@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import {
+  type BlendGroupJSON,
   type BlockDefinition,
   type TileRef,
   type TilesetDefinition
@@ -68,7 +69,7 @@ const kTileNames = Object.keys(kTiles) as TileName[];
 
 interface TerrainBlockSpec extends Pick<
   BlockDefinition,
-  "collidable" | "alphaMode" | "cullCoveredFaces"
+  "collidable" | "alphaMode" | "cullCoveredFaces" | "blendGroup"
 > {
   id: TerrainBlockId;
   name: string;
@@ -84,17 +85,39 @@ const kFoliage = {
 } as const satisfies Partial<TerrainBlockSpec>;
 
 const kBlockSpecs: TerrainBlockSpec[] = [
-  { id: TerrainBlock.Grass, name: "Grass", tile: "grassSide", top: "grassTop", bottom: "dirt" },
-  { id: TerrainBlock.Dirt, name: "Dirt", tile: "dirt" },
-  { id: TerrainBlock.Stone, name: "Stone", tile: "stone" },
-  { id: TerrainBlock.Sand, name: "Sand", tile: "sand", top: "sandTop" },
-  { id: TerrainBlock.Snow, name: "Snow", tile: "snowSide", top: "snowTop", bottom: "stone" },
+  {
+    id: TerrainBlock.Grass,
+    name: "Grass",
+    tile: "grassSide",
+    top: "grassTop",
+    bottom: "dirt",
+    blendGroup: "grass"
+  },
+  { id: TerrainBlock.Dirt, name: "Dirt", tile: "dirt", blendGroup: "dirt" },
+  { id: TerrainBlock.Stone, name: "Stone", tile: "stone", blendGroup: "stone" },
+  { id: TerrainBlock.Sand, name: "Sand", tile: "sand", top: "sandTop", blendGroup: "sand" },
+  {
+    id: TerrainBlock.Snow,
+    name: "Snow",
+    tile: "snowSide",
+    top: "snowTop",
+    bottom: "stone",
+    blendGroup: "snow"
+  },
   { id: TerrainBlock.Water, name: "Water", tile: "water", collidable: false },
   { id: TerrainBlock.Log, name: "Log", tile: "bark", top: "logEnd", bottom: "logEnd" },
   { id: TerrainBlock.Leaves, name: "Leaves", tile: "leaves", ...kFoliage },
   { id: TerrainBlock.PineLeaves, name: "Pine leaves", tile: "pineLeaves", ...kFoliage },
   { id: TerrainBlock.BirchLog, name: "Birch log", tile: "birchBark", top: "birchEnd", bottom: "birchEnd" },
   { id: TerrainBlock.BirchLeaves, name: "Birch leaves", tile: "birchLeaves", ...kFoliage }
+];
+
+export const TERRAIN_BLEND_GROUPS: readonly BlendGroupJSON[] = [
+  { id: "grass", width: 10, priority: 2 },
+  { id: "sand", width: 8, priority: 1 },
+  { id: "dirt", width: 8, priority: 1 },
+  { id: "stone", width: 6 },
+  { id: "snow", width: 12, priority: 3 }
 ];
 
 export interface TerrainTileset {

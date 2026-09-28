@@ -104,6 +104,7 @@ export class ChunkMaterialCache {
     far = false
   ): ChunkMaterial {
     const { tilesetId, surface } = geometryKey;
+    const blended = geometryKey.blended && !far;
     const key = `${geometryKey}:far=${far}`;
 
     const cached = this.#materials.get(key);
@@ -114,7 +115,8 @@ export class ChunkMaterialCache {
     const material = this.#create(
       tilesetId,
       surface,
-      far
+      far,
+      blended
     );
     this.#materials.set(key, material);
     this.#entries.set(material, {
@@ -184,7 +186,8 @@ export class ChunkMaterialCache {
   #create(
     tilesetId: string,
     surface: BlockSurface,
-    far: boolean
+    far: boolean,
+    blended: boolean
   ): ChunkMaterial {
     const atlas = this.#atlases.resolve(tilesetId);
     if (atlas === undefined) {
@@ -221,7 +224,7 @@ export class ChunkMaterialCache {
     const averages = this.tileAveraging ?
       AtlasAverages.of(texture)?.texture :
       null;
-    const inputs = enableVertexPulling(material, this.faceTemplates);
+    const inputs = enableVertexPulling(material, this.faceTemplates, blended);
     enableTileShading(material, inputs, {
       surface,
       aoStrength: this.aoStrength,

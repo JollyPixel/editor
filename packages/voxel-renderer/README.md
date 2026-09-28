@@ -143,6 +143,7 @@ the renderer package does not depend on an ECS runtime.
   [commands](docs/api/core/commands.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
+  [`VoxelTemplates`](docs/api/world/VoxelTemplates.md),
   [`VoxelChunk`](docs/api/world/VoxelChunk.md),
   [`VoxelStore`](docs/api/world/VoxelStore.md),
   [`VoxelTransform`](docs/api/world/VoxelTransform.md), and

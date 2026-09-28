@@ -5,18 +5,22 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   isTilesetDocumentCommand,
+  isVoxelBlendGroupCommand,
   isVoxelBlockCommand,
   isVoxelEditCommand,
   isVoxelLayerCommand,
   isVoxelObjectLayerCommand,
   isVoxelMaterialGroupCommand,
+  isVoxelTemplateCommand,
   isVoxelTilesetCommand,
   isVoxelWorldCommand,
   TILESET_DOCUMENT_COMMAND_ACTIONS,
+  VOXEL_BLEND_GROUP_COMMAND_ACTIONS,
   VOXEL_BLOCK_COMMAND_ACTIONS,
   VOXEL_COMMAND_ACTIONS,
   VOXEL_LAYER_COMMAND_ACTIONS,
   VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
+  VOXEL_TEMPLATE_COMMAND_ACTIONS,
   VOXEL_TILESET_COMMAND_ACTIONS,
   VOXEL_WORLD_COMMAND_ACTIONS
 } from "../../../src/document/commands/index.ts";
@@ -27,9 +31,11 @@ describe("command guards", () => {
       const command = { action };
       const matches = [
         isVoxelLayerCommand(command),
+        isVoxelTemplateCommand(command),
         isVoxelBlockCommand(command),
         isVoxelTilesetCommand(command),
-        isVoxelMaterialGroupCommand(command)
+        isVoxelMaterialGroupCommand(command),
+        isVoxelBlendGroupCommand(command)
       ].filter(Boolean);
 
       assert.equal(matches.length, 1, action);
@@ -49,7 +55,8 @@ describe("command guards", () => {
       "voxel-removed",
       "voxels-set",
       "voxels-removed",
-      "voxels-patched"
+      "voxels-patched",
+      "layer-transformed"
     ]);
     assert.equal(objects.length, 7);
     assert.ok([...edits, ...objects].every(
@@ -61,9 +68,11 @@ describe("command guards", () => {
     assert.equal(
       new Set(VOXEL_COMMAND_ACTIONS).size,
       VOXEL_LAYER_COMMAND_ACTIONS.length +
+      VOXEL_TEMPLATE_COMMAND_ACTIONS.length +
       VOXEL_BLOCK_COMMAND_ACTIONS.length +
       VOXEL_TILESET_COMMAND_ACTIONS.length +
-      VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length
+      VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length +
+      VOXEL_BLEND_GROUP_COMMAND_ACTIONS.length
     );
   });
 

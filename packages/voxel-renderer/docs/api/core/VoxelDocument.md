@@ -56,6 +56,8 @@ interface VoxelDocumentOptions {
   tilesets?: Iterable<TilesetDefinition>;
   /** Finishes of the named material groups; invalid entries are skipped. */
   materialGroups?: Iterable<MaterialGroupJSON>;
+  /** Blend groups the blocks can name; invalid entries are skipped. */
+  blendGroups?: Iterable<BlendGroupJSON>;
   /** Undo/redo of voxel edits; disabled by default. */
   history?: VoxelHistoryOptions;
   /** Debug logger; defaults to a no-op implementation. */
@@ -73,6 +75,7 @@ class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly blocks: BlockRegistry;
   readonly tilesets: TilesetList;   // links only, no atlases
   readonly materialGroups: MaterialGroupList;
+  readonly blendGroups: BlendGroupList;
   readonly history: VoxelHistory;   // see VoxelHistory.md
   readonly chunkSize: number;
 }
@@ -82,11 +85,13 @@ class VoxelDocument extends BlockDocument<VoxelCommand> {
 textures built from those declarations belong to the view's
 [`TilesetAtlases`](../tilesets/TilesetAtlases.md).
 
-`blocks` and `materialGroups` are runtime state. A world saves neither: they
+`blocks`, `materialGroups` and `blendGroups` are runtime state. A world saves
+none of them: they
 are projected from the [`TilesetDocument`](../tilesets/TilesetDocument.md) of
 each linked tileset by the host, or defined in code for a standalone scene.
 `materialGroups` holds the [surface finishes](../materials/MaterialGroup.md)
-the blocks name.
+the blocks name. `blendGroups` holds the
+[blend rules](../materials/BlendGroup.md) that fade blocks into each other.
 
 ## Events
 
@@ -145,11 +150,12 @@ rejected command is never broadcast. An applied command is emitted the way it
 was applied: a `block-defined` block carries the default tileset in its
 texture references, a `block-moved` carries the index the block landed on, a
 `tileset-added` carries the slot the tileset received, and a
-`material-group-defined` group has every field filled in. A network adapter
+`material-group-defined` or `blend-group-defined` group has every field filled
+in. A network adapter
 applies peer commands with `{ origin: "remote" }` and sends only the `"local"`
 ones, so nothing is echoed back.
 
-The block and material group methods come from `BlockDocument`, the base
+The block and group methods come from `BlockDocument`, the base
 [`TilesetDocument`](../tilesets/TilesetDocument.md) shares; each is a
 shorthand for `apply()`:
 
@@ -161,6 +167,8 @@ shorthand for `apply()`:
 | `moveBlock(blockId, toIndex)` | `block-moved` | `false` for an unknown ID or a move that changes nothing |
 | `defineMaterialGroup(group)` | `material-group-defined` | `false` for an invalid finish or one equal to the current definition |
 | `removeMaterialGroup(groupId)` | `material-group-removed` | `false` for an unknown group |
+| `defineBlendGroup(group)` | `blend-group-defined` | `false` for invalid settings or ones equal to the current definition |
+| `removeBlendGroup(groupId)` | `blend-group-removed` | `false` for an unknown group |
 
 Tile references a block defines without `tilesetId` get the first declared
 tileset. The order `moveBlock()` changes is a document concern only; see
@@ -182,17 +190,22 @@ in `tilesets` without a command.
 
 `save()` writes the world and its tileset links. `load()` replaces the
 world, drops the undo history, and emits `loaded`. The snapshot replaces the
-tileset list wholesale and leaves `blocks` and `materialGroups` alone, so
+tileset list wholesale and leaves `blocks` and the groups alone, so
 `options.tilesets` declarations are applied after it:
 
 ```ts
 interface VoxelLoadOptions {
   /** Collapses layers; higher-priority voxels win overlaps. */
-  mergeLayers?: boolean;
+  mergeLayers?: boolean | VoxelMergeAllLayersOptions;
   /** Declared after the snapshot replaced the list. */
   tilesets?: Iterable<TilesetDefinition>;
 }
 ```
+
+`mergeLayers: { except: ["Water"] }` keeps the named layers apart and merges
+the layers on each side of them separately, as
+[`VoxelWorld.mergeAllLayers()`](../world/VoxelWorld.md#methods)
+does. A name the loaded world has no layer for logs a warning.
 
 `data.chunkSize` is metadata: `load()` keeps the document's chunk size.
 Deserialization is silent, so restoring a snapshot emits no command.

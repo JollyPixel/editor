@@ -4,6 +4,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import type {
   VoxelLayer,
   VoxelLayerCommand,
+  VoxelTransformOptions,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
@@ -25,6 +26,39 @@ import {
 } from "./layerSources.ts";
 import "../properties/CustomPropertiesEditor.ts";
 
+// CONSTANTS
+const kLayerTransforms: {
+  label: string;
+  title: string;
+  transform: VoxelTransformOptions;
+}[] = [
+  {
+    label: "Rotate left",
+    title: "Rotate 90° counter-clockwise around the layer center",
+    transform: { rotation: 1 }
+  },
+  {
+    label: "Rotate right",
+    title: "Rotate 90° clockwise around the layer center",
+    transform: { rotation: 3 }
+  },
+  {
+    label: "Flip X",
+    title: "Mirror along X through the layer center",
+    transform: { flipX: true }
+  },
+  {
+    label: "Flip Z",
+    title: "Mirror along Z through the layer center",
+    transform: { flipZ: true }
+  },
+  {
+    label: "Flip Y",
+    title: "Mirror along Y through the layer center",
+    transform: { flipY: true }
+  }
+];
+
 @customElement("layer-panel")
 export class VoxelLayerPanel extends LitElement {
   static override styles = css`
@@ -35,6 +69,11 @@ export class VoxelLayerPanel extends LitElement {
       padding: var(--jolly-space-1, 4px);
     }
 
+    .transforms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--jolly-row-gap, 4px);
+    }
   `;
 
   @property({ attribute: false })
@@ -94,7 +133,8 @@ export class VoxelLayerPanel extends LitElement {
       event.action !== "voxel-removed" &&
       event.action !== "voxels-set" &&
       event.action !== "voxels-removed" &&
-      event.action !== "voxels-patched"
+      event.action !== "voxels-patched" &&
+      event.action !== "layer-transformed"
     ) {
       return;
     }
@@ -184,6 +224,15 @@ export class VoxelLayerPanel extends LitElement {
         @click=${this.#onRebase}
       >Rebase to content origin</jolly-button>
 
+      <div class="transforms">
+        ${kLayerTransforms.map(({ label, title, transform }) => html`
+          <jolly-button
+            title=${title}
+            @click=${() => this.#transformLayer(transform)}
+          >${label}</jolly-button>
+        `)}
+      </div>
+
       <custom-properties-editor
         .rows=${this._props}
         storage-key="voxel-map:folder:layer-properties"
@@ -203,6 +252,17 @@ export class VoxelLayerPanel extends LitElement {
       y: Math.round(this._contentOrigin.y),
       z: Math.round(this._contentOrigin.z)
     });
+  }
+
+  #transformLayer(
+    transform: VoxelTransformOptions
+  ): void {
+    const { world, layerName } = this;
+    if (!world || !layerName) {
+      return;
+    }
+
+    world.transformLayer(layerName, transform);
   }
 
   #onPropertyRowsChange(

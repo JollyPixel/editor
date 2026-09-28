@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  BlendGroupList,
   BlockRegistry,
   BlockShapeRegistry,
   composeBlockId,
@@ -12,6 +13,7 @@ import {
   TilesetDocument,
   TilesetList,
   TilesetAtlases,
+  type BlendGroupJSON,
   type ResolvedBlockDefinition,
   type TilesetDefinition,
   type TilesetTexture,
@@ -80,11 +82,13 @@ function makeEngine(): VoxelView {
   const atlases = new TilesetAtlases({ tilesets });
   const blockRegistry = new BlockRegistry();
   const materialGroups = new MaterialGroupList();
+  const blendGroups = new BlendGroupList();
   const fake = {
     document: {
       tilesets,
       blocks: blockRegistry,
       materialGroups,
+      blendGroups,
       defineBlock: (def: ResolvedBlockDefinition) => {
         blockRegistry.register(def);
       },
@@ -94,7 +98,9 @@ function makeEngine(): VoxelView {
       removeBlock: (id: number) => blockRegistry.unregister(id),
       moveBlock: (id: number, toIndex: number) => blockRegistry.moveTo(id, toIndex),
       defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
-      removeMaterialGroup: (id: string) => materialGroups.remove(id)
+      removeMaterialGroup: (id: string) => materialGroups.remove(id),
+      defineBlendGroup: (group: BlendGroupJSON) => blendGroups.define(group),
+      removeBlendGroup: (id: string) => blendGroups.remove(id)
     },
     atlases,
     shapes: BlockShapeRegistry.createDefault(),

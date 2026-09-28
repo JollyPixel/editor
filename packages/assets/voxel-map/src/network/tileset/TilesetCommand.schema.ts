@@ -11,6 +11,7 @@ import {
 import {
   MAX_LOCAL_BLOCK_ID,
   type TilesetTileSizeCommand,
+  type VoxelBlendGroupCommandAction,
   type VoxelBlockCommandAction,
   type VoxelMaterialGroupCommandAction
 } from "@jolly-pixel/voxel.renderer";
@@ -77,6 +78,33 @@ const kMaterialGroupCommandProperties: Record<
   }
 };
 
+export const blendGroupSchema = defineSchema({
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    width: { type: "integer", minimum: 1, maximum: 64 },
+    pattern: { type: "string", enum: ["noise", "bayer"] },
+    priority: { type: "integer" },
+    exclude: {
+      type: "array",
+      items: { type: "string", minLength: 1 }
+    }
+  },
+  required: ["id"]
+});
+
+const kBlendGroupCommandProperties: Record<
+  VoxelBlendGroupCommandAction,
+  Record<string, JSONSchema>
+> = {
+  "blend-group-defined": {
+    group: blendGroupSchema
+  },
+  "blend-group-removed": {
+    groupId: { type: "string", minLength: 1 }
+  }
+};
+
 const kTileSizeAction: TilesetTileSizeCommand["action"] = "tile-size-updated";
 
 export const tilesetSnapshotSchema: JSONSchema = {
@@ -88,6 +116,10 @@ export const tilesetSnapshotSchema: JSONSchema = {
     materialGroups: {
       type: "array",
       items: materialGroupSchema
+    },
+    blendGroups: {
+      type: "array",
+      items: blendGroupSchema
     }
   },
   required: [
@@ -105,6 +137,9 @@ export const tilesetCommandProtocol: MessageProtocol = new MessageProtocol({
       ([action, properties]) => networkCommand(action, properties)
     ),
     ...Object.entries(kMaterialGroupCommandProperties).map(
+      ([action, properties]) => networkCommand(action, properties)
+    ),
+    ...Object.entries(kBlendGroupCommandProperties).map(
       ([action, properties]) => networkCommand(action, properties)
     ),
     networkCommand(kTileSizeAction, {

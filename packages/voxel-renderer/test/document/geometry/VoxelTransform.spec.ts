@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelTransform, VOXEL_TRANSFORM_MASK } from "../../../src/document/geometry/index.ts";
+import { rotateVertex } from "../../../src/document/geometry/rotation.ts";
+import type { Vec3 } from "../../../src/document/geometry/faceDirection.ts";
 
 // CONSTANTS
 const kRotations = [0, 1, 2, 3] as const;
@@ -131,5 +133,53 @@ describe("VoxelTransform.pack", () => {
   it("wraps rotations outside 0..3", () => {
     assert.equal(VoxelTransform.pack({ rotation: 5 }), 1);
     assert.equal(VoxelTransform.pack({ rotation: -1 }), 3);
+  });
+});
+
+describe("VoxelTransform#followedBy", () => {
+  const kVertices: Vec3[] = [
+    [0, 0, 0],
+    [1, 0, 0.25],
+    [0.5, 1, 1],
+    [0.75, 0.25, 0]
+  ];
+
+  it("moves every vertex like applying both transforms in turn", () => {
+    for (let inner = 0; inner <= VOXEL_TRANSFORM_MASK; inner++) {
+      for (let outer = 0; outer <= VOXEL_TRANSFORM_MASK; outer++) {
+        const a = VoxelTransform.fromPacked(inner);
+        const b = VoxelTransform.fromPacked(outer);
+        const composed = a.followedBy(b);
+
+        for (const vertex of kVertices) {
+          assert.deepEqual(
+            rotateVertex(vertex, composed),
+            rotateVertex(rotateVertex(vertex, a), b),
+            `${inner} then ${outer}`
+          );
+        }
+      }
+    }
+  });
+});
+
+describe("VoxelTransform#transformOffset", () => {
+  it("moves a cell offset like the transform moves the cell center", () => {
+    const offset = { x: 2, y: 1, z: -3 };
+
+    for (let packed = 0; packed <= VOXEL_TRANSFORM_MASK; packed++) {
+      const transform = VoxelTransform.fromPacked(packed);
+      const [x, y, z] = rotateVertex(
+        [offset.x + 0.5, offset.y + 0.5, offset.z + 0.5],
+        transform
+      );
+      const moved = transform.transformOffset(offset);
+
+      assert.deepEqual(
+        [moved.x + 0, moved.y + 0, moved.z + 0],
+        [x - 0.5, y - 0.5, z - 0.5],
+        String(packed)
+      );
+    }
   });
 });

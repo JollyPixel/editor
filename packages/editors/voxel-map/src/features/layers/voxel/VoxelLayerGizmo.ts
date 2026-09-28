@@ -200,6 +200,7 @@ export class VoxelLayerGizmo extends ActorComponent {
       event.action === "voxels-set" ||
       event.action === "voxels-removed" ||
       event.action === "voxels-patched" ||
+      event.action === "layer-transformed" ||
       event.action === "position-updated" ||
       event.action === "position-rebased"
     ) {

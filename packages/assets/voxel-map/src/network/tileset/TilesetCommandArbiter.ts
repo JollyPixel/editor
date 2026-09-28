@@ -66,6 +66,10 @@ export class TilesetCommandArbiter {
         return `material-group:${command.group.id}`;
       case "material-group-removed":
         return `material-group:${command.groupId}`;
+      case "blend-group-defined":
+        return `blend-group:${command.group.id}`;
+      case "blend-group-removed":
+        return `blend-group:${command.groupId}`;
       case "tile-size-updated":
         return "tile-size";
       default: {

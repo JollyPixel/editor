@@ -29,7 +29,7 @@ flowchart TB
 
 | Folder | Holds |
 |---|---|
-| `document/world` | `VoxelWorld`, `VoxelLayer`, chunk `storage/`, the `editing/` write path, object layers |
+| `document/world` | `VoxelWorld`, `VoxelLayer`, chunk `storage/`, the `editing/` write path, object layers, `templates/` |
 | `document/blocks`, `tilesets`, `materials` | Definitions, tileset links and documents, projection between tileset and world ids |
 | `document/commands`, `serialization` | Command types and appliers, the `VoxelWorldJSON` codec |
 | `document/geometry` | Face directions, `VoxelTransform`, rotations, voxel picking helpers |
@@ -50,7 +50,7 @@ flowchart TB
 ```
 
 Every aggregate applies its own commands and returns them as applied:
-`VoxelWorld` (layers, voxels, object layers), `BlockRegistry`,
+`VoxelWorld` (layers, voxels, object layers, templates), `BlockRegistry`,
 `MaterialGroupList` and `TilesetList`. `VoxelDocument` and `TilesetDocument`
 share `BlockDocument`, which emits an applied command once with its origin.
 A local world edit is emitted as `"local"`; `apply()` replays a peer command
@@ -99,7 +99,8 @@ flowchart TB
     Plugin --> View
 ```
 
-`save()` serializes the world's layers, object layers and tileset links.
+`save()` serializes the world's layers, object layers, templates and tileset
+links.
 The snapshot stores each layer as a palette plus run-length encoded chunks
 (see [serialization](./docs/api/serialization/serialization.md)). Saving
 captures chunks as sorted cells and packed voxels, and loading writes them back

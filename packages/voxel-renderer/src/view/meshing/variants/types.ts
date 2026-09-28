@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
+import type { BlendGroup } from "../../../document/materials/BlendGroup.ts";
 import type {
   ResolvedTilesetDefinition,
   TileRotation,
@@ -73,4 +74,9 @@ export interface BlockVariant {
    */
   selfOcclusionMask: number;
   keepsCoveredFaces: boolean;
+  /**
+   * The block's blend group, or null when it is ungrouped, names an unknown
+   * group, or is not opaque.
+   */
+  blend: BlendGroup | null;
 }

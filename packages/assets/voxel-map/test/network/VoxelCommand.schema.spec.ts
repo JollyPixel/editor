@@ -11,6 +11,7 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { voxelCommandProtocol } from "#src/network/VoxelCommand.schema.ts";
 import {
+  templateCommands,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
@@ -181,6 +182,13 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(layerCommand("voxels-patched", {})), false);
   });
 
+  test("accepts a layer transform carrying every transform field", () => {
+    const transform = { rotation: 1, flipX: false, flipZ: false, flipY: true };
+
+    assert.strictEqual(accepts(layerCommand("layer-transformed", transform)), true);
+    assert.strictEqual(accepts(layerCommand("layer-transformed", { rotation: 1 })), false);
+  });
+
   test("accepts a position update carrying a position or a delta", () => {
     const delta = { x: 1, y: 0, z: 0 };
 
@@ -196,6 +204,26 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(layerCommand("object-added", {
       object: { id: "o1" }
     })), false);
+  });
+
+  test("accepts the template commands a world emits", () => {
+    const commands = templateCommands();
+
+    assert.deepEqual(
+      commands.map(({ action }) => action),
+      ["template-defined", "template-updated", "template-removed"]
+    );
+    for (const command of commands) {
+      assert.strictEqual(accepts({ ...kHeader, ...command }), true, command.action);
+    }
+  });
+
+  test("rejects a template without a pivot", () => {
+    const [defined] = templateCommands();
+    assert.ok(defined.action === "template-defined");
+    const { pivot, ...template } = defined.template;
+
+    assert.strictEqual(accepts({ ...kHeader, ...defined, template }), false);
   });
 
   test("rejects an unknown reorder direction", () => {

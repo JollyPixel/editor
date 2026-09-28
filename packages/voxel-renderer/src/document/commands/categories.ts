@@ -2,6 +2,8 @@
 import type {
   TilesetDocumentCommand,
   TilesetDocumentCommandAction,
+  VoxelBlendGroupCommand,
+  VoxelBlendGroupCommandAction,
   VoxelBlockCommand,
   VoxelBlockCommandAction,
   VoxelCommandAction,
@@ -11,6 +13,8 @@ import type {
   VoxelMaterialGroupCommand,
   VoxelMaterialGroupCommandAction,
   VoxelObjectLayerCommand,
+  VoxelTemplateCommand,
+  VoxelTemplateCommandAction,
   VoxelTilesetCommand,
   VoxelTilesetCommandAction,
   VoxelWorldCommand,
@@ -33,6 +37,7 @@ const kActionCategories: {
   "voxels-set": "layer",
   "voxels-removed": "layer",
   "voxels-patched": "layer",
+  "layer-transformed": "layer",
   reordered: "layer",
   "layer-moved": "layer",
   "object-layer-added": "layer",
@@ -42,13 +47,18 @@ const kActionCategories: {
   "object-removed": "layer",
   "object-moved": "layer",
   "object-updated": "layer",
+  "template-defined": "template",
+  "template-updated": "template",
+  "template-removed": "template",
   "block-defined": "block",
   "block-removed": "block",
   "block-moved": "block",
   "tileset-added": "tileset",
   "tileset-removed": "tileset",
   "material-group-defined": "material-group",
-  "material-group-removed": "material-group"
+  "material-group-removed": "material-group",
+  "blend-group-defined": "blend-group",
+  "blend-group-removed": "blend-group"
 };
 const kCategoryByAction = new Map<string, CommandCategory>(
   Object.entries(kActionCategories)
@@ -59,14 +69,17 @@ const kEditActions = new Set<string>([
   "voxel-removed",
   "voxels-set",
   "voxels-removed",
-  "voxels-patched"
+  "voxels-patched",
+  "layer-transformed"
 ] satisfies VoxelEditCommand["action"][]);
 
 interface CommandCategories {
   layer: VoxelLayerCommand;
+  template: VoxelTemplateCommand;
   block: VoxelBlockCommand;
   tileset: VoxelTilesetCommand;
   "material-group": VoxelMaterialGroupCommand;
+  "blend-group": VoxelBlendGroupCommand;
 }
 
 type CommandCategory = keyof CommandCategories;
@@ -83,6 +96,9 @@ type CategoryOf<TAction extends VoxelCommandAction> = {
 export const VOXEL_LAYER_COMMAND_ACTIONS:
 readonly VoxelLayerCommandAction[] = actionsOf("layer");
 
+export const VOXEL_TEMPLATE_COMMAND_ACTIONS:
+readonly VoxelTemplateCommandAction[] = actionsOf("template");
+
 export const VOXEL_BLOCK_COMMAND_ACTIONS:
 readonly VoxelBlockCommandAction[] = actionsOf("block");
 
@@ -92,16 +108,22 @@ readonly VoxelTilesetCommandAction[] = actionsOf("tileset");
 export const VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS:
 readonly VoxelMaterialGroupCommandAction[] = actionsOf("material-group");
 
+export const VOXEL_BLEND_GROUP_COMMAND_ACTIONS:
+readonly VoxelBlendGroupCommandAction[] = actionsOf("blend-group");
+
 export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
+  ...VOXEL_TEMPLATE_COMMAND_ACTIONS,
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
   ...VOXEL_TILESET_COMMAND_ACTIONS,
-  ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS
+  ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
+  ...VOXEL_BLEND_GROUP_COMMAND_ACTIONS
 ];
 
 export const VOXEL_WORLD_COMMAND_ACTIONS:
 readonly VoxelWorldCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
+  ...VOXEL_TEMPLATE_COMMAND_ACTIONS,
   ...VOXEL_TILESET_COMMAND_ACTIONS
 ];
 
@@ -109,6 +131,7 @@ export const TILESET_DOCUMENT_COMMAND_ACTIONS:
 readonly TilesetDocumentCommandAction[] = [
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
   ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
+  ...VOXEL_BLEND_GROUP_COMMAND_ACTIONS,
   kTileSizeAction
 ];
 
@@ -130,6 +153,12 @@ export function isVoxelObjectLayerCommand(
   return isVoxelLayerCommand(command) && command.action.startsWith("object-");
 }
 
+export function isVoxelTemplateCommand(
+  command: { action: string; }
+): command is VoxelTemplateCommand {
+  return kCategoryByAction.get(command.action) === "template";
+}
+
 export function isVoxelBlockCommand(
   command: { action: string; }
 ): command is VoxelBlockCommand {
@@ -148,10 +177,18 @@ export function isVoxelMaterialGroupCommand(
   return kCategoryByAction.get(command.action) === "material-group";
 }
 
+export function isVoxelBlendGroupCommand(
+  command: { action: string; }
+): command is VoxelBlendGroupCommand {
+  return kCategoryByAction.get(command.action) === "blend-group";
+}
+
 export function isVoxelWorldCommand(
   command: { action: string; }
 ): command is VoxelWorldCommand {
-  return isVoxelLayerCommand(command) || isVoxelTilesetCommand(command);
+  return isVoxelLayerCommand(command) ||
+    isVoxelTemplateCommand(command) ||
+    isVoxelTilesetCommand(command);
 }
 
 export function isTilesetDocumentCommand(
@@ -159,6 +196,7 @@ export function isTilesetDocumentCommand(
 ): command is TilesetDocumentCommand {
   return isVoxelBlockCommand(command) ||
     isVoxelMaterialGroupCommand(command) ||
+    isVoxelBlendGroupCommand(command) ||
     command.action === kTileSizeAction;
 }
 

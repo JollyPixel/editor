@@ -186,6 +186,39 @@ describe("VoxelView - document material group finishes", () => {
   });
 });
 
+describe("VoxelView - document blend groups", () => {
+  const kDirtId = 5;
+
+  function blendedMeshes(
+    view: VoxelView
+  ): string[] {
+    return chunkMeshes(view)
+      .map((mesh) => mesh.name)
+      .filter((name) => name.endsWith(":blended"));
+  }
+
+  it("remeshes blended faces when a group is defined and removed", () => {
+    const view = meshedGround({
+      blocks: [
+        makeBlockDef(kCubeId, "cube", { blendGroup: "grass" }),
+        makeBlockDef(kDirtId, "cube", { blendGroup: "dirt" })
+      ],
+      blendGroups: [{ id: "grass" }]
+    });
+    placeCube(view, "Ground", { x: 1, y: 0, z: 0 }, kDirtId);
+    view.flush();
+    assert.deepEqual(blendedMeshes(view), []);
+
+    view.document.defineBlendGroup({ id: "dirt" });
+    view.flush();
+    assert.equal(blendedMeshes(view).length, 1);
+
+    view.document.removeBlendGroup("dirt");
+    view.flush();
+    assert.deepEqual(blendedMeshes(view), []);
+  });
+});
+
 describe("VoxelView - tile minification", () => {
   it("fades distant tiles to their average colour by default", () => {
     assert.equal(meshedGround().rendering.tileMinification, "average");

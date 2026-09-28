@@ -43,6 +43,7 @@ interface VoxelWorldJSON {
   tilesets: TilesetDefinition[];
   layers: VoxelLayerJSON[];
   objectLayers?: VoxelObjectLayerJSON[];
+  templates?: VoxelTemplateJSON[];
 }
 ```
 
@@ -88,6 +89,45 @@ A missing `compositing` loads as `"composite"`; use `"replace"` explicitly for
 cell replacement.
 
 `objectLayers` stores placed objects such as spawn points and trigger zones.
+
+### Templates
+
+`templates` stores the world's [voxel templates](../world/VoxelTemplates.md).
+The field is optional, so documents without it load with no template.
+
+```ts
+interface VoxelTemplateJSON {
+  id: string;
+  name: string;
+  pivot: VoxelCoord;
+  properties?: Record<string, any>;
+  chunkSize: number;
+  palette: VoxelEntryJSON[];
+  chunks: VoxelChunkJSON[];
+}
+```
+
+A template uses the layer encoding, in template-local space, with its own
+`chunkSize`. The world writer uses the world's `chunkSize`; a template read
+with another size is decoded with it. `pivot` is template-local.
+
+```ts
+function serializeVoxelTemplate(
+  template: VoxelTemplate,
+  chunkSize?: number // default: 16
+): VoxelTemplateJSON;
+
+function deserializeVoxelTemplate(
+  data: VoxelTemplateJSON
+): VoxelTemplate;
+
+function parseVoxelTemplate(value: unknown): VoxelTemplateJSON;
+```
+
+`deserializeVoxelTemplate()` validates `data` with `parseVoxelTemplate()`
+and throws `InvalidVoxelWorldError` when it is malformed. The
+`"template-defined"` command carries the output of
+`serializeVoxelTemplate()`.
 
 ## Serializing a world
 
@@ -140,9 +180,10 @@ loads into the world's own chunks; serializing the world again writes the
 world's `chunkSize`. A chunk that falls outside the world's chunk range once
 re-partitioned is rejected before anything changes.
 
-Layers are restored with [`world.restoreLayer()`](../world/VoxelWorld.md) and
-object layers with `world.objectLayers.restore()`, so deserializing emits no
-command, even outside `world.silently()`.
+Layers are restored with [`world.restoreLayer()`](../world/VoxelWorld.md),
+object layers with `world.objectLayers.restore()` and templates with
+`world.templates.restore()`, so deserializing emits no command, even outside
+`world.silently()`.
 
 `options.tilesets` is replaced with the document's tilesets, slots included.
 The block registry is never touched: register the projected blocks of the
@@ -191,6 +232,10 @@ problem, naming the layer and chunk:
 - Run lengths are at least `1` and values at most `palette.length`. Dense
   runs cover exactly `S³` cells. Sparse runs assign values of `1` or more
   to every cell, and the last cell is below `S³`.
+- `templates`, when present, is an array. Each template has a string `id`
+  and `name`, a `pivot` coordinate, a power-of-two `chunkSize` and an
+  object `properties` when present; its palette and chunks follow the layer
+  rules with its own `chunkSize`.
 
 A missing or malformed `tilesets` value becomes an empty array. A malformed
 `objectLayers` value is omitted. Unknown top-level keys, including the

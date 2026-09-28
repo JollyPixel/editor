@@ -28,6 +28,7 @@ function makeTileset(): TilesetDocument {
         name: "grass",
         shapeId: "cube",
         materialGroup: "soft",
+        blendGroup: "meadow",
         defaultTexture: { col: 0, row: 0 }
       },
       {
@@ -37,7 +38,8 @@ function makeTileset(): TilesetDocument {
         defaultTexture: { col: 1, row: 0 }
       }
     ],
-    materialGroups: [{ id: "soft", roughness: 0.5 }]
+    materialGroups: [{ id: "soft", roughness: 0.5 }],
+    blendGroups: [{ id: "meadow", exclude: ["rock"] }]
   });
 }
 
@@ -66,6 +68,11 @@ describe("TilesetProjection", () => {
     });
     assert.equal(grass?.materialGroup, "terrain/soft");
     assert.equal(engine.materialGroups.get("terrain/soft")?.roughness, 0.5);
+    assert.equal(grass?.blendGroup, "terrain/meadow");
+    assert.deepEqual(
+      engine.blendGroups.get("terrain/meadow")?.exclude,
+      ["terrain/rock"]
+    );
   });
 
   it("mirrors block and group commands as the tileset changes", () => {
@@ -87,10 +94,14 @@ describe("TilesetProjection", () => {
     tileset.moveBlock(3, 0);
     tileset.defineMaterialGroup({ id: "hard", metalness: 1 });
     tileset.removeMaterialGroup("soft");
+    tileset.defineBlendGroup({ id: "beach", width: 6 });
+    tileset.removeBlendGroup("meadow");
 
     assert.deepEqual(ids(engine), [composeBlockId(1, 3), composeBlockId(1, 2)]);
     assert.equal(engine.materialGroups.has("terrain/soft"), false);
     assert.equal(engine.materialGroups.get("terrain/hard")?.metalness, 1);
+    assert.equal(engine.blendGroups.has("terrain/meadow"), false);
+    assert.equal(engine.blendGroups.get("terrain/beach")?.width, 6);
   });
 
   it("re-projects rescaled tiles after a tile size change", () => {
@@ -120,6 +131,7 @@ describe("TilesetProjection", () => {
       shapeId: "cube"
     });
     engine.defineMaterialGroup({ id: "other/soft" });
+    engine.defineBlendGroup({ id: "other/meadow" });
     const projection = new TilesetProjection({
       engine,
       tileset: makeTileset(),
@@ -130,6 +142,7 @@ describe("TilesetProjection", () => {
 
     assert.deepEqual(ids(engine), [composeBlockId(3, 1)]);
     assert.deepEqual([...engine.materialGroups.ids()], ["other/soft"]);
+    assert.deepEqual([...engine.blendGroups].map(({ id }) => id), ["other/meadow"]);
   });
 
   it("re-homes its blocks when the slot changes", () => {

@@ -4,8 +4,13 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelWorld } from "../../../src/document/world/index.ts";
-import { VOXEL_LAYER_COMMAND_ACTIONS, type VoxelLayerCommand } from "../../../src/document/commands/index.ts";
+import {
+  VOXEL_LAYER_COMMAND_ACTIONS,
+  VOXEL_TEMPLATE_COMMAND_ACTIONS,
+  type VoxelWorldContentCommand
+} from "../../../src/document/commands/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
+import { serializeVoxelTemplate } from "../../../src/document/serialization/index.ts";
 import { makeObject, recordCommands } from "../../helpers/fakes.ts";
 import {
   withoutId,
@@ -16,14 +21,14 @@ interface RoundTripCase {
   name: string;
   seed?: (world: VoxelWorld) => void;
   act: (world: VoxelWorld) => void;
-  actions: VoxelLayerCommand["action"][];
+  actions: VoxelWorldContentCommand["action"][];
   check?: (remote: VoxelWorld) => void;
 }
 
 interface Peers {
   local: VoxelWorld;
   remote: VoxelWorld;
-  commands: VoxelLayerCommand[];
+  commands: VoxelWorldContentCommand[];
 }
 
 function makePeers(
@@ -42,7 +47,8 @@ function stateOf(
 ): unknown {
   return {
     layers: world.getLayers().map(withoutId),
-    objectLayers: world.objectLayers.toArray().map(({ id, ...rest }) => structuredClone(rest))
+    objectLayers: world.objectLayers.toArray().map(({ id, ...rest }) => structuredClone(rest)),
+    templates: world.templates.toArray().map((template) => serializeVoxelTemplate(template))
   };
 }
 
@@ -69,6 +75,13 @@ function spawns(
   world.objectLayers.add("To");
   world.objectLayers.addObject("From", makeObject({ id: "obj1" }));
   world.objectLayers.addObject("From", makeObject({ id: "obj2" }));
+}
+
+function steps(
+  world: VoxelWorld
+): void {
+  ground(world);
+  world.templates.createFromLayer("Ground", { name: "Steps", id: "steps" });
 }
 
 const kCases: RoundTripCase[] = [
@@ -178,6 +191,23 @@ const kCases: RoundTripCase[] = [
     actions: ["voxels-patched", "voxels-patched"]
   },
   {
+    name: "turns and mirrors a layer around its center",
+    seed: ground,
+    act: (world) => world.transformLayer("Ground", { rotation: 1, flipY: true }),
+    actions: ["layer-transformed"],
+    check: (remote) => assert.equal(remote.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2)
+  },
+  {
+    name: "folds a layer transform into the transaction patch",
+    seed: ground,
+    act: (world) => world.transaction(() => {
+      world.setVoxel("Ground", { position: { x: 0, y: 0, z: 1 }, blockId: 3 });
+      world.transformLayer("Ground", { rotation: 2 });
+    }),
+    actions: ["voxels-patched"],
+    check: (remote) => assert.equal(remote.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 3)
+  },
+  {
     name: "clones a layer, voxels included, under a derived name",
     seed: (world) => {
       world.addLayer("Bottom");
@@ -250,6 +280,42 @@ const kCases: RoundTripCase[] = [
       remote.objectLayers.get("To")?.objects.map((object) => object.id),
       ["obj1"]
     )
+  },
+  {
+    name: "creates a template from a layer",
+    seed: ground,
+    act: (world) => world.templates.createFromLayer("Ground", { name: "Steps" }),
+    actions: ["template-defined"],
+    check: (remote) => assert.equal(remote.templates.get("template_0")?.voxelCount, 2)
+  },
+  {
+    name: "updates a template",
+    seed: steps,
+    act: (world) => world.templates.update("steps", { name: "Stairs", properties: { tag: "x" } }),
+    actions: ["template-updated"]
+  },
+  {
+    name: "removes a template",
+    seed: steps,
+    act: (world) => world.templates.remove("steps"),
+    actions: ["template-removed"]
+  },
+  {
+    name: "turns a stored template",
+    seed: steps,
+    act: (world) => world.templates.transform("steps", { rotation: 1 }),
+    actions: ["template-defined"],
+    check: (remote) => assert.deepEqual(remote.templates.get("steps")?.size, { x: 1, y: 1, z: 2 })
+  },
+  {
+    name: "places a turned template as a voxel patch",
+    seed: steps,
+    act: (world) => world.templates.place("steps", {
+      layerName: "Ground",
+      position: { x: 5, y: 0, z: 5 },
+      transform: { rotation: 3, flipY: true }
+    }),
+    actions: ["voxels-patched"]
   }
 ];
 
@@ -271,11 +337,12 @@ describe("command round-trip", () => {
     });
   }
 
-  it("covers every layer command action", () => {
-    const covered = new Set(kCases.flatMap(({ actions }) => actions));
+  it("covers every layer and template command action", () => {
+    const covered = new Set<string>(kCases.flatMap(({ actions }) => actions));
 
     assert.deepEqual(
-      VOXEL_LAYER_COMMAND_ACTIONS.filter((action) => !covered.has(action)),
+      [...VOXEL_LAYER_COMMAND_ACTIONS, ...VOXEL_TEMPLATE_COMMAND_ACTIONS]
+        .filter((action) => !covered.has(action)),
       []
     );
   });

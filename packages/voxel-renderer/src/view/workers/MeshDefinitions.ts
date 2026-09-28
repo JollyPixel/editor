@@ -10,6 +10,8 @@ import type { ResolvedBlockDefinition } from "../../document/blocks/BlockDefinit
 import type { FaceDefinition } from "../../document/blocks/face/index.ts";
 import type { TilesetAtlases } from "../atlases/TilesetAtlases.ts";
 import type { ResolvedTilesetDefinition } from "../../document/tilesets/types.ts";
+import type { BlendGroupJSON } from "../../document/materials/BlendGroup.ts";
+import type { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
 import { FACES } from "../../document/geometry/faceDirection.ts";
 
 export interface MeshShapeDefinition {
@@ -29,6 +31,7 @@ export interface MeshDefinitions {
   blocks: ResolvedBlockDefinition[];
   shapes: MeshShapeDefinition[];
   tilesets: MeshTilesetDefinitions;
+  blendGroups: BlendGroupJSON[];
   alphaTest: number;
 }
 
@@ -36,15 +39,22 @@ export interface MeshDefinitionSources {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
   atlases: TilesetAtlases;
+  blendGroups?: BlendGroupList;
   alphaTest: number;
 }
 
 export function meshDefinitionsVersion(
   sources: MeshDefinitionSources
 ): string {
-  const { blockRegistry, shapeRegistry, atlases } = sources;
+  const {
+    blockRegistry,
+    shapeRegistry,
+    atlases,
+    blendGroups
+  } = sources;
 
-  return `${blockRegistry.version}:${shapeRegistry.version}:${atlases.version}`;
+  return `${blockRegistry.version}:${shapeRegistry.version}:${atlases.version}:` +
+    `${blendGroups?.version ?? 0}`;
 }
 
 export function captureMeshDefinitions(
@@ -54,6 +64,7 @@ export function captureMeshDefinitions(
     blockRegistry,
     shapeRegistry,
     atlases,
+    blendGroups,
     alphaTest
   } = sources;
   const { tilesets } = atlases;
@@ -73,6 +84,7 @@ export function captureMeshDefinitions(
       declared: [...tilesets.ids()],
       loaded
     },
+    blendGroups: blendGroups?.toJSON() ?? [],
     alphaTest
   };
 }

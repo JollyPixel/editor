@@ -24,6 +24,8 @@ import {
 } from "./VoxelHistory.ts";
 import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
 import { MaterialGroupList } from "./materials/MaterialGroupList.ts";
+import type { BlendGroupJSON } from "./materials/BlendGroup.ts";
+import { BlendGroupList } from "./materials/BlendGroupList.ts";
 import {
   deserializeVoxelWorld,
   serializeVoxelWorld
@@ -32,14 +34,18 @@ import type { VoxelWorldJSON } from "./serialization/types.ts";
 import { TilesetList } from "./tilesets/TilesetList.ts";
 import type { TilesetDefinition } from "./tilesets/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../VoxelLogger.ts";
-import { VoxelWorld } from "./world/VoxelWorld.ts";
+import {
+  VoxelWorld,
+  type VoxelMergeAllLayersOptions
+} from "./world/VoxelWorld.ts";
 import { DEFAULT_CHUNK_SIZE } from "./world/storage/VoxelChunk.ts";
 
 export interface VoxelLoadOptions {
   /**
    * Collapses layers before rendering; higher-priority voxels win overlaps.
+   * Layers named in `except` stay apart and split the merge around them.
    */
-  mergeLayers?: boolean;
+  mergeLayers?: boolean | VoxelMergeAllLayersOptions;
 
   /**
    * Tileset definitions declared before loading a world that uses them.
@@ -80,6 +86,12 @@ export interface VoxelDocumentOptions {
   materialGroups?: Iterable<MaterialGroupJSON>;
 
   /**
+   * Blend groups the blocks can name through `blendGroup`.
+   * @default []
+   */
+  blendGroups?: Iterable<BlendGroupJSON>;
+
+  /**
    * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
    */
   history?: VoxelHistoryOptions;
@@ -96,9 +108,10 @@ export interface VoxelDocumentOptions {
 }
 
 /**
- * A world with the blocks and material groups its tilesets project into it.
- * Saving and loading cover the world and its tileset links only; blocks and
- * material groups are runtime state a host fills from tileset documents.
+ * A world with the blocks, material groups and blend groups its tilesets
+ * project into it. Saving and loading cover the world and its tileset links
+ * only; blocks and groups are runtime state a host fills from tileset
+ * documents.
  */
 export class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly world: VoxelWorld;
@@ -116,13 +129,15 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
       blocks = [],
       tilesets = [],
       materialGroups = [],
+      blendGroups = [],
       history,
       logger = NOOP_LOGGER,
       onCommand
     } = options;
     super(
       new BlockRegistry(blocks),
-      new MaterialGroupList(materialGroups)
+      new MaterialGroupList(materialGroups),
+      new BlendGroupList(blendGroups)
     );
 
     if (onCommand) {
@@ -208,7 +223,9 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     }
 
     if (options.mergeLayers) {
-      this.world.mergeAllLayers();
+      this.#mergeLayers(
+        options.mergeLayers === true ? {} : options.mergeLayers
+      );
     }
 
     this.history.clear();
@@ -221,6 +238,21 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     this.tilesets.clear();
     this.world.removeAllListeners();
     this.removeAllListeners();
+  }
+
+  #mergeLayers(
+    options: VoxelMergeAllLayersOptions
+  ): void {
+    const except = [...options.except ?? []];
+    for (const name of except) {
+      if (!this.world.getLayer(name)) {
+        this.#logger.warn(
+          `Cannot keep unknown layer '${name}' out of the merge.`
+        );
+      }
+    }
+
+    this.world.mergeAllLayers({ except });
   }
 
   protected fold(

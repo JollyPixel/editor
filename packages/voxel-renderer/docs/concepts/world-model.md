@@ -2,7 +2,8 @@
 
 A `VoxelWorld` contains named `VoxelLayer` instances. Each layer divides its
 voxel data into fixed-size `VoxelChunk` instances and stores placed objects in
-separate object layers.
+separate object layers. [Voxel templates](../api/world/VoxelTemplates.md) are
+saved with the world outside the layer stack and never drawn.
 
 ```text
 VoxelWorld
@@ -10,6 +11,7 @@ VoxelWorld
   |     +-- VoxelChunk
   |           +-- VoxelStore
   +-- VoxelObjectLayerJSON
+  +-- VoxelTemplate
 ```
 
 ## Layer compositing
@@ -41,6 +43,8 @@ or `translateLayer()` so the world recalculates cross-layer face culling.
 `localBounds()`, `worldBounds()`, and `worldCenter()` describe the content rather
 than the origin. `VoxelWorld.rebaseLayer()` moves the origin and rewrites local
 storage so content remains at the same world positions.
+`VoxelWorld.transformLayer()` turns or mirrors the content around its center
+and rewrites the voxels; a layer stores no rotation of its own.
 
 ## Ownership
 

@@ -19,6 +19,7 @@ export type BlockOverrides = Partial<
     | "side"
     | "alphaCutoff"
     | "materialGroup"
+    | "blendGroup"
     | "cullCoveredFaces"
     | "properties"
   >

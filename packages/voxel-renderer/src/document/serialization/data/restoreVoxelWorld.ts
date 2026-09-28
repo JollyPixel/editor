@@ -1,14 +1,19 @@
 // Import Internal Dependencies
-import type { VoxelLayer } from "../../world/VoxelLayer.ts";
 import type { VoxelWorld } from "../../world/VoxelWorld.ts";
+import { VoxelTemplate } from "../../world/templates/VoxelTemplate.ts";
 import { inChunkRange } from "../../world/storage/chunkKey.ts";
 import type { TilesetList } from "../../tilesets/TilesetList.ts";
 import { InvalidVoxelWorldError } from "../errors/InvalidVoxelWorldError.ts";
 import type {
   VoxelChunkData,
-  VoxelLayerData,
+  VoxelTemplateData,
   VoxelWorldData
 } from "./types.ts";
+
+interface FlatVoxels {
+  positions: Int32Array;
+  voxels: Uint32Array;
+}
 
 export function restoreVoxelWorld(
   data: VoxelWorldData,
@@ -38,30 +43,49 @@ export function restoreVoxelWorld(
       }
     }
     else {
-      loadRepartitioned(layer, layerData, data.chunkSize);
+      const { positions, voxels } = flattenChunks(
+        layerData.chunks,
+        data.chunkSize
+      );
+      layer.loadPackedVoxels(positions, voxels);
     }
   }
 
   world.objectLayers.restore(data.objectLayers);
+  world.templates.restore(data.templates.map(restoreVoxelTemplate));
 }
 
-function loadRepartitioned(
-  layer: VoxelLayer,
-  layerData: VoxelLayerData,
+export function restoreVoxelTemplate(
+  data: VoxelTemplateData
+): VoxelTemplate {
+  const { positions, voxels } = flattenChunks(data.chunks, data.chunkSize);
+
+  return new VoxelTemplate({
+    id: data.id,
+    name: data.name,
+    pivot: data.pivot,
+    properties: data.properties,
+    positions,
+    voxels
+  });
+}
+
+function flattenChunks(
+  chunks: VoxelChunkData[],
   chunkSize: number
-): void {
+): FlatVoxels {
   const shift = Math.log2(chunkSize);
   const mask = chunkSize - 1;
 
   let total = 0;
-  for (const chunk of layerData.chunks) {
+  for (const chunk of chunks) {
     total += chunk.cells.length;
   }
 
   const positions = new Int32Array(total * 3);
   const voxels = new Uint32Array(total);
   let offset = 0;
-  for (const { cx, cy, cz, cells, voxels: packed } of layerData.chunks) {
+  for (const { cx, cy, cz, cells, voxels: packed } of chunks) {
     const originX = cx * chunkSize;
     const originY = cy * chunkSize;
     const originZ = cz * chunkSize;
@@ -75,7 +99,7 @@ function loadRepartitioned(
     }
   }
 
-  layer.loadPackedVoxels(positions, voxels);
+  return { positions, voxels };
 }
 
 function assertChunksFit(

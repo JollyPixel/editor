@@ -13,10 +13,11 @@ import {
 } from "../blocks/BlockDefinition.ts";
 import { BlockTextures } from "../blocks/BlockTextures.ts";
 import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
+import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
 import type { TilesetDefinition } from "./types.ts";
 
 // CONSTANTS
-const kMaterialGroupSeparator = "/";
+const kGroupSeparator = "/";
 
 /**
  * The world-side identity a tileset's blocks are projected into.
@@ -29,7 +30,7 @@ export function projectedMaterialGroupId(
   tileset: TilesetProjection,
   groupId: string
 ): string {
-  return `${tileset.id}${kMaterialGroupSeparator}${groupId}`;
+  return `${tileset.id}${kGroupSeparator}${groupId}`;
 }
 
 /**
@@ -40,13 +41,27 @@ export function localMaterialGroupId(
   tileset: TilesetProjection,
   groupId: string
 ): string {
-  const prefix = `${tileset.id}${kMaterialGroupSeparator}`;
+  const prefix = `${tileset.id}${kGroupSeparator}`;
 
   return groupId.startsWith(prefix) ? groupId.slice(prefix.length) : groupId;
 }
 
+export function projectedBlendGroupId(
+  tileset: TilesetProjection,
+  groupId: string
+): string {
+  return projectedMaterialGroupId(tileset, groupId);
+}
+
+export function localBlendGroupId(
+  tileset: TilesetProjection,
+  groupId: string
+): string {
+  return localMaterialGroupId(tileset, groupId);
+}
+
 /**
- * Gives a tileset block its world id, tileset id and material group name.
+ * Gives a tileset block its world id, tileset id and group names.
  */
 export function projectTilesetBlock(
   tileset: TilesetProjection,
@@ -68,6 +83,9 @@ export function projectTilesetBlock(
     id: composeBlockId(tileset.slot, block.id),
     ...(block.materialGroup === undefined ? {} : {
       materialGroup: projectedMaterialGroupId(tileset, block.materialGroup)
+    }),
+    ...(block.blendGroup === undefined ? {} : {
+      blendGroup: projectedBlendGroupId(tileset, block.blendGroup)
     })
   };
 }
@@ -99,6 +117,29 @@ export function projectTilesetMaterialGroups(
   );
 }
 
+export function projectTilesetBlendGroup(
+  tileset: TilesetProjection,
+  group: BlendGroupJSON
+): BlendGroupJSON {
+  return {
+    ...group,
+    id: projectedBlendGroupId(tileset, group.id),
+    ...(group.exclude === undefined ? {} : {
+      exclude: group.exclude.map((id) => projectedBlendGroupId(tileset, id))
+    })
+  };
+}
+
+export function projectTilesetBlendGroups(
+  tileset: TilesetProjection,
+  groups: Iterable<BlendGroupJSON>
+): BlendGroupJSON[] {
+  return Array.from(
+    groups,
+    (group) => projectTilesetBlendGroup(tileset, group)
+  );
+}
+
 /**
  * Whether a world block id was projected from the tileset's slot.
  */
@@ -111,7 +152,7 @@ export function belongsToTileset(
 
 /**
  * The tileset-local block of a projected one: local id, tile references
- * naming no tileset and the local material group name.
+ * naming no tileset and the local group names.
  */
 export function localTilesetBlock(
   tileset: TilesetProjection,
@@ -122,6 +163,9 @@ export function localTilesetBlock(
     id: localBlockIdOf(block.id),
     ...(block.materialGroup === undefined ? {} : {
       materialGroup: localMaterialGroupId(tileset, block.materialGroup)
+    }),
+    ...(block.blendGroup === undefined ? {} : {
+      blendGroup: localBlendGroupId(tileset, block.blendGroup)
     })
   };
 }

@@ -8,7 +8,7 @@ import {
   type VoxelHistoryState
 } from "../../src/document/VoxelHistory.ts";
 import { VoxelWorld, type VoxelCellChange } from "../../src/document/world/index.ts";
-import type { VoxelLayerCommand } from "../../src/document/commands/index.ts";
+import type { VoxelWorldContentCommand } from "../../src/document/commands/index.ts";
 import { VoxelDocument } from "../../src/document/VoxelDocument.ts";
 
 // CONSTANTS
@@ -245,7 +245,7 @@ describe("VoxelHistory", () => {
   it("emits replayed changes as regular commands without recording them", () => {
     const { world, history } = makeHistory();
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-    const commands: VoxelLayerCommand[] = [];
+    const commands: VoxelWorldContentCommand[] = [];
     world.on("command", (command) => commands.push(command));
 
     history.undo();

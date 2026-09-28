@@ -208,16 +208,35 @@ function localMaterialGroupId(
   tileset: TilesetProjection,
   groupId: string
 ): string;
+
+function projectTilesetBlendGroup(
+  tileset: TilesetProjection,
+  group: BlendGroupJSON
+): BlendGroupJSON;
+function projectTilesetBlendGroups(
+  tileset: TilesetProjection,
+  groups: Iterable<BlendGroupJSON>
+): BlendGroupJSON[];
+function projectedBlendGroupId(
+  tileset: TilesetProjection,
+  groupId: string
+): string;
+function localBlendGroupId(
+  tileset: TilesetProjection,
+  groupId: string
+): string;
 ```
 
 `projectTilesetBlock()` gives a block the id
 [`composeBlockId(slot, block.id)`](../blocks/BlockDefinition.md#block-ids),
-names the tileset in every tile reference and prefixes its material group
-with `"<tilesetId>/"`. `localTilesetBlock()` is the inverse.
+names the tileset in every tile reference and prefixes its material and blend
+groups with `"<tilesetId>/"`. `localTilesetBlock()` is the inverse.
 `belongsToTileset()` tells whether a world block id was projected from the
-slot. Material groups are projected the same way, so two tilesets may both
-define a `"metal"` group. Register the projected blocks and groups on the
-`VoxelDocument` with `defineBlocks()` and `defineMaterialGroup()`; replay a tileset
+slot. Material and blend groups are projected the same way, so two tilesets
+may both define a `"metal"` group; a projected blend group also prefixes the
+groups it excludes. Register the projected blocks and groups on the
+`VoxelDocument` with `defineBlocks()`, `defineMaterialGroup()` and
+`defineBlendGroup()`; replay a tileset
 document's commands the same way to keep a world in step with it.
 
 ## Rescaling and tile rectangles

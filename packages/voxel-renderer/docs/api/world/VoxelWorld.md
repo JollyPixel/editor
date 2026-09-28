@@ -1,6 +1,6 @@
 # VoxelWorld
 
-`VoxelWorld` owns voxel layers, object layers, and chunk lifecycle. Read
+`VoxelWorld` owns voxel layers, object layers, templates, and chunk lifecycle. Read
 [the world model](../../concepts/world-model.md) for the ownership and compositing
 rules.
 
@@ -81,8 +81,12 @@ Other sizes throw a `RangeError`.
 
 ```ts
 readonly chunkSize: number;
+readonly objectLayers: VoxelObjectLayers;
+readonly templates: VoxelTemplates;
 recorder: VoxelEditRecorder | null;
 ```
+
+`templates` holds the world's [voxel templates](./VoxelTemplates.md).
 
 `recorder` receives the cells changed by each non-silent `setVoxel`,
 `removeVoxel`, `setVoxelBulk` and `removeVoxelBulk` call, read before the
@@ -106,11 +110,14 @@ interface VoxelCellChange {
 
 ```ts
 type VoxelWorldEvents = {
-  command: (command: VoxelLayerCommand) => void;
+  command: (command: VoxelWorldContentCommand) => void;
 };
+
+type VoxelWorldContentCommand = VoxelLayerCommand | VoxelTemplateCommand;
 ```
 
-Every mutating method below emits a [layer command](../core/commands.md#layer-commands)
+Every mutating method below emits a [layer command](../core/commands.md#layer-commands),
+and every template change a [template command](../core/commands.md#template-commands),
 on `"command"`, so an editor or a network adapter can mirror local edits
 without wrapping the world. [`VoxelDocument`](../core/VoxelDocument.md#events)
 forwards these as local commands. The exceptions are `restoreLayer`,
@@ -186,6 +193,26 @@ Moves the layer origin to `position` while preserving every voxel's world-space
 location. Local chunk storage is rewritten and all layers are marked dirty.
 No-op if the layer is not found.
 
+#### `transformLayer(name: string, transform: VoxelTransformOptions): void`
+
+Turns and mirrors every voxel of the layer around the center of its voxel
+bounds, so the content stays where it is. Each cell's offset from the center
+goes through [`transformOffset()`](./VoxelTransform.md#methods) and each voxel's
+own transform becomes `voxelTransform.followedBy(transform)`, so turned blocks
+keep facing the right way. The layer position is unchanged and plays no part.
+
+When one of the X and Z extents is odd and the other even, a quarter turn
+around the exact center would land between cells. The pivot then moves half a
+cell to a fixed grid of points that every later turn or flip of the layer
+reuses, so any sequence that composes to the identity (four quarter turns, a
+turn and its inverse, a flip twice) restores the voxels exactly. In that case
+a 180° turn or a flip along the moved axis also shifts the content by one cell.
+
+The voxels are rewritten, so the change is one
+[history](../core/VoxelHistory.md) step and emits one `"layer-transformed"`
+command, or a `"voxels-patched"` command inside a `transaction()`. No-op, with
+no command, for the identity transform, an empty layer or an unknown layer.
+
 #### `getLayer(name: string): VoxelLayer | undefined`
 
 #### `getLayers(): readonly VoxelLayer[]`
@@ -225,11 +252,25 @@ The target keeps its own `visible` and position. The source's
 `properties` are folded in behind the target's, so keys already present on the
 target win and the rest carry over.
 
-#### `mergeAllLayers(): VoxelLayer | null`
+#### `mergeAllLayers(options?: VoxelMergeAllLayersOptions): VoxelLayer[]`
 
-Collapses all voxel layers into the lowest-order layer. Higher-order voxels win at
-overlapping world positions, and every other voxel layer is removed. Returns `null`
-for an empty world.
+```ts
+interface VoxelMergeAllLayersOptions {
+  except?: Iterable<string>;
+}
+```
+
+Collapses the voxel layers into the lowest-order layer. Higher-order voxels win at
+overlapping world positions, and every other merged layer is removed. Properties
+of the removed layers are folded in behind the target's, as with `mergeLayer`.
+
+Layers named in `except` are left alone and keep their place in the stack. Each
+unbroken run of layers between them merges on its own into the lowest layer of
+that run, so a kept layer still covers the layers below it and stays covered by
+the ones above it. Names that match no layer are ignored.
+
+Returns the resulting layers, highest `order` first: one per run, or an empty
+array for an empty world or when every layer is excluded.
 
 #### `getVoxelAt(position: THREE.Vector3Like): VoxelEntry | undefined`
 
@@ -382,7 +423,7 @@ Marks every chunk of every layer dirty for rebuild.
 
 #### `clear(): void`
 
-Removes all voxel layers and object layers.
+Removes all voxel layers, object layers and templates.
 
 ### Block counts
 
@@ -406,9 +447,9 @@ Voxels of `blockId` across all layers; `0` when none.
 
 ### Commands
 
-#### `apply(command: VoxelLayerCommand, logger?: VoxelLogger): VoxelLayerCommand | null`
+#### `apply(command: VoxelWorldContentCommand, logger?: VoxelLogger): VoxelWorldContentCommand | null`
 
-Replays a layer command onto this world without emitting it, so a network
+Replays a layer or template command onto this world without emitting it, so a network
 adapter cannot echo it back. Every action of the union is handled; an unknown
 one throws. On a document, prefer
 [`document.apply()`](../core/VoxelDocument.md#methods), which emits it once with

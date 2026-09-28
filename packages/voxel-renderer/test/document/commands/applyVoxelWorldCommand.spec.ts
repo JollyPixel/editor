@@ -52,25 +52,32 @@ describe("applyVoxelWorldCommand - tilesets", () => {
     });
   });
 
-  it("never gives a new tileset the slot of voxels a removed one left", () => {
-    const target = makeTarget();
-    target.world.addLayer("Base");
-    target.world.setVoxel("Base", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: composeBlockId(0, 1)
-    });
-    applyVoxelWorldCommand(target, {
-      action: "tileset-removed",
-      tilesetId: "a"
-    });
+  for (const holder of ["voxels", "a template"] as const) {
+    it(`never gives a new tileset the slot of ${holder} a removed one left`, () => {
+      const target = makeTarget();
+      const position = { x: 0, y: 0, z: 0 };
+      target.world.addLayer("Base");
+      target.world.setVoxel("Base", {
+        position,
+        blockId: composeBlockId(0, 1)
+      });
+      if (holder === "a template") {
+        target.world.templates.createFromLayer("Base", { name: "Kept" });
+        target.world.removeVoxel("Base", { position });
+      }
+      applyVoxelWorldCommand(target, {
+        action: "tileset-removed",
+        tilesetId: "a"
+      });
 
-    const added = applyVoxelWorldCommand(target, {
-      action: "tileset-added",
-      tileset: { id: "c", asset: { id: "a1", kind: "tileset" } }
-    });
+      const added = applyVoxelWorldCommand(target, {
+        action: "tileset-added",
+        tileset: { id: "c", asset: { id: "a1", kind: "tileset" } }
+      });
 
-    assert.equal(added?.action === "tileset-added" && added.tileset.slot, 2);
-  });
+      assert.equal(added?.action === "tileset-added" && added.tileset.slot, 2);
+    });
+  }
 
   it("returns null for a refused add or an unknown removal", () => {
     const target = makeTarget();

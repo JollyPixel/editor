@@ -17,10 +17,13 @@ import type {
 } from "../blocks/BlockDefinition.ts";
 import type { TilesetDefinition } from "../tilesets/types.ts";
 import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
+import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
 import type {
   VoxelObjectLayerJSON,
   VoxelObjectJSON
 } from "../world/objects/types.ts";
+import type { VoxelTemplatePatch } from "../world/templates/types.ts";
+import type { VoxelTemplateJSON } from "../serialization/types.ts";
 
 export type VoxelLayerStructureCommand =
   | {
@@ -121,6 +124,16 @@ export type VoxelEditCommand =
     metadata: {
       cells: VoxelPatchCells;
     };
+  }
+  | {
+    action: "layer-transformed";
+    layerName: string;
+    metadata: {
+      rotation: number;
+      flipX: boolean;
+      flipZ: boolean;
+      flipY: boolean;
+    };
   };
 
 export type VoxelObjectLayerCommand =
@@ -180,6 +193,23 @@ export type VoxelLayerCommand =
 
 export type VoxelLayerCommandAction = VoxelLayerCommand["action"];
 
+export type VoxelTemplateCommand =
+  | {
+    action: "template-defined";
+    template: VoxelTemplateJSON;
+  }
+  | {
+    action: "template-updated";
+    templateId: string;
+    patch: VoxelTemplatePatch;
+  }
+  | {
+    action: "template-removed";
+    templateId: string;
+  };
+
+export type VoxelTemplateCommandAction = VoxelTemplateCommand["action"];
+
 export type VoxelBlockCommand =
   | {
     action: "block-defined";
@@ -222,20 +252,41 @@ export type VoxelMaterialGroupCommand =
 export type VoxelMaterialGroupCommandAction =
   VoxelMaterialGroupCommand["action"];
 
+export type VoxelBlendGroupCommand =
+  | {
+    action: "blend-group-defined";
+    group: BlendGroupJSON;
+  }
+  | {
+    action: "blend-group-removed";
+    groupId: string;
+  };
+
+export type VoxelBlendGroupCommandAction = VoxelBlendGroupCommand["action"];
+
 export type VoxelCommand =
   | VoxelLayerCommand
+  | VoxelTemplateCommand
   | VoxelBlockCommand
   | VoxelTilesetCommand
-  | VoxelMaterialGroupCommand;
+  | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand;
 
 export type VoxelCommandAction = VoxelCommand["action"];
 
 /**
- * Commands a world persists and shares: its layers and its tileset links.
- * Blocks and material groups belong to the tilesets.
+ * Commands a `VoxelWorld` applies and emits: its layers and templates.
+ */
+export type VoxelWorldContentCommand =
+  | VoxelLayerCommand
+  | VoxelTemplateCommand;
+
+/**
+ * Commands a world persists and shares: its content and its tileset links.
+ * Blocks, material groups and blend groups belong to the tilesets.
  */
 export type VoxelWorldCommand =
-  | VoxelLayerCommand
+  | VoxelWorldContentCommand
   | VoxelTilesetCommand;
 
 export type VoxelWorldCommandAction = VoxelWorldCommand["action"];
@@ -246,12 +297,13 @@ export type TilesetTileSizeCommand = {
 };
 
 /**
- * Commands a tileset document applies to its own blocks, material groups
- * and tile size.
+ * Commands a tileset document applies to its own blocks, material groups,
+ * blend groups and tile size.
  */
 export type TilesetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
+  | VoxelBlendGroupCommand
   | TilesetTileSizeCommand;
 
 export type TilesetDocumentCommandAction = TilesetDocumentCommand["action"];

@@ -1,6 +1,7 @@
 # TilesetDocument
 
-The blocks, material groups and tile size of one tileset, with the command
+The blocks, material groups, blend groups and tile size of one tileset, with
+the command
 stream that carries edits to them. A tileset document is what a shared
 tileset asset holds beside its pixels; a world links the tileset and projects
 the document's blocks into its own block ids through the tileset's
@@ -38,12 +39,16 @@ interface TilesetDocumentOptions {
   blocks?: Iterable<BlockDefinition>;
   /** Material groups the blocks can name through `materialGroup`. */
   materialGroups?: Iterable<MaterialGroupJSON>;
+  /** Blend groups the blocks can name through `blendGroup`. */
+  blendGroups?: Iterable<BlendGroupJSON>;
 }
 
 interface TilesetDocumentJSON {
   tileSize: number;
   blocks: ResolvedBlockDefinition[];
   materialGroups: MaterialGroupJSON[];
+  /** Missing in documents saved before blend groups; read as `[]`. */
+  blendGroups?: BlendGroupJSON[];
 }
 
 type TilesetDocumentEvents = {
@@ -54,6 +59,7 @@ type TilesetDocumentEvents = {
 class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
   readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
+  readonly blendGroups: BlendGroupList;
   readonly tileSize: number;
 
   constructor(options?: TilesetDocumentOptions);
@@ -66,6 +72,8 @@ class TilesetDocument extends BlockDocument<TilesetDocumentCommand> {
   moveBlock(blockId: number, toIndex: number): boolean;
   defineMaterialGroup(group: MaterialGroup | MaterialGroupJSON): boolean;
   removeMaterialGroup(groupId: string): boolean;
+  defineBlendGroup(group: BlendGroup | BlendGroupJSON): boolean;
+  removeBlendGroup(groupId: string): boolean;
 
   resizeTiles(tileSize: number): boolean;
 
@@ -95,13 +103,15 @@ tileset ids in its references is stored without them. The shorthands come
 from `BlockDocument`, the base [`VoxelDocument`](../core/VoxelDocument.md#methods)
 shares, and build the matching command: `defineBlock()` registers or replaces
 a block, `moveBlock()` reorders one, `defineMaterialGroup()` adds or replaces a
-group with every finish field filled in.
+group with every finish field filled in, and `defineBlendGroup()` does the
+same for a blend group.
 
 `resizeTiles()` changes the tile grid and rescales every block with
 [`rescaleTileRef()`](./tilesets.md#rescaling-and-tile-rectangles) so it keeps
 covering the same pixels; it emits `tile-size-updated`.
 
 `toJSON()` writes the blocks in registry order. `load()` replaces the tile
-size, blocks and material groups wholesale and emits `loaded`; `clear()`
+size, blocks, material groups and blend groups wholesale and emits
+`loaded`; `clear()`
 loads an empty document with the given tile size (default
 `DEFAULT_TILE_SIZE`).

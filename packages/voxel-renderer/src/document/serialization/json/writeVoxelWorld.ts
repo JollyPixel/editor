@@ -12,14 +12,22 @@ import {
 import {
   VOXEL_WORLD_VERSION,
   type VoxelChunkJSON,
+  type VoxelEntryJSON,
   type VoxelLayerJSON,
+  type VoxelTemplateJSON,
   type VoxelWorldJSON
 } from "../types.ts";
 import type {
   VoxelChunkData,
   VoxelLayerData,
+  VoxelTemplateData,
   VoxelWorldData
 } from "../data/types.ts";
+
+interface VoxelGridJSON {
+  palette: VoxelEntryJSON[];
+  chunks: VoxelChunkJSON[];
+}
 
 export function writeVoxelWorld(
   data: VoxelWorldData
@@ -31,7 +39,8 @@ export function writeVoxelWorld(
     layers: data.layers.map(
       (layer) => writeVoxelLayer(layer, data.chunkSize)
     ),
-    objectLayers: data.objectLayers
+    objectLayers: data.objectLayers,
+    templates: data.templates.map(writeVoxelTemplate)
   };
 }
 
@@ -40,11 +49,32 @@ export function writeVoxelLayer(
   chunkSize: number
 ): VoxelLayerJSON {
   const { chunks, ...metadata } = layer;
+
+  return {
+    ...metadata,
+    ...writeVoxelGrid(chunks, chunkSize)
+  };
+}
+
+export function writeVoxelTemplate(
+  template: VoxelTemplateData
+): VoxelTemplateJSON {
+  const { chunks, ...metadata } = template;
+
+  return {
+    ...metadata,
+    ...writeVoxelGrid(chunks, template.chunkSize)
+  };
+}
+
+function writeVoxelGrid(
+  chunks: VoxelChunkData[],
+  chunkSize: number
+): VoxelGridJSON {
   const cellCount = chunkSize ** 3;
   const palette = buildPalette(chunks.map((chunk) => chunk.voxels));
 
   return {
-    ...metadata,
     palette: palette.entries.map((packed) => {
       return {
         block: voxelBlockId(packed),

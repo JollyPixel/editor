@@ -26,7 +26,10 @@ import {
   generateTerrain,
   type TerrainStats
 } from "./noise-world/terrain.ts";
-import { createTerrainTileset } from "./noise-world/terrainAtlas.ts";
+import {
+  createTerrainTileset,
+  TERRAIN_BLEND_GROUPS
+} from "./noise-world/terrainAtlas.ts";
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";
@@ -69,6 +72,7 @@ const kFogDensityScale = 0.001;
 const kDefaultViewChunks = 8;
 const kFarChunks = 14;
 const kMaxDetailChunks = 40;
+const kMaxBlendWidth = 64;
 
 interface WorldSettings {
   size: number;
@@ -128,7 +132,8 @@ const voxelMap = world.createActor("map")
     document: {
       chunkSize: settings.chunkSize,
       layers: [kTerrainLayer],
-      blocks: tileset.blocks
+      blocks: tileset.blocks,
+      blendGroups: TERRAIN_BLEND_GROUPS
     },
     tilesets,
     rendering: {
@@ -191,6 +196,8 @@ const controls = {
   ambientOcclusion: true,
   shadows: daylight.shadows,
   alphaToCoverage: voxels.rendering.alphaToCoverage,
+  blending: true,
+  blendSpread: 1,
   traa: true
 };
 const traaPipeline = temporalAntialiasing();
@@ -323,6 +330,17 @@ controlsFolder
 controlsFolder
   .addBinding(controls, "traa", { label: "TRAA [T]" })
   .on("change", ({ value }) => setTemporalAntialiasing(value));
+controlsFolder
+  .addBinding(controls, "blending", { label: "tile blending [B]" })
+  .on("change", ({ value }) => setTileBlending(value));
+controlsFolder
+  .addBinding(controls, "blendSpread", {
+    min: 0.25,
+    max: 2,
+    step: 0.25,
+    label: "blend spread"
+  })
+  .on("change", () => setTileBlending(controls.blending));
 
 runtime.metrics.addSource(voxels.inspector);
 await runtime.mountMetricsPanel({
@@ -365,7 +383,38 @@ document.addEventListener("keydown", (event) => {
     setTemporalAntialiasing(!controls.traa);
     pane.refresh();
   }
+
+  if (event.code === "KeyB") {
+    setTileBlending(!controls.blending);
+    pane.refresh();
+  }
 });
+
+function setTileBlending(
+  enabled: boolean
+): void {
+  controls.blending = enabled;
+  for (const group of TERRAIN_BLEND_GROUPS) {
+    if (enabled) {
+      voxels.document.defineBlendGroup({
+        ...group,
+        width: blendWidth(group.width)
+      });
+    }
+    else {
+      voxels.document.removeBlendGroup(group.id);
+    }
+  }
+}
+
+function blendWidth(
+  width = 8
+): number {
+  return Math.min(
+    kMaxBlendWidth,
+    Math.max(1, Math.round(width * controls.blendSpread))
+  );
+}
 
 function rebuild(
   seed: number

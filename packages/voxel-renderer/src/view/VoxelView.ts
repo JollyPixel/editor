@@ -9,6 +9,7 @@ import type {
   VoxelColliderFactory
 } from "./collision/VoxelCollider.ts";
 import {
+  isVoxelBlendGroupCommand,
   isVoxelMaterialGroupCommand,
   isVoxelTilesetCommand
 } from "../document/commands/categories.ts";
@@ -144,7 +145,8 @@ export class VoxelView {
     }
     else if (
       command.action === "block-defined" ||
-      command.action === "block-removed"
+      command.action === "block-removed" ||
+      isVoxelBlendGroupCommand(command)
     ) {
       this.markAllChunksDirty(command.action);
     }
@@ -187,7 +189,12 @@ export class VoxelView {
       alphaTest = 0.1
     } = rendering;
     const { budgetMs = 8, workers } = meshing;
-    const { world, blocks, materialGroups } = document;
+    const {
+      world,
+      blocks,
+      materialGroups,
+      blendGroups
+    } = document;
 
     this.document = document;
     this.root.name = "VoxelView";
@@ -221,6 +228,7 @@ export class VoxelView {
       blockRegistry: blocks,
       shapeRegistry: this.shapes,
       atlases: this.atlases,
+      blendGroups,
       alphaTest,
       faceTemplates: this.#faceTemplates,
       logger: this.#logger
@@ -259,6 +267,7 @@ export class VoxelView {
           blockRegistry: blocks,
           shapeRegistry: this.shapes,
           atlases: this.atlases,
+          blendGroups,
           alphaTest
         },
         logger: this.#logger,

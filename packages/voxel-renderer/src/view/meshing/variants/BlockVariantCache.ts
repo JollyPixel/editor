@@ -13,6 +13,7 @@ import { MISSING_TILESET_ID } from "../../../document/tilesets/missingTileset.ts
 import type { FaceDefinition } from "../../../document/blocks/face/index.ts";
 import { BlockTextures } from "../../../document/blocks/BlockTextures.ts";
 import { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
+import type { BlendGroupList } from "../../../document/materials/BlendGroupList.ts";
 import {
   cullsCoveredFaces,
   type ResolvedBlockDefinition
@@ -76,6 +77,7 @@ export interface BlockVariantCacheOptions {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
   atlases: TilesetResolver;
+  blendGroups?: BlendGroupList;
   /**
    * Receives a warning for each `faceTextures` key no slot of the block's
    * shape can use.
@@ -90,6 +92,7 @@ export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
   #atlases: TilesetResolver;
+  #blendGroups: BlendGroupList | undefined;
   #alphaTest: number;
   #logger: VoxelLogger;
   #checkedSlots = new WeakMap<ResolvedBlockDefinition, BlockShape>();
@@ -111,6 +114,7 @@ export class BlockVariantCache {
   #blockVersion = -1;
   #shapeVersion = -1;
   #tilesetVersion = -1;
+  #blendVersion = -1;
 
   constructor(
     options: BlockVariantCacheOptions
@@ -118,6 +122,7 @@ export class BlockVariantCache {
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
     this.#atlases = options.atlases;
+    this.#blendGroups = options.blendGroups;
     this.#alphaTest = options.alphaTest ?? 0.1;
     this.#logger = options.logger ?? NOOP_LOGGER;
   }
@@ -126,11 +131,13 @@ export class BlockVariantCache {
     const blockVersion = this.#blockRegistry.version;
     const shapeVersion = this.#shapeRegistry.version;
     const tilesetVersion = this.#atlases.version;
+    const blendVersion = this.#blendGroups?.version ?? 0;
 
     if (
       blockVersion === this.#blockVersion &&
       shapeVersion === this.#shapeVersion &&
-      tilesetVersion === this.#tilesetVersion
+      tilesetVersion === this.#tilesetVersion &&
+      blendVersion === this.#blendVersion
     ) {
       return;
     }
@@ -138,6 +145,7 @@ export class BlockVariantCache {
     this.#blockVersion = blockVersion;
     this.#shapeVersion = shapeVersion;
     this.#tilesetVersion = tilesetVersion;
+    this.#blendVersion = blendVersion;
     this.#variants.clear();
     this.#slots.clear();
     this.#geometryKeys.length = 0;
@@ -240,6 +248,14 @@ export class BlockVariantCache {
     }));
   }
 
+  blendedSlotOf(
+    slot: number
+  ): number {
+    const key = this.#geometryKeys[slot];
+
+    return this.#slotFor(key.tilesetId, key.surface, true);
+  }
+
   frontFaceOf(
     face: BlockVariantFace
   ): BlockVariantFace {
@@ -276,9 +292,10 @@ export class BlockVariantCache {
 
   #slotFor(
     tilesetId: string,
-    surface: BlockSurface
+    surface: BlockSurface,
+    blended = false
   ): number {
-    const geometryKey = new ChunkGeometryKey(tilesetId, surface);
+    const geometryKey = new ChunkGeometryKey(tilesetId, surface, blended);
     const key = geometryKey.toString();
 
     let slot = this.#slots.get(key);
@@ -392,7 +409,10 @@ export class BlockVariantCache {
       occlusionMask: surface.occludes ? selfOcclusionMask : 0,
       selfOcclusionMask,
       keepsCoveredFaces: !cullsCoveredFaces(blockDef),
-      surface
+      surface,
+      blend: surface.occludes && blockDef.blendGroup !== undefined ?
+        this.#blendGroups?.get(blockDef.blendGroup) ?? null :
+        null
     };
   }
 

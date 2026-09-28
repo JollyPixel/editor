@@ -57,6 +57,11 @@ function makeRichWorld(): VoxelWorld {
   glass.visible = false;
   glass.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
   world.objectLayers.add("Spawns");
+  world.templates.createFromLayer("Ground", {
+    name: "House",
+    id: "house",
+    properties: { tag: "home" }
+  });
 
   return world;
 }
@@ -72,6 +77,7 @@ describe("voxel world round-trip", () => {
     assert.deepEqual(serializeVoxelWorld(restored), json);
     assert.deepEqual(restored.getVoxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
     assert.equal(restored.getLayer("Glass")?.compositing, "replace");
+    assert.deepEqual(restored.templates.get("house")?.properties, { tag: "home" });
   });
 
   it("widens the chunk bounds over every restored voxel", () => {
@@ -146,7 +152,7 @@ describe("serializeVoxelWorld", () => {
 
     assert.deepEqual(
       Object.keys(json).sort(),
-      ["chunkSize", "layers", "objectLayers", "tilesets", "version"]
+      ["chunkSize", "layers", "objectLayers", "templates", "tilesets", "version"]
     );
   });
 
@@ -395,6 +401,35 @@ describe("deserializeVoxelWorld", () => {
     );
     assert.deepEqual(world.getLayers().map(({ name }) => name), ["Existing"]);
     assert.equal(tilesets.has("atlas"), true);
+  });
+
+  it("reads a template in the chunk size it was saved with", () => {
+    const world = new VoxelWorld(16);
+    deserializeVoxelWorld(untrusted(emptyDocument({
+      templates: [{
+        id: "t1",
+        name: "Pair",
+        pivot: { x: 5, y: 0, z: 0 },
+        chunkSize: 4,
+        palette: [
+          { block: 1, transform: 0 },
+          { block: 2, transform: 5 }
+        ],
+        chunks: [
+          { at: [0, 0, 0], cells: [0], runs: [1, 1] },
+          { at: [1, 0, 0], cells: [1], runs: [1, 2] }
+        ]
+      }]
+    })), world);
+
+    const template = world.templates.get("t1");
+    assert.ok(template !== undefined);
+    assert.deepEqual(
+      Array.from(template.localVoxels(), ([x, y, z, packed]) => [x, y, z, voxelBlockId(packed)]),
+      [[0, 0, 0, 1], [5, 0, 0, 2]]
+    );
+    assert.deepEqual(template.pivot, { x: 5, y: 0, z: 0 });
+    assert.equal(serializeVoxelWorld(world).templates?.[0].chunkSize, 16);
   });
 
   it("applies the serialized layer position to local voxel keys", () => {

@@ -6,9 +6,16 @@ import type {
 import type { ChunkMeshPass } from "./ChunkMesher.ts";
 import { FACE_OFFSETS } from "../../document/geometry/faceDirection.ts";
 import { AO_UNOCCLUDED } from "./ambientOcclusion.ts";
+import {
+  FACE_BLEND_OFFSETS,
+  type FaceBlendNeighbours
+} from "./faceBlend.ts";
 
 export class FaceEmitter {
   #pass: ChunkMeshPass;
+  #neighbours: FaceBlendNeighbours = new Array(FACE_BLEND_OFFSETS.length)
+    .fill(null);
+  #position: [number, number, number] = [0, 0, 0];
 
   constructor(
     pass: ChunkMeshPass
@@ -61,7 +68,18 @@ export class FaceEmitter {
       AO_UNOCCLUDED;
 
     if (!face.splittable) {
-      bufferFor(face.slot).addFace(face, wx, wy, wz, ao);
+      const position = this.#position;
+      position[0] = wx;
+      position[1] = wy;
+      position[2] = wz;
+      const blended = variant.blend !== null && neighbourhood.blendNeighboursAt(
+        variant,
+        face,
+        position,
+        this.#neighbours
+      );
+      bufferFor(face.slot, blended)
+        .addFace(face, wx, wy, wz, ao, blended ? this.#neighbours : undefined);
       stats.faces++;
 
       return;

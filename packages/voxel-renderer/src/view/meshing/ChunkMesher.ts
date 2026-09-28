@@ -17,7 +17,7 @@ export interface ChunkMeshPass {
   worldOriginY: number;
   worldOriginZ: number;
   stats: MeshBuildStats;
-  bufferFor: (slot: number) => PulledFaceBuffer;
+  bufferFor: (slot: number, blended?: boolean) => PulledFaceBuffer;
   ambientOcclusion: boolean;
 }
 

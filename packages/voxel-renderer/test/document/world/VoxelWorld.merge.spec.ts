@@ -167,9 +167,9 @@ describe("VoxelWorld — mergeAllLayers", () => {
 
     const merged = world.mergeAllLayers();
 
-    assert.ok(merged);
-    assert.equal(world.getLayers().length, 1);
-    assert.deepEqual(merged.getVoxelAt({ x: 0, y: 0, z: 0 }), winner);
+    assert.equal(merged.length, 1);
+    assert.deepEqual(world.getLayers(), merged);
+    assert.deepEqual(merged[0].getVoxelAt({ x: 0, y: 0, z: 0 }), winner);
   });
 
   it("hands back the only layer untouched", () => {
@@ -178,12 +178,76 @@ describe("VoxelWorld — mergeAllLayers", () => {
     const entry = makeVoxelEntry(2, 0);
     writeVoxel(world, "Only", { x: 0, y: 0, z: 0 }, entry);
 
-    assert.equal(world.mergeAllLayers(), layer);
+    assert.deepEqual(world.mergeAllLayers(), [layer]);
     assert.equal(world.getLayers().length, 1);
     assert.deepEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), entry);
   });
 
   it("has nothing to merge in an empty world", () => {
-    assert.equal(new VoxelWorld(4).mergeAllLayers(), null);
+    assert.deepEqual(new VoxelWorld(4).mergeAllLayers(), []);
+  });
+
+  it("folds merged-away properties behind the target's own", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Base", { properties: { biome: "forest" } });
+    world.addLayer("Top", { properties: { biome: "desert", seed: 7 } });
+
+    const [merged] = world.mergeAllLayers();
+
+    assert.deepEqual(merged.properties, { biome: "forest", seed: 7 });
+  });
+
+  it("merges the layers on each side of an excluded one separately", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    world.addLayer("Ground");
+    const water = world.addLayer("Water");
+    const decor = world.addLayer("Decor");
+    world.addLayer("Top");
+
+    const merged = world.mergeAllLayers({ except: ["Water"] });
+
+    assert.deepEqual(merged, [decor, base]);
+    assert.deepEqual(world.getLayers(), [decor, water, base]);
+  });
+
+  it("keeps an excluded layer between the layers it sat between", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Base");
+    world.addLayer("Ground");
+    world.addLayer("Water");
+    world.addLayer("Decor");
+    world.addLayer("Top");
+    const overGround = { x: 0, y: 0, z: 0 };
+    const underTop = { x: 1, y: 0, z: 0 };
+    const water = makeVoxelEntry(5, 0);
+    const top = makeVoxelEntry(9, 0);
+    writeVoxel(world, "Ground", overGround, makeVoxelEntry(1, 0));
+    writeVoxel(world, "Water", overGround, water);
+    writeVoxel(world, "Water", underTop, makeVoxelEntry(5, 0));
+    writeVoxel(world, "Top", underTop, top);
+
+    world.mergeAllLayers({ except: ["Water"] });
+
+    assert.equal(world.getLayers().length, 3);
+    assert.deepEqual(world.getVoxelAt(overGround), water);
+    assert.deepEqual(world.getVoxelAt(underTop), top);
+  });
+
+  it("merges nothing when every layer is excluded", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    const top = world.addLayer("Top");
+
+    assert.deepEqual(world.mergeAllLayers({ except: ["Base", "Top"] }), []);
+    assert.deepEqual(world.getLayers(), [top, base]);
+  });
+
+  it("ignores excluded names that match no layer", () => {
+    const world = new VoxelWorld(4);
+    const base = world.addLayer("Base");
+    world.addLayer("Top");
+
+    assert.deepEqual(world.mergeAllLayers({ except: ["NoSuch"] }), [base]);
   });
 });

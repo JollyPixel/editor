@@ -2,11 +2,14 @@
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
 import { tilesetSlotOf } from "../blocks/BlockId.ts";
 import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
+import type { BlendGroupList } from "../materials/BlendGroupList.ts";
 import type { TilesetList } from "../tilesets/TilesetList.ts";
 import {
+  isVoxelBlendGroupCommand,
   isVoxelBlockCommand,
   isVoxelLayerCommand,
-  isVoxelMaterialGroupCommand
+  isVoxelMaterialGroupCommand,
+  isVoxelTemplateCommand
 } from "./categories.ts";
 import type {
   VoxelCommand,
@@ -23,6 +26,7 @@ export interface VoxelWorldCommandTarget {
 export interface VoxelCommandTarget extends VoxelWorldCommandTarget {
   readonly blocks: BlockRegistry;
   readonly materialGroups: MaterialGroupList;
+  readonly blendGroups: BlendGroupList;
 }
 
 /**
@@ -36,13 +40,16 @@ export function applyVoxelWorldCommand(
   logger?: VoxelLogger
 ): VoxelWorldCommand | null {
   const { world, tilesets } = target;
-  if (isVoxelLayerCommand(command)) {
+  if (isVoxelLayerCommand(command) || isVoxelTemplateCommand(command)) {
     return world.apply(command, logger);
   }
 
   return tilesets.apply(
     command,
-    () => Array.from(world.countBlocks().keys(), tilesetSlotOf)
+    () => [
+      ...world.countBlocks().keys(),
+      ...world.templates.countBlocks().keys()
+    ].map(tilesetSlotOf)
   );
 }
 
@@ -60,6 +67,9 @@ export function applyVoxelCommand(
   }
   if (isVoxelMaterialGroupCommand(command)) {
     return target.materialGroups.apply(command);
+  }
+  if (isVoxelBlendGroupCommand(command)) {
+    return target.blendGroups.apply(command);
   }
 
   return applyVoxelWorldCommand(target, command, logger);

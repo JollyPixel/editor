@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { Vector3Like } from "three";
+
 // CONSTANTS
 const kRotationMask = 0b11;
 const kFlipXBit = 0b100;
@@ -5,6 +8,18 @@ const kFlipZBit = 0b1000;
 const kFlipYBit = 0b10000;
 const kVariantCount = 32;
 const kInterned = new Array<VoxelTransform | undefined>(kVariantCount);
+const kRotationMatrices: readonly XzMatrix[] = [
+  [1, 0, 0, 1],
+  [0, 1, -1, 0],
+  [-1, 0, 0, -1],
+  [0, -1, 1, 0]
+];
+const kPackedByMatrix = new Uint8Array(81);
+for (let packed = kFlipXBit | kRotationMask; packed >= 0; packed--) {
+  kPackedByMatrix[matrixKey(xzMatrix(packed))] = packed;
+}
+
+type XzMatrix = readonly [number, number, number, number];
 
 export const VOXEL_TRANSFORM_MASK = kVariantCount - 1;
 
@@ -117,7 +132,61 @@ export class VoxelTransform {
     return this.packed === other.packed;
   }
 
+  /**
+   * The transform that applies this one, then `outer`.
+   */
+  followedBy(
+    outer: VoxelTransform
+  ): VoxelTransform {
+    const [ia, ib, ic, id] = xzMatrix(this.packed);
+    const [oa, ob, oc, od] = xzMatrix(outer.packed);
+    const turn = kPackedByMatrix[matrixKey([
+      (oa * ia) + (ob * ic),
+      (oa * ib) + (ob * id),
+      (oc * ia) + (od * ic),
+      (oc * ib) + (od * id)
+    ])];
+
+    return VoxelTransform.fromPacked(
+      turn | ((this.packed ^ outer.packed) & kFlipYBit)
+    );
+  }
+
+  /**
+   * Moves a cell offset, measured from the cell this transform turns around,
+   * the way the transform moves a block inside its cell.
+   */
+  transformOffset(
+    offset: Vector3Like
+  ): Vector3Like {
+    const [a, b, c, d] = xzMatrix(this.packed);
+
+    return {
+      x: (a * offset.x) + (b * offset.z),
+      y: this.flipY ? -offset.y : offset.y,
+      z: (c * offset.x) + (d * offset.z)
+    };
+  }
+
   toJSON(): number {
     return this.packed;
   }
+}
+
+function xzMatrix(
+  packed: number
+): XzMatrix {
+  const [a, b, c, d] = kRotationMatrices[packed & kRotationMask];
+  const x = (packed & kFlipXBit) === 0 ? 1 : -1;
+  const z = (packed & kFlipZBit) === 0 ? 1 : -1;
+
+  return [a * x, b * x, c * z, d * z];
+}
+
+function matrixKey(
+  matrix: XzMatrix
+): number {
+  const [a, b, c, d] = matrix;
+
+  return ((a + 1) * 27) + ((b + 1) * 9) + ((c + 1) * 3) + d + 1;
 }

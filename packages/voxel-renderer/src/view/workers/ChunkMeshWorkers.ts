@@ -3,9 +3,8 @@ import { BlockSurface } from "../../document/blocks/BlockSurface.ts";
 import {
   ChunkGeometryKey,
   MeshBuildStats,
-  PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
-  type PulledChunkGeometry,
+  PulledChunkGeometry,
   type PulledMeshData,
   type VoxelMeshBuilder
 } from "../meshing/index.ts";
@@ -441,10 +440,10 @@ export class ChunkMeshWorkers {
     const { meshBuilder } = this.#options;
     const { plan, slot } = job;
     const geometries = new Map<ChunkGeometryKey, PulledChunkGeometry>();
-    for (const { tilesetId, surface, data } of response.geometries) {
+    for (const { tilesetId, surface, blended, data } of response.geometries) {
       remapTemplates(data, slot.templateIds);
       geometries.set(
-        new ChunkGeometryKey(tilesetId, new BlockSurface(surface)),
+        new ChunkGeometryKey(tilesetId, new BlockSurface(surface), blended),
         meshBuilder.createGeometry(data)
       );
     }
@@ -493,8 +492,9 @@ function remapTemplates(
   templateIds: readonly number[]
 ): void {
   const { words, faceCount } = data;
+  const faceWords = PulledChunkGeometry.faceWordsOf(data);
   for (let face = 0; face < faceCount; face++) {
-    const index = (face * PULLED_FACE_WORDS) + 1;
+    const index = (face * faceWords) + 1;
     const packed = words[index];
     words[index] = (
       (packed & ~kTemplateMask) | templateIds[packed & kTemplateMask]

@@ -9,12 +9,9 @@ import {
   float,
   floor,
   Fn,
-  int,
   max,
   reference,
-  round,
   texture,
-  textureSize,
   varying,
   vec2,
   vec3,
@@ -28,6 +25,16 @@ import {
   aoFactorNode,
   type AoStrengthUniform
 } from "./ambientOcclusionNodes.ts";
+import {
+  atlasSize,
+  regionStart,
+  regionTexels
+} from "./atlasNodes.ts";
+import {
+  blendedTile,
+  remapTileUv,
+  type TileBlendInputs
+} from "./tileBlending.ts";
 
 // CONSTANTS
 const kMinimumWeight = 1e-6;
@@ -48,6 +55,10 @@ export interface TileInputs {
   vertexRegion: Vec4Node;
   brightness: FloatNode;
   faceBrightness: FloatNode;
+  /**
+   * Blend neighbours of a blended face; ignored by flat shading.
+   */
+  blend?: TileBlendInputs;
 }
 
 export interface TileShadingOptions {
@@ -66,6 +77,12 @@ interface TileSample {
   sampled: Vec4Node;
   texel: Vec2Node;
   position: Vec2Node;
+  region?: Vec4Node;
+}
+
+interface TexelBounds {
+  start: Vec2Node;
+  end: Vec2Node;
 }
 
 /**
@@ -83,19 +100,31 @@ export function enableTileShading(
     return;
   }
 
+  const blend = options.flat ? undefined : inputs.blend;
+  const tile = blend === undefined ?
+    undefined :
+    blendedTile(map, inputs.region, blend);
+  const region = tile?.region ?? inputs.region;
+  const uv = tile === undefined ?
+    inputs.uv :
+    remapTileUv(inputs.uv, inputs.region, region);
   const clamped = clamp(
-    inputs.uv,
-    inputs.region.xy,
-    inputs.region.xy.add(inputs.region.zw)
+    uv,
+    region.xy,
+    region.xy.add(region.zw)
   );
   const size = atlasSize(map);
+  const sampled = texture(map, clamped).level(float(0));
 
   applyTileColor(
     material,
     {
-      sampled: texture(map, clamped).level(float(0)),
+      sampled: tile === undefined ?
+        sampled :
+        vec4(sampled.rgb.mul(tile.shade), sampled.a),
       texel: inputs.uv.mul(size),
-      position: clamped.mul(size)
+      position: clamped.mul(size),
+      region: tile?.region
     },
     {
       ...options,
@@ -130,7 +159,9 @@ function applyTileColor(
       map,
       averages,
       sample,
-      inputs.vertexRegion,
+      sample.region === undefined ?
+        varyingBounds(map, inputs.vertexRegion) :
+        texelBounds(map, sample.region),
       footprint
     );
     brightness = minifiedBrightness(map, inputs, footprint);
@@ -190,12 +221,11 @@ function footprintAverage(
   map: THREE.Texture,
   averages: THREE.Texture,
   sample: TileSample,
-  tileRegion: Vec4Node,
+  bounds: TexelBounds,
   footprint: Vec2Node
 ): Vec4Node {
   const size = atlasSize(map);
-  const start = varying(regionStart(tileRegion, size));
-  const end = varying(regionStart(tileRegion, size).add(regionTexels(map, tileRegion)));
+  const { start, end } = bounds;
 
   const half = max(footprint.mul(kFootprintScale), float(1)).mul(0.5);
   const low = clamp(sample.position.sub(half), start, end);
@@ -221,6 +251,30 @@ function footprintAverage(
   );
 
   return lerp(sample.sampled, average, weight);
+}
+
+function texelBounds(
+  map: THREE.Texture,
+  tileRegion: Vec4Node
+): TexelBounds {
+  const start = regionStart(tileRegion, atlasSize(map));
+
+  return {
+    start,
+    end: start.add(regionTexels(map, tileRegion))
+  };
+}
+
+function varyingBounds(
+  map: THREE.Texture,
+  tileRegion: Vec4Node
+): TexelBounds {
+  const { start, end } = texelBounds(map, tileRegion);
+
+  return {
+    start: varying(start),
+    end: varying(end)
+  };
 }
 
 /**
@@ -305,32 +359,6 @@ function regionAverage(
   const coverage = sum.a.div(max(extent.x.mul(extent.y), float(1)));
 
   return vec4(sum.rgb.div(max(sum.a, float(kMinimumWeight))), coverage);
-}
-
-function regionStart(
-  tileRegion: Vec4Node,
-  size: Vec2Node
-): Vec2Node {
-  return round(tileRegion.xy.mul(size).sub(0.5));
-}
-
-/**
- * Size in texels of the face rect; `tileRegion` spans texel centres.
- */
-function regionTexels(
-  map: THREE.Texture,
-  tileRegion: Vec4Node
-): Vec2Node {
-  return round(tileRegion.zw.mul(atlasSize(map)).add(1));
-}
-
-function atlasSize(
-  map: THREE.Texture
-): Vec2Node {
-  // `@types/three` types textureSize() as an untyped node.
-  const size = textureSize(texture(map, vec2(0)), int(0)) as unknown as Node<"ivec2">;
-
-  return vec2(size);
 }
 
 function lerp(

@@ -10,7 +10,6 @@ import type {
 import type { VoxelView } from "../../src/view/VoxelView.ts";
 import {
   FACE_TEMPLATE_TEXELS,
-  PULLED_FACE_WORDS,
   PULLED_TEMPLATE_BITS,
   type PulledChunkGeometry
 } from "../../src/view/meshing/index.ts";
@@ -93,6 +92,7 @@ export interface MeshSnapshot {
   drawCount: number;
   attributes: Record<string, number[]>;
   faces: number[][];
+  blends: number[];
 }
 
 export function meshSnapshot(
@@ -108,7 +108,10 @@ export function meshSnapshot(
     snapshot.set(mesh.name, {
       drawCount: geometry.drawRange.count,
       attributes,
-      faces: pulledFaces(geometry)
+      faces: pulledFaces(geometry),
+      blends: geometry.blends === null ?
+        [] :
+        Array.from(geometry.blends.image.data as Float32Array)
     });
   }
 
@@ -123,12 +126,16 @@ function pulledFaces(
   const templateMask = (1 << PULLED_TEMPLATE_BITS) - 1;
   const faces: number[][] = [];
   for (let face = 0; face < geometry.faceCount; face++) {
-    const packed = words[(face * PULLED_FACE_WORDS) + 1];
+    const packed = words[(face * geometry.faceWords) + 1];
     const template = (packed & templateMask) * kTemplateFloats;
     faces.push([
-      words[face * PULLED_FACE_WORDS],
+      words[face * geometry.faceWords],
       packed >>> PULLED_TEMPLATE_BITS,
-      ...templates.subarray(template, template + kTemplateFloats)
+      ...templates.subarray(template, template + kTemplateFloats),
+      ...words.subarray(
+        (face * geometry.faceWords) + 2,
+        (face + 1) * geometry.faceWords
+      )
     ]);
   }
 

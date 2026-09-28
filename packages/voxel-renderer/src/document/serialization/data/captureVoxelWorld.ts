@@ -1,11 +1,13 @@
 // Import Internal Dependencies
-import type { VoxelLayer } from "../../world/VoxelLayer.ts";
+import { VoxelLayer } from "../../world/VoxelLayer.ts";
+import type { VoxelTemplate } from "../../world/templates/VoxelTemplate.ts";
 import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import type { VoxelChunk } from "../../world/storage/VoxelChunk.ts";
 import type { TilesetDefinition } from "../../tilesets/types.ts";
 import type {
   VoxelChunkData,
   VoxelLayerData,
+  VoxelTemplateData,
   VoxelWorldData
 } from "./types.ts";
 
@@ -36,7 +38,40 @@ export function captureVoxelWorld(
     chunkSize: world.chunkSize,
     tilesets: Array.from(tilesets, serializeTilesetDefinition),
     layers: world.getLayers().map(captureVoxelLayer),
-    objectLayers: world.objectLayers.toArray()
+    objectLayers: world.objectLayers.toArray(),
+    templates: world.templates.toArray().map(
+      (template) => captureVoxelTemplate(template, world.chunkSize)
+    )
+  };
+}
+
+export function captureVoxelTemplate(
+  template: VoxelTemplate,
+  chunkSize: number
+): VoxelTemplateData {
+  const positions = new Int32Array(template.voxelCount * 3);
+  const voxels = new Uint32Array(template.voxelCount);
+  let index = 0;
+  for (const [x, y, z, packed] of template.localVoxels()) {
+    positions.set([x, y, z], index * 3);
+    voxels[index++] = packed;
+  }
+
+  const layer = new VoxelLayer({
+    id: template.id,
+    name: template.name,
+    order: 0,
+    chunkSize
+  });
+  layer.loadPackedVoxels(positions, voxels);
+
+  return {
+    id: template.id,
+    name: template.name,
+    pivot: { ...template.pivot },
+    properties: structuredClone(template.properties),
+    chunkSize,
+    chunks: captureVoxelLayer(layer).chunks
   };
 }
 

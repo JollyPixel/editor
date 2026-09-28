@@ -13,10 +13,13 @@ import type { VoxelLayerStack } from "../VoxelLayerStack.ts";
 import {
   packVoxel,
   VOXEL_ABSENT,
+  voxelBlockId,
+  voxelTransform,
   type PackedVoxel
 } from "../storage/packedVoxel.ts";
 import type {
   VoxelCellChange,
+  VoxelCoord,
   VoxelEditRecorder
 } from "../types.ts";
 import {
@@ -50,6 +53,8 @@ interface VoxelWrite {
   position: Vector3Like;
   packed: PackedVoxel;
 }
+
+type LayerCell = [number, number, number, PackedVoxel];
 
 export class VoxelWriter {
   recorder: VoxelEditRecorder | null = null;
@@ -122,7 +127,7 @@ export class VoxelWriter {
       return this.#patchDirect(layer, command.metadata.cells);
     }
 
-    const writes = writesOf(command);
+    const writes = writesOf(command, layer);
     if (layer === undefined) {
       if (writes.some(({ packed }) => packed !== VOXEL_ABSENT)) {
         throw new Error(
@@ -146,7 +151,14 @@ export class VoxelWriter {
     }
 
     if (command.action === "voxels-patched") {
-      return this.#patchTracked(layer, writes, recorder);
+      const cells = this.#patchTracked(layer, writes, recorder);
+
+      return cells === null ? null : patched(layer, cells);
+    }
+    if (command.action === "layer-transformed") {
+      return this.#patchTracked(layer, writes, recorder) === null ?
+        null :
+        command;
     }
 
     this.#writeNow(layer, writes, recorder);
@@ -191,7 +203,7 @@ export class VoxelWriter {
     layer: VoxelLayer,
     writes: readonly VoxelWrite[],
     recorder: VoxelEditRecorder | null
-  ): VoxelEditCommand | null {
+  ): VoxelPatchCells | null {
     const batch = new VoxelEditBatch(this.#chunkSize);
     const options = {
       track: true,
@@ -210,11 +222,7 @@ export class VoxelWriter {
       recorder?.record(flushed.changes);
     }
 
-    return {
-      action: "voxels-patched",
-      layerName: layer.name,
-      metadata: { cells: flushed.cells }
-    };
+    return flushed.cells;
   }
 
   #patchDirect(
@@ -277,7 +285,8 @@ function patched(
 }
 
 function writesOf(
-  command: VoxelEditCommand
+  command: VoxelEditCommand,
+  layer: VoxelLayer | undefined
 ): VoxelWrite[] {
   switch (command.action) {
     case "voxel-set":
@@ -313,6 +322,13 @@ function writesOf(
       });
     case "voxels-patched":
       return patchWrites(command.metadata.cells);
+    case "layer-transformed":
+      return layer === undefined ?
+        [] :
+        transformWrites(
+          layer,
+          VoxelTransform.fromPacked(VoxelTransform.pack(command.metadata))
+        );
     default: {
       const unhandled: never = command;
       throw new Error(
@@ -340,6 +356,85 @@ function patchWrites(
   }
 
   return writes;
+}
+
+function transformWrites(
+  layer: VoxelLayer,
+  transform: VoxelTransform
+): VoxelWrite[] {
+  if (transform.equals(VoxelTransform.Identity)) {
+    return [];
+  }
+
+  const { x: ox, y: oy, z: oz } = layer.position;
+  const cells = Array.from(
+    layer.localVoxels(),
+    ([x, y, z, packed]): LayerCell => [x + ox, y + oy, z + oz, packed]
+  );
+  if (cells.length === 0) {
+    return [];
+  }
+
+  const pivot = transformPivot(cells);
+  const targets = new Set<string>();
+  const writes: VoxelWrite[] = [];
+  for (const [x, y, z, packed] of cells) {
+    const offset = transform.transformOffset({
+      x: (2 * x) + 1 - pivot.x,
+      y: (2 * y) + 1 - pivot.y,
+      z: (2 * z) + 1 - pivot.z
+    });
+    const turned = VoxelTransform
+      .fromPacked(voxelTransform(packed))
+      .followedBy(transform);
+    const position = {
+      x: (pivot.x + offset.x - 1) / 2,
+      y: (pivot.y + offset.y - 1) / 2,
+      z: (pivot.z + offset.z - 1) / 2
+    };
+
+    targets.add(`${position.x},${position.y},${position.z}`);
+    writes.push({
+      position,
+      packed: packVoxel(voxelBlockId(packed), turned.packed)
+    });
+  }
+  for (const [x, y, z] of cells) {
+    if (!targets.has(`${x},${y},${z}`)) {
+      writes.push({
+        position: { x, y, z },
+        packed: VOXEL_ABSENT
+      });
+    }
+  }
+
+  return writes;
+}
+
+function transformPivot(
+  cells: readonly LayerCell[]
+): VoxelCoord {
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (const cell of cells) {
+    for (let axis = 0; axis < 3; axis++) {
+      min[axis] = Math.min(min[axis], cell[axis]);
+      max[axis] = Math.max(max[axis], cell[axis]);
+    }
+  }
+
+  const x = min[0] + max[0] + 1;
+  const y = min[1] + max[1] + 1;
+  const z = min[2] + max[2] + 1;
+  if (((x + z) & 1) === 0) {
+    return { x, y, z };
+  }
+
+  const step = ((x + z) & 3) === 3 ? 1 : -1;
+
+  return ((x + z) & 3) === ((x - z) & 3) ?
+    { x: x + step, y, z } :
+    { x, y, z: z + step };
 }
 
 function packPatchCell(

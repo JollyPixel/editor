@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import {
   VOXEL_WORLD_VERSION,
-  type VoxelLayerCommand
+  VoxelWorld,
+  isVoxelTemplateCommand,
+  type VoxelLayerCommand,
+  type VoxelTemplateCommand
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -17,6 +20,24 @@ export function makeAddedCommand(
     layerName,
     metadata: { options: {} }
   };
+}
+
+export function templateCommands(): VoxelTemplateCommand[] {
+  const world = new VoxelWorld(16);
+  world.addLayer("Ground");
+  world.patchVoxels("Ground", [0, 0, 0, 1, 0, 1, 0, 0, 2, 1]);
+  const commands: VoxelTemplateCommand[] = [];
+  world.on("command", (command) => {
+    if (isVoxelTemplateCommand(command)) {
+      commands.push(command);
+    }
+  });
+
+  world.templates.createFromLayer("Ground", { name: "Pair", id: "pair" });
+  world.templates.update("pair", { name: "Twin", pivot: { x: 0, y: 0, z: 0 } });
+  world.templates.remove("pair");
+
+  return commands;
 }
 
 export interface VoxelSetCmdOptions {

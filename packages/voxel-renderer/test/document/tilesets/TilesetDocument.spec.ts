@@ -75,6 +75,31 @@ describe("TilesetDocument", () => {
     assert.equal(document.materialGroups.size, 0);
   });
 
+  it("defines and removes blend groups", () => {
+    const document = new TilesetDocument();
+    const emissions = recordEmissions(document);
+
+    assert.equal(document.defineBlendGroup({ id: "grass", width: 3 }), true);
+    assert.equal(document.defineBlendGroup({ id: "grass", width: 3 }), false);
+    assert.equal(document.blendGroups.get("grass")?.width, 3);
+    assert.equal(document.removeBlendGroup("grass"), true);
+    assert.equal(document.blendGroups.size, 0);
+    assert.deepEqual(emissions, [
+      { action: "blend-group-defined", origin: "local" },
+      { action: "blend-group-removed", origin: "local" }
+    ]);
+  });
+
+  it("loads a document saved before blend groups existed", () => {
+    const document = new TilesetDocument({
+      blendGroups: [{ id: "grass" }]
+    });
+
+    document.load({ tileSize: 16, blocks: [], materialGroups: [] });
+
+    assert.equal(document.blendGroups.size, 0);
+  });
+
   it("rescales every block when the tile size changes", () => {
     const document = new TilesetDocument({
       tileSize: 16,
@@ -125,7 +150,8 @@ describe("TilesetDocument", () => {
     const source = new TilesetDocument({
       tileSize: 8,
       blocks: [makeBlockDef(1, "cube"), makeBlockDef(2, "stair")],
-      materialGroups: [{ id: "gold", metalness: 1 }]
+      materialGroups: [{ id: "gold", metalness: 1 }],
+      blendGroups: [{ id: "grass", priority: 1, exclude: ["sand"] }]
     });
     source.moveBlock(2, 0);
     const json: TilesetDocumentJSON = JSON.parse(JSON.stringify(source.toJSON()));
@@ -188,7 +214,8 @@ describe("TilesetDocument", () => {
     const document = new TilesetDocument({
       tileSize: 8,
       blocks: [makeBlockDef(1, "cube")],
-      materialGroups: [{ id: "gold" }]
+      materialGroups: [{ id: "gold" }],
+      blendGroups: [{ id: "grass" }]
     });
 
     document.clear();
@@ -196,7 +223,8 @@ describe("TilesetDocument", () => {
     assert.deepEqual(document.toJSON(), {
       tileSize: 32,
       blocks: [],
-      materialGroups: []
+      materialGroups: [],
+      blendGroups: []
     });
   });
 });

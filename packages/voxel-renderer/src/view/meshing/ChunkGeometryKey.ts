@@ -3,18 +3,21 @@ import type { BlockSurface } from "../../document/blocks/BlockSurface.ts";
 
 // CONSTANTS
 const kSurfaceSeparator = ":surface=";
+const kBlendedSuffix = ":blended";
 
 /**
- * A chunk draw group identified by its atlas, surface policy, and material
- * group.
+ * A chunk draw group identified by its atlas, surface policy, material
+ * group, and whether its faces carry blend neighbours.
  */
 export class ChunkGeometryKey {
   readonly tilesetId: string;
   readonly surface: BlockSurface;
+  readonly blended: boolean;
 
   constructor(
     tilesetId: string,
-    surface: BlockSurface
+    surface: BlockSurface,
+    blended = false
   ) {
     if (tilesetId.includes(kSurfaceSeparator)) {
       throw new RangeError("Tileset id uses a reserved geometry separator.");
@@ -22,6 +25,7 @@ export class ChunkGeometryKey {
 
     this.tilesetId = tilesetId;
     this.surface = surface;
+    this.blended = blended;
     Object.freeze(this);
   }
 
@@ -30,11 +34,14 @@ export class ChunkGeometryKey {
     if (
       alphaMode === "opaque" &&
       side === "front" &&
-      materialGroup === undefined
+      materialGroup === undefined &&
+      !this.blended
     ) {
       return this.tilesetId;
     }
 
-    return this.tilesetId + kSurfaceSeparator + JSON.stringify(this.surface);
+    const key = this.tilesetId + kSurfaceSeparator + JSON.stringify(this.surface);
+
+    return this.blended ? key + kBlendedSuffix : key;
   }
 }

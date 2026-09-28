@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { BlockRegistry } from "../../document/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeRegistry.ts";
+import { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
 import type { VoxelLogger } from "../../VoxelLogger.ts";
 import { VoxelMeshBuilder } from "../meshing/VoxelMeshBuilder.ts";
 import { DefinedShape } from "./DefinedShape.ts";
@@ -65,9 +66,13 @@ function build(
         alphaCutoff,
         materialGroup
       },
+      blended: key.blended,
       data
     });
     transfer.push(data.words.buffer);
+    if (data.blendPalette !== undefined) {
+      transfer.push(data.blendPalette.buffer);
+    }
   }
 
   scope.postMessage(
@@ -94,6 +99,7 @@ function createBuilder(
       definitions.shapes.map((shape) => new DefinedShape(shape))
     ),
     atlases: new DefinedTilesets(definitions.tilesets),
+    blendGroups: new BlendGroupList(definitions.blendGroups),
     alphaTest: definitions.alphaTest,
     logger
   });

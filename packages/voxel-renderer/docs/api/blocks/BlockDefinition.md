@@ -15,6 +15,7 @@ interface BlockDefinition extends BlockSurfaceOptions {
   side?: BlockSide;
   alphaCutoff?: number;
   materialGroup?: string;
+  blendGroup?: string;
   cullCoveredFaces?: boolean;
   defaultTilesetId?: string;
   properties?: BlockProperties;
@@ -36,6 +37,11 @@ uncovered texels before applying the layer fade. Blended blocks preserve
 fractional alpha and do not write depth; use
 [`VoxelTransparencyPassNode`](../core/VoxelTransparencyPassNode.md) to
 composite overlapping surfaces without triangle sorting.
+
+`blendGroup` names the [`BlendGroup`](../materials/BlendGroup.md) that fades
+the block's top and bottom faces into neighbouring blocks of other groups. It
+must be a non-empty string; an ungrouped block, or one naming a group the
+document does not define, never blends. Only opaque blocks blend.
 
 `cullCoveredFaces` defaults to `true` for opaque blocks and `false` for
 mask and blend blocks. `cullsCoveredFaces(definition)` returns the resolved
