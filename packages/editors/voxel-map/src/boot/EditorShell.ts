@@ -3,8 +3,9 @@ import type { EditorRuntime } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
-import type { VoxelMapWorkspace } from "../scene/EditorScene.ts";
-import { EditorPanels } from "../app/panels/index.ts";
+import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import { EditorPanels } from "../app/panels/EditorPanels.ts";
+import "../features/painting/toolbar/BrushToolbar.ts";
 
 // CONSTANTS
 const kCanvasHoverEvent = "canvas-hover-change";
@@ -54,7 +55,9 @@ export class EditorShell {
     workspace: VoxelMapWorkspace
   ): void {
     this.#panels?.attach(workspace);
-    this.#toolbar?.attach(workspace);
+    if (this.#toolbar !== null) {
+      this.#toolbar.workspace = workspace;
+    }
   }
 
   dispose(): void {

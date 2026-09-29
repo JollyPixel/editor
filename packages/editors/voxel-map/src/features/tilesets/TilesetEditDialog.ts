@@ -1,49 +1,37 @@
 // Import Third-party Dependencies
 import {
-  LitElement,
   html,
   css,
   nothing
 } from "lit";
 import {
   customElement,
-  property,
   query,
   state
 } from "lit/decorators.js";
 import type {
-  VoxelView,
-  VoxelTilesetUsage
-} from "@jolly-pixel/voxel.renderer";
-import type {
   Dialog,
-  JollyChangeDetail,
-  LogQueue
+  JollyChangeDetail
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
-import type {
-  BlockUsageStore,
-  TilesetEntry,
-  TilesetStore
-} from "../../state/index.ts";
-import type { LinkedTilesets } from "./LinkedTilesets.ts";
-import type { TilesetActions } from "./TilesetActions.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { TilesetEntry } from "./tilesetEntry.ts";
 import { rescaleLeavesBlocksOffGrid } from "./blockTilesets.ts";
 import { tileSizeSegments } from "./tileSizes.ts";
 import {
-  formatCount,
   tilesetIsUnused,
-  tilesetRemovalMessage
-} from "../blocks/blockUsage.ts";
+  tilesetRemovalMessage,
+  tilesetUsageSummary
+} from "./tilesetUsage.ts";
 
 // CONSTANTS
 const kOffGridWarning = "Some blocks will not line up with the new tile " +
   "grid. They keep covering the same pixels.";
 
 @customElement("tileset-edit-dialog")
-export class TilesetEditDialog extends LitElement {
+export class TilesetEditDialog extends WorkspaceElement {
   static override styles = css`
     .fields {
       display: flex;
@@ -86,27 +74,6 @@ export class TilesetEditDialog extends LitElement {
     }
   `;
 
-  @property({ attribute: false })
-  declare engine: VoxelView;
-
-  @property({ attribute: false })
-  declare actions: TilesetActions | null;
-
-  @property({ attribute: false })
-  declare tilesets: TilesetStore;
-
-  @property({ attribute: false })
-  declare linked: LinkedTilesets;
-
-  @property({ attribute: false })
-  declare mapDocument: MapDocument;
-
-  @property({ attribute: false })
-  declare usage: BlockUsageStore;
-
-  @property({ attribute: false })
-  declare log: LogQueue;
-
   @state()
   private declare _tilesetId: string | null;
 
@@ -116,36 +83,26 @@ export class TilesetEditDialog extends LitElement {
   @query("jolly-dialog")
   private declare _dialog: Dialog;
 
-  #subscriptions: Array<() => void> = [];
-
   constructor() {
     super();
-    this.actions = null;
     this._tilesetId = null;
     this._pendingTileSize = null;
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this.#subscriptions.push(
-      this.tilesets.subscribe("change", this.#refresh),
-      this.linked.subscribe("change", this.#refresh),
-      this.mapDocument.subscribe("blockRegistryChanged", this.#refresh),
-      this.usage.subscribe("change", this.#refresh)
-    );
-  }
-
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
+  protected override watchWorkspace(
+    workspace: VoxelMapWorkspace
+  ): Iterable<() => void> {
+    return [
+      workspace.tilesets.subscribe("change", this.#refresh),
+      workspace.mapDocument.subscribe("blockRegistryChanged", this.#refresh),
+      workspace.usage.subscribe("change", this.#refresh)
+    ];
   }
 
   async open(
     tilesetId: string
   ): Promise<void> {
-    if (this.tilesets.entry(tilesetId) === undefined) {
+    if (this.workspace?.tilesets.entry(tilesetId) === undefined) {
       return;
     }
 
@@ -157,10 +114,15 @@ export class TilesetEditDialog extends LitElement {
   get #entry(): TilesetEntry | undefined {
     return this._tilesetId === null ?
       undefined :
-      this.tilesets.entry(this._tilesetId);
+      this.workspace?.tilesets.entry(this._tilesetId);
   }
 
   override render() {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return nothing;
+    }
+
     const entry = this.#entry;
 
     return html`
@@ -169,14 +131,14 @@ export class TilesetEditDialog extends LitElement {
         icon="sliders"
         @jolly-close=${this.#onClose}
       >
-        ${entry === undefined ? nothing : this.#renderContent(entry)}
+        ${entry === undefined ? nothing : this.#renderContent(workspace, entry)}
 
         <jolly-button
           slot="actions"
           class="remove"
           variant="danger"
           icon="trash"
-          ?disabled=${this.actions === null || entry === undefined}
+          ?disabled=${entry === undefined}
           @click=${this.#remove}
         >Remove</jolly-button>
         <jolly-button
@@ -189,12 +151,13 @@ export class TilesetEditDialog extends LitElement {
   }
 
   #renderContent(
+    workspace: VoxelMapWorkspace,
     entry: TilesetEntry
   ) {
     const { definition } = entry;
-    const tileSize = this.linked.tileSizeOf(definition.id);
-    const usage = this.usage.tilesetUsageOf(definition.id);
-    const renamable = this.actions !== null && entry.assetId !== null;
+    const tileSize = workspace.tilesets.tileSizeOf(definition.id);
+    const usage = workspace.usage.tilesetUsageOf(definition.id);
+    const renamable = entry.assetId !== null;
     const pendingTileSize = this._pendingTileSize;
 
     return html`
@@ -212,7 +175,7 @@ export class TilesetEditDialog extends LitElement {
           label="Tile size"
           .options=${tileSizeSegments(tileSize)}
           .value=${pendingTileSize ?? tileSize}
-          ?disabled=${this.actions === null || tileSize === undefined}
+          ?disabled=${tileSize === undefined}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
             this.#resize(entry, event.detail.value);
           }}
@@ -233,7 +196,7 @@ export class TilesetEditDialog extends LitElement {
           </div>
         `}
       </div>
-      <p class="usage">${usageSummary(usage)}</p>
+      <p class="usage">${tilesetUsageSummary(usage)}</p>
     `;
   }
 
@@ -252,10 +215,10 @@ export class TilesetEditDialog extends LitElement {
     name: string
   ): Promise<void> {
     try {
-      await this.actions?.rename(entry.definition.id, name);
+      await this.workspace?.tilesets.rename(entry.definition.id, name);
     }
     catch (error) {
-      this.log.push(`Could not rename "${entry.label}": ${messageOf(error)}`);
+      this.workspace?.state.log.push(`Could not rename "${entry.label}": ${messageOf(error)}`);
     }
     this.requestUpdate();
   }
@@ -264,9 +227,10 @@ export class TilesetEditDialog extends LitElement {
     entry: TilesetEntry,
     tileSize: number
   ): void {
+    const workspace = this.workspace;
     const { definition } = entry;
-    const from = this.linked.tileSizeOf(definition.id);
-    if (this.actions === null || from === undefined) {
+    const from = workspace?.tilesets.tileSizeOf(definition.id);
+    if (workspace === null || from === undefined) {
       return;
     }
 
@@ -276,7 +240,7 @@ export class TilesetEditDialog extends LitElement {
     }
 
     const offGrid = rescaleLeavesBlocksOffGrid(
-      this.engine.document.blocks,
+      workspace.engine.document.blocks,
       {
         tilesetId: definition.id,
         from,
@@ -289,7 +253,7 @@ export class TilesetEditDialog extends LitElement {
       return;
     }
 
-    this.actions.resize(definition.id, tileSize);
+    workspace.tilesets.resizeTiles(definition.id, tileSize);
     this.requestUpdate();
   }
 
@@ -298,18 +262,19 @@ export class TilesetEditDialog extends LitElement {
   ): void {
     const tileSize = this._pendingTileSize;
     this._pendingTileSize = null;
-    if (this.actions !== null && tileSize !== null) {
-      this.actions.resize(entry.definition.id, tileSize);
+    if (tileSize !== null) {
+      this.workspace?.tilesets.resizeTiles(entry.definition.id, tileSize);
     }
   }
 
   async #remove(): Promise<void> {
+    const workspace = this.workspace;
     const entry = this.#entry;
-    if (this.actions === null || entry === undefined) {
+    if (workspace === null || entry === undefined) {
       return;
     }
 
-    const usage = this.usage.tilesetUsageOf(entry.definition.id);
+    const usage = workspace.usage.tilesetUsageOf(entry.definition.id);
     const confirmed = tilesetIsUnused(usage) ||
       await this._dialog.confirmInline({
         message: `Remove "${entry.label}"? ` +
@@ -317,7 +282,7 @@ export class TilesetEditDialog extends LitElement {
         confirmLabel: "Remove",
         danger: true
       });
-    if (confirmed && this.actions.remove(entry.definition.id)) {
+    if (confirmed && workspace.tilesets.remove(entry.definition.id)) {
       this.#close();
     }
   }
@@ -330,13 +295,6 @@ export class TilesetEditDialog extends LitElement {
     this._tilesetId = null;
     this._pendingTileSize = null;
   }
-}
-
-function usageSummary(
-  usage: VoxelTilesetUsage
-): string {
-  return `Used by ${formatCount(usage.blocks.length, "block")}, ` +
-    `${formatCount(usage.voxels, "voxel")} in the map.`;
 }
 
 function messageOf(

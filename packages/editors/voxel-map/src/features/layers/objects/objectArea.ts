@@ -9,9 +9,6 @@ import {
   type VoxelObjectJSON
 } from "@jolly-pixel/voxel.renderer";
 
-// Import Internal Dependencies
-import type { ObjectKey } from "../../../state/index.ts";
-
 // CONSTANTS
 const kDerivedColor = {
   saturation: 0.65,
@@ -33,28 +30,6 @@ function roundCoordinate(
   return Math.round(value) || 0;
 }
 
-export function objectKey(
-  layerName: string,
-  objectId: string
-): string {
-  return `${layerName}:${objectId}`;
-}
-
-export function parseObjectKey(
-  key: string
-): ObjectKey {
-  const separator = key.lastIndexOf(":");
-
-  return {
-    layerName: key.slice(0, separator),
-    objectId: key.slice(separator + 1)
-  };
-}
-
-/**
- * A visible 1x1 object filling `position`, the grid cell it is centered on.
- * Coordinates are snapped, since the engine stores whole cells.
- */
 export function createObjectAt(
   name: string,
   position: Vector3Like
@@ -69,10 +44,6 @@ export function createObjectAt(
   };
 }
 
-/**
- * Stable hue an object falls back to, derived from its id. Worlds saved
- * before `color` existed render exactly as they used to.
- */
 export function derivedColorOf(
   object: VoxelObjectJSON
 ): string {

@@ -13,7 +13,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { TemplateStore } from "../../../src/state/index.ts";
+import { TemplateStore } from "../../../src/features/templates/TemplateStore.ts";
 import {
   beginTemplatePlacement,
   commitTemplatePlacement,

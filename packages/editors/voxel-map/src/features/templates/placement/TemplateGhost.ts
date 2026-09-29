@@ -1,24 +1,26 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  BlockSurface,
   VoxelTransform,
   voxelBlockId,
   voxelTransform,
   type BlockRegistry,
+  type BlockSurface,
   type VoxelTemplate
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
   BLOCK_TEXTURED_MATERIAL,
-  buildBlockGeometry,
-  textureOf,
-  type BlockPreviewSources
-} from "../../blocks/blockPreviewMesh.ts";
+  type BlockRenderSources
+} from "../../blocks/blockGeometry.ts";
+import {
+  BlockPieces,
+  type BlockPiece
+} from "../../blocks/BlockPieces.ts";
 
 // CONSTANTS
-const kDefaultOpacity = 0.55;
+const kOpacity = 0.55;
 const kDepthRenderOrder = 1000;
 const kOrigin = {
   x: 0,
@@ -26,19 +28,9 @@ const kOrigin = {
   z: 0
 };
 
-export interface TemplateGhostOptions extends BlockPreviewSources {
+export interface TemplateGhostOptions {
+  sources: BlockRenderSources;
   blockRegistry: BlockRegistry;
-  /**
-   * @default 0.55
-   */
-  opacity?: number;
-}
-
-interface CellPiece {
-  geometry: THREE.BufferGeometry;
-  batchKey: string;
-  texture: THREE.Texture | null;
-  surface: BlockSurface;
 }
 
 interface BatchMaterials {
@@ -57,10 +49,9 @@ interface Batch {
 }
 
 export class TemplateGhost extends THREE.Group {
-  #sources: BlockPreviewSources;
+  #sources: BlockRenderSources;
   #blockRegistry: BlockRegistry;
-  #opacity: number;
-  #pieces = new Map<string, CellPiece | null>();
+  #pieces: BlockPieces;
   #materials = new Map<string, BatchMaterials>();
   #atlasVersion = -1;
   #drawn: {
@@ -73,23 +64,13 @@ export class TemplateGhost extends THREE.Group {
   ) {
     super();
 
-    const {
-      blockRegistry,
-      opacity = kDefaultOpacity,
-      ...sources
-    } = options;
-
     this.name = "template-ghost";
-    this.#sources = sources;
-    this.#blockRegistry = blockRegistry;
-    this.#opacity = opacity;
+    this.#sources = options.sources;
+    this.#blockRegistry = options.blockRegistry;
+    this.#pieces = new BlockPieces(options.sources);
     this.visible = false;
   }
 
-  /**
-   * Shows `template` turned by `transform`, with its pivot at the group
-   * origin. Rebuilds only when the template, transform or atlases changed.
-   */
   draw(
     template: VoxelTemplate,
     transform: VoxelTransform
@@ -98,7 +79,7 @@ export class TemplateGhost extends THREE.Group {
     if (version !== this.#atlasVersion) {
       this.#clearMeshes();
       this.#clearMaterials();
-      this.#clearPieces();
+      this.#pieces.clear();
       this.#atlasVersion = version;
     }
     else if (
@@ -126,14 +107,14 @@ export class TemplateGhost extends THREE.Group {
   }
 
   invalidate(): void {
-    this.#clearPieces();
+    this.#pieces.clear();
     this.#drawn = null;
   }
 
   override dispose(): void {
     this.#clearMeshes();
     this.#clearMaterials();
-    this.#clearPieces();
+    this.#pieces.clear();
     this.#drawn = null;
     super.dispose();
   }
@@ -144,15 +125,19 @@ export class TemplateGhost extends THREE.Group {
   ): IterableIterator<Batch> {
     const batches = new Map<string, Batch>();
     for (const [x, y, z, packed] of template.placedVoxels(kOrigin, transform)) {
-      const piece = this.#pieceOf(voxelBlockId(packed), voxelTransform(packed));
+      const block = this.#blockRegistry.get(voxelBlockId(packed));
+      const piece = block === undefined ?
+        null :
+        this.#pieces.pieceOf(block, VoxelTransform.fromPacked(voxelTransform(packed)));
       if (piece === null) {
         continue;
       }
 
-      let batch = batches.get(piece.batchKey);
+      const key = batchKeyOf(piece);
+      let batch = batches.get(key);
       if (batch === undefined) {
         batch = {
-          key: piece.batchKey,
+          key,
           texture: piece.texture,
           surface: piece.surface,
           positions: [],
@@ -160,49 +145,12 @@ export class TemplateGhost extends THREE.Group {
           uvs: [],
           indices: []
         };
-        batches.set(piece.batchKey, batch);
+        batches.set(key, batch);
       }
       appendPiece(batch, piece.geometry, x, y, z);
     }
 
     return batches.values();
-  }
-
-  #pieceOf(
-    blockId: number,
-    packedTransform: number
-  ): CellPiece | null {
-    const key = `${blockId}:${packedTransform}`;
-    const cached = this.#pieces.get(key);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const block = this.#blockRegistry.get(blockId);
-    const geometry = block === undefined ?
-      null :
-      buildBlockGeometry(
-        block,
-        this.#sources,
-        VoxelTransform.fromPacked(packedTransform)
-      );
-    if (block === undefined || geometry === null) {
-      this.#pieces.set(key, null);
-
-      return null;
-    }
-
-    const texture = textureOf(block, this.#sources);
-    const surface = new BlockSurface(block);
-    const piece: CellPiece = {
-      geometry,
-      batchKey: `${texture?.uuid ?? "none"}:${surface.alphaCutoff}:${surface.side}`,
-      texture,
-      surface
-    };
-    this.#pieces.set(key, piece);
-
-    return piece;
   }
 
   #materialsOf(
@@ -222,7 +170,7 @@ export class TemplateGhost extends THREE.Group {
         alphaTest: batch.surface.alphaCutoff,
         side,
         transparent: true,
-        opacity: this.#opacity,
+        opacity: kOpacity,
         depthWrite: false
       }),
       depth: new THREE.MeshBasicMaterial({
@@ -287,13 +235,12 @@ export class TemplateGhost extends THREE.Group {
     }
     this.#materials.clear();
   }
+}
 
-  #clearPieces(): void {
-    for (const piece of this.#pieces.values()) {
-      piece?.geometry.dispose();
-    }
-    this.#pieces.clear();
-  }
+function batchKeyOf(
+  piece: BlockPiece
+): string {
+  return `${piece.texture?.uuid ?? "none"}:${piece.surface.alphaCutoff}:${piece.surface.side}`;
 }
 
 function appendPiece(

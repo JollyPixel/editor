@@ -14,7 +14,7 @@ import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
-import type { LinkedTilesets } from "../tilesets/LinkedTilesets.ts";
+import type { MapTilesets } from "../tilesets/MapTilesets.ts";
 import {
   customFinishSource,
   materialFinishSource,
@@ -25,7 +25,7 @@ import {
 const kMetalHint = "Turn on Reflections in General to see metal";
 
 export type MaterialGroupWriter = Pick<
-  LinkedTilesets,
+  MapTilesets,
   "defineMaterialGroup" | "removeMaterialGroup"
 >;
 

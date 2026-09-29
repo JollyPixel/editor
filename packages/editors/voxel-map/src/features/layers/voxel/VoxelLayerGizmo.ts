@@ -12,18 +12,24 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
-import type { SelectionStore } from "../../../state/index.ts";
+import type {
+  PointerCapture,
+  SelectionStore
+} from "../../../state/index.ts";
+import { isLayerGeometryCommand } from "./layerGeometry.ts";
 
 export interface VoxelLayerGizmoOptions {
   world: VoxelWorld;
   camera: THREE.PerspectiveCamera;
   selection: SelectionStore;
+  pointer: PointerCapture;
   mapDocument: MapDocument;
 }
 
 export class VoxelLayerGizmo extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
+  #pointerCapture: PointerCapture;
   #mapDocument: MapDocument;
   #controls: TransformControls | null = null;
   #anchor = new THREE.Object3D();
@@ -42,6 +48,7 @@ export class VoxelLayerGizmo extends ActorComponent {
     this.#world = options.world;
     this.#camera = options.camera;
     this.#selection = options.selection;
+    this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
   }
 
@@ -118,7 +125,7 @@ export class VoxelLayerGizmo extends ActorComponent {
     this.#controls?.detach();
     this.#controls?.dispose();
     this.#controls = null;
-    this.#selection.gizmoDragging = false;
+    this.#pointerCapture.release(this);
 
     super.destroy();
   }
@@ -171,11 +178,11 @@ export class VoxelLayerGizmo extends ActorComponent {
   }
 
   readonly #onDraggingStarted = (): void => {
-    this.#selection.gizmoDragging = true;
+    this.#pointerCapture.capture(this);
   };
 
   readonly #onDraggingEnded = (): void => {
-    this.#selection.gizmoDragging = false;
+    this.#pointerCapture.release(this);
   };
 
   readonly #onObjectChange = (): void => {
@@ -194,16 +201,7 @@ export class VoxelLayerGizmo extends ActorComponent {
     if (event.layerName !== this.#activeLayer) {
       return;
     }
-    if (
-      event.action === "voxel-set" ||
-      event.action === "voxel-removed" ||
-      event.action === "voxels-set" ||
-      event.action === "voxels-removed" ||
-      event.action === "voxels-patched" ||
-      event.action === "layer-transformed" ||
-      event.action === "position-updated" ||
-      event.action === "position-rebased"
-    ) {
+    if (isLayerGeometryCommand(event)) {
       this.#repositionPivot();
     }
   };

@@ -3,7 +3,7 @@ import type { VoxelTemplate } from "@jolly-pixel/voxel.renderer";
 import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { formatCount } from "../blocks/blockUsage.ts";
+import { formatCount } from "../../shared/format.ts";
 
 export function templateTreeNodes(
   templates: Iterable<VoxelTemplate>

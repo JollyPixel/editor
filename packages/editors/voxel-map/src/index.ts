@@ -4,7 +4,7 @@ import { bootStandalone } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
-import "./app/sidebarIcons.ts";
+import "./app/icons.ts";
 
 declare global {
   interface Window {

@@ -4,60 +4,30 @@ import { customElement, property, state } from "lit/decorators.js";
 import type {
   VoxelHistory,
   VoxelTemplate,
-  VoxelTransformOptions,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
-import type {
-  SelectionStore,
-  TemplatePlacement,
-  TemplateStore
-} from "../../state/index.ts";
+import type { SelectionStore } from "../../state/index.ts";
+import type { TemplatePlacement, TemplateStore } from "./TemplateStore.ts";
 import {
   propertiesOf,
   propertyRowsOf,
   type PropertyRow,
   type PropertyRowsChangeDetail
-} from "../layers/properties/propertyDraft.ts";
-import { layerPositionSource } from "../layers/voxel/layerSources.ts";
+} from "../../shared/propertyDraft.ts";
+import { positionSource } from "../../shared/positionSource.ts";
+import { transformButtons } from "../../shared/transformButtons.ts";
 import { commitTemplatePlacement } from "./templateActions.ts";
-import "../layers/properties/CustomPropertiesEditor.ts";
+import "../../shared/CustomPropertiesEditor.ts";
 
 // CONSTANTS
-const kPlacementTransforms: {
-  label: string;
-  title: string;
-  transform: VoxelTransformOptions;
-}[] = [
-  {
-    label: "Rotate left",
-    title: "Rotate 90° counter-clockwise around the pivot (Q)",
-    transform: { rotation: 1 }
-  },
-  {
-    label: "Rotate right",
-    title: "Rotate 90° clockwise around the pivot (E)",
-    transform: { rotation: 3 }
-  },
-  {
-    label: "Flip X",
-    title: "Mirror along X through the pivot",
-    transform: { flipX: true }
-  },
-  {
-    label: "Flip Z",
-    title: "Mirror along Z through the pivot",
-    transform: { flipZ: true }
-  },
-  {
-    label: "Flip Y",
-    title: "Mirror along Y through the pivot",
-    transform: { flipY: true }
-  }
-];
+const kPlacementTransforms = transformButtons("the pivot", {
+  left: "Q",
+  right: "E"
+});
 
 @customElement("template-panel")
 export class TemplatePanel extends LitElement {
@@ -107,7 +77,7 @@ export class TemplatePanel extends LitElement {
 
   #subscriptions: Array<() => void> = [];
 
-  #position = new FieldBinding(this, layerPositionSource({
+  #position = new FieldBinding(this, positionSource({
     position: () => this._placement?.position ?? null,
     move: (position) => this.templates.movePlacement(position)
   }));

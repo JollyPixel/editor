@@ -2,8 +2,9 @@
 import type { DockLayout } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import type { TextureEditor } from "../../features/texture/TextureEditor.ts";
+import "../../features/texture/TextureEditor.ts";
 import { BlocksPanel } from "./BlocksPanel.ts";
 import { GeneralPanel } from "./GeneralPanel.ts";
 import { LayersPanel } from "./LayersPanel.ts";
@@ -70,19 +71,12 @@ export class EditorPanels {
   ): void {
     const { layout, general, blocks, layers } = this.#elements;
 
-    general.attach(workspace);
-    blocks.attach(workspace);
-    layers.attach(workspace);
+    general.workspace = workspace;
+    blocks.workspace = workspace;
+    layers.workspace = workspace;
 
     const textureEditor = document.createElement("texture-editor");
-    textureEditor.brush = workspace.state.brush;
-    textureEditor.tilesets = workspace.state.tilesets;
-    textureEditor.mapDocument = workspace.mapDocument;
-    textureEditor.engine = workspace.engine;
-    textureEditor.linked = workspace.linkedTilesets;
-    textureEditor.actions = workspace.tilesetActions;
-    textureEditor.usage = workspace.usage;
-    textureEditor.log = workspace.state.log;
+    textureEditor.workspace = workspace;
     this.#textureEditor = textureEditor;
 
     layout.addEventListener("jolly-layout-change", this.#place);

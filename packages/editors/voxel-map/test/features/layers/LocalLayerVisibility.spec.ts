@@ -19,7 +19,7 @@ import {
   LocalLayerVisibility
 } from "../../../src/features/layers/LocalLayerVisibility.ts";
 import { createObjectAt } from "../../../src/features/layers/objects/objectArea.ts";
-import { LayerVisibilityStore } from "../../../src/state/LayerVisibilityStore.ts";
+import { LayerVisibilityStore } from "../../../src/features/layers/LayerVisibilityStore.ts";
 
 function setup() {
   const world = new VoxelWorld(4);

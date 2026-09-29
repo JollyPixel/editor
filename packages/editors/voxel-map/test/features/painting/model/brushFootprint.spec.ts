@@ -11,9 +11,9 @@ import {
   cellsOf,
   isBall,
   overlaps,
-  type BrushAxis,
   type BrushFootprint
 } from "../../../../src/features/painting/model/brushFootprint.ts";
+import type { BrushAxis } from "../../../../src/state/index.ts";
 
 // CONSTANTS
 const kOrigin = {

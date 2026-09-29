@@ -3,19 +3,25 @@ import type * as THREE from "three";
 import type { Systems } from "@jolly-pixel/engine";
 import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { PeerIdentity } from "@jolly-pixel/ui";
-import { PeerRoster } from "@jolly-pixel/ui/network";
+import {
+  PeerMarkTracker,
+  PeerRoster
+} from "@jolly-pixel/ui/network";
 import type {
   VoxelMapRoom
 } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
-import type { EditorState } from "../state/index.ts";
-import { BlockSelectionPresence } from "../features/blocks/collaboration/BlockSelectionPresence.ts";
-import { LayerSelectionPresence } from "../features/layers/collaboration/LayerSelectionPresence.ts";
 import {
-  PeerBrushes,
-  type LocalBrush
-} from "../features/painting/index.ts";
+  layerKey,
+  type EditorState
+} from "../state/index.ts";
+import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
+import type { BrushCursor } from "../features/painting/model/brushCursor.ts";
+
+// CONSTANTS
+const kBlockPresenceKey = "block";
+const kLayerPresenceKey = "layer";
 
 export interface MapCollaborationOptions {
   room: VoxelMapRoom;
@@ -23,49 +29,59 @@ export interface MapCollaborationOptions {
   state: EditorState;
   world: Systems.World;
   camera: THREE.PerspectiveCamera;
-  localBrush: LocalBrush;
 }
 
 export class MapCollaboration {
   readonly frustums: PeerFrustums;
 
-  #roster: PeerRoster;
-  #blockSelections: BlockSelectionPresence;
-  #layerSelections: LayerSelectionPresence;
+  #peerBrushes: PeerBrushes;
+  #disposables: Array<() => void> = [];
 
   constructor(
     options: MapCollaborationOptions
   ) {
-    const { room, state, world, localBrush } = options;
+    const { room, state, world } = options;
+    const { brush, selection, presence } = state;
 
-    this.#roster = new PeerRoster({
+    const roster = new PeerRoster({
       room,
       identity: options.identity,
       publish: (peers) => {
-        state.presence.peers = peers;
+        presence.peers = peers;
       },
       log: state.log
     });
-    this.#blockSelections = new BlockSelectionPresence({
+    const blockMarks = new PeerMarkTracker({
       room,
-      brush: state.brush,
-      presence: state.presence
+      presenceKey: kBlockPresenceKey,
+      localKey: () => brush.blockId,
+      readKey: readBlockId,
+      publish: (marks) => {
+        presence.blockSelections = marks;
+      }
     });
-    this.#layerSelections = new LayerSelectionPresence({
+    const layerMarks = new PeerMarkTracker({
       room,
-      selection: state.selection,
-      presence: state.presence
+      presenceKey: kLayerPresenceKey,
+      localKey: () => (selection.current === null ? null : layerKey(selection.current)),
+      readKey: readLayerKey,
+      publish: (marks) => {
+        presence.layerSelections = marks;
+      }
     });
+    this.#disposables.push(
+      brush.subscribe("blockChange", () => blockMarks.publishLocal()),
+      selection.subscribe("change", () => layerMarks.publishLocal()),
+      () => blockMarks.dispose(),
+      () => layerMarks.dispose(),
+      () => roster.dispose()
+    );
 
-    const peerBrushes = world
+    this.#peerBrushes = world
       .createActor("peer-brushes")
       .addComponentAndGet(PeerBrushes, {
-        room,
-        brush: state.brush
+        room
       });
-    localBrush.onCursorChange = (cursor) => {
-      peerBrushes.publishLocalCursor(cursor);
-    };
 
     this.frustums = world
       .createActor("peer-frustums")
@@ -75,9 +91,27 @@ export class MapCollaboration {
       });
   }
 
-  dispose(): void {
-    this.#roster.dispose();
-    this.#blockSelections.dispose();
-    this.#layerSelections.dispose();
+  publishCursor(
+    cursor: BrushCursor | null
+  ): void {
+    this.#peerBrushes.publishLocalCursor(cursor);
   }
+
+  dispose(): void {
+    for (const dispose of this.#disposables.splice(0)) {
+      dispose();
+    }
+  }
+}
+
+function readBlockId(
+  value: unknown
+): number | null {
+  return typeof value === "number" && Number.isInteger(value) ? value : null;
+}
+
+function readLayerKey(
+  value: unknown
+): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }

@@ -17,47 +17,18 @@ import {
   propertyRowsOf,
   type PropertyRow,
   type PropertyRowsChangeDetail
-} from "../properties/propertyDraft.ts";
+} from "../../../shared/propertyDraft.ts";
 import {
-  gizmoSource,
-  layerPositionSource,
+  positionSource,
   roundPosition,
   samePosition
-} from "./layerSources.ts";
-import "../properties/CustomPropertiesEditor.ts";
+} from "../../../shared/positionSource.ts";
+import { transformButtons } from "../../../shared/transformButtons.ts";
+import { isLayerGeometryCommand } from "./layerGeometry.ts";
+import "../../../shared/CustomPropertiesEditor.ts";
 
 // CONSTANTS
-const kLayerTransforms: {
-  label: string;
-  title: string;
-  transform: VoxelTransformOptions;
-}[] = [
-  {
-    label: "Rotate left",
-    title: "Rotate 90° counter-clockwise around the layer center",
-    transform: { rotation: 1 }
-  },
-  {
-    label: "Rotate right",
-    title: "Rotate 90° clockwise around the layer center",
-    transform: { rotation: 3 }
-  },
-  {
-    label: "Flip X",
-    title: "Mirror along X through the layer center",
-    transform: { flipX: true }
-  },
-  {
-    label: "Flip Z",
-    title: "Mirror along Z through the layer center",
-    transform: { flipZ: true }
-  },
-  {
-    label: "Flip Y",
-    title: "Mirror along Y through the layer center",
-    transform: { flipY: true }
-  }
-];
+const kLayerTransforms = transformButtons("the layer center");
 
 @customElement("layer-panel")
 export class VoxelLayerPanel extends LitElement {
@@ -98,7 +69,7 @@ export class VoxelLayerPanel extends LitElement {
   private declare _props: PropertyRow[];
   #subscriptions: Array<() => void> = [];
 
-  #position = new FieldBinding(this, layerPositionSource({
+  #position = new FieldBinding(this, positionSource({
     position: () => this._layer?.position ?? null,
     move: (position) => {
       if (this.layerName !== null) {
@@ -107,14 +78,14 @@ export class VoxelLayerPanel extends LitElement {
     }
   }));
 
-  #gizmo = new FieldBinding(this, gizmoSource({
-    enabled: () => this.selection.gizmoLayer === this.layerName,
-    toggle: (enabled) => {
+  #gizmo = new FieldBinding<boolean>(this, {
+    read: () => this.selection.gizmoLayer === this.layerName,
+    write: (enabled) => {
       if (this.layerName !== null) {
         this.selection.gizmoLayer = enabled ? this.layerName : null;
       }
     }
-  }));
+  });
 
   constructor() {
     super();
@@ -125,20 +96,9 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #onLayerUpdated = (event: VoxelLayerCommand) => {
-    if (
-      event.layerName !== this.layerName ||
-      event.action !== "position-updated" &&
-      event.action !== "position-rebased" &&
-      event.action !== "voxel-set" &&
-      event.action !== "voxel-removed" &&
-      event.action !== "voxels-set" &&
-      event.action !== "voxels-removed" &&
-      event.action !== "voxels-patched" &&
-      event.action !== "layer-transformed"
-    ) {
-      return;
+    if (event.layerName === this.layerName && isLayerGeometryCommand(event)) {
+      this.#syncFromLayer();
     }
-    this.#syncFromLayer();
   };
 
   #onGizmoLayerChange = () => {
@@ -168,23 +128,18 @@ export class VoxelLayerPanel extends LitElement {
       changed.has("world")
     ) {
       this.#syncFromLayer();
+      this._props = propertyRowsOf(this._layer?.properties);
     }
   }
 
   #syncFromLayer(): void {
-    if (!this.layerName) {
-      this._layer = null;
-
-      return;
-    }
-
-    const layer = this.world.getLayer(this.layerName) ?? null;
+    const layer = this.layerName ?
+      this.world.getLayer(this.layerName) ?? null :
+      null;
     this._layer = layer;
-
     if (layer) {
       const bounds = layer.worldBounds();
       this._contentOrigin = { ...(bounds?.min ?? layer.position) };
-      this._props = propertyRowsOf(layer.properties);
     }
 
     this.requestUpdate();

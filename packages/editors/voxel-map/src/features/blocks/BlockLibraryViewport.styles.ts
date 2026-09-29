@@ -78,14 +78,6 @@ export const blockLibraryViewportStyles = css`
     z-index: 2;
   }
 
-  .problem {
-    position: absolute;
-    box-sizing: border-box;
-    border: 2px solid var(--jolly-danger);
-    border-radius: var(--jolly-radius-sm, 4px);
-    background: color-mix(in srgb, var(--jolly-danger) 18%, transparent);
-  }
-
   .unused {
     position: absolute;
     box-sizing: border-box;

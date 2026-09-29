@@ -14,16 +14,11 @@ import {
 
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";
-import {
-  EditorScene,
-  type VoxelMapWorkspace
-} from "../scene/EditorScene.ts";
-import { ViewFocus } from "../scene/index.ts";
+import { EditorScene } from "../scene/EditorScene.ts";
+import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorShell } from "./EditorShell.ts";
-import { TILESET_DOCUMENT_KIND } from "../features/tilesets/TilesetSources.ts";
-import {
-  mountInspectorControls
-} from "../features/performance/index.ts";
+import { TILESET_DOCUMENT_KIND } from "../features/tilesets/TilesetBinding.ts";
+import { mountInspectorControls } from "./inspectorControls.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -57,7 +52,6 @@ export class VoxelMapEditor {
   ): Promise<VoxelMapEditor> {
     const { session } = context;
     const state = new EditorState();
-    const viewFocus = new ViewFocus();
     const target = session.targetLease(kMapKind);
 
     const editorRuntime = await EditorRuntime.create(kCanvas, {
@@ -74,7 +68,6 @@ export class VoxelMapEditor {
     const { runtime } = editorRuntime;
     const scene = new EditorScene({
       state,
-      viewFocus,
       session: {
         room: target.room,
         map: target.document,

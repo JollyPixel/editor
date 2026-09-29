@@ -1,10 +1,7 @@
 // Import Third-party Dependencies
 import { LitElement, html, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import type {
-  VoxelView,
-  ResolvedBlockDefinition
-} from "@jolly-pixel/voxel.renderer";
+import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
 import {
   LocalStorageAdapter,
@@ -14,6 +11,7 @@ import {
 // Import Internal Dependencies
 import { blockLibraryViewportStyles } from "./BlockLibraryViewport.styles.ts";
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
+import type { BlockRenderSources } from "./blockGeometry.ts";
 import {
   blockCellRect,
   blockCellStyle,
@@ -29,7 +27,7 @@ import {
   resolvePeerMarks,
   type PeerMarkMap,
   type PeerMarkView
-} from "../../collaboration/peerMarks.ts";
+} from "../../shared/peerMarks.ts";
 import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 
 // CONSTANTS
@@ -69,7 +67,7 @@ export class BlockLibraryViewport extends LitElement {
   static override styles = blockLibraryViewportStyles;
 
   @property({ attribute: false })
-  declare engine: VoxelView;
+  declare sources: BlockRenderSources;
 
   @property({ attribute: false })
   declare blocks: ResolvedBlockDefinition[];
@@ -79,9 +77,6 @@ export class BlockLibraryViewport extends LitElement {
 
   @property({ attribute: false })
   declare selectedId: number | null;
-
-  @property({ attribute: false })
-  declare problems: ReadonlyMap<number, string>;
 
   @property({ attribute: false })
   declare unused: ReadonlySet<number>;
@@ -120,7 +115,6 @@ export class BlockLibraryViewport extends LitElement {
     this.blocks = [];
     this.marks = new Map();
     this.selectedId = null;
-    this.problems = new Map();
     this.unused = new Set();
     this.reorderable = true;
     this.layout = "compact";
@@ -152,7 +146,7 @@ export class BlockLibraryViewport extends LitElement {
       this.#connectResizeHandle();
     }
 
-    if (changed.has("engine") || this.#renderer === null) {
+    if (changed.has("sources") || this.#renderer === null) {
       this.#build();
     }
     else if (changed.has("blocks")) {
@@ -209,7 +203,6 @@ export class BlockLibraryViewport extends LitElement {
       </div>
       <div class="layer marks">
         ${this.#renderUnused()}
-        ${this.#renderProblems()}
         ${cells.map((cell) => this.#renderMarker(cell))}
       </div>
       <div class="layer drop">
@@ -331,28 +324,6 @@ export class BlockLibraryViewport extends LitElement {
     });
   }
 
-  #renderProblems() {
-    const grid = this._grid;
-    if (grid === null || this.problems.size === 0) {
-      return nothing;
-    }
-
-    return this.blocks.map((block, index) => {
-      const problem = this.problems.get(block.id);
-      if (problem === undefined) {
-        return nothing;
-      }
-
-      const rect = blockCellRect(index, grid, kCellInset);
-
-      return html`<div
-        class="problem"
-        title=${problem}
-        style=${blockCellStyle(rect)}
-      ></div>`;
-    });
-  }
-
   #renderInsertion() {
     const grid = this._grid;
     if (grid === null || this._insertAt === null) {
@@ -441,12 +412,8 @@ export class BlockLibraryViewport extends LitElement {
 
   #build(): void {
     this.#renderer?.dispose();
-    this.#renderer = new BlockLibraryRenderer(this._scroller, {
-      shapeRegistry: this.engine.shapes,
-      atlases: this.engine.atlases,
-      materialGroups: this.engine.document.materialGroups,
-      blocks: this.blocks
-    });
+    this.#renderer = new BlockLibraryRenderer(this._scroller, this.sources);
+    this.#renderer.setBlocks(this.blocks);
     this.#renderer.onLayoutChange = () => this.#syncGrid();
     this.#renderer.onContextLost = () => {
       this.#build();
@@ -639,7 +606,7 @@ export class BlockLibraryViewport extends LitElement {
 
     const bounds = renderer.canvas.getBoundingClientRect();
 
-    return renderer.getBlockAtPointer(
+    return renderer.blockAt(
       event.clientX - bounds.left,
       event.clientY - bounds.top
     );

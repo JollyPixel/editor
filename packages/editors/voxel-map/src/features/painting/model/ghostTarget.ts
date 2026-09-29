@@ -19,7 +19,6 @@ export interface GhostStroke {
 }
 
 export interface GhostTargetOptions {
-  enabled: boolean;
   size: number;
   mode: BrushMode;
   aim: GhostAim | null;
@@ -39,13 +38,12 @@ export function ghostTargetOf(
   options: GhostTargetOptions
 ): GhostTarget | null {
   const {
-    enabled,
     size,
     aim,
     stroke,
     occupied
   } = options;
-  if (!enabled || size !== 1) {
+  if (size !== 1) {
     return null;
   }
 

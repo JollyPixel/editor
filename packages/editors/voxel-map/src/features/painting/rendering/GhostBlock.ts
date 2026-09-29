@@ -1,60 +1,48 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import {
-  BlockSurface,
-  type BlockRegistry,
-  type VoxelTransform,
-  type ResolvedBlockDefinition
+import type {
+  BlockRegistry,
+  ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import type { BlockRenderSources } from "../../blocks/blockGeometry.ts";
 import {
-  buildBlockGeometry,
-  textureOf,
-  type BlockPreviewSources
-} from "../../blocks/blockPreviewMesh.ts";
+  BlockPieces,
+  type BlockPiece
+} from "../../blocks/BlockPieces.ts";
 import type { GhostTarget } from "../model/ghostTarget.ts";
 
 // CONSTANTS
-const kDefaultOpacity = 0.55;
+const kOpacity = 0.55;
 const kOverlayScale = 1.02;
 
-export interface GhostBlockOptions extends BlockPreviewSources {
+export interface GhostBlockOptions {
+  sources: BlockRenderSources;
   blockRegistry: BlockRegistry;
-  /**
-   * @default 0.55
-   */
-  opacity?: number;
 }
 
 export class GhostBlock extends THREE.Group {
-  #sources: BlockPreviewSources;
   #blockRegistry: BlockRegistry;
+  #pieces: BlockPieces;
   #mesh: THREE.Mesh;
   #empty = new THREE.BufferGeometry();
   #material: THREE.MeshLambertMaterial;
   #hidden: THREE.MeshBasicMaterial;
   #block: ResolvedBlockDefinition | null = null;
-  #tilesetVersion = -1;
-  #geometries = new Map<number, THREE.BufferGeometry | null>();
+  #piece: BlockPiece | null = null;
 
   constructor(
     options: GhostBlockOptions
   ) {
     super();
 
-    const {
-      blockRegistry,
-      opacity = kDefaultOpacity,
-      ...sources
-    } = options;
-
     this.name = "ghost-block";
-    this.#sources = sources;
-    this.#blockRegistry = blockRegistry;
+    this.#blockRegistry = options.blockRegistry;
+    this.#pieces = new BlockPieces(options.sources);
     this.#material = new THREE.MeshLambertMaterial({
       transparent: true,
-      opacity,
+      opacity: kOpacity,
       depthWrite: false
     });
     this.#hidden = new THREE.MeshBasicMaterial({
@@ -64,6 +52,7 @@ export class GhostBlock extends THREE.Group {
       this.#empty,
       [this.#material, this.#hidden]
     );
+    this.#mesh.position.set(-0.5, -0.5, -0.5);
     this.#mesh.renderOrder = 1;
     this.#mesh.frustumCulled = false;
     this.add(this.#mesh);
@@ -74,25 +63,24 @@ export class GhostBlock extends THREE.Group {
     target: GhostTarget
   ): boolean {
     const block = this.#blockRegistry.get(target.blockId);
-    if (block === undefined) {
+    if (block !== this.#block) {
+      this.#block = block ?? null;
+      this.#forget();
+    }
+
+    const piece = block === undefined ?
+      null :
+      this.#pieces.pieceOf(block, target.transform);
+    if (piece === null) {
       this.hide();
 
       return false;
     }
 
-    this.#adopt(block);
-    const geometry = this.#geometryOf(block, target.transform);
-    if (geometry === null) {
-      this.hide();
-
-      return false;
-    }
-
+    this.#adopt(piece);
     const { x, y, z } = target.position;
-    const scale = target.overlay ? kOverlayScale : 1;
-    this.#mesh.geometry = geometry;
     this.position.set(x + 0.5, y + 0.5, z + 0.5);
-    this.scale.setScalar(scale);
+    this.scale.setScalar(target.overlay ? kOverlayScale : 1);
     this.visible = true;
 
     return true;
@@ -103,8 +91,7 @@ export class GhostBlock extends THREE.Group {
   }
 
   override dispose(): void {
-    this.#mesh.geometry = this.#empty;
-    this.#clear();
+    this.#forget();
     this.#empty.dispose();
     this.#material.dispose();
     this.#hidden.dispose();
@@ -112,52 +99,25 @@ export class GhostBlock extends THREE.Group {
   }
 
   #adopt(
-    block: ResolvedBlockDefinition
+    piece: BlockPiece
   ): void {
-    const { version } = this.#sources.atlases;
-    if (block === this.#block && version === this.#tilesetVersion) {
+    if (piece === this.#piece) {
       return;
     }
 
-    this.#mesh.geometry = this.#empty;
-    this.#clear();
-    this.#block = block;
-    this.#tilesetVersion = version;
-
-    const surface = new BlockSurface(block);
-    const map = textureOf(block, this.#sources);
-    this.#material.map = map;
-    this.#material.alphaTest = surface.alphaCutoff;
-    this.#material.side = surface.side === "double" ?
+    this.#piece = piece;
+    this.#mesh.geometry = piece.geometry;
+    this.#material.map = piece.texture;
+    this.#material.alphaTest = piece.surface.alphaCutoff;
+    this.#material.side = piece.surface.side === "double" ?
       THREE.DoubleSide :
       THREE.FrontSide;
     this.#material.needsUpdate = true;
   }
 
-  #geometryOf(
-    block: ResolvedBlockDefinition,
-    transform: VoxelTransform
-  ): THREE.BufferGeometry | null {
-    const cached = this.#geometries.get(transform.packed);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const geometry = buildBlockGeometry(
-      block,
-      this.#sources,
-      transform
-    );
-    geometry?.translate(-0.5, -0.5, -0.5);
-    this.#geometries.set(transform.packed, geometry);
-
-    return geometry;
-  }
-
-  #clear(): void {
-    for (const geometry of this.#geometries.values()) {
-      geometry?.dispose();
-    }
-    this.#geometries.clear();
+  #forget(): void {
+    this.#mesh.geometry = this.#empty;
+    this.#piece = null;
+    this.#pieces.clear();
   }
 }

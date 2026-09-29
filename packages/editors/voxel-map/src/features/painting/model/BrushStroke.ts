@@ -6,10 +6,9 @@ import type { VoxelRotationValue } from "./brushOrientation.ts";
 import {
   planeThrough,
   type BrushAnchor,
-  type BrushAxis,
-  type BrushPattern,
   type BrushPlane
 } from "./brushFootprint.ts";
+import type { BrushAxis, BrushPattern } from "../../../state/index.ts";
 
 export type StrokeMode = "place" | "replace" | "remove";
 
@@ -26,15 +25,9 @@ export interface BrushStrokeOptions {
   pattern?: BrushPattern;
   anchor?: BrushAnchor;
   layerName: string;
-  /**
-   * Undefined in remove mode.
-   */
   paint?: VoxelPaint;
 }
 
-/**
- * Plane-locked stroke that follows the cursor and stamps each cell once.
- */
 export class BrushStroke {
   readonly mode: StrokeMode;
   readonly origin: VoxelCoord;

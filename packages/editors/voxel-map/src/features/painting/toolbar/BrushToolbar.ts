@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  LitElement,
   html,
   nothing,
   type TemplateResult
@@ -18,14 +17,11 @@ import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
 import {
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
-  type BrushMode
+  type BrushAxis,
+  type BrushStore
 } from "../../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../../scene/EditorScene.ts";
-import { WorkspaceController } from "../../../shared/WorkspaceController.ts";
-import type {
-  BrushAxis,
-  BrushPattern
-} from "../model/brushFootprint.ts";
+import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import { brushToolbarStyles } from "./BrushToolbar.styles.ts";
 import {
   paintingNoticeOf,
@@ -52,23 +48,11 @@ interface ChoiceTool<TValue extends string> {
 }
 
 @customElement("voxel-brush-toolbar")
-export class BrushToolbar extends LitElement {
+export class BrushToolbar extends WorkspaceElement {
   static override styles = brushToolbarStyles;
 
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
-
-  @state()
-  declare _mode: BrushMode;
-
-  @state()
-  declare _axis: BrushAxis;
-
-  @state()
-  declare _pattern: BrushPattern;
-
-  @state()
-  declare _ghost: boolean;
 
   @state()
   declare _canUndo: boolean;
@@ -80,9 +64,9 @@ export class BrushToolbar extends LitElement {
   declare _notice: PaintingNotice | null;
 
   #size = new FieldBinding<number>(this, {
-    read: () => this.#workspace.attached.state.brush.size,
+    read: () => this.#brush.size,
     write: (value) => {
-      this.#workspace.attached.state.brush.size = value;
+      this.#brush.size = value;
     }
   });
 
@@ -93,7 +77,24 @@ export class BrushToolbar extends LitElement {
     this._canRedo = state.canRedo;
   };
 
-  #workspace = new WorkspaceController(this, (workspace) => {
+  constructor() {
+    super();
+    this.disabled = true;
+    this._notice = null;
+  }
+
+  get #brush(): BrushStore {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      throw new Error("No workspace is attached yet.");
+    }
+
+    return workspace.state.brush;
+  }
+
+  protected override watchWorkspace(
+    workspace: VoxelMapWorkspace
+  ): Iterable<() => void> {
     const { brush, selection } = workspace.state;
     const { history } = workspace.engine.document;
     const refreshSelection = (): void => {
@@ -101,10 +102,6 @@ export class BrushToolbar extends LitElement {
       this._notice = paintingNoticeOf(selection);
     };
 
-    this._mode = brush.mode;
-    this._axis = brush.axis;
-    this._pattern = brush.pattern;
-    this._ghost = brush.ghost;
     this._canUndo = history.canUndo;
     this._canRedo = history.canRedo;
     refreshSelection();
@@ -112,43 +109,20 @@ export class BrushToolbar extends LitElement {
     history.on("change", this.#onHistoryChange);
 
     return [
-      brush.subscribe("modeChange", (mode) => {
-        this._mode = mode;
-      }),
-      brush.subscribe("axisChange", (axis) => {
-        this._axis = axis;
-      }),
-      brush.subscribe("patternChange", (pattern) => {
-        this._pattern = pattern;
-      }),
-      brush.subscribe("sizeChange", () => {
-        this.requestUpdate();
-      }),
-      brush.subscribe("ghostChange", (ghost) => {
-        this._ghost = ghost;
-      }),
+      brush.subscribe("change", () => this.requestUpdate()),
       selection.subscribe("change", refreshSelection),
       workspace.mapDocument.subscribe("layerUpdated", refreshSelection),
       () => history.off("change", this.#onHistoryChange)
     ];
-  });
-
-  constructor() {
-    super();
-    this.disabled = true;
-    this._notice = null;
-  }
-
-  attach(
-    workspace: VoxelMapWorkspace
-  ): void {
-    this.#workspace.attach(workspace);
   }
 
   override render(): TemplateResult | typeof nothing {
-    if (this.#workspace.current === null) {
+    const workspace = this.workspace;
+    if (workspace === null) {
       return nothing;
     }
+
+    const { brush } = workspace.state;
 
     return html`
       ${this.#renderNotice()}
@@ -183,19 +157,19 @@ export class BrushToolbar extends LitElement {
           ${this.#renderChoice({
             tool: "mode",
             options: BRUSH_MODE_OPTIONS,
-            current: this._mode,
+            current: brush.mode,
             shortcut: "R",
             select: (value) => {
-              this.#workspace.attached.state.brush.mode = value;
+              brush.mode = value;
             }
           })}
           ${this.#renderChoice({
             tool: "axis",
             options: BRUSH_AXIS_OPTIONS,
-            current: this._axis,
+            current: brush.axis,
             shortcut: "X",
             select: (value) => {
-              this.#workspace.attached.state.brush.axis = value;
+              brush.axis = value;
             },
             content: axisLetters
           })}
@@ -220,17 +194,17 @@ export class BrushToolbar extends LitElement {
           ${this.#renderChoice({
             tool: "pattern",
             options: BRUSH_PATTERN_OPTIONS,
-            current: this._pattern,
+            current: brush.pattern,
             shortcut: "C",
             select: (value) => {
-              this.#workspace.attached.state.brush.pattern = value;
+              brush.pattern = value;
             }
           })}
           <jolly-tool-button
             data-tool="ghost"
             icon="brush-ghost"
             label=${toolLabel(ghostLabel(this.#size.value), "G", this.disabled)}
-            ?active=${this._ghost}
+            ?active=${brush.ghost}
             ?disabled=${this.disabled}
             @click=${this.#onGhostToggle}
           ></jolly-tool-button>
@@ -264,7 +238,7 @@ export class BrushToolbar extends LitElement {
   #resume(
     layerName: string
   ): void {
-    this.#workspace.attached.state.selection.selectVoxelLayer(layerName);
+    this.workspace?.state.selection.selectVoxelLayer(layerName);
   }
 
   #renderChoice<TValue extends string>(
@@ -305,15 +279,15 @@ export class BrushToolbar extends LitElement {
   }
 
   #onUndo(): void {
-    this.#workspace.current?.engine.document.history.undo();
+    this.workspace?.engine.document.history.undo();
   }
 
   #onRedo(): void {
-    this.#workspace.current?.engine.document.history.redo();
+    this.workspace?.engine.document.history.redo();
   }
 
   #onGhostToggle(): void {
-    this.#workspace.attached.state.brush.ghost = !this.#workspace.attached.state.brush.ghost;
+    this.#brush.ghost = !this.#brush.ghost;
   }
 }
 

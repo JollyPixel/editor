@@ -33,7 +33,7 @@ function placement(
 ): Promise<PlacementSnapshot | null> {
   return page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
-    const current = workspace.state.templates.placement;
+    const current = workspace.templates.placement;
     const template = current === null ?
       undefined :
       workspace.engine.document.world.templates.get(current.templateId);

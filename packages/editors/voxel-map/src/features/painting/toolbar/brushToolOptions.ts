@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import type { BrushMode } from "../../../state/index.ts";
 import type {
   BrushAxis,
+  BrushMode,
   BrushPattern
-} from "../model/brushFootprint.ts";
+} from "../../../state/index.ts";
 import type { ChoiceOption } from "../../../shared/toolChoice.ts";
 
 // CONSTANTS

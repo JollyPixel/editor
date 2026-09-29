@@ -37,18 +37,13 @@ export interface TilesetProjectionOptions {
   slot: TilesetSlot;
 }
 
-/**
- * Mirrors a tileset document's blocks, material groups and blend groups
- * into the world engine under the tileset's slot, and keeps them there as
- * the document changes.
- */
 export class TilesetProjection {
   readonly #engine: ProjectionEngine;
   readonly #tileset: TilesetDocument;
-  #slot: TilesetSlot;
+  readonly #slot: TilesetSlot;
 
   readonly #onLoaded = (): void => {
-    this.projectAll();
+    this.#projectAll();
   };
 
   readonly #onCommand: TilesetDocumentListener = (command) => {
@@ -64,26 +59,16 @@ export class TilesetProjection {
 
     this.#tileset.on("loaded", this.#onLoaded);
     this.#tileset.on("command", this.#onCommand);
-    this.projectAll();
+    this.#projectAll();
   }
 
-  get slot(): TilesetSlot {
-    return this.#slot;
+  dispose(): void {
+    this.#tileset.off("loaded", this.#onLoaded);
+    this.#tileset.off("command", this.#onCommand);
+    this.#unprojectAll();
   }
 
-  update(
-    slot: TilesetSlot
-  ): void {
-    if (slot.id === this.#slot.id && slot.slot === this.#slot.slot) {
-      return;
-    }
-
-    this.unprojectAll();
-    this.#slot = { ...slot };
-    this.projectAll();
-  }
-
-  projectAll(): void {
+  #projectAll(): void {
     const engine = this.#engine;
     const { blocks, materialGroups, blendGroups } = this.#tileset;
 
@@ -120,7 +105,7 @@ export class TilesetProjection {
     engine.defineBlocks(projectTilesetBlocks(this.#slot, blocks));
   }
 
-  unprojectAll(): void {
+  #unprojectAll(): void {
     const engine = this.#engine;
 
     for (const block of [...engine.blocks]) {
@@ -138,12 +123,6 @@ export class TilesetProjection {
         engine.removeBlendGroup(group.id);
       }
     }
-  }
-
-  dispose(): void {
-    this.#tileset.off("loaded", this.#onLoaded);
-    this.#tileset.off("command", this.#onCommand);
-    this.unprojectAll();
   }
 
   #apply(
@@ -197,10 +176,6 @@ export class TilesetProjection {
     }
   }
 
-  /**
-   * The engine index a tileset-local index maps to: the position of the
-   * slot's block currently at that local position.
-   */
   #engineIndexOf(
     localIndex: number
   ): number {

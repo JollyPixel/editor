@@ -7,7 +7,7 @@ import type {
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { TemplateStore } from "../../state/index.ts";
+import type { TemplateStore } from "./TemplateStore.ts";
 
 export type TemplateWorld = Pick<VoxelWorld, "templates">;
 

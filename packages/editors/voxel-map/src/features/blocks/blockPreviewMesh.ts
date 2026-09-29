@@ -2,21 +2,18 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import {
-  buildShapeGeometry,
-  shapeSlots,
   BlockSurface,
-  BlockTextures,
-  VoxelTransform,
-  type FaceDefinition,
-  type ResolvedBlockDefinition,
-  type BlockShapeRegistry,
-  type MaterialGroupList,
-  type TilesetAtlases
+  type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { SceneLighting } from "../../scene/SceneLighting.ts";
-import type { TileOpacityProbe } from "./tileOpacity.ts";
+import {
+  BLOCK_EMPTY_MATERIAL,
+  buildBlockGeometry,
+  textureOf,
+  type BlockRenderSources
+} from "./blockGeometry.ts";
 
 // CONSTANTS
 const kCameraFov = 45;
@@ -32,21 +29,12 @@ const kOutlineThresholdAngle = 20;
 const kEnvironmentBlur = 0.04;
 const kEnvironmentIntensity = 0.6;
 
-export const BLOCK_TEXTURED_MATERIAL = 0;
-export const BLOCK_EMPTY_MATERIAL = 1;
 export const PREVIEW_FIT_RADIUS = Math.tan((kCameraFov * Math.PI) / 360) *
   kCameraZ * kFitFactor;
 export const PREVIEW_TILT = 0.4;
 export const PREVIEW_ROTATION_STEP = 0.005;
 
 let checkerTexture: THREE.DataTexture | null = null;
-
-export interface BlockPreviewSources {
-  shapeRegistry: BlockShapeRegistry;
-  atlases: TilesetAtlases;
-  tileOpacity: TileOpacityProbe;
-  materialGroups?: MaterialGroupList;
-}
 
 export interface BlockPreviewStage {
   scene: THREE.Scene;
@@ -91,29 +79,9 @@ export function fitGeometry(
   geometry.scale(scale, scale, scale);
 }
 
-export function emptyTextureSlots(
-  block: ResolvedBlockDefinition,
-  sources: BlockPreviewSources
-): string[] {
-  const shape = sources.shapeRegistry.get(block.shapeId);
-  if (!shape) {
-    return [];
-  }
-
-  const textures = BlockTextures.of(block);
-  const { alphaCutoff } = new BlockSurface(block);
-
-  return shapeSlots(shape)
-    .map((slot) => slot.id)
-    .filter((slot) => sources.tileOpacity.isEmpty(
-      textures.forSlot(slot),
-      alphaCutoff
-    ));
-}
-
 export function buildBlockPreviewMesh(
   block: ResolvedBlockDefinition,
-  sources: BlockPreviewSources
+  sources: BlockRenderSources
 ): THREE.Mesh {
   const geo = buildBlockGeometry(block, sources);
   if (geo === null) {
@@ -165,85 +133,6 @@ export function buildBlockPreviewMesh(
   return mesh;
 }
 
-export function buildBlockGeometry(
-  block: ResolvedBlockDefinition,
-  sources: BlockPreviewSources,
-  transform: VoxelTransform = VoxelTransform.Identity
-): THREE.BufferGeometry | null {
-  const { shapeRegistry, atlases } = sources;
-  const shape = shapeRegistry.get(block.shapeId);
-  if (!shape) {
-    return null;
-  }
-
-  const texture = textureOf(block, sources);
-  const { positions, normals, uvs, indices, ranges } = buildShapeGeometry(
-    shape,
-    transform
-  );
-
-  const atlasUvs = Float32Array.from(uvs);
-  const geo = new THREE.BufferGeometry();
-
-  const empty = new Set(emptyTextureSlots(block, sources));
-  const textures = BlockTextures.of(block);
-  let indexStart = 0;
-  for (const range of ranges) {
-    const indexCount = triangleIndexCount(range.definitions);
-    const isEmpty = empty.has(range.slot);
-    geo.addGroup(
-      indexStart,
-      indexCount,
-      isEmpty ? BLOCK_EMPTY_MATERIAL : BLOCK_TEXTURED_MATERIAL
-    );
-    indexStart += indexCount;
-
-    const tileRef = textures.forSlot(range.slot);
-    if (isEmpty || !tileRef || !texture) {
-      continue;
-    }
-
-    const region = atlases
-      .get(tileRef.tilesetId)
-      ?.uvFor(
-        tileRef.col,
-        tileRef.row,
-        tileRef.size,
-        textures.spanFor(range.slot, range.span)
-      );
-    if (!region) {
-      continue;
-    }
-
-    const end = range.start + range.count;
-    for (let index = range.start; index < end; index++) {
-      atlasUvs[index * 2] = region.offsetU +
-        (atlasUvs[index * 2] * region.scaleU);
-      atlasUvs[(index * 2) + 1] = region.offsetV +
-        (atlasUvs[(index * 2) + 1] * region.scaleV);
-    }
-  }
-
-  geo.setAttribute(
-    "position",
-    new THREE.BufferAttribute(Float32Array.from(positions), 3)
-  );
-  geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
-  geo.setAttribute("uv", new THREE.BufferAttribute(atlasUvs, 2));
-  geo.setIndex(new THREE.BufferAttribute(indices, 1));
-
-  return geo;
-}
-
-export function textureOf(
-  block: ResolvedBlockDefinition,
-  sources: BlockPreviewSources
-): THREE.Texture | null {
-  return sources.atlases
-    .get(block.defaultTexture?.tilesetId)
-    ?.texture ?? null;
-}
-
 function emptyIndicesOf(
   geometry: THREE.BufferGeometry
 ): number[] {
@@ -257,15 +146,6 @@ function emptyIndicesOf(
     .flatMap((group) => Array.from(
       index.array.subarray(group.start, group.start + group.count)
     ));
-}
-
-function triangleIndexCount(
-  definitions: readonly FaceDefinition[]
-): number {
-  return definitions.reduce(
-    (count, definition) => count + ((definition.vertices.length - 2) * 3),
-    0
-  );
 }
 
 function buildOutline(

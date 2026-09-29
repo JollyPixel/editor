@@ -7,7 +7,11 @@ import {
 import type { VoxelCoord, VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { BrushStore, SelectionStore } from "../../state/index.ts";
+import type {
+  BrushStore,
+  PointerCapture,
+  SelectionStore
+} from "../../state/index.ts";
 import type { BrushCursor } from "./model/brushCursor.ts";
 import type { BrushShape } from "./model/brushFootprint.ts";
 import {
@@ -33,7 +37,7 @@ import {
 } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
-import { TileOpacityProbe } from "../blocks/tileOpacity.ts";
+import type { BlockRenderSources } from "../blocks/blockGeometry.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
@@ -43,42 +47,21 @@ const kStaleAimFrames = 2;
 
 export interface LocalBrushOptions {
   engine: VoxelView;
+  sources: BlockRenderSources;
   camera: THREE.PerspectiveCamera;
   brush: BrushStore;
   selection: SelectionStore;
-  /**
-   * Fallback ground-plane side length, in world units.
-   * @default 4096
-   */
+  pointer: PointerCapture;
   groundPlaneSize?: number;
-  /**
-   * Maximum brush reach in world units; disables previews and edits beyond it.
-   * @default 32
-   */
   maxDistance?: number;
-  /**
-   * Camera-centred shell for aiming at empty sky, in world units; 0 disables
-   * it and leaves the ground plane as the only fallback.
-   * @default 24
-   */
   skyRadius?: number;
-  /**
-   * Cursor tint, usually the local peer's collaboration color.
-   */
   color?: THREE.ColorRepresentation;
+  onCursorChange: (cursor: BrushCursor | null) => void;
+  onFocusRequest: (point: THREE.Vector3Like) => void;
+  onPaintBlocked: () => void;
 }
 
-/**
- * Paints fixed-height strokes and publishes the aimed cursor for peers.
- */
 export class LocalBrush extends ActorComponent {
-  /**
-   * Fires when the aimed cursor changes; null means no target.
-   */
-  onCursorChange?: (cursor: BrushCursor | null) => void;
-  onFocusRequest?: (point: THREE.Vector3Like) => void;
-  onPaintBlocked?: () => void;
-
   suspended = false;
 
   readonly engine: VoxelView;
@@ -86,6 +69,9 @@ export class LocalBrush extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #brush: BrushStore;
   #selection: SelectionStore;
+  #pointerCapture: PointerCapture;
+  #onFocusRequest: (point: THREE.Vector3Like) => void;
+  #onPaintBlocked: () => void;
   #aimer: BrushAimResolver;
   #preview: BrushPreview;
   #pointer = new THREE.Vector2();
@@ -110,6 +96,7 @@ export class LocalBrush extends ActorComponent {
       camera,
       brush,
       selection,
+      pointer,
       groundPlaneSize = 4096,
       maxDistance = kDefaultMaxDistance,
       skyRadius = kDefaultSkyRadius,
@@ -120,6 +107,9 @@ export class LocalBrush extends ActorComponent {
     this.#camera = camera;
     this.#brush = brush;
     this.#selection = selection;
+    this.#pointerCapture = pointer;
+    this.#onFocusRequest = options.onFocusRequest;
+    this.#onPaintBlocked = options.onPaintBlocked;
     this.#aimer = new BrushAimResolver({
       camera,
       solid: engine.root,
@@ -130,15 +120,12 @@ export class LocalBrush extends ActorComponent {
     this.#preview = new BrushPreview({
       actor,
       camera,
-      brush,
       ghost: {
         blockRegistry: engine.document.blocks,
-        shapeRegistry: engine.shapes,
-        atlases: engine.atlases,
-        tileOpacity: new TileOpacityProbe(engine.atlases)
+        sources: options.sources
       },
       ...color === undefined ? {} : { color },
-      onCursorChange: (cursor) => this.onCursorChange?.(cursor)
+      onCursorChange: options.onCursorChange
     });
     const markDirty = () => this.#preview.markDirty();
     const markAimStale = () => {
@@ -147,31 +134,12 @@ export class LocalBrush extends ActorComponent {
     engine.document.on("command", markAimStale);
     this.#unsubscribers = [
       () => engine.document.off("command", markAimStale),
-      brush.subscribe("sizeChange", markDirty),
-      brush.subscribe("axisChange", markDirty),
-      brush.subscribe("patternChange", markDirty),
-      brush.subscribe("modeChange", markDirty),
+      brush.subscribe("change", markDirty),
       brush.subscribe("blockChange", markDirty),
-      brush.subscribe("rotationModeChange", markDirty),
-      brush.subscribe("flipYChange", markDirty),
-      brush.subscribe("ghostChange", markDirty),
       selection.subscribe("change", () => {
         this.#blockedPaintReported = false;
       })
     ];
-  }
-
-  get maxDistance(): number {
-    return this.#aimer.maxDistance;
-  }
-
-  set maxDistance(value: number) {
-    if (value === this.#aimer.maxDistance) {
-      return;
-    }
-
-    this.#aimer.maxDistance = value;
-    this.#preview.markDirty();
   }
 
   get skyRadius(): number {
@@ -284,13 +252,13 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#blockedPaintReported = true;
-    this.onPaintBlocked?.();
+    this.#onPaintBlocked();
   }
 
   #updateStroke(): void {
     const { input } = this.actor.world;
 
-    if (this.#selection.gizmoDragging) {
+    if (this.#pointerCapture.captured) {
       this.#endStroke();
 
       return;
@@ -364,7 +332,6 @@ export class LocalBrush extends ActorComponent {
 
     const side = mode === "place" ? "place" : "remove";
     const { axis, pattern } = this.#brush;
-    // Freeze orientation so camera movement cannot rotate a stroke midway.
     const paint = mode === "remove" ? undefined : this.#paint();
     const stroke = new BrushStroke({
       mode,
@@ -431,7 +398,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     const { remove: cell } = aim;
-    this.onFocusRequest?.({
+    this.#onFocusRequest({
       x: cell.x + 0.5,
       y: cell.y + 0.5,
       z: cell.z + 0.5
@@ -486,7 +453,7 @@ export class LocalBrush extends ActorComponent {
   }
 
   #updatePreview(): void {
-    if (this.#selection.gizmoDragging) {
+    if (this.#pointerCapture.captured) {
       this.#preview.hide();
 
       return;
@@ -510,7 +477,6 @@ export class LocalBrush extends ActorComponent {
     const layer = this.engine.document.world.getLayer(layerName);
 
     return ghostTargetOf({
-      enabled: this.#brush.ghost,
       size: this.#brush.size,
       mode: this.#brush.mode,
       aim: stroke === null ? this.#resolveAim() : null,

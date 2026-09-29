@@ -13,11 +13,9 @@ import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../../document/index.ts";
-import type {
-  TemplatePlacement as Placement,
-  TemplateStore
-} from "../../../state/index.ts";
-import { TileOpacityProbe } from "../../blocks/tileOpacity.ts";
+import type { PointerCapture } from "../../../state/index.ts";
+import type { TemplatePlacement as Placement, TemplateStore } from "../TemplateStore.ts";
+import type { BlockRenderSources } from "../../blocks/blockGeometry.ts";
 import {
   placementBounds,
   placementPositionOf
@@ -29,8 +27,10 @@ const kMarqueeColors = ["#ffd400", "#1a1a1a"] as const;
 
 export interface TemplatePlacementOptions {
   engine: VoxelView;
+  sources: BlockRenderSources;
   camera: THREE.PerspectiveCamera;
   templates: TemplateStore;
+  pointer: PointerCapture;
   mapDocument: MapDocumentSignals;
 }
 
@@ -38,6 +38,7 @@ export class TemplatePlacement extends ActorComponent {
   #engine: VoxelView;
   #camera: THREE.PerspectiveCamera;
   #templates: TemplateStore;
+  #pointerCapture: PointerCapture;
   #mapDocument: MapDocumentSignals;
   #marquee = new MarqueeBox({
     colors: kMarqueeColors,
@@ -58,12 +59,11 @@ export class TemplatePlacement extends ActorComponent {
     this.#engine = options.engine;
     this.#camera = options.camera;
     this.#templates = options.templates;
+    this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
     this.#ghost = new TemplateGhost({
       blockRegistry: options.engine.document.blocks,
-      shapeRegistry: options.engine.shapes,
-      atlases: options.engine.atlases,
-      tileOpacity: new TileOpacityProbe(options.engine.atlases)
+      sources: options.sources
     });
     this.#marquee.visible = false;
   }
@@ -106,7 +106,7 @@ export class TemplatePlacement extends ActorComponent {
       controls.dispose();
       this.#controls = null;
     }
-    this.#templates.dragging = false;
+    this.#pointerCapture.release(this);
     this.#ghost.dispose();
     this.#marquee.dispose();
 
@@ -120,6 +120,7 @@ export class TemplatePlacement extends ActorComponent {
       undefined :
       this.#engine.document.world.templates.get(placement.templateId);
     if (placement === null || template === undefined) {
+      this.#pointerCapture.release(this);
       this.#controls?.detach();
       this.#marquee.visible = false;
       this.#ghost.hide();
@@ -154,7 +155,7 @@ export class TemplatePlacement extends ActorComponent {
   };
 
   readonly #onDragStart = (): void => {
-    this.#templates.dragging = true;
+    this.#pointerCapture.capture(this);
   };
 
   readonly #onDragChange = (
@@ -174,6 +175,6 @@ export class TemplatePlacement extends ActorComponent {
   };
 
   readonly #onDragEnd = (): void => {
-    this.#templates.dragging = false;
+    this.#pointerCapture.release(this);
   };
 }

@@ -33,7 +33,6 @@ function optionsOf(
   patch: Partial<GhostTargetOptions> = {}
 ): GhostTargetOptions {
   return {
-    enabled: true,
     size: 1,
     mode: "build",
     aim: {
@@ -71,8 +70,7 @@ describe("ghostTargetOf", () => {
     assert.equal(target.overlay, true);
   });
 
-  test("shows nothing when disabled or larger than one voxel", () => {
-    assert.equal(ghostTargetOf(optionsOf({ enabled: false })), null);
+  test("shows nothing for a brush larger than one voxel", () => {
     assert.equal(ghostTargetOf(optionsOf({ size: 2 })), null);
   });
 

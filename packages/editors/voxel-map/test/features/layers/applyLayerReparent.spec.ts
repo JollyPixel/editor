@@ -11,7 +11,7 @@ import type { JollyReparentDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { applyLayerReparent } from "../../../src/features/layers/layerDrop.ts";
-import { layerRowId } from "../../../src/features/layers/layerTree.ts";
+import { layerKey } from "../../../src/state/layerRef.ts";
 
 describe("applyLayerReparent — voxel layers", () => {
   test("restacks a layer dropped above a lower one", () => {
@@ -91,7 +91,7 @@ describe("applyLayerReparent — voxel layers", () => {
       },
       {
         movedIds: [voxelId("C")],
-        targetId: layerRowId({ kind: "object-layer", name: "Triggers" }),
+        targetId: layerKey({ kind: "object-layer", name: "Triggers" }),
         where: "above"
       }
     ];
@@ -110,13 +110,13 @@ describe("applyLayerReparent — objects", () => {
 
     applyLayerReparent(world, {
       movedIds: [
-        layerRowId({
+        layerKey({
           kind: "object",
           layerName: "Triggers",
           objectId: "obj_1"
         })
       ],
-      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
+      targetId: layerKey({ kind: "object-layer", name: "Spawns" }),
       where: "inside"
     });
 
@@ -124,46 +124,21 @@ describe("applyLayerReparent — objects", () => {
     assert.deepEqual(objectIds(world, "Spawns"), ["obj_1"]);
   });
 
-  test("reports where each moved object landed", () => {
+  test("leaves the layers alone for a move that did not happen", () => {
     const world = makeWorld();
 
-    const relocated = applyLayerReparent(world, {
+    applyLayerReparent(world, {
       movedIds: [
-        layerRowId({
-          kind: "object",
-          layerName: "Triggers",
-          objectId: "obj_1"
-        })
-      ],
-      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
-      where: "inside"
-    });
-
-    assert.deepEqual(relocated, [
-      {
-        kind: "object",
-        layerName: "Spawns",
-        objectId: "obj_1"
-      }
-    ]);
-  });
-
-  test("reports nothing for a move that did not happen", () => {
-    const world = makeWorld();
-
-    const relocated = applyLayerReparent(world, {
-      movedIds: [
-        layerRowId({
+        layerKey({
           kind: "object",
           layerName: "Triggers",
           objectId: "gone"
         })
       ],
-      targetId: layerRowId({ kind: "object-layer", name: "Spawns" }),
+      targetId: layerKey({ kind: "object-layer", name: "Spawns" }),
       where: "inside"
     });
 
-    assert.deepEqual(relocated, []);
     assert.deepEqual(objectIds(world, "Triggers"), ["obj_1"]);
     assert.deepEqual(objectIds(world, "Spawns"), []);
   });
@@ -191,7 +166,7 @@ function makeWorld(): VoxelWorld {
 function voxelId(
   name: string
 ): string {
-  return layerRowId({
+  return layerKey({
     kind: "voxel-layer",
     name
   });

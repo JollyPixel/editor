@@ -10,11 +10,8 @@ import {
   blockIsUnused,
   blockRemovalMessage,
   blockUsageSummary,
-  formatCount,
   orphanVoxelsMessage,
-  sortBlocksByUsage,
-  tilesetIsUnused,
-  tilesetRemovalMessage
+  sortBlocksByUsage
 } from "../../../src/features/blocks/blockUsage.ts";
 
 function block(
@@ -31,12 +28,6 @@ function block(
 }
 
 describe("blockUsage", () => {
-  it("formats counts with grouping and plurals", () => {
-    assert.equal(formatCount(0, "voxel"), "0 voxels");
-    assert.equal(formatCount(1, "voxel"), "1 voxel");
-    assert.equal(formatCount(12345, "voxel"), "12,345 voxels");
-  });
-
   it("sorts blocks by descending usage and keeps registry order on ties", () => {
     const blocks = [block(1), block(2), block(3), block(4)];
     const counts = new Map([[2, 5], [3, 9], [4, 5]]);
@@ -82,23 +73,6 @@ describe("blockUsage", () => {
     );
   });
 
-  it("warns before removing a tileset", () => {
-    assert.equal(
-      tilesetRemovalMessage({ tilesetId: "a", blocks: [], voxels: 0 }),
-      "No block uses this tileset."
-    );
-    assert.equal(
-      tilesetRemovalMessage({ tilesetId: "a", blocks: [1], voxels: 0 }),
-      "1 block (none placed in the map) comes from this tileset " +
-      "and leaves the map with it."
-    );
-    assert.equal(
-      tilesetRemovalMessage({ tilesetId: "a", blocks: [1, 2], voxels: 2048 }),
-      "2 blocks (2,048 voxels in the map) come from this tileset " +
-      "and leave the map with it."
-    );
-  });
-
   it("treats a removal that loses nothing as unused", () => {
     assert.equal(
       blockIsUnused({ blockId: 1, voxels: 0, layers: [] }),
@@ -110,14 +84,6 @@ describe("blockUsage", () => {
         voxels: 1,
         layers: [{ layerName: "Ground", voxels: 1 }]
       }),
-      false
-    );
-    assert.equal(
-      tilesetIsUnused({ tilesetId: "a", blocks: [], voxels: 0 }),
-      true
-    );
-    assert.equal(
-      tilesetIsUnused({ tilesetId: "a", blocks: [1], voxels: 0 }),
       false
     );
   });

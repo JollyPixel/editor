@@ -8,14 +8,17 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { LayerVisibilityStore } from "../../../state/index.ts";
-import { layerRowId } from "../layerTree.ts";
+import {
+  layerKey,
+  objectKey,
+  parseLayerKey,
+  type ObjectRef
+} from "../../../state/index.ts";
+import type { LayerVisibilityStore } from "../LayerVisibilityStore.ts";
 import {
   areaTransformOf,
   colorOf,
-  isLocked,
-  objectKey,
-  parseObjectKey
+  isLocked
 } from "./objectArea.ts";
 
 export interface ObjectAreaSceneOptions {
@@ -25,9 +28,6 @@ export interface ObjectAreaSceneOptions {
   onRemoving?: (key: string) => void;
 }
 
-/**
- * Maintains the Three.js area objects projected from object-layer data.
- */
 export class ObjectAreaScene {
   #actor: Actor;
   #world: VoxelWorld;
@@ -54,46 +54,48 @@ export class ObjectAreaScene {
     return this.#areas.get(key);
   }
 
+  ref(
+    key: string
+  ): ObjectRef | undefined {
+    const ref = parseLayerKey(key);
+
+    return ref.kind === "object" ? ref : undefined;
+  }
+
   object(
     key: string
   ): VoxelObjectJSON | undefined {
-    const { layerName, objectId } = parseObjectKey(key);
+    const ref = this.ref(key);
+    if (ref === undefined) {
+      return undefined;
+    }
 
     return this.#world
-      .objectLayers.get(layerName)
-      ?.objects.find((candidate) => candidate.id === objectId);
+      .objectLayers.get(ref.layerName)
+      ?.objects.find((candidate) => candidate.id === ref.objectId);
   }
 
   shown(
     key: string
   ): boolean {
+    const ref = this.ref(key);
     const object = this.object(key);
-    if (object === undefined) {
-      return false;
-    }
-
-    const { layerName, objectId } = parseObjectKey(key);
-    const layer = this.#world.objectLayers.get(layerName);
-    if (layer === undefined) {
+    const layer = ref === undefined ?
+      undefined :
+      this.#world.objectLayers.get(ref.layerName);
+    if (ref === undefined || object === undefined || layer === undefined) {
       return false;
     }
 
     const layerShown = this.#visibility.resolve(
-      layerRowId({
+      layerKey({
         kind: "object-layer",
-        name: layerName
+        name: ref.layerName
       }),
       layer.visible
     );
 
-    return layerShown && this.#visibility.resolve(
-      layerRowId({
-        kind: "object",
-        layerName,
-        objectId
-      }),
-      object.visible
-    );
+    return layerShown && this.#visibility.resolve(key, object.visible);
   }
 
   locked(
@@ -113,7 +115,7 @@ export class ObjectAreaScene {
     );
 
     for (const key of [...this.#areas.keys()]) {
-      if (!names.has(parseObjectKey(key).layerName)) {
+      if (!names.has(this.ref(key)?.layerName ?? "")) {
         this.#remove(key);
       }
     }
@@ -130,21 +132,24 @@ export class ObjectAreaScene {
       layerName
     )?.objects ?? [];
     const alive = new Set(
-      objects.map((object) => objectKey(layerName, object.id))
+      objects.map((object) => objectKey({
+        layerName,
+        objectId: object.id
+      }))
     );
 
     for (const key of [...this.#areas.keys()]) {
-      if (
-        parseObjectKey(key).layerName === layerName &&
-        !alive.has(key)
-      ) {
+      if (this.ref(key)?.layerName === layerName && !alive.has(key)) {
         this.#remove(key);
       }
     }
     for (const object of objects) {
-      const key = objectKey(layerName, object.id);
-      if (key !== skipKey) {
-        this.#syncObject(layerName, object);
+      const ref = {
+        layerName,
+        objectId: object.id
+      };
+      if (objectKey(ref) !== skipKey) {
+        this.#syncObject(ref, object);
       }
     }
   }
@@ -156,10 +161,10 @@ export class ObjectAreaScene {
   }
 
   #syncObject(
-    layerName: string,
+    ref: ObjectRef,
     object: VoxelObjectJSON
   ): void {
-    const key = objectKey(layerName, object.id);
+    const key = objectKey(ref);
     const { position, size } = areaTransformOf(object);
     const area = this.#areas.get(key);
 

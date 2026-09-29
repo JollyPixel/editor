@@ -4,17 +4,17 @@ import type { JollyReparentDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  layerRefOf,
+  parseLayerKey,
   type LayerRef
-} from "./layerTree.ts";
+} from "../../state/index.ts";
 
 export function canDropLayerRef(
   detail: JollyReparentDetail
 ): boolean {
-  const target = layerRefOf(detail.targetId);
+  const target = parseLayerKey(detail.targetId);
 
   return detail.movedIds.every(
-    (movedId) => allows(layerRefOf(movedId), target, detail.where)
+    (movedId) => allows(parseLayerKey(movedId), target, detail.where)
   );
 }
 
@@ -56,32 +56,25 @@ function allows(
 export function applyLayerReparent(
   world: VoxelWorld,
   detail: JollyReparentDetail
-): LayerRef[] {
+): void {
   if (!canDropLayerRef(detail)) {
-    return [];
+    return;
   }
 
-  const relocated: LayerRef[] = [];
-  const target = layerRefOf(detail.targetId);
+  const target = parseLayerKey(detail.targetId);
   for (const movedId of detail.movedIds) {
-    const moved = layerRefOf(movedId);
+    const moved = parseLayerKey(movedId);
     if (moved.kind === "voxel-layer" && target.kind === "voxel-layer") {
       moveVoxelLayerOnto(world, moved.name, target.name, detail.where);
     }
-    else if (
-      moved.kind === "object" &&
-      target.kind === "object-layer" &&
-      moveObjectToLayer(world, moved, target.name)
-    ) {
-      relocated.push({
-        kind: "object",
-        layerName: target.name,
-        objectId: moved.objectId
-      });
+    else if (moved.kind === "object" && target.kind === "object-layer") {
+      world.objectLayers.moveObject(
+        moved.layerName,
+        moved.objectId,
+        target.name
+      );
     }
   }
-
-  return relocated;
 }
 
 function moveVoxelLayerOnto(
@@ -106,16 +99,4 @@ function moveVoxelLayerOnto(
   }
 
   world.moveLayerTo(movedName, toIndex);
-}
-
-function moveObjectToLayer(
-  world: VoxelWorld,
-  moved: Extract<LayerRef, { kind: "object"; }>,
-  targetLayerName: string
-): boolean {
-  return world.objectLayers.moveObject(
-    moved.layerName,
-    moved.objectId,
-    targetLayerName
-  );
 }

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
-import { LitElement, html } from "lit";
+import { html, nothing } from "lit";
 import {
   customElement,
-  property,
   query,
   state
 } from "lit/decorators.js";
@@ -17,13 +16,14 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
-import type {
-  LayerVisibilityStore,
-  PresenceStore,
-  SelectionStore
+import {
+  layerKey,
+  parseLayerKey,
+  type LayerRef
 } from "../../state/index.ts";
-import { ViewFocus } from "../../scene/viewFocus.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import { formatCount } from "../../shared/format.ts";
 import { AddLayerDialog } from "./AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
 import { MergeLayerDialog } from "./MergeLayerDialog.ts";
@@ -33,51 +33,34 @@ import {
   mergeLayerEntry,
   removeLayerEntry,
   renameLayerEntry,
-  setLayerEntryLocked,
-  setLayerEntryVisibility
+  setLayerEntryLocked
 } from "./layerActions.ts";
 import {
   applyLayerReparent,
   canDropLayerRef
 } from "./layerDrop.ts";
 import {
-  layerRefOf,
-  layerRowId,
   layerTreeNodes,
-  withLayerBadges,
-  type LayerRef
+  withLayerBadges
 } from "./layerTree.ts";
+import "./objects/ObjectPanel.ts";
+import "./voxel/VoxelLayerPanel.ts";
 
 @customElement("layer-manager")
-export class LayerManager extends LitElement {
+export class LayerManager extends WorkspaceElement {
   static override styles = layerManagerStyles;
-
-  @property({ attribute: false })
-  declare world: VoxelWorld;
-
-  @property({ attribute: false })
-  declare selection: SelectionStore;
-
-  @property({ attribute: false })
-  declare mapDocument: MapDocument;
-
-  @property({ attribute: false })
-  declare presence: PresenceStore;
-
-  @property({ attribute: false })
-  declare layerVisibility: LayerVisibilityStore;
-
-  @property({ attribute: false })
-  declare viewFocus: ViewFocus;
 
   @state()
   private declare _nodes: TreeNode<LayerRef>[];
 
   @state()
-  private declare _selected: string[];
+  private declare _selection: LayerRef | null;
 
   @state()
   private declare _expanded: string[];
+
+  @query("jolly-folder")
+  private declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
 
   @query("add-layer-dialog")
   private declare _addDialog: AddLayerDialog;
@@ -85,125 +68,180 @@ export class LayerManager extends LitElement {
   @query("merge-layer-dialog")
   private declare _mergeDialog: MergeLayerDialog;
 
-  #subscriptions: Array<() => void> = [];
-
   constructor() {
     super();
-    this.viewFocus = new ViewFocus();
     this._nodes = [];
-    this._selected = [];
+    this._selection = null;
     this._expanded = [];
   }
 
-  readonly #onLayerUpdated = () => {
-    this.#refreshNodes();
-  };
+  protected override watchWorkspace(
+    workspace: VoxelMapWorkspace
+  ): Iterable<() => void> {
+    const { selection, presence } = workspace.state;
+    const refresh = (): void => this.#refreshNodes(workspace);
+    this._selection = selection.current;
+    refresh();
 
-  readonly #onSelectionChange = () => {
-    this._selected = this.#selectionFromState();
-    this.#expandSelectedLayer();
-  };
-
-  override willUpdate(
-    changedProperties: Map<string | symbol, unknown>
-  ): void {
-    if (changedProperties.has("world")) {
-      this.#refreshNodes();
-    }
-  }
-
-  override connectedCallback() {
-    super.connectedCallback();
-
-    this.#subscriptions.push(
-      this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.mapDocument.subscribe("reset", this.#onLayerUpdated),
-      this.selection.subscribe("change", this.#onSelectionChange),
-      this.presence.subscribe("layerSelectionsChange", this.#onLayerUpdated),
-      this.layerVisibility.subscribe("change", this.#onLayerUpdated)
-    );
-
-    this._selected = this.#selectionFromState();
-    this.#refreshNodes();
-  }
-
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
+    return [
+      workspace.mapDocument.subscribe("layerUpdated", refresh),
+      workspace.mapDocument.subscribe("reset", refresh),
+      presence.subscribe("layerSelectionsChange", refresh),
+      workspace.layerVisibility.subscribe("change", refresh),
+      workspace.usage.subscribe("change", () => this.requestUpdate()),
+      selection.subscribe("change", (current) => {
+        this._selection = current;
+        this.#expandLayerOf(current);
+      })
+    ];
   }
 
   override render() {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return nothing;
+    }
+
+    const world = workspace.engine.document.world;
+    const voxelLayerSelected = this._selection?.kind === "voxel-layer";
+
     return html`
-      <div class="tree-host">
-        <jolly-tree
-          require-selection
-          renamable
-          reorderable
-          row-drag
-          .nodes=${this._nodes}
-          .selected=${this._selected}
-          .expanded=${this._expanded}
-          .acceptDrop=${canDropLayerRef}
-          @jolly-select=${this.#onSelect}
-          @jolly-toggle-expand=${this.#onToggleExpand}
-          @jolly-toggle-visible=${this.#onToggleVisible}
-          @jolly-toggle-lock=${this.#onToggleLock}
-          @jolly-rename=${this.#onRename}
-          @jolly-reparent=${this.#onReparent}
-        ></jolly-tree>
-      </div>
+      <jolly-folder
+        key="layers"
+        label="Layers"
+        storage-key="voxel-map:folder:layers"
+      >
+        <span
+          slot="actions"
+          class="total"
+          title="Voxels placed in the map"
+        >${formatCount(workspace.usage.stats.voxels, "voxel")}</span>
+        <jolly-button
+          slot="actions"
+          icon="plus"
+          icon-only
+          label="Add layer"
+          title="Add layer"
+          @click=${this.#addLayer}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="copy"
+          icon-only
+          label="Clone layer"
+          title="Clone layer"
+          ?disabled=${!voxelLayerSelected}
+          @click=${this.#cloneLayer}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="merge"
+          icon-only
+          label="Merge layer"
+          title="Merge layer into another"
+          ?disabled=${!voxelLayerSelected || world.getLayers().length < 2}
+          @click=${this.#mergeLayer}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="trash"
+          icon-only
+          variant="danger"
+          label="Remove layer"
+          title="Remove layer"
+          ?disabled=${this._selection === null}
+          @click=${this.#removeLayer}
+        ></jolly-button>
+
+        <div class="tree-host">
+          <jolly-tree
+            require-selection
+            renamable
+            reorderable
+            row-drag
+            .nodes=${this._nodes}
+            .selected=${this._selection === null ? [] : [layerKey(this._selection)]}
+            .expanded=${this._expanded}
+            .acceptDrop=${canDropLayerRef}
+            @jolly-select=${this.#onSelect}
+            @jolly-toggle-expand=${this.#onToggleExpand}
+            @jolly-toggle-visible=${this.#onToggleVisible}
+            @jolly-toggle-lock=${this.#onToggleLock}
+            @jolly-rename=${this.#onRename}
+            @jolly-reparent=${this.#onReparent}
+          ></jolly-tree>
+        </div>
+        ${this.#renderInspector(workspace, world)}
+      </jolly-folder>
 
       <add-layer-dialog></add-layer-dialog>
       <merge-layer-dialog></merge-layer-dialog>
     `;
   }
 
-  get #selectedRef(): LayerRef | null {
-    const [id] = this._selected;
+  #renderInspector(
+    workspace: VoxelMapWorkspace,
+    world: VoxelWorld
+  ) {
+    const selection = this._selection;
+    if (selection === null) {
+      return nothing;
+    }
 
-    return id === undefined ? null : layerRefOf(id);
+    switch (selection.kind) {
+      case "voxel-layer":
+        return html`<layer-panel
+          .world=${world}
+          .selection=${workspace.state.selection}
+          .mapDocument=${workspace.mapDocument}
+          .layerName=${selection.name}
+        ></layer-panel>`;
+      case "object":
+        return html`<object-panel
+          .world=${world}
+          .mapDocument=${workspace.mapDocument}
+          .layerName=${selection.layerName}
+          .objectId=${selection.objectId}
+        ></object-panel>`;
+      default:
+        return html`<p class="hint">
+          Select an object to edit its properties.
+        </p>`;
+    }
   }
 
-  #selectionFromState(): string[] {
-    const current = this.selection.current;
-
-    return current === null ? [] : [layerRowId(current)];
+  #refreshNodes(
+    workspace: VoxelMapWorkspace
+  ): void {
+    this._nodes = withLayerBadges(
+      layerTreeNodes(workspace.engine.document.world, workspace.layerVisibility),
+      workspace.state.presence.layerSelections
+    );
   }
 
-  #expandSelectedLayer(): void {
-    const layerName = this.selection.object?.layerName;
-    if (layerName === undefined) {
+  #expandLayerOf(
+    selection: LayerRef | null
+  ): void {
+    if (selection?.kind !== "object") {
       return;
     }
 
-    const id = layerRowId({
+    const id = layerKey({
       kind: "object-layer",
-      name: layerName
+      name: selection.layerName
     });
     if (!this._expanded.includes(id)) {
       this._expanded = [...this._expanded, id];
     }
   }
 
-  #refreshNodes(): void {
-    this._nodes = withLayerBadges(
-      layerTreeNodes(this.world, this.layerVisibility),
-      this.presence.layerSelections
-    );
-  }
-
   #onSelect(
     event: CustomEvent<JollySelectDetail>
   ): void {
     const [id] = event.detail.selected;
-    if (id === undefined) {
-      return;
+    if (id !== undefined && this.workspace !== null) {
+      this.workspace.state.selection.current = parseLayerKey(id);
     }
-
-    this._selected = [id];
-    this.selection.current = layerRefOf(id);
   }
 
   #onToggleExpand(
@@ -218,129 +256,114 @@ export class LayerManager extends LitElement {
   #onToggleVisible(
     event: CustomEvent<JollyToggleVisibleDetail>
   ): void {
-    const { visible } = event.detail;
-    const ref = layerRefOf(event.detail.id);
-    setLayerEntryVisibility(
-      this.layerVisibility,
-      ref,
-      visible
+    this.workspace?.layerVisibility.override(
+      event.detail.id,
+      event.detail.visible
     );
   }
 
   #onRename(
     event: CustomEvent<JollyRenameDetail>
   ): void {
-    const ref = layerRefOf(event.detail.id);
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return;
+    }
+
     renameLayerEntry(
-      this.world,
-      ref,
+      workspace.engine.document.world,
+      parseLayerKey(event.detail.id),
       event.detail.name
     );
-    this.#refreshNodes();
+    this.#refreshNodes(workspace);
   }
 
   #onToggleLock(
     event: CustomEvent<JollyToggleLockDetail>
   ): void {
-    const ref = layerRefOf(event.detail.id);
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return;
+    }
+
     setLayerEntryLocked(
-      this.world,
-      ref,
+      workspace.engine.document.world,
+      parseLayerKey(event.detail.id),
       event.detail.locked
     );
-    this.#refreshNodes();
-  }
-
-  async addLayer() {
-    const objectLayer = this.selection.objectLayer;
-    const objectLayers = this.world.objectLayers.toArray();
-    const result = await this._addDialog.open({
-      canAddObject: objectLayer !== null,
-      defaultKind: objectLayer === null ? "voxel-layer" : "object",
-      defaultName: {
-        "voxel-layer": `Layer ${this.world.getLayers().length + 1}`,
-        "object-layer": `Objects ${objectLayers.length + 1}`,
-        object: "Object"
-      }
-    });
-    if (result === null) {
-      return;
-    }
-
-    createLayerEntry(
-      this.world,
-      this.selection,
-      this.viewFocus,
-      result
-    );
-  }
-
-  async removeLayer() {
-    const ref = this.#selectedRef;
-    if (ref === null) {
-      return;
-    }
-
-    await removeLayerEntry(this.world, ref);
+    this.#refreshNodes(workspace);
   }
 
   #onReparent(
     event: CustomEvent<JollyReparentDetail>
   ): void {
-    const relocated = applyLayerReparent(this.world, event.detail);
-    this.#followRelocatedObjects(relocated);
-    this.#refreshNodes();
-  }
-
-  #followRelocatedObjects(
-    relocated: readonly LayerRef[]
-  ): void {
-    const selected = this.selection.object;
-    if (selected === null) {
+    const workspace = this.workspace;
+    if (workspace === null) {
       return;
     }
 
-    for (const ref of relocated) {
-      if (
-        ref.kind === "object" &&
-        ref.objectId === selected.objectId
-      ) {
-        this.selection.selectObject({
-          layerName: ref.layerName,
-          objectId: ref.objectId
-        });
+    applyLayerReparent(workspace.engine.document.world, event.detail);
+    this.#refreshNodes(workspace);
+  }
 
-        return;
+  readonly #addLayer = async(): Promise<void> => {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return;
+    }
+
+    if (this._folder !== null && !this._folder.open) {
+      this._folder.open = true;
+    }
+
+    const world = workspace.engine.document.world;
+    const { selection } = workspace.state;
+    const objectLayer = selection.objectLayer;
+    const result = await this._addDialog.open({
+      canAddObject: objectLayer !== null,
+      defaultKind: objectLayer === null ? "voxel-layer" : "object",
+      defaultName: {
+        "voxel-layer": `Layer ${world.getLayers().length + 1}`,
+        "object-layer": `Objects ${world.objectLayers.toArray().length + 1}`,
+        object: "Object"
       }
+    });
+    if (result !== null) {
+      createLayerEntry(world, selection, workspace.focusPoint(), result);
     }
-  }
+  };
 
-  cloneLayer(): void {
-    const ref = this.#selectedRef;
-    if (ref === null) {
-      return;
+  readonly #removeLayer = async(): Promise<void> => {
+    const workspace = this.workspace;
+    if (workspace !== null && this._selection !== null) {
+      await removeLayerEntry(workspace.engine.document.world, this._selection);
     }
+  };
 
-    cloneLayerEntry(
-      this.world,
-      this.selection,
-      ref
-    );
-  }
+  readonly #cloneLayer = (): void => {
+    const workspace = this.workspace;
+    if (workspace !== null && this._selection !== null) {
+      cloneLayerEntry(
+        workspace.engine.document.world,
+        workspace.state.selection,
+        this._selection
+      );
+    }
+  };
 
-  async mergeLayer() {
-    const ref = this.#selectedRef;
-    if (ref === null) {
+  readonly #mergeLayer = async(): Promise<void> => {
+    const workspace = this.workspace;
+    if (workspace === null || this._selection === null) {
       return;
     }
 
     await mergeLayerEntry(
-      this.world,
-      this.selection,
-      ref,
+      workspace.engine.document.world,
+      workspace.state.selection,
+      this._selection,
       (context) => this._mergeDialog.open(context)
     );
-  }
+  };
 }
 
 declare global {

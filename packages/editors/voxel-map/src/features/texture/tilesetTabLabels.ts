@@ -1,21 +1,6 @@
 // Import Internal Dependencies
-import type { TilesetEntry } from "../../state/index.ts";
-import { formatCount } from "../blocks/blockUsage.ts";
-
-// CONSTANTS
-const kDetachedSuffix = "(detached)";
-
-export interface TilesetTabLabelsOptions {
-  /**
-   * Number of blocks textured by the tileset.
-   */
-  blocks: number;
-  /**
-   * True when the open tab still edits an asset the tileset no longer links.
-   * @default false
-   */
-  detached?: boolean;
-}
+import type { TilesetEntry } from "../tilesets/tilesetEntry.ts";
+import { formatCount } from "../../shared/format.ts";
 
 export interface TilesetTabLabels {
   name: string;
@@ -25,14 +10,13 @@ export interface TilesetTabLabels {
 
 export function tilesetTabLabels(
   entry: TilesetEntry,
-  options: TilesetTabLabelsOptions
+  blocks: number
 ): TilesetTabLabels {
-  const { blocks, detached = false } = options;
   const { label, definition } = entry;
   const origin = entry.assetId === null ? "Unlinked texture" : label;
 
   return {
-    name: detached ? `${label} ${kDetachedSuffix}` : label,
+    name: label,
     tooltip: `${origin} · ${definition.tileSize}px · ${formatCount(blocks, "block")}`,
     badge: String(blocks)
   };
