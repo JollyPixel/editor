@@ -7,35 +7,30 @@ import {
 
 // Import Internal Dependencies
 import { SelectionStore } from "../../src/state/SelectionStore.ts";
-import type { LayerRef } from "../../src/state/layerRef.ts";
+import {
+  ObjectLayerRef,
+  ObjectRef,
+  VoxelLayerRef,
+  type LayerRef
+} from "../../src/state/index.ts";
 
 function voxel(
   name: string
 ): LayerRef {
-  return {
-    kind: "voxel-layer",
-    name
-  };
+  return new VoxelLayerRef(name);
 }
 
 function objectLayer(
   name: string
 ): LayerRef {
-  return {
-    kind: "object-layer",
-    name
-  };
+  return new ObjectLayerRef(name);
 }
 
 function object(
   layerName: string,
   objectId: string
 ): LayerRef {
-  return {
-    kind: "object",
-    layerName,
-    objectId
-  };
+  return new ObjectRef(layerName, objectId);
 }
 
 function storeOn(

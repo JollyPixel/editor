@@ -16,7 +16,8 @@ import {
 
 // Import Internal Dependencies
 import { GhostBlock } from "../../../../src/features/painting/rendering/GhostBlock.ts";
-import { TileOpacityProbe } from "../../../../src/features/blocks/tileOpacity.ts";
+import { TileOpacityProbe } from "../../../../src/features/blocks/rendering/tileOpacity.ts";
+import { BlockRenderSources } from "../../../../src/features/blocks/rendering/BlockRenderSources.ts";
 import type { GhostTarget } from "../../../../src/features/painting/model/ghostTarget.ts";
 
 function ghostOf(): GhostBlock {
@@ -30,11 +31,11 @@ function ghostOf(): GhostBlock {
         shapeId: "ramp"
       }
     ]),
-    sources: {
-      shapeRegistry: BlockShapeRegistry.createDefault(),
+    sources: new BlockRenderSources({
+      shapes: BlockShapeRegistry.createDefault(),
       atlases,
       tileOpacity: new TileOpacityProbe(atlases, () => null)
-    }
+    })
   });
 }
 

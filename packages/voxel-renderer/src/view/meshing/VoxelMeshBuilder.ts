@@ -5,6 +5,7 @@ import type { BlendGroupList } from "../../document/materials/BlendGroupList.ts"
 import type { TilesetResolver } from "./variants/types.ts";
 import type {
   MeshableLayerChunk,
+  MeshableLayerVisibility,
   MeshableWorld,
   PulledMeshData
 } from "./types.ts";
@@ -35,6 +36,7 @@ export interface VoxelMeshBuilderOptions {
   faceTemplates?: FaceTemplateTable;
   blendGroups?: BlendGroupList;
   logger?: VoxelLogger;
+  visibility?: MeshableLayerVisibility;
 }
 
 /**
@@ -49,6 +51,7 @@ export class VoxelMeshBuilder {
   readonly faceTemplates: FaceTemplateTable;
 
   #world: MeshableWorld;
+  #visibility: MeshableLayerVisibility | undefined;
   #variants: BlockVariantCache;
   #mesher: ChunkMesher;
   #origin: [number, number, number] = [0, 0, 0];
@@ -88,6 +91,7 @@ export class VoxelMeshBuilder {
     options: VoxelMeshBuilderOptions
   ) {
     this.#world = options.world;
+    this.#visibility = options.visibility;
     this.faceTemplates = options.faceTemplates ?? new FaceTemplateTable();
     this.ambientOcclusion = options.ambientOcclusion ?? false;
     this.#variants = new BlockVariantCache({
@@ -165,7 +169,8 @@ export class VoxelMeshBuilder {
       minWx: worldOriginX - 1,
       minWy: worldOriginY - 1,
       minWz: worldOriginZ - 1,
-      windowFor: this.#windowFor
+      windowFor: this.#windowFor,
+      visibility: this.#visibility
     });
 
     this.#origin = [worldOriginX, worldOriginY, worldOriginZ];

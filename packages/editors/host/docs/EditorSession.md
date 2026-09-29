@@ -166,7 +166,8 @@ Downloads, dialogs and navigation go through the `browser` option, an
 
 `<jolly-archive-actions>` renders the export, import and reset buttons of an
 `EditorArchives`, the notice of a volatile workspace, and the error of the last
-failed flow. It renders nothing until `archives` is set. Importing
+failed flow. Import and reset use the danger variant, and the buttons share
+the available width. It renders nothing until `archives` is set. Importing
 `@jolly-pixel/editor.host/ui` defines it; the root entry point does not.
 
 ```ts

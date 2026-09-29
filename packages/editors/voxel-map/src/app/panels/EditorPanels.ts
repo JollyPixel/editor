@@ -9,12 +9,7 @@ import { BlocksPanel } from "./BlocksPanel.ts";
 import { GeneralPanel } from "./GeneralPanel.ts";
 import { LayersPanel } from "./LayersPanel.ts";
 import { PaintPanel } from "./PaintPanel.ts";
-import {
-  resolveTextureHost,
-  texturePanesGrouped,
-  textureUvAccess,
-  type TextureHost
-} from "./textureHost.ts";
+import { TextureHost } from "./TextureHost.ts";
 
 export interface EditorPanelElements {
   layout: DockLayout;
@@ -27,7 +22,7 @@ export interface EditorPanelElements {
 export class EditorPanels {
   readonly #elements: EditorPanelElements;
   #textureEditor: TextureEditor | null = null;
-  #host: TextureHost = "blocks";
+  #host = new TextureHost("blocks", true);
 
   static mount(
     root: ParentNode
@@ -100,22 +95,18 @@ export class EditorPanels {
     }
 
     const { layout, blocks, paint } = this.#elements;
-    const blocksPlacement = layout.placement("blocks");
-    const paintPlacement = layout.placement("paint");
-    this.#host = resolveTextureHost(
-      blocksPlacement,
-      paintPlacement,
-      this.#host
+    const host = TextureHost.resolve(
+      layout.placement("blocks"),
+      layout.placement("paint"),
+      this.#host.panel
     );
-    const panel = this.#host === "blocks" ? blocks : paint;
+    this.#host = host;
+    const panel = host.panel === "blocks" ? blocks : paint;
     if (textureEditor.parentElement !== panel) {
       panel.append(textureEditor);
     }
-    blocks.hostsTextureEditor = this.#host === "blocks";
-    textureEditor.uvAccess = textureUvAccess(
-      this.#host,
-      texturePanesGrouped(blocksPlacement, paintPlacement)
-    );
-    textureEditor.active = layout.paneVisible(this.#host);
+    blocks.hostsTextureEditor = host.panel === "blocks";
+    textureEditor.uvAccess = host.uvAccess;
+    textureEditor.active = layout.paneVisible(host.panel);
   };
 }

@@ -1,7 +1,9 @@
 // Import Internal Dependencies
-import type {
-  MeshableLayer,
-  MeshableWorld
+import {
+  AUTHORED_LAYER_VISIBILITY,
+  type MeshableLayer,
+  type MeshableLayerVisibility,
+  type MeshableWorld
 } from "../types.ts";
 import type { BlockVariantCache } from "../variants/BlockVariantCache.ts";
 import { LayerChunkCache } from "./LayerChunkCache.ts";
@@ -47,6 +49,7 @@ export interface ChunkNeighbourhoodOptions {
    * to query chunk storage directly.
    */
   windowFor?: (index: number) => Int32Array | null;
+  visibility?: MeshableLayerVisibility;
 }
 
 /**
@@ -71,13 +74,14 @@ export class ChunkNeighbourhood {
       minWx,
       minWy,
       minWz,
-      windowFor
+      windowFor,
+      visibility = AUTHORED_LAYER_VISIBILITY
     } = options;
     const layers: LayerChunkCache[] = [];
     const { chunkSize } = world;
 
     for (const candidate of world.getLayers()) {
-      if (!candidate.visible) {
+      if (!visibility.isVisible(candidate)) {
         continue;
       }
 

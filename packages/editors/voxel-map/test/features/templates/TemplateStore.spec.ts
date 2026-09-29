@@ -9,10 +9,8 @@ import {
 import { VoxelTransform } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  TemplateStore,
-  type TemplatePlacement
-} from "../../../src/features/templates/TemplateStore.ts";
+import { TemplateStore } from "../../../src/features/templates/TemplateStore.ts";
+import type { TemplatePlacement } from "../../../src/features/templates/TemplatePlacement.ts";
 
 function placingStore(): TemplateStore {
   const store = new TemplateStore();

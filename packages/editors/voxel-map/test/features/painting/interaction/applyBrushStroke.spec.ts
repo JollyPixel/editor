@@ -16,7 +16,7 @@ import { applyBrushStroke } from "../../../../src/features/painting/interaction/
 import { BrushStroke } from "../../../../src/features/painting/model/BrushStroke.ts";
 
 interface FakeEngine {
-  engine: VoxelView;
+  view: VoxelView;
   removed: string[];
 }
 
@@ -37,7 +37,7 @@ function createColumnEngine(
       return solid ? { blockId: 1, transform: 0 } : undefined;
     }
   };
-  const engine = {
+  const view = {
     document: {
       world: {
         getLayer: () => layer,
@@ -55,14 +55,14 @@ function createColumnEngine(
   };
 
   return {
-    engine: engine as unknown as VoxelView,
+    view: view as unknown as VoxelView,
     removed
   };
 }
 
 describe("applyBrushStroke", () => {
   test("digs a wall down from the top face it was aimed at", () => {
-    const { engine, removed } = createColumnEngine(6);
+    const { view, removed } = createColumnEngine(6);
     const origin = { x: 0, y: 5, z: 0 };
     const stroke = new BrushStroke({
       mode: "remove",
@@ -72,7 +72,7 @@ describe("applyBrushStroke", () => {
       origin
     });
 
-    assert.ok(applyBrushStroke(engine, stroke, [origin], 3));
+    assert.ok(applyBrushStroke(view, stroke, [origin], 3));
     assert.deepStrictEqual(
       [...new Set(removed.map((key) => key.split(",")[1]))].sort(),
       ["3", "4", "5"]
@@ -81,7 +81,7 @@ describe("applyBrushStroke", () => {
   });
 
   test("only reaches the aimed row when the wall rises into the air", () => {
-    const { engine, removed } = createColumnEngine(6);
+    const { view, removed } = createColumnEngine(6);
     const origin = { x: 0, y: 5, z: 0 };
     const stroke = new BrushStroke({
       mode: "remove",
@@ -90,7 +90,7 @@ describe("applyBrushStroke", () => {
       origin
     });
 
-    applyBrushStroke(engine, stroke, [origin], 3);
+    applyBrushStroke(view, stroke, [origin], 3);
 
     assert.deepStrictEqual(
       removed.sort(),

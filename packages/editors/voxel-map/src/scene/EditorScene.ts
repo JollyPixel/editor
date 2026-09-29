@@ -25,19 +25,20 @@ import {
 } from "../document/index.ts";
 import type { EditorState } from "../state/index.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
-import { BlockUsageStore } from "../features/blocks/BlockUsageStore.ts";
-import { blockRenderSourcesOf } from "../features/blocks/blockGeometry.ts";
+import { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
+import { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
 import { LayerVisibilityStore } from "../features/layers/LayerVisibilityStore.ts";
 import { LocalLayerVisibility } from "../features/layers/LocalLayerVisibility.ts";
+import { MapLayers } from "../features/layers/MapLayers.ts";
 import { ObjectLayerRenderer } from "../features/layers/objects/ObjectLayerRenderer.ts";
 import { VoxelLayerGizmo } from "../features/layers/voxel/VoxelLayerGizmo.ts";
 import { layerSelectionsOf } from "../features/layers/layerTree.ts";
 import { MapCollaboration } from "../collaboration/MapCollaboration.ts";
 import { LocalBrush } from "../features/painting/LocalBrush.ts";
 import { bindBrushShortcuts } from "../features/painting/interaction/brushShortcuts.ts";
-import { TemplatePlacement } from "../features/templates/placement/TemplatePlacement.ts";
+import { TemplatePlacementGizmo } from "../features/templates/placement/TemplatePlacementGizmo.ts";
 import { bindTemplateShortcuts } from "../features/templates/placement/templateShortcuts.ts";
-import { TemplateStore } from "../features/templates/TemplateStore.ts";
+import { MapTemplates } from "../features/templates/MapTemplates.ts";
 import {
   MapTilesets,
   type TilesetCatalog
@@ -48,7 +49,7 @@ import {
   type GridRendererOptions
 } from "./GridRenderer.ts";
 import { bindHistoryShortcuts } from "./historyShortcuts.ts";
-import { SceneLighting } from "./SceneLighting.ts";
+import { SceneLighting } from "../shared/SceneLighting.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { spawnPose } from "./spawnPose.ts";
 import { viewFocusPoint } from "../shared/viewRay.ts";
@@ -125,7 +126,6 @@ export class EditorScene extends Systems.Scene {
     } = this.#options;
     const world = this.world;
     const scene = world.sceneManager.getSource();
-    const templates = new TemplateStore();
     const layerVisibility = new LayerVisibilityStore();
 
     const lighting = new SceneLighting(world.renderer.getSource());
@@ -151,7 +151,7 @@ export class EditorScene extends Systems.Scene {
     };
     keyboard.on(kExitOrbitFocusKey, exitOrbitFocus);
 
-    const { view: engine } = world
+    const { view } = world
       .createActor("map")
       .addComponentAndGet(VoxelRenderer, {
         document: session.map.voxels,
@@ -165,30 +165,35 @@ export class EditorScene extends Systems.Scene {
       renderer: world.renderer.getSource(),
       scene,
       lighting,
-      chunks: engine.lighting
+      chunks: view.lighting
     });
     environment.apply(state.view.settings);
     this.#environment = environment;
 
-    const blockSources = blockRenderSourcesOf(engine);
+    const blockSources = BlockRenderSources.of(view);
+    const templates = new MapTemplates({
+      world: view.document.world,
+      history: view.document.history
+    });
     const mapDocument = new MapDocument({
-      commands: engine.document,
+      commands: view.document,
       source: new LeasedWorldSource({
         map: session.map,
         defaultLayerName: kDefaultLayerName
       })
     });
     const localVisibility = new LocalLayerVisibility({
-      world: engine.document.world,
+      world: view.document.world,
+      layers: view.layerVisibility,
       mapDocument,
       visibility: layerVisibility
     });
     const usage = new BlockUsageStore({
       mapDocument,
-      source: engine.inspector.blocks
+      source: view.inspector.blocks
     });
     const tilesets = new MapTilesets({
-      engine,
+      view,
       catalog: session.catalog,
       mapDocument,
       open: (assetId) => openTileset(session.assets, assetId)
@@ -207,7 +212,7 @@ export class EditorScene extends Systems.Scene {
     const localBrush = world
       .createActor("brush")
       .addComponentAndGet(LocalBrush, {
-        engine,
+        view,
         sources: blockSources,
         camera: camera.camera,
         brush: state.brush,
@@ -226,24 +231,24 @@ export class EditorScene extends Systems.Scene {
 
     world.createActor("gizmo")
       .addComponent(VoxelLayerGizmo, {
-        world: engine.document.world,
+        world: view.document.world,
         camera: camera.camera,
         selection: state.selection,
         pointer: state.pointer,
         mapDocument
       });
     world.createActor("template-placement")
-      .addComponent(TemplatePlacement, {
-        engine,
+      .addComponent(TemplatePlacementGizmo, {
+        view,
         sources: blockSources,
         camera: camera.camera,
-        templates,
+        templates: templates.store,
         pointer: state.pointer,
         mapDocument
       });
     world.createActor("object-layer-renderer")
       .addComponent(ObjectLayerRenderer, {
-        world: engine.document.world,
+        world: view.document.world,
         camera: camera.camera,
         selection: state.selection,
         pointer: state.pointer,
@@ -251,8 +256,8 @@ export class EditorScene extends Systems.Scene {
         visibility: layerVisibility
       });
     function reconcileTemplates(): void {
-      templates.reconcile(
-        Array.from(engine.document.world.templates, (template) => template.id)
+      templates.store.reconcile(
+        Array.from(view.document.world.templates, (template) => template.id)
       );
     }
 
@@ -261,19 +266,19 @@ export class EditorScene extends Systems.Scene {
       state.pointer.subscribe("change", (captured) => {
         camera.enabled = !captured;
       }),
-      templates.subscribe("placementChange", (placement) => {
+      templates.store.subscribe("placementChange", (placement) => {
         localBrush.suspended = placement !== null;
       }),
       mapDocument.subscribe("layerUpdated", () => {
-        this.#reconcileSelection(engine);
+        this.#reconcileSelection(view);
       }),
       mapDocument.subscribe("templatesChanged", () => {
         reconcileTemplates();
       }),
       mapDocument.subscribe("reset", () => {
-        this.#reconcileSelection(engine);
+        this.#reconcileSelection(view);
         reconcileTemplates();
-        this.#spawnCamera(engine);
+        this.#spawnCamera(view);
       }),
       state.view.subscribe("change", (settings) => {
         environment.apply(settings);
@@ -285,11 +290,11 @@ export class EditorScene extends Systems.Scene {
       }),
       bindHistoryShortcuts({
         keyboard,
-        history: engine.document.history
+        history: view.document.history
       }),
       bindTemplateShortcuts({
         keyboard,
-        templates
+        templates: templates.store
       }),
       () => environment.dispose(),
       () => collaboration.dispose(),
@@ -299,9 +304,9 @@ export class EditorScene extends Systems.Scene {
       () => mapDocument.dispose()
     );
 
-    this.#reconcileSelection(engine);
+    this.#reconcileSelection(view);
     if (mapDocument.ready) {
-      this.#spawnCamera(engine);
+      this.#spawnCamera(view);
     }
 
     this.#workspace.resolve({
@@ -311,12 +316,16 @@ export class EditorScene extends Systems.Scene {
       blockSources,
       templates,
       layerVisibility,
-      engine,
+      layers: new MapLayers({
+        world: view.document.world,
+        selection: state.selection
+      }),
+      view,
       gridRenderer,
       localBrush,
       tilesets,
       archives: session.archives,
-      focusPoint: () => viewFocusPoint(camera.camera, engine.root),
+      focusPoint: () => viewFocusPoint(camera.camera, view.root),
       loadWorld: (data) => {
         this.#spawnPending = true;
         mapDocument.load(data);
@@ -348,15 +357,15 @@ export class EditorScene extends Systems.Scene {
   }
 
   #reconcileSelection(
-    engine: VoxelView
+    view: VoxelView
   ): void {
     this.#options.state.selection.reconcile(
-      layerSelectionsOf(engine.document.world)
+      layerSelectionsOf(view.document.world)
     );
   }
 
   #spawnCamera(
-    engine: VoxelView
+    view: VoxelView
   ): void {
     const camera = this.#camera;
     if (!this.#spawnPending || camera === undefined) {
@@ -366,7 +375,7 @@ export class EditorScene extends Systems.Scene {
     this.#spawnPending = false;
     camera.exitOrbitFocus();
     camera.teleport(
-      spawnPose(engine.document.world.getLayers(), {
+      spawnPose(view.document.world.getLayers(), {
         fov: camera.camera.fov
       })
     );

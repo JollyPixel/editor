@@ -42,6 +42,7 @@ import {
   type VoxelRenderingOptions
 } from "./options/index.ts";
 import { TilesetAtlases } from "./atlases/TilesetAtlases.ts";
+import { VoxelLayerVisibility } from "./VoxelLayerVisibility.ts";
 import type { TilesetSource } from "./atlases/loadTilesets.ts";
 import type {
   TilesetDefinition,
@@ -118,6 +119,7 @@ export class VoxelView {
   readonly range: VoxelRange;
   readonly lighting: VoxelLighting;
   readonly rendering: VoxelRendering;
+  readonly layerVisibility: VoxelLayerVisibility;
 
   focus: THREE.Vector3Like | null = null;
 
@@ -222,6 +224,9 @@ export class VoxelView {
     this.atlases = new TilesetAtlases({
       tilesets: document.tilesets
     });
+    this.layerVisibility = new VoxelLayerVisibility(
+      () => this.markAllChunksDirty("layerVisibility")
+    );
 
     const meshBuilder = new VoxelMeshBuilder({
       world,
@@ -231,7 +236,8 @@ export class VoxelView {
       blendGroups,
       alphaTest,
       faceTemplates: this.#faceTemplates,
-      logger: this.#logger
+      logger: this.#logger,
+      visibility: this.layerVisibility
     });
     this.#collider = collider?.({
       blockRegistry: blocks,
@@ -245,7 +251,7 @@ export class VoxelView {
       customizer
     });
 
-    const layout = new ChunkMeshLayout(world);
+    const layout = new ChunkMeshLayout(world, this.layerVisibility);
     const meshes = new ChunkMeshStore({
       root: this.#chunkGroup,
       layout,
@@ -271,7 +277,8 @@ export class VoxelView {
           alphaTest
         },
         logger: this.#logger,
-        onCapacity: () => this.#pipeline.refill()
+        onCapacity: () => this.#pipeline.refill(),
+        visibility: this.layerVisibility
       })
     });
 

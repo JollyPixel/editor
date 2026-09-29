@@ -14,14 +14,14 @@ const kDebugModeOptions: Record<VoxelInspectorMode, VoxelInspectorMode> = {
 
 export interface InspectorControlsOptions {
   panel: MetricsPanel;
-  engine: VoxelView;
+  view: VoxelView;
 }
 
 export function mountInspectorControls(
   options: InspectorControlsOptions
 ): () => void {
-  const { panel, engine } = options;
-  const { inspector } = engine;
+  const { panel, view } = options;
+  const { inspector } = view;
 
   const state = {
     mode: inspector.mode,

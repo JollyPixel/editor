@@ -27,7 +27,7 @@ function offlineIds(
 
     return {
       mapId: session.target.record.id,
-      tilesetIds: workspace.engine.document.tilesets
+      tilesetIds: workspace.view.document.tilesets
         .definitions()
         .map((tileset) => tileset.asset?.id)
     };
@@ -68,11 +68,11 @@ test("exports the map, resets the workspace and imports it back", async({ page }
 
   expect(await offlineIds(page)).toEqual(exported);
   const state = await page.evaluate(() => {
-    const { engine } = window.voxelMapEditor!.workspace;
+    const { view } = window.voxelMapEditor!.workspace;
 
     return {
-      layers: engine.document.world.getLayers().map((layer) => layer.name),
-      blocks: engine.document.blocks.size
+      layers: view.document.world.getLayers().map((layer) => layer.name),
+      blocks: view.document.blocks.size
     };
   });
   expect(state).toEqual({

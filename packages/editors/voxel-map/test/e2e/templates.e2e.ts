@@ -33,10 +33,10 @@ function placement(
 ): Promise<PlacementSnapshot | null> {
   return page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
-    const current = workspace.templates.placement;
+    const current = workspace.templates.store.placement;
     const template = current === null ?
       undefined :
-      workspace.engine.document.world.templates.get(current.templateId);
+      workspace.view.document.world.templates.get(current.templateId);
     if (current === null || template === undefined) {
       return null;
     }
@@ -58,7 +58,7 @@ function placement(
 function templateNames(
   page: Page
 ): Promise<string[]> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .templates.toArray()
     .map((template) => template.name));
 }

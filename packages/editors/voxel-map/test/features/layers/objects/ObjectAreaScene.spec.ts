@@ -13,8 +13,8 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import {
   ObjectAreaScene
 } from "../../../../src/features/layers/objects/ObjectAreaScene.ts";
-import { createObjectAt } from "../../../../src/features/layers/objects/objectArea.ts";
-import { objectKey } from "../../../../src/state/layerRef.ts";
+import { MapObject } from "../../../../src/features/layers/objects/MapObject.ts";
+import { ObjectRef } from "../../../../src/state/index.ts";
 import {
   LayerVisibilityStore
 } from "../../../../src/features/layers/LayerVisibilityStore.ts";
@@ -22,7 +22,7 @@ import {
 function setup() {
   const world = new VoxelWorld(4);
   world.objectLayers.add("Triggers");
-  const object = createObjectAt("Door", { x: 0, y: 0, z: 0 });
+  const object = MapObject.create("Door", { x: 0, y: 0, z: 0 });
   world.objectLayers.addObject("Triggers", object);
 
   const visibility = new LayerVisibilityStore();
@@ -36,10 +36,7 @@ function setup() {
     world,
     visibility,
     scene,
-    key: objectKey({
-      layerName: "Triggers",
-      objectId: object.id
-    })
+    key: new ObjectRef("Triggers", object.id).key
   };
 }
 
@@ -76,9 +73,9 @@ describe("ObjectAreaScene.shown", () => {
   test("never shows an unknown object", () => {
     const { scene } = setup();
 
-    assert.strictEqual(scene.shown(objectKey({
-      layerName: "Triggers",
-      objectId: "missing"
-    })), false);
+    assert.strictEqual(
+      scene.shown(new ObjectRef("Triggers", "missing").key),
+      false
+    );
   });
 });

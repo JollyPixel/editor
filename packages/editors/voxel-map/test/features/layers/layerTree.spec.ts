@@ -14,8 +14,16 @@ import {
   layerTreeNodes,
   withLayerBadges
 } from "../../../src/features/layers/layerTree.ts";
-import type { PeerMark } from "../../../src/shared/peerMarks.ts";
-import type { LayerRef } from "../../../src/state/layerRef.ts";
+import {
+  PeerMarks,
+  type PeerMark
+} from "../../../src/shared/PeerMarks.ts";
+import {
+  ObjectLayerRef,
+  ObjectRef,
+  VoxelLayerRef,
+  type LayerRef
+} from "../../../src/state/index.ts";
 import { LayerVisibilityStore } from "../../../src/features/layers/LayerVisibilityStore.ts";
 
 describe("layerTreeNodes", () => {
@@ -51,10 +59,7 @@ describe("layerTreeNodes", () => {
     );
 
     assert.strictEqual(nodes.length, 2);
-    assert.deepStrictEqual(nodes[0].data, {
-      kind: "voxel-layer",
-      name: "Ground"
-    });
+    assert.deepStrictEqual(nodes[0].data, new VoxelLayerRef("Ground"));
     assert.strictEqual(nodes[0].detail, "1,234 voxels");
     assert.strictEqual(nodes[1].detail, undefined);
     assert.strictEqual(nodes[1].visible, false);
@@ -65,11 +70,7 @@ describe("layerTreeNodes", () => {
       visible: true,
       locked: true,
       renamable: true,
-      data: {
-        kind: "object",
-        layerName: "Triggers",
-        objectId: "spawn"
-      }
+      data: new ObjectRef("Triggers", "spawn")
     });
   });
 
@@ -119,27 +120,17 @@ describe("withLayerBadges", () => {
     {
       id: "voxel:Ground",
       label: "Ground",
-      data: {
-        kind: "voxel-layer",
-        name: "Ground"
-      }
+      data: new VoxelLayerRef("Ground")
     },
     {
       id: "object:Triggers",
       label: "Triggers",
-      data: {
-        kind: "object-layer",
-        name: "Triggers"
-      },
+      data: new ObjectLayerRef("Triggers"),
       children: [
         {
           id: "obj:Triggers/spawn",
           label: "Spawn",
-          data: {
-            kind: "object",
-            layerName: "Triggers",
-            objectId: "spawn"
-          }
+          data: new ObjectRef("Triggers", "spawn")
         }
       ]
     }
@@ -157,17 +148,16 @@ describe("withLayerBadges", () => {
   }
 
   test("leaves every row untouched when no peer selects anything", () => {
-    const badged = withLayerBadges(nodes, new Map());
+    const badged = withLayerBadges(nodes, new PeerMarks(new Map()));
 
     assert.strictEqual(badged[0].badges, undefined);
     assert.strictEqual(badged[1].children?.[0].badges, undefined);
   });
 
   test("badges a voxel layer with the color and name of its peers", () => {
-    const badged = withLayerBadges(
-      nodes,
-      new Map([["voxel:Ground", [mark("bob", "#ff0000")]]])
-    );
+    const badged = withLayerBadges(nodes, new PeerMarks(new Map([
+      ["voxel:Ground", [mark("bob", "#ff0000")]]
+    ])));
 
     assert.deepStrictEqual(badged[0].badges, [
       {
@@ -178,10 +168,9 @@ describe("withLayerBadges", () => {
   });
 
   test("badges a nested object row", () => {
-    const badged = withLayerBadges(
-      nodes,
-      new Map([["obj:Triggers/spawn", [mark("bob", "#ff0000")]]])
-    );
+    const badged = withLayerBadges(nodes, new PeerMarks(new Map([
+      ["obj:Triggers/spawn", [mark("bob", "#ff0000")]]
+    ])));
 
     assert.strictEqual(badged[1].badges, undefined);
     assert.deepStrictEqual(
@@ -191,13 +180,10 @@ describe("withLayerBadges", () => {
   });
 
   test("caps a row at three badges", () => {
-    const badged = withLayerBadges(
-      nodes,
-      new Map([[
-        "voxel:Ground",
-        ["a", "b", "c", "d"].map((clientId) => mark(clientId, "#fff"))
-      ]])
-    );
+    const badged = withLayerBadges(nodes, new PeerMarks(new Map([[
+      "voxel:Ground",
+      ["a", "b", "c", "d"].map((clientId) => mark(clientId, "#fff"))
+    ]])));
 
     assert.deepStrictEqual(
       badged[0].badges?.map((badge) => badge.title),
@@ -206,10 +192,7 @@ describe("withLayerBadges", () => {
   });
 
   test("does not mutate the source nodes", () => {
-    withLayerBadges(
-      nodes,
-      new Map([["voxel:Ground", [mark("bob", "#ff0000")]]])
-    );
+    withLayerBadges(nodes, new PeerMarks(new Map([["voxel:Ground", [mark("bob", "#ff0000")]]])));
 
     assert.strictEqual(nodes[0].badges, undefined);
   });

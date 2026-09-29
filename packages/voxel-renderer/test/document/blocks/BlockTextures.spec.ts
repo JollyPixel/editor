@@ -155,3 +155,41 @@ describe("BlockTextures.applyTo", () => {
     assert.equal("defaultTexture" in applied, false);
   });
 });
+
+describe("BlockTextures sizes", () => {
+  it("sets the size on every reference and reads it back", () => {
+    const textures = BlockTextures.of(makeBlock()).withSize(64);
+
+    assert.ok([...textures].every((ref) => ref.size === 64));
+    assert.equal(textures.size, 64);
+  });
+
+  it("reads the size of the default texture, else of the first face", () => {
+    assert.equal(BlockTextures.of(makeBlock()).size, undefined);
+    assert.equal(
+      new BlockTextures({ top: { col: 0, row: 0, size: 8 } }).size,
+      8
+    );
+    assert.equal(new BlockTextures({}).size, undefined);
+  });
+
+  it("tells whether a rescale keeps every reference on the tile grid", () => {
+    const rescale = {
+      tilesetId: "b",
+      from: 16,
+      to: 32
+    };
+
+    assert.equal(
+      new BlockTextures({ top: { tilesetId: "b", col: 2, row: 4 } })
+        .staysOnGrid(rescale),
+      true
+    );
+    assert.equal(
+      new BlockTextures({ top: { tilesetId: "c", col: 1, row: 1 } })
+        .staysOnGrid(rescale),
+      true
+    );
+    assert.equal(BlockTextures.of(makeBlock()).staysOnGrid(rescale), false);
+  });
+});

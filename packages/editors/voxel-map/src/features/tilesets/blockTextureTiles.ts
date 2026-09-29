@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  resolvedBlockTextureSlots,
+  BlockTextureLayout,
   tileRectOf,
   type BlockShape,
   type ResolvedBlockDefinition
@@ -14,7 +14,7 @@ import type {
 import {
   blockShapeUv,
   uvGeometryForSlot
-} from "../texture/uv/blockShapeUv.ts";
+} from "../../shared/blockShapeUv.ts";
 
 export interface BlockTextureRects {
   block: ResolvedBlockDefinition;
@@ -28,36 +28,26 @@ export function findBlocksReferencingTileset(
   tilesetId: string,
   tileSize: number
 ): BlockTextureRects[] {
-  const results: BlockTextureRects[] = [];
-  for (const block of blocks) {
+  return [...blocks].flatMap((block) => {
     const shape = shapeOf(block.shapeId);
-    if (!shape) {
-      continue;
+    const layout = BlockTextureLayout.of(block, shape);
+    const slots = layout.slotsIn(tilesetId);
+    if (shape === undefined || slots.length === 0) {
+      return [];
     }
 
-    const unique = new Map<string, SelectionRect>();
     const shapeUv = blockShapeUv(shape);
-    const geometries: UVGeometry[] = [];
-    for (const {
-      slot,
-      tile,
-      bounds,
-      span
-    } of resolvedBlockTextureSlots(block, shape)) {
-      if (tile.tilesetId !== tilesetId) {
-        continue;
-      }
-      const rect = tileRectOf(tile, tileSize, bounds, span);
-      const key = `${rect.x}:${rect.y}:${rect.width}:${rect.height}`;
-      if (!unique.has(key)) {
-        unique.set(key, rect);
-      }
-      geometries.push(uvGeometryForSlot(rect, shapeUv, slot));
-    }
-    if (unique.size > 0) {
-      results.push({ block, rects: [...unique.values()], geometries });
-    }
-  }
 
-  return results;
+    return [
+      {
+        block,
+        rects: layout.drawnRectsIn(tilesetId, tileSize),
+        geometries: slots.map(({ slot, tile, bounds, span }) => uvGeometryForSlot(
+          tileRectOf(tile, tileSize, bounds, span),
+          shapeUv,
+          slot
+        ))
+      }
+    ];
+  });
 }

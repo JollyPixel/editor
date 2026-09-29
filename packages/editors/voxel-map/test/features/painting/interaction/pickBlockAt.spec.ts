@@ -10,25 +10,28 @@ import type {
 
 // Import Internal Dependencies
 import { pickBlockAt } from "../../../../src/features/painting/interaction/pickBlockAt.ts";
-import type { BrushFootprint } from "../../../../src/features/painting/model/brushFootprint.ts";
+import {
+  BrushFootprint,
+  type BrushFootprintOptions
+} from "../../../../src/features/painting/model/BrushFootprint.ts";
 
 function footprint(
   size: number,
-  patch: Partial<BrushFootprint> = {}
+  patch: Partial<BrushFootprintOptions> = {}
 ): BrushFootprint {
-  return {
+  return new BrushFootprint({
     position: { x: 0, y: 0, z: 0 },
     size,
     axis: "xz",
     pattern: "square",
     ...patch
-  };
+  });
 }
 
-function createEngine(
+function createView(
   blocks: Record<string, number>
 ): VoxelView {
-  const engine = {
+  const view = {
     document: {
       world: {
         getVoxelAt(position: VoxelCoord) {
@@ -42,7 +45,7 @@ function createEngine(
     }
   };
 
-  return engine as unknown as VoxelView;
+  return view as unknown as VoxelView;
 }
 
 function cellKey(
@@ -53,54 +56,54 @@ function cellKey(
 
 describe("pickBlockAt", () => {
   it("reads the block of the centre cell", () => {
-    const engine = createEngine({ "0,0,0": 7 });
+    const view = createView({ "0,0,0": 7 });
 
-    assert.equal(pickBlockAt(engine, footprint(1)), 7);
+    assert.equal(pickBlockAt(view, footprint(1)), 7);
   });
 
   it("returns null when the footprint holds no voxel", () => {
-    const engine = createEngine({ "1,0,0": 7 });
+    const view = createView({ "1,0,0": 7 });
 
-    assert.equal(pickBlockAt(engine, footprint(1)), null);
+    assert.equal(pickBlockAt(view, footprint(1)), null);
   });
 
   it("prefers the centre cell over the rest of the footprint", () => {
-    const engine = createEngine({
+    const view = createView({
       "0,0,0": 7,
       "-1,0,-1": 9
     });
 
-    assert.equal(pickBlockAt(engine, footprint(3)), 7);
+    assert.equal(pickBlockAt(view, footprint(3)), 7);
   });
 
   it("falls back to a neighbour when the centre is empty", () => {
-    const engine = createEngine({ "1,0,1": 9 });
+    const view = createView({ "1,0,1": 9 });
 
-    assert.equal(pickBlockAt(engine, footprint(3)), 9);
+    assert.equal(pickBlockAt(view, footprint(3)), 9);
   });
 
   it("stays inside the footprint", () => {
-    const engine = createEngine({ "2,0,0": 9 });
+    const view = createView({ "2,0,0": 9 });
 
-    assert.equal(pickBlockAt(engine, footprint(3)), null);
+    assert.equal(pickBlockAt(view, footprint(3)), null);
   });
 
   it("only reads the aimed layer height", () => {
-    const engine = createEngine({ "0,1,0": 9 });
+    const view = createView({ "0,1,0": 9 });
 
-    assert.equal(pickBlockAt(engine, footprint(3)), null);
+    assert.equal(pickBlockAt(view, footprint(3)), null);
   });
 
   it("reads the whole footprint of a vertical brush", () => {
-    const engine = createEngine({ "0,2,0": 9 });
+    const view = createView({ "0,2,0": 9 });
 
-    assert.equal(pickBlockAt(engine, footprint(3, { axis: "xy" })), 9);
+    assert.equal(pickBlockAt(view, footprint(3, { axis: "xy" })), 9);
   });
 
   it("skips the corners a circle leaves out", () => {
-    const engine = createEngine({ "-2,0,-2": 9 });
+    const view = createView({ "-2,0,-2": 9 });
 
-    assert.equal(pickBlockAt(engine, footprint(4)), 9);
-    assert.equal(pickBlockAt(engine, footprint(4, { pattern: "circle" })), null);
+    assert.equal(pickBlockAt(view, footprint(4)), 9);
+    assert.equal(pickBlockAt(view, footprint(4, { pattern: "circle" })), null);
   });
 });

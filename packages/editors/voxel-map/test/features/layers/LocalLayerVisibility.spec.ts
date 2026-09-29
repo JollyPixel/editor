@@ -8,6 +8,7 @@ import {
 // Import Third-party Dependencies
 import {
   isVoxelLayerCommand,
+  VoxelLayerVisibility,
   VoxelWorld,
   type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
@@ -18,7 +19,7 @@ import type { MapDocumentEvents } from "../../../src/document/index.ts";
 import {
   LocalLayerVisibility
 } from "../../../src/features/layers/LocalLayerVisibility.ts";
-import { createObjectAt } from "../../../src/features/layers/objects/objectArea.ts";
+import { MapObject } from "../../../src/features/layers/objects/MapObject.ts";
 import { LayerVisibilityStore } from "../../../src/features/layers/LayerVisibilityStore.ts";
 
 function setup() {
@@ -37,14 +38,17 @@ function setup() {
   });
 
   const visibility = new LayerVisibilityStore();
+  const layers = new VoxelLayerVisibility();
   const local = new LocalLayerVisibility({
     world,
+    layers,
     mapDocument,
     visibility
   });
 
   return {
     world,
+    layers,
     mapDocument,
     commands,
     visibility,
@@ -52,15 +56,33 @@ function setup() {
   };
 }
 
+function groundShown(
+  world: VoxelWorld,
+  layers: VoxelLayerVisibility
+): boolean {
+  return layers.isVisible(world.getLayer("Ground")!);
+}
+
 describe("LocalLayerVisibility", () => {
-  test("hides a voxel layer without emitting a command", () => {
-    const { world, commands, visibility } = setup();
+  test("hides a voxel layer in the view only, without a command", () => {
+    const { world, layers, commands, visibility } = setup();
     commands.length = 0;
 
     visibility.override("voxel:Ground", false);
 
-    assert.strictEqual(world.getLayer("Ground")?.visible, false);
+    assert.strictEqual(groundShown(world, layers), false);
+    assert.strictEqual(world.getLayer("Ground")?.visible, true);
     assert.deepStrictEqual(commands, []);
+  });
+
+  test("shows a layer again once its override is forgotten", () => {
+    const { world, layers, visibility } = setup();
+    visibility.override("voxel:Ground", false);
+
+    visibility.forget("voxel:Ground");
+
+    assert.strictEqual(groundShown(world, layers), true);
+    assert.strictEqual(layers.overrides.size, 0);
   });
 
   test("leaves object layers untouched in the world", () => {
@@ -74,12 +96,13 @@ describe("LocalLayerVisibility", () => {
   });
 
   test("keeps the local value over an incoming visibility update", () => {
-    const { world, visibility } = setup();
-    visibility.override("voxel:Ground", false);
+    const { world, layers, visibility } = setup();
+    visibility.override("voxel:Ground", true);
 
-    world.updateLayer("Ground", { visible: true });
+    world.updateLayer("Ground", { visible: false });
 
     assert.strictEqual(world.getLayer("Ground")?.visible, false);
+    assert.strictEqual(groundShown(world, layers), true);
   });
 
   test("gives a cloned layer the override of its source", () => {
@@ -119,7 +142,7 @@ describe("LocalLayerVisibility", () => {
 
   test("forgets an object layer and its objects when it is removed", () => {
     const { world, visibility } = setup();
-    const object = createObjectAt("Door", { x: 0, y: 0, z: 0 });
+    const object = MapObject.create("Door", { x: 0, y: 0, z: 0 });
     world.objectLayers.addObject("Triggers", object);
     visibility.override("object:Triggers", false);
     visibility.override(`obj:Triggers/${object.id}`, false);
@@ -132,7 +155,7 @@ describe("LocalLayerVisibility", () => {
 
   test("follows an object moved to another layer", () => {
     const { world, visibility } = setup();
-    const object = createObjectAt("Door", { x: 0, y: 0, z: 0 });
+    const object = MapObject.create("Door", { x: 0, y: 0, z: 0 });
     world.objectLayers.addObject("Triggers", object);
     visibility.override(`obj:Triggers/${object.id}`, false);
 
@@ -147,7 +170,7 @@ describe("LocalLayerVisibility", () => {
 
   test("forgets a removed object", () => {
     const { world, visibility } = setup();
-    const object = createObjectAt("Door", { x: 0, y: 0, z: 0 });
+    const object = MapObject.create("Door", { x: 0, y: 0, z: 0 });
     world.objectLayers.addObject("Triggers", object);
     visibility.override(`obj:Triggers/${object.id}`, false);
 
@@ -157,14 +180,15 @@ describe("LocalLayerVisibility", () => {
   });
 
   test("re-applies overrides and prunes missing entries on reset", () => {
-    const { world, mapDocument, visibility } = setup();
+    const { world, layers, mapDocument, visibility } = setup();
     visibility.override("voxel:Ground", false);
     visibility.override("object:Gone", false);
-    world.setLayerVisible("Ground", true);
+    layers.override("Stale", false);
 
     mapDocument.emit("reset");
 
-    assert.strictEqual(world.getLayer("Ground")?.visible, false);
+    assert.strictEqual(groundShown(world, layers), false);
+    assert.deepStrictEqual([...layers.overrides.keys()], ["Ground"]);
     assert.deepStrictEqual([...visibility.keys], ["voxel:Ground"]);
   });
 
@@ -172,24 +196,26 @@ describe("LocalLayerVisibility", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Ground");
     const visibility = new LayerVisibilityStore();
+    const layers = new VoxelLayerVisibility();
     visibility.override("voxel:Ground", false);
 
     const local = new LocalLayerVisibility({
       world,
+      layers,
       mapDocument: new Emitter<MapDocumentEvents>(),
       visibility
     });
 
-    assert.strictEqual(world.getLayer("Ground")?.visible, false);
+    assert.strictEqual(groundShown(world, layers), false);
     local.dispose();
   });
 
   test("stops applying overrides once disposed", () => {
-    const { world, visibility, local } = setup();
+    const { world, layers, visibility, local } = setup();
 
     local.dispose();
     visibility.override("voxel:Ground", false);
 
-    assert.strictEqual(world.getLayer("Ground")?.visible, true);
+    assert.strictEqual(groundShown(world, layers), true);
   });
 });

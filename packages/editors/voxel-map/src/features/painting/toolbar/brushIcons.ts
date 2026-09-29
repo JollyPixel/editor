@@ -82,19 +82,22 @@ registerIcon("pattern-circle", svg`
 registerIcon("brush-ghost", svg`
   <path
     class="tone-fill"
-    d="M12 3 20 7.5v9L12 21l-8-4.5v-9Z"
+    d="M5 20.5V11a7 7 0 0 1 14 0v9.5L16.67 18.75 14.33 20.5 12 18.75 9.67 20.5 7.33 18.75Z"
     stroke="currentColor"
     stroke-width="1.5"
     stroke-linejoin="round"
-    stroke-dasharray="2.5 2"
   />
-  <path
-    d="M4 7.5 12 12l8-4.5M12 12v9"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linejoin="round"
-    stroke-dasharray="2.5 2"
+  <circle
+    cx="9.5"
+    cy="11"
+    r="1.5"
+    fill="currentColor"
+  />
+  <circle
+    cx="14.5"
+    cy="11"
+    r="1.5"
+    fill="currentColor"
   />
 `, { tone: "violet" });
 

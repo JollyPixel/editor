@@ -1,16 +1,14 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import type {
+  BlockPiece,
+  BlockPieces,
   BlockRegistry,
   ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { BlockRenderSources } from "../../blocks/blockGeometry.ts";
-import {
-  BlockPieces,
-  type BlockPiece
-} from "../../blocks/BlockPieces.ts";
+import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
 import type { GhostTarget } from "../model/ghostTarget.ts";
 
 // CONSTANTS
@@ -39,7 +37,7 @@ export class GhostBlock extends THREE.Group {
 
     this.name = "ghost-block";
     this.#blockRegistry = options.blockRegistry;
-    this.#pieces = new BlockPieces(options.sources);
+    this.#pieces = options.sources.createPieces();
     this.#material = new THREE.MeshLambertMaterial({
       transparent: true,
       opacity: kOpacity,

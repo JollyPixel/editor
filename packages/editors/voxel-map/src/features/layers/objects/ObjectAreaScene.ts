@@ -9,17 +9,11 @@ import type {
 
 // Import Internal Dependencies
 import {
-  layerKey,
-  objectKey,
-  parseLayerKey,
-  type ObjectRef
+  ObjectRef,
+  parseLayerRef
 } from "../../../state/index.ts";
 import type { LayerVisibilityStore } from "../LayerVisibilityStore.ts";
-import {
-  areaTransformOf,
-  colorOf,
-  isLocked
-} from "./objectArea.ts";
+import { MapObject } from "./MapObject.ts";
 
 export interface ObjectAreaSceneOptions {
   actor: Actor;
@@ -57,29 +51,22 @@ export class ObjectAreaScene {
   ref(
     key: string
   ): ObjectRef | undefined {
-    const ref = parseLayerKey(key);
+    const ref = parseLayerRef(key);
 
-    return ref.kind === "object" ? ref : undefined;
+    return ref instanceof ObjectRef ? ref : undefined;
   }
 
   object(
     key: string
   ): VoxelObjectJSON | undefined {
-    const ref = this.ref(key);
-    if (ref === undefined) {
-      return undefined;
-    }
-
-    return this.#world
-      .objectLayers.get(ref.layerName)
-      ?.objects.find((candidate) => candidate.id === ref.objectId);
+    return this.ref(key)?.objectIn(this.#world);
   }
 
   shown(
     key: string
   ): boolean {
     const ref = this.ref(key);
-    const object = this.object(key);
+    const object = ref?.objectIn(this.#world);
     const layer = ref === undefined ?
       undefined :
       this.#world.objectLayers.get(ref.layerName);
@@ -87,15 +74,8 @@ export class ObjectAreaScene {
       return false;
     }
 
-    const layerShown = this.#visibility.resolve(
-      layerKey({
-        kind: "object-layer",
-        name: ref.layerName
-      }),
-      layer.visible
-    );
-
-    return layerShown && this.#visibility.resolve(key, object.visible);
+    return this.#visibility.resolve(ref.layer.key, layer.visible) &&
+      this.#visibility.resolve(key, object.visible);
   }
 
   locked(
@@ -103,7 +83,7 @@ export class ObjectAreaScene {
   ): boolean {
     const object = this.object(key);
 
-    return object !== undefined && isLocked(object);
+    return object !== undefined && new MapObject(object).locked;
   }
 
   syncAll(
@@ -132,10 +112,7 @@ export class ObjectAreaScene {
       layerName
     )?.objects ?? [];
     const alive = new Set(
-      objects.map((object) => objectKey({
-        layerName,
-        objectId: object.id
-      }))
+      objects.map((object) => new ObjectRef(layerName, object.id).key)
     );
 
     for (const key of [...this.#areas.keys()]) {
@@ -144,12 +121,9 @@ export class ObjectAreaScene {
       }
     }
     for (const object of objects) {
-      const ref = {
-        layerName,
-        objectId: object.id
-      };
-      if (objectKey(ref) !== skipKey) {
-        this.#syncObject(ref, object);
+      const key = new ObjectRef(layerName, object.id).key;
+      if (key !== skipKey) {
+        this.#syncObject(key, new MapObject(object));
       }
     }
   }
@@ -161,19 +135,18 @@ export class ObjectAreaScene {
   }
 
   #syncObject(
-    ref: ObjectRef,
-    object: VoxelObjectJSON
+    key: string,
+    object: MapObject
   ): void {
-    const key = objectKey(ref);
-    const { position, size } = areaTransformOf(object);
+    const { position, size } = object.area;
     const area = this.#areas.get(key);
 
     if (area === undefined) {
       const created = new AreaBox({
         position,
         size,
-        color: colorOf(object),
-        displayName: object.name
+        color: object.color,
+        displayName: object.data.name
       });
       this.#actor.addChildren(created);
       this.#areas.set(key, created);
@@ -188,12 +161,12 @@ export class ObjectAreaScene {
     );
     area.size = size;
 
-    const color = colorOf(object);
+    const { color } = object;
     if (area.color.getHexString() !== new THREE.Color(color).getHexString()) {
       area.color = color;
     }
-    if (area.label !== null && area.label.displayName !== object.name) {
-      area.label.displayName = object.name;
+    if (area.label !== null && area.label.displayName !== object.data.name) {
+      area.label.displayName = object.data.name;
     }
   }
 

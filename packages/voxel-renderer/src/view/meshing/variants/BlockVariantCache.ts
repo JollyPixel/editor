@@ -9,7 +9,6 @@ import type {
   TilesetUVRegion
 } from "../../../document/tilesets/types.ts";
 import { rotateTileUv } from "../../../document/tilesets/tileRef.ts";
-import { MISSING_TILESET_ID } from "../../../document/tilesets/missingTileset.ts";
 import type { FaceDefinition } from "../../../document/blocks/face/index.ts";
 import { BlockTextures } from "../../../document/blocks/BlockTextures.ts";
 import { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
@@ -31,6 +30,7 @@ import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
 import { FACES, FACE_OPPOSITE } from "../../../document/geometry/faceDirection.ts";
 import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
 import { isFullQuad } from "./fullQuad.ts";
+import { tileUvOf } from "./tileUv.ts";
 import {
   transformFace,
   rotateVertex,
@@ -373,17 +373,14 @@ export class BlockVariantCache {
         continue;
       }
 
-      const missing = atlas.def.id === MISSING_TILESET_ID;
-      const tileRotation = missing ? undefined : tileRef.rotation;
-      const uvRegion = missing ?
-        atlas.uvFor(0, 0) :
-        atlas.uvFor(
-          tileRef.col,
-          tileRef.row,
-          tileRef.size,
-          textures.spanFor(textureSlot.id, textureSlot.span),
-          tileRotation
-        );
+      const {
+        region: uvRegion,
+        rotation: tileRotation
+      } = tileUvOf(
+        atlas,
+        tileRef,
+        textures.spanFor(textureSlot.id, textureSlot.span)
+      );
 
       for (const faceDef of textureSlot.definitions) {
         faces.push(

@@ -149,6 +149,7 @@ class VoxelView {
   readonly rendering: VoxelRendering;
   readonly lighting: VoxelLighting;
   readonly range: VoxelRange;
+  readonly layerVisibility: VoxelLayerVisibility;
   focus: THREE.Vector3Like | null;
   readonly pendingRebuilds: number;
 }
@@ -161,6 +162,31 @@ itself, and only the mesher, the collider and block previews read them.
 Chunk meshes sit in a `"VoxelView:chunks"` group under `root`. A mesh outside
 the view distance has `visible` set to `false`; the inspector's `"wireframe"`
 mode hides the whole group.
+
+## Layer visibility
+
+```ts
+class VoxelLayerVisibility {
+  readonly overrides: ReadonlyMap<string, boolean>;
+
+  isVisible(layer: { name?: string; visible: boolean; }): boolean;
+  override(layerName: string, visible: boolean): void;
+  reset(layerName: string): void;
+  clear(): void;
+}
+```
+
+```ts
+view.layerVisibility.override("Ground", false);
+view.layerVisibility.reset("Ground");
+```
+
+Shows or hides a voxel layer in this view only. The document keeps the
+layer's own `visible`, which is what gets saved and what
+`world.getVoxelAt()` composites with; another view of the same document is
+not affected. A layer with no override follows its own `visible`, and an
+override can show a layer the document hides. Overrides are keyed by layer
+name. Each change marks every chunk dirty, like a document visibility change.
 
 ## Settings
 

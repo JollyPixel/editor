@@ -1,20 +1,22 @@
 // Import Third-party Dependencies
-import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
+import type {
+  VoxelCoord,
+  VoxelRotationStep
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { VoxelRotationValue } from "./brushOrientation.ts";
 import {
-  planeThrough,
-  type BrushAnchor,
+  BrushFootprint,
   type BrushPlane
-} from "./brushFootprint.ts";
+} from "./BrushFootprint.ts";
+import type { BrushAnchor } from "./CellFace.ts";
 import type { BrushAxis, BrushPattern } from "../../../state/index.ts";
 
 export type StrokeMode = "place" | "replace" | "remove";
 
 export interface VoxelPaint {
   blockId: number;
-  rotation: VoxelRotationValue;
+  rotation: VoxelRotationStep;
   flipY: boolean;
 }
 
@@ -48,11 +50,24 @@ export class BrushStroke {
     this.mode = options.mode;
     this.origin = { ...options.origin };
     this.axis = options.axis ?? "xz";
-    this.plane = planeThrough(this.axis, this.origin);
+    this.plane = BrushFootprint.planeThrough(this.axis, this.origin);
     this.pattern = options.pattern ?? "square";
     this.anchor = options.anchor ?? "bottom";
     this.layerName = options.layerName;
     this.paint = options.paint;
+  }
+
+  footprintAt(
+    position: VoxelCoord,
+    size: number
+  ): BrushFootprint {
+    return new BrushFootprint({
+      position,
+      size,
+      axis: this.axis,
+      pattern: this.pattern,
+      anchor: this.anchor
+    });
   }
 
   lock(

@@ -170,74 +170,116 @@ removed tileset left behind are not given the new tileset's blocks.
 
 A [`TilesetDocument`](./TilesetDocument.md) numbers its blocks from `1` and
 its tile references name no tileset. A world sees them through the tileset's
-slot:
+slot. Keep a world in step with a tileset document through a `TilesetLink`:
 
 ```ts
-type TilesetProjection = Pick<TilesetDefinition, "id"> & { slot: number; };
+import {
+  TilesetLink,
+  TilesetSlot
+} from "@jolly-pixel/voxel.renderer";
 
-function projectTilesetBlock(
-  tileset: TilesetProjection,
-  block: ResolvedBlockDefinition
-): ResolvedBlockDefinition;
-function projectTilesetBlocks(
-  tileset: TilesetProjection,
-  blocks: Iterable<ResolvedBlockDefinition>
-): ResolvedBlockDefinition[];
-function localTilesetBlock(
-  tileset: TilesetProjection,
-  block: ResolvedBlockDefinition
-): ResolvedBlockDefinition;
-function belongsToTileset(
-  tileset: Pick<TilesetProjection, "slot">,
-  blockId: number
-): boolean;
+const link = new TilesetLink({
+  document: view.document,
+  tileset,
+  slot: new TilesetSlot({ id: "terrain", slot: 2 })
+});
 
-function projectTilesetMaterialGroup(
-  tileset: TilesetProjection,
-  group: MaterialGroupJSON
-): MaterialGroupJSON;
-function projectTilesetMaterialGroups(
-  tileset: TilesetProjection,
-  groups: Iterable<MaterialGroupJSON>
-): MaterialGroupJSON[];
-function projectedMaterialGroupId(
-  tileset: TilesetProjection,
-  groupId: string
-): string;
-function localMaterialGroupId(
-  tileset: TilesetProjection,
-  groupId: string
-): string;
-
-function projectTilesetBlendGroup(
-  tileset: TilesetProjection,
-  group: BlendGroupJSON
-): BlendGroupJSON;
-function projectTilesetBlendGroups(
-  tileset: TilesetProjection,
-  groups: Iterable<BlendGroupJSON>
-): BlendGroupJSON[];
-function projectedBlendGroupId(
-  tileset: TilesetProjection,
-  groupId: string
-): string;
-function localBlendGroupId(
-  tileset: TilesetProjection,
-  groupId: string
-): string;
+link.defineBlock({ id: link.nextBlockId, name: "Moss", shapeId: "cube" });
+link.dispose();
 ```
 
-`projectTilesetBlock()` gives a block the id
-[`composeBlockId(slot, block.id)`](../blocks/BlockDefinition.md#block-ids),
-names the tileset in every tile reference and prefixes its material and blend
-groups with `"<tilesetId>/"`. `localTilesetBlock()` is the inverse.
-`belongsToTileset()` tells whether a world block id was projected from the
-slot. Material and blend groups are projected the same way, so two tilesets
-may both define a `"metal"` group; a projected blend group also prefixes the
-groups it excludes. Register the projected blocks and groups on the
-`VoxelDocument` with `defineBlocks()`, `defineMaterialGroup()` and
-`defineBlendGroup()`; replay a tileset
-document's commands the same way to keep a world in step with it.
+### TilesetSlot
+
+```ts
+interface TilesetSlotJSON {
+  id: string;
+  slot: number;
+}
+
+class TilesetSlot {
+  readonly id: string;
+  readonly slot: number;
+
+  constructor(options: TilesetSlotJSON);
+
+  owns(blockId: number): boolean;
+  blockId(localId: number): number;
+  localBlockId(blockId: number): number;
+
+  groupId(localId: string): string;
+  localGroupId(groupId: string): string | null;
+
+  project(block: ResolvedBlockDefinition): ResolvedBlockDefinition;
+  projectAll(blocks: Iterable<ResolvedBlockDefinition>): ResolvedBlockDefinition[];
+  local(block: ResolvedBlockDefinition): ResolvedBlockDefinition;
+  projectMaterialGroup(group: MaterialGroupJSON): MaterialGroupJSON;
+  localMaterialGroup(group: MaterialGroupJSON): MaterialGroupJSON;
+  projectBlendGroup(group: BlendGroupJSON): BlendGroupJSON;
+
+  equals(other: TilesetSlot): boolean;
+  toJSON(): TilesetSlotJSON;
+}
+```
+
+The constructor throws a `RangeError` for a slot outside `0` to
+`MAX_TILESET_SLOT`. `blockId()` is
+[`composeBlockId(slot, localId)`](../blocks/BlockDefinition.md#block-ids) and
+`owns()` tells whether a world block id was projected from the slot.
+`groupId()` prefixes a group with `"<tilesetId>/"`; `localGroupId()` strips
+it back and returns `null` for a group this tileset did not project.
+
+`project()` gives a block its world id, names the tileset in every tile
+reference and prefixes its material and blend groups. `local()` is the
+inverse; it keeps a group another tileset projected. A projected blend group
+also prefixes the groups it excludes, so two tilesets may both define a
+`"metal"` group.
+
+### TilesetLink
+
+```ts
+type TilesetLinkTarget = Pick<
+  VoxelDocument,
+  | "blocks" | "materialGroups" | "blendGroups"
+  | "defineBlock" | "defineBlocks" | "removeBlock" | "moveBlock"
+  | "defineMaterialGroup" | "removeMaterialGroup"
+  | "defineBlendGroup" | "removeBlendGroup"
+>;
+
+interface TilesetLinkOptions {
+  document: TilesetLinkTarget;
+  tileset: TilesetDocument;
+  slot: TilesetSlot;
+}
+
+class TilesetLink {
+  readonly slot: TilesetSlot;
+  readonly tileset: TilesetDocument;
+  readonly nextBlockId: number;
+
+  constructor(options: TilesetLinkOptions);
+
+  defineBlock(block: BlockDefinition): boolean;
+  removeBlock(blockId: number): boolean;
+  moveBlock(blockId: number, toIndex: number): boolean;
+  defineMaterialGroup(group: MaterialGroupJSON): boolean;
+  removeMaterialGroup(groupId: string): boolean;
+  dispose(): void;
+}
+```
+
+The constructor projects every block, material group and blend group of the
+tileset into the document, and drops those of the slot the tileset no longer
+has. Each later tileset command is replayed on the document, a
+`tile-size-updated` included; a `block-moved` lands on the matching position
+among the slot's blocks. `dispose()` stops listening and removes everything
+the slot projected.
+
+The writers take world ids and write the tileset in its own space:
+`defineBlock()` and `defineMaterialGroup()` go through `local()` and
+`localMaterialGroup()`, `removeMaterialGroup()` returns `false` for a group
+of another tileset, and `moveBlock()` reads `toIndex` as a position among
+the document's blocks without the moved one. `nextBlockId` is the world id the
+tileset gives its next block.
 
 ## Rescaling and tile rectangles
 

@@ -14,12 +14,6 @@ import type {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import {
-  beginTemplatePlacement,
-  removeTemplate,
-  renameTemplate,
-  saveLayerAsTemplate
-} from "./templateActions.ts";
 import { templateTreeNodes } from "./templateTree.ts";
 import "./TemplatePanel.ts";
 
@@ -68,16 +62,16 @@ export class TemplateManager extends WorkspaceElement {
     const { templates, mapDocument } = workspace;
     const { selection } = workspace.state;
     const refresh = (): void => {
-      this._nodes = templateTreeNodes(workspace.engine.document.world.templates);
+      this._nodes = templateTreeNodes(workspace.view.document.world.templates);
     };
-    this._selected = templates.selected;
+    this._selected = templates.store.selected;
     this._canSave = selection.voxelLayer !== null;
     refresh();
 
     return [
       mapDocument.subscribe("templatesChanged", refresh),
       mapDocument.subscribe("reset", refresh),
-      templates.subscribe("selectionChange", (templateId) => {
+      templates.store.subscribe("selectionChange", (templateId) => {
         this._selected = templateId;
       }),
       selection.subscribe("change", () => {
@@ -129,8 +123,7 @@ export class TemplateManager extends WorkspaceElement {
 
         ${this.#renderTree()}
         <template-panel
-          .world=${workspace.engine.document.world}
-          .history=${workspace.engine.document.history}
+          .world=${workspace.view.document.world}
           .templates=${workspace.templates}
           .selection=${workspace.state.selection}
           .mapDocument=${workspace.mapDocument}
@@ -168,11 +161,7 @@ export class TemplateManager extends WorkspaceElement {
       return;
     }
 
-    const templateId = saveLayerAsTemplate(
-      workspace.engine.document.world,
-      workspace.templates,
-      layerName
-    );
+    const templateId = workspace.templates.saveLayer(layerName);
     if (templateId === null) {
       workspace.state.log.push(`${layerName} has no voxels to save as a template`);
     }
@@ -180,23 +169,18 @@ export class TemplateManager extends WorkspaceElement {
 
   readonly #place = (): void => {
     const workspace = this.workspace;
-    const templateId = workspace?.templates.selected ?? null;
+    const templateId = workspace?.templates.store.selected ?? null;
     if (workspace === null || templateId === null) {
       return;
     }
 
-    beginTemplatePlacement(
-      workspace.engine.document.world,
-      workspace.templates,
-      templateId,
-      workspace.focusPoint()
-    );
+    workspace.templates.beginPlacement(templateId, workspace.focusPoint());
   };
 
   readonly #removeTemplate = async(): Promise<void> => {
     const workspace = this.workspace;
     if (workspace !== null && this._selected !== null) {
-      await removeTemplate(workspace.engine.document.world, this._selected);
+      await workspace.templates.remove(this._selected);
     }
   };
 
@@ -205,7 +189,7 @@ export class TemplateManager extends WorkspaceElement {
   ): void {
     const [id] = event.detail.selected;
     if (this.workspace !== null) {
-      this.workspace.templates.selected = id ?? null;
+      this.workspace.templates.store.selected = id ?? null;
     }
   }
 
@@ -217,16 +201,15 @@ export class TemplateManager extends WorkspaceElement {
       return;
     }
 
-    const world = workspace.engine.document.world;
-    renameTemplate(world, event.detail.id, event.detail.name);
-    this._nodes = templateTreeNodes(world.templates);
+    workspace.templates.rename(event.detail.id, event.detail.name);
+    this._nodes = templateTreeNodes(workspace.view.document.world.templates);
   }
 
   #onActivate(
     event: CustomEvent<JollyActivateDetail>
   ): void {
     if (this.workspace !== null) {
-      this.workspace.templates.selected = event.detail.id;
+      this.workspace.templates.store.selected = event.detail.id;
       this.#place();
     }
   }

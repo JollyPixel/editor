@@ -2,11 +2,10 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import {
-  layerKey,
-  type LayerRef,
-  type ObjectRef
-} from "./layerRef.ts";
+import type { LayerRef } from "./LayerRef.ts";
+import { ObjectLayerRef } from "./ObjectLayerRef.ts";
+import type { ObjectRef } from "./ObjectRef.ts";
+import { VoxelLayerRef } from "./VoxelLayerRef.ts";
 
 export type SelectionStoreEvents = {
   change: (
@@ -50,19 +49,7 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   }
 
   get objectLayer(): string | null {
-    const selection = this.#current;
-    if (selection === null) {
-      return null;
-    }
-
-    switch (selection.kind) {
-      case "object-layer":
-        return selection.name;
-      case "object":
-        return selection.layerName;
-      default:
-        return null;
-    }
+    return this.#current?.objectLayer ?? null;
   }
 
   get isObjectContext(): boolean {
@@ -70,12 +57,7 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   }
 
   get object(): ObjectRef | null {
-    return this.#current?.kind === "object"
-      ? {
-        layerName: this.#current.layerName,
-        objectId: this.#current.objectId
-      }
-      : null;
+    return this.#current?.kind === "object" ? this.#current : null;
   }
 
   get gizmoLayer(): string | null {
@@ -99,29 +81,19 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   selectVoxelLayer(
     name: string
   ): void {
-    this.current = {
-      kind: "voxel-layer",
-      name
-    };
+    this.current = new VoxelLayerRef(name);
   }
 
   selectObjectLayer(
     name: string
   ): void {
-    this.current = {
-      kind: "object-layer",
-      name
-    };
+    this.current = new ObjectLayerRef(name);
   }
 
   selectObject(
-    key: ObjectRef
+    ref: ObjectRef
   ): void {
-    this.current = {
-      kind: "object",
-      layerName: key.layerName,
-      objectId: key.objectId
-    };
+    this.current = ref;
   }
 
   reconcile(
@@ -138,7 +110,7 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   #assign(
     selection: LayerRef | null
   ): void {
-    if (keyOf(this.#current) === keyOf(selection)) {
+    if (this.#current?.key === selection?.key) {
       return;
     }
 
@@ -164,8 +136,7 @@ function fallbackSelection(
     return firstLayerOf(next);
   }
 
-  const key = keyOf(current);
-  if (next.some((entry) => keyOf(entry) === key)) {
+  if (next.some((entry) => current.equals(entry))) {
     return current;
   }
 
@@ -177,19 +148,12 @@ function fallbackSelection(
       return moved;
     }
 
-    return fallbackSelection(
-      {
-        kind: "object-layer",
-        name: current.layerName
-      },
-      previous,
-      next
-    );
+    return fallbackSelection(current.layer, previous, next);
   }
 
   const before = previous.filter((entry) => entry.kind === current.kind);
   const after = next.filter((entry) => entry.kind === current.kind);
-  const index = before.findIndex((entry) => keyOf(entry) === key);
+  const index = before.findIndex((entry) => current.equals(entry));
   if (index !== -1 && after.length > 0) {
     return after[Math.min(index, after.length - 1)];
   }
@@ -203,10 +167,4 @@ function firstLayerOf(
   return entries.find((entry) => entry.kind === "voxel-layer") ??
     entries.find((entry) => entry.kind === "object-layer") ??
     null;
-}
-
-function keyOf(
-  selection: LayerRef | null
-): string | null {
-  return selection === null ? null : layerKey(selection);
 }

@@ -1,11 +1,12 @@
 // Import Third-party Dependencies
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
-import type {
-  BlockDefinition,
-  TilesetDefinition,
-  TilesetDocument,
-  TilesetProjection as TilesetSlot,
-  VoxelView
+import {
+  TilesetLink,
+  type BlockDefinition,
+  type TilesetDefinition,
+  type TilesetDocument,
+  type TilesetSlot,
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import {
   tilesetDocumentKind,
@@ -15,9 +16,8 @@ import type { AssetLeases } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
-import type { TilesetEntry } from "./tilesetEntry.ts";
+import type { TilesetEntry } from "./TilesetEntry.ts";
 import { TilesetAtlasBridge } from "./TilesetAtlasBridge.ts";
-import { TilesetProjection } from "./TilesetProjection.ts";
 
 // CONSTANTS
 export const TILESET_DOCUMENT_KIND = tilesetDocumentKind({
@@ -41,7 +41,7 @@ export interface BlockWriter {
 }
 
 export interface TilesetBindingOptions {
-  engine: VoxelView;
+  view: VoxelView;
   entry: TilesetEntry;
   slot: TilesetSlot;
   opened: OpenedTileset;
@@ -50,35 +50,37 @@ export interface TilesetBindingOptions {
 }
 
 export class TilesetBinding {
-  readonly slot: TilesetSlot;
   readonly assetId: string | null;
   readonly opened: OpenedTileset;
-  readonly #projection: TilesetProjection;
+  readonly link: TilesetLink;
   readonly #atlas: TilesetAtlasBridge;
   #definition: TilesetDefinition;
 
   constructor(
     options: TilesetBindingOptions
   ) {
-    const { engine, entry, opened } = options;
+    const { view, entry, opened } = options;
 
-    this.slot = options.slot;
     this.assetId = entry.assetId;
     this.opened = opened;
     this.#definition = entry.definition;
-    this.#projection = new TilesetProjection({
-      engine: engine.document,
+    this.link = new TilesetLink({
+      document: view.document,
       tileset: opened.tileset,
-      slot: this.slot
+      slot: options.slot
     });
     this.#atlas = new TilesetAtlasBridge({
-      engine,
+      view,
       pixels: opened.pixels,
       tileset: opened.tileset,
       definition: entry.definition,
       mapDocument: options.mapDocument,
       blocks: options.blocks
     });
+  }
+
+  get slot(): TilesetSlot {
+    return this.link.slot;
   }
 
   get definition(): TilesetDefinition {
@@ -101,7 +103,7 @@ export class TilesetBinding {
 
   dispose(): void {
     this.#atlas.destroy();
-    this.#projection.dispose();
+    this.link.dispose();
     this.opened.release();
   }
 }

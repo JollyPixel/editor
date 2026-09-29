@@ -16,7 +16,7 @@ import {
   objectSizeSource,
   type ObjectPort
 } from "./objectSources.ts";
-import { derivedColorOf } from "./objectArea.ts";
+import { MapObject } from "./MapObject.ts";
 import {
   propertiesOf,
   propertyRowsOf,
@@ -131,9 +131,10 @@ export class ObjectPanel extends LitElement {
       return;
     }
 
-    const object = this.world
-      .objectLayers.get(this.layerName)
-      ?.objects.find((candidate) => candidate.id === this.objectId) ?? null;
+    const object = this.world.objectLayers.getObject(
+      this.layerName,
+      this.objectId
+    ) ?? null;
     this._object = object === null ? null : { ...object };
 
     if (object !== null && options.resetProperties === true) {
@@ -155,7 +156,7 @@ export class ObjectPanel extends LitElement {
       <jolly-color
         label="Color"
         .value=${this.#color.value}
-        .default=${derivedColorOf(object)}
+        .default=${new MapObject(object).derivedColor}
         @jolly-input=${this.#color.input}
         @jolly-change=${this.#color.commit}
       ></jolly-color>

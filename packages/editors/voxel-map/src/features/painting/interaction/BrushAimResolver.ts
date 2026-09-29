@@ -9,13 +9,11 @@ import {
 // Import Internal Dependencies
 import { castViewRay } from "../../../shared/viewRay.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
-import type { BrushPlane } from "../model/brushFootprint.ts";
+import type { BrushPlane } from "../model/BrushFootprint.ts";
 import {
-  anchorsOf,
-  cellFaceOf,
-  type CellFace,
+  CellFace,
   type FaceAnchors
-} from "../model/cellFace.ts";
+} from "../model/CellFace.ts";
 
 // CONSTANTS
 const kPlane = new THREE.Plane();
@@ -126,7 +124,7 @@ export class BrushAimResolver {
       return {
         place: ground,
         remove: ground,
-        face: "-y",
+        face: CellFace.NegY,
         anchors: {
           place: "bottom",
           remove: "bottom"
@@ -140,7 +138,7 @@ export class BrushAimResolver {
       "back"
     );
 
-    const face = cellFaceOf(
+    const face = CellFace.of(
       cellFaceStep(this.#raycaster.ray, cell) ?? hit.normal
     );
 
@@ -152,7 +150,7 @@ export class BrushAimResolver {
       ),
       remove: cell,
       face,
-      anchors: anchorsOf(face)
+      anchors: face.anchors
     };
   }
 
@@ -177,7 +175,7 @@ export class BrushAimResolver {
       place: cell,
       remove: cell,
       face: null,
-      anchors: anchorsOf(null)
+      anchors: CellFace.FREE_ANCHORS
     };
   }
 

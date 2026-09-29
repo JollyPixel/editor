@@ -21,9 +21,12 @@ class BlockTextures implements Iterable<ResolvedTileRef> {
   [Symbol.iterator](): IterableIterator<ResolvedTileRef>;
   forSlot(slot: string): ResolvedTileRef | undefined;
   spanFor(slot: string, span: Readonly<TileSpan>): Readonly<TileSpan>;
+  readonly size: number | undefined;
   tilesetIds(): string[];
+  staysOnGrid(rescale: TileRescale): boolean;
   map(mapper: TileRefMapper): BlockTextures;
   withTileset(tilesetId: string | null): BlockTextures;
+  withSize(size: number): BlockTextures;
   applyTo(block: ResolvedBlockDefinition): ResolvedBlockDefinition;
 }
 ```
@@ -45,6 +48,13 @@ only from a tile of its own.
 
 `tilesetIds()` returns the distinct explicit tileset IDs in iteration order.
 
+`size` is the `size` of `defaultTexture`, or of the first face reference
+without one; `undefined` when that reference has none.
+
+`staysOnGrid()` tells whether every reference keeps whole `col` and `row`
+values through [`rescaleTileRef()`](../tilesets/tilesets.md#rescaling-and-tile-rectangles);
+check it before resizing a tileset's tiles.
+
 ## Transforming
 
 `map()` applies `mapper` to every reference. It returns the same instance when
@@ -52,6 +62,8 @@ only from a tile of its own.
 
 `withTileset()` fills `tilesetId` on references that lack one. A `null` ID
 returns the same instance.
+
+`withSize()` sets `size` on every reference.
 
 `applyTo()` returns `block` with these textures. It returns `block` itself when
 the textures are the ones `of(block)` read, and otherwise a copy that omits
@@ -65,3 +77,33 @@ const assigned = textures
   .withTileset(document.tilesets.defaultTilesetId)
   .applyTo(block);
 ```
+
+## BlockTextureLayout
+
+```ts
+class BlockTextureLayout {
+  static of(
+    block: ResolvedBlockDefinition,
+    shape: BlockShape | undefined
+  ): BlockTextureLayout;
+
+  readonly block: ResolvedBlockDefinition;
+  readonly slots: readonly ResolvedBlockTextureSlot[];
+
+  usesTileset(tilesetId: string): boolean;
+  slotsIn(tilesetId: string): ResolvedBlockTextureSlot[];
+  drawnRectsIn(tilesetId: string, tileSize: number): TileRect[];
+  footprintsIn(tilesetId: string, tileSize: number): TileRect[];
+}
+```
+
+Where a block's textures land on a shape. `slots` are the shape's
+[texture slots](./shapeTextureLayout.md) that sample a tile, with the span of
+the tile they use; a block without a known shape has none.
+
+`usesTileset()` and `slotsIn()` only look at those slots, so a face texture the
+shape never draws does not count. `drawnRectsIn()` returns the unique texel
+rectangles the slots sample from a tileset, each slot's `bounds` included.
+`footprintsIn()` returns the whole tiles each reference to the tileset holds,
+stretched by the longest span a slot draws it with: use it to find free room in
+an atlas.

@@ -10,6 +10,7 @@ export * from "./document/VoxelHistory.ts";
 export * from "./document/serialization/index.ts";
 
 export * from "./view/VoxelView.ts";
+export * from "./view/VoxelLayerVisibility.ts";
 export {
   VoxelLighting,
   VoxelRange,
@@ -29,6 +30,7 @@ export * from "./view/atlases/index.ts";
 export * from "./view/collision/index.ts";
 export * from "./view/inspector/index.ts";
 export { MeshBuildStats } from "./view/meshing/index.ts";
+export * from "./view/meshing/BlockPieces.ts";
 export { runMeshWorker } from "./view/workers/runMeshWorker.ts";
 export type {
   MeshWorkerPort,

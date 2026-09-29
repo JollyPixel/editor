@@ -10,14 +10,14 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { BlockRenderSources } from "../../src/features/blocks/blockGeometry.ts";
-import { TileOpacityProbe } from "../../src/features/blocks/tileOpacity.ts";
+import { BlockRenderSources } from "../../src/features/blocks/rendering/BlockRenderSources.ts";
+import { TileOpacityProbe } from "../../src/features/blocks/rendering/tileOpacity.ts";
 
 export function sourcesOf(
   atlases: TilesetAtlases
 ): BlockRenderSources {
-  return {
-    shapeRegistry: BlockShapeRegistry.createDefault(),
+  return new BlockRenderSources({
+    shapes: BlockShapeRegistry.createDefault(),
     atlases,
     tileOpacity: new TileOpacityProbe(atlases, () => {
       const data = new Uint8ClampedArray(4 * 2 * 4);
@@ -31,7 +31,7 @@ export function sourcesOf(
         data
       };
     })
-  };
+  });
 }
 
 export function texturedSources(): BlockRenderSources {

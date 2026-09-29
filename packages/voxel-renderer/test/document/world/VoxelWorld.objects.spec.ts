@@ -49,6 +49,17 @@ describe("VoxelWorld - object edits", () => {
     assert.equal(world.objectLayers.get("From")?.objects[0].x, 0);
     assert.deepEqual(commands, []);
   });
+
+  it("finds an object by layer and id", () => {
+    const world = makeWorld();
+
+    assert.equal(
+      world.objectLayers.getObject("From", "obj1"),
+      world.objectLayers.get("From")?.objects[0]
+    );
+    assert.equal(world.objectLayers.getObject("To", "obj1"), undefined);
+    assert.equal(world.objectLayers.getObject("NoSuch", "obj1"), undefined);
+  });
 });
 
 describe("VoxelWorld - object layers", () => {

@@ -35,6 +35,14 @@ class VoxelTemplate {
     position: Vector3Like,
     transform?: VoxelTransform
   ): IterableIterator<VoxelTemplateVoxel>;
+  placedBounds(
+    position: Vector3Like,
+    transform?: VoxelTransform
+  ): VoxelTemplateBounds;
+  placedPositionFor(
+    min: Vector3Like,
+    transform?: VoxelTransform
+  ): VoxelCoord;
   transformed(transform: VoxelTransform): VoxelTemplate;
   countBlocks(): Map<number, number>;
   withPatch(patch: VoxelTemplatePatch): VoxelTemplate;
@@ -50,6 +58,11 @@ interface VoxelTemplateOptions {
 }
 
 type VoxelTemplateVoxel = [x: number, y: number, z: number, packed: PackedVoxel];
+
+interface VoxelTemplateBounds {
+  min: VoxelCoord;
+  size: VoxelCoord;
+}
 ```
 
 A template is immutable. The constructor copies `positions`, `voxels` and
@@ -66,6 +79,11 @@ when `positions` does not hold three numbers per voxel.
 [`transformOffset()`](./VoxelTransform.md#methods), and each voxel's own
 transform becomes `voxelTransform.followedBy(transform)`, so turned blocks keep
 facing the right way.
+
+`placedBounds()` is the box `placedVoxels()` fills: its lowest cell and its
+extent on each axis, without walking the voxels. `placedPositionFor()` is its
+inverse: the pivot position whose placed box starts at `min`, used to drag a
+placement by its box.
 
 `transformed()` returns a copy whose voxels are the placed voxels turned
 around the pivot, shifted back so the lowest corner is `0, 0, 0`. The pivot

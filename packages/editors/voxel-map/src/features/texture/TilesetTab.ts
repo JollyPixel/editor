@@ -21,7 +21,7 @@ import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 
 export interface TilesetTabOptions {
   canvas: PixelArtCanvas;
-  engine: VoxelView;
+  view: VoxelView;
   binding: TilesetBinding;
   blocks: BlockWriter;
   brush: BrushStore;
@@ -46,7 +46,7 @@ export class TilesetTab {
   constructor(
     options: TilesetTabOptions
   ) {
-    const { canvas, engine, binding } = options;
+    const { canvas, view, binding } = options;
 
     this.binding = binding;
     this.#collaboration = new PixelCollaboration({
@@ -55,7 +55,7 @@ export class TilesetTab {
       label: (_clientId, profile) => readUsername(profile),
       color: peerProfileColor
     });
-    this.#uvBridge = new BlockUvBridge(canvas.uv, engine, {
+    this.#uvBridge = new BlockUvBridge(canvas.uv, view, {
       runLocalRestore: (fn) => canvas.runLocalRestore(fn),
       brush: options.brush,
       mapDocument: options.mapDocument,

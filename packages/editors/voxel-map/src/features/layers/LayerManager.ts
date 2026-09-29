@@ -5,7 +5,6 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import type {
   JollyRenameDetail,
   JollyReparentDetail,
@@ -17,28 +16,17 @@ import type {
 
 // Import Internal Dependencies
 import {
-  layerKey,
-  parseLayerKey,
+  parseLayerRef,
   type LayerRef
 } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { formatCount } from "../../shared/format.ts";
-import { AddLayerDialog } from "./AddLayerDialog.ts";
+import { AddLayerDialog } from "./dialogs/AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
-import { MergeLayerDialog } from "./MergeLayerDialog.ts";
-import {
-  cloneLayerEntry,
-  createLayerEntry,
-  mergeLayerEntry,
-  removeLayerEntry,
-  renameLayerEntry,
-  setLayerEntryLocked
-} from "./layerActions.ts";
-import {
-  applyLayerReparent,
-  canDropLayerRef
-} from "./layerDrop.ts";
+import { MergeLayerDialog } from "./dialogs/MergeLayerDialog.ts";
+import { MapLayers } from "./MapLayers.ts";
+import { PeerMarks } from "../../shared/PeerMarks.ts";
 import {
   layerTreeNodes,
   withLayerBadges
@@ -102,7 +90,7 @@ export class LayerManager extends WorkspaceElement {
       return nothing;
     }
 
-    const world = workspace.engine.document.world;
+    const world = workspace.view.document.world;
     const voxelLayerSelected = this._selection?.kind === "voxel-layer";
 
     return html`
@@ -160,9 +148,9 @@ export class LayerManager extends WorkspaceElement {
             reorderable
             row-drag
             .nodes=${this._nodes}
-            .selected=${this._selection === null ? [] : [layerKey(this._selection)]}
+            .selected=${this._selection === null ? [] : [this._selection.key]}
             .expanded=${this._expanded}
-            .acceptDrop=${canDropLayerRef}
+            .acceptDrop=${MapLayers.acceptsDrop}
             @jolly-select=${this.#onSelect}
             @jolly-toggle-expand=${this.#onToggleExpand}
             @jolly-toggle-visible=${this.#onToggleVisible}
@@ -171,7 +159,7 @@ export class LayerManager extends WorkspaceElement {
             @jolly-reparent=${this.#onReparent}
           ></jolly-tree>
         </div>
-        ${this.#renderInspector(workspace, world)}
+        ${this.#renderInspector(workspace)}
       </jolly-folder>
 
       <add-layer-dialog></add-layer-dialog>
@@ -180,9 +168,9 @@ export class LayerManager extends WorkspaceElement {
   }
 
   #renderInspector(
-    workspace: VoxelMapWorkspace,
-    world: VoxelWorld
+    workspace: VoxelMapWorkspace
   ) {
+    const { world } = workspace.view.document;
     const selection = this._selection;
     if (selection === null) {
       return nothing;
@@ -214,8 +202,8 @@ export class LayerManager extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): void {
     this._nodes = withLayerBadges(
-      layerTreeNodes(workspace.engine.document.world, workspace.layerVisibility),
-      workspace.state.presence.layerSelections
+      layerTreeNodes(workspace.view.document.world, workspace.layerVisibility),
+      new PeerMarks(workspace.state.presence.layerSelections)
     );
   }
 
@@ -226,10 +214,7 @@ export class LayerManager extends WorkspaceElement {
       return;
     }
 
-    const id = layerKey({
-      kind: "object-layer",
-      name: selection.layerName
-    });
+    const id = selection.layer.key;
     if (!this._expanded.includes(id)) {
       this._expanded = [...this._expanded, id];
     }
@@ -240,7 +225,7 @@ export class LayerManager extends WorkspaceElement {
   ): void {
     const [id] = event.detail.selected;
     if (id !== undefined && this.workspace !== null) {
-      this.workspace.state.selection.current = parseLayerKey(id);
+      this.workspace.state.selection.current = parseLayerRef(id);
     }
   }
 
@@ -270,11 +255,7 @@ export class LayerManager extends WorkspaceElement {
       return;
     }
 
-    renameLayerEntry(
-      workspace.engine.document.world,
-      parseLayerKey(event.detail.id),
-      event.detail.name
-    );
+    workspace.layers.rename(parseLayerRef(event.detail.id), event.detail.name);
     this.#refreshNodes(workspace);
   }
 
@@ -286,11 +267,7 @@ export class LayerManager extends WorkspaceElement {
       return;
     }
 
-    setLayerEntryLocked(
-      workspace.engine.document.world,
-      parseLayerKey(event.detail.id),
-      event.detail.locked
-    );
+    workspace.layers.lock(parseLayerRef(event.detail.id), event.detail.locked);
     this.#refreshNodes(workspace);
   }
 
@@ -302,7 +279,7 @@ export class LayerManager extends WorkspaceElement {
       return;
     }
 
-    applyLayerReparent(workspace.engine.document.world, event.detail);
+    workspace.layers.reparent(event.detail);
     this.#refreshNodes(workspace);
   }
 
@@ -316,38 +293,28 @@ export class LayerManager extends WorkspaceElement {
       this._folder.open = true;
     }
 
-    const world = workspace.engine.document.world;
-    const { selection } = workspace.state;
-    const objectLayer = selection.objectLayer;
+    const { objectLayer } = workspace.state.selection;
     const result = await this._addDialog.open({
       canAddObject: objectLayer !== null,
       defaultKind: objectLayer === null ? "voxel-layer" : "object",
-      defaultName: {
-        "voxel-layer": `Layer ${world.getLayers().length + 1}`,
-        "object-layer": `Objects ${world.objectLayers.toArray().length + 1}`,
-        object: "Object"
-      }
+      defaultName: workspace.layers.defaultNames()
     });
     if (result !== null) {
-      createLayerEntry(world, selection, workspace.focusPoint(), result);
+      workspace.layers.create(workspace.focusPoint(), result);
     }
   };
 
   readonly #removeLayer = async(): Promise<void> => {
     const workspace = this.workspace;
     if (workspace !== null && this._selection !== null) {
-      await removeLayerEntry(workspace.engine.document.world, this._selection);
+      await workspace.layers.remove(this._selection);
     }
   };
 
   readonly #cloneLayer = (): void => {
     const workspace = this.workspace;
     if (workspace !== null && this._selection !== null) {
-      cloneLayerEntry(
-        workspace.engine.document.world,
-        workspace.state.selection,
-        this._selection
-      );
+      workspace.layers.clone(this._selection);
     }
   };
 
@@ -357,9 +324,7 @@ export class LayerManager extends WorkspaceElement {
       return;
     }
 
-    await mergeLayerEntry(
-      workspace.engine.document.world,
-      workspace.state.selection,
+    await workspace.layers.merge(
       this._selection,
       (context) => this._mergeDialog.open(context)
     );

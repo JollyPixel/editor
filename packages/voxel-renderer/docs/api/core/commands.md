@@ -54,7 +54,10 @@ sends only local commands; UI listeners usually ignore the origin.
 `isVoxelBlendGroupCommand()` narrow a command (or any `{ action: string }`)
 to one category. Within layer commands, `isVoxelEditCommand()` and
 `isVoxelObjectLayerCommand()` narrow to the
-[voxel edit and object layer subsets](#layer-commands). `VOXEL_COMMAND_ACTIONS` lists every action;
+[voxel edit and object layer subsets](#layer-commands).
+`isVoxelLayerGeometryCommand()` adds `"position-updated"` and
+`"position-rebased"` to the voxel edits: the commands that move a layer's
+bounds or center. `VOXEL_COMMAND_ACTIONS` lists every action;
 `VOXEL_LAYER_COMMAND_ACTIONS`, `VOXEL_TEMPLATE_COMMAND_ACTIONS`, `VOXEL_BLOCK_COMMAND_ACTIONS`,
 `VOXEL_TILESET_COMMAND_ACTIONS`, `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` and
 `VOXEL_BLEND_GROUP_COMMAND_ACTIONS` list each category. `VoxelCommandAction` and the per-category `*CommandAction` types are

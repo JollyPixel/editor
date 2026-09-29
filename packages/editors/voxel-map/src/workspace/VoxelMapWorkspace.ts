@@ -10,11 +10,12 @@ import type { Vector3Like } from "three";
 import type { MapDocument } from "../document/index.ts";
 import type { EditorState } from "../state/index.ts";
 import type { GridRenderer } from "../scene/GridRenderer.ts";
-import type { BlockUsageStore } from "../features/blocks/BlockUsageStore.ts";
-import type { BlockRenderSources } from "../features/blocks/blockGeometry.ts";
+import type { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
+import type { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
 import type { LayerVisibilityStore } from "../features/layers/LayerVisibilityStore.ts";
+import type { MapLayers } from "../features/layers/MapLayers.ts";
 import type { LocalBrush } from "../features/painting/LocalBrush.ts";
-import type { TemplateStore } from "../features/templates/TemplateStore.ts";
+import type { MapTemplates } from "../features/templates/MapTemplates.ts";
 import type { MapTilesets } from "../features/tilesets/MapTilesets.ts";
 
 export interface VoxelMapWorkspace {
@@ -22,9 +23,10 @@ export interface VoxelMapWorkspace {
   mapDocument: MapDocument;
   usage: BlockUsageStore;
   blockSources: BlockRenderSources;
-  templates: TemplateStore;
+  templates: MapTemplates;
   layerVisibility: LayerVisibilityStore;
-  engine: VoxelView;
+  layers: MapLayers;
+  view: VoxelView;
   gridRenderer: GridRenderer;
   localBrush: LocalBrush;
   tilesets: MapTilesets;

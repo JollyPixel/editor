@@ -3,7 +3,11 @@ import type {
   ResolvedTileRef,
   TileSpan
 } from "../tilesets/types.ts";
-import { UNIT_TILE_SPAN } from "../tilesets/tileRef.ts";
+import {
+  rescaleTileRef,
+  UNIT_TILE_SPAN,
+  type TileRescale
+} from "../tilesets/tileRef.ts";
 import type { ResolvedBlockDefinition } from "./BlockDefinition.ts";
 import { baseSlotOf } from "./shape/shapeSlots.ts";
 
@@ -37,6 +41,10 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     if (this.defaultTexture !== undefined) {
       yield this.defaultTexture;
     }
+  }
+
+  get size(): number | undefined {
+    return (this.defaultTexture ?? [...this][0])?.size;
   }
 
   forSlot(
@@ -87,6 +95,27 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     return changed ?
       new BlockTextures(faceTextures, defaultTexture) :
       this;
+  }
+
+  withSize(
+    size: number
+  ): BlockTextures {
+    return this.map((ref) => {
+      return {
+        ...ref,
+        size
+      };
+    });
+  }
+
+  staysOnGrid(
+    rescale: TileRescale
+  ): boolean {
+    return [...this].every((ref) => {
+      const moved = rescaleTileRef(ref, rescale);
+
+      return Number.isInteger(moved.col) && Number.isInteger(moved.row);
+    });
   }
 
   withTileset(

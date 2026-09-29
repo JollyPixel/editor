@@ -9,6 +9,7 @@ import {
   isVoxelBlockCommand,
   isVoxelEditCommand,
   isVoxelLayerCommand,
+  isVoxelLayerGeometryCommand,
   isVoxelObjectLayerCommand,
   isVoxelMaterialGroupCommand,
   isVoxelTemplateCommand,
@@ -62,6 +63,23 @@ describe("command guards", () => {
     assert.ok([...edits, ...objects].every(
       (action) => isVoxelLayerCommand({ action })
     ));
+  });
+
+  it("adds the position actions to the edits as layer geometry", () => {
+    const geometry = VOXEL_COMMAND_ACTIONS.filter(
+      (action) => isVoxelLayerGeometryCommand({ action })
+    );
+
+    assert.deepEqual(geometry, [
+      "position-updated",
+      "position-rebased",
+      "voxel-set",
+      "voxel-removed",
+      "voxels-set",
+      "voxels-removed",
+      "voxels-patched",
+      "layer-transformed"
+    ]);
   });
 
   it("lists every category action once", () => {

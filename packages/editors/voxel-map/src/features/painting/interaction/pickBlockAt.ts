@@ -5,16 +5,13 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  cellsOf,
-  type BrushFootprint
-} from "../model/brushFootprint.ts";
+import type { BrushFootprint } from "../model/BrushFootprint.ts";
 
 export function pickBlockAt(
-  engine: VoxelView,
+  view: VoxelView,
   footprint: BrushFootprint
 ): number | null {
-  const { world } = engine.document;
+  const { world } = view.document;
 
   for (const cell of footprintOf(footprint)) {
     const entry = world.getVoxelAt(cell);
@@ -36,7 +33,7 @@ function* footprintOf(
     return;
   }
 
-  for (const cell of cellsOf(footprint)) {
+  for (const cell of footprint.cells()) {
     if (
       cell.x !== center.x ||
       cell.y !== center.y ||

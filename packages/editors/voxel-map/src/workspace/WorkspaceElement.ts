@@ -23,6 +23,10 @@ export class WorkspaceElement extends LitElement {
     }
   }
 
+  get attached(): VoxelMapWorkspace {
+    return this.#controller.attached;
+  }
+
   protected watchWorkspace(
     _workspace: VoxelMapWorkspace
   ): Iterable<() => void> {

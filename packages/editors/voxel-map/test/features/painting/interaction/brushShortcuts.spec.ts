@@ -11,7 +11,8 @@ import { Keyboard } from "@jolly-pixel/controls";
 // Import Internal Dependencies
 import {
   BrushStore,
-  SelectionStore
+  SelectionStore,
+  VoxelLayerRef
 } from "../../../../src/state/index.ts";
 import { bindBrushShortcuts } from "../../../../src/features/painting/interaction/brushShortcuts.ts";
 
@@ -19,10 +20,7 @@ function setup() {
   const keyboard = new Keyboard();
   const brush = new BrushStore();
   const selection = new SelectionStore();
-  selection.current = {
-    kind: "voxel-layer",
-    name: "Ground"
-  };
+  selection.current = new VoxelLayerRef("Ground");
   const release = bindBrushShortcuts({
     keyboard,
     brush,

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
-import {
-  resolvedBlockTextureSlots,
-  type ResolvedBlockDefinition,
-  type VoxelView
+import type {
+  ResolvedBlockDefinition,
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type {
   UVMap,
@@ -13,15 +12,7 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../../document/index.ts";
-import {
-  blockFromUvRegion,
-  blockIdFromUvRegion,
-  blockUsesTileset,
-  blockUvRegion,
-  freeBlockUvRegion,
-  uvRegionsEqual
-} from "../uv/blockUvProjection.ts";
-import { blockShapeUv } from "../uv/blockShapeUv.ts";
+import { BlockUv } from "../uv/BlockUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import type { BrushStore } from "../../../state/index.ts";
 import type { BlockWriter } from "../../tilesets/TilesetBinding.ts";
@@ -35,7 +26,7 @@ export interface BlockUvBridgeOptions {
 
 export class BlockUvBridge {
   readonly #uv: UVMap;
-  readonly #engine: VoxelView;
+  readonly #view: VoxelView;
   readonly #blocks: BlockWriter;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
@@ -47,12 +38,12 @@ export class BlockUvBridge {
 
   constructor(
     uv: UVMap,
-    engine: VoxelView,
+    view: VoxelView,
     options: BlockUvBridgeOptions
   ) {
     this.#uv = uv;
-    this.#engine = engine;
-    this.#blocks = options.blocks ?? engine.document;
+    this.#view = view;
+    this.#blocks = options.blocks ?? view.document;
     this.#selection = new BlockUvSelectionSync(
       uv,
       options.brush
@@ -98,23 +89,25 @@ export class BlockUvBridge {
       return [];
     }
 
-    return [...this.#engine.document.blocks.getAll()].filter(
-      (block) => blockUsesTileset(
-        block,
-        this.#engine.shapes.get(block.shapeId),
-        tilesetId
-      )
+    return [...this.#view.document.blocks.getAll()].filter(
+      (block) => this.#uvOf(block).usesTileset(tilesetId)
+    );
+  }
+
+  #uvOf(
+    block: ResolvedBlockDefinition
+  ): BlockUv {
+    return new BlockUv(
+      block,
+      this.#view.shapes.get(block.shapeId),
+      this.#tileSize
     );
   }
 
   #regionFor(
     block: ResolvedBlockDefinition
   ): UVRegion {
-    return blockUvRegion(
-      block,
-      this.#engine.shapes.get(block.shapeId),
-      this.#tileSize
-    );
+    return this.#uvOf(block).region();
   }
 
   #rebuild(): void {
@@ -130,7 +123,7 @@ export class BlockUvBridge {
       this.#runLocalRestore(() => {
         for (const region of [...this.#uv.regions]) {
           if (
-            blockIdFromUvRegion(region.id) !== null &&
+            BlockUv.blockIdOf(region.id) !== null &&
             !desired.has(region.id)
           ) {
             this.#uv.delete(region.id);
@@ -138,7 +131,7 @@ export class BlockUvBridge {
         }
         for (const region of desired.values()) {
           const existing = this.#uv.get(region.id);
-          if (!existing || !uvRegionsEqual(existing, region)) {
+          if (!existing || !BlockUv.sameRegion(existing, region)) {
             this.#uv.restore(region);
           }
         }
@@ -156,7 +149,7 @@ export class BlockUvBridge {
   ): void {
     const region = this.#regionFor(block);
     const existing = this.#uv.get(region.id);
-    if (existing && uvRegionsEqual(existing, region)) {
+    if (existing && BlockUv.sameRegion(existing, region)) {
       return;
     }
 
@@ -166,22 +159,17 @@ export class BlockUvBridge {
   #applyRegionToBlock(
     region: UVRegion
   ): void {
-    const blockId = blockIdFromUvRegion(region.id);
+    const blockId = BlockUv.blockIdOf(region.id);
     if (blockId === null) {
       return;
     }
 
-    const block = this.#engine.document.blocks.get(blockId);
+    const block = this.#view.document.blocks.get(blockId);
     if (!block) {
       return;
     }
 
-    const updated = blockFromUvRegion(
-      block,
-      this.#engine.shapes.get(block.shapeId),
-      region,
-      this.#tileSize
-    );
+    const updated = this.#uvOf(block).apply(region);
 
     this.#applying = true;
     try {
@@ -200,7 +188,7 @@ export class BlockUvBridge {
 
   readonly #onRegionMoved: UVMapListener<"region-moved"> = (event) => {
     const block = this.#blockOf(event.region.id);
-    if (!block || uvRegionsEqual(this.#regionFor(block), event.region)) {
+    if (!block || BlockUv.sameRegion(this.#regionFor(block), event.region)) {
       return;
     }
 
@@ -222,7 +210,7 @@ export class BlockUvBridge {
       event.rect,
       event.face ?? undefined
     );
-    if (uvRegionsEqual(this.#regionFor(block), dragged)) {
+    if (BlockUv.sameRegion(this.#regionFor(block), dragged)) {
       return;
     }
 
@@ -248,7 +236,7 @@ export class BlockUvBridge {
       return;
     }
     const block = this.#blockOf(event.region.id);
-    if (!block || uvRegionsEqual(this.#regionFor(block), event.region)) {
+    if (!block || BlockUv.sameRegion(this.#regionFor(block), event.region)) {
       return;
     }
 
@@ -264,16 +252,12 @@ export class BlockUvBridge {
       return false;
     }
 
-    const shape = this.#engine.shapes.get(block.shapeId);
-    if (shape === undefined || blockShapeUv(shape).isBox) {
+    const uv = this.#uvOf(block);
+    if (uv.shape === undefined || uv.isBox) {
       return false;
     }
 
-    const derived = freeBlockUvRegion(
-      block,
-      shape,
-      this.#tileSize
-    );
+    const derived = uv.freeRegion();
     this.#rebuilding = true;
     try {
       this.#runLocalRestore(() => this.#uv.restore(derived));
@@ -289,18 +273,12 @@ export class BlockUvBridge {
   #blockOf(
     id: string
   ): ResolvedBlockDefinition | undefined {
-    const blockId = blockIdFromUvRegion(id);
-    if (blockId === null) {
-      return undefined;
-    }
+    const blockId = BlockUv.blockIdOf(id);
+    const block = blockId === null ?
+      undefined :
+      this.#view.document.blocks.get(blockId);
 
-    const block = this.#engine.document.blocks.get(blockId);
-    if (!block) {
-      return undefined;
-    }
-    const shape = this.#engine.shapes.get(block.shapeId);
-
-    return shape && resolvedBlockTextureSlots(block, shape).length > 0 ?
+    return block !== undefined && this.#uvOf(block).textured ?
       block :
       undefined;
   }
@@ -310,12 +288,12 @@ export class BlockUvBridge {
       return;
     }
 
-    const blockId = blockIdFromUvRegion(event.region.id);
+    const blockId = BlockUv.blockIdOf(event.region.id);
     if (blockId === null) {
       return;
     }
 
-    const block = this.#engine.document.blocks.get(blockId);
+    const block = this.#view.document.blocks.get(blockId);
     if (!block) {
       return;
     }

@@ -12,12 +12,9 @@ import type {
 } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
-import {
-  layerKey,
-  type EditorState
-} from "../state/index.ts";
+import type { EditorState } from "../state/index.ts";
 import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
-import type { BrushCursor } from "../features/painting/model/brushCursor.ts";
+import type { BrushFootprint } from "../features/painting/model/BrushFootprint.ts";
 
 // CONSTANTS
 const kBlockPresenceKey = "block";
@@ -63,7 +60,7 @@ export class MapCollaboration {
     const layerMarks = new PeerMarkTracker({
       room,
       presenceKey: kLayerPresenceKey,
-      localKey: () => (selection.current === null ? null : layerKey(selection.current)),
+      localKey: () => selection.current?.key ?? null,
       readKey: readLayerKey,
       publish: (marks) => {
         presence.layerSelections = marks;
@@ -92,7 +89,7 @@ export class MapCollaboration {
   }
 
   publishCursor(
-    cursor: BrushCursor | null
+    cursor: BrushFootprint | null
   ): void {
     this.#peerBrushes.publishLocalCursor(cursor);
   }
