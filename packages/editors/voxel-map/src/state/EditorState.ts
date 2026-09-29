@@ -10,6 +10,7 @@ import { BrushStore } from "./BrushStore.ts";
 import { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
+import { TemplateStore } from "./TemplateStore.ts";
 import { TilesetStore } from "./TilesetStore.ts";
 import { ViewStore } from "./ViewStore.ts";
 
@@ -23,6 +24,7 @@ export class EditorState {
   readonly presence = new PresenceStore();
   readonly tilesets = new TilesetStore();
   readonly layerVisibility = new LayerVisibilityStore();
+  readonly templates = new TemplateStore();
   readonly log = new LogQueue();
   readonly view: ViewStore;
 

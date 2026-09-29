@@ -191,3 +191,34 @@ registerIcon("order-registry", svg`
     stroke-linecap="round"
   />
 `);
+
+registerIcon("template", svg`
+  <path
+    d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1Z"
+    fill="currentColor"
+  />
+`, { tone: "amber" });
+
+registerIcon("template-save", svg`
+  <path
+    d="M5 4a1 1 0 0 1 1-1h8v2H7v12.3l5-3.2 5 3.2V11h2v10l-7-4.5L5 21V4Z"
+    fill="currentColor"
+  />
+  <path
+    class="tone-ink"
+    d="M18 2h2v3h3v2h-3v3h-2V7h-3V5h3V2Z"
+    fill="currentColor"
+  />
+`, { tone: "amber" });
+
+registerIcon("stamp", svg`
+  <path
+    class="tone-ink"
+    d="M9 3h6v5.5c0 1.2 1 2 2 2.5l1.5.8c.9.5 1.5 1.4 1.5 2.5V15H4v-.7c0-1.1.6-2 1.5-2.5l1.5-.8c1-.5 2-1.3 2-2.5V3Z"
+    fill="currentColor"
+  />
+  <path
+    d="M4 17h16v2H4z"
+    fill="currentColor"
+  />
+`, { tone: "amber" });

@@ -273,6 +273,29 @@ describe("resize", () => {
     assert.equal(visibleArrowCount(ground.area), 4);
     assert.equal(visibleArrowCount(volume.area), 6);
   });
+
+  test("the none policy hides every arrow and never resizes", () => {
+    const harness = createHarness();
+    const picker = pickerCenter(harness.area, "x", 1);
+    const press = pointerAt({
+      camera: harness.camera,
+      element: harness.element,
+      target: picker,
+      type: "pointerdown"
+    });
+
+    harness.controls.resizeAxes = "none";
+    harness.render();
+
+    assert.equal(visibleArrowCount(harness.area), 0);
+    assert.equal(harness.controls.isOverHandle(press), false);
+
+    harness.send({ type: "pointerdown", target: picker });
+    harness.send({ type: "pointermove", target: harness.at(13, 0.5, 4) });
+
+    assert.deepEqual(harness.area.size.toArray(), [8, 1, 8]);
+    assert.ok(harness.changes.every((change) => change.mode !== "resize"));
+  });
 });
 
 describe("events", () => {

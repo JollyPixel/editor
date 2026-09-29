@@ -50,7 +50,7 @@ interface BoxControlsOptions {
   minSize?: THREE.Vector3Like | null;
   bounds?: THREE.Box3 | null;
   moveAxes?: BoxAxisPolicy;
-  resizeAxes?: BoxAxisPolicy;
+  resizeAxes?: BoxResizePolicy;
   handleSize?: number;
 }
 ```
@@ -61,7 +61,7 @@ interface BoxControlsOptions {
 | `minSize` | one snap step per axis | Smallest extent a resize may reach, per axis. |
 | `bounds` | `null` | Parent-space volume used to clamp moves and dragged faces. |
 | `moveAxes` | `"xz"` | Axes a move may affect. |
-| `resizeAxes` | `"xz"` | Axes a resize may affect; arrows of excluded axes are hidden. |
+| `resizeAxes` | `"xz"` | Axes a resize may affect; arrows of excluded axes are hidden. `"none"` disables resizing. |
 | `handleSize` | `0.035` | Arrow size as a fraction of the viewport height. |
 
 All options except `handleSize` are live properties. Changing `resizeAxes` updates the arrows immediately.
@@ -78,9 +78,10 @@ Moves snap the min corner. Resizes snap the dragged face and preserve the opposi
 
 ```ts
 type BoxAxisPolicy = "xz" | "xyz";
+type BoxResizePolicy = BoxAxisPolicy | "none";
 ```
 
-`"xz"` keeps gestures on the ground plane, while `"xyz"` enables the vertical axis. The policies are independent. Tile editors with fixed height can keep both at `"xz"`. Level editors placing trigger volumes can set both to `"xyz"`.
+`"xz"` keeps gestures on the ground plane, while `"xyz"` enables the vertical axis. The policies are independent. Tile editors with fixed height can keep both at `"xz"`. Level editors placing trigger volumes can set both to `"xyz"`. `resizeAxes` also accepts `"none"`, which hides every arrow for boxes that only move, such as a placement preview.
 
 ## Properties
 

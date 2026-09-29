@@ -79,6 +79,8 @@ export class LocalBrush extends ActorComponent {
   onFocusRequest?: (point: THREE.Vector3Like) => void;
   onPaintBlocked?: () => void;
 
+  suspended = false;
+
   readonly engine: VoxelView;
 
   #camera: THREE.PerspectiveCamera;
@@ -208,6 +210,7 @@ export class LocalBrush extends ActorComponent {
       input.keyboard.isDown("AltRight");
 
     if (
+      this.suspended ||
       !input.mouse.hovering ||
       this.#selection.isObjectContext ||
       input.mouse.isDown("middle")

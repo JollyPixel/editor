@@ -24,6 +24,7 @@ const kEvents: Array<keyof MapDocumentEvents> = [
   "blockRegistryChanged",
   "tilesetsChanged",
   "materialGroupsChanged",
+  "templatesChanged",
   "reset"
 ];
 
@@ -73,16 +74,18 @@ describe("MapDocument", () => {
     engine.emit("command", command("material-group-removed"), {
       origin: "remote"
     });
+    engine.emit("command", command("template-defined"), { origin: "local" });
 
     assert.deepEqual(seen, [
       "layerUpdated",
       "blockRegistryChanged",
       "tilesetsChanged",
-      "materialGroupsChanged"
+      "materialGroupsChanged",
+      "templatesChanged"
     ]);
   });
 
-  it("announces tilesets, blocks and material groups before the reset of a source", () => {
+  it("announces tilesets, blocks, material groups and templates before the reset of a source", () => {
     const { source, seen } = setup();
 
     source.emit("reset");
@@ -91,6 +94,7 @@ describe("MapDocument", () => {
       "tilesetsChanged",
       "blockRegistryChanged",
       "materialGroupsChanged",
+      "templatesChanged",
       "reset"
     ]);
   });

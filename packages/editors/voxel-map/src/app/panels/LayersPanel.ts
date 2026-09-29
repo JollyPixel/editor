@@ -7,6 +7,11 @@ import type { LayerSelection } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
 import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 import type { LayerManager } from "../../features/layers/LayerManager.ts";
+import type { TemplateManager } from "../../features/templates/TemplateManager.ts";
+import {
+  removeTemplate,
+  saveLayerAsTemplate
+} from "../../features/templates/templateActions.ts";
 import { formatCount } from "../../features/blocks/blockUsage.ts";
 
 import "../../features/registerElements.ts";
@@ -19,6 +24,15 @@ export class LayersPanel extends LitElement {
 
       --jolly-folder-indent: 0;
       --jolly-field-inset-end: 0;
+    }
+
+    layer-manager {
+      min-height: calc(var(--jolly-row-height, 20px) * 3);
+      max-height: 200px;
+    }
+
+    template-manager {
+      max-height: 160px;
     }
 
     .total {
@@ -42,16 +56,26 @@ export class LayersPanel extends LitElement {
   @query("jolly-folder")
   declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
 
+  @state()
+  declare _template: string | null;
+
   @query("layer-manager")
   declare _layerManager: LayerManager | null;
 
+  @query("template-manager")
+  declare _templateManager: TemplateManager | null;
+
   #workspace = new WorkspaceController(this, (workspace) => {
-    const { selection } = workspace.state;
+    const { selection, templates } = workspace.state;
     this._selection = selection.current;
+    this._template = templates.selected;
 
     return [
       selection.subscribe("change", (current) => {
         this._selection = current;
+      }),
+      templates.subscribe("selectionChange", (templateId) => {
+        this._template = templateId;
       }),
       workspace.usage.subscribe("change", () => this.requestUpdate()),
       workspace.mapDocument.subscribe("reset", () => this.requestUpdate())
@@ -61,6 +85,7 @@ export class LayersPanel extends LitElement {
   constructor() {
     super();
     this._selection = null;
+    this._template = null;
   }
 
   attach(
@@ -86,6 +111,36 @@ export class LayersPanel extends LitElement {
 
   readonly #mergeLayer = async(): Promise<void> => {
     await this._layerManager?.mergeLayer();
+  };
+
+  readonly #saveTemplate = (): void => {
+    const workspace = this.#workspace.current;
+    const layerName = workspace?.state.selection.voxelLayer ?? null;
+    if (workspace === null || layerName === null) {
+      return;
+    }
+
+    const templateId = saveLayerAsTemplate(
+      workspace.engine.document.world,
+      workspace.state.templates,
+      layerName
+    );
+    if (templateId === null) {
+      workspace.state.log.push(`${layerName} has no voxels to save as a template`);
+    }
+  };
+
+  readonly #placeTemplate = (): void => {
+    this._templateManager?.place();
+  };
+
+  readonly #removeTemplate = async(): Promise<void> => {
+    const workspace = this.#workspace.current;
+    if (workspace === null || this._template === null) {
+      return;
+    }
+
+    await removeTemplate(workspace.engine.document.world, this._template);
   };
 
   get #canEditVoxelLayer(): boolean {
@@ -158,9 +213,57 @@ export class LayersPanel extends LitElement {
           .presence=${workspace.state.presence}
           .layerVisibility=${workspace.state.layerVisibility}
           .viewFocus=${workspace.viewFocus}
-          style="height:200px;"
         ></layer-manager>
         ${this.#renderSelectionPanel(workspace)}
+      </jolly-folder>
+
+      <jolly-folder
+        key="templates"
+        label="Templates"
+        storage-key="voxel-map:folder:templates"
+      >
+        <jolly-button
+          slot="actions"
+          icon="template-save"
+          icon-only
+          label="Save layer as template"
+          title="Save the selected voxel layer as a template"
+          ?disabled=${!this.#canEditVoxelLayer}
+          @click=${this.#saveTemplate}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="stamp"
+          icon-only
+          label="Place template"
+          title="Place the selected template in the world"
+          ?disabled=${this._template === null}
+          @click=${this.#placeTemplate}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="trash"
+          icon-only
+          variant="danger"
+          label="Delete template"
+          title="Delete template"
+          ?disabled=${this._template === null}
+          @click=${this.#removeTemplate}
+        ></jolly-button>
+
+        <template-manager
+          .world=${workspace.engine.document.world}
+          .templates=${workspace.state.templates}
+          .mapDocument=${workspace.mapDocument}
+          .viewFocus=${workspace.viewFocus}
+        ></template-manager>
+        <template-panel
+          .world=${workspace.engine.document.world}
+          .history=${workspace.engine.document.history}
+          .templates=${workspace.state.templates}
+          .selection=${workspace.state.selection}
+          .mapDocument=${workspace.mapDocument}
+        ></template-panel>
       </jolly-folder>
     `;
   }

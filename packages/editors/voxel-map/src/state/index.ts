@@ -3,6 +3,7 @@ export * from "./BrushStore.ts";
 export * from "./LayerVisibilityStore.ts";
 export * from "./PresenceStore.ts";
 export * from "./SelectionStore.ts";
+export * from "./TemplateStore.ts";
 export * from "./TilesetStore.ts";
 export * from "./BlockUsageStore.ts";
 export * from "./tilesetEntry.ts";

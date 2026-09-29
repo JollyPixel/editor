@@ -43,6 +43,10 @@ import {
   layerSelectionsOf
 } from "../features/layers/index.ts";
 import {
+  TemplatePlacement,
+  TemplateShortcuts
+} from "../features/templates/index.ts";
+import {
   TilesetDirectory,
   type TilesetCatalog
 } from "../features/tilesets/TilesetDirectory.ts";
@@ -266,12 +270,23 @@ export class EditorScene extends Systems.Scene {
       keyboard,
       history: engine.document.history
     });
+    const templateShortcuts = new TemplateShortcuts({
+      keyboard,
+      templates: state.templates
+    });
 
     world.createActor("gizmo")
       .addComponent(VoxelLayerGizmo, {
         world: engine.document.world,
         camera: camera.camera,
         selection: state.selection,
+        mapDocument
+      });
+    world.createActor("template-placement")
+      .addComponent(TemplatePlacement, {
+        engine,
+        camera: camera.camera,
+        templates: state.templates,
         mapDocument
       });
     world.createActor("object-layer-renderer")
@@ -291,16 +306,27 @@ export class EditorScene extends Systems.Scene {
       localBrush
     });
 
+    function suspendCamera(): void {
+      camera.enabled = !state.selection.gizmoDragging &&
+        !state.templates.dragging;
+    }
+
     this.#disposables.push(
       () => keyboard.off(kExitOrbitFocusKey, exitOrbitFocus),
-      state.selection.subscribe("gizmoDraggingChange", (dragging) => {
-        camera.enabled = !dragging;
+      state.selection.subscribe("gizmoDraggingChange", suspendCamera),
+      state.templates.subscribe("draggingChange", suspendCamera),
+      state.templates.subscribe("placementChange", (placement) => {
+        localBrush.suspended = placement !== null;
       }),
       mapDocument.subscribe("layerUpdated", () => {
         this.#reconcileSelection(engine);
       }),
+      mapDocument.subscribe("templatesChanged", () => {
+        this.#reconcileTemplates(engine);
+      }),
       mapDocument.subscribe("reset", () => {
         this.#reconcileSelection(engine);
+        this.#reconcileTemplates(engine);
         this.#spawnCamera(engine);
       }),
       state.view.subscribe("change", (settings) => {
@@ -309,6 +335,7 @@ export class EditorScene extends Systems.Scene {
       () => environment.dispose(),
       () => shortcuts.dispose(),
       () => historyShortcuts.dispose(),
+      () => templateShortcuts.dispose(),
       () => collaboration.dispose(),
       () => linkedTilesets.dispose(),
       () => tilesetDirectory.dispose(),
@@ -372,6 +399,14 @@ export class EditorScene extends Systems.Scene {
   ): void {
     this.#options.state.selection.reconcile(
       layerSelectionsOf(engine.document.world)
+    );
+  }
+
+  #reconcileTemplates(
+    engine: VoxelView
+  ): void {
+    this.#options.state.templates.reconcile(
+      Array.from(engine.document.world.templates, (template) => template.id)
     );
   }
 

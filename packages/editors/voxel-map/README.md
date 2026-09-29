@@ -212,6 +212,24 @@ The preview shows what a right click removes and highlights the hovered cube
 face of the aimed cell, whatever the brush size or pattern; a build lands on
 the other side of that face. Peers see it too.
 
+## Templates
+
+The Templates folder of the Layers pane lists the templates saved with the
+map. Its save button copies the selected voxel layer into a new template named
+after it. Double-click a row or press the place button to drop the template at
+the view focus. It shows as a translucent copy inside a dashed box until
+committed.
+
+| Action | How |
+|---|---|
+| Move | Drag the box; `Shift` + drag lifts it |
+| Turn | `Q` / `E`, or the rotate and flip buttons of the panel |
+| Commit | Commit into the selected voxel layer (the last one selected otherwise) |
+| Cancel | Cancel button |
+
+A commit is one undo step. Painting is paused while a placement is pending,
+and the pending placement stays local to the page.
+
 ## Block transparency
 
 The block editor offers Opaque, Cutout, and Blended alpha modes, plus Outside
