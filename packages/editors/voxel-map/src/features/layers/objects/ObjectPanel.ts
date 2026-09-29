@@ -22,8 +22,8 @@ import {
   propertyRowsOf,
   type PropertyRow,
   type PropertyRowsChangeDetail
-} from "../properties/propertyDraft.ts";
-import "../properties/CustomPropertiesEditor.ts";
+} from "../../../shared/propertyDraft.ts";
+import "../../../shared/CustomPropertiesEditor.ts";
 
 @customElement("object-panel")
 export class ObjectPanel extends LitElement {
@@ -134,10 +134,8 @@ export class ObjectPanel extends LitElement {
     const object = this.world
       .objectLayers.get(this.layerName)
       ?.objects.find((candidate) => candidate.id === this.objectId) ?? null;
-    // Snapshot in-place mutations to trigger a Lit update.
     this._object = object === null ? null : { ...object };
 
-    // Preserve half-typed rows when store commits arrive.
     if (object !== null && options.resetProperties === true) {
       this._props = propertyRowsOf(object.properties);
     }

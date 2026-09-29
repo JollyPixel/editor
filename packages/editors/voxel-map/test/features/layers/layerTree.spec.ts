@@ -11,38 +11,12 @@ import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  layerRefOf,
-  layerRowId,
   layerTreeNodes,
-  withLayerBadges,
-  type LayerRef
+  withLayerBadges
 } from "../../../src/features/layers/layerTree.ts";
-import type { PeerMark } from "../../../src/collaboration/peerMarks.ts";
-import { LayerVisibilityStore } from "../../../src/state/LayerVisibilityStore.ts";
-
-describe("layer tree references", () => {
-  const refs: LayerRef[] = [
-    {
-      kind: "voxel-layer",
-      name: "Ground"
-    },
-    {
-      kind: "object-layer",
-      name: "Triggers"
-    },
-    {
-      kind: "object",
-      layerName: "Triggers/Inside",
-      objectId: "spawn"
-    }
-  ];
-
-  test("round-trips every row kind", () => {
-    for (const ref of refs) {
-      assert.deepStrictEqual(layerRefOf(layerRowId(ref)), ref);
-    }
-  });
-});
+import type { PeerMark } from "../../../src/shared/peerMarks.ts";
+import type { LayerRef } from "../../../src/state/layerRef.ts";
+import { LayerVisibilityStore } from "../../../src/features/layers/LayerVisibilityStore.ts";
 
 describe("layerTreeNodes", () => {
   test("projects voxel layers, object layers and their objects", () => {
@@ -192,7 +166,7 @@ describe("withLayerBadges", () => {
   test("badges a voxel layer with the color and name of its peers", () => {
     const badged = withLayerBadges(
       nodes,
-      new Map([["voxel-layer:Ground", [mark("bob", "#ff0000")]]])
+      new Map([["voxel:Ground", [mark("bob", "#ff0000")]]])
     );
 
     assert.deepStrictEqual(badged[0].badges, [
@@ -206,7 +180,7 @@ describe("withLayerBadges", () => {
   test("badges a nested object row", () => {
     const badged = withLayerBadges(
       nodes,
-      new Map([["object:spawn", [mark("bob", "#ff0000")]]])
+      new Map([["obj:Triggers/spawn", [mark("bob", "#ff0000")]]])
     );
 
     assert.strictEqual(badged[1].badges, undefined);
@@ -220,7 +194,7 @@ describe("withLayerBadges", () => {
     const badged = withLayerBadges(
       nodes,
       new Map([[
-        "voxel-layer:Ground",
+        "voxel:Ground",
         ["a", "b", "c", "d"].map((clientId) => mark(clientId, "#fff"))
       ]])
     );
@@ -234,7 +208,7 @@ describe("withLayerBadges", () => {
   test("does not mutate the source nodes", () => {
     withLayerBadges(
       nodes,
-      new Map([["voxel-layer:Ground", [mark("bob", "#ff0000")]]])
+      new Map([["voxel:Ground", [mark("bob", "#ff0000")]]])
     );
 
     assert.strictEqual(nodes[0].badges, undefined);

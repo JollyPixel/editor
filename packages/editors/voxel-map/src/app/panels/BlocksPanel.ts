@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import { html, css } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   LocalStorageAdapter,
@@ -7,25 +7,22 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
-import { WorkspaceController } from "../../shared/WorkspaceController.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import {
   parseBlockLibraryOrder,
   type BlockLibraryOrder
 } from "../../features/blocks/blockLibraryOrder.ts";
 import type { BlockOrderChangeDetail } from "../../features/blocks/BlockOrderMenu.ts";
-import type {
-  BlockLibrary,
-  BlockSelectionChangeDetail
-} from "../../features/blocks/BlockLibrary.ts";
-
-import "../../features/registerElements.ts";
+import type { BlockLibrary } from "../../features/blocks/BlockLibrary.ts";
+import "../../features/blocks/BlockLibrary.ts";
+import "../../features/blocks/BlockOrderMenu.ts";
 
 // CONSTANTS
 const kOrderStorageKey = "voxel-map:block-library:order";
 
 @customElement("blocks-panel")
-export class BlocksPanel extends LitElement {
+export class BlocksPanel extends WorkspaceElement {
   static override styles = css`
     :host {
       display: flex;
@@ -66,10 +63,6 @@ export class BlocksPanel extends LitElement {
   @query("block-library")
   declare _blockLibrary: BlockLibrary | null;
 
-  #workspace = new WorkspaceController(this, (workspace) => [
-    workspace.mapDocument.subscribe("reset", () => this.requestUpdate())
-  ]);
-
   constructor() {
     super();
     this.hostsTextureEditor = false;
@@ -78,10 +71,20 @@ export class BlocksPanel extends LitElement {
     this._order = parseBlockLibraryOrder(this.storage.get(kOrderStorageKey));
   }
 
-  attach(
+  protected override watchWorkspace(
     workspace: VoxelMapWorkspace
-  ): void {
-    this.#workspace.attach(workspace);
+  ): Iterable<() => void> {
+    const refreshEditable = (): void => {
+      const { blockId } = workspace.state.brush;
+      this._canEditBlock = workspace.engine.document.blocks.get(blockId) !== undefined;
+    };
+    refreshEditable();
+
+    return [
+      workspace.mapDocument.subscribe("reset", () => this.requestUpdate()),
+      workspace.mapDocument.subscribe("blockRegistryChanged", refreshEditable),
+      workspace.state.brush.subscribe("blockChange", refreshEditable)
+    ];
   }
 
   readonly #onOrderChange = (
@@ -89,12 +92,6 @@ export class BlocksPanel extends LitElement {
   ): void => {
     this._order = event.detail.order;
     this.storage.set(kOrderStorageKey, this._order);
-  };
-
-  readonly #onBlockSelectionChange = (
-    event: CustomEvent<BlockSelectionChangeDetail>
-  ): void => {
-    this._canEditBlock = event.detail.block !== null;
   };
 
   readonly #editBlock = async(): Promise<void> => {
@@ -109,7 +106,7 @@ export class BlocksPanel extends LitElement {
   }
 
   override render() {
-    const workspace = this.#workspace.current;
+    const workspace = this.workspace;
     if (workspace === null) {
       return html`<slot></slot>`;
     }
@@ -137,16 +134,9 @@ export class BlocksPanel extends LitElement {
           @click=${this.#editBlock}
         ></jolly-button>
         <block-library
-          .engine=${workspace.engine}
-          .brush=${workspace.state.brush}
-          .mapDocument=${workspace.mapDocument}
-          .presence=${workspace.state.presence}
-          .tilesets=${workspace.state.tilesets}
-          .linked=${workspace.linkedTilesets}
-          .usage=${workspace.usage}
+          .workspace=${workspace}
           .order=${this._order}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}
-          @block-selection-change=${this.#onBlockSelectionChange}
         ></block-library>
       </jolly-folder>
 

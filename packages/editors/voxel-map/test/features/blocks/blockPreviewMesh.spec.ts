@@ -5,94 +5,24 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  BlockShapeRegistry,
   MaterialGroupList,
-  TilesetList,
   TilesetAtlases,
-  VoxelTransform,
-  resolveBlockDefinition,
-  type BlockDefinition,
-  type TilesetImage
+  type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  buildBlockGeometry,
   buildBlockPreviewMesh,
-  emptyTextureSlots,
   fitGeometry,
-  PREVIEW_FIT_RADIUS,
-  type BlockPreviewSources
+  PREVIEW_FIT_RADIUS
 } from "../../../src/features/blocks/blockPreviewMesh.ts";
-import { TileOpacityProbe } from "../../../src/features/blocks/tileOpacity.ts";
+import {
+  blockOf,
+  sourcesOf
+} from "../../helpers/blockSources.ts";
 
 // CONSTANTS
-const kCubeSlots = ["right", "left", "top", "bottom", "front", "back"];
 const kSources = sourcesOf(new TilesetAtlases());
-const kTextured = texturedSources();
-const kPainted = {
-  tilesetId: "atlas",
-  col: 0,
-  row: 0
-};
-const kBlank = {
-  tilesetId: "atlas",
-  col: 1,
-  row: 0
-};
-
-function sourcesOf(
-  atlases: TilesetAtlases
-): BlockPreviewSources {
-  return {
-    shapeRegistry: BlockShapeRegistry.createDefault(),
-    atlases,
-    tileOpacity: new TileOpacityProbe(atlases, () => {
-      const data = new Uint8ClampedArray(4 * 2 * 4);
-      for (let index = 0; index < data.length; index += 4) {
-        data[index + 3] = (index / 4) % 4 < 2 ? 255 : 0;
-      }
-
-      return {
-        width: 4,
-        height: 2,
-        data
-      };
-    })
-  };
-}
-
-function texturedSources(): BlockPreviewSources {
-  const atlases = new TilesetAtlases({
-    tilesets: new TilesetList([
-      {
-        id: "atlas",
-        src: "atlas.png",
-        tileSize: 2
-      }
-    ])
-  });
-  const canvas = document.createElement("canvas");
-  canvas.width = 4;
-  canvas.height = 2;
-  atlases.registerTexture(
-    "atlas",
-    new THREE.Texture<TilesetImage>(canvas)
-  );
-
-  return sourcesOf(atlases);
-}
-
-function blockOf(
-  patch: Partial<BlockDefinition>
-) {
-  return resolveBlockDefinition({
-    id: 1,
-    name: "Block",
-    shapeId: "cube",
-    ...patch
-  });
-}
 
 function assertFitted(
   geometry: THREE.BufferGeometry
@@ -180,70 +110,3 @@ describe("buildBlockPreviewMesh", () => {
     }
   });
 });
-
-describe("buildBlockGeometry", () => {
-  it("keeps the geometry in block space", () => {
-    const geometry = buildBlockGeometry(blockOf({ shapeId: "ramp" }), kSources)!;
-    geometry.computeBoundingBox();
-    const { min, max } = geometry.boundingBox!;
-
-    assert.deepEqual(min.toArray(), [0, 0, 0]);
-    assert.deepEqual(max.toArray(), [1, 1, 1]);
-  });
-
-  it("orients the geometry with the given transform", () => {
-    const block = blockOf({ shapeId: "ramp" });
-    const identity = buildBlockGeometry(block, kSources)!;
-    const turned = buildBlockGeometry(
-      block,
-      kSources,
-      new VoxelTransform({ rotation: 1 })
-    )!;
-
-    assert.notDeepEqual(
-      turned.getAttribute("position").array,
-      identity.getAttribute("position").array
-    );
-    assert.deepEqual(turned.groups, identity.groups);
-  });
-
-  it("returns null for an unknown shape", () => {
-    assert.equal(
-      buildBlockGeometry(blockOf({ shapeId: "missing" }), kSources),
-      null
-    );
-  });
-});
-
-describe("emptyTextureSlots", () => {
-  it("lists every slot of an untextured block", () => {
-    assert.deepEqual(emptyTextureSlots(blockOf({}), kTextured), kCubeSlots);
-  });
-
-  it("lists nothing for a painted block", () => {
-    assert.deepEqual(
-      emptyTextureSlots(blockOf({ defaultTexture: kPainted }), kTextured),
-      []
-    );
-  });
-
-  it("lists only the slots mapped to a blank tile", () => {
-    const block = blockOf({
-      defaultTexture: kPainted,
-      faceTextures: { top: kBlank, bottom: kBlank }
-    });
-
-    assert.deepEqual(emptyTextureSlots(block, kTextured), ["top", "bottom"]);
-  });
-
-  it("lists nothing for an unknown shape", () => {
-    assert.deepEqual(
-      emptyTextureSlots(
-        blockOf({ shapeId: "unknown" as BlockDefinition["shapeId"] }),
-        kSources
-      ),
-      []
-    );
-  });
-});
-

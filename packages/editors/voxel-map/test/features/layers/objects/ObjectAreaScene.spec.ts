@@ -13,13 +13,11 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import {
   ObjectAreaScene
 } from "../../../../src/features/layers/objects/ObjectAreaScene.ts";
-import {
-  createObjectAt,
-  objectKey
-} from "../../../../src/features/layers/objects/objectArea.ts";
+import { createObjectAt } from "../../../../src/features/layers/objects/objectArea.ts";
+import { objectKey } from "../../../../src/state/layerRef.ts";
 import {
   LayerVisibilityStore
-} from "../../../../src/state/LayerVisibilityStore.ts";
+} from "../../../../src/features/layers/LayerVisibilityStore.ts";
 
 function setup() {
   const world = new VoxelWorld(4);
@@ -38,8 +36,10 @@ function setup() {
     world,
     visibility,
     scene,
-    key: objectKey("Triggers", object.id),
-    rowId: `obj:Triggers/${object.id}`
+    key: objectKey({
+      layerName: "Triggers",
+      objectId: object.id
+    })
   };
 }
 
@@ -58,17 +58,17 @@ describe("ObjectAreaScene.shown", () => {
   });
 
   test("hides an object hidden locally", () => {
-    const { scene, visibility, key, rowId } = setup();
-    visibility.override(rowId, false);
+    const { scene, visibility, key } = setup();
+    visibility.override(key, false);
 
     assert.strictEqual(scene.shown(key), false);
   });
 
   test("shows a saved hidden object shown locally", () => {
-    const { world, scene, visibility, key, rowId } = setup();
+    const { world, scene, visibility, key } = setup();
     world.objectLayers.update("Triggers", { visible: false });
     visibility.override("object:Triggers", true);
-    visibility.override(rowId, true);
+    visibility.override(key, true);
 
     assert.strictEqual(scene.shown(key), true);
   });
@@ -76,6 +76,9 @@ describe("ObjectAreaScene.shown", () => {
   test("never shows an unknown object", () => {
     const { scene } = setup();
 
-    assert.strictEqual(scene.shown(objectKey("Triggers", "missing")), false);
+    assert.strictEqual(scene.shown(objectKey({
+      layerName: "Triggers",
+      objectId: "missing"
+    })), false);
   });
 });

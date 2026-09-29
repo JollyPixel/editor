@@ -1,13 +1,16 @@
 // Import Third-party Dependencies
 import {
-  LitElement,
   html,
   css,
   nothing
 } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
 import {
-  type VoxelView,
+  customElement,
+  property,
+  query,
+  state
+} from "lit/decorators.js";
+import {
   type ResolvedBlockDefinition,
   VoxelRotation
 } from "@jolly-pixel/voxel.renderer";
@@ -18,21 +21,16 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
-import { BlockEditorDialog } from "./BlockEditorDialog.ts";
 import type {
-  BlockUsageStore,
   BrushStore,
-  PresenceStore,
-  RotationMode,
-  TilesetStore
+  RotationMode
 } from "../../state/index.ts";
-import type { LinkedTilesets } from "../tilesets/LinkedTilesets.ts";
-import {
-  formatCount,
-  orphanVoxelsMessage,
-  removeBlockVoxels
-} from "./blockUsage.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { BlockCreateDialog } from "./BlockCreateDialog.ts";
+import type { BlockEditDialog } from "./BlockEditDialog.ts";
+import { orphanVoxelsMessage, removeBlockVoxels } from "./blockUsage.ts";
+import { formatCount } from "../../shared/format.ts";
 import {
   DEFAULT_BLOCK_LIBRARY_ORDER,
   isReorderable,
@@ -43,19 +41,16 @@ import {
   mergeSelfPeerMark,
   selfPeerMark,
   type PeerMarkMap
-} from "../../collaboration/peerMarks.ts";
-
-// Registers the Three.js block grid.
-import {
+} from "../../shared/peerMarks.ts";
+import type {
   BlockLibraryViewport,
-  type BlockMoveDetail
+  BlockMoveDetail
 } from "./BlockLibraryViewport.ts";
+import "./BlockLibraryViewport.ts";
+import "./BlockCreateDialog.ts";
+import "./BlockEditDialog.ts";
 
 export type BlockLibraryLayout = "compact" | "fill";
-
-export interface BlockSelectionChangeDetail {
-  block: ResolvedBlockDefinition | null;
-}
 
 // CONSTANTS
 const kRotationOptions: JollyOption<RotationMode>[] = [
@@ -67,7 +62,7 @@ const kRotationOptions: JollyOption<RotationMode>[] = [
 ];
 
 @customElement("block-library")
-export class BlockLibrary extends LitElement {
+export class BlockLibrary extends WorkspaceElement {
   static override styles = css`
     :host {
       display: flex;
@@ -126,27 +121,6 @@ export class BlockLibrary extends LitElement {
     }
   `;
 
-  @property({ attribute: false })
-  declare engine: VoxelView;
-
-  @property({ attribute: false })
-  declare brush: BrushStore;
-
-  @property({ attribute: false })
-  declare mapDocument: MapDocument;
-
-  @property({ attribute: false })
-  declare presence: PresenceStore;
-
-  @property({ attribute: false })
-  declare tilesets: TilesetStore;
-
-  @property({ attribute: false })
-  declare linked: LinkedTilesets;
-
-  @property({ attribute: false })
-  declare usage: BlockUsageStore;
-
   @property({ type: String })
   declare order: BlockLibraryOrder;
 
@@ -155,9 +129,6 @@ export class BlockLibrary extends LitElement {
 
   @state()
   private declare _selectedId: number | null;
-
-  @state()
-  private declare _selectedBlock: ResolvedBlockDefinition | null;
 
   @state()
   private declare _blocks: ResolvedBlockDefinition[];
@@ -171,25 +142,26 @@ export class BlockLibrary extends LitElement {
   @state()
   private declare _unused: ReadonlySet<number>;
 
-  @query("block-editor-dialog")
-  declare private _dialog: BlockEditorDialog;
+  @query("block-create-dialog")
+  declare private _createDialog: BlockCreateDialog;
+
+  @query("block-edit-dialog")
+  declare private _editDialog: BlockEditDialog;
 
   @query("block-library-viewport")
   declare private _viewport: BlockLibraryViewport | null;
 
-  #subscriptions: Array<() => void> = [];
-
   #rotation = new FieldBinding<RotationMode>(this, {
-    read: () => this.brush.rotationMode,
+    read: () => this.#brush.rotationMode,
     write: (value) => {
-      this.brush.rotationMode = value;
+      this.#brush.rotationMode = value;
     }
   });
 
   #flipY = new FieldBinding<boolean>(this, {
-    read: () => this.brush.flipY,
+    read: () => this.#brush.flipY,
     write: (value) => {
-      this.brush.flipY = value;
+      this.#brush.flipY = value;
     }
   });
 
@@ -199,75 +171,66 @@ export class BlockLibrary extends LitElement {
     this.order = DEFAULT_BLOCK_LIBRARY_ORDER;
     this.layout = "compact";
     this._selectedId = null;
-    this._selectedBlock = null;
     this._blocks = [];
     this._shownBlocks = [];
     this._marks = new Map();
     this._unused = new Set();
   }
 
-  readonly #onBrushOptionChange = () => {
-    this.requestUpdate();
-  };
+  get #brush(): BrushStore {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      throw new Error("No workspace is attached yet.");
+    }
 
-  readonly #onSelectedBlockChange = () => {
-    this.#resolveSelection();
-    void this.#revealSelection();
-  };
-
-  readonly #onBlockRegistryChanged = () => {
-    this.#resolveSelection();
-    this.#refreshBlocks();
-  };
-
-  readonly #onMarksChange = () => {
-    this.#refreshMarks();
-  };
-
-  readonly #onUsageChange = () => {
-    this.#refreshUsage();
-  };
-
-  override connectedCallback() {
-    super.connectedCallback();
-    this.#subscriptions.push(
-      this.brush.subscribe("blockChange", this.#onSelectedBlockChange),
-      this.mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged),
-      this.brush.subscribe("rotationModeChange", this.#onBrushOptionChange),
-      this.brush.subscribe("flipYChange", this.#onBrushOptionChange),
-      this.presence.subscribe("blockSelectionsChange", this.#onMarksChange),
-      this.presence.subscribe("peersChange", this.#onMarksChange),
-      this.usage.subscribe("change", this.#onUsageChange)
-    );
-    this.#refreshMarks();
-    this.#refreshUsage();
+    return workspace.state.brush;
   }
 
-  override disconnectedCallback() {
-    super.disconnectedCallback();
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
+  protected override watchWorkspace(
+    workspace: VoxelMapWorkspace
+  ): Iterable<() => void> {
+    const { brush, presence } = workspace.state;
+    const refreshMarks = (): void => this.#refreshMarks(workspace);
+    this.#resolveSelection(workspace);
+    this.#refreshBlocks(workspace);
+    this.#refreshUsage(workspace);
+
+    return [
+      brush.subscribe("blockChange", () => {
+        this.#resolveSelection(workspace);
+        void this.#revealSelection();
+      }),
+      brush.subscribe("change", () => this.requestUpdate()),
+      workspace.mapDocument.subscribe("blockRegistryChanged", () => {
+        this.#resolveSelection(workspace);
+        this.#refreshBlocks(workspace);
+      }),
+      presence.subscribe("blockSelectionsChange", refreshMarks),
+      presence.subscribe("peersChange", refreshMarks),
+      workspace.usage.subscribe("change", () => this.#refreshUsage(workspace))
+    ];
   }
 
   override willUpdate(
     changed: Map<string, unknown>
   ) {
-    if (changed.has("engine")) {
-      this.#resolveSelection();
-      this.#refreshBlocks();
-    }
-    else if (changed.has("order")) {
-      this.#refreshShownBlocks();
+    const workspace = this.workspace;
+    if (changed.has("order") && workspace !== null) {
+      this.#refreshShownBlocks(workspace);
       void this.#revealSelection();
     }
   }
 
   override render() {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return nothing;
+    }
+
     return html`
-      ${this.#renderOrphans()}
+      ${this.#renderOrphans(workspace)}
       <block-library-viewport
-        .engine=${this.engine}
+        .sources=${workspace.blockSources}
         .blocks=${this._shownBlocks}
         .marks=${this._marks}
         .selectedId=${this._selectedId}
@@ -295,20 +258,15 @@ export class BlockLibrary extends LitElement {
         ></jolly-checkbox>
       </div>
 
-      <block-editor-dialog
-        .engine=${this.engine}
-        .brush=${this.brush}
-        .tilesets=${this.tilesets}
-        .linked=${this.linked}
-        .usage=${this.usage}
-        .mapDocument=${this.mapDocument}
-        .block=${this._selectedBlock}
-      ></block-editor-dialog>
+      <block-create-dialog .workspace=${workspace}></block-create-dialog>
+      <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
     `;
   }
 
-  #renderOrphans() {
-    const { orphanVoxels } = this.usage.stats;
+  #renderOrphans(
+    workspace: VoxelMapWorkspace
+  ) {
+    const { orphanVoxels } = workspace.usage.stats;
     if (orphanVoxels === 0) {
       return nothing;
     }
@@ -327,10 +285,12 @@ export class BlockLibrary extends LitElement {
   }
 
   async #confirmRemoveOrphans(): Promise<void> {
-    const { orphanVoxels, orphanBlocks } = this.usage.stats;
-    if (orphanVoxels === 0) {
+    const workspace = this.workspace;
+    if (workspace === null || workspace.usage.stats.orphanVoxels === 0) {
       return;
     }
+
+    const { orphanVoxels, orphanBlocks } = workspace.usage.stats;
 
     const confirmed = await showConfirm({
       title: "Remove orphan voxels",
@@ -340,45 +300,40 @@ export class BlockLibrary extends LitElement {
       danger: true
     });
     if (confirmed) {
-      removeBlockVoxels(this.engine.document.world, new Set(orphanBlocks));
+      removeBlockVoxels(workspace.engine.document.world, new Set(orphanBlocks));
     }
   }
 
   #onBlockSelect(
     event: CustomEvent<{ id: number; }>
   ): void {
-    this.brush.blockId = event.detail.id;
+    this.#brush.blockId = event.detail.id;
   }
 
   #onBlockEdit(
     event: CustomEvent<{ id: number; }>
   ): void {
-    this.brush.blockId = event.detail.id;
+    this.#brush.blockId = event.detail.id;
     void this.editBlock();
   }
 
   #onBlockMove(
     event: CustomEvent<BlockMoveDetail>
   ): void {
-    this.linked.moveBlock(event.detail.id, event.detail.toIndex);
+    this.workspace?.tilesets.moveBlock(event.detail.id, event.detail.toIndex);
   }
 
   #onBlockCreate(): void {
-    void this.#addBlock();
-  }
-
-  async #addBlock(): Promise<void> {
-    await this.updateComplete;
-    await this._dialog?.openForCreate();
+    void this._createDialog?.open();
   }
 
   async editBlock(): Promise<void> {
-    if (this._selectedBlock === null) {
+    if (this._selectedId === null) {
       return;
     }
 
     await this.updateComplete;
-    await this._dialog?.openForEdit();
+    await this._editDialog?.open(this._selectedId);
   }
 
   async #revealSelection(): Promise<void> {
@@ -391,56 +346,52 @@ export class BlockLibrary extends LitElement {
     this._viewport?.revealBlock(id);
   }
 
-  #refreshMarks(): void {
+  #refreshMarks(
+    workspace: VoxelMapWorkspace
+  ): void {
+    const { presence } = workspace.state;
     this._marks = mergeSelfPeerMark(
-      this.presence.blockSelections,
+      presence.blockSelections,
       this._selectedId,
-      selfPeerMark(this.presence.peers)
+      selfPeerMark(presence.peers)
     );
   }
 
-  #resolveSelection(): void {
-    this._selectedId = this.brush.blockId;
-    this.#refreshMarks();
-    const block = this.engine.document.blocks.get(this._selectedId ?? 0) ?? null;
-    if (block === this._selectedBlock) {
-      return;
-    }
-
-    this._selectedBlock = block;
-    this.dispatchEvent(
-      new CustomEvent<BlockSelectionChangeDetail>("block-selection-change", {
-        detail: { block },
-        bubbles: true,
-        composed: true
-      })
-    );
+  #resolveSelection(
+    workspace: VoxelMapWorkspace
+  ): void {
+    this._selectedId = workspace.state.brush.blockId;
+    this.#refreshMarks(workspace);
   }
 
-  #refreshBlocks(): void {
-    this._blocks = [
-      ...this.engine.document.blocks.getAll()
-    ];
-    this.#refreshShownBlocks();
+  #refreshBlocks(
+    workspace: VoxelMapWorkspace
+  ): void {
+    this._blocks = [...workspace.engine.document.blocks.getAll()];
+    this.#refreshShownBlocks(workspace);
   }
 
-  #refreshUsage(): void {
-    const { unusedBlocks } = this.usage.stats;
+  #refreshUsage(
+    workspace: VoxelMapWorkspace
+  ): void {
+    const { unusedBlocks } = workspace.usage.stats;
     if (
       unusedBlocks.length !== this._unused.size ||
       unusedBlocks.some((id) => !this._unused.has(id))
     ) {
       this._unused = new Set(unusedBlocks);
     }
-    this.#refreshShownBlocks();
+    this.#refreshShownBlocks(workspace);
     this.requestUpdate();
   }
 
-  #refreshShownBlocks(): void {
+  #refreshShownBlocks(
+    workspace: VoxelMapWorkspace
+  ): void {
     const next = orderBlocks(
       this._blocks,
       this.order,
-      this.usage.stats.blocks
+      workspace.usage.stats.blocks
     );
     const shown = this._shownBlocks;
     if (

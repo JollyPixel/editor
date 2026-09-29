@@ -6,6 +6,11 @@ import type { Axis } from "../common/axes.ts";
  */
 export type BoxAxisPolicy = "xz" | "xyz";
 
+/**
+ * `"none"` hides every resize arrow.
+ */
+export type BoxResizePolicy = BoxAxisPolicy | "none";
+
 export type BoxDragMode = "move" | "resize";
 
 export type BoxState = "idle" | "hovered" | "active";
@@ -21,8 +26,12 @@ export interface AxisExtent {
 }
 
 export function axisPolicyIncludes(
-  policy: BoxAxisPolicy,
+  policy: BoxResizePolicy,
   axis: Axis
 ): boolean {
+  if (policy === "none") {
+    return false;
+  }
+
   return axis === "y" ? policy === "xyz" : true;
 }

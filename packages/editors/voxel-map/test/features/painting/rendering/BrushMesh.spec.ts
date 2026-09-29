@@ -11,11 +11,11 @@ import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 
 // Import Internal Dependencies
 import { BrushMesh } from "../../../../src/features/painting/rendering/BrushMesh.ts";
-import { DEFAULT_BRUSH_STYLE } from "../../../../src/features/painting/model/BrushStyle.ts";
 import type { BrushCursor } from "../../../../src/features/painting/model/brushCursor.ts";
 
 // CONSTANTS
 const kFaceMargin = 0.015;
+const kEdgeWidth = 2;
 const kCursor: BrushCursor = {
   position: {
     x: 0,
@@ -108,7 +108,7 @@ describe("BrushMesh", () => {
   test("backs the border with a wider dark halo", () => {
     const [halo, border] = edgeLinesOf(drawnMesh());
 
-    assert.equal(border.material.linewidth, DEFAULT_BRUSH_STYLE.edgeWidth);
+    assert.equal(border.material.linewidth, kEdgeWidth);
     assert.ok(halo.material.linewidth > border.material.linewidth);
     assert.ok(
       halo.material.color.getHSL({ h: 0, s: 0, l: 0 }).l < 0.1
@@ -168,18 +168,6 @@ describe("BrushMesh", () => {
 
     renderFrom(mesh, [20, 20, 20]);
     assert.equal(segmentCount(mesh), 9);
-  });
-
-  test("hides every edge pass when the edge width is zero", () => {
-    const mesh = drawnMesh();
-    mesh.style = {
-      ...DEFAULT_BRUSH_STYLE,
-      edgeWidth: 0
-    };
-
-    for (const lines of edgeLinesOf(mesh)) {
-      assert.equal(lines.visible, false);
-    }
   });
 
   test("paints the fill, face and border in the given color", () => {
@@ -250,7 +238,7 @@ describe("BrushMesh", () => {
 
     assert.equal(halo.visible, false);
     assert.equal(border.visible, true);
-    assert.ok(border.material.linewidth < DEFAULT_BRUSH_STYLE.edgeWidth);
+    assert.ok(border.material.linewidth < kEdgeWidth);
     assert.ok(border.material.linewidth >= 1);
   });
 
@@ -277,58 +265,6 @@ describe("BrushMesh", () => {
     assert.equal(alphas.size, 2);
     assert.equal(Math.max(...alphas), 1);
     assert.ok(Math.min(...alphas) < 1);
-  });
-
-  test("marches the dashes of a dashed local brush", (t) => {
-    t.mock.timers.enable({
-      apis: ["Date"],
-      now: 0
-    });
-    const mesh = drawnMesh();
-    mesh.style = {
-      ...DEFAULT_BRUSH_STYLE,
-      edgeStyle: "dashed"
-    };
-    const [halo, border] = edgeLinesOf(mesh);
-
-    t.mock.timers.setTime(400);
-    renderFrom(mesh, [20, 20, 20]);
-
-    assert.ok(border.material.dashOffset < 0);
-    assert.equal(halo.material.dashOffset, border.material.dashOffset);
-  });
-
-  test("keeps solid and subdued outlines still", (t) => {
-    t.mock.timers.enable({
-      apis: ["Date"],
-      now: 400
-    });
-    const solid = drawnMesh();
-    const subdued = new BrushMesh({
-      subdued: true,
-      style: {
-        ...DEFAULT_BRUSH_STYLE,
-        edgeStyle: "dashed"
-      }
-    });
-    subdued.draw(kCursor);
-
-    for (const mesh of [solid, subdued]) {
-      renderFrom(mesh, [20, 20, 20]);
-      assert.equal(edgeLinesOf(mesh)[1].material.dashOffset, 0);
-    }
-  });
-
-  test("follows the dashed edge style on the border and halo", () => {
-    const mesh = drawnMesh();
-    mesh.style = {
-      ...DEFAULT_BRUSH_STYLE,
-      edgeStyle: "dashed"
-    };
-    const [halo, border] = edgeLinesOf(mesh);
-
-    assert.equal(halo.material.dashed, true);
-    assert.equal(border.material.dashed, true);
   });
 
   test("keeps only the face highlight once unshelled", () => {

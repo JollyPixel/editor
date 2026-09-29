@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { LitElement, html, css, nothing } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type {
   JollyPeerSelectDetail,
@@ -7,13 +7,12 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../scene/EditorScene.ts";
-import { WorkspaceController } from "../../shared/WorkspaceController.ts";
-
-import "../../features/registerElements.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import "./MapConfigPanel.ts";
 
 @customElement("general-panel")
-export class GeneralPanel extends LitElement {
+export class GeneralPanel extends WorkspaceElement {
   static override styles = css`
     :host {
       display: block;
@@ -23,7 +22,14 @@ export class GeneralPanel extends LitElement {
   @state()
   declare _peers: readonly PresencePeer[];
 
-  #workspace = new WorkspaceController(this, (workspace) => {
+  constructor() {
+    super();
+    this._peers = [];
+  }
+
+  protected override watchWorkspace(
+    workspace: VoxelMapWorkspace
+  ): Iterable<() => void> {
     this._peers = workspace.state.presence.peers;
 
     return [
@@ -32,27 +38,16 @@ export class GeneralPanel extends LitElement {
       }),
       workspace.mapDocument.subscribe("reset", () => this.requestUpdate())
     ];
-  });
-
-  constructor() {
-    super();
-    this._peers = [];
-  }
-
-  attach(
-    workspace: VoxelMapWorkspace
-  ): void {
-    this.#workspace.attach(workspace);
   }
 
   readonly #onPeerSelect = (
     event: CustomEvent<JollyPeerSelectDetail>
   ): void => {
-    this.#workspace.current?.teleportToPeer(event.detail.clientId);
+    this.workspace?.teleportToPeer(event.detail.clientId);
   };
 
   override render() {
-    const workspace = this.#workspace.current;
+    const workspace = this.workspace;
     if (workspace === null) {
       return nothing;
     }

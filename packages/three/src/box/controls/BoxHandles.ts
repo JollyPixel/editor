@@ -15,7 +15,7 @@ import {
   faceCenter
 } from "../faceCenter.ts";
 import {
-  type BoxAxisPolicy,
+  type BoxResizePolicy,
   axisPolicyIncludes
 } from "../types.ts";
 
@@ -63,7 +63,7 @@ export class BoxHandles extends THREE.Object3D {
   #handleSize: number;
   #slots: BoxHandleSlot[] = [];
   #hovered: number | null = null;
-  #resizeAxes: BoxAxisPolicy = "xz";
+  #resizeAxes: BoxResizePolicy = "xz";
   #activeCount = kGroundSlotCount;
   #arrows: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   #pickers: THREE.InstancedMesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
@@ -151,17 +151,15 @@ export class BoxHandles extends THREE.Object3D {
     }
   }
 
-  get resizeAxes(): BoxAxisPolicy {
+  get resizeAxes(): BoxResizePolicy {
     return this.#resizeAxes;
   }
 
   set resizeAxes(
-    policy: BoxAxisPolicy
+    policy: BoxResizePolicy
   ) {
     this.#resizeAxes = policy;
-    this.#activeCount = axisPolicyIncludes(policy, "y")
-      ? kSlots.length
-      : kGroundSlotCount;
+    this.#activeCount = activeSlotCount(policy);
     this.#arrows.count = this.#activeCount;
     this.#pickers.count = this.#activeCount;
   }
@@ -191,9 +189,6 @@ export class BoxHandles extends THREE.Object3D {
       this.layout(parent.copySizeTo(_size));
     }
 
-    /*
-     * The parent's world matrix is current before this node calls super.
-     */
     _anchor.setFromMatrixPosition(
       this.parent?.matrixWorld ?? this.matrixWorld
     );
@@ -216,9 +211,6 @@ export class BoxHandles extends THREE.Object3D {
     }
     this.#arrows.instanceMatrix.needsUpdate = true;
     this.#pickers.instanceMatrix.needsUpdate = true;
-    /*
-     * Recompute the bounding sphere cached by InstancedMesh.raycast.
-     */
     this.#pickers.computeBoundingSphere();
 
     super.updateMatrixWorld(force);
@@ -254,4 +246,14 @@ export class BoxHandles extends THREE.Object3D {
       this.#arrows.instanceColor.needsUpdate = true;
     }
   }
+}
+
+function activeSlotCount(
+  policy: BoxResizePolicy
+): number {
+  if (policy === "none") {
+    return 0;
+  }
+
+  return axisPolicyIncludes(policy, "y") ? kSlots.length : kGroundSlotCount;
 }

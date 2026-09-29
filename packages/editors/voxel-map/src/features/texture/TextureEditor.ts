@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import {
-  LitElement,
   html,
   css,
+  nothing,
   type PropertyValues
 } from "lit";
 import {
@@ -11,32 +11,27 @@ import {
   query
 } from "lit/decorators.js";
 import type { PixelArtCanvasOptions } from "@jolly-pixel/pixel-draw.renderer";
-import type { VoxelView } from "@jolly-pixel/voxel.renderer";
+import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 import {
   PixelDrawPanel,
   type TextureChangeDetail,
   type TextureEditRequestDetail,
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
-import type { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
-import type {
-  BlockUsageStore,
-  BrushStore,
-  TilesetStore
-} from "../../state/index.ts";
+import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { countBlocksPerTileset } from "../tilesets/blockTilesets.ts";
-import type { LinkedTilesets } from "../tilesets/LinkedTilesets.ts";
-import type { TilesetActions } from "../tilesets/TilesetActions.ts";
-import type { TilesetDialogs } from "../tilesets/TilesetDialogs.ts";
+import type { AddTilesetDialog } from "../tilesets/AddTilesetDialog.ts";
+import type { TilesetEditDialog } from "../tilesets/TilesetEditDialog.ts";
 import { TilesetTab } from "./TilesetTab.ts";
 import {
   tilesetTabLabels,
   type TilesetTabLabels
 } from "./tilesetTabLabels.ts";
-import "../tilesets/TilesetDialogs.ts";
+import "../tilesets/AddTilesetDialog.ts";
+import "../tilesets/TilesetEditDialog.ts";
 
 // CONSTANTS
 const kCanvasOptions: PixelArtCanvasOptions = {
@@ -55,7 +50,7 @@ const kCanvasOptions: PixelArtCanvasOptions = {
 };
 
 @customElement("texture-editor")
-export class TextureEditor extends LitElement {
+export class TextureEditor extends WorkspaceElement {
   static override styles = css`
     :host {
       display: flex;
@@ -84,76 +79,50 @@ export class TextureEditor extends LitElement {
     }
   `;
 
-  @property({ attribute: false })
-  declare engine: VoxelView;
-
-  @property({ attribute: false })
-  declare linked: LinkedTilesets;
-
   @property({ type: Boolean })
   declare active: boolean;
 
   @property({ type: String })
   declare uvAccess: UvAccess;
 
-  @property({ attribute: false })
-  declare brush: BrushStore;
+  @query("add-tileset-dialog")
+  private declare _addDialog: AddTilesetDialog;
 
-  @property({ attribute: false })
-  declare mapDocument: MapDocument;
-
-  @property({ attribute: false })
-  declare tilesets: TilesetStore;
-
-  @property({ attribute: false })
-  declare actions: TilesetActions | null;
-
-  @property({ attribute: false })
-  declare usage: BlockUsageStore;
-
-  @property({ attribute: false })
-  declare log: LogQueue;
-
-  @query("tileset-dialogs")
-  private declare _dialogs: TilesetDialogs;
+  @query("tileset-edit-dialog")
+  private declare _editDialog: TilesetEditDialog;
 
   #tabs = new Map<string, TilesetTab>();
   #placeholders = new Set<string>();
   #panel: PixelDrawPanel | null = null;
   #reconciling: Promise<void> = Promise.resolve();
-  #subscriptions: Array<() => void> = [];
   #followedTilesetId: string | null = null;
+  #adding = false;
 
   constructor() {
     super();
     this.active = false;
     this.uvAccess = "edit";
-    this.actions = null;
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    if (this.#subscriptions.length > 0) {
-      return;
-    }
+  protected override watchWorkspace(
+    workspace: VoxelMapWorkspace
+  ): Iterable<() => void> {
+    const { tilesets, mapDocument } = workspace;
 
-    this.#subscriptions.push(
-      this.tilesets.subscribe("change", this.#requestSync),
-      this.tilesets.subscribe("activeChange", this.#reconcile),
-      this.linked.subscribe("change", this.#requestSync),
-      this.brush.subscribe("blockChange", this.#onBlockChange),
-      this.mapDocument.subscribe(
-        "blockRegistryChanged",
-        this.#onBlockRegistryChanged
-      )
-    );
+    return [
+      tilesets.subscribe("change", this.#requestSync),
+      tilesets.subscribe("activeChange", this.#reconcile),
+      workspace.state.brush.subscribe("blockChange", this.#onBlockChange),
+      mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
+    ];
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     queueMicrotask(() => {
       if (!this.isConnected) {
-        this.#teardown();
+        this.#disposeTabs();
+        this.#releasePanel();
       }
     });
   }
@@ -161,9 +130,6 @@ export class TextureEditor extends LitElement {
   override updated(
     changed: PropertyValues<this>
   ) {
-    if (changed.has("engine") || changed.has("linked")) {
-      this.#disposeTabs();
-    }
     if (changed.has("active") && this.active) {
       this.#panel?.onResize();
     }
@@ -186,74 +152,74 @@ export class TextureEditor extends LitElement {
       await this.#adoptPanel(panel);
     }
 
-    const { engine, linked } = this;
-    if (panel === null || panel !== this.#panel) {
+    const workspace = this.workspace;
+    if (workspace === null || panel === null || panel !== this.#panel) {
       return;
     }
 
-    const { entries } = this.tilesets;
+    const { engine, tilesets } = workspace;
+    const { entries } = tilesets;
     const counts = countBlocksPerTileset(engine.document.blocks.getAll());
     for (const entry of entries) {
-      const { definition, assetId } = entry;
-      const blocks = counts.get(definition.id) ?? 0;
-      const tab = this.#tabs.get(definition.id);
-      if (tab !== undefined) {
-        panel.updateTexture(definition.id, tilesetTabLabels(entry, {
-          blocks,
-          detached: tab.assetId !== null && assetId !== tab.assetId
-        }));
-        tab.update(definition);
+      const tilesetId = entry.definition.id;
+      const labels = tilesetTabLabels(entry, counts.get(tilesetId) ?? 0);
+      const binding = tilesets.open(tilesetId);
+      const tab = this.#tabs.get(tilesetId);
+      const placeholder = tab === undefined && binding === undefined &&
+        this.#placeholders.has(tilesetId);
+      if ((tab !== undefined && tab.binding === binding) || placeholder) {
+        panel.updateTexture(tilesetId, labels);
         continue;
       }
 
-      const labels = tilesetTabLabels(entry, { blocks });
-      const opened = linked.open(definition.id);
-      if (opened === undefined) {
-        this.#showPlaceholder(panel, definition.id, labels);
+      this.#removeTab(panel, tilesetId);
+      if (binding === undefined) {
+        this.#showPlaceholder(panel, tilesetId, labels);
         continue;
       }
 
-      if (this.#placeholders.delete(definition.id)) {
-        panel.removeTexture(definition.id);
-      }
       const canvas = panel.addTexture(
         {
-          id: definition.id,
+          id: tilesetId,
           ...labels,
-          document: opened.opened.pixels
+          document: binding.opened.pixels
         },
         { activate: false }
       );
-      this.#tabs.set(definition.id, new TilesetTab({
+      this.#tabs.set(tilesetId, new TilesetTab({
         canvas,
         engine,
-        linked: opened,
-        assetId,
-        blocks: linked,
-        brush: this.brush,
-        mapDocument: this.mapDocument
+        binding,
+        blocks: tilesets,
+        brush: workspace.state.brush,
+        mapDocument: workspace.mapDocument
       }));
     }
 
     const kept = new Set(entries.map((entry) => entry.definition.id));
-    for (const [tilesetId, tab] of this.#tabs) {
-      if (!kept.has(tilesetId) || !linked.has(tilesetId)) {
-        panel.removeTexture(tilesetId);
-        tab.dispose();
-        this.#tabs.delete(tilesetId);
-      }
-    }
-    for (const tilesetId of [...this.#placeholders]) {
+    for (const tilesetId of [...this.#tabs.keys(), ...this.#placeholders]) {
       if (!kept.has(tilesetId)) {
-        panel.removeTexture(tilesetId);
-        this.#placeholders.delete(tilesetId);
+        this.#removeTab(panel, tilesetId);
       }
     }
 
-    const active = this.tilesets.activeTilesetId;
+    const active = tilesets.activeTilesetId;
     if (active !== null && this.#tabs.has(active)) {
       panel.activeTextureId = active;
     }
+  }
+
+  #removeTab(
+    panel: PixelDrawPanel,
+    tilesetId: string
+  ): void {
+    const tab = this.#tabs.get(tilesetId);
+    if (tab !== undefined || this.#placeholders.has(tilesetId)) {
+      panel.removeTexture(tilesetId);
+    }
+    tab?.dispose();
+    this.#tabs.delete(tilesetId);
+    this.#placeholders.delete(tilesetId);
   }
 
   #showPlaceholder(
@@ -261,12 +227,6 @@ export class TextureEditor extends LitElement {
     tilesetId: string,
     labels: TilesetTabLabels
   ): void {
-    if (this.#placeholders.has(tilesetId)) {
-      panel.updateTexture(tilesetId, labels);
-
-      return;
-    }
-
     panel.addTexture({
       id: tilesetId,
       ...labels,
@@ -306,14 +266,6 @@ export class TextureEditor extends LitElement {
     this.#placeholders.clear();
   }
 
-  #teardown(): void {
-    for (const unsubscribe of this.#subscriptions.splice(0)) {
-      unsubscribe();
-    }
-    this.#disposeTabs();
-    this.#releasePanel();
-  }
-
   readonly #requestSync = (): void => {
     this.requestUpdate();
   };
@@ -330,43 +282,89 @@ export class TextureEditor extends LitElement {
   #followSelectedBlock(
     force: boolean
   ): void {
-    const block = this.engine.document.blocks.get(this.brush.blockId);
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return;
+    }
+
+    const block = workspace.engine.document.blocks.get(
+      workspace.state.brush.blockId
+    );
     if (block === undefined) {
       return;
     }
 
-    const tilesetId = this.linked.ownerOf(block.id)?.definition.id ?? null;
+    const tilesetId = workspace.tilesets.ownerOf(block.id)?.definition.id ?? null;
     if (!force && tilesetId === this.#followedTilesetId) {
       return;
     }
 
     this.#followedTilesetId = tilesetId;
     if (tilesetId !== null) {
-      this.tilesets.activeTilesetId = tilesetId;
+      workspace.tilesets.activeTilesetId = tilesetId;
     }
   }
 
   readonly #onTextureChange = (
     event: CustomEvent<TextureChangeDetail>
   ): void => {
-    if (event.detail.source === "user") {
-      this.tilesets.activeTilesetId = event.detail.id;
+    if (event.detail.source === "user" && this.workspace !== null) {
+      this.workspace.tilesets.activeTilesetId = event.detail.id;
     }
   };
 
-  readonly #addTileset = (): void => {
-    void this._dialogs.add();
+  readonly #addTileset = async(): Promise<void> => {
+    const workspace = this.workspace;
+    if (workspace === null || this.#adding) {
+      return;
+    }
+
+    const { tilesets } = workspace;
+    const active = tilesets.activeTilesetId;
+    const result = await this._addDialog.open({
+      defaultTileSize: (active === null ? undefined : tilesets.tileSizeOf(active)) ??
+        DEFAULT_TILE_SIZE,
+      linkable: tilesets.linkableAssets()
+    });
+    if (result === null) {
+      return;
+    }
+
+    this.#adding = true;
+    try {
+      const tilesetId = result.kind === "link" ?
+        tilesets.link(result.assetId) :
+        await tilesets.create(result);
+      if (tilesetId === null) {
+        workspace.state.log.push("Could not add the tileset: it was refused by the map.");
+      }
+      else {
+        tilesets.activeTilesetId = tilesetId;
+      }
+    }
+    catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      workspace.state.log.push(`Could not add the tileset: ${reason}`);
+    }
+    finally {
+      this.#adding = false;
+    }
   };
 
   readonly #onEditRequest = (
     event: CustomEvent<TextureEditRequestDetail>
   ): void => {
-    void this._dialogs.edit(event.detail.id);
+    void this._editDialog.open(event.detail.id);
   };
 
   override render() {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return nothing;
+    }
+
     return html`
-      ${this.tilesets.entries.length === 0 ?
+      ${workspace.tilesets.entries.length === 0 ?
         this.#renderEmpty() :
         html`
           <pixel-draw-panel
@@ -374,19 +372,12 @@ export class TextureEditor extends LitElement {
             texture-add-label="Add tileset"
             textures-editable
             .uvAccess=${this.uvAccess}
+            .texturesAddable=${true}
             .texturesClosable=${false}
-            .texturesAddable=${this.actions !== null}
           ></pixel-draw-panel>
         `}
-      <tileset-dialogs
-        .engine=${this.engine}
-        .actions=${this.actions}
-        .tilesets=${this.tilesets}
-        .linked=${this.linked}
-        .mapDocument=${this.mapDocument}
-        .usage=${this.usage}
-        .log=${this.log}
-      ></tileset-dialogs>
+      <add-tileset-dialog></add-tileset-dialog>
+      <tileset-edit-dialog .workspace=${workspace}></tileset-edit-dialog>
     `;
   }
 
@@ -396,7 +387,6 @@ export class TextureEditor extends LitElement {
         <p>No tileset yet.</p>
         <jolly-button
           icon="plus"
-          ?disabled=${this.actions === null}
           @click=${this.#addTileset}
         >Add tileset</jolly-button>
       </div>

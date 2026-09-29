@@ -30,6 +30,7 @@ import {
 } from "../../src/index.ts";
 import type { VoxelMapNetworkCommand } from "../../src/network/server.ts";
 import {
+  templateCommands,
   voxelSetCmd,
   worldReplaceCmd
 } from "../helpers/networkCommands.ts";
@@ -357,6 +358,32 @@ describe("voxelMapAssetKind", () => {
       second.world.getVoxelAt({ x: 4, y: 1, z: 4 })?.blockId,
       9
     );
+  });
+
+  test("a folded template survives serialization", async() => {
+    const handler = voxelMapAssetKind({ chunkSize: 16 });
+    const first = handler.create("asset-1");
+    const [defined] = templateCommands();
+    foldAssetEvent(handler, first, event(VOXEL_MAP_COMMAND, {
+      ...defined,
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }));
+
+    const data = await handler.serialize(first);
+    const second = handler.create("asset-1");
+    foldAssetEvent(handler, second, event(ASSET_CREATED, {
+      path: "world.voxelmap.json",
+      kind: VOXEL_MAP_KIND,
+      hash: "h1",
+      size: data.byteLength,
+      content: encodeContent(data)
+    }));
+
+    const template = second.world.templates.get("pair");
+    assert.strictEqual(template?.name, "Pair");
+    assert.strictEqual(template?.voxelCount, 2);
   });
 
   test("declares the voxel command stream", () => {

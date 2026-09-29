@@ -7,10 +7,9 @@ import {
 
 // Import Internal Dependencies
 import { BrushStore } from "./BrushStore.ts";
-import { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
+import { PointerCapture } from "./PointerCapture.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
-import { TilesetStore } from "./TilesetStore.ts";
 import { ViewStore } from "./ViewStore.ts";
 
 export interface EditorStateOptions {
@@ -21,8 +20,7 @@ export class EditorState {
   readonly selection = new SelectionStore();
   readonly brush = new BrushStore();
   readonly presence = new PresenceStore();
-  readonly tilesets = new TilesetStore();
-  readonly layerVisibility = new LayerVisibilityStore();
+  readonly pointer = new PointerCapture();
   readonly log = new LogQueue();
   readonly view: ViewStore;
 

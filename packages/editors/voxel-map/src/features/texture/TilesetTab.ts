@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type {
-  TilesetDefinition,
   TilesetDocumentListener,
   VoxelView
 } from "@jolly-pixel/voxel.renderer";
@@ -14,29 +13,25 @@ import {
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
 import type { BrushStore } from "../../state/index.ts";
-import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 import type {
   BlockWriter,
-  LinkedTileset
-} from "../tilesets/LinkedTilesets.ts";
+  TilesetBinding
+} from "../tilesets/TilesetBinding.ts";
+import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 
 export interface TilesetTabOptions {
   canvas: PixelArtCanvas;
   engine: VoxelView;
-  linked: LinkedTileset;
-  assetId: string | null;
+  binding: TilesetBinding;
   blocks: BlockWriter;
   brush: BrushStore;
   mapDocument: MapDocument;
 }
 
 export class TilesetTab {
-  readonly canvas: PixelArtCanvas;
-  readonly assetId: string | null;
-  readonly #linked: LinkedTileset;
+  readonly binding: TilesetBinding;
   readonly #uvBridge: BlockUvBridge;
   readonly #collaboration: PixelCollaboration;
-  #definition: TilesetDefinition;
 
   readonly #onTilesetCommand: TilesetDocumentListener = (command) => {
     if (command.action === "tile-size-updated") {
@@ -51,14 +46,11 @@ export class TilesetTab {
   constructor(
     options: TilesetTabOptions
   ) {
-    const { canvas, engine, linked } = options;
+    const { canvas, engine, binding } = options;
 
-    this.canvas = canvas;
-    this.assetId = options.assetId;
-    this.#linked = linked;
-    this.#definition = linked.definition;
+    this.binding = binding;
     this.#collaboration = new PixelCollaboration({
-      room: linked.opened.room,
+      room: binding.opened.room,
       canvas,
       label: (_clientId, profile) => readUsername(profile),
       color: peerProfileColor
@@ -69,33 +61,22 @@ export class TilesetTab {
       mapDocument: options.mapDocument,
       blocks: options.blocks
     });
-    linked.opened.tileset.on("command", this.#onTilesetCommand);
-    linked.opened.tileset.on("loaded", this.#onTilesetLoaded);
-    this.#apply();
-  }
-
-  get definition(): TilesetDefinition {
-    return this.#definition;
-  }
-
-  update(
-    definition: TilesetDefinition
-  ): void {
-    this.#definition = definition;
+    binding.opened.tileset.on("command", this.#onTilesetCommand);
+    binding.opened.tileset.on("loaded", this.#onTilesetLoaded);
     this.#apply();
   }
 
   dispose(): void {
-    this.#linked.opened.tileset.off("command", this.#onTilesetCommand);
-    this.#linked.opened.tileset.off("loaded", this.#onTilesetLoaded);
+    this.binding.opened.tileset.off("command", this.#onTilesetCommand);
+    this.binding.opened.tileset.off("loaded", this.#onTilesetLoaded);
     this.#uvBridge.dispose();
     this.#collaboration.destroy();
   }
 
   #apply(): void {
     this.#uvBridge.setActiveTileset(
-      this.#definition.id,
-      this.#linked.opened.tileset.tileSize
+      this.binding.definition.id,
+      this.binding.opened.tileset.tileSize
     );
   }
 }

@@ -6,14 +6,12 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import {
-  SelectionStore,
-  type LayerSelection
-} from "../../src/state/SelectionStore.ts";
+import { SelectionStore } from "../../src/state/SelectionStore.ts";
+import type { LayerRef } from "../../src/state/layerRef.ts";
 
 function voxel(
   name: string
-): LayerSelection {
+): LayerRef {
   return {
     kind: "voxel-layer",
     name
@@ -22,7 +20,7 @@ function voxel(
 
 function objectLayer(
   name: string
-): LayerSelection {
+): LayerRef {
   return {
     kind: "object-layer",
     name
@@ -32,7 +30,7 @@ function objectLayer(
 function object(
   layerName: string,
   objectId: string
-): LayerSelection {
+): LayerRef {
   return {
     kind: "object",
     layerName,
@@ -41,8 +39,8 @@ function object(
 }
 
 function storeOn(
-  entries: readonly LayerSelection[],
-  selected: LayerSelection
+  entries: readonly LayerRef[],
+  selected: LayerRef
 ): SelectionStore {
   const store = new SelectionStore();
   store.reconcile(entries);
@@ -121,6 +119,17 @@ describe("SelectionStore.reconcile", () => {
     assert.deepEqual(store.current, objectLayer("Props"));
   });
 
+  test("follows an object moved to another object layer", () => {
+    const store = storeOn(
+      [objectLayer("Props"), object("Props", "a"), objectLayer("Doors")],
+      object("Props", "a")
+    );
+
+    store.reconcile([objectLayer("Props"), objectLayer("Doors"), object("Doors", "a")]);
+
+    assert.deepEqual(store.current, object("Doors", "a"));
+  });
+
   test("moves to a sibling object layer when an object layer is removed", () => {
     const store = storeOn(
       [voxel("Ground"), objectLayer("Props"), objectLayer("Spawns")],
@@ -145,7 +154,7 @@ describe("SelectionStore.reconcile", () => {
 
   test("clears the selection only when the world has no layer left", () => {
     const store = storeOn([voxel("Ground")], voxel("Ground"));
-    const changes: Array<LayerSelection | null> = [];
+    const changes: Array<LayerRef | null> = [];
     store.subscribe("change", (selection) => changes.push(selection));
 
     store.reconcile([]);

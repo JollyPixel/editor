@@ -24,22 +24,15 @@ import {
 import { blockShapeUv } from "../uv/blockShapeUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import type { BrushStore } from "../../../state/index.ts";
-import type { BlockWriter } from "../../tilesets/LinkedTilesets.ts";
+import type { BlockWriter } from "../../tilesets/TilesetBinding.ts";
 
 export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
   brush: BrushStore;
   mapDocument: MapDocumentSignals;
-  /**
-   * Receives the block a moved region resolves to, in world space.
-   * @default the engine
-   */
   blocks?: BlockWriter;
 }
 
-/**
- * Keeps block texture definitions and pixel-editor UV regions in sync.
- */
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #engine: VoxelView;

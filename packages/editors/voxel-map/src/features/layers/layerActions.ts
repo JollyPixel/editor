@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
+import type { Vector3Like } from "three";
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
-  LayerVisibilityStore,
+  LayerRef,
   SelectionStore
 } from "../../state/index.ts";
-import type { ViewFocus } from "../../scene/viewFocus.ts";
 import { createObjectAt } from "./objects/objectArea.ts";
 import type { AddLayerResult } from "./AddLayerDialog.ts";
 import type { MergeLayerContext } from "./MergeLayerDialog.ts";
@@ -15,18 +15,6 @@ import {
   mergeTargetsFor,
   mergeWarnings
 } from "./mergeTargets.ts";
-import {
-  layerRowId,
-  type LayerRef
-} from "./layerTree.ts";
-
-export function setLayerEntryVisibility(
-  visibility: LayerVisibilityStore,
-  ref: LayerRef,
-  visible: boolean
-): void {
-  visibility.override(layerRowId(ref), visible);
-}
 
 export function renameLayerEntry(
   world: VoxelWorld,
@@ -63,7 +51,7 @@ export function setLayerEntryLocked(
 export function createLayerEntry(
   world: VoxelWorld,
   selection: SelectionStore,
-  viewFocus: ViewFocus,
+  focus: Vector3Like,
   result: AddLayerResult
 ): void {
   switch (result.kind) {
@@ -79,7 +67,7 @@ export function createLayerEntry(
       createObject(
         world,
         selection,
-        viewFocus,
+        focus,
         result.name
       );
       break;
@@ -184,7 +172,7 @@ export async function mergeLayerEntry(
 function createObject(
   world: VoxelWorld,
   selection: SelectionStore,
-  viewFocus: ViewFocus,
+  focus: Vector3Like,
   name: string
 ): void {
   const layerName = selection.objectLayer;
@@ -194,7 +182,7 @@ function createObject(
 
   const object = createObjectAt(
     name,
-    viewFocus.point
+    focus
   );
   world.objectLayers.addObject(
     layerName,

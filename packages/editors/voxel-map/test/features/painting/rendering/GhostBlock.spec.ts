@@ -30,9 +30,11 @@ function ghostOf(): GhostBlock {
         shapeId: "ramp"
       }
     ]),
-    shapeRegistry: BlockShapeRegistry.createDefault(),
-    atlases,
-    tileOpacity: new TileOpacityProbe(atlases, () => null)
+    sources: {
+      shapeRegistry: BlockShapeRegistry.createDefault(),
+      atlases,
+      tileOpacity: new TileOpacityProbe(atlases, () => null)
+    }
   });
 }
 
@@ -75,10 +77,9 @@ describe("GhostBlock", () => {
     assert.deepEqual(ghost.position.toArray(), [2.5, 0.5, -0.5]);
     assert.deepEqual(ghost.scale.toArray(), [1, 1, 1]);
 
-    const { geometry } = meshOf(ghost);
-    geometry.computeBoundingBox();
-    assert.deepEqual(geometry.boundingBox?.min.toArray(), [-0.5, -0.5, -0.5]);
-    assert.deepEqual(geometry.boundingBox?.max.toArray(), [0.5, 0.5, 0.5]);
+    const bounds = new THREE.Box3().setFromObject(ghost);
+    assert.deepEqual(bounds.min.toArray(), [2, 0, -1]);
+    assert.deepEqual(bounds.max.toArray(), [3, 1, 0]);
   });
 
   test("draws semi-transparent without writing depth", () => {

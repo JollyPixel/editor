@@ -1,41 +1,34 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 
-export interface ObjectKey {
-  layerName: string;
-  objectId: string;
-}
-
-export type LayerSelection =
-  | { kind: "voxel-layer"; name: string; }
-  | { kind: "object-layer"; name: string; }
-  | { kind: "object"; layerName: string; objectId: string; };
+// Import Internal Dependencies
+import {
+  layerKey,
+  type LayerRef,
+  type ObjectRef
+} from "./layerRef.ts";
 
 export type SelectionStoreEvents = {
   change: (
-    selection: LayerSelection | null
+    selection: LayerRef | null
   ) => void;
   gizmoLayerChange: (
     name: string | null
   ) => void;
-  gizmoDraggingChange: (
-    dragging: boolean
-  ) => void;
 };
 
 export class SelectionStore extends Emitter<SelectionStoreEvents> {
-  #current: LayerSelection | null = null;
-  #entries: readonly LayerSelection[] = [];
+  #current: LayerRef | null = null;
+  #entries: readonly LayerRef[] = [];
   #lastVoxelLayer: string | null = null;
   #gizmoLayer: string | null = null;
-  #gizmoDragging = false;
 
-  get current(): LayerSelection | null {
+  get current(): LayerRef | null {
     return this.#current;
   }
 
   set current(
-    selection: LayerSelection
+    selection: LayerRef
   ) {
     this.#assign(selection);
   }
@@ -76,7 +69,7 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
     return this.objectLayer !== null;
   }
 
-  get object(): ObjectKey | null {
+  get object(): ObjectRef | null {
     return this.#current?.kind === "object"
       ? {
         layerName: this.#current.layerName,
@@ -103,23 +96,6 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
     );
   }
 
-  get gizmoDragging(): boolean {
-    return this.#gizmoDragging;
-  }
-
-  set gizmoDragging(
-    dragging: boolean
-  ) {
-    if (this.#gizmoDragging === dragging) {
-      return;
-    }
-    this.#gizmoDragging = dragging;
-    this.emit(
-      "gizmoDraggingChange",
-      dragging
-    );
-  }
-
   selectVoxelLayer(
     name: string
   ): void {
@@ -139,7 +115,7 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   }
 
   selectObject(
-    key: ObjectKey
+    key: ObjectRef
   ): void {
     this.current = {
       kind: "object",
@@ -149,7 +125,7 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   }
 
   reconcile(
-    entries: readonly LayerSelection[]
+    entries: readonly LayerRef[]
   ): void {
     const previous = this.#entries;
     this.#entries = [...entries];
@@ -160,9 +136,9 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   }
 
   #assign(
-    selection: LayerSelection | null
+    selection: LayerRef | null
   ): void {
-    if (selectionKey(this.#current) === selectionKey(selection)) {
+    if (keyOf(this.#current) === keyOf(selection)) {
       return;
     }
 
@@ -180,20 +156,27 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
 }
 
 function fallbackSelection(
-  current: LayerSelection | null,
-  previous: readonly LayerSelection[],
-  next: readonly LayerSelection[]
-): LayerSelection | null {
+  current: LayerRef | null,
+  previous: readonly LayerRef[],
+  next: readonly LayerRef[]
+): LayerRef | null {
   if (current === null) {
     return firstLayerOf(next);
   }
 
-  const key = selectionKey(current);
-  if (next.some((entry) => selectionKey(entry) === key)) {
+  const key = keyOf(current);
+  if (next.some((entry) => keyOf(entry) === key)) {
     return current;
   }
 
   if (current.kind === "object") {
+    const moved = next.find(
+      (entry) => entry.kind === "object" && entry.objectId === current.objectId
+    );
+    if (moved !== undefined) {
+      return moved;
+    }
+
     return fallbackSelection(
       {
         kind: "object-layer",
@@ -206,7 +189,7 @@ function fallbackSelection(
 
   const before = previous.filter((entry) => entry.kind === current.kind);
   const after = next.filter((entry) => entry.kind === current.kind);
-  const index = before.findIndex((entry) => selectionKey(entry) === key);
+  const index = before.findIndex((entry) => keyOf(entry) === key);
   if (index !== -1 && after.length > 0) {
     return after[Math.min(index, after.length - 1)];
   }
@@ -215,21 +198,15 @@ function fallbackSelection(
 }
 
 function firstLayerOf(
-  entries: readonly LayerSelection[]
-): LayerSelection | null {
+  entries: readonly LayerRef[]
+): LayerRef | null {
   return entries.find((entry) => entry.kind === "voxel-layer") ??
     entries.find((entry) => entry.kind === "object-layer") ??
     null;
 }
 
-function selectionKey(
-  selection: LayerSelection | null
+function keyOf(
+  selection: LayerRef | null
 ): string | null {
-  if (selection === null) {
-    return null;
-  }
-
-  return selection.kind === "object"
-    ? `${selection.kind}:${selection.layerName}/${selection.objectId}`
-    : `${selection.kind}:${selection.name}`;
+  return selection === null ? null : layerKey(selection);
 }

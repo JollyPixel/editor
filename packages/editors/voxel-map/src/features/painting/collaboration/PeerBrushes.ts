@@ -15,34 +15,23 @@ import type {
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { BrushStore } from "../../../state/index.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import { overlaps } from "../model/brushFootprint.ts";
 import { BrushMesh } from "../rendering/BrushMesh.ts";
-import type { BrushStyle } from "../model/BrushStyle.ts";
 
 // CONSTANTS
 const kPresenceCursorKey = "brush";
 
 export interface PeerBrushesOptions {
   room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
-  brush: BrushStore;
 }
 
 export class PeerBrushes extends ActorComponent {
   #room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
   #channel: PresenceChannel<BrushCursor | null>;
-  #brush: BrushStore;
   #meshes = new Map<string, BrushMesh>();
   #localCursor: BrushCursor | null = null;
-  #unsubscribeStyle: () => void;
-
-  #onStyleChange = (style: BrushStyle): void => {
-    for (const mesh of this.#meshes.values()) {
-      mesh.style = style;
-    }
-  };
 
   #onPeerChange = (
     change: PresenceChange<BrushCursor | null>
@@ -65,16 +54,11 @@ export class PeerBrushes extends ActorComponent {
     });
 
     this.#room = options.room;
-    this.#brush = options.brush;
     this.#channel = new PresenceChannel(options.room, {
       key: kPresenceCursorKey,
       decode: cursor.read,
       equals: cursor.equals
     });
-    this.#unsubscribeStyle = this.#brush.subscribe(
-      "styleChange",
-      this.#onStyleChange
-    );
 
     for (const clientId of this.#channel.values.keys()) {
       this.#render(clientId);
@@ -96,7 +80,6 @@ export class PeerBrushes extends ActorComponent {
   }
 
   override destroy(): void {
-    this.#unsubscribeStyle();
     this.#channel.off("change", this.#onPeerChange);
     this.#channel.destroy();
 
@@ -145,7 +128,6 @@ export class PeerBrushes extends ActorComponent {
 
     const mesh = new BrushMesh({
       color,
-      style: this.#brush.style,
       subdued: true
     });
     mesh.hide();

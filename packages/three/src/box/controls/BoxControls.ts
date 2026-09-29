@@ -16,6 +16,7 @@ import {
 import {
   type BoxAxisPolicy,
   type BoxDragMode,
+  type BoxResizePolicy,
   axisPolicyIncludes
 } from "../types.ts";
 import { AxisConstraints } from "./AxisConstraints.ts";
@@ -99,7 +100,7 @@ export interface BoxControlsOptions {
    */
   bounds?: THREE.Box3 | null;
   moveAxes?: BoxAxisPolicy;
-  resizeAxes?: BoxAxisPolicy;
+  resizeAxes?: BoxResizePolicy;
   /**
    * Arrow size as a fraction of viewport height.
    */
@@ -179,12 +180,12 @@ export class BoxControls<
     return this.#session !== null;
   }
 
-  get resizeAxes(): BoxAxisPolicy {
+  get resizeAxes(): BoxResizePolicy {
     return this.#handles.resizeAxes;
   }
 
   set resizeAxes(
-    resizeAxes: BoxAxisPolicy
+    resizeAxes: BoxResizePolicy
   ) {
     this.#handles.resizeAxes = resizeAxes;
   }

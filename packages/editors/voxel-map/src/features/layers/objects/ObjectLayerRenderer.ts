@@ -16,14 +16,14 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
-import type {
-  LayerVisibilityStore,
-  SelectionStore
-} from "../../../state/index.ts";
 import {
   objectKey,
+  type PointerCapture,
+  type SelectionStore
+} from "../../../state/index.ts";
+import type { LayerVisibilityStore } from "../LayerVisibilityStore.ts";
+import {
   objectPatchFromArea,
-  parseObjectKey,
   sameObjectArea
 } from "./objectArea.ts";
 import { ObjectAreaScene } from "./ObjectAreaScene.ts";
@@ -39,17 +39,16 @@ export interface ObjectLayerRendererOptions {
   world: VoxelWorld;
   camera: THREE.PerspectiveCamera;
   selection: SelectionStore;
+  pointer: PointerCapture;
   mapDocument: MapDocument;
   visibility: LayerVisibilityStore;
 }
 
-/**
- * Owns object-area selection, picking, and transform controls.
- */
 export class ObjectLayerRenderer extends ActorComponent {
   #world: VoxelWorld;
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
+  #pointerCapture: PointerCapture;
   #mapDocument: MapDocument;
   #visibility: LayerVisibilityStore;
   #scene: ObjectAreaScene;
@@ -71,6 +70,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     this.#world = options.world;
     this.#camera = options.camera;
     this.#selection = options.selection;
+    this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
     this.#visibility = options.visibility;
     this.#scene = new ObjectAreaScene({
@@ -152,11 +152,6 @@ export class ObjectLayerRenderer extends ActorComponent {
     if (this.#selectedKey === key) {
       this.#detach();
     }
-    if (this.#selectedObjectKey() === key) {
-      this.#selection.selectObjectLayer(
-        parseObjectKey(key).layerName
-      );
-    }
   };
 
   #updateVisibility(): void {
@@ -200,9 +195,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   #selectedObjectKey(): string | null {
     const selected = this.#selection.object;
 
-    return selected === null ?
-      null :
-      objectKey(selected.layerName, selected.objectId);
+    return selected === null ? null : objectKey(selected);
   }
 
   #detach(): void {
@@ -272,17 +265,18 @@ export class ObjectLayerRenderer extends ActorComponent {
     }
 
     const [key, area] = picked;
-    const { layerName, objectId } = parseObjectKey(key);
+    const ref = this.#scene.ref(key);
+    if (ref === undefined) {
+      return;
+    }
+
     this.#selectedKey = key;
     controls.attach(area, { from: event });
-    this.#selection.selectObject({
-      layerName,
-      objectId
-    });
+    this.#selection.selectObject(ref);
   };
 
   readonly #onDragStart = (): void => {
-    this.#selection.gizmoDragging = true;
+    this.#pointerCapture.capture(this);
   };
 
   readonly #onDragChange = (
@@ -293,19 +287,16 @@ export class ObjectLayerRenderer extends ActorComponent {
     event: BoxDragEvent
   ): void => {
     this.#persist(event);
-    this.#selection.gizmoDragging = false;
+    this.#pointerCapture.release(this);
   };
 
   #persist(
     event: BoxDragEvent
   ): void {
     const key = this.#selectedKey;
-    if (key === null) {
-      return;
-    }
-
-    const object = this.#scene.object(key);
-    if (object === undefined) {
+    const ref = key === null ? undefined : this.#scene.ref(key);
+    const object = key === null ? undefined : this.#scene.object(key);
+    if (ref === undefined || object === undefined) {
       return;
     }
 
@@ -317,10 +308,9 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    const { layerName, objectId } = parseObjectKey(key);
     this.#world.objectLayers.updateObject(
-      layerName,
-      objectId,
+      ref.layerName,
+      ref.objectId,
       patch
     );
   }

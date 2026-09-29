@@ -4,21 +4,14 @@ import {
   type ResolvedBlockDefinition,
   type VoxelBlockUsage,
   type VoxelRemoveOptions,
-  type VoxelTilesetUsage,
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import { formatCount } from "../../shared/format.ts";
+
 // CONSTANTS
 const kRemoveBatchSize = 4096;
-const kNumberFormat = new Intl.NumberFormat("en-US");
-
-export function formatCount(
-  count: number,
-  singular: string,
-  plural = `${singular}s`
-): string {
-  return `${kNumberFormat.format(count)} ${count === 1 ? singular : plural}`;
-}
 
 export function sortBlocksByUsage(
   blocks: readonly ResolvedBlockDefinition[],
@@ -53,12 +46,6 @@ export function blockIsUnused(
   return usage.voxels === 0;
 }
 
-export function tilesetIsUnused(
-  usage: VoxelTilesetUsage
-): boolean {
-  return usage.blocks.length === 0 && usage.voxels === 0;
-}
-
 export function blockRemovalMessage(
   usage: VoxelBlockUsage
 ): string {
@@ -68,24 +55,6 @@ export function blockRemovalMessage(
 
   return `Used by ${blockUsageSummary(usage)}. ` +
     "Those voxels stay in the map but are no longer drawn.";
-}
-
-export function tilesetRemovalMessage(
-  usage: VoxelTilesetUsage
-): string {
-  const count = usage.blocks.length;
-  if (count === 0) {
-    return "No block uses this tileset.";
-  }
-
-  const placed = usage.voxels === 0 ?
-    "none placed in the map" :
-    `${formatCount(usage.voxels, "voxel")} in the map`;
-  const verb = count === 1 ?
-    "comes from this tileset and leaves the map with it" :
-    "come from this tileset and leave the map with it";
-
-  return `${formatCount(count, "block")} (${placed}) ${verb}.`;
 }
 
 export function orphanVoxelsMessage(

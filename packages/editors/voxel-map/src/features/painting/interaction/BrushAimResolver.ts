@@ -7,7 +7,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { castViewRay } from "../../../scene/viewFocus.ts";
+import { castViewRay } from "../../../shared/viewRay.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
 import type { BrushPlane } from "../model/brushFootprint.ts";
 import {
@@ -44,9 +44,6 @@ export interface BrushAimResolverOptions {
   skyRadius?: number;
 }
 
-/**
- * Resolves pointer coordinates to voxel cells without owning input state.
- */
 export class BrushAimResolver {
   #camera: THREE.PerspectiveCamera;
   #solid: THREE.Object3D;
@@ -66,17 +63,6 @@ export class BrushAimResolver {
     this.#groundPlaneSize = options.groundPlaneSize;
     this.#maxDistance = options.maxDistance;
     this.#skyRadius = Math.max(0, options.skyRadius ?? 0);
-  }
-
-  get maxDistance(): number {
-    return this.#maxDistance;
-  }
-
-  set maxDistance(
-    value: number
-  ) {
-    this.#maxDistance = value;
-    this.#aimPointer.set(NaN, NaN);
   }
 
   get skyRadius(): number {

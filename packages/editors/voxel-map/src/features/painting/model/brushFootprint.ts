@@ -1,17 +1,14 @@
 // Import Third-party Dependencies
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
-export type BrushAxis = "xz" | "xy" | "yz" | "xyz";
-export type BrushPattern = "square" | "circle";
+// Import Internal Dependencies
+import type {
+  BrushAxis,
+  BrushPattern
+} from "../../../state/index.ts";
+
 export type CoordAxis = "x" | "y" | "z";
 export type BrushAnchor = "bottom" | "top" | "center";
-
-export const BRUSH_AXES: readonly BrushAxis[] = Object.freeze([
-  "xz",
-  "xy",
-  "yz",
-  "xyz"
-]);
 
 // CONSTANTS
 const kCoordAxes: readonly CoordAxis[] = ["x", "y", "z"];

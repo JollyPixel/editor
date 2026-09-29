@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
 import { LitElement, html, css } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
-import type {
-  VoxelView,
-  ResolvedBlockDefinition
-} from "@jolly-pixel/voxel.renderer";
+import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import type { BlockRenderSources } from "./blockGeometry.ts";
 import { BlockPreviewRenderer } from "./BlockPreviewRenderer.ts";
 
 @customElement("block-shape-preview")
@@ -30,7 +28,7 @@ export class BlockShapePreview extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare engine: VoxelView;
+  declare sources: BlockRenderSources;
 
   @property({ attribute: false })
   declare block: ResolvedBlockDefinition | null;
@@ -65,7 +63,7 @@ export class BlockShapePreview extends LitElement {
   override updated(
     changed: Map<string, unknown>
   ): void {
-    if (changed.has("engine") || this.#renderer === null) {
+    if (changed.has("sources") || this.#renderer === null) {
       this.#build();
     }
     else if (changed.has("block")) {
@@ -80,11 +78,7 @@ export class BlockShapePreview extends LitElement {
       return;
     }
 
-    this.#renderer = new BlockPreviewRenderer(this._well, {
-      shapeRegistry: this.engine.shapes,
-      atlases: this.engine.atlases,
-      materialGroups: this.engine.document.materialGroups
-    });
+    this.#renderer = new BlockPreviewRenderer(this._well, this.sources);
     this.#renderer.block = this.block;
     this.#renderer.onContextLost = () => this.#build();
   }

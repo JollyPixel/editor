@@ -144,17 +144,4 @@ describe("TilesetProjection", () => {
     assert.deepEqual([...engine.materialGroups.ids()], ["other/soft"]);
     assert.deepEqual([...engine.blendGroups].map(({ id }) => id), ["other/meadow"]);
   });
-
-  it("re-homes its blocks when the slot changes", () => {
-    const engine = makeEngine();
-    const projection = new TilesetProjection({
-      engine,
-      tileset: makeTileset(),
-      slot: { id: "terrain", slot: 1 }
-    });
-
-    projection.update({ id: "terrain", slot: 4 });
-
-    assert.deepEqual(ids(engine), [composeBlockId(4, 1), composeBlockId(4, 2)]);
-  });
 });

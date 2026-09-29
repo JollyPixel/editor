@@ -10,31 +10,31 @@ import type { JollyReparentDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { canDropLayerRef } from "../../../src/features/layers/layerDrop.ts";
-import { layerRowId } from "../../../src/features/layers/layerTree.ts";
+import { layerKey } from "../../../src/state/layerRef.ts";
 
 // CONSTANTS
-const kGround = layerRowId({
+const kGround = layerKey({
   kind: "voxel-layer",
   name: "Ground"
 });
-const kDeco = layerRowId({
+const kDeco = layerKey({
   kind: "voxel-layer",
   name: "Deco"
 });
-const kTriggers = layerRowId({
+const kTriggers = layerKey({
   kind: "object-layer",
   name: "Triggers"
 });
-const kSpawns = layerRowId({
+const kSpawns = layerKey({
   kind: "object-layer",
   name: "Spawns"
 });
-const kTriggerArea = layerRowId({
+const kTriggerArea = layerKey({
   kind: "object",
   layerName: "Triggers",
   objectId: "obj_1"
 });
-const kSpawnPoint = layerRowId({
+const kSpawnPoint = layerKey({
   kind: "object",
   layerName: "Spawns",
   objectId: "obj_2"

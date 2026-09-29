@@ -6,79 +6,33 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type {
-  LayerSelection,
-  LayerVisibilityStore
+import {
+  layerKey,
+  type LayerRef
 } from "../../state/index.ts";
-import type { PeerMarkMap } from "../../collaboration/peerMarks.ts";
-import { layerRefPresenceKey } from "./collaboration/layerPresenceKey.ts";
-import { formatCount } from "../blocks/blockUsage.ts";
+import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
+import type { PeerMarkMap } from "../../shared/peerMarks.ts";
+import { formatCount } from "../../shared/format.ts";
 
 // CONSTANTS
-const kVoxelPrefix = "voxel:";
-const kObjectLayerPrefix = "object:";
-const kObjectPrefix = "obj:";
 const kMaxBadges = 3;
-
-export type LayerRef =
-  | { kind: "voxel-layer"; name: string; }
-  | { kind: "object-layer"; name: string; }
-  | { kind: "object"; layerName: string; objectId: string; };
-
-export function layerRowId(
-  ref: LayerRef
-): string {
-  switch (ref.kind) {
-    case "voxel-layer":
-      return `${kVoxelPrefix}${ref.name}`;
-    case "object-layer":
-      return `${kObjectLayerPrefix}${ref.name}`;
-    default:
-      return `${kObjectPrefix}${ref.layerName}/${ref.objectId}`;
-  }
-}
-
-export function layerRefOf(
-  id: string
-): LayerRef {
-  if (id.startsWith(kObjectPrefix)) {
-    const rest = id.slice(kObjectPrefix.length);
-    const separator = rest.lastIndexOf("/");
-
-    return {
-      kind: "object",
-      layerName: rest.slice(0, separator),
-      objectId: rest.slice(separator + 1)
-    };
-  }
-
-  return id.startsWith(kObjectLayerPrefix) ?
-    {
-      kind: "object-layer",
-      name: id.slice(kObjectLayerPrefix.length)
-    } :
-    {
-      kind: "voxel-layer",
-      name: id.slice(kVoxelPrefix.length)
-    };
-}
 
 export function layerSelectionsOf(
   world: VoxelWorld
-): LayerSelection[] {
+): LayerRef[] {
   return [
-    ...world.getLayers().map((layer): LayerSelection => {
+    ...world.getLayers().map((layer): LayerRef => {
       return {
         kind: "voxel-layer",
         name: layer.name
       };
     }),
-    ...world.objectLayers.toArray().flatMap((layer): LayerSelection[] => [
+    ...world.objectLayers.toArray().flatMap((layer): LayerRef[] => [
       {
         kind: "object-layer",
         name: layer.name
       },
-      ...layer.objects.map((object): LayerSelection => {
+      ...layer.objects.map((object): LayerRef => {
         return {
           kind: "object",
           layerName: layer.name,
@@ -99,7 +53,7 @@ export function layerTreeNodes(
         kind: "voxel-layer",
         name: layer.name
       };
-      const id = layerRowId(ref);
+      const id = layerKey(ref);
 
       return {
         id,
@@ -115,7 +69,7 @@ export function layerTreeNodes(
         kind: "object-layer",
         name: layer.name
       };
-      const id = layerRowId(ref);
+      const id = layerKey(ref);
 
       return {
         id,
@@ -129,7 +83,7 @@ export function layerTreeNodes(
             layerName: layer.name,
             objectId: object.id
           };
-          const objectId = layerRowId(objectRef);
+          const objectId = layerKey(objectRef);
 
           return {
             id: objectId,
@@ -172,7 +126,7 @@ function badgesOf(
     return [];
   }
 
-  const peers = marks.get(layerRefPresenceKey(node.data)) ?? [];
+  const peers = marks.get(layerKey(node.data)) ?? [];
 
   return peers.slice(0, kMaxBadges).map((peer) => {
     return {

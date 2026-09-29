@@ -3,13 +3,11 @@ import * as THREE from "three";
 import type { Actor } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import type { BrushStore } from "../../../state/index.ts";
 import { BrushMesh } from "./BrushMesh.ts";
 import {
   GhostBlock,
   type GhostBlockOptions
 } from "./GhostBlock.ts";
-import type { BrushStyle } from "../model/BrushStyle.ts";
 import * as cursor from "../model/brushCursor.ts";
 import type { BrushCursor } from "../model/brushCursor.ts";
 import type { BrushShape } from "../model/brushFootprint.ts";
@@ -23,15 +21,11 @@ export type BrushTarget = Pick<
 export interface BrushPreviewOptions {
   actor: Actor;
   camera: THREE.PerspectiveCamera;
-  brush: BrushStore;
   ghost: GhostBlockOptions;
   color?: THREE.ColorRepresentation;
   onCursorChange: (cursor: BrushCursor | null) => void;
 }
 
-/**
- * Owns local brush presentation and cursor-change publication.
- */
 export class BrushPreview {
   #actor: Actor;
   #camera: THREE.PerspectiveCamera;
@@ -41,7 +35,6 @@ export class BrushPreview {
   #cursor: BrushCursor | null = null;
   #dirty = true;
   #lastCameraMatrix = new THREE.Matrix4();
-  #unsubscribeStyle: () => void;
 
   constructor(
     options: BrushPreviewOptions
@@ -49,18 +42,11 @@ export class BrushPreview {
     this.#actor = options.actor;
     this.#camera = options.camera;
     this.#onCursorChange = options.onCursorChange;
-    this.#mesh = new BrushMesh({
-      ...options.color === undefined ? {} : { color: options.color },
-      style: options.brush.style
-    });
+    this.#mesh = new BrushMesh(
+      options.color === undefined ? {} : { color: options.color }
+    );
     this.#ghost = new GhostBlock(options.ghost);
     this.#actor.addChildren(this.#mesh, this.#ghost);
-    this.#unsubscribeStyle = options.brush.subscribe(
-      "styleChange",
-      (style: BrushStyle) => {
-        this.#mesh.style = style;
-      }
-    );
   }
 
   markDirty(): void {
@@ -109,7 +95,6 @@ export class BrushPreview {
   }
 
   destroy(): void {
-    this.#unsubscribeStyle();
     this.#actor.removeChildren(this.#mesh);
     this.#ghost.removeFromParent();
     this.#ghost.dispose();

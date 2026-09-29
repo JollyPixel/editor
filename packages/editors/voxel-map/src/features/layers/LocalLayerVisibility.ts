@@ -6,12 +6,13 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
-import type { LayerVisibilityStore } from "../../state/index.ts";
 import {
-  layerRefOf,
-  layerRowId,
+  layerKey,
+  objectKey,
+  parseLayerKey,
   type LayerRef
-} from "./layerTree.ts";
+} from "../../state/index.ts";
+import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
 
 export interface LocalLayerVisibilityOptions {
   world: VoxelWorld;
@@ -47,7 +48,7 @@ export class LocalLayerVisibility {
   readonly #apply = (
     key: string
   ): void => {
-    const ref = layerRefOf(key);
+    const ref = parseLayerKey(key);
     if (ref.kind !== "voxel-layer") {
       return;
     }
@@ -65,7 +66,7 @@ export class LocalLayerVisibility {
 
   readonly #onReset = (): void => {
     this.#visibility.retain(
-      (key) => this.#exists(layerRefOf(key))
+      (key) => this.#exists(parseLayerKey(key))
     );
     this.#applyAll();
   };
@@ -91,18 +92,27 @@ export class LocalLayerVisibility {
         break;
       case "object-layer-removed":
         this.#visibility.retain(
-          (key) => !belongsToObjectLayer(layerRefOf(key), command.layerName)
+          (key) => !belongsToObjectLayer(parseLayerKey(key), command.layerName)
         );
         break;
       case "object-removed":
         this.#visibility.forget(
-          objectKey(command.layerName, command.metadata.objectId)
+          objectKey({
+            layerName: command.layerName,
+            objectId: command.metadata.objectId
+          })
         );
         break;
       case "object-moved":
         this.#visibility.transfer(
-          objectKey(command.metadata.fromLayerName, command.metadata.objectId),
-          objectKey(command.metadata.toLayerName, command.metadata.objectId)
+          objectKey({
+            layerName: command.metadata.fromLayerName,
+            objectId: command.metadata.objectId
+          }),
+          objectKey({
+            layerName: command.metadata.toLayerName,
+            objectId: command.metadata.objectId
+          })
         );
         break;
       default:
@@ -135,20 +145,9 @@ export class LocalLayerVisibility {
 function voxelLayerKey(
   name: string
 ): string {
-  return layerRowId({
+  return layerKey({
     kind: "voxel-layer",
     name
-  });
-}
-
-function objectKey(
-  layerName: string,
-  objectId: string
-): string {
-  return layerRowId({
-    kind: "object",
-    layerName,
-    objectId
   });
 }
 

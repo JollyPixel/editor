@@ -24,22 +24,18 @@ import {
   type VoxelSolid
 } from "../model/voxelContour.ts";
 import { faceCornersOf } from "../model/cellFace.ts";
-import {
-  DEFAULT_BRUSH_STYLE,
-  brushStyleFrom,
-  type BrushStyle
-} from "../model/BrushStyle.ts";
 
 // CONSTANTS
 const kInflate = 0.01;
 const kFaceMargin = kInflate + 0.005;
+const kOpacity = 0.15;
 const kFaceOpacityBoost = 0.35;
 const kDefaultColor = 0x33e0ff;
 const kSubduedOpacity = 0.5;
 const kRimOpacityBoost = 1.8;
 const kCenterAlpha = 0.5;
-const kMarchSpeed = 0.35;
-const kSubduedEdgeTrim = 1;
+const kEdgeWidth = 2;
+const kSubduedEdgeWidth = 1;
 const kHaloColor = 0x0b0f14;
 const kHaloSpread = 1;
 const kDepthBias = 1;
@@ -64,24 +60,10 @@ interface BrushShell {
 }
 
 export interface BrushMeshOptions {
-  /**
-   * @default 0x33e0ff
-   */
   color?: THREE.ColorRepresentation;
-  /**
-   * Draws a fainter fill and a thinner outline without its dark backing.
-   * @default false
-   */
   subdued?: boolean;
-  /**
-   * @default DEFAULT_BRUSH_STYLE
-   */
-  style?: BrushStyle;
 }
 
-/**
- * Reuses one fill and outline while the brush footprint changes.
- */
 export class BrushMesh extends THREE.Group {
   #fill: THREE.Mesh;
   #fillMaterial: THREE.MeshBasicMaterial;
@@ -93,7 +75,6 @@ export class BrushMesh extends THREE.Group {
   #face: THREE.Mesh;
   #faceMaterial: THREE.MeshBasicMaterial;
 
-  #style: BrushStyle;
   #subdued: boolean;
   #hidden = false;
   #drawn = false;
@@ -111,19 +92,19 @@ export class BrushMesh extends THREE.Group {
 
     const {
       color = kDefaultColor,
-      style = DEFAULT_BRUSH_STYLE,
       subdued = false
     } = options;
+    const weight = subdued ? kSubduedOpacity : 1;
+    const edgeWidth = subdued ? kSubduedEdgeWidth : kEdgeWidth;
 
     this.name = "brush";
-    this.#style = style;
     this.#subdued = subdued;
 
     this.#fillMaterial = new THREE.MeshBasicMaterial({
       color,
       vertexColors: true,
       transparent: true,
-      opacity: style.opacity,
+      opacity: Math.min(1, kOpacity * kRimOpacityBoost) * weight,
       depthWrite: false
     });
     this.#fill = new THREE.Mesh(
@@ -136,20 +117,22 @@ export class BrushMesh extends THREE.Group {
 
     this.#halo = this.#edgeLines({
       color: kHaloColor,
+      linewidth: edgeWidth + kHaloSpread,
       ...kTowardCamera
     }, 2);
     this.#halo.onBeforeRender = (_renderer, _scene, camera) => {
       this.#cullAwayFrom(camera);
-      this.#march();
     };
     this.#border = this.#edgeLines({
       color,
+      linewidth: edgeWidth,
       ...kTowardCamera
     }, 3);
 
     this.#faceMaterial = new THREE.MeshBasicMaterial({
       color,
       transparent: true,
+      opacity: Math.min(1, kOpacity + kFaceOpacityBoost) * weight,
       depthWrite: false,
       side: THREE.DoubleSide
     });
@@ -173,16 +156,6 @@ export class BrushMesh extends THREE.Group {
       this.#halo,
       this.#border
     );
-    this.#applyStyle();
-  }
-
-  get style(): BrushStyle {
-    return this.#style;
-  }
-
-  set style(value: BrushStyle) {
-    this.#style = brushStyleFrom(value);
-    this.#applyStyle();
   }
 
   get shelled(): boolean {
@@ -290,18 +263,6 @@ export class BrushMesh extends THREE.Group {
     this.#outline(shell.edges);
   }
 
-  #march(): void {
-    const { edgeStyle, dashSize, gapSize } = this.#style;
-    if (this.#subdued || edgeStyle !== "dashed") {
-      return;
-    }
-
-    const period = dashSize + gapSize;
-    const offset = -((Date.now() / 1000) * kMarchSpeed) % period;
-    this.#halo.material.dashOffset = offset;
-    this.#border.material.dashOffset = offset;
-  }
-
   #cullAwayFrom(
     camera: THREE.Camera
   ): void {
@@ -333,9 +294,7 @@ export class BrushMesh extends THREE.Group {
   #outline(
     edges: number[]
   ): void {
-    // Rebuild to keep dash lengths constant in world units.
     this.#edges.setPositions(edges);
-    this.#border.computeLineDistances();
   }
 
   #edgeLines(
@@ -356,51 +315,14 @@ export class BrushMesh extends THREE.Group {
     return lines;
   }
 
-  #applyStyle(): void {
-    const {
-      opacity,
-      edgeWidth,
-      edgeStyle,
-      dashSize,
-      gapSize
-    } = this.#style;
-
-    const weight = this.#subdued ? kSubduedOpacity : 1;
-    const width = this.#subdued ?
-      Math.min(edgeWidth, Math.max(1, edgeWidth - kSubduedEdgeTrim)) :
-      edgeWidth;
-
-    this.#fillMaterial.opacity =
-      Math.min(1, opacity * kRimOpacityBoost) * weight;
-    this.#faceMaterial.opacity =
-      Math.min(1, opacity + kFaceOpacityBoost) * weight;
-
-    const widths = [
-      [this.#halo, width + kHaloSpread],
-      [this.#border, width]
-    ] as const;
-    for (const [lines, linewidth] of widths) {
-      const { material } = lines;
-      material.linewidth = linewidth;
-      material.dashed = edgeStyle === "dashed";
-      material.dashSize = dashSize;
-      material.gapSize = gapSize;
-      material.needsUpdate = true;
-    }
-
-    this.#applyVisibility();
-  }
-
   #applyVisibility(): void {
     const visible = !this.#hidden && this.#drawn;
-
     const shelled = visible && this.#shelled;
 
-    this.#fill.visible = shelled && this.#style.opacity > 0;
+    this.#fill.visible = shelled;
     this.#face.visible = visible && this.#faced;
-    const edged = shelled && this.#style.edgeWidth > 0;
-    this.#halo.visible = edged && !this.#subdued;
-    this.#border.visible = edged;
+    this.#halo.visible = shelled && !this.#subdued;
+    this.#border.visible = shelled;
   }
 }
 

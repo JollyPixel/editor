@@ -27,17 +27,6 @@ export class GridRenderer extends ActorComponent {
     this.#build();
   }
 
-  setExtent(
-    value: number
-  ): void {
-    this.#options = {
-      ...this.#options,
-      extent: value
-    };
-    this.#clear();
-    this.#build();
-  }
-
   get visible(): boolean {
     return this.#options.enabled ?? true;
   }

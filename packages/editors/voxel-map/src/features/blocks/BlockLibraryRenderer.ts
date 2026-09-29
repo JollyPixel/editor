@@ -1,67 +1,21 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import { disposeObject3D } from "@jolly-pixel/engine";
-import type {
-  ResolvedBlockDefinition,
-  BlockShapeRegistry,
-  MaterialGroupList,
-  TilesetAtlases
-} from "@jolly-pixel/voxel.renderer";
+import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import type { BlockRenderSources } from "./blockGeometry.ts";
 import {
   blockGridRows,
   computeBlockGridLayout,
   type BlockGridLayout
 } from "./blockGridLayout.ts";
-import {
-  buildBlockPreviewMesh,
-  createBlockPreviewStage,
-  emptyTextureSlots,
-  PREVIEW_ROTATION_STEP,
-  PREVIEW_TILT,
-  type BlockPreviewSources
-} from "./blockPreviewMesh.ts";
-import { TileOpacityProbe } from "./tileOpacity.ts";
-import { WebGLContextLease } from "./WebGLContextLease.ts";
+import { BlockTurntable } from "./BlockTurntable.ts";
 
 // CONSTANTS
-const kSuperSampling = 2;
-const kMaxPixelRatio = 3;
 const kSettleFrames = 6;
-const kOpacityCheckIntervalMs = 250;
 
-export interface CellEntry {
-  blockId: number;
-  block: ResolvedBlockDefinition;
-  mesh: THREE.Mesh | THREE.Group;
-  emptySlots: string;
-  x: number;
-  y: number;
-}
-
-export interface BlockLibraryRendererOptions {
-  shapeRegistry: BlockShapeRegistry;
-  atlases: TilesetAtlases;
-  materialGroups?: MaterialGroupList;
-  blocks?: ResolvedBlockDefinition[];
-}
-
-export class BlockLibraryRenderer {
-  readonly canvas: HTMLCanvasElement;
+export class BlockLibraryRenderer extends BlockTurntable {
   onLayoutChange: (() => void) | null = null;
-  onContextLost: (() => void) | null = null;
 
-  #renderer: THREE.WebGLRenderer;
-  #contextLease: WebGLContextLease;
-  #scene: THREE.Scene;
-  #camera: THREE.PerspectiveCamera;
-  #cells: CellEntry[] = [];
-  #sources: BlockPreviewSources;
-  #atlases: TilesetAtlases;
-  #opacityCheckAt = 0;
-  #raf = -1;
-  #rot = 0;
   #cols = 1;
   #cellSize = 1;
   #canvasWidth = 0;
@@ -72,89 +26,13 @@ export class BlockLibraryRenderer {
   #pendingCellSize = 0;
   #stableFrames = 0;
   #layoutDirty = true;
-  #tilesetVersion: number;
-  #materialGroupsVersion: number;
-  #container: HTMLElement;
-  #resizeObserver: ResizeObserver;
 
   constructor(
     container: HTMLElement,
-    options: BlockLibraryRendererOptions
+    sources: BlockRenderSources
   ) {
-    this.#sources = {
-      shapeRegistry: options.shapeRegistry,
-      atlases: options.atlases,
-      tileOpacity: new TileOpacityProbe(options.atlases),
-      materialGroups: options.materialGroups
-    };
-    this.#materialGroupsVersion = options.materialGroups?.version ?? -1;
-    this.#atlases = options.atlases;
-    this.#tilesetVersion = options.atlases.version;
-    this.#container = container;
-
-    this.#renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true
-    });
-    this.#renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio * kSuperSampling, kMaxPixelRatio)
-    );
-    this.#renderer.autoClear = false;
-    this.#renderer.setClearColor(0x000000, 0);
-    this.#contextLease = new WebGLContextLease(this.#renderer);
-    this.#contextLease.onLost = () => this.onContextLost?.();
-
-    this.canvas = this.#renderer.domElement;
-    this.canvas.style.display = "block";
-    container.appendChild(this.canvas);
-
-    const stage = createBlockPreviewStage(this.#renderer);
-    this.#scene = stage.scene;
-    this.#camera = stage.camera;
-
-    this.#resizeObserver = new ResizeObserver(() => {
-      this.#layoutDirty = true;
-    });
-    this.#resizeObserver.observe(container);
-
-    if (options.blocks) {
-      this.setBlocks(options.blocks);
-    }
-
-    this.#startLoop();
-  }
-
-  setBlocks(
-    blocks: ResolvedBlockDefinition[]
-  ): void {
-    const previous = new Map(
-      this.#cells.map((cell) => [cell.blockId, cell])
-    );
-    const next: CellEntry[] = [];
-
-    for (const block of blocks) {
-      const existing = previous.get(block.id);
-      if (existing?.block === block) {
-        previous.delete(block.id);
-        next.push(existing);
-
-        continue;
-      }
-
-      if (existing) {
-        this.#removeCell(existing);
-        previous.delete(block.id);
-      }
-
-      next.push(this.#createCell(block));
-    }
-
-    for (const cell of previous.values()) {
-      this.#removeCell(cell);
-    }
-
-    this.#cells = next;
-    this.#relayout();
+    super(container, sources);
+    this.renderer.autoClear = false;
   }
 
   get layout(): BlockGridLayout {
@@ -164,63 +42,89 @@ export class BlockLibraryRenderer {
     };
   }
 
-  getBlockAtPointer(
+  setBlocks(
+    blocks: ResolvedBlockDefinition[]
+  ): void {
+    this.meshes.sync(blocks);
+    this.#relayout();
+  }
+
+  blockAt(
     px: number,
     py: number
   ): number | null {
     const col = Math.floor(px / this.#cellSize);
     const row = Math.floor(py / this.#cellSize);
+    if (col < 0 || row < 0 || col >= this.#cols) {
+      return null;
+    }
 
-    const cell = this.#cells.find(
-      (cell) => cell.x === col && cell.y === row
-    );
-
-    return cell?.blockId ?? null;
+    return this.meshes.entries[(row * this.#cols) + col]?.block.id ?? null;
   }
 
-  dispose(): void {
-    cancelAnimationFrame(this.#raf);
-    this.#resizeObserver.disconnect();
-    for (const cell of this.#cells) {
-      this.#removeCell(cell);
+  protected override resized(): void {
+    this.#layoutDirty = true;
+  }
+
+  protected override draw(): void {
+    if (this.#layoutDirty) {
+      this.#relayout();
     }
-    this.#cells = [];
-    this.#contextLease.release();
-    this.canvas.remove();
+    this.#syncCanvasSize();
+    if (this.#canvasWidth === 0 || this.#canvasHeight === 0) {
+      return;
+    }
+
+    this.renderer.clear();
+
+    const cellSize = this.#cellSize;
+    const drawnCellSize = this.#drawnCellSize;
+    const scrollTop = this.container.scrollTop;
+    const containerHeight = this.container.clientHeight;
+
+    this.meshes.entries.forEach((entry, index) => {
+      const col = index % this.#cols;
+      const row = Math.floor(index / this.#cols);
+      const cellTop = row * cellSize;
+      if (cellTop + cellSize <= scrollTop || cellTop >= scrollTop + containerHeight) {
+        return;
+      }
+
+      const x = col * drawnCellSize;
+      const y = (this.#drawnRows - 1 - row) * drawnCellSize;
+      this.renderer.setViewport(x, y, drawnCellSize, drawnCellSize);
+      this.renderer.setScissor(x, y, drawnCellSize, drawnCellSize);
+      this.renderer.setScissorTest(true);
+      this.renderer.clearDepth();
+      this.renderMesh(entry.mesh);
+    });
+
+    this.renderer.setScissorTest(false);
   }
 
   #relayout(): void {
     this.#layoutDirty = false;
 
-    const style = getComputedStyle(this.#container);
+    const style = getComputedStyle(this.container);
     const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     const layout = computeBlockGridLayout(
-      this.#container.clientWidth - paddingH
+      this.container.clientWidth - paddingH
     );
 
     const changed = layout.cols !== this.#cols ||
       layout.cellSize !== this.#cellSize;
     this.#cols = layout.cols;
     this.#cellSize = layout.cellSize;
-
-    for (let i = 0; i < this.#cells.length; i++) {
-      this.#cells[i].x = i % this.#cols;
-      this.#cells[i].y = Math.floor(i / this.#cols);
-    }
-
     if (changed) {
       this.onLayoutChange?.();
     }
   }
 
   #syncCanvasSize(): void {
-    const rows = blockGridRows(this.#cells.length, this.#cols);
+    const rows = blockGridRows(this.meshes.entries.length, this.#cols);
     const width = this.#cols * this.#cellSize;
     const height = rows * this.#cellSize;
-    if (
-      width !== this.#canvasWidth ||
-      height !== this.#canvasHeight
-    ) {
+    if (width !== this.#canvasWidth || height !== this.#canvasHeight) {
       this.#canvasWidth = width;
       this.#canvasHeight = height;
       this.canvas.style.width = `${width}px`;
@@ -252,143 +156,6 @@ export class BlockLibraryRenderer {
     this.#drawnRows = rows;
     this.#drawnCellSize = this.#cellSize;
     this.#stableFrames = 0;
-    this.#renderer.setSize(width, height, false);
-  }
-
-  #startLoop(): void {
-    const loop = (time: number) => {
-      this.#raf = requestAnimationFrame(loop);
-      this.#render(time);
-    };
-    this.#raf = requestAnimationFrame(loop);
-  }
-
-  #render(
-    time: number
-  ): void {
-    const groupsVersion = this.#sources.materialGroups?.version ?? -1;
-    if (this.#tilesetVersion !== this.#atlases.version) {
-      this.#rebuildCells();
-    }
-    else if (groupsVersion !== this.#materialGroupsVersion) {
-      this.#materialGroupsVersion = groupsVersion;
-      this.#rebuildGroupedCells();
-    }
-    else if (time - this.#opacityCheckAt >= kOpacityCheckIntervalMs) {
-      this.#opacityCheckAt = time;
-      this.#refreshEmptyCells();
-    }
-    if (this.#layoutDirty) {
-      this.#relayout();
-    }
-    this.#syncCanvasSize();
-    if (
-      this.#canvasWidth === 0 ||
-      this.#canvasHeight === 0
-    ) {
-      return;
-    }
-
-    this.#rot += PREVIEW_ROTATION_STEP;
-
-    this.#renderer.clear();
-
-    const totalRows = this.#drawnRows;
-    const cellSize = this.#cellSize;
-    const drawnCellSize = this.#drawnCellSize;
-
-    const scrollTop = this.#container.scrollTop;
-    const containerH = this.#container.clientHeight;
-
-    for (const cell of this.#cells) {
-      const cellTop = cell.y * cellSize;
-      const cellBottom = cellTop + cellSize;
-      if (cellBottom <= scrollTop || cellTop >= scrollTop + containerH) {
-        continue;
-      }
-
-      cell.mesh.visible = true;
-      cell.mesh.position.set(0, 0, 0);
-      cell.mesh.rotation.set(PREVIEW_TILT, this.#rot, 0);
-
-      const x = cell.x * drawnCellSize;
-      const y = (totalRows - 1 - cell.y) * drawnCellSize;
-
-      this.#renderer.setViewport(x, y, drawnCellSize, drawnCellSize);
-      this.#renderer.setScissor(x, y, drawnCellSize, drawnCellSize);
-      this.#renderer.setScissorTest(true);
-      this.#renderer.clearDepth();
-
-      this.#renderer.render(this.#scene, this.#camera);
-
-      cell.mesh.visible = false;
-    }
-
-    this.#renderer.setScissorTest(false);
-  }
-
-  #rebuildCells(): void {
-    this.#tilesetVersion = this.#atlases.version;
-    const blocks = this.#cells.map((cell) => cell.block);
-    for (const cell of this.#cells) {
-      this.#removeCell(cell);
-    }
-    this.#cells = [];
-    this.setBlocks(blocks);
-  }
-
-  #rebuildGroupedCells(): void {
-    for (let index = 0; index < this.#cells.length; index++) {
-      const cell = this.#cells[index];
-      if (cell.block.materialGroup === undefined) {
-        continue;
-      }
-
-      this.#removeCell(cell);
-      this.#cells[index] = {
-        ...this.#createCell(cell.block),
-        x: cell.x,
-        y: cell.y
-      };
-    }
-  }
-
-  #createCell(
-    block: ResolvedBlockDefinition
-  ): CellEntry {
-    const mesh = buildBlockPreviewMesh(block, this.#sources);
-    mesh.visible = false;
-    this.#scene.add(mesh);
-
-    return {
-      blockId: block.id,
-      block,
-      mesh,
-      emptySlots: emptyTextureSlots(block, this.#sources).join(","),
-      x: 0,
-      y: 0
-    };
-  }
-
-  #refreshEmptyCells(): void {
-    for (let index = 0; index < this.#cells.length; index++) {
-      const cell = this.#cells[index];
-      const emptySlots = emptyTextureSlots(cell.block, this.#sources).join(",");
-      if (emptySlots === cell.emptySlots) {
-        continue;
-      }
-
-      this.#removeCell(cell);
-      this.#cells[index] = {
-        ...this.#createCell(cell.block),
-        x: cell.x,
-        y: cell.y
-      };
-    }
-  }
-
-  #removeCell(cell: CellEntry): void {
-    this.#scene.remove(cell.mesh);
-    disposeObject3D(cell.mesh);
+    this.renderer.setSize(width, height, false);
   }
 }

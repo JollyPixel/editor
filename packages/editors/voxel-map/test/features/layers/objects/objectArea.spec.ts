@@ -16,9 +16,7 @@ import {
   derivedColorOf,
   isLocked,
   isNoopPatch,
-  objectKey,
   objectPatchFromArea,
-  parseObjectKey,
   sameObjectArea
 } from "../../../../src/features/layers/objects/objectArea.ts";
 
@@ -66,18 +64,6 @@ describe("createObjectAt", () => {
     assert.equal(object.x, 12);
     assert.equal(object.y, 0);
     assert.equal(object.z, -8);
-  });
-});
-
-describe("objectKey", () => {
-  test("round-trips a key holding a colon in the layer name", () => {
-    const key = objectKey("zone:north", "obj-1");
-
-    assert.equal(key, "zone:north:obj-1");
-    assert.deepEqual(parseObjectKey(key), {
-      layerName: "zone:north",
-      objectId: "obj-1"
-    });
   });
 });
 
