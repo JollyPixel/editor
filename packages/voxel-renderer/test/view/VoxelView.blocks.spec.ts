@@ -39,3 +39,61 @@ describe("VoxelView - block order", () => {
     assert.equal(anyChunkDirty(view), false);
   });
 });
+
+function dirtyChunkXs(
+  view: VoxelView
+): number[] {
+  return [...view.document.world.getAllChunks()]
+    .filter(({ chunk }) => chunk.dirty)
+    .map(({ chunk }) => chunk.cx)
+    .sort((left, right) => left - right);
+}
+
+function makeRowView(): VoxelView {
+  const view = makeView({ layers: ["Ground"] });
+  view.document.defineBlock(makeBlockDef(kLeavesId, "cube"));
+  placeCube(view, "Ground", { x: 0, y: 0, z: 0 });
+  placeCube(view, "Ground", { x: 4, y: 0, z: 0 }, kLeavesId);
+  placeCube(view, "Ground", { x: 12, y: 0, z: 0 }, kLeavesId);
+  view.tick(0);
+
+  return view;
+}
+
+describe("VoxelView - block redefinition", () => {
+  it("remeshes only the chunks holding a block whose texture moved", () => {
+    const view = makeRowView();
+
+    view.document.defineBlock(makeBlockDef(kCubeId, "cube", {
+      defaultTexture: { col: 1, row: 0 }
+    }));
+
+    assert.deepEqual(dirtyChunkXs(view), [0]);
+  });
+
+  it("remeshes the bordering chunks when the block stops occluding", () => {
+    const view = makeRowView();
+
+    view.document.defineBlock(makeBlockDef(kCubeId, "cube", {
+      alphaMode: "mask"
+    }));
+
+    assert.deepEqual(dirtyChunkXs(view), [0, 1]);
+  });
+
+  it("leaves the meshes untouched for a block no voxel uses", () => {
+    const view = makeRowView();
+
+    view.document.defineBlock(makeBlockDef(9, "cube"));
+
+    assert.equal(anyChunkDirty(view), false);
+  });
+
+  it("remeshes the bordering chunks when a block is removed", () => {
+    const view = makeRowView();
+
+    view.document.removeBlock(kLeavesId);
+
+    assert.deepEqual(dirtyChunkXs(view), [0, 1, 3]);
+  });
+});

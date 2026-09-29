@@ -47,7 +47,7 @@ function dirtyChunks(
 }
 
 describe("VoxelView - document subscriptions", () => {
-  it("marks every chunk dirty when a block definition changes", () => {
+  it("marks the chunks holding a block dirty when its definition changes", () => {
     const { document, view } = makePair();
     document.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
@@ -57,7 +57,9 @@ describe("VoxelView - document subscriptions", () => {
     assert.equal(dirtyChunks(document), 0);
 
     document.defineBlock(makeBlockDef(CUBE_ID + 1, "cube", { name: "Bark" }));
+    assert.equal(dirtyChunks(document), 0);
 
+    document.defineBlock(makeBlockDef(CUBE_ID, "cube", { name: "Bark" }));
     assert.equal(dirtyChunks(document), 1);
   });
 
@@ -104,7 +106,7 @@ describe("VoxelView - document subscriptions", () => {
     );
   });
 
-  it("marks every chunk dirty when a remote peer removes a block", () => {
+  it("marks the chunks holding a block dirty when a remote peer removes it", () => {
     const { document, view } = makePair();
     document.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },

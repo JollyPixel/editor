@@ -53,7 +53,9 @@ if (typeof globalThis.requestAnimationFrame !== "function") {
   globalThis.requestAnimationFrame = () => 0;
 }
 
-function makePixels(): PixelDocument {
+function makePixels(
+  transparent: () => boolean
+): PixelDocument {
   const canvas = { width: 64, height: 64 };
   const fake = Object.assign(
     new Emitter<Record<string, (...args: unknown[]) => void>>(),
@@ -62,7 +64,7 @@ function makePixels(): PixelDocument {
       size: () => {
         return { x: 64, y: 64 };
       },
-      hasTransparency: () => false
+      hasTransparency: transparent
     }
   );
 
@@ -114,6 +116,7 @@ function makeView(): VoxelView {
 class FakeSources {
   readonly opened = new Map<string, OpenedTileset>();
   readonly released: string[] = [];
+  transparent = false;
 
   open(
     assetId: string
@@ -130,7 +133,7 @@ class FakeSources {
       ]
     });
     const opened: OpenedTileset = {
-      pixels: makePixels(),
+      pixels: makePixels(() => this.transparent),
       tileset,
       room: {} as TilesetRoom,
       ready: Promise.resolve(),
@@ -253,6 +256,55 @@ describe("MapTilesets", () => {
     assert.equal(tilesets.removeBlock(id), true);
     assert.equal(view.document.blocks.has(id), false);
     assert.equal(tilesets.defineBlock({ id: composeBlockId(9, 1), name: "x", shapeId: "cube" }), false);
+  });
+
+  it("writes a block with the alpha mode its pixels need in a single command", async() => {
+    const { view, sources, tilesets } = setup();
+    const opened = sources.opened.get("terrain")!;
+    const id = composeBlockId(1, 1);
+    await opened.ready;
+
+    const actions: string[] = [];
+    opened.tileset.on("command", (command) => actions.push(command.action));
+    sources.transparent = true;
+    tilesets.defineBlock({
+      ...view.document.blocks.get(id)!,
+      name: "leaves"
+    });
+
+    assert.deepEqual(actions, ["block-defined"]);
+    assert.equal(opened.tileset.blocks.get(1)?.alphaMode, "mask");
+    assert.equal(view.document.blocks.get(id)?.alphaMode, "mask");
+  });
+
+  it("keeps the alpha mode of a block written before its tileset loaded", () => {
+    const { view, sources, tilesets } = setup();
+    const id = composeBlockId(1, 1);
+    sources.transparent = true;
+
+    tilesets.defineBlock({
+      ...view.document.blocks.get(id)!,
+      name: "leaves"
+    });
+
+    assert.equal(view.document.blocks.get(id)?.alphaMode, undefined);
+  });
+
+  it("syncs the alpha mode of the blocks a tileset repaint changed", async() => {
+    const { view, sources, tilesets } = setup();
+    const id = composeBlockId(1, 1);
+    await sources.opened.get("terrain")!.ready;
+
+    sources.transparent = true;
+    tilesets.syncAlphaModes("terrain");
+    assert.equal(view.document.blocks.get(id)?.alphaMode, "mask");
+
+    sources.transparent = false;
+    tilesets.syncAlphaModes("terrain", { x: 32, y: 32, width: 4, height: 4 });
+    assert.equal(view.document.blocks.get(id)?.alphaMode, "mask");
+
+    tilesets.syncAlphaModes("terrain", { x: 0, y: 0, width: 4, height: 4 });
+    assert.equal(view.document.blocks.get(id)?.alphaMode, "opaque");
   });
 
   it("routes material groups by their projected id", () => {

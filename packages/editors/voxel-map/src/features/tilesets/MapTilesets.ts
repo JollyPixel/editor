@@ -16,10 +16,15 @@ import {
   type MaterialGroup,
   type VoxelView
 } from "@jolly-pixel/voxel.renderer";
+import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
+import {
+  BlockAlphaModes,
+  type TilesetPixels
+} from "./BlockAlphaModes.ts";
 import { TilesetEntry } from "./TilesetEntry.ts";
 import {
   TilesetBinding,
@@ -76,6 +81,7 @@ export class MapTilesets
   readonly #open: (assetId: string) => OpenedTileset;
   readonly #generateId: () => string;
   readonly #bindings = new Map<string, TilesetBinding>();
+  readonly #alphaModes: BlockAlphaModes;
   readonly #unsubscribe: () => void;
   #entries: readonly TilesetEntry[] = [];
   #activeTilesetId: string | null = null;
@@ -89,6 +95,10 @@ export class MapTilesets
     this.#mapDocument = options.mapDocument;
     this.#open = options.open;
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
+    this.#alphaModes = new BlockAlphaModes({
+      view: this.#view,
+      pixelsOf: (tilesetId) => this.#loadedPixelsOf(tilesetId)
+    });
 
     this.#catalog.on("change", this.refresh);
     this.#unsubscribe = this.#mapDocument.subscribe(
@@ -175,14 +185,22 @@ export class MapTilesets
   defineBlock(
     block: BlockDefinition
   ): boolean {
-    return this.ownerOf(block.id)?.link.defineBlock(block) ?? false;
+    const owner = this.ownerOf(block.id);
+    if (owner === undefined) {
+      return false;
+    }
+
+    return owner.link.defineBlock(
+      this.#alphaModes.resolve(block, owner.definition.id)
+    );
   }
 
-  defineBlocks(
-    blocks: Iterable<BlockDefinition>
+  syncAlphaModes(
+    tilesetId: string,
+    bounds?: SelectionRect
   ): void {
-    for (const block of blocks) {
-      this.defineBlock(block);
+    for (const block of this.#alphaModes.staleIn(tilesetId, bounds)) {
+      this.ownerOf(block.id)?.link.defineBlock(block);
     }
   }
 
@@ -392,6 +410,20 @@ export class MapTilesets
   ): void {
     this.#bindings.delete(tilesetId);
     binding.dispose();
+  }
+
+  #loadedPixelsOf(
+    tilesetId: string
+  ): TilesetPixels | undefined {
+    const binding = this.#bindings.get(tilesetId);
+    if (binding === undefined || !binding.loaded) {
+      return undefined;
+    }
+
+    return {
+      tileSize: binding.opened.tileset.tileSize,
+      pixels: binding.opened.pixels
+    };
   }
 
   #materialGroupOwnerOf(

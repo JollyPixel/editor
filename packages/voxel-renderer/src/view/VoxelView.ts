@@ -14,6 +14,7 @@ import {
   isVoxelTilesetCommand
 } from "../document/commands/categories.ts";
 import type { VoxelCommand } from "../document/commands/types.ts";
+import { markBlockDirty } from "../document/world/editing/markBlockDirty.ts";
 import type {
   VoxelDocument,
   VoxelLoadOptions
@@ -31,6 +32,7 @@ import { ChunkMeshLayout } from "./chunks/ChunkMeshLayout.ts";
 import { ChunkMeshStore } from "./chunks/ChunkMeshStore.ts";
 import { ChunkPipeline } from "./chunks/ChunkPipeline.ts";
 import { ChunkViewport } from "./chunks/ChunkViewport.ts";
+import { BlockReach } from "./chunks/BlockReach.ts";
 import { ChunkMeshWorkers } from "./workers/ChunkMeshWorkers.ts";
 import {
   VoxelLighting,
@@ -129,6 +131,7 @@ export class VoxelView {
   #pipeline: ChunkPipeline;
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
+  #blockReach = new BlockReach();
 
   #onCommand = (
     command: VoxelCommand
@@ -145,11 +148,22 @@ export class VoxelView {
         this.markAllChunksDirty(command.action);
       }
     }
-    else if (
-      command.action === "block-defined" ||
-      command.action === "block-removed" ||
-      isVoxelBlendGroupCommand(command)
-    ) {
+    else if (command.action === "block-defined") {
+      markBlockDirty(
+        this.document.world.getLayers(),
+        command.block.id,
+        this.#blockReach.redefine(command.block)
+      );
+    }
+    else if (command.action === "block-removed") {
+      this.#blockReach.forget(command.blockId);
+      markBlockDirty(
+        this.document.world.getLayers(),
+        command.blockId,
+        true
+      );
+    }
+    else if (isVoxelBlendGroupCommand(command)) {
       this.markAllChunksDirty(command.action);
     }
   };
@@ -167,6 +181,7 @@ export class VoxelView {
       }
     }
     this.#materials.invalidate();
+    this.#blockReach.reset(this.document.blocks.getAll());
     this.#rebuildAllChunks("load");
   };
 
@@ -306,6 +321,7 @@ export class VoxelView {
       }
     }
 
+    this.#blockReach.reset(blocks.getAll());
     document.on("command", this.#onCommand);
     document.on("loaded", this.#onLoaded);
   }

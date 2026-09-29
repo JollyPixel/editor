@@ -300,3 +300,68 @@ describe("ChunkMaterialCache — vertex pulling", () => {
     assert.ok((material as { colorNode?: unknown; }).colorNode);
   });
 });
+
+describe("ChunkMaterialCache — release", () => {
+  it("keeps a released material for the next chunk resolving its key", () => {
+    const cache = makeCache();
+    const material = cache.resolve(keyOf("atlas", kBlend));
+    let disposed = false;
+    material.addEventListener("dispose", () => {
+      disposed = true;
+    });
+
+    cache.retain(material);
+    cache.release(material);
+
+    assert.equal(disposed, false);
+    assert.equal(cache.resolve(keyOf("atlas", kBlend)), material);
+  });
+
+  it("disposes the oldest released material past sixteen idle ones", () => {
+    const cache = makeCache();
+    const materials = Array.from({ length: 17 }, (_, index) => {
+      const material = cache.resolve(keyOf(
+        "atlas",
+        new BlockSurface({ alphaMode: "mask", alphaCutoff: index / 100 })
+      ));
+      cache.retain(material);
+
+      return material;
+    });
+    const disposed = new Set<THREE.Material>();
+    for (const material of materials) {
+      material.addEventListener("dispose", () => disposed.add(material));
+    }
+
+    for (const material of materials) {
+      cache.release(material);
+    }
+
+    assert.deepEqual([...disposed], [materials[0]]);
+    assert.notEqual(
+      cache.resolve(keyOf("atlas", new BlockSurface({ alphaMode: "mask", alphaCutoff: 0 }))),
+      materials[0]
+    );
+  });
+
+  it("stops treating a material as idle once a chunk retains it again", () => {
+    const cache = makeCache();
+    const material = cache.resolve(keyOf("atlas", kBlend));
+    cache.retain(material);
+    cache.release(material);
+    cache.retain(material);
+
+    const disposed: THREE.Material[] = [];
+    material.addEventListener("dispose", () => disposed.push(material));
+    for (let index = 0; index < 17; index++) {
+      const other = cache.resolve(keyOf(
+        "atlas",
+        new BlockSurface({ alphaMode: "mask", alphaCutoff: index / 100 })
+      ));
+      cache.retain(other);
+      cache.release(other);
+    }
+
+    assert.deepEqual(disposed, []);
+  });
+});
