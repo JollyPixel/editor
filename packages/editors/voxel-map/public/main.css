@@ -54,6 +54,11 @@ jolly-pane[key="paint"]::part(content) {
   outline: none;
 }
 
+html.template-dragging,
+html.template-dragging * {
+  cursor: grabbing !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

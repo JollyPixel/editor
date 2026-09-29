@@ -96,6 +96,10 @@ The layout adopts it on the next sync, stores its geometry in the layout
 snapshot, and the window drags into any dock or pane group like an authored
 pane. `key` is what the snapshot and the groups address it by.
 
+Docking removes the window and floating again creates a new one, so
+`pane.element` can be detached. `hidden` and `dispose()` follow the pane
+instead: they act on its current window, or on the `jolly-pane` while docked.
+
 ## Contributing to a pane the facade did not create
 
 `Pane` always creates a `jolly-pane`. To add builders inside one that already
@@ -134,10 +138,11 @@ no element.
 | `addPresence(options?)` | `Presence` | Appends a `jolly-presence`. |
 | `refresh()` | `void` | Re-reads bindings and monitors created through this pane. |
 | `disposeAll()` | `void` | Disposes direct child builders and clears the child list. |
-| `dispose()` | `void` | Removes `element`. |
+| `dispose()` | `void` | Removes `element` and the pane's current host. |
 
 `hidden` and `disabled` read and write the corresponding state on
-`pane.element`. `dispose()` also removes the `jolly-scope` a floating pane
+`pane.element`, except that `hidden` targets the current host of a pane owned
+by a dock layout. `dispose()` also removes the `jolly-scope` a floating pane
 created.
 
 ## Presence

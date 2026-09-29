@@ -36,8 +36,8 @@ import "./BlockMaterialFinish.ts";
 
 // CONSTANTS
 const kAlphaModeOptions: JollyOption<BlockAlphaMode>[] = [
-  { label: "Blended", value: "blend" },
-  { label: "Cutout", value: "mask" }
+  { label: "Cutout", value: "mask" },
+  { label: "Blended", value: "blend" }
 ];
 const kSideOptions: JollyOption<BlockSide>[] = [
   { label: "Outside", value: "front" },
@@ -200,7 +200,7 @@ export class BlockEditDialog extends WorkspaceElement {
       <jolly-separator label="Transparency"></jolly-separator>
       <jolly-button-group
         label="Alpha"
-        description="Blended follows the tile pixels; Cutout keeps hard edges"
+        description="Cutout keeps hard edges; Blended follows the tile pixels"
         .options=${kAlphaModeOptions}
         .value=${alphaMode}
         @jolly-change=${this.#onAlphaModeChange}

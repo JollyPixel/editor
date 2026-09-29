@@ -20,6 +20,7 @@ export const CHROME_EXAMPLE: GalleryExample = {
       section("Button variants", buttonRow()),
       section("Disabled and icon only", iconRow()),
       separator("Grouping"),
+      separatorWithActions("Actions"),
       section("Property row", propertyRow())
     );
 
@@ -85,6 +86,28 @@ function separator(
 ): HTMLElement {
   const element = document.createElement("jolly-separator");
   element.label = label;
+
+  return element;
+}
+
+function separatorWithActions(
+  label: string
+): HTMLElement {
+  const element = separator(label);
+
+  const add = document.createElement("jolly-button");
+  add.slot = "actions";
+  add.icon = "plus";
+  add.label = "Add";
+  add.iconOnly = true;
+
+  const revert = document.createElement("jolly-button");
+  revert.slot = "actions";
+  revert.icon = "revert";
+  revert.label = "Revert";
+  revert.iconOnly = true;
+
+  element.append(add, revert);
 
   return element;
 }

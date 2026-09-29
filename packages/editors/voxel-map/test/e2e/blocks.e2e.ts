@@ -154,25 +154,25 @@ test("a transparent block edits its alpha mode and its sides", async({ page }) =
 
   await eraseBlockTile(page, 1);
   await expect.poll(() => blockSurface(page, 1))
-    .toEqual({ alphaMode: "blend", side: undefined });
+    .toEqual({ alphaMode: "mask", side: undefined });
 
   await openPane(page, "Blocks");
   await library.getByRole("option", { name: first, exact: true }).dblclick();
 
   await expect(editor.getByText("Transparency")).toBeVisible();
-  await expect(alpha.getByRole("radio", { name: "Blended" }))
+  await expect(alpha.getByRole("radio", { name: "Cutout" }))
     .toHaveAttribute("aria-checked", "true");
   await expect(alpha.getByRole("radio", { name: "Opaque" })).toHaveCount(0);
 
-  await alpha.getByRole("radio", { name: "Cutout" }).click();
+  await alpha.getByRole("radio", { name: "Blended" }).click();
   await expect.poll(() => blockSurface(page, 1))
-    .toEqual({ alphaMode: "mask", side: undefined });
+    .toEqual({ alphaMode: "blend", side: undefined });
 
   await buttonGroup(editor, "Sides")
     .getByRole("radio", { name: "Both" })
     .click();
   await expect.poll(() => blockSurface(page, 1))
-    .toEqual({ alphaMode: "mask", side: "double" });
+    .toEqual({ alphaMode: "blend", side: "double" });
 });
 
 test("a lone tileset leaves the tileset field disabled", async({ page }) => {

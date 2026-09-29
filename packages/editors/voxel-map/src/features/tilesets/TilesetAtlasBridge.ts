@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import type {
-  ResolvedBlockDefinition,
   TilesetAtlas,
   TilesetDefinition,
   TilesetDocument,
@@ -16,7 +15,6 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
-import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
 import { TilesetEntry } from "./TilesetEntry.ts";
 import type { BlockWriter } from "./TilesetBinding.ts";
 
@@ -43,7 +41,6 @@ export class TilesetAtlasBridge {
   #dirty: SelectionRect | null = null;
   #pendingTransparency: SelectionRect | null = null;
   #needsFullSync = false;
-  #syncing = false;
   #running = true;
 
   readonly #onChanged = (event: { bounds: SelectionRect; }): void => {
@@ -62,10 +59,8 @@ export class TilesetAtlasBridge {
     }
   };
 
-  readonly #onBlockRegistryChanged = (): void => {
-    if (!this.#syncing) {
-      this.syncTransparency();
-    }
+  readonly #onReset = (): void => {
+    this.syncAlphaModes();
   };
 
   readonly #tick = (): void => {
@@ -95,8 +90,8 @@ export class TilesetAtlasBridge {
     this.#tileset.on("loaded", this.#onSurfaceChanged);
     this.#tileset.on("command", this.#onTilesetCommand);
     this.#unsubscribe = this.#mapDocument.subscribe(
-      "blockRegistryChanged",
-      this.#onBlockRegistryChanged
+      "reset",
+      this.#onReset
     );
 
     this.#bind();
@@ -121,50 +116,14 @@ export class TilesetAtlasBridge {
     }
 
     this.#atlas.updateImage(this.#pixels.buffer.canvas());
-    this.syncTransparency();
+    this.syncAlphaModes();
   }
 
-  syncTransparency(
+  syncAlphaModes(
     bounds?: SelectionRect
   ): void {
-    if (!this.#mapDocument.ready) {
-      return;
-    }
-
-    const view = this.#view;
-    const affected = findBlocksReferencingTileset(
-      view.document.blocks.getAll(),
-      (shapeId) => view.shapes.get(shapeId),
-      this.#definition.id,
-      this.#tileset.tileSize
-    );
-
-    const updates: ResolvedBlockDefinition[] = [];
-    for (const { block, rects, geometries } of affected) {
-      if (bounds && !rects.some((rect) => rectsIntersect(rect, bounds))) {
-        continue;
-      }
-
-      const transparent = geometries.some(
-        (geometry) => this.#pixels.hasTransparency(geometry)
-      );
-      const alphaMode = transparent ? "blend" : "opaque";
-      if (
-        block.alphaMode === "mask" ||
-        alphaMode === (block.alphaMode ?? "opaque")
-      ) {
-        continue;
-      }
-
-      updates.push({ ...block, alphaMode });
-    }
-
-    this.#syncing = true;
-    try {
-      this.#blocks.defineBlocks(updates);
-    }
-    finally {
-      this.#syncing = false;
+    if (this.#running && this.#mapDocument.ready) {
+      this.#blocks.syncAlphaModes(this.#definition.id, bounds);
     }
   }
 
@@ -214,7 +173,7 @@ export class TilesetAtlasBridge {
     const bounds = this.#pendingTransparency;
     if (bounds !== null) {
       this.#pendingTransparency = null;
-      this.syncTransparency(bounds);
+      this.syncAlphaModes(bounds);
     }
   }
 
@@ -266,14 +225,4 @@ function rectsUnion(
     width: Math.max(a.x + a.width, b.x + b.width) - x,
     height: Math.max(a.y + a.height, b.y + b.height) - y
   };
-}
-
-function rectsIntersect(
-  a: SelectionRect,
-  b: SelectionRect
-): boolean {
-  return a.x < b.x + b.width &&
-    b.x < a.x + a.width &&
-    a.y < b.y + b.height &&
-    b.y < a.y + a.height;
 }

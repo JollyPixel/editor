@@ -2,7 +2,6 @@
 import {
   LitElement,
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -24,9 +23,6 @@ export class Separator extends LitElement {
     hiddenStyles
   ];
 
-  /**
-   * Caption for the divider; absent captions make it decorative.
-   */
   @property({ type: String })
   declare label: string;
 
@@ -37,6 +33,15 @@ export class Separator extends LitElement {
   }
 
   override render(): TemplateResult {
+    return html`
+      <div class="row">
+        ${this.#renderRule()}
+        <slot name="actions"></slot>
+      </div>
+    `;
+  }
+
+  #renderRule(): TemplateResult {
     if (this.label === "") {
       return html`
         <div class="unlabelled" role="separator">
@@ -51,7 +56,6 @@ export class Separator extends LitElement {
         <span class="caption">${this.label}</span>
         <span class="rule" aria-hidden="true"></span>
       </div>
-      ${nothing}
     `;
   }
 }

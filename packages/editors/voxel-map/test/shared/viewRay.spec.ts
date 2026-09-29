@@ -8,7 +8,8 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   castViewRay,
-  viewFocusPoint
+  viewFocusPoint,
+  viewportPointer
 } from "../../src/shared/viewRay.ts";
 
 function createCamera(
@@ -151,3 +152,28 @@ describe("viewFocusPoint", () => {
   });
 });
 
+describe("viewportPointer", () => {
+  const rect = {
+    left: 100,
+    top: 50,
+    width: 200,
+    height: 100
+  };
+
+  test("maps the viewport corners and center to normalized device coordinates", () => {
+    assert.deepEqual(viewportPointer(rect, 100, 50)?.toArray(), [-1, 1]);
+    assert.deepEqual(viewportPointer(rect, 300, 150)?.toArray(), [1, -1]);
+    assert.deepEqual(viewportPointer(rect, 200, 100)?.toArray(), [0, 0]);
+  });
+
+  test("returns null outside the viewport", () => {
+    assert.equal(viewportPointer(rect, 99, 100), null);
+    assert.equal(viewportPointer(rect, 301, 100), null);
+    assert.equal(viewportPointer(rect, 200, 49), null);
+    assert.equal(viewportPointer(rect, 200, 151), null);
+  });
+
+  test("returns null for an empty viewport", () => {
+    assert.equal(viewportPointer({ ...rect, width: 0 }, 100, 100), null);
+  });
+});

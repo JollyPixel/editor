@@ -401,7 +401,8 @@ replaces.
 | document | view |
 | --- | --- |
 | `command`, tileset actions | re-syncs the atlases, invalidates their materials, marks every chunk dirty |
-| `command`, `block-defined` / `block-removed` | marks every chunk dirty |
+| `command`, `block-defined` | marks the chunks holding the block dirty, plus the chunks next to them when its shape, occlusion, face culling or blend group changed |
+| `command`, `block-removed` | marks the chunks holding the block and the chunks next to them dirty |
 | `command`, material group actions | updates the group's materials, marks every chunk dirty when one is replaced |
 | `loaded` | clears the meshes, re-syncs atlases, rebuilds everything |
 

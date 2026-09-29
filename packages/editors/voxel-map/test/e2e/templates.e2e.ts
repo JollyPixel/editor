@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
-import { pressAt } from "@jolly-pixel/e2e";
+import {
+  centerOf,
+  pressAt
+} from "@jolly-pixel/e2e";
 import {
   nextFrames,
   waitForEditor
@@ -165,6 +168,40 @@ test("a layer is turned with its marquee and committed with Enter", async({ page
   await expect.poll(() => placement(page)).toBeNull();
   expect(await voxelCount(page)).toBe(3);
   expect(await blocksAt(page, turned!.cells)).toEqual([1, 1, 1]);
+});
+
+test("double-clicking a template row renames it", async({ page }) => {
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+
+  await page.getByRole("button", { name: "Save layer as template" }).click();
+  await page.locator("template-manager [role=\"treeitem\"] .label").dblclick();
+
+  const rename = page.locator("template-manager").getByRole("textbox", { name: "Rename" });
+  await rename.fill("House");
+  await rename.press("Enter");
+
+  await expect.poll(() => templateNames(page)).toEqual(["House"]);
+  expect(await placement(page)).toBeNull();
+});
+
+test("a template row dragged into the viewport is staged at the hovered cell", async({ page }) => {
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await pinCamera(page);
+
+  await page.getByRole("button", { name: "Save layer as template" }).click();
+  const row = page.locator("template-manager [role=\"treeitem\"]");
+  await pressAt(page, [
+    await centerOf(row),
+    await cellTopPoint(page, { x: 3, y: 0, z: 0 })
+  ], { settle: nextFrames });
+
+  await expect.poll(async() => (await placement(page))?.position)
+    .toEqual({ x: 3, y: 0, z: 0 });
+  const staged = await placement(page);
+
+  await page.getByRole("button", { name: "Commit into Ground" }).click();
+  await expect.poll(() => placement(page)).toBeNull();
+  expect(await blocksAt(page, staged!.cells)).toEqual([1]);
 });
 
 test("a saved template reaches a peer and survives a reload", async({ page, peer }) => {

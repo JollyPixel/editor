@@ -17,6 +17,7 @@ import type { MaterialGroupList } from "../../document/materials/MaterialGroupLi
 
 // CONSTANTS
 const kCoveredFaceOffset = -1;
+const kMaxIdleMaterials = 16;
 
 export type ChunkMaterial =
   | THREE.MeshLambertMaterial
@@ -70,6 +71,7 @@ export class ChunkMaterialCache {
   #materials = new Map<string, ChunkMaterial>();
   #entries = new Map<THREE.Material, ChunkMaterialEntry>();
   #references = new Map<THREE.Material, number>();
+  #idle = new Set<THREE.Material>();
   #atlases: TilesetAtlases;
   #materialGroups: MaterialGroupList | undefined;
   #type: "lambert" | "standard";
@@ -133,6 +135,7 @@ export class ChunkMaterialCache {
   retain(
     material: THREE.Material
   ): void {
+    this.#idle.delete(material);
     this.#references.set(
       material,
       (this.#references.get(material) ?? 0) + 1
@@ -148,12 +151,10 @@ export class ChunkMaterialCache {
 
       return;
     }
-    if (this.#entries.has(material)) {
-      this.#evict(material);
-
-      return;
-    }
     this.#references.delete(material);
+    if (this.#entries.has(material)) {
+      this.#park(material);
+    }
   }
 
   refreshGroup(
@@ -267,6 +268,7 @@ export class ChunkMaterialCache {
     this.#materials.clear();
     this.#entries.clear();
     this.#references.clear();
+    this.#idle.clear();
   }
 
   #usesStandard(
@@ -275,9 +277,20 @@ export class ChunkMaterialCache {
     return this.#type === "standard" || group !== undefined;
   }
 
+  #park(
+    material: THREE.Material
+  ): void {
+    this.#idle.add(material);
+    if (this.#idle.size > kMaxIdleMaterials) {
+      const [oldest] = this.#idle;
+      this.#evict(oldest);
+    }
+  }
+
   #evict(
     material: THREE.Material
   ): void {
+    this.#idle.delete(material);
     const entry = this.#entries.get(material);
     if (entry !== undefined) {
       this.#materials.delete(entry.key);

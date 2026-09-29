@@ -316,3 +316,34 @@ registerIcon("transform", svg`
     stroke-linejoin="round"
   />
 `, { tone: "violet" });
+
+registerIcon("rebase", svg`
+  <path
+    class="tone-fill"
+    d="M7.5 9.5h7v7h-7z"
+  />
+  <path
+    d="M7.5 9.5h7v7h-7z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M4 3v17h17"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    class="tone-ink"
+    d="M20.5 3.5 16 8M15.5 4.5v4h4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });

@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import type {
+  PixelDocument,
+  SelectionRect
+} from "@jolly-pixel/pixel-draw.renderer";
 import {
   TilesetLink,
   type BlockDefinition,
@@ -37,7 +40,7 @@ export interface OpenedTileset {
 
 export interface BlockWriter {
   defineBlock(block: BlockDefinition): void;
-  defineBlocks(blocks: Iterable<BlockDefinition>): void;
+  syncAlphaModes(tilesetId: string, bounds?: SelectionRect): void;
 }
 
 export interface TilesetBindingOptions {
@@ -55,6 +58,7 @@ export class TilesetBinding {
   readonly link: TilesetLink;
   readonly #atlas: TilesetAtlasBridge;
   #definition: TilesetDefinition;
+  #loaded = false;
 
   constructor(
     options: TilesetBindingOptions
@@ -77,6 +81,14 @@ export class TilesetBinding {
       mapDocument: options.mapDocument,
       blocks: options.blocks
     });
+    void opened.ready.then(() => {
+      this.#loaded = true;
+      this.#atlas.syncAlphaModes();
+    });
+  }
+
+  get loaded(): boolean {
+    return this.#loaded;
   }
 
   get slot(): TilesetSlot {

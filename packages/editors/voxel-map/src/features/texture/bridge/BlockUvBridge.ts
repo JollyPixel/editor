@@ -21,19 +21,21 @@ export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
   brush: BrushStore;
   mapDocument: MapDocumentSignals;
-  blocks?: BlockWriter;
+  blocks?: Pick<BlockWriter, "defineBlock">;
 }
 
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #view: VoxelView;
-  readonly #blocks: BlockWriter;
+  readonly #blocks: Pick<BlockWriter, "defineBlock">;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
   #tilesetId: string | null = null;
   #tileSize = 1;
   #rebuilding = false;
   #applying = false;
+  #dragged: UVRegion | null = null;
+  #dragFrame: number | null = null;
   #unsubscribeRegistry: () => void;
 
   constructor(
@@ -52,6 +54,7 @@ export class BlockUvBridge {
 
     this.#uv.on("region-moved", this.#onRegionMoved);
     this.#uv.on("region-dragging", this.#onRegionDragging);
+    this.#uv.on("region-drag-ended", this.#flushDrag);
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
     this.#uv.on("region-rotated", this.#onRegionRotated);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
@@ -74,8 +77,10 @@ export class BlockUvBridge {
   }
 
   dispose(): void {
+    this.#cancelDrag();
     this.#uv.off("region-moved", this.#onRegionMoved);
     this.#uv.off("region-dragging", this.#onRegionDragging);
+    this.#uv.off("region-drag-ended", this.#flushDrag);
     this.#uv.off("region-state-changed", this.#onRegionStateChanged);
     this.#uv.off("region-rotated", this.#onRegionRotated);
     this.#uv.off("region-deleted", this.#onRegionDeleted);
@@ -159,6 +164,10 @@ export class BlockUvBridge {
   #applyRegionToBlock(
     region: UVRegion
   ): void {
+    if (this.#dragged?.id === region.id) {
+      this.#cancelDrag();
+    }
+
     const blockId = BlockUv.blockIdOf(region.id);
     if (blockId === null) {
       return;
@@ -187,6 +196,10 @@ export class BlockUvBridge {
   };
 
   readonly #onRegionMoved: UVMapListener<"region-moved"> = (event) => {
+    if (this.#dragged?.id === event.region.id) {
+      this.#cancelDrag();
+    }
+
     const block = this.#blockOf(event.region.id);
     if (!block || BlockUv.sameRegion(this.#regionFor(block), event.region)) {
       return;
@@ -200,22 +213,41 @@ export class BlockUvBridge {
       return;
     }
 
-    const block = this.#blockOf(event.id);
     const region = this.#uv.get(event.id);
-    if (!block || !region) {
+    if (!region || !this.#blockOf(event.id)) {
       return;
     }
 
-    const dragged = region.withRect(
+    if (this.#dragged !== null && this.#dragged.id !== event.id) {
+      this.#flushDrag();
+    }
+    this.#dragged = region.withRect(
       event.rect,
       event.face ?? undefined
     );
-    if (BlockUv.sameRegion(this.#regionFor(block), dragged)) {
+    this.#dragFrame ??= requestAnimationFrame(this.#flushDrag);
+  };
+
+  readonly #flushDrag = (): void => {
+    const dragged = this.#dragged;
+    this.#cancelDrag();
+    if (dragged === null) {
       return;
     }
 
-    this.#applyRegionToBlock(dragged);
+    const block = this.#blockOf(dragged.id);
+    if (block && !BlockUv.sameRegion(this.#regionFor(block), dragged)) {
+      this.#applyRegionToBlock(dragged);
+    }
   };
+
+  #cancelDrag(): void {
+    if (this.#dragFrame !== null) {
+      cancelAnimationFrame(this.#dragFrame);
+      this.#dragFrame = null;
+    }
+    this.#dragged = null;
+  }
 
   readonly #onRegionStateChanged: UVMapListener<
     "region-state-changed"

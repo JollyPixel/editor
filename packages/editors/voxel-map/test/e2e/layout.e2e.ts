@@ -169,3 +169,19 @@ test("the performance readout merges into the pane group it is dropped on", asyn
     ["general", kPerformancePane, "blocks", "paint", "layers"]
   ]);
 });
+
+test("the performance toggle key still toggles the readout once docked", async({ page }) => {
+  await page.keyboard.press(kPerformanceToggleKey);
+  const readout = page.locator(`jolly-pane[key='${kPerformancePane}']`);
+  await expect(readout).toBeVisible();
+
+  await dragPaneToTab(page, readout, "General");
+  await expect(
+    page.locator(`jolly-dock[key='left'] jolly-pane[key='${kPerformancePane}']`)
+  ).toBeVisible();
+
+  await page.keyboard.press(kPerformanceToggleKey);
+  await expect(readout).toBeHidden();
+  await page.keyboard.press(kPerformanceToggleKey);
+  await expect(readout).toBeVisible();
+});

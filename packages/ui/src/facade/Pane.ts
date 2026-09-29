@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import "../containers/pane/Pane.ts";
-import "../containers/floating/Floating.ts";
 import "../theme/components/ScopeHost.ts";
+import { Floating } from "../containers/floating/Floating.ts";
 import { FacadeContainer } from "./Container.ts";
 import { documentThemeMode } from "../theme/ambientTheme.ts";
 import type {
@@ -79,6 +79,7 @@ export class Pane extends FacadeContainer {
   readonly element: HTMLElement;
 
   #pane: HTMLElementTagNameMap["jolly-pane"];
+  #floating: boolean;
   #scope: HTMLElement | null = null;
 
   constructor(
@@ -97,6 +98,8 @@ export class Pane extends FacadeContainer {
     this.#pane.storageKey = options.storageKey ?? "";
     this.#pane.floatWidth = options.floatWidth;
     this.#pane.floatHeight = options.floatHeight;
+    this.#floating = options.container === undefined ||
+      options.floating === true;
 
     this.element = options.container === undefined
       ? this.#mountFloating(
@@ -121,8 +124,24 @@ export class Pane extends FacadeContainer {
     this.#pane.presence = value;
   }
 
+  override get hidden(): boolean {
+    return Boolean(this.#pane.hidden || this.#host().hidden);
+  }
+
+  override set hidden(
+    value: boolean
+  ) {
+    const host = this.#host();
+    host.hidden = value;
+    if (host !== this.#pane) {
+      this.#pane.hidden = false;
+    }
+  }
+
   override dispose(): void {
+    const host = this.#host();
     super.dispose();
+    host.remove();
     this.#scope?.remove();
     this.#scope = null;
   }
@@ -135,6 +154,12 @@ export class Pane extends FacadeContainer {
     options: FolderOptions
   ): FacadeFolder {
     return new FacadeFolder(options);
+  }
+
+  #host(): HTMLElement {
+    const parent = this.#pane.parentElement;
+
+    return this.#floating && parent instanceof Floating ? parent : this.#pane;
   }
 
   #mountInto(

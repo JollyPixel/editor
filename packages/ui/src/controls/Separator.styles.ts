@@ -14,9 +14,17 @@ export const separatorStyles = css`
     background: var(--jolly-divider);
   }
 
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--jolly-space-1, 4px);
+  }
+
   .labelled,
   .unlabelled {
+    flex: 1 1 auto;
     align-items: center;
+    min-width: 0;
     min-height: var(--jolly-row-height, 20px);
     margin-block-start: calc(var(--jolly-space-1, 4px) / 2);
   }
@@ -32,6 +40,11 @@ export const separatorStyles = css`
 
   .unlabelled {
     display: flex;
+  }
+
+  ::slotted([slot="actions"]) {
+    flex: 0 0 auto;
+    margin-block-start: calc(var(--jolly-space-1, 4px) / 2);
   }
 
   .labelled .rule {
