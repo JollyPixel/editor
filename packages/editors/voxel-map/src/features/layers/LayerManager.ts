@@ -181,6 +181,7 @@ export class LayerManager extends WorkspaceElement {
         return html`<layer-panel
           .world=${world}
           .selection=${workspace.state.selection}
+          .placement=${workspace.placement}
           .mapDocument=${workspace.mapDocument}
           .layerName=${selection.name}
         ></layer-panel>`;

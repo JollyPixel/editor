@@ -16,7 +16,9 @@ import {
   AreaBox,
   BoxControls,
   Grid,
+  type Axis,
   type BoxAxisPolicy,
+  type BoxFlipPolicy,
   type AreaBoxOptions
 } from "../../src/index.ts";
 import {
@@ -36,6 +38,16 @@ const kAxisOptions: Record<string, BoxAxisPolicy> = {
   "Ground (XZ)": "xz",
   "Volume (XYZ)": "xyz"
 };
+const kFlipOptions: Record<string, BoxFlipPolicy> = {
+  None: "none",
+  "Ground (XZ)": "xz",
+  "Volume (XYZ)": "xyz"
+};
+const kPivotOptions: Record<string, PivotMode> = {
+  Center: "center",
+  "Min corner": "corner"
+};
+const kUp = new THREE.Vector3(0, 1, 0);
 const kBounds = new THREE.Box3(
   new THREE.Vector3(-16, 0, -16),
   new THREE.Vector3(16, 8, 16)
@@ -46,6 +58,8 @@ const kCoordRange = { min: -20, max: 20, step: 1 };
 const kOpacityRange = { min: 0, max: 1, step: 0.05 };
 const kEdgeWidthRange = { min: 1, max: 6, step: 1 };
 const kLabelWidth = "13ch";
+
+type PivotMode = "center" | "corner";
 
 const {
   canvas,
@@ -84,7 +98,9 @@ scene.add(new Grid({
 const controls = new BoxControls<AreaBox>(camera, canvas, {
   snap: 1,
   moveAxes: "xyz",
-  resizeAxes: "xz"
+  resizeAxes: "xz",
+  rotateAxes: "y",
+  flipAxes: "xz"
 });
 
 const areas: AreaBox[] = [];
@@ -117,6 +133,9 @@ const settings = {
   snap: 1,
   moveAxes: "xyz" as BoxAxisPolicy,
   resizeAxes: "xz" as BoxAxisPolicy,
+  rotate: true,
+  flipAxes: "xz" as BoxFlipPolicy,
+  pivot: "center" as PivotMode,
   bounded: false
 };
 const readout = {
@@ -177,6 +196,25 @@ interactionFolder
       select(area);
     }
   });
+interactionFolder
+  .addBinding(settings, "rotate", { label: "Rotate" })
+  .on("change", ({ value }) => {
+    controls.rotateAxes = value ? "y" : "none";
+  });
+interactionFolder
+  .addBinding(settings, "flipAxes", {
+    options: kFlipOptions,
+    label: "Flip axes"
+  })
+  .on("change", ({ value }) => {
+    controls.flipAxes = value;
+  });
+interactionFolder
+  .addBinding(settings, "pivot", {
+    options: kPivotOptions,
+    label: "Pivot"
+  })
+  .on("change", syncPivot);
 interactionFolder
   .addBinding(settings, "bounded", { label: "Clamp to bounds" })
   .on("change", ({ value }) => {
@@ -306,7 +344,63 @@ function select(
     controls.attach(area, { from });
   }
 
+  syncPivot();
   refreshReadout();
+}
+
+function syncPivot(): void {
+  const { box: area } = controls;
+  controls.pivot = settings.pivot === "corner" && area !== null
+    ? area.position.clone()
+    : null;
+}
+
+function pivotOf(
+  area: AreaBox
+): THREE.Vector3 {
+  return controls.pivot?.clone() ??
+    area.toBox3().getCenter(new THREE.Vector3());
+}
+
+function snapToGrid(
+  box: THREE.Box3
+): THREE.Box3 {
+  if (settings.snap > 0) {
+    for (const point of [box.min, box.max]) {
+      point.divideScalar(settings.snap).round().multiplyScalar(settings.snap);
+    }
+  }
+
+  return box;
+}
+
+function turnArea(
+  area: AreaBox,
+  turns: number
+): void {
+  const pivot = pivotOf(area);
+  const { min, max } = area.toBox3();
+  const corners = [min, max].map((corner) => corner
+    .sub(pivot)
+    .applyAxisAngle(kUp, turns * Math.PI / 2)
+    .add(pivot)
+  );
+
+  area.fromBox3(snapToGrid(new THREE.Box3().setFromPoints(corners)));
+}
+
+function mirrorArea(
+  area: AreaBox,
+  axis: Axis
+): void {
+  const pivot = pivotOf(area);
+  const box = area.toBox3();
+  const min = (pivot[axis] * 2) - box.max[axis];
+  const max = (pivot[axis] * 2) - box.min[axis];
+  box.min[axis] = min;
+  box.max[axis] = max;
+
+  area.fromBox3(snapToGrid(box));
 }
 
 const raycaster = new THREE.Raycaster();
@@ -338,7 +432,20 @@ controls.addEventListener("start", () => {
 });
 controls.addEventListener("end", () => {
   orbit.enabled = true;
+  syncPivot();
   refreshReadout();
+});
+controls.addEventListener("rotate", ({ turns }) => {
+  if (controls.box !== null) {
+    turnArea(controls.box, turns);
+    refreshReadout();
+  }
+});
+controls.addEventListener("flip", ({ axis }) => {
+  if (controls.box !== null) {
+    mirrorArea(controls.box, axis);
+    refreshReadout();
+  }
 });
 controls.addEventListener("change", refreshReadout);
 

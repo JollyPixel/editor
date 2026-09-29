@@ -4,8 +4,10 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   type Axis,
+  type AxisSign,
   AXIS_DIRECTION
 } from "../../common/axes.ts";
+import { eyeDirection } from "../../common/eyeDirection.ts";
 import { PointerDrag } from "../../common/PointerDrag.ts";
 import type { SnapStep } from "../../common/snap.ts";
 import type { BoxVolume } from "../BoxVolume.ts";
@@ -16,12 +18,18 @@ import {
 import {
   type BoxAxisPolicy,
   type BoxDragMode,
+  type BoxFlipPolicy,
   type BoxResizePolicy,
+  type BoxRotatePolicy,
   axisPolicyIncludes
 } from "../types.ts";
 import { AxisConstraints } from "./AxisConstraints.ts";
-import { BoxHandles } from "./BoxHandles.ts";
+import {
+  BoxHandleSet,
+  type BoxHandlePick
+} from "./BoxHandleSet.ts";
 import { closestPointOnAxis } from "./projection.ts";
+import { RotateDrag } from "./RotateDrag.ts";
 import {
   moveAxis,
   resizeAxis
@@ -30,6 +38,7 @@ import {
 // CONSTANTS
 const kGroundAxes: readonly Axis[] = ["x", "z"];
 const kVerticalAxes: readonly Axis[] = ["y"];
+const kDefaultHandleSize = 0.035;
 
 const _pointer = new THREE.Vector2();
 const _bounds = new THREE.Box3();
@@ -38,6 +47,10 @@ const _point = new THREE.Vector3();
 const _size = new THREE.Vector3();
 const _axisOrigin = new THREE.Vector3();
 const _normal = new THREE.Vector3();
+const _pivot = new THREE.Vector3();
+const _corner = new THREE.Vector3();
+const _eye = new THREE.Vector3();
+const _world = new THREE.Vector3();
 
 interface MoveSession {
   mode: "move";
@@ -58,7 +71,29 @@ interface ResizeSession extends BoxFace {
   faceOffset: number;
 }
 
-type DragSession = MoveSession | ResizeSession;
+interface RotateSession {
+  mode: "rotate";
+  axis: "y";
+  moved: boolean;
+  drag: RotateDrag;
+}
+
+interface FlipSession {
+  mode: "flip";
+  axis: Axis;
+  moved: boolean;
+}
+
+type DragSession = MoveSession | ResizeSession | RotateSession | FlipSession;
+
+export interface BoxRotateEvent {
+  axis: "y";
+  turns: AxisSign;
+}
+
+export interface BoxFlipEvent {
+  axis: Axis;
+}
 
 export interface BoxDragEvent {
   mode: BoxDragMode;
@@ -76,6 +111,8 @@ export interface BoxControlsEventMap {
    * Emitted once per effective move or resize step.
    */
   change: BoxDragEvent;
+  rotate: BoxRotateEvent;
+  flip: BoxFlipEvent;
   end: BoxDragEvent;
 }
 
@@ -101,6 +138,9 @@ export interface BoxControlsOptions {
   bounds?: THREE.Box3 | null;
   moveAxes?: BoxAxisPolicy;
   resizeAxes?: BoxResizePolicy;
+  rotateAxes?: BoxRotatePolicy;
+  flipAxes?: BoxFlipPolicy;
+  pivot?: THREE.Vector3 | null;
   /**
    * Arrow size as a fraction of viewport height.
    */
@@ -108,7 +148,7 @@ export interface BoxControlsOptions {
 }
 
 /**
- * Pointer controls for moving and resizing one `BoxVolume`.
+ * Pointer controls for moving, resizing, turning and mirroring one `BoxVolume`.
  */
 export class BoxControls<
   TBox extends BoxVolume = BoxVolume
@@ -117,8 +157,9 @@ export class BoxControls<
   minSize: THREE.Vector3Like | null;
   bounds: THREE.Box3 | null;
   moveAxes: BoxAxisPolicy;
+  pivot: THREE.Vector3 | null;
 
-  #handles: BoxHandles;
+  #handles: BoxHandleSet;
   #drag: PointerDrag;
   #raycaster = new THREE.Raycaster();
   #box: TBox | null = null;
@@ -141,26 +182,33 @@ export class BoxControls<
       bounds = null,
       moveAxes = "xz",
       resizeAxes = "xz",
-      handleSize
+      rotateAxes = "none",
+      flipAxes = "none",
+      pivot = null,
+      handleSize = kDefaultHandleSize
     } = options;
 
     this.snap = snap;
     this.minSize = minSize;
     this.bounds = bounds;
     this.moveAxes = moveAxes;
+    this.pivot = pivot;
 
-    this.#handles = new BoxHandles({
+    this.#handles = new BoxHandleSet({
       camera,
-      handleSize
+      handleSize,
+      pivot: (box, target) => this.#resolvePivot(box, target)
     });
     this.resizeAxes = resizeAxes;
+    this.rotateAxes = rotateAxes;
+    this.flipAxes = flipAxes;
     this.#drag = new PointerDrag({
       press: (event) => {
         this.#claim(event);
       },
       hover: (event) => this.#hover(event),
       drag: (event) => this.#applyDrag(event),
-      release: () => this.#finishSession()
+      release: (event) => this.#finishSession(event)
     });
 
     if (domElement !== null) {
@@ -190,6 +238,26 @@ export class BoxControls<
     this.#handles.resizeAxes = resizeAxes;
   }
 
+  get rotateAxes(): BoxRotatePolicy {
+    return this.#handles.rotateAxes;
+  }
+
+  set rotateAxes(
+    rotateAxes: BoxRotatePolicy
+  ) {
+    this.#handles.rotateAxes = rotateAxes;
+  }
+
+  get flipAxes(): BoxFlipPolicy {
+    return this.#handles.flipAxes;
+  }
+
+  set flipAxes(
+    flipAxes: BoxFlipPolicy
+  ) {
+    this.#handles.flipAxes = flipAxes;
+  }
+
   /**
    * Attaches a box and optionally claims `options.from` as a drag.
    */
@@ -200,7 +268,7 @@ export class BoxControls<
     if (box !== this.#box) {
       this.detach();
       this.#box = box;
-      box.add(this.#handles);
+      this.#handles.attachTo(box);
       box.state = "active";
     }
 
@@ -212,7 +280,7 @@ export class BoxControls<
   isOverHandle(
     event: PointerEvent
   ): boolean {
-    return this.#castParentRay(event) && this.#pickFace() !== null;
+    return this.#castParentRay(event) && this.#pickHandle() !== null;
   }
 
   detach(): void {
@@ -222,9 +290,8 @@ export class BoxControls<
     }
 
     this.#drag.end();
-    box.remove(this.#handles);
+    this.#handles.detachFrom(box);
     box.state = "idle";
-    this.#handles.hover(null);
     this.#box = null;
   }
 
@@ -260,9 +327,9 @@ export class BoxControls<
       return false;
     }
 
-    const face = this.#pickFace();
-    if (face !== null) {
-      return this.#beginResize(event, box, face);
+    const handle = this.#pickHandle();
+    if (handle !== null) {
+      return this.#beginHandle(event, box, handle);
     }
     if (!this.#pickBody(box, _hit)) {
       return false;
@@ -281,10 +348,10 @@ export class BoxControls<
       return false;
     }
 
-    const face = this.#pickFace();
-    this.#handles.hover(face);
+    const handle = this.#pickHandle();
+    this.#handles.hover(handle);
 
-    return face !== null || this.#pickBody(box, _hit);
+    return handle !== null || this.#pickBody(box, _hit);
   }
 
   #pickBody(
@@ -311,28 +378,48 @@ export class BoxControls<
       return;
     }
 
-    if (session.mode === "move") {
-      this.#applyMove(session, box, event);
-    }
-    else {
-      this.#applyResize(session, box, event);
+    switch (session.mode) {
+      case "move":
+        this.#applyMove(session, box, event);
+        break;
+      case "resize":
+        this.#applyResize(session, box, event);
+        break;
+      case "rotate":
+        this.#applyRotate(session, event);
+        break;
+      default:
+        this.#trackFlip(session);
     }
   }
 
-  #pickFace(): BoxFace | null {
-    const hits = this.#raycaster.intersectObjects(
-      this.#handles.pickers,
-      false
-    );
-    if (hits.length === 0) {
-      return null;
+  #pickHandle(): BoxHandlePick | null {
+    return this.#handles.pick(this.#raycaster);
+  }
+
+  #beginHandle(
+    event: PointerEvent,
+    box: BoxVolume,
+    handle: BoxHandlePick
+  ): boolean {
+    switch (handle.kind) {
+      case "resize":
+        return this.#beginResize(event, box, handle.face);
+      case "rotate":
+        return this.#beginRotate(event, box, handle.direction);
+      default:
+        this.#startSession(
+          event,
+          {
+            mode: "flip",
+            axis: handle.axis,
+            moved: false
+          },
+          box
+        );
+
+        return true;
     }
-
-    const face = this.#handles.resolve(hits[0]);
-
-    return face !== null && axisPolicyIncludes(this.resizeAxes, face.axis)
-      ? face
-      : null;
   }
 
   #beginMove(
@@ -404,7 +491,9 @@ export class BoxControls<
     });
   }
 
-  #finishSession(): void {
+  #finishSession(
+    event: PointerEvent | null
+  ): void {
     const session = this.#session;
     const box = this.#box;
     if (session === null) {
@@ -412,8 +501,12 @@ export class BoxControls<
     }
 
     this.#session = null;
+    this.#handles.endGesture();
 
     if (box !== null) {
+      if (event !== null) {
+        this.#confirmRelease(session, event);
+      }
       this.dispatchEvent({
         type: "end",
         mode: session.mode,
@@ -422,6 +515,131 @@ export class BoxControls<
         size: box.size
       });
     }
+  }
+
+  #confirmRelease(
+    session: DragSession,
+    event: PointerEvent
+  ): void {
+    if (session.mode === "rotate") {
+      if (session.drag.isClick(event)) {
+        this.dispatchEvent({
+          type: "rotate",
+          axis: "y",
+          turns: session.drag.direction
+        });
+      }
+    }
+    else if (
+      session.mode === "flip" &&
+      this.#castParentRay(event) &&
+      this.#isOverFlip(session.axis)
+    ) {
+      this.dispatchEvent({
+        type: "flip",
+        axis: session.axis
+      });
+    }
+  }
+
+  #beginRotate(
+    event: PointerEvent,
+    box: BoxVolume,
+    direction: AxisSign
+  ): boolean {
+    this.#resolvePivot(box, _pivot);
+    const corner = this.#handles.copyCornerTo(box, _corner);
+    const origin = new THREE.Vector3(_pivot.x, corner.y, _pivot.z);
+    const drag = RotateDrag.begin({
+      ray: this.#parentRay,
+      origin,
+      corner,
+      eye: this.#eyeAt(origin, _eye),
+      direction,
+      press: event
+    });
+    if (drag === null) {
+      return false;
+    }
+
+    this.#startSession(
+      event,
+      {
+        mode: "rotate",
+        axis: "y",
+        moved: false,
+        drag
+      },
+      box
+    );
+    this.#handles.beginRotate(corner);
+
+    return true;
+  }
+
+  #applyRotate(
+    session: RotateSession,
+    event: PointerEvent
+  ): void {
+    const steps = session.drag.update(this.#parentRay, event);
+    this.#handles.sweepTo(session.drag.angle);
+
+    for (const turns of steps) {
+      if (this.#session !== session) {
+        return;
+      }
+
+      session.moved = true;
+      this.dispatchEvent({
+        type: "rotate",
+        axis: "y",
+        turns
+      });
+    }
+  }
+
+  #trackFlip(
+    session: FlipSession
+  ): void {
+    this.#handles.previewFlip(
+      this.#isOverFlip(session.axis) ? session.axis : null
+    );
+  }
+
+  #isOverFlip(
+    axis: Axis
+  ): boolean {
+    const handle = this.#pickHandle();
+
+    return handle?.kind === "flip" && handle.axis === axis;
+  }
+
+  #resolvePivot(
+    box: BoxVolume,
+    target: THREE.Vector3
+  ): THREE.Vector3 {
+    if (this.pivot !== null) {
+      return target.copy(this.pivot);
+    }
+
+    return box
+      .copySizeTo(target)
+      .multiplyScalar(0.5)
+      .add(box.position);
+  }
+
+  #eyeAt(
+    point: THREE.Vector3,
+    target: THREE.Vector3
+  ): THREE.Vector3 {
+    _world.copy(point);
+    const parent = this.#box?.parent ?? null;
+    if (parent !== null) {
+      _world.applyMatrix4(parent.matrixWorld);
+    }
+
+    return eyeDirection(this.object, _world, target)
+      .transformDirection(this.#parentInverse);
   }
 
   #applyMove(

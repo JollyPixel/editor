@@ -13,7 +13,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { TemplatePlacement } from "../../../src/features/templates/TemplatePlacement.ts";
+import { Placement } from "../../../src/features/placement/Placement.ts";
+import { TemplateSource } from "../../../src/features/placement/PlacementSource.ts";
 
 // CONSTANTS
 const kTemplate = new VoxelTemplate({
@@ -26,27 +27,32 @@ const kTemplate = new VoxelTemplate({
   ],
   voxels: [packVoxel(1, 0), packVoxel(1, 0), packVoxel(1, 0)]
 });
+const kSource = new TemplateSource("wall");
 
-describe("TemplatePlacement", () => {
+describe("Placement", () => {
   test("starts untransformed on a rounded cell", () => {
-    const placement = TemplatePlacement.at("wall", { x: 3.6, y: 0.2, z: -1.5 });
+    const placement = Placement.at(kSource, { x: 3.6, y: 0.2, z: -1.5 });
 
     assert.deepEqual(placement.position, { x: 4, y: 0, z: -1 });
     assert.equal(placement.transform, VoxelTransform.Identity);
   });
 
-  test("compares template, cell and transform", () => {
-    const placement = TemplatePlacement.at("wall", { x: 0, y: 0, z: 0 });
+  test("compares source, cell and transform", () => {
+    const placement = Placement.at(kSource, { x: 0, y: 0, z: 0 });
 
     assert.equal(placement.equals(placement.movedTo({ x: 0.3, y: 0, z: 0 })), true);
     assert.equal(placement.equals(placement.movedTo({ x: 1, y: 0, z: 0 })), false);
     assert.equal(placement.equals(placement.turnedBy({ rotation: 1 })), false);
     assert.equal(placement.equals(placement.turnedBy({ rotation: 4 })), true);
     assert.equal(placement.equals(null), false);
+    assert.equal(
+      placement.equals(Placement.at(new TemplateSource("wall"), placement.position)),
+      false
+    );
   });
 
   test("frames the template and finds the pivot back from the frame", () => {
-    const placement = TemplatePlacement.at("wall", { x: 10, y: 0, z: 0 })
+    const placement = Placement.at(kSource, { x: 10, y: 0, z: 0 })
       .turnedBy({ rotation: 1 });
     const bounds = placement.boundsIn(kTemplate);
 

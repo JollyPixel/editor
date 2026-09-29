@@ -119,45 +119,19 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
       return undefined;
     }
 
-    const { bounds } = options;
-    const { x: ox, y: oy, z: oz } = layer.position;
-    const positions: number[] = [];
-    const voxels: number[] = [];
-    for (const [lx, ly, lz, packed] of layer.localVoxels()) {
-      const x = lx + ox;
-      const y = ly + oy;
-      const z = lz + oz;
-      if (bounds === undefined || (
-        x >= bounds.min.x && x < bounds.max.x &&
-        y >= bounds.min.y && y < bounds.max.y &&
-        z >= bounds.min.z && z < bounds.max.z
-      )) {
-        positions.push(x, y, z);
-        voxels.push(packed);
-      }
-    }
-    if (voxels.length === 0) {
+    const template = VoxelTemplate.fromLayer(layer, {
+      ...options,
+      id: options.id ?? this.#nextId()
+    });
+    if (template.voxelCount === 0) {
       return undefined;
     }
 
-    const template = new VoxelTemplate({
-      id: options.id ?? this.#nextId(),
-      name: options.name,
-      pivot: options.pivot,
-      properties: options.properties,
-      positions,
-      voxels
-    });
     this.define(serializeVoxelTemplate(template, this.#chunkSize));
 
     return this.#templates.get(template.id);
   }
 
-  /**
-   * Adds the template, or replaces the one with the same id.
-   *
-   * @throws {InvalidVoxelWorldError} when `template` is malformed
-   */
   define(
     template: VoxelTemplateJSON
   ): boolean {

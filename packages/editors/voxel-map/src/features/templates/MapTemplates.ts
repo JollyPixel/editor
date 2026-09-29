@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  VoxelCoord,
-  VoxelHistory,
-  VoxelWorld
-} from "@jolly-pixel/voxel.renderer";
+import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -13,7 +9,6 @@ export type TemplateWorld = Pick<VoxelWorld, "templates">;
 
 export interface MapTemplatesOptions {
   world: TemplateWorld;
-  history: Pick<VoxelHistory, "begin" | "commit">;
   store?: TemplateStore;
   confirm?: typeof showConfirm;
 }
@@ -22,14 +17,12 @@ export class MapTemplates {
   readonly store: TemplateStore;
 
   readonly #world: TemplateWorld;
-  readonly #history: Pick<VoxelHistory, "begin" | "commit">;
   readonly #confirm: typeof showConfirm;
 
   constructor(
     options: MapTemplatesOptions
   ) {
     this.#world = options.world;
-    this.#history = options.history;
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
   }
@@ -75,44 +68,5 @@ export class MapTemplates {
     });
 
     return confirmed && this.#world.templates.remove(templateId);
-  }
-
-  beginPlacement(
-    templateId: string,
-    position: VoxelCoord
-  ): boolean {
-    if (this.#world.templates.get(templateId) === undefined) {
-      return false;
-    }
-    this.store.beginPlacement(templateId, position);
-
-    return true;
-  }
-
-  commitPlacement(
-    layerName: string | null
-  ): boolean {
-    const { placement } = this.store;
-    if (placement === null || layerName === null) {
-      return false;
-    }
-
-    this.#history.begin();
-    let placed = false;
-    try {
-      placed = this.#world.templates.place(placement.templateId, {
-        layerName,
-        position: placement.position,
-        transform: placement.transform
-      });
-    }
-    finally {
-      this.#history.commit();
-    }
-    if (placed) {
-      this.store.endPlacement();
-    }
-
-    return placed;
   }
 }

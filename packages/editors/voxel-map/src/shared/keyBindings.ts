@@ -21,3 +21,15 @@ export function bindKeys(
     }
   };
 }
+
+export type KeyChainHandler = (event: KeyboardEvent) => boolean;
+
+export function bindKeyChain(
+  keyboard: KeyBindingTarget,
+  code: KeyCode,
+  handlers: readonly KeyChainHandler[]
+): () => void {
+  return bindKeys(keyboard, [code], (event) => {
+    handlers.some((handler) => handler(event));
+  });
+}

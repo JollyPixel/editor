@@ -179,6 +179,30 @@ describe("LocalLayerVisibility", () => {
     assert.deepStrictEqual([...visibility.keys], []);
   });
 
+  test("conceals a layer over its override until released", () => {
+    const { world, layers, visibility, local } = setup();
+    visibility.override("voxel:Ground", true);
+
+    const release = local.conceal("Ground");
+    visibility.override("voxel:Ground", true);
+    assert.strictEqual(groundShown(world, layers), false);
+
+    release();
+    assert.strictEqual(groundShown(world, layers), true);
+  });
+
+  test("keeps a concealed layer hidden across a reset", () => {
+    const { world, layers, mapDocument, local } = setup();
+    const release = local.conceal("Ground");
+
+    mapDocument.emit("reset");
+    assert.strictEqual(groundShown(world, layers), false);
+
+    release();
+    assert.strictEqual(groundShown(world, layers), true);
+    assert.strictEqual(layers.overrides.size, 0);
+  });
+
   test("re-applies overrides and prunes missing entries on reset", () => {
     const { world, layers, mapDocument, visibility } = setup();
     visibility.override("voxel:Ground", false);

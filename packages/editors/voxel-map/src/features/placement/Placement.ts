@@ -7,28 +7,31 @@ import {
   type VoxelTransformOptions
 } from "@jolly-pixel/voxel.renderer";
 
-export class TemplatePlacement {
+// Import Internal Dependencies
+import type { PlacementSource } from "./PlacementSource.ts";
+
+export class Placement {
   static at(
-    templateId: string,
+    source: PlacementSource,
     position: VoxelCoord
-  ): TemplatePlacement {
-    return new TemplatePlacement(
-      templateId,
+  ): Placement {
+    return new Placement(
+      source,
       position,
       VoxelTransform.Identity
     );
   }
 
-  readonly templateId: string;
+  readonly source: PlacementSource;
   readonly position: Readonly<VoxelCoord>;
   readonly transform: VoxelTransform;
 
   constructor(
-    templateId: string,
+    source: PlacementSource,
     position: VoxelCoord,
     transform: VoxelTransform
   ) {
-    this.templateId = templateId;
+    this.source = source;
     this.position = Object.freeze({
       x: Math.round(position.x),
       y: Math.round(position.y),
@@ -41,17 +44,17 @@ export class TemplatePlacement {
 
   movedTo(
     position: VoxelCoord
-  ): TemplatePlacement {
-    return new TemplatePlacement(this.templateId, position, this.transform);
+  ): Placement {
+    return new Placement(this.source, position, this.transform);
   }
 
   turnedBy(
     options: VoxelTransformOptions
-  ): TemplatePlacement {
+  ): Placement {
     const outer = VoxelTransform.fromPacked(VoxelTransform.pack(options));
 
-    return new TemplatePlacement(
-      this.templateId,
+    return new Placement(
+      this.source,
       this.position,
       this.transform.followedBy(outer)
     );
@@ -71,10 +74,10 @@ export class TemplatePlacement {
   }
 
   equals(
-    other: TemplatePlacement | null
+    other: Placement | null
   ): boolean {
     return other !== null &&
-      other.templateId === this.templateId &&
+      other.source === this.source &&
       other.position.x === this.position.x &&
       other.position.y === this.position.y &&
       other.position.z === this.position.z &&

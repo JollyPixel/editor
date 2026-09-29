@@ -18,7 +18,7 @@ export interface PointerDragHandlers {
   /**
    * The drag stopped, whether released, cancelled or ended by `end`.
    */
-  release: () => void;
+  release: (event: PointerEvent | null) => void;
 }
 
 type DragCursor = "grab" | "grabbing";
@@ -86,21 +86,7 @@ export class PointerDrag {
   }
 
   end(): void {
-    const element = this.#element;
-    const pointerId = this.#pointerId;
-    if (element === null || pointerId === null) {
-      return;
-    }
-
-    this.#pointerId = null;
-    element.removeEventListener("pointerup", this.#onPointerUp);
-    element.removeEventListener("pointercancel", this.#onPointerUp);
-    if (element.hasPointerCapture?.(pointerId)) {
-      element.releasePointerCapture(pointerId);
-    }
-
-    this.#showCursor(null);
-    this.#handlers.release();
+    this.#finish(null);
   }
 
   toNdc(
@@ -149,11 +135,31 @@ export class PointerDrag {
       return;
     }
 
-    this.end();
+    this.#finish(event.type === "pointerup" ? event : null);
     if (event.type === "pointerup") {
       this.#hover(event);
     }
   };
+
+  #finish(
+    event: PointerEvent | null
+  ): void {
+    const element = this.#element;
+    const pointerId = this.#pointerId;
+    if (element === null || pointerId === null) {
+      return;
+    }
+
+    this.#pointerId = null;
+    element.removeEventListener("pointerup", this.#onPointerUp);
+    element.removeEventListener("pointercancel", this.#onPointerUp);
+    if (element.hasPointerCapture?.(pointerId)) {
+      element.releasePointerCapture(pointerId);
+    }
+
+    this.#showCursor(null);
+    this.#handlers.release(event);
+  }
 
   #hover(
     event: PointerEvent

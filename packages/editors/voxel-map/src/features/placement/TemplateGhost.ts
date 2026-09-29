@@ -13,7 +13,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
+import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 
 // CONSTANTS
 const kOpacity = 0.55;

@@ -21,6 +21,11 @@ world.templates.place(house.id, {
 
 ```ts
 class VoxelTemplate {
+  static fromLayer(
+    layer: VoxelLayer,
+    options: VoxelTemplateLayerOptions
+  ): VoxelTemplate;
+
   readonly id: string;
   readonly name: string;
   readonly pivot: Readonly<VoxelCoord>;
@@ -90,6 +95,13 @@ around the pivot, shifted back so the lowest corner is `0, 0, 0`. The pivot
 cell moves with them.
 
 `withPatch()` returns a copy with another `name`, `pivot` or `properties`.
+
+`VoxelTemplate.fromLayer()` copies the voxels of a layer into a template that
+is not added to any world, for example to preview a layer somewhere else.
+`VoxelTemplateLayerOptions` is
+[`VoxelTemplateCaptureOptions`](#createfromlayerlayername-options) with a
+required `id`; `bounds` and `pivot` are in world space. An empty layer, or
+`bounds` that hold no voxel, gives an empty template.
 
 ## `VoxelTemplates`
 

@@ -125,6 +125,7 @@ export class TemplateManager extends WorkspaceElement {
         <template-panel
           .world=${workspace.view.document.world}
           .templates=${workspace.templates}
+          .placement=${workspace.placement}
           .selection=${workspace.state.selection}
           .mapDocument=${workspace.mapDocument}
         ></template-panel>
@@ -174,7 +175,7 @@ export class TemplateManager extends WorkspaceElement {
       return;
     }
 
-    workspace.templates.beginPlacement(templateId, workspace.focusPoint());
+    workspace.placement.placeTemplate(templateId, workspace.focusPoint());
   };
 
   readonly #removeTemplate = async(): Promise<void> => {

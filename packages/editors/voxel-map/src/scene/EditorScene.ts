@@ -31,13 +31,13 @@ import { LayerVisibilityStore } from "../features/layers/LayerVisibilityStore.ts
 import { LocalLayerVisibility } from "../features/layers/LocalLayerVisibility.ts";
 import { MapLayers } from "../features/layers/MapLayers.ts";
 import { ObjectLayerRenderer } from "../features/layers/objects/ObjectLayerRenderer.ts";
-import { VoxelLayerGizmo } from "../features/layers/voxel/VoxelLayerGizmo.ts";
 import { layerSelectionsOf } from "../features/layers/layerTree.ts";
 import { MapCollaboration } from "../collaboration/MapCollaboration.ts";
 import { LocalBrush } from "../features/painting/LocalBrush.ts";
 import { bindBrushShortcuts } from "../features/painting/interaction/brushShortcuts.ts";
-import { TemplatePlacementGizmo } from "../features/templates/placement/TemplatePlacementGizmo.ts";
-import { bindTemplateShortcuts } from "../features/templates/placement/templateShortcuts.ts";
+import { MapPlacement } from "../features/placement/MapPlacement.ts";
+import { PlacementGizmo } from "../features/placement/PlacementGizmo.ts";
+import { bindPlacementShortcuts } from "../features/placement/placementShortcuts.ts";
 import { MapTemplates } from "../features/templates/MapTemplates.ts";
 import {
   MapTilesets,
@@ -49,6 +49,7 @@ import {
   type GridRendererOptions
 } from "./GridRenderer.ts";
 import { bindHistoryShortcuts } from "./historyShortcuts.ts";
+import { bindKeyChain } from "../shared/keyBindings.ts";
 import { SceneLighting } from "../shared/SceneLighting.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { spawnPose } from "./spawnPose.ts";
@@ -56,7 +57,6 @@ import { viewFocusPoint } from "../shared/viewRay.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
-const kExitOrbitFocusKey = "Escape";
 const kGrid: GridRendererOptions = {
   extent: 400,
   infiniteGrid: true,
@@ -145,11 +145,6 @@ export class EditorScene extends Systems.Scene {
     camera.teleport(spawnPose([]));
 
     const { keyboard } = world.input;
-    const exitOrbitFocus = (): void => {
-      camera.exitOrbitFocus();
-      this.#announceCameraMode();
-    };
-    keyboard.on(kExitOrbitFocusKey, exitOrbitFocus);
 
     const { view } = world
       .createActor("map")
@@ -172,8 +167,7 @@ export class EditorScene extends Systems.Scene {
 
     const blockSources = BlockRenderSources.of(view);
     const templates = new MapTemplates({
-      world: view.document.world,
-      history: view.document.history
+      world: view.document.world
     });
     const mapDocument = new MapDocument({
       commands: view.document,
@@ -187,6 +181,12 @@ export class EditorScene extends Systems.Scene {
       layers: view.layerVisibility,
       mapDocument,
       visibility: layerVisibility
+    });
+    const placement = new MapPlacement({
+      world: view.document.world,
+      history: view.document.history,
+      selection: state.selection,
+      conceal: (layerName) => localVisibility.conceal(layerName)
     });
     const usage = new BlockUsageStore({
       mapDocument,
@@ -229,22 +229,15 @@ export class EditorScene extends Systems.Scene {
         }
       });
 
-    world.createActor("gizmo")
-      .addComponent(VoxelLayerGizmo, {
-        world: view.document.world,
-        camera: camera.camera,
-        selection: state.selection,
-        pointer: state.pointer,
-        mapDocument
-      });
-    world.createActor("template-placement")
-      .addComponent(TemplatePlacementGizmo, {
+    world.createActor("placement")
+      .addComponent(PlacementGizmo, {
         view,
         sources: blockSources,
         camera: camera.camera,
-        templates: templates.store,
+        placements: placement.store,
         pointer: state.pointer,
-        mapDocument
+        mapDocument,
+        color: session.identity.color
       });
     world.createActor("object-layer-renderer")
       .addComponent(ObjectLayerRenderer, {
@@ -259,18 +252,28 @@ export class EditorScene extends Systems.Scene {
       templates.store.reconcile(
         Array.from(view.document.world.templates, (template) => template.id)
       );
+      placement.store.reconcile(view.document.world);
     }
 
     this.#disposables.push(
-      () => keyboard.off(kExitOrbitFocusKey, exitOrbitFocus),
+      bindKeyChain(keyboard, "Escape", [
+        () => placement.cancel(),
+        () => {
+          camera.exitOrbitFocus();
+          this.#announceCameraMode();
+
+          return true;
+        }
+      ]),
       state.pointer.subscribe("change", (captured) => {
         camera.enabled = !captured;
       }),
-      templates.store.subscribe("placementChange", (placement) => {
-        localBrush.suspended = placement !== null;
+      placement.store.subscribe("change", (current) => {
+        localBrush.suspended = current !== null;
       }),
       mapDocument.subscribe("layerUpdated", () => {
         this.#reconcileSelection(view);
+        placement.store.reconcile(view.document.world);
       }),
       mapDocument.subscribe("templatesChanged", () => {
         reconcileTemplates();
@@ -292,14 +295,15 @@ export class EditorScene extends Systems.Scene {
         keyboard,
         history: view.document.history
       }),
-      bindTemplateShortcuts({
+      bindPlacementShortcuts({
         keyboard,
-        templates: templates.store
+        placement
       }),
       () => environment.dispose(),
       () => collaboration.dispose(),
       () => tilesets.dispose(),
       () => usage.dispose(),
+      () => placement.dispose(),
       () => localVisibility.dispose(),
       () => mapDocument.dispose()
     );
@@ -315,6 +319,7 @@ export class EditorScene extends Systems.Scene {
       usage,
       blockSources,
       templates,
+      placement,
       layerVisibility,
       layers: new MapLayers({
         world: view.document.world,

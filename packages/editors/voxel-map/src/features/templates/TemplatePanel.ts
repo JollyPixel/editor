@@ -11,7 +11,8 @@ import { FieldBinding } from "@jolly-pixel/ui";
 import type { MapDocumentSignals } from "../../document/index.ts";
 import type { SelectionStore } from "../../state/index.ts";
 import type { MapTemplates } from "./MapTemplates.ts";
-import type { TemplatePlacement } from "./TemplatePlacement.ts";
+import type { MapPlacement } from "../placement/MapPlacement.ts";
+import type { Placement } from "../placement/Placement.ts";
 import {
   propertiesOf,
   propertyRowsOf,
@@ -19,14 +20,8 @@ import {
   type PropertyRowsChangeDetail
 } from "../../shared/propertyDraft.ts";
 import { positionSource } from "../../shared/positionSource.ts";
-import { transformButtons } from "../../shared/transformButtons.ts";
 import "../../shared/CustomPropertiesEditor.ts";
-
-// CONSTANTS
-const kPlacementTransforms = transformButtons("the pivot", {
-  left: "Q",
-  right: "E"
-});
+import "../placement/PlacementActions.ts";
 
 @customElement("template-panel")
 export class TemplatePanel extends LitElement {
@@ -37,17 +32,6 @@ export class TemplatePanel extends LitElement {
       gap: var(--jolly-row-gap, 4px);
       padding: var(--jolly-space-1, 4px);
     }
-
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--jolly-row-gap, 4px);
-    }
-
-    .hint {
-      margin: 0;
-      color: var(--jolly-text-muted);
-    }
   `;
 
   @property({ attribute: false })
@@ -55,6 +39,9 @@ export class TemplatePanel extends LitElement {
 
   @property({ attribute: false })
   declare templates: MapTemplates;
+
+  @property({ attribute: false })
+  declare placement: MapPlacement;
 
   @property({ attribute: false })
   declare selection: SelectionStore;
@@ -66,7 +53,7 @@ export class TemplatePanel extends LitElement {
   private declare _template: VoxelTemplate | null;
 
   @state()
-  private declare _placement: TemplatePlacement | null;
+  private declare _placement: Placement | null;
 
   @state()
   private declare _props: PropertyRow[];
@@ -75,7 +62,7 @@ export class TemplatePanel extends LitElement {
 
   #position = new FieldBinding(this, positionSource({
     position: () => this._placement?.position ?? null,
-    move: (position) => this.templates.store.movePlacement(position)
+    move: (position) => this.placement.store.move(position)
   }));
 
   constructor() {
@@ -90,12 +77,12 @@ export class TemplatePanel extends LitElement {
 
     this.#subscriptions.push(
       this.templates.store.subscribe("selectionChange", this.#syncTemplate),
-      this.templates.store.subscribe("placementChange", this.#syncPlacement),
+      this.placement.store.subscribe("change", this.#syncPlacement),
       this.mapDocument.subscribe("templatesChanged", this.#syncTemplate),
       this.selection.subscribe("change", () => this.requestUpdate())
     );
     this.#syncTemplate();
-    this.#syncPlacement(this.templates.store.placement);
+    this.#syncPlacement(this.placement.store.placement);
   }
 
   override disconnectedCallback() {
@@ -114,12 +101,11 @@ export class TemplatePanel extends LitElement {
 
   #renderPlacement() {
     const placement = this._placement;
-    if (placement === null) {
+    if (placement?.source.kind !== "template") {
       return nothing;
     }
 
-    const template = this.world.templates.get(placement.templateId);
-    const layerName = this.selection.lastVoxelLayer;
+    const template = this.world.templates.get(placement.source.templateId);
 
     return html`
       <jolly-separator
@@ -134,32 +120,10 @@ export class TemplatePanel extends LitElement {
         @jolly-change=${this.#position.commit}
       ></jolly-vector3>
 
-      <div class="row">
-        ${kPlacementTransforms.map(({ label, title, transform }) => html`
-          <jolly-button
-            title=${title}
-            @click=${() => this.templates.store.transformPlacement(transform)}
-          >${label}</jolly-button>
-        `)}
-      </div>
-
-      <p class="hint">
-        Drag the box to move it, Shift + drag to lift it.
-      </p>
-
-      <div class="row">
-        <jolly-button
-          variant="accent"
-          icon="check"
-          title=${layerName === null ? "Add a voxel layer first" : `Stamp into ${layerName}`}
-          ?disabled=${layerName === null}
-          @click=${this.#commit}
-        >${layerName === null ? "Commit" : `Commit into ${layerName}`}</jolly-button>
-        <jolly-button
-          icon="close"
-          @click=${() => this.templates.store.endPlacement()}
-        >Cancel</jolly-button>
-      </div>
+      <placement-actions
+        .placement=${this.placement}
+        .target=${this.placement.target}
+      ></placement-actions>
     `;
   }
 
@@ -201,13 +165,9 @@ export class TemplatePanel extends LitElement {
   };
 
   readonly #syncPlacement = (
-    placement: TemplatePlacement | null
+    placement: Placement | null
   ): void => {
     this._placement = placement;
-  };
-
-  readonly #commit = (): void => {
-    this.templates.commitPlacement(this.selection.lastVoxelLayer);
   };
 
   #onPropertyRowsChange(

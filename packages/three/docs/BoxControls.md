@@ -1,6 +1,6 @@
 # BoxControls
 
-`BoxControls` moves and resizes one box volume with the pointer, either an [`AreaBox`](./AreaBox.md) or a [`MarqueeBox`](./MarqueeBox.md). As a `THREE.Controls` subclass, it shares the `OrbitControls` lifecycle and `enabled` contract.
+`BoxControls` moves, resizes, turns and mirrors one box volume with the pointer, either an [`AreaBox`](./AreaBox.md) or a [`MarqueeBox`](./MarqueeBox.md). As a `THREE.Controls` subclass, it shares the `OrbitControls` lifecycle and `enabled` contract.
 
 ```ts
 import { AreaBox, BoxControls } from "@jolly-pixel/three";
@@ -24,6 +24,9 @@ controls.addEventListener("change", ({ min, size }) => {
 | Drag the volume | Moves the area on the ground plane. |
 | <kbd>Shift</kbd> + drag the volume | Moves the area vertically (requires `moveAxes: "xyz"`). |
 | Drag a face arrow | Moves that face alone; the opposite face stays fixed. |
+| Click one half of the corner arc | Requests a quarter turn in the direction of that half's arrowhead (requires `rotateAxes: "y"`). |
+| Drag the corner arc | Requests one quarter turn each time the pointer sweeps past the next 45° around the pivot. |
+| Click a mirror chip | Requests a mirror through the pivot along the chip's axis (requires `flipAxes`). |
 | <kbd>Alt</kbd> during a gesture | Suspends snapping while held. |
 
 Shift remains live until the first movement, then the drag plane locks to prevent jumps.
@@ -31,6 +34,8 @@ Shift remains live until the first movement, then the drag plane locks to preven
 The element's cursor becomes `grab` over the volume or an arrow and `grabbing` during a gesture, then returns to its previous value.
 
 Each of the six constant-screen-size arrows has a thin shaft, cone head and enlarged invisible picker. Pickers may cover small areas, and arrows win hit tests over the volume. Reduce `handleSize` for areas one or two cells wide.
+
+The corner arc sits on the top corner facing the camera. Hovering it shows the pivot as a vertical axis; dragging it replaces it with a dial whose wedge follows the pointer. Mirror chips sit beside the camera-facing face of each allowed axis, beyond the resize arrow when that axis also resizes. Hovering a chip shows the mirror plane through the pivot. A chip mirrors on release only when the pointer is still over it.
 
 ## Constructor
 
@@ -51,6 +56,9 @@ interface BoxControlsOptions {
   bounds?: THREE.Box3 | null;
   moveAxes?: BoxAxisPolicy;
   resizeAxes?: BoxResizePolicy;
+  rotateAxes?: BoxRotatePolicy;
+  flipAxes?: BoxFlipPolicy;
+  pivot?: THREE.Vector3 | null;
   handleSize?: number;
 }
 ```
@@ -62,9 +70,12 @@ interface BoxControlsOptions {
 | `bounds` | `null` | Parent-space volume used to clamp moves and dragged faces. |
 | `moveAxes` | `"xz"` | Axes a move may affect. |
 | `resizeAxes` | `"xz"` | Axes a resize may affect; arrows of excluded axes are hidden. `"none"` disables resizing. |
+| `rotateAxes` | `"none"` | `"y"` shows the corner arc for quarter turns around the vertical axis. |
+| `flipAxes` | `"none"` | Axes that get a mirror chip. |
+| `pivot` | `null` | Parent-space point that turns and mirrors go through. `null` uses the box center. |
 | `handleSize` | `0.035` | Arrow size as a fraction of the viewport height. |
 
-All options except `handleSize` are live properties. Changing `resizeAxes` updates the arrows immediately.
+All options except `handleSize` are live properties. Changing `resizeAxes`, `rotateAxes` or `flipAxes` updates the handles immediately. `pivot` is read on every press and frame, so it can be mutated in place; changing it does not end a gesture.
 
 Moving an area larger than the bounds preserves its size and pins its min corner to the lower bound. During resize, `minSize` wins when both constraints conflict.
 
@@ -79,6 +90,8 @@ Moves snap the min corner. Resizes snap the dragged face and preserve the opposi
 ```ts
 type BoxAxisPolicy = "xz" | "xyz";
 type BoxResizePolicy = BoxAxisPolicy | "none";
+type BoxRotatePolicy = "y" | "none";
+type BoxFlipPolicy = BoxAxisPolicy | "none";
 ```
 
 `"xz"` keeps gestures on the ground plane, while `"xyz"` enables the vertical axis. The policies are independent. Tile editors with fixed height can keep both at `"xz"`. Level editors placing trigger volumes can set both to `"xyz"`. `resizeAxes` also accepts `"none"`, which hides every arrow for boxes that only move, such as a placement preview.
@@ -149,7 +162,7 @@ The host chooses the area using its own layers, visibility and identity rules. C
 isOverHandle(event: PointerEvent): boolean
 ```
 
-Checks whether `event` hits an attached resize arrow. Call it before host picking because arrows lie outside the area and raycast through other geometry. Otherwise the host may select an object behind the arrow and interrupt the resize.
+Checks whether `event` hits an attached resize arrow, rotate arc or mirror chip. Call it before host picking because arrows lie outside the area and raycast through other geometry. Otherwise the host may select an object behind the arrow and interrupt the resize.
 
 ### `connect()` / `disconnect()` / `dispose()`
 
@@ -167,9 +180,11 @@ dispose(): void
 |---|---|---|
 | `start` | `{ mode, axis }` | A gesture began. |
 | `change` | `{ mode, axis, min, size }` | The area moved or resized. |
+| `rotate` | `{ axis: "y", turns }` | A quarter turn was requested; `turns` is `1` or `-1`. |
+| `flip` | `{ axis }` | A mirror along `axis` was requested. |
 | `end` | `{ mode, axis, min, size }` | The gesture ended. |
 
-`mode` is `"move"` or `"resize"`. `axis` is the resized axis or `null` for a move. `min` and `size` are safe-to-keep copies.
+`mode` is `"move"`, `"resize"`, `"rotate"` or `"flip"`. `axis` is the resized, turned or mirrored axis, or `null` for a move. `min` and `size` are safe-to-keep copies.
 
 `change` is deduplicated, so snapped drags emit at most once per grid step. Persist `change` for live updates. The `end` event confirms the final value, while free drags (`snap: null` or <kbd>Alt</kbd>) normally emit on every pointer event.
 
@@ -189,3 +204,27 @@ controls.addEventListener("end", () => {
 ## Applying changes
 
 The controls mutate the area during a drag. Owners may overwrite `position` and `size` mid-drag, including after a remote conflict. The next pointer event uses the corrected state in **parent** space, avoiding transformed-parent offsets.
+
+## Turning and mirroring
+
+The controls never turn or mirror the box: an axis-aligned min corner and size cannot hold a partial turn, and where a quarter turn lands depends on the host's own pivot rules. `rotate` and `flip` are requests. The host applies them to its model, then writes the new `position` and `size` back, as it may do mid-drag.
+
+`turns: 1` is a positive rotation around +Y (counter-clockwise seen from above). During a drag, `rotate` fires once per quarter step as the pointer passes 45° plus a small dead band from the last step, and sweeping back fires the opposite turn. A release within 4 pixels of the press counts as a click; a longer drag that never reaches a step requests nothing. When the camera looks across the vertical axis, horizontal screen motion drives the turn instead.
+
+```ts
+const controls = new BoxControls(camera, canvas, {
+  resizeAxes: "none",
+  rotateAxes: "y",
+  flipAxes: "xz",
+  pivot: new THREE.Vector3()
+});
+
+controls.addEventListener("rotate", ({ turns }) => {
+  placement.turn(turns);
+  syncBox(placement);
+});
+controls.addEventListener("flip", ({ axis }) => {
+  placement.mirror(axis);
+  syncBox(placement);
+});
+```
