@@ -17,6 +17,7 @@ import {
 import {
   packVoxel,
   unpackVoxel,
+  voxelBlockId,
   VOXEL_ABSENT,
   type PackedVoxel
 } from "./storage/packedVoxel.ts";
@@ -659,6 +660,32 @@ export class VoxelLayer {
         this.getPackedVoxelAt(position) === VOXEL_ABSENT
       ) {
         this.setPackedVoxelAt(position, packed);
+      }
+    }
+  }
+
+  * positionsOf(
+    blockIds: ReadonlySet<number>
+  ): IterableIterator<VoxelCoord> {
+    const size = this.#chunkSize;
+
+    for (const chunk of this.#chunks.values()) {
+      const counts = chunk.countBlocks();
+      if (![...blockIds].some((id) => counts.has(id))) {
+        continue;
+      }
+
+      for (const [index, packed] of chunk.packedEntries()) {
+        if (!blockIds.has(voxelBlockId(packed))) {
+          continue;
+        }
+
+        const { lx, ly, lz } = chunk.fromLinearIndex(index);
+        yield {
+          x: (chunk.cx * size) + lx + this.position.x,
+          y: (chunk.cy * size) + ly + this.position.y,
+          z: (chunk.cz * size) + lz + this.position.z
+        };
       }
     }
   }

@@ -16,16 +16,12 @@ import type {
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
-import {
-  objectKey,
-  type PointerCapture,
-  type SelectionStore
+import type {
+  PointerCapture,
+  SelectionStore
 } from "../../../state/index.ts";
 import type { LayerVisibilityStore } from "../LayerVisibilityStore.ts";
-import {
-  objectPatchFromArea,
-  sameObjectArea
-} from "./objectArea.ts";
+import { MapObject } from "./MapObject.ts";
 import { ObjectAreaScene } from "./ObjectAreaScene.ts";
 
 // CONSTANTS
@@ -193,9 +189,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   }
 
   #selectedObjectKey(): string | null {
-    const selected = this.#selection.object;
-
-    return selected === null ? null : objectKey(selected);
+    return this.#selection.object?.key ?? null;
   }
 
   #detach(): void {
@@ -300,19 +294,10 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    const patch = objectPatchFromArea(
-      event.min,
-      event.size
-    );
-    if (sameObjectArea(object, patch)) {
-      return;
+    const patch = MapObject.areaPatch(event.min, event.size);
+    if (!new MapObject(object).hasArea(patch)) {
+      ref.update(this.#world, patch);
     }
-
-    this.#world.objectLayers.updateObject(
-      ref.layerName,
-      ref.objectId,
-      patch
-    );
   }
 
   readonly #onSelectionChange = (): void => this.#updateVisibility();

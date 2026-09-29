@@ -10,10 +10,7 @@ import * as THREE from "three";
 import { VoxelRotation } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  resolveFlipY,
-  resolveRotation
-} from "../../../../src/features/painting/model/brushOrientation.ts";
+import { brushOrientationOf } from "../../../../src/features/painting/model/brushOrientation.ts";
 
 function cameraLookingAt(
   x: number,
@@ -28,16 +25,16 @@ function cameraLookingAt(
   return camera;
 }
 
-describe("resolveRotation", () => {
+describe("brushOrientationOf rotation", () => {
   test("returns an explicit mode untouched, whatever the camera does", () => {
     const camera = cameraLookingAt(0, 0, 10);
 
     assert.strictEqual(
-      resolveRotation(camera, VoxelRotation.CW90),
+      brushOrientationOf(camera, VoxelRotation.CW90, false).rotation,
       VoxelRotation.CW90
     );
     assert.strictEqual(
-      resolveRotation(camera, VoxelRotation.None),
+      brushOrientationOf(camera, VoxelRotation.None, false).rotation,
       VoxelRotation.None
     );
   });
@@ -58,7 +55,7 @@ describe("resolveRotation", () => {
 
     for (const [index, [x, y, z]] of cases.entries()) {
       assert.strictEqual(
-        resolveRotation(cameraLookingAt(x, y, z), "auto"),
+        brushOrientationOf(cameraLookingAt(x, y, z), "auto", false).rotation,
         expected[index],
         `looking at ${x},${y},${z}`
       );
@@ -67,36 +64,36 @@ describe("resolveRotation", () => {
 
   test("auto ignores the vertical part of the view direction", () => {
     assert.strictEqual(
-      resolveRotation(cameraLookingAt(1, -20, 10), "auto"),
+      brushOrientationOf(cameraLookingAt(1, -20, 10), "auto", false).rotation,
       VoxelRotation.None
     );
   });
 
   test("auto favors the z axis on a perfect diagonal", () => {
     assert.strictEqual(
-      resolveRotation(cameraLookingAt(10, 0, 10), "auto"),
+      brushOrientationOf(cameraLookingAt(10, 0, 10), "auto", false).rotation,
       VoxelRotation.None
     );
   });
 });
 
-describe("resolveFlipY", () => {
+describe("brushOrientationOf flip", () => {
   test("a forced flip wins over every mode", () => {
-    assert.ok(resolveFlipY(cameraLookingAt(0, -10, 1), "auto", true));
-    assert.ok(resolveFlipY(cameraLookingAt(0, -10, 1), VoxelRotation.None, true));
+    assert.ok(brushOrientationOf(cameraLookingAt(0, -10, 1), "auto", true).flipY);
+    assert.ok(brushOrientationOf(cameraLookingAt(0, -10, 1), VoxelRotation.None, true).flipY);
   });
 
   test("auto flips while the camera looks upwards", () => {
-    assert.ok(resolveFlipY(cameraLookingAt(0, 10, 1), "auto", false));
+    assert.ok(brushOrientationOf(cameraLookingAt(0, 10, 1), "auto", false).flipY);
   });
 
   test("auto leaves a downwards view unflipped", () => {
-    assert.ok(!resolveFlipY(cameraLookingAt(0, -10, 1), "auto", false));
+    assert.ok(!brushOrientationOf(cameraLookingAt(0, -10, 1), "auto", false).flipY);
   });
 
   test("an explicit rotation mode never flips on its own", () => {
     assert.ok(
-      !resolveFlipY(cameraLookingAt(0, 10, 1), VoxelRotation.CW90, false)
+      !brushOrientationOf(cameraLookingAt(0, 10, 1), VoxelRotation.CW90, false).flipY
     );
   });
 });

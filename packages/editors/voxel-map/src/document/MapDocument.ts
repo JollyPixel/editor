@@ -4,6 +4,7 @@ import {
   isVoxelLayerCommand,
   isVoxelMaterialGroupCommand,
   isVoxelTemplateCommand,
+  isVoxelTilesetCommand,
   type VoxelCommand,
   type VoxelCommandListener,
   type VoxelLayerCommand,
@@ -59,7 +60,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
     else if (isVoxelTemplateCommand(command)) {
       this.emit("templatesChanged");
     }
-    else {
+    else if (isVoxelTilesetCommand(command)) {
       this.emit("tilesetsChanged");
     }
   };

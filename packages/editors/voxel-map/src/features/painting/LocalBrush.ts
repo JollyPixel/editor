@@ -12,12 +12,11 @@ import type {
   PointerCapture,
   SelectionStore
 } from "../../state/index.ts";
-import type { BrushCursor } from "./model/brushCursor.ts";
-import type { BrushShape } from "./model/brushFootprint.ts";
 import {
-  resolveFlipY,
-  resolveRotation
-} from "./model/brushOrientation.ts";
+  BrushFootprint,
+  type BrushShape
+} from "./model/BrushFootprint.ts";
+import { brushOrientationOf } from "./model/brushOrientation.ts";
 import {
   BrushStroke,
   type StrokeMode,
@@ -37,7 +36,7 @@ import {
 } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
-import type { BlockRenderSources } from "../blocks/blockGeometry.ts";
+import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
@@ -46,7 +45,7 @@ const kAltClickTravelThreshold = 6;
 const kStaleAimFrames = 2;
 
 export interface LocalBrushOptions {
-  engine: VoxelView;
+  view: VoxelView;
   sources: BlockRenderSources;
   camera: THREE.PerspectiveCamera;
   brush: BrushStore;
@@ -56,7 +55,7 @@ export interface LocalBrushOptions {
   maxDistance?: number;
   skyRadius?: number;
   color?: THREE.ColorRepresentation;
-  onCursorChange: (cursor: BrushCursor | null) => void;
+  onCursorChange: (cursor: BrushFootprint | null) => void;
   onFocusRequest: (point: THREE.Vector3Like) => void;
   onPaintBlocked: () => void;
 }
@@ -64,7 +63,7 @@ export interface LocalBrushOptions {
 export class LocalBrush extends ActorComponent {
   suspended = false;
 
-  readonly engine: VoxelView;
+  readonly view: VoxelView;
 
   #camera: THREE.PerspectiveCamera;
   #brush: BrushStore;
@@ -92,7 +91,7 @@ export class LocalBrush extends ActorComponent {
       typeName: "LocalBrush"
     });
     const {
-      engine,
+      view,
       camera,
       brush,
       selection,
@@ -103,7 +102,7 @@ export class LocalBrush extends ActorComponent {
       color
     } = options;
 
-    this.engine = engine;
+    this.view = view;
     this.#camera = camera;
     this.#brush = brush;
     this.#selection = selection;
@@ -112,7 +111,7 @@ export class LocalBrush extends ActorComponent {
     this.#onPaintBlocked = options.onPaintBlocked;
     this.#aimer = new BrushAimResolver({
       camera,
-      solid: engine.root,
+      solid: view.root,
       groundPlaneSize,
       maxDistance,
       skyRadius
@@ -121,7 +120,7 @@ export class LocalBrush extends ActorComponent {
       actor,
       camera,
       ghost: {
-        blockRegistry: engine.document.blocks,
+        blockRegistry: view.document.blocks,
         sources: options.sources
       },
       ...color === undefined ? {} : { color },
@@ -131,9 +130,9 @@ export class LocalBrush extends ActorComponent {
     const markAimStale = () => {
       this.#staleAimFrames = kStaleAimFrames;
     };
-    engine.document.on("command", markAimStale);
+    view.document.on("command", markAimStale);
     this.#unsubscribers = [
-      () => engine.document.off("command", markAimStale),
+      () => view.document.off("command", markAimStale),
       brush.subscribe("change", markDirty),
       brush.subscribe("blockChange", markDirty),
       selection.subscribe("change", () => {
@@ -305,12 +304,12 @@ export class LocalBrush extends ActorComponent {
     }
 
     const blockId = pickBlockAt(
-      this.engine,
-      {
+      this.view,
+      new BrushFootprint({
         ...this.#shape(),
         position: center,
         anchor: this.#resolveAim()?.anchors.remove
-      }
+      })
     );
     if (blockId !== null) {
       this.#brush.blockId = blockId;
@@ -344,7 +343,7 @@ export class LocalBrush extends ActorComponent {
     });
 
     this.#stroke = stroke;
-    this.engine.document.history.begin();
+    this.view.document.history.begin();
     const cursor = this.#aimAtPlane(stroke);
     const target = cursor === null ?
       stroke.origin :
@@ -356,11 +355,7 @@ export class LocalBrush extends ActorComponent {
   #paint(): VoxelPaint {
     return {
       blockId: this.#brush.blockId,
-      rotation: resolveRotation(
-        this.#camera,
-        this.#brush.rotationMode
-      ),
-      flipY: resolveFlipY(
+      ...brushOrientationOf(
         this.#camera,
         this.#brush.rotationMode,
         this.#brush.flipY
@@ -374,7 +369,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#stroke = null;
-    this.engine.document.history.commit();
+    this.view.document.history.commit();
   }
 
   #apply(
@@ -382,7 +377,7 @@ export class LocalBrush extends ActorComponent {
     centers: Iterable<VoxelCoord>
   ): void {
     if (applyBrushStroke(
-      this.engine,
+      this.view,
       stroke,
       centers,
       this.#brush.size
@@ -430,7 +425,7 @@ export class LocalBrush extends ActorComponent {
   }
 
   #refreshStaleAim(): void {
-    if (this.engine.pendingRebuilds > 0) {
+    if (this.view.pendingRebuilds > 0) {
       this.#staleAimFrames = kStaleAimFrames;
     }
     if (this.#staleAimFrames === 0) {
@@ -474,7 +469,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     const stroke = this.#stroke;
-    const layer = this.engine.document.world.getLayer(layerName);
+    const layer = this.view.document.world.getLayer(layerName);
 
     return ghostTargetOf({
       size: this.#brush.size,

@@ -2,7 +2,6 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type {
-  VoxelHistory,
   VoxelTemplate,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
@@ -11,7 +10,8 @@ import { FieldBinding } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
 import type { SelectionStore } from "../../state/index.ts";
-import type { TemplatePlacement, TemplateStore } from "./TemplateStore.ts";
+import type { MapTemplates } from "./MapTemplates.ts";
+import type { TemplatePlacement } from "./TemplatePlacement.ts";
 import {
   propertiesOf,
   propertyRowsOf,
@@ -20,7 +20,6 @@ import {
 } from "../../shared/propertyDraft.ts";
 import { positionSource } from "../../shared/positionSource.ts";
 import { transformButtons } from "../../shared/transformButtons.ts";
-import { commitTemplatePlacement } from "./templateActions.ts";
 import "../../shared/CustomPropertiesEditor.ts";
 
 // CONSTANTS
@@ -55,10 +54,7 @@ export class TemplatePanel extends LitElement {
   declare world: VoxelWorld;
 
   @property({ attribute: false })
-  declare history: Pick<VoxelHistory, "begin" | "commit">;
-
-  @property({ attribute: false })
-  declare templates: TemplateStore;
+  declare templates: MapTemplates;
 
   @property({ attribute: false })
   declare selection: SelectionStore;
@@ -79,7 +75,7 @@ export class TemplatePanel extends LitElement {
 
   #position = new FieldBinding(this, positionSource({
     position: () => this._placement?.position ?? null,
-    move: (position) => this.templates.movePlacement(position)
+    move: (position) => this.templates.store.movePlacement(position)
   }));
 
   constructor() {
@@ -93,13 +89,13 @@ export class TemplatePanel extends LitElement {
     super.connectedCallback();
 
     this.#subscriptions.push(
-      this.templates.subscribe("selectionChange", this.#syncTemplate),
-      this.templates.subscribe("placementChange", this.#syncPlacement),
+      this.templates.store.subscribe("selectionChange", this.#syncTemplate),
+      this.templates.store.subscribe("placementChange", this.#syncPlacement),
       this.mapDocument.subscribe("templatesChanged", this.#syncTemplate),
       this.selection.subscribe("change", () => this.requestUpdate())
     );
     this.#syncTemplate();
-    this.#syncPlacement(this.templates.placement);
+    this.#syncPlacement(this.templates.store.placement);
   }
 
   override disconnectedCallback() {
@@ -142,7 +138,7 @@ export class TemplatePanel extends LitElement {
         ${kPlacementTransforms.map(({ label, title, transform }) => html`
           <jolly-button
             title=${title}
-            @click=${() => this.templates.transformPlacement(transform)}
+            @click=${() => this.templates.store.transformPlacement(transform)}
           >${label}</jolly-button>
         `)}
       </div>
@@ -161,7 +157,7 @@ export class TemplatePanel extends LitElement {
         >${layerName === null ? "Commit" : `Commit into ${layerName}`}</jolly-button>
         <jolly-button
           icon="close"
-          @click=${() => this.templates.endPlacement()}
+          @click=${() => this.templates.store.endPlacement()}
         >Cancel</jolly-button>
       </div>
     `;
@@ -191,7 +187,7 @@ export class TemplatePanel extends LitElement {
   }
 
   readonly #syncTemplate = (): void => {
-    const templateId = this.templates.selected;
+    const templateId = this.templates.store.selected;
     const template = templateId === null ?
       undefined :
       this.world.templates.get(templateId);
@@ -211,12 +207,7 @@ export class TemplatePanel extends LitElement {
   };
 
   readonly #commit = (): void => {
-    commitTemplatePlacement(
-      this.world,
-      this.history,
-      this.templates,
-      this.selection.lastVoxelLayer
-    );
+    this.templates.commitPlacement(this.selection.lastVoxelLayer);
   };
 
   #onPropertyRowsChange(

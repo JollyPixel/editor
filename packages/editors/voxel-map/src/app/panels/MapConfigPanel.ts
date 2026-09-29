@@ -18,7 +18,7 @@ import "@jolly-pixel/editor.host/ui";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import type {
   LightingMode,
-  ViewSettings
+  ViewSettingsJSON
 } from "../../state/index.ts";
 
 // CONSTANTS
@@ -122,13 +122,13 @@ export class MapConfigPanel extends LitElement {
     `;
   }
 
-  #viewBinding<TKey extends keyof ViewSettings>(
+  #viewBinding<TKey extends keyof ViewSettingsJSON>(
     key: TKey
-  ): FieldBinding<ViewSettings[TKey]> {
-    return new FieldBinding<ViewSettings[TKey]>(this, {
+  ): FieldBinding<ViewSettingsJSON[TKey]> {
+    return new FieldBinding<ViewSettingsJSON[TKey]>(this, {
       read: () => this.workspace.state.view.settings[key],
       write: (value) => {
-        const patch: Partial<ViewSettings> = {};
+        const patch: Partial<ViewSettingsJSON> = {};
         patch[key] = value;
         this.workspace.state.view.update(patch);
       }

@@ -3,9 +3,9 @@ import * as THREE from "three/webgpu";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // Import Internal Dependencies
-import type { SceneLighting } from "./SceneLighting.ts";
+import type { SceneLighting } from "../shared/SceneLighting.ts";
 import { createSkyBackground } from "./skyBackground.ts";
-import type { ViewSettings } from "../state/ViewStore.ts";
+import type { ViewSettings } from "../state/ViewSettings.ts";
 
 // CONSTANTS
 const kBackground = "#262627";
@@ -60,7 +60,7 @@ export class SceneEnvironment {
   }
 
   apply(
-    settings: Readonly<ViewSettings>
+    settings: ViewSettings
   ): void {
     this.#lighting.mode = settings.lighting;
     this.#applyBackground(settings.lighting === "daylight");

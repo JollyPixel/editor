@@ -12,6 +12,12 @@ export class LayerVisibilityStore extends Emitter<LayerVisibilityStoreEvents> {
     return this.#overrides.keys();
   }
 
+  overrideOf(
+    key: string
+  ): boolean | undefined {
+    return this.#overrides.get(key);
+  }
+
   resolve(
     key: string,
     authored: boolean

@@ -1,16 +1,12 @@
 // Import Third-party Dependencies
-import {
-  VoxelTransform,
-  type VoxelCoord,
-  type VoxelTransformOptions
+import type {
+  VoxelCoord,
+  VoxelTransformOptions
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
-export interface TemplatePlacement {
-  readonly templateId: string;
-  readonly position: Readonly<VoxelCoord>;
-  readonly transform: VoxelTransform;
-}
+// Import Internal Dependencies
+import { TemplatePlacement } from "./TemplatePlacement.ts";
 
 export type TemplateStoreEvents = {
   selectionChange: (
@@ -53,53 +49,26 @@ export class TemplateStore extends Emitter<TemplateStoreEvents> {
     position: VoxelCoord
   ): void {
     this.selected = templateId;
-    this.#assignPlacement({
-      templateId,
-      position: cellOf(position),
-      transform: VoxelTransform.Identity
-    });
+    this.#assignPlacement(TemplatePlacement.at(templateId, position));
   }
 
   movePlacement(
     position: VoxelCoord
   ): void {
-    const placement = this.#placement;
-    if (placement === null) {
-      return;
-    }
-
-    const cell = cellOf(position);
-    if (
-      cell.x === placement.position.x &&
-      cell.y === placement.position.y &&
-      cell.z === placement.position.z
-    ) {
-      return;
-    }
-
-    this.#assignPlacement({
-      ...placement,
-      position: cell
-    });
+    this.#assignPlacement(this.#placement?.movedTo(position) ?? null);
   }
 
   transformPlacement(
     transform: VoxelTransformOptions
   ): void {
-    const placement = this.#placement;
-    const outer = VoxelTransform.fromPacked(VoxelTransform.pack(transform));
-    if (placement === null || outer.equals(VoxelTransform.Identity)) {
-      return;
-    }
-
-    this.#assignPlacement({
-      ...placement,
-      transform: placement.transform.followedBy(outer)
-    });
+    this.#assignPlacement(this.#placement?.turnedBy(transform) ?? null);
   }
 
   endPlacement(): void {
-    this.#assignPlacement(null);
+    if (this.#placement !== null) {
+      this.#placement = null;
+      this.emit("placementChange", null);
+    }
   }
 
   reconcile(
@@ -117,17 +86,11 @@ export class TemplateStore extends Emitter<TemplateStoreEvents> {
   #assignPlacement(
     placement: TemplatePlacement | null
   ): void {
-    this.#placement = placement === null ? null : Object.freeze(placement);
-    this.emit("placementChange", this.#placement);
-  }
-}
+    if (placement === null || placement.equals(this.#placement)) {
+      return;
+    }
 
-function cellOf(
-  position: VoxelCoord
-): VoxelCoord {
-  return Object.freeze({
-    x: Math.round(position.x),
-    y: Math.round(position.y),
-    z: Math.round(position.z)
-  });
+    this.#placement = placement;
+    this.emit("placementChange", placement);
+  }
 }

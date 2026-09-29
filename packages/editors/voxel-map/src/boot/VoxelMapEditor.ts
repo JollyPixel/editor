@@ -92,7 +92,7 @@ export class VoxelMapEditor {
 
     const workspace = await scene.ready;
     shell.adoptWorkspace(workspace);
-    runtime.metrics.addSource(workspace.engine.inspector);
+    runtime.metrics.addSource(workspace.view.inspector);
 
     const panel = await runtime.mountMetricsPanel({
       target: shell.layout ?? undefined,
@@ -105,7 +105,7 @@ export class VoxelMapEditor {
     });
     mountInspectorControls({
       panel,
-      engine: workspace.engine
+      view: workspace.view
     });
 
     return new VoxelMapEditor({

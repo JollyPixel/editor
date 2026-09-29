@@ -190,4 +190,4 @@ so a scene that defines its blocks in code needs no slots at all.
 local id of `0` or above `MAX_LOCAL_BLOCK_ID`, or a non-integer. The two
 accessors split an id back. A host projecting a
 [`TilesetDocument`](../tilesets/TilesetDocument.md) into a world uses them
-through [`projectTilesetBlock()`](../tilesets/tilesets.md#projecting-a-tileset-into-a-world).
+through [`TilesetSlot.project()`](../tilesets/tilesets.md#tilesetslot).

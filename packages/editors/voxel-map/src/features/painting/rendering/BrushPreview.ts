@@ -8,13 +8,15 @@ import {
   GhostBlock,
   type GhostBlockOptions
 } from "./GhostBlock.ts";
-import * as cursor from "../model/brushCursor.ts";
-import type { BrushCursor } from "../model/brushCursor.ts";
-import type { BrushShape } from "../model/brushFootprint.ts";
+import {
+  BrushFootprint,
+  type BrushFootprintOptions,
+  type BrushShape
+} from "../model/BrushFootprint.ts";
 import type { GhostTarget } from "../model/ghostTarget.ts";
 
 export type BrushTarget = Pick<
-  BrushCursor,
+  BrushFootprintOptions,
   "position" | "face" | "anchor"
 >;
 
@@ -23,7 +25,7 @@ export interface BrushPreviewOptions {
   camera: THREE.PerspectiveCamera;
   ghost: GhostBlockOptions;
   color?: THREE.ColorRepresentation;
-  onCursorChange: (cursor: BrushCursor | null) => void;
+  onCursorChange: (cursor: BrushFootprint | null) => void;
 }
 
 export class BrushPreview {
@@ -31,8 +33,8 @@ export class BrushPreview {
   #camera: THREE.PerspectiveCamera;
   #mesh: BrushMesh;
   #ghost: GhostBlock;
-  #onCursorChange: (cursor: BrushCursor | null) => void;
-  #cursor: BrushCursor | null = null;
+  #onCursorChange: (cursor: BrushFootprint | null) => void;
+  #cursor: BrushFootprint | null = null;
   #dirty = true;
   #lastCameraMatrix = new THREE.Matrix4();
 
@@ -79,10 +81,10 @@ export class BrushPreview {
       return;
     }
 
-    const next = {
+    const next = new BrushFootprint({
       ...shape,
       ...target
-    };
+    });
     const ghost = resolveGhost();
     const ghosted = ghost !== null && this.#ghost.draw(ghost);
     if (!ghosted) {
@@ -117,9 +119,9 @@ export class BrushPreview {
   }
 
   #setCursor(
-    next: BrushCursor | null
+    next: BrushFootprint | null
   ): void {
-    if (cursor.equals(next, this.#cursor)) {
+    if (next === this.#cursor || next?.equals(this.#cursor) === true) {
       return;
     }
 

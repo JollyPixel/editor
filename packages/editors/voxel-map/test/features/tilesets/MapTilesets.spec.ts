@@ -69,7 +69,7 @@ function makePixels(): PixelDocument {
   return fake as unknown as PixelDocument;
 }
 
-function makeEngine(): VoxelView {
+function makeView(): VoxelView {
   const tilesets = new TilesetList();
   const atlases = new TilesetAtlases({ tilesets });
   const blockRegistry = new BlockRegistry();
@@ -179,7 +179,7 @@ function tilesetRecord(
 function setup(
   definitions: TilesetDefinition[] = [kTerrain]
 ) {
-  const engine = makeEngine();
+  const view = makeView();
   const sources = new FakeSources();
   const catalog = new FakeCatalog();
   catalog.list = [kTerrain, kRock, kMoss].map(
@@ -189,10 +189,10 @@ function setup(
     new Emitter<Record<string, () => void>>(),
     { ready: true }
   ) as unknown as MapDocument;
-  engine.document.tilesets.replace(definitions);
+  view.document.tilesets.replace(definitions);
   let nextId = 0;
   const tilesets = new MapTilesets({
-    engine,
+    view,
     catalog,
     mapDocument,
     open: (assetId) => sources.open(assetId),
@@ -202,25 +202,25 @@ function setup(
   function relink(
     next: TilesetDefinition[]
   ): void {
-    engine.document.tilesets.replace(next);
+    view.document.tilesets.replace(next);
     mapDocument.emit("tilesetsChanged");
   }
 
-  return { engine, catalog, sources, tilesets, relink };
+  return { view, catalog, sources, tilesets, relink };
 }
 
 describe("MapTilesets", () => {
-  it("binds each linked tileset and projects its blocks into the engine", () => {
-    const { engine, tilesets } = setup();
+  it("binds each linked tileset and projects its blocks into the document", () => {
+    const { view, tilesets } = setup();
 
     assert.equal(tilesets.open("terrain") !== undefined, true);
     assert.equal(tilesets.tileSizeOf("terrain"), 16);
-    assert.deepEqual(engine.document.blocks.get(composeBlockId(1, 1))?.defaultTexture, {
+    assert.deepEqual(view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture, {
       col: 0,
       row: 0,
       tilesetId: "terrain"
     });
-    assert.equal(engine.document.tilesets.get("terrain")?.tileSize, 16);
+    assert.equal(view.document.tilesets.get("terrain")?.tileSize, 16);
   });
 
   it("finds the owner of a world block id by its slot", () => {
@@ -233,7 +233,7 @@ describe("MapTilesets", () => {
   });
 
   it("routes world-space block writes to the owning tileset in its own space", () => {
-    const { engine, sources, tilesets } = setup([kTerrain, kRock]);
+    const { view, sources, tilesets } = setup([kTerrain, kRock]);
     const id = composeBlockId(2, 3);
 
     assert.equal(tilesets.defineBlock({
@@ -247,34 +247,34 @@ describe("MapTilesets", () => {
     const local = sources.opened.get("rock")?.tileset.blocks.get(3);
     assert.deepEqual(local?.defaultTexture, { col: 1, row: 1 });
     assert.equal(local?.materialGroup, "wet");
-    assert.equal(engine.document.blocks.get(id)?.materialGroup, "rock/wet");
+    assert.equal(view.document.blocks.get(id)?.materialGroup, "rock/wet");
     assert.equal(sources.opened.get("terrain")?.tileset.blocks.has(3), false);
 
     assert.equal(tilesets.removeBlock(id), true);
-    assert.equal(engine.document.blocks.has(id), false);
+    assert.equal(view.document.blocks.has(id), false);
     assert.equal(tilesets.defineBlock({ id: composeBlockId(9, 1), name: "x", shapeId: "cube" }), false);
   });
 
   it("routes material groups by their projected id", () => {
-    const { engine, sources, tilesets } = setup([kTerrain, kRock]);
+    const { view, sources, tilesets } = setup([kTerrain, kRock]);
 
     assert.equal(tilesets.defineMaterialGroup(
       new MaterialGroup({ id: "rock/wet", roughness: 0.2 })
     ), true);
     assert.equal(sources.opened.get("rock")?.tileset.materialGroups.get("wet")?.roughness, 0.2);
-    assert.equal(engine.document.materialGroups.get("rock/wet")?.roughness, 0.2);
+    assert.equal(view.document.materialGroups.get("rock/wet")?.roughness, 0.2);
 
     assert.equal(tilesets.removeMaterialGroup("rock/wet"), true);
-    assert.equal(engine.document.materialGroups.has("rock/wet"), false);
+    assert.equal(view.document.materialGroups.has("rock/wet"), false);
     assert.equal(tilesets.defineMaterialGroup(new MaterialGroup({ id: "loose" })), false);
   });
 
-  it("maps an engine position onto the tileset order when moving a block", () => {
-    const { engine, sources, tilesets } = setup([kTerrain, kRock]);
+  it("maps a document position onto the tileset order when moving a block", () => {
+    const { view, sources, tilesets } = setup([kTerrain, kRock]);
     tilesets.defineBlock({ id: composeBlockId(2, 2), name: "b", shapeId: "cube" });
     tilesets.defineBlock({ id: composeBlockId(2, 3), name: "c", shapeId: "cube" });
 
-    const engineIds = [...engine.document.blocks].map((block) => block.id);
+    const engineIds = [...view.document.blocks].map((block) => block.id);
     assert.equal(tilesets.moveBlock(composeBlockId(2, 3), engineIds.indexOf(composeBlockId(2, 1))), true);
 
     assert.deepEqual(
@@ -283,8 +283,8 @@ describe("MapTilesets", () => {
     );
   });
 
-  it("moves a block down to the engine position it was dropped at", () => {
-    const { engine, sources, tilesets } = setup([kRock]);
+  it("moves a block down to the document position it was dropped at", () => {
+    const { view, sources, tilesets } = setup([kRock]);
     tilesets.defineBlock({ id: composeBlockId(2, 2), name: "b", shapeId: "cube" });
     tilesets.defineBlock({ id: composeBlockId(2, 3), name: "c", shapeId: "cube" });
 
@@ -295,35 +295,35 @@ describe("MapTilesets", () => {
     );
     assert.equal(tilesets.moveBlock(composeBlockId(2, 2), 1), true);
     assert.deepEqual(
-      [...engine.document.blocks].map((block) => block.id),
+      [...view.document.blocks].map((block) => block.id),
       [composeBlockId(2, 3), composeBlockId(2, 2), composeBlockId(2, 1)]
     );
   });
 
   it("keeps the blocks of a tileset taking over the slot of an unlinked one", () => {
-    const { engine, tilesets, relink } = setup([kTerrain]);
+    const { view, tilesets, relink } = setup([kTerrain]);
 
     relink([kMoss]);
 
     assert.equal(tilesets.open("terrain") !== undefined, false);
     assert.equal(tilesets.open("moss") !== undefined, true);
     assert.equal(
-      engine.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.tilesetId,
+      view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.tilesetId,
       "moss"
     );
   });
 
   it("resizes the tiles of a linked tileset", () => {
-    const { engine, tilesets } = setup();
+    const { view, tilesets } = setup();
 
     assert.equal(tilesets.resizeTiles("terrain", 32), true);
     assert.equal(tilesets.tileSizeOf("terrain"), 32);
-    assert.equal(engine.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.size, 16);
+    assert.equal(view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.size, 16);
     assert.equal(tilesets.resizeTiles("missing", 32), false);
   });
 
-  it("releases an unlinked tileset and takes its blocks out of the engine", () => {
-    const { engine, sources, tilesets, relink } = setup([kTerrain, kRock]);
+  it("releases an unlinked tileset and takes its blocks out of the document", () => {
+    const { view, sources, tilesets, relink } = setup([kTerrain, kRock]);
     let changes = 0;
     tilesets.subscribe("change", () => {
       changes++;
@@ -332,8 +332,8 @@ describe("MapTilesets", () => {
     relink([kTerrain]);
 
     assert.deepEqual(sources.released, ["asset-rock"]);
-    assert.equal(engine.document.blocks.has(composeBlockId(2, 1)), false);
-    assert.equal(engine.document.blocks.has(composeBlockId(1, 1)), true);
+    assert.equal(view.document.blocks.has(composeBlockId(2, 1)), false);
+    assert.equal(view.document.blocks.has(composeBlockId(1, 1)), true);
     assert.equal(tilesets.open("rock") !== undefined, false);
     assert.equal(changes, 1);
   });
@@ -373,13 +373,13 @@ describe("MapTilesets", () => {
   });
 
   it("links a catalog asset under a fresh tileset id", () => {
-    const { engine, tilesets } = setup([kTerrain]);
+    const { view, tilesets } = setup([kTerrain]);
 
     assert.deepEqual(
       tilesets.linkableAssets().map((record) => record.id),
       ["asset-moss", "asset-rock"]
     );
     assert.equal(tilesets.link("asset-rock"), "generated-0");
-    assert.equal(engine.document.tilesets.get("generated-0")?.asset?.id, "asset-rock");
+    assert.equal(view.document.tilesets.get("generated-0")?.asset?.id, "asset-rock");
   });
 });

@@ -11,12 +11,7 @@ import {
   TILESET_EXTENSION
 } from "@jolly-pixel/asset.voxel-map/client";
 import {
-  composeBlockId,
-  localBlockIdOf,
-  localMaterialGroupId,
-  localTilesetBlock,
-  resolveBlockDefinition,
-  tilesetSlotOf,
+  TilesetSlot,
   type BlockDefinition,
   type MaterialGroup,
   type VoxelView
@@ -25,22 +20,16 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
-import {
-  entriesEqual,
-  isTilesetAsset,
-  resolveTilesetEntries,
-  type TilesetEntry
-} from "./tilesetEntry.ts";
+import { TilesetEntry } from "./TilesetEntry.ts";
 import {
   TilesetBinding,
   type BlockWriter,
   type OpenedTileset
 } from "./TilesetBinding.ts";
 import {
-  firstFreeTile,
-  occupiedTileRects,
+  TileOccupancy,
   type TilePosition
-} from "./blockTilesets.ts";
+} from "./TileOccupancy.ts";
 
 // CONSTANTS
 const kTilesetDirectory = "tilesets/";
@@ -66,7 +55,7 @@ export interface CreateTilesetOptions {
 }
 
 export interface MapTilesetsOptions {
-  engine: VoxelView;
+  view: VoxelView;
   catalog: TilesetCatalog;
   mapDocument: MapDocument;
   open: (assetId: string) => OpenedTileset;
@@ -81,7 +70,7 @@ export type MapTilesetsEvents = {
 export class MapTilesets
   extends Emitter<MapTilesetsEvents>
   implements BlockWriter {
-  readonly #engine: VoxelView;
+  readonly #view: VoxelView;
   readonly #catalog: TilesetCatalog;
   readonly #mapDocument: MapDocument;
   readonly #open: (assetId: string) => OpenedTileset;
@@ -95,7 +84,7 @@ export class MapTilesets
     options: MapTilesetsOptions
   ) {
     super();
-    this.#engine = options.engine;
+    this.#view = options.view;
     this.#catalog = options.catalog;
     this.#mapDocument = options.mapDocument;
     this.#open = options.open;
@@ -130,9 +119,7 @@ export class MapTilesets
   entry(
     tilesetId: string
   ): TilesetEntry | undefined {
-    return this.#entries.find(
-      (entry) => entry.definition.id === tilesetId
-    );
+    return this.#entries.find((entry) => entry.id === tilesetId);
   }
 
   open(
@@ -144,14 +131,9 @@ export class MapTilesets
   ownerOf(
     blockId: number
   ): TilesetBinding | undefined {
-    const slot = tilesetSlotOf(blockId);
-    for (const binding of this.#bindings.values()) {
-      if (binding.slot.slot === slot) {
-        return binding;
-      }
-    }
-
-    return undefined;
+    return [...this.#bindings.values()].find(
+      (binding) => binding.slot.owns(blockId)
+    );
   }
 
   tileSizeOf(
@@ -163,15 +145,7 @@ export class MapTilesets
   nextBlockId(
     tilesetId: string
   ): number | undefined {
-    const binding = this.#bindings.get(tilesetId);
-    if (binding === undefined) {
-      return undefined;
-    }
-
-    return composeBlockId(
-      binding.slot.slot,
-      binding.opened.tileset.blocks.nextId
-    );
+    return this.#bindings.get(tilesetId)?.link.nextBlockId;
   }
 
   freeTile(
@@ -183,35 +157,25 @@ export class MapTilesets
       return undefined;
     }
 
-    const { atlases, shapes, document } = this.#engine;
+    const { atlases, shapes, document } = this.#view;
     const atlas = atlases.get(tilesetId)?.def;
-    const occupied = occupiedTileRects(
+    const occupancy = TileOccupancy.of(
       document.blocks.getAll(),
       (shapeId) => shapes.get(shapeId),
       tilesetId,
       tileSize
     );
 
-    return firstFreeTile(
-      {
-        tileSize,
-        width: atlas && atlas.cols * atlas.tileSize,
-        height: atlas && atlas.rows * atlas.tileSize
-      },
-      size ?? tileSize,
-      occupied
-    );
+    return occupancy.firstFree(size ?? tileSize, {
+      width: atlas && atlas.cols * atlas.tileSize,
+      height: atlas && atlas.rows * atlas.tileSize
+    });
   }
 
   defineBlock(
     block: BlockDefinition
   ): boolean {
-    const resolved = resolveBlockDefinition(block);
-    const owner = this.ownerOf(resolved.id);
-
-    return owner !== undefined && owner.opened.tileset.defineBlock(
-      localTilesetBlock(owner.slot, resolved)
-    );
+    return this.ownerOf(block.id)?.link.defineBlock(block) ?? false;
   }
 
   defineBlocks(
@@ -225,59 +189,28 @@ export class MapTilesets
   removeBlock(
     blockId: number
   ): boolean {
-    const owner = this.ownerOf(blockId);
-
-    return owner !== undefined &&
-      owner.opened.tileset.removeBlock(localBlockIdOf(blockId));
+    return this.ownerOf(blockId)?.link.removeBlock(blockId) ?? false;
   }
 
   moveBlock(
     blockId: number,
     toIndex: number
   ): boolean {
-    const owner = this.ownerOf(blockId);
-    if (owner === undefined) {
-      return false;
-    }
-
-    let localIndex = 0;
-    let index = 0;
-    for (const block of this.#engine.document.blocks) {
-      if (block.id === blockId) {
-        continue;
-      }
-      if (index >= toIndex) {
-        break;
-      }
-      if (tilesetSlotOf(block.id) === owner.slot.slot) {
-        localIndex++;
-      }
-      index++;
-    }
-
-    return owner.opened.tileset.moveBlock(localBlockIdOf(blockId), localIndex);
+    return this.ownerOf(blockId)?.link.moveBlock(blockId, toIndex) ?? false;
   }
 
   defineMaterialGroup(
     group: MaterialGroup
   ): boolean {
-    const owner = this.#materialGroupOwnerOf(group.id);
-
-    return owner !== undefined && owner.opened.tileset.defineMaterialGroup({
-      ...group.toJSON(),
-      id: localMaterialGroupId(owner.slot, group.id)
-    });
+    return this.#materialGroupOwnerOf(group.id)?.link
+      .defineMaterialGroup(group.toJSON()) ?? false;
   }
 
   removeMaterialGroup(
     groupId: string
   ): boolean {
-    const owner = this.#materialGroupOwnerOf(groupId);
-
-    return owner !== undefined &&
-      owner.opened.tileset.removeMaterialGroup(
-        localMaterialGroupId(owner.slot, groupId)
-      );
+    return this.#materialGroupOwnerOf(groupId)?.link
+      .removeMaterialGroup(groupId) ?? false;
   }
 
   resizeTiles(
@@ -294,7 +227,7 @@ export class MapTilesets
     const linked = new Set(this.#entries.map((entry) => entry.assetId));
 
     return [...this.#catalog.records()]
-      .filter((record) => isTilesetAsset(record) && !linked.has(record.id))
+      .filter((record) => TilesetEntry.isTilesetAsset(record) && !linked.has(record.id))
       .sort((left, right) => left.source.localeCompare(right.source));
   }
 
@@ -320,7 +253,7 @@ export class MapTilesets
     assetId: string
   ): string | null {
     const tilesetId = this.#uniqueTilesetId();
-    const added = this.#engine.document.addTileset({
+    const added = this.#view.document.addTileset({
       id: tilesetId,
       asset: tilesetAsset(assetId)
     });
@@ -331,7 +264,7 @@ export class MapTilesets
   remove(
     tilesetId: string
   ): boolean {
-    return this.#engine.document.removeTileset(tilesetId);
+    return this.#view.document.removeTileset(tilesetId);
   }
 
   async rename(
@@ -354,18 +287,21 @@ export class MapTilesets
   }
 
   readonly refresh = (): void => {
-    const entries = resolveTilesetEntries(
-      this.#engine.document.tilesets,
+    const entries = TilesetEntry.resolveAll(
+      this.#view.document.tilesets,
       this.#catalog.records()
     );
-    if (entriesEqual(this.#entries, entries)) {
+    if (
+      entries.length === this.#entries.length &&
+      entries.every((entry, index) => entry.equals(this.#entries[index]))
+    ) {
       return;
     }
 
     this.#entries = entries;
     const active = this.#activeTilesetId;
     if (active === null || this.entry(active) === undefined) {
-      this.#assignActive(entries[0]?.definition.id ?? null);
+      this.#assignActive(entries[0]?.id ?? null);
     }
     this.#reconcileBindings();
     this.emit("change");
@@ -390,7 +326,7 @@ export class MapTilesets
 
   #reconcileBindings(): void {
     const entries = new Map(
-      this.#entries.map((entry) => [entry.definition.id, entry])
+      this.#entries.map((entry) => [entry.id, entry])
     );
     for (const [tilesetId, binding] of this.#bindings) {
       const entry = entries.get(tilesetId);
@@ -432,12 +368,12 @@ export class MapTilesets
     }
 
     const binding = new TilesetBinding({
-      engine: this.#engine,
+      view: this.#view,
       entry,
-      slot: {
+      slot: new TilesetSlot({
         id: definition.id,
         slot: definition.slot
-      },
+      }),
       opened,
       mapDocument: this.#mapDocument,
       blocks: this
@@ -461,17 +397,13 @@ export class MapTilesets
   #materialGroupOwnerOf(
     groupId: string
   ): TilesetBinding | undefined {
-    for (const binding of this.#bindings.values()) {
-      if (localMaterialGroupId(binding.slot, groupId) !== groupId) {
-        return binding;
-      }
-    }
-
-    return undefined;
+    return [...this.#bindings.values()].find(
+      (binding) => binding.slot.localGroupId(groupId) !== null
+    );
   }
 
   #uniqueTilesetId(): string {
-    const taken = this.#engine.document.tilesets.ids();
+    const taken = this.#view.document.tilesets.ids();
     let tilesetId = this.#generateId();
     while (taken.has(tilesetId)) {
       tilesetId = this.#generateId();

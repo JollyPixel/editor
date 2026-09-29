@@ -15,9 +15,7 @@ import type {
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import * as cursor from "../model/brushCursor.ts";
-import type { BrushCursor } from "../model/brushCursor.ts";
-import { overlaps } from "../model/brushFootprint.ts";
+import { BrushFootprint } from "../model/BrushFootprint.ts";
 import { BrushMesh } from "../rendering/BrushMesh.ts";
 
 // CONSTANTS
@@ -29,12 +27,12 @@ export interface PeerBrushesOptions {
 
 export class PeerBrushes extends ActorComponent {
   #room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
-  #channel: PresenceChannel<BrushCursor | null>;
+  #channel: PresenceChannel<BrushFootprint | null>;
   #meshes = new Map<string, BrushMesh>();
-  #localCursor: BrushCursor | null = null;
+  #localCursor: BrushFootprint | null = null;
 
   #onPeerChange = (
-    change: PresenceChange<BrushCursor | null>
+    change: PresenceChange<BrushFootprint | null>
   ): void => {
     if (change.value === undefined) {
       this.#removeMesh(change.clientId);
@@ -56,8 +54,8 @@ export class PeerBrushes extends ActorComponent {
     this.#room = options.room;
     this.#channel = new PresenceChannel(options.room, {
       key: kPresenceCursorKey,
-      decode: cursor.read,
-      equals: cursor.equals
+      decode: BrushFootprint.parse,
+      equals: (left, right) => left === right || left?.equals(right) === true
     });
 
     for (const clientId of this.#channel.values.keys()) {
@@ -67,7 +65,7 @@ export class PeerBrushes extends ActorComponent {
   }
 
   publishLocalCursor(
-    next: BrushCursor | null
+    next: BrushFootprint | null
   ): void {
     if (!this.#channel.publish(next)) {
       return;
@@ -106,7 +104,7 @@ export class PeerBrushes extends ActorComponent {
 
     if (
       peerCursor === null ||
-      overlaps(peerCursor, this.#localCursor)
+      peerCursor.overlaps(this.#localCursor)
     ) {
       mesh.hide();
 

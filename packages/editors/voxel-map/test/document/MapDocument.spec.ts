@@ -47,15 +47,15 @@ class FakeWorldSource
 }
 
 function setup() {
-  const engine = new Emitter<VoxelDocumentEvents>();
+  const view = new Emitter<VoxelDocumentEvents>();
   const source = new FakeWorldSource();
-  const mapDocument = new MapDocument({ commands: engine, source });
+  const mapDocument = new MapDocument({ commands: view, source });
   const seen: string[] = [];
   for (const event of kEvents) {
     mapDocument.on(event, () => seen.push(event));
   }
 
-  return { engine, source, mapDocument, seen };
+  return { view, source, mapDocument, seen };
 }
 
 function command(
@@ -65,16 +65,17 @@ function command(
 }
 
 describe("MapDocument", () => {
-  it("routes each engine command family to its own signal", () => {
-    const { engine, seen } = setup();
+  it("routes each document command family to its own signal", () => {
+    const { view, seen } = setup();
 
-    engine.emit("command", command("added"), { origin: "local" });
-    engine.emit("command", command("block-defined"), { origin: "remote" });
-    engine.emit("command", command("tileset-added"), { origin: "local" });
-    engine.emit("command", command("material-group-removed"), {
+    view.emit("command", command("added"), { origin: "local" });
+    view.emit("command", command("block-defined"), { origin: "remote" });
+    view.emit("command", command("tileset-added"), { origin: "local" });
+    view.emit("command", command("material-group-removed"), {
       origin: "remote"
     });
-    engine.emit("command", command("template-defined"), { origin: "local" });
+    view.emit("command", command("template-defined"), { origin: "local" });
+    view.emit("command", command("blend-group-defined"), { origin: "local" });
 
     assert.deepEqual(seen, [
       "layerUpdated",
@@ -117,10 +118,10 @@ describe("MapDocument", () => {
   });
 
   it("stops listening and releases its source once disposed", () => {
-    const { engine, source, mapDocument, seen } = setup();
+    const { view, source, mapDocument, seen } = setup();
 
     mapDocument.dispose();
-    engine.emit("command", command("added"), { origin: "local" });
+    view.emit("command", command("added"), { origin: "local" });
     source.emit("reset");
 
     assert.deepEqual(seen, []);

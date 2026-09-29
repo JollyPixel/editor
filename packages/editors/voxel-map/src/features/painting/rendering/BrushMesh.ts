@@ -5,29 +5,17 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { Line2NodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
-import type { BrushCursor } from "../model/brushCursor.ts";
+import type {
+  BrushFootprint,
+  BrushShape
+} from "../model/BrushFootprint.ts";
 import {
-  boundsOf,
-  cellsOf,
-  isBall,
-  type BrushShape
-} from "../model/brushFootprint.ts";
-import {
-  edgesFacing,
-  facingKey,
-  voxelShell,
-  type VoxelShell
-} from "../model/voxelShell.ts";
-import {
-  contourEdges,
-  voxelSolid,
-  type VoxelSolid
-} from "../model/voxelContour.ts";
-import { faceCornersOf } from "../model/cellFace.ts";
+  BRUSH_SHELL_INFLATE,
+  BrushShell
+} from "./BrushShell.ts";
 
 // CONSTANTS
-const kInflate = 0.01;
-const kFaceMargin = kInflate + 0.005;
+const kFaceMargin = BRUSH_SHELL_INFLATE + 0.005;
 const kOpacity = 0.15;
 const kFaceOpacityBoost = 0.35;
 const kDefaultColor = 0x33e0ff;
@@ -39,25 +27,11 @@ const kSubduedEdgeWidth = 1;
 const kHaloColor = 0x0b0f14;
 const kHaloSpread = 1;
 const kDepthBias = 1;
-const kOrigin = {
-  x: 0,
-  y: 0,
-  z: 0
-};
-const kShells = new Map<string, BrushShell>();
 const kTowardCamera = {
   polygonOffset: true,
   polygonOffsetFactor: -kDepthBias,
   polygonOffsetUnits: -kDepthBias
 };
-
-interface BrushShell {
-  local: VoxelShell;
-  source: VoxelShell;
-  solid: VoxelSolid | null;
-  center: number[];
-  scale: number[];
-}
 
 export interface BrushMeshOptions {
   color?: THREE.ColorRepresentation;
@@ -187,15 +161,11 @@ export class BrushMesh extends THREE.Group {
   }
 
   draw(
-    cursor: BrushCursor
+    cursor: BrushFootprint
   ): void {
-    const { min, span } = boundsOf(cursor);
+    const { x, y, z } = cursor.center;
 
-    this.position.set(
-      min.x + (span.x / 2),
-      min.y + (span.y / 2),
-      min.z + (span.z / 2)
-    );
+    this.position.set(x, y, z);
     this.#reshape(cursor);
     this.#placeFace(cursor);
 
@@ -204,7 +174,7 @@ export class BrushMesh extends THREE.Group {
   }
 
   #placeFace(
-    cursor: BrushCursor
+    cursor: BrushFootprint
   ): void {
     const { face } = cursor;
     this.#faced = face !== undefined;
@@ -212,11 +182,7 @@ export class BrushMesh extends THREE.Group {
       return;
     }
 
-    const corners = faceCornersOf(
-      cursor.position,
-      face,
-      kFaceMargin
-    );
+    const corners = face.corners(cursor.position, kFaceMargin);
     const attribute = this.#face.geometry.getAttribute("position");
     corners.forEach((corner, index) => {
       attribute.setXYZ(
@@ -232,15 +198,15 @@ export class BrushMesh extends THREE.Group {
   #reshape(
     shape: BrushShape
   ): void {
-    const key = shapeKeyOf(shape);
+    const key = `${shape.size}:${shape.axis}:${shape.pattern}`;
     if (key === this.#shapeKey) {
       return;
     }
     this.#shapeKey = key;
 
-    const brushShell = shellOf(key, shape);
+    const brushShell = BrushShell.of(shape);
     const shell = brushShell.local;
-    const flat = brushShell.solid !== null;
+    const { flat } = brushShell;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
       "position",
@@ -274,21 +240,13 @@ export class BrushMesh extends THREE.Group {
     const eye = this.worldToLocal(
       this.#eye.setFromMatrixPosition(camera.matrixWorld)
     ).toArray();
-    const key = shell.solid === null ?
-      facingKey(shell.local, eye) :
-      eye.map((value) => value.toFixed(2)).join(":");
+    const key = shell.facingKey(eye);
     if (key === this.#facingKey) {
       return;
     }
 
     this.#facingKey = key;
-    if (shell.solid === null) {
-      this.#outline(edgesFacing(shell.local, eye));
-
-      return;
-    }
-
-    this.#outline(contourOf(shell, shell.solid, eye));
+    this.#outline(shell.outline(eye));
   }
 
   #outline(
@@ -324,81 +282,4 @@ export class BrushMesh extends THREE.Group {
     this.#halo.visible = shelled && !this.#subdued;
     this.#border.visible = shelled;
   }
-}
-
-function shapeKeyOf(
-  shape: BrushShape
-): string {
-  return `${shape.size}:${shape.axis}:${shape.pattern}`;
-}
-
-function contourOf(
-  shell: BrushShell,
-  solid: VoxelSolid,
-  eye: number[]
-): number[] {
-  const { center, scale } = shell;
-  const sourceEye = eye.map(
-    (value, index) => (value / scale[index]) + center[index]
-  );
-
-  return contourEdges(shell.source, solid, sourceEye).map(
-    (value, index) => (value - center[index % 3]) * scale[index % 3]
-  );
-}
-
-function shellOf(
-  key: string,
-  shape: BrushShape
-): BrushShell {
-  const cached = kShells.get(key);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const footprint = {
-    ...shape,
-    position: kOrigin
-  };
-  const { min, span } = boundsOf(footprint);
-  const cells = cellsOf(footprint);
-  const shell = voxelShell(cells);
-  const center = [
-    min.x + (span.x / 2),
-    min.y + (span.y / 2),
-    min.z + (span.z / 2)
-  ];
-  const scale = [
-    (span.x + (kInflate * 2)) / span.x,
-    (span.y + (kInflate * 2)) / span.y,
-    (span.z + (kInflate * 2)) / span.z
-  ];
-  function toLocal(
-    values: number[]
-  ): number[] {
-    return values.map(
-      (value, index) => (value - center[index % 3]) * scale[index % 3]
-    );
-  }
-  const local: VoxelShell = {
-    triangles: toLocal(shell.triangles),
-    edges: toLocal(shell.edges),
-    rims: shell.rims,
-    edgeFaces: shell.edgeFaces,
-    planes: [
-      shell.planes[0].map((plane) => (plane - center[0]) * scale[0]),
-      shell.planes[1].map((plane) => (plane - center[1]) * scale[1]),
-      shell.planes[2].map((plane) => (plane - center[2]) * scale[2])
-    ]
-  };
-  const brushShell: BrushShell = {
-    local,
-    source: shell,
-    solid: isBall(shape) ? voxelSolid(cells) : null,
-    center,
-    scale
-  };
-  kShells.set(key, brushShell);
-
-  return brushShell;
 }

@@ -121,8 +121,7 @@ and every template change a [template command](../core/commands.md#template-comm
 on `"command"`, so an editor or a network adapter can mirror local edits
 without wrapping the world. [`VoxelDocument`](../core/VoxelDocument.md#events)
 forwards these as local commands. The exceptions are `restoreLayer`,
-`setLayerVisible`, `mergeAllLayers`, `markAllDirty` and
-`clear`, which stay silent. Each emitting method builds its command and applies
+`mergeAllLayers`, `markAllDirty` and `clear`, which stay silent. Each emitting method builds its command and applies
 it through the same path as `apply()`.
 
 ### Methods
@@ -168,12 +167,6 @@ Every change to the stack (adding, cloning, moving, removing or merging a
 layer) re-ranks every layer's `order` densely and descending from the
 resulting sequence, so `order` is an internal rank rather than a stable
 identifier. Layer ids are unique within the world.
-
-#### `setLayerVisible(name: string, visible: boolean): void`
-
-Hidden layers are skipped during compositing and mesh rebuild. Marks all chunks in
-every layer dirty when visibility actually flips, since cross-layer face culling
-changes with it; otherwise only the layer's own chunks.
 
 #### `setLayerPosition(name: string, position: VoxelCoord): void`
 
@@ -341,6 +334,13 @@ world.setVoxelBulk("Ground", [
 Removes several voxels and emits a single `"voxels-removed"` for the batch.
 Removing from a layer that does not exist changes nothing and emits nothing.
 
+#### `removeBlocks(blockIds: Iterable<number>): number`
+
+Removes every voxel of the given blocks from every layer and returns how many
+it removed. Each layer emits `"voxels-removed"` commands of at most 4096
+entries; a layer without such voxels emits nothing. Use it to clear the voxels
+a deleted block left behind.
+
 #### `transaction<T>(fn: () => T): T`
 
 Runs `fn` and returns its result. Use it for large writes; for world
@@ -496,6 +496,7 @@ class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
   readonly size: number;
   toArray(): VoxelObjectLayerJSON[];
   get(name: string): VoxelObjectLayerJSON | undefined;
+  getObject(layerName: string, objectId: string): VoxelObjectJSON | undefined;
   add(name: string): VoxelObjectLayerJSON;
   remove(name: string): boolean;
   update(name: string, patch: { visible?: boolean; }): boolean;
@@ -510,6 +511,8 @@ class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
 
 `add()` creates a visible layer whose `order` is the current object layer count
 and returns the new descriptor. `toArray()` lists the layers in insertion order.
+`getObject()` finds an object by its layer and id; object ids are only unique
+within a layer.
 The other methods return `false` when a named layer or object is not found.
 
 `apply()` applies an [object layer command](../core/commands.md#layer-commands)

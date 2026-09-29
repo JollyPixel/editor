@@ -22,16 +22,16 @@ import {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import { countBlocksPerTileset } from "../tilesets/blockTilesets.ts";
-import type { AddTilesetDialog } from "../tilesets/AddTilesetDialog.ts";
-import type { TilesetEditDialog } from "../tilesets/TilesetEditDialog.ts";
+import type { AddTilesetDialog } from "../tilesets/dialogs/AddTilesetDialog.ts";
+import type { TilesetEditDialog } from "../tilesets/dialogs/TilesetEditDialog.ts";
 import { TilesetTab } from "./TilesetTab.ts";
 import {
+  blockCountsByTileset,
   tilesetTabLabels,
   type TilesetTabLabels
 } from "./tilesetTabLabels.ts";
-import "../tilesets/AddTilesetDialog.ts";
-import "../tilesets/TilesetEditDialog.ts";
+import "../tilesets/dialogs/AddTilesetDialog.ts";
+import "../tilesets/dialogs/TilesetEditDialog.ts";
 
 // CONSTANTS
 const kCanvasOptions: PixelArtCanvasOptions = {
@@ -157,11 +157,11 @@ export class TextureEditor extends WorkspaceElement {
       return;
     }
 
-    const { engine, tilesets } = workspace;
+    const { view, tilesets } = workspace;
     const { entries } = tilesets;
-    const counts = countBlocksPerTileset(engine.document.blocks.getAll());
+    const counts = blockCountsByTileset(view.document.blocks.getAll());
     for (const entry of entries) {
-      const tilesetId = entry.definition.id;
+      const tilesetId = entry.id;
       const labels = tilesetTabLabels(entry, counts.get(tilesetId) ?? 0);
       const binding = tilesets.open(tilesetId);
       const tab = this.#tabs.get(tilesetId);
@@ -188,7 +188,7 @@ export class TextureEditor extends WorkspaceElement {
       );
       this.#tabs.set(tilesetId, new TilesetTab({
         canvas,
-        engine,
+        view,
         binding,
         blocks: tilesets,
         brush: workspace.state.brush,
@@ -196,7 +196,7 @@ export class TextureEditor extends WorkspaceElement {
       }));
     }
 
-    const kept = new Set(entries.map((entry) => entry.definition.id));
+    const kept = new Set(entries.map((entry) => entry.id));
     for (const tilesetId of [...this.#tabs.keys(), ...this.#placeholders]) {
       if (!kept.has(tilesetId)) {
         this.#removeTab(panel, tilesetId);
@@ -287,7 +287,7 @@ export class TextureEditor extends WorkspaceElement {
       return;
     }
 
-    const block = workspace.engine.document.blocks.get(
+    const block = workspace.view.document.blocks.get(
       workspace.state.brush.blockId
     );
     if (block === undefined) {

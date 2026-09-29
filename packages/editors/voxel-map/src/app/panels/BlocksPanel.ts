@@ -9,14 +9,11 @@ import {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import {
-  parseBlockLibraryOrder,
-  type BlockLibraryOrder
-} from "../../features/blocks/blockLibraryOrder.ts";
-import type { BlockOrderChangeDetail } from "../../features/blocks/BlockOrderMenu.ts";
-import type { BlockLibrary } from "../../features/blocks/BlockLibrary.ts";
-import "../../features/blocks/BlockLibrary.ts";
-import "../../features/blocks/BlockOrderMenu.ts";
+import { BlockLibraryOrder } from "../../features/blocks/library/BlockLibraryOrder.ts";
+import type { BlockOrderChangeDetail } from "../../features/blocks/library/BlockOrderMenu.ts";
+import type { BlockLibrary } from "../../features/blocks/library/BlockLibrary.ts";
+import "../../features/blocks/library/BlockLibrary.ts";
+import "../../features/blocks/library/BlockOrderMenu.ts";
 
 // CONSTANTS
 const kOrderStorageKey = "voxel-map:block-library:order";
@@ -68,7 +65,7 @@ export class BlocksPanel extends WorkspaceElement {
     this.hostsTextureEditor = false;
     this._canEditBlock = false;
     this.storage = new LocalStorageAdapter();
-    this._order = parseBlockLibraryOrder(this.storage.get(kOrderStorageKey));
+    this._order = BlockLibraryOrder.parse(this.storage.get(kOrderStorageKey));
   }
 
   protected override watchWorkspace(
@@ -76,7 +73,7 @@ export class BlocksPanel extends WorkspaceElement {
   ): Iterable<() => void> {
     const refreshEditable = (): void => {
       const { blockId } = workspace.state.brush;
-      this._canEditBlock = workspace.engine.document.blocks.get(blockId) !== undefined;
+      this._canEditBlock = workspace.view.document.blocks.get(blockId) !== undefined;
     };
     refreshEditable();
 
@@ -91,7 +88,7 @@ export class BlocksPanel extends WorkspaceElement {
     event: CustomEvent<BlockOrderChangeDetail>
   ): void => {
     this._order = event.detail.order;
-    this.storage.set(kOrderStorageKey, this._order);
+    this.storage.set(kOrderStorageKey, this._order.value);
   };
 
   readonly #editBlock = async(): Promise<void> => {

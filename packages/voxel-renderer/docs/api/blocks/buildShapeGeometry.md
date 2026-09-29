@@ -3,7 +3,8 @@
 Triangulates a [`BlockShape`](./BlockShape.md) into one indexed buffer for
 tools that render a single block: a library thumbnail, a UV editor preview, an
 inspector. The chunk mesher does not use it; it builds merged geometry through
-its own path.
+its own path. [`BlockPieces`](./BlockPieces.md) builds on it to texture a block
+like the mesher does.
 
 ```ts
 import { buildShapeGeometry } from "@jolly-pixel/voxel.renderer";

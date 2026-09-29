@@ -5,9 +5,10 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import { TransformControls } from "@jolly-pixel/three";
-import type {
-  VoxelWorld,
-  VoxelLayerCommand
+import {
+  isVoxelLayerGeometryCommand,
+  type VoxelWorld,
+  type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -16,7 +17,6 @@ import type {
   PointerCapture,
   SelectionStore
 } from "../../../state/index.ts";
-import { isLayerGeometryCommand } from "./layerGeometry.ts";
 
 export interface VoxelLayerGizmoOptions {
   world: VoxelWorld;
@@ -201,7 +201,7 @@ export class VoxelLayerGizmo extends ActorComponent {
     if (event.layerName !== this.#activeLayer) {
       return;
     }
-    if (isLayerGeometryCommand(event)) {
+    if (isVoxelLayerGeometryCommand(event)) {
       this.#repositionPivot();
     }
   };

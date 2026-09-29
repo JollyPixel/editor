@@ -53,6 +53,7 @@ export interface MeshableChunk {
 }
 
 export interface MeshableLayer {
+  readonly name?: string;
   readonly visible: boolean;
   readonly compositing: "replace" | "composite";
   readonly position: Readonly<VoxelCoord>;
@@ -72,3 +73,11 @@ export interface MeshableWorld {
   readonly chunkSize: number;
   getLayers(): readonly MeshableLayer[];
 }
+
+export interface MeshableLayerVisibility {
+  isVisible(layer: MeshableLayer): boolean;
+}
+
+export const AUTHORED_LAYER_VISIBILITY: MeshableLayerVisibility = {
+  isVisible: (layer) => layer.visible
+};

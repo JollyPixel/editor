@@ -18,7 +18,7 @@ import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 import { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
 import { BlendGroupList } from "../materials/BlendGroupList.ts";
-import { localBlock } from "./projectTileset.ts";
+import { localBlock } from "./localBlock.ts";
 import { rescaleTileRef } from "./tileRef.ts";
 import {
   DEFAULT_TILE_SIZE,

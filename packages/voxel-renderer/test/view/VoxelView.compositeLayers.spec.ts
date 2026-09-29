@@ -124,6 +124,35 @@ describe("VoxelView - composite layers", () => {
     assert.equal(facesOf(view), 6);
   });
 
+  it("hides a layer in this view only", () => {
+    const view = makeLayeredView();
+    view.tick(0);
+
+    view.layerVisibility.override("Top", false);
+    view.tick(0);
+
+    assert.equal(facesOf(view), 6);
+    assert.equal(view.document.world.getLayer("Top")?.visible, true);
+    assert.equal(
+      view.document.world.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId,
+      1
+    );
+  });
+
+  it("shows a layer the document hides until the override is reset", () => {
+    const view = makeLayeredView();
+    view.document.world.updateLayer("Top", { visible: false });
+    view.tick(0);
+
+    view.layerVisibility.override("Top", true);
+    view.tick(0);
+    assert.equal(facesOf(view), 10);
+
+    view.layerVisibility.reset("Top");
+    view.tick(0);
+    assert.equal(facesOf(view), 6);
+  });
+
   it("rebuilds the cell without a removed layer", () => {
     const view = makeLayeredView();
     view.tick(0);

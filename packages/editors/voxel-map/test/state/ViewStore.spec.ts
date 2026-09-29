@@ -6,11 +6,11 @@ import { describe, test } from "node:test";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { ViewStore } from "../../src/state/ViewStore.ts";
 import {
-  DEFAULT_VIEW_SETTINGS,
-  ViewStore,
-  type ViewSettings
-} from "../../src/state/ViewStore.ts";
+  ViewSettings,
+  type ViewSettingsJSON
+} from "../../src/state/ViewSettings.ts";
 
 // CONSTANTS
 const kKey = "voxel-map:view";
@@ -19,8 +19,8 @@ describe("ViewStore", () => {
   test("starts from the defaults with every effect off", () => {
     const store = new ViewStore();
 
-    assert.deepEqual(store.settings, DEFAULT_VIEW_SETTINGS);
-    assert.deepEqual(store.settings, {
+    assert.deepEqual(store.settings, ViewSettings.DEFAULT);
+    assert.deepEqual(store.settings.toJSON(), {
       lighting: "studio",
       reflections: false,
       ambientOcclusion: false,
@@ -31,7 +31,7 @@ describe("ViewStore", () => {
   test("persists an update and emits the new settings once", () => {
     const storage = new MemoryStorageAdapter();
     const store = new ViewStore(storage);
-    const seen: ViewSettings[] = [];
+    const seen: ViewSettingsJSON[] = [];
     store.on("change", (settings) => seen.push({ ...settings }));
 
     store.update({ reflections: true });
@@ -50,13 +50,13 @@ describe("ViewStore", () => {
       ambientOcclusion: true
     }));
 
-    assert.deepEqual(new ViewStore(storage).settings, {
-      ...DEFAULT_VIEW_SETTINGS,
-      ambientOcclusion: true
-    });
+    assert.deepEqual(
+      new ViewStore(storage).settings,
+      ViewSettings.DEFAULT.with({ ambientOcclusion: true })
+    );
 
     storage.set(kKey, "{not json");
-    assert.deepEqual(new ViewStore(storage).settings, DEFAULT_VIEW_SETTINGS);
+    assert.deepEqual(new ViewStore(storage).settings, ViewSettings.DEFAULT);
   });
 
   test("ignores an invalid lighting mode in an update", () => {
@@ -66,5 +66,27 @@ describe("ViewStore", () => {
     store.update(JSON.parse("{\"lighting\":\"night\"}"));
 
     assert.equal(store.settings.lighting, "daylight");
+  });
+});
+
+describe("ViewSettings", () => {
+  test("parses stored JSON and falls back field by field", () => {
+    assert.equal(ViewSettings.parse(null), ViewSettings.DEFAULT);
+    assert.equal(ViewSettings.parse("{not json"), ViewSettings.DEFAULT);
+    assert.deepEqual(
+      ViewSettings.parse("{\"lighting\":\"flat\",\"shadows\":1}").toJSON(),
+      {
+        ...ViewSettings.DEFAULT.toJSON(),
+        lighting: "flat"
+      }
+    );
+  });
+
+  test("changes into new settings and compares by value", () => {
+    const shaded = ViewSettings.DEFAULT.with({ shadows: true });
+
+    assert.equal(ViewSettings.DEFAULT.shadows, false);
+    assert.equal(shaded.equals(ViewSettings.DEFAULT.with({ shadows: true })), true);
+    assert.equal(shaded.equals(ViewSettings.DEFAULT), false);
   });
 });

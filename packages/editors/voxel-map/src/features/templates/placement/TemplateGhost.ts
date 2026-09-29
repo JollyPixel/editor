@@ -1,23 +1,19 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
+  BLOCK_PIECE_TEXTURED_GROUP,
   VoxelTransform,
   voxelBlockId,
   voxelTransform,
+  type BlockPiece,
+  type BlockPieces,
   type BlockRegistry,
   type BlockSurface,
   type VoxelTemplate
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  BLOCK_TEXTURED_MATERIAL,
-  type BlockRenderSources
-} from "../../blocks/blockGeometry.ts";
-import {
-  BlockPieces,
-  type BlockPiece
-} from "../../blocks/BlockPieces.ts";
+import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
 
 // CONSTANTS
 const kOpacity = 0.55;
@@ -67,7 +63,7 @@ export class TemplateGhost extends THREE.Group {
     this.name = "template-ghost";
     this.#sources = options.sources;
     this.#blockRegistry = options.blockRegistry;
-    this.#pieces = new BlockPieces(options.sources);
+    this.#pieces = options.sources.createPieces();
     this.visible = false;
   }
 
@@ -274,7 +270,7 @@ function appendPiece(
   }
 
   for (const group of geometry.groups) {
-    if (group.materialIndex !== BLOCK_TEXTURED_MATERIAL) {
+    if (group.materialIndex !== BLOCK_PIECE_TEXTURED_GROUP) {
       continue;
     }
     for (let at = group.start; at < group.start + group.count; at++) {

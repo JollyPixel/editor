@@ -42,6 +42,15 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
     return this.#layers.get(name);
   }
 
+  getObject(
+    layerName: string,
+    objectId: string
+  ): VoxelObjectJSON | undefined {
+    return this.#layers.get(layerName)?.objects.find(
+      (object) => object.id === objectId
+    );
+  }
+
   add(
     name: string
   ): VoxelObjectLayerJSON {

@@ -28,10 +28,10 @@ const kStairSlots = [
 function setup(
   faceTextures: Record<string, unknown> = {}
 ) {
-  const { engine, bridgeOptions } = makeFakeVoxelEngine();
+  const { view, bridgeOptions } = makeFakeVoxelEngine();
   const uv = makeUv();
 
-  engine.document.defineBlock({
+  view.document.defineBlock({
     id: 1,
     name: "Stair",
     shapeId: "stair",
@@ -40,13 +40,13 @@ function setup(
     defaultTexture: { col: 0, row: 0, tilesetId: "atlas" }
   } as never);
 
-  return { engine, uv, bridgeOptions };
+  return { view, uv, bridgeOptions };
 }
 
 describe("BlockUvBridge — stairs", () => {
   it("gives a stair region every slot its shape emits", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const { view, uv, bridgeOptions } = setup();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);
@@ -66,8 +66,8 @@ describe("BlockUvBridge — stairs", () => {
   });
 
   it("draws the side of a stair as its L-shaped coverage", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const { view, uv, bridgeOptions } = setup();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);
@@ -89,8 +89,8 @@ describe("BlockUvBridge — stairs", () => {
   });
 
   it("gives a tread and a riser the footprint of a slab side", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const { view, uv, bridgeOptions } = setup();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);
@@ -123,15 +123,15 @@ describe("BlockUvBridge — stairs", () => {
   });
 
   it("writes one tile per slot when a slot moves", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const { view, uv, bridgeOptions } = setup();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);
       uv.setState("block-1", "free");
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
 
-      const updated = engine.document.blocks.get(1)!;
+      const updated = view.document.blocks.get(1)!;
 
       assert.deepEqual(
         {
@@ -156,8 +156,8 @@ describe("BlockUvBridge — stairs", () => {
   });
 
   it("stacks onto the whole tile, not the partial slot that was selected", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const { view, uv, bridgeOptions } = setup();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);
@@ -172,7 +172,7 @@ describe("BlockUvBridge — stairs", () => {
         "a 16x8 tread must not become the block's shared rectangle"
       );
 
-      const { defaultTexture } = engine.document.blocks.get(1)!;
+      const { defaultTexture } = view.document.blocks.get(1)!;
       assert.deepEqual(
         { col: defaultTexture!.col, row: defaultTexture!.row },
         { col: 0, row: 0 }
@@ -184,8 +184,8 @@ describe("BlockUvBridge — stairs", () => {
   });
 
   it("frees a moved stair back onto the shape's own slot footprints", () => {
-    const { engine, uv, bridgeOptions } = setup();
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const { view, uv, bridgeOptions } = setup();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);
@@ -212,10 +212,10 @@ describe("BlockUvBridge — stairs", () => {
   });
 
   it("rebuilds a legacy stair, inheriting derived slots from their base", () => {
-    const { engine, uv, bridgeOptions } = setup({
+    const { view, uv, bridgeOptions } = setup({
       [Face.PosY]: { col: 2, row: 1, tilesetId: "atlas" }
     });
-    const bridge = new BlockUvBridge(uv, engine, bridgeOptions);
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
       bridge.setActiveTileset("atlas", 16);

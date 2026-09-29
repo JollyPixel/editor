@@ -28,6 +28,10 @@ import type { VoxelLayer } from "../../document/world/VoxelLayer.ts";
 import type { VoxelWorld } from "../../document/world/VoxelWorld.ts";
 import type { ChunkMeshTarget } from "../chunks/ChunkMeshLayout.ts";
 import type { ChunkRebuildPlan } from "../chunks/ChunkMeshStore.ts";
+import {
+  AUTHORED_LAYER_VISIBILITY,
+  type MeshableLayerVisibility
+} from "../meshing/types.ts";
 
 // CONSTANTS
 const kJobsPerWorker = 2;
@@ -45,6 +49,7 @@ export interface ChunkMeshWorkersContext {
   definitions: MeshDefinitionSources;
   logger: VoxelLogger;
   onCapacity?: () => void;
+  visibility?: MeshableLayerVisibility;
 }
 
 export type ChunkMeshWorkersOptions = MeshWorkerOptions & ChunkMeshWorkersContext;
@@ -279,14 +284,18 @@ export class ChunkMeshWorkers {
   #request(
     job: MeshJob
   ): MeshBuildRequest {
-    const { world, meshBuilder } = this.#options;
+    const {
+      world,
+      meshBuilder,
+      visibility = AUTHORED_LAYER_VISIBILITY
+    } = this.#options;
     const { chunkSize } = world;
     const { members } = job.plan;
     const layers: MeshWorkerLayer[] = [];
     const indices = new Map<VoxelLayer, number>();
 
     for (const layer of world.getLayers()) {
-      const chunks = layer.visible ?
+      const chunks = visibility.isVisible(layer) ?
         this.#shareWindow(job, layer) :
         [];
       if (chunks.length === 0) {

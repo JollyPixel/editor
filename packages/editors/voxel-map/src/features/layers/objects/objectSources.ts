@@ -9,11 +9,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import {
-  colorOf,
-  derivedColorOf,
-  isNoopPatch
-} from "./objectArea.ts";
+import { MapObject } from "./MapObject.ts";
 
 export type ObjectFootprint = Record<"x" | "z", number>;
 
@@ -29,7 +25,7 @@ export function objectColorSource(
     read: () => {
       const object = port.object();
 
-      return object === null ? "#000000" : colorOf(object);
+      return object === null ? "#000000" : new MapObject(object).color;
     },
     write: (value) => {
       const object = port.object();
@@ -37,7 +33,7 @@ export function objectColorSource(
         return;
       }
 
-      const derived = derivedColorOf(object);
+      const derived = new MapObject(object).derivedColor;
       applyPatch(port, object, {
         color: sameColor(value, derived) ? undefined : value
       });
@@ -108,7 +104,7 @@ function applyPatch(
   object: VoxelObjectJSON,
   patch: Partial<VoxelObjectJSON>
 ): void {
-  if (isNoopPatch(object, patch)) {
+  if (new MapObject(object).isNoop(patch)) {
     return;
   }
 

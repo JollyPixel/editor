@@ -6,10 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import type { BrushStore } from "../../../state/index.ts";
-import {
-  blockIdFromUvRegion,
-  blockUvRegionId
-} from "../uv/blockUvProjection.ts";
+import { BlockUv } from "../uv/BlockUv.ts";
 
 /**
  * Keeps block-library and UV-map selection aligned.
@@ -48,14 +45,14 @@ export class BlockUvSelectionSync {
       return;
     }
 
-    const blockId = blockIdFromUvRegion(event.selectedRegionId);
+    const blockId = BlockUv.blockIdOf(event.selectedRegionId);
     if (blockId !== null) {
       this.#brush.blockId = blockId;
     }
   };
 
   readonly #onSelectedBlockChange = (id: number): void => {
-    const uvId = blockUvRegionId(id);
+    const uvId = BlockUv.regionIdOf(id);
 
     this.#uv.select(this.#uv.get(uvId) ? uvId : null);
   };

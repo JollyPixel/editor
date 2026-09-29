@@ -28,7 +28,7 @@ interface LayerSummary {
 function voxelLayers(
   page: Page
 ): Promise<LayerSummary[]> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .getLayers()
     .map((layer) => {
       return {
@@ -42,7 +42,7 @@ function voxelLayers(
 function objectLayers(
   page: Page
 ): Promise<Array<{ name: string; objects: string[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -55,7 +55,7 @@ function objectLayers(
 function objectVisibility(
   page: Page
 ): Promise<Array<{ name: string; visible: boolean; objects: boolean[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.engine.document.world
+  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -66,12 +66,25 @@ function objectVisibility(
     }));
 }
 
+function layerShown(
+  page: Page,
+  name: string
+): Promise<boolean> {
+  return page.evaluate((layerName) => {
+    const { view } = window.voxelMapEditor!.workspace;
+
+    return view.layerVisibility.isVisible(
+      view.document.world.getLayer(layerName)!
+    );
+  }, name);
+}
+
 async function syncFence(
   page: Page,
   peer: Page
 ): Promise<void> {
   await page.evaluate(
-    () => window.voxelMapEditor!.workspace.engine.document.world.addLayer("Fence")
+    () => window.voxelMapEditor!.workspace.view.document.world.addLayer("Fence")
   );
   await expect.poll(async() => (await voxelLayers(peer))
     .some((layer) => layer.name === "Fence")).toBe(true);
@@ -164,9 +177,9 @@ test("the eye hides and shows a layer", async({ page }) => {
   const row = layerRow(page, "Ground");
 
   await row.getByRole("button", { name: "Hide" }).click();
-  await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([null]);
+  await expect.poll(() => layerShown(page, "Ground")).toBe(false);
   await row.getByRole("button", { name: "Show" }).click();
-  await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+  await expect.poll(() => layerShown(page, "Ground")).toBe(true);
 });
 
 test("hiding a voxel layer stays local to the page", async({ page, peer }) => {
@@ -175,12 +188,15 @@ test("hiding a voxel layer stays local to the page", async({ page, peer }) => {
   await expect.poll(() => blocksAt(peer, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
 
   await layerRow(page, "Ground").getByRole("button", { name: "Hide" }).click();
-  await expect.poll(() => blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([null]);
+  await expect.poll(() => layerShown(page, "Ground")).toBe(false);
   await syncFence(page, peer);
 
-  expect(await blocksAt(peer, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
-  expect((await voxelLayers(peer))
-    .find((layer) => layer.name === "Ground")?.visible).toBe(true);
+  expect(await blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+  expect(await layerShown(peer, "Ground")).toBe(true);
+  for (const client of [page, peer]) {
+    expect((await voxelLayers(client))
+      .find((layer) => layer.name === "Ground")?.visible).toBe(true);
+  }
 });
 
 test("hiding an object layer or an object stays local to the page", async({ page, peer }) => {

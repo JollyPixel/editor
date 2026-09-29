@@ -7,14 +7,13 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { cellsOf } from "../model/brushFootprint.ts";
 import type {
   BrushStroke,
   VoxelPaint
 } from "../model/BrushStroke.ts";
 
 export function applyBrushStroke(
-  engine: VoxelView,
+  view: VoxelView,
   stroke: BrushStroke,
   centers: Iterable<VoxelCoord>,
   brushSize: number
@@ -22,20 +21,14 @@ export function applyBrushStroke(
   const cells: VoxelCoord[] = [];
   for (const position of centers) {
     cells.push(
-      ...stroke.claim(cellsOf({
-        position,
-        size: brushSize,
-        axis: stroke.axis,
-        pattern: stroke.pattern,
-        anchor: stroke.anchor
-      }))
+      ...stroke.claim(stroke.footprintAt(position, brushSize).cells())
     );
   }
   if (cells.length === 0) {
     return false;
   }
 
-  const { world } = engine.document;
+  const { world } = view.document;
   const layer = world.getLayer(stroke.layerName);
   if (stroke.paint) {
     const paint = stroke.paint;
@@ -75,7 +68,7 @@ export function applyBrushStroke(
     world.removeVoxelBulk(stroke.layerName, entries);
   }
 
-  engine.flush();
+  view.flush();
 
   return true;
 }

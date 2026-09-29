@@ -39,7 +39,7 @@ export function makeBlock(
 }
 
 export function makeFakeVoxelEngine(): {
-  engine: VoxelView;
+  view: VoxelView;
   dirtyReasons: string[];
   bridgeOptions: FakeBridgeOptions;
 } {
@@ -76,7 +76,7 @@ export function makeFakeVoxelEngine(): {
   };
 
   return {
-    engine: fake as unknown as VoxelView,
+    view: fake as unknown as VoxelView,
     dirtyReasons,
     bridgeOptions
   };

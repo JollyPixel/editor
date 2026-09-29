@@ -10,7 +10,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { BrushAimResolver } from "../../../../src/features/painting/interaction/BrushAimResolver.ts";
-import type { BrushPlane } from "../../../../src/features/painting/model/brushFootprint.ts";
+import type { BrushPlane } from "../../../../src/features/painting/model/BrushFootprint.ts";
+import { CellFace } from "../../../../src/features/painting/model/CellFace.ts";
 
 // CONSTANTS
 const kPointer = new THREE.Vector2(0, 0);
@@ -164,7 +165,7 @@ describe("BrushAimResolver.resolve", () => {
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 0, z: -1 },
       remove: { x: 0, y: 0, z: 0 },
-      face: "-z",
+      face: CellFace.NegZ,
       anchors: {
         place: "center",
         remove: "center"
@@ -181,7 +182,7 @@ describe("BrushAimResolver.resolve", () => {
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 0, z: -1 },
       remove: { x: 0, y: 0, z: 0 },
-      face: "-z",
+      face: CellFace.NegZ,
       anchors: {
         place: "center",
         remove: "center"
@@ -198,7 +199,7 @@ describe("BrushAimResolver.resolve", () => {
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 1, z: 0 },
       remove: { x: 0, y: 0, z: 0 },
-      face: "+y",
+      face: CellFace.PosY,
       anchors: {
         place: "bottom",
         remove: "top"
@@ -215,7 +216,7 @@ describe("BrushAimResolver.resolve", () => {
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 2, y: 0, z: 2 },
       remove: { x: 2, y: 0, z: 2 },
-      face: "-y",
+      face: CellFace.NegY,
       anchors: {
         place: "bottom",
         remove: "bottom"
@@ -344,7 +345,7 @@ describe("BrushAimResolver sky shell", () => {
     assert.deepStrictEqual(resolver.resolve(kPointer), {
       place: { x: 0, y: 0, z: 0 },
       remove: { x: 0, y: 0, z: 0 },
-      face: "-y",
+      face: CellFace.NegY,
       anchors: {
         place: "bottom",
         remove: "bottom"

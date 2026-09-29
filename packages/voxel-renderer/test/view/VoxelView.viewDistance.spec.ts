@@ -218,7 +218,7 @@ describe("VoxelView - view distance", () => {
           view.range.viewDistance = viewDistance;
         }
         if (layerVisible !== undefined) {
-          view.document.world.setLayerVisible("Ground", layerVisible);
+          view.layerVisibility.override("Ground", layerVisible);
         }
         view.tick(0);
 

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { VoxelRotation } from "@jolly-pixel/voxel.renderer";
+import type { VoxelRotationStep } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // CONSTANTS
@@ -14,7 +14,7 @@ export const BRUSH_AXES: readonly BrushAxis[] = Object.freeze([
 
 export type BrushAxis = "xz" | "xy" | "yz" | "xyz";
 export type BrushPattern = "square" | "circle";
-export type RotationMode = typeof VoxelRotation[keyof typeof VoxelRotation] | "auto";
+export type RotationMode = VoxelRotationStep | "auto";
 export type BrushMode = "build" | "replace";
 
 export interface BrushOptions {

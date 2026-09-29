@@ -17,11 +17,11 @@ import type {
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
 import { findBlocksReferencingTileset } from "./blockTextureTiles.ts";
-import { definitionsEqual } from "./tilesetEntry.ts";
+import { TilesetEntry } from "./TilesetEntry.ts";
 import type { BlockWriter } from "./TilesetBinding.ts";
 
 export interface TilesetAtlasBridgeOptions {
-  engine: VoxelView;
+  view: VoxelView;
   pixels: PixelDocument;
   tileset: TilesetDocument;
   definition: TilesetDefinition;
@@ -31,7 +31,7 @@ export interface TilesetAtlasBridgeOptions {
 }
 
 export class TilesetAtlasBridge {
-  readonly #engine: VoxelView;
+  readonly #view: VoxelView;
   readonly #pixels: PixelDocument;
   readonly #tileset: TilesetDocument;
   readonly #mapDocument: MapDocument;
@@ -80,7 +80,7 @@ export class TilesetAtlasBridge {
   constructor(
     options: TilesetAtlasBridgeOptions
   ) {
-    this.#engine = options.engine;
+    this.#view = options.view;
     this.#pixels = options.pixels;
     this.#tileset = options.tileset;
     this.#definition = options.definition;
@@ -106,7 +106,7 @@ export class TilesetAtlasBridge {
   update(
     definition: TilesetDefinition
   ): void {
-    if (definitionsEqual(definition, this.#definition)) {
+    if (TilesetEntry.sameDefinition(definition, this.#definition)) {
       return;
     }
 
@@ -131,10 +131,10 @@ export class TilesetAtlasBridge {
       return;
     }
 
-    const engine = this.#engine;
+    const view = this.#view;
     const affected = findBlocksReferencingTileset(
-      engine.document.blocks.getAll(),
-      (shapeId) => engine.shapes.get(shapeId),
+      view.document.blocks.getAll(),
+      (shapeId) => view.shapes.get(shapeId),
       this.#definition.id,
       this.#tileset.tileSize
     );
@@ -180,7 +180,7 @@ export class TilesetAtlasBridge {
   }
 
   #bind(): void {
-    this.#atlas = this.#engine.atlases.get(this.#definition.id) ?? null;
+    this.#atlas = this.#view.atlases.get(this.#definition.id) ?? null;
     this.#needsFullSync = true;
     this.#flush();
   }
@@ -242,14 +242,14 @@ export class TilesetAtlasBridge {
       rows: _rows,
       ...source
     } = definition;
-    this.#engine.loadTileset(
+    this.#view.loadTileset(
       {
         ...source,
         tileSize
       },
       texture
     );
-    this.#atlas = this.#engine.atlases.atlas(definition.id);
+    this.#atlas = this.#view.atlases.atlas(definition.id);
   }
 }
 

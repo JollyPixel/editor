@@ -84,19 +84,14 @@ export class BrushToolbar extends WorkspaceElement {
   }
 
   get #brush(): BrushStore {
-    const workspace = this.workspace;
-    if (workspace === null) {
-      throw new Error("No workspace is attached yet.");
-    }
-
-    return workspace.state.brush;
+    return this.attached.state.brush;
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const { brush, selection } = workspace.state;
-    const { history } = workspace.engine.document;
+    const { history } = workspace.view.document;
     const refreshSelection = (): void => {
       this.disabled = selection.voxelLayer === null;
       this._notice = paintingNoticeOf(selection);
@@ -279,11 +274,11 @@ export class BrushToolbar extends WorkspaceElement {
   }
 
   #onUndo(): void {
-    this.workspace?.engine.document.history.undo();
+    this.workspace?.view.document.history.undo();
   }
 
   #onRedo(): void {
-    this.workspace?.engine.document.history.redo();
+    this.workspace?.view.document.history.redo();
   }
 
   #onGhostToggle(): void {

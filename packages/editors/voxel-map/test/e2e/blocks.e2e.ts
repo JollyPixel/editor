@@ -32,7 +32,7 @@ function blockNames(
   page: Page
 ): Promise<string[]> {
   return page.evaluate(() => [
-    ...window.voxelMapEditor!.workspace.engine.document.blocks.getAll()
+    ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
   ].map((block) => block.name));
 }
 
@@ -41,7 +41,7 @@ function blockSurface(
   blockId: number
 ): Promise<{ alphaMode?: string; side?: string; }> {
   return page.evaluate((id) => {
-    const block = window.voxelMapEditor!.workspace.engine.document.blocks.get(id);
+    const block = window.voxelMapEditor!.workspace.view.document.blocks.get(id);
 
     return {
       alphaMode: block?.alphaMode,
@@ -67,7 +67,7 @@ function blockTileSize(
   blockId: number
 ): Promise<number | undefined> {
   return page.evaluate((id) => {
-    const block = window.voxelMapEditor!.workspace.engine.document.blocks.get(id);
+    const block = window.voxelMapEditor!.workspace.view.document.blocks.get(id);
     const refs = Object.values(block?.faceTextures ?? {});
 
     return (block?.defaultTexture ?? refs[0])?.size;

@@ -7,11 +7,13 @@ import type {
 
 // Import Internal Dependencies
 import {
-  layerKey,
+  ObjectLayerRef,
+  ObjectRef,
+  VoxelLayerRef,
   type LayerRef
 } from "../../state/index.ts";
 import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
-import type { PeerMarkMap } from "../../shared/peerMarks.ts";
+import type { PeerMarks } from "../../shared/PeerMarks.ts";
 import { formatCount } from "../../shared/format.ts";
 
 // CONSTANTS
@@ -21,24 +23,10 @@ export function layerSelectionsOf(
   world: VoxelWorld
 ): LayerRef[] {
   return [
-    ...world.getLayers().map((layer): LayerRef => {
-      return {
-        kind: "voxel-layer",
-        name: layer.name
-      };
-    }),
+    ...world.getLayers().map((layer) => new VoxelLayerRef(layer.name)),
     ...world.objectLayers.toArray().flatMap((layer): LayerRef[] => [
-      {
-        kind: "object-layer",
-        name: layer.name
-      },
-      ...layer.objects.map((object): LayerRef => {
-        return {
-          kind: "object",
-          layerName: layer.name,
-          objectId: object.id
-        };
-      })
+      new ObjectLayerRef(layer.name),
+      ...layer.objects.map((object) => new ObjectRef(layer.name, object.id))
     ])
   ];
 }
@@ -49,11 +37,8 @@ export function layerTreeNodes(
 ): TreeNode<LayerRef>[] {
   return [
     ...world.getLayers().map((layer): TreeNode<LayerRef> => {
-      const ref: LayerRef = {
-        kind: "voxel-layer",
-        name: layer.name
-      };
-      const id = layerKey(ref);
+      const ref = new VoxelLayerRef(layer.name);
+      const id = ref.key;
 
       return {
         id,
@@ -65,11 +50,8 @@ export function layerTreeNodes(
       };
     }),
     ...world.objectLayers.toArray().map((layer): TreeNode<LayerRef> => {
-      const ref: LayerRef = {
-        kind: "object-layer",
-        name: layer.name
-      };
-      const id = layerKey(ref);
+      const ref = new ObjectLayerRef(layer.name);
+      const id = ref.key;
 
       return {
         id,
@@ -78,12 +60,8 @@ export function layerTreeNodes(
         visible: visibility.resolve(id, layer.visible),
         data: ref,
         children: layer.objects.map((object): TreeNode<LayerRef> => {
-          const objectRef: LayerRef = {
-            kind: "object",
-            layerName: layer.name,
-            objectId: object.id
-          };
-          const objectId = layerKey(objectRef);
+          const objectRef = new ObjectRef(layer.name, object.id);
+          const objectId = objectRef.key;
 
           return {
             id: objectId,
@@ -102,7 +80,7 @@ export function layerTreeNodes(
 
 export function withLayerBadges(
   nodes: readonly TreeNode<LayerRef>[],
-  marks: PeerMarkMap<string>
+  marks: PeerMarks<string>
 ): TreeNode<LayerRef>[] {
   return nodes.map((node) => {
     const badges = badgesOf(node, marks);
@@ -120,13 +98,13 @@ export function withLayerBadges(
 
 function badgesOf(
   node: TreeNode<LayerRef>,
-  marks: PeerMarkMap<string>
+  marks: PeerMarks<string>
 ): TreeBadge[] {
   if (node.data === undefined) {
     return [];
   }
 
-  const peers = marks.get(layerKey(node.data)) ?? [];
+  const peers = marks.marksOf(node.data.key);
 
   return peers.slice(0, kMaxBadges).map((peer) => {
     return {

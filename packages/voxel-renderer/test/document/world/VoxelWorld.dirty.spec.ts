@@ -23,14 +23,12 @@ describe("VoxelWorld — layer properties", () => {
     assert.equal(layer.visible, false);
   });
 
-  it("carries visibility and position through the dedicated setters", () => {
+  it("carries the position through the dedicated setter", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
 
-    world.setLayerVisible("Ground", false);
     world.setLayerPosition("Ground", { x: 16, y: 0, z: -8 });
 
-    assert.equal(layer.visible, false);
     assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
   });
 
@@ -38,7 +36,6 @@ describe("VoxelWorld — layer properties", () => {
     const world = new VoxelWorld(4);
 
     assert.equal(world.updateLayer("NoSuch", { visible: false }), false);
-    assert.doesNotThrow(() => world.setLayerVisible("NoSuch", false));
   });
 });
 
@@ -89,24 +86,19 @@ describe("VoxelWorld — dirty propagation", () => {
   });
 
   it("dirties every layer when visibility actually flips", () => {
-    for (const flip of [
-      (world: VoxelWorld) => world.setLayerVisible("A", false),
-      (world: VoxelWorld) => world.updateLayer("A", { visible: false })
-    ]) {
-      const fixture = makeTwoLayerWorld();
-      clearAllDirty(fixture.world);
+    const fixture = makeTwoLayerWorld();
+    clearAllDirty(fixture.world);
 
-      flip(fixture.world);
+    fixture.world.updateLayer("A", { visible: false });
 
-      assert.deepEqual(dirtyFlags(fixture), { a: true, b: true });
-    }
+    assert.deepEqual(dirtyFlags(fixture), { a: true, b: true });
   });
 
   it("dirties only the layer itself when visibility is set to what it already was", () => {
     const fixture = makeTwoLayerWorld();
     clearAllDirty(fixture.world);
 
-    fixture.world.setLayerVisible("A", true);
+    fixture.world.updateLayer("A", { visible: true });
 
     assert.deepEqual(dirtyFlags(fixture), { a: true, b: false });
   });

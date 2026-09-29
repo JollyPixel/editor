@@ -6,6 +6,10 @@ import type {
   VoxelWorld
 } from "../../document/world/VoxelWorld.ts";
 import type { VoxelCoord } from "../../document/world/types.ts";
+import {
+  AUTHORED_LAYER_VISIBILITY,
+  type MeshableLayerVisibility
+} from "../meshing/types.ts";
 
 interface ChunkMeshTargetBase {
   readonly key: string;
@@ -30,11 +34,14 @@ export type ChunkMeshTarget =
 
 export class ChunkMeshLayout {
   #world: VoxelWorld;
+  #visibility: MeshableLayerVisibility;
 
   constructor(
-    world: VoxelWorld
+    world: VoxelWorld,
+    visibility: MeshableLayerVisibility = AUTHORED_LAYER_VISIBILITY
   ) {
     this.#world = world;
+    this.#visibility = visibility;
   }
 
   composites(
@@ -43,7 +50,7 @@ export class ChunkMeshLayout {
     const size = this.#world.chunkSize;
     const { x, y, z } = layer.position;
 
-    return layer.visible &&
+    return this.#visibility.isVisible(layer) &&
       x % size === 0 &&
       y % size === 0 &&
       z % size === 0;
@@ -66,7 +73,7 @@ export class ChunkMeshLayout {
     layer: VoxelLayer,
     chunk: VoxelChunk
   ): ChunkMeshTarget | null {
-    if (!layer.visible) {
+    if (!this.#visibility.isVisible(layer)) {
       return null;
     }
 
@@ -106,7 +113,7 @@ export class ChunkMeshLayout {
     if (target.kind === "layer") {
       const { layer } = target;
       const chunk = layers.includes(layer) &&
-        layer.visible &&
+        this.#visibility.isVisible(layer) &&
         !this.composites(layer) ?
         layer.getChunk(target.cx, target.cy, target.cz) :
         undefined;

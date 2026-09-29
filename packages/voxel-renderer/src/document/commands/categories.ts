@@ -72,6 +72,10 @@ const kEditActions = new Set<string>([
   "voxels-patched",
   "layer-transformed"
 ] satisfies VoxelEditCommand["action"][]);
+const kPositionActions = new Set<string>([
+  "position-updated",
+  "position-rebased"
+] satisfies VoxelLayerCommandAction[]);
 
 interface CommandCategories {
   layer: VoxelLayerCommand;
@@ -145,6 +149,13 @@ export function isVoxelEditCommand(
   command: { action: string; }
 ): command is VoxelEditCommand {
   return kEditActions.has(command.action);
+}
+
+export function isVoxelLayerGeometryCommand(
+  command: { action: string; }
+): command is VoxelLayerCommand {
+  return kEditActions.has(command.action) ||
+    kPositionActions.has(command.action);
 }
 
 export function isVoxelObjectLayerCommand(

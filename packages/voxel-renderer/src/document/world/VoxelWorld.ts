@@ -49,6 +49,7 @@ import {
   isVoxelTemplateCommand
 } from "../commands/categories.ts";
 import type { VoxelPatchCells } from "./editing/voxelPatch.ts";
+import { removeBlockVoxels } from "./editing/removeBlockVoxels.ts";
 import { assertPowerOfTwoChunkSize } from "./storage/chunkSize.ts";
 import type { VoxelLogger } from "../../VoxelLogger.ts";
 
@@ -199,16 +200,6 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       layerName: name,
       metadata: { toIndex }
     });
-  }
-
-  setLayerVisible(
-    name: string,
-    visible: boolean
-  ): void {
-    const layer = this.getLayer(name);
-    if (layer) {
-      this.#updateLayerVisibility(layer, visible);
-    }
   }
 
   setLayerPosition(
@@ -427,6 +418,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       layerName,
       metadata: { entries }
     });
+  }
+
+  removeBlocks(
+    blockIds: Iterable<number>
+  ): number {
+    return removeBlockVoxels(this, new Set(blockIds));
   }
 
   patchVoxels(

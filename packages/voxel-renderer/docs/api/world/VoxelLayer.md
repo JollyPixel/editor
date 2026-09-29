@@ -99,6 +99,12 @@ new map.
 
 Voxels of `blockId` in the layer; `0` when none.
 
+### `positionsOf(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
+
+World positions of the layer's voxels whose block is in `blockIds`, whatever
+their transform. Chunks without any of those blocks are skipped through their
+block histogram.
+
 ### `getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk`
 
 Returns the `VoxelChunk` at the given chunk coordinates, creating it if it does not exist.

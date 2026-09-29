@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import type { VoxelObjectJSON } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { derivedColorOf } from "../../../../src/features/layers/objects/objectArea.ts";
+import { MapObject } from "../../../../src/features/layers/objects/MapObject.ts";
 import {
   objectColorSource,
   objectPositionSource,
@@ -53,14 +53,14 @@ describe("objectColorSource", () => {
     const object = anObject();
     const source = objectColorSource(objectPort(object));
 
-    assert.equal(source.read(), derivedColorOf(object));
+    assert.equal(source.read(), new MapObject(object).derivedColor);
   });
 
   test("clears the color when the committed value is the derived one", () => {
     const object = anObject({ color: "#ff0000" });
     const port = objectPort(object);
 
-    objectColorSource(port).write(derivedColorOf(object), true);
+    objectColorSource(port).write(new MapObject(object).derivedColor, true);
 
     assert.deepEqual(port.patches, [{ color: undefined }]);
   });
@@ -70,7 +70,7 @@ describe("objectColorSource", () => {
     const port = objectPort(object);
 
     objectColorSource(port).write(
-      derivedColorOf(object).toUpperCase(),
+      new MapObject(object).derivedColor.toUpperCase(),
       true
     );
 

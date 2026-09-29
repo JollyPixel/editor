@@ -1,11 +1,12 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type {
-  VoxelLayer,
-  VoxelLayerCommand,
-  VoxelTransformOptions,
-  VoxelWorld
+import {
+  isVoxelLayerGeometryCommand,
+  type VoxelLayer,
+  type VoxelLayerCommand,
+  type VoxelTransformOptions,
+  type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
 
@@ -24,7 +25,6 @@ import {
   samePosition
 } from "../../../shared/positionSource.ts";
 import { transformButtons } from "../../../shared/transformButtons.ts";
-import { isLayerGeometryCommand } from "./layerGeometry.ts";
 import "../../../shared/CustomPropertiesEditor.ts";
 
 // CONSTANTS
@@ -96,7 +96,7 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #onLayerUpdated = (event: VoxelLayerCommand) => {
-    if (event.layerName === this.layerName && isLayerGeometryCommand(event)) {
+    if (event.layerName === this.layerName && isVoxelLayerGeometryCommand(event)) {
       this.#syncFromLayer();
     }
   };

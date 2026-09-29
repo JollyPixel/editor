@@ -11,12 +11,16 @@ import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 
 // Import Internal Dependencies
 import { BrushMesh } from "../../../../src/features/painting/rendering/BrushMesh.ts";
-import type { BrushCursor } from "../../../../src/features/painting/model/brushCursor.ts";
+import {
+  BrushFootprint,
+  type BrushFootprintOptions
+} from "../../../../src/features/painting/model/BrushFootprint.ts";
+import { CellFace } from "../../../../src/features/painting/model/CellFace.ts";
 
 // CONSTANTS
 const kFaceMargin = 0.015;
 const kEdgeWidth = 2;
-const kCursor: BrushCursor = {
+const kCursor: BrushFootprintOptions = {
   position: {
     x: 0,
     y: 0,
@@ -37,7 +41,7 @@ function edgeLinesOf(
 
 function drawnMesh(): BrushMesh {
   const mesh = new BrushMesh();
-  mesh.draw(kCursor);
+  mesh.draw(new BrushFootprint(kCursor));
 
   return mesh;
 }
@@ -68,10 +72,10 @@ function segmentCount(
 }
 
 function tintCount(
-  cursor: BrushCursor
+  cursor: BrushFootprintOptions
 ): number {
   const mesh = new BrushMesh();
-  mesh.draw(cursor);
+  mesh.draw(new BrushFootprint(cursor));
   const fill = mesh.children.find(
     (child) => child instanceof THREE.Mesh &&
       child.geometry.hasAttribute("color")
@@ -133,13 +137,13 @@ describe("BrushMesh", () => {
   });
 
   test("traces only the contour of a ball", () => {
-    const ball: BrushCursor = {
+    const ball: BrushFootprintOptions = {
       ...kCursor,
       size: 8,
       pattern: "circle"
     };
     const mesh = new BrushMesh();
-    mesh.draw(ball);
+    mesh.draw(new BrushFootprint(ball));
     const creases = segmentCount(mesh);
 
     renderFrom(mesh, [20, 20, 20]);
@@ -160,10 +164,10 @@ describe("BrushMesh", () => {
     const mesh = drawnMesh();
     renderFrom(mesh, [20, 20, 20]);
 
-    mesh.draw({
+    mesh.draw(new BrushFootprint({
       ...kCursor,
       size: 3
-    });
+    }));
     assert.equal(segmentCount(mesh), 12);
 
     renderFrom(mesh, [20, 20, 20]);
@@ -174,7 +178,7 @@ describe("BrushMesh", () => {
     const mesh = new BrushMesh({
       color: 0xff0000
     });
-    mesh.draw(kCursor);
+    mesh.draw(new BrushFootprint(kCursor));
     const [halo, border] = edgeLinesOf(mesh);
     const surfaces = mesh.children.filter(
       (child) => !(child instanceof LineSegments2)
@@ -191,7 +195,7 @@ describe("BrushMesh", () => {
 
   test("keeps the face highlight on the aimed cell at any size", () => {
     const mesh = new BrushMesh();
-    mesh.draw({
+    mesh.draw(new BrushFootprint({
       position: {
         x: 2,
         y: 0,
@@ -200,8 +204,8 @@ describe("BrushMesh", () => {
       size: 5,
       axis: "xz",
       pattern: "circle",
-      face: "+y"
-    });
+      face: CellFace.PosY
+    }));
 
     const [, face] = mesh.children.filter(
       (child) => child instanceof THREE.Mesh &&
@@ -233,7 +237,7 @@ describe("BrushMesh", () => {
     const mesh = new BrushMesh({
       subdued: true
     });
-    mesh.draw(kCursor);
+    mesh.draw(new BrushFootprint(kCursor));
     const [halo, border] = edgeLinesOf(mesh);
 
     assert.equal(halo.visible, false);
@@ -244,10 +248,10 @@ describe("BrushMesh", () => {
 
   test("fades the fill away from the footprint edges", () => {
     const mesh = new BrushMesh();
-    mesh.draw({
+    mesh.draw(new BrushFootprint({
       ...kCursor,
       size: 3
-    });
+    }));
     const fill = mesh.children.find(
       (child) => child instanceof THREE.Mesh &&
         child.geometry.hasAttribute("color")
@@ -269,11 +273,11 @@ describe("BrushMesh", () => {
 
   test("keeps only the face highlight once unshelled", () => {
     const mesh = new BrushMesh();
-    mesh.draw({
+    mesh.draw(new BrushFootprint({
       ...kCursor,
       size: 1,
-      face: "+y"
-    });
+      face: CellFace.PosY
+    }));
     mesh.shelled = false;
     const [fill, face] = mesh.children.filter(
       (child) => child instanceof THREE.Mesh

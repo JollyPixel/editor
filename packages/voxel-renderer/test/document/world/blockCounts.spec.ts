@@ -141,4 +141,40 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     assert.equal(world.getLayer("Copy")!.countBlock(2), 3);
     assert.equal(world.voxelCount, 12);
   });
+
+  it("removes every voxel of the given blocks from every layer", () => {
+    const world = makeWorld();
+    world.setLayerPosition("Top", { x: 10, y: 2, z: 0 });
+    const removed: number[] = [];
+    world.on("command", (command) => {
+      if (command.action === "voxels-removed") {
+        removed.push(command.metadata.entries.length);
+      }
+    });
+
+    assert.equal(world.removeBlocks([2, 9]), 3);
+    assert.deepEqual(removed, [1, 2]);
+    assert.equal(world.countBlock(2), 0);
+    assert.equal(world.countBlock(1), 4);
+    assert.deepEqual(
+      [...world.getLayer("Top")!.positionsOf(new Set([2]))],
+      []
+    );
+  });
+
+  it("lists the world positions of a layer's voxels of some blocks", () => {
+    const world = makeWorld();
+    world.setLayerPosition("Top", { x: 10, y: 2, z: 0 });
+
+    assert.deepEqual(
+      [...world.getLayer("Top")!.positionsOf(new Set([2]))],
+      [{ x: 10, y: 2, z: 0 }]
+    );
+    assert.deepEqual(
+      [...world.getLayer("Ground")!.positionsOf(new Set([2]))]
+        .map(({ x }) => x)
+        .sort(),
+      [4, 5]
+    );
+  });
 });
