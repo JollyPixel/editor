@@ -4,41 +4,41 @@ import {
   customElement,
   state
 } from "lit/decorators.js";
-import type {
-  JollyActivateDetail,
-  JollyRenameDetail,
-  JollySelectDetail,
-  TreeNode
+import {
+  startPointerDragSession,
+  type JollyActivateDetail,
+  type JollyRenameDetail,
+  type JollySelectDetail,
+  type PointerDragSessionHandle,
+  type TreeNode
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import { treeHostStyles } from "../../shared/treeHost.styles.ts";
 import { templateTreeNodes } from "./templateTree.ts";
+import { TemplateDrop } from "./TemplateDrop.ts";
 import "./TemplatePanel.ts";
+
+// CONSTANTS
+const kDragThreshold = 4;
+const kDraggingClass = "template-dragging";
 
 @customElement("template-manager")
 export class TemplateManager extends WorkspaceElement {
-  static override styles = css`
-    :host {
-      display: block;
-    }
+  static override styles = [
+    treeHostStyles,
+    css`
+      :host {
+        display: block;
+      }
 
-    .tree-host {
-      max-height: 160px;
-      overflow-y: auto;
-    }
-
-    jolly-tree {
-      margin-inline: var(--jolly-space-1, 4px);
-    }
-
-    .hint {
-      margin: 0;
-      padding: var(--jolly-space-1, 4px);
-      color: var(--jolly-text-muted);
-    }
-  `;
+      .tree-host {
+        max-height: 160px;
+      }
+    `
+  ];
 
   @state()
   private declare _nodes: TreeNode<string>[];
@@ -48,6 +48,8 @@ export class TemplateManager extends WorkspaceElement {
 
   @state()
   private declare _canSave: boolean;
+
+  #drag: PointerDragSessionHandle | null = null;
 
   constructor() {
     super();
@@ -76,7 +78,8 @@ export class TemplateManager extends WorkspaceElement {
       }),
       selection.subscribe("change", () => {
         this._canSave = selection.voxelLayer !== null;
-      })
+      }),
+      () => this.#drag?.cancel()
     ];
   }
 
@@ -121,7 +124,7 @@ export class TemplateManager extends WorkspaceElement {
           @click=${this.#removeTemplate}
         ></jolly-button>
 
-        ${this.#renderTree()}
+        <div class="tree-host">${this.#renderTree()}</div>
         <template-panel
           .world=${workspace.view.document.world}
           .templates=${workspace.templates}
@@ -141,17 +144,15 @@ export class TemplateManager extends WorkspaceElement {
     }
 
     return html`
-      <div class="tree-host">
-        <jolly-tree
-          renamable
-          activate-on-double-click
-          .nodes=${this._nodes}
-          .selected=${this._selected === null ? [] : [this._selected]}
-          @jolly-select=${this.#onSelect}
-          @jolly-rename=${this.#onRename}
-          @jolly-activate=${this.#onActivate}
-        ></jolly-tree>
-      </div>
+      <jolly-tree
+        renamable
+        .nodes=${this._nodes}
+        .selected=${this._selected === null ? [] : [this._selected]}
+        @jolly-select=${this.#onSelect}
+        @jolly-rename=${this.#onRename}
+        @jolly-activate=${this.#onActivate}
+        @pointerdown=${this.#onTreePointerDown}
+      ></jolly-tree>
     `;
   }
 
@@ -214,6 +215,56 @@ export class TemplateManager extends WorkspaceElement {
       this.#place();
     }
   }
+
+  #onTreePointerDown(
+    event: PointerEvent
+  ): void {
+    const workspace = this.workspace;
+    const row = event.button === 0 ? templateRowOf(event) : null;
+    const templateId = row?.dataset.id;
+    if (workspace === null || row === null || templateId === undefined) {
+      return;
+    }
+
+    const drop = new TemplateDrop({
+      templateId,
+      placement: workspace.placement,
+      pointAt: (clientX, clientY) => workspace.pointAt(clientX, clientY)
+    });
+    this.#drag?.cancel();
+    this.#drag = startPointerDragSession({
+      element: row,
+      event,
+      threshold: kDragThreshold,
+      documentClass: kDraggingClass,
+      onStart: () => {
+        workspace.templates.store.selected = templateId;
+      },
+      onMove: (clientX, clientY) => drop.hover(clientX, clientY),
+      onFinish: (result) => {
+        this.#drag = null;
+        drop.finish(result);
+      }
+    });
+  }
+}
+
+function templateRowOf(
+  event: Event
+): HTMLElement | null {
+  for (const target of event.composedPath()) {
+    if (target instanceof HTMLInputElement) {
+      return null;
+    }
+    if (
+      target instanceof HTMLElement &&
+      target.getAttribute("role") === "treeitem"
+    ) {
+      return target;
+    }
+  }
+
+  return null;
 }
 
 declare global {

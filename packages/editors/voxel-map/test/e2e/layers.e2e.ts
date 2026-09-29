@@ -136,6 +136,45 @@ test("clicking the empty tree area keeps the layer selected", async({ page }) =>
   await expect(row).toHaveAttribute("aria-selected", "true");
 });
 
+test("the custom properties folder only toggles once it holds a property", async({ page }) => {
+  const properties = page.locator("layer-panel custom-properties-editor");
+  const toggle = properties.getByRole("button", { name: "Custom Properties" });
+
+  await layerRow(page, "Ground").click();
+  await expect(toggle).toHaveCount(0);
+
+  await properties.getByRole("button", { name: "Add property" }).click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+  await properties.getByRole("button", { name: "Remove property" }).click();
+  await expect(toggle).toHaveCount(0);
+});
+
+test("the layer header rebases the layer and locks while transforming", async({ page }) => {
+  await seedVoxels(page, [{ x: 3, y: 1, z: 2, blockId: 1 }]);
+  await layerRow(page, "Ground").click();
+
+  const panel = page.locator("layer-panel");
+  const rebase = panel.getByRole("button", { name: "Rebase to content origin" });
+  const transform = panel.getByRole("button", { name: "Transform" });
+  await expect(panel.locator("jolly-button[title*=\"(3, 1, 2)\"]")).toHaveCount(1);
+
+  await rebase.click();
+  await expect.poll(() => page.evaluate(() => {
+    const { position } = window.voxelMapEditor!.workspace.view.document.world
+      .getLayer("Ground")!;
+
+    return { x: position.x, y: position.y, z: position.z };
+  })).toEqual({ x: 3, y: 1, z: 2 });
+  await expect(rebase).toBeDisabled();
+  expect(await blocksAt(page, [{ x: 3, y: 1, z: 2 }])).toEqual([1]);
+
+  await transform.click();
+  await expect(panel.locator("placement-actions")).toBeVisible();
+  await expect(transform).toBeDisabled();
+  await expect(panel.locator("jolly-vector3")).toHaveCount(0);
+});
+
 test("cloning copies the voxels and removing asks first", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
   await layerRow(page, "Ground").click();

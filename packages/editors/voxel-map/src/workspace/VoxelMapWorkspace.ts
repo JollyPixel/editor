@@ -34,6 +34,10 @@ export interface VoxelMapWorkspace {
   tilesets: MapTilesets;
   archives: EditorArchives;
   focusPoint(): Vector3Like;
+  pointAt(
+    clientX: number,
+    clientY: number
+  ): Vector3Like | null;
   loadWorld(data: VoxelWorldJSON): void;
   teleportToPeer(clientId: string): void;
 }

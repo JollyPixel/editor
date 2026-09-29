@@ -27,6 +27,21 @@ export class CustomPropertiesEditor extends LitElement {
       display: block;
     }
 
+    jolly-folder.empty {
+      --jolly-folder-header-bg: var(--jolly-control-bg);
+      --jolly-folder-header-bg-hover: var(--jolly-control-bg-hover);
+
+      margin-block-end: 0;
+    }
+
+    jolly-folder.empty::part(header)::after {
+      color: var(--jolly-ink);
+    }
+
+    jolly-folder.empty::part(content) {
+      display: none;
+    }
+
     .prop-row {
       display: flex;
       align-items: center;
@@ -53,11 +68,15 @@ export class CustomPropertiesEditor extends LitElement {
   }
 
   override render() {
+    const empty = this.rows.length === 0;
+
     return html`
       <jolly-folder
+        class=${empty ? "empty" : ""}
         key=${this.storageKey}
         label="Custom Properties"
         storage-key=${this.storageKey}
+        .collapsible=${!empty}
       >
         <jolly-button
           slot="actions"

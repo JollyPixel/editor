@@ -136,9 +136,11 @@ export class VoxelLayerPanel extends LitElement {
     }
 
     return html`
-      <jolly-separator label=${this.layerName ?? ""}></jolly-separator>
+      <jolly-separator label=${this.layerName ?? ""}>
+        ${this.#renderActions()}
+      </jolly-separator>
 
-      ${this.#renderTransform()}
+      ${this.#renderPosition()}
 
       <custom-properties-editor
         .rows=${this._props}
@@ -148,30 +150,48 @@ export class VoxelLayerPanel extends LitElement {
     `;
   }
 
-  #renderTransform() {
-    const { layerName } = this;
-    if (layerName !== null && this.placement.transforming(layerName)) {
+  #renderActions() {
+    const transforming = this.#transforming();
+    const empty = this._layer?.worldBounds() === null;
+    const transformTitle = empty ?
+      "The layer has no voxels to transform" :
+      "Move, turn or mirror the layer with a marquee";
+    const origin = roundPosition(this._contentOrigin);
+    const rebased = samePosition(origin, this.#position.value);
+
+    return html`
+      <jolly-button
+        slot="actions"
+        icon="transform"
+        icon-only
+        label="Transform"
+        title=${transformTitle}
+        ?disabled=${empty || transforming}
+        @click=${this.#onTransform}
+      ></jolly-button>
+      <jolly-button
+        slot="actions"
+        icon="rebase"
+        icon-only
+        label="Rebase to content origin"
+        title=${`Rebase to content origin (${origin.x}, ${origin.y}, ${origin.z})`}
+        ?disabled=${rebased || transforming}
+        @click=${this.#onRebase}
+      ></jolly-button>
+    `;
+  }
+
+  #renderPosition() {
+    if (this.#transforming()) {
       return html`
         <placement-actions
           .placement=${this.placement}
-          .target=${layerName}
+          .target=${this.layerName}
         ></placement-actions>
       `;
     }
 
-    const empty = this._layer?.worldBounds() === null;
-    const title = empty ?
-      "The layer has no voxels to transform" :
-      "Move, turn or mirror the layer with a marquee";
-
     return html`
-      <jolly-button
-        icon="transform"
-        title=${title}
-        ?disabled=${empty}
-        @click=${this.#onTransform}
-      >Transform</jolly-button>
-
       <jolly-vector3
         label="Position"
         step="1"
@@ -179,18 +199,12 @@ export class VoxelLayerPanel extends LitElement {
         @jolly-input=${this.#position.input}
         @jolly-change=${this.#position.commit}
       ></jolly-vector3>
-
-      <jolly-vector3
-        label="Content origin"
-        disabled
-        .value=${this._contentOrigin}
-      ></jolly-vector3>
-
-      <jolly-button
-        ?disabled=${samePosition(roundPosition(this._contentOrigin), this.#position.value)}
-        @click=${this.#onRebase}
-      >Rebase to content origin</jolly-button>
     `;
+  }
+
+  #transforming(): boolean {
+    return this.layerName !== null &&
+      this.placement.transforming(this.layerName);
   }
 
   #onTransform(): void {
@@ -205,11 +219,7 @@ export class VoxelLayerPanel extends LitElement {
       return;
     }
 
-    world.rebaseLayer(layerName, {
-      x: Math.round(this._contentOrigin.x),
-      y: Math.round(this._contentOrigin.y),
-      z: Math.round(this._contentOrigin.z)
-    });
+    world.rebaseLayer(layerName, roundPosition(this._contentOrigin));
   }
 
   #onPropertyRowsChange(

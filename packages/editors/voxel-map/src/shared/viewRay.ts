@@ -33,6 +33,33 @@ export interface ViewFocusOptions extends ViewRayOptions {
   maxDistance?: number;
 }
 
+export interface ViewportRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export function viewportPointer(
+  rect: ViewportRect,
+  clientX: number,
+  clientY: number
+): THREE.Vector2 | null {
+  const x = (clientX - rect.left) / rect.width;
+  const y = (clientY - rect.top) / rect.height;
+  if (
+    !(x >= 0 && x <= 1) ||
+    !(y >= 0 && y <= 1)
+  ) {
+    return null;
+  }
+
+  return new THREE.Vector2(
+    (x * 2) - 1,
+    1 - (y * 2)
+  );
+}
+
 export function castViewRay(
   camera: THREE.Camera,
   solid: THREE.Object3D | null,

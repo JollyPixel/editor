@@ -23,8 +23,9 @@ test.describe("controls: chrome", () => {
       .not.toBe(await styleOf(plain, "background-color"));
 
     await expect(page.locator("jolly-button[disabled] button")).toBeDisabled();
-    await expect(page.locator("jolly-button[icon-only] button"))
-      .toHaveAttribute("aria-label", "Close");
+    await expect(
+      page.locator('[data-state="Disabled and icon only"] jolly-button[icon-only] button')
+    ).toHaveAttribute("aria-label", "Close");
     await expect(
       page.locator("jolly-separator").first().locator('[role="separator"]')
     ).toHaveAttribute("aria-label", "Grouping");
@@ -39,6 +40,30 @@ test.describe("controls: chrome", () => {
     await expect(info).toHaveCSS("width", "14px");
     await expect(info).toHaveCSS("margin-block-start", "0px");
     await expect(description).toHaveCSS("margin-block-end", "2px");
+  });
+
+  test("separator actions trail the rule on the same row", async({ page }) => {
+    await openExample(page, "controls/chrome");
+
+    const separators = page.locator("jolly-separator");
+    const withActions = separators.nth(1);
+    await expect(withActions.getByRole("button", { name: "Add" })).toBeVisible();
+    await expect(withActions.getByRole("button", { name: "Revert" })).toBeVisible();
+
+    const actions = withActions.locator('jolly-button[slot="actions"]');
+    const [plain, host, trailing, first, second] = await Promise.all([
+      boxOf(separators.first()),
+      boxOf(withActions),
+      boxOf(withActions.locator(".rule").last()),
+      boxOf(actions.first()),
+      boxOf(actions.last())
+    ]);
+    expect(host.height).toBe(plain.height);
+    expect(first.x - (trailing.x + trailing.width)).toBe(4);
+    expect(second.x - (first.x + first.width)).toBe(4);
+    expect(second.x + second.width).toBeCloseTo(host.x + host.width, 0);
+    expect(first.y + first.height / 2)
+      .toBeCloseTo(trailing.y + trailing.height / 2, 0);
   });
 
   test("a separator caption aligns with control labels", async({ page }) => {

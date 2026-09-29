@@ -13,14 +13,7 @@ import type { SelectionStore } from "../../state/index.ts";
 import type { MapTemplates } from "./MapTemplates.ts";
 import type { MapPlacement } from "../placement/MapPlacement.ts";
 import type { Placement } from "../placement/Placement.ts";
-import {
-  propertiesOf,
-  propertyRowsOf,
-  type PropertyRow,
-  type PropertyRowsChangeDetail
-} from "../../shared/propertyDraft.ts";
 import { positionSource } from "../../shared/positionSource.ts";
-import "../../shared/CustomPropertiesEditor.ts";
 import "../placement/PlacementActions.ts";
 
 @customElement("template-panel")
@@ -55,9 +48,6 @@ export class TemplatePanel extends LitElement {
   @state()
   private declare _placement: Placement | null;
 
-  @state()
-  private declare _props: PropertyRow[];
-
   #subscriptions: Array<() => void> = [];
 
   #position = new FieldBinding(this, positionSource({
@@ -69,7 +59,6 @@ export class TemplatePanel extends LitElement {
     super();
     this._template = null;
     this._placement = null;
-    this._props = [];
   }
 
   override connectedCallback() {
@@ -141,12 +130,6 @@ export class TemplatePanel extends LitElement {
         disabled
         .value=${{ ...template.size }}
       ></jolly-vector3>
-
-      <custom-properties-editor
-        .rows=${this._props}
-        storage-key="voxel-map:folder:template-properties"
-        @property-rows-change=${this.#onPropertyRowsChange}
-      ></custom-properties-editor>
     `;
   }
 
@@ -155,12 +138,6 @@ export class TemplatePanel extends LitElement {
     const template = templateId === null ?
       undefined :
       this.world.templates.get(templateId);
-
-    if (template?.id !== this._template?.id) {
-      this._props = template === undefined ?
-        [] :
-        propertyRowsOf(template.properties);
-    }
     this._template = template ?? null;
   };
 
@@ -169,20 +146,6 @@ export class TemplatePanel extends LitElement {
   ): void => {
     this._placement = placement;
   };
-
-  #onPropertyRowsChange(
-    event: CustomEvent<PropertyRowsChangeDetail>
-  ): void {
-    this._props = event.detail.rows;
-    const template = this._template;
-    if (template === null) {
-      return;
-    }
-
-    this.world.templates.update(template.id, {
-      properties: propertiesOf(this._props)
-    });
-  }
 }
 
 declare global {

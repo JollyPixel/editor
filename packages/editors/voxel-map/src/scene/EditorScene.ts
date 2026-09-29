@@ -53,7 +53,10 @@ import { bindKeyChain } from "../shared/keyBindings.ts";
 import { SceneLighting } from "../shared/SceneLighting.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { spawnPose } from "./spawnPose.ts";
-import { viewFocusPoint } from "../shared/viewRay.ts";
+import {
+  viewFocusPoint,
+  viewportPointer
+} from "../shared/viewRay.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
@@ -331,6 +334,22 @@ export class EditorScene extends Systems.Scene {
       tilesets,
       archives: session.archives,
       focusPoint: () => viewFocusPoint(camera.camera, view.root),
+      pointAt: (clientX, clientY) => {
+        const { canvas } = world.renderer;
+        if (document.elementFromPoint(clientX, clientY) !== canvas) {
+          return null;
+        }
+
+        const pointer = viewportPointer(
+          canvas.getBoundingClientRect(),
+          clientX,
+          clientY
+        );
+
+        return pointer === null ?
+          null :
+          viewFocusPoint(camera.camera, view.root, { pointer });
+      },
       loadWorld: (data) => {
         this.#spawnPending = true;
         mapDocument.load(data);
