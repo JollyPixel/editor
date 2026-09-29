@@ -10,7 +10,9 @@ import {
 } from "../storage/packedVoxel.ts";
 import { VoxelTransform } from "../../geometry/VoxelTransform.ts";
 import type { VoxelCoord } from "../types.ts";
+import type { VoxelLayer } from "../VoxelLayer.ts";
 import type { VoxelTemplatePatch } from "./types.ts";
+import type { VoxelTemplateCaptureOptions } from "./VoxelTemplates.ts";
 
 export interface VoxelTemplateOptions {
   id: string;
@@ -39,19 +41,52 @@ export interface VoxelTemplateBounds {
   size: VoxelCoord;
 }
 
+export interface VoxelTemplateLayerOptions extends VoxelTemplateCaptureOptions {
+  id: string;
+}
+
 /**
  * An immutable group of voxels saved with the world and copied into a layer
  * on placement. Positions are template-local, with the lowest corner of the
  * voxels at `0, 0, 0`.
  */
 export class VoxelTemplate {
+  static fromLayer(
+    layer: VoxelLayer,
+    options: VoxelTemplateLayerOptions
+  ): VoxelTemplate {
+    const { bounds } = options;
+    const { x: ox, y: oy, z: oz } = layer.position;
+    const positions: number[] = [];
+    const voxels: PackedVoxel[] = [];
+    for (const [lx, ly, lz, packed] of layer.localVoxels()) {
+      const x = lx + ox;
+      const y = ly + oy;
+      const z = lz + oz;
+      if (bounds === undefined || (
+        x >= bounds.min.x && x < bounds.max.x &&
+        y >= bounds.min.y && y < bounds.max.y &&
+        z >= bounds.min.z && z < bounds.max.z
+      )) {
+        positions.push(x, y, z);
+        voxels.push(packed);
+      }
+    }
+
+    return new VoxelTemplate({
+      id: options.id,
+      name: options.name,
+      pivot: options.pivot,
+      properties: options.properties,
+      positions,
+      voxels
+    });
+  }
+
   readonly id: string;
   readonly name: string;
   readonly pivot: Readonly<VoxelCoord>;
   readonly properties: Readonly<Record<string, any>>;
-  /**
-   * Voxel extent on each axis; `0, 0, 0` when the template is empty.
-   */
   readonly size: Readonly<VoxelCoord>;
 
   #positions: Int32Array;
@@ -132,11 +167,6 @@ export class VoxelTemplate {
     }
   }
 
-  /**
-   * World-space voxels once the pivot sits on `position` and `transform`
-   * turns the template around it. Each voxel's own transform is composed
-   * with `transform`.
-   */
   * placedVoxels(
     position: Vector3Like,
     transform: VoxelTransform = VoxelTransform.Identity

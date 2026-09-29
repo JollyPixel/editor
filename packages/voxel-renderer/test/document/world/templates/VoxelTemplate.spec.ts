@@ -8,6 +8,7 @@ import {
 // Import Internal Dependencies
 import {
   packVoxel,
+  VoxelLayer,
   VoxelTemplate,
   type VoxelCoord,
   type VoxelTemplateBounds
@@ -111,5 +112,61 @@ describe("VoxelTemplate.placedPositionFor", () => {
 
       assert.deepEqual(template.placedPositionFor(min, transform), kPosition);
     }
+  });
+});
+
+describe("VoxelTemplate.fromLayer", () => {
+  function offsetLayer(): VoxelLayer {
+    const layer = new VoxelLayer({
+      id: "draft",
+      name: "Draft",
+      order: 0,
+      chunkSize: 4,
+      position: {
+        x: 10,
+        y: 0,
+        z: -3
+      }
+    });
+    layer.setPackedVoxelAt({ x: 10, y: 0, z: -3 }, packVoxel(1, 0));
+    layer.setPackedVoxelAt({ x: 11, y: 0, z: -3 }, packVoxel(2, 1));
+    layer.setPackedVoxelAt({ x: 15, y: 2, z: -3 }, packVoxel(3, 0));
+
+    return layer;
+  }
+
+  test("captures the layer voxels in world space around the given pivot", () => {
+    const pivot = {
+      x: 10,
+      y: 0,
+      z: -3
+    };
+    const template = VoxelTemplate.fromLayer(offsetLayer(), {
+      id: "snapshot",
+      name: "Draft",
+      pivot
+    });
+
+    assert.deepEqual(
+      [...template.placedVoxels(pivot)].sort((a, b) => a[0] - b[0]),
+      [
+        [10, 0, -3, packVoxel(1, 0)],
+        [11, 0, -3, packVoxel(2, 1)],
+        [15, 2, -3, packVoxel(3, 0)]
+      ]
+    );
+  });
+
+  test("keeps only the voxels inside bounds", () => {
+    const template = VoxelTemplate.fromLayer(offsetLayer(), {
+      id: "snapshot",
+      name: "Draft",
+      bounds: {
+        min: { x: 0, y: 0, z: -10 },
+        max: { x: 12, y: 1, z: 10 }
+      }
+    });
+
+    assert.equal(template.voxelCount, 2);
   });
 });

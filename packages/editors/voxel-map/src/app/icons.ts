@@ -196,3 +196,123 @@ registerIcon("stamp", svg`
     fill="currentColor"
   />
 `, { tone: "amber" });
+
+registerIcon("rotate-ccw", svg`
+  <path
+    class="tone-ink"
+    d="M5 12a7 7 0 1 0 2.05-4.95L4.5 9.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    class="tone-ink"
+    d="M4 4.5v5h5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "sky" });
+
+registerIcon("rotate-cw", svg`
+  <path
+    class="tone-ink"
+    d="M19 12a7 7 0 1 1-2.05-4.95L19.5 9.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    class="tone-ink"
+    d="M20 4.5v5h-5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "sky" });
+
+registerIcon("flip-x", svg`
+  <path
+    class="tone-fill"
+    d="M9.5 5.5v13H3.5z"
+  />
+  <path
+    d="M9.5 5.5v13H3.5zM14.5 5.5v13h6z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M12 2.5v2.5M12 10.75v2.5M12 19v2.5"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("flip-y", svg`
+  <path
+    class="tone-fill"
+    d="M5.5 14.5h13v6z"
+  />
+  <path
+    d="M5.5 14.5h13v6zM5.5 9.5h13V3.5z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M2.5 12h2.5M10.75 12h2.5M19 12h2.5"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("flip-z", svg`
+  <path
+    class="tone-fill"
+    d="M3.5 11.5 11.5 3.5 3.5 3.5z"
+  />
+  <path
+    d="M3.5 11.5 11.5 3.5H3.5zM12.5 20.5 20.5 12.5v8z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M3 21l2-2M11 13l2-2M19 5l2-2"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("transform", svg`
+  <path
+    class="tone-ink"
+    d="M12 3v18M3 12h18"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+  />
+  <path
+    d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });

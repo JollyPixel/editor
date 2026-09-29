@@ -11,16 +11,12 @@ export type SelectionStoreEvents = {
   change: (
     selection: LayerRef | null
   ) => void;
-  gizmoLayerChange: (
-    name: string | null
-  ) => void;
 };
 
 export class SelectionStore extends Emitter<SelectionStoreEvents> {
   #current: LayerRef | null = null;
   #entries: readonly LayerRef[] = [];
   #lastVoxelLayer: string | null = null;
-  #gizmoLayer: string | null = null;
 
   get current(): LayerRef | null {
     return this.#current;
@@ -58,24 +54,6 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
 
   get object(): ObjectRef | null {
     return this.#current?.kind === "object" ? this.#current : null;
-  }
-
-  get gizmoLayer(): string | null {
-    return this.#gizmoLayer;
-  }
-
-  set gizmoLayer(
-    name: string | null
-  ) {
-    if (this.#gizmoLayer === name) {
-      return;
-    }
-
-    this.#gizmoLayer = name;
-    this.emit(
-      "gizmoLayerChange",
-      name
-    );
   }
 
   selectVoxelLayer(
@@ -122,8 +100,6 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
       "change",
       selection
     );
-
-    this.gizmoLayer = null;
   }
 }
 

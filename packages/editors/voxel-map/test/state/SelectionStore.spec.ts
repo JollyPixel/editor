@@ -168,15 +168,6 @@ describe("SelectionStore.reconcile", () => {
 
     assert.deepEqual(store.current, objectLayer("Items"));
   });
-
-  test("resets the gizmo layer when the selection moves", () => {
-    const store = storeOn([voxel("A"), voxel("B")], voxel("A"));
-    store.gizmoLayer = "A";
-
-    store.reconcile([voxel("B")]);
-
-    assert.strictEqual(store.gizmoLayer, null);
-  });
 });
 
 describe("SelectionStore.lastVoxelLayer", () => {

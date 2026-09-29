@@ -5,7 +5,6 @@ import {
   isVoxelLayerGeometryCommand,
   type VoxelLayer,
   type VoxelLayerCommand,
-  type VoxelTransformOptions,
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
@@ -13,6 +12,7 @@ import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
 import type { SelectionStore } from "../../../state/index.ts";
+import type { MapPlacement } from "../../placement/MapPlacement.ts";
 import {
   propertiesOf,
   propertyRowsOf,
@@ -24,11 +24,8 @@ import {
   roundPosition,
   samePosition
 } from "../../../shared/positionSource.ts";
-import { transformButtons } from "../../../shared/transformButtons.ts";
 import "../../../shared/CustomPropertiesEditor.ts";
-
-// CONSTANTS
-const kLayerTransforms = transformButtons("the layer center");
+import "../../placement/PlacementActions.ts";
 
 @customElement("layer-panel")
 export class VoxelLayerPanel extends LitElement {
@@ -38,12 +35,6 @@ export class VoxelLayerPanel extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       padding: var(--jolly-space-1, 4px);
-    }
-
-    .transforms {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--jolly-row-gap, 4px);
     }
   `;
 
@@ -55,6 +46,9 @@ export class VoxelLayerPanel extends LitElement {
 
   @property({ attribute: false })
   declare selection: SelectionStore;
+
+  @property({ attribute: false })
+  declare placement: MapPlacement;
 
   @property({ attribute: false })
   declare mapDocument: MapDocument;
@@ -78,15 +72,6 @@ export class VoxelLayerPanel extends LitElement {
     }
   }));
 
-  #gizmo = new FieldBinding<boolean>(this, {
-    read: () => this.selection.gizmoLayer === this.layerName,
-    write: (enabled) => {
-      if (this.layerName !== null) {
-        this.selection.gizmoLayer = enabled ? this.layerName : null;
-      }
-    }
-  });
-
   constructor() {
     super();
     this.layerName = null;
@@ -101,7 +86,7 @@ export class VoxelLayerPanel extends LitElement {
     }
   };
 
-  #onGizmoLayerChange = () => {
+  #onPlacementChange = () => {
     this.requestUpdate();
   };
 
@@ -109,7 +94,7 @@ export class VoxelLayerPanel extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.selection.subscribe("gizmoLayerChange", this.#onGizmoLayerChange)
+      this.placement.store.subscribe("change", this.#onPlacementChange)
     );
   }
 
@@ -153,12 +138,39 @@ export class VoxelLayerPanel extends LitElement {
     return html`
       <jolly-separator label=${this.layerName ?? ""}></jolly-separator>
 
-      <jolly-checkbox
-        align="end"
-        label="Gizmo"
-        .value=${this.#gizmo.value}
-        @jolly-change=${this.#gizmo.commit}
-      ></jolly-checkbox>
+      ${this.#renderTransform()}
+
+      <custom-properties-editor
+        .rows=${this._props}
+        storage-key="voxel-map:folder:layer-properties"
+        @property-rows-change=${this.#onPropertyRowsChange}
+      ></custom-properties-editor>
+    `;
+  }
+
+  #renderTransform() {
+    const { layerName } = this;
+    if (layerName !== null && this.placement.transforming(layerName)) {
+      return html`
+        <placement-actions
+          .placement=${this.placement}
+          .target=${layerName}
+        ></placement-actions>
+      `;
+    }
+
+    const empty = this._layer?.worldBounds() === null;
+    const title = empty ?
+      "The layer has no voxels to transform" :
+      "Move, turn or mirror the layer with a marquee";
+
+    return html`
+      <jolly-button
+        icon="transform"
+        title=${title}
+        ?disabled=${empty}
+        @click=${this.#onTransform}
+      >Transform</jolly-button>
 
       <jolly-vector3
         label="Position"
@@ -178,22 +190,13 @@ export class VoxelLayerPanel extends LitElement {
         ?disabled=${samePosition(roundPosition(this._contentOrigin), this.#position.value)}
         @click=${this.#onRebase}
       >Rebase to content origin</jolly-button>
-
-      <div class="transforms">
-        ${kLayerTransforms.map(({ label, title, transform }) => html`
-          <jolly-button
-            title=${title}
-            @click=${() => this.#transformLayer(transform)}
-          >${label}</jolly-button>
-        `)}
-      </div>
-
-      <custom-properties-editor
-        .rows=${this._props}
-        storage-key="voxel-map:folder:layer-properties"
-        @property-rows-change=${this.#onPropertyRowsChange}
-      ></custom-properties-editor>
     `;
+  }
+
+  #onTransform(): void {
+    if (this.layerName !== null) {
+      this.placement.transformLayer(this.layerName);
+    }
   }
 
   #onRebase(): void {
@@ -207,17 +210,6 @@ export class VoxelLayerPanel extends LitElement {
       y: Math.round(this._contentOrigin.y),
       z: Math.round(this._contentOrigin.z)
     });
-  }
-
-  #transformLayer(
-    transform: VoxelTransformOptions
-  ): void {
-    const { world, layerName } = this;
-    if (!world || !layerName) {
-      return;
-    }
-
-    world.transformLayer(layerName, transform);
   }
 
   #onPropertyRowsChange(

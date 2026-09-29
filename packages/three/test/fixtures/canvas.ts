@@ -37,6 +37,12 @@ export class MockCanvasRenderingContext2D {
   closePath(): void {
     // No-op for testing
   }
+  moveTo(..._args: unknown[]): void {
+    // No-op for testing
+  }
+  lineTo(..._args: unknown[]): void {
+    // No-op for testing
+  }
   roundRect(..._args: unknown[]): void {
     this.roundRectCallCount++;
   }

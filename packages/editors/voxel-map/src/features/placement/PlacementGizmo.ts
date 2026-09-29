@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
   type Actor,
   ActorComponent
@@ -7,60 +7,69 @@ import {
 import {
   BoxControls,
   MarqueeBox,
-  type BoxDragEvent
+  type BoxDragEvent,
+  type BoxFlipEvent,
+  type BoxRotateEvent
 } from "@jolly-pixel/three";
 import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/index.ts";
-import type { PointerCapture } from "../../../state/index.ts";
-import type { TemplateStore } from "../TemplateStore.ts";
-import type { TemplatePlacement } from "../TemplatePlacement.ts";
-import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
+import type { MapDocumentSignals } from "../../document/index.ts";
+import type { PointerCapture } from "../../state/index.ts";
+import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
+import type { Placement } from "./Placement.ts";
+import type { PlacementStore } from "./PlacementStore.ts";
+import {
+  mirrorOf,
+  quarterTurnOf
+} from "./gizmoTransforms.ts";
 import { TemplateGhost } from "./TemplateGhost.ts";
 
 // CONSTANTS
-const kMarqueeColors = ["#ffd400", "#1a1a1a"] as const;
+const kMarqueeShade = "#1a1a1a";
 
-export interface TemplatePlacementGizmoOptions {
+export interface PlacementGizmoOptions {
   view: VoxelView;
   sources: BlockRenderSources;
   camera: THREE.PerspectiveCamera;
-  templates: TemplateStore;
+  placements: PlacementStore;
   pointer: PointerCapture;
   mapDocument: MapDocumentSignals;
+  color: THREE.ColorRepresentation;
 }
 
-export class TemplatePlacementGizmo extends ActorComponent {
+export class PlacementGizmo extends ActorComponent {
   #view: VoxelView;
   #camera: THREE.PerspectiveCamera;
-  #templates: TemplateStore;
+  #placements: PlacementStore;
   #pointerCapture: PointerCapture;
   #mapDocument: MapDocumentSignals;
-  #marquee = new MarqueeBox({
-    colors: kMarqueeColors,
-    xray: true
-  });
+  #marquee: MarqueeBox;
   #ghost: TemplateGhost;
+  #pivot = new THREE.Vector3();
   #controls: BoxControls<MarqueeBox> | null = null;
   #subscriptions: Array<() => void> = [];
 
   constructor(
     actor: Actor,
-    options: TemplatePlacementGizmoOptions
+    options: PlacementGizmoOptions
   ) {
     super({
       actor,
-      typeName: "TemplatePlacementGizmo"
+      typeName: "PlacementGizmo"
     });
     this.#view = options.view;
     this.#camera = options.camera;
-    this.#templates = options.templates;
+    this.#placements = options.placements;
     this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
     this.#ghost = new TemplateGhost({
       blockRegistry: options.view.document.blocks,
       sources: options.sources
+    });
+    this.#marquee = new MarqueeBox({
+      colors: [options.color, kMarqueeShade],
+      xray: true
     });
     this.#marquee.visible = false;
   }
@@ -72,22 +81,27 @@ export class TemplatePlacementGizmo extends ActorComponent {
       {
         snap: 1,
         moveAxes: "xyz",
-        resizeAxes: "none"
+        resizeAxes: "none",
+        rotateAxes: "y",
+        flipAxes: "xz",
+        pivot: this.#pivot
       }
     );
     controls.addEventListener("start", this.#onDragStart);
     controls.addEventListener("change", this.#onDragChange);
+    controls.addEventListener("rotate", this.#onRotate);
+    controls.addEventListener("flip", this.#onFlip);
     controls.addEventListener("end", this.#onDragEnd);
     this.#controls = controls;
 
     this.actor.addChildren(this.#marquee, this.#ghost);
     this.#subscriptions.push(
-      this.#templates.subscribe("placementChange", this.#sync),
+      this.#placements.subscribe("change", this.#sync),
       this.#mapDocument.subscribe("templatesChanged", this.#resync),
       this.#mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
       this.#mapDocument.subscribe("tilesetsChanged", this.#rebuild)
     );
-    this.#sync(this.#templates.placement);
+    this.#sync(this.#placements.placement);
   }
 
   override destroy(): void {
@@ -99,6 +113,8 @@ export class TemplatePlacementGizmo extends ActorComponent {
     if (controls !== null) {
       controls.removeEventListener("start", this.#onDragStart);
       controls.removeEventListener("change", this.#onDragChange);
+      controls.removeEventListener("rotate", this.#onRotate);
+      controls.removeEventListener("flip", this.#onFlip);
       controls.removeEventListener("end", this.#onDragEnd);
       controls.dispose();
       this.#controls = null;
@@ -111,11 +127,9 @@ export class TemplatePlacementGizmo extends ActorComponent {
   }
 
   readonly #sync = (
-    placement: TemplatePlacement | null
+    placement: Placement | null
   ): void => {
-    const template = placement === null ?
-      undefined :
-      this.#view.document.world.templates.get(placement.templateId);
+    const template = placement?.source.resolve(this.#view.document.world);
     if (
       placement === null ||
       template === undefined
@@ -125,7 +139,7 @@ export class TemplatePlacementGizmo extends ActorComponent {
       this.#marquee.visible = false;
       this.#ghost.hide();
       if (placement !== null) {
-        this.#templates.endPlacement();
+        this.#placements.end();
       }
 
       return;
@@ -140,6 +154,11 @@ export class TemplatePlacementGizmo extends ActorComponent {
     );
     this.#marquee.size = bounds.size;
     this.#marquee.visible = true;
+    this.#pivot.set(
+      position.x + 0.5,
+      position.y + 0.5,
+      position.z + 0.5
+    );
     this.#ghost.position.set(
       position.x,
       position.y,
@@ -154,7 +173,7 @@ export class TemplatePlacementGizmo extends ActorComponent {
   };
 
   readonly #resync = (): void => {
-    this.#sync(this.#templates.placement);
+    this.#sync(this.#placements.placement);
   };
 
   readonly #rebuild = (): void => {
@@ -169,15 +188,25 @@ export class TemplatePlacementGizmo extends ActorComponent {
   readonly #onDragChange = (
     event: BoxDragEvent
   ): void => {
-    const placement = this.#templates.placement;
-    const template = placement === null ?
-      undefined :
-      this.#view.document.world.templates.get(placement.templateId);
+    const placement = this.#placements.placement;
+    const template = placement?.source.resolve(this.#view.document.world);
     if (placement === null || template === undefined) {
       return;
     }
 
-    this.#templates.movePlacement(placement.positionFor(template, event.min));
+    this.#placements.move(placement.positionFor(template, event.min));
+  };
+
+  readonly #onRotate = (
+    event: BoxRotateEvent
+  ): void => {
+    this.#placements.transform(quarterTurnOf(event.turns));
+  };
+
+  readonly #onFlip = (
+    event: BoxFlipEvent
+  ): void => {
+    this.#placements.transform(mirrorOf(event.axis));
   };
 
   readonly #onDragEnd = (): void => {

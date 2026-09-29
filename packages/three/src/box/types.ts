@@ -11,7 +11,11 @@ export type BoxAxisPolicy = "xz" | "xyz";
  */
 export type BoxResizePolicy = BoxAxisPolicy | "none";
 
-export type BoxDragMode = "move" | "resize";
+export type BoxRotatePolicy = "y" | "none";
+
+export type BoxFlipPolicy = BoxAxisPolicy | "none";
+
+export type BoxDragMode = "move" | "resize" | "rotate" | "flip";
 
 export type BoxState = "idle" | "hovered" | "active";
 
@@ -26,7 +30,7 @@ export interface AxisExtent {
 }
 
 export function axisPolicyIncludes(
-  policy: BoxResizePolicy,
+  policy: BoxResizePolicy | BoxFlipPolicy,
   axis: Axis
 ): boolean {
   if (policy === "none") {

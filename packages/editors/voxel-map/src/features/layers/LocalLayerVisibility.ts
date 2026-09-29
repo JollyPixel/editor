@@ -26,6 +26,7 @@ export class LocalLayerVisibility {
   #layers: VoxelLayerVisibility;
   #visibility: LayerVisibilityStore;
   #subscriptions: Array<() => void>;
+  #concealed = new Set<string>();
 
   constructor(
     options: LocalLayerVisibilityOptions
@@ -42,6 +43,19 @@ export class LocalLayerVisibility {
     this.#applyAll();
   }
 
+  conceal(
+    layerName: string
+  ): () => void {
+    this.#concealed.add(layerName);
+    this.#layers.override(layerName, false);
+
+    return () => {
+      if (this.#concealed.delete(layerName)) {
+        this.#apply(new VoxelLayerRef(layerName).key);
+      }
+    };
+  }
+
   dispose(): void {
     for (const unsubscribe of this.#subscriptions.splice(0)) {
       unsubscribe();
@@ -56,7 +70,9 @@ export class LocalLayerVisibility {
       return;
     }
 
-    const visible = this.#visibility.overrideOf(key);
+    const visible = this.#concealed.has(ref.name) ?
+      false :
+      this.#visibility.overrideOf(key);
     if (visible === undefined) {
       this.#layers.reset(ref.name);
     }
@@ -71,6 +87,9 @@ export class LocalLayerVisibility {
     );
     this.#layers.clear();
     this.#applyAll();
+    for (const layerName of this.#concealed) {
+      this.#layers.override(layerName, false);
+    }
   };
 
   readonly #onLayerUpdated = (

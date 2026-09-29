@@ -3,5 +3,7 @@ export {
   type BoxAttachOptions,
   type BoxControlsEventMap,
   type BoxControlsOptions,
-  type BoxDragEvent
+  type BoxDragEvent,
+  type BoxFlipEvent,
+  type BoxRotateEvent
 } from "./BoxControls.ts";

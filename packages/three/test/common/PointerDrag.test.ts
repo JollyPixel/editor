@@ -29,7 +29,9 @@ function createHarness(
       return grabbable;
     },
     drag: () => calls.push("drag"),
-    release: () => calls.push("release")
+    release: (event) => calls.push(
+      event === null ? "release" : `release:${event.type}`
+    )
   });
   drag.connect(element);
 
@@ -83,13 +85,13 @@ describe("PointerDrag", () => {
     assert.equal(drag.active, true);
   });
 
-  test("releases on pointerup, then hovers where the pointer stopped", () => {
+  test("releases on pointerup with the event, then hovers where the pointer stopped", () => {
     const { drag, calls, send } = createHarness();
 
     drag.begin(send("pointerdown"));
     send("pointerup");
 
-    assert.deepEqual(calls, ["press", "release", "hover"]);
+    assert.deepEqual(calls, ["press", "release:pointerup", "hover"]);
     assert.equal(drag.active, false);
   });
 

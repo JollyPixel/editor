@@ -33,10 +33,8 @@ function placement(
 ): Promise<PlacementSnapshot | null> {
   return page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
-    const current = workspace.templates.store.placement;
-    const template = current === null ?
-      undefined :
-      workspace.view.document.world.templates.get(current.templateId);
+    const current = workspace.placement.store.placement;
+    const template = current?.source.resolve(workspace.view.document.world);
     if (current === null || template === undefined) {
       return null;
     }
@@ -72,6 +70,14 @@ async function dragPlacement(
     await cellTopPoint(page, from),
     await cellTopPoint(page, to)
   ], { settle: nextFrames });
+}
+
+async function hoverCell(
+  page: Page,
+  cell: Cell
+): Promise<void> {
+  const point = await cellTopPoint(page, cell);
+  await page.mouse.move(point.x, point.y);
 }
 
 test.beforeEach(async({ page }) => {
@@ -123,17 +129,42 @@ test("a saved layer is placed, moved, turned and committed as one undo step", as
   expect(await blocksAt(page, original)).toEqual([1, 1, 1]);
 });
 
-test("cancelling a placement leaves the world untouched", async({ page }) => {
+test("Escape cancels a placement and leaves the world untouched", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await pinCamera(page);
 
   await page.getByRole("button", { name: "Save layer as template" }).click();
   await page.getByRole("button", { name: "Place template" }).click();
   await expect.poll(() => placement(page)).not.toBeNull();
 
-  await page.getByRole("button", { name: "Cancel" }).click();
+  await hoverCell(page, { x: 0, y: 0, z: 0 });
+  await page.keyboard.press("Escape");
 
   await expect.poll(() => placement(page)).toBeNull();
   expect(await voxelCount(page)).toBe(1);
+});
+
+test("a layer is turned with its marquee and committed with Enter", async({ page }) => {
+  const original: Cell[] = [0, 1, 2].map((x) => {
+    return { x, y: 0, z: 0 };
+  });
+  await seedVoxels(page, original.map((cell) => {
+    return { ...cell, blockId: 1 };
+  }));
+  await pinCamera(page);
+
+  await page.locator("layer-panel").getByRole("button", { name: "Transform" }).click();
+  await expect.poll(() => placement(page)).not.toBeNull();
+
+  await hoverCell(page, original[1]);
+  await page.keyboard.press("KeyQ");
+  await expect.poll(async() => (await placement(page))?.rotation).toBe(1);
+  const turned = await placement(page);
+  await page.keyboard.press("Enter");
+
+  await expect.poll(() => placement(page)).toBeNull();
+  expect(await voxelCount(page)).toBe(3);
+  expect(await blocksAt(page, turned!.cells)).toEqual([1, 1, 1]);
 });
 
 test("a saved template reaches a peer and survives a reload", async({ page, peer }) => {

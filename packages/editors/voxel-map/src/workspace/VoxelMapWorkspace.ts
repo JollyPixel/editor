@@ -15,6 +15,7 @@ import type { BlockRenderSources } from "../features/blocks/rendering/BlockRende
 import type { LayerVisibilityStore } from "../features/layers/LayerVisibilityStore.ts";
 import type { MapLayers } from "../features/layers/MapLayers.ts";
 import type { LocalBrush } from "../features/painting/LocalBrush.ts";
+import type { MapPlacement } from "../features/placement/MapPlacement.ts";
 import type { MapTemplates } from "../features/templates/MapTemplates.ts";
 import type { MapTilesets } from "../features/tilesets/MapTilesets.ts";
 
@@ -24,6 +25,7 @@ export interface VoxelMapWorkspace {
   usage: BlockUsageStore;
   blockSources: BlockRenderSources;
   templates: MapTemplates;
+  placement: MapPlacement;
   layerVisibility: LayerVisibilityStore;
   layers: MapLayers;
   view: VoxelView;

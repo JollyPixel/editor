@@ -5,7 +5,9 @@ export {
 export type {
   BoxAxisPolicy,
   BoxDragMode,
+  BoxFlipPolicy,
   BoxResizePolicy,
+  BoxRotatePolicy,
   BoxState
 } from "./types.ts";
 export type { BoxFace } from "./faceCenter.ts";
