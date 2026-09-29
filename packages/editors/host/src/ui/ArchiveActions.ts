@@ -10,6 +10,7 @@ import {
 
 // Import Internal Dependencies
 import type { EditorArchives } from "../session/EditorArchives.ts";
+import "./archiveIcons.ts";
 
 /**
  * Export, import and reset buttons for an `EditorArchives`, with the notice
@@ -37,6 +38,10 @@ export class ArchiveActions extends LitElement {
       display: flex;
       flex-wrap: wrap;
       gap: var(--jolly-row-gap, 4px);
+    }
+
+    .actions jolly-button {
+      flex: 1 1 0;
     }
 
     .notice,
@@ -79,18 +84,22 @@ export class ArchiveActions extends LitElement {
       <div class="actions">
         <jolly-button
           id="export-archive"
+          icon="archive-export"
           ?disabled=${this.busy}
           @click=${this.#onExport}
-        >Export (.zip)</jolly-button>
+        >Export</jolly-button>
         <jolly-button
           id="import-archive"
+          icon="archive-import"
+          variant="danger"
           ?disabled=${this.busy || !archives.canImport}
           @click=${this.#onImport}
-        >Import (.zip)</jolly-button>
+        >Import</jolly-button>
         ${archives.canReset ?
           html`
             <jolly-button
               id="reset-workspace"
+              icon="revert"
               variant="danger"
               ?disabled=${this.busy}
               @click=${this.#onReset}

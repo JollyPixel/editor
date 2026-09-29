@@ -86,6 +86,12 @@ describe("ArchiveActions", () => {
     assert.equal(query(element, ".notice"), null);
   });
 
+  test("marks import as a destructive action", async() => {
+    const element = await mount(createArchives());
+
+    assert.equal(query(element, "#import-archive")?.getAttribute("variant"), "danger");
+  });
+
   test("shows the volatile notice without the reset button", async() => {
     const element = await mount(createArchives({
       workspace: {

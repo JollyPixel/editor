@@ -36,6 +36,10 @@ export class MapConfigPanel extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
     }
+
+    jolly-archive-actions {
+      padding-inline-end: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+    }
   `;
 
   @property({ attribute: false })
@@ -78,6 +82,7 @@ export class MapConfigPanel extends LitElement {
       ></jolly-slider>
 
       ${this.#renderView()}
+      <jolly-separator label="File"></jolly-separator>
       <jolly-archive-actions
         .archives=${this.workspace.archives}
       ></jolly-archive-actions>
