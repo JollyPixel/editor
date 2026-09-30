@@ -31,6 +31,7 @@ function state(
     highlight: -1,
     itemCount: 0,
     browsingHistory: false,
+    inlineCompletion: false,
     ...overrides
   };
 }
@@ -91,6 +92,19 @@ describe("resolveKey", () => {
       "history-next"
     ],
     ["Down with no suggestions does nothing", key("ArrowDown"), {}, null],
+    [
+      "Right accepts the inline completion",
+      key("ArrowRight"),
+      { itemCount: 1, inlineCompletion: true },
+      "complete"
+    ],
+    ["Right without an inline completion moves the caret", key("ArrowRight"), { itemCount: 1 }, null],
+    [
+      "Shift+Right keeps extending the selection",
+      key("ArrowRight", { shiftKey: true }),
+      { itemCount: 1, inlineCompletion: true },
+      null
+    ],
     ["a modified key is left alone", key("Enter", { ctrlKey: true }), {}, null],
     ["a composing key is left alone", key("Enter", { isComposing: true }), {}, null],
     ["a printable key is left alone", key("a"), {}, null]

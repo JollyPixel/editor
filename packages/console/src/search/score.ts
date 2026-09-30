@@ -1,4 +1,10 @@
-export type MatchTier = 1 | 2 | 3 | 4 | 5;
+// Import Internal Dependencies
+import {
+  loweredPrefixDistance,
+  typoTolerance
+} from "./typo.ts";
+
+export type MatchTier = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface MatchRange {
   start: number;
@@ -16,7 +22,8 @@ export const MATCH_TIERS = {
   prefix: 2,
   wordBoundary: 3,
   substring: 4,
-  subsequence: 5
+  subsequence: 5,
+  typo: 6
 } as const;
 
 export function score(
@@ -72,6 +79,37 @@ export function score(
   };
 }
 
+export function scoreTypo(
+  query: string,
+  candidate: string
+): Match | null {
+  if (typoTolerance(query.length) === 0) {
+    return null;
+  }
+
+  const needle = query.toLowerCase();
+  const haystack = candidate.toLowerCase();
+  let best: number | null = null;
+  for (let index = 0; index < candidate.length; index++) {
+    if (!isWordStart(candidate, index)) {
+      continue;
+    }
+    const found = loweredPrefixDistance(needle, haystack, index);
+    if (found !== null && (best === null || found < best)) {
+      best = found;
+    }
+  }
+  if (best === null) {
+    return null;
+  }
+
+  return {
+    tier: MATCH_TIERS.typo,
+    score: 1 - best / query.length,
+    ranges: []
+  };
+}
+
 function match(
   tier: MatchTier,
   value: number,
@@ -87,17 +125,23 @@ function match(
 function wordStarts(
   candidate: string
 ): boolean[] {
-  return Array.from(candidate, (char, index) => {
-    if (index === 0) {
-      return isWordChar(char);
-    }
-    const previous = candidate[index - 1];
-    if (!isWordChar(char)) {
-      return false;
-    }
+  return Array.from(candidate, (_, index) => isWordStart(candidate, index));
+}
 
-    return !isWordChar(previous) || (isUpper(char) && !isUpper(previous));
-  });
+function isWordStart(
+  candidate: string,
+  index: number
+): boolean {
+  const char = candidate[index];
+  if (!isWordChar(char)) {
+    return false;
+  }
+  if (index === 0) {
+    return true;
+  }
+  const previous = candidate[index - 1];
+
+  return !isWordChar(previous) || (isUpper(char) && !isUpper(previous));
 }
 
 function matchWordBoundaries(

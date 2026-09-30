@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   MATCH_TIERS,
-  score
+  score,
+  scoreTypo
 } from "#src/search/score.ts";
 
 function highlighted(
@@ -92,5 +93,25 @@ describe("score within a tier", () => {
     const loose = score("bze", "bxxxxxze");
 
     assert.ok(tight && loose && tight.score > loose.score);
+  });
+});
+
+describe("scoreTypo", () => {
+  test("matches a mistyped word start with no highlight", () => {
+    assert.deepEqual(scoreTypo("brush.sise", "brush.size"), {
+      tier: MATCH_TIERS.typo,
+      score: 0.9,
+      ranges: []
+    });
+    assert.equal(scoreTypo("sise", "brush.size")?.tier, MATCH_TIERS.typo);
+  });
+
+  test("score never tolerates typos on its own", () => {
+    assert.equal(score("brush.sise", "brush.size"), null);
+  });
+
+  test("rejects short queries and distant words", () => {
+    assert.equal(scoreTypo("siz", "brush.rize"), null);
+    assert.equal(scoreTypo("camera", "brush.size"), null);
   });
 });

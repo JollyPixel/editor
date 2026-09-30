@@ -99,6 +99,27 @@ test.describe("jolly-console", () => {
     await expect(prompt(page)).toHaveValue("");
   });
 
+  test("the gray suffix completes with Tab or Right at the end of the line", async({ page }) => {
+    const suffix = page.locator("jolly-console .ghost .suffix");
+    await page.keyboard.press("Control+k");
+    await prompt(page).fill("brush.si");
+    await expect(suffix).toHaveText("ze");
+
+    await page.keyboard.press("Tab");
+    await expect(prompt(page)).toHaveValue("brush.size");
+    await expect(suffix).toBeHidden();
+
+    await prompt(page).fill("/brush.gr");
+    await expect(suffix).toHaveText("ow");
+    await page.keyboard.press("ArrowLeft");
+    await expect(suffix).toBeHidden();
+    await page.keyboard.press("End");
+    await expect(suffix).toHaveText("ow");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(prompt(page)).toHaveValue("/brush.grow");
+  });
+
   test("search results follow a registry change while open", async({ page }) => {
     await page.keyboard.press("Control+k");
     await prompt(page).fill("brush.si");

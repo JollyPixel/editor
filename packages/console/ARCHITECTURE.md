@@ -18,14 +18,16 @@ flowchart TB
         Console --> Builtins["builtins<br/>/help, /clear"]
         Console --> Classify["classify<br/>command, variable or search"]
         Classify --> Registry
-        Search["search + score<br/>ranked results"] --> Registry
+        Search["search + score<br/>ranked results, typo tier"] --> Registry
+        Search --> Typo["typo<br/>Levenshtein tolerance"]
         Complete["complete<br/>token under the caret"] --> Classify
+        Complete --> Typo
     end
 
     subgraph Element["@jolly-pixel/console/element"]
         Dialog["ConsoleElement<br/>jolly-console dialog"]
         Dialog --> Keymap["keymap<br/>key to action"]
-        Dialog --> Suggestions["suggestions<br/>list under the prompt"]
+        Dialog --> Suggestions["suggestions<br/>list and gray suffix"]
     end
 
     Dialog --> Classify
@@ -44,7 +46,7 @@ passes it down.
 | `registry/` | `Registry`, `NamespaceEntry`, definition types and validation, `ConsoleFeature` |
 | `input/` | `tokenize`, `classify`, `coerce` |
 | `execution/` | `bindArguments`, variable access, `InputHistory`, `Scrollback`, builtins and `help` |
-| `search/` | `score` tiers, `search`, `complete` |
+| `search/` | `score` tiers, `search`, `complete`, `typo` tolerance over the `levenshtein` port |
 | `element/` | `ConsoleElement` and its styles, `keymap`, `suggestions`, list navigation |
 
 ## One keystroke

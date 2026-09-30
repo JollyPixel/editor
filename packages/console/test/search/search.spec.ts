@@ -80,6 +80,30 @@ describe("search", () => {
     assert.ok(search("colour", registry).some((result) => result.label === "theme"));
   });
 
+  test("a mistyped name is found by the typo tier", () => {
+    const [result] = search("brush.sise", registry);
+
+    assert.equal(result.label, "brush.size");
+    assert.equal(result.tier, 6);
+    assert.deepEqual(result.ranges, []);
+  });
+
+  test("typo matches rank after description matches", () => {
+    const commands = new CommandConsole();
+    commands.registerNamespace("brush", { description: "Voxel brush" });
+    commands.registerVariable("boxel", {
+      type: "number",
+      description: "",
+      get: () => 1,
+      set: () => undefined
+    });
+
+    const results = search("voxel", commands.registry);
+
+    assert.deepEqual(results.map((result) => result.label), ["brush", "boxel"]);
+    assert.equal(results[0].field, "description");
+  });
+
   test("command ranges point into the label past the slash", () => {
     const result = search("grow", registry).find((item) => item.label === "/brush.grow");
 

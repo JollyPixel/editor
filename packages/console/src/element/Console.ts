@@ -40,6 +40,7 @@ import {
 } from "./listNavigation.ts";
 import {
   completionSuggestions,
+  inlineCompletion,
   NO_SUGGESTIONS,
   searchSuggestions,
   type Suggestion,
@@ -69,11 +70,17 @@ export class ConsoleElement extends LitElement {
   @state()
   declare _highlight: number;
 
+  @state()
+  declare _caretAtEnd: boolean;
+
   @query("dialog")
   declare _dialog: HTMLDialogElement | null;
 
   @query("input")
   declare _input: HTMLInputElement | null;
+
+  @query(".ghost")
+  declare _ghost: HTMLElement | null;
 
   @query(".scrollback")
   declare _scrollback: HTMLElement | null;
@@ -92,6 +99,7 @@ export class ConsoleElement extends LitElement {
     this.console = null;
     this._text = "";
     this._highlight = -1;
+    this._caretAtEnd = true;
   }
 
   get open(): boolean {
@@ -128,6 +136,13 @@ export class ConsoleElement extends LitElement {
     this.renderRoot
       .querySelector("[role=option][aria-selected=true]")
       ?.scrollIntoView({ block: "nearest" });
+
+    const input = this._input;
+    const ghost = this._ghost;
+    if (input !== null && ghost !== null) {
+      const overflowing = input.scrollWidth > input.clientWidth;
+      ghost.style.visibility = overflowing ? "hidden" : "";
+    }
   }
 
   async show(): Promise<void> {
@@ -172,6 +187,7 @@ export class ConsoleElement extends LitElement {
     const entries = this.console?.scrollback ?? [];
     const { items, hint } = this.#list;
     const expanded = items.length > 0;
+    const ghost = this._caretAtEnd ? this.#inlineCompletion() : "";
     const classes = [
       "card",
       entries.length > 0 ? "has-log" : ""
@@ -198,23 +214,35 @@ export class ConsoleElement extends LitElement {
           )}</div>
           <div class="prompt">
             <jolly-icon name="search" aria-hidden="true"></jolly-icon>
-            <input
-              type="text"
-              role="combobox"
-              aria-label="Command"
-              aria-autocomplete="list"
-              aria-controls="suggestions"
-              aria-expanded=${expanded ? "true" : "false"}
-              aria-activedescendant=${this._highlight >= 0 && expanded ?
-                `option-${this._highlight}` :
-                nothing}
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="Search, /command or variable"
-              .value=${live(this._text)}
-              @input=${this.#onInput}
-              @keydown=${this.#onKeyDown}
-            >
+            <div class="field">
+              <input
+                type="text"
+                role="combobox"
+                aria-label="Command"
+                aria-autocomplete="both"
+                aria-controls="suggestions"
+                aria-expanded=${expanded ? "true" : "false"}
+                aria-activedescendant=${this._highlight >= 0 && expanded ?
+                  `option-${this._highlight}` :
+                  nothing}
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Search, /command or variable"
+                .value=${live(this._text)}
+                @input=${this.#onInput}
+                @keydown=${this.#onKeyDown}
+                @keyup=${this.#onCaretMove}
+                @pointerup=${this.#onCaretMove}
+                @select=${this.#onCaretMove}
+              >
+              <span
+                class="ghost"
+                aria-hidden="true"
+                ?hidden=${ghost === ""}
+              ><span class="typed">${this._text}</span><span
+                class="suffix"
+              >${ghost}</span></span>
+            </div>
             <span class="hint">${hint ?? ""}</span>
           </div>
           <div class=${expanded ? "suggestions expanded" : "suggestions"}>
@@ -342,7 +370,20 @@ export class ConsoleElement extends LitElement {
     this._text = text;
     await this.updateComplete;
     this._input?.setSelectionRange(caret, caret);
+    this.#syncCaret();
     this.#refresh();
+  }
+
+  #syncCaret(): void {
+    const input = this._input;
+    this._caretAtEnd = input === null || (
+      input.selectionStart === input.selectionEnd &&
+      input.selectionEnd === input.value.length
+    );
+  }
+
+  #inlineCompletion(): string {
+    return inlineCompletion(this._text, this.#list, this._highlight);
   }
 
   #submit(
@@ -467,17 +508,24 @@ export class ConsoleElement extends LitElement {
     if (event.target instanceof HTMLInputElement) {
       this._text = event.target.value;
       this.#browsingHistory = false;
+      this.#syncCaret();
       this.#refresh();
     }
+  };
+
+  readonly #onCaretMove = (): void => {
+    this.#syncCaret();
   };
 
   readonly #onKeyDown = (
     event: KeyboardEvent
   ): void => {
+    this.#syncCaret();
     const action = resolveKey(event, {
       highlight: this._highlight,
       itemCount: this.#list.items.length,
-      browsingHistory: this.#browsingHistory
+      browsingHistory: this.#browsingHistory,
+      inlineCompletion: this._caretAtEnd && this.#inlineCompletion() !== ""
     });
     if (action === null) {
       return;

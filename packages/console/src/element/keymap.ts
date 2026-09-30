@@ -11,6 +11,7 @@ export interface KeyState {
   highlight: number;
   itemCount: number;
   browsingHistory: boolean;
+  inlineCompletion: boolean;
 }
 
 export type ConsoleKeyAction =
@@ -66,6 +67,8 @@ export function resolveKey(
       }
 
       return state.itemCount > 0 ? "highlight-next" : null;
+    case "ArrowRight":
+      return state.inlineCompletion && !event.shiftKey ? "complete" : null;
     default:
       return null;
   }

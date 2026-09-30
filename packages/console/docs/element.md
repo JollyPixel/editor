@@ -48,9 +48,17 @@ shadow roots.
 | Key | Effect |
 |---|---|
 | Enter | runs the line, or acts on the highlighted suggestion |
-| Tab | completes the current token |
+| Tab | accepts the highlighted suggestion, or the first one, without running it |
+| Right | accepts the gray suffix when the caret is at the end of the line, otherwise moves the caret |
 | Up, Down | move the highlight when a suggestion is highlighted, otherwise walk the history |
 | Escape | closes the console |
+
+## Inline completion
+
+While the caret is at the end of the line, the prompt shows in gray the rest of the line that Tab
+would produce: `brush.si` shows `ze`, `/brush.gr` shows `ow`. It follows the highlighted suggestion,
+or the first one. A typo correction does not extend the typed text, so it shows no gray suffix;
+Tab still applies it. The suffix hides when the typed text overflows the prompt.
 
 ## Layout and theme
 
@@ -66,6 +74,7 @@ on the element by hand wins over both.
 ## Accessibility
 
 - The prompt is a `combobox` with `aria-expanded`, `aria-controls` and `aria-activedescendant`
-  pointing into the suggestion `listbox`.
+  pointing into the suggestion `listbox`, and `aria-autocomplete="both"`. The gray suffix is
+  `aria-hidden`; the highlighted option carries the same text.
 - The scrollback is a `log` with `aria-relevant="additions"`, labelled "Console output".
 - The dialog is labelled "Console", which announces it when it opens.

@@ -226,6 +226,37 @@ describe("commands", () => {
     assert.equal(commands.scrollback[1].kind, "error");
   });
 
+  test("an unknown command suggests the closest one without running it", async() => {
+    let called = false;
+    const commands = new CommandConsole();
+    commands.registerNamespace("brush").registerCommand("grow", {
+      description: "",
+      args: [],
+      execute: () => {
+        called = true;
+      }
+    });
+
+    await commands.submit("/brush.grwo");
+
+    assert.equal(called, false);
+    assert.equal(
+      lines(commands).at(-1),
+      "error: Unknown command \"/brush.grwo\". Did you mean /brush.grow?"
+    );
+  });
+
+  test("a mistyped variable suggests the closest one", async() => {
+    const { commands } = withBrush();
+
+    await commands.submit("brush.sise");
+
+    assert.equal(
+      lines(commands).at(-1),
+      "error: \"brush.sise\" is not a variable; commands start with /. Did you mean brush.size?"
+    );
+  });
+
   test("a failed line is still recorded in history", async() => {
     const commands = new CommandConsole();
 

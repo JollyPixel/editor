@@ -16,6 +16,7 @@ import type {
   RegisteredVariable,
   VariableDef
 } from "../registry/types.ts";
+import { prefixTypoDistance } from "./typo.ts";
 
 // CONSTANTS
 const kBooleanValues = ["true", "false"];
@@ -142,25 +143,37 @@ function addressCompletions(
   mode: "command" | "variable"
 ): Completion[] {
   const lowered = typed.toLowerCase();
-  const dot = lowered.indexOf(".");
-  const completions: Completion[] = [];
+  const prefix = mode === "command" ? `/${lowered}` : lowered;
+  const matches = scopedAddresses(registry, typed, mode)
+    .filter((completion) => completion.value.toLowerCase().startsWith(prefix));
+  if (matches.length > 0) {
+    return matches.sort(byValue);
+  }
 
+  const everyAddress = [registry.root, ...registry.namespaces()]
+    .flatMap((namespace) => members(namespace, mode));
+
+  return corrections(everyAddress, typed, mode === "command" ? 1 : 0);
+}
+
+function scopedAddresses(
+  registry: ConsoleRegistry,
+  typed: string,
+  mode: "command" | "variable"
+): Completion[] {
+  const dot = typed.indexOf(".");
   if (dot !== -1) {
     const namespace = registry.namespace(typed.slice(0, dot));
-    if (namespace === undefined) {
-      return [];
-    }
-    completions.push(...members(namespace, mode));
+
+    return namespace === undefined ? [] : members(namespace, mode);
   }
-  else if (mode === "command") {
-    completions.push(...members(registry.root, mode));
-    for (const namespace of registry.namespaces()) {
+
+  const completions = members(registry.root, mode);
+  for (const namespace of registry.namespaces()) {
+    if (mode === "command") {
       completions.push(...members(namespace, mode));
     }
-  }
-  else {
-    completions.push(...members(registry.root, mode));
-    for (const namespace of registry.namespaces()) {
+    else {
       completions.push({
         value: `${namespace.name}.`,
         label: `${namespace.name}.`,
@@ -169,11 +182,7 @@ function addressCompletions(
     }
   }
 
-  const prefix = mode === "command" ? `/${lowered}` : lowered;
-
-  return completions
-    .filter((completion) => completion.value.toLowerCase().startsWith(prefix))
-    .sort((left, right) => left.value.localeCompare(right.value));
+  return completions;
 }
 
 function members(
@@ -237,16 +246,46 @@ function valueCompletions(
   arg?: ArgDef
 ): Completion[] {
   const lowered = typed.toLowerCase();
+  const completions = values.map((value) => {
+    return {
+      value: arg?.rest ? value : quote(value),
+      label: value,
+      detail: arg?.name ?? ""
+    };
+  });
+  const matches = completions
+    .filter((completion) => completion.label.toLowerCase().startsWith(lowered));
 
-  return values
-    .filter((value) => value.toLowerCase().startsWith(lowered))
-    .map((value) => {
-      return {
-        value: arg?.rest ? value : quote(value),
-        label: value,
-        detail: arg?.name ?? ""
-      };
-    });
+  return matches.length > 0 ? matches : corrections(completions, typed, 0);
+}
+
+function corrections(
+  completions: Completion[],
+  typed: string,
+  offset: number
+): Completion[] {
+  const ranked: { completion: Completion; distance: number; }[] = [];
+  for (const completion of completions) {
+    const found = prefixTypoDistance(typed, completion.label.slice(offset));
+    if (found !== null) {
+      ranked.push({
+        completion,
+        distance: found
+      });
+    }
+  }
+
+  return ranked
+    .sort((left, right) => left.distance - right.distance ||
+      byValue(left.completion, right.completion))
+    .map(({ completion }) => completion);
+}
+
+function byValue(
+  left: Completion,
+  right: Completion
+): number {
+  return left.value.localeCompare(right.value);
 }
 
 function list(

@@ -109,6 +109,12 @@ export const consoleStyles = css`
     transition: opacity var(--jolly-duration-base, 160ms) var(--jolly-easing, ease);
   }
 
+  .scrollback,
+  [role="listbox"] {
+    scrollbar-color: var(--jolly-groove, rgb(255 255 255 / 20%)) transparent;
+    scrollbar-width: thin;
+  }
+
   @starting-style {
     .scrollback {
       opacity: 0;
@@ -195,6 +201,15 @@ export const consoleStyles = css`
     --jolly-icon-size: 14px;
   }
 
+  .field {
+    display: flex;
+    position: relative;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+    font-size: calc(var(--jolly-font-size, 11px) + 2px);
+  }
+
   input {
     flex: 1 1 auto;
     min-width: 0;
@@ -204,11 +219,29 @@ export const consoleStyles = css`
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: calc(var(--jolly-font-size, 11px) + 2px);
   }
 
   input::placeholder {
     color: var(--jolly-text-muted, #9aa0a6);
+  }
+
+  .ghost {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    overflow: hidden;
+    color: var(--jolly-text-muted, #9aa0a6);
+    white-space: pre;
+    pointer-events: none;
+  }
+
+  .ghost[hidden] {
+    display: none;
+  }
+
+  .ghost .typed {
+    visibility: hidden;
   }
 
   .hint {

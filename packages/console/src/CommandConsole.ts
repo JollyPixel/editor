@@ -26,6 +26,7 @@ import type {
   RegistrationHandle,
   VariableDef
 } from "./registry/types.ts";
+import { closestAddress } from "./search/typo.ts";
 
 export type CommandConsoleEvents = {
   "registry-changed": () => void;
@@ -133,7 +134,10 @@ export class CommandConsole extends Emitter<
           break;
         default:
           throw new ConsoleInputError(
-            `"${input.query}" is not a variable; commands start with /`
+            didYouMean(
+              `"${input.query}" is not a variable; commands start with /`,
+              closestAddress(input.query, this.#registry, "variable")
+            )
           );
       }
     }
@@ -150,7 +154,12 @@ export class CommandConsole extends Emitter<
   ): Promise<void> {
     const { command } = input;
     if (command === undefined) {
-      throw new ConsoleInputError(`Unknown command "/${input.address}"`);
+      throw new ConsoleInputError(
+        didYouMean(
+          `Unknown command "/${input.address}"`,
+          closestAddress(input.address, this.#registry, "command")
+        )
+      );
     }
 
     const values = bindArguments(
@@ -206,4 +215,11 @@ export class CommandConsole extends Emitter<
       this.emit("scrollback-changed");
     }
   }
+}
+
+function didYouMean(
+  message: string,
+  guess: string | null
+): string {
+  return guess === null ? message : `${message}. Did you mean ${guess}?`;
 }

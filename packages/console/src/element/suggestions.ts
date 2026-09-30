@@ -83,6 +83,23 @@ export async function completionSuggestions(
   };
 }
 
+export function inlineCompletion(
+  input: string,
+  list: SuggestionList,
+  highlight: number
+): string {
+  const item = list.items[Math.max(highlight, 0)];
+  if (item === undefined) {
+    return "";
+  }
+
+  const { text } = item.accept();
+  const continues = text.length > input.length &&
+    text.toLowerCase().startsWith(input.toLowerCase());
+
+  return continues ? text.slice(input.length) : "";
+}
+
 function resultSuggestion(
   result: SearchResult
 ): Suggestion {
