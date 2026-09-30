@@ -490,8 +490,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -530,8 +530,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -624,8 +624,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -682,8 +682,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -717,7 +717,7 @@ importers:
         version: 0.2.2
       three:
         specifier: ^0.186.0
-        version: 0.186.0
+        version: 0.186.1
     devDependencies:
       '@types/picomatch':
         specifier: ^4.0.2
@@ -841,7 +841,7 @@ importers:
         version: 6.0.23
       three:
         specifier: ^0.186.0
-        version: 0.186.0
+        version: 0.186.1
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -911,8 +911,8 @@ importers:
   packages/three:
     dependencies:
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
     devDependencies:
       '@jolly-pixel/color':
         specifier: workspace:*
@@ -949,8 +949,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
     devDependencies:
       '@dimforge/rapier3d':
         specifier: 0.20.0
@@ -986,8 +986,8 @@ importers:
         specifier: workspace:*
         version: link:../voxel-renderer
       three:
-        specifier: 0.186.0
-        version: 0.186.0
+        specifier: 0.186.1
+        version: 0.186.1
 
 packages:
 
@@ -3948,8 +3948,8 @@ packages:
     resolution: {integrity: sha512-e2zZ96wSChazBsbENf/Pcm/4swHt2cEKQ92rhUjkL9GCKiTDJIaTBenjE/m9DXi0QBmTMDkFDdOomUy20A1tDQ==}
     engines: {node: '>=20'}
 
-  three@0.186.0:
-    resolution: {integrity: sha512-cr/fIM2ddMSVbYVgkfD4jLJv7Fh/8ZTjvo+7gQeSVGUZHxpx9FDwoL5iC7hUz/LiRA8wMbqfnb90xKfm1/HHkQ==}
+  three@0.186.1:
+    resolution: {integrity: sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==}
 
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
@@ -7164,7 +7164,7 @@ snapshots:
     dependencies:
       real-require: 1.0.0
 
-  three@0.186.0: {}
+  three@0.186.1: {}
 
   tiny-invariant@1.3.3: {}
 

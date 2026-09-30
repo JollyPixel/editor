@@ -45,6 +45,6 @@
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
-    "three": "0.186.0"
+    "three": "0.186.1"
   }
 }

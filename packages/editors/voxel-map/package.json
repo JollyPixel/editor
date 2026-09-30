@@ -71,6 +71,6 @@
     "@jolly-pixel/voxel.renderer": "workspace:*",
     "@openally/emitt": "1.1.0",
     "lit": "3.3.3",
-    "three": "0.186.0"
+    "three": "0.186.1"
   }
 }
