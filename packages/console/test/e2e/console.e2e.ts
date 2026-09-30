@@ -47,7 +47,59 @@ test.describe("jolly-console", () => {
     await page.keyboard.press("Control+k");
 
     await expect(prompt(page)).toHaveValue("");
-    await expect(page.getByRole("option")).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Namespaces" })).toContainText("brush");
+    await expect(page.locator("[role=option][aria-selected=true]")).toHaveCount(0);
+  });
+
+  test("the empty prompt lists entries and flips a toggle", async({ page }) => {
+    await page.keyboard.press("Control+k");
+    const toggles = page.getByRole("group", { name: "Toggles" });
+    const ghost = toggles.getByRole("option", { name: "brush.ghost" });
+    await expect(ghost).toHaveAttribute("aria-checked", "true");
+
+    await ghost.click();
+
+    await expect(page.locator("#brush-ghost")).toHaveText("false");
+    await expect(ghost).toHaveAttribute("aria-checked", "false");
+    await expect(prompt(page)).toBeFocused();
+    await expect(page.getByRole("group", { name: "Recent" }))
+      .toContainText("brush.ghost false");
+  });
+
+  test("the highlighted suggestion shows its usage", async({ page }) => {
+    const usage = page.locator("jolly-console .usage");
+    await page.keyboard.press("Control+k");
+    await prompt(page).fill("/brush.gr");
+    await expect(usage).toBeHidden();
+
+    await page.keyboard.press("ArrowDown");
+
+    await expect(usage).toContainText("/brush.grow <delta:number>");
+    await expect(prompt(page)).toHaveAttribute("aria-describedby", "usage");
+  });
+
+  test("long output folds until expanded", async({ page }) => {
+    await page.evaluate(() => {
+      document.querySelector("jolly-console")?.console?.registerCommand("lines", {
+        description: "Print twenty lines",
+        args: [],
+        execute: (_, ctx) => ctx.print(
+          Array.from({ length: 20 }, (_line, index) => `line ${index + 1}`).join("\n")
+        )
+      });
+    });
+    await page.keyboard.press("Control+k");
+    await prompt(page).fill("/lines");
+    await page.keyboard.press("Enter");
+
+    const entry = page.getByRole("log").locator(".entry").last();
+    await expect(entry).toContainText("line 6");
+    await expect(entry).not.toContainText("line 7");
+
+    await entry.getByRole("button", { name: "Show 14 more lines" }).click();
+
+    await expect(entry).toContainText("line 20");
+    await expect(prompt(page)).toBeFocused();
   });
 
   test("closing returns focus to the element that held it", async({ page }) => {

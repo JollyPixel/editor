@@ -13,7 +13,6 @@ import {
   state
 } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
-import { repeat } from "lit/directives/repeat.js";
 import {
   adoptAmbientTheme,
   deepActiveElement,
@@ -25,34 +24,15 @@ import "@jolly-pixel/ui/icon";
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
-import { classify } from "../input/classify.ts";
-import type { ScrollbackEntry } from "../execution/Scrollback.ts";
-import type { MatchRange } from "../search/score.ts";
 import { consoleStyles } from "./Console.styles.ts";
+import type { ConsoleLogElement } from "./ConsoleLog.ts";
+import "./ConsoleLog.ts";
 import {
-  isToggleShortcut,
-  resolveKey,
-  type ConsoleKeyAction
-} from "./keymap.ts";
-import {
-  initialHighlight,
-  moveHighlight
-} from "./listNavigation.ts";
-import {
-  completionSuggestions,
-  inlineCompletion,
-  NO_SUGGESTIONS,
-  searchSuggestions,
-  type Suggestion,
-  type SuggestionList
-} from "./suggestions.ts";
-
-// CONSTANTS
-const kEntryIcons = {
-  echo: "chevron",
-  info: null,
-  error: "warning"
-} as const;
+  KeyboardController,
+  type ConsoleKeyAction,
+  type KeyState
+} from "./KeyboardController.ts";
+import { SuggestionController } from "./SuggestionController.ts";
 
 @customElement("jolly-console")
 export class ConsoleElement extends LitElement {
@@ -68,9 +48,6 @@ export class ConsoleElement extends LitElement {
   declare _text: string;
 
   @state()
-  declare _highlight: number;
-
-  @state()
   declare _caretAtEnd: boolean;
 
   @query("dialog")
@@ -82,11 +59,21 @@ export class ConsoleElement extends LitElement {
   @query(".ghost")
   declare _ghost: HTMLElement | null;
 
-  @query(".scrollback")
-  declare _scrollback: HTMLElement | null;
+  @query("jolly-console-log")
+  declare _log: ConsoleLogElement | null;
 
-  #list: SuggestionList = NO_SUGGESTIONS;
-  #request = 0;
+  @query("[role=listbox]")
+  declare _listbox: HTMLElement | null;
+
+  #suggestions = new SuggestionController(this, {
+    listbox: () => this._listbox,
+    pick: (index) => this.#pick(index)
+  });
+  #keys = new KeyboardController(this, {
+    state: () => this.#keyState(),
+    act: (action) => this.#act(action),
+    toggle: () => this.#toggle()
+  });
   #browsingHistory = false;
   #restoreFocus: HTMLElement | null = null;
   #releaseLayer: (() => void) | null = null;
@@ -98,7 +85,6 @@ export class ConsoleElement extends LitElement {
 
     this.console = null;
     this._text = "";
-    this._highlight = -1;
     this._caretAtEnd = true;
   }
 
@@ -106,13 +92,7 @@ export class ConsoleElement extends LitElement {
     return this._dialog?.open ?? false;
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.#onWindowKeyDown, true);
-  }
-
   override disconnectedCallback(): void {
-    window.removeEventListener("keydown", this.#onWindowKeyDown, true);
     this.#unsubscribe?.();
     this.#unsubscribe = null;
     this.#release();
@@ -129,14 +109,6 @@ export class ConsoleElement extends LitElement {
   }
 
   protected override updated(): void {
-    const scrollback = this._scrollback;
-    if (scrollback !== null) {
-      scrollback.scrollTop = scrollback.scrollHeight;
-    }
-    this.renderRoot
-      .querySelector("[role=option][aria-selected=true]")
-      ?.scrollIntoView({ block: "nearest" });
-
     const input = this._input;
     const ghost = this._ghost;
     if (input !== null && ghost !== null) {
@@ -163,7 +135,6 @@ export class ConsoleElement extends LitElement {
     const active = deepActiveElement();
     this.#restoreFocus = active instanceof HTMLElement ? active : null;
     this.#inheritedTheme = adoptAmbientTheme(this, this.#inheritedTheme);
-    this.#list = NO_SUGGESTIONS;
     this._text = "";
     dialog.showModal();
     this.#releaseLayer = inputLayers.push({
@@ -173,6 +144,7 @@ export class ConsoleElement extends LitElement {
         return true;
       }
     });
+    this._log?.followLatest();
     this.#refresh();
     this._input?.focus();
   }
@@ -185,9 +157,10 @@ export class ConsoleElement extends LitElement {
 
   override render(): TemplateResult {
     const entries = this.console?.scrollback ?? [];
-    const { items, hint } = this.#list;
-    const expanded = items.length > 0;
-    const ghost = this._caretAtEnd ? this.#inlineCompletion() : "";
+    const suggestions = this.#suggestions;
+    const expanded = suggestions.items.length > 0;
+    const ghost = this.#ghostText();
+    const usage = suggestions.usage;
     const classes = [
       "card",
       entries.length > 0 ? "has-log" : ""
@@ -201,103 +174,63 @@ export class ConsoleElement extends LitElement {
         @click=${this.#onBackdropClick}
       >
         <div class=${classes}>
-          <div
-            class="scrollback"
-            role="log"
-            aria-relevant="additions"
-            aria-label="Console output"
+          <jolly-console-log
+            .entries=${entries}
             ?hidden=${entries.length === 0}
-          >${repeat(
-            entries,
-            (entry) => entry.id,
-            (entry) => this.#renderEntry(entry)
-          )}</div>
-          <div class="prompt">
-            <jolly-icon name="search" aria-hidden="true"></jolly-icon>
-            <div class="field">
-              <input
-                type="text"
-                role="combobox"
-                aria-label="Command"
-                aria-autocomplete="both"
-                aria-controls="suggestions"
-                aria-expanded=${expanded ? "true" : "false"}
-                aria-activedescendant=${this._highlight >= 0 && expanded ?
-                  `option-${this._highlight}` :
-                  nothing}
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="Search, /command or variable"
-                .value=${live(this._text)}
-                @input=${this.#onInput}
-                @keydown=${this.#onKeyDown}
-                @keyup=${this.#onCaretMove}
-                @pointerup=${this.#onCaretMove}
-                @select=${this.#onCaretMove}
-              >
-              <span
-                class="ghost"
-                aria-hidden="true"
-                ?hidden=${ghost === ""}
-              ><span class="typed">${this._text}</span><span
-                class="suffix"
-              >${ghost}</span></span>
+          ></jolly-console-log>
+          <div class="body">
+            <div class="prompt">
+              <jolly-icon name="search" aria-hidden="true"></jolly-icon>
+              <div class="field">
+                <input
+                  type="text"
+                  role="combobox"
+                  aria-label="Command"
+                  aria-autocomplete="both"
+                  aria-controls="suggestions"
+                  aria-expanded=${expanded ? "true" : "false"}
+                  aria-activedescendant=${suggestions.highlight >= 0 && expanded ?
+                    `option-${suggestions.highlight}` :
+                    nothing}
+                  aria-describedby=${usage === null ? nothing : "usage"}
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Search, /command or variable"
+                  .value=${live(this._text)}
+                  @input=${this.#onInput}
+                  @keydown=${this.#onKeyDown}
+                  @keyup=${this.#onCaretMove}
+                  @pointerup=${this.#onCaretMove}
+                  @select=${this.#onCaretMove}
+                >
+                <span
+                  class="ghost"
+                  aria-hidden="true"
+                  ?hidden=${ghost === ""}
+                ><span class="typed">${this._text}</span><span
+                  class="suffix"
+                >${ghost}</span></span>
+              </div>
+              <span class="hint">${suggestions.hint ?? ""}</span>
             </div>
-            <span class="hint">${hint ?? ""}</span>
-          </div>
-          <div class=${expanded ? "suggestions expanded" : "suggestions"}>
-            <ul
-              id="suggestions"
-              role="listbox"
-              aria-label="Suggestions"
-              @mousedown=${this.#onListMouseDown}
-            >${items.map((item, index) => this.#renderSuggestion(item, index))}</ul>
+            <div class=${expanded ? "suggestions expanded" : "suggestions"}>
+              <ul
+                id="suggestions"
+                role="listbox"
+                aria-label="Suggestions"
+                @mousedown=${this.#keepPromptFocus}
+              >${suggestions.renderOptions()}</ul>
+            </div>
+            <div id="usage" class="usage" ?hidden=${usage === null}>
+              <span class="signature">${usage?.usage ?? ""}</span>
+              <span class="description">${usage?.description ?? ""}</span>
+            </div>
+            <div class="keys">${this.#keys.hints.map(({ keys, action }) => html`
+              <span class="key-hint"><kbd>${keys}</kbd>${action}</span>
+            `)}</div>
           </div>
         </div>
       </dialog>
-    `;
-  }
-
-  #renderEntry(
-    entry: ScrollbackEntry
-  ): TemplateResult {
-    const classes = [
-      "entry",
-      entry.kind,
-      entry.pending ? "pending" : ""
-    ].join(" ");
-    const icon = kEntryIcons[entry.kind];
-
-    return html`
-      <div class=${classes}>
-        ${icon === null ?
-          nothing :
-          html`<jolly-icon name=${icon} aria-hidden="true"></jolly-icon>`}
-        <span class="text">${entry.text}</span>
-      </div>
-    `;
-  }
-
-  #renderSuggestion(
-    item: Suggestion,
-    index: number
-  ): TemplateResult {
-    const { match } = item;
-
-    return html`
-      <li
-        id=${`option-${index}`}
-        role="option"
-        aria-selected=${index === this._highlight ? "true" : "false"}
-        @click=${() => this.#pick(index)}
-      >
-        <span class="label">${match?.field === "label" ?
-          marked(item.label, match.ranges) :
-          item.label}</span>
-        <span class="detail">${match?.field === "detail" ?
-          marked(item.detail, match.ranges) :
-          item.detail}</span>
-      </li>
     `;
   }
 
@@ -306,7 +239,7 @@ export class ConsoleElement extends LitElement {
   ): void {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#request++;
+    this.#suggestions.cancel();
     if (commands === null) {
       return;
     }
@@ -332,35 +265,10 @@ export class ConsoleElement extends LitElement {
   }
 
   #refresh(): void {
-    const commands = this.console;
-    if (commands === null) {
-      return;
+    if (this.console !== null) {
+      const caret = this._input?.selectionStart ?? this._text.length;
+      void this.#suggestions.refresh(this.console, this._text, caret);
     }
-
-    const request = ++this.#request;
-    const text = this._text;
-    const classified = classify(text, commands.registry);
-    if (classified.mode === "search") {
-      this.#showList(searchSuggestions(classified.query, commands.registry));
-
-      return;
-    }
-
-    this.#showList(this.#list.preselect ? NO_SUGGESTIONS : this.#list);
-    const caret = this._input?.selectionStart ?? text.length;
-    void completionSuggestions(text, caret, commands.registry).then((list) => {
-      if (request === this.#request) {
-        this.#showList(list);
-      }
-    });
-  }
-
-  #showList(
-    list: SuggestionList
-  ): void {
-    this.#list = list;
-    this._highlight = initialHighlight(list);
-    this.requestUpdate();
   }
 
   async #replaceText(
@@ -382,8 +290,24 @@ export class ConsoleElement extends LitElement {
     );
   }
 
-  #inlineCompletion(): string {
-    return inlineCompletion(this._text, this.#list, this._highlight);
+  #ghostText(): string {
+    return this._caretAtEnd ?
+      this.#suggestions.inlineCompletion(this._text) :
+      "";
+  }
+
+  #keyState(): KeyState {
+    const suggestions = this.#suggestions;
+
+    return {
+      highlight: suggestions.highlight,
+      itemCount: suggestions.items.length,
+      browsingHistory: this.#browsingHistory,
+      inlineCompletion: this.#ghostText() !== "",
+      hasText: this._text.trim() !== "",
+      hasHistory: (this.console?.history.entries.length ?? 0) > 0,
+      highlightRuns: suggestions.highlighted?.accept().run ?? false
+    };
   }
 
   #submit(
@@ -412,12 +336,12 @@ export class ConsoleElement extends LitElement {
     index: number,
     execute: boolean
   ): void {
-    const item = this.#list.items[index];
-    if (item === undefined) {
+    const acceptance = this.#suggestions.accept(index);
+    if (acceptance === null) {
       return;
     }
 
-    const { text, caret, run } = item.accept();
+    const { text, caret, run } = acceptance;
     if (run && execute) {
       this.#submit(text);
     }
@@ -429,9 +353,23 @@ export class ConsoleElement extends LitElement {
   #pick(
     index: number
   ): void {
-    this._highlight = index;
     this.#accept(index, true);
     this._input?.focus();
+  }
+
+  #toggle(): boolean {
+    if (this.console === null) {
+      return false;
+    }
+
+    if (this.open) {
+      this.hide();
+    }
+    else {
+      void this.show();
+    }
+
+    return true;
   }
 
   #act(
@@ -452,10 +390,10 @@ export class ConsoleElement extends LitElement {
         }
         break;
       case "accept":
-        this.#accept(this._highlight, true);
+        this.#accept(this.#suggestions.highlight, true);
         break;
       case "complete":
-        this.#accept(Math.max(this._highlight, 0), false);
+        this.#accept(Math.max(this.#suggestions.highlight, 0), false);
         break;
       case "history-previous":
       case "history-next": {
@@ -470,11 +408,7 @@ export class ConsoleElement extends LitElement {
       }
       case "highlight-previous":
       case "highlight-next":
-        this._highlight = moveHighlight(
-          this._highlight,
-          action === "highlight-next" ? 1 : -1,
-          this.#list
-        );
+        this.#suggestions.move(action === "highlight-next" ? 1 : -1);
         break;
       default:
         break;
@@ -485,22 +419,6 @@ export class ConsoleElement extends LitElement {
     this.#releaseLayer?.();
     this.#releaseLayer = null;
   }
-
-  readonly #onWindowKeyDown = (
-    event: KeyboardEvent
-  ): void => {
-    if (!isToggleShortcut(event) || this.console === null) {
-      return;
-    }
-
-    event.preventDefault();
-    if (this.open) {
-      this.hide();
-    }
-    else {
-      void this.show();
-    }
-  };
 
   readonly #onInput = (
     event: Event
@@ -521,21 +439,10 @@ export class ConsoleElement extends LitElement {
     event: KeyboardEvent
   ): void => {
     this.#syncCaret();
-    const action = resolveKey(event, {
-      highlight: this._highlight,
-      itemCount: this.#list.items.length,
-      browsingHistory: this.#browsingHistory,
-      inlineCompletion: this._caretAtEnd && this.#inlineCompletion() !== ""
-    });
-    if (action === null) {
-      return;
-    }
-
-    event.preventDefault();
-    this.#act(action);
+    this.#keys.onKeyDown(event);
   };
 
-  readonly #onListMouseDown = (
+  readonly #keepPromptFocus = (
     event: MouseEvent
   ): void => {
     event.preventDefault();
@@ -559,27 +466,11 @@ export class ConsoleElement extends LitElement {
   readonly #onClose = (): void => {
     this.#release();
     this.#browsingHistory = false;
-    this.#request++;
+    this.#suggestions.cancel();
     const restore = this.#restoreFocus;
     this.#restoreFocus = null;
     restore?.focus();
   };
-}
-
-function marked(
-  text: string,
-  ranges: MatchRange[]
-): TemplateResult {
-  const parts: (TemplateResult | string)[] = [];
-  let cursor = 0;
-  for (const { start, end } of ranges) {
-    parts.push(text.slice(cursor, start));
-    parts.push(html`<mark>${text.slice(start, end)}</mark>`);
-    cursor = end;
-  }
-  parts.push(text.slice(cursor));
-
-  return html`${parts}`;
 }
 
 declare global {

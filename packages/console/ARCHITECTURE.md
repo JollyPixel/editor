@@ -3,8 +3,9 @@
 The package has two entries. The root entry is the headless `CommandConsole`:
 the registry, the input grammar, search and execution, with no DOM.
 `@jolly-pixel/console/element` is the Lit `jolly-console` dialog. It keeps the
-prompt and the suggestion list, listens to four `CommandConsole` events and
-hands each submitted line back to `submit()`.
+prompt, renders the scrollback through `jolly-console-log` and the suggestion
+list through a controller, listens to four `CommandConsole` events and hands
+each submitted line back to `submit()`.
 
 ## Workspace map
 
@@ -20,19 +21,22 @@ flowchart TB
         Classify --> Registry
         Search["search + score<br/>ranked results, typo tier"] --> Registry
         Search --> Typo["typo<br/>Levenshtein tolerance"]
+        Browse["browse<br/>empty-prompt sections"] --> Registry
         Complete["complete<br/>token under the caret"] --> Classify
         Complete --> Typo
     end
 
     subgraph Element["@jolly-pixel/console/element"]
-        Dialog["ConsoleElement<br/>jolly-console dialog"]
-        Dialog --> Keymap["keymap<br/>key to action"]
-        Dialog --> Suggestions["suggestions<br/>list and gray suffix"]
+        Dialog["ConsoleElement<br/>jolly-console dialog and prompt"]
+        Dialog --> Log["ConsoleLogElement<br/>jolly-console-log scrollback"]
+        Dialog --> Keyboard["KeyboardController<br/>Ctrl+K, key to action, hints"]
+        Dialog --> Suggestions["SuggestionController<br/>list, highlight, gray suffix, usage"]
     end
 
-    Dialog --> Classify
+    Suggestions --> Classify
     Suggestions --> Search
     Suggestions --> Complete
+    Suggestions --> Browse
     Dialog -->|"submit(line)"| Console
     Console -. "registry-changed, scrollback-changed,<br/>open-requested, close-requested" .-> Dialog
 ```
@@ -46,8 +50,8 @@ passes it down.
 | `registry/` | `Registry`, `NamespaceEntry`, definition types and validation, `ConsoleFeature` |
 | `input/` | `tokenize`, `classify`, `coerce` |
 | `execution/` | `bindArguments`, variable access, `InputHistory`, `Scrollback`, builtins and `help` |
-| `search/` | `score` tiers, `search`, `complete`, `typo` tolerance over the `levenshtein` port |
-| `element/` | `ConsoleElement` and its styles, `keymap`, `suggestions`, list navigation |
+| `search/` | `score` tiers, `search`, `complete`, `browse` sections, `typo` tolerance over the `levenshtein` port |
+| `element/` | `ConsoleElement` and its styles, `ConsoleLogElement`, `KeyboardController`, `SuggestionController` |
 
 ## One keystroke
 
@@ -55,7 +59,10 @@ passes it down.
 flowchart TB
     Text["Prompt text changes"] --> Classify["classify(text, registry)"]
     Classify --> Mode{"Mode?"}
-    Mode -->|"search"| Search["search(query)<br/>rank by tier, then score"]
+    Mode -->|"search"| Empty{"Query empty?"}
+    Empty -->|"yes"| Browse["browse(registry, history)<br/>sections"]
+    Browse --> Plain
+    Empty -->|"no"| Search["search(query)<br/>rank by tier, then score"]
     Search --> Preselect["List with the first result highlighted"]
     Mode -->|"command or variable"| Complete["complete(text, caret)<br/>may await autocomplete()"]
     Complete --> Latest{"Latest request?"}
@@ -65,9 +72,11 @@ flowchart TB
     Plain --> Show
 ```
 
-Search is synchronous. Completion can wait on an `autocomplete()` promise, so
-the element numbers each request and drops a result that arrives after a newer
-one; the previous completion list stays on screen meanwhile. An exact variable
+Search and browse are synchronous. Completion can wait on an `autocomplete()`
+promise, so `SuggestionController` numbers each request and drops a result that arrives after a newer
+one; the previous completion list stays on screen meanwhile. The list renders
+in the prompt shadow root so the combobox IDREFs resolve
+([ADR-0007](./docs/adr/0007-the-suggestion-list-shares-the-prompt-shadow-root.md)). An exact variable
 match puts the prompt in variable mode before search is tried.
 
 ## Submitting a line

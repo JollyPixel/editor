@@ -51,16 +51,22 @@ export function search(
 export function select(
   result: SearchResult
 ): SearchSelection {
-  const { target } = result;
+  return selectEntry(result.target);
+}
+
+export function selectEntry(
+  target: RegisteredEntry
+): SearchSelection {
+  const text = label(target);
   switch (target.kind) {
     case "command":
       return target.def.args.some((arg) => arg.required) ?
-        { text: `${result.label} `, run: false } :
-        { text: result.label, run: true };
+        { text: `${text} `, run: false } :
+        { text, run: true };
     case "variable":
-      return { text: result.label, run: false };
+      return { text, run: false };
     default:
-      return { text: `${result.label}.`, run: false };
+      return { text: `${text}.`, run: false };
   }
 }
 

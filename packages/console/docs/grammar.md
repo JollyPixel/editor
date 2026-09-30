@@ -31,7 +31,7 @@ A literal the type refuses prints an error and the handler or setter is not call
 |---|---|---|---|
 | command | starts with `/` | completions for the token under the caret, none highlighted | runs the line |
 | variable | the first token resolves exactly to a variable | `enum` and `boolean` values, otherwise the current value as a hint | reads or writes the variable |
-| search | anything else, or a leading `?` | fuzzy results, the first one highlighted | acts on the highlighted result |
+| search | anything else, or a leading `?` | fuzzy results, the first one highlighted; an empty query lists the registry by section | acts on the highlighted result |
 
 An exact variable match beats search. `brush.si` is a search; Enter on the top hit inserts
 `brush.size`, which puts the prompt in variable mode, and a second Enter reads the value. The cost

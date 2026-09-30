@@ -12,6 +12,7 @@ import type {
   ArgDef,
   ConsoleRegistry,
   RegisteredCommand,
+  RegisteredEntry,
   RegisteredNamespace,
   RegisteredVariable,
   VariableDef
@@ -25,6 +26,7 @@ export interface Completion {
   value: string;
   label: string;
   detail: string;
+  entry: RegisteredEntry | null;
 }
 
 export interface CompletionList {
@@ -177,7 +179,8 @@ function scopedAddresses(
       completions.push({
         value: `${namespace.name}.`,
         label: `${namespace.name}.`,
-        detail: namespace.description
+        detail: namespace.description,
+        entry: namespace
       });
     }
   }
@@ -208,7 +211,8 @@ function entryCompletion(
   return {
     value: text,
     label: text,
-    detail: entry.def.description
+    detail: entry.def.description,
+    entry
   };
 }
 
@@ -250,7 +254,8 @@ function valueCompletions(
     return {
       value: arg?.rest ? value : quote(value),
       label: value,
-      detail: arg?.name ?? ""
+      detail: arg?.name ?? "",
+      entry: null
     };
   });
   const matches = completions
