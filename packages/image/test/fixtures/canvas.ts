@@ -1,12 +1,3 @@
-/*
- * Canvas 2D fixture. happy-dom provides real <canvas> elements but no 2D
- * rendering context, so installCanvasMock patches getContext("2d") to return
- * a pixel-backed context. The raster ladder only ever creates, writes, reads
- * and blits whole buffers, so this mock covers exactly those four calls; the
- * fill/stroke/path emulation the pixel-draw-renderer fixture carries has no
- * caller here.
- */
-
 class MockImageData {
   data: Uint8ClampedArray;
   width: number;
@@ -39,17 +30,12 @@ export class MockCanvas2DContext {
     this.#pixels = new Uint8ClampedArray(this.#width * this.#height * 4);
   }
 
-  // The RGBA8 buffer backing this context, resynced to the canvas size.
   get pixels(): Uint8ClampedArray {
     this.#syncSize();
 
     return this.#pixels;
   }
 
-  /*
-   * Setting canvas.width/height clears the canvas in a browser; mirror that
-   * by reallocating a zeroed buffer whenever the live dimensions change.
-   */
   #syncSize(): void {
     if (
       this.canvas.width === this.#width &&
@@ -119,11 +105,6 @@ export class MockCanvas2DContext {
     }
   }
 
-  /**
-   * Straight copy of a canvas source at (dx, dy). The ladder only ever blits
-   * a freshly decoded bitmap onto an empty canvas of the same size, so there
-   * is nothing to composite against and no scaling to do.
-   */
   drawImage(
     image: unknown,
     dx = 0,
@@ -165,10 +146,6 @@ function isCanvasSource(
   ).getContext === "function";
 }
 
-/**
- * Patches doc.createElement so a "canvas" gets a working mock 2D context
- * (happy-dom's own getContext returns null). The element stays happy-dom's.
- */
 export function installCanvasMock(
   doc: Document
 ): void {
@@ -208,7 +185,6 @@ export function mockContextOf(
   return context;
 }
 
-/** The RGBA8 pixel buffer backing a mocked canvas. */
 export function canvasPixels(
   canvas: HTMLCanvasElement
 ): Uint8ClampedArray {
