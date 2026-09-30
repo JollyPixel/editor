@@ -2,7 +2,7 @@
 import type { VoxelObjectLayerJSON } from "../world/objects/types.ts";
 import type { TilesetDefinition } from "../tilesets/types.ts";
 
-export const VOXEL_WORLD_VERSION = 3;
+export const VOXEL_WORLD_VERSION = 4;
 
 export interface VoxelEntryJSON {
   block: number;
@@ -20,7 +20,7 @@ export interface VoxelLayerMetadataJSON {
   id: string;
   name: string;
   visible: boolean;
-  order: number;
+  rank: string;
   position?: {
     x: number;
     y: number;

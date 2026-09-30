@@ -67,6 +67,7 @@ export class ClientRoom<
   #rights = kNoRights;
   #peers = new Map<string, Peer>();
   #presence: PeerMetadata = {};
+  #resume: (() => unknown) | null = null;
   #profile: PeerMetadata;
   #parser: RoomMessageParser<TServerMessage> | undefined;
   #send: (envelope: ClientEnvelope) => void;
@@ -125,12 +126,34 @@ export class ClientRoom<
     }
 
     this.#state = "joined";
-    this.#send({
-      room: this.id,
-      kind: "join",
-      profile: this.#profile,
-      presence: { ...this.#presence }
-    });
+    this.#sendJoin();
+  }
+
+  rejoin(): void {
+    if (this.#state === "joined") {
+      this.#sendJoin();
+    }
+  }
+
+  suspend(): void {
+    if (this.#state !== "joined") {
+      return;
+    }
+
+    this.#clientId = null;
+    const clientIds = [...this.#peers.keys()];
+    this.#peers.clear();
+    for (const clientId of clientIds) {
+      this.emit("peer-left", {
+        clientId
+      });
+    }
+  }
+
+  resumeWith(
+    source: (() => unknown) | null
+  ): void {
+    this.#resume = source;
   }
 
   send(
@@ -152,6 +175,15 @@ export class ClientRoom<
         room: this.id,
         kind: "presence",
         patch
+      });
+    }
+  }
+
+  resync(): void {
+    if (this.#state === "joined") {
+      this.#send({
+        room: this.id,
+        kind: "resync"
       });
     }
   }
@@ -190,6 +222,18 @@ export class ClientRoom<
         reason: envelope.reason
       }))
       .exhaustive();
+  }
+
+  #sendJoin(): void {
+    const resume = this.#resume?.();
+
+    this.#send({
+      room: this.id,
+      kind: "join",
+      profile: this.#profile,
+      presence: { ...this.#presence },
+      ...(resume === undefined ? {} : { resume })
+    });
   }
 
   #receiveMessage(

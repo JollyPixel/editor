@@ -91,3 +91,32 @@ describe("LastWriteWinsResolver — same client (undo/redo replay ordering)", ()
     assert.strictEqual(resolver.resolve({ incoming, existing }), "accept");
   });
 });
+
+describe("LastWriteWinsResolver — server order", () => {
+  test("a fresh write beats an existing versioned write whatever its timestamp", () => {
+    const resolver = new LastWriteWinsResolver();
+
+    assert.strictEqual(resolver.resolve({
+      incoming: header({ clientId: "B", timestamp: 1 }),
+      existing: { ...header({ clientId: "A", timestamp: 9_000 }), version: 4 }
+    }), "accept");
+  });
+
+  test("a replay wins only when its basis is not older than the existing version", () => {
+    const resolver = new LastWriteWinsResolver();
+    const existing = { ...header({ clientId: "A" }), version: 7 };
+
+    assert.strictEqual(resolver.resolve({
+      incoming: header({ clientId: "B", basis: 7 }),
+      existing
+    }), "accept");
+    assert.strictEqual(resolver.resolve({
+      incoming: header({ clientId: "B", basis: 5 }),
+      existing
+    }), "reject");
+    assert.strictEqual(resolver.resolve({
+      incoming: header({ clientId: "A", basis: 5 }),
+      existing
+    }), "accept");
+  });
+});

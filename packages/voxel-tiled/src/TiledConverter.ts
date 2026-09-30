@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   DEFAULT_CHUNK_SIZE,
+  rankBetween,
   serializeVoxelLayer,
   VOXEL_WORLD_VERSION,
   VoxelFootprint,
@@ -257,7 +258,11 @@ function convertTileLayers(
 ): void {
   for (const layer of layers) {
     if (layer.type === "tilelayer") {
-      out.push(convertTileLayer(layer, ctx, out.length));
+      out.push(convertTileLayer(
+        layer,
+        ctx,
+        rankBetween(out.at(-1)?.rank ?? null, null)
+      ));
       ctx.counter.value++;
     }
     else if (layer.type === "group") {
@@ -269,14 +274,15 @@ function convertTileLayers(
 function convertTileLayer(
   layer: TiledTileLayer,
   ctx: TileLayerContext,
-  layerOrder: number
+  rank: string
 ): VoxelLayerJSON {
   const data = decodeLayerData(layer);
   const voxelLayer = new VoxelLayer({
     id: `tiled_layer_${layer.id}`,
     name: layer.name,
     visible: layer.visible,
-    order: layerOrder,
+    order: 0,
+    rank,
     chunkSize: ctx.options.chunkSize ?? DEFAULT_CHUNK_SIZE,
     properties: flattenProperties(layer.properties)
   });

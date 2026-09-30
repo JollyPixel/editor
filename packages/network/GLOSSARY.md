@@ -149,9 +149,46 @@ The browser uses it to seed its remote-peer mirror.
 ### Network Command
 
 A feature command carrying `clientId`, `seq`, and `timestamp` alongside its
-domain fields. `CommandSync` stamps outgoing commands and suppresses the local
-client's echoed commands. Extensions remain responsible for accepting,
-applying, and persisting them.
+domain fields. `CommandSync` stamps outgoing commands and treats the local
+client's echoed commands as acknowledgements. Extensions remain responsible
+for accepting, applying, and persisting them.
+
+### Pending Command
+
+A local command `CommandSync` sent and the server has not acknowledged yet.
+It stays in the pending ledger with the inverse its reconciler captured, and
+is replayed on top of every server change until it is acknowledged.
+
+### Ack
+
+The server's statement that it processed a client's commands up to a `seq`,
+whether it admitted, narrowed or rejected them. An own echo acknowledges its
+`seq`; snapshots and corrections carry an `acks` map. Acks are cumulative.
+
+### Rebase
+
+Rebuilding the local state after a server change: revert the pending
+commands, apply the change, replay the pending commands. It never rewrites
+anything on the server. Absolute register writes skip the revert and drop
+the incoming entries a pending write outlives.
+
+### Resync
+
+A client's request for a fresh snapshot, sent as the `resync` envelope when
+a pending command cannot be reverted.
+
+### Room Version
+
+The event-store `eventVersion` of the last event folded into a room's
+state. Asset rooms send it on every command broadcast and snapshot;
+`CommandSync` keeps the highest one it applied.
+
+### Resume
+
+Rejoining a room after a reconnect with the previous client ID and the last
+room version seen, so the extension can send a catch-up of the missed
+commands instead of a snapshot, and acknowledge the previous connection's
+commands.
 
 ### Snapshot
 
@@ -161,8 +198,8 @@ one. Snapshot contents belong to the feature using the room.
 
 ### Server Notice
 
-A feature-defined outbound synchronization message whose `type` is neither
-`snapshot` nor `command`. `CommandSync` exposes notices separately so a feature
+A feature-defined outbound synchronization message whose `type` is none of
+`snapshot`, `command` and `correction`. `CommandSync` exposes notices separately so a feature
 can report outcomes such as `rejected` or `deleted`.
 
 ### Conflict Key
@@ -179,10 +216,16 @@ after the accepted change has been applied or persisted.
 
 ### Last Write Wins
 
-The default conflict rule for commands from different clients. The command
-with the newer timestamp wins, with client ID as the tie-breaker. Commands from
-the same client stay in their received sequence even when replay keeps an older
-timestamp.
+The default conflict rule for commands from different clients. The command the
+server processes last wins, unless its `basis` says it replays a command older
+than the one it would overwrite. Commands recorded without a room version fall
+back to the newer timestamp, with client ID as the tie-breaker. Commands from
+the same client always win.
+
+### Basis
+
+The room version of the command an undo or a redo replays, sent in the
+command header. The client learns it from the echo of the original command.
 
 ## Naming boundaries
 

@@ -48,7 +48,7 @@ function client(
 
 function seededDocument(): Uint8Array {
   const state = new VoxelMapState(kChunkSize);
-  state.world.addLayer("Ground");
+  state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
   return encodeVoxelWorld(state.toJSON());
 }
@@ -219,15 +219,18 @@ describe("voxel-map asset kind over a real back-end", () => {
           blockId: 5
         })
       });
-      // The older write loses.
+      // A replay of an edit older than A's write loses.
       await server.handleMessage("B", {
         room,
         kind: "message",
-        payload: voxelSetCmd({
-          clientId: "B",
-          timestamp: 1_000,
-          blockId: 9
-        })
+        payload: {
+          ...voxelSetCmd({
+            clientId: "B",
+            timestamp: 1_000,
+            blockId: 9
+          }),
+          basis: 0
+        }
       });
 
       assert.strictEqual(

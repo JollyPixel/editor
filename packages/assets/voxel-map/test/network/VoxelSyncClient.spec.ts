@@ -25,7 +25,7 @@ interface ReceivedCommand {
 
 function makeDocument(): VoxelDocument {
   const document = new VoxelDocument({ chunkSize: 16 });
-  document.world.addLayer("Ground");
+  document.world.restoreLayer({ id: "Ground", name: "Ground" });
 
   return document;
 }
@@ -170,7 +170,7 @@ describe("VoxelSyncClient — remote commands", () => {
     room.simulateCommand({
       ...kPeerHeader,
       action: "voxels-patched",
-      layerName: "Ground",
+      layerId: "Ground",
       metadata: { cells: [1, 0, 0, 2, 0, 3, 0, 0, 4, 0] }
     });
 

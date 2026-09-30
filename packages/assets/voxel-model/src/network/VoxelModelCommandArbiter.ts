@@ -6,6 +6,7 @@ import type {
   VoxelModelCommand,
   VoxelModelNetworkCommand
 } from "./types.ts";
+import { voxelModelConflictKeys } from "./VoxelModelCommandKeys.ts";
 
 export interface VoxelModelCommandArbiterOptions {
   conflictResolver?: network.ConflictResolver<VoxelModelNetworkCommand>;
@@ -36,28 +37,14 @@ export class VoxelModelCommandArbiter {
 
     return this.#tracker.admit(
       command,
-      VoxelModelCommandArbiter.keys(command)
+      voxelModelConflictKeys(command)
     );
   }
 
-  static keys(
-    command: VoxelModelCommand | VoxelModelNetworkCommand
-  ): string[] {
-    switch (command.action) {
-      case "node-added":
-      case "node-removed":
-        return [];
-      case "node-renamed":
-        return [`name:${command.id}`];
-      case "node-moved":
-        return [
-          `parent:${command.id}`,
-          ...command.transforms.map(({ id }) => `transform:${id}`)
-        ];
-      case "node-transformed":
-        return [`transform:${command.id}`];
-      case "node-uv-changed":
-        return [`uv:${command.id}`];
-    }
+  restore(
+    command: VoxelModelNetworkCommand,
+    version: number
+  ): void {
+    this.#tracker.record(command, voxelModelConflictKeys(command), version);
   }
 }

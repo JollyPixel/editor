@@ -143,7 +143,7 @@ describe("ServerRoom — rights: $presence", () => {
       b.client,
       identityOf("B", "viewer"),
       {},
-      { cursor: { x: 1, y: 1 } }
+      { presence: { cursor: { x: 1, y: 1 } } }
     );
 
     assert.deepEqual(withoutSync(b.sent), [{
@@ -176,7 +176,7 @@ describe("ServerRoom — rights: $presence", () => {
       b.client,
       identityOf("B"),
       {},
-      { cursor: { x: 1, y: 1 } }
+      { presence: { cursor: { x: 1, y: 1 } } }
     );
 
     assert.deepEqual(withoutSync(a.sent), [{

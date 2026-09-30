@@ -34,6 +34,11 @@ interface AuthorizeOptions {
   label: string;
 }
 
+export interface ServerRoomJoinOptions {
+  presence?: PeerMetadata;
+  resume?: unknown;
+}
+
 export interface ServerRoomOptions {
   logger?: Logger;
 }
@@ -136,8 +141,12 @@ export class ServerRoom {
     client: ClientHandle,
     identity: PeerIdentity,
     profile: PeerMetadata,
-    presence: PeerMetadata = {}
+    options: ServerRoomJoinOptions = {}
   ): Promise<boolean> {
+    const {
+      presence = {},
+      resume
+    } = options;
     const { role } = identity;
     if (!this.#authorize({
       clientId,
@@ -179,7 +188,8 @@ export class ServerRoom {
         clientId,
         identity,
         profile,
-        presence: { ...initialPresence }
+        presence: { ...initialPresence },
+        ...(resume === undefined ? {} : { resume })
       },
       this.#contextFor(identity)
     );
@@ -402,6 +412,28 @@ export class ServerRoom {
     }
 
     await this.#deliverMessage(clientId, identity, message);
+  }
+
+  async resync(
+    clientId: string
+  ): Promise<void> {
+    const record = this.#members.get(clientId);
+    if (record === undefined) {
+      this.#logger
+        .withMetadata({
+          clientId,
+          outcome: "dropped",
+          reason: "not a member"
+        })
+        .debug("resync");
+
+      return;
+    }
+
+    await this.#extension.onResync?.(
+      clientId,
+      this.#contextFor(record.identity)
+    );
   }
 
   async #deliverMessage(

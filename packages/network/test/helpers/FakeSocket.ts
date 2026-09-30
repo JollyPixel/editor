@@ -76,6 +76,23 @@ export function createClient(
   return { client, socket };
 }
 
+export function createReconnectingClient(
+  options: Omit<ClientOptions, "socket"> = {}
+): { client: Client; sockets: FakeSocket[]; } {
+  const sockets: FakeSocket[] = [];
+  const client = new Client({
+    ...options,
+    socket: () => {
+      const socket = new FakeSocket();
+      sockets.push(socket);
+
+      return socket;
+    }
+  });
+
+  return { client, sockets };
+}
+
 export function createOpenClient(
   options: Omit<ClientOptions, "socket"> = {}
 ): { client: Client; socket: FakeSocket; } {

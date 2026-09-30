@@ -58,10 +58,11 @@ chooses the network operation.
 
 | Direction | `kind` | Data | Purpose |
 |---|---|---|---|
-| Client to server | `join` | `profile?`, `presence?` | Request membership and publish initial peer data. |
+| Client to server | `join` | `profile?`, `presence?`, `resume?` | Request membership and publish initial peer data. `resume` is an opaque payload for the extension after a reconnect. |
 | Client to server | `leave` | | Leave a joined room. |
 | Both | `message` | `payload` | Carry a feature-specific message. |
 | Client to server | `presence` | `patch` | Update per-room presence. |
+| Client to server | `resync` | | Ask the extension for a fresh state; forwarded to `Extension.onResync`. |
 | Server to client | `sync` | `self`, `rights`, `members` | Initialize the joining client's room state. |
 | Server to client | `peer-joined` | `clientId`, `role`, `profile`, `presence` | Announce a new member. |
 | Server to client | `peer-left` | `clientId` | Remove a member from the peer mirror. |
@@ -139,6 +140,22 @@ empty presence and sends a separate `denied` envelope for `$presence`.
 The `sync.members` snapshot includes the joining member. The browser adopts
 its server-assigned `self`, `role`, and `rights`, then keeps only remote members
 in `room.peers`. Existing members receive `peer-joined`; the joiner does not.
+
+### Reconnecting
+
+When an open socket drops unexpectedly, the client suspends its joined rooms
+(`clientId` becomes `null`, peers are dropped), queues outgoing envelopes, and
+reopens the socket with a 0.5 s, 1 s, 2 s, 5 s, then 10 s backoff. The new
+connection authenticates again and gets a new client ID. Each joined room
+sends `join` again with the payload of `Room.resumeWith()` as `resume`, then
+the queue is flushed. The server treats it as a first join: the old
+connection leaves when the server notices its close. An `unauthorized` close
+stops reconnecting.
+
+[`CommandSync`](./docs/sync/CommandSync.md#resume) puts the previous client
+ID and the last room version in `resume`, so the extension can send only
+the missed commands and say which of the previous connection's commands it
+processed.
 
 ## Message routing
 
@@ -267,8 +284,9 @@ model above:
 
 - [`PresenceChannel`](./docs/PresenceChannel.md) exposes one typed presence
   field per peer.
-- [`CommandSync`](./docs/sync/CommandSync.md) stamps commands and suppresses a
-  client's own echoes, except those a snapshot overtook.
+- [`CommandSync`](./docs/sync/CommandSync.md) stamps commands, keeps them
+  pending until the server acknowledges them, and rebases them on every server
+  change so the client converges to the server's state.
 - [`ConflictTracker`](./docs/sync/Conflicts.md) applies server-side conflict
   rules before an extension commits a command.
 

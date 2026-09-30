@@ -24,11 +24,20 @@ import {
   type Logger
 } from "./logger.ts";
 
+// CONSTANTS
+const kReconnectDelays: readonly number[] = [500, 1_000, 2_000, 5_000, 10_000];
+const kAbnormalCloseCode = 1006;
+
 type ConnectionState =
   | "connecting"
   | "open"
+  | "reconnecting"
   | "closing"
   | "closed";
+
+export interface ClientReconnectOptions {
+  delays?: readonly number[];
+}
 
 export interface ClientOptions {
   profile?: PeerMetadata;
@@ -38,20 +47,27 @@ export interface ClientOptions {
    * @default () => connectWebSocket()
    */
   socket?: () => ClientSocket;
+  reconnect?: boolean | ClientReconnectOptions;
 }
 
 export type ClientEventMap = {
   ready: () => void;
+  disconnected: () => void;
   unauthorized: () => void;
 };
 
 export class Client extends Emitter<ClientEventMap> {
   #profile: PeerMetadata;
   #logger: Logger;
-  #socket: ClientSocket;
+  #connect: () => ClientSocket;
+  #socket!: ClientSocket;
   #state: ConnectionState = "connecting";
   #queue: string[] = [];
   #rooms = new Map<string, ClientRoom>();
+  #delays: readonly number[] | null;
+  #attempt = 0;
+  #suspended = false;
+  #timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     options: ClientOptions = {}
@@ -59,15 +75,9 @@ export class Client extends Emitter<ClientEventMap> {
     super();
     this.#profile = options.profile ?? {};
     this.#logger = options.logger ?? createLogger();
-
-    const connect = options.socket ?? connectWebSocket;
-    this.#socket = connect();
-    this.#socket.addEventListener("open", () => this.#open());
-    this.#socket.addEventListener("message", (event) => this.#receive(event.data));
-    this.#socket.addEventListener("error", () => {
-      this.#logger.error("WebSocket connection error");
-    });
-    this.#socket.addEventListener("close", (event) => this.#close(event));
+    this.#connect = options.socket ?? connectWebSocket;
+    this.#delays = reconnectDelays(options.reconnect ?? true);
+    this.#openSocket();
   }
 
   get ready(): boolean {
@@ -101,12 +111,49 @@ export class Client extends Emitter<ClientEventMap> {
       return;
     }
 
+    if (this.#timer !== null) {
+      clearTimeout(this.#timer);
+      this.#timer = null;
+      this.#state = "closed";
+      this.#queue = [];
+
+      return;
+    }
+
     this.#state = "closing";
     this.#socket.close();
   }
 
-  #open(): void {
+  #openSocket(): void {
+    const socket = this.#connect();
+    this.#socket = socket;
+    socket.addEventListener("open", () => this.#open(socket));
+    socket.addEventListener("message", (event) => {
+      if (socket === this.#socket) {
+        this.#receive(event.data);
+      }
+    });
+    socket.addEventListener("error", () => {
+      this.#logger.error("WebSocket connection error");
+    });
+    socket.addEventListener("close", (event) => this.#close(socket, event));
+  }
+
+  #open(
+    socket: ClientSocket
+  ): void {
+    if (socket !== this.#socket) {
+      return;
+    }
+
     this.#state = "open";
+    this.#attempt = 0;
+    if (this.#suspended) {
+      this.#suspended = false;
+      for (const room of this.#rooms.values()) {
+        room.rejoin();
+      }
+    }
     for (const raw of this.#queue) {
       this.#socket.send(raw);
     }
@@ -115,22 +162,80 @@ export class Client extends Emitter<ClientEventMap> {
   }
 
   #close(
+    socket: ClientSocket,
     event: ClientSocketEvent
   ): void {
-    const expected = this.#state === "closing";
-    this.#state = "closed";
-    this.#queue = [];
+    if (socket !== this.#socket) {
+      return;
+    }
 
-    if (event.code === UNAUTHORIZED_CLOSE_CODE) {
-      this.emit("unauthorized");
+    const expected = this.#state === "closing";
+    const wasOpen = this.#state === "open";
+    if (
+      expected ||
+      this.#delays === null ||
+      event.code === UNAUTHORIZED_CLOSE_CODE
+    ) {
+      this.#state = "closed";
+      this.#queue = [];
+      this.#suspendRooms(wasOpen);
+      if (event.code === UNAUTHORIZED_CLOSE_CODE) {
+        this.emit("unauthorized");
+      }
+      else if (!expected) {
+        this.#warnClosed(event);
+      }
 
       return;
     }
-    if (!expected) {
-      this.#logger
-        .withMetadata({ code: event.code, reason: event.reason })
-        .warn("WebSocket closed unexpectedly");
+
+    this.#state = "reconnecting";
+    if (wasOpen) {
+      this.#warnClosed(event);
+      this.#suspendRooms(true);
     }
+    const delays = this.#delays;
+    const delay = delays[Math.min(this.#attempt, delays.length - 1)];
+    this.#attempt++;
+    this.#timer = setTimeout(() => this.#retry(), delay);
+  }
+
+  #retry(): void {
+    this.#timer = null;
+    try {
+      this.#openSocket();
+    }
+    catch (error) {
+      this.#logger
+        .withMetadata({ error })
+        .error("failed to reopen the connection");
+      this.#close(this.#socket, {
+        code: kAbnormalCloseCode,
+        reason: "reconnect failed"
+      });
+    }
+  }
+
+  #suspendRooms(
+    wasOpen: boolean
+  ): void {
+    if (!wasOpen) {
+      return;
+    }
+
+    this.#suspended = true;
+    for (const room of this.#rooms.values()) {
+      room.suspend();
+    }
+    this.emit("disconnected");
+  }
+
+  #warnClosed(
+    event: ClientSocketEvent
+  ): void {
+    this.#logger
+      .withMetadata({ code: event.code, reason: event.reason })
+      .warn("WebSocket closed unexpectedly");
   }
 
   #send(
@@ -150,7 +255,10 @@ export class Client extends Emitter<ClientEventMap> {
     if (this.#state === "open") {
       this.#socket.send(raw);
     }
-    else if (this.#state === "connecting") {
+    else if (
+      this.#state === "connecting" ||
+      this.#state === "reconnecting"
+    ) {
       this.#queue.push(raw);
     }
     else {
@@ -184,4 +292,18 @@ export class Client extends Emitter<ClientEventMap> {
 
     room.receive(envelope);
   }
+}
+
+function reconnectDelays(
+  option: boolean | ClientReconnectOptions
+): readonly number[] | null {
+  if (option === false) {
+    return null;
+  }
+
+  const delays = option === true ?
+    kReconnectDelays :
+    option.delays ?? kReconnectDelays;
+
+  return delays.length === 0 ? null : delays;
 }

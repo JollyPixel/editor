@@ -251,3 +251,36 @@ describe("ModelTree.load", () => {
     assert.equal(tree.has("a"), false);
   });
 });
+
+describe("ModelTree.imagesOf", () => {
+  test("returns the nodes a command changes, as they are before it", () => {
+    const tree = treeOf(
+      folderAdded("f"),
+      blockAdded("a", "f"),
+      blockAdded("b")
+    );
+
+    assert.deepEqual(tree.imagesOf(blockAdded("c")), []);
+    assert.deepEqual(
+      tree.imagesOf({ action: "node-removed", id: "f" }).map((node) => node.id),
+      ["f", "a"]
+    );
+    assert.deepEqual(
+      tree.imagesOf({
+        action: "node-moved",
+        id: "a",
+        parentId: null,
+        transforms: [{ id: "a", transform: TRANSFORM }, { id: "b", transform: TRANSFORM }]
+      }).map((node) => node.id),
+      ["a", "b"]
+    );
+    assert.deepEqual(
+      tree.imagesOf({ action: "node-renamed", id: "b", name: "B" }),
+      [blockNode("b")]
+    );
+    assert.deepEqual(
+      tree.imagesOf({ action: "node-renamed", id: "missing", name: "B" }),
+      []
+    );
+  });
+});

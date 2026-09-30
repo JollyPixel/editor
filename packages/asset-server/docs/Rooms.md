@@ -41,7 +41,9 @@ A room is created when:
 - the catalog contains the asset under that kind.
 
 Every asset room is hosted by `AssetRoomExtension`, which owns the
-snapshot-on-connect and arbitrate-append-broadcast plumbing. Kinds cannot
+snapshot-on-connect (or catch-up on a resumed join), resync, and
+arbitrate-append-broadcast plumbing; see
+[asset kinds](./AssetKinds.md#writing-an-editable-kind). Kinds cannot
 supply their own extension, so resolving a room never spawns a worker thread.
 
 The handler receives the live state through `AssetRoomBinding`:
@@ -52,8 +54,12 @@ interface AssetRoomBinding<TState> {
   readonly kind: string;
   readonly roomId: string;
   readonly state: TState;
+  readonly version?: () => number | undefined;
 }
 ```
+
+`version` returns the room version, the `eventVersion` of the last event the
+state store folded into `state`. `registerAssetRooms` sets it.
 
 ## Commands
 
@@ -61,15 +67,19 @@ A room overwrites `clientId` on each object message with the sender's
 server-side id, lowers a numeric `timestamp` ahead of the server clock to the
 server time, validates the message against the kind's `commands.protocol`
 and arbitrates it through its live protocol. A client-supplied `clientId` is
-never trusted, and a future `timestamp` cannot outrank later edits.
-An accepted command is appended to `events`, then committed and broadcast.
+never trusted. Conflicts are decided in server order: the event version, not
+`timestamp`, is what the conflict tracker records.
+An accepted command is appended to `events`, then committed with its event
+version and broadcast as `{ type: "command", data, version }`.
 The `network` server never touches the event store.
 
 The author applied its command before sending it. When arbitration returns
 `null`, or admits a narrowed command (a different object than it received),
-the room sends the author alone a fresh `{ type: "snapshot", data }` so its
-state matches the room again. A kind whose live protocol implements `correct`
-sends `{ type: "correction", data }` instead, restoring only what was refused.
+the room sends the author alone a fresh `{ type: "snapshot", data, version, acks }`
+so its state matches the room again. A kind whose live protocol implements
+`correct` sends `{ type: "correction", data, acks }` instead, restoring only
+what was refused. `acks` tells the author's `CommandSync` which of its
+commands the room processed.
 See [asset kinds](./AssetKinds.md#writing-an-editable-kind).
 
 When the append fails, the room commits and broadcasts nothing and sends the

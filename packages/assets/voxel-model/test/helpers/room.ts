@@ -13,8 +13,10 @@ export interface MockRoom extends VoxelModelRoom {
   readonly sent: VoxelModelNetworkCommand[];
   joins: number;
   leaves: number;
+  resyncs: number;
   deliverCommand(command: VoxelModelNetworkCommand): void;
   deliverSnapshot(snapshot: VoxelModelSnapshot): void;
+  deliver(message: VoxelModelServerMessage): void;
 }
 
 export function createMockRoom(
@@ -42,6 +44,7 @@ export function createMockRoom(
     sent,
     joins: 0,
     leaves: 0,
+    resyncs: 0,
     can: (): network.Right => "write",
     join: () => {
       room.joins++;
@@ -49,6 +52,10 @@ export function createMockRoom(
     leave: () => {
       room.leaves++;
     },
+    resync: () => {
+      room.resyncs++;
+    },
+    resumeWith: () => void 0,
     send: (command) => {
       sent.push(command as VoxelModelNetworkCommand);
     },
@@ -71,7 +78,8 @@ export function createMockRoom(
     deliverSnapshot: (snapshot) => emit("message", {
       type: "snapshot",
       data: snapshot
-    })
+    }),
+    deliver: (message) => emit("message", message)
   };
 
   return room;

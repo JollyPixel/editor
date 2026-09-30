@@ -65,7 +65,8 @@ export const joinEnvelopeSchema = defineSchema({
       const: "join"
     },
     profile: peerMetadataSchema,
-    presence: peerMetadataSchema
+    presence: peerMetadataSchema,
+    resume: {}
   },
   required: kRoomRequired
 });
@@ -76,6 +77,17 @@ export const leaveEnvelopeSchema = defineSchema({
     ...kRoomProperties,
     kind: {
       const: "leave"
+    }
+  },
+  required: kRoomRequired
+});
+
+export const resyncEnvelopeSchema = defineSchema({
+  type: "object",
+  properties: {
+    ...kRoomProperties,
+    kind: {
+      const: "resync"
     }
   },
   required: kRoomRequired
@@ -225,7 +237,8 @@ export const clientEnvelopeSchema = defineSchema({
     joinEnvelopeSchema,
     leaveEnvelopeSchema,
     messageEnvelopeSchema,
-    presenceEnvelopeSchema
+    presenceEnvelopeSchema,
+    resyncEnvelopeSchema
   ]
 });
 

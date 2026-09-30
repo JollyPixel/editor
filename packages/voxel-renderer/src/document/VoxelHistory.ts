@@ -78,7 +78,7 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
     this.enabled = enabled;
     this.limit = limit;
     if (enabled) {
-      world.recorder = this.#recorder;
+      world.addRecorder(this.#recorder);
     }
   }
 
@@ -138,9 +138,7 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
   }
 
   dispose(): void {
-    if (this.#world.recorder === this.#recorder) {
-      this.#world.recorder = null;
-    }
+    this.#world.removeRecorder(this.#recorder);
     this.#undoStack = [];
     this.#redoStack = [];
     this.#group = null;
@@ -216,15 +214,15 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
         [change.after, change.before] :
         [change.before, change.after];
 
-      const { layerName, position } = change;
-      if (world.getLayer(layerName)?.getPackedVoxelAt(position) !== expected) {
+      const { layerId, position } = change;
+      if (world.getLayerById(layerId)?.getPackedVoxelAt(position) !== expected) {
         continue;
       }
 
-      let cells = patches.get(layerName);
+      let cells = patches.get(layerId);
       if (cells === undefined) {
         cells = [];
-        patches.set(layerName, cells);
+        patches.set(layerId, cells);
       }
       cells.push(
         position.x,
@@ -236,8 +234,8 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
     }
 
     world.unrecorded(() => world.transaction(() => {
-      for (const [layerName, cells] of patches) {
-        world.patchVoxels(layerName, cells);
+      for (const [layerId, cells] of patches) {
+        world.patchVoxels(world.getLayerById(layerId)!.name, cells);
       }
     }));
   }
@@ -255,5 +253,5 @@ function cellKey(
 ): string {
   const { x, y, z } = change.position;
 
-  return `${x},${y},${z}:${change.layerName}`;
+  return `${x},${y},${z}:${change.layerId}`;
 }

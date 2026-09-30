@@ -30,6 +30,8 @@ interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
    * higher values render above lower ones.
    **/
   order: number;
+  // fractional stack position; see VoxelWorld layer ranks. Default "V".
+  rank?: string;
   /** Size of one voxel chunk (required). */
   chunkSize: number;
   /**
@@ -53,6 +55,7 @@ class VoxelLayer {
   id: string;
   name: string;
   order: number;
+  rank: string;
   visible: boolean;
 
   // edge length of every chunk, in voxels

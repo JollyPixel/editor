@@ -2,6 +2,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  isVoxelObjectLayerCommand,
   type VoxelWorld,
   type VoxelObjectJSON,
   type VoxelLayerCommand
@@ -84,6 +85,7 @@ export class ObjectPanel extends LitElement {
     }
 
     if (
+      !isVoxelObjectLayerCommand(evt) ||
       evt.layerName !== this.layerName ||
       (
         evt.action !== "object-updated" &&

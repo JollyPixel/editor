@@ -122,9 +122,9 @@ describe("Client — default url", () => {
 });
 
 describe("Client — connection lifecycle", () => {
-  test("warns once the socket closes unexpectedly, then drops outgoing messages", () => {
+  test("without reconnect, warns once the socket closes unexpectedly, then drops outgoing messages", () => {
     const { logger, warnings } = captureLogger();
-    const { client, socket } = createOpenClient({ logger });
+    const { client, socket } = createOpenClient({ logger, reconnect: false });
 
     socket.serverClose({ code: 1006, reason: "gone" });
     client.room("pixel-draw").join();

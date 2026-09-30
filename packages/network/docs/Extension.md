@@ -15,6 +15,7 @@ abstract class Extension<TMessage = unknown> {
   ): void | Promise<void>;
   onClientDisconnect?(clientId: string, context: RoomContext): void | Promise<void>;
   onMessage?(clientId: string, message: TMessage, context: RoomContext): void | Promise<void>;
+  onResync?(clientId: string, context: RoomContext): void | Promise<void>;
 }
 
 interface RoomContext {
@@ -27,6 +28,7 @@ interface RoomPeer {
   readonly identity: PeerIdentity;
   readonly profile: PeerMetadata;
   readonly presence: PeerMetadata;
+  readonly resume?: unknown;
 }
 
 interface RoomBroadcast {
@@ -175,12 +177,13 @@ const world = result.val;
 
 ## Callbacks
 
-All three are optional. Implement only the ones the feature needs; the room
+All four are optional. Implement only the ones the feature needs; the room
 skips the rest, and a missing hook never allocates its `RoomContext`.
 
-- `onClientConnect` — the client is already admitted. Its `client.send()` is pre-scoped to this room and filtered by the outbound protocol.
+- `onClientConnect` — the client is already admitted. Its `client.send()` is pre-scoped to this room and filtered by the outbound protocol. `peer.resume` is the untrusted, unvalidated `resume` of the join envelope, sent by a client rejoining after a reconnect; see [CommandSync](./sync/CommandSync.md#resume).
 - `onClientDisconnect` — explicit `leave()` or socket drop. Never gated; a member can always leave.
 - `onMessage` — a message that parsed against the inbound protocol and passed its write check. A rejected or denied payload never reaches here.
+- `onResync` — a member asked for a fresh state with `Room.resync()`. Reply with `context.room.sendTo(clientId, ...)`. Not gated by rights.
 
 `context` is built for the triggering client.
 

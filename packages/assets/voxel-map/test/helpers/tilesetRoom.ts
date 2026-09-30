@@ -13,8 +13,10 @@ export interface MockTilesetRoom extends network.Room<
   TilesetServerMessage
 > {
   sentCommands: TilesetNetworkCommand[];
+  resyncs: number;
   simulateCommand(cmd: TilesetNetworkCommand): void;
   simulateSnapshot(snapshot: TilesetSnapshot): void;
+  deliver(message: TilesetServerMessage): void;
 }
 
 export function createMockTilesetRoom(
@@ -29,7 +31,7 @@ export function createMockTilesetRoom(
     }
   }
 
-  return {
+  const room: MockTilesetRoom = {
     id: "tileset-room",
     clientId,
     peers: new Map(),
@@ -38,6 +40,7 @@ export function createMockTilesetRoom(
     access: "write" as const,
     can: () => "write" as const,
     sentCommands,
+    resyncs: 0,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -61,11 +64,22 @@ export function createMockTilesetRoom(
     leave() {
       return void 0;
     },
+    resync() {
+      room.resyncs++;
+    },
+    resumeWith() {
+      return void 0;
+    },
     simulateCommand(cmd) {
       emit("message", { type: "command", data: cmd });
     },
     simulateSnapshot(snapshot) {
       emit("message", { type: "snapshot", data: snapshot });
+    },
+    deliver(message) {
+      emit("message", message);
     }
   };
+
+  return room;
 }

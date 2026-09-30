@@ -84,6 +84,10 @@ export interface Room<
   updatePresence(
     patch: PeerMetadata
   ): void;
+  resync(): void;
+  resumeWith(
+    source: (() => unknown) | null
+  ): void;
   leave(): void;
 
   on<K extends keyof RoomEventMap<TServerMessage>>(

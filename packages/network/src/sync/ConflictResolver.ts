@@ -1,11 +1,15 @@
 // Import Internal Dependencies
 import type { NetworkCommandHeader } from "../sync/types.ts";
 
+export type ConflictRecord = NetworkCommandHeader & {
+  version?: number;
+};
+
 export interface ConflictContext<
   Header extends NetworkCommandHeader = NetworkCommandHeader
 > {
   incoming: Header;
-  existing: NetworkCommandHeader | undefined;
+  existing: ConflictRecord | undefined;
 }
 
 export interface ConflictResolver<
@@ -30,6 +34,12 @@ export class LastWriteWinsResolver<
 
     if (incoming.clientId === existing.clientId) {
       return "accept";
+    }
+
+    if (existing.version !== undefined) {
+      return incoming.basis === undefined || incoming.basis >= existing.version ?
+        "accept" :
+        "reject";
     }
 
     if (incoming.timestamp > existing.timestamp) {

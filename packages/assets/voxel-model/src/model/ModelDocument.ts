@@ -21,6 +21,7 @@ export interface ModelChange {
   command: VoxelModelCommand;
   origin: ModelOrigin;
   removed: readonly ModelNodeJSON[];
+  previous: readonly ModelNodeJSON[];
 }
 
 export type ModelDocumentEvents = {
@@ -180,14 +181,13 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     command: VoxelModelCommand,
     origin: ModelOrigin
   ): void {
-    const removed = command.action === "node-removed" ?
-      this.#tree.subtreeOf(command.id) :
-      [];
+    const previous = this.#tree.imagesOf(command);
     this.#tree.apply(command);
     this.emit("change", {
       command,
       origin,
-      removed
+      removed: command.action === "node-removed" ? previous : [],
+      previous
     });
   }
 }

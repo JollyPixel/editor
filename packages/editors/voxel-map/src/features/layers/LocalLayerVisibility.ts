@@ -96,15 +96,21 @@ export class LocalLayerVisibility {
     command: VoxelLayerCommand
   ): void => {
     switch (command.action) {
-      case "cloned":
-        this.#visibility.copy(
-          new VoxelLayerRef(command.layerName).key,
-          new VoxelLayerRef(command.metadata.options.name).key
-        );
+      case "cloned": {
+        const source = this.#world.getLayerById(command.layerId);
+        if (source !== undefined) {
+          this.#visibility.copy(
+            new VoxelLayerRef(source.name).key,
+            new VoxelLayerRef(command.metadata.options.name).key
+          );
+        }
         break;
+      }
       case "removed":
       case "merged":
-        this.#visibility.forget(new VoxelLayerRef(command.layerName).key);
+        this.#visibility.retain(
+          (key) => parseLayerRef(key).exists(this.#world)
+        );
         break;
       case "object-layer-removed":
         this.#visibility.retain(

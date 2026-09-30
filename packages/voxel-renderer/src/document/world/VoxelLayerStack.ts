@@ -1,10 +1,13 @@
 // Import Internal Dependencies
 import type { VoxelLayer } from "./VoxelLayer.ts";
+import {
+  compareLayerRanks,
+  rankBetween
+} from "./layerRank.ts";
 
 export class VoxelLayerStack implements Iterable<VoxelLayer> {
   #layers: VoxelLayer[] = [];
   #detached: VoxelLayer[] = [];
-  #idCounter = 0;
 
   get size(): number {
     return this.#layers.length;
@@ -30,36 +33,56 @@ export class VoxelLayerStack implements Iterable<VoxelLayer> {
     return this.#layers.find((layer) => layer.name === name);
   }
 
+  byId(
+    id: string
+  ): VoxelLayer | undefined {
+    return this.#layers.find((layer) => layer.id === id);
+  }
+
   indexOf(
-    name: string
+    layer: VoxelLayer
   ): number {
-    return this.#layers.findIndex((layer) => layer.name === name);
+    return this.#layers.indexOf(layer);
   }
 
   insert(
-    index: number,
     layer: VoxelLayer
   ): void {
-    this.#layers.splice(index, 0, layer);
-    this.#renumber();
+    this.#layers.push(layer);
+    this.#sort();
   }
 
-  move(
-    fromIndex: number,
+  rerank(
+    layer: VoxelLayer,
+    rank: string
+  ): void {
+    layer.rank = rank;
+    this.#sort();
+  }
+
+  topRank(): string {
+    return rankBetween(this.#layers[0]?.rank ?? null, null);
+  }
+
+  rankAbove(
+    layer: VoxelLayer
+  ): string {
+    const index = this.#layers.indexOf(layer);
+
+    return rankBetween(layer.rank, this.#layers[index - 1]?.rank ?? null);
+  }
+
+  rankAt(
+    layer: VoxelLayer,
     toIndex: number
-  ): boolean {
-    if (
-      toIndex === fromIndex ||
-      toIndex < 0 ||
-      toIndex >= this.#layers.length
-    ) {
-      return false;
-    }
+  ): string {
+    const others = this.#layers.filter((other) => other !== layer);
+    const index = Math.min(Math.max(Math.trunc(toIndex), 0), others.length);
 
-    const [layer] = this.#layers.splice(fromIndex, 1);
-    this.insert(toIndex, layer);
-
-    return true;
+    return rankBetween(
+      others[index]?.rank ?? null,
+      others[index - 1]?.rank ?? null
+    );
   }
 
   detach(
@@ -79,31 +102,29 @@ export class VoxelLayerStack implements Iterable<VoxelLayer> {
     this.#detached = [];
   }
 
-  nextId(
-    prefix: string
-  ): string {
-    let id: string;
-    do {
-      id = `${prefix}${this.#idCounter++}`;
-    } while (this.#layers.some((layer) => layer.id === id));
-
-    return id;
-  }
-
   uniqueName(
-    base: string
+    base: string,
+    except: VoxelLayer | null = null
   ): string {
-    if (this.get(base) === undefined) {
+    const taken = (name: string) => this.#layers.some(
+      (layer) => layer !== except && layer.name === name
+    );
+    if (!taken(base)) {
       return base;
     }
 
     const root = base.replace(/ \(\d+\)$/, "");
     for (let index = 1; ; index++) {
       const candidate = `${root} (${index})`;
-      if (this.get(candidate) === undefined) {
+      if (!taken(candidate)) {
         return candidate;
       }
     }
+  }
+
+  #sort(): void {
+    this.#layers.sort((left, right) => compareLayerRanks(right, left));
+    this.#renumber();
   }
 
   #renumber(): void {

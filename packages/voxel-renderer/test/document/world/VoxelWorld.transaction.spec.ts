@@ -133,7 +133,9 @@ describe("VoxelWorld.transaction", () => {
     });
 
     assert.deepEqual(
-      commands.filter(isVoxelLayerCommand).map(({ layerName }) => layerName),
+      commands.filter(isVoxelLayerCommand).map(
+        (command) => ("layerId" in command ? world.getLayerById(command.layerId)?.name : null)
+      ),
       [kLayer, "Top"]
     );
     assert.deepEqual(patchOf(commands[0]), [
@@ -208,7 +210,7 @@ describe("VoxelWorld.transaction", () => {
     ]);
 
     const remote = new VoxelWorld(4);
-    remote.addLayer(kLayer);
+    remote.restoreLayer({ id: world.getLayer(kLayer)!.id, name: kLayer });
     for (const command of commands) {
       remote.apply(command);
     }
@@ -321,7 +323,7 @@ describe("VoxelWorld.patchVoxels", () => {
     const [command] = commands;
     assert.equal(commands.length, 1);
     assert.equal(command?.action, "voxels-patched");
-    assert.equal(command.layerName, kLayer);
+    assert.equal(command.layerId, world.getLayer(kLayer)!.id);
     assert.deepEqual(command.metadata.cells, cells);
     assert.notEqual(command.metadata.cells, cells);
     assert.equal(world.getVoxelAt(kOrigin)?.blockId, 4);

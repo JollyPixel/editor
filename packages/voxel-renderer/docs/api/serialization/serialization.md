@@ -25,7 +25,7 @@ interface VoxelLayerMetadataJSON {
   id: string;
   name: string;
   visible: boolean;
-  order: number;
+  rank: string;
   position?: VoxelCoord;
   properties?: Record<string, any>;
 }
@@ -35,10 +35,10 @@ interface VoxelLayerJSON extends VoxelLayerMetadataJSON {
   chunks: VoxelChunkJSON[];
 }
 
-const VOXEL_WORLD_VERSION = 3;
+const VOXEL_WORLD_VERSION = 4;
 
 interface VoxelWorldJSON {
-  version: 3;
+  version: 4;
   chunkSize: number;
   tilesets: TilesetDefinition[];
   layers: VoxelLayerJSON[];
@@ -74,7 +74,7 @@ The writer picks whichever encoding needs fewer numbers for each chunk.
 
 ```json
 {
-  "id": "layer_1", "name": "Terrain", "visible": true, "order": 0,
+  "id": "layer_1", "name": "Terrain", "visible": true, "rank": "V",
   "palette": [{ "block": 65537, "transform": 0 }, { "block": 65538, "transform": 0 }],
   "chunks": [
     { "at": [0, 0, 0], "runs": [256, 2, 3840, 0] },
@@ -222,9 +222,10 @@ problem, naming the layer and chunk:
 - `version` is `VOXEL_WORLD_VERSION`. Earlier versions are rejected; there
   is no migration.
 - `chunkSize` is a power of two.
-- Each layer has a string `id` and `name`, a boolean `visible` and a numeric
-  `order`; `compositing`, `position` and `properties` are
-  typed when present.
+- Each layer has a string `id` and `name`, a boolean `visible` and a
+  `rank` (see [layer ranks](../world/VoxelWorld.md#layer-ranks)); `compositing`,
+  `position` and `properties` are typed when present. The stack follows the
+  ranks, not the array order.
 - Each palette entry has a block id in `1..MAX_BLOCK_ID` and a transform in
   `0..255`.
 - Each `at` is an integer triple within the layer chunk range (±1024 on X

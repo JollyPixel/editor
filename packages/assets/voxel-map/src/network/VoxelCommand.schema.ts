@@ -65,8 +65,20 @@ const kEmptySchema: JSONSchema = {
   type: "object"
 };
 
+const kIdSchema: JSONSchema = {
+  type: "string",
+  minLength: 1
+};
+
+const kRankSchema: JSONSchema = {
+  type: "string",
+  pattern: "^[0-9A-Za-z]*[1-9A-Za-z]$"
+};
+
 const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
   added: objectSchema({
+    name: { type: "string" },
+    rank: kRankSchema,
     options: { type: "object" }
   }),
   removed: kEmptySchema,
@@ -74,10 +86,12 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
     options: { type: "object" }
   }),
   cloned: objectSchema({
+    cloneId: kIdSchema,
+    rank: kRankSchema,
     options: objectSchema({ name: { type: "string" } })
   }),
   merged: objectSchema({
-    targetLayerName: { type: "string" }
+    targetLayerId: kIdSchema
   }),
   "position-updated": {
     oneOf: [
@@ -119,11 +133,8 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
     }
   }),
   "layer-transformed": objectSchema(kVoxelTransformProperties),
-  reordered: objectSchema({
-    direction: { enum: ["up", "down"] }
-  }),
   "layer-moved": objectSchema({
-    toIndex: { type: "integer" }
+    rank: kRankSchema
   }),
   "object-layer-added": kEmptySchema,
   "object-layer-removed": kEmptySchema,
@@ -264,10 +275,9 @@ export const voxelWorldSchema: JSONSchema = {
 export const voxelCommandProtocol: MessageProtocol = new MessageProtocol({
   oneOf: [
     ...Object.entries(kLayerMetadataSchemas).map(
-      ([action, metadata]) => networkCommand(action, {
-        layerName: { type: "string" },
-        metadata
-      })
+      ([action, metadata]) => networkCommand(action, action.startsWith("object-") ?
+        { layerName: { type: "string" }, metadata } :
+        { layerId: kIdSchema, metadata })
     ),
     ...Object.entries(kTemplateCommandProperties).map(
       ([action, properties]) => networkCommand(action, properties)

@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { InvalidVoxelWorldError } from "../errors/InvalidVoxelWorldError.ts";
+import { isLayerRank } from "../../world/layerRank.ts";
 import { validateChunk } from "../chunks/chunkEncoding.ts";
 import { packPaletteEntry } from "../chunks/palette.ts";
 import {
@@ -141,8 +142,8 @@ function assertVoxelLayer(
   if (typeof readField(value, "visible") !== "boolean") {
     fail("visible is not a boolean");
   }
-  if (!Number.isFinite(readField(value, "order"))) {
-    fail("order is not a number");
+  if (!isLayerRank(readField(value, "rank"))) {
+    fail("rank is not a layer rank");
   }
   assertLayerOptions(value, fail);
   assertVoxelGrid(value, cellCount, fail);

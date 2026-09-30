@@ -10,7 +10,11 @@ import {
   type VoxelWorldContentCommand
 } from "../../../src/document/commands/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
-import { serializeVoxelTemplate } from "../../../src/document/serialization/index.ts";
+import {
+  deserializeVoxelWorld,
+  serializeVoxelTemplate,
+  serializeVoxelWorld
+} from "../../../src/document/serialization/index.ts";
 import { makeObject, recordCommands } from "../../helpers/fakes.ts";
 import {
   withoutId,
@@ -37,7 +41,7 @@ function makePeers(
   const local = new VoxelWorld(4);
   const remote = new VoxelWorld(4);
   seed(local);
-  seed(remote);
+  deserializeVoxelWorld(serializeVoxelWorld(local), remote);
 
   return { local, remote, commands: recordCommands(local) };
 }
@@ -123,7 +127,7 @@ const kCases: RoundTripCase[] = [
     name: "swaps a layer with its neighbour",
     seed: stack,
     act: (world) => world.moveLayer("A", "up"),
-    actions: ["reordered"]
+    actions: ["layer-moved"]
   },
   {
     name: "moves a layer across the stack",
@@ -353,13 +357,14 @@ describe("command round-trip", () => {
       world.addLayer("Source");
     });
 
+    const sourceId = local.getLayer("Source")!.id;
     local.mergeLayer("Source", "Target");
     for (const command of commands) {
       remote.apply(command);
     }
     remote.apply({
       action: "voxels-set",
-      layerName: "Source",
+      layerId: sourceId,
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 4 }] }
     });
 

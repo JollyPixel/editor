@@ -52,6 +52,8 @@ export function createRoomHarness(): RoomHarness {
     can: () => "write",
     join: () => void 0,
     leave: () => void 0,
+    resync: () => void 0,
+    resumeWith: () => void 0,
     send: () => void 0,
     updatePresence: (patch) => {
       published.push(patch);

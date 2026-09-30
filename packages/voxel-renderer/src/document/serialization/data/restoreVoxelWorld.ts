@@ -25,12 +25,11 @@ export function restoreVoxelWorld(
   tilesets?.replace(data.tilesets);
   world.clear();
 
-  const sortedLayers = [...data.layers]
-    .sort((a, b) => a.order - b.order);
-  for (const layerData of sortedLayers) {
+  for (const layerData of data.layers) {
     const layer = world.restoreLayer({
       id: layerData.id,
       name: layerData.name,
+      rank: layerData.rank,
       visible: layerData.visible,
       compositing: layerData.compositing,
       position: layerData.position,

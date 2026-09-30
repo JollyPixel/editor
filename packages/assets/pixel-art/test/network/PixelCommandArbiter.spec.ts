@@ -456,3 +456,52 @@ describe("PixelCommandArbiter — uv rotation", () => {
     })), null);
   });
 });
+
+describe("PixelCommandArbiter — server order", () => {
+  test("a global fill claims the pixels it repaints", () => {
+    const { arbiter, buffer } = setup();
+    const [r, g, b, a] = buffer.samplePixel(3, 3);
+    const fill = arbiter.admit(
+      buffer,
+      command("global-fill", { fromColor: { r, g, b, a }, toColor: gray(9) }, { clientId: "B" })
+    );
+    fill?.commit(5);
+
+    const undo = packed(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 3, y: 3 }]
+    }, { clientId: "A", basis: 4 }));
+
+    assert.strictEqual(arbiter.admit(buffer, undo), null);
+  });
+
+  test("restore records a past stroke so an older replay loses to it", () => {
+    const { arbiter, buffer } = setup();
+    arbiter.restore(packed(command("stroke", {
+      color: gray(2),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "B" })), 7);
+
+    const replay = packed(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "A", basis: 6 }));
+    const fresh = packed(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }]
+    }, { clientId: "A", timestamp: 1 }));
+
+    assert.strictEqual(arbiter.admit(buffer, replay), null);
+    assert.notStrictEqual(arbiter.admit(buffer, fresh), null);
+  });
+
+  test("restore of a replacement rejects replays older than it", () => {
+    const { arbiter, buffer } = setup();
+    arbiter.restore(command("resized", { size: { x: 4, y: 4 } }, { clientId: "B" }), 3);
+
+    assert.strictEqual(arbiter.admit(buffer, packed(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 1, y: 1 }]
+    }, { clientId: "A", basis: 2 }))), null);
+  });
+});

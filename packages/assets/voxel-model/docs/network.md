@@ -4,7 +4,7 @@ The browser entry point is `@jolly-pixel/asset.voxel-model/client`. Server proto
 
 ## Editable document
 
-`ModelDocument` owns a `ModelTreeReader` at `tree`. Its edit methods validate a command, apply accepted changes locally, and emit a `change` event with `origin: "local"`. `apply(command)` applies a remote command the tree accepts and emits a remote change; it returns `false` and changes nothing when the tree refuses the command. `load(snapshot)` replaces the tree and emits `reset`; a snapshot with a repeated id, a missing parent or a cycle throws `InvalidModelTreeError` and leaves the tree as it was.
+`ModelDocument` owns a `ModelTreeReader` at `tree`. Its edit methods validate a command, apply accepted changes locally, and emit a `change` event with `origin: "local"`. A change carries `previous`, the nodes it replaced as they were before it (`tree.imagesOf(command)`), and `removed`, the subtree a removal took. `apply(command)` applies a remote command the tree accepts and emits a remote change; it returns `false` and changes nothing when the tree refuses the command. `load(snapshot)` replaces the tree and emits `reset`; a snapshot with a repeated id, a missing parent or a cycle throws `InvalidModelTreeError` and leaves the tree as it was.
 
 - `addBlock({ name, parentId?, id?, transform?, uv? })` and `addFolder({ name, parentId?, id? })` return the new ID, or `null` when rejected.
 - `remove(id)`, `rename(id, name)`, `move(id, parentId, transforms?)`, `transform(id, transform, flipAxes?)`, and `setUv(id, uv)` return a boolean. A move carries its block transforms in the same command; `transform` and `setUv` target a block.
@@ -15,7 +15,7 @@ A block's required `uv` is its `UVLayoutData` from `@jolly-pixel/asset.pixel-art
 
 ## Synchronization
 
-`new ModelSyncClient({ room, document })` sends local document changes and applies peer commands and snapshots. Construct it before `room.join()`. `destroy()` removes document and room listeners; the caller leaves the room and owns the shared network client.
+`new ModelSyncClient({ room, document })` sends local document changes and applies peer commands and snapshots. Local changes stay pending until the server acknowledges them. `ModelReconciler` keeps each change's `previous` nodes as its inverse: a peer rename, transform or UV change skips the node a pending write of this client will win, and any other peer command reverts the pending changes with one `load`, applies, and replays them. A pending change the tree now refuses, such as a move into a removed folder, leaves the tree until the server repairs it. Construct it before `room.join()`. `destroy()` removes document and room listeners; the caller leaves the room and owns the shared network client.
 
 `new SyncedModelDocument(room)` creates the document and a private sync client. `ready` resolves after the first snapshot and `loaded` reports it; `dispose()` destroys the sync client. `voxelModelDocumentKind()` exposes the same construction through a `@jolly-pixel/editor.host` document-kind adapter. The sync client inherits `snapshot`, `ready`, `command`, and `notice` events; notices report rejected edits or asset deletion.
 
@@ -28,4 +28,4 @@ The snapshot is `{ nodes: ModelNodeJSON[] }`. `VoxelModelNetworkCommand` adds `c
 - `node-transformed` carries a block ID, transform, and optional flip axes.
 - `node-uv-changed` carries a block ID and its whole UV layout.
 
-`voxelModelCommandProtocol` validates commands and `voxelModelSnapshotSchema` validates snapshots. `VoxelModelCommandArbiter.admit(state, command)` returns an admission, or `null` when `state.accepts(command)` is false or a key rejects it; `keys(command)` exposes the collision keys described in [architecture](../ARCHITECTURE.md). The stored document also has a version and a required texture reference; these are outside the live snapshot.
+`voxelModelCommandProtocol` validates commands and `voxelModelSnapshotSchema` validates snapshots. `VoxelModelCommandArbiter.admit(state, command)` returns an admission, or `null` when `state.accepts(command)` is false or a key rejects it; `voxelModelConflictKeys(command)` returns the collision keys described in [architecture](../ARCHITECTURE.md), and `voxelModelWriteKeys(command)` the registers a rename, transform or UV change sets for the client reconciler. The stored document also has a version and a required texture reference; these are outside the live snapshot.

@@ -8,6 +8,7 @@ import type { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 import { localBlock } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { tilesetCommandKey } from "./TilesetCommandKeys.ts";
 import type {
   TilesetDocumentNetworkCommand,
   TilesetNetworkCommand
@@ -49,35 +50,19 @@ export class TilesetCommandArbiter {
 
     return this.#tracker.admit(
       command,
-      [TilesetCommandArbiter.key(command)]
+      [tilesetCommandKey(command)]
     );
   }
 
-  static key(
-    command: TilesetDocumentNetworkCommand
-  ): string {
-    switch (command.action) {
-      case "block-defined":
-        return `block:${command.block.id}`;
-      case "block-removed":
-      case "block-moved":
-        return `block:${command.blockId}`;
-      case "material-group-defined":
-        return `material-group:${command.group.id}`;
-      case "material-group-removed":
-        return `material-group:${command.groupId}`;
-      case "blend-group-defined":
-        return `blend-group:${command.group.id}`;
-      case "blend-group-removed":
-        return `blend-group:${command.groupId}`;
-      case "tile-size-updated":
-        return "tile-size";
-      default: {
-        const unhandled: never = command;
-        throw new Error(
-          `TilesetCommandArbiter: unhandled action '${(unhandled as TilesetDocumentNetworkCommand).action}'.`
-        );
-      }
+  restore(
+    command: TilesetNetworkCommand,
+    version: number
+  ): void {
+    if (isPixelCommand(command)) {
+      this.#pixels.restore(command, version);
+    }
+    else {
+      this.#tracker.record(command, [tilesetCommandKey(command)], version);
     }
   }
 }

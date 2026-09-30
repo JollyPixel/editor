@@ -4,17 +4,26 @@ import type {
   VoxelLayerCommand
 } from "../../src/document/commands/index.ts";
 import { resolveBlockDefinition } from "../../src/document/blocks/index.ts";
+import { rankBetween } from "../../src/document/world/index.ts";
 import { makeBlockDef } from "./blocks.ts";
 
 type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
+let lastRank: string | null = null;
+
 export function makeAddedCommand(
   layerName: string
 ): AddedCommand {
+  lastRank = rankBetween(lastRank, null);
+
   return {
     action: "added",
-    layerName,
-    metadata: { options: {} }
+    layerId: layerName,
+    metadata: {
+      name: layerName,
+      rank: lastRank,
+      options: {}
+    }
   };
 }
 

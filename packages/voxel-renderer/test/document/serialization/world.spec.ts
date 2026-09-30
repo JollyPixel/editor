@@ -223,8 +223,8 @@ describe("serializeVoxelWorld", () => {
     ];
     const forward = new VoxelWorld(16);
     const backward = new VoxelWorld(16);
-    const a = forward.addLayer("Ground");
-    const b = backward.addLayer("Ground");
+    const a = forward.restoreLayer({ id: "ground", name: "Ground" });
+    const b = backward.restoreLayer({ id: "ground", name: "Ground" });
     for (const [x, y, z, block] of entries) {
       a.setVoxelAt({ x, y, z }, makeVoxelEntry(block));
     }
@@ -271,7 +271,7 @@ describe("deserializeVoxelWorld", () => {
           name: "Ground",
           visible: true,
           opacity: 0.5,
-          order: 0,
+          rank: "V",
           palette: [],
           chunks: []
         }]
@@ -285,14 +285,14 @@ describe("deserializeVoxelWorld", () => {
     assert.equal("opacity" in serializeVoxelWorld(world).layers[0], false);
   });
 
-  it("stacks layers by their saved order and renumbers them densely", () => {
+  it("stacks layers by their saved rank and renumbers them densely", () => {
     const world = new VoxelWorld(16);
 
     deserializeVoxelWorld(
       untrusted(emptyDocument({
         layers: [
-          { id: "top", name: "Top", visible: true, order: 7, palette: [], chunks: [] },
-          { id: "ground", name: "Ground", visible: true, order: 2, palette: [], chunks: [] }
+          { id: "ground", name: "Ground", visible: true, rank: "2", palette: [], chunks: [] },
+          { id: "top", name: "Top", visible: true, rank: "7", palette: [], chunks: [] }
         ]
       })),
       world
@@ -314,7 +314,7 @@ describe("deserializeVoxelWorld", () => {
           id: "l1",
           name: "Ground",
           visible: true,
-          order: 0,
+          rank: "V",
           tint: "red",
           palette: [{ block: 2, transform: 0 }],
           chunks: [{ at: [0, 0, 0], cells: [0], runs: [1, 1], lod: 2 }]
@@ -336,7 +336,7 @@ describe("deserializeVoxelWorld", () => {
           id: "l1",
           name: "Ground",
           visible: true,
-          order: 0,
+          rank: "V",
           palette: [1, 2, 3, 4, 5].map((block) => {
             return { block, transform: 0 };
           }),
@@ -392,7 +392,7 @@ describe("deserializeVoxelWorld", () => {
           id: "l1",
           name: "Ground",
           visible: true,
-          order: 0,
+          rank: "V",
           palette: [{ block: 1, transform: 0 }],
           chunks: [{ at: [1000, 0, 0], cells: [0], runs: [1, 1] }]
         }]
@@ -439,7 +439,7 @@ describe("deserializeVoxelWorld", () => {
         id: "ground",
         name: "Ground",
         visible: true,
-        order: 0,
+        rank: "V",
         position: { x: 20, y: 3, z: -4 },
         palette: [{ block: 1, transform: 0 }],
         chunks: [{ at: [0, 0, 0], cells: [1298], runs: [1, 1] }]

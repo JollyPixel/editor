@@ -7,14 +7,24 @@ import {
 // Import Internal Dependencies
 import type { Logger } from "#src/index.ts";
 
-export function captureLogger(): { logger: Logger; warnings: string[]; } {
+export interface CapturedLogger {
+  logger: Logger;
+  warnings: string[];
+  errors: string[];
+}
+
+export function captureLogger(): CapturedLogger {
   const warnings: string[] = [];
+  const errors: string[] = [];
   const logger = new LogLayer({
     transport: new ConsoleTransport({
       logger: {
         ...console,
         warn: (...args: unknown[]) => {
           warnings.push(args.map(String).join(" "));
+        },
+        error: (...args: unknown[]) => {
+          errors.push(args.map(String).join(" "));
         }
       }
     })
@@ -22,6 +32,7 @@ export function captureLogger(): { logger: Logger; warnings: string[]; } {
 
   return {
     logger,
-    warnings
+    warnings,
+    errors
   };
 }

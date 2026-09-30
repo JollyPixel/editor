@@ -148,24 +148,26 @@ registry did not change.
 
 ## Layer commands
 
-`VoxelLayerCommand` is keyed on `action` and always carries `layerName` and
-`metadata`. `VoxelWorld` emits them on its own `"command"` event, which the
-document forwards as local commands.
+`VoxelLayerCommand` is keyed on `action` and always carries `metadata`.
+Voxel layer commands name their layer by `layerId`, so a rename never
+strands a peer's commands; object layer commands name theirs by `layerName`.
+`VoxelWorld` emits them on its own `"command"` event, which the document
+forwards as local commands.
 
 ```ts
 type VoxelLayerCommand =
-  | VoxelLayerStructureCommand  // added, removed, updated, cloned, merged, position-*, reordered, layer-moved
+  | VoxelLayerStructureCommand  // added, removed, updated, cloned, merged, position-*, layer-moved
   | VoxelEditCommand            // voxel-set, voxel-removed, voxels-set, voxels-removed, voxels-patched, layer-transformed
   | VoxelObjectLayerCommand;    // object-layer-*, object-*
 ```
 
 | `action` | `metadata` shape | Notes |
 |---|---|---|
-| `"added"` | `{ options: VoxelLayerConfigurableOptions }` | |
+| `"added"` | `{ name: string; rank: string; options: VoxelLayerConfigurableOptions }` | `layerId` is the new layer's id; refused when it exists. `name` comes back unique. |
 | `"removed"` | `{}` | |
-| `"updated"` | `{ options: Partial<VoxelLayerConfigurableOptions> }` | |
-| `"cloned"` | `{ options: VoxelLayerCloneOptions }` | `layerName` is the source layer; `options.name` is the resolved clone name. |
-| `"merged"` | `{ targetLayerName: string }` | `layerName` is the source layer, which the merge removes. |
+| `"updated"` | `{ options: VoxelLayerUpdate }` | `options.name` renames the layer and comes back unique. |
+| `"cloned"` | `{ cloneId: string; rank: string; options: VoxelLayerCloneOptions }` | `layerId` is the source layer; `options.name` is the resolved clone name. |
+| `"merged"` | `{ targetLayerId: string }` | `layerId` is the source layer, which the merge removes. |
 | `"position-updated"` | `{ position: VoxelCoord }` or `{ delta: VoxelCoord }` | |
 | `"position-rebased"` | `{ position: VoxelCoord }` | |
 | `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY }` | |
@@ -174,8 +176,7 @@ type VoxelLayerCommand =
 | `"voxels-removed"` | `{ entries: VoxelRemoveOptions[] }` | Bulk removal |
 | `"voxels-patched"` | `{ cells: VoxelPatchCells }` | Emitted by `transaction()` and `patchVoxels()`. Five numbers per cell: `x, y, z, blockId, transform`; block `0` removes the voxel. |
 | `"layer-transformed"` | `{ rotation, flipX, flipZ, flipY }` | Emitted by `transformLayer()`. Peers turn their own copy of the layer around its content center. |
-| `"reordered"` | `{ direction: "up" \| "down" }` | One step; `"up"` raises priority. |
-| `"layer-moved"` | `{ toIndex: number }` | Absolute position, already clamped. |
+| `"layer-moved"` | `{ rank: string }` | The layer's new [rank](../world/VoxelWorld.md#layer-ranks). Moves of different layers commute. |
 | `"object-layer-added"` | `{}` | |
 | `"object-layer-removed"` | `{}` | |
 | `"object-layer-updated"` | `{ patch: { visible?: boolean } }` | |

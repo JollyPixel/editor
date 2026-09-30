@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  rankBetween,
   VOXEL_WORLD_VERSION,
   VoxelWorld,
   isVoxelTemplateCommand,
@@ -12,13 +13,21 @@ import type { VoxelMapNetworkCommand } from "../../src/network/server.ts";
 
 type AddedCommand = Extract<VoxelLayerCommand, { action: "added"; }>;
 
+let lastRank: string | null = null;
+
 export function makeAddedCommand(
   layerName: string
 ): AddedCommand {
+  lastRank = rankBetween(lastRank, null);
+
   return {
     action: "added",
-    layerName,
-    metadata: { options: {} }
+    layerId: layerName,
+    metadata: {
+      name: layerName,
+      rank: lastRank,
+      options: {}
+    }
   };
 }
 
@@ -48,7 +57,7 @@ export interface VoxelSetCmdOptions {
   y?: number;
   z?: number;
   blockId?: number;
-  layerName?: string;
+  layerId?: string;
 }
 
 export function voxelSetCmd(
@@ -56,7 +65,7 @@ export function voxelSetCmd(
 ): VoxelMapNetworkCommand {
   return {
     action: "voxel-set",
-    layerName: opts.layerName ?? "Ground",
+    layerId: opts.layerId ?? "Ground",
     metadata: {
       position: { x: opts.x ?? 0, y: opts.y ?? 0, z: opts.z ?? 0 },
       blockId: opts.blockId ?? 1,

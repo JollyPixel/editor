@@ -23,7 +23,10 @@ import type {
   VoxelEditRecorder
 } from "../types.ts";
 import {
+  VOXEL_REACH_OBSERVERS,
+  VOXEL_REACH_RECORDERS,
   VoxelEditBatch,
+  type VoxelEditBatchFlush,
   type VoxelEditWriteOptions
 } from "./VoxelEditBatch.ts";
 import {
@@ -35,7 +38,7 @@ import {
 // CONSTANTS
 const kUntrackedWrite: VoxelEditWriteOptions = {
   track: false,
-  record: false
+  reach: 0
 };
 
 export type VoxelWriteMode =
@@ -57,8 +60,9 @@ interface VoxelWrite {
 type LayerCell = [number, number, number, PackedVoxel];
 
 export class VoxelWriter {
-  recorder: VoxelEditRecorder | null = null;
-
+  #recorders = new Set<VoxelEditRecorder>();
+  #observers = new Set<VoxelEditRecorder>();
+  #suspended = 0;
   #chunkSize: number;
   #layers: VoxelLayerStack;
   #publish: (command: VoxelLayerCommand) => void;
@@ -91,16 +95,31 @@ export class VoxelWriter {
     }
   }
 
+  addRecorder(
+    recorder: VoxelEditRecorder,
+    includeUnrecorded: boolean
+  ): void {
+    (includeUnrecorded ? this.#observers : this.#recorders).add(recorder);
+  }
+
+  removeRecorder(
+    recorder: VoxelEditRecorder
+  ): boolean {
+    const recorded = this.#recorders.delete(recorder);
+    const observed = this.#observers.delete(recorder);
+
+    return recorded || observed;
+  }
+
   unrecorded<T>(
     fn: () => T
   ): T {
-    const recorder = this.recorder;
-    this.recorder = null;
+    this.#suspended++;
     try {
       return fn();
     }
     finally {
-      this.recorder = recorder;
+      this.#suspended--;
     }
   }
 
@@ -115,13 +134,13 @@ export class VoxelWriter {
     command: VoxelEditCommand,
     mode: VoxelWriteMode
   ): VoxelEditCommand | null {
-    const recorder = mode === "live" ? this.recorder : null;
+    const reach = this.#reachOf(mode);
     const batch = mode === "replay" ? null : this.#batch;
     if (
       command.action === "voxels-patched" &&
       layer !== undefined &&
       batch === null &&
-      recorder === null &&
+      reach === 0 &&
       mode !== "replay"
     ) {
       return this.#patchDirect(layer, command.metadata.cells);
@@ -131,7 +150,7 @@ export class VoxelWriter {
     if (layer === undefined) {
       if (writes.some(({ packed }) => packed !== VOXEL_ABSENT)) {
         throw new Error(
-          `VoxelWorld: layer "${command.layerName}" does not exist.`
+          `VoxelWorld: layer "${command.layerId}" does not exist.`
         );
       }
 
@@ -141,7 +160,7 @@ export class VoxelWriter {
     if (batch !== null) {
       const options = {
         track: mode !== "silent",
-        record: recorder !== null
+        reach
       };
       for (const { position, packed } of writes) {
         batch.write(layer, position, packed, options);
@@ -151,17 +170,17 @@ export class VoxelWriter {
     }
 
     if (command.action === "voxels-patched") {
-      const cells = this.#patchTracked(layer, writes, recorder);
+      const cells = this.#patchTracked(layer, writes, reach);
 
       return cells === null ? null : patched(layer, cells);
     }
     if (command.action === "layer-transformed") {
-      return this.#patchTracked(layer, writes, recorder) === null ?
+      return this.#patchTracked(layer, writes, reach) === null ?
         null :
         command;
     }
 
-    this.#writeNow(layer, writes, recorder);
+    this.#writeNow(layer, writes, reach);
 
     return command;
   }
@@ -169,11 +188,11 @@ export class VoxelWriter {
   #writeNow(
     layer: VoxelLayer,
     writes: readonly VoxelWrite[],
-    recorder: VoxelEditRecorder | null
+    reach: number
   ): void {
     const changes: VoxelCellChange[] = [];
     for (const { position, packed } of writes) {
-      const before = recorder === null ?
+      const before = reach === 0 ?
         packed :
         layer.getPackedVoxelAt(position);
       layer.setPackedVoxelAt(position, packed);
@@ -183,7 +202,7 @@ export class VoxelWriter {
 
       if (before !== packed) {
         changes.push({
-          layerName: layer.name,
+          layerId: layer.id,
           position: {
             x: position.x,
             y: position.y,
@@ -194,20 +213,21 @@ export class VoxelWriter {
         });
       }
     }
-    if (changes.length > 0) {
-      recorder?.record(changes);
-    }
+    this.#deliver({
+      changes: (reach & VOXEL_REACH_RECORDERS) === 0 ? [] : changes,
+      observed: (reach & VOXEL_REACH_OBSERVERS) === 0 ? [] : changes
+    });
   }
 
   #patchTracked(
     layer: VoxelLayer,
     writes: readonly VoxelWrite[],
-    recorder: VoxelEditRecorder | null
+    reach: number
   ): VoxelPatchCells | null {
     const batch = new VoxelEditBatch(this.#chunkSize);
     const options = {
       track: true,
-      record: recorder !== null
+      reach
     };
     for (const { position, packed } of writes) {
       batch.write(layer, position, packed, options);
@@ -218,9 +238,7 @@ export class VoxelWriter {
     if (flushed === undefined) {
       return null;
     }
-    if (flushed.changes.length > 0) {
-      recorder?.record(flushed.changes);
-    }
+    this.#deliver(flushed);
 
     return flushed.cells;
   }
@@ -264,11 +282,39 @@ export class VoxelWriter {
   #flush(
     batch: VoxelEditBatch
   ): void {
-    for (const { layer, cells, changes } of batch.drain()) {
-      if (changes.length > 0) {
-        this.recorder?.record(changes);
+    for (const flushed of batch.drain()) {
+      this.#deliver(flushed);
+      this.#publish(patched(flushed.layer, flushed.cells));
+    }
+  }
+
+  #reachOf(
+    mode: VoxelWriteMode
+  ): number {
+    if (mode !== "live") {
+      return 0;
+    }
+
+    const recorders = this.#suspended === 0 && this.#recorders.size > 0 ?
+      VOXEL_REACH_RECORDERS :
+      0;
+
+    return recorders |
+      (this.#observers.size > 0 ? VOXEL_REACH_OBSERVERS : 0);
+  }
+
+  #deliver(
+    flushed: Pick<VoxelEditBatchFlush, "changes" | "observed">
+  ): void {
+    if (flushed.changes.length > 0) {
+      for (const recorder of this.#recorders) {
+        recorder.record(flushed.changes);
       }
-      this.#publish(patched(layer, cells));
+    }
+    if (flushed.observed.length > 0) {
+      for (const recorder of this.#observers) {
+        recorder.record(flushed.observed);
+      }
     }
   }
 }
@@ -279,7 +325,7 @@ function patched(
 ): VoxelEditCommand {
   return {
     action: "voxels-patched",
-    layerName: layer.name,
+    layerId: layer.id,
     metadata: { cells }
   };
 }

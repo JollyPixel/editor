@@ -38,6 +38,8 @@ export class MockRoom
   readonly sent: PixelWireCommand[] = [];
   readonly presenceUpdates: network.PeerMetadata[] = [];
 
+  resyncs = 0;
+
   #onSend: ((command: PixelWireCommand) => void) | undefined;
 
   constructor(
@@ -57,6 +59,14 @@ export class MockRoom
   }
 
   leave(): void {
+    return void 0;
+  }
+
+  resync(): void {
+    this.resyncs++;
+  }
+
+  resumeWith(): void {
     return void 0;
   }
 

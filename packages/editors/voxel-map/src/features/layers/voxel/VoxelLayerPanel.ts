@@ -81,7 +81,11 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #onLayerUpdated = (event: VoxelLayerCommand) => {
-    if (event.layerName === this.layerName && isVoxelLayerGeometryCommand(event)) {
+    if (
+      isVoxelLayerGeometryCommand(event) &&
+      "layerId" in event &&
+      this.world.getLayerById(event.layerId)?.name === this.layerName
+    ) {
       this.#syncFromLayer();
     }
   };

@@ -62,6 +62,14 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
     this.joins++;
   }
 
+  resync(): void {
+    return void 0;
+  }
+
+  resumeWith(): void {
+    return void 0;
+  }
+
   leave(): void {
     this.leaves++;
   }

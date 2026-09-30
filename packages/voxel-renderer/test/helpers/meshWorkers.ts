@@ -99,13 +99,18 @@ export function meshSnapshot(
   view: VoxelView
 ): Map<string, MeshSnapshot> {
   const snapshot = new Map<string, MeshSnapshot>();
+  const layers = view.document.world.getLayers();
   for (const mesh of chunkMeshes(view)) {
     const geometry = mesh.geometry as PulledChunkGeometry;
     const attributes: Record<string, number[]> = {};
     for (const [name, attribute] of Object.entries(geometry.attributes)) {
       attributes[name] = Array.from(attribute.array);
     }
-    snapshot.set(mesh.name, {
+    const key = layers.reduce(
+      (name, layer) => name.replace(layer.id, layer.name),
+      mesh.name
+    );
+    snapshot.set(key, {
       drawCount: geometry.drawRange.count,
       attributes,
       faces: pulledFaces(geometry),

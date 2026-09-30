@@ -145,6 +145,10 @@ describe("EnvelopeDispatcher — membership gate", () => {
       room: "lobby",
       kind: "presence",
       patch: {}
+    },
+    {
+      room: "lobby",
+      kind: "resync"
     }
   ];
 
@@ -188,6 +192,18 @@ describe("EnvelopeDispatcher — membership gate", () => {
       kind: "message",
       payload: { action: "voxel-set" }
     }]);
+  });
+
+  test("handles a resync once the client has joined", async() => {
+    const { dispatcher, sessions } = createHarness();
+    const a = createClient("A");
+    sessions.open(a.client, identityOf(a.client));
+    await dispatcher.dispatch("A", { room: "lobby", kind: "join" });
+
+    assert.deepEqual(
+      await dispatcher.dispatch("A", { room: "lobby", kind: "resync" }),
+      { outcome: "handled" }
+    );
   });
 
   test("handles a presence patch once the client has joined", async() => {

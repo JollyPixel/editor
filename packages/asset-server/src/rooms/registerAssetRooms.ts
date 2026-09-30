@@ -23,6 +23,7 @@ import {
 export interface AssetRoomsOptions {
   server: Server;
   events: EventStore.EventWriter;
+  reader?: EventStore.EventReader;
   kinds: AssetKindRegistry;
   catalog: CatalogProjection;
   states: AssetStateStore;
@@ -38,6 +39,7 @@ export function registerAssetRooms(
   const {
     server,
     events,
+    reader,
     kinds,
     catalog,
     states,
@@ -96,13 +98,15 @@ export function registerAssetRooms(
       assetId,
       kind,
       roomId: roomName,
-      state: entry.state
+      state: entry.state,
+      version: () => states.versionOf(assetId)
     };
     const extension = new AssetRoomExtension(
       binding,
       commands,
       commands.live(binding),
-      events
+      events,
+      { reader }
     );
     liveRooms.set(assetId, extension);
 

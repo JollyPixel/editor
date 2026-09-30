@@ -44,7 +44,7 @@ interface LiveHarness {
 function live(): LiveHarness {
   const handler = voxelMapAssetKind({ chunkSize: 16 });
   const state = handler.create("asset-1");
-  state.world.addLayer("Ground");
+  state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
   return {
     state,
@@ -91,12 +91,12 @@ function documentEvent(
 }
 
 function positionDelta(
-  layerName: string,
+  layerId: string,
   delta: { x: number; y: number; z: number; }
 ): VoxelMapNetworkCommand {
   return {
     action: "position-updated",
-    layerName,
+    layerId,
     metadata: { delta },
     clientId: "client-A",
     seq: 1,
@@ -150,7 +150,7 @@ describe("voxelMapAssetKind", () => {
   test("a lifecycle event loads the whole document", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = new VoxelMapState(16);
-    source.world.addLayer("Ground");
+    source.world.restoreLayer({ id: "Ground", name: "Ground" });
     source.world.setVoxel("Ground", {
       position: { x: 1, y: 2, z: 3 },
       blockId: 7
@@ -192,7 +192,7 @@ describe("voxelMapAssetKind", () => {
   test("a domain command mutates the folded world", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
+    state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
     foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, voxelSetCmd({
       x: 1,
@@ -210,7 +210,7 @@ describe("voxelMapAssetKind", () => {
   test("a delta position applies exactly once per event", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    const layer = state.world.addLayer("Ground");
+    const layer = state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
     foldAssetEvent(
       handler,
@@ -232,10 +232,10 @@ describe("voxelMapAssetKind", () => {
   test("a world-replace command reloads the whole world", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.world.addLayer("Stale");
+    state.world.restoreLayer({ id: "Stale", name: "Stale" });
 
     const replacement = new VoxelMapState(16);
-    replacement.world.addLayer("Fresh");
+    replacement.world.restoreLayer({ id: "Fresh", name: "Fresh" });
 
     foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
       action: "world-replace",
@@ -254,7 +254,7 @@ describe("voxelMapAssetKind", () => {
   test("a delete empties the world", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
+    state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
     foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "world.voxelmap.json",
@@ -268,7 +268,7 @@ describe("voxelMapAssetKind", () => {
   test("a malformed document throws before touching the world", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
+    state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
     assert.throws(() => {
       foldAssetEvent(handler, state, event(ASSET_CREATED, {
@@ -309,14 +309,14 @@ describe("voxelMapAssetKind", () => {
 
     assert.doesNotThrow(() => {
       foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, voxelSetCmd({
-        layerName: "Missing"
+        layerId: "Missing"
       })));
     });
   });
 
   test("a document saved with another chunk size loads", async() => {
     const source = new VoxelMapState(32);
-    source.world.addLayer("Ground");
+    source.world.restoreLayer({ id: "Ground", name: "Ground" });
     source.world.setVoxel("Ground", {
       position: { x: 20, y: 0, z: -3 },
       blockId: 4
@@ -336,7 +336,7 @@ describe("voxelMapAssetKind", () => {
   test("serialize round-trips through apply", async() => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const first = handler.create("asset-1");
-    first.world.addLayer("Ground");
+    first.world.restoreLayer({ id: "Ground", name: "Ground" });
     foldAssetEvent(handler, first, event(VOXEL_MAP_COMMAND, voxelSetCmd({
       x: 4,
       y: 1,
@@ -399,7 +399,7 @@ describe("voxelMapAssetKind", () => {
   test("ignores a command payload the protocol rejects", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
+    state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
     foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
       ...voxelSetCmd({ blockId: 9 }),
@@ -559,7 +559,7 @@ describe("voxelMapAssetKind — tilesets", () => {
   test("a block command is not part of the map stream", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
-    state.world.addLayer("Ground");
+    state.world.restoreLayer({ id: "Ground", name: "Ground" });
 
     foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
       ...kHeader,

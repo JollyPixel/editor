@@ -17,6 +17,7 @@ export type ModelTreeReader = Pick<
   | "blocks"
   | "childrenOf"
   | "subtreeOf"
+  | "imagesOf"
   | "enclosingBlockOf"
   | "transformParentOf"
   | "accepts"
@@ -98,6 +99,30 @@ export class ModelTree {
     }
 
     return subtree;
+  }
+
+  imagesOf(
+    command: VoxelModelCommand
+  ): ModelNodeJSON[] {
+    switch (command.action) {
+      case "node-added":
+        return [];
+      case "node-removed":
+        return this.subtreeOf(command.id);
+      case "node-moved": {
+        const ids = new Set([
+          command.id,
+          ...command.transforms.map(({ id }) => id)
+        ]);
+
+        return [...ids].flatMap((id) => this.get(id) ?? []);
+      }
+      default: {
+        const node = this.get(command.id);
+
+        return node === undefined ? [] : [node];
+      }
+    }
   }
 
   enclosingBlockOf(

@@ -175,7 +175,8 @@ describe("registerAssetRooms — admission", () => {
         kind: "message",
         payload: {
           type: "snapshot",
-          data: { value: 0 }
+          data: { value: 0 },
+          version: 1
         }
       }
     );

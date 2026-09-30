@@ -1,5 +1,7 @@
 export * from "./types.ts";
+export * from "./ModelReconciler.ts";
 export * from "./ModelSyncClient.ts";
+export * from "./VoxelModelCommandKeys.ts";
 export * from "./SyncedModelDocument.ts";
 export * from "../model/index.ts";
 export {

@@ -56,6 +56,14 @@ export class FakeRoom<
     this.patches.push(JSON.parse(JSON.stringify(patch)));
   }
 
+  resync(): void {
+    return void 0;
+  }
+
+  resumeWith(): void {
+    return void 0;
+  }
+
   leave(): void {
     this.peers.clear();
   }

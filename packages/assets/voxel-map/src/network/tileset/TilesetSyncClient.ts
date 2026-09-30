@@ -1,10 +1,18 @@
 // Import Third-party Dependencies
-import { CommandSync } from "@jolly-pixel/network/client";
+import {
+  CommandSync,
+  type CommandReconciler,
+  type ConflictResolver
+} from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   isPixelCommand,
   loadPixelSnapshot,
+  narrowPixelCommand,
   packPixelEvent,
+  replayPixelCommand,
+  ReplayBasis,
+  revertsInPlace,
   unpackPixelCommand,
   type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
@@ -20,11 +28,35 @@ import type {
   TilesetRoom,
   TilesetSnapshot
 } from "./types.ts";
+import { tilesetWriteKeys } from "./TilesetCommandKeys.ts";
 
 export interface TilesetSyncClientOptions {
   room: TilesetRoom;
   pixels: PixelSyncTarget;
   tileset: TilesetDocument;
+  resolver?: ConflictResolver;
+}
+
+export function createTilesetReconciler(
+  pixels: PixelSyncTarget,
+  tileset: TilesetDocument
+): CommandReconciler<TilesetNetworkCommand> {
+  return {
+    keys: tilesetWriteKeys,
+    narrow: (command, keep) => (
+      isPixelCommand(command) ? narrowPixelCommand(command, keep) : null
+    ),
+    revert: (pending) => pending.every((command) => (
+      isPixelCommand(command) ?
+        revertsInPlace(command) :
+        command.action !== "block-moved"
+    )),
+    replay: (command) => (
+      isPixelCommand(command) ?
+        replayPixelCommand(pixels, command) :
+        tileset.apply(command, { origin: "remote" })
+    )
+  };
 }
 
 export class TilesetSyncClient extends CommandSync<
@@ -34,12 +66,13 @@ export class TilesetSyncClient extends CommandSync<
 > {
   #pixels: PixelSyncTarget;
   #tileset: TilesetDocument;
+  #basis = new ReplayBasis();
 
   #sendPixelCommand = (
     event: PixelBufferHookEvent
   ): void => {
     const { originTimestamp, ...body } = packPixelEvent(event);
-    this.send(body, originTimestamp);
+    this.send(body, originTimestamp, this.#basis.of(originTimestamp));
   };
 
   #sendTilesetCommand: TilesetDocumentListener = (command, { origin }) => {
@@ -51,12 +84,19 @@ export class TilesetSyncClient extends CommandSync<
   constructor(
     options: TilesetSyncClientOptions
   ) {
-    super(options.room);
+    super(options.room, {
+      reconciler: createTilesetReconciler(options.pixels, options.tileset),
+      resolver: options.resolver
+    });
     const { pixels, tileset } = options;
 
     this.#pixels = pixels;
     this.#tileset = tileset;
     pixels.on("buffer-updated", this.#sendPixelCommand);
+    this.on(
+      "acknowledged",
+      (command, version) => this.#basis.learn(command.timestamp, version)
+    );
     tileset.on("command", this.#sendTilesetCommand);
     this.on("snapshot", (snapshot) => this.#loadSnapshot(snapshot));
     this.on("command", (command) => this.#applyRemote(command));

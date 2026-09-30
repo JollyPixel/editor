@@ -160,3 +160,43 @@ describe("ConflictTracker resolver context", () => {
     ]);
   });
 });
+
+describe("ConflictTracker versions", () => {
+  test("commit records the version the command landed at", () => {
+    const seen: unknown[] = [];
+    const conflicts = new ConflictTracker({
+      resolve(ctx) {
+        seen.push(ctx.existing);
+
+        return "accept";
+      }
+    });
+
+    conflicts.admit(header(), ["k"])?.commit(12);
+    conflicts.admitEach(header({ clientId: "B" }), ["j"]).commit(13);
+    conflicts.admit(header({ clientId: "C" }), ["k", "j"]);
+
+    assert.deepStrictEqual(seen.slice(-2), [
+      { clientId: "A", seq: 1, timestamp: 1000, version: 12 },
+      { clientId: "B", seq: 1, timestamp: 1000, version: 13 }
+    ]);
+  });
+
+  test("a replay older than a versioned reset is rejected", () => {
+    const conflicts = tracker();
+
+    conflicts.reset(header({ clientId: "R" }), 20);
+
+    assert.notStrictEqual(conflicts.admit(header({ clientId: "B", timestamp: 1 }), ["k"]), null);
+    assert.strictEqual(conflicts.admit(header({ clientId: "B", basis: 3 }), ["k"]), null);
+  });
+
+  test("record restores a key without an admission", () => {
+    const conflicts = tracker();
+
+    conflicts.record(header({ clientId: "A" }), ["k"], 8);
+
+    assert.strictEqual(conflicts.admit(header({ clientId: "B", basis: 2 }), ["k"]), null);
+    assert.notStrictEqual(conflicts.admit(header({ clientId: "B", basis: 8 }), ["k"]), null);
+  });
+});

@@ -90,6 +90,14 @@ async function dispatch(
         createContext(message.identity)
       );
     })
+    .with({ method: "onResync" }, (message) => {
+      const [clientId] = message.args;
+
+      return extension.onResync?.(
+        clientId,
+        createContext(message.identity)
+      );
+    })
     .with({ method: "onMessage" }, (message) => {
       const [clientId, payload] = message.args;
 

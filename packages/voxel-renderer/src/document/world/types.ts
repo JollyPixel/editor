@@ -13,7 +13,7 @@ export interface VoxelEntry {
 }
 
 export interface VoxelCellChange {
-  layerName: string;
+  layerId: string;
   position: VoxelCoord;
   /**
    * `VOXEL_ABSENT` when the cell was empty.
@@ -30,4 +30,8 @@ export interface VoxelEditRecorder {
    * Receives the cells changed by one non-silent voxel mutation.
    */
   record(changes: VoxelCellChange[]): void;
+}
+
+export interface VoxelRecorderOptions {
+  includeUnrecorded?: boolean;
 }

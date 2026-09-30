@@ -11,8 +11,10 @@ import type {
 export interface MockRoom extends network.Room<VoxelMapNetworkCommand, VoxelMapServerMessage> {
   sentCommands: VoxelMapNetworkCommand[];
   left: boolean;
+  resyncs: number;
   simulateCommand(cmd: VoxelMapNetworkCommand): void;
   simulateSnapshot(snapshot: VoxelWorldJSON): void;
+  deliver(message: VoxelMapServerMessage): void;
 }
 
 export function createMockRoom(clientId = "client-A"): MockRoom {
@@ -39,6 +41,7 @@ export function createMockRoom(clientId = "client-A"): MockRoom {
     can: () => "write" as const,
     sentCommands,
     left: false,
+    resyncs: 0,
     on: (type, listener) => {
       let set = listeners.get(type);
       if (!set) {
@@ -62,11 +65,20 @@ export function createMockRoom(clientId = "client-A"): MockRoom {
     leave() {
       room.left = true;
     },
+    resync() {
+      room.resyncs++;
+    },
+    resumeWith() {
+      return void 0;
+    },
     simulateCommand(cmd) {
       emit("message", { type: "command", data: cmd });
     },
     simulateSnapshot(snapshot) {
       emit("message", { type: "snapshot", data: snapshot });
+    },
+    deliver(message) {
+      emit("message", message);
     }
   };
 

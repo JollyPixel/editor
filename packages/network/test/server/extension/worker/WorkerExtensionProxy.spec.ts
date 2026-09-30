@@ -79,6 +79,24 @@ describe("WorkerExtensionProxy — readiness", () => {
     transports[0].simulateMessage({ type: "dispatch-result", id: sent.id, ok: true });
     await pending;
   });
+
+  test("forwards a resync to the worker", async() => {
+    const { factory, transports } = createFakeTransportFactory();
+    const proxy = new WorkerExtensionProxy(
+      createDescriptor(),
+      { logger: createLogger(), transportFactory: factory }
+    );
+    transports[0].simulateMessage(readyMessage());
+
+    const pending = proxy.onResync("A", createContext());
+    await flushMacrotask();
+
+    const sent = transports[0].dispatched();
+    assert.equal(sent.method, "onResync");
+    assert.deepEqual(sent.args, ["A"]);
+    transports[0].simulateMessage({ type: "dispatch-result", id: sent.id, ok: true });
+    await pending;
+  });
 });
 
 describe("WorkerExtensionProxy — hooks the worker does not implement", () => {

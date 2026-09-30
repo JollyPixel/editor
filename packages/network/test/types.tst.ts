@@ -14,6 +14,8 @@ import type {
 } from "#src/transport/ClientSocket.ts";
 import type {
   CommandBody,
+  CommandReconciler,
+  CommandSync,
   NetworkCommandHeader,
   NetworkServerNoticeOf
 } from "#src/client/index.ts";
@@ -98,6 +100,20 @@ describe("CommandBody", () => {
   });
 });
 
+describe("CommandReconciler", () => {
+  test("takes and returns the synced command union", () => {
+    type Reconciler = CommandReconciler<Command>;
+
+    expect<Parameters<Reconciler["keys"]>[0]>().type.toBe<Command>();
+    expect<ReturnType<Reconciler["narrow"]>>().type.toBe<Command | null>();
+    expect<Parameters<Reconciler["revert"]>[0]>().type.toBe<readonly Command[]>();
+  });
+
+  test("send returns the stamped pending command", () => {
+    expect<ReturnType<CommandSync<Command, unknown>["send"]>>().type.toBe<Command>();
+  });
+});
+
 describe("ChannelTransportMessage", () => {
   test("relays every client socket event type", () => {
     expect<Extract<ChannelTransportMessage, { type: "event"; }>["event"]>()
@@ -154,7 +170,7 @@ describe("MessageProtocol", () => {
 describe("Envelope schemas", () => {
   test("infers every envelope kind", () => {
     expect<ClientEnvelope["kind"]>()
-      .type.toBe<"join" | "leave" | "message" | "presence">();
+      .type.toBe<"join" | "leave" | "message" | "presence" | "resync">();
     expect<ServerEnvelope["kind"]>().type.toBe<
       | "message"
       | "sync"

@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { CommandSync } from "@jolly-pixel/network/client";
+import {
+  CommandSync,
+  type ConflictResolver
+} from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   isVoxelWorldCommand,
@@ -13,10 +16,12 @@ import type {
   VoxelMapNetworkCommand,
   VoxelMapRoom
 } from "./types.ts";
+import { VoxelReconciler } from "./VoxelReconciler.ts";
 
 export interface VoxelSyncClientOptions {
   room: VoxelMapRoom;
   document: VoxelDocument;
+  resolver?: ConflictResolver;
 }
 
 export class VoxelSyncClient extends CommandSync<
@@ -25,21 +30,31 @@ export class VoxelSyncClient extends CommandSync<
   AssetRoomNotice
 > {
   #document: VoxelDocument;
-
-  #sendLocalCommand: VoxelCommandListener = (command, { origin }) => {
-    if (origin === "local" && isVoxelWorldCommand(command)) {
-      this.send(command);
-    }
-  };
+  #reconciler: VoxelReconciler;
+  #onCommand: VoxelCommandListener;
+  #onLoaded: () => void;
 
   constructor(
     options: VoxelSyncClientOptions
   ) {
-    super(options.room);
+    const reconciler = new VoxelReconciler(options.document);
+    super(options.room, {
+      reconciler,
+      resolver: options.resolver
+    });
     const { document } = options;
 
     this.#document = document;
-    document.on("command", this.#sendLocalCommand);
+    this.#reconciler = reconciler;
+    this.#onCommand = (command, { origin }) => {
+      if (origin === "local" && isVoxelWorldCommand(command)) {
+        reconciler.capture(this.send(command));
+      }
+      reconciler.observe();
+    };
+    this.#onLoaded = () => reconciler.observe();
+    document.on("command", this.#onCommand);
+    document.on("loaded", this.#onLoaded);
     this.on("snapshot", (snapshot) => document.load(snapshot));
     this.on("command", (command) => this.#applyRemote(command));
   }
@@ -47,14 +62,16 @@ export class VoxelSyncClient extends CommandSync<
   replaceWorld(
     data: VoxelWorldJSON
   ): void {
-    this.send({
+    this.#reconciler.capture(this.send({
       action: "world-replace",
       data
-    });
+    }));
   }
 
   override destroy(): void {
-    this.#document.off("command", this.#sendLocalCommand);
+    this.#document.off("command", this.#onCommand);
+    this.#document.off("loaded", this.#onLoaded);
+    this.#reconciler.dispose();
     super.destroy();
   }
 
