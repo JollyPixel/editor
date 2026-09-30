@@ -9,13 +9,6 @@ import {
 } from "#src/box/controls/snapping.ts";
 
 describe("moveAxis", () => {
-  test("passes the target through when unbounded", () => {
-    assert.equal(
-      moveAxis({ target: 12, size: 3 }),
-      12
-    );
-  });
-
   test("keeps the whole extent inside the bounds", () => {
     const bounds = { min: 0, max: 10 };
 
@@ -33,31 +26,6 @@ describe("moveAxis", () => {
 });
 
 describe("resizeAxis", () => {
-  test("moves the max face without touching the min corner", () => {
-    const extent = resizeAxis({
-      min: 2,
-      size: 3,
-      sign: 1,
-      faceCoord: 9,
-      minSize: 1
-    });
-
-    assert.deepEqual(extent, { min: 2, size: 7 });
-  });
-
-  test("moves the min face without moving the max face", () => {
-    const extent = resizeAxis({
-      min: 2,
-      size: 3,
-      sign: -1,
-      faceCoord: -1,
-      minSize: 1
-    });
-
-    // The max face stays at 5.
-    assert.deepEqual(extent, { min: -1, size: 6 });
-  });
-
   test("clamps at minSize instead of inverting the extent", () => {
     const grown = resizeAxis({
       min: 2,

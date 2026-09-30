@@ -157,10 +157,6 @@ describe("MeshHighlight", () => {
     const previous = presentations[0];
     assert.strictEqual(presentations.length, 1);
 
-    /*
-     * The second renderer is created by the existing factory. Mark it as
-     * failing immediately after construction through an appearance event.
-     */
     system.state.addEventListener("techniqueChange", () => {
       presentations.at(-1)!.failSync = true;
     }, { once: true });
@@ -170,6 +166,32 @@ describe("MeshHighlight", () => {
     }, /sync failed/);
     assert.strictEqual(system.mode, "outline");
     assert.strictEqual(system.state.technique, "outline");
+    assert.strictEqual(previous.disposeCount, 0);
+    assert.strictEqual(presentations[1].disposeCount, 1);
+
+    system.render();
+    assert.strictEqual(previous.renderCount, 1);
+  });
+
+  test("a failed configure synchronization keeps the old appearance and renderer", () => {
+    const { system, presentations } = createHarness();
+    system.register("mesh", new THREE.Mesh());
+    system.select("mesh");
+
+    const previous = presentations[0];
+    const appearance = system.appearance;
+    system.state.addEventListener("appearanceChange", () => {
+      presentations.at(-1)!.failSync = true;
+    }, { once: true });
+
+    assert.throws(() => {
+      system.configure({
+        selected: {
+          color: "#ff0000"
+        }
+      });
+    }, /sync failed/);
+    assert.strictEqual(system.appearance, appearance);
     assert.strictEqual(previous.disposeCount, 0);
     assert.strictEqual(presentations[1].disposeCount, 1);
 

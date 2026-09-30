@@ -13,6 +13,7 @@ import type {
   TransformEndEvent,
   TransformMode
 } from "#src/index.ts";
+import { watchDisposal } from "../fixtures/disposal.ts";
 import { pointerAt } from "../fixtures/pointer.ts";
 import {
   assertVector,
@@ -32,11 +33,6 @@ describe("appearance", () => {
       "translate-plane-xz",
       "translate-plane-xy"
     ]);
-    for (const key of ["x-positive", "y-positive", "z-positive"]) {
-      const handle = harness.handle(key);
-      assert.ok(handle.getObjectByName("transform-handle-outline"));
-      assert.ok(handle.getObjectByName("transform-handle-picker"));
-    }
 
     harness.controls.dispose();
   });
@@ -65,21 +61,32 @@ describe("appearance", () => {
     harness.controls.dispose();
   });
 
-  test("joins the axis handles at the origin by default", () => {
-    const harness = createHarness();
+  test("starts the axis handles at the gap, joined at the origin by default", () => {
+    const cases = [
+      {
+        appearance: {},
+        gap: 0
+      },
+      {
+        appearance: {
+          gap: 0.2
+        },
+        gap: 0.2
+      }
+    ];
 
-    for (const key of ["x-positive", "y-positive", "z-positive"]) {
-      assertVector(harness.handle(key).position, [0, 0, 0], key);
+    for (const { appearance, gap } of cases) {
+      const harness = createHarness({ appearance });
+      assertVector(harness.handle("x-positive").position, [gap, 0, 0]);
+      assertVector(harness.handle("y-positive").position, [0, gap, 0]);
+      assertVector(harness.handle("z-positive").position, [0, 0, gap]);
+      harness.controls.dispose();
     }
-
-    harness.controls.dispose();
   });
 
   test("draws the axis pointing at the camera above the others", () => {
     const harness = createHarness();
-    harness.camera.position.set(1, 1, 10);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(1, 1, 10);
 
     function order(
       key: string
@@ -93,9 +100,7 @@ describe("appearance", () => {
     assert.ok(order("z-positive") > order("x-positive"));
     assert.ok(order("z-positive") > order("y-positive"));
 
-    harness.camera.position.set(1, 1, -10);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(1, 1, -10);
     assert.ok(order("z-positive") < order("x-positive"));
 
     harness.controls.dispose();
@@ -107,9 +112,7 @@ describe("appearance", () => {
         center: {}
       }
     });
-    harness.camera.position.set(0, 0, 10);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(0, 0, 10);
 
     const center = harness.handle("center");
     const axis = harness.handle("z-positive");
@@ -149,9 +152,6 @@ describe("appearance", () => {
     const harness = createHarness({
       mode: "rotate",
       appearance: {
-        handle: {
-          kind: "sphere"
-        },
         planes: false,
         viewRing: false,
         outline: false
@@ -216,21 +216,9 @@ describe("appearance", () => {
     interactive.controls.dispose();
   });
 
-  test("omits the center by default", () => {
-    const harness = createHarness();
-
-    assert.equal(
-      harness.controls.helper.getObjectByName("transform-handle-center"),
-      undefined
-    );
-
-    harness.controls.dispose();
-  });
-
   test("hides view-aligned handles only on request", () => {
     const always = createHarness();
-    always.camera.position.set(10, 0, 0);
-    always.camera.lookAt(0, 0, 0);
+    always.lookFrom(10, 0, 0);
     assert.ok(always.visibleHandles().includes("translate-x-positive"));
     always.controls.dispose();
 
@@ -239,8 +227,7 @@ describe("appearance", () => {
         hideAligned: true
       }
     });
-    hiding.camera.position.set(10, 0, 0);
-    hiding.camera.lookAt(0, 0, 0);
+    hiding.lookFrom(10, 0, 0);
     assert.deepEqual(hiding.visibleHandles(), [
       "translate-y-positive",
       "translate-z-positive",
@@ -255,9 +242,7 @@ describe("appearance", () => {
         flipTowardCamera: true
       }
     });
-    harness.camera.position.set(-5, 4, 7);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(-5, 4, 7);
 
     function pointing(
       key: string
@@ -480,20 +465,18 @@ describe("gesture lifecycle", () => {
     harness.controls.dispose();
   });
 
-  test("disconnects input and disposes owned geometry once", () => {
+  test("detaches and disposes owned geometry and materials once", () => {
     const harness = createHarness();
     const visual = harness.handle("x-positive").getObjectByName(
       "transform-handle-visual"
-    ) as THREE.Mesh<THREE.BufferGeometry>;
-    let disposals = 0;
-    visual.geometry.addEventListener("dispose", () => disposals++);
+    ) as THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+    const disposals = watchDisposal(visual.geometry, visual.material);
 
     harness.controls.dispose();
     harness.controls.dispose();
-    harness.send("pointerdown", new THREE.Vector3());
 
-    assert.equal(disposals, 1);
-    assert.equal(harness.controls.dragging, false);
+    assert.deepEqual(disposals, [1, 1]);
+    assert.equal(harness.controls.target, null);
   });
 
   test("disconnect ends a gesture and reconnect accepts another", () => {

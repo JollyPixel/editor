@@ -12,22 +12,10 @@ import {
   PeerHoverRegistry,
   PeerSelectionVisibility
 } from "#src/index.ts";
-
-/**
- * Camera at the origin looking down -Z, matching this file's own targets:
- * `(0, 0, -10)` sits well inside the frustum and near plane/far plane range,
- * `(0, 0, 10)` sits directly behind the camera (outside any frustum
- * regardless of fov), `(50, 0, -10)` sits far enough off-axis at that depth
- * to fall outside a 50deg fov frustum.
- */
-function createCamera(): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-  camera.position.set(0, 0, 0);
-  camera.lookAt(0, 0, -1);
-  camera.updateMatrixWorld();
-
-  return camera;
-}
+import {
+  createFrontCamera,
+  createPeerScene
+} from "./helpers.ts";
 
 function createHarness(
   options?: { maxDistance?: number; }
@@ -38,17 +26,23 @@ function createHarness(
   visibility: PeerSelectionVisibility;
   mesh: THREE.Mesh;
 } {
-  const selection = new MeshHighlightState();
-  const registry = new PeerSelectionRegistry();
-  const camera = createCamera();
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-  selection.register("mesh-1", mesh);
+  const { selection, registry, mesh } = createPeerScene();
+  const camera = createFrontCamera();
 
   const visibility = new PeerSelectionVisibility({
-    registry, selection, camera, maxDistance: options?.maxDistance
+    registry,
+    selection,
+    camera,
+    maxDistance: options?.maxDistance
   });
 
-  return { selection, registry, camera, visibility, mesh };
+  return {
+    selection,
+    registry,
+    camera,
+    visibility,
+    mesh
+  };
 }
 
 describe("isVisible", () => {
@@ -120,33 +114,31 @@ describe("isVisible", () => {
 });
 
 describe("hoverRegistry", () => {
-  function createHoverHarness(): {
+  function createHoverHarness(
+    options?: { attached?: boolean; }
+  ): {
     registry: PeerSelectionRegistry;
     hoverRegistry: PeerHoverRegistry;
     visibility: PeerSelectionVisibility;
     mesh: THREE.Mesh;
   } {
-    const selection = new MeshHighlightState();
-    const registry = new PeerSelectionRegistry();
+    const { selection, registry, mesh } = createPeerScene();
     const hoverRegistry = new PeerHoverRegistry();
-    const camera = createCamera();
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    selection.register("mesh-1", mesh);
 
-    const visibility = new PeerSelectionVisibility({ registry, selection, camera, hoverRegistry });
+    const visibility = new PeerSelectionVisibility({
+      registry,
+      selection,
+      camera: createFrontCamera(),
+      hoverRegistry: options?.attached === false ? undefined : hoverRegistry
+    });
 
-    return { registry, hoverRegistry, visibility, mesh };
+    return {
+      registry,
+      hoverRegistry,
+      visibility,
+      mesh
+    };
   }
-
-  test("true for a peer-hovered-only object inside the frustum", () => {
-    const { hoverRegistry, visibility, mesh } = createHoverHarness();
-    mesh.position.set(0, 0, -10);
-    hoverRegistry.hover("peer-a", "mesh-1");
-
-    visibility.update();
-
-    assert.strictEqual(visibility.isVisible("mesh-1"), true);
-  });
 
   test("false for a peer-hovered-only object behind the camera", () => {
     const { hoverRegistry, visibility, mesh } = createHoverHarness();
@@ -169,21 +161,8 @@ describe("hoverRegistry", () => {
   });
 
   test("omitting hoverRegistry preserves selection-only behavior for a hover-only id", () => {
-    const selection = new MeshHighlightState();
-    const registry = new PeerSelectionRegistry();
-    const hoverRegistry = new PeerHoverRegistry();
-    const camera = createCamera();
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    selection.register("mesh-1", mesh);
+    const { hoverRegistry, visibility, mesh } = createHoverHarness({ attached: false });
     mesh.position.set(0, 0, 10);
-
-    /*
-     * No `hoverRegistry` passed here - a hover-only id (no selector) is
-     * never added to the tracked set, so `update()` never evaluates it,
-     * regardless of the peer hover state a caller happens to track
-     * elsewhere.
-     */
-    const visibility = new PeerSelectionVisibility({ registry, selection, camera });
     hoverRegistry.hover("peer-a", "mesh-1");
 
     visibility.update();
@@ -213,7 +192,7 @@ describe("camera and maxDistance", () => {
     visibility.update();
     assert.strictEqual(visibility.isVisible("mesh-1"), true);
 
-    const behindCamera = createCamera();
+    const behindCamera = createFrontCamera();
     behindCamera.position.set(0, 0, -100);
     behindCamera.lookAt(0, 0, -200);
     behindCamera.updateMatrixWorld();

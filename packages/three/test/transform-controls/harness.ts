@@ -36,6 +36,11 @@ export interface ControlsHarness {
   pointOnRing(key: string): THREE.Vector3;
   gizmoScale(): number;
   visibleHandles(): string[];
+  lookFrom(
+    x: number,
+    y: number,
+    z: number
+  ): void;
   send(
     type: "pointerdown" | "pointermove" | "pointerup",
     point: THREE.Vector3,
@@ -119,6 +124,16 @@ export function createHarness(
         )
         .map((child) => child.name.replace("transform-handle-", ""));
     },
+    lookFrom(
+      x,
+      y,
+      z
+    ): void {
+      camera.position.set(x, y, z);
+      camera.lookAt(0, 0, 0);
+      camera.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);
+    },
     send(
       type,
       point,
@@ -159,6 +174,17 @@ export function rotatedAround(
     .add(center);
 }
 
+export function assertClose(
+  actual: number,
+  expected: number,
+  message = "value"
+): void {
+  assert.ok(
+    Math.abs(actual - expected) < 1e-6,
+    `${message}: expected ${expected}, received ${actual}`
+  );
+}
+
 export function assertVector(
   actual: THREE.Vector3,
   expected: [number, number, number],
@@ -170,6 +196,18 @@ export function assertVector(
       `${message}: expected [${expected}], received [${actual.toArray()}]`
     );
   });
+}
+
+export function assertQuaternion(
+  actual: THREE.Quaternion,
+  expected: THREE.Quaternion,
+  message = "quaternion"
+): void {
+  const received = `${message}: expected [${expected.toArray()}], ` +
+    `received [${actual.toArray()}]`;
+
+  assert.ok(Math.abs(actual.length() - 1) < 1e-6, received);
+  assert.ok(Math.abs(actual.dot(expected)) > 1 - 1e-9, received);
 }
 
 export function pressEscape(): void {

@@ -13,6 +13,8 @@ import type { TransformEndEvent } from "#src/index.ts";
 import {
   QUARTER_TURN,
   UP,
+  assertClose,
+  assertQuaternion,
   assertVector,
   createHarness,
   rotatedAround
@@ -200,7 +202,7 @@ describe("translating", () => {
     const cameraPosition = harness.camera.position;
     const toTarget = harness.target.position.clone().sub(cameraPosition);
     const toAim = aim.clone().sub(cameraPosition);
-    assert.ok(toTarget.normalize().distanceTo(toAim.normalize()) < 1e-6);
+    assertVector(toTarget.normalize(), toAim.normalize().toArray());
     assert.ok(harness.target.position.length() > 1);
 
     harness.send("pointerup", aim);
@@ -267,11 +269,10 @@ describe("rotating", () => {
       rotatedAround(start, new THREE.Vector3(), QUARTER_TURN)
     );
 
-    const expected = new THREE.Quaternion().setFromAxisAngle(
-      UP,
-      QUARTER_TURN
+    assertQuaternion(
+      harness.target.quaternion,
+      new THREE.Quaternion().setFromAxisAngle(UP, QUARTER_TURN)
     );
-    assert.ok(Math.abs(harness.target.quaternion.dot(expected)) > 1 - 1e-9);
     assertVector(harness.target.position, [0, 0, 0]);
 
     harness.send("pointerup", start);
@@ -290,12 +291,10 @@ describe("rotating", () => {
     const end = rotatedAround(start, new THREE.Vector3(), fiftyDegrees);
 
     harness.drag(start, end);
-    assert.ok(
-      Math.abs(harness.target.rotation.y - (Math.PI / 4)) < 1e-6
-    );
+    assertClose(harness.target.rotation.y, Math.PI / 4);
 
     harness.send("pointermove", end, { altKey: true });
-    assert.ok(Math.abs(harness.target.rotation.y - fiftyDegrees) < 1e-6);
+    assertClose(harness.target.rotation.y, fiftyDegrees);
 
     harness.send("pointerup", start);
     harness.controls.dispose();
@@ -313,11 +312,10 @@ describe("rotating", () => {
 
     harness.drag(start, rotatedAround(start, new THREE.Vector3(), 0.5));
 
-    const expected = new THREE.Quaternion()
-      .setFromAxisAngle(UP, 0.5)
-      .multiply(before);
-    const after = harness.target.getWorldQuaternion(new THREE.Quaternion());
-    assert.ok(Math.abs(after.dot(expected)) > 1 - 1e-9);
+    assertQuaternion(
+      harness.target.getWorldQuaternion(new THREE.Quaternion()),
+      new THREE.Quaternion().setFromAxisAngle(UP, 0.5).multiply(before)
+    );
 
     harness.send("pointerup", start);
     harness.controls.dispose();
@@ -356,8 +354,10 @@ describe("rotating", () => {
 
     harness.drag(start, end);
 
-    const expected = new THREE.Quaternion().setFromAxisAngle(eye, 0.75);
-    assert.ok(Math.abs(harness.target.quaternion.dot(expected)) > 1 - 1e-9);
+    assertQuaternion(
+      harness.target.quaternion,
+      new THREE.Quaternion().setFromAxisAngle(eye, 0.75)
+    );
 
     harness.send("pointerup", start);
     harness.controls.dispose();
@@ -380,18 +380,20 @@ describe("scaling", () => {
     harness.controls.dispose();
   });
 
-  test("snaps the resulting scale", () => {
+  test("snaps the resulting scale value, not the factor", () => {
     const harness = createHarness({
       mode: "scale",
       snap: {
         scale: 0.5
       }
     });
+    harness.target.scale.y = 2;
+    harness.scene.updateMatrixWorld(true);
     const start = harness.pointOnHandle("y-positive");
 
     harness.drag(start, start.clone().multiplyScalar(1.3));
 
-    assertVector(harness.target.scale, [1, 1.5, 1]);
+    assertVector(harness.target.scale, [1, 2.5, 1]);
 
     harness.send("pointerup", start);
     harness.controls.dispose();

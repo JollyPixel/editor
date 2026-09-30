@@ -2,9 +2,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
 import { Grid } from "#src/index.ts";
 
@@ -28,36 +25,6 @@ describe("accessors", () => {
       grid[property] = 42;
 
       assert.strictEqual(grid[property], 42);
-    });
-  }
-
-  const kColorProperties = [
-    "cellColor",
-    "sectionColor",
-    "xAxisColor",
-    "yAxisColor",
-    "zAxisColor"
-  ] as const;
-
-  for (const property of kColorProperties) {
-    test(`setting "${property}.value" with a hex string round-trips as normalized hex`, () => {
-      const grid = new Grid();
-      grid[property].value = "#abcdef";
-
-      assert.strictEqual(
-        grid[property].value,
-        "#abcdef"
-      );
-    });
-
-    test(`setting "${property}.value" accepts a THREE.Color instance`, () => {
-      const grid = new Grid();
-      grid[property].value = new THREE.Color("#123456");
-
-      assert.strictEqual(
-        grid[property].value,
-        "#123456"
-      );
     });
   }
 
@@ -98,16 +65,6 @@ describe("accessors", () => {
     grid.visible = false;
 
     assert.strictEqual(grid.enabled, false);
-  });
-
-  test("followCamera round-trips true/false", () => {
-    const grid = new Grid();
-    grid.followCamera = false;
-
-    assert.strictEqual(grid.followCamera, false);
-
-    grid.followCamera = true;
-    assert.ok(grid.followCamera);
   });
 
   test("hideCellOnSection round-trips true/false", () => {

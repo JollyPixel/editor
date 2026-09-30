@@ -6,42 +6,40 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { faceCenter } from "#src/box/faceCenter.ts";
+import {
+  type BoxFace,
+  faceCenter
+} from "#src/box/faceCenter.ts";
 
 // CONSTANTS
 const kMin = { x: 2, y: 0, z: -4 };
 const kSize = { x: 8, y: 2, z: 6 };
 
 describe("faceCenter", () => {
-  test("sits on the max face for a positive sign", () => {
-    const center = faceCenter(
-      kMin,
-      kSize,
-      { axis: "x", sign: 1 },
-      new THREE.Vector3()
-    );
+  const cases: { face: BoxFace; expected: THREE.Vector3Tuple; }[] = [
+    {
+      face: { axis: "x", sign: 1 },
+      expected: [10, 1, -1]
+    },
+    {
+      face: { axis: "y", sign: 1 },
+      expected: [6, 2, -1]
+    },
+    {
+      face: { axis: "z", sign: -1 },
+      expected: [6, 1, -4]
+    }
+  ];
 
-    assert.deepEqual(center.toArray(), [10, 1, -1]);
-  });
+  for (const { face, expected } of cases) {
+    const side = face.sign === 1 ? "max" : "min";
 
-  test("sits on the min face for a negative sign", () => {
-    const center = faceCenter(
-      kMin,
-      kSize,
-      { axis: "z", sign: -1 },
-      new THREE.Vector3()
-    );
+    test(`centers the ${side} ${face.axis} face`, () => {
+      const target = new THREE.Vector3();
 
-    assert.deepEqual(center.toArray(), [6, 1, -4]);
-  });
+      faceCenter(kMin, kSize, face, target);
 
-  test("writes into and returns the target", () => {
-    const target = new THREE.Vector3();
-
-    assert.equal(
-      faceCenter(kMin, kSize, { axis: "y", sign: 1 }, target),
-      target
-    );
-    assert.deepEqual(target.toArray(), [6, 2, -1]);
-  });
+      assert.deepEqual(target.toArray(), expected);
+    });
+  }
 });

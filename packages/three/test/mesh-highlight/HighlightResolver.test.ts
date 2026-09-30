@@ -58,22 +58,24 @@ function createHarness(): {
 }
 
 describe("HighlightResolver", () => {
-  test("applies the same priority policy to every renderer", () => {
+  test("resolves overlapping local and peer intent to one local selection", () => {
     const { state, selections, hovers, resolver } = createHarness();
     hovers.hover("peer-a", "box");
     state.hover("box");
     selections.select("peer-b", "box");
     state.select("box");
 
-    const [indicator] = resolver.resolve();
+    const indicators = resolver.resolve();
+    const [indicator] = indicators;
 
+    assert.strictEqual(indicators.length, 1);
     assert.strictEqual(indicator.objectId, "box");
     assert.strictEqual(indicator.role, "selection");
     assert.strictEqual(indicator.source, "local");
     assert.strictEqual(indicator.color, "#ffffff");
   });
 
-  test("resolves one primary peer per object", () => {
+  test("colors a shared object after its primary peer", () => {
     const { selections, resolver } = createHarness();
     selections.select("peer-a", "box");
     selections.select("peer-b", "box");
@@ -116,6 +118,27 @@ describe("HighlightResolver", () => {
       [
         { objectId: "box", role: "hover", source: "local" },
         { objectId: "sphere", role: "selection", source: "peer" }
+      ]
+    );
+  });
+
+  test("draws a peer's hover at the hover opacity when nothing else claims the object", () => {
+    const { hovers, resolver } = createHarness();
+    hovers.hover("peer-b", "sphere");
+
+    assert.deepStrictEqual(
+      resolver.resolve().map(({ objectId, role, source, peerId, color, opacity }) => {
+        return { objectId, role, source, peerId, color, opacity };
+      }),
+      [
+        {
+          objectId: "sphere",
+          role: "hover",
+          source: "peer",
+          peerId: "peer-b",
+          color: "#0000ff",
+          opacity: 0.4
+        }
       ]
     );
   });

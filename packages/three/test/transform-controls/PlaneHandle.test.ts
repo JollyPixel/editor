@@ -11,6 +11,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   type ControlsHarness,
+  assertClose,
   createHarness
 } from "./harness.ts";
 
@@ -49,17 +50,6 @@ function bounds(
   assert.ok(mesh.geometry.boundingBox);
 
   return mesh.geometry.boundingBox;
-}
-
-function assertClose(
-  actual: number,
-  expected: number,
-  message: string
-): void {
-  assert.ok(
-    Math.abs(actual - expected) < 1e-6,
-    `${message}: expected ${expected}, received ${actual}`
-  );
 }
 
 describe("plane handles", () => {
@@ -254,9 +244,7 @@ describe("plane handles", () => {
 
   test("picks from behind", () => {
     const harness = createHarness();
-    harness.camera.position.set(5, 4, -7);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(5, 4, -7);
 
     harness.send("pointermove", harness.pointOnHandle("plane-xy"));
     assert.deepEqual(harness.controls.hoveredHandle, {
@@ -269,9 +257,7 @@ describe("plane handles", () => {
 
   test("stays visible but refuses a pick when seen edge-on", () => {
     const harness = createHarness();
-    harness.camera.position.set(10, 0.5, 0);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(10, 0.5, 1);
 
     assert.ok(harness.visibleHandles().includes("translate-plane-xy"));
     harness.send("pointermove", harness.pointOnHandle("plane-xy"));
@@ -297,9 +283,7 @@ describe("plane handles", () => {
         }
       }
     });
-    harness.camera.position.set(0, 0, 10);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(0, 0, 10);
 
     const nearCorner = harness
       .handle("plane-xy")
@@ -318,9 +302,7 @@ describe("plane handles", () => {
 
   test("draws below the axis handles, nearest plane last", () => {
     const harness = createHarness();
-    harness.camera.position.set(1, 8, 2);
-    harness.camera.lookAt(0, 0, 0);
-    harness.scene.updateMatrixWorld(true);
+    harness.lookFrom(1, 8, 2);
 
     function order(
       key: string,

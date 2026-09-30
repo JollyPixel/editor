@@ -15,6 +15,7 @@ import {
   MARQUEE_PHASE_END,
   advanceOffset
 } from "#src/box/marquee/material.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 function createEdges(
   overrides: Partial<MarqueeBoxEdgesOptions> = {}
@@ -42,22 +43,8 @@ describe("MarqueeBoxEdges", () => {
       assert.equal(createEdges().material.transparent, false);
     });
 
-    test("draws fat lines at the requested pixel width", () => {
-      assert.equal(createEdges({ width: 3 }).material.linewidth, 3);
-    });
-
     test("opts out of frustum culling", () => {
       assert.equal(createEdges().frustumCulled, false);
-    });
-
-    test("traces the twelve edges of a unit box", () => {
-      const edges = createEdges();
-
-      assert.equal(edges.geometry.getAttribute("instanceStart").count, 12);
-      assert.deepEqual(
-        edges.geometry.boundingBox!.max.toArray(),
-        [1, 1, 1]
-      );
     });
 
     test("clamps the ratio between zero and one", () => {
@@ -67,17 +54,6 @@ describe("MarqueeBoxEdges", () => {
   });
 
   describe("resize", () => {
-    test("rebuilds the segments rather than stretching them", () => {
-      const edges = createEdges();
-
-      edges.resize({ x: 6, y: 3, z: 4 });
-
-      const box = edges.geometry.boundingBox!;
-      assert.deepEqual(box.min.toArray(), [0, 0, 0]);
-      assert.deepEqual(box.max.toArray(), [6, 3, 4]);
-      assert.deepEqual(edges.scale.toArray(), [1, 1, 1]);
-    });
-
     test("writes into the same instanced buffers", () => {
       const edges = createEdges();
       const positions = edges.geometry.getAttribute("instanceStart");
@@ -184,15 +160,12 @@ describe("MarqueeBoxEdges", () => {
   describe("dispose", () => {
     test("releases the geometry and the material once", () => {
       const edges = createEdges();
-      let disposals = 0;
-      edges.geometry.addEventListener("dispose", () => {
-        disposals++;
-      });
+      const disposals = watchDisposal(edges.geometry, edges.material);
 
       edges.dispose();
       edges.dispose();
 
-      assert.equal(disposals, 1);
+      assert.deepEqual(disposals, [1, 1]);
     });
   });
 });

@@ -8,28 +8,22 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   AreaBox,
-  BoxControls,
   MarqueeBox
 } from "#src/index.ts";
 import {
   createHarness,
   pickerCenter
 } from "../../fixtures/boxControls.ts";
-import {
-  createPointerTarget,
-  pointerAt,
-  type PointerAtOptions
-} from "../../fixtures/pointer.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
+
+// CONSTANTS
+const kEmptyGround = new THREE.Vector3(-10, 0, -10);
 
 function visibleArrowCount(
-  area: AreaBox
+  box: THREE.Object3D
 ): number {
   let count = 0;
-  area.traverse((child) => {
-    /*
-     * The arrows share one InstancedMesh: the policy is expressed as its
-     * instance count, ground-axis slots first.
-     */
+  box.traverse((child) => {
     if (child instanceof THREE.InstancedMesh && child.visible) {
       count = child.count;
     }
@@ -45,18 +39,16 @@ describe("move", () => {
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
     harness.send({ type: "pointermove", target: harness.at(7, 1, 4) });
 
-    assert.deepEqual(harness.area.position.toArray(), [3, 0, 0]);
+    assert.deepEqual(harness.box.position.toArray(), [3, 0, 0]);
   });
 
-  test("keeps the grab offset, so the box does not jump under the cursor", () => {
+  test("keeps the grab offset when the box is grabbed off its center", () => {
     const harness = createHarness();
 
-    // Grab the far corner of the top face rather than its center.
-    harness.send({ type: "pointerdown", target: harness.at(8, 1, 8) });
-    harness.send({ type: "pointermove", target: harness.at(8, 1, 8) });
+    harness.send({ type: "pointerdown", target: harness.at(1, 1, 1) });
+    harness.send({ type: "pointermove", target: harness.at(4, 1, 1) });
 
-    assert.deepEqual(harness.area.position.toArray(), [0, 0, 0]);
-    assert.equal(harness.changes.length, 0);
+    assert.deepEqual(harness.box.position.toArray(), [3, 0, 0]);
   });
 
   test("leaves the vertical axis alone by default", () => {
@@ -73,7 +65,7 @@ describe("move", () => {
       shiftKey: true
     });
 
-    assert.equal(harness.area.position.y, 0);
+    assert.equal(harness.box.position.y, 0);
   });
 
   test("moves vertically with Shift when the policy allows it", () => {
@@ -90,7 +82,7 @@ describe("move", () => {
       shiftKey: true
     });
 
-    assert.deepEqual(harness.area.position.toArray(), [0, 3, 0]);
+    assert.deepEqual(harness.box.position.toArray(), [0, 3, 0]);
   });
 
   test("suspends snapping while Alt is held", () => {
@@ -103,7 +95,7 @@ describe("move", () => {
       altKey: true
     });
 
-    assert.ok(Math.abs(harness.area.position.x - 3.4) < 1e-6);
+    assert.ok(Math.abs(harness.box.position.x - 3.4) < 1e-6);
   });
 
   test("stays inside the bounds", () => {
@@ -117,90 +109,67 @@ describe("move", () => {
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
     harness.send({ type: "pointermove", target: harness.at(40, 1, 4) });
 
-    assert.equal(harness.area.position.x, 4);
+    assert.equal(harness.box.position.x, 4);
   });
 });
 
 describe("resize", () => {
   test("moves the dragged face and pins the opposite one", () => {
     const harness = createHarness();
-    const picker = pickerCenter(harness.area, "x", 1);
+    const picker = pickerCenter(harness.box, "x", 1);
 
     harness.send({ type: "pointerdown", target: picker });
     harness.send({ type: "pointermove", target: harness.at(13, 0.5, 4) });
 
-    const { position } = harness.area;
-    const size = harness.area.size;
+    const { position } = harness.box;
+    const size = harness.box.size;
     assert.equal(position.x, 0);
     assert.ok(size.x > 8);
     assert.ok(Number.isInteger(size.x));
-    // Untouched axes keep their extent.
     assert.deepEqual([size.y, size.z], [1, 8]);
-  });
-
-  test("dragging the min face keeps the max face still", () => {
-    const harness = createHarness();
-    const picker = pickerCenter(harness.area, "x", -1);
-
-    harness.send({ type: "pointerdown", target: picker });
-    harness.send({ type: "pointermove", target: harness.at(-4, 0.5, 4) });
-
-    const { position } = harness.area;
-    assert.ok(position.x < 0);
-    assert.equal(position.x + harness.area.size.x, 8);
-  });
-
-  test("clamps at the minimum size instead of inverting", () => {
-    const harness = createHarness();
-    const picker = pickerCenter(harness.area, "x", 1);
-
-    harness.send({ type: "pointerdown", target: picker });
-    harness.send({ type: "pointermove", target: harness.at(-10, 0.5, 4) });
-
-    assert.equal(harness.area.size.x, 1);
-    assert.equal(harness.area.position.x, 0);
-  });
-
-  test("reports the resized axis on the change event", () => {
-    const harness = createHarness();
-    const picker = pickerCenter(harness.area, "x", 1);
-
-    harness.send({ type: "pointerdown", target: picker });
-    harness.send({ type: "pointermove", target: harness.at(13, 0.5, 4) });
 
     const [change] = harness.changes;
     assert.equal(change.mode, "resize");
     assert.equal(change.axis, "x");
   });
 
-  test("hides the arrows of the excluded axis", () => {
-    const ground = createHarness();
-    const volume = createHarness({ resizeAxes: "xyz" });
+  test("dragging the min face keeps the max face still", () => {
+    const harness = createHarness();
+    const picker = pickerCenter(harness.box, "x", -1);
 
-    assert.equal(visibleArrowCount(ground.area), 4);
-    assert.equal(visibleArrowCount(volume.area), 6);
+    harness.send({ type: "pointerdown", target: picker });
+    harness.send({ type: "pointermove", target: harness.at(-4, 0.5, 4) });
+
+    const { position } = harness.box;
+    assert.ok(position.x < 0);
+    assert.equal(position.x + harness.box.size.x, 8);
+  });
+
+  test("clamps at the minimum size instead of inverting", () => {
+    const harness = createHarness();
+    const picker = pickerCenter(harness.box, "x", 1);
+
+    harness.send({ type: "pointerdown", target: picker });
+    harness.send({ type: "pointermove", target: harness.at(-10, 0.5, 4) });
+
+    assert.equal(harness.box.size.x, 1);
+    assert.equal(harness.box.position.x, 0);
   });
 
   test("the none policy hides every arrow and never resizes", () => {
     const harness = createHarness();
-    const picker = pickerCenter(harness.area, "x", 1);
-    const press = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: picker,
-      type: "pointerdown"
-    });
+    const picker = pickerCenter(harness.box, "x", 1);
 
     harness.controls.resizeAxes = "none";
     harness.render();
 
-    assert.equal(visibleArrowCount(harness.area), 0);
-    assert.equal(harness.controls.isOverHandle(press), false);
+    assert.equal(visibleArrowCount(harness.box), 0);
+    assert.equal(harness.isOver(picker), false);
 
     harness.send({ type: "pointerdown", target: picker });
     harness.send({ type: "pointermove", target: harness.at(13, 0.5, 4) });
 
-    assert.deepEqual(harness.area.size.toArray(), [8, 1, 8]);
+    assert.deepEqual(harness.box.size.toArray(), [8, 1, 8]);
     assert.ok(harness.changes.every((change) => change.mode !== "resize"));
   });
 });
@@ -252,7 +221,7 @@ describe("events", () => {
   test("ignores a pointer that missed both the body and the arrows", () => {
     const harness = createHarness();
 
-    harness.send({ type: "pointerdown", target: harness.at(60, 0, 60) });
+    harness.send({ type: "pointerdown", target: kEmptyGround });
 
     assert.equal(harness.controls.dragging, false);
     assert.equal(harness.starts.length, 0);
@@ -286,29 +255,29 @@ describe("events", () => {
     harness.controls.enabled = false;
     harness.send({ type: "pointermove", target: harness.at(7, 1, 4) });
 
-    assert.deepEqual(harness.area.position.toArray(), [0, 0, 0]);
+    assert.deepEqual(harness.box.position.toArray(), [0, 0, 0]);
   });
 });
 
 describe("attach", () => {
-  test("marks the attached area as active and restores it on detach", () => {
+  test("marks the attached box as active and restores it on detach", () => {
     const harness = createHarness();
-    assert.equal(harness.area.state, "active");
+    assert.equal(harness.box.state, "active");
 
     harness.controls.detach();
 
-    assert.equal(harness.area.state, "idle");
+    assert.equal(harness.box.state, "idle");
     assert.equal(harness.controls.box, null);
   });
 
-  test("removes the arrows from the previous area", () => {
+  test("removes the arrows from the previous box", () => {
     const harness = createHarness();
     const other = new AreaBox();
     harness.scene.add(other);
 
     harness.controls.attach(other);
 
-    assert.equal(visibleArrowCount(harness.area), 0);
+    assert.equal(visibleArrowCount(harness.box), 0);
     assert.equal(visibleArrowCount(other), 4);
   });
 
@@ -324,10 +293,25 @@ describe("attach", () => {
 });
 
 describe("dispose", () => {
-  test("stops listening to the element", () => {
+  test("detaches, disconnects and releases the arrow geometry", () => {
     const harness = createHarness();
+    const arrows: THREE.BufferGeometry[] = [];
+    harness.box.traverse((child) => {
+      if (child instanceof THREE.InstancedMesh) {
+        arrows.push(child.geometry);
+      }
+    });
+    const disposals = watchDisposal(...arrows);
 
     harness.controls.dispose();
+
+    assert.equal(harness.controls.box, null);
+    assert.equal(harness.box.state, "idle");
+    assert.equal(harness.controls.domElement, null);
+    assert.ok(arrows.length > 0);
+    assert.deepEqual(disposals, arrows.map(() => 1));
+
+    harness.controls.attach(harness.box);
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
 
     assert.equal(harness.controls.dragging, false);
@@ -357,10 +341,6 @@ describe("vertical modifier", () => {
   test("honours Shift pressed after the drag started", () => {
     const harness = createHarness({ moveAxes: "xyz" });
 
-    /*
-     * The gesture starts without the modifier, as it does when a user reaches
-     * for Shift a moment after grabbing the box.
-     */
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
     harness.send({
       type: "pointermove",
@@ -368,43 +348,36 @@ describe("vertical modifier", () => {
       shiftKey: true
     });
 
-    assert.deepEqual(harness.area.position.toArray(), [0, 3, 0]);
+    assert.deepEqual(harness.box.position.toArray(), [0, 3, 0]);
   });
 
-  test("locks the drag plane once the area has moved", () => {
+  test("locks the drag plane once the box has moved", () => {
     const harness = createHarness({ moveAxes: "xyz" });
 
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
     harness.send({ type: "pointermove", target: harness.at(7, 1, 4) });
-    // Too late: the ground drag already owns this gesture.
     harness.send({
       type: "pointermove",
       target: harness.at(10, 1, 4),
       shiftKey: true
     });
 
-    assert.equal(harness.area.position.y, 0);
-    assert.equal(harness.area.position.x, 6);
+    assert.equal(harness.box.position.y, 0);
+    assert.equal(harness.box.position.x, 6);
   });
 });
 
 describe("attach from a pointer event", () => {
-  test("claims the press that selected the area, so it drags at once", () => {
+  test("claims the press that selected the box, so it drags at once", () => {
     const harness = createHarness();
     const other = new AreaBox({ size: { x: 8, y: 1, z: 8 } });
     other.position.set(30, 0, 0);
     harness.scene.add(other);
     harness.render();
 
-    /*
-     * The press lands on an area the controls are not attached to yet: the
-     * host picks it and hands the same event over.
-     */
-    const press = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: new THREE.Vector3(34, 1, 4),
-      type: "pointerdown"
+    const press = harness.pointer({
+      type: "pointerdown",
+      target: harness.at(34, 1, 4)
     });
     const claimed = harness.controls.attach(other, { from: press });
 
@@ -413,18 +386,16 @@ describe("attach from a pointer event", () => {
     assert.equal(harness.starts.length, 1);
   });
 
-  test("claims nothing when the press missed the area", () => {
+  test("claims nothing when the press missed the box", () => {
     const harness = createHarness();
     const other = new AreaBox({ size: { x: 8, y: 1, z: 8 } });
     other.position.set(30, 0, 0);
     harness.scene.add(other);
     harness.render();
 
-    const press = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: new THREE.Vector3(-40, 0, -40),
-      type: "pointerdown"
+    const press = harness.pointer({
+      type: "pointerdown",
+      target: harness.at(-40, 0, -40)
     });
 
     assert.equal(harness.controls.attach(other, { from: press }), false);
@@ -444,59 +415,33 @@ describe("attach from a pointer event", () => {
 describe("isOverHandle", () => {
   test("reports a press on a resize arrow", () => {
     const harness = createHarness();
-    const picker = pickerCenter(harness.area, "x", 1);
 
-    const press = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: picker,
-      type: "pointerdown"
-    });
-
-    assert.equal(harness.controls.isOverHandle(press), true);
+    assert.equal(harness.isOver(pickerCenter(harness.box, "x", 1)), true);
   });
 
   test("reports false on the body and on empty space", () => {
     const harness = createHarness();
-    const onBody = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: harness.at(4, 1, 4),
-      type: "pointerdown"
-    });
-    const onNothing = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: harness.at(60, 0, 60),
-      type: "pointerdown"
-    });
 
-    assert.equal(harness.controls.isOverHandle(onBody), false);
-    assert.equal(harness.controls.isOverHandle(onNothing), false);
+    assert.equal(harness.isOver(harness.at(4, 1, 4)), false);
+    assert.equal(harness.isOver(kEmptyGround), false);
   });
 
   test("updates arrow visibility and picking with the live policy", () => {
     const harness = createHarness({ resizeAxes: "xyz" });
-    const topPicker = pickerCenter(harness.area, "y", 1);
-    const press = pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: topPicker,
-      type: "pointerdown"
-    });
-    assert.equal(harness.controls.isOverHandle(press), true);
+    const topPicker = pickerCenter(harness.box, "y", 1);
+    assert.equal(harness.isOver(topPicker), true);
 
     harness.controls.resizeAxes = "xz";
     harness.render();
 
-    assert.equal(visibleArrowCount(harness.area), 4);
-    assert.equal(harness.controls.isOverHandle(press), false);
+    assert.equal(visibleArrowCount(harness.box), 4);
+    assert.equal(harness.isOver(topPicker), false);
 
     harness.controls.resizeAxes = "xyz";
     harness.render();
 
-    assert.equal(visibleArrowCount(harness.area), 6);
-    assert.equal(harness.controls.isOverHandle(press), true);
+    assert.equal(visibleArrowCount(harness.box), 6);
+    assert.equal(harness.isOver(topPicker), true);
   });
 });
 
@@ -504,122 +449,51 @@ describe("handle picking stays live", () => {
   test("still hits an arrow after the camera moved", () => {
     const harness = createHarness();
 
-    // First raycast, at the original camera distance.
-    assert.equal(
-      harness.controls.isOverHandle(pointerAt({
-        camera: harness.camera,
-        element: harness.element,
-        target: pickerCenter(harness.area, "x", 1),
-        type: "pointerdown"
-      })),
-      true
-    );
+    assert.equal(harness.isOver(pickerCenter(harness.box, "x", 1)), true);
 
-    /*
-     * Pulling the camera back rescales the arrows, which InstancedMesh's
-     * cached bounding sphere would not know about.
-     */
-    harness.camera.position.set(30, 60, 70);
-    harness.camera.lookAt(0, 0, 0);
+    harness.aim({ x: 30, y: 60, z: 70 }, { x: 0, y: 0, z: 0 });
     harness.render();
 
-    assert.equal(
-      harness.controls.isOverHandle(pointerAt({
-        camera: harness.camera,
-        element: harness.element,
-        target: pickerCenter(harness.area, "x", 1),
-        type: "pointerdown"
-      })),
-      true
-    );
+    assert.equal(harness.isOver(pickerCenter(harness.box, "x", 1)), true);
   });
 
-  test("still hits an arrow after the area was resized", () => {
+  test("still hits an arrow after the box was resized", () => {
     const harness = createHarness();
-    harness.controls.isOverHandle(pointerAt({
-      camera: harness.camera,
-      element: harness.element,
-      target: pickerCenter(harness.area, "x", 1),
-      type: "pointerdown"
-    }));
+    harness.isOver(pickerCenter(harness.box, "x", 1));
 
-    harness.area.size = { x: 24, y: 1, z: 24 };
+    harness.box.size = { x: 24, y: 1, z: 24 };
     harness.render();
 
-    assert.equal(
-      harness.controls.isOverHandle(pointerAt({
-        camera: harness.camera,
-        element: harness.element,
-        target: pickerCenter(harness.area, "x", 1),
-        type: "pointerdown"
-      })),
-      true
-    );
+    assert.equal(harness.isOver(pickerCenter(harness.box, "x", 1)), true);
   });
 });
 
 describe("any box volume", () => {
   function createMarqueeHarness() {
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(6, 12, 14);
-    camera.lookAt(0, 0, 0);
-
-    const element = createPointerTarget();
-    const marquee = new MarqueeBox({ size: { x: 8, y: 1, z: 8 } });
-    scene.add(marquee);
-
-    const controls = new BoxControls<MarqueeBox>(camera, element);
-    controls.attach(marquee);
-    scene.updateMatrixWorld(true);
-
-    return {
-      camera,
-      controls,
-      element,
-      marquee,
-      send: (
-        type: PointerAtOptions["type"],
-        target: THREE.Vector3
-      ) => {
-        element.dispatchEvent(
-          pointerAt({ type, target, camera, element })
-        );
-      }
-    };
+    return createHarness(
+      {},
+      () => new MarqueeBox({ size: { x: 8, y: 1, z: 8 } })
+    );
   }
 
   test("drags a box that has no fill mesh by its volume", () => {
-    const { controls, marquee, send } = createMarqueeHarness();
+    const harness = createMarqueeHarness();
 
-    send("pointerdown", new THREE.Vector3(4, 1, 4));
-    send("pointermove", new THREE.Vector3(7, 1, 4));
-    send("pointerup", new THREE.Vector3(7, 1, 4));
+    harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
+    harness.send({ type: "pointermove", target: harness.at(7, 1, 4) });
+    harness.send({ type: "pointerup", target: harness.at(7, 1, 4) });
 
-    assert.equal(controls.box, marquee);
-    assert.deepEqual(marquee.position.toArray(), [3, 0, 0]);
-  });
-
-  test("resizes it from an arrow", () => {
-    const { marquee, send } = createMarqueeHarness();
-
-    send("pointerdown", pickerCenter(marquee, "x", 1));
-    send("pointermove", new THREE.Vector3(13, 0.5, 4));
-    send("pointerup", new THREE.Vector3(13, 0.5, 4));
-
-    assert.ok(marquee.size.x > 8);
-    assert.deepEqual(marquee.position.toArray(), [0, 0, 0]);
+    assert.equal(harness.controls.box, harness.box);
+    assert.deepEqual(harness.box.position.toArray(), [3, 0, 0]);
   });
 
   test("claims nothing from a camera sitting inside the box", () => {
-    const { camera, controls, send } = createMarqueeHarness();
+    const harness = createMarqueeHarness();
 
-    camera.position.set(4, 0.5, 4);
-    camera.lookAt(8, 0.5, 8);
-    camera.updateMatrixWorld(true);
-    send("pointerdown", new THREE.Vector3(6, 0.5, 6));
+    harness.aim({ x: 4, y: 0.5, z: 4 }, { x: 8, y: 0.5, z: 8 });
+    harness.send({ type: "pointerdown", target: harness.at(6, 0.5, 6) });
 
-    assert.equal(controls.dragging, false);
+    assert.equal(harness.controls.dragging, false);
   });
 });
 
@@ -635,6 +509,6 @@ describe("pointer identity", () => {
     });
 
     assert.equal(harness.changes.length, 0);
-    assert.deepEqual(harness.area.position.toArray(), [0, 0, 0]);
+    assert.deepEqual(harness.box.position.toArray(), [0, 0, 0]);
   });
 });

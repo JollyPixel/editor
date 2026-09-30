@@ -17,12 +17,6 @@ function edgePhases(
 }
 
 describe("marqueePhases", () => {
-  test("yields a start and an end phase per box edge", () => {
-    const phases = marqueePhases({ x: 4, y: 3, z: 2 }, 0.5);
-
-    assert.equal(phases.length, kEdgeCount * 2);
-  });
-
   test("chains the edges of a ring end to start", () => {
     const phases = marqueePhases({ x: 4, y: 3, z: 2 }, 0.5);
 

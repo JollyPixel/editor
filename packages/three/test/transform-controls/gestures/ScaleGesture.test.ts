@@ -10,8 +10,8 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { ScaleGesture } from "#src/transform-controls/gestures/ScaleGesture.ts";
+import { assertClose } from "../harness.ts";
 import {
-  assertClose,
   createContext,
   rayAt
 } from "./context.ts";

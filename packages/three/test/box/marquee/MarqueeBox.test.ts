@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { MarqueeBox } from "#src/index.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 describe("MarqueeBox", () => {
   describe("constructor", () => {
@@ -47,15 +48,37 @@ describe("MarqueeBox", () => {
       assert.equal(edges.dashLength, 2);
       assert.equal(edges.ratio, 0.25);
       assert.equal(edges.speed, 0);
-      assert.equal(edges.colors[1].getHexString(), "0000ff");
+      assert.deepEqual(
+        edges.colors.map((color) => color.getHexString()),
+        ["ff0000", "0000ff"]
+      );
       assert.equal(edges.xray, true);
     });
 
-    test("falls back on the static defaults", () => {
+    test("falls back on the documented defaults", () => {
       const { edges } = new MarqueeBox();
 
-      assert.equal(edges.width, MarqueeBox.Defaults.width);
-      assert.equal(edges.speed, MarqueeBox.Defaults.speed);
+      assert.equal(edges.width, 2);
+      assert.equal(edges.dashLength, 0.5);
+      assert.equal(edges.ratio, 0.5);
+      assert.equal(edges.speed, 1.5);
+      assert.deepEqual(
+        edges.colors.map((color) => color.getHexString()),
+        ["ffffff", "000000"]
+      );
+      assert.equal(edges.xray, false);
+    });
+
+    test("reads the static defaults when each instance is built", () => {
+      const { speed } = MarqueeBox.Defaults;
+      MarqueeBox.Defaults.speed = 3;
+
+      try {
+        assert.equal(new MarqueeBox().edges.speed, 3);
+      }
+      finally {
+        MarqueeBox.Defaults.speed = speed;
+      }
     });
   });
 
@@ -107,15 +130,15 @@ describe("MarqueeBox", () => {
   describe("dispose", () => {
     test("disposes its edges once", () => {
       const marquee = new MarqueeBox();
-      let disposals = 0;
-      marquee.edges.geometry.addEventListener("dispose", () => {
-        disposals++;
-      });
+      const disposals = watchDisposal(
+        marquee.edges.geometry,
+        marquee.edges.material
+      );
 
       marquee.dispose();
       marquee.dispose();
 
-      assert.equal(disposals, 1);
+      assert.deepEqual(disposals, [1, 1]);
     });
   });
 });

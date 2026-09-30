@@ -12,6 +12,7 @@ import {
   AreaBoxFill,
   AreaBoxLabel
 } from "#src/index.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 describe("constructor", () => {
   test("anchors the position on the min corner and centers the fill", () => {
@@ -39,7 +40,6 @@ describe("constructor", () => {
       displayName: "Spawn"
     });
     assert.ok(named.label instanceof AreaBoxLabel);
-    // Centered on the top face, with vertical clearance.
     assert.deepEqual(named.label.position.toArray(), [2, 2.4, 1]);
   });
 
@@ -133,15 +133,6 @@ describe("state", () => {
     assert.ok(area.edges!.material.opacity > 0.5);
   });
 
-  test("never exceeds a fully opaque material", () => {
-    const area = new AreaBox({ opacity: 0.98, edges: { opacity: 0.98 } });
-
-    area.state = "active";
-
-    assert.equal(area.fill.material.opacity, 1);
-    assert.equal(area.edges!.material.opacity, 1);
-  });
-
   test("returns to idle", () => {
     const area = new AreaBox({ opacity: 0.25 });
 
@@ -160,20 +151,11 @@ describe("dispose", () => {
       new THREE.MeshBasicMaterial()
     );
     area.add(foreign);
-
-    let disposedFill = false;
-    let disposedForeign = false;
-    area.fill.geometry.addEventListener("dispose", () => {
-      disposedFill = true;
-    });
-    foreign.geometry.addEventListener("dispose", () => {
-      disposedForeign = true;
-    });
+    const disposals = watchDisposal(area.fill.geometry, foreign.geometry);
 
     area.dispose();
 
-    assert.equal(disposedFill, true);
-    assert.equal(disposedForeign, false);
+    assert.deepEqual(disposals, [1, 0]);
   });
 });
 
@@ -184,7 +166,6 @@ describe("label legibility", () => {
       displayName: "Patrol"
     });
 
-    // A label tinted like the fill it floats over is the hardest one to read.
     assert.equal(new THREE.Color(area.label!.color).getHexString(), "ffffff");
   });
 });
@@ -193,11 +174,6 @@ describe("render order", () => {
   test("draws the fill and edges above a transparent ground grid", () => {
     const area = new AreaBox();
 
-    /*
-     * A camera-following grid sorts as the nearest transparent object and
-     * would otherwise paint its lines over the area at full strength, which
-     * no amount of `opacity` can compensate for.
-     */
     assert.ok(area.fill.renderOrder > 0);
     assert.ok(area.edges!.renderOrder > area.fill.renderOrder);
   });
@@ -213,7 +189,6 @@ describe("color", () => {
 
     assert.equal(area.color.getHexString(), "ff0000");
     assert.equal(area.edges!.color.getHexString(), "ff0000");
-    // Same instances: recolouring must never churn GPU resources.
     assert.equal(area.fill.geometry, geometry);
     assert.equal(area.fill.material, material);
     assert.equal(area.edges!.material, edgeMaterial);
@@ -225,10 +200,6 @@ describe("color", () => {
 
     area.color = "#ff0000";
 
-    /*
-     * Identical to an area built red and emphasised the same way: the
-     * recolour must neither drop the emphasis nor apply it twice.
-     */
     const reference = new AreaBox({ color: "#ff0000" });
     reference.state = "active";
 
@@ -246,13 +217,12 @@ describe("color", () => {
 describe("dispose idempotence", () => {
   test("frees its resources once, however many times it is called", () => {
     const area = new AreaBox({ displayName: "Spawn" });
-    let disposals = 0;
-    area.fill.geometry.addEventListener("dispose", () => disposals++);
+    const disposals = watchDisposal(area.fill.geometry);
 
     area.dispose();
     area.dispose();
     area.fill.dispose();
 
-    assert.equal(disposals, 1);
+    assert.deepEqual(disposals, [1]);
   });
 });

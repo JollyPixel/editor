@@ -142,11 +142,13 @@ describe("PointerDrag", () => {
 
     drag.connect(next);
     send("pointerdown");
+    assert.deepEqual(calls, []);
+
     next.dispatchEvent(
       new window.PointerEvent("pointerdown", { pointerId: 1 })
     );
-
     assert.deepEqual(calls, ["press"]);
+    assert.equal(drag.element, next);
   });
 
   describe("cursor", () => {

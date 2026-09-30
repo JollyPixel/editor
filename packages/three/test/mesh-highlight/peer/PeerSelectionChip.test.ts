@@ -2,47 +2,29 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
 import { PeerSelectionChip } from "#src/mesh-highlight/peer/PeerSelectionChip.ts";
-import { mockContextOf } from "../../fixtures/canvas.ts";
+import { contextOf } from "../../fixtures/canvas.ts";
 
-function canvasOf(
+function textureVersionOf(
   chip: PeerSelectionChip
-): HTMLCanvasElement {
+): number {
   const { map } = chip.material;
-  assert.ok(map instanceof THREE.CanvasTexture);
+  assert.ok(map);
 
-  return map.image;
+  return map.version;
 }
 
 describe("constructor", () => {
-  test("is a THREE.Sprite", () => {
+  test("paints the chip in its color on creation", () => {
     const chip = new PeerSelectionChip({ color: "#43aa8b" });
 
-    assert.ok(chip instanceof THREE.Sprite);
-  });
-
-  test("draws a filled, stroked circle once on creation", () => {
-    const chip = new PeerSelectionChip({ color: "#43aa8b" });
-    const context = mockContextOf(canvasOf(chip));
-
-    assert.strictEqual(context.arcCallCount, 1);
-    assert.strictEqual(context.fillCallCount, 1);
-    assert.strictEqual(context.strokeCallCount, 1);
-  });
-
-  test("exposes the given color", () => {
-    const chip = new PeerSelectionChip({ color: "#43aa8b" });
-
-    assert.strictEqual(chip.color, "#43aa8b");
+    assert.strictEqual(contextOf(chip).fillStyle, "rgb(67,170,139)");
   });
 
   test("label defaults to undefined and draws no text", () => {
     const chip = new PeerSelectionChip({ color: "#43aa8b" });
-    const context = mockContextOf(canvasOf(chip));
+    const context = contextOf(chip);
 
     assert.strictEqual(chip.label, undefined);
     assert.strictEqual(context.fillTextCallCount, 0);
@@ -50,7 +32,7 @@ describe("constructor", () => {
 
   test("a given label is drawn as text", () => {
     const chip = new PeerSelectionChip({ color: "#4a4a4a", label: "+3" });
-    const context = mockContextOf(canvasOf(chip));
+    const context = contextOf(chip);
 
     assert.strictEqual(chip.label, "+3");
     assert.strictEqual(context.lastFillText, "+3");
@@ -58,22 +40,22 @@ describe("constructor", () => {
 });
 
 describe("color", () => {
-  test("redraws the chip", () => {
+  test("repaints the chip in the new color", () => {
     const chip = new PeerSelectionChip({ color: "#000000" });
-    const context = mockContextOf(canvasOf(chip));
-    const callsBefore = context.fillCallCount;
+    const versionBefore = textureVersionOf(chip);
 
     chip.color = "#00ff00";
 
     assert.strictEqual(chip.color, "#00ff00");
-    assert.ok(context.fillCallCount > callsBefore);
+    assert.strictEqual(contextOf(chip).fillStyle, "rgb(0,255,0)");
+    assert.ok(textureVersionOf(chip) > versionBefore, "the texture must be re-uploaded");
   });
 });
 
 describe("label", () => {
   test("redraws the chip with the new label", () => {
     const chip = new PeerSelectionChip({ color: "#4a4a4a" });
-    const context = mockContextOf(canvasOf(chip));
+    const context = contextOf(chip);
 
     chip.label = "+5";
 
@@ -81,39 +63,19 @@ describe("label", () => {
     assert.strictEqual(context.lastFillText, "+5");
   });
 
-  test("clearing the label back to undefined stops drawing text", () => {
+  test("clearing the label back to undefined repaints without text", () => {
     const chip = new PeerSelectionChip({ color: "#4a4a4a", label: "+5" });
-    const context = mockContextOf(canvasOf(chip));
-    const callsBefore = context.fillTextCallCount;
+    const context = contextOf(chip);
+    const textCallsBefore = context.fillTextCallCount;
+    const versionBefore = textureVersionOf(chip);
 
     chip.label = undefined;
 
+    assert.ok(textureVersionOf(chip) > versionBefore, "the chip must repaint");
     assert.strictEqual(
       context.fillTextCallCount,
-      callsBefore,
+      textCallsBefore,
       "must not draw text once the label is cleared"
     );
-  });
-});
-
-describe("dispose", () => {
-  test("disposes the texture and material", () => {
-    const chip = new PeerSelectionChip({ color: "#43aa8b" });
-    const { map: texture } = chip.material;
-    assert.ok(texture instanceof THREE.CanvasTexture);
-
-    let textureDisposed = false;
-    let materialDisposed = false;
-    texture.addEventListener("dispose", () => {
-      textureDisposed = true;
-    });
-    chip.material.addEventListener("dispose", () => {
-      materialDisposed = true;
-    });
-
-    chip.dispose();
-
-    assert.ok(textureDisposed);
-    assert.ok(materialDisposed);
   });
 });

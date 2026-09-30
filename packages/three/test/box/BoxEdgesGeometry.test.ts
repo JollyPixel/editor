@@ -8,14 +8,80 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { BoxEdgesGeometry } from "#src/box/BoxEdgesGeometry.ts";
 
-describe("BoxEdgesGeometry", () => {
-  test("traces twelve segments from the min corner", () => {
-    const geometry = new BoxEdgesGeometry({ x: 6, y: 3, z: 4 });
+function segmentKey(
+  from: THREE.Vector3Tuple,
+  to: THREE.Vector3Tuple
+): string {
+  return [from.join(","), to.join(",")].sort().join(" ");
+}
 
-    assert.equal(geometry.instanceCount, 12);
-    assert.deepEqual(geometry.boundingBox!.min.toArray(), [0, 0, 0]);
-    assert.deepEqual(geometry.boundingBox!.max.toArray(), [6, 3, 4]);
+function boxEdgeKeys(
+  size: THREE.Vector3Like
+): string[] {
+  const corners: THREE.Vector3Tuple[] = [];
+  for (const x of [0, size.x]) {
+    for (const y of [0, size.y]) {
+      for (const z of [0, size.z]) {
+        corners.push([x, y, z]);
+      }
+    }
+  }
+
+  const keys: string[] = [];
+  corners.forEach((from, index) => {
+    for (const to of corners.slice(index + 1)) {
+      const differing = from.filter((value, axis) => value !== to[axis]);
+      if (differing.length === 1) {
+        keys.push(segmentKey(from, to));
+      }
+    }
   });
+
+  return keys.sort();
+}
+
+function tracedKeys(
+  geometry: BoxEdgesGeometry
+): string[] {
+  const start = geometry.getAttribute("instanceStart");
+  const end = geometry.getAttribute("instanceEnd");
+  const keys: string[] = [];
+  for (let index = 0; index < geometry.instanceCount; index++) {
+    keys.push(segmentKey(
+      [start.getX(index), start.getY(index), start.getZ(index)],
+      [end.getX(index), end.getY(index), end.getZ(index)]
+    ));
+  }
+
+  return keys.sort();
+}
+
+describe("BoxEdgesGeometry", () => {
+  const cases = [
+    {
+      name: "a unit box by default",
+      create: () => new BoxEdgesGeometry(),
+      size: { x: 1, y: 1, z: 1 }
+    },
+    {
+      name: "the requested size",
+      create: () => new BoxEdgesGeometry({ x: 6, y: 3, z: 4 }),
+      size: { x: 6, y: 3, z: 4 }
+    }
+  ];
+
+  for (const { name, create, size } of cases) {
+    test(`traces the twelve edges of ${name} from the min corner`, () => {
+      const geometry = create();
+
+      assert.deepEqual(tracedKeys(geometry), boxEdgeKeys(size));
+      assert.deepEqual(geometry.boundingBox!.min.toArray(), [0, 0, 0]);
+      assert.deepEqual(
+        geometry.boundingBox!.max.toArray(),
+        [size.x, size.y, size.z]
+      );
+    });
+  }
 
   test("reports whether a resize changed the size", () => {
     const geometry = new BoxEdgesGeometry({ x: 1, y: 1, z: 1 });

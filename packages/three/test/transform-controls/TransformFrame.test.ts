@@ -10,6 +10,10 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { TransformFrame } from "#src/transform-controls/TransformFrame.ts";
+import {
+  assertQuaternion,
+  assertVector
+} from "./harness.ts";
 
 // CONSTANTS
 const kQuarterTurn = Math.PI / 2;
@@ -35,13 +39,6 @@ function createScene(): {
   return { parent, target, camera };
 }
 
-function closeTo(
-  actual: THREE.Quaternion,
-  expected: THREE.Quaternion
-): boolean {
-  return Math.abs(actual.dot(expected)) > 1 - 1e-9;
-}
-
 describe("orientation", () => {
   test("resolves each named orientation", () => {
     const { parent, target, camera } = createScene();
@@ -49,22 +46,23 @@ describe("orientation", () => {
     const resolved = new THREE.Quaternion();
 
     frame.resolveQuaternion(target, camera, "translate", resolved);
-    assert.ok(closeTo(resolved, new THREE.Quaternion()));
+    assertQuaternion(resolved, new THREE.Quaternion(), "world");
 
     frame.orientation = "local";
     frame.resolveQuaternion(target, camera, "translate", resolved);
-    assert.ok(closeTo(
+    assertQuaternion(
       resolved,
-      target.getWorldQuaternion(new THREE.Quaternion())
-    ));
+      target.getWorldQuaternion(new THREE.Quaternion()),
+      "local"
+    );
 
     frame.orientation = "parent";
     frame.resolveQuaternion(target, camera, "translate", resolved);
-    assert.ok(closeTo(resolved, parent.quaternion));
+    assertQuaternion(resolved, parent.quaternion, "parent");
 
     frame.orientation = "view";
     frame.resolveQuaternion(target, camera, "translate", resolved);
-    assert.ok(closeTo(resolved, camera.quaternion));
+    assertQuaternion(resolved, camera.quaternion, "view");
   });
 
   test("uses the world axes for a parentless target in parent orientation", () => {
@@ -74,7 +72,7 @@ describe("orientation", () => {
     const orphan = new THREE.Object3D();
     orphan.rotation.z = 1;
 
-    assert.ok(closeTo(
+    assertQuaternion(
       frame.resolveQuaternion(
         orphan,
         camera,
@@ -82,7 +80,7 @@ describe("orientation", () => {
         new THREE.Quaternion(1, 0, 0, 0)
       ),
       new THREE.Quaternion()
-    ));
+    );
   });
 
   test("always scales along the target's own axes", () => {
@@ -90,7 +88,7 @@ describe("orientation", () => {
     const frame = new TransformFrame();
     frame.orientation = "world";
 
-    assert.ok(closeTo(
+    assertQuaternion(
       frame.resolveQuaternion(
         target,
         camera,
@@ -98,7 +96,7 @@ describe("orientation", () => {
         new THREE.Quaternion()
       ),
       target.getWorldQuaternion(new THREE.Quaternion())
-    ));
+    );
   });
 
   test("normalizes and copies a custom quaternion", () => {
@@ -119,18 +117,18 @@ describe("orientation", () => {
       "translate",
       new THREE.Quaternion()
     );
-    assert.ok(closeTo(
+    assertQuaternion(
       resolved,
       new THREE.Quaternion().setFromAxisAngle(
         new THREE.Vector3(0, 1, 0),
         kQuarterTurn
       )
-    ));
+    );
 
     const read = frame.orientation;
     assert.ok(read instanceof THREE.Quaternion);
     read.set(1, 0, 0, 0);
-    assert.ok(closeTo(
+    assertQuaternion(
       frame.resolveQuaternion(
         target,
         camera,
@@ -138,7 +136,7 @@ describe("orientation", () => {
         new THREE.Quaternion()
       ),
       resolved
-    ));
+    );
   });
 
   test("rejects unknown names and degenerate quaternions", () => {
@@ -173,8 +171,9 @@ describe("pivot", () => {
       new THREE.Vector3()
     );
 
-    assert.ok(
-      origin.distanceTo(target.getWorldPosition(new THREE.Vector3())) < 1e-9
+    assertVector(
+      origin,
+      target.getWorldPosition(new THREE.Vector3()).toArray()
     );
   });
 
@@ -185,9 +184,10 @@ describe("pivot", () => {
     frame.pivot = point;
     point.set(9, 9, 9);
 
-    const origin = frame.resolveOrigin(target, new THREE.Vector3());
-    const expected = target.localToWorld(new THREE.Vector3(0, 1, 0));
-    assert.ok(origin.distanceTo(expected) < 1e-9);
+    assertVector(
+      frame.resolveOrigin(target, new THREE.Vector3()),
+      target.localToWorld(new THREE.Vector3(0, 1, 0)).toArray()
+    );
   });
 
   test("follows an object in world space", () => {
