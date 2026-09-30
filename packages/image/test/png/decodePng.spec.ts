@@ -69,6 +69,26 @@ describe("decodePng", () => {
     assert.deepEqual([...data], [1, 2, 3, 64, 4, 5, 6, 255]);
   });
 
+  it("expands grayscale samples, with and without alpha", async() => {
+    const gray = png([
+      header(2, 1, 0),
+      chunk("IDAT", deflateSync(Buffer.from([0, 10, 20])))
+    ]);
+    const grayAlpha = png([
+      header(2, 1, 4),
+      chunk("IDAT", deflateSync(Buffer.from([0, 10, 1, 20, 2])))
+    ]);
+
+    assert.deepEqual(
+      [...(await decodePng(gray)).data],
+      [10, 10, 10, 255, 20, 20, 20, 255]
+    );
+    assert.deepEqual(
+      [...(await decodePng(grayAlpha)).data],
+      [10, 10, 10, 1, 20, 20, 20, 2]
+    );
+  });
+
   it("joins image data split across several IDAT chunks", async() => {
     const deflated = deflateSync(Buffer.from([0, 9, 8, 7]));
     const image = png([
@@ -120,6 +140,22 @@ describe("decodePng", () => {
           chunk("IDAT", deflateSync(Buffer.alloc(2)))
         ]),
         message: /no PLTE chunk/
+      },
+      {
+        name: "an unknown scanline filter",
+        payload: png([
+          header(1, 1, 6),
+          chunk("IDAT", deflateSync(Buffer.from([5, 0, 0, 0, 0])))
+        ]),
+        message: /unknown scanline filter 5/
+      },
+      {
+        name: "image data shorter than its scanlines",
+        payload: png([
+          header(2, 1, 6),
+          chunk("IDAT", deflateSync(Buffer.from([0, 1, 2, 3, 4])))
+        ]),
+        message: /image data is truncated/
       }
     ];
 

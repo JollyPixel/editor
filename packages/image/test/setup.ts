@@ -10,8 +10,7 @@ const kEmulatedBrowserWindow = new Window();
 Object.assign(globalThis, {
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,
-  HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement,
-  Image: kEmulatedBrowserWindow.Image
+  HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement
 });
 
 installCanvasMock(document);

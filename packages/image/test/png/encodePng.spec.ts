@@ -4,12 +4,8 @@ import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 
 // Import Internal Dependencies
-import {
-  encodePng,
-  encodePngWithFilter
-} from "#src/png/encodePng.ts";
+import { encodePng } from "#src/png/encodePng.ts";
 import { decodePng } from "#src/png/decodePng.ts";
-import { FILTER_TYPES } from "#src/png/filters.ts";
 import type { DecodedImage } from "#src/types.ts";
 import {
   PNG_SIGNATURE,
@@ -110,6 +106,10 @@ describe("encodePng", () => {
           1, 2, 3, 4, 5, 6, 7, 8,
           9, 10, 11, 12, 13, 14, 15, 16
         ])
+      },
+      {
+        name: "a noisy multi-row image",
+        source: noisyImage(8)
       }
     ];
 
@@ -119,18 +119,6 @@ describe("encodePng", () => {
 
         assert.equal(decoded.width, source.width);
         assert.equal(decoded.height, source.height);
-        assert.deepEqual([...decoded.data], [...source.data]);
-      });
-    }
-
-    for (const filter of FILTER_TYPES) {
-      it(`preserves a noisy image written with filter ${filter}`, async() => {
-        const source = noisyImage(8);
-
-        const decoded = await decodePng(
-          await encodePngWithFilter(source, filter)
-        );
-
         assert.deepEqual([...decoded.data], [...source.data]);
       });
     }

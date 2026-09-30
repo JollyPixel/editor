@@ -17,14 +17,12 @@ function buildTable(): Uint32Array {
 }
 
 export function crc32(
-  ...parts: readonly Uint8Array[]
+  bytes: Uint8Array
 ): number {
   let crc = 0xFFFFFFFF;
 
-  for (const part of parts) {
-    for (let index = 0; index < part.length; index++) {
-      crc = kTable[(crc ^ part[index]) & 0xFF] ^ (crc >>> 8);
-    }
+  for (let index = 0; index < bytes.length; index++) {
+    crc = kTable[(crc ^ bytes[index]) & 0xFF] ^ (crc >>> 8);
   }
 
   return (crc ^ 0xFFFFFFFF) >>> 0;

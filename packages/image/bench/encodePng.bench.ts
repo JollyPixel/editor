@@ -8,8 +8,9 @@ import {
 // Import Internal Dependencies
 import {
   encodePng,
-  encodePngWithFilter
+  encodePngWith
 } from "../src/png/encodePng.ts";
+import { fixedFilter } from "../src/png/filters.ts";
 
 // CONSTANTS
 const kSizes = [64, 256, 1024];
@@ -23,7 +24,7 @@ const suite = defineSuite("PNG encoding", (bench) => {
         await encodePng(image);
       })
       .add(`encodePng / ${size}x${size} / filter 0`, async() => {
-        await encodePngWithFilter(image, 0);
+        await encodePngWith(image, fixedFilter(0));
       });
   }
 });
@@ -65,7 +66,7 @@ async function reportSizes(): Promise<void> {
   for (const size of kSizes) {
     const image = tileImage(size);
     const heuristic = await encodePng(image);
-    const flat = await encodePngWithFilter(image, 0);
+    const flat = await encodePngWith(image, fixedFilter(0));
     const delta = 1 - (heuristic.length / flat.length);
 
     console.log(

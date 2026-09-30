@@ -38,6 +38,6 @@ implementation.
 
 ## Runtime requirements
 
-This entry uses browser APIs including `Blob`, `document`, canvas 2D, and one
-or more image decoders. Set `blob.type` to the file's MIME type so the exact
-PNG path and WebCodecs can identify the format.
+This entry uses `Blob`, `document`, canvas 2D, and `createImageBitmap()`.
+WebCodecs `ImageDecoder` is used first when available. Set `blob.type` to the
+file's MIME type so the exact PNG path and WebCodecs can identify the format.
