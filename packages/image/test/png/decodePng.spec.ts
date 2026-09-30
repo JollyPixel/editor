@@ -33,14 +33,15 @@ describe("decodePng", () => {
     ]);
   });
 
-  it("reverses the Sub, Up and Paeth scanline filters", async() => {
+  it("reverses the Sub, Up, Average and Paeth scanline filters", async() => {
     const scanlines = Buffer.from([
       1, 10, 20, 30, 5, 5, 5,
       2, 1, 1, 1, 1, 1, 1,
-      4, 0, 0, 0, 0, 0, 0
+      3, 0, 0, 0, 0, 0, 0,
+      4, 5, 0, 246, 1, 2, 3
     ]);
     const image = png([
-      header(2, 3, 2),
+      header(2, 4, 2),
       chunk("IDAT", deflateSync(scanlines))
     ]);
 
@@ -49,7 +50,8 @@ describe("decodePng", () => {
     assert.deepEqual([...data], [
       10, 20, 30, 255, 15, 25, 35, 255,
       11, 21, 31, 255, 16, 26, 36, 255,
-      11, 21, 31, 255, 16, 26, 36, 255
+      5, 10, 15, 255, 10, 18, 25, 255,
+      10, 10, 5, 255, 11, 20, 18, 255
     ]);
   });
 
@@ -80,38 +82,57 @@ describe("decodePng", () => {
     assert.deepEqual([...data], [9, 8, 7, 255]);
   });
 
-  it("rejects payloads and formats it cannot read", async() => {
-    await assert.rejects(
-      () => decodePng(new Uint8Array(16)),
-      /not a PNG/
-    );
-    await assert.rejects(
-      () => decodePng(png([
-        header(1, 1, 6, { bitDepth: 16 }),
-        chunk("IDAT", deflateSync(Buffer.alloc(9)))
-      ])),
-      /only 8-bit images/
-    );
-    await assert.rejects(
-      () => decodePng(png([
-        header(1, 1, 6, { interlace: 1 }),
-        chunk("IDAT", deflateSync(Buffer.alloc(5)))
-      ])),
-      /interlaced/
-    );
-    await assert.rejects(
-      () => decodePng(png([
-        header(0, 1, 6),
-        chunk("IDAT", deflateSync(Buffer.alloc(1)))
-      ])),
-      /dimensions must be positive/
-    );
-    await assert.rejects(
-      () => decodePng(png([
-        header(1, 1, 3),
-        chunk("IDAT", deflateSync(Buffer.alloc(2)))
-      ])),
-      /no PLTE chunk/
-    );
+  describe("rejects", () => {
+    const cases = [
+      {
+        name: "a payload without the PNG signature",
+        payload: new Uint8Array(16),
+        message: /not a PNG/
+      },
+      {
+        name: "a 16-bit image",
+        payload: png([
+          header(1, 1, 6, { bitDepth: 16 }),
+          chunk("IDAT", deflateSync(Buffer.alloc(9)))
+        ]),
+        message: /only 8-bit images/
+      },
+      {
+        name: "an interlaced image",
+        payload: png([
+          header(1, 1, 6, { interlace: 1 }),
+          chunk("IDAT", deflateSync(Buffer.alloc(5)))
+        ]),
+        message: /interlaced/
+      },
+      {
+        name: "a zero-width image",
+        payload: png([
+          header(0, 1, 6),
+          chunk("IDAT", deflateSync(Buffer.alloc(1)))
+        ]),
+        message: /dimensions must be positive/
+      },
+      {
+        name: "an indexed image without a palette",
+        payload: png([
+          header(1, 1, 3),
+          chunk("IDAT", deflateSync(Buffer.alloc(2)))
+        ]),
+        message: /no PLTE chunk/
+      }
+    ];
+
+    for (const { name, payload, message } of cases) {
+      it(name, async() => {
+        await assert.rejects(
+          () => decodePng(payload),
+          {
+            name: "InvalidPngError",
+            message
+          }
+        );
+      });
+    }
   });
 });

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { InvalidPngError } from "../errors/InvalidPngError.ts";
+import { InvalidPngError } from "./errors/InvalidPngError.ts";
 
 // CONSTANTS
 const kChannelsPerColorType: Record<number, number> = {

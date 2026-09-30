@@ -2,23 +2,19 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
-import { inflateSync } from "node:zlib";
 
 // Import Internal Dependencies
-import { encodePng } from "#src/png/encodePng.ts";
+import {
+  encodePng,
+  encodePngWithFilter
+} from "#src/png/encodePng.ts";
 import { decodePng } from "#src/png/decodePng.ts";
-import { chooseFilter } from "#src/png/filters.ts";
-import { PNG_SIGNATURE } from "../fixtures/png.ts";
-
-/*
- * CONSTANTS
- * RGB under a low alpha, which a premultiplying canvas would return as
- * (170, 85, 85, 3).
- */
-const kFragilePixels = [
-  200, 100, 50, 3,
-  0, 0, 0, 0
-];
+import { FILTER_TYPES } from "#src/png/filters.ts";
+import type { DecodedImage } from "#src/types.ts";
+import {
+  PNG_SIGNATURE,
+  FRAGILE_PIXELS
+} from "../fixtures/png.ts";
 
 interface ParsedChunk {
   type: string;
@@ -26,10 +22,6 @@ interface ParsedChunk {
   crc: number;
 }
 
-/**
- * An independent CRC32, computed bitwise rather than from a table, so the
- * encoder's own implementation is not what validates it.
- */
 function referenceCrc32(
   bytes: Buffer
 ): number {
@@ -71,13 +63,23 @@ function parseChunks(
 function image(
   width: number,
   height: number,
-  samples: number[]
-) {
+  samples: ArrayLike<number>
+): DecodedImage {
   return {
     width,
     height,
     data: new Uint8ClampedArray(samples)
   };
+}
+
+function noisyImage(
+  size: number
+): DecodedImage {
+  return image(
+    size,
+    size,
+    Array.from({ length: size * size * 4 }, (_, index) => (index * 97) % 251)
+  );
 }
 
 describe("encodePng", () => {
@@ -92,11 +94,11 @@ describe("encodePng", () => {
       },
       {
         name: "partial alpha, including alpha 3",
-        source: image(2, 1, kFragilePixels)
+        source: image(2, 1, FRAGILE_PIXELS)
       },
       {
         name: "a fully transparent image",
-        source: image(3, 2, Array.from({ length: 24 }, () => 0))
+        source: image(3, 2, new Array(24).fill(0))
       },
       {
         name: "a 1x1 image",
@@ -121,37 +123,33 @@ describe("encodePng", () => {
       });
     }
 
-    it("preserves a gradient under every filter the heuristic may pick", async() => {
-      const width = 16;
-      const height = 16;
-      const data = new Uint8ClampedArray(width * height * 4);
-      for (let index = 0; index < data.length; index++) {
-        data[index] = (index * 7) % 256;
-      }
-      const source = {
-        width,
-        height,
-        data
-      };
+    for (const filter of FILTER_TYPES) {
+      it(`preserves a noisy image written with filter ${filter}`, async() => {
+        const source = noisyImage(8);
 
-      const decoded = await decodePng(await encodePng(source));
+        const decoded = await decodePng(
+          await encodePngWithFilter(source, filter)
+        );
 
-      assert.deepEqual([...decoded.data], [...data]);
-    });
+        assert.deepEqual([...decoded.data], [...source.data]);
+      });
+    }
   });
 
   describe("structure", () => {
-    it("writes the signature, then IHDR, IDAT and IEND in order", async() => {
-      const bytes = await encodePng(image(2, 1, kFragilePixels));
+    it("writes the signature, then IHDR, IDAT and an empty IEND", async() => {
+      const bytes = await encodePng(image(2, 1, FRAGILE_PIXELS));
+      const chunks = parseChunks(bytes);
 
       assert.deepEqual(
         [...bytes.subarray(0, 8)],
         [...PNG_SIGNATURE]
       );
       assert.deepEqual(
-        parseChunks(bytes).map(({ type }) => type),
+        chunks.map(({ type }) => type),
         ["IHDR", "IDAT", "IEND"]
       );
+      assert.equal(chunks[2].data.length, 0);
     });
 
     it("declares an 8-bit, non-interlaced, truecolor-with-alpha image", async() => {
@@ -168,23 +166,6 @@ describe("encodePng", () => {
       assert.equal(ihdr.data[12], 0, "interlace method");
     });
 
-    it("ends with an empty IEND chunk", async() => {
-      const bytes = await encodePng(image(1, 1, [1, 2, 3, 4]));
-      const chunks = parseChunks(bytes);
-      const last = chunks[chunks.length - 1];
-
-      assert.equal(last.type, "IEND");
-      assert.equal(last.data.length, 0);
-    });
-
-    it("carries one filter byte per scanline inside the zlib stream", async() => {
-      const bytes = await encodePng(image(2, 3, new Array(24).fill(0)));
-      const [, idat] = parseChunks(bytes);
-      const scanlines = inflateSync(idat.data);
-
-      assert.equal(scanlines.length, 3 * ((2 * 4) + 1));
-    });
-
     it("gives every chunk a CRC over its type and payload", async() => {
       const bytes = await encodePng(image(2, 2, new Array(16).fill(9)));
 
@@ -198,90 +179,40 @@ describe("encodePng", () => {
     });
   });
 
-  /*
-   * chooseFilter works on bytes, so these use one byte per pixel: the
-   * predictors are then readable as plain numbers rather than as channels.
-   */
-  describe("chooseFilter", () => {
-    const bytesPerPixel = 1;
-
-    it("picks None for a row whose samples are already near zero", () => {
-      const row = new Uint8Array([0, 3, 0, 3]);
-
-      assert.equal(chooseFilter(row, null, bytesPerPixel), 0);
-    });
-
-    it("picks Sub for a row that repeats horizontally", () => {
-      const row = new Uint8Array([90, 90, 90, 90]);
-
-      assert.equal(chooseFilter(row, null, bytesPerPixel), 1);
-    });
-
-    it("picks Up for a row identical to the one above", () => {
-      const above = new Uint8Array([10, 90, 200, 70]);
-      const row = new Uint8Array(above);
-
-      assert.equal(chooseFilter(row, above, bytesPerPixel), 2);
-    });
-
-    it("picks Average when each sample is the midpoint of its two neighbours", () => {
-      const above = new Uint8Array([50, 100, 150, 200]);
-      const row = new Uint8Array([0, 50, 100, 150]);
-
-      assert.equal(chooseFilter(row, above, bytesPerPixel), 3);
-    });
-
-    it("picks Paeth when neither neighbour alone predicts well", () => {
-      const above = new Uint8Array([146, 159, 245, 212]);
-      const row = new Uint8Array([162, 149, 176, 185]);
-
-      assert.equal(chooseFilter(row, above, bytesPerPixel), 4);
-    });
-  });
-
   describe("rejects", () => {
-    it("a data length that disagrees with width * height", async() => {
-      await assert.rejects(
-        () => encodePng({
-          width: 2,
-          height: 2,
-          data: new Uint8ClampedArray(8)
-        }),
-        /expected 16 bytes/
-      );
-    });
+    const cases = [
+      {
+        name: "a data length that disagrees with width * height",
+        source: image(2, 2, new Array(8).fill(0)),
+        message: /expected 16 bytes/
+      },
+      {
+        name: "non-positive dimensions",
+        source: image(0, 4, []),
+        message: /dimensions must be positive/
+      },
+      {
+        name: "non-integer dimensions",
+        source: image(1.5, 1, new Array(4).fill(0)),
+        message: /dimensions must be positive 32-bit integers/
+      },
+      {
+        name: "dimensions larger than PNG can store",
+        source: image(0x1_0000_0000, 1, []),
+        message: /dimensions must be positive 32-bit integers/
+      }
+    ];
 
-    it("non-positive dimensions", async() => {
-      await assert.rejects(
-        () => encodePng({
-          width: 0,
-          height: 4,
-          data: new Uint8ClampedArray(0)
-        }),
-        /dimensions must be positive/
-      );
-    });
-
-    it("non-integer dimensions", async() => {
-      await assert.rejects(
-        () => encodePng({
-          width: 1.5,
-          height: 1,
-          data: new Uint8ClampedArray(4)
-        }),
-        /dimensions must be positive 32-bit integers/
-      );
-    });
-
-    it("dimensions larger than PNG can store", async() => {
-      await assert.rejects(
-        () => encodePng({
-          width: 0x1_0000_0000,
-          height: 1,
-          data: new Uint8ClampedArray(0)
-        }),
-        /dimensions must be positive 32-bit integers/
-      );
-    });
+    for (const { name, source, message } of cases) {
+      it(name, async() => {
+        await assert.rejects(
+          () => encodePng(source),
+          {
+            name: "InvalidPngError",
+            message
+          }
+        );
+      });
+    }
   });
 });

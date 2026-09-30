@@ -6,12 +6,19 @@ import {
   chooseFilter,
   type FilterType
 } from "./filters.ts";
-import { InvalidPngError } from "../errors/InvalidPngError.ts";
+import { InvalidPngError } from "./errors/InvalidPngError.ts";
 import type { DecodedImage } from "../types.ts";
 
 // CONSTANTS
 const kSignature = new Uint8Array([
-  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A
 ]);
 const kBytesPerPixel = 4;
 const kBitDepth = 8;
@@ -86,7 +93,11 @@ function filterScanlines(
   for (let y = 0; y < height; y++) {
     const from = y * stride;
     const row = data.subarray(from, from + stride);
-    const filter = pinned ?? chooseFilter(row, above, kBytesPerPixel);
+    const filter = pinned ?? chooseFilter(
+      row,
+      above,
+      kBytesPerPixel
+    );
     const to = y * (stride + 1);
 
     out[to] = filter;
@@ -121,7 +132,9 @@ function chunk(
   type: string,
   data: Uint8Array
 ): Uint8Array {
-  const out = new Uint8Array(data.length + kChunkOverhead);
+  const out = new Uint8Array(
+    data.length + kChunkOverhead
+  );
   const view = new DataView(out.buffer);
   const typeBytes = new Uint8Array([
     type.charCodeAt(0),
@@ -133,7 +146,10 @@ function chunk(
   view.setUint32(0, data.length);
   out.set(typeBytes, 4);
   out.set(data, 8);
-  view.setUint32(data.length + 8, crc32(typeBytes, data));
+  view.setUint32(
+    data.length + 8,
+    crc32(typeBytes, data)
+  );
 
   return out;
 }

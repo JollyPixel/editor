@@ -58,7 +58,7 @@ async function decodeWithImageDecoder(
     const { image } = await decoder.decode({ frameIndex: 0 });
 
     try {
-      return copyFrameToRaster(image);
+      return await copyFrameToRaster(image);
     }
     finally {
       image.close();

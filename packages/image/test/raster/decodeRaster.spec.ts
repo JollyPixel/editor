@@ -16,18 +16,10 @@ import {
 import {
   chunk,
   header,
-  png
+  png,
+  FRAGILE_PIXELS
 } from "../fixtures/png.ts";
 import { canvasPixels } from "../fixtures/canvas.ts";
-
-/*
- * CONSTANTS
- * RGB under a low alpha: a canvas round-trip would return (170, 85, 85, 3).
- */
-const kFragilePixels = [
-  200, 100, 50, 3,
-  0, 0, 0, 0
-];
 
 interface FrameStub {
   codedWidth: number;
@@ -38,28 +30,28 @@ interface FrameStub {
 }
 
 interface DecoderStubOptions {
-  samples?: number[];
-  width?: number;
-  height?: number;
-  /**
-   * Simulates a padded plane layout, which the RGBA8 fast path cannot use.
-   */
   allocationSize?: number;
   throwOnConstruct?: boolean;
   throwOnDecode?: boolean;
+  throwOnCopy?: boolean;
 }
 
-let closedDecoders = 0;
-let closedFrames = 0;
+interface DecoderProbe {
+  closedDecoders: number;
+  closedFrames: number;
+}
+
+interface BitmapProbe {
+  options?: ImageBitmapOptions;
+}
 
 function installImageDecoder(
   options: DecoderStubOptions = {}
-): void {
-  const {
-    samples = kFragilePixels,
-    width = 2,
-    height = 1
-  } = options;
+): DecoderProbe {
+  const probe: DecoderProbe = {
+    closedDecoders: 0,
+    closedFrames: 0
+  };
 
   class ImageDecoderStub {
     completed = Promise.resolve();
@@ -75,38 +67,52 @@ function installImageDecoder(
         throw new Error("decode failed");
       }
 
+      let closed = false;
+
       return {
         image: {
-          codedWidth: width,
-          codedHeight: height,
-          allocationSize: () => options.allocationSize ?? samples.length,
+          codedWidth: 2,
+          codedHeight: 1,
+          allocationSize: () => (
+            options.allocationSize ?? FRAGILE_PIXELS.length
+          ),
           copyTo: async(buffer: Uint8ClampedArray) => {
-            buffer.set(samples);
+            await Promise.resolve();
+            if (closed) {
+              throw new Error("frame closed during copy");
+            }
+            if (options.throwOnCopy) {
+              throw new Error("copy failed");
+            }
+            buffer.set(FRAGILE_PIXELS);
           },
           close: () => {
-            closedFrames++;
+            closed = true;
+            probe.closedFrames++;
           }
         }
       };
     }
 
     close(): void {
-      closedDecoders++;
+      probe.closedDecoders++;
     }
   }
 
   Object.assign(globalThis, { ImageDecoder: ImageDecoderStub });
+
+  return probe;
 }
 
-function installBitmapDecoder(
-  received: { options?: ImageBitmapOptions; } = {}
-): void {
+function installBitmapDecoder(): BitmapProbe {
+  const probe: BitmapProbe = {};
+
   Object.assign(globalThis, {
     createImageBitmap: async(
       _blob: Blob,
       bitmapOptions?: ImageBitmapOptions
     ) => {
-      received.options = bitmapOptions;
+      probe.options = bitmapOptions;
       const canvas = document.createElement("canvas");
       canvas.width = 2;
       canvas.height = 1;
@@ -116,19 +122,21 @@ function installBitmapDecoder(
       });
     }
   });
+
+  return probe;
 }
 
-/**
- * A real 2x1 truecolor-with-alpha PNG carrying `kFragilePixels`, so the
- * pure-JS decoder has something valid to read.
- */
 function fragilePngBlob(): Blob {
   const payload = png([
     header(2, 1, 6),
-    chunk("IDAT", deflateSync(Buffer.from([0, ...kFragilePixels])))
+    chunk("IDAT", deflateSync(Buffer.from([0, ...FRAGILE_PIXELS])))
   ]);
 
   return new Blob([payload], { type: "image/png" });
+}
+
+function opaqueBlob(): Blob {
+  return new Blob(["x"], { type: "image/x-unknown" });
 }
 
 function clearDecoders(): void {
@@ -137,89 +145,91 @@ function clearDecoders(): void {
 }
 
 describe("decodeRaster", () => {
-  afterEach(() => {
-    clearDecoders();
-    closedDecoders = 0;
-    closedFrames = 0;
-  });
+  afterEach(clearDecoders);
 
   test("prefers WebCodecs, returning the file's own samples untouched", async() => {
     installImageDecoder();
 
-    const image = await decodeRaster(
-      new Blob(["png"], { type: "image/png" })
-    );
+    const image = await decodeRaster(opaqueBlob());
 
     assert.strictEqual(image.width, 2);
     assert.strictEqual(image.height, 1);
-    assert.deepStrictEqual([...image.data], kFragilePixels);
+    assert.deepStrictEqual([...image.data], FRAGILE_PIXELS);
   });
 
   test("releases the decoder and the frame", async() => {
-    installImageDecoder();
+    const probe = installImageDecoder();
 
-    await decodeRaster(new Blob(["png"], { type: "image/png" }));
+    await decodeRaster(opaqueBlob());
 
-    assert.strictEqual(closedDecoders, 1);
-    assert.strictEqual(closedFrames, 1);
+    assert.deepStrictEqual(probe, {
+      closedDecoders: 1,
+      closedFrames: 1
+    });
   });
 
   test("falls back to the canvas decoder, asking it not to alter the pixels", async() => {
-    const received: { options?: ImageBitmapOptions; } = {};
-    installBitmapDecoder(received);
+    const bitmap = installBitmapDecoder();
 
-    await decodeRaster(new Blob(["png"], { type: "image/png" }));
+    await decodeRaster(opaqueBlob());
 
-    assert.deepStrictEqual(received.options, {
+    assert.deepStrictEqual(bitmap.options, {
       premultiplyAlpha: "none",
       colorSpaceConversion: "none"
     });
   });
 
-  test("falls back when the codec rejects the type", async() => {
-    installImageDecoder({ throwOnConstruct: true });
-    const received: { options?: ImageBitmapOptions; } = {};
-    installBitmapDecoder(received);
+  const fallbackCases: {
+    name: string;
+    decoder?: DecoderStubOptions;
+    blob?: Blob;
+  }[] = [
+    {
+      name: "the codec rejects the type",
+      decoder: { throwOnConstruct: true }
+    },
+    {
+      name: "decoding throws",
+      decoder: { throwOnDecode: true }
+    },
+    {
+      name: "the frame would need a padded stride",
+      decoder: { allocationSize: 64 }
+    },
+    {
+      name: "copying the frame fails",
+      decoder: { throwOnCopy: true }
+    },
+    {
+      name: "the PNG bytes are unreadable",
+      blob: new Blob(["png"], { type: "image/png" })
+    }
+  ];
 
-    const image = await decodeRaster(
-      new Blob(["x"], { type: "image/x-unknown" })
-    );
+  for (const { name, decoder, blob = opaqueBlob() } of fallbackCases) {
+    test(`falls back to the canvas decoder when ${name}`, async() => {
+      if (decoder) {
+        installImageDecoder(decoder);
+      }
+      const bitmap = installBitmapDecoder();
 
-    assert.strictEqual(image.width, 2);
-    assert.ok(received.options, "the canvas decoder ran");
-  });
+      const image = await decodeRaster(blob);
 
-  test("falls back when decoding throws", async() => {
-    installImageDecoder({ throwOnDecode: true });
-    const received: { options?: ImageBitmapOptions; } = {};
-    installBitmapDecoder(received);
-
-    await decodeRaster(new Blob(["png"], { type: "image/png" }));
-
-    assert.ok(received.options, "the canvas decoder ran");
-  });
-
-  test("falls back when the frame would need a padded stride", async() => {
-    installImageDecoder({ allocationSize: 64 });
-    const received: { options?: ImageBitmapOptions; } = {};
-    installBitmapDecoder(received);
-
-    await decodeRaster(new Blob(["png"], { type: "image/png" }));
-
-    assert.ok(received.options, "the canvas decoder ran");
-  });
+      assert.strictEqual(image.width, 2);
+      assert.ok(bitmap.options, "the canvas decoder ran");
+    });
+  }
 
   test("decodes PNG losslessly without WebCodecs, skipping the canvas", async() => {
-    const received: { options?: ImageBitmapOptions; } = {};
-    installBitmapDecoder(received);
+    const bitmap = installBitmapDecoder();
 
     const image = await decodeRaster(fragilePngBlob());
 
     assert.strictEqual(image.width, 2);
     assert.strictEqual(image.height, 1);
-    assert.deepStrictEqual([...image.data], kFragilePixels);
+    assert.deepStrictEqual([...image.data], FRAGILE_PIXELS);
     assert.strictEqual(
-      received.options,
+      bitmap.options,
       undefined,
       "the canvas decoder never ran"
     );
@@ -227,35 +237,18 @@ describe("decodeRaster", () => {
 });
 
 describe("decodeRasterCanvas", () => {
-  afterEach(() => {
-    clearDecoders();
-    closedDecoders = 0;
-    closedFrames = 0;
-  });
+  afterEach(clearDecoders);
 
-  test("takes the same PNG path without WebCodecs", async() => {
-    installBitmapDecoder({});
+  test("puts the exactly decoded samples on a canvas of the image size", async() => {
+    installBitmapDecoder();
 
     const canvas = await decodeRasterCanvas(fragilePngBlob());
-
-    assert.deepStrictEqual(
-      [...canvasPixels(canvas)],
-      kFragilePixels
-    );
-  });
-
-  test("writes exact samples rather than compositing them", async() => {
-    installImageDecoder();
-
-    const canvas = await decodeRasterCanvas(
-      new Blob(["png"], { type: "image/png" })
-    );
 
     assert.strictEqual(canvas.width, 2);
     assert.strictEqual(canvas.height, 1);
     assert.deepStrictEqual(
       [...canvasPixels(canvas)],
-      kFragilePixels
+      FRAGILE_PIXELS
     );
   });
 });

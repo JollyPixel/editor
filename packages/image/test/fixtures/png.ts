@@ -5,15 +5,16 @@ import { Buffer } from "node:buffer";
 export const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
 ]);
+export const FRAGILE_PIXELS = [
+  200, 100, 50, 3,
+  0, 0, 0, 0
+];
 
 export interface PngHeaderOptions {
   bitDepth?: number;
   interlace?: number;
 }
 
-/**
- * The decoder never verifies CRCs, so the trailing four bytes stay zero.
- */
 export function chunk(
   type: string,
   data: Buffer
@@ -46,9 +47,6 @@ export function header(
   return chunk("IHDR", data);
 }
 
-/**
- * Wraps chunks between the signature and an empty IEND.
- */
 export function png(
   chunks: Buffer[]
 ): Uint8Array<ArrayBuffer> {

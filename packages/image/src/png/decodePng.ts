@@ -6,7 +6,7 @@ import {
   unfilter,
   type PngPalette
 } from "./scanlines.ts";
-import { InvalidPngError } from "../errors/InvalidPngError.ts";
+import { InvalidPngError } from "./errors/InvalidPngError.ts";
 import type { DecodedImage } from "../types.ts";
 
 // CONSTANTS
@@ -120,7 +120,11 @@ function readHeader(
     throw new InvalidPngError("the IHDR chunk is truncated.");
   }
 
-  const view = new DataView(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+  const view = new DataView(
+    chunk.buffer,
+    chunk.byteOffset,
+    chunk.byteLength
+  );
   const width = view.getUint32(0);
   const height = view.getUint32(4);
   const bitDepth = chunk[8];
