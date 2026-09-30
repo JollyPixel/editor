@@ -4,6 +4,7 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import {
   BRUSH_AXES,
+  BRUSH_PATTERNS,
   type BrushAxis,
   type BrushPattern
 } from "../../../state/index.ts";
@@ -17,7 +18,6 @@ import {
 // CONSTANTS
 const kCoordAxes: readonly CoordAxis[] = ["x", "y", "z"];
 const kAnchors: readonly BrushAnchor[] = ["bottom", "top", "center"];
-const kPatterns: readonly BrushPattern[] = ["square", "circle"];
 const kRadiusTrim = 0.5;
 
 export interface BrushShape {
@@ -68,7 +68,7 @@ export class BrushFootprint implements BrushShape {
     }
 
     const axis = BRUSH_AXES.find((known) => known === Reflect.get(value, "axis"));
-    const pattern = kPatterns.find(
+    const pattern = BRUSH_PATTERNS.find(
       (known) => known === Reflect.get(value, "pattern")
     );
     const anchor = kAnchors.find(

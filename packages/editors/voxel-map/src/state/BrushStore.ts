@@ -1,21 +1,36 @@
 // Import Third-party Dependencies
-import type { VoxelRotationStep } from "@jolly-pixel/voxel.renderer";
+import {
+  VoxelRotation,
+  type VoxelRotationStep
+} from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // CONSTANTS
 export const BRUSH_MIN_SIZE = 1;
 export const BRUSH_MAX_SIZE = 16;
-export const BRUSH_AXES: readonly BrushAxis[] = Object.freeze([
+export const BRUSH_AXES = Object.freeze([
   "xz",
   "xy",
   "yz",
   "xyz"
+] as const);
+export const BRUSH_PATTERNS = Object.freeze([
+  "square",
+  "circle"
+] as const);
+export const BRUSH_MODES = Object.freeze([
+  "build",
+  "replace"
+] as const);
+export const ROTATION_MODES: readonly RotationMode[] = Object.freeze([
+  "auto",
+  ...Object.values(VoxelRotation)
 ]);
 
-export type BrushAxis = "xz" | "xy" | "yz" | "xyz";
-export type BrushPattern = "square" | "circle";
+export type BrushAxis = typeof BRUSH_AXES[number];
+export type BrushPattern = typeof BRUSH_PATTERNS[number];
 export type RotationMode = VoxelRotationStep | "auto";
-export type BrushMode = "build" | "replace";
+export type BrushMode = typeof BRUSH_MODES[number];
 
 export interface BrushOptions {
   size: number;

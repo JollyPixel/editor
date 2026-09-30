@@ -80,6 +80,46 @@ describe("mountStandalone", () => {
     Reflect.deleteProperty(globalThis, "hostTestHandle");
     sessionStorage.clear();
     window.history.replaceState(null, "", "/");
+    for (const element of document.querySelectorAll("jolly-console")) {
+      element.remove();
+    }
+  });
+
+  test("hands the editor the console mounted on the page", async() => {
+    const workspace = await openWorkspace();
+
+    const received: EditorContext["commands"][] = [];
+    const handle = await mountStandalone(definition((context) => {
+      received.push(context.commands);
+
+      return Promise.resolve(editorHandle(context.session));
+    }), offlineOptions(workspace));
+
+    const elements = document.querySelectorAll("jolly-console");
+    assert.equal(elements.length, 1);
+    assert.equal(received.length, 1);
+    assert.equal(elements[0].console, received[0]);
+    assert.notEqual(
+      received[0].registry.resolveVariable("theme"),
+      undefined
+    );
+
+    handle.dispose();
+    await workspace.close();
+  });
+
+  test("removes the console when the boot fails", async() => {
+    const workspace = await openWorkspace();
+
+    await assert.rejects(
+      mountStandalone(definition(
+        () => Promise.reject(new Error("mount failed"))
+      ), offlineOptions(workspace)),
+      /mount failed/
+    );
+    assert.equal(document.querySelector("jolly-console"), null);
+
+    await workspace.close();
   });
 
   test("rejects before any session when no launch source names a target", async() => {

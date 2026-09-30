@@ -25,6 +25,8 @@ const kCatalogMaxContentBytes = 32 * 1024 * 1024;
 const kWorkspaceBrowserEntries = [
   "@jolly-pixel/asset.pixel-art/client",
   "@jolly-pixel/color",
+  "@jolly-pixel/console",
+  "@jolly-pixel/console/element",
   "@jolly-pixel/editor.host",
   "@jolly-pixel/engine",
   "@jolly-pixel/image",

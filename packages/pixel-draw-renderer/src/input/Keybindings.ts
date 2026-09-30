@@ -43,7 +43,7 @@ export interface ParsedKeybinding {
 }
 
 // CONSTANTS
-const kKeybindingActions: KeybindingAction[] = [
+export const KEYBINDING_ACTIONS: readonly KeybindingAction[] = Object.freeze([
   "copy",
   "paste",
   "undo",
@@ -53,7 +53,7 @@ const kKeybindingActions: KeybindingAction[] = [
   "rotateCounterClockwise",
   "flipHorizontal",
   "flipVertical"
-];
+]);
 
 export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
   copy: "mod+c",
@@ -134,7 +134,7 @@ function mergeAndValidate(
   };
 
   const seenBy = new Map<string, KeybindingAction>();
-  for (const action of kKeybindingActions) {
+  for (const action of KEYBINDING_ACTIONS) {
     for (const binding of flattenBindings(merged[action])) {
       const parsed = parseKeybinding(binding);
       const signature = `${parsed.mod}:${parsed.shift}:${parsed.alt}:${parsed.key}`;
@@ -182,7 +182,7 @@ export class Keybindings {
   match(
     event: KeyboardEvent
   ): KeybindingAction | null {
-    for (const action of kKeybindingActions) {
+    for (const action of KEYBINDING_ACTIONS) {
       for (const binding of flattenBindings(this.#bindings[action])) {
         const isMatching = eventMatchesKeybinding(
           event,

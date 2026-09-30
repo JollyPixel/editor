@@ -56,6 +56,7 @@
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.voxel-map": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
+    "@jolly-pixel/console": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/editor.pixel-art": "workspace:*",

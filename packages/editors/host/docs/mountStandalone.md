@@ -41,6 +41,7 @@ interface EditorContext {
   session: EditorSession;
   shell: ShellChannel | null;
   logger: HostLogger;
+  commands: CommandConsole;
 }
 
 interface EditorHandle {
@@ -65,11 +66,43 @@ editor once `mount` returns, so `dispose()` must call `session.dispose()`.
 `context.shell` is the [shell channel](#shell-channel) when a parent frame
 launched the page, `null` otherwise. `context.logger` is the `editor`
 namespace of the [boot trace](#boot-tracing), for the editor's own steps.
+`context.commands` is the page's [console](#console).
 
 The returned handle exposes the session and the `Runtime` of its 3D view,
 `null` for an editor without one. `ready` resolves once the target document is
 loaded and the scene has awoken; `mountStandalone` waits for it before
 resolving, and disposes the handle when it rejects.
+
+## Console
+
+`mountStandalone` constructs one
+[`CommandConsole`](../../../console/docs/CommandConsole.md) per page, appends
+a `jolly-console` element to `document.body`, and passes the instance to
+`mount` as `context.commands`. Ctrl+K opens it in every editor.
+
+The host registers one root variable, `theme`, an enum of `light`, `dark` and
+`auto`. A write sets the `theme` attribute of every `jolly-scope` on the page,
+and `auto` removes it so the scopes follow the system. It is not persisted.
+
+When a boot step fails, the element is removed and every registration is
+dropped, so the retry of the [offline fallback](#offline-fallback) mounts a
+fresh console. Once the editor is ready the console stays for the life of the
+page.
+
+An editor registers its namespaces as a list of
+[console features](../../../console/docs/features.md) and unregisters them in
+`dispose()`:
+
+```ts
+const features = registerConsoleFeatures(
+  context.commands,
+  [brushConsole],
+  workspace
+);
+
+// in dispose()
+features.unregister();
+```
 
 ## Options
 

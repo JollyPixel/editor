@@ -1,5 +1,6 @@
 export * from "./CommandConsole.ts";
 export type * from "./registry/types.ts";
+export * from "./registry/ConsoleFeature.ts";
 export * from "./registry/errors/ArgumentOrderError.ts";
 export * from "./registry/errors/DuplicateArgumentError.ts";
 export * from "./registry/errors/InvalidIdentifierError.ts";

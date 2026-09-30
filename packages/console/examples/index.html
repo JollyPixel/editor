@@ -5,22 +5,63 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>jolly-pixel/console example</title>
+  <link rel="stylesheet" href="./main.css">
 </head>
 
 <body>
   <jolly-scope theme="dark">
     <main>
-      <h1>Console</h1>
-      <p>Press Ctrl+K (Cmd+K on macOS) to open the console.</p>
-      <p>
-        Brush size: <output id="brush-size"></output>,
-        shape: <output id="brush-shape"></output>,
-        ghost: <output id="brush-ghost"></output>
-      </p>
-      <jolly-button id="open-console">Open console</jolly-button>
-      <jolly-button id="open-dialog">Open dialog</jolly-button>
-      <jolly-button id="open-locked-dialog">Open locked dialog</jolly-button>
-      <input id="notes" type="text" aria-label="Notes" placeholder="Notes">
+      <header>
+        <h1>Console</h1>
+        <p class="lede">
+          Press <kbd>Ctrl</kbd> <kbd>K</kbd> (<kbd>⌘</kbd> <kbd>K</kbd> on macOS)
+          to open the console.
+        </p>
+      </header>
+
+      <section aria-labelledby="state-heading">
+        <h2 id="state-heading">State</h2>
+        <dl class="state">
+          <div>
+            <dt>theme</dt>
+            <dd><output id="theme"></output></dd>
+          </div>
+          <div>
+            <dt>brush.size</dt>
+            <dd><output id="brush-size"></output></dd>
+          </div>
+          <div>
+            <dt>brush.shape</dt>
+            <dd><output id="brush-shape"></output></dd>
+          </div>
+          <div>
+            <dt>brush.ghost</dt>
+            <dd><output id="brush-ghost"></output></dd>
+          </div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="try-heading">
+        <h2 id="try-heading">Try</h2>
+        <ul class="samples">
+          <li><code>theme light</code><span>switch the page theme</span></li>
+          <li><code>brush.size 8</code><span>write a variable</span></li>
+          <li><code>/brush.grow -2</code><span>run a command</span></li>
+          <li><code>/wait 2000</code><span>pending entry</span></li>
+          <li><code>/fail</code><span>error entry</span></li>
+          <li><code>/help</code><span>list everything</span></li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="focus-heading">
+        <h2 id="focus-heading">Focus and dialogs</h2>
+        <div class="actions">
+          <jolly-button id="open-console">Open console</jolly-button>
+          <jolly-button id="open-dialog">Open dialog</jolly-button>
+          <jolly-button id="open-locked-dialog">Open locked dialog</jolly-button>
+          <input id="notes" type="text" aria-label="Notes" placeholder="Notes">
+        </div>
+      </section>
     </main>
 
     <jolly-dialog id="dialog" heading="Layer settings">

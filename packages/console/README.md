@@ -65,7 +65,14 @@ Name the instance `commands`: a binding named `console` shadows the global.
 Construct one per editor page and pass it down; the package exports no
 instance.
 
-The design is described in [SPEC.md](./SPEC.md).
+## 📚 API
+
+- [CommandConsole](./docs/CommandConsole.md): namespaces, commands, variables, output and history
+- [Registering from features](./docs/features.md): `ConsoleFeature` and `registerConsoleFeatures`
+- [Input grammar](./docs/grammar.md): the three modes, coercion, search and completion
+- [jolly-console](./docs/element.md): mounting the element, keys and accessibility
+- [Architecture](./ARCHITECTURE.md): diagrams of the two entries, a keystroke, a submit and registration lifetime
+- [Architecture decisions](./docs/adr/README.md)
 
 ## 🧪 Benchmarks
 

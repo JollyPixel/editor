@@ -50,6 +50,7 @@ export const packageGroups: PackageGroup[] = [
     text: "Interface",
     packages: [
       { dir: "ui", text: "UI" },
+      { dir: "console", text: "Console" },
       { dir: "resize-handle", text: "Resize Handle" },
       { dir: "arbor", text: "Arbor" }
     ]
