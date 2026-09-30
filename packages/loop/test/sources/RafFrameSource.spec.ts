@@ -3,11 +3,11 @@ import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { GameLoop, RafFrameSource } from "../../src/index.ts";
+import {
+  GameLoop,
+  RafFrameSource
+} from "../../src/index.ts";
 
-/**
- * Deterministic animation-frame scheduler without DOM timers.
- */
 class FakeRaf {
   handle = 0;
   pending = new Map<number, (now: number) => void>();
@@ -26,9 +26,6 @@ class FakeRaf {
     this.pending.delete(handle);
   };
 
-  /**
-   * Advances time and fires every pending callback.
-   */
   flush(deltaMs = 16): void {
     this.now += deltaMs;
     const callbacks = [...this.pending.entries()];
@@ -55,7 +52,9 @@ describe("Loop.RafFrameSource", () => {
 
   test("throws when no animation frame function is available", () => {
     assert.throws(
-      () => new RafFrameSource({ requestAnimationFrame: undefined }),
+      () => new RafFrameSource({
+        requestAnimationFrame: undefined
+      }),
       TypeError
     );
   });
@@ -64,7 +63,7 @@ describe("Loop.RafFrameSource", () => {
     const source = createSource();
     const times: number[] = [];
 
-    source.start((now) => times.push(now!));
+    source.start((now) => times.push(now));
     assert.strictEqual(source.running, true);
     assert.strictEqual(raf.pending.size, 1);
 
@@ -122,21 +121,31 @@ describe("Loop.RafFrameSource", () => {
       throw new Error("host blew up");
     });
 
-    assert.throws(() => raf.flush(), /host blew up/);
+    assert.throws(
+      () => raf.flush(),
+      /host blew up/
+    );
     assert.strictEqual(raf.pending.size, 1);
 
-    assert.throws(() => raf.flush(), /host blew up/);
+    assert.throws(
+      () => raf.flush(),
+      /host blew up/
+    );
     assert.strictEqual(frames, 2);
   });
 
   test("drives a GameLoop end to end", () => {
-    const loop = new GameLoop({ source: createSource() });
+    const loop = new GameLoop({
+      source: createSource()
+    });
     const steps: number[] = [];
 
     loop.start({
-      fixedUpdate: (_delta, stepIndex) => steps.push(stepIndex)
+      fixedUpdate: (
+        _delta,
+        stepIndex
+      ) => steps.push(stepIndex)
     });
-    // The first frame primes the scheduler and reports a zero delta.
     raf.flush(16);
     raf.flush(60);
 

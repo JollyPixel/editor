@@ -74,19 +74,30 @@ describe("Loop.FrameBudget", () => {
   });
 
   test("rejects a negative or non-finite budget", () => {
-    assert.throws(() => budget.start(-1), RangeError);
-    assert.throws(() => budget.start(NaN), RangeError);
-    assert.throws(() => budget.start(Infinity), RangeError);
+    assert.throws(
+      () => budget.start(-1),
+      RangeError
+    );
+    assert.throws(
+      () => budget.start(NaN),
+      RangeError
+    );
+    assert.throws(
+      () => budget.start(Infinity),
+      RangeError
+    );
   });
 
   test("drains a queue up to the deadline and leaves the rest", () => {
-    const queue = Array.from({ length: 10 }, (_unused, index) => index);
+    const queue = Array.from(
+      { length: 10 },
+      (_unused, index) => index
+    );
     const done: number[] = [];
 
     budget.start(4);
     while (queue.length > 0 && !budget.expired) {
       done.push(queue.shift()!);
-      // Each item costs a millisecond of wall time.
       clock.advance(1);
     }
 

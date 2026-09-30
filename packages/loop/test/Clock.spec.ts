@@ -7,8 +7,14 @@ import { ManualClock, PerformanceClock } from "../src/index.ts";
 
 describe("Loop.ManualClock", () => {
   test("starts at zero unless an initial time is given", () => {
-    assert.strictEqual(new ManualClock().now(), 0);
-    assert.strictEqual(new ManualClock(1234).now(), 1234);
+    assert.strictEqual(
+      new ManualClock().now(),
+      0
+    );
+    assert.strictEqual(
+      new ManualClock(1234).now(),
+      1234
+    );
   });
 
   test("advance() moves forward and returns the new time", () => {

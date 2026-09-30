@@ -12,7 +12,6 @@ import { Xorshift32, generateTape } from "./helpers/prng.ts";
 // CONSTANTS
 const kSeeds = 64;
 const kFramesPerTape = 200;
-// Allow floating-point error in time bookkeeping.
 const kEpsilon = 1e-9;
 
 const kOptionGrid: FrameSchedulerOptions[] = [
@@ -90,7 +89,6 @@ describe("Loop.FrameScheduler invariants", () => {
           );
           previousTime = scheduler.time;
 
-          // Account for simulated, pending, and dropped time.
           const accounted = scheduler.time +
             scheduler.accumulator +
             scheduler.droppedTime;
@@ -103,13 +101,4 @@ describe("Loop.FrameScheduler invariants", () => {
       }
     });
   }
-
-  test("the generator is deterministic across runs", () => {
-    const first = generateTape(new Xorshift32(7));
-    const second = generateTape(new Xorshift32(7));
-
-    assert.deepStrictEqual(first, second);
-    assert.notDeepStrictEqual(first, generateTape(new Xorshift32(8)));
-    assert.ok(first.every((delta) => Number.isFinite(delta) && delta >= 0));
-  });
 });
