@@ -13,6 +13,7 @@ import {
   state
 } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
+import { repeat } from "lit/directives/repeat.js";
 import {
   adoptAmbientTheme,
   deepActiveElement,
@@ -147,6 +148,8 @@ export class ConsoleElement extends LitElement {
     const active = deepActiveElement();
     this.#restoreFocus = active instanceof HTMLElement ? active : null;
     this.#inheritedTheme = adoptAmbientTheme(this, this.#inheritedTheme);
+    this.#list = NO_SUGGESTIONS;
+    this._text = "";
     dialog.showModal();
     this.#releaseLayer = inputLayers.push({
       dismiss: () => {
@@ -188,7 +191,11 @@ export class ConsoleElement extends LitElement {
             aria-relevant="additions"
             aria-label="Console output"
             ?hidden=${entries.length === 0}
-          >${entries.map((entry) => this.#renderEntry(entry))}</div>
+          >${repeat(
+            entries,
+            (entry) => entry.id,
+            (entry) => this.#renderEntry(entry)
+          )}</div>
           <div class="prompt">
             <jolly-icon name="search" aria-hidden="true"></jolly-icon>
             <input
@@ -210,13 +217,14 @@ export class ConsoleElement extends LitElement {
             >
             <span class="hint">${hint ?? ""}</span>
           </div>
-          <ul
-            id="suggestions"
-            role="listbox"
-            aria-label="Suggestions"
-            ?hidden=${!expanded}
-            @mousedown=${this.#onListMouseDown}
-          >${items.map((item, index) => this.#renderSuggestion(item, index))}</ul>
+          <div class=${expanded ? "suggestions expanded" : "suggestions"}>
+            <ul
+              id="suggestions"
+              role="listbox"
+              aria-label="Suggestions"
+              @mousedown=${this.#onListMouseDown}
+            >${items.map((item, index) => this.#renderSuggestion(item, index))}</ul>
+          </div>
         </div>
       </dialog>
     `;
@@ -504,9 +512,6 @@ export class ConsoleElement extends LitElement {
     this.#release();
     this.#browsingHistory = false;
     this.#request++;
-    this.#list = NO_SUGGESTIONS;
-    this._text = "";
-    this._highlight = -1;
     const restore = this.#restoreFocus;
     this.#restoreFocus = null;
     restore?.focus();

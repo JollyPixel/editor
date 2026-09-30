@@ -37,6 +37,19 @@ test.describe("jolly-console", () => {
     await expect(consoleDialog(page)).not.toHaveAttribute("open");
   });
 
+  test("reopening starts from an empty prompt", async({ page }) => {
+    await page.keyboard.press("Control+k");
+    await prompt(page).fill("brush.si");
+    await expect(page.getByRole("option").first()).toContainText("brush.size");
+    await page.keyboard.press("Escape");
+    await expect(consoleDialog(page)).not.toHaveAttribute("open");
+
+    await page.keyboard.press("Control+k");
+
+    await expect(prompt(page)).toHaveValue("");
+    await expect(page.getByRole("option")).toHaveCount(0);
+  });
+
   test("closing returns focus to the element that held it", async({ page }) => {
     const notes = page.getByRole("textbox", { name: "Notes" });
     await notes.click();
