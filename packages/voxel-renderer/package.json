@@ -61,7 +61,7 @@
     }
   },
   "devDependencies": {
-    "@dimforge/rapier3d": "0.20.0",
+    "@dimforge/rapier3d": "0.21.0",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
