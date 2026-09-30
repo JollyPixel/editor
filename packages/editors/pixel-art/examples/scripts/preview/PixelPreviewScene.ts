@@ -115,9 +115,13 @@ export class PixelPreviewScene extends Systems.Scene {
     this.#style.borderColor.set(appearance.borderColor);
   }
 
-  setRotating(
+  get rotating(): boolean {
+    return this.#style.rotating;
+  }
+
+  set rotating(
     rotating: boolean
-  ): void {
+  ) {
     this.#style.rotating = rotating;
   }
 

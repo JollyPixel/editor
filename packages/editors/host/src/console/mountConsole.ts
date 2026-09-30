@@ -3,7 +3,10 @@ import { CommandConsole } from "@jolly-pixel/console";
 import "@jolly-pixel/console/element";
 
 // Import Internal Dependencies
-import { registerThemeVariable } from "./themeVariable.ts";
+import {
+  registerDensityVariable,
+  registerThemeVariable
+} from "./appearanceVariables.ts";
 
 export interface EditorConsole {
   readonly commands: CommandConsole;
@@ -16,9 +19,18 @@ export function mountConsole(
   parent: HTMLElement = document.body
 ): EditorConsole {
   const commands = new CommandConsole();
-  registerThemeVariable(commands, parent.ownerDocument);
+  registerThemeVariable(
+    commands,
+    parent.ownerDocument
+  );
+  registerDensityVariable(
+    commands,
+    parent.ownerDocument
+  );
 
-  const element = parent.ownerDocument.createElement("jolly-console");
+  const element = parent.ownerDocument.createElement(
+    "jolly-console"
+  );
   element.console = commands;
   parent.append(element);
 

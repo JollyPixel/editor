@@ -1,21 +1,18 @@
 /*
- * Demo-only chrome (page backdrop, rotation toggle) is outside
- * pixel-draw-panel's shadow DOM, so it can't see its CSS custom properties.
+ * Demo-only chrome (page backdrop) is outside pixel-draw-panel's shadow DOM,
+ * so it can't see its CSS custom properties.
  * Same "light-dark() + color-scheme" pattern as PixelDrawPanel.styles.ts: one
  * line per token instead of a default block plus a "prefers-color-scheme"
  * block plus a "[data-theme]" override block. "color-scheme" here starts as
  * "light dark" (OS-driven, "auto") and DemoShell sets "data-theme" only to pin
- * an explicit light/dark choice, same contract as the "theme" attribute
- * jolly-theme-preferences drives on the panel.
+ * an explicit light/dark choice, mirrored from the page jolly-scope that the
+ * console "theme" variable drives.
  */
 :root {
   color-scheme: light dark;
 
   --demo-page-bg: light-dark(#d7e3ee, #0d151d);
   --demo-control-bg: light-dark(#fff, #1a2228);
-  --demo-border: light-dark(#6f8caa, #4a5c68);
-  --demo-text: light-dark(#16232f, #eee);
-  --demo-accent: light-dark(#2f6fd8, #3a6fc2);
 }
 
 :root[data-theme="light"] {
@@ -35,6 +32,10 @@ html, body {
 body {
   display: flex;
   background: var(--demo-page-bg);
+}
+
+jolly-scope {
+  display: contents;
 }
 
 #canvas-container {
@@ -67,65 +68,4 @@ body {
 
 #draw-panel:not([data-ready]) {
   visibility: hidden;
-}
-
-#demo-controls {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/*
- * jolly-theme-preferences needs a jolly-scope ancestor for its own controls
- * to render themed instead of falling back (see docs/theming.md). Overridden
- * to the demo's own accent instead of jolly's stock ramp, so the toggle reads
- * as part of this page's chrome rather than a different product's.
- * "min-width" gives the three-segment Light/Dark/Auto toggle enough room:
- * unset, "Light" (the longest label) truncates by a few px against "Dark"
- * and "Auto" in the equal-width split.
- */
-#demo-controls jolly-scope {
-  min-width: 190px;
-
-  --jolly-accent-fill: var(--demo-accent);
-  --jolly-accent-fill-hover: color-mix(in oklab, var(--demo-accent) 88%, white);
-  --jolly-accent-fill-focus: color-mix(in oklab, var(--demo-accent) 76%, white);
-}
-
-#rotation-control {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px;
-  border: 0;
-  border-radius: 4px;
-  outline: 0;
-  background-color: var(--demo-control-bg);
-  color: var(--demo-text);
-  font-size: 12px;
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.15s;
-  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-}
-
-#rotation-control:hover,
-#rotation-control:has(#rotation-toggle:focus-visible) {
-  background-color: color-mix(
-    in srgb,
-    var(--demo-control-bg),
-    var(--demo-accent) 12%
-  );
-}
-
-#rotation-toggle {
-  margin: 0;
-  margin-right: 5px;
-  outline: 0;
-  accent-color: var(--demo-accent);
-  cursor: pointer;
 }

@@ -103,6 +103,10 @@ describe("mountStandalone", () => {
       received[0].registry.resolveVariable("theme"),
       undefined
     );
+    assert.notEqual(
+      received[0].registry.resolveVariable("density"),
+      undefined
+    );
 
     handle.dispose();
     await workspace.close();

@@ -10,7 +10,10 @@ import assert from "node:assert/strict";
 import { CommandConsole } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import { registerThemeVariable } from "#src/console/themeVariable.ts";
+import {
+  registerDensityVariable,
+  registerThemeVariable
+} from "#src/console/appearanceVariables.ts";
 
 function scopes(
   count: number
@@ -78,7 +81,59 @@ describe("theme variable", () => {
 
     assert.equal(
       lastLine(commands),
-      "error: This page has no jolly-scope to theme"
+      "error: This page has no jolly-scope"
+    );
+  });
+});
+
+describe("density variable", () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  test("reads default while the first scope sets no density", async() => {
+    scopes(1);
+    const commands = new CommandConsole();
+    registerDensityVariable(commands);
+
+    await commands.submit("density");
+
+    assert.equal(lastLine(commands), "info: default");
+  });
+
+  test("a write resizes every scope of the page", async() => {
+    const [first, second] = scopes(2);
+    const commands = new CommandConsole();
+    registerDensityVariable(commands);
+
+    await commands.submit("density Compact");
+
+    assert.equal(lastLine(commands), "info: compact");
+    assert.equal(first.getAttribute("density"), "compact");
+    assert.equal(second.getAttribute("density"), "compact");
+  });
+
+  test("default is written instead of removing the attribute", async() => {
+    const [scope] = scopes(1);
+    scope.setAttribute("density", "comfortable");
+    const commands = new CommandConsole();
+    registerDensityVariable(commands);
+
+    await commands.submit("density default");
+
+    assert.equal(scope.getAttribute("density"), "default");
+    assert.equal(lastLine(commands), "info: default");
+  });
+
+  test("a write on a page without scope prints an error", async() => {
+    const commands = new CommandConsole();
+    registerDensityVariable(commands);
+
+    await commands.submit("density compact");
+
+    assert.equal(
+      lastLine(commands),
+      "error: This page has no jolly-scope"
     );
   });
 });

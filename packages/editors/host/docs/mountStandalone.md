@@ -80,9 +80,13 @@ resolving, and disposes the handle when it rejects.
 a `jolly-console` element to `document.body`, and passes the instance to
 `mount` as `context.commands`. Ctrl+K opens it in every editor.
 
-The host registers one root variable, `theme`, an enum of `light`, `dark` and
-`auto`. A write sets the `theme` attribute of every `jolly-scope` on the page,
-and `auto` removes it so the scopes follow the system. It is not persisted.
+The host registers two root variables, neither persisted:
+
+- `theme`, an enum of `light`, `dark` and `auto`. A write sets the `theme`
+  attribute of every `jolly-scope` on the page, and `auto` removes it so the
+  scopes follow the system.
+- `density`, an enum of `compact`, `default` and `comfortable`. A write sets
+  the `density` attribute of every `jolly-scope` on the page.
 
 When a boot step fails, the element is removed and every registration is
 dropped, so the retry of the [offline fallback](#offline-fallback) mounts a

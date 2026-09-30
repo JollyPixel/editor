@@ -119,11 +119,6 @@ export const consoleStyles = css`
     align-items: center;
     height: calc(var(--jolly-console-row) + 12px);
     padding: 0 var(--jolly-space-3, 12px);
-    background: linear-gradient(
-      to bottom,
-      light-dark(rgb(0 0 0 / 4%), rgb(0 0 0 / 16%)),
-      light-dark(rgb(0 0 0 / 0%), rgb(0 0 0 / 4%))
-    );
     box-shadow: inset 0 1px 3px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 22%));
   }
 
