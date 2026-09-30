@@ -126,6 +126,20 @@ describe("complete", () => {
     });
   });
 
+  test("a mistyped command falls back to the closest addresses", async() => {
+    assert.deepEqual(await values("/git.chekout"), ["/git.checkout"]);
+    assert.deepEqual(await values("/gti.checkout"), ["/git.checkout"]);
+  });
+
+  test("a mistyped value falls back to the closest values", async() => {
+    assert.deepEqual(await values("/git.checkout main hsrd"), ["hard"]);
+    assert.deepEqual(await values("/git.checkout feture"), ["\"feature one\""]);
+  });
+
+  test("typos are not offered while a prefix matches", async() => {
+    assert.deepEqual(await values("/git.checkout main s"), ["soft"]);
+  });
+
   test("a rejecting autocomplete yields an empty list", async() => {
     const commands = new CommandConsole();
     commands.registerCommand("open", {

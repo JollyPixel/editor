@@ -5,3 +5,4 @@ export const TEXTURE_SIZE = {
 
 export const DEMO_ASSET_PATH = "demo-canvas.pixelart";
 export const DEMO_ASSET_ID = "demo-canvas";
+export const ROTATION_STORAGE_KEY = "pixel-draw-demo:rotation";

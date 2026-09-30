@@ -48,9 +48,49 @@ shadow roots.
 | Key | Effect |
 |---|---|
 | Enter | runs the line, or acts on the highlighted suggestion |
-| Tab | completes the current token |
+| Tab | accepts the highlighted suggestion, or the first one, without running it |
+| Right | accepts the gray suffix when the caret is at the end of the line, otherwise moves the caret |
 | Up, Down | move the highlight when a suggestion is highlighted, otherwise walk the history |
 | Escape | closes the console |
+
+## Inline completion
+
+While the caret is at the end of the line, the prompt shows in gray the rest of the line that Tab
+would produce: `brush.si` shows `ze`, `/brush.gr` shows `ow`. It follows the highlighted suggestion,
+or the first one. A typo correction does not extend the typed text, so it shows no gray suffix;
+Tab still applies it. The suffix hides when the typed text overflows the prompt.
+
+## Empty prompt
+
+An empty prompt, or a bare `?`, lists the registry in sections with nothing highlighted. A section
+with no entries is left out.
+
+| Section | Lists | Enter or click |
+|---|---|---|
+| Recent | the last three distinct submitted lines, newest first | runs the line again |
+| Toggles | every `boolean` variable, checked when true | writes the opposite value |
+| Namespaces | every namespace | inserts `brush.`, which lists its members |
+| Commands | root commands | runs it, or inserts it when an argument is required |
+| Variables | root variables other than `boolean` ones | inserts the address |
+
+Down enters the list; Up with nothing highlighted still walks the history. The list shows no gray
+suffix. `/help` keeps printing to the scrollback.
+
+## Usage line and key hints
+
+When the highlighted suggestion names a command, a variable or a namespace, a line under the list
+shows its usage: a command signature (`/brush.grow <delta:number>`), a variable type and current
+value (`brush.size <number> = 4`), or the member counts of a namespace. The prompt references it
+with `aria-describedby`.
+
+The footer lists the keys that act in the current state: `↑↓ navigate` (or `history`), `↵ run` or
+`↵ insert`, `Tab complete` and `Esc close`.
+
+## Scrollback
+
+An entry longer than seven lines shows its first six and a `Show N more lines` button, which
+expands it in place and does not take focus from the prompt. The scrollback scrolls to a new entry
+and on opening; typing leaves its position alone.
 
 ## Layout and theme
 
@@ -66,6 +106,9 @@ on the element by hand wins over both.
 ## Accessibility
 
 - The prompt is a `combobox` with `aria-expanded`, `aria-controls` and `aria-activedescendant`
-  pointing into the suggestion `listbox`.
+  pointing into the suggestion `listbox`, and `aria-autocomplete="both"`. The gray suffix is
+  `aria-hidden`; the highlighted option carries the same text.
+- Sections of the empty-prompt list are `group`s labelled by their title. A toggle option carries
+  `aria-checked`, and a fold button `aria-expanded`.
 - The scrollback is a `log` with `aria-relevant="additions"`, labelled "Console output".
 - The dialog is labelled "Console", which announces it when it opens.

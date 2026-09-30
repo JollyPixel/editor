@@ -47,9 +47,15 @@ const suite = defineSuite("console / search per keystroke (500 entries)", (bench
     .add("search / humps", () => search("bs", registry).length)
     .add("search / word", () => search("rotation", registry).length)
     .add("search / miss", () => search("qqqq", registry).length)
+    .add("search / typo", () => search("rotatoin", registry).length)
     .add("classify / variable", () => classify("ns12.var3 4", registry).mode)
     .add("complete / after slash", async() => {
       const list = await complete("/ns1", 4, registry);
+
+      return list.items.length;
+    })
+    .add("complete / typo", async() => {
+      const list = await complete("/ns12.cdm3", 10, registry);
 
       return list.items.length;
     });

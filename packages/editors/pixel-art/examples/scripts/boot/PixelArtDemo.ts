@@ -5,10 +5,7 @@ import {
 } from "@jolly-pixel/console";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { Runtime } from "@jolly-pixel/runtime";
-import {
-  LocalStorageAdapter,
-  type ThemePreferences
-} from "@jolly-pixel/ui";
+import { LocalStorageAdapter } from "@jolly-pixel/ui";
 import {
   PIXEL_ART_KIND,
   type SyncedPixelDocument
@@ -31,6 +28,7 @@ import {
   type PixelDrawPanel
 } from "../../../src/index.ts";
 import { DemoShell } from "./DemoShell.ts";
+import { previewConsole } from "./previewConsole.ts";
 import { TextureTabs } from "./TextureTabs.ts";
 import { DEMO_TEXTURE_KIND } from "./textureKind.ts";
 import { TEXTURE_SIZE } from "../config.ts";
@@ -86,12 +84,8 @@ export class PixelArtDemo {
     if (params.importPolicy !== undefined && isTextureImportPolicy(params.importPolicy)) {
       panel.textureImportPolicy = params.importPolicy;
     }
-    const themePreferences = document.querySelector<ThemePreferences>(
-      "jolly-theme-preferences"
-    )!;
+    const scope = document.querySelector("jolly-scope")!;
     await panel.updateComplete;
-    themePreferences.target = panel;
-    await themePreferences.updateComplete;
 
     const keybindings = new KeybindingSettings({
       storage: new LocalStorageAdapter(),
@@ -122,10 +116,9 @@ export class PixelArtDemo {
       null :
       await openDemoPreview({
         canvas: "#canvas-container > canvas",
-        canvasManager: canvas,
-        rotationToggle: document.querySelector<HTMLInputElement>("#rotation-toggle")!
+        canvasManager: canvas
       });
-    const shell = new DemoShell(panel, preview);
+    const shell = new DemoShell(panel, scope, preview);
 
     const tabs = new TextureTabs({
       panel,
@@ -153,11 +146,20 @@ export class PixelArtDemo {
       target,
       tabs,
       keybindings: applyKeybindings(panel, keybindings),
-      consoleFeatures: registerConsoleFeatures(
-        commands,
-        [keybindConsole],
-        { keybindings }
-      )
+      consoleFeatures: preview === null ?
+        registerConsoleFeatures(
+          commands,
+          [keybindConsole],
+          { keybindings }
+        ) :
+        registerConsoleFeatures(
+          commands,
+          [keybindConsole, previewConsole],
+          {
+            keybindings,
+            preview
+          }
+        )
     });
   }
 

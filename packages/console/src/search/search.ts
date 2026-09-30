@@ -7,6 +7,7 @@ import type {
 import {
   MATCH_TIERS,
   score,
+  scoreTypo,
   type Match,
   type MatchRange,
   type MatchTier
@@ -50,16 +51,22 @@ export function search(
 export function select(
   result: SearchResult
 ): SearchSelection {
-  const { target } = result;
+  return selectEntry(result.target);
+}
+
+export function selectEntry(
+  target: RegisteredEntry
+): SearchSelection {
+  const text = label(target);
   switch (target.kind) {
     case "command":
       return target.def.args.some((arg) => arg.required) ?
-        { text: `${result.label} `, run: false } :
-        { text: result.label, run: true };
+        { text: `${text} `, run: false } :
+        { text, run: true };
     case "variable":
-      return { text: result.label, run: false };
+      return { text, run: false };
     default:
-      return { text: `${result.label}.`, run: false };
+      return { text: `${text}.`, run: false };
   }
 }
 
@@ -106,7 +113,11 @@ function rank(
     return result(target, text, description, "description", byDescription);
   }
 
-  return null;
+  const byTypo = scoreTypo(query, text.slice(offset));
+
+  return byTypo === null ?
+    null :
+    result(target, text, description, "name", byTypo);
 }
 
 function result(
@@ -131,8 +142,9 @@ function compare(
   left: SearchResult,
   right: SearchResult
 ): number {
-  if (left.field !== right.field) {
-    return left.field === "name" ? -1 : 1;
+  const byGroup = group(left) - group(right);
+  if (byGroup !== 0) {
+    return byGroup;
   }
   if (left.tier !== right.tier) {
     return left.tier - right.tier;
@@ -142,4 +154,14 @@ function compare(
   }
 
   return left.label.localeCompare(right.label);
+}
+
+function group(
+  result: SearchResult
+): number {
+  if (result.field === "description") {
+    return 1;
+  }
+
+  return result.tier === MATCH_TIERS.typo ? 2 : 0;
 }

@@ -41,7 +41,9 @@ brush.registerVariable("size", {
 });
 brush.registerCommand("grow", {
   description: "Grow or shrink the brush",
-  args: [{ name: "delta", type: "number", required: true }],
+  args: [
+    { name: "delta", type: "number", required: true }
+  ],
   execute: ({ delta }, ctx) => {
     brushStore.resize(delta);
     ctx.print(`brush size ${brushStore.size}`);
@@ -71,8 +73,6 @@ instance.
 - [Registering from features](./docs/features.md): `ConsoleFeature` and `registerConsoleFeatures`
 - [Input grammar](./docs/grammar.md): the three modes, coercion, search and completion
 - [jolly-console](./docs/element.md): mounting the element, keys and accessibility
-- [Architecture](./ARCHITECTURE.md): diagrams of the two entries, a keystroke, a submit and registration lifetime
-- [Architecture decisions](./docs/adr/README.md)
 
 ## 🧪 Benchmarks
 
