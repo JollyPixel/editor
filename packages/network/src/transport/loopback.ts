@@ -89,7 +89,8 @@ class LoopbackSocket implements ClientSocket {
     this.#server.handleConnect(
       {
         id: this.id,
-        send: (data) => this.#deliver(data)
+        send: (data) => this.#deliver(JSON.stringify(data)),
+        sendSerialized: (json) => this.#deliver(json)
       },
       identity
     );
@@ -97,13 +98,11 @@ class LoopbackSocket implements ClientSocket {
   }
 
   #deliver(
-    data: unknown
+    json: string
   ): void {
-    const raw = JSON.stringify(data);
-
     queueMicrotask(() => {
       if (this.#state !== "closed") {
-        this.#emit("message", { data: raw });
+        this.#emit("message", { data: json });
       }
     });
   }

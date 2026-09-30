@@ -235,6 +235,10 @@ interface AssetLiveProtocol<TCommand = unknown> {
     command: TCommand
   ): AssetArbitration<TCommand> | null;
   broadcast?(command: TCommand): AssetRoomMessage;
+  correct?(
+    command: TCommand,
+    admitted: TCommand | null
+  ): TCommand | null;
 }
 ```
 
@@ -271,9 +275,14 @@ lands, so a conflict tracker never records a command the store refused. The
 append folds through `commands.apply` before it resolves, so state is current
 by the time peers hear about the change.
 
-An arbitration that returns `null` or a narrowed command also sends the
-author a snapshot; return the received command itself when it is admitted
-whole. `broadcast` overrides the default `{ type: "command", data: command }`
+An arbitration that returns `null` or a narrowed command also resyncs the
+author; return the received command itself when it is admitted whole. The
+room first asks `correct` for a command that restores, on the author's side,
+what `command` touched but `admitted` (`null` when nothing was kept) did not.
+It sends that command as `{ type: "correction", data }`. Without `correct`,
+or when it returns `null`, the author gets a snapshot. Build the correction
+from current state and write absolute values: the author replays its later
+commands on top of it. `broadcast` overrides the default `{ type: "command", data: command }`
 envelope. `voxel-map` uses it to answer a `world-replace` with a full
 snapshot.
 

@@ -29,7 +29,8 @@ import {
   pixelSnapshotSchema
 } from "../network/PixelCommand.schema.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
-import type { PixelNetworkCommand } from "../network/types.ts";
+import { correctPixelCommand } from "../network/PixelCorrection.ts";
+import type { PixelWireCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kDefaultSize: Vec2 = {
@@ -83,7 +84,7 @@ export interface PixelArtAssetKindOptions {
 
 export function pixelArtAssetKind(
   options: PixelArtAssetKindOptions = {}
-): AssetKindHandler<PixelArtState, PixelNetworkCommand> {
+): AssetKindHandler<PixelArtState, PixelWireCommand> {
   const {
     defaultSize = kDefaultSize,
     snapshot,
@@ -156,7 +157,12 @@ export function pixelArtAssetKind(
         return {
           snapshotSchema: pixelSnapshotSchema,
           snapshot: () => pixelArtSnapshot(state.buffer),
-          arbitrate: (command) => arbiter.admit(state.buffer, command)
+          arbitrate: (command) => arbiter.admit(state.buffer, command),
+          correct: (command, admitted) => correctPixelCommand(
+            state.buffer,
+            command,
+            admitted
+          )
         };
       }
     }

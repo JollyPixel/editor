@@ -32,7 +32,11 @@ import {
   PIXEL_ART_KIND
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
-import type { PixelNetworkCommand } from "#src/network/types.ts";
+import type {
+  PixelNetworkCommand,
+  PixelWireCommand
+} from "#src/network/types.ts";
+import { packed } from "../fixtures/commands.ts";
 
 // CONSTANTS
 const kRed = {
@@ -42,6 +46,7 @@ const kRed = {
   a: 255
 };
 const kRedTuple = [255, 0, 0, 255];
+const kWhiteTuple = [255, 255, 255, 255];
 
 function event(
   eventType: string,
@@ -102,10 +107,14 @@ function binding(
   };
 }
 
-function liveProtocol(): AssetLiveProtocol<PixelNetworkCommand> {
+function liveProtocol(
+  state?: PixelArtState
+): AssetLiveProtocol<PixelWireCommand> {
   const handler = pixelArtAssetKind();
 
-  return handler.commands!.live!(binding(handler.create("asset-1")));
+  return handler.commands!.live!(
+    binding(state ?? handler.create("asset-1"))
+  );
 }
 
 function stroke(
@@ -170,6 +179,21 @@ describe("pixelArtAssetKind", () => {
       handler,
       state,
       event(PIXEL_ART_COMMAND, strokeCommand([{ x: 1, y: 1 }]))
+    );
+
+    assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
+  });
+
+  test("a packed domain command mutates the folded buffer", () => {
+    const handler = pixelArtAssetKind({
+      defaultSize: { x: 4, y: 4 }
+    });
+    const state = handler.create("asset-1");
+
+    foldAssetEvent(
+      handler,
+      state,
+      event(PIXEL_ART_COMMAND, packed(strokeCommand([{ x: 1, y: 1 }])))
     );
 
     assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
@@ -316,6 +340,51 @@ describe("pixelArtAssetKind", () => {
       protocol.arbitrate(stroke([{ x: 0, y: 0 }], 1_000, "bob")),
       null
     );
+  });
+
+  test("correct() restores the authoritative colors of every pixel of a rejected stroke", () => {
+    const handler = pixelArtAssetKind({ defaultSize: { x: 4, y: 4 } });
+    const state = handler.create("asset-1");
+    state.buffer.drawPixels([{ x: 1, y: 0 }], kRed);
+    const protocol = liveProtocol(state);
+    const rejected = stroke([{ x: 0, y: 0 }, { x: 1, y: 0 }], 1_000, "bob");
+
+    assert.deepEqual(protocol.correct!(rejected, null), {
+      clientId: "bob",
+      seq: 1,
+      timestamp: 1_000,
+      action: "select-edit",
+      metadata: {
+        xy: [0, 0, 1, 0],
+        rgba: [...kWhiteTuple, ...kRedTuple]
+      }
+    });
+  });
+
+  test("correct() only restores the pixels the admitted stroke dropped", () => {
+    const protocol = liveProtocol();
+    const sent = stroke([{ x: 0, y: 0 }, { x: 1, y: 0 }], 1_000, "bob");
+    const admitted = stroke([{ x: 1, y: 0 }], 1_000, "bob");
+
+    const correction = protocol.correct!(sent, packed(admitted));
+
+    assert.deepEqual(correction?.metadata, {
+      xy: [0, 0],
+      rgba: kWhiteTuple
+    });
+  });
+
+  test("correct() defers to a snapshot for commands that do not paint pixels", () => {
+    const protocol = liveProtocol();
+    const resized: PixelWireCommand = {
+      clientId: "bob",
+      seq: 1,
+      timestamp: 1_000,
+      action: "resized",
+      metadata: { size: { x: 8, y: 8 } }
+    };
+
+    assert.strictEqual(protocol.correct!(resized, null), null);
   });
 
   test("live() snapshots the current buffer", () => {

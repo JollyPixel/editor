@@ -35,13 +35,15 @@ class CommandSync<
 type NetworkServerMessage<TCommand, TSnapshot, TNotice extends NetworkServerNoticeOf<TNotice> = never> =
   | { type: "snapshot"; data: TSnapshot; }
   | { type: "command"; data: TCommand; }
+  | { type: "correction"; data: TCommand; }
   | TNotice;
 ```
 
-A notice's `type` must be a literal other than `"snapshot"` and `"command"`. `NetworkServerNoticeOf<TNotice>` resolves to `never` for a notice whose `type` could collide with one, such as `{ type: string }`, so the constraint fails at compile time.
+A notice's `type` must be a literal other than `"snapshot"`, `"command"` and `"correction"`. `NetworkServerNoticeOf<TNotice>` resolves to `never` for a notice whose `type` could collide with one, such as `{ type: string }`, so the constraint fails at compile time.
 
 - `snapshot` emits `"snapshot"`, then `"ready"` once, the first time. `whenReady()` returns one promise that resolves at that moment.
 - `command` emits `"command"` unless its `clientId` is `room.clientId` and it was sent after the last snapshot. A snapshot replaces local state, so own commands sent before it (held ones included) and echoed after it are emitted like peer commands; they are the ones the snapshot does not contain yet.
+- `correction` emits `"command"`, even though it carries the client's own `clientId`. A server sends one in place of a snapshot to undo only what it refused of this client's command. Like a snapshot, it puts the client's later commands back in the replay range, so their echoes are applied on top of the correction.
 - Any other `type` emits `"notice"` with the whole message, for server notices such as the asset room's `rejected` and `deleted`.
 
 ## Usage

@@ -109,7 +109,12 @@ export class AssetRoomExtension<
 
     const arbitration = this.#protocol.arbitrate(command);
     if (arbitration === null) {
-      this.#resync(clientId, context.room);
+      this.#resync(
+        clientId,
+        context.room,
+        command,
+        null
+      );
 
       return;
     }
@@ -126,7 +131,12 @@ export class AssetRoomExtension<
         type: ASSET_ROOM_REJECTED,
         reason: appended.val.message
       } satisfies AssetRoomRejectedMessage);
-      this.#resync(clientId, context.room);
+      this.#resync(
+        clientId,
+        context.room,
+        command,
+        null
+      );
 
       return;
     }
@@ -139,14 +149,31 @@ export class AssetRoomExtension<
       }
     );
     if (arbitration.command !== command) {
-      this.#resync(clientId, context.room);
+      this.#resync(
+        clientId,
+        context.room,
+        command,
+        arbitration.command
+      );
     }
   }
 
   #resync(
     clientId: string,
-    room: network.RoomBroadcast
+    room: network.RoomBroadcast,
+    command: TCommand,
+    admitted: TCommand | null
   ): void {
+    const correction = this.#protocol.correct?.(command, admitted) ?? null;
+    if (correction !== null) {
+      room.sendTo(clientId, {
+        type: "correction",
+        data: correction
+      });
+
+      return;
+    }
+
     room.sendTo(clientId, {
       type: "snapshot",
       data: this.#protocol.snapshot()

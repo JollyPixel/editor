@@ -39,6 +39,8 @@ interface ServerOptions {
 
 Transport implementations call `authenticate`, `handleConnect`, `handleDisconnect` and `handleMessage`. `handleConnect` takes the identity `authenticate` returned, and that identity is the only source of the connection's role and subject for its whole lifetime. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are handled in arrival order per room, so a slow join on one room does not hold up a join on another; `handleDisconnect` waits for every room still in flight.
 
+The `ClientHandle` passed to `handleConnect` needs an `id` and `send(data)`. A transport that sends JSON can also implement `sendSerialized(json)`. A room then serializes each message it fans out once, instead of once per member.
+
 ## Dynamic rooms
 
 `register` covers rooms known up front. Use a resolver when room names are

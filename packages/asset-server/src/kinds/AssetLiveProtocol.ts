@@ -40,4 +40,9 @@ export interface AssetLiveProtocol<TCommand = unknown> {
   broadcast?(
     command: TCommand
   ): AssetRoomMessage;
+
+  correct?(
+    command: TCommand,
+    admitted: TCommand | null
+  ): TCommand | null;
 }

@@ -29,11 +29,23 @@ import { MockRoom } from "../../helpers/room.ts";
 type StrokeListener = (pixels: PeerStrokePixel[]) => void;
 
 // CONSTANTS
+const kRed = { r: 255, g: 0, b: 0, a: 255 };
 const kPixel: PeerStrokePixel = {
   x: 1,
   y: 2,
-  color: { r: 255, g: 0, b: 0, a: 255 }
+  color: kRed
 };
+
+function redPixel(
+  x: number,
+  y = 0
+): PeerStrokePixel {
+  return {
+    x,
+    y,
+    color: kRed
+  };
+}
 
 function createHost() {
   return {
@@ -82,13 +94,53 @@ describe("PixelStrokeGhostSync — local strokes", () => {
     assert.strictEqual(host.onStrokeProgress, previous);
   });
 
-  test("reports stroke progress as strokeGhost presence", async() => {
+  test("reports stroke progress as a strokeGhost frame", async() => {
     const { room, host } = setup();
 
     host.onStrokeProgress?.([kPixel]);
     await nextFrame();
 
-    assert.deepStrictEqual(room.presenceUpdates, [{ strokeGhost: [kPixel] }]);
+    assert.deepStrictEqual(room.presenceUpdates, [{
+      strokeGhost: { from: 0, spans: [{ color: kRed, xy: [1, 2] }] }
+    }]);
+  });
+
+  test("sends only the pixels added since the previous frame", async() => {
+    const { room, host } = setup();
+
+    host.onStrokeProgress?.([redPixel(0)]);
+    await nextFrame();
+    host.onStrokeProgress?.([redPixel(0), redPixel(1)]);
+    host.onStrokeProgress?.([redPixel(0), redPixel(1), redPixel(2)]);
+    await nextFrame();
+    host.onStrokeProgress?.([redPixel(0), redPixel(1), redPixel(2)]);
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [
+      { strokeGhost: { from: 0, spans: [{ color: kRed, xy: [0, 0] }] } },
+      {
+        strokeGhost: {
+          from: 1,
+          spans: [
+            { color: kRed, xy: [1, 0] },
+            { color: kRed, xy: [2, 0] }
+          ]
+        }
+      }
+    ]);
+  });
+
+  test("resends the whole stroke once it no longer extends the previous one", async() => {
+    const { room, host } = setup();
+
+    host.onStrokeProgress?.([redPixel(0), redPixel(1)]);
+    await nextFrame();
+    host.onStrokeProgress?.([redPixel(0), redPixel(2)]);
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates.at(-1), {
+      strokeGhost: { from: 0, spans: [{ color: kRed, xy: [0, 0, 2, 0] }] }
+    });
   });
 
   test("an empty stroke progress drops the pending report and clears the ghost", async() => {
@@ -103,30 +155,74 @@ describe("PixelStrokeGhostSync — local strokes", () => {
 });
 
 describe("PixelStrokeGhostSync — remote peers", () => {
-  test("draws a peer strokeGhost on the stroke overlay", () => {
+  test("draws a peer's frames on the stroke overlay as one growing stroke", () => {
     const { room, strokes } = setup();
 
-    room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: [kPixel] } });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: { from: 0, spans: [{ color: kRed, xy: [0, 0] }] } }
+    });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: { from: 1, spans: [{ color: kRed, xy: [1, 0] }] } }
+    });
 
-    assert.deepStrictEqual(callsOf(strokes.set), [["peer-B", [kPixel]]]);
+    assert.deepStrictEqual(strokes.set.mock.calls.at(-1)?.arguments, [
+      "peer-B",
+      [redPixel(0), redPixel(1)]
+    ]);
+  });
+
+  test("restarts a peer's stroke on a frame from the first pixel", () => {
+    const { room, strokes } = setup();
+
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: { from: 0, spans: [{ color: kRed, xy: [0, 0] }] } }
+    });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: { from: 0, spans: [{ color: kRed, xy: [5, 0] }] } }
+    });
+
+    assert.deepStrictEqual(strokes.set.mock.calls.at(-1)?.arguments, [
+      "peer-B",
+      [redPixel(5)]
+    ]);
+  });
+
+  test("draws the pixels of a frame joined mid-stroke", () => {
+    const { room, strokes } = setup();
+
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: { from: 40, spans: [{ color: kRed, xy: [3, 0] }] } }
+    });
+
+    assert.deepStrictEqual(callsOf(strokes.set), [["peer-B", [redPixel(3)]]]);
   });
 
   test("ignores a malformed strokeGhost payload", () => {
     const { room, strokes } = setup();
 
-    room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: "not-an-array" } });
-    room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: [{ x: 1 }] } });
-    room.emit("peer-presence", {
-      clientId: "peer-B",
-      patch: { strokeGhost: [{ x: 1, y: 1, color: "red" }] }
-    });
+    for (const strokeGhost of [
+      [kPixel],
+      { from: -1, spans: [] },
+      { from: 0, spans: [{ color: kRed, xy: [1] }] },
+      { from: 0, spans: [{ color: "red", xy: [1, 1] }] }
+    ]) {
+      room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost } });
+    }
 
     assert.strictEqual(strokes.set.mock.callCount(), 0);
   });
 
   test("removes a leaving peer's ghost and clears all ghosts on snapshot", () => {
     const { room, strokes } = setup();
-    room.emit("peer-presence", { clientId: "peer-B", patch: { strokeGhost: [kPixel] } });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { strokeGhost: { from: 0, spans: [{ color: kRed, xy: [1, 2] }] } }
+    });
 
     room.emit("peer-left", { clientId: "peer-B" });
     room.deliverSnapshot();

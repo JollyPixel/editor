@@ -68,10 +68,12 @@ The `network` server never touches the event store.
 The author applied its command before sending it. When arbitration returns
 `null`, or admits a narrowed command (a different object than it received),
 the room sends the author alone a fresh `{ type: "snapshot", data }` so its
-state matches the room again.
+state matches the room again. A kind whose live protocol implements `correct`
+sends `{ type: "correction", data }` instead, restoring only what was refused.
+See [asset kinds](./AssetKinds.md#writing-an-editable-kind).
 
 When the append fails, the room commits and broadcasts nothing and sends the
-author alone the notice below, then a snapshot:
+author alone the notice below, then a correction or a snapshot:
 
 ```ts
 { type: "rejected", reason: string }

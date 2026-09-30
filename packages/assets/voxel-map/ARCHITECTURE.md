@@ -24,7 +24,7 @@ flowchart TB
     TilesetLog --> TilesetState["TilesetState"]
     TilesetState --> Buffer["PixelBuffer"]
     TilesetState --> Definitions["TilesetDocument"]
-    TilesetRoom -->|"command or snapshot"| TilesetSync
+    TilesetRoom -->|"command, correction or snapshot"| TilesetSync
 ```
 
 A world engine never receives block commands from its room. The host leases every linked tileset, projects its blocks into the world's block registry under the link's slot, and edits blocks through the tileset room.

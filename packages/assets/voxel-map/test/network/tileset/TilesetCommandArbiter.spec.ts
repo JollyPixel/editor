@@ -140,9 +140,9 @@ describe("TilesetCommandArbiter", () => {
 
     assert.deepEqual(
       contested?.command.action === "stroke" ?
-        contested.command.metadata.positions :
+        contested.command.metadata :
         null,
-      [{ x: 0, y: 0 }]
+      { color: kBlack, xy: [0, 0] }
     );
     assert.strictEqual(
       arbiter.admit(state, stroke([{ x: 1, y: 0 }], { clientId: "late", timestamp: 1000 })),

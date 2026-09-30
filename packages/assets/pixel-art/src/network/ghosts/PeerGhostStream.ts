@@ -10,6 +10,7 @@ import type {
   PixelNetworkCommand,
   PixelServerMessage
 } from "../types.ts";
+import { unpackPixelCommand } from "../PixelWireCodec.ts";
 
 export interface PeerGhostLayer<T> {
   set(clientId: string, payload: T): void;
@@ -23,6 +24,7 @@ export interface PeerGhostStreamOptions<T> {
   decode: (value: unknown) => T | undefined;
   layer: PeerGhostLayer<T>;
   reconcile?: (command: PixelNetworkCommand) => void;
+  merge?: (pending: T, next: T) => T;
 }
 
 export class PeerGhostStream<T> {
@@ -30,6 +32,7 @@ export class PeerGhostStream<T> {
   #channel: PresenceChannel<T | null>;
   #layer: PeerGhostLayer<T>;
   #reconcile: ((command: PixelNetworkCommand) => void) | undefined;
+  #merge: ((pending: T, next: T) => T) | undefined;
   #pending: T | undefined;
   #frame: number | undefined;
 
@@ -50,8 +53,11 @@ export class PeerGhostStream<T> {
     if (message.type === "snapshot") {
       this.clearRemote();
     }
-    else if (message.type === "command") {
-      this.#reconcile?.(message.data);
+    else if (
+      message.type === "command" &&
+      this.#reconcile !== undefined
+    ) {
+      this.#reconcile(unpackPixelCommand(message.data));
     }
   };
 
@@ -61,6 +67,7 @@ export class PeerGhostStream<T> {
     this.#room = options.room;
     this.#layer = options.layer;
     this.#reconcile = options.reconcile;
+    this.#merge = options.merge;
     this.#channel = new PresenceChannel<T | null>(options.room, {
       key: options.key,
       decode: options.decode,
@@ -84,7 +91,11 @@ export class PeerGhostStream<T> {
   report(
     payload: T
   ): void {
-    this.#pending = payload;
+    this.#pending = this.#frame !== undefined &&
+      this.#pending !== undefined &&
+      this.#merge !== undefined ?
+      this.#merge(this.#pending, payload) :
+      payload;
     this.#frame ??= requestAnimationFrame(() => {
       this.#frame = undefined;
       if (this.#pending !== undefined) {

@@ -18,7 +18,10 @@ import {
   connectWebSocket
 } from "#src/index.ts";
 import { WebsocketTransport } from "#src/transport/websocket.ts";
-import { DEFAULT_WEBSOCKET_PATH } from "#src/transport/constants.ts";
+import {
+  DEFAULT_WEBSOCKET_PATH,
+  WEBSOCKET_PROTOCOL
+} from "#src/transport/constants.ts";
 import { RecordingExtension } from "../helpers/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 
@@ -116,4 +119,66 @@ describe("WebsocketTransport + Client (integration)", () => {
 
     clientA.destroy();
   });
+
+  test("negotiates permessage-deflate only when compression is enabled", async() => {
+    const server = new Server();
+    server.register(new RecordingExtension("test-ns"));
+    new WebsocketTransport({ httpServer, server, path: "/ws-plain" });
+    new WebsocketTransport({ httpServer, server, path: "/ws-deflate", compression: true });
+
+    assert.strictEqual(await negotiatedExtensions(port, "/ws-plain"), "");
+    assert.match(await negotiatedExtensions(port, "/ws-deflate"), /^permessage-deflate/);
+  });
+
+  test("delivers a compressed room broadcast to every member", async() => {
+    const server = new Server();
+    const extension = new RecordingExtension("test-ns");
+    server.register(extension);
+    new WebsocketTransport({
+      httpServer,
+      server,
+      path: "/ws-deflate-rooms",
+      compression: { level: 1, threshold: 0 }
+    });
+
+    const clients = [0, 1].map(() => new Client({
+      socket: () => connectWebSocket({
+        url: `ws://127.0.0.1:${port}/ws-deflate-rooms`
+      })
+    }));
+    const received: unknown[] = [];
+    for (const client of clients) {
+      const room = client.room("test-ns");
+      room.on("message", (payload) => received.push(payload));
+      room.join();
+    }
+    await waitFor(() => extension.connected.length === 2);
+
+    const payload = { pixels: "A".repeat(64 * 1024) };
+    extension.lastContext.room.broadcast(payload);
+    await waitFor(() => received.length === 2);
+
+    assert.deepEqual(received, [payload, payload]);
+    for (const client of clients) {
+      client.destroy();
+    }
+  });
 });
+
+async function negotiatedExtensions(
+  port: number,
+  path: string
+): Promise<string> {
+  const socket = new WebSocket(
+    `ws://127.0.0.1:${port}${path}`,
+    WEBSOCKET_PROTOCOL
+  );
+  await new Promise((resolve, reject) => {
+    socket.addEventListener("open", resolve);
+    socket.addEventListener("error", reject);
+  });
+  const { extensions } = socket;
+  socket.close();
+
+  return extensions;
+}

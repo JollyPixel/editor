@@ -108,6 +108,23 @@ describe("CommandSync", () => {
     assert.deepEqual(seqs, [2]);
   });
 
+  test("emits a correction as a command, then own echoes of commands sent before it", () => {
+    const { harness, sync } = setup();
+    const received: TestCommand[] = [];
+    sync.on("command", (command) => received.push(command));
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    const correction = { ...remote("self"), value: 0, seq: 1 };
+    harness.serverMessage({ type: "correction", data: correction });
+    sync.send({ action: "set", value: 3 });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 3 } });
+
+    assert.deepEqual(received.map((command) => command.seq), [1, 2]);
+    assert.strictEqual(received[0], correction);
+  });
+
   test("counts held commands in the replay range of a snapshot", () => {
     const { harness, sync } = setup({ admitted: false });
     const seqs: number[] = [];

@@ -9,13 +9,16 @@ import {
 
 // Import Internal Dependencies
 import type {
-  PixelNetworkCommand
+  PixelWireCommand
 } from "./types.ts";
+import { unpackPixelCommand } from "./PixelWireCodec.ts";
 
 export function applyCommandToBuffer(
   buffer: PixelBuffer,
-  cmd: PixelNetworkCommand
+  command: PixelWireCommand
 ): void {
+  const cmd = unpackPixelCommand(command);
+
   switch (cmd.action) {
     case "stroke":
       buffer.drawPixels(

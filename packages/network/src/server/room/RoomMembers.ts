@@ -78,6 +78,7 @@ export class RoomMembers {
       predicate
     } = options;
 
+    let json: string | undefined;
     for (const [memberId, record] of this.#members) {
       if (memberId === excludeClientId) {
         continue;
@@ -89,7 +90,14 @@ export class RoomMembers {
         continue;
       }
 
-      record.handle.send(envelope);
+      const { handle } = record;
+      if (handle.sendSerialized === undefined) {
+        handle.send(envelope);
+      }
+      else {
+        json ??= JSON.stringify(envelope);
+        handle.sendSerialized(json);
+      }
     }
   }
 }

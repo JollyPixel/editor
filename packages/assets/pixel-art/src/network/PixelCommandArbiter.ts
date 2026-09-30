@@ -11,22 +11,28 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { PixelNetworkCommand } from "./types.ts";
+import type { PixelWireCommand } from "./types.ts";
+import {
+  packColors,
+  packPositions,
+  selectEditPixels,
+  strokePositions
+} from "./PixelWireCodec.ts";
 
 export type PixelStrokeCommand = Extract<
-  PixelNetworkCommand,
+  PixelWireCommand,
   { action: "stroke"; }
 >;
 export type PixelSelectEditCommand = Extract<
-  PixelNetworkCommand,
+  PixelWireCommand,
   { action: "select-edit"; }
 >;
 export type PixelReplacementCommand = Extract<
-  PixelNetworkCommand,
+  PixelWireCommand,
   { action: "resized" | "texture-replaced"; }
 >;
 export type PixelUvRegionCommand = Extract<
-  PixelNetworkCommand,
+  PixelWireCommand,
   {
     action:
       | "uv-region-moved"
@@ -104,8 +110,8 @@ export class PixelCommandArbiter {
 
   admit(
     buffer: PixelBuffer,
-    command: PixelNetworkCommand
-  ): network.Admission<PixelNetworkCommand> | null {
+    command: PixelWireCommand
+  ): network.Admission<PixelWireCommand> | null {
     switch (command.action) {
       case "stroke":
         return this.#admitStroke(command);
@@ -138,12 +144,16 @@ export class PixelCommandArbiter {
 
   #admitStroke(
     command: PixelStrokeCommand
-  ): network.Admission<PixelNetworkCommand> | null {
-    const { indices, commit } = this.#admitPositions(command);
+  ): network.Admission<PixelWireCommand> | null {
+    const positions = strokePositions(command.metadata);
+    const { indices, commit } = this.#admitPositions(
+      command,
+      positions
+    );
     if (indices.length === 0) {
       return null;
     }
-    if (indices.length === command.metadata.positions.length) {
+    if (indices.length === positions.length) {
       return {
         command,
         commit
@@ -154,8 +164,8 @@ export class PixelCommandArbiter {
       command: {
         ...command,
         metadata: {
-          ...command.metadata,
-          positions: indices.map((index) => command.metadata.positions[index])
+          color: command.metadata.color,
+          xy: packPositions(indices.map((index) => positions[index]))
         }
       },
       commit
@@ -164,17 +174,20 @@ export class PixelCommandArbiter {
 
   #admitSelectEdit(
     command: PixelSelectEditCommand
-  ): network.Admission<PixelNetworkCommand> | null {
-    const { metadata } = command;
-    if (metadata.positions.length !== metadata.colors.length) {
+  ): network.Admission<PixelWireCommand> | null {
+    const { positions, colors } = selectEditPixels(command.metadata);
+    if (positions.length !== colors.length) {
       return null;
     }
 
-    const { indices, commit } = this.#admitPositions(command);
+    const { indices, commit } = this.#admitPositions(
+      command,
+      positions
+    );
     if (indices.length === 0) {
       return null;
     }
-    if (indices.length === metadata.positions.length) {
+    if (indices.length === positions.length) {
       return {
         command,
         commit
@@ -185,8 +198,8 @@ export class PixelCommandArbiter {
       command: {
         ...command,
         metadata: {
-          positions: indices.map((index) => metadata.positions[index]),
-          colors: indices.map((index) => metadata.colors[index])
+          xy: packPositions(indices.map((index) => positions[index])),
+          rgba: packColors(indices.map((index) => colors[index]))
         }
       },
       commit
@@ -195,7 +208,7 @@ export class PixelCommandArbiter {
 
   #admitReplacement(
     command: PixelReplacementCommand
-  ): network.Admission<PixelNetworkCommand> {
+  ): network.Admission<PixelWireCommand> {
     return {
       command,
       commit: () => this.#pixelTracker.reset(command)
@@ -203,18 +216,19 @@ export class PixelCommandArbiter {
   }
 
   #admitPositions(
-    command: PixelStrokeCommand | PixelSelectEditCommand
+    command: PixelWireCommand,
+    positions: readonly Vec2[]
   ): network.PartialAdmission {
     return this.#pixelTracker.admitEach(
       command,
-      command.metadata.positions.map(pixelKey)
+      positions.map(pixelKey)
     );
   }
 
   #admitUvRegion(
     buffer: PixelBuffer,
     command: PixelUvRegionCommand
-  ): network.Admission<PixelNetworkCommand> | null {
+  ): network.Admission<PixelWireCommand> | null {
     return this.#regionTracker.admit(
       command,
       uvConflictKeys(command, buffer)
@@ -223,7 +237,7 @@ export class PixelCommandArbiter {
 }
 
 function isValidRotation(
-  command: Extract<PixelNetworkCommand, { action: "uv-region-rotated"; }>
+  command: Extract<PixelWireCommand, { action: "uv-region-rotated"; }>
 ): boolean {
   const rotation = command.metadata;
 
