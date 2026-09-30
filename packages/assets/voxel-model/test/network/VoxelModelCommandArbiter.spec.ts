@@ -8,11 +8,16 @@ import {
   type VoxelModelArbiterState
 } from "#src/network/VoxelModelCommandArbiter.ts";
 import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
-import { voxelModelConflictKeys } from "#src/network/VoxelModelCommandKeys.ts";
+import {
+  voxelModelConflictKeys,
+  voxelModelWriteKeys
+} from "#src/network/VoxelModelCommandKeys.ts";
 import {
   TRANSFORM,
   UV,
   blockAdded,
+  materialAdded,
+  materialFolderAdded,
   networkCommand
 } from "../helpers/commands.ts";
 
@@ -89,12 +94,94 @@ describe("voxelModelConflictKeys", () => {
         uv: UV
       }),
       ["uv:node-1"]
-    ]
+    ],
+    [
+      networkCommand({
+        action: "node-material-changed",
+        id: "node-1",
+        materialId: null
+      }),
+      ["material:node-1"]
+    ],
+    [
+      networkCommand({
+        action: "material-renamed",
+        id: "glass",
+        name: "Glass"
+      }),
+      ["material-name:glass"]
+    ],
+    [
+      networkCommand({
+        action: "material-changed",
+        id: "glass",
+        surface: {
+          opacity: 0.5,
+          roughness: 0.2
+        }
+      }),
+      ["material-surface:glass:opacity", "material-surface:glass:roughness"]
+    ],
+    [
+      networkCommand({
+        action: "material-moved",
+        id: "glass",
+        parentId: "metals"
+      }),
+      ["material-parent:glass"]
+    ],
+    [networkCommand(materialAdded("glass")), []],
+    [networkCommand(materialFolderAdded("metals")), []],
+    [networkCommand({ action: "material-removed", id: "glass" }), []]
   ];
 
   for (const [command, expected] of cases) {
     it(`keys ${command.action} as [${expected.join(", ")}]`, () => {
       assert.deepEqual(voxelModelConflictKeys(command), expected);
+    });
+  }
+});
+
+describe("voxelModelWriteKeys", () => {
+  const cases: [VoxelModelNetworkCommand, string[] | null][] = [
+    [
+      networkCommand({
+        action: "node-material-changed",
+        id: "node-1",
+        materialId: "glass"
+      }),
+      ["material:node-1"]
+    ],
+    [
+      networkCommand({
+        action: "material-renamed",
+        id: "glass",
+        name: "Glass"
+      }),
+      ["material-name:glass"]
+    ],
+    [
+      networkCommand({
+        action: "material-changed",
+        id: "glass",
+        surface: { opacity: 0.5, roughness: 0.2 }
+      }),
+      ["material-surface:glass:opacity", "material-surface:glass:roughness"]
+    ],
+    [
+      networkCommand({
+        action: "material-moved",
+        id: "glass",
+        parentId: null
+      }),
+      null
+    ],
+    [networkCommand({ action: "material-removed", id: "glass" }), null]
+  ];
+
+  for (const [command, expected] of cases) {
+    it(`keys ${command.action} as ${expected === null ? "null" : `[${expected.join(", ")}]`}`, () => {
+      assert.deepEqual(voxelModelWriteKeys(command), expected);
     });
   }
 });
@@ -171,6 +258,29 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
       admitted(arbiter, moved("folder", ["arm"], { clientId: "B", timestamp: 500 })),
       null
     );
+  });
+
+  it("settles material changes per surface field", () => {
+    const arbiter = new VoxelModelCommandArbiter();
+    commit(arbiter, networkCommand({
+      action: "material-changed",
+      id: "glass",
+      surface: { roughness: 0.2 }
+    }, { clientId: "A", timestamp: 900 }));
+
+    const otherField = networkCommand({
+      action: "material-changed",
+      id: "glass",
+      surface: { opacity: 0.5 }
+    }, { clientId: "B", timestamp: 500 });
+    const sameField = networkCommand({
+      action: "material-changed",
+      id: "glass",
+      surface: { roughness: 0.8 }
+    }, { clientId: "B", timestamp: 500 });
+
+    assert.notEqual(admitted(arbiter, otherField), null);
+    assert.equal(admitted(arbiter, sameField), null);
   });
 
   it("always admits unarbitrated actions regardless of prior state", () => {

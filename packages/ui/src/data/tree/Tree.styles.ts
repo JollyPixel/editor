@@ -131,6 +131,45 @@ export const treeStyles = css`
     box-shadow: 0 0 0 1px var(--jolly-surface, ${kFallback.controlBg});
   }
 
+  .swatch {
+    --jolly-swatch-checker: color-mix(in oklab, var(--jolly-ink) 18%, transparent);
+
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    margin-inline: var(--jolly-space-1, 4px);
+    padding: 0;
+    border: 1px solid color-mix(in oklab, var(--jolly-ink) 35%, transparent);
+    border-radius: 2px;
+    outline: 1.5px solid var(--jolly-tree-swatch-ring, transparent);
+    outline-offset: 1px;
+    background-color: var(--jolly-surface-raised, ${kFallback.controlBg});
+    background-image:
+      linear-gradient(
+        var(--jolly-tree-swatch-color, transparent),
+        var(--jolly-tree-swatch-color, transparent)
+      ),
+      conic-gradient(
+        var(--jolly-swatch-checker) 25%,
+        transparent 0 50%,
+        var(--jolly-swatch-checker) 0 75%,
+        transparent 0
+      );
+    background-size: auto, 4px 4px;
+    cursor: pointer;
+  }
+
+  .swatch[data-empty="true"] {
+    visibility: hidden;
+    border-style: dashed;
+    background: transparent;
+  }
+
+  .row:hover .swatch[data-empty="true"],
+  .row[aria-selected="true"] .swatch[data-empty="true"] {
+    visibility: visible;
+  }
+
   .rename {
     min-width: 0;
     padding: 0;

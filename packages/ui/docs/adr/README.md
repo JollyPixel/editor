@@ -48,6 +48,8 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 | [0040](./0040-declarative-bindings-read-through.md) | A declarative binding reads through to its source and keeps no mirror |
 | [0041](./0041-metric-sources-are-structural.md) | A metric source is structural, and `unit` replaces an imported formatter |
 | [0042](./0042-open-layers-can-be-dismissed.md) | An open layer can be dismissed, and a layer that refuses wins |
+| [0043](./0043-a-tree-swatch-samples-one-property.md) | A tree swatch samples one editable property of its row |
+| [0044](./0044-a-lock-paints-and-never-reflows.md) | A lock paints, and never reflows its field |
 
 ## Scope boundary
 
@@ -55,8 +57,10 @@ result of a real trade-off. API reference lives in [`docs/api`](../api/README.md
 composites stay in editors and are built from these parts. Asset and object reference pickers, block
 and tileset libraries, 3D preview tiles, and curve and gradient editors are out of scope.
 
-`jolly-split` and `jolly-menu` are deferred rather than rejected: no consumer in this
-repository names one, so there is nothing to validate a design against. `jolly-toast` stays deferred
+`jolly-split` and menubar or dropdown menus are deferred rather than rejected: no consumer in this
+repository names one, so there is nothing to validate a design against. `jolly-context-menu` left
+that list once a tree needed right-click row actions; it opens only at a point until a button menu
+has a consumer. `jolly-toast` stays deferred
 for a different reason: `editors/voxel-map` needed an ambient feed, not an alert, and got
 `jolly-log` instead. See [ADR-0031](./0031-a-log-is-not-a-toast.md).
 

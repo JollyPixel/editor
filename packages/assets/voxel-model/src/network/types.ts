@@ -8,7 +8,11 @@ import type {
   blockNodeSchema,
   blockTransformSchema,
   folderNodeSchema,
+  materialFolderSchema,
+  materialSurfacePatchSchema,
+  materialSurfaceSchema,
   mirrorAxesSchema,
+  modelMaterialSchema,
   nodeTransformSchema,
   vector3Schema,
   voxelModelCommandSchema,
@@ -19,6 +23,12 @@ export type Vector3JSON = network.Infer<typeof vector3Schema>;
 export type MirrorAxes = network.Infer<typeof mirrorAxesSchema>;
 export type BlockTransformJSON = network.Infer<typeof blockTransformSchema>;
 export type NodeTransformJSON = network.Infer<typeof nodeTransformSchema>;
+export type MaterialSurfaceJSON = network.Infer<typeof materialSurfaceSchema>;
+export type MaterialSurfacePatchJSON = network.Infer<typeof materialSurfacePatchSchema>;
+export type ModelMaterialJSON = network.Infer<typeof modelMaterialSchema>;
+export type MaterialFolderJSON = network.Infer<typeof materialFolderSchema>;
+export type MaterialEntryJSON = MaterialFolderJSON | ModelMaterialJSON;
+export type MaterialEntryKind = MaterialEntryJSON["kind"];
 
 export type { UVLayoutData };
 

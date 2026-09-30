@@ -12,6 +12,13 @@ export interface TreeBadge {
   title?: string;
 }
 
+export interface TreeSwatch {
+  title: string;
+  /** Any CSS colour; empty when omitted. */
+  color?: string;
+  ring?: string;
+}
+
 export interface TreeNode<
   TData = unknown
 > {
@@ -24,6 +31,7 @@ export interface TreeNode<
   renamable?: boolean;
   detail?: string;
   badges?: TreeBadge[];
+  swatch?: TreeSwatch;
   data?: TData;
 }
 
@@ -33,6 +41,17 @@ export interface JollySelectDetail {
 
 export interface JollyActivateDetail {
   id: string;
+}
+
+export interface JollyActivateSwatchDetail {
+  id: string;
+}
+
+export interface JollyContextRequestDetail {
+  /** `null` for the tree itself. */
+  id: string | null;
+  x: number;
+  y: number;
 }
 
 export interface JollyToggleExpandDetail {
@@ -68,6 +87,8 @@ export type TreeDropAccept = (
 export interface DataEventMap {
   "jolly-select": JollySelectDetail;
   "jolly-activate": JollyActivateDetail;
+  "jolly-activate-swatch": JollyActivateSwatchDetail;
+  "jolly-context-request": JollyContextRequestDetail;
   "jolly-toggle-expand": JollyToggleExpandDetail;
   "jolly-toggle-visible": JollyToggleVisibleDetail;
   "jolly-toggle-lock": JollyToggleLockDetail;
@@ -87,6 +108,8 @@ declare global {
   interface HTMLElementEventMap {
     "jolly-select": CustomEvent<JollySelectDetail>;
     "jolly-activate": CustomEvent<JollyActivateDetail>;
+    "jolly-activate-swatch": CustomEvent<JollyActivateSwatchDetail>;
+    "jolly-context-request": CustomEvent<JollyContextRequestDetail>;
     "jolly-toggle-expand": CustomEvent<JollyToggleExpandDetail>;
     "jolly-toggle-visible": CustomEvent<JollyToggleVisibleDetail>;
     "jolly-toggle-lock": CustomEvent<JollyToggleLockDetail>;

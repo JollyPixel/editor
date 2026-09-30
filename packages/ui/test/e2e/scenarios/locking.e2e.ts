@@ -58,6 +58,16 @@ test.describe("Locking", () => {
         await expect(ada.locator(`${kWidth} input`)).not.toHaveAttribute("readonly", "");
       });
 
+      await test.step("the holder sees no chip of their own, only a contender's", async() => {
+        await expect(ada.locator(`${kWidth} .chip`)).toHaveCount(0);
+
+        await lin.locator(`${kWidth} input`).focus();
+        await expect(ada.locator(`${kWidth} .chip`)).toHaveAttribute("data-tooltip", "Lin");
+        await expect(lin.locator(`${kWidth} .chip`)).toHaveAttribute("data-tooltip", "Ada");
+        await lin.locator(`${kWidth} input`).blur();
+        await expect(ada.locator(`${kWidth} .chip`)).toHaveCount(0);
+      });
+
       await test.step("moving focus moves the lock", async() => {
         await ada.locator(`${kHeight} input`).focus();
         await expect(lin.locator(kWidth)).not.toHaveAttribute("locked", "");

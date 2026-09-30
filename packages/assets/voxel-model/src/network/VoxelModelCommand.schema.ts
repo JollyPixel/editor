@@ -7,6 +7,12 @@ import {
 } from "@jolly-pixel/network";
 import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 
+// Import Internal Dependencies
+import {
+  MATERIAL_SURFACE_KEYS,
+  MATERIAL_SURFACE_PROPERTIES
+} from "../model/materialSurface.ts";
+
 // CONSTANTS
 const kNullableIdSchema = defineSchema({
   type: ["string", "null"]
@@ -50,6 +56,46 @@ export const blockTransformSchema = defineSchema({
   ]
 });
 
+export const materialSurfaceSchema = defineSchema({
+  type: "object",
+  properties: MATERIAL_SURFACE_PROPERTIES,
+  required: MATERIAL_SURFACE_KEYS
+});
+
+export const materialSurfacePatchSchema = defineSchema({
+  type: "object",
+  properties: MATERIAL_SURFACE_PROPERTIES,
+  minProperties: 1,
+  additionalProperties: false
+});
+
+export const modelMaterialSchema = defineSchema({
+  type: "object",
+  properties: {
+    kind: { const: "material" },
+    id: { type: "string" },
+    parentId: kNullableIdSchema,
+    name: { type: "string" },
+    surface: materialSurfaceSchema
+  },
+  required: ["kind", "id", "parentId", "name", "surface"]
+});
+
+export const materialFolderSchema = defineSchema({
+  type: "object",
+  properties: {
+    kind: { const: "folder" },
+    id: { type: "string" },
+    parentId: kNullableIdSchema,
+    name: { type: "string" }
+  },
+  required: ["kind", "id", "parentId", "name"]
+});
+
+export const materialEntrySchema = defineSchema({
+  oneOf: [materialFolderSchema, modelMaterialSchema]
+});
+
 export const folderNodeSchema = defineSchema({
   type: "object",
   properties: {
@@ -70,7 +116,8 @@ export const blockNodeSchema = defineSchema({
     name: { type: "string" },
     transform: blockTransformSchema,
     flipAxes: mirrorAxesSchema,
-    uv: uvLayoutSchema
+    uv: uvLayoutSchema,
+    materialId: { type: "string" }
   },
   required: ["kind", "id", "parentId", "name", "transform", "uv"]
 });
@@ -91,15 +138,18 @@ export const nodeTransformSchema = defineSchema({
 export const voxelModelSnapshotSchema = defineSchema({
   type: "object",
   properties: {
-    nodes: { type: "array", items: modelNodeSchema }
+    nodes: { type: "array", items: modelNodeSchema },
+    materials: { type: "array", items: materialEntrySchema }
   },
-  required: ["nodes"]
+  required: ["nodes", "materials"]
 });
 
 export const voxelModelCommandSchema = defineSchema({
   oneOf: [
     commandVariant("node-added", {
       node: modelNodeSchema
+    }, {
+      beforeId: { type: "string" }
     }),
     commandVariant("node-removed", {
       id: { type: "string" }
@@ -112,6 +162,8 @@ export const voxelModelCommandSchema = defineSchema({
       id: { type: "string" },
       parentId: kNullableIdSchema,
       transforms: { type: "array", items: nodeTransformSchema }
+    }, {
+      beforeId: { type: "string" }
     }),
     commandVariant("node-transformed", {
       id: { type: "string" },
@@ -122,6 +174,39 @@ export const voxelModelCommandSchema = defineSchema({
     commandVariant("node-uv-changed", {
       id: { type: "string" },
       uv: uvLayoutSchema
+    }),
+    commandVariant("node-material-changed", {
+      id: { type: "string" },
+      materialId: kNullableIdSchema
+    }),
+    commandVariant("material-added", {
+      material: modelMaterialSchema
+    }, {
+      beforeId: { type: "string" }
+    }),
+    commandVariant("material-folder-added", {
+      folder: materialFolderSchema
+    }, {
+      beforeId: { type: "string" }
+    }),
+    commandVariant("material-moved", {
+      id: { type: "string" },
+      parentId: kNullableIdSchema
+    }, {
+      beforeId: { type: "string" }
+    }),
+    commandVariant("material-removed", {
+      id: { type: "string" }
+    }, {
+      keepContents: { type: "boolean" }
+    }),
+    commandVariant("material-renamed", {
+      id: { type: "string" },
+      name: { type: "string" }
+    }),
+    commandVariant("material-changed", {
+      id: { type: "string" },
+      surface: materialSurfacePatchSchema
     })
   ]
 });

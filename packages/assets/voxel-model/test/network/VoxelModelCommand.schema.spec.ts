@@ -11,11 +11,14 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { voxelModelCommandProtocol } from "#src/network/VoxelModelCommand.schema.ts";
 import type { VoxelModelCommand } from "#src/network/types.ts";
+import { createMaterialSurface } from "#src/model/materialSurface.ts";
 import {
   TRANSFORM,
   UV,
   blockNode,
-  folderNode
+  folderNode,
+  material,
+  materialFolder
 } from "../helpers/commands.ts";
 
 // CONSTANTS
@@ -27,7 +30,8 @@ const kHeader = {
 const kCommands: readonly VoxelModelCommand[] = [
   {
     action: "node-added",
-    node: blockNode("node-1")
+    node: blockNode("node-1"),
+    beforeId: "node-2"
   },
   {
     action: "node-removed",
@@ -42,7 +46,8 @@ const kCommands: readonly VoxelModelCommand[] = [
     action: "node-moved",
     id: "node-1",
     parentId: "node-2",
-    transforms: [{ id: "node-1", transform: TRANSFORM }]
+    transforms: [{ id: "node-1", transform: TRANSFORM }],
+    beforeId: "node-3"
   },
   {
     action: "node-transformed",
@@ -53,6 +58,40 @@ const kCommands: readonly VoxelModelCommand[] = [
     action: "node-uv-changed",
     id: "node-1",
     uv: UV
+  },
+  {
+    action: "node-material-changed",
+    id: "node-1",
+    materialId: "material-1"
+  },
+  {
+    action: "material-added",
+    material: material("material-1", "folder-1"),
+    beforeId: "material-2"
+  },
+  {
+    action: "material-folder-added",
+    folder: materialFolder("folder-1")
+  },
+  {
+    action: "material-moved",
+    id: "material-1",
+    parentId: null,
+    beforeId: "folder-1"
+  },
+  {
+    action: "material-removed",
+    id: "material-1"
+  },
+  {
+    action: "material-renamed",
+    id: "material-1",
+    name: "Glass"
+  },
+  {
+    action: "material-changed",
+    id: "material-1",
+    surface: createMaterialSurface()
   }
 ];
 
@@ -171,6 +210,57 @@ describe("voxelModelCommandProtocol", () => {
       accepts({ ...added, node: { ...added.node, uv: { state: "stacked" } } }),
       false
     );
+  });
+
+  test("takes a null material id to clear a block's material but requires the field", () => {
+    const command = {
+      ...kHeader,
+      action: "node-material-changed",
+      id: "node-1"
+    };
+
+    assert.strictEqual(accepts({ ...command, materialId: null }), true);
+    assert.strictEqual(accepts(command), false);
+  });
+
+  test("rejects a material surface out of range or with a malformed color", () => {
+    const command = {
+      ...kHeader,
+      action: "material-changed",
+      id: "material-1"
+    };
+
+    assert.strictEqual(
+      accepts({ ...command, surface: createMaterialSurface({ opacity: 1.5 }) }),
+      false
+    );
+    assert.strictEqual(
+      accepts({ ...command, surface: createMaterialSurface({ color: "red" }) }),
+      false
+    );
+  });
+
+  test("takes a material removal that keeps a folder's contents", () => {
+    const command = {
+      ...kHeader,
+      action: "material-removed",
+      id: "folder-1"
+    };
+
+    assert.strictEqual(accepts({ ...command, keepContents: true }), true);
+    assert.strictEqual(accepts({ ...command, keepContents: "yes" }), false);
+  });
+
+  test("takes a partial material surface but not an empty one or an unknown field", () => {
+    const command = {
+      ...kHeader,
+      action: "material-changed",
+      id: "material-1"
+    };
+
+    assert.strictEqual(accepts({ ...command, surface: { roughness: 0.2 } }), true);
+    assert.strictEqual(accepts({ ...command, surface: {} }), false);
+    assert.strictEqual(accepts({ ...command, surface: { shine: 1 } }), false);
   });
 
   test("rejects a UV change without a valid layout", () => {

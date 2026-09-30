@@ -13,7 +13,7 @@ import type {
   IconName
 } from "@jolly-pixel/ui";
 
-export interface HierarchyDialogFrame {
+export interface EditorDialogFrame {
   heading: string;
   icon?: IconName;
   intent?: DialogIntent;
@@ -21,7 +21,7 @@ export interface HierarchyDialogFrame {
   confirmVariant: ButtonVariant;
 }
 
-export abstract class HierarchyDialog<TContext, TResult> extends LitElement {
+export abstract class EditorDialog<TContext, TResult> extends LitElement {
   @query("jolly-dialog")
   declare private dialogElement: Dialog;
 
@@ -33,7 +33,7 @@ export abstract class HierarchyDialog<TContext, TResult> extends LitElement {
 
   #settle: ((result: TResult | null) => void) | null = null;
 
-  protected abstract get frame(): HierarchyDialogFrame;
+  protected abstract get frame(): EditorDialogFrame;
 
   protected abstract reset(
     context: TContext

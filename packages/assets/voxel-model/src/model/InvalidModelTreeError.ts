@@ -1,12 +1,17 @@
+export type ModelTreeEntry = "node" | "material";
+
 export class InvalidModelTreeError extends Error {
-  readonly nodeId: string;
+  readonly entry: ModelTreeEntry;
+  readonly id: string;
 
   constructor(
-    nodeId: string,
+    entry: ModelTreeEntry,
+    id: string,
     reason: string
   ) {
-    super(`Invalid model tree: node ${nodeId} ${reason}.`);
+    super(`Invalid model tree: ${entry} ${id} ${reason}.`);
     this.name = "InvalidModelTreeError";
-    this.nodeId = nodeId;
+    this.entry = entry;
+    this.id = id;
   }
 }

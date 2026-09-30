@@ -13,6 +13,7 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 import { parseBlockTransformJSON } from "./blockTransformCodec.ts";
 import type { ModelBlocks } from "../../../scene/index.ts";
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
+import { LatestFrameThrottle } from "../../../collaboration/LatestFrameThrottle.ts";
 
 // CONSTANTS
 const kThrottleMs = 50;
@@ -40,7 +41,8 @@ export class TransformLiveSync {
   #blocks: ModelBlocks;
   #channel: PresenceChannel<TransformLivePayload | null>;
   #streams = new Map<string, LiveStream>();
-  #lastSentAt = 0;
+  #throttle: LatestFrameThrottle<TransformLivePayload>;
+  #unsubscribe: () => void;
 
   #onPeerChange = (
     change: PresenceChange<TransformLivePayload | null>
@@ -64,29 +66,28 @@ export class TransformLiveSync {
       decode: decodeLivePayload,
       equals: () => false
     });
-    this.#channel.on("change", this.#onPeerChange);
+    this.#throttle = new LatestFrameThrottle(
+      kThrottleMs,
+      (payload) => this.#channel.publish(payload)
+    );
+    this.#unsubscribe = this.#channel.subscribe("change", this.#onPeerChange);
   }
 
   publish(
     uuid: string,
     transform: BlockTransformJSON
   ): void {
-    const now = Date.now();
-    if (now - this.#lastSentAt < kThrottleMs) {
-      return;
-    }
-    this.#lastSentAt = now;
-
-    this.#channel.publish({ uuid, transform });
+    this.#throttle.push({ uuid, transform });
   }
 
   clear(): void {
-    this.#lastSentAt = 0;
+    this.#throttle.cancel();
     this.#channel.publish(null);
   }
 
   dispose(): void {
-    this.#channel.off("change", this.#onPeerChange);
+    this.#throttle.cancel();
+    this.#unsubscribe();
     for (const clientId of [...this.#streams.keys()]) {
       this.#endStream(clientId, { revert: false });
     }

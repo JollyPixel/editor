@@ -1,6 +1,8 @@
 // Import Internal Dependencies
 import {
+  findNode,
   resolveReparent,
+  type ContextMenu,
   type Tree,
   type TreeNode
 } from "../../../../src/index.ts";
@@ -89,7 +91,12 @@ function sampleNodes(): TreeNode[] {
               icon: "check",
               visible: true,
               locked: false,
-              renamable: true
+              renamable: true,
+              swatch: {
+                title: "Material: Glass",
+                color: "#8ecae673",
+                ring: "#ffb703"
+              }
             },
             {
               id: "barrel",
@@ -97,7 +104,10 @@ function sampleNodes(): TreeNode[] {
               icon: "check",
               visible: false,
               locked: false,
-              renamable: true
+              renamable: true,
+              swatch: {
+                title: "Add material"
+              }
             }
           ]
         }
@@ -188,6 +198,48 @@ function buildTree(
   return tree;
 }
 
+function rowMenu(
+  tree: Tree
+): ContextMenu {
+  const menu = document.createElement("jolly-context-menu");
+  menu.label = "Row actions";
+  let target = "";
+
+  tree.addEventListener("jolly-context-request", (event) => {
+    const { id, x, y } = event.detail;
+    if (id === null) {
+      return;
+    }
+    const visible = findNode(tree.nodes, id)?.visible;
+    target = id;
+    menu.items = [
+      {
+        id: "rename",
+        label: "Rename",
+        disabled: !tree.renamable
+      },
+      {
+        id: "visibility",
+        label: visible === false ? "Show" : "Hide",
+        icon: "eye",
+        disabled: visible === undefined
+      }
+    ];
+    menu.openAt(x, y);
+  });
+  menu.addEventListener("jolly-context-action", (event) => {
+    if (event.detail.id === "rename") {
+      tree.beginRename(target);
+    }
+    else {
+      const visible = findNode(tree.nodes, target)?.visible;
+      tree.nodes = setNodeField(tree.nodes, target, "visible", visible === false);
+    }
+  });
+
+  return menu;
+}
+
 function renameNode(
   nodes: TreeNode[],
   id: string,
@@ -212,6 +264,7 @@ export const TREE_EXAMPLE: GalleryExample<TreeOptionKey> = {
   title: "Tree",
   options: kOptions,
   render(host, options) {
-    host.append(buildTree(options));
+    const tree = buildTree(options);
+    host.append(tree, rowMenu(tree));
   }
 };

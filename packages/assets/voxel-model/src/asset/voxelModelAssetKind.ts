@@ -75,7 +75,7 @@ export class VoxelModelState {
   load(
     document: VoxelModelDocument
   ): void {
-    this.#tree.load(document.nodes);
+    this.#tree.load(document);
     this.#texture = {
       id: document.texture.id,
       kind: document.texture.kind
@@ -106,9 +106,7 @@ export class VoxelModelState {
   }
 
   snapshot(): VoxelModelSnapshot {
-    return {
-      nodes: this.#tree.toJSON()
-    };
+    return this.#tree.toJSON();
   }
 
   toJSON(): VoxelModelDocument {

@@ -11,9 +11,9 @@ import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
-  HierarchyDialog,
-  type HierarchyDialogFrame
-} from "./HierarchyDialog.ts";
+  EditorDialog,
+  type EditorDialogFrame
+} from "../../../shared/EditorDialog.ts";
 
 // CONSTANTS
 const kAxes = ["x", "y", "z"] as const;
@@ -29,7 +29,7 @@ export interface HierarchyDuplicateResult {
   mirrorAxes: MirrorAxes;
 }
 
-export class HierarchyDuplicateDialog extends HierarchyDialog<
+export class HierarchyDuplicateDialog extends EditorDialog<
   HierarchyDuplicateContext,
   HierarchyDuplicateResult
 > {
@@ -65,10 +65,10 @@ export class HierarchyDuplicateDialog extends HierarchyDialog<
     };
   }
 
-  protected get frame(): HierarchyDialogFrame {
+  protected get frame(): EditorDialogFrame {
     return {
       heading: "Duplicate",
-      icon: "block-duplicate",
+      icon: "action-duplicate",
       confirmLabel: "Duplicate",
       confirmVariant: "accent"
     };

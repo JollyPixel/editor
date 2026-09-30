@@ -27,13 +27,24 @@ test("a texture resized from the Build tab keeps its size after a reload", async
   await expect(sizeField(page, "Width").locator("option:checked")).toHaveText("64");
 
   await sizeField(page, "Width").selectOption({ label: "128" });
-  await sizeField(page, "Height").selectOption({ label: "32" });
+  await sizeField(page, "Height").selectOption({ label: "256" });
 
   await page.reload();
   await waitForEditor(page);
 
   await expect(sizeField(page, "Width").locator("option:checked")).toHaveText("128");
-  await expect(sizeField(page, "Height").locator("option:checked")).toHaveText("32");
+  await expect(sizeField(page, "Height").locator("option:checked")).toHaveText("256");
+});
+
+test("texture sizes that would cut through a block's UVs are disabled", async({ page }) => {
+  const width = sizeField(page, "Width");
+  const height = sizeField(page, "Height");
+  await expect(width.locator("option:disabled")).toHaveText(["16"]);
+  await expect(height.locator("option:disabled")).toHaveText(["16", "32"]);
+
+  await addNode(page, "Block", "Arm");
+
+  await expect(width.locator("option:disabled")).toHaveText(["16", "32"]);
 });
 
 test("the Paint tab swaps the region tools for the drawing tools", async({ page }) => {
@@ -92,7 +103,7 @@ test("selecting a block selects its texture region", async({ page }) => {
   await treeRow(page, "Block").click();
   await expect(regionToolbar(page)).toBeVisible();
 
-  await addNode(page, "Block", "Arm", { asChild: false });
+  await addNode(page, "Block", "Arm");
   await hierarchyAction(page, "Delete").click();
   await dialog(page, "Delete Block")
     .getByRole("button", { name: "Delete" })

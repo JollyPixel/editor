@@ -5,7 +5,10 @@ import type {
 } from "lit";
 
 // Import Internal Dependencies
-import { anchoredPosition } from "../geometry/anchoredPosition.ts";
+import {
+  anchoredPosition,
+  type AnchorRect
+} from "../geometry/anchoredPosition.ts";
 import { inputLayers } from "../interaction/input/InputLayers.ts";
 
 // CONSTANTS
@@ -15,7 +18,7 @@ export interface PopoverControllerOptions {
   /**
    * Anchor used for placement.
    */
-  anchor: () => HTMLElement | null;
+  anchor: () => HTMLElement | AnchorRect | null;
   /**
    * Popover element rendered by the host.
    */
@@ -98,8 +101,9 @@ export class PopoverController implements ReactiveController {
       this.#unlisten();
       this.#options.onClose?.();
 
-      if (this.#restoreFocus) {
-        this.#options.anchor()?.focus();
+      const anchor = this.#options.anchor();
+      if (this.#restoreFocus && anchor instanceof HTMLElement) {
+        anchor.focus();
       }
     }
 
@@ -117,7 +121,9 @@ export class PopoverController implements ReactiveController {
       return;
     }
 
-    const anchorRect = anchor.getBoundingClientRect();
+    const anchorRect = anchor instanceof HTMLElement ?
+      anchor.getBoundingClientRect() :
+      anchor;
 
     const placed = anchoredPosition({
       anchor: {

@@ -13,12 +13,16 @@ export type PresenceStoreEvents = {
   blockHoversChange: (
     hovers: PeerMarkMap<string>
   ) => void;
+  materialEditsChange: (
+    edits: PeerMarkMap<string>
+  ) => void;
 };
 
 export class PresenceStore extends Emitter<PresenceStoreEvents> {
   #peers: readonly PresencePeer[] = [];
   #blockSelections: PeerMarkMap<string> = new Map();
   #blockHovers: PeerMarkMap<string> = new Map();
+  #materialEdits: PeerMarkMap<string> = new Map();
 
   get peers(): readonly PresencePeer[] {
     return this.#peers;
@@ -59,6 +63,20 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     this.emit(
       "blockHoversChange",
       hovers
+    );
+  }
+
+  get materialEdits(): PeerMarkMap<string> {
+    return this.#materialEdits;
+  }
+
+  set materialEdits(
+    edits: PeerMarkMap<string>
+  ) {
+    this.#materialEdits = edits;
+    this.emit(
+      "materialEditsChange",
+      edits
     );
   }
 }

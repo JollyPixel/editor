@@ -11,7 +11,13 @@ import {
   test,
   expect
 } from "./fixtures.ts";
-import { addNode, hierarchyAction } from "./support/hierarchy.ts";
+import {
+  addNode,
+  hierarchyAction,
+  materialBlockBar,
+  materialTab,
+  rowMenu
+} from "./support/hierarchy.ts";
 import {
   blockSummary,
   outline,
@@ -27,10 +33,10 @@ test("a new block is listed, selected and given its texture region", async({ pag
   expect(await selectedBlock(page)).toBe("Arm");
 });
 
-test("a block added as a child nests under the selection", async({ page }) => {
-  await treeRow(page, "Block").click();
-  await addNode(page, "Block", "Arm");
-  await addNode(page, "Block", "Leg", { asChild: false });
+test("the header adds at the root and a row menu adds inside the row", async({ page }) => {
+  await addNode(page, "Block", "Arm", { under: "Block" });
+  await expect(treeRow(page, "Arm")).toHaveAttribute("aria-selected", "true");
+  await addNode(page, "Block", "Leg");
 
   expect(await outline(page)).toEqual(["Block", "  Arm", "Leg"]);
 });
@@ -48,13 +54,28 @@ test("a cancelled dialog adds nothing", async({ page }) => {
 
 test("blocks placed in a folder are listed under it", async({ page }) => {
   await addNode(page, "Folder", "Limbs");
-  await treeRow(page, "Limbs").click();
-  await addNode(page, "Block", "Arm");
+  await addNode(page, "Block", "Arm", { under: "Limbs" });
 
-  expect(await outline(page)).toEqual(["Limbs/", "  Arm", "Block"]);
+  expect(await outline(page)).toEqual(["Block", "Limbs/", "  Arm"]);
 });
 
-test("a row is renamed in place", async({ page }) => {
+test("a row is reordered among its siblings with the keyboard move state", async({ page }) => {
+  await addNode(page, "Block", "Arm");
+
+  const arm = treeRow(page, "Arm");
+  await arm.click();
+  await arm.press(" ");
+  await arm.press("ArrowRight");
+  await arm.press("Enter");
+
+  await expect.poll(() => outline(page)).toEqual(["Arm", "Block"]);
+});
+
+test("rows show no drag grip", async({ page }) => {
+  await expect(treeRow(page, "Block").locator("[part=grip]")).toBeHidden();
+});
+
+test("a row is renamed in place by double-click", async({ page }) => {
   await treeRow(page, "Block").dblclick();
   const rename = page.getByRole("textbox", { name: "Rename" });
   await rename.fill("Torso");
@@ -81,7 +102,7 @@ test("a duplicate copies the subtree and mirrors it", async({ page }) => {
   await page.getByRole("radio", { name: "Pos" }).check();
   await page.getByRole("textbox", { name: "X" }).fill("2");
   await page.getByRole("textbox", { name: "X" }).press("Enter");
-  await addNode(page, "Block", "Arm");
+  await addNode(page, "Block", "Arm", { under: "Block" });
 
   await treeRow(page, "Block").click();
   await hierarchyAction(page, "Duplicate").click();
@@ -103,10 +124,60 @@ test("a duplicate copies the subtree and mirrors it", async({ page }) => {
   });
 });
 
-test("deleting a parent removes or promotes its children", async({ page }) => {
+test("a row menu renames in place and opens the Material tab", async({ page }) => {
+  const menu = await rowMenu(page, "Block");
+  await expect(menu.getByRole("menuitem")).toHaveText([
+    "Add Child Block",
+    "Rename",
+    "Duplicate",
+    "Material…",
+    "Delete"
+  ]);
+  await menu.getByRole("menuitem", { name: "Rename" }).click();
+  const rename = page.getByRole("textbox", { name: "Rename" });
+  await expect(rename).toBeFocused();
+  await rename.fill("Torso");
+  await rename.press("Enter");
+  await expect(treeRow(page, "Torso")).toBeVisible();
+
+  await (await rowMenu(page, "Torso")).getByRole("menuitem", { name: "Material…" }).click();
+  await expect(materialTab(page)).toBeVisible();
+  await expect(materialBlockBar(page)).toContainText("Torso");
+});
+
+test("a right-click below the rows adds at the root, with no row actions", async({ page }) => {
   await treeRow(page, "Block").click();
+  const tree = (await page.locator("jolly-model-editor-hierarchy jolly-tree").boundingBox())!;
+
+  await page.mouse.click(tree.x + 20, tree.y + tree.height - 10, { button: "right" });
+  const menu = page.getByRole("menu", { name: "Hierarchy actions" });
+  await expect(menu.getByRole("menuitem")).toHaveText(["Add Block", "Add Folder"]);
+  await expect(treeRow(page, "Block")).toHaveAttribute("aria-selected", "true");
+
+  await menu.getByRole("menuitem", { name: "Add Folder" }).click();
+  const form = dialog(page, "New Folder");
+  await textField(form, "Folder name").fill("Props");
+  await form.getByRole("button", { name: "OK" }).click();
+
+  await expect.poll(() => outline(page)).toEqual(["Block", "Props/"]);
+});
+
+test("a row menu duplicates next to the row and deletes it", async({ page }) => {
   await addNode(page, "Block", "Arm");
-  await addNode(page, "Block", "Hand");
+
+  await (await rowMenu(page, "Block")).getByRole("menuitem", { name: "Duplicate" }).click();
+  await dialog(page, "Duplicate").getByRole("button", { name: "Duplicate" }).click();
+  await expect.poll(() => outline(page)).toEqual(["Block", "Block Copy", "Arm"]);
+
+  await (await rowMenu(page, "Block Copy")).getByRole("menuitem", { name: "Delete" }).click();
+  await dialog(page, "Delete Block").getByRole("button", { name: "Delete" }).click();
+
+  await expect.poll(() => outline(page)).toEqual(["Block", "Arm"]);
+});
+
+test("deleting a parent removes or promotes its children", async({ page }) => {
+  await addNode(page, "Block", "Arm", { under: "Block" });
+  await addNode(page, "Block", "Hand", { under: "Arm" });
 
   await test.step("keeping the children", async() => {
     await treeRow(page, "Arm").click();

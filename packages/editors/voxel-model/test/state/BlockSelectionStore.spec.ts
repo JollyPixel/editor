@@ -56,15 +56,33 @@ describe("BlockSelectionStore hover", () => {
   });
 });
 
+describe("BlockSelectionStore emphasize", () => {
+  test("emits the group without repeats, and an empty group only to clear one", () => {
+    const store = new BlockSelectionStore();
+    const emitted: string[][] = [];
+    store.on("emphasize", (uuids) => emitted.push([...uuids]));
+
+    store.emphasize([]);
+    store.emphasize(["a", "b", "a"]);
+    store.emphasize([]);
+    store.emphasize([]);
+
+    assert.deepEqual(emitted, [["a", "b"], []]);
+    assert.deepEqual(store.emphasized, []);
+  });
+});
+
 describe("BlockSelectionStore forget", () => {
   test("clears only the marks that point at the forgotten id", () => {
     const store = new BlockSelectionStore();
     store.select("a");
     store.hover("b");
+    store.emphasize(["a", "c"]);
 
     store.forget("a");
 
     assert.equal(store.selected, null);
     assert.equal(store.hovered, "b");
+    assert.deepEqual(store.emphasized, ["c"]);
   });
 });

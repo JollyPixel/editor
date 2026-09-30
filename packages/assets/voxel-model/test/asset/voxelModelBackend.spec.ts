@@ -149,7 +149,8 @@ describe("voxel-model asset kind over a real back-end", () => {
 
       const snapshot = sent.find((message) => message.payload?.type === "snapshot");
       assert.deepEqual(snapshot?.payload?.data, {
-        nodes: []
+        nodes: [],
+        materials: []
       });
 
       await server.close();

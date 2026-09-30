@@ -51,6 +51,7 @@ export class BlockTextures {
   #bindings = new Map<string, UVGeometryBinding>();
   #restoring = false;
   #releaseBlockRegions: () => void;
+  #subscriptions: Array<() => void>;
 
   #onChange = (
     change: ModelChange
@@ -101,6 +102,9 @@ export class BlockTextures {
         this.#pixels.uv.restore(regionOf(block));
       }
     });
+    for (const block of this.#blocks.values()) {
+      this.#bind(block);
+    }
   };
 
   #onResized = (
@@ -113,7 +117,7 @@ export class BlockTextures {
 
   #onRegionCreated: UVMapListener<"region-created"> = ({ region }) => {
     const uuid = blockUuidFromRegion(region.id);
-    if (uuid !== null) {
+    if (!this.#restoring && uuid !== null) {
       this.#bindByUuid(uuid);
     }
   };
@@ -175,16 +179,18 @@ export class BlockTextures {
     );
 
     const { uv } = pixels;
-    this.#texture.on("resized", this.#onResized);
-    uv.on("region-created", this.#onRegionCreated);
-    uv.on("region-deleted", this.#onRegionDeleted);
-    uv.on("region-moved", this.#onRegionEdited);
-    uv.on("region-rotated", this.#onRegionEdited);
-    uv.on("region-state-changed", this.#onRegionEdited);
-    uv.on("selection-changed", this.#onRegionSelected);
-    this.#document.on("change", this.#onChange);
-    this.#document.on("reset", this.#rebuild);
-    this.#selection.on("select", this.#onBlockSelected);
+    this.#subscriptions = [
+      this.#texture.subscribe("resized", this.#onResized),
+      uv.subscribe("region-created", this.#onRegionCreated),
+      uv.subscribe("region-deleted", this.#onRegionDeleted),
+      uv.subscribe("region-moved", this.#onRegionEdited),
+      uv.subscribe("region-rotated", this.#onRegionEdited),
+      uv.subscribe("region-state-changed", this.#onRegionEdited),
+      uv.subscribe("selection-changed", this.#onRegionSelected),
+      this.#document.subscribe("change", this.#onChange),
+      this.#document.subscribe("reset", this.#rebuild),
+      this.#selection.subscribe("select", this.#onBlockSelected)
+    ];
 
     this.#rebuild();
   }
@@ -206,19 +212,11 @@ export class BlockTextures {
       this.#unbind(uuid);
     }
 
-    const { uv } = this.#pixels;
-    uv.off("region-created", this.#onRegionCreated);
-    uv.off("region-deleted", this.#onRegionDeleted);
-    uv.off("region-moved", this.#onRegionEdited);
-    uv.off("region-rotated", this.#onRegionEdited);
-    uv.off("region-state-changed", this.#onRegionEdited);
-    uv.off("selection-changed", this.#onRegionSelected);
-    this.#document.off("change", this.#onChange);
-    this.#document.off("reset", this.#rebuild);
-    this.#selection.off("select", this.#onBlockSelected);
+    for (const unsubscribe of this.#subscriptions) {
+      unsubscribe();
+    }
     this.#releaseBlockRegions();
     this.#blocks.texture = null;
-    this.#texture.off("resized", this.#onResized);
     this.#texture.dispose();
   }
 
@@ -238,6 +236,9 @@ export class BlockTextures {
     block: BlockNodeJSON
   ): void {
     this.#restore(() => this.#pixels.uv.restore(regionOf(block)));
+    if (!this.#bindings.has(block.id)) {
+      this.#bindByUuid(block.id);
+    }
   }
 
   #bindByUuid(

@@ -10,13 +10,17 @@ import {
   ModelBlocks,
   type ModelBlock
 } from "#src/scene/blocks/index.ts";
-import { BlockSelectionStore } from "#src/state/index.ts";
+import {
+  BlockSelectionStore,
+  MaterialPreviews
+} from "#src/state/index.ts";
 
 export interface ModelFixture {
   document: ModelDocument;
   scene: THREE.Scene;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
+  previews: MaterialPreviews;
   addBlock(options?: Partial<AddBlockOptions>): ModelBlock;
 }
 
@@ -24,10 +28,12 @@ export function createModelFixture(): ModelFixture {
   const document = new ModelDocument();
   const scene = new THREE.Scene();
   const selection = new BlockSelectionStore();
+  const previews = new MaterialPreviews();
   const blocks = new ModelBlocks({
     document,
     scene,
-    selection
+    selection,
+    previews
   });
 
   return {
@@ -35,6 +41,7 @@ export function createModelFixture(): ModelFixture {
     scene,
     blocks,
     selection,
+    previews,
     addBlock(options = {}) {
       const id = document.addBlock({
         name: "Block",

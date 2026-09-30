@@ -226,6 +226,27 @@ describe("ObjectOverlayRenderer", () => {
     assert.strictEqual(received[0].xrayDepthWrite, true);
   });
 
+  test("draws the scene after placing the overlays, or only places them without renderScene", () => {
+    const overlays: TestOverlay[] = [];
+    let draws = 0;
+    const drawing = new ObjectOverlayRenderer({
+      registry: createRegistry(overlays),
+      renderScene: () => {
+        draws += 1;
+      },
+      camera: kCamera
+    });
+    const placing = new ObjectOverlayRenderer({
+      registry: createRegistry(overlays),
+      camera: kCamera
+    });
+
+    drawing.render();
+    placing.render();
+
+    assert.strictEqual(draws, 1);
+  });
+
   test("leaves the occluded opacity at the visible one when no scale is configured", () => {
     const overlays: TestOverlay[] = [];
     const renderer = new ObjectOverlayRenderer({

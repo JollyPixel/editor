@@ -38,9 +38,12 @@ chrome shrinks and grows with the density.
 | `--jolly-dialog-chrome-bg` | `--jolly-ink` at 4% over `--jolly-surface-raised` |
 | `--jolly-dialog-chrome-padding` | `calc(var(--jolly-row-height) * 0.4)` |
 | `--jolly-dialog-backdrop` | `--jolly-dialog-header-bg` at 28% over a themed scrim |
+| `--jolly-dialog-backdrop-filter` | `blur(2px)` |
 
 The backdrop is mixed from the header fill, so the fade behind the dialog takes
-the accent, the tone or the intent of the dialog in front of it.
+the accent, the tone or the intent of the dialog in front of it. A dialog that
+previews its edits on the page behind it can set
+`--jolly-dialog-backdrop-filter: none` and a lighter backdrop.
 
 The header, its icon and its title are exposed as the `header`, `icon` and
 `title` parts.

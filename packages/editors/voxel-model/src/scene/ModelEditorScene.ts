@@ -2,7 +2,10 @@
 import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
-import type { PeerIdentity } from "@jolly-pixel/ui";
+import type {
+  PeerIdentity,
+  PresenceSource
+} from "@jolly-pixel/ui";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
@@ -14,9 +17,16 @@ import { ModelHierarchy } from "../model/index.ts";
 import { ModelCollaboration } from "../collaboration/index.ts";
 import {
   BlockSelectionStore,
-  type PresenceStore
+  MaterialFocusStore,
+  MaterialPreviews,
+  type PresenceStore,
+  type ViewSettingsStore
 } from "../state/index.ts";
 import { ModelBlocks } from "./blocks/index.ts";
+import { ViewLighting } from "./ViewLighting.ts";
+import { ViewGlow } from "./ViewGlow.ts";
+import { ViewportRenderer } from "./ViewportRenderer.ts";
+import { createRoomEnvironment } from "./roomEnvironment.ts";
 import {
   BlockPicker,
   HighlightBridge
@@ -35,6 +45,7 @@ export interface ModelEditorSceneOptions {
   presence: PresenceStore;
   pixels: PixelDocument;
   archives: EditorArchives;
+  view: ViewSettingsStore;
 }
 
 export interface ModelWorkspace {
@@ -42,11 +53,15 @@ export interface ModelWorkspace {
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
+  materialFocus: MaterialFocusStore;
   hierarchy: ModelHierarchy;
   textures: BlockTextures;
   gizmo: TransformGizmo;
   lock: TransformLock;
   presence: PresenceStore;
+  fields: PresenceSource;
+  previews: MaterialPreviews;
+  view: ViewSettingsStore;
   teleportToPeer(clientId: string): void;
 }
 
@@ -54,6 +69,7 @@ export class ModelEditorScene extends Systems.Scene {
   #options: ModelEditorSceneOptions;
   #workspace = Promise.withResolvers<ModelWorkspace>();
   #disposables: Array<() => void> = [];
+  #viewport: ViewportRenderer | null = null;
 
   get ready(): Promise<ModelWorkspace> {
     return this.#workspace.promise;
@@ -72,16 +88,13 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       identity,
       presence,
-      pixels
+      pixels,
+      view
     } = this.#options;
 
     const scene = this.world.sceneManager.getSource();
     scene.background = new THREE.Color("#262627");
 
-    scene.add(
-      new THREE.HemisphereLight("#dceaff", "#151820", 2.5),
-      new THREE.DirectionalLight("#ffffff", 3)
-    );
     scene.add(createModelGrid());
 
     const camera = this.world
@@ -100,11 +113,27 @@ export class ModelEditorScene extends Systems.Scene {
       });
 
     const selection = new BlockSelectionStore();
+    const materialFocus = new MaterialFocusStore();
+    const previews = new MaterialPreviews();
     const blocks = new ModelBlocks({
       document,
       scene,
-      selection
+      selection,
+      previews
     });
+
+    const lighting = new ViewLighting({
+      scene,
+      view
+    });
+    const unfollowShading = view.follow((settings) => {
+      blocks.lit = settings.shading === "lit";
+    });
+    lighting
+      .useEnvironment(createRoomEnvironment(this.world.renderer.getSource()))
+      .catch((error: unknown) => {
+        console.warn("[voxel-model] No environment map for the viewport.", error);
+      });
 
     const textures = new BlockTextures({
       pixels,
@@ -120,8 +149,11 @@ export class ModelEditorScene extends Systems.Scene {
     const collaboration = new ModelCollaboration({
       room,
       identity,
+      document,
       blocks,
       selection,
+      materialFocus,
+      previews,
       presence,
       world: this.world,
       camera: camera.camera
@@ -144,22 +176,31 @@ export class ModelEditorScene extends Systems.Scene {
         gizmo
       });
 
-    this.world.renderer.removeRenderComponent(camera);
+    const viewport = new ViewportRenderer(camera);
+    this.#viewport = viewport;
     const highlight = new HighlightBridge({
       renderer: this.world.renderer.getSource(),
       scene,
-      camera,
+      camera: camera.threeCamera,
       blocks,
       selection,
       presence
     });
-    this.world.renderer.addRenderComponent(highlight);
+    viewport.addPreDrawStep(highlight.update);
+    const glow = new ViewGlow({
+      target: viewport,
+      view
+    });
 
     this.#disposables.push(
+      () => this.world.renderer.removeRenderComponent(viewport),
+      () => glow.dispose(),
       () => highlight.dispose(),
       () => gizmo.dispose(),
       () => collaboration.dispose(),
       () => textures.dispose(),
+      () => lighting.dispose(),
+      unfollowShading,
       () => blocks.dispose()
     );
 
@@ -168,11 +209,15 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       blocks,
       selection,
+      materialFocus,
       hierarchy,
       textures,
       gizmo,
       lock: collaboration.lock,
       presence,
+      fields: collaboration.fields,
+      previews,
+      view,
       teleportToPeer: (clientId) => {
         const pose = collaboration.frustums.poseOf(clientId);
         if (pose !== undefined) {
@@ -180,6 +225,10 @@ export class ModelEditorScene extends Systems.Scene {
         }
       }
     });
+  }
+
+  override start(): void {
+    this.#viewport?.replaceCamera(this.world.renderer);
   }
 
   override destroy(): void {

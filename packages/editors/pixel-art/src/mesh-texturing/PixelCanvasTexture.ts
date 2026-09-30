@@ -95,11 +95,18 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
   };
 
   readonly #onResized = (event: { size: Vec2; }): void => {
+    this.#reallocate();
     this.emit("resized", event);
   };
 
   readonly #onReplaced = (event: { size: Vec2; }): void => {
-    this.texture.image = this.#source.textureCanvas();
+    this.#reallocate();
     this.emit("resized", event);
   };
+
+  #reallocate(): void {
+    this.texture.image = this.#source.textureCanvas();
+    this.texture.dispose();
+    this.texture.needsUpdate = true;
+  }
 }

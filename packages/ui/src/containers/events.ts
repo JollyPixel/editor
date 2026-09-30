@@ -31,6 +31,10 @@ export interface JollyHeadingChangeDetail {
   heading: string;
 }
 
+export interface JollyContextActionDetail {
+  id: string;
+}
+
 export interface PaneMoveDetail {
   pane: PaneElement;
   command: PaneMoveCommand;
@@ -48,6 +52,7 @@ export interface PaneFoldersDetail {
 export interface ContainerEventMap {
   "jolly-cancel": undefined;
   "jolly-close": { returnValue: string; };
+  "jolly-context-action": JollyContextActionDetail;
   "jolly-folder-drag": { folder: Folder; event: PointerEvent; };
   "jolly-folder-reorder": {
     folder: Folder;
@@ -84,6 +89,7 @@ declare global {
   interface HTMLElementEventMap {
     "jolly-cancel": CustomEvent<undefined>;
     "jolly-close": CustomEvent<{ returnValue: string; }>;
+    "jolly-context-action": CustomEvent<JollyContextActionDetail>;
     "jolly-folder-drag": CustomEvent<ContainerEventMap["jolly-folder-drag"]>;
     "jolly-folder-reorder": CustomEvent<ContainerEventMap["jolly-folder-reorder"]>;
     "jolly-heading-change": CustomEvent<JollyHeadingChangeDetail>;

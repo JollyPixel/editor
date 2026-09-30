@@ -18,6 +18,7 @@ export * from "./theme/resolveThemeToken.ts";
 export * from "./theme/ambientTheme.ts";
 
 export * from "./geometry/Rect.ts";
+export type { AnchorRect } from "./geometry/anchoredPosition.ts";
 
 export * from "./storage/StorageAdapter.ts";
 export * from "./storage/LocalStorageAdapter.ts";
@@ -126,6 +127,7 @@ export {
   type PointerDragSessionOptions
 } from "./interaction/pointer/PointerDragSession.ts";
 
+export * from "./containers/context-menu/ContextMenu.ts";
 export * from "./containers/dialog/Dialog.ts";
 export * from "./containers/dialog/dialogHeader.ts";
 export * from "./containers/dialog/dialogHelpers.ts";
@@ -176,6 +178,7 @@ export {
 } from "./containers/dock/layoutParser.ts";
 export type {
   ContainerEventMap,
+  JollyContextActionDetail,
   JollyHeadingChangeDetail,
   JollyMoveDetail,
   JollyReorderDetail,
@@ -192,6 +195,7 @@ export {
   resolveDepthDropTarget,
   resolveDropDepth,
   resolveReparent,
+  resolveReparentMoves,
   resolveRowDropZone,
   resolveSelection,
   TreeSnapshot,
@@ -204,6 +208,7 @@ export {
   isSelfOrDescendant,
   type DepthDropTarget,
   type FlatTreeRow,
+  type ReparentMove,
   type ResolvedSelection,
   type ResolveDepthDropOptions,
   type ResolveReparentOptions

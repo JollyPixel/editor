@@ -7,7 +7,8 @@ import {
   canDrop,
   findNode,
   resolveDepthDropTarget,
-  resolveReparent
+  resolveReparent,
+  resolveReparentMoves
 } from "../../src/data/tree/model.ts";
 import type {
   JollyReparentDetail,
@@ -205,6 +206,32 @@ describe("Data.resolveReparent", () => {
     const result = resolveReparent({ nodes: tree(), movedIds: ["a1", "a2"], targetId: "b", where: "above" });
 
     assert.deepEqual(findNode(result, "a")?.children, []);
+  });
+});
+
+describe("Data.resolveReparentMoves", () => {
+  test("moves each node last-first, before a sibling already in place", () => {
+    assert.deepEqual(
+      resolveReparentMoves({ nodes: tree(), movedIds: ["b", "c"], targetId: "a1", where: "above" }),
+      [
+        { id: "c", parentId: "a", beforeId: "a1" },
+        { id: "b", parentId: "a", beforeId: "c" }
+      ]
+    );
+  });
+
+  test("lands a node last inside a target without a sibling after it", () => {
+    assert.deepEqual(
+      resolveReparentMoves({ nodes: tree(), movedIds: ["c"], targetId: "a", where: "inside" }),
+      [{ id: "c", parentId: "a" }]
+    );
+  });
+
+  test("gives no moves for a refused drop", () => {
+    assert.deepEqual(
+      resolveReparentMoves({ nodes: tree(), movedIds: ["a"], targetId: "a1", where: "inside" }),
+      []
+    );
   });
 });
 

@@ -48,7 +48,7 @@ export const dialogStyles = css`
 
   dialog::backdrop {
     background: var(--jolly-dialog-backdrop);
-    backdrop-filter: blur(2px);
+    backdrop-filter: var(--jolly-dialog-backdrop-filter, blur(2px));
   }
 
   ${overlayMotion}

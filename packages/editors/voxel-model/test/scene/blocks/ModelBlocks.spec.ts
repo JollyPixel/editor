@@ -7,6 +7,7 @@ import * as THREE from "three";
 import {
   createBlockTransform,
   createBlockUv,
+  createMaterialSurface,
   type BlockTransformJSON,
   type ModelDocument,
   type VoxelModelCommand
@@ -17,6 +18,9 @@ import {
   createModelFixture,
   type ModelFixture
 } from "../../fixtures/model.ts";
+
+// CONSTANTS
+const kMetal = createMaterialSurface({ metalness: 0.8 });
 
 function recordCommands(
   document: ModelDocument
@@ -132,9 +136,11 @@ describe("ModelBlocks projection", () => {
     const folderId = fixture.document.addFolder({ name: "Limbs" });
     const arm = fixture.addBlock({ parentId: folderId });
 
-    fixture.document.move(folderId!, body.uuid, [
-      { id: arm.uuid, transform: transformAt({ x: -2, y: 0, z: 0 }) }
-    ]);
+    fixture.document.move(folderId!, body.uuid, {
+      transforms: [
+        { id: arm.uuid, transform: transformAt({ x: -2, y: 0, z: 0 }) }
+      ]
+    });
 
     assert.equal(arm.node.parent, body.node);
     assert.equal(arm.position.x, -2);
@@ -152,7 +158,8 @@ describe("ModelBlocks projection", () => {
           parentId: "parent",
           name: "Child",
           transform: transformAt({ x: 1, y: 0, z: 0 }),
-          uv: createBlockUv()
+          uv: createBlockUv(),
+          materialId: "metal"
         },
         {
           kind: "block",
@@ -162,11 +169,22 @@ describe("ModelBlocks projection", () => {
           transform: transformAt({ x: 0, y: 0, z: 0 }),
           uv: createBlockUv()
         }
+      ],
+      materials: [
+        {
+          kind: "material",
+          id: "metal",
+          parentId: null,
+          name: "Metal",
+          surface: kMetal
+        }
       ]
     });
 
     assert.equal(fixture.blocks.get(stale.uuid), undefined);
     assert.equal(fixture.blocks.size, 2);
+    assert.deepEqual(fixture.blocks.get("child")?.surface, kMetal);
+    assert.equal(fixture.blocks.get("parent")?.surface, null);
     assert.equal(
       fixture.blocks.get("child")?.node.parent,
       fixture.blocks.get("parent")?.node
@@ -180,6 +198,50 @@ describe("ModelBlocks projection", () => {
     fixture.document.addBlock({ name: "Late" });
 
     assert.equal(fixture.blocks.size, 0);
+  });
+});
+
+describe("ModelBlocks surface previews", () => {
+  test("shows a material's previews on its blocks and keeps them over a commit", () => {
+    const { document, previews, addBlock } = createModelFixture();
+    const glass = document.addMaterial({ name: "Glass" })!;
+    const block = addBlock({ materialId: glass });
+
+    previews.set(glass, "bob", { roughness: 0.3 });
+    assert.deepEqual(block.surface, createMaterialSurface({ roughness: 0.3 }));
+
+    document.changeMaterial(glass, { opacity: 0.5 });
+    assert.deepEqual(
+      block.surface,
+      createMaterialSurface({ opacity: 0.5, roughness: 0.3 })
+    );
+
+    previews.end(glass, "bob");
+    assert.deepEqual(block.surface, createMaterialSurface({ opacity: 0.5 }));
+  });
+
+  test("dresses a block newly given a material with the material's previews", () => {
+    const { document, previews, addBlock } = createModelFixture();
+    const glass = document.addMaterial({ name: "Glass" })!;
+    const block = addBlock();
+
+    previews.set(glass, "bob", { roughness: 0.3 });
+    document.assignMaterial(block.uuid, glass);
+
+    assert.deepEqual(block.surface, createMaterialSurface({ roughness: 0.3 }));
+  });
+
+  test("shows the default surface once a block's material is removed", () => {
+    const { document, addBlock } = createModelFixture();
+    const glass = document.addMaterial({
+      name: "Glass",
+      surface: createMaterialSurface({ opacity: 0.5 })
+    })!;
+    const block = addBlock({ materialId: glass });
+
+    document.removeMaterial(glass);
+
+    assert.equal(block.surface, null);
   });
 });
 
@@ -226,9 +288,9 @@ describe("ModelBlocks poses", () => {
     const worldRotation = child.node.getWorldQuaternion(new THREE.Quaternion());
 
     const transform = fixture.blocks.under(child.uuid, parent.uuid);
-    fixture.document.move(child.uuid, parent.uuid, [
-      { id: child.uuid, transform }
-    ]);
+    fixture.document.move(child.uuid, parent.uuid, {
+      transforms: [{ id: child.uuid, transform }]
+    });
     fixture.scene.updateMatrixWorld(true);
 
     assert.equal(child.node.parent, parent.node);
@@ -282,9 +344,9 @@ describe("ModelBlocks poses", () => {
     const worldPivot = child.worldPosition;
 
     const transform = fixture.blocks.under(child.uuid, parent.uuid);
-    fixture.document.move(child.uuid, parent.uuid, [
-      { id: child.uuid, transform }
-    ]);
+    fixture.document.move(child.uuid, parent.uuid, {
+      transforms: [{ id: child.uuid, transform }]
+    });
     fixture.scene.updateMatrixWorld(true);
 
     assert.deepEqual(transform.scale, { x: 0.5, y: 0.5, z: 0.5 });
@@ -459,5 +521,21 @@ describe("ModelBlocks textures", () => {
 
     assert.equal(existing.texture, texture);
     assert.equal(future.texture, texture);
+  });
+});
+
+describe("ModelBlocks shading", () => {
+  test("shades existing and future blocks with the current mode", () => {
+    const fixture = createModelFixture();
+    const existing = fixture.addBlock();
+
+    fixture.blocks.lit = false;
+    const future = fixture.addBlock();
+
+    assert.equal(existing.lit, false);
+    assert.equal(future.lit, false);
+
+    fixture.blocks.lit = true;
+    assert.equal(existing.lit, true);
   });
 });

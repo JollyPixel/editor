@@ -41,6 +41,8 @@ input: an empty `selected` set by the consumer is still rendered as is.
 |---|---|
 | `jolly-select` | `{ selected }` |
 | `jolly-activate` | `{ id }` |
+| `jolly-activate-swatch` | `{ id }` |
+| `jolly-context-request` | `{ id, x, y }` |
 | `jolly-toggle-expand` | `{ id, expanded }` |
 | `jolly-toggle-visible` | `{ id, visible }` |
 | `jolly-toggle-lock` | `{ id, locked }` |
@@ -55,6 +57,17 @@ modes. Starting or settling one always returns the component to an idle mode.
 Pointer gestures capture immediately, even when whole-row dragging is waiting
 for its movement threshold. Escape, pointer cancellation, lost capture, and
 component disconnection cancel without emitting `jolly-reparent`.
+
+A reorderable row ends with a drag grip, exposed as the `grip` part. The grip
+drags on the first movement and never scrolls, so it stays useful on touch
+screens even with `rowDrag`. A tree used with a mouse whose rows drag whole
+can hide it:
+
+```css
+jolly-tree::part(grip) {
+  display: none;
+}
+```
 
 ## Rejecting a drop the domain does not allow
 
@@ -100,6 +113,25 @@ node.badges = peersOn(node.id).map((peer) => ({
 `title` fills both the tooltip and the dot's accessible label. Rows with an
 empty or absent list render no badge container at all.
 
+## Sampling a property with a swatch
+
+`TreeNode.swatch` draws one small square after the detail and before the
+badges, sampling a property the row's object owns, such as a material. `color`
+fills it with any CSS colour, and a checkerboard shows through a translucent
+one. `ring` outlines it in a second colour. `title` is its tooltip and
+accessible name.
+
+```ts
+node.swatch = material === null ?
+  { title: "Add material" } :
+  { title: "Material: Glass", color: "#dff4ff73" };
+```
+
+A swatch without `color` is empty: a dashed square shown only on a hovered or
+selected row. Clicking a swatch emits `jolly-activate-swatch` and neither
+selects nor renames the row, so a consumer opens the property's editor there.
+Unlike a badge, a swatch is a click target (see ADR-0043).
+
 ## Showing a row detail
 
 `TreeNode.detail` is a short muted text drawn after the label, before the
@@ -137,6 +169,34 @@ renameButton.addEventListener("click", () => {
 
 `beginRename` returns `false` and does nothing when the row does not opt in
 or another interaction (a rename, a drag, a keyboard move) is in progress.
+
+## Opening a row menu
+
+A row's `contextmenu` event, from a right-click or from the browser's keyboard
+shortcut on a focused row (Shift+F10 or the menu key), emits
+`jolly-context-request` with the row `id` and a point in viewport pixels: the
+pointer, or the row's bottom-left corner from the keyboard. A host that cancels
+F-key defaults, such as a game keyboard, also cancels that shortcut. A right-click on
+the empty area below the rows emits it with `id: null` and changes no
+selection, for actions on the tree itself such as adding a root node; a
+consumer without such actions ignores it. The tree renders
+no menu. The consumer fills a
+[`jolly-context-menu`](../containers/context-menu.md) and opens it there.
+
+```ts
+tree.addEventListener("jolly-context-request", (event) => {
+  const { id, x, y } = event.detail;
+  menu.items = id === null ? treeActions : actionsFor(id);
+  menu.openAt(x, y);
+});
+```
+
+Before emitting, the tree prevents the browser menu, emits `jolly-select` for
+the row unless it is already selected, so a right-click inside a
+multi-selection keeps it, and focuses the row so the menu returns focus there.
+A menu action can call `beginRename(id)` directly. While a row is being
+renamed or moved, a right-click does nothing, and the text field keeps the
+browser menu.
 
 ## Showing parent/child indent guides
 

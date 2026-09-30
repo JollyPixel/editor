@@ -32,7 +32,7 @@ export function isModified<TValue>(
 export function resolveHolder(
   peers: readonly CollaboratorPresence[],
   lockedBy: CollaboratorPresence | null,
-  selfId = ""
+  selfId: string
 ): CollaboratorPresence | null {
   if (lockedBy !== null) {
     return lockedBy;
@@ -53,17 +53,13 @@ export function resolveHolder(
  */
 export function splitPeerChips(
   peers: readonly CollaboratorPresence[],
-  limit: number
+  limit: number,
+  selfId: string
 ): { shown: CollaboratorPresence[]; overflow: number; } {
-  if (peers.length <= limit) {
-    return {
-      shown: [...peers],
-      overflow: 0
-    };
-  }
+  const others = peers.filter((peer) => peer.clientId !== selfId);
 
   return {
-    shown: peers.slice(0, limit),
-    overflow: peers.length - limit
+    shown: others.slice(0, limit),
+    overflow: Math.max(others.length - limit, 0)
   };
 }

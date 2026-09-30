@@ -61,6 +61,7 @@ export interface MeshHighlightChangeEventDetail {
 export interface MeshHighlightEventMap {
   selectionChange: Event;
   hoverChange: Event;
+  emphasisChange: CustomEvent<MeshHighlightChangeEventDetail>;
   targetsChange: CustomEvent<MeshHighlightChangeEventDetail>;
   appearanceChange: CustomEvent<MeshHighlightChangeEventDetail>;
   techniqueChange: CustomEvent<MeshHighlightChangeEventDetail>;
@@ -286,6 +287,17 @@ export class MeshHighlight extends EventTarget {
   ): void {
     this.#assertActive();
     this.state.hover(id);
+  }
+
+  get emphasized(): ReadonlySet<string> {
+    return this.state.emphasized;
+  }
+
+  emphasize(
+    ids: Iterable<string>
+  ): void {
+    this.#assertActive();
+    this.state.emphasize(ids);
   }
 
   configure(

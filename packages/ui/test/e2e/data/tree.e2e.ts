@@ -61,6 +61,35 @@ test.describe("Tree", () => {
     await openExample(page, "data/tree");
   });
 
+  test("activates a swatch without selecting or renaming its row", async({ page }) => {
+    const tree = page.locator(kTree);
+    const crate = rowOf(page, "crate");
+    const swatch = crate.getByRole("button", { name: "Material: Glass" });
+    await tree.evaluate((element) => {
+      element.addEventListener("jolly-activate-swatch", (event) => {
+        if (event instanceof CustomEvent) {
+          element.setAttribute("data-swatch", event.detail.id);
+        }
+      });
+    });
+
+    await swatch.click();
+    await expect(tree).toHaveAttribute("data-swatch", "crate");
+    await expect(crate).toHaveAttribute("aria-selected", "false");
+
+    await swatch.dblclick();
+    await expect(crate.locator(".rename")).toHaveCount(0);
+  });
+
+  test("shows an empty swatch only on a hovered or selected row", async({ page }) => {
+    const barrel = rowOf(page, "barrel");
+    const swatch = barrel.getByRole("button", { name: "Add material" });
+    await expect(swatch).toBeHidden();
+
+    await barrel.hover();
+    await expect(swatch).toBeVisible();
+  });
+
   test("renders ordered badges and one indent unit per ancestor", async({ page }) => {
     const badges = rowOf(page, "camera").locator(".badge");
 
@@ -171,6 +200,25 @@ test.describe("Tree", () => {
     await expect(crate).toBeFocused();
   });
 
+  test("keeps renaming while the pointer selects text in the field", async({ page }) => {
+    const camera = rowOf(page, "camera");
+    await camera.dblclick();
+    const field = camera.locator(".rename");
+    const box = await boxOf(field);
+
+    await field.click();
+    await page.mouse.move(box.x + 2, box.y + (box.height / 2));
+    await page.mouse.down();
+    await page.mouse.move(box.x + (box.width / 2), box.y + (box.height / 2), { steps: 4 });
+    await page.mouse.up();
+
+    await expect(field).toBeFocused();
+    await expect(page.locator(`${kTree} .row[data-dragging="true"]`)).toHaveCount(0);
+    await field.fill("Lens");
+    await field.press("Enter");
+    await expect(camera.locator(".label")).toHaveText("Lens");
+  });
+
   test("activates on double-click and renames on request when opted in", async({ page }) => {
     const tree = page.locator(kTree);
     const camera = rowOf(page, "camera");
@@ -207,6 +255,7 @@ test.describe("Tree", () => {
   });
 
   test("grip dragging commits an inside drop", async({ page }) => {
+    await expect(rowOf(page, "camera").locator("[part=grip]")).toBeVisible();
     await hold(
       page,
       await centerOf(rowOf(page, "camera").locator(".grip")),
@@ -284,5 +333,99 @@ test.describe("Tree", () => {
     await page.locator(kTree).evaluate((element) => element.remove());
     await expect(page.locator("html")).not.toHaveClass(/jolly-tree-dragging/);
     await page.mouse.up();
+  });
+});
+
+test.describe("Tree context requests", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "data/tree");
+  });
+
+  test("a right-click selects the row and opens its menu at the pointer", async({ page }) => {
+    const crate = rowOf(page, "crate");
+    const box = await boxOf(crate);
+    const pointer = {
+      x: box.x + 30,
+      y: box.y + 4
+    };
+
+    await page.mouse.click(pointer.x, pointer.y, { button: "right" });
+
+    const menu = page.getByRole("menu", { name: "Row actions" });
+    await expect(crate).toHaveAttribute("aria-selected", "true");
+    await expect(menu).toBeVisible();
+    await expect.poll(async() => (await menu.boundingBox())?.x).toBeCloseTo(pointer.x, 0);
+    await page.keyboard.press("Escape");
+    await expect(crate).toBeFocused();
+  });
+
+  test("a right-click inside a multi-selection keeps it", async({ page }) => {
+    const crate = rowOf(page, "crate");
+    const barrel = rowOf(page, "barrel");
+    await crate.click();
+    await barrel.click({ modifiers: ["Control"] });
+    await expect(crate).toHaveAttribute("aria-selected", "true");
+
+    await barrel.click({ button: "right" });
+
+    await expect(crate).toHaveAttribute("aria-selected", "true");
+    await expect(barrel).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("Rename from the menu keeps the field focused and commits", async({ page }) => {
+    const camera = rowOf(page, "camera");
+    await camera.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Rename" }).click();
+
+    const field = camera.locator(".rename");
+    await expect(field).toBeFocused();
+    await field.fill("Lens");
+    await field.press("Enter");
+
+    await expect(camera).toContainText("Lens");
+  });
+
+  test("the browser's keyboard context menu (Shift+F10) opens under the focused row", async({ page }) => {
+    const barrel = rowOf(page, "barrel");
+    await barrel.click();
+    const box = await boxOf(barrel);
+
+    await page.keyboard.press("Shift+F10");
+
+    const menu = page.getByRole("menu", { name: "Row actions" });
+    await expect(page.getByRole("menuitem", { name: "Rename" })).toBeFocused();
+    await expect.poll(async() => (await menu.boundingBox())?.y).toBeCloseTo(box.y + box.height, 0);
+  });
+
+  test("a right-click below the rows requests the tree's menu and keeps the selection", async({ page }) => {
+    const tree = page.locator(kTree);
+    await tree.evaluate((element) => {
+      element.addEventListener("jolly-context-request", (event) => {
+        if (event instanceof CustomEvent) {
+          element.setAttribute("data-request", JSON.stringify(event.detail.id));
+        }
+      });
+    });
+    const crate = rowOf(page, "crate");
+    await crate.click();
+    const rows = await boxOf(page.locator(`${kTree} .rows`));
+
+    await page.mouse.click(rows.x + 20, rows.y + rows.height - 5, { button: "right" });
+
+    await expect(tree).toHaveAttribute("data-request", "null");
+    await expect(crate).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("menu")).toBeHidden();
+  });
+
+  test("a right-click in the rename field leaves the row menu closed", async({ page }) => {
+    const camera = rowOf(page, "camera");
+    await camera.dblclick();
+    const field = camera.locator(".rename");
+    await expect(field).toBeFocused();
+
+    await field.click({ button: "right" });
+
+    await expect(page.getByRole("menu")).toBeHidden();
+    await expect(field).toBeVisible();
   });
 });

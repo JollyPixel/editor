@@ -37,8 +37,13 @@ where the fields are already inside a padded container, such as a dialog body,
 so rows, separators and descriptions share one left edge.
 
 An empty `label` drops the label column: the field reflects `unlabeled`, and the
-value spans the row with the same inset on both edges. A locked field keeps its
-gutter, so the value stays clear of the lock icon.
+value spans the row with the same inset on both edges.
+
+A lock only paints: the row takes the holder's colour as a left bar and a tint,
+and hovering it shows "Held by" and the holder's name. The label, the value and
+the row height stay where they were, per [ADR-0044](../../adr/0044-a-lock-paints-and-never-reflows.md).
+Peer chips sit on the row's top corner, above the value, and are left out while
+the field is locked, since the tint already names the holder.
 
 The label column is capped at `--jolly-label-max-width` (`45%`) so a long label
 cannot swallow the value area. A field packed next to another on one line is
@@ -65,7 +70,8 @@ unchanged until an allowed edit commits a concrete value.
 
 `CollaboratorPresence` has `clientId`, `displayName`, `color`, and optional
 `editing` fields. `lockedBy` makes the field read-only while keeping it
-focusable. `peers` renders collaborator indicators. The package owns no
+focusable. `peers` renders collaborator indicators, except for the local peer
+of the attached source. The package owns no
 collaboration transport.
 
 `path` is the identity the field claims while focused, agreed between clients

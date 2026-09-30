@@ -5,6 +5,7 @@ import { bootStandalone } from "@jolly-pixel/editor.host";
 import "./app/paneIcons.ts";
 import "./app/LeftPanel.ts";
 import "./app/RightPanel.ts";
+import "./features/material/MaterialLibrary.ts";
 import { VoxelModelEditor } from "./boot/VoxelModelEditor.ts";
 
 declare global {

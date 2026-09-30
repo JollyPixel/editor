@@ -47,7 +47,8 @@ function torsoSnapshot(
         transform: createBlockTransform(),
         uv
       }
-    ]
+    ],
+    materials: []
   };
 }
 
@@ -221,6 +222,28 @@ describe("BlockTextures model layouts", () => {
       uv.get(kTorsoRegionId)?.geometryFor("front"),
       { x: 32, y: 0, width: 16, height: 16 }
     );
+  });
+
+  test("binds a snapshot block whose region the texture already carries", () => {
+    const { document, blocks, uv } = createHarness();
+    uv.create({ id: kTorsoRegionId, width: 16, height: 16 });
+
+    document.load(torsoSnapshot(stackedAt(32)));
+
+    const block = blocks.get("torso");
+    assert.ok(block);
+    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
+  });
+
+  test("binds the meshes a second snapshot re-creates", () => {
+    const { document, blocks } = createHarness();
+    document.load(torsoSnapshot(stackedAt(0)));
+
+    document.load(torsoSnapshot(stackedAt(32)));
+
+    const block = blocks.get("torso");
+    assert.ok(block);
+    assert.deepEqual(uvOf(block, 1), [48 / kTextureSize.x, 1]);
   });
 
   test("drops texture regions of blocks the model does not have", () => {

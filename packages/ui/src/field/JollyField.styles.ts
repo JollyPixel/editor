@@ -36,6 +36,7 @@ export const fieldStyles = css`
   }
 
   .row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
@@ -73,12 +74,11 @@ export const fieldStyles = css`
     );
   }
 
-  /* With no label the leading line is an empty band, unless it holds a lock. */
-  :host([unlabeled]:not([locked])[label-position="top"]) .leading {
+  :host([unlabeled][label-position="top"]) .leading {
     display: none;
   }
 
-  :host([unlabeled]:not([locked])[label-position="top"]) .content {
+  :host([unlabeled][label-position="top"]) .content {
     padding-inline-start: 0;
   }
 
@@ -97,23 +97,12 @@ export const fieldStyles = css`
     overflow: hidden;
   }
 
-  :host([unlabeled]:not([locked])) .gutter {
+  :host([unlabeled]) .gutter {
     margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
   }
 
-  :host([unlabeled]:not([locked])) .row {
+  :host([unlabeled]) .row {
     padding-inline-start: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
-  }
-
-  :host([locked]) .gutter {
-    width: max(var(--jolly-gutter-width, 0px), 14px);
-    overflow: visible;
-  }
-
-  .gutter > jolly-icon {
-    width: 14px;
-    height: 14px;
-    color: var(--jolly-locked-ring, var(--jolly-locked));
   }
 
   .label {
@@ -200,7 +189,6 @@ export const fieldStyles = css`
   }
 
   :host([locked]) {
-    padding-block: calc(var(--jolly-space-1, 4px) / 2);
     box-shadow: inset 3px 0 0 0 var(--jolly-locked-ring, var(--jolly-locked));
     border-radius: var(--jolly-radius-sm, 2px);
     background: color-mix(
@@ -221,7 +209,7 @@ export const fieldStyles = css`
     padding-inline-start: var(--jolly-space-1, 4px);
   }
 
-  .trailing:not(:has(.revert, .peers)) {
+  .trailing:not(:has(.revert)) {
     padding-inline-start: 0;
   }
 
@@ -268,10 +256,12 @@ export const fieldStyles = css`
   }
 
   .peers {
+    position: absolute;
+    top: -4px;
+    inset-inline-end: 2px;
+    z-index: 1;
     display: flex;
-    flex: 0 0 auto;
     align-items: center;
-    margin-inline-start: auto;
   }
 
   .chip {
@@ -316,8 +306,8 @@ export const fieldStyles = css`
       transform var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
-  .gutter[data-tooltip]::after {
-    left: 3px;
+  .row[data-tooltip]::after {
+    left: 0;
   }
 
   .chip::after {
@@ -346,8 +336,8 @@ export const fieldStyles = css`
     text-align: start;
   }
 
-  :host([unlabeled]:not([locked])) .description,
-  :host([unlabeled]:not([locked])) .error {
+  :host([unlabeled]) .description,
+  :host([unlabeled]) .error {
     margin-inline-start: calc(
       var(--jolly-gutter-width, 0px) +
         var(--jolly-field-inset-end, var(--jolly-space-1, 4px))

@@ -7,6 +7,7 @@ import { FLOATING_EXAMPLE } from "./floating.ts";
 import { DIALOG_EXAMPLE } from "./dialog.ts";
 import { TOOLBAR_EXAMPLE } from "./toolbar.ts";
 import { RAIL_EXAMPLE } from "./rail.ts";
+import { CONTEXT_MENU_EXAMPLE } from "./context-menu.ts";
 
 export const CONTAINERS_EXAMPLES = [
   PANE_EXAMPLE,
@@ -15,6 +16,7 @@ export const CONTAINERS_EXAMPLES = [
   DOCK_EXAMPLE,
   FLOATING_EXAMPLE,
   DIALOG_EXAMPLE,
+  CONTEXT_MENU_EXAMPLE,
   TOOLBAR_EXAMPLE,
   RAIL_EXAMPLE
 ];

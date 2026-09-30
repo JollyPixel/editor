@@ -2,7 +2,7 @@
 import { svg } from "lit";
 import { registerIcon } from "@jolly-pixel/ui";
 
-registerIcon("block-duplicate", svg`
+registerIcon("action-duplicate", svg`
   <rect
     class="tone-fill"
     x="9"
@@ -23,7 +23,7 @@ registerIcon("block-duplicate", svg`
   />
 `, { tone: "sky" });
 
-registerIcon("block-delete", svg`
+registerIcon("action-delete", svg`
   <path
     class="tone-fill"
     d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13z"
@@ -44,6 +44,47 @@ registerIcon("block-delete", svg`
     stroke-linecap="round"
   />
 `, { tone: "coral" });
+
+registerIcon("action-rename", svg`
+  <path
+    class="tone-fill"
+    d="M15 5l4 4L9 19H5v-4L15 5Z"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M13 7l4 4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("material", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="12"
+    r="9"
+  />
+  <circle
+    cx="12"
+    cy="12"
+    r="9"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <path
+    d="M7.5 10a5 5 0 0 1 4-4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+`, { tone: "violet" });
 
 registerIcon("folder", svg`
   <path

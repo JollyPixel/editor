@@ -11,7 +11,8 @@ import { isScenePipelineTechnique } from "../MeshHighlightState.ts";
 
 export interface ObjectOverlayRendererOptions {
   registry: HighlightOverlayRegistry;
-  renderScene: () => void;
+  /** Without it, render only places the overlays for a scene drawn elsewhere. */
+  renderScene?: () => void;
   camera: THREE.Camera;
   boundsOnly?: boolean;
 }
@@ -26,7 +27,7 @@ interface ActiveHighlightOverlay {
 
 export class ObjectOverlayRenderer implements MeshHighlightRenderer {
   #registry: HighlightOverlayRegistry;
-  #renderScene: () => void;
+  #renderScene: (() => void) | null;
   #camera: THREE.Camera;
   #boundsOnly: boolean;
   #overlays = new Map<string, ActiveHighlightOverlay>();
@@ -36,7 +37,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
     options: ObjectOverlayRendererOptions
   ) {
     this.#registry = options.registry;
-    this.#renderScene = options.renderScene;
+    this.#renderScene = options.renderScene ?? null;
     this.#camera = options.camera;
     this.#boundsOnly = options.boundsOnly ?? false;
   }
@@ -123,7 +124,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
     for (const { overlay } of this.#overlays.values()) {
       overlay.update?.(this.#cameraWorldPosition);
     }
-    this.#renderScene();
+    this.#renderScene?.();
   }
 
   dispose(): void {

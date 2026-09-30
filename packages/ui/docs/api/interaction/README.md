@@ -5,7 +5,9 @@
 `PopoverController` positions a native popover against an anchor, repositions
 it while open, restores focus, and can handle Escape cancellation.
 `PopoverControllerOptions` configures the anchor, popover, placement, and
-lifecycle callbacks.
+lifecycle callbacks. The anchor is an element or an `AnchorRect` in viewport
+pixels; a rectangle of zero size anchors at a point. Focus returns on close
+only to an element anchor.
 
 ```ts
 const popup = new PopoverController(this, {

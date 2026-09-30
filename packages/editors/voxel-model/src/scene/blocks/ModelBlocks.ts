@@ -4,6 +4,7 @@ import { Emitter } from "@openally/emitt";
 import type {
   BlockNodeJSON,
   BlockTransformJSON,
+  MaterialSurfaceJSON,
   MirrorAxes,
   ModelChange,
   ModelDocument,
@@ -12,7 +13,10 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockPoses } from "../../model/index.ts";
-import type { BlockSelectionStore } from "../../state/index.ts";
+import type {
+  BlockSelectionStore,
+  MaterialPreviews
+} from "../../state/index.ts";
 import { BlockNode } from "./BlockNode.ts";
 import { ModelBlock } from "./ModelBlock.ts";
 import { plainVector3 } from "./plainVector3.ts";
@@ -31,6 +35,7 @@ export interface ModelBlocksOptions {
   document: ModelDocument;
   scene: THREE.Object3D;
   selection: BlockSelectionStore;
+  previews: MaterialPreviews;
 }
 
 export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPoses {
@@ -40,6 +45,15 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   #byMesh = new Map<THREE.Object3D, ModelBlock>();
   #selection: BlockSelectionStore;
   #texture: THREE.Texture | null = null;
+  #lit = true;
+  #previews: MaterialPreviews;
+  #subscriptions: Array<() => void>;
+
+  #onPreviewChange = (
+    materialId: string
+  ): void => {
+    this.#paintUsers(materialId);
+  };
 
   #onChange = (
     change: ModelChange
@@ -81,6 +95,22 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       case "node-transformed":
         this.applyTransform(command.id, command.transform);
         break;
+
+      case "node-material-changed": {
+        const block = this.#blocks.get(command.id);
+        if (block) {
+          this.#paint(block);
+        }
+        break;
+      }
+
+      case "material-changed":
+        this.#paintUsers(command.id);
+        break;
+
+      case "material-removed":
+        this.#paintAll();
+        break;
     }
   };
 
@@ -104,9 +134,13 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     this.#document = options.document;
     this.#scene = options.scene;
     this.#selection = options.selection;
+    this.#previews = options.previews;
 
-    this.#document.on("change", this.#onChange);
-    this.#document.on("reset", this.#onReset);
+    this.#subscriptions = [
+      this.#document.subscribe("change", this.#onChange),
+      this.#document.subscribe("reset", this.#onReset),
+      this.#previews.subscribe("change", this.#onPreviewChange)
+    ];
     this.#onReset();
   }
 
@@ -124,6 +158,19 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     this.#texture = texture;
     for (const block of this.#blocks.values()) {
       block.texture = texture;
+    }
+  }
+
+  get lit(): boolean {
+    return this.#lit;
+  }
+
+  set lit(
+    lit: boolean
+  ) {
+    this.#lit = lit;
+    for (const block of this.#blocks.values()) {
+      block.lit = lit;
     }
   }
 
@@ -222,8 +269,9 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   }
 
   dispose(): void {
-    this.#document.off("change", this.#onChange);
-    this.#document.off("reset", this.#onReset);
+    for (const unsubscribe of this.#subscriptions) {
+      unsubscribe();
+    }
     for (const uuid of [...this.#blocks.keys()]) {
       this.#discard(uuid);
     }
@@ -238,11 +286,52 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       texture: this.#texture
     });
     block.transform = node.transform;
+    block.surface = this.#surfaceOf(node.materialId);
+    block.lit = this.#lit;
     this.#blocks.set(block.uuid, block);
     this.#byMesh.set(block.mesh, block);
     this.emit("blockAdded", block);
 
     return block;
+  }
+
+  #paint(
+    block: ModelBlock
+  ): void {
+    block.surface = this.#surfaceOf(
+      this.#document.tree.materialIdOf(block.uuid)
+    );
+  }
+
+  #paintUsers(
+    materialId: string
+  ): void {
+    for (const uuid of this.#document.tree.blocksUsing(materialId)) {
+      const block = this.#blocks.get(uuid);
+      if (block) {
+        this.#paint(block);
+      }
+    }
+  }
+
+  #paintAll(): void {
+    for (const block of this.#blocks.values()) {
+      this.#paint(block);
+    }
+  }
+
+  #surfaceOf(
+    materialId: string | undefined
+  ): MaterialSurfaceJSON | null {
+    if (materialId === undefined) {
+      return null;
+    }
+
+    const stored = this.#document.tree.materials.material(materialId)?.surface;
+
+    return stored === undefined ?
+      null :
+      this.#previews.surfaceOf(materialId, stored);
   }
 
   #attach(

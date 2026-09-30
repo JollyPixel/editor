@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { PresencePeer } from "@jolly-pixel/ui";
+import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
@@ -11,13 +12,14 @@ import {
   toTreeNodes
 } from "#src/features/hierarchy/hierarchyTreeNodes.ts";
 import type { HierarchyNode } from "#src/model/index.ts";
+import { materialSwatch } from "#src/shared/materialSwatch.ts";
 
 function node(
   id: string,
   kind: HierarchyNode["kind"],
   children: HierarchyNode[] = []
 ): HierarchyNode {
-  return { id, name: id, kind, children };
+  return { id, name: id, kind, material: null, children };
 }
 
 function peer(
@@ -31,15 +33,28 @@ function peer(
 }
 
 describe("toTreeNodes", () => {
-  test("maps names to renamable labels and gives folders the folder icon", () => {
-    const nodes = toTreeNodes([node("limbs", "folder", [node("arm", "block")])], new Map());
+  test("gives folders the folder icon and blocks their material swatch", () => {
+    const glass = {
+      kind: "material" as const,
+      id: "glass",
+      parentId: null,
+      name: "Glass",
+      surface: createMaterialSurface({ opacity: 0.4 })
+    };
+    const nodes = toTreeNodes([node("limbs", "folder", [
+      node("arm", "block"),
+      { ...node("leg", "block"), material: glass }
+    ])], new Map());
 
     assert.deepEqual(nodes, [{
       id: "limbs",
       label: "limbs",
       renamable: true,
       icon: "folder",
-      children: [{ id: "arm", label: "arm", renamable: true }]
+      children: [
+        { id: "arm", label: "arm", renamable: true, swatch: materialSwatch(null) },
+        { id: "leg", label: "leg", renamable: true, swatch: materialSwatch(glass) }
+      ]
     }]);
   });
 
