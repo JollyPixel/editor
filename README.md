@@ -84,6 +84,13 @@ $ pnpm install
 $ pnpm run build
 ```
 
+## Run
+[@jolly-pixel/studio](./packages/studio) is the full application
+
+```bash
+$ pnpm --filter @jolly-pixel/studio dev
+```
+
 ## Test
 Run tests for one workspace, then run the repository type checks:
 
