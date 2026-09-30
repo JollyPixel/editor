@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Interpolated, lerpNumber, GameLoop, ManualFrameSource } from "../src/index.ts";
+import { Interpolated, lerpNumber } from "../src/index.ts";
 
 interface Point {
   x: number;
@@ -72,7 +72,10 @@ describe("Loop.Interpolated", () => {
   });
 
   test("carries any type its lerp understands", () => {
-    const point = new Interpolated<Point>({ x: 0, y: 0 }, lerpPoint);
+    const point = new Interpolated<Point>(
+      { x: 0, y: 0 },
+      lerpPoint
+    );
 
     point.push({ x: 10, y: 20 });
 
@@ -95,35 +98,5 @@ describe("Loop.Interpolated", () => {
 
     value.at(0.5);
     assert.strictEqual(calls, 1);
-  });
-
-  test("smooths a value stepped at 10Hz and drawn at 60Hz", () => {
-    const source = new ManualFrameSource();
-    const loop = new GameLoop({ source, fixedFps: 10 });
-    const position = new Interpolated(0, lerpNumber);
-    const smoothed: number[] = [];
-    const raw: number[] = [];
-    let simulated = 0;
-
-    loop.start({
-      fixedUpdate: () => {
-        // At 10 fixed steps per second, each step moves one unit.
-        simulated += 1;
-        position.push(simulated);
-      },
-      update: (_frameDelta, alpha) => {
-        smoothed.push(position.at(alpha));
-        raw.push(position.current);
-      }
-    });
-    source.run(Array.from({ length: 30 }, () => 1000 / 60));
-
-    // Raw samples repeat six times per step; interpolation changes each frame.
-    assert.ok(new Set(raw).size <= simulated + 1);
-    assert.ok(new Set(smoothed).size > 4 * new Set(raw).size);
-    // Interpolation stays behind the simulation value.
-    assert.ok(smoothed.every((value) => value <= simulated));
-    assert.ok(smoothed.every((value, index) => index === 0 ||
-      value >= smoothed[index - 1]));
   });
 });

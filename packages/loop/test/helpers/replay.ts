@@ -6,14 +6,11 @@ import {
   type FrameTape
 } from "../../src/index.ts";
 
-/**
- * Replays deltas after discarding the scheduler's priming frame.
- */
 export function replay(
   deltas: number[],
-  options: FrameSchedulerOptions = {},
-  scheduler = new FrameScheduler(options)
+  options: FrameSchedulerOptions = {}
 ): { scheduler: FrameScheduler; schedules: FrameSchedule[]; } {
+  const scheduler = new FrameScheduler(options);
   let now = 0;
   scheduler.advance(now);
 
@@ -23,13 +20,19 @@ export function replay(
     return scheduler.advance(now);
   });
 
-  return { scheduler, schedules };
+  return {
+    scheduler,
+    schedules
+  };
 }
 
 export function replayTape(
   tape: FrameTape
 ) {
-  return replay(tape.deltas, tape.options);
+  return replay(
+    tape.deltas,
+    tape.options
+  );
 }
 
 export function closeTo(
