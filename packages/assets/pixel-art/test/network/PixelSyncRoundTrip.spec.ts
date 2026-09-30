@@ -22,7 +22,7 @@ import {
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
-import type { PixelNetworkCommand } from "#src/network/types.ts";
+import type { PixelWireCommand } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
@@ -38,6 +38,24 @@ const kWhite = [255, 255, 255, 255];
 const kBlack = [0, 0, 0, 255];
 const kBlue = [0, 0, 255, 255];
 const kAssetId = "asset-1";
+
+function isCorrection(
+  message: unknown
+): message is { type: "correction"; data: PixelWireCommand; } {
+  return typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "correction";
+}
+
+function isSnapshot(
+  message: unknown
+): boolean {
+  return typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "snapshot";
+}
 
 function setup() {
   const handler = pixelArtAssetKind({
@@ -59,12 +77,12 @@ function setup() {
     commands.live!(binding),
     eventStore.writer
   );
-  const { context } = createRoomContext();
+  const { context, broadcasts } = createRoomContext();
   const { buffer } = state;
 
   function receive(
     clientId: string,
-    sent: PixelNetworkCommand
+    sent: PixelWireCommand
   ): void {
     extension.onMessage(clientId, sent, context);
   }
@@ -88,6 +106,7 @@ function setup() {
 
   return {
     buffer,
+    broadcasts,
     receive,
     room,
     manager,
@@ -145,6 +164,29 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kWhite);
     assert.deepStrictEqual(buffer.samplePixel(1, 1), kWhite);
+    manager.destroy();
+  });
+
+  test("an undo that loses to a peer's newer edit is corrected without a snapshot", (t) => {
+    t.mock.timers.enable({ apis: ["Date"] });
+    const { broadcasts, receive, room, manager, paintPixelOneOne } = setup();
+
+    t.mock.timers.tick(1000);
+    paintPixelOneOne();
+    receive("B", command("stroke", {
+      color: { r: 0, g: 0, b: 255, a: 255 },
+      positions: [{ x: 1, y: 1 }]
+    }, { clientId: "B", timestamp: 1000 }));
+    t.mock.timers.tick(2000);
+    manager.undo();
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kWhite);
+
+    const correction = broadcasts.at(-1);
+    assert.ok(isCorrection(correction));
+    room.deliverCommand(correction.data, "correction");
+
+    assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kBlue);
+    assert.ok(broadcasts.every((message) => !isSnapshot(message)));
     manager.destroy();
   });
 

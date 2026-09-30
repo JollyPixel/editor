@@ -6,10 +6,13 @@ import type {
 
 // Import Internal Dependencies
 import { PeerGhostStream } from "./PeerGhostStream.ts";
-import { isPeerStrokePixel } from "./presenceGuards.ts";
+import { StrokeGhostEncoder } from "./StrokeGhostEncoder.ts";
+import { StrokeGhostLayer } from "./StrokeGhostLayer.ts";
+import { isStrokeGhostFrame } from "./presenceGuards.ts";
 import type {
   PixelArtRoom,
-  PixelNetworkCommand
+  PixelNetworkCommand,
+  StrokeGhostFrame
 } from "../types.ts";
 
 export interface PixelStrokeGhostSyncOptions {
@@ -19,15 +22,14 @@ export interface PixelStrokeGhostSyncOptions {
 
 function decodeStrokeGhost(
   value: unknown
-): PeerStrokePixel[] | undefined {
-  return Array.isArray(value) && value.every(isPeerStrokePixel) ?
-    value :
-    undefined;
+): StrokeGhostFrame | undefined {
+  return isStrokeGhostFrame(value) ? value : undefined;
 }
 
 export class PixelStrokeGhostSync {
   #canvas: PixelArtCanvas;
-  #stream: PeerGhostStream<PeerStrokePixel[]>;
+  #stream: PeerGhostStream<StrokeGhostFrame>;
+  #encoder = new StrokeGhostEncoder();
   #previousHandler: ((pixels: PeerStrokePixel[]) => void) | undefined;
 
   #handleStrokeProgress = (
@@ -35,10 +37,15 @@ export class PixelStrokeGhostSync {
   ): void => {
     this.#previousHandler?.(pixels);
     if (pixels.length === 0) {
+      this.#encoder.reset();
       this.#stream.clearLocal();
+
+      return;
     }
-    else {
-      this.#stream.report(pixels);
+
+    const frame = this.#encoder.encode(pixels);
+    if (frame !== null) {
+      this.#stream.report(frame);
     }
   };
 
@@ -52,8 +59,9 @@ export class PixelStrokeGhostSync {
       room: options.room,
       key: "strokeGhost",
       decode: decodeStrokeGhost,
-      layer: canvas.peerPresence.strokes,
-      reconcile: (command) => this.#reconcile(command)
+      layer: new StrokeGhostLayer(canvas.peerPresence.strokes),
+      reconcile: (command) => this.#reconcile(command),
+      merge: StrokeGhostEncoder.merge
     });
     this.#previousHandler = canvas.onStrokeProgress;
     canvas.onStrokeProgress = this.#handleStrokeProgress;

@@ -343,6 +343,80 @@ describe("AssetRoomExtension", () => {
     ]);
   });
 
+  test("sends the author a correction of a refused command instead of a snapshot", async() => {
+    const corrections: [Command, Command | null][] = [];
+    const { extension, context, direct } = harness({
+      accepts: false,
+      protocol: {
+        correct: (command, admitted) => {
+          corrections.push([command, admitted]);
+
+          return command;
+        }
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    const sent = { action: "increment", clientId: "alice" };
+    assert.deepEqual(corrections, [[sent, null]]);
+    assert.deepEqual(direct, [
+      {
+        clientId: "alice",
+        payload: {
+          type: "correction",
+          data: sent
+        }
+      }
+    ]);
+  });
+
+  test("hands the correction the narrowed command it broadcast", async() => {
+    const narrowed = {
+      action: "increment",
+      clientId: "alice"
+    } as const;
+    const corrections: [Command, Command | null][] = [];
+    const { extension, context, direct } = harness({
+      protocol: {
+        arbitrate: () => {
+          return { command: narrowed };
+        },
+        correct: (command, admitted) => {
+          corrections.push([command, admitted]);
+
+          return command;
+        }
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.strictEqual(corrections[0][1], narrowed);
+    assert.strictEqual(direct.length, 1);
+  });
+
+  test("falls back to a snapshot when the protocol has no correction", async() => {
+    const { extension, context, direct } = harness({
+      accepts: false,
+      protocol: {
+        correct: () => null
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(direct, [
+      {
+        clientId: "alice",
+        payload: {
+          type: "snapshot",
+          data: { value: 7 }
+        }
+      }
+    ]);
+  });
+
   test("clamps a timestamp ahead of the server clock", async(t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 5_000 });
     const { extension, context, appended } = harness();

@@ -57,14 +57,30 @@ const kRgba8Schema = defineSchema({
   ]
 });
 
+const kFlatIntegers = defineSchema({
+  type: "array",
+  items: { type: "integer" }
+});
+
+const kFlatNumbers = defineSchema({
+  type: "array",
+  items: { type: "number" }
+});
+
 const kPixelCommandMetadata: Record<
   PixelCommandAction,
   readonly Record<string, JSONSchema>[]
 > = {
-  stroke: [{
-    color: kRgba8Schema,
-    positions: { type: "array", items: kVec2Schema }
-  }],
+  stroke: [
+    {
+      color: kRgba8Schema,
+      xy: kFlatIntegers
+    },
+    {
+      color: kRgba8Schema,
+      positions: { type: "array", items: kVec2Schema }
+    }
+  ],
   resized: [{
     size: kSizeSchema
   }],
@@ -76,10 +92,16 @@ const kPixelCommandMetadata: Record<
     fromColor: kRgba8Schema,
     toColor: kRgba8Schema
   }],
-  "select-edit": [{
-    positions: { type: "array", items: kVec2Schema },
-    colors: { type: "array", items: kRgba8Schema }
-  }],
+  "select-edit": [
+    {
+      xy: kFlatIntegers,
+      rgba: kFlatNumbers
+    },
+    {
+      positions: { type: "array", items: kVec2Schema },
+      colors: { type: "array", items: kRgba8Schema }
+    }
+  ],
   "uv-region-created": [{
     region: uvRegionSchema
   }],

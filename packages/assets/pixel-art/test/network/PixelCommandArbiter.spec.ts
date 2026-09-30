@@ -13,11 +13,13 @@ import {
 
 // Import Internal Dependencies
 import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
-import type { PixelNetworkCommand } from "#src/network/types.ts";
+import type { PixelWireCommand } from "#src/network/types.ts";
+import { packColors } from "#src/network/PixelWireCodec.ts";
 import {
   command,
   freeRegion,
-  gray
+  gray,
+  packed
 } from "../fixtures/commands.ts";
 
 // CONSTANTS
@@ -44,8 +46,8 @@ function setup(): {
 function accept(
   arbiter: PixelCommandArbiter,
   buffer: PixelBuffer,
-  pixelCommand: PixelNetworkCommand
-): PixelNetworkCommand | null {
+  pixelCommand: PixelWireCommand
+): PixelWireCommand | null {
   const arbitration = arbiter.admit(buffer, pixelCommand);
   arbitration?.commit();
 
@@ -78,7 +80,17 @@ describe("PixelCommandArbiter — pixels", () => {
     assert.deepStrictEqual(accept(arbiter, buffer, newer), newer);
   });
 
-  test("narrows a stroke to the positions that won", () => {
+  test("accepts an uncontested packed stroke unchanged", () => {
+    const { arbiter, buffer } = setup();
+    const stroke = packed(command("stroke", {
+      color: gray(1),
+      positions: [{ x: 1, y: 1 }]
+    }));
+
+    assert.strictEqual(accept(arbiter, buffer, stroke), stroke);
+  });
+
+  test("narrows a stroke to the positions that won, packed", () => {
     const { arbiter, buffer } = setup();
     accept(arbiter, buffer, command("stroke", {
       color: gray(9),
@@ -90,10 +102,10 @@ describe("PixelCommandArbiter — pixels", () => {
       positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
     }, { clientId: "early", timestamp: 1000 }));
 
-    assert.deepStrictEqual(accepted, command("stroke", {
+    assert.deepStrictEqual(accepted, packed(command("stroke", {
       color: gray(1),
       positions: [{ x: 1, y: 1 }]
-    }, { clientId: "early", timestamp: 1000 }));
+    }, { clientId: "early", timestamp: 1000 })));
   });
 
   test("rejects a stroke when every position lost", () => {
@@ -130,7 +142,7 @@ describe("PixelCommandArbiter — pixels", () => {
     assert.deepStrictEqual(accept(arbiter, buffer, replay), replay);
   });
 
-  test("narrows a select-edit's positions and colors together", () => {
+  test("narrows a select-edit's positions and colors together, packed", () => {
     const { arbiter, buffer } = setup();
     accept(arbiter, buffer, command("stroke", {
       color: gray(9),
@@ -143,8 +155,8 @@ describe("PixelCommandArbiter — pixels", () => {
     }, { clientId: "B", timestamp: 500 }));
 
     assert.deepStrictEqual(accepted?.metadata, {
-      positions: [{ x: 1, y: 1 }],
-      colors: [gray(2)]
+      xy: [1, 1],
+      rgba: packColors([gray(2)])
     });
   });
 
@@ -170,6 +182,22 @@ describe("PixelCommandArbiter — pixels", () => {
       positions: [{ x: 0, y: 0 }],
       colors: []
     })), null);
+  });
+
+  test("rejects a packed select-edit whose colors do not match its positions", () => {
+    const { arbiter, buffer } = setup();
+    const mismatched: PixelWireCommand = {
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000,
+      action: "select-edit",
+      metadata: {
+        xy: [0, 0, 1, 0],
+        rgba: packColors([gray(1)])
+      }
+    };
+
+    assert.strictEqual(accept(arbiter, buffer, mismatched), null);
   });
 
   test("leaves the buffer untouched", () => {

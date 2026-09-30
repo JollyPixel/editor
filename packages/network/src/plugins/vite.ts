@@ -3,7 +3,10 @@ import type { Plugin } from "vite";
 
 // Import Internal Dependencies
 import { Server } from "../server/Server.ts";
-import { WebsocketTransport } from "../transport/websocket.ts";
+import {
+  WebsocketTransport,
+  type WebsocketCompressionOptions
+} from "../transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
 import type { Extension } from "../server/extension/Extension.ts";
 import type { RightsMap } from "../server/rights/RightsTable.ts";
@@ -40,6 +43,11 @@ export interface WebsocketVitePluginOptions {
    * @default DEFAULT_WEBSOCKET_PATH
    */
   path?: string;
+  /**
+   * Forwarded to the WebSocket transport.
+   * @default false
+   */
+  compression?: boolean | WebsocketCompressionOptions;
 }
 
 export function createWebSocketNetworkPlugin(
@@ -50,7 +58,8 @@ export function createWebSocketNetworkPlugin(
     extensions = [],
     rights,
     defaultRole,
-    auth
+    auth,
+    compression
   } = options;
 
   const server = options.server ?? new Server({
@@ -72,7 +81,8 @@ export function createWebSocketNetworkPlugin(
       new WebsocketTransport({
         path,
         httpServer,
-        server
+        server,
+        compression
       });
     }
   };

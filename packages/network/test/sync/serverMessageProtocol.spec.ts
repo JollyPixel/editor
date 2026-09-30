@@ -12,7 +12,7 @@ import { SNAPSHOT_EVENT } from "#src/protocol/constants.ts";
 import { actionCommandProtocol } from "../helpers/protocols.ts";
 
 describe("serverMessageProtocol", () => {
-  test("names a snapshot with the reserved event and a command with its action", () => {
+  test("names a snapshot with the reserved event and a command or correction with its action", () => {
     const protocol = serverMessageProtocol({
       command: actionCommandProtocol,
       snapshot: { type: "object" }
@@ -20,6 +20,8 @@ describe("serverMessageProtocol", () => {
 
     assert.deepEqual(protocol.events, [
       SNAPSHOT_EVENT,
+      "voxel-set",
+      "object-added",
       "voxel-set",
       "object-added"
     ]);
@@ -63,5 +65,12 @@ describe("serverMessageProtocol", () => {
     });
     assert.ok(command.ok);
     assert.strictEqual(command.val.event, "object-added");
+
+    const correction = parser.parse({
+      type: "correction",
+      data: { action: "voxel-set" }
+    });
+    assert.ok(correction.ok);
+    assert.strictEqual(correction.val.event, "voxel-set");
   });
 });

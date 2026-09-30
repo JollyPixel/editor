@@ -25,7 +25,8 @@ function createLayer() {
 }
 
 function setup(
-  room = new MockRoom()
+  room = new MockRoom(),
+  merge?: (pending: string, next: string) => string
 ) {
   const layer = createLayer();
   const reconcile = mock.fn<(received: PixelNetworkCommand) => void>();
@@ -34,7 +35,8 @@ function setup(
     key: "testGhost",
     decode: (value) => (typeof value === "string" ? value : undefined),
     layer,
-    reconcile
+    reconcile,
+    merge
   });
 
   return {
@@ -57,6 +59,24 @@ describe("PeerGhostStream — local reporting", () => {
 
     assert.deepStrictEqual(room.presenceUpdates, [{ testGhost: "b" }]);
     assert.strictEqual(stream.pending, "b");
+  });
+
+  test("merges reports queued for the same frame, never one already published", async() => {
+    const { room, stream } = setup(
+      new MockRoom(),
+      (pending, next) => pending + next
+    );
+
+    stream.report("a");
+    stream.report("b");
+    await nextFrame();
+    stream.report("c");
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [
+      { testGhost: "ab" },
+      { testGhost: "c" }
+    ]);
   });
 
   test("cancelPending drops the queued report", async() => {

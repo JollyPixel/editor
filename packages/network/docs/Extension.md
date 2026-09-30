@@ -115,7 +115,7 @@ The room parses a client payload against `inbound.schema` before anything else r
 
 `context.room.broadcast()` and `sendTo()` parse against `outbound.schema` and use the matched event to filter recipients by their read rights. A payload that doesn't match is a server-side bug: it is logged at `error` level and not sent.
 
-Most extensions emit the `NetworkServerMessage` shape (`{ type: "snapshot" | "command", data }`). `serverMessageProtocol()` builds the matching outbound protocol from the inbound one, mapping a snapshot to the reserved `$snapshot` event and each command to its own inner event name:
+Most extensions emit the `NetworkServerMessage` shape (`{ type: "snapshot" | "command" | "correction", data }`). `serverMessageProtocol()` builds the matching outbound protocol from the inbound one. It maps a snapshot to the reserved `$snapshot` event, and each command or correction to its own inner event name:
 
 ```ts
 interface ServerMessageProtocolOptions {

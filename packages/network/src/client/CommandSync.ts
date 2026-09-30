@@ -16,7 +16,8 @@ export type CommandBody<TCommand extends NetworkCommandHeader> =
 
 type SyncMessage<TCommand, TSnapshot> =
   | { type: "snapshot"; data: TSnapshot; }
-  | { type: "command"; data: TCommand; };
+  | { type: "command"; data: TCommand; }
+  | { type: "correction"; data: TCommand; };
 
 interface PendingCommand<TCommand extends NetworkCommandHeader> {
   body: CommandBody<TCommand>;
@@ -26,7 +27,9 @@ interface PendingCommand<TCommand extends NetworkCommandHeader> {
 function isSyncMessage<TCommand, TSnapshot>(
   message: { type: string; }
 ): message is SyncMessage<TCommand, TSnapshot> {
-  return message.type === "snapshot" || message.type === "command";
+  return message.type === "snapshot" ||
+    message.type === "command" ||
+    message.type === "correction";
 }
 
 export type CommandSyncEventMap<
@@ -67,11 +70,15 @@ export class CommandSync<
       return;
     }
 
-    if (message.type === "snapshot") {
-      this.#handleSnapshot(message.data);
-    }
-    else {
-      this.#handleCommand(message.data);
+    switch (message.type) {
+      case "snapshot":
+        this.#handleSnapshot(message.data);
+        break;
+      case "correction":
+        this.#handleCorrection(message.data);
+        break;
+      default:
+        this.#handleCommand(message.data);
     }
   };
 
@@ -137,6 +144,13 @@ export class CommandSync<
     ) {
       this.emit("command", command);
     }
+  }
+
+  #handleCorrection(
+    correction: TCommand
+  ): void {
+    this.#replayUpTo = this.#seq + this.#pending.length;
+    this.emit("command", correction);
   }
 
   #handleSnapshot(

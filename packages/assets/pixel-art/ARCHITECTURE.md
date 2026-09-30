@@ -9,7 +9,7 @@ flowchart TB
     Room -->|"validate"| Arbiter["PixelCommandArbiter"]
     Arbiter -->|"admission"| Log["Event log"]
     Log -->|"fold"| State["PixelArtState.buffer"]
-    Room -->|"command or snapshot"| Sync
+    Room -->|"command, correction or snapshot"| Sync
     Canvas["Canvas presence helpers"] <--> Room
 ```
 

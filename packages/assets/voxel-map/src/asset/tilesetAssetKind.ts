@@ -12,6 +12,7 @@ import {
 } from "@jolly-pixel/asset-server";
 import {
   applyCommandToBuffer,
+  correctPixelCommand,
   isPixelCommand
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
@@ -285,9 +286,30 @@ export function tilesetAssetKind(
         return {
           snapshotSchema: tilesetSnapshotSchema,
           snapshot: () => state.snapshot(),
-          arbitrate: (command) => arbiter.admit(state, command)
+          arbitrate: (command) => arbiter.admit(state, command),
+          correct: (command, admitted) => correctTilesetCommand(
+            state,
+            command,
+            admitted
+          )
         };
       }
     }
   };
+}
+
+function correctTilesetCommand(
+  state: TilesetState,
+  command: TilesetNetworkCommand,
+  admitted: TilesetNetworkCommand | null
+): TilesetNetworkCommand | null {
+  if (!isPixelCommand(command)) {
+    return null;
+  }
+
+  return correctPixelCommand(
+    state.pixels,
+    command,
+    admitted !== null && isPixelCommand(admitted) ? admitted : null
+  );
 }

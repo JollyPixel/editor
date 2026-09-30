@@ -4,7 +4,7 @@ import type * as network from "@jolly-pixel/network";
 // Import Internal Dependencies
 import type {
   PixelBufferSnapshot,
-  PixelNetworkCommand,
+  PixelWireCommand,
   PixelServerMessage
 } from "#src/network/types.ts";
 import { MockEmitter } from "./emitter.ts";
@@ -18,7 +18,7 @@ const kEmptySnapshot: PixelBufferSnapshot = {
 
 export interface MockRoomOptions {
   clientId?: string;
-  onSend?: (command: PixelNetworkCommand) => void;
+  onSend?: (command: PixelWireCommand) => void;
 }
 
 export interface MockPeer {
@@ -28,17 +28,17 @@ export interface MockPeer {
 
 export class MockRoom
   extends MockEmitter<network.RoomEventMap<PixelServerMessage>>
-  implements network.Room<PixelNetworkCommand, PixelServerMessage> {
+  implements network.Room<PixelWireCommand, PixelServerMessage> {
   readonly id = "test-room";
   readonly clientId: string;
   readonly peers = new Map<string, network.Peer>();
   readonly role = "default";
   readonly rights = {};
   readonly access = "write";
-  readonly sent: PixelNetworkCommand[] = [];
+  readonly sent: PixelWireCommand[] = [];
   readonly presenceUpdates: network.PeerMetadata[] = [];
 
-  #onSend: ((command: PixelNetworkCommand) => void) | undefined;
+  #onSend: ((command: PixelWireCommand) => void) | undefined;
 
   constructor(
     options: MockRoomOptions = {}
@@ -61,7 +61,7 @@ export class MockRoom
   }
 
   send(
-    command: PixelNetworkCommand
+    command: PixelWireCommand
   ): void {
     this.sent.push(command);
     this.#onSend?.(command);
@@ -86,10 +86,11 @@ export class MockRoom
   }
 
   deliverCommand(
-    command: PixelNetworkCommand
+    command: PixelWireCommand,
+    type: "command" | "correction" = "command"
   ): void {
     this.emit("message", {
-      type: "command",
+      type,
       data: command
     });
   }

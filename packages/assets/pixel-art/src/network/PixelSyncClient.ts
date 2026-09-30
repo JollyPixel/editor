@@ -12,8 +12,12 @@ import {
 import type {
   PixelArtRoom,
   PixelBufferSnapshot,
-  PixelNetworkCommand
+  PixelWireCommand
 } from "./types.ts";
+import {
+  packPixelEvent,
+  unpackPixelCommand
+} from "./PixelWireCodec.ts";
 
 export interface PixelSyncTarget extends Pick<
   PixelDocument,
@@ -40,7 +44,7 @@ export function loadPixelSnapshot(
 }
 
 export class PixelSyncClient extends CommandSync<
-  PixelNetworkCommand,
+  PixelWireCommand,
   PixelBufferSnapshot,
   AssetRoomNotice
 > {
@@ -49,7 +53,7 @@ export class PixelSyncClient extends CommandSync<
   #sendLocalCommand = (
     event: PixelBufferHookEvent
   ): void => {
-    const { originTimestamp, ...body } = event;
+    const { originTimestamp, ...body } = packPixelEvent(event);
     this.send(body, originTimestamp);
   };
 
@@ -62,7 +66,10 @@ export class PixelSyncClient extends CommandSync<
     this.#document = document;
     document.on("buffer-updated", this.#sendLocalCommand);
     this.on("snapshot", (snapshot) => loadPixelSnapshot(document, snapshot));
-    this.on("command", (command) => document.applyRemoteCommand(command));
+    this.on(
+      "command",
+      (command) => document.applyRemoteCommand(unpackPixelCommand(command))
+    );
   }
 
   override destroy(): void {

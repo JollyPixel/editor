@@ -8,7 +8,11 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { PixelNetworkCommand } from "#src/network/types.ts";
+import type {
+  PixelNetworkCommand,
+  PixelWireCommand
+} from "#src/network/types.ts";
+import { packPixelEvent } from "#src/network/PixelWireCodec.ts";
 
 export type PixelCommandAction = PixelNetworkCommand["action"];
 export type PixelCommandOf<TAction extends PixelCommandAction> = Extract<
@@ -40,6 +44,15 @@ export function command<TAction extends PixelCommandAction>(
     action,
     metadata
   } as PixelCommandOf<TAction>;
+}
+
+export function packed(
+  pixelCommand: PixelNetworkCommand
+): PixelWireCommand {
+  return {
+    ...pixelCommand,
+    ...packPixelEvent(pixelCommand)
+  };
 }
 
 export function wholeCanvasCommands(): PixelNetworkCommand[] {

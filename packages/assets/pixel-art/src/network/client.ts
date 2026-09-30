@@ -5,6 +5,7 @@ export {
 } from "../asset/pixelArt.ts";
 export * from "./pixelCommandActions.ts";
 export * from "./PixelSyncClient.ts";
+export * from "./PixelWireCodec.ts";
 export * from "./SyncedPixelDocument.ts";
 export * from "./PixelCollaboration.ts";
 export * from "./pixelArtAssets.ts";

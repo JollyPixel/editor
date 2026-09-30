@@ -264,4 +264,24 @@ describe("tilesetAssetKind", () => {
       null
     );
   });
+
+  test("live() corrects a rejected stroke in place and defers block commands to a snapshot", () => {
+    const handler = tilesetAssetKind();
+    const state = handler.create("asset-1");
+    const protocol = handler.commands!.live!({
+      assetId: "asset-1",
+      kind: TILESET_KIND,
+      roomId: `${TILESET_KIND}:asset-1`,
+      state
+    });
+
+    const correction = protocol.correct!(strokeCommand(), null);
+
+    assert.strictEqual(correction?.action, "select-edit");
+    assert.deepEqual(correction.metadata, {
+      xy: [1, 1],
+      rgba: [...state.pixels.samplePixel(1, 1)]
+    });
+    assert.strictEqual(protocol.correct!(blockCommand(3), null), null);
+  });
 });

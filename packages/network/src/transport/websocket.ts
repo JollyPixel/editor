@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 // Import Third-party Dependencies
 import {
   WebSocketServer,
+  type PerMessageDeflateOptions,
   type WebSocket
 } from "ws";
 
@@ -23,6 +24,23 @@ import {
   WEBSOCKET_PROTOCOL
 } from "./constants.ts";
 import type { ClientHandle } from "./ClientHandle.ts";
+
+// CONSTANTS
+const kDefaultCompressionLevel = 3;
+const kDefaultCompressionThreshold = 64;
+
+export interface WebsocketCompressionOptions {
+  /**
+   * zlib level, from 1 (fastest) to 9 (smallest).
+   * @default 3
+   */
+  level?: number;
+  /**
+   * Messages shorter than this many bytes are sent uncompressed.
+   * @default 64
+   */
+  threshold?: number;
+}
 
 export interface WebsocketTransportOptions {
   /**
@@ -40,6 +58,12 @@ export interface WebsocketTransportOptions {
    * messages and disconnects. Its logger is reused by the transport.
    */
   server: Server;
+  /**
+   * Negotiates permessage-deflate with clients that offer it.
+   * `true` uses the default level and threshold.
+   * @default false
+   */
+  compression?: boolean | WebsocketCompressionOptions;
 }
 
 export class WebsocketTransport {
@@ -54,7 +78,8 @@ export class WebsocketTransport {
     const {
       path,
       httpServer,
-      server
+      server,
+      compression = false
     } = options;
     this.#server = server;
     this.#logger = server.logger;
@@ -63,6 +88,7 @@ export class WebsocketTransport {
     // Manual upgrade filtering requires `noServer` mode.
     this.#wss = new WebSocketServer({
       noServer: true,
+      perMessageDeflate: perMessageDeflate(compression),
       handleProtocols(protocols) {
         return protocols.has(WEBSOCKET_PROTOCOL)
           ? WEBSOCKET_PROTOCOL
@@ -149,6 +175,9 @@ export class WebsocketTransport {
       id: clientId,
       send(data) {
         socket.send(JSON.stringify(data));
+      },
+      sendSerialized(json) {
+        socket.send(json);
       }
     };
 
@@ -174,4 +203,24 @@ export class WebsocketTransport {
         .error("client socket error")
     );
   }
+}
+
+function perMessageDeflate(
+  compression: boolean | WebsocketCompressionOptions
+): false | PerMessageDeflateOptions {
+  if (compression === false) {
+    return false;
+  }
+
+  const {
+    level = kDefaultCompressionLevel,
+    threshold = kDefaultCompressionThreshold
+  } = compression === true ? {} : compression;
+
+  return {
+    threshold,
+    zlibDeflateOptions: {
+      level
+    }
+  };
 }

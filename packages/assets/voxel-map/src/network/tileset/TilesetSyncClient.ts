@@ -4,6 +4,8 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   isPixelCommand,
   loadPixelSnapshot,
+  packPixelEvent,
+  unpackPixelCommand,
   type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
 import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
@@ -36,7 +38,7 @@ export class TilesetSyncClient extends CommandSync<
   #sendPixelCommand = (
     event: PixelBufferHookEvent
   ): void => {
-    const { originTimestamp, ...body } = event;
+    const { originTimestamp, ...body } = packPixelEvent(event);
     this.send(body, originTimestamp);
   };
 
@@ -79,7 +81,7 @@ export class TilesetSyncClient extends CommandSync<
     command: TilesetNetworkCommand
   ): void {
     if (isPixelCommand(command)) {
-      this.#pixels.applyRemoteCommand(command);
+      this.#pixels.applyRemoteCommand(unpackPixelCommand(command));
 
       return;
     }

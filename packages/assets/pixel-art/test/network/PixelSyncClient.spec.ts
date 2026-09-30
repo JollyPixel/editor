@@ -13,7 +13,8 @@ import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
 import {
   command,
-  gray
+  gray,
+  packed
 } from "../fixtures/commands.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
 import { MockEmitter } from "../helpers/emitter.ts";
@@ -89,6 +90,25 @@ describe("PixelSyncClient — local mutations", () => {
       command("resized", kResized.metadata, { clientId: "client-A", seq: 2, timestamp: 1000 })
     ]);
   });
+
+  test("sends strokes and selection edits packed", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+    const { room, host } = setup();
+
+    host.emit("buffer-updated", {
+      action: "stroke",
+      metadata: { color: gray(1), positions: [{ x: 2, y: 3 }] }
+    });
+    host.emit("buffer-updated", {
+      action: "select-edit",
+      metadata: { positions: [{ x: 4, y: 5 }], colors: [gray(2)] }
+    });
+
+    assert.deepStrictEqual(room.sent.map((sent) => sent.metadata), [
+      { color: gray(1), xy: [2, 3] },
+      { xy: [4, 5], rgba: [2, 2, 2, 255] }
+    ]);
+  });
 });
 
 describe("PixelSyncClient — remote messages", () => {
@@ -102,6 +122,30 @@ describe("PixelSyncClient — remote messages", () => {
     room.deliverCommand(stroke);
 
     assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke]]);
+  });
+
+  test("applies a packed command from another client unpacked", () => {
+    const { room, host } = setup();
+    const stroke = command("stroke", {
+      color: gray(1),
+      positions: [{ x: 0, y: 0 }, { x: 3, y: 1 }]
+    }, { clientId: "client-B" });
+
+    room.deliverCommand(packed(stroke));
+
+    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke]]);
+  });
+
+  test("applies a correction of its own command", () => {
+    const { room, host } = setup();
+    const correction = command("select-edit", {
+      positions: [{ x: 0, y: 0 }],
+      colors: [gray(3)]
+    }, { clientId: "client-A" });
+
+    room.deliverCommand(packed(correction), "correction");
+
+    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[correction]]);
   });
 
   test("ignores its own echoed commands", () => {

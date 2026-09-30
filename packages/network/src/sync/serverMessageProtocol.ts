@@ -11,7 +11,7 @@ export interface ServerMessageProtocolOptions {
 
 function syncVariant(
   title: string,
-  type: "snapshot" | "command",
+  type: "snapshot" | "command" | "correction",
   data: JSONSchema
 ): JSONSchema {
   return {
@@ -43,6 +43,9 @@ export function serverMessageProtocol(
         syncVariant(SNAPSHOT_EVENT, "snapshot", snapshot),
         ...command.variants.map(
           ({ event, schema }) => syncVariant(event, "command", schema)
+        ),
+        ...command.variants.map(
+          ({ event, schema }) => syncVariant(event, "correction", schema)
         ),
         ...notices
       ]

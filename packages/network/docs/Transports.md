@@ -39,6 +39,11 @@ interface WebsocketVitePluginOptions {
    * @default "/ws-sync"
    */
   path?: string;
+  /**
+   * Forwarded to the WebSocket transport. See below.
+   * @default false
+   */
+  compression?: boolean | WebsocketCompressionOptions;
 }
 ```
 
@@ -67,6 +72,34 @@ never reaches the server's session table.
 It also negotiates the subprotocol, selecting the bare `jolly-pixel` value so a
 credential offered as `jolly-pixel.auth.<base64url>` is never echoed back. See
 [Authentication](./Authentication.md#the-handshake).
+
+### Compression
+
+`compression` negotiates `permessage-deflate` with clients that offer it. Browsers and the Node.js `WebSocket` always offer it, so the client side needs nothing. It is off by default.
+
+```ts
+new WebsocketTransport({
+  httpServer,
+  server,
+  path: "/ws-sync",
+  compression: true
+});
+
+interface WebsocketCompressionOptions {
+  /**
+   * zlib level, from 1 (fastest) to 9 (smallest).
+   * @default 3
+   */
+  level?: number;
+  /**
+   * Messages shorter than this many bytes are sent uncompressed.
+   * @default 64
+   */
+  threshold?: number;
+}
+```
+
+Each socket keeps its compression context between messages, so repeated small messages such as presence updates also shrink. The cost is roughly 300 KB of zlib memory per connection. Enable compression when clients connect over a real network. On localhost it only costs CPU.
 
 ## LoopbackTransport
 

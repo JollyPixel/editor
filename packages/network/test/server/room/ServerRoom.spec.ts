@@ -166,6 +166,42 @@ describe("ServerRoom", () => {
     assert.deepEqual(b.sent, [{ room: "pixel-draw", kind: "message", payload: { hello: "world" } }]);
   });
 
+  test("room.broadcast serializes once for members that accept serialized JSON", async() => {
+    const extension = createExtension();
+    const a = createClient("A");
+    const serialized: string[] = [];
+    function serializingClient(
+      id: string
+    ) {
+      return {
+        id,
+        send: () => void 0,
+        sendSerialized: (json: string) => serialized.push(json)
+      };
+    }
+    const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
+    await room.join("B", serializingClient("B"), identityOf("B"), {});
+    await room.join("C", serializingClient("C"), identityOf("C"), {});
+    a.sent.length = 0;
+    serialized.length = 0;
+
+    let serializations = 0;
+    const payload = {
+      toJSON() {
+        serializations++;
+
+        return { hello: "world" };
+      }
+    };
+    extension.lastContext.room.broadcast(payload);
+
+    const expected = "{\"room\":\"pixel-draw\",\"kind\":\"message\",\"payload\":{\"hello\":\"world\"}}";
+    assert.strictEqual(serializations, 1);
+    assert.deepEqual(serialized, [expected, expected]);
+    assert.deepEqual(a.sent, [{ room: "pixel-draw", kind: "message", payload }]);
+  });
+
   test("a message from a non-member never reaches the extension", async() => {
     const extension = createExtension();
     const room = createRoom(extension);
