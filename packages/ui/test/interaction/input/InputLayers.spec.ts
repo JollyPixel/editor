@@ -160,6 +160,91 @@ describe("InputLayers", () => {
     release();
   });
 
+  test("dismissAll succeeds when no layer is open", () => {
+    assert.equal(layers.dismissAll(), true);
+  });
+
+  test("dismissAll closes every dismissible layer, newest first", () => {
+    const order: string[] = [];
+    function dismissible(
+      name: string
+    ): () => void {
+      const release = layers.push({
+        dismiss: () => {
+          order.push(name);
+          release();
+
+          return true;
+        }
+      });
+
+      return release;
+    }
+    dismissible("dialog");
+    dismissible("popover");
+
+    assert.equal(layers.dismissAll(), true);
+    assert.deepEqual(order, ["popover", "dialog"]);
+    assert.equal(layers.open, false);
+  });
+
+  test("dismissAll reports a refusing layer and still closes the others", () => {
+    const releaseFirst = layers.push({
+      dismiss: () => {
+        releaseFirst();
+
+        return true;
+      }
+    });
+    const releaseLocked = layers.push({
+      dismiss: () => false
+    });
+    const releaseLast = layers.push({
+      dismiss: () => {
+        releaseLast();
+
+        return true;
+      }
+    });
+
+    assert.equal(layers.dismissAll(), false);
+    assert.equal(layers.open, true);
+
+    releaseLocked();
+    assert.equal(layers.open, false);
+  });
+
+  test("dismissAll treats a layer pushed without dismiss as refusing", () => {
+    const release = layers.push();
+
+    assert.equal(layers.dismissAll(), false);
+    assert.equal(layers.open, true);
+
+    release();
+  });
+
+  test("dismissAll skips a layer released by an earlier dismiss", () => {
+    let innerDismissed = false;
+    const releaseInner = layers.push({
+      dismiss: () => {
+        innerDismissed = true;
+
+        return true;
+      }
+    });
+    const releaseOuter = layers.push({
+      dismiss: () => {
+        releaseOuter();
+        releaseInner();
+
+        return true;
+      }
+    });
+
+    assert.equal(layers.dismissAll(), true);
+    assert.equal(innerDismissed, false);
+  });
+
   test("exposes a shared instance", () => {
     assert.ok(inputLayers instanceof InputLayers);
   });

@@ -4,6 +4,7 @@ import test from "node:test";
 
 // Import Internal Dependencies
 import {
+  adoptAmbientTheme,
   ambientThemeMode,
   documentThemeMode
 } from "../../src/theme/ambientTheme.ts";
@@ -79,4 +80,32 @@ test("documentThemeMode skips scope hosts left on both schemes", () => {
 
 test("documentThemeMode returns null when the page declares no scope", () => {
   assert.equal(documentThemeMode(document), null);
+});
+
+test("adoptAmbientTheme follows the ambient theme across calls", () => {
+  const parent = themedParent("dark");
+  const element = document.createElement("div");
+  parent.append(element);
+
+  const first = adoptAmbientTheme(element, null);
+  parent.style.colorScheme = "light";
+  const second = adoptAmbientTheme(element, first);
+
+  assert.equal(first, "dark");
+  assert.equal(second, "light");
+  assert.equal(element.getAttribute("theme"), "light");
+
+  parent.remove();
+});
+
+test("adoptAmbientTheme leaves a theme the author set", () => {
+  const parent = themedParent("dark");
+  const element = document.createElement("div");
+  element.setAttribute("theme", "light");
+  parent.append(element);
+
+  assert.equal(adoptAmbientTheme(element, null), null);
+  assert.equal(element.getAttribute("theme"), "light");
+
+  parent.remove();
 });

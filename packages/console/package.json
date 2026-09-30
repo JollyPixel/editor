@@ -1,0 +1,73 @@
+{
+  "name": "@jolly-pixel/console",
+  "description": "Command palette and developer console for JollyPixel's editors",
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./element": {
+      "types": "./dist/element/index.d.ts",
+      "default": "./dist/element/index.js"
+    }
+  },
+  "scripts": {
+    "prepublishOnly": "tsc -b",
+    "build": "tsc -b",
+    "dev": "vite",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
+    "test:e2e": "playwright test",
+    "lint": "oxlint src test examples bench && pnpm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" --cache",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json && tsc --noEmit -p examples/tsconfig.json",
+    "bench": "jolly-bench"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/console"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "@jolly-pixel/ui": "workspace:^",
+    "lit": "^3.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/ui": {
+      "optional": true
+    },
+    "lit": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@openally/emitt": "1.1.0"
+  },
+  "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*",
+    "@jolly-pixel/e2e": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "lit": "3.3.3"
+  }
+}

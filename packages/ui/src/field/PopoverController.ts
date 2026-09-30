@@ -161,7 +161,13 @@ export class PopoverController implements ReactiveController {
   };
 
   #claimInput(): void {
-    this.#releaseInputLayer ??= inputLayers.push();
+    this.#releaseInputLayer ??= inputLayers.push({
+      dismiss: () => {
+        this.hide();
+
+        return true;
+      }
+    });
   }
 
   #releaseInput(): void {

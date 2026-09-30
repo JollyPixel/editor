@@ -407,6 +407,25 @@ importers:
         specifier: workspace:*
         version: link:../bench
 
+  packages/console:
+    dependencies:
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+    devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../ui
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+
   packages/controls:
     dependencies:
       '@openally/emitt':

@@ -4,6 +4,8 @@ status: accepted
 
 # An open dialog or popover claims the keyboard, through a guard `controls` consumes
 
+Amended by [ADR-0042](./0042-open-layers-can-be-dismissed.md), which lets a caller dismiss every open layer.
+
 [ADR-0020](./0020-input-scope-follows-focus.md) planned an `InputScopeSource` in `ui`. It was never
 built, and the gap showed up in `editors/voxel-map`: with the block dialog open, focus sits on a
 button or a select, which is not editable, so Escape reached the viewport keyboard. The camera left

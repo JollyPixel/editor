@@ -3,13 +3,17 @@ const kClaimedEventTypes = [
   "keypress"
 ] as const;
 
+export interface InputLayerOptions {
+  dismiss?: () => boolean;
+}
+
 export interface InputLayersOptions {
   target?: () => EventTarget;
 }
 
 export class InputLayers {
   #target: () => EventTarget;
-  #layers = new Set<symbol>();
+  #layers = new Map<symbol, InputLayerOptions>();
   #claimed = new WeakSet<Event>();
   #engageListeners = new Set<() => void>();
   #listeningOn: EventTarget | null = null;
@@ -24,10 +28,12 @@ export class InputLayers {
     return this.#layers.size > 0;
   }
 
-  push(): () => void {
+  push(
+    options: InputLayerOptions = {}
+  ): () => void {
     const layer = Symbol("InputLayer");
     const wasOpen = this.open;
-    this.#layers.add(layer);
+    this.#layers.set(layer, options);
 
     if (!wasOpen) {
       this.#listen();
@@ -37,6 +43,20 @@ export class InputLayers {
     }
 
     return () => this.#release(layer);
+  }
+
+  dismissAll(): boolean {
+    let dismissed = true;
+    for (const [layer, options] of [...this.#layers].reverse()) {
+      if (
+        this.#layers.has(layer) &&
+        options.dismiss?.() !== true
+      ) {
+        dismissed = false;
+      }
+    }
+
+    return dismissed;
   }
 
   blocks(
@@ -74,7 +94,11 @@ export class InputLayers {
   #listen(): void {
     const target = this.#target();
     for (const type of kClaimedEventTypes) {
-      target.addEventListener(type, this.#claim, true);
+      target.addEventListener(
+        type,
+        this.#claim,
+        true
+      );
     }
     this.#listeningOn = target;
   }
@@ -86,7 +110,11 @@ export class InputLayers {
     }
 
     for (const type of kClaimedEventTypes) {
-      target.removeEventListener(type, this.#claim, true);
+      target.removeEventListener(
+        type,
+        this.#claim,
+        true
+      );
     }
     this.#listeningOn = null;
   }
