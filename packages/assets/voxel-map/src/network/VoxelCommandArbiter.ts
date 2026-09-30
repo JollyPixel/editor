@@ -2,38 +2,26 @@
 import * as network from "@jolly-pixel/network";
 import {
   deserializeVoxelWorld,
+  isVoxelLayerCommand,
+  isVoxelObjectLayerCommand,
   parseVoxelTemplate,
   parseVoxelWorld,
   TilesetList,
   VOXEL_PATCH_STRIDE,
   VoxelWorld,
-  type VoxelLayerCommand,
   type VoxelWorldCommandTarget,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelMapNetworkCommand } from "./types.ts";
-
-// CONSTANTS
-const kVoxelWriteActions = new Set<string>([
-  "voxel-set",
-  "voxel-removed",
-  "voxels-set",
-  "voxels-removed",
-  "voxels-patched",
-  "layer-transformed"
-]);
-
-type BulkCommand = Extract<
-  VoxelMapNetworkCommand,
-  { action: "voxels-set" | "voxels-removed"; }
->;
-
-type PatchCommand = Extract<
-  VoxelMapNetworkCommand,
-  { action: "voxels-patched"; }
->;
+import {
+  isVoxelCellCommand,
+  narrowVoxelCellCommand,
+  voxelCellKeys,
+  voxelCommandKeys,
+  type VoxelCellCommand
+} from "./VoxelCommandKeys.ts";
 
 type WorldReplaceCommand = Extract<
   VoxelMapNetworkCommand,
@@ -70,65 +58,20 @@ export class VoxelCommandArbiter {
     if (command.action === "template-defined" && !parses(command)) {
       return null;
     }
+    if (!targetsExist(state, command)) {
+      return null;
+    }
     if (
-      kVoxelWriteActions.has(command.action) &&
-      "layerName" in command &&
-      state.world.getLayer(command.layerName) === undefined
+      command.action === "voxels-patched" &&
+      command.metadata.cells.length % VOXEL_PATCH_STRIDE !== 0
     ) {
       return null;
     }
-    if (isBulkCommand(command)) {
-      return this.#admitEntries(command);
-    }
-    if (command.action === "voxels-patched") {
-      return this.#admitPatch(command);
+    if (isVoxelCellCommand(command)) {
+      return this.#admitCells(command);
     }
 
-    return this.#tracker.admit(command, VoxelCommandArbiter.keys(command));
-  }
-
-  static keys(
-    command: VoxelLayerCommand | VoxelMapNetworkCommand
-  ): string[] {
-    if (isBulkCommand(command)) {
-      return command.metadata.entries.map(
-        (entry) => voxelKey(command.layerName, entry.position)
-      );
-    }
-    if (command.action === "voxels-patched") {
-      return patchKeys(command.layerName, command.metadata.cells);
-    }
-
-    const key = VoxelCommandArbiter.key(command);
-
-    return key === null ? [] : [key];
-  }
-
-  static key(
-    command: VoxelLayerCommand | VoxelMapNetworkCommand
-  ): string | null {
-    switch (command.action) {
-      case "voxel-set":
-      case "voxel-removed":
-        return voxelKey(command.layerName, command.metadata.position);
-      case "object-added":
-        return `object:${command.metadata.object.id}`;
-      case "object-removed":
-      case "object-updated":
-      case "object-moved":
-        return `object:${command.metadata.objectId}`;
-      case "template-defined":
-        return `template:${command.template.id}`;
-      case "template-updated":
-      case "template-removed":
-        return `template:${command.templateId}`;
-      case "tileset-added":
-        return `tileset:${command.tileset.id}`;
-      case "tileset-removed":
-        return `tileset:${command.tilesetId}`;
-      default:
-        return null;
-    }
+    return this.#tracker.admit(command, voxelCommandKeys(command));
   }
 
   #admitWorldReplace(
@@ -141,70 +84,63 @@ export class VoxelCommandArbiter {
 
     return {
       command,
-      commit: () => this.#tracker.reset(command)
+      commit: (version) => this.#tracker.reset(command, version)
     };
   }
 
-  #admitEntries<TCommand extends BulkCommand>(
+  restore(
+    command: VoxelMapNetworkCommand,
+    version: number
+  ): void {
+    if (command.action === "world-replace") {
+      this.#tracker.reset(command, version);
+    }
+    else {
+      this.#tracker.record(command, voxelCommandKeys(command), version);
+    }
+  }
+
+  #admitCells<TCommand extends VoxelCellCommand & VoxelMapNetworkCommand>(
     command: TCommand
   ): network.Admission<TCommand> | null {
-    const { entries } = command.metadata;
-    const { indices, commit } = this.#tracker.admitEach(
-      command,
-      VoxelCommandArbiter.keys(command)
-    );
+    const keys = voxelCellKeys(command);
+    const { indices, commit } = this.#tracker.admitEach(command, keys);
     if (indices.length === 0) {
       return null;
     }
 
-    const admitted = indices.length === entries.length ?
-      command :
-      {
-        ...command,
-        metadata: {
-          entries: indices.map((index) => entries[index])
-        }
-      };
-
     return {
-      command: admitted,
+      command: indices.length === keys.length ?
+        command :
+        narrowVoxelCellCommand(command, indices)!,
       commit
     };
   }
+}
 
-  #admitPatch(
-    command: PatchCommand
-  ): network.Admission<PatchCommand> | null {
-    const { cells } = command.metadata;
-    if (cells.length % VOXEL_PATCH_STRIDE !== 0) {
-      return null;
+function targetsExist(
+  state: VoxelWorldCommandTarget,
+  command: VoxelMapNetworkCommand
+): boolean {
+  if (!isVoxelLayerCommand(command) || isVoxelObjectLayerCommand(command)) {
+    return true;
+  }
+
+  const { world } = state;
+  const source = world.getLayerById(command.layerId);
+  switch (command.action) {
+    case "added":
+      return source === undefined;
+    case "cloned":
+      return source !== undefined &&
+        world.getLayerById(command.metadata.cloneId) === undefined;
+    case "merged": {
+      const target = world.getLayerById(command.metadata.targetLayerId);
+
+      return source !== undefined && target !== undefined && target !== source;
     }
-
-    const { indices, commit } = this.#tracker.admitEach(
-      command,
-      patchKeys(command.layerName, cells)
-    );
-    if (indices.length === 0) {
-      return null;
-    }
-
-    const admitted = indices.length * VOXEL_PATCH_STRIDE === cells.length ?
-      command :
-      {
-        ...command,
-        metadata: {
-          cells: indices.flatMap((index) => {
-            const offset = index * VOXEL_PATCH_STRIDE;
-
-            return cells.slice(offset, offset + VOXEL_PATCH_STRIDE);
-          })
-        }
-      };
-
-    return {
-      command: admitted,
-      commit
-    };
+    default:
+      return source !== undefined;
   }
 }
 
@@ -237,41 +173,4 @@ function parses(
   catch {
     return false;
   }
-}
-
-function patchKeys(
-  layerName: string,
-  cells: readonly number[]
-): string[] {
-  const keys: string[] = [];
-  for (let offset = 0; offset < cells.length; offset += VOXEL_PATCH_STRIDE) {
-    keys.push(voxelKey(layerName, {
-      x: cells[offset],
-      y: cells[offset + 1],
-      z: cells[offset + 2]
-    }));
-  }
-
-  return keys;
-}
-
-function isBulkCommand<
-  TCommand extends VoxelLayerCommand | VoxelMapNetworkCommand
->(
-  command: TCommand
-): command is Extract<
-  TCommand,
-  { action: "voxels-set" | "voxels-removed"; }
-> {
-  return command.action === "voxels-set" ||
-    command.action === "voxels-removed";
-}
-
-function voxelKey(
-  layerName: string,
-  position: { x: number; y: number; z: number; }
-): string {
-  const { x, y, z } = position;
-
-  return `${layerName}:${x},${y},${z}`;
 }

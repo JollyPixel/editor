@@ -92,23 +92,23 @@ describe("CommandSync", () => {
     assert.deepEqual(commands, [remote("peer")]);
   });
 
-  test("after a snapshot, emits own echoes of commands sent before it", () => {
+  test("a snapshot replays the pending commands its acks do not cover", () => {
     const { harness, sync } = setup();
-    const seqs: number[] = [];
-    sync.on("command", (command) => seqs.push(command.seq));
+    const values: number[] = [];
+    sync.on("command", (command) => values.push(command.value));
 
     sync.send({ action: "set", value: 1 });
     sync.send({ action: "set", value: 2 });
-    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 1 } });
-    harness.serverMessage({ type: "snapshot", data: { value: 1 } });
     sync.send({ action: "set", value: 3 });
-    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 1 } });
+    harness.serverMessage({ type: "snapshot", data: { value: 1 }, acks: { self: 2 } });
     harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 3 } });
 
-    assert.deepEqual(seqs, [2]);
+    assert.deepEqual(values, [3]);
+    assert.strictEqual(sync.pending, 0);
   });
 
-  test("emits a correction as a command, then own echoes of commands sent before it", () => {
+  test("a correction acknowledges the corrected command and replays the later ones", () => {
     const { harness, sync } = setup();
     const received: TestCommand[] = [];
     sync.on("command", (command) => received.push(command));
@@ -116,26 +116,81 @@ describe("CommandSync", () => {
     sync.send({ action: "set", value: 1 });
     sync.send({ action: "set", value: 2 });
     const correction = { ...remote("self"), value: 0, seq: 1 };
-    harness.serverMessage({ type: "correction", data: correction });
-    sync.send({ action: "set", value: 3 });
-    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
-    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 3 } });
+    harness.serverMessage({ type: "correction", data: correction, acks: { self: 1 } });
 
-    assert.deepEqual(received.map((command) => command.seq), [1, 2]);
+    assert.deepEqual(received.map((command) => command.value), [0, 2]);
     assert.strictEqual(received[0], correction);
+    assert.strictEqual(sync.pending, 1);
   });
 
-  test("counts held commands in the replay range of a snapshot", () => {
-    const { harness, sync } = setup({ admitted: false });
-    const seqs: number[] = [];
-    sync.on("command", (command) => seqs.push(command.seq));
+  test("a correction without acks still acknowledges its own seq", () => {
+    const { harness, sync } = setup();
 
     sync.send({ action: "set", value: 1 });
-    harness.serverMessage({ type: "snapshot", data: { value: 0 } });
+    sync.send({ action: "set", value: 2 });
+    harness.serverMessage({
+      type: "correction",
+      data: { ...remote("self"), value: 0, seq: 1 }
+    });
+
+    assert.strictEqual(sync.pending, 1);
+  });
+
+  test("a snapshot received before admission replays the held commands", () => {
+    const { harness, sync } = setup({ admitted: false });
+    const values: number[] = [];
+    sync.on("command", (command) => values.push(command.value));
+
+    sync.send({ action: "set", value: 1 });
     harness.admit("A");
+    harness.serverMessage({ type: "snapshot", data: { value: 0 } });
     harness.serverMessage({ type: "command", data: { ...remote("A"), seq: 1 } });
 
-    assert.deepEqual(seqs, [1]);
+    assert.deepEqual(values, [1]);
+    assert.strictEqual(sync.pending, 0);
+  });
+
+  test("an own echo acknowledges every command up to its seq", () => {
+    const { harness, sync } = setup();
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    sync.send({ action: "set", value: 3 });
+    assert.strictEqual(sync.pending, 3);
+
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+
+    assert.strictEqual(sync.pending, 1);
+  });
+
+  test("emits settled when the last pending command is acknowledged", () => {
+    const { harness, sync } = setup();
+    let settled = 0;
+    sync.on("settled", () => settled++);
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 1 } });
+    assert.strictEqual(settled, 0);
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+
+    assert.strictEqual(settled, 1);
+  });
+
+  test("send returns the pending command, and the room receives a copy", () => {
+    const { harness, sync } = setup();
+
+    const pending = sync.send({ action: "set", value: 1 }, 10);
+
+    assert.deepEqual(pending, {
+      action: "set",
+      value: 1,
+      clientId: "self",
+      seq: 1,
+      timestamp: 10
+    });
+    assert.notStrictEqual(harness.messages[0], pending);
   });
 
   test("whenReady resolves on the first snapshot", async() => {

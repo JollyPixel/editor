@@ -38,6 +38,34 @@ describe("isMainToWorkerMessage", () => {
     assert.strictEqual(isMainToWorkerMessage(message), true);
   });
 
+  test("accepts a room peer carrying a resume payload", () => {
+    const message = connectDispatch({
+      clientId: "A",
+      identity: {
+        subject: "alice",
+        role: "default"
+      },
+      profile: {},
+      presence: {},
+      resume: { version: 3 }
+    });
+
+    assert.strictEqual(isMainToWorkerMessage(message), true);
+  });
+
+  test("accepts an onResync dispatch", () => {
+    assert.strictEqual(isMainToWorkerMessage({
+      type: "dispatch",
+      id: "call-1",
+      method: "onResync",
+      identity: {
+        subject: "alice",
+        role: "default"
+      },
+      args: ["A"]
+    }), true);
+  });
+
   test("rejects an onClientConnect dispatch whose peer is incomplete", () => {
     assert.strictEqual(isMainToWorkerMessage(connectDispatch({})), false);
     assert.strictEqual(isMainToWorkerMessage(connectDispatch({

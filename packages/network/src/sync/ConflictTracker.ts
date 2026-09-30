@@ -1,23 +1,26 @@
 // Import Internal Dependencies
 import type { NetworkCommandHeader } from "../sync/types.ts";
-import type { ConflictResolver } from "./ConflictResolver.ts";
+import type {
+  ConflictRecord,
+  ConflictResolver
+} from "./ConflictResolver.ts";
 
 export interface Admission<TCommand> {
   readonly command: TCommand;
-  commit(): void;
+  commit(version?: number): void;
 }
 
 export interface PartialAdmission {
   readonly indices: number[];
-  commit(): void;
+  commit(version?: number): void;
 }
 
 export class ConflictTracker<
   THeader extends NetworkCommandHeader = NetworkCommandHeader
 > {
   #resolver: ConflictResolver<THeader>;
-  #lastByKey = new Map<string, NetworkCommandHeader>();
-  #floor: NetworkCommandHeader | undefined;
+  #lastByKey = new Map<string, ConflictRecord>();
+  #floor: ConflictRecord | undefined;
 
   constructor(
     resolver: ConflictResolver<THeader>
@@ -35,7 +38,7 @@ export class ConflictTracker<
 
     return {
       command,
-      commit: () => this.#record(keys, command)
+      commit: (version) => this.record(command, keys, version)
     };
   }
 
@@ -54,15 +57,27 @@ export class ConflictTracker<
 
     return {
       indices,
-      commit: () => this.#record(accepted, command)
+      commit: (version) => this.record(command, accepted, version)
     };
   }
 
+  record(
+    command: NetworkCommandHeader,
+    keys: readonly string[],
+    version?: number
+  ): void {
+    const header = recordOf(command, version);
+    for (const key of keys) {
+      this.#lastByKey.set(key, header);
+    }
+  }
+
   reset(
-    command: NetworkCommandHeader
+    command: NetworkCommandHeader,
+    version?: number
   ): void {
     this.#lastByKey.clear();
-    this.#floor = headerOf(command);
+    this.#floor = recordOf(command, version);
   }
 
   #accepts(
@@ -74,24 +89,17 @@ export class ConflictTracker<
       existing: this.#lastByKey.get(key) ?? this.#floor
     }) === "accept";
   }
-
-  #record(
-    keys: readonly string[],
-    command: NetworkCommandHeader
-  ): void {
-    const header = headerOf(command);
-    for (const key of keys) {
-      this.#lastByKey.set(key, header);
-    }
-  }
 }
 
-function headerOf(
-  command: NetworkCommandHeader
-): NetworkCommandHeader {
-  return {
+function recordOf(
+  command: NetworkCommandHeader,
+  version: number | undefined
+): ConflictRecord {
+  const header = {
     clientId: command.clientId,
     seq: command.seq,
     timestamp: command.timestamp
   };
+
+  return version === undefined ? header : { ...header, version };
 }

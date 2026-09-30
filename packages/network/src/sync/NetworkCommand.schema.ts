@@ -25,6 +25,10 @@ export const commandHeaderProperties = {
   },
   timestamp: {
     type: "number"
+  },
+  basis: {
+    type: "integer",
+    minimum: 0
   }
 } as const;
 

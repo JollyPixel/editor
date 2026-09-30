@@ -291,7 +291,8 @@ export function tilesetAssetKind(
             state,
             command,
             admitted
-          )
+          ),
+          restore: (command, version) => arbiter.restore(command, version)
         };
       }
     }

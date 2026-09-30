@@ -29,6 +29,7 @@ import type {
 // CONSTANTS
 const kCellMin = new Vector3();
 const kCellMax = new Vector3();
+const kDefaultRank = "V";
 
 export interface VoxelLayerConfigurableOptions {
   /** Cell replacement or optical compositing. Defaults to "composite". */
@@ -43,6 +44,10 @@ export interface VoxelLayerConfigurableOptions {
    * @default {}
    */
   properties?: Record<string, any>;
+}
+
+export interface VoxelLayerUpdate extends Partial<VoxelLayerConfigurableOptions> {
+  name?: string;
 }
 
 export interface VoxelLayerMergeOptions {
@@ -60,6 +65,7 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
    *
    */
   order: number;
+  rank?: string;
   /** Size of one voxel chunk (required). */
   chunkSize: number;
   /**
@@ -84,6 +90,7 @@ export class VoxelLayer {
   id: string;
   name: string;
   order: number;
+  rank: string;
   position: VoxelCoord;
   properties: Record<string, any> = {};
   visible: boolean;
@@ -120,6 +127,7 @@ export class VoxelLayer {
       id,
       name,
       order,
+      rank = kDefaultRank,
       chunkSize,
       visible = true,
       compositing = "composite",
@@ -132,6 +140,7 @@ export class VoxelLayer {
     this.id = id;
     this.name = name;
     this.order = order;
+    this.rank = rank;
     this.#chunkSize = chunkSize;
     this.#chunkShift = Math.log2(chunkSize);
     this.#chunkMask = chunkSize - 1;
@@ -628,6 +637,7 @@ export class VoxelLayer {
       id: this.id,
       name: this.name,
       order: this.order,
+      rank: this.rank,
       visible: this.visible,
       compositing: this.compositing,
       position: this.position,

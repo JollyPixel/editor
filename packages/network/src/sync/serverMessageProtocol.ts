@@ -1,7 +1,23 @@
 // Import Internal Dependencies
 import { MessageProtocol } from "../protocol/message/MessageProtocol.ts";
-import { SNAPSHOT_EVENT } from "../protocol/constants.ts";
+import {
+  CATCH_UP_EVENT,
+  SNAPSHOT_EVENT
+} from "../protocol/constants.ts";
 import type { JSONSchema } from "../protocol/schema.ts";
+
+// CONSTANTS
+const kAcksSchema = {
+  type: "object",
+  additionalProperties: {
+    type: "integer",
+    minimum: 0
+  }
+} as const;
+const kVersionSchema = {
+  type: "integer",
+  minimum: 0
+} as const;
 
 export interface ServerMessageProtocolOptions {
   command: MessageProtocol;
@@ -9,9 +25,27 @@ export interface ServerMessageProtocolOptions {
   notices?: readonly JSONSchema[];
 }
 
+type SyncMessageType = "snapshot" | "command" | "correction";
+
+const kSyncOptionalProperties: Record<
+  SyncMessageType,
+  Record<string, JSONSchema>
+> = {
+  snapshot: {
+    version: kVersionSchema,
+    acks: kAcksSchema
+  },
+  command: {
+    version: kVersionSchema
+  },
+  correction: {
+    acks: kAcksSchema
+  }
+};
+
 function syncVariant(
   title: string,
-  type: "snapshot" | "command" | "correction",
+  type: SyncMessageType,
   data: JSONSchema
 ): JSONSchema {
   return {
@@ -19,11 +53,39 @@ function syncVariant(
     type: "object",
     properties: {
       type: { const: type },
-      data
+      data,
+      ...kSyncOptionalProperties[type]
     },
     required: [
       "type",
       "data"
+    ]
+  };
+}
+
+function catchUpVariant(
+  command: MessageProtocol
+): JSONSchema {
+  const items = command.variants.length === 0 ?
+    {} :
+    { anyOf: command.variants.map(({ schema }) => schema) };
+
+  return {
+    title: CATCH_UP_EVENT,
+    type: "object",
+    properties: {
+      type: { const: "catch-up" },
+      data: {
+        type: "array",
+        items
+      },
+      version: kVersionSchema,
+      acks: kAcksSchema
+    },
+    required: [
+      "type",
+      "data",
+      "version"
     ]
   };
 }
@@ -47,6 +109,7 @@ export function serverMessageProtocol(
         ...command.variants.map(
           ({ event, schema }) => syncVariant(event, "correction", schema)
         ),
+        catchUpVariant(command),
         ...notices
       ]
     },

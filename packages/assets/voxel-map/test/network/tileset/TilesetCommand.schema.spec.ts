@@ -79,7 +79,7 @@ describe("tilesetCommandProtocol", () => {
     assert.strictEqual(accepts({
       ...kHeader,
       action: "voxel-set",
-      layerName: "Ground",
+      layerId: "Ground",
       metadata: {}
     }), false);
     assert.strictEqual(accepts({

@@ -10,7 +10,12 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { VoxelCommandArbiter, type VoxelMapNetworkCommand } from "../../src/network/server.ts";
+import {
+  VoxelCommandArbiter,
+  voxelCommandKey,
+  voxelCommandKeys,
+  type VoxelMapNetworkCommand
+} from "../../src/network/server.ts";
 import {
   makeAddedCommand,
   templateCommands,
@@ -27,7 +32,7 @@ const kHeader = {
 
 function createState(): VoxelWorldCommandTarget {
   const world = new VoxelWorld(16);
-  world.addLayer("Ground");
+  world.restoreLayer({ id: "Ground", name: "Ground" });
 
   return {
     world,
@@ -56,7 +61,7 @@ describe("VoxelCommandArbiter — state checks", () => {
     const arbiter = new VoxelCommandArbiter();
 
     assert.strictEqual(
-      admitted(arbiter, voxelSetCmd({ layerName: "Missing" })),
+      admitted(arbiter, voxelSetCmd({ layerId: "Missing" })),
       null
     );
   });
@@ -66,11 +71,11 @@ describe("VoxelCommandArbiter — state checks", () => {
     const transform: VoxelMapNetworkCommand = {
       ...kHeader,
       action: "layer-transformed",
-      layerName: "Ground",
+      layerId: "Ground",
       metadata: { rotation: 1, flipX: false, flipZ: false, flipY: false }
     };
 
-    assert.strictEqual(admitted(arbiter, { ...transform, layerName: "Missing" }), null);
+    assert.strictEqual(admitted(arbiter, { ...transform, layerId: "Missing" }), null);
     assert.strictEqual(admitted(arbiter, transform), transform);
   });
 
@@ -126,7 +131,7 @@ describe("VoxelCommandArbiter — state checks", () => {
 describe("VoxelCommandArbiter", () => {
   test("keys a voxel command by layer and position", () => {
     assert.strictEqual(
-      VoxelCommandArbiter.key(voxelSetCmd({
+      voxelCommandKey(voxelSetCmd({
         x: 1,
         y: 2,
         z: 3
@@ -135,17 +140,49 @@ describe("VoxelCommandArbiter", () => {
     );
   });
 
-  test("structural commands have no key and are always accepted", () => {
+  test("admits a new layer without a key, and refuses an id the world has", () => {
     const arbiter = new VoxelCommandArbiter();
-    const added: VoxelMapNetworkCommand = {
-      ...makeAddedCommand("Ground"),
+    const header = {
       clientId: "client-A",
       seq: 1,
       timestamp: 1000
     };
+    const added: VoxelMapNetworkCommand = { ...makeAddedCommand("Other"), ...header };
 
-    assert.strictEqual(VoxelCommandArbiter.key(added), null);
+    assert.strictEqual(voxelCommandKey(added), null);
     assert.strictEqual(admitted(arbiter, added), added);
+    assert.strictEqual(admitted(arbiter, { ...makeAddedCommand("Ground"), ...header }), null);
+  });
+
+  test("keys a layer move by layer, and refuses one for a layer the world lacks", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const moved: VoxelMapNetworkCommand = {
+      ...kHeader,
+      action: "layer-moved",
+      layerId: "Ground",
+      metadata: { rank: "k" }
+    };
+
+    assert.strictEqual(voxelCommandKey(moved), "layer-order:Ground");
+    assert.strictEqual(admitted(arbiter, moved), moved);
+    assert.strictEqual(admitted(arbiter, { ...moved, layerId: "Missing" }), null);
+  });
+
+  test("refuses a clone onto an existing id or a merge into itself", () => {
+    const arbiter = new VoxelCommandArbiter();
+
+    assert.strictEqual(admitted(arbiter, {
+      ...kHeader,
+      action: "cloned",
+      layerId: "Ground",
+      metadata: { cloneId: "Ground", rank: "k", options: { name: "Copy" } }
+    }), null);
+    assert.strictEqual(admitted(arbiter, {
+      ...kHeader,
+      action: "merged",
+      layerId: "Ground",
+      metadata: { targetLayerId: "Ground" }
+    }), null);
   });
 
   test("accepts an uncontested command", () => {
@@ -214,7 +251,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   ): VoxelMapNetworkCommand {
     return {
       action: "voxels-set",
-      layerName: "Ground",
+      layerId: "Ground",
       metadata: {
         entries: xs.map((x) => {
           return {
@@ -231,7 +268,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
 
   test("keys a bulk command by every cell it touches", () => {
     assert.deepStrictEqual(
-      VoxelCommandArbiter.keys(voxelsSetCmd([0, 1])),
+      voxelCommandKeys(voxelsSetCmd([0, 1])),
       ["Ground:0,0,0", "Ground:1,0,0"]
     );
   });
@@ -270,7 +307,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
 
     assert.notStrictEqual(narrowed, null);
     assert.deepStrictEqual(
-      VoxelCommandArbiter.keys(narrowed!),
+      voxelCommandKeys(narrowed!),
       ["Ground:0,0,0", "Ground:2,0,0"]
     );
   });
@@ -307,7 +344,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
   ): VoxelMapNetworkCommand {
     return {
       action: "voxels-patched",
-      layerName: "Ground",
+      layerId: "Ground",
       metadata: {
         cells: xs.flatMap((x) => [x, 0, 0, x + 1, 0])
       },
@@ -319,7 +356,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
 
   test("keys a patch by every cell it touches", () => {
     assert.deepStrictEqual(
-      VoxelCommandArbiter.keys(voxelsPatchedCmd([0, 1])),
+      voxelCommandKeys(voxelsPatchedCmd([0, 1])),
       ["Ground:0,0,0", "Ground:1,0,0"]
     );
   });
@@ -384,7 +421,7 @@ describe("VoxelCommandArbiter — object commands", () => {
 
   test("keys every object command by the object id alone", () => {
     assert.strictEqual(
-      VoxelCommandArbiter.key({
+      voxelCommandKey({
         ...header,
         action: "object-added",
         layerName: "Spawns",
@@ -403,7 +440,7 @@ describe("VoxelCommandArbiter — object commands", () => {
     );
 
     assert.strictEqual(
-      VoxelCommandArbiter.key({
+      voxelCommandKey({
         ...header,
         action: "object-removed",
         layerName: "Spawns",
@@ -413,7 +450,7 @@ describe("VoxelCommandArbiter — object commands", () => {
     );
 
     assert.strictEqual(
-      VoxelCommandArbiter.key({
+      voxelCommandKey({
         ...header,
         action: "object-updated",
         layerName: "Spawns",
@@ -423,7 +460,7 @@ describe("VoxelCommandArbiter — object commands", () => {
     );
 
     assert.strictEqual(
-      VoxelCommandArbiter.key({
+      voxelCommandKey({
         ...header,
         action: "object-moved",
         layerName: "Spawns",
@@ -498,7 +535,7 @@ describe("VoxelCommandArbiter — object commands", () => {
 describe("VoxelCommandArbiter — template commands", () => {
   test("keys every template command by its template id", () => {
     assert.deepEqual(
-      templateCommands().map((command) => VoxelCommandArbiter.key({ ...kHeader, ...command })),
+      templateCommands().map((command) => voxelCommandKey({ ...kHeader, ...command })),
       ["template:pair", "template:pair", "template:pair"]
     );
   });
@@ -506,15 +543,41 @@ describe("VoxelCommandArbiter — template commands", () => {
 
 describe("VoxelCommandArbiter — tileset commands", () => {
   test("keys a tileset command by its tileset id", () => {
-    assert.strictEqual(VoxelCommandArbiter.key({
+    assert.strictEqual(voxelCommandKey({
       ...kHeader,
       action: "tileset-added",
       tileset: { id: "stone", src: "asset-stone", tileSize: 16 }
     }), "tileset:stone");
-    assert.strictEqual(VoxelCommandArbiter.key({
+    assert.strictEqual(voxelCommandKey({
       ...kHeader,
       action: "tileset-removed",
       tilesetId: "stone"
     }), "tileset:stone");
+  });
+});
+
+describe("VoxelCommandArbiter.restore", () => {
+  test("records a past write, so an older replay of that cell loses", () => {
+    const arbiter = new VoxelCommandArbiter();
+    arbiter.restore(voxelSetCmd({ clientId: "client-B" }), 6);
+
+    assert.strictEqual(
+      arbiter.admit(createState(), { ...voxelSetCmd({ clientId: "client-A" }), basis: 5 }),
+      null
+    );
+    assert.notStrictEqual(
+      arbiter.admit(createState(), voxelSetCmd({ clientId: "client-A", timestamp: 1 })),
+      null
+    );
+  });
+
+  test("a restored world replacement floors every cell", () => {
+    const arbiter = new VoxelCommandArbiter();
+    arbiter.restore(worldReplaceCmd({ clientId: "client-B" }), 4);
+
+    assert.strictEqual(
+      arbiter.admit(createState(), { ...voxelSetCmd({ clientId: "client-A", x: 3 }), basis: 2 }),
+      null
+    );
   });
 });

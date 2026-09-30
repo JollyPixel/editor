@@ -125,6 +125,7 @@ describe("ChannelTransport + ChannelTransportHost", () => {
     using relay = createRelay();
     const closed: ClientSocketEvent[] = [];
     const client = new Client({
+      reconnect: false,
       socket: () => {
         const socket = relay.transport.connect();
         socket.addEventListener("close", (event) => closed.push(event));
@@ -146,6 +147,7 @@ describe("ChannelTransport + ChannelTransportHost", () => {
   test("the host closes relayed sockets when it closes", async() => {
     using relay = createRelay();
     new Client({
+      reconnect: false,
       socket: () => relay.transport.connect()
     }).room("test-ns").join();
     await waitFor(() => relay.extension.connected.length === 1);

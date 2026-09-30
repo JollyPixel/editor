@@ -45,7 +45,6 @@ describe("VoxelHistory", () => {
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     assert.equal(history.enabled, false);
-    assert.equal(world.recorder, null);
     assert.equal(history.canUndo, false);
     assert.equal(history.undo(), false);
     assert.equal(blockAt(world), 1);
@@ -202,7 +201,7 @@ describe("VoxelHistory", () => {
 
     world.apply({
       action: "voxel-set",
-      layerName: kLayer,
+      layerId: world.getLayer(kLayer)!.id,
       metadata: {
         position: kOrigin,
         blockId: 1,
@@ -281,7 +280,6 @@ describe("VoxelHistory", () => {
     history.dispose();
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
-    assert.equal(world.recorder, null);
     assert.equal(history.canUndo, false);
   });
 });
@@ -291,17 +289,55 @@ describe("VoxelWorld recorder", () => {
     const world = new VoxelWorld(4);
     world.addLayer(kLayer);
     const recorded: VoxelCellChange[][] = [];
-    world.recorder = {
+    world.addRecorder({
       record: (changes) => recorded.push(changes)
-    };
+    });
 
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
     world.removeVoxel(kLayer, { position: kOrigin });
 
     assert.deepEqual(recorded, [
-      [{ layerName: kLayer, position: kOrigin, before: -1, after: 256 }],
-      [{ layerName: kLayer, position: kOrigin, before: 256, after: -1 }]
+      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: -1, after: 256 }],
+      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: 256, after: -1 }]
     ]);
+  });
+  it("hands every change to each added recorder until it is removed", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer(kLayer);
+    const first: number[] = [];
+    const second: number[] = [];
+    const recorder = {
+      record: (changes: VoxelCellChange[]) => void second.push(changes.length)
+    };
+    world.addRecorder({
+      record: (changes) => void first.push(changes.length)
+    });
+    world.addRecorder(recorder);
+
+    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    assert.strictEqual(world.removeRecorder(recorder), true);
+    world.setVoxel(kLayer, { position: kNext, blockId: 1 });
+
+    assert.deepEqual(first, [1, 1]);
+    assert.deepEqual(second, [1]);
+  });
+
+  it("shows an undo to a recorder that includes unrecorded edits", () => {
+    const { world, history } = makeHistory();
+    const recorded: VoxelCellChange[][] = [];
+    world.addRecorder({
+      record: (changes) => recorded.push(changes)
+    }, { includeUnrecorded: true });
+
+    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.transaction(() => history.undo());
+
+    assert.deepEqual(recorded, [
+      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: -1, after: 256 }],
+      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: 256, after: -1 }]
+    ]);
+    assert.strictEqual(history.canUndo, false);
+    assert.strictEqual(history.canRedo, true);
   });
 });
 

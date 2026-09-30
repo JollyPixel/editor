@@ -28,6 +28,7 @@ const kWorkerToMain = new Validator(
 export interface DispatchArgsMap {
   onClientConnect: [clientId: string, peer: RoomPeer];
   onClientDisconnect: [clientId: string];
+  onResync: [clientId: string];
   onMessage: [clientId: string, payload: unknown];
 }
 
@@ -36,6 +37,7 @@ export type DispatchMethod = keyof DispatchArgsMap;
 export const DISPATCH_METHODS: DispatchMethod[] = [
   "onClientConnect",
   "onClientDisconnect",
+  "onResync",
   "onMessage"
 ];
 

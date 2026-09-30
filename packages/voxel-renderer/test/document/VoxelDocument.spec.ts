@@ -154,7 +154,7 @@ describe("VoxelDocument.apply", () => {
 
     document.apply({
       action: "voxel-set",
-      layerName: "Ground",
+      layerId: document.world.getLayer("Ground")!.id,
       metadata: {
         position: { x: 0, y: 0, z: 0 },
         blockId: CUBE_ID,
@@ -229,25 +229,30 @@ describe("VoxelDocument - command origin", () => {
     ]);
   });
 
-  const kRemoteCommands: VoxelCommand[] = [
-    makeAddedCommand("Remote"),
-    {
-      action: "voxels-set",
-      layerName: "Ground",
-      metadata: { entries: [{ position: { x: 5, y: 0, z: 5 }, blockId: 1 }] }
-    },
-    {
-      action: "reordered",
-      layerName: "Ground",
-      metadata: { direction: "up" }
-    },
-    blockDefinedCmd({ id: 4 })
+  const kRemoteCommands: [string, (document: VoxelDocument) => VoxelCommand][] = [
+    ["added", () => makeAddedCommand("Remote")],
+    ["voxels-set", (document) => {
+      return {
+        action: "voxels-set",
+        layerId: document.world.getLayer("Ground")!.id,
+        metadata: { entries: [{ position: { x: 5, y: 0, z: 5 }, blockId: 1 }] }
+      };
+    }],
+    ["layer-moved", (document) => {
+      return {
+        action: "layer-moved",
+        layerId: document.world.getLayer("Ground")!.id,
+        metadata: { rank: "z" }
+      };
+    }],
+    ["block-defined", () => blockDefinedCmd({ id: 4 })]
   ];
 
-  for (const command of kRemoteCommands) {
-    it(`applies a remote '${command.action}' once, tagged remote`, () => {
+  for (const [action, commandOf] of kRemoteCommands) {
+    it(`applies a remote '${action}' once, tagged remote`, () => {
       const document = makeDocument(["Ground", "Top"]);
       const events = trace(document);
+      const command = commandOf(document);
 
       assert.equal(document.apply(command, { origin: "remote" }), true);
 
@@ -261,10 +266,11 @@ describe("VoxelDocument - command origin", () => {
     const document = makeDocument(["Ground", "Top"]);
     const events = trace(document);
 
+    const ground = document.world.getLayer("Ground")!;
     assert.equal(document.apply({
-      action: "reordered",
-      layerName: "Ground",
-      metadata: { direction: "down" }
+      action: "layer-moved",
+      layerId: ground.id,
+      metadata: { rank: ground.rank }
     }, { origin: "remote" }), false);
 
     assert.deepEqual(events, []);

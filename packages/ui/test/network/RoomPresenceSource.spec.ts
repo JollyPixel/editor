@@ -53,6 +53,14 @@ class FakeRoom implements Room {
     this.peers.clear();
   }
 
+  resync(): void {
+    return void 0;
+  }
+
+  resumeWith(): void {
+    return void 0;
+  }
+
   on<K extends keyof RoomEventMap>(
     type: K,
     listener: RoomEventMap[K]

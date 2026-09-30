@@ -298,6 +298,7 @@ export async function createAssetBackend(
       return registerAssetRooms({
         server,
         events: eventStore.writer,
+        reader: eventStore.reader,
         kinds,
         catalog,
         states,

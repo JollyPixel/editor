@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { CommandSync } from "@jolly-pixel/network/client";
+import {
+  CommandSync,
+  type ConflictResolver
+} from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -12,10 +15,12 @@ import type {
   VoxelModelRoom,
   VoxelModelSnapshot
 } from "./types.ts";
+import { ModelReconciler } from "./ModelReconciler.ts";
 
 export interface ModelSyncClientOptions {
   room: VoxelModelRoom;
   document: ModelDocument;
+  resolver?: ConflictResolver<VoxelModelNetworkCommand>;
 }
 
 export class ModelSyncClient extends CommandSync<
@@ -24,20 +29,22 @@ export class ModelSyncClient extends CommandSync<
   AssetRoomNotice
 > {
   #document: ModelDocument;
-
-  #onChange = (
-    change: ModelChange
-  ): void => {
-    if (change.origin === "local") {
-      this.send(change.command);
-    }
-  };
+  #onChange: (change: ModelChange) => void;
 
   constructor(
     options: ModelSyncClientOptions
   ) {
-    super(options.room);
+    const reconciler = new ModelReconciler(options.document);
+    super(options.room, {
+      reconciler,
+      resolver: options.resolver
+    });
     this.#document = options.document;
+    this.#onChange = (change) => {
+      if (change.origin === "local") {
+        reconciler.capture(this.send(change.command), change);
+      }
+    };
 
     this.#document.on("change", this.#onChange);
     this.on("snapshot", (snapshot) => this.#document.load(snapshot));

@@ -64,7 +64,7 @@ describe("VoxelWorld — cloneLayer", () => {
     assert.deepEqual(withoutId(clone), {
       ...withoutId(original),
       name: "A_1",
-      order: original.order + 1,
+      rank: clone.rank,
       visible: false
     });
   });

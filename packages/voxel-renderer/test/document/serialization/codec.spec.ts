@@ -37,7 +37,7 @@ function layerWith(
     id: "l1",
     name: "Ground",
     visible: true,
-    order: 0,
+    rank: "V",
     palette: [{ block: 1, transform: 0 }],
     chunks: [],
     ...fields
@@ -87,7 +87,7 @@ describe("parseVoxelWorld", () => {
         id: "l1",
         name: "Ground",
         visible: true,
-        order: 0,
+        rank: "V",
         palette: [{ block: 1, transform: 0 }],
         chunks: [
           { at: [0, 0, 0], runs: [256, 1, 3840, 0] },
@@ -150,7 +150,7 @@ describe("parseVoxelWorld", () => {
     ["unsupported version 2", {
       ...kEmptyWorld,
       version: 2,
-      layers: [{ id: "l1", name: "Ground", visible: true, order: 0, voxels: {} }]
+      layers: [{ id: "l1", name: "Ground", visible: true, rank: "V", voxels: {} }]
     }],
     ["chunkSize is not a power of two", { ...kEmptyWorld, chunkSize: 0 }],
     ["chunkSize is not a power of two", { ...kEmptyWorld, chunkSize: 1.5 }],

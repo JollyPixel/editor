@@ -8,6 +8,7 @@ import {
   type VoxelModelArbiterState
 } from "#src/network/VoxelModelCommandArbiter.ts";
 import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
+import { voxelModelConflictKeys } from "#src/network/VoxelModelCommandKeys.ts";
 import {
   TRANSFORM,
   UV,
@@ -64,7 +65,7 @@ function moved(
   }, overrides);
 }
 
-describe("VoxelModelCommandArbiter.keys", () => {
+describe("voxelModelConflictKeys", () => {
   const cases: [VoxelModelNetworkCommand, string[]][] = [
     [transformed(), ["transform:node-1"]],
     [
@@ -93,7 +94,7 @@ describe("VoxelModelCommandArbiter.keys", () => {
 
   for (const [command, expected] of cases) {
     it(`keys ${command.action} as [${expected.join(", ")}]`, () => {
-      assert.deepEqual(VoxelModelCommandArbiter.keys(command), expected);
+      assert.deepEqual(voxelModelConflictKeys(command), expected);
     });
   }
 });
@@ -182,5 +183,23 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
     assert.notEqual(admitted(arbiter, removed), null);
     commit(arbiter, removed);
     assert.notEqual(admitted(arbiter, removed), null);
+  });
+});
+
+describe("VoxelModelCommandArbiter.restore", () => {
+  it("records a past rename, so an older replay of it loses", () => {
+    const arbiter = new VoxelModelCommandArbiter();
+    arbiter.restore(
+      networkCommand({ action: "node-renamed", id: "a", name: "B" }, { clientId: "client-B" }),
+      9
+    );
+
+    assert.strictEqual(
+      arbiter.admit(kAcceptAll, networkCommand(
+        { action: "node-renamed", id: "a", name: "C" },
+        { clientId: "client-A", basis: 8 }
+      )),
+      null
+    );
   });
 });

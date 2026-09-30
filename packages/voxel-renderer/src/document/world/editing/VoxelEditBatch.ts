@@ -53,7 +53,11 @@ export interface VoxelEditBatchFlush {
   layer: VoxelLayer;
   cells: VoxelPatchCells;
   changes: VoxelCellChange[];
+  observed: VoxelCellChange[];
 }
+
+export const VOXEL_REACH_RECORDERS = 1;
+export const VOXEL_REACH_OBSERVERS = 2;
 
 interface WorldBox {
   min: Vector3Like;
@@ -66,9 +70,10 @@ export interface VoxelEditWriteOptions {
    */
   track: boolean;
   /**
-   * Hand the cell to the history recorder when the batch flushes.
+   * Recorders the cell reaches when the batch flushes: a mask of
+   * `VOXEL_REACH_RECORDERS` and `VOXEL_REACH_OBSERVERS`.
    */
-  record: boolean;
+  reach: number;
 }
 
 /**
@@ -125,7 +130,7 @@ export class VoxelEditBatch {
       cells.before[index] = chunk === undefined ?
         VOXEL_ABSENT :
         chunk.getPackedAt(lx, ly, lz);
-      cells.recorded[index] = options.record ? 1 : 0;
+      cells.recorded[index] = options.reach;
       cells.order.push(index);
       this.#pendingCells++;
     }
@@ -202,7 +207,8 @@ export class VoxelEditBatch {
       const flush: VoxelEditBatchFlush = {
         layer,
         cells: new Array(pending * VOXEL_PATCH_STRIDE),
-        changes: []
+        changes: [],
+        observed: []
       };
       let written = 0;
       for (const touched of chunks.values()) {
@@ -264,13 +270,20 @@ export class VoxelEditBatch {
       cells[written + 3] = absent ? 0 : voxelBlockId(to);
       cells[written + 4] = absent ? 0 : voxelTransform(to);
       written += VOXEL_PATCH_STRIDE;
-      if (recorded[index] === 1) {
-        flush.changes.push({
-          layerName: flush.layer.name,
+      const reach = recorded[index];
+      if (reach !== 0) {
+        const change: VoxelCellChange = {
+          layerId: flush.layer.id,
           position: { x, y, z },
           before: from,
           after: to
-        });
+        };
+        if ((reach & VOXEL_REACH_RECORDERS) !== 0) {
+          flush.changes.push(change);
+        }
+        if ((reach & VOXEL_REACH_OBSERVERS) !== 0) {
+          flush.observed.push(change);
+        }
       }
     }
     order.length = 0;

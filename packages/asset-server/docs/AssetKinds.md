@@ -239,6 +239,7 @@ interface AssetLiveProtocol<TCommand = unknown> {
     command: TCommand,
     admitted: TCommand | null
   ): TCommand | null;
+  restore?(command: TCommand, version: number): void;
 }
 ```
 
@@ -270,7 +271,7 @@ commands: {
 The room sets `clientId` on the payload to the sender's server-side id,
 validates it against `commands.protocol`, arbitrates it,
 appends `arbitration.command` under `commands.eventType`, then calls
-`arbitration.commit` and broadcasts. `commit` runs only after the append
+`arbitration.commit(eventVersion)` and broadcasts. `commit` runs only after the append
 lands, so a conflict tracker never records a command the store refused. The
 append folds through `commands.apply` before it resolves, so state is current
 by the time peers hear about the change.
@@ -279,12 +280,46 @@ An arbitration that returns `null` or a narrowed command also resyncs the
 author; return the received command itself when it is admitted whole. The
 room first asks `correct` for a command that restores, on the author's side,
 what `command` touched but `admitted` (`null` when nothing was kept) did not.
-It sends that command as `{ type: "correction", data }`. Without `correct`,
-or when it returns `null`, the author gets a snapshot. Build the correction
-from current state and write absolute values: the author replays its later
-commands on top of it. `broadcast` overrides the default `{ type: "command", data: command }`
-envelope. `voxel-map` uses it to answer a `world-replace` with a full
-snapshot.
+It sends that command as `{ type: "correction", data, acks }`. Without
+`correct`, or when it returns `null`, the author gets `{ type: "snapshot",
+data, acks }`. Build the correction from current state and write absolute
+values: the author replays its later commands on top of it. `broadcast`
+overrides the default `{ type: "command", data: command }` envelope.
+`voxel-map` uses it to answer a `world-replace` with a full snapshot.
+
+When the room starts with a reader, it hands every command event since the
+asset's last checkpoint to `restore` with its version, so a conflict tracker
+knows which writes a later undo must not overwrite.
+
+The room keeps the last `seq` it processed per member, admitted or not, and
+sends it as `acks` so the client's [`CommandSync`](../../network/docs/sync/CommandSync.md)
+can drop acknowledged commands from its pending ledger: `{ [author]: seq }`
+on a correction or resync snapshot, every member's entry on a snapshot that
+`broadcast` returns. A `Room.resync()` request gets a snapshot with the
+member's `acks`.
+
+Every command broadcast carries `version`, the `eventVersion` of its event,
+and every snapshot the [room version](../../network/GLOSSARY.md#room-version)
+it reflects. A join whose `resume` names a previous client id and a version
+waits until that client has left the room (at most `departureTimeout`), then
+gets `{ type: "catch-up", data, version, acks }`: the command events after
+that version, read from the event store, and the previous client's last
+processed `seq`. Renames and scheduled snapshots in the range are skipped.
+The room sends a snapshot with the same `acks` instead when the resume has no
+version, the range holds more than `resumeLimit` events or any other event,
+or compaction removed its start.
+
+```ts
+interface AssetRoomExtensionOptions {
+  reader?: EventStore.EventReader; // without it, a resume gets a snapshot
+  resumeLimit?: number; // default 1_000
+  departureTimeout?: number; // default 5_000 ms
+}
+```
+
+`registerAssetRooms` passes the store's reader and the room version the
+state store folded to. At 1,000 events a pixel-art catch-up of 40-pixel
+strokes is about the size of a 256 by 256 snapshot (350 KB uncompressed).
 
 The room derives its `protocols` from both schemas: `commands.protocol` is
 inbound, and outbound is `serverMessageProtocol({ command, snapshot, notices })`

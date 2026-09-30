@@ -18,8 +18,10 @@ export class RecordingExtension extends Extension {
   readonly name: string;
   readonly protocols: MessageProtocols;
   readonly clients: ClientHandle[] = [];
+  readonly peers: RoomPeer[] = [];
   readonly disconnected: string[] = [];
   readonly messages: RecordedMessage[] = [];
+  readonly resynced: string[] = [];
   readonly contexts: RoomContext[] = [];
 
   constructor(
@@ -50,10 +52,11 @@ export class RecordingExtension extends Extension {
 
   override onClientConnect(
     client: ClientHandle,
-    _peer: RoomPeer,
+    peer: RoomPeer,
     context: RoomContext
   ): void {
     this.clients.push(client);
+    this.peers.push(peer);
     this.contexts.push(context);
   }
 
@@ -74,6 +77,14 @@ export class RecordingExtension extends Extension {
       clientId,
       payload
     });
+    this.contexts.push(context);
+  }
+
+  override onResync(
+    clientId: string,
+    context: RoomContext
+  ): void {
+    this.resynced.push(clientId);
     this.contexts.push(context);
   }
 }

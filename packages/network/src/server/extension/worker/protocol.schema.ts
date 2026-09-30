@@ -20,7 +20,8 @@ const kRoomPeer = {
     clientId: kIdentifier,
     identity: kIdentity,
     profile: peerMetadataSchema,
-    presence: peerMetadataSchema
+    presence: peerMetadataSchema,
+    resume: {}
   },
   required: [
     "clientId",
@@ -97,6 +98,27 @@ export const mainToWorkerSchema = defineSchema({
         type: { const: "dispatch" },
         id: kIdentifier,
         identity: kIdentity,
+        method: { const: "onResync" },
+        args: {
+          type: "array",
+          prefixItems: [kIdentifier],
+          minItems: 1
+        }
+      },
+      required: [
+        "type",
+        "id",
+        "method",
+        "args",
+        "identity"
+      ]
+    },
+    {
+      type: "object",
+      properties: {
+        type: { const: "dispatch" },
+        id: kIdentifier,
+        identity: kIdentity,
         method: { const: "onMessage" },
         args: {
           type: "array",
@@ -127,6 +149,7 @@ export const workerToMainSchema = defineSchema({
             enum: [
               "onClientConnect",
               "onClientDisconnect",
+              "onResync",
               "onMessage"
             ]
           }

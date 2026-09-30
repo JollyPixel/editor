@@ -2,22 +2,23 @@
 import * as network from "@jolly-pixel/network";
 import {
   DEFAULT_UV_SLOTS,
+  Fill,
   isUVGeometry,
   isUVRegionData,
-  uvTargetKey,
-  type PixelBuffer,
-  type UVRegionData,
-  type Vec2
+  type PixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { PixelWireCommand } from "./types.ts";
 import {
-  packColors,
-  packPositions,
-  selectEditPixels,
-  strokePositions
-} from "./PixelWireCodec.ts";
+  narrowPixelCommand,
+  paintedPositions,
+  pixelKey,
+  uvRegionKeys,
+  uvWriteKeys,
+  type PixelUvRegionCommand
+} from "./PixelCommandKeys.ts";
+import { selectEditPixels } from "./PixelWireCodec.ts";
 
 export type PixelStrokeCommand = Extract<
   PixelWireCommand,
@@ -31,64 +32,18 @@ export type PixelReplacementCommand = Extract<
   PixelWireCommand,
   { action: "resized" | "texture-replaced"; }
 >;
-export type PixelUvRegionCommand = Extract<
-  PixelWireCommand,
-  {
-    action:
-      | "uv-region-moved"
-      | "uv-region-deleted"
-      | "uv-region-state-changed"
-      | "uv-region-rotated";
-  }
->;
-
-function regionConflictKeys(
-  region: UVRegionData
-): string[] {
-  const faces = region.faces ?
-    Object.keys(region.faces) :
-    DEFAULT_UV_SLOTS;
-
-  return [
-    uvTargetKey({ regionId: region.id, slot: null }),
-    ...faces.map((face) => uvTargetKey({
-      regionId: region.id,
-      slot: face
-    }))
-  ];
-}
 
 function uvConflictKeys(
   command: PixelUvRegionCommand,
   buffer: PixelBuffer
 ): string[] {
-  switch (command.action) {
-    case "uv-region-moved":
-      return [
-        uvTargetKey({
-          regionId: command.metadata.id,
-          slot: command.metadata.face
-        })
-      ];
-    case "uv-region-rotated": {
-      const rotation = command.metadata;
-
-      return rotation.face === null ?
-        regionConflictKeys(rotation.region) :
-        [uvTargetKey({ regionId: rotation.id, slot: rotation.face })];
-    }
-    case "uv-region-deleted": {
-      const { id } = command.metadata;
-      const slots = buffer.uvRegions.get(id)?.slots ?? DEFAULT_UV_SLOTS;
-
-      return [
-        uvTargetKey({ regionId: id, slot: null }),
-        ...slots.map((slot) => uvTargetKey({ regionId: id, slot }))
-      ];
-    }
-    default:
-      return regionConflictKeys(command.metadata.region);
+  if (command.action !== "uv-region-deleted") {
+    return uvWriteKeys(command);
   }
+
+  const { id } = command.metadata;
+
+  return uvRegionKeys(id, buffer.uvRegions.get(id)?.slots ?? DEFAULT_UV_SLOTS);
 }
 
 export interface PixelCommandArbiterOptions {
@@ -114,9 +69,14 @@ export class PixelCommandArbiter {
   ): network.Admission<PixelWireCommand> | null {
     switch (command.action) {
       case "stroke":
-        return this.#admitStroke(command);
-      case "select-edit":
-        return this.#admitSelectEdit(command);
+        return this.#admitPixels(command);
+      case "select-edit": {
+        const { positions, colors } = selectEditPixels(command.metadata);
+
+        return positions.length === colors.length ?
+          this.#admitPixels(command) :
+          null;
+      }
       case "uv-region-created":
         return isUVRegionData(command.metadata.region) ?
           this.#regionTracker.admit(command, []) :
@@ -138,22 +98,56 @@ export class PixelCommandArbiter {
           this.#admitReplacement(command) :
           null;
       case "global-fill":
-        return this.#regionTracker.admit(command, []);
+        return this.#pixelTracker.admit(
+          command,
+          Fill.matchAll(buffer, command.metadata.fromColor).map(pixelKey)
+        );
     }
   }
 
-  #admitStroke(
-    command: PixelStrokeCommand
+  restore(
+    command: PixelWireCommand,
+    version: number
+  ): void {
+    switch (command.action) {
+      case "stroke":
+      case "select-edit":
+        this.#pixelTracker.record(
+          command,
+          paintedPositions(command)!.map(pixelKey),
+          version
+        );
+        break;
+      case "resized":
+      case "texture-replaced":
+        this.#pixelTracker.reset(command, version);
+        break;
+      case "uv-region-moved":
+      case "uv-region-rotated":
+      case "uv-region-state-changed":
+        this.#regionTracker.record(command, uvWriteKeys(command), version);
+        break;
+      case "uv-region-deleted":
+        this.#regionTracker.record(
+          command,
+          uvRegionKeys(command.metadata.id),
+          version
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
+  #admitPixels(
+    command: PixelStrokeCommand | PixelSelectEditCommand
   ): network.Admission<PixelWireCommand> | null {
-    const positions = strokePositions(command.metadata);
-    const { indices, commit } = this.#admitPositions(
-      command,
-      positions
-    );
+    const keys = paintedPositions(command)!.map(pixelKey);
+    const { indices, commit } = this.#pixelTracker.admitEach(command, keys);
     if (indices.length === 0) {
       return null;
     }
-    if (indices.length === positions.length) {
+    if (indices.length === keys.length) {
       return {
         command,
         commit
@@ -161,47 +155,7 @@ export class PixelCommandArbiter {
     }
 
     return {
-      command: {
-        ...command,
-        metadata: {
-          color: command.metadata.color,
-          xy: packPositions(indices.map((index) => positions[index]))
-        }
-      },
-      commit
-    };
-  }
-
-  #admitSelectEdit(
-    command: PixelSelectEditCommand
-  ): network.Admission<PixelWireCommand> | null {
-    const { positions, colors } = selectEditPixels(command.metadata);
-    if (positions.length !== colors.length) {
-      return null;
-    }
-
-    const { indices, commit } = this.#admitPositions(
-      command,
-      positions
-    );
-    if (indices.length === 0) {
-      return null;
-    }
-    if (indices.length === positions.length) {
-      return {
-        command,
-        commit
-      };
-    }
-
-    return {
-      command: {
-        ...command,
-        metadata: {
-          xy: packPositions(indices.map((index) => positions[index])),
-          rgba: packColors(indices.map((index) => colors[index]))
-        }
-      },
+      command: narrowPixelCommand(command, indices)!,
       commit
     };
   }
@@ -211,18 +165,8 @@ export class PixelCommandArbiter {
   ): network.Admission<PixelWireCommand> {
     return {
       command,
-      commit: () => this.#pixelTracker.reset(command)
+      commit: (version) => this.#pixelTracker.reset(command, version)
     };
-  }
-
-  #admitPositions(
-    command: PixelWireCommand,
-    positions: readonly Vec2[]
-  ): network.PartialAdmission {
-    return this.#pixelTracker.admitEach(
-      command,
-      positions.map(pixelKey)
-    );
   }
 
   #admitUvRegion(
@@ -244,10 +188,4 @@ function isValidRotation(
   return rotation.face === null ?
     isUVRegionData(rotation.region) && rotation.region.id === rotation.id :
     isUVGeometry(rotation.geometry);
-}
-
-function pixelKey(
-  position: Vec2
-): string {
-  return `${position.x},${position.y}`;
 }

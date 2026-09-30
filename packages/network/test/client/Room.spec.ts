@@ -257,6 +257,25 @@ describe("Room — leave", () => {
   });
 });
 
+describe("Room — resync", () => {
+  test("sends a resync envelope once joined and nothing before", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+
+    room.resync();
+    room.join();
+    room.resync();
+
+    assert.deepEqual(
+      socket.sent.map((raw) => JSON.parse(raw)),
+      [
+        { room: "pixel-draw", kind: "join", profile: {}, presence: {} },
+        { room: "pixel-draw", kind: "resync" }
+      ]
+    );
+  });
+});
+
 describe("Room — denied", () => {
   test("fires \"denied\" with the event name and reason", () => {
     const { client, socket } = createOpenClient();

@@ -16,7 +16,7 @@ const kOrigin = { x: 0, y: 0, z: 0 };
 const kVoxelCommands: VoxelLayerCommand[] = [
   {
     action: "voxel-set",
-    layerName: "Gone",
+    layerId: "Gone",
     metadata: {
       position: kOrigin,
       blockId: 1,
@@ -28,22 +28,22 @@ const kVoxelCommands: VoxelLayerCommand[] = [
   },
   {
     action: "voxels-set",
-    layerName: "Gone",
+    layerId: "Gone",
     metadata: { entries: [{ position: kOrigin, blockId: 1 }] }
   },
   {
     action: "voxel-removed",
-    layerName: "Gone",
+    layerId: "Gone",
     metadata: { position: kOrigin }
   },
   {
     action: "voxels-removed",
-    layerName: "Gone",
+    layerId: "Gone",
     metadata: { entries: [{ position: kOrigin }] }
   },
   {
     action: "layer-transformed",
-    layerName: "Gone",
+    layerId: "Gone",
     metadata: {
       rotation: 1,
       flipX: false,
@@ -69,7 +69,7 @@ describe("VoxelWorld.apply - unknown layer", () => {
 
   it("stays quiet when the layer is known", () => {
     const world = new VoxelWorld(4);
-    world.addLayer("Gone");
+    world.restoreLayer({ id: "Gone", name: "Gone" });
     const warnings: string[] = [];
 
     world.apply(kVoxelCommands[0], makeLogger(warnings));
@@ -84,12 +84,12 @@ describe("VoxelWorld.apply - unknown layer", () => {
 
     assert.equal(world.apply({
       action: "merged",
-      layerName: "Gone",
-      metadata: { targetLayerName: "AlsoGone" }
+      layerId: "Gone",
+      metadata: { targetLayerId: "AlsoGone" }
     }, makeLogger(warnings)), null);
     assert.equal(world.apply({
       action: "removed",
-      layerName: "Gone",
+      layerId: "Gone",
       metadata: {}
     }, makeLogger(warnings)), null);
 
@@ -119,26 +119,63 @@ describe("VoxelWorld.apply - applied command", () => {
 
     const applied = world.apply({
       action: "added",
-      layerName: "Ground",
-      metadata: { options: {} }
+      layerId: "ground",
+      metadata: { name: "Ground", rank: "V", options: {} }
     });
 
     assert.equal(applied?.action, "added");
-    assert.ok(world.getLayer("Ground"));
+    assert.equal(world.getLayer("Ground")?.id, "ground");
     assert.deepEqual(emitted, []);
+  });
+
+  it("refuses a layer whose id already exists, and renames a clashing name", () => {
+    const { world } = makeWorld("Ground");
+
+    assert.equal(world.apply({
+      action: "added",
+      layerId: world.getLayer("Ground")!.id,
+      metadata: { name: "Other", rank: "a", options: {} }
+    }), null);
+    assert.deepEqual(world.apply({
+      action: "added",
+      layerId: "second",
+      metadata: { name: "Ground", rank: "a", options: {} }
+    }), {
+      action: "added",
+      layerId: "second",
+      metadata: { name: "Ground (1)", rank: "a", options: {} }
+    });
+  });
+
+  it("renames a layer, keeping names unique", () => {
+    const { world } = makeWorld("Bottom", "Top");
+    const top = world.getLayer("Top")!;
+
+    const applied = world.apply({
+      action: "updated",
+      layerId: top.id,
+      metadata: { options: { name: "Bottom" } }
+    });
+
+    assert.deepEqual(
+      applied?.action === "updated" && applied.metadata,
+      { options: { name: "Bottom (1)" } }
+    );
+    assert.equal(top.name, "Bottom (1)");
   });
 
   it("returns null for a layer command that changes nothing", () => {
     const { world } = makeWorld("Bottom", "Top");
 
+    const bottom = world.getLayer("Bottom")!;
     assert.equal(world.apply({
-      action: "reordered",
-      layerName: "Bottom",
-      metadata: { direction: "down" }
+      action: "layer-moved",
+      layerId: bottom.id,
+      metadata: { rank: bottom.rank }
     }), null);
     assert.equal(world.apply({
       action: "position-updated",
-      layerName: "Gone",
+      layerId: "Gone",
       metadata: { position: kOrigin }
     }), null);
     assert.equal(world.apply({
@@ -148,32 +185,33 @@ describe("VoxelWorld.apply - applied command", () => {
     }), null);
   });
 
-  it("returns the clamped index of a layer move", () => {
+  it("moves a layer to its rank", () => {
     const { world } = makeWorld("Bottom", "Top");
+    const top = world.getLayer("Top")!;
 
-    assert.deepEqual(world.apply({
+    world.apply({
       action: "layer-moved",
-      layerName: "Top",
-      metadata: { toIndex: 99 }
-    }), {
-      action: "layer-moved",
-      layerName: "Top",
-      metadata: { toIndex: 1 }
+      layerId: top.id,
+      metadata: { rank: "0V" }
     });
+
+    assert.deepEqual(world.getLayers().map((layer) => layer.name), ["Bottom", "Top"]);
   });
 
   it("returns the clone name the world resolved", () => {
     const { world } = makeWorld("Ground");
+    const ground = world.getLayer("Ground")!;
 
     assert.deepEqual(world.apply({
       action: "cloned",
-      layerName: "Ground",
-      metadata: { options: { name: "Ground" } }
+      layerId: ground.id,
+      metadata: { cloneId: "copy", rank: "z", options: { name: "Ground" } }
     }), {
       action: "cloned",
-      layerName: "Ground",
-      metadata: { options: { name: "Ground (1)" } }
+      layerId: ground.id,
+      metadata: { cloneId: "copy", rank: "z", options: { name: "Ground (1)" } }
     });
+    assert.equal(world.getLayerById("copy")?.name, "Ground (1)");
   });
 
   it("returns only the patched cells that changed", () => {
@@ -181,20 +219,21 @@ describe("VoxelWorld.apply - applied command", () => {
     world.setVoxel("Ground", { position: kOrigin, blockId: 2 });
     emitted.length = 0;
 
+    const layerId = world.getLayer("Ground")!.id;
     const applied = world.apply({
       action: "voxels-patched",
-      layerName: "Ground",
+      layerId,
       metadata: { cells: [0, 0, 0, 2, 0, 1, 0, 0, 3, 0] }
     });
 
     assert.deepEqual(applied, {
       action: "voxels-patched",
-      layerName: "Ground",
+      layerId,
       metadata: { cells: [1, 0, 0, 3, 0] }
     });
     assert.equal(world.apply({
       action: "voxels-patched",
-      layerName: "Ground",
+      layerId,
       metadata: { cells: [0, 0, 0, 2, 0] }
     }), null);
     assert.deepEqual(emitted, []);
@@ -207,7 +246,7 @@ describe("VoxelWorld.apply - applied command", () => {
       world.setVoxel("Ground", { position: kOrigin, blockId: 2 });
       world.apply({
         action: "voxels-patched",
-        layerName: "Ground",
+        layerId: world.getLayer("Ground")!.id,
         metadata: { cells: [0, 0, 0, 3, 0] }
       });
       world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 4 });

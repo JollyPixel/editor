@@ -1,16 +1,15 @@
 // Import Third-party Dependencies
-import type {
-  PixelBuffer,
-  Vec2
-} from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { PixelWireCommand } from "./types.ts";
 import {
+  paintedPositions,
+  pixelKey
+} from "./PixelCommandKeys.ts";
+import {
   packColors,
-  packPositions,
-  selectEditPixels,
-  strokePositions
+  packPositions
 } from "./PixelWireCodec.ts";
 
 export function correctPixelCommand(
@@ -40,23 +39,4 @@ export function correctPixelCommand(
       rgba: packColors(buffer.samplePixels(rejected))
     }
   };
-}
-
-function paintedPositions(
-  command: PixelWireCommand
-): Vec2[] | null {
-  switch (command.action) {
-    case "stroke":
-      return strokePositions(command.metadata);
-    case "select-edit":
-      return selectEditPixels(command.metadata).positions;
-    default:
-      return null;
-  }
-}
-
-function pixelKey(
-  position: Vec2
-): string {
-  return `${position.x},${position.y}`;
 }

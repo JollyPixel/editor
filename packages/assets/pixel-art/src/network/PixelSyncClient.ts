@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { CommandSync } from "@jolly-pixel/network/client";
+import {
+  CommandSync,
+  type ConflictResolver
+} from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   decodePixelBytes,
@@ -18,6 +21,8 @@ import {
   packPixelEvent,
   unpackPixelCommand
 } from "./PixelWireCodec.ts";
+import { createPixelReconciler } from "./PixelReconciler.ts";
+import { ReplayBasis } from "./ReplayBasis.ts";
 
 export interface PixelSyncTarget extends Pick<
   PixelDocument,
@@ -30,6 +35,7 @@ export interface PixelSyncTarget extends Pick<
 export interface PixelSyncClientOptions {
   room: PixelArtRoom;
   document: PixelSyncTarget;
+  resolver?: ConflictResolver;
 }
 
 export function loadPixelSnapshot(
@@ -49,22 +55,30 @@ export class PixelSyncClient extends CommandSync<
   AssetRoomNotice
 > {
   #document: PixelSyncTarget;
+  #basis = new ReplayBasis();
 
   #sendLocalCommand = (
     event: PixelBufferHookEvent
   ): void => {
     const { originTimestamp, ...body } = packPixelEvent(event);
-    this.send(body, originTimestamp);
+    this.send(body, originTimestamp, this.#basis.of(originTimestamp));
   };
 
   constructor(
     options: PixelSyncClientOptions
   ) {
-    super(options.room);
+    super(options.room, {
+      reconciler: createPixelReconciler(options.document),
+      resolver: options.resolver
+    });
     const { document } = options;
 
     this.#document = document;
     document.on("buffer-updated", this.#sendLocalCommand);
+    this.on(
+      "acknowledged",
+      (command, version) => this.#basis.learn(command.timestamp, version)
+    );
     this.on("snapshot", (snapshot) => loadPixelSnapshot(document, snapshot));
     this.on(
       "command",

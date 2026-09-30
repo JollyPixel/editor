@@ -118,6 +118,18 @@ describe("ModelDocument", () => {
     assert.equal(document.tree.size, 0);
   });
 
+  test("reports the nodes a change replaced, as they were before it", () => {
+    const document = new ModelDocument();
+    const blockId = document.addBlock({ name: "Arm" });
+    const before = document.tree.get(blockId!);
+    const changes = recordChanges(document);
+
+    document.rename(blockId!, "Leg");
+
+    assert.deepEqual(changes[0].previous, [before]);
+    assert.deepEqual(changes[0].removed, []);
+  });
+
   test("loads a snapshot as one reset, with no change events", () => {
     const document = new ModelDocument();
     document.addBlock({ name: "Stale" });

@@ -49,7 +49,7 @@ function readVoxelLayer(
     name: layer.name,
     visible: layer.visible,
     compositing: layer.compositing,
-    order: layer.order,
+    rank: layer.rank,
     position: layer.position,
     properties: layer.properties,
     chunks: readVoxelChunks(layer.palette, layer.chunks)

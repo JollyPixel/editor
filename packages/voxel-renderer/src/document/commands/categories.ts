@@ -38,7 +38,6 @@ const kActionCategories: {
   "voxels-removed": "layer",
   "voxels-patched": "layer",
   "layer-transformed": "layer",
-  reordered: "layer",
   "layer-moved": "layer",
   "object-layer-added": "layer",
   "object-layer-removed": "layer",

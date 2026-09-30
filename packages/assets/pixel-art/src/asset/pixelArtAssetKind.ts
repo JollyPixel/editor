@@ -162,7 +162,8 @@ export function pixelArtAssetKind(
             state.buffer,
             command,
             admitted
-          )
+          ),
+          restore: (command, version) => arbiter.restore(command, version)
         };
       }
     }

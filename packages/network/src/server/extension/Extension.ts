@@ -9,6 +9,7 @@ export interface RoomPeer {
   readonly identity: PeerIdentity;
   readonly profile: PeerMetadata;
   readonly presence: PeerMetadata;
+  readonly resume?: unknown;
 }
 
 export interface RoomBroadcast {
@@ -47,6 +48,11 @@ export abstract class Extension<
   onMessage?(
     clientId: string,
     message: TMessage,
+    context: RoomContext
+  ): void | Promise<void>;
+
+  onResync?(
+    clientId: string,
     context: RoomContext
   ): void | Promise<void>;
 

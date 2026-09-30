@@ -202,6 +202,30 @@ describe("ServerRoom", () => {
     assert.deepEqual(a.sent, [{ room: "pixel-draw", kind: "message", payload }]);
   });
 
+  test("join hands the resume payload to onClientConnect", async() => {
+    const extension = createExtension();
+    const room = createRoom(extension);
+
+    await room.join("A", createClient("A").client, identityOf("A"), {}, { resume: { version: 2 } });
+    await room.join("B", createClient("B").client, identityOf("B"), {});
+
+    assert.deepEqual(extension.peers.map((peer) => peer.resume), [{ version: 2 }, undefined]);
+    assert.strictEqual("resume" in extension.peers[1], false);
+  });
+
+  test("resync forwards the member to the extension", async() => {
+    const extension = createExtension();
+    const a = createClient("A");
+    const room = createRoom(extension);
+    await room.join("A", a.client, identityOf("A"), {});
+
+    await room.resync("A");
+    await room.resync("nobody");
+
+    assert.deepEqual(extension.resynced, ["A"]);
+    assert.strictEqual(extension.lastContext.identity.subject, identityOf("A").subject);
+  });
+
   test("a message from a non-member never reaches the extension", async() => {
     const extension = createExtension();
     const room = createRoom(extension);
@@ -223,7 +247,7 @@ describe("ServerRoom", () => {
       b.client,
       identityOf("B"),
       {},
-      { cursor: { x: 2, y: 3 } }
+      { presence: { cursor: { x: 2, y: 3 } } }
     );
     await room.join("C", c.client, identityOf("C"), {});
 

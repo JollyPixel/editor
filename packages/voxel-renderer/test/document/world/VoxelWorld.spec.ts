@@ -3,7 +3,15 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelWorld } from "../../../src/document/world/index.ts";
+import {
+  rankBetween,
+  VoxelWorld
+} from "../../../src/document/world/index.ts";
+import {
+  deserializeVoxelWorld,
+  serializeVoxelWorld
+} from "../../../src/document/serialization/index.ts";
+import { recordCommands } from "../../helpers/fakes.ts";
 import { FACE } from "../../../src/document/geometry/faceDirection.ts";
 import type { VoxelWorldContentCommand } from "../../../src/document/commands/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
@@ -154,10 +162,10 @@ describe("VoxelWorld — layer ordering", () => {
     assert.deepEqual(actions, []);
   });
 
-  it("emits the clamped index it actually applied", () => {
+  it("emits the rank that places the layer at the clamped index", () => {
     const world = new VoxelWorld(4);
-    world.addLayer("A");
-    world.addLayer("B");
+    const a = world.addLayer("A");
+    const b = world.addLayer("B");
 
     const events: VoxelWorldContentCommand[] = [];
     world.on("command", (event) => events.push(event));
@@ -167,10 +175,12 @@ describe("VoxelWorld — layer ordering", () => {
     assert.deepEqual(events, [
       {
         action: "layer-moved",
-        layerName: "B",
-        metadata: { toIndex: 1 }
+        layerId: b.id,
+        metadata: { rank: b.rank }
       }
     ]);
+    assert.ok(b.rank < a.rank);
+    assert.deepEqual(layerNames(world), ["A", "B"]);
   });
 });
 
@@ -273,14 +283,14 @@ describe("VoxelWorld — restore and recording", () => {
     const recorder = {
       record: (changes: unknown[]) => void recorded.push(changes.length)
     };
-    world.recorder = recorder;
+    world.addRecorder(recorder);
 
     world.unrecorded(
       () => world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 })
     );
     world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 1 });
 
-    assert.equal(world.recorder, recorder);
+    assert.strictEqual(world.removeRecorder(recorder), true);
     assert.deepEqual(recorded, [1]);
   });
 });
@@ -344,5 +354,74 @@ describe("VoxelWorld — chunk size", () => {
       () => new VoxelWorld(10),
       /chunkSize must be a power of two, received 10/
     );
+  });
+});
+
+describe("VoxelWorld — layer identity", () => {
+  it("gives new layers distinct ids and stacks them on top", () => {
+    const world = new VoxelWorld(4);
+    const a = world.addLayer("A");
+    const b = world.addLayer("B");
+
+    assert.notStrictEqual(a.id, b.id);
+    assert.ok(b.rank > a.rank);
+    assert.deepEqual(layerNames(world), ["B", "A"]);
+  });
+
+  it("applies concurrent moves of different layers in either order to the same stack", () => {
+    const seed = new VoxelWorld(4);
+    ["A", "B", "C"].forEach((name) => seed.addLayer(name));
+    const moves = [
+      {
+        action: "layer-moved",
+        layerId: seed.getLayer("A")!.id,
+        metadata: { rank: rankBetween(seed.getLayer("C")!.rank, null) }
+      },
+      {
+        action: "layer-moved",
+        layerId: seed.getLayer("C")!.id,
+        metadata: { rank: rankBetween(null, seed.getLayer("A")!.rank) }
+      }
+    ] as const;
+    const first = new VoxelWorld(4);
+    const second = new VoxelWorld(4);
+    deserializeVoxelWorld(serializeVoxelWorld(seed), first);
+    deserializeVoxelWorld(serializeVoxelWorld(seed), second);
+
+    moves.forEach((move) => first.apply(move));
+    [...moves].reverse().forEach((move) => second.apply(move));
+
+    assert.deepEqual(layerNames(first), ["A", "B", "C"]);
+    assert.deepEqual(layerNames(second), layerNames(first));
+  });
+
+  it("renames a layer while commands keep addressing it by id", () => {
+    const world = new VoxelWorld(4);
+    const layer = world.addLayer("Ground");
+    const commands = recordCommands(world);
+
+    assert.strictEqual(world.updateLayer("Ground", { name: "Floor" }), true);
+    world.apply({
+      action: "voxels-set",
+      layerId: layer.id,
+      metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 2 }] }
+    });
+
+    assert.strictEqual(world.getLayer("Floor"), layer);
+    assert.strictEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
+    assert.deepEqual(commands, [
+      { action: "updated", layerId: layer.id, metadata: { options: { name: "Floor" } } }
+    ]);
+  });
+
+  it("places a clone directly above its source", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("A");
+    world.addLayer("B");
+
+    const clone = world.cloneLayer("A");
+
+    assert.strictEqual(clone?.name, "A (1)");
+    assert.deepEqual(layerNames(world), ["B", "A (1)", "A"]);
   });
 });

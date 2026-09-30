@@ -243,11 +243,14 @@ describe("pixel-art asset kind over a real back-end", () => {
       });
       const afterFirst = commandCount(eventStore, record.id);
 
-      // The older write loses.
+      // A replay of an edit older than A's write loses.
       await server.handleMessage("B", {
         room,
         kind: "message",
-        payload: strokeCommand([{ x: 0, y: 0 }], 1_000)
+        payload: {
+          ...strokeCommand([{ x: 0, y: 0 }], 1_000),
+          basis: 0
+        }
       });
 
       assert.strictEqual(commandCount(eventStore, record.id), afterFirst);

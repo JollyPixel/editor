@@ -51,6 +51,13 @@ layer changes, and edits along a chunk boundary can mark chunks dirty.
 A named, ordered collection of voxels. A voxel layer has its own visibility
 and world-space offset, and divides its voxel data into chunks.
 
+### Layer Rank
+
+A fractional-index string that places a voxel layer in the stack; a higher
+rank sits above a lower one, and ties sort by layer id. A move writes only
+the moved layer's rank, so moves of different layers commute. Voxel layer
+commands name their layer by id, never by name or index.
+
 ### Object Layer
 
 A named, ordered collection of placed objects such as spawn points and trigger

@@ -36,7 +36,7 @@ function layerCommand(
   return {
     ...kHeader,
     action,
-    layerName: "Ground",
+    ...(action.startsWith("object-") ? { layerName: "Spawns" } : { layerId: "Ground" }),
     metadata
   };
 }
@@ -226,8 +226,26 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts({ ...kHeader, ...defined, template }), false);
   });
 
-  test("rejects an unknown reorder direction", () => {
-    assert.strictEqual(accepts(layerCommand("reordered", { direction: "left" })), false);
+  test("accepts a layer move to a rank and rejects anything else", () => {
+    assert.strictEqual(accepts(layerCommand("layer-moved", { rank: "0V" })), true);
+    assert.strictEqual(accepts(layerCommand("layer-moved", { rank: "V0" })), false);
+    assert.strictEqual(accepts(layerCommand("layer-moved", { toIndex: 0 })), false);
+    assert.strictEqual(accepts(layerCommand("reordered", { direction: "up" })), false);
+  });
+
+  test("requires the new layer's id, name and rank on added and cloned", () => {
+    assert.strictEqual(accepts(layerCommand("added", {
+      name: "Ground",
+      rank: "V",
+      options: {}
+    })), true);
+    assert.strictEqual(accepts(layerCommand("added", { options: {} })), false);
+    assert.strictEqual(accepts(layerCommand("cloned", {
+      cloneId: "copy",
+      rank: "k",
+      options: { name: "Copy" }
+    })), true);
+    assert.strictEqual(accepts(layerCommand("cloned", { options: { name: "Copy" } })), false);
   });
 
   test("rejects a world-replace with the wrong version", () => {

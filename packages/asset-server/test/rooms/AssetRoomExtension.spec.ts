@@ -255,10 +255,30 @@ describe("AssetRoomExtension", () => {
         data: {
           action: "increment",
           clientId: "alice"
-        }
+        },
+        version: 1
       }
     ]);
     assert.strictEqual(committed.length, 1);
+  });
+
+  test("commits the admission with the version of its event", async() => {
+    const versions: (number | undefined)[] = [];
+    const { extension, context } = harness({
+      protocol: {
+        arbitrate: (command) => {
+          return {
+            command,
+            commit: (version) => versions.push(version)
+          };
+        }
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(versions, [1, 2]);
   });
 
   test("a rejected append neither commits nor broadcasts", async() => {
@@ -464,7 +484,8 @@ describe("AssetRoomExtension", () => {
     assert.deepEqual(broadcast, [
       {
         type: "snapshot",
-        data: { value: 8 }
+        data: { value: 8 },
+        version: 1
       }
     ]);
   });
@@ -486,7 +507,8 @@ describe("AssetRoomExtension", () => {
         data: {
           action: "increment",
           clientId: "alice"
-        }
+        },
+        version: 1
       }
     ]);
   });
@@ -503,6 +525,124 @@ describe("AssetRoomExtension", () => {
       action: "increment",
       clientId: "alice"
     });
+  });
+});
+
+describe("AssetRoomExtension — acks", () => {
+  test("a correction acknowledges the author's last processed seq", async() => {
+    const { extension, context, direct } = harness({
+      accepts: false,
+      protocol: {
+        correct: (command) => command
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment", seq: 4 }, context);
+
+    assert.deepEqual(direct[0].payload, {
+      type: "correction",
+      data: {
+        action: "increment",
+        seq: 4,
+        clientId: "alice"
+      },
+      acks: { alice: 4 }
+    });
+  });
+
+  test("a resync snapshot acknowledges the author only", async() => {
+    const { extension, context, direct } = harness({ accepts: false });
+
+    await extension.onMessage("bob", { action: "increment", seq: 9 }, context);
+    await extension.onMessage("alice", { action: "increment", seq: 2 }, context);
+
+    assert.deepEqual(direct.at(-1), {
+      clientId: "alice",
+      payload: {
+        type: "snapshot",
+        data: { value: 7 },
+        acks: { alice: 2 }
+      }
+    });
+  });
+
+  test("a broadcast snapshot acknowledges every member", async() => {
+    const { extension, context, broadcast } = harness({
+      protocol: {
+        broadcast: () => {
+          return {
+            type: "snapshot",
+            data: { value: 8 }
+          };
+        }
+      }
+    });
+
+    await extension.onMessage("bob", { action: "increment", seq: 3 }, context);
+    await extension.onMessage("alice", { action: "increment", seq: 5 }, context);
+
+    assert.deepEqual(broadcast.at(-1), {
+      type: "snapshot",
+      data: { value: 8 },
+      version: 2,
+      acks: { bob: 3, alice: 5 }
+    });
+  });
+
+  test("forgets a client's processed seq when it disconnects", async() => {
+    const { extension, context, broadcast } = harness({
+      protocol: {
+        broadcast: () => {
+          return {
+            type: "snapshot",
+            data: { value: 8 }
+          };
+        }
+      }
+    });
+
+    await extension.onMessage("bob", { action: "increment", seq: 3 }, context);
+    extension.onClientDisconnect("bob");
+    await extension.onMessage("alice", { action: "increment", seq: 5 }, context);
+
+    assert.deepEqual(broadcast.at(-1), {
+      type: "snapshot",
+      data: { value: 8 },
+      version: 2,
+      acks: { alice: 5 }
+    });
+  });
+
+  test("answers a resync with a snapshot acknowledging the client", async() => {
+    const { extension, context, direct } = harness();
+
+    await extension.onMessage("alice", { action: "increment", seq: 6 }, context);
+    extension.onResync("alice", context);
+
+    assert.deepEqual(direct, [
+      {
+        clientId: "alice",
+        payload: {
+          type: "snapshot",
+          data: { value: 7 },
+          acks: { alice: 6 }
+        }
+      }
+    ]);
+  });
+
+  test("declares acks on outbound snapshots", () => {
+    const { extension } = harness();
+    const parser = new MessageParser(extension.protocols.outbound!);
+
+    assert.strictEqual(
+      parser.parse({ type: "snapshot", data: {}, acks: { alice: 1 } }).ok,
+      true
+    );
+    assert.strictEqual(
+      parser.parse({ type: "snapshot", data: {}, acks: { alice: -1 } }).ok,
+      false
+    );
   });
 });
 

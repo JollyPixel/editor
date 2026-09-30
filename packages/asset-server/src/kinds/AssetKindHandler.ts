@@ -25,6 +25,7 @@ export interface AssetRoomBinding<TState = unknown> {
   readonly kind: string;
   readonly roomId: string;
   readonly state: TState;
+  readonly version?: () => number | undefined;
 }
 
 export interface AssetCommands<

@@ -4,7 +4,10 @@ export {
   PIXEL_ART_KIND
 } from "../asset/pixelArt.ts";
 export * from "./pixelCommandActions.ts";
+export * from "./PixelCommandKeys.ts";
+export * from "./PixelReconciler.ts";
 export * from "./PixelSyncClient.ts";
+export * from "./ReplayBasis.ts";
 export * from "./PixelWireCodec.ts";
 export * from "./SyncedPixelDocument.ts";
 export * from "./PixelCollaboration.ts";

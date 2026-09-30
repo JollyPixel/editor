@@ -12,6 +12,7 @@ import type { PixelNetworkCommand } from "@jolly-pixel/asset.pixel-art/client";
 // Import Internal Dependencies
 import {
   TilesetCommandArbiter,
+  tilesetCommandKey,
   type TilesetDocumentNetworkCommand
 } from "#src/network/server.ts";
 import { makeResolvedBlockDef } from "../../helpers/blocks.ts";
@@ -67,9 +68,9 @@ function stroke(
 
 describe("TilesetCommandArbiter", () => {
   test("keys document commands by block, material group or tile size", () => {
-    assert.strictEqual(TilesetCommandArbiter.key(blockDefined(4)), "block:4");
+    assert.strictEqual(tilesetCommandKey(blockDefined(4)), "block:4");
     assert.strictEqual(
-      TilesetCommandArbiter.key({
+      tilesetCommandKey({
         ...kHeader,
         action: "block-moved",
         blockId: 4,
@@ -78,7 +79,7 @@ describe("TilesetCommandArbiter", () => {
       "block:4"
     );
     assert.strictEqual(
-      TilesetCommandArbiter.key({
+      tilesetCommandKey({
         ...kHeader,
         action: "material-group-removed",
         groupId: "gold"
@@ -86,7 +87,7 @@ describe("TilesetCommandArbiter", () => {
       "material-group:gold"
     );
     assert.strictEqual(
-      TilesetCommandArbiter.key({
+      tilesetCommandKey({
         ...kHeader,
         action: "tile-size-updated",
         tileSize: 16

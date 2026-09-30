@@ -25,7 +25,7 @@ export type AssetRoomNotice =
 
 export interface AssetArbitration<TCommand = unknown> {
   readonly command: TCommand;
-  commit?(): void;
+  commit?(version?: number): void;
 }
 
 export interface AssetLiveProtocol<TCommand = unknown> {
@@ -45,4 +45,9 @@ export interface AssetLiveProtocol<TCommand = unknown> {
     command: TCommand,
     admitted: TCommand | null
   ): TCommand | null;
+
+  restore?(
+    command: TCommand,
+    version: number
+  ): void;
 }

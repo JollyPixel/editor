@@ -3,13 +3,17 @@ import { Emitter } from "@openally/emitt";
 import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
-import {
+import type {
   VoxelLayer,
-  type VoxelLayerCloneOptions,
-  type VoxelLayerConfigurableOptions,
-  type VoxelLayerOptions
+  VoxelLayerConfigurableOptions,
+  VoxelLayerOptions,
+  VoxelLayerUpdate
 } from "./VoxelLayer.ts";
 import { VoxelLayerStack } from "./VoxelLayerStack.ts";
+import {
+  VoxelLayerStructure,
+  type VoxelLayerRestoreOptions
+} from "./VoxelLayerStructure.ts";
 import {
   VoxelChunk,
   DEFAULT_CHUNK_SIZE
@@ -21,6 +25,7 @@ import {
 import type {
   VoxelCoord,
   VoxelEditRecorder,
+  VoxelRecorderOptions,
   VoxelEntry
 } from "./types.ts";
 import {
@@ -40,7 +45,6 @@ import {
 import type {
   VoxelEditCommand,
   VoxelLayerCommand,
-  VoxelLayerStructureCommand,
   VoxelWorldContentCommand
 } from "../commands/types.ts";
 import {
@@ -75,10 +79,7 @@ export interface VoxelMergeAllLayersOptions {
   except?: Iterable<string>;
 }
 
-export type VoxelLayerRestoreOptions = Omit<
-  VoxelLayerOptions,
-  "chunkSize" | "order"
->;
+export type { VoxelLayerRestoreOptions };
 
 /**
  * Layered voxel data ordered from highest to lowest compositing priority.
@@ -91,6 +92,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   readonly templates: VoxelTemplates;
 
   #layers = new VoxelLayerStack();
+  #structure: VoxelLayerStructure;
   #writer: VoxelWriter;
   #silent = false;
 
@@ -101,6 +103,11 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     assertPowerOfTwoChunkSize(chunkSize, "VoxelWorld");
 
     this.chunkSize = chunkSize;
+    this.#structure = new VoxelLayerStructure({
+      chunkSize,
+      layers: this.#layers,
+      markAllDirty: () => this.markAllDirty()
+    });
     this.#writer = new VoxelWriter({
       chunkSize,
       layers: this.#layers,
@@ -114,14 +121,17 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     });
   }
 
-  get recorder(): VoxelEditRecorder | null {
-    return this.#writer.recorder;
+  addRecorder(
+    recorder: VoxelEditRecorder,
+    options: VoxelRecorderOptions = {}
+  ): void {
+    this.#writer.addRecorder(recorder, options.includeUnrecorded ?? false);
   }
 
-  set recorder(
-    recorder: VoxelEditRecorder | null
-  ) {
-    this.#writer.recorder = recorder;
+  removeRecorder(
+    recorder: VoxelEditRecorder
+  ): boolean {
+    return this.#writer.removeRecorder(recorder);
   }
 
   get voxelCount(): number {
@@ -137,35 +147,33 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     options: VoxelLayerConfigurableOptions = {}
   ): VoxelLayer {
+    const layerId = crypto.randomUUID();
     this.#dispatch({
       action: "added",
-      layerName: name,
-      metadata: { options }
+      layerId,
+      metadata: {
+        name,
+        rank: this.#layers.topRank(),
+        options
+      }
     });
 
-    return this.getLayer(name)!;
+    return this.#layers.byId(layerId)!;
   }
 
   restoreLayer(
     options: VoxelLayerRestoreOptions
   ): VoxelLayer {
-    const layer = new VoxelLayer({
-      ...options,
-      order: this.#layers.size,
-      chunkSize: this.chunkSize
-    });
-    this.#layers.insert(0, layer);
-
-    return layer;
+    return this.#structure.restore(options);
   }
 
   updateLayer(
     name: string,
-    options: Partial<VoxelLayerConfigurableOptions>
+    options: VoxelLayerUpdate
   ): boolean {
     return this.#dispatch({
       action: "updated",
-      layerName: name,
+      layerId: this.#idOf(name),
       metadata: { options }
     }) !== null;
   }
@@ -175,7 +183,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): boolean {
     return this.#dispatch({
       action: "removed",
-      layerName: name,
+      layerId: this.#idOf(name),
       metadata: {}
     }) !== null;
   }
@@ -184,22 +192,29 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     direction: "up" | "down"
   ): void {
-    this.#dispatch({
-      action: "reordered",
-      layerName: name,
-      metadata: { direction }
-    });
+    const layer = this.getLayer(name);
+    if (layer !== undefined) {
+      const index = this.#layers.indexOf(layer);
+      const toIndex = direction === "up" ? index - 1 : index + 1;
+      if (toIndex >= 0 && toIndex < this.#layers.size) {
+        this.moveLayerTo(name, toIndex);
+      }
+    }
   }
 
   moveLayerTo(
     name: string,
     toIndex: number
   ): void {
-    this.#dispatch({
-      action: "layer-moved",
-      layerName: name,
-      metadata: { toIndex }
-    });
+    const layer = this.getLayer(name);
+    const index = Math.min(Math.max(Math.trunc(toIndex), 0), this.#layers.size - 1);
+    if (layer !== undefined && index !== this.#layers.indexOf(layer)) {
+      this.#dispatch({
+        action: "layer-moved",
+        layerId: layer.id,
+        metadata: { rank: this.#layers.rankAt(layer, index) }
+      });
+    }
   }
 
   setLayerPosition(
@@ -208,7 +223,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "position-updated",
-      layerName: name,
+      layerId: this.#idOf(name),
       metadata: { position }
     });
   }
@@ -219,7 +234,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "position-updated",
-      layerName: name,
+      layerId: this.#idOf(name),
       metadata: { delta }
     });
   }
@@ -230,7 +245,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "position-rebased",
-      layerName: name,
+      layerId: this.#idOf(name),
       metadata: { position }
     });
   }
@@ -241,7 +256,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "layer-transformed",
-      layerName: name,
+      layerId: this.#idOf(name),
       metadata: transformFields(transform)
     });
   }
@@ -255,19 +270,21 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       return undefined;
     }
 
-    const cloneName = this.uniqueLayerName(options.name ?? layer.name);
+    const cloneId = crypto.randomUUID();
     this.#dispatch({
       action: "cloned",
-      layerName: name,
+      layerId: layer.id,
       metadata: {
+        cloneId,
+        rank: this.#layers.rankAbove(layer),
         options: {
           ...options,
-          name: cloneName
+          name: options.name ?? layer.name
         }
       }
     });
 
-    return this.getLayer(cloneName);
+    return this.#layers.byId(cloneId);
   }
 
   mergeLayer(
@@ -276,8 +293,8 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): boolean {
     return this.#dispatch({
       action: "merged",
-      layerName: sourceName,
-      metadata: { targetLayerName: targetName }
+      layerId: this.#idOf(sourceName),
+      metadata: { targetLayerId: this.#idOf(targetName) }
     }) !== null;
   }
 
@@ -293,7 +310,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
         target = null;
       }
       else if (target) {
-        this.#merge(layer, target);
+        this.#structure.merge(layer, target);
       }
       else {
         target = layer;
@@ -315,6 +332,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string
   ): VoxelLayer | undefined {
     return this.#layers.get(name);
+  }
+
+  getLayerById(
+    id: string
+  ): VoxelLayer | undefined {
+    return this.#layers.byId(id);
   }
 
   uniqueLayerName(
@@ -384,7 +407,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     options: VoxelSetOptions
   ): void {
-    this.#dispatch(voxelSetCommand(layerName, options));
+    this.#dispatch(voxelSetCommand(this.#idOf(layerName), options));
   }
 
   removeVoxel(
@@ -393,7 +416,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxel-removed",
-      layerName,
+      layerId: this.#idOf(layerName),
       metadata: { position: options.position }
     });
   }
@@ -404,7 +427,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxels-set",
-      layerName,
+      layerId: this.#idOf(layerName),
       metadata: { entries }
     });
   }
@@ -415,7 +438,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxels-removed",
-      layerName,
+      layerId: this.#idOf(layerName),
       metadata: { entries }
     });
   }
@@ -432,7 +455,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxels-patched",
-      layerName,
+      layerId: this.#idOf(layerName),
       metadata: { cells }
     });
   }
@@ -469,11 +492,11 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     this.#writer.flush();
     if (
       isVoxelEditCommand(command) &&
-      this.getLayer(command.layerName) === undefined
+      this.#layers.byId(command.layerId) === undefined
     ) {
       logger?.warn(
         `VoxelWorld: dropped '${command.action}' for unknown layer ` +
-        `'${command.layerName}'.`
+        `'${command.layerId}'.`
       );
 
       return null;
@@ -541,165 +564,23 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       return this.templates.apply(command);
     }
     if (isVoxelEditCommand(command)) {
-      return this.#writer.write(this.getLayer(command.layerName), command, mode);
+      return this.#writer.write(
+        this.#layers.byId(command.layerId),
+        command,
+        mode
+      );
     }
     if (isVoxelObjectLayerCommand(command)) {
       return this.objectLayers.apply(command);
     }
 
-    return this.#restructure(command);
+    return this.#structure.apply(command);
   }
 
-  #restructure(
-    command: VoxelLayerStructureCommand
-  ): VoxelLayerStructureCommand | null {
-    const layer = this.getLayer(command.layerName);
-
-    switch (command.action) {
-      case "added":
-        this.restoreLayer({
-          ...command.metadata.options,
-          id: this.#layers.nextId("layer_"),
-          name: command.layerName
-        });
-
-        return command;
-      case "cloned":
-        return layer ? this.#clone(layer, command.metadata.options) : null;
-      case "layer-moved":
-        return this.#moveTo(command.layerName, command.metadata.toIndex);
-      default:
-        return layer && this.#change(layer, command) ? command : null;
-    }
-  }
-
-  #change(
-    layer: VoxelLayer,
-    command: VoxelLayerStructureCommand
-  ): boolean {
-    switch (command.action) {
-      case "updated":
-        this.#update(layer, command.metadata.options);
-
-        return true;
-      case "removed":
-        this.#layers.detach(layer);
-        break;
-      case "reordered": {
-        const index = this.#layers.indexOf(layer.name);
-        const delta = command.metadata.direction === "up" ? -1 : 1;
-        if (!this.#layers.move(index, index + delta)) {
-          return false;
-        }
-        break;
-      }
-      case "position-updated": {
-        const { metadata } = command;
-        layer.position = "position" in metadata ?
-          { ...metadata.position } :
-          {
-            x: layer.position.x + metadata.delta.x,
-            y: layer.position.y + metadata.delta.y,
-            z: layer.position.z + metadata.delta.z
-          };
-        break;
-      }
-      case "position-rebased":
-        layer.rebase(command.metadata.position);
-        break;
-      case "merged": {
-        const target = this.getLayer(command.metadata.targetLayerName);
-        if (!target || target === layer) {
-          return false;
-        }
-        this.#merge(layer, target);
-        break;
-      }
-      default:
-        throw new Error(
-          `VoxelWorld: unhandled action '${command.action}'.`
-        );
-    }
-    this.markAllDirty();
-
-    return true;
-  }
-
-  #update(
-    layer: VoxelLayer,
-    options: Partial<VoxelLayerConfigurableOptions>
-  ): void {
-    if (options.properties) {
-      layer.properties = structuredClone(options.properties);
-    }
-    if (options.visible !== undefined) {
-      this.#updateLayerVisibility(layer, options.visible);
-    }
-    if (
-      options.compositing !== undefined &&
-      options.compositing !== layer.compositing
-    ) {
-      layer.compositing = options.compositing;
-      this.markAllDirty();
-    }
-  }
-
-  #clone(
-    layer: VoxelLayer,
-    options: VoxelLayerCloneOptions
-  ): VoxelLayerStructureCommand {
-    const resolved: VoxelLayerCloneOptions = {
-      ...options,
-      name: this.uniqueLayerName(options.name)
-    };
-    const clone = layer.clone({
-      ...resolved,
-      id: this.#layers.nextId(`${layer.id}_`)
-    });
-
-    this.#layers.insert(this.#layers.indexOf(layer.name), clone);
-    this.markAllDirty();
-
-    return {
-      action: "cloned",
-      layerName: layer.name,
-      metadata: { options: resolved }
-    };
-  }
-
-  #moveTo(
-    name: string,
-    toIndex: number
-  ): VoxelLayerStructureCommand | null {
-    const index = this.#layers.indexOf(name);
-    const clamped = Math.min(
-      Math.max(Math.trunc(toIndex), 0),
-      this.#layers.size - 1
-    );
-    if (index === -1 || !this.#layers.move(index, clamped)) {
-      return null;
-    }
-    this.markAllDirty();
-
-    return {
-      action: "layer-moved",
-      layerName: name,
-      metadata: { toIndex: clamped }
-    };
-  }
-
-  #merge(
-    source: VoxelLayer,
-    target: VoxelLayer
-  ): void {
-    target.mergeFrom(source, {
-      overwrite: source.order > target.order
-    });
-    target.properties = {
-      ...structuredClone(source.properties),
-      ...target.properties
-    };
-    this.#layers.detach(source);
+  #idOf(
+    name: string
+  ): string {
+    return this.#layers.get(name)?.id ?? name;
   }
 
   #compositedLayerAt(
@@ -710,31 +591,17 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
         layer.getPackedVoxelAt(position) !== VOXEL_ABSENT
     );
   }
-
-  #updateLayerVisibility(
-    layer: VoxelLayer,
-    visible: boolean
-  ): void {
-    if (layer.visible === visible) {
-      layer.markAllDirty();
-
-      return;
-    }
-
-    layer.visible = visible;
-    this.markAllDirty();
-  }
 }
 
 function voxelSetCommand(
-  layerName: string,
+  layerId: string,
   options: VoxelSetOptions
 ): VoxelEditCommand {
   const { position, blockId } = options;
 
   return {
     action: "voxel-set",
-    layerName,
+    layerId,
     metadata: {
       position,
       blockId,
@@ -748,11 +615,11 @@ function normalized(
 ): VoxelWorldContentCommand {
   switch (command.action) {
     case "voxel-set":
-      return voxelSetCommand(command.layerName, command.metadata);
+      return voxelSetCommand(command.layerId, command.metadata);
     case "layer-transformed":
       return {
         action: "layer-transformed",
-        layerName: command.layerName,
+        layerId: command.layerId,
         metadata: transformFields(command.metadata)
       };
     default:

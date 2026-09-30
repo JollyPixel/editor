@@ -4,7 +4,8 @@ import type { Vector3Like } from "three";
 // Import Internal Dependencies
 import type {
   VoxelLayerCloneOptions,
-  VoxelLayerConfigurableOptions
+  VoxelLayerConfigurableOptions,
+  VoxelLayerUpdate
 } from "../world/VoxelLayer.ts";
 import type {
   VoxelSetOptions,
@@ -28,66 +29,63 @@ import type { VoxelTemplateJSON } from "../serialization/types.ts";
 export type VoxelLayerStructureCommand =
   | {
     action: "added";
-    layerName: string;
+    layerId: string;
     metadata: {
+      name: string;
+      rank: string;
       options: VoxelLayerConfigurableOptions;
     };
   }
   | {
     action: "removed";
-    layerName: string;
+    layerId: string;
     metadata: Record<string, never>;
   }
   | {
     action: "updated";
-    layerName: string;
+    layerId: string;
     metadata: {
-      options: Partial<VoxelLayerConfigurableOptions>;
+      options: VoxelLayerUpdate;
     };
   }
   | {
     action: "cloned";
-    layerName: string;
+    layerId: string;
     metadata: {
+      cloneId: string;
+      rank: string;
       options: VoxelLayerCloneOptions;
     };
   }
   | {
     action: "merged";
-    layerName: string;
+    layerId: string;
     metadata: {
-      targetLayerName: string;
+      targetLayerId: string;
     };
   }
   | {
     action: "position-updated";
-    layerName: string;
+    layerId: string;
     metadata: { position: VoxelCoord; } | { delta: VoxelCoord; };
   }
   | {
     action: "position-rebased";
-    layerName: string;
+    layerId: string;
     metadata: { position: VoxelCoord; };
   }
   | {
-    action: "reordered";
-    layerName: string;
-    metadata: {
-      direction: "up" | "down";
-    };
-  }
-  | {
     action: "layer-moved";
-    layerName: string;
+    layerId: string;
     metadata: {
-      toIndex: number;
+      rank: string;
     };
   };
 
 export type VoxelEditCommand =
   | {
     action: "voxel-set";
-    layerName: string;
+    layerId: string;
     metadata: {
       position: Vector3Like;
       blockId: number;
@@ -99,35 +97,35 @@ export type VoxelEditCommand =
   }
   | {
     action: "voxel-removed";
-    layerName: string;
+    layerId: string;
     metadata: {
       position: Vector3Like;
     };
   }
   | {
     action: "voxels-set";
-    layerName: string;
+    layerId: string;
     metadata: {
       entries: VoxelSetOptions[];
     };
   }
   | {
     action: "voxels-removed";
-    layerName: string;
+    layerId: string;
     metadata: {
       entries: VoxelRemoveOptions[];
     };
   }
   | {
     action: "voxels-patched";
-    layerName: string;
+    layerId: string;
     metadata: {
       cells: VoxelPatchCells;
     };
   }
   | {
     action: "layer-transformed";
-    layerName: string;
+    layerId: string;
     metadata: {
       rotation: number;
       flipX: boolean;

@@ -83,15 +83,15 @@ Other sizes throw a `RangeError`.
 readonly chunkSize: number;
 readonly objectLayers: VoxelObjectLayers;
 readonly templates: VoxelTemplates;
-recorder: VoxelEditRecorder | null;
 ```
 
 `templates` holds the world's [voxel templates](./VoxelTemplates.md).
 
-`recorder` receives the cells changed by each non-silent `setVoxel`,
-`removeVoxel`, `setVoxelBulk` and `removeVoxelBulk` call, read before the
-write. [`VoxelHistory`](../core/VoxelHistory.md) installs itself there when
-enabled.
+Each recorder added with `addRecorder` receives the cells changed by each non-silent
+`setVoxel`, `removeVoxel`, `setVoxelBulk` and `removeVoxelBulk` call, read
+before the write. Commands applied with `apply()` are not recorded.
+[`VoxelHistory`](../core/VoxelHistory.md) adds itself when enabled; a sync
+client adds another to capture the inverse of its pending commands.
 
 ```ts
 interface VoxelEditRecorder {
@@ -99,7 +99,7 @@ interface VoxelEditRecorder {
 }
 
 interface VoxelCellChange {
-  layerName: string;
+  layerId: string;
   position: VoxelCoord;
   before: PackedVoxel; // VOXEL_ABSENT when the cell was empty
   after: PackedVoxel; // VOXEL_ABSENT when the cell was cleared
@@ -128,22 +128,30 @@ it through the same path as `apply()`.
 
 #### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
 
-Creates a new layer on top of the stack, with the highest compositing priority.
+Creates a new layer on top of the stack, with the highest compositing
+priority and a random UUID as its id. A taken name gets a ` (n)` suffix.
 
 #### `restoreLayer(options: VoxelLayerRestoreOptions): VoxelLayer`
 
-Puts a layer on top of the stack with the given `id`, `name` and optional
-`position`, `visible`, `compositing` and `properties`, without
-emitting a command. Deserialization uses it.
+Puts a layer in the stack with the given `id`, `name` and optional `rank`,
+`position`, `visible`, `compositing` and `properties`, without emitting a
+command. Without `rank` it goes on top. Deserialization uses it.
 
 ```ts
 type VoxelLayerRestoreOptions = Omit<VoxelLayerOptions, "chunkSize" | "order">;
 ```
 
-#### `updateLayer(name: string, options: Partial<VoxelLayerConfigurableOptions>): boolean`
+#### `updateLayer(name: string, options: VoxelLayerUpdate): boolean`
 
-Updates visibility, compositing, or properties. Returns `false` when the layer does
-not exist.
+Updates the name, visibility, compositing, or properties. A name another
+layer holds gets a ` (n)` suffix. Returns `false` when the layer does not
+exist.
+
+```ts
+interface VoxelLayerUpdate extends Partial<VoxelLayerConfigurableOptions> {
+  name?: string;
+}
+```
 
 #### `removeLayer(name: string): boolean`
 
@@ -161,12 +169,35 @@ already at that end of the stack.
 Moves the layer to an absolute position in `getLayers()` order, where index 0
 is the highest compositing priority. `toIndex` is truncated and clamped to the
 stack, so an out-of-range index lands the layer at the nearest end. A move that
-leaves the layer where it already sits does nothing and emits nothing.
+leaves the layer where it already sits does nothing and emits nothing. The
+command carries the rank between the new neighbours, not the index.
 
-Every change to the stack (adding, cloning, moving, removing or merging a
-layer) re-ranks every layer's `order` densely and descending from the
-resulting sequence, so `order` is an internal rank rather than a stable
-identifier. Layer ids are unique within the world.
+#### `getLayerById(id: string): VoxelLayer | undefined`
+
+Finds a layer by id. Commands name voxel layers by id; the methods on this
+page take names.
+
+### Layer ranks
+
+Every voxel layer has an id, unique across peers, and a `rank`: a
+fractional-index string over `0-9A-Za-z` that never ends with `0`. The
+stack sorts by rank, highest on top, then by id when two ranks tie, so
+concurrent moves of different layers keep both intents and every peer ends
+with the same order.
+
+```ts
+function rankBetween(lower: string | null, upper: string | null): string;
+function compareLayerRanks(left: RankedLayer, right: RankedLayer): number;
+function isLayerRank(value: unknown): value is string;
+```
+
+`rankBetween` returns a rank strictly between two ranks; `null` stands for
+the bottom or the top of the stack. When `lower >= upper` it returns a rank
+above `lower`.
+
+Every change to the stack re-numbers each layer's `order` densely and
+descending from the resulting sequence, so `order` is the draw order the
+renderer reads, not an identifier.
 
 #### `setLayerPosition(name: string, position: VoxelCoord): void`
 
@@ -214,7 +245,7 @@ All layers, sorted highest `order` first.
 
 #### `cloneLayer(name: string, options?: Partial<VoxelLayerOptions>): VoxelLayer | undefined`
 
-Clones a layer, voxels included, and inserts the copy directly above the source,
+Clones a layer, voxels included, under a new UUID, and inserts the copy directly above the source,
 renumbering the whole stack and marking every layer's chunks dirty, since the
 copy now covers the layers below it. Other layer options can override the
 source values.
@@ -478,11 +509,26 @@ mutations peers already know about. Nesting is safe.
 world.silently(() => world.setVoxel("Ground", { position, blockId: 1 }));
 ```
 
+#### `addRecorder(recorder: VoxelEditRecorder, options?: VoxelRecorderOptions): void`
+
+#### `removeRecorder(recorder: VoxelEditRecorder): boolean`
+
+Adds or removes a recorder. `removeRecorder` returns `false` when the
+recorder was not added.
+
+```ts
+interface VoxelRecorderOptions {
+  // Also receive the edits made inside unrecorded(). Default false.
+  includeUnrecorded?: boolean;
+}
+```
+
 #### `unrecorded<T>(fn: () => T): T`
 
-Runs `fn` and returns its result; edits made inside are not handed to
-`recorder`. [`VoxelHistory`](../core/VoxelHistory.md) replays undo and redo
-through it.
+Runs `fn` and returns its result; edits made inside reach only the recorders
+added with `includeUnrecorded`. [`VoxelHistory`](../core/VoxelHistory.md)
+replays undo and redo through it; a sync client records them to invert its
+pending commands.
 
 ### Object layer management
 

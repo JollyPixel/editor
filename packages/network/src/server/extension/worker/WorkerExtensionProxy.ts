@@ -112,6 +112,17 @@ export class WorkerExtensionProxy extends Extension {
     );
   }
 
+  override onResync(
+    clientId: string,
+    context: RoomContext
+  ): Promise<void> {
+    return this.#dispatch(
+      "onResync",
+      [clientId],
+      context
+    );
+  }
+
   override onMessage(
     clientId: string,
     payload: unknown,

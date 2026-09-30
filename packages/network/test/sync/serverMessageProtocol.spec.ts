@@ -8,7 +8,10 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { serverMessageProtocol } from "#src/sync/serverMessageProtocol.ts";
 import { MessageParser } from "#src/protocol/message/MessageParser.ts";
-import { SNAPSHOT_EVENT } from "#src/protocol/constants.ts";
+import {
+  CATCH_UP_EVENT,
+  SNAPSHOT_EVENT
+} from "#src/protocol/constants.ts";
 import { actionCommandProtocol } from "../helpers/protocols.ts";
 
 describe("serverMessageProtocol", () => {
@@ -23,7 +26,8 @@ describe("serverMessageProtocol", () => {
       "voxel-set",
       "object-added",
       "voxel-set",
-      "object-added"
+      "object-added",
+      CATCH_UP_EVENT
     ]);
   });
 
@@ -72,5 +76,39 @@ describe("serverMessageProtocol", () => {
     });
     assert.ok(correction.ok);
     assert.strictEqual(correction.val.event, "voxel-set");
+  });
+
+  test("declares the room version on commands and snapshots", () => {
+    const parser = new MessageParser(serverMessageProtocol({
+      command: actionCommandProtocol,
+      snapshot: { type: "object" }
+    }));
+
+    assert.ok(parser.parse({ type: "command", data: { action: "voxel-set" }, version: 4 }).ok);
+    assert.ok(parser.parse({ type: "snapshot", data: {}, version: 4, acks: { A: 2 } }).ok);
+    assert.strictEqual(
+      parser.parse({ type: "command", data: { action: "voxel-set" }, version: -1 }).ok,
+      false
+    );
+  });
+
+  test("validates every command of a catch-up", () => {
+    const parser = new MessageParser(serverMessageProtocol({
+      command: actionCommandProtocol,
+      snapshot: { type: "object" }
+    }));
+
+    const caughtUp = parser.parse({
+      type: "catch-up",
+      data: [{ action: "voxel-set" }, { action: "object-added" }],
+      version: 9,
+      acks: { A: 3 }
+    });
+    assert.ok(caughtUp.ok);
+    assert.strictEqual(caughtUp.val.event, CATCH_UP_EVENT);
+    assert.strictEqual(
+      parser.parse({ type: "catch-up", data: [{ action: "unknown" }], version: 9 }).ok,
+      false
+    );
   });
 });

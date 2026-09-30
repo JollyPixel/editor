@@ -38,6 +38,7 @@ export class AssetStateStore {
   #kinds: AssetKindRegistry;
   #logger: Logger;
   #entries = new Map<string, AssetStateEntry>();
+  #versions = new Map<string, number>();
   #replays = new Map<string, Promise<AssetStateEntry>>();
   #unsubscribe: (() => void) | null = null;
 
@@ -54,6 +55,7 @@ export class AssetStateStore {
       const entry = this.#entries.get(event.assetId);
       if (entry !== undefined) {
         this.#fold(entry.handler, entry.state, event);
+        this.#versions.set(event.assetId, event.eventVersion);
       }
     });
   }
@@ -62,6 +64,7 @@ export class AssetStateStore {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
     this.#entries.clear();
+    this.#versions.clear();
   }
 
   has(
@@ -74,6 +77,12 @@ export class AssetStateStore {
     assetId: string
   ): AssetStateEntry | undefined {
     return this.#entries.get(assetId);
+  }
+
+  versionOf(
+    assetId: string
+  ): number | undefined {
+    return this.#versions.get(assetId);
   }
 
   acquire(
@@ -106,6 +115,7 @@ export class AssetStateStore {
     assetId: string
   ): void {
     this.#entries.delete(assetId);
+    this.#versions.delete(assetId);
   }
 
   async serialize(
@@ -143,6 +153,7 @@ export class AssetStateStore {
 
       events = this.#eventStore.reader.list(assetId, from);
     }
+    this.#versions.set(assetId, from);
 
     return {
       assetId,

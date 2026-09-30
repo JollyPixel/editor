@@ -37,6 +37,7 @@ import {
   voxelWorldSchema
 } from "../network/VoxelCommand.schema.ts";
 import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
+import { correctVoxelCommand } from "../network/VoxelCorrection.ts";
 import type { VoxelMapNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
@@ -216,6 +217,12 @@ export function voxelMapAssetKind(
           snapshotSchema: voxelWorldSchema,
           snapshot: () => state.toJSON(),
           arbitrate: (command) => arbiter.admit(state, command),
+          correct: (command, admitted) => correctVoxelCommand(
+            state,
+            command,
+            admitted
+          ),
+          restore: (command, version) => arbiter.restore(command, version),
           broadcast(command) {
             if (
               command.action === "world-replace" ||

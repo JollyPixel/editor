@@ -58,6 +58,7 @@ export class EnvelopeDispatcher {
       .with({ kind: "leave" }, (envelope) => this.#handleLeave(session, envelope))
       .with({ kind: "message" }, (envelope) => this.#handleMessage(session, room, envelope))
       .with({ kind: "presence" }, (envelope) => this.#handlePresence(session, room, envelope))
+      .with({ kind: "resync" }, (envelope) => this.#handleResync(session, room, envelope))
       .exhaustive();
   }
 
@@ -79,7 +80,10 @@ export class EnvelopeDispatcher {
         session.handle,
         session.identity,
         envelope.profile ?? Object.create(null),
-        envelope.presence ?? Object.create(null)
+        {
+          presence: envelope.presence ?? Object.create(null),
+          resume: envelope.resume
+        }
       );
       if (!admitted) {
         return {
@@ -132,6 +136,23 @@ export class EnvelopeDispatcher {
       session.handle.id,
       envelope.payload
     );
+
+    return { outcome: "handled" };
+  }
+
+  async #handleResync(
+    session: ClientSession,
+    room: ServerRoom,
+    envelope: Extract<ClientEnvelope, { kind: "resync"; }>
+  ): Promise<DispatchOutcome> {
+    if (!session.rooms.has(envelope.room)) {
+      return {
+        outcome: "dropped",
+        reason: "client has not joined room"
+      };
+    }
+
+    await room.resync(session.handle.id);
 
     return { outcome: "handled" };
   }

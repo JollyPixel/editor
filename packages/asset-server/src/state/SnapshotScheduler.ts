@@ -17,10 +17,18 @@ import { TaskChain } from "../utils/TaskChain.ts";
 // CONSTANTS
 const kDefaultDelay = 2_000;
 const kDefaultMaxDelay = 30_000;
+const kSnapshotSource = "snapshot";
 const kSnapshotActor: EventStore.Actor = {
   type: "system",
-  source: "snapshot"
+  source: kSnapshotSource
 };
+
+export function isScheduledSnapshot(
+  event: EventStore.Event
+): boolean {
+  return event.actor.type === "system" &&
+    event.actor.source === kSnapshotSource;
+}
 
 interface PendingSnapshot {
   handle: ReturnType<typeof setTimeout>;

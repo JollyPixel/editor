@@ -4,6 +4,7 @@ export * from "./editing/voxelPatch.ts";
 export * from "./storage/VoxelChunk.ts";
 export * from "./storage/VoxelStore.ts";
 export * from "./VoxelLayer.ts";
+export * from "./layerRank.ts";
 export * from "./VoxelWorld.ts";
 export * from "./objects/VoxelObjectLayers.ts";
 export * from "./objects/VoxelFootprint.ts";
