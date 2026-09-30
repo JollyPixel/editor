@@ -31,6 +31,8 @@ const kWorkspaceBrowserEntries = [
   "@jolly-pixel/asset.voxel-map",
   "@jolly-pixel/asset.voxel-map/client",
   "@jolly-pixel/color",
+  "@jolly-pixel/console",
+  "@jolly-pixel/console/element",
   "@jolly-pixel/editor.host",
   "@jolly-pixel/editor.host/ui",
   "@jolly-pixel/editor.pixel-art",

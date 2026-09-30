@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   DEFAULT_KEYBINDINGS,
+  KEYBINDING_ACTIONS,
   Keybindings,
   parseKeybinding
 } from "#src/input/Keybindings.ts";
@@ -323,5 +324,15 @@ describe("Keybindings construction and patch", () => {
       keybindings.bindings.delete,
       DEFAULT_KEYBINDINGS.delete
     );
+  });
+});
+
+describe("KEYBINDING_ACTIONS", () => {
+  test("lists every action of the defaults, frozen", () => {
+    assert.deepStrictEqual(
+      [...KEYBINDING_ACTIONS].sort(),
+      Object.keys(DEFAULT_KEYBINDINGS).sort()
+    );
+    assert.ok(Object.isFrozen(KEYBINDING_ACTIONS));
   });
 });

@@ -462,6 +462,9 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
+      '@jolly-pixel/console':
+        specifier: workspace:*
+        version: link:../../console
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
@@ -505,6 +508,9 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
+      '@jolly-pixel/console':
+        specifier: workspace:*
+        version: link:../../console
       '@jolly-pixel/image':
         specifier: workspace:*
         version: link:../../image
@@ -526,6 +532,9 @@ importers:
       three:
         specifier: 0.186.0
         version: 0.186.0
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -569,6 +578,9 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
+      '@jolly-pixel/console':
+        specifier: workspace:*
+        version: link:../../console
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls

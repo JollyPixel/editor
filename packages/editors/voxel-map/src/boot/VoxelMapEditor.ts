@@ -1,4 +1,8 @@
 // Import Third-party Dependencies
+import {
+  registerConsoleFeatures,
+  type RegistrationHandle
+} from "@jolly-pixel/console";
 import type { Runtime } from "@jolly-pixel/runtime";
 import {
   EditorRuntime,
@@ -19,6 +23,7 @@ import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorShell } from "./EditorShell.ts";
 import { TILESET_DOCUMENT_KIND } from "../features/tilesets/TilesetBinding.ts";
 import { mountInspectorControls } from "./inspectorControls.ts";
+import { CONSOLE_FEATURES } from "./consoleFeatures.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -38,6 +43,7 @@ export interface VoxelMapEditorParts {
   workspace: VoxelMapWorkspace;
   session: EditorSession;
   target: AssetLease<SyncedVoxelMap>;
+  consoleFeatures: RegistrationHandle;
 }
 
 export class VoxelMapEditor {
@@ -50,7 +56,7 @@ export class VoxelMapEditor {
   static async mount(
     context: EditorContext
   ): Promise<VoxelMapEditor> {
-    const { session } = context;
+    const { session, commands } = context;
     const state = new EditorState();
     const target = session.targetLease(kMapKind);
 
@@ -114,12 +120,18 @@ export class VoxelMapEditor {
       shell,
       workspace,
       session,
-      target
+      target,
+      consoleFeatures: registerConsoleFeatures(
+        commands,
+        CONSOLE_FEATURES,
+        workspace
+      )
     });
   }
 
   #shell: EditorShell;
   #target: AssetLease<SyncedVoxelMap>;
+  #consoleFeatures: RegistrationHandle;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
@@ -136,6 +148,7 @@ export class VoxelMapEditor {
     this.workspace = parts.workspace;
     this.#shell = parts.shell;
     this.#target = parts.target;
+    this.#consoleFeatures = parts.consoleFeatures;
     this.ready = Promise.all([
       parts.target.ready,
       parts.scene.ready
@@ -143,6 +156,7 @@ export class VoxelMapEditor {
   }
 
   dispose(): void {
+    this.#consoleFeatures.unregister();
     this.#shell.dispose();
     this.#target.release();
     this.session.dispose();

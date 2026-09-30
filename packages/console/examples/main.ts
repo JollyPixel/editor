@@ -5,8 +5,10 @@ import "@jolly-pixel/console/element";
 
 // CONSTANTS
 const kShapes = ["cube", "sphere", "cross"] as const;
+const kThemes = ["light", "dark", "auto"] as const;
 
 type Shape = typeof kShapes[number];
+type Theme = typeof kThemes[number];
 
 const brush = {
   size: 1,
@@ -14,7 +16,24 @@ const brush = {
   ghost: true
 };
 
+const scope = document.querySelector("jolly-scope");
 const commands = new CommandConsole();
+
+commands.registerVariable("theme", {
+  type: "enum",
+  description: "Page theme, auto follows the system color scheme",
+  enumValues: kThemes,
+  get: () => readTheme(),
+  set: (value) => {
+    if (value === "auto") {
+      scope?.removeAttribute("theme");
+    }
+    else {
+      scope?.setAttribute("theme", value);
+    }
+    renderTheme();
+  }
+});
 
 const brushNamespace = commands.registerNamespace("brush", {
   description: "Voxel brush"
@@ -104,7 +123,18 @@ document.querySelector("#open-console")
   ?.addEventListener("click", () => commands.open());
 wireDialog("#open-dialog", "#dialog", true);
 wireDialog("#open-locked-dialog", "#locked-dialog", false);
+renderTheme();
 renderBrush();
+
+function readTheme(): Theme {
+  const theme = scope?.getAttribute("theme");
+
+  return theme === "light" || theme === "dark" ? theme : "auto";
+}
+
+function renderTheme(): void {
+  output("#theme", readTheme());
+}
 
 function renderBrush(): void {
   output("#brush-size", String(brush.size));

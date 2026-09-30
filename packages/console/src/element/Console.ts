@@ -341,8 +341,22 @@ export class ConsoleElement extends LitElement {
     line: string
   ): void {
     this.#browsingHistory = false;
-    void this.console?.submit(line);
+    void this.console?.submit(line).then(() => this.#followAmbientTheme());
     void this.#replaceText("");
+  }
+
+  #followAmbientTheme(): void {
+    const adopted = this.#inheritedTheme;
+    if (adopted === null || this.getAttribute("theme") !== adopted) {
+      return;
+    }
+
+    this.removeAttribute("theme");
+    this.#inheritedTheme = adoptAmbientTheme(this, null);
+    if (this.#inheritedTheme === null) {
+      this.setAttribute("theme", adopted);
+      this.#inheritedTheme = adopted;
+    }
   }
 
   #accept(

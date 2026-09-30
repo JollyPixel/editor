@@ -1,0 +1,131 @@
+/* Page level only. Colours come from the tokens jolly-scope declares. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+jolly-scope {
+  display: block;
+  min-height: 100vh;
+  background: var(--jolly-surface);
+  color: var(--jolly-text);
+  font-family: var(--jolly-font-family);
+  font-size: calc(var(--jolly-font-size) + 1px);
+}
+
+main {
+  display: grid;
+  gap: var(--jolly-space-6);
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px var(--jolly-space-4);
+}
+
+h1 {
+  margin: 0 0 var(--jolly-space-2);
+  font-size: 20px;
+}
+
+h2 {
+  margin: 0 0 var(--jolly-space-2);
+  color: var(--jolly-text-muted);
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+p {
+  margin: 0;
+}
+
+.lede {
+  color: var(--jolly-text-muted);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 2.2ch;
+  padding: 1px 5px;
+  border: 1px solid var(--jolly-divider);
+  border-radius: var(--jolly-radius-sm);
+  background: var(--jolly-surface-raised);
+  color: var(--jolly-text);
+  font: inherit;
+  text-align: center;
+}
+
+.state,
+.samples {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--jolly-divider);
+  border-radius: var(--jolly-radius-md);
+  background: var(--jolly-surface-raised);
+  list-style: none;
+}
+
+.state > div,
+.samples > li {
+  display: flex;
+  gap: var(--jolly-space-4);
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--jolly-space-2) var(--jolly-space-3);
+}
+
+.state > div + div,
+.samples > li + li {
+  border-top: 1px solid var(--jolly-divider);
+}
+
+dt {
+  color: var(--jolly-text-muted);
+}
+
+dd {
+  margin: 0;
+  color: var(--jolly-tone-sky);
+  font-weight: 700;
+}
+
+code {
+  color: var(--jolly-tone-lime);
+  font: inherit;
+}
+
+.samples span {
+  color: var(--jolly-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jolly-space-2);
+  align-items: center;
+}
+
+#notes {
+  flex: 1 1 160px;
+  height: var(--jolly-control-height);
+  padding: 0 var(--jolly-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--jolly-radius-sm);
+  outline: none;
+  background: var(--jolly-control-bg);
+  color: var(--jolly-text);
+  font: inherit;
+}
+
+#notes::placeholder {
+  color: var(--jolly-text-muted);
+}
+
+#notes:focus-visible {
+  border-color: var(--jolly-accent-fill);
+}

@@ -1,7 +1,14 @@
 // Import Third-party Dependencies
+import {
+  registerConsoleFeatures,
+  type RegistrationHandle
+} from "@jolly-pixel/console";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { Runtime } from "@jolly-pixel/runtime";
-import type { ThemePreferences } from "@jolly-pixel/ui";
+import {
+  LocalStorageAdapter,
+  type ThemePreferences
+} from "@jolly-pixel/ui";
 import {
   PIXEL_ART_KIND,
   type SyncedPixelDocument
@@ -17,7 +24,12 @@ import {
   isTextureImportPolicy,
   suggestTextureName
 } from "../../../src/textures/textures.ts";
-import type { PixelDrawPanel } from "../../../src/index.ts";
+import {
+  applyKeybindings,
+  keybindConsole,
+  KeybindingSettings,
+  type PixelDrawPanel
+} from "../../../src/index.ts";
 import { DemoShell } from "./DemoShell.ts";
 import { TextureTabs } from "./TextureTabs.ts";
 import { DEMO_TEXTURE_KIND } from "./textureKind.ts";
@@ -54,6 +66,8 @@ export interface PixelArtDemoParts {
   session: EditorSession;
   target: SyncedPixelDocument;
   tabs: TextureTabs;
+  keybindings: () => void;
+  consoleFeatures: RegistrationHandle;
 }
 
 export class PixelArtDemo {
@@ -66,7 +80,7 @@ export class PixelArtDemo {
   static async mount(
     context: EditorContext
   ): Promise<PixelArtDemo> {
-    const { session } = context;
+    const { session, commands } = context;
     const params = PIXEL_ART_DEMO_PARAMS.read();
     const panel = document.querySelector("pixel-draw-panel")!;
     if (params.importPolicy !== undefined && isTextureImportPolicy(params.importPolicy)) {
@@ -78,6 +92,11 @@ export class PixelArtDemo {
     await panel.updateComplete;
     themePreferences.target = panel;
     await themePreferences.updateComplete;
+
+    const keybindings = new KeybindingSettings({
+      storage: new LocalStorageAdapter(),
+      onDropped: (message) => console.warn(message)
+    });
 
     const { room, record } = session.target;
     const target = DEMO_TEXTURE_KIND.createDocument(room);
@@ -96,7 +115,8 @@ export class PixelArtDemo {
       },
       brush: {
         size: 1
-      }
+      },
+      keybindings: keybindings.overrides
     });
     const preview = params.runtime === "off" ?
       null :
@@ -131,11 +151,19 @@ export class PixelArtDemo {
       shell,
       session,
       target,
-      tabs
+      tabs,
+      keybindings: applyKeybindings(panel, keybindings),
+      consoleFeatures: registerConsoleFeatures(
+        commands,
+        [keybindConsole],
+        { keybindings }
+      )
     });
   }
 
   readonly #shell: DemoShell;
+  readonly #keybindings: () => void;
+  readonly #consoleFeatures: RegistrationHandle;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime | null;
@@ -154,6 +182,8 @@ export class PixelArtDemo {
     this.target = parts.target;
     this.tabs = parts.tabs;
     this.#shell = parts.shell;
+    this.#keybindings = parts.keybindings;
+    this.#consoleFeatures = parts.consoleFeatures;
     this.runtime = parts.preview?.editorRuntime.runtime ?? null;
     this.ready = Promise.all([
       parts.target.ready,
@@ -162,6 +192,8 @@ export class PixelArtDemo {
   }
 
   dispose(): void {
+    this.#consoleFeatures.unregister();
+    this.#keybindings();
     this.#shell.dispose();
     this.tabs.dispose();
     this.session.dispose();

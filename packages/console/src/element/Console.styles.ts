@@ -178,7 +178,7 @@ export const consoleStyles = css`
 
   [role="option"][aria-selected="true"] {
     background: var(--jolly-accent-fill, #3b82f6);
-    color: var(--jolly-accent-text, white);
+    color: var(--jolly-text-on-fill, white);
   }
 
   [role="option"]:not([aria-selected="true"]):hover {

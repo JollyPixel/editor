@@ -33,3 +33,4 @@ export {
   type ColorChangeDetail
 } from "./color/ColorSwatch.ts";
 export type { IconName } from "./shared/icons.ts";
+export * from "./keybindings/index.ts";

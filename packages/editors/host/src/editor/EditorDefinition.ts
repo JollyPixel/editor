@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { CommandConsole } from "@jolly-pixel/console";
 import type { Runtime } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
@@ -20,6 +21,7 @@ export interface EditorContext {
   session: EditorSession;
   shell: ShellChannel | null;
   logger: HostLogger;
+  commands: CommandConsole;
 }
 
 export interface EditorHandle {

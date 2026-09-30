@@ -26,6 +26,12 @@ type Keybinding =
 type KeybindingsMap = Record<KeybindingAction, Keybinding | Keybinding[]>;
 ```
 
+`KEYBINDING_ACTIONS` lists every `KeybindingAction`, frozen, in the order `match()` checks them. Loop over it to build a settings UI or validate stored bindings.
+
+```ts
+const KEYBINDING_ACTIONS: readonly KeybindingAction[];
+```
+
 ## PixelArtCanvas routing
 
 `PixelArtCanvas` dispatches shortcuts only while the pointer is over its canvas. It ignores repeated keydown events and events from text-entry `<input>` elements, `<textarea>` elements, and `contenteditable` elements.

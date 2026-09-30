@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { CommandConsole } from "@jolly-pixel/console";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -6,6 +7,7 @@ import type {
   EditorDefinition,
   EditorHandle
 } from "./EditorDefinition.ts";
+import { mountConsole } from "../console/mountConsole.ts";
 import {
   readDebugLogger,
   type HostLogger
@@ -74,19 +76,23 @@ export async function mountStandalone<
     logger.child({ namespace: "host.boot" })
   );
 
+  const editorConsole = mountConsole();
+
   boot.state("booting");
   try {
     const handle = await mountEditor(
       definition,
       options,
       logger,
-      boot
+      boot,
+      editorConsole.commands
     );
     boot.state("ready");
 
     return handle;
   }
   catch (error) {
+    editorConsole.dispose();
     boot.fail(error);
     boot.state("failed");
 
@@ -98,7 +104,8 @@ async function mountEditor<THandle extends EditorHandle>(
   definition: EditorDefinition<THandle>,
   options: MountStandaloneOptions,
   logger: HostLogger,
-  boot: BootTrace
+  boot: BootTrace,
+  commands: CommandConsole
 ): Promise<THandle> {
   const dev = options.dev === true;
   const launch = await boot.step("launch", () => EditorLaunch.read(
@@ -140,7 +147,8 @@ async function mountEditor<THandle extends EditorHandle>(
       launch,
       session,
       shell: launch.shell,
-      logger: logger.child({ namespace: "editor" })
+      logger: logger.child({ namespace: "editor" }),
+      commands
     }));
   }
   catch (error) {

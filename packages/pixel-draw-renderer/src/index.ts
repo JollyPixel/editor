@@ -98,6 +98,7 @@ export type {
 } from "./types.ts";
 export {
   DEFAULT_KEYBINDINGS,
+  KEYBINDING_ACTIONS,
   Keybindings,
   type Keybinding,
   type KeybindingAction,
