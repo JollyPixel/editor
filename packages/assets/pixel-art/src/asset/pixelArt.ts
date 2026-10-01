@@ -16,6 +16,7 @@ export const PIXEL_ART_EXTENSION = ".pixelart";
 export const PIXEL_ART_ASSET: AssetKindDescriptor = {
   kind: PIXEL_ART_KIND,
   label: "Pixel art",
+  extension: PIXEL_ART_EXTENSION,
   icon: {
     svg: `
       <rect

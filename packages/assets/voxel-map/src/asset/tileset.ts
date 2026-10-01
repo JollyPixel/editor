@@ -28,6 +28,7 @@ const kDefaultBlockLimit = 32;
 export const TILESET_ASSET: AssetKindDescriptor = {
   kind: TILESET_KIND,
   label: "Tileset",
+  extension: TILESET_EXTENSION,
   icon: {
     svg: `
       <rect

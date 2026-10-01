@@ -158,7 +158,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
   async create(
     path: string,
-    content: Uint8Array,
+    content: Uint8Array | null,
     options: CatalogCreateOptions = {}
   ): Promise<string> {
     const reply = await this.#request({
@@ -166,7 +166,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       path,
       kind: options.kind,
       onConflict: options.onConflict,
-      content: encodeContent(content)
+      content: content === null ? undefined : encodeContent(content)
     });
 
     return reply.assetId;

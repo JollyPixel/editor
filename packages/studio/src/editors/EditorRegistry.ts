@@ -69,6 +69,7 @@ export class EditorRegistry {
     this.#kinds.set(kind, {
       kind,
       label: descriptor.label,
+      extension: descriptor.extension,
       icon: icon === undefined ? undefined : name
     });
 

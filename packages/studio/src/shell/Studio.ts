@@ -137,7 +137,7 @@ export class Studio extends LitElement {
             min-size="200"
             max-size="480"
           >
-            <jolly-pane key="assets" heading="Assets" icon="folder" locked>
+            <jolly-pane key="assets" heading="Assets" locked>
               <asset-browser
                 .options=${this._assets}
                 @asset-open=${this.#onAssetOpen}

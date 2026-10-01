@@ -18,3 +18,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0010](./0010-folders-are-path-prefixes.md) | Folders are path prefixes, and partial folder commands are not rolled back |
 | [0011](./0011-one-lit-element-per-panel.md) | One Lit element per panel, pure decisions in value objects |
 | [0012](./0012-one-project-per-studio.md) | One project per studio, seeded without overwriting |
+| [0013](./0013-companions-are-derived-from-names-and-edges.md) | Companions are derived from names and dependency edges |

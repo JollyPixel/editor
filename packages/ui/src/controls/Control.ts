@@ -46,13 +46,7 @@ export class Control extends LitElement {
     anchor: () => this._detailsButton,
     popover: () => this._details,
     side: "above",
-    align: "center",
-    onOpen: () => {
-      this._details?.style.setProperty(
-        "visibility",
-        "visible"
-      );
-    }
+    align: "center"
   });
 
   constructor() {
@@ -107,16 +101,7 @@ export class Control extends LitElement {
 
   #showDetails(): void {
     if (!this.#popup.open) {
-      const details = this._details;
-      if (details === null) {
-        return;
-      }
-
-      details.style.setProperty(
-        "visibility",
-        "hidden"
-      );
-      details.showPopover();
+      this.#popup.show();
     }
   }
 
@@ -136,10 +121,6 @@ export class Control extends LitElement {
 
   #hideDetails(): void {
     if (this.#popup.open) {
-      this._details?.style.setProperty(
-        "visibility",
-        "hidden"
-      );
       this.#popup.hide();
     }
   }

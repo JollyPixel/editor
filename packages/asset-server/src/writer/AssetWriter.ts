@@ -1,24 +1,13 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
-  AssetSource as AssetSourcePath,
-  type AssetReferenceData
-} from "@jolly-pixel/asset";
-import {
   Err,
   Ok,
   type Result
 } from "@openally/result";
-import {
-  AssetPathEscapeError,
-  isStatePath,
-  safeAssetPath
-} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
-import { UnknownAssetKindError } from "../kinds/errors/UnknownAssetKindError.ts";
-import { AssetPathConflictError } from "./errors/AssetPathConflictError.ts";
 import type { IdentitySidecar } from "../identity/IdentitySidecar.ts";
 import {
   ASSET_CREATED,
@@ -37,8 +26,21 @@ import {
 } from "../logger.ts";
 import { asError } from "../utils/asError.ts";
 import { TaskChain } from "../utils/TaskChain.ts";
+import {
+  AssetPathAllocator,
+  writableAssetPath,
+  type PathConflictPolicy
+} from "./AssetPathAllocator.ts";
+import {
+  AssetCreationPlanner,
+  type PlannedAsset
+} from "./AssetCreationPlanner.ts";
+import {
+  DependencyReader,
+  type AssetContent
+} from "./DependencyReader.ts";
 
-export type PathConflictPolicy = "reject" | "suffix";
+export type { PathConflictPolicy } from "./AssetPathAllocator.ts";
 
 export interface AssetWriterOptions {
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
@@ -53,18 +55,16 @@ interface WriteOptions {
   alreadyProjected?: boolean;
 }
 
-interface ContentWriteOptions extends WriteOptions {
-  data: Uint8Array;
-  /**
-   * Assets `data` references.
-   * @default computed by the kind handler from `data`
-   */
-  dependencies?: readonly AssetReferenceData[];
-}
+interface ContentWriteOptions extends WriteOptions, AssetContent {}
 
-export interface CreateAssetInput extends ContentWriteOptions {
+export interface CreateAssetInput extends Omit<ContentWriteOptions, "data"> {
   path: string;
   kind?: string;
+  /**
+   * @default the serialized `create(assetId)` state of the kind, linked to
+   * a same-named asset of each of its companion kinds
+   */
+  data?: Uint8Array;
   /**
    * @default the id the identity sidecar records for a vacant path, else a
    * random UUID
@@ -88,20 +88,33 @@ export interface DeleteAssetInput extends WriteOptions {
 
 export class AssetWriter {
   #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
-  #kinds: AssetKindRegistry;
   #projector: AssetProjector;
   #identity: IdentitySidecar;
   #logger: Logger;
+  #paths: AssetPathAllocator;
+  #planner: AssetCreationPlanner;
+  #dependencies: DependencyReader;
   #writes = new TaskChain();
 
   constructor(
     options: AssetWriterOptions
   ) {
     this.#eventStore = options.eventStore;
-    this.#kinds = options.kinds;
     this.#projector = options.projector;
     this.#identity = options.identity;
     this.#logger = options.logger ?? silentLogger();
+    this.#paths = new AssetPathAllocator({
+      projector: options.projector,
+      identity: options.identity
+    });
+    this.#planner = new AssetCreationPlanner({
+      kinds: options.kinds,
+      paths: this.#paths
+    });
+    this.#dependencies = new DependencyReader({
+      kinds: options.kinds,
+      logger: this.#logger
+    });
   }
 
   create(
@@ -117,7 +130,9 @@ export class AssetWriter {
   ): Promise<Result<EventStore.Event, Error>> {
     const snapshot = copyContentInput(input);
 
-    return this.#writes.run(() => this.#update(snapshot));
+    return this.#writes.run(
+      () => this.#update(snapshot)
+    );
   }
 
   rename(
@@ -128,7 +143,9 @@ export class AssetWriter {
       actor: { ...input.actor }
     };
 
-    return this.#writes.run(() => this.#rename(snapshot));
+    return this.#writes.run(
+      () => this.#rename(snapshot)
+    );
   }
 
   remove(
@@ -139,50 +156,91 @@ export class AssetWriter {
       actor: { ...input.actor }
     };
 
-    return this.#writes.run(() => this.#remove(snapshot));
+    return this.#writes.run(
+      () => this.#remove(snapshot)
+    );
   }
 
   async #create(
     input: CreateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
-    const writable = writableAssetPath(input.path);
-    if (!writable.ok) {
-      return Err(writable.val);
+    const planned = await this.#planner.plan(input);
+    if (!planned.ok) {
+      return planned;
     }
 
-    if (input.kind !== undefined && !this.#kinds.has(input.kind)) {
-      return Err(new UnknownAssetKindError(input.kind));
+    const { owner, companions } = planned.val;
+    const written: PlannedAsset[] = [];
+    for (const companion of companions) {
+      const appended = await this.#appendCreated(
+        companion,
+        input
+      );
+      if (!appended.ok) {
+        await this.#discard(written, input);
+
+        return appended;
+      }
+      written.push(companion);
     }
 
-    const path = input.onPathConflict === "suffix" ?
-      this.#vacantPath(writable.val, input.assetId) :
-      writable.val;
-    const vacant = this.#vacant(path, input.assetId);
-    if (!vacant.ok) {
-      return Err(vacant.val);
-    }
-
-    const assetId = input.assetId ?? this.#dormantId(path) ?? crypto.randomUUID();
-    const kind = input.kind ?? this.#kinds.resolve(path).kind;
-    const appended = this.#append(
-      assetId,
-      kind,
-      ASSET_CREATED,
-      await this.#writeData(assetId, path, kind, input),
+    const appended = await this.#appendCreated(
+      owner,
       input
     );
     if (!appended.ok) {
+      await this.#discard(written, input);
+
       return appended;
     }
 
-    this.#identity.set({
-      id: assetId,
-      path,
-      kind
-    });
     await this.#saveIdentity();
 
     return appended;
+  }
+
+  async #appendCreated(
+    asset: PlannedAsset,
+    options: WriteOptions
+  ): Promise<Result<EventStore.Event, Error>> {
+    const appended = this.#append(
+      asset.assetId,
+      asset.kind,
+      ASSET_CREATED,
+      await this.#writeData(asset.assetId, asset.path, asset.kind, asset),
+      options
+    );
+    if (appended.ok) {
+      this.#identity.set({
+        id: asset.assetId,
+        path: asset.path,
+        kind: asset.kind
+      });
+    }
+
+    return appended;
+  }
+
+  async #discard(
+    written: readonly PlannedAsset[],
+    options: WriteOptions
+  ): Promise<void> {
+    for (const asset of written) {
+      this.#append(
+        asset.assetId,
+        asset.kind,
+        ASSET_DELETED,
+        {
+          path: asset.path,
+          kind: asset.kind
+        },
+        options
+      );
+      this.#identity.removeById(asset.assetId);
+    }
+    if (written.length > 0) {
+      await this.#saveIdentity();
+    }
   }
 
   async #update(
@@ -218,7 +276,7 @@ export class AssetWriter {
     }
 
     const to = writable.val;
-    const vacant = this.#vacant(to, input.assetId);
+    const vacant = this.#paths.vacant(to, input.assetId);
     if (!vacant.ok) {
       return Err(vacant.val);
     }
@@ -295,85 +353,14 @@ export class AssetWriter {
     assetId: string,
     path: string,
     kind: string,
-    input: ContentWriteOptions
+    content: AssetContent
   ): Promise<AssetWriteData> {
-    const references = input.dependencies ??
-      this.#dependencies(assetId, kind, input.data);
-
     return writeData(
       path,
       kind,
-      input.data,
-      uniqueDependencies(assetId, references)
+      content.data,
+      this.#dependencies.resolve(assetId, kind, content)
     );
-  }
-
-  #dependencies(
-    assetId: string,
-    kind: string,
-    data: Uint8Array
-  ): readonly AssetReferenceData[] {
-    const handler = this.#kinds.get(kind);
-    if (handler.dependencies === undefined) {
-      return [];
-    }
-
-    try {
-      const state = handler.create(assetId);
-      handler.load(state, data);
-
-      return handler.dependencies(state);
-    }
-    catch (error) {
-      this.#logger
-        .withMetadata({
-          assetId,
-          kind,
-          reason: asError(error).message
-        })
-        .warn("asset dependencies not computed");
-
-      return [];
-    }
-  }
-
-  #dormantId(
-    path: string
-  ): string | undefined {
-    const recorded = this.#identity.byPath(path)?.id;
-    if (
-      recorded === undefined ||
-      this.#projector.desired(recorded) !== null
-    ) {
-      return undefined;
-    }
-
-    return recorded;
-  }
-
-  #vacant(
-    path: string,
-    assetId: string | undefined
-  ): Result<void, AssetPathConflictError> {
-    const occupant = this.#projector.assetAt(path);
-
-    return occupant === null || occupant === assetId ?
-      Ok(undefined) :
-      Err(new AssetPathConflictError(path, occupant));
-  }
-
-  #vacantPath(
-    path: string,
-    assetId: string | undefined
-  ): string {
-    const source = new AssetSourcePath(path);
-
-    let candidate = path;
-    for (let index = 2; !this.#vacant(candidate, assetId).ok; index++) {
-      candidate = source.withName(`${source.name}-${index}`).toString();
-    }
-
-    return candidate;
   }
 
   async #saveIdentity(): Promise<void> {
@@ -414,52 +401,23 @@ export class AssetWriter {
   }
 }
 
-function copyContentInput<TInput extends ContentWriteOptions>(
+function copyContentInput<
+  TInput extends CreateAssetInput | UpdateAssetInput
+>(
   input: TInput
 ): TInput {
   return {
     ...input,
-    actor: { ...input.actor },
-    data: Uint8Array.from(input.data),
+    actor: {
+      ...input.actor
+    },
+    data: input.data === undefined
+      ? undefined
+      : Uint8Array.from(input.data),
     dependencies: input.dependencies?.map(
       (reference) => {
         return { ...reference };
       }
     )
   };
-}
-
-function uniqueDependencies(
-  assetId: string,
-  references: readonly AssetReferenceData[]
-): AssetReferenceData[] {
-  const unique = new Map<string, AssetReferenceData>();
-  for (const reference of references) {
-    if (
-      reference.id !== assetId &&
-      !unique.has(reference.id)
-    ) {
-      unique.set(reference.id, reference);
-    }
-  }
-
-  return [...unique.values()];
-}
-
-function writableAssetPath(
-  input: string
-): Result<string, AssetPathEscapeError> {
-  const result = safeAssetPath(input);
-  if (!result.ok) {
-    return Err(
-      new AssetPathEscapeError(input, result.val)
-    );
-  }
-  if (isStatePath(result.val)) {
-    return Err(
-      new AssetPathEscapeError(input, "reserved")
-    );
-  }
-
-  return Ok(result.val);
 }

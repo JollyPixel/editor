@@ -14,7 +14,16 @@ const popup = new PopoverController(this, {
   anchor: () => this._button,
   popover: () => this._panel
 });
+
+popup.show();
+popup.hide();
 ```
+
+`show()` opens the popover and places it in the same task, so its first frame
+is already against the anchor. A popover opened another way, such as with
+`popovertarget`, is placed on its `toggle` event, which can come a frame late.
+Each placement sets `--jolly-overlay-origin` on the popover to the point
+nearest the anchor's center, which the overlay motion scales from.
 
 ## Input layers
 

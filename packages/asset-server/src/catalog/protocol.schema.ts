@@ -40,8 +40,7 @@ export const catalogCommandProtocol = new MessageProtocol(
         required: [
           "type",
           "requestId",
-          "path",
-          "content"
+          "path"
         ]
       },
       {

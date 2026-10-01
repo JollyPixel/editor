@@ -28,6 +28,11 @@ export class Toolbar extends LitElement {
       font: inherit;
     }
 
+    div {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
     :host([orientation="vertical"]),
     :host([orientation="vertical"]) div {
       align-items: stretch;

@@ -45,6 +45,15 @@ export interface AssetCommands<
   ): AssetLiveProtocol<TCommand>;
 }
 
+export interface AssetKindCompanion<TState = unknown> {
+  readonly kind: string;
+
+  link(
+    state: TState,
+    companion: AssetReferenceData
+  ): void;
+}
+
 /**
  * Folds an asset event stream and serializes its projected state.
  */
@@ -57,6 +66,7 @@ export interface AssetKindHandler<
   readonly match?: readonly string[];
   readonly snapshot?: SnapshotPolicy;
   readonly commands?: AssetCommands<TState, TCommand>;
+  readonly companions?: readonly AssetKindCompanion<TState>[];
 
   create(
     assetId: string

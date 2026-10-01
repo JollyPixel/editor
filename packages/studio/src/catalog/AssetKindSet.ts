@@ -10,10 +10,12 @@ import type { AssetKindPresenter } from "./AssetTreeModel.ts";
 // CONSTANTS
 const kFallbackIcon: IconName = "file";
 const kNoEditorDetail = "no editor";
+const kNewAssetPrefix = "New ";
 
 export interface AssetKindEntry {
   readonly kind: string;
   readonly label: string;
+  readonly extension: string;
   readonly icon?: IconName;
 }
 
@@ -56,6 +58,12 @@ export class AssetKindSet implements AssetKindPresenter {
     return this.#byKind.has(kind);
   }
 
+  entryOf(
+    kind: string
+  ): AssetKindEntry | undefined {
+    return this.#byKind.get(kind);
+  }
+
   iconFor(
     kind: string
   ): IconName {
@@ -81,4 +89,12 @@ export class AssetKindSet implements AssetKindPresenter {
       };
     });
   }
+}
+
+export function newAssetName(
+  entry: AssetKindEntry
+): string {
+  const { label } = entry;
+
+  return `${kNewAssetPrefix}${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 }

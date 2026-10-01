@@ -169,9 +169,20 @@ catalog changes.
 - Delete opens `<asset-delete-dialog>`, listing the live assets outside the
   deleted set that still reference it, from `dependentsOf`. Confirming forces
   each command.
+- New asset lists one item per registered kind, labelled and iconed from
+  its descriptor. It sends `CatalogClient.create` with no content, the path
+  `New <label><extension>` in the selected folder and `onConflict: "suffix"`.
+  The back-end writes the kind's default state and its companions, so the
+  shell never loads a handler. Once the record reaches the tree, the row is
+  selected and its name edited in place, as with New folder.
 - Export downloads the selected asset and its dependencies as `<stem>.zip`
   from `CatalogClient.exportArchive`. It is disabled on a folder: an archive
   has a single root.
+- A right-click, Shift+F10 or the menu key opens a `jolly-context-menu` with
+  the same actions, plus Open on a single asset. Below the rows it only
+  offers New folder and New asset, created at the root. The toolbar and the menu read
+  which actions apply from `AssetSelection`, and an action re-checks it
+  against the current tree before it runs.
 - Failures go to the `jolly-log` over the workbench.
 
 The shell prompts for a username once with `promptPeerIdentity`, under the
@@ -183,9 +194,11 @@ prompt again.
 
 `StudioSession` listens to catalog `change`: a tab whose asset was deleted
 closes, a renamed asset relabels its tab. `<asset-browser>` rebuilds its
-`AssetTreeModel` from the records and keeps the expanded folders, the
+`AssetTreeModel` on `change` and `dependencies`, from the records, the
+dependency edges and its draft folders, and keeps the expanded folders, the
 selection and the kind filter. Folders are path prefixes, so a folder
-rename or delete sends one catalog command per asset under it.
+rename or delete sends one catalog command per asset under it; an owner's
+rename or move adds one per companion.
 
 ## Editor pages
 
@@ -215,7 +228,7 @@ active frame at once, the others on their next focus.
 | `src/index.ts` | boot: connection, registry, `<jolly-studio>` |
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog with offline fallback |
 | `src/seed.ts` | `createStudioProject`: handlers and seed for both back-ends |
-| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`: pure tree decisions |
+| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetCompanions`, `AssetDeletion`, `AssetSelection`, `DraftFolders`: pure tree decisions |
 | `src/editors/` | `EditorRegistry`, `EditorDescriptor` |
 | `src/tabs/` | `EditorTabs`: strip, iframe stack, handshake, tab cap; `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, `<asset-browser>`, delete dialog |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, `<asset-browser>`, `AssetCommands`, asset menu, delete dialog |

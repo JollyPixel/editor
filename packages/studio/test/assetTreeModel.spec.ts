@@ -14,10 +14,10 @@ import {
   AssetTreeModel,
   assetNodeId,
   folderNodeId,
-  type AssetRelocation,
-  type AssetTreeNode
+  type AssetRelocation
 } from "../src/catalog/AssetTreeModel.ts";
 import { InvalidAssetNameError } from "../src/catalog/errors/InvalidAssetNameError.ts";
+import { shape } from "./helpers/assetTree.ts";
 
 // CONSTANTS
 const kRecords: AssetRecordData[] = [
@@ -56,16 +56,6 @@ const kModel = new AssetTreeModel(kRecords);
 const kMaps = folderNodeId(AssetPath.parse("maps"));
 const kTextures = folderNodeId(AssetPath.parse("textures"));
 const kBlocks = folderNodeId(AssetPath.parse("textures/blocks"));
-
-function shape(
-  nodes: AssetTreeNode[]
-): unknown[] {
-  return nodes.map((node) => (
-    node.children === undefined ?
-      node.label :
-      [node.label, shape(node.children)]
-  ));
-}
 
 function plain(
   relocation: AssetRelocation | null
@@ -133,16 +123,16 @@ describe("AssetTreeModel", () => {
     assert.deepEqual(AssetTreeModel.EMPTY.folderIds(), []);
   });
 
-  test("lists the asset itself or every asset under a folder", () => {
+  test("deletes the asset itself or every asset under a folder", () => {
     assert.deepEqual(
-      kModel.assetsUnder(assetNodeId("readme")).map((asset) => asset.id),
+      kModel.deletionOf([assetNodeId("readme")]).assets.map((asset) => asset.id),
       ["readme"]
     );
     assert.deepEqual(
-      kModel.assetsUnder(kTextures).map((asset) => asset.id),
+      kModel.deletionOf([kTextures]).assets.map((asset) => asset.id),
       ["tex-b", "tex-a", "tex-nested"]
     );
-    assert.deepEqual(kModel.assetsUnder("asset:unknown"), []);
+    assert.equal(kModel.deletionOf(["asset:unknown"]).isEmpty, true);
   });
 
   test("replaces labels without touching the model", () => {
@@ -174,7 +164,7 @@ describe("AssetTreeModel kind filter", () => {
     assert.deepEqual(shape(model.nodes), shape(kModel.nodes));
   });
 
-  test("still relocates and lists hidden assets under a visible folder", () => {
+  test("still relocates and deletes hidden assets under a visible folder", () => {
     const model = new AssetTreeModel([
       ...kRecords,
       {
@@ -186,7 +176,9 @@ describe("AssetTreeModel kind filter", () => {
 
     assert.equal(model.has(assetNodeId("map-in-textures")), false);
     assert.ok(
-      model.assetsUnder(kTextures).some((asset) => asset.id === "map-in-textures")
+      model.deletionOf([kTextures]).assets.some(
+        (asset) => asset.id === "map-in-textures"
+      )
     );
     assert.ok(
       model.renameOf(kTextures, "images")?.renames.some(

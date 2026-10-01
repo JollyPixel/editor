@@ -8,6 +8,22 @@ registerIcon("folder", `
   />
 `, { tone: "amber" });
 
+registerIcon("new-folder", `
+  <path
+    d="M3 5a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 9v7M8.5 12.5h7"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    fill="none"
+  />
+`, { tone: "amber" });
+
 registerIcon("pencil", `
   <path
     d="M4 20l1-4L16 5l3 3L8 19l-4 1Z"

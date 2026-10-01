@@ -27,6 +27,7 @@ function entriesFor(
       id: "delete",
       label: "Delete",
       icon: "close",
+      intent: "danger",
       disabled: locked
     }
   ];

@@ -32,7 +32,7 @@ boot. Point `JOLLY_PROJECT` at another directory, absolute or relative to
 this package, to open a real project. The seed only writes paths the root
 lacks.
 
-Seeded asset ids: `map-overworld`, `tileset-default`, `model-default`,
+Seeded asset ids: `map-overworld`, `tileset-overworld`, `model-default`,
 `model-texture`.
 
 ## Shell
@@ -43,6 +43,16 @@ focuses the tab if it is already open. Rows whose kind has no editor page say
 `no editor`. Four editor tabs at most: a fifth asks which one to close.
 Open tabs come back after a reload, in their order; only the active one
 loads its editor until another is focused.
+
+Ctrl+click or Shift+click selects several rows of one folder, to move or
+delete them together. New folder adds an empty folder that exists until a
+reload or until an asset lands in it. New asset, in the toolbar and the
+context menu, creates an asset of a registered kind next to the selection,
+named `New <kind>` and suffixed when taken; a new map or model comes with
+its tileset or texture. An asset referenced by a same-named
+asset in its folder is its companion: it nests under it and follows its
+renames and moves, see
+[ADR-0013](./docs/adr/0013-companions-are-derived-from-names-and-edges.md).
 
 Each tab is an iframe on `/editors/<name>/`. The page posts `jolly-ready`,
 the shell answers with `jolly-launch` and the target id, and the editor can

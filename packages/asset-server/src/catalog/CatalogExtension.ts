@@ -173,7 +173,9 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
     switch (command.type) {
       case CATALOG_CREATE: {
-        const data = this.#decode(command.content);
+        const data = command.content === undefined ?
+          Ok(undefined) :
+          this.#decode(command.content);
         if (!data.ok) {
           return data;
         }

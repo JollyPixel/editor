@@ -26,6 +26,7 @@ export interface ContextMenuItem {
   label: string;
   icon?: IconName;
   disabled?: boolean;
+  intent?: "danger";
 }
 
 export type ContextMenuEntry = ContextMenuItem | "separator";
@@ -58,7 +59,6 @@ export class ContextMenu extends LitElement {
     anchor: () => this.#point,
     popover: () => this._menu,
     gap: 0,
-    onOpen: () => this.#focusFirst(),
     onClose: () => this.#settle()
   });
 
@@ -99,6 +99,7 @@ export class ContextMenu extends LitElement {
       right: x
     };
     this.#chosen = null;
+    this.performUpdate();
     if (this._menu.matches(":popover-open")) {
       this.#popup.reposition();
       this.#focusFirst();
@@ -122,7 +123,8 @@ export class ContextMenu extends LitElement {
 
   #show(): void {
     this.#invoker = deepActiveElement();
-    this._menu.showPopover();
+    this.#popup.show();
+    this.#focusFirst();
   }
 
   readonly #onPointerDown = (): void => {
@@ -169,7 +171,7 @@ export class ContextMenu extends LitElement {
   ): TemplateResult {
     return html`
       <button
-        class="item"
+        class=${item.intent === "danger" ? "item danger" : "item"}
         type="button"
         role="menuitem"
         tabindex="-1"

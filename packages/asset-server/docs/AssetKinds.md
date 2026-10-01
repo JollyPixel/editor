@@ -10,6 +10,7 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   readonly match?: readonly string[];
   readonly snapshot?: SnapshotPolicy;
   readonly commands?: AssetCommands<TState, TCommand>;
+  readonly companions?: readonly AssetKindCompanion<TState>[];
 
   create(assetId: string): TState;
   load(state: TState, content: Uint8Array): void;
@@ -49,6 +50,26 @@ references nothing omits it. See [dependency edges](./Catalog.md#dependency-edge
 `rebind` changes references to IDs present in `idMap` when importing an
 archive as a copy. The handler mutates the loaded state before serialization.
 Kinds with no references can omit it.
+
+### Companions
+
+```ts
+interface AssetKindCompanion<TState = unknown> {
+  readonly kind: string;
+
+  link(state: TState, companion: AssetReferenceData): void;
+}
+```
+
+`companions` lists the assets an asset of this kind needs from the start, such
+as the tileset of a voxel map. They are only created when the asset itself is
+[created without content](./AssetWriter.md#create): the writer creates one
+asset of each companion kind, in its default state, beside the new asset, then
+calls `link` on the new asset's fresh state with the companion's reference
+before serializing it. `dependencies` should report the linked reference so
+the pair gets its dependency edge. A companion's own companions are not
+created. Each companion kind must be registered and claim an extension that
+differs from the owner's and from the other companions'.
 
 Import the handler contract from `@jolly-pixel/asset-server`. It exposes
 the handler and live protocol types, `foldAssetEvent`, the built-in handlers
@@ -152,6 +173,7 @@ later registrations winning on a shared extension.
 interface AssetKindDescriptor {
   kind: string;
   label: string;
+  extension: string;
   icon?: AssetKindIcon;
 }
 
@@ -161,10 +183,11 @@ interface AssetKindIcon {
 }
 ```
 
-A descriptor is the kind's presentation as plain data: a label and an icon
-whose `svg` holds the children of a 24x24 view box. A host that lists or
-opens assets reads it without loading the handler, so a descriptor can also
-come from a manifest. Packages export one beside their handler
+A descriptor is the kind's presentation as plain data: a label, the
+extension a new asset of the kind gets (leading dot included, one of the
+handler's `extensions`), and an icon whose `svg` holds the children of a 24x24
+view box. A host that lists, opens or creates assets reads it without loading
+the handler, so a descriptor can also come from a manifest. Packages export one beside their handler
 (`PIXEL_ART_ASSET`, `VOXEL_MAP_ASSET`, `VOXEL_MODEL_ASSET`).
 
 ## Built-in kinds

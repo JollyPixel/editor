@@ -33,6 +33,10 @@ import {
   VOXEL_MAP_KIND
 } from "./voxelMap.ts";
 import {
+  tilesetAsset,
+  TILESET_KIND
+} from "./tileset.ts";
+import {
   voxelCommandProtocol,
   voxelWorldSchema
 } from "../network/VoxelCommand.schema.ts";
@@ -42,6 +46,7 @@ import type { VoxelMapNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
+const kCompanionTilesetId = "default";
 const kWorldParser = new SchemaParser(voxelWorldSchema);
 const kDefaultSnapshot: SnapshotPolicy = {
   delay: 5_000,
@@ -143,6 +148,17 @@ export function voxelMapAssetKind(
       [VOXEL_MAP_EXTENSION]: "application/json; charset=utf-8"
     },
     snapshot,
+    companions: [
+      {
+        kind: TILESET_KIND,
+        link(state, tileset) {
+          state.tilesets.add({
+            id: kCompanionTilesetId,
+            asset: tilesetAsset(tileset.id)
+          });
+        }
+      }
+    ],
 
     create(): VoxelMapState {
       return new VoxelMapState(chunkSize);

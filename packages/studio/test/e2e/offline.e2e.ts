@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { expect, test } from "@playwright/test";
+import { treeRow } from "@jolly-pixel/e2e";
 
 test("offers a shared offline catalog when the socket closes", async({ page }) => {
   await page.routeWebSocket("**/ws-sync", (socket) => {
@@ -11,11 +12,8 @@ test("offers a shared offline catalog when the socket closes", async({ page }) =
   }).click();
 
   const rows = page.locator("asset-browser jolly-tree").getByRole("treeitem");
-  await expect(rows).toHaveCount(8);
-  await page.getByRole("treeitem", {
-    name: "overworld.voxelmap.json",
-    exact: true
-  }).dblclick();
+  await expect(rows).toHaveCount(4);
+  await treeRow(page, "overworld.voxelmap.json").dblclick();
 
   await expect(page.locator("#editor-frames iframe")).toHaveCount(1);
   await expect(page.locator("#editor-frames iframe")).toHaveAttribute(

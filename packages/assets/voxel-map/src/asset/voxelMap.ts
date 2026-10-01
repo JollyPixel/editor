@@ -9,6 +9,7 @@ export const VOXEL_MAP_EXTENSION = ".voxelmap.json";
 export const VOXEL_MAP_ASSET: AssetKindDescriptor = {
   kind: VOXEL_MAP_KIND,
   label: "Voxel map",
+  extension: VOXEL_MAP_EXTENSION,
   icon: {
     svg: `
       <path

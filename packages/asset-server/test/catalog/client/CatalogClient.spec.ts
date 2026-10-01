@@ -170,6 +170,28 @@ describe("CatalogClient", () => {
     });
   });
 
+  test("sends a create without content for a null content", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    void client.create(
+      "maps/new.voxelmap.json",
+      null,
+      { kind: "voxelmap" }
+    );
+    await flush();
+
+    assert.deepEqual(room.sent[0], {
+      type: CATALOG_CREATE,
+      requestId: room.requestId(0),
+      path: "maps/new.voxelmap.json",
+      kind: "voxelmap",
+      onConflict: undefined,
+      content: undefined
+    });
+  });
+
   test("rejects a request the server refuses", async() => {
     const room = new FakeCatalogRoom();
     const client = new CatalogClient(room);
