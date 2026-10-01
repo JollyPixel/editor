@@ -28,6 +28,7 @@ const kTilesetFile = path.join(
   "tileset.png"
 );
 const kEditors = readEditorPackages([
+  "@jolly-pixel/editor.pixel-art",
   "@jolly-pixel/editor.voxel-map",
   "@jolly-pixel/editor.voxel-model"
 ]);

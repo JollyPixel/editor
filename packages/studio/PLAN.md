@@ -14,8 +14,12 @@ Each phase ends with `pnpm --filter @jolly-pixel/studio test`,
   reorder, dock handle fix.
 - D1 (2026-09-24): data-only registry. Kinds come from
   `AssetKindDescriptor`, editors from the `jollypixel.editor` manifest.
-- P5, partly: Playwright suites (`shell.e2e.ts`, `offline.e2e.ts`) and the
-  editor host `ROADMAP.md` update.
+- P4 (2026-10-01): pixel-art editor page in `editors/pixel-art/page/`, built
+  to `dist-page/` by `build:page`, listed by the studio. The voxel-map
+  Paint-tab action was dropped: tilesets stay inside voxel-map.
+- P5 (2026-10-01): Playwright suites (`shell.e2e.ts`, `offline.e2e.ts`), the
+  editor host `ROADMAP.md` update, `ARCHITECTURE.md`, `GLOSSARY.md`, and
+  `studio/**` excluded from the docs site.
 
 ## Open issues
 
@@ -27,27 +31,10 @@ Each phase ends with `pnpm --filter @jolly-pixel/studio test`,
   the seed needs a decision on what `clear` should restore.
 - Static pages use the absolute `/editors/` prefix while the build sets
   `base: "./"`, so a build hosted under a sub-path cannot load its editors.
-
-## P4 — Pixel-art page
-
-- `PixelArtEditor` in `editors/pixel-art`: `index.html`, boot module, panel
-  over the target document, presence, `Join pixel art` identity title.
-  Generic demo boot pieces move to `src/` and the demo imports them there.
-- Vite build to `dist-page/`, `base: "./"`, a `build:page` script the studio
-  `build` depends on. The package declares a `jollypixel.editor` manifest
-  (`pixel-art`, kinds `pixelart`, dist `dist-page`) and the studio
-  `vite.config.ts` lists it; nothing else changes in the shell.
-- voxel-map Paint tab: an action calling `context.shell.openAsset` for the
-  selected tileset, hidden when `context.shell` is null.
-- Tests: the editor mounts over a fake session with `happy-dom` and joins
-  the target room; the Paint action is absent without a shell and posts the
-  command with one.
-- Exit: a texture row opens a pixel-art tab; the Paint tab opens the tileset
-  in a second tab and focuses it on a repeat.
-
-## P5 — Docs
-
-- `ARCHITECTURE.md`, `GLOSSARY.md`, docs site placement.
+- The shell channel has no caller. Its first command, `open-asset`, waits for
+  an editor that links to another asset.
+- The studio e2e suite is skipped in CI with the voxel-map and voxel-model
+  suites, so the editor frames are proven only locally.
 
 ## Dynamic kinds and editors
 

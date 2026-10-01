@@ -11,7 +11,7 @@ test("offers a shared offline catalog when the socket closes", async({ page }) =
   }).click();
 
   const rows = page.locator("asset-browser jolly-tree").getByRole("treeitem");
-  await expect(rows).toHaveCount(7);
+  await expect(rows).toHaveCount(8);
   await page.getByRole("treeitem", {
     name: "overworld.voxelmap.json",
     exact: true

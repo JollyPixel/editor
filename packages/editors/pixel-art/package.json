@@ -4,6 +4,15 @@
   "version": "1.1.0",
   "type": "module",
   "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "pixel-art",
+      "kinds": [
+        "pixelart"
+      ],
+      "dist": "dist-page"
+    }
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -20,14 +29,16 @@
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
     "build": "tsc -b",
+    "build:page": "vite build -c vite.page.config.ts",
+    "build:page:static": "vite build -c vite.page.config.ts --mode static",
     "dev": "vite",
     "dev:e2e": "vite --mode e2e",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
-    "lint": "oxlint src test && pnpm run lint:css",
-    "lint:css": "stylelint \"src/**/*.ts\" \"examples/scripts/**/*.ts\" \"examples/public/**/*.css\" --cache",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
+    "lint": "oxlint src test page vite.page.config.ts && pnpm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"examples/scripts/**/*.ts\" \"examples/public/**/*.css\" \"page/public/**/*.css\" --cache",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json && tsc --noEmit -p page/tsconfig.json"
   },
   "repository": {
     "type": "git",

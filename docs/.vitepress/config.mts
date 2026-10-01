@@ -25,7 +25,8 @@ export default withMermaid(defineConfig({
     "**/PLAN.md",
     "**/examples/**",
     "bench/**",
-    "editors/**"
+    "editors/**",
+    "studio/**"
   ],
   themeConfig: {
     nav: [

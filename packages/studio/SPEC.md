@@ -1,6 +1,7 @@
 # @jolly-pixel/studio — SPEC
 
-Status: P1 and P2 built on 2026-09-22, P3 on 2026-09-24. P4 is next.
+Status: P1 and P2 built on 2026-09-22, P3 on 2026-09-24, P4 and P5 on
+2026-10-01. The dynamic kinds and editors track (D2 to D4) is next.
 
 ## Goal
 
@@ -82,8 +83,8 @@ studio origin therefore reaches the studio back-end without any editor change.
   the editors' roots. The seed applies only to paths the root lacks, so
   pointing at a real project directory is safe.
 - `handlers` and `seed` from `createStudioProject` in `src/seed.ts`, which the
-  offline workspace shares. Handlers: pixel-art, voxel-map, voxel-model,
-  texture. Seed: one tileset, one map referencing it, one model with its
+  offline workspace shares. Handlers: pixel-art, tileset, voxel-map,
+  voxel-model, texture. Seed: one tileset, one map referencing it, one model with its
   texture, so the tree is never empty. Documents come from the asset packages'
   builders (`createTilesetDocument`, `createVoxelMapDocument`,
   `createPixelArtDocument`, `createVoxelModelDocument`) and the studio's copy of
@@ -105,11 +106,15 @@ each one's `package.json`:
 }
 ```
 
-`dist` is optional. The plugin also serves the `name` and `kinds` of every
-editor as the `virtual:jolly-pixel/editors` module the shell boots from. The
-studio lists each editor package as a `devDependency` so `pnpm -r build` runs
-the editors' existing `build` scripts first. Editors set `base: "./"` so their bundles work under that
-prefix and stop colliding with the asset-server's `/assets/` route.
+`dist` is optional. Packages are located with `module.findPackageJSON`, so
+a package with an `exports` map needs no `./package.json` export. The plugin
+also serves the `name` and `kinds` of every editor as the
+`virtual:jolly-pixel/editors` module the shell boots from. The studio lists
+each editor package as a `devDependency` so `pnpm -r build` runs the editors'
+existing `build` scripts first; the studio's own `build` script then builds
+the pixel-art page, which the pixel-art library build leaves out. Editors set
+`base: "./"` so their bundles work under that prefix and stop colliding with
+the asset-server's `/assets/` route.
 
 Two constraints on editor pages surfaced while building this:
 
@@ -188,25 +193,28 @@ editor's code:
 - `pageUrl(kind, target)` builds `/editors/<name>/?<query>&target=<id>`; the
   offline shell passes `{ offline: "", workspace: "studio" }` as `query`.
 
-A kind with no editor, such as `texture`, opens nothing and the row shows a
-`no editor` detail. `pixelart` gets an editor in P4, when its page declares
-the manifest.
+A kind with no editor, such as `texture` or `tileset`, opens nothing and the
+row shows a `no editor` detail.
 
 ### Pixel-art page
 
-Pixel-art has a library and a host-mounted demo under `examples/`, not an
-editor page. The studio plan adds one in `packages/editors/pixel-art`:
+Pixel-art is a library with a host-mounted demo under `examples/`. Its
+editor page lives beside them in `packages/editors/pixel-art/page/`:
 
-- A `PixelArtEditor` class accepting `pixelart`, mounting `pixel-draw-panel`
-  over the target's synced document, with presence. No runtime preview,
-  rotation toggle or demo query parameters.
-- Its own `index.html` and boot module, reusing the demo's boot pieces that
-  are not demo-specific. The demo stays unchanged for its e2e suite.
-- Built with Vite to `dist-page/`, so the `tsc` library `dist/` is untouched
-  and the studio's pages plugin resolves that folder for this editor.
+- `PixelArtEditor` accepts `pixelart` and mounts `pixel-draw-panel` over the
+  target's synced document, with presence and the stored key bindings. No
+  runtime preview, rotation toggle or demo query parameters. Identity title:
+  `Join pixel art`.
+- The demo and the page share `PanelScope` (scope theme and density mirrored
+  onto the panel) and `TEXTURE_DOCUMENT_KIND` from `src/`. Neither is a
+  package export. The demo behaves as before.
+- `vite.page.config.ts` builds the page to `dist-page/`, so the `tsc` library
+  `dist/` is untouched. The package's `jollypixel.editor` manifest points the
+  studio at that folder.
 
-The voxel-map Paint tab opening its tileset through `context.shell` is the
-first shell-channel consumer, once this page exists.
+Tilesets are not pixel-art assets: the `tileset` kind holds pixels and
+blocks, and its pixels are edited only inside voxel-map. The voxel-map Paint
+tab therefore gets no "open in a tab" action.
 
 ### Launch handshake
 
@@ -247,7 +255,8 @@ The reverse direction exists from the first cut, with one command:
 - The channel is one-way per command: the shell never replies on it. A
   command that needs an answer gets its own message type when it appears.
 
-The voxel-map Paint tab is the first caller, in the pixel-art page phase.
+No editor calls it yet. The voxel-map Paint tab was the planned first
+caller until tilesets were kept inside voxel-map.
 
 ### Tab cap
 
@@ -282,8 +291,9 @@ request unopened.
 
 ## Docs site
 
-`studio/**` joins `editors/**` in the VitePress `srcExclude`. It is an app,
-not a library; its `README.md` and `ARCHITECTURE.md` are read in the repo.
+`studio/**` sits beside `editors/**` in the VitePress `srcExclude` and in the
+ignored dead-link patterns. It is an app, not a library; its `README.md`,
+`ARCHITECTURE.md` and `GLOSSARY.md` are read in the repo.
 
 ## Decisions log
 
@@ -320,3 +330,14 @@ Settled while building P3, 2026-09-24:
 - `EditorTabs` stays an imperative controller: an iframe reloads when it is
   moved or re-created, so a template must never own the frames.
 - Partial folder renames and deletes are reported, not rolled back.
+
+Settled while building P4, 2026-10-01:
+
+- Tileset pixels stay inside voxel-map. The pixel-art page edits `pixelart`
+  assets only, and the Paint-tab action is dropped.
+- The page sits in `page/`, outside `src/`, so the library build and its
+  dependencies stay as they were.
+- The page shows one texture, the target. Import replaces it; adding a
+  texture as a new asset stays a demo feature.
+- The page's mount is proven by the studio e2e suite, not a happy-dom spec:
+  the panel needs a real canvas and the boot needs a real session.

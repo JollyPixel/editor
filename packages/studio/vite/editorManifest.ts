@@ -1,7 +1,7 @@
 // Import Node.js Dependencies
 import fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
+import { findPackageJSON } from "node:module";
 
 // Import Third-party Dependencies
 import * as z from "zod";
@@ -10,7 +10,6 @@ import * as z from "zod";
 import type { EditorDescriptor } from "../src/editors/EditorDescriptor.ts";
 
 // CONSTANTS
-const kRequire = createRequire(import.meta.url);
 const kPackageManifestSchema = z.object({
   jollypixel: z.object({
     editor: z.object({
@@ -32,9 +31,12 @@ export interface EditorPackage extends EditorDescriptor {
 export function locatePackage(
   packageName: string
 ): string {
-  return path.dirname(
-    kRequire.resolve(`${packageName}/package.json`)
-  );
+  const manifest = findPackageJSON(packageName, import.meta.url);
+  if (manifest === undefined) {
+    throw new TypeError(`Cannot locate the package "${packageName}".`);
+  }
+
+  return fs.realpathSync(path.dirname(manifest));
 }
 
 /**
