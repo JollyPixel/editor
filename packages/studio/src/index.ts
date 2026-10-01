@@ -6,7 +6,10 @@ import {
   VOXEL_MAP_ASSET
 } from "@jolly-pixel/asset.voxel-map";
 import { VOXEL_MODEL_ASSET } from "@jolly-pixel/asset.voxel-model";
-import { rememberQueryUsername } from "@jolly-pixel/editor.host";
+import {
+  mountConsole,
+  rememberQueryUsername
+} from "@jolly-pixel/editor.host";
 import { showConfirm } from "@jolly-pixel/ui";
 import editors from "virtual:jolly-pixel/editors";
 
@@ -50,9 +53,11 @@ async function boot(): Promise<void> {
   if (import.meta.env.DEV) {
     rememberQueryUsername();
   }
+  const editorConsole = mountConsole();
   const connection = await connectStudio();
   const studio = required("jolly-studio");
   await studio.attach({
+    console: editorConsole,
     catalog: connection.catalog,
     editors: createEditorRegistry(connection.editorQuery),
     confirmEvict: (tab) => showConfirm({

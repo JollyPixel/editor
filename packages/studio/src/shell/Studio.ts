@@ -10,6 +10,7 @@ import {
   state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import type { EditorConsole } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
   type LogEntry
@@ -29,6 +30,7 @@ export interface StudioOptions {
   catalog: CatalogClient;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
   editors: EditorRegistry;
+  console?: EditorConsole;
 }
 
 @customElement("jolly-studio")
@@ -80,11 +82,16 @@ export class Studio extends LitElement {
       editors: options.editors,
       tabs: {
         strip: this._strip,
-        frames: this._frames,
         home: this._home,
         confirmEvict: options.confirmEvict
       },
-      onTabsChange: this.#syncOpenTabs
+      frames: {
+        container: this._frames
+      },
+      onTabsChange: this.#syncOpenTabs,
+      onToggleConsole: () => {
+        options.console?.element.toggle();
+      }
     });
     this.#session = session;
     this._assets = {

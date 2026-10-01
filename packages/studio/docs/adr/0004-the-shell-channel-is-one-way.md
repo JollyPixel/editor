@@ -15,8 +15,10 @@ posts commands to the parent:
 page framed by something else, or not framed at all, never posts into the void. The channel is
 bound to the origin of that answer and posts only there.
 
-The shell never replies on the channel. A command that needs an answer gets its own message type
-when it appears. New commands are new members of the command union; title and dirty state are the
+The shell never replies to a command. A command that needs an answer gets its own message type
+when it appears. The one message the shell pushes unasked is `jolly-appearance`, which the channel
+hands to the page as `onAppearance`
+([ADR-0015](./0015-the-studio-console-takes-precedence.md)). New commands are new members of the command union; title and dirty state are the
 expected next two, and nothing is reserved by name.
 
 `open-asset` runs exactly like a tree activation: it focuses the open tab or opens one, subject to
@@ -32,3 +34,5 @@ the registry and the tab cap.
 
 No editor calls the channel yet. The voxel-map Paint tab was the planned first caller until
 tilesets were kept inside voxel-map ([ADR-0008](./0008-pixel-art-page-edits-pixelart-only.md)).
+`editor.host` itself posts `toggle-console` on Ctrl+K
+([ADR-0015](./0015-the-studio-console-takes-precedence.md)).

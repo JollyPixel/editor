@@ -1,13 +1,17 @@
 // Import Third-party Dependencies
-import type { CommandConsole } from "@jolly-pixel/console";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
+  EditorContext,
   EditorDefinition,
   EditorHandle
 } from "./EditorDefinition.ts";
-import { mountConsole } from "../console/mountConsole.ts";
+import { forwardConsole } from "../console/forwardConsole.ts";
+import {
+  mountConsole,
+  type PageConsole
+} from "../console/mountConsole.ts";
 import {
   readDebugLogger,
   type HostLogger
@@ -46,6 +50,10 @@ export interface StandaloneConnection {
 }
 
 export interface MountStandaloneOptions {
+  /**
+   * Read when the parent answers no `jolly-launch`.
+   * @default [new QueryLaunchSource(), new InjectedLaunchSource()]
+   */
   sources?: Iterable<LaunchSource>;
   dev?: boolean;
   debugHandle?: string;
@@ -55,7 +63,7 @@ export interface MountStandaloneOptions {
    */
   connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
   /**
-   * Origins the default `HostMessageLaunchSource` accepts a launch from.
+   * Origins the parent's `jolly-launch` is accepted from.
    * @default [location.origin]
    */
   origins?: Iterable<string>;
@@ -76,23 +84,42 @@ export async function mountStandalone<
     logger.child({ namespace: "host.boot" })
   );
 
-  const editorConsole = mountConsole();
-
   boot.state("booting");
+  let editorConsole: PageConsole | null = null;
   try {
+    const launch = await boot.step("launch", () => EditorLaunch.read(
+      [
+        new HostMessageLaunchSource({
+          origins: options.origins,
+          logger: logger.child({ namespace: "host.launch" })
+        }),
+        ...options.sources ?? [
+          new QueryLaunchSource(),
+          new InjectedLaunchSource()
+        ]
+      ],
+      boot.logger
+    ));
+    editorConsole = launch.shell === null ?
+      mountConsole() :
+      forwardConsole(launch.shell);
+
     const handle = await mountEditor(
       definition,
       options,
       logger,
       boot,
-      editorConsole.commands
+      {
+        launch,
+        commands: editorConsole.commands
+      }
     );
     boot.state("ready");
 
     return handle;
   }
   catch (error) {
-    editorConsole.dispose();
+    editorConsole?.dispose();
     boot.fail(error);
     boot.state("failed");
 
@@ -105,20 +132,10 @@ async function mountEditor<THandle extends EditorHandle>(
   options: MountStandaloneOptions,
   logger: HostLogger,
   boot: BootTrace,
-  commands: CommandConsole
+  page: Pick<EditorContext, "launch" | "commands">
 ): Promise<THandle> {
+  const { launch, commands } = page;
   const dev = options.dev === true;
-  const launch = await boot.step("launch", () => EditorLaunch.read(
-    options.sources ?? [
-      new HostMessageLaunchSource({
-        origins: options.origins,
-        logger: logger.child({ namespace: "host.launch" })
-      }),
-      new QueryLaunchSource(),
-      new InjectedLaunchSource()
-    ],
-    boot.logger
-  ));
   const target = {
     launch,
     kinds: definition.kinds,

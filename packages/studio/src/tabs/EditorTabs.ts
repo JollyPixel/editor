@@ -1,13 +1,8 @@
 // Import Third-party Dependencies
-import {
-  isReadyMessage,
-  isShellCommand,
-  LAUNCH_MESSAGE_TYPE,
-  readDebugLogger,
-  type HostLogger,
-  type ShellCommand
-} from "@jolly-pixel/editor.host";
 import type { IconName } from "@jolly-pixel/ui";
+
+// Import Internal Dependencies
+import type { EditorFrames } from "./EditorFrames.ts";
 
 // CONSTANTS
 export const DEFAULT_TAB_CAP = 4;
@@ -34,7 +29,7 @@ export interface TabStrip extends HTMLElement {
 
 export interface EditorTabsOptions {
   strip: TabStrip;
-  frames: HTMLElement;
+  frames: EditorFrames;
   /**
    * Shown when no editor tab is active, behind a fixed tab that cannot be
    * closed and does not count toward `cap`.
@@ -45,20 +40,11 @@ export interface EditorTabsOptions {
    */
   cap?: number;
   /**
-   * @default location.origin
-   */
-  launchOrigin?: string;
-  /**
    * Asked before the least recently activated tab is closed to make room.
    * @default always accepts
    */
   confirmEvict?: (tab: EditorTab) => boolean | Promise<boolean>;
-  onShellCommand?: (command: ShellCommand, from: EditorTab) => void;
   onChange?: () => void;
-  /**
-   * @default readDebugLogger()
-   */
-  logger?: HostLogger;
 }
 
 export interface EditorTabOpenOptions {
@@ -73,21 +59,17 @@ export interface EditorTabOpenOptions {
 interface OpenTab {
   tab: EditorTab;
   item: HTMLElement;
-  frame: HTMLIFrameElement | null;
 }
 
 export class EditorTabs {
   readonly cap: number;
 
   #strip: TabStrip;
-  #frames: HTMLElement;
+  #frames: EditorFrames;
   #home: HTMLElement;
   #homeItem: HTMLElement;
-  #launchOrigin: string;
   #confirmEvict: (tab: EditorTab) => boolean | Promise<boolean>;
-  #onShellCommand: ((command: ShellCommand, from: EditorTab) => void) | undefined;
   #onChange: (() => void) | undefined;
-  #logger: HostLogger;
   #open = new Map<string, OpenTab>();
   #active: string | null = null;
   #listening = new AbortController();
@@ -99,13 +81,8 @@ export class EditorTabs {
     this.#strip = options.strip;
     this.#frames = options.frames;
     this.#home = options.home;
-    this.#launchOrigin = options.launchOrigin ?? location.origin;
     this.#confirmEvict = options.confirmEvict ?? (() => true);
-    this.#onShellCommand = options.onShellCommand;
     this.#onChange = options.onChange;
-    this.#logger = (options.logger ?? readDebugLogger()).child({
-      namespace: "studio.tabs"
-    });
 
     this.#homeItem = document.createElement(kTabTag);
     Object.assign(this.#homeItem, {
@@ -128,7 +105,6 @@ export class EditorTabs {
     this.#strip.addEventListener("jolly-tab-reorder", (event) => {
       this.move(event.detail.value, event.detail.index);
     }, { signal });
-    window.addEventListener("message", this.#onMessage, { signal });
   }
 
   get active(): string {
@@ -185,8 +161,7 @@ export class EditorTabs {
       this.#strip.append(item);
       this.#open.set(tab.id, {
         tab,
-        item,
-        frame: null
+        item
       });
     }
     if (focus) {
@@ -230,7 +205,7 @@ export class EditorTabs {
 
     this.#open.delete(id);
     entry.item.remove();
-    entry.frame?.remove();
+    this.#frames.remove(id);
     if (this.#active === id) {
       this.focus(
         [...this.#open.keys()].at(-1) ?? HOME_TAB_ID
@@ -251,8 +226,7 @@ export class EditorTabs {
       return false;
     }
 
-    entry.frame?.remove();
-    entry.frame = null;
+    this.#frames.remove(id);
     if (this.#active === id) {
       this.#show(entry);
     }
@@ -300,18 +274,16 @@ export class EditorTabs {
       label,
       tooltip: tooltip ?? ""
     });
-    if (entry.frame !== null) {
-      entry.frame.title = label;
-    }
+    this.#frames.retitle(id, label);
 
     return true;
   }
 
   dispose(): void {
     this.#listening.abort();
-    for (const entry of this.#open.values()) {
+    for (const [id, entry] of this.#open) {
       entry.item.remove();
-      entry.frame?.remove();
+      this.#frames.remove(id);
     }
     this.#open.clear();
     this.#active = null;
@@ -324,74 +296,6 @@ export class EditorTabs {
     this.#active = entry?.tab.id ?? null;
     this.#strip.value = this.active;
     this.#home.hidden = entry !== null;
-    if (entry !== null && entry.frame === null) {
-      entry.frame = this.#createFrame(entry.tab);
-    }
-    for (const other of this.#open.values()) {
-      if (other.frame !== null) {
-        other.frame.hidden = other !== entry;
-      }
-    }
+    this.#frames.show(entry?.tab ?? null);
   }
-
-  #createFrame(
-    tab: EditorTab
-  ): HTMLIFrameElement {
-    const frame = document.createElement("iframe");
-    frame.title = tab.label;
-    frame.allow = "keyboard-map";
-    frame.src = tab.url;
-    this.#frames.append(frame);
-
-    return frame;
-  }
-
-  #entryOf(
-    source: MessageEventSource | null
-  ): OpenTab | undefined {
-    if (source === null) {
-      return undefined;
-    }
-    for (const entry of this.#open.values()) {
-      if (entry.frame?.contentWindow === source) {
-        return entry;
-      }
-    }
-
-    return undefined;
-  }
-
-  readonly #onMessage = (
-    event: MessageEvent
-  ): void => {
-    const entry = this.#entryOf(event.source);
-    if (entry === undefined) {
-      return;
-    }
-
-    if (isReadyMessage(event.data)) {
-      this.#logger.debug("launch posted", {
-        target: entry.tab.id,
-        origin: this.#launchOrigin
-      });
-      entry.frame?.contentWindow?.postMessage(
-        {
-          type: LAUNCH_MESSAGE_TYPE,
-          target: entry.tab.id
-        },
-        this.#launchOrigin
-      );
-    }
-    else if (isShellCommand(event.data)) {
-      this.#logger.debug("shell command", {
-        from: entry.tab.id,
-        command: event.data.command,
-        target: event.data.target
-      });
-      this.#onShellCommand?.(
-        event.data,
-        entry.tab
-      );
-    }
-  };
 }

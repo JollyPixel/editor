@@ -28,11 +28,15 @@ it to another instance.
 | `commands.open()`, `element.show()` | opens it |
 | Escape, a click on the backdrop | closes it |
 | `commands.close()`, `element.hide()` | closes it |
+| `element.toggle()` | toggles it; returns `false` and does nothing while `console` is `null` |
 | a `closeOnExecute` command resolving | closes it |
 
 The element listens for the shortcut on `window` in the capture phase while it is connected, and
 calls `preventDefault()` because Firefox binds Ctrl+K to its search bar. `element.open` reports
 whether the dialog is showing.
+
+`isToggleShortcut(event)`, from the main entry, tells whether a key event is that shortcut. A page
+that leaves its console to another window uses it to forward the keystroke without loading Lit.
 
 The console is a native `<dialog>` opened with `showModal()`. Opening first calls
 `inputLayers.dismissAll()` from `ui`, which closes every open `jolly-dialog` and popover. When a

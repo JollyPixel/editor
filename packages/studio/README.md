@@ -55,8 +55,10 @@ renames and moves, see
 [ADR-0013](./docs/adr/0013-companions-are-derived-from-names-and-edges.md).
 
 Each tab is an iframe on `/editors/<name>/`. The page posts `jolly-ready`,
-the shell answers with `jolly-launch` and the target id, and the editor can
-post `jolly-shell` commands back (`open-asset` today). Set
+the shell answers with `jolly-launch`, the target id and the shell's theme and
+density, and the editor can post `jolly-shell` commands back (`open-asset`,
+`toggle-console`). Ctrl+K opens the studio's console from the shell or from
+any editor tab; `theme` and `density` restyle the shell and every frame. Set
 `jolly-pixel:debug` in `localStorage` (for example to `host.*,studio.tabs`)
 to log the handshake and each editor's boot steps. An editor page can also be
 opened directly:

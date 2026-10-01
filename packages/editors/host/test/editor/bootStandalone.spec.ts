@@ -21,6 +21,7 @@ import type {
 } from "#src/editor/EditorDefinition.ts";
 import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/mountStandalone.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
+import { LAUNCH_MESSAGE_TYPE } from "#src/launch/ShellChannel.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 
@@ -90,6 +91,35 @@ async function answerOffer(
   }
 }
 
+function frameInShell(): () => void {
+  const parent = Object.assign(new MessageChannel().port1, {
+    postMessage(): void {
+      queueMicrotask(() => window.dispatchEvent(new MessageEvent("message", {
+        source: parent,
+        origin: location.origin,
+        data: {
+          type: LAUNCH_MESSAGE_TYPE,
+          target: kAssetId
+        }
+      })));
+    }
+  });
+  const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
+  Object.defineProperty(window, "parent", {
+    configurable: true,
+    get: () => parent
+  });
+
+  return () => {
+    if (descriptor === undefined) {
+      Reflect.deleteProperty(window, "parent");
+    }
+    else {
+      Object.defineProperty(window, "parent", descriptor);
+    }
+  };
+}
+
 describe("bootStandalone", () => {
   afterEach(() => {
     document.documentElement.removeAttribute(EDITOR_STATE_ATTRIBUTE);
@@ -125,6 +155,27 @@ describe("bootStandalone", () => {
 
     assert.equal(reads.count, 0);
     assert.deepEqual(mounted, [kAssetId]);
+  });
+
+  test("an offline page framed by a shell takes its launch and shell channel", async(context) => {
+    context.after(frameInShell());
+    const shells: Array<EditorContext["shell"]> = [];
+
+    const handle = await bootStandalone({
+      ...definition(),
+      mount: (editorContext) => {
+        shells.push(editorContext.shell);
+
+        return Promise.resolve(editorHandle(editorContext.session));
+      }
+    }, {
+      offline: project,
+      forceOffline: true
+    });
+    handle.dispose();
+
+    assert.equal(shells[0]?.origin, location.origin);
+    assert.equal(document.body.querySelector("jolly-console"), null);
   });
 
   test("opens the offline workspace when the user picks it", async() => {

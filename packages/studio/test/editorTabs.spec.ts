@@ -6,15 +6,8 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import {
-  LAUNCH_MESSAGE_TYPE,
-  READY_MESSAGE_TYPE,
-  SHELL_MESSAGE_TYPE,
-  type ShellCommand
-} from "@jolly-pixel/editor.host";
-
 // Import Internal Dependencies
+import { EditorFrames } from "../src/tabs/EditorFrames.ts";
 import {
   EditorTabs,
   HOME_TAB_ID,
@@ -23,7 +16,6 @@ import {
 } from "../src/tabs/EditorTabs.ts";
 
 // CONSTANTS
-const kOrigin = "http://localhost";
 const kMap: EditorTab = {
   id: "map-1",
   label: "overworld.voxelmap.json",
@@ -42,6 +34,7 @@ const kOther: EditorTab = {
 
 interface Harness {
   tabs: EditorTabs;
+  editorFrames: EditorFrames;
   strip: HTMLElement & { value: string; };
   frames: HTMLElement;
   home: HTMLElement;
@@ -61,11 +54,13 @@ function harness(
   const frames = document.createElement("div");
   const home = document.createElement("section");
   document.body.append(strip, frames, home);
+  const editorFrames = new EditorFrames({
+    container: frames
+  });
   const tabs = new EditorTabs({
     strip,
-    frames,
+    frames: editorFrames,
     home,
-    launchOrigin: kOrigin,
     ...options
   });
   function frameList(): HTMLIFrameElement[] {
@@ -74,6 +69,7 @@ function harness(
 
   current = {
     tabs,
+    editorFrames,
     strip,
     frames,
     home,
@@ -96,19 +92,9 @@ function harness(
   return current;
 }
 
-function postFromFrame(
-  frame: HTMLIFrameElement,
-  data: unknown
-): void {
-  window.dispatchEvent(new MessageEvent("message", {
-    source: frame.contentWindow,
-    origin: kOrigin,
-    data
-  }));
-}
-
 afterEach(() => {
   current?.tabs.dispose();
+  current?.editorFrames.dispose();
   current = undefined;
   document.body.replaceChildren();
 });
@@ -341,66 +327,6 @@ describe("EditorTabs", () => {
       detail: { value: "map-1" }
     }));
     assert.deepEqual(tabs.ids(), ["model-1"]);
-  });
-
-  test("answers a frame's ready message with its launch", async() => {
-    const { tabs, frameOf } = harness();
-    await tabs.open(kMap);
-    const frame = frameOf("map-1");
-    const posted: Array<[unknown, string]> = [];
-    assert.ok(frame.contentWindow);
-    Object.assign(frame.contentWindow, {
-      postMessage: (message: unknown, origin: string) => {
-        posted.push([message, origin]);
-      }
-    });
-
-    window.dispatchEvent(new MessageEvent("message", {
-      source: window,
-      data: { type: READY_MESSAGE_TYPE }
-    }));
-    postFromFrame(frame, { type: READY_MESSAGE_TYPE });
-
-    assert.deepEqual(posted, [
-      [
-        {
-          type: LAUNCH_MESSAGE_TYPE,
-          target: "map-1"
-        },
-        kOrigin
-      ]
-    ]);
-  });
-
-  test("routes a frame's shell command with its tab", async() => {
-    const received: Array<[ShellCommand, string]> = [];
-    const { tabs, frameOf } = harness({
-      onShellCommand: (command, from) => {
-        received.push([command, from.id]);
-      }
-    });
-    await tabs.open(kMap);
-
-    postFromFrame(frameOf("map-1"), {
-      type: SHELL_MESSAGE_TYPE,
-      command: "open-asset",
-      target: "tileset-1"
-    });
-    postFromFrame(frameOf("map-1"), {
-      type: SHELL_MESSAGE_TYPE,
-      command: "unknown"
-    });
-
-    assert.deepEqual(received, [
-      [
-        {
-          type: SHELL_MESSAGE_TYPE,
-          command: "open-asset",
-          target: "tileset-1"
-        },
-        "map-1"
-      ]
-    ]);
   });
 
   test("relabels an open tab", async() => {

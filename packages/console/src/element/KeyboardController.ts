@@ -4,12 +4,13 @@ import type {
   ReactiveControllerHost
 } from "lit";
 
-export interface KeyInput {
-  key: string;
-  ctrlKey: boolean;
-  metaKey: boolean;
-  altKey: boolean;
-  shiftKey: boolean;
+// Import Internal Dependencies
+import {
+  isToggleShortcut,
+  type ShortcutInput
+} from "../toggleShortcut.ts";
+
+export interface KeyInput extends ShortcutInput {
   isComposing?: boolean;
   preventDefault(): void;
 }
@@ -82,21 +83,28 @@ export class KeyboardController implements ReactiveController {
   }
 
   hostConnected(): void {
-    window.addEventListener("keydown", this.onWindowKeyDown, true);
+    window.addEventListener(
+      "keydown",
+      this.onWindowKeyDown,
+      true
+    );
   }
 
   hostDisconnected(): void {
-    window.removeEventListener("keydown", this.onWindowKeyDown, true);
+    window.removeEventListener(
+      "keydown",
+      this.onWindowKeyDown,
+      true
+    );
   }
 
   readonly onWindowKeyDown = (
     event: KeyInput
   ): void => {
-    const toggles = event.key === "k" &&
-      (event.ctrlKey || event.metaKey) &&
-      !event.altKey &&
-      !event.shiftKey;
-    if (toggles && this.#options.toggle()) {
+    if (
+      isToggleShortcut(event) &&
+      this.#options.toggle()
+    ) {
       event.preventDefault();
     }
   };
