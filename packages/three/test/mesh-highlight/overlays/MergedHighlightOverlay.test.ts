@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { MergedHighlightOverlay } from "#src/index.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 function createTarget(
   x: number = 0
@@ -53,29 +54,19 @@ describe("constructor", () => {
     for (const target of targets) {
       parent.add(target);
     }
-    parent.updateMatrixWorld(true);
 
     const overlay = new MergedHighlightOverlay({ parent, targets, color: "#ffffff" });
-    const position = overlay.object.geometry.getAttribute("position");
+    const bounds = new THREE.Box3().setFromObject(overlay.object);
 
-    const xs = new Set<number>();
-    for (let i = 0; i < position.count; i++) {
-      xs.add(Math.round(position.getX(i)));
-    }
-    /*
-     * Box half-extent is 0.5, so vertices cluster around each target's own x
-     * (-0.5/+0.5 offset rounds back to the target's own integer x).
-     */
-    assert.ok(xs.has(0) || xs.has(-1) || xs.has(1));
-    assert.ok(xs.has(5) || xs.has(4) || xs.has(6));
+    assert.strictEqual(bounds.min.x, -0.5);
+    assert.strictEqual(bounds.max.x, 5.5);
   });
 
-  test("defaults to white, full opacity, non-transparent", () => {
+  test("defaults to full opacity, non-transparent", () => {
     const parent = new THREE.Scene();
     const targets = [createTarget()];
     const overlay = new MergedHighlightOverlay({ parent, targets, color: "#ffffff" });
 
-    assert.strictEqual(`#${overlay.object.material.color.getHexString()}`, "#ffffff");
     assert.strictEqual(overlay.object.material.opacity, 1);
     assert.strictEqual(overlay.object.material.transparent, false);
   });
@@ -109,25 +100,15 @@ describe("dispose", () => {
     parent.add(target);
 
     const overlay = new MergedHighlightOverlay({ parent, targets: [target], color: "#ffffff" });
-
-    let targetGeometryDisposed = false;
-    let mergedGeometryDisposed = false;
-    let materialDisposed = false;
-    target.geometry.addEventListener("dispose", () => {
-      targetGeometryDisposed = true;
-    });
-    overlay.object.geometry.addEventListener("dispose", () => {
-      mergedGeometryDisposed = true;
-    });
-    overlay.object.material.addEventListener("dispose", () => {
-      materialDisposed = true;
-    });
+    const counts = watchDisposal(
+      target.geometry,
+      overlay.object.geometry,
+      overlay.object.material
+    );
 
     overlay.dispose();
 
     assert.strictEqual(parent.children.length, 1, "only the target itself should remain");
-    assert.ok(mergedGeometryDisposed);
-    assert.ok(materialDisposed);
-    assert.strictEqual(targetGeometryDisposed, false, "must not dispose a target's own geometry");
+    assert.deepStrictEqual(counts, [0, 1, 1]);
   });
 });

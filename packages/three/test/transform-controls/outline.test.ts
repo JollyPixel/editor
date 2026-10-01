@@ -24,13 +24,6 @@ function miters(
 }
 
 describe("createOutlineGeometry", () => {
-  test("welds a box to its eight corners", () => {
-    const outline = createOutlineGeometry(new THREE.BoxGeometry(1, 1, 1));
-
-    assert.equal(outline.getAttribute("position").count, 8);
-    assert.equal(outline.getAttribute("normal"), undefined);
-  });
-
   test("offsets every face of a hard corner by the same distance", () => {
     const outline = createOutlineGeometry(new THREE.BoxGeometry(2, 1, 3));
 

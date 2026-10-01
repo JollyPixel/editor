@@ -7,14 +7,12 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { HighlightOutline } from "#src/index.ts";
-
-function createTarget(): THREE.Mesh {
-  return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-}
+import { watchDisposal } from "../../fixtures/disposal.ts";
+import { createBoxMesh } from "../helpers.ts";
 
 describe("constructor", () => {
   test("builds an edges geometry matching the target's", () => {
-    const target = createTarget();
+    const target = createBoxMesh();
     const outline = new HighlightOutline({ target });
     const expected = new THREE.EdgesGeometry(target.geometry);
 
@@ -25,7 +23,7 @@ describe("constructor", () => {
   });
 
   test("adds itself as a child of the target", () => {
-    const target = createTarget();
+    const target = createBoxMesh();
     const outline = new HighlightOutline({ target });
 
     assert.strictEqual(target.children.length, 1);
@@ -33,7 +31,7 @@ describe("constructor", () => {
   });
 
   test("defaults to white, full opacity, non-transparent", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
 
     assert.strictEqual(`#${outline.material.color.getHexString()}`, "#ffffff");
     assert.strictEqual(outline.material.opacity, 1);
@@ -41,32 +39,32 @@ describe("constructor", () => {
   });
 
   test("opacity < 1 marks the material transparent", () => {
-    const outline = new HighlightOutline({ target: createTarget(), opacity: 0.4 });
+    const outline = new HighlightOutline({ target: createBoxMesh(), opacity: 0.4 });
 
     assert.strictEqual(outline.material.opacity, 0.4);
     assert.strictEqual(outline.material.transparent, true);
   });
 
   test("applies the given color", () => {
-    const outline = new HighlightOutline({ target: createTarget(), color: "#ff0000" });
+    const outline = new HighlightOutline({ target: createBoxMesh(), color: "#ff0000" });
 
     assert.strictEqual(`#${outline.material.color.getHexString()}`, "#ff0000");
   });
 
   test("defaults linewidth to 1", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
 
     assert.strictEqual(outline.material.linewidth, 1);
   });
 
   test("applies the given linewidth", () => {
-    const outline = new HighlightOutline({ target: createTarget(), linewidth: 3 });
+    const outline = new HighlightOutline({ target: createBoxMesh(), linewidth: 3 });
 
     assert.strictEqual(outline.material.linewidth, 3);
   });
 
   test("defaults to depth-tested with a low render order", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
 
     assert.strictEqual(outline.material.depthTest, true);
     assert.strictEqual(outline.material.depthWrite, true);
@@ -74,7 +72,7 @@ describe("constructor", () => {
   });
 
   test("xray disables depth test/write and raises the render order above default objects", () => {
-    const outline = new HighlightOutline({ target: createTarget(), xray: true });
+    const outline = new HighlightOutline({ target: createBoxMesh(), xray: true });
 
     assert.strictEqual(outline.material.depthTest, false);
     assert.strictEqual(outline.material.depthWrite, false);
@@ -84,13 +82,13 @@ describe("constructor", () => {
 
 describe("dashed", () => {
   test("defaults to a solid LineBasicMaterial, not LineDashedMaterial", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
 
     assert.ok(!(outline.material instanceof THREE.LineDashedMaterial));
   });
 
   test("builds a LineDashedMaterial with a positive dash/gap size", () => {
-    const outline = new HighlightOutline({ target: createTarget(), dashed: true });
+    const outline = new HighlightOutline({ target: createBoxMesh(), dashed: true });
 
     assert.ok(outline.material instanceof THREE.LineDashedMaterial);
     assert.ok((outline.material as THREE.LineDashedMaterial).dashSize > 0);
@@ -98,7 +96,7 @@ describe("dashed", () => {
   });
 
   test("computes line distances so the dash pattern actually renders", () => {
-    const outline = new HighlightOutline({ target: createTarget(), dashed: true });
+    const outline = new HighlightOutline({ target: createBoxMesh(), dashed: true });
 
     assert.ok(outline.geometry.getAttribute("lineDistance"));
   });
@@ -107,7 +105,7 @@ describe("dashed", () => {
     "still applies color/opacity/linewidth/xray - LineDashedMaterial is a LineBasicMaterial subclass",
     () => {
       const outline = new HighlightOutline({
-        target: createTarget(), dashed: true, color: "#ff0000", opacity: 0.5, linewidth: 3, xray: true
+        target: createBoxMesh(), dashed: true, color: "#ff0000", opacity: 0.5, linewidth: 3, xray: true
       });
 
       assert.strictEqual(`#${outline.material.color.getHexString()}`, "#ff0000");
@@ -120,7 +118,7 @@ describe("dashed", () => {
 
 describe("color", () => {
   test("updates the material color", () => {
-    const outline = new HighlightOutline({ target: createTarget(), color: "#000000" });
+    const outline = new HighlightOutline({ target: createBoxMesh(), color: "#000000" });
     outline.color = "#00ff00";
 
     assert.strictEqual(`#${outline.material.color.getHexString()}`, "#00ff00");
@@ -129,7 +127,7 @@ describe("color", () => {
 
 describe("opacity", () => {
   test("updates opacity and toggles transparent accordingly", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
 
     outline.opacity = 0.5;
     assert.strictEqual(outline.material.opacity, 0.5);
@@ -143,7 +141,7 @@ describe("opacity", () => {
 
 describe("linewidth", () => {
   test("updates the material linewidth", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
     outline.linewidth = 4;
 
     assert.strictEqual(outline.material.linewidth, 4);
@@ -152,7 +150,7 @@ describe("linewidth", () => {
 
 describe("xray", () => {
   test("toggling xray on disables depth test/write and raises render order", () => {
-    const outline = new HighlightOutline({ target: createTarget() });
+    const outline = new HighlightOutline({ target: createBoxMesh() });
     outline.xray = true;
 
     assert.strictEqual(outline.material.depthTest, false);
@@ -161,7 +159,7 @@ describe("xray", () => {
   });
 
   test("toggling xray off restores depth test/write and the default render order", () => {
-    const outline = new HighlightOutline({ target: createTarget(), xray: true });
+    const outline = new HighlightOutline({ target: createBoxMesh(), xray: true });
     outline.xray = false;
 
     assert.strictEqual(outline.material.depthTest, true);
@@ -172,22 +170,13 @@ describe("xray", () => {
 
 describe("dispose", () => {
   test("removes itself from the target and disposes geometry/material", () => {
-    const target = createTarget();
+    const target = createBoxMesh();
     const outline = new HighlightOutline({ target });
-
-    let geometryDisposed = false;
-    let materialDisposed = false;
-    outline.geometry.addEventListener("dispose", () => {
-      geometryDisposed = true;
-    });
-    outline.material.addEventListener("dispose", () => {
-      materialDisposed = true;
-    });
+    const counts = watchDisposal(outline.geometry, outline.material);
 
     outline.dispose();
 
     assert.strictEqual(target.children.length, 0);
-    assert.ok(geometryDisposed);
-    assert.ok(materialDisposed);
+    assert.deepStrictEqual(counts, [1, 1]);
   });
 });

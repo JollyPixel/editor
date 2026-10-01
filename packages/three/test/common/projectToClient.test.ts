@@ -52,7 +52,6 @@ describe("projectToClient", () => {
   test("uses the camera pose even before the first render", () => {
     const camera = frontCamera();
     camera.position.set(3, 0, 10);
-    camera.lookAt(3, 0, 0);
 
     assert.deepEqual(
       projectToClient(camera, kCanvas, { x: 3, y: 0, z: 0 }),

@@ -11,7 +11,8 @@ import {
   type BoxControlsOptions,
   type BoxDragEvent,
   type BoxFlipEvent,
-  type BoxRotateEvent
+  type BoxRotateEvent,
+  type BoxVolume
 } from "#src/index.ts";
 import {
   createPointerTarget,
@@ -19,10 +20,12 @@ import {
   type PointerAtOptions
 } from "./pointer.ts";
 
-export interface Harness {
-  area: AreaBox;
+export type HarnessPointer = Omit<PointerAtOptions, "camera" | "element">;
+
+export interface Harness<TBox extends BoxVolume = AreaBox> {
+  box: TBox;
   camera: THREE.PerspectiveCamera;
-  controls: BoxControls;
+  controls: BoxControls<TBox>;
   element: HTMLElement;
   scene: THREE.Scene;
   changes: BoxDragEvent[];
@@ -30,28 +33,51 @@ export interface Harness {
   ends: BoxDragEvent[];
   rotations: BoxRotateEvent[];
   flips: BoxFlipEvent[];
-  /**
-   * Refreshes world matrices, as a renderer would between two frames.
-   */
   render: () => void;
-  send: (options: Omit<PointerAtOptions, "camera" | "element">) => void;
+  aim: (
+    position: THREE.Vector3Like,
+    target: THREE.Vector3Like
+  ) => void;
+  pointer: (options: HarnessPointer) => PointerEvent;
+  send: (options: HarnessPointer) => void;
+  click: (target: THREE.Vector3) => void;
+  isOver: (target: THREE.Vector3) => boolean;
   at: (x: number, y: number, z: number) => THREE.Vector3;
 }
 
+function createAreaBox(): AreaBox {
+  return new AreaBox({ size: { x: 8, y: 1, z: 8 } });
+}
+
 export function createHarness(
-  options: BoxControlsOptions = {}
-): Harness {
+  options?: BoxControlsOptions
+): Harness<AreaBox>;
+export function createHarness<TBox extends BoxVolume>(
+  options: BoxControlsOptions,
+  createBox: () => TBox
+): Harness<TBox>;
+export function createHarness(
+  options: BoxControlsOptions = {},
+  createBox: () => BoxVolume = createAreaBox
+): Harness<BoxVolume> {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-  camera.position.set(6, 12, 14);
-  camera.lookAt(0, 0, 0);
-
   const element = createPointerTarget();
-  const area = new AreaBox({ size: { x: 8, y: 1, z: 8 } });
-  scene.add(area);
+  const box = createBox();
+  scene.add(box);
+
+  function aim(
+    position: THREE.Vector3Like,
+    target: THREE.Vector3Like
+  ): void {
+    camera.position.copy(position);
+    camera.lookAt(target.x, target.y, target.z);
+    camera.updateMatrixWorld();
+  }
+  aim({ x: 6, y: 12, z: 14 }, { x: 0, y: 0, z: 0 });
 
   const controls = new BoxControls(camera, element, options);
-  controls.attach(area);
+  controls.attach(box);
   scene.updateMatrixWorld(true);
 
   const changes: BoxDragEvent[] = [];
@@ -72,8 +98,23 @@ export function createHarness(
     flips.push({ axis });
   });
 
+  function pointer(
+    event: HarnessPointer
+  ): PointerEvent {
+    return pointerAt({
+      ...event,
+      camera,
+      element
+    });
+  }
+  function send(
+    event: HarnessPointer
+  ): void {
+    element.dispatchEvent(pointer(event));
+  }
+
   return {
-    area,
+    box,
     camera,
     controls,
     element,
@@ -84,27 +125,27 @@ export function createHarness(
     rotations,
     flips,
     render: () => scene.updateMatrixWorld(true),
-    send: (pointer) => {
-      element.dispatchEvent(
-        pointerAt({ ...pointer, camera, element })
-      );
+    aim,
+    pointer,
+    send,
+    click: (target) => {
+      send({ type: "pointerdown", target });
+      send({ type: "pointerup", target });
     },
+    isOver: (target) => controls.isOverHandle(
+      pointer({ type: "pointerdown", target })
+    ),
     at: (x, y, z) => new THREE.Vector3(x, y, z)
   };
 }
 
-/**
- * World center of the picker instance sitting on the face with the highest
- * (or lowest) coordinate along the given axis. The pickers are instances of
- * the one InstancedMesh that is never rendered.
- */
 export function pickerCenter(
-  area: THREE.Object3D,
+  box: THREE.Object3D,
   axis: "x" | "y" | "z",
   sign: 1 | -1
 ): THREE.Vector3 {
   const centers: THREE.Vector3[] = [];
-  area.traverse((child) => {
+  box.traverse((child) => {
     if (child instanceof THREE.InstancedMesh && child.visible === false) {
       const matrix = new THREE.Matrix4();
       for (let instance = 0; instance < child.count; instance++) {
@@ -118,7 +159,7 @@ export function pickerCenter(
     }
   });
 
-  assert.ok(centers.length > 0, "expected resize pickers in the area");
+  assert.ok(centers.length > 0, "expected resize pickers in the box");
 
   return centers.reduce((best, candidate) => {
     const better = sign === 1

@@ -9,20 +9,6 @@ import * as THREE from "three";
 import { GridPlaneValue } from "#src/grid/GridPlaneValue.ts";
 
 describe("GridPlaneValue", () => {
-  test("throws for an invalid plane", () => {
-    assert.throws(
-      // @ts-expect-error Testing invalid plane
-      () => new GridPlaneValue("invalid"),
-      /Invalid plane "invalid"/
-    );
-  });
-
-  test("value reflects the constructed plane", () => {
-    const plane = new GridPlaneValue("yz");
-
-    assert.strictEqual(plane.value, "yz");
-  });
-
   describe("clone", () => {
     test("returns a distinct instance with the same value", () => {
       const plane = new GridPlaneValue("yz");
@@ -92,23 +78,34 @@ describe("GridPlaneValue", () => {
   });
 
   describe("orientGeometry", () => {
-    function boundingBox(
+    function orientedPlane(
       plane: GridPlaneValue
-    ): THREE.Box3 {
+    ): THREE.PlaneGeometry {
       const geometry = new THREE.PlaneGeometry(2, 2);
       plane.orientGeometry(geometry);
       geometry.computeBoundingBox();
 
+      return geometry;
+    }
+
+    function boundingBoxOf(
+      geometry: THREE.PlaneGeometry
+    ): THREE.Box3 {
       const box = geometry.boundingBox;
       assert.ok(box);
 
       return box;
     }
 
-    /*
-     * rotateX/rotateY bake the rotation into vertex data via cos/sin(π/2),
-     * which isn't exactly 0 in floating point.
-     */
+    function frontNormalOf(
+      geometry: THREE.PlaneGeometry
+    ): THREE.Vector3 {
+      return new THREE.Vector3().fromBufferAttribute(
+        geometry.getAttribute("normal"),
+        0
+      );
+    }
+
     function assertNear(
       actual: number,
       expected: number
@@ -119,31 +116,40 @@ describe("GridPlaneValue", () => {
       );
     }
 
-    test("\"xz\" flattens the geometry onto y = 0", () => {
-      const box = boundingBox(new GridPlaneValue("xz"));
+    test("\"xz\" flattens the geometry onto y = 0, facing +y", () => {
+      const geometry = orientedPlane(new GridPlaneValue("xz"));
+      const box = boundingBoxOf(geometry);
+      const normal = frontNormalOf(geometry);
 
       assertNear(box.min.y, 0);
       assertNear(box.max.y, 0);
       assertNear(box.min.x, -1);
       assertNear(box.min.z, -1);
+      assertNear(normal.y, 1);
     });
 
-    test("\"yz\" flattens the geometry onto x = 0", () => {
-      const box = boundingBox(new GridPlaneValue("yz"));
+    test("\"yz\" flattens the geometry onto x = 0, facing +x", () => {
+      const geometry = orientedPlane(new GridPlaneValue("yz"));
+      const box = boundingBoxOf(geometry);
+      const normal = frontNormalOf(geometry);
 
       assertNear(box.min.x, 0);
       assertNear(box.max.x, 0);
       assertNear(box.min.y, -1);
       assertNear(box.min.z, -1);
+      assertNear(normal.x, 1);
     });
 
-    test("\"xy\" leaves the geometry flat on z = 0", () => {
-      const box = boundingBox(new GridPlaneValue("xy"));
+    test("\"xy\" leaves the geometry flat on z = 0, facing +z", () => {
+      const geometry = orientedPlane(new GridPlaneValue("xy"));
+      const box = boundingBoxOf(geometry);
+      const normal = frontNormalOf(geometry);
 
       assert.strictEqual(box.min.z, 0);
       assert.strictEqual(box.max.z, 0);
       assert.strictEqual(box.min.x, -1);
       assert.strictEqual(box.min.y, -1);
+      assert.strictEqual(normal.z, 1);
     });
   });
 });

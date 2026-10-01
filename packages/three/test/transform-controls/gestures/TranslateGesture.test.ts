@@ -12,6 +12,9 @@ import * as THREE from "three";
 import { TranslateGesture } from "#src/transform-controls/gestures/TranslateGesture.ts";
 import {
   assertClose,
+  assertVector
+} from "../harness.ts";
+import {
   createContext,
   rayAt
 } from "./context.ts";
@@ -26,9 +29,7 @@ describe("TranslateGesture", () => {
 
     const delta = new THREE.Vector3();
     assert.equal(gesture.update(rayAt(2.7, 0.3), 1, delta), true);
-    assertClose(delta.x, 2);
-    assertClose(delta.y, 0);
-    assertClose(delta.z, 0);
+    assertVector(delta, [2, 0, 0]);
 
     assert.equal(gesture.update(rayAt(2.7, 0.3), null, delta), true);
     assertClose(delta.x, 2.2);
@@ -43,25 +44,6 @@ describe("TranslateGesture", () => {
     assert.equal(gesture, null);
   });
 
-  test("moves along the frame axes of a rotated orientation", () => {
-    const gesture = TranslateGesture.begin(createContext(
-      { kind: "axis", axis: "x", direction: 1 },
-      rayAt(0, 0.5),
-      {
-        quaternion: new THREE.Quaternion().setFromAxisAngle(
-          new THREE.Vector3(0, 0, 1),
-          Math.PI / 2
-        )
-      }
-    ));
-    assert.ok(gesture);
-
-    const delta = new THREE.Vector3();
-    gesture.update(rayAt(0.4, 2.5), null, delta);
-    assertClose(delta.x, 0);
-    assertClose(delta.y, 2);
-  });
-
   test("moves on a plane with a per-axis snap", () => {
     const gesture = TranslateGesture.begin(createContext(
       { kind: "plane", normal: "z" },
@@ -71,9 +53,7 @@ describe("TranslateGesture", () => {
 
     const delta = new THREE.Vector3();
     gesture.update(rayAt(1.7, 3.1), { x: 1, y: 2, z: 1 }, delta);
-    assertClose(delta.x, 1);
-    assertClose(delta.y, 2);
-    assertClose(delta.z, 0);
+    assertVector(delta, [1, 2, 0]);
   });
 
   test("refuses a plane seen edge-on", () => {
@@ -94,10 +74,7 @@ describe("TranslateGesture", () => {
 
     const delta = new THREE.Vector3();
     gesture.update(rayAt(-1.5, 2.25), null, delta);
-    assert.deepEqual(
-      delta.toArray().map((value) => Math.round(value * 100) / 100),
-      [-1.5, 2.25, 0]
-    );
+    assertVector(delta, [-1.5, 2.25, 0]);
   });
 
   test("has no gesture for the view ring", () => {

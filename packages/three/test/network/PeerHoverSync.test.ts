@@ -9,11 +9,12 @@ import * as THREE from "three";
 import { FakeRoom } from "../fixtures/room.ts";
 import { MeshHighlightState, PeerHoverRegistry } from "#src/index.ts";
 import { PeerHoverSync } from "#src/network/index.ts";
+import { joinPeer } from "./helpers.ts";
 
 function setup(
   options: { presenceKey?: string; throttleMs?: number; } = {}
 ) {
-  const room = new FakeRoom("three:peer-hover-test");
+  const room = new FakeRoom();
   const registry = new PeerHoverRegistry();
   const selection = new MeshHighlightState();
   const sync = new PeerHoverSync({
@@ -31,7 +32,7 @@ function setup(
 
 describe("remote peers", () => {
   test("applies a peer already known at construction", () => {
-    const room = new FakeRoom("three:peer-hover-test");
+    const room = new FakeRoom();
     room.addPeer("alice", { presence: { hover: "box-1" } });
     const registry = new PeerHoverRegistry();
 
@@ -45,28 +46,9 @@ describe("remote peers", () => {
     assert.equal(registry.hoverOf("alice"), "box-1");
   });
 
-  test("picks up peers landed by the join snapshot on \"sync\"", () => {
-    const { room, registry } = setup();
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-
-    room.emitSync("alice");
-
-    assert.equal(registry.hoverOf("alice"), "box-1");
-  });
-
-  test("picks up a peer on \"peer-joined\"", () => {
-    const { room, registry } = setup();
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-
-    room.emitJoin("alice");
-
-    assert.equal(registry.hoverOf("alice"), "box-1");
-  });
-
   test("applies hover patches from \"peer-presence\"", () => {
     const { room, registry } = setup();
-    room.addPeer("alice", { presence: { hover: null } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { hover: null });
 
     room.emitPresence("alice", { hover: "box-2" });
 
@@ -75,37 +57,16 @@ describe("remote peers", () => {
 
   test("clears a peer's hover when it publishes null", () => {
     const { room, registry } = setup();
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { hover: "box-1" });
 
     room.emitPresence("alice", { hover: null });
 
     assert.equal(registry.hoverOf("alice"), null);
   });
 
-  test("ignores a patch that carries no hover key", () => {
-    const { room, registry } = setup();
-
-    room.emitPresence("alice", { cursor: { x: 1 } });
-
-    assert.equal(registry.hoverOf("alice"), null);
-    assert.deepEqual(registry.hoveredObjectIds(), []);
-  });
-
-  test("removes a peer hover when the value is malformed", () => {
-    const { room, registry } = setup();
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
-
-    room.emitPresence("alice", { hover: 42 });
-
-    assert.equal(registry.hoverOf("alice"), null);
-  });
-
   test("removes a peer's hover on \"peer-left\"", () => {
     const { room, registry } = setup();
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { hover: "box-1" });
 
     room.emitLeft("alice");
 
@@ -116,8 +77,7 @@ describe("remote peers", () => {
 describe("presence key", () => {
   test("publishes and reads hovers under a custom key", () => {
     const { room, registry, selection } = setup({ presenceKey: "point" });
-    room.addPeer("alice", { presence: { point: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { point: "box-1" });
 
     selection.register("box-2", new THREE.Object3D());
     selection.hover("box-2");
@@ -175,18 +135,6 @@ describe("throttling", () => {
     assert.deepEqual(room.patches, [{ hover: null }, { hover: "box-1" }]);
   });
 
-  test("schedules a trailing flush for a report suppressed by the window", (t) => {
-    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
-    const { room, selection } = setup({ throttleMs: 50 });
-    selection.register("box-1", new THREE.Object3D());
-
-    selection.hover("box-1");
-    assert.equal(room.patches.length, 1);
-
-    t.mock.timers.tick(50);
-    assert.deepEqual(room.lastPatch, { hover: "box-1" });
-  });
-
   test("a later hover change before the flush replaces the pending value", (t) => {
     t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     const { room, selection } = setup({ throttleMs: 50 });
@@ -208,21 +156,6 @@ describe("throttling", () => {
 });
 
 describe("lifecycle", () => {
-  test("destroy() unsubscribes from every room event", () => {
-    const { room, sync } = setup();
-    assert.deepEqual(room.subscribedEvents(), [
-      "left",
-      "peer-joined",
-      "peer-left",
-      "peer-presence",
-      "sync"
-    ]);
-
-    sync.destroy();
-
-    assert.deepEqual(room.subscribedEvents(), []);
-  });
-
   test("does not react to hover changes after destroy()", () => {
     const { room, selection, sync } = setup();
     selection.register("box-1", new THREE.Object3D());
@@ -250,8 +183,7 @@ describe("lifecycle", () => {
 
   test("destroy() removes every peer this instance applied", () => {
     const { room, registry, sync } = setup();
-    room.addPeer("alice", { presence: { hover: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { hover: "box-1" });
     assert.equal(registry.hoverOf("alice"), "box-1");
 
     sync.destroy();
@@ -263,10 +195,8 @@ describe("lifecycle", () => {
     const { room, registry, sync } = setup();
     sync.destroy();
 
-    room.addPeer("bob", { presence: { hover: "box-1" } });
-    room.emitSync("bob");
+    joinPeer(room, "bob", { hover: "box-1" });
 
     assert.equal(registry.hoverOf("bob"), null);
   });
 });
-

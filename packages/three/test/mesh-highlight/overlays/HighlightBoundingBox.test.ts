@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { HighlightBoundingBox } from "#src/index.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 function createGroupOfTwoBoxes(): THREE.Group {
   const group = new THREE.Group();
@@ -134,7 +135,7 @@ describe("fillOpacity", () => {
   });
 });
 
-describe("fillOpacity", () => {
+describe("fillOpacity setter", () => {
   test("updates the fill mesh's own opacity", () => {
     const box = new HighlightBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
     box.fillOpacity = 0.6;
@@ -159,9 +160,8 @@ describe("fillOpacity", () => {
   test("remains a no-op for a non-positive opacity on a box with no fill mesh yet", () => {
     const box = new HighlightBoundingBox({ target: createGroupOfTwoBoxes() });
 
-    assert.doesNotThrow(() => {
-      box.fillOpacity = 0;
-    });
+    box.fillOpacity = 0;
+
     assert.strictEqual(box.children.length, 0);
   });
 });
@@ -246,40 +246,22 @@ describe("dispose", () => {
   test("removes itself from the target and disposes geometry/material", () => {
     const target = createGroupOfTwoBoxes();
     const box = new HighlightBoundingBox({ target });
-
-    let geometryDisposed = false;
-    let materialDisposed = false;
-    box.geometry.addEventListener("dispose", () => {
-      geometryDisposed = true;
-    });
-    box.material.addEventListener("dispose", () => {
-      materialDisposed = true;
-    });
+    const counts = watchDisposal(box.geometry, box.material);
 
     box.dispose();
 
     assert.strictEqual(target.children.length, 2);
-    assert.ok(geometryDisposed);
-    assert.ok(materialDisposed);
+    assert.deepStrictEqual(counts, [1, 1]);
   });
 
   test("also disposes the fill mesh's own geometry/material, when one exists", () => {
     const target = createGroupOfTwoBoxes();
     const box = new HighlightBoundingBox({ target, fillOpacity: 0.3 });
     const fill = box.children[0] as THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
-
-    let fillGeometryDisposed = false;
-    let fillMaterialDisposed = false;
-    fill.geometry.addEventListener("dispose", () => {
-      fillGeometryDisposed = true;
-    });
-    fill.material.addEventListener("dispose", () => {
-      fillMaterialDisposed = true;
-    });
+    const counts = watchDisposal(fill.geometry, fill.material);
 
     box.dispose();
 
-    assert.ok(fillGeometryDisposed);
-    assert.ok(fillMaterialDisposed);
+    assert.deepStrictEqual(counts, [1, 1]);
   });
 });

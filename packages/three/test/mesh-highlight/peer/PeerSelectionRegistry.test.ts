@@ -4,22 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  PeerHoverRegistry,
   PeerSelectionRegistry,
-  type PeerSelectionChangeEventDetail,
-  type PeerColorAllocator
+  type PeerSelectionChangeEventDetail
 } from "#src/index.ts";
-
-function createStubColorAllocator(): PeerColorAllocator & { released: string[]; } {
-  const released: string[] = [];
-
-  return {
-    released,
-    colorOf: (peerId) => `stub:${peerId}`,
-    release: (peerId) => {
-      released.push(peerId);
-    }
-  };
-}
+import { createStubColorAllocator } from "./helpers.ts";
 
 describe("select", () => {
   test("records a peer's selection", () => {
@@ -124,10 +113,11 @@ describe("removePeer", () => {
 });
 
 describe("colorOf", () => {
-  test("returns the same color for the same peer id", () => {
+  test("resolves a peer to the same color on another registry, whatever was asked first", () => {
     const registry = new PeerSelectionRegistry();
+    registry.colorOf("peer-b");
 
-    assert.strictEqual(registry.colorOf("peer-a"), registry.colorOf("peer-a"));
+    assert.strictEqual(registry.colorOf("peer-a"), new PeerHoverRegistry().colorOf("peer-a"));
   });
 });
 

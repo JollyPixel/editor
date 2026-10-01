@@ -8,10 +8,6 @@ import type { TransformHandle } from "#src/index.ts";
 // CONSTANTS
 const kCameraDistance = 10;
 
-/*
- * The fixture camera sits on +Z and looks at the origin, so every ray
- * travels along -Z and `rayAt(x, y)` crosses the z = 0 plane at (x, y).
- */
 export function rayAt(
   x: number,
   y: number
@@ -37,16 +33,4 @@ export function createContext(
     size: 1,
     ...overrides
   };
-}
-
-export function assertClose(
-  actual: number,
-  expected: number,
-  message?: string
-): void {
-  if (Math.abs(actual - expected) > 1e-6) {
-    throw new Error(
-      `${message ?? "value"}: expected ${expected}, received ${actual}`
-    );
-  }
 }

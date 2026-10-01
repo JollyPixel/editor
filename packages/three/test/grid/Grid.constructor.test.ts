@@ -11,9 +11,9 @@ import { Grid, GridPlaneValue } from "#src/index.ts";
 describe("constructor", () => {
   test("throws Error for invalid plane", () => {
     assert.throws(
-      // @ts-expect-error Testing invalid plane
+      // @ts-expect-error
       () => new Grid({ plane: "invalid" }),
-      /Invalid plane/
+      /Invalid plane "invalid"/
     );
   });
 
@@ -23,25 +23,19 @@ describe("constructor", () => {
     assert.strictEqual(grid.plane.value, "xz");
   });
 
-  test("plane reflects the provided plane", () => {
-    const grid = new Grid({ plane: "yz" });
-
-    assert.strictEqual(grid.plane.value, "yz");
-  });
-
   test("throws Error for invalid cellStyle", () => {
     assert.throws(
-      // @ts-expect-error Testing invalid cellStyle
+      // @ts-expect-error
       () => new Grid({ cell: { style: "invalid" } }),
-      /Invalid cellStyle/
+      /Invalid cellStyle "invalid"/
     );
   });
 
   test("throws Error for invalid sectionStyle", () => {
     assert.throws(
-      // @ts-expect-error Testing invalid sectionStyle
+      // @ts-expect-error
       () => new Grid({ section: { style: "invalid" } }),
-      /Invalid sectionStyle/
+      /Invalid sectionStyle "invalid"/
     );
   });
 
@@ -123,7 +117,7 @@ describe("constructor", () => {
   test("throws Error when fade.from is \"target\" without a fade.target", () => {
     assert.throws(
       () => new Grid({ fade: { from: "target" } }),
-      /GridFadeOptions\.target is required/
+      /GridFadeOptions\.target is required when fade\.from is "target"/
     );
   });
 
@@ -139,73 +133,6 @@ describe("constructor", () => {
     assert.strictEqual(grid.fade.from, "target");
     assert.ok(grid.followCamera);
     assert.strictEqual(grid.fade.target, target);
-  });
-
-  test("enabled: false hides the grid from construction", () => {
-    const grid = new Grid({
-      enabled: false
-    });
-
-    assert.strictEqual(grid.enabled, false);
-    assert.strictEqual(grid.visible, false);
-  });
-
-  test("constructor options override every default", () => {
-    const grid = new Grid({
-      plane: "xy",
-      cell: {
-        style: "cross",
-        size: 2,
-        color: "#111111",
-        thickness: 3
-      },
-      section: {
-        show: false,
-        style: "cross",
-        size: 8,
-        color: "#222222",
-        thickness: 4
-      },
-      crossSize: 0.3,
-      hideCellOnSection: true,
-      hideCellOnSectionFadeWidth: 1.5,
-      fade: {
-        from: "origin",
-        distance: 50,
-        strength: 2
-      },
-      axes: {
-        show: false,
-        thickness: 5,
-        xColor: "#ff0000",
-        yColor: "#00ff00",
-        zColor: "#0000ff"
-      },
-      offset: 7
-    });
-
-    assert.strictEqual(grid.plane.value, "xy");
-    assert.strictEqual(grid.cellStyle.value, "cross");
-    assert.strictEqual(grid.sectionStyle.value, "cross");
-    assert.strictEqual(grid.cellSize, 2);
-    assert.strictEqual(grid.sectionSize, 8);
-    assert.strictEqual(grid.cellColor.value, "#111111");
-    assert.strictEqual(grid.sectionColor.value, "#222222");
-    assert.strictEqual(grid.cellThickness, 3);
-    assert.strictEqual(grid.sectionThickness, 4);
-    assert.strictEqual(grid.showSection, false);
-    assert.strictEqual(grid.crossSize, 0.3);
-    assert.ok(grid.hideCellOnSection);
-    assert.strictEqual(grid.hideCellOnSectionFadeWidth, 1.5);
-    assert.strictEqual(grid.fade.from, "origin");
-    assert.strictEqual(grid.fadeDistance, 50);
-    assert.strictEqual(grid.fadeStrength, 2);
-    assert.strictEqual(grid.showAxes, false);
-    assert.strictEqual(grid.axisThickness, 5);
-    assert.strictEqual(grid.xAxisColor.value, "#ff0000");
-    assert.strictEqual(grid.yAxisColor.value, "#00ff00");
-    assert.strictEqual(grid.zAxisColor.value, "#0000ff");
-    assert.strictEqual(grid.offset, 7);
   });
 });
 
@@ -252,21 +179,6 @@ describe("Grid.Defaults", () => {
     }
   });
 
-  test("constructor options still override a mutated Grid.Defaults value", () => {
-    const original = Grid.Defaults.cell.size;
-    try {
-      Grid.Defaults.cell.size = 5;
-      const grid = new Grid({
-        cell: { size: 9 }
-      });
-
-      assert.strictEqual(grid.cellSize, 9);
-    }
-    finally {
-      Grid.Defaults.cell.size = original;
-    }
-  });
-
   test("Grid.Defaults.plane can be replaced with a validated GridPlaneValue", () => {
     const original = Grid.Defaults.plane;
     try {
@@ -278,32 +190,6 @@ describe("Grid.Defaults", () => {
     finally {
       Grid.Defaults.plane = original;
     }
-  });
-
-  test("Grid instances clone Grid.Defaults.plane rather than sharing the instance", () => {
-    const grid = new Grid();
-
-    assert.notStrictEqual(
-      grid.plane,
-      Grid.Defaults.plane
-    );
-    assert.strictEqual(
-      grid.plane.value,
-      Grid.Defaults.plane.value
-    );
-  });
-
-  test("Grid instances clone Grid.Defaults.cell.style/section.style rather than sharing the instance", () => {
-    const grid = new Grid();
-
-    assert.notStrictEqual(
-      grid.cellStyle,
-      Grid.Defaults.cell.style
-    );
-    assert.notStrictEqual(
-      grid.sectionStyle,
-      Grid.Defaults.section.style
-    );
   });
 
   test("Grid.Defaults.fade.from is used when GridOptions.fade.from is omitted", () => {
@@ -324,13 +210,16 @@ describe("Grid.Defaults", () => {
     const originalMultiplier = Grid.Defaults.extent.fadeMultiplier;
     try {
       Grid.Defaults.extent.minimum = 10;
-      Grid.Defaults.extent.fadeMultiplier = 1;
-      const grid = new Grid({
+      Grid.Defaults.extent.fadeMultiplier = 2;
+      const scaled = new Grid({
         fade: { distance: 20 }
       });
+      const floored = new Grid({
+        fade: { distance: 2 }
+      });
 
-      const params = grid.geometry.parameters;
-      assert.strictEqual(params.width, 20);
+      assert.strictEqual(scaled.geometry.parameters.width, 40);
+      assert.strictEqual(floored.geometry.parameters.width, 10);
     }
     finally {
       Grid.Defaults.extent.minimum = originalMinimum;

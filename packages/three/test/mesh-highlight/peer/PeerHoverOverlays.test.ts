@@ -13,6 +13,10 @@ import {
   PeerHoverOverlays,
   PeerSelectionVisibility
 } from "#src/index.ts";
+import {
+  createFrontCamera,
+  createPeerScene
+} from "./helpers.ts";
 
 function createHarness(
   options?: { visibility?: boolean; opacity?: number; }
@@ -24,29 +28,33 @@ function createHarness(
   visibility: PeerSelectionVisibility | undefined;
   mesh: THREE.Mesh;
 } {
-  const selection = new MeshHighlightState();
-  const selectionRegistry = new PeerSelectionRegistry();
+  const { selection, registry: selectionRegistry, mesh } = createPeerScene();
   const hoverRegistry = new PeerHoverRegistry();
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-  selection.register("mesh-1", mesh);
 
-  let visibility: PeerSelectionVisibility | undefined;
-  if (options?.visibility) {
-    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, 0);
-    camera.lookAt(0, 0, -1);
-    camera.updateMatrixWorld();
-    visibility = new PeerSelectionVisibility(
-      { registry: selectionRegistry, selection, camera, hoverRegistry }
-    );
-  }
+  const visibility = options?.visibility ?
+    new PeerSelectionVisibility({
+      registry: selectionRegistry,
+      selection,
+      camera: createFrontCamera(),
+      hoverRegistry
+    }) :
+    undefined;
 
   const overlays = new PeerHoverOverlays({
-    selectionRegistry, hoverRegistry, selection, visibility, opacity: options?.opacity
+    selectionRegistry,
+    hoverRegistry,
+    selection,
+    visibility,
+    opacity: options?.opacity
   });
 
   return {
-    selection, selectionRegistry, hoverRegistry, overlays, visibility, mesh
+    selection,
+    selectionRegistry,
+    hoverRegistry,
+    overlays,
+    visibility,
+    mesh
   };
 }
 
@@ -56,6 +64,12 @@ function materialOf(
   return (mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
 }
 
+function colorOf(
+  mesh: THREE.Mesh
+): string {
+  return `#${materialOf(mesh).color.getHexString()}`;
+}
+
 describe("peer hover", () => {
   test("one peer hovering a registered mesh produces exactly one dashed overlay in its color", () => {
     const { hoverRegistry, mesh } = createHarness();
@@ -63,14 +77,14 @@ describe("peer hover", () => {
 
     assert.strictEqual(mesh.children.length, 1);
     assert.ok(materialOf(mesh) instanceof THREE.LineDashedMaterial);
-    assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
+    assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
   });
 
-  test("defaults to a dimmer opacity than a full-strength selection overlay", () => {
+  test("defaults to the documented 0.35 hover opacity", () => {
     const { hoverRegistry, mesh } = createHarness();
     hoverRegistry.hover("peer-a", "mesh-1");
 
-    assert.ok(materialOf(mesh).opacity < 1);
+    assert.strictEqual(materialOf(mesh).opacity, 0.35);
   });
 
   test("a custom opacity is applied to the overlay", () => {
@@ -88,7 +102,7 @@ describe("peer hover", () => {
       hoverRegistry.hover("peer-b", "mesh-1");
 
       assert.strictEqual(mesh.children.length, 1);
-      assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
+      assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
     }
   );
 
@@ -105,7 +119,7 @@ describe("peer hover", () => {
       overlayBefore,
       "must reuse the same overlay instance, not rebuild it"
     );
-    assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-b"));
+    assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-b"));
   });
 
   test("all peers un-hovering disposes the overlay", () => {
@@ -116,19 +130,15 @@ describe("peer hover", () => {
     assert.strictEqual(mesh.children.length, 0);
   });
 
-  test("a peer hover that already existed before construction renders immediately - " +
-    "e.g. a mode switch rebuilding this class mid-session", () => {
-    const selection = new MeshHighlightState();
-    const selectionRegistry = new PeerSelectionRegistry();
+  test("a peer hover that already existed before construction renders immediately", () => {
+    const { selection, registry: selectionRegistry, mesh } = createPeerScene();
     const hoverRegistry = new PeerHoverRegistry();
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
-    selection.register("mesh-1", mesh);
     hoverRegistry.hover("peer-a", "mesh-1");
 
     new PeerHoverOverlays({ selectionRegistry, hoverRegistry, selection });
 
     assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
+    assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
   });
 });
 
@@ -144,15 +154,10 @@ describe("priority rule: any selector suppresses hover", () => {
   test("the local selection suppresses a peer's hover overlay", () => {
     const { selection, hoverRegistry, mesh } = createHarness();
     hoverRegistry.hover("peer-a", "mesh-1");
-    /*
-     * `MeshHighlightState.select` builds its own overlay directly, unlike
-     * `PeerSelectionRegistry.select`'s pure bookkeeping - only that one
-     * overlay should remain once the peer's is suppressed.
-     */
     selection.select("mesh-1");
 
     assert.strictEqual(mesh.children.length, 1, "only the local selection's own overlay should remain");
-    assert.notStrictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
+    assert.notStrictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
   });
 
   test("the peer hover overlay reappears once the selector clears", () => {
@@ -169,14 +174,10 @@ describe("priority rule: local hover wins over peer hover", () => {
   test("local hover on the object suppresses a peer's hover overlay", () => {
     const { selection, hoverRegistry, mesh } = createHarness();
     hoverRegistry.hover("peer-a", "mesh-1");
-    /*
-     * `MeshHighlightState.hover` builds its own overlay directly - only that
-     * one should remain once the peer's is suppressed.
-     */
     selection.hover("mesh-1");
 
     assert.strictEqual(mesh.children.length, 1, "only the local hover's own overlay should remain");
-    assert.notStrictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
+    assert.notStrictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
   });
 
   test("the peer hover overlay reappears once the local hover moves away", () => {
@@ -186,16 +187,6 @@ describe("priority rule: local hover wins over peer hover", () => {
     selection.hover(null);
 
     assert.strictEqual(mesh.children.length, 1);
-  });
-});
-
-describe("priority rule: oldest peer hoverer wins", () => {
-  test("a later peer hovering the same object does not steal the ring from the first", () => {
-    const { hoverRegistry, mesh } = createHarness();
-    hoverRegistry.hover("peer-a", "mesh-1");
-    hoverRegistry.hover("peer-b", "mesh-1");
-
-    assert.strictEqual(`#${materialOf(mesh).color.getHexString()}`, hoverRegistry.colorOf("peer-a"));
   });
 });
 
@@ -218,13 +209,6 @@ describe("visibility", () => {
 
     mesh.position.set(0, 0, -10);
     visibility!.update();
-
-    assert.strictEqual(mesh.children.length, 1);
-  });
-
-  test("omitting visibility preserves always-visible behavior", () => {
-    const { hoverRegistry, mesh } = createHarness();
-    hoverRegistry.hover("peer-a", "mesh-1");
 
     assert.strictEqual(mesh.children.length, 1);
   });

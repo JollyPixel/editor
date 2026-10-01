@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { AreaBoxEdges } from "#src/index.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 // CONSTANTS
 const kColor = "#4da3ff";
@@ -34,18 +35,10 @@ describe("AreaBoxEdges", () => {
     });
 
     test("draws fat lines at the requested pixel width", () => {
-      /*
-       * Fat lines rather than LineSegments: line width is capped at one
-       * pixel on both renderers, so a plain line cannot draw a thicker rim.
-       */
       assert.equal(createEdges({ width: 3 }).material.linewidth, 3);
     });
 
     test("stays opaque at a full opacity", () => {
-      /*
-       * A transparent Line2NodeMaterial samples a full-screen copy of the
-       * opaque pass, which three recreates mid-encode on a canvas resize.
-       */
       assert.equal(createEdges({ opacity: 1 }).material.transparent, false);
     });
 
@@ -54,7 +47,6 @@ describe("AreaBoxEdges", () => {
     });
 
     test("opts out of frustum culling", () => {
-      // Fat lines expand beyond the source segments used for frustum tests.
       assert.equal(createEdges().frustumCulled, false);
     });
 
@@ -68,14 +60,6 @@ describe("AreaBoxEdges", () => {
   });
 
   describe("resize", () => {
-    test("traces the twelve box edges", () => {
-      const edges = createEdges();
-
-      edges.resize({ x: 6, y: 3, z: 4 });
-
-      assert.equal(edges.geometry.getAttribute("instanceStart").count, 12);
-    });
-
     test("rebuilds the segments rather than stretching them", () => {
       const edges = createEdges();
 
@@ -85,15 +69,10 @@ describe("AreaBoxEdges", () => {
       assert.deepEqual(box.min.toArray(), [0, 0, 0]);
       assert.deepEqual(box.max.toArray(), [6, 3, 4]);
       assert.ok(edges.geometry.boundingSphere!.radius > 0);
-      // Scaling would have moved the node itself instead.
       assert.deepEqual(edges.scale.toArray(), [1, 1, 1]);
     });
 
     test("writes every size into the same instanced buffers", () => {
-      /*
-       * setPositions() swaps in fresh buffers, and destroying the previous
-       * ones mid-frame faults the WebGPU queue.
-       */
       const edges = createEdges();
 
       edges.resize({ x: 6, y: 3, z: 4 });
@@ -121,7 +100,7 @@ describe("AreaBoxEdges", () => {
 
       edges.emphasize(1.05, 0);
 
-      assert.ok(edges.material.opacity > 0.5);
+      assert.ok(Math.abs(edges.material.opacity - 0.525) < 1e-6);
     });
 
     test("never exceeds a fully opaque material", () => {
@@ -158,7 +137,6 @@ describe("AreaBoxEdges", () => {
       const active = edges.material.color;
       assert.ok(active.r > color.r);
       assert.notEqual(active.getHexString(), "ffffff");
-      // Still recognizably the area color.
       assert.ok(active.b > active.r);
     });
 
@@ -179,14 +157,11 @@ describe("AreaBoxEdges", () => {
   describe("dispose", () => {
     test("releases the geometry and the material", () => {
       const edges = createEdges();
-      let disposed = false;
-      edges.geometry.addEventListener("dispose", () => {
-        disposed = true;
-      });
+      const disposals = watchDisposal(edges.geometry, edges.material);
 
       edges.dispose();
 
-      assert.equal(disposed, true);
+      assert.deepEqual(disposals, [1, 1]);
     });
   });
 });

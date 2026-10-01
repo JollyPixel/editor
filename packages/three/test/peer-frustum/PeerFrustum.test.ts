@@ -1,21 +1,28 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import { describe, test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { PeerFrustum, PeerFrustumLabel } from "#src/index.ts";
-import { mockContextOf } from "../fixtures/canvas.ts";
+import {
+  PeerFrustum,
+  PeerFrustumLabel,
+  type PeerFrustumDefaults
+} from "#src/index.ts";
+import { contextOf } from "../fixtures/canvas.ts";
+import { watchDisposal } from "../fixtures/disposal.ts";
 
-function canvasOf(
-  label: PeerFrustumLabel
-): HTMLCanvasElement {
-  const { map } = label.material;
-  assert.ok(map instanceof THREE.CanvasTexture);
-
-  return map.image;
+function overrideDefaults(
+  t: TestContext,
+  patch: Partial<PeerFrustumDefaults>
+): void {
+  const original = { ...PeerFrustum.Defaults };
+  Object.assign(PeerFrustum.Defaults, patch);
+  t.after(() => {
+    Object.assign(PeerFrustum.Defaults, original);
+  });
 }
 
 describe("constructor", () => {
@@ -37,7 +44,6 @@ describe("constructor", () => {
     const frustum = new PeerFrustum();
     const positions = frustum.geometry.getAttribute("position");
 
-    // 4 near-rect + 4 far-rect + 4 body edges, 2 points each.
     assert.strictEqual(positions.count, 12 * 2);
   });
 
@@ -45,7 +51,6 @@ describe("constructor", () => {
     const frustum = new PeerFrustum({ showApex: true });
     const positions = frustum.geometry.getAttribute("position");
 
-    // 4 near-rect + 4 far-rect + 4 body + 4 apex-tip edges, 2 points each.
     assert.strictEqual(positions.count, 16 * 2);
   });
 
@@ -70,7 +75,6 @@ describe("constructor", () => {
       );
     }
 
-    // Point 0 is the near-plane's top-left corner, point 8 the far-plane's.
     const nearTopLeft = point(0);
     const farTopLeft = point(8);
     const ratio = near / depth;
@@ -120,22 +124,40 @@ describe("color", () => {
 
   test("forwards the new color to the existing label", () => {
     const frustum = new PeerFrustum({ displayName: "Bob" });
-    const { label } = frustum;
-    assert.ok(label instanceof PeerFrustumLabel);
-    const context = mockContextOf(canvasOf(label));
-    const callsBefore = context.fillTextCallCount;
 
     frustum.color = "#00ff00";
 
-    assert.ok(context.fillTextCallCount > callsBefore);
+    assert.strictEqual(frustum.label?.color, "#00ff00");
   });
 
-  test("does nothing to a label when none exists", () => {
+  test("passes a color set before the label exists to the lazy label", () => {
+    const frustum = new PeerFrustum();
+    frustum.color = "#ff0000";
+
+    frustum.displayName = "Alice";
+
+    assert.strictEqual(frustum.label?.color, "#ff0000");
+  });
+});
+
+describe("opacity", () => {
+  test("clamps to 0..1", () => {
     const frustum = new PeerFrustum();
 
-    assert.doesNotThrow(() => {
-      frustum.color = "#ff0000";
-    });
+    frustum.opacity = 2;
+    assert.strictEqual(frustum.opacity, 1);
+
+    frustum.opacity = -1;
+    assert.strictEqual(frustum.opacity, 0);
+  });
+
+  test("passes the opacity to a label created later", () => {
+    const frustum = new PeerFrustum();
+    frustum.opacity = 0.5;
+
+    frustum.displayName = "Alice";
+
+    assert.strictEqual(frustum.label?.opacity, 0.5);
   });
 });
 
@@ -158,19 +180,12 @@ describe("displayName", () => {
     frustum.displayName = "Erin";
 
     assert.strictEqual(frustum.label, label);
+    assert.strictEqual(frustum.displayName, "Erin");
     assert.strictEqual(frustum.children.length, 1);
   });
 });
 
 describe("showNameBox", () => {
-  test("does not throw when no label exists", () => {
-    const frustum = new PeerFrustum();
-
-    assert.doesNotThrow(() => {
-      frustum.showNameBox = true;
-    });
-  });
-
   test("applies the retained value when a label is created later", () => {
     const frustum = new PeerFrustum();
     frustum.showNameBox = true;
@@ -179,74 +194,49 @@ describe("showNameBox", () => {
 
     const { label } = frustum;
     assert.ok(label instanceof PeerFrustumLabel);
-    const context = mockContextOf(canvasOf(label));
-    assert.strictEqual(context.roundRectCallCount, 1);
+    assert.strictEqual(contextOf(label).roundRectCallCount, 1);
   });
 });
 
 describe("PeerFrustum.Defaults", () => {
-  test("new PeerFrustum() falls back to a mutated PeerFrustum.Defaults value", () => {
-    const original = PeerFrustum.Defaults.color;
-    try {
-      PeerFrustum.Defaults.color = "#ff00ff";
-      const frustum = new PeerFrustum();
+  test("new PeerFrustum() falls back to a mutated PeerFrustum.Defaults value", (t) => {
+    overrideDefaults(t, { color: "#ff00ff" });
+    const frustum = new PeerFrustum();
 
-      assert.strictEqual(
-        `#${frustum.material.color.getHexString()}`,
-        "#ff00ff"
-      );
-    }
-    finally {
-      PeerFrustum.Defaults.color = original;
-    }
+    assert.strictEqual(
+      `#${frustum.material.color.getHexString()}`,
+      "#ff00ff"
+    );
   });
 
-  test("mutating PeerFrustum.Defaults does not affect already-constructed instances", () => {
-    const original = PeerFrustum.Defaults.color;
-    try {
-      const frustum = new PeerFrustum();
-      PeerFrustum.Defaults.color = "#ff00ff";
+  test("mutating PeerFrustum.Defaults does not affect already-constructed instances", (t) => {
+    const frustum = new PeerFrustum();
+    overrideDefaults(t, { color: "#ff00ff" });
 
-      assert.strictEqual(
-        `#${frustum.material.color.getHexString()}`,
-        "#43aa8b"
-      );
-    }
-    finally {
-      PeerFrustum.Defaults.color = original;
-    }
+    assert.strictEqual(
+      `#${frustum.material.color.getHexString()}`,
+      "#43aa8b"
+    );
   });
 
-  test("constructor options still override a mutated PeerFrustum.Defaults value", () => {
-    const original = PeerFrustum.Defaults.color;
-    try {
-      PeerFrustum.Defaults.color = "#ff00ff";
-      const frustum = new PeerFrustum({ color: "#00ff00" });
+  test("constructor options still override a mutated PeerFrustum.Defaults value", (t) => {
+    overrideDefaults(t, { color: "#ff00ff" });
+    const frustum = new PeerFrustum({ color: "#00ff00" });
 
-      assert.strictEqual(
-        `#${frustum.material.color.getHexString()}`,
-        "#00ff00"
-      );
-    }
-    finally {
-      PeerFrustum.Defaults.color = original;
-    }
+    assert.strictEqual(
+      `#${frustum.material.color.getHexString()}`,
+      "#00ff00"
+    );
   });
 
-  test("PeerFrustum.Defaults.nearRatio drives the derived near when near is omitted", () => {
-    const original = PeerFrustum.Defaults.nearRatio;
-    try {
-      PeerFrustum.Defaults.nearRatio = 0.5;
-      const depth = 3;
-      const frustum = new PeerFrustum({ depth });
-      const positions = frustum.geometry.getAttribute("position");
-      const nearTopLeftZ = positions.getZ(0);
+  test("PeerFrustum.Defaults.nearRatio drives the derived near when near is omitted", (t) => {
+    overrideDefaults(t, { nearRatio: 0.5 });
+    const depth = 3;
+    const frustum = new PeerFrustum({ depth });
+    const positions = frustum.geometry.getAttribute("position");
+    const nearTopLeftZ = positions.getZ(0);
 
-      assert.ok(Math.abs(nearTopLeftZ - -(depth * 0.5)) < 1e-6);
-    }
-    finally {
-      PeerFrustum.Defaults.nearRatio = original;
-    }
+    assert.ok(Math.abs(nearTopLeftZ - -(depth * 0.5)) < 1e-6);
   });
 });
 
@@ -255,38 +245,24 @@ describe("dispose", () => {
     const frustum = new PeerFrustum({ displayName: "Frank" });
     const { label } = frustum;
     assert.ok(label instanceof PeerFrustumLabel);
-    const { map: texture } = label.material;
-    assert.ok(texture instanceof THREE.CanvasTexture);
-
-    let geometryDisposed = false;
-    let materialDisposed = false;
-    let textureDisposed = false;
-    let labelMaterialDisposed = false;
-
-    frustum.geometry.addEventListener("dispose", () => {
-      geometryDisposed = true;
-    });
-    frustum.material.addEventListener("dispose", () => {
-      materialDisposed = true;
-    });
-    texture.addEventListener("dispose", () => {
-      textureDisposed = true;
-    });
-    label.material.addEventListener("dispose", () => {
-      labelMaterialDisposed = true;
-    });
+    const disposals = watchDisposal(
+      frustum.geometry,
+      frustum.material,
+      label.material.map ?? undefined,
+      label.material
+    );
 
     frustum.dispose();
 
-    assert.ok(geometryDisposed);
-    assert.ok(materialDisposed);
-    assert.ok(textureDisposed);
-    assert.ok(labelMaterialDisposed);
+    assert.deepEqual(disposals, [1, 1, 1, 1]);
   });
 
-  test("does not throw when no label exists", () => {
+  test("disposes geometry and material without a label", () => {
     const frustum = new PeerFrustum();
+    const disposals = watchDisposal(frustum.geometry, frustum.material);
 
-    assert.doesNotThrow(() => frustum.dispose());
+    frustum.dispose();
+
+    assert.deepEqual(disposals, [1, 1]);
   });
 });

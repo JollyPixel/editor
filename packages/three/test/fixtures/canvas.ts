@@ -1,57 +1,62 @@
-/*
- * happy-dom provides real <canvas> elements (DOM tree, sizing, style) but no
- * 2D rendering context, so installCanvasMock patches getContext("2d") to
- * return a no-op-drawing stub. PeerFrustum's label only needs the context to
- * not throw — pixel output isn't asserted on.
- */
+// Import Node.js Dependencies
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three";
+
 export class MockCanvasRenderingContext2D {
   fillStyle: string | CanvasGradient | CanvasPattern = "#000000";
   strokeStyle: string | CanvasGradient | CanvasPattern = "#000000";
   lineWidth = 1;
+  lineJoin: CanvasLineJoin = "miter";
   font = "";
   textAlign: CanvasTextAlign = "left";
   textBaseline: CanvasTextBaseline = "alphabetic";
 
   fillTextCallCount = 0;
   lastFillText = "";
-  strokeTextCallCount = 0;
   lastStrokeText = "";
   roundRectCallCount = 0;
-  lineJoin: CanvasLineJoin = "miter";
   arcCallCount = 0;
   fillCallCount = 0;
   strokeCallCount = 0;
 
   clearRect(..._args: unknown[]): void {
-    // No-op for testing
+    return void 0;
   }
+
   fillRect(..._args: unknown[]): void {
-    // No-op for testing
+    return void 0;
   }
-  strokeRect(..._args: unknown[]): void {
-    // No-op for testing
-  }
+
   beginPath(): void {
-    // No-op for testing
+    return void 0;
   }
+
   closePath(): void {
-    // No-op for testing
+    return void 0;
   }
+
   moveTo(..._args: unknown[]): void {
-    // No-op for testing
+    return void 0;
   }
+
   lineTo(..._args: unknown[]): void {
-    // No-op for testing
+    return void 0;
   }
+
   roundRect(..._args: unknown[]): void {
     this.roundRectCallCount++;
   }
+
   arc(..._args: unknown[]): void {
     this.arcCallCount++;
   }
+
   fill(): void {
     this.fillCallCount++;
   }
+
   stroke(): void {
     this.strokeCallCount++;
   }
@@ -66,22 +71,10 @@ export class MockCanvasRenderingContext2D {
   strokeText(
     text: string
   ): void {
-    this.strokeTextCallCount++;
     this.lastStrokeText = text;
-  }
-
-  measureText(
-    text: string
-  ): TextMetrics {
-    return { width: text.length * 8 } as TextMetrics;
   }
 }
 
-/**
- * Patches doc.createElement so a "canvas" gets a working mock 2D context
- * (happy-dom's own getContext returns null). The element stays happy-dom's,
- * keeping real events, sizing, and DOM-tree behavior.
- */
 export function installCanvasMock(
   doc: Document
 ): void {
@@ -106,21 +99,16 @@ export function installCanvasMock(
   });
 }
 
-/**
- * Returns the mock 2D context patched onto a canvas by installCanvasMock,
- * exposing call counters for assertions.
- */
-export function mockContextOf(
-  canvas: HTMLCanvasElement
+export function contextOf(
+  sprite: THREE.Sprite
 ): MockCanvasRenderingContext2D {
-  const context = canvas.getContext(
+  const { map } = sprite.material;
+  assert.ok(map instanceof THREE.CanvasTexture);
+
+  const context = (map.image as HTMLCanvasElement).getContext(
     "2d"
   ) as unknown as MockCanvasRenderingContext2D | null;
-  if (context === null) {
-    throw new Error(
-      "canvas was not created through installCanvasMock"
-    );
-  }
+  assert.ok(context, "canvas was not created through installCanvasMock");
 
   return context;
 }

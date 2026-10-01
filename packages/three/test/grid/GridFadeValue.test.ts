@@ -9,46 +9,10 @@ import * as THREE from "three";
 import { GridFadeValue } from "#src/grid/GridFadeValue.ts";
 
 describe("GridFadeValue", () => {
-  test("throws when from is \"target\" and no target is provided", () => {
-    assert.throws(
-      () => new GridFadeValue("target"),
-      /GridFadeOptions\.target is required when fade\.from is "target"/
-    );
-  });
-
-  test("does not throw when from is \"camera\" without a target", () => {
-    assert.doesNotThrow(
-      () => new GridFadeValue("camera")
-    );
-  });
-
-  test("does not throw when from is \"origin\" without a target", () => {
-    assert.doesNotThrow(
-      () => new GridFadeValue("origin")
-    );
-  });
-
   test("target defaults to null when not provided", () => {
     const fade = new GridFadeValue("camera");
 
     assert.strictEqual(fade.target, null);
-  });
-
-  test("from reflects the constructed value", () => {
-    const object = new THREE.Object3D();
-    const fade = new GridFadeValue("target", object);
-
-    assert.strictEqual(fade.from, "target");
-  });
-
-  test("target is live-swappable after construction", () => {
-    const object = new THREE.Object3D();
-    const fade = new GridFadeValue("target", object);
-
-    const replacement = new THREE.Object3D();
-    fade.target = replacement;
-
-    assert.strictEqual(fade.target, replacement);
   });
 
   describe("trackTarget", () => {
@@ -129,46 +93,43 @@ describe("GridFadeValue", () => {
   });
 
   describe("anchorPosition", () => {
-    const cameraPosition = { x: 1, y: 2, z: 3 };
-    const targetPositionUniform = { x: 4, y: 5, z: 6 };
+    const kCameraPosition = { x: 1, y: 2, z: 3 };
+    const kTargetPosition = { x: 4, y: 5, z: 6 };
+    const kCases = [
+      {
+        label: "target when from is \"target\" and target is set",
+        create: () => new GridFadeValue("target", new THREE.Object3D()),
+        expected: kTargetPosition
+      },
+      {
+        label: "camera when from is \"target\" but target is cleared",
+        create: () => {
+          const fade = new GridFadeValue("target", new THREE.Object3D());
+          fade.target = null;
 
-    test("returns the target position when from is \"target\" and target is set", () => {
-      const object = new THREE.Object3D();
-      const fade = new GridFadeValue("target", object);
+          return fade;
+        },
+        expected: kCameraPosition
+      },
+      {
+        label: "camera when from is \"camera\"",
+        create: () => new GridFadeValue("camera"),
+        expected: kCameraPosition
+      },
+      {
+        label: "camera when from is \"origin\"",
+        create: () => new GridFadeValue("origin"),
+        expected: kCameraPosition
+      }
+    ];
 
-      assert.deepStrictEqual(
-        fade.anchorPosition(cameraPosition, targetPositionUniform),
-        targetPositionUniform
-      );
-    });
-
-    test("returns the camera position when from is \"target\" but target is cleared", () => {
-      const object = new THREE.Object3D();
-      const fade = new GridFadeValue("target", object);
-      fade.target = null;
-
-      assert.deepStrictEqual(
-        fade.anchorPosition(cameraPosition, targetPositionUniform),
-        cameraPosition
-      );
-    });
-
-    test("returns the camera position when from is \"camera\"", () => {
-      const fade = new GridFadeValue("camera");
-
-      assert.deepStrictEqual(
-        fade.anchorPosition(cameraPosition, targetPositionUniform),
-        cameraPosition
-      );
-    });
-
-    test("returns the camera position when from is \"origin\"", () => {
-      const fade = new GridFadeValue("origin");
-
-      assert.deepStrictEqual(
-        fade.anchorPosition(cameraPosition, targetPositionUniform),
-        cameraPosition
-      );
-    });
+    for (const { label, create, expected } of kCases) {
+      test(`returns the ${label}`, () => {
+        assert.strictEqual(
+          create().anchorPosition(kCameraPosition, kTargetPosition),
+          expected
+        );
+      });
+    }
   });
 });

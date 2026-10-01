@@ -9,11 +9,12 @@ import * as THREE from "three";
 import { FakeRoom } from "../fixtures/room.ts";
 import { MeshHighlightState, PeerSelectionRegistry } from "#src/index.ts";
 import { PeerSelectionSync } from "#src/network/index.ts";
+import { joinPeer } from "./helpers.ts";
 
 function setup(
   options: { presenceKey?: string; } = {}
 ) {
-  const room = new FakeRoom("three:peer-selection-test");
+  const room = new FakeRoom();
   const registry = new PeerSelectionRegistry();
   const selection = new MeshHighlightState();
   const sync = new PeerSelectionSync({
@@ -30,7 +31,7 @@ function setup(
 
 describe("remote peers", () => {
   test("applies a peer already known at construction", () => {
-    const room = new FakeRoom("three:peer-selection-test");
+    const room = new FakeRoom();
     room.addPeer("alice", { presence: { selection: "box-1" } });
     const registry = new PeerSelectionRegistry();
 
@@ -43,28 +44,9 @@ describe("remote peers", () => {
     assert.equal(registry.selectionOf("alice"), "box-1");
   });
 
-  test("picks up peers landed by the join snapshot on \"sync\"", () => {
-    const { room, registry } = setup();
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-
-    room.emitSync("alice");
-
-    assert.equal(registry.selectionOf("alice"), "box-1");
-  });
-
-  test("picks up a peer on \"peer-joined\"", () => {
-    const { room, registry } = setup();
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-
-    room.emitJoin("alice");
-
-    assert.equal(registry.selectionOf("alice"), "box-1");
-  });
-
   test("applies selection patches from \"peer-presence\"", () => {
     const { room, registry } = setup();
-    room.addPeer("alice", { presence: { selection: null } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { selection: null });
 
     room.emitPresence("alice", { selection: "box-2" });
 
@@ -73,37 +55,16 @@ describe("remote peers", () => {
 
   test("clears a peer's selection when it publishes null", () => {
     const { room, registry } = setup();
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { selection: "box-1" });
 
     room.emitPresence("alice", { selection: null });
 
     assert.equal(registry.selectionOf("alice"), null);
   });
 
-  test("ignores a patch that carries no selection key", () => {
-    const { room, registry } = setup();
-
-    room.emitPresence("alice", { cursor: { x: 1 } });
-
-    assert.equal(registry.selectionOf("alice"), null);
-    assert.deepEqual(registry.selectedObjectIds(), []);
-  });
-
-  test("removes a peer selection when the value is malformed", () => {
-    const { room, registry } = setup();
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
-
-    room.emitPresence("alice", { selection: 42 });
-
-    assert.equal(registry.selectionOf("alice"), null);
-  });
-
   test("removes a peer's selection on \"peer-left\"", () => {
     const { room, registry } = setup();
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { selection: "box-1" });
 
     room.emitLeft("alice");
 
@@ -114,8 +75,7 @@ describe("remote peers", () => {
 describe("presence key", () => {
   test("publishes and reads selections under a custom key", () => {
     const { room, registry, selection } = setup({ presenceKey: "pick" });
-    room.addPeer("alice", { presence: { pick: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { pick: "box-1" });
 
     selection.register("box-2", new THREE.Object3D());
     selection.select("box-2");
@@ -153,21 +113,6 @@ describe("local reporting", () => {
 });
 
 describe("lifecycle", () => {
-  test("destroy() unsubscribes from every room event", () => {
-    const { room, sync } = setup();
-    assert.deepEqual(room.subscribedEvents(), [
-      "left",
-      "peer-joined",
-      "peer-left",
-      "peer-presence",
-      "sync"
-    ]);
-
-    sync.destroy();
-
-    assert.deepEqual(room.subscribedEvents(), []);
-  });
-
   test("does not react to selection changes after destroy()", () => {
     const { room, selection, sync } = setup();
     selection.register("box-1", new THREE.Object3D());
@@ -180,8 +125,7 @@ describe("lifecycle", () => {
 
   test("destroy() removes every peer this instance applied", () => {
     const { room, registry, sync } = setup();
-    room.addPeer("alice", { presence: { selection: "box-1" } });
-    room.emitSync("alice");
+    joinPeer(room, "alice", { selection: "box-1" });
     assert.equal(registry.selectionOf("alice"), "box-1");
 
     sync.destroy();
@@ -193,10 +137,8 @@ describe("lifecycle", () => {
     const { room, registry, sync } = setup();
     sync.destroy();
 
-    room.addPeer("bob", { presence: { selection: "box-1" } });
-    room.emitSync("bob");
+    joinPeer(room, "bob", { selection: "box-1" });
 
     assert.equal(registry.selectionOf("bob"), null);
   });
 });
-

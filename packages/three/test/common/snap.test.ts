@@ -14,9 +14,6 @@ describe("snapValue", () => {
     assert.equal(snapValue(3.6, 1), 4);
     assert.equal(snapValue(-3.6, 1), -4);
     assert.equal(snapValue(3.4, 2), 4);
-  });
-
-  test("snaps to absolute multiples, not to the starting offset", () => {
     assert.equal(snapValue(0.3, 1), 0);
     assert.equal(snapValue(1.3, 1), 1);
   });

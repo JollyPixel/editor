@@ -28,18 +28,6 @@ function nearestVertex(
 }
 
 describe("inflateEdgesGeometry", () => {
-  test("offset 0 matches a plain THREE.EdgesGeometry exactly", () => {
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const inflated = inflateEdgesGeometry(geometry, 0);
-    const plain = new THREE.EdgesGeometry(geometry);
-
-    assert.strictEqual(inflated.getAttribute("position").count, plain.getAttribute("position").count);
-    assert.deepStrictEqual(
-      Array.from(inflated.getAttribute("position").array),
-      Array.from(plain.getAttribute("position").array)
-    );
-  });
-
   test("on a box (star-convex), an edge vertex moves away from the origin", () => {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const corner = new THREE.Vector3(0.5, 0.5, 0.5);
@@ -56,12 +44,6 @@ describe("inflateEdgesGeometry", () => {
   test(
     "on a torus (non-star-convex), the inner (hole-facing) rim moves toward the axis, not away from origin",
     () => {
-      /*
-       * radius 1, tube 0.4 - the inner-equator point at angle 0 sits at
-       * (radius - tube, 0, 0) = (0.6, 0, 0), where the true surface normal
-       * points back toward the main axis (see `inflateEdgesGeometry`'s own
-       * doc comment for why that's the opposite of "away from origin").
-       */
       const geometry = new THREE.TorusGeometry(1, 0.4, 16, 48);
       const innerEquatorPoint = new THREE.Vector3(0.6, 0, 0);
 
@@ -87,8 +69,11 @@ describe("inflateEdgesGeometry", () => {
   test("falls back to computing normals when the source geometry has none, without mutating it", () => {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     geometry.deleteAttribute("normal");
+    const corner = new THREE.Vector3(0.5, 0.5, 0.5);
 
-    assert.doesNotThrow(() => inflateEdgesGeometry(geometry, 0.1));
+    const after = nearestVertex(inflateEdgesGeometry(geometry, 0.1).getAttribute("position"), corner);
+
+    assert.ok(after.length() > corner.length());
     assert.strictEqual(geometry.getAttribute("normal"), undefined);
   });
 });

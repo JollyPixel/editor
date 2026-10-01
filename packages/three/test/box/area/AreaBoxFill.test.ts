@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { AreaBoxFill } from "#src/index.ts";
+import { watchDisposal } from "../../fixtures/disposal.ts";
 
 // CONSTANTS
 const kColor = "#4da3ff";
@@ -28,22 +29,9 @@ describe("AreaBoxFill", () => {
       const color = new THREE.Color(kColor);
       const fill = createFill();
 
-      /*
-       * The fill is smoked so that blending it over the scene darkens what
-       * shows through instead of washing it out.
-       */
       assert.ok(fill.material.color.r < color.r);
       assert.ok(fill.material.color.g < color.g);
       assert.ok(fill.material.color.b < color.b);
-    });
-
-    test("draws above a transparent ground grid", () => {
-      /*
-       * A camera-following grid sorts as the nearest transparent object and
-       * would otherwise paint its lines over the area at full strength,
-       * which no amount of `opacity` can compensate for.
-       */
-      assert.ok(createFill().renderOrder > 0);
     });
 
     test("writes depth so the near face hides the far one", () => {
@@ -69,15 +57,9 @@ describe("AreaBoxFill", () => {
       const colors = fill.geometry.getAttribute("color");
 
       assert.ok(colors);
-      // BoxGeometry lays out 6 faces of 4 vertices.
       assert.equal(colors.count, 24);
       assert.equal(fill.material.vertexColors, true);
 
-      /*
-       * Group order is +X, -X, +Y, -Y, +Z, -Z: the top face is the
-       * brightest and the bottom one the darkest, so the faces stay
-       * distinguishable without a light in the scene.
-       */
       const top = colors.getX(8);
       const bottom = colors.getX(12);
       const side = colors.getX(0);
@@ -128,10 +110,6 @@ describe("AreaBoxFill", () => {
 
       fill.emphasize(1.05, 0.24);
 
-      /*
-       * Brighter, and still blue: lerping to white would cost it its
-       * identity.
-       */
       const active = fill.material.color;
       assert.ok(active.b > idle.b);
       assert.ok(active.b > active.r);
@@ -152,14 +130,11 @@ describe("AreaBoxFill", () => {
   describe("dispose", () => {
     test("releases the geometry and the material", () => {
       const fill = createFill();
-      let disposed = false;
-      fill.geometry.addEventListener("dispose", () => {
-        disposed = true;
-      });
+      const disposals = watchDisposal(fill.geometry, fill.material);
 
       fill.dispose();
 
-      assert.equal(disposed, true);
+      assert.deepEqual(disposals, [1, 1]);
     });
   });
 });

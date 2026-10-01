@@ -4,10 +4,6 @@ import * as THREE from "three";
 // CONSTANTS
 const kViewportSize = 200;
 
-/*
- * happy-dom lays nothing out, so `getBoundingClientRect()` returns zeros and
- * every NDC conversion would divide by zero. Tests stub a square viewport.
- */
 export function createPointerTarget(
   size = kViewportSize
 ): HTMLElement {
@@ -33,10 +29,6 @@ export function createPointerTarget(
 export interface PointerAtOptions {
   camera: THREE.Camera;
   element: HTMLElement;
-  /**
-   * World point the pointer should aim at. The event is placed at the pixel
-   * this point projects to, so the resulting ray passes through it.
-   */
   target: THREE.Vector3;
   type: "pointerdown" | "pointermove" | "pointerup";
   pointerId?: number;
@@ -45,9 +37,6 @@ export interface PointerAtOptions {
   button?: number;
 }
 
-/**
- * Builds a pointer event aimed at a known world point.
- */
 export function pointerAt(
   options: PointerAtOptions
 ): PointerEvent {

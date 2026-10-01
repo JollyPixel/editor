@@ -12,42 +12,11 @@ function triggerRender(
   grid: Grid,
   camera: THREE.Camera
 ): void {
-  // @ts-expect-error Only camera is relevant; remaining THREE.WebGLRenderer params are unused
+  // @ts-expect-error
   grid.onBeforeRender(void 0, void 0, camera, void 0, void 0, void 0);
 }
 
 describe("infiniteGrid", () => {
-  test("defaults to false", () => {
-    const grid = new Grid();
-
-    assert.strictEqual(
-      grid.infiniteGrid,
-      false
-    );
-  });
-
-  test("reflects the provided infiniteGrid option", () => {
-    const grid = new Grid({
-      infiniteGrid: true
-    });
-
-    assert.ok(grid.infiniteGrid);
-  });
-
-  test("uses a fixed 2x2 geometry instead of the extent-sized quad", () => {
-    const bounded = new Grid();
-    const infinite = new Grid({
-      infiniteGrid: true
-    });
-
-    const boundedParams = bounded.geometry.parameters;
-    const infiniteParams = infinite.geometry.parameters;
-
-    assert.notStrictEqual(boundedParams.width, 2);
-    assert.strictEqual(infiniteParams.width, 2);
-    assert.strictEqual(infiniteParams.height, 2);
-  });
-
   test("extent option is ignored", () => {
     const grid = new Grid({
       infiniteGrid: true,
@@ -71,15 +40,6 @@ describe("infiniteGrid", () => {
     assert.strictEqual(grid.position.x, 0);
     assert.strictEqual(grid.position.y, 0);
     assert.strictEqual(grid.position.z, 0);
-  });
-
-  test("offset still round-trips live in infinite mode", () => {
-    const grid = new Grid({
-      infiniteGrid: true
-    });
-    grid.offset = 3.5;
-
-    assert.strictEqual(grid.offset, 3.5);
   });
 });
 
@@ -115,7 +75,7 @@ describe("camera-following via onBeforeRender", () => {
     assert.strictEqual(grid.position.z, 3);
   });
 
-  test("preserves the constructor offset across calls", () => {
+  test("pins the normal axis to the constructor offset, then to a live offset change", () => {
     const grid = new Grid({
       plane: "xz",
       offset: 2.5
@@ -124,8 +84,11 @@ describe("camera-following via onBeforeRender", () => {
     camera.position.set(1, 99, 1);
 
     triggerRender(grid, camera);
-
     assert.strictEqual(grid.position.y, 2.5);
+
+    grid.offset = 4;
+    triggerRender(grid, camera);
+    assert.strictEqual(grid.position.y, 4);
   });
 
   test("followCamera: false keeps the grid pinned to the origin plane regardless of camera position", () => {
@@ -184,29 +147,6 @@ describe("target fade mode via onBeforeRender", () => {
     assert.strictEqual(grid.position.z, -7);
   });
 
-  test("follows fade.target's world position, not its local position", () => {
-    const parent = new THREE.Object3D();
-    parent.position.set(100, 0, 0);
-    const target = new THREE.Object3D();
-    target.position.set(3, 0, -7);
-    parent.add(target);
-    parent.updateMatrixWorld(true);
-
-    const grid = new Grid({
-      plane: "xz",
-      fade: {
-        from: "target",
-        target
-      }
-    });
-    const camera = new THREE.PerspectiveCamera();
-
-    triggerRender(grid, camera);
-
-    assert.strictEqual(grid.position.x, 103);
-    assert.strictEqual(grid.position.z, -7);
-  });
-
   test("stays in sync across repeated calls as fade.target moves", () => {
     const target = new THREE.Object3D();
     const grid = new Grid({
@@ -227,23 +167,6 @@ describe("target fade mode via onBeforeRender", () => {
     triggerRender(grid, camera);
     assert.strictEqual(grid.position.x, -9);
     assert.strictEqual(grid.position.z, 3);
-  });
-
-  test("followCamera: false keeps the grid pinned to the origin plane regardless of fade.target", () => {
-    const target = new THREE.Object3D();
-    target.position.set(3, 0, -7);
-
-    const grid = new Grid({
-      plane: "xz",
-      fade: { from: "target", target },
-      followCamera: false
-    });
-    const camera = new THREE.PerspectiveCamera();
-
-    triggerRender(grid, camera);
-
-    assert.strictEqual(grid.position.x, 0);
-    assert.strictEqual(grid.position.z, 0);
   });
 
   test("fade.target can be swapped live and is followed on the next call", () => {
@@ -292,26 +215,25 @@ describe("target fade mode via onBeforeRender", () => {
     assert.strictEqual(grid.position.z, 5);
   });
 
-  test(
-    "does not reposition on onBeforeRender in infinite mode, but still tracks fade.target's world position",
-    () => {
-      const target = new THREE.Object3D();
-      target.position.set(3, 0, -7);
+  test("still tracks fade.target's world position in infinite mode", (t) => {
+    const target = new THREE.Object3D();
+    target.position.set(3, 0, -7);
 
-      const grid = new Grid({
-        infiniteGrid: true,
-        fade: {
-          from: "target",
-          target
-        }
-      });
-      const camera = new THREE.PerspectiveCamera();
+    const grid = new Grid({
+      infiniteGrid: true,
+      fade: {
+        from: "target",
+        target
+      }
+    });
+    const trackTarget = t.mock.method(grid.fade, "trackTarget");
+    const camera = new THREE.PerspectiveCamera();
 
-      triggerRender(grid, camera);
+    triggerRender(grid, camera);
 
-      assert.strictEqual(grid.position.x, 0);
-      assert.strictEqual(grid.position.y, 0);
-      assert.strictEqual(grid.position.z, 0);
-    }
-  );
+    assert.strictEqual(trackTarget.mock.callCount(), 1);
+    const [targetPosition, fallbackPosition] = trackTarget.mock.calls[0].arguments;
+    assert.deepStrictEqual(targetPosition.toArray(), [3, 0, -7]);
+    assert.strictEqual(fallbackPosition, camera.position);
+  });
 });

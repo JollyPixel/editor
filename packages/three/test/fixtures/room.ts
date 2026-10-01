@@ -8,46 +8,31 @@ import type {
   RoomRights
 } from "@jolly-pixel/network/client";
 
-export class FakeRoom<
-  ClientMessage = unknown,
-  ServerMessage = unknown
-> implements Room<ClientMessage, ServerMessage> {
-  readonly id: string;
+export class FakeRoom implements Room {
+  readonly id = "three:test";
   readonly clientId = "local-uuid-nobody-sees";
   readonly peers = new Map<string, Peer>();
   readonly patches: PeerMetadata[] = [];
-  readonly sent: ClientMessage[] = [];
-
-  role = "default";
-  rights: RoomRights = {};
-  access: Right = "write";
+  readonly role = "default";
+  readonly rights: RoomRights = {};
+  readonly access: Right = "write";
 
   #listeners = new Map<string, Set<(...args: any[]) => void>>();
-
-  constructor(
-    id = "three:test"
-  ) {
-    this.id = id;
-  }
 
   get lastPatch(): PeerMetadata | undefined {
     return this.patches.at(-1);
   }
 
-  can(
-    event: string
-  ): Right {
-    return this.rights[event] ?? this.access;
+  can(): Right {
+    return this.access;
   }
 
   join(): void {
     return void 0;
   }
 
-  send(
-    payload: ClientMessage
-  ): void {
-    this.sent.push(payload);
+  send(): void {
+    return void 0;
   }
 
   updatePresence(
@@ -65,21 +50,21 @@ export class FakeRoom<
   }
 
   leave(): void {
-    this.peers.clear();
+    return void 0;
   }
 
-  on<K extends keyof RoomEventMap<ServerMessage>>(
+  on<K extends keyof RoomEventMap>(
     type: K,
-    listener: RoomEventMap<ServerMessage>[K]
+    listener: RoomEventMap[K]
   ): void {
     const set = this.#listeners.get(type) ?? new Set();
     set.add(listener as (...args: any[]) => void);
     this.#listeners.set(type, set);
   }
 
-  off<K extends keyof RoomEventMap<ServerMessage>>(
+  off<K extends keyof RoomEventMap>(
     type: K,
-    listener: RoomEventMap<ServerMessage>[K]
+    listener: RoomEventMap[K]
   ): void {
     this.#listeners.get(type)?.delete(listener as (...args: any[]) => void);
   }
@@ -91,42 +76,27 @@ export class FakeRoom<
       .sort();
   }
 
-  emit<K extends keyof RoomEventMap<ServerMessage>>(
-    type: K,
-    event: Parameters<RoomEventMap<ServerMessage>[K]>[0]
-  ): void {
-    for (const listener of this.#listeners.get(type) ?? []) {
-      listener(event);
-    }
-  }
-
   emitSync(
     ...clientIds: string[]
   ): void {
-    this.emit("sync", {
+    this.#emit("sync", {
       self: this.clientId,
       clientIds
     });
-  }
-
-  emitJoin(
-    clientId: string
-  ): void {
-    this.emit("peer-joined", { clientId });
   }
 
   emitLeft(
     clientId: string
   ): void {
     this.peers.delete(clientId);
-    this.emit("peer-left", { clientId });
+    this.#emit("peer-left", { clientId });
   }
 
   emitPresence(
     clientId: string,
     patch: PeerMetadata
   ): void {
-    this.emit("peer-presence", { clientId, patch });
+    this.#emit("peer-presence", { clientId, patch });
   }
 
   addPeer(
@@ -139,5 +109,14 @@ export class FakeRoom<
       profile: peer.profile ?? {},
       presence: peer.presence ?? {}
     });
+  }
+
+  #emit<K extends keyof RoomEventMap>(
+    type: K,
+    event: Parameters<RoomEventMap[K]>[0]
+  ): void {
+    for (const listener of this.#listeners.get(type) ?? []) {
+      listener(event);
+    }
   }
 }
