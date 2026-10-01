@@ -193,7 +193,13 @@ test("the menu below the rows adds a folder at the root", async({ page }) => {
   );
 
   const menu = page.getByRole("menu", { name: "Asset actions" });
-  await expect(menu.getByRole("menuitem")).toHaveCount(1);
+  await expect(menu.getByRole("menuitem")).toHaveText([
+    "New folder",
+    "New pixel art",
+    "New tileset",
+    "New voxel map",
+    "New voxel model"
+  ]);
   await menu.getByRole("menuitem", { name: "New folder" }).click();
   const rename = page.locator("asset-browser").getByRole("textbox", { name: "Rename" });
   await rename.fill("world");
@@ -202,6 +208,51 @@ test("the menu below the rows adds a folder at the root", async({ page }) => {
   await treeRow(page, "models").getByRole("button", { name: "Collapse" }).click();
   await expect(treeRow(page, kModel)).toBeHidden();
   await expect(treeRow(page, "world")).toBeVisible();
+});
+
+test("creates a map, a model and a texture from the tree and opens each", async({ page }) => {
+  test.slow();
+  await openShell(page);
+  const browser = page.locator("asset-browser");
+  const menu = page.getByRole("menu", { name: "Asset actions" });
+  const assets = [
+    {
+      kind: "New voxel map",
+      file: "New voxel map.voxelmap.json",
+      companion: "New voxel map.tileset.json",
+      editor: "voxel-map"
+    },
+    {
+      kind: "New voxel model",
+      file: "New voxel model.voxelmodel.json",
+      companion: "New voxel model.pixelart",
+      editor: "voxel-model"
+    },
+    {
+      kind: "New pixel art",
+      file: "New pixel art.pixelart",
+      companion: null,
+      editor: "pixel-art"
+    }
+  ];
+
+  for (const asset of assets) {
+    await browser.getByRole("button", { name: "New asset" }).click();
+    await menu.getByRole("menuitem", { name: asset.kind }).click();
+    const rename = browser.getByRole("textbox", { name: "Rename" });
+    await expect(rename).toHaveValue(asset.file);
+    await rename.press("Escape");
+
+    if (asset.companion !== null) {
+      await treeRow(page, asset.file).getByRole("button", { name: "Expand" }).click();
+      await expect(treeRow(page, asset.companion)).toBeVisible();
+    }
+
+    await treeRow(page, asset.file).dblclick();
+    const frame = page.locator(`#editor-frames iframe[src^="editors/${asset.editor}/"]`);
+    await expect(frame.contentFrame().locator("html"))
+      .toHaveAttribute("data-editor-state", "ready", { timeout: 30_000 });
+  }
 });
 
 test("a collapsed asset dock keeps its handle beside the workbench", async({ page }) => {

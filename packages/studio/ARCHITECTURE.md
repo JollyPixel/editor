@@ -169,12 +169,18 @@ catalog changes.
 - Delete opens `<asset-delete-dialog>`, listing the live assets outside the
   deleted set that still reference it, from `dependentsOf`. Confirming forces
   each command.
+- New asset lists one item per registered kind, labelled and iconed from
+  its descriptor. It sends `CatalogClient.create` with no content, the path
+  `New <label><extension>` in the selected folder and `onConflict: "suffix"`.
+  The back-end writes the kind's default state and its companions, so the
+  shell never loads a handler. Once the record reaches the tree, the row is
+  selected and its name edited in place, as with New folder.
 - Export downloads the selected asset and its dependencies as `<stem>.zip`
   from `CatalogClient.exportArchive`. It is disabled on a folder: an archive
   has a single root.
 - A right-click, Shift+F10 or the menu key opens a `jolly-context-menu` with
   the same actions, plus Open on a single asset. Below the rows it only
-  offers New folder, created at the root. The toolbar and the menu read
+  offers New folder and New asset, created at the root. The toolbar and the menu read
   which actions apply from `AssetSelection`, and an action re-checks it
   against the current tree before it runs.
 - Failures go to the `jolly-log` over the workbench.

@@ -13,5 +13,6 @@ export interface AssetKindIcon {
 export interface AssetKindDescriptor {
   kind: string;
   label: string;
+  extension: string;
   icon?: AssetKindIcon;
 }

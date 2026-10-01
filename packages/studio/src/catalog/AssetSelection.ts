@@ -5,6 +5,9 @@ import type {
   AssetTreeModel
 } from "./AssetTreeModel.ts";
 
+// CONSTANTS
+const kNewAssetActionPrefix = "new-asset:";
+
 export const ASSET_ACTIONS = [
   "open",
   "new-folder",
@@ -19,6 +22,20 @@ export function isAssetAction(
   id: string
 ): id is AssetAction {
   return ASSET_ACTIONS.some((action) => action === id);
+}
+
+export function newAssetAction(
+  kind: string
+): string {
+  return `${kNewAssetActionPrefix}${kind}`;
+}
+
+export function newAssetKindOf(
+  id: string
+): string | null {
+  return id.startsWith(kNewAssetActionPrefix) ?
+    id.slice(kNewAssetActionPrefix.length) :
+    null;
 }
 
 export class AssetSelection {

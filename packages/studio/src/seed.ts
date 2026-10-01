@@ -36,7 +36,7 @@ const kTilesetAssetId = "tileset-overworld";
 const kMapAssetId = "map-overworld";
 const kModelTextureAssetId = "model-texture";
 const kModelAssetId = "model-default";
-const kModelTextureSize = {
+const kTextureSize = {
   x: 64,
   y: 64
 };
@@ -56,7 +56,7 @@ export async function createStudioProject(
 
   return {
     handlers: [
-      pixelArtAssetKind(),
+      pixelArtAssetKind({ defaultSize: kTextureSize }),
       tilesetAssetKind(),
       voxelMapAssetKind(),
       voxelModelAssetKind(),
@@ -84,7 +84,7 @@ export async function createStudioProject(
       "models/model.pixelart": {
         id: kModelTextureAssetId,
         kind: PIXEL_ART_KIND,
-        content: () => createPixelArtDocument(kModelTextureSize)
+        content: () => createPixelArtDocument(kTextureSize)
       },
       "models/model.voxelmodel.json": {
         id: kModelAssetId,

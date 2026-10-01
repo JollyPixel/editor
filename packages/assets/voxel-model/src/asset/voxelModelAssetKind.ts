@@ -11,8 +11,11 @@ import {
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
+
 // Import Internal Dependencies
 import {
+  createVoxelModelDocument,
   encodeVoxelModelDocument,
   VOXEL_MODEL_COMMAND,
   VOXEL_MODEL_DOCUMENT_VERSION,
@@ -144,6 +147,16 @@ export function voxelModelAssetKind(
       [VOXEL_MODEL_EXTENSION]: "application/json; charset=utf-8"
     },
     snapshot,
+    companions: [
+      {
+        kind: PIXEL_ART_KIND,
+        link(state, texture) {
+          state.load(
+            createVoxelModelDocument({ texture })
+          );
+        }
+      }
+    ],
 
     create(): VoxelModelState {
       return new VoxelModelState();

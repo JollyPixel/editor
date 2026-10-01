@@ -163,3 +163,22 @@ export function linkHandler(): AssetKindHandler<LinkState, LinkCommand> {
     }
   };
 }
+
+export function ownerHandler(
+  companionKinds: readonly string[] = ["counter"]
+): AssetKindHandler<LinkState, LinkCommand> {
+  return {
+    ...linkHandler(),
+    kind: "owner",
+    extensions: { ".owner": "text/plain; charset=utf-8" },
+    commands: undefined,
+    companions: companionKinds.map((kind) => {
+      return {
+        kind,
+        link: (state, companion) => {
+          state.targets.push(companion.id);
+        }
+      };
+    })
+  };
+}

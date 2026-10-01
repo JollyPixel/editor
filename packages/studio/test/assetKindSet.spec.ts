@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   AssetKindSet,
+  newAssetName,
   type AssetKindEntry
 } from "../src/catalog/AssetKindSet.ts";
 
@@ -15,11 +16,13 @@ import {
 const kMap: AssetKindEntry = {
   kind: "voxelmap",
   label: "Voxel map",
+  extension: ".voxelmap.json",
   icon: "kind:voxelmap"
 };
 const kTexture: AssetKindEntry = {
   kind: "texture",
-  label: "Texture"
+  label: "Texture",
+  extension: ".png"
 };
 const kKinds = new AssetKindSet({
   kinds: [kMap, kTexture],
@@ -31,6 +34,16 @@ describe("AssetKindSet", () => {
     assert.equal(kKinds.has("voxelmap"), true);
     assert.equal(kKinds.has("binary"), false);
     assert.equal(AssetKindSet.EMPTY.has("voxelmap"), false);
+  });
+
+  test("finds the entry of a listed kind", () => {
+    assert.deepEqual(kKinds.entryOf("voxelmap"), kMap);
+    assert.equal(kKinds.entryOf("binary"), undefined);
+  });
+
+  test("names a new asset after the kind label", () => {
+    assert.equal(newAssetName(kMap), "New voxel map");
+    assert.equal(newAssetName(kTexture), "New texture");
   });
 
   test("falls back to the file icon", () => {

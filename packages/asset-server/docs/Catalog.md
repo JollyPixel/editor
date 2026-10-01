@@ -107,7 +107,7 @@ writer for the usual setup, capped by the `catalogMaxContentBytes` and
 ### Commands
 
 ```ts
-{ type: "catalog:create", requestId, path, kind?, onConflict?, content: AssetInlineContent }
+{ type: "catalog:create", requestId, path, kind?, onConflict?, content?: AssetInlineContent }
 { type: "catalog:rename", requestId, assetId, to }
 { type: "catalog:delete", requestId, assetId, force? }
 { type: "catalog:export", requestId, root? }
@@ -117,7 +117,9 @@ writer for the usual setup, capped by the `catalogMaxContentBytes` and
 
 `content` is the `{ type: "inline", encoding: "base64", data }` shape built by
 `encodeContent`. `onConflict` is `"reject"` (default) or `"suffix"`, passed to
-`AssetWriter.create` as `onPathConflict`. There is no update command: content changes go through the
+`AssetWriter.create` as `onPathConflict`. A create without `content` writes
+the default state of the kind and its companions, see
+[AssetWriter](./AssetWriter.md#create). There is no update command: content changes go through the
 asset's own room.
 
 The room runs each command through `AssetWriter`, attributed to
@@ -242,7 +244,7 @@ interface CatalogImportOptions {
 |---|---|
 | `ready` | Resolves on the first `catalog:snapshot`. |
 | `records()` / `record(assetId)` | Current `AssetRecordData`, kept in sync with `catalog:changed`. |
-| `create(path, content, options?)` | Resolves the created asset ID. `options` takes `kind` and `onConflict`. |
+| `create(path, content, options?)` | Resolves the created asset ID. A `null` `content` creates the kind's default state with its companions. `options` takes `kind` and `onConflict`. |
 | `rename(assetId, to)` / `remove(assetId, options?)` | Resolve once applied. `remove` takes `force` to bypass [delete protection](#delete-protection). |
 | `exportArchive(root?)` | Resolves the [archive](./Archive.md) bytes of `root`, or of the whole workspace. |
 | `planImport(archive)` | Resolves the `ImportPlan`, writing nothing. |

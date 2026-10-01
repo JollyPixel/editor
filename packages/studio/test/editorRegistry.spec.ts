@@ -18,6 +18,7 @@ import { EditorRegistry } from "../src/editors/EditorRegistry.ts";
 const kMapKind = {
   kind: "voxelmap",
   label: "Voxel map",
+  extension: ".voxelmap.json",
   icon: {
     svg: "<path d=\"M3 6h18\" />",
     tone: "lime"
@@ -90,18 +91,21 @@ describe("EditorRegistry", () => {
       .registerKind(kMapKind)
       .registerKind({
         kind: "texture",
-        label: "Texture"
+        label: "Texture",
+        extension: ".png"
       });
 
     assert.deepEqual(registry.kindSet().entries, [
       {
         kind: "voxelmap",
         label: "Voxel map",
+        extension: ".voxelmap.json",
         icon: "kind:voxelmap"
       },
       {
         kind: "texture",
         label: "Texture",
+        extension: ".png",
         icon: undefined
       }
     ]);
@@ -135,6 +139,7 @@ describe("EditorRegistry", () => {
       () => new EditorRegistry().registerKind({
         kind: "voxelmap",
         label: "Voxel map",
+        extension: ".voxelmap.json",
         icon: {
           svg: "",
           tone: "mauve"

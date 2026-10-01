@@ -5,9 +5,14 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type {
-  AssetAction,
-  AssetSelection
+import {
+  newAssetName,
+  type AssetKindSet
+} from "../../catalog/AssetKindSet.ts";
+import {
+  newAssetAction,
+  type AssetAction,
+  type AssetSelection
 } from "../../catalog/AssetSelection.ts";
 
 interface AssetMenuItem extends ContextMenuItem {
@@ -15,15 +20,19 @@ interface AssetMenuItem extends ContextMenuItem {
 }
 
 export function assetMenu(
-  selection: AssetSelection
+  selection: AssetSelection,
+  kinds: AssetKindSet
 ): ContextMenuEntry[] {
-  const newFolder = menuItem(selection, {
-    id: "new-folder",
-    label: "New folder",
-    icon: "new-folder"
-  });
+  const creation = [
+    menuItem(selection, {
+      id: "new-folder",
+      label: "New folder",
+      icon: "new-folder"
+    }),
+    ...newAssetMenu(kinds)
+  ];
   if (selection.isEmpty) {
-    return [newFolder];
+    return creation;
   }
 
   const opening: ContextMenuEntry[] = selection.asset === null ?
@@ -39,7 +48,8 @@ export function assetMenu(
 
   return [
     ...opening,
-    newFolder,
+    ...creation,
+    "separator",
     menuItem(selection, {
       id: "rename",
       label: "Rename",
@@ -58,6 +68,18 @@ export function assetMenu(
       intent: "danger"
     })
   ];
+}
+
+export function newAssetMenu(
+  kinds: AssetKindSet
+): ContextMenuItem[] {
+  return kinds.entries.map((entry) => {
+    return {
+      id: newAssetAction(entry.kind),
+      label: newAssetName(entry),
+      icon: kinds.iconFor(entry.kind)
+    };
+  });
 }
 
 function menuItem(

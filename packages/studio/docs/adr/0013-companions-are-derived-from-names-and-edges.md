@@ -18,6 +18,11 @@ Pairing is one level deep. An asset referenced by two same-named assets, or two 
 each other, nest nowhere. A tileset shared by several maps nests only under the one with its
 name; moving it never breaks the others, since references are ids, not paths.
 
+An asset created from the shell without content gets its companions from the back-end: the kind
+handler lists the companion kinds, and the writer creates each one beside the new asset, same
+name, and links it before writing the owner. The pair is nested from the start, and a taken name
+suffixes owner and companions together.
+
 The tree refuses a rename or a move whose target path, companions included, is already taken,
 before sending any catalog command. [ADR-0010](./0010-folders-are-path-prefixes.md) still holds
 for failures the back-end reports half way.

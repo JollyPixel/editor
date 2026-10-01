@@ -37,7 +37,7 @@ export interface CatalogCreateCommand {
   path: string;
   kind?: string;
   onConflict?: PathConflictPolicy;
-  content: AssetInlineContent;
+  content?: AssetInlineContent;
 }
 
 export interface CatalogRenameCommand {

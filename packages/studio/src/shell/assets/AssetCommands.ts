@@ -5,6 +5,11 @@ import {
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
+import {
+  newAssetName,
+  type AssetKindEntry
+} from "../../catalog/AssetKindSet.ts";
+import type { AssetPath } from "../../catalog/AssetPath.ts";
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
 import type {
   AssetLeafData,
@@ -20,7 +25,7 @@ export type RelocationVerb = "rename" | "move";
 
 export type AssetCommandCatalog = Pick<
   CatalogClient,
-  "rename" | "remove" | "exportArchive"
+  "create" | "rename" | "remove" | "exportArchive"
 >;
 
 export interface AssetCommandsOptions {
@@ -37,6 +42,28 @@ export class AssetCommands {
   ) {
     this.#catalog = options.catalog;
     this.#onError = options.onError;
+  }
+
+  async create(
+    folder: AssetPath,
+    kind: AssetKindEntry
+  ): Promise<string | null> {
+    const name = newAssetName(kind);
+    try {
+      return await this.#catalog.create(
+        folder.child(`${name}${kind.extension}`).toString(),
+        null,
+        {
+          kind: kind.kind,
+          onConflict: "suffix"
+        }
+      );
+    }
+    catch (error) {
+      this.#onError(`Could not create "${name}": ${reasonOf(error)}`);
+
+      return null;
+    }
   }
 
   async relocate(

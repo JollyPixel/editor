@@ -20,15 +20,20 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import {
+  AssetKindSet,
+  type AssetKindEntry
+} from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
 import {
   AssetSelection,
   isAssetAction,
+  newAssetKindOf,
   type AssetAction
 } from "../../catalog/AssetSelection.ts";
 import {
   AssetTreeModel,
+  assetNodeId,
   folderNodeId,
   type AssetRelocation
 } from "../../catalog/AssetTreeModel.ts";
@@ -38,7 +43,10 @@ import {
   type RelocationVerb
 } from "./AssetCommands.ts";
 import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
-import { assetMenu } from "./assetMenu.ts";
+import {
+  assetMenu,
+  newAssetMenu
+} from "./assetMenu.ts";
 import "./AssetDeleteDialog.ts";
 
 // CONSTANTS
@@ -95,10 +103,14 @@ export class AssetBrowser extends LitElement {
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"];
 
+  @query(".new-asset")
+  declare _newAssetButton: HTMLElement;
+
   #catalog: CatalogClient | null = null;
   #commands: AssetCommands | null = null;
   #storage = new LocalStorageAdapter();
   #menuTarget: AssetSelection | null = null;
+  #created: string | null = null;
 
   constructor() {
     super();
@@ -151,6 +163,15 @@ export class AssetBrowser extends LitElement {
         @jolly-change=${this.#onKindChange}
       ></jolly-button-group>
       <jolly-toolbar label="Asset actions">
+        <jolly-button
+          class="new-asset"
+          icon="plus"
+          icon-only
+          label="New asset"
+          title="New asset"
+          ?disabled=${this.#kinds.entries.length === 0}
+          @click=${this.#openNewAssetMenu}
+        ></jolly-button>
         <jolly-button
           icon="new-folder"
           icon-only
@@ -367,6 +388,58 @@ export class AssetBrowser extends LitElement {
     }
     this._selected = [nodeId];
 
+    await this.#beginRenameOf(nodeId);
+  }
+
+  #newAsset(
+    kind: string,
+    target: AssetSelection
+  ): void {
+    const entry = this.#kinds.entryOf(kind);
+    if (entry !== undefined) {
+      void this.#newAssetIn(this.#selection(target.nodeIds).folder, entry);
+    }
+  }
+
+  async #newAssetIn(
+    folder: AssetPath,
+    entry: AssetKindEntry
+  ): Promise<void> {
+    const assetId = await this.#commands?.create(folder, entry) ?? null;
+    if (assetId === null) {
+      return;
+    }
+
+    if (!folder.isRoot) {
+      this.#toggle(folderNodeId(folder), true);
+    }
+    this.#created = assetId;
+    this.#revealCreated();
+  }
+
+  #revealCreated(): void {
+    const assetId = this.#created;
+    if (assetId === null) {
+      return;
+    }
+
+    const nodeId = assetNodeId(assetId);
+    if (!this._model.has(nodeId)) {
+      if (this.#catalog?.record(assetId) !== undefined) {
+        this.#created = null;
+      }
+
+      return;
+    }
+
+    this.#created = null;
+    this._selected = [nodeId];
+    void this.#beginRenameOf(nodeId);
+  }
+
+  async #beginRenameOf(
+    nodeId: string
+  ): Promise<void> {
     await this.updateComplete;
     await this._tree?.updateComplete;
     this._tree?.beginRename(nodeId);
@@ -444,6 +517,7 @@ export class AssetBrowser extends LitElement {
       }
     }
     this._pendingLabels = labels;
+    this.#revealCreated();
   };
 
   readonly #onKindChange = (
@@ -525,8 +599,15 @@ export class AssetBrowser extends LitElement {
     const { id, x, y } = event.detail;
     const target = this.#selection(id === null ? [] : this._selected);
     this.#menuTarget = target;
-    this._menu.items = assetMenu(target);
+    this._menu.items = assetMenu(target, this.#kinds);
     this._menu.openAt(x, y);
+  };
+
+  readonly #openNewAssetMenu = (): void => {
+    const anchor = this._newAssetButton.getBoundingClientRect();
+    this.#menuTarget = this.#selection();
+    this._menu.items = newAssetMenu(this.#kinds);
+    this._menu.openAt(anchor.left, anchor.bottom);
   };
 
   readonly #onContextAction = (
@@ -535,7 +616,15 @@ export class AssetBrowser extends LitElement {
     const target = this.#menuTarget;
     const action = event.detail.id;
     this.#menuTarget = null;
-    if (target !== null && isAssetAction(action)) {
+    if (target === null) {
+      return;
+    }
+
+    const kind = newAssetKindOf(action);
+    if (kind !== null) {
+      this.#newAsset(kind, target);
+    }
+    else if (isAssetAction(action)) {
       this.#run(action, target);
     }
   };

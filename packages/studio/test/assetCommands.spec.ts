@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import type { AssetKindEntry } from "../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../src/catalog/AssetPath.ts";
 import {
   assetNodeId,
@@ -20,10 +21,16 @@ import { companionModelOf } from "./helpers/assetTree.ts";
 
 // CONSTANTS
 const kMaps = folderNodeId(AssetPath.parse("maps"));
+const kMapKind: AssetKindEntry = {
+  kind: "voxelmap",
+  label: "Voxel map",
+  extension: ".voxelmap.json"
+};
 
 interface CommandsProbe {
   commands: AssetCommands;
   errors: string[];
+  created: Parameters<AssetCommandCatalog["create"]>[];
 }
 
 function commandsFailingAt(
@@ -35,7 +42,14 @@ function commandsFailingAt(
       throw new Error("disk full");
     }
   }
+  const created: Parameters<AssetCommandCatalog["create"]>[] = [];
   const catalog: AssetCommandCatalog = {
+    create: async(...args) => {
+      created.push(args);
+      await fail();
+
+      return "created";
+    },
     rename: fail,
     remove: fail,
     exportArchive: async() => new Uint8Array()
@@ -47,7 +61,8 @@ function commandsFailingAt(
       catalog,
       onError: (message) => errors.push(message)
     }),
-    errors
+    errors,
+    created
   };
 }
 
@@ -70,6 +85,30 @@ function relocationOf(
 }
 
 describe("AssetCommands", () => {
+  test("creates a new asset of a kind in a folder, without content", async() => {
+    const { commands, created, errors } = commandsFailingAt(-1);
+
+    const assetId = await commands.create(AssetPath.parse("maps"), kMapKind);
+
+    assert.equal(assetId, "created");
+    assert.deepEqual(created, [[
+      "maps/New voxel map.voxelmap.json",
+      null,
+      {
+        kind: "voxelmap",
+        onConflict: "suffix"
+      }
+    ]]);
+    assert.deepEqual(errors, []);
+  });
+
+  test("reports a create the catalog refuses", async() => {
+    const { commands, errors } = commandsFailingAt(0);
+
+    assert.equal(await commands.create(AssetPath.ROOT, kMapKind), null);
+    assert.deepEqual(errors, ['Could not create "New voxel map": disk full']);
+  });
+
   test("says how many renames of a folder went through and returns it", async() => {
     const { commands, errors } = commandsFailingAt(2);
     const relocation = relocationOf("maps", "worlds", 3);

@@ -21,6 +21,7 @@ const kDefaultBlockName = "Block";
 export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
   kind: VOXEL_MODEL_KIND,
   label: "Voxel model",
+  extension: VOXEL_MODEL_EXTENSION,
   icon: {
     svg: `
       <path

@@ -9,8 +9,12 @@ import assert from "node:assert/strict";
 import type { ContextMenuEntry } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { AssetKindSet } from "../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../src/catalog/AssetPath.ts";
-import { AssetSelection } from "../src/catalog/AssetSelection.ts";
+import {
+  AssetSelection,
+  newAssetKindOf
+} from "../src/catalog/AssetSelection.ts";
 import {
   assetNodeId,
   folderNodeId
@@ -20,6 +24,23 @@ import { companionModelOf } from "./helpers/assetTree.ts";
 
 // CONSTANTS
 const kModel = companionModelOf();
+const kKinds = new AssetKindSet({
+  kinds: [
+    {
+      kind: "voxelmap",
+      label: "Voxel map",
+      extension: ".voxelmap.json",
+      icon: "kind:voxelmap"
+    },
+    {
+      kind: "pixelart",
+      label: "Pixel art",
+      extension: ".pixelart"
+    }
+  ],
+  editable: []
+});
+const kCreation = ["new-folder", "new-asset:voxelmap", "new-asset:pixelart"];
 
 function outline(
   entries: readonly ContextMenuEntry[]
@@ -36,26 +57,46 @@ function outline(
 function menuOf(
   nodeIds: readonly string[]
 ): ContextMenuEntry[] {
-  return assetMenu(new AssetSelection(kModel, nodeIds));
+  return assetMenu(new AssetSelection(kModel, nodeIds), kKinds);
 }
 
 describe("assetMenu", () => {
-  test("the empty area only offers a new folder", () => {
-    assert.deepEqual(outline(menuOf([])), ["new-folder"]);
+  test("the empty area only offers to create", () => {
+    assert.deepEqual(outline(menuOf([])), kCreation);
   });
 
   test("an asset opens first and deletes last", () => {
     assert.deepEqual(
       outline(menuOf([assetNodeId("model-hero")])),
-      ["open", "-", "new-folder", "rename", "export", "-", "delete"]
+      ["open", "-", ...kCreation, "-", "rename", "export", "-", "delete"]
     );
   });
 
   test("a folder keeps the export item disabled", () => {
     assert.deepEqual(
       outline(menuOf([folderNodeId(AssetPath.parse("models"))])),
-      ["new-folder", "rename", "(export)", "-", "delete"]
+      [...kCreation, "-", "rename", "(export)", "-", "delete"]
     );
+  });
+
+  test("offers one new asset per kind, named and iconed after it", () => {
+    const [, map, texture] = menuOf([]);
+
+    assert.deepEqual(map, {
+      id: "new-asset:voxelmap",
+      label: "New voxel map",
+      icon: "kind:voxelmap"
+    });
+    assert.deepEqual(texture, {
+      id: "new-asset:pixelart",
+      label: "New pixel art",
+      icon: "file"
+    });
+  });
+
+  test("a new asset item names its kind", () => {
+    assert.equal(newAssetKindOf("new-asset:voxelmap"), "voxelmap");
+    assert.equal(newAssetKindOf("new-folder"), null);
   });
 
   test("delete carries the danger intent", () => {

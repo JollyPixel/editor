@@ -32,7 +32,7 @@ console.log(event.assetId);
 ```ts
 interface CreateAssetInput {
   path: string;
-  data: Uint8Array;
+  data?: Uint8Array;
   actor: Actor;
   kind?: string;
   assetId?: string;
@@ -51,6 +51,14 @@ With `onPathConflict: "suffix"`, a taken path gets `-2`, `-3`, ... inserted
 before its first extension (`maps/world.voxelmap.json` becomes
 `maps/world-2.voxelmap.json`) until the path is free. The default, `"reject"`,
 returns `AssetPathConflictError`.
+
+Without `data`, the asset holds the serialized `create(assetId)` state of its
+kind. Each of the kind's [companions](./AssetKinds.md#companions) is created
+first, beside it: same folder, same name, the companion kind's first extension.
+Every one of these paths must be free; `"suffix"` renames them together
+(`maps/world-2.voxelmap.json` and `maps/world-2.tileset.json`). When a write
+fails part way, the companions already written are deleted. With `data`, no
+companion is created.
 
 `create` and `update` store the asset's dependency edges in the event's
 `dependencies` field. When the input omits them, the writer loads `data` into
