@@ -296,6 +296,7 @@ export class EditorScene extends Systems.Scene {
         keyboard,
         placement
       }),
+      state.keyboardLayout.watch(window),
       () => environment.dispose(),
       () => collaboration.dispose(),
       () => tilesets.dispose(),

@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import type {
   Keyboard,
-  KeyBindingHandler
+  KeyBindingHandler,
+  KeyChordString
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
@@ -11,6 +12,15 @@ import {
   type BrushStore,
   type SelectionStore
 } from "../../../state/index.ts";
+
+export const BRUSH_SHORTCUTS = {
+  mode: ["r"],
+  axis: ["x"],
+  pattern: ["c"],
+  ghost: ["g"],
+  shrink: ["BracketLeft"],
+  grow: ["BracketRight"]
+} as const satisfies Record<string, readonly KeyChordString[]>;
 
 export interface BrushShortcutsOptions {
   keyboard: Pick<Keyboard, "bind">;
@@ -37,22 +47,22 @@ export function bindBrushShortcuts(
   }
 
   const releases = [
-    keyboard.bind("KeyR", onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.mode, onVoxelLayer(() => {
       brush.mode = brush.mode === "build" ? "replace" : "build";
     })),
-    keyboard.bind("KeyX", onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.axis, onVoxelLayer(() => {
       brush.axis = nextAxis(brush.axis);
     })),
-    keyboard.bind("KeyC", onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.pattern, onVoxelLayer(() => {
       brush.pattern = brush.pattern === "square" ? "circle" : "square";
     })),
-    keyboard.bind("KeyG", onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.ghost, onVoxelLayer(() => {
       brush.ghost = !brush.ghost;
     })),
-    keyboard.bind("BracketLeft", onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.shrink, onVoxelLayer(() => {
       brush.resize(-1);
     }), { repeat: true }),
-    keyboard.bind("BracketRight", onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.grow, onVoxelLayer(() => {
       brush.resize(1);
     }), { repeat: true })
   ];

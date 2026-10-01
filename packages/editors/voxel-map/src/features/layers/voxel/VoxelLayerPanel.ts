@@ -11,7 +11,10 @@ import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
-import type { SelectionStore } from "../../../state/index.ts";
+import type {
+  KeyboardLayoutStore,
+  SelectionStore
+} from "../../../state/index.ts";
 import type { MapPlacement } from "../../placement/MapPlacement.ts";
 import {
   propertiesOf,
@@ -49,6 +52,9 @@ export class VoxelLayerPanel extends LitElement {
 
   @property({ attribute: false })
   declare placement: MapPlacement;
+
+  @property({ attribute: false })
+  declare keyboardLayout: KeyboardLayoutStore;
 
   @property({ attribute: false })
   declare mapDocument: MapDocument;
@@ -190,6 +196,7 @@ export class VoxelLayerPanel extends LitElement {
       return html`
         <placement-actions
           .placement=${this.placement}
+          .keyboardLayout=${this.keyboardLayout}
           .target=${this.layerName}
         ></placement-actions>
       `;

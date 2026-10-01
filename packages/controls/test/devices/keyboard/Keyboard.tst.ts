@@ -14,10 +14,10 @@ import type {
 declare const keyboard: Keyboard;
 declare const text: string;
 
-test("ExtendedKeyCode accepts codes and one-character shorthands", () => {
+test("ExtendedKeyCode accepts codes and uppercase or digit shorthands", () => {
   expect<"KeyA">().type.toBeAssignableTo<ExtendedKeyCode>();
   expect<"A">().type.toBeAssignableTo<ExtendedKeyCode>();
-  expect<"a">().type.toBeAssignableTo<ExtendedKeyCode>();
+  expect<"a">().type.not.toBeAssignableTo<ExtendedKeyCode>();
   expect<"7">().type.toBeAssignableTo<ExtendedKeyCode>();
   expect<"AB">().type.not.toBeAssignableTo<ExtendedKeyCode>();
   expect<"a">().type.not.toBeAssignableTo<KeyCode>();
@@ -25,7 +25,8 @@ test("ExtendedKeyCode accepts codes and one-character shorthands", () => {
 
 test("state queries accept keys, shorthands and sentinels", () => {
   expect(keyboard.isDown).type.toBeCallableWith("KeyA");
-  expect(keyboard.isDown).type.toBeCallableWith("a");
+  expect(keyboard.isDown).type.toBeCallableWith("A");
+  expect(keyboard.isDown).type.not.toBeCallableWith("a");
   expect(keyboard.wasJustPressed).type.toBeCallableWith("ANY");
   expect(keyboard.wasJustReleased).type.toBeCallableWith("NONE");
   expect(keyboard.isDown).type.not.toBeCallableWith("left");
@@ -33,7 +34,7 @@ test("state queries accept keys, shorthands and sentinels", () => {
 });
 
 test("wasJustAutoRepeated() has no sentinel form", () => {
-  expect(keyboard.wasJustAutoRepeated).type.toBeCallableWith("a");
+  expect(keyboard.wasJustAutoRepeated).type.toBeCallableWith("A");
   expect(keyboard.wasJustAutoRepeated).type.not.toBeCallableWith("ANY");
 });
 
@@ -71,4 +72,15 @@ test("bind() accepts chords with ordered Mod, Shift and Alt prefixes", () => {
     () => undefined
   );
   expect(keyboard.bind).type.not.toBeCallableWith("KeyG", () => "handled");
+});
+
+test("bind() accepts lowercase letters as printed-key chords", () => {
+  expect(keyboard.bind).type.toBeCallableWith("g", () => undefined);
+  expect(keyboard.bind).type.toBeCallableWith(
+    ["Mod+y", "Mod+Shift+z"],
+    () => true
+  );
+  expect(keyboard.bind).type.not.toBeCallableWith("Mod+zz", () => undefined);
+  expect(keyboard.bind).type.not.toBeCallableWith("1", () => undefined);
+  expect(keyboard.bind).type.not.toBeCallableWith("[", () => undefined);
 });

@@ -246,6 +246,13 @@ describe("EditorTabs", () => {
     assert.equal(Reflect.get(strip.children[1], "icon"), "kind:voxelmap");
   });
 
+  test("lets an editor frame read the keyboard layout", async() => {
+    const { tabs, frameOf } = harness();
+    await tabs.open(kMap);
+
+    assert.equal(frameOf("map-1").allow, "keyboard-map");
+  });
+
   test("evicts the least recently activated tab at the cap", async() => {
     const asked: string[] = [];
     const { tabs, itemValues } = harness({

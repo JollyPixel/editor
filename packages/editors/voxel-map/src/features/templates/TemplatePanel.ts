@@ -9,7 +9,10 @@ import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
-import type { SelectionStore } from "../../state/index.ts";
+import type {
+  KeyboardLayoutStore,
+  SelectionStore
+} from "../../state/index.ts";
 import type { MapTemplates } from "./MapTemplates.ts";
 import type { MapPlacement } from "../placement/MapPlacement.ts";
 import type { Placement } from "../placement/Placement.ts";
@@ -35,6 +38,9 @@ export class TemplatePanel extends LitElement {
 
   @property({ attribute: false })
   declare placement: MapPlacement;
+
+  @property({ attribute: false })
+  declare keyboardLayout: KeyboardLayoutStore;
 
   @property({ attribute: false })
   declare selection: SelectionStore;
@@ -111,6 +117,7 @@ export class TemplatePanel extends LitElement {
 
       <placement-actions
         .placement=${this.placement}
+        .keyboardLayout=${this.keyboardLayout}
         .target=${this.placement.target}
       ></placement-actions>
     `;

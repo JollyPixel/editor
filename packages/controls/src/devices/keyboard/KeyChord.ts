@@ -1,12 +1,24 @@
 // Import Internal Dependencies
 import type { KeyCode } from "./code.ts";
+import {
+  isKeyChordLetter,
+  resolveKeyLetter,
+  type KeyChordLetter
+} from "./letter.ts";
+import type { KeyboardLayout } from "./layout.ts";
 import { isApplePlatform } from "../../platform.ts";
 
 // CONSTANTS
-const kKeyLabels: Partial<Record<KeyCode, string>> = {
+const kNamedKeyLabels: Partial<Record<KeyCode, string>> = {
   Escape: "Esc",
   Delete: "Del",
   NumpadEnter: "Enter",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  ArrowLeft: "←",
+  ArrowRight: "→"
+};
+const kPunctuationLabels: Partial<Record<KeyCode, string>> = {
   BracketLeft: "[",
   BracketRight: "]",
   Minus: "-",
@@ -17,12 +29,9 @@ const kKeyLabels: Partial<Record<KeyCode, string>> = {
   Backslash: "\\",
   Semicolon: ";",
   Quote: "'",
-  Backquote: "`",
-  ArrowUp: "↑",
-  ArrowDown: "↓",
-  ArrowLeft: "←",
-  ArrowRight: "→"
+  Backquote: "`"
 };
+const kPrintableCharacter = /^[^\s\p{C}]$/u;
 
 export type KeyChordModifierPrefix =
   | ""
@@ -34,40 +43,59 @@ export type KeyChordModifierPrefix =
   | "Shift+Alt+"
   | "Mod+Shift+Alt+";
 
-export type KeyChordString = `${KeyChordModifierPrefix}${KeyCode}`;
+export type KeyChordString =
+  `${KeyChordModifierPrefix}${KeyCode | KeyChordLetter}`;
 
 export type KeyChordEvent = Pick<
   KeyboardEvent,
-  "code" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey"
+  "code" | "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey"
 >;
 
 export interface KeyChordPlatformOptions {
   apple?: boolean;
 }
 
-export interface KeyChordOptions {
-  code: KeyCode;
+export interface KeyChordFormatOptions extends KeyChordPlatformOptions {
+  layout?: KeyboardLayout | null;
+}
+
+export interface KeyChordModifiers {
   mod?: boolean;
   shift?: boolean;
   alt?: boolean;
 }
+
+export interface KeyChordCodeOptions extends KeyChordModifiers {
+  code: KeyCode;
+  key?: never;
+}
+
+export interface KeyChordLetterOptions extends KeyChordModifiers {
+  key: KeyChordLetter;
+  code?: never;
+}
+
+export type KeyChordOptions = KeyChordCodeOptions | KeyChordLetterOptions;
 
 export class KeyChord {
   static parse(
     chord: KeyChordString
   ): KeyChord {
     const parts = chord.split("+");
-    const code = parts.pop() as KeyCode;
-
-    return new KeyChord({
-      code,
+    const target = parts.pop() ?? "";
+    const modifiers = {
       mod: parts.includes("Mod"),
       shift: parts.includes("Shift"),
       alt: parts.includes("Alt")
-    });
+    };
+
+    return isKeyChordLetter(target) ?
+      new KeyChord({ ...modifiers, key: target }) :
+      new KeyChord({ ...modifiers, code: target as KeyCode });
   }
 
-  readonly code: KeyCode;
+  readonly code: KeyCode | null;
+  readonly key: KeyChordLetter | null;
   readonly mod: boolean;
   readonly shift: boolean;
   readonly alt: boolean;
@@ -76,13 +104,15 @@ export class KeyChord {
     options: KeyChordOptions
   ) {
     const {
-      code,
+      code = null,
+      key = null,
       mod = false,
       shift = false,
       alt = false
     } = options;
 
     this.code = code;
+    this.key = key;
     this.mod = mod;
     this.shift = shift;
     this.alt = alt;
@@ -95,8 +125,11 @@ export class KeyChord {
     const { apple = isApplePlatform() } = options;
     const modKey = apple ? event.metaKey : event.ctrlKey;
     const otherKey = apple ? event.ctrlKey : event.metaKey;
+    const target = this.key === null ?
+      event.code === this.code :
+      resolveKeyLetter(event) === this.key;
 
-    return event.code === this.code &&
+    return target &&
       modKey === this.mod &&
       !otherKey &&
       event.shiftKey === this.shift &&
@@ -104,10 +137,13 @@ export class KeyChord {
   }
 
   format(
-    options: KeyChordPlatformOptions = {}
+    options: KeyChordFormatOptions = {}
   ): string {
-    const { apple = isApplePlatform() } = options;
-    const key = keyLabel(this.code);
+    const {
+      apple = isApplePlatform(),
+      layout
+    } = options;
+    const key = this.#label(layout);
 
     if (apple) {
       return [
@@ -125,21 +161,45 @@ export class KeyChord {
       key
     ].filter((part) => part !== null).join("+");
   }
+
+  #label(
+    layout: KeyboardLayout | null = null
+  ): string {
+    if (this.key !== null) {
+      return this.key.toUpperCase();
+    }
+    if (this.code === null) {
+      return "";
+    }
+
+    return codeLabel(this.code, layout);
+  }
 }
 
-function keyLabel(
-  code: KeyCode
+function codeLabel(
+  code: KeyCode,
+  layout: KeyboardLayout | null
 ): string {
-  const label = kKeyLabels[code];
-  if (label !== undefined) {
-    return label;
-  }
-  if (code.startsWith("Key")) {
-    return code.slice(3);
-  }
   if (code.startsWith("Digit")) {
     return code.slice(5);
   }
 
-  return code;
+  const named = kNamedKeyLabels[code];
+  if (named !== undefined) {
+    return named;
+  }
+
+  const qwerty = kPunctuationLabels[code] ??
+    (code.startsWith("Key") ? code.slice(3) : null);
+  if (qwerty === null) {
+    return code;
+  }
+
+  const printed = layout?.get(code);
+
+  return printed !== undefined && kPrintableCharacter.test(printed) ?
+    printed.toLocaleUpperCase() :
+    qwerty;
 }
+
+export type { KeyChordLetter } from "./letter.ts";

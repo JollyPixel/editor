@@ -4,9 +4,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  Keyboard,
-  isApplePlatform,
-  type KeyCode
+  KeyBindings,
+  isApplePlatform
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
@@ -21,7 +20,7 @@ const kOtherMod: KeyboardEventInit = isApplePlatform() ?
   { metaKey: true };
 
 function setup() {
-  const keyboard = new Keyboard();
+  const keyboard = new KeyBindings();
   const calls: string[] = [];
   const release = bindHistoryShortcuts({
     keyboard,
@@ -32,17 +31,14 @@ function setup() {
   });
 
   function press(
-    code: KeyCode,
-    modifiers: Partial<KeyboardEventInit> = {}
+    init: KeyboardEventInit
   ): boolean {
     const event = new KeyboardEvent("keydown", {
-      code,
       cancelable: true,
-      ...modifiers
+      ...init
     });
-    keyboard.emit(code, event);
 
-    return event.defaultPrevented;
+    return keyboard.dispatch(event);
   }
 
   return { release, calls, press };
@@ -52,8 +48,17 @@ describe("HistoryShortcuts", () => {
   it("undoes on the platform Mod+Z only", () => {
     const { calls, press } = setup();
 
-    assert.equal(press("KeyZ", kMod), true);
-    assert.equal(press("KeyZ", kOtherMod), false);
+    assert.equal(press({ code: "KeyZ", key: "z", ...kMod }), true);
+    assert.equal(press({ code: "KeyZ", key: "z", ...kOtherMod }), false);
+
+    assert.deepEqual(calls, ["undo"]);
+  });
+
+  it("follows the printed Z on AZERTY", () => {
+    const { calls, press } = setup();
+
+    press({ code: "KeyW", key: "z", ...kMod });
+    press({ code: "KeyZ", key: "w", ...kMod });
 
     assert.deepEqual(calls, ["undo"]);
   });
@@ -61,8 +66,8 @@ describe("HistoryShortcuts", () => {
   it("redoes on Mod+Shift+Z and Mod+Y", () => {
     const { calls, press } = setup();
 
-    press("KeyZ", { ...kMod, shiftKey: true });
-    press("KeyY", kMod);
+    press({ code: "KeyZ", key: "Z", shiftKey: true, ...kMod });
+    press({ code: "KeyY", key: "y", ...kMod });
 
     assert.deepEqual(calls, ["redo", "redo"]);
   });
@@ -70,9 +75,9 @@ describe("HistoryShortcuts", () => {
   it("ignores the keys without a modifier or with Alt", () => {
     const { calls, press } = setup();
 
-    assert.equal(press("KeyZ"), false);
-    press("KeyY");
-    press("KeyZ", { ...kMod, altKey: true });
+    assert.equal(press({ code: "KeyZ", key: "z" }), false);
+    press({ code: "KeyY", key: "y" });
+    press({ code: "KeyZ", key: "z", altKey: true, ...kMod });
 
     assert.deepEqual(calls, []);
   });
@@ -81,8 +86,8 @@ describe("HistoryShortcuts", () => {
     const { release, calls, press } = setup();
 
     release();
-    press("KeyZ", kMod);
-    press("KeyY", kMod);
+    press({ code: "KeyZ", key: "z", ...kMod });
+    press({ code: "KeyY", key: "y", ...kMod });
 
     assert.deepEqual(calls, []);
   });

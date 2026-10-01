@@ -129,6 +129,7 @@ export class TemplateManager extends WorkspaceElement {
           .world=${workspace.view.document.world}
           .templates=${workspace.templates}
           .placement=${workspace.placement}
+          .keyboardLayout=${workspace.state.keyboardLayout}
           .selection=${workspace.state.selection}
           .mapDocument=${workspace.mapDocument}
         ></template-panel>

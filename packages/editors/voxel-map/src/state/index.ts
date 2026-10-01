@@ -4,6 +4,7 @@ export * from "./VoxelLayerRef.ts";
 export * from "./ObjectLayerRef.ts";
 export * from "./ObjectRef.ts";
 export * from "./BrushStore.ts";
+export * from "./KeyboardLayoutStore.ts";
 export * from "./PointerCapture.ts";
 export * from "./PresenceStore.ts";
 export * from "./SelectionStore.ts";

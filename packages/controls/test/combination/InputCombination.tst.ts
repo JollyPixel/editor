@@ -24,12 +24,12 @@ test("key() accepts bare keys, shorthands, sentinels and combined actions", () =
   expect(InputCombination.key("KeyA")).type.toBe<AtomicInput>();
   expect(InputCombination.key).type.toBeCallableWith("KeyA", "down");
   expect(InputCombination.key).type.toBeCallableWith("A.down");
-  expect(InputCombination.key).type.toBeCallableWith("a.down");
   expect(InputCombination.key).type.toBeCallableWith("7.pressed");
   expect(InputCombination.key).type.toBeCallableWith("ANY", "released");
 });
 
-test("key() rejects invalid states, sentinel combined forms and wide strings", () => {
+test("key() rejects invalid states, lowercase letters, sentinel combined forms and wide strings", () => {
+  expect(InputCombination.key).type.not.toBeCallableWith("a.down");
   expect(InputCombination.key).type.not.toBeCallableWith("KeyA.down", "pressed");
   expect(InputCombination.key).type.not.toBeCallableWith("KeyA", "held");
   expect(InputCombination.key).type.not.toBeCallableWith("KeyA.held");

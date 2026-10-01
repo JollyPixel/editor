@@ -28,7 +28,8 @@ test("mouse strings cannot reach keyboard conditions", () => {
 });
 
 test("Axis accepts bare keys and sentinels as halves", () => {
-  expect(Axis.buttons).type.toBeCallableWith("d", "a");
+  expect(Axis.buttons).type.toBeCallableWith("D", "A");
+  expect(Axis.buttons).type.not.toBeCallableWith("d", "a");
   expect(Axis.buttons).type.toBeCallableWith("ANY");
   expect(Axis.buttons).type.not.toBeCallableWith("KeyW.held");
 });

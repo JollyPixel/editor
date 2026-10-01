@@ -161,6 +161,7 @@ export class EditorTabs {
     const frame = document.createElement("iframe");
     frame.hidden = true;
     frame.title = tab.label;
+    frame.allow = "keyboard-map";
     frame.src = tab.url;
     this.#strip.append(item);
     this.#frames.append(frame);
