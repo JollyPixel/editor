@@ -76,11 +76,28 @@ jolly-pane::part(content) {
 asset-browser {
   display: flex;
   flex-direction: column;
+  gap: var(--jolly-space-2);
   min-height: 100%;
+  padding: var(--jolly-space-2);
+}
+
+asset-browser .kinds {
+  --jolly-field-inset-start: 0;
+  --jolly-field-inset-end: 0;
+}
+
+asset-browser jolly-toolbar jolly-button {
+  flex: 1 1 0;
+
+  --jolly-icon-button-size: 100%;
 }
 
 asset-browser jolly-tree {
   flex: 1 0 auto;
+}
+
+asset-browser asset-delete-dialog {
+  position: absolute;
 }
 
 #workbench {
