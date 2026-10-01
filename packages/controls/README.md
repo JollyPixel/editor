@@ -65,6 +65,8 @@ if (dashCombo()) {
 - [Input](./docs/input.md)
   - [Mouse](./docs/mouse.md)
   - [Keyboard](./docs/keyboard.md)
+    - [Key chords](./docs/key-chords.md): bindings by key position or
+      printed letter, and layout-aware labels.
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)

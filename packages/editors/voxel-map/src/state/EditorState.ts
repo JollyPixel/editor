@@ -7,6 +7,7 @@ import {
 
 // Import Internal Dependencies
 import { BrushStore } from "./BrushStore.ts";
+import { KeyboardLayoutStore } from "./KeyboardLayoutStore.ts";
 import { PointerCapture } from "./PointerCapture.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
@@ -22,6 +23,7 @@ export class EditorState {
   readonly presence = new PresenceStore();
   readonly pointer = new PointerCapture();
   readonly log = new LogQueue();
+  readonly keyboardLayout = new KeyboardLayoutStore();
   readonly view: ViewStore;
 
   constructor(

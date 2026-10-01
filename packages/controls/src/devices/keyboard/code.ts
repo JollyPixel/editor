@@ -44,11 +44,10 @@ export type KeyCode =
 export type ExtendedKeyCode =
   | KeyCode
   | Alphabet
-  | Lowercase<Alphabet>
   | Numeric;
 
 /**
- * Every shorthand (`"A"`, `"a"`, `"7"`) pre-resolved to its `KeyCode`.
+ * Every shorthand (`"A"`, `"7"`) pre-resolved to its `KeyCode`.
  */
 const kExtendedKeyToCode: Record<string, KeyCode> = buildLookup();
 
@@ -57,7 +56,6 @@ function buildLookup(): Record<string, KeyCode> {
 
   for (const [letter, code] of Object.entries(ALPHABET_TO_KEY)) {
     lookup[letter] = code;
-    lookup[letter.toLowerCase()] = code;
   }
   for (const [digit, code] of Object.entries(NUMERIC_TO_KEY)) {
     lookup[digit] = code;

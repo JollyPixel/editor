@@ -46,10 +46,10 @@ describe("Controls.InputCombination", () => {
     assert.strictEqual(InputCombination.mouse("ANY", "down").evaluate(input), false);
   });
 
-  test("key() resolves a lowercase letter shorthand", () => {
+  test("key() resolves an uppercase letter shorthand", () => {
     input.keyboard.buttonsDown.add("KeyA");
 
-    assert.strictEqual(InputCombination.key("a.down").evaluate(input), true);
+    assert.strictEqual(InputCombination.key("A.down").evaluate(input), true);
   });
 
   test("key() accepts a bare key with a default/explicit state, or a dot-path action", () => {

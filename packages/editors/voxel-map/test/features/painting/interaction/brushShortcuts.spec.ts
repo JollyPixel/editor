@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import { Keyboard } from "@jolly-pixel/controls";
+import { KeyBindings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import {
@@ -17,7 +17,7 @@ import {
 import { bindBrushShortcuts } from "../../../../src/features/painting/interaction/brushShortcuts.ts";
 
 function setup() {
-  const keyboard = new Keyboard();
+  const keyboard = new KeyBindings();
   const brush = new BrushStore();
   const selection = new SelectionStore();
   selection.current = new VoxelLayerRef("Ground");
@@ -30,8 +30,9 @@ function setup() {
   function press(
     init: KeyboardEventInit = {}
   ): void {
-    keyboard.emit("KeyG", new KeyboardEvent("keydown", {
+    keyboard.dispatch(new KeyboardEvent("keydown", {
       code: "KeyG",
+      key: "g",
       ...init
     }));
   }

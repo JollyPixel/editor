@@ -10,7 +10,7 @@ import {
   state
 } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
-import { KeyChord } from "@jolly-pixel/controls";
+import type { KeyChordString } from "@jolly-pixel/controls";
 import { FieldBinding } from "@jolly-pixel/ui";
 import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
 
@@ -38,11 +38,8 @@ import {
   type BrushToolOption
 } from "./brushToolOptions.ts";
 import { HISTORY_SHORTCUTS } from "../../../scene/historyShortcuts.ts";
+import { BRUSH_SHORTCUTS } from "../interaction/brushShortcuts.ts";
 import "./brushIcons.ts";
-
-// CONSTANTS
-const kUndoLabel = `Undo (${KeyChord.parse(HISTORY_SHORTCUTS.undo[0]).format()})`;
-const kRedoLabel = `Redo (${KeyChord.parse(HISTORY_SHORTCUTS.redo[0]).format()})`;
 
 interface ChoiceTool<TValue extends string> {
   tool: string;
@@ -96,7 +93,7 @@ export class BrushToolbar extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { brush, selection } = workspace.state;
+    const { brush, selection, keyboardLayout } = workspace.state;
     const { history } = workspace.view.document;
     const refreshSelection = (): void => {
       this.disabled = selection.voxelLayer === null;
@@ -111,6 +108,7 @@ export class BrushToolbar extends WorkspaceElement {
 
     return [
       brush.subscribe("change", () => this.requestUpdate()),
+      keyboardLayout.subscribe("change", () => this.requestUpdate()),
       selection.subscribe("change", refreshSelection),
       workspace.mapDocument.subscribe("layerUpdated", refreshSelection),
       () => history.off("change", this.#onHistoryChange)
@@ -123,7 +121,17 @@ export class BrushToolbar extends WorkspaceElement {
       return nothing;
     }
 
-    const { brush } = workspace.state;
+    const { brush, keyboardLayout } = workspace.state;
+    function shortcut(
+      chords: readonly KeyChordString[]
+    ): string {
+      return keyboardLayout.format(chords[0]);
+    }
+
+    const sizeShortcut = [
+      shortcut(BRUSH_SHORTCUTS.shrink),
+      shortcut(BRUSH_SHORTCUTS.grow)
+    ].join(" / ");
 
     return html`
       ${this.#renderNotice()}
@@ -136,14 +144,14 @@ export class BrushToolbar extends WorkspaceElement {
           <jolly-tool-button
             data-tool="undo"
             icon="history-undo"
-            label=${kUndoLabel}
+            label=${`Undo (${shortcut(HISTORY_SHORTCUTS.undo)})`}
             ?disabled=${!this._canUndo}
             @click=${this.#onUndo}
           ></jolly-tool-button>
           <jolly-tool-button
             data-tool="redo"
             icon="history-redo"
-            label=${kRedoLabel}
+            label=${`Redo (${shortcut(HISTORY_SHORTCUTS.redo)})`}
             ?disabled=${!this._canRedo}
             @click=${this.#onRedo}
           ></jolly-tool-button>
@@ -159,7 +167,7 @@ export class BrushToolbar extends WorkspaceElement {
             tool: "mode",
             options: BRUSH_MODE_OPTIONS,
             current: brush.mode,
-            shortcut: "R",
+            shortcut: shortcut(BRUSH_SHORTCUTS.mode),
             select: (value) => {
               brush.mode = value;
             }
@@ -168,7 +176,7 @@ export class BrushToolbar extends WorkspaceElement {
             tool: "axis",
             options: BRUSH_AXIS_OPTIONS,
             current: brush.axis,
-            shortcut: "X",
+            shortcut: shortcut(BRUSH_SHORTCUTS.axis),
             select: (value) => {
               brush.axis = value;
             },
@@ -177,7 +185,11 @@ export class BrushToolbar extends WorkspaceElement {
           <jolly-tool-button
             data-tool="size"
             flyout-side="above"
-            label=${toolLabel(`Size ${this.#size.value}`, "[ / ]", this.disabled)}
+            label=${toolLabel(
+              `Size ${this.#size.value}`,
+              sizeShortcut,
+              this.disabled
+            )}
             ?disabled=${this.disabled}
           >
             <span class="size">${this.#size.value}</span>
@@ -196,7 +208,7 @@ export class BrushToolbar extends WorkspaceElement {
             tool: "pattern",
             options: BRUSH_PATTERN_OPTIONS,
             current: brush.pattern,
-            shortcut: "C",
+            shortcut: shortcut(BRUSH_SHORTCUTS.pattern),
             select: (value) => {
               brush.pattern = value;
             }
@@ -204,7 +216,11 @@ export class BrushToolbar extends WorkspaceElement {
           <jolly-tool-button
             data-tool="ghost"
             icon="brush-ghost"
-            label=${toolLabel(ghostLabel(this.#size.value), "G", this.disabled)}
+            label=${toolLabel(
+              ghostLabel(this.#size.value),
+              shortcut(BRUSH_SHORTCUTS.ghost),
+              this.disabled
+            )}
             ?active=${brush.ghost}
             ?disabled=${this.disabled}
             @click=${this.#onGhostToggle}

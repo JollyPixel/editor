@@ -130,4 +130,50 @@ describe("Controls.Keyboard bind", () => {
 
     assert.equal(calls, 0);
   });
+
+  test("a letter chord runs on the key that prints the letter", () => {
+    const calls: string[] = [];
+    const release = keyboard.bind("Mod+z", (event) => {
+      calls.push(event.code);
+    });
+
+    assert.equal(press({ code: "KeyW", key: "z", ...kMod }), true);
+    assert.equal(press({ code: "KeyZ", key: "w", ...kMod }), false);
+    release();
+    assert.equal(press({ code: "KeyW", key: "z", ...kMod }), false);
+
+    assert.deepEqual(calls, ["KeyW"]);
+  });
+
+  test("code and letter bindings share one priority order", () => {
+    const calls: string[] = [];
+    keyboard.bind("KeyW", () => {
+      calls.push("code");
+    });
+    keyboard.bind("z", () => {
+      calls.push("letter");
+
+      return false;
+    }, { priority: 1 });
+    keyboard.bind("z", () => {
+      calls.push("late letter");
+    });
+
+    press({ code: "KeyW", key: "z" });
+
+    assert.deepEqual(calls, ["letter", "code"]);
+  });
+
+  test("a binding reached by code and by letter runs once", () => {
+    let calls = 0;
+    keyboard.bind(["z", "KeyZ"], () => {
+      calls++;
+
+      return false;
+    });
+
+    press({ code: "KeyZ", key: "z" });
+
+    assert.equal(calls, 1);
+  });
 });

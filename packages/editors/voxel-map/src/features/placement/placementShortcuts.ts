@@ -1,11 +1,19 @@
 // Import Third-party Dependencies
 import type {
   Keyboard,
-  KeyBindingHandler
+  KeyBindingHandler,
+  KeyChordString
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import type { MapPlacement } from "./MapPlacement.ts";
+
+export const PLACEMENT_SHORTCUTS = {
+  rotateCounterClockwise: ["KeyQ"],
+  rotateClockwise: ["KeyE"],
+  commit: ["Enter", "NumpadEnter"],
+  cancel: ["Escape"]
+} as const satisfies Record<string, readonly KeyChordString[]>;
 
 export interface PlacementShortcutsOptions {
   keyboard: Pick<Keyboard, "bind">;
@@ -23,14 +31,20 @@ export function bindPlacementShortcuts(
     return (event) => placement.store.placing && action(event) !== false;
   }
 
+  const {
+    rotateCounterClockwise,
+    rotateClockwise,
+    commit,
+    cancel
+  } = PLACEMENT_SHORTCUTS;
   const releases = [
-    keyboard.bind("KeyQ", whilePlacing(() => {
+    keyboard.bind(rotateCounterClockwise, whilePlacing(() => {
       placement.store.transform({ rotation: 1 });
     })),
-    keyboard.bind("KeyE", whilePlacing(() => {
+    keyboard.bind(rotateClockwise, whilePlacing(() => {
       placement.store.transform({ rotation: 3 });
     })),
-    keyboard.bind(["Enter", "NumpadEnter"], whilePlacing((event) => {
+    keyboard.bind(commit, whilePlacing((event) => {
       if (pressesButton(event)) {
         return false;
       }
@@ -38,7 +52,7 @@ export function bindPlacementShortcuts(
 
       return true;
     })),
-    keyboard.bind("Escape", () => placement.cancel(), { priority: 1 })
+    keyboard.bind(cancel, () => placement.cancel(), { priority: 1 })
   ];
 
   return () => {

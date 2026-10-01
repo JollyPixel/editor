@@ -6,8 +6,8 @@ import type {
 import type { VoxelHistory } from "@jolly-pixel/voxel.renderer";
 
 export const HISTORY_SHORTCUTS = {
-  undo: ["Mod+KeyZ"],
-  redo: ["Mod+KeyY", "Mod+Shift+KeyZ"]
+  undo: ["Mod+z"],
+  redo: ["Mod+y", "Mod+Shift+z"]
 } as const satisfies Record<string, readonly KeyChordString[]>;
 
 export interface HistoryShortcutsOptions {

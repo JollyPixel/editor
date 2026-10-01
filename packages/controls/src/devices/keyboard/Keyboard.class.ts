@@ -15,10 +15,12 @@ import {
   type KeyCode,
   type ExtendedKeyCode
 } from "./code.ts";
+import type { KeyChordString } from "./KeyChord.ts";
 import {
-  KeyChord,
-  type KeyChordString
-} from "./KeyChord.ts";
+  KeyBindings,
+  type KeyBindingHandler,
+  type KeyBindingOptions
+} from "./KeyBindings.ts";
 
 // CONSTANTS
 /** `Tab` and `Escape` keep browser defaults but still emit key events. */
@@ -128,20 +130,6 @@ export interface KeyboardOptions {
   documentAdapter?: DocumentAdapter;
 }
 
-export type KeyBindingHandler = (event: KeyboardEvent) => boolean | void;
-
-export interface KeyBindingOptions {
-  repeat?: boolean;
-  priority?: number;
-}
-
-interface KeyBinding {
-  chords: readonly KeyChord[];
-  handler: KeyBindingHandler;
-  repeat: boolean;
-  priority: number;
-}
-
 export class Keyboard extends Emitter<
   KeyboardEvents
 > implements InputControl {
@@ -151,7 +139,7 @@ export class Keyboard extends Emitter<
   #settled = true;
   #enabled = true;
   #guards = new Map<KeyboardGuard, (() => void) | null>();
-  #bindings = new Map<string, KeyBinding[]>();
+  #bindings = new KeyBindings();
   #suspensions = 0;
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
@@ -217,87 +205,8 @@ export class Keyboard extends Emitter<
     handler: KeyBindingHandler,
     options: KeyBindingOptions = {}
   ): () => void {
-    const {
-      repeat = false,
-      priority = 0
-    } = options;
-    const binding: KeyBinding = {
-      chords: (typeof chords === "string" ? [chords] : chords)
-        .map((chord) => KeyChord.parse(chord)),
-      handler,
-      repeat,
-      priority
-    };
-    const codes = new Set(binding.chords.map((chord) => chord.code));
-
-    for (const code of codes) {
-      this.#addBinding(code, binding);
-    }
-
-    return () => {
-      for (const code of codes) {
-        this.#removeBinding(code, binding);
-      }
-    };
+    return this.#bindings.bind(chords, handler, options);
   }
-
-  #addBinding(
-    code: KeyCode,
-    binding: KeyBinding
-  ): void {
-    let bindings = this.#bindings.get(code);
-    if (bindings === undefined) {
-      bindings = [];
-      this.#bindings.set(code, bindings);
-      this.on(code, this.#dispatchBinding);
-    }
-
-    const index = bindings.findIndex(
-      (other) => other.priority < binding.priority
-    );
-    bindings.splice(index === -1 ? bindings.length : index, 0, binding);
-  }
-
-  #removeBinding(
-    code: KeyCode,
-    binding: KeyBinding
-  ): void {
-    const bindings = this.#bindings.get(code);
-    if (bindings === undefined) {
-      return;
-    }
-
-    const index = bindings.indexOf(binding);
-    if (index !== -1) {
-      bindings.splice(index, 1);
-    }
-    if (bindings.length === 0) {
-      this.#bindings.delete(code);
-      this.off(code, this.#dispatchBinding);
-    }
-  }
-
-  #dispatchBinding = (event: KeyboardEvent) => {
-    const bindings = this.#bindings.get(event.code);
-    if (bindings === undefined) {
-      return;
-    }
-
-    for (const binding of [...bindings]) {
-      if (
-        (event.repeat && !binding.repeat) ||
-        !binding.chords.some((chord) => chord.matches(event))
-      ) {
-        continue;
-      }
-
-      if (binding.handler(event) !== false) {
-        event.preventDefault();
-
-        return;
-      }
-    }
-  };
 
   get #listening(): boolean {
     return this.#enabled && this.#suspensions === 0;
@@ -484,6 +393,7 @@ export class Keyboard extends Emitter<
     }
     this.emit("down", event);
     this.emit(event.code as KeyCode, event);
+    this.#bindings.dispatch(event);
   };
 
   #onKeyPress = (event: KeyboardEvent) => {
@@ -560,4 +470,6 @@ export type {
   KeyCode,
   ExtendedKeyCode
 } from "./code.ts";
+export * from "./KeyBindings.ts";
 export * from "./KeyChord.ts";
+export * from "./layout.ts";

@@ -163,7 +163,7 @@ describe("Controls.AliasedKeyInput", () => {
   });
 
   test("resolves extended key shorthands and drops duplicates", () => {
-    const condition = new AliasedKeyInput(["w", "KeyW", "ArrowUp"]);
+    const condition = new AliasedKeyInput(["W", "KeyW", "ArrowUp"]);
 
     assert.deepStrictEqual(condition.keys, ["KeyW", "ArrowUp"]);
 

@@ -3,8 +3,12 @@ import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 // Import Internal Dependencies
+import type { KeyboardLayoutStore } from "../../state/index.ts";
 import type { MapPlacement } from "./MapPlacement.ts";
-import { PLACEMENT_TRANSFORMS } from "./placementTransforms.ts";
+import {
+  PLACEMENT_TRANSFORMS,
+  type PlacementTransform
+} from "./placementTransforms.ts";
 
 @customElement("placement-actions")
 export class PlacementActions extends LitElement {
@@ -40,11 +44,30 @@ export class PlacementActions extends LitElement {
   declare placement: MapPlacement;
 
   @property({ attribute: false })
+  declare keyboardLayout: KeyboardLayoutStore;
+
+  @property({ attribute: false })
   declare target: string | null;
+
+  #unsubscribe: (() => void) | null = null;
 
   constructor() {
     super();
     this.target = null;
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    this.#unsubscribe = this.keyboardLayout.subscribe(
+      "change",
+      () => this.requestUpdate()
+    );
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.#unsubscribe?.();
+    this.#unsubscribe = null;
   }
 
   override render() {
@@ -55,14 +78,20 @@ export class PlacementActions extends LitElement {
 
     return html`
       <div class="transforms" @mousedown=${keepFocus}>
-        ${PLACEMENT_TRANSFORMS.map(({ icon, title, transform }) => html`
-          <jolly-button
-            icon=${icon}
-            label=${title}
-            title=${title}
-            @click=${() => this.placement.store.transform(transform)}
-          ></jolly-button>
-        `)}
+        ${PLACEMENT_TRANSFORMS.map((placementTransform) => {
+          const label = this.#labelOf(placementTransform);
+
+          return html`
+            <jolly-button
+              icon=${placementTransform.icon}
+              label=${label}
+              title=${label}
+              @click=${() => this.placement.store.transform(
+                placementTransform.transform
+              )}
+            ></jolly-button>
+          `;
+        })}
       </div>
 
       <div class="actions" @mousedown=${keepFocus}>
@@ -84,6 +113,16 @@ export class PlacementActions extends LitElement {
 
       <p class="hint">Drag to move, Shift + drag to lift.</p>
     `;
+  }
+
+  #labelOf(
+    placementTransform: PlacementTransform
+  ): string {
+    const { title, shortcut } = placementTransform;
+
+    return shortcut === null ?
+      title :
+      `${title} (${this.keyboardLayout.format(shortcut)})`;
   }
 }
 

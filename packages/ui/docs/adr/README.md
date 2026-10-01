@@ -57,6 +57,8 @@ for a different reason: `editors/voxel-map` needed an ambient feed, not an alert
 - Whether a central shortcut registry and user-rebindable shortcuts are needed, and where overrides
   persist. If built, spatial bindings match `event.code` (so `KeyW` stays the physical key on AZERTY)
   and command bindings match `event.key` (so undo stays on the key labelled Z).
+  `@jolly-pixel/controls` key chords already match this way (`"KeyQ"` is a position, `"z"` a
+  printed letter), so a registry would build on them.
 - Whether `jolly-flags` needs per-bit mixedness. A bitmask across a multi-selection genuinely is
   mixed bit by bit, which `FieldValue<number>` cannot express.
 - Relative multi-edit is not expressible. `{ value: T }` carries one absolute value; Unity applies a

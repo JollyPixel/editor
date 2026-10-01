@@ -83,7 +83,7 @@ class AliasedKeyInput implements InputCondition {
 }
 ```
 
-The state defaults to `"down"`. Shorthands such as `"w"` resolve to their
+The state defaults to `"down"`. Shorthands such as `"W"` resolve to their
 `KeyCode`, and duplicate keys are removed. `keys` returns a copy.
 
 The constructor also accepts a resolver function. The resolver runs on the

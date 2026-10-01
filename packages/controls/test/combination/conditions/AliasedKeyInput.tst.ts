@@ -12,7 +12,7 @@ import {
 
 test("accepts key codes, shorthands or a key resolver", () => {
   expect(AliasedKeyInput).type.toBeConstructableWith(["ShiftLeft", "ShiftRight"]);
-  expect(AliasedKeyInput).type.toBeConstructableWith(["w", "ArrowUp"], "pressed");
+  expect(AliasedKeyInput).type.toBeConstructableWith(["W", "ArrowUp"], "pressed");
   expect(AliasedKeyInput).type.toBeConstructableWith(() => ["MetaLeft"]);
 });
 

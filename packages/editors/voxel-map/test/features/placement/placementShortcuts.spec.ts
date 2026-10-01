@@ -7,7 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import {
-  Keyboard,
+  KeyBindings,
   type KeyCode
 } from "@jolly-pixel/controls";
 import { VoxelTransform } from "@jolly-pixel/voxel.renderer";
@@ -18,7 +18,7 @@ import { TemplateSource } from "../../../src/features/placement/PlacementSource.
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
 
 function setup() {
-  const keyboard = new Keyboard();
+  const keyboard = new KeyBindings();
   const store = new PlacementStore();
   let commits = 0;
   const release = bindPlacementShortcuts({
@@ -44,7 +44,7 @@ function setup() {
     code: KeyCode,
     init: KeyboardEventInit = {}
   ): void {
-    keyboard.emit(code, new KeyboardEvent("keydown", {
+    keyboard.dispatch(new KeyboardEvent("keydown", {
       code,
       ...init
     }));
@@ -100,7 +100,7 @@ describe("PlacementShortcuts", () => {
     begin(store);
     const button = document.createElement("button");
     document.body.append(button);
-    button.addEventListener("keydown", (event) => keyboard.emit("Enter", event));
+    button.addEventListener("keydown", (event) => keyboard.dispatch(event));
 
     button.dispatchEvent(new KeyboardEvent("keydown", {
       code: "Enter",
