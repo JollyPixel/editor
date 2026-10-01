@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import fs from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
@@ -68,9 +69,7 @@ async function catalogOverHttp(
     });
   });
   server.listen(0, "127.0.0.1");
-  await new Promise((resolve) => {
-    server.once("listening", resolve);
-  });
+  await once(server, "listening");
   const { port } = server.address() as { port: number; };
 
   try {

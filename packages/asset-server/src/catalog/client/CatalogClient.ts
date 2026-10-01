@@ -347,16 +347,15 @@ async function readyWithin(
   ready: Promise<void>,
   timeoutMs: number
 ): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = Promise.withResolvers<never>();
+  const timer = setTimeout(
+    () => timeout.reject(new CatalogUnavailableError()),
+    timeoutMs
+  );
   try {
     await Promise.race([
       ready,
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () => reject(new CatalogUnavailableError()),
-          timeoutMs
-        );
-      })
+      timeout.promise
     ]);
   }
   finally {

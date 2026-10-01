@@ -11,7 +11,8 @@ export function callsOf<TArgs extends unknown[]>(
 }
 
 export function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
+  const { promise, resolve } = Promise.withResolvers<void>();
+  requestAnimationFrame(() => resolve());
+
+  return promise;
 }

@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
@@ -51,9 +52,7 @@ async function waitFor(
       throw new Error("timed out waiting for the watcher");
     }
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, 25);
-    });
+    await setTimeout(25);
   }
 }
 

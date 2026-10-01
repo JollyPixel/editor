@@ -288,9 +288,12 @@ test.describe("texture API", () => {
     expect(result.ids).toContain("background");
     expect(result.sources).toEqual(["api"]);
 
-    const userSource = panel.evaluate((element: PixelDrawPanel) => new Promise<string>((resolve) => {
+    const userSource = panel.evaluate((element: PixelDrawPanel) => {
+      const { promise, resolve } = Promise.withResolvers<string>();
       element.addEventListener("texture-change", (event) => resolve(event.detail.source), { once: true });
-    }));
+
+      return promise;
+    });
     await panel.getByRole("tab").first().click();
 
     expect(await userSource).toBe("user");

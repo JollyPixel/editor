@@ -35,7 +35,7 @@ function createFakeRuntime() {
       })
     ]),
     loaders: new AssetLoaderRegistry().register(kPendingAsset, {
-      load: () => new Promise<string>(() => void 0)
+      load: () => Promise.withResolvers<string>().promise
     })
   });
   const sceneManager = new Systems.SceneManager();

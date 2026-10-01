@@ -63,9 +63,9 @@ export class OwnerMonitor {
         type: "hello",
         tab: this.#tab
       } satisfies OwnerMessage);
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, DISCOVERY_INTERVAL_MS);
-      });
+      const interval = Promise.withResolvers<void>();
+      setTimeout(interval.resolve, DISCOVERY_INTERVAL_MS);
+      await interval.promise;
       if (Date.now() - started > DISCOVERY_TIMEOUT_MS) {
         throw new Error("The shared workspace owner did not respond.");
       }

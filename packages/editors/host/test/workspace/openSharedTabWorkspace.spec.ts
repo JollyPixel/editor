@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { indexedDB } from "fake-indexeddb";
+import { once } from "@openally/emitt";
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import { CATALOG_ROOM, CatalogClient } from "@jolly-pixel/asset-server/client";
 
@@ -39,9 +40,7 @@ test("a second tab edits the persistent catalog through its owner", async() => {
       (await follower.launchSources(BINARY_KIND)).length,
       3
     );
-    const changed = new Promise<void>((resolve) => {
-      secondCatalog.on("change", resolve);
-    });
+    const changed = once(secondCatalog, "change");
     const id = await firstCatalog.create(
       "second.bin",
       new TextEncoder().encode("second"),

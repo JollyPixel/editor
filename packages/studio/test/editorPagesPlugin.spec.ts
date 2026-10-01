@@ -6,6 +6,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import fs from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
@@ -65,7 +66,7 @@ function voxelMapEditor(
   };
 }
 
-function listen(
+async function listen(
   handler: Connect.NextHandleFunction
 ): Promise<PagesServer> {
   const server = http.createServer((request, response) => {
@@ -74,24 +75,23 @@ function listen(
       response.end();
     });
   });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const { port } = server.address() as AddressInfo;
 
-  return new Promise((resolve) => {
-    server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address() as AddressInfo;
-      resolve({
-        fetch: (pathname, init) => fetch(
-          `http://127.0.0.1:${port}${pathname}`,
-          {
-            redirect: "manual",
-            ...init
-          }
-        ),
-        [Symbol.asyncDispose]: () => new Promise((done) => {
-          server.close(() => done());
-        })
-      });
-    });
-  });
+  return {
+    fetch: (pathname, init) => fetch(
+      `http://127.0.0.1:${port}${pathname}`,
+      {
+        redirect: "manual",
+        ...init
+      }
+    ),
+    async [Symbol.asyncDispose]() {
+      server.close();
+      await once(server, "close");
+    }
+  };
 }
 
 async function removeTemp(

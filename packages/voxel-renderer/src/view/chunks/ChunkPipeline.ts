@@ -117,9 +117,10 @@ export class ChunkPipeline {
       return Promise.resolve();
     }
 
-    return new Promise((resolve) => {
-      this.#idleWaiters.push(resolve);
-    });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    this.#idleWaiters.push(resolve);
+
+    return promise;
   }
 
   clear(): void {

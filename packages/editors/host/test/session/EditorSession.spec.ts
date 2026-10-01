@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate, setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import {
@@ -78,9 +79,7 @@ async function startConnect(
     [kMap, kGrass, kStone, kSound],
     options.dependencies ?? {}
   ));
-  await new Promise((resolve) => {
-    setImmediate(resolve);
-  });
+  await setImmediate();
 
   return {
     client,
@@ -469,9 +468,7 @@ describe("EditorSession archives", () => {
     }));
 
     const downloading = archives.download();
-    await new Promise((resolve) => {
-      setTimeout(resolve);
-    });
+    await setTimeout();
     const command = catalog.sent.find(isExportCommand);
     assert.ok(command);
     catalog.receive({

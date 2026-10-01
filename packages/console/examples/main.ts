@@ -96,13 +96,13 @@ commands.registerCommand("wait", {
   description: "Resolve after a delay, in milliseconds",
   args: [{ name: "ms", type: "number" }],
   execute: async({ ms = 1000 }, ctx) => {
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, ms);
-      ctx.signal.addEventListener("abort", () => {
-        clearTimeout(timer);
-        reject(new Error("aborted"));
-      });
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
+    const timer = setTimeout(resolve, ms);
+    ctx.signal.addEventListener("abort", () => {
+      clearTimeout(timer);
+      reject(new Error("aborted"));
     });
+    await promise;
     ctx.print(`waited ${ms} ms`);
   }
 });

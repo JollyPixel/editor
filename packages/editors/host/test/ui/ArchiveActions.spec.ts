@@ -5,6 +5,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { setTimeout } from "node:timers/promises";
 
 // Import Internal Dependencies
 import type { ArchiveActions } from "#src/ui/index.ts";
@@ -122,9 +123,7 @@ describe("ArchiveActions", () => {
     }));
 
     query(element, "#export-archive")!.click();
-    await new Promise((resolve) => {
-      setTimeout(resolve);
-    });
+    await setTimeout();
     await element.updateComplete;
 
     assert.equal(query(element, "[role=alert]")?.textContent, "export failed");

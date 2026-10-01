@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 import {
   afterEach,
   describe,
@@ -8,6 +9,7 @@ import {
 
 // Import Third-party Dependencies
 import type { KeyboardLayout } from "@jolly-pixel/controls";
+import { once } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { KeyboardLayoutStore } from "../../src/state/KeyboardLayoutStore.ts";
@@ -31,15 +33,12 @@ function useLayout(
   });
 }
 
-function nextChange(
+async function nextChange(
   store: KeyboardLayoutStore
 ): Promise<KeyboardLayout | null> {
-  return new Promise((resolve) => {
-    const unsubscribe = store.subscribe("change", (layout) => {
-      unsubscribe();
-      resolve(layout);
-    });
-  });
+  const [layout] = await once(store, "change");
+
+  return layout;
 }
 
 describe("KeyboardLayoutStore", () => {
@@ -98,9 +97,7 @@ describe("KeyboardLayoutStore", () => {
     store.subscribe("change", (layout) => changes.push(layout));
     useLayout([["KeyQ", "a"]]);
     target.dispatchEvent(new window.Event("focus"));
-    await new Promise((resolve) => {
-      setImmediate(resolve);
-    });
+    await setImmediate();
     assert.deepEqual(changes, []);
   });
 });

@@ -31,17 +31,18 @@ function renderFrames(
   frames: number,
   draw: () => void
 ): Promise<void> {
-  return new Promise((resolve) => {
-    let remaining = frames;
-    void renderer.setAnimationLoop(() => {
-      draw();
-      remaining--;
-      if (remaining === 0) {
-        void renderer.setAnimationLoop(null);
-        resolve();
-      }
-    });
+  const { promise, resolve } = Promise.withResolvers<void>();
+  let remaining = frames;
+  void renderer.setAnimationLoop(() => {
+    draw();
+    remaining--;
+    if (remaining === 0) {
+      void renderer.setAnimationLoop(null);
+      resolve();
+    }
   });
+
+  return promise;
 }
 
 async function atlasImage(): Promise<HTMLImageElement> {

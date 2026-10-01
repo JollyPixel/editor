@@ -71,9 +71,9 @@ describe("loadTilesets", () => {
     const loader: TextureSourceLoader = {
       async loadAsync(url: string) {
         started.push(url);
-        await new Promise<void>((resolve) => {
-          resolvers.push(resolve);
-        });
+        const { promise, resolve } = Promise.withResolvers<void>();
+        resolvers.push(resolve);
+        await promise;
 
         return mockTexture(16, 16);
       }

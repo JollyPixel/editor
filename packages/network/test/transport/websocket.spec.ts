@@ -1,4 +1,5 @@
 // Import Node.js Dependencies
+import { once } from "node:events";
 import {
   createServer,
   type Server as HttpServer
@@ -31,9 +32,8 @@ describe("WebsocketTransport + Client (integration)", () => {
 
   before(async() => {
     httpServer = createServer();
-    await new Promise<void>((resolve) => {
-      httpServer.listen(0, resolve);
-    });
+    httpServer.listen(0);
+    await once(httpServer, "listening");
 
     const address = httpServer.address();
     if (address === null || typeof address === "string") {
@@ -173,10 +173,10 @@ async function negotiatedExtensions(
     `ws://127.0.0.1:${port}${path}`,
     WEBSOCKET_PROTOCOL
   );
-  await new Promise((resolve, reject) => {
-    socket.addEventListener("open", resolve);
-    socket.addEventListener("error", reject);
-  });
+  const opened = Promise.withResolvers<Event>();
+  socket.addEventListener("open", opened.resolve);
+  socket.addEventListener("error", opened.reject);
+  await opened.promise;
   const { extensions } = socket;
   socket.close();
 

@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { setTimeout } from "node:timers/promises";
 
 // Import Internal Dependencies
 import { TaskChain } from "#src/utils/index.ts";
@@ -14,9 +15,7 @@ describe("TaskChain", () => {
     const order: string[] = [];
     function task(name: string, ms: number) {
       return async() => {
-        await new Promise((resolve) => {
-          setTimeout(resolve, ms);
-        });
+        await setTimeout(ms);
         order.push(name);
       };
     }
@@ -57,9 +56,7 @@ describe("TaskChain", () => {
     let done = false;
 
     void chain.run(async() => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
-      });
+      await setTimeout(10);
       done = true;
     });
     await chain.settled();
