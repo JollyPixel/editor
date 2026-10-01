@@ -51,6 +51,11 @@ import {
 import { TextureSet } from "../textures/TextureSet.ts";
 import { TextureImporter } from "../textures/import/TextureImporter.ts";
 import {
+  CanvasKeyboardController,
+  type CanvasHoverChangeDetail
+} from "../keybindings/CanvasKeyboardController.ts";
+import type { PixelArtKeyBindings } from "../keybindings/pixelArtKeyBindings.ts";
+import {
   isTextureImportPolicy,
   isTextureTabsMode,
   textureCanvasOptions,
@@ -74,10 +79,6 @@ const kDefaultTextureId = "default";
 const kDefaultTextureName = "Texture";
 
 export type ThemeMode = "light" | "dark" | "auto";
-
-export interface CanvasHoverChangeDetail {
-  hovering: boolean;
-}
 
 export interface PixelDrawTexture {
   readonly id: string;
@@ -198,6 +199,10 @@ export class PixelDrawPanel extends LitElement {
     importer: this.#importer
   });
   readonly #colors = new ColorController(this, this.#activeCanvas);
+  readonly #keyboard = new CanvasKeyboardController(
+    this,
+    () => this.canvasManager?.shortcuts ?? null
+  );
 
   #baseOptions: PixelArtCanvasOptions | null = null;
   #prefersDarkQuery: MediaQueryList | null = null;
@@ -216,6 +221,16 @@ export class PixelDrawPanel extends LitElement {
     this.texturesEditable = false;
     this.textureAddLabel = "Add texture";
     this.textureTabsVariant = "default";
+  }
+
+  get keyBindings(): PixelArtKeyBindings {
+    return this.#keyboard.keyBindings;
+  }
+
+  set keyBindings(
+    keyBindings: PixelArtKeyBindings
+  ) {
+    this.#keyboard.keyBindings = keyBindings;
   }
 
   get canvasManager(): PixelArtCanvas | null {
@@ -454,16 +469,6 @@ export class PixelDrawPanel extends LitElement {
       bubbles: true,
       composed: true,
       detail: this.resolvedTheme
-    }));
-  }
-
-  #dispatchCanvasHover(
-    hovering: boolean
-  ): void {
-    this.dispatchEvent(new CustomEvent<CanvasHoverChangeDetail>("canvas-hover-change", {
-      bubbles: true,
-      composed: true,
-      detail: { hovering }
     }));
   }
 
@@ -708,8 +713,8 @@ export class PixelDrawPanel extends LitElement {
           <div
             class="canvas-host"
             part="canvas-host"
-            @mouseenter=${() => this.#dispatchCanvasHover(true)}
-            @mouseleave=${() => this.#dispatchCanvasHover(false)}
+            @mouseenter=${() => this.#keyboard.hover(true)}
+            @mouseleave=${() => this.#keyboard.hover(false)}
           ></div>
           ${this.#renderBusy()}
           ${this.#textureDrop.render()}

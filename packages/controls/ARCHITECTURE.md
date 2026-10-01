@@ -72,10 +72,15 @@ from both indexes. Each candidate's chords are checked with
 `KeyChord.matches()`, which also compares the exact modifiers. Candidates run
 by priority until one handles the key.
 
+A `KeyBindingMap` sits above the registry. It resolves each action to its
+chords once, from the defaults and the overrides, and registers one binding
+per action. Conflicts are found when the map is built, not on a keydown.
+
 `KeyChord.format()` builds tooltip labels. Letter chords print their letter.
 Physical chords print the QWERTY character, or the user's keycap when given
 the map from `loadKeyboardLayout()`. The layout is only read for labels;
 matching never depends on it.
 
 For methods and device behavior, see the [Input API](./docs/input.md),
-[key chords](./docs/key-chords.md), and [glossary](./GLOSSARY.md).
+[key chords](./docs/key-chords.md),
+[KeyBindingMap](./docs/key-binding-map.md), and [glossary](./GLOSSARY.md).

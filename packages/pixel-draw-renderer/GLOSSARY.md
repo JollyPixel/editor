@@ -32,6 +32,10 @@ The camera and zoom through which the user sees and navigates the texture. Panni
 
 The active input interpretation: `paint`, `erase`, `move`, `fill`, `select`, or `uv`.
 
+### Shortcut
+
+A keyboard-driven intent of the canvas, such as undo, delete, or rotate, reached through `canvas.shortcuts`. The renderer owns what a shortcut does in each mode; the host owns which key triggers it. *Held modifiers* are the pan and line states a host sets while a key stays down.
+
 ### Tool
 
 A component that performs or configures an editing behavior. Brush, fill, selection, line, and UV manipulation are tools.

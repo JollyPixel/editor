@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { PixelDrawPanel } from "../../../src/index.ts";
+import {
+  CANVAS_HOVER_CHANGE_EVENT,
+  type PixelDrawPanel
+} from "../../../src/index.ts";
 import type { DemoPreview } from "./DemoPreview.ts";
 
 // CONSTANTS
@@ -32,7 +35,7 @@ export class DemoShell {
       () => void 0 :
       preview.editorRuntime.suspendKeyboardOnHover(
         panel,
-        "canvas-hover-change"
+        CANVAS_HOVER_CHANGE_EVENT
       );
     this.#followScope();
     this.#applyTheme();

@@ -15,9 +15,9 @@ import {
   type KeyCode,
   type ExtendedKeyCode
 } from "./code.ts";
-import type { KeyChordString } from "./KeyChord.ts";
 import {
   KeyBindings,
+  type KeyBindingChords,
   type KeyBindingHandler,
   type KeyBindingOptions
 } from "./KeyBindings.ts";
@@ -61,9 +61,19 @@ const kControlKeys = new Set([
   "F24"
 ]);
 
-const kEditableTagNames = new Set([
-  "INPUT",
-  "TEXTAREA"
+const kTextInputTypes = new Set([
+  "text",
+  "search",
+  "email",
+  "url",
+  "tel",
+  "password",
+  "number",
+  "date",
+  "datetime-local",
+  "month",
+  "time",
+  "week"
 ]);
 
 function isEditableElement(
@@ -83,9 +93,21 @@ function isEditableElement(
     return true;
   }
 
-  return "tagName" in target &&
-    typeof target.tagName === "string" &&
-    kEditableTagNames.has(target.tagName);
+  if (!("tagName" in target)) {
+    return false;
+  }
+  if (target.tagName === "TEXTAREA") {
+    return true;
+  }
+  if (target.tagName !== "INPUT") {
+    return false;
+  }
+
+  const type = "type" in target && typeof target.type === "string" ?
+    target.type :
+    "text";
+
+  return kTextInputTypes.has(type);
 }
 
 export interface KeyEventTargetLike {
@@ -128,12 +150,14 @@ export interface KeyboardGuard {
 
 export interface KeyboardOptions {
   documentAdapter?: DocumentAdapter;
+  preventControlKeys?: boolean;
 }
 
 export class Keyboard extends Emitter<
   KeyboardEvents
 > implements InputControl {
   #documentAdapter: DocumentAdapter;
+  #preventControlKeys: boolean;
 
   #wasActive = false;
   #settled = true;
@@ -152,11 +176,13 @@ export class Keyboard extends Emitter<
   ) {
     super();
     const {
-      documentAdapter = new BrowserDocumentAdapter()
+      documentAdapter = new BrowserDocumentAdapter(),
+      preventControlKeys = true
     } = options;
 
     this.reset();
     this.#documentAdapter = documentAdapter;
+    this.#preventControlKeys = preventControlKeys;
   }
 
   get wasActive() {
@@ -201,7 +227,7 @@ export class Keyboard extends Emitter<
   }
 
   bind(
-    chords: KeyChordString | readonly KeyChordString[],
+    chords: KeyBindingChords,
     handler: KeyBindingHandler,
     options: KeyBindingOptions = {}
   ): () => void {
@@ -371,7 +397,10 @@ export class Keyboard extends Emitter<
 
     const isControlKey = kControlKeys.has(event.code);
     const isAltCombo = event.altKey && !isControlKey;
-    if (isControlKey || isAltCombo) {
+    if (
+      this.#preventControlKeys &&
+      (isControlKey || isAltCombo)
+    ) {
       event.preventDefault();
     }
 
@@ -466,10 +495,13 @@ export class Keyboard extends Emitter<
   }
 }
 
-export type {
-  KeyCode,
-  ExtendedKeyCode
+export {
+  KEY_CODES,
+  type KeyCode,
+  type ExtendedKeyCode
 } from "./code.ts";
+export * from "./errors/index.ts";
+export * from "./KeyBindingMap.ts";
 export * from "./KeyBindings.ts";
 export * from "./KeyChord.ts";
 export * from "./layout.ts";

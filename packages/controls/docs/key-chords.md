@@ -40,6 +40,7 @@ A chord requires its exact modifiers: `"g"` does not match Shift+G.
 ```ts
 class KeyChord {
   static parse(chord: KeyChordString): KeyChord;
+  static from(value: string): KeyChord;
   constructor(options: KeyChordOptions);
 
   readonly code: KeyCode | null;
@@ -52,11 +53,22 @@ class KeyChord {
   format(
     options?: { apple?: boolean; layout?: KeyboardLayout | null; }
   ): string;
+  toString(): KeyChordString;
 }
 ```
 
 A chord has exactly one of `code` and `key`. `apple` defaults to
 `isApplePlatform()`.
+
+`parse()` takes a typed chord and `from()` an untrusted string, such as a
+stored setting. Both throw `InvalidKeyChordError` unless the text is a chord
+written exactly as `toString()` writes it: modifiers in order, a lowercase
+letter or one of the `KEY_CODES`.
+
+```ts
+KeyChord.from("Mod+Shift+z"); // ok
+KeyChord.from("mod+shift+z"); // throws InvalidKeyChordError
+```
 
 ## Labels
 
@@ -86,15 +98,21 @@ window regains focus.
 ```ts
 class KeyBindings {
   bind(
-    chords: KeyChordString | readonly KeyChordString[],
+    chords: KeyBindingChords,
     handler: (event: KeyboardEvent) => boolean | void,
     options?: { repeat?: boolean; priority?: number; }
   ): () => void;
   dispatch(event: KeyboardEvent): boolean;
 }
+
+type KeyBindingChord = KeyChord | KeyChordString;
+type KeyBindingChords = KeyBindingChord | readonly KeyBindingChord[];
 ```
 
 `KeyBindings` is the registry behind `Keyboard.bind()`, for keydowns that do
 not come from a `Keyboard`. `dispatch()` runs the bindings for one keydown
 and returns `true` when one handled it. Unlike `Keyboard`, it does not skip
 editable targets or guarded keys.
+
+To name the shortcuts of a feature by action and let users rebind them, see
+[KeyBindingMap](./key-binding-map.md).

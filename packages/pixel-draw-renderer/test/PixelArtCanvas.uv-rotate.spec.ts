@@ -12,14 +12,7 @@ import type {
 } from "#src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
-import {
-  hoverCanvas,
-  mouseEvent
-} from "./helpers/events.ts";
-import {
-  rotateCounterClockwiseKey,
-  rotateKey
-} from "./helpers/select.ts";
+import { mouseEvent } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — uv rotation", () => {
   /*
@@ -45,22 +38,21 @@ describe("PixelArtCanvas — uv rotation", () => {
     manager.mode = "uv";
     const region = manager.uv.create({ width, height });
     manager.uv.select(region.id);
-    hoverCanvas(manager.canvas());
 
     return region;
   }
 
-  test("R and Shift+R rotate the selected region in uv mode", () => {
+  test("rotate shortcuts turn the selected region in uv mode", () => {
     const manager = makeManager();
     const region = selectedRegion(manager);
 
-    window.dispatchEvent(rotateKey());
+    manager.shortcuts.rotate("cw");
     assert.deepStrictEqual(
       manager.uv.get(region.id)!.geometryFor("front"),
       { x: 0, y: 0, width: 2, height: 4, rotation: 1 }
     );
 
-    window.dispatchEvent(rotateCounterClockwiseKey());
+    manager.shortcuts.rotate("ccw");
     assert.deepStrictEqual(
       manager.uv.get(region.id)!.geometryFor("front"),
       { x: 0, y: 0, width: 4, height: 2 }
@@ -68,13 +60,13 @@ describe("PixelArtCanvas — uv rotation", () => {
     manager.destroy();
   });
 
-  test("R rotates only the selected slot of a free region", () => {
+  test("rotate turns only the selected slot of a free region", () => {
     const manager = makeManager();
     const region = selectedRegion(manager);
     manager.uv.setState(region.id, "free");
     manager.uv.select(region.id, "top");
 
-    window.dispatchEvent(rotateKey());
+    manager.shortcuts.rotate("cw");
 
     const stored = manager.uv.get(region.id)!;
     assert.strictEqual(stored.geometryFor("top").rotation, 1);
@@ -89,7 +81,7 @@ describe("PixelArtCanvas — uv rotation", () => {
 
     canvas.dispatchEvent(mouseEvent("mousedown", 84, 84));
     canvas.dispatchEvent(mouseEvent("mousemove", 88, 88));
-    window.dispatchEvent(rotateKey());
+    manager.shortcuts.rotate("cw");
     canvas.dispatchEvent(mouseEvent("mouseup", 88, 88));
 
     assert.deepStrictEqual(

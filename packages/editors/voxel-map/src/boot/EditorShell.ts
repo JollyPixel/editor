@@ -1,14 +1,12 @@
 // Import Third-party Dependencies
 import type { EditorRuntime } from "@jolly-pixel/editor.host";
+import { CANVAS_HOVER_CHANGE_EVENT } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorPanels } from "../app/panels/EditorPanels.ts";
 import "../features/painting/toolbar/BrushToolbar.ts";
-
-// CONSTANTS
-const kCanvasHoverEvent = "canvas-hover-change";
 
 export interface EditorShellOptions {
   state: EditorState;
@@ -41,7 +39,7 @@ export class EditorShell {
     this.#panels = panels;
     if (panels !== null) {
       this.#disposables.push(
-        runtime.suspendKeyboardOnHover(panels.layout, kCanvasHoverEvent),
+        runtime.suspendKeyboardOnHover(panels.layout, CANVAS_HOVER_CHANGE_EVENT),
         () => panels.dispose()
       );
     }

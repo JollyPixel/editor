@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   PixelArtCanvas,
-  type PixelArtCanvasOptions,
-  type PixelDocument
+  type PixelArtCanvasOptions
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -25,12 +24,6 @@ export function asCanvas(
   host: object
 ): PixelArtCanvas {
   return host as unknown as PixelArtCanvas;
-}
-
-export function asDocument(
-  host: object
-): PixelDocument {
-  return host as unknown as PixelDocument;
 }
 
 export function createPixelArtCanvas(

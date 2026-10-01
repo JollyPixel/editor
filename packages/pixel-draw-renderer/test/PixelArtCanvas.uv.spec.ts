@@ -13,10 +13,7 @@ import {
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
 import type { UVRegionData } from "#src/uv/UVRegion.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
-import {
-  mouseEvent,
-  deleteKey
-} from "./helpers/events.ts";
+import { mouseEvent } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — uv mode", () => {
   /*
@@ -77,11 +74,7 @@ describe("PixelArtCanvas — uv mode", () => {
     });
     manager.uv.select(region.id);
 
-    // Keyboard shortcuts only dispatch while the canvas is hovered.
-    manager.canvas().dispatchEvent(
-      mouseEvent("mouseenter", 84, 84)
-    );
-    globalThis.window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.strictEqual(
       manager.uv.get(region.id),
@@ -89,7 +82,7 @@ describe("PixelArtCanvas — uv mode", () => {
     );
   });
 
-  test("Delete in select mode does not delete a UV region selected earlier (regression)", () => {
+  test("delete in select mode does not delete a UV region selected earlier (regression)", () => {
     const manager = makeManager();
 
     /*
@@ -113,7 +106,7 @@ describe("PixelArtCanvas — uv mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    globalThis.window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.ok(
       manager.canUndo(),

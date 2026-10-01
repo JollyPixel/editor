@@ -1,8 +1,5 @@
 // Import Internal Dependencies
-import type {
-  RotationDirection,
-  Vec2
-} from "../types.ts";
+import type { Vec2 } from "../types.ts";
 
 export interface InputActions {
   /**
@@ -49,22 +46,5 @@ export interface InputActions {
    * Receives every canvas or window mouseup.
    */
   onMouseUp(): void;
-  onShiftDown(): void;
-  onShiftUp(): void;
-  onSpaceDown(): void;
-  onSpaceUp(): void;
   onBlur(): void;
-  /**
-   * Returns whether to suppress the browser default.
-   */
-  onCopy(): boolean;
-  onPaste(): boolean;
-  onDelete(): boolean;
-  onUndo(): boolean;
-  onRedo(): boolean;
-  onRotate(
-    direction: RotationDirection
-  ): boolean;
-  onFlipHorizontal(): boolean;
-  onFlipVertical(): boolean;
 }

@@ -1,6 +1,5 @@
 export {
   PixelDrawPanel,
-  type CanvasHoverChangeDetail,
   type PixelDrawTexture,
   type ThemeMode
 } from "./panel/PixelDrawPanel.ts";
@@ -34,3 +33,7 @@ export {
 } from "./color/ColorSwatch.ts";
 export type { IconName } from "./shared/icons.ts";
 export * from "./keybindings/index.ts";
+export {
+  CANVAS_HOVER_CHANGE_EVENT,
+  type CanvasHoverChangeDetail
+} from "./keybindings/CanvasKeyboardController.ts";

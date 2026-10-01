@@ -7,7 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { InputController } from "#src/input/InputController.ts";
+import { PointerController } from "#src/input/PointerController.ts";
 import type { WindowLike } from "#src/input/WindowLike.ts";
 import { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
@@ -45,7 +45,7 @@ class FakeWindow implements WindowLike {
   }
 }
 
-describe("InputController lifecycle", () => {
+describe("PointerController lifecycle", () => {
   let viewport: Viewport;
   let canvas: HTMLCanvasElement;
 
@@ -61,7 +61,7 @@ describe("InputController lifecycle", () => {
 
   test("primary dragging continues while another mouse button is held", () => {
     const { actions, calls } = makeActions();
-    const controller = new InputController({
+    const controller = new PointerController({
       canvas,
       viewport,
       actions
@@ -85,7 +85,7 @@ describe("InputController lifecycle", () => {
 
   test("window blur ends active drags and clears their tracking state", () => {
     const { actions, calls } = makeActions();
-    const controller = new InputController({
+    const controller = new PointerController({
       canvas,
       viewport,
       actions
@@ -113,7 +113,7 @@ describe("InputController lifecycle", () => {
   test("does not report a bubbling canvas mouseup twice", () => {
     const { actions, calls } = makeActions();
     const fakeWindow = new FakeWindow();
-    const controller = new InputController({
+    const controller = new PointerController({
       canvas,
       viewport,
       actions,

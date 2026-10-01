@@ -208,3 +208,30 @@ describe("Controls.Keyboard", () => {
     assert.equal(keyboard.buttonsDown.has("KeyA"), false);
   });
 });
+
+describe("Controls.Keyboard preventControlKeys", () => {
+  test("prevents control keys and Alt combos by default", () => {
+    const { keyboard, documentAdapter } = createConnectedKeyboardFixture();
+
+    assert.equal(documentAdapter.dispatchEvent("keydown", { code: "F5" }).defaultPrevented, true);
+    assert.equal(
+      documentAdapter.dispatchEvent("keydown", { code: "KeyF", altKey: true }).defaultPrevented,
+      true
+    );
+    keyboard.disconnect();
+  });
+
+  test("leaves browser defaults alone when disabled", () => {
+    const { keyboard, documentAdapter } = createConnectedKeyboardFixture({
+      preventControlKeys: false
+    });
+
+    assert.equal(documentAdapter.dispatchEvent("keydown", { code: "F5" }).defaultPrevented, false);
+    assert.equal(
+      documentAdapter.dispatchEvent("keydown", { code: "KeyF", altKey: true }).defaultPrevented,
+      false
+    );
+    assert.equal(keyboard.isDown("F5"), true);
+    keyboard.disconnect();
+  });
+});

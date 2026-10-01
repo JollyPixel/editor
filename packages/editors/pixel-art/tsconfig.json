@@ -24,6 +24,9 @@
     },
     {
       "path": "../../console"
+    },
+    {
+      "path": "../../controls"
     }
   ]
 }

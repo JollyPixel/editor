@@ -40,7 +40,6 @@ interface PixelArtCanvasOptions {
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
-  keybindings?: Partial<KeybindingsMap>;
 }
 
 interface TextureOptions {
@@ -91,13 +90,9 @@ An existing [`PixelDocument`](./PixelDocument.md) to edit instead of creating on
 
 Initial interaction mode. It accepts `"paint"`, `"move"`, `"fill"`, `"select"` or `"uv"` and defaults to `"paint"`. See [`PixelArtCanvas.mode`](./PixelArtCanvas.md#mode).
 
-### `keybindings`
-
-Overrides selected keyboard shortcuts. Unspecified actions keep their defaults. See [`Keybindings`](./input/Keybindings.md).
-
 ### `window`
 
-Event target used for drag continuation, keyboard input and blur handling. It defaults to the global `window` and accepts an object with compatible `addEventListener()` and `removeEventListener()` methods.
+Event target used for drag continuation and blur handling. It defaults to the global `window` and accepts an object with compatible `addEventListener()` and `removeEventListener()` methods.
 
 `WindowLike` is exported for typed browser adapters and test doubles.
 
@@ -107,7 +102,7 @@ Overrides `navigator.clipboard` with an adapter exposing compatible `read()` and
 
 ### `onClipboardResult`
 
-Receives every copy or paste result, including toolbar, keyboard and direct API calls. Codes cover success, internal-only copy, busy operations, denied access, missing or invalid images, transparent images, maximum-size rejection, and a decoded selection that could not be placed (`paste-failed`).
+Receives every copy or paste result, including toolbar, shortcut and direct API calls. Codes cover success, internal-only copy, busy operations, denied access, missing or invalid images, transparent images, maximum-size rejection, and a decoded selection that could not be placed (`paste-failed`).
 
 ### `onModeChange`
 

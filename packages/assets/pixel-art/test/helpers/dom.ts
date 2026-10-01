@@ -24,20 +24,6 @@ export function stubRect(
   });
 }
 
-export function makeCanvas(
-  size = 200
-): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  stubRect(canvas, {
-    width: size,
-    height: size
-  });
-
-  return canvas;
-}
-
 export function makeContainer(
   width = 200,
   height = width

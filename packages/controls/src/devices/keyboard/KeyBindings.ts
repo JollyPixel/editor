@@ -7,6 +7,10 @@ import { resolveKeyLetter } from "./letter.ts";
 
 export type KeyBindingHandler = (event: KeyboardEvent) => boolean | void;
 
+export type KeyBindingChord = KeyChord | KeyChordString;
+
+export type KeyBindingChords = KeyBindingChord | readonly KeyBindingChord[];
+
 export interface KeyBindingOptions {
   repeat?: boolean;
   priority?: number;
@@ -26,7 +30,7 @@ export class KeyBindings {
   #sequence = 0;
 
   bind(
-    chords: KeyChordString | readonly KeyChordString[],
+    chords: KeyBindingChords,
     handler: KeyBindingHandler,
     options: KeyBindingOptions = {}
   ): () => void {
@@ -35,8 +39,7 @@ export class KeyBindings {
       priority = 0
     } = options;
     const binding: KeyBinding = {
-      chords: (typeof chords === "string" ? [chords] : chords)
-        .map((chord) => KeyChord.parse(chord)),
+      chords: toKeyChords(chords),
       handler,
       repeat,
       priority,
@@ -94,6 +97,18 @@ export class KeyBindings {
 
     return [...new Set([...byCode, ...byLetter])].sort(compareBindings);
   }
+}
+
+function toKeyChords(
+  chords: KeyBindingChords
+): KeyChord[] {
+  const list = typeof chords === "string" || chords instanceof KeyChord ?
+    [chords] :
+    chords;
+
+  return list.map((chord) => (
+    typeof chord === "string" ? KeyChord.parse(chord) : chord
+  ));
 }
 
 function indexBinding(

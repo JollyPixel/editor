@@ -27,6 +27,7 @@ const kWorkspaceBrowserEntries = [
   "@jolly-pixel/color",
   "@jolly-pixel/console",
   "@jolly-pixel/console/element",
+  "@jolly-pixel/controls",
   "@jolly-pixel/editor.host",
   "@jolly-pixel/engine",
   "@jolly-pixel/image",

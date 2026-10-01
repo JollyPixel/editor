@@ -196,6 +196,12 @@ The registry behind `Keyboard.bind()`. It indexes bindings by key code and by
 letter, and `dispatch()` runs them for one keydown. It can be used on its own
 for keydowns that do not come from a `Keyboard`.
 
+### KeyBindingMap
+
+The rebindable shortcuts of one feature, by action. It merges default chords
+with user overrides, rejects a chord bound to two actions, and binds every
+action on a `Keyboard` at once.
+
 ### Priority
 
 The order in which matching bindings run: highest `priority` first, then

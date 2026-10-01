@@ -9,7 +9,10 @@ import assert from "node:assert/strict";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
-import { KeyBindings } from "../../../src/index.ts";
+import {
+  KeyBindings,
+  KeyChord
+} from "../../../src/index.ts";
 
 // CONSTANTS
 const kWindow = new Window();
@@ -43,5 +46,22 @@ describe("Controls.KeyBindings", () => {
 
     assert.equal(bindings.dispatch(event), false);
     assert.equal(event.defaultPrevented, false);
+  });
+
+  test("bind() takes KeyChord instances beside chord strings", () => {
+    const bindings = new KeyBindings();
+    const calls: string[] = [];
+    bindings.bind(new KeyChord({ code: "KeyQ" }), () => {
+      calls.push("q");
+    });
+    bindings.bind([KeyChord.parse("Enter"), "Escape"], () => {
+      calls.push("confirm");
+    });
+
+    bindings.dispatch(keydown({ code: "KeyQ", key: "a" }));
+    bindings.dispatch(keydown({ code: "Enter", key: "Enter" }));
+    bindings.dispatch(keydown({ code: "Escape", key: "Escape" }));
+
+    assert.deepEqual(calls, ["q", "confirm", "confirm"]);
   });
 });

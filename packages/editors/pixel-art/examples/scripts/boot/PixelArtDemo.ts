@@ -22,9 +22,8 @@ import {
   suggestTextureName
 } from "../../../src/textures/textures.ts";
 import {
-  applyKeybindings,
   keybindConsole,
-  KeybindingSettings,
+  KeyBindingSettings,
   type PixelDrawPanel
 } from "../../../src/index.ts";
 import { DemoShell } from "./DemoShell.ts";
@@ -87,10 +86,11 @@ export class PixelArtDemo {
     const scope = document.querySelector("jolly-scope")!;
     await panel.updateComplete;
 
-    const keybindings = new KeybindingSettings({
+    const keyBindingSettings = new KeyBindingSettings({
       storage: new LocalStorageAdapter(),
       onDropped: (message) => console.warn(message)
     });
+    panel.keyBindings = keyBindingSettings.keyBindings;
 
     const { room, record } = session.target;
     const target = DEMO_TEXTURE_KIND.createDocument(room);
@@ -109,8 +109,7 @@ export class PixelArtDemo {
       },
       brush: {
         size: 1
-      },
-      keybindings: keybindings.overrides
+      }
     });
     const preview = params.runtime === "off" ?
       null :
@@ -145,18 +144,20 @@ export class PixelArtDemo {
       session,
       target,
       tabs,
-      keybindings: applyKeybindings(panel, keybindings),
+      keybindings: keyBindingSettings.subscribe("change", (keyBindings) => {
+        panel.keyBindings = keyBindings;
+      }),
       consoleFeatures: preview === null ?
         registerConsoleFeatures(
           commands,
           [keybindConsole],
-          { keybindings }
+          { keyBindingSettings }
         ) :
         registerConsoleFeatures(
           commands,
           [keybindConsole, previewConsole],
           {
-            keybindings,
+            keyBindingSettings,
             preview
           }
         )

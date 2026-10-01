@@ -160,6 +160,41 @@ promise covering the whole add and the indicator stays up until it settles,
 resolved or rejected. A host that never calls `respondWith` clears the indicator
 as soon as the event has been dispatched.
 
+## Keyboard shortcuts
+
+The panel owns its keyboard. While the pointer is over the drawing canvas, it
+runs the shortcuts of `keyBindings` on the active texture's
+[`canvas.shortcuts`](../../../../pixel-draw-renderer/docs/input/CanvasShortcuts.md):
+
+| Action | Default |
+|---|---|
+| `copy` / `paste` | `Mod+c` / `Mod+v` |
+| `undo` | `Mod+z` |
+| `redo` | `Mod+y` or `Mod+Shift+z` |
+| `delete` | `Delete` |
+| `rotate` / `rotateCounterClockwise` | `r` / `Shift+r` |
+| `flipHorizontal` / `flipVertical` | `h` / `v` |
+
+Letters follow the printed key, so `Mod+z` stays Ctrl+Z on AZERTY. Space holds
+the pan modifier and Shift the line modifier; neither can be rebound. Keys typed
+in a text field, and keys claimed by an open dialog or popover (`inputLayers`
+from `@jolly-pixel/ui`), are ignored. The panel keeps the browser default of
+every key it does not handle.
+
+```ts
+import { KeyBindingMap } from "@jolly-pixel/controls";
+import { PIXEL_ART_KEY_BINDINGS } from "@jolly-pixel/editor.pixel-art";
+
+panel.keyBindings = new KeyBindingMap(PIXEL_ART_KEY_BINDINGS, {
+  undo: "Mod+u"
+});
+```
+
+`PIXEL_ART_KEY_BINDINGS` holds the defaults and `PixelArtAction` the action
+names; the map lists them in `keyBindings.actions`. To persist user overrides, see
+[KeyBindingSettings](../keybindings/KeyBindingSettings.md). For the map itself,
+see [KeyBindingMap](../../../../controls/docs/key-binding-map.md).
+
 ## API
 
 | Member | What it does |
@@ -167,6 +202,7 @@ as soon as the event has been dispatched.
 | `initialize(options?)` | `configure(options)`, then creates the first texture and returns its `PixelArtCanvas`. Call once. |
 | `configure(options?)` | Sets the `PixelArtCanvasOptions` every `addTexture()` starts from, without creating a texture. |
 | `canvasManager` | The active texture's `PixelArtCanvas`, or `null` before the first texture. |
+| `keyBindings` | The `KeyBindingMap<PixelArtAction>` the panel runs. Setting it replaces every shortcut at once. See [Keyboard shortcuts](#keyboard-shortcuts). |
 | `addTexture(options, { activate? })` | Creates a texture from `{ id, name, tooltip?, badge?, disabled?, ...PixelArtCanvasOptions }` and returns its canvas. It becomes active unless it is `disabled`, or `activate` is `false` and another texture is active. Throws before `configure()` or for a duplicate `id`. |
 | `removeTexture(id)` | Destroys a texture. Removing the active one activates its right neighbour, or its left one when it was last. Throws for an unknown id or the last texture. |
 | `renameTexture(id, name)` | Updates a tab label. Names need not be unique. |
@@ -193,7 +229,7 @@ as soon as the event has been dispatched.
 | `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
 | `resolvedTheme` | The palette in use, `"light"` or `"dark"`: `theme`, or what `"auto"` resolves to. |
 | `theme-change` event | `detail` is the new `resolvedTheme`. Fires when `theme` changes, and when `prefers-color-scheme` changes under `"auto"`. |
-| `canvas-hover-change` event | `detail: { hovering }`. Fires when the pointer enters or leaves the drawing canvas, for hosts that suspend their own shortcuts meanwhile. |
+| `canvas-hover-change` event | `detail: { hovering }`. Fires when the pointer enters or leaves the drawing canvas, for hosts that suspend their own keyboard meanwhile. The name is exported as `CANVAS_HOVER_CHANGE_EVENT`. |
 
 Destruction is automatic: `disconnectedCallback()` destroys every texture canvas when the element leaves the DOM.
 

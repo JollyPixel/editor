@@ -511,6 +511,9 @@ importers:
       '@jolly-pixel/console':
         specifier: workspace:*
         version: link:../../console
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../../controls
       '@jolly-pixel/image':
         specifier: workspace:*
         version: link:../../image

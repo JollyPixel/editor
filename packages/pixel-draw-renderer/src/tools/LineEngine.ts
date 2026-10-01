@@ -31,7 +31,7 @@ export class LineEngine {
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
   #lastCursorPos: Vec2 | null = null;
-  #isShiftHeld = false;
+  #lineHeld = false;
   #colorSlot: BrushColorSlot = "primary";
   #paintMode: BrushPaintMode = "brush";
 
@@ -52,10 +52,10 @@ export class LineEngine {
     return this.#line.commitTrigger;
   }
 
-  set shiftHeld(
+  set lineHeld(
     held: boolean
   ) {
-    this.#isShiftHeld = held;
+    this.#lineHeld = held;
   }
 
   get paintMode(): BrushPaintMode {
@@ -109,7 +109,7 @@ export class LineEngine {
     );
     this.#onProgress?.([]);
 
-    if (this.#isShiftHeld) {
+    if (this.#lineHeld) {
       this.#line.arm(
         points.at(-1) ?? points[0],
         "mousedown"

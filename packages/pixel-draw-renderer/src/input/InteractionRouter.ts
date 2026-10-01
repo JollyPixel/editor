@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { InteractionMode } from "./modes/InteractionMode.ts";
 import type { InputActions } from "./InputActions.ts";
+import type { CanvasShortcuts } from "./CanvasShortcuts.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type {
   Mode,
@@ -22,7 +23,7 @@ export interface InteractionRouterOptions {
 
 export type ExternalCursorMoveListener = (pos: Vec2 | null) => void;
 
-export class InteractionRouter implements InputActions {
+export class InteractionRouter implements InputActions, CanvasShortcuts {
   #modes: Map<Mode, InteractionMode>;
   #active: InteractionMode;
   #viewport: Viewport;
@@ -33,7 +34,8 @@ export class InteractionRouter implements InputActions {
   #onPaste: () => boolean;
   #onModeChange?: (mode: Mode, previousMode: Mode) => void;
   #textureCursor: Vec2 | null = null;
-  #panModifierHeld: boolean = false;
+  #panHeld: boolean = false;
+  #lineHeld: boolean = false;
   onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
   constructor(
@@ -152,7 +154,7 @@ export class InteractionRouter implements InputActions {
   }
 
   onPanEnd(): void {
-    if (this.#panModifierHeld) {
+    if (this.#panHeld) {
       this.#setCursor("grab");
 
       return;
@@ -190,60 +192,79 @@ export class InteractionRouter implements InputActions {
     this.#active.onMouseUp();
   }
 
-  onShiftDown(): void {
-    this.#active.onShiftDown();
-  }
-
-  onShiftUp(): void {
-    this.#active.onShiftUp();
-  }
-
-  onSpaceDown(): void {
-    this.#panModifierHeld = true;
-    this.#setCursor("grab");
-  }
-
-  onSpaceUp(): void {
-    this.#panModifierHeld = false;
-    this.#syncCursor();
-  }
-
   onBlur(): void {
+    this.#panHeld = false;
+    this.#lineHeld = false;
     this.#active.onBlur();
     this.#syncCursor();
   }
 
-  onCopy(): boolean {
+  get panHeld(): boolean {
+    return this.#panHeld;
+  }
+
+  set panHeld(
+    held: boolean
+  ) {
+    if (held === this.#panHeld) {
+      return;
+    }
+
+    this.#panHeld = held;
+    if (held) {
+      this.#setCursor("grab");
+    }
+    else {
+      this.#syncCursor();
+    }
+  }
+
+  get lineHeld(): boolean {
+    return this.#lineHeld;
+  }
+
+  set lineHeld(
+    held: boolean
+  ) {
+    if (held === this.#lineHeld) {
+      return;
+    }
+
+    this.#lineHeld = held;
+    this.#active.onLineHeldChange(held);
+  }
+
+  copy(): boolean {
     return this.#onCopy();
   }
 
-  onPaste(): boolean {
+  paste(): boolean {
     return this.#onPaste();
   }
 
-  onDelete(): boolean {
+  delete(): boolean {
     return this.#active.onDelete();
   }
 
-  onUndo(): boolean {
+  undo(): boolean {
     return this.#onUndo();
   }
 
-  onRedo(): boolean {
+  redo(): boolean {
     return this.#onRedo();
   }
 
-  onRotate(
+  rotate(
     direction: RotationDirection
   ): boolean {
     return this.#active.onRotate(direction);
   }
 
-  onFlipHorizontal(): boolean {
+  flipHorizontal(): boolean {
     return this.#active.onFlipHorizontal();
   }
 
-  onFlipVertical(): boolean {
+  flipVertical(): boolean {
     return this.#active.onFlipVertical();
   }
 }

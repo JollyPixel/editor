@@ -26,10 +26,7 @@ import type { PixelWireCommand } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
-import {
-  deleteKey,
-  mouseEvent
-} from "../helpers/events.ts";
+import { mouseEvent } from "../helpers/events.ts";
 import { MockRoom } from "../helpers/room.ts";
 import { createRoomContext } from "../helpers/roomContext.ts";
 
@@ -198,7 +195,7 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
     assert.deepStrictEqual(buffer.samplePixel(2, 2), kWhite);
 
     manager.undo();

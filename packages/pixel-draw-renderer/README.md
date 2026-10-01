@@ -22,7 +22,7 @@ UV region tools, undo/redo, and zoom/pan behind one `PixelArtCanvas` API.
 - **Rectangle and shape select**: drag out a rectangle or select a connected region
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
 - **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes;
-- **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag and `Space`+left-drag panning;
+- **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag panning and left-drag panning while a pan modifier is held;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 
 ## 💃 Getting Started
@@ -96,42 +96,34 @@ manager.texture = img;
 - `"select"`: select, move, copy, and delete a rectangular or shape-selected region; set `manager.tools.select.shape = true` for connected-region selection
 - `"uv"`: select and drag UV regions; regions are created programmatically via `manager.uv.create(...)`, not by clicking
 
-Wheel input zooms from any mode unless it arrives with `Ctrl` in `"paint"` or `"erase"` mode. Middle-drag or `Space`+left-drag pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` and `"erase"` modes, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size. Any trackpad gesture reported as `Ctrl`+wheel input follows the same rule.
+Wheel input zooms from any mode unless it arrives with `Ctrl` in `"paint"` or `"erase"` mode. Middle-drag, or left-drag while `shortcuts.panHeld` is set, pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` and `"erase"` modes, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size. Any trackpad gesture reported as `Ctrl`+wheel input follows the same rule.
 
 > [!TIP]
-> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keybinds](#keybinds) section below for exact shortcuts.
+> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keyboard shortcuts](#keyboard-shortcuts) section below.
 
-### Keybinds
+### Keyboard shortcuts
 
-`Shift` (line draw) and `Space` (pan) are not **configurable** but everything below is:
+The canvas does not listen to the keyboard and ships no default keys. The host binds its own keys to `manager.shortcuts`, which routes each intent to the current mode:
 
-| Action | Default |
+| Intent | Member |
 |---|---|
-| Copy | `Ctrl`/`Cmd`+`C` |
-| Paste | `Ctrl`/`Cmd`+`V` |
-| Undo | `Ctrl`/`Cmd`+`Z` |
-| Redo | `Ctrl`/`Cmd`+`Y` or `Ctrl`/`Cmd`+`Shift`+`Z` |
-| Delete | `Delete` |
-| Rotate selection | `R` |
-| Flip selection horizontal | `H` |
-| Flip selection vertical | `V` |
-
-Override at construction, or live via `keybindings.patch()`:
+| Copy, paste | `copy()`, `paste()` |
+| Undo, redo | `undo()`, `redo()` |
+| Delete the selection or UV region | `delete()` |
+| Rotate the selection or UV region | `rotate("cw")`, `rotate("ccw")` |
+| Flip the selection | `flipHorizontal()`, `flipVertical()` |
+| Pan with a left-drag | `panHeld = true` while the key is down |
+| Draw a straight line | `lineHeld = true` while the key is down |
 
 ```ts
-const manager = new PixelArtCanvas(container, {
-  keybindings: {
-    undo: "alt+u"
-  } // unspecified actions keep their default
-});
-
-manager.keybindings.patch({
-  redo: "alt+shift+u"
-});
+keyboard.bind("Mod+z", () => manager.shortcuts.undo());
+keyboard.bind("r", () => manager.shortcuts.rotate("cw"));
 ```
 
+Each method returns `true` when it handled the intent, so the host knows whether to prevent the browser default.
+
 > [!TIP]
-> Read [input/Keybindings.md](./docs/input/Keybindings.md) for the combo string format and error handling.
+> Read [input/CanvasShortcuts.md](./docs/input/CanvasShortcuts.md) for the full behavior.
 
 ### Undo/redo
 
@@ -165,8 +157,8 @@ manager.redo();
   - [`BrushTool`](./docs/tools/BrushTool.md)
   - [`FillTool`](./docs/tools/FillTool.md)
   - [`SelectTool`](./docs/tools/SelectTool.md)
+  - [`CanvasShortcuts`](./docs/input/CanvasShortcuts.md)
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
-- [`Keybindings`](./docs/input/Keybindings.md)
 - [`Serialization`](./docs/serialization/index.md)
 - [Integration primitives](./docs/IntegrationPrimitives.md)
 

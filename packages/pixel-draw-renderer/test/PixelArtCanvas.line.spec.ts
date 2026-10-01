@@ -9,11 +9,7 @@ import assert from "node:assert/strict";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent, PixelBufferHookListener } from "#src/buffer/hooks.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
-import {
-  shiftKeyDown,
-  shiftKeyUp,
-  moveTo
-} from "./helpers/events.ts";
+import { moveTo } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — line tool (Shift)", () => {
   /*
@@ -36,7 +32,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     moveTo(canvas, 128, 100);
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -56,7 +52,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     canvas.dispatchEvent(new MouseEvent("mousedown", {
       button: 0, buttons: 1, clientX: 100, clientY: 100, bubbles: true
     }));
@@ -84,7 +80,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     moveTo(canvas, 128, 100);
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -105,7 +101,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     moveTo(canvas, 128, 100);
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -128,7 +124,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
       const canvas = manager.canvas();
 
       moveTo(canvas, 100, 100);
-      window.dispatchEvent(shiftKeyDown());
+      manager.shortcuts.lineHeld = true;
       moveTo(canvas, 128, 100);
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -137,11 +133,6 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
 
       assert.strictEqual(events.length, 1, "first segment committed");
 
-      /*
-       * Shift is still held (no keyup dispatched): moving and clicking again
-       * should chain a second segment starting where the first one ended,
-       * without requiring the user to release and re-press Shift.
-       */
       moveTo(canvas, 128, 128);
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
@@ -165,13 +156,13 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     moveTo(canvas, 128, 100);
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
       button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
     }));
-    window.dispatchEvent(shiftKeyUp());
+    manager.shortcuts.lineHeld = false;
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
       button: 0, buttons: 1, clientX: 128, clientY: 128, bubbles: true
@@ -204,7 +195,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
       buttons: 1, clientX: 110, clientY: 100, bubbles: true
     }));
 
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
 
     assert.strictEqual(
       events.length,
@@ -218,14 +209,14 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.destroy();
   });
 
-  test("Shift keyup without mousedown cancels the line — nothing committed", () => {
+  test("releasing lineHeld without mousedown cancels the line — nothing committed", () => {
     const events: PixelBufferHookEvent[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
-    window.dispatchEvent(shiftKeyUp());
+    manager.shortcuts.lineHeld = true;
+    manager.shortcuts.lineHeld = false;
 
     assert.strictEqual(events.length, 0);
     manager.destroy();
@@ -237,7 +228,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     manager.mode = "move";
 
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
@@ -252,7 +243,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     window.dispatchEvent(new Event("blur"));
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -268,15 +259,15 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.destroy();
   });
 
-  test("OS key-repeat keydown does not reset the armed startPosition", () => {
+  test("setting lineHeld again does not reset the armed startPosition", () => {
     const events: PixelBufferHookEvent[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     moveTo(canvas, 128, 100);
-    window.dispatchEvent(shiftKeyDown(true));
+    manager.shortcuts.lineHeld = true;
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
       button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
@@ -287,7 +278,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     assert.strictEqual(
       event.metadata.positions.length,
       8,
-      "start should still be (8,8), not reset by the repeat event"
+      "start should still be (8,8)"
     );
     manager.destroy();
   });

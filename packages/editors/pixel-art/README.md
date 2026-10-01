@@ -73,7 +73,7 @@ Open `http://localhost:3000` to see the interactive demo.
 ## 📚 API
 
 - [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)
-- [`KeybindingSettings`](./docs/keybindings/KeybindingSettings.md): per-browser shortcuts and the console `keybind` namespace
+- [`KeyBindingSettings`](./docs/keybindings/KeyBindingSettings.md): per-browser shortcuts and the console `keybind` namespace
 
 ## 🧪 Running the E2E tests
 

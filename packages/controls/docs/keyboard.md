@@ -31,7 +31,10 @@ gameLoop();
 ## Lifecycle
 
 ```ts
-new Keyboard(options?: { documentAdapter?: DocumentAdapter })
+new Keyboard(options?: {
+  documentAdapter?: DocumentAdapter;
+  preventControlKeys?: boolean;
+})
 
 connect(): void
 disconnect(): void
@@ -72,7 +75,7 @@ shorthands for `"KeyW"` and `"Digit7"`; lowercase letters are rejected.
 
 ```ts
 bind(
-  chords: KeyChordString | readonly KeyChordString[],
+  chords: KeyBindingChords,
   handler: (event: KeyboardEvent) => boolean | void,
   options?: { repeat?: boolean; priority?: number; }
 ): () => void
@@ -80,7 +83,7 @@ bind(
 
 `bind()` runs `handler` on a keydown matching one of the
 [key chords](./key-chords.md) and returns a function that removes the
-binding.
+binding. Each chord is a `KeyChordString` or a `KeyChord`.
 
 ```ts
 keyboard.bind(["Mod+y", "Mod+Shift+z"], () => history.redo());
@@ -110,8 +113,8 @@ released.
 
 ## Ignored keys
 
-Keydowns and keypresses from an `input`, `textarea`, or content-editable
-element are ignored, so typing in a field neither moves the player nor fires
+Keydowns and keypresses from a text `input`, a `textarea`, or a
+content-editable element are ignored, so typing in a field neither moves the player nor fires
 bindings. Keyups still release held keys. The same check is exported as
 `isEditableTarget(event)`.
 
@@ -135,8 +138,10 @@ import { inputLayers } from "@jolly-pixel/ui";
 const dispose = input.keyboard.addGuard(inputLayers);
 ```
 
-Arrow keys, Page Up/Down, Home/End, Insert/Delete, and F1 to F24 have their
-browser default prevented. Tab and Escape keep it.
+Arrow keys, Page Up/Down, Home/End, Insert/Delete, F1 to F24, and Alt combos
+have their browser default prevented. Tab and Escape keep it. Pass
+`preventControlKeys: false` to keep every browser default, for a keyboard that
+only serves bindings next to other page content.
 
 ## Events
 

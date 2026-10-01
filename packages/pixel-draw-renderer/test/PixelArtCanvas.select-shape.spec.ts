@@ -16,11 +16,7 @@ import {
   canvasPixels,
   readPixel
 } from "./fixtures/canvas.ts";
-import {
-  mouseEvent,
-  deleteKey,
-  ctrlKey
-} from "./helpers/events.ts";
+import { mouseEvent } from "./helpers/events.ts";
 
 function click(
   canvas: HTMLCanvasElement,
@@ -77,7 +73,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
 
     // texture (2,2), part of the black pair.
     click(canvas, 92, 92);
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -101,7 +97,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     manager.tools.select.shape = true;
 
     click(canvas, 92, 92);
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(
@@ -140,7 +136,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
 
     // texture (2,2), a border pixel.
     click(canvas, 92, 92);
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     for (const pos of [...border, { x: 3, y: 3 }]) {
       assert.deepStrictEqual(
@@ -178,7 +174,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(
@@ -213,7 +209,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
     click(canvas, 92, 92);
 
     manager.tools.select.shape = false;
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(
@@ -367,7 +363,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(ctrlKey("z"));
+    manager.shortcuts.undo();
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
       [0, 0, 0, 255],

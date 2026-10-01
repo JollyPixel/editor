@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { EditorRuntime } from "@jolly-pixel/editor.host";
+import { CANVAS_HOVER_CHANGE_EVENT } from "@jolly-pixel/editor.pixel-art";
 import type {
   DockLayout,
   PaneElement
@@ -17,7 +18,6 @@ import type { MaterialLibrary } from "../features/material/MaterialLibrary.ts";
 import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
 
 // CONSTANTS
-const kCanvasHoverEvent = "canvas-hover-change";
 const kLayoutSelector = "jolly-dock-layout";
 const kLayoutEvents = ["jolly-layout-change", "jolly-pane-visibility"];
 const kLeftPanelSelector = "jolly-model-editor-left-panel";
@@ -88,7 +88,7 @@ export class EditorShell {
       ),
       runtime.suspendKeyboardOnHover(
         this.#leftPanel,
-        kCanvasHoverEvent
+        CANVAS_HOVER_CHANGE_EVENT
       )
     );
   }
