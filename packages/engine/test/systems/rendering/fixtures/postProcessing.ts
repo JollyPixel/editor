@@ -67,33 +67,33 @@ export async function probe(
   const context = sample.getContext("2d", { willReadFrequently: true })!;
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      let remaining = kFrames;
-      void renderer.setAnimationLoop(() => {
-        try {
-          strategy.render(scene, {
-            components: [component],
-            canvasWidth: kSize,
-            canvasHeight: kSize
-          });
-          if (options.overlay) {
-            renderer.setViewport(kSize - 8, 0, 8, 8);
-            renderer.render(overlay, camera);
-            renderer.setViewport(0, 0, kSize, kSize);
-          }
-          remaining--;
-          if (remaining === 0) {
-            context.drawImage(renderer.domElement, 0, 0);
-            void renderer.setAnimationLoop(null);
-            resolve();
-          }
+    const rendered = Promise.withResolvers<void>();
+    let remaining = kFrames;
+    void renderer.setAnimationLoop(() => {
+      try {
+        strategy.render(scene, {
+          components: [component],
+          canvasWidth: kSize,
+          canvasHeight: kSize
+        });
+        if (options.overlay) {
+          renderer.setViewport(kSize - 8, 0, 8, 8);
+          renderer.render(overlay, camera);
+          renderer.setViewport(0, 0, kSize, kSize);
         }
-        catch (error) {
+        remaining--;
+        if (remaining === 0) {
+          context.drawImage(renderer.domElement, 0, 0);
           void renderer.setAnimationLoop(null);
-          reject(error);
+          rendered.resolve();
         }
-      });
+      }
+      catch (error) {
+        void renderer.setAnimationLoop(null);
+        rendered.reject(error);
+      }
     });
+    await rendered.promise;
 
     return {
       left: pixelAt(context, kSize / 4),

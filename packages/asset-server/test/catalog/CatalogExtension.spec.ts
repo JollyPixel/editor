@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import http from "node:http";
 
 // Import Third-party Dependencies
@@ -729,18 +730,15 @@ async function catalogServer(
     });
   });
   server.listen(0, "127.0.0.1");
-  await new Promise((resolve) => {
-    server.once("listening", resolve);
-  });
+  await once(server, "listening");
   const { port } = server.address() as { port: number; };
 
   return {
     origin: `http://127.0.0.1:${port}`,
     async [Symbol.asyncDispose]() {
       server.closeAllConnections();
-      await new Promise((resolve) => {
-        server.close(resolve);
-      });
+      server.close();
+      await once(server, "close");
     }
   };
 }

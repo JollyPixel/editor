@@ -42,9 +42,9 @@ export function ticksOverFrames(
 
     world.on("afterUpdate", countTick);
     for (let index = 0; index < frameCount; index++) {
-      await new Promise((resolve) => {
-        requestAnimationFrame(resolve);
-      });
+      const frame = Promise.withResolvers<number>();
+      requestAnimationFrame(frame.resolve);
+      await frame.promise;
     }
     world.off("afterUpdate", countTick);
 

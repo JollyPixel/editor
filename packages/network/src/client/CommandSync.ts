@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Emitter } from "@openally/emitt";
+import { Emitter, once } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { Room } from "./Room.ts";
@@ -87,9 +87,7 @@ export class CommandSync<
   #ledger: LedgerEntry<TCommand>[] = [];
   #reconciler: CommandReconciler<TCommand> | null;
   #resolver: ConflictResolver<TCommand>;
-  #whenReady = new Promise<void>((resolve) => {
-    this.once("ready", resolve);
-  });
+  #whenReady: Promise<void> = once(this, "ready").then(() => undefined);
 
   #onMessage = (
     message: NetworkServerMessage<TCommand, TSnapshot, TNotice>

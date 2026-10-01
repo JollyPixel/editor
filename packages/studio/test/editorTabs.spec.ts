@@ -292,9 +292,12 @@ describe("EditorTabs", () => {
     const pending: Array<(confirmed: boolean) => void> = [];
     const { tabs, itemValues } = harness({
       cap: 1,
-      confirmEvict: () => new Promise((resolve) => {
+      confirmEvict: () => {
+        const { promise, resolve } = Promise.withResolvers<boolean>();
         pending.push(resolve);
-      })
+
+        return promise;
+      }
     });
     await tabs.open(kMap);
 

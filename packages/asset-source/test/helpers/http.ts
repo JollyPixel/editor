@@ -49,20 +49,16 @@ export async function send(
   await once(server, "listening");
 
   try {
-    const response = await new Promise<http.IncomingMessage>(
-      (resolve, reject) => {
-        const request = http.request({
-          host: "127.0.0.1",
-          port: portOf(server.address()),
-          method,
-          path: url,
-          headers
-        });
-        request.once("response", resolve);
-        request.once("error", reject);
-        request.end();
-      }
-    );
+    const request = http.request({
+      host: "127.0.0.1",
+      port: portOf(server.address()),
+      method,
+      path: url,
+      headers
+    });
+    const responded = once(request, "response");
+    request.end();
+    const [response]: http.IncomingMessage[] = await responded;
     const chunks: Buffer[] = [];
     for await (const chunk of response) {
       chunks.push(chunk);

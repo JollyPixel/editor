@@ -174,9 +174,10 @@ export class Runtime<
   }
 
   nextFrame(): Promise<void> {
-    return new Promise((resolve) => {
-      this.world.once("afterUpdate", () => resolve());
-    });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    this.world.once("afterUpdate", () => resolve());
+
+    return promise;
   }
 
   async frames(

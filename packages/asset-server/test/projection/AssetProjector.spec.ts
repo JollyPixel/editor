@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
@@ -608,9 +609,7 @@ class SlowAssetSource extends MemoryAssetSource {
     path: string,
     data: Uint8Array
   ): Promise<void> {
-    await new Promise((resolve) => {
-      setImmediate(resolve);
-    });
+    await setImmediate();
     await super.write(path, data);
   }
 }

@@ -1,6 +1,7 @@
 // Import Node.js Dependencies
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 
 // Import Internal Dependencies
 import {
@@ -83,9 +84,7 @@ function snapshot(
 }
 
 async function flush(): Promise<void> {
-  await new Promise((resolve) => {
-    setImmediate(resolve);
-  });
+  await setImmediate();
 }
 
 describe("CatalogClient", () => {

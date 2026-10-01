@@ -11,21 +11,6 @@ function lines(
   return commands.scrollback.map((entry) => `${entry.kind}: ${entry.text}`);
 }
 
-function deferred() {
-  let resolve!: () => void;
-  let reject!: (error: Error) => void;
-  const promise = new Promise<void>((onResolve, onReject) => {
-    resolve = onResolve;
-    reject = onReject;
-  });
-
-  return {
-    promise,
-    resolve,
-    reject
-  };
-}
-
 function withBrush(): { commands: CommandConsole; brush: { size: number; }; } {
   const commands = new CommandConsole();
   const brush = { size: 1 };
@@ -268,7 +253,7 @@ describe("commands", () => {
 
 describe("async commands", () => {
   test("the echo entry is pending until the promise settles", async() => {
-    const gate = deferred();
+    const gate = Promise.withResolvers<void>();
     const commands = new CommandConsole();
     commands.registerCommand("fetch", {
       description: "",
@@ -287,7 +272,7 @@ describe("async commands", () => {
   });
 
   test("closeOnExecute requests a close only after the promise resolves", async() => {
-    const gate = deferred();
+    const gate = Promise.withResolvers<void>();
     let closes = 0;
     const commands = new CommandConsole();
     commands.on("close-requested", () => closes++);
@@ -330,7 +315,7 @@ describe("async commands", () => {
   });
 
   test("unregistering a running command aborts its signal", async() => {
-    const gate = deferred();
+    const gate = Promise.withResolvers<void>();
     let signal: AbortSignal | undefined;
     const commands = new CommandConsole();
     const handle = commands.registerNamespace("net").registerCommand("pull", {
@@ -356,7 +341,7 @@ describe("async commands", () => {
   });
 
   test("unregistering the namespace aborts its running commands", async() => {
-    const gate = deferred();
+    const gate = Promise.withResolvers<void>();
     let signal: AbortSignal | undefined;
     const commands = new CommandConsole();
     const net = commands.registerNamespace("net");
