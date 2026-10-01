@@ -105,3 +105,27 @@ function anchoredHorizontal({
     viewport
   });
 }
+
+export interface AnchorOriginOptions {
+  anchor: AnchorRect;
+  panel: ViewportSize;
+  position: ViewportPosition;
+}
+
+/**
+ * Returns the point of a placed panel nearest to its anchor's center, in
+ * pixels from the panel's top-left corner. A panel scales from there.
+ */
+export function anchorOrigin({
+  anchor,
+  panel,
+  position
+}: AnchorOriginOptions): ViewportPosition {
+  const centerX = (anchor.left + anchor.right) / 2;
+  const centerY = (anchor.top + anchor.bottom) / 2;
+
+  return {
+    x: Math.min(Math.max(centerX - position.x, 0), panel.width),
+    y: Math.min(Math.max(centerY - position.y, 0), panel.height)
+  };
+}

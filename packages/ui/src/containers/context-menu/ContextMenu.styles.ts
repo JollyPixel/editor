@@ -50,6 +50,16 @@ export const contextMenuStyles = css`
     background: var(--jolly-control-bg-hover, ${kFallback.controlBg});
   }
 
+  .item.danger {
+    --jolly-icon-tone-strength: 0%;
+
+    color: var(--jolly-danger);
+  }
+
+  .item.danger:focus {
+    background: var(--jolly-invalid-bg-focus);
+  }
+
   .item:disabled {
     color: var(--jolly-text-muted, ${kFallback.text});
     opacity: 0.6;

@@ -107,6 +107,28 @@ test.describe("Context menu", () => {
     await expect(page.locator("main > div")).not.toHaveAttribute("data-result");
   });
 
+  test("is placed at the point in the task that opens it", async({ page }) => {
+    const placed = await page.locator("jolly-context-menu").evaluate((
+      menu: HTMLElementTagNameMap["jolly-context-menu"]
+    ) => {
+      menu.items = [{ id: "one", label: "One" }];
+      menu.openAt(40, 60);
+      const rect = menu.shadowRoot!
+        .querySelector(".menu")!
+        .getBoundingClientRect();
+
+      return {
+        x: rect.x,
+        y: rect.y
+      };
+    });
+
+    expect(placed).toEqual({
+      x: 40,
+      y: 60
+    });
+  });
+
   test("stays inside the viewport near its corner", async({ page }) => {
     const viewport = page.viewportSize()!;
     await page.locator("jolly-context-menu").evaluate((

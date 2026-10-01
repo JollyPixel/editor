@@ -6,6 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import {
+  anchorOrigin,
   anchoredPosition,
   type AnchorRect
 } from "../geometry/anchoredPosition.ts";
@@ -110,6 +111,11 @@ export class PopoverController implements ReactiveController {
     this.#host.requestUpdate();
   };
 
+  show(): void {
+    this.#options.popover()?.showPopover();
+    this.reposition();
+  }
+
   hide(): void {
     this.#options.popover()?.hidePopover();
   }
@@ -117,25 +123,31 @@ export class PopoverController implements ReactiveController {
   reposition(): void {
     const anchor = this.#options.anchor();
     const popover = this.#options.popover();
-    if (anchor === null || popover === null || !this.#open) {
+    if (
+      anchor === null ||
+      popover === null ||
+      !popover.matches(":popover-open")
+    ) {
       return;
     }
 
     const anchorRect = anchor instanceof HTMLElement ?
       anchor.getBoundingClientRect() :
       anchor;
+    const anchorBox = {
+      top: anchorRect.top,
+      bottom: anchorRect.bottom,
+      left: anchorRect.left,
+      right: anchorRect.right
+    };
+    const panel = {
+      width: popover.offsetWidth,
+      height: popover.offsetHeight
+    };
 
     const placed = anchoredPosition({
-      anchor: {
-        top: anchorRect.top,
-        bottom: anchorRect.bottom,
-        left: anchorRect.left,
-        right: anchorRect.right
-      },
-      panel: {
-        width: popover.offsetWidth,
-        height: popover.offsetHeight
-      },
+      anchor: anchorBox,
+      panel,
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight
@@ -144,9 +156,18 @@ export class PopoverController implements ReactiveController {
       side: this.#options.side,
       align: this.#options.align
     });
+    const origin = anchorOrigin({
+      anchor: anchorBox,
+      panel,
+      position: placed
+    });
 
     popover.style.left = `${placed.x}px`;
     popover.style.top = `${placed.y}px`;
+    popover.style.setProperty(
+      "--jolly-overlay-origin",
+      `${origin.x}px ${origin.y}px`
+    );
   }
 
   hostDisconnected(): void {

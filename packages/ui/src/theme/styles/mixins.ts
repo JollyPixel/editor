@@ -63,7 +63,7 @@ export const overlayMotion = css`
 
   .overlay-motion {
     transform: scale(var(--jolly-overlay-scale, 0.96));
-    transform-origin: center;
+    transform-origin: var(--jolly-overlay-origin, center);
   }
 
   .overlay-motion:is([open], :popover-open),

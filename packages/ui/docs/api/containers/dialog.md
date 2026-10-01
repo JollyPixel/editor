@@ -107,7 +107,8 @@ Escape does unless `dismissible` is `false`. See
 
 The dialog and its backdrop fade and scale in on open and out on close. Dialog
 helpers stay in the DOM until the exit transition ends. The same motion applies
-to field popovers such as the `jolly-color` picker and control details.
+to `jolly-context-menu` and to field popovers such as the `jolly-color` picker
+and control details. A popover scales from the edge nearest its anchor.
 
 | Token | Default |
 |---|---|

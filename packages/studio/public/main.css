@@ -73,6 +73,16 @@ jolly-pane::part(content) {
   padding: 0;
 }
 
+asset-browser {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+asset-browser jolly-tree {
+  flex: 1 0 auto;
+}
+
 #workbench {
   position: relative;
   display: flex;

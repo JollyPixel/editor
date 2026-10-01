@@ -14,7 +14,13 @@ row.addEventListener("contextmenu", (event) => {
   menu.items = [
     { id: "rename", label: "Rename" },
     "separator",
-    { id: "delete", label: "Delete", icon: "close", disabled: locked }
+    {
+      id: "delete",
+      label: "Delete",
+      icon: "close",
+      intent: "danger",
+      disabled: locked
+    }
   ];
   menu.openAt(event.clientX, event.clientY);
 });
@@ -30,9 +36,10 @@ menu.addEventListener("jolly-context-action", (event) => {
 | `label` | `label` | `string` | `""` |
 
 `ContextMenuEntry` is a `ContextMenuItem` or the string `"separator"`. An item
-has an `id`, a `label`, and optional `icon` and `disabled`. When one item has an
-icon, every item keeps an icon column so the labels line up. `label` names the
-menu for assistive technology.
+has an `id`, a `label`, and optional `icon`, `disabled` and `intent`. An item
+with `intent: "danger"` is drawn in the danger color, for destructive actions
+such as Delete. When one item has an icon, every item keeps an icon column so
+the labels line up. `label` names the menu for assistive technology.
 
 `openAt(x, y)` opens the menu with its top-left corner at a point in viewport
 pixels. It flips above the point when there is no room below and stays inside
@@ -40,6 +47,9 @@ the viewport. Calling it while the menu is open moves it. Called while a
 pointer button is held, as Linux fires `contextmenu` on press, it shows the
 menu on release so that release does not close it. `close()` closes it, and
 the read-only `open` is `true` while it shows.
+
+The menu fades and scales in from the point it opened at, and out on close,
+with the [dialog motion](./dialog.md#motion) tokens.
 
 The menu is a native `popover="auto"`: a click outside or Escape closes it. It
 holds an [input layer](../interaction/README.md#input-layers) while open.

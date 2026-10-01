@@ -87,7 +87,6 @@ export const controlStyles = css`
     inset: auto;
     width: max-content;
     margin: 0;
-    visibility: hidden;
     box-sizing: border-box;
     max-inline-size: min(20rem, calc(100vw - 2rem));
     padding: calc(var(--jolly-controls-inset, 10px) / 1.5);

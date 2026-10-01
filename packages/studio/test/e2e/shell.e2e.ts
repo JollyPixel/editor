@@ -169,6 +169,41 @@ test("exports the selected asset as a ZIP archive", async({ page }) => {
   expect((await download).suggestedFilename()).toBe("overworld.zip");
 });
 
+test("the asset menu exports the right-clicked asset", async({ page }) => {
+  await openShell(page);
+  await treeRow(page, kMap).click({ button: "right" });
+
+  const menu = page.getByRole("menu", { name: "Asset actions" });
+  await expect(menu.getByRole("menuitem", { name: "Open" })).toBeFocused();
+  const download = page.waitForEvent("download");
+  await menu.getByRole("menuitem", { name: "Export as ZIP" }).click();
+
+  expect((await download).suggestedFilename()).toBe("overworld.zip");
+  await expect(menu).toBeHidden();
+});
+
+test("the menu below the rows adds a folder at the root", async({ page }) => {
+  await openShell(page);
+  await treeRow(page, kModel).click();
+  const tree = await boxOf(page.locator("asset-browser jolly-tree"));
+  await page.mouse.click(
+    tree.x + (tree.width / 2),
+    tree.y + tree.height - 10,
+    { button: "right" }
+  );
+
+  const menu = page.getByRole("menu", { name: "Asset actions" });
+  await expect(menu.getByRole("menuitem")).toHaveCount(1);
+  await menu.getByRole("menuitem", { name: "New folder" }).click();
+  const rename = page.locator("asset-browser").getByRole("textbox", { name: "Rename" });
+  await rename.fill("world");
+  await rename.press("Enter");
+
+  await treeRow(page, "models").getByRole("button", { name: "Collapse" }).click();
+  await expect(treeRow(page, kModel)).toBeHidden();
+  await expect(treeRow(page, "world")).toBeVisible();
+});
+
 test("a collapsed asset dock keeps its handle beside the workbench", async({ page }) => {
   await openShell(page);
   const dock = page.locator("#asset-dock");

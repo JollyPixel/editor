@@ -23,10 +23,13 @@ import {
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
 import {
+  AssetSelection,
+  isAssetAction,
+  type AssetAction
+} from "../../catalog/AssetSelection.ts";
+import {
   AssetTreeModel,
   folderNodeId,
-  type AssetLeafData,
-  type AssetNodeData,
   type AssetRelocation
 } from "../../catalog/AssetTreeModel.ts";
 import { DraftFolders } from "../../catalog/DraftFolders.ts";
@@ -35,6 +38,7 @@ import {
   type RelocationVerb
 } from "./AssetCommands.ts";
 import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
+import { assetMenu } from "./assetMenu.ts";
 import "./AssetDeleteDialog.ts";
 
 // CONSTANTS
@@ -88,9 +92,13 @@ export class AssetBrowser extends LitElement {
   @query("asset-delete-dialog")
   declare _deleteDialog: AssetDeleteDialog;
 
+  @query("jolly-context-menu")
+  declare _menu: HTMLElementTagNameMap["jolly-context-menu"];
+
   #catalog: CatalogClient | null = null;
   #commands: AssetCommands | null = null;
   #storage = new LocalStorageAdapter();
+  #menuTarget: AssetSelection | null = null;
 
   constructor() {
     super();
@@ -131,9 +139,7 @@ export class AssetBrowser extends LitElement {
   }
 
   override render(): TemplateResult {
-    const empty = this._selected.length === 0;
-    const single = this._selected.length === 1;
-    const exportable = this.#selectedAsset() !== null;
+    const selection = this.#selection();
 
     return html`
       <jolly-button-group
@@ -157,7 +163,7 @@ export class AssetBrowser extends LitElement {
           icon-only
           label="Rename"
           title="Rename (F2)"
-          ?disabled=${!single}
+          ?disabled=${!selection.allows("rename")}
           @click=${this.#beginRename}
         ></jolly-button>
         <jolly-button
@@ -166,7 +172,7 @@ export class AssetBrowser extends LitElement {
           variant="danger"
           label="Delete"
           title="Delete (Del)"
-          ?disabled=${empty}
+          ?disabled=${!selection.allows("delete")}
           @click=${this.#deleteSelected}
         ></jolly-button>
         <jolly-button
@@ -174,7 +180,7 @@ export class AssetBrowser extends LitElement {
           icon-only
           label="Export"
           title="Export as a ZIP archive"
-          ?disabled=${!exportable}
+          ?disabled=${!selection.allows("export")}
           @click=${this.#exportSelected}
         ></jolly-button>
       </jolly-toolbar>
@@ -194,8 +200,13 @@ export class AssetBrowser extends LitElement {
         @jolly-activate=${this.#onActivate}
         @jolly-rename=${this.#onRename}
         @jolly-reparent=${this.#onReparent}
+        @jolly-context-request=${this.#onContextRequest}
         @keydown=${this.#onKeyDown}
       ></jolly-tree>
+      <jolly-context-menu
+        label="Asset actions"
+        @jolly-context-action=${this.#onContextAction}
+      ></jolly-context-menu>
       <asset-delete-dialog></asset-delete-dialog>
     `;
   }
@@ -295,25 +306,70 @@ export class AssetBrowser extends LitElement {
     await commands.remove(deletion, confirmation.companions);
   }
 
-  #selectedData(): AssetNodeData | undefined {
-    const [nodeId] = this._selected;
-
-    return nodeId === undefined ? undefined : this._model.node(nodeId)?.data;
+  #selection(
+    nodeIds: Iterable<string> = this._selected
+  ): AssetSelection {
+    return new AssetSelection(this._model, nodeIds);
   }
 
-  #selectedAsset(): AssetLeafData | null {
-    const data = this._selected.length === 1 ? this.#selectedData() : undefined;
-
-    return data?.type === "asset" ? data : null;
-  }
-
-  #selectedFolder(): AssetPath {
-    const data = this.#selectedData();
-    if (data === undefined) {
-      return AssetPath.ROOT;
+  #run(
+    action: AssetAction,
+    target: AssetSelection
+  ): void {
+    const selection = this.#selection(target.nodeIds);
+    if (!selection.allows(action)) {
+      return;
     }
 
-    return data.type === "folder" ? data.path : data.path.parent;
+    const { asset, folder, nodeIds } = selection;
+    switch (action) {
+      case "open":
+        if (asset !== null) {
+          this.#open(asset.id);
+        }
+        break;
+      case "new-folder":
+        void this.#newFolderIn(folder);
+        break;
+      case "rename":
+        this._tree?.beginRename(nodeIds[0]);
+        break;
+      case "export":
+        if (asset !== null) {
+          void this.#commands?.export(asset);
+        }
+        break;
+      case "delete":
+        void this.#delete(nodeIds);
+        break;
+      default:
+        break;
+    }
+  }
+
+  #open(
+    assetId: string
+  ): void {
+    this.dispatchEvent(new CustomEvent<AssetOpenDetail>("asset-open", {
+      bubbles: true,
+      detail: { assetId }
+    }));
+  }
+
+  async #newFolderIn(
+    parent: AssetPath
+  ): Promise<void> {
+    const path = this._model.vacantFolder(parent, kNewFolderName);
+    const nodeId = folderNodeId(path);
+    this._drafts = this._drafts.with(path);
+    if (!parent.isRoot) {
+      this.#toggle(folderNodeId(parent), true);
+    }
+    this._selected = [nodeId];
+
+    await this.updateComplete;
+    await this._tree?.updateComplete;
+    this._tree?.beginRename(nodeId);
   }
 
   #followFolder(
@@ -397,26 +453,12 @@ export class AssetBrowser extends LitElement {
     this.#storage.set(kKindStorageKey, this._kind);
   };
 
-  readonly #newFolder = async(): Promise<void> => {
-    const parent = this.#selectedFolder();
-    const path = this._model.vacantFolder(parent, kNewFolderName);
-    const nodeId = folderNodeId(path);
-    this._drafts = this._drafts.with(path);
-    if (!parent.isRoot) {
-      this.#toggle(folderNodeId(parent), true);
-    }
-    this._selected = [nodeId];
-
-    await this.updateComplete;
-    await this._tree?.updateComplete;
-    this._tree?.beginRename(nodeId);
+  readonly #newFolder = (): void => {
+    this.#run("new-folder", this.#selection());
   };
 
   readonly #exportSelected = (): void => {
-    const asset = this.#selectedAsset();
-    if (asset !== null) {
-      void this.#commands?.export(asset);
-    }
+    this.#run("export", this.#selection());
   };
 
   readonly #acceptDrop = (
@@ -444,10 +486,7 @@ export class AssetBrowser extends LitElement {
       this.#toggle(nodeId, !this._expanded?.has(nodeId));
     }
     else if (data?.type === "asset") {
-      this.dispatchEvent(new CustomEvent<AssetOpenDetail>("asset-open", {
-        bubbles: true,
-        detail: { assetId: data.id }
-      }));
+      this.#open(data.id);
     }
   };
 
@@ -480,17 +519,33 @@ export class AssetBrowser extends LitElement {
     }
   };
 
-  readonly #beginRename = (): void => {
-    const [nodeId] = this._selected;
-    if (nodeId !== undefined) {
-      this._tree?.beginRename(nodeId);
+  readonly #onContextRequest = (
+    event: HTMLElementEventMap["jolly-context-request"]
+  ): void => {
+    const { id, x, y } = event.detail;
+    const target = this.#selection(id === null ? [] : this._selected);
+    this.#menuTarget = target;
+    this._menu.items = assetMenu(target);
+    this._menu.openAt(x, y);
+  };
+
+  readonly #onContextAction = (
+    event: HTMLElementEventMap["jolly-context-action"]
+  ): void => {
+    const target = this.#menuTarget;
+    const action = event.detail.id;
+    this.#menuTarget = null;
+    if (target !== null && isAssetAction(action)) {
+      this.#run(action, target);
     }
   };
 
+  readonly #beginRename = (): void => {
+    this.#run("rename", this.#selection());
+  };
+
   readonly #deleteSelected = (): void => {
-    if (this._selected.length > 0) {
-      void this.#delete(this._selected);
-    }
+    this.#run("delete", this.#selection());
   };
 }
 
