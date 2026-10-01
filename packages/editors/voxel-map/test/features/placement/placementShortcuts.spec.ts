@@ -30,6 +30,12 @@ function setup() {
         store.end();
 
         return true;
+      },
+      cancel: () => {
+        const placing = store.placing;
+        store.end();
+
+        return placing;
       }
     }
   });
@@ -129,6 +135,22 @@ describe("PlacementShortcuts", () => {
 
     assert.equal(store.placement?.transform, VoxelTransform.Identity);
     assert.equal(commits(), 0);
+  });
+
+  test("Escape cancels the pending placement before lower-priority bindings", () => {
+    const { keyboard, store, press } = setup();
+    const fallbacks: string[] = [];
+    keyboard.bind("Escape", () => {
+      fallbacks.push("camera");
+    });
+    begin(store);
+
+    press("Escape");
+    assert.equal(store.placement, null);
+    assert.deepEqual(fallbacks, []);
+
+    press("Escape");
+    assert.deepEqual(fallbacks, ["camera"]);
   });
 
   test("stops listening once disposed", () => {

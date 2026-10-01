@@ -10,6 +10,7 @@ import {
   state
 } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
+import { KeyChord } from "@jolly-pixel/controls";
 import { FieldBinding } from "@jolly-pixel/ui";
 import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
 
@@ -36,7 +37,12 @@ import {
   toolLabel,
   type BrushToolOption
 } from "./brushToolOptions.ts";
+import { HISTORY_SHORTCUTS } from "../../../scene/historyShortcuts.ts";
 import "./brushIcons.ts";
+
+// CONSTANTS
+const kUndoLabel = `Undo (${KeyChord.parse(HISTORY_SHORTCUTS.undo[0]).format()})`;
+const kRedoLabel = `Redo (${KeyChord.parse(HISTORY_SHORTCUTS.redo[0]).format()})`;
 
 interface ChoiceTool<TValue extends string> {
   tool: string;
@@ -130,14 +136,14 @@ export class BrushToolbar extends WorkspaceElement {
           <jolly-tool-button
             data-tool="undo"
             icon="history-undo"
-            label="Undo (Ctrl+Z)"
+            label=${kUndoLabel}
             ?disabled=${!this._canUndo}
             @click=${this.#onUndo}
           ></jolly-tool-button>
           <jolly-tool-button
             data-tool="redo"
             icon="history-redo"
-            label="Redo (Ctrl+Y)"
+            label=${kRedoLabel}
             ?disabled=${!this._canRedo}
             @click=${this.#onRedo}
           ></jolly-tool-button>

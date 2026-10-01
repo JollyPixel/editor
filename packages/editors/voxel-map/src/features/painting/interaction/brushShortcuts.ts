@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import type {
+  Keyboard,
+  KeyBindingHandler
+} from "@jolly-pixel/controls";
+
 // Import Internal Dependencies
 import {
   BRUSH_AXES,
@@ -5,13 +11,9 @@ import {
   type BrushStore,
   type SelectionStore
 } from "../../../state/index.ts";
-import {
-  bindKeys,
-  type KeyBindingTarget
-} from "../../../shared/keyBindings.ts";
 
 export interface BrushShortcutsOptions {
-  keyboard: KeyBindingTarget;
+  keyboard: Pick<Keyboard, "bind">;
   brush: BrushStore;
   selection: SelectionStore;
 }
@@ -19,47 +21,47 @@ export interface BrushShortcutsOptions {
 export function bindBrushShortcuts(
   options: BrushShortcutsOptions
 ): () => void {
-  const { brush, selection } = options;
-  const codes = ["KeyR", "KeyX", "KeyC", "KeyG", "BracketLeft", "BracketRight"] as const;
+  const { keyboard, brush, selection } = options;
 
-  return bindKeys(options.keyboard, codes, (event) => {
-    const resizing = event.code === "BracketLeft" || event.code === "BracketRight";
-    if (
-      event.ctrlKey ||
-      event.altKey ||
-      event.shiftKey ||
-      event.metaKey ||
-      (event.repeat && !resizing) ||
-      selection.voxelLayer === null
-    ) {
-      return;
+  function onVoxelLayer(
+    action: () => void
+  ): KeyBindingHandler {
+    return () => {
+      if (selection.voxelLayer === null) {
+        return false;
+      }
+      action();
+
+      return true;
+    };
+  }
+
+  const releases = [
+    keyboard.bind("KeyR", onVoxelLayer(() => {
+      brush.mode = brush.mode === "build" ? "replace" : "build";
+    })),
+    keyboard.bind("KeyX", onVoxelLayer(() => {
+      brush.axis = nextAxis(brush.axis);
+    })),
+    keyboard.bind("KeyC", onVoxelLayer(() => {
+      brush.pattern = brush.pattern === "square" ? "circle" : "square";
+    })),
+    keyboard.bind("KeyG", onVoxelLayer(() => {
+      brush.ghost = !brush.ghost;
+    })),
+    keyboard.bind("BracketLeft", onVoxelLayer(() => {
+      brush.resize(-1);
+    }), { repeat: true }),
+    keyboard.bind("BracketRight", onVoxelLayer(() => {
+      brush.resize(1);
+    }), { repeat: true })
+  ];
+
+  return () => {
+    for (const release of releases) {
+      release();
     }
-
-    switch (event.code) {
-      case "KeyR":
-        brush.mode = brush.mode === "build" ? "replace" : "build";
-        break;
-      case "KeyX":
-        brush.axis = nextAxis(brush.axis);
-        break;
-      case "KeyC":
-        brush.pattern = brush.pattern === "square" ? "circle" : "square";
-        break;
-      case "KeyG":
-        brush.ghost = !brush.ghost;
-        break;
-      case "BracketLeft":
-        brush.resize(-1);
-        break;
-      case "BracketRight":
-        brush.resize(1);
-        break;
-      default:
-        return;
-    }
-
-    event.preventDefault();
-  });
+  };
 }
 
 function nextAxis(

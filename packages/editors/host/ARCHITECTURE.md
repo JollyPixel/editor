@@ -298,7 +298,7 @@ flowchart TB
   Key["key event"] --> Guard{"dialog or popover open?<br/>inputLayers guard"}
   Guard -->|"yes"| Ui["the open layer keeps the key"]
   Guard -->|"no"| Hover{"pointer over a<br/>2D canvas panel?"}
-  Hover -->|"yes"| Panel["keyboard disabled<br/>panel shortcuts only"]
+  Hover -->|"yes"| Panel["keyboard suspended<br/>panel shortcuts only"]
   Hover -->|"no"| Scene["runtime keyboard<br/>scene shortcuts"]
 ```
 

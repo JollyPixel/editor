@@ -58,11 +58,11 @@ awakes, so a scene with async setup needs its own readiness promise.
 suspendKeyboardOnHover(target: EventTarget, event: string): () => void;
 ```
 
-Disables the runtime keyboard while the pointer is over a panel that has its
+Suspends the runtime keyboard while the pointer is over a panel that has its
 own shortcuts. `event` is a `CustomEvent` whose `detail` is
 `{ hovering: boolean }`, such as the pixel-draw panel's `canvas-hover-change`.
 The returned function removes the listener and releases that binding's
 suspension, including when called during hover. Repeated calls do nothing.
-Overlapping bindings keep input disabled until the last hovering binding
-releases it, then restore the state from before the first suspension. Input
-that was already disabled stays disabled.
+Overlapping bindings keep input suspended until the last hovering binding
+releases it. The suspension uses `Keyboard.suspend()`, so it never changes
+`keyboard.enabled`.

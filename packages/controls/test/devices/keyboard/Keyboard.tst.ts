@@ -57,3 +57,18 @@ test("addGuard() accepts a structural guard and returns a disposer", () => {
   });
   expect(keyboard.addGuard).type.not.toBeCallableWith({});
 });
+
+test("bind() accepts chords with ordered Mod, Shift and Alt prefixes", () => {
+  expect(keyboard.bind).type.toBeCallableWith("KeyG", () => undefined);
+  expect(keyboard.bind).type.toBeCallableWith(
+    ["Mod+KeyY", "Mod+Shift+KeyZ"],
+    () => true
+  );
+  expect(keyboard.bind).type.not.toBeCallableWith("Mod+Z", () => undefined);
+  expect(keyboard.bind).type.not.toBeCallableWith("Ctrl+KeyZ", () => undefined);
+  expect(keyboard.bind).type.not.toBeCallableWith(
+    "Shift+Mod+KeyZ",
+    () => undefined
+  );
+  expect(keyboard.bind).type.not.toBeCallableWith("KeyG", () => "handled");
+});
