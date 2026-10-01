@@ -18,15 +18,34 @@ import type {
 
 // Import Internal Dependencies
 import {
+  EDITOR_PAGE_REBUILT_EVENT,
   EDITOR_PAGES_DIR,
   EDITOR_PAGES_PREFIX,
-  type EditorDescriptor
+  type EditorDescriptor,
+  type EditorPageRebuilt
 } from "../src/editors/EditorDescriptor.ts";
 import type { EditorPackage } from "./editorManifest.ts";
 
 // CONSTANTS
 export const EDITORS_MODULE_ID = "virtual:jolly-pixel/editors";
+export const EDITOR_PAGE_SETTLE_MS = 300;
 const kResolvedEditorsModuleId = `\0${EDITORS_MODULE_ID}`;
+
+export interface EditorPagesServer {
+  watcher: {
+    add(paths: readonly string[]): unknown;
+    on(
+      event: "all",
+      listener: (eventName: string, file: string) => void
+    ): unknown;
+  };
+  ws: {
+    send(
+      event: string,
+      payload: EditorPageRebuilt
+    ): void;
+  };
+}
 
 export function editorsModule(
   editors: Iterable<EditorDescriptor>
@@ -53,6 +72,31 @@ export function createEditorPagesHandler(
   );
 }
 
+export function watchEditorPages(
+  server: EditorPagesServer,
+  editors: readonly EditorPackage[]
+): void {
+  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+
+  server.watcher.add(editors.map((editor) => editor.dist));
+  server.watcher.on("all", (_event, file) => {
+    const editor = editors.find(
+      (candidate) => isInside(candidate.dist, file)
+    );
+    if (editor === undefined) {
+      return;
+    }
+
+    clearTimeout(pending.get(editor.name));
+    pending.set(editor.name, setTimeout(() => {
+      pending.delete(editor.name);
+      server.ws.send(EDITOR_PAGE_REBUILT_EVENT, {
+        name: editor.name
+      });
+    }, EDITOR_PAGE_SETTLE_MS));
+  });
+}
+
 export function editorPagesPlugin(
   editors: readonly EditorPackage[]
 ): Plugin[] {
@@ -69,6 +113,7 @@ export function editorPagesPlugin(
       },
       configureServer(server) {
         server.middlewares.use(createEditorPagesHandler(editors));
+        watchEditorPages(server, editors);
       }
     },
     {
@@ -112,4 +157,15 @@ function unknownEditorPage(
   }
 
   next?.();
+}
+
+function isInside(
+  directory: string,
+  file: string
+): boolean {
+  const relative = path.relative(directory, file);
+
+  return relative !== "" &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative);
 }

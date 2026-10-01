@@ -83,6 +83,13 @@ export class Studio extends LitElement {
       catalog: options.catalog,
       kinds: session.kinds
     };
+    await session.restoreTabs();
+  }
+
+  reloadEditor(
+    name: string
+  ): void {
+    this.#session?.reloadEditor(name);
   }
 
   openAsset(

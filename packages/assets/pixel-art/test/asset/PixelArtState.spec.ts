@@ -57,7 +57,7 @@ describe("PixelArtState", () => {
     );
   });
 
-  test("clear resets to the default size and drops uv regions", () => {
+  test("clear erases the pixels at the current size and drops uv regions", () => {
     const state = new PixelArtState({ x: 2, y: 2 });
 
     state.load(new PixelArtState({ x: 4, y: 4 }).toJSON());
@@ -74,10 +74,10 @@ describe("PixelArtState", () => {
 
     state.clear();
 
-    assert.deepEqual(state.buffer.size(), { x: 2, y: 2 });
+    assert.deepEqual(state.buffer.size(), { x: 4, y: 4 });
     assert.deepEqual(
       state.buffer.pixels(),
-      new Uint8ClampedArray(2 * 2 * 4)
+      new Uint8ClampedArray(4 * 4 * 4)
     );
     assert.deepEqual([...state.buffer.uvRegions], []);
   });

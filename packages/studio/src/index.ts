@@ -12,6 +12,10 @@ import editors from "virtual:jolly-pixel/editors";
 
 // Import Internal Dependencies
 import { connectStudio } from "./connection.ts";
+import {
+  EDITOR_PAGE_REBUILT_EVENT,
+  type EditorPageRebuilt
+} from "./editors/EditorDescriptor.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import "./icons.ts";
 import type { Studio } from "./shell/Studio.ts";
@@ -61,6 +65,10 @@ async function boot(): Promise<void> {
   if (import.meta.env.DEV) {
     window.studio = studio;
   }
+  import.meta.hot?.on(
+    EDITOR_PAGE_REBUILT_EVENT,
+    (page: EditorPageRebuilt) => studio.reloadEditor(page.name)
+  );
 }
 
 function createEditorRegistry(

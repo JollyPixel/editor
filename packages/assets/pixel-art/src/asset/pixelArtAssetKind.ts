@@ -41,12 +41,9 @@ const kDefaultSize: Vec2 = {
 export class PixelArtState {
   readonly buffer: PixelBuffer;
 
-  #defaultSize: Vec2;
-
   constructor(
     size: Vec2
   ) {
-    this.#defaultSize = size;
     this.buffer = new PixelBuffer({
       size
     });
@@ -66,11 +63,11 @@ export class PixelArtState {
   }
 
   clear(): void {
-    const { x, y } = this.#defaultSize;
+    const size = this.buffer.size();
 
     this.buffer.replacePixels(
-      new Uint8ClampedArray(x * y * 4),
-      this.#defaultSize
+      new Uint8ClampedArray(size.x * size.y * 4),
+      size
     );
     this.buffer.uvRegions.clear();
   }

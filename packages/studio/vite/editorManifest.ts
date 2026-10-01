@@ -31,12 +31,17 @@ export interface EditorPackage extends EditorDescriptor {
 export function locatePackage(
   packageName: string
 ): string {
-  const manifest = findPackageJSON(packageName, import.meta.url);
+  const manifest = findPackageJSON(
+    packageName,
+    import.meta.url
+  );
   if (manifest === undefined) {
     throw new TypeError(`Cannot locate the package "${packageName}".`);
   }
 
-  return fs.realpathSync(path.dirname(manifest));
+  return fs.realpathSync(
+    path.dirname(manifest)
+  );
 }
 
 /**
@@ -75,9 +80,13 @@ function readEditorPackage(
   packageName: string,
   root: string
 ): EditorPackage {
-  const manifest = kPackageManifestSchema.safeParse(JSON.parse(
-    fs.readFileSync(path.join(root, "package.json"), "utf8")
-  ));
+  const rawData = fs.readFileSync(
+    path.join(root, "package.json"),
+    "utf8"
+  );
+  const manifest = kPackageManifestSchema.safeParse(
+    JSON.parse(rawData)
+  );
   if (!manifest.success) {
     const reason = z.prettifyError(manifest.error);
 

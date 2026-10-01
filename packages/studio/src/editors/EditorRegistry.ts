@@ -12,7 +12,7 @@ import {
   type AssetKindEntry
 } from "../catalog/AssetKindSet.ts";
 import {
-  EDITOR_PAGES_PREFIX,
+  EDITOR_PAGES_PATH,
   type EditorDescriptor
 } from "./EditorDescriptor.ts";
 
@@ -26,7 +26,7 @@ export interface EditorRegistryOptions {
    */
   query?: Readonly<Record<string, string>>;
   /**
-   * @default EDITOR_PAGES_PREFIX
+   * @default EDITOR_PAGES_PATH
    */
   prefix?: string;
 }
@@ -45,7 +45,7 @@ export class EditorRegistry {
     options: EditorRegistryOptions = {}
   ) {
     this.#query = { ...options.query };
-    this.#prefix = options.prefix ?? EDITOR_PAGES_PREFIX;
+    this.#prefix = options.prefix ?? EDITOR_PAGES_PATH;
   }
 
   registerKind(

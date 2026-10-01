@@ -9,12 +9,17 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import { SHELL_MESSAGE_TYPE } from "@jolly-pixel/editor.host";
+import {
+  MemoryStorageAdapter,
+  type StorageAdapter
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { EditorRegistry } from "../src/editors/EditorRegistry.ts";
 import "../src/icons.ts";
 import {
   StudioSession,
+  TABS_STORAGE_KEY,
   type StudioCatalog
 } from "../src/shell/StudioSession.ts";
 import { HOME_TAB_ID } from "../src/tabs/EditorTabs.ts";
@@ -24,6 +29,16 @@ const kMap: AssetRecordData = {
   id: "map-1",
   kind: "voxelmap",
   source: "maps/overworld.voxelmap.json"
+};
+const kCave: AssetRecordData = {
+  id: "map-2",
+  kind: "voxelmap",
+  source: "maps/cave.voxelmap.json"
+};
+const kModel: AssetRecordData = {
+  id: "model-1",
+  kind: "voxelmodel",
+  source: "models/model.voxelmodel.json"
 };
 const kTexture: AssetRecordData = {
   id: "texture-1",
@@ -77,7 +92,9 @@ class FakeCatalog implements StudioCatalog {
 let current: StudioSession | undefined;
 
 function session(
-  catalog: FakeCatalog
+  catalog: FakeCatalog,
+  storage: StorageAdapter = new MemoryStorageAdapter(),
+  cap?: number
 ): StudioSession {
   const strip = Object.assign(document.createElement("jolly-tabs"), {
     value: ""
@@ -87,19 +104,38 @@ function session(
   document.body.append(strip, frames, home);
   current = new StudioSession({
     catalog,
-    editors: new EditorRegistry().registerEditor({
-      name: "voxel-map",
-      kinds: ["voxelmap"]
-    }),
+    editors: new EditorRegistry()
+      .registerEditor({
+        name: "voxel-map",
+        kinds: ["voxelmap"]
+      })
+      .registerEditor({
+        name: "voxel-model",
+        kinds: ["voxelmodel"]
+      }),
     tabs: {
       strip,
       frames,
       home,
+      cap,
       launchOrigin: "http://localhost"
-    }
+    },
+    storage
   });
 
   return current;
+}
+
+function restart(): void {
+  current?.dispose();
+  current = undefined;
+  document.body.replaceChildren();
+}
+
+function frameTargets(): string[] {
+  return [...document.querySelectorAll("iframe")].map(
+    (frame) => new URL(frame.src).searchParams.get("target") ?? ""
+  );
 }
 
 afterEach(() => {
@@ -161,6 +197,88 @@ describe("StudioSession", () => {
     await Promise.resolve();
 
     assert.equal(studio.tabs.active, "map-1");
+  });
+
+  test("restores the saved tabs in order and loads only the active one", async() => {
+    const catalog = new FakeCatalog([kMap, kCave, kModel]);
+    const storage = new MemoryStorageAdapter();
+    const first = session(catalog, storage);
+    await first.openAsset("map-1");
+    await first.openAsset("model-1");
+    await first.openAsset("map-2");
+    first.tabs.move("map-2", 1);
+    first.tabs.focus("model-1");
+    restart();
+
+    const second = session(catalog, storage);
+    await second.restoreTabs();
+
+    assert.deepEqual(second.tabs.ids(), ["map-2", "map-1", "model-1"]);
+    assert.equal(second.tabs.active, "model-1");
+    assert.deepEqual(frameTargets(), ["model-1"]);
+  });
+
+  test("restores up to the cap, skipping assets it cannot open", async() => {
+    const storage = new MemoryStorageAdapter();
+    storage.set(TABS_STORAGE_KEY, JSON.stringify({
+      ids: ["missing", "texture-1", "map-1", "model-1", "map-2"],
+      active: "missing"
+    }));
+    const studio = session(
+      new FakeCatalog([kMap, kCave, kModel, kTexture]),
+      storage,
+      2
+    );
+
+    await studio.restoreTabs();
+
+    assert.deepEqual(studio.tabs.ids(), ["map-1", "model-1"]);
+    assert.equal(studio.tabs.active, HOME_TAB_ID);
+    assert.deepEqual(frameTargets(), []);
+    assert.deepEqual(JSON.parse(storage.get(TABS_STORAGE_KEY) ?? ""), {
+      ids: ["map-1", "model-1"],
+      active: HOME_TAB_ID
+    });
+  });
+
+  test("restores nothing from an unreadable save", async() => {
+    const storage = new MemoryStorageAdapter();
+    storage.set(TABS_STORAGE_KEY, "{\"ids\":[1]");
+    const studio = session(new FakeCatalog([kMap]), storage);
+
+    await studio.restoreTabs();
+
+    assert.deepEqual(studio.tabs.ids(), []);
+    assert.equal(studio.tabs.active, HOME_TAB_ID);
+  });
+
+  test("forgets a tab whose asset is deleted", async() => {
+    const catalog = new FakeCatalog([kMap, kModel]);
+    const storage = new MemoryStorageAdapter();
+    const studio = session(catalog, storage);
+    await studio.openAsset("map-1");
+    await studio.openAsset("model-1");
+
+    catalog.records.delete("map-1");
+    catalog.change();
+
+    assert.deepEqual(JSON.parse(storage.get(TABS_STORAGE_KEY) ?? ""), {
+      ids: ["model-1"],
+      active: "model-1"
+    });
+  });
+
+  test("reloads the tabs of a rebuilt editor only", async() => {
+    const studio = session(new FakeCatalog([kMap, kCave, kModel]));
+    await studio.openAsset("map-1");
+    await studio.openAsset("map-2");
+    await studio.openAsset("model-1");
+    const model = document.querySelector("iframe[src*='model-1']");
+
+    studio.reloadEditor("voxel-map");
+
+    assert.deepEqual(frameTargets(), ["model-1"]);
+    assert.equal(document.querySelector("iframe[src*='model-1']"), model);
   });
 
   test("dispose stops following the catalog", () => {

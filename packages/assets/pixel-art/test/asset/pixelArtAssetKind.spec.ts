@@ -199,12 +199,13 @@ describe("pixelArtAssetKind", () => {
     assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
   });
 
-  test("a delete resets the buffer to its default size", () => {
+  test("a delete erases the pixels and keeps the size", () => {
     const handler = pixelArtAssetKind({
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
     const source = new PixelBuffer({ size: { x: 8, y: 8 } });
+    source.drawPixels([{ x: 1, y: 1 }], kRed);
     foldAssetEvent(handler, state, documentEvent(source));
 
     foldAssetEvent(handler, state, event(ASSET_DELETED, {
@@ -212,7 +213,11 @@ describe("pixelArtAssetKind", () => {
       kind: PIXEL_ART_KIND
     }));
 
-    assert.deepEqual(state.buffer.size(), { x: 4, y: 4 });
+    assert.deepEqual(state.buffer.size(), { x: 8, y: 8 });
+    assert.deepEqual(
+      state.buffer.pixels(),
+      new Uint8ClampedArray(8 * 8 * 4)
+    );
   });
 
   test("ignores an unrelated domain event", () => {

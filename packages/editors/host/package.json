@@ -24,6 +24,7 @@
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
     "build": "tsc -b",
+    "build:watch": "tsc -b --watch",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",

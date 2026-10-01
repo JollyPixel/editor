@@ -62,13 +62,14 @@ kind opens in at most one editor.
 
 ### Editor page
 
-An editor's built `index.html`, served at `/editors/<name>/`. Each one runs
-`editor.host` with its own client, session and runtime.
+An editor's built `index.html`, served at `editors/<name>/` beside the shell.
+Each one runs `editor.host` with its own client, session and runtime.
 
 ### Tab
 
 One open editor page in the shell, keyed by the asset id it opened. The
-first tab, Home, is fixed and opens no editor.
+first tab, Home, is fixed and opens no editor. A tab loads its frame when
+first focused, and the open tabs are saved under `studio:tabs`.
 
 ### Tab cap
 

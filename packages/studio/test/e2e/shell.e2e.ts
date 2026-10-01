@@ -62,6 +62,31 @@ test("starts on home and reorders editor tabs behind it", async({ page }) => {
   await expect(page.locator("#studio-home")).toBeVisible();
 });
 
+test("reopens the tabs in their order after a reload", async({ page }) => {
+  await openShell(page);
+  await treeRow(page, kMap).dblclick();
+  await treeRow(page, kModel).dblclick();
+  const home = page.locator("#editor-tabs").getByRole("tab", { name: "Home" });
+  const model = page.locator("#editor-tabs").getByRole("tab", { name: kModel });
+  const homeBox = await boxOf(home);
+  await dragTo(page, model, {
+    x: homeBox.x + (homeBox.width * 0.75),
+    y: homeBox.y + (homeBox.height / 2)
+  });
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await model.click();
+  await expect(model).toHaveAttribute("aria-selected", "true");
+
+  await page.reload();
+
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await expect(model).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#editor-frames iframe")).toHaveCount(1);
+
+  await page.locator("#editor-tabs").getByRole("tab", { name: kMap }).click();
+  await expect(page.locator("#editor-frames iframe")).toHaveCount(2);
+});
+
 test("opens a pixel-art texture in the pixel-art editor page", async({ page }) => {
   await openShell(page);
   await treeRow(page, kTexture).dblclick();
@@ -69,7 +94,7 @@ test("opens a pixel-art texture in the pixel-art editor page", async({ page }) =
   const frame = page.locator("#editor-frames iframe");
   await expect(frame).toHaveAttribute(
     "src",
-    /\/editors\/pixel-art\/\?.*target=model-texture/
+    /^editors\/pixel-art\/\?.*target=model-texture/
   );
   const editor = frame.contentFrame();
   await expect(editor.locator("html"))
