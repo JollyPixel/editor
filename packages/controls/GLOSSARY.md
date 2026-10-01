@@ -27,7 +27,7 @@ and pointer lock.
 ### Keyboard
 
 Tracks held keys, key transitions, auto-repeat, and text entered during the
-current frame.
+current frame. It also runs key-chord bindings.
 
 ### Gamepad
 
@@ -105,6 +105,111 @@ a delay.
 
 The area near a gamepad stick's resting position where `Gamepad` reports
 zero, filtering small movements and drift.
+
+### Editable target
+
+An `input`, `textarea`, or content-editable element in the event's composed
+path. `Keyboard` ignores keydowns and keypresses from it, so typing in a field
+neither moves the player nor fires bindings.
+
+### Guard
+
+A `KeyboardGuard` added with `addGuard()`. While its `blocks()` returns true
+for an event, `Keyboard` ignores that event as it would an editable target.
+An open dialog uses one to take keys away from the canvas.
+
+### Suspension
+
+A pause taken with `Keyboard.suspend()`. The keyboard resets and ignores key
+events until every suspension is released. Unlike `enabled`, several owners
+can suspend at once.
+
+## Keys and chords
+
+### Key code
+
+A `KeyboardEvent.code` value such as `"KeyW"`, `"Digit1"`, or `"Enter"`. It
+names a physical position, not a character: `"KeyQ"` is the key printed A on
+AZERTY. Polling queries take key codes; `"W"` and `"7"` are shorthands for
+`"KeyW"` and `"Digit7"`.
+
+### Key chord
+
+A string naming one key and its modifiers, such as `"Mod+Shift+z"`. Modifiers
+come first, in the order `Mod+`, `Shift+`, `Alt+`. `KeyChord` parses, matches,
+and labels it.
+
+### Physical chord / Letter chord
+
+The two kinds of key a chord can name. A **physical chord** ends in a key code
+(`"KeyQ"`) and matches that position on every layout. A **letter chord** ends
+in a lowercase letter (`"q"`) and matches the key printed with that letter on
+the user's layout. A `KeyChord` holds exactly one of `code` and `key`.
+
+### Spatial binding / Mnemonic
+
+The two reasons to pick a chord kind. A **spatial binding** depends on where
+keys sit relative to each other, such as WASD or Q/E rotation, and uses
+physical chords. A **mnemonic** depends on the letter's meaning, such as
+Ctrl+Z for undo or R for replace, and uses letter chords.
+
+### Mod
+
+The platform's primary shortcut modifier: Command on Apple platforms, Control
+elsewhere. The other of the two must be released for a chord to match.
+
+### Exact modifiers
+
+A chord matches only when the held modifiers are exactly the ones it names:
+`"g"` does not match Shift+G. Shift and Caps Lock do not change the letter
+itself, so `"Mod+Shift+z"` is Ctrl+Shift+Z.
+
+### Letter fallback
+
+How a letter chord resolves on a layout without Latin letters. When
+`event.key` is not `a` to `z`, the letter is taken from the key position
+instead, so `"Mod+z"` still works on a Cyrillic layout.
+
+### Keyboard layout
+
+A map from key codes to the characters printed on the user's keycaps, loaded
+with `loadKeyboardLayout()`. It resolves to `null` where the browser cannot
+report it. Browsers do not announce layout changes, so callers reload it when
+the window regains focus.
+
+### Label
+
+The text `KeyChord.format()` writes for a tooltip: `"Ctrl+Shift+Z"`, or
+`"⇧⌘Z"` on Apple platforms. A physical chord prints its QWERTY character
+unless a keyboard layout is passed.
+
+## Bindings
+
+### Binding
+
+A handler registered with `Keyboard.bind()` or `KeyBindings.bind()` for one or
+more chords. It runs on a matching keydown, not during `update()`.
+
+### KeyBindings
+
+The registry behind `Keyboard.bind()`. It indexes bindings by key code and by
+letter, and `dispatch()` runs them for one keydown. It can be used on its own
+for keydowns that do not come from a `Keyboard`.
+
+### Priority
+
+The order in which matching bindings run: highest `priority` first, then
+registration order.
+
+### Handled / Passed on
+
+A handler that returns `false` passes the key on to the next matching
+binding. Any other return value handles it: later bindings are skipped and the
+event gets `preventDefault()`.
+
+### Repeat
+
+Whether a binding also runs on auto-repeated keydowns. It is off by default.
 
 ## Combining controls
 
