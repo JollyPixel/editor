@@ -5,18 +5,12 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-The goal of the first three steps is kinds and editors loaded from outside
+The goal of the first two steps is kinds and editors loaded from outside
 the monorepo (a project folder, a package in `node_modules`), keeping
 [ADR-0002](./docs/adr/0002-the-shell-consumes-data-only.md): kind code stays
 in back-end handlers, editor code stays in iframes.
 
-## 1. Boot tracing
-
-`mountStandalone`, the session open, `Runtime.create`, the bootstrap steps
-and the scene's ready promise log through the host logger, so a silent boot
-hang inside a frame no longer needs temporary `console.log` calls.
-
-## 2. `project.json`
+## 1. `project.json`
 
 - `project/.jollypixel/project.json` lists the editor packages and the kind
   packages. The Vite config reads it instead of hard-coded lists; the
@@ -28,7 +22,7 @@ hang inside a frame no longer needs temporary `console.log` calls.
 - Tests: a project file resolves editors and kinds; a missing package or a
   kind claimed twice fails with the package named.
 
-## 3. External kinds and editors
+## 2. External kinds and editors
 
 - Resolve packages from the project folder's `node_modules`, not only the
   studio's, and descriptors or editors from a local folder.
@@ -38,29 +32,29 @@ hang inside a frame no longer needs temporary `console.log` calls.
 - Settle trust: an external editor runs same-origin in an iframe today, with
   full access to the shell's storage and back-end session.
 
-## 4. Identity in the launch message
+## 3. Identity in the launch message
 
 The shell already prompts once and editor frames read the stored name from
 `sessionStorage`, but each frame mints its own peer id. Carrying the identity
 in `jolly-launch` gives one user one presence color across tabs.
 
-## 5. Authentication
+## 4. Authentication
 
 The shell logs in once, the launch message carries a token, and the network
 `AuthenticationProvider` checks it on upgrade. Editors never learn how the
 identity was obtained.
 
-## 6. Preferences and settings pane
+## 5. Preferences and settings pane
 
 A per-user store the shell owns, reached from the header toolbar. The open
 tabs, the dock layout and the kind filter move there from `localStorage`.
 
-## 7. Runtime tab
+## 6. Runtime tab
 
 Another page in another iframe that plays the project. No editor contract
 involved; its action goes in the header toolbar.
 
-## 8. In-process editors
+## 7. In-process editors
 
 Mount editors in the shell's document instead of iframes. Waits for the
 `EditorDefinition` revisit in the

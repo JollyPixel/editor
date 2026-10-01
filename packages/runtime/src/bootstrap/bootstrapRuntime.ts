@@ -15,6 +15,10 @@ import {
   type ConfigureRuntimeDeviceOptions
 } from "./configureRuntimeDevice.ts";
 
+export interface RuntimeBootstrapOptions extends ConfigureRuntimeDeviceOptions {
+  logger?: Systems.Logger;
+}
+
 export interface RuntimeLoadOptions<
   TContext = Systems.WorldDefaultContext
 > {
@@ -53,7 +57,7 @@ export async function bootstrapRuntime<
 >(
   runtime: Runtime<TContext>,
   options: RuntimeLoadOptions<TContext> = {},
-  device: ConfigureRuntimeDeviceOptions = {}
+  bootstrap: RuntimeBootstrapOptions = {}
 ): Promise<void> {
   const {
     loadingDelay = 850,
@@ -63,6 +67,10 @@ export async function bootstrapRuntime<
     skipLoadingScreen = false,
     maxFps
   } = options;
+  const {
+    logger = new Systems.Logger(),
+    ...device
+  } = bootstrap;
   const deviceOptions = {
     ...device,
     maxFps
@@ -82,26 +90,33 @@ export async function bootstrapRuntime<
   try {
     await Promise.all([
       loadingScreen?.start(),
-      configureRuntimeDevice(runtime, deviceOptions),
+      logger.step(
+        "device",
+        () => configureRuntimeDevice(runtime, deviceOptions)
+      ),
       waitForLoadingDelay(skipLoadingScreen ? 0 : loadingDelay)
     ]);
 
-    await loadInitialAssets(
-      runtime,
-      loadingScreen,
-      assets
+    await logger.step(
+      "assets",
+      () => loadInitialAssets(runtime, loadingScreen, assets)
     );
 
     if (scene !== undefined) {
-      await loadInitialScene(
-        runtime.world.sceneManager,
-        loadingScreen,
-        scene
+      await logger.step(
+        "scene",
+        () => loadInitialScene(
+          runtime.world.sceneManager,
+          loadingScreen,
+          scene
+        ),
+        { scene: scene.name }
       );
     }
 
     await loadingScreen?.complete();
     runtime.start();
+    traceFirstFrame(runtime, logger);
   }
   catch (value: unknown) {
     const error = toError(value);
@@ -161,6 +176,22 @@ async function loadInitialScene<TContext>(
   finally {
     sceneManager.off("sceneLoadChanged", reportProgress);
   }
+}
+
+function traceFirstFrame<TContext>(
+  runtime: Runtime<TContext>,
+  logger: Systems.Logger
+): void {
+  if (!logger.isNamespaceEnabled()) {
+    return;
+  }
+
+  logger.debug("waiting for first frame", {
+    visibility: document.visibilityState
+  });
+  void runtime.nextFrame().then(
+    () => logger.debug("first frame")
+  );
 }
 
 function waitForLoadingDelay(

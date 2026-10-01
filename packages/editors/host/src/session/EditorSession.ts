@@ -2,6 +2,7 @@
 import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import { Systems } from "@jolly-pixel/engine";
 import * as network from "@jolly-pixel/network/client";
 import {
   promptPeerIdentity,
@@ -10,6 +11,7 @@ import {
 import { toPeerMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
+import type { HostLogger } from "../debug/readDebugLogger.ts";
 import type { EditorLaunch } from "../launch/index.ts";
 import {
   AssetLeases,
@@ -55,6 +57,10 @@ export interface EditorSessionTarget {
   launch: EditorLaunch;
   accepts: string;
   kinds: Iterable<AssetDocumentKind<unknown>>;
+  /**
+   * @default a logger with every namespace disabled
+   */
+  logger?: HostLogger;
 }
 
 export interface EditorSessionOptions extends EditorSessionTarget {
@@ -86,13 +92,20 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   static async open(
     options: EditorSessionOptions
   ): Promise<EditorSession> {
-    const identity = await promptPeerIdentity({
-      title: options.identity.title,
-      storageKey: IDENTITY_STORAGE_KEY
-    });
+    const {
+      logger = new Systems.Logger()
+    } = options;
+    const identity = await logger.step(
+      "identity",
+      () => promptPeerIdentity({
+        title: options.identity.title,
+        storageKey: IDENTITY_STORAGE_KEY
+      })
+    );
 
     return EditorSession.connect({
       ...options,
+      logger,
       identity,
       client: new network.Client({
         profile: toPeerMetadata(identity)
@@ -104,10 +117,13 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   static async connect(
     options: EditorSessionConnectOptions
   ): Promise<EditorSession> {
-    const { client } = options;
-    const catalog = await openCatalog(
+    const {
       client,
-      options.catalogTimeoutMs
+      logger = new Systems.Logger()
+    } = options;
+    const catalog = await logger.step(
+      "catalog",
+      () => openCatalog(client, options.catalogTimeoutMs)
     );
 
     let session: EditorSession;
@@ -126,10 +142,18 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
     try {
       await Promise.all([
-        session.targetReady,
+        logger.step(
+          "target",
+          () => session.targetReady,
+          toTraceMeta(session.target.record)
+        ),
         ...Array.from(
           session.dependencies(),
-          (lease) => lease.ready
+          (dependency) => logger.step(
+            "dependency",
+            () => dependency.ready,
+            toTraceMeta(dependency.record)
+          )
         )
       ]);
     }
@@ -331,4 +355,13 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       }
     }
   }
+}
+
+function toTraceMeta(
+  reference: AssetReferenceData
+): Record<string, unknown> {
+  return {
+    kind: reference.kind,
+    id: reference.id
+  };
 }

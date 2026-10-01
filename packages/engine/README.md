@@ -54,6 +54,7 @@ each frame.
   - [Renderer](./docs/systems/renderer.md) — abstracts the Three.js WebGPU render pipeline.
   - [SceneManager](./docs/systems/scene-manager.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).
+  - [Logger](./docs/systems/logger.md): leveled, namespaced logging and timed steps.
 - [Asset](./docs/asset.md) — lazy-loading asset pipeline with a
   registry of loaders, a queue, and a cache.
 

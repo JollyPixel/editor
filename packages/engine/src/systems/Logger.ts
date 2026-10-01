@@ -257,6 +257,33 @@ export class Logger {
     this.#emit("fatal", msg, meta);
   }
 
+  async step<T>(
+    name: string,
+    run: () => Promise<T>,
+    meta?: Record<string, unknown>
+  ): Promise<T> {
+    const startedAt = performance.now();
+    this.debug(`${name} started`, meta);
+
+    try {
+      const result = await run();
+      this.debug(`${name} done`, {
+        ...meta,
+        ms: Math.round(performance.now() - startedAt)
+      });
+
+      return result;
+    }
+    catch (error) {
+      this.error(`${name} failed`, {
+        ...meta,
+        error
+      });
+
+      throw error;
+    }
+  }
+
   #emit(
     level: EmittedLogLevel,
     msg: string,
