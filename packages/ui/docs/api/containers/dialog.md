@@ -144,7 +144,11 @@ While confirming, the body is inert, the `actions` slot is hidden and the
 footer shows the message with its two buttons. The confirm button takes the
 focus and is the default action; the focus returns to where it was once the
 confirmation settles. `danger` gives the confirm button the `danger` variant
-and tints the footer. The footer row is exposed as the `confirmation` part.
+and tints the footer. The footer row is exposed as the `confirmation` part,
+and the message carries `role="alert"`.
+
+Escape and a backdrop click answer the confirmation with `false` and leave the
+dialog open; a second Escape closes the dialog as usual.
 
 Use [`showConfirm()`](./dialog-helpers.md) when no dialog is open.
 

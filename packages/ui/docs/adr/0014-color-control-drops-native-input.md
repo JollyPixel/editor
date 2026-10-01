@@ -27,10 +27,7 @@ Anchored placement, repositioning, focus restoration and the Escape hook live in
   the hue handle snaps to red whenever the cursor enters a corner.
 - **Holding HSVA as permanent canonical state.** Two rows bound to one colour drift apart, since
   neither ever re-reads the value.
-- **`jolly-floating` as the popup.** It is a draggable, persisted, viewport-fixed panel that expects
-  a nested Pane, not an anchored popup.
 - **An absolutely positioned panel in the shadow root.** Clipped by any scrolling ancestor, and
   colour rows live inside scrolling docks.
-- **CSS anchor positioning.** Firefox does not implement it, so placement stays in JS.
 - **Placement inside `jolly-color`.** An editor wanting a brush swatch with no property row would
   reimplement anchoring, Escape and focus restoration.

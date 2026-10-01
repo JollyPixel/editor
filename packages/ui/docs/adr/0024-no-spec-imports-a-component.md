@@ -31,11 +31,9 @@ without throwing.
   against Linux CI, and the tier is already the flaky one.
 - **Hash routing alongside the query parameter.** Two mechanisms for one job: history handling, a
   precedence rule, and two code paths to test.
-- **A fixed room name for the locking example.** Playwright runs four parallel workers against one
-  dev server, so they would see each other's peers.
 
 ## Consequences
 
 Any test that does import Lit needs a setup file registering `Document`, `ShadowRoot`,
 `CSSStyleSheet` and `HTMLTemplateElement`, because `@lit/reactive-element/node/css-tag.js` reads
-`Document.prototype` at import time. The existing `pixel-draw-renderer` setup does not.
+`Document.prototype` at import time.

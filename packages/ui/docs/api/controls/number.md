@@ -15,7 +15,9 @@
 | `value` | `number \| typeof Mixed` | `0` |
 
 Typed input accepts decimal and scientific literals, parentheses, unary signs,
-and the `+`, `-`, `*`, and `/` operators. Arrow keys commit one step. Shift
+and the `+`, `-`, `*`, and `/` operators. `,` is read as a decimal separator,
+so `1,5` is `1.5`. Anything else, such as a name or a member access, is a parse
+error shown on the field without committing. Arrow keys commit one step. Shift
 multiplies the step by ten; Alt divides it by ten.
 
 Pointer scrubbing emits `jolly-input` during movement and `jolly-change` on
