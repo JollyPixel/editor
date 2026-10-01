@@ -11,10 +11,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import {
-  ARCHIVE_MIME_TYPE,
-  type CatalogClient
-} from "@jolly-pixel/asset-server/client";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import {
   LocalStorageAdapter,
   type JollyChangeDetail,
@@ -24,19 +21,25 @@ import {
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import { AssetPath } from "../../catalog/AssetPath.ts";
 import {
   AssetTreeModel,
   folderNodeId,
   type AssetLeafData,
+  type AssetNodeData,
   type AssetRelocation
 } from "../../catalog/AssetTreeModel.ts";
+import { DraftFolders } from "../../catalog/DraftFolders.ts";
+import {
+  AssetCommands,
+  type RelocationVerb
+} from "./AssetCommands.ts";
 import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
 import "./AssetDeleteDialog.ts";
 
 // CONSTANTS
-const kProjectRoot = "the project root";
 const kKindStorageKey = "studio:asset-kind";
-const kArchiveExtension = ".zip";
+const kNewFolderName = "New folder";
 const kAllKinds: JollyOption<string> = {
   value: "",
   label: "All kinds",
@@ -56,8 +59,6 @@ export interface AssetErrorDetail {
   message: string;
 }
 
-type RelocationVerb = "rename" | "move";
-
 @customElement("asset-browser")
 export class AssetBrowser extends LitElement {
   @property({ attribute: false })
@@ -76,6 +77,9 @@ export class AssetBrowser extends LitElement {
   declare _pendingLabels: ReadonlyMap<string, string>;
 
   @state()
+  declare _drafts: DraftFolders;
+
+  @state()
   declare _kind: string;
 
   @query("jolly-tree")
@@ -85,6 +89,7 @@ export class AssetBrowser extends LitElement {
   declare _deleteDialog: AssetDeleteDialog;
 
   #catalog: CatalogClient | null = null;
+  #commands: AssetCommands | null = null;
   #storage = new LocalStorageAdapter();
 
   constructor() {
@@ -94,6 +99,7 @@ export class AssetBrowser extends LitElement {
     this._expanded = null;
     this._selected = [];
     this._pendingLabels = new Map();
+    this._drafts = DraftFolders.EMPTY;
     this._kind = this.#storage.get(kKindStorageKey) ?? "";
   }
 
@@ -104,8 +110,9 @@ export class AssetBrowser extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.#catalog?.off("change", this.#onCatalogChange);
+    this.#unlisten();
     this.#catalog = null;
+    this.#commands = null;
   }
 
   protected override createRenderRoot(): HTMLElement {
@@ -118,13 +125,14 @@ export class AssetBrowser extends LitElement {
     if (changed.has("options")) {
       this.#listen();
     }
-    else if (changed.has("_kind")) {
-      this.#onCatalogChange();
+    else if (changed.has("_kind") || changed.has("_drafts")) {
+      this.#rebuild();
     }
   }
 
   override render(): TemplateResult {
     const empty = this._selected.length === 0;
+    const single = this._selected.length === 1;
     const exportable = this.#selectedAsset() !== null;
 
     return html`
@@ -138,11 +146,18 @@ export class AssetBrowser extends LitElement {
       ></jolly-button-group>
       <jolly-toolbar label="Asset actions">
         <jolly-button
+          icon="new-folder"
+          icon-only
+          label="New folder"
+          title="New folder"
+          @click=${this.#newFolder}
+        ></jolly-button>
+        <jolly-button
           icon="pencil"
           icon-only
           label="Rename"
           title="Rename (F2)"
-          ?disabled=${empty}
+          ?disabled=${!single}
           @click=${this.#beginRename}
         ></jolly-button>
         <jolly-button
@@ -164,6 +179,7 @@ export class AssetBrowser extends LitElement {
         ></jolly-button>
       </jolly-toolbar>
       <jolly-tree
+        multiple
         renamable
         reorderable
         row-drag
@@ -194,10 +210,20 @@ export class AssetBrowser extends LitElement {
       return;
     }
 
-    this.#catalog?.off("change", this.#onCatalogChange);
+    this.#unlisten();
     this.#catalog = catalog;
-    this.#catalog?.on("change", this.#onCatalogChange);
-    this.#onCatalogChange();
+    this.#commands = catalog === null ? null : new AssetCommands({
+      catalog,
+      onError: (message) => this.#error(message)
+    });
+    this.#catalog?.on("change", this.#rebuild);
+    this.#catalog?.on("dependencies", this.#rebuild);
+    this.#rebuild();
+  }
+
+  #unlisten(): void {
+    this.#catalog?.off("change", this.#rebuild);
+    this.#catalog?.off("dependencies", this.#rebuild);
   }
 
   #toggle(
@@ -218,8 +244,8 @@ export class AssetBrowser extends LitElement {
     relocations: AssetRelocation[],
     verb: RelocationVerb
   ): Promise<void> {
-    const catalog = this.#catalog;
-    if (catalog === null) {
+    const commands = this.#commands;
+    if (commands === null) {
       return;
     }
 
@@ -231,106 +257,63 @@ export class AssetBrowser extends LitElement {
       this.#followFolder(relocation);
     }
     this._pendingLabels = labels;
+    this._drafts = this._drafts.rebased(relocations);
 
-    for (const relocation of relocations) {
-      let applied = 0;
-      try {
-        for (const rename of relocation.renames) {
-          await catalog.rename(rename.assetId, rename.to);
-          applied++;
-        }
-      }
-      catch (error) {
-        const restored = new Map(this._pendingLabels);
-        restored.delete(relocation.nodeId);
-        this._pendingLabels = restored;
-        this.#error(relocationFailure(verb, relocation, applied, error));
-
-        return;
-      }
+    const failed = await commands.relocate(relocations, verb);
+    if (failed !== null) {
+      const restored = new Map(this._pendingLabels);
+      restored.delete(failed.nodeId);
+      this._pendingLabels = restored;
+      this._drafts = this._drafts.rebased([{
+        from: failed.to,
+        to: failed.from
+      }]);
     }
   }
 
   async #delete(
-    nodeId: string
+    nodeIds: readonly string[]
   ): Promise<void> {
-    const catalog = this.#catalog;
-    const node = this._model.node(nodeId);
-    const assets = this._model.assetsUnder(nodeId);
-    if (
-      catalog === null ||
-      node?.data === undefined ||
-      assets.length === 0
-    ) {
+    const commands = this.#commands;
+    if (commands === null) {
       return;
     }
 
-    const deleted = new Set(assets.map((asset) => asset.id));
-    const dependents = new Set<string>();
-    for (const asset of assets) {
-      for (const dependent of catalog.dependentsOf(asset.id)) {
-        if (!deleted.has(dependent.id)) {
-          dependents.add(dependent.source);
-        }
-      }
-    }
-    const confirmed = await this._deleteDialog.open({
-      name: node.label,
-      folder: node.data.type === "folder",
-      assets: assets.map((asset) => asset.path.toString()),
-      dependents: [...dependents].sort()
-    });
-    if (confirmed) {
-      await this.#remove(catalog, node.label, assets);
-    }
-  }
+    const deletion = this._model.deletionOf(nodeIds);
+    if (deletion.isEmpty) {
+      this._drafts = this._drafts.without(deletion.folders);
 
-  async #remove(
-    catalog: CatalogClient,
-    name: string,
-    assets: AssetLeafData[]
-  ): Promise<void> {
-    let removed = 0;
-    try {
-      for (const asset of assets) {
-        await catalog.remove(asset.id, { force: true });
-        removed++;
-      }
-    }
-    catch (error) {
-      this.#error(assets.length === 1 ?
-        `Could not delete "${name}": ${reasonOf(error)}` :
-        `Deleted ${removed} of ${assets.length} assets under "${name}": ${reasonOf(error)}`);
-    }
-  }
-
-  async #export(
-    asset: AssetLeafData
-  ): Promise<void> {
-    const catalog = this.#catalog;
-    if (catalog === null) {
       return;
     }
 
-    try {
-      const bytes = await catalog.exportArchive(asset.id);
-      download(
-        new Blob([Uint8Array.from(bytes)], { type: ARCHIVE_MIME_TYPE }),
-        `${asset.path.stem || asset.id}${kArchiveExtension}`
-      );
+    const confirmation = await this._deleteDialog.open(deletion);
+    if (confirmation === null) {
+      return;
     }
-    catch (error) {
-      this.#error(`Could not export "${asset.path.name}": ${reasonOf(error)}`);
-    }
+
+    this._drafts = this._drafts.without(deletion.folders);
+    await commands.remove(deletion, confirmation.companions);
+  }
+
+  #selectedData(): AssetNodeData | undefined {
+    const [nodeId] = this._selected;
+
+    return nodeId === undefined ? undefined : this._model.node(nodeId)?.data;
   }
 
   #selectedAsset(): AssetLeafData | null {
-    const [nodeId] = this._selected;
-    const data = nodeId === undefined ?
-      undefined :
-      this._model.node(nodeId)?.data;
+    const data = this._selected.length === 1 ? this.#selectedData() : undefined;
 
     return data?.type === "asset" ? data : null;
+  }
+
+  #selectedFolder(): AssetPath {
+    const data = this.#selectedData();
+    if (data === undefined) {
+      return AssetPath.ROOT;
+    }
+
+    return data.type === "folder" ? data.path : data.path.parent;
   }
 
   #followFolder(
@@ -356,6 +339,19 @@ export class AssetBrowser extends LitElement {
     this._selected = this._selected.map(rebase);
   }
 
+  #plan<T>(
+    plan: () => T
+  ): T | null {
+    try {
+      return plan();
+    }
+    catch (error) {
+      this.#error(error instanceof Error ? error.message : String(error));
+
+      return null;
+    }
+  }
+
   #error(
     message: string
   ): void {
@@ -365,12 +361,18 @@ export class AssetBrowser extends LitElement {
     }));
   }
 
-  readonly #onCatalogChange = (): void => {
+  readonly #rebuild = (): void => {
     const records = [...this.#catalog?.records() ?? []];
+    this._drafts = this._drafts.unpopulated(
+      records.map((record) => AssetPath.parse(record.source))
+    );
+
     const kinds = this.#kinds;
     const model = new AssetTreeModel(records, {
       presenter: kinds,
-      kind: kinds.has(this._kind) ? this._kind : null
+      kind: kinds.has(this._kind) ? this._kind : null,
+      dependencies: this.#catalog?.dependencies,
+      folders: this._drafts
     });
     this._model = model;
     this._expanded ??= this.#catalog === null ?
@@ -395,10 +397,25 @@ export class AssetBrowser extends LitElement {
     this.#storage.set(kKindStorageKey, this._kind);
   };
 
+  readonly #newFolder = async(): Promise<void> => {
+    const parent = this.#selectedFolder();
+    const path = this._model.vacantFolder(parent, kNewFolderName);
+    const nodeId = folderNodeId(path);
+    this._drafts = this._drafts.with(path);
+    if (!parent.isRoot) {
+      this.#toggle(folderNodeId(parent), true);
+    }
+    this._selected = [nodeId];
+
+    await this.updateComplete;
+    await this._tree?.updateComplete;
+    this._tree?.beginRename(nodeId);
+  };
+
   readonly #exportSelected = (): void => {
     const asset = this.#selectedAsset();
     if (asset !== null) {
-      void this.#export(asset);
+      void this.#commands?.export(asset);
     }
   };
 
@@ -437,15 +454,9 @@ export class AssetBrowser extends LitElement {
   readonly #onRename = (
     event: HTMLElementEventMap["jolly-rename"]
   ): void => {
-    let relocation: AssetRelocation | null;
-    try {
-      relocation = this._model.renameOf(event.detail.id, event.detail.name);
-    }
-    catch (error) {
-      this.#error(reasonOf(error));
-
-      return;
-    }
+    const relocation = this.#plan(
+      () => this._model.renameOf(event.detail.id, event.detail.name)
+    );
     if (relocation !== null) {
       void this.#relocate([relocation], "rename");
     }
@@ -454,7 +465,7 @@ export class AssetBrowser extends LitElement {
   readonly #onReparent = (
     event: HTMLElementEventMap["jolly-reparent"]
   ): void => {
-    const relocations = this._model.movesOf(event.detail);
+    const relocations = this.#plan(() => this._model.movesOf(event.detail)) ?? [];
     if (relocations.length > 0) {
       void this.#relocate(relocations, "move");
     }
@@ -477,52 +488,10 @@ export class AssetBrowser extends LitElement {
   };
 
   readonly #deleteSelected = (): void => {
-    const [nodeId] = this._selected;
-    if (nodeId !== undefined) {
-      void this.#delete(nodeId);
+    if (this._selected.length > 0) {
+      void this.#delete(this._selected);
     }
   };
-}
-
-function relocationFailure(
-  verb: RelocationVerb,
-  relocation: AssetRelocation,
-  applied: number,
-  error: unknown
-): string {
-  const reason = reasonOf(error);
-  const total = relocation.renames.length;
-  const name = relocation.from.name;
-  if (total > 1 && applied > 0) {
-    const done = verb === "rename" ? "Renamed" : "Moved";
-
-    return `${done} ${applied} of ${total} assets under "${name}": ${reason}`;
-  }
-  if (verb === "rename") {
-    return `Could not rename "${name}" to "${relocation.to.name}": ${reason}`;
-  }
-
-  const folder = relocation.to.parent;
-
-  return `Could not move "${name}" to ${folder.isRoot ? kProjectRoot : `"${folder}"`}: ${reason}`;
-}
-
-function reasonOf(
-  error: unknown
-): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function download(
-  blob: Blob,
-  fileName: string
-): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.click();
-  URL.revokeObjectURL(url);
 }
 
 declare global {

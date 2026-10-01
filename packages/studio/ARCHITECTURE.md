@@ -183,9 +183,11 @@ prompt again.
 
 `StudioSession` listens to catalog `change`: a tab whose asset was deleted
 closes, a renamed asset relabels its tab. `<asset-browser>` rebuilds its
-`AssetTreeModel` from the records and keeps the expanded folders, the
+`AssetTreeModel` on `change` and `dependencies`, from the records, the
+dependency edges and its draft folders, and keeps the expanded folders, the
 selection and the kind filter. Folders are path prefixes, so a folder
-rename or delete sends one catalog command per asset under it.
+rename or delete sends one catalog command per asset under it; an owner's
+rename or move adds one per companion.
 
 ## Editor pages
 
@@ -215,7 +217,7 @@ active frame at once, the others on their next focus.
 | `src/index.ts` | boot: connection, registry, `<jolly-studio>` |
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog with offline fallback |
 | `src/seed.ts` | `createStudioProject`: handlers and seed for both back-ends |
-| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`: pure tree decisions |
+| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetCompanions`, `AssetDeletion`, `DraftFolders`: pure tree decisions |
 | `src/editors/` | `EditorRegistry`, `EditorDescriptor` |
 | `src/tabs/` | `EditorTabs`: strip, iframe stack, handshake, tab cap; `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, `<asset-browser>`, delete dialog |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, `<asset-browser>`, `AssetCommands`, delete dialog |

@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import {
   boxOf,
+  centerOf,
   dragTo,
   treeRow
 } from "@jolly-pixel/e2e";
@@ -20,7 +21,7 @@ async function openShell(
 ): Promise<void> {
   await page.goto("/?offline&username=Guest");
   await expect(page.locator("asset-browser jolly-tree").getByRole("treeitem"))
-    .toHaveCount(8);
+    .toHaveCount(4);
 }
 
 function tabNames(
@@ -89,6 +90,7 @@ test("reopens the tabs in their order after a reload", async({ page }) => {
 
 test("opens a pixel-art texture in the pixel-art editor page", async({ page }) => {
   await openShell(page);
+  await treeRow(page, kModel).getByRole("button", { name: "Expand" }).click();
   await treeRow(page, kTexture).dblclick();
 
   const frame = page.locator("#editor-frames iframe");
@@ -113,7 +115,45 @@ test("filters the asset tree by kind", async({ page }) => {
 
   await kinds.getByRole("radio", { name: "All kinds" }).click();
   await expect(page.locator("asset-browser jolly-tree").getByRole("treeitem"))
-    .toHaveCount(8);
+    .toHaveCount(4);
+});
+
+test("moves several selected rows into a new folder", async({ page }) => {
+  await openShell(page);
+  await page.locator("asset-browser")
+    .getByRole("button", { name: "New folder" })
+    .click();
+  const rename = page.locator("asset-browser").getByRole("textbox", { name: "Rename" });
+  await rename.fill("world");
+  await rename.press("Enter");
+
+  await treeRow(page, "maps").click();
+  await treeRow(page, "models").click({ modifiers: ["ControlOrMeta"] });
+  await dragTo(page, treeRow(page, "maps"), await centerOf(treeRow(page, "world")));
+
+  await expect(page.locator("asset-browser jolly-tree").getByRole("treeitem"))
+    .toHaveCount(1);
+  await treeRow(page, "world").getByRole("button", { name: "Expand" }).click();
+  await expect(treeRow(page, "maps")).toBeVisible();
+  await expect(treeRow(page, "models")).toBeVisible();
+});
+
+test("deleting an asset can keep its companion", async({ page }) => {
+  await openShell(page);
+  await treeRow(page, kMap).click();
+  await page.locator("asset-browser")
+    .getByRole("button", { name: "Delete" })
+    .click();
+
+  const dialog = page.locator("asset-delete-dialog");
+  await expect(dialog.getByText("Also delete its companion")).toBeVisible();
+  const companions = dialog.getByRole("checkbox");
+  await expect(companions).toBeChecked();
+  await companions.click();
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(treeRow(page, kMap)).toHaveCount(0);
+  await expect(treeRow(page, "overworld.tileset.json")).toBeVisible();
 });
 
 test("exports the selected asset as a ZIP archive", async({ page }) => {

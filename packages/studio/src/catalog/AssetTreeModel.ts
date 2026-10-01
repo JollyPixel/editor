@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { AssetRecordData } from "@jolly-pixel/asset";
+import type {
+  AssetRecordData,
+  AssetReferenceData
+} from "@jolly-pixel/asset";
 import type {
   IconName,
   JollyReparentDetail,
@@ -7,7 +10,10 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { AssetCompanions } from "./AssetCompanions.ts";
+import { AssetDeletion } from "./AssetDeletion.ts";
 import { AssetPath } from "./AssetPath.ts";
+import { AssetPathTakenError } from "./errors/AssetPathTakenError.ts";
 
 // CONSTANTS
 const kFolderNodePrefix = "folder:";
@@ -39,6 +45,11 @@ export interface AssetKindPresenter {
   detailFor(kind: string): string | undefined;
 }
 
+export interface AssetDependencies {
+  dependenciesOf(assetId: string): readonly AssetReferenceData[];
+  dependentsOf(assetId: string): readonly string[];
+}
+
 export interface AssetTreeOptions {
   presenter?: AssetKindPresenter;
   /**
@@ -46,6 +57,8 @@ export interface AssetTreeOptions {
    * Folder relocations and deletions still cover every asset under them.
    */
   kind?: string | null;
+  dependencies?: AssetDependencies;
+  folders?: Iterable<AssetPath>;
 }
 
 export interface AssetRename {
@@ -61,6 +74,11 @@ export interface AssetRelocation {
 }
 
 export type AssetDrop = Pick<JollyReparentDetail, "targetId" | "where">;
+
+interface AssetLeaf {
+  asset: AssetLeafData;
+  node: AssetTreeNode;
+}
 
 export function folderNodeId(
   path: AssetPath
@@ -80,7 +98,9 @@ export class AssetTreeModel {
   readonly nodes: AssetTreeNode[];
 
   #index = new Map<string, AssetTreeNode>();
-  #assets: AssetLeafData[] = [];
+  #assets = new Map<string, AssetLeafData>();
+  #companions: AssetCompanions;
+  #dependencies: AssetDependencies | undefined;
 
   constructor(
     records: Iterable<AssetRecordData>,
@@ -88,24 +108,45 @@ export class AssetTreeModel {
   ) {
     this.nodes = [];
     for (const record of records) {
-      const data: AssetLeafData = {
+      this.#assets.set(record.id, {
         type: "asset",
         id: record.id,
         kind: record.kind,
         path: AssetPath.parse(record.source)
-      };
-      this.#assets.push(data);
-      if (options.kind && options.kind !== record.kind) {
-        continue;
-      }
-      this.#add(this.#folderAt(data.path.parent), {
-        id: assetNodeId(record.id),
-        label: data.path.name,
-        icon: options.presenter?.iconFor(record.kind),
-        detail: options.presenter?.detailFor(record.kind),
-        renamable: true,
-        data
       });
+    }
+    const dependencies = options.dependencies;
+    this.#dependencies = dependencies;
+    this.#companions = dependencies === undefined ?
+      AssetCompanions.EMPTY :
+      AssetCompanions.pair(
+        this.#assets.values(),
+        (assetId) => dependencies.dependenciesOf(assetId)
+      );
+
+    const leaves = new Map<string, AssetLeaf>();
+    for (const asset of this.#assets.values()) {
+      if (!options.kind || options.kind === asset.kind) {
+        leaves.set(asset.id, {
+          asset,
+          node: assetNode(asset, options.presenter)
+        });
+      }
+    }
+    for (const { asset, node } of leaves.values()) {
+      const ownerId = this.#companions.ownerOf(asset.id);
+      const owner = ownerId === undefined ?
+        undefined :
+        leaves.get(ownerId)?.node;
+      this.#add(
+        owner === undefined ?
+          this.#folderAt(asset.path.parent) :
+          owner.children ??= [],
+        node
+      );
+    }
+    for (const folder of options.folders ?? []) {
+      this.#folderAt(folder);
     }
     sortNodes(this.nodes);
   }
@@ -126,20 +167,52 @@ export class AssetTreeModel {
     return folderIdsOf(this.nodes);
   }
 
-  assetsUnder(
-    nodeId: string
-  ): AssetLeafData[] {
-    const data = this.#index.get(nodeId)?.data;
-    if (data === undefined) {
-      return [];
-    }
-    if (data.type === "asset") {
-      return [data];
+  vacantFolder(
+    parent: AssetPath,
+    name: string
+  ): AssetPath {
+    let path = parent.child(name);
+    for (let index = 2; this.#isTaken(path); index++) {
+      path = parent.child(`${name} ${index}`);
     }
 
-    return this.#assets.filter(
-      (asset) => asset.path.isUnder(data.path)
+    return path;
+  }
+
+  deletionOf(
+    nodeIds: Iterable<string>
+  ): AssetDeletion {
+    const targets = [...nodeIds].flatMap(
+      (nodeId) => this.#index.get(nodeId)?.data ?? []
     );
+    const assets = new Map<string, AssetLeafData>();
+    for (const target of targets) {
+      for (const asset of this.#assetsUnder(target)) {
+        assets.set(asset.id, asset);
+      }
+    }
+    const companions = new Map<string, AssetLeafData>();
+    for (const target of targets) {
+      if (target.type !== "asset") {
+        continue;
+      }
+      for (const companion of this.#companionsOf(target.id)) {
+        if (!assets.has(companion.id)) {
+          companions.set(companion.id, companion);
+        }
+      }
+    }
+
+    return new AssetDeletion({
+      targets,
+      assets: [...assets.values()],
+      companions: [...companions.values()],
+      dependents: this.#dependentsOf(assets.values()),
+      dependentsWithCompanions: this.#dependentsOf([
+        ...assets.values(),
+        ...companions.values()
+      ])
+    });
   }
 
   renameOf(
@@ -154,10 +227,14 @@ export class AssetTreeModel {
     const to = data.type === "asset" ?
       data.path.withNameKeepingExtension(name) :
       data.path.withName(name);
+    if (to.equals(data.path)) {
+      return null;
+    }
 
-    return to.equals(data.path)
-      ? null
-      : this.#relocate(nodeId, data, to);
+    const relocation = this.#relocate(nodeId, data, to);
+    this.#assertVacant([relocation]);
+
+    return relocation;
   }
 
   dropFolder(
@@ -193,13 +270,16 @@ export class AssetTreeModel {
       return [];
     }
 
-    return this.#movedData(detail.movedIds)
+    const relocations = this.#movedData(detail.movedIds)
       .filter(([, data]) => this.#canMove(data, folder))
       .map(([nodeId, data]) => this.#relocate(
         nodeId,
         data,
         data.path.moveUnder(folder)
       ));
+    this.#assertVacant(relocations);
+
+    return relocations;
   }
 
   withLabels(
@@ -221,9 +301,22 @@ export class AssetTreeModel {
       }
     }
 
-    return moved.filter(([, data]) => !moved.some(
-      ([, other]) => other.type === "folder" && data.path.isUnder(other.path)
+    const movedAssets = new Set(moved.flatMap(
+      ([, data]) => (data.type === "asset" ? [data.id] : [])
     ));
+
+    return moved.filter(([, data]) => {
+      if (data.type === "asset") {
+        const owner = this.#companions.ownerOf(data.id);
+        if (owner !== undefined && movedAssets.has(owner)) {
+          return false;
+        }
+      }
+
+      return !moved.some(
+        ([, other]) => other.type === "folder" && data.path.isUnder(other.path)
+      );
+    });
   }
 
   #canMove(
@@ -243,17 +336,91 @@ export class AssetTreeModel {
     data: AssetNodeData,
     to: AssetPath
   ): AssetRelocation {
+    const renames = this.#assetsUnder(data).map((asset) => {
+      return {
+        assetId: asset.id,
+        to: asset.path.rebase(data.path, to).toString()
+      };
+    });
+    if (data.type === "asset") {
+      for (const companion of this.#companionsOf(data.id)) {
+        renames.push({
+          assetId: companion.id,
+          to: to.withName(`${to.stem}${companion.path.extension}`).toString()
+        });
+      }
+    }
+
     return {
       nodeId,
       from: data.path,
       to,
-      renames: this.assetsUnder(nodeId).map((asset) => {
-        return {
-          assetId: asset.id,
-          to: asset.path.rebase(data.path, to).toString()
-        };
-      })
+      renames
     };
+  }
+
+  #assertVacant(
+    relocations: readonly AssetRelocation[]
+  ): void {
+    const renames = relocations.flatMap((relocation) => relocation.renames);
+    const moving = new Set(renames.map((rename) => rename.assetId));
+    const taken = new Set(
+      [...this.#assets.values()]
+        .filter((asset) => !moving.has(asset.id))
+        .map((asset) => asset.path.toString())
+    );
+    for (const rename of renames) {
+      if (taken.has(rename.to)) {
+        throw new AssetPathTakenError(rename.to);
+      }
+      taken.add(rename.to);
+    }
+  }
+
+  #isTaken(
+    path: AssetPath
+  ): boolean {
+    return this.#index.has(folderNodeId(path)) ||
+      [...this.#assets.values()].some(
+        (asset) => asset.path.equals(path) || asset.path.isUnder(path)
+      );
+  }
+
+  #assetsUnder(
+    data: AssetNodeData
+  ): AssetLeafData[] {
+    if (data.type === "asset") {
+      return [data];
+    }
+
+    return [...this.#assets.values()].filter(
+      (asset) => asset.path.isUnder(data.path)
+    );
+  }
+
+  #companionsOf(
+    ownerId: string
+  ): AssetLeafData[] {
+    return this.#companions
+      .companionsOf(ownerId)
+      .flatMap((assetId) => this.#assets.get(assetId) ?? []);
+  }
+
+  #dependentsOf(
+    assets: Iterable<AssetLeafData>
+  ): string[] {
+    const deleted = new Set([...assets].map((asset) => asset.id));
+    const dependents = new Set<string>();
+    for (const assetId of deleted) {
+      for (const dependentId of this.#dependencies?.dependentsOf(assetId) ?? []) {
+        const dependent = this.#assets.get(dependentId);
+        if (dependent !== undefined && !deleted.has(dependentId)) {
+          dependents.add(dependent.path.toString());
+        }
+      }
+    }
+
+    return [...dependents].sort();
   }
 
   #folderAt(
@@ -292,6 +459,20 @@ export class AssetTreeModel {
     siblings.push(node);
     this.#index.set(node.id, node);
   }
+}
+
+function assetNode(
+  data: AssetLeafData,
+  presenter: AssetKindPresenter | undefined
+): AssetTreeNode {
+  return {
+    id: assetNodeId(data.id),
+    label: data.path.name,
+    icon: presenter?.iconFor(data.kind),
+    detail: presenter?.detailFor(data.kind),
+    renamable: true,
+    data
+  };
 }
 
 function relabel(

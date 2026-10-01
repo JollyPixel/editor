@@ -10,7 +10,7 @@ gitignored.
 
 `createStudioProject` supplies the handlers and the seed to both back-ends: the dev server and the
 offline workspace in the browser. The seed writes only the paths the root lacks, so pointing the
-studio at a real project is safe. Seeded ids are fixed (`map-overworld`, `tileset-default`,
+studio at a real project is safe. Seeded ids are fixed (`map-overworld`, `tileset-overworld`,
 `model-default`, `model-texture`) so the README and the tests can name them.
 
 "Workspace" already names four things in this repository. The studio never gives it a fifth

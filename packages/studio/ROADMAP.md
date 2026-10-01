@@ -20,6 +20,9 @@ in back-end handlers, editor code stays in iframes.
   joins `AssetKindDescriptor` so the shell never reads a handler.
 - A new texture or tileset gets the handler's `defaultSize`, which now only
   sizes assets created without content.
+- A new voxel map comes with a same-named tileset beside it, already linked,
+  so the pair is a [companion](./docs/adr/0013-companions-are-derived-from-names-and-edges.md)
+  from the start.
 - Tests: asset-server creates a contentless asset of each built-in kind and
   rejects an unknown kind; the browser action sends the command.
 - Exit: create a map, a model and a texture from the tree and open each.

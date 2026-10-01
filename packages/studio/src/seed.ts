@@ -32,7 +32,7 @@ import {
 
 // CONSTANTS
 const kTilesetUrl = "textures/tileset.png";
-const kTilesetAssetId = "tileset-default";
+const kTilesetAssetId = "tileset-overworld";
 const kMapAssetId = "map-overworld";
 const kModelTextureAssetId = "model-texture";
 const kModelAssetId = "model-default";
@@ -63,7 +63,7 @@ export async function createStudioProject(
       textureAssetKind()
     ],
     seed: {
-      "tilesets/tileset.tileset.json": {
+      "maps/overworld.tileset.json": {
         id: kTilesetAssetId,
         kind: TILESET_KIND,
         content: () => encodeTilesetDocument(tileset)
@@ -81,7 +81,7 @@ export async function createStudioProject(
           ]
         })
       },
-      "textures/model.pixelart": {
+      "models/model.pixelart": {
         id: kModelTextureAssetId,
         kind: PIXEL_ART_KIND,
         content: () => createPixelArtDocument(kModelTextureSize)
