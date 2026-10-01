@@ -16,6 +16,8 @@ An element that declares tokens of its own stops inheriting the scope around
 it, and one appended to `document.body` never inherited any. Both resolve the
 page theme with `ambientThemeMode()` / `documentThemeMode()` and stamp it back
 on themselves — `jolly-dialog` and the facade's floating `Pane` already do.
+`AmbientThemeController` keeps an open element on the page theme while it
+changes.
 
 `jolly-theme-preferences` renders the theme and density controls, applies their
 values to a target scope, and persists them when `storage-key` is set.

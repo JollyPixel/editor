@@ -183,4 +183,19 @@ test.describe("jolly-console", () => {
 
     await expect(page.getByRole("option")).toHaveCount(0);
   });
+
+  test("the open console follows the page theme through auto", async({ page }) => {
+    const element = page.locator("jolly-console");
+    await page.keyboard.press("Control+k");
+    await expect(element).toHaveAttribute("theme", "dark");
+
+    await prompt(page).fill("theme auto");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#theme")).toHaveText("auto");
+    await expect(element).not.toHaveAttribute("theme");
+
+    await prompt(page).fill("theme light");
+    await page.keyboard.press("Enter");
+    await expect(element).toHaveAttribute("theme", "light");
+  });
 });

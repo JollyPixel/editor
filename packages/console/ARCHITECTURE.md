@@ -110,8 +110,9 @@ sequenceDiagram
 
 An error thrown while binding or by the handler becomes an error entry;
 `submit()` never rethrows. `ctx.signal` aborts when the command is replaced or
-unregistered while it runs. After each submit the element re-adopts the ambient
-theme, so `theme light` restyles the open console.
+unregistered while it runs. While open, the element re-adopts the ambient theme
+whenever a `theme` attribute changes, so `theme light` restyles the open
+console.
 
 ## Registration lifetime
 

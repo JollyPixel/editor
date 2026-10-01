@@ -65,6 +65,21 @@ test("ambientThemeMode falls back to the page's scope host", () => {
   detached.remove();
 });
 
+test("ambientThemeMode prefers the page's scope host over a parent's own scheme", () => {
+  const scope = document.createElement("jolly-scope");
+  scope.style.colorScheme = "light";
+  const parent = document.createElement("div");
+  parent.style.colorScheme = "dark";
+  const element = document.createElement("div");
+  parent.append(element);
+  document.body.append(scope, parent);
+
+  assert.equal(ambientThemeMode(element), "light");
+
+  scope.remove();
+  parent.remove();
+});
+
 test("documentThemeMode skips scope hosts left on both schemes", () => {
   const auto = document.createElement("jolly-scope");
   auto.style.colorScheme = "light dark";
@@ -108,4 +123,38 @@ test("adoptAmbientTheme leaves a theme the author set", () => {
   assert.equal(element.getAttribute("theme"), "light");
 
   parent.remove();
+});
+
+test("adoptAmbientTheme drops an adopted theme when the page picks no side", () => {
+  const parent = themedParent("dark");
+  const element = document.createElement("div");
+  parent.append(element);
+
+  const first = adoptAmbientTheme(element, null);
+  parent.style.colorScheme = "light dark";
+  const second = adoptAmbientTheme(element, first);
+
+  assert.equal(first, "dark");
+  assert.equal(second, null);
+  assert.equal(element.hasAttribute("theme"), false);
+
+  parent.remove();
+});
+
+test("adoptAmbientTheme ignores focus held inside the element", () => {
+  const scope = document.createElement("jolly-scope");
+  scope.style.colorScheme = "light";
+  const element = document.createElement("div");
+  element.setAttribute("theme", "dark");
+  const input = document.createElement("input");
+  input.style.colorScheme = "dark";
+  element.append(input);
+  document.body.append(scope, element);
+  input.focus();
+
+  assert.equal(adoptAmbientTheme(element, "dark"), "light");
+  assert.equal(element.getAttribute("theme"), "light");
+
+  scope.remove();
+  element.remove();
 });

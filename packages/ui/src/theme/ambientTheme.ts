@@ -21,7 +21,7 @@ export function ambientThemeMode(
   }
 
   const active = element.ownerDocument.activeElement;
-  if (active !== null) {
+  if (active !== null && !element.contains(active)) {
     const mode = themeModeOf(
       getComputedStyle(active)
     );
@@ -30,11 +30,12 @@ export function ambientThemeMode(
     }
   }
 
-  const inherited = parent === null
-    ? null
-    : themeModeOf(getComputedStyle(parent));
+  const documentMode = documentThemeMode(element.ownerDocument);
+  if (documentMode !== null || parent === null) {
+    return documentMode;
+  }
 
-  return inherited ?? documentThemeMode(element.ownerDocument);
+  return themeModeOf(getComputedStyle(parent));
 }
 
 export function adoptAmbientTheme(
@@ -48,9 +49,11 @@ export function adoptAmbientTheme(
 
   const inherited = ambientThemeMode(element);
   if (inherited === null) {
-    return adopted;
+    element.removeAttribute("theme");
   }
-  element.setAttribute("theme", inherited);
+  else if (inherited !== configured) {
+    element.setAttribute("theme", inherited);
+  }
 
   return inherited;
 }

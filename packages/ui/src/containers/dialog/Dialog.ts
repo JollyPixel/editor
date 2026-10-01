@@ -35,10 +35,7 @@ import type {
 } from "../../icon/registry.ts";
 import { applyAreaTone } from "../../theme/areaTone.ts";
 import { themeStyles } from "../../theme/styles/themeStyles.ts";
-import {
-  adoptAmbientTheme,
-  type ResolvedThemeMode
-} from "../../theme/ambientTheme.ts";
+import { AmbientThemeController } from "../../theme/AmbientThemeController.ts";
 import { inputLayers } from "../../interaction/input/InputLayers.ts";
 
 // CONSTANTS
@@ -91,7 +88,7 @@ export class Dialog extends LitElement {
     tone: "",
     intent: ""
   });
-  #inheritedTheme: ResolvedThemeMode | null = null;
+  #theme = new AmbientThemeController(this);
   #releaseInputLayer: (() => void) | null = null;
 
   constructor() {
@@ -228,7 +225,7 @@ export class Dialog extends LitElement {
   }
 
   async showModal(): Promise<void> {
-    this.#inheritedTheme = adoptAmbientTheme(this, this.#inheritedTheme);
+    this.#theme.follow();
     await this.updateComplete;
     if (!this._dialog.open) {
       this._dialog.showModal();
@@ -455,6 +452,7 @@ export class Dialog extends LitElement {
   };
 
   #onClose = () => {
+    this.#theme.stop();
     this.#settleInlineConfirm(false);
     this.#releaseLayer();
     emitContainerEvent(this, "jolly-close", {
