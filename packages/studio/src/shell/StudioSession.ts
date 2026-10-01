@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { ShellCommand } from "@jolly-pixel/editor.host";
+import {
+  LocalStorageAdapter,
+  type StorageAdapter
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "../catalog/AssetKindSet.ts";
@@ -8,8 +12,13 @@ import { AssetPath } from "../catalog/AssetPath.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import {
   EditorTabs,
+  type EditorTabOpenOptions,
   type EditorTabsOptions
 } from "../tabs/EditorTabs.ts";
+import { SavedTabs } from "../tabs/SavedTabs.ts";
+
+// CONSTANTS
+export const TABS_STORAGE_KEY = "studio:tabs";
 
 export interface StudioCatalog {
   record(
@@ -28,7 +37,11 @@ export interface StudioCatalog {
 export interface StudioSessionOptions {
   catalog: StudioCatalog;
   editors: EditorRegistry;
-  tabs: Omit<EditorTabsOptions, "onShellCommand">;
+  tabs: Omit<EditorTabsOptions, "onShellCommand" | "onChange">;
+  /**
+   * @default new LocalStorageAdapter()
+   */
+  storage?: StorageAdapter;
 }
 
 export class StudioSession {
@@ -37,39 +50,92 @@ export class StudioSession {
 
   #catalog: StudioCatalog;
   #editors: EditorRegistry;
+  #storage: StorageAdapter;
+  #restoring = false;
 
   constructor(
     options: StudioSessionOptions
   ) {
     this.#catalog = options.catalog;
     this.#editors = options.editors;
+    this.#storage = options.storage ?? new LocalStorageAdapter();
     this.kinds = options.editors.kindSet();
     this.tabs = new EditorTabs({
       ...options.tabs,
-      onShellCommand: this.#onShellCommand
+      onShellCommand: this.#onShellCommand,
+      onChange: this.#saveTabs
     });
     this.#catalog.on("change", this.#syncTabs);
   }
 
   async openAsset(
-    assetId: string
+    assetId: string,
+    options: EditorTabOpenOptions = {}
   ): Promise<boolean> {
     const record = this.#catalog.record(assetId);
     if (record === undefined) {
       return false;
     }
 
-    const url = this.#editors.pageUrl(record.kind, assetId);
+    const url = this.#editors.pageUrl(
+      record.kind,
+      assetId
+    );
     if (url === undefined) {
       return false;
     }
 
-    return this.tabs.open({
-      id: assetId,
-      label: AssetPath.parse(record.source).name,
-      url,
-      icon: this.kinds.iconFor(record.kind)
-    });
+    return this.tabs.open(
+      {
+        id: assetId,
+        label: AssetPath.parse(
+          record.source
+        ).name,
+        url,
+        icon: this.kinds.iconFor(record.kind)
+      },
+      options
+    );
+  }
+
+  async restoreTabs(): Promise<void> {
+    const saved = SavedTabs.parse(
+      this.#storage.get(TABS_STORAGE_KEY)
+    );
+
+    this.#restoring = true;
+    try {
+      for (const id of saved.ids) {
+        if (this.tabs.size >= this.tabs.cap) {
+          break;
+        }
+
+        await this.openAsset(
+          id,
+          { focus: false }
+        );
+      }
+    }
+    finally {
+      this.#restoring = false;
+    }
+    if (!this.tabs.focus(saved.active)) {
+      this.#saveTabs();
+    }
+  }
+
+  reloadEditor(
+    name: string
+  ): void {
+    for (const assetId of this.tabs.ids()) {
+      const record = this.#catalog.record(assetId);
+      if (
+        record !== undefined &&
+        this.#editors.editorFor(record.kind)?.name === name
+      ) {
+        this.tabs.reload(assetId);
+      }
+    }
   }
 
   dispose(): void {
@@ -85,6 +151,21 @@ export class StudioSession {
     }
   };
 
+  readonly #saveTabs = (): void => {
+    if (this.#restoring) {
+      return;
+    }
+
+    const saved = new SavedTabs(
+      this.tabs.ids(),
+      this.tabs.active
+    );
+    this.#storage.set(
+      TABS_STORAGE_KEY,
+      JSON.stringify(saved)
+    );
+  };
+
   readonly #syncTabs = (): void => {
     for (const assetId of this.tabs.ids()) {
       const record = this.#catalog.record(assetId);
@@ -92,7 +173,9 @@ export class StudioSession {
         this.tabs.close(assetId);
       }
       else {
-        const recordLabel = AssetPath.parse(record.source).name;
+        const recordLabel = AssetPath.parse(
+          record.source
+        ).name;
 
         this.tabs.relabel(
           assetId,

@@ -28,6 +28,7 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
+    "build:watch": "tsc -b --watch",
     "dev": "vite",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",

@@ -147,14 +147,9 @@ export class TilesetState {
   readonly pixels: PixelBuffer;
   readonly document: TilesetDocument;
 
-  #defaultSize: Vec2;
-  #defaultTileSize: number;
-
   constructor(
     options: TilesetStateOptions
   ) {
-    this.#defaultSize = { ...options.size };
-    this.#defaultTileSize = options.tileSize;
     this.pixels = new PixelBuffer({
       size: options.size
     });
@@ -202,14 +197,14 @@ export class TilesetState {
   }
 
   clear(): void {
-    const { x, y } = this.#defaultSize;
+    const size = this.pixels.size();
 
     this.pixels.replacePixels(
-      new Uint8ClampedArray(x * y * 4),
-      this.#defaultSize
+      new Uint8ClampedArray(size.x * size.y * 4),
+      size
     );
     this.pixels.uvRegions.clear();
-    this.document.clear(this.#defaultTileSize);
+    this.document.clear(this.document.tileSize);
   }
 }
 

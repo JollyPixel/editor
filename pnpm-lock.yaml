@@ -895,6 +895,9 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e
+      '@jolly-pixel/editor.pixel-art':
+        specifier: workspace:*
+        version: link:../editors/pixel-art
       '@jolly-pixel/editor.voxel-map':
         specifier: workspace:*
         version: link:../editors/voxel-map

@@ -22,6 +22,9 @@ import {
   suggestTextureName
 } from "../../../src/textures/textures.ts";
 import {
+  TEXTURE_DOCUMENT_KIND
+} from "../../../src/textures/textureDocumentKind.ts";
+import {
   keybindConsole,
   KeyBindingSettings,
   type PixelDrawPanel
@@ -29,7 +32,6 @@ import {
 import { DemoShell } from "./DemoShell.ts";
 import { previewConsole } from "./previewConsole.ts";
 import { TextureTabs } from "./TextureTabs.ts";
-import { DEMO_TEXTURE_KIND } from "./textureKind.ts";
 import { TEXTURE_SIZE } from "../config.ts";
 import {
   openDemoPreview,
@@ -93,7 +95,7 @@ export class PixelArtDemo {
     panel.keyBindings = keyBindingSettings.keyBindings;
 
     const { room, record } = session.target;
-    const target = DEMO_TEXTURE_KIND.createDocument(room);
+    const target = TEXTURE_DOCUMENT_KIND.createDocument(room);
     target.document.buffer.resize(TEXTURE_SIZE);
     room.join();
 

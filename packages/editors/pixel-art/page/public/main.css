@@ -1,0 +1,38 @@
+:root {
+  color-scheme: light dark;
+
+  --page-bg: light-dark(#d7e3ee, #0d151d);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  background: var(--page-bg);
+}
+
+jolly-scope {
+  display: contents;
+}
+
+pixel-draw-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+pixel-draw-panel:not([data-ready]) {
+  visibility: hidden;
+}

@@ -41,9 +41,24 @@ describe("EditorRegistry", () => {
 
     assert.equal(
       registry.pageUrl("voxelmap", "map a&b"),
-      "/editors/voxel-map/?target=map+a%26b"
+      "editors/voxel-map/?target=map+a%26b"
     );
     assert.equal(registry.pageUrl("texture", "map"), undefined);
+  });
+
+  test("builds a page url that stays under the shell's sub-path", () => {
+    const registry = new EditorRegistry().registerEditor(kMapEditor);
+    const url = registry.pageUrl("voxelmap", "map");
+    assert.ok(url);
+
+    assert.equal(
+      new URL(url, "https://example.com/studio/").pathname,
+      "/studio/editors/voxel-map/"
+    );
+    assert.equal(
+      new URL(url, "https://example.com/studio/index.html").pathname,
+      "/studio/editors/voxel-map/"
+    );
   });
 
   test("puts the registry query before the target", () => {

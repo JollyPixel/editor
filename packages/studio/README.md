@@ -4,10 +4,13 @@ One dev app that opens a JollyPixel project: one asset back-end for every
 editor, a tree of the project's assets, and one editor page per tab.
 
 If the catalog does not respond, Studio offers Retry or an offline workspace
-stored in this browser. Add `?offline` to start there directly. The map and
-model editor frames share that workspace through BroadcastChannel.
+stored in this browser. Add `?offline` to start there directly. The editor
+frames share that workspace through BroadcastChannel.
 
-Design in `SPEC.md`, phases in `PLAN.md`.
+Decisions in the [ADRs](./docs/adr/README.md), open work in
+[ROADMAP.md](./ROADMAP.md), structure in
+[ARCHITECTURE.md](./ARCHITECTURE.md), vocabulary in
+[GLOSSARY.md](./GLOSSARY.md).
 
 ## Run
 
@@ -16,10 +19,13 @@ pnpm -r build
 pnpm --filter @jolly-pixel/studio dev
 ```
 
+The studio `build` script builds the pixel-art editor page
+(`build:page`), which the pixel-art library build leaves out.
+
 For static hosting, run
 `pnpm --filter @jolly-pixel/studio build:static` and serve `dist/` at the
-site root. The build includes both editor pages and starts offline without
-an asset server.
+site root or under any sub-path. The build includes the three editor pages
+and starts offline without an asset server.
 
 The back-end root is `packages/studio/project/`, created and seeded on first
 boot. Point `JOLLY_PROJECT` at another directory, absolute or relative to
@@ -35,6 +41,8 @@ The page prompts for a username once, then lists the catalog in a tree.
 Activating a row (double-click or Enter) opens its editor in a tab, or
 focuses the tab if it is already open. Rows whose kind has no editor page say
 `no editor`. Four editor tabs at most: a fifth asks which one to close.
+Open tabs come back after a reload, in their order; only the active one
+loads its editor until another is focused.
 
 Each tab is an iframe on `/editors/<name>/`. The page posts `jolly-ready`,
 the shell answers with `jolly-launch` and the target id, and the editor can
@@ -46,11 +54,19 @@ opened directly:
 ```
 http://localhost:5173/editors/voxel-map/?target=map-overworld
 http://localhost:5173/editors/voxel-model/?target=model-default
+http://localhost:5173/editors/pixel-art/?target=model-texture
 ```
 
-Editor pages come from each editor package's `dist/`, so rebuild an editor
-after changing it, or after changing `@jolly-pixel/editor.host`, which the
-pages bundle. Editor code has no HMR here.
+Editor pages come from each editor package's built page folder (`dist/`,
+`dist-page/` for pixel-art), and they bundle `@jolly-pixel/editor.host` and
+`@jolly-pixel/ui`. To see editor, host or ui changes while the studio runs,
+start the watch builds in a second terminal:
+
+```bash
+pnpm --filter @jolly-pixel/studio dev:editors
+```
+
+Each rebuilt page reloads its open tabs. Editor code has no HMR here.
 
 ## Layout
 

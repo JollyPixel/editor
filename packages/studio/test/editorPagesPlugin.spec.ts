@@ -22,10 +22,17 @@ import {
 
 // Import Internal Dependencies
 import {
+  EDITOR_PAGE_REBUILT_EVENT,
+  type EditorPageRebuilt
+} from "../src/editors/EditorDescriptor.ts";
+import {
   createEditorPagesHandler,
+  EDITOR_PAGE_SETTLE_MS,
   editorPagesPlugin,
   editorsModule,
-  EDITORS_MODULE_ID
+  EDITORS_MODULE_ID,
+  watchEditorPages,
+  type EditorPagesServer
 } from "../vite/editorPagesPlugin.ts";
 import type { EditorPackage } from "../vite/editorManifest.ts";
 
@@ -341,6 +348,63 @@ describe("editorPagesPlugin", () => {
       ),
       kBundle
     );
+  });
+});
+
+describe("watchEditorPages", () => {
+  const mapDist = path.resolve("pkg", "voxel-map", "dist");
+  const modelDist = path.resolve("pkg", "voxel-model", "dist");
+
+  function pagesServer(): EditorPagesServer & {
+    watched: string[];
+    sent: Array<[string, EditorPageRebuilt]>;
+    emit(file: string): void;
+  } {
+    const listeners: Array<(eventName: string, file: string) => void> = [];
+    const watched: string[] = [];
+    const sent: Array<[string, EditorPageRebuilt]> = [];
+
+    return {
+      watched,
+      sent,
+      watcher: {
+        add: (paths) => watched.push(...paths),
+        on: (_event, listener) => listeners.push(listener)
+      },
+      ws: {
+        send: (event, payload) => sent.push([event, payload])
+      },
+      emit: (file) => {
+        for (const listener of listeners) {
+          listener("change", file);
+        }
+      }
+    };
+  }
+
+  test("announces a rebuilt page once its writes settle", (context) => {
+    context.mock.timers.enable({ apis: ["setTimeout"] });
+    const server = pagesServer();
+    watchEditorPages(server, [
+      voxelMapEditor(mapDist),
+      {
+        ...voxelMapEditor(modelDist),
+        name: "voxel-model"
+      }
+    ]);
+
+    server.emit(path.join(mapDist, "assets", "index.js"));
+    context.mock.timers.tick(EDITOR_PAGE_SETTLE_MS - 1);
+    server.emit(path.join(mapDist, "index.html"));
+    server.emit(path.join(modelDist, "index.html"));
+    server.emit(path.resolve("pkg", "voxel-map", "src", "index.ts"));
+    context.mock.timers.tick(EDITOR_PAGE_SETTLE_MS);
+
+    assert.deepEqual(server.watched, [mapDist, modelDist]);
+    assert.deepEqual(server.sent, [
+      [EDITOR_PAGE_REBUILT_EVENT, { name: "voxel-map" }],
+      [EDITOR_PAGE_REBUILT_EVENT, { name: "voxel-model" }]
+    ]);
   });
 });
 

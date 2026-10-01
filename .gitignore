@@ -149,3 +149,6 @@ blob-report/
 packages/editors/voxel-map/assets/
 packages/editors/voxel-model/assets/
 packages/studio/project/
+
+# Pixel-art editor page served by the studio
+packages/editors/pixel-art/dist-page/

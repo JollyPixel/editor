@@ -150,18 +150,31 @@ describe("tilesetAssetKind", () => {
     assert.equal(state.document.materialGroups.get("gold")?.metalness, 1);
   });
 
-  test("a delete resets the tileset to its defaults", () => {
+  test("a delete empties the tileset and keeps its sizes", () => {
     const handler = tilesetAssetKind({ tileSize: 32 });
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(seeded()));
+    state.pixels.drawPixels(
+      [{ x: 1, y: 1 }],
+      {
+        r: 255,
+        g: 0,
+        b: 0,
+        a: 255
+      }
+    );
 
     foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "textures/stone.tileset.json",
       kind: TILESET_KIND
     }));
 
-    assert.deepEqual(state.pixels.size(), { x: 256, y: 256 });
-    assert.equal(state.document.tileSize, 32);
+    assert.deepEqual(state.pixels.size(), { x: 16, y: 16 });
+    assert.deepEqual(
+      state.pixels.pixels(),
+      new Uint8ClampedArray(16 * 16 * 4)
+    );
+    assert.equal(state.document.tileSize, 8);
     assert.equal(state.document.blocks.size, 0);
     assert.equal(state.document.materialGroups.size, 0);
   });

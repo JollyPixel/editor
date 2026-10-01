@@ -13,13 +13,14 @@ import {
 // CONSTANTS
 const kMap = "overworld.voxelmap.json";
 const kModel = "model.voxelmodel.json";
+const kTexture = "model.pixelart";
 
 async function openShell(
   page: Page
 ): Promise<void> {
   await page.goto("/?offline&username=Guest");
   await expect(page.locator("asset-browser jolly-tree").getByRole("treeitem"))
-    .toHaveCount(7);
+    .toHaveCount(8);
 }
 
 function tabNames(
@@ -61,6 +62,46 @@ test("starts on home and reorders editor tabs behind it", async({ page }) => {
   await expect(page.locator("#studio-home")).toBeVisible();
 });
 
+test("reopens the tabs in their order after a reload", async({ page }) => {
+  await openShell(page);
+  await treeRow(page, kMap).dblclick();
+  await treeRow(page, kModel).dblclick();
+  const home = page.locator("#editor-tabs").getByRole("tab", { name: "Home" });
+  const model = page.locator("#editor-tabs").getByRole("tab", { name: kModel });
+  const homeBox = await boxOf(home);
+  await dragTo(page, model, {
+    x: homeBox.x + (homeBox.width * 0.75),
+    y: homeBox.y + (homeBox.height / 2)
+  });
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await model.click();
+  await expect(model).toHaveAttribute("aria-selected", "true");
+
+  await page.reload();
+
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await expect(model).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#editor-frames iframe")).toHaveCount(1);
+
+  await page.locator("#editor-tabs").getByRole("tab", { name: kMap }).click();
+  await expect(page.locator("#editor-frames iframe")).toHaveCount(2);
+});
+
+test("opens a pixel-art texture in the pixel-art editor page", async({ page }) => {
+  await openShell(page);
+  await treeRow(page, kTexture).dblclick();
+
+  const frame = page.locator("#editor-frames iframe");
+  await expect(frame).toHaveAttribute(
+    "src",
+    /^editors\/pixel-art\/\?.*target=model-texture/
+  );
+  const editor = frame.contentFrame();
+  await expect(editor.locator("html"))
+    .toHaveAttribute("data-editor-state", "ready");
+  await expect(editor.locator("pixel-draw-panel")).toBeVisible();
+});
+
 test("filters the asset tree by kind", async({ page }) => {
   await openShell(page);
   const kinds = page.locator("asset-browser jolly-button-group");
@@ -72,7 +113,7 @@ test("filters the asset tree by kind", async({ page }) => {
 
   await kinds.getByRole("radio", { name: "All kinds" }).click();
   await expect(page.locator("asset-browser jolly-tree").getByRole("treeitem"))
-    .toHaveCount(7);
+    .toHaveCount(8);
 });
 
 test("exports the selected asset as a ZIP archive", async({ page }) => {

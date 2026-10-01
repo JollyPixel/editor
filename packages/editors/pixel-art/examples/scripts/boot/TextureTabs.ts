@@ -22,7 +22,9 @@ import type {
   TextureAddRequestDetail,
   TextureCloseRequestDetail
 } from "../../../src/index.ts";
-import { DEMO_TEXTURE_KIND } from "./textureKind.ts";
+import {
+  TEXTURE_DOCUMENT_KIND
+} from "../../../src/textures/textureDocumentKind.ts";
 
 export interface TabTexture {
   readonly room: PixelArtRoom;
@@ -120,7 +122,7 @@ export class TextureTabs {
         `${name}${PIXEL_ART_EXTENSION}`,
         documentFromCanvas(source)
       );
-      const lease = this.#session.assets.open(DEMO_TEXTURE_KIND, assetId);
+      const lease = this.#session.assets.open(TEXTURE_DOCUMENT_KIND, assetId);
       lease.document.buffer.loadTexture(source);
       const canvas = this.#panel.addTexture({
         id: assetId,

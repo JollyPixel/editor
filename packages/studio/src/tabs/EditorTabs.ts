@@ -50,16 +50,26 @@ export interface EditorTabsOptions {
    */
   confirmEvict?: (tab: EditorTab) => boolean | Promise<boolean>;
   onShellCommand?: (command: ShellCommand, from: EditorTab) => void;
+  onChange?: () => void;
   /**
    * @default readDebugLogger()
    */
   logger?: HostLogger;
 }
 
+export interface EditorTabOpenOptions {
+  /**
+   * When false, the tab joins the strip without its frame, which loads on
+   * first focus.
+   * @default true
+   */
+  focus?: boolean;
+}
+
 interface OpenTab {
   tab: EditorTab;
   item: HTMLElement;
-  frame: HTMLIFrameElement;
+  frame: HTMLIFrameElement | null;
 }
 
 export class EditorTabs {
@@ -72,6 +82,7 @@ export class EditorTabs {
   #launchOrigin: string;
   #confirmEvict: (tab: EditorTab) => boolean | Promise<boolean>;
   #onShellCommand: ((command: ShellCommand, from: EditorTab) => void) | undefined;
+  #onChange: (() => void) | undefined;
   #logger: HostLogger;
   #open = new Map<string, OpenTab>();
   #active: string | null = null;
@@ -87,6 +98,7 @@ export class EditorTabs {
     this.#launchOrigin = options.launchOrigin ?? location.origin;
     this.#confirmEvict = options.confirmEvict ?? (() => true);
     this.#onShellCommand = options.onShellCommand;
+    this.#onChange = options.onChange;
     this.#logger = (options.logger ?? readDebugLogger()).child({
       namespace: "studio.tabs"
     });
@@ -138,40 +150,42 @@ export class EditorTabs {
   }
 
   async open(
-    tab: EditorTab
+    tab: EditorTab,
+    options: EditorTabOpenOptions = {}
   ): Promise<boolean> {
+    const { focus = true } = options;
+
     while (!this.#open.has(tab.id) && this.#open.size >= this.cap) {
       const [victim] = this.#open.values();
-      if (victim === undefined || !await this.#confirmEvict(victim.tab)) {
+      if (
+        victim === undefined ||
+        !(await this.#confirmEvict(victim.tab))
+      ) {
         return false;
       }
       this.close(victim.tab.id);
     }
-    if (this.#open.has(tab.id)) {
+    if (!this.#open.has(tab.id)) {
+      const item = document.createElement(kTabTag);
+      Object.assign(item, {
+        value: tab.id,
+        label: tab.label,
+        icon: tab.icon ?? "",
+        closable: true
+      });
+      this.#strip.append(item);
+      this.#open.set(tab.id, {
+        tab,
+        item,
+        frame: null
+      });
+    }
+    if (focus) {
       return this.focus(tab.id);
     }
+    this.#onChange?.();
 
-    const item = document.createElement(kTabTag);
-    Object.assign(item, {
-      value: tab.id,
-      label: tab.label,
-      icon: tab.icon ?? "",
-      closable: true
-    });
-    const frame = document.createElement("iframe");
-    frame.hidden = true;
-    frame.title = tab.label;
-    frame.allow = "keyboard-map";
-    frame.src = tab.url;
-    this.#strip.append(item);
-    this.#frames.append(frame);
-    this.#open.set(tab.id, {
-      tab,
-      item,
-      frame
-    });
-
-    return this.focus(tab.id);
+    return true;
   }
 
   focus(
@@ -179,6 +193,7 @@ export class EditorTabs {
   ): boolean {
     if (id === HOME_TAB_ID) {
       this.#show(null);
+      this.#onChange?.();
 
       return true;
     }
@@ -191,6 +206,7 @@ export class EditorTabs {
     this.#open.delete(id);
     this.#open.set(id, entry);
     this.#show(entry);
+    this.#onChange?.();
 
     return true;
   }
@@ -205,9 +221,31 @@ export class EditorTabs {
 
     this.#open.delete(id);
     entry.item.remove();
-    entry.frame.remove();
+    entry.frame?.remove();
     if (this.#active === id) {
-      this.focus([...this.#open.keys()].at(-1) ?? HOME_TAB_ID);
+      this.focus(
+        [...this.#open.keys()].at(-1) ?? HOME_TAB_ID
+      );
+    }
+    else {
+      this.#onChange?.();
+    }
+
+    return true;
+  }
+
+  reload(
+    id: string
+  ): boolean {
+    const entry = this.#open.get(id);
+    if (entry === undefined) {
+      return false;
+    }
+
+    entry.frame?.remove();
+    entry.frame = null;
+    if (this.#active === id) {
+      this.#show(entry);
     }
 
     return true;
@@ -225,8 +263,11 @@ export class EditorTabs {
     const others = [...this.#strip.children].filter(
       (item) => item !== entry.item
     );
-    const reference = others[Math.max(index, kFirstEditorIndex)] ?? null;
+    const reference = others[
+      Math.max(index, kFirstEditorIndex)
+    ] ?? null;
     this.#strip.insertBefore(entry.item, reference);
+    this.#onChange?.();
 
     return true;
   }
@@ -245,16 +286,21 @@ export class EditorTabs {
       label
     };
     Object.assign(entry.item, { label });
-    entry.frame.title = label;
+    if (entry.frame !== null) {
+      entry.frame.title = label;
+    }
 
     return true;
   }
 
   dispose(): void {
     this.#listening.abort();
-    for (const id of this.ids()) {
-      this.close(id);
+    for (const entry of this.#open.values()) {
+      entry.item.remove();
+      entry.frame?.remove();
     }
+    this.#open.clear();
+    this.#active = null;
     this.#homeItem.remove();
   }
 
@@ -264,9 +310,26 @@ export class EditorTabs {
     this.#active = entry?.tab.id ?? null;
     this.#strip.value = this.active;
     this.#home.hidden = entry !== null;
-    for (const other of this.#open.values()) {
-      other.frame.hidden = other !== entry;
+    if (entry !== null && entry.frame === null) {
+      entry.frame = this.#createFrame(entry.tab);
     }
+    for (const other of this.#open.values()) {
+      if (other.frame !== null) {
+        other.frame.hidden = other !== entry;
+      }
+    }
+  }
+
+  #createFrame(
+    tab: EditorTab
+  ): HTMLIFrameElement {
+    const frame = document.createElement("iframe");
+    frame.title = tab.label;
+    frame.allow = "keyboard-map";
+    frame.src = tab.url;
+    this.#frames.append(frame);
+
+    return frame;
   }
 
   #entryOf(
@@ -276,7 +339,7 @@ export class EditorTabs {
       return undefined;
     }
     for (const entry of this.#open.values()) {
-      if (entry.frame.contentWindow === source) {
+      if (entry.frame?.contentWindow === source) {
         return entry;
       }
     }
@@ -297,7 +360,7 @@ export class EditorTabs {
         target: entry.tab.id,
         origin: this.#launchOrigin
       });
-      entry.frame.contentWindow?.postMessage(
+      entry.frame?.contentWindow?.postMessage(
         {
           type: LAUNCH_MESSAGE_TYPE,
           target: entry.tab.id
@@ -311,7 +374,10 @@ export class EditorTabs {
         command: event.data.command,
         target: event.data.target
       });
-      this.#onShellCommand?.(event.data, entry.tab);
+      this.#onShellCommand?.(
+        event.data,
+        entry.tab
+      );
     }
   };
 }

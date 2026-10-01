@@ -3,16 +3,13 @@ import {
   CANVAS_HOVER_CHANGE_EVENT,
   type PixelDrawPanel
 } from "../../../src/index.ts";
+import { PanelScope } from "../../../src/panel/PanelScope.ts";
 import type { DemoPreview } from "./DemoPreview.ts";
-
-// CONSTANTS
-const kScopeAttributes = ["theme", "density"];
 
 export class DemoShell {
   readonly #panel: PixelDrawPanel;
-  readonly #scope: HTMLElement;
+  readonly #scope: PanelScope;
   readonly #preview: DemoPreview | null;
-  readonly #scopeObserver: MutationObserver;
   readonly #resumeKeyboard: () => void;
 
   constructor(
@@ -21,50 +18,29 @@ export class DemoShell {
     preview: DemoPreview | null
   ) {
     this.#panel = panel;
-    this.#scope = scope;
     this.#preview = preview;
 
     panel.addEventListener("theme-change", this.#applyTheme);
     panel.addEventListener("texture-change", this.#followActiveTexture);
-    this.#scopeObserver = new MutationObserver(this.#followScope);
-    this.#scopeObserver.observe(scope, {
-      attributes: true,
-      attributeFilter: kScopeAttributes
-    });
+    this.#scope = new PanelScope(panel, scope);
     this.#resumeKeyboard = preview === null ?
       () => void 0 :
       preview.editorRuntime.suspendKeyboardOnHover(
         panel,
         CANVAS_HOVER_CHANGE_EVENT
       );
-    this.#followScope();
     this.#applyTheme();
   }
 
   dispose(): void {
-    this.#scopeObserver.disconnect();
+    this.#scope.dispose();
     this.#panel.removeEventListener("theme-change", this.#applyTheme);
     this.#panel.removeEventListener("texture-change", this.#followActiveTexture);
     this.#resumeKeyboard();
     this.#preview?.scene.destroy();
   }
 
-  readonly #followScope = (): void => {
-    for (const name of kScopeAttributes) {
-      const value = this.#scope.getAttribute(name);
-      if (value === null) {
-        this.#panel.removeAttribute(name);
-      }
-      else {
-        this.#panel.setAttribute(name, value);
-      }
-    }
-  };
-
   readonly #applyTheme = (): void => {
-    const { dataset } = document.documentElement;
-    dataset.theme = this.#panel.theme;
-    dataset.resolvedTheme = this.#panel.resolvedTheme;
     this.#preview?.scene.setAppearance(this.#panel.resolvedTheme);
   };
 

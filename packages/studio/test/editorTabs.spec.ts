@@ -399,6 +399,75 @@ describe("EditorTabs", () => {
     assert.equal(frameOf("map-1").title, "renamed.voxelmap.json");
   });
 
+  test("opens a tab in the background without loading its frame", async() => {
+    const { tabs, frames, itemValues, frameOf } = harness();
+    await tabs.open(kMap);
+
+    assert.equal(await tabs.open(kModel, { focus: false }), true);
+
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
+    assert.equal(tabs.active, "map-1");
+    assert.equal(frames.querySelectorAll("iframe").length, 1);
+
+    tabs.focus("model-1");
+
+    assert.equal(frameOf("model-1").hidden, false);
+    assert.equal(frameOf("map-1").hidden, true);
+  });
+
+  test("reports each open, focus, move and close", async() => {
+    let changes = 0;
+    const { tabs } = harness({
+      onChange: () => {
+        changes++;
+      }
+    });
+
+    await tabs.open(kMap);
+    await tabs.open(kModel, { focus: false });
+    tabs.focus(HOME_TAB_ID);
+    tabs.move("model-1", 1);
+    tabs.close("map-1");
+    tabs.relabel("model-1", "renamed.voxelmodel.json");
+
+    assert.equal(changes, 5);
+  });
+
+  test("reloads the active frame and defers an inactive one", async() => {
+    const { tabs, frames, frameOf } = harness();
+    await tabs.open(kMap);
+    await tabs.open(kModel);
+    const model = frameOf("model-1");
+
+    assert.equal(tabs.reload("model-1"), true);
+    assert.equal(tabs.reload("map-1"), true);
+    assert.equal(tabs.reload("missing"), false);
+
+    assert.notEqual(frameOf("model-1"), model);
+    assert.equal(frameOf("model-1").hidden, false);
+    assert.equal(frames.querySelectorAll("iframe").length, 1);
+
+    tabs.focus("map-1");
+
+    assert.equal(frames.querySelectorAll("iframe").length, 2);
+    assert.equal(frameOf("map-1").hidden, false);
+  });
+
+  test("dispose reports no change", async() => {
+    let changes = 0;
+    const { tabs } = harness({
+      onChange: () => {
+        changes++;
+      }
+    });
+    await tabs.open(kMap);
+    changes = 0;
+
+    tabs.dispose();
+
+    assert.equal(changes, 0);
+  });
+
   test("dispose removes every tab and stops listening", async() => {
     const { tabs, strip, frames } = harness();
     await tabs.open(kMap);

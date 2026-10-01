@@ -63,14 +63,17 @@ describe("readEditorPackages", () => {
   });
 
   test("reads the editor packages installed in the studio", () => {
-    const [voxelMap, voxelModel] = readEditorPackages([
+    const [voxelMap, voxelModel, pixelArt] = readEditorPackages([
       "@jolly-pixel/editor.voxel-map",
-      "@jolly-pixel/editor.voxel-model"
+      "@jolly-pixel/editor.voxel-model",
+      "@jolly-pixel/editor.pixel-art"
     ]);
 
     assert.deepEqual(voxelMap.kinds, ["voxelmap"]);
     assert.deepEqual(voxelModel.kinds, ["voxelmodel"]);
+    assert.deepEqual(pixelArt.kinds, ["pixelart"]);
     assert.match(voxelMap.dist, /[\\/]voxel-map[\\/]dist$/);
+    assert.match(pixelArt.dist, /[\\/]pixel-art[\\/]dist-page$/);
   });
 
   test("rejects a package without an editor manifest", async() => {

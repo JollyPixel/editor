@@ -70,6 +70,23 @@ pnpm --filter @jolly-pixel/editor.pixel-art dev
 
 Open `http://localhost:3000` to see the interactive demo.
 
+## 🖼️ Editor page
+
+`page/` is the editor page the [studio](../../studio/README.md) opens for
+`pixelart` assets, declared by the `jollypixel.editor` field of
+`package.json`. `PixelArtEditor` mounts `<pixel-draw-panel>` over the launch
+target, with presence and the stored key bindings. It has no 3D preview and
+no demo query parameters. The demo and the page share `PanelScope` and
+`TEXTURE_DOCUMENT_KIND` from `src/`.
+
+```bash
+pnpm --filter @jolly-pixel/editor.pixel-art build:page
+```
+
+The page builds to `dist-page/`, leaving the library's `dist/` alone.
+`build:page:static` builds the variant that always starts offline, for the
+studio's static build.
+
 ## 📚 API
 
 - [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)

@@ -30,7 +30,7 @@ await createAssetBackend({
 });
 ```
 
-The handler claims `.pixelart` files. `defaultSize` is used when a state is created or cleared; it defaults to 32 by 32. The renderer package owns the document codec. Use `MemoryAssetSource` and an in-memory event store for an ephemeral workspace.
+The handler claims `.pixelart` files. `defaultSize` is the size of a texture created without content; it defaults to 32 by 32. A deleted texture keeps its size and loses its pixels and UV regions. The renderer package owns the document codec. Use `MemoryAssetSource` and an in-memory event store for an ephemeral workspace.
 
 ### Connect a document
 
