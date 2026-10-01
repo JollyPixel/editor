@@ -1,32 +1,13 @@
 // Import Internal Dependencies
 import type { InputActions } from "#src/input/InputActions.ts";
 
-/*
- * Recorded arguments for every InputActions callback, keyed by callback name.
- * Typing to `keyof InputActions` makes a mistyped key a compile error instead
- * of a silently-undefined read.
- */
 export type InputActionCalls = Record<keyof InputActions, unknown[][]>;
 
-// Return values for callbacks that control drag tracking or browser defaults.
 export interface MakeActionsOptions {
   onPrimaryDownReturns?: boolean;
   onSecondaryDownReturns?: boolean;
-  onCopyReturns?: boolean;
-  onPasteReturns?: boolean;
-  onDeleteReturns?: boolean;
-  onUndoReturns?: boolean;
-  onRedoReturns?: boolean;
-  onRotateReturns?: boolean;
-  onFlipHorizontalReturns?: boolean;
-  onFlipVerticalReturns?: boolean;
 }
 
-/**
- * Builds a spying `InputActions` plus a `calls` recorder. Each callback pushes
- * its arguments onto `calls[name]`; the `*Returns` options drive the return
- * value of the callbacks that report back to the InputController.
- */
 export function makeActions(
   options: MakeActionsOptions = {}
 ): {
@@ -47,19 +28,7 @@ export function makeActions(
     onCanvasHover: [],
     onTextureCursorMove: [],
     onMouseUp: [],
-    onShiftDown: [],
-    onShiftUp: [],
-    onSpaceDown: [],
-    onSpaceUp: [],
-    onBlur: [],
-    onCopy: [],
-    onPaste: [],
-    onDelete: [],
-    onUndo: [],
-    onRedo: [],
-    onRotate: [],
-    onFlipHorizontal: [],
-    onFlipVertical: []
+    onBlur: []
   };
 
   const actions: InputActions = {
@@ -110,60 +79,8 @@ export function makeActions(
     onMouseUp: () => {
       calls.onMouseUp.push([]);
     },
-    onShiftDown: () => {
-      calls.onShiftDown.push([]);
-    },
-    onShiftUp: () => {
-      calls.onShiftUp.push([]);
-    },
-    onSpaceDown: () => {
-      calls.onSpaceDown.push([]);
-    },
-    onSpaceUp: () => {
-      calls.onSpaceUp.push([]);
-    },
     onBlur: () => {
       calls.onBlur.push([]);
-    },
-    onCopy: () => {
-      calls.onCopy.push([]);
-
-      return options.onCopyReturns ?? false;
-    },
-    onPaste: () => {
-      calls.onPaste.push([]);
-
-      return options.onPasteReturns ?? false;
-    },
-    onDelete: () => {
-      calls.onDelete.push([]);
-
-      return options.onDeleteReturns ?? false;
-    },
-    onUndo: () => {
-      calls.onUndo.push([]);
-
-      return options.onUndoReturns ?? false;
-    },
-    onRedo: () => {
-      calls.onRedo.push([]);
-
-      return options.onRedoReturns ?? false;
-    },
-    onRotate: () => {
-      calls.onRotate.push([]);
-
-      return options.onRotateReturns ?? false;
-    },
-    onFlipHorizontal: () => {
-      calls.onFlipHorizontal.push([]);
-
-      return options.onFlipHorizontalReturns ?? false;
-    },
-    onFlipVertical: () => {
-      calls.onFlipVertical.push([]);
-
-      return options.onFlipVerticalReturns ?? false;
     }
   };
 

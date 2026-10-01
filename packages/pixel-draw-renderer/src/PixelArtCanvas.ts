@@ -23,11 +23,8 @@ import { FillMode } from "./input/modes/FillMode.ts";
 import { SelectMode } from "./input/modes/SelectMode.ts";
 import { UVMode } from "./input/modes/UVMode.ts";
 import { MoveMode } from "./input/modes/MoveMode.ts";
-import { InputController } from "./input/InputController.ts";
-import type {
-  Keybindings,
-  KeybindingsMap
-} from "./input/Keybindings.ts";
+import { PointerController } from "./input/PointerController.ts";
+import type { CanvasShortcuts } from "./input/CanvasShortcuts.ts";
 import type { WindowLike } from "./input/WindowLike.ts";
 import type {
   CanvasViewport
@@ -120,13 +117,12 @@ export interface PixelArtCanvasOptions {
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
-  keybindings?: Partial<KeybindingsMap>;
 }
 
 export class PixelArtCanvas {
   #parentHtmlElement: HTMLDivElement;
   #view: CanvasView;
-  #input: InputController;
+  #input: PointerController;
 
   #edits: EditPipeline;
   #onDrawEnd?: () => void;
@@ -151,6 +147,7 @@ export class PixelArtCanvas {
   readonly viewport: CanvasViewport;
   readonly uv: UVMap;
   readonly tools: Toolset;
+  readonly shortcuts: CanvasShortcuts;
   readonly peerPresence: PeerPresence;
   readonly selectionEvents: Pick<Emitter<SelectEngineEvent>, "on" | "off">;
 
@@ -278,13 +275,14 @@ export class PixelArtCanvas {
       ]
     });
 
-    this.#input = new InputController({
+    this.shortcuts = this.#router;
+    this.#input = new PointerController({
       canvas: this.#view.renderer.canvas(),
       viewport: this.#view.viewport,
       window: options.window,
       actions: this.#router,
-      keybindings: options.keybindings,
-      shouldPanOnPrimary: () => this.#router.mode === "move",
+      shouldPanOnPrimary: () => this.#router.panHeld ||
+        this.#router.mode === "move",
       onCtrlWheel: (delta) => {
         const mode = this.#router.mode;
         if (
@@ -372,10 +370,6 @@ export class PixelArtCanvas {
 
   get zoom(): Zoom {
     return this.#view.viewport.zoom;
-  }
-
-  get keybindings(): Keybindings {
-    return this.#input.keybindings;
   }
 
   centerTexture(): void {

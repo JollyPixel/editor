@@ -55,6 +55,16 @@ describe("Controls.isEditableTarget", () => {
     );
   });
 
+  test("ignores inputs that do not take text entry", () => {
+    const range = createElement("input");
+    range.setAttribute("type", "range");
+    const search = createElement("input");
+    search.setAttribute("type", "search");
+
+    assert.equal(isEditableTarget({ target: range }), false);
+    assert.equal(isEditableTarget({ target: search }), true);
+  });
+
   test("tolerates a missing or non object target", () => {
     assert.equal(
       isEditableTarget({}),

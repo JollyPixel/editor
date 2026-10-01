@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { KeyCode } from "./code.ts";
+import {
+  isKeyCode,
+  type KeyCode
+} from "./code.ts";
 import {
   isKeyChordLetter,
   resolveKeyLetter,
@@ -7,6 +10,7 @@ import {
 } from "./letter.ts";
 import type { KeyboardLayout } from "./layout.ts";
 import { isApplePlatform } from "../../platform.ts";
+import { InvalidKeyChordError } from "./errors/InvalidKeyChordError.ts";
 
 // CONSTANTS
 const kNamedKeyLabels: Partial<Record<KeyCode, string>> = {
@@ -81,7 +85,13 @@ export class KeyChord {
   static parse(
     chord: KeyChordString
   ): KeyChord {
-    const parts = chord.split("+");
+    return KeyChord.from(chord);
+  }
+
+  static from(
+    value: string
+  ): KeyChord {
+    const parts = value.split("+");
     const target = parts.pop() ?? "";
     const modifiers = {
       mod: parts.includes("Mod"),
@@ -89,9 +99,19 @@ export class KeyChord {
       alt: parts.includes("Alt")
     };
 
-    return isKeyChordLetter(target) ?
-      new KeyChord({ ...modifiers, key: target }) :
-      new KeyChord({ ...modifiers, code: target as KeyCode });
+    let chord: KeyChord | null = null;
+    if (isKeyChordLetter(target)) {
+      chord = new KeyChord({ ...modifiers, key: target });
+    }
+    else if (isKeyCode(target)) {
+      chord = new KeyChord({ ...modifiers, code: target });
+    }
+
+    if (chord === null || chord.toString() !== value) {
+      throw new InvalidKeyChordError(value);
+    }
+
+    return chord;
   }
 
   readonly code: KeyCode | null;
@@ -160,6 +180,18 @@ export class KeyChord {
       this.alt ? "Alt" : null,
       key
     ].filter((part) => part !== null).join("+");
+  }
+
+  toString(): KeyChordString {
+    const prefix: KeyChordModifierPrefix = `${
+      this.mod ? "Mod+" : ""
+    }${
+      this.shift ? "Shift+" : ""
+    }${
+      this.alt ? "Alt+" : ""
+    }`;
+
+    return `${prefix}${this.key ?? this.code ?? ""}` as KeyChordString;
   }
 
   #label(

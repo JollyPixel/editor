@@ -383,13 +383,6 @@ export function mockContextOf(
   return context;
 }
 
-/** The RGBA8 pixel buffer backing a mocked canvas. */
-export function canvasPixels(
-  canvas: HTMLCanvasElement
-): Uint8ClampedArray {
-  return mockContextOf(canvas).pixels;
-}
-
 export function readPixel(
   pixels: Uint8ClampedArray,
   pos: { x: number; y: number; },

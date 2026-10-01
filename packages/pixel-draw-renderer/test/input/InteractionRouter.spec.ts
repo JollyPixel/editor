@@ -9,7 +9,11 @@ import assert from "node:assert/strict";
 import { InteractionRouter } from "#src/input/InteractionRouter.ts";
 import { InteractionMode } from "#src/input/modes/InteractionMode.ts";
 import type { Viewport } from "#src/rendering/Viewport.ts";
-import type { Mode, Vec2 } from "#src/types.ts";
+import type {
+  Mode,
+  RotationDirection,
+  Vec2
+} from "#src/types.ts";
 
 class FakeMode extends InteractionMode {
   readonly id: Mode;
@@ -55,8 +59,48 @@ class FakeMode extends InteractionMode {
     this.calls.push("up");
   }
 
+  onLineHeldChange(
+    held: boolean
+  ): void {
+    this.calls.push(held ? "line-held" : "line-released");
+  }
+
+  onBlur(): void {
+    this.calls.push("blur");
+  }
+
+  onCopy(): boolean {
+    this.calls.push("copy");
+
+    return true;
+  }
+
+  onPaste(): boolean {
+    this.calls.push("paste");
+
+    return false;
+  }
+
   onDelete(): boolean {
     this.calls.push("delete");
+
+    return true;
+  }
+
+  onRotate(direction: RotationDirection): boolean {
+    this.calls.push(`rotate:${direction}`);
+
+    return true;
+  }
+
+  onFlipHorizontal(): boolean {
+    this.calls.push("flip-horizontal");
+
+    return false;
+  }
+
+  onFlipVertical(): boolean {
+    this.calls.push("flip-vertical");
 
     return true;
   }
@@ -186,16 +230,54 @@ describe("InteractionRouter", () => {
     );
   });
 
-  test("routes edit actions to the active mode", () => {
+  test("routes edit shortcuts to the active mode and returns whether it handled them", () => {
     const { router, modes } = makeRouter({
       modes: [new FakeMode("select")],
       defaultMode: "select"
     });
 
-    const handled = router.onDelete();
+    const handled = [
+      router.copy(),
+      router.paste(),
+      router.delete(),
+      router.rotate("ccw"),
+      router.flipHorizontal(),
+      router.flipVertical()
+    ];
 
-    assert.strictEqual(handled, true);
-    assert.deepStrictEqual(modes[0].calls, ["delete"]);
+    assert.deepStrictEqual(handled, [true, false, true, true, false, true]);
+    assert.deepStrictEqual(
+      modes[0].calls,
+      ["copy", "paste", "delete", "rotate:ccw", "flip-horizontal", "flip-vertical"]
+    );
+  });
+
+  test("lineHeld reports each change once to the active mode", () => {
+    const { router, modes } = makeRouter();
+
+    router.lineHeld = true;
+    router.lineHeld = true;
+    router.lineHeld = false;
+    router.lineHeld = false;
+
+    assert.strictEqual(router.lineHeld, false);
+    assert.deepStrictEqual(modes[0].calls, ["line-held", "line-released"]);
+  });
+
+  test("blur clears both held modifiers without a separate release", () => {
+    const { router, recorder, modes } = makeRouter({
+      modes: [new FakeMode("paint", "crosshair")],
+      defaultMode: "paint"
+    });
+
+    router.panHeld = true;
+    router.lineHeld = true;
+    router.onBlur();
+
+    assert.strictEqual(router.panHeld, false);
+    assert.strictEqual(router.lineHeld, false);
+    assert.deepStrictEqual(modes[0].calls, ["line-held", "blur"]);
+    assert.deepStrictEqual(recorder.cursor, ["grab", "crosshair"]);
   });
 
   test("handles pan and zoom itself, never touching the active mode", () => {
@@ -221,16 +303,17 @@ describe("InteractionRouter", () => {
     assert.deepStrictEqual(recorder.cursor, ["grabbing", "crosshair"]);
   });
 
-  test("Space arms a grab cursor and a pan restores to grab while it stays held", () => {
+  test("panHeld arms a grab cursor and a pan restores to grab while it stays held", () => {
     const { router, recorder } = makeRouter({
       modes: [new FakeMode("paint", "crosshair")],
       defaultMode: "paint"
     });
 
-    router.onSpaceDown();
+    router.panHeld = true;
+    router.panHeld = true;
     router.onPanStart();
     router.onPanEnd();
-    router.onSpaceUp();
+    router.panHeld = false;
 
     assert.deepStrictEqual(
       recorder.cursor,
@@ -254,8 +337,8 @@ describe("InteractionRouter", () => {
       }
     });
 
-    assert.strictEqual(router.onUndo(), true);
-    assert.strictEqual(router.onRedo(), false);
+    assert.strictEqual(router.undo(), true);
+    assert.strictEqual(router.redo(), false);
     assert.strictEqual(undo, 1);
     assert.strictEqual(redo, 1);
   });

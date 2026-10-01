@@ -46,6 +46,11 @@ export abstract class StrokeMode extends InteractionMode {
     this.#line.paintMode = this.#paintMode;
   }
 
+  #releaseLine(): void {
+    this.#line.lineHeld = false;
+    this.#line.cancelIfArmed();
+  }
+
   onExit(): void {
     this.#highlight.hide();
     this.#line.cancelIfArmed();
@@ -158,9 +163,17 @@ export abstract class StrokeMode extends InteractionMode {
     }
   }
 
-  onShiftDown(): void {
+  onLineHeldChange(
+    held: boolean
+  ): void {
+    if (!held) {
+      this.#releaseLine();
+
+      return;
+    }
+
     this.#claimEngines();
-    this.#line.shiftHeld = true;
+    this.#line.lineHeld = true;
 
     if (this.#brush.isActive === "primary") {
       this.#stopDrawing();
@@ -177,13 +190,7 @@ export abstract class StrokeMode extends InteractionMode {
     this.#line.arm("mousedown");
   }
 
-  onShiftUp(): void {
-    this.#line.shiftHeld = false;
-    this.#line.cancelIfArmed();
-  }
-
   onBlur(): void {
-    this.#line.shiftHeld = false;
-    this.#line.cancelIfArmed();
+    this.#releaseLine();
   }
 }

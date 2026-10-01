@@ -4,6 +4,7 @@ import { Window } from "happy-dom";
 // Import Internal Dependencies
 import {
   Keyboard,
+  type KeyboardOptions,
   type KeyCode
 } from "../../../src/index.ts";
 import * as mocks from "../../mocks/index.ts";
@@ -56,9 +57,12 @@ export interface KeyboardFixture {
   documentAdapter: KeyboardDocumentAdapter;
 }
 
-export function createConnectedKeyboardFixture(): KeyboardFixture {
+export function createConnectedKeyboardFixture(
+  options: Omit<KeyboardOptions, "documentAdapter"> = {}
+): KeyboardFixture {
   const documentAdapter = new KeyboardDocumentAdapter();
   const keyboard = new Keyboard({
+    ...options,
     documentAdapter
   });
   keyboard.connect();

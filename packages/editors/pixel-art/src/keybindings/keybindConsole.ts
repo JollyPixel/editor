@@ -3,30 +3,30 @@ import type {
   CommandConsole,
   RegistrationHandle
 } from "@jolly-pixel/console";
-import { KEYBINDING_ACTIONS } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { KeybindingSettings } from "./KeybindingSettings.ts";
+import type { KeyBindingSettings } from "./KeyBindingSettings.ts";
 
 export interface KeybindConsoleContext {
-  keybindings: KeybindingSettings;
+  keyBindingSettings: KeyBindingSettings;
 }
 
 export function keybindConsole(
   commands: CommandConsole,
-  { keybindings }: KeybindConsoleContext
+  { keyBindingSettings }: KeybindConsoleContext
 ): RegistrationHandle {
   const namespace = commands.registerNamespace("keybind", {
     description: "Pixel-art keyboard shortcuts"
   });
+  const { actions } = keyBindingSettings.keyBindings;
 
-  for (const action of KEYBINDING_ACTIONS) {
+  for (const action of actions) {
     namespace.registerVariable(action, {
       type: "string",
       description: `Shortcut for ${action}, comma-separated for several`,
-      get: () => keybindings.bindingsOf(action).join(", "),
+      get: () => keyBindingSettings.bindingsOf(action).join(", "),
       set: (value) => {
-        keybindings.assign(action, parseBindingList(value));
+        keyBindingSettings.assign(action, parseBindingList(value));
       }
     });
   }
@@ -37,15 +37,17 @@ export function keybindConsole(
       {
         name: "action",
         type: "enum",
-        enumValues: KEYBINDING_ACTIONS
+        enumValues: actions
       }
     ],
     execute: ({ action }, ctx) => {
-      keybindings.reset(action);
+      keyBindingSettings.reset(action);
       ctx.print(
         action === undefined ?
           "Every shortcut restored" :
-          `${action} restored to ${keybindings.bindingsOf(action).join(", ")}`
+          `${action} restored to ${
+            keyBindingSettings.bindingsOf(action).join(", ")
+          }`
       );
     }
   });

@@ -1,3 +1,3 @@
-export * from "./KeybindingSettings.ts";
-export * from "./applyKeybindings.ts";
+export * from "./KeyBindingSettings.ts";
 export * from "./keybindConsole.ts";
+export * from "./pixelArtKeyBindings.ts";

@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  InvalidKeyChordError,
   KeyChord,
-  type KeyChordEvent
+  type KeyChordEvent,
+  type KeyChordString
 } from "../../../src/index.ts";
 
 function keydown(
@@ -172,5 +174,47 @@ describe("Controls.KeyChord", () => {
     for (const [chord, label] of cases) {
       assert.equal(KeyChord.parse(chord).format({ apple: false, layout }), label);
     }
+  });
+
+  test("from() accepts every chord that parse() reads", () => {
+    for (const value of ["Mod+Shift+Alt+z", "KeyQ", "Shift+Delete", "Digit1"]) {
+      assert.equal(KeyChord.from(value).toString(), value);
+    }
+  });
+
+  test("from() rejects unknown keys, modifiers, and orderings", () => {
+    const invalid = [
+      "",
+      "mod+z",
+      "Mod+Z",
+      "Mod+",
+      "Ctrl+z",
+      "Shift+Mod+z",
+      "Mod+Mod+z",
+      "Space+z",
+      "NotAKey"
+    ];
+
+    for (const value of invalid) {
+      assert.throws(
+        () => KeyChord.from(value),
+        (error) => error instanceof InvalidKeyChordError && error.chord === value
+      );
+    }
+  });
+
+  test("parse() rejects a string cast past its type like from()", () => {
+    assert.throws(
+      () => KeyChord.parse("mod+z" as KeyChordString),
+      InvalidKeyChordError
+    );
+  });
+
+  test("toString() writes the canonical chord", () => {
+    assert.equal(
+      new KeyChord({ alt: true, mod: true, key: "z" }).toString(),
+      "Mod+Alt+z"
+    );
+    assert.equal(new KeyChord({ code: "Space" }).toString(), "Space");
   });
 });

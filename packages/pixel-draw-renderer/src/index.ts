@@ -96,14 +96,7 @@ export type {
   SelectionRect,
   Vec2
 } from "./types.ts";
-export {
-  DEFAULT_KEYBINDINGS,
-  KEYBINDING_ACTIONS,
-  Keybindings,
-  type Keybinding,
-  type KeybindingAction,
-  type KeybindingsMap
-} from "./input/Keybindings.ts";
+export type { CanvasShortcuts } from "./input/CanvasShortcuts.ts";
 export type { WindowLike } from "./input/WindowLike.ts";
 export { decodeRasterBlob } from "./clipboard/selectionImage.ts";
 export type {
@@ -119,8 +112,6 @@ export {
   placeSelection,
   type SelectionPlacementOptions
 } from "./tools/selectionPlacement.ts";
-export { InvalidKeybindingError } from "./input/errors/InvalidKeybindingError.ts";
-export { KeybindingConflictError } from "./input/errors/KeybindingConflictError.ts";
 export {
   UVMap,
   type UVMapEvent,

@@ -2,12 +2,6 @@
 import type { Viewport } from "../rendering/Viewport.ts";
 import type { Vec2 } from "../types.ts";
 import type { InputActions } from "./InputActions.ts";
-import {
-  Keybindings,
-  type KeybindingAction,
-  type KeybindingsMap
-} from "./Keybindings.ts";
-import { isEditableTarget } from "./utils.ts";
 import type { WindowLike } from "./WindowLike.ts";
 
 // CONSTANTS
@@ -49,7 +43,7 @@ function isMouseButtonPressed(
   return (buttons & buttonMask) !== 0;
 }
 
-export interface InputControllerOptions {
+export interface PointerControllerOptions {
   canvas: HTMLCanvasElement;
   viewport: Viewport;
   actions: InputActions;
@@ -58,11 +52,6 @@ export interface InputControllerOptions {
    * @default window
    */
   window?: WindowLike;
-  /**
-   * Keybinding overrides.
-   * Unspecified actions keep their defaults; Shift is fixed.
-   */
-  keybindings?: Partial<KeybindingsMap>;
   /**
    * When it returns `true`, a plain primary drag pans.
    * @default () => false
@@ -75,7 +64,7 @@ export interface InputControllerOptions {
   onCtrlWheel?: (delta: number) => boolean;
 }
 
-export class InputController {
+export class PointerController {
   #canvas: HTMLCanvasElement;
   #viewport: Viewport;
   #actions: InputActions;
@@ -87,15 +76,11 @@ export class InputController {
   };
   #isDraggingPrimary: boolean = false;
   #isDraggingSecondary: boolean = false;
-  #isHovering: boolean = false;
-  #spaceHeld: boolean = false;
   #shouldPanOnPrimary: () => boolean;
   #onCtrlWheel: (delta: number) => boolean;
 
-  readonly keybindings: Keybindings;
-
   constructor(
-    options: InputControllerOptions
+    options: PointerControllerOptions
   ) {
     const {
       canvas,
@@ -110,7 +95,6 @@ export class InputController {
     this.#inputWindow = inputWindow;
     this.#shouldPanOnPrimary = options.shouldPanOnPrimary ?? neverPanOnPrimary;
     this.#onCtrlWheel = options.onCtrlWheel ?? ignoreCtrlWheel;
-    this.keybindings = new Keybindings(options.keybindings);
 
     this.#addEventListeners();
   }
@@ -128,7 +112,6 @@ export class InputController {
 
   #addEventListeners(): void {
     this.#canvas.addEventListener("mousedown", this.#handleMouseDown);
-    this.#canvas.addEventListener("mouseenter", this.#handleMouseEnter);
     this.#canvas.addEventListener("mousemove", this.#handleMouseMove);
     this.#canvas.addEventListener("mouseleave", this.#handleMouseLeave);
     this.#canvas.addEventListener("mouseup", this.#handleMouseUp);
@@ -136,14 +119,11 @@ export class InputController {
     this.#canvas.addEventListener("contextmenu", this.#handleContextMenu);
     this.#inputWindow.addEventListener("mousemove", this.#handleWindowMouseMove);
     this.#inputWindow.addEventListener("mouseup", this.#handleWindowMouseUp);
-    this.#inputWindow.addEventListener("keydown", this.#handleKeyDown);
-    this.#inputWindow.addEventListener("keyup", this.#handleKeyUp);
     this.#inputWindow.addEventListener("blur", this.#handleWindowBlur);
   }
 
   #removeEventListeners(): void {
     this.#canvas.removeEventListener("mousedown", this.#handleMouseDown);
-    this.#canvas.removeEventListener("mouseenter", this.#handleMouseEnter);
     this.#canvas.removeEventListener("mousemove", this.#handleMouseMove);
     this.#canvas.removeEventListener("mouseleave", this.#handleMouseLeave);
     this.#canvas.removeEventListener("mouseup", this.#handleMouseUp);
@@ -151,8 +131,6 @@ export class InputController {
     this.#canvas.removeEventListener("contextmenu", this.#handleContextMenu);
     this.#inputWindow.removeEventListener("mousemove", this.#handleWindowMouseMove);
     this.#inputWindow.removeEventListener("mouseup", this.#handleWindowMouseUp);
-    this.#inputWindow.removeEventListener("keydown", this.#handleKeyDown);
-    this.#inputWindow.removeEventListener("keyup", this.#handleKeyUp);
     this.#inputWindow.removeEventListener("blur", this.#handleWindowBlur);
   }
 
@@ -235,14 +213,9 @@ export class InputController {
   #handleMouseDown = (
     event: MouseEvent
   ): void => {
-    this.#isHovering = true;
-
     switch (event.button) {
       case kMouseButton.primary: {
-        if (
-          this.#spaceHeld ||
-          this.#shouldPanOnPrimary()
-        ) {
+        if (this.#shouldPanOnPrimary()) {
           this.#beginPan(event);
 
           return;
@@ -275,7 +248,6 @@ export class InputController {
     event: MouseEvent
   ): void => {
     event.preventDefault();
-    this.#isHovering = true;
 
     this.#actions.onCanvasHover(
       this.#resolveCanvasPosition(event)
@@ -305,12 +277,7 @@ export class InputController {
     }
   };
 
-  #handleMouseEnter = (): void => {
-    this.#isHovering = true;
-  };
-
   #handleMouseLeave = (): void => {
-    this.#isHovering = false;
     this.#actions.onCanvasHover(null);
     this.#actions.onTextureCursorMove(null);
   };
@@ -390,105 +357,9 @@ export class InputController {
     this.#reportMouseUp();
   };
 
-  #endPanModifier(): void {
-    if (!this.#spaceHeld) {
-      return;
-    }
-
-    this.#spaceHeld = false;
-    this.#actions.onSpaceUp();
-  }
-
   #handleWindowBlur = (): void => {
     this.#endPan();
     this.#endTrackedDrags();
-    this.#endPanModifier();
     this.#actions.onBlur();
-  };
-
-  #handleKeyDown = (
-    event: KeyboardEvent
-  ): void => {
-    if (
-      !this.#isHovering ||
-      isEditableTarget(event.target)
-    ) {
-      return;
-    }
-
-    if (event.key === "Shift") {
-      if (!event.repeat) {
-        this.#actions.onShiftDown();
-      }
-
-      return;
-    }
-
-    if (event.code === "Space") {
-      event.preventDefault();
-      if (!event.repeat && !this.#spaceHeld) {
-        this.#spaceHeld = true;
-        this.#actions.onSpaceDown();
-      }
-
-      return;
-    }
-
-    if (event.repeat) {
-      return;
-    }
-
-    const action = this.keybindings.match(event);
-    if (action === null) {
-      return;
-    }
-
-    if (this.#dispatchKeybindingAction(action)) {
-      event.preventDefault();
-    }
-  };
-
-  #dispatchKeybindingAction(
-    action: KeybindingAction
-  ): boolean {
-    switch (action) {
-      case "copy":
-        return this.#actions.onCopy();
-      case "paste":
-        return this.#actions.onPaste();
-      case "undo":
-        return this.#actions.onUndo();
-      case "redo":
-        return this.#actions.onRedo();
-      case "delete":
-        return this.#actions.onDelete();
-      case "rotate":
-        return this.#actions.onRotate("cw");
-      case "rotateCounterClockwise":
-        return this.#actions.onRotate("ccw");
-      case "flipHorizontal":
-        return this.#actions.onFlipHorizontal();
-      case "flipVertical":
-        return this.#actions.onFlipVertical();
-      default: {
-        const unexpectedAction: never = action;
-
-        throw new Error(`Unknown keybinding action: ${unexpectedAction}`);
-      }
-    }
-  }
-
-  #handleKeyUp = (
-    event: KeyboardEvent
-  ): void => {
-    if (event.key === "Shift") {
-      this.#actions.onShiftUp();
-
-      return;
-    }
-
-    if (event.code === "Space") {
-      this.#endPanModifier();
-    }
   };
 }

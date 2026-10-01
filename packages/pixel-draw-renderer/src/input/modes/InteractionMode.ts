@@ -47,8 +47,7 @@ export abstract class InteractionMode {
   onHover(_position: Vec2 | null): void {}
   onCursorMove(_pos: Vec2 | null): void {}
   onMouseUp(): void {}
-  onShiftDown(): void {}
-  onShiftUp(): void {}
+  onLineHeldChange(_held: boolean): void {}
   onBlur(): void {}
   onCopy(): boolean {
     return false;

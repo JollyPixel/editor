@@ -7,12 +7,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { InputController } from "#src/input/InputController.ts";
+import { PointerController } from "#src/input/PointerController.ts";
 import { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
 
-describe("InputController secondary (right-click) mouse events", () => {
+describe("PointerController secondary (right-click) mouse events", () => {
   let viewport: Viewport;
   let canvas: HTMLCanvasElement;
 
@@ -30,7 +30,7 @@ describe("InputController secondary (right-click) mouse events", () => {
     "mousedown (right button) triggers onSecondaryDown with the resolved texture position and ctrlKey",
     () => {
       const { actions, calls } = makeActions();
-      const ctrl = new InputController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions
@@ -53,7 +53,7 @@ describe("InputController secondary (right-click) mouse events", () => {
 
   test("dragging after right mousedown fires onSecondaryMove", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new InputController({
+    const ctrl = new PointerController({
       canvas,
       viewport,
       actions
@@ -79,7 +79,7 @@ describe("InputController secondary (right-click) mouse events", () => {
 
   test("mouseup ends a tracked secondary gesture with onSecondaryUp", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new InputController({
+    const ctrl = new PointerController({
       canvas,
       viewport,
       actions
@@ -104,7 +104,7 @@ describe("InputController secondary (right-click) mouse events", () => {
     const { actions, calls } = makeActions({
       onSecondaryDownReturns: false
     });
-    const ctrl = new InputController({
+    const ctrl = new PointerController({
       canvas,
       viewport,
       actions
@@ -135,7 +135,7 @@ describe("InputController secondary (right-click) mouse events", () => {
 
   test("primary and secondary drags are tracked independently", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new InputController({
+    const ctrl = new PointerController({
       canvas,
       viewport,
       actions

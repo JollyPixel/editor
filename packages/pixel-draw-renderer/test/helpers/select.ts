@@ -4,59 +4,6 @@ import type {
 } from "#src/PixelArtCanvas.ts";
 import { mouseEvent } from "./events.ts";
 
-/*
- * Rotate/flip keybindings, shared between the standalone R/H/V coverage and
- * the undo/redo-of-a-transform coverage in the select-mode specs.
- */
-export function rotateCounterClockwiseKey(): KeyboardEvent {
-  return new KeyboardEvent(
-    "keydown",
-    {
-      key: "R",
-      code: "KeyR",
-      shiftKey: true,
-      bubbles: true,
-      cancelable: true
-    }
-  );
-}
-
-export function rotateKey(): KeyboardEvent {
-  return new KeyboardEvent(
-    "keydown",
-    {
-      key: "r",
-      code: "KeyR",
-      bubbles: true,
-      cancelable: true
-    }
-  );
-}
-
-export function flipHorizontalKey(): KeyboardEvent {
-  return new KeyboardEvent(
-    "keydown",
-    {
-      key: "h",
-      code: "KeyH",
-      bubbles: true,
-      cancelable: true
-    }
-  );
-}
-
-export function flipVerticalKey(): KeyboardEvent {
-  return new KeyboardEvent(
-    "keydown",
-    {
-      key: "v",
-      code: "KeyV",
-      bubbles: true,
-      cancelable: true
-    }
-  );
-}
-
 /** A 2-wide x 1-tall pair over (2,2)-(3,2): black at (2,2), red at (3,2). */
 export function paintHorizontalPair(
   manager: PixelArtCanvas

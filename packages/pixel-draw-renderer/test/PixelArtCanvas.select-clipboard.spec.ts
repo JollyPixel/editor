@@ -18,10 +18,7 @@ import {
   readPixel
 } from "./fixtures/canvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
-import {
-  mouseEvent,
-  ctrlKey
-} from "./helpers/events.ts";
+import { mouseEvent } from "./helpers/events.ts";
 
 function makeClipboardItem(
   data: Record<string, Blob>
@@ -213,11 +210,11 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     manager.destroy();
   });
 
-  test("Ctrl+V without a prior Ctrl+C is a no-op", () => {
+  test("paste without a prior copy is a no-op", () => {
     const manager = makeManager();
     const before = manager.texture.slice();
 
-    window.dispatchEvent(ctrlKey("v"));
+    manager.shortcuts.paste();
 
     assert.deepStrictEqual(
       manager.texture,

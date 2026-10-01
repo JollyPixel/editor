@@ -58,6 +58,7 @@
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/console": "workspace:*",
+    "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/image": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",

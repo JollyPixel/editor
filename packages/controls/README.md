@@ -67,6 +67,8 @@ if (dashCombo()) {
   - [Keyboard](./docs/keyboard.md)
     - [Key chords](./docs/key-chords.md): bindings by key position or
       printed letter, and layout-aware labels.
+    - [KeyBindingMap](./docs/key-binding-map.md): rebindable shortcuts named
+      by action.
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)

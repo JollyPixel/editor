@@ -39,6 +39,7 @@ type Mode = "paint" | "erase" | "move" | "fill" | "select" | "uv";
 readonly document: PixelDocument
 readonly brush: Brush
 readonly tools: Toolset
+readonly shortcuts: CanvasShortcuts
 readonly uv: UVMap
 readonly viewport: CanvasViewport
 ```
@@ -63,6 +64,10 @@ Stores the primary and secondary colors, opacity, brush size and cursor colors. 
 ### `tools`
 
 Runtime controls for color picking, fill behavior and selection transforms. See [`Toolset`](./tools/Toolset.md).
+
+### `shortcuts`
+
+Keyboard-driven intents (copy, paste, delete, undo, redo, rotate, flip) and the held pan and line modifiers. The canvas never listens to the keyboard; the host binds keys to these members. See [`CanvasShortcuts`](./input/CanvasShortcuts.md).
 
 ### `uv`
 
@@ -108,26 +113,18 @@ set mode(value: Mode)
 
 | Mode | Left-click | Right-click |
 |---|---|---|
-| `"paint"` | Paint with `brush.primary`. Hold `Shift` for a straight line. When the picker is armed, pick into `brush.primary`. | Paint with `brush.secondary`. When the picker is armed, pick into `brush.secondary`; otherwise `Ctrl`+right-click picks into `brush.primary`. |
-| `"erase"` | Erase with `brush.erase`. Hold `Shift` for a straight line. | Erase, like left-click. |
+| `"paint"` | Paint with `brush.primary`. Hold [`shortcuts.lineHeld`](./input/CanvasShortcuts.md#lineheld) for a straight line. When the picker is armed, pick into `brush.primary`. | Paint with `brush.secondary`. When the picker is armed, pick into `brush.secondary`; otherwise `Ctrl`+right-click picks into `brush.primary`. |
+| `"erase"` | Erase with `brush.erase`. Hold `shortcuts.lineHeld` for a straight line. | Erase, like left-click. |
 | `"move"` | Pan the view. | No action. |
 | `"fill"` | Fill with `brush.primary`. | Fill with `brush.secondary`. |
 | `"select"` | Create or move a selection. | No action. |
 | `"uv"` | Select or drag a visible UV region. | No action. |
 
-Erase mode is paint mode writing `brush.erase` (transparent unless [`brush.eraseColor`](./tools/Brush.md#types) says otherwise): same brush size, same footprint, same `Shift` line, but neither mouse button paints a brush color and the color picker stays out of reach.
+Erase mode is paint mode writing `brush.erase` (transparent unless [`brush.eraseColor`](./tools/Brush.md#types) says otherwise): same brush size, same footprint, same straight line, but neither mouse button paints a brush color and the color picker stays out of reach.
 
-Wheel input zooms in every mode. Middle-drag or `Space`+left-drag pans the view. In paint and erase modes, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
+Wheel input zooms in every mode. Middle-drag, or left-drag while [`shortcuts.panHeld`](./input/CanvasShortcuts.md#panheld) is set, pans the view. In paint and erase modes, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
 
 Leaving paint or erase mode cancels an armed line, and leaving paint mode also cancels the color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
-
-### `keybindings`
-
-```ts
-get keybindings(): Keybindings
-```
-
-Use `keybindings.bindings` to read the current bindings and `keybindings.patch()` to change them. Invalid or conflicting patches throw without changing the previous bindings. See [`Keybindings`](./input/Keybindings.md).
 
 ## Texture
 

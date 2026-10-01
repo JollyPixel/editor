@@ -11,9 +11,9 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  KEYBINDINGS_STORAGE_KEY,
-  KeybindingSettings
-} from "../../src/keybindings/KeybindingSettings.ts";
+  KEY_BINDINGS_STORAGE_KEY,
+  KeyBindingSettings
+} from "../../src/keybindings/KeyBindingSettings.ts";
 import {
   keybindConsole,
   parseBindingList
@@ -23,12 +23,12 @@ function boot(
   storage: MemoryStorageAdapter
 ) {
   const commands = new CommandConsole();
-  const keybindings = new KeybindingSettings({ storage });
-  keybindConsole(commands, { keybindings });
+  const keyBindingSettings = new KeyBindingSettings({ storage });
+  keybindConsole(commands, { keyBindingSettings });
 
   return {
     commands,
-    keybindings
+    keyBindingSettings
   };
 }
 
@@ -54,91 +54,91 @@ describe("keybind console", () => {
 
     await commands.submit("keybind.redo");
 
-    assert.equal(lastLine(commands), "info: mod+y, mod+shift+z");
+    assert.equal(lastLine(commands), "info: Mod+y, Mod+Shift+z");
   });
 
   test("a write survives a reboot on the same storage", async() => {
     const storage = new MemoryStorageAdapter();
     const first = boot(storage);
 
-    await first.commands.submit("keybind.undo \"mod+u\"");
-    await first.commands.submit("keybind.redo \"mod+y, mod+shift+u\"");
-    assert.equal(lastLine(first.commands), "info: mod+y, mod+shift+u");
+    await first.commands.submit("keybind.undo \"Mod+u\"");
+    await first.commands.submit("keybind.redo \"Mod+y, Mod+Shift+u\"");
+    assert.equal(lastLine(first.commands), "info: Mod+y, Mod+Shift+u");
 
     const second = boot(storage);
-    assert.deepEqual(second.keybindings.overrides, {
-      undo: ["mod+u"],
-      redo: ["mod+y", "mod+shift+u"]
+    assert.deepEqual(second.keyBindingSettings.keyBindings.overrides, {
+      undo: ["Mod+u"],
+      redo: ["Mod+y", "Mod+Shift+u"]
     });
-    assert.deepEqual(second.keybindings.bindings.undo, ["mod+u"]);
+    assert.deepEqual(second.keyBindingSettings.bindingsOf("undo"), ["Mod+u"]);
   });
 
-  test("a conflict prints the KeybindingConflictError message and stores nothing", async() => {
+  test("a conflict prints the KeyChordConflictError message and stores nothing", async() => {
     const storage = new MemoryStorageAdapter();
-    const { commands, keybindings } = boot(storage);
+    const { commands, keyBindingSettings } = boot(storage);
 
-    await commands.submit("keybind.copy \"mod+z\"");
+    await commands.submit("keybind.copy \"Mod+z\"");
 
     assert.equal(
       lastLine(commands),
-      "error: Keybinding \"mod+z\" is already assigned to \"copy\" (conflicts with \"undo\")"
+      "error: Key chord \"Mod+z\" is bound to both \"copy\" and \"undo\""
     );
-    assert.deepEqual(keybindings.bindingsOf("copy"), ["mod+c"]);
-    assert.equal(storage.get(KEYBINDINGS_STORAGE_KEY), null);
+    assert.deepEqual(keyBindingSettings.bindingsOf("copy"), ["Mod+c"]);
+    assert.equal(storage.get(KEY_BINDINGS_STORAGE_KEY), null);
   });
 
   test("an empty value unbinds the action", async() => {
-    const { commands, keybindings } = boot(new MemoryStorageAdapter());
+    const { commands, keyBindingSettings } = boot(new MemoryStorageAdapter());
 
     await commands.submit("keybind.delete \"\"");
 
-    assert.deepEqual(keybindings.bindingsOf("delete"), []);
-    assert.deepEqual(keybindings.overrides, { delete: [] });
+    assert.deepEqual(keyBindingSettings.bindingsOf("delete"), []);
+    assert.deepEqual(keyBindingSettings.keyBindings.overrides, { delete: [] });
   });
 
-  test("a malformed binding prints the InvalidKeybindingError message", async() => {
+  test("a malformed binding prints the InvalidKeyChordError message", async() => {
     const { commands } = boot(new MemoryStorageAdapter());
 
-    await commands.submit("keybind.undo \"ctrl+z\"");
+    await commands.submit("keybind.undo \"mod+z\"");
 
-    assert.equal(lastLine(commands), "error: Invalid keybinding: \"ctrl+z\"");
+    assert.equal(lastLine(commands), "error: Invalid key chord: \"mod+z\"");
   });
 
   test("/keybind.reset restores one action and clears its stored entry", async() => {
     const storage = new MemoryStorageAdapter();
-    const { commands, keybindings } = boot(storage);
-    await commands.submit("keybind.undo \"mod+u\"");
+    const { commands, keyBindingSettings } = boot(storage);
+    await commands.submit("keybind.undo \"Mod+u\"");
     await commands.submit("keybind.delete \"Backspace\"");
 
     await commands.submit("/keybind.reset undo");
 
-    assert.equal(lastLine(commands), "info: undo restored to mod+z");
-    assert.deepEqual(keybindings.overrides, { delete: ["Backspace"] });
+    assert.equal(lastLine(commands), "info: undo restored to Mod+z");
+    assert.deepEqual(keyBindingSettings.keyBindings.overrides, { delete: ["Backspace"] });
     assert.deepEqual(
-      JSON.parse(storage.get(KEYBINDINGS_STORAGE_KEY)!),
+      JSON.parse(storage.get(KEY_BINDINGS_STORAGE_KEY)!),
       { delete: ["Backspace"] }
     );
   });
 
   test("/keybind.reset without an action restores every shortcut", async() => {
     const storage = new MemoryStorageAdapter();
-    const { commands, keybindings } = boot(storage);
-    await commands.submit("keybind.undo \"mod+u\"");
+    const { commands, keyBindingSettings } = boot(storage);
+    await commands.submit("keybind.undo \"Mod+u\"");
     await commands.submit("keybind.delete \"Backspace\"");
 
     await commands.submit("/keybind.reset");
 
     assert.equal(lastLine(commands), "info: Every shortcut restored");
-    assert.deepEqual(keybindings.overrides, {});
-    assert.deepEqual(JSON.parse(storage.get(KEYBINDINGS_STORAGE_KEY)!), {});
+    assert.deepEqual(keyBindingSettings.keyBindings.overrides, {});
+    assert.deepEqual(JSON.parse(storage.get(KEY_BINDINGS_STORAGE_KEY)!), {});
   });
 });
 
 describe("parseBindingList", () => {
   test("splits on commas, trims and skips empty items", () => {
     assert.deepEqual(
-      parseBindingList(" mod+y ,mod+shift+z,, "),
-      ["mod+y", "mod+shift+z"]
+      parseBindingList(" Mod+y ,Mod+Shift+z,, "),
+      ["Mod+y", "Mod+Shift+z"]
     );
     assert.deepEqual(parseBindingList(""), []);
   });

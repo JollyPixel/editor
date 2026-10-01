@@ -13,7 +13,7 @@ canvas.mode = "uv";
 canvas.uv.select(region.id);
 ```
 
-In UV mode, click a visible region to select it, drag it to move it, press `R` or `Shift+R` to rotate it, or press `Delete` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
+In UV mode, click a visible region to select it, drag it to move it, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
 
 See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
 
@@ -198,7 +198,7 @@ Turns a region 90 degrees and emits `"region-rotated"` with the previous region 
 
 The top-left corner stays fixed and a non-square rect swaps its width and height. The result is then clamped into the canvas: the whole region for stacked and unfolded, only the turned slot for free. Returns `false` for an unknown id or a free region without `slot`. See [`UVRegion.rotated()`](./UVRegion.md#rotateddirection-slot) for the geometry.
 
-In UV mode, `R` and `Shift+R` rotate the selected region, or the selected slot of a free region, clockwise and counter-clockwise. They do nothing during a drag.
+In UV mode, `shortcuts.rotate("cw")` and `shortcuts.rotate("ccw")` rotate the selected region, or the selected slot of a free region, clockwise and counter-clockwise. They do nothing during a drag.
 
 ### `select(id, slot?)`
 

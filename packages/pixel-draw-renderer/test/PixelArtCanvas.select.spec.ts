@@ -17,14 +17,8 @@ import {
   readPixel
 } from "./fixtures/canvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
+import { mouseEvent } from "./helpers/events.ts";
 import {
-  mouseEvent,
-  deleteKey,
-  ctrlKey
-} from "./helpers/events.ts";
-import {
-  rotateKey,
-  flipHorizontalKey,
   paintHorizontalPair,
   selectHorizontalPair
 } from "./helpers/select.ts";
@@ -78,7 +72,7 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -108,7 +102,7 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 0, y: 0 }, 8),
@@ -132,7 +126,7 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -360,7 +354,7 @@ describe("PixelArtCanvas — select mode", () => {
     );
 
     // No selection was ever established, so Delete has nothing to act on.
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -415,7 +409,7 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -443,7 +437,7 @@ describe("PixelArtCanvas — select mode", () => {
     );
 
     manager.mode = "paint";
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -502,7 +496,7 @@ describe("PixelArtCanvas — select mode", () => {
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })
     );
-    window.dispatchEvent(deleteKey());
+    manager.shortcuts.delete();
 
     assert.strictEqual(drawEndCount, 1);
     assert.strictEqual(events.length, 1);
@@ -539,7 +533,7 @@ describe("PixelArtCanvas — select mode", () => {
         [0, 0, 0, 255]
       );
 
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
@@ -551,7 +545,7 @@ describe("PixelArtCanvas — select mode", () => {
         "undo removes the destination"
       );
 
-      window.dispatchEvent(ctrlKey("y"));
+      manager.shortcuts.redo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 255, 255, 255]
@@ -586,7 +580,7 @@ describe("PixelArtCanvas — select mode", () => {
       // Leaving select mode clears the active selection.
       manager.mode = "paint";
 
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
@@ -621,20 +615,20 @@ describe("PixelArtCanvas — select mode", () => {
         new MouseEvent("mouseup", { bubbles: true })
       );
 
-      window.dispatchEvent(deleteKey());
+      manager.shortcuts.delete();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 255, 255, 255]
       );
 
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
         "undo restores the deleted pixel"
       );
 
-      window.dispatchEvent(ctrlKey("y"));
+      manager.shortcuts.redo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 255, 255, 255],
@@ -694,14 +688,14 @@ describe("PixelArtCanvas — select mode", () => {
         "paste restores content at (2,2)"
       );
 
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 255, 255, 255],
         "undo removes the pasted content"
       );
 
-      window.dispatchEvent(ctrlKey("y"));
+      manager.shortcuts.redo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
@@ -720,14 +714,14 @@ describe("PixelArtCanvas — select mode", () => {
       manager.mode = "select";
       selectHorizontalPair(canvas);
 
-      window.dispatchEvent(rotateKey());
+      manager.shortcuts.rotate("cw");
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 3, y: 3 }, 8),
         [255, 0, 0, 255],
         "sanity: rotated"
       );
 
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
@@ -742,7 +736,7 @@ describe("PixelArtCanvas — select mode", () => {
         [255, 255, 255, 255]
       );
 
-      window.dispatchEvent(ctrlKey("y"));
+      manager.shortcuts.redo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 255, 255, 255]
@@ -768,8 +762,8 @@ describe("PixelArtCanvas — select mode", () => {
       manager.mode = "select";
       selectHorizontalPair(canvas);
 
-      window.dispatchEvent(rotateKey());
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.rotate("cw");
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
@@ -786,7 +780,7 @@ describe("PixelArtCanvas — select mode", () => {
        * footprint instead, leaving (2,2) behind and corrupting (4,3), which
        * was never part of the selection.
        */
-      window.dispatchEvent(rotateKey());
+      manager.shortcuts.rotate("cw");
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 255, 255, 255],
@@ -818,14 +812,14 @@ describe("PixelArtCanvas — select mode", () => {
       manager.mode = "select";
       selectHorizontalPair(canvas);
 
-      window.dispatchEvent(flipHorizontalKey());
+      manager.shortcuts.flipHorizontal();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 0, 0, 255],
         "sanity: flipped"
       );
 
-      window.dispatchEvent(ctrlKey("z"));
+      manager.shortcuts.undo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [0, 0, 0, 255],
@@ -836,7 +830,7 @@ describe("PixelArtCanvas — select mode", () => {
         [255, 0, 0, 255]
       );
 
-      window.dispatchEvent(ctrlKey("y"));
+      manager.shortcuts.redo();
       assert.deepStrictEqual(
         readPixel(manager.texture, { x: 2, y: 2 }, 8),
         [255, 0, 0, 255]

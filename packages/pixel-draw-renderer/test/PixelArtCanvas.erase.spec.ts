@@ -14,7 +14,6 @@ import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   mouseEvent,
   moveTo,
-  shiftKeyDown,
   wheel
 } from "./helpers/events.ts";
 
@@ -177,7 +176,7 @@ describe("PixelArtCanvas — erase mode", () => {
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
-    window.dispatchEvent(shiftKeyDown());
+    manager.shortcuts.lineHeld = true;
     moveTo(canvas, 128, 100);
     canvas.dispatchEvent(mouseEvent("mousedown", 128, 100));
 

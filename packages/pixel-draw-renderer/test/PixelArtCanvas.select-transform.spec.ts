@@ -16,10 +16,6 @@ import { readPixel } from "./fixtures/canvas.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import {
-  rotateKey,
-  rotateCounterClockwiseKey,
-  flipHorizontalKey,
-  flipVerticalKey,
   paintHorizontalPair,
   selectHorizontalPair
 } from "./helpers/select.ts";
@@ -50,7 +46,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     });
   }
 
-  test("R rotates a non-square selection 90deg clockwise around its center", () => {
+  test("rotating clockwise turns a non-square selection 90deg clockwise around its center", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -58,7 +54,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.mode = "select";
     selectHorizontalPair(canvas);
 
-    window.dispatchEvent(rotateKey());
+    manager.shortcuts.rotate("cw");
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -78,7 +74,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("Shift+R rotates a selection 90deg counter-clockwise", () => {
+  test("rotating counter-clockwise turns a selection 90deg counter-clockwise", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -86,7 +82,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.mode = "select";
     selectHorizontalPair(canvas);
 
-    window.dispatchEvent(rotateCounterClockwiseKey());
+    manager.shortcuts.rotate("ccw");
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 3, y: 2 }, 8),
@@ -101,7 +97,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("H flips the active selection's content left-right in place", () => {
+  test("flipHorizontal() mirrors the active selection's content left-right in place", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -109,7 +105,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.mode = "select";
     selectHorizontalPair(canvas);
 
-    window.dispatchEvent(flipHorizontalKey());
+    manager.shortcuts.flipHorizontal();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -124,7 +120,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("V flips the active selection's content top-bottom in place", () => {
+  test("flipVertical() mirrors the active selection's content top-bottom in place", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -140,7 +136,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    window.dispatchEvent(flipVerticalKey());
+    manager.shortcuts.flipVertical();
 
     assert.deepStrictEqual(
       readPixel(manager.texture, { x: 2, y: 2 }, 8),
@@ -155,21 +151,21 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("R/H/V are no-ops without an active selection", () => {
+  test("rotate and flip shortcuts are no-ops without an active selection", () => {
     const manager = makeManager();
     const before = manager.texture.slice();
 
     assert.doesNotThrow(() => {
-      window.dispatchEvent(rotateKey());
-      window.dispatchEvent(flipHorizontalKey());
-      window.dispatchEvent(flipVerticalKey());
+      manager.shortcuts.rotate("cw");
+      manager.shortcuts.flipHorizontal();
+      manager.shortcuts.flipVertical();
     });
 
     assert.deepStrictEqual(manager.texture, before);
     manager.destroy();
   });
 
-  test("public rotate/flip methods mirror the keybinding path, and no-op safely without a selection", () => {
+  test("tools.select rotate/flip mirror the shortcuts, and no-op safely without a selection", () => {
     const manager = makeManager();
     const canvas = manager.canvas();
 
@@ -215,9 +211,9 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
       manager.mode = "select";
       selectHorizontalPair(canvas);
 
-      window.dispatchEvent(rotateKey());
-      window.dispatchEvent(flipHorizontalKey());
-      window.dispatchEvent(flipVerticalKey());
+      manager.shortcuts.rotate("cw");
+      manager.shortcuts.flipHorizontal();
+      manager.shortcuts.flipVertical();
 
       assert.strictEqual(drawEndCount, 3);
       assert.strictEqual(events.length, 3);
