@@ -47,8 +47,31 @@ Registering an existing name replaces its glyph. Register custom icons before
 rendering them; registry changes do not request updates from existing
 `jolly-icon` elements.
 
-Glyphs should use the 24 by 24 view box expected by `jolly-icon`.
+Glyphs use a 24 by 24 view box unless they are registered with `viewBox`.
 `currentColor` makes strokes and fills follow the surrounding text color.
+
+## Illustrated glyphs
+
+A glyph can be a full-colour illustration drawn on its own grid. Pass the
+grid as `viewBox` and keep the literal colours:
+
+```ts
+registerIcon("image", `
+  <rect x="5" y="11" width="54" height="42" rx="5" fill="#7fd3ff" />
+  <circle cx="45" cy="23" r="5.5" fill="#ffd23f" />
+`, { viewBox: "0 0 64 64" });
+```
+
+Literal colours ignore tones, `on-fill` and `--jolly-icon-tone-strength`, and
+stay as drawn under forced colours, like an image. Register an illustrated
+glyph without a tone.
+
+```ts
+iconViewBox(name: IconName): string
+```
+
+`iconViewBox()` returns the registered view box, or `DEFAULT_ICON_VIEW_BOX`
+(`"0 0 24 24"`) for a glyph registered without one and for an unknown name.
 
 ## Tones
 
@@ -111,7 +134,10 @@ import {
   svg,
   type SVGTemplateResult
 } from "lit";
-import { getIcon } from "@jolly-pixel/ui/icon";
+import {
+  getIcon,
+  iconViewBox
+} from "@jolly-pixel/ui/icon";
 
 type EditorIconName = "move" | "paint";
 
@@ -119,7 +145,7 @@ function renderEditorIcon(
   name: EditorIconName
 ): SVGTemplateResult {
   return svg`
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg viewBox=${iconViewBox(name)} fill="none" aria-hidden="true">
       ${getIcon(name)}
     </svg>
   `;
@@ -135,5 +161,6 @@ its accessible label.
 preserves completion for those names while accepting application-defined
 strings.
 `IconGlyph` is `string | SVGTemplateResult`. `IconTone` is the union of
-`ICON_TONES`, and `RegisterIconOptions` is `{ tone?: IconTone }`.
+`ICON_TONES`, and `RegisterIconOptions` is
+`{ tone?: IconTone; viewBox?: string }`.
 

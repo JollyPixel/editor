@@ -17,9 +17,13 @@ const kHomeLabel = "Home";
 const kFirstEditorIndex = 1;
 const kHomeIcon: IconName = "home";
 
-export interface EditorTab {
-  id: string;
+export interface EditorTabTitle {
   label: string;
+  tooltip?: string;
+}
+
+export interface EditorTab extends EditorTabTitle {
+  id: string;
   url: string;
   icon?: IconName;
 }
@@ -136,11 +140,15 @@ export class EditorTabs {
   }
 
   ids(): string[] {
+    return this.list().map((tab) => tab.id);
+  }
+
+  list(): EditorTab[] {
     const items = [...this.#strip.children];
 
     return [...this.#open.values()]
       .sort((left, right) => items.indexOf(left.item) - items.indexOf(right.item))
-      .map((entry) => entry.tab.id);
+      .map((entry) => entry.tab);
   }
 
   has(
@@ -170,6 +178,7 @@ export class EditorTabs {
       Object.assign(item, {
         value: tab.id,
         label: tab.label,
+        tooltip: tab.tooltip ?? "",
         icon: tab.icon ?? "",
         closable: true
       });
@@ -274,18 +283,23 @@ export class EditorTabs {
 
   relabel(
     id: string,
-    label: string
+    title: EditorTabTitle
   ): boolean {
     const entry = this.#open.get(id);
     if (entry === undefined) {
       return false;
     }
 
+    const { label, tooltip } = title;
     entry.tab = {
       ...entry.tab,
-      label
+      label,
+      tooltip
     };
-    Object.assign(entry.item, { label });
+    Object.assign(entry.item, {
+      label,
+      tooltip: tooltip ?? ""
+    });
     if (entry.frame !== null) {
       entry.frame.title = label;
     }

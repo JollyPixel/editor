@@ -5,7 +5,7 @@ status: accepted
 # Open tabs persist per browser
 
 The shell saves the open tabs, in strip order, and the active one under `studio:tabs` in
-`localStorage`, like `studio:asset-kind` and the `studio:layout` dock layout. A tab open, close,
+`localStorage`, like `studio:asset-kind` and the `studio:home-layout` dock layout. A tab open, close,
 move or focus writes it.
 
 On boot, once the catalog has its records, the shell reopens the saved tabs in order and focuses

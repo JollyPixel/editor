@@ -13,7 +13,8 @@ import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import {
   EditorTabs,
   type EditorTabOpenOptions,
-  type EditorTabsOptions
+  type EditorTabsOptions,
+  type EditorTabTitle
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
 
@@ -38,6 +39,7 @@ export interface StudioSessionOptions {
   catalog: StudioCatalog;
   editors: EditorRegistry;
   tabs: Omit<EditorTabsOptions, "onShellCommand" | "onChange">;
+  onTabsChange?: () => void;
   /**
    * @default new LocalStorageAdapter()
    */
@@ -51,6 +53,7 @@ export class StudioSession {
   #catalog: StudioCatalog;
   #editors: EditorRegistry;
   #storage: StorageAdapter;
+  #onTabsChange: (() => void) | undefined;
   #restoring = false;
 
   constructor(
@@ -59,11 +62,12 @@ export class StudioSession {
     this.#catalog = options.catalog;
     this.#editors = options.editors;
     this.#storage = options.storage ?? new LocalStorageAdapter();
+    this.#onTabsChange = options.onTabsChange;
     this.kinds = options.editors.kindSet();
     this.tabs = new EditorTabs({
       ...options.tabs,
       onShellCommand: this.#onShellCommand,
-      onChange: this.#saveTabs
+      onChange: this.#onChange
     });
     this.#catalog.on("change", this.#syncTabs);
   }
@@ -88,9 +92,7 @@ export class StudioSession {
     return this.tabs.open(
       {
         id: assetId,
-        label: AssetPath.parse(
-          record.source
-        ).name,
+        ...this.#titleOf(record),
         url,
         icon: this.kinds.iconFor(record.kind)
       },
@@ -143,12 +145,28 @@ export class StudioSession {
     this.tabs.dispose();
   }
 
+  #titleOf(
+    record: AssetRecordData
+  ): EditorTabTitle {
+    const path = AssetPath.parse(record.source);
+
+    return {
+      label: this.kinds.displayNameFor(record.kind, path.name),
+      tooltip: path.toString()
+    };
+  }
+
   readonly #onShellCommand = (
     command: ShellCommand
   ): void => {
     if (command.command === "open-asset") {
       void this.openAsset(command.target);
     }
+  };
+
+  readonly #onChange = (): void => {
+    this.#saveTabs();
+    this.#onTabsChange?.();
   };
 
   readonly #saveTabs = (): void => {
@@ -173,15 +191,12 @@ export class StudioSession {
         this.tabs.close(assetId);
       }
       else {
-        const recordLabel = AssetPath.parse(
-          record.source
-        ).name;
-
         this.tabs.relabel(
           assetId,
-          recordLabel
+          this.#titleOf(record)
         );
       }
     }
+    this.#onTabsChange?.();
   };
 }

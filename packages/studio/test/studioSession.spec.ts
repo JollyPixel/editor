@@ -94,7 +94,8 @@ let current: StudioSession | undefined;
 function session(
   catalog: FakeCatalog,
   storage: StorageAdapter = new MemoryStorageAdapter(),
-  cap?: number
+  cap?: number,
+  onTabsChange?: () => void
 ): StudioSession {
   const strip = Object.assign(document.createElement("jolly-tabs"), {
     value: ""
@@ -105,6 +106,11 @@ function session(
   current = new StudioSession({
     catalog,
     editors: new EditorRegistry()
+      .registerKind({
+        kind: "voxelmap",
+        label: "Voxel map",
+        extension: ".voxelmap.json"
+      })
       .registerEditor({
         name: "voxel-map",
         kinds: ["voxelmap"]
@@ -120,7 +126,8 @@ function session(
       cap,
       launchOrigin: "http://localhost"
     },
-    storage
+    storage,
+    onTabsChange
   });
 
   return current;
@@ -145,15 +152,26 @@ afterEach(() => {
 });
 
 describe("StudioSession", () => {
-  test("opens an asset in its editor, labelled by its file name", async() => {
+  test("opens an asset in its editor, labelled without its extension", async() => {
     const studio = session(new FakeCatalog([kMap]));
 
     assert.equal(await studio.openAsset("map-1"), true);
 
     assert.deepEqual(studio.tabs.ids(), ["map-1"]);
+    const [tab] = studio.tabs.list();
+    assert.equal(tab.label, "overworld");
+    assert.equal(tab.tooltip, "maps/overworld.voxelmap.json");
     const frame = document.querySelector("iframe");
-    assert.equal(frame?.title, "overworld.voxelmap.json");
+    assert.equal(frame?.title, "overworld");
     assert.ok(frame?.src.endsWith("/editors/voxel-map/?target=map-1"));
+  });
+
+  test("labels an asset of a kind without descriptor by its file name", async() => {
+    const studio = session(new FakeCatalog([kModel]));
+
+    assert.equal(await studio.openAsset("model-1"), true);
+
+    assert.equal(studio.tabs.list()[0].label, "model.voxelmodel.json");
   });
 
   test("does not open an unknown asset or a kind without editor", async() => {
@@ -174,11 +192,35 @@ describe("StudioSession", () => {
       source: "maps/cave.voxelmap.json"
     });
     catalog.change();
-    assert.equal(document.querySelector("iframe")?.title, "cave.voxelmap.json");
+    assert.equal(document.querySelector("iframe")?.title, "cave");
+    assert.equal(studio.tabs.list()[0].tooltip, "maps/cave.voxelmap.json");
 
     catalog.records.delete("map-1");
     catalog.change();
     assert.deepEqual(studio.tabs.ids(), []);
+  });
+
+  test("reports tab changes, catalog renames included", async() => {
+    const catalog = new FakeCatalog([kMap]);
+    const labels: string[][] = [];
+    const studio = session(
+      catalog,
+      new MemoryStorageAdapter(),
+      undefined,
+      () => labels.push(studio.tabs.list().map((tab) => tab.label))
+    );
+    await studio.openAsset("map-1");
+
+    catalog.records.set("map-1", {
+      ...kMap,
+      source: "maps/cave.voxelmap.json"
+    });
+    catalog.change();
+
+    assert.deepEqual(labels, [
+      ["overworld"],
+      ["cave"]
+    ]);
   });
 
   test("opens the target of an editor's open-asset command", async() => {

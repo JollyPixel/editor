@@ -26,13 +26,20 @@ The assets written into a project root that lacks them, from
 
 ### Shell
 
-The studio page: the header with the tab strip, the asset dock and the
-workbench. It holds data only and never loads a kind handler or editor code.
+The studio page: the header with the tab strip, and the workbench below it
+that shows Home or one editor frame. It holds data only and never loads a
+kind handler or editor code.
+
+### Home
+
+The fixed first tab and the `<studio-home>` page it shows: the asset browser
+in the asset dock, and the project overview, which counts the assets per kind
+and lists the open editors.
 
 ### Asset browser
 
-The `<asset-browser>` element in the asset dock: the kind filter, the asset
-actions and the tree of catalog records.
+The `<asset-browser>` element in the asset dock on Home: the kind filter, the
+asset actions and the tree of catalog records.
 
 ### Folder
 
@@ -83,8 +90,9 @@ Each one runs `editor.host` with its own client, session and runtime.
 ### Tab
 
 One open editor page in the shell, keyed by the asset id it opened. The
-first tab, Home, is fixed and opens no editor. A tab loads its frame when
-first focused, and the open tabs are saved under `studio:tabs`.
+first tab, Home, is fixed and opens no editor. A tab shows the asset name
+without its kind extension and the full path on hover. A tab loads its frame
+when first focused, and the open tabs are saved under `studio:tabs`.
 
 ### Tab cap
 

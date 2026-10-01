@@ -24,13 +24,15 @@ flowchart TB
     Connection["connectStudio<br/>online or offline catalog"]
     Registry["EditorRegistry<br/>kinds + editors"]
     Studio["&lt;jolly-studio&gt;"]
+    Home["&lt;studio-home&gt;<br/>asset dock + project overview"]
     Browser["&lt;asset-browser&gt;<br/>AssetTreeModel, AssetPath"]
     Session["StudioSession"]
     Tabs["EditorTabs<br/>strip + iframe stack"]
     Boot --> Connection
     Boot --> Registry
     Boot --> Studio
-    Studio --> Browser
+    Studio --> Home
+    Home --> Browser
     Studio --> Session
     Session --> Tabs
   end
@@ -94,7 +96,7 @@ sequenceDiagram
   I->>R: registerEditor(editor) per manifest entry
   I->>S: attach({ catalog, editors, confirmEvict })
   S->>S: new StudioSession(kinds, EditorTabs)
-  S->>B: options { catalog, kinds }
+  S->>B: options { catalog, kinds } through studio-home
   B->>B: build AssetTreeModel from catalog records
   S->>S: restoreTabs() from studio:tabs
 ```
@@ -132,7 +134,9 @@ sequenceDiagram
 
 A kind without an editor returns no URL and opens nothing; its rows show
 `no editor`. Tabs are keyed by asset id, so a second activation focuses the
-open tab. Closing a tab removes its iframe, which ends the editor's session.
+open tab. A tab label is the asset name without the extension its kind
+declares (`AssetKindSet.displayNameFor`), with the full path as tooltip.
+Closing a tab removes its iframe, which ends the editor's session.
 A tab creates its iframe when first focused, and inactive frames stay
 mounted with `display: none`.
 
@@ -154,6 +158,19 @@ A frame launched through `jolly-launch` gets a `ShellChannel` and may post
 only from its own frames and hands commands to `StudioSession`, which runs
 `open-asset` exactly like a tree activation. The shell never replies on the
 channel.
+
+## Home
+
+The fixed Home tab shows `<studio-home>`, a sibling of the editor frames in
+the workbench. It holds the asset dock, resizable and saved under
+`studio:home-layout`, and `<project-overview>`. An editor tab fills the
+workbench; `EditorTabs` only hides Home, so the tree keeps its state across
+tab switches ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
+
+`<project-overview>` counts the catalog records per kind through
+`AssetTally`, every registered kind first, then unknown kinds by name. It
+lists the open editors from `StudioSession`'s `onTabsChange`, which also
+fires on a catalog rename; a click sends `asset-open`, which focuses the tab.
 
 ## Asset browser
 
@@ -193,7 +210,7 @@ prompt again.
 ## Catalog changes
 
 `StudioSession` listens to catalog `change`: a tab whose asset was deleted
-closes, a renamed asset relabels its tab. `<asset-browser>` rebuilds its
+closes, a renamed asset relabels its tab and its tooltip. `<asset-browser>` rebuilds its
 `AssetTreeModel` on `change` and `dependencies`, from the records, the
 dependency edges and its draft folders, and keeps the expanded folders, the
 selection and the kind filter. Folders are path prefixes, so a folder
@@ -228,7 +245,7 @@ active frame at once, the others on their next focus.
 | `src/index.ts` | boot: connection, registry, `<jolly-studio>` |
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog with offline fallback |
 | `src/seed.ts` | `createStudioProject`: handlers and seed for both back-ends |
-| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetCompanions`, `AssetDeletion`, `AssetSelection`, `DraftFolders`: pure tree decisions |
+| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetTally`, `AssetCompanions`, `AssetDeletion`, `AssetSelection`, `DraftFolders`: pure tree decisions |
 | `src/editors/` | `EditorRegistry`, `EditorDescriptor` |
 | `src/tabs/` | `EditorTabs`: strip, iframe stack, handshake, tab cap; `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, `<asset-browser>`, `AssetCommands`, asset menu, delete dialog |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, `home/`: `<studio-home>`, `<project-overview>`, `assets/`: `<asset-browser>`, `AssetCommands`, asset menu, delete dialog |

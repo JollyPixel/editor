@@ -246,6 +246,21 @@ describe("EditorTabs", () => {
     assert.equal(Reflect.get(strip.children[1], "icon"), "kind:voxelmap");
   });
 
+  test("gives an editor tab its tooltip", async() => {
+    const { tabs, strip } = harness();
+    await tabs.open({
+      ...kMap,
+      tooltip: "maps/overworld.voxelmap.json"
+    });
+    await tabs.open(kModel);
+
+    assert.equal(
+      Reflect.get(strip.children[1], "tooltip"),
+      "maps/overworld.voxelmap.json"
+    );
+    assert.equal(Reflect.get(strip.children[2], "tooltip"), "");
+  });
+
   test("lets an editor frame read the keyboard layout", async() => {
     const { tabs, frameOf } = harness();
     await tabs.open(kMap);
@@ -390,13 +405,31 @@ describe("EditorTabs", () => {
 
   test("relabels an open tab", async() => {
     const { tabs, strip, frameOf } = harness();
-    await tabs.open(kMap);
+    await tabs.open({
+      ...kMap,
+      tooltip: "maps/overworld.voxelmap.json"
+    });
 
-    assert.equal(tabs.relabel("map-1", "renamed.voxelmap.json"), true);
-    assert.equal(tabs.relabel("missing", "x"), false);
+    assert.equal(tabs.relabel("map-1", {
+      label: "renamed",
+      tooltip: "maps/renamed.voxelmap.json"
+    }), true);
+    assert.equal(tabs.relabel("missing", { label: "x" }), false);
 
-    assert.equal(Reflect.get(strip.children[1], "label"), "renamed.voxelmap.json");
-    assert.equal(frameOf("map-1").title, "renamed.voxelmap.json");
+    const item = strip.children[1];
+    assert.equal(Reflect.get(item, "label"), "renamed");
+    assert.equal(Reflect.get(item, "tooltip"), "maps/renamed.voxelmap.json");
+    assert.equal(frameOf("map-1").title, "renamed");
+    assert.deepEqual(tabs.list(), [
+      {
+        ...kMap,
+        label: "renamed",
+        tooltip: "maps/renamed.voxelmap.json"
+      }
+    ]);
+
+    tabs.relabel("map-1", { label: "plain" });
+    assert.equal(Reflect.get(item, "tooltip"), "");
   });
 
   test("opens a tab in the background without loading its frame", async() => {
@@ -428,7 +461,7 @@ describe("EditorTabs", () => {
     tabs.focus(HOME_TAB_ID);
     tabs.move("model-1", 1);
     tabs.close("map-1");
-    tabs.relabel("model-1", "renamed.voxelmodel.json");
+    tabs.relabel("model-1", { label: "renamed" });
 
     assert.equal(changes, 5);
   });

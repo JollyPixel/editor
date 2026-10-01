@@ -180,13 +180,15 @@ interface AssetKindDescriptor {
 interface AssetKindIcon {
   svg: string;
   tone?: string;
+  viewBox?: string;
 }
 ```
 
 A descriptor is the kind's presentation as plain data: a label, the
 extension a new asset of the kind gets (leading dot included, one of the
-handler's `extensions`), and an icon whose `svg` holds the children of a 24x24
-view box. A host that lists, opens or creates assets reads it without loading
+handler's `extensions`), and an icon whose `svg` holds the children of its
+`viewBox` (`"0 0 24 24"` when omitted). A full-colour icon keeps its literal
+colours and leaves `tone` out. A host that lists, opens or creates assets reads it without loading
 the handler, so a descriptor can also come from a manifest. Packages export one beside their handler
 (`PIXEL_ART_ASSET`, `VOXEL_MAP_ASSET`, `VOXEL_MODEL_ASSET`).
 

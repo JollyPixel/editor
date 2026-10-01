@@ -217,3 +217,6 @@ row's start. When no node has children, that space is dropped.
 The highlight has an inner inline padding on both sides, set by
 `--jolly-tree-row-padding-inline` (defaults to `--jolly-space-1`). The row adds
 no padding of its own on its end side.
+
+Node icons are 12px square; `--jolly-tree-icon-size` changes that, for
+example to 16px for [illustrated glyphs](../icon/registry.md#illustrated-glyphs).

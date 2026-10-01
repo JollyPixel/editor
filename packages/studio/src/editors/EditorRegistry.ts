@@ -64,7 +64,10 @@ export class EditorRegistry {
 
     const name: IconName = `${kKindIconPrefix}${kind}`;
     if (icon !== undefined) {
-      registerIcon(name, icon.svg, { tone });
+      registerIcon(name, icon.svg, {
+        tone,
+        viewBox: icon.viewBox
+      });
     }
     this.#kinds.set(kind, {
       kind,

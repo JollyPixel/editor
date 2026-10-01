@@ -24,6 +24,12 @@ export default defineConfig(typescriptConfig({
       }
     },
     {
+      files: ["**/icons.ts", "**/*Icons.ts"],
+      rules: {
+        "@stylistic/max-len": "off"
+      }
+    },
+    {
       files: ["packages/voxel-renderer/src/document/**"],
       rules: {
         "no-restricted-imports": [

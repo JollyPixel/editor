@@ -19,3 +19,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0011](./0011-one-lit-element-per-panel.md) | One Lit element per panel, pure decisions in value objects |
 | [0012](./0012-one-project-per-studio.md) | One project per studio, seeded without overwriting |
 | [0013](./0013-companions-are-derived-from-names-and-edges.md) | Companions are derived from names and dependency edges |
+| [0014](./0014-the-asset-browser-lives-on-home.md) | The asset browser lives on the Home tab |

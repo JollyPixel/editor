@@ -16,6 +16,7 @@ import {
 import {
   getIcon,
   iconTone,
+  iconViewBox,
   isIconTone,
   type IconName,
   type IconTone
@@ -54,6 +55,8 @@ export class Icon extends LitElement {
     @media (forced-colors: active) {
       svg {
         --jolly-icon-tone-mix: 0%;
+
+        forced-color-adjust: none;
       }
     }
 
@@ -113,7 +116,7 @@ export class Icon extends LitElement {
 
     return html`
       <svg
-        viewBox="0 0 24 24"
+        viewBox=${iconViewBox(this.name)}
         fill="none"
         role=${decorative ? "presentation" : "img"}
         aria-hidden=${decorative ? "true" : nothing}

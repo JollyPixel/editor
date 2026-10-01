@@ -92,8 +92,8 @@ export const treeStyles = css`
 
   .node-icon {
     flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
+    width: var(--jolly-tree-icon-size, 12px);
+    height: var(--jolly-tree-icon-size, 12px);
     color: var(--jolly-text-muted, ${kFallback.text});
   }
 
