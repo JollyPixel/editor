@@ -11,7 +11,10 @@ import * as mocks from "../../mocks/index.ts";
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
 
-export interface EventData {
+export interface EventData extends Pick<
+  KeyboardEventInit,
+  "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "repeat"
+> {
   code?: KeyCode;
   key?: string;
   /** Stands in for the composed path, which an undispatched event cannot supply. */
@@ -26,6 +29,11 @@ export class KeyboardDocumentAdapter extends mocks.DocumentAdapter {
     const event = new kEmulatedBrowserWindow.KeyboardEvent(type, {
       code: eventData.code || "",
       key: eventData.key || "",
+      ctrlKey: eventData.ctrlKey,
+      metaKey: eventData.metaKey,
+      shiftKey: eventData.shiftKey,
+      altKey: eventData.altKey,
+      repeat: eventData.repeat,
       bubbles: true,
       cancelable: true
     });

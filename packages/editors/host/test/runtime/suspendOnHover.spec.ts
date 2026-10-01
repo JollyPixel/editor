@@ -6,10 +6,25 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { suspendOnHover } from "#src/runtime/suspendOnHover.ts";
+import {
+  suspendOnHover,
+  type Suspendable
+} from "#src/runtime/suspendOnHover.ts";
 
 // CONSTANTS
 const kHoverEvent = "canvas-hover-change";
+
+class FakeKeyboard implements Suspendable {
+  holders = 0;
+
+  suspend(): () => void {
+    this.holders++;
+
+    return () => {
+      this.holders--;
+    };
+  }
+}
 
 function hover(
   target: EventTarget,
@@ -21,73 +36,37 @@ function hover(
 }
 
 describe("suspendOnHover", () => {
-  test("stopping during hover restores input and is idempotent", () => {
+  test("suspends the keyboard once while hovering", () => {
     const target = new EventTarget();
-    const keyboard = { enabled: true };
-    const stop = suspendOnHover(keyboard, target, kHoverEvent);
-    hover(target, true);
-    hover(target, true);
-    stop();
-    stop();
-    assert.equal(keyboard.enabled, true);
-    hover(target, true);
-    assert.equal(keyboard.enabled, true);
-  });
+    const keyboard = new FakeKeyboard();
+    suspendOnHover(keyboard, target, kHoverEvent);
 
-  test("preserves an initially disabled target", () => {
-    const target = new EventTarget();
-    const keyboard = { enabled: false };
-    const stop = suspendOnHover(keyboard, target, kHoverEvent);
+    hover(target, true);
+    hover(target, true);
+    assert.equal(keyboard.holders, 1);
+
     hover(target, false);
-    assert.equal(keyboard.enabled, false);
-    hover(target, true);
     hover(target, false);
-    assert.equal(keyboard.enabled, false);
-    hover(target, true);
-    stop();
-    assert.equal(keyboard.enabled, false);
+    assert.equal(keyboard.holders, 0);
   });
 
-  test("keeps input suspended until every hovering binding releases it", () => {
-    const first = new EventTarget();
-    const second = new EventTarget();
-    const keyboard = { enabled: true };
-    const stopFirst = suspendOnHover(keyboard, first, kHoverEvent);
-    const stopSecond = suspendOnHover(keyboard, second, kHoverEvent);
-    hover(first, true);
-    hover(second, true);
-    hover(first, false);
-    assert.equal(keyboard.enabled, false);
-    stopFirst();
-    assert.equal(keyboard.enabled, false);
-    stopSecond();
-    assert.equal(keyboard.enabled, true);
-
-    const stop = suspendOnHover(keyboard, first, kHoverEvent);
-    hover(first, true);
-    assert.equal(keyboard.enabled, false);
-    stop();
-    assert.equal(keyboard.enabled, true);
-  });
-
-  test("disables the target while hovering, until stopped", () => {
+  test("stopping during hover releases the keyboard and is idempotent", () => {
     const target = new EventTarget();
-    const keyboard = { enabled: true };
+    const keyboard = new FakeKeyboard();
     const stop = suspendOnHover(keyboard, target, kHoverEvent);
 
     hover(target, true);
-    assert.equal(keyboard.enabled, false);
-    hover(target, false);
-    assert.equal(keyboard.enabled, true);
-
     stop();
+    stop();
+    assert.equal(keyboard.holders, 0);
+
     hover(target, true);
-    assert.equal(keyboard.enabled, true);
+    assert.equal(keyboard.holders, 0);
   });
 
   test("ignores events without a hovering detail", () => {
     const target = new EventTarget();
-    const keyboard = { enabled: true };
+    const keyboard = new FakeKeyboard();
     suspendOnHover(keyboard, target, kHoverEvent);
 
     target.dispatchEvent(new Event(kHoverEvent));
@@ -96,6 +75,6 @@ describe("suspendOnHover", () => {
       detail: { hovering: "true" }
     }));
 
-    assert.equal(keyboard.enabled, true);
+    assert.equal(keyboard.holders, 0);
   });
 });

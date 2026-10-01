@@ -27,11 +27,11 @@ test("the panel reports the pointer entering and leaving the canvas", async({ pa
 test.describe("3D preview", () => {
   test.use({ editor: demo({ runtime: true }) });
 
-  function keyboardEnabled(
+  function keyboardSuspended(
     panel: Locator
   ): Promise<boolean | undefined> {
     return panel.page().evaluate(
-      () => window.pixelArtDemo?.preview?.editorRuntime.runtime.world.input.keyboard.enabled
+      () => window.pixelArtDemo?.preview?.editorRuntime.runtime.world.input.keyboard.suspended
     );
   }
 
@@ -39,9 +39,9 @@ test.describe("3D preview", () => {
     await page.mouse.move(0, 0);
 
     await panel.locator("[part~='canvas-host']").hover();
-    await expect.poll(() => keyboardEnabled(panel)).toBe(false);
+    await expect.poll(() => keyboardSuspended(panel)).toBe(true);
 
     await page.mouse.move(0, 0);
-    await expect.poll(() => keyboardEnabled(panel)).toBe(true);
+    await expect.poll(() => keyboardSuspended(panel)).toBe(false);
   });
 });

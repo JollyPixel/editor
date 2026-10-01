@@ -22,6 +22,7 @@ right form of the corresponding modifier.
 `InputCombination.Mod` uses the Meta keys on Apple platforms and the Control
 keys elsewhere. It reads `navigator.platform` when its keys are first needed
 and caches the result. Without a `navigator`, it uses the Control keys.
+The package exports the same check as `isApplePlatform(): boolean`.
 
 A chord built from a modifier preset does not exclude other modifiers. This
 condition also matches Ctrl+Shift+S:

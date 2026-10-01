@@ -120,6 +120,18 @@ The keyboard starts enabled. Setting `enabled` to `false` resets all held and
 pending state, then ignores keydown, keyup, and keypress events. Setting it
 back to `true` resumes event tracking without reconnecting listeners.
 
+## Suspension
+
+```ts
+get suspended(): boolean
+suspend(): () => void
+```
+
+`suspend()` stops the keyboard the same way as `enabled = false` without
+changing `enabled`. It returns a release function; extra calls to the same
+release do nothing. The keyboard stays suspended until every suspension is
+released, so several owners can hold it at once.
+
 ## Editable elements and browser defaults
 
 Keydown and keypress events are ignored when their composed path contains an
@@ -193,6 +205,76 @@ printable character with a character code of at least 32.
 
 A keydown also emits an event named after `event.code`, such as `"Space"` or
 `"KeyA"`.
+
+## Bindings
+
+```ts
+type KeyBindingHandler = (event: KeyboardEvent) => boolean | void;
+
+interface KeyBindingOptions {
+  repeat?: boolean;
+  priority?: number;
+}
+
+bind(
+  chords: KeyChordString | readonly KeyChordString[],
+  handler: KeyBindingHandler,
+  options?: KeyBindingOptions
+): () => void
+```
+
+`bind()` runs `handler` on a keydown that matches one of `chords`. It returns
+a function that removes the binding.
+
+```ts
+keyboard.bind(["Mod+KeyY", "Mod+Shift+KeyZ"], () => history.redo());
+keyboard.bind("BracketLeft", () => brush.resize(-1), { repeat: true });
+keyboard.bind("Escape", () => placement.cancel(), { priority: 1 });
+```
+
+- Auto-repeated keydowns are skipped unless `repeat` is `true`.
+- Bindings on the same key run from the highest `priority` (default `0`) to
+  the lowest, in registration order for equal priorities.
+- A handler that returns `false` passes the key to the next binding. Any other
+  return value handles it: no later binding runs and the event gets
+  `preventDefault()`.
+- Bindings listen to the key event named after `event.code`, so they follow
+  the same enabled, suspension, guard, and editable-target rules.
+
+## Key chords
+
+```ts
+type KeyChordString = `${"" | "Mod+" | "Shift+" | "Alt+" | ...}${KeyCode}`;
+
+class KeyChord {
+  static parse(chord: KeyChordString): KeyChord;
+
+  constructor(options: { code: KeyCode; mod?: boolean; shift?: boolean; alt?: boolean; });
+
+  readonly code: KeyCode;
+  readonly mod: boolean;
+  readonly shift: boolean;
+  readonly alt: boolean;
+
+  matches(event: KeyChordEvent, options?: { apple?: boolean; }): boolean;
+  format(options?: { apple?: boolean; }): string;
+}
+```
+
+A chord string lists its modifiers in the order `Mod`, `Shift`, `Alt`,
+then a physical `KeyCode`, such as `"Mod+Shift+KeyZ"`. `Mod` is Meta on
+Apple platforms and Control elsewhere.
+
+`matches()` compares `event.code` and requires the exact modifier set:
+`"KeyG"` rejects Shift+G, and `"Mod+KeyZ"` rejects Ctrl+Z on Apple
+platforms.
+
+`format()` returns a label for tooltips: `"Ctrl+Shift+Z"`, or `"⇧⌘Z"` on
+Apple platforms. Letter and digit codes print their character, and some
+codes print a short name (`"Esc"`, `"["`, `"↑"`). The label names the key
+on a QWERTY layout.
+
+`apple` defaults to `isApplePlatform()`.
 
 ## Lifecycle
 

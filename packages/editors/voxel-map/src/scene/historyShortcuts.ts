@@ -1,37 +1,36 @@
 // Import Third-party Dependencies
+import type {
+  Keyboard,
+  KeyChordString
+} from "@jolly-pixel/controls";
 import type { VoxelHistory } from "@jolly-pixel/voxel.renderer";
 
-// Import Internal Dependencies
-import {
-  bindKeys,
-  type KeyBindingTarget
-} from "../shared/keyBindings.ts";
+export const HISTORY_SHORTCUTS = {
+  undo: ["Mod+KeyZ"],
+  redo: ["Mod+KeyY", "Mod+Shift+KeyZ"]
+} as const satisfies Record<string, readonly KeyChordString[]>;
 
 export interface HistoryShortcutsOptions {
-  keyboard: KeyBindingTarget;
+  keyboard: Pick<Keyboard, "bind">;
   history: Pick<VoxelHistory, "undo" | "redo">;
 }
 
 export function bindHistoryShortcuts(
   options: HistoryShortcutsOptions
 ): () => void {
-  const { history } = options;
-
-  return bindKeys(options.keyboard, ["KeyZ", "KeyY"], (event) => {
-    if (!(event.ctrlKey || event.metaKey) || event.altKey) {
-      return;
-    }
-
-    if (event.code === "KeyY" || (event.code === "KeyZ" && event.shiftKey)) {
-      history.redo();
-    }
-    else if (event.code === "KeyZ") {
+  const { keyboard, history } = options;
+  const releases = [
+    keyboard.bind(HISTORY_SHORTCUTS.undo, () => {
       history.undo();
-    }
-    else {
-      return;
-    }
+    }),
+    keyboard.bind(HISTORY_SHORTCUTS.redo, () => {
+      history.redo();
+    })
+  ];
 
-    event.preventDefault();
-  });
+  return () => {
+    for (const release of releases) {
+      release();
+    }
+  };
 }

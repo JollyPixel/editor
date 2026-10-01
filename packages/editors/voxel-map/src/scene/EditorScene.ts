@@ -49,7 +49,6 @@ import {
   type GridRendererOptions
 } from "./GridRenderer.ts";
 import { bindHistoryShortcuts } from "./historyShortcuts.ts";
-import { bindKeyChain } from "../shared/keyBindings.ts";
 import { SceneLighting } from "../shared/SceneLighting.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { spawnPose } from "./spawnPose.ts";
@@ -259,15 +258,10 @@ export class EditorScene extends Systems.Scene {
     }
 
     this.#disposables.push(
-      bindKeyChain(keyboard, "Escape", [
-        () => placement.cancel(),
-        () => {
-          camera.exitOrbitFocus();
-          this.#announceCameraMode();
-
-          return true;
-        }
-      ]),
+      keyboard.bind("Escape", () => {
+        camera.exitOrbitFocus();
+        this.#announceCameraMode();
+      }),
       state.pointer.subscribe("change", (captured) => {
         camera.enabled = !captured;
       }),

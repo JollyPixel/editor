@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { InputCombination } from "@jolly-pixel/controls";
 import {
   Actor,
   ActorComponent
@@ -171,10 +172,8 @@ export class LocalBrush extends ActorComponent {
     this.#refreshStaleAim();
 
     const { input } = this.actor.world;
-    const isCtrl = input.keyboard.isDown("ControlLeft") ||
-      input.keyboard.isDown("ControlRight");
-    const isAlt = input.keyboard.isDown("AltLeft") ||
-      input.keyboard.isDown("AltRight");
+    const isCtrl = InputCombination.Control.evaluate(input);
+    const isAlt = InputCombination.Alt.evaluate(input);
 
     if (
       this.suspended ||
