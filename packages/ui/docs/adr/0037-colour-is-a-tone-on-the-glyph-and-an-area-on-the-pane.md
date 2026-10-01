@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# Colour is a tone on the glyph and an area on the pane
+# Colour is a tone on the glyph and an area on the pane, and a dialog's intent is not a tone
 
 A glyph is registered with an optional tone, one of seven hues
 (`registerIcon(name, glyph, { tone })`). Two classes inside the glyph opt
@@ -20,6 +20,13 @@ and accent-filled controls take the hue. Scope hosts read
 component that declares tokens of its own inside a toned pane follows the area
 too.
 
+`jolly-dialog` is a toned area the same way. Its `intent` (`info`, `success`,
+`warning`, `danger`) is a separate input: it sets `--jolly-dialog-header-bg`
+from an `--jolly-intent-*-fill` token and nothing else, wins over a tone, and
+drops the area. The seven hues stay clear of the semantic ones — `coral` sits
+at 42 degrees so a toned header never reads as an error — and an intent states
+what the dialog means while its actions keep their own meaning.
+
 ## Considered Options
 
 - **A `tone` attribute at every call site.** Pane tabs, tool buttons, tree rows
@@ -31,23 +38,29 @@ too.
 - **Overriding the accent tokens from the pane only.** A nested scope host
   redeclares every token on itself and shadowed the override; the embedded
   texture editor stayed blue inside a pink pane.
+- **Warning and danger as tones.** Undoes the separation between decorative
+  and semantic hues.
+- **An intent that retints the dialog content.** An amber accent button stops
+  reading as the primary action, and a destructive action already has the
+  `danger` button variant.
+- **Keeping both the area tone and the intent header.** A red header over teal
+  focus rings and accent buttons carries two signals at once.
 
 ## Consequences
 
 - Tones are off (strength `0%`) wherever a fill already carries meaning:
-  `accent` and `danger` buttons, a checked segment, a selected pane tab, and
-  under forced colours.
+  `accent` and `danger` buttons, a checked segment, a selected pane tab, a
+  dialog header icon, and under forced colours.
 - An icon over an accent fill needs the lighter stop, which a local
   `color-scheme` flip cannot give because tone tokens resolve on the scope
   host. `jolly-icon` takes `on-fill` instead, and folder actions, whose ground
   is inverted, swap the stops.
-- `tone-fill` hides detail drawn inside the shape. Glyphs with inner detail, or
-  made of one continuous stroke, use `tone-ink` on the whole stroke; tinting
-  part of a stroke reads as a rendering fault.
-- `tone-fill` suits thin outlines (1.5 to 2px). Under a heavy stroke on a dark
-  ground the rest-strength fill reads muddy, so `editor.pixel-art`, whose glyphs
-  use 2.4px strokes, tones with `tone-ink` only.
-- `coral` sits at 42 degrees, away from the danger hue, so a toned header never
-  reads as an error.
+- `tone-fill` hides detail drawn inside the shape and reads muddy under heavy
+  strokes. Glyphs with inner detail, one continuous stroke, or strokes past
+  about 2px (`editor.pixel-art` uses 2.4px) tone with `tone-ink` only.
 - `lock` and `revert` stay untoned: their colour already means who holds the
   lock and that the value is modified.
+- `warning` and `danger` intents switch the dialog to `role="alertdialog"`, and
+  every intent has a default icon, so the intent never rests on colour alone.
+- `showConfirm({ danger: true })` defaults to the `danger` intent, so existing
+  destructive confirms changed appearance without a call-site edit.

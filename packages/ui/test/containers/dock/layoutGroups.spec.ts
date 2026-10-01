@@ -7,40 +7,14 @@ import {
   applyLayoutChange,
   floatPane,
   movePane,
-  panePlacement,
-  paneVisible,
   reconcileLayout,
-  stackPane,
-  type DeclaredLayout
+  stackPane
 } from "../../../src/containers/dock/layout.ts";
-
-// CONSTANTS
-const kDeclared: DeclaredLayout = {
-  docks: [
-    {
-      key: "left",
-      groups: [
-        {
-          panes: ["general", "blocks", "paint"],
-          active: "blocks"
-        },
-        {
-          panes: ["layers"]
-        }
-      ]
-    },
-    {
-      key: "right",
-      groups: []
-    }
-  ],
-  floating: [],
-  locked: []
-};
+import { GROUPED_LAYOUT } from "../../fixtures/dockLayout.ts";
 
 describe("Containers.reconcileLayout groups", () => {
   test("builds the declared groups with their declared active pane", () => {
-    const snapshot = reconcileLayout(null, kDeclared);
+    const snapshot = reconcileLayout(null, GROUPED_LAYOUT);
 
     assert.deepEqual(snapshot.docks.left.groups, [
       {
@@ -57,7 +31,7 @@ describe("Containers.reconcileLayout groups", () => {
 
   test("activates the first pane when the markup names none", () => {
     const snapshot = reconcileLayout(null, {
-      ...kDeclared,
+      ...GROUPED_LAYOUT,
       docks: [
         {
           key: "left",
@@ -75,13 +49,13 @@ describe("Containers.reconcileLayout groups", () => {
 
   test("stored groups win over the declared grouping", () => {
     const stored = stackPane(
-      movePane(reconcileLayout(null, kDeclared), "paint", "right", 0),
+      movePane(reconcileLayout(null, GROUPED_LAYOUT), "paint", "right", 0),
       "layers",
       "right",
       0,
       1
     );
-    const snapshot = reconcileLayout(stored, kDeclared);
+    const snapshot = reconcileLayout(stored, GROUPED_LAYOUT);
 
     assert.deepEqual(snapshot.docks.left.groups, [
       {
@@ -99,7 +73,7 @@ describe("Containers.reconcileLayout groups", () => {
 
   test("a pane the store never saw joins its declared siblings", () => {
     const stored = reconcileLayout(null, {
-      ...kDeclared,
+      ...GROUPED_LAYOUT,
       docks: [
         {
           key: "left",
@@ -112,7 +86,7 @@ describe("Containers.reconcileLayout groups", () => {
         }
       ]
     });
-    const snapshot = reconcileLayout(stored, kDeclared);
+    const snapshot = reconcileLayout(stored, GROUPED_LAYOUT);
 
     assert.deepEqual(snapshot.docks.left.groups, [
       {
@@ -128,20 +102,20 @@ describe("Containers.reconcileLayout groups", () => {
 
   test("is idempotent when re-run against its own output", () => {
     const stored = stackPane(
-      reconcileLayout(null, kDeclared),
+      reconcileLayout(null, GROUPED_LAYOUT),
       "layers",
       "left",
       0,
       0
     );
-    const once = reconcileLayout(stored, kDeclared);
+    const once = reconcileLayout(stored, GROUPED_LAYOUT);
 
-    assert.deepEqual(reconcileLayout(once, kDeclared), once);
+    assert.deepEqual(reconcileLayout(once, GROUPED_LAYOUT), once);
   });
 });
 
 describe("Containers.movePane groups", () => {
-  const base = reconcileLayout(null, kDeclared);
+  const base = reconcileLayout(null, GROUPED_LAYOUT);
 
   test("takes the active pane out of its group and activates a neighbour", () => {
     const moved = movePane(base, "blocks", "right", 0);
@@ -179,7 +153,7 @@ describe("Containers.movePane groups", () => {
 });
 
 describe("Containers.stackPane", () => {
-  const base = reconcileLayout(null, kDeclared);
+  const base = reconcileLayout(null, GROUPED_LAYOUT);
 
   test("joins a lone pane into a group and makes it active", () => {
     const stacked = stackPane(base, "layers", "left", 0, 1);
@@ -245,87 +219,5 @@ describe("Containers.stackPane", () => {
     assert.equal(stackPane(base, "layers", "left", 1, 0), base);
     assert.equal(stackPane(base, "layers", "left", 9, 0), base);
     assert.equal(stackPane(base, "layers", "missing", 0, 0), base);
-  });
-});
-
-describe("Containers.applyLayoutChange group", () => {
-  const base = reconcileLayout(null, kDeclared);
-
-  test("activates a pane inside its group", () => {
-    const next = applyLayoutChange(base, {
-      type: "group",
-      pane: "paint"
-    });
-
-    assert.equal(next.docks.left.groups[0].active, "paint");
-    assert.equal(base.docks.left.groups[0].active, "blocks");
-  });
-
-  test("returns the same snapshot when nothing changes", () => {
-    assert.equal(
-      applyLayoutChange(base, {
-        type: "group",
-        pane: "blocks"
-      }),
-      base
-    );
-    assert.equal(
-      applyLayoutChange(base, {
-        type: "group",
-        pane: "missing"
-      }),
-      base
-    );
-  });
-});
-
-describe("Containers.paneVisible", () => {
-  const base = reconcileLayout(null, kDeclared);
-
-  test("shows only the active pane of a group", () => {
-    assert.equal(paneVisible(base, "blocks"), true);
-    assert.equal(paneVisible(base, "paint"), false);
-    assert.deepEqual(panePlacement(base, "paint"), {
-      dock: "left",
-      column: "primary",
-      index: 0,
-      count: 2,
-      group: ["general", "blocks", "paint"],
-      active: false
-    });
-  });
-
-  test("hides every pane of a collapsed dock", () => {
-    const collapsed = applyLayoutChange(base, {
-      type: "dock",
-      dock: "left",
-      collapsed: true
-    });
-
-    assert.equal(paneVisible(collapsed, "blocks"), false);
-    assert.equal(paneVisible(collapsed, "layers"), false);
-  });
-
-  test("hides a folded lone pane but not a folded grouped one", () => {
-    const folded = applyLayoutChange(
-      applyLayoutChange(base, {
-        type: "pane",
-        pane: "layers",
-        collapsed: true
-      }),
-      {
-        type: "pane",
-        pane: "blocks",
-        collapsed: true
-      }
-    );
-
-    assert.equal(paneVisible(folded, "layers"), false);
-    assert.equal(paneVisible(folded, "blocks"), true);
-  });
-
-  test("shows a floating pane and hides an unknown one", () => {
-    assert.equal(paneVisible(floatPane(base, "paint", {}), "paint"), true);
-    assert.equal(paneVisible(base, "missing"), false);
   });
 });

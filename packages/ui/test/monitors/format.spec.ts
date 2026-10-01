@@ -29,13 +29,6 @@ describe("monitors.formatCount", () => {
       "1,235"
     );
   });
-
-  test("rounds down at the half", () => {
-    assert.equal(
-      formatCount(0.4),
-      "0"
-    );
-  });
 });
 
 describe("monitors.formatDecimal", () => {

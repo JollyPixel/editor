@@ -34,17 +34,6 @@ export function formatNumber(
   return value.toFixed(precisionOf(step, value));
 }
 
-export function parseNumeric(
-  text: string
-): EvalResult | null {
-  const trimmed = text.trim();
-  if (trimmed === "") {
-    return null;
-  }
-
-  return evaluate(trimmed);
-}
-
 export function quantize(
   value: number,
   step: number,
@@ -65,8 +54,13 @@ export function parseNumericEntry(
   text: string,
   bounds: NumericBounds
 ): EvalResult | null {
-  const result = parseNumeric(text);
-  if (result === null || !result.ok) {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    return null;
+  }
+
+  const result = evaluate(trimmed);
+  if (!result.ok) {
     return result;
   }
 

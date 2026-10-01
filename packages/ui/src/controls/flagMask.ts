@@ -26,35 +26,3 @@ export function setFlag(
     enabled ? base | flag : base & ~flag
   );
 }
-
-export function toggleFlag(
-  mask: number,
-  bit: number
-): number {
-  return setFlag(
-    mask,
-    bit,
-    !hasFlag(mask, bit)
-  );
-}
-
-/**
- * Returns selected bits in declaration order.
- */
-export function selectedFlags(
-  mask: number,
-  available: readonly number[]
-): number[] {
-  return available.filter(
-    (bit) => hasFlag(mask, bit)
-  );
-}
-
-export function maskFromFlags(
-  bits: readonly number[]
-): number {
-  return bits.reduce(
-    (mask, bit) => normalizeMask(mask | normalizeMask(bit)),
-    0
-  );
-}

@@ -37,7 +37,7 @@ whether the dialog is showing.
 The console is a native `<dialog>` opened with `showModal()`. Opening first calls
 `inputLayers.dismissAll()` from `ui`, which closes every open `jolly-dialog` and popover. When a
 layer refuses, such as a dialog with `dismissible` set to `false`, the console does not open. See
-[ui ADR-0042](../../ui/docs/adr/0042-open-layers-can-be-dismissed.md).
+[ui ADR-0020](../../ui/docs/adr/0020-input-scope-follows-focus.md).
 
 While open, the console pushes its own input layer, so an `EditorRuntime` keyboard ignores the
 keys typed into it. On close, focus returns to the element that held it before, found through

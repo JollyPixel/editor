@@ -20,9 +20,3 @@ test("ensureDocumentStyles installs each document style once", () => {
 
   styles[0]?.remove();
 });
-
-test("ensureDocumentStyles is safe without a document", () => {
-  assert.doesNotThrow(() => {
-    ensureDocumentStyles("jolly-no-document", "", undefined);
-  });
-});

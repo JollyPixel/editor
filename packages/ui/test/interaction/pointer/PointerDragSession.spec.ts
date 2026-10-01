@@ -11,28 +11,6 @@ import {
   type PointerDragResult
 } from "../../../src/interaction/pointer/PointerDragSession.ts";
 
-interface CaptureElement extends HTMLElement {
-  captured: number | null;
-}
-
-function captureElement(): CaptureElement {
-  const element: CaptureElement = Object.assign(
-    document.createElement("div"),
-    { captured: null as number | null }
-  );
-  element.setPointerCapture = (pointerId) => {
-    element.captured = pointerId;
-  };
-  element.hasPointerCapture = (pointerId) => element.captured === pointerId;
-  element.releasePointerCapture = (pointerId) => {
-    if (element.captured === pointerId) {
-      element.captured = null;
-    }
-  };
-
-  return element;
-}
-
 function pointer(
   type: string,
   pointerId: number,
@@ -48,7 +26,7 @@ function pointer(
 
 describe("PointerDragSession", () => {
   test("captures immediately but starts only after the threshold", () => {
-    const element = captureElement();
+    const element = document.createElement("div");
     let starts = 0;
     const moves: number[][] = [];
     const finishes: Array<[PointerDragResult, boolean]> = [];
@@ -63,7 +41,7 @@ describe("PointerDragSession", () => {
       onFinish: (result, started) => finishes.push([result, started])
     });
 
-    assert.equal(element.captured, 7);
+    assert.equal(element.hasPointerCapture(7), true);
     element.dispatchEvent(pointer("pointermove", 8, 30, 30));
     element.dispatchEvent(pointer("pointermove", 7, 12, 12));
     assert.equal(starts, 0);
@@ -73,11 +51,11 @@ describe("PointerDragSession", () => {
     assert.deepEqual(moves, [[14, 10]]);
     element.dispatchEvent(pointer("pointerup", 7, 14, 10));
     assert.deepEqual(finishes, [["commit", true]]);
-    assert.equal(element.captured, null);
+    assert.equal(element.hasPointerCapture(7), false);
   });
 
   test("reports a release below the threshold without starting", () => {
-    const element = captureElement();
+    const element = document.createElement("div");
     const finishes: Array<[PointerDragResult, boolean]> = [];
     startPointerDragSession({
       element,
@@ -92,7 +70,7 @@ describe("PointerDragSession", () => {
   });
 
   test("cancels once when capture is lost", () => {
-    const element = captureElement();
+    const element = document.createElement("div");
     const finishes: PointerDragResult[] = [];
     const session = startPointerDragSession({
       element,
@@ -109,7 +87,7 @@ describe("PointerDragSession", () => {
 
   test("Escape and the owner handle cancel explicitly", () => {
     for (const settle of ["escape", "handle"] as const) {
-      const element = captureElement();
+      const element = document.createElement("div");
       const finishes: PointerDragResult[] = [];
       const session = startPointerDragSession({
         element,

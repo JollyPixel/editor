@@ -57,7 +57,6 @@ describe("Interaction.resolveDropIndex", () => {
   });
 
   test("holds the current index inside the dead band", () => {
-    // Past the first midpoint, but not by the six pixels required to leave.
     assert.equal(
       resolveDropIndex({
         position: 53,

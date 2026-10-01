@@ -44,6 +44,5 @@ presence.addEventListener("jolly-peer-select", (event) => {
 | `jolly-peer-select` | `{ clientId }` | yes | yes | no |
 
 The element holds no selected row and changes nothing on a click: it states an
-intent and the host decides what a peer means, per
-[ADR-0029](../../adr/0029-presence-selection-is-an-intent.md). A click on a peer
-the host cannot act on is a silent no-op.
+intent and the host decides what a peer means. A click on a peer the host
+cannot act on is a silent no-op.

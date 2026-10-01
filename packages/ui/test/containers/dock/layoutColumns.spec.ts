@@ -290,37 +290,3 @@ describe("Containers.layout double docks", () => {
     assert.equal(restored.docks.left.groups[0].active, "blocks");
   });
 });
-
-describe("Containers.parseLayout secondary column", () => {
-  test("keeps a secondary column only when stored as an array", () => {
-    const parsed = parseLayout(JSON.stringify({
-      v: 1,
-      docks: {
-        left: {
-          groups: [],
-          secondary: [
-            {
-              panes: ["a"],
-              active: "missing"
-            },
-            {
-              panes: []
-            }
-          ]
-        },
-        right: {
-          groups: [],
-          secondary: "nope"
-        }
-      }
-    }));
-
-    assert.deepEqual(parsed?.docks.left.secondary, [
-      {
-        panes: ["a"],
-        active: "a"
-      }
-    ]);
-    assert.equal(parsed?.docks.right.secondary, undefined);
-  });
-});

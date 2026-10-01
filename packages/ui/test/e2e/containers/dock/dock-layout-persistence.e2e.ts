@@ -39,6 +39,8 @@ test.describe("DockLayout persistence", () => {
 
     await dropIntoDock(page, kFloatingAssets, "left");
     await expect(frame).toHaveCount(0);
+    await expect(paneKeysOf(page, "left"))
+      .resolves.toEqual(["hierarchy", "inspector", "assets"]);
     await reloadGallery(page);
 
     await dragTo(

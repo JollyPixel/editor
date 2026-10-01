@@ -65,15 +65,13 @@ dispatch table stays the facade's alone.
 
 `FieldBinding` is a plain module, so it is unit tested directly, unlike the facade containers
 ADR-0024 puts out of reach. A source carrying real logic follows it out of the component, into a
-module the element composes: `objectSources.ts`, `layerSources.ts` and `pickerChange.ts` are driven
-by fake ports in specs that never import the component around them.
+module the element composes and a spec can drive with fake ports.
 
 Three shapes stay on hand-written handlers, and that is the decision rather than a backlog:
 
-- **Fields repeated per row**, as in `CustomPropertiesEditor`. A binding is one per instance, and
-  making N of them churn with the rows costs more than the handler it removes.
-- **A value that reaches the field through a render parameter** rather than through the host, as in
-  `BlockEditorDialog` and `TilesetEditDialog`. `read()` would re-derive what the caller already
-  resolved, and the two would drift.
+- **Fields repeated per row.** A binding is one per instance, and making N of them churn with the
+  rows costs more than the handler it removes.
+- **A value that reaches the field through a render parameter** rather than through the host.
+  `read()` would re-derive what the caller already resolved, and the two would drift.
 - **An event whose detail is not `{ value }`**, such as `jolly-heading-change`. The handlers ignore
   it by design, so there is nothing to bind.

@@ -2,16 +2,10 @@
 import { Window } from "happy-dom";
 
 // CONSTANTS
-const kEmulatedBrowserWindow = new Window();
+const kEmulatedBrowserWindow = new Window({
+  url: "http://localhost/editor/"
+});
 
-/**
- * DOM globals for happy-dom, wired through `node --import ./test/setup.ts`.
- *
- * `Document`, `ShadowRoot`, `CSSStyleSheet` and `HTMLTemplateElement` are for Lit, not for any
- * test: `@lit/reactive-element/node/css-tag.js` reads `Document.prototype` at import time, so
- * importing `lit` fails with `Document is not defined` before a test runs. A partial set fails
- * the same obscure way, hence all of them.
- */
 Object.assign(globalThis, {
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,
@@ -29,6 +23,7 @@ Object.assign(globalThis, {
   KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent,
   PointerEvent: kEmulatedBrowserWindow.PointerEvent,
   localStorage: kEmulatedBrowserWindow.localStorage,
+  location: kEmulatedBrowserWindow.location,
   getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(
     kEmulatedBrowserWindow
   )

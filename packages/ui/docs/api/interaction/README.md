@@ -49,7 +49,7 @@ closed the last layer during that event's dispatch, as Escape does.
 calls it on every open layer, newest first, and returns `true` only when every
 layer closed. A layer pushed without `dismiss` refuses. A refusing layer stays
 open and the others still close. A caller that gets `false` should not open
-over it; see [ADR-0042](../../adr/0042-open-layers-can-be-dismissed.md).
+over it; see [ADR-0020](../../adr/0020-input-scope-follows-focus.md).
 
 `jolly-dialog` holds a layer while it is open, and so does every popover
 driven by `PopoverController`, from `beforetoggle` to close. Hover flyouts

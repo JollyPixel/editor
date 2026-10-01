@@ -41,7 +41,7 @@ value spans the row with the same inset on both edges.
 
 A lock only paints: the row takes the holder's colour as a left bar and a tint,
 and hovering it shows "Held by" and the holder's name. The label, the value and
-the row height stay where they were, per [ADR-0044](../../adr/0044-a-lock-paints-and-never-reflows.md).
+the row height stay where they were, per [ADR-0018](../../adr/0018-locks-are-advisory.md).
 Peer chips sit on the row's top corner, above the value, and are left out while
 the field is locked, since the tint already names the holder.
 

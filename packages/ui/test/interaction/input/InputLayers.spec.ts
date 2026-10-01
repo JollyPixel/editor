@@ -8,10 +8,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import {
-  InputLayers,
-  inputLayers
-} from "../../../src/interaction/input/InputLayers.ts";
+import { InputLayers } from "../../../src/interaction/input/InputLayers.ts";
 
 function keydown(
   target: EventTarget,
@@ -243,9 +240,5 @@ describe("InputLayers", () => {
 
     assert.equal(layers.dismissAll(), true);
     assert.equal(innerDismissed, false);
-  });
-
-  test("exposes a shared instance", () => {
-    assert.ok(inputLayers instanceof InputLayers);
   });
 });

@@ -101,7 +101,7 @@ indent, so the target depth is visible before release.
 `TreeNode.badges` renders a list of `{ color, title }` as small dots between
 the label and the visibility toggle. The tree resolves neither field and emits
 nothing for a dot: a badge is display only, and what it stands for is consumer
-knowledge (see ADR-0030).
+knowledge. The tree does not deduplicate, order or cap badges.
 
 ```ts
 node.badges = peersOn(node.id).map((peer) => ({
@@ -130,7 +130,8 @@ node.swatch = material === null ?
 A swatch without `color` is empty: a dashed square shown only on a hovered or
 selected row. Clicking a swatch emits `jolly-activate-swatch` and neither
 selects nor renames the row, so a consumer opens the property's editor there.
-Unlike a badge, a swatch is a click target (see ADR-0043).
+Unlike a badge, a swatch is a click target. It is not a tab stop: the keyboard
+reaches the same editor through the row. A row has at most one swatch.
 
 ## Showing a row detail
 

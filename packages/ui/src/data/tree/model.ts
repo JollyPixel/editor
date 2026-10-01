@@ -392,7 +392,7 @@ export function resolveEdgeDropRows<TData>(
   };
 }
 
-export interface ResolveRootDropOptions<TData> {
+interface ResolveRootDropOptions<TData> {
   nodes: TreeNode<TData>[];
   movedIds: string[];
   rowId: string;
@@ -400,7 +400,7 @@ export interface ResolveRootDropOptions<TData> {
   accept?: TreeDropAccept | null;
 }
 
-export function resolveRootDropTarget<TData>(
+function resolveRootDropTarget<TData>(
   options: ResolveRootDropOptions<TData>,
   snapshot = new TreeSnapshot(options.nodes)
 ): DepthDropTarget | null {

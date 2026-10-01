@@ -62,16 +62,13 @@ describe("Math.euler", () => {
     assert.ok(quatClose(quaternion, back));
   });
 
-  test("survives a pitch approaching the gimbal pole without a NaN", () => {
-    // 89.99 degrees keeps m13 just under the gimbal clamp.
+  test("keeps the orientation for a pitch just inside the gimbal pole", () => {
     const euler = { x: 10 * kDeg, y: 89.99 * kDeg, z: 5 * kDeg };
-    const back = quaternionToEuler(
-      eulerToQuaternion(euler)
-    );
+    const quaternion = eulerToQuaternion(euler);
 
-    assert.ok(Number.isFinite(back.x));
-    assert.ok(Number.isFinite(back.y));
-    assert.ok(Number.isFinite(back.z));
+    assert.ok(
+      eulerRoundTrips(quaternionToEuler(quaternion), quaternion)
+    );
   });
 
   test("collapses Z at the gimbal pole itself", () => {
