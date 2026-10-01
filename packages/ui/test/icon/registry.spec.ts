@@ -10,9 +10,11 @@ import {
 
 // Import Internal Dependencies
 import {
+  DEFAULT_ICON_VIEW_BOX,
   ICON_TONES,
   getIcon,
   iconTone,
+  iconViewBox,
   isIconTone,
   registerIcon
 } from "../../src/icon/registry.ts";
@@ -57,6 +59,32 @@ describe("Icon.registerIcon", () => {
     registerIcon("test-retoned-glyph", "<path />");
 
     assert.equal(iconTone("test-retoned-glyph"), null);
+  });
+
+  test("records the view box of a glyph drawn on another grid", () => {
+    registerIcon("test-wide-glyph", "<path />", { viewBox: "0 0 64 64" });
+
+    assert.equal(iconViewBox("test-wide-glyph"), "0 0 64 64");
+  });
+
+  test("falls back to the default view box", () => {
+    registerIcon("test-default-grid-glyph", "<path />");
+
+    assert.equal(
+      iconViewBox("test-default-grid-glyph"),
+      DEFAULT_ICON_VIEW_BOX
+    );
+    assert.equal(
+      iconViewBox("test-never-registered"),
+      DEFAULT_ICON_VIEW_BOX
+    );
+  });
+
+  test("drops the view box when a glyph is registered again without one", () => {
+    registerIcon("test-regridded-glyph", "<path />", { viewBox: "0 0 64 64" });
+    registerIcon("test-regridded-glyph", "<path />");
+
+    assert.equal(iconViewBox("test-regridded-glyph"), DEFAULT_ICON_VIEW_BOX);
   });
 });
 

@@ -15,8 +15,9 @@
 | `onFill` (`on-fill`) | `boolean` | `false` |
 
 An empty label marks the icon as decorative. A non-empty label gives it an
-accessible image role. Glyphs use `currentColor`; `--jolly-icon-size` controls
-their rendered size.
+accessible image role. Glyphs use `currentColor` unless they are
+[illustrated](./registry.md#illustrated-glyphs); `--jolly-icon-size` controls
+their rendered size. The SVG takes the glyph's registered view box.
 
 `tone` overrides the glyph's [registered tone](./registry.md#tones). Set
 `on-fill` when the icon sits on an accent fill, so the tone uses its lighter

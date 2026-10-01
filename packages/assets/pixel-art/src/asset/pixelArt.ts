@@ -8,6 +8,9 @@ import {
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
+// Import Internal Dependencies
+import { PIXEL_ART_ICON } from "./icons.ts";
+
 // CONSTANTS
 export const PIXEL_ART_KIND = "pixelart";
 export const PIXEL_ART_COMMAND = "pixelart.command";
@@ -17,26 +20,7 @@ export const PIXEL_ART_ASSET: AssetKindDescriptor = {
   kind: PIXEL_ART_KIND,
   label: "Pixel art",
   extension: PIXEL_ART_EXTENSION,
-  icon: {
-    svg: `
-      <rect
-        x="3"
-        y="4"
-        width="18"
-        height="16"
-        rx="2"
-        fill="currentColor"
-        opacity="0.35"
-      />
-      <path
-        class="tone-ink"
-        d="M5 17l4-5 3 3 2-2 5 4H5Z"
-        fill="currentColor"
-      />
-      <circle class="tone-ink" cx="16" cy="9" r="2" fill="currentColor" />
-    `,
-    tone: "pink"
-  }
+  icon: PIXEL_ART_ICON
 };
 
 export interface EncodedPixelArt {

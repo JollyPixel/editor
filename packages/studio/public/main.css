@@ -36,17 +36,47 @@ jolly-studio {
   flex: 0 0 auto;
   align-items: flex-end;
   gap: 8px;
-  padding: 4px 8px 0;
-  border-block-end: 1px solid var(--jolly-border);
+  padding: 6px 8px 0;
   background: var(--jolly-surface-sunken);
+  box-shadow:
+    inset 0 2px 6px light-dark(rgb(0 0 0 / 12%), rgb(0 0 0 / 45%)),
+    inset 0 -1px 0 light-dark(rgb(0 0 0 / 14%), rgb(0 0 0 / 70%)),
+    inset 0 -8px 10px -8px light-dark(rgb(0 0 0 / 16%), rgb(0 0 0 / 55%));
 }
 
 #editor-tabs {
   flex: 1 1 auto;
   min-width: 0;
+  font-family: var(--jolly-font-family);
 
-  --jolly-control-height: 28px;
-  --jolly-tab-icon-size: 18px;
+  --jolly-control-height: 33px;
+  --jolly-tab-icon-size: 22px;
+  --jolly-tab-close-size: 20px;
+  --jolly-tab-close-icon-size: 12px;
+}
+
+#editor-tabs::part(list) {
+  gap: 8px;
+}
+
+#editor-tabs::part(tab) {
+  background: var(--jolly-control-bg);
+}
+
+#editor-tabs::part(tab):hover {
+  background: var(--jolly-control-bg-hover);
+}
+
+#editor-tabs::part(tab-selected) {
+  background: var(--jolly-tab-selected-bg);
+}
+
+#editor-tabs::part(tab-selected):hover {
+  background: var(--jolly-tab-selected-bg-hover);
+}
+
+#editor-tabs::part(close) {
+  margin-inline: 4px 8px;
 }
 
 #studio-actions {
@@ -54,15 +84,64 @@ jolly-studio {
   align-self: center;
 }
 
-#studio-main {
+#workbench {
+  position: relative;
   display: flex;
   flex: 1;
-  flex-direction: row;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-block-start: 1px solid light-dark(rgb(255 255 255 / 80%), rgb(255 255 255 / 7%));
+}
+
+#editor-frames {
+  position: relative;
+  flex: 1;
   min-height: 0;
 }
 
+#editor-frames iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+#editor-frames iframe[hidden],
+studio-home[hidden] {
+  display: none;
+}
+
+#workbench jolly-log {
+  position: absolute;
+  inset-block-end: 12px;
+  inset-inline-start: 12px;
+}
+
+studio-home {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: var(--jolly-surface-sunken);
+}
+
+jolly-studio:has(studio-home:not([hidden])) #studio-header {
+  box-shadow: inset 0 2px 6px light-dark(rgb(0 0 0 / 12%), rgb(0 0 0 / 45%));
+}
+
+jolly-studio:has(studio-home:not([hidden])) #workbench {
+  border-block-start-color: transparent;
+}
+
 #asset-dock {
+  background: transparent;
+
   --jolly-dock-handle-size: 8px;
+  --jolly-dock-resize-bg: transparent;
+}
+
+#asset-dock jolly-pane {
+  background: transparent;
 }
 
 #asset-dock jolly-pane::part(header) {
@@ -84,6 +163,8 @@ asset-browser {
 asset-browser .kinds {
   --jolly-field-inset-start: 0;
   --jolly-field-inset-end: 0;
+  --jolly-control-height: 28px;
+  --jolly-icon-size: 20px;
 }
 
 asset-browser jolly-toolbar jolly-button {
@@ -94,42 +175,84 @@ asset-browser jolly-toolbar jolly-button {
 
 asset-browser jolly-tree {
   flex: 1 0 auto;
+
+  --jolly-tree-icon-size: 16px;
 }
 
 asset-browser asset-delete-dialog {
   position: absolute;
 }
 
-#workbench {
-  position: relative;
+project-overview {
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: var(--jolly-space-5);
+  min-width: 0;
+  margin-block-start: var(--jolly-space-2);
+  padding: var(--jolly-space-4) var(--jolly-space-5);
+  overflow: auto;
+  border-block-start: 1px solid var(--jolly-border);
+  border-inline-start: 1px solid var(--jolly-border);
+  border-start-start-radius: var(--jolly-radius-md);
+  background: var(--jolly-surface);
+  box-shadow: -2px -2px 10px light-dark(rgb(0 0 0 / 10%), rgb(0 0 0 / 45%));
+  color: var(--jolly-text);
+  font-family: var(--jolly-font-family);
+  font-size: var(--jolly-font-size);
+}
+
+project-overview h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--jolly-space-2);
+  margin-block-end: var(--jolly-space-3);
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+project-overview .total {
+  color: var(--jolly-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+project-overview ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--jolly-space-2);
+  list-style: none;
+}
+
+project-overview .tally li {
+  display: flex;
+  align-items: center;
+  gap: var(--jolly-space-3);
+  padding: var(--jolly-space-2) var(--jolly-space-3);
+  border-radius: var(--jolly-radius-sm);
+  background: var(--jolly-surface-sunken);
+
+  --jolly-icon-size: 28px;
+}
+
+project-overview .tally .label {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-#editor-frames {
-  position: relative;
-  flex: 1;
-  min-height: 0;
+project-overview .tally .count {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.4em;
 }
 
-#editor-frames iframe,
-#studio-home {
-  display: block;
+project-overview .open-editors jolly-button {
+  display: flex;
   width: 100%;
-  height: 100%;
-  border: 0;
 }
 
-#editor-frames iframe[hidden],
-#studio-home[hidden] {
-  display: none;
-}
-
-#workbench jolly-log {
-  position: absolute;
-  inset-block-end: 12px;
-  inset-inline-start: 12px;
+project-overview .empty {
+  color: var(--jolly-text-muted);
 }

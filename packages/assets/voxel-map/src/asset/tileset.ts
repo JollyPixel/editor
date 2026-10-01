@@ -17,6 +17,9 @@ import {
   type TilesetAssetReference
 } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import { TILESET_ICON } from "./icons.ts";
+
 // CONSTANTS
 export const TILESET_KIND = "tileset";
 export const TILESET_COMMAND = "tileset.command";
@@ -29,27 +32,7 @@ export const TILESET_ASSET: AssetKindDescriptor = {
   kind: TILESET_KIND,
   label: "Tileset",
   extension: TILESET_EXTENSION,
-  icon: {
-    svg: `
-      <rect
-        x="3"
-        y="3"
-        width="18"
-        height="18"
-        rx="1.5"
-        fill="currentColor"
-        opacity="0.35"
-      />
-      <path
-        class="tone-ink"
-        d="M9 3v18M15 3v18M3 9h18M3 15h18"
-        stroke="currentColor"
-        stroke-width="2"
-        fill="none"
-      />
-    `,
-    tone: "amber"
-  }
+  icon: TILESET_ICON
 };
 
 /**

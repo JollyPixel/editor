@@ -2,6 +2,7 @@
 import {
   expect,
   test,
+  type Locator,
   type Page
 } from "@playwright/test";
 import {
@@ -14,6 +15,8 @@ import {
 // CONSTANTS
 const kMap = "overworld.voxelmap.json";
 const kModel = "model.voxelmodel.json";
+const kMapTab = "overworld";
+const kModelTab = "model";
 const kTexture = "model.pixelart";
 
 async function openShell(
@@ -34,27 +37,41 @@ function tabNames(
   );
 }
 
+function homeTab(
+  page: Page
+): Locator {
+  return page.locator("#editor-tabs").getByRole("tab", { name: "Home" });
+}
+
+async function openFromHome(
+  page: Page,
+  name: string
+): Promise<void> {
+  await homeTab(page).click();
+  await treeRow(page, name).dblclick();
+}
+
 test("starts on home and reorders editor tabs behind it", async({ page }) => {
   await openShell(page);
-  const home = page.locator("#editor-tabs").getByRole("tab", { name: "Home" });
+  const home = homeTab(page);
   await expect(home).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("#studio-home")).toBeVisible();
 
   await treeRow(page, kMap).dblclick();
-  await treeRow(page, kModel).dblclick();
+  await openFromHome(page, kModel);
   await expect(page.locator("#editor-frames iframe")).toHaveCount(2);
   await expect(page.locator("#studio-home")).toBeHidden();
-  await expect.poll(() => tabNames(page)).toEqual(["Home", kMap, kModel]);
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kMapTab, kModelTab]);
 
-  const model = page.locator("#editor-tabs").getByRole("tab", { name: kModel });
+  const model = page.locator("#editor-tabs").getByRole("tab", { name: kModelTab });
   const homeBox = await boxOf(home);
   await dragTo(page, model, {
     x: homeBox.x + (homeBox.width * 0.75),
     y: homeBox.y + (homeBox.height / 2)
   });
-  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModelTab, kMapTab]);
 
-  for (const name of [kModel, kMap]) {
+  for (const name of [kModelTab, kMapTab]) {
     await page.locator("#editor-tabs")
       .getByRole("button", { name: `Close ${name}` })
       .click();
@@ -66,25 +83,25 @@ test("starts on home and reorders editor tabs behind it", async({ page }) => {
 test("reopens the tabs in their order after a reload", async({ page }) => {
   await openShell(page);
   await treeRow(page, kMap).dblclick();
-  await treeRow(page, kModel).dblclick();
-  const home = page.locator("#editor-tabs").getByRole("tab", { name: "Home" });
-  const model = page.locator("#editor-tabs").getByRole("tab", { name: kModel });
+  await openFromHome(page, kModel);
+  const home = homeTab(page);
+  const model = page.locator("#editor-tabs").getByRole("tab", { name: kModelTab });
   const homeBox = await boxOf(home);
   await dragTo(page, model, {
     x: homeBox.x + (homeBox.width * 0.75),
     y: homeBox.y + (homeBox.height / 2)
   });
-  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModelTab, kMapTab]);
   await model.click();
   await expect(model).toHaveAttribute("aria-selected", "true");
 
   await page.reload();
 
-  await expect.poll(() => tabNames(page)).toEqual(["Home", kModel, kMap]);
+  await expect.poll(() => tabNames(page)).toEqual(["Home", kModelTab, kMapTab]);
   await expect(model).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("#editor-frames iframe")).toHaveCount(1);
 
-  await page.locator("#editor-tabs").getByRole("tab", { name: kMap }).click();
+  await page.locator("#editor-tabs").getByRole("tab", { name: kMapTab }).click();
   await expect(page.locator("#editor-frames iframe")).toHaveCount(2);
 });
 
@@ -252,24 +269,30 @@ test("creates a map, a model and a texture from the tree and opens each", async(
     const frame = page.locator(`#editor-frames iframe[src^="editors/${asset.editor}/"]`);
     await expect(frame.contentFrame().locator("html"))
       .toHaveAttribute("data-editor-state", "ready", { timeout: 30_000 });
+    await homeTab(page).click();
   }
 });
 
-test("a collapsed asset dock keeps its handle beside the workbench", async({ page }) => {
+test("an editor takes the full width and home lists it among open editors", async({ page }) => {
   await openShell(page);
-  const dock = page.locator("#asset-dock");
-  const handle = dock.locator(".resize-handle");
+  const overview = page.locator("project-overview");
+  await expect(overview.locator(".total")).toHaveText("4");
 
-  await handle.dblclick();
-  await expect(dock).toHaveAttribute("collapsed");
-
-  const [handleBox, workbench] = await Promise.all([
-    boxOf(handle),
+  await treeRow(page, kMap).dblclick();
+  await expect(page.locator("asset-browser")).toBeHidden();
+  const [frame, workbench] = await Promise.all([
+    boxOf(page.locator("#editor-frames iframe")),
     boxOf(page.locator("#workbench"))
   ]);
-  expect(handleBox.width).toBeGreaterThan(0);
-  expect(handleBox.x + handleBox.width).toBeLessThanOrEqual(workbench.x);
+  expect(frame.x).toBe(workbench.x);
+  expect(frame.width).toBe(workbench.width);
 
-  await handle.dblclick();
-  await expect(dock).not.toHaveAttribute("collapsed");
+  const tabs = page.locator("#editor-tabs");
+  await homeTab(page).click();
+  await expect(page.locator("asset-browser")).toBeVisible();
+  const openEditor = overview.locator("jolly-button", { hasText: kMapTab });
+  await expect(openEditor).toHaveAttribute("title", `maps/${kMap}`);
+  await openEditor.click();
+  await expect(tabs.getByRole("tab", { name: kMapTab }))
+    .toHaveAttribute("aria-selected", "true");
 });

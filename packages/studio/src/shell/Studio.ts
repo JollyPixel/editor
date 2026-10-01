@@ -19,8 +19,11 @@ import {
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
 import { StudioSession } from "./StudioSession.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
-import type { EditorTabsOptions } from "../tabs/EditorTabs.ts";
-import "./assets/AssetBrowser.ts";
+import type {
+  EditorTab,
+  EditorTabsOptions
+} from "../tabs/EditorTabs.ts";
+import "./home/StudioHome.ts";
 
 export interface StudioOptions {
   catalog: CatalogClient;
@@ -32,6 +35,9 @@ export interface StudioOptions {
 export class Studio extends LitElement {
   @state()
   declare _assets: AssetBrowserOptions | null;
+
+  @state()
+  declare _openTabs: readonly EditorTab[];
 
   @state()
   declare _log: readonly LogEntry[];
@@ -52,6 +58,7 @@ export class Studio extends LitElement {
   constructor() {
     super();
     this._assets = null;
+    this._openTabs = [];
     this._log = [];
   }
 
@@ -76,7 +83,8 @@ export class Studio extends LitElement {
         frames: this._frames,
         home: this._home,
         confirmEvict: options.confirmEvict
-      }
+      },
+      onTabsChange: this.#syncOpenTabs
     });
     this.#session = session;
     this._assets = {
@@ -84,6 +92,7 @@ export class Studio extends LitElement {
       kinds: session.kinds
     };
     await session.restoreTabs();
+    this.#syncOpenTabs();
   }
 
   reloadEditor(
@@ -126,35 +135,26 @@ export class Studio extends LitElement {
         <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions"></jolly-toolbar>
       </header>
-      <div id="studio-main">
-        <jolly-dock-layout storage-key="studio:layout">
-          <jolly-dock
-            id="asset-dock"
-            key="left"
-            side="left"
-            collapsible
-            size="280"
-            min-size="200"
-            max-size="480"
-          >
-            <jolly-pane key="assets" heading="Assets" locked>
-              <asset-browser
-                .options=${this._assets}
-                @asset-open=${this.#onAssetOpen}
-                @asset-error=${this.#onAssetError}
-              ></asset-browser>
-            </jolly-pane>
-          </jolly-dock>
-          <section id="workbench">
-            <div id="editor-frames">
-              <section id="studio-home" aria-label="Home"></section>
-            </div>
-            <jolly-log .entries=${this._log}></jolly-log>
-          </section>
-        </jolly-dock-layout>
-      </div>
+      <section id="workbench">
+        <div id="editor-frames">
+          <studio-home
+            id="studio-home"
+            role="region"
+            aria-label="Home"
+            .assets=${this._assets}
+            .openTabs=${this._openTabs}
+            @asset-open=${this.#onAssetOpen}
+            @asset-error=${this.#onAssetError}
+          ></studio-home>
+        </div>
+        <jolly-log .entries=${this._log}></jolly-log>
+      </section>
     `;
   }
+
+  readonly #syncOpenTabs = (): void => {
+    this._openTabs = this.#session?.tabs.list() ?? [];
+  };
 
   readonly #onAssetOpen = (
     event: HTMLElementEventMap["asset-open"]

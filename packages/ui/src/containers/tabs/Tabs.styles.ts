@@ -143,6 +143,8 @@ export const tabsStyles = css`
     ${truncate}
 
     min-width: 0;
+    padding-block: 0.3em;
+    text-box: trim-both cap alphabetic;
   }
 
   .icon {
@@ -205,8 +207,8 @@ export const tabsStyles = css`
 
   .close {
     display: inline-grid;
-    width: 14px;
-    height: 14px;
+    width: var(--jolly-tab-close-size, 14px);
+    height: var(--jolly-tab-close-size, 14px);
     flex: 0 0 auto;
     padding: 0;
     border-radius: 50%;
@@ -221,8 +223,8 @@ export const tabsStyles = css`
   }
 
   .close jolly-icon {
-    width: 8px;
-    height: 8px;
+    width: var(--jolly-tab-close-icon-size, 8px);
+    height: var(--jolly-tab-close-icon-size, 8px);
   }
 
   .close:hover:not(:disabled) {

@@ -1,9 +1,13 @@
 export interface AssetKindIcon {
   /**
-   * SVG children drawn in a 24x24 view box, without the `<svg>` element.
+   * SVG children drawn in `viewBox`, without the `<svg>` element.
    */
   svg: string;
   tone?: string;
+  /**
+   * @default "0 0 24 24"
+   */
+  viewBox?: string;
 }
 
 /**

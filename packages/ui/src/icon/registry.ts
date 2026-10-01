@@ -32,13 +32,19 @@ export const ICON_TONES = [
   "violet",
   "pink"
 ] as const;
+export const DEFAULT_ICON_VIEW_BOX = "0 0 24 24";
 const kIcons = new Map<string, SVGTemplateResult>();
 const kTones = new Map<string, IconTone>();
+const kViewBoxes = new Map<string, string>();
 
 export type IconTone = typeof ICON_TONES[number];
 
 export interface RegisterIconOptions {
   tone?: IconTone;
+  /**
+   * @default DEFAULT_ICON_VIEW_BOX
+   */
+  viewBox?: string;
 }
 
 export function registerIcon(
@@ -59,6 +65,19 @@ export function registerIcon(
   else {
     kTones.set(name, options.tone);
   }
+
+  if (options.viewBox === undefined) {
+    kViewBoxes.delete(name);
+  }
+  else {
+    kViewBoxes.set(name, options.viewBox);
+  }
+}
+
+export function iconViewBox(
+  name: IconName
+): string {
+  return kViewBoxes.get(name) ?? DEFAULT_ICON_VIEW_BOX;
 }
 
 export function iconTone(

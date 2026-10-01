@@ -58,6 +58,27 @@ describe("AssetKindSet", () => {
     assert.equal(kKinds.detailFor("binary"), "no editor");
   });
 
+  test("displays a name without the extension of its kind", () => {
+    assert.equal(
+      kKinds.displayNameFor("voxelmap", "cave.voxelmap.json"),
+      "cave"
+    );
+    assert.equal(
+      kKinds.displayNameFor("voxelmap", "v1.2 cave.voxelmap.json"),
+      "v1.2 cave"
+    );
+    assert.equal(kKinds.displayNameFor("texture", "grass.png"), "grass");
+  });
+
+  test("displays the whole name when the kind extension does not apply", () => {
+    assert.equal(kKinds.displayNameFor("binary", "data.bin"), "data.bin");
+    assert.equal(kKinds.displayNameFor("voxelmap", "cave.json"), "cave.json");
+    assert.equal(
+      kKinds.displayNameFor("voxelmap", ".voxelmap.json"),
+      ".voxelmap.json"
+    );
+  });
+
   test("offers the listed kinds in order", () => {
     assert.deepEqual(kKinds.toOptions(), [
       {

@@ -80,6 +80,22 @@ export class AssetKindSet implements AssetKindPresenter {
       : kNoEditorDetail;
   }
 
+  displayNameFor(
+    kind: string,
+    name: string
+  ): string {
+    const extension = this.#byKind.get(kind)?.extension ?? "";
+    if (
+      extension === "" ||
+      name === extension ||
+      !name.endsWith(extension)
+    ) {
+      return name;
+    }
+
+    return name.slice(0, -extension.length);
+  }
+
   toOptions(): JollyOption<string>[] {
     return this.entries.map(({ kind, label }) => {
       return {

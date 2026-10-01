@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  DEFAULT_ICON_VIEW_BOX,
   getIcon,
-  iconTone
+  iconTone,
+  iconViewBox
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -84,6 +86,23 @@ describe("EditorRegistry", () => {
     assert.equal(icon, "kind:voxelmap");
     assert.notEqual(getIcon(icon), null);
     assert.equal(iconTone(icon), "lime");
+    assert.equal(iconViewBox(icon), DEFAULT_ICON_VIEW_BOX);
+  });
+
+  test("registers an illustrated kind icon on its own grid", () => {
+    const registry = new EditorRegistry().registerKind({
+      kind: "tileset",
+      label: "Tileset",
+      extension: ".tileset",
+      icon: {
+        svg: "<rect width=\"64\" height=\"64\" fill=\"#ffc93c\" />",
+        viewBox: "0 0 64 64"
+      }
+    });
+    const icon = registry.kindSet().iconFor("tileset");
+
+    assert.equal(iconViewBox(icon), "0 0 64 64");
+    assert.equal(iconTone(icon), null);
   });
 
   test("snapshots the registered kinds in registration order", () => {

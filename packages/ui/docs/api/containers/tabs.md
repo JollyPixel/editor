@@ -98,6 +98,17 @@ the start of its row rather than filling it.
 | `--jolly-tab-skew` | Horizontal run of the slant, `8px` |
 | `--jolly-tab-skew-seam` | Gap between two chained tabs, `2px` |
 
+## Sizing
+
+A tab is at least `--jolly-control-height` tall. Its label centres the cap
+height of the text on the icon.
+
+| Token | Applies to |
+|---|---|
+| `--jolly-tab-icon-size` | The tab icon, `16px` |
+| `--jolly-tab-close-size` | The round close button, `14px` |
+| `--jolly-tab-close-icon-size` | The close glyph, `8px` |
+
 ## Parts
 
 | Part | Node |
