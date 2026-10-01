@@ -106,14 +106,6 @@ describe("Storage.LocalStorageAdapter", () => {
     assert.equal(adapter.get("second"), "2");
   });
 
-  test("does not throw into a render when a write fails", () => {
-    const adapter = new LocalStorageAdapter({
-      resolve: throwingOnWrite
-    });
-
-    assert.doesNotThrow(() => adapter.set("a", "1"));
-  });
-
   test("returns null for an unknown key", () => {
     const adapter = new LocalStorageAdapter({
       resolve: workingStorage

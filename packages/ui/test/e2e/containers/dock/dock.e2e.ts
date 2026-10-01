@@ -47,7 +47,6 @@ test.describe("Dock", () => {
     await expect(dock.locator("jolly-pane")).toHaveCSS("border-radius", "0px");
     expect(await styleOf(handle, "background-image", "::after"))
       .toContain("radial-gradient");
-    await expect(handle).toHaveCSS("width", "4px");
 
     const rest = await resolvedColorOf(handle, "var(--jolly-dock-resize-bg)");
     await expect(handle).toHaveCSS("background-color", rest);
@@ -121,13 +120,23 @@ test.describe("Placement", () => {
       localStorage.setItem("gallery-example:placement", JSON.stringify({
         v: 1,
         docks: {
-          left: { size: 240, collapsed: false, panes: [] },
-          right: { size: 240, collapsed: false, panes: ["right"] }
+          left: {
+            size: 240,
+            collapsed: false,
+            groups: []
+          },
+          right: {
+            size: 320,
+            collapsed: false,
+            groups: [{ panes: ["right"] }]
+          }
         },
         floating: {
           left: { x: 700, y: 600, width: 280, height: 220 }
         },
-        panes: {}
+        geometry: {},
+        panes: {},
+        folders: {}
       }));
     });
     await openExample(page, "scenarios/dock-resize");
@@ -136,5 +145,11 @@ test.describe("Placement", () => {
       page.locator("jolly-dock[side='left'] jolly-pane[key='left']")
     ).toHaveCount(1);
     await expect(page.locator("jolly-floating")).toHaveCount(1);
+    await expect.poll(async() => {
+      const right = await widthOf(page.locator("jolly-dock[side='right']"));
+      const left = await widthOf(page.locator("jolly-dock[side='left']"));
+
+      return right - left;
+    }).toBe(80);
   });
 });

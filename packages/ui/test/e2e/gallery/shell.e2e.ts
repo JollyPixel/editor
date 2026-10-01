@@ -120,18 +120,9 @@ test.describe("gallery shell", () => {
       options: { closable: true }
     });
 
+    await expect(page.locator("gallery-root nav")).toHaveCount(0);
     await expect(page.locator("gallery-root .options")).toHaveCount(0);
     await expect(page.locator("gallery-root jolly-tabs [part~=close]")).toHaveCount(4);
-  });
-
-  test("chrome=off renders the example with no nav", async({ page }) => {
-    await gotoGallery(page, {
-      example: kFirst.id,
-      chrome: "off"
-    });
-
-    await expect(page.locator("gallery-root nav")).toHaveCount(0);
-    await expect(page.locator("gallery-root .token-grid")).toBeVisible();
   });
 
   test("scopes full-size pane CSS to its navigation pane", async({ page }) => {

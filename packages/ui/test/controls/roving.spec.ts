@@ -62,7 +62,6 @@ describe("Controls.nextEnabledIndex", () => {
     );
   });
 
-  /** Otherwise an all disabled group loops forever looking for a stop that does not exist. */
   test("returns -1 when nothing is selectable", () => {
     assert.equal(
       nextEnabledIndex([false, false], 0, 1),

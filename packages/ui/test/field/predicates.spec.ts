@@ -59,7 +59,6 @@ describe("Field.isModified", () => {
     assert.equal(isModified(fallback, fallback, Object.is), false);
   });
 
-  /** What stops an object valued field lighting its revert gutter on an untouched value. */
   test("uses a supplied comparator for object values", () => {
     function equals(
       a: { x: number; },

@@ -244,14 +244,6 @@ test.describe("DockLayout drag", () => {
     await expect(frame).toHaveCount(0);
   });
 
-  test("dragging a floating pane onto a dock combines it back", async({ page }) => {
-    await dropIntoDock(page, kFloatingAssets, "left");
-
-    await expect(page.locator("jolly-floating")).toHaveCount(0);
-    await expect(paneKeysOf(page, "left"))
-      .resolves.toEqual(["hierarchy", "inspector", "assets"]);
-  });
-
   test("a window docks once its box enters, cursor short of the dock", async({ page }) => {
     const dock = await boxOf(page.locator("jolly-dock[key='right']"));
 

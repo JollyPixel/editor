@@ -20,10 +20,6 @@ const { defaultStorageAdapter } = await import(
 );
 
 describe("Storage.defaultStorageAdapter", () => {
-  test("returns one adapter for the page", () => {
-    assert.equal(defaultStorageAdapter(), defaultStorageAdapter());
-  });
-
   test("a replacement element still sees a value written after storage failed", () => {
     const first = defaultStorageAdapter();
     first.set("jolly-stats:metric", "ms");

@@ -8,10 +8,6 @@ import type { ReactiveControllerHost } from "lit";
 // Import Internal Dependencies
 import { ScrubController } from "../../../src/interaction/scrub/ScrubController.ts";
 
-interface CaptureElement extends HTMLElement {
-  captured: number | null;
-}
-
 function pointer(
   type: string,
   clientX: number
@@ -29,16 +25,7 @@ test("ScrubController restores the preview and does not commit on cancel", () =>
   const host = Object.assign(hostElement, {
     addController: () => undefined
   }) as unknown as ReactiveControllerHost & HTMLElement;
-  const target = Object.assign(document.createElement("span"), {
-    captured: null as number | null
-  }) as CaptureElement;
-  target.setPointerCapture = (pointerId) => {
-    target.captured = pointerId;
-  };
-  target.hasPointerCapture = (pointerId) => target.captured === pointerId;
-  target.releasePointerCapture = () => {
-    target.captured = null;
-  };
+  const target = document.createElement("span");
   host.append(target);
   document.body.append(host);
 
@@ -60,7 +47,7 @@ test("ScrubController restores the preview and does not commit on cancel", () =>
   assert.deepEqual(inputs, [15, 10]);
   assert.deepEqual(commits, []);
   assert.equal(controller.dragging, false);
-  assert.equal(target.captured, null);
+  assert.equal(target.hasPointerCapture(1), false);
   assert.equal(document.querySelector(".jolly-scrub-guide"), null);
 
   controller.hostDisconnected();

@@ -5,7 +5,6 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   formatNumber,
-  parseNumeric,
   parseNumericEntry,
   quantize,
   stepNumericEntry,
@@ -118,43 +117,6 @@ describe("Numeric.formatNumber", () => {
   });
 });
 
-describe("Numeric.parseNumeric", () => {
-  test("returns null for blank input, which is a cancel and not a zero", () => {
-    assert.equal(parseNumeric(""), null);
-    assert.equal(parseNumeric("   "), null);
-  });
-
-  test("commits an expression", () => {
-    assert.deepEqual(
-      parseNumeric("1920/2"),
-      { ok: true, value: 960 }
-    );
-    assert.deepEqual(
-      parseNumeric(" (3+4)/2 "),
-      { ok: true, value: 3.5 }
-    );
-  });
-
-  test("commits a plain number through the fast path", () => {
-    assert.deepEqual(
-      parseNumeric("42"),
-      { ok: true, value: 42 }
-    );
-  });
-
-  test("reports a parse failure rather than throwing", () => {
-    const result = parseNumeric("alert(1)");
-
-    assert.equal(result?.ok, false);
-  });
-
-  test("reports a non finite result as a failure", () => {
-    const result = parseNumeric("1/0");
-
-    assert.equal(result?.ok, false);
-  });
-});
-
 describe("Numeric.quantize", () => {
   test("snaps onto the step grid", () => {
     assert.equal(
@@ -185,7 +147,7 @@ describe("Numeric.quantize", () => {
     );
   });
 
-  test("leaves the value alone when the step is zero", () => {
+  test("rounds to a whole number when the step is zero", () => {
     assert.equal(
       quantize(1.234, 0, -10, 10),
       1

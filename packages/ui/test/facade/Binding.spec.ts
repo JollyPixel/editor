@@ -5,13 +5,6 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { FacadeBinding } from "../../src/facade/Binding.ts";
 
-/*
- * Lit elements carry decorators, which node type stripping cannot parse, so no
- * custom element is registered here. The facade still creates the right tag
- * and sets the right properties on it; how the element then behaves is covered
- * by the Playwright suite.
- */
-
 function commit(
   element: HTMLElement,
   value: unknown

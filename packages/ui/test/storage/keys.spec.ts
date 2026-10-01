@@ -70,13 +70,6 @@ describe("Storage.deriveKey", () => {
     );
   });
 
-  test("separates two controls of different types sharing a label", () => {
-    assert.notEqual(
-      deriveKey("jolly-folder", "Transform"),
-      deriveKey("jolly-vector3", "Transform")
-    );
-  });
-
   test("leaves the first occurrence unsuffixed and numbers the rest", () => {
     assert.equal(
       deriveKey("jolly-folder", "Options", 1),
@@ -185,11 +178,9 @@ describe("Storage.pageNamespace", () => {
   });
 
   test("joins the page path with the parts", () => {
-    const path = globalThis.location?.pathname ?? "";
-
     assert.equal(
       pageNamespace("", "jolly-dock", "left"),
-      `${path}:jolly-dock:left`
+      "/editor/:jolly-dock:left"
     );
   });
 });

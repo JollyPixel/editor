@@ -20,10 +20,7 @@ describe("Interaction.themeTokenNames", () => {
       themeTokenNames()
     );
 
-    /*
-     * One per stylesheet composed into "themeStyles", so a group dropped from
-     * the composition cannot go unnoticed.
-     */
+    assert.ok(names.has("--jolly-neutral-100"));
     assert.ok(names.has("--jolly-accent-fill"));
     assert.ok(names.has("--jolly-surface"));
     assert.ok(names.has("--jolly-pane-header-bg"));
@@ -38,23 +35,6 @@ describe("Interaction.themeTokenNames", () => {
     assert.equal(
       new Set(names).size,
       names.length
-    );
-  });
-
-  test("includes ramp tokens declared by the scope", () => {
-    /*
-     * The scope declares raw ramp tokens as well as semantic aliases, so a
-     * ghost receives every custom property needed by the resolved theme.
-     */
-    assert.ok(
-      themeTokenNames().includes("--jolly-neutral-100")
-    );
-  });
-
-  test("returns the same list on every call", () => {
-    assert.equal(
-      themeTokenNames(),
-      themeTokenNames()
     );
   });
 });

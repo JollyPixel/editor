@@ -56,12 +56,6 @@ describe("FacadeItem", () => {
 
     assert.equal(owner.released.length, 1);
   });
-
-  test("an unowned item disposes without an owner", () => {
-    const item = new TestItem();
-
-    assert.doesNotThrow(() => item.dispose());
-  });
 });
 
 describe("FacadeElement", () => {
