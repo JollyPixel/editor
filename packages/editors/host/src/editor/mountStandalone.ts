@@ -122,7 +122,8 @@ async function mountEditor<THandle extends EditorHandle>(
   const target = {
     launch,
     kinds: definition.kinds,
-    accepts: definition.accepts
+    accepts: definition.accepts,
+    logger: logger.child({ namespace: "host.session" })
   };
 
   if (dev) {
@@ -202,14 +203,8 @@ class BootTrace {
     name: string,
     run: () => Promise<T>
   ): Promise<T> {
-    const startedAt = performance.now();
     this.#step = name;
-    this.logger.debug(`${name} started`);
-
-    const result = await run();
-    this.logger.debug(`${name} done`, {
-      ms: Math.round(performance.now() - startedAt)
-    });
+    const result = await this.logger.step(name, run);
     this.#step = null;
 
     return result;
@@ -225,8 +220,10 @@ class BootTrace {
   fail(
     error: unknown
   ): void {
-    this.logger.error(`${this.#step ?? "boot"} failed`, {
-      error
-    });
+    if (this.#step === null) {
+      this.logger.error("boot failed", {
+        error
+      });
+    }
   }
 }

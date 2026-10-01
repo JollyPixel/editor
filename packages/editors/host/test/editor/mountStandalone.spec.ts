@@ -246,7 +246,10 @@ describe("mountStandalone", () => {
 
   test("traces each boot step in order", async() => {
     const workspace = await openWorkspace();
-    const { logger, lines } = captureLogs(["host.boot"]);
+    const { logger, lines, metas } = captureLogs([
+      "host.boot",
+      "host.session"
+    ]);
 
     let editorLogger: HostLogger | undefined;
     const handle = await mountStandalone(definition((context) => {
@@ -264,6 +267,10 @@ describe("mountStandalone", () => {
       "[DEBUG] [host.boot] launch source read",
       "[DEBUG] [host.boot] launch done",
       "[DEBUG] [host.boot] session started",
+      "[DEBUG] [host.session] catalog started",
+      "[DEBUG] [host.session] catalog done",
+      "[DEBUG] [host.session] target started",
+      "[DEBUG] [host.session] target done",
       "[DEBUG] [host.boot] session done",
       "[DEBUG] [host.boot] mount started",
       "[DEBUG] [host.boot] mount done",
@@ -271,6 +278,12 @@ describe("mountStandalone", () => {
       "[DEBUG] [host.boot] ready done",
       "[DEBUG] [host.boot] state ready"
     ]);
+    assert.deepEqual(metas[lines.indexOf(
+      "[DEBUG] [host.session] target started"
+    )], {
+      kind: BINARY_KIND,
+      id: kAssetId
+    });
     assert.equal(editorLogger?.namespace, "editor");
 
     handle.dispose();

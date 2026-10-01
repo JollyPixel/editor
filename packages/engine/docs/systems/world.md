@@ -212,5 +212,6 @@ if (input.keyboard.isDown("Space")) {
 
 - [SceneManager](scene-manager.md): actor tree, lifecycle, and destruction
 - [Renderer](renderer.md): rendering pipeline
+- [Logger](logger.md): `world.logger`, namespaces and steps
 - [Input](../../../controls/docs/input.md): input handling
 - [Actor](../actor/actor.md): the engine's core entity

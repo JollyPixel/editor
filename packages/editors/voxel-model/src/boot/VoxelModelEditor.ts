@@ -94,7 +94,8 @@ export class VoxelModelEditor {
     });
     const editorRuntime = await EditorRuntime.create(kCanvas, {
       focusCanvas: false,
-      viewHelper: true
+      viewHelper: true,
+      logger: context.logger.child({ namespace: "runtime" })
     });
     const shell = new EditorShell({
       runtime: editorRuntime,
@@ -104,7 +105,10 @@ export class VoxelModelEditor {
       maxFps: Infinity
     });
 
-    const workspace = await scene.ready;
+    const workspace = await context.logger.step(
+      "scene",
+      () => scene.ready
+    );
     shell.adoptWorkspace(workspace);
 
     return new VoxelModelEditor({

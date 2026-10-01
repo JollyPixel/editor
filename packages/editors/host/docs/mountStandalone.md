@@ -386,11 +386,12 @@ editor hides what only a shell can do.
 ## Boot tracing
 
 `mountStandalone` logs each boot step to a `HostLogger`, the engine's
-`Systems.Logger`. Nothing is logged unless the page enables it:
+[`Systems.Logger`](../../../engine/docs/systems/logger.md), as a `step`.
+Nothing is logged unless the page enables it:
 
 | Switch | Example |
 |---|---|
-| `?debug=` query parameter | `?debug=host.*,editor`; a bare `?debug` enables every namespace |
+| `?debug=` query parameter | `?debug=host.*,editor.*`; a bare `?debug` enables every namespace |
 | `jolly-pixel:debug` in `localStorage` | `localStorage.setItem("jolly-pixel:debug", "*")`, for pages framed by the studio |
 
 The query parameter wins over the stored value. Namespaces are comma-separated
@@ -398,9 +399,11 @@ globs:
 
 | Namespace | Logs |
 |---|---|
-| `host.boot` | `state <state>`, `<step> started` and `<step> done` with `ms` for the `launch`, `session`, `mount` and `ready` steps, `launch source read` per source, `<step> failed` with the error |
+| `host.boot` | `state <state>`, `<step> started` and `<step> done` with `ms` for the `launch`, `session`, `mount` and `ready` steps, `launch source read` per source, `<step> failed` with the error, or `boot failed` for an error outside the steps |
 | `host.launch` | the handshake of the default `HostMessageLaunchSource` |
-| `editor` | `context.logger` and the children an editor derives from it |
+| `host.session` | the [session steps](./EditorSession.md#boot-steps) |
+| `editor` | `context.logger` and the children an editor derives from it; voxel-map and voxel-model write a `scene` step while their scene awakes |
+| `editor.runtime` | the [startup steps](../../../runtime/docs/api/Runtime.md#startup-tracing) of the editor's `Runtime`, when it passes `context.logger.child({ namespace: "runtime" })` as the `logger` option of `EditorRuntime.create` |
 | `studio.tabs` | the studio side of the handshake |
 
 ```ts

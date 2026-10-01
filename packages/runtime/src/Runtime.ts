@@ -76,6 +76,10 @@ export interface RuntimeOptions<
    * Forwarded to `Systems.ThreeRenderer.create()`.
    */
   renderer?: Systems.ThreeRendererOptions;
+  /**
+   * @default a logger with every namespace disabled
+   */
+  logger?: Systems.Logger;
 }
 
 export class Runtime<
@@ -95,6 +99,7 @@ export class Runtime<
   #focusHint: FocusHintOptions | null;
   #viewHelper: ViewHelperOptions | null;
   #adaptivePixelRatio: boolean;
+  #logger: Systems.Logger;
   #session: AbortController | null = null;
   #statsOverlay: MountedPerformanceStats | null = null;
 
@@ -115,6 +120,7 @@ export class Runtime<
     this.#focusCanvas = options.focusCanvas ?? true;
     this.#focusHint = resolveToggleOptions(options.focusHint);
     this.#viewHelper = resolveToggleOptions(options.viewHelper);
+    this.#logger = options.logger ?? new Systems.Logger();
 
     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
@@ -141,22 +147,33 @@ export class Runtime<
     target: RuntimeCanvasTarget,
     options: RuntimeOptions<TContext> = Object.create(null)
   ): Promise<Runtime<TContext>> {
+    const logger = options.logger ?? new Systems.Logger();
     const canvas = resolveElement(target, HTMLCanvasElement);
-    const catalog = await resolveRuntimeAssetCatalog(options.assets?.catalog);
-    const renderer = await Systems.ThreeRenderer.create(
-      canvas,
-      options.renderer
+    const catalog = await logger.step(
+      "catalog",
+      () => resolveRuntimeAssetCatalog(options.assets?.catalog)
+    );
+    const renderer = await logger.step(
+      "renderer",
+      () => Systems.ThreeRenderer.create(canvas, options.renderer)
     );
 
     const runtime = new Runtime(
       canvas,
       renderer,
       catalog,
-      options
+      {
+        ...options,
+        logger
+      }
     );
-    await runtime.#initializePerformanceStats(
-      options.includePerformanceStats
-    );
+    const stats = options.includePerformanceStats;
+    if (stats) {
+      await logger.step(
+        "stats",
+        () => runtime.#initializePerformanceStats(stats)
+      );
+    }
 
     return runtime;
   }
@@ -169,7 +186,8 @@ export class Runtime<
     options: RuntimeLoadOptions<TContext> = {}
   ): Promise<void> {
     return bootstrapRuntime(this, options, {
-      adaptivePixelRatio: this.#adaptivePixelRatio
+      adaptivePixelRatio: this.#adaptivePixelRatio,
+      logger: this.#logger
     });
   }
 
@@ -279,12 +297,11 @@ export class Runtime<
   }
 
   async #initializePerformanceStats(
-    option: RuntimeOptions<TContext>["includePerformanceStats"]
+    option: Exclude<
+      RuntimeOptions<TContext>["includePerformanceStats"],
+      false | undefined
+    >
   ): Promise<void> {
-    if (!option) {
-      return;
-    }
-
     const settings = typeof option === "object" ? option : {};
     if (settings.mount ?? true) {
       const { mountPerformanceStats } = await import(

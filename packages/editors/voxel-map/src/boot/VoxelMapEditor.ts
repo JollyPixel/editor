@@ -56,7 +56,11 @@ export class VoxelMapEditor {
   static async mount(
     context: EditorContext
   ): Promise<VoxelMapEditor> {
-    const { session, commands } = context;
+    const {
+      session,
+      commands,
+      logger
+    } = context;
     const state = new EditorState();
     const target = session.targetLease(kMapKind);
 
@@ -69,7 +73,8 @@ export class VoxelMapEditor {
       viewHelper: true,
       overlay: {
         container: "#game-container"
-      }
+      },
+      logger: logger.child({ namespace: "runtime" })
     });
     const { runtime } = editorRuntime;
     const scene = new EditorScene({
@@ -96,7 +101,10 @@ export class VoxelMapEditor {
       maxFps: Infinity
     });
 
-    const workspace = await scene.ready;
+    const workspace = await logger.step(
+      "scene",
+      () => scene.ready
+    );
     shell.adoptWorkspace(workspace);
     runtime.metrics.addSource(workspace.view.inspector);
 

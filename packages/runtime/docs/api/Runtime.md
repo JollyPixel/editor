@@ -68,6 +68,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
   assets?: RuntimeAssetOptions;
   loop?: FrameSchedulerOptions;
   renderer?: Systems.ThreeRendererOptions;
+  logger?: Systems.Logger;
 }
 
 interface RuntimeLoadOptions<
@@ -149,6 +150,7 @@ for options.
 | `assets` | Empty catalog and default loaders | Configures the runtime asset coordinator. |
 | `loop` | `GameLoop` defaults | Configures the loop's `FrameScheduler`. |
 | `renderer` | Engine defaults | Forwarded to `ThreeRenderer.create()`. An explicit `output.pixelRatio` or `output.maxPixelRatio` survives `load()`. |
+| `logger` | Every namespace disabled | Receives the startup steps of `create()` and `load()`. See [startup tracing](#startup-tracing). |
 
 `runtime.stats` and `runtime.metrics` always exist, and the loop brackets
 every frame with them. The option decides what is displayed: `{ mount: false }`
@@ -460,6 +462,29 @@ directly. The runtime remains stopped when startup fails.
 
 See [customizing the loading screen](../guides/loading-screen.md) for container,
 theme, and opt-out examples.
+
+### Startup tracing
+
+The `logger` option records each startup step as a
+[`Logger.step`](../../../engine/docs/systems/logger.md#steps): `<step> started`,
+then `<step> done` with `ms` or `<step> failed` with `error`. Lines go to the
+logger itself, not to a child, so they carry the caller's namespace.
+
+| Step | From | Meta |
+|---|---|---|
+| `catalog` | `create()` | |
+| `renderer` | `create()` | |
+| `stats` | `create()`, when `includePerformanceStats` is set | |
+| `device` | `load()` | |
+| `assets` | `load()` | |
+| `scene` | `load()`, when `scene` is set | `scene`, the scene name |
+
+Once `load()` has started the runtime, an enabled logger writes
+`waiting for first frame` with `visibility`, the page's
+`document.visibilityState`, and `first frame` when the first tick ends. A scene
+awakes on that first tick, and a hidden page never ticks, so a missing
+`first frame` next to `visibility: "hidden"` explains a scene that never
+awoke.
 
 ## Lifecycle
 

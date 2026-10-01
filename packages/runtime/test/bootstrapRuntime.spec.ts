@@ -54,16 +54,18 @@ function createFakeRuntime() {
   };
   sceneManager.bindWorld(world as any);
 
+  const firstFrame = Promise.withResolvers<void>();
   const runtime = {
     canvas,
     loop: { scheduler: { maxFps: Infinity } },
     world,
     start: () => {
       startCalls.push("start");
-    }
+    },
+    nextFrame: () => firstFrame.promise
   } as unknown as Runtime;
 
-  return { runtime, startCalls, setPixelRatio };
+  return { runtime, startCalls, setPixelRatio, firstFrame };
 }
 
 describe("bootstrapRuntime (skipLoadingScreen)", () => {
@@ -158,5 +160,56 @@ describe("bootstrapRuntime (pixel ratio)", () => {
     );
 
     assert.strictEqual(setPixelRatio.mock.callCount(), 0);
+  });
+});
+
+describe("bootstrapRuntime (tracing)", () => {
+  test("traces each step, then waits for the first frame", async() => {
+    const { runtime, firstFrame } = createFakeRuntime();
+    const lines: string[] = [];
+    const metas: Array<Record<string, unknown> | undefined> = [];
+    function record(
+      line: string,
+      meta?: Record<string, unknown>
+    ): void {
+      lines.push(line);
+      metas.push(meta);
+    }
+    const logger = new Systems.Logger({
+      level: "debug",
+      namespaces: ["*"],
+      adapter: {
+        log: record,
+        warn: record,
+        error: record
+      }
+    }).child({ namespace: "runtime" });
+
+    await bootstrapRuntime(
+      runtime,
+      {
+        skipLoadingScreen: true,
+        scene: new TestScene("empty")
+      },
+      { logger }
+    );
+
+    assert.deepStrictEqual(lines, [
+      "[DEBUG] [runtime] device started",
+      "[DEBUG] [runtime] device done",
+      "[DEBUG] [runtime] assets started",
+      "[DEBUG] [runtime] assets done",
+      "[DEBUG] [runtime] scene started",
+      "[DEBUG] [runtime] scene done",
+      "[DEBUG] [runtime] waiting for first frame"
+    ]);
+    assert.deepStrictEqual(metas.at(-1), {
+      visibility: document.visibilityState
+    });
+
+    firstFrame.resolve();
+    await firstFrame.promise;
+
+    assert.strictEqual(lines.at(-1), "[DEBUG] [runtime] first frame");
   });
 });

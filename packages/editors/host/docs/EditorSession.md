@@ -51,6 +51,23 @@ snapshot, then throws `CatalogUnavailableError` (from
 `EditorSession.connect()` accepts `catalogTimeoutMs` for supplied clients;
 without it, the caller owns connection liveness.
 
+### Boot steps
+
+Both `open()` and `connect()` take a `logger`, a `HostLogger` with every
+namespace disabled by default; `mountStandalone` passes its `host.session`
+child. Each step is a [`Logger.step`](../../../engine/docs/systems/logger.md#steps):
+
+| Step | Meta |
+|---|---|
+| `identity` | |
+| `catalog` | |
+| `target` | `kind`, `id` |
+| `dependency` | `kind`, `id`, one step per dependency |
+
+`identity` is the username prompt and only `open()` runs it. `target` and the
+`dependency` steps run concurrently, so a lease that never loads is the one
+whose `started` line has no `done`.
+
 A page that needs the catalog without a session calls
 `openCatalog(client, timeoutMs?)` instead. It resolves once the snapshot
 lands. It wraps `CatalogClient.connect`: on failure or timeout it also
