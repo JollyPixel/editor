@@ -22,6 +22,7 @@ Object.assign(globalThis, {
   EventTarget: kEmulatedBrowserWindow.EventTarget,
   KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent,
   PointerEvent: kEmulatedBrowserWindow.PointerEvent,
+  MutationObserver: kEmulatedBrowserWindow.MutationObserver,
   localStorage: kEmulatedBrowserWindow.localStorage,
   location: kEmulatedBrowserWindow.location,
   getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(

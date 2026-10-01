@@ -99,9 +99,9 @@ One card, at most 640px wide (`--jolly-console-width`), anchored 30vh from the t
 scrollback grows upward from it and suggestions grow downward. The backdrop dims without blurring,
 so the effect of `brush.size 5` on the page behind stays visible.
 
-The element adopts the page theme through `adoptAmbientTheme` from `ui` when it opens, and again
-after each submitted line, so `theme light` restyles the open console too. A `theme` attribute set
-on the element by hand wins over both.
+The element follows the page theme through `AmbientThemeController` from `ui` while it is open,
+so `theme light` restyles the open console too, and `theme auto` returns it to the system color
+scheme. A `theme` attribute set on the element by hand wins.
 
 ## Accessibility
 

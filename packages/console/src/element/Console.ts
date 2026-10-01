@@ -14,11 +14,10 @@ import {
 } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import {
-  adoptAmbientTheme,
+  AmbientThemeController,
   deepActiveElement,
   inputLayers,
-  themeStyles,
-  type ResolvedThemeMode
+  themeStyles
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/icon";
 
@@ -78,7 +77,7 @@ export class ConsoleElement extends LitElement {
   #restoreFocus: HTMLElement | null = null;
   #releaseLayer: (() => void) | null = null;
   #unsubscribe: (() => void) | null = null;
-  #inheritedTheme: ResolvedThemeMode | null = null;
+  #theme = new AmbientThemeController(this);
 
   constructor() {
     super();
@@ -134,7 +133,7 @@ export class ConsoleElement extends LitElement {
 
     const active = deepActiveElement();
     this.#restoreFocus = active instanceof HTMLElement ? active : null;
-    this.#inheritedTheme = adoptAmbientTheme(this, this.#inheritedTheme);
+    this.#theme.follow();
     this._text = "";
     dialog.showModal();
     this.#releaseLayer = inputLayers.push({
@@ -314,22 +313,8 @@ export class ConsoleElement extends LitElement {
     line: string
   ): void {
     this.#browsingHistory = false;
-    void this.console?.submit(line).then(() => this.#followAmbientTheme());
+    void this.console?.submit(line);
     void this.#replaceText("");
-  }
-
-  #followAmbientTheme(): void {
-    const adopted = this.#inheritedTheme;
-    if (adopted === null || this.getAttribute("theme") !== adopted) {
-      return;
-    }
-
-    this.removeAttribute("theme");
-    this.#inheritedTheme = adoptAmbientTheme(this, null);
-    if (this.#inheritedTheme === null) {
-      this.setAttribute("theme", adopted);
-      this.#inheritedTheme = adopted;
-    }
   }
 
   #accept(
@@ -464,6 +449,7 @@ export class ConsoleElement extends LitElement {
   };
 
   readonly #onClose = (): void => {
+    this.#theme.stop();
     this.#release();
     this.#browsingHistory = false;
     this.#suggestions.cancel();
