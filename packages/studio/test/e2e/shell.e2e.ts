@@ -296,3 +296,32 @@ test("an editor takes the full width and home lists it among open editors", asyn
   await expect(tabs.getByRole("tab", { name: kMapTab }))
     .toHaveAttribute("aria-selected", "true");
 });
+
+test("an editor frame opens the shell console, which themes every frame", async({ page }) => {
+  test.slow();
+  await openShell(page);
+  await treeRow(page, kModel).getByRole("button", { name: "Expand" }).click();
+  await treeRow(page, kTexture).dblclick();
+  const texture = page.locator("#editor-frames iframe").contentFrame();
+  await expect(texture.locator("html")).toHaveAttribute("data-editor-state", "ready");
+  await expect(texture.locator("jolly-console")).toHaveCount(0);
+
+  await texture.locator("pixel-draw-panel")
+    .getByRole("button")
+    .first()
+    .focus();
+  await page.keyboard.press("Control+k");
+  const prompt = page.getByRole("combobox", { name: "Command" });
+  await expect(prompt).toBeFocused();
+  await prompt.fill("theme light");
+  await prompt.press("Enter");
+  await page.keyboard.press("Escape");
+
+  await expect(page.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
+  await expect(texture.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
+
+  await openFromHome(page, kModel);
+  const model = page.locator("#editor-frames iframe[src*='voxel-model']").contentFrame();
+  await expect(model.locator("jolly-scope").first())
+    .toHaveAttribute("theme", "light", { timeout: 30_000 });
+});

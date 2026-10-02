@@ -63,6 +63,12 @@ not `document`.
 
 ## Waiting for a trigger
 
-- **A first shell command caller.** `context.shell` has no caller since the
-  voxel-map Paint action was dropped. Title and dirty state are the expected
-  next commands; add them when an editor needs the shell to show either.
+- **Shell commands from editors.** The host posts `toggle-console` on Ctrl+K,
+  but no editor calls `context.shell` since the voxel-map Paint action was
+  dropped. Title and dirty state are the expected next commands; add them
+  when an editor needs the shell to show either.
+- **Editor commands in the studio console.** A framed editor still registers
+  its namespaces (`brush`, `keybind`) on `context.commands`, but only the
+  shell's console shows, so they are out of reach inside the studio. Reaching
+  them needs a request and response channel, which
+  [ADR-0004](./docs/adr/0004-the-shell-channel-is-one-way.md) defers.

@@ -71,7 +71,7 @@ export class ConsoleElement extends LitElement {
   #keys = new KeyboardController(this, {
     state: () => this.#keyState(),
     act: (action) => this.#act(action),
-    toggle: () => this.#toggle()
+    toggle: () => this.toggle()
   });
   #browsingHistory = false;
   #restoreFocus: HTMLElement | null = null;
@@ -152,6 +152,21 @@ export class ConsoleElement extends LitElement {
     if (this._dialog?.open) {
       this._dialog.close();
     }
+  }
+
+  toggle(): boolean {
+    if (this.console === null) {
+      return false;
+    }
+
+    if (this.open) {
+      this.hide();
+    }
+    else {
+      void this.show();
+    }
+
+    return true;
   }
 
   override render(): TemplateResult {
@@ -340,21 +355,6 @@ export class ConsoleElement extends LitElement {
   ): void {
     this.#accept(index, true);
     this._input?.focus();
-  }
-
-  #toggle(): boolean {
-    if (this.console === null) {
-      return false;
-    }
-
-    if (this.open) {
-      this.hide();
-    }
-    else {
-      void this.show();
-    }
-
-    return true;
   }
 
   #act(

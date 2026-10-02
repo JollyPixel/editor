@@ -126,11 +126,14 @@ own origin, the studio's case. The injected element is written by the
 asset workspace Vite plugin's `launch` option. Only a launch answered by the
 parent carries a `ShellChannel`, reachable as `context.shell`, through which
 the editor posts `jolly-shell` commands such as `open-asset` back to the
-parent.
+parent. Such a page leaves the console to the shell: it mounts no
+`jolly-console`, forwards Ctrl+K as `toggle-console`, and applies the theme
+and density the shell sends in `jolly-launch` and `jolly-appearance`.
 
-`mountStandalone({ sources })` replaces this list. Offline workspaces provide
-their own list: `?target=`, the last opened ID if the catalog still has it with
-the accepted kind, then the first catalog record of that kind. If no source
+The parent's `jolly-launch` is always read first. `mountStandalone({ sources })`
+replaces the rest of the list. Offline, `bootStandalone` passes the
+workspace's own list: `?target=`, the last opened ID if the catalog still has
+it with the accepted kind, then the first catalog record of that kind. If no source
 returns a target, `EditorLaunch.read` throws before a client is created.
 
 ## Target and dependencies

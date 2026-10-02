@@ -1,22 +1,16 @@
-// Import Third-party Dependencies
-import * as z from "zod";
-
 // Import Internal Dependencies
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
 import { EditorLaunch } from "../EditorLaunch.ts";
 import {
+  parseLaunchMessage,
   READY_MESSAGE_TYPE,
   ShellChannel
 } from "../ShellChannel.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 // CONSTANTS
-export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
 export const ANY_SHELL_ORIGIN = "*";
 const kDefaultTimeout = 1000;
-const kLaunchMessageSchema = z.object({
-  type: z.literal(LAUNCH_MESSAGE_TYPE)
-});
 
 export interface HostMessageLaunchSourceOptions {
   timeout?: number;
@@ -76,9 +70,10 @@ export class HostMessageLaunchSource implements LaunchSource {
     );
 
     window.addEventListener("message", (event) => {
+      const message = parseLaunchMessage(event.data);
       if (
         event.source !== parent ||
-        !kLaunchMessageSchema.safeParse(event.data).success
+        message === undefined
       ) {
         return;
       }
@@ -90,11 +85,12 @@ export class HostMessageLaunchSource implements LaunchSource {
         return;
       }
 
-      const launch = EditorLaunch.parse(
-        event.data,
+      const launch = EditorLaunch.fromTarget(
+        message.target,
         new ShellChannel({
           port: parent,
-          origin: event.origin
+          origin: event.origin,
+          appearance: message.appearance ?? null
         })
       );
       if (launch !== undefined) {

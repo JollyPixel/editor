@@ -27,7 +27,8 @@ flowchart TB
     Home["&lt;studio-home&gt;<br/>asset dock + project overview"]
     Browser["&lt;asset-browser&gt;<br/>AssetTreeModel, AssetPath"]
     Session["StudioSession"]
-    Tabs["EditorTabs<br/>strip + iframe stack"]
+    Tabs["EditorTabs<br/>strip, cap, order"]
+    FrameStack["EditorFrames<br/>iframe stack + messages"]
     Boot --> Connection
     Boot --> Registry
     Boot --> Studio
@@ -35,6 +36,8 @@ flowchart TB
     Home --> Browser
     Studio --> Session
     Session --> Tabs
+    Session --> FrameStack
+    Tabs --> FrameStack
   end
 
   subgraph Frames["Editor frames"]
@@ -46,7 +49,7 @@ flowchart TB
   Pages -.->|"built page folder"| Frame
   Connection <-->|"CatalogClient"| Backend
   Browser <-->|"records, rename, delete, export"| Backend
-  Tabs <-->|"jolly-ready, jolly-launch, jolly-shell"| Frame
+  FrameStack <-->|"jolly-ready, jolly-launch, jolly-shell, jolly-appearance"| Frame
   Frame <-->|"own client, asset rooms"| Backend
 ```
 
@@ -95,7 +98,7 @@ sequenceDiagram
   I->>R: registerKind(descriptor) per kind
   I->>R: registerEditor(editor) per manifest entry
   I->>S: attach({ catalog, editors, confirmEvict })
-  S->>S: new StudioSession(kinds, EditorTabs)
+  S->>S: new StudioSession(kinds, EditorTabs, EditorFrames)
   S->>B: options { catalog, kinds } through studio-home
   B->>B: build AssetTreeModel from catalog records
   S->>S: restoreTabs() from studio:tabs
@@ -114,6 +117,7 @@ sequenceDiagram
   participant S as StudioSession
   participant R as EditorRegistry
   participant T as EditorTabs
+  participant E as EditorFrames
   participant F as Editor frame
 
   B->>S: asset-open { assetId }
@@ -126,9 +130,10 @@ sequenceDiagram
     T->>T: confirmEvict(least recently active)
     T->>T: close it, or give up on cancel
   end
-  T->>F: create the iframe on first focus
-  F->>T: jolly-ready
-  T->>F: jolly-launch { target }
+  T->>E: show(tab)
+  E->>F: create the iframe on first focus
+  F->>E: jolly-ready
+  E->>F: jolly-launch { target, appearance }
   F->>F: mountStandalone boots the editor
 ```
 
@@ -140,8 +145,11 @@ Closing a tab removes its iframe, which ends the editor's session.
 A tab creates its iframe when first focused, and inactive frames stay
 mounted with `display: none`.
 
-`EditorTabs` stays an imperative controller beside the Lit elements: moving
-or re-creating an iframe reloads it, so no template owns the frames.
+`EditorTabs` and `EditorFrames` stay imperative controllers beside the Lit
+elements: moving or re-creating an iframe reloads it, so no template owns the
+frames. `EditorTabs` owns the strip, the cap and the order, and tells
+`EditorFrames` which tab to show, retitle or drop. `EditorFrames` owns the
+iframes and every message exchanged with them.
 
 ## Tab persistence
 
@@ -154,10 +162,23 @@ the saved active tab, which is the only one to load its frame.
 ## Shell commands
 
 A frame launched through `jolly-launch` gets a `ShellChannel` and may post
-`{ type: "jolly-shell", command, target }`. `EditorTabs` accepts messages
-only from its own frames and hands commands to `StudioSession`, which runs
-`open-asset` exactly like a tree activation. The shell never replies on the
-channel.
+`{ type: "jolly-shell", command }`. `EditorFrames` accepts messages only
+from its own frames and hands commands to `StudioSession`, which runs
+`open-asset` exactly like a tree activation and passes `toggle-console` to
+the studio's console. The shell never replies to a command; the only message
+it pushes on the channel is `jolly-appearance`.
+
+## Console and appearance
+
+The shell mounts the `jolly-console` of `editor.host` with its `theme` and
+`density` variables. A frame launched by the shell mounts no console of its
+own: Ctrl+K inside it posts `toggle-console`, so one console serves the
+whole studio ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
+
+`EditorFrames` reads the theme and density of the shell's `jolly-scope`
+elements through `PageAppearance` and watches their attributes. It sends the
+current values in each `jolly-launch` and posts `jolly-appearance` to every
+loaded frame on a change, whatever wrote the attributes.
 
 ## Home
 
@@ -247,5 +268,5 @@ active frame at once, the others on their next focus.
 | `src/seed.ts` | `createStudioProject`: handlers and seed for both back-ends |
 | `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetTally`, `AssetCompanions`, `AssetDeletion`, `AssetSelection`, `DraftFolders`: pure tree decisions |
 | `src/editors/` | `EditorRegistry`, `EditorDescriptor` |
-| `src/tabs/` | `EditorTabs`: strip, iframe stack, handshake, tab cap; `SavedTabs` |
+| `src/tabs/` | `EditorTabs`: strip, tab cap, order; `EditorFrames`: iframe stack, handshake, shell commands, appearance; `SavedTabs` |
 | `src/shell/` | `<jolly-studio>`, `StudioSession`, `home/`: `<studio-home>`, `<project-overview>`, `assets/`: `<asset-browser>`, `AssetCommands`, asset menu, delete dialog |

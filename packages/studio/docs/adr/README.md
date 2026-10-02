@@ -20,3 +20,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0012](./0012-one-project-per-studio.md) | One project per studio, seeded without overwriting |
 | [0013](./0013-companions-are-derived-from-names-and-edges.md) | Companions are derived from names and dependency edges |
 | [0014](./0014-the-asset-browser-lives-on-home.md) | The asset browser lives on the Home tab |
+| [0015](./0015-the-studio-console-takes-precedence.md) | The studio console takes precedence over editor consoles |

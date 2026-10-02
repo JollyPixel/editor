@@ -27,7 +27,8 @@ The root entry point exports these theme styles and helpers:
   detached UI such as a floating window appended to the body.
 
 `ThemeMode` is `"light" | "dark" | "auto"`. `Density` is
-`"compact" | "default" | "comfortable"`.
+`"compact" | "default" | "comfortable"`. `THEME_MODES` and `DENSITIES` list
+their values in that order, as frozen arrays.
 
 Components consume semantic properties such as `--jolly-surface`,
 `--jolly-text`, `--jolly-control-bg`, `--jolly-accent-fill`,

@@ -24,6 +24,7 @@ import type {
 import type { HostLogger } from "#src/debug/readDebugLogger.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
+import { ShellChannel } from "#src/launch/ShellChannel.ts";
 import { IDENTITY_STORAGE_KEY } from "#src/session/EditorSession.ts";
 import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
@@ -107,6 +108,35 @@ describe("mountStandalone", () => {
       received[0].registry.resolveVariable("density"),
       undefined
     );
+
+    handle.dispose();
+    await workspace.close();
+  });
+
+  test("leaves the console to the shell that framed the page", async() => {
+    const workspace = await openWorkspace();
+    const shell = new ShellChannel({
+      port: { postMessage: () => undefined },
+      origin: "http://studio.test"
+    });
+
+    const received: EditorContext["commands"][] = [];
+    const handle = await mountStandalone(definition((context) => {
+      received.push(context.commands);
+
+      return Promise.resolve(editorHandle(context.session));
+    }), {
+      ...offlineOptions(workspace),
+      sources: [
+        {
+          read: () => Promise.resolve(EditorLaunch.fromTarget(kAssetId, shell))
+        }
+      ]
+    });
+
+    assert.equal(document.querySelector("jolly-console"), null);
+    assert.equal(received.length, 1);
+    assert.equal(received[0].registry.resolveVariable("theme"), undefined);
 
     handle.dispose();
     await workspace.close();
@@ -264,6 +294,7 @@ describe("mountStandalone", () => {
     assert.deepEqual(lines, [
       "[DEBUG] [host.boot] state booting",
       "[DEBUG] [host.boot] launch started",
+      "[DEBUG] [host.boot] launch source read",
       "[DEBUG] [host.boot] launch source read",
       "[DEBUG] [host.boot] launch done",
       "[DEBUG] [host.boot] session started",

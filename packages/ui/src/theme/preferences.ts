@@ -1,7 +1,9 @@
 // Import Internal Dependencies
-import type {
-  Density,
-  ThemeMode
+import {
+  DENSITIES,
+  THEME_MODES,
+  type Density,
+  type ThemeMode
 } from "./types.ts";
 
 export function resolveThemePreference(
@@ -35,11 +37,11 @@ export function applyAppearance(
 function isThemeMode(
   value: string | null
 ): value is ThemeMode {
-  return value === "light" || value === "dark" || value === "auto";
+  return THEME_MODES.some((mode) => mode === value);
 }
 
 function isDensity(
   value: string | null
 ): value is Density {
-  return value === "compact" || value === "default" || value === "comfortable";
+  return DENSITIES.some((density) => density === value);
 }

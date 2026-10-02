@@ -75,12 +75,19 @@ resolving, and disposes the handle when it rejects.
 
 ## Console
 
-`mountStandalone` constructs one
-[`CommandConsole`](../../../console/docs/CommandConsole.md) per page, appends
-a `jolly-console` element to `document.body`, and passes the instance to
-`mount` as `context.commands`. Ctrl+K opens it in every editor.
+Once the launch is read, `mountStandalone` constructs one
+[`CommandConsole`](../../../console/docs/CommandConsole.md) per page and
+passes it to `mount` as `context.commands`. Where the console shows depends on
+the launch:
 
-The host registers two root variables, neither persisted:
+- Without a [shell channel](#shell-channel), `mountConsole()` appends a
+  `jolly-console` element to `document.body`, and Ctrl+K opens it.
+- With a shell channel, the shell's console takes precedence. The page mounts
+  no element, Ctrl+K posts the `toggle-console` command to the shell, and the
+  page follows the shell's [appearance](#appearance). The editor's
+  registrations still land on `context.commands`, but nothing displays them.
+
+`mountConsole` registers two root variables, neither persisted:
 
 - `theme`, an enum of `light`, `dark` and `auto`. A write sets the `theme`
   attribute of every `jolly-scope` on the page, and `auto` removes it so the
@@ -92,6 +99,22 @@ When a boot step fails, the element is removed and every registration is
 dropped, so the retry of the [offline fallback](#offline-fallback) mounts a
 fresh console. Once the editor is ready the console stays for the life of the
 page.
+
+A page that boots without `mountStandalone`, such as the studio shell, mounts
+the same console itself:
+
+```ts
+function mountConsole(parent?: HTMLElement): EditorConsole;
+
+interface EditorConsole {
+  readonly commands: CommandConsole;
+  readonly element: HTMLElementTagNameMap["jolly-console"];
+  dispose(): void;
+}
+```
+
+`parent` defaults to `document.body`. `dispose()` removes the element and
+every registration.
 
 An editor registers its namespaces as a list of
 [console features](../../../console/docs/features.md) and unregisters them in
@@ -143,8 +166,8 @@ the launch is read, and the session destroys the returned client when it is
 disposed or fails to open.
 
 `origins` lists the parent origins allowed to launch the page, `[location.origin]`
-by default. It applies to the default launch sources only; see
-[Shell channel](#shell-channel). `logger` replaces the logger read by
+by default. It applies to the parent's `jolly-launch`, which is read before
+`sources`; see [Shell channel](#shell-channel). `logger` replaces the logger read by
 `readDebugLogger()`.
 
 ## Offline fallback
@@ -185,7 +208,7 @@ type OfflineProject = Pick<OfflineWorkspaceOptions, "handlers" | "seed" | "backe
 |---|---|
 | `offline` | the handlers, seed and backend tuning of the in-page workspace; called only once the editor goes offline, so import them dynamically |
 | `forceOffline` | skips the server; pass `import.meta.env.MODE === "static"` for a static build |
-| `sources` | replaces the launch sources of the online attempt only |
+| `sources` | replaces the launch sources read after the parent's, for the online attempt only |
 
 The editor goes offline straight away when `forceOffline` is set or the page
 has the `offline` [query parameter](./QueryParams.md#host-parameters).
@@ -196,7 +219,9 @@ rethrown without asking.
 
 Offline, `openSharedTabWorkspace` opens the workspace named by the
 `workspace` query parameter (`"default"` without it), and the editor mounts
-with the workspace's launch sources and connection.
+with the workspace's connection. The launch comes from the parent's
+`jolly-launch` first, as online, so a page framed by the studio keeps its
+[shell channel](#shell-channel), then from the workspace's launch sources.
 
 `offerOffline(message)` shows the Retry / Open offline workspace dialog alone,
 for a page that connects without `mountStandalone`. It resolves `"retry"`,
@@ -311,7 +336,7 @@ await page.waitForFunction(
 
 ## Launch sources
 
-By default the target is read from the first source that answers:
+The target is read from the first source that answers:
 
 | Order | Source |
 |---|---|
@@ -319,8 +344,9 @@ By default the target is read from the first source that answers:
 | 2 | the `target` query parameter |
 | 3 | the JSON element injected by the asset workspace Vite plugin's `launch` option |
 
-`sources` replaces the list. A source returns `undefined` to pass to the next
-one:
+The parent's `jolly-launch` is always read first, so a page framed by a shell
+keeps its [shell channel](#shell-channel). `sources` replaces the rest of the
+list. A source returns `undefined` to pass to the next one:
 
 ```ts
 interface LaunchSource {
@@ -364,24 +390,84 @@ new HostMessageLaunchSource({
 | `logger` | none | receives `ready posted`, `launch accepted`, `launch rejected` and `launch timed out` |
 
 A launch that came this way carries a `ShellChannel` bound to the parent and
-to the origin of its answer. The channel posts commands back
-and never receives a reply:
+to the origin of its answer. The channel posts commands back and receives
+only the shell's [appearance](#appearance), never a reply:
 
 ```ts
 class ShellChannel {
   readonly origin: string;
+  readonly appearance: Appearance | null;
   openAsset(id: AssetId | string): void;
+  toggleConsole(): void;
+  onAppearance(
+    listener: (appearance: Appearance) => void,
+    signal: AbortSignal
+  ): void;
 }
 ```
 
 | Command | Message |
 |---|---|
 | `openAsset(id)` | `{ type: "jolly-shell", command: "open-asset", target: id }` |
+| `toggleConsole()` | `{ type: "jolly-shell", command: "toggle-console" }` |
 
-`isReadyMessage(data)` and `isShellCommand(data)` narrow a message for a
-shell that listens on its own window. A launch read from the query string or
-the injected element has no channel, so `context.shell` is `null` and an
-editor hides what only a shell can do.
+A shell that listens on its own window narrows what a frame posts with
+`isReadyMessage(data)` and `isShellCommand(data)`, and answers with
+`launchMessage(target, appearance)`. `parseLaunchMessage(data)` is the frame's
+side: it returns the launch message, without an invalid `appearance`, or
+`undefined`. `READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE`
+and `APPEARANCE_MESSAGE_TYPE` name the four messages.
+
+A launch read from the query string or the injected element has no channel,
+so `context.shell` is `null` and an editor hides what only a shell can do.
+
+## Appearance
+
+A shell keeps its frames on its own theme and density. It adds
+`appearance` to `jolly-launch`, then posts every later change, built with
+`launchMessage` and `appearanceMessage(appearance)`:
+
+```ts
+{ type: "jolly-launch", target: string, appearance?: Appearance }
+{ type: "jolly-appearance", appearance: Appearance }
+
+interface Appearance {
+  theme: ThemeMode;
+  density: Density;
+}
+```
+
+The channel keeps the launch appearance as `shell.appearance`, `null` when
+missing or invalid. `shell.onAppearance(listener, signal)` calls `listener`
+with each valid `jolly-appearance` posted by the parent from the channel's
+origin, until `signal` aborts. A page launched with a shell channel applies
+the launch appearance before `mount`, then each one it receives. `auto`
+removes the `theme` attribute.
+
+`PageAppearance` reads and writes the `jolly-scope` elements of a root,
+`document` by default:
+
+```ts
+class PageAppearance implements Appearance {
+  constructor(root?: ParentNode);
+  theme: ThemeMode;
+  density: Density;
+  apply(appearance: Appearance): void;
+  watch(
+    listener: (appearance: Appearance) => void,
+    signal: AbortSignal
+  ): void;
+  toJSON(): Appearance;
+}
+```
+
+The getters read the first scope, `auto` and `default` when it sets nothing.
+The setters write every scope and throw when the root has none. `apply`
+writes both values to every scope and does nothing on a root without one.
+`watch` calls `listener` with the current appearance after a `theme` or
+`density` attribute of any scope under the root changes, scopes added later
+included, until `signal` aborts. `THEME_MODES` and `DENSITIES` from
+`@jolly-pixel/ui` list the accepted values.
 
 ## Boot tracing
 

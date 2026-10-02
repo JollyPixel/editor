@@ -14,10 +14,10 @@ import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import {
   ANY_SHELL_ORIGIN,
-  LAUNCH_MESSAGE_TYPE,
   HostMessageLaunchSource
 } from "#src/launch/sources/HostMessageLaunchSource.ts";
 import {
+  LAUNCH_MESSAGE_TYPE,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE
 } from "#src/launch/ShellChannel.ts";
@@ -225,6 +225,7 @@ describe("HostMessageLaunchSource", () => {
     parent.posted.length = 0;
 
     launch?.shell?.openAsset("tileset-1");
+    launch?.shell?.toggleConsole();
 
     assert.deepEqual(parent.posted, [
       {
@@ -234,7 +235,44 @@ describe("HostMessageLaunchSource", () => {
           target: "tileset-1"
         },
         origin: kStudioOrigin
+      },
+      {
+        message: {
+          type: SHELL_MESSAGE_TYPE,
+          command: "toggle-console"
+        },
+        origin: kStudioOrigin
       }
+    ]);
+  });
+
+  test("gives the shell channel a valid launch appearance only", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+    const appearances: unknown[] = [];
+
+    for (const appearance of [
+      { theme: "light", density: "compact" },
+      { theme: "pink", density: "compact" },
+      undefined
+    ]) {
+      const pending = new HostMessageLaunchSource({
+        origins: [kStudioOrigin]
+      }).read();
+      window.dispatchEvent(new MessageEvent("message", {
+        source: parent,
+        origin: kStudioOrigin,
+        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host", appearance }
+      }));
+      const launch = await pending;
+      assert.equal(launch?.target.value, "from-host");
+      appearances.push(launch?.shell?.appearance);
+    }
+
+    assert.deepEqual(appearances, [
+      { theme: "light", density: "compact" },
+      null,
+      null
     ]);
   });
 

@@ -11,6 +11,10 @@ import type { AssetKindSet } from "../catalog/AssetKindSet.ts";
 import { AssetPath } from "../catalog/AssetPath.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import {
+  EditorFrames,
+  type EditorFramesOptions
+} from "../tabs/EditorFrames.ts";
+import {
   EditorTabs,
   type EditorTabOpenOptions,
   type EditorTabsOptions,
@@ -38,8 +42,10 @@ export interface StudioCatalog {
 export interface StudioSessionOptions {
   catalog: StudioCatalog;
   editors: EditorRegistry;
-  tabs: Omit<EditorTabsOptions, "onShellCommand" | "onChange">;
+  tabs: Omit<EditorTabsOptions, "frames" | "onChange">;
+  frames: Omit<EditorFramesOptions, "onShellCommand">;
   onTabsChange?: () => void;
+  onToggleConsole?: () => void;
   /**
    * @default new LocalStorageAdapter()
    */
@@ -51,9 +57,11 @@ export class StudioSession {
   readonly tabs: EditorTabs;
 
   #catalog: StudioCatalog;
+  #frames: EditorFrames;
   #editors: EditorRegistry;
   #storage: StorageAdapter;
   #onTabsChange: (() => void) | undefined;
+  #onToggleConsole: (() => void) | undefined;
   #restoring = false;
 
   constructor(
@@ -63,10 +71,15 @@ export class StudioSession {
     this.#editors = options.editors;
     this.#storage = options.storage ?? new LocalStorageAdapter();
     this.#onTabsChange = options.onTabsChange;
+    this.#onToggleConsole = options.onToggleConsole;
     this.kinds = options.editors.kindSet();
+    this.#frames = new EditorFrames({
+      ...options.frames,
+      onShellCommand: this.#onShellCommand
+    });
     this.tabs = new EditorTabs({
       ...options.tabs,
-      onShellCommand: this.#onShellCommand,
+      frames: this.#frames,
       onChange: this.#onChange
     });
     this.#catalog.on("change", this.#syncTabs);
@@ -143,6 +156,7 @@ export class StudioSession {
   dispose(): void {
     this.#catalog.off("change", this.#syncTabs);
     this.tabs.dispose();
+    this.#frames.dispose();
   }
 
   #titleOf(
@@ -159,8 +173,19 @@ export class StudioSession {
   readonly #onShellCommand = (
     command: ShellCommand
   ): void => {
-    if (command.command === "open-asset") {
-      void this.openAsset(command.target);
+    switch (command.command) {
+      case "open-asset":
+        void this.openAsset(command.target);
+        break;
+      case "toggle-console":
+        this.#onToggleConsole?.();
+        break;
+      default: {
+        const unhandled: never = command;
+        throw new Error(
+          `Unhandled shell command: ${JSON.stringify(unhandled)}`
+        );
+      }
     }
   };
 

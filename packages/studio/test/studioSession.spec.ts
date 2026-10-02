@@ -20,7 +20,8 @@ import "../src/icons.ts";
 import {
   StudioSession,
   TABS_STORAGE_KEY,
-  type StudioCatalog
+  type StudioCatalog,
+  type StudioSessionOptions
 } from "../src/shell/StudioSession.ts";
 import { HOME_TAB_ID } from "../src/tabs/EditorTabs.ts";
 
@@ -95,7 +96,7 @@ function session(
   catalog: FakeCatalog,
   storage: StorageAdapter = new MemoryStorageAdapter(),
   cap?: number,
-  onTabsChange?: () => void
+  extra: Partial<StudioSessionOptions> = {}
 ): StudioSession {
   const strip = Object.assign(document.createElement("jolly-tabs"), {
     value: ""
@@ -121,16 +122,27 @@ function session(
       }),
     tabs: {
       strip,
-      frames,
       home,
-      cap,
+      cap
+    },
+    frames: {
+      container: frames,
       launchOrigin: "http://localhost"
     },
     storage,
-    onTabsChange
+    ...extra
   });
 
   return current;
+}
+
+function postFromFrame(
+  data: unknown
+): void {
+  window.dispatchEvent(new MessageEvent("message", {
+    source: document.querySelector("iframe")?.contentWindow ?? null,
+    data
+  }));
 }
 
 function restart(): void {
@@ -207,7 +219,11 @@ describe("StudioSession", () => {
       catalog,
       new MemoryStorageAdapter(),
       undefined,
-      () => labels.push(studio.tabs.list().map((tab) => tab.label))
+      {
+        onTabsChange: () => labels.push(
+          studio.tabs.list().map((tab) => tab.label)
+        )
+      }
     );
     await studio.openAsset("map-1");
 
@@ -228,14 +244,11 @@ describe("StudioSession", () => {
     await studio.openAsset("map-1");
     studio.tabs.focus(HOME_TAB_ID);
 
-    window.dispatchEvent(new MessageEvent("message", {
-      source: document.querySelector("iframe")?.contentWindow ?? null,
-      data: {
-        type: SHELL_MESSAGE_TYPE,
-        command: "open-asset",
-        target: "map-1"
-      }
-    }));
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "open-asset",
+      target: "map-1"
+    });
     await Promise.resolve();
 
     assert.equal(studio.tabs.active, "map-1");
@@ -321,6 +334,29 @@ describe("StudioSession", () => {
 
     assert.deepEqual(frameTargets(), ["model-1"]);
     assert.equal(document.querySelector("iframe[src*='model-1']"), model);
+  });
+
+  test("toggles the console on an editor's toggle-console command", async() => {
+    let toggles = 0;
+    const studio = session(
+      new FakeCatalog([kMap]),
+      new MemoryStorageAdapter(),
+      undefined,
+      {
+        onToggleConsole: () => {
+          toggles++;
+        }
+      }
+    );
+    await studio.openAsset("map-1");
+
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "toggle-console"
+    });
+
+    assert.equal(toggles, 1);
+    assert.equal(studio.tabs.active, "map-1");
   });
 
   test("dispose stops following the catalog", () => {
