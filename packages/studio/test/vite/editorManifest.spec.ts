@@ -1,17 +1,34 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  after,
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 
 // Import Internal Dependencies
-import { readEditorPackages } from "../vite/editorManifest.ts";
+import { readEditorPackages } from "../../vite/editorManifest.ts";
+import {
+  createTempDir,
+  removeTempDir
+} from "../helpers/tempDir.ts";
+
+// CONSTANTS
+const kRoots: string[] = [];
+
+async function createRoot(): Promise<string> {
+  const root = await createTempDir("studio-editor-");
+  kRoots.push(root);
+
+  return root;
+}
 
 async function createPackage(
   editor: unknown
 ): Promise<string> {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "studio-editor-"));
+  const root = await createRoot();
   await fs.writeFile(
     path.join(root, "package.json"),
     JSON.stringify({
@@ -24,6 +41,10 @@ async function createPackage(
 }
 
 describe("readEditorPackages", () => {
+  after(async() => {
+    await Promise.all(kRoots.map((root) => removeTempDir(root)));
+  });
+
   test("reads the editor manifest of each located package", async() => {
     const voxelMap = await createPackage({
       name: "voxel-map",
@@ -77,7 +98,7 @@ describe("readEditorPackages", () => {
   });
 
   test("rejects a package without an editor manifest", async() => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "studio-editor-"));
+    const root = await createRoot();
     await fs.writeFile(path.join(root, "package.json"), "{}");
 
     assert.throws(

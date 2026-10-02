@@ -9,18 +9,18 @@ import assert from "node:assert/strict";
 import type { ContextMenuEntry } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { AssetKindSet } from "../src/catalog/AssetKindSet.ts";
-import { AssetPath } from "../src/catalog/AssetPath.ts";
+import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";
+import { AssetPath } from "../../../src/catalog/AssetPath.ts";
 import {
   AssetSelection,
   newAssetKindOf
-} from "../src/catalog/AssetSelection.ts";
+} from "../../../src/catalog/AssetSelection.ts";
 import {
   assetNodeId,
   folderNodeId
-} from "../src/catalog/AssetTreeModel.ts";
-import { assetMenu } from "../src/shell/assets/assetMenu.ts";
-import { companionModelOf } from "./helpers/assetTree.ts";
+} from "../../../src/catalog/AssetTreeModel.ts";
+import { assetMenu } from "../../../src/shell/assets/assetMenu.ts";
+import { companionModelOf } from "../../helpers/assetTree.ts";
 
 // CONSTANTS
 const kModel = companionModelOf();

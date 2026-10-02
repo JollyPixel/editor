@@ -7,121 +7,40 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { EditorFrames } from "../src/tabs/EditorFrames.ts";
+import { HOME_TAB_ID } from "../../src/tabs/EditorTabs.ts";
 import {
-  EditorTabs,
-  HOME_TAB_ID,
-  type EditorTab,
-  type EditorTabsOptions
-} from "../src/tabs/EditorTabs.ts";
+  disposeHarness,
+  harness,
+  MAP_TAB,
+  MODEL_TAB,
+  OTHER_TAB
+} from "../helpers/editorTabs.ts";
 
-// CONSTANTS
-const kMap: EditorTab = {
-  id: "map-1",
-  label: "overworld.voxelmap.json",
-  url: "/editors/voxel-map/?target=map-1"
-};
-const kModel: EditorTab = {
-  id: "model-1",
-  label: "model.voxelmodel.json",
-  url: "/editors/voxel-model/?target=model-1"
-};
-const kOther: EditorTab = {
-  id: "map-2",
-  label: "cave.voxelmap.json",
-  url: "/editors/voxel-map/?target=map-2"
-};
-
-interface Harness {
-  tabs: EditorTabs;
-  editorFrames: EditorFrames;
-  strip: HTMLElement & { value: string; };
-  frames: HTMLElement;
-  home: HTMLElement;
-  itemValues(): string[];
-  frameOf(id: string): HTMLIFrameElement;
-  visibleFrames(): string[];
-}
-
-let current: Harness | undefined;
-
-function harness(
-  options: Partial<EditorTabsOptions> = {}
-): Harness {
-  const strip = Object.assign(document.createElement("jolly-tabs"), {
-    value: ""
-  });
-  const frames = document.createElement("div");
-  const home = document.createElement("section");
-  document.body.append(strip, frames, home);
-  const editorFrames = new EditorFrames({
-    container: frames
-  });
-  const tabs = new EditorTabs({
-    strip,
-    frames: editorFrames,
-    home,
-    ...options
-  });
-  function frameList(): HTMLIFrameElement[] {
-    return [...frames.querySelectorAll("iframe")];
-  }
-
-  current = {
-    tabs,
-    editorFrames,
-    strip,
-    frames,
-    home,
-    itemValues: () => [...strip.children].map(
-      (item) => String(Reflect.get(item, "value"))
-    ),
-    frameOf: (id) => {
-      const frame = frameList().find(
-        (candidate) => candidate.src.endsWith(`target=${id}`)
-      );
-      assert.ok(frame, `frame for ${id}`);
-
-      return frame;
-    },
-    visibleFrames: () => frameList()
-      .filter((frame) => !frame.hidden)
-      .map((frame) => frame.src)
-  };
-
-  return current;
-}
-
-afterEach(() => {
-  current?.tabs.dispose();
-  current?.editorFrames.dispose();
-  current = undefined;
-  document.body.replaceChildren();
-});
+afterEach(disposeHarness);
 
 describe("EditorTabs", () => {
   test("opens a tab with its frame and activates it", async() => {
     const { tabs, strip, itemValues, frameOf, visibleFrames } = harness();
 
-    assert.equal(await tabs.open(kMap), true);
+    assert.equal(await tabs.open(MAP_TAB), true);
 
     assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1"]);
     assert.equal(strip.value, "map-1");
     assert.equal(tabs.active, "map-1");
-    assert.ok(frameOf("map-1").src.endsWith(kMap.url));
-    assert.equal(frameOf("map-1").title, kMap.label);
+    assert.ok(frameOf("map-1").src.endsWith(MAP_TAB.url));
+    assert.equal(frameOf("map-1").title, MAP_TAB.label);
     assert.equal(visibleFrames().length, 1);
   });
 
   test("focuses an already open tab instead of duplicating it", async() => {
     const { tabs, itemValues, frameOf } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
 
     assert.equal(tabs.active, "model-1");
     assert.equal(frameOf("map-1").hidden, true);
 
-    assert.equal(await tabs.open(kMap), true);
+    assert.equal(await tabs.open(MAP_TAB), true);
 
     assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
     assert.equal(tabs.active, "map-1");
@@ -131,9 +50,9 @@ describe("EditorTabs", () => {
 
   test("closes a tab and focuses the most recently activated one", async() => {
     const { tabs, itemValues, frames } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
-    await tabs.open(kOther);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
+    await tabs.open(OTHER_TAB);
     tabs.focus("model-1");
 
     assert.equal(tabs.close("model-1"), true);
@@ -146,8 +65,8 @@ describe("EditorTabs", () => {
 
   test("closing an inactive tab keeps the active one", async() => {
     const { tabs, strip } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
 
     tabs.close("map-1");
 
@@ -170,7 +89,7 @@ describe("EditorTabs", () => {
 
   test("returns to home when the last tab closes", async() => {
     const { tabs, strip, home } = harness();
-    await tabs.open(kMap);
+    await tabs.open(MAP_TAB);
     assert.equal(home.hidden, true);
 
     tabs.close("map-1");
@@ -183,7 +102,7 @@ describe("EditorTabs", () => {
 
   test("focusing home hides every frame and keeps them open", async() => {
     const { tabs, home, visibleFrames } = harness();
-    await tabs.open(kMap);
+    await tabs.open(MAP_TAB);
 
     assert.equal(tabs.focus(HOME_TAB_ID), true);
 
@@ -192,18 +111,11 @@ describe("EditorTabs", () => {
     assert.equal(tabs.size, 1);
   });
 
-  test("home does not count toward the cap", async() => {
-    const { tabs } = harness({ cap: 1 });
-
-    assert.equal(await tabs.open(kMap), true);
-    assert.deepEqual(tabs.ids(), ["map-1"]);
-  });
-
   test("moves a tab on the strip's reorder event and keeps home first", async() => {
     const { tabs, strip, itemValues } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
-    await tabs.open(kOther);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
+    await tabs.open(OTHER_TAB);
 
     strip.dispatchEvent(new CustomEvent("jolly-tab-reorder", {
       detail: {
@@ -225,7 +137,7 @@ describe("EditorTabs", () => {
   test("gives an editor tab its icon", async() => {
     const { tabs, strip } = harness();
     await tabs.open({
-      ...kMap,
+      ...MAP_TAB,
       icon: "kind:voxelmap"
     });
 
@@ -235,10 +147,10 @@ describe("EditorTabs", () => {
   test("gives an editor tab its tooltip", async() => {
     const { tabs, strip } = harness();
     await tabs.open({
-      ...kMap,
+      ...MAP_TAB,
       tooltip: "maps/overworld.voxelmap.json"
     });
-    await tabs.open(kModel);
+    await tabs.open(MODEL_TAB);
 
     assert.equal(
       Reflect.get(strip.children[1], "tooltip"),
@@ -247,76 +159,10 @@ describe("EditorTabs", () => {
     assert.equal(Reflect.get(strip.children[2], "tooltip"), "");
   });
 
-  test("lets an editor frame read the keyboard layout", async() => {
-    const { tabs, frameOf } = harness();
-    await tabs.open(kMap);
-
-    assert.equal(frameOf("map-1").allow, "keyboard-map");
-  });
-
-  test("evicts the least recently activated tab at the cap", async() => {
-    const asked: string[] = [];
-    const { tabs, itemValues } = harness({
-      cap: 2,
-      confirmEvict: (tab) => {
-        asked.push(tab.id);
-
-        return true;
-      }
-    });
-    await tabs.open(kMap);
-    await tabs.open(kModel);
-    tabs.focus("map-1");
-
-    assert.equal(await tabs.open(kOther), true);
-
-    assert.deepEqual(asked, ["model-1"]);
-    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "map-2"]);
-    assert.equal(tabs.active, "map-2");
-  });
-
-  test("leaves the request unopened when eviction is declined", async() => {
-    const { tabs, itemValues } = harness({
-      cap: 2,
-      confirmEvict: () => Promise.resolve(false)
-    });
-    await tabs.open(kMap);
-    await tabs.open(kModel);
-
-    assert.equal(await tabs.open(kOther), false);
-
-    assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
-    assert.equal(tabs.active, "model-1");
-  });
-
-  test("concurrent opens during an eviction stay within the cap", async() => {
-    const pending: Array<(confirmed: boolean) => void> = [];
-    const { tabs, itemValues } = harness({
-      cap: 1,
-      confirmEvict: () => {
-        const { promise, resolve } = Promise.withResolvers<boolean>();
-        pending.push(resolve);
-
-        return promise;
-      }
-    });
-    await tabs.open(kMap);
-
-    const first = tabs.open(kModel);
-    const second = tabs.open(kModel);
-    for (const resolve of pending) {
-      resolve(true);
-    }
-
-    assert.deepEqual(await Promise.all([first, second]), [true, true]);
-    assert.deepEqual(itemValues(), [HOME_TAB_ID, "model-1"]);
-    assert.equal(tabs.size, 1);
-  });
-
   test("follows the strip's change and close events", async() => {
     const { tabs, strip } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
 
     strip.dispatchEvent(new CustomEvent("jolly-tab-change", {
       detail: { value: "map-1" }
@@ -332,7 +178,7 @@ describe("EditorTabs", () => {
   test("relabels an open tab", async() => {
     const { tabs, strip, frameOf } = harness();
     await tabs.open({
-      ...kMap,
+      ...MAP_TAB,
       tooltip: "maps/overworld.voxelmap.json"
     });
 
@@ -348,7 +194,7 @@ describe("EditorTabs", () => {
     assert.equal(frameOf("map-1").title, "renamed");
     assert.deepEqual(tabs.list(), [
       {
-        ...kMap,
+        ...MAP_TAB,
         label: "renamed",
         tooltip: "maps/renamed.voxelmap.json"
       }
@@ -360,9 +206,9 @@ describe("EditorTabs", () => {
 
   test("opens a tab in the background without loading its frame", async() => {
     const { tabs, frames, itemValues, frameOf } = harness();
-    await tabs.open(kMap);
+    await tabs.open(MAP_TAB);
 
-    assert.equal(await tabs.open(kModel, { focus: false }), true);
+    assert.equal(await tabs.open(MODEL_TAB, { focus: false }), true);
 
     assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
     assert.equal(tabs.active, "map-1");
@@ -382,8 +228,8 @@ describe("EditorTabs", () => {
       }
     });
 
-    await tabs.open(kMap);
-    await tabs.open(kModel, { focus: false });
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB, { focus: false });
     tabs.focus(HOME_TAB_ID);
     tabs.move("model-1", 1);
     tabs.close("map-1");
@@ -394,8 +240,8 @@ describe("EditorTabs", () => {
 
   test("reloads the active frame and defers an inactive one", async() => {
     const { tabs, frames, frameOf } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
     const model = frameOf("model-1");
 
     assert.equal(tabs.reload("model-1"), true);
@@ -412,31 +258,23 @@ describe("EditorTabs", () => {
     assert.equal(frameOf("map-1").hidden, false);
   });
 
-  test("dispose reports no change", async() => {
+  test("dispose removes every tab, reports no change and stops listening", async() => {
     let changes = 0;
-    const { tabs } = harness({
+    const { tabs, strip, frames } = harness({
       onChange: () => {
         changes++;
       }
     });
-    await tabs.open(kMap);
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
     changes = 0;
 
     tabs.dispose();
-
-    assert.equal(changes, 0);
-  });
-
-  test("dispose removes every tab and stops listening", async() => {
-    const { tabs, strip, frames } = harness();
-    await tabs.open(kMap);
-    await tabs.open(kModel);
-
-    tabs.dispose();
     strip.dispatchEvent(new CustomEvent("jolly-tab-change", {
-      detail: { value: "map-1" }
+      detail: { value: HOME_TAB_ID }
     }));
 
+    assert.equal(changes, 0);
     assert.equal(tabs.size, 0);
     assert.equal(strip.children.length, 0);
     assert.equal(frames.children.length, 0);

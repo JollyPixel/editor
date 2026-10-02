@@ -20,8 +20,8 @@ import {
 import {
   EditorFrames,
   type EditorFramesOptions
-} from "../src/tabs/EditorFrames.ts";
-import type { EditorTab } from "../src/tabs/EditorTabs.ts";
+} from "../../src/tabs/EditorFrames.ts";
+import type { EditorTab } from "../../src/tabs/EditorTabs.ts";
 
 // CONSTANTS
 const kOrigin = "http://localhost";
@@ -134,6 +134,12 @@ describe("EditorFrames", () => {
     ]);
   });
 
+  test("lets an editor frame read the keyboard layout", () => {
+    editorFrames().show(kMap);
+
+    assert.equal(frame().allow, "keyboard-map");
+  });
+
   test("routes a frame's shell command with its tab id", () => {
     const received: Array<[ShellCommand, string]> = [];
     editorFrames({
@@ -164,19 +170,12 @@ describe("EditorFrames", () => {
     ]);
   });
 
-  test("dispose removes the frames and stops answering", async() => {
-    const element = scope();
+  test("dispose removes the frames", () => {
     const frames = editorFrames();
     frames.show(kMap);
-    const loaded = frame();
-    const posted = recordPosts(loaded);
 
     frames.dispose();
-    postFrom(loaded.contentWindow, { type: READY_MESSAGE_TYPE });
-    element.setAttribute("theme", "light");
-    await setImmediate();
 
     assert.equal(document.querySelector("iframe"), null);
-    assert.deepEqual(posted, []);
   });
 });

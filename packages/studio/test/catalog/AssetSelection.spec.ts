@@ -6,18 +6,18 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AssetPath } from "../src/catalog/AssetPath.ts";
+import { AssetPath } from "../../src/catalog/AssetPath.ts";
 import {
   ASSET_ACTIONS,
   AssetSelection,
   isAssetAction,
   type AssetAction
-} from "../src/catalog/AssetSelection.ts";
+} from "../../src/catalog/AssetSelection.ts";
 import {
   assetNodeId,
   folderNodeId
-} from "../src/catalog/AssetTreeModel.ts";
-import { companionModelOf } from "./helpers/assetTree.ts";
+} from "../../src/catalog/AssetTreeModel.ts";
+import { companionModelOf } from "../helpers/assetTree.ts";
 
 // CONSTANTS
 const kModel = companionModelOf();

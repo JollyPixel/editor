@@ -11,7 +11,7 @@ import {
   DEFAULT_PROJECT_DIR,
   PROJECT_ROOT_ENV,
   resolveProjectRoot
-} from "../vite/projectRoot.ts";
+} from "../../vite/projectRoot.ts";
 
 // CONSTANTS
 const kBase = path.resolve("/studio");

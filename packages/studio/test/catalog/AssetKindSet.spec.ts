@@ -10,7 +10,7 @@ import {
   AssetKindSet,
   newAssetName,
   type AssetKindEntry
-} from "../src/catalog/AssetKindSet.ts";
+} from "../../src/catalog/AssetKindSet.ts";
 
 // CONSTANTS
 const kMap: AssetKindEntry = {

@@ -9,14 +9,14 @@ import assert from "node:assert/strict";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { AssetPath } from "../src/catalog/AssetPath.ts";
+import { AssetPath } from "../../src/catalog/AssetPath.ts";
 import {
   AssetTreeModel,
   assetNodeId,
   folderNodeId
-} from "../src/catalog/AssetTreeModel.ts";
-import { AssetPathTakenError } from "../src/catalog/errors/AssetPathTakenError.ts";
-import { shape } from "./helpers/assetTree.ts";
+} from "../../src/catalog/AssetTreeModel.ts";
+import { AssetPathTakenError } from "../../src/catalog/errors/AssetPathTakenError.ts";
+import { shape } from "../helpers/assetTree.ts";
 
 // CONSTANTS
 const kRecords: AssetRecordData[] = [
