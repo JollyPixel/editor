@@ -8,7 +8,9 @@ import {
   type FrameSchedulerOptions
 } from "./FrameScheduler.ts";
 import type { FrameSource } from "./FrameSource.ts";
-import { RafFrameSource } from "./sources/RafFrameSource.ts";
+import {
+  RequestAnimationFrameSource
+} from "./sources/RequestAnimationFrameSource.ts";
 
 // CONSTANTS
 const kDefaultTrailingRenders = 2;
@@ -52,7 +54,7 @@ export interface GameLoopCallbacks {
 
 export interface GameLoopOptions extends FrameSchedulerOptions {
   /**
-   * Defaults to `RafFrameSource`.
+   * Defaults to `RequestAnimationFrameSource`.
    */
   source?: FrameSource;
   keepAlive?: () => boolean;
@@ -97,7 +99,7 @@ export class GameLoop extends Emitter<GameLoopEvents> {
     }
 
     this.scheduler = new FrameScheduler(schedulerOptions);
-    this.#source = source ?? new RafFrameSource();
+    this.#source = source ?? new RequestAnimationFrameSource();
     this.#timeScale = this.scheduler.timeScale;
     this.#keepAlive = keepAlive;
     this.#trailingRenders = trailingRenders;

@@ -2,7 +2,7 @@
 import {
   FrameScheduler,
   GameLoop,
-  RafFrameSource,
+  RequestAnimationFrameSource,
   type FrameCallback,
   type FrameSchedule,
   type FrameSource,
@@ -53,7 +53,7 @@ class GatedFrameSource implements FrameSource {
 
 const canvas = requireElement<HTMLCanvasElement>("#plot");
 const plot = new FramePlot(canvas);
-const source = new GatedFrameSource(new RafFrameSource());
+const source = new GatedFrameSource(new RequestAnimationFrameSource());
 const loop = new GameLoop({ source });
 
 const injection = {

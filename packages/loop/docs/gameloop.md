@@ -25,7 +25,7 @@ loop.start({
 
 ```ts
 export interface GameLoopOptions extends FrameSchedulerOptions {
-  // Defaults to a RafFrameSource
+  // Defaults to a RequestAnimationFrameSource
   source?: FrameSource;
   // Defaults to () => true: the loop never sleeps
   keepAlive?: () => boolean;

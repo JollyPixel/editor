@@ -75,7 +75,7 @@ runs fixed steps; its schedule sets `render` to `false`.
 
 ### Frame source
 
-The driver that supplies frame timestamps. `RafFrameSource` uses
+The driver that supplies frame timestamps. `RequestAnimationFrameSource` uses
 `requestAnimationFrame`; `ManualFrameSource` advances under caller control.
 
 ### Schedule

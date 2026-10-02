@@ -24,12 +24,12 @@ previous subscription.
 The built-in sources differ in two ways:
 
 - **Restarting.** `start()` on an already-started source may restart it
-  (`RafFrameSource`) or simply replace the callback (`ManualFrameSource`). It
-  must not leak the previous subscription either way.
+  (`RequestAnimationFrameSource`) or simply replace the callback
+  (`ManualFrameSource`). It must not leak the previous subscription either way.
 - **Priming frame.** A source may emit one frame synchronously from `start()`
-  (`ManualFrameSource` does) or wait for its pump (`RafFrameSource`). Hosts
-  tolerate both: `FrameScheduler` reports a zero delta for whichever frame
-  lands first.
+  (`ManualFrameSource` does) or wait for its pump
+  (`RequestAnimationFrameSource`). Hosts tolerate both: `FrameScheduler`
+  reports a zero delta for whichever frame lands first.
 
 ## AnimationLoopFrameSource
 
@@ -57,19 +57,19 @@ export interface AnimationLoopRenderer {
 previous one. `stop()` passes `null`. Frames use the renderer's timebase and
 the first one waits for the renderer's pump.
 
-## RafFrameSource
+## RequestAnimationFrameSource
 
 The browser source. Both animation frame functions are injectable, so its tests
 need no DOM shim.
 
 ```ts
-import { RafFrameSource } from "@jolly-pixel/loop";
+import { RequestAnimationFrameSource } from "@jolly-pixel/loop";
 
-const source = new RafFrameSource();
+const source = new RequestAnimationFrameSource();
 ```
 
 ```ts
-export interface RafFrameSourceOptions {
+export interface RequestAnimationFrameSourceOptions {
   // Defaults to globalThis.requestAnimationFrame
   requestAnimationFrame?: (callback: (now: number) => void) => number;
   // Defaults to globalThis.cancelAnimationFrame
@@ -77,8 +77,9 @@ export interface RafFrameSourceOptions {
 }
 ```
 
-`new RafFrameSource(options?: RafFrameSourceOptions)` uses the global animation
-frame functions by default and throws `TypeError` if either is unavailable.
+`new RequestAnimationFrameSource(options?: RequestAnimationFrameSourceOptions)`
+uses the global animation frame functions by default and throws `TypeError` if
+either is unavailable.
 The read-only `running` property reports whether a frame is scheduled.
 
 `start(callback)` cancels any pending handle before scheduling the next frame.

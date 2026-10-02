@@ -7,7 +7,7 @@ callbacks. A host with its own frame pump can use `FrameScheduler` directly.
 ```mermaid
 flowchart TB
     Host["Host application"] --> Loop["GameLoop"]
-    Source["FrameSource<br/>RafFrameSource or ManualFrameSource"] -->|"timestamp"| Loop
+    Source["FrameSource<br/>RequestAnimationFrameSource or ManualFrameSource"] -->|"timestamp"| Loop
     Loop --> Scheduler["FrameScheduler"]
     Scheduler -->|"FrameSchedule"| Loop
     Loop -->|"frame, fixedUpdate, update"| Host
@@ -21,9 +21,9 @@ flowchart TB
 ```
 
 `FrameSource` only supplies timestamps; it does not cap the frame rate.
-`RafFrameSource` uses `requestAnimationFrame`. `ManualFrameSource` uses a
-`ManualClock` and emits frames on demand, including a zero-delta frame when
-started. `FrameBudget` measures a deadline for optional work and is separate
+`RequestAnimationFrameSource` uses `requestAnimationFrame`. `ManualFrameSource`
+uses a `ManualClock` and emits frames on demand, including a zero-delta frame
+when started. `FrameBudget` measures a deadline for optional work and is separate
 from the scheduler's fixed-step limit. The host owns any `Interpolated` values
 and pushes a new sample after each fixed step.
 
