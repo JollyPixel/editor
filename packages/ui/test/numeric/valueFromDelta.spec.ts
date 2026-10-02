@@ -141,4 +141,11 @@ describe("Numeric.valueFromDelta", () => {
       2.234
     );
   });
+
+  test("rounds to a given precision instead of deriving one", () => {
+    assert.equal(
+      valueFromDelta({ start: 1.234, deltaPx: 1, step: 1, pixelsPerStep: 1, precision: 1 }),
+      2.2
+    );
+  });
 });

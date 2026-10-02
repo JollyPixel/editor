@@ -83,17 +83,40 @@ export function resolveMetricRange(
   definition: MetricDefinition,
   history: readonly number[]
 ): MetricRange {
-  const observedMin = history.length === 0 ?
-    0 :
-    Math.min(...history);
-  const observedMax = history.length === 0 ?
-    0 :
-    Math.max(...history);
-
   return {
-    min: definition.min ?? observedMin,
-    max: definition.max ?? observedMax
+    min: definition.min ?? observedMin(history),
+    max: definition.max ?? observedMax(history)
   };
+}
+
+function observedMin(
+  history: readonly number[]
+): number {
+  if (history.length === 0) {
+    return 0;
+  }
+
+  let min = Infinity;
+  for (const value of history) {
+    min = Math.min(min, value);
+  }
+
+  return min;
+}
+
+function observedMax(
+  history: readonly number[]
+): number {
+  if (history.length === 0) {
+    return 0;
+  }
+
+  let max = -Infinity;
+  for (const value of history) {
+    max = Math.max(max, value);
+  }
+
+  return max;
 }
 
 export function resolveMetricFormat(

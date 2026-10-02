@@ -23,6 +23,16 @@ const kInsertionThickness = 2;
 const kEnterDepth = 48;
 const kChipOffset = 12;
 const kChipHeight = 22;
+const kPassiveCapture: AddEventListenerOptions = {
+  capture: true,
+  passive: true
+};
+
+interface PaintedInsertion {
+  zone: DragZone;
+  slot: number;
+  index: number;
+}
 
 /**
  * A container that can receive the dragged element.
@@ -149,12 +159,14 @@ export function startDragSession(
 
   const originX = event.clientX;
   const originY = event.clientY;
+  const view = source.ownerDocument.defaultView;
 
   let overlay: DragOverlay | null = null;
   let armed: DragZone[] = [];
   let current: number | null = null;
   let ghostX = -kChipOffset;
   let ghostY = -kChipOffset;
+  let painted: PaintedInsertion | null = null;
   let result: DragResult = {
     zone: null,
     index: 0,
@@ -187,9 +199,44 @@ export function startDragSession(
         height: kChipHeight
       });
       overlay.showZones(armed.map((zone) => zone.rect));
+      view?.addEventListener("wheel", remeasure, kPassiveCapture);
+      view?.addEventListener("scroll", remeasure, kPassiveCapture);
+      view?.addEventListener("resize", remeasure);
     }
     ensureSessionStyles();
     onStart?.();
+  }
+
+  function remeasure(): void {
+    painted = null;
+  }
+
+  function paintInsertion(
+    zone: DragZone,
+    target: DragZone | DragStack,
+    slot: number,
+    index: number
+  ): void {
+    if (
+      painted !== null &&
+      painted.zone === zone &&
+      painted.slot === slot &&
+      painted.index === index
+    ) {
+      return;
+    }
+    painted = {
+      zone,
+      slot,
+      index
+    };
+
+    if (movesNothing(target.source, index)) {
+      overlay?.hideInsertion();
+    }
+    else {
+      overlay?.showInsertion(target.line(index));
+    }
   }
 
   function update(
@@ -210,6 +257,7 @@ export function startDragSession(
     let stacked: DragStackResult | null = null;
     if (zone === null) {
       current = null;
+      painted = null;
       overlay?.hideInsertion();
     }
     else if (stack === null) {
@@ -220,14 +268,7 @@ export function startDragSession(
         current: sameZone ? current : null,
         deadBand
       });
-      if (movesNothing(zone.source, current)) {
-        overlay?.hideInsertion();
-      }
-      else {
-        overlay?.showInsertion(
-          zone.line(current)
-        );
-      }
+      paintInsertion(zone, zone, -1, current);
     }
     else {
       const sameStack = result.stack !== null &&
@@ -243,12 +284,7 @@ export function startDragSession(
         slot: stack.slot,
         index
       };
-      if (movesNothing(stack.source, index)) {
-        overlay?.hideInsertion();
-      }
-      else {
-        overlay?.showInsertion(stack.line(index));
-      }
+      paintInsertion(zone, stack, stack.slot, index);
     }
 
     overlay?.moveGhost(
@@ -266,6 +302,9 @@ export function startDragSession(
   }
 
   function teardown(): void {
+    view?.removeEventListener("wheel", remeasure, kPassiveCapture);
+    view?.removeEventListener("scroll", remeasure, kPassiveCapture);
+    view?.removeEventListener("resize", remeasure);
     overlay?.destroy();
     overlay = null;
   }

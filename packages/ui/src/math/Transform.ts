@@ -55,6 +55,7 @@ export interface TransformFieldState {
 
 // CONSTANTS
 const kEmptySubState: TransformSubFieldState = {};
+const kNoPeers: CollaboratorPresence[] = [];
 
 /**
  * Composes independently labeled and lockable position, rotation and scale
@@ -165,7 +166,7 @@ export class Transform extends LitElement {
         .value=${this.value.position}
         .default=${this.default?.position}
         .lockedBy=${position.lockedBy ?? null}
-        .peers=${position.peers ?? []}
+        .peers=${position.peers ?? kNoPeers}
         .error=${position.error ?? null}
         ?disabled=${position.disabled ?? false}
         ?readonly=${position.readonly ?? false}
@@ -178,7 +179,7 @@ export class Transform extends LitElement {
         .value=${this.value.rotation}
         .default=${this.default?.rotation}
         .lockedBy=${rotation.lockedBy ?? null}
-        .peers=${rotation.peers ?? []}
+        .peers=${rotation.peers ?? kNoPeers}
         .error=${rotation.error ?? null}
         ?disabled=${rotation.disabled ?? false}
         ?readonly=${rotation.readonly ?? false}
@@ -191,7 +192,7 @@ export class Transform extends LitElement {
         .value=${this.value.scale}
         .default=${this.default?.scale}
         .lockedBy=${scale.lockedBy ?? null}
-        .peers=${scale.peers ?? []}
+        .peers=${scale.peers ?? kNoPeers}
         .error=${scale.error ?? null}
         ?disabled=${scale.disabled ?? false}
         ?readonly=${scale.readonly ?? false}

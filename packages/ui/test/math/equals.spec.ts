@@ -45,6 +45,16 @@ describe("Math.equals.vectorValueEquals", () => {
     );
   });
 
+  test("an axis present on one side only differs", () => {
+    assert.equal(vectorValueEquals({ x: 1, y: 2 }, { x: 1, y: 2, z: 0 }), false);
+    assert.equal(vectorValueEquals({ x: 1, y: 2, z: 0 }, { x: 1, y: 2 }), false);
+  });
+
+  test("compares axes with Object.is", () => {
+    assert.ok(vectorValueEquals({ x: Number.NaN }, { x: Number.NaN }));
+    assert.equal(vectorValueEquals({ x: 0 }, { x: -0 }), false);
+  });
+
   test("concrete records compare component-wise", () => {
     assert.ok(vectorValueEquals({ x: 1, y: 2 }, { x: 1, y: 2 }));
     assert.equal(

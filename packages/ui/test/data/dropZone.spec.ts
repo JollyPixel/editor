@@ -12,6 +12,7 @@ import {
   resolveRowDropZone,
   TreeSnapshot
 } from "../../src/data/tree/model.ts";
+import type { TreeNode } from "../../src/data/tree/contract.ts";
 import {
   FOLDER_TREE,
   TREE
@@ -129,7 +130,72 @@ describe("Data.resolveEdgeDropRows", () => {
       { firstRow: rows[0], lastRow: rows[0] }
     );
   });
+
+  test("keeps the edges when only middle rows move", () => {
+    const snapshot = new TreeSnapshot(TREE, new Set(["a", "a2"]));
+    const rows = snapshot.visibleRows;
+
+    assert.deepEqual(
+      resolveEdgeDropRows(rows, ["a1", "a2"], snapshot),
+      { firstRow: rows[0], lastRow: rows[rows.length - 1] }
+    );
+  });
+
+  test("ignores moved IDs missing from the tree", () => {
+    const snapshot = new TreeSnapshot(TREE, new Set());
+    const rows = snapshot.visibleRows;
+
+    assert.deepEqual(
+      resolveEdgeDropRows(rows, ["missing"], snapshot),
+      { firstRow: rows[0], lastRow: rows[1] }
+    );
+  });
+
+  test("matches filtering every row against every moved ID", () => {
+    const nodes = deepTree(4, 3);
+    const snapshot = new TreeSnapshot(nodes, new Set(allIds(nodes)));
+    const rows = snapshot.visibleRows;
+    const ids = rows.map((row) => row.node.id);
+
+    for (let start = 0; start < ids.length; start += 7) {
+      for (const movedIds of [
+        [ids[start]],
+        ids.slice(0, start + 1),
+        ids.slice(start),
+        [ids[0], ids[start], ids[ids.length - 1]]
+      ]) {
+        const available = rows.filter(
+          (row) => !movedIds.some((id) => snapshot.isSelfOrDescendant(id, row.node.id))
+        );
+
+        assert.deepEqual(
+          resolveEdgeDropRows(rows, movedIds, snapshot),
+          { firstRow: available[0], lastRow: available[available.length - 1] }
+        );
+      }
+    }
+  });
 });
+
+function deepTree(
+  breadth: number,
+  depth: number,
+  prefix = "n"
+): TreeNode[] {
+  return Array.from({ length: breadth }, (_, index) => {
+    const id = `${prefix}${index}`;
+
+    return depth === 0 ?
+      { id, label: id } :
+      { id, label: id, children: deepTree(breadth, depth - 1, `${id}.`) };
+  });
+}
+
+function allIds(
+  nodes: readonly TreeNode[]
+): string[] {
+  return nodes.flatMap((node) => [node.id, ...allIds(node.children ?? [])]);
+}
 
 describe("Data.resolveEdgeDropTarget", () => {
   test("anchors at the true last row for an unrelated moved node", () => {

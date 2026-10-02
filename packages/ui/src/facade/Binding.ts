@@ -21,6 +21,12 @@ import { vec2PairOf } from "../math/guards.ts";
 
 // CONSTANTS
 const kEightDigitHex = /^#[0-9a-f]{8}$/i;
+const kAxes = [
+  "x",
+  "y",
+  "z",
+  "w"
+] as const;
 
 /**
  * Structural surface every dispatched control shares through `JollyField`.
@@ -100,9 +106,12 @@ export class FacadeBinding<
 
   refresh(): void {
     const value = this.#object[this.#key];
-    this.#bindable.value = this.#math
-      ? snapshotComponents(value)
-      : value;
+    if (!this.#math) {
+      this.#bindable.value = value;
+    }
+    else if (!matchesComponents(this.#bindable.value, value)) {
+      this.#bindable.value = snapshotComponents(value);
+    }
   }
 
   protected override readDisabled(): boolean {
@@ -237,6 +246,34 @@ function buildElement<TValue>(
     default:
       return tag;
   }
+}
+
+function matchesComponents(
+  current: unknown,
+  live: unknown
+): boolean {
+  if (
+    typeof live !== "object" || live === null ||
+    typeof current !== "object" || current === null ||
+    current === live
+  ) {
+    return false;
+  }
+
+  const record = current as Record<string, unknown>;
+  const source = live as Record<string, unknown>;
+  let count = 0;
+  for (const axis of kAxes) {
+    const component = source[axis];
+    if (typeof component === "number") {
+      if (!Object.is(record[axis], component)) {
+        return false;
+      }
+      count++;
+    }
+  }
+
+  return Object.keys(record).length === count;
 }
 
 function applyBounds<TValue>(

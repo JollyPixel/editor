@@ -149,3 +149,40 @@ describe("facade.Binding scalar values", () => {
     assert.equal(object.opacity, 0.75);
   });
 });
+
+describe("facade.Binding refresh", () => {
+  test("keeps the field value while the bound components are unchanged", () => {
+    const object = { position: { x: 1, y: 2, z: 3 } };
+    const binding = new FacadeBinding(object, "position");
+    const field = binding.element as unknown as { value: unknown; };
+    const before = field.value;
+
+    binding.refresh();
+
+    assert.equal(field.value, before);
+  });
+
+  test("replaces the field value once a component moves", () => {
+    const object = { position: { x: 1, y: 2, z: 3 } };
+    const binding = new FacadeBinding(object, "position");
+    const field = binding.element as unknown as { value: unknown; };
+    const before = field.value;
+
+    object.position.z = -0;
+    binding.refresh();
+
+    assert.notEqual(field.value, before);
+    assert.deepEqual(field.value, { x: 1, y: 2, z: -0 });
+  });
+
+  test("replaces a field value carrying extra keys", () => {
+    const object = { position: { x: 1, y: 2, z: 3 } };
+    const binding = new FacadeBinding(object, "position");
+    const field = binding.element as unknown as { value: unknown; };
+
+    field.value = { x: 1, y: 2, z: 3, label: "stale" };
+    binding.refresh();
+
+    assert.deepEqual(field.value, { x: 1, y: 2, z: 3 });
+  });
+});

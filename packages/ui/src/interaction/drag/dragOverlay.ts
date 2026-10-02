@@ -139,6 +139,9 @@ export function createDragOverlay(
 
   const bands: HTMLElement[] = [];
   const rects: Rect[] = [];
+  let armedIndex: number | null = null;
+  let armedPreview: Rect | undefined;
+  let insertionRect: Rect | null = null;
 
   return {
     showZones(
@@ -149,6 +152,8 @@ export function createDragOverlay(
       }
       bands.length = 0;
       rects.length = 0;
+      armedIndex = null;
+      armedPreview = undefined;
 
       for (const zone of zones) {
         const band = document.createElement("div");
@@ -177,6 +182,12 @@ export function createDragOverlay(
       index: number | null,
       preview?: Rect
     ): void {
+      if (index === armedIndex && sameRect(preview, armedPreview)) {
+        return;
+      }
+      armedIndex = index;
+      armedPreview = preview;
+
       for (let position = 0; position < bands.length; position++) {
         const band = bands[position];
         const armed = position === index;
@@ -196,6 +207,11 @@ export function createDragOverlay(
     showInsertion(
       rect: Rect
     ): void {
+      if (insertionRect !== null && sameRect(rect, insertionRect)) {
+        return;
+      }
+      insertionRect = rect;
+
       Object.assign(insertion.style, {
         display: "block",
         left: `${rect.x}px`,
@@ -206,6 +222,10 @@ export function createDragOverlay(
     },
 
     hideInsertion(): void {
+      if (insertionRect === null) {
+        return;
+      }
+      insertionRect = null;
       insertion.style.display = "none";
     },
 
@@ -221,4 +241,18 @@ export function createDragOverlay(
       root.remove();
     }
   };
+}
+
+function sameRect(
+  a: Rect | undefined,
+  b: Rect | undefined
+): boolean {
+  if (a === undefined || b === undefined) {
+    return a === b;
+  }
+
+  return a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height;
 }

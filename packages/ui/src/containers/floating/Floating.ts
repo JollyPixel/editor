@@ -31,7 +31,10 @@ import {
   isDocumentOrShadowRoot
 } from "../../dom.ts";
 import { startDragSession } from "../../interaction/drag/DragSession.ts";
-import { clampToViewport } from "../../geometry/clampToViewport.ts";
+import {
+  clampToViewport,
+  type ViewportRect
+} from "../../geometry/clampToViewport.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -258,7 +261,12 @@ export class Floating extends LitElement {
   }
 
   clampToView = () => {
-    const rect = this.getBoundingClientRect();
+    this.#clampWithin(this.getBoundingClientRect());
+  };
+
+  #clampWithin(
+    size: ViewportRect
+  ): void {
     const view = this.ownerDocument.defaultView;
     if (view === null) {
       return;
@@ -267,7 +275,7 @@ export class Floating extends LitElement {
     const position = clampToViewport({
       x: this.x,
       y: this.y,
-      rect,
+      rect: size,
       viewport: {
         width: view.innerWidth,
         height: view.innerHeight
@@ -275,7 +283,7 @@ export class Floating extends LitElement {
     });
     this.x = position.x;
     this.y = position.y;
-  };
+  }
 
   #onPaneDrag = (
     event: CustomEvent<PaneDragDetail>
@@ -290,6 +298,7 @@ export class Floating extends LitElement {
     const startY = this.y;
     const originX = detail.event.clientX;
     const originY = detail.event.clientY;
+    let size: ViewportRect | null = null;
     this.#raise();
 
     startDragSession({
@@ -300,10 +309,10 @@ export class Floating extends LitElement {
       visuals: false,
       zones: () => [],
       onPreview: (result) => {
-        this.moveTo(
-          startX + result.x - originX,
-          startY + result.y - originY
-        );
+        size ??= this.getBoundingClientRect();
+        this.x = startX + result.x - originX;
+        this.y = startY + result.y - originY;
+        this.#clampWithin(size);
         emitContainerEvent(this, "jolly-move", {
           x: this.x,
           y: this.y
@@ -368,8 +377,7 @@ export class Floating extends LitElement {
         resizeHandle,
         () => this.#resizeDetail(),
         () => {
-          this.#readSize();
-          this.clampToView();
+          this.#fitToRect();
           this.#persist();
         }
       ));
@@ -396,8 +404,7 @@ export class Floating extends LitElement {
   }
 
   #onResize = () => {
-    this.#readSize();
-    this.clampToView();
+    this.#fitToRect();
   };
 
   #raise = () => {
@@ -424,13 +431,13 @@ export class Floating extends LitElement {
     this.#ownsZIndex = true;
   };
 
-  #readSize(): void {
+  #fitToRect(): void {
     const rect = this.getBoundingClientRect();
     this.width = rect.width;
-    if (this.#collapsed) {
-      return;
+    if (!this.#collapsed) {
+      this.height = rect.height;
     }
-    this.height = rect.height;
+    this.#clampWithin(rect);
   }
 
   #applyGeometry(): void {

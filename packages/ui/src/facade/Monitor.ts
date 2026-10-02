@@ -6,10 +6,21 @@ import {
   displayMonitorValue,
   type MonitorValue
 } from "./monitorValue.ts";
+import { isVec2Like } from "../math/guards.ts";
+import { formatVector } from "../monitors/format.ts";
 
 interface BindableMonitor extends HTMLElement {
   value: unknown;
   label: string;
+}
+
+interface VectorText {
+  x: unknown;
+  y: unknown;
+  z: unknown;
+  w: unknown;
+  precision: number | undefined;
+  text: string;
 }
 
 export type { MonitorValue } from "./monitorValue.ts";
@@ -48,6 +59,7 @@ export class FacadeMonitor<
   #bindable: BindableMonitor;
   #options: MonitorOptions<TObject[TKey]>;
   #graph: boolean;
+  #vectorText: VectorText | null = null;
 
   constructor(
     object: TObject,
@@ -69,7 +81,41 @@ export class FacadeMonitor<
     const value = this.#object[this.#key];
     this.#bindable.value = this.#graph
       ? value
-      : displayMonitorValue(value, this.#options);
+      : this.#display(value);
+  }
+
+  #display(
+    value: TObject[TKey]
+  ): unknown {
+    const { format, precision } = this.#options;
+    if (format !== undefined || !isVec2Like(value)) {
+      return displayMonitorValue(value, this.#options);
+    }
+
+    const vector = value as unknown as Record<string, unknown>;
+    const cached = this.#vectorText;
+    if (
+      cached !== null &&
+      Object.is(cached.precision, precision) &&
+      Object.is(cached.x, vector.x) &&
+      Object.is(cached.y, vector.y) &&
+      Object.is(cached.z, vector.z) &&
+      Object.is(cached.w, vector.w)
+    ) {
+      return cached.text;
+    }
+
+    const text = formatVector(value, precision);
+    this.#vectorText = {
+      x: vector.x,
+      y: vector.y,
+      z: vector.z,
+      w: vector.w,
+      precision,
+      text
+    };
+
+    return text;
   }
 }
 

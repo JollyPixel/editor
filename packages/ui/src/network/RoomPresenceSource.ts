@@ -30,6 +30,21 @@ interface StampedPresence {
   editing?: unknown;
 }
 
+interface ValidStamp {
+  clientId: string;
+  displayName: string;
+  color: string;
+  editing?: unknown;
+}
+
+interface ResolvedPeers {
+  map: Map<string, CollaboratorPresence>;
+  local: CollaboratorPresence;
+  identityKeys: string[];
+  editing: string | null;
+  remote: CollaboratorPresence[];
+}
+
 export class RoomPresenceSource implements PresenceSource {
   readonly clientId: string;
 
@@ -38,6 +53,7 @@ export class RoomPresenceSource implements PresenceSource {
   #editing: string | null = null;
   #listeners = new Set<() => void>();
   #detach: (() => void)[] = [];
+  #resolved: ResolvedPeers | null = null;
 
   constructor(
     room: Room,
@@ -57,21 +73,41 @@ export class RoomPresenceSource implements PresenceSource {
   }
 
   get peers(): ReadonlyMap<string, CollaboratorPresence> {
-    const peers = new Map<string, CollaboratorPresence>([
-      [this.clientId, {
-        ...this.#identity,
-        ...this.#editing === null ? {} : { editing: this.#editing }
-      }]
-    ]);
+    const previous = this.#resolved;
+    if (previous !== null && this.#isCurrent(previous)) {
+      return previous.map;
+    }
 
+    const local = previous !== null && this.#matchesLocal(previous) ?
+      previous.local :
+      this.#localPresence();
+    const map = new Map<string, CollaboratorPresence>([
+      [this.clientId, local]
+    ]);
     for (const peer of this.#room.peers.values()) {
-      const presence = readStamp(peer.presence);
-      if (presence !== null && presence.clientId !== this.clientId) {
-        peers.set(presence.clientId, presence);
+      const stamp = validStamp(peer.presence);
+      if (stamp !== null && stamp.clientId !== this.clientId) {
+        const known = previous?.map.get(stamp.clientId);
+        map.set(
+          stamp.clientId,
+          known !== undefined && matchesStamp(known, stamp) ?
+            known :
+            toPresence(stamp)
+        );
       }
     }
 
-    return peers;
+    const remote = [...map.values()];
+    remote.shift();
+    this.#resolved = {
+      map,
+      local,
+      identityKeys: Object.keys(this.#identity),
+      editing: this.#editing,
+      remote
+    };
+
+    return map;
   }
 
   claim(
@@ -121,6 +157,64 @@ export class RoomPresenceSource implements PresenceSource {
     this.#listeners.clear();
   }
 
+  #isCurrent(
+    resolved: ResolvedPeers
+  ): boolean {
+    if (
+      resolved.map.size !== resolved.remote.length + 1 ||
+      !this.#matchesLocal(resolved)
+    ) {
+      return false;
+    }
+
+    let index = 0;
+    for (const peer of this.#room.peers.values()) {
+      const stamp = validStamp(peer.presence);
+      if (stamp === null || stamp.clientId === this.clientId) {
+        continue;
+      }
+
+      const known = resolved.remote[index];
+      if (known === undefined || !matchesStamp(known, stamp)) {
+        return false;
+      }
+      index++;
+    }
+
+    return index === resolved.remote.length;
+  }
+
+  #matchesLocal(
+    resolved: ResolvedPeers
+  ): boolean {
+    if (resolved.editing !== this.#editing) {
+      return false;
+    }
+
+    const identity = this.#identity as unknown as Record<string, unknown>;
+    const local = resolved.local as unknown as Record<string, unknown>;
+
+    let count = 0;
+    for (const key in identity) {
+      if (!Object.hasOwn(identity, key)) {
+        continue;
+      }
+      if (key === "editing" || !Object.is(local[key], identity[key])) {
+        return false;
+      }
+      count++;
+    }
+
+    return count === resolved.identityKeys.length;
+  }
+
+  #localPresence(): CollaboratorPresence {
+    return {
+      ...this.#identity,
+      ...this.#editing === null ? {} : { editing: this.#editing }
+    };
+  }
+
   #publish(): void {
     this.#room.updatePresence({
       [kPresenceKey]: {
@@ -137,9 +231,9 @@ export class RoomPresenceSource implements PresenceSource {
   }
 }
 
-function readStamp(
+function validStamp(
   presence: Record<string, unknown>
-): CollaboratorPresence | null {
+): ValidStamp | null {
   const stamp = presence[kPresenceKey] as StampedPresence | undefined;
   if (
     typeof stamp?.clientId !== "string" ||
@@ -149,6 +243,12 @@ function readStamp(
     return null;
   }
 
+  return stamp as ValidStamp;
+}
+
+function toPresence(
+  stamp: ValidStamp
+): CollaboratorPresence {
   return {
     clientId: stamp.clientId,
     displayName: stamp.displayName,
@@ -157,4 +257,18 @@ function readStamp(
       ? { editing: stamp.editing }
       : {}
   };
+}
+
+function matchesStamp(
+  known: CollaboratorPresence,
+  stamp: ValidStamp
+): boolean {
+  const editing = typeof stamp.editing === "string" ?
+    stamp.editing :
+    undefined;
+
+  return known.clientId === stamp.clientId &&
+    known.displayName === stamp.displayName &&
+    known.color === stamp.color &&
+    known.editing === editing;
 }

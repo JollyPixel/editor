@@ -54,9 +54,16 @@ export function createDragGuide(
 
   document.body.append(svg);
 
+  let lastX: number | null = null;
+
   function update(
     currentX: number
   ): void {
+    if (currentX === lastX) {
+      return;
+    }
+    lastX = currentX;
+
     line.setAttribute(
       "x2",
       String(currentX)
@@ -74,14 +81,10 @@ export function createDragGuide(
 
     const direction = currentX > startX ? 1 : -1;
     const tipX = currentX + (direction * 5);
-    const points = [
-      [tipX, originY],
-      [tipX - (direction * 6), originY - 4],
-      [tipX - (direction * 6), originY + 4]
-    ].map((point) => point.join(",")).join(" ");
+    const backX = tipX - (direction * 6);
     arrow.setAttribute(
       "points",
-      points
+      `${tipX},${originY} ${backX},${originY - 4} ${backX},${originY + 4}`
     );
   }
 

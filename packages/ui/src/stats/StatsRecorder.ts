@@ -280,13 +280,20 @@ function aggregate(
   mode: MetricAggregation
 ): number {
   if (mode === "average") {
-    return values.reduce(
-      (sum, value) => sum + value,
-      0
-    ) / values.length;
+    let sum = 0;
+    for (const value of values) {
+      sum += value;
+    }
+
+    return sum / values.length;
   }
   if (mode === "max") {
-    return Math.max(...values);
+    let max = -Infinity;
+    for (const value of values) {
+      max = Math.max(max, value);
+    }
+
+    return max;
   }
 
   return values[values.length - 1];

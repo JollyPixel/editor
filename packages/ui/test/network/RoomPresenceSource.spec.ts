@@ -265,3 +265,61 @@ describe("RoomPresenceSource — change notification", () => {
     assert.equal(changes, 0);
   });
 });
+
+describe("RoomPresenceSource — repeated reads", () => {
+  const kAda = {
+    clientId: "ada",
+    displayName: "Ada",
+    color: "#43aa8b",
+    editing: "map.width"
+  };
+
+  test("returns the same presence objects while nothing changed", () => {
+    const { room, source } = createSource();
+    room.addPeer("transport-7", { ...kAda });
+
+    const first = source.peers;
+    room.addPeer("transport-7", { ...kAda });
+    const second = source.peers;
+
+    assert.equal(second.get("me"), first.get("me"));
+    assert.equal(second.get("ada"), first.get("ada"));
+  });
+
+  test("rebuilds a remote presence whose stamp changed", () => {
+    const { room, source } = createSource();
+    room.addPeer("transport-7", { ...kAda });
+
+    const before = source.peers.get("ada");
+    room.addPeer("transport-7", { ...kAda, editing: null });
+    const after = source.peers.get("ada");
+
+    assert.notEqual(after, before);
+    assert.deepEqual(after, {
+      clientId: "ada",
+      displayName: "Ada",
+      color: "#43aa8b"
+    });
+  });
+
+  test("rebuilds the local presence when it claims a path", () => {
+    const { source } = createSource();
+
+    const before = source.peers.get("me");
+    source.claim("map.width");
+    const after = source.peers.get("me");
+
+    assert.notEqual(after, before);
+    assert.equal(after?.editing, "map.width");
+  });
+
+  test("follows room changes made without an event", () => {
+    const { room, source } = createSource();
+    room.addPeer("transport-7", { ...kAda });
+    assert.deepEqual([...source.peers.keys()], ["me", "ada"]);
+
+    room.leave();
+
+    assert.deepEqual([...source.peers.keys()], ["me"]);
+  });
+});

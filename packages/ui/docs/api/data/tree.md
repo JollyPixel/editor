@@ -30,7 +30,9 @@ tree.expanded = ["scene"];
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 
 The component does not mutate these arrays after user input. Consumers write
-event details back to the relevant property.
+event details back to the relevant property. `selected` and `expanded` compare
+by content: assigning a new array with the same IDs in the same order does not
+re-render, so replace the array instead of mutating it in place.
 
 Clicking the empty area below the rows emits `jolly-select` with an empty
 list. `requireSelection` (attribute `require-selection`) disables that, and
