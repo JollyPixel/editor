@@ -35,7 +35,9 @@ const kRejected = [
   "hsl(210, 40%)",
   "hsl(red, 40%, 17%)",
   "hsl(210px, 40%, 17%)",
-  "hsl(210, 40%, 17%, 1, 1)"
+  "hsl(210, 40%, 17%, 1, 1)",
+  "hsv(210, red, 17%)",
+  "hwb(210 40% red)"
 ];
 
 function hueOf(
@@ -73,6 +75,10 @@ describe("parseColor / hsl", () => {
   test("wraps the hue into 0-360", () => {
     assert.equal(hueOf("hsl(-150, 40%, 17%)"), 210);
     assert.equal(hueOf("hsl(570, 40%, 17%)"), 210);
+  });
+
+  test("reads a none hue as 0", () => {
+    assert.equal(formatHex(parseColor("hsl(none 100% 50%)")!), "#ff0000");
   });
 
   test("clamps saturation and lightness", () => {

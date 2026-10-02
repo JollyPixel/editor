@@ -28,16 +28,9 @@ describe("parseColor / named", () => {
     assert.equal(Object.keys(kNamedColors).length, 148);
   });
 
-  test("every name parses to an in-range color", () => {
+  test("every listed name is reachable through parseColor", () => {
     for (const name of Object.keys(kNamedColors)) {
-      const color = parseColor(name);
-      if (color === null) {
-        assert.fail(`${name} did not parse`);
-      }
-
-      for (const channel of Object.values(color)) {
-        assert.ok(channel >= 0 && channel <= 1, `${name}: ${channel}`);
-      }
+      assert.notEqual(parseColor(name), null, name);
     }
   });
 

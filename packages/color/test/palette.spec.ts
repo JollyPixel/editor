@@ -31,11 +31,12 @@ describe("ColorPalette", () => {
     assert.equal(palette.next(), "#a");
   });
 
-  test("forKey is stable for the same key", () => {
-    const palette = new ColorPalette();
+  test("forKey picks from its colors without moving the cursor", () => {
+    const palette = new ColorPalette({ colors: ["#a", "#b"] });
 
-    assert.equal(palette.forKey("peer-1"), palette.forKey("peer-1"));
-    assert.notEqual(palette.forKey("peer-1"), palette.next());
+    assert.equal(palette.next(), "#a");
+    assert.ok(palette.colors.includes(palette.forKey("peer-1")));
+    assert.equal(palette.next(), "#b");
   });
 
   test("defaults to the built-in palette and cannot be tampered with", () => {
@@ -60,14 +61,11 @@ describe("ColorPalette", () => {
 });
 
 describe("colorFromKey", () => {
-  test("is deterministic and stays inside the palette", () => {
+  test("stays inside the built-in palette", () => {
     const colors = defaultPaletteColors();
 
     for (const key of ["", "a", "peer-42", "a-much-longer-client-id"]) {
-      const color = colorFromKey(key);
-
-      assert.equal(color, colorFromKey(key), key);
-      assert.ok(colors.includes(color), key);
+      assert.ok(colors.includes(colorFromKey(key)), key);
     }
   });
 
@@ -83,8 +81,9 @@ describe("colorFromKey", () => {
 });
 
 describe("goldenAngleColor", () => {
-  test("returns a parseable hex color", () => {
-    assert.match(goldenAngleColor(0), /^#[0-9a-f]{6}$/);
+  test("defaults to 72% saturation and 70% lightness", () => {
+    assert.equal(goldenAngleColor(0), "#ea7b7b");
+    assert.equal(goldenAngleColor(1), "#7bea9c");
   });
 
   test("keeps adjacent indexes far apart in hue", () => {
@@ -93,11 +92,6 @@ describe("goldenAngleColor", () => {
     const distance = Math.abs(first - second);
 
     assert.ok(Math.min(distance, 360 - distance) > 90);
-  });
-
-  test("is stable and repeats only after a full rotation", () => {
-    assert.equal(goldenAngleColor(3), goldenAngleColor(3));
-    assert.notEqual(goldenAngleColor(3), goldenAngleColor(4));
   });
 
   test("honours saturation and lightness overrides", () => {

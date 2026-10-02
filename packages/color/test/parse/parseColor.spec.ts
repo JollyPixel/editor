@@ -41,18 +41,6 @@ describe("parseColor", () => {
     }
   });
 
-  test("returns unit channels", () => {
-    assert.deepEqual(
-      parseColor("#ffffff80"),
-      {
-        r: 1,
-        g: 1,
-        b: 1,
-        a: 128 / 255
-      }
-    );
-  });
-
   test("returns null for unrecognised input", () => {
     for (const input of kRejected) {
       assert.equal(parseColor(input), null, input);

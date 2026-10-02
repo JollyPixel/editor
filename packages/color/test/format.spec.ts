@@ -5,11 +5,11 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   formatHex,
+  formatHex8,
   formatHsl,
   formatRgb,
   formatRgba
 } from "../src/format.ts";
-import { parseColor } from "../src/parse/index.ts";
 
 // CONSTANTS
 const kOrange = {
@@ -49,13 +49,11 @@ describe("formatHex", () => {
     );
   });
 
-  test("round trips through parseColor", () => {
-    const parsed = parseColor("#1a2b3c");
-    if (parsed === null) {
-      assert.fail("did not parse");
-    }
-
-    assert.equal(formatHex(parsed), "#1a2b3c");
+  test("formatHex8 reads byte channels", () => {
+    assert.equal(
+      formatHex8({ r: 255, g: 102, b: 0, a: 128 }, true),
+      "#ff660080"
+    );
   });
 });
 

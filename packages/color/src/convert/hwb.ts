@@ -56,7 +56,7 @@ export function hwbToRgb(
 
   return hsvToRgb({
     h: color.h,
-    s: value === 0 ? 0 : 1 - (w / value),
+    s: 1 - (w / value),
     v: value,
     a: alpha
   });
