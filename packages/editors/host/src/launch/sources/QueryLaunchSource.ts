@@ -15,12 +15,14 @@ export class QueryLaunchSource implements LaunchSource {
   }
 
   read(): Promise<EditorLaunch | undefined> {
+    return Promise.resolve(this.peek());
+  }
+
+  peek(): EditorLaunch | undefined {
     const target = new URLSearchParams(
       location.search
     ).get(this.param);
 
-    return Promise.resolve(
-      EditorLaunch.fromTarget(target)
-    );
+    return EditorLaunch.fromTarget(target);
   }
 }

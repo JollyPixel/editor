@@ -7,6 +7,7 @@ import {
 
 // Import Internal Dependencies
 import type { OfflineStorage } from "./OfflineWorkspace.ts";
+import { acquireWorkspaceLock } from "./workspaceLock.ts";
 
 export interface OfflineSource {
   source: AssetSource;
@@ -18,23 +19,23 @@ export async function openOfflineSource(
   requested: OfflineStorage,
   databaseName: string
 ): Promise<OfflineSource> {
-  if (requested === "memory") {
-    return {
-      source: new MemoryAssetSource(),
-      storage: "memory"
-    };
+  const release = requested === "indexeddb" ?
+    await acquireWorkspaceLock(databaseName) :
+    null;
+  if (release !== null) {
+    return openPersistentSource(databaseName, release);
   }
 
-  const release = await acquireTabLock(
-    databaseName
-  );
-  if (release === null) {
-    return {
-      source: new MemoryAssetSource(),
-      storage: "memory"
-    };
-  }
+  return {
+    source: new MemoryAssetSource(),
+    storage: "memory"
+  };
+}
 
+export async function openPersistentSource(
+  databaseName: string,
+  release: () => void
+): Promise<OfflineSource> {
   void globalThis.navigator?.storage?.persist?.().catch(
     () => false
   );
@@ -53,27 +54,4 @@ export async function openOfflineSource(
 
     throw error;
   }
-}
-
-async function acquireTabLock(
-  name: string
-): Promise<(() => void) | null> {
-  const locks = globalThis.navigator?.locks;
-  if (locks === undefined) {
-    return () => void 0;
-  }
-
-  const acquired = Promise.withResolvers<boolean>();
-  const released = Promise.withResolvers<void>();
-  void locks.request(
-    name,
-    { ifAvailable: true },
-    (lock) => {
-      acquired.resolve(lock !== null);
-
-      return lock === null ? undefined : released.promise;
-    }
-  );
-
-  return await acquired.promise ? released.resolve : null;
 }

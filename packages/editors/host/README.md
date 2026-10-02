@@ -43,7 +43,8 @@ releases. The [glossary](./GLOSSARY.md) defines the vocabulary.
 import {
   EditorRuntime,
   mountStandalone,
-  type EditorContext
+  type HostLogger,
+  type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import {
   pixelArtDocumentKind
@@ -56,11 +57,16 @@ class MyEditor {
     pixelArtDocumentKind()
   ];
 
+  static createRuntime(
+    logger: HostLogger
+  ): Promise<EditorRuntime> {
+    return EditorRuntime.create("#canvas", { logger });
+  }
+
   static async mount(
-    context: EditorContext
+    context: RuntimeEditorContext
   ): Promise<MyEditor> {
-    const editorRuntime = await EditorRuntime.create("#canvas");
-    await editorRuntime.load(
+    await context.runtime.load(
       new MyScene(context.session.target.room)
     );
 

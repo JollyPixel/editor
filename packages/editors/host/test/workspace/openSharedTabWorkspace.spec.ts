@@ -15,19 +15,27 @@ Object.assign(globalThis, { indexedDB });
 
 test("a second tab edits the persistent catalog through its owner", async() => {
   const name = `shared-${crypto.randomUUID()}`;
+  let loads = 0;
   const options = {
     name,
-    handlers: [],
-    seed: {
-      "readme.bin": {
-        id: "readme",
-        kind: BINARY_KIND,
-        content: () => new TextEncoder().encode("hello")
-      }
+    project: () => {
+      loads++;
+
+      return {
+        handlers: [],
+        seed: {
+          "readme.bin": {
+            id: "readme",
+            kind: BINARY_KIND,
+            content: () => new TextEncoder().encode("hello")
+          }
+        }
+      };
     }
   };
   const owner = await openSharedTabWorkspace(options);
   const follower = await openSharedTabWorkspace(options);
+  assert.strictEqual(loads, 1);
   const first = owner.connect();
   const second = follower.connect();
   const firstCatalog = new CatalogClient(first.client.room(CATALOG_ROOM));
@@ -36,10 +44,8 @@ test("a second tab edits the persistent catalog through its owner", async() => {
     await Promise.all([firstCatalog.ready, secondCatalog.ready]);
     assert.strictEqual(owner.persistent, true);
     assert.strictEqual(follower.persistent, true);
-    assert.deepEqual(
-      (await follower.launchSources(BINARY_KIND)).length,
-      3
-    );
+    const [source] = follower.launchSources(BINARY_KIND);
+    assert.strictEqual((await source.read())?.target.value, "readme");
     const changed = once(secondCatalog, "change");
     const id = await firstCatalog.create(
       "second.bin",

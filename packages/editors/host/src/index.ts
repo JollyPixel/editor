@@ -22,7 +22,10 @@ export * from "./session/SessionArchive.ts";
 export * from "./session/EditorArchives.ts";
 export * from "./session/errors/ArchiveRootError.ts";
 export * from "./session/rememberQueryUsername.ts";
-export type { SessionWorkspace } from "./workspace/SessionWorkspace.ts";
+export type {
+  SessionWorkspace,
+  StandaloneConnection
+} from "./workspace/SessionWorkspace.ts";
 export {
   EditorRuntime,
   type EditorRuntimeCreateOptions,
@@ -31,6 +34,11 @@ export {
 export * from "./runtime/PeerFrustums.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
+export {
+  EDITOR_STATE_ATTRIBUTE,
+  type EditorState
+} from "./editor/BootTrace.ts";
+export { DEBUG_HANDLE } from "./editor/StandaloneEditor.ts";
 export * from "./editor/bootStandalone.ts";
 export * from "./editor/offerOffline.ts";
 export * from "./appearance/PageAppearance.ts";

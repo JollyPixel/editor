@@ -38,19 +38,9 @@ export interface BlockPreviewStage {
   camera: THREE.PerspectiveCamera;
 }
 
-export function createBlockPreviewStage(
-  renderer?: THREE.WebGLRenderer
-): BlockPreviewStage {
+export function createBlockPreviewStage(): BlockPreviewStage {
   const scene = new THREE.Scene();
   scene.add(...new SceneLighting().lights);
-  if (renderer) {
-    const room = new RoomEnvironment();
-    const generator = new THREE.PMREMGenerator(renderer);
-    scene.environment = generator.fromScene(room, kEnvironmentBlur).texture;
-    scene.environmentIntensity = kEnvironmentIntensity;
-    generator.dispose();
-    room.dispose();
-  }
 
   const camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
   camera.position.set(0, 0, kCameraZ);
@@ -59,6 +49,30 @@ export function createBlockPreviewStage(
     scene,
     camera
   };
+}
+
+export function lightWithEnvironment(
+  scene: THREE.Scene,
+  renderer: THREE.WebGLRenderer
+): void {
+  const room = new RoomEnvironment();
+  const generator = new THREE.PMREMGenerator(renderer);
+  scene.environment = generator.fromScene(room, kEnvironmentBlur).texture;
+  scene.environmentIntensity = kEnvironmentIntensity;
+  generator.dispose();
+  room.dispose();
+}
+
+export function needsEnvironment(
+  mesh: THREE.Mesh
+): boolean {
+  const materials = Array.isArray(mesh.material) ?
+    mesh.material :
+    [mesh.material];
+
+  return materials.some(
+    (material) => material instanceof THREE.MeshStandardMaterial
+  );
 }
 
 export function fitGeometry(

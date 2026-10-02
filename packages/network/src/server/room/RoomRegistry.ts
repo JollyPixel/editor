@@ -43,6 +43,7 @@ export class RoomRegistry {
   #graceMs: number;
   #entries = new Map<string, RoomEntry>();
   #evictions = new Map<string, Promise<void>>();
+  #resolutions = new Map<string, Promise<ServerRoom | null>>();
 
   constructor(
     options: RoomRegistryOptions
@@ -80,6 +81,22 @@ export class RoomRegistry {
       return null;
     }
 
+    const pending = this.#resolutions.get(name);
+    if (pending !== undefined) {
+      return pending;
+    }
+
+    const resolution = this.#create(name).finally(() => {
+      this.#resolutions.delete(name);
+    });
+    this.#resolutions.set(name, resolution);
+
+    return resolution;
+  }
+
+  async #create(
+    name: string
+  ): Promise<ServerRoom | null> {
     await this.#evictions.get(name);
 
     const resolution = await this.#resolveOnce(name);

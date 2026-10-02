@@ -5,12 +5,17 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../../editor/mountStandalone.ts";
-import type { LaunchSource } from "../../launch/index.ts";
+import {
+  EditorLaunch,
+  type LaunchSource
+} from "../../launch/index.ts";
 import { openCatalog } from "../../session/openCatalog.ts";
 import { catalogLaunchSources } from "../catalogLaunchSources.ts";
 import { guestConnection } from "../guestConnection.ts";
-import type { StandaloneWorkspace } from "../SessionWorkspace.ts";
+import type {
+  StandaloneConnection,
+  StandaloneWorkspace
+} from "../SessionWorkspace.ts";
 import { OwnerMonitor } from "./OwnerMonitor.ts";
 import {
   DISCOVERY_INTERVAL_MS,
@@ -77,29 +82,14 @@ export class RemoteWorkspace implements StandaloneWorkspace {
     return false;
   }
 
-  async launchSources(
+  launchSources(
     accepts: string
-  ): Promise<LaunchSource[]> {
-    const connection = this.connect();
-    const catalog = await openCatalog(connection.client);
-    try {
-      const known = new Set(
-        [...catalog.records()]
-          .filter((record) => record.kind === accepts)
-          .map((record) => record.id)
-      );
-      const [first] = known;
-
-      return catalogLaunchSources({
-        accepts,
-        isKnown: (assetId) => known.has(assetId),
-        first: () => first
-      });
-    }
-    finally {
-      catalog.dispose();
-      connection.client.destroy();
-    }
+  ): LaunchSource[] {
+    return [
+      {
+        read: () => this.#readLaunch(accepts)
+      }
+    ];
   }
 
   connect(): StandaloneConnection {
@@ -124,6 +114,31 @@ export class RemoteWorkspace implements StandaloneWorkspace {
 
   async close(): Promise<void> {
     this.#shutdown();
+  }
+
+  async #readLaunch(
+    accepts: string
+  ): Promise<EditorLaunch | undefined> {
+    const connection = this.connect();
+    const catalog = await openCatalog(connection.client);
+    try {
+      const known = new Set(
+        [...catalog.records()]
+          .filter((record) => record.kind === accepts)
+          .map((record) => record.id)
+      );
+      const [first] = known;
+
+      return await EditorLaunch.first(catalogLaunchSources({
+        accepts,
+        isKnown: (assetId) => known.has(assetId),
+        first: () => first
+      }));
+    }
+    finally {
+      catalog.dispose();
+      connection.client.destroy();
+    }
   }
 
   #shutdown(

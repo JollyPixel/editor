@@ -71,8 +71,8 @@ source.run([16, 16, 5000, 16]);
 ## 📚 API
 
 - [FrameScheduler](./docs/framescheduler.md): the scheduler and the `FrameSchedule` it returns.
-- [GameLoop](./docs/gameloop.md): the facade, its callbacks and its events.
-- [FrameSource](./docs/framesource.md): the driver seam, plus `RafFrameSource` and `ManualFrameSource`.
+- [GameLoop](./docs/gameloop.md): the facade, its callbacks, its events, and `suspendWhenHidden`.
+- [FrameSource](./docs/framesource.md): the driver seam, plus `AnimationLoopFrameSource`, `RafFrameSource` and `ManualFrameSource`.
 - [Clock](./docs/clock.md): `PerformanceClock` and `ManualClock`.
 - [Interpolated](./docs/interpolated.md): rendering between two fixed steps.
 - [FrameBudget](./docs/framebudget.md): a deadline for optional per-frame work.

@@ -1,8 +1,8 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import type {
   FrameCallback,
   FrameSource
-} from "@jolly-pixel/loop";
+} from "../FrameSource.ts";
 
 export type AnimationLoopRendererCallback = (time: number) => void;
 
@@ -12,6 +12,9 @@ export interface AnimationLoopRenderer {
   ): void;
 }
 
+/**
+ * Frame source driven by a renderer's `setAnimationLoop()`.
+ */
 export class AnimationLoopFrameSource implements FrameSource {
   #renderer: AnimationLoopRenderer;
 

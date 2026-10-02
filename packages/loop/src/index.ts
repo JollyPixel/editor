@@ -6,3 +6,4 @@ export * from "./FrameSource.ts";
 export * from "./GameLoop.ts";
 export * from "./Interpolated.ts";
 export * from "./sources/index.ts";
+export * from "./suspendWhenHidden.ts";

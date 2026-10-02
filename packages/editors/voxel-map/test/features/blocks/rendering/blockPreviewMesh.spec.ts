@@ -14,6 +14,7 @@ import {
 import {
   buildBlockPreviewMesh,
   fitGeometry,
+  needsEnvironment,
   PREVIEW_FIT_RADIUS
 } from "../../../../src/features/blocks/rendering/blockPreviewMesh.ts";
 import {
@@ -42,6 +43,27 @@ describe("fitGeometry", () => {
     fitGeometry(geometry);
 
     assertFitted(geometry);
+  });
+});
+
+describe("needsEnvironment", () => {
+  it("is true only for a block drawn with a material group finish", () => {
+    const groups = new MaterialGroupList([
+      { id: "gold", roughness: 0.3, metalness: 1 }
+    ]);
+
+    assert.equal(needsEnvironment(
+      buildBlockPreviewMesh(blockOf({ materialGroup: "gold" }), kPieces, groups)
+    ), true);
+    assert.equal(needsEnvironment(
+      buildBlockPreviewMesh(blockOf({}), kPieces, groups)
+    ), false);
+    assert.equal(needsEnvironment(
+      buildBlockPreviewMesh(
+        blockOf({ shapeId: "unknown" as BlockDefinition["shapeId"] }),
+        kPieces
+      )
+    ), false);
   });
 });
 

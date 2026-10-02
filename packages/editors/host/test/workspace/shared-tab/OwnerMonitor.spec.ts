@@ -50,6 +50,18 @@ describe("OwnerMonitor", () => {
     ]);
   });
 
+  it("resolves as soon as the owner replies", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
+    const { monitor, posted } = createMonitor();
+
+    const discovered = monitor.discover();
+    monitor.handle({ type: "owner", tab: "tab-a", owner: "owner-1" });
+
+    assert.strictEqual(await discovered, "owner-1");
+    assert.strictEqual(posted.length, 1);
+    monitor.stop();
+  });
+
   it("rejects when no owner replies in time", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
     const { monitor } = createMonitor();

@@ -9,6 +9,7 @@ import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
+import type { Runtime } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
 import {
@@ -17,9 +18,12 @@ import {
 } from "#src/editor/bootStandalone.ts";
 import type {
   EditorContext,
-  EditorHandle
+  EditorHandle,
+  RuntimeEditorContext
 } from "#src/editor/EditorDefinition.ts";
-import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/mountStandalone.ts";
+import { HOST_PARAMS } from "#src/params/HostParams.ts";
+import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/BootTrace.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { LAUNCH_MESSAGE_TYPE } from "#src/launch/ShellChannel.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
@@ -57,6 +61,30 @@ function definition(
       mounted.push(context.launch.target.value);
 
       return Promise.resolve(editorHandle(context.session));
+    }
+  };
+}
+
+function recordingRuntimes() {
+  const created: Array<EditorRuntime> = [];
+  let disposed = 0;
+  const runtime: Pick<Runtime, "dispose"> = {
+    dispose: () => {
+      disposed++;
+    }
+  };
+
+  return {
+    created,
+    disposed: () => disposed,
+    create: (): Promise<EditorRuntime> => {
+      const editorRuntime = new EditorRuntime(
+        runtime as Runtime,
+        HOST_PARAMS.read("")
+      );
+      created.push(editorRuntime);
+
+      return Promise.resolve(editorRuntime);
     }
   };
 }
@@ -210,6 +238,51 @@ describe("bootStandalone", () => {
     await assert.rejects(pending, LaunchNotFoundError);
     assert.equal(reads.count, 2);
     assert.equal(projects, 0);
+  });
+
+  test("creates the runtime once and mounts the offline fallback with it", async() => {
+    const runtimes = recordingRuntimes();
+    const received: Array<EditorRuntime> = [];
+
+    const pending = bootStandalone({
+      ...definition(),
+      createRuntime: runtimes.create,
+      mount: (context: RuntimeEditorContext) => {
+        received.push(context.runtime);
+
+        return Promise.resolve(editorHandle(context.session));
+      }
+    }, {
+      sources: missingLaunch(),
+      offline: project
+    });
+    await answerOffer("offline");
+    const handle = await pending;
+    handle.dispose();
+
+    assert.equal(runtimes.created.length, 1);
+    assert.deepEqual(received, runtimes.created);
+    assert.equal(runtimes.disposed(), 0);
+  });
+
+  test("disposes the runtime when the boot fails for good", async() => {
+    const runtimes = recordingRuntimes();
+
+    const pending = bootStandalone({
+      ...definition(),
+      createRuntime: runtimes.create,
+      mount: (context: RuntimeEditorContext) => Promise.resolve(
+        editorHandle(context.session)
+      )
+    }, {
+      sources: missingLaunch(),
+      offline: project
+    });
+    await answerOffer("cancel");
+
+    await assert.rejects(pending, LaunchNotFoundError);
+    await setImmediate();
+    assert.equal(runtimes.disposed(), 1);
   });
 
   test("rethrows any other error without offering the offline workspace", async() => {

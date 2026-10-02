@@ -98,6 +98,8 @@ export class BlockLibraryViewport extends LitElement {
   declare private _grip: HTMLDivElement | null;
 
   #renderer: BlockLibraryRenderer | null = null;
+  #shown = false;
+  #visibilityObserver: IntersectionObserver | null = null;
   #drag: DragSession | null = null;
   #suppressClick = false;
   #resizeHandle: ResizeHandle | null = null;
@@ -121,10 +123,14 @@ export class BlockLibraryViewport extends LitElement {
     if (this.hasUpdated) {
       this.requestUpdate();
     }
+    this.#visibilityObserver = new IntersectionObserver(this.#onVisibility);
+    this.#visibilityObserver.observe(this);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
+    this.#stopWatchingVisibility();
+    this.#shown = false;
     this.#endDrag();
     this.#renderer?.dispose();
     this.#renderer = null;
@@ -138,6 +144,9 @@ export class BlockLibraryViewport extends LitElement {
       this.#connectResizeHandle();
     }
 
+    if (!this.#shown) {
+      return;
+    }
     if (changed.has("sources") || this.#renderer === null) {
       this.#build();
     }
@@ -204,6 +213,23 @@ export class BlockLibraryViewport extends LitElement {
     ${this.layout === "compact" ?
       html`<div class="grip" aria-label="Block library height"></div>` :
       nothing}`;
+  }
+
+  readonly #onVisibility = (
+    entries: IntersectionObserverEntry[]
+  ): void => {
+    if (entries.at(-1)?.isIntersecting !== true) {
+      return;
+    }
+
+    this.#shown = true;
+    this.#stopWatchingVisibility();
+    this.requestUpdate();
+  };
+
+  #stopWatchingVisibility(): void {
+    this.#visibilityObserver?.disconnect();
+    this.#visibilityObserver = null;
   }
 
   #connectResizeHandle(): void {

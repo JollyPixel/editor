@@ -1,6 +1,15 @@
+// Import Third-party Dependencies
+import type { PeerIdentity } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../editor/mountStandalone.ts";
 import type { LaunchSource } from "../launch/index.ts";
+import type { EditorSessionClient } from "../session/EditorSession.ts";
+
+export interface StandaloneConnection {
+  identity: PeerIdentity;
+  client: EditorSessionClient;
+  workspace?: SessionWorkspace;
+}
 
 export interface SessionWorkspace {
   readonly persistent: boolean;
@@ -12,7 +21,7 @@ export interface SessionWorkspace {
 export interface StandaloneWorkspace extends SessionWorkspace {
   launchSources(
     accepts: string
-  ): LaunchSource[] | Promise<LaunchSource[]>;
+  ): LaunchSource[];
   connect(): StandaloneConnection;
   close(): Promise<void>;
 }

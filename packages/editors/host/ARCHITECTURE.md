@@ -58,9 +58,11 @@ flowchart TB
   MountFn --> Handle
 ```
 
-The host owns launch resolution and session setup. After `mount` succeeds, the
-editor owns the returned session and decides whether to create an
-`EditorRuntime`. The editor also owns its scene, panels, and target document.
+The host owns launch resolution and session setup. An editor with a 3D view
+declares a static `createRuntime(logger)`; the host calls it when the boot
+starts and passes the `EditorRuntime` to `mount`. After `mount` succeeds, the
+editor owns the returned session and runtime, and also its scene, panels, and
+target document.
 
 ## Boot
 
@@ -75,8 +77,13 @@ sequenceDiagram
   participant A as AssetLeases
 
   E->>M: mountStandalone(Editor)
-  M->>L: read() in order
-  L-->>M: EditorLaunch { target }
+  par runtime
+    M->>E: createRuntime(logger), when declared
+  and launch
+    M->>L: read() in order
+    L-->>M: EditorLaunch { target }
+  end
+  Note over M,S: the session below starts with the launch read<br/>when the URL has ?target=, and is kept if the launch names it
   alt default connection
     M->>S: open({ launch, accepts, identity, kinds })
     S->>S: prompt username, create WebSocket client
@@ -92,9 +99,14 @@ sequenceDiagram
   end
   S->>S: await every ready
   S-->>M: session
-  M->>E: mount({ launch, session })
+  M->>E: mount({ launch, session, runtime? })
   E-->>M: handle
 ```
+
+Nothing in the session or the runtime needs the shell's answer, so all three
+run at once: the studio puts the target in the frame URL and posts the same
+target in `jolly-launch`. A session opened for a `?target=` the launch does
+not confirm is disposed, and a new one opens for the launch target.
 
 `mount` starts with every dependency document already synced. The target is the
 exception: the session only reserves its room. The `connect` option supplies an
@@ -337,8 +349,8 @@ page. It uses a loopback client and a guest identity, so the same catalog,
 session, leases, and editor mounting path work without the remote server.
 The offline code is reached through the separate `./offline` entry point so
 an online entry point can load it only when needed. `bootStandalone` imports
-it the same way, and asks the editor for its handlers and seed only once it
-goes offline.
+it the same way, and asks the editor for its handlers and seed only in the
+tab that owns the workspace.
 
 Storage defaults to memory. With `storage: "indexeddb"`, the asset source
 persists documents and IDs under `jolly-workspace:<name>` (`default` if no
@@ -352,7 +364,9 @@ An IndexedDB workspace holds a Web Lock for its database name when the browser
 supports the Locks API. Direct `OfflineWorkspace.open` falls back to memory
 when another tab owns the database. `openSharedTabWorkspace` instead connects
 the second tab to the owner over BroadcastChannel with the network package's
-`ChannelTransport`, forwarding the existing network room protocol. The owner
+`ChannelTransport`, forwarding the existing network room protocol. It checks
+the lock before importing the back-end, so a second tab loads neither the
+back-end code nor the editor's project. The owner
 alone writes IndexedDB. If Web Locks are unavailable, the shared opener uses
 memory storage. A memory workspace can export and plan an archive, but cannot
 import one. Disposing a session destroys its client; the owner stays open while

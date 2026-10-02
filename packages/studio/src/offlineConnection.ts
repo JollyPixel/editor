@@ -14,7 +14,7 @@ const kWorkspace = "studio";
 
 export async function connectOffline(): Promise<StudioConnection> {
   const workspace = await openSharedTabWorkspace({
-    ...await loadStudioProject(),
+    project: loadStudioProject,
     name: kWorkspace
   });
 

@@ -61,6 +61,50 @@ Mount editors in the shell's document instead of iframes. Waits for the
 [editor host roadmap](../editors/host/ROADMAP.md): `mount` takes a container,
 not `document`.
 
+## Performance
+
+Opening an editor tab was measured from the double-click to
+`data-editor-state="ready"`, with `jolly-pixel:debug` set to `*` so each boot
+step logs its duration. Machine speed drifts, so compare against a baseline
+worktree with interleaved runs. After the first pass, a voxel-map tab opens
+in about 0.9 s cold and 0.45 s warm, down from 2.1 s and 0.9 s. What is left,
+roughly by expected gain:
+
+- **Pixel snapshots.** A voxel-map open receives its tileset as base64 raw
+  RGBA, 2.7 MB for a 1024x512 texture whose PNG is 68 KB, parsed and decoded
+  on the main thread. A compressed binary payload, inflated with
+  `DecompressionStream`, and an encoded snapshot cached per room revision
+  would cut the transfer and the decode. Pixel-art documents use the same
+  encoding.
+- **Shared editor chunks.** Each editor page bundles its own three.js, Lit,
+  `@jolly-pixel/ui` and `editor.host`: 2.8 MB eager for voxel-map, 2.3 MB for
+  voxel-model, 1 MB for pixel-art. One multi-page build for the studio's
+  editors would share those chunks, so the HTTP and V8 code caches of one
+  editor serve the next. The page handler serves hashed assets with
+  `no-cache`; they could be `immutable`.
+- **Warm standby frames.** A hidden frame per editor kind, booted up to the
+  launch handshake with its runtime created, would leave only the session and
+  the scene to an open. It costs a frame and a GPU context per kind.
+- **Shared main thread.** Editor frames share the shell's origin, so they run
+  on its main thread: a heavy boot or frame stalls the shell. Mesh workers
+  (`ChunkMeshWorkers`) are unused by the editors, and an `OffscreenCanvas`
+  runtime in a worker would take rendering off that thread.
+- **Render on demand.** A visible voxel-map tab with nothing changing still
+  spends about 10% of the main thread rendering every frame.
+- **Cold asset rooms.** A room's first join replays the asset twice:
+  `AssetStateStore` folds the log, then `AssetRoomExtension` re-reads the same
+  range to restore its arbiter. Its message validators are compiled per room,
+  and a room is evicted 30 s after its last client leaves.
+- **One catalog per frame.** Every frame opens its own WebSocket and receives
+  the whole catalog and dependency map. Offline, every message to a frame is
+  cloned to every tab on the BroadcastChannel and parsed twice before it is
+  dropped.
+- **Metrics panel.** voxel-map awaits its hidden metrics panel before it is
+  ready; the layout e2e presses F3 right after, so it needs a readiness signal
+  first.
+- **Dev server.** `vite` crashes with `EBUSY` on Windows when
+  `pnpm run build:page` empties `dist-page` while the studio watches it.
+
 ## Waiting for a trigger
 
 - **Shell commands from editors.** The host posts `toggle-console` on Ctrl+K,

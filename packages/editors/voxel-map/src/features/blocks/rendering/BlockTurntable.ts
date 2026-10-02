@@ -5,6 +5,8 @@ import * as THREE from "three";
 import type { BlockRenderSources } from "./BlockRenderSources.ts";
 import {
   createBlockPreviewStage,
+  lightWithEnvironment,
+  needsEnvironment,
   PREVIEW_ROTATION_STEP,
   PREVIEW_TILT
 } from "./blockPreviewMesh.ts";
@@ -26,7 +28,10 @@ export class BlockTurntable {
   readonly #camera: THREE.PerspectiveCamera;
   readonly #contextLease: WebGLContextLease;
   readonly #resizeObserver: ResizeObserver;
+  readonly #visibilityObserver: IntersectionObserver;
   #raf = -1;
+  #visible = false;
+  #lit = false;
   #rotation = 0;
 
   constructor(
@@ -49,19 +54,21 @@ export class BlockTurntable {
     this.canvas.style.display = "block";
     container.appendChild(this.canvas);
 
-    const stage = createBlockPreviewStage(this.renderer);
+    const stage = createBlockPreviewStage();
     this.#scene = stage.scene;
     this.#camera = stage.camera;
     this.meshes = new BlockPreviewMeshes(this.#scene, sources);
 
     this.#resizeObserver = new ResizeObserver(() => this.resized());
     this.#resizeObserver.observe(container);
-    this.#raf = requestAnimationFrame(this.#loop);
+    this.#visibilityObserver = new IntersectionObserver(this.#onVisibility);
+    this.#visibilityObserver.observe(container);
   }
 
   dispose(): void {
     cancelAnimationFrame(this.#raf);
     this.#resizeObserver.disconnect();
+    this.#visibilityObserver.disconnect();
     this.meshes.dispose();
     this.#contextLease.release();
     this.canvas.remove();
@@ -78,11 +85,28 @@ export class BlockTurntable {
   protected renderMesh(
     mesh: THREE.Mesh
   ): void {
+    if (!this.#lit && needsEnvironment(mesh)) {
+      lightWithEnvironment(this.#scene, this.renderer);
+      this.#lit = true;
+    }
     mesh.visible = true;
     mesh.rotation.set(PREVIEW_TILT, this.#rotation, 0);
     this.renderer.render(this.#scene, this.#camera);
     mesh.visible = false;
   }
+
+  readonly #onVisibility = (
+    entries: IntersectionObserverEntry[]
+  ): void => {
+    const visible = entries.at(-1)?.isIntersecting === true;
+    if (visible === this.#visible) {
+      return;
+    }
+
+    this.#visible = visible;
+    cancelAnimationFrame(this.#raf);
+    this.#raf = visible ? requestAnimationFrame(this.#loop) : -1;
+  };
 
   readonly #loop = (time: number): void => {
     this.#raf = requestAnimationFrame(this.#loop);

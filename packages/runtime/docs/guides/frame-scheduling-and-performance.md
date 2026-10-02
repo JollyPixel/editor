@@ -43,7 +43,8 @@ await runtime.load({
 ```
 
 Use `Infinity` to remove the detected render cap. This option overrides
-`runtime.loop.scheduler.maxFps` during startup.
+`runtime.loop.scheduler.maxFps` during startup and skips GPU benchmarking,
+which otherwise fetches benchmark data from a CDN and probes a WebGL context.
 
 The detected pixel ratio is skipped when `Runtime.create()` received
 `renderer.output.pixelRatio` or `renderer.output.maxPixelRatio`.

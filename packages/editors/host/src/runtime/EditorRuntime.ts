@@ -33,7 +33,10 @@ export class EditorRuntime {
     } = options;
     const runtime = await Runtime.create(
       canvas,
-      runtimeOptions
+      {
+        suspendWhenHidden: true,
+        ...runtimeOptions
+      }
     );
     runtime.world.input.keyboard.addGuard(
       inputLayers
@@ -66,6 +69,10 @@ export class EditorRuntime {
       skipLoadingScreen: true,
       maxFps: this.params.maxFps ?? options.maxFps
     });
+  }
+
+  dispose(): void {
+    this.runtime.dispose();
   }
 
   suspendKeyboardOnHover(
