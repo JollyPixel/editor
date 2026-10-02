@@ -122,6 +122,7 @@ export class LeftPanel extends LitElement {
     });
     canvas.uv.showAll = true;
     canvas.uv.showRegionLabels = true;
+    canvas.uv.labelScope = "selected";
     canvas.mode = canvasModeForTab(this.mode);
     this._canvas = canvas;
 

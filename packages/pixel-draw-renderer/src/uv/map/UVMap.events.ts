@@ -5,6 +5,7 @@ import type {
   UVRegion,
   UVRegionData
 } from "../region/UVRegion.ts";
+import type { UVLabelScope } from "./UVMap.ts";
 
 export type UVMapEvent = {
   changed: () => void;
@@ -38,6 +39,7 @@ export type UVMapEvent = {
   }) => void;
   "visibility-changed": (event: { showAll: boolean; }) => void;
   "label-visibility-changed": (event: { showRegionLabels: boolean; }) => void;
+  "label-scope-changed": (event: { labelScope: UVLabelScope; }) => void;
 };
 
 export type UVMapEventType = keyof UVMapEvent;

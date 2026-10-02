@@ -70,6 +70,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"selection-changed"` | `selectedRegionId`, `selectedSlot` |
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
+| `"label-scope-changed"` | `labelScope` |
 
 `face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
@@ -109,6 +110,17 @@ set showRegionLabels(value: boolean)
 ```
 
 Shows each visible region's name, falling back to its id. The default is `false`. It is independent of `showAll`, which shows every region without labelling it.
+
+### `labelScope`
+
+```ts
+type UVLabelScope = "all" | "selected";
+
+get labelScope(): UVLabelScope
+set labelScope(value: UVLabelScope)
+```
+
+Which visible regions carry labels. `"all"` labels every visible region; `"selected"` labels only the region matching `selectedRegionId`, while every other region keeps its border. The default is `"all"`.
 
 ## Visibility
 
