@@ -1,5 +1,39 @@
 # @jolly-pixel/three
 
+## 4.1.0
+
+### Minor Changes
+
+- [#809](https://github.com/JollyPixel/editor/pull/809) [`5d359a9`](https://github.com/JollyPixel/editor/commit/5d359a93ddd5985b9c7857fe382e82dbabd3e5cf) Thanks [@fraxken](https://github.com/fraxken)! - Add `BoxResizePolicy`: `BoxControls.resizeAxes` accepts `"none"` to hide every resize arrow and keep a box move-only.
+
+- [#811](https://github.com/JollyPixel/editor/pull/811) [`9ad8868`](https://github.com/JollyPixel/editor/commit/9ad8868c41f9fc86c234d4dcff169b96a3a00441) Thanks [@fraxken](https://github.com/fraxken)! - `BoxControls` gains a corner arc (`rotateAxes`) that requests quarter turns around `pivot`, and mirror chips (`flipAxes`) with a mirror-plane preview.
+  The host applies them from the new `rotate` and `flip` events.
+
+- [#769](https://github.com/JollyPixel/editor/pull/769) [`4eb05ad`](https://github.com/JollyPixel/editor/commit/4eb05ad0723a9cc386cb7232009aa9a8a2fb6ebc) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add the `boxSilhouette` highlight technique, exported as `HighlightBoxSilhouette`: a camera-facing outline for box meshes, built from watertight edge geometry instead of an outline pass.
+  `MeshHighlightAppearance` gains `occludedOpacityScale` to dim any indicator's portion hidden behind other geometry, and overlay factories can read `peer` to render a local indicator above a peer one on the same geometry.
+
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
+  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
+  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+
+- [#772](https://github.com/JollyPixel/editor/pull/772) [`4981bb9`](https://github.com/JollyPixel/editor/commit/4981bb99fb740a52641452686674df6f0f4a1b6f) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `TransformControls` gains a `slab` axis handle kind: a square tip, half as deep as it is wide by default, for resize-style handles that should read differently from the scale cube.
+  
+  `MeshHighlightAppearance` gains `renderOrder` and `xrayDepthWrite`. The box silhouette uses them to place its overlays in the render order, with peer indicators one step below, and to keep writing depth under xray so later transparent passes, such as a grid, stay hidden behind the outline. Its occluded pass never writes depth.
+  
+  Fix `HighlightBoxSilhouette` throwing on a color change after the camera sat inside the box, which kept a late-joining peer from seeing existing selections.
+
+- [#821](https://github.com/JollyPixel/editor/pull/821) [`ad38d4e`](https://github.com/JollyPixel/editor/commit/ad38d4e8935e0a759c0d4f7add3771ab0543f9b0) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `jolly-context-menu` (a point or `AnchorRect` anchor) and `resolveReparentMoves()`; `jolly-tree` emits `jolly-context-request` on right-click or Shift+F10, samples rows with `TreeNode.swatch` (`jolly-activate-swatch`) and exposes a `grip` part.
+  Locked fields no longer reflow and peer chips skip their own user; pane `actions` buttons no longer start a drag, clicks in the rename field keep it open, and `jolly-dialog` accepts `--jolly-dialog-backdrop-filter`.
+  `MeshHighlight` gains `emphasize(ids)`, `emphasized` and `emphasisChange`; `ObjectOverlayRenderer` takes an optional `renderScene`, without which `render` only places the overlays.
+
+### Patch Changes
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- Updated dependencies [[`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5), [`e206538`](https://github.com/JollyPixel/editor/commit/e2065388190abbe17facabbbe64fac562fa628de), [`8d33c94`](https://github.com/JollyPixel/editor/commit/8d33c9415c21955b94f3c294ceb347f733534787), [`1bbae1c`](https://github.com/JollyPixel/editor/commit/1bbae1ceddffa7431cbe9c711d41a3c401a5dc93), [`5d415e4`](https://github.com/JollyPixel/editor/commit/5d415e4f680fd90ba0ec3819b018baa5c59382fe), [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e), [`71d300a`](https://github.com/JollyPixel/editor/commit/71d300a76e87200b52cb4a1e9394ce22793c2a8a), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/network@5.0.0
+
 ## 4.0.0
 
 ### Major Changes
