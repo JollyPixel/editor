@@ -18,6 +18,7 @@ import { paintBlockSurface } from "./paintBlockSurface.ts";
 const kTransformRoundDecimals = 2;
 const kDefaultEmphasisOwner = "default";
 const kLocalPivotOwner = "local";
+const kOccludedGhostOpacityScale = 0.35;
 export const SELECTION_HIGHLIGHT_COLOR = 0xff00ff;
 
 export interface ModelBlockOptions {
@@ -368,11 +369,11 @@ export class ModelBlock {
         map: this.mesh.material.map,
         side: THREE.FrontSide,
         transparent: true,
-        depthTest: false,
-        depthWrite: true
+        depthFunc: THREE.GreaterDepth,
+        depthWrite: false
       })
     );
-    paintBlockSurface(ghost.material, this.#shownSurface(), this.#lit);
+    this.#paintGhost(ghost);
     clampUvRegion(ghost);
     ghost.name = "selection-texture-ghost";
     ghost.renderOrder = RenderOrder.selectionGhost;
@@ -398,8 +399,16 @@ export class ModelBlock {
 
     const ghost = this.#selectionTextureGhost;
     if (ghost !== null) {
-      paintBlockSurface(ghost.material, surface, this.#lit);
+      this.#paintGhost(ghost);
     }
+  }
+
+  #paintGhost(
+    ghost: BlockMesh
+  ): void {
+    const surface = this.#shownSurface();
+    paintBlockSurface(ghost.material, surface, this.#lit);
+    ghost.material.opacity = surface.opacity * kOccludedGhostOpacityScale;
   }
 
   #disposeTextureGhost(
