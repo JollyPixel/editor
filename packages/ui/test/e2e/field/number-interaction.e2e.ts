@@ -3,10 +3,10 @@ import {
   test,
   expect
 } from "@playwright/test";
-import { fieldRow as row, scrubBy } from "@jolly-pixel/e2e";
+import { scrubBy } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
   fieldInputCount,

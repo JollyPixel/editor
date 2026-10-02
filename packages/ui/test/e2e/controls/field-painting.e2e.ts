@@ -3,17 +3,14 @@ import {
   test,
   expect
 } from "@playwright/test";
-import {
-  fieldRow as row,
-  boxOf
-} from "@jolly-pixel/e2e";
+import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   TRANSPARENT,
   fieldControl as control
 } from "../support/field.ts";
-import { openExample } from "../support/gallery.ts";
+import { fieldRow as row, openExample } from "../support/gallery.ts";
 import { styleOf } from "../support/styles.ts";
 
 test.describe("controls: field painting", () => {

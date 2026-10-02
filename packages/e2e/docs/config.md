@@ -24,18 +24,16 @@ export default defineE2EConfig({
 ```
 
 Specs live in `test/e2e/**/*.e2e.ts`, so `node --test` (which globs
-`*.spec.ts`) never picks them up. Tests run fully parallel with a
-`retain-on-failure` trace. The result is a plain config object; spread it to
+`*.spec.ts`) never picks them up. Tests run fully parallel on 4 workers with a
+`retain-on-failure` trace, and the dev server has 60 seconds to answer. The result is a plain config object; spread it to
 override anything else.
 
 | Option | Default | |
 |---|---|---|
 | `port` | | dev server port, also the `baseURL` |
 | `command` | | starts the dev server |
-| `workers` | `4` | |
-| `ciWorkers` | `workers` | workers when `CI` is set |
+| `ciWorkers` | `4` | workers when `CI` is set |
 | `viewport` | Playwright's | |
-| `serverTimeout` | `60_000` | ms the dev server may take to answer |
 | `reuseExistingServer` | `!CI` | |
 
 On CI a failed test retries once.
@@ -47,5 +45,4 @@ On CI a failed test retries once.
 `runtime` 3005, `console` 3006. Vite configs read the same table for
 `server.port`.
 
-- `baseUrl(port)`: `http://localhost:<port>`.
-- `socketUrl(port)`: the sync server websocket, `ws://localhost:<port>/ws-sync`.
+`baseUrl(port)` gives `http://localhost:<port>`.
