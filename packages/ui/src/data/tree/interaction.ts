@@ -275,3 +275,16 @@ function resolveMoveKey<TData>(
       return null;
   }
 }
+
+export function samePointerDropPreview(
+  a: TreePointerDropPreview | null,
+  b: TreePointerDropPreview | null
+): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+
+  return a.targetId === b.targetId &&
+    a.where === b.where &&
+    a.anchorId === b.anchorId;
+}

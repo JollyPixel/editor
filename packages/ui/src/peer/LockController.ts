@@ -146,12 +146,29 @@ export class LockController implements ReactiveController {
       return;
     }
 
+    const { path } = this.#host;
     const { lockedBy, peers } = resolveLock(
-      this.#source.peers.values(),
-      this.#host.path,
+      path === null ? [] : this.#source.peers.values(),
+      path,
       this.#source.clientId
     );
     this.#host.lockedBy = lockedBy;
-    this.#host.peers = peers;
+    if (!samePeers(this.#host.peers, peers)) {
+      this.#host.peers = peers;
+    }
   }
+}
+
+function samePeers(
+  current: readonly CollaboratorPresence[],
+  next: readonly CollaboratorPresence[]
+): boolean {
+  if (current === next) {
+    return true;
+  }
+  if (current.length !== next.length) {
+    return false;
+  }
+
+  return current.every((peer, index) => peer === next[index]);
 }

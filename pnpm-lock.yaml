@@ -939,6 +939,9 @@ importers:
         specifier: workspace:*
         version: link:../resize-handle
     devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e

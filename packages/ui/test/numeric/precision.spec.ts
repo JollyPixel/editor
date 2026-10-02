@@ -16,6 +16,12 @@ describe("Numeric.decimalPlaces", () => {
     assert.equal(decimalPlaces(-1.125), 3);
   });
 
+  test("returns zero for an integer", () => {
+    assert.equal(decimalPlaces(-0), 0);
+    assert.equal(decimalPlaces(2 ** 53), 0);
+    assert.equal(decimalPlaces(1e20), 0);
+  });
+
   test("reads the exponent of e- notation", () => {
     assert.equal(decimalPlaces(1e-7), 7);
   });

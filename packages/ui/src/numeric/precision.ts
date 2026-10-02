@@ -1,10 +1,14 @@
 // CONSTANTS
 const kMaxDecimals = 12;
+const kExponentialFrom = 1e21;
 
 export function decimalPlaces(
   value: number
 ): number {
-  if (!Number.isFinite(value)) {
+  if (
+    !Number.isFinite(value) ||
+    (Number.isInteger(value) && Math.abs(value) < kExponentialFrom)
+  ) {
     return 0;
   }
 
@@ -24,10 +28,15 @@ export function decimalPlaces(
 export function precisionOf(
   ...values: number[]
 ): number {
-  return Math.min(
-    Math.max(0, ...values.map(decimalPlaces)),
-    kMaxDecimals
-  );
+  let places = 0;
+  for (const value of values) {
+    const decimals = decimalPlaces(value);
+    if (decimals > places) {
+      places = decimals;
+    }
+  }
+
+  return Math.min(places, kMaxDecimals);
 }
 
 export function roundToPrecision(

@@ -10,6 +10,9 @@ import type {
 
 // CONSTANTS
 const kPairAxes: readonly string[] = ["x", "y", "z"];
+const kVec2Axes: readonly string[] = ["x", "y"];
+const kVec3Axes: readonly string[] = ["x", "y", "z"];
+const kVec4Axes: readonly string[] = ["x", "y", "z", "w"];
 
 /*
  * Each guard asks only for the axes it names, so a four-axis value satisfies
@@ -20,25 +23,25 @@ const kPairAxes: readonly string[] = ["x", "y", "z"];
 export function isVec2Like(
   value: unknown
 ): value is Vec2Like {
-  return hasAxes(value, ["x", "y"]);
+  return hasAxes(value, kVec2Axes);
 }
 
 export function isVec3Like(
   value: unknown
 ): value is Vec3Like {
-  return hasAxes(value, ["x", "y", "z"]);
+  return hasAxes(value, kVec3Axes);
 }
 
 export function isVec4Like(
   value: unknown
 ): value is Vec4Like {
-  return hasAxes(value, ["x", "y", "z", "w"]);
+  return hasAxes(value, kVec4Axes);
 }
 
 export function isQuatLike(
   value: unknown
 ): value is QuatLike {
-  return hasAxes(value, ["x", "y", "z", "w"]);
+  return hasAxes(value, kVec4Axes);
 }
 
 /*

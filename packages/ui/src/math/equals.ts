@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import { isMixed } from "../field/mixed.ts";
+import {
+  isMixed,
+  type FieldValue
+} from "../field/mixed.ts";
 import { isQuatLike } from "./guards.ts";
 import type {
   QuatLike,
@@ -28,23 +31,18 @@ export function vectorValueEquals(
     return a === b;
   }
 
-  const keys = new Set([
-    ...Object.keys(a),
-    ...Object.keys(b)
-  ]);
+  return ownComponentsMatch(a, b) && ownComponentsMatch(b, a);
+}
 
-  for (const key of keys) {
-    const av = a[key];
-    const bv = b[key];
-
-    if (isMixed(av) || isMixed(bv)) {
-      if (av !== bv) {
-        return false;
-      }
-      continue;
-    }
-
-    if (!Object.is(av, bv)) {
+function ownComponentsMatch(
+  source: Record<string, FieldValue<number>>,
+  other: Record<string, FieldValue<number>>
+): boolean {
+  for (const key in source) {
+    if (
+      Object.hasOwn(source, key) &&
+      !Object.is(source[key], other[key])
+    ) {
       return false;
     }
   }

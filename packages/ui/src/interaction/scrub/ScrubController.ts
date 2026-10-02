@@ -9,6 +9,7 @@ import { valueFromDelta } from "../../numeric/valueFromDelta.ts";
 import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
 import { createDragGuide, type DragGuide } from "./dragGuide.ts";
 import { multiplierFor } from "../../numeric/modifierMultiplier.ts";
+import { precisionOf } from "../../numeric/precision.ts";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 import {
@@ -49,6 +50,8 @@ export class ScrubController implements ReactiveController {
   #startValue = 0;
   #startX = 0;
   #currentValue = 0;
+  #precisionStep: number | null = null;
+  #precision = 0;
   #guide: DragGuide | null = null;
 
   constructor(
@@ -101,6 +104,7 @@ export class ScrubController implements ReactiveController {
     this.#startValue = start;
     this.#startX = event.clientX;
     this.#currentValue = start;
+    this.#precisionStep = null;
     ensureDocumentStyles("jolly-drag-styles", `
       html.jolly-scrub-dragging,
       html.jolly-scrub-dragging * {
@@ -162,14 +166,28 @@ export class ScrubController implements ReactiveController {
   #valueAt(
     event: PointerEvent
   ): number {
+    const step = this.#options.step();
+
     return valueFromDelta({
       start: this.#startValue,
       deltaPx: event.clientX - this.#startX,
-      step: this.#options.step(),
+      step,
       multiplier: multiplierFor(event),
       min: this.#options.min?.(),
-      max: this.#options.max?.()
+      max: this.#options.max?.(),
+      precision: this.#precisionFor(step)
     });
+  }
+
+  #precisionFor(
+    step: number
+  ): number {
+    if (step !== this.#precisionStep) {
+      this.#precisionStep = step;
+      this.#precision = precisionOf(this.#startValue, step);
+    }
+
+    return this.#precision;
   }
 
   #end(): void {

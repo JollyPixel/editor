@@ -3,6 +3,10 @@ import type { Dock } from "./Dock.ts";
 import type { DockColumn } from "./layout.ts";
 import { floatingOf } from "./LayoutProjection.ts";
 import type { Floating } from "../floating/Floating.ts";
+import {
+  clampToViewport,
+  type ViewportRect
+} from "../../geometry/clampToViewport.ts";
 import type {
   PaneDragDetail,
   PaneElement
@@ -76,6 +80,14 @@ export class DockLayoutDragController {
     const startX = frame?.x ?? 0;
     const startY = frame?.y ?? 0;
     const targets = new Map<string, DockTarget>();
+    let frameSize: ViewportRect | null = null;
+    function sizeOf(
+      target: Floating
+    ): ViewportRect {
+      frameSize ??= target.getBoundingClientRect();
+
+      return frameSize;
+    }
 
     this.#session = startDragSession({
       source: pane,
@@ -125,7 +137,7 @@ export class DockLayoutDragController {
       probe: frame === null ?
         undefined :
         (clientX: number, clientY: number) => {
-          const box = frame.getBoundingClientRect();
+          const box = sizeOf(frame);
 
           return {
             x: startX + clientX - originX,
@@ -146,10 +158,14 @@ export class DockLayoutDragController {
         }
       },
       onPreview: (result) => {
-        frame?.moveTo(
-          startX + result.x - originX,
-          startY + result.y - originY
-        );
+        if (frame !== null) {
+          moveWithin(
+            frame,
+            startX + result.x - originX,
+            startY + result.y - originY,
+            sizeOf(frame)
+          );
+        }
       },
       onCommit: (result) => {
         const target = result.zone === null ?
@@ -192,4 +208,29 @@ export class DockLayoutDragController {
       }
     });
   }
+}
+
+function moveWithin(
+  frame: Floating,
+  x: number,
+  y: number,
+  size: ViewportRect
+): void {
+  const view = frame.ownerDocument.defaultView;
+  const position = view === null ?
+    {
+      x,
+      y
+    } :
+    clampToViewport({
+      x,
+      y,
+      rect: size,
+      viewport: {
+        width: view.innerWidth,
+        height: view.innerHeight
+      }
+    });
+  frame.x = position.x;
+  frame.y = position.y;
 }

@@ -14,6 +14,7 @@ import {
 // Import Internal Dependencies
 import {
   TreeSnapshot,
+  idListChanged,
   isExpandable,
   resolveRename,
   type FlatTreeRow
@@ -43,10 +44,16 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ attribute: false })
   declare nodes: TreeNode<TData>[];
 
-  @property({ attribute: false })
+  @property({
+    attribute: false,
+    hasChanged: idListChanged
+  })
   declare selected: string[];
 
-  @property({ attribute: false })
+  @property({
+    attribute: false,
+    hasChanged: idListChanged
+  })
   declare expanded: string[];
 
   @property({ type: Boolean, reflect: true })
@@ -93,6 +100,8 @@ export class Tree<TData = unknown> extends LitElement {
   private declare _interaction: TreeInteraction;
 
   #snapshot: TreeSnapshot<TData>;
+  #expandedIds: ReadonlySet<string>;
+  #selectedIds: ReadonlySet<string>;
   #drag: TreeDragController<TData>;
   #selection: TreeSelectionController<TData>;
 
@@ -111,6 +120,8 @@ export class Tree<TData = unknown> extends LitElement {
     this.indentGuides = false;
     this.acceptDrop = null;
     this._interaction = idleTreeInteraction();
+    this.#expandedIds = new Set();
+    this.#selectedIds = new Set();
     this.#snapshot = new TreeSnapshot(this.nodes);
     this.#drag = new TreeDragController(this, {
       nodes: () => this.nodes,
@@ -145,10 +156,12 @@ export class Tree<TData = unknown> extends LitElement {
   protected override willUpdate(
     changed: Map<string, unknown>
   ): void {
+    this.#expandedIds = new Set(this.expanded);
+    this.#selectedIds = new Set(this.selected);
     if (changed.has("nodes") || changed.has("expanded")) {
       this.#snapshot = new TreeSnapshot(
         this.nodes,
-        new Set(this.expanded)
+        this.#expandedIds
       );
     }
   }
@@ -175,8 +188,8 @@ export class Tree<TData = unknown> extends LitElement {
   ): TemplateResult {
     const { node, depth } = row;
     const isBranch = isExpandable(node);
-    const isExpanded = this.expanded.includes(node.id);
-    const isSelected = this.selected.includes(node.id);
+    const isExpanded = this.#expandedIds.has(node.id);
+    const isSelected = this.#selectedIds.has(node.id);
     const isDragSource = this.#drag.isDragSource(node.id);
     const isMoveCursor = this.#drag.isMoveCursor(node.id);
     const expandedState = isBranch ? String(isExpanded) : nothing;
@@ -579,11 +592,6 @@ export class Tree<TData = unknown> extends LitElement {
     if (activeId === null) {
       return;
     }
-    const renamableIds = new Set(
-      rows
-        .filter((row) => this.#isRenamable(row.node.id))
-        .map((row) => row.node.id)
-    );
     const action = resolveTreeKey({
       key: event.key,
       rows,
@@ -592,7 +600,7 @@ export class Tree<TData = unknown> extends LitElement {
       selected: this.selected,
       expanded: new Set(this.expanded),
       reorderable: this.reorderable,
-      renamableIds
+      renamableIds: this.#isRenamable(activeId) ? new Set([activeId]) : new Set()
     });
     if (action === null) {
       return;

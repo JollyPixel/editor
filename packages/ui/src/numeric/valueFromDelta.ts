@@ -25,6 +25,7 @@ export interface ValueFromDeltaOptions {
   multiplier?: number;
   min?: number;
   max?: number;
+  precision?: number;
 }
 
 /**
@@ -40,7 +41,8 @@ export function valueFromDelta(
     pixelsPerStep = 4,
     multiplier = 1,
     min = Number.NEGATIVE_INFINITY,
-    max = Number.POSITIVE_INFINITY
+    max = Number.POSITIVE_INFINITY,
+    precision = precisionOf(start, step)
   } = options;
 
   const stepCount = Math.round(
@@ -49,7 +51,7 @@ export function valueFromDelta(
   const raw = start + (stepCount * step);
 
   return clamp(
-    roundToPrecision(raw, precisionOf(start, step)),
+    roundToPrecision(raw, precision),
     min,
     max
   );

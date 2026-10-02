@@ -20,6 +20,7 @@ import {
 } from "./model.ts";
 import {
   idleTreeInteraction,
+  samePointerDropPreview,
   type TreeInteraction,
   type TreePointerDropPreview
 } from "./interaction.ts";
@@ -61,6 +62,8 @@ export class TreeDragController<TData> implements ReactiveController {
   #host: ReactiveControllerHost & EventTarget;
   #options: TreeDragOptions<TData>;
   #session: PointerDragSessionHandle | null = null;
+  #dragSourceIds: readonly string[] | null = null;
+  #dragSources: ReadonlySet<string> = new Set();
 
   dropIndicatorRow: DropIndicatorRow | null = null;
 
@@ -90,9 +93,15 @@ export class TreeDragController<TData> implements ReactiveController {
     id: string
   ): boolean {
     const interaction = this.#options.interaction();
+    if (interaction.kind !== "pointer-move") {
+      return false;
+    }
+    if (this.#dragSourceIds !== interaction.movedIds) {
+      this.#dragSourceIds = interaction.movedIds;
+      this.#dragSources = new Set(interaction.movedIds);
+    }
 
-    return interaction.kind === "pointer-move" &&
-      interaction.movedIds.includes(id);
+    return this.#dragSources.has(id);
   }
 
   isMoveCursor(
@@ -219,8 +228,6 @@ export class TreeDragController<TData> implements ReactiveController {
     movedIds: string[]
   ): void {
     const rows = this.#options.visibleRows();
-    const { firstRow, lastRow } = resolveEdgeDropRows(rows, movedIds, this.#options.snapshot());
-
     const target = this.#options.elementAtPoint(clientX, clientY);
     const rowElement = target instanceof Element ? target.closest<HTMLElement>(".row") : null;
     if (rowElement === null) {
@@ -238,20 +245,16 @@ export class TreeDragController<TData> implements ReactiveController {
 
     const rect = rowElement.getBoundingClientRect();
     const where = resolveRowDropZone(rect, clientY);
+    if (where !== "inside") {
+      const { firstRow, lastRow } = resolveEdgeDropRows(rows, movedIds, this.#options.snapshot());
+      const edgeRow = where === "below" ? lastRow : firstRow;
+      if (edgeRow !== undefined && targetId === edgeRow.node.id) {
+        this.#setPointerPreview(
+          this.#resolveDepthDrop(edgeRow, clientX, movedIds, where)
+        );
 
-    if (lastRow !== undefined && targetId === lastRow.node.id && where === "below") {
-      this.#setPointerPreview(
-        this.#resolveDepthDrop(lastRow, clientX, movedIds, "below")
-      );
-
-      return;
-    }
-    if (firstRow !== undefined && targetId === firstRow.node.id && where === "above") {
-      this.#setPointerPreview(
-        this.#resolveDepthDrop(firstRow, clientX, movedIds, "above")
-      );
-
-      return;
+        return;
+      }
     }
 
     this.#setPointerPreview(canDrop({
@@ -269,7 +272,10 @@ export class TreeDragController<TData> implements ReactiveController {
     preview: TreePointerDropPreview | null
   ): void {
     const interaction = this.#options.interaction();
-    if (interaction.kind !== "pointer-move") {
+    if (
+      interaction.kind !== "pointer-move" ||
+      samePointerDropPreview(interaction.preview, preview)
+    ) {
       return;
     }
 

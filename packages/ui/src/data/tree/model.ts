@@ -59,10 +59,10 @@ export interface DepthDropTarget {
 
 interface IndexedNode<TData> {
   node: TreeNode<TData>;
+  parent: IndexedNode<TData> | null;
   parentId: string | null;
   depth: number;
   order: number;
-  ancestors: string[];
 }
 
 /**
@@ -84,19 +84,18 @@ export class TreeSnapshot<
 
     const visit = (
       list: readonly TreeNode<TData>[],
-      parentId: string | null,
+      parent: IndexedNode<TData> | null,
       depth: number,
-      ancestors: readonly string[],
       visible: boolean
     ): void => {
+      const parentId = parent === null ? null : parent.node.id;
       for (const node of list) {
-        const nodeAncestors = [...ancestors, node.id];
-        const indexed = {
+        const indexed: IndexedNode<TData> = {
           node,
+          parent,
           parentId,
           depth,
-          order,
-          ancestors: nodeAncestors
+          order
         };
         this.#nodes.set(node.id, indexed);
 
@@ -113,16 +112,15 @@ export class TreeSnapshot<
         if (node.children !== undefined) {
           visit(
             node.children,
-            node.id,
+            indexed,
             depth + 1,
-            nodeAncestors,
             visible && expanded.has(node.id)
           );
         }
       }
     };
 
-    visit(nodes, null, 0, [], true);
+    visit(nodes, null, 0, true);
     this.hasBranches = hasBranches;
   }
 
@@ -166,17 +164,37 @@ export class TreeSnapshot<
   ancestorChain(
     id: string
   ): string[] {
-    return [
-      ...(this.#nodes.get(id)?.ancestors ?? [id])
-    ];
+    let indexed = this.#nodes.get(id) ?? null;
+    if (indexed === null) {
+      return [id];
+    }
+
+    const chain: string[] = [];
+    while (indexed !== null) {
+      chain.push(indexed.node.id);
+      indexed = indexed.parent;
+    }
+
+    return chain.reverse();
   }
 
   isSelfOrDescendant(
     ancestorId: string,
     id: string
   ): boolean {
-    return this.#nodes.has(ancestorId) &&
-      (this.#nodes.get(id)?.ancestors.includes(ancestorId) ?? false);
+    if (!this.#nodes.has(ancestorId)) {
+      return false;
+    }
+
+    let indexed = this.#nodes.get(id) ?? null;
+    while (indexed !== null) {
+      if (indexed.node.id === ancestorId) {
+        return true;
+      }
+      indexed = indexed.parent;
+    }
+
+    return false;
   }
 }
 
@@ -380,16 +398,39 @@ export function resolveEdgeDropRows<TData>(
   firstRow: FlatTreeRow<TData> | undefined;
   lastRow: FlatTreeRow<TData> | undefined;
 } {
-  const availableRows = rows.filter(
-    (row) => !movedIds.some(
-      (movedId) => snapshot.isSelfOrDescendant(movedId, row.node.id)
-    )
+  const moved = new Set(
+    movedIds.filter((id) => snapshot.node(id) !== null)
   );
 
+  let first = 0;
+  while (first < rows.length && isMovedRow(rows[first], moved, snapshot)) {
+    first += 1;
+  }
+  if (first === rows.length) {
+    return {
+      firstRow: undefined,
+      lastRow: undefined
+    };
+  }
+
+  let last = rows.length - 1;
+  while (last > first && isMovedRow(rows[last], moved, snapshot)) {
+    last -= 1;
+  }
+
   return {
-    firstRow: availableRows[0],
-    lastRow: availableRows[availableRows.length - 1]
+    firstRow: rows[first],
+    lastRow: rows[last]
   };
+}
+
+function isMovedRow<TData>(
+  row: FlatTreeRow<TData>,
+  moved: ReadonlySet<string>,
+  snapshot: TreeSnapshot<TData>
+): boolean {
+  return moved.size > 0 &&
+    snapshot.ancestorChain(row.node.id).some((id) => moved.has(id));
 }
 
 interface ResolveRootDropOptions<TData> {
@@ -699,4 +740,23 @@ export function resolveRename(
   const name = draft.trim();
 
   return name === "" || name === currentLabel ? null : name;
+}
+
+export function idListChanged(
+  value: unknown,
+  oldValue: unknown
+): boolean {
+  if (!Array.isArray(value) || !Array.isArray(oldValue)) {
+    return value !== oldValue;
+  }
+  if (value.length !== oldValue.length) {
+    return true;
+  }
+  for (let index = 0; index < value.length; index++) {
+    if (value[index] !== oldValue[index]) {
+      return true;
+    }
+  }
+
+  return false;
 }

@@ -39,6 +39,12 @@ import {
 const kGraphTop = 18;
 const kGraphPadding = 2;
 
+interface TileDefinitions {
+  recorder: StatsRecorder | null;
+  revision: number;
+  definitions: readonly MetricDefinition[];
+}
+
 @customElement("jolly-stats")
 export class StatsElement extends LitElement {
   static override styles = statsStyles;
@@ -75,6 +81,11 @@ export class StatsElement extends LitElement {
   #resize: ResizeObserver | null = null;
   #themeObserver: MutationObserver | null = null;
   #colorScheme: MediaQueryList | null = null;
+  #tiles: TileDefinitions = {
+    recorder: null,
+    revision: -1,
+    definitions: []
+  };
 
   constructor() {
     super();
@@ -171,9 +182,24 @@ export class StatsElement extends LitElement {
   }
 
   #definitions(): readonly MetricDefinition[] {
-    return this.recorder?.definitions.filter(
-      ({ tile }) => tile !== false
-    ) ?? [];
+    const { recorder } = this;
+    if (!recorder) {
+      return [];
+    }
+    if (
+      this.#tiles.recorder !== recorder ||
+      this.#tiles.revision !== recorder.revision
+    ) {
+      this.#tiles = {
+        recorder,
+        revision: recorder.revision,
+        definitions: recorder.definitions.filter(
+          ({ tile }) => tile !== false
+        )
+      };
+    }
+
+    return this.#tiles.definitions;
   }
 
   #restoreSelection(): void {
@@ -438,10 +464,10 @@ export class StatsElement extends LitElement {
     );
     context.fillStyle = palette.bed;
 
-    history.forEach((sample, index) => {
+    for (let index = 0; index < history.length; index++) {
       const normalized = Math.min(
         1,
-        Math.max(0, (sample - bounds.min) / range)
+        Math.max(0, (history[index] - bounds.min) / range)
       );
       const barHeight = Math.max(1, normalized * graphHeight);
       const coverHeight = graphHeight - barHeight;
@@ -457,7 +483,7 @@ export class StatsElement extends LitElement {
         (barRightPixels - barLeftPixels) / ratio,
         coverHeight
       );
-    });
+    }
   }
 
   #palette(

@@ -27,7 +27,12 @@ export function resolveLock(
     return kEmptyLock;
   }
 
-  const editing = [...peers].filter((peer) => peer.editing === path);
+  const editing: CollaboratorPresence[] = [];
+  for (const peer of peers) {
+    if (peer.editing === path) {
+      editing.push(peer);
+    }
+  }
   if (editing.length === 0) {
     return kEmptyLock;
   }

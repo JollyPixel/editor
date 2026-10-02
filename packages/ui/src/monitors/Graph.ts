@@ -15,6 +15,7 @@ import {
 // Import Internal Dependencies
 import { formatInteger } from "./format.ts";
 import { graphStyles } from "./Graph.styles.ts";
+import { SampleRing } from "./SampleRing.ts";
 import { resolveThemeColor } from "../theme/resolveThemeToken.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
@@ -67,7 +68,7 @@ export class GraphElement extends LitElement {
   @query("canvas")
   declare _canvas: HTMLCanvasElement;
 
-  #buffer: number[] = [];
+  #buffer = new SampleRing();
   #resize = new ResizeObserver(
     () => this.#draw()
   );
@@ -86,7 +87,7 @@ export class GraphElement extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.#buffer = [this.value];
+    this.#buffer.reset(this.value);
   }
 
   override disconnectedCallback(): void {
@@ -98,13 +99,10 @@ export class GraphElement extends LitElement {
     changed: PropertyValues<this>
   ): void {
     if (changed.has("value")) {
-      this.#buffer.push(this.value);
-      if (this.#buffer.length > this.samples) {
-        this.#buffer.splice(
-          0,
-          this.#buffer.length - this.samples
-        );
-      }
+      this.#buffer.push(
+        this.value,
+        this.samples
+      );
     }
 
     if (changed.has("rows")) {
@@ -177,13 +175,17 @@ export class GraphElement extends LitElement {
       return;
     }
 
-    const min = this.min ?? Math.min(...this.#buffer);
-    const max = this.max ?? Math.max(...this.#buffer);
+    const min = this.min ?? this.#buffer.min();
+    const max = this.max ?? this.#buffer.max();
     const range = max - min || 1;
+    const lastIndex = this.samples - 1;
     ctx.beginPath();
-    this.#buffer.forEach((sample, index) => {
-      const x = (index / (this.samples - 1)) * width;
-      const t = Math.min(1, Math.max(0, (sample - min) / range));
+    for (let index = 0; index < this.#buffer.length; index++) {
+      const x = (index / lastIndex) * width;
+      const t = Math.min(
+        1,
+        Math.max(0, (this.#buffer.at(index) - min) / range)
+      );
       const y = height - (t * height);
 
       if (index === 0) {
@@ -192,7 +194,7 @@ export class GraphElement extends LitElement {
       else {
         ctx.lineTo(x, y);
       }
-    });
+    }
     ctx.strokeStyle = resolveThemeColor(
       this,
       "--jolly-accent-fill",
