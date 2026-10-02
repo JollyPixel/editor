@@ -42,7 +42,10 @@ export function* readChunks(
     const length = view.getUint32(offset);
     const start = offset + kLengthSize + kTypeSize;
     const type = String.fromCharCode(
-      ...png.subarray(offset + kLengthSize, start)
+      png[offset + 4],
+      png[offset + 5],
+      png[offset + 6],
+      png[offset + 7]
     );
     if (type === kEndType) {
       return;

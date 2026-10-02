@@ -4,6 +4,7 @@ import { InvalidPngError } from "./errors/InvalidPngError.ts";
 // CONSTANTS
 const kRgbaChannels = 4;
 const kOpaque = 255;
+const kTableSize = 256;
 
 export interface PngPalette {
   readonly entries: Uint8Array | null;
@@ -13,39 +14,42 @@ export interface PngPalette {
 export interface ColorModel {
   readonly type: number;
   readonly channels: number;
-  expand(
+  toRGBA(
     samples: Uint8Array,
-    pixels: Uint8ClampedArray,
     palette: PngPalette
-  ): void;
+  ): Uint8ClampedArray;
 }
 
 export const TRUECOLOR_ALPHA: ColorModel = {
   type: 6,
   channels: 4,
-  expand: (samples, pixels) => pixels.set(samples)
+  toRGBA: (samples) => new Uint8ClampedArray(
+    samples.buffer,
+    samples.byteOffset,
+    samples.length
+  )
 };
 
 const kColorModels: readonly ColorModel[] = [
   {
     type: 0,
     channels: 1,
-    expand: expandGrayscale
+    toRGBA: expandGrayscale
   },
   {
     type: 2,
     channels: 3,
-    expand: expandTruecolor
+    toRGBA: expandTruecolor
   },
   {
     type: 3,
     channels: 1,
-    expand: expandIndexed
+    toRGBA: expandIndexed
   },
   {
     type: 4,
     channels: 2,
-    expand: expandGrayscaleAlpha
+    toRGBA: expandGrayscaleAlpha
   },
   TRUECOLOR_ALPHA
 ];
@@ -61,31 +65,28 @@ export function toRGBA(
   color: ColorModel,
   palette: PngPalette
 ): Uint8ClampedArray {
-  const pixels = new Uint8ClampedArray(
-    (samples.length / color.channels) * kRgbaChannels
-  );
-  color.expand(samples, pixels, palette);
-
-  return pixels;
+  return color.toRGBA(samples, palette);
 }
 
 function expandGrayscale(
-  samples: Uint8Array,
-  pixels: Uint8ClampedArray
-): void {
-  for (let from = 0, to = 0; to < pixels.length; from++, to += 4) {
-    const value = samples[from];
-    pixels[to] = value;
-    pixels[to + 1] = value;
-    pixels[to + 2] = value;
-    pixels[to + 3] = kOpaque;
+  samples: Uint8Array
+): Uint8ClampedArray {
+  const table = new Uint32Array(kTableSize);
+  const bytes = new Uint8Array(table.buffer);
+  for (let level = 0, to = 0; level < kTableSize; level++, to += 4) {
+    bytes[to] = level;
+    bytes[to + 1] = level;
+    bytes[to + 2] = level;
+    bytes[to + 3] = kOpaque;
   }
+
+  return expandThrough(samples, table);
 }
 
 function expandGrayscaleAlpha(
-  samples: Uint8Array,
-  pixels: Uint8ClampedArray
-): void {
+  samples: Uint8Array
+): Uint8ClampedArray {
+  const pixels = new Uint8ClampedArray(samples.length * 2);
   for (let from = 0, to = 0; to < pixels.length; from += 2, to += 4) {
     const value = samples[from];
     pixels[to] = value;
@@ -93,36 +94,54 @@ function expandGrayscaleAlpha(
     pixels[to + 2] = value;
     pixels[to + 3] = samples[from + 1];
   }
+
+  return pixels;
 }
 
 function expandTruecolor(
-  samples: Uint8Array,
-  pixels: Uint8ClampedArray
-): void {
+  samples: Uint8Array
+): Uint8ClampedArray {
+  const pixels = new Uint8ClampedArray((samples.length / 3) * kRgbaChannels);
   for (let from = 0, to = 0; to < pixels.length; from += 3, to += 4) {
     pixels[to] = samples[from];
     pixels[to + 1] = samples[from + 1];
     pixels[to + 2] = samples[from + 2];
     pixels[to + 3] = kOpaque;
   }
+
+  return pixels;
 }
 
 function expandIndexed(
   samples: Uint8Array,
-  pixels: Uint8ClampedArray,
   palette: PngPalette
-): void {
+): Uint8ClampedArray {
   const { entries, alpha } = palette;
   if (entries === null) {
     throw new InvalidPngError("an indexed image has no PLTE chunk.");
   }
 
-  for (let from = 0, to = 0; to < pixels.length; from++, to += 4) {
-    const index = samples[from];
+  const table = new Uint32Array(kTableSize);
+  const bytes = new Uint8Array(table.buffer);
+  for (let index = 0, to = 0; index < kTableSize; index++, to += 4) {
     const entry = index * 3;
-    pixels[to] = entries[entry];
-    pixels[to + 1] = entries[entry + 1];
-    pixels[to + 2] = entries[entry + 2];
-    pixels[to + 3] = alpha?.[index] ?? kOpaque;
+    bytes[to] = entries[entry] ?? 0;
+    bytes[to + 1] = entries[entry + 1] ?? 0;
+    bytes[to + 2] = entries[entry + 2] ?? 0;
+    bytes[to + 3] = alpha?.[index] ?? kOpaque;
   }
+
+  return expandThrough(samples, table);
+}
+
+function expandThrough(
+  samples: Uint8Array,
+  table: Uint32Array
+): Uint8ClampedArray {
+  const pixels = new Uint32Array(samples.length);
+  for (let index = 0; index < samples.length; index++) {
+    pixels[index] = table[samples[index]];
+  }
+
+  return new Uint8ClampedArray(pixels.buffer);
 }
