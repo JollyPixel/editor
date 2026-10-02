@@ -40,7 +40,9 @@ const kRejected = [
   "rgb(255 102 0",
   "rgb 255 102 0",
   "rgb()",
-  "rgb(255 102 0 /)"
+  "rgb(255 102 0 /)",
+  "rgb(a% 102 0)",
+  "rgb(255 102 0 / red)"
 ];
 
 describe("parseColor / rgb", () => {

@@ -39,4 +39,9 @@ describe("parseColor / hex", () => {
     assert.equal(parseColor("#gg0000"), null);
     assert.equal(parseColor("#ff-660"), null);
   });
+
+  test("rejects non-ASCII digits that alias hex digits", () => {
+    assert.equal(parseColor("#fæf"), null);
+    assert.equal(parseColor("#ｆｆｆ"), null);
+  });
 });

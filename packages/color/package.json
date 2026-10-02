@@ -14,7 +14,8 @@
     "build": "tsc -b",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
-    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "oxlint src test",
     "bench": "jolly-bench"
   },

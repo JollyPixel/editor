@@ -3,8 +3,11 @@ import { BYTE_MAX } from "../utils.ts";
 import type { RGBA } from "../types.ts";
 
 // CONSTANTS
-const kHexPattern = /^#?([0-9a-f]+)$/i;
-const kFullLengths = new Set([6, 8]);
+const kHash = 0x23;
+const kAsciiBits = 7;
+const kMaxDigits = 8;
+const kHexDigits = "0123456789abcdef";
+const kNibbles = nibbleTable();
 
 /**
  * Accepts short or full hex, with an optional hash and alpha.
@@ -12,43 +15,71 @@ const kFullLengths = new Set([6, 8]);
 export function parseHex(
   input: string
 ): RGBA | null {
-  const match = kHexPattern.exec(input.trim());
-  if (match === null) {
+  const value = input.trim();
+  const start = value.charCodeAt(0) === kHash ? 1 : 0;
+  const digits = value.length - start;
+  if (digits > kMaxDigits) {
     return null;
   }
 
-  const digits = match[1].toLowerCase();
-  const hex = digits.length <= 4 ?
-    expandShorthand(digits) :
-    digits;
+  let packed = 0;
+  let invalid = 0;
+  for (let i = start; i < value.length; i++) {
+    const nibble = nibbleOf(value.charCodeAt(i));
+    invalid |= nibble;
+    packed = (packed << 4) | nibble;
+  }
 
-  if (!kFullLengths.has(hex.length)) {
+  if (invalid < 0) {
     return null;
   }
 
-  return {
-    r: channel(hex, 0),
-    g: channel(hex, 2),
-    b: channel(hex, 4),
-    a: hex.length === 8 ? channel(hex, 6) : 1
-  };
+  switch (digits) {
+    case 3:
+      return unpack(expandShorthand((packed << 4) | 0xf));
+    case 4:
+      return unpack(expandShorthand(packed));
+    case 6:
+      return unpack((packed << 8) | 0xff);
+    case 8:
+      return unpack(packed);
+    default:
+      return null;
+  }
+}
+
+function nibbleOf(
+  code: number
+): number {
+  return kNibbles[code & 0x7f] | -(code >> kAsciiBits);
 }
 
 function expandShorthand(
-  digits: string
-): string {
-  return Array.from(
-    digits,
-    (digit) => digit + digit
-  ).join("");
+  packed: number
+): number {
+  const bytes = (packed | (packed << 8)) & 0x00ff00ff;
+  const nibbles = (bytes | (bytes << 4)) & 0x0f0f0f0f;
+
+  return nibbles * 0x11;
 }
 
-function channel(
-  hex: string,
-  index: number
-): number {
-  return Number.parseInt(
-    hex.slice(index, index + 2),
-    16
-  ) / BYTE_MAX;
+function unpack(
+  rgba: number
+): RGBA {
+  return {
+    r: (rgba >>> 24) / BYTE_MAX,
+    g: ((rgba >>> 16) & 0xff) / BYTE_MAX,
+    b: ((rgba >>> 8) & 0xff) / BYTE_MAX,
+    a: (rgba & 0xff) / BYTE_MAX
+  };
+}
+
+function nibbleTable(): Int8Array {
+  const table = new Int8Array(1 << kAsciiBits).fill(-1);
+  for (let i = 0; i < kHexDigits.length; i++) {
+    table[kHexDigits.charCodeAt(i)] = i;
+    table[kHexDigits.toUpperCase().charCodeAt(i)] = i;
+  }
+
+  return table;
 }

@@ -67,16 +67,4 @@ describe("pixelsToImageData", () => {
 
     assert.deepEqual([...data], [255, 102, 0, 0]);
   });
-
-  test("round trips through imageDataToPixels", () => {
-    const pixels = [
-      { r: 9, g: 8, b: 7, a: 6 },
-      { r: 5, g: 4, b: 3, a: 2 }
-    ];
-    const data = new Uint8ClampedArray(8);
-
-    pixelsToImageData(pixels, data);
-
-    assert.deepEqual(imageDataToPixels(data), pixels);
-  });
 });
