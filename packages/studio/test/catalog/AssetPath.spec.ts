@@ -6,8 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AssetPath } from "../src/catalog/AssetPath.ts";
-import { InvalidAssetNameError } from "../src/catalog/errors/InvalidAssetNameError.ts";
+import { AssetPath } from "../../src/catalog/AssetPath.ts";
+import { InvalidAssetNameError } from "../../src/catalog/errors/InvalidAssetNameError.ts";
 
 describe("AssetPath", () => {
   test("parses a source into segments, the empty source being the root", () => {

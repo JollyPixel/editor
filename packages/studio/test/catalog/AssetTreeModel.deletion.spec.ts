@@ -6,19 +6,19 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AssetPath } from "../src/catalog/AssetPath.ts";
+import { AssetPath } from "../../src/catalog/AssetPath.ts";
 import {
   AssetTreeModel,
   assetNodeId,
   folderNodeId,
   type AssetLeafData
-} from "../src/catalog/AssetTreeModel.ts";
+} from "../../src/catalog/AssetTreeModel.ts";
 import {
   COMPANION_EDGES,
   COMPANION_RECORDS,
   companionModelOf,
   dependenciesOf
-} from "./helpers/assetTree.ts";
+} from "../helpers/assetTree.ts";
 
 // CONSTANTS
 const kMaps = folderNodeId(AssetPath.parse("maps"));

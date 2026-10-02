@@ -14,7 +14,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { EditorRegistry } from "../src/editors/EditorRegistry.ts";
+import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
 
 // CONSTANTS
 const kMapKind = {

@@ -6,8 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AssetPath } from "../src/catalog/AssetPath.ts";
-import { DraftFolders } from "../src/catalog/DraftFolders.ts";
+import { AssetPath } from "../../src/catalog/AssetPath.ts";
+import { DraftFolders } from "../../src/catalog/DraftFolders.ts";
 
 function draftsOf(
   ...paths: string[]

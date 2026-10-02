@@ -6,8 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AssetKindSet } from "../src/catalog/AssetKindSet.ts";
-import { AssetTally } from "../src/catalog/AssetTally.ts";
+import { AssetKindSet } from "../../src/catalog/AssetKindSet.ts";
+import { AssetTally } from "../../src/catalog/AssetTally.ts";
 
 // CONSTANTS
 const kKinds = new AssetKindSet({
