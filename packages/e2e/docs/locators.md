@@ -13,7 +13,6 @@ ARIA roles.
 | `checkboxField(scope, label)` | the checkbox of a `jolly-checkbox` |
 | `buttonGroup(scope, label)` | the radiogroup of a `jolly-button-group` |
 | `treeRow(page, name)` | a `treeitem` holding the exact text `name` |
-| `fieldRow(page, tag, state)` | the `tag` field in the row marked `data-state="<state>"` |
 
 `jolly-dialog` has no accessible name, and field labels are not associated
 with their inputs, so these filter by visible text. A tree row's accessible

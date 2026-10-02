@@ -27,6 +27,3 @@ and `window.jollyEditor` in dev builds.
   waits on the runtime, not `requestAnimationFrame`: with a frame cap most
   animation frames render nothing. Throws when the editor runs without a
   runtime.
-- `editorHandle<THandle>(page)`: `JSHandle` on `window.jollyEditor`. The default
-  type only knows `runtime.frames()`; pass the host's `EditorHandle` or an
-  editor type for more.

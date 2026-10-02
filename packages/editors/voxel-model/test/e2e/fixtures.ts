@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
 import {
-  PORTS,
-  socketUrl
-} from "@jolly-pixel/e2e";
-import {
   e2eFolder,
   editorFixture
 } from "@jolly-pixel/e2e/editor";
@@ -27,7 +23,6 @@ export interface E2EModel {
 }
 
 export const test = editorFixture<E2EModel>({
-  socketUrl: socketUrl(PORTS.voxelModel),
   editor: {
     maxFps: 5
   },

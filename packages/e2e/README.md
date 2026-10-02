@@ -43,14 +43,10 @@ export default defineE2EConfig({
 ```
 
 An editor suite also has a `test/e2e/fixtures.ts` that seeds the documents each
-test opens:
+test opens on the config's `baseURL`:
 
 ```ts
 // Import Third-party Dependencies
-import {
-  PORTS,
-  socketUrl
-} from "@jolly-pixel/e2e";
 import {
   e2eFolder,
   editorFixture
@@ -59,7 +55,6 @@ import {
 export { expect } from "@playwright/test";
 
 export const test = editorFixture({
-  socketUrl: socketUrl(PORTS.voxelModel),
   async create(catalog) {
     const id = await catalog.create(
       `${e2eFolder()}/model.voxelmodel.json`,
@@ -94,7 +89,7 @@ test("opens the requested model with its default block", async({ page }) => {
 
 `@jolly-pixel/e2e`, for every suite:
 
-- [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl` and `socketUrl`.
+- [Config](./docs/config.md): `defineE2EConfig`, `PORTS` and `baseUrl`.
 - [Pointer](./docs/pointer.md): bounding boxes, drags and multi-step presses.
 - [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
 - [Sockets](./docs/sockets.md): `recordSockets`.
@@ -107,8 +102,8 @@ test("opens the requested model with its default block", async({ page }) => {
 ## 🧱 Boundaries
 
 The package never imports `@jolly-pixel/ui` or an editor, directly or through
-a dependency. Locators match `jolly-*` tag names and ARIA roles only, and the
-editor handle is typed structurally. This lets `@jolly-pixel/ui` devDepend on
+a dependency. Locators match `jolly-*` tag names and ARIA roles only, and
+`nextFrames` types `window.jollyEditor` structurally. This lets `@jolly-pixel/ui` devDepend on
 the package without a workspace cycle.
 
 ## 🧭 Starting a new suite

@@ -4,10 +4,10 @@ import {
   expect,
   type Locator
 } from "@playwright/test";
-import { fieldRow, boxOf } from "@jolly-pixel/e2e";
+import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import { fieldRow, openExample } from "../support/gallery.ts";
 
 async function insets(
   field: Locator

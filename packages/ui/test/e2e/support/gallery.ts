@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 export interface GotoOptions {
   example?: string;
@@ -44,6 +44,14 @@ export async function reloadGallery(
 ): Promise<void> {
   await page.reload();
   await waitForGallery(page);
+}
+
+export function fieldRow(
+  page: Page,
+  tag: string,
+  state: string
+): Locator {
+  return page.locator(`[data-state="${state}"] ${tag}`);
 }
 
 export function disposedIds(

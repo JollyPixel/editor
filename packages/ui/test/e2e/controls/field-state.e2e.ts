@@ -6,7 +6,6 @@ import {
   type Page
 } from "@playwright/test";
 import {
-  fieldRow as row,
   boxOf,
   widthOf
 } from "@jolly-pixel/e2e";
@@ -16,7 +15,7 @@ import {
   TRANSPARENT,
   fieldControl as control
 } from "../support/field.ts";
-import { openExample } from "../support/gallery.ts";
+import { fieldRow as row, openExample } from "../support/gallery.ts";
 import { styleOf } from "../support/styles.ts";
 
 // CONSTANTS

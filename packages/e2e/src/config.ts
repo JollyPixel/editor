@@ -11,16 +11,14 @@ import type {
 import { baseUrl } from "./ports.ts";
 
 // CONSTANTS
-const kDefaultWorkers = 4;
-const kDefaultServerTimeout = 60_000;
+const kWorkers = 4;
+const kServerTimeout = 60_000;
 
 export interface E2EConfigOptions {
   port: number;
   command: string;
-  workers?: number;
   ciWorkers?: number;
   viewport?: ViewportSize;
-  serverTimeout?: number;
   reuseExistingServer?: boolean;
 }
 
@@ -31,10 +29,8 @@ export function defineE2EConfig(
   const {
     port,
     command,
-    workers = kDefaultWorkers,
-    ciWorkers = workers,
+    ciWorkers = kWorkers,
     viewport,
-    serverTimeout = kDefaultServerTimeout,
     reuseExistingServer = !ci
   } = options;
 
@@ -42,7 +38,7 @@ export function defineE2EConfig(
     testDir: "./test/e2e",
     testMatch: "**/*.e2e.ts",
     fullyParallel: true,
-    workers: ci ? ciWorkers : workers,
+    workers: ci ? ciWorkers : kWorkers,
     retries: ci ? 1 : 0,
     use: {
       baseURL: baseUrl(port),
@@ -53,7 +49,7 @@ export function defineE2EConfig(
       command,
       port,
       reuseExistingServer,
-      timeout: serverTimeout
+      timeout: kServerTimeout
     }
   };
 }

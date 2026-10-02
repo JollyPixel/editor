@@ -71,11 +71,3 @@ export function treeRow(
     has: page.getByText(name, { exact: true })
   });
 }
-
-export function fieldRow(
-  page: Page,
-  tag: string,
-  state: string
-): Locator {
-  return page.locator(`[data-state="${state}"] ${tag}`);
-}

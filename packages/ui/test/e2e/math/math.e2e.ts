@@ -6,13 +6,12 @@ import {
   type Page
 } from "@playwright/test";
 import {
-  fieldRow as row,
   boxOf,
   scrubBy
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
   recordFieldChanges as recordChanges

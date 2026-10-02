@@ -23,13 +23,12 @@ export interface EditorTarget {
 }
 
 export interface EditorFixtureOptions<TTarget extends EditorTarget> {
-  socketUrl: string;
   create: (catalog: CatalogClient) => Promise<TTarget>;
-  editor?: OpenEditorOptions;
+  editor?: Omit<OpenEditorOptions, "target">;
 }
 
 export interface EditorFixtures<TTarget extends EditorTarget> {
-  editor: OpenEditorOptions;
+  editor: Omit<OpenEditorOptions, "target">;
   target: TTarget;
   peer: Page;
 }
@@ -38,23 +37,21 @@ export function editorFixture<TTarget extends EditorTarget>(
   options: EditorFixtureOptions<TTarget>
 ) {
   const {
-    socketUrl,
     create,
     editor = {}
   } = options;
 
   return base.extend<EditorFixtures<TTarget>>({
-    editor: [
-      {
-        username: kUsername,
-        ...editor
-      },
-      { option: true }
-    ],
+    editor: [editor, { option: true }],
     target: [
-      async({ page, editor }, use) => {
-        const target = await withCatalog(socketUrl, create);
+      async({ page, editor, baseURL }, use) => {
+        if (baseURL === undefined) {
+          throw new Error("editorFixture needs use.baseURL, set by defineE2EConfig.");
+        }
+
+        const target = await withCatalog(baseURL, create);
         await openEditor(page, {
+          username: kUsername,
           ...editor,
           target: target.id
         });

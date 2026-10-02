@@ -11,10 +11,6 @@ editor on them.
 ```ts
 // Import Third-party Dependencies
 import {
-  PORTS,
-  socketUrl
-} from "@jolly-pixel/e2e";
-import {
   e2eFolder,
   editorFixture
 } from "@jolly-pixel/e2e/editor";
@@ -22,7 +18,6 @@ import {
 export { expect } from "@playwright/test";
 
 export const test = editorFixture({
-  socketUrl: socketUrl(PORTS.voxelModel),
   editor: {
     maxFps: 5
   },
@@ -40,14 +35,13 @@ export const test = editorFixture({
 
 | Option | |
 |---|---|
-| `socketUrl` | sync server the catalog client connects to |
 | `create(catalog)` | creates the documents; returns a record with the `id` to open |
-| `editor` | default [`OpenEditorOptions`](./editor-navigation.md#openeditoroptions); `username` defaults to `"E2E"` |
+| `editor` | default [`OpenEditorOptions`](./editor-navigation.md#openeditoroptions) without `target` |
 
 | Fixture | |
 |---|---|
 | `target` | auto; the record `create` returned, typed from it |
-| `editor` | option; replace it per file with `test.use({ editor })` |
+| `editor` | option; replace it per file with `test.use({ editor })`; `username` defaults to `"E2E"` when it is unset |
 | `peer` | a `Page` in a second browser context on the same target, as `"Peer"`; the context closes on teardown |
 
 A test that asserts what happens after the peer leaves closes it itself with
@@ -55,6 +49,7 @@ A test that asserts what happens after the peer leaves closes it itself with
 
 ## Catalog
 
-- `withCatalog(socketUrl, fn)`: opens a network client and a `CatalogClient`,
-  awaits `ready`, runs `fn(catalog)`, then disposes both.
+- `withCatalog(baseURL, fn)`: opens a network client on the sync server of the
+  dev server at `baseURL` and a `CatalogClient`, awaits `ready`, runs
+  `fn(catalog)`, then disposes both.
 - `e2eFolder()`: `e2e/<uuid>`, a fresh folder for one test's documents.

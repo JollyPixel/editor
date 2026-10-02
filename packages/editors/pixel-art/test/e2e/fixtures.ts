@@ -4,10 +4,6 @@ import type {
   Page
 } from "@playwright/test";
 import {
-  PORTS,
-  socketUrl
-} from "@jolly-pixel/e2e";
-import {
   e2eFolder,
   editorFixture,
   type EditorTarget,
@@ -65,7 +61,6 @@ export function demo(
   }
 
   return {
-    username: "E2E",
     maxFps: runtime ? maxFps : undefined,
     query
   };
@@ -78,7 +73,6 @@ export function demoPanel(
 }
 
 export const test = editorFixture<EditorTarget>({
-  socketUrl: socketUrl(PORTS.pixelArt),
   editor: demo(),
   async create(catalog) {
     const blank = new PixelBuffer({

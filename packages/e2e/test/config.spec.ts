@@ -57,7 +57,6 @@ describe("defineE2EConfig", () => {
     process.env.CI = "true";
     const config = defineE2EConfig({
       ...kOptions,
-      workers: 4,
       ciWorkers: 2
     });
 
@@ -71,23 +70,19 @@ describe("defineE2EConfig", () => {
     });
   });
 
-  it("falls back to workers on CI without ciWorkers", () => {
+  it("keeps the default workers on CI without ciWorkers", () => {
     process.env.CI = "true";
 
-    assert.equal(defineE2EConfig({
-      ...kOptions,
-      workers: 3
-    }).workers, 3);
+    assert.equal(defineE2EConfig(kOptions).workers, 4);
   });
 
-  it("applies viewport, server timeout and reuse overrides", () => {
+  it("applies viewport and reuse overrides", () => {
     const config = defineE2EConfig({
       ...kOptions,
       viewport: {
         width: 960,
         height: 540
       },
-      serverTimeout: 30_000,
       reuseExistingServer: false
     });
 
@@ -103,7 +98,7 @@ describe("defineE2EConfig", () => {
       command: "pnpm run dev:e2e",
       port: 3100,
       reuseExistingServer: false,
-      timeout: 30_000
+      timeout: 60_000
     });
   });
 });

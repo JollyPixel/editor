@@ -4,10 +4,6 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import {
-  PORTS,
-  socketUrl
-} from "@jolly-pixel/e2e";
-import {
   e2eFolder,
   editorFixture
 } from "@jolly-pixel/e2e/editor";
@@ -44,7 +40,6 @@ export interface E2EWorld {
 }
 
 export const test = editorFixture<E2EWorld>({
-  socketUrl: socketUrl(PORTS.voxelMap),
   editor: {
     maxFps: 10,
     query: {

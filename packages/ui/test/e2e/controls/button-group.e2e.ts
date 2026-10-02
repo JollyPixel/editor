@@ -4,10 +4,9 @@ import {
   expect,
   type Locator
 } from "@playwright/test";
-import { fieldRow as row } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges,
   recordFieldChanges
