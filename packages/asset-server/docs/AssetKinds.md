@@ -246,6 +246,41 @@ and its links to tilesets, which it lists as dependencies. Both packages take
 `@jolly-pixel/asset-server` as an optional peer dependency, so a browser-only
 consumer of either renderer never installs it.
 
+## Kind packages
+
+A package that ships kinds also exports them as one `ASSET_KINDS` value, so a
+host can load them by package name from a [project file](./Project.md):
+
+```ts
+interface AssetKindPackage<TOptions extends object = object> {
+  readonly descriptors: readonly AssetKindDescriptor[];
+  readonly optionsSchema: JSONSchema;
+
+  handlers(options?: TOptions): AssetKindHandler[];
+}
+```
+
+`handlers` builds a fresh handler for each kind the package ships, from the
+options the project gives it. Each descriptor names one of those kinds.
+`optionsSchema` describes the JSON options a project file may pass, so a typo
+fails when the project loads rather than inside a handler. Options that are
+not JSON, such as `conflictResolver`, stay out of it. `SNAPSHOT_POLICY_SCHEMA`
+describes a `SnapshotPolicy` for packages to nest in their schema.
+
+```ts
+import { ASSET_KINDS } from "@jolly-pixel/asset.voxel-map";
+
+const handlers = ASSET_KINDS.handlers({
+  tileset: { tileSize: 16 },
+  voxelmap: { chunkSize: 16 }
+});
+```
+
+`asset.pixel-art` takes `{ defaultSize?, snapshot? }` and `asset.voxel-model`
+takes `{ snapshot? }`. `asset.voxel-map` takes `{ tileset?, voxelmap? }`, one
+entry per kind: `{ tileSize?, defaultSize?, snapshot? }` and
+`{ chunkSize?, snapshot? }`.
+
 ## Writing an editable kind
 
 A kind with live editing has two halves that must not overlap:

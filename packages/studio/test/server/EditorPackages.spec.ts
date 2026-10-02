@@ -9,7 +9,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Internal Dependencies
-import { readEditorPackages } from "../../vite/editorManifest.ts";
+import { EditorPackage } from "../../server/EditorPackage.ts";
+import { EditorPackages } from "../../server/EditorPackages.ts";
 import {
   createTempDir,
   removeTempDir
@@ -40,7 +41,7 @@ async function createPackage(
   return root;
 }
 
-describe("readEditorPackages", () => {
+describe("EditorPackages", () => {
   after(async() => {
     await Promise.all(kRoots.map((root) => removeTempDir(root)));
   });
@@ -60,31 +61,41 @@ describe("readEditorPackages", () => {
       ["@jolly-pixel/editor.pixel-art", pixelArt]
     ]);
     const located: string[] = [];
-    const editors = readEditorPackages(roots.keys(), (packageName) => {
+    const editors = EditorPackages.read(roots.keys(), (packageName) => {
       located.push(packageName);
 
       return roots.get(packageName) ?? "";
     });
 
     assert.deepEqual(located, [...roots.keys()]);
-    assert.deepEqual(editors, [
-      {
+    assert.deepEqual([...editors], [
+      new EditorPackage({
         package: "@jolly-pixel/editor.voxel-map",
         name: "voxel-map",
         kinds: ["voxelmap"],
         dist: path.join(voxelMap, "dist")
-      },
-      {
+      }),
+      new EditorPackage({
         package: "@jolly-pixel/editor.pixel-art",
         name: "pixel-art",
         kinds: ["pixelart"],
         dist: path.join(pixelArt, "dist-page")
+      })
+    ]);
+    assert.deepEqual(editors.descriptors(), [
+      {
+        name: "voxel-map",
+        kinds: ["voxelmap"]
+      },
+      {
+        name: "pixel-art",
+        kinds: ["pixelart"]
       }
     ]);
   });
 
   test("reads the editor packages installed in the studio", () => {
-    const [voxelMap, voxelModel, pixelArt] = readEditorPackages([
+    const [voxelMap, voxelModel, pixelArt] = EditorPackages.read([
       "@jolly-pixel/editor.voxel-map",
       "@jolly-pixel/editor.voxel-model",
       "@jolly-pixel/editor.pixel-art"
@@ -102,7 +113,7 @@ describe("readEditorPackages", () => {
     await fs.writeFile(path.join(root, "package.json"), "{}");
 
     assert.throws(
-      () => readEditorPackages(["editor"], () => root),
+      () => EditorPackages.read(["editor"], () => root),
       {
         name: "TypeError",
         message: /"editor" declares an invalid "jollypixel.editor" manifest:\n.*at jollypixel/s
@@ -123,7 +134,7 @@ describe("readEditorPackages", () => {
       const root = await createPackage(manifest);
 
       assert.throws(
-        () => readEditorPackages(["editor"], () => root),
+        () => EditorPackages.read(["editor"], () => root),
         {
           name: "TypeError",
           message: /"editor" declares an invalid "jollypixel.editor" manifest/
@@ -139,7 +150,7 @@ describe("readEditorPackages", () => {
     });
 
     assert.throws(
-      () => readEditorPackages(["a", "b"], () => root),
+      () => EditorPackages.read(["a", "b"], () => root),
       /Editor "voxel-map" is declared by both "a" and "b"/
     );
   });

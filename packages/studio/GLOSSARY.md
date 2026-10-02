@@ -14,7 +14,8 @@ The app. One studio process opens exactly one project.
 
 ### Project
 
-An asset root on disk plus its configuration. The `JOLLY_PROJECT`
+An asset root on disk plus its configuration, `.jollypixel/project.json`,
+which lists its editor packages and kind packages. The `JOLLY_PROJECT`
 environment variable picks it, defaulting to `packages/studio/project/`.
 The back-end calls the same assets a workspace; the studio never uses that
 word for anything else.
@@ -22,7 +23,7 @@ word for anything else.
 ### Seed
 
 The assets written into a project root that lacks them, from
-`createStudioProject`. A seed entry never overwrites an existing path.
+`createStudioSeed`. A seed entry never overwrites an existing path.
 
 ### Shell
 

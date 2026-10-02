@@ -16,17 +16,13 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
-import {
-  editorPagesPlugin,
-  editorsModule,
-  EDITORS_MODULE_ID
-} from "../../vite/editorPagesPlugin.ts";
+import { editorPagesPlugin } from "../../vite/editorPagesPlugin.ts";
 import {
   BUNDLE,
   createDist,
   INDEX_HTML,
   listen,
-  voxelMapEditor
+  voxelMapPages
 } from "../helpers/editorPages.ts";
 import {
   createTempDir,
@@ -46,8 +42,7 @@ describe("editorPagesPlugin", () => {
     );
     await fs.writeFile(
       path.join(root, "main.ts"),
-      `import editors from "${EDITORS_MODULE_ID}";\n` +
-      "document.title = JSON.stringify(editors);\n"
+      "document.title = \"studio\";\n"
     );
   });
 
@@ -65,7 +60,7 @@ describe("editorPagesPlugin", () => {
       server: {
         middlewareMode: true
       },
-      plugins: [editorPagesPlugin([voxelMapEditor(dist)])]
+      plugins: [editorPagesPlugin(voxelMapPages(dist))]
     });
     await using server = await listen(vite.middlewares);
 
@@ -80,7 +75,7 @@ describe("editorPagesPlugin", () => {
     }
   });
 
-  test("bundles the descriptors and copies the pages on build", async() => {
+  test("copies the pages on build", async() => {
     const outDir = path.join(root, "out");
     await build({
       root,
@@ -89,15 +84,9 @@ describe("editorPagesPlugin", () => {
       build: {
         outDir
       },
-      plugins: [editorPagesPlugin([voxelMapEditor(dist)])]
+      plugins: [editorPagesPlugin(voxelMapPages(dist))]
     });
 
-    const assets = await fs.readdir(path.join(outDir, "assets"));
-    const bundle = await fs.readFile(
-      path.join(outDir, "assets", assets[0]),
-      "utf8"
-    );
-    assert.match(bundle, /voxel-map/);
     assert.strictEqual(
       await fs.readFile(
         path.join(outDir, "editors", "voxel-map", "index.html"),
@@ -111,15 +100,6 @@ describe("editorPagesPlugin", () => {
         "utf8"
       ),
       BUNDLE
-    );
-  });
-});
-
-describe("editorsModule", () => {
-  test("exports the name and kinds of each editor", () => {
-    assert.strictEqual(
-      editorsModule([voxelMapEditor("/pkg/dist")]),
-      "export default [{\"name\":\"voxel-map\",\"kinds\":[\"voxelmap\"]}];\n"
     );
   });
 });

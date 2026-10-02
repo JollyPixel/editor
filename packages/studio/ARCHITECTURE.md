@@ -12,10 +12,13 @@ decisions live in the [ADRs](./docs/adr/README.md), open work in the
 flowchart TB
   subgraph Vite["vite.config.ts"]
     direction TB
-    Manifests["readEditorPackages<br/>jollypixel.editor manifests"]
-    Pages["editorPagesPlugin<br/>/editors/&lt;name&gt;/ + virtual module"]
-    Backend["createAssetWorkspacePlugin<br/>createStudioProject handlers + seed"]
-    Manifests --> Pages
+    Project["StudioProject<br/>.jollypixel/project.json"]
+    Modules["projectModulesPlugin<br/>virtual modules"]
+    Pages["editorPagesPlugin<br/>EditorPages /editors/&lt;name&gt;/"]
+    Backend["createAssetWorkspacePlugin<br/>project kinds + seed"]
+    Project --> Modules
+    Project --> Pages
+    Project --> Backend
   end
 
   subgraph Shell["Shell page"]
@@ -45,7 +48,7 @@ flowchart TB
     Frame["iframe /editors/&lt;name&gt;/?target=&lt;id&gt;<br/>editor.host mountStandalone"]
   end
 
-  Pages -.->|"virtual:jolly-pixel/editors"| Registry
+  Modules -.->|"virtual:jolly-pixel/project"| Registry
   Pages -.->|"built page folder"| Frame
   Connection <-->|"CatalogClient"| Backend
   Browser <-->|"records, rename, delete, export"| Backend
@@ -60,16 +63,29 @@ never share objects.
 
 ## Server side
 
-`vite.config.ts` reads the `jollypixel.editor` manifest of each listed
-editor package. `editorPagesPlugin` serves each editor's built page folder at
-`/editors/<name>/`, answers `404` for any other path under that prefix, and
-exposes `{ name, kinds }[]` as `virtual:jolly-pixel/editors`. A build copies
-the page folders into `dist/editors/`.
+`vite.config.ts` opens the project with `StudioProject.open`
+([ADR-0016](./docs/adr/0016-the-project-file-lists-editors-and-kinds.md)).
+It writes the default `.jollypixel/project.json` when the root has none,
+reads the `jollypixel.editor` manifest of each package under `editors` into
+`EditorPackages`, and loads each package under `kinds` through asset-server's
+`ProjectKinds`. The `e2e` and `static` modes load `DEFAULT_PROJECT_FILE` with
+`StudioProject.load` instead, so a local project file never changes what they
+test or ship. The code under `server/` knows nothing of Vite; `vite/` only
+adapts it.
+
+`EditorPages` serves each editor's built page folder at `/editors/<name>/`
+and answers `404` for any other path under that prefix. A build copies the
+page folders into `dist/editors/`. `projectModulesPlugin` serves two
+modules: `virtual:jolly-pixel/project` exports the editor descriptors and the
+kind descriptors to the shell, and `virtual:jolly-pixel/handlers` builds the
+kind handlers for the offline workspace only.
 
 `createAssetWorkspacePlugin` runs the catalog and the asset rooms on the
-project root. `createStudioProject` (`src/seed.ts`) supplies the handlers and
-the seed; the shell's offline workspace calls the same function, so both
-back-ends know the same kinds.
+project root, with `project.kinds.handlers()` (the packages' handlers and
+`texture`) and the seed of `createStudioSeed` (`src/seed.ts`). The shell's
+offline workspace takes its handlers from `virtual:jolly-pixel/handlers`,
+which ends with `texture` too, and its seed from `loadStudioSeed`, so both
+back-ends know the same kinds and seed the same assets.
 
 | Mode | Back-end | Editor pages |
 |---|---|---|
@@ -262,10 +278,11 @@ active frame at once, the others on their next focus.
 
 | Path | Role |
 |---|---|
-| `vite.config.ts`, `vite/` | back-end plugin, editor manifests, editor pages plugin, project root |
+| `server/` | `StudioProject`, `EditorPackages`, `EditorPages`, `EditorPagesWatcher`: the project file, editor manifests and pages, without Vite |
+| `vite.config.ts`, `vite/` | back-end plugin, editor pages plugin, project modules plugin |
 | `src/index.ts` | boot: connection, registry, `<jolly-studio>` |
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog with offline fallback |
-| `src/seed.ts` | `createStudioProject`: handlers and seed for both back-ends |
+| `src/seed.ts` | `createStudioSeed`, `loadStudioSeed`: the seed for both back-ends |
 | `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetTally`, `AssetCompanions`, `AssetDeletion`, `AssetSelection`, `DraftFolders`: pure tree decisions |
 | `src/editors/` | `EditorRegistry`, `EditorDescriptor` |
 | `src/tabs/` | `EditorTabs`: strip, tab cap, order; `EditorFrames`: iframe stack, handshake, shell commands, appearance; `SavedTabs` |

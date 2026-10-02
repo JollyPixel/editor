@@ -1,13 +1,16 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
+  defineSchema,
   describeErrors,
   SchemaParser,
   type ConflictResolver
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
+  SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
+  type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 
@@ -17,6 +20,7 @@ import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
   createVoxelModelDocument,
   encodeVoxelModelDocument,
+  VOXEL_MODEL_ASSET,
   VOXEL_MODEL_COMMAND,
   VOXEL_MODEL_DOCUMENT_VERSION,
   VOXEL_MODEL_EXTENSION,
@@ -38,6 +42,13 @@ import type {
 
 // CONSTANTS
 const kDocumentParser = new SchemaParser(voxelModelDocumentSchema);
+const kOptionsSchema = defineSchema({
+  type: "object",
+  properties: {
+    snapshot: SNAPSHOT_POLICY_SCHEMA
+  },
+  additionalProperties: false
+});
 
 export function decodeVoxelModelDocument(
   content: Uint8Array
@@ -229,3 +240,9 @@ export function voxelModelAssetKind(
     }
   };
 }
+
+export const ASSET_KINDS: AssetKindPackage<VoxelModelAssetKindOptions> = {
+  descriptors: [VOXEL_MODEL_ASSET],
+  optionsSchema: kOptionsSchema,
+  handlers: (options) => [voxelModelAssetKind(options)]
+};

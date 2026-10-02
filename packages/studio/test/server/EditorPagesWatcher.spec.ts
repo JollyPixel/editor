@@ -17,9 +17,9 @@ import {
 } from "../../src/editors/EditorDescriptor.ts";
 import {
   EDITOR_PAGE_SETTLE_MS,
-  watchEditorPages,
+  EditorPagesWatcher,
   type EditorPagesServer
-} from "../../vite/watchEditorPages.ts";
+} from "../../server/EditorPagesWatcher.ts";
 import {
   BUNDLE,
   INDEX_HTML,
@@ -34,13 +34,13 @@ import {
 const kBuiltAt = new Date("2026-01-01T00:00:00.000Z");
 const kReadAt = new Date("2026-01-01T02:00:00.000Z");
 
-describe("watchEditorPages", () => {
+describe("EditorPagesWatcher", () => {
   let parent: string;
   let mapDist: string;
   let modelDist: string;
   let sent: Array<[string, EditorPageRebuilt]>;
   let warnings: string[];
-  let unwatch: () => void;
+  let watcher: EditorPagesWatcher;
 
   const server: EditorPagesServer = {
     config: {
@@ -59,17 +59,14 @@ describe("watchEditorPages", () => {
     modelDist = path.join(parent, "voxel-model", "dist");
     sent = [];
     warnings = [];
-    unwatch = watchEditorPages(server, [
+    watcher = new EditorPagesWatcher(server, [
       voxelMapEditor(mapDist),
-      {
-        ...voxelMapEditor(modelDist),
-        name: "voxel-model"
-      }
+      voxelMapEditor(modelDist, "voxel-model")
     ]);
   });
 
   afterEach(async() => {
-    unwatch();
+    watcher.close();
     await removeTempDir(parent);
   });
 
@@ -118,11 +115,11 @@ describe("watchEditorPages", () => {
   });
 
   test("ignores files the page already had when watching started", async() => {
-    unwatch();
+    watcher.close();
     const index = path.join(mapDist, "index.html");
     await fs.writeFile(index, INDEX_HTML);
     await fs.utimes(index, kBuiltAt, kBuiltAt);
-    unwatch = watchEditorPages(server, [voxelMapEditor(mapDist)]);
+    watcher = new EditorPagesWatcher(server, [voxelMapEditor(mapDist)]);
 
     await fs.utimes(index, kReadAt, kBuiltAt);
     await sleep(EDITOR_PAGE_SETTLE_MS * 2);
@@ -130,8 +127,8 @@ describe("watchEditorPages", () => {
     assert.deepEqual(sent, []);
   });
 
-  test("stops announcing once unwatched", async() => {
-    unwatch();
+  test("stops announcing once closed", async() => {
+    watcher.close();
     await fs.writeFile(path.join(mapDist, "index.html"), INDEX_HTML);
     await sleep(EDITOR_PAGE_SETTLE_MS * 2);
 

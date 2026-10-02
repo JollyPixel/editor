@@ -12,6 +12,7 @@ export * from "./workspace/seedAssetSource.ts";
 export {
   EVENTS_DB_PATH,
   IDENTITY_SIDECAR_PATH,
+  PROJECT_FILE_PATH,
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH
 } from "./stateDirectory.ts";
