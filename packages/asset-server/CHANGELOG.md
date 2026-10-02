@@ -1,5 +1,63 @@
 # @jolly-pixel/asset-server
 
+## 5.0.0
+
+### Major Changes
+
+- [#782](https://github.com/JollyPixel/editor/pull/782) [`5d64074`](https://github.com/JollyPixel/editor/commit/5d64074fca7103b22c62c1d652baf8e09618e3c4) Thanks [@fraxken](https://github.com/fraxken)! - Add the `catalogArchiveLimits` back-end option (`archiveLimits` on `CatalogExtension`) to set the decoded entry and archive caps of catalog imports.
+  `readAssetArchive` takes `ArchiveLimits`, which replaces `ReadAssetArchiveOptions`; `./client` now exports it with `DEFAULT_ARCHIVE_MAX_*`, and the root exports `AssetBackendTuning`.
+
+- [#781](https://github.com/JollyPixel/editor/pull/781) [`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e) Thanks [@fraxken](https://github.com/fraxken)! - The asset static handler and the catalog handler are built on `@openally/servo`: content ETags with `304`, `Cache-Control: no-cache`, `nosniff`, and byte ranges for assets.
+  `safeAssetPath` now rejects a Windows reserved segment (`:`, trailing dot or space, device name) as `reserved`, so writes, archive imports and every source refuse it, and asset URLs answer `403`.
+
+- [#777](https://github.com/JollyPixel/editor/pull/777) [`d621be0`](https://github.com/JollyPixel/editor/commit/d621be08881b0fc979a7971ecf3712808bb834e5) Thanks [@fraxken](https://github.com/fraxken)! - Catalog API reshaped: `CatalogProjection`/`CatalogClient` expose `dependencies` (read-only `DependencyIndex`) and `dependentsOf` returns live records; `CatalogExtension` takes one `backend`; `CatalogClient.connect()` replaces `catalogRoom()`.
+  `requestId` is required on catalog commands and replies; `CatalogSessionArchive` and `ArchiveImportDisabledError` moved to editor.host.
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+
+### Minor Changes
+
+- [#796](https://github.com/JollyPixel/editor/pull/796) [`0db872e`](https://github.com/JollyPixel/editor/commit/0db872e6e3567a4a0deca4ad6bda0b30d3b643c9) Thanks [@fraxken](https://github.com/fraxken)! - `AssetCatalog` gains `find()` and `set()`; `replace()`, `firstOfKind()`, the `fetch`/`text`/`sourceUrl` helpers, `assetSourceUrl`, `AssetKindNotFoundError` and `AssetFetchError` are removed. `parse()` methods validate with zod and throw `ZodError`, and kinds reject a colon everywhere.
+  `AssetStore` is internal: `AssetCoordinator.evict()` replaces `coordinator.store`, requests no longer create entries, and `loadBatch()` accepts `signal`. `LAUNCH_ELEMENT_ID` moves to `@jolly-pixel/asset-server`.
+
+- [#820](https://github.com/JollyPixel/editor/pull/820) [`8d33c94`](https://github.com/JollyPixel/editor/commit/8d33c9415c21955b94f3c294ceb347f733534787) Thanks [@fraxken](https://github.com/fraxken)! - `AssetLiveProtocol` gains an optional `correct(command, admitted)`. When it returns a command, a refused or narrowed edit resyncs its author with a `correction` instead of a full snapshot.
+
+- [#773](https://github.com/JollyPixel/editor/pull/773) [`3297510`](https://github.com/JollyPixel/editor/commit/3297510657a51f74aa04c24c64274bae3f7d885b) Thanks [@fraxken](https://github.com/fraxken)! - Make `content` optional on a seed entry: `seedAssetSource` takes `handlers` and writes the serialized `create(id)` state of the entry's kind instead.
+  Add the `AssetKindDescriptor` type, a kind's label and icon as plain data.
+
+- [#788](https://github.com/JollyPixel/editor/pull/788) [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e) Thanks [@fraxken](https://github.com/fraxken)! - Add `InvalidAssetDocumentError`, thrown by a kind's `load` when its content is not a document of that kind.
+  `AssetStateStore` logs it at warn level instead of error.
+
+- [#837](https://github.com/JollyPixel/editor/pull/837) [`50df26e`](https://github.com/JollyPixel/editor/commit/50df26ebaeef139dc80a7ecce88fa786ea248caf) Thanks [@fraxken](https://github.com/fraxken)! - `catalog:create`, `CatalogClient.create` (with `null` content) and `AssetWriter.create` accept no content and write the kind's default state.
+  Handlers can declare `companions`, created and linked beside an asset created without content; `AssetKindDescriptor` gains `extension`.
+
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
+  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
+  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+
+- [#838](https://github.com/JollyPixel/editor/pull/838) [`e1c4a2d`](https://github.com/JollyPixel/editor/commit/e1c4a2d163156a30dd89a432fd801eb23c4687c4) Thanks [@fraxken](https://github.com/fraxken)! - Add illustrated icons: `registerIcon(name, glyph, { viewBox })` draws a full-colour glyph on its own grid, read back with `iconViewBox()`, and `jolly-tree` gains `--jolly-tree-icon-size`.
+  `AssetKindIcon` accepts `viewBox`.
+
+- [#823](https://github.com/JollyPixel/editor/pull/823) [`1bbae1c`](https://github.com/JollyPixel/editor/commit/1bbae1ceddffa7431cbe9c711d41a3c401a5dc93) Thanks [@fraxken](https://github.com/fraxken)! - `CommandSync` keeps a pending ledger acknowledged by echoes and `acks`, and rebases it on every server change through an optional `CommandReconciler`; `Room` gains `resync()` and `resumeWith()`, and `Client` reconnects with backoff and resumes its rooms from the last room `version`.
+  Asset rooms send `version` and `acks`, answer a resumed join with a `catch-up`, and resolve conflicts in server order (event versions, `basis` for replays); `ConflictTracker` gains `record()` and versioned `commit()`/`reset()`.
+  Voxel layer commands address layers by `layerId`, order them by a fractional `rank` (world format v4, `reordered` removed) and can rename them; `VoxelWorld.recorder` becomes `addRecorder()`/`removeRecorder()` with `includeUnrecorded`.
+
+- [#802](https://github.com/JollyPixel/editor/pull/802) [`5d415e4`](https://github.com/JollyPixel/editor/commit/5d415e4f680fd90ba0ec3819b018baa5c59382fe) Thanks [@fraxken](https://github.com/fraxken)! - Asset rooms clamp future command timestamps and send the author a snapshot after a refused, narrowed or unappended command; `CommandSync` replays its own echoes a snapshot overtook and adds `whenReady()`. `ConflictTracker` records headers only and gains `reset()`; `commandVariant()` and `withCommandHeader()` build command schemas, and `seq` must be a non-negative integer.
+  `PixelDocument` emits `buffer-updated` next to its `onBufferUpdated` hook; `AssetRoomNotice` names the asset room notice union.
+
+### Patch Changes
+
+- [#786](https://github.com/JollyPixel/editor/pull/786) [`482d8b7`](https://github.com/JollyPixel/editor/commit/482d8b7d9462d8cd57ee09e21f4d650d9f7cbc17) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `exportAssetArchive` loads each document through its kind and rejects with `unreadable-asset` instead of producing an archive that import refuses.
+  Add `PixelDocument.disownUvRegions()` so another document can own UV regions, and an optional `UVMap.clear()` filter; `UVCompound.parts` is now mutable.
+  Export the UV geometry helpers `rectOf()`, `triangleCornerOf()` and `withRotation()`.
+- Updated dependencies [[`0db872e`](https://github.com/JollyPixel/editor/commit/0db872e6e3567a4a0deca4ad6bda0b30d3b643c9), [`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e), [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5), [`e206538`](https://github.com/JollyPixel/editor/commit/e2065388190abbe17facabbbe64fac562fa628de), [`8d33c94`](https://github.com/JollyPixel/editor/commit/8d33c9415c21955b94f3c294ceb347f733534787), [`1bbae1c`](https://github.com/JollyPixel/editor/commit/1bbae1ceddffa7431cbe9c711d41a3c401a5dc93), [`5d415e4`](https://github.com/JollyPixel/editor/commit/5d415e4f680fd90ba0ec3819b018baa5c59382fe), [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e), [`71d300a`](https://github.com/JollyPixel/editor/commit/71d300a76e87200b52cb4a1e9394ce22793c2a8a), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/asset@3.0.0
+  - @jolly-pixel/asset-source@3.0.0
+  - @jolly-pixel/network@5.0.0
+  - @jolly-pixel/event-store@4.0.0
+
 ## 4.0.0
 
 ### Major Changes

@@ -1,5 +1,30 @@
 # @jolly-pixel/controls
 
+## 3.0.0
+
+### Major Changes
+
+- [#832](https://github.com/JollyPixel/editor/pull/832) [`bd7b3d3`](https://github.com/JollyPixel/editor/commit/bd7b3d3c346826673e9de8d14286a8573c253fe1) Thanks [@fraxken](https://github.com/fraxken)! - `ExtendedKeyCode` no longer accepts lowercase letters: use `"W"` or `"KeyW"` instead of `"w"` in `isDown()`, `InputCombination.key()`, `AliasedKeyInput`, `Axis.buttons()` and `Camera3DControls` bindings.
+
+### Minor Changes
+
+- [#833](https://github.com/JollyPixel/editor/pull/833) [`f54d006`](https://github.com/JollyPixel/editor/commit/f54d006a7c16e9d2cca6cf6fec6076053ac86335) Thanks [@fraxken](https://github.com/fraxken)! - Add `KeyBindingMap` for rebindable shortcuts by action, `KeyChord.from()`/`toString()`, `KEY_CODES`, and the `preventControlKeys` keyboard option; `bind()` also takes `KeyChord` instances.
+  `isEditableTarget` now only treats text-entry inputs as editable, so sliders and checkboxes keep shortcuts working.
+
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
+  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
+  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+
+- [#829](https://github.com/JollyPixel/editor/pull/829) [`56c4d56`](https://github.com/JollyPixel/editor/commit/56c4d566330c6851b52b6dd64b0bdd3f69946dfb) Thanks [@fraxken](https://github.com/fraxken)! - `Keyboard` gains `bind(chords, handler, options)` for prioritized key-chord bindings (also exported standalone as `KeyBindings`) and a ref-counted `suspend()`.
+  New `KeyChord` parses, matches and formats chords by position (`"Mod+KeyZ"`) or printed letter (`"Mod+z"`); `format({ layout })` names keys from `loadKeyboardLayout()`.
+  `isApplePlatform` is now exported.
+
+### Patch Changes
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+
 ## 2.1.0
 
 ### Minor Changes

@@ -1,5 +1,33 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 7.0.0
+
+### Major Changes
+
+- [#833](https://github.com/JollyPixel/editor/pull/833) [`f54d006`](https://github.com/JollyPixel/editor/commit/f54d006a7c16e9d2cca6cf6fec6076053ac86335) Thanks [@fraxken](https://github.com/fraxken)! - Keyboard handling moves to the host: `PixelArtCanvas.shortcuts` exposes the mode-routed intents and the pan and line modifiers.
+  The `keybindings` option and getter, `Keybindings`, `DEFAULT_KEYBINDINGS`, `KEYBINDING_ACTIONS` and the keybinding errors are removed.
+
+### Minor Changes
+
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
+  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
+  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+
+- [#802](https://github.com/JollyPixel/editor/pull/802) [`5d415e4`](https://github.com/JollyPixel/editor/commit/5d415e4f680fd90ba0ec3819b018baa5c59382fe) Thanks [@fraxken](https://github.com/fraxken)! - Asset rooms clamp future command timestamps and send the author a snapshot after a refused, narrowed or unappended command; `CommandSync` replays its own echoes a snapshot overtook and adds `whenReady()`. `ConflictTracker` records headers only and gains `reset()`; `commandVariant()` and `withCommandHeader()` build command schemas, and `seq` must be a non-negative integer.
+  `PixelDocument` emits `buffer-updated` next to its `onBufferUpdated` hook; `AssetRoomNotice` names the asset room notice union.
+
+- [#788](https://github.com/JollyPixel/editor/pull/788) [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e) Thanks [@fraxken](https://github.com/fraxken)! - Add `UVRegion.toLayout()` and `UVRegion.fromLayout(layout, identity)`, with the `UVLayoutData` and `UVRegionIdentity` types, to split a UV region's geometry from its identity.
+
+- [#786](https://github.com/JollyPixel/editor/pull/786) [`482d8b7`](https://github.com/JollyPixel/editor/commit/482d8b7d9462d8cd57ee09e21f4d650d9f7cbc17) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `exportAssetArchive` loads each document through its kind and rejects with `unreadable-asset` instead of producing an archive that import refuses.
+  Add `PixelDocument.disownUvRegions()` so another document can own UV regions, and an optional `UVMap.clear()` filter; `UVCompound.parts` is now mutable.
+  Export the UV geometry helpers `rectOf()`, `triangleCornerOf()` and `withRotation()`.
+
+### Patch Changes
+
+- Updated dependencies [[`b19efe6`](https://github.com/JollyPixel/editor/commit/b19efe62f02a41cccb67a846c7066d6bf3337c76), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
+  - @jolly-pixel/image@2.0.0
+  - @jolly-pixel/color@1.1.1
+
 ## 6.0.0
 
 ### Major Changes

@@ -1,5 +1,49 @@
 # @jolly-pixel/runtime
 
+## 6.0.0
+
+### Major Changes
+
+- [#801](https://github.com/JollyPixel/editor/pull/801) [`e7383a4`](https://github.com/JollyPixel/editor/commit/e7383a4b93414ca3334f8ff9440f9da8fd8c2279) Thanks [@fraxken](https://github.com/fraxken)! - `SceneManager` loads `scene.assets` through `world.assetCoordinator`; `SceneLoader`, `SceneLoadDriver` and `setSceneLoader()` are removed, and `SceneLoad.done` settles with the load. The engine exports `createDefaultAssetLoaders()`.
+  `RuntimeMetrics` owns renderer latching and the readout panel (`mountPanel()`, `dispose()`); `recorder`, `revision` and `attachPanel()` are removed, use `runtime.stats`.
+
+### Minor Changes
+
+- [#839](https://github.com/JollyPixel/editor/pull/839) [`6e6ca8b`](https://github.com/JollyPixel/editor/commit/6e6ca8b6aa3be1af5f4cf35b6e18f8de261712db) Thanks [@fraxken](https://github.com/fraxken)! - Add `Systems.Logger.step()`, which logs an awaited operation as started, done with its duration, or failed.
+  `RuntimeOptions` accepts a `logger` that receives the startup steps of `create()` and `load()`, then the wait for the first frame.
+
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
+  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
+  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+
+- [#791](https://github.com/JollyPixel/editor/pull/791) [`b4574c7`](https://github.com/JollyPixel/editor/commit/b4574c71334e5c21b871d66785348f67c1407744) Thanks [@fraxken](https://github.com/fraxken)! - Add a `filter` option to `mountMetricsPanel()` so a readout can leave out metrics, such as the ones the corner HUD already cycles through.
+
+- [#791](https://github.com/JollyPixel/editor/pull/791) [`31f0081`](https://github.com/JollyPixel/editor/commit/31f0081bca20cd835f4302d868413a702d31b9b1) Thanks [@fraxken](https://github.com/fraxken)! - Expose the renderer counters as `runtime.metrics.renderer`: `frame` returns the draw calls and triangles latched on the last `draw`, safe to read outside a draw handler.
+
+- [#771](https://github.com/JollyPixel/editor/pull/771) [`e606d65`](https://github.com/JollyPixel/editor/commit/e606d657b056d1e20f04a30f8cb2305f19fe9865) Thanks [@fraxken](https://github.com/fraxken)! - `Runtime.create()` forwards a `renderer` option to `ThreeRenderer.create()`, and `runtime.renderer` exposes the concrete `ThreeRenderer`.
+  An explicit `output.pixelRatio` or `output.maxPixelRatio` is no longer overwritten by the GPU detection in `load()`.
+
+- [#841](https://github.com/JollyPixel/editor/pull/841) [`71d300a`](https://github.com/JollyPixel/editor/commit/71d300a76e87200b52cb4a1e9394ce22793c2a8a) Thanks [@fraxken](https://github.com/fraxken)! - Add `AnimationLoopFrameSource` (moved from runtime) and `suspendWhenHidden` to loop, and the matching `suspendWhenHidden` runtime option.
+  Runtime `load({ maxFps })` skips GPU benchmarking and loads `@pmndrs/detect-gpu` on demand.
+  Concurrent joins of the same dynamic network room now share one resolver call.
+
+- [#803](https://github.com/JollyPixel/editor/pull/803) [`ab4ad1a`](https://github.com/JollyPixel/editor/commit/ab4ad1a00b61463b39aaaae73644ca329898b8de) Thanks [@fraxken](https://github.com/fraxken)! - Remove `VoxelEngine`: `VoxelRenderer` exposes `document` and `view`, the codec helpers become `parseVoxelWorld`/`encodeVoxelWorld`/`decodeVoxelWorld`, the `apply*Command()` helpers become `apply()` on `BlockRegistry`, `MaterialGroupList` and `TilesetList` (returning the applied command or `null`), object layers move to `world.objectLayers`, `view.tilesets` becomes `view.atlases`, and the `invalidated` event, `registerTileset()` and `PartialExcept` are gone.
+  Remove greedy meshing and `retainVertexData`: every chunk is vertex pulled at 8 bytes per face and can be meshed in Web Workers (`meshing.workers`, `runMeshWorker()`); view options are grouped into `rendering`, `lighting`, `range` and `meshing`, adding baked ambient occlusion, chunk shadows, `farDistance`, `alphaToCoverage` and box-filtered distant tiles.
+  GPU memory is measurable through the voxel `meshMemory` and runtime `geometryMemory`/`textureMemory` metrics with a `bytes` unit in `@jolly-pixel/ui`; fix hidden layers reappearing, stale meshes after `cloneLayer()` and `view.dispose()` clearing the document's tilesets.
+
+### Patch Changes
+
+- [#797](https://github.com/JollyPixel/editor/pull/797) [`3cf031e`](https://github.com/JollyPixel/editor/commit/3cf031ef217963e8611171c56028ff7839d6ddc5) Thanks [@fraxken](https://github.com/fraxken)! - `start()` after `stop()` resumes the runtime again: it clears the exit flag `stop()` sets, which previously stopped the runtime on its first tick.
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- Updated dependencies [[`3795267`](https://github.com/JollyPixel/editor/commit/37952670b39501299cd97be272d1da1704f68c97), [`0db872e`](https://github.com/JollyPixel/editor/commit/0db872e6e3567a4a0deca4ad6bda0b30d3b643c9), [`6e6ca8b`](https://github.com/JollyPixel/editor/commit/6e6ca8b6aa3be1af5f4cf35b6e18f8de261712db), [`e606d65`](https://github.com/JollyPixel/editor/commit/e606d657b056d1e20f04a30f8cb2305f19fe9865), [`921c7a6`](https://github.com/JollyPixel/editor/commit/921c7a6ae7195ba5099b964416145865eff269e4), [`bd7b3d3`](https://github.com/JollyPixel/editor/commit/bd7b3d3c346826673e9de8d14286a8573c253fe1), [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5), [`175845f`](https://github.com/JollyPixel/editor/commit/175845ff00ccac8ae8a81472543feb5345b6f2a1), [`e1c4a2d`](https://github.com/JollyPixel/editor/commit/e1c4a2d163156a30dd89a432fd801eb23c4687c4), [`46ea926`](https://github.com/JollyPixel/editor/commit/46ea926b7946125a538f7bb885a5a8e0788f9418), [`799d17c`](https://github.com/JollyPixel/editor/commit/799d17cd8d7732d84664b0109648fb353bd3ad0e), [`e7383a4`](https://github.com/JollyPixel/editor/commit/e7383a4b93414ca3334f8ff9440f9da8fd8c2279), [`f2182da`](https://github.com/JollyPixel/editor/commit/f2182da4d77756bf62bf2c12d4ca2a41fedd76ab), [`71d300a`](https://github.com/JollyPixel/editor/commit/71d300a76e87200b52cb4a1e9394ce22793c2a8a), [`e1c4a2d`](https://github.com/JollyPixel/editor/commit/e1c4a2d163156a30dd89a432fd801eb23c4687c4), [`a54b8a8`](https://github.com/JollyPixel/editor/commit/a54b8a8bdf5597293fcb1a960ed35aeb0a57d603), [`75d0d66`](https://github.com/JollyPixel/editor/commit/75d0d666a436bb8399fda93930da84c16b02f93a), [`6339aea`](https://github.com/JollyPixel/editor/commit/6339aea20bf9777054eec1e6cb828d40fe96c3cc), [`ad38d4e`](https://github.com/JollyPixel/editor/commit/ad38d4e8935e0a759c0d4f7add3771ab0543f9b0), [`10f797b`](https://github.com/JollyPixel/editor/commit/10f797bb711798024f7ed82ed6c615e12de54e3d), [`b691bbf`](https://github.com/JollyPixel/editor/commit/b691bbf91d44d5d5fa65d32165e6d0688d82e06a), [`1452db0`](https://github.com/JollyPixel/editor/commit/1452db0b72b073fbb4c5c46fd37dfe748da1e7f7), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285), [`ab4ad1a`](https://github.com/JollyPixel/editor/commit/ab4ad1a00b61463b39aaaae73644ca329898b8de)]:
+  - @jolly-pixel/ui@3.2.0
+  - @jolly-pixel/asset@3.0.0
+  - @jolly-pixel/engine@7.0.0
+  - @jolly-pixel/loop@1.1.0
+
 ## 5.2.0
 
 ### Minor Changes

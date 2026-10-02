@@ -1,5 +1,41 @@
 # @jolly-pixel/network
 
+## 5.0.0
+
+### Major Changes
+
+- [#794](https://github.com/JollyPixel/editor/pull/794) [`e206538`](https://github.com/JollyPixel/editor/commit/e2065388190abbe17facabbbe64fac562fa628de) Thanks [@fraxken](https://github.com/fraxken)! - `Client` takes a `socket` factory instead of `id`/`url`/`credential`, rooms get a stricter lifecycle (`clientId` is `null` until admitted, `leave()` emits `"left"`, `sync` replaces `peers`, one `RoomRejectionEvent`), and the `MessageProtocol` class replaces `defineMessageProtocol` and its helpers.
+  Message guards validate the whole shape with zod, and notice types can no longer be `"snapshot"` or `"command"`.
+  `PresenceChannel` accepts a zod schema as `decode`, and `Server.authenticate` refuses the client instead of throwing when the provider fails.
+
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
+  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
+  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+
+### Minor Changes
+
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
+  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
+  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+
+- [#820](https://github.com/JollyPixel/editor/pull/820) [`8d33c94`](https://github.com/JollyPixel/editor/commit/8d33c9415c21955b94f3c294ceb347f733534787) Thanks [@fraxken](https://github.com/fraxken)! - `WebsocketTransport` and the Vite plugin accept `compression` to negotiate permessage-deflate. Rooms serialize a fanned-out message once for handles implementing `ClientHandle.sendSerialized`.
+  Server messages gain `{ type: "correction", data }`, which `CommandSync` emits as a command, then replays the client's later echoes on top of it.
+
+- [#823](https://github.com/JollyPixel/editor/pull/823) [`1bbae1c`](https://github.com/JollyPixel/editor/commit/1bbae1ceddffa7431cbe9c711d41a3c401a5dc93) Thanks [@fraxken](https://github.com/fraxken)! - `CommandSync` keeps a pending ledger acknowledged by echoes and `acks`, and rebases it on every server change through an optional `CommandReconciler`; `Room` gains `resync()` and `resumeWith()`, and `Client` reconnects with backoff and resumes its rooms from the last room `version`.
+  Asset rooms send `version` and `acks`, answer a resumed join with a `catch-up`, and resolve conflicts in server order (event versions, `basis` for replays); `ConflictTracker` gains `record()` and versioned `commit()`/`reset()`.
+  Voxel layer commands address layers by `layerId`, order them by a fractional `rank` (world format v4, `reordered` removed) and can rename them; `VoxelWorld.recorder` becomes `addRecorder()`/`removeRecorder()` with `includeUnrecorded`.
+
+- [#802](https://github.com/JollyPixel/editor/pull/802) [`5d415e4`](https://github.com/JollyPixel/editor/commit/5d415e4f680fd90ba0ec3819b018baa5c59382fe) Thanks [@fraxken](https://github.com/fraxken)! - Asset rooms clamp future command timestamps and send the author a snapshot after a refused, narrowed or unappended command; `CommandSync` replays its own echoes a snapshot overtook and adds `whenReady()`. `ConflictTracker` records headers only and gains `reset()`; `commandVariant()` and `withCommandHeader()` build command schemas, and `seq` must be a non-negative integer.
+  `PixelDocument` emits `buffer-updated` next to its `onBufferUpdated` hook; `AssetRoomNotice` names the asset room notice union.
+
+- [#788](https://github.com/JollyPixel/editor/pull/788) [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e) Thanks [@fraxken](https://github.com/fraxken)! - Add `SchemaParser`, which checks a value against one JSON Schema and returns a typed `Result`. It is exported from the package root.
+
+### Patch Changes
+
+- [#841](https://github.com/JollyPixel/editor/pull/841) [`71d300a`](https://github.com/JollyPixel/editor/commit/71d300a76e87200b52cb4a1e9394ce22793c2a8a) Thanks [@fraxken](https://github.com/fraxken)! - Add `AnimationLoopFrameSource` (moved from runtime) and `suspendWhenHidden` to loop, and the matching `suspendWhenHidden` runtime option.
+  Runtime `load({ maxFps })` skips GPU benchmarking and loads `@pmndrs/detect-gpu` on demand.
+  Concurrent joins of the same dynamic network room now share one resolver call.
+
 ## 4.0.0
 
 ### Major Changes
