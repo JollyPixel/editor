@@ -42,4 +42,5 @@ Destroying the actor removes every frustum.
 
 A remote pose change calls `world.invalidate()`, so a runtime
 [rendering on demand](../../../runtime/docs/api/Runtime.md#rendering-on-demand)
-draws it.
+draws it, stays awake while `room` has at least one peer, and wakes when a
+peer joins.
