@@ -280,6 +280,40 @@ describe("UVRegionLayer — face labels", () => {
     assert.strictEqual(map.showRegionLabels, true);
   });
 
+  test("labelScope selected labels only the selected region", () => {
+    const { svg, map } = setup();
+    map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r1"
+    });
+    const b = map.create({
+      width: kLabelSize,
+      height: kLabelSize,
+      id: "r2"
+    });
+    map.setState(b.id, "free");
+    map.showAll = true;
+    map.showRegionLabels = true;
+
+    map.labelScope = "selected";
+    assert.deepStrictEqual(labels(svg), []);
+    assert.strictEqual(
+      svg.querySelectorAll("g > rect:last-child").length,
+      7,
+      "every border stays drawn"
+    );
+
+    map.select("r2", "front");
+    assert.deepStrictEqual(labels(svg), ["(r2)front +5"]);
+
+    map.select("r1");
+    assert.deepStrictEqual(labels(svg), ["(r1)"]);
+
+    map.labelScope = "all";
+    assert.deepStrictEqual(labels(svg).sort(), ["(r1)", "(r2)front +5"]);
+  });
+
   test("showAll keeps face labels on free regions", () => {
     const { svg, map } = setup();
     const region = map.create({

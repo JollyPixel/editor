@@ -42,6 +42,8 @@ export interface UVMapOptions {
   getCanvasSize: () => Vec2;
 }
 
+export type UVLabelScope = "all" | "selected";
+
 // CONSTANTS
 const kDefaultSlot: UVSlot = "front";
 
@@ -55,6 +57,7 @@ export class UVMap extends Emitter<
   #selectedSlot: UVSlot | null = null;
   #showAll = false;
   #showRegionLabels = false;
+  #labelScope: UVLabelScope = "all";
 
   constructor(
     options: UVMapOptions
@@ -109,6 +112,22 @@ export class UVMap extends Emitter<
 
     this.#showRegionLabels = value;
     this.emit("label-visibility-changed", { showRegionLabels: value });
+    this.emit("changed");
+  }
+
+  get labelScope(): UVLabelScope {
+    return this.#labelScope;
+  }
+
+  set labelScope(
+    value: UVLabelScope
+  ) {
+    if (this.#labelScope === value) {
+      return;
+    }
+
+    this.#labelScope = value;
+    this.emit("label-scope-changed", { labelScope: value });
     this.emit("changed");
   }
 

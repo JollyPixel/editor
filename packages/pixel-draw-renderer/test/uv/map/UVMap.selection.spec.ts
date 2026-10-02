@@ -196,6 +196,28 @@ describe("UVMap — select / visibility", () => {
     ]);
   });
 
+  test("labels every visible region by default", () => {
+    assert.strictEqual(makeMap().labelScope, "all");
+  });
+
+  test("emits label-scope-changed only when the scope changes", () => {
+    const map = makeMap();
+    const events: EventPayload<"label-scope-changed">[] = [];
+    let changes = 0;
+    map.on("label-scope-changed", (e) => events.push(e));
+    map.on("changed", () => changes++);
+
+    map.labelScope = "selected";
+    map.labelScope = "selected";
+    map.labelScope = "all";
+
+    assert.deepStrictEqual(events, [
+      { labelScope: "selected" },
+      { labelScope: "all" }
+    ]);
+    assert.strictEqual(changes, 2);
+  });
+
   test("emits one consolidated change signal per visible mutation", () => {
     const map = makeMap();
     let changes = 0;

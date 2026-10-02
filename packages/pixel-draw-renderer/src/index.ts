@@ -122,6 +122,7 @@ export {
   type UVMapEventType,
   type UVMapListener,
   type UVMapOptions,
+  type UVLabelScope,
   type UVSlotGeometryTemplate,
   type UVSlotSize,
   type UVRegionCreateOptions

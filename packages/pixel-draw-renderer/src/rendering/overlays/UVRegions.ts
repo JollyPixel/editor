@@ -201,8 +201,15 @@ export class UVRegionLayer {
     camera: Vec2
   ): void {
     const showRegionLabels = this.#uvMap.showRegionLabels;
+    const selectedOnly = this.#uvMap.labelScope === "selected";
     const groups = new Map<string, UVOverlayEntry[]>();
     for (const entry of entries) {
+      if (
+        selectedOnly &&
+        entry.region.id !== this.#uvMap.selectedRegionId
+      ) {
+        continue;
+      }
       if (entry.slot === null) {
         if (showRegionLabels) {
           groups.set(entry.key, [entry]);
