@@ -16,6 +16,7 @@ import { yieldToEventLoop } from "../utils/yieldToEventLoop.ts";
 
 // CONSTANTS
 const kReplayYieldEvery = 250;
+const kCheckpointEventTypes = new Set<string>(ASSET_CHECKPOINT_EVENT_TYPES);
 
 export interface AssetStateEntry {
   readonly assetId: string;
@@ -24,15 +25,22 @@ export interface AssetStateEntry {
   readonly state: unknown;
 }
 
+export interface RecordedCommand<TCommand = unknown> {
+  readonly command: TCommand;
+  readonly version: number;
+}
+
+interface ReplayedAsset {
+  readonly entry: AssetStateEntry;
+  readonly commands: RecordedCommand[];
+}
+
 export interface AssetStateStoreOptions {
   eventStore: EventStore.EventStore;
   kinds: AssetKindRegistry;
   logger?: Logger;
 }
 
-/**
- * Holds live per-asset state folded by each asset's kind handler.
- */
 export class AssetStateStore {
   #eventStore: EventStore.EventStore;
   #kinds: AssetKindRegistry;
@@ -40,6 +48,7 @@ export class AssetStateStore {
   #entries = new Map<string, AssetStateEntry>();
   #versions = new Map<string, number>();
   #replays = new Map<string, Promise<AssetStateEntry>>();
+  #commandsSinceCheckpoint = new Map<string, RecordedCommand[]>();
   #unsubscribe: (() => void) | null = null;
 
   constructor(
@@ -54,8 +63,12 @@ export class AssetStateStore {
     this.#unsubscribe ??= this.#eventStore.subscribe((event) => {
       const entry = this.#entries.get(event.assetId);
       if (entry !== undefined) {
-        this.#fold(entry.handler, entry.state, event);
+        const command = this.#fold(entry.handler, entry.state, event);
         this.#versions.set(event.assetId, event.eventVersion);
+        const commands = this.#commandsSinceCheckpoint.get(event.assetId);
+        if (commands !== undefined) {
+          recordCommand(commands, event, command);
+        }
       }
     });
   }
@@ -65,6 +78,7 @@ export class AssetStateStore {
     this.#unsubscribe = null;
     this.#entries.clear();
     this.#versions.clear();
+    this.#commandsSinceCheckpoint.clear();
   }
 
   has(
@@ -100,8 +114,9 @@ export class AssetStateStore {
     }
 
     const replay = this.#replay(assetId, kind)
-      .then((entry) => {
+      .then(({ entry, commands }) => {
         this.#entries.set(assetId, entry);
+        this.#commandsSinceCheckpoint.set(assetId, commands);
 
         return entry;
       })
@@ -111,11 +126,21 @@ export class AssetStateStore {
     return replay;
   }
 
+  takeCommandsSinceCheckpoint(
+    assetId: string
+  ): RecordedCommand[] {
+    const commands = this.#commandsSinceCheckpoint.get(assetId) ?? [];
+    this.#commandsSinceCheckpoint.delete(assetId);
+
+    return commands;
+  }
+
   release(
     assetId: string
   ): void {
     this.#entries.delete(assetId);
     this.#versions.delete(assetId);
+    this.#commandsSinceCheckpoint.delete(assetId);
   }
 
   async serialize(
@@ -123,7 +148,7 @@ export class AssetStateStore {
     kind: string
   ): Promise<Uint8Array> {
     const entry = this.#entries.get(assetId) ??
-      await this.#replay(assetId, kind);
+      (await this.#replay(assetId, kind)).entry;
 
     return entry.handler.serialize(entry.state);
   }
@@ -131,9 +156,10 @@ export class AssetStateStore {
   async #replay(
     assetId: string,
     kind: string
-  ): Promise<AssetStateEntry> {
+  ): Promise<ReplayedAsset> {
     const handler = this.#kinds.get(kind);
     const state = handler.create(assetId);
+    const commands: RecordedCommand[] = [];
     let events = this.#eventStore.reader.listFromCheckpoint(
       assetId,
       ASSET_CHECKPOINT_EVENT_TYPES
@@ -143,7 +169,7 @@ export class AssetStateStore {
 
     while (events.length > 0) {
       for (const event of events) {
-        this.#fold(handler, state, event);
+        recordCommand(commands, event, this.#fold(handler, state, event));
         from = event.eventVersion;
         if (++sinceYield >= kReplayYieldEvery) {
           sinceYield = 0;
@@ -156,10 +182,13 @@ export class AssetStateStore {
     this.#versions.set(assetId, from);
 
     return {
-      assetId,
-      kind,
-      handler,
-      state
+      entry: {
+        assetId,
+        kind,
+        handler,
+        state
+      },
+      commands
     };
   }
 
@@ -167,9 +196,9 @@ export class AssetStateStore {
     handler: AssetKindHandler,
     state: unknown,
     event: EventStore.Event
-  ): void {
+  ): unknown {
     try {
-      foldAssetEvent(handler, state, event);
+      return foldAssetEvent(handler, state, event);
     }
     catch (error) {
       const log = this.#logger.withMetadata({
@@ -185,6 +214,24 @@ export class AssetStateStore {
       else {
         log.error("asset event not folded");
       }
+
+      return null;
     }
+  }
+}
+
+function recordCommand(
+  commands: RecordedCommand[],
+  event: EventStore.Event,
+  command: unknown
+): void {
+  if (kCheckpointEventTypes.has(event.eventType)) {
+    commands.length = 0;
+  }
+  else if (command !== null) {
+    commands.push({
+      command,
+      version: event.eventVersion
+    });
   }
 }

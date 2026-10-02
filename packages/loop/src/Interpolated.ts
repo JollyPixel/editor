@@ -1,7 +1,11 @@
 /**
  * Blends samples; alpha maps zero to `previous` and one to `current`.
  */
-export type Lerp<T> = (previous: T, current: T, alpha: number) => T;
+export type Lerp<T> = (
+  previous: T,
+  current: T,
+  alpha: number
+) => T;
 
 export function lerpNumber(
   previous: number,
@@ -46,9 +50,6 @@ export class Interpolated<T> {
     return this;
   }
 
-  /**
-   * Replaces both samples, bypassing interpolation from the old value.
-   */
   reset(
     value: T
   ): this {
@@ -58,9 +59,6 @@ export class Interpolated<T> {
     return this;
   }
 
-  /**
-   * Blends at alpha clamped to `[0, 1]`.
-   */
   at(
     alpha: number
   ): T {
@@ -71,6 +69,10 @@ export class Interpolated<T> {
       return this.#current;
     }
 
-    return this.#lerp(this.#previous, this.#current, alpha);
+    return this.#lerp(
+      this.#previous,
+      this.#current,
+      alpha
+    );
   }
 }

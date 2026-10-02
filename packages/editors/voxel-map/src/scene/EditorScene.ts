@@ -282,6 +282,7 @@ export class EditorScene extends Systems.Scene {
       }),
       state.view.subscribe("change", (settings) => {
         environment.apply(settings);
+        world.invalidate();
       }),
       bindBrushShortcuts({
         keyboard,

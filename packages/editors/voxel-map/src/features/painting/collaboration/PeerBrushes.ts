@@ -40,6 +40,7 @@ export class PeerBrushes extends ActorComponent {
     else {
       this.#render(change.clientId);
     }
+    this.actor.world.invalidate();
   };
 
   constructor(

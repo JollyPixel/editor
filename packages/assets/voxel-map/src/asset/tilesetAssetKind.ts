@@ -13,6 +13,7 @@ import {
 import {
   applyCommandToBuffer,
   correctPixelCommand,
+  encodePixelSnapshot,
   isPixelCommand
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
@@ -173,6 +174,15 @@ export class TilesetState {
     };
   }
 
+  async encodeSnapshot(): Promise<TilesetSnapshot> {
+    const document = this.document.toJSON();
+
+    return {
+      pixels: await encodePixelSnapshot(this.pixels),
+      ...document
+    };
+  }
+
   load(
     document: TilesetAssetDocument
   ): void {
@@ -281,6 +291,7 @@ export function tilesetAssetKind(
         return {
           snapshotSchema: tilesetSnapshotSchema,
           snapshot: () => state.snapshot(),
+          encodeSnapshot: () => state.encodeSnapshot(),
           arbitrate: (command) => arbiter.admit(state, command),
           correct: (command, admitted) => correctTilesetCommand(
             state,

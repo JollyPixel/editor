@@ -58,10 +58,14 @@ interface HostParams {
   username: string | undefined;
   offline: boolean;
   workspace: string | undefined;
+  continuousRendering: boolean;
 }
 
 HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
-// { maxFps: 10, samples: 0, username: "Ada", offline: true, workspace: undefined }
+// {
+//   maxFps: 10, samples: 0, username: "Ada", offline: true,
+//   workspace: undefined, continuousRendering: false
+// }
 ```
 
 | Parameter | Field | Accepted values | Used by |
@@ -71,8 +75,10 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
 | `username` | `username` | a non-blank string, trimmed | [`rememberQueryUsername`](./EditorSession.md#identity), in dev only |
 | `offline` | `offline` | present, whatever the value | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
 | `workspace` | `workspace` | a non-blank string, trimmed | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
+| `render` | `continuousRendering` | `continuous` | [`EditorRuntime.create`](./EditorRuntime.md#creation) |
 
-Any other value reads as `undefined`, and an absent `offline` as `false`.
+Any other value reads as `undefined`, and an absent `offline` or `render` as
+`false`.
 
 `offlineWorkspaceQuery(workspace)` writes the `offline` and `workspace`
 parameters, for a shell that opens editor pages on its own offline workspace:

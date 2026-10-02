@@ -107,7 +107,8 @@ function makeView(): VoxelView {
       tilesets.declare(def);
       atlases.registerTexture(def.id, texture);
     },
-    markAllChunksDirty: () => void 0
+    markAllChunksDirty: () => void 0,
+    requestFrame: () => void 0
   };
 
   return fake as unknown as VoxelView;

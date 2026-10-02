@@ -7,6 +7,7 @@ export * from "./pixelCommandActions.ts";
 export * from "./PixelCommandKeys.ts";
 export * from "./PixelReconciler.ts";
 export * from "./PixelSyncClient.ts";
+export { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
 export * from "./ReplayBasis.ts";
 export * from "./PixelWireCodec.ts";
 export * from "./SyncedPixelDocument.ts";

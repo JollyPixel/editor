@@ -54,3 +54,9 @@ The actor world's logger is used unless `options.logger` is supplied; it is
 handed to the document the renderer builds and to the view. When a focus
 object is set, its world position is converted to view-root local coordinates
 on every update before the view ticks.
+
+The view's [frame requests](../core/VoxelView.md#frame-requests) call
+`world.invalidate()`, then `options.requestFrame` when given, and the renderer
+keeps the world animating while `view.pendingRebuilds` is above zero. A runtime
+that renders on demand therefore draws edits, loads and mesh worker results
+without further wiring.

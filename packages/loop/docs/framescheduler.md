@@ -102,6 +102,11 @@ Within floating-point tolerance, `elapsed` equals
 
 `advance(now: number): FrameSchedule` schedules work since the previous
 timestamp. `reset(): void` clears accumulated state and the previous timestamp.
+`skipGap(): void` only forgets the previous timestamp: the next `advance()`
+reports a zero delta and renders, while `time`, `elapsed` and the accumulator
+are kept. Call it when a source resumes after an intended pause, as
+[`GameLoop`](./gameloop.md#rendering-on-demand) does on waking, so the
+gap is not clamped into a burst of fixed steps.
 
 ## Render capping
 

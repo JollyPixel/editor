@@ -6,9 +6,10 @@ Sends stamped commands over a `Room`, keeps them in a pending ledger until the s
 type CommandBody<TCommand extends NetworkCommandHeader> =
   Omit<TCommand, keyof NetworkCommandHeader>;
 
-interface CommandSyncOptions<TCommand extends NetworkCommandHeader> {
+interface CommandSyncOptions<TCommand extends NetworkCommandHeader, TSnapshot = unknown> {
   reconciler?: CommandReconciler<TCommand>;
   resolver?: ConflictResolver<TCommand>;
+  applySnapshot?: (snapshot: TSnapshot) => void | Promise<void>;
 }
 
 class CommandSync<
@@ -18,6 +19,7 @@ class CommandSync<
 > extends Emitter<{
   ready: () => void;
   snapshot: (snapshot: TSnapshot) => void;
+  "snapshot-failed": (error: unknown) => void;
   command: (command: TCommand) => void;
   notice: (notice: TNotice) => void;
   settled: () => void;
@@ -26,7 +28,7 @@ class CommandSync<
 }> {
   constructor(
     room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>,
-    options?: CommandSyncOptions<TCommand>
+    options?: CommandSyncOptions<TCommand, TSnapshot>
   );
 
   readonly room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>;
@@ -65,6 +67,8 @@ A notice's `type` must be a literal other than `"snapshot"`, `"command"`, `"corr
 - `correction` acknowledges its `acks` and its own `seq`, then is reconciled and emitted like a peer command. A server sends one in place of a snapshot to undo what it refused of this client's command.
 - `catch-up` answers a resume; see [Resume](#resume).
 - Any other `type` emits `"notice"` with the whole message, for server notices such as the asset room's `rejected` and `deleted`.
+
+`applySnapshot` loads a snapshot before `"snapshot"` is emitted. When it returns a promise, as an asynchronous decode does, every later message is held and processed in order once the promise settles. A rejection emits `"snapshot-failed"` instead of `"snapshot"`, leaves `ready` unchanged, and releases the held messages.
 
 `"settled"` fires when an acknowledgement empties the ledger. `"acknowledged"` fires for each own echo with the pending command it acknowledges and the echo's `version`.
 

@@ -134,6 +134,18 @@ interface Input {
 `"default"`. `Input` changes it to `"gamepad"` after gamepad activity and back
 to `"default"` after activity from one of the other devices.
 
+## Activity
+
+```ts
+interface Input {
+  get wasActive(): boolean;
+}
+```
+
+`wasActive` is `true` while any device reports `wasActive`: a key held or
+auto-repeating, a mouse button or touch held, or a gamepad input found by the
+latest poll.
+
 ## Exit state
 
 ```ts

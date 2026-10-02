@@ -27,13 +27,20 @@ loop.start({
 export interface GameLoopOptions extends FrameSchedulerOptions {
   // Defaults to a RafFrameSource
   source?: FrameSource;
+  // Defaults to () => true: the loop never sleeps
+  keepAlive?: () => boolean;
+  // Defaults to 2
+  trailingRenders?: number;
 }
 
 new GameLoop(options?: GameLoopOptions);
 ```
 
 Scheduler options (`fixedFps`, `maxFps`, `maxFrameDelta`, `maxStepsPerFrame`,
-`timeScale`) are forwarded to the scheduler it builds.
+`timeScale`) are forwarded to the scheduler it builds. `keepAlive` and
+`trailingRenders` control [rendering on demand](#rendering-on-demand). The
+constructor throws `RangeError` when `trailingRenders` is not an integer
+`>= 0`.
 
 ## Callbacks
 
@@ -63,13 +70,16 @@ export type GameLoopEvents = {
   pause: (payload: { paused: boolean; }) => void;
   panic: (payload: { droppedMs: number; steps: number; }) => void;
   clamp: (payload: { rawDelta: number; frameDelta: number; }) => void;
+  sleep: () => void;
+  wake: () => void;
 };
 ```
 
 `start` is emitted before the source can deliver a frame. `pause` carries the
 new state for both pause and resume operations. `clamp` includes the uncapped
 `rawDelta` and the consumed `frameDelta`; `panic` includes the step count and
-dropped simulation time.
+dropped simulation time. `sleep` and `wake` mark the loop going idle and
+resuming; neither is emitted by `start()` or `stop()`.
 
 ## Properties
 
@@ -78,6 +88,7 @@ dropped simulation time.
 | `scheduler` | Read-only `FrameScheduler` used by the loop. |
 | `source` | Read-only `FrameSource` used by the loop. |
 | `running` | Whether the source has been started by the loop. |
+| `sleeping` | Whether the loop is running but idle, with its source stopped. |
 | `paused` | Whether simulation time is paused. |
 | `timeScale` | Requested simulation scale, including while paused. |
 
@@ -101,6 +112,37 @@ restarts with the ones already registered, pass them to replace the set.
 
 Frames continue while paused. They have `frameDelta: 0`, run no fixed steps,
 and may still render. Paused time is not accumulated for replay on resume.
+
+`invalidate(): void` asks for another rendered frame and wakes a sleeping
+loop. On a stopped loop it does nothing, since `start()` renders anyway.
+
+## Rendering on demand
+
+A loop given a `keepAlive` predicate stops its source while nothing asks for
+frames, for a view that only changes on input or data. It stays `running`, so
+`suspendWhenHidden` keeps working.
+
+```ts
+import { AnimationLoopFrameSource, GameLoop } from "@jolly-pixel/loop";
+
+const loop = new GameLoop({
+  source: new AnimationLoopFrameSource(renderer),
+  keepAlive: () => camera.moving
+});
+
+canvas.addEventListener("pointermove", () => loop.invalidate());
+```
+
+After each frame the loop sleeps once it owes no more rendered frames.
+`start()` and `invalidate()` owe the next rendered frame plus
+`trailingRenders`, and so does every frame after which `keepAlive` returns
+`true`. Only rendered frames pay the debt, so a `maxFps` cap never swallows a
+requested frame, and a frame that calls `invalidate()` always gets at least one
+rendered successor. Without `keepAlive` the loop never sleeps.
+
+Waking calls [`scheduler.skipGap()`](./framescheduler.md#api) before restarting
+the source, so the first frame after a sleep reports a zero delta instead of
+the idle time.
 
 ## suspendWhenHidden
 

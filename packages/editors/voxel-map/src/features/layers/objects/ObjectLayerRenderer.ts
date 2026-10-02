@@ -158,6 +158,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     }
 
     this.#syncGizmo(selectedKey);
+    this.actor.world.invalidate();
   }
 
   #syncGizmo(

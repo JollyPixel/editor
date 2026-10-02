@@ -40,9 +40,6 @@ export class ManualFrameSource implements FrameSource {
     return this.#callback !== null;
   }
 
-  /**
-   * Registers the callback and synchronously emits a priming frame.
-   */
   start(
     callback: FrameCallback
   ): void {

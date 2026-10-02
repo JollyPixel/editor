@@ -59,6 +59,17 @@ export function createTilesetReconciler(
   };
 }
 
+function loadTilesetSnapshot(
+  tileset: TilesetDocument,
+  pixels: PixelSyncTarget,
+  snapshot: TilesetSnapshot
+): void | Promise<void> {
+  const { pixels: pixelSnapshot, ...document } = snapshot;
+  tileset.load(document);
+
+  return loadPixelSnapshot(pixels, pixelSnapshot);
+}
+
 export class TilesetSyncClient extends CommandSync<
   TilesetNetworkCommand,
   TilesetSnapshot,
@@ -86,7 +97,12 @@ export class TilesetSyncClient extends CommandSync<
   ) {
     super(options.room, {
       reconciler: createTilesetReconciler(options.pixels, options.tileset),
-      resolver: options.resolver
+      resolver: options.resolver,
+      applySnapshot: (snapshot) => loadTilesetSnapshot(
+        options.tileset,
+        options.pixels,
+        snapshot
+      )
     });
     const { pixels, tileset } = options;
 
@@ -98,7 +114,6 @@ export class TilesetSyncClient extends CommandSync<
       (command, version) => this.#basis.learn(command.timestamp, version)
     );
     tileset.on("command", this.#sendTilesetCommand);
-    this.on("snapshot", (snapshot) => this.#loadSnapshot(snapshot));
     this.on("command", (command) => this.#applyRemote(command));
   }
 
@@ -106,15 +121,6 @@ export class TilesetSyncClient extends CommandSync<
     this.#pixels.off("buffer-updated", this.#sendPixelCommand);
     this.#tileset.off("command", this.#sendTilesetCommand);
     super.destroy();
-  }
-
-  #loadSnapshot(
-    snapshot: TilesetSnapshot
-  ): void {
-    const { pixels, ...document } = snapshot;
-
-    this.#tileset.load(document);
-    loadPixelSnapshot(this.#pixels, pixels);
   }
 
   #applyRemote(

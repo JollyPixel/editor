@@ -178,3 +178,5 @@ room.on("malformed", ({ payload, errors }) => logger.warn({ payload, errors }));
 A payload that matches emits `message`; one that doesn't emits `malformed` and never reaches the `message` listeners.
 
 `options.parser` accepts anything shaped like `RoomMessageParser`, so you can supply a validator compiled ahead of time instead. `MessageParser` compiles schemas at runtime and lives behind its own subpath for that reason: importing it adds a JSON Schema compiler to a browser bundle, and a client that never passes a parser never pays for one.
+
+`MessageParser.of(protocol)` returns one parser per protocol object and compiles it once. The server parses every room through it, so rooms built from the same `MessageProtocols` share their validators.

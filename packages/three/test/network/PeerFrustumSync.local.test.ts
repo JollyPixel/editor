@@ -45,7 +45,7 @@ describe("local reporting", () => {
   });
 
   test("throttles moves to one report per window", (t) => {
-    t.mock.timers.enable({ apis: ["Date"] });
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     const { room, sync } = setup({ throttleMs: 50 });
     const source = new THREE.Object3D();
     sync.attach(source);
@@ -57,7 +57,40 @@ describe("local reporting", () => {
 
     t.mock.timers.tick(50);
     sync.update();
+    assert.equal(room.patches.length, 2);
     assert.deepEqual(room.patches[1], { frustum: pose(1) });
+  });
+
+  test("reports the last throttled pose when the window ends", (t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+    const { room, sync } = setup({ throttleMs: 50 });
+    const source = new THREE.Object3D();
+    sync.attach(source);
+
+    sync.update();
+    source.position.x = 1;
+    sync.update();
+    source.position.x = 2;
+    sync.update();
+
+    t.mock.timers.tick(50);
+    assert.equal(room.patches.length, 2);
+    assert.deepEqual(room.patches[1], { frustum: pose(2) });
+  });
+
+  test("detach() drops a throttled pose", (t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+    const { room, sync } = setup({ throttleMs: 50 });
+    const source = new THREE.Object3D();
+    sync.attach(source);
+    sync.update();
+    source.position.x = 1;
+    sync.update();
+
+    sync.detach();
+    t.mock.timers.tick(50);
+
+    assert.equal(room.patches.length, 1);
   });
 });
 

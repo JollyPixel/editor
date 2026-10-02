@@ -39,3 +39,7 @@ Returns the peer's last published pose, or `undefined` when the peer has
 published none. `PeerFrustumPose` comes from `@jolly-pixel/three/network`.
 
 Destroying the actor removes every frustum.
+
+A remote pose change calls `world.invalidate()`, so a runtime
+[rendering on demand](../../../runtime/docs/api/Runtime.md#rendering-on-demand)
+draws it.

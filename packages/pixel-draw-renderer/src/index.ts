@@ -51,9 +51,12 @@ export {
   deserializePixelBuffer,
   encodePixelBytes,
   decodePixelBytes,
+  encodePngPixels,
+  decodePngPixels,
   PIXEL_ART_DOCUMENT_VERSION,
   type PixelArtDocumentData,
-  type PixelBufferSnapshot
+  type PixelBufferSnapshot,
+  type PngPixels
 } from "./serialization/index.ts";
 export type {
   PixelBufferHookAction,

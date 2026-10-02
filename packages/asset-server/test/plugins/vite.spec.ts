@@ -4,10 +4,17 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { once } from "node:events";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import {
+  DEFAULT_WEBSOCKET_PATH,
+  WEBSOCKET_PROTOCOL
+} from "@jolly-pixel/network";
 import type {
   HtmlTagDescriptor,
   IndexHtmlTransformContext,
@@ -29,7 +36,8 @@ interface PluginHarness extends AsyncDisposable {
 }
 
 async function pluginHarness(
-  options: Partial<AssetWorkspacePluginOptions>
+  options: Partial<AssetWorkspacePluginOptions>,
+  httpServer: http.Server | null = null
 ): Promise<PluginHarness> {
   const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
   const source = new MemoryAssetSource();
@@ -43,7 +51,7 @@ async function pluginHarness(
   });
   const devServer = {
     middlewares: { use: () => undefined },
-    httpServer: null
+    httpServer
   };
   await callHook(plugin.configureServer, devServer as unknown as ViteDevServer);
 
@@ -131,3 +139,41 @@ describe("createAssetWorkspacePlugin — launch", () => {
     });
   });
 });
+
+describe("createAssetWorkspacePlugin — WebSocket", () => {
+  test("negotiates no compression by default", async() => {
+    assert.strictEqual(await negotiatedExtensions({}), "");
+  });
+
+  test("forwards compression to the WebSocket transport", async() => {
+    assert.match(
+      await negotiatedExtensions({ compression: true }),
+      /^permessage-deflate/
+    );
+  });
+});
+
+async function negotiatedExtensions(
+  options: Partial<AssetWorkspacePluginOptions>
+): Promise<string> {
+  const httpServer = http.createServer();
+  httpServer.listen(0, "127.0.0.1");
+  await once(httpServer, "listening");
+  const { port } = httpServer.address() as AddressInfo;
+  await using _harness = await pluginHarness(options, httpServer);
+
+  const socket = new WebSocket(
+    `ws://127.0.0.1:${port}${DEFAULT_WEBSOCKET_PATH}`,
+    WEBSOCKET_PROTOCOL
+  );
+  const opened = Promise.withResolvers<Event>();
+  socket.addEventListener("open", opened.resolve);
+  socket.addEventListener("error", opened.reject);
+  await opened.promise;
+  const { extensions } = socket;
+  socket.close();
+  httpServer.closeAllConnections();
+  httpServer.close();
+
+  return extensions;
+}

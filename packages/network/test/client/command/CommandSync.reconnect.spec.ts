@@ -12,11 +12,11 @@ import {
   type NetworkCommandHeader,
   type NetworkServerMessage
 } from "#src/index.ts";
-import { captureLogger } from "../helpers/captureLogger.ts";
+import { captureLogger } from "../../helpers/captureLogger.ts";
 import {
   createReconnectingClient,
   type FakeSocket
-} from "../helpers/FakeSocket.ts";
+} from "../../helpers/FakeSocket.ts";
 
 type TestCommand = { action: "set"; value: number; } & NetworkCommandHeader;
 

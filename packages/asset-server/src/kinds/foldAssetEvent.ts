@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import { MessageParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { AssetKindHandler } from "./AssetKindHandler.ts";
@@ -10,13 +11,12 @@ import {
   parseAssetEvent
 } from "../events/AssetEvents.ts";
 import { decodeContent } from "../events/inlineContent.ts";
-import { parseAssetCommand } from "./parseAssetCommand.ts";
 
 export function foldAssetEvent<TState, TCommand>(
   handler: AssetKindHandler<TState, TCommand>,
   state: TState,
   event: EventStore.Event
-): void {
+): TCommand | null {
   const parsed = parseAssetEvent(event);
   if (parsed.ok) {
     const assetEvent = parsed.val;
@@ -35,7 +35,7 @@ export function foldAssetEvent<TState, TCommand>(
         break;
     }
 
-    return;
+    return null;
   }
 
   const { commands } = handler;
@@ -43,11 +43,16 @@ export function foldAssetEvent<TState, TCommand>(
     commands === undefined ||
     event.eventType !== commands.eventType
   ) {
-    return;
+    return null;
   }
 
-  const command = parseAssetCommand(commands, event.eventData);
-  if (command !== null) {
-    commands.apply(state, command);
+  const command = MessageParser.of<TCommand>(commands.protocol)
+    .parse(event.eventData);
+  if (!command.ok) {
+    return null;
   }
+
+  commands.apply(state, command.val.message);
+
+  return command.val.message;
 }

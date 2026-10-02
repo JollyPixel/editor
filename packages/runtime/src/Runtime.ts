@@ -9,7 +9,6 @@ import { StatsRecorder } from "@jolly-pixel/ui/stats";
 import {
   AnimationLoopFrameSource,
   GameLoop,
-  suspendWhenHidden,
   type FrameSchedulerOptions
 } from "@jolly-pixel/loop";
 
@@ -31,26 +30,20 @@ import type {
   MetricsPanel,
   MetricsPanelOptions
 } from "./metrics/MetricsPanel.ts";
-import type {
-  MountedPerformanceStats,
-  PerformanceStatsPosition
-} from "./stats/mountPerformanceStats.ts";
+import { RuntimeSession } from "./session/RuntimeSession.ts";
 import {
-  mountFocusHint,
-  type FocusHintOptions
-} from "./ui/focus/mountFocusHint.ts";
+  RuntimeSessionSettings
+} from "./session/RuntimeSessionSettings.ts";
+import {
+  PerformanceStatsHud,
+  type PerformanceStatsPosition
+} from "./stats/PerformanceStatsHud.ts";
+import type { FocusHintOptions } from "./ui/focus/mountFocusHint.ts";
 import {
   OverlayLayer,
   type OverlayLayerOptions
 } from "./ui/overlay/OverlayLayer.ts";
-import {
-  mountViewHelper,
-  type ViewHelperOptions
-} from "./ui/viewHelper/mountViewHelper.ts";
-
-// CONSTANTS
-const kDefaultStatsPosition = "top-left";
-const kDefaultStatsInset = 8;
+import type { ViewHelperOptions } from "./ui/viewHelper/mountViewHelper.ts";
 
 export type RuntimeCanvasTarget = HTMLCanvasElement | string;
 
@@ -65,6 +58,7 @@ export interface RuntimeOptions<
   };
   focusCanvas?: boolean;
   suspendWhenHidden?: boolean;
+  renderOnDemand?: boolean;
   focusHint?: boolean | FocusHintOptions;
   viewHelper?: boolean | ViewHelperOptions;
   overlay?: OverlayLayerOptions;
@@ -95,14 +89,11 @@ export class Runtime<
   readonly metrics: RuntimeMetrics;
   readonly manager = new THREE.LoadingManager();
 
-  #focusCanvas: boolean;
-  #suspendWhenHidden: boolean;
-  #focusHint: FocusHintOptions | null;
-  #viewHelper: ViewHelperOptions | null;
+  #sessionSettings: RuntimeSessionSettings;
   #adaptivePixelRatio: boolean;
   #logger: Systems.Logger;
-  #session: AbortController | null = null;
-  #statsOverlay: MountedPerformanceStats | null = null;
+  #session: RuntimeSession | null = null;
+  #statsHud: PerformanceStatsHud | null = null;
 
   private constructor(
     canvas: HTMLCanvasElement,
@@ -118,10 +109,7 @@ export class Runtime<
     const output = options.renderer?.output;
     this.#adaptivePixelRatio = output?.pixelRatio === undefined &&
       output?.maxPixelRatio === undefined;
-    this.#focusCanvas = options.focusCanvas ?? true;
-    this.#suspendWhenHidden = options.suspendWhenHidden ?? false;
-    this.#focusHint = resolveToggleOptions(options.focusHint);
-    this.#viewHelper = resolveToggleOptions(options.viewHelper);
+    this.#sessionSettings = new RuntimeSessionSettings(options);
     this.#logger = options.logger ?? new Systems.Logger();
 
     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
@@ -139,8 +127,12 @@ export class Runtime<
       source: new AnimationLoopFrameSource(
         renderer.getSource()
       ),
-      ...options.loop
+      ...options.loop,
+      keepAlive: this.renderOnDemand ?
+        () => this.world.animating || this.world.input.wasActive :
+        undefined
     });
+    this.world.on("invalidate", () => this.loop.invalidate());
   }
 
   static async create<
@@ -171,9 +163,9 @@ export class Runtime<
     );
     const stats = options.includePerformanceStats;
     if (stats) {
-      await logger.step(
+      runtime.#statsHud = await logger.step(
         "stats",
-        () => runtime.#initializePerformanceStats(stats)
+        () => PerformanceStatsHud.mount(runtime, stats)
       );
     }
 
@@ -182,6 +174,14 @@ export class Runtime<
 
   get running() {
     return this.#session !== null;
+  }
+
+  get renderOnDemand(): boolean {
+    return this.#sessionSettings.renderOnDemand;
+  }
+
+  get idle(): boolean {
+    return this.loop.sleeping;
   }
 
   load(
@@ -195,7 +195,11 @@ export class Runtime<
 
   nextFrame(): Promise<void> {
     const { promise, resolve } = Promise.withResolvers<void>();
-    this.world.once("afterUpdate", () => resolve());
+    this.world.once(
+      "afterUpdate",
+      () => resolve()
+    );
+    this.world.invalidate();
 
     return promise;
   }
@@ -222,38 +226,7 @@ export class Runtime<
       return;
     }
 
-    this.#session = new AbortController();
-    const { signal } = this.#session;
-
-    this.canvas.focus();
-    this.canvas.addEventListener(
-      "keypress",
-      (event) => event.preventDefault(),
-      { signal }
-    );
-    if (this.#focusCanvas) {
-      document.addEventListener(
-        "click",
-        () => this.#focusCanvasElement(),
-        { signal }
-      );
-    }
-    if (this.#focusHint !== null) {
-      const focusHint = mountFocusHint(
-        this.canvas,
-        this.overlay,
-        this.#focusHint
-      );
-      signal.addEventListener("abort", () => focusHint.dispose());
-    }
-    if (this.#viewHelper !== null) {
-      const viewHelper = mountViewHelper(
-        this.world.renderer,
-        this.#viewHelper
-      );
-      signal.addEventListener("abort", () => viewHelper.dispose());
-    }
-
+    this.#session = new RuntimeSession(this, this.#sessionSettings);
     this.world.input.exited = false;
     this.world.connect();
     this.world.start();
@@ -267,13 +240,6 @@ export class Runtime<
         }
       }
     });
-    if (this.#suspendWhenHidden) {
-      void this.nextFrame().then(() => {
-        if (!signal.aborted) {
-          suspendWhenHidden(this.loop, this.canvas, signal);
-        }
-      });
-    }
   }
 
   stop() {
@@ -286,59 +252,16 @@ export class Runtime<
     this.world.stop();
     this.world.input.exited = true;
     this.loop.stop();
-    session.abort();
+    session.dispose();
     this.world.disconnect();
   }
 
   dispose() {
     this.stop();
-    this.#statsOverlay?.dispose();
-    this.#statsOverlay = null;
+    this.#statsHud?.dispose();
+    this.#statsHud = null;
     this.metrics.dispose();
     this.overlay.dispose();
     this.world.dispose();
   }
-
-  #focusCanvasElement(): void {
-    if (document.activeElement !== this.canvas) {
-      this.canvas.focus();
-    }
-  }
-
-  async #initializePerformanceStats(
-    option: Exclude<
-      RuntimeOptions<TContext>["includePerformanceStats"],
-      false | undefined
-    >
-  ): Promise<void> {
-    const settings = typeof option === "object" ? option : {};
-    if (settings.mount ?? true) {
-      const { mountPerformanceStats } = await import(
-        "./stats/mountPerformanceStats.ts"
-      );
-      this.#statsOverlay = await mountPerformanceStats(
-        this.stats,
-        this.overlay,
-        {
-          position: settings.position ?? kDefaultStatsPosition,
-          inset: settings.inset ?? kDefaultStatsInset
-        }
-      );
-    }
-    if (settings.panel) {
-      await this.mountMetricsPanel(
-        settings.panel === true ? {} : settings.panel
-      );
-    }
-  }
-}
-
-function resolveToggleOptions<TOptions extends object>(
-  option: boolean | TOptions | undefined
-): Partial<TOptions> | null {
-  if (!option) {
-    return null;
-  }
-
-  return option === true ? {} : option;
 }

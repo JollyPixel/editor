@@ -186,6 +186,8 @@ events itself. The view helper renders into the canvas after each draw. The
 loading screen mounts in `loadingContainer`, outside the overlay.
 
 Details: [runtime API](./docs/api/Runtime.md),
+[metrics](./docs/api/RuntimeMetrics.md),
+[overlay layer](./docs/api/OverlayLayer.md),
 [asset options](./docs/api/runtime-assets.md),
 [scenes and assets](./docs/guides/scenes-and-assets.md),
 [loading screen](./docs/guides/loading-screen.md), and

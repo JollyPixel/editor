@@ -13,7 +13,10 @@ import {
   type AssetCatalog
 } from "@jolly-pixel/asset";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
-import { WebsocketTransport } from "@jolly-pixel/network/node";
+import {
+  WebsocketTransport,
+  type WebsocketCompressionOptions
+} from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import { createCatalogHandler } from "../catalog/httpHandler.ts";
@@ -85,6 +88,11 @@ export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
    */
   socketPath?: string;
   /**
+   * Negotiates permessage-deflate on the WebSocket.
+   * @default false
+   */
+  compression?: boolean | WebsocketCompressionOptions;
+  /**
    * Called once the back-end is up, for a host needing its handles.
    */
   onReady?: (
@@ -115,6 +123,7 @@ export function createAssetWorkspacePlugin(
     catalogPath = CATALOG_URL_PATH,
     prefix,
     socketPath = DEFAULT_WEBSOCKET_PATH,
+    compression,
     onReady,
     launch,
     ...workspaceOptions
@@ -146,7 +155,8 @@ export function createAssetWorkspacePlugin(
         new WebsocketTransport({
           path: socketPath,
           httpServer: devServer.httpServer,
-          server: workspace.server
+          server: workspace.server,
+          compression
         });
       }
 

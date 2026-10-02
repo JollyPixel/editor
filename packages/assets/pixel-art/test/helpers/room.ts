@@ -5,6 +5,7 @@ import type * as network from "@jolly-pixel/network";
 import type {
   PixelBufferSnapshot,
   PixelWireCommand,
+  PixelWireSnapshot,
   PixelServerMessage
 } from "#src/network/types.ts";
 import { MockEmitter } from "./emitter.ts";
@@ -106,7 +107,7 @@ export class MockRoom
   }
 
   deliverSnapshot(
-    snapshot: PixelBufferSnapshot = kEmptySnapshot
+    snapshot: PixelWireSnapshot = kEmptySnapshot
   ): void {
     this.emit("message", {
       type: "snapshot",

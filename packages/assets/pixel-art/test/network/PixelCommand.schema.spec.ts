@@ -180,6 +180,27 @@ describe("pixelCommandProtocol: uv regions", () => {
 });
 
 describe("pixelSnapshotSchema", () => {
+  test("accepts base64 or PNG pixels", () => {
+    const parser = new MessageParser(new MessageProtocol({
+      title: "snapshot",
+      ...pixelSnapshotSchema
+    }));
+    const snapshot = {
+      size: { x: 4, y: 4 },
+      uvRegions: []
+    };
+
+    assert.strictEqual(parser.parse({ ...snapshot, pixels: "AAAA" }).ok, true);
+    assert.strictEqual(parser.parse({
+      ...snapshot,
+      pixels: { format: "png", data: "AAAA" }
+    }).ok, true);
+    assert.strictEqual(parser.parse({
+      ...snapshot,
+      pixels: { format: "webp", data: "AAAA" }
+    }).ok, false);
+  });
+
   test("validates the snapshot's uv regions", () => {
     const parser = new MessageParser(new MessageProtocol({
       title: "snapshot",

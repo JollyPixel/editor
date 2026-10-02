@@ -11,6 +11,7 @@ export interface HostParams {
   username: string | undefined;
   offline: boolean;
   workspace: string | undefined;
+  continuousRendering: boolean;
 }
 
 export const HOST_PARAMS = new QueryParams<HostParams>((query) => {
@@ -26,7 +27,8 @@ export const HOST_PARAMS = new QueryParams<HostParams>((query) => {
       undefined,
     username: username === "" ? undefined : username,
     offline: query.flag(kOfflineParam),
-    workspace: workspace === "" ? undefined : workspace
+    workspace: workspace === "" ? undefined : workspace,
+    continuousRendering: query.string("render")?.trim() === "continuous"
   };
 });
 

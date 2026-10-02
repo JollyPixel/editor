@@ -184,6 +184,7 @@ interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
   catalogPath?: string;
   prefix?: string;
   socketPath?: string;
+  compression?: boolean | WebsocketCompressionOptions;
   onReady?: (workspace: AssetWorkspace) => void | Promise<void>;
   launch?: (request: AssetLaunchRequest) => string | undefined;
 }
@@ -195,7 +196,9 @@ interface AssetLaunchRequest {
 ```
 
 `catalogPath` defaults to `/__jollypixel/catalog`, `prefix` to `/assets/`,
-and `socketPath` to `/ws-sync`. `onReady` runs when the workspace is ready.
+and `socketPath` to `/ws-sync`. `compression` is forwarded to the
+[`WebsocketTransport`](../../network/docs/Transports.md) and is off by default.
+`onReady` runs when the workspace is ready.
 `launch` selects the asset an HTML page opens.
 
 Everything is built inside `configureServer`, so a production build never

@@ -1,5 +1,10 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
+import {
+  mkdirSync,
+  watch,
+  type FSWatcher
+} from "node:fs";
 import path from "node:path";
 import type {
   IncomingMessage,
@@ -32,12 +37,10 @@ export const EDITOR_PAGE_SETTLE_MS = 300;
 const kResolvedEditorsModuleId = `\0${EDITORS_MODULE_ID}`;
 
 export interface EditorPagesServer {
-  watcher: {
-    add(paths: readonly string[]): unknown;
-    on(
-      event: "all",
-      listener: (eventName: string, file: string) => void
-    ): unknown;
+  config: {
+    logger: {
+      warn(message: string): void;
+    };
   };
   ws: {
     send(
@@ -75,32 +78,42 @@ export function createEditorPagesHandler(
 export function watchEditorPages(
   server: EditorPagesServer,
   editors: readonly EditorPackage[]
-): void {
+): () => void {
   const pending = new Map<string, ReturnType<typeof setTimeout>>();
+  const watchers: FSWatcher[] = editors.map((editor) => {
+    mkdirSync(editor.dist, { recursive: true });
 
-  server.watcher.add(editors.map((editor) => editor.dist));
-  server.watcher.on("all", (_event, file) => {
-    const editor = editors.find(
-      (candidate) => isInside(candidate.dist, file)
-    );
-    if (editor === undefined) {
-      return;
-    }
-
-    clearTimeout(pending.get(editor.name));
-    pending.set(editor.name, setTimeout(() => {
-      pending.delete(editor.name);
-      server.ws.send(EDITOR_PAGE_REBUILT_EVENT, {
-        name: editor.name
-      });
-    }, EDITOR_PAGE_SETTLE_MS));
+    return watch(editor.dist, { recursive: true }, () => {
+      clearTimeout(pending.get(editor.name));
+      pending.set(editor.name, setTimeout(() => {
+        pending.delete(editor.name);
+        server.ws.send(EDITOR_PAGE_REBUILT_EVENT, {
+          name: editor.name
+        });
+      }, EDITOR_PAGE_SETTLE_MS));
+    }).on("error", (error) => {
+      server.config.logger.warn(
+        `editor page watcher for ${editor.name} failed: ${error.message}`
+      );
+    });
   });
+
+  return () => {
+    for (const watcher of watchers) {
+      watcher.close();
+    }
+    for (const timer of pending.values()) {
+      clearTimeout(timer);
+    }
+    pending.clear();
+  };
 }
 
 export function editorPagesPlugin(
   editors: readonly EditorPackage[]
 ): Plugin[] {
   let outDir: string;
+  let unwatch: (() => void) | null = null;
 
   return [
     {
@@ -113,7 +126,11 @@ export function editorPagesPlugin(
       },
       configureServer(server) {
         server.middlewares.use(createEditorPagesHandler(editors));
-        watchEditorPages(server, editors);
+        unwatch = watchEditorPages(server, editors);
+      },
+      buildEnd() {
+        unwatch?.();
+        unwatch = null;
       }
     },
     {
@@ -157,15 +174,4 @@ function unknownEditorPage(
   }
 
   next?.();
-}
-
-function isInside(
-  directory: string,
-  file: string
-): boolean {
-  const relative = path.relative(directory, file);
-
-  return relative !== "" &&
-    !relative.startsWith("..") &&
-    !path.isAbsolute(relative);
 }

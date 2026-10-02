@@ -97,6 +97,9 @@ The guides cover runtime setup and customization:
 
 - [`Runtime`](./docs/api/Runtime.md): construction, loading, services, and
   lifecycle.
+- [`RuntimeMetrics`](./docs/api/RuntimeMetrics.md): metrics, renderer
+  counters, and the readout panel.
+- [`OverlayLayer`](./docs/api/OverlayLayer.md): HTML mounted over the canvas.
 - [Runtime asset options](./docs/api/runtime-assets.md): catalogs and platform
   loaders.
 - [`SceneManager`](../engine/docs/systems/scene-manager.md): scene-load state,

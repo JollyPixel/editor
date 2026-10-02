@@ -56,6 +56,7 @@ export class VoxelRenderer extends ActorComponent {
       focus = null,
       document = {},
       logger = actor.world.logger,
+      requestFrame,
       ...viewOptions
     } = options;
 
@@ -66,8 +67,17 @@ export class VoxelRenderer extends ActorComponent {
       new VoxelDocument({ logger, ...document });
     this.view = new VoxelView(this.document, {
       ...viewOptions,
-      logger
+      logger,
+      requestFrame: () => {
+        actor.world.invalidate();
+        requestFrame?.();
+      }
     });
+    this.addTeardown(
+      actor.world.keepAlive(
+        () => this.view.pendingRebuilds > 0
+      )
+    );
   }
 
   awake(): void {

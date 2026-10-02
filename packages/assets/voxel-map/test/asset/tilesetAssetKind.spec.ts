@@ -15,6 +15,11 @@ import {
   type AssetEventData
 } from "@jolly-pixel/asset-server";
 import { PIXEL_COMMAND_ACTIONS } from "@jolly-pixel/asset.pixel-art/client";
+import {
+  MessageParser,
+  MessageProtocol
+} from "@jolly-pixel/network";
+import { decodePngPixels } from "@jolly-pixel/pixel-draw.renderer";
 import { TILESET_DOCUMENT_COMMAND_ACTIONS } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -28,7 +33,11 @@ import {
   tilesetAssetKind,
   type TilesetAssetDocument
 } from "#src/index.ts";
-import type { TilesetNetworkCommand } from "#src/network/server.ts";
+import {
+  tilesetSnapshotSchema,
+  type TilesetNetworkCommand,
+  type TilesetSnapshot
+} from "#src/network/server.ts";
 import {
   makeBlockDef,
   makeResolvedBlockDef
@@ -228,6 +237,36 @@ describe("tilesetAssetKind", () => {
     foldAssetEvent(handler, state, event(TILESET_COMMAND, null));
 
     assert.equal(state.document.blocks.has(3), false);
+  });
+
+  test("live() encodes the snapshot pixels as a PNG", async() => {
+    const handler = tilesetAssetKind();
+    const state = handler.create("asset-1");
+    foldAssetEvent(handler, state, documentEvent(seeded()));
+    const protocol = handler.commands!.live!({
+      assetId: "asset-1",
+      kind: TILESET_KIND,
+      roomId: `${TILESET_KIND}:asset-1`,
+      state
+    });
+    const parser = new MessageParser(new MessageProtocol({
+      title: "snapshot",
+      ...tilesetSnapshotSchema
+    }));
+
+    const encoded = await protocol.encodeSnapshot!() as TilesetSnapshot;
+    const { pixels, ...document } = encoded;
+    const { pixels: plainPixels, ...plainDocument } =
+      protocol.snapshot() as TilesetSnapshot;
+
+    assert.strictEqual(parser.parse(encoded).ok, true);
+    assert.deepEqual(document, plainDocument);
+    assert.ok(typeof pixels.pixels !== "string");
+    assert.deepEqual(
+      [...await decodePngPixels(pixels.pixels, pixels.size)],
+      [...state.pixels.pixels()]
+    );
+    assert.deepEqual(pixels.size, plainPixels.size);
   });
 
   test("live() snapshots the pixels next to the document", () => {

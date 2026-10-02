@@ -4,18 +4,17 @@ import {
   type ConflictResolver
 } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
-import {
-  decodePixelBytes,
-  type PixelBufferHookEvent,
-  type PixelBufferHookListener,
-  type PixelDocument
+import type {
+  PixelBufferHookEvent,
+  PixelBufferHookListener,
+  PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type {
   PixelArtRoom,
-  PixelBufferSnapshot,
-  PixelWireCommand
+  PixelWireCommand,
+  PixelWireSnapshot
 } from "./types.ts";
 import {
   packPixelEvent,
@@ -23,6 +22,7 @@ import {
 } from "./PixelWireCodec.ts";
 import { createPixelReconciler } from "./PixelReconciler.ts";
 import { ReplayBasis } from "./ReplayBasis.ts";
+import { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
 
 export interface PixelSyncTarget extends Pick<
   PixelDocument,
@@ -38,20 +38,9 @@ export interface PixelSyncClientOptions {
   resolver?: ConflictResolver;
 }
 
-export function loadPixelSnapshot(
-  target: Pick<PixelDocument, "loadSnapshot">,
-  snapshot: PixelBufferSnapshot
-): void {
-  target.loadSnapshot(
-    snapshot.size,
-    decodePixelBytes(snapshot.pixels),
-    snapshot.uvRegions
-  );
-}
-
 export class PixelSyncClient extends CommandSync<
   PixelWireCommand,
-  PixelBufferSnapshot,
+  PixelWireSnapshot,
   AssetRoomNotice
 > {
   #document: PixelSyncTarget;
@@ -69,7 +58,8 @@ export class PixelSyncClient extends CommandSync<
   ) {
     super(options.room, {
       reconciler: createPixelReconciler(options.document),
-      resolver: options.resolver
+      resolver: options.resolver,
+      applySnapshot: (snapshot) => loadPixelSnapshot(options.document, snapshot)
     });
     const { document } = options;
 
@@ -79,7 +69,6 @@ export class PixelSyncClient extends CommandSync<
       "acknowledged",
       (command, version) => this.#basis.learn(command.timestamp, version)
     );
-    this.on("snapshot", (snapshot) => loadPixelSnapshot(document, snapshot));
     this.on(
       "command",
       (command) => document.applyRemoteCommand(unpackPixelCommand(command))

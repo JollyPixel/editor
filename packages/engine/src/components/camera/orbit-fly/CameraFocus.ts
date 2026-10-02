@@ -36,6 +36,7 @@ export interface CameraFocus {
   readonly isOrbiting: boolean;
   readonly isLocked: boolean;
   readonly pivot: THREE.Vector3Like | null;
+  readonly settled: boolean;
 
   enter(
     request: CameraFocusEnterRequest
@@ -64,6 +65,7 @@ export class NoCameraFocus implements CameraFocus {
   readonly isOrbiting = false;
   readonly isLocked = false;
   readonly pivot = null;
+  readonly settled = true;
 
   enter(): null {
     return null;

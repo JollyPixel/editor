@@ -127,13 +127,17 @@ export class LocalBrush extends ActorComponent {
       ...color === undefined ? {} : { color },
       onCursorChange: options.onCursorChange
     });
-    const markDirty = () => this.#preview.markDirty();
+    const markDirty = () => {
+      this.#preview.markDirty();
+      actor.world.invalidate();
+    };
     const markAimStale = () => {
       this.#staleAimFrames = kStaleAimFrames;
     };
     view.document.on("command", markAimStale);
     this.#unsubscribers = [
       () => view.document.off("command", markAimStale),
+      actor.world.keepAlive(() => this.#staleAimFrames > 0),
       brush.subscribe("change", markDirty),
       brush.subscribe("blockChange", markDirty),
       selection.subscribe("change", () => {
@@ -155,6 +159,7 @@ export class LocalBrush extends ActorComponent {
 
     this.#aimer.skyRadius = value;
     this.#preview.markDirty();
+    this.actor.world.invalidate();
   }
 
   override destroy(): void {

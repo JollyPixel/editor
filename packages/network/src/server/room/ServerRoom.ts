@@ -72,8 +72,12 @@ export class ServerRoom {
     });
 
     const { inbound, outbound } = extension.protocols;
-    this.#inbound = inbound === null ? null : new MessageParser(inbound);
-    this.#outbound = outbound === null ? null : new MessageParser(outbound);
+    this.#inbound = inbound === null
+      ? null
+      : MessageParser.of(inbound);
+    this.#outbound = outbound === null
+      ? null
+      : MessageParser.of(outbound);
 
     this.#roomBroadcast = {
       broadcast: (payload) => this.#broadcast(payload),
@@ -374,7 +378,11 @@ export class ServerRoom {
     const { identity } = record;
     const { role } = identity;
     if (this.#inbound === null) {
-      await this.#deliverMessage(clientId, identity, payload);
+      await this.#deliverMessage(
+        clientId,
+        identity,
+        payload
+      );
 
       return;
     }
@@ -411,7 +419,11 @@ export class ServerRoom {
       return;
     }
 
-    await this.#deliverMessage(clientId, identity, message);
+    await this.#deliverMessage(
+      clientId,
+      identity,
+      message
+    );
   }
 
   async resync(

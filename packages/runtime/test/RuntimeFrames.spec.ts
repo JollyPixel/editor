@@ -9,6 +9,12 @@ import { Runtime } from "../src/Runtime.ts";
 class SteppedWorld {
   #listeners: Array<() => void> = [];
 
+  invalidations = 0;
+
+  invalidate(): void {
+    this.invalidations++;
+  }
+
   once(
     _event: "afterUpdate",
     listener: () => void
@@ -66,6 +72,17 @@ describe("Runtime frame stepping", () => {
 
     await world.step();
     assert.equal(frames.settled, true);
+  });
+
+  test("each awaited frame requests one", async() => {
+    const world = new SteppedWorld();
+    const frames = track(steppedRuntime(world).frames(2));
+
+    await world.step();
+    await world.step();
+
+    assert.equal(frames.settled, true);
+    assert.equal(world.invalidations, 2);
   });
 
   test("frames(0) resolves without an update", async() => {

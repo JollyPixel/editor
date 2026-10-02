@@ -63,12 +63,38 @@ interface RoomHarness extends AsyncDisposable {
   send(clientId: string, payload: unknown): Promise<void>;
 }
 
+interface RoomHarnessOptions {
+  graceMs?: number;
+  kind?: CounterKind;
+  handler?: AssetKindHandler<CounterState>;
+}
+
+function restoringCounterHandler(
+  restored: Array<[unknown, number]>
+): AssetKindHandler<CounterState> {
+  const inner = liveCounterHandler({ delay: 0, maxDelay: 0 });
+  const commands = inner.commands!;
+
+  return {
+    ...inner,
+    commands: {
+      ...commands,
+      live: (binding) => {
+        return {
+          ...commands.live!(binding),
+          restore: (command, version) => restored.push([command, version])
+        };
+      }
+    }
+  };
+}
+
 async function roomHarness(
-  options: { graceMs?: number; kind?: CounterKind; } = {}
+  options: RoomHarnessOptions = {}
 ): Promise<RoomHarness> {
   const { graceMs = 1_000, kind = "live" } = options;
   const sync = await syncHarness({
-    handlers: [counterKinds[kind]()],
+    handlers: [options.handler ?? counterKinds[kind]()],
     snapshot: { delay: 0, maxDelay: 0 }
   });
 
@@ -202,6 +228,29 @@ describe("registerAssetRooms — admission", () => {
     await harness.join("A", new AssetRoom("binary", harness.assetId).toString());
 
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  });
+});
+
+describe("registerAssetRooms — restore", () => {
+  test("a cold room restores its arbiter from the replayed commands", async() => {
+    const restored: Array<[unknown, number]> = [];
+    await using harness = await roomHarness({
+      handler: restoringCounterHandler(restored)
+    });
+    const versions = [1, 2].map(() => harness.sync.eventStore.writer.append({
+      assetType: "counter",
+      assetId: harness.assetId,
+      eventType: COUNTER_INCREMENTED,
+      eventData: { action: "increment" },
+      actor: kActor
+    }).unwrap().eventVersion);
+
+    await harness.join("alice");
+
+    assert.deepEqual(restored, versions.map((version) => [
+      { action: "increment" },
+      version
+    ]));
   });
 });
 

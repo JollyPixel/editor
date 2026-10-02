@@ -118,6 +118,9 @@ interface OrbitFlyCamera {
   // The current pivot position, or null when not orbiting.
   get orbitPivot(): THREE.Vector3Like | null;
 
+  // True while the camera glides or its pivot/trail distance damps.
+  get moving(): boolean;
+
   // Snaps position/orientation, dropping any carried momentum.
   teleport(pose: CameraPose): void;
 
@@ -129,6 +132,11 @@ interface OrbitFlyCamera {
   exitOrbitFocus(): void;
 }
 ```
+
+The camera keeps an on-demand host rendering through
+[`world.keepAlive()`](../systems/world.md#rendering-on-demand) while it is
+enabled and `moving`. `teleport()`, `enterOrbitFocus()` and `exitOrbitFocus()`
+call `world.invalidate()`.
 
 ## See also
 

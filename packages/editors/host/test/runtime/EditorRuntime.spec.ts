@@ -7,9 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { Systems } from "@jolly-pixel/engine";
-import type {
+import {
   Runtime,
-  RuntimeLoadOptions
+  type RuntimeLoadOptions,
+  type RuntimeOptions
 } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
@@ -32,6 +33,40 @@ function recordingRuntime(
 
 describe("EditorRuntime", () => {
   const scene = {} as Systems.Scene;
+
+  test("renders on demand unless the editor or the render param opts out", async(t) => {
+    const created: Array<RuntimeOptions | undefined> = [];
+    const runtime = {
+      world: {
+        input: {
+          keyboard: {
+            addGuard: () => undefined
+          }
+        }
+      }
+    } as unknown as Runtime;
+    t.mock.method(Runtime, "create", (_canvas: unknown, options?: RuntimeOptions) => {
+      created.push(options);
+
+      return Promise.resolve(runtime);
+    });
+
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read("")
+    });
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read("?render=continuous")
+    });
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read(""),
+      renderOnDemand: false
+    });
+
+    assert.deepEqual(
+      created.map((options) => options?.renderOnDemand),
+      [true, false, false]
+    );
+  });
 
   test("the max-fps param overrides the editor fallback", async() => {
     const loads: Array<RuntimeLoadOptions> = [];

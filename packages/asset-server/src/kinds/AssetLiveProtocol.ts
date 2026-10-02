@@ -33,6 +33,8 @@ export interface AssetLiveProtocol<TCommand = unknown> {
 
   snapshot(): unknown;
 
+  encodeSnapshot?(): Promise<unknown>;
+
   arbitrate(
     command: TCommand
   ): AssetArbitration<TCommand> | null;

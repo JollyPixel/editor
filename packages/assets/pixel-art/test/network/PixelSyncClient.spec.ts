@@ -7,7 +7,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  encodePngPixels,
+  type PixelBufferHookEvent
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
@@ -167,6 +170,32 @@ describe("PixelSyncClient — remote messages", () => {
 
     assert.deepStrictEqual(callsOf(host.loadSnapshot), [
       [{ x: 1, y: 1 }, new Uint8ClampedArray([1, 2, 3, 255]), []]
+    ]);
+  });
+
+  test("loads a PNG snapshot before the commands that follow it", async() => {
+    const { room, host, client } = setup();
+    const order: string[] = [];
+    host.loadSnapshot.mock.mockImplementation(() => {
+      order.push("snapshot");
+    });
+    host.applyRemoteCommand.mock.mockImplementation(() => {
+      order.push("command");
+    });
+    const size = { x: 1, y: 1 };
+
+    room.deliverSnapshot({
+      size,
+      pixels: await encodePngPixels(new Uint8ClampedArray([1, 2, 3, 255]), size),
+      uvRegions: []
+    });
+    room.deliverCommand(command("resized", kResized.metadata, { clientId: "peer" }));
+    assert.deepStrictEqual(order, []);
+    await client.whenReady();
+
+    assert.deepStrictEqual(order, ["snapshot", "command"]);
+    assert.deepStrictEqual(callsOf(host.loadSnapshot), [
+      [size, new Uint8ClampedArray([1, 2, 3, 255]), []]
     ]);
   });
 

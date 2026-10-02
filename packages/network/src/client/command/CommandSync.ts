@@ -2,13 +2,17 @@
 import { Emitter, once } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { Room } from "./Room.ts";
+import type { Room } from "../Room.ts";
 import type { CommandReconciler } from "./CommandReconciler.ts";
+import { CommandIntegrator } from "./CommandIntegrator.ts";
+import {
+  PendingLedger,
+  type LedgerEntry
+} from "./PendingLedger.ts";
 import {
   LastWriteWinsResolver,
-  type ConflictRecord,
   type ConflictResolver
-} from "../sync/ConflictResolver.ts";
+} from "../../sync/ConflictResolver.ts";
 import type {
   NetworkAcks,
   NetworkCommandHeader,
@@ -16,27 +20,12 @@ import type {
   NetworkServerMessage,
   NetworkServerNoticeOf,
   NetworkSyncMessage
-} from "../sync/types.ts";
-
-// CONSTANTS
-const kMaxHeldCommands = 500;
-const kMaxHeldBytes = 2 * 1024 * 1024;
+} from "../../sync/types.ts";
 
 export type CommandBody<TCommand extends NetworkCommandHeader> =
   TCommand extends unknown ?
     Omit<TCommand, keyof NetworkCommandHeader> :
     never;
-
-interface LedgerEntry<TCommand extends NetworkCommandHeader> {
-  readonly command: TCommand;
-  sent: boolean;
-  applied: boolean;
-}
-
-interface KeyedEntry<TCommand extends NetworkCommandHeader> {
-  readonly entry: LedgerEntry<TCommand>;
-  readonly keys: ReadonlySet<string>;
-}
 
 function isSyncMessage<TCommand, TSnapshot>(
   message: { type: string; }
@@ -47,9 +36,13 @@ function isSyncMessage<TCommand, TSnapshot>(
     message.type === "catch-up";
 }
 
-export interface CommandSyncOptions<TCommand extends NetworkCommandHeader> {
+export interface CommandSyncOptions<
+  TCommand extends NetworkCommandHeader,
+  TSnapshot = unknown
+> {
   reconciler?: CommandReconciler<TCommand>;
   resolver?: ConflictResolver<TCommand>;
+  applySnapshot?: (snapshot: TSnapshot) => void | Promise<void>;
 }
 
 export type CommandSyncEventMap<
@@ -59,6 +52,7 @@ export type CommandSyncEventMap<
 > = {
   ready: () => void;
   snapshot: (snapshot: TSnapshot) => void;
+  "snapshot-failed": (error: unknown) => void;
   command: (command: TCommand) => void;
   notice: (notice: TNotice) => void;
   settled: () => void;
@@ -80,18 +74,29 @@ export class CommandSync<
   #version = 0;
   #ready = false;
   #resyncing = false;
-  #overflowed = false;
-  #heldBytes = 0;
   #clientId: string | null = null;
   #resumingFrom: string | null = null;
-  #ledger: LedgerEntry<TCommand>[] = [];
-  #reconciler: CommandReconciler<TCommand> | null;
-  #resolver: ConflictResolver<TCommand>;
+  #ledger = new PendingLedger<TCommand>();
+  #integrator: CommandIntegrator<TCommand>;
+  #applySnapshot: ((snapshot: TSnapshot) => void | Promise<void>) | null;
+  #deferred: NetworkServerMessage<TCommand, TSnapshot, TNotice>[] | null = null;
+  #destroyed = false;
   #whenReady: Promise<void> = once(this, "ready").then(() => undefined);
 
   #onMessage = (
     message: NetworkServerMessage<TCommand, TSnapshot, TNotice>
   ): void => {
+    if (this.#deferred === null) {
+      this.#receive(message);
+    }
+    else {
+      this.#deferred.push(message);
+    }
+  };
+
+  #receive(
+    message: NetworkServerMessage<TCommand, TSnapshot, TNotice>
+  ): void {
     if (!isSyncMessage<TCommand, TSnapshot>(message)) {
       this.emit("notice", message);
 
@@ -100,7 +105,7 @@ export class CommandSync<
 
     switch (message.type) {
       case "snapshot":
-        this.#handleSnapshot(message.data, message.version, message.acks);
+        this.#receiveSnapshot(message.data, message.version, message.acks);
         break;
       case "correction":
         this.#handleCorrection(message.data, message.acks);
@@ -111,20 +116,19 @@ export class CommandSync<
       default:
         this.#handleCommand(message.data, message.version);
     }
-  };
+  }
 
   #onSync = (): void => {
     const previous = this.#clientId;
     this.#clientId = this.room.clientId;
     if (previous !== null && previous !== this.#clientId) {
-      if (!this.#overflowed) {
+      if (!this.#ledger.overflowed) {
         this.#resumingFrom = previous;
 
         return;
       }
 
-      this.#ledger = [];
-      this.#overflowed = false;
+      this.#ledger.clear();
     }
 
     this.#transmitHeld();
@@ -132,12 +136,21 @@ export class CommandSync<
 
   constructor(
     room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>,
-    options: CommandSyncOptions<TCommand> = {}
+    options: CommandSyncOptions<TCommand, TSnapshot> = {}
   ) {
     super();
     this.room = room;
-    this.#reconciler = options.reconciler ?? null;
-    this.#resolver = options.resolver ?? new LastWriteWinsResolver();
+    this.#integrator = new CommandIntegrator({
+      ledger: this.#ledger,
+      reconciler: options.reconciler ?? null,
+      resolver: options.resolver ?? new LastWriteWinsResolver(),
+      apply: (command) => this.emit("command", command),
+      resync: () => {
+        this.#resyncing = true;
+        this.room.resync();
+      }
+    });
+    this.#applySnapshot = options.applySnapshot ?? null;
     this.room.on("message", this.#onMessage);
     this.room.on("sync", this.#onSync);
     this.room.resumeWith(() => this.#resume());
@@ -148,7 +161,7 @@ export class CommandSync<
   }
 
   get pending(): number {
-    return this.#ledger.length;
+    return this.#ledger.size;
   }
 
   get version(): number {
@@ -156,7 +169,7 @@ export class CommandSync<
   }
 
   get overflowed(): boolean {
-    return this.#overflowed;
+    return this.#ledger.overflowed;
   }
 
   whenReady(): Promise<void> {
@@ -180,26 +193,27 @@ export class CommandSync<
       applied: true
     };
     if (this.room.clientId !== null && this.#resumingFrom === null) {
-      this.#ledger.push(entry);
+      this.#ledger.add(entry);
       this.#transmit(entry);
     }
-    else if (!this.#overflowed) {
-      this.#ledger.push(entry);
-      this.#hold(body);
+    else if (!this.#ledger.overflowed && this.#ledger.hold(entry, body)) {
+      this.emit("overflow");
     }
 
     return entry.command;
   }
 
   destroy(): void {
+    this.#destroyed = true;
+    this.#deferred = null;
     this.room.off("message", this.#onMessage);
     this.room.off("sync", this.#onSync);
     this.room.resumeWith(null);
-    this.#ledger = [];
+    this.#ledger.clear();
   }
 
   #resume(): NetworkResume | undefined {
-    if (this.#clientId === null || this.#overflowed) {
+    if (this.#clientId === null || this.#ledger.overflowed) {
       return undefined;
     }
 
@@ -211,25 +225,9 @@ export class CommandSync<
       };
   }
 
-  #hold(
-    body: CommandBody<TCommand>
-  ): void {
-    this.#heldBytes += JSON.stringify(body).length;
-    if (
-      this.#ledger.length > kMaxHeldCommands ||
-      this.#heldBytes > kMaxHeldBytes
-    ) {
-      this.#overflowed = true;
-      this.emit("overflow");
-    }
-  }
-
   #transmitHeld(): void {
-    this.#heldBytes = 0;
-    for (const entry of this.#ledger) {
-      if (!entry.sent) {
-        this.#transmit(entry);
-      }
+    for (const entry of this.#ledger.takeUnsent()) {
+      this.#transmit(entry);
     }
   }
 
@@ -246,9 +244,7 @@ export class CommandSync<
 
   #finishResume(): void {
     this.#resumingFrom = null;
-    for (const entry of this.#ledger) {
-      entry.sent = false;
-    }
+    this.#ledger.markUnsent();
     this.#transmitHeld();
   }
 
@@ -264,17 +260,8 @@ export class CommandSync<
     clientId: string | null,
     seq: number
   ): LedgerEntry<TCommand>[] {
-    let remaining = this.#ledger.findIndex(
-      (entry) => !entry.sent ||
-        entry.command.clientId !== clientId ||
-        entry.command.seq > seq
-    );
-    if (remaining === -1) {
-      remaining = this.#ledger.length;
-    }
-    const acknowledged = this.#ledger.slice(0, remaining);
-    this.#ledger = this.#ledger.slice(remaining);
-    if (acknowledged.length > 0 && this.#ledger.length === 0) {
+    const acknowledged = this.#ledger.acknowledge(clientId, seq);
+    if (acknowledged.length > 0 && this.#ledger.size === 0) {
       this.emit("settled");
     }
 
@@ -315,7 +302,7 @@ export class CommandSync<
       this.#acknowledgeEcho(command, version);
     }
     else {
-      this.#integrate(command, version);
+      this.#integrator.integrate(command, version);
     }
     this.#noteVersion(version);
   }
@@ -332,7 +319,7 @@ export class CommandSync<
 
     this.emit("acknowledged", landed.command, version);
     if (!landed.applied) {
-      this.#integrate(command, version);
+      this.#integrator.integrate(command, version);
     }
   }
 
@@ -348,14 +335,7 @@ export class CommandSync<
       return;
     }
 
-    if (this.#reconciler === null) {
-      this.emit("command", correction);
-      this.#replayPending();
-
-      return;
-    }
-
-    this.#integrate(correction);
+    this.#integrator.integrateCorrection(correction);
   }
 
   #handleCatchUp(
@@ -368,13 +348,51 @@ export class CommandSync<
         this.#acknowledgeEcho(command);
       }
       else {
-        this.#integrate(command);
+        this.#integrator.integrate(command);
       }
     }
     this.#noteVersion(version);
     this.#acknowledgeFrom(acks);
     if (this.#resumingFrom !== null) {
       this.#finishResume();
+    }
+  }
+
+  #receiveSnapshot(
+    snapshot: TSnapshot,
+    version: number | undefined,
+    acks: NetworkAcks | undefined
+  ): void {
+    const applied = this.#applySnapshot?.(snapshot);
+    if (applied === undefined) {
+      this.#handleSnapshot(snapshot, version, acks);
+
+      return;
+    }
+
+    this.#deferred = [];
+    applied.then(
+      () => this.#releaseDeferred(
+        () => this.#handleSnapshot(snapshot, version, acks)
+      ),
+      (error: unknown) => this.#releaseDeferred(
+        () => this.emit("snapshot-failed", error)
+      )
+    );
+  }
+
+  #releaseDeferred(
+    settle: () => void
+  ): void {
+    const deferred = this.#deferred ?? [];
+    this.#deferred = null;
+    if (this.#destroyed) {
+      return;
+    }
+
+    settle();
+    for (const message of deferred) {
+      this.#onMessage(message);
     }
   }
 
@@ -389,7 +407,7 @@ export class CommandSync<
       this.#version = version;
     }
     this.emit("snapshot", snapshot);
-    this.#replayPending();
+    this.#integrator.replayPending();
     if (this.#resumingFrom !== null) {
       this.#finishResume();
     }
@@ -397,121 +415,6 @@ export class CommandSync<
     if (!this.#ready) {
       this.#ready = true;
       this.emit("ready");
-    }
-  }
-
-  #integrate(
-    command: TCommand,
-    version?: number
-  ): void {
-    const reconciler = this.#reconciler;
-    if (reconciler === null || this.#ledger.length === 0) {
-      this.emit("command", command);
-
-      return;
-    }
-
-    if (!this.#integrateKeyed(reconciler, command, version)) {
-      this.#rebase(reconciler, command);
-    }
-  }
-
-  #integrateKeyed(
-    reconciler: CommandReconciler<TCommand>,
-    command: TCommand,
-    version: number | undefined
-  ): boolean {
-    const keys = reconciler.keys(command);
-    if (keys === null) {
-      return false;
-    }
-
-    const pending: KeyedEntry<TCommand>[] = [];
-    for (const entry of this.#ledger) {
-      const pendingKeys = entry.applied ? reconciler.keys(entry.command) : null;
-      if (pendingKeys === null) {
-        return false;
-      }
-      pending.push({
-        entry,
-        keys: new Set(pendingKeys)
-      });
-    }
-
-    const existing: ConflictRecord = version === undefined ?
-      command :
-      { ...command, version };
-    const keep: number[] = [];
-    const outliving = new Set<LedgerEntry<TCommand>>();
-    keys.forEach((key, index) => {
-      const winners = pending.filter(
-        (keyed) => this.#outlives(keyed, key, existing)
-      );
-      if (winners.length === 0) {
-        keep.push(index);
-      }
-      for (const winner of winners) {
-        outliving.add(winner.entry);
-      }
-    });
-
-    if (keep.length === keys.length) {
-      this.emit("command", command);
-    }
-    else if (keep.length > 0) {
-      const narrowed = reconciler.narrow(command, keep);
-      if (narrowed === null) {
-        this.emit("command", command);
-        for (const entry of outliving) {
-          entry.applied = reconciler.replay(entry.command);
-        }
-      }
-      else {
-        this.emit("command", narrowed);
-      }
-    }
-
-    return true;
-  }
-
-  #outlives(
-    keyed: KeyedEntry<TCommand>,
-    key: string,
-    existing: ConflictRecord
-  ): boolean {
-    return keyed.keys.has(key) && this.#resolver.resolve({
-      incoming: keyed.entry.command,
-      existing
-    }) === "accept";
-  }
-
-  #rebase(
-    reconciler: CommandReconciler<TCommand>,
-    command: TCommand
-  ): void {
-    const applied = this.#ledger
-      .filter((entry) => entry.applied)
-      .map((entry) => entry.command);
-    if (!reconciler.revert(applied)) {
-      this.#resyncing = true;
-      this.room.resync();
-
-      return;
-    }
-
-    this.emit("command", command);
-    this.#replayPending();
-  }
-
-  #replayPending(): void {
-    const reconciler = this.#reconciler;
-    for (const entry of [...this.#ledger]) {
-      if (reconciler === null) {
-        this.emit("command", entry.command);
-      }
-      else {
-        entry.applied = reconciler.replay(entry.command);
-      }
     }
   }
 }

@@ -40,6 +40,7 @@ export interface PeerFrustumSyncOptions {
     profile: PeerMetadata
   ) => THREE.ColorRepresentation;
   frustum?: Omit<PeerFrustumOptions, "displayName">;
+  requestFrame?: () => void;
 }
 
 function defaultLabel(
@@ -59,9 +60,20 @@ export class PeerFrustumSync {
   #label: NonNullable<PeerFrustumSyncOptions["label"]>;
   #color: PeerFrustumSyncOptions["color"];
   #frustumOptions: Omit<PeerFrustumOptions, "displayName">;
+  #requestFrame: () => void;
   #peers = new Map<string, PeerFrustum>();
   #source: THREE.Object3D | undefined;
   #lastSentAt: number | undefined;
+  #pendingPose: PeerFrustumPose | null = null;
+  #trailingTimer: ReturnType<typeof setTimeout> | null = null;
+
+  #publishPending = (): void => {
+    this.#trailingTimer = null;
+    const pose = this.#pendingPose;
+    if (pose !== null) {
+      this.#publish(pose);
+    }
+  };
 
   #onPeerChange = (
     change: PresenceChange<PeerFrustumPose>
@@ -75,6 +87,7 @@ export class PeerFrustumSync {
     else {
       this.#removePeer(change.clientId);
     }
+    this.#requestFrame();
   };
 
   constructor(
@@ -88,6 +101,7 @@ export class PeerFrustumSync {
     this.#label = options.label ?? defaultLabel;
     this.#color = options.color;
     this.#frustumOptions = options.frustum ?? {};
+    this.#requestFrame = options.requestFrame ?? (() => undefined);
     this.#channel = new PresenceChannel(options.room, {
       key: options.presenceKey ?? kDefaultPresenceKey,
       decode: decodePeerFrustumPose,
@@ -112,6 +126,7 @@ export class PeerFrustumSync {
 
   detach(): void {
     this.#source = undefined;
+    this.#cancelPending();
 
     for (const [clientId, frustum] of this.#peers) {
       frustum.opacity = 1;
@@ -176,17 +191,34 @@ export class PeerFrustumSync {
   #reportLocal(
     pose: PeerFrustumPose
   ): void {
-    const now = Date.now();
-    if (
-      this.#lastSentAt !== undefined &&
-      now - this.#lastSentAt < this.#throttleMs
-    ) {
+    const wait = this.#lastSentAt === undefined ?
+      0 :
+      this.#throttleMs - (Date.now() - this.#lastSentAt);
+    if (wait <= 0) {
+      this.#publish(pose);
+
       return;
     }
 
+    this.#pendingPose = pose;
+    this.#trailingTimer ??= setTimeout(this.#publishPending, wait);
+  }
+
+  #publish(
+    pose: PeerFrustumPose
+  ): void {
+    this.#cancelPending();
     if (this.#channel.publish(pose)) {
-      this.#lastSentAt = now;
+      this.#lastSentAt = Date.now();
     }
+  }
+
+  #cancelPending(): void {
+    if (this.#trailingTimer !== null) {
+      clearTimeout(this.#trailingTimer);
+      this.#trailingTimer = null;
+    }
+    this.#pendingPose = null;
   }
 
   #showPeer(

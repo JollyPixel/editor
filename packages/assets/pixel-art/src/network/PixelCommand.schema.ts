@@ -163,7 +163,23 @@ export const pixelSnapshotSchema: JSONSchema = {
   type: "object",
   properties: {
     size: kSizeSchema,
-    pixels: { type: "string" },
+    pixels: {
+      oneOf: [
+        { type: "string" },
+        {
+          type: "object",
+          properties: {
+            format: { const: "png" },
+            data: { type: "string" }
+          },
+          required: [
+            "format",
+            "data"
+          ],
+          additionalProperties: false
+        }
+      ]
+    },
     uvRegions: {
       type: "array",
       items: uvRegionSchema
