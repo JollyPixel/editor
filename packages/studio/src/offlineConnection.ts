@@ -4,17 +4,23 @@ import {
   openCatalog
 } from "@jolly-pixel/editor.host";
 import { openSharedTabWorkspace } from "@jolly-pixel/editor.host/offline";
+import createHandlers from "virtual:jolly-pixel/handlers";
 
 // Import Internal Dependencies
 import type { StudioConnection } from "./connection.ts";
-import { loadStudioProject } from "./seed.ts";
+import { loadStudioSeed } from "./seed.ts";
 
 // CONSTANTS
 const kWorkspace = "studio";
 
 export async function connectOffline(): Promise<StudioConnection> {
   const workspace = await openSharedTabWorkspace({
-    project: loadStudioProject,
+    project: async() => {
+      return {
+        handlers: createHandlers(),
+        seed: await loadStudioSeed()
+      };
+    },
     name: kWorkspace
   });
 

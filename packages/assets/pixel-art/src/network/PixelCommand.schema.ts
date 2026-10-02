@@ -29,7 +29,7 @@ const kVec2Schema = defineSchema({
   ]
 });
 
-const kSizeSchema = defineSchema({
+export const sizeSchema = defineSchema({
   type: "object",
   properties: {
     x: { type: "integer", exclusiveMinimum: 0 },
@@ -82,10 +82,10 @@ const kPixelCommandMetadata: Record<
     }
   ],
   resized: [{
-    size: kSizeSchema
+    size: sizeSchema
   }],
   "texture-replaced": [{
-    size: kSizeSchema,
+    size: sizeSchema,
     pixels: { type: "string" }
   }],
   "global-fill": [{
@@ -162,7 +162,7 @@ export const pixelCommandProtocol: MessageProtocol = new MessageProtocol({
 export const pixelSnapshotSchema: JSONSchema = {
   type: "object",
   properties: {
-    size: kSizeSchema,
+    size: sizeSchema,
     pixels: {
       oneOf: [
         { type: "string" },

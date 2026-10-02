@@ -9,7 +9,9 @@ import type { AddressInfo } from "node:net";
 import type { Connect } from "vite";
 
 // Import Internal Dependencies
-import type { EditorPackage } from "../../vite/editorManifest.ts";
+import { EditorPackage } from "../../server/EditorPackage.ts";
+import { EditorPackages } from "../../server/EditorPackages.ts";
+import { EditorPages } from "../../server/EditorPages.ts";
 import { createTempDir } from "./tempDir.ts";
 
 // CONSTANTS
@@ -39,14 +41,23 @@ export async function createDist(): Promise<string> {
 }
 
 export function voxelMapEditor(
-  dist: string
+  dist: string,
+  name = "voxel-map"
 ): EditorPackage {
-  return {
-    package: "@jolly-pixel/editor.voxel-map",
-    name: "voxel-map",
+  return new EditorPackage({
+    package: `@jolly-pixel/editor.${name}`,
+    name,
     kinds: ["voxelmap"],
     dist
-  };
+  });
+}
+
+export function voxelMapPages(
+  dist: string
+): EditorPages {
+  return new EditorPages(
+    new EditorPackages([voxelMapEditor(dist)])
+  );
 }
 
 export async function listen(

@@ -12,6 +12,7 @@ import {
   type AssetEventData,
   type AssetLiveProtocol
 } from "@jolly-pixel/asset-server";
+import { SchemaParser } from "@jolly-pixel/network";
 import {
   decodeVoxelWorld,
   encodeVoxelWorld,
@@ -21,6 +22,8 @@ import {
 
 // Import Internal Dependencies
 import {
+  ASSET_KINDS,
+  TILESET_KIND,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_EXTENSION,
   VOXEL_MAP_KIND,
@@ -574,5 +577,72 @@ describe("voxelMapAssetKind — tilesets", () => {
 
     assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 3);
     assert.strictEqual("blocks" in state, false);
+  });
+});
+
+describe("ASSET_KINDS", () => {
+  test("describes every kind it handles", () => {
+    const handlers = ASSET_KINDS.handlers();
+
+    assert.deepEqual(
+      handlers.map((handler) => handler.kind),
+      [TILESET_KIND, VOXEL_MAP_KIND]
+    );
+    assert.deepEqual(
+      ASSET_KINDS.descriptors.map((descriptor) => descriptor.kind),
+      [TILESET_KIND, VOXEL_MAP_KIND]
+    );
+  });
+
+  test("passes the options of each kind to its handler", () => {
+    const tileset = {
+      delay: 10
+    };
+    const voxelmap = {
+      delay: 20
+    };
+    const [tilesetHandler, voxelMapHandler] = ASSET_KINDS.handlers({
+      tileset: {
+        snapshot: tileset
+      },
+      voxelmap: {
+        snapshot: voxelmap
+      }
+    });
+
+    assert.strictEqual(tilesetHandler.snapshot, tileset);
+    assert.strictEqual(voxelMapHandler.snapshot, voxelmap);
+  });
+
+  test("accepts only the JSON options of each handler", () => {
+    const parser = new SchemaParser(ASSET_KINDS.optionsSchema);
+
+    assert.ok(parser.parse({
+      tileset: {
+        tileSize: 16,
+        defaultSize: {
+          x: 128,
+          y: 128
+        },
+        snapshot: {
+          delay: 10
+        }
+      },
+      voxelmap: {
+        chunkSize: 8,
+        snapshot: {
+          maxDelay: 20
+        }
+      }
+    }).ok);
+    for (const options of [
+      { tileset: { tileSize: 0 } },
+      { tileset: { defaultSize: { x: 128 } } },
+      { voxelmap: { chunkSize: 1.5 } },
+      { voxelmap: { layer: "Ground" } },
+      { chunkSize: 8 }
+    ]) {
+      assert.ok(parser.parse(options).err, JSON.stringify(options));
+    }
   });
 });

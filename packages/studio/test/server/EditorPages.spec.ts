@@ -9,25 +9,24 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 // Import Internal Dependencies
-import { createEditorPagesHandler } from "../../vite/editorPagesPlugin.ts";
 import {
   BUNDLE,
   createDist,
   INDEX_HTML,
   listen,
   PASS_THROUGH_STATUS,
-  voxelMapEditor,
+  voxelMapPages,
   type PagesServer
 } from "../helpers/editorPages.ts";
 import { removeTempDir } from "../helpers/tempDir.ts";
 
-describe("createEditorPagesHandler", () => {
+describe("EditorPages", () => {
   let dist: string;
   let server: PagesServer;
 
   before(async() => {
     dist = await createDist();
-    server = await listen(createEditorPagesHandler([voxelMapEditor(dist)]));
+    server = await listen(voxelMapPages(dist).middleware);
   });
 
   after(async() => {

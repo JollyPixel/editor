@@ -10,15 +10,20 @@ import {
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
-  createAssetWorkspacePlugin
+  createAssetWorkspacePlugin,
+  ProjectFile
 } from "@jolly-pixel/asset-server/node";
 import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { readEditorPackages } from "./vite/editorManifest.ts";
+import { EditorPages } from "./server/EditorPages.ts";
+import {
+  DEFAULT_PROJECT_FILE,
+  StudioProject
+} from "./server/StudioProject.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
-import { resolveProjectRoot } from "./vite/projectRoot.ts";
-import { createStudioProject } from "./src/seed.ts";
+import { projectModulesPlugin } from "./vite/projectModules.ts";
+import { createStudioSeed } from "./src/seed.ts";
 
 // CONSTANTS
 const kTilesetFile = path.join(
@@ -28,33 +33,29 @@ const kTilesetFile = path.join(
   "tileset.png"
 );
 const kRoomGraceMs = 5 * 60_000;
-const kEditors = readEditorPackages([
-  "@jolly-pixel/editor.pixel-art",
-  "@jolly-pixel/editor.voxel-map",
-  "@jolly-pixel/editor.voxel-model"
-]);
 
 async function assetWorkspacePlugin(
+  project: StudioProject,
   inMemory: boolean
 ): Promise<Plugin> {
-  const { handlers, seed } = await createStudioProject(
-    await fs.readFile(kTilesetFile)
-  );
-
   return createAssetWorkspacePlugin({
-    root: resolveProjectRoot(import.meta.dirname),
+    root: project.file.root,
     ...(inMemory ? {
       source: new MemoryAssetSource(),
       eventStore: EventStore.persistence.memory()
     } : {}),
-    handlers,
-    seed,
+    handlers: project.kinds.handlers(),
+    seed: await createStudioSeed(await fs.readFile(kTilesetFile)),
     roomGraceMs: kRoomGraceMs
   });
 }
 
 export default defineConfig(async({ mode }) => {
   const e2e = mode === "e2e";
+  const root = StudioProject.resolveRoot(import.meta.dirname);
+  const project = e2e || mode === "static" ?
+    await StudioProject.load(new ProjectFile(root, DEFAULT_PROJECT_FILE)) :
+    await StudioProject.open(root);
 
   return {
     base: "./",
@@ -63,8 +64,9 @@ export default defineConfig(async({ mode }) => {
       strictPort: true
     } : undefined,
     plugins: [
-      editorPagesPlugin(kEditors),
-      mode === "static" ? null : await assetWorkspacePlugin(e2e)
+      projectModulesPlugin(project),
+      editorPagesPlugin(new EditorPages(project.editors)),
+      mode === "static" ? null : await assetWorkspacePlugin(project, e2e)
     ]
   };
 });

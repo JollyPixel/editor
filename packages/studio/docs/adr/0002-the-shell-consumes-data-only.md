@@ -18,8 +18,10 @@ The shell never loads an asset kind's handler or an editor's code. It learns a k
 }
 ```
 
-`readEditorPackages` reads the manifests at build time and serves `{ name, kinds }[]` as the
-`virtual:jolly-pixel/editors` module. `EditorRegistry` turns both into kind icons and page URLs.
+`EditorPackages` reads the manifests at build time. The `virtual:jolly-pixel/project` module
+serves their `{ name, kinds }[]` with the descriptors of the project's kind packages
+([ADR-0016](./0016-the-project-file-lists-editors-and-kinds.md)). `EditorRegistry` turns both
+into kind icons and page URLs.
 Kind code runs in the back-end handlers, editor code in the frames, and the shell talks to the
 frames through `postMessage` only.
 

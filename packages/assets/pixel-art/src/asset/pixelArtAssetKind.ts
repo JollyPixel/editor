@@ -1,8 +1,13 @@
 // Import Third-party Dependencies
-import type * as network from "@jolly-pixel/network";
+import {
+  defineSchema,
+  type ConflictResolver
+} from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
+  SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
+  type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 import {
@@ -19,6 +24,7 @@ import {
 
 // Import Internal Dependencies
 import {
+  PIXEL_ART_ASSET,
   PIXEL_ART_COMMAND,
   PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND
@@ -27,7 +33,8 @@ import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
 import { encodePixelSnapshot } from "../network/PixelSnapshotCodec.ts";
 import {
   pixelCommandProtocol,
-  pixelSnapshotSchema
+  pixelSnapshotSchema,
+  sizeSchema
 } from "../network/PixelCommand.schema.ts";
 import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
 import { correctPixelCommand } from "../network/PixelCorrection.ts";
@@ -38,6 +45,14 @@ const kDefaultSize: Vec2 = {
   x: 32,
   y: 32
 };
+const kOptionsSchema = defineSchema({
+  type: "object",
+  properties: {
+    defaultSize: sizeSchema,
+    snapshot: SNAPSHOT_POLICY_SCHEMA
+  },
+  additionalProperties: false
+});
 
 export class PixelArtState {
   readonly buffer: PixelBuffer;
@@ -77,7 +92,7 @@ export class PixelArtState {
 export interface PixelArtAssetKindOptions {
   defaultSize?: Vec2;
   snapshot?: SnapshotPolicy;
-  conflictResolver?: network.ConflictResolver;
+  conflictResolver?: ConflictResolver;
 }
 
 export function pixelArtAssetKind(
@@ -168,3 +183,9 @@ export function pixelArtAssetKind(
     }
   };
 }
+
+export const ASSET_KINDS: AssetKindPackage<PixelArtAssetKindOptions> = {
+  descriptors: [PIXEL_ART_ASSET],
+  optionsSchema: kOptionsSchema,
+  handlers: (options) => [pixelArtAssetKind(options)]
+};

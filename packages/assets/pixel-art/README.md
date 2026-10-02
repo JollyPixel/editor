@@ -58,7 +58,7 @@ await synced.ready;
 
 ## 📚 API
 
-- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, the kind and event constants for server registration, and the document builders `createPixelArtDocument(size)` and `pixelArtDocumentFromPng(png)` for seeds and fixtures. Loading malformed content throws `InvalidAssetDocumentError`, with the renderer error as `cause`.
+- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ defaultSize?, snapshot? }` options), the kind and event constants for server registration, and the document builders `createPixelArtDocument(size)` and `pixelArtDocumentFromPng(png)` for seeds and fixtures. Loading malformed content throws `InvalidAssetDocumentError`, with the renderer error as `cause`.
 - `@jolly-pixel/asset.pixel-art/client` exports `SyncedPixelDocument`, `PixelSyncClient`, `pixelArtRoom`, `createPixelArtAsset`, `PixelCollaboration`, presence helpers, and wire types such as `PixelArtRoom`.
 - `@jolly-pixel/asset.pixel-art/server` exports `PixelCommandArbiter`, `applyCommandToBuffer`, and the command, snapshot and UV layout schemas.
 

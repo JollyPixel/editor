@@ -1,12 +1,15 @@
 // Import Third-party Dependencies
 import {
+  defineSchema,
   describeErrors,
   SchemaParser,
   type ConflictResolver
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
+  SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
+  type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 import {
@@ -28,14 +31,24 @@ import {
 
 // Import Internal Dependencies
 import {
+  VOXEL_MAP_ASSET,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_EXTENSION,
   VOXEL_MAP_KIND
 } from "./voxelMap.ts";
 import {
   tilesetAsset,
+  TILESET_ASSET,
   TILESET_KIND
 } from "./tileset.ts";
+import {
+  tilesetAssetKind,
+  type TilesetAssetKindOptions
+} from "./tilesetAssetKind.ts";
+import {
+  objectSchema,
+  tileSizeSchema
+} from "../network/schema.ts";
 import {
   voxelCommandProtocol,
   voxelWorldSchema
@@ -48,6 +61,36 @@ import type { VoxelMapNetworkCommand } from "../network/types.ts";
 const kDefaultLayerName = "Ground";
 const kCompanionTilesetId = "default";
 const kWorldParser = new SchemaParser(voxelWorldSchema);
+const kPositiveIntegerSchema = defineSchema({
+  type: "integer",
+  minimum: 1
+});
+const kOptionsSchema = defineSchema({
+  type: "object",
+  properties: {
+    tileset: {
+      type: "object",
+      properties: {
+        tileSize: tileSizeSchema,
+        defaultSize: objectSchema({
+          x: kPositiveIntegerSchema,
+          y: kPositiveIntegerSchema
+        }),
+        snapshot: SNAPSHOT_POLICY_SCHEMA
+      },
+      additionalProperties: false
+    },
+    voxelmap: {
+      type: "object",
+      properties: {
+        chunkSize: kPositiveIntegerSchema,
+        snapshot: SNAPSHOT_POLICY_SCHEMA
+      },
+      additionalProperties: false
+    }
+  },
+  additionalProperties: false
+});
 const kDefaultSnapshot: SnapshotPolicy = {
   delay: 5_000,
   maxDelay: 60_000
@@ -302,3 +345,20 @@ function landedAsSent(
 
   return state.tilesets.get(id)?.slot === slot;
 }
+
+export interface VoxelMapAssetKindsOptions {
+  tileset?: TilesetAssetKindOptions;
+  voxelmap?: VoxelMapAssetKindOptions;
+}
+
+export const ASSET_KINDS: AssetKindPackage<VoxelMapAssetKindsOptions> = {
+  descriptors: [
+    TILESET_ASSET,
+    VOXEL_MAP_ASSET
+  ],
+  optionsSchema: kOptionsSchema,
+  handlers: (options = {}) => [
+    tilesetAssetKind(options.tileset),
+    voxelMapAssetKind(options.voxelmap)
+  ]
+};

@@ -5,6 +5,7 @@ export const IDENTITY_SIDECAR_PATH = `${STATE_DIRECTORY}/assets.json`;
 export const PROJECTION_STATE_PATH = `${STATE_DIRECTORY}/state.json`;
 export const STATE_GITIGNORE_PATH = `${STATE_DIRECTORY}/.gitignore`;
 export const EVENTS_DB_PATH = `${STATE_DIRECTORY}/events.db`;
+export const PROJECT_FILE_PATH = `${STATE_DIRECTORY}/project.json`;
 
 export const STATE_GITIGNORE_CONTENT = `state.json
 events.db
