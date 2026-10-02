@@ -13,7 +13,7 @@ import {
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import { HistoryStack } from "../src/history/HistoryStack.ts";
 import { groupPositionsByColor } from "../src/buffer/colorGroups.ts";
-import { UVMap } from "../src/uv/UVMap.ts";
+import { UVMap } from "../src/uv/map/UVMap.ts";
 import type { HistoryStrokeEntry } from "../src/history/HistoryStack.types.ts";
 import type { RGBA8, Vec2 } from "../src/types.ts";
 

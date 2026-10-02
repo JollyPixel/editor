@@ -11,28 +11,63 @@ import {
   type PeerUVPreviewState
 } from "#src/rendering/presence/PeerUVPreview.ts";
 import {
+  UVRegion,
+  type UVGeometry
+} from "#src/uv/region/UVRegion.ts";
+import type { SelectionRect } from "#src/types.ts";
+import {
   makeSvg,
   makeUvMap,
   makeUvOverlay,
   makeViewport
 } from "../../helpers/overlay.ts";
 
+function stackedGhost(
+  id: string,
+  rect: SelectionRect
+): PeerUVPreviewState {
+  return {
+    region: new UVRegion({
+      id,
+      color: "#ff0000",
+      state: "stacked",
+      rect
+    }),
+    face: null,
+    color: "#ff0000"
+  };
+}
+
+function freeGhost(
+  id: string,
+  front: UVGeometry,
+  color: string
+): PeerUVPreviewState {
+  return {
+    region: new UVRegion({
+      id,
+      color,
+      state: "free",
+      faces: {
+        front,
+        back: { x: 20, y: 20, width: 2, height: 2 }
+      }
+    }),
+    face: "front",
+    color
+  };
+}
+
 // CONSTANTS
-const kRectGhost: PeerUVPreviewState = {
-  id: "region-A",
-  face: null,
-  geometry: {
-    x: 2,
-    y: 3,
-    width: 5,
-    height: 6
-  },
-  color: "#ff0000"
-};
-const kTriangleGhost: PeerUVPreviewState = {
-  id: "region-B",
-  face: "front",
-  geometry: {
+const kRectGhost = stackedGhost("region-A", {
+  x: 2,
+  y: 3,
+  width: 5,
+  height: 6
+});
+const kTriangleGhost = freeGhost(
+  "region-B",
+  {
     shape: "triangle",
     rect: {
       x: 0,
@@ -42,12 +77,11 @@ const kTriangleGhost: PeerUVPreviewState = {
     },
     corner: "top-left"
   },
-  color: "#00ff00"
-};
-const kCompoundGhost: PeerUVPreviewState = {
-  id: "region-C",
-  face: "front",
-  geometry: {
+  "#00ff00"
+);
+const kCompoundGhost = freeGhost(
+  "region-C",
+  {
     shape: "compound",
     rect: {
       x: 1,
@@ -64,8 +98,8 @@ const kCompoundGhost: PeerUVPreviewState = {
       }
     ]
   },
-  color: "#0000ff"
-};
+  "#0000ff"
+);
 
 describe("PeerUVPreview — set", () => {
   test("renders a dashed rect border at the projected screen position, with no contrasting casing", () => {
@@ -165,7 +199,7 @@ describe("PeerUVPreview — set", () => {
       ghosts.set("peer-A", kRectGhost);
       ghosts.set(
         "peer-A",
-        { ...kRectGhost, geometry: { x: 0, y: 0, width: 1, height: 1 } }
+        stackedGhost("region-A", { x: 0, y: 0, width: 1, height: 1 })
       );
 
       assert.strictEqual(
@@ -214,6 +248,56 @@ describe("PeerUVPreview — set", () => {
 
     assert.strictEqual(svg.querySelectorAll("polygon").length, 0);
     assert.strictEqual(svg.querySelectorAll("path").length, 2);
+  });
+
+  test("draws only the dragged face of a free region", () => {
+    const svg = makeSvg();
+    const viewport = makeViewport();
+    const ghosts = new PeerUVPreview(
+      svg,
+      viewport,
+      makeUvOverlay(svg, viewport)
+    );
+
+    ghosts.set("peer-A", freeGhost(
+      "region-D",
+      { x: 1, y: 1, width: 3, height: 3 },
+      "#ff0000"
+    ));
+
+    assert.strictEqual(svg.querySelectorAll("rect").length, 2);
+    assert.strictEqual(svg.querySelectorAll("rect")[1].getAttribute("width"), "12");
+  });
+
+  test("draws every face of an unfolded region, then one border for a stacked one", () => {
+    const svg = makeSvg();
+    const viewport = makeViewport();
+    const ghosts = new PeerUVPreview(
+      svg,
+      viewport,
+      makeUvOverlay(svg, viewport)
+    );
+    const region = new UVRegion({
+      id: kRectGhost.region.id,
+      color: "#ff0000",
+      state: "unfolded",
+      faces: {
+        front: { x: 0, y: 0, width: 2, height: 2 },
+        back: { x: 2, y: 0, width: 3, height: 2 },
+        top: { x: 0, y: 2, width: 2, height: 2 }
+      }
+    });
+
+    ghosts.set("peer-A", { ...kRectGhost, region });
+
+    const strokes = [...svg.querySelectorAll("rect")].filter((_rect, index) => index % 2 === 1);
+    assert.deepStrictEqual(
+      strokes.map((rect) => rect.getAttribute("width")),
+      ["8", "12", "8"]
+    );
+
+    ghosts.set("peer-A", kRectGhost);
+    assert.strictEqual(svg.querySelectorAll("rect").length, 2);
   });
 });
 
@@ -264,7 +348,7 @@ describe("PeerUVPreview — removeByRegion", () => {
     );
 
     ghosts.set("peer-A", kRectGhost);
-    ghosts.removeByRegion(kRectGhost.id);
+    ghosts.removeByRegion(kRectGhost.region.id);
 
     assert.strictEqual(
       svg.querySelectorAll("rect").length,
@@ -284,7 +368,7 @@ describe("PeerUVPreview — removeByRegion", () => {
 
     ghosts.set("peer-A", kRectGhost);
     ghosts.set("peer-B", kTriangleGhost);
-    ghosts.removeByRegion(kRectGhost.id);
+    ghosts.removeByRegion(kRectGhost.region.id);
 
     assert.strictEqual(
       svg.querySelectorAll("rect").length,
@@ -404,7 +488,7 @@ describe("PeerUVPreview — suppresses the classical UVRegionLayer border", () =
 
       ghosts.set(
         "peer-A",
-        { ...kRectGhost, id: region.id, face: null }
+        stackedGhost(region.id, { x: 2, y: 3, width: 5, height: 6 })
       );
       // classical border gone; only the (dashed) ghost border remains.
       const rectsWhileDragging = svg.querySelectorAll("rect");
@@ -448,7 +532,7 @@ describe("PeerUVPreview — suppresses the classical UVRegionLayer border", () =
     uvMap.select(region.id);
     ghosts.set(
       "peer-A",
-      { ...kRectGhost, id: "region-B", face: null }
+      stackedGhost("region-B", { x: 2, y: 3, width: 5, height: 6 })
     );
 
     // region-A's classical border (2) + peer-B's ghost border (2).

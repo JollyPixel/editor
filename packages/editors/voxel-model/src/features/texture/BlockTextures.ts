@@ -9,7 +9,6 @@ import {
   PixelCanvasTexture,
   UVGeometryBinding
 } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
-import type { UVGhostPayload } from "@jolly-pixel/asset.pixel-art/client";
 import type {
   BlockNodeJSON,
   ModelChange,
@@ -196,14 +195,11 @@ export class BlockTextures {
   }
 
   previewPeerDrag(
-    payload: UVGhostPayload
+    region: UVRegion
   ): void {
-    const uuid = blockUuidFromRegion(payload.id);
+    const uuid = blockUuidFromRegion(region.id);
     if (uuid !== null) {
-      this.#bindings.get(uuid)?.preview(
-        payload.face,
-        payload.geometry
-      );
+      this.#bindings.get(uuid)?.preview(region);
     }
   }
 

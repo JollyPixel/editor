@@ -68,19 +68,26 @@ describe("PixelCollaboration", () => {
   test("forwards a peer's in-progress UV drag to onRemoteUvDragging", () => {
     const room = new MockRoom({ clientId: "client-A" });
     const { manager: canvas } = createPixelArtCanvas();
-    const dragged: unknown[] = [];
+    const dragged: string[] = [];
     const collaboration = new PixelCollaboration({
       room,
       canvas,
       label: () => "peer",
       color: () => "#abcdef",
-      onRemoteUvDragging: (payload) => dragged.push(payload)
+      onRemoteUvDragging: (region) => dragged.push(region.id)
     });
-    const payload = { id: "region-A", face: null, geometry: { x: 0, y: 0, width: 4, height: 4 } };
+    const payload = {
+      id: "region-A",
+      face: null,
+      layout: {
+        state: "stacked",
+        rect: { x: 0, y: 0, width: 4, height: 4 }
+      }
+    };
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: payload } });
 
-    assert.deepStrictEqual(dragged, [payload]);
+    assert.deepStrictEqual(dragged, ["region-A"]);
     collaboration.destroy();
     canvas.destroy();
   });

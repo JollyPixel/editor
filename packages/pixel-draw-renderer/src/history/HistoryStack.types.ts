@@ -7,7 +7,7 @@ import type {
 import type {
   UVSlot,
   UVRegionData
-} from "../uv/UVRegion.ts";
+} from "../uv/region/UVRegion.ts";
 
 export interface HistoryStrokeEntry {
   action: "stroke";

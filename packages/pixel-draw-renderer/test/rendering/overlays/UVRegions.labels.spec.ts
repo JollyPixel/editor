@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { DEFAULT_UV_SLOTS } from "#src/uv/UVRegion.ts";
+import { DEFAULT_UV_SLOTS } from "#src/uv/region/UVRegion.ts";
 import {
   makeSvg,
   makeViewport,

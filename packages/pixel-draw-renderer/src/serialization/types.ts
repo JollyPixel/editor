@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { UVRegionData } from "../uv/UVRegion.ts";
+import type { UVRegionData } from "../uv/region/UVRegion.ts";
 import type { Vec2 } from "../types.ts";
 
 export const PIXEL_ART_DOCUMENT_VERSION = 1;

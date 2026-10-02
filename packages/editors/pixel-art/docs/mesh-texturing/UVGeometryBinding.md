@@ -42,14 +42,14 @@ A `null` face, which is what a stacked region reports, projects the region's sha
 ## `preview()`
 
 ```ts
-preview(face: UVSlot | null, geometry: UVGeometry): void
+preview(region: UVRegion): void
 ```
 
-Projects an in-progress drag of the bound region without going through a `UVMap`, for drags reported from elsewhere, such as a peer. A `null` face moves the whole region to the geometry's rect; a named face writes only that face.
+Projects `region` onto the mesh without adopting it, for an in-progress drag reported from elsewhere, such as a peer. A region with another id is ignored.
 
 ## `follow()` / `unfollow()`
 
-`follow(uv)` subscribes to `region-moved`, `region-dragging`, `region-state-changed` and `region-rotated`, filtered to the bound region's id. A region moved as a whole reprojects every active face. A rotated slot's UVs are turned inside its rect with `rotateUv()`, after the triangle corner orientation. `region-dragging` fires on every pointer move, so the geometry tracks the pointer instead of jumping on release. Following a map already followed is a no-op; `unfollow()` is idempotent.
+`follow(uv)` subscribes to `region-moved`, `region-dragging`, `region-state-changed` and `region-rotated`, filtered to the bound region's id. A region moved as a whole reprojects every active face. A rotated slot's UVs are turned inside its rect with `rotateUv()`, after the triangle corner orientation. `region-dragging` carries the region as a move or resize drag shows it, so the geometry tracks the pointer instead of jumping on release. Following a map already followed is a no-op; `unfollow()` is idempotent.
 
 ## `setRegion()` / `setTextureSize()`
 

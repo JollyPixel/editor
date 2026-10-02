@@ -7,7 +7,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { PeerUVPreviewState } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  UVRegion,
+  type PeerUVPreviewState
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -28,17 +31,38 @@ import {
 import { MockRoom } from "../../helpers/room.ts";
 
 type UVEvents = {
-  "region-dragging": (event: UVGhostPayload) => void;
+  "region-dragging": (event: { region: UVRegion; face: string | null; }) => void;
+  "region-state-changed": (event: { region: { id: string; }; }) => void;
   "region-moved": (event: { region: { id: string; }; }) => void;
   "region-drag-ended": (event: { id: string; committed: boolean; }) => void;
 };
 
 // CONSTANTS
+const kStacked = new UVRegion({
+  id: "region-A",
+  color: "#f00",
+  state: "stacked",
+  rect: { x: 0, y: 0, width: 4, height: 4 }
+});
+const kDrag = {
+  region: kStacked,
+  face: null
+};
 const kPayload: UVGhostPayload = {
   id: "region-A",
   face: null,
-  geometry: { x: 0, y: 0, width: 4, height: 4 }
+  layout: kStacked.toLayout()
 };
+
+const kNet = new UVRegion({
+  id: "region-A",
+  color: "#f00",
+  state: "unfolded",
+  faces: {
+    front: { x: 0, y: 0, width: 4, height: 4 },
+    back: { x: 4, y: 0, width: 6, height: 4 }
+  }
+});
 
 function peerColor(
   clientId: string
@@ -79,7 +103,7 @@ describe("UVGhostSync — local drag", () => {
   test("reports region dragging as uvGhost presence", async() => {
     const { room, events } = setup();
 
-    events.emit("region-dragging", kPayload);
+    events.emit("region-dragging", kDrag);
     await nextFrame();
 
     assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: kPayload }]);
@@ -88,7 +112,7 @@ describe("UVGhostSync — local drag", () => {
   test("moving the dragged region cancels the pending report", async() => {
     const { room, events } = setup();
 
-    events.emit("region-dragging", kPayload);
+    events.emit("region-dragging", kDrag);
     events.emit("region-moved", { region: { id: kPayload.id } });
     await nextFrame();
 
@@ -98,17 +122,58 @@ describe("UVGhostSync — local drag", () => {
   test("moving another region keeps the pending report", async() => {
     const { room, events } = setup();
 
-    events.emit("region-dragging", kPayload);
+    events.emit("region-dragging", kDrag);
     events.emit("region-moved", { region: { id: "region-B" } });
     await nextFrame();
 
     assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: kPayload }]);
   });
 
+  test("reports a net drag with its whole layout", async() => {
+    const { room, events } = setup();
+
+    events.emit("region-dragging", { region: kNet, face: null });
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [{
+      uvGhost: {
+        id: kNet.id,
+        face: null,
+        layout: kNet.toLayout()
+      }
+    }]);
+  });
+
+  test("reports the dragged slot of a free region", async() => {
+    const { room, events } = setup();
+    const free = kNet.free().resized({ x: 0, y: 0, width: 5, height: 4 }, "front");
+
+    events.emit("region-dragging", { region: free, face: "front" });
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [{
+      uvGhost: {
+        id: kNet.id,
+        face: "front",
+        layout: free.toLayout()
+      }
+    }]);
+  });
+
+  test("committing a new state for the dragged region cancels the pending report", async() => {
+    const { room, events } = setup();
+
+    events.emit("region-dragging", { region: kNet, face: null });
+    events.emit("region-state-changed", { region: { id: kNet.id } });
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, []);
+  });
+
   test("a cancelled drag clears presence immediately", async() => {
     const { room, events } = setup();
 
-    events.emit("region-dragging", kPayload);
+    events.emit("region-dragging", kDrag);
     events.emit("region-drag-ended", { id: kPayload.id, committed: false });
     await nextFrame();
 
@@ -118,7 +183,7 @@ describe("UVGhostSync — local drag", () => {
   test("a committed drag clears presence too", async() => {
     const { room, events } = setup();
 
-    events.emit("region-dragging", kPayload);
+    events.emit("region-dragging", kDrag);
     events.emit("region-drag-ended", { id: kPayload.id, committed: true });
     await nextFrame();
 
@@ -134,7 +199,8 @@ describe("UVGhostSync — remote peers", () => {
 
     const [[clientId, state]] = callsOf(overlay.set);
     assert.strictEqual(clientId, "peer-B");
-    assert.strictEqual(state.id, kPayload.id);
+    assert.strictEqual(state.region.id, kPayload.id);
+    assert.strictEqual(state.region.color, "#peer-B");
     assert.strictEqual(state.color, "#peer-B");
   });
 
@@ -149,6 +215,19 @@ describe("UVGhostSync — remote peers", () => {
     assert.strictEqual(callsOf(overlay.set)[0][1].color, "peer-B:red");
   });
 
+  test("draws a peer's dragged region from its layout", () => {
+    const { room, overlay } = setup();
+
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { uvGhost: { ...kPayload, layout: kNet.toLayout() } }
+    });
+
+    const [[, state]] = callsOf(overlay.set);
+    assert.deepStrictEqual(state.region.toLayout(), kNet.toLayout());
+    assert.strictEqual(state.face, null);
+  });
+
   test("ignores a malformed uvGhost payload", () => {
     const { room, overlay } = setup();
 
@@ -156,7 +235,15 @@ describe("UVGhostSync — remote peers", () => {
     room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: { face: null } } });
     room.emit("peer-presence", {
       clientId: "peer-B",
-      patch: { uvGhost: { ...kPayload, geometry: { shape: "unknown" } } }
+      patch: { uvGhost: { id: kPayload.id, face: null } }
+    });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { uvGhost: { ...kPayload, layout: { state: "unfolded" } } }
+    });
+    room.emit("peer-presence", {
+      clientId: "peer-B",
+      patch: { uvGhost: { ...kPayload, face: 3 } }
     });
 
     assert.strictEqual(overlay.set.mock.callCount(), 0);
@@ -174,16 +261,19 @@ describe("UVGhostSync — remote peers", () => {
   });
 
   test("reports a peer's in-progress drag through onRemoteRegionDragging", () => {
-    const onRemoteRegionDragging = mock.fn<(payload: UVGhostPayload) => void>();
-    const { room } = setup({ onRemoteRegionDragging });
+    const onRemoteRegionDragging = mock.fn<(region: UVRegion) => void>();
+    const { room, overlay } = setup({ onRemoteRegionDragging });
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: kPayload } });
 
-    assert.deepStrictEqual(callsOf(onRemoteRegionDragging), [[kPayload]]);
+    const [[region]] = callsOf(onRemoteRegionDragging);
+    assert.strictEqual(region, callsOf(overlay.set)[0][1].region);
+    assert.strictEqual(region.id, kPayload.id);
+    assert.deepStrictEqual(region.toLayout(), kPayload.layout);
   });
 
   test("does not call onRemoteRegionDragging for a malformed payload", () => {
-    const onRemoteRegionDragging = mock.fn<(payload: UVGhostPayload) => void>();
+    const onRemoteRegionDragging = mock.fn<(region: UVRegion) => void>();
     const { room } = setup({ onRemoteRegionDragging });
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { uvGhost: "not-an-object" } });

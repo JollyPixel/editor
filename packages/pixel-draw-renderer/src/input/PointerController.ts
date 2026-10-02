@@ -223,7 +223,10 @@ export class PointerController {
 
         const position = this.#resolveTexturePosition(event);
         if (position) {
-          this.#isDraggingPrimary = this.#actions.onPrimaryDown(position);
+          this.#isDraggingPrimary = this.#actions.onPrimaryDown(
+            position,
+            this.#resolveCanvasPosition(event)
+          );
         }
 
         return;
@@ -262,7 +265,10 @@ export class PointerController {
     ) {
       const position = this.#resolveTexturePosition(event);
       if (position) {
-        this.#actions.onPrimaryMove(position);
+        this.#actions.onPrimaryMove(
+          position,
+          this.#resolveCanvasPosition(event)
+        );
       }
     }
 

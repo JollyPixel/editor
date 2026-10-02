@@ -11,7 +11,7 @@ import {
   type HistoryState
 } from "#src/history/History.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
-import { UVMap } from "#src/uv/UVMap.ts";
+import { UVMap } from "#src/uv/map/UVMap.ts";
 import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS

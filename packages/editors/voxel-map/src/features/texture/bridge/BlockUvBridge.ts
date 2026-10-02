@@ -208,23 +208,15 @@ export class BlockUvBridge {
     this.#applyRegionToBlock(event.region);
   };
 
-  readonly #onRegionDragging: UVMapListener<"region-dragging"> = (event) => {
-    if (this.#rebuilding) {
+  readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({ region }) => {
+    if (this.#rebuilding || !this.#blockOf(region.id)) {
       return;
     }
 
-    const region = this.#uv.get(event.id);
-    if (!region || !this.#blockOf(event.id)) {
-      return;
-    }
-
-    if (this.#dragged !== null && this.#dragged.id !== event.id) {
+    if (this.#dragged !== null && this.#dragged.id !== region.id) {
       this.#flushDrag();
     }
-    this.#dragged = region.withRect(
-      event.rect,
-      event.face ?? undefined
-    );
+    this.#dragged = region;
     this.#dragFrame ??= requestAnimationFrame(this.#flushDrag);
   };
 

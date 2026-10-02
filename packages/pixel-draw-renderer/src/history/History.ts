@@ -18,7 +18,7 @@ import type {
 import type {
   PixelBufferHookEvent
 } from "../buffer/hooks.ts";
-import type { UVMap } from "../uv/UVMap.ts";
+import type { UVMap } from "../uv/map/UVMap.ts";
 
 export interface HistoryState {
   canUndo: boolean;

@@ -36,6 +36,7 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
   #textureCursor: Vec2 | null = null;
   #panHeld: boolean = false;
   #lineHeld: boolean = false;
+  #isPanning = false;
   onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
   constructor(
@@ -99,10 +100,12 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
   }
 
   onPrimaryDown(
-    position: Vec2
+    position: Vec2,
+    canvasPosition: Vec2
   ): boolean {
     const shouldTrackDrag = this.#active.onPrimaryDown(
-      position
+      position,
+      canvasPosition
     );
     this.#syncCursor();
 
@@ -110,9 +113,10 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
   }
 
   onPrimaryMove(
-    position: Vec2
+    position: Vec2,
+    canvasPosition: Vec2
   ): void {
-    this.#active.onPrimaryMove(position);
+    this.#active.onPrimaryMove(position, canvasPosition);
   }
 
   onPrimaryUp(): void {
@@ -141,6 +145,7 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
   }
 
   onPanStart(): void {
+    this.#isPanning = true;
     this.#setCursor("grabbing");
   }
 
@@ -154,6 +159,7 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
   }
 
   onPanEnd(): void {
+    this.#isPanning = false;
     if (this.#panHeld) {
       this.#setCursor("grab");
 
@@ -178,6 +184,9 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
     position: Vec2 | null
   ): void {
     this.#active.onHover(position);
+    if (!this.#isPanning && !this.#panHeld) {
+      this.#syncCursor();
+    }
   }
 
   onTextureCursorMove(

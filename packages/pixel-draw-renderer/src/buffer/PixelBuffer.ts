@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { resolveColor } from "../utils/colors.ts";
 import { RectArea } from "../utils/RectArea.ts";
-import { UVRegionCollection } from "../uv/UVRegionCollection.ts";
+import { UVRegionCollection } from "../uv/region/UVRegionCollection.ts";
 import type {
   ByteColorInput,
   RGBA8,

@@ -16,12 +16,12 @@ import type {
   HistoryEntry,
   HistoryEntryInput
 } from "../history/HistoryStack.types.ts";
-import type { UVMap } from "../uv/UVMap.ts";
+import type { UVMap } from "../uv/map/UVMap.ts";
 import type {
   UVSlot,
   UVRegion,
   UVRegionData
-} from "../uv/UVRegion.ts";
+} from "../uv/region/UVRegion.ts";
 import type {
   RGBA8,
   SelectionRect,

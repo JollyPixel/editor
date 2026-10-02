@@ -45,14 +45,14 @@ class FakeMode extends InteractionMode {
     return brushSize * 2;
   }
 
-  onPrimaryDown(pos: Vec2): boolean {
-    this.calls.push(`down:${pos.x},${pos.y}`);
+  onPrimaryDown(pos: Vec2, canvasPos: Vec2): boolean {
+    this.calls.push(`down:${pos.x},${pos.y}@${canvasPos.x},${canvasPos.y}`);
 
     return true;
   }
 
-  onPrimaryMove(pos: Vec2): void {
-    this.calls.push(`move:${pos.x},${pos.y}`);
+  onPrimaryMove(pos: Vec2, canvasPos: Vec2): void {
+    this.calls.push(`move:${pos.x},${pos.y}@${canvasPos.x},${canvasPos.y}`);
   }
 
   onPrimaryUp(): void {
@@ -170,14 +170,14 @@ describe("InteractionRouter", () => {
   test("forwards pointer actions to the active mode and returns its result", () => {
     const { router, modes } = makeRouter();
 
-    const handled = router.onPrimaryDown({ x: 4, y: 7 });
-    router.onPrimaryMove({ x: 5, y: 8 });
+    const handled = router.onPrimaryDown({ x: 4, y: 7 }, { x: 40, y: 70 });
+    router.onPrimaryMove({ x: 5, y: 8 }, { x: 50, y: 80 });
     router.onPrimaryUp();
 
     assert.strictEqual(handled, true);
     assert.deepStrictEqual(
       modes[0].calls,
-      ["down:4,7", "move:5,8", "up"]
+      ["down:4,7@40,70", "move:5,8@50,80", "up"]
     );
   });
 
@@ -220,7 +220,7 @@ describe("InteractionRouter", () => {
       defaultMode: "select"
     });
 
-    router.onPrimaryDown({ x: 1, y: 1 });
+    router.onPrimaryDown({ x: 1, y: 1 }, { x: 1, y: 1 });
     router.onPrimaryUp();
     router.onBlur();
 

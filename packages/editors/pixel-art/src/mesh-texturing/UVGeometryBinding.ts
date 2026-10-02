@@ -52,19 +52,9 @@ export class UVGeometryBinding {
   };
 
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({
-    id,
-    face,
-    rect,
-    geometry
+    region
   }) => {
-    if (id !== this.#region.id) {
-      return;
-    }
-
-    this.preview(
-      face,
-      face === null ? rect : geometry
-    );
+    this.preview(region);
   };
 
   readonly #onRegionReplaced: UVMapListener<"region-state-changed"> = ({
@@ -139,21 +129,11 @@ export class UVGeometryBinding {
   }
 
   preview(
-    face: UVSlot | null,
-    geometry: UVGeometry
+    region: UVRegion
   ): void {
-    if (face === null) {
-      this.#applySlots(
-        this.#region.withRect(rectOf(geometry))
-      );
-
-      return;
+    if (region.id === this.#region.id) {
+      this.#applySlots(region);
     }
-
-    this.applyFace(
-      face,
-      geometry
-    );
   }
 
   follow(

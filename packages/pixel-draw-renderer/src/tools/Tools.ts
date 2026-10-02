@@ -15,8 +15,12 @@ import {
   SelectEngine,
   type SelectTool
 } from "./SelectEngine.ts";
-import { UVController } from "../uv/UVController.ts";
-import type { UVMap } from "../uv/UVMap.ts";
+import {
+  UVController,
+  type UVTool
+} from "./uv/UVController.ts";
+import type { UVMap } from "../uv/map/UVMap.ts";
+import type { UVView } from "../uv/region/resizeHandles.ts";
 import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
@@ -38,6 +42,8 @@ export interface ToolsOptions {
   uvMap: UVMap;
   uvOverlay: UVRegionLayer;
   uvDeselectOnEmptyClick?: boolean;
+  uvResizable?: boolean;
+  viewport: UVView;
   pipeline: EditPipeline;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
@@ -46,6 +52,7 @@ export interface Toolset {
   brush: BrushTool;
   fill: FillTool;
   select: SelectTool;
+  uv: UVTool;
 }
 
 export class Tools {
@@ -91,7 +98,9 @@ export class Tools {
     this.uv = new UVController({
       uvMap: options.uvMap,
       overlay: options.uvOverlay,
-      deselectOnEmptyClick: options.uvDeselectOnEmptyClick
+      deselectOnEmptyClick: options.uvDeselectOnEmptyClick,
+      resizable: options.uvResizable,
+      viewport: options.viewport
     });
   }
 }

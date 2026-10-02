@@ -2,7 +2,7 @@
 import type {
   DefaultPixelBuffer
 } from "../buffer/types.ts";
-import type { UVMap } from "../uv/UVMap.ts";
+import type { UVMap } from "../uv/map/UVMap.ts";
 import type {
   HistoryEntry,
   HistoryEntryInput

@@ -21,16 +21,16 @@ import {
 } from "./sync/DocumentEdits.ts";
 import type { FillGlobalCommit } from "./tools/FillEngine.ts";
 import type { SelectEditEntry } from "./tools/SelectEngine.ts";
-import { UVMap } from "./uv/UVMap.ts";
+import { UVMap } from "./uv/map/UVMap.ts";
 import {
   pointInGeometry,
   rectOf
-} from "./uv/geometry.ts";
-import type { UVGeometry } from "./uv/types.ts";
+} from "./uv/geometry/geometry.ts";
+import type { UVGeometry } from "./uv/geometry/types.ts";
 import type {
   UVRegion,
   UVRegionData
-} from "./uv/UVRegion.ts";
+} from "./uv/region/UVRegion.ts";
 import type {
   ByteColorInput,
   RGBA8,

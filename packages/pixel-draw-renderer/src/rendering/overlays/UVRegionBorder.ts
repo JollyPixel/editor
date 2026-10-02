@@ -6,15 +6,15 @@ import { SVG_NS } from "../constants.ts";
 import {
   rectOf,
   rotationOf
-} from "../../uv/geometry.ts";
-import { compoundOutline } from "../../uv/compoundOutline.ts";
+} from "../../uv/geometry/geometry.ts";
+import { compoundOutline } from "../../uv/geometry/compoundOutline.ts";
 import type {
   UVCompound,
   UVCompoundPart,
   UVGeometry,
   UVQuarterTurn,
   UVTriangleCorner
-} from "../../uv/UVRegion.ts";
+} from "../../uv/region/UVRegion.ts";
 import type {
   SelectionRect,
   Vec2

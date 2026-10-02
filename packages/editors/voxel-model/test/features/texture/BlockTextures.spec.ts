@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   PixelDocument,
+  UVRegion,
   type PixelBufferHookEvent
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -375,15 +376,23 @@ describe("BlockTextures UV edits", () => {
 
   test("applies a peer's in-progress drag without touching the region", () => {
     const { uv, block, regionId, textures } = bound();
+    const moved = uv.get(regionId)!.withRect({ x: 64, y: 32, width: 16, height: 16 });
 
-    textures.previewPeerDrag({
-      id: regionId,
-      face: null,
-      geometry: { x: 64, y: 32, width: 16, height: 16 }
-    });
+    textures.previewPeerDrag(moved);
 
     assert.deepEqual(uvOf(block, 1), [80 / kTextureSize.x, 1 - (32 / kTextureSize.y)]);
     assert.deepEqual(uv.get(regionId)?.geometryFor("front"), { x: 0, y: 0, width: 16, height: 16 });
+  });
+
+  test("applies a peer's in-progress net resize without touching the region", () => {
+    const { uv, block, regionId, textures } = bound();
+    const stored = uv.get(regionId)!;
+    const resized = stored.resized({ x: 0, y: 0, width: 24, height: 16 }, "front");
+
+    textures.previewPeerDrag(resized);
+
+    assert.deepEqual(uvOf(block, 1), [24 / kTextureSize.x, 1]);
+    assert.equal(uv.get(regionId), stored);
   });
 
   test("ignores regions and peer drags that belong to no block", () => {
@@ -391,11 +400,12 @@ describe("BlockTextures UV edits", () => {
     uv.create({ id: "unrelated-region", width: 16, height: 16 });
 
     assert.doesNotThrow(() => uv.move("unrelated-region", { x: 8, y: 8, width: 16, height: 16 }));
-    assert.doesNotThrow(() => textures.previewPeerDrag({
+    assert.doesNotThrow(() => textures.previewPeerDrag(new UVRegion({
       id: "block-missing",
-      face: null,
-      geometry: { x: 0, y: 0, width: 16, height: 16 }
-    }));
+      color: "#000000",
+      state: "stacked",
+      rect: { x: 0, y: 0, width: 16, height: 16 }
+    })));
     assert.deepEqual(changes, []);
   });
 

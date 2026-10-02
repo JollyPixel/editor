@@ -53,7 +53,7 @@ get lineHeld(): boolean
 set lineHeld(value: boolean)
 ```
 
-While `true` in `"paint"` or `"erase"` mode, the next click draws a straight line from the cursor position where it was set, and each later click chains a new segment. Setting it during a stroke commits the stroke and draws the line on release. Setting it back to `false` cancels a line not yet drawn. Bind it to a held key, usually `Shift`.
+While `true` in `"paint"` or `"erase"` mode, the next click draws a straight line from the cursor position where it was set, and each later click chains a new segment. Setting it during a stroke commits the stroke and draws the line on release. Setting it back to `false` cancels a line not yet drawn. In `"uv"` mode it resizes a net face together with its aligned row or column, as [`UVTool`](../tools/UVTool.md#resizable) describes. Bind it to a held key, usually `Shift`.
 
 Both setters ignore a value equal to the current one, so auto-repeated keydowns are harmless. A window blur sets both back to `false`, so a key released outside the page does not stay held.
 

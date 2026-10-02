@@ -10,16 +10,16 @@ import type {
 import type { DefaultViewport } from "../Viewport.ts";
 import type {
   UVSlot,
-  UVGeometry
-} from "../../uv/UVRegion.ts";
+  UVRegion
+} from "../../uv/region/UVRegion.ts";
 
 // CONSTANTS
 const kStrokeWidth = 2;
 
 export interface PeerUVPreviewState {
-  id: string;
+  region: UVRegion;
+  /** `null` draws every face. */
   face: UVSlot | null;
-  geometry: UVGeometry;
   color: string;
 }
 
@@ -28,7 +28,7 @@ export interface PeerUVPreviewState {
  */
 export class PeerUVPreview extends PeerRegistry<
   PeerUVPreviewState,
-  UVRegionBorder
+  UVRegionBorder[]
 > {
   #svg: SVGElement;
   #viewport: DefaultViewport;
@@ -67,7 +67,7 @@ export class PeerUVPreview extends PeerRegistry<
     id: string
   ): void {
     for (const [clientId, state] of [...this.entries()]) {
-      if (state.id === id) {
+      if (state.region.id === id) {
         this.remove(clientId);
       }
     }
@@ -80,7 +80,12 @@ export class PeerUVPreview extends PeerRegistry<
 
   #syncSuppression(): void {
     this.#uvOverlay.setGhostSuppressed(
-      this.values()
+      [...this.values()].map(({ region, face }) => {
+        return {
+          id: region.id,
+          face
+        };
+      })
     );
   }
 
@@ -88,12 +93,16 @@ export class PeerUVPreview extends PeerRegistry<
     clientId: string,
     state: PeerUVPreviewState
   ): void {
-    const border = this.view(
-      clientId
-    ) ?? this.#createBorder(
-      clientId,
-      state.geometry
-    );
+    const { region, face } = state;
+    const geometries = face === null ?
+      region.slotsOf().map(({ geometry }) => geometry) :
+      [region.geometryFor(face)];
+    const borders = this.view(clientId) ?? [];
+    this.setView(clientId, borders);
+    while (borders.length > geometries.length) {
+      borders.pop()!.remove();
+    }
+
     const style: UVRegionBorderStyle = {
       color: state.color,
       strokeWidth: kStrokeWidth,
@@ -102,31 +111,24 @@ export class PeerUVPreview extends PeerRegistry<
       dashed: true,
       casing: false
     };
-
-    border.place(
-      state.geometry,
-      this.#viewport.zoom.value,
-      this.#viewport.camera
-    );
-    border.paint(style);
-    border.appendTo(this.#svg);
+    geometries.forEach((geometry, index) => {
+      borders[index] ??= new UVRegionBorder(geometry);
+      const border = borders[index];
+      border.place(
+        geometry,
+        this.#viewport.zoom.value,
+        this.#viewport.camera
+      );
+      border.paint(style);
+      border.appendTo(this.#svg);
+    });
   }
 
   protected disposeView(
-    view: UVRegionBorder
+    view: UVRegionBorder[]
   ): void {
-    view.remove();
-  }
-
-  #createBorder(
-    clientId: string,
-    geometry: UVGeometry
-  ): UVRegionBorder {
-    const border = new UVRegionBorder(
-      geometry
-    );
-    this.setView(clientId, border);
-
-    return border;
+    for (const border of view) {
+      border.remove();
+    }
   }
 }
