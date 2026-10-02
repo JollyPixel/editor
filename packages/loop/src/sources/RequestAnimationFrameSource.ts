@@ -4,7 +4,7 @@ import type {
   FrameSource
 } from "../FrameSource.ts";
 
-export interface RafFrameSourceOptions {
+export interface RequestAnimationFrameSourceOptions {
   /**
    * Defaults to `globalThis.requestAnimationFrame`.
    */
@@ -22,13 +22,13 @@ export interface RafFrameSourceOptions {
 /**
  * Browser frame source with injectable animation-frame functions.
  */
-export class RafFrameSource implements FrameSource {
+export class RequestAnimationFrameSource implements FrameSource {
   #request: (callback: (now: number) => void) => number;
   #cancel: (handle: number) => void;
   #handle: number | null = null;
 
   constructor(
-    options: RafFrameSourceOptions = {}
+    options: RequestAnimationFrameSourceOptions = {}
   ) {
     const {
       requestAnimationFrame: request = globalThis.requestAnimationFrame,

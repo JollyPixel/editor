@@ -21,7 +21,10 @@ $ yarn add @jolly-pixel/loop
 ```ts
 import { GameLoop } from "@jolly-pixel/loop";
 
-const loop = new GameLoop({ fixedFps: 60, maxFps: 144 });
+const loop = new GameLoop({
+  fixedFps: 60,
+  maxFps: 144
+});
 
 loop.on("panic", ({ droppedMs }) => {
   console.warn(`the frame overran its budget, dropped ${droppedMs}ms`);
@@ -29,7 +32,10 @@ loop.on("panic", ({ droppedMs }) => {
 
 loop.start({
   fixedUpdate: (fixedDeltaMs, stepIndex) => {
-    world.step(fixedDeltaMs / 1000, stepIndex);
+    world.step(
+      fixedDeltaMs / 1000,
+      stepIndex
+    );
   },
   update: (frameDeltaMs, alpha) => {
     renderer.draw(alpha);
@@ -42,13 +48,20 @@ for a host with its own frame pump:
 ```ts
 import { FrameScheduler } from "@jolly-pixel/loop";
 
-const scheduler = new FrameScheduler({ fixedFps: 60 });
+const scheduler = new FrameScheduler({
+  fixedFps: 60
+});
 
-function tick(now: number) {
+function tick(
+  now: number
+) {
   const schedule = scheduler.advance(now);
 
   for (let stepIndex = 0; stepIndex < schedule.steps; stepIndex++) {
-    world.step(schedule.fixedDelta / 1000, stepIndex);
+    world.step(
+      schedule.fixedDelta / 1000,
+      stepIndex
+    );
   }
   if (schedule.render) {
     renderer.draw(schedule.alpha);
@@ -59,23 +72,44 @@ function tick(now: number) {
 Tests drive either layer without timers:
 
 ```ts
-import { GameLoop, ManualFrameSource } from "@jolly-pixel/loop";
+import {
+  GameLoop,
+  ManualFrameSource
+} from "@jolly-pixel/loop";
 
 const source = new ManualFrameSource();
-const loop = new GameLoop({ source });
+const loop = new GameLoop({
+  source
+});
 
-loop.start({ fixedUpdate, update });
+loop.start({
+  fixedUpdate,
+  update
+});
 source.run([16, 16, 5000, 16]);
 ```
 
 ## 📚 API
 
-- [FrameScheduler](./docs/framescheduler.md): the scheduler and the `FrameSchedule` it returns.
-- [GameLoop](./docs/gameloop.md): the facade, its callbacks, its events, and `suspendWhenHidden`.
-- [FrameSource](./docs/framesource.md): the driver seam, plus `AnimationLoopFrameSource`, `RafFrameSource` and `ManualFrameSource`.
-- [Clock](./docs/clock.md): `PerformanceClock` and `ManualClock`.
-- [Interpolated](./docs/interpolated.md): rendering between two fixed steps.
-- [FrameBudget](./docs/framebudget.md): a deadline for optional per-frame work.
+### Core
+
+What runs the loop. Start with `GameLoop`.
+
+- [GameLoop](./docs/gameloop.md): the ready-made loop, its callbacks and events.
+- [FrameScheduler](./docs/framescheduler.md): the scheduler under `GameLoop`, for hosts with their own frame pump.
+- [FrameSource](./docs/framesource.md): where frames come from.
+  - [RequestAnimationFrameSource](./docs/sources/requestanimationframesource.md): browsers, the default.
+  - [AnimationLoopFrameSource](./docs/sources/animationloopframesource.md): renderers with `setAnimationLoop()`.
+  - [ManualFrameSource](./docs/sources/manualframesource.md): tests and replays.
+
+### Utilities
+
+Optional helpers. Use them only when you need them.
+
+- [Interpolated](./docs/interpolated.md): smooth rendering between two fixed steps.
+- [FrameBudget](./docs/framebudget.md): a time limit for optional work inside a frame.
+- [suspendWhenHidden](./docs/suspendwhenhidden.md): stop a loop while its canvas is off screen.
+- [Clock](./docs/clock.md): `PerformanceClock` and `ManualClock`, for `FrameBudget` and tests.
 
 See [GLOSSARY.md](./GLOSSARY.md) for the timing terms used by the package.
 

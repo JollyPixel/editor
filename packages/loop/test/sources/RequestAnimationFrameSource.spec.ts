@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   GameLoop,
-  RafFrameSource
+  RequestAnimationFrameSource
 } from "../../src/index.ts";
 
-class FakeRaf {
+class FakeAnimationFrame {
   handle = 0;
   pending = new Map<number, (now: number) => void>();
   cancelled: number[] = [];
@@ -36,23 +36,23 @@ class FakeRaf {
   }
 }
 
-describe("Loop.RafFrameSource", () => {
-  let raf: FakeRaf;
+describe("Loop.RequestAnimationFrameSource", () => {
+  let animationFrame: FakeAnimationFrame;
 
   beforeEach(() => {
-    raf = new FakeRaf();
+    animationFrame = new FakeAnimationFrame();
   });
 
   function createSource() {
-    return new RafFrameSource({
-      requestAnimationFrame: raf.request,
-      cancelAnimationFrame: raf.cancel
+    return new RequestAnimationFrameSource({
+      requestAnimationFrame: animationFrame.request,
+      cancelAnimationFrame: animationFrame.cancel
     });
   }
 
   test("throws when no animation frame function is available", () => {
     assert.throws(
-      () => new RafFrameSource({
+      () => new RequestAnimationFrameSource({
         requestAnimationFrame: undefined
       }),
       TypeError
@@ -65,14 +65,14 @@ describe("Loop.RafFrameSource", () => {
 
     source.start((now) => times.push(now));
     assert.strictEqual(source.running, true);
-    assert.strictEqual(raf.pending.size, 1);
+    assert.strictEqual(animationFrame.pending.size, 1);
 
-    raf.flush(16);
-    raf.flush(16);
-    raf.flush(16);
+    animationFrame.flush(16);
+    animationFrame.flush(16);
+    animationFrame.flush(16);
 
     assert.deepStrictEqual(times, [16, 32, 48]);
-    assert.strictEqual(raf.pending.size, 1);
+    assert.strictEqual(animationFrame.pending.size, 1);
   });
 
   test("stop() cancels the pending handle and leaves nothing scheduled", () => {
@@ -82,14 +82,14 @@ describe("Loop.RafFrameSource", () => {
     source.start(() => {
       frames++;
     });
-    raf.flush();
+    animationFrame.flush();
     source.stop();
 
     assert.strictEqual(source.running, false);
-    assert.strictEqual(raf.pending.size, 0);
-    assert.strictEqual(raf.cancelled.length, 1);
+    assert.strictEqual(animationFrame.pending.size, 0);
+    assert.strictEqual(animationFrame.cancelled.length, 1);
 
-    raf.flush();
+    animationFrame.flush();
     assert.strictEqual(frames, 1);
   });
 
@@ -99,7 +99,7 @@ describe("Loop.RafFrameSource", () => {
     source.stop();
     source.stop();
 
-    assert.strictEqual(raf.cancelled.length, 0);
+    assert.strictEqual(animationFrame.cancelled.length, 0);
   });
 
   test("start() twice leaks no handle", () => {
@@ -108,8 +108,8 @@ describe("Loop.RafFrameSource", () => {
     source.start(() => void 0);
     source.start(() => void 0);
 
-    assert.strictEqual(raf.pending.size, 1);
-    assert.strictEqual(raf.cancelled.length, 1);
+    assert.strictEqual(animationFrame.pending.size, 1);
+    assert.strictEqual(animationFrame.cancelled.length, 1);
   });
 
   test("a throwing callback does not kill the loop", () => {
@@ -122,13 +122,13 @@ describe("Loop.RafFrameSource", () => {
     });
 
     assert.throws(
-      () => raf.flush(),
+      () => animationFrame.flush(),
       /host blew up/
     );
-    assert.strictEqual(raf.pending.size, 1);
+    assert.strictEqual(animationFrame.pending.size, 1);
 
     assert.throws(
-      () => raf.flush(),
+      () => animationFrame.flush(),
       /host blew up/
     );
     assert.strictEqual(frames, 2);
@@ -146,13 +146,13 @@ describe("Loop.RafFrameSource", () => {
         stepIndex
       ) => steps.push(stepIndex)
     });
-    raf.flush(16);
-    raf.flush(60);
+    animationFrame.flush(16);
+    animationFrame.flush(60);
 
     assert.deepStrictEqual(steps, [0, 1, 2]);
     assert.strictEqual(loop.scheduler.elapsed, 60);
 
     loop.stop();
-    assert.strictEqual(raf.pending.size, 0);
+    assert.strictEqual(animationFrame.pending.size, 0);
   });
 });

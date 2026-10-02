@@ -1,10 +1,14 @@
 # Interpolated
 
-`Interpolated` stores the previous and current fixed-step samples. Call
-`push()` after each fixed step and `at(schedule.alpha)` when rendering.
+Keeps the last two fixed-step values so rendering can blend between them.
+
+**Use it when** motion stutters because the render rate and `fixedFps` differ.
 
 ```ts
-import { Interpolated, lerpNumber } from "@jolly-pixel/loop";
+import {
+  Interpolated,
+  lerpNumber,
+} from "@jolly-pixel/loop";
 
 const height = new Interpolated(0, lerpNumber);
 
@@ -19,52 +23,42 @@ loop.start({
 });
 ```
 
-The lerp is supplied by the caller, so this class carries no knowledge of what
-it interpolates:
+1. `push()` after each fixed step.
+2. `at(alpha)` when rendering.
 
-```ts
-export type Lerp<T> = (previous: T, current: T, alpha: number) => T;
-
-export function lerpNumber(
-  previous: number,
-  current: number,
-  alpha: number
-): number;
-
-const position = new Interpolated({ x: 0, y: 0 }, (previous, current, alpha) => ({
-  x: lerpNumber(previous.x, current.x, alpha),
-  y: lerpNumber(previous.y, current.y, alpha)
-}));
-```
-
-The caller supplies interpolation for other value types. The package has no
-`three` dependency.
+The rendered value lags the simulation by up to one fixed step.
 
 ## Constructor
-
-### `new Interpolated(initial, lerp)`
 
 ```ts
 new Interpolated<T>(initial: T, lerp: Lerp<T>);
 ```
 
-Both samples start at `initial`.
+Both stored values start at `initial`.
 
-## API
+## Members
 
-| Member | Description |
+| Member | Meaning |
 | --- | --- |
-| `previous` | Read-only sample before `current`. |
-| `current` | Read-only latest sample. |
-| `push(value: T): this` | Shifts `current` to `previous` and stores `value`. |
-| `reset(value: T): this` | Replaces both samples. |
-| `at(alpha: number): T` | Blends with `alpha` clamped to `[0, 1]`. |
+| `previous` | Read-only. The value before `current`. |
+| `current` | Read-only. The latest value. |
+| `push(value): this` | `current` becomes `previous`, `value` becomes `current`. |
+| `reset(value): this` | Sets both to `value`. Use it on teleports. |
+| `at(alpha): T` | Blends the two. `alpha <= 0` returns `previous`, `alpha >= 1` returns `current`, without calling `lerp`. |
 
-`at()` returns an endpoint without calling the lerp when `alpha <= 0` or
-`alpha >= 1`. Interpolated rendering trails simulation by at most one fixed
-step.
+## Lerp
 
-> [!NOTE]
-> Engine-wide transform interpolation requires fixed steps to be the only
-> transform writers. Existing components also write transforms in `update()`,
-> so automatic interpolation remains out of scope for this package.
+You supply the blend function, so any type works.
+
+```ts
+export type Lerp<T> = (previous: T, current: T, alpha: number) => T;
+```
+
+`lerpNumber` covers numbers. Compose it for other shapes:
+
+```ts
+const position = new Interpolated({ x: 0, y: 0 }, (previous, current, alpha) => ({
+  x: lerpNumber(previous.x, current.x, alpha),
+  y: lerpNumber(previous.y, current.y, alpha)
+}));
+```

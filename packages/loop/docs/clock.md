@@ -1,6 +1,6 @@
 # Clock
 
-`Clock` supplies monotonic wall-clock time in milliseconds.
+Returns the current time in milliseconds.
 
 ```ts
 export interface Clock {
@@ -8,13 +8,12 @@ export interface Clock {
 }
 ```
 
-`FrameScheduler` receives timestamps through `advance(now)`. Frame sources and
-`FrameBudget` use clocks directly.
+Used by [`FrameBudget`](./framebudget.md) and
+[`ManualFrameSource`](./sources/manualframesource.md).
 
 ## PerformanceClock
 
-`PerformanceClock` reads `performance.now()`. It is the default clock for
-`FrameBudget`.
+Reads `performance.now()`. The default clock of `FrameBudget`.
 
 ```ts
 import { PerformanceClock } from "@jolly-pixel/loop";
@@ -25,7 +24,7 @@ clock.now();
 
 ## ManualClock
 
-`ManualClock` changes only when `set()` or `advance()` is called.
+Moves only when you tell it to. For tests.
 
 ```ts
 import { ManualClock } from "@jolly-pixel/loop";
@@ -36,9 +35,8 @@ clock.advance(5000);                 // -> 5016
 clock.set(0);                        // -> 0
 ```
 
-`new ManualClock(initialTime?: number)` starts at `initialTime` when supplied
-and at `0` otherwise. `set(time)` assigns an absolute time, while
-`advance(deltaMs)` adds to the current value. Both methods return the result.
-
-`ManualFrameSource` owns a `ManualClock`; `FrameBudget` accepts one through its
-constructor.
+| Member | Meaning |
+| --- | --- |
+| `new ManualClock(initialTime = 0)` | Starts at `initialTime`. |
+| `set(time): number` | Jumps to `time`, returns it. |
+| `advance(deltaMs): number` | Adds `deltaMs`, returns the new time. |
