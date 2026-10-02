@@ -16,6 +16,10 @@ import type {
   RGBA
 } from "../types.ts";
 
+// CONSTANTS
+const kHash = 0x23;
+const kCloseParen = 0x29;
+
 export class ColorParseError extends Error {
   constructor(
     input: string
@@ -35,15 +39,18 @@ export function parseColor(
   if (value === "") {
     return null;
   }
+  if (value.charCodeAt(0) === kHash) {
+    return parseHex(value);
+  }
 
   const named = parseNamed(value);
   if (named !== null) {
     return named;
   }
+  if (value.charCodeAt(value.length - 1) === kCloseParen) {
+    const fn = parseFunction(value);
 
-  const fn = parseFunction(value);
-  if (fn !== null) {
-    return fromFunction(fn);
+    return fn === null ? null : fromFunction(fn);
   }
 
   return parseHex(value);

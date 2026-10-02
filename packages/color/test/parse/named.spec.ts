@@ -25,11 +25,11 @@ describe("parseColor / named", () => {
   }
 
   test("carries the 148 CSS named colors", () => {
-    assert.equal(Object.keys(kNamedColors).length, 148);
+    assert.equal(kNamedColors.size, 148);
   });
 
   test("every listed name is reachable through parseColor", () => {
-    for (const name of Object.keys(kNamedColors)) {
+    for (const name of kNamedColors.keys()) {
       assert.notEqual(parseColor(name), null, name);
     }
   });
@@ -37,5 +37,11 @@ describe("parseColor / named", () => {
   test("rejects unknown names", () => {
     assert.equal(parseColor("nosuchcolor"), null);
     assert.equal(parseColor("reddish blue"), null);
+  });
+
+  test("rejects object prototype keys", () => {
+    for (const input of ["constructor", "__proto__", "hasOwnProperty"]) {
+      assert.equal(parseColor(input), null, input);
+    }
   });
 });

@@ -1,9 +1,7 @@
 // Import Internal Dependencies
+import { toByte } from "./convert/bytes.ts";
 import {
-  fromRGBA8,
-  toByte
-} from "./convert/bytes.ts";
-import {
+  BYTE_MAX,
   clampUnit,
   wrapHue
 } from "./utils.ts";
@@ -21,6 +19,13 @@ const kAlphaDigits = 3;
 const kPercentDigits = 1;
 const kHueDigits = 1;
 const kPercentScale = 100;
+const kHexPairs = byteTable(
+  (byte) => byte.toString(16).padStart(2, "0")
+);
+const kDecimals = byteTable(String);
+const kByteAlphas = byteTable(
+  (byte) => String(trim(byte / BYTE_MAX, kAlphaDigits))
+);
 
 /**
  * Emits lowercase full-length hex after clamping channels.
@@ -40,17 +45,21 @@ export function formatHex8(
   color: RGBA8,
   withAlpha = false
 ): string {
-  return formatHex(fromRGBA8(color), withAlpha);
+  const rgb = pair(color.r / BYTE_MAX) +
+    pair(color.g / BYTE_MAX) +
+    pair(color.b / BYTE_MAX);
+
+  return withAlpha ?
+    `#${rgb}${pair(color.a / BYTE_MAX)}` :
+    `#${rgb}`;
 }
 
 export function formatRgb(
   color: RGBA
 ): string {
-  const {
-    r,
-    g,
-    b
-  } = bytes(color);
+  const r = decimal(color.r);
+  const g = decimal(color.g);
+  const b = decimal(color.b);
 
   return `rgb(${r}, ${g}, ${b})`;
 }
@@ -58,11 +67,9 @@ export function formatRgb(
 export function formatRgba(
   color: RGBA
 ): string {
-  const {
-    r,
-    g,
-    b
-  } = bytes(color);
+  const r = decimal(color.r);
+  const g = decimal(color.g);
+  const b = decimal(color.b);
 
   return `rgba(${r}, ${g}, ${b}, ${alpha(color.a)})`;
 }
@@ -83,20 +90,15 @@ export function formatHsl(
     `hsla(${h}, ${s}%, ${l}%, ${alpha(a)})`;
 }
 
-function bytes(
-  color: RGBA
-): { r: number; g: number; b: number; } {
-  return {
-    r: toByte(color.r),
-    g: toByte(color.g),
-    b: toByte(color.b)
-  };
-}
-
 function alpha(
   value: number
-): number {
-  return trim(clampUnit(value), kAlphaDigits);
+): string {
+  const unit = clampUnit(value);
+  const byte = Math.round(unit * BYTE_MAX);
+
+  return byte / BYTE_MAX === unit ?
+    kByteAlphas[byte] :
+    String(trim(unit, kAlphaDigits));
 }
 
 function trim(
@@ -109,7 +111,24 @@ function trim(
 function pair(
   channel: number
 ): string {
-  return toByte(channel)
-    .toString(16)
-    .padStart(2, "0");
+  const byte = toByte(channel);
+
+  return kHexPairs[byte] ?? String(byte);
+}
+
+function decimal(
+  channel: number
+): string {
+  const byte = toByte(channel);
+
+  return kDecimals[byte] ?? String(byte);
+}
+
+function byteTable(
+  format: (byte: number) => string
+): string[] {
+  return Array.from(
+    { length: BYTE_MAX + 1 },
+    (_, byte) => format(byte)
+  );
 }

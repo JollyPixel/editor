@@ -66,7 +66,7 @@ goldenAngleColor(index);      // unbounded, hues a golden angle apart
 
 ## 🧪 Benchmarks
 
-The suite measures parsing per notation and hex formatting.
+One suite per module: parsing per notation (including rejected input), formatting, conversion, contrast, palettes and pixel buffers.
 
 ```bash
 pnpm --filter @jolly-pixel/color bench
