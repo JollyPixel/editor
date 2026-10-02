@@ -1,10 +1,5 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
-import {
-  mkdirSync,
-  watch,
-  type FSWatcher
-} from "node:fs";
 import path from "node:path";
 import type {
   IncomingMessage,
@@ -23,32 +18,16 @@ import type {
 
 // Import Internal Dependencies
 import {
-  EDITOR_PAGE_REBUILT_EVENT,
   EDITOR_PAGES_DIR,
   EDITOR_PAGES_PREFIX,
-  type EditorDescriptor,
-  type EditorPageRebuilt
+  type EditorDescriptor
 } from "../src/editors/EditorDescriptor.ts";
 import type { EditorPackage } from "./editorManifest.ts";
+import { watchEditorPages } from "./watchEditorPages.ts";
 
 // CONSTANTS
 export const EDITORS_MODULE_ID = "virtual:jolly-pixel/editors";
-export const EDITOR_PAGE_SETTLE_MS = 300;
 const kResolvedEditorsModuleId = `\0${EDITORS_MODULE_ID}`;
-
-export interface EditorPagesServer {
-  config: {
-    logger: {
-      warn(message: string): void;
-    };
-  };
-  ws: {
-    send(
-      event: string,
-      payload: EditorPageRebuilt
-    ): void;
-  };
-}
 
 export function editorsModule(
   editors: Iterable<EditorDescriptor>
@@ -73,40 +52,6 @@ export function createEditorPagesHandler(
     })),
     unknownEditorPage
   );
-}
-
-export function watchEditorPages(
-  server: EditorPagesServer,
-  editors: readonly EditorPackage[]
-): () => void {
-  const pending = new Map<string, ReturnType<typeof setTimeout>>();
-  const watchers: FSWatcher[] = editors.map((editor) => {
-    mkdirSync(editor.dist, { recursive: true });
-
-    return watch(editor.dist, { recursive: true }, () => {
-      clearTimeout(pending.get(editor.name));
-      pending.set(editor.name, setTimeout(() => {
-        pending.delete(editor.name);
-        server.ws.send(EDITOR_PAGE_REBUILT_EVENT, {
-          name: editor.name
-        });
-      }, EDITOR_PAGE_SETTLE_MS));
-    }).on("error", (error) => {
-      server.config.logger.warn(
-        `editor page watcher for ${editor.name} failed: ${error.message}`
-      );
-    });
-  });
-
-  return () => {
-    for (const watcher of watchers) {
-      watcher.close();
-    }
-    for (const timer of pending.values()) {
-      clearTimeout(timer);
-    }
-    pending.clear();
-  };
 }
 
 export function editorPagesPlugin(

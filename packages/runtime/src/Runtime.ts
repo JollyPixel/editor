@@ -129,7 +129,9 @@ export class Runtime<
       ),
       ...options.loop,
       keepAlive: this.renderOnDemand ?
-        () => this.world.animating || this.world.input.wasActive :
+        () => this.world.animating ||
+          this.world.input.wasActive ||
+          this.world.input.mouse.hovering :
         undefined
     });
     this.world.on("invalidate", () => this.loop.invalidate());

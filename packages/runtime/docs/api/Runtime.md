@@ -107,6 +107,7 @@ frames on:
 - keyboard, pointer, wheel, and drag-and-drop events in the page;
 - window `resize`, `focus`, and `blur`;
 - a resize of the canvas container or a device pixel ratio change;
+- every frame while the pointer hovers the canvas;
 - every frame after which a key, button, or touch is still held, or a
   [`world.keepAlive()`](../../../engine/docs/systems/world.md#rendering-on-demand)
   predicate returns `true`.

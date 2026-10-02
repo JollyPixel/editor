@@ -198,6 +198,25 @@ describe("Runtime renderOnDemand", () => {
     dispose();
   });
 
+  test("stays awake while the pointer hovers the canvas", () => {
+    const { runtime, renderer, tick, dispose } = createRuntime();
+    runtime.start();
+    tick(10);
+
+    runtime.canvas.dispatchEvent(new MouseEvent("mouseenter"));
+    runtime.canvas.dispatchEvent(
+      new PointerEvent("pointermove", { bubbles: true })
+    );
+    tick(50);
+    assert.equal(runtime.idle, false);
+    assert.equal(renderer.source.looping, true);
+
+    runtime.canvas.dispatchEvent(new MouseEvent("mouseleave"));
+    tick(10);
+    assert.equal(runtime.idle, true);
+    dispose();
+  });
+
   test("stops listening for input once stopped", () => {
     const { runtime, renderer, tick, dispose } = createRuntime();
     runtime.start();

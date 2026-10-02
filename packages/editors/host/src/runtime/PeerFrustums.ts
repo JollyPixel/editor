@@ -25,6 +25,7 @@ export interface PeerFrustumsOptions {
 
 export class PeerFrustums extends ActorComponent {
   #sync: PeerFrustumSync;
+  #room: Room;
   #camera: THREE.PerspectiveCamera;
 
   constructor(
@@ -36,6 +37,7 @@ export class PeerFrustums extends ActorComponent {
       typeName: "PeerFrustums"
     });
 
+    this.#room = options.room;
     this.#camera = options.camera;
     this.#sync = new PeerFrustumSync({
       room: options.room,
@@ -53,6 +55,17 @@ export class PeerFrustums extends ActorComponent {
 
   awake(): void {
     this.#sync.attach(this.#camera);
+
+    const { world } = this.actor;
+    this.#room.on("sync", this.#onPeersChange);
+    this.#room.on("peer-joined", this.#onPeersChange);
+    this.addTeardown(
+      world.keepAlive(() => this.#room.peers.size > 0)
+    );
+    this.addTeardown(() => {
+      this.#room.off("sync", this.#onPeersChange);
+      this.#room.off("peer-joined", this.#onPeersChange);
+    });
   }
 
   poseOf(
@@ -69,4 +82,8 @@ export class PeerFrustums extends ActorComponent {
     this.#sync.destroy();
     super.destroy();
   }
+
+  readonly #onPeersChange = (): void => {
+    this.actor.world.invalidate();
+  };
 }
