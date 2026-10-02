@@ -69,6 +69,18 @@ describe("decodePng", () => {
     assert.deepEqual([...data], [1, 2, 3, 64, 4, 5, 6, 255]);
   });
 
+  it("expands indices past the palette as opaque black", async() => {
+    const image = png([
+      header(1, 1, 3),
+      chunk("PLTE", Buffer.from([1, 2, 3])),
+      chunk("IDAT", deflateSync(Buffer.from([0, 200])))
+    ]);
+
+    const { data } = await decodePng(image);
+
+    assert.deepEqual([...data], [0, 0, 0, 255]);
+  });
+
   it("expands grayscale samples, with and without alpha", async() => {
     const gray = png([
       header(2, 1, 0),
@@ -154,6 +166,14 @@ describe("decodePng", () => {
         payload: png([
           header(2, 1, 6),
           chunk("IDAT", deflateSync(Buffer.from([0, 1, 2, 3, 4])))
+        ]),
+        message: /image data is truncated/
+      },
+      {
+        name: "dimensions the compressed data cannot fill",
+        payload: png([
+          header(65_535, 65_535, 6),
+          chunk("IDAT", deflateSync(Buffer.alloc(16)))
         ]),
         message: /image data is truncated/
       }

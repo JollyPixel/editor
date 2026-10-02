@@ -48,8 +48,9 @@ export async function decodePng(
   }
 
   const { width, height, color } = header;
+  const stride = width * color.channels;
   const samples = unfilterScanlines(
-    await inflate(concat(idat)),
+    await inflate(concat(idat), height * (stride + 1)),
     width,
     height,
     color.channels
