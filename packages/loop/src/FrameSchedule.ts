@@ -6,6 +6,7 @@ export interface FrameSchedule {
    * Non-negative wall-clock delta before clamping and scaling, in ms.
    */
   rawDelta: number;
+  unscaledDelta: number;
   /**
    * Wall-clock delta after clamping and scaling, in ms.
    */

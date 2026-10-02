@@ -46,8 +46,8 @@ function createMockInput() {
   return {
     connect: mock.fn(),
     disconnect: mock.fn(),
-    update: mock.fn(),
-    publishFrameState: mock.fn(),
+    sample: mock.fn(),
+    publish: mock.fn(),
     exited: false
   };
 }
@@ -227,66 +227,128 @@ describe("Systems.World", () => {
   });
 
   describe("input sampling", () => {
-    test("should sample input once per fixed step", () => {
+    function recordInputOrder(): string[] {
+      const order: string[] = [];
+      input.sample.mock.mockImplementation(() => {
+        order.push("sample");
+      });
+      input.publish.mock.mockImplementation((reader: string) => {
+        order.push(reader);
+      });
+      sceneManager.fixedUpdate.mock.mockImplementation(() => {
+        order.push("fixedUpdate");
+      });
+      sceneManager.update.mock.mockImplementation(() => {
+        order.push("update");
+      });
+
+      return order;
+    }
+
+    test("should sample once, then publish before each step and the rendered update", () => {
       world.start();
       tick();
-      input.update.mock.resetCalls();
+      const order = recordInputOrder();
 
-      /*
-       * Three steps: the first sees the press edge, the next two diff against
-       * it and correctly do not, so a jump fires once rather than three times.
-       */
       tick(3 * kFixedDelta60);
 
-      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 3);
-      assert.strictEqual(input.update.mock.callCount(), 3);
+      assert.deepStrictEqual(order, [
+        "sample",
+        "step",
+        "fixedUpdate",
+        "step",
+        "fixedUpdate",
+        "step",
+        "fixedUpdate",
+        "frame",
+        "update"
+      ]);
     });
 
-    test("should sample input once on a frame that runs no step", () => {
+    test("should keep input pending for the next step on a frame that runs no step", () => {
       world.start();
       tick();
-      input.update.mock.resetCalls();
+      const order = recordInputOrder();
 
       // A 144Hz frame against a 60Hz simulation: no step is due.
       tick(1000 / 144);
 
-      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 0);
-      assert.strictEqual(input.update.mock.callCount(), 1);
+      assert.deepStrictEqual(order, ["sample", "frame", "update"]);
+    });
+  });
+
+  describe("time", () => {
+    test("should split game and wall-clock time in seconds", () => {
+      scheduler.timeScale = 0.5;
+      world.start();
+      tick();
+
+      tick(40);
+
+      assert.strictEqual(world.time.delta, 0.02);
+      assert.strictEqual(world.time.unscaledDelta, 0.04);
+      assert.strictEqual(world.time.elapsed, 0.02);
+      assert.strictEqual(world.time.unscaledElapsed, 0.04);
     });
 
-    test("should publish accumulated input before the rendered update", () => {
-      const order: string[] = [];
-      input.publishFrameState.mock.mockImplementation(() => {
-        order.push("input");
-      });
+    test("should keep wall-clock time flowing at a zero time scale", () => {
+      scheduler.timeScale = 0;
+      world.start();
+      tick();
+
+      tick(20);
+      tick(20);
+
+      assert.strictEqual(world.time.delta, 0);
+      assert.strictEqual(world.time.elapsed, 0);
+      assert.strictEqual(world.time.unscaledDelta, 0.02);
+      assert.strictEqual(world.time.unscaledElapsed, 0.04);
+    });
+
+    test("should clamp wall-clock time like game time", () => {
+      world.start();
+      tick();
+
+      tick(10_000);
+
+      assert.strictEqual(world.time.unscaledDelta, 0.25);
+    });
+
+    test("should expose the delta read by update()", () => {
+      const deltas: number[] = [];
       sceneManager.update.mock.mockImplementation(() => {
-        order.push("scene");
+        deltas.push(world.time.delta);
       });
       world.start();
-
       tick();
 
-      assert.deepStrictEqual(order, ["input", "scene"]);
+      tick(20);
+
+      assert.deepStrictEqual(deltas, [0, 0.02]);
     });
 
-    test("should sample before the step that reads the sample", () => {
-      const stepsWhenSampled: number[] = [];
-      input.update.mock.mockImplementation(() => {
-        stepsWhenSampled.push(sceneManager.fixedUpdate.mock.callCount());
+    test("should advance fixedElapsed once per completed step", () => {
+      const seen: number[] = [];
+      sceneManager.fixedUpdate.mock.mockImplementation(() => {
+        seen.push(world.time.fixedElapsed);
       });
-
       world.start();
       tick();
-      tick(1000 / 144);
-      tick(1000 / 144);
-      tick(1000 / 144);
 
-      /*
-       * Every sample lands before the step it feeds, never after it, so no
-       * edge is diffed away before a step has seen it.
-       */
-      assert.deepStrictEqual(stepsWhenSampled, [0, 0, 0, 0]);
-      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
+      tick(3 * kFixedDelta60);
+
+      assert.deepStrictEqual(seen, [
+        0,
+        kFixedDelta60 / 1000,
+        2 * kFixedDelta60 / 1000
+      ]);
+      assert.strictEqual(world.time.fixedElapsed, 3 * kFixedDelta60 / 1000);
+    });
+
+    test("should not advance before start()", () => {
+      tick(20);
+
+      assert.strictEqual(world.time.unscaledElapsed, 0);
     });
   });
 

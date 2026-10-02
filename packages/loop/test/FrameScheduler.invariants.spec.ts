@@ -44,7 +44,9 @@ describe("Loop.FrameScheduler invariants", () => {
         const rng = new Xorshift32(seed);
         const deltas = generateTape(rng, { frames: kFramesPerTape });
         const scheduler = new FrameScheduler(options);
-        const maxSteps = scheduler.maxStepsPerFrame;
+        const maxSteps = Math.ceil(
+          scheduler.maxStepsPerFrame * Math.max(scheduler.timeScale, 1)
+        );
 
         let now = 0;
         let previousTime = 0;

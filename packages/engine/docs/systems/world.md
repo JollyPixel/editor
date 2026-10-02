@@ -147,11 +147,11 @@ One frame, in order:
 1. Calls `sceneManager.beginFrame()`, which snapshots the actor tree and
    starts pending components. The snapshot is reused by every `fixedUpdate`
    and `update` call in the frame.
-2. Runs `schedule.steps` fixed steps, each preceded by an
-   [Input](../../../controls/docs/input.md) update.
-3. Updates input once more if the frame ran no step at all.
-4. On a drawn frame, publishes transient input accumulated across the fixed
-   samples, calls `sceneManager.update(deltaTime, alpha)`, then
+2. Calls `input.sample()` once.
+3. Runs `schedule.steps` fixed steps, each preceded by
+   `input.publish("step")`. See [Input](../../../controls/docs/input.md).
+4. On a drawn frame, calls `input.publish("frame")`, then
+   `sceneManager.update(deltaTime, alpha)`, then
    `renderer.draw(sceneManager.getSource())`.
 5. Calls `endFrame()`.
 
@@ -161,23 +161,72 @@ Runs deterministic logic at a fixed rate, 0 to `maxStepsPerFrame` times per
 frame, always with the same delta. `stepIndex` counts the steps within the
 current frame, from zero.
 
-Input is sampled before each step, so a catch-up frame running three steps
-reports a press edge to the first step only, and a frame that runs no step
-does not diff the edge away before any step has seen it.
+Input is published to each step, so a catch-up frame running three steps
+reports a press edge to the first step only. A frame that runs no step keeps
+its edges pending for the next step, so a press during slow motion or on a
+display faster than the step rate is never lost to `fixedUpdate`. While paused, edges
+wait for the next step, such as one run by `GameLoop.step()` or the first one
+after `resume()`.
 
 #### `update(deltaTime, alpha)`
 
 Runs variable-rate logic once per drawn frame. `alpha` is how far the frame
 sits between the last fixed step and the next one, in `[0, 1)`. Pass it to
-`Interpolated` from `@jolly-pixel/loop` to draw smoothly between steps.
+`Interpolated` from `@jolly-pixel/loop` to draw smoothly between steps. The
+engine does not interpolate transforms: a component that moves an actor in
+`fixedUpdate` should interpolate it here, or the motion looks choppy on fast
+displays and in slow motion. See
+[Interpolated](../../../loop/docs/interpolated.md#slow-motion).
 
-Before this phase, `World` republishes mouse transitions and movement
-accumulated across every fixed-step input sample since the previous drawn
-frame. Variable-rate components therefore see each mouse edge once even when
-the current frame ran several fixed steps.
+```ts
+class Mover extends Behavior {
+  speed = 4;
+  #x = new Interpolated(0, lerpNumber);
+
+  fixedUpdate(deltaTime: number) {
+    this.#x.push(this.#x.current + (this.speed * deltaTime));
+  }
+
+  update(_deltaTime: number, alpha: number) {
+    this.actor.transform.setLocalPosition({ x: this.#x.at(alpha), y: 0, z: 0 });
+  }
+}
+```
+
+Before this phase, `World` calls `input.publish("frame")`: the transitions,
+typed characters and mouse movement sampled since the previous drawn frame.
+Variable-rate components therefore see each edge once even when the current
+frame ran several fixed steps or none.
 
 A frame suppressed by `maxFps` skips `update` and the draw, but still
 accumulates time and still runs its fixed steps.
+
+### Time
+
+`world.time` is a `WorldTime` updated by `tick()`, in seconds:
+
+| Property | Meaning |
+| --- | --- |
+| `delta` | Game time this frame brought in. Follows `timeScale`, `0` while paused. Same value as the `update` delta. |
+| `unscaledDelta` | Wall-clock time this frame brought in, clamped like game time. Ignores `timeScale` and pause. |
+| `elapsed` | Sum of `delta`. |
+| `unscaledElapsed` | Sum of `unscaledDelta`. |
+| `fixedElapsed` | Game time consumed by completed fixed steps. Inside `fixedUpdate` it is the start time of the running step. |
+
+Code that must keep running at normal speed while the game slows down or
+pauses reads `unscaledDelta`: cameras, UI motion, debug tools, and tweens of
+`timeScale` itself. [Camera3DControls](../components/camera-3d-controls.md)
+and [OrbitFlyCamera](../components/orbit-fly-camera.md) move by it.
+
+```ts
+const { time } = this.actor.world;
+
+if (time.fixedElapsed - this.lastShot >= 2) {
+  this.lastShot = time.fixedElapsed;
+}
+```
+
+A tick on a stopped world does not advance the time.
 
 #### `endFrame(): boolean`
 

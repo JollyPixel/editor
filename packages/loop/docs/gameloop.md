@@ -71,6 +71,20 @@ Freeze and unfreeze simulation time. Both are safe to call twice.
 While paused, frames keep coming with `frameDelta: 0` and no fixed steps, and
 `update` still runs. Paused time is not replayed on resume.
 
+### `step(count = 1): this`
+
+Runs `count` extra fixed steps and one render on the next frame, then goes
+back to the current speed. Meant for frame-by-frame debugging while paused:
+
+```ts
+loop.pause();
+loop.step();
+```
+
+That frame's `frameDelta` grows by `count * fixedDelta`. Wakes a sleeping
+loop. Does nothing on a stopped loop. See
+[`FrameScheduler.queueSteps()`](./framescheduler.md#queuestepscount-number-void).
+
 ### `invalidate(): void`
 
 Asks for another rendered frame and wakes a sleeping loop. Does nothing on a
@@ -99,7 +113,7 @@ stopped loop.
 | `stop` | none | `stop()` stops a running loop. |
 | `pause` | `{ paused }` | `pause()` (`true`) or `resume()` (`false`) changes state. |
 | `clamp` | `{ rawDelta, frameDelta }` | A frame delta was above `maxFrameDelta`. |
-| `panic` | `{ droppedMs, steps }` | A frame hit `maxStepsPerFrame` and dropped time. |
+| `panic` | `{ droppedMs, steps }` | A frame hit the step budget and dropped time. |
 | `sleep` | none | The loop goes idle. |
 | `wake` | none | `invalidate()` wakes it. |
 

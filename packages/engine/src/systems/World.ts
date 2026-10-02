@@ -25,6 +25,7 @@ import {
   Logger,
   type LoggerOptions
 } from "./Logger.ts";
+import { WorldTime } from "./WorldTime.ts";
 
 export type WorldEvents = {
   beforeFixedUpdate: (dt: number) => void;
@@ -83,6 +84,7 @@ export class World<
 
   readonly debug: boolean;
   readonly logger: Logger;
+  readonly time = new WorldTime();
 
   #worldLogger: Logger;
   #running = false;
@@ -218,10 +220,12 @@ export class World<
     }
 
     this.sceneManager.beginFrame();
+    this.time.advanceFrame(schedule);
+    this.input.sample();
 
     const fixedDt = schedule.fixedDelta / 1000;
     for (let stepIndex = 0; stepIndex < schedule.steps; stepIndex++) {
-      this.input.update();
+      this.input.publish("step");
 
       this.emit(
         "beforeFixedUpdate",
@@ -235,15 +239,13 @@ export class World<
         "afterFixedUpdate",
         fixedDt
       );
-    }
-    if (schedule.steps === 0) {
-      this.input.update();
+      this.time.advanceStep(fixedDt);
     }
 
     if (schedule.render) {
-      const dt = schedule.frameDelta / 1000;
+      const dt = this.time.delta;
 
-      this.input.publishFrameState();
+      this.input.publish("frame");
       this.emit(
         "beforeUpdate",
         dt

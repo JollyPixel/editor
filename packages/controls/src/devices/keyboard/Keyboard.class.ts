@@ -4,7 +4,8 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type {
   InputControl,
-  InputCustomAction
+  InputCustomAction,
+  InputReader
 } from "../../types.ts";
 import {
   BrowserDocumentAdapter,
@@ -21,6 +22,7 @@ import {
   type KeyBindingHandler,
   type KeyBindingOptions
 } from "./KeyBindings.ts";
+import { KeyEdgeBuffer } from "./KeyEdgeBuffer.ts";
 
 // CONSTANTS
 /** `Tab` and `Escape` keep browser defaults but still emit key events. */
@@ -160,11 +162,12 @@ export class Keyboard extends Emitter<
   #preventControlKeys: boolean;
 
   #wasActive = false;
-  #settled = true;
   #enabled = true;
   #guards = new Map<KeyboardGuard, (() => void) | null>();
   #bindings = new KeyBindings();
   #suspensions = 0;
+  #edges = new KeyEdgeBuffer();
+  #publishedEdges = false;
   buttons = new Map<string, KeyState>();
   buttonsDown = new Set<string>();
   autoRepeatedCode: string | null = null;
@@ -265,7 +268,6 @@ export class Keyboard extends Emitter<
   #releaseHeldKeys = () => {
     this.buttonsDown.clear();
     this.autoRepeatedCode = null;
-    this.#settled = false;
   };
 
   #isBlocked(
@@ -320,6 +322,8 @@ export class Keyboard extends Emitter<
     this.char = "";
     this.newChar = "";
     this.autoRepeatedCode = null;
+    this.#edges.reset();
+    this.#publishedEdges = false;
   }
 
   isDown(
@@ -452,8 +456,13 @@ export class Keyboard extends Emitter<
   };
 
   update() {
+    this.sample();
+    this.publish("step");
+  }
+
+  sample(): void {
     if (
-      this.#settled &&
+      !this.#wasActive &&
       this.buttonsDown.size === 0 &&
       this.autoRepeatedCode === null &&
       this.newChar === ""
@@ -462,36 +471,50 @@ export class Keyboard extends Emitter<
     }
 
     let active = 0;
-    let settling = 0;
-
     for (const keyState of this.buttons.values()) {
       const wasDown = keyState.isDown;
       const isDown = this.buttonsDown.has(keyState.code);
 
       keyState.isDown = isDown;
-      keyState.wasJustPressed = !wasDown && isDown;
-      keyState.wasJustAutoRepeated = false;
-      keyState.wasJustReleased = wasDown && !isDown;
-
-      active |= Number(isDown);
-      settling |= Number(keyState.wasJustPressed) | Number(keyState.wasJustReleased);
-    }
-
-    if (this.autoRepeatedCode !== null) {
-      const keyState = this.buttons.get(this.autoRepeatedCode);
-      if (keyState) {
-        keyState.wasJustAutoRepeated = true;
-        active |= 1;
-        settling |= 1;
+      if (!wasDown && isDown) {
+        this.#edges.push("pressed", keyState.code);
       }
-      this.autoRepeatedCode = null;
+      else if (wasDown && !isDown) {
+        this.#edges.push("released", keyState.code);
+      }
+      active |= Number(isDown);
     }
 
-    this.char = this.newChar;
+    if (
+      this.autoRepeatedCode !== null &&
+      this.buttons.has(this.autoRepeatedCode)
+    ) {
+      this.#edges.push("autoRepeated", this.autoRepeatedCode);
+      active |= 1;
+    }
+    this.autoRepeatedCode = null;
+
+    this.#edges.pushChar(this.newChar);
     this.newChar = "";
 
     this.#wasActive = active !== 0;
-    this.#settled = active === 0 && settling === 0 && this.char === "";
+  }
+
+  publish(
+    reader: InputReader
+  ): void {
+    const edges = this.#edges.take(reader);
+    if (edges.empty && !this.#publishedEdges) {
+      return;
+    }
+
+    for (const keyState of this.buttons.values()) {
+      keyState.wasJustPressed = edges.pressed.has(keyState.code);
+      keyState.wasJustAutoRepeated = edges.autoRepeated.has(keyState.code);
+      keyState.wasJustReleased = edges.released.has(keyState.code);
+    }
+    this.char = edges.char;
+    this.#publishedEdges = !edges.empty;
   }
 }
 

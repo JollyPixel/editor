@@ -213,6 +213,19 @@ export class GameLoop extends Emitter<GameLoopEvents> {
     return this;
   }
 
+  step(
+    count = 1
+  ): this {
+    if (!this.#running) {
+      return this;
+    }
+
+    this.scheduler.queueSteps(count);
+    this.invalidate();
+
+    return this;
+  }
+
   #syncTimeScale(): void {
     this.scheduler.timeScale = this.#paused
       ? 0

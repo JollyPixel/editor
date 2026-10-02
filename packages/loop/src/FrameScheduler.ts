@@ -69,6 +69,7 @@ export class FrameScheduler {
   #elapsed = 0;
   #droppedTime = 0;
   #frameCount = 0;
+  #queuedSteps = 0;
 
   constructor(
     options: FrameSchedulerOptions = {}
@@ -181,10 +182,23 @@ export class FrameScheduler {
     this.#elapsed = 0;
     this.#droppedTime = 0;
     this.#frameCount = 0;
+    this.#queuedSteps = 0;
   }
 
   skipGap(): void {
     this.#lastNow = null;
+  }
+
+  queueSteps(
+    count: number
+  ): void {
+    if (!Number.isInteger(count) || count < 1) {
+      throw new RangeError(
+        `count must be an integer >= 1, got ${count}`
+      );
+    }
+
+    this.#queuedSteps += count;
   }
 
   advance(
@@ -198,19 +212,25 @@ export class FrameScheduler {
 
     const clamped = rawDelta > this.#maxFrameDelta;
     const wallDelta = clamped ? this.#maxFrameDelta : rawDelta;
-    const frameDelta = wallDelta * this.#timeScale;
+    const scaledDelta = wallDelta * this.#timeScale;
+    const queuedSteps = this.#queuedSteps;
+    const queuedDelta = queuedSteps * this.#fixedDelta;
+    this.#queuedSteps = 0;
 
-    this.#elapsed += frameDelta;
-    this.#accumulator += frameDelta;
+    this.#elapsed += scaledDelta + queuedDelta;
+    this.#accumulator += scaledDelta;
 
     const wantedSteps = Math.floor(
       this.#accumulator / this.#fixedDelta
     );
-    const steps = Math.min(wantedSteps, this.#maxStepsPerFrame);
-    const panicked = wantedSteps > this.#maxStepsPerFrame;
+    const stepBudget = Math.ceil(
+      this.#maxStepsPerFrame * Math.max(this.#timeScale, 1)
+    );
+    const steps = Math.min(wantedSteps, stepBudget);
+    const panicked = wantedSteps > stepBudget;
 
     this.#accumulator -= steps * this.#fixedDelta;
-    this.#time += steps * this.#fixedDelta;
+    this.#time += steps * this.#fixedDelta + queuedDelta;
 
     let droppedMs = 0;
     if (panicked) {
@@ -222,13 +242,14 @@ export class FrameScheduler {
     const render = this.#shouldRender(
       firstFrame,
       wallDelta
-    );
+    ) || queuedSteps > 0;
 
     return {
       rawDelta,
-      frameDelta,
+      unscaledDelta: wallDelta,
+      frameDelta: scaledDelta + queuedDelta,
       fixedDelta: this.#fixedDelta,
-      steps,
+      steps: steps + queuedSteps,
       alpha: this.#accumulator / this.#fixedDelta,
       render,
       clamped,

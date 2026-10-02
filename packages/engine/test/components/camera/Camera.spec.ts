@@ -34,6 +34,10 @@ function createActorMock() {
     components: [],
     componentsRequiringUpdate: [],
     world: {
+      time: {
+        delta: 0.1,
+        unscaledDelta: 0.1
+      },
       renderer: createRendererMock(),
       audio: { threeAudioListener: new THREE.Object3D() },
       sceneManager: {
@@ -351,12 +355,29 @@ describe("Components.Camera.Camera3DControls", () => {
         (key: string) => key === "KeyW"
       );
 
-      controls.update(0.1);
+      controls.update();
 
       assert.strictEqual(
         Math.round(actor.transform.getLocalPosition().z * 100) / 100,
         -1,
         "forward is -Z: speed 10 for 0.1s"
+      );
+    });
+
+    test("should keep moving while game time is paused", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        speed: 10
+      });
+      actor.world.time.delta = 0;
+      actor.world.input.keyboard.isDown.mock.mockImplementation(
+        (key: string) => key === "KeyW"
+      );
+
+      controls.update();
+
+      assert.strictEqual(
+        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        -1
       );
     });
 
@@ -368,7 +389,7 @@ describe("Components.Camera.Camera3DControls", () => {
         (key: string) => key === "Space"
       );
 
-      controls.update(0.1);
+      controls.update();
 
       assert.strictEqual(
         Math.round(actor.transform.getGlobalPosition().y * 100) / 100,
@@ -379,7 +400,7 @@ describe("Components.Camera.Camera3DControls", () => {
     test("should stay put when no key is down", () => {
       const controls = new Camera3DControls(actor as unknown as Actor);
 
-      controls.update(0.1);
+      controls.update();
 
       assert.deepStrictEqual(
         actor.transform.getLocalPosition().toArray(),

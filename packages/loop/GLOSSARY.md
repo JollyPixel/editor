@@ -16,7 +16,8 @@ fit together.
 Time measured by the computer's clock, also called wall-clock time. It keeps
 going whatever the game does: during hitches, pauses and background tabs.
 
-*In code:* the `now` timestamp given to `advance()`, and `rawDelta`.
+*In code:* the `now` timestamp given to `advance()`, `rawDelta`, and
+`unscaledDelta` once clamped.
 
 ### Game time
 
@@ -42,7 +43,8 @@ Freezing game time without stopping the loop. Frames keep arriving and the game
 is still drawn, so the camera and UI stay responsive, but no step runs. The
 paused time is not replayed on resume.
 
-*In code:* `GameLoop.pause()` and `resume()`.
+*In code:* `GameLoop.pause()` and `resume()`. `GameLoop.step()` advances a
+paused game by single steps.
 
 ## Frames and steps
 
@@ -177,8 +179,9 @@ steps and drops the rest of the game time, so the game falls a little behind
 real time instead of spiraling. Repeated panics mean the machine cannot keep
 up with the step rate.
 
-*In code:* `maxStepsPerFrame`, `5` by default. The frame reports
-`panicked: true` and `GameLoop` emits `panic`.
+*In code:* `maxStepsPerFrame`, `5` by default, multiplied by the time scale
+when it is above `1` so fast-forward is not mistaken for overload. The frame
+reports `panicked: true` and `GameLoop` emits `panic`.
 
 ### Dropped time
 

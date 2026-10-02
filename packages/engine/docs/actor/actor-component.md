@@ -54,8 +54,12 @@ Components follow a lifecycle managed by the scene engine:
 | `awake()` | Once, when the scene starts or when the actor is added |
 | `start()` | Once, on the first frame after the component is created |
 | `fixedUpdate(deltaTime, stepIndex)` | Every fixed step, at a constant rate (default 60 Hz). Use for physics and deterministic logic. `stepIndex` counts the steps within the current frame |
-| `update(deltaTime, alpha)` | Every drawn frame, with the elapsed time in seconds. `alpha` is how far the frame sits between the last fixed step and the next one, in `[0, 1)` |
+| `update(deltaTime, alpha)` | Every drawn frame, with the elapsed game time in seconds. `alpha` is how far the frame sits between the last fixed step and the next one, in `[0, 1)` |
 | `destroy()` | When the actor or component is removed from the scene |
+
+The `update` delta follows the loop time scale and is `0` while paused, when
+no fixed step runs either. Read [`world.time`](../systems/world.md#time) for
+wall-clock time.
 
 Components that define `update()` or `fixedUpdate()` are
 registered for per-frame updates via the `needUpdate` property.

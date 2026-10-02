@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Mouse } from "../../../src/index.ts";
-import { MouseEventButton } from "../../../src/devices/Mouse.class.ts";
+import { MouseEventButton } from "../../../src/devices/mouse/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
   MouseCanvasAdapter

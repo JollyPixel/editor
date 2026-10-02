@@ -28,6 +28,15 @@ loop.start({
 
 The rendered value lags the simulation by up to one fixed step.
 
+## Slow motion
+
+`timeScale` never changes the step length, so slow motion runs fewer steps per
+second: at `timeScale: 0.25` on a 60 Hz display, one frame in four runs a step.
+Motion driven by `fixedUpdate` then moves at 15 Hz on screen unless it is
+interpolated. `alpha` follows game time, so `at(alpha)` stays smooth at any
+time scale. Nothing interpolates automatically: each fixed-step component that
+moves something on screen owns its `Interpolated` values.
+
 ## Constructor
 
 ```ts

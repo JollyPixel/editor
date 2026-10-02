@@ -5,6 +5,9 @@ and, unlike [Camera3DControls](camera-3d-controls.md), can pivot around a
 focus point instead of always flying free: `focusMode: "lock"` orbits a
 fixed point at a scroll-adjusted distance, and `focusMode: "elastic"` lets
 WASD/look pilot a free-floating pivot that the camera trails behind.
+Movement and damping follow wall-clock time
+([`world.time.unscaledDelta`](../systems/world.md#time)), so the camera
+keeps its speed in slow motion and while the game is paused.
 
 ## Usage
 

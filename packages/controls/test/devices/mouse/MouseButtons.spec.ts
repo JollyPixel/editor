@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { Mouse } from "../../../src/index.ts";
-import { MouseEventButton } from "../../../src/devices/Mouse.class.ts";
+import { MouseEventButton } from "../../../src/devices/mouse/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
   MouseCanvasAdapter,
@@ -74,12 +74,12 @@ describe("Controls.Mouse buttons", () => {
     assert.strictEqual(mouse.wasJustPressed("left"), false);
     assert.strictEqual(mouse.wasJustReleased("left"), false);
 
-    mouse.publishFrameState();
+    mouse.publish("frame");
 
     assert.strictEqual(mouse.wasJustPressed("left"), true);
     assert.strictEqual(mouse.wasJustReleased("left"), true);
 
-    mouse.publishFrameState();
+    mouse.publish("frame");
 
     assert.strictEqual(mouse.wasJustPressed("left"), false);
     assert.strictEqual(mouse.wasJustReleased("left"), false);
@@ -92,7 +92,7 @@ describe("Controls.Mouse buttons", () => {
 
     assert.strictEqual(mouse.wasJustPressed("left"), false);
 
-    mouse.publishFrameState();
+    mouse.publish("frame");
 
     assert.strictEqual(mouse.wasJustPressed("left"), true);
   });

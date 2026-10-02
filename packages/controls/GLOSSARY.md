@@ -58,12 +58,15 @@ Special actions accepted by mouse and keyboard button or key queries.
 ### Down / Just pressed / Just released
 
 **Down** remains true while a button or key is held. **Just pressed** and
-**just released** report transitions from the latest `update()` call.
+**just released** are [edges](#edge): they report transitions the current
+[reader](#reader) has not seen yet. With `update()` alone, that means since
+the previous `update()`.
 
 ### wasActive
 
 An activity flag on `Mouse`, `Keyboard`, `Gamepad`, and `Touchpad` for the
-latest update. `Input` uses these flags to change device preference.
+latest [sample](#sample). `Input` uses these flags to change device
+preference.
 
 ### Device preference
 
@@ -71,12 +74,58 @@ The input family used most recently: `"default"` for mouse, keyboard, or
 touch input, and `"gamepad"` for gamepad input. `Input` updates this value
 automatically.
 
+## Steps and rendered frames
+
+A fixed-step game reads input before each fixed step and before each rendered
+update, and a frame can run several steps or none. These terms describe how
+every change still reaches each of them exactly once. The
+[architecture](./ARCHITECTURE.md#steps-and-rendered-frames) shows the flow.
+
+### Sample
+
+Reading what changed in the browser since the previous sample: keys and
+buttons, pointer and wheel movement, touches, and gamepad polls. The changes
+become [edges](#edge), kept for every [reader](#reader). Nothing is visible to
+queries until a [publish](#publish).
+
+*In code:* `sample()`, once per frame. `update()` samples too.
+
+### Edge
+
+A change reported to a reader once: a press, release, auto-repeat, touch start
+or end, or double-click. Typed characters, mouse movement, and wheel input
+follow the same rule. Down state is not an edge; it stays true while held.
+
+### Reader
+
+Who consumes edges. The **step reader** runs before each fixed step. The
+**frame reader** runs before the rendered update. Each reader sees every edge
+once, on its own schedule, so a catch-up frame does not repeat an edge and a
+frame without a step does not lose one.
+
+*In code:* `InputReader`, `"step"` or `"frame"`.
+
+### Publish
+
+Handing one reader every edge it has not taken yet, through the `wasJust*`
+flags, typed characters, movement, and wheel values. They stay visible until
+the next publish.
+
+*In code:* `publish(reader)`. `update()` is `sample()` then
+`publish("step")`.
+
+### Pending edge
+
+An edge sampled but not yet taken by a reader. A frame that runs no step does
+not publish to the step reader, so its edges stay pending: a press during slow
+motion or pause reaches the next fixed step.
+
 ## Mouse movement and position
 
 ### Delta
 
-Mouse movement since the last `update()`, measured in canvas-local pixels.
-The Y axis points down.
+Mouse movement the current [reader](#reader) has not seen yet, measured in
+canvas-local pixels. The Y axis points down.
 
 ### Viewport position / Viewport delta
 

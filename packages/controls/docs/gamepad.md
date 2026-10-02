@@ -238,8 +238,14 @@ An axis index without allocated state throws
 
 ```ts
 update(): void
+sample(): void
+publish(reader: InputReader): void
 reset(): void
 ```
+
+`update()` is `sample()` then `publish("step")`. A fixed-step engine calls
+`sample()` and `publish(reader)` separately; see
+[Input](./input.md#publishreader).
 
 Until a controller is found, `update()` calls `navigator.getGamepads()` once
 every `Gamepad.IdlePollFrames` updates. This back-off still detects a

@@ -123,6 +123,75 @@ describe("Loop.GameLoop", () => {
     });
   });
 
+  describe("step()", () => {
+    test("runs the requested steps and one render while paused", () => {
+      const { recorder, callbacks } = record();
+      loop.start(callbacks);
+      loop.pause();
+      source.step(16);
+      const simulated = loop.scheduler.time;
+
+      loop.step(2);
+      source.step(16);
+
+      const frame = recorder.frames.at(-1)!;
+      assert.strictEqual(frame.steps, 2);
+      assert.strictEqual(frame.render, true);
+      assert.strictEqual(frame.frameDelta, 2 * frame.fixedDelta);
+      assert.deepStrictEqual(
+        recorder.fixedUpdate.map(([, stepIndex]) => stepIndex),
+        [0, 1]
+      );
+      assert.strictEqual(
+        loop.scheduler.time,
+        simulated + (2 * frame.fixedDelta)
+      );
+      assert.strictEqual(loop.paused, true);
+    });
+
+    test("does not repeat on the following frames", () => {
+      const { recorder, callbacks } = record();
+      loop.start(callbacks);
+      loop.pause();
+
+      loop.step();
+      source.run([16, 16, 16]);
+
+      assert.deepStrictEqual(
+        recorder.frames.map(({ steps }) => steps),
+        [0, 1, 0, 0]
+      );
+    });
+
+    test("wakes a sleeping loop", () => {
+      const sleepy = new GameLoop({
+        source,
+        keepAlive: () => false,
+        trailingRenders: 0
+      });
+      const { recorder, callbacks } = record();
+      sleepy.start(callbacks);
+      sleepy.pause();
+      assert.strictEqual(sleepy.sleeping, true);
+
+      sleepy.step();
+
+      assert.strictEqual(recorder.fixedUpdate.length, 1);
+      assert.strictEqual(sleepy.sleeping, true);
+    });
+
+    test("does nothing while stopped", () => {
+      const { recorder, callbacks } = record();
+      loop.step(3);
+      loop.start(callbacks);
+      loop.pause();
+
+      source.step(16);
+
+      assert.strictEqual(recorder.fixedUpdate.length, 0);
+    });
+  });
+
   describe("events", () => {
     test("panic carries the dropped time", () => {
       const panics: { droppedMs: number; steps: number; }[] = [];

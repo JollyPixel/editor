@@ -83,7 +83,8 @@ magnitude. Use `scroll` when magnitude or horizontal input matters.
 ```ts
 interface Mouse {
   update(): void;
-  publishFrameState(): void;
+  sample(): void;
+  publish(reader: InputReader): void;
   reset(): void;
 
   readonly wasActive: boolean;
@@ -98,11 +99,11 @@ that state and publishes button transitions, double-clicks, wheel input, and
 movement for the current input step. A complete press and release between two
 updates still publishes both edges.
 
-`publishFrameState()` republishes every transient accumulated since its
-previous call. Fixed-step engines use it before rendering so edges consumed by
-earlier catch-up updates remain visible to the rendered update.
+`update()` is `sample()` then `publish("step")`. A fixed-step engine calls
+`sample()` and `publish(reader)` separately; see
+[Input](./input.md#publishreader).
 
-`update()` returns early while the mouse is idle. `reset()` clears button,
+`sample()` returns early while the mouse is idle. `reset()` clears button,
 wheel, position, and delta state.
 
 `hovering` is whether the pointer sits over the canvas, from `mouseenter` and

@@ -25,7 +25,10 @@ runtime.loop.timeScale = 0.5;
 
 `fixedFps` controls the simulation rate. `maxFps` caps rendering independently
 of that rate. Set `timeScale` to `0` to pause simulation time without stopping
-the runtime.
+the runtime. While paused, `runtime.loop.step()` advances the game by one fixed
+step and draws it. Components read wall-clock time from
+[`world.time.unscaledDelta`](../../../engine/docs/systems/world.md#time) when
+they must keep moving in slow motion or while paused.
 
 The [`GameLoop` reference](../../../loop/docs/gameloop.md) covers scheduling,
 pause state, and frame-source behavior.

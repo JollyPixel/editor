@@ -41,7 +41,7 @@ None of these are required by the core.
 flowchart TB
     subgraph Scheduler["FrameScheduler.advance(now)"]
         direction LR
-        Delta["clamp delta<br/>× timeScale"] --> Accumulate["accumulate"] --> Cap["cap at<br/>maxStepsPerFrame"]
+        Delta["clamp delta<br/>× timeScale"] --> Accumulate["accumulate"] --> Cap["cap at step budget<br/>maxStepsPerFrame × max(timeScale, 1)"]
     end
     subgraph Loop["GameLoop"]
         direction LR

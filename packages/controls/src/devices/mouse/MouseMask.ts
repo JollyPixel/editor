@@ -1,10 +1,14 @@
+// Import Internal Dependencies
+import type { InputReader } from "../../types.ts";
+import { EdgeBuffer } from "../EdgeBuffer.ts";
+
 /**
- * Bitmask with separate event, input-sample, and rendered-frame state.
+ * Bitmask fed by DOM events and samples, published to one reader at a time.
  */
 export class MouseMask {
   #value = 0;
   #pending = 0;
-  #frame = 0;
+  #edges = new EdgeBuffer();
 
   get value(): number {
     return this.#value;
@@ -33,19 +37,19 @@ export class MouseMask {
   sample(
     bits = 0
   ): void {
-    this.#value = bits | this.#pending;
+    this.#edges.push(bits | this.#pending);
     this.#pending = 0;
-    this.#frame |= this.#value;
   }
 
-  publishFrame(): void {
-    this.#value = this.#frame;
-    this.#frame = 0;
+  take(
+    reader: InputReader
+  ): void {
+    this.#value = this.#edges.take(reader);
   }
 
   reset(): void {
     this.#value = 0;
     this.#pending = 0;
-    this.#frame = 0;
+    this.#edges.reset();
   }
 }
