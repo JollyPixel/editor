@@ -1,41 +1,66 @@
 // Import Internal Dependencies
+import type { OfflineProjectLoader } from "../offline/OfflineWorkspace.ts";
 import {
-  OfflineWorkspace,
-  type OfflineWorkspaceOptions
-} from "../offline/OfflineWorkspace.ts";
+  DEFAULT_OFFLINE_WORKSPACE_NAME,
+  acquireWorkspaceLock,
+  workspaceDatabaseName
+} from "../offline/workspaceLock.ts";
 import type { StandaloneWorkspace } from "../SessionWorkspace.ts";
-import { OwnerWorkspace } from "./OwnerWorkspace.ts";
 import { RemoteWorkspace } from "./RemoteWorkspace.ts";
 
+export interface SharedTabWorkspaceOptions {
+  project: OfflineProjectLoader;
+  name?: string;
+}
+
 export async function openSharedTabWorkspace(
-  options: OfflineWorkspaceOptions
+  options: SharedTabWorkspaceOptions
 ): Promise<StandaloneWorkspace> {
+  const {
+    project,
+    name = DEFAULT_OFFLINE_WORKSPACE_NAME
+  } = options;
   if (
     globalThis.navigator?.locks === undefined ||
     globalThis.BroadcastChannel === undefined
   ) {
+    const { OfflineWorkspace } = await import(
+      "../offline/OfflineWorkspace.ts"
+    );
+
     return OfflineWorkspace.open({
-      ...options,
+      ...await project(),
+      name,
       storage: "memory"
     });
   }
 
-  const name = options.name ?? "default";
-  const workspace = await OfflineWorkspace.open({
-    ...options,
-    storage: "indexeddb"
-  });
-  if (workspace.persistent) {
-    try {
-      return new OwnerWorkspace(workspace, name);
-    }
-    catch (error) {
-      await workspace.close();
-
-      throw error;
-    }
+  const databaseName = workspaceDatabaseName(name);
+  const release = await acquireWorkspaceLock(databaseName);
+  if (release === null) {
+    return RemoteWorkspace.open(name);
   }
-  await workspace.close();
 
-  return RemoteWorkspace.open(name);
+  const [{ OfflineWorkspace }, { OwnerWorkspace }] = await Promise.all([
+    import("../offline/OfflineWorkspace.ts"),
+    import("./OwnerWorkspace.ts")
+  ]).catch((error: unknown) => {
+    release();
+
+    throw error;
+  });
+  const workspace = await OfflineWorkspace.openOwner({
+    project,
+    databaseName,
+    release
+  });
+
+  try {
+    return new OwnerWorkspace(workspace, name);
+  }
+  catch (error) {
+    await workspace.close();
+
+    throw error;
+  }
 }

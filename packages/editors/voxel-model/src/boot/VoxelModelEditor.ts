@@ -15,8 +15,9 @@ import {
 import {
   EditorRuntime,
   type AssetLease,
-  type EditorContext,
-  type EditorSession
+  type EditorSession,
+  type HostLogger,
+  type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
@@ -59,10 +60,20 @@ export class VoxelModelEditor {
   };
   static readonly kinds = [kModelKind, kTextureKind];
 
+  static createRuntime(
+    logger: HostLogger
+  ): Promise<EditorRuntime> {
+    return EditorRuntime.create(kCanvas, {
+      focusCanvas: false,
+      viewHelper: true,
+      logger
+    });
+  }
+
   static async mount(
-    context: EditorContext
+    context: RuntimeEditorContext
   ): Promise<VoxelModelEditor> {
-    const { session } = context;
+    const { session, runtime: editorRuntime } = context;
     const reference = session.catalog
       .dependencies.dependenciesOf(session.target.record.id)
       .find((dependency) => dependency.kind === PIXEL_ART_KIND);
@@ -91,11 +102,6 @@ export class VoxelModelEditor {
         resetWarning: "Every model and texture stored in this browser is " +
           "deleted. Export what you want to keep first."
       })
-    });
-    const editorRuntime = await EditorRuntime.create(kCanvas, {
-      focusCanvas: false,
-      viewHelper: true,
-      logger: context.logger.child({ namespace: "runtime" })
     });
     const shell = new EditorShell({
       runtime: editorRuntime,

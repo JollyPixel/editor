@@ -31,8 +31,31 @@ The built-in sources differ in two ways:
   tolerate both: `FrameScheduler` reports a zero delta for whichever frame
   lands first.
 
-The `setAnimationLoop()` adapter is in `@jolly-pixel/runtime`. This package has
-no `three` dependency.
+## AnimationLoopFrameSource
+
+The source for renderers that own their frame pump through
+`setAnimationLoop()`, such as three.js renderers or a WebXR session. The
+renderer is typed structurally, so this package has no `three` dependency.
+
+```ts
+import { AnimationLoopFrameSource, GameLoop } from "@jolly-pixel/loop";
+
+const loop = new GameLoop({
+  source: new AnimationLoopFrameSource(renderer)
+});
+```
+
+```ts
+export type AnimationLoopRendererCallback = (time: number) => void;
+
+export interface AnimationLoopRenderer {
+  setAnimationLoop(callback: AnimationLoopRendererCallback | null): void;
+}
+```
+
+`start(callback)` hands the callback to `setAnimationLoop()`, which replaces any
+previous one. `stop()` passes `null`. Frames use the renderer's timebase and
+the first one waits for the renderer's pump.
 
 ## RafFrameSource
 

@@ -26,6 +26,12 @@ static create(
 Takes the arguments of `Runtime.create`. `params` defaults to
 [`HOST_PARAMS.read()`](./QueryParams.md#host-parameters). Open dialogs and popovers keep their
 keys: the runtime keyboard ignores them until the layer closes.
+`suspendWhenHidden` defaults to `true`, so an editor in a hidden studio tab
+stops rendering until its canvas shows again.
+
+An editor booted by [`mountStandalone`](./mountStandalone.md#editor-definition)
+creates it in its static `createRuntime(logger)`, which the host calls before
+the session opens.
 
 ## Properties
 
@@ -33,10 +39,11 @@ keys: the runtime keyboard ignores them until the layer closes.
 readonly runtime: Runtime;
 readonly params: HostParams;
 get samples(): number | undefined;
+dispose(): void;
 ```
 
 `samples` is the `samples` query parameter, for an editor that sets up its own
-multisampled render targets.
+multisampled render targets. `dispose()` disposes `runtime`.
 
 ## Loading a scene
 

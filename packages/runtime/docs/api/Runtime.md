@@ -60,6 +60,7 @@ interface RuntimeOptions<TContext = Systems.WorldDefaultContext> {
     panel?: boolean | MetricsPanelOptions;
   };
   focusCanvas?: boolean;
+  suspendWhenHidden?: boolean;
   focusHint?: boolean | FocusHintOptions;
   viewHelper?: boolean | ViewHelperOptions;
   overlay?: OverlayLayerOptions;
@@ -142,6 +143,7 @@ for options.
 |---|---|---|
 | `includePerformanceStats` | `false` | Mounts the corner HUD. `runtime.stats` exists either way. |
 | `focusCanvas` | `true` | Restores canvas focus after page clicks while the runtime is running. |
+| `suspendWhenHidden` | `false` | Stops the frame source while the canvas is outside the viewport or inside a hidden frame, from the first frame on, and restarts it once the canvas shows again. The world keeps its state; the scheduler restarts without a catch-up delta. |
 | `focusHint` | `false` | Shows a hint over the canvas while it does not hold keyboard focus. |
 | `viewHelper` | `false` | Draws an axis gizmo showing the main camera orientation. See [view helper](#view-helper). |
 | `overlay` | Tracks the canvas | Chooses where runtime overlays are mounted. See [overlays](#overlays). |
@@ -433,7 +435,7 @@ scene, then starts the runtime.
 | `assets` | Empty iterable | Additional references loaded before the initial scene. |
 | `scene` | `undefined` | Initial scene prepared and queued before the runtime starts. |
 | `skipLoadingScreen` | `false` | Starts without mounting or updating a loading screen. |
-| `maxFps` | GPU estimate or `Infinity` | Overrides the render cap chosen during device setup. |
+| `maxFps` | GPU estimate or `Infinity` | Overrides the render cap chosen during device setup and skips GPU benchmarking. |
 
 ```ts
 await runtime.load({

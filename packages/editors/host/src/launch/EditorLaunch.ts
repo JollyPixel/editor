@@ -43,6 +43,18 @@ export class EditorLaunch {
     sources: Iterable<LaunchSource>,
     logger?: HostLogger
   ): Promise<EditorLaunch> {
+    const launch = await EditorLaunch.first(sources, logger);
+    if (launch === undefined) {
+      throw new LaunchNotFoundError();
+    }
+
+    return launch;
+  }
+
+  static async first(
+    sources: Iterable<LaunchSource>,
+    logger?: HostLogger
+  ): Promise<EditorLaunch | undefined> {
     let index = 0;
     for (const source of sources) {
       const launch = await source.read();
@@ -57,7 +69,7 @@ export class EditorLaunch {
       index++;
     }
 
-    throw new LaunchNotFoundError();
+    return undefined;
   }
 
   readonly target: AssetId;

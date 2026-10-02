@@ -1,13 +1,10 @@
-// Import Third-party Dependencies
-import { getGPUTier } from "@pmndrs/detect-gpu";
-
 // Import Internal Dependencies
 import type { Runtime } from "../Runtime.ts";
 
 export interface ConfigureRuntimeDeviceOptions {
   /**
    * Render cap in frames per second.
-   * Overrides the GPU-benchmarked estimate.
+   * Overrides the GPU-benchmarked estimate and skips the benchmark.
    */
   maxFps?: number;
   /**
@@ -17,10 +14,45 @@ export interface ConfigureRuntimeDeviceOptions {
   adaptivePixelRatio?: boolean;
 }
 
+export type DeviceNavigator = Pick<
+  Navigator,
+  "userAgent" | "platform" | "maxTouchPoints"
+>;
+
+interface DeviceProfile {
+  fps?: number;
+  isMobile: boolean;
+}
+
 export async function configureRuntimeDevice<TContext>(
   runtime: Runtime<TContext>,
   options: ConfigureRuntimeDeviceOptions = {}
 ): Promise<void> {
+  const profile: DeviceProfile = options.maxFps === undefined ?
+    await benchmarkDevice() :
+    { isMobile: isMobileDevice() };
+  const { fps, isMobile } = profile;
+
+  runtime.loop.scheduler.maxFps = options.maxFps ?? fps ?? Infinity;
+  if (options.adaptivePixelRatio ?? true) {
+    runtime.world.renderer.getSource().setPixelRatio(
+      getDevicePixelRatio(isMobile)
+    );
+  }
+}
+
+export function isMobileDevice(
+  device: DeviceNavigator = navigator
+): boolean {
+  const { userAgent, platform, maxTouchPoints } = device;
+
+  return /android|iphone|ipod|ipad/i.test(userAgent) ||
+    platform === "iPad" ||
+    (platform === "MacIntel" && maxTouchPoints > 0);
+}
+
+async function benchmarkDevice(): Promise<DeviceProfile> {
+  const { getGPUTier } = await import("@pmndrs/detect-gpu");
   const {
     fps,
     isMobile = false,
@@ -38,12 +70,10 @@ export async function configureRuntimeDevice<TContext>(
     );
   }
 
-  runtime.loop.scheduler.maxFps = options.maxFps ?? fps ?? Infinity;
-  if (options.adaptivePixelRatio ?? true) {
-    runtime.world.renderer.getSource().setPixelRatio(
-      getDevicePixelRatio(isMobile)
-    );
-  }
+  return {
+    fps,
+    isMobile
+  };
 }
 
 function getDevicePixelRatio(

@@ -10,8 +10,14 @@ class VoxelModelEditor {
   static readonly identity = { title: "Join voxel model" };
   static readonly kinds = [TEXTURE_DOCUMENT_KIND];
 
-  static async mount(context: EditorContext): Promise<VoxelModelEditor> {
-    // ...
+  static createRuntime(logger: HostLogger): Promise<EditorRuntime> {
+    return EditorRuntime.create("#canvas", { logger });
+  }
+
+  static async mount(
+    context: RuntimeEditorContext
+  ): Promise<VoxelModelEditor> {
+    // context.runtime is the EditorRuntime created above
   }
 
   readonly ready: Promise<void>;
@@ -29,11 +35,23 @@ await mountStandalone(VoxelModelEditor);
 ## Editor definition
 
 ```ts
-interface EditorDefinition<THandle extends EditorHandle> {
+type EditorDefinition<THandle extends EditorHandle> =
+  | PageEditorDefinition<THandle>
+  | RuntimeEditorDefinition<THandle>;
+
+interface PageEditorDefinition<THandle extends EditorHandle> {
   readonly accepts: string;
   readonly identity: { title: string; };
   readonly kinds: Iterable<AssetDocumentKind<unknown>>;
   mount(context: EditorContext): Promise<THandle>;
+}
+
+interface RuntimeEditorDefinition<THandle extends EditorHandle> {
+  readonly accepts: string;
+  readonly identity: { title: string; };
+  readonly kinds: Iterable<AssetDocumentKind<unknown>>;
+  createRuntime(logger: HostLogger): Promise<EditorRuntime>;
+  mount(context: RuntimeEditorContext): Promise<THandle>;
 }
 
 interface EditorContext {
@@ -42,6 +60,10 @@ interface EditorContext {
   shell: ShellChannel | null;
   logger: HostLogger;
   commands: CommandConsole;
+}
+
+interface RuntimeEditorContext extends EditorContext {
+  runtime: EditorRuntime;
 }
 
 interface EditorHandle {
@@ -59,7 +81,14 @@ An editor class satisfies the definition with static members.
 | `accepts` | the asset kind of the target; any other kind is refused |
 | `identity.title` | title of the username prompt |
 | `kinds` | dependency kinds the session leases with a synced [document](./AssetLeases.md#document-kinds) |
+| `createRuntime` | optional; creates the editor's [`EditorRuntime`](./EditorRuntime.md) |
 | `mount` | builds the editor from a connected session and returns its instance |
+
+`mountStandalone` calls `createRuntime` as soon as the boot starts, so the
+renderer starts up while the launch is read and the session connects. `logger`
+is the `editor.runtime` namespace of the [boot trace](#boot-tracing). `mount`
+receives the runtime as `context.runtime`. The runtime is disposed when the
+boot fails before `mount` returns; after that it belongs to the handle.
 
 `context.launch.target` is the target's `AssetId`. The session belongs to the
 editor once `mount` returns, so `dispose()` must call `session.dispose()`.
@@ -161,9 +190,13 @@ when `debugHandle` is set. A `username` query parameter is stored as the tab's
 identity (see [`rememberQueryUsername`](./EditorSession.md#identity)) so the
 prompt is skipped. Without `dev`, neither happens.
 
-`connect` replaces the username prompt and the WebSocket client. It runs after
-the launch is read, and the session destroys the returned client when it is
-disposed or fails to open.
+`connect` replaces the username prompt and the WebSocket client. The session
+destroys the returned client when it is disposed or fails to open.
+
+The session opens while the launch is read when the page URL has a `target`
+query parameter: a shell that also posts `jolly-launch` names the same asset,
+so the session is ready sooner. When the launch names another target, that
+session is disposed and a new one opens, so `connect` runs twice.
 
 `origins` lists the parent origins allowed to launch the page, `[location.origin]`
 by default. It applies to the parent's `jolly-launch`, which is read before
@@ -197,16 +230,17 @@ function bootStandalone<THandle extends EditorHandle>(
 
 interface BootStandaloneOptions
   extends Omit<MountStandaloneOptions, "connect"> {
-  offline: () => OfflineProject | Promise<OfflineProject>;
+  offline: OfflineProjectLoader;
   forceOffline?: boolean;
 }
 
 type OfflineProject = Pick<OfflineWorkspaceOptions, "handlers" | "seed" | "backend">;
+type OfflineProjectLoader = () => OfflineProject | Promise<OfflineProject>;
 ```
 
 | Option | Role |
 |---|---|
-| `offline` | the handlers, seed and backend tuning of the in-page workspace; called only once the editor goes offline, so import them dynamically |
+| `offline` | the handlers, seed and backend tuning of the in-page workspace; called only in the tab that owns the workspace, so import them dynamically |
 | `forceOffline` | skips the server; pass `import.meta.env.MODE === "static"` for a static build |
 | `sources` | replaces the launch sources read after the parent's, for the online attempt only |
 
@@ -215,7 +249,9 @@ has the `offline` [query parameter](./QueryParams.md#host-parameters).
 Otherwise, when the online mount throws `CatalogUnavailableError` or
 `LaunchNotFoundError`, `offerOffline` asks the user to retry or to open the
 offline workspace, and cancelling rethrows the error. Any other error is
-rethrown without asking.
+rethrown without asking. The runtime is created once, before the first
+attempt, and reused by every retry and by the offline mount, since the canvas
+keeps the context of the first one; it is disposed when the boot fails.
 
 Offline, `openSharedTabWorkspace` opens the workspace named by the
 `workspace` query parameter (`"default"` without it), and the editor mounts
@@ -254,18 +290,20 @@ import { mountStandalone } from "@jolly-pixel/editor.host";
 const { openSharedTabWorkspace } =
   await import("@jolly-pixel/editor.host/offline");
 const workspace = await openSharedTabWorkspace({
-  handlers: [voxelMapAssetKind()],
-  seed: {
-    "maps/scratch.voxelmap.json": {
-      id: crypto.randomUUID(),
-      kind: VOXEL_MAP_KIND,
-      content: () => encodeWorld()
+  project: () => ({
+    handlers: [voxelMapAssetKind()],
+    seed: {
+      "maps/scratch.voxelmap.json": {
+        id: crypto.randomUUID(),
+        kind: VOXEL_MAP_KIND,
+        content: () => encodeWorld()
+      }
     }
-  }
+  })
 });
 
 await mountStandalone(VoxelMapEditor, {
-  sources: await workspace.launchSources(VoxelMapEditor.accepts),
+  sources: workspace.launchSources(VoxelMapEditor.accepts),
   connect: () => workspace.connect()
 });
 ```
@@ -273,10 +311,10 @@ await mountStandalone(VoxelMapEditor, {
 | Member | Role |
 |---|---|
 | `OfflineWorkspace.open({ handlers, seed?, storage?, name?, backend? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
-| `openSharedTabWorkspace({ handlers, seed?, name?, backend? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
+| `openSharedTabWorkspace({ project, name? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
 | `StandaloneWorkspace` | the members below that every workspace shares: `persistent`, `connect()`, `launchSources()`, `reset()`, `close()` |
 | `connect()` | a guest identity, a local or BroadcastChannel client and the workspace |
-| `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; await it for a shared follower |
+| `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; a shared follower reads the owner's catalog only when its source is read |
 | `storage` / `persistent` | direct workspaces expose both; shared workspaces expose `persistent` |
 | `backend` | the `AssetBackend` on a direct `OfflineWorkspace` |
 | `reset()` | closes the owner workspace and deletes its database; unavailable in a follower tab |
@@ -300,7 +338,8 @@ On `"indexeddb"`:
   user the same asset, and their archives would collide on import.
 - `openSharedTabWorkspace` uses the Web Lock to select one database owner.
   Other tabs use the owner's catalog and asset rooms over BroadcastChannel.
-  When Web Locks are unavailable it returns a memory workspace.
+  A tab that finds the lock held never calls `project` and never loads the
+  back-end. When Web Locks are unavailable it returns a memory workspace.
 - Direct `OfflineWorkspace.open` still falls back to memory in a second tab.
 - Snapshots are taken after 500 ms of quiet and at most every 5 s, and pending
   ones are flushed when the page is hidden. A browser does not guarantee
@@ -489,7 +528,7 @@ globs:
 | `host.launch` | the handshake of the default `HostMessageLaunchSource` |
 | `host.session` | the [session steps](./EditorSession.md#boot-steps) |
 | `editor` | `context.logger` and the children an editor derives from it; voxel-map and voxel-model write a `scene` step while their scene awakes |
-| `editor.runtime` | the [startup steps](../../../runtime/docs/api/Runtime.md#startup-tracing) of the editor's `Runtime`, when it passes `context.logger.child({ namespace: "runtime" })` as the `logger` option of `EditorRuntime.create` |
+| `editor.runtime` | the [startup steps](../../../runtime/docs/api/Runtime.md#startup-tracing) of the editor's `Runtime`, when `createRuntime` passes its `logger` to `EditorRuntime.create` |
 | `studio.tabs` | the studio side of the handshake |
 
 ```ts

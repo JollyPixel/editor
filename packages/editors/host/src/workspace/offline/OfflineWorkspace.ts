@@ -20,17 +20,29 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../../editor/mountStandalone.ts";
 import type { LaunchSource } from "../../launch/index.ts";
-import type { StandaloneWorkspace } from "../SessionWorkspace.ts";
+import type {
+  StandaloneConnection,
+  StandaloneWorkspace
+} from "../SessionWorkspace.ts";
 import { catalogLaunchSources } from "../catalogLaunchSources.ts";
 import { guestConnection } from "../guestConnection.ts";
-import { openOfflineSource } from "./openOfflineSource.ts";
+import {
+  openOfflineSource,
+  openPersistentSource,
+  type OfflineSource
+} from "./openOfflineSource.ts";
+import {
+  DEFAULT_OFFLINE_WORKSPACE_NAME,
+  workspaceDatabaseName
+} from "./workspaceLock.ts";
+
+export {
+  DEFAULT_OFFLINE_WORKSPACE_NAME,
+  OFFLINE_DATABASE_PREFIX
+} from "./workspaceLock.ts";
 
 // CONSTANTS
-export const OFFLINE_DATABASE_PREFIX = "jolly-workspace:";
-export const DEFAULT_OFFLINE_WORKSPACE_NAME = "default";
-
 const kPersistentSnapshotPolicy: SnapshotPolicy = {
   delay: 500,
   maxDelay: 5_000
@@ -50,6 +62,19 @@ export interface OfflineWorkspaceOptions {
   backend?: AssetBackendTuning;
 }
 
+export type OfflineProject = Pick<
+  OfflineWorkspaceOptions,
+  "handlers" | "seed" | "backend"
+>;
+
+export type OfflineProjectLoader = () => OfflineProject | Promise<OfflineProject>;
+
+export interface OfflineOwnerOptions {
+  project: OfflineProjectLoader;
+  databaseName: string;
+  release: () => void;
+}
+
 export interface OfflineWorkspaceParts {
   backend: AssetBackend;
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
@@ -65,22 +90,46 @@ export class OfflineWorkspace implements StandaloneWorkspace {
     options: OfflineWorkspaceOptions
   ): Promise<OfflineWorkspace> {
     const {
-      handlers,
-      seed,
       storage: requested = "memory",
-      name = DEFAULT_OFFLINE_WORKSPACE_NAME,
-      backend: tuning = {}
+      name = DEFAULT_OFFLINE_WORKSPACE_NAME
     } = options;
-    const databaseName = `${OFFLINE_DATABASE_PREFIX}${name}`;
-    const { source, storage, release } = await openOfflineSource(
-      requested,
-      databaseName
+    const databaseName = workspaceDatabaseName(name);
+
+    return OfflineWorkspace.#start(
+      () => options,
+      databaseName,
+      await openOfflineSource(requested, databaseName)
     );
+  }
+
+  static async openOwner(
+    options: OfflineOwnerOptions
+  ): Promise<OfflineWorkspace> {
+    const { project, databaseName, release } = options;
+
+    return OfflineWorkspace.#start(
+      project,
+      databaseName,
+      await openPersistentSource(databaseName, release)
+    );
+  }
+
+  static async #start(
+    project: OfflineProjectLoader,
+    databaseName: string,
+    opened: OfflineSource
+  ): Promise<OfflineWorkspace> {
+    const { source, storage, release } = opened;
 
     let eventStore: EventStore.TypedEventStore<AssetEventDataMap> | undefined;
     let backend: AssetBackend | undefined;
     let server: Server | undefined;
     try {
+      const {
+        handlers,
+        seed,
+        backend: tuning = {}
+      } = await project();
       await source.delete(PROJECTION_STATE_PATH);
       if (seed !== undefined && (await source.list()).length === 0) {
         await seedAssetSource(

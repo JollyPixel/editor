@@ -33,6 +33,18 @@ describe("Server — dynamic room resolution", () => {
     await server.close();
   });
 
+  test("concurrent joins resolve the room once", async() => {
+    const { server, created } = harness();
+
+    await Promise.all([
+      join(server, "A", "pixelart:asset-1"),
+      join(server, "B", "pixelart:asset-1")
+    ]);
+
+    assert.deepEqual(created, ["pixelart:asset-1"]);
+    await server.close();
+  });
+
   test("an unregistered kind is refused", async() => {
     const { server, created } = harness();
 

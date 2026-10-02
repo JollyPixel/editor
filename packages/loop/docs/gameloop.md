@@ -101,3 +101,31 @@ restarts with the ones already registered, pass them to replace the set.
 
 Frames continue while paused. They have `frameDelta: 0`, run no fixed steps,
 and may still render. Paused time is not accumulated for replay on resume.
+
+## suspendWhenHidden
+
+```ts
+suspendWhenHidden(loop: GameLoop, target: Element, signal: AbortSignal): void;
+```
+
+Stops a running loop while `target` is outside the viewport, or inside a hidden
+frame, and starts it again once `target` shows. The restart resets the
+scheduler, so the first frame back has no catch-up delta. Visibility comes from
+an `IntersectionObserver`, which must exist on `globalThis`.
+
+```ts
+import { GameLoop, suspendWhenHidden } from "@jolly-pixel/loop";
+
+const session = new AbortController();
+loop.start({ update });
+suspendWhenHidden(loop, canvas, session.signal);
+
+// later, when the host stops the loop for good
+loop.stop();
+session.abort();
+```
+
+The loop is only restarted if visibility stopped it. A loop the owner started
+again while hidden keeps running. Abort `signal` when the owner stops the loop:
+a `stop()` while the loop is already suspended is a no-op the helper cannot
+see, so the loop would start again once `target` shows.

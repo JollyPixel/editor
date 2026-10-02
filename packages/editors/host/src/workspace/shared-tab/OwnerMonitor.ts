@@ -22,6 +22,7 @@ export class OwnerMonitor {
   #lastSeen = Date.now();
   #interval: ReturnType<typeof setInterval> | undefined;
   #stopped = false;
+  #discovered: (() => void) | null = null;
 
   constructor(
     options: OwnerMonitorOptions
@@ -41,6 +42,7 @@ export class OwnerMonitor {
     if (message.type === "owner") {
       this.#owner = message.owner;
       this.#lastSeen = Date.now();
+      this.#discovered?.();
     }
     else if (
       message.type === "heartbeat" &&
@@ -64,9 +66,15 @@ export class OwnerMonitor {
         tab: this.#tab
       } satisfies OwnerMessage);
       const interval = Promise.withResolvers<void>();
-      setTimeout(interval.resolve, DISCOVERY_INTERVAL_MS);
+      const timer = setTimeout(interval.resolve, DISCOVERY_INTERVAL_MS);
+      this.#discovered = interval.resolve;
       await interval.promise;
-      if (Date.now() - started > DISCOVERY_TIMEOUT_MS) {
+      clearTimeout(timer);
+      this.#discovered = null;
+      if (
+        this.#owner === undefined &&
+        Date.now() - started > DISCOVERY_TIMEOUT_MS
+      ) {
         throw new Error("The shared workspace owner did not respond.");
       }
     }

@@ -7,14 +7,13 @@ import {
 } from "@jolly-pixel/engine";
 import { StatsRecorder } from "@jolly-pixel/ui/stats";
 import {
+  AnimationLoopFrameSource,
   GameLoop,
+  suspendWhenHidden,
   type FrameSchedulerOptions
 } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
-import {
-  AnimationLoopFrameSource
-} from "./AnimationLoopFrameSource.ts";
 import {
   bootstrapRuntime,
   type RuntimeLoadOptions
@@ -65,6 +64,7 @@ export interface RuntimeOptions<
     panel?: boolean | MetricsPanelOptions;
   };
   focusCanvas?: boolean;
+  suspendWhenHidden?: boolean;
   focusHint?: boolean | FocusHintOptions;
   viewHelper?: boolean | ViewHelperOptions;
   overlay?: OverlayLayerOptions;
@@ -96,6 +96,7 @@ export class Runtime<
   readonly manager = new THREE.LoadingManager();
 
   #focusCanvas: boolean;
+  #suspendWhenHidden: boolean;
   #focusHint: FocusHintOptions | null;
   #viewHelper: ViewHelperOptions | null;
   #adaptivePixelRatio: boolean;
@@ -118,6 +119,7 @@ export class Runtime<
     this.#adaptivePixelRatio = output?.pixelRatio === undefined &&
       output?.maxPixelRatio === undefined;
     this.#focusCanvas = options.focusCanvas ?? true;
+    this.#suspendWhenHidden = options.suspendWhenHidden ?? false;
     this.#focusHint = resolveToggleOptions(options.focusHint);
     this.#viewHelper = resolveToggleOptions(options.viewHelper);
     this.#logger = options.logger ?? new Systems.Logger();
@@ -265,6 +267,13 @@ export class Runtime<
         }
       }
     });
+    if (this.#suspendWhenHidden) {
+      void this.nextFrame().then(() => {
+        if (!signal.aborted) {
+          suspendWhenHidden(this.loop, this.canvas, signal);
+        }
+      });
+    }
   }
 
   stop() {

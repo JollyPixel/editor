@@ -3,25 +3,22 @@ import type {
   EditorDefinition,
   EditorHandle
 } from "./EditorDefinition.ts";
-import {
-  mountStandalone,
-  type MountStandaloneOptions
-} from "./mountStandalone.ts";
+import type { MountStandaloneOptions } from "./mountStandalone.ts";
 import { withOfflineFallback } from "./offerOffline.ts";
+import { StandaloneEditor } from "./StandaloneEditor.ts";
+import { readDebugLogger } from "../debug/readDebugLogger.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
 import type {
-  OfflineWorkspaceOptions
+  OfflineProject,
+  OfflineProjectLoader
 } from "../workspace/offline/OfflineWorkspace.ts";
 
-export type OfflineProject = Pick<
-  OfflineWorkspaceOptions,
-  "handlers" | "seed" | "backend"
->;
+export type { OfflineProject };
 
 export interface BootStandaloneOptions extends Omit<
   MountStandaloneOptions, "connect"
 > {
-  offline: () => OfflineProject | Promise<OfflineProject>;
+  offline: OfflineProjectLoader;
   forceOffline?: boolean;
 }
 
@@ -34,33 +31,42 @@ export async function bootStandalone<
   const {
     offline,
     forceOffline = false,
+    logger = readDebugLogger(),
     ...mountOptions
   } = options;
   const params = HOST_PARAMS.read();
+  const editor = new StandaloneEditor(definition, logger);
 
   async function mountOffline(): Promise<THandle> {
     const { openSharedTabWorkspace } = await import(
       "../workspace/shared-tab/openSharedTabWorkspace.ts"
     );
     const workspace = await openSharedTabWorkspace({
-      ...await offline(),
+      project: offline,
       name: params.workspace
     });
 
-    return mountStandalone(definition, {
+    return editor.mount({
       ...mountOptions,
-      sources: await workspace.launchSources(definition.accepts),
+      sources: workspace.launchSources(definition.accepts),
       connect: () => workspace.connect()
     });
   }
 
-  if (forceOffline || params.offline) {
-    return mountOffline();
-  }
+  try {
+    if (forceOffline || params.offline) {
+      return await mountOffline();
+    }
 
-  return withOfflineFallback({
-    message: "The asset server is unreachable.",
-    online: () => mountStandalone(definition, mountOptions),
-    offline: mountOffline
-  });
+    return await withOfflineFallback({
+      message: "The asset server is unreachable.",
+      online: () => editor.mount(mountOptions),
+      offline: mountOffline
+    });
+  }
+  catch (error) {
+    editor.dispose();
+
+    throw error;
+  }
 }

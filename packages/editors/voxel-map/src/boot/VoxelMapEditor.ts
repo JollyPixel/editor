@@ -7,8 +7,9 @@ import type { Runtime } from "@jolly-pixel/runtime";
 import {
   EditorRuntime,
   type AssetLease,
-  type EditorContext,
-  type EditorSession
+  type EditorSession,
+  type HostLogger,
+  type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import {
   VOXEL_MAP_KIND,
@@ -53,18 +54,10 @@ export class VoxelMapEditor {
   };
   static readonly kinds = [kMapKind, TILESET_DOCUMENT_KIND];
 
-  static async mount(
-    context: EditorContext
-  ): Promise<VoxelMapEditor> {
-    const {
-      session,
-      commands,
-      logger
-    } = context;
-    const state = new EditorState();
-    const target = session.targetLease(kMapKind);
-
-    const editorRuntime = await EditorRuntime.create(kCanvas, {
+  static createRuntime(
+    logger: HostLogger
+  ): Promise<EditorRuntime> {
+    return EditorRuntime.create(kCanvas, {
       includePerformanceStats: {
         position: "top-right"
       },
@@ -74,8 +67,22 @@ export class VoxelMapEditor {
       overlay: {
         container: "#game-container"
       },
-      logger: logger.child({ namespace: "runtime" })
+      logger
     });
+  }
+
+  static async mount(
+    context: RuntimeEditorContext
+  ): Promise<VoxelMapEditor> {
+    const {
+      session,
+      commands,
+      logger,
+      runtime: editorRuntime
+    } = context;
+    const state = new EditorState();
+    const target = session.targetLease(kMapKind);
+
     const { runtime } = editorRuntime;
     const scene = new EditorScene({
       state,

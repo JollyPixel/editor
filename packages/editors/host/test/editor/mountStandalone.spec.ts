@@ -12,11 +12,12 @@ import { BINARY_KIND } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
-  DEBUG_HANDLE,
-  EDITOR_STATE_ATTRIBUTE,
   mountStandalone,
   type MountStandaloneOptions
 } from "#src/editor/mountStandalone.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/BootTrace.ts";
+import { DEBUG_HANDLE } from "#src/editor/StandaloneEditor.ts";
+import type { StandaloneConnection } from "#src/workspace/SessionWorkspace.ts";
 import type {
   EditorContext,
   EditorHandle
@@ -27,11 +28,13 @@ import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { ShellChannel } from "#src/launch/ShellChannel.ts";
 import { IDENTITY_STORAGE_KEY } from "#src/session/EditorSession.ts";
 import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
+import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import { captureLogs } from "../helpers/logs.ts";
 
 // CONSTANTS
 const kAssetId = "debug-target";
+const kOtherAssetId = "other-target";
 
 function editorState(): string | null {
   return document.documentElement.getAttribute(EDITOR_STATE_ATTRIBUTE);
@@ -60,6 +63,25 @@ function offlineOptions(
       }
     ],
     connect: () => workspace.connect()
+  };
+}
+
+function trackedConnection(
+  workspace: OfflineWorkspace,
+  onDestroy: () => void
+): StandaloneConnection {
+  const connection = workspace.connect();
+  const { client } = connection;
+
+  return {
+    ...connection,
+    client: {
+      room: (name) => client.room(name),
+      destroy: () => {
+        onDestroy();
+        client.destroy();
+      }
+    }
   };
 }
 
@@ -356,6 +378,111 @@ describe("mountStandalone", () => {
     assert.equal(sessionStorage.getItem(IDENTITY_STORAGE_KEY), "Ada");
 
     handle.dispose();
+    await workspace.close();
+  });
+
+  test("opens the session of the target query param while the launch is read", async() => {
+    const workspace = await openWorkspace();
+    window.history.replaceState(null, "", `/?target=${kAssetId}`);
+    const launch = Promise.withResolvers<EditorLaunch | undefined>();
+    let connections = 0;
+
+    const mounting = mountStandalone(definition(
+      (context) => Promise.resolve(editorHandle(context.session))
+    ), {
+      sources: [{ read: () => launch.promise }],
+      connect: () => {
+        connections++;
+
+        return workspace.connect();
+      }
+    });
+    await setImmediate();
+    assert.equal(connections, 1);
+
+    launch.resolve(EditorLaunch.fromTarget(kAssetId));
+    const handle = await mounting;
+    assert.equal(connections, 1);
+    assert.equal(handle.session.target.record.id, kAssetId);
+
+    handle.dispose();
+    await workspace.close();
+  });
+
+  test("drops the early session when the launch names another target", async() => {
+    const workspace = await OfflineWorkspace.open({
+      handlers: [],
+      seed: {
+        "notes/readme.bin": {
+          id: kAssetId,
+          kind: BINARY_KIND,
+          content: () => new Uint8Array([1])
+        },
+        "notes/other.bin": {
+          id: kOtherAssetId,
+          kind: BINARY_KIND,
+          content: () => new Uint8Array([2])
+        }
+      }
+    });
+    window.history.replaceState(null, "", `/?target=${kAssetId}`);
+    const destroyed: boolean[] = [];
+
+    const handle = await mountStandalone(definition(
+      (context) => Promise.resolve(editorHandle(context.session))
+    ), {
+      sources: [
+        {
+          read: () => Promise.resolve(EditorLaunch.fromTarget(kOtherAssetId))
+        }
+      ],
+      connect: () => {
+        const index = destroyed.push(false) - 1;
+
+        return trackedConnection(workspace, () => {
+          destroyed[index] = true;
+        });
+      }
+    });
+    await setImmediate();
+
+    assert.equal(handle.session.target.record.id, kOtherAssetId);
+    assert.deepEqual(destroyed, [true, false]);
+
+    handle.dispose();
+    await workspace.close();
+  });
+
+  test("disposes the session when the declared runtime cannot be created", async() => {
+    const workspace = await openWorkspace();
+    let mounted = false;
+    let destroyed = false;
+
+    await assert.rejects(
+      mountStandalone({
+        accepts: BINARY_KIND,
+        identity: { title: "never prompted" },
+        kinds: [],
+        createRuntime: (logger) => EditorRuntime.create("#missing-canvas", {
+          logger
+        }),
+        mount: () => {
+          mounted = true;
+
+          return Promise.reject(new Error("unreachable"));
+        }
+      }, {
+        ...offlineOptions(workspace),
+        connect: () => trackedConnection(workspace, () => {
+          destroyed = true;
+        })
+      }),
+      /missing-canvas/
+    );
+    assert.equal(mounted, false);
+    assert.equal(destroyed, true);
+    assert.equal(editorState(), "failed");
+
     await workspace.close();
   });
 

@@ -2,10 +2,12 @@
 import { ChannelTransportHost } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../../editor/mountStandalone.ts";
 import type { LaunchSource } from "../../launch/index.ts";
 import type { OfflineWorkspace } from "../offline/OfflineWorkspace.ts";
-import type { StandaloneWorkspace } from "../SessionWorkspace.ts";
+import type {
+  StandaloneConnection,
+  StandaloneWorkspace
+} from "../SessionWorkspace.ts";
 import {
   HEARTBEAT_MS,
   parseOwnerMessage,
