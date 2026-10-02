@@ -224,16 +224,17 @@ describe("ModelBlock name", () => {
 });
 
 describe("ModelBlock selection ghost", () => {
-  test("adds a front-face-only texture duplicate when shown", () => {
+  test("adds a dimmed front-face duplicate drawn only where occluded", () => {
     const block = new ModelBlock();
 
     block.showSelectionGhost();
 
     const ghost = textureGhostOf(block);
     assert.equal(ghost?.material.side, THREE.FrontSide);
-    assert.equal(ghost?.material.depthTest, false);
-    assert.equal(ghost?.material.depthWrite, true);
-    assert.equal(ghost?.material.opacity, 1);
+    assert.equal(ghost?.material.depthTest, true);
+    assert.equal(ghost?.material.depthFunc, THREE.GreaterDepth);
+    assert.equal(ghost?.material.depthWrite, false);
+    assert.equal(ghost?.material.opacity, 0.35);
     assert.equal(ghost?.geometry, block.mesh.geometry);
   });
 
@@ -284,9 +285,9 @@ describe("ModelBlock selection ghost", () => {
     });
 
     const ghost = textureGhostOf(block);
-    assert.equal(ghost?.material.opacity, 0.5);
+    assert.equal(ghost?.material.opacity, 0.5 * 0.35);
     assert.equal(ghost?.material.metalness, 0.7);
-    assert.equal(ghost?.material.depthTest, false);
+    assert.equal(ghost?.material.depthFunc, THREE.GreaterDepth);
   });
 
   test("repaints material values in place, without rebuilding any shader", () => {

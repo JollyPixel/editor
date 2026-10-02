@@ -22,7 +22,7 @@ import type {
 const kBoxSilhouetteTechnique = "boxSilhouette";
 const kOutlineThickness = 0.05;
 const kSelectionOpacity = 0.5;
-const kHoverOpacity = 0.3;
+const kHoverOpacity = 0.2;
 const kOccludedOpacityScale = 0.25;
 
 export interface HighlightBridgeOptions {
