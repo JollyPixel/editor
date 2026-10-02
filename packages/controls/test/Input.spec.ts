@@ -107,6 +107,18 @@ describe("Controls.Input", () => {
     });
   });
 
+  describe("wasActive", () => {
+    test("is false while no device is active", () => {
+      assert.strictEqual(input.wasActive, false);
+    });
+
+    test("is true while any one device is active", () => {
+      mock.getter(input.touchpad, "wasActive", () => true);
+
+      assert.strictEqual(input.wasActive, true);
+    });
+  });
+
   describe("vibrate", () => {
     test("delegates to the window adapter's navigator", () => {
       const windowAdapter = new FakeWindowAdapter();

@@ -91,6 +91,21 @@ resolve, and concurrent callers share one replay. It re-reads the tail until
 the stream stops growing, because events appended while it yielded land before
 the entry starts following the log.
 
+The entry also records each command folded since the newest checkpoint, with
+its version, and restarts the list at every later checkpoint. The asset room
+takes them once to restore its arbiter:
+
+```ts
+states.takeCommandsSinceCheckpoint(assetId: string): RecordedCommand[]
+
+interface RecordedCommand<TCommand = unknown> {
+  readonly command: TCommand;
+  readonly version: number;
+}
+```
+
+A second call, or a call for an asset that was released, returns `[]`.
+
 Each event goes through `foldAssetEvent`. A hook that throws is logged as
 `asset event not folded` and skipped, both during replay and while following
 the log, so the state keeps its last good value.

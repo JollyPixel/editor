@@ -30,6 +30,11 @@ the runtime.
 The [`GameLoop` reference](../../../loop/docs/gameloop.md) covers scheduling,
 pause state, and frame-source behavior.
 
+A tool or editor whose view only changes on input or data can stop rendering
+in between with `renderOnDemand: true`. See
+[rendering on demand](../api/Runtime.md#rendering-on-demand) for what wakes it
+and how a component asks for frames.
+
 ## Control startup device settings
 
 `runtime.load()` uses GPU detection to choose a render cap and pixel ratio. Pass
@@ -76,7 +81,7 @@ const runtime = await Runtime.create("canvas", {
 ```
 
 The HUD is mounted through `runtime.overlay`, so it follows the canvas when the
-canvas moves or resizes. See [overlays](../api/Runtime.md#overlays) to mount it
+canvas moves or resizes. See [`OverlayLayer`](../api/OverlayLayer.md) to mount it
 inside a container element instead. The HUD is removed by `runtime.dispose()`.
 
 Pass `mount: false` when application code will display or consume the recorder:
@@ -125,7 +130,7 @@ count. Read the counters the runtime latched on the last `draw` instead:
 const { drawCalls, triangles } = runtime.metrics.renderer.frame;
 ```
 
-See [renderer counters](../api/Runtime.md#renderer-counters).
+See [renderer counters](../api/RuntimeMetrics.md#renderer-counters).
 
 ## Show a full readout
 

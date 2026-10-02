@@ -22,7 +22,8 @@ describe("HOST_PARAMS", () => {
         samples: 0,
         username: "Ada",
         offline: true,
-        workspace: "demo"
+        workspace: "demo",
+        continuousRendering: false
       }
     );
   });
@@ -33,7 +34,8 @@ describe("HOST_PARAMS", () => {
       samples: undefined,
       username: undefined,
       offline: false,
-      workspace: undefined
+      workspace: undefined,
+      continuousRendering: false
     });
   });
 
@@ -45,11 +47,23 @@ describe("HOST_PARAMS", () => {
         samples: undefined,
         username: undefined,
         offline: false,
-        workspace: undefined
+        workspace: undefined,
+        continuousRendering: false
       }
     );
     assert.equal(HOST_PARAMS.read("?max-fps=-5").maxFps, undefined);
     assert.equal(HOST_PARAMS.read("?samples=-1").samples, undefined);
+  });
+
+  test("render=continuous turns on-demand rendering off", () => {
+    assert.equal(
+      HOST_PARAMS.read("?render=continuous").continuousRendering,
+      true
+    );
+    assert.equal(
+      HOST_PARAMS.read("?render=on-demand").continuousRendering,
+      false
+    );
   });
 
   test("offlineWorkspaceQuery reads back as an offline workspace", () => {

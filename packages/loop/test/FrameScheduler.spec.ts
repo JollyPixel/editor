@@ -164,6 +164,22 @@ describe("Loop.FrameScheduler", () => {
       assert.strictEqual(scheduler.advance(9999).frameDelta, 0);
     });
 
+    test("skipGap() reports a zero delta next, keeping simulation time", () => {
+      const scheduler = new FrameScheduler({ maxFps: 30 });
+      scheduler.advance(0);
+      scheduler.advance(40);
+      const time = scheduler.time;
+
+      scheduler.skipGap();
+      const schedule = scheduler.advance(10_000);
+
+      assert.strictEqual(schedule.rawDelta, 0);
+      assert.strictEqual(schedule.clamped, false);
+      assert.strictEqual(schedule.render, true);
+      assert.strictEqual(scheduler.time, time);
+      assert.strictEqual(scheduler.advance(10_016).rawDelta, 16);
+    });
+
     test("frameCount counts every advance", () => {
       const { scheduler } = replay([16, 16, 16]);
 

@@ -74,6 +74,10 @@ export class ElasticFocus implements CameraFocus {
     return this.#pivotPosition;
   }
 
+  get settled(): boolean {
+    return this.#trailDistance === this.#targetTrailDistance;
+  }
+
   enter(): null {
     return null;
   }

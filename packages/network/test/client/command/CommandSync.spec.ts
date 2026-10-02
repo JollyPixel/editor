@@ -11,7 +11,7 @@ import {
   type NetworkCommandHeader,
   type NetworkServerMessage
 } from "#src/index.ts";
-import { RoomHarness } from "../helpers/RoomHarness.ts";
+import { RoomHarness } from "../../helpers/RoomHarness.ts";
 
 type TestCommand = { action: "set"; value: number; } & NetworkCommandHeader;
 

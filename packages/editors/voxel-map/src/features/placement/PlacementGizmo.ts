@@ -129,6 +129,7 @@ export class PlacementGizmo extends ActorComponent {
   readonly #sync = (
     placement: Placement | null
   ): void => {
+    this.actor.world.invalidate();
     const template = placement?.source.resolve(this.#view.document.world);
     if (
       placement === null ||

@@ -194,6 +194,34 @@ Delegates to `renderer.draw(scene)`, which resizes if needed, clears
 the frame buffer, and renders the scene through all active
 cameras.
 
+## Rendering on demand
+
+A host can stop ticking while nothing changes, as the runtime's
+`renderOnDemand` option does. The world tells it when frames are needed:
+
+```ts
+type WorldKeepAlive = () => boolean;
+
+invalidate(): void;
+keepAlive(predicate: WorldKeepAlive): () => void;
+get animating(): boolean;
+```
+
+`invalidate()` emits `invalidate`. Call it after changing what is drawn from
+outside a frame, such as from a network or timer callback. `keepAlive()` adds
+a predicate read after every frame; frames continue while one returns `true`,
+so an animation or a damped motion can settle. It invalidates once and returns
+a function removing the predicate. `animating` is `true` while any predicate
+returns `true`.
+
+```ts
+const release = this.actor.world.keepAlive(() => this.fading);
+this.addTeardown(release);
+```
+
+A host that ticks every frame ignores both, so components can call them
+unconditionally.
+
 ## Accessing subsystems
 
 Actors and components can access every subsystem through public

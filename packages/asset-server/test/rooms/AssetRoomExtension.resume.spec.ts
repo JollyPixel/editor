@@ -37,7 +37,7 @@ interface Command {
 }
 
 function setup(
-  options: AssetRoomExtensionOptions = {}
+  options: AssetRoomExtensionOptions<Command> = {}
 ) {
   const log: EventStore.Event[] = [];
   function record(
@@ -300,40 +300,8 @@ describe("AssetRoomExtension — resume", () => {
 });
 
 describe("AssetRoomExtension — restore", () => {
-  test("hands the command events since the last checkpoint to the protocol", () => {
+  test("hands the recorded commands to the protocol in order", () => {
     const restored: [unknown, number][] = [];
-    const events: EventStore.Event[] = [
-      {
-        assetId: kAssetId,
-        assetType: "counter",
-        eventType: ASSET_UPDATED,
-        eventData: {},
-        actor: { type: "system", source: "snapshot" },
-        eventId: 4,
-        eventVersion: 4,
-        createdAt: ""
-      },
-      {
-        assetId: kAssetId,
-        assetType: "counter",
-        eventType: kEventType,
-        eventData: { action: "increment", clientId: "a", seq: 1 },
-        actor: { type: "user", id: "a" },
-        eventId: 5,
-        eventVersion: 5,
-        createdAt: ""
-      },
-      {
-        assetId: kAssetId,
-        assetType: "counter",
-        eventType: kEventType,
-        eventData: { action: "unknown" },
-        actor: { type: "user", id: "a" },
-        eventId: 6,
-        eventVersion: 6,
-        createdAt: ""
-      }
-    ];
 
     new AssetRoomExtension<Command>(
       {
@@ -359,17 +327,22 @@ describe("AssetRoomExtension — restore", () => {
         }
       },
       {
-        reader: {
-          list: () => [],
-          listFromCheckpoint: () => events,
-          listAll: () => [],
-          listFromCheckpoints: () => []
-        }
+        restore: [
+          {
+            command: { action: "increment", clientId: "a", seq: 1 },
+            version: 5
+          },
+          {
+            command: { action: "increment", clientId: "b", seq: 1 },
+            version: 7
+          }
+        ]
       }
     );
 
     assert.deepEqual(restored, [
-      [{ action: "increment", clientId: "a", seq: 1 }, 5]
+      [{ action: "increment", clientId: "a", seq: 1 }, 5],
+      [{ action: "increment", clientId: "b", seq: 1 }, 7]
     ]);
   });
 });

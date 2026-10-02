@@ -42,20 +42,24 @@ export class TilesetAtlasBridge {
   #pendingTransparency: SelectionRect | null = null;
   #needsFullSync = false;
   #running = true;
+  #scheduled = false;
 
   readonly #onChanged = (event: { bounds: SelectionRect; }): void => {
     this.#dirty = this.#dirty === null ?
       event.bounds :
       rectsUnion(this.#dirty, event.bounds);
+    this.#schedule();
   };
 
   readonly #onSurfaceChanged = (): void => {
     this.#needsFullSync = true;
+    this.#schedule();
   };
 
   readonly #onTilesetCommand: TilesetDocumentListener = (command) => {
     if (command.action === "tile-size-updated") {
       this.#needsFullSync = true;
+      this.#schedule();
     }
   };
 
@@ -64,12 +68,15 @@ export class TilesetAtlasBridge {
   };
 
   readonly #tick = (): void => {
+    this.#scheduled = false;
     if (!this.#running) {
       return;
     }
 
     this.#flush();
-    this.#scheduler(this.#tick);
+    if (this.#pendingTransparency !== null) {
+      this.#schedule();
+    }
   };
 
   constructor(
@@ -95,7 +102,6 @@ export class TilesetAtlasBridge {
     );
 
     this.#bind();
-    this.#scheduler(this.#tick);
   }
 
   update(
@@ -116,6 +122,7 @@ export class TilesetAtlasBridge {
     }
 
     this.#atlas.updateImage(this.#pixels.buffer.canvas());
+    this.#view.requestFrame();
     this.syncAlphaModes();
   }
 
@@ -144,6 +151,15 @@ export class TilesetAtlasBridge {
     this.#flush();
   }
 
+  #schedule(): void {
+    if (this.#scheduled || !this.#running) {
+      return;
+    }
+
+    this.#scheduled = true;
+    this.#scheduler(this.#tick);
+  }
+
   #flush(): void {
     const dirty = this.#dirty;
     this.#dirty = null;
@@ -164,6 +180,7 @@ export class TilesetAtlasBridge {
     }
 
     this.#atlas.updateImage(this.#pixels.buffer.canvas());
+    this.#view.requestFrame();
     this.#pendingTransparency = this.#pendingTransparency === null ?
       dirty :
       rectsUnion(this.#pendingTransparency, dirty);

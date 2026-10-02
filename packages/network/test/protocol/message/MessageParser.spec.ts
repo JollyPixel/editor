@@ -34,6 +34,17 @@ const kCommandProtocol = new MessageProtocol({
 });
 
 describe("MessageParser", () => {
+  test("of() compiles one parser per protocol", () => {
+    const parser = MessageParser.of(kCommandProtocol);
+
+    assert.strictEqual(MessageParser.of(kCommandProtocol), parser);
+    assert.notStrictEqual(
+      MessageParser.of(new MessageProtocol(kCommandProtocol.schema)),
+      parser
+    );
+    assert.strictEqual(parser.parse({ action: "voxel-removed" }).ok, true);
+  });
+
   test("returns the matching variant's event alongside the message", () => {
     const parser = new MessageParser(kCommandProtocol);
     const result = parser.parse({ action: "voxel-set", x: 3 });

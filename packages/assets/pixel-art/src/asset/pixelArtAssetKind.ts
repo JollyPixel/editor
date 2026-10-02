@@ -24,6 +24,7 @@ import {
   PIXEL_ART_KIND
 } from "./pixelArt.ts";
 import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
+import { encodePixelSnapshot } from "../network/PixelSnapshotCodec.ts";
 import {
   pixelCommandProtocol,
   pixelSnapshotSchema
@@ -154,6 +155,7 @@ export function pixelArtAssetKind(
         return {
           snapshotSchema: pixelSnapshotSchema,
           snapshot: () => pixelArtSnapshot(state.buffer),
+          encodeSnapshot: () => encodePixelSnapshot(state.buffer),
           arbitrate: (command) => arbiter.admit(state.buffer, command),
           correct: (command, admitted) => correctPixelCommand(
             state.buffer,

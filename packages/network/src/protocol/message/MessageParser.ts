@@ -24,6 +24,9 @@ export interface RoomMessageParser<TMessage> {
   ): Result<ParsedMessage<TMessage>, readonly ValidationError[]>;
 }
 
+// CONSTANTS
+const kParsers = new WeakMap<MessageProtocol, MessageParser>();
+
 interface CompiledVariant<
   TMessage
 > {
@@ -34,6 +37,18 @@ interface CompiledVariant<
 export class MessageParser<
   TMessage = unknown
 > implements RoomMessageParser<TMessage> {
+  static of<TMessage = unknown>(
+    protocol: MessageProtocol
+  ): MessageParser<TMessage> {
+    let parser = kParsers.get(protocol);
+    if (parser === undefined) {
+      parser = new MessageParser(protocol);
+      kParsers.set(protocol, parser);
+    }
+
+    return parser as MessageParser<TMessage>;
+  }
+
   #variants: readonly CompiledVariant<TMessage>[];
   #union: Validator<TMessage>;
 
@@ -43,7 +58,10 @@ export class MessageParser<
     this.#variants = protocol.variants.map(({ event, schema }) => {
       return {
         event,
-        validator: new Validator<TMessage>(schema, VALIDATOR_OPTIONS)
+        validator: new Validator<TMessage>(
+          schema,
+          VALIDATOR_OPTIONS
+        )
       };
     });
     this.#union = new Validator<TMessage>(

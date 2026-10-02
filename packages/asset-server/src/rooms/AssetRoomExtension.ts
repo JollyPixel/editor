@@ -15,12 +15,11 @@ import {
   type AssetRoomDeletedMessage,
   type AssetRoomRejectedMessage
 } from "../kinds/AssetLiveProtocol.ts";
-import { parseAssetCommand } from "../kinds/parseAssetCommand.ts";
 import {
   actorOf,
-  ASSET_CHECKPOINT_EVENT_TYPES,
   ASSET_RENAMED
 } from "../events/AssetEvents.ts";
+import type { RecordedCommand } from "../state/AssetStateStore.ts";
 import { isScheduledSnapshot } from "../state/SnapshotScheduler.ts";
 import {
   assetRoomDeletedSchema,
@@ -31,9 +30,14 @@ import {
 const kDefaultResumeLimit = 1_000;
 const kDefaultDepartureTimeout = 5_000;
 const kMaxDeparted = 256;
+const kRoomProtocols = new WeakMap<
+  network.MessageProtocol,
+  Map<network.JSONSchema, network.MessageProtocols>
+>();
 
-export interface AssetRoomExtensionOptions {
+export interface AssetRoomExtensionOptions<TCommand = unknown> {
   reader?: EventStore.EventReader;
+  restore?: Iterable<RecordedCommand<TCommand>>;
   resumeLimit?: number;
   departureTimeout?: number;
 }
@@ -42,6 +46,11 @@ type SyncExtras = {
   version?: number;
   acks?: network.NetworkAcks;
 };
+
+interface EncodedSnapshot {
+  readonly version: number;
+  readonly data: unknown;
+}
 
 interface CatchUp {
   readonly commands: unknown[];
@@ -65,6 +74,7 @@ export class AssetRoomExtension<
   #departureTimeout: number;
   #room: network.RoomBroadcast | null = null;
   #deleted = false;
+  #encoded: EncodedSnapshot | null = null;
   #members = new Set<string>();
   #departures = new Map<string, () => void>();
   #processed = new Map<string, number>();
@@ -75,7 +85,7 @@ export class AssetRoomExtension<
     commands: AssetCommands<unknown, TCommand>,
     protocol: AssetLiveProtocol<TCommand>,
     events: EventStore.EventWriter,
-    options: AssetRoomExtensionOptions = {}
+    options: AssetRoomExtensionOptions<TCommand> = {}
   ) {
     super();
 
@@ -94,7 +104,7 @@ export class AssetRoomExtension<
     this.#resumeLimit = options.resumeLimit ?? kDefaultResumeLimit;
     this.#departureTimeout = options.departureTimeout ??
       kDefaultDepartureTimeout;
-    this.#restore();
+    this.#restore(options.restore ?? []);
   }
 
   get deleted(): boolean {
@@ -124,6 +134,10 @@ export class AssetRoomExtension<
     if (resume !== null) {
       await this.#departure(resume.clientId);
     }
+    const encoding = this.#encodeSnapshot();
+    if (encoding !== null) {
+      await encoding;
+    }
 
     if (this.#deleted) {
       client.send({
@@ -133,7 +147,9 @@ export class AssetRoomExtension<
       return;
     }
 
-    client.send(this.#joinMessage(resume));
+    client.send(
+      this.#joinMessage(resume)
+    );
   }
 
   override onResync(
@@ -144,7 +160,10 @@ export class AssetRoomExtension<
       return;
     }
 
-    context.room.sendTo(clientId, this.#snapshot(this.#acksOf([clientId])));
+    context.room.sendTo(
+      clientId,
+      this.#snapshot(this.#acksOf([clientId]))
+    );
   }
 
   override onClientDisconnect(
@@ -156,7 +175,9 @@ export class AssetRoomExtension<
       this.#processed.delete(clientId);
       this.#departed.set(clientId, seq);
       if (this.#departed.size > kMaxDeparted) {
-        this.#departed.delete(this.#departed.keys().next().value!);
+        this.#departed.delete(
+          this.#departed.keys().next().value!
+        );
       }
     }
     this.#departures.get(clientId)?.();
@@ -171,13 +192,13 @@ export class AssetRoomExtension<
       return;
     }
 
-    const command = parseAssetCommand(
-      this.#commands,
-      withAuthor(payload, clientId)
-    );
-    if (command === null) {
+    const parsed = network.MessageParser.of<TCommand>(
+      this.#commands.protocol
+    ).parse(withAuthor(payload, clientId));
+    if (!parsed.ok) {
       return;
     }
+    const command = parsed.val.message;
     const seq = seqOf(command);
     if (seq !== undefined) {
       this.#processed.set(clientId, seq);
@@ -219,7 +240,10 @@ export class AssetRoomExtension<
 
     arbitration.commit?.(appended.val.eventVersion);
     context.room.broadcast(
-      this.#broadcastOf(arbitration.command, appended.val.eventVersion)
+      this.#broadcastOf(
+        arbitration.command,
+        appended.val.eventVersion
+      )
     );
     if (arbitration.command !== command) {
       this.#resync(
@@ -231,24 +255,15 @@ export class AssetRoomExtension<
     }
   }
 
-  #restore(): void {
-    if (this.#reader === null || this.#protocol.restore === undefined) {
+  #restore(
+    commands: Iterable<RecordedCommand<TCommand>>
+  ): void {
+    if (this.#protocol.restore === undefined) {
       return;
     }
 
-    const events = this.#reader.listFromCheckpoint(
-      this.#assetId,
-      ASSET_CHECKPOINT_EVENT_TYPES
-    );
-    for (const event of events) {
-      if (event.eventType !== this.#commands.eventType) {
-        continue;
-      }
-
-      const command = parseAssetCommand(this.#commands, event.eventData);
-      if (command !== null) {
-        this.#protocol.restore(command, event.eventVersion);
-      }
+    for (const { command, version } of commands) {
+      this.#protocol.restore(command, version);
     }
   }
 
@@ -335,14 +350,51 @@ export class AssetRoomExtension<
     };
   }
 
+  #encodeSnapshot(): Promise<void> | null {
+    const version = this.#version();
+    if (
+      this.#protocol.encodeSnapshot === undefined ||
+      version === undefined ||
+      this.#encoded?.version === version
+    ) {
+      return null;
+    }
+
+    return this.#storeEncoded(
+      version,
+      this.#protocol.encodeSnapshot()
+    );
+  }
+
+  async #storeEncoded(
+    version: number,
+    encoding: Promise<unknown>
+  ): Promise<void> {
+    try {
+      const data = await encoding;
+      if (this.#version() === version) {
+        this.#encoded = {
+          version,
+          data
+        };
+      }
+    }
+    catch {
+      this.#encoded = null;
+    }
+  }
+
   #snapshot(
     extras: SyncExtras
   ): AssetRoomMessage & SyncExtras {
     const version = this.#version();
+    const encoded = this.#encoded;
 
     return {
       type: "snapshot",
-      data: this.#protocol.snapshot(),
+      data: encoded !== null && encoded.version === version ?
+        encoded.data :
+        this.#protocol.snapshot(),
       ...(version === undefined ? {} : { version }),
       ...extras
     };
@@ -354,7 +406,10 @@ export class AssetRoomExtension<
     command: TCommand,
     admitted: TCommand | null
   ): void {
-    const correction = this.#protocol.correct?.(command, admitted) ?? null;
+    const correction = this.#protocol.correct?.(
+      command,
+      admitted
+    ) ?? null;
     const acks = this.#acksOf([clientId]);
     if (correction !== null) {
       room.sendTo(clientId, {
@@ -484,15 +539,27 @@ function assetRoomProtocols(
   command: network.MessageProtocol,
   snapshot: network.JSONSchema
 ): network.MessageProtocols {
-  return {
-    inbound: command,
-    outbound: network.serverMessageProtocol({
-      command,
-      snapshot,
-      notices: [
-        assetRoomDeletedSchema,
-        assetRoomRejectedSchema
-      ]
-    })
-  };
+  let bySnapshot = kRoomProtocols.get(command);
+  if (bySnapshot === undefined) {
+    bySnapshot = new Map();
+    kRoomProtocols.set(command, bySnapshot);
+  }
+
+  let protocols = bySnapshot.get(snapshot);
+  if (protocols === undefined) {
+    protocols = {
+      inbound: command,
+      outbound: network.serverMessageProtocol({
+        command,
+        snapshot,
+        notices: [
+          assetRoomDeletedSchema,
+          assetRoomRejectedSchema
+        ]
+      })
+    };
+    bySnapshot.set(snapshot, protocols);
+  }
+
+  return protocols;
 }

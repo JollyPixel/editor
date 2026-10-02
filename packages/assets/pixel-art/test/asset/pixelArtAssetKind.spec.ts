@@ -18,6 +18,11 @@ import {
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
 import {
+  MessageParser,
+  MessageProtocol
+} from "@jolly-pixel/network";
+import {
+  decodePngPixels,
   encodePixelArtDocument,
   PixelBuffer,
   pixelArtSnapshot,
@@ -32,9 +37,11 @@ import {
   PIXEL_ART_KIND
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
+import { pixelSnapshotSchema } from "#src/network/PixelCommand.schema.ts";
 import type {
   PixelNetworkCommand,
-  PixelWireCommand
+  PixelWireCommand,
+  PixelWireSnapshot
 } from "#src/network/types.ts";
 import { packed } from "../fixtures/commands.ts";
 
@@ -390,6 +397,27 @@ describe("pixelArtAssetKind", () => {
     };
 
     assert.strictEqual(protocol.correct!(resized, null), null);
+  });
+
+  test("live() encodes the snapshot pixels as a PNG", async() => {
+    const handler = pixelArtAssetKind({ defaultSize: { x: 2, y: 2 } });
+    const state = handler.create("asset-1");
+    state.buffer.pixels().set(kRedTuple, 4);
+    const protocol = handler.commands!.live!(binding(state));
+    const parser = new MessageParser(new MessageProtocol({
+      title: "snapshot",
+      ...pixelSnapshotSchema
+    }));
+
+    const encoded = await protocol.encodeSnapshot!() as PixelWireSnapshot;
+    const { pixels, size } = encoded;
+
+    assert.strictEqual(parser.parse(encoded).ok, true);
+    assert.ok(typeof pixels !== "string");
+    assert.deepEqual(
+      [...await decodePngPixels(pixels, size)],
+      [...state.buffer.pixels()]
+    );
   });
 
   test("live() snapshots the current buffer", () => {

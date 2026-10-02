@@ -85,8 +85,13 @@ export class FrameScheduler {
     return this.#fixedFps;
   }
 
-  set fixedFps(value: number) {
-    this.#fixedFps = assertNumber("fixedFps", value);
+  set fixedFps(
+    value: number
+  ) {
+    this.#fixedFps = assertNumber(
+      "fixedFps",
+      value
+    );
     this.#fixedDelta = 1000 / this.#fixedFps;
   }
 
@@ -98,8 +103,13 @@ export class FrameScheduler {
     return this.#maxFps;
   }
 
-  set maxFps(value: number) {
-    this.#maxFps = assertNumber("maxFps", value);
+  set maxFps(
+    value: number
+  ) {
+    this.#maxFps = assertNumber(
+      "maxFps",
+      value
+    );
     this.#renderInterval = 1000 / this.#maxFps;
     this.#renderAccumulator = 0;
   }
@@ -108,24 +118,39 @@ export class FrameScheduler {
     return this.#maxFrameDelta;
   }
 
-  set maxFrameDelta(value: number) {
-    this.#maxFrameDelta = assertNumber("maxFrameDelta", value);
+  set maxFrameDelta(
+    value: number
+  ) {
+    this.#maxFrameDelta = assertNumber(
+      "maxFrameDelta",
+      value
+    );
   }
 
   get maxStepsPerFrame(): number {
     return this.#maxStepsPerFrame;
   }
 
-  set maxStepsPerFrame(value: number) {
-    this.#maxStepsPerFrame = assertNumber("maxStepsPerFrame", value);
+  set maxStepsPerFrame(
+    value: number
+  ) {
+    this.#maxStepsPerFrame = assertNumber(
+      "maxStepsPerFrame",
+      value
+    );
   }
 
   get timeScale(): number {
     return this.#timeScale;
   }
 
-  set timeScale(value: number) {
-    this.#timeScale = assertNumber("timeScale", value);
+  set timeScale(
+    value: number
+  ) {
+    this.#timeScale = assertNumber(
+      "timeScale",
+      value
+    );
   }
 
   get accumulator(): number {
@@ -148,9 +173,6 @@ export class FrameScheduler {
     return this.#frameCount;
   }
 
-  /**
-   * Clears state; the next `advance()` reports a zero delta.
-   */
   reset(): void {
     this.#lastNow = null;
     this.#accumulator = 0;
@@ -161,10 +183,10 @@ export class FrameScheduler {
     this.#frameCount = 0;
   }
 
-  /**
-   * Returns the work due since the previous timestamp.
-   * The first call reports zero delta, zero steps, and renders.
-   */
+  skipGap(): void {
+    this.#lastNow = null;
+  }
+
   advance(
     now: number
   ): FrameSchedule {
@@ -181,7 +203,9 @@ export class FrameScheduler {
     this.#elapsed += frameDelta;
     this.#accumulator += frameDelta;
 
-    const wantedSteps = Math.floor(this.#accumulator / this.#fixedDelta);
+    const wantedSteps = Math.floor(
+      this.#accumulator / this.#fixedDelta
+    );
     const steps = Math.min(wantedSteps, this.#maxStepsPerFrame);
     const panicked = wantedSteps > this.#maxStepsPerFrame;
 
@@ -195,8 +219,10 @@ export class FrameScheduler {
       this.#droppedTime += droppedMs;
     }
 
-    // Compute first because rendering updates its accumulator.
-    const render = this.#shouldRender(firstFrame, wallDelta);
+    const render = this.#shouldRender(
+      firstFrame,
+      wallDelta
+    );
 
     return {
       rawDelta,

@@ -27,6 +27,7 @@ const kTilesetFile = path.join(
   "textures",
   "tileset.png"
 );
+const kRoomGraceMs = 5 * 60_000;
 const kEditors = readEditorPackages([
   "@jolly-pixel/editor.pixel-art",
   "@jolly-pixel/editor.voxel-map",
@@ -47,7 +48,8 @@ async function assetWorkspacePlugin(
       eventStore: EventStore.persistence.memory()
     } : {}),
     handlers,
-    seed
+    seed,
+    roomGraceMs: kRoomGraceMs
   });
 }
 

@@ -106,7 +106,10 @@ export function registerAssetRooms(
       commands,
       commands.live(binding),
       events,
-      { reader }
+      {
+        reader,
+        restore: states.takeCommandsSinceCheckpoint(assetId)
+      }
     );
     liveRooms.set(assetId, extension);
 

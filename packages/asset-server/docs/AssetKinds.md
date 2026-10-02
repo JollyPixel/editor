@@ -92,8 +92,10 @@ function foldAssetEvent<TState, TCommand>(
   handler: AssetKindHandler<TState, TCommand>,
   state: TState,
   event: Event
-): void;
+): TCommand | null;
 ```
+
+It returns the command it applied, or `null` for any other event.
 
 | Event | Hook |
 |---|---|
@@ -256,6 +258,7 @@ interface AssetLiveProtocol<TCommand = unknown> {
   readonly snapshotSchema: JSONSchema;
 
   snapshot(): unknown;
+  encodeSnapshot?(): Promise<unknown>;
   arbitrate(
     command: TCommand
   ): AssetArbitration<TCommand> | null;
@@ -312,9 +315,17 @@ values: the author replays its later commands on top of it. `broadcast`
 overrides the default `{ type: "command", data: command }` envelope.
 `voxel-map` uses it to answer a `world-replace` with a full snapshot.
 
-When the room starts with a reader, it hands every command event since the
-asset's last checkpoint to `restore` with its version, so a conflict tracker
-knows which writes a later undo must not overwrite.
+`encodeSnapshot` returns a smaller form of `snapshot()` that also matches
+`snapshotSchema`, such as PNG pixels. It must read the state before its first
+`await`. A join waits for it and the room keeps the result for that room
+version, so later joins and resyncs at the same version reuse it. When the
+version moved during the encode, or the encode rejects, the room sends
+`snapshot()` instead.
+
+The room hands `restore` every command since the asset's last checkpoint, in
+order and with its version, so a conflict tracker knows which writes a later
+undo must not overwrite. `registerAssetRooms` passes the commands the state
+store recorded while folding them, so opening a room reads the log once.
 
 The room keeps the last `seq` it processed per member, admitted or not, and
 sends it as `acks` so the client's [`CommandSync`](../../network/docs/sync/CommandSync.md)
@@ -335,8 +346,9 @@ version, the range holds more than `resumeLimit` events or any other event,
 or compaction removed its start.
 
 ```ts
-interface AssetRoomExtensionOptions {
+interface AssetRoomExtensionOptions<TCommand = unknown> {
   reader?: EventStore.EventReader; // without it, a resume gets a snapshot
+  restore?: Iterable<RecordedCommand<TCommand>>;
   resumeLimit?: number; // default 1_000
   departureTimeout?: number; // default 5_000 ms
 }

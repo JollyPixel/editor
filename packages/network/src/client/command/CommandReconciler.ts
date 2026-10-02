@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { NetworkCommandHeader } from "../sync/types.ts";
+import type { NetworkCommandHeader } from "../../sync/types.ts";
 
 export interface CommandReconciler<
   TCommand extends NetworkCommandHeader

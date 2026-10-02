@@ -69,6 +69,15 @@ async function textureHost(
   return null;
 }
 
+async function performanceReadout(
+  page: Page
+): Promise<Locator> {
+  const readout = page.locator(`jolly-pane[key='${kPerformancePane}']`);
+  await expect(readout).toBeAttached();
+
+  return readout;
+}
+
 async function dragPaneToTab(
   page: Page,
   pane: Locator,
@@ -159,9 +168,9 @@ test("the texture editor stays in Paint once it has its own dock", async({ page 
 });
 
 test("the performance readout merges into the pane group it is dropped on", async({ page }) => {
+  const readout = await performanceReadout(page);
   await page.keyboard.press(kPerformanceToggleKey);
-  const readout = page.locator(`jolly-pane[key='${kPerformancePane}']`);
-  await expect(readout).toBeAttached();
+  await expect(readout).toBeVisible();
 
   await dragPaneToTab(page, readout, "General");
 
@@ -171,8 +180,8 @@ test("the performance readout merges into the pane group it is dropped on", asyn
 });
 
 test("the performance toggle key still toggles the readout once docked", async({ page }) => {
+  const readout = await performanceReadout(page);
   await page.keyboard.press(kPerformanceToggleKey);
-  const readout = page.locator(`jolly-pane[key='${kPerformancePane}']`);
   await expect(readout).toBeVisible();
 
   await dragPaneToTab(page, readout, "General");

@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import type { PixelSyncTarget } from "@jolly-pixel/asset.pixel-art/client";
 import {
   encodePixelBytes,
+  encodePngPixels,
   type PixelBufferHookEvent,
   type PixelBufferHookListener,
   type UVRegionData,
@@ -157,6 +158,33 @@ describe("TilesetSyncClient", () => {
       ]
     );
     assert.equal(room.sentCommands[0].timestamp, 42);
+  });
+
+  it("loads PNG pixels before the commands that follow the snapshot", async() => {
+    const { room, pixels, tileset, client } = harness();
+    const size = { x: 1, y: 1 };
+
+    room.simulateSnapshot({
+      ...snapshot(),
+      pixels: {
+        size,
+        pixels: await encodePngPixels(
+          new Uint8ClampedArray([9, 8, 7, 255]),
+          size
+        ),
+        uvRegions: []
+      }
+    });
+    room.simulateCommand({
+      ...kPeerHeader,
+      action: "block-removed",
+      blockId: 2
+    });
+    assert.equal(client.ready, false);
+    await client.whenReady();
+
+    assert.deepEqual([...pixels.loaded[0].pixels], [9, 8, 7, 255]);
+    assert.equal(tileset.blocks.has(2), false);
   });
 
   it("applies remote pixel and document commands without echoing them", () => {

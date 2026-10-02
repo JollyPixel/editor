@@ -13,7 +13,7 @@ export type {
 } from "./ui/viewHelper/mountViewHelper.ts";
 export type {
   PerformanceStatsPosition
-} from "./stats/mountPerformanceStats.ts";
+} from "./stats/PerformanceStatsHud.ts";
 export { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
 export {
   RendererMetrics,

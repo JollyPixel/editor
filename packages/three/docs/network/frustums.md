@@ -76,6 +76,7 @@ renderer.setAnimationLoop(() => {
 | `label` | `identity.username` | Resolve a remote display name |
 | `color` | `frustum.color` | Resolve a remote color per peer |
 | `frustum` | `{}` | Shared `PeerFrustum` options except `displayName` |
+| `requestFrame` | none | Called after a remote pose shows, hides or removes a frustum, so a host rendering on demand draws it |
 
 The sync assigns no color of its own. Without a `color` callback every peer
 gets `frustum.color`, falling back to `PeerFrustum.Defaults.color`; the
@@ -85,7 +86,9 @@ covers the common case).
 
 Call `update()` once per render tick. It publishes after a position or
 quaternion component changes by more than `1e-4` and the throttle interval has
-elapsed.
+elapsed. A pose read inside the interval is kept and published when it ends,
+so the resting pose reaches peers even when no frame follows, as with a
+runtime rendering on demand. `detach()` drops that pending pose.
 
 ## Proximity fade
 

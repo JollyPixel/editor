@@ -6,7 +6,8 @@ export type {
   PixelNetworkCommand,
   PixelServerMessage,
   PixelWireCommand,
-  PixelWireEvent
+  PixelWireEvent,
+  PixelWireSnapshot
 } from "./types.ts";
 export * from "./pixelCommandActions.ts";
 export * from "./PixelCommandApplier.ts";
@@ -16,3 +17,4 @@ export * from "./PixelCommandArbiter.ts";
 export * from "./PixelCommandKeys.ts";
 export * from "./PixelCorrection.ts";
 export * from "./PixelWireCodec.ts";
+export { encodePixelSnapshot } from "./PixelSnapshotCodec.ts";

@@ -28,14 +28,16 @@ export class EditorRuntime {
     options: EditorRuntimeCreateOptions = {}
   ): Promise<EditorRuntime> {
     const {
-      params,
+      params = HOST_PARAMS.read(),
+      renderOnDemand = true,
       ...runtimeOptions
     } = options;
     const runtime = await Runtime.create(
       canvas,
       {
         suspendWhenHidden: true,
-        ...runtimeOptions
+        ...runtimeOptions,
+        renderOnDemand: renderOnDemand && !params.continuousRendering
       }
     );
     runtime.world.input.keyboard.addGuard(

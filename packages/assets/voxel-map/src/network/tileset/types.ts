@@ -2,8 +2,8 @@
 import type * as network from "@jolly-pixel/network";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
-  PixelBufferSnapshot,
-  PixelWireCommand
+  PixelWireCommand,
+  PixelWireSnapshot
 } from "@jolly-pixel/asset.pixel-art/client";
 import type {
   TilesetDocumentCommand,
@@ -19,7 +19,7 @@ export type TilesetNetworkCommand =
   | TilesetDocumentNetworkCommand;
 
 export interface TilesetSnapshot extends TilesetDocumentJSON {
-  pixels: PixelBufferSnapshot;
+  pixels: PixelWireSnapshot;
 }
 
 export type TilesetServerMessage = network.NetworkServerMessage<

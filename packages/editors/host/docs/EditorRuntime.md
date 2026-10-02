@@ -29,6 +29,16 @@ keys: the runtime keyboard ignores them until the layer closes.
 `suspendWhenHidden` defaults to `true`, so an editor in a hidden studio tab
 stops rendering until its canvas shows again.
 
+`renderOnDemand` defaults to `true`: the view renders after input,
+`world.invalidate()` and while a `world.keepAlive()` predicate holds, then
+idles. See
+[rendering on demand](../../../runtime/docs/api/Runtime.md#rendering-on-demand).
+Components that change the scene from room traffic, such as
+[`PeerFrustums`](./PeerFrustums.md), invalidate the world themselves. An
+editor whose scene changes without telling the world passes `false`. The
+`render=continuous` [query parameter](./QueryParams.md#host-parameters) turns
+it off for any editor, to rule out a missed wake-up.
+
 An editor booted by [`mountStandalone`](./mountStandalone.md#editor-definition)
 creates it in its static `createRuntime(logger)`, which the host calls before
 the session opens.

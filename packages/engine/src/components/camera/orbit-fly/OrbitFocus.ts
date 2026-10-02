@@ -79,6 +79,13 @@ export class OrbitFocus implements CameraFocus {
     return this.#hasPivot ? this.#pivotPoint : null;
   }
 
+  get settled(): boolean {
+    return !this.#isOrbiting || (
+      this.#pivotDistance === this.#targetPivotDistance &&
+      this.#pivotPoint.equals(this.#targetPivotPoint)
+    );
+  }
+
   #clampPivotDistance(
     distance: number
   ): number {

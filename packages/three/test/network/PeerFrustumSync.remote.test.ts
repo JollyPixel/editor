@@ -95,6 +95,24 @@ describe("remote peers", () => {
     assert.deepEqual(disposals, [1, 1]);
   });
 
+  test("requests a frame on every remote frustum change", () => {
+    let requests = 0;
+    const { room } = setup({
+      requestFrame: () => {
+        requests++;
+      }
+    });
+
+    joinPeer(room, "alice", { frustum: pose(1) });
+    assert.equal(requests, 1);
+
+    room.emitPresence("alice", { frustum: pose(2) });
+    assert.equal(requests, 2);
+
+    room.emitLeft("alice");
+    assert.equal(requests, 3);
+  });
+
   test("reads back the last pose applied to a peer", () => {
     const { room, sync } = setup();
     joinPeer(room, "alice", { frustum: pose(1) });

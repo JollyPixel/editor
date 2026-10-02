@@ -10,6 +10,9 @@ import {
 import type { FrameSource } from "./FrameSource.ts";
 import { RafFrameSource } from "./sources/RafFrameSource.ts";
 
+// CONSTANTS
+const kDefaultTrailingRenders = 2;
+
 export type GameLoopEvents = {
   start: () => void;
   stop: () => void;
@@ -19,6 +22,8 @@ export type GameLoopEvents = {
    * Reports raw and consumed deltas when a frame is clamped.
    */
   clamp: (payload: { rawDelta: number; frameDelta: number; }) => void;
+  sleep: () => void;
+  wake: () => void;
 };
 
 export interface GameLoopCallbacks {
@@ -50,6 +55,8 @@ export interface GameLoopOptions extends FrameSchedulerOptions {
    * Defaults to `RafFrameSource`.
    */
   source?: FrameSource;
+  keepAlive?: () => boolean;
+  trailingRenders?: number;
 }
 
 /**
@@ -63,8 +70,11 @@ export class GameLoop extends Emitter<GameLoopEvents> {
   #callbacks: GameLoopCallbacks = {};
   #running = false;
   #paused = false;
-  // Stores the requested scale while pausing applies zero to the scheduler.
   #timeScale: number;
+  #keepAlive: () => boolean;
+  #trailingRenders: number;
+  #owedRenders = 0;
+  #sleeping = false;
 
   constructor(
     options: GameLoopOptions = {}
@@ -72,16 +82,33 @@ export class GameLoop extends Emitter<GameLoopEvents> {
     super();
     const {
       source,
+      keepAlive = () => true,
+      trailingRenders = kDefaultTrailingRenders,
       ...schedulerOptions
     } = options;
+
+    if (
+      !Number.isInteger(trailingRenders) ||
+      trailingRenders < 0
+    ) {
+      throw new RangeError(
+        `trailingRenders must be an integer >= 0, got ${trailingRenders}`
+      );
+    }
 
     this.scheduler = new FrameScheduler(schedulerOptions);
     this.#source = source ?? new RafFrameSource();
     this.#timeScale = this.scheduler.timeScale;
+    this.#keepAlive = keepAlive;
+    this.#trailingRenders = trailingRenders;
   }
 
   get running(): boolean {
     return this.#running;
+  }
+
+  get sleeping(): boolean {
+    return this.#sleeping;
   }
 
   get paused(): boolean {
@@ -104,10 +131,6 @@ export class GameLoop extends Emitter<GameLoopEvents> {
     this.#syncTimeScale();
   }
 
-  /**
-   * Resets scheduling and starts the source.
-   * Omitted callbacks retain the previous set.
-   */
   start(
     callbacks?: GameLoopCallbacks
   ): this {
@@ -120,13 +143,13 @@ export class GameLoop extends Emitter<GameLoopEvents> {
 
     this.#running = true;
     this.#paused = false;
+    this.#sleeping = false;
+    this.#oweRenders();
     this.#syncTimeScale();
     this.scheduler.reset();
-    // Emit before a source can synchronously deliver its first frame.
+
     this.emit("start");
-    this.#source.start(
-      (now) => this.#onFrame(now)
-    );
+    this.#source.start(this.#onFrame);
 
     return this;
   }
@@ -139,15 +162,25 @@ export class GameLoop extends Emitter<GameLoopEvents> {
     this.#source.stop();
     this.#running = false;
     this.#paused = false;
+    this.#sleeping = false;
     this.#syncTimeScale();
     this.emit("stop");
 
     return this;
   }
 
-  /**
-   * Stops simulation steps while frames and rendering continue.
-   */
+  invalidate(): void {
+    this.#oweRenders();
+    if (!this.#sleeping) {
+      return;
+    }
+
+    this.#sleeping = false;
+    this.scheduler.skipGap();
+    this.emit("wake");
+    this.#source.start(this.#onFrame);
+  }
+
   pause(): this {
     if (this.#paused) {
       return this;
@@ -179,13 +212,42 @@ export class GameLoop extends Emitter<GameLoopEvents> {
   }
 
   #syncTimeScale(): void {
-    this.scheduler.timeScale = this.#paused ? 0 : this.#timeScale;
+    this.scheduler.timeScale = this.#paused
+      ? 0
+      : this.#timeScale;
   }
 
-  #onFrame(
+  #oweRenders(): void {
+    this.#owedRenders = this.#trailingRenders + 1;
+  }
+
+  #sleepWhenIdle(): void {
+    if (!this.#running || this.#sleeping) {
+      return;
+    }
+
+    if (this.#keepAlive()) {
+      this.#oweRenders();
+
+      return;
+    }
+
+    if (this.#owedRenders > 0) {
+      return;
+    }
+
+    this.#sleeping = true;
+    this.#source.stop();
+    this.emit("sleep");
+  }
+
+  readonly #onFrame = (
     now: number
-  ): void {
+  ): void => {
     const schedule = this.scheduler.advance(now);
+    if (schedule.render) {
+      this.#owedRenders--;
+    }
 
     if (schedule.clamped) {
       this.emit("clamp", {
@@ -220,5 +282,7 @@ export class GameLoop extends Emitter<GameLoopEvents> {
         schedule.alpha
       );
     }
-  }
+
+    this.#sleepWhenIdle();
+  };
 }

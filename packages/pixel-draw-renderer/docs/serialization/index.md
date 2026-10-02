@@ -47,6 +47,8 @@ construction instead of by convention.
 | `parsePixelArtDocument(value)` | already-parsed JSON → validated document |
 | `encodePixelBytes(pixels)` | RGBA8 bytes → base64, encoding the view only |
 | `decodePixelBytes(pixels)` | base64 → `Uint8ClampedArray` |
+| `encodePngPixels(pixels, size)` | RGBA8 bytes → `PngPixels`, a base64 PNG |
+| `decodePngPixels(pixels, size)` | `PngPixels` → `Uint8ClampedArray` |
 
 `decodePixelArtDocument` validates rather than asserts, because a document
 reaches it from persistence: an unsupported version, a non-integer size, or
@@ -63,6 +65,21 @@ functions use for the `pixels` field. They are exported so a consumer that
 reads or writes that field on its own, such as a wire snapshot or a
 `texture-replaced` command, does not have to pick its own base64 library and
 stay in step with this one.
+
+```ts
+interface PngPixels {
+  readonly format: "png";
+  readonly data: string;
+}
+```
+
+`encodePngPixels` and `decodePngPixels` are the compact alternative for a
+snapshot sent over the network: a 1024x512 tileset is about 2.7 MB as base64
+RGBA8 and about 165 KB as a base64 PNG. Both are asynchronous. `encodePngPixels` reads
+the first `size.x * size.y * 4` bytes before its first `await`, so the buffer
+can change while it compresses. `decodePngPixels` throws
+`InvalidPixelArtDocumentError` when the image is not `size`. Persisted
+documents keep base64 RGBA8.
 
 ## Seeding a document from an image
 

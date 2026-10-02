@@ -11,13 +11,30 @@ import { VoxelRenderer } from "../../../src/plugins/engine/VoxelRenderer.ts";
 import { VoxelDocument } from "../../../src/document/VoxelDocument.ts";
 import { makeLogger } from "../../helpers/fakes.ts";
 
-function makeActor(): Actor {
+interface FrameRequests {
+  invalidations: number;
+  keepAlives: Array<() => boolean>;
+}
+
+function makeActor(
+  frames: FrameRequests = { invalidations: 0, keepAlives: [] }
+): Actor {
   return {
     components: [],
     componentsRequiringUpdate: [],
     object3D: new THREE.Group(),
     world: {
       logger: makeLogger(),
+      invalidate: () => {
+        frames.invalidations++;
+      },
+      keepAlive: (predicate: () => boolean) => {
+        frames.keepAlives.push(predicate);
+
+        return () => {
+          frames.keepAlives.splice(frames.keepAlives.indexOf(predicate), 1);
+        };
+      },
       sceneManager: {
         scheduleStart: () => void 0,
         cancelStart: () => void 0
@@ -84,5 +101,23 @@ describe("VoxelRenderer", () => {
     renderer.destroy();
 
     assert.strictEqual(dispose.mock.callCount(), 0);
+  });
+
+  it("asks the world for frames while the view changes or rebuilds", () => {
+    const frames: FrameRequests = {
+      invalidations: 0,
+      keepAlives: []
+    };
+    const renderer = new VoxelRenderer(makeActor(frames), {
+      document: { layers: ["Ground"] }
+    });
+    const [rebuilding] = frames.keepAlives;
+    assert.strictEqual(rebuilding(), false);
+
+    renderer.view.markAllChunksDirty("test");
+    assert.strictEqual(frames.invalidations, 1);
+
+    renderer.destroy();
+    assert.deepStrictEqual(frames.keepAlives, []);
   });
 });

@@ -59,6 +59,8 @@ interface VoxelViewOptions {
   lighting?: VoxelLightingOptions;
   range?: VoxelRangeOptions;
   meshing?: VoxelMeshingOptions;
+  /** Called when the view changes outside tick(), see Frame requests. */
+  requestFrame?: () => void;
 }
 
 type MaterialCustomizerFn = (
@@ -249,6 +251,24 @@ hold it back. It never resolves after `dispose()`.
 ```ts
 document.world.setVoxel("Ground", { position, blockId });
 await view.whenIdle();    // the new voxel is meshed
+```
+
+### Frame requests
+
+A host that renders on demand needs to know when the view changed outside
+`tick()`. The view calls `requestFrame` after every document command, a world
+load, `markAllChunksDirty()` (layer visibility, tileset loads, settings that
+remesh) and each mesh worker result. `requestFrame()` calls it too, for code
+that changes what the view draws by other means, such as replacing an atlas
+image. Keep ticking while `pendingRebuilds` is above zero so queued chunks
+finish meshing. [`VoxelRenderer`](../engine/VoxelRenderer.md) does both
+through the engine world.
+
+```ts
+const view = new VoxelView(document, {
+  requestFrame: () => runtime.world.invalidate()
+});
+runtime.world.keepAlive(() => view.pendingRebuilds > 0);
 ```
 
 ### Mesh workers

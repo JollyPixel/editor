@@ -210,6 +210,9 @@ export class OrbitFlyCamera extends CameraComponent {
         this.#focus = new NoCameraFocus();
     }
     this.addTeardown(() => this.#focus.dispose());
+    this.addTeardown(
+      this.actor.world.keepAlive(() => this.enabled && this.moving)
+    );
 
     this.#applyOrientation();
     this.actor.transform.setLocalPosition(initialPosition);
@@ -256,6 +259,10 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#moveSpeed = this.#clampMoveSpeed(speed);
   }
 
+  get moving(): boolean {
+    return this.#vel.lengthSq() > 0 || !this.#focus.settled;
+  }
+
   teleport(
     pose: CameraPose
   ): void {
@@ -269,6 +276,7 @@ export class OrbitFlyCamera extends CameraComponent {
 
     this.#applyOrientation();
     this.actor.transform.setLocalPosition(pose.position);
+    this.actor.world.invalidate();
   }
 
   get isOrbiting(): boolean {
@@ -298,10 +306,12 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#pitch = this.#clampPitch(orientation.pitch);
     this.#vel.set(0, 0, 0);
     this.#updateFocusPose(0);
+    this.actor.world.invalidate();
   }
 
   exitOrbitFocus(): void {
     this.#focus.exit();
+    this.actor.world.invalidate();
   }
 
   #updateFocusPose(

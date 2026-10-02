@@ -3,7 +3,10 @@ import {
   registerConsoleFeatures,
   type RegistrationHandle
 } from "@jolly-pixel/console";
-import type { Runtime } from "@jolly-pixel/runtime";
+import type {
+  MetricsPanel,
+  Runtime
+} from "@jolly-pixel/runtime";
 import {
   EditorRuntime,
   type AssetLease,
@@ -45,6 +48,7 @@ export interface VoxelMapEditorParts {
   session: EditorSession;
   target: AssetLease<SyncedVoxelMap>;
   consoleFeatures: RegistrationHandle;
+  metricsPanel: Promise<MetricsPanel>;
 }
 
 export class VoxelMapEditor {
@@ -115,19 +119,18 @@ export class VoxelMapEditor {
     shell.adoptWorkspace(workspace);
     runtime.metrics.addSource(workspace.view.inspector);
 
-    const panel = await runtime.mountMetricsPanel({
-      target: shell.layout ?? undefined,
-      floating: true,
-      key: kPerformancePaneKey,
-      title: "Performance [F3]",
-      storageKey: kPerformanceStorageKey,
-      toggleKey: kPerformanceToggleKey,
-      hidden: true
-    });
-    mountInspectorControls({
-      panel,
-      view: workspace.view
-    });
+    const metricsPanel = logger.step(
+      "metrics",
+      () => runtime.mountMetricsPanel({
+        target: shell.layout ?? undefined,
+        floating: true,
+        key: kPerformancePaneKey,
+        title: "Performance [F3]",
+        storageKey: kPerformanceStorageKey,
+        toggleKey: kPerformanceToggleKey,
+        hidden: true
+      })
+    );
 
     return new VoxelMapEditor({
       runtime,
@@ -140,13 +143,15 @@ export class VoxelMapEditor {
         commands,
         CONSOLE_FEATURES,
         workspace
-      )
+      ),
+      metricsPanel
     });
   }
 
   #shell: EditorShell;
   #target: AssetLease<SyncedVoxelMap>;
   #consoleFeatures: RegistrationHandle;
+  #disposed = false;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
@@ -168,9 +173,23 @@ export class VoxelMapEditor {
       parts.target.ready,
       parts.scene.ready
     ]).then(() => undefined);
+
+    parts.metricsPanel.then((panel) => {
+      if (this.#disposed) {
+        panel.dispose();
+
+        return;
+      }
+
+      mountInspectorControls({
+        panel,
+        view: this.workspace.view
+      });
+    }, () => undefined);
   }
 
   dispose(): void {
+    this.#disposed = true;
     this.#consoleFeatures.unregister();
     this.#shell.dispose();
     this.#target.release();

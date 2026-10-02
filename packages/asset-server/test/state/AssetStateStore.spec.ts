@@ -77,14 +77,14 @@ async function counterAsset(
 function increment(
   harness: SyncHarness,
   assetId: string
-): void {
-  harness.eventStore.writer.append({
+): number {
+  return harness.eventStore.writer.append({
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
     eventData: { action: "increment" },
     actor: kActor
-  }).unwrap();
+  }).unwrap().eventVersion;
 }
 
 describe("AssetStateStore — checkpointed replay", () => {
@@ -157,6 +157,60 @@ describe("AssetStateStore — checkpointed replay", () => {
 
     assert.deepEqual(folded, ["load"]);
     assert.strictEqual(text(data), "1");
+  });
+});
+
+describe("AssetStateStore — commands since checkpoint", () => {
+  test("hands the replayed commands over once", async() => {
+    await using harness = await syncHarness({ handlers: [counterHandler()] });
+    const assetId = await counterAsset(harness);
+    const versions = [
+      increment(harness, assetId),
+      increment(harness, assetId)
+    ];
+
+    await harness.states.acquire(assetId, "counter");
+
+    assert.deepEqual(
+      harness.states.takeCommandsSinceCheckpoint(assetId),
+      versions.map((version) => {
+        return {
+          command: { action: "increment" },
+          version
+        };
+      })
+    );
+    assert.deepEqual(harness.states.takeCommandsSinceCheckpoint(assetId), []);
+  });
+
+  test("restarts at a checkpoint appended after the replay", async() => {
+    await using harness = await syncHarness({
+      handlers: [counterHandler({ delay: 0, maxDelay: 0 })]
+    });
+    const assetId = await counterAsset(harness);
+
+    await harness.states.acquire(assetId, "counter");
+    increment(harness, assetId);
+    await harness.scheduler.flush();
+    const version = increment(harness, assetId);
+
+    assert.deepEqual(harness.states.takeCommandsSinceCheckpoint(assetId), [
+      {
+        command: { action: "increment" },
+        version
+      }
+    ]);
+  });
+
+  test("forgets the commands of a released asset", async() => {
+    await using harness = await syncHarness({ handlers: [counterHandler()] });
+    const assetId = await counterAsset(harness);
+    increment(harness, assetId);
+
+    await harness.states.acquire(assetId, "counter");
+    harness.states.release(assetId);
+
+    assert.deepEqual(harness.states.takeCommandsSinceCheckpoint(assetId), []);
   });
 });
 

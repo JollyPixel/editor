@@ -57,7 +57,6 @@ export class RafFrameSource implements FrameSource {
     this.stop();
 
     const tick = (now: number) => {
-      // Schedule first so a throwing callback only interrupts one frame.
       this.#handle = this.#request(tick);
       callback(now);
     };

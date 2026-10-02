@@ -1,6 +1,6 @@
 export * from "./Client.ts";
-export * from "./CommandReconciler.ts";
-export * from "./CommandSync.ts";
+export * from "./command/CommandReconciler.ts";
+export * from "./command/CommandSync.ts";
 export * from "./PresenceChannel.ts";
 export * from "./Room.ts";
 export type { Logger } from "../logger.ts";

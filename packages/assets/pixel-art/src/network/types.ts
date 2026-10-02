@@ -4,6 +4,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   PixelBufferHookEvent,
   PixelBufferSnapshot,
+  PngPixels,
   RGBA8,
   SelectionRect,
   UVSlot,
@@ -11,6 +12,10 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 export type { PixelBufferSnapshot };
+
+export interface PixelWireSnapshot extends Omit<PixelBufferSnapshot, "pixels"> {
+  pixels: string | PngPixels;
+}
 
 export type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
 
@@ -42,7 +47,7 @@ export type PixelWireCommand = PixelWireEvent & network.NetworkCommandHeader;
 
 export type PixelServerMessage = network.NetworkServerMessage<
   PixelWireCommand,
-  PixelBufferSnapshot,
+  PixelWireSnapshot,
   AssetRoomNotice
 >;
 

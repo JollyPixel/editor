@@ -109,6 +109,7 @@ export interface VoxelViewOptions {
    * Rebuild budget and mesh workers.
    */
   meshing?: VoxelMeshingOptions;
+  requestFrame?: () => void;
 }
 
 export class VoxelView {
@@ -132,10 +133,12 @@ export class VoxelView {
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
   #blockReach = new BlockReach();
+  #requestFrame: () => void;
 
   #onCommand = (
     command: VoxelCommand
   ): void => {
+    this.requestFrame();
     if (isVoxelTilesetCommand(command)) {
       this.#syncAtlases();
       this.markAllChunksDirty(command.action);
@@ -183,6 +186,7 @@ export class VoxelView {
     this.#materials.invalidate();
     this.#blockReach.reset(this.document.blocks.getAll());
     this.#rebuildAllChunks("load");
+    this.requestFrame();
   };
 
   constructor(
@@ -198,7 +202,8 @@ export class VoxelView {
       rendering = {},
       lighting,
       range,
-      meshing = {}
+      meshing = {},
+      requestFrame = () => undefined
     } = options;
     const {
       material = "lambert",
@@ -214,6 +219,7 @@ export class VoxelView {
     } = document;
 
     this.document = document;
+    this.#requestFrame = requestFrame;
     this.root.name = "VoxelView";
     this.#chunkGroup.name = "VoxelView:chunks";
     this.root.add(this.#chunkGroup);
@@ -292,7 +298,10 @@ export class VoxelView {
           alphaTest
         },
         logger: this.#logger,
-        onCapacity: () => this.#pipeline.refill(),
+        onCapacity: () => {
+          this.#pipeline.refill();
+          this.requestFrame();
+        },
         visibility: this.layerVisibility
       })
     });
@@ -388,6 +397,11 @@ export class VoxelView {
   ): void {
     this.#logger.debug("Marking all chunks dirty...", { source });
     this.document.world.markAllDirty();
+    this.requestFrame();
+  }
+
+  requestFrame(): void {
+    this.#requestFrame();
   }
 
   dispose(): void {

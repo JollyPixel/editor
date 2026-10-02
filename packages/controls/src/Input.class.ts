@@ -155,6 +155,13 @@ export class Input extends Emitter<InputEvents> {
     return this.#preference;
   }
 
+  get wasActive(): boolean {
+    return this.keyboard.wasActive ||
+      this.mouse.wasActive ||
+      this.touchpad.wasActive ||
+      this.gamepad.wasActive;
+  }
+
   update() {
     this.mouse.update();
     this.touchpad.update();

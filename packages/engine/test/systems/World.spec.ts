@@ -365,6 +365,43 @@ describe("Systems.World", () => {
     });
   });
 
+  describe("frame requests", () => {
+    test("invalidate() emits invalidate", () => {
+      const handler = mock.fn();
+      world.on("invalidate", handler);
+
+      world.invalidate();
+
+      assert.strictEqual(handler.mock.callCount(), 1);
+    });
+
+    test("animating holds while any keep-alive predicate does", () => {
+      let first = false;
+      let second = false;
+      world.keepAlive(() => first);
+      const release = world.keepAlive(() => second);
+      assert.strictEqual(world.animating, false);
+
+      second = true;
+      assert.strictEqual(world.animating, true);
+
+      release();
+      assert.strictEqual(world.animating, false);
+
+      first = true;
+      assert.strictEqual(world.animating, true);
+    });
+
+    test("keepAlive() requests a frame", () => {
+      const handler = mock.fn();
+      world.on("invalidate", handler);
+
+      world.keepAlive(() => false);
+
+      assert.strictEqual(handler.mock.callCount(), 1);
+    });
+  });
+
   describe("EventEmitter", () => {
     test("should support on/off for world events", () => {
       const handler = mock.fn();

@@ -15,6 +15,9 @@ const globals: Record<string, unknown> = {
   customElements: kEmulatedBrowserWindow.customElements,
   requestAnimationFrame: kEmulatedBrowserWindow.requestAnimationFrame.bind(
     kEmulatedBrowserWindow
+  ),
+  getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(
+    kEmulatedBrowserWindow
   )
 };
 for (const name of Object.getOwnPropertyNames(kEmulatedBrowserWindow)) {

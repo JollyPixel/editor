@@ -46,6 +46,49 @@ function dirtyChunks(
     .length;
 }
 
+describe("VoxelView - frame requests", () => {
+  function makeCountingView() {
+    const document = new VoxelDocument({
+      chunkSize: CHUNK_SIZE,
+      layers: ["Ground"],
+      blocks: [makeBlockDef(CUBE_ID, "cube", { name: "Cube" })]
+    });
+    const counter = { frames: 0 };
+    const view = new VoxelView(document, {
+      requestFrame: () => {
+        counter.frames++;
+      }
+    });
+    view.loadTileset(makeAtlasDef(), mockTexture());
+    view.init();
+    counter.frames = 0;
+
+    return { document, view, counter };
+  }
+
+  it("requests a frame for a voxel edit and a world load", () => {
+    const { document, counter } = makeCountingView();
+
+    document.world.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: CUBE_ID
+    });
+    assert.ok(counter.frames > 0);
+
+    counter.frames = 0;
+    document.load(new VoxelDocument({ chunkSize: CHUNK_SIZE }).save());
+    assert.ok(counter.frames > 0);
+  });
+
+  it("requests a frame when every chunk is marked dirty", () => {
+    const { view, counter } = makeCountingView();
+
+    view.markAllChunksDirty("test");
+
+    assert.equal(counter.frames, 1);
+  });
+});
+
 describe("VoxelView - document subscriptions", () => {
   it("marks the chunks holding a block dirty when its definition changes", () => {
     const { document, view } = makePair();

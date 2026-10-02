@@ -46,7 +46,8 @@ export class PeerFrustums extends ActorComponent {
       fadeWithin: kFadeWithin,
       frustum: {
         showNameBox: true
-      }
+      },
+      requestFrame: () => this.actor.world.invalidate()
     });
   }
 

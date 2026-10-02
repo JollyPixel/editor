@@ -31,7 +31,14 @@ export type WorldEvents = {
   afterFixedUpdate: (dt: number) => void;
   beforeUpdate: (dt: number) => void;
   afterUpdate: (dt: number) => void;
+  invalidate: () => void;
 };
+
+export type WorldKeepAlive = () => boolean;
+
+interface KeepAliveEntry {
+  predicate: WorldKeepAlive;
+}
 
 export interface WorldOptions<
   TContext = WorldDefaultContext
@@ -79,6 +86,7 @@ export class World<
 
   #worldLogger: Logger;
   #running = false;
+  #keepAlives = new Set<KeepAliveEntry>();
 
   constructor(
     renderer: Renderer<T>,
@@ -152,6 +160,32 @@ export class World<
     return this.#running;
   }
 
+  get animating(): boolean {
+    for (const { predicate } of this.#keepAlives) {
+      if (predicate()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  invalidate(): void {
+    this.emit("invalidate");
+  }
+
+  keepAlive(
+    predicate: WorldKeepAlive
+  ): () => void {
+    const entry: KeepAliveEntry = { predicate };
+    this.#keepAlives.add(entry);
+    this.invalidate();
+
+    return () => {
+      this.#keepAlives.delete(entry);
+    };
+  }
+
   start() {
     this.#worldLogger.debug("Starting world");
     this.#running = true;
@@ -166,11 +200,6 @@ export class World<
     return this;
   }
 
-  /**
-   * Stops the loop, disconnects, and releases the renderer's GPU resources.
-   * The world must not be used afterwards — browsers cap the number of live
-   * WebGL contexts, so a world that is dropped without disposing leaks one.
-   */
   dispose() {
     this.#worldLogger.debug("Disposing world");
 
