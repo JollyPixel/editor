@@ -100,8 +100,8 @@ export class EditorShell {
     this.#leftPanel.model = workspace.document;
     this.#materialLibrary.attach(workspace);
     this.#materialPane.presence = workspace.fields;
-    this.#leftPanel.onPeerUvDragging = (payload) => {
-      workspace.textures.previewPeerDrag(payload);
+    this.#leftPanel.onPeerUvDragging = (region) => {
+      workspace.textures.previewPeerDrag(region);
     };
   }
 

@@ -221,6 +221,14 @@ describe("UVGeometryBinding", () => {
       assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
     });
 
+    test("tracks region-dragging for a resize drag too", () => {
+      bindCreated();
+
+      uv.previewResize("tracked", { x: 0, y: 0, width: 32, height: 16 });
+
+      assert.deepStrictEqual(uvOf(geometry, 1), [0.5, 1]);
+    });
+
     test("tracks region-moved", () => {
       bindCreated();
 
@@ -288,10 +296,25 @@ describe("UVGeometryBinding", () => {
 
     test("preview projects a drag that did not come from the followed map", () => {
       const binding = bindCreated();
+      const region = uv.get("tracked")!;
 
-      binding.preview(null, { x: 32, y: 0, width: 16, height: 16 });
+      binding.preview(region.withRect({ x: 32, y: 0, width: 16, height: 16 }));
 
       assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
+    });
+
+    test("preview ignores another region", () => {
+      const binding = bindCreated();
+      const before = uvOf(geometry, 1);
+
+      binding.preview(UVRegion.from({
+        id: "other",
+        color: "#00ff00",
+        state: "stacked",
+        rect: { x: 32, y: 0, width: 16, height: 16 }
+      }));
+
+      assert.deepStrictEqual(uvOf(geometry, 1), before);
     });
 
     test("ignores events for other regions", () => {
@@ -384,7 +407,7 @@ describe("UVGeometryBinding region attributes", () => {
     const geometry = makeGeometry();
     const binding = bind(geometry);
 
-    binding.preview(null, { x: 16, y: 16, width: 16, height: 16 });
+    binding.preview(stackedRegion({ x: 16, y: 16, width: 16, height: 16 }));
 
     assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
   });

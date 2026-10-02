@@ -42,16 +42,16 @@ import {
 import {
   CanvasView
 } from "./CanvasView.ts";
-import type { UVMap } from "./uv/UVMap.ts";
+import type { UVMap } from "./uv/map/UVMap.ts";
 import type {
   UVRegion,
   UVRegionData
-} from "./uv/UVRegion.ts";
+} from "./uv/region/UVRegion.ts";
 import {
   uvSlotGeometries,
   uvSlotMask
-} from "./uv/uvSlotMask.ts";
-import type { UVGeometry } from "./uv/types.ts";
+} from "./uv/region/uvSlotMask.ts";
+import type { UVGeometry } from "./uv/geometry/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { resolveColor } from "./utils/colors.ts";
 import type {
@@ -106,6 +106,7 @@ export interface PixelArtCanvasOptions {
   };
   uv?: {
     deselectOnEmptyClick?: boolean;
+    resizable?: boolean;
   };
   onDrawEnd?: () => void;
   onBufferUpdated?: PixelBufferHookListener;
@@ -227,6 +228,8 @@ export class PixelArtCanvas {
       uvMap: this.document.uv,
       uvOverlay: this.#view.overlays.uvOverlay,
       uvDeselectOnEmptyClick: options.uv?.deselectOnEmptyClick,
+      uvResizable: options.uv?.resizable,
+      viewport: this.#view.viewport,
       pipeline: this.#edits,
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
     });

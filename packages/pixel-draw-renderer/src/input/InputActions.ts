@@ -6,10 +6,12 @@ export interface InputActions {
    * Returns whether the primary drag should be tracked.
    */
   onPrimaryDown(
-    position: Vec2
+    position: Vec2,
+    canvasPosition: Vec2
   ): boolean;
   onPrimaryMove(
-    position: Vec2
+    position: Vec2,
+    canvasPosition: Vec2
   ): void;
   onPrimaryUp(): void;
   /**

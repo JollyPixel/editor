@@ -14,13 +14,13 @@ import {
 import type {
   Mode,
   PixelArtCanvas,
-  PixelDocument
+  PixelDocument,
+  UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
 import { type PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import {
   PixelCollaboration,
-  type PixelArtRoom,
-  type UVGhostPayload
+  type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
 import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 import "@jolly-pixel/ui";
@@ -59,7 +59,7 @@ export class LeftPanel extends LitElement {
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
 
-  onPeerUvDragging: ((payload: UVGhostPayload) => void) | undefined;
+  onPeerUvDragging: ((region: UVRegion) => void) | undefined;
 
   #resizeObserver: ResizeObserver | null = null;
   #texture: LeftPanelTexture | null = null;
@@ -130,7 +130,7 @@ export class LeftPanel extends LitElement {
       canvas,
       label: (_clientId, profile) => readUsername(profile),
       color: peerProfileColor,
-      onRemoteUvDragging: (payload) => this.onPeerUvDragging?.(payload)
+      onRemoteUvDragging: (region) => this.onPeerUvDragging?.(region)
     });
   }
 
@@ -166,7 +166,7 @@ export class LeftPanel extends LitElement {
         .canvas=${this._canvas}
         .model=${this.model}
       ></jolly-model-editor-build>
-      <pixel-draw-panel></pixel-draw-panel>
+      <pixel-draw-panel uv-resize></pixel-draw-panel>
     `;
   }
 }

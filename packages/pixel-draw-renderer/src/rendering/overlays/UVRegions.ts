@@ -7,26 +7,23 @@ import {
   geometryKey,
   rectOf,
   triangleCornerOf
-} from "../../uv/geometry.ts";
-import { uvTargetKey } from "../../uv/UVTarget.ts";
+} from "../../uv/geometry/geometry.ts";
+import { uvTargetKey } from "../../uv/region/UVTarget.ts";
 import { UVRegionBorder } from "./UVRegionBorder.ts";
+import { UVResizeHandles } from "./UVResizeHandles.ts";
 import {
   projectUVOverlay,
   uvOverlayPaintOrder,
-  type UVLiveOverride,
   type UVOverlayEntry
 } from "./UVOverlayProjection.ts";
 import type { DefaultViewport } from "../Viewport.ts";
-import type { UVMap } from "../../uv/UVMap.ts";
+import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
   UVSlot,
   UVGeometry,
   UVRegion
-} from "../../uv/UVRegion.ts";
-import type {
-  SelectionRect,
-  Vec2
-} from "../../types.ts";
+} from "../../uv/region/UVRegion.ts";
+import type { Vec2 } from "../../types.ts";
 
 // CONSTANTS
 const kStrokeWidth = 2;
@@ -85,7 +82,9 @@ export class UVRegionLayer {
   #group: SVGGElement;
   #borders = new Map<string, UVRegionBorder>();
   #labels = new Map<string, SVGTextElement>();
-  #liveOverride: UVLiveOverride | null = null;
+  #livePreview: UVRegion | null = null;
+  #resizeHandles = false;
+  #handles: UVResizeHandles;
   #ghostSuppressed = new Set<string>();
 
   #onChanged = () => this.#render();
@@ -96,24 +95,24 @@ export class UVRegionLayer {
     uvMap: UVMap
   ) {
     this.#group = this.#init(svg);
+    this.#handles = new UVResizeHandles(this.#group);
     this.#viewport = viewport;
     this.#uvMap = uvMap;
 
     this.#uvMap.on("changed", this.#onChanged);
   }
 
-  setLiveOverride(
-    id: string,
-    face: UVSlot | null,
-    rect: SelectionRect | null
+  setLivePreview(
+    region: UVRegion | null
   ): void {
-    this.#liveOverride = rect ? {
-      target: {
-        regionId: id,
-        slot: face
-      },
-      rect
-    } : null;
+    this.#livePreview = region;
+    this.#render();
+  }
+
+  set resizeHandles(
+    value: boolean
+  ) {
+    this.#resizeHandles = value;
     this.#render();
   }
 
@@ -141,14 +140,15 @@ export class UVRegionLayer {
       label.remove();
     }
     this.#labels.clear();
+    this.#handles.destroy();
     this.#group.remove();
   }
 
   #render(): void {
     const entries = projectUVOverlay(
       this.#uvMap,
-      this.#liveOverride,
-      this.#ghostSuppressed
+      this.#ghostSuppressed,
+      this.#livePreview
     );
     const painted = uvOverlayPaintOrder(entries);
 
@@ -177,6 +177,22 @@ export class UVRegionLayer {
     }
 
     this.#renderLabels(entries, zoom, camera);
+    this.#handles.render(
+      this.#handleRegion(entries),
+      this.#uvMap.selectedSlot,
+      this.#viewport
+    );
+  }
+
+  #handleRegion(
+    entries: UVOverlayEntry[]
+  ): UVRegion | null {
+    const id = this.#uvMap.selectedRegionId;
+    if (!this.#resizeHandles || this.#livePreview !== null || id === null) {
+      return null;
+    }
+
+    return entries.find((entry) => entry.region.id === id)?.region ?? null;
   }
 
   #renderLabels(

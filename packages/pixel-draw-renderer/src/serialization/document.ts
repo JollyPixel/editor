@@ -7,7 +7,7 @@ import {
   type PixelArtDocumentData
 } from "./types.ts";
 import { encodePixelBytes } from "./pixelBytes.ts";
-import { isUVRegionData } from "../uv/validation.ts";
+import { isUVRegionData } from "../uv/region/validation.ts";
 import type { Vec2 } from "../types.ts";
 
 export function createPixelArtDocument(

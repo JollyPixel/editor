@@ -10,7 +10,7 @@ import { UVRegionLayer } from "./UVRegions.ts";
 import type {
   DefaultViewport
 } from "../Viewport.ts";
-import type { UVMap } from "../../uv/UVMap.ts";
+import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
   BrushHighlight
 } from "../../types.ts";

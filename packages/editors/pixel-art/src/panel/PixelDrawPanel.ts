@@ -113,6 +113,9 @@ export class PixelDrawPanel extends LitElement {
   @property({ type: Boolean, attribute: "allow-uv-create-delete" })
   declare allowUvCreateDelete: boolean;
 
+  @property({ type: Boolean, attribute: "uv-resize" })
+  declare uvResize: boolean;
+
   @property({
     type: String,
     reflect: true,
@@ -211,6 +214,7 @@ export class PixelDrawPanel extends LitElement {
   constructor() {
     super();
     this.allowUvCreateDelete = false;
+    this.uvResize = false;
     this.uvAccess = "edit";
     this.theme = "auto";
     this.colorDocked = false;
@@ -300,6 +304,9 @@ export class PixelDrawPanel extends LitElement {
     }
     if (changedProperties.has("uvAccess")) {
       this.#applyUvAccess();
+    }
+    if (changedProperties.has("uvResize")) {
+      this.#textures.uvResizable = this.uvResize;
     }
   }
 

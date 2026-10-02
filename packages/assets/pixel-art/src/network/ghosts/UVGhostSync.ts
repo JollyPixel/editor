@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import {
-  isUVGeometry,
+  isUVLayoutData,
   isUVSlot,
+  UVRegion,
   type PixelArtCanvas,
-  type UVRegion
+  type UVSlot
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -23,25 +24,20 @@ export interface UVGhostSyncOptions {
   room: PixelArtRoom;
   canvas: PixelArtCanvas;
   color: PeerColor;
-  onRemoteRegionDragging?: (payload: UVGhostPayload) => void;
+  onRemoteRegionDragging?: (region: UVRegion) => void;
 }
 
 function isUVGhostPayload(
   value: unknown
 ): value is UVGhostPayload {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("id" in value) ||
-    typeof value.id !== "string" ||
-    !("face" in value) ||
-    !("geometry" in value)
-  ) {
-    return false;
-  }
-
-  return (value.face === null || isUVSlot(value.face)) &&
-    isUVGeometry(value.geometry);
+  return typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "face" in value &&
+    (value.face === null || isUVSlot(value.face)) &&
+    "layout" in value &&
+    isUVLayoutData(value.layout);
 }
 
 function decodeUVGhost(
@@ -54,19 +50,19 @@ export class UVGhostSync {
   #canvas: PixelArtCanvas;
   #colorOf: PeerStyle;
   #stream: PeerGhostStream<UVGhostPayload>;
-  #onRemoteRegionDragging: ((payload: UVGhostPayload) => void) | undefined;
+  #onRemoteRegionDragging: ((region: UVRegion) => void) | undefined;
 
   #onRegionDragging = (
-    event: UVGhostPayload
+    event: { region: UVRegion; face: UVSlot | null; }
   ): void => {
     this.#stream.report({
-      id: event.id,
+      id: event.region.id,
       face: event.face,
-      geometry: event.geometry
+      layout: event.region.toLayout()
     });
   };
 
-  #onRegionMoved = (
+  #onRegionCommitted = (
     event: { region: UVRegion; }
   ): void => {
     if (this.#stream.pending?.id === event.region.id) {
@@ -93,11 +89,17 @@ export class UVGhostSync {
       decode: decodeUVGhost,
       layer: {
         set: (clientId, payload) => {
-          uv.set(clientId, {
-            ...payload,
-            color: this.#colorOf(clientId)
+          const color = this.#colorOf(clientId);
+          const region = UVRegion.fromLayout(payload.layout, {
+            id: payload.id,
+            color
           });
-          this.#onRemoteRegionDragging?.(payload);
+          uv.set(clientId, {
+            region,
+            face: payload.face,
+            color
+          });
+          this.#onRemoteRegionDragging?.(region);
         },
         remove: (clientId) => uv.remove(clientId),
         clearAll: () => uv.clearAll()
@@ -105,13 +107,15 @@ export class UVGhostSync {
       reconcile: (command) => this.#reconcile(command)
     });
     canvas.uv.on("region-dragging", this.#onRegionDragging);
-    canvas.uv.on("region-moved", this.#onRegionMoved);
+    canvas.uv.on("region-moved", this.#onRegionCommitted);
+    canvas.uv.on("region-state-changed", this.#onRegionCommitted);
     canvas.uv.on("region-drag-ended", this.#onRegionDragEnded);
   }
 
   destroy(): void {
     this.#canvas.uv.off("region-dragging", this.#onRegionDragging);
-    this.#canvas.uv.off("region-moved", this.#onRegionMoved);
+    this.#canvas.uv.off("region-moved", this.#onRegionCommitted);
+    this.#canvas.uv.off("region-state-changed", this.#onRegionCommitted);
     this.#canvas.uv.off("region-drag-ended", this.#onRegionDragEnded);
     this.#stream.destroy();
   }

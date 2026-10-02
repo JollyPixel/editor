@@ -8,7 +8,7 @@ import type {
   RGBA8,
   SelectionRect,
   UVSlot,
-  UVGeometry
+  UVLayoutData
 } from "@jolly-pixel/pixel-draw.renderer";
 
 export type { PixelBufferSnapshot };
@@ -69,7 +69,7 @@ export interface StrokeGhostFrame {
 export interface UVGhostPayload {
   id: string;
   face: UVSlot | null;
-  geometry: UVGeometry;
+  layout: UVLayoutData;
 }
 
 export type SelectionGhostPayload =

@@ -17,6 +17,7 @@ export type {
   SelectTool
 } from "./tools/SelectEngine.ts";
 export type { Toolset } from "./tools/Tools.ts";
+export type { UVTool } from "./tools/uv/UVController.ts";
 export {
   PixelArtCanvas,
   type HistoryState,
@@ -124,7 +125,7 @@ export {
   type UVSlotGeometryTemplate,
   type UVSlotSize,
   type UVRegionCreateOptions
-} from "./uv/UVMap.ts";
+} from "./uv/map/UVMap.ts";
 export {
   UVRegion,
   DEFAULT_UV_SLOTS,
@@ -134,6 +135,7 @@ export {
   type UVRegionData,
   type UVRegionIdentity,
   type UVRegionSlot,
+  type UVResizeOptions,
   type UVRegionState,
   type UVMovementScope,
   type UVQuarterTurn,
@@ -143,8 +145,8 @@ export {
   type UVCompound,
   type UVCompoundPart,
   type UVNormalizedRect
-} from "./uv/UVRegion.ts";
-export { UVRegionCollection } from "./uv/UVRegionCollection.ts";
+} from "./uv/region/UVRegion.ts";
+export { UVRegionCollection } from "./uv/region/UVRegionCollection.ts";
 export {
   applyColorGroups,
   groupPositionsByColor,
@@ -163,18 +165,19 @@ export {
   rotationOf,
   triangleCornerOf,
   withRotation
-} from "./uv/geometry.ts";
+} from "./uv/geometry/geometry.ts";
 export {
   isUVGeometry,
+  isUVLayoutData,
   isUVQuarterTurn,
   isUVRegionData,
   isUVSlot,
   isUVTextureRect
-} from "./uv/validation.ts";
+} from "./uv/region/validation.ts";
 export {
   uvTargetKey,
   type UVTarget
-} from "./uv/UVTarget.ts";
+} from "./uv/region/UVTarget.ts";
 export type {
   PeerSelectionOutlineState
 } from "./rendering/presence/PeerSelectionOutlines.ts";

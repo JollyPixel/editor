@@ -28,11 +28,17 @@ export abstract class InteractionMode {
     return brushSize;
   }
 
-  onPrimaryDown(_pos: Vec2): boolean {
+  onPrimaryDown(
+    _pos: Vec2,
+    _canvasPos: Vec2
+  ): boolean {
     return false;
   }
 
-  onPrimaryMove(_pos: Vec2): void {}
+  onPrimaryMove(
+    _pos: Vec2,
+    _canvasPos: Vec2
+  ): void {}
   onPrimaryUp(): void {}
 
   onSecondaryDown(

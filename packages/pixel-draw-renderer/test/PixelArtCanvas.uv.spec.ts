@@ -11,7 +11,7 @@ import {
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
-import type { UVRegionData } from "#src/uv/UVRegion.ts";
+import type { UVRegionData } from "#src/uv/region/UVRegion.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 

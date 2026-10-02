@@ -13,8 +13,10 @@ adapters use it to replay global-fill commands with the renderer's fill rules.
 
 ## UV validation and conflict keys
 
-The root exports `isUVGeometry()`, `isUVRegionData()`, `isUVSlot()`, and
-`isUVTextureRect()` for validating serialized UV command data.
+The root exports `isUVGeometry()`, `isUVRegionData()`, `isUVLayoutData()`,
+`isUVSlot()`, and `isUVTextureRect()` for validating serialized UV command
+data. `isUVLayoutData()` checks a region without its identity, as
+`UVRegion.toLayout()` writes it.
 `uvTargetKey()` converts a `UVTarget` into the stable key used by conflict
 trackers.
 
@@ -27,4 +29,6 @@ or two `null` values.
 
 `PeerSelectionOutlineState`, `PeerFloatingSelectionState`, and
 `PeerUVPreviewState` describe the values written through `PixelArtCanvas` peer
-presence overlays. They are type-only exports.
+presence overlays. They are type-only exports. A `PeerUVPreviewState` holds the
+peer's dragged `region`, the `face` it changes or `null` for the whole region,
+and the peer `color`.

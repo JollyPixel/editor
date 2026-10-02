@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
-import type { UVController } from "../../uv/UVController.ts";
+import type { UVController } from "../../tools/uv/UVController.ts";
 import type {
   Mode,
   RotationDirection,
@@ -25,24 +25,39 @@ export class UVMode extends InteractionMode {
 
   onExit(): void {
     this.#uv.cancelDrag();
+    this.#uv.alignEdges(false);
   }
 
   cursor(): string {
-    return this.#uv.isDragging ? "grabbing" : "grab";
+    return this.#uv.cursor;
+  }
+
+  onHover(
+    position: Vec2 | null
+  ): void {
+    this.#uv.hover(position);
+  }
+
+  onLineHeldChange(
+    held: boolean
+  ): void {
+    this.#uv.alignEdges(held);
   }
 
   onPrimaryDown(
-    pos: Vec2
+    _pos: Vec2,
+    canvasPos: Vec2
   ): boolean {
-    this.#uv.handleStart(pos);
+    this.#uv.handleStart(canvasPos);
 
     return true;
   }
 
   onPrimaryMove(
-    pos: Vec2
+    _pos: Vec2,
+    canvasPos: Vec2
   ): void {
-    this.#uv.handleMove(pos);
+    this.#uv.handleMove(canvasPos);
   }
 
   onPrimaryUp(): void {
@@ -61,5 +76,6 @@ export class UVMode extends InteractionMode {
 
   onBlur(): void {
     this.#uv.cancelDrag();
+    this.#uv.alignEdges(false);
   }
 }

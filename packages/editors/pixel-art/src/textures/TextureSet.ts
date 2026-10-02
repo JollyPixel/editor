@@ -48,6 +48,7 @@ export class TextureSet {
   readonly #entries = new Map<string, TextureEntry>();
   #active: TextureEntry | null = null;
   #settings: ToolSettings | null = null;
+  #uvResizable = false;
 
   constructor(
     host: ReactiveControllerHost,
@@ -67,6 +68,15 @@ export class TextureSet {
 
   get carriesSettings(): boolean {
     return this.#settings !== null;
+  }
+
+  set uvResizable(
+    value: boolean
+  ) {
+    this.#uvResizable = value;
+    for (const { canvas } of this.#entries.values()) {
+      canvas.tools.uv.resizable = value;
+    }
   }
 
   values(): IterableIterator<TextureEntry> {
@@ -232,6 +242,10 @@ export class TextureSet {
 
     return new PixelArtCanvas(host, {
       ...options,
+      uv: {
+        ...options.uv,
+        resizable: this.#uvResizable
+      },
       onHistoryChange: (state) => {
         if (isActive()) {
           this.#host.requestUpdate();

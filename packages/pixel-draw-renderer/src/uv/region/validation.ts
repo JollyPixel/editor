@@ -1,0 +1,184 @@
+// Import Internal Dependencies
+import {
+  DEFAULT_UV_SLOTS,
+  type UVCompoundPart,
+  type UVGeometry,
+  type UVNormalizedRect,
+  type UVQuarterTurn,
+  type UVSlot,
+  type UVTriangleCorner
+} from "../geometry/types.ts";
+import type {
+  UVLayoutData,
+  UVRegionData
+} from "./UVRegion.ts";
+import type { SelectionRect } from "../../types.ts";
+
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isFiniteNumber(
+  value: unknown
+): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+export function isUVSlot(
+  value: unknown
+): value is UVSlot {
+  return typeof value === "string" && value.length > 0;
+}
+
+export function isUVQuarterTurn(
+  value: unknown
+): value is UVQuarterTurn {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
+function hasValidRotation(
+  value: object
+): boolean {
+  return !("rotation" in value) ||
+    value.rotation === undefined ||
+    isUVQuarterTurn(value.rotation);
+}
+
+export function isUVTextureRect(
+  value: unknown
+): value is SelectionRect {
+  return isRecord(value) &&
+    isFiniteNumber(value.x) &&
+    isFiniteNumber(value.y) &&
+    isFiniteNumber(value.width) &&
+    isFiniteNumber(value.height) &&
+    value.width > 0 &&
+    value.height > 0;
+}
+
+export function isUVNormalizedRect(
+  value: unknown
+): value is UVNormalizedRect {
+  if (!isUVTextureRect(value)) {
+    return false;
+  }
+
+  return value.x >= 0 &&
+    value.y >= 0 &&
+    value.x + value.width <= 1 &&
+    value.y + value.height <= 1;
+}
+
+function isUVTriangleCorner(
+  value: unknown
+): value is UVTriangleCorner {
+  return value === "top-left" ||
+    value === "top-right" ||
+    value === "bottom-left" ||
+    value === "bottom-right";
+}
+
+function isUVCompoundPart(
+  value: unknown
+): value is UVCompoundPart {
+  if (!isRecord(value) || !("shape" in value)) {
+    return isUVNormalizedRect(value);
+  }
+
+  return value.shape === "triangle" &&
+    isUVTriangleCorner(value.corner) &&
+    isUVNormalizedRect(value.rect);
+}
+
+export function isUVGeometry(
+  value: unknown
+): value is UVGeometry {
+  if (!isRecord(value) || !hasValidRotation(value)) {
+    return false;
+  }
+  if (!("shape" in value)) {
+    return isUVTextureRect(value);
+  }
+
+  if (value.shape === "compound") {
+    return isUVTextureRect(value.rect) &&
+      Array.isArray(value.parts) &&
+      value.parts.length > 0 &&
+      value.parts.every(isUVCompoundPart);
+  }
+
+  return value.shape === "triangle" &&
+    isUVTriangleCorner(value.corner) &&
+    isUVTextureRect(value.rect);
+}
+
+function isUVSlots(
+  value: unknown
+): value is Record<UVSlot, UVGeometry> {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const slots = Object.keys(value);
+
+  return slots.length > 0 &&
+    slots.every((slot) => isUVSlot(slot) && isUVGeometry(value[slot]));
+}
+
+function isActiveSlots(
+  value: unknown
+): value is UVSlot[] {
+  return Array.isArray(value) && value.every(isUVSlot);
+}
+
+export function isUVRegionData(
+  value: unknown
+): value is UVRegionData {
+  return isRecord(value) &&
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    typeof value.color === "string" &&
+    (value.name === undefined || typeof value.name === "string") &&
+    isUVLayoutData(value);
+}
+
+export function isUVLayoutData(
+  value: unknown
+): value is UVLayoutData {
+  if (
+    !isRecord(value) ||
+    (value.activeFaces !== undefined && !isActiveSlots(value.activeFaces))
+  ) {
+    return false;
+  }
+
+  const faces = value.faces;
+  const slots = isRecord(faces) ? Object.keys(faces) : [...DEFAULT_UV_SLOTS];
+  if (
+    isActiveSlots(value.activeFaces) &&
+    (
+      value.activeFaces.length === 0 ||
+      !value.activeFaces.every((slot) => slots.includes(slot))
+    )
+  ) {
+    return false;
+  }
+
+  if (value.state === "unfolded" || value.state === "free") {
+    return isUVSlots(faces);
+  }
+
+  return value.state === "stacked" &&
+    isUVTextureRect(value.rect) &&
+    hasValidRotation(value.rect) &&
+    (faces === undefined || isUVSlots(faces)) &&
+    (
+      value.stackedFace === undefined ||
+      (
+        isUVSlot(value.stackedFace) &&
+        slots.includes(value.stackedFace)
+      )
+    );
+}

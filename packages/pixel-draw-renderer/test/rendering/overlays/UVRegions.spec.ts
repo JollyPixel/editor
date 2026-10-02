@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { UVRegion } from "#src/uv/UVRegion.ts";
+import { UVRegion } from "#src/uv/region/UVRegion.ts";
 import {
   makeSvg,
   makeViewport,
@@ -232,7 +232,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 });
 
 describe("UVRegionLayer — setLiveOverride", () => {
-  test("renders the override rect instead of the stored one", () => {
+  test("renders the live preview instead of the stored region", () => {
     const svg = makeSvg();
     const map = makeUvMap();
     const overlay = new UVRegionLayer(
@@ -247,19 +247,17 @@ describe("UVRegionLayer — setLiveOverride", () => {
     });
     map.showAll = true;
 
-    overlay.setLiveOverride(
-      region.id,
-      null,
-      {
+    overlay.setLivePreview(
+      map.previewMove(region.id, {
         x: 9, y: 9, width: 2, height: 2
-      }
+      })
     );
 
     const [rect] = borders(svg);
     assert.strictEqual(rect.getAttribute("x"), "36");
     assert.strictEqual(rect.getAttribute("y"), "36");
 
-    overlay.setLiveOverride(region.id, null, null);
+    overlay.setLivePreview(null);
     assert.strictEqual(rect.getAttribute("x"), "0");
   });
 });
@@ -339,10 +337,12 @@ describe("UVRegionLayer — free regions", () => {
     map.setState(region.id, "free");
     map.select("r1");
 
-    overlay.setLiveOverride(
-      "r1",
-      "top",
-      { x: 9, y: 9, width: 4, height: 4 }
+    overlay.setLivePreview(
+      map.previewMove(
+        "r1",
+        { x: 9, y: 9, width: 4, height: 4 },
+        "top"
+      )
     );
 
     const moved = borders(svg)
@@ -602,13 +602,11 @@ describe("UVRegionLayer — unfolded regions", () => {
     );
   });
 
-  test("a null live override moves every face together", () => {
-    const { svg, overlay } = makeUnfolded();
+  test("a previewed move of the net moves every face together", () => {
+    const { svg, map, overlay } = makeUnfolded();
 
-    overlay.setLiveOverride(
-      "r1",
-      null,
-      { x: 2, y: 3, width: 8, height: 12 }
+    overlay.setLivePreview(
+      map.previewMove("r1", { x: 2, y: 3, width: 8, height: 12 })
     );
 
     assert.deepStrictEqual(

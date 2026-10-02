@@ -17,6 +17,7 @@ interface Toolset {
   brush: BrushTool;
   fill: FillTool;
   select: SelectTool;
+  uv: UVTool;
 }
 ```
 
@@ -45,3 +46,11 @@ select: SelectTool
 ```
 
 Controls rectangle or shape selection and exposes selection transforms. See [`SelectTool`](./SelectTool.md).
+
+### `uv`
+
+```ts
+uv: UVTool
+```
+
+Turns UV resize handles on or off. See [`UVTool`](./UVTool.md).

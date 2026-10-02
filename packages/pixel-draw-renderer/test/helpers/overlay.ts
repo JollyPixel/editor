@@ -6,7 +6,7 @@
 // Import Internal Dependencies
 import { SVG_NS } from "#src/rendering/constants.ts";
 import { Zoom } from "#src/rendering/Zoom.ts";
-import { UVMap } from "#src/uv/UVMap.ts";
+import { UVMap } from "#src/uv/map/UVMap.ts";
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type {
   DefaultViewport

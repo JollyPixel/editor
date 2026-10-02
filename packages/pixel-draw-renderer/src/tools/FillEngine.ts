@@ -8,12 +8,12 @@ import type {
   CanvasBuffer
 } from "../buffer/CanvasBuffer.ts";
 import type { EditPipeline } from "../sync/EditPipeline.ts";
-import type { UVMap } from "../uv/UVMap.ts";
-import { pointInGeometry } from "../uv/geometry.ts";
+import type { UVMap } from "../uv/map/UVMap.ts";
+import { pointInGeometry } from "../uv/geometry/geometry.ts";
 import {
   uvSlotGeometries,
   uvSlotMask
-} from "../uv/uvSlotMask.ts";
+} from "../uv/region/uvSlotMask.ts";
 import type {
   RGBA8,
   Vec2

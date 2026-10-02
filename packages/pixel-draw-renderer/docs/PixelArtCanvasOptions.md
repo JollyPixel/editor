@@ -61,6 +61,7 @@ interface SelectOptions {
 
 interface UVOptions {
   deselectOnEmptyClick?: boolean;
+  resizable?: boolean;
 }
 
 interface HistoryOptions {
@@ -177,6 +178,10 @@ The label reports the bounding box in texture pixels, including for shape select
 Whether a UV-mode click landing outside every visible region clears the selection. It defaults to `true`.
 
 Set it to `false` when the host application owns the selection, for instance when a block library drives which region is selected: an outside click then does nothing instead of hiding the selected region. It only governs that gesture; `Delete`, [`UVMap.select(null)`](./uv/UVMap.md#selectid-face) and deleting the selected region still clear the selection.
+
+### `uv.resizable`
+
+Whether the selected region shows resize handles in UV mode. It defaults to `false`, and [`canvas.tools.uv.resizable`](./tools/UVTool.md#resizable) changes it later.
 
 ## History
 

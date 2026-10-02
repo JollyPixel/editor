@@ -73,6 +73,24 @@ describe("PixelDocument", () => {
       assert.deepEqual(pixelAt(doc, 0, 0), [255, 0, 0, 255]);
     });
 
+    test("a UV resize syncs as a state change and undoes in one step", () => {
+      const events: PixelBufferHookEvent[] = [];
+      const doc = createDocument(events);
+      const region = doc.uv.create({ width: 2, height: 2 });
+      events.length = 0;
+
+      doc.uv.resize(region.id, { ...region.bounds, width: 3 });
+
+      assert.deepEqual(
+        events.map((event) => event.action),
+        ["uv-region-state-changed"]
+      );
+      doc.undo();
+      assert.deepEqual(doc.uv.get(region.id)!.toJSON(), region.toJSON());
+      doc.redo();
+      assert.equal(doc.uv.get(region.id)!.bounds.width, 3);
+    });
+
     test("emits buffer-updated with the hook command, and not for remote commands", () => {
       const hooked: PixelBufferHookEvent[] = [];
       const emitted: PixelBufferHookEvent[] = [];

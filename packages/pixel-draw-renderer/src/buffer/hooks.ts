@@ -8,7 +8,7 @@ import type {
   UVGeometry,
   UVSlot,
   UVRegionData
-} from "../uv/UVRegion.ts";
+} from "../uv/region/UVRegion.ts";
 
 /**
  * `originTimestamp` preserves the original network timestamp during replay.

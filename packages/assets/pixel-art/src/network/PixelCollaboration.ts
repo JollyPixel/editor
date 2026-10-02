@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type {
+  PixelArtCanvas,
+  UVRegion
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelCursorSync } from "./PixelCursorSync.ts";
@@ -10,17 +13,14 @@ import type {
   PeerColor,
   PeerLabel
 } from "./peerAppearance.ts";
-import type {
-  PixelArtRoom,
-  UVGhostPayload
-} from "./types.ts";
+import type { PixelArtRoom } from "./types.ts";
 
 export interface PixelCollaborationOptions {
   room: PixelArtRoom;
   canvas: PixelArtCanvas;
   label: PeerLabel;
   color: PeerColor;
-  onRemoteUvDragging?: (payload: UVGhostPayload) => void;
+  onRemoteUvDragging?: (region: UVRegion) => void;
 }
 
 export class PixelCollaboration {

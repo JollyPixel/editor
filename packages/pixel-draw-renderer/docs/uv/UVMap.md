@@ -13,7 +13,7 @@ canvas.mode = "uv";
 canvas.uv.select(region.id);
 ```
 
-In UV mode, click a visible region to select it, drag it to move it, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
+In UV mode, click a visible region to select it, drag it to move it, drag its handles to resize it when [`canvas.tools.uv.resizable`](../tools/UVTool.md) is on, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
 
 See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
 
@@ -63,7 +63,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"region-created"` | `region` |
 | `"region-deleted"` | `region` |
 | `"region-moved"` | `region`, `face`, `previousRect` |
-| `"region-dragging"` | `id`, `face`, `rect`, `geometry` |
+| `"region-dragging"` | `region`, `face` |
 | `"region-drag-ended"` | `id`, `committed` |
 | `"region-state-changed"` | `region`, `previous` |
 | `"region-rotated"` | `region`, `previous`, `face` |
@@ -71,7 +71,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
 
-`face` is `null` for anything but a free region, since stacked and unfolded regions move and rotate whole. `"region-dragging"` is a preview event; it does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
+`face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
 ## Properties
 
@@ -155,10 +155,28 @@ Moves one slot of a free region, or the whole of a stacked or unfolded one, in w
 ### `previewMove(id, rect, slot?)`
 
 ```ts
-previewMove(id: string, rect: SelectionRect, slot?: UVSlot): void
+previewMove(id: string, rect: SelectionRect, slot?: UVSlot): UVRegion | null
 ```
 
-Emits `"region-dragging"` with clamped preview geometry, keeping the current size and rotation like `move()`. The stored region, history and network state remain unchanged.
+Emits `"region-dragging"` with the region `move()` would commit for the same arguments, and returns it. The stored region, history and network state remain unchanged. Returns `null` for an unknown id or a free region without `slot`.
+
+### `resize(id, rect, slot?, options?)`
+
+```ts
+resize(id: string, rect: SelectionRect, slot?: UVSlot, options?: UVResizeOptions): boolean
+```
+
+Gives a stacked region, or one active `slot` of an unfolded or free region, the size and position of `rect`, following [`UVRegion.resized()`](./UVRegion.md#resizedrect-slot-options). Sizes below 1px are raised to 1px. Moved edges stop at the canvas border; for an unfolded net, that includes the faces sliding with an edge. A net already past the border is not pulled back, but it cannot grow further out.
+
+The new region is committed like a state change: it emits `"region-state-changed"` with the previous region, so it records one `uv-state` history entry and syncs as `uv-region-state-changed`. Returns `false` for an unknown id, a region with a triangle or compound face, or an unchanged result.
+
+### `previewResize(id, rect, slot?, options?)`
+
+```ts
+previewResize(id: string, rect: SelectionRect, slot?: UVSlot, options?: UVResizeOptions): UVRegion | null
+```
+
+Emits `"region-dragging"` with the region `resize()` would commit for the same arguments, and returns it. The stored region, history and network state remain unchanged. Returns `null` for an unknown id.
 
 ### `setState(id, state, slot?)`
 

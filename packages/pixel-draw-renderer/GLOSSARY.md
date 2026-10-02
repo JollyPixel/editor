@@ -96,6 +96,10 @@ Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions
 
 The quarter turns a UV slot's mapping has taken, clockwise in texture space. It follows the UV movement scope: stacked and unfolded regions turn whole, a free region turns one slot. The slot geometry is stored as it looks after the turn, and the rotation tells a mesh which way its UVs face inside it.
 
+### UV Resize
+
+Changing a UV rectangle's size independently of the mesh. A stacked region resizes whole and resets every face to the new size. An unfolded or free region resizes one slot; in an unfolded net, faces act as solid boxes: a growing face pushes the faces it runs into, a shrinking one pulls back the faces that touched it, and faces out of contact stay put. Regions with a triangle or compound face cannot be resized.
+
 ### History Entry
 
 The reversible record of one local edit, used by undo and redo.
