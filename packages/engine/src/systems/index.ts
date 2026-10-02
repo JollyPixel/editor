@@ -6,6 +6,7 @@ export {
   type LoggerChildOptions
 } from "./Logger.ts";
 export * from "./World.ts";
+export * from "./WorldTime.ts";
 export * from "./scene/index.ts";
 export * from "./rendering/index.ts";
 export * from "./generators/IntegerIncrement.ts";

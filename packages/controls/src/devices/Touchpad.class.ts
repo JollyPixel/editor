@@ -5,8 +5,10 @@ import { Emitter } from "@openally/emitt";
 import type { CanvasAdapter } from "./../adapters/canvas.ts";
 import type {
   InputControl,
+  InputReader,
   Vector2Like
 } from "../types.ts";
+import { EdgeBuffer } from "./EdgeBuffer.ts";
 
 export const TouchIdentifier = {
   // usually first finger/index
@@ -63,7 +65,9 @@ export class Touchpad extends Emitter<
   #canvas: CanvasAdapter;
 
   #wasActive = false;
-  #settled = true;
+  #started = new EdgeBuffer();
+  #ended = new EdgeBuffer();
+  #publishedEdges = 0;
   touches: TouchState[] = [];
   touchesDown: boolean[] = [];
 
@@ -180,15 +184,24 @@ export class Touchpad extends Emitter<
       };
       this.touchesDown[i] = false;
     }
+    this.#started.reset();
+    this.#ended.reset();
+    this.#publishedEdges = 0;
   }
 
   update() {
-    if (this.#settled && !this.#anyTouchDown()) {
+    this.sample();
+    this.publish("step");
+  }
+
+  sample(): void {
+    if (!this.#wasActive && !this.#anyTouchDown()) {
       return;
     }
 
     let active = 0;
-    let settling = 0;
+    let started = 0;
+    let ended = 0;
 
     for (let i = 0; i < this.touches.length; i++) {
       const touch = this.touches[i];
@@ -196,15 +209,31 @@ export class Touchpad extends Emitter<
       const isDown = this.touchesDown[i];
 
       touch.isDown = isDown;
-      touch.wasStarted = !wasDown && isDown;
-      touch.wasEnded = wasDown && !isDown;
-
       active |= Number(isDown);
-      settling |= Number(touch.wasStarted) | Number(touch.wasEnded);
+      started |= Number(!wasDown && isDown) << i;
+      ended |= Number(wasDown && !isDown) << i;
     }
 
+    this.#started.push(started);
+    this.#ended.push(ended);
     this.#wasActive = active !== 0;
-    this.#settled = active === 0 && settling === 0;
+  }
+
+  publish(
+    reader: InputReader
+  ): void {
+    const started = this.#started.take(reader);
+    const ended = this.#ended.take(reader);
+    if ((started | ended | this.#publishedEdges) === 0) {
+      return;
+    }
+
+    for (let i = 0; i < this.touches.length; i++) {
+      const touch = this.touches[i];
+      touch.wasStarted = (started & (1 << i)) !== 0;
+      touch.wasEnded = (ended & (1 << i)) !== 0;
+    }
+    this.#publishedEdges = started | ended;
   }
 
   #anyTouchDown(): boolean {

@@ -131,10 +131,8 @@ export class Camera3DControls extends CameraComponent<any> {
     );
   }
 
-  update(
-    deltaTime: number
-  ) {
-    const { input } = this.actor.world;
+  update() {
+    const { input, time } = this.actor.world;
 
     this.#axes.update(input);
     const vector = this.#axes.vector3(
@@ -145,7 +143,7 @@ export class Camera3DControls extends CameraComponent<any> {
     );
 
     const { transform } = this.actor;
-    const distance = this.#movementSpeed * deltaTime;
+    const distance = this.#movementSpeed * time.unscaledDelta;
 
     transform.moveOriented(
       this.#translation

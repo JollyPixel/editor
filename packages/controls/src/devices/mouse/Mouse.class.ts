@@ -6,18 +6,20 @@ import {
   BrowserDocumentAdapter,
   type DocumentAdapter,
   type CanvasAdapter
-} from "./../adapters/index.ts";
+} from "../../adapters/index.ts";
 import type {
   InputControl,
   InputCustomAction,
+  InputReader,
   Vector2Like
-} from "../types.ts";
+} from "../../types.ts";
 import {
   TouchIdentifier,
   type TouchPosition
-} from "./Touchpad.class.ts";
+} from "../Touchpad.class.ts";
 import { MouseMask } from "./MouseMask.ts";
-import { isApplePlatform } from "../platform.ts";
+import { MotionBuffer } from "./MotionBuffer.ts";
+import { isApplePlatform } from "../../platform.ts";
 
 // CONSTANTS
 /** Every index in `MouseEventButton`, hence every bit the state masks use. */
@@ -126,14 +128,7 @@ export class Mouse extends Emitter<
     y: 0
   };
 
-  #delta = {
-    x: 0,
-    y: 0
-  };
-  #frameDelta = {
-    x: 0,
-    y: 0
-  };
+  #delta = new MotionBuffer();
   newDelta = {
     x: 0,
     y: 0
@@ -142,19 +137,11 @@ export class Mouse extends Emitter<
     x: 0,
     y: 0
   };
-  #scrollSample = {
-    x: 0,
-    y: 0
-  };
-  #frameScroll = {
-    x: 0,
-    y: 0
-  };
+  #scrollSample = new MotionBuffer();
 
   #canvasEvent: MouseEvent | null = null;
   #hovering = false;
   #wasActive = false;
-  #settled = true;
   #wantsPointerLock = false;
   #wasPointerLocked = false;
 
@@ -281,10 +268,7 @@ export class Mouse extends Emitter<
   reset() {
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
-    this.#scrollSample.x = 0;
-    this.#scrollSample.y = 0;
-    this.#frameScroll.x = 0;
-    this.#frameScroll.y = 0;
+    this.#scrollSample.reset();
     this.#canvasEvent = null;
     this.#setHovering(false);
     this.#downMask = 0;
@@ -298,10 +282,7 @@ export class Mouse extends Emitter<
     this.#position.y = 0;
     this.newPosition = null;
 
-    this.#delta.x = 0;
-    this.#delta.y = 0;
-    this.#frameDelta.x = 0;
-    this.#frameDelta.y = 0;
+    this.#delta.reset();
     this.newDelta.x = 0;
     this.newDelta.y = 0;
   }
@@ -321,14 +302,15 @@ export class Mouse extends Emitter<
   scrollTo<T extends Vector2Like>(
     out: T
   ): T {
-    out.x = this.#scrollSample.x;
-    out.y = this.#scrollSample.y;
+    out.x = this.#scrollSample.value.x;
+    out.y = this.#scrollSample.value.y;
 
     return out;
   }
 
   isScrolling(): boolean {
-    return this.#scrollSample.x !== 0 || this.#scrollSample.y !== 0;
+    return this.#scrollSample.value.x !== 0 ||
+      this.#scrollSample.value.y !== 0;
   }
 
   get position() {
@@ -351,8 +333,8 @@ export class Mouse extends Emitter<
   deltaTo<T extends Vector2Like>(
     out: T
   ): T {
-    out.x = this.#delta.x;
-    out.y = this.#delta.y;
+    out.x = this.#delta.value.x;
+    out.y = this.#delta.value.y;
 
     return out;
   }
@@ -432,14 +414,14 @@ export class Mouse extends Emitter<
     normalizeWithSize = false
   ): T {
     if (normalizeWithSize) {
-      out.x = this.#delta.x / (this.#canvas.clientWidth / 2);
-      out.y = -this.#delta.y / (this.#canvas.clientHeight / 2);
+      out.x = this.#delta.value.x / (this.#canvas.clientWidth / 2);
+      out.y = -this.#delta.value.y / (this.#canvas.clientHeight / 2);
 
       return out;
     }
 
-    out.x = this.#delta.x;
-    out.y = -this.#delta.y;
+    out.x = this.#delta.value.x;
+    out.y = -this.#delta.value.y;
 
     return out;
   }
@@ -462,7 +444,12 @@ export class Mouse extends Emitter<
   }
 
   update() {
-    if (this.#settled && this.#isQuiet()) {
+    this.sample();
+    this.publish("step");
+  }
+
+  sample(): void {
+    if (this.#isQuiet()) {
       return;
     }
 
@@ -470,82 +457,47 @@ export class Mouse extends Emitter<
       (Number(this.#scrollDelta.y > 0) << MouseEventButton.scrollUp) |
       (Number(this.#scrollDelta.y < 0) << MouseEventButton.scrollDown);
     this.#scroll.sample(scrollBits);
-    this.#downMask = (this.#downMask & ~kScrollMask) |
-      this.#scroll.value;
-
-    this.#scrollSample.x = this.#scrollDelta.x;
-    this.#scrollSample.y = this.#scrollDelta.y;
-    this.#frameScroll.x += this.#scrollDelta.x;
-    this.#frameScroll.y += this.#scrollDelta.y;
+    this.#scrollSample.push(this.#scrollDelta.x, this.#scrollDelta.y);
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
 
     if (this.#wantsPointerLock && this.#wasPointerLocked) {
-      this.#delta.x = this.newDelta.x;
-      this.#delta.y = this.newDelta.y;
+      this.#delta.push(this.newDelta.x, this.newDelta.y);
       this.newDelta.x = 0;
       this.newDelta.y = 0;
     }
-    else if (this.newPosition === null) {
-      this.#delta.x = 0;
-      this.#delta.y = 0;
-    }
-    else {
-      this.#delta.x = this.newPosition.x - this.#position.x;
-      this.#delta.y = this.newPosition.y - this.#position.y;
-
+    else if (this.newPosition !== null) {
+      this.#delta.push(
+        this.newPosition.x - this.#position.x,
+        this.newPosition.y - this.#position.y
+      );
       this.#position.x = this.newPosition.x;
       this.#position.y = this.newPosition.y;
 
       this.newPosition = null;
     }
-    this.#frameDelta.x += this.#delta.x;
-    this.#frameDelta.y += this.#delta.y;
 
-    const isDown = this.#downMask;
+    const isDown = (this.#downMask & ~kScrollMask) | scrollBits;
     const wasDown = this.#prevMask;
 
     this.#pressed.sample(~wasDown & isDown);
     this.#released.sample(wasDown & ~isDown);
-    this.#prevMask = isDown;
     this.#doubleClicked.sample();
-
+    this.#prevMask = isDown;
     this.#wasActive = isDown !== 0;
-    this.#settled = isDown === 0 &&
-      wasDown === 0 &&
-      !this.#pressed.any &&
-      !this.#released.any &&
-      !this.#doubleClicked.any &&
-      this.#delta.x === 0 &&
-      this.#delta.y === 0;
   }
 
-  publishFrameState(): void {
-    this.#pressed.publishFrame();
-    this.#released.publishFrame();
-    this.#doubleClicked.publishFrame();
-    this.#scroll.publishFrame();
+  publish(
+    reader: InputReader
+  ): void {
+    this.#pressed.take(reader);
+    this.#released.take(reader);
+    this.#doubleClicked.take(reader);
+    this.#scroll.take(reader);
     this.#downMask = (this.#downMask & ~kScrollMask) |
       this.#scroll.value;
-    this.#delta.x = this.#frameDelta.x;
-    this.#delta.y = this.#frameDelta.y;
-    this.#scrollSample.x = this.#frameScroll.x;
-    this.#scrollSample.y = this.#frameScroll.y;
-
-    this.#frameDelta.x = 0;
-    this.#frameDelta.y = 0;
-    this.#frameScroll.x = 0;
-    this.#frameScroll.y = 0;
-
-    if (
-      this.#pressed.any ||
-      this.#released.any ||
-      this.#doubleClicked.any ||
-      this.#delta.x !== 0 ||
-      this.#delta.y !== 0
-    ) {
-      this.#settled = false;
-    }
+    this.#delta.take(reader);
+    this.#scrollSample.take(reader);
   }
 
   #isQuiet(): boolean {
@@ -557,11 +509,11 @@ export class Mouse extends Emitter<
       !this.#pressed.queued &&
       !this.#released.queued &&
       !this.#doubleClicked.queued &&
-      this.#downMask === 0;
+      this.#prevMask === 0;
   }
 
   isMoving(): boolean {
-    return this.#delta.x !== 0 || this.#delta.y !== 0;
+    return this.#delta.value.x !== 0 || this.#delta.value.y !== 0;
   }
 
   isDown(
@@ -692,10 +644,6 @@ export class Mouse extends Emitter<
   #onMouseMove = (event: MouseEvent) => {
     this.#canvasEvent = event;
     event.preventDefault();
-    /*
-     * A move over the canvas proves the pointer is there, even when the
-     * matching enter was missed, as when the window regains focus under it.
-     */
     this.#setHovering(true);
 
     if (this.#wantsPointerLock) {
@@ -761,7 +709,6 @@ export class Mouse extends Emitter<
     event.preventDefault();
     const [deltaX, deltaY] = Mouse.wheelDelta(event);
 
-    // Accumulate every wheel event received between updates.
     this.#scrollDelta.x += deltaX;
     this.#scrollDelta.y += deltaY;
     this.emit("wheel", event);

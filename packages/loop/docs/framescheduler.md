@@ -42,7 +42,7 @@ new FrameScheduler(options?: FrameSchedulerOptions);
 | `fixedFps` | `60` | `> 0` | Fixed steps per second. |
 | `maxFps` | `Infinity` | `> 0`, `Infinity` allowed | Render cap. Steps still run on capped frames. |
 | `maxFrameDelta` | `250` | `> 0` | Longer frame deltas are clamped to this. |
-| `maxStepsPerFrame` | `5` | integer `>= 1` | More steps than this is a panic. |
+| `maxStepsPerFrame` | `5` | integer `>= 1` | More steps than this is a panic. Multiplied by `timeScale` above `1`, rounded up. |
 | `timeScale` | `1` | `>= 0` | Simulation speed. `0` pauses. |
 
 Out-of-range values throw `RangeError`, in the constructor and on assignment.
@@ -69,6 +69,16 @@ Forgets the previous timestamp only. The next `advance()` has a zero delta;
 Call it when frames resume after an intentional pause, so the pause is not
 replayed as a burst of steps. `GameLoop` does this when it wakes up.
 
+### `queueSteps(count: number): void`
+
+Adds `count` fixed steps to the next `advance()`, on top of the steps its
+delta pays for. That frame renders, and its `frameDelta`, `time` and `elapsed`
+grow by `count * fixedDelta`. Queued steps work at `timeScale: 0`, do not
+count toward `maxStepsPerFrame` and leave the accumulator alone. `reset()`
+drops them.
+
+Throws `RangeError` unless `count` is an integer `>= 1`.
+
 ## FrameSchedule
 
 `advance()` returns a fresh object every frame.
@@ -76,13 +86,14 @@ replayed as a burst of steps. `GameLoop` does this when it wakes up.
 | Field | Meaning |
 | --- | --- |
 | `rawDelta` | Time since the previous frame, before clamping and `timeScale`. |
+| `unscaledDelta` | Same delta after clamping, before `timeScale`. Keeps flowing while paused. |
 | `frameDelta` | Same delta after clamping and `timeScale`. |
 | `fixedDelta` | `1000 / fixedFps`. |
 | `steps` | Fixed steps to run now. |
 | `alpha` | Leftover time as a fraction of a step, in `[0, 1)`. Pass it to [`Interpolated.at()`](./interpolated.md). |
 | `render` | `false` when `maxFps` skips this frame. |
 | `clamped` | `rawDelta` was above `maxFrameDelta`. |
-| `panicked` | More than `maxStepsPerFrame` steps were due; the extra time was dropped. |
+| `panicked` | More steps were due than the step budget allows; the extra time was dropped. |
 | `droppedMs` | Time dropped by the panic. `0` otherwise. |
 
 `clamped` and `panicked` can both be `true` on the same frame.

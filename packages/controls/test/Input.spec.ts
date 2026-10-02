@@ -54,15 +54,36 @@ describe("Controls.Input", () => {
     assert.strictEqual(input.devicePreference, "default");
   });
 
-  test("publishes accumulated mouse state", () => {
-    const publish = mock.method(
+  test("sample() reaches every edge-reporting device", () => {
+    const calls = [
       input.mouse,
-      "publishFrameState"
+      input.touchpad,
+      input.keyboard,
+      input.gamepad
+    ].map((device) => mock.method(device, "sample", () => void 0));
+
+    input.sample();
+
+    assert.deepStrictEqual(
+      calls.map((call) => call.mock.callCount()),
+      [1, 1, 1, 1]
     );
+  });
 
-    input.publishFrameState();
+  test("publish() hands the reader to every edge-reporting device", () => {
+    const calls = [
+      input.mouse,
+      input.touchpad,
+      input.keyboard,
+      input.gamepad
+    ].map((device) => mock.method(device, "publish", () => void 0));
 
-    assert.strictEqual(publish.mock.callCount(), 1);
+    input.publish("frame");
+
+    assert.deepStrictEqual(
+      calls.map((call) => call.mock.calls.map((entry) => entry.arguments)),
+      [[["frame"]], [["frame"]], [["frame"]], [["frame"]]]
+    );
   });
 
   describe("device preference", () => {

@@ -35,6 +35,7 @@ describe("Loop.FrameScheduler", () => {
 
       assert.deepStrictEqual(schedule, {
         rawDelta: 0,
+        unscaledDelta: 0,
         frameDelta: 0,
         fixedDelta: kFixedDelta60,
         steps: 0,
@@ -101,13 +102,18 @@ describe("Loop.FrameScheduler", () => {
       assert.strictEqual(schedules[0].alpha, 0.5);
       assert.strictEqual(schedules[0].panicked, false);
       assert.strictEqual(schedules[0].rawDelta, 10_000);
+      assert.strictEqual(schedules[0].unscaledDelta, 250);
     });
 
-    test("rawDelta is the unscaled delta", () => {
+    test("rawDelta and unscaledDelta ignore timeScale", () => {
       const { schedules } = replay([40, 40], { timeScale: 0.5 });
 
       assert.deepStrictEqual(
         schedules.map(({ rawDelta }) => rawDelta),
+        [40, 40]
+      );
+      assert.deepStrictEqual(
+        schedules.map(({ unscaledDelta }) => unscaledDelta),
         [40, 40]
       );
       assert.deepStrictEqual(
@@ -126,6 +132,33 @@ describe("Loop.FrameScheduler", () => {
       assert.strictEqual(schedule.alpha, 0);
       assert.strictEqual(scheduler.accumulator, 0);
       assert.ok(closeTo(scheduler.droppedTime, schedule.droppedMs));
+    });
+
+    test("the step budget grows with a timeScale above 1", () => {
+      const { schedules } = replay([20, 20], {
+        fixedFps: 50,
+        timeScale: 8
+      });
+
+      assert.deepStrictEqual(stepsOf(schedules), [8, 8]);
+      assert.ok(schedules.every(({ panicked }) => !panicked));
+    });
+
+    test("fast-forward still panics past the scaled budget", () => {
+      const { schedules } = replay([100], {
+        timeScale: 2,
+        maxStepsPerFrame: 2
+      });
+
+      assert.strictEqual(schedules[0].steps, 4);
+      assert.strictEqual(schedules[0].panicked, true);
+    });
+
+    test("a timeScale below 1 keeps maxStepsPerFrame", () => {
+      const { schedules } = replay([200], { timeScale: 0.5 });
+
+      assert.strictEqual(schedules[0].steps, 5);
+      assert.strictEqual(schedules[0].panicked, true);
     });
 
     test("dropped time is never carried into the next frame", () => {
@@ -178,6 +211,59 @@ describe("Loop.FrameScheduler", () => {
       assert.strictEqual(schedule.render, true);
       assert.strictEqual(scheduler.time, time);
       assert.strictEqual(scheduler.advance(10_016).rawDelta, 16);
+    });
+
+    test("queueSteps() adds steps to the next frame only", () => {
+      const scheduler = new FrameScheduler({
+        timeScale: 0,
+        maxFps: 30
+      });
+      scheduler.advance(0);
+
+      scheduler.queueSteps(2);
+      const queued = scheduler.advance(5);
+      const next = scheduler.advance(10);
+
+      assert.strictEqual(queued.steps, 2);
+      assert.strictEqual(queued.frameDelta, 2 * kFixedDelta60);
+      assert.strictEqual(queued.unscaledDelta, 5);
+      assert.strictEqual(queued.render, true);
+      assert.strictEqual(next.steps, 0);
+      assert.strictEqual(next.frameDelta, 0);
+      assert.strictEqual(scheduler.time, 2 * kFixedDelta60);
+      assert.strictEqual(scheduler.elapsed, 2 * kFixedDelta60);
+    });
+
+    test("queueSteps() bypasses maxStepsPerFrame and keeps the accumulator", () => {
+      const scheduler = new FrameScheduler({ maxStepsPerFrame: 1 });
+      scheduler.advance(0);
+
+      scheduler.queueSteps(3);
+      const schedule = scheduler.advance(20);
+
+      assert.strictEqual(schedule.steps, 4);
+      assert.strictEqual(schedule.panicked, false);
+      assert.ok(closeTo(scheduler.accumulator, 20 - kFixedDelta60));
+      assert.ok(closeTo(
+        scheduler.elapsed,
+        scheduler.time + scheduler.accumulator + scheduler.droppedTime
+      ));
+    });
+
+    test("queueSteps() rejects a count below one or fractional", () => {
+      const scheduler = new FrameScheduler();
+
+      assert.throws(() => scheduler.queueSteps(0), RangeError);
+      assert.throws(() => scheduler.queueSteps(1.5), RangeError);
+    });
+
+    test("reset() drops queued steps", () => {
+      const scheduler = new FrameScheduler();
+      scheduler.queueSteps(2);
+
+      scheduler.reset();
+
+      assert.strictEqual(scheduler.advance(0).steps, 0);
     });
 
     test("frameCount counts every advance", () => {

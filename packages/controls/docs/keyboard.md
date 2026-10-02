@@ -39,6 +39,8 @@ new Keyboard(options?: {
 connect(): void
 disconnect(): void
 update(): void
+sample(): void
+publish(reader: InputReader): void
 reset(): void
 ```
 
@@ -46,6 +48,10 @@ reset(): void
 `disconnect()` stops. Call `update()` once per frame: it publishes the
 transitions that happened since the previous call. `reset()` clears held keys
 and typed characters.
+
+`update()` is `sample()` then `publish("step")`. A fixed-step engine calls
+`sample()` and `publish(reader)` separately; see
+[Input](./input.md#publishreader).
 
 ## Polling
 
@@ -65,10 +71,11 @@ Keys are physical `KeyboardEvent.code` values (`"KeyW"`, `"Space"`,
 `"ArrowUp"`), so WASD stays a cluster on every layout. `"W"` and `"7"` are
 shorthands for `"KeyW"` and `"Digit7"`; lowercase letters are rejected.
 
-`isDown()` reads the held state. The `wasJust*` flags last for one `update()`.
+`isDown()` reads the held state. The `wasJust*` flags last until the next
+`publish()`.
 `"ANY"` is true when at least one key matches, `"NONE"` when none does.
 
-`char` holds the printable characters typed since the previous update.
+`char` holds the printable characters the current reader has not seen yet.
 `wasActive` is `true` while a key is held or auto-repeating.
 
 ## Bindings

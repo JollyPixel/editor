@@ -79,6 +79,10 @@ export function createHarness(
       }
     },
     world: {
+      time: {
+        delta: kFrame,
+        unscaledDelta: kFrame
+      },
       audio: {},
       invalidate: () => {
         invalidations++;
@@ -145,7 +149,7 @@ export function createHarness(
     },
     advance(frames = 1): void {
       for (let index = 0; index < frames; index++) {
-        camera.update(kFrame);
+        camera.update();
         justPressed.clear();
       }
     },

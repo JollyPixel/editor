@@ -41,7 +41,7 @@ describe("Controls.Mouse wheel", () => {
     assert.deepStrictEqual(mouse.delta, { x: 0, y: 0 });
     assert.strictEqual(mouse.scrollUp, false);
 
-    mouse.publishFrameState();
+    mouse.publish("frame");
 
     assert.deepStrictEqual(mouse.delta, { x: 20, y: 10 });
     assert.strictEqual(mouse.scrollUp, true);
@@ -125,7 +125,7 @@ describe("Controls.Mouse wheel", () => {
     mouse.update();
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     mouse.update();
-    mouse.publishFrameState();
+    mouse.publish("frame");
 
     assert.strictEqual(mouse.scroll.y, 2);
   });

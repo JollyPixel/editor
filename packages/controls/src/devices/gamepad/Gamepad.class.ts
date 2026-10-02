@@ -7,13 +7,20 @@ import {
   BrowserNavigatorAdapter,
   type WindowAdapter,
   BrowserWindowAdapter
-} from "./../adapters/index.ts";
-import type { InputControl } from "../types.ts";
+} from "../../adapters/index.ts";
+import type {
+  InputControl,
+  InputReader
+} from "../../types.ts";
 import { GamepadVibration } from "./GamepadVibration.class.ts";
+import { EdgeBuffer } from "../EdgeBuffer.ts";
 
 // CONSTANTS
 /** Deflection past which a stick axis counts as "pressed" in a direction. */
 const kAxisPressedValue = 0.5;
+const kStickCount = 2;
+/** Edge flags per axis, packed as `axisIndex * kAxisEdgeCount + edge`. */
+const kAxisEdgeCount = 6;
 
 export type GamepadIndex = 0 | 1 | 2 | 3;
 
@@ -122,6 +129,14 @@ interface AxisDownState {
   negative: boolean;
 }
 
+interface GamepadEdges {
+  pressed: EdgeBuffer;
+  released: EdgeBuffer;
+  axes: EdgeBuffer;
+  /** Non-zero while any `wasJust*` flag of this gamepad is set. */
+  published: number;
+}
+
 export type GamepadEvents = {
   connect: (gamepad: globalThis.Gamepad) => void;
   disconnect: (gamepad: globalThis.Gamepad) => void;
@@ -149,7 +164,9 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
   #wasActive = false;
   #idlePollCountdown = 0;
-  #sawGamepad = false;
+  /** One bit per slot that returned a gamepad on the latest poll. */
+  #presentGamepads = 0;
+  #edges: GamepadEdges[] = [];
 
   /** Reused by `#updateAxes` to avoid per-stick allocations. */
   #stickScratch: [GamepadAxisState, GamepadAxisState] = [
@@ -187,6 +204,12 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
       this.axes[gamepadIndex] = [];
       this.autoRepeats[gamepadIndex] = null;
       this.vibration[gamepadIndex] = new GamepadVibration();
+      this.#edges[gamepadIndex] = {
+        pressed: new EdgeBuffer(),
+        released: new EdgeBuffer(),
+        axes: new EdgeBuffer(),
+        published: 0
+      };
     }
 
     this.reset();
@@ -220,6 +243,11 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
   reset() {
     for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
+      const edges = this.#edges[gamepadIndex];
+      edges.pressed.reset();
+      edges.released.reset();
+      edges.axes.reset();
+      edges.published = 0;
       for (let button = 0; button < Gamepad.MaxButtons; button++) {
         this.buttons[gamepadIndex][button] = {
           isDown: false,
@@ -342,11 +370,42 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   }
 
   update() {
+    this.sample();
+    this.publish("step");
+  }
+
+  publish(
+    reader: InputReader
+  ): void {
+    if (this.#presentGamepads === 0) {
+      return;
+    }
+
+    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
+      if ((this.#presentGamepads & (1 << gamepadIndex)) === 0) {
+        continue;
+      }
+
+      const edges = this.#edges[gamepadIndex];
+      const pressed = edges.pressed.take(reader);
+      const released = edges.released.take(reader);
+      const axes = edges.axes.take(reader);
+      if ((pressed | released | axes | edges.published) === 0) {
+        continue;
+      }
+
+      writeButtonEdges(this.buttons[gamepadIndex], pressed, released);
+      writeAxisEdges(this.axes[gamepadIndex], axes);
+      edges.published = pressed | released | axes;
+    }
+  }
+
+  sample(): void {
     /*
      * `gamepadconnected` may not fire for a controller present at page load.
      * Poll slowly until one is found, then resume per-frame polling.
      */
-    if (!this.#sawGamepad && this.connectedGamepads <= 0) {
+    if (this.#presentGamepads === 0 && this.connectedGamepads <= 0) {
       if (this.#idlePollCountdown > 0) {
         this.#idlePollCountdown--;
         this.#wasActive = false;
@@ -360,23 +419,27 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     // Clear before early returns so device preference cannot remain stale.
     this.#wasActive = false;
     if (gamepads === null) {
-      this.#sawGamepad = false;
+      this.#presentGamepads = 0;
 
       return;
     }
 
-    let sawGamepad = false;
+    let present = 0;
     for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
       const gamepad = gamepads[gamepadIndex];
       if (gamepad) {
-        sawGamepad = true;
+        present |= 1 << gamepadIndex;
         this.#updateButtons(gamepad, gamepadIndex);
+        // Auto-repeat reads and writes the axis flags, so they are read back.
         this.#updateAxes(gamepad, gamepadIndex);
+        this.#edges[gamepadIndex].axes.push(
+          axisEdgeBits(this.axes[gamepadIndex])
+        );
         this.vibration[gamepadIndex].actuator =
           gamepad.vibrationActuator ?? null;
       }
     }
-    this.#sawGamepad = sawGamepad;
+    this.#presentGamepads = present;
   }
 
   #updateButtons(
@@ -387,6 +450,8 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     // Controllers may expose fewer buttons than `MaxButtons`.
     const count = Math.min(states.length, gamepad.buttons.length);
     let active = 0;
+    let pressed = 0;
+    let released = 0;
 
     for (let buttonIndex = 0; buttonIndex < count; buttonIndex++) {
       const source = gamepad.buttons[buttonIndex];
@@ -400,12 +465,17 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
       button.isDown = isDown;
       button.value = source.value;
-      button.wasJustPressed = !wasDown && isDown;
-      button.wasJustReleased = wasDown && !isDown;
+      pressed |= Number(!wasDown && isDown) << buttonIndex;
+      released |= Number(wasDown && !isDown) << buttonIndex;
 
       active |= Number(isDown);
     }
 
+    if ((pressed | released) !== 0) {
+      const edges = this.#edges[gamepadIndex];
+      edges.pressed.push(pressed);
+      edges.released.push(released);
+    }
     if (active !== 0) {
       this.#wasActive = true;
     }
@@ -417,7 +487,7 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   ): void {
     const now = Date.now();
 
-    for (let stick = 0; stick < 2; stick++) {
+    for (let stick = 0; stick < kStickCount; stick++) {
       const stickIndex = stick * 2;
       // Some controllers expose only one stick.
       if (
@@ -586,4 +656,50 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     this.connectedGamepads = Math.max(0, this.connectedGamepads - 1);
     this.emit("disconnect", event.gamepad);
   };
+}
+
+function axisEdgeBits(
+  axes: GamepadAxisState[]
+): number {
+  let axisBits = 0;
+  for (let index = 0; index < kStickCount * 2; index++) {
+    const axis = axes[index];
+    const bits = Number(axis.wasPositiveJustPressed) |
+      (Number(axis.wasPositiveJustAutoRepeated) << 1) |
+      (Number(axis.wasPositiveJustReleased) << 2) |
+      (Number(axis.wasNegativeJustPressed) << 3) |
+      (Number(axis.wasNegativeJustAutoRepeated) << 4) |
+      (Number(axis.wasNegativeJustReleased) << 5);
+    axisBits |= bits << (index * kAxisEdgeCount);
+  }
+
+  return axisBits;
+}
+
+function writeButtonEdges(
+  buttons: GamepadButtonState[],
+  pressed: number,
+  released: number
+): void {
+  for (let index = 0; index < buttons.length; index++) {
+    const bit = 1 << index;
+    buttons[index].wasJustPressed = (pressed & bit) !== 0;
+    buttons[index].wasJustReleased = (released & bit) !== 0;
+  }
+}
+
+function writeAxisEdges(
+  axes: GamepadAxisState[],
+  axisBits: number
+): void {
+  for (let index = 0; index < kStickCount * 2; index++) {
+    const axis = axes[index];
+    const bits = axisBits >>> (index * kAxisEdgeCount);
+    axis.wasPositiveJustPressed = (bits & 1) !== 0;
+    axis.wasPositiveJustAutoRepeated = (bits & (1 << 1)) !== 0;
+    axis.wasPositiveJustReleased = (bits & (1 << 2)) !== 0;
+    axis.wasNegativeJustPressed = (bits & (1 << 3)) !== 0;
+    axis.wasNegativeJustAutoRepeated = (bits & (1 << 4)) !== 0;
+    axis.wasNegativeJustReleased = (bits & (1 << 5)) !== 0;
+  }
 }

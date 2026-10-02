@@ -4,6 +4,9 @@ A first-person camera controller. It extends
 [CameraComponent](camera.md), attaches the audio listener, and
 handles WASD movement with mouse-look rotation. Movement is applied
 to the **actor's transform**, which is what drives the camera.
+Movement follows wall-clock time
+([`world.time.unscaledDelta`](../systems/world.md#time)), so the camera
+keeps its speed in slow motion and while the game is paused.
 
 ## Usage
 

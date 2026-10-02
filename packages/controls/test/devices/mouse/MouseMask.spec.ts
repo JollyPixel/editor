@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { MouseMask } from "../../../src/devices/MouseMask.ts";
+import { MouseMask } from "../../../src/devices/mouse/MouseMask.ts";
 
 describe("MouseMask", () => {
   test("combines queued and sampled bits", () => {
@@ -14,33 +14,38 @@ describe("MouseMask", () => {
 
     mask.queue(0b001);
     mask.sample(0b010);
+    mask.take("step");
 
     assert.strictEqual(mask.value, 0b011);
     assert.strictEqual(mask.has(0b001), true);
     assert.strictEqual(mask.has(0b100), false);
   });
 
-  test("restores transitions accumulated across samples", () => {
+  test("each reader takes every sampled bit once", () => {
     const mask = new MouseMask();
 
     mask.sample(0b001);
+    mask.take("step");
+    assert.strictEqual(mask.value, 0b001);
+
     mask.sample(0b010);
+    mask.take("step");
     assert.strictEqual(mask.value, 0b010);
 
-    mask.publishFrame();
+    mask.take("frame");
     assert.strictEqual(mask.value, 0b011);
 
-    mask.publishFrame();
+    mask.take("frame");
     assert.strictEqual(mask.value, 0);
   });
 
-  test("reset clears published, queued, and accumulated bits", () => {
+  test("reset clears published, queued, and sampled bits", () => {
     const mask = new MouseMask();
     mask.queue(0b001);
     mask.sample(0b010);
 
     mask.reset();
-    mask.publishFrame();
+    mask.take("frame");
 
     assert.strictEqual(mask.value, 0);
   });

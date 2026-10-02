@@ -6,6 +6,7 @@ export * from "./devices/index.ts";
 export { isApplePlatform } from "./platform.ts";
 
 export type {
+  InputReader,
   Vector2Like,
   Vector3Like
 } from "./types.ts";

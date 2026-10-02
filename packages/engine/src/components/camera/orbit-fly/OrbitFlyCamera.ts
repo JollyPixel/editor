@@ -327,10 +327,9 @@ export class OrbitFlyCamera extends CameraComponent {
     });
   }
 
-  update(
-    deltaTime: number
-  ) {
-    const { input } = this.actor.world;
+  update() {
+    const { input, time } = this.actor.world;
+    const deltaTime = time.unscaledDelta;
     const isDescending = InputCombination.Shift.evaluate(input);
 
     if (!this.enabled) {

@@ -88,6 +88,8 @@ declare class Touchpad {
   readonly isThreeFingerGesture: boolean;
 
   update(): void;
+  sample(): void;
+  publish(reader: InputReader): void;
   reset(): void;
 }
 ```
@@ -96,6 +98,10 @@ declare class Touchpad {
 compares it with the previous state and publishes `wasStarted` and `wasEnded`
 for one input step. A start and end must be separated by an update if the
 caller needs to observe both transitions.
+
+`update()` is `sample()` then `publish("step")`. A fixed-step engine calls
+`sample()` and `publish(reader)` separately; see
+[Input](./input.md#publishreader).
 
 The gesture getters read `touchesDown` directly. They report whether
 identifiers `0`, `0 + 1`, or `0 + 1 + 2` are currently down. They do not

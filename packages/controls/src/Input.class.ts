@@ -10,7 +10,10 @@ import {
   type DocumentAdapter,
   type WindowAdapter
 } from "./adapters/index.ts";
-import type { KeyCode } from "./types.ts";
+import type {
+  InputReader,
+  KeyCode
+} from "./types.ts";
 
 /**
  * @note default stand for mouse + keyboard
@@ -163,11 +166,28 @@ export class Input extends Emitter<InputEvents> {
   }
 
   update() {
-    this.mouse.update();
-    this.touchpad.update();
-    this.keyboard.update();
-    this.gamepad.update();
+    this.sample();
+    this.publish("step");
+  }
 
+  sample(): void {
+    this.mouse.sample();
+    this.touchpad.sample();
+    this.keyboard.sample();
+    this.gamepad.sample();
+    this.#updatePreference();
+  }
+
+  publish(
+    reader: InputReader
+  ): void {
+    this.mouse.publish(reader);
+    this.touchpad.publish(reader);
+    this.keyboard.publish(reader);
+    this.gamepad.publish(reader);
+  }
+
+  #updatePreference(): void {
     if (
       this.gamepad.wasActive &&
       this.#preference !== "gamepad"
@@ -188,10 +208,6 @@ export class Input extends Emitter<InputEvents> {
         this.#preference
       );
     }
-  }
-
-  publishFrameState(): void {
-    this.mouse.publishFrameState();
   }
 
   vibrate(

@@ -12,7 +12,7 @@ import {
   TouchIdentifier,
   type Mouse
 } from "../../../src/index.ts";
-import { MouseEventButton } from "../../../src/devices/Mouse.class.ts";
+import { MouseEventButton } from "../../../src/devices/mouse/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
   createTouch,

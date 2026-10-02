@@ -83,11 +83,14 @@ request owned by `screen`.
 ## Lifecycle
 
 ```ts
+type InputReader = "step" | "frame";
+
 interface Input {
   connect(): void;
   disconnect(): void;
   update(): void;
-  publishFrameState(): void;
+  sample(): void;
+  publish(reader: InputReader): void;
 }
 ```
 
@@ -106,19 +109,43 @@ remain stuck, which also clears `mouse.hovering`.
 
 ### `update()`
 
-Advances mouse, touchpad, keyboard, and gamepad state. Call it once before the
-frame reads `isDown`, `wasJustPressed`, `wasJustReleased`, movement, or typed
-characters.
+Calls `sample()` then `publish("step")`. Call it once before the frame reads
+`isDown`, `wasJustPressed`, `wasJustReleased`, movement, or typed characters.
+A host without fixed steps needs nothing else.
 
-`update()` also changes `devicePreference` when it sees gamepad activity or
+### `sample()`
+
+Reads what changed in mouse, touchpad, keyboard, and gamepad since the
+previous sample, and keeps the new transitions, typed characters, wheel input,
+and mouse movement for both readers. Nothing is visible to queries until a
+`publish()`.
+
+`sample()` also changes `devicePreference` when it sees gamepad activity or
 activity from mouse, keyboard, or touch input.
 
-### `publishFrameState()`
+### `publish(reader)`
 
-Publishes mouse transitions, wheel state, and movement accumulated across
-every `update()` call since the previous publication. A fixed-step engine can
-call it before the rendered update so the render sees all transients consumed
-by catch-up steps without repeating an edge.
+Hands one reader everything sampled since that reader's previous `publish()`,
+through the `wasJust*` flags, typed characters, wheel state, and movement.
+Each reader sees every edge once:
+
+- `"step"`, before each fixed step. A catch-up frame reports an edge to its
+  first step only. A frame with no step leaves the edges pending, so the next
+  step still sees every press, including both edges of a tap.
+- `"frame"`, before the rendered update. It sees every edge of the frame,
+  whatever number of steps ran.
+
+A fixed-step engine samples once per frame:
+
+```ts
+input.sample();
+for (let step = 0; step < steps; step++) {
+  input.publish("step");
+  fixedUpdate();
+}
+input.publish("frame");
+update();
+```
 
 ## Device preference
 
