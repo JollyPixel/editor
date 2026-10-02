@@ -48,7 +48,7 @@ fails to initialize.
 | `viewHelper.position` | `"bottom-right"` | `"top-left"`, `"top-right"`, `"bottom-left"` or `"bottom-right"`. |
 | `viewHelper.inset` | `0` | Distance in pixels from the canvas edges. |
 | `renderOnDemand` | `false` | Stops rendering while nothing changes. See [rendering on demand](#rendering-on-demand). |
-| `suspendWhenHidden` | `false` | Stops the loop while the canvas is off screen or inside a hidden frame. See [`suspendWhenHidden`](../../../loop/docs/gameloop.md#suspendwhenhidden). |
+| `suspendWhenHidden` | `false` | Stops the loop while the canvas is off screen or inside a hidden frame. See [`suspendWhenHidden`](../../../loop/docs/suspendwhenhidden.md). |
 
 ## Properties
 

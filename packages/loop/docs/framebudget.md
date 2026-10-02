@@ -1,8 +1,9 @@
 # FrameBudget
 
-`FrameBudget` tracks a wall-clock deadline for optional work such as queue
-draining. It is independent of `FrameScheduler.maxStepsPerFrame` and the
-scheduler's panic state.
+A time limit for optional work inside one frame.
+
+**Use it when** you drain a queue (mesh rebuilds, uploads) and want to stop
+after a few milliseconds.
 
 ```ts
 import { FrameBudget } from "@jolly-pixel/loop";
@@ -15,32 +16,35 @@ while (queue.length > 0 && !budget.expired) {
 }
 ```
 
-## Constructor
+It has no link to the scheduler. `maxStepsPerFrame` and panics are unaffected.
 
-### `new FrameBudget(clock)`
+## Constructor
 
 ```ts
 new FrameBudget(clock?: Clock);
 ```
 
-The constructor uses `PerformanceClock` by default and accepts a `ManualClock`
-for tests.
+Defaults to a [`PerformanceClock`](./clock.md#performanceclock). Pass a
+[`ManualClock`](./clock.md#manualclock) in tests.
+
+## Methods
+
+| Method | What it does |
+| --- | --- |
+| `start(budgetMs): this` | Starts a deadline `budgetMs` from now. Throws `RangeError` when negative or not finite. |
+| `clear(): this` | Drops the deadline. The budget is expired again. |
 
 ## Properties
 
-| Property | Description |
+| Property | Meaning |
 | --- | --- |
-| `budget` | Milliseconds granted by the last `start()`. |
-| `elapsed` | Milliseconds since the last `start()`, or `0` when cleared. |
-| `remaining` | Milliseconds left, clamped to `0`. |
-| `expired` | `true` before `start()` and once the deadline is reached. |
+| `budget` | Milliseconds given to the last `start()`. |
+| `elapsed` | Milliseconds since `start()`. `0` after `clear()`. |
+| `remaining` | Milliseconds left, never below `0`. |
+| `expired` | Deadline reached. |
 
-## API
+## Gotchas
 
-`start(budgetMs: number): this` starts a deadline at the clock's current time.
-It throws `RangeError` when `budgetMs` is negative or non-finite.
-
-`clear(): this` resets the budget and makes it expired.
-
-A budget of `0` expires immediately. A fresh or cleared budget is also expired,
-so optional work should only run after `start()`.
+- A new or cleared budget is **already expired**. Call `start()` first, or the
+  loop above runs nothing.
+- `start(0)` expires immediately.

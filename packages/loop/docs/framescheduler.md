@@ -1,19 +1,27 @@
 # FrameScheduler
 
-Turns wall-clock timestamps into fixed-step schedules. It has no frame driver,
-DOM access, callbacks, or event subscribers. Hosts with their own frame pump
-can use it without [`GameLoop`](./gameloop.md).
+Turns frame timestamps into fixed simulation steps plus a render decision.
+
+**Use it when** you already own the frame pump. Otherwise use
+[`GameLoop`](./gameloop.md), which wraps it.
 
 ```ts
 import { FrameScheduler } from "@jolly-pixel/loop";
 
-const scheduler = new FrameScheduler({ fixedFps: 60 });
+const scheduler = new FrameScheduler({
+  fixedFps: 60
+});
 
-function tick(now: number) {
+function tick(
+  now: number
+) {
   const schedule = scheduler.advance(now);
 
   for (let stepIndex = 0; stepIndex < schedule.steps; stepIndex++) {
-    world.step(schedule.fixedDelta / 1000, stepIndex);
+    world.step(
+      schedule.fixedDelta / 1000,
+      stepIndex
+    );
   }
   if (schedule.render) {
     renderer.draw(schedule.alpha);
@@ -21,98 +29,90 @@ function tick(now: number) {
 }
 ```
 
-The first call after construction or `reset()` reports a zero delta, runs no
-step, and renders. Older timestamps also produce a zero delta.
+All times are **milliseconds**.
 
-## Constructor
-
-### `new FrameScheduler(options)`
+## Options
 
 ```ts
-export interface FrameSchedulerOptions {
-  // Simulation rate, in fixed steps per second
-  fixedFps?: number;         // 60
-  // Render cap, in frames per second
-  maxFps?: number;           // Infinity
-  // Upper bound on the raw wall-clock delta, in ms
-  maxFrameDelta?: number;    // 250
-  // Upper bound on fixed steps per frame
-  maxStepsPerFrame?: number; // 5
-  // Multiplier applied to the frame delta before accumulating
-  timeScale?: number;        // 1
-}
-
 new FrameScheduler(options?: FrameSchedulerOptions);
 ```
 
-`fixedFps` and `maxFrameDelta` must be finite and greater than `0`. `maxFps`
-has the same range but also accepts `Infinity`. `maxStepsPerFrame` must be an
-integer of at least `1`; `timeScale` must be finite and non-negative. Invalid
-constructor options and property assignments throw `RangeError`.
+| Option | Default | Valid range | What it does |
+| --- | --- | --- | --- |
+| `fixedFps` | `60` | `> 0` | Fixed steps per second. |
+| `maxFps` | `Infinity` | `> 0`, `Infinity` allowed | Render cap. Steps still run on capped frames. |
+| `maxFrameDelta` | `250` | `> 0` | Longer frame deltas are clamped to this. |
+| `maxStepsPerFrame` | `5` | integer `>= 1` | More steps than this is a panic. |
+| `timeScale` | `1` | `>= 0` | Simulation speed. `0` pauses. |
+
+Out-of-range values throw `RangeError`, in the constructor and on assignment.
+
+## Methods
+
+### `advance(now: number): FrameSchedule`
+
+Schedules the work since the previous timestamp. Call it once per frame.
+
+- The first call after construction or `reset()` has a zero delta, runs no
+  step, and renders.
+- A timestamp older than the previous one counts as a zero delta.
+
+### `reset(): void`
+
+Clears all accumulated state, counters included.
+
+### `skipGap(): void`
+
+Forgets the previous timestamp only. The next `advance()` has a zero delta;
+`time`, `elapsed` and the accumulator are kept.
+
+Call it when frames resume after an intentional pause, so the pause is not
+replayed as a burst of steps. `GameLoop` does this when it wakes up.
 
 ## FrameSchedule
 
-`advance()` returns a new object for each frame.
+`advance()` returns a fresh object every frame.
 
-```ts
-export interface FrameSchedule {
-  // Wall-clock ms since the previous frame, before clamping and time scale
-  rawDelta: number;
-  // Wall-clock ms since the previous frame, after clamping and time scale
-  frameDelta: number;
-  // Constant ms per fixed step. Always 1000 / fixedFps
-  fixedDelta: number;
-  // Fixed steps the host must run this frame
-  steps: number;
-  // Accumulator remainder as a fraction of fixedDelta. [0, 1)
-  alpha: number;
-  // Whether the host should draw this frame (see maxFps)
-  render: boolean;
-  // Raw delta exceeded maxFrameDelta and was clamped
-  clamped: boolean;
-  // Step budget was exhausted and the remaining accumulator was discarded
-  panicked: boolean;
-  // Simulation time discarded by the panic, in ms. 0 unless panicked
-  droppedMs: number;
-}
-```
+| Field | Meaning |
+| --- | --- |
+| `rawDelta` | Time since the previous frame, before clamping and `timeScale`. |
+| `frameDelta` | Same delta after clamping and `timeScale`. |
+| `fixedDelta` | `1000 / fixedFps`. |
+| `steps` | Fixed steps to run now. |
+| `alpha` | Leftover time as a fraction of a step, in `[0, 1)`. Pass it to [`Interpolated.at()`](./interpolated.md). |
+| `render` | `false` when `maxFps` skips this frame. |
+| `clamped` | `rawDelta` was above `maxFrameDelta`. |
+| `panicked` | More than `maxStepsPerFrame` steps were due; the extra time was dropped. |
+| `droppedMs` | Time dropped by the panic. `0` otherwise. |
 
-`clamped` and `panicked` are independent, so both may be true on one schedule.
-The non-negative `rawDelta` preserves the uncapped, unscaled stall duration.
+`clamped` and `panicked` can both be `true` on the same frame.
 
 ## Properties
 
-The option properties are readable and writable. Assigning `maxFps` resets the
-render accumulator; assigning `fixedFps` recomputes `fixedDelta` without
-clearing the simulation accumulator.
+The five options are readable and writable properties.
 
-| Read-only property | Description |
+- Setting `fixedFps` keeps the accumulator.
+- Setting `maxFps` restarts render pacing.
+
+Read-only counters, all reset by `reset()`:
+
+| Property | Meaning |
 | --- | --- |
-| `fixedDelta` | Milliseconds per fixed step: `1000 / fixedFps`. |
-| `accumulator` | Unconsumed simulation time in milliseconds. |
-| `time` | Simulation time consumed by fixed steps since reset. |
-| `elapsed` | Clamped and scaled time received since reset. |
-| `droppedTime` | Simulation time discarded by panics since reset. |
-| `frameCount` | Calls to `advance()` since reset. |
+| `fixedDelta` | `1000 / fixedFps`. |
+| `accumulator` | Time not yet consumed by a step. |
+| `time` | Time consumed by fixed steps. |
+| `elapsed` | Clamped and scaled time received. |
+| `droppedTime` | Total time dropped by panics. |
+| `frameCount` | Calls to `advance()`. |
 
-Within floating-point tolerance, `elapsed` equals
-`time + accumulator + droppedTime`.
+`elapsed` equals `time + accumulator + droppedTime`, give or take float error.
 
-## API
+## Gotchas
 
-`advance(now: number): FrameSchedule` schedules work since the previous
-timestamp. `reset(): void` clears accumulated state and the previous timestamp.
-`skipGap(): void` only forgets the previous timestamp: the next `advance()`
-reports a zero delta and renders, while `time`, `elapsed` and the accumulator
-are kept. Call it when a source resumes after an intended pause, as
-[`GameLoop`](./gameloop.md#rendering-on-demand) does on waking, so the
-gap is not clamped into a burst of fixed steps.
+> [!WARNING]
+> Keep calling `advance()` on frames you won't draw. A [frame source](./framesource.md)
+> that skips frames to cap the frame rate makes steps arrive in bursts. Use
+> `maxFps` instead.
 
-## Render capping
-
-A dedicated render accumulator paces non-divisible rates evenly. Render pacing
-uses unscaled wall time, so a paused or slowed simulation can keep drawing.
-
-The [frame source](./framesource.md) must continue delivering timestamps on
-frames that are not drawn. Otherwise, elapsed time reaches the simulation
-accumulator in bursts.
+- `maxFps` paces on real time, ignoring `timeScale`. A paused simulation keeps
+  rendering at the cap.
