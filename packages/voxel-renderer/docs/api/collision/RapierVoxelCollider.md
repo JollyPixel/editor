@@ -1,71 +1,41 @@
 # RapierVoxelCollider
 
-`RapierVoxelCollider` implements `VoxelCollider` with Rapier3D. It is exported
-from the package root.
-
-## API
-
-```ts
-interface RapierVoxelColliderOptions {
-  api: RapierAPI;
-  world: RapierWorld;
-  blockRegistry: BlockRegistry;
-  shapeRegistry: BlockShapeRegistry;
-}
-
-class RapierVoxelCollider implements VoxelCollider {
-  constructor(options: RapierVoxelColliderOptions);
-
-  rebuildChunk(
-    key: string,
-    collision: VoxelChunkCollision
-  ): void;
-  removeChunk(key: string): void;
-  dispose(): void;
-}
-```
-
-The implementation creates one fixed rigid body per key, placed at the
-collision `origin`, from the voxels of every chunk in `chunks`. Full cubes are
-merged into cuboids, a cell filled in several layers counting once, other
-`"box"` shapes such as slabs get a cuboid of their own bounds, and `"trimesh"`
-shapes share one triangle mesh built from their shape faces. Removing a key
-removes that body and its attached colliders.
-
-`RapierAPI`, `RapierWorld`, and the other Rapier types are structural interfaces
-for the subset used by this package. Voxel-renderer never imports the Rapier
-WASM module. Pass the initialized Rapier namespace and world instance.
+A [`VoxelCollider`](./VoxelCollider.md) backed by Rapier3D. The package does
+not import Rapier; pass your initialized `@dimforge/rapier3d` (or `-compat`)
+namespace and world.
 
 ```ts
-interface RapierAPI {
-  RigidBodyDesc: {
-    fixed(): RapierRigidBodyDesc;
-  };
-  ColliderDesc: {
-    cuboid(
-      hx: number,
-      hy: number,
-      hz: number
-    ): RapierColliderDesc;
-    trimesh(
-      vertices: Float32Array,
-      indices: Uint32Array
-    ): RapierColliderDesc;
-  };
-}
+import Rapier from "@dimforge/rapier3d-compat";
+import { RapierVoxelCollider, VoxelView } from "@jolly-pixel/voxel.renderer";
 
-interface RapierWorld {
-  createRigidBody(
-    descriptor: RapierRigidBodyDesc
-  ): RapierRigidBody;
-  createCollider(
-    descriptor: RapierColliderDesc,
-    parent?: RapierRigidBody
-  ): RapierCollider;
-  removeCollider(
-    collider: RapierCollider,
-    wakeUp: boolean
-  ): void;
-  removeRigidBody(body: RapierRigidBody): void;
-}
+await Rapier.init();
+const rapierWorld = new Rapier.World({ x: 0, y: -9.81, z: 0 });
+
+const view = new VoxelView(document, {
+  collider: (context) => new RapierVoxelCollider({ api: Rapier, world: rapierWorld, ...context })
+});
 ```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `api` | `RapierAPI` | The Rapier namespace. |
+| `world` | `RapierWorld` | The Rapier world colliders are added to. |
+| `blockRegistry` | `BlockRegistry` | From the factory context. |
+| `shapeRegistry` | `BlockShapeRegistry` | From the factory context. |
+
+`RapierAPI` and `RapierWorld` are structural types covering only what the
+collider calls: `RigidBodyDesc.fixed()`, `ColliderDesc.cuboid()`,
+`ColliderDesc.trimesh()`, and creating and removing bodies and colliders.
+
+## Behaviour
+
+- One fixed rigid body per chunk cell, placed at the cell's `origin`.
+- Blocks with `collidable: false`, or whose shape's `collisionHint` is
+  `"none"`, get no collider.
+- Full cubes are merged into as few cuboids as possible; a cell filled in
+  several layers counts once.
+- Other `"box"` shapes, such as slabs, get a cuboid of their own bounds.
+- `"trimesh"` shapes share one triangle mesh per cell.
+- `removeChunk()` removes the body and its colliders.

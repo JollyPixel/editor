@@ -1,27 +1,13 @@
 # VoxelDocument
 
-The voxel data of a world, with no Three.js rendering objects: layers and
-voxels, the block registry, the tileset links, undo/redo history, and
-the command stream that carries edits between peers.
-
-A document runs headless. Pair it with a [`VoxelView`](./VoxelView.md) to draw
-it. Editing the world itself (layers, voxels, objects) goes through
-[`document.world`](../world/VoxelWorld.md), which emits the
-[commands](./commands.md) the document forwards.
-
-`three` still appears in the types it returns (`Vector3Like`, and `Vector3` and
-`Box3` from [`VoxelLayer`](../world/VoxelLayer.md)) because the world does its
-geometry in those classes. Nothing here creates an `Object3D`, a material, a
-texture or a geometry.
+The voxel data of a world: layers, the block registry, tileset links, undo
+history and the command stream. It creates no Three.js objects; pair it with a
+[`VoxelView`](./VoxelView.md) to draw it.
 
 ```ts
-import {
-  VoxelDocument,
-  VoxelRotation
-} from "@jolly-pixel/voxel.renderer";
+import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
 
 const document = new VoxelDocument({
-  chunkSize: 16,
   layers: ["Ground"],
   blocks: [
     {
@@ -35,177 +21,124 @@ const document = new VoxelDocument({
   ]
 });
 
-document.world.setVoxel("Ground", {
-  position: { x: 0, y: 0, z: 0 },
-  blockId: 1,
-  rotation: VoxelRotation.CW90
-});
+document.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
 ```
 
-## VoxelDocumentOptions
+Layer, voxel and object edits go through
+[`document.world`](../world/VoxelWorld.md).
 
-```ts
-interface VoxelDocumentOptions {
-  /** Power of two; anything else throws a RangeError. @default 16 */
-  chunkSize?: number;
-  /** Layer names added in order, so the last one ends up on top. */
-  layers?: string[];
-  /** Block definitions registered before any command is applied. */
-  blocks?: BlockDefinition[];
-  /** Tileset definitions declared before any texture is registered. */
-  tilesets?: Iterable<TilesetDefinition>;
-  /** Finishes of the named material groups; invalid entries are skipped. */
-  materialGroups?: Iterable<MaterialGroupJSON>;
-  /** Blend groups the blocks can name; invalid entries are skipped. */
-  blendGroups?: Iterable<BlendGroupJSON>;
-  /** Undo/redo of voxel edits; disabled by default. */
-  history?: VoxelHistoryOptions;
-  /** Debug logger; defaults to a no-op implementation. */
-  logger?: VoxelLogger;
-  /** Subscribed to `"command"` before any command is applied. */
-  onCommand?: VoxelCommandListener;
-}
-```
+## Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chunkSize` | `number` | `16` | Chunk edge in voxels. Must be a power of two, otherwise a `RangeError` is thrown. |
+| `layers` | `string[]` | `[]` | Layer names added in order; the last one ends up on top. |
+| `blocks` | `BlockDefinition[]` | `[]` | Registered before any command is applied. |
+| `tilesets` | `Iterable<TilesetDefinition>` | | Tileset links declared up front. |
+| `materialGroups` | `Iterable<MaterialGroupJSON>` | `[]` | Material groups the blocks can name. Invalid entries are skipped. |
+| `blendGroups` | `Iterable<BlendGroupJSON>` | `[]` | Blend groups the blocks can name. Invalid entries are skipped. |
+| `history` | `VoxelHistoryOptions` | disabled | See [`VoxelHistory`](./VoxelHistory.md). |
+| `logger` | `VoxelLogger` | no-op | |
+| `onCommand` | `VoxelCommandListener` | | Subscribed to `"command"` before any command is applied. |
 
 ## Properties
 
 ```ts
-class VoxelDocument extends BlockDocument<VoxelCommand> {
+class VoxelDocument {
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
-  readonly tilesets: TilesetList;   // links only, no atlases
+  readonly tilesets: TilesetList;
   readonly materialGroups: MaterialGroupList;
   readonly blendGroups: BlendGroupList;
-  readonly history: VoxelHistory;   // see VoxelHistory.md
+  readonly history: VoxelHistory;
   readonly chunkSize: number;
 }
 ```
 
-`tilesets` holds only what a tileset *is* and the slot it owns. The atlas
-textures built from those declarations belong to the view's
-[`TilesetAtlases`](../tilesets/TilesetAtlases.md).
-
-`blocks`, `materialGroups` and `blendGroups` are runtime state. A world saves
-none of them: they
-are projected from the [`TilesetDocument`](../tilesets/TilesetDocument.md) of
-each linked tileset by the host, or defined in code for a standalone scene.
-`materialGroups` holds the [surface finishes](../materials/MaterialGroup.md)
-the blocks name. `blendGroups` holds the
-[blend rules](../materials/BlendGroup.md) that fade blocks into each other.
+- [`blocks`](../blocks/BlockRegistry.md),
+  [`materialGroups`](../materials/MaterialGroup.md) and
+  [`blendGroups`](../materials/BlendGroup.md) are runtime state. A saved world
+  holds its layers and tileset links only; the host projects blocks and groups
+  from each linked [`TilesetDocument`](../tilesets/TilesetDocument.md), or
+  defines them in code.
+- [`tilesets`](../tilesets/tilesets.md) holds tileset definitions and their
+  slots, not textures. Atlases belong to the view's
+  [`TilesetAtlases`](../tilesets/TilesetAtlases.md).
 
 ## Events
 
-```ts
-type VoxelDocumentEvents = {
-  command: (command: VoxelCommand, context: VoxelCommandContext) => void;
-  loaded: () => void;
-};
-```
+| Event | Arguments | When |
+| --- | --- | --- |
+| `command` | `(command, { origin })` | After every applied [command](./commands.md), local or replayed. |
+| `loaded` | | After `load()` put the new world in place. |
 
-- `command` carries every edit, with `origin` `"local"` for a change made here
-  and `"remote"` for one replayed through `apply()`. Local layer commands are
-  forwarded from [`world`](../world/VoxelWorld.md#commands). A sync client
-  broadcasts the [world half](./commands.md#world-and-tileset-document-commands)
-  of this stream; block and material group commands are the projection of
-  tileset documents and stay local. A direct `blocks` or `tilesets` mutation
-  emits nothing, and neither does `load()`.
-- `loaded` follows `load()`, once the new world is in place.
+`load()` and direct `blocks` or `tilesets` mutations emit no command.
 
 ## Methods
 
-```ts
-apply(command: VoxelCommand, options?: VoxelApplyOptions): boolean;
+### Commands
 
-defineBlock(def: BlockDefinition): boolean;
-defineBlocks(defs: Iterable<BlockDefinition>): void;
-removeBlock(blockId: number): boolean;
-moveBlock(blockId: number, toIndex: number): boolean;
+```ts
+apply(command: VoxelCommand, options?: { origin?: "local" | "remote" }): boolean;
+```
+
+Applies a command and emits it once on `"command"` with `options.origin`
+(default `"local"`). Returns `false` and emits nothing when the command changed
+nothing. See [commands](./commands.md) for what each command carries once
+applied.
+
+The block and group methods below are shorthands for `apply()`:
+
+| Method | Command | Returns `false` when |
+| --- | --- | --- |
+| `defineBlock(def)` | `block-defined` | the registry did not change. An existing ID is overwritten. |
+| `defineBlocks(defs)` | one `block-defined` each | returns nothing |
+| `removeBlock(blockId)` | `block-removed` | the ID is unknown. IDs are never reused. |
+| `moveBlock(blockId, toIndex)` | `block-moved` | the ID is unknown or the move changes nothing |
+| `defineMaterialGroup(group)` | `material-group-defined` | the finish is invalid or equal to the current one |
+| `removeMaterialGroup(groupId)` | `material-group-removed` | the group is unknown |
+| `defineBlendGroup(group)` | `blend-group-defined` | the settings are invalid or equal to the current ones |
+| `removeBlendGroup(groupId)` | `blend-group-removed` | the group is unknown |
+| `addTileset(tileset)` | `tileset-added` | the list did not change. Without `slot`, the lowest free slot is assigned. |
+| `removeTileset(tilesetId)` | `tileset-removed` | the tileset is unknown |
+
+A tile reference without `tilesetId` gets the first declared tileset. To declare
+a tileset locally without a command, use
+[`VoxelView.loadTileset()`](./VoxelView.md#methods).
+
+### Queries
+
+```ts
 blockAt(position: THREE.Vector3Like): ResolvedBlockDefinition | undefined;
 blockPropertiesAt(position: THREE.Vector3Like): BlockProperties | undefined;
+```
 
-addTileset(tileset: TilesetDefinition): boolean;
-removeTileset(tilesetId: string): boolean;
+`blockAt()` returns the definition of the visible voxel at `position`, or
+`undefined` for air or an unregistered block. The result is the stored object;
+do not mutate it. `blockPropertiesAt()` returns a copy of that block's
+[custom properties](../blocks/BlockDefinition.md#custom-properties), or `{}`.
 
-defineMaterialGroup(group: MaterialGroup | MaterialGroupJSON): boolean;
-removeMaterialGroup(groupId: string): boolean;
+### Save and load
 
+```ts
 save(): VoxelWorldJSON;
 load(data: VoxelWorldJSON, options?: VoxelLoadOptions): void;
 dispose(): void;
-```
 
-`apply()` applies any [command](./commands.md) with
-[`applyVoxelCommand()`](./commands.md#applying-commands) and emits it once on
-`"command"` with `options.origin`:
-
-```ts
-interface VoxelApplyOptions {
-  /** @default "local" */
-  origin?: "local" | "remote";
-}
-```
-
-It returns `false` and emits nothing when the command changed nothing, so a
-rejected command is never broadcast. An applied command is emitted the way it
-was applied: a `block-defined` block carries the default tileset in its
-texture references, a `block-moved` carries the index the block landed on, a
-`tileset-added` carries the slot the tileset received, and a
-`material-group-defined` or `blend-group-defined` group has every field filled
-in. A network adapter
-applies peer commands with `{ origin: "remote" }` and sends only the `"local"`
-ones, so nothing is echoed back.
-
-The block and group methods come from `BlockDocument`, the base
-[`TilesetDocument`](../tilesets/TilesetDocument.md) shares; each is a
-shorthand for `apply()`:
-
-| Method | Command | Returns |
-| --- | --- | --- |
-| `defineBlock(def)` | `block-defined` | whether the registry changed; an existing ID is overwritten |
-| `defineBlocks(defs)` | one `block-defined` per definition | nothing; an empty batch does nothing |
-| `removeBlock(blockId)` | `block-removed` | `false` for an unknown ID; IDs are never recycled |
-| `moveBlock(blockId, toIndex)` | `block-moved` | `false` for an unknown ID or a move that changes nothing |
-| `defineMaterialGroup(group)` | `material-group-defined` | `false` for an invalid finish or one equal to the current definition |
-| `removeMaterialGroup(groupId)` | `material-group-removed` | `false` for an unknown group |
-| `defineBlendGroup(group)` | `blend-group-defined` | `false` for invalid settings or ones equal to the current definition |
-| `removeBlendGroup(groupId)` | `blend-group-removed` | `false` for an unknown group |
-
-Tile references a block defines without `tilesetId` get the first declared
-tileset. The order `moveBlock()` changes is a document concern only; see
-[`BlockRegistry` ordering](../blocks/BlockRegistry.md#ordering).
-
-`blockAt()` resolves the voxel at a world position to its block definition,
-reading the highest-priority layer that holds one. It returns `undefined` for
-air and for a voxel whose block is no longer registered. The definition is the
-stored one, not a copy; do not mutate it. `blockPropertiesAt()` does the same
-lookup and returns a fresh copy of the block's
-[custom properties](../blocks/BlockDefinition.md#custom-properties), an empty
-object for a block carrying none.
-
-`addTileset()` links a tileset and broadcasts a command; a definition without
-`slot` receives the lowest free one. A tileset that arrives with its texture
-rather than through an edit is declared with
-[`VoxelView.loadTileset()`](./VoxelView.md#methods), which adds or updates it
-in `tilesets` without a command.
-
-`save()` writes the world and its tileset links. `load()` replaces the
-world, drops the undo history, and emits `loaded`. The snapshot replaces the
-tileset list wholesale and leaves `blocks` and the groups alone, so
-`options.tilesets` declarations are applied after it:
-
-```ts
 interface VoxelLoadOptions {
-  /** Collapses layers; higher-priority voxels win overlaps. */
   mergeLayers?: boolean | VoxelMergeAllLayersOptions;
-  /** Declared after the snapshot replaced the list. */
   tilesets?: Iterable<TilesetDefinition>;
 }
 ```
 
-`mergeLayers: { except: ["Water"] }` keeps the named layers apart and merges
-the layers on each side of them separately, as
-[`VoxelWorld.mergeAllLayers()`](../world/VoxelWorld.md#methods)
-does. A name the loaded world has no layer for logs a warning.
+`save()` writes the world and its tileset links in the
+[serialized format](../serialization/serialization.md).
 
-`data.chunkSize` is metadata: `load()` keeps the document's chunk size.
-Deserialization is silent, so restoring a snapshot emits no command.
+`load()` replaces the world and the tileset list, clears the undo history and
+emits `loaded`. It emits no command and leaves `blocks` and the groups alone.
+The document keeps its own `chunkSize`. `options.tilesets` are declared after
+the snapshot. `mergeLayers` collapses the layers as
+[`world.mergeAllLayers()`](../world/VoxelWorld.md) does; an `except`
+name with no matching layer logs a warning.
+
+`dispose()` clears the history, the tileset list and every listener.

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { AtlasAverages } from "../../../src/view/atlases/index.ts";
+import { AtlasAverages } from "../../../src/view/atlases/AtlasAverages.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
 
 type Rgba = [r: number, g: number, b: number, a: number];

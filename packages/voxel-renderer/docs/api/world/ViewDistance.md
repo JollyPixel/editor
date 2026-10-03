@@ -1,63 +1,46 @@
 # ViewDistance
 
-Immutable chunk radius around [`VoxelView.focus`](../core/VoxelView.md#view-distance),
-with separate enter and leave radii so a chunk on the border does not flip
-every tick. It is set with `range.viewDistance` in the
-[view options](../core/VoxelView.md#voxelviewoptions) or on `view.range`. Distances are measured in world units between the focus and a
-chunk center.
-
-## Constructor
+Immutable chunk radius around the view's focus. Chunks outside it are not
+meshed. Set it with `range.viewDistance` in the
+[`VoxelView` options](../core/VoxelView.md#view-distance) or on `view.range`.
 
 ```ts
-new ViewDistance(options?: ViewDistanceOptions)
+import { ViewDistance } from "@jolly-pixel/voxel.renderer";
 
-interface ViewDistanceOptions {
-  /** Radius in chunks; `Infinity` keeps every chunk meshed. Default: `Infinity`. */
-  chunks?: number;
-  /** `"xz"` ignores the vertical axis, `"sphere"` measures it. Default: `"xz"`. */
-  shape?: "xz" | "sphere";
-  /** Extra radius in chunks a visible chunk keeps. Default: `1`. */
-  hysteresis?: number;
-}
+view.range.viewDistance = new ViewDistance({
+  chunks: 12,
+  shape: "sphere",
+  hysteresis: 2
+});
 ```
 
-A negative `chunks` or `hysteresis` throws a `RangeError`.
+## Options
 
-`ViewDistance.Unlimited` is the shared instance a view starts with, and
-`ViewDistance.from()` accepts either a radius or an options object:
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chunks` | `number` | `Infinity` | Radius in chunks, measured from the focus to a chunk center. |
+| `shape` | `"xz" \| "sphere"` | `"xz"` | `"xz"` ignores height; `"sphere"` includes it. |
+| `hysteresis` | `number` | `1` | Extra chunks a visible chunk may drift before it leaves the view. |
 
-```ts
-ViewDistance.from(8);                    // same as new ViewDistance({ chunks: 8 })
-ViewDistance.from({ chunks: 8 });
-ViewDistance.from(ViewDistance.Unlimited);
-```
+A negative or `NaN` `chunks` or `hysteresis` throws a `RangeError`.
 
 ## Properties
 
-```ts
-class ViewDistance {
-  readonly chunks: number;
-  readonly shape: "xz" | "sphere";
-  readonly hysteresis: number;
+`chunks`, `shape` and `hysteresis` are read-only. `unlimited` is `true` when
+`chunks` is `Infinity`.
 
-  get unlimited(): boolean;
-}
-```
+## Static members
+
+#### `ViewDistance.Unlimited`
+
+The instance a view starts with.
+
+#### `ViewDistance.from(value: number | ViewDistanceOptions | ViewDistance): ViewDistance`
+
+A number is a radius in chunks. An instance is returned as is.
 
 ## Methods
 
-#### `admits(dx: number, dy: number, dz: number, chunkSize: number): boolean`
-
-Whether a chunk that far from the focus may enter the view. `dx`/`dy`/`dz` are
-the world-space offsets from the focus to the chunk center; `dy` is ignored in
-`"xz"` shape.
-
-#### `retains(dx: number, dy: number, dz: number, chunkSize: number): boolean`
-
-Whether a chunk already in view stays there. True everywhere `admits()` is,
-plus one more `hysteresis` of drift.
-
 #### `equals(other: ViewDistance): boolean`
 
-Compares by value. The view compares by identity instead, so assigning an
-equal but distinct instance still triggers a visibility pass.
+Compares by value.

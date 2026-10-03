@@ -3,11 +3,9 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  AtlasAverages,
-  createMissingTilesetAtlas,
-  TilesetAtlases
-} from "../../../src/view/atlases/index.ts";
+import { TilesetAtlases } from "../../../src/view/atlases/index.ts";
+import { AtlasAverages } from "../../../src/view/atlases/AtlasAverages.ts";
+import { createMissingTilesetAtlas } from "../../../src/view/atlases/missingTilesetAtlas.ts";
 import { MISSING_TILESET_ID } from "../../../src/document/tilesets/index.ts";
 import {
   mockTexture,

@@ -1,14 +1,11 @@
 # MaterialGroup
 
-A material group is the surface finish shared by every block whose
-[`BlockSurface`](../blocks/BlockSurface.md) names it in `materialGroup`. The
-finish is stored in the [tileset document](../tilesets/TilesetDocument.md),
-next to `blocks`, so it is saved, loaded and synced with the tileset; a world
-receives it projected under `"<tilesetId>/<groupId>"`.
+A surface finish (roughness, metalness, emission) shared by every block whose
+[`BlockSurface`](../blocks/BlockSurface.md) names it in `materialGroup`. Groups
+belong to a [tileset document](../tilesets/TilesetDocument.md) and reach a
+world as `"<tilesetId>/<groupId>"`; a `VoxelDocument` can also define its own.
 
 ```ts
-import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
-
 const document = new VoxelDocument({
   blocks: [
     { id: 1, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
@@ -21,99 +18,73 @@ const document = new VoxelDocument({
 document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 ```
 
-```ts
-interface MaterialGroupJSON {
-  id: string;
-  roughness?: number;
-  metalness?: number;
-  emissive?: string;
-  emissiveIntensity?: number;
-  normalScale?: number;
-}
+## Fields
 
-type MaterialGroupFinish = Required<Omit<MaterialGroupJSON, "id">>;
-
-class MaterialGroup {
-  static readonly defaults: Readonly<MaterialGroupFinish>;
-  static parse(value: unknown): MaterialGroup | null;
-
-  constructor(json: MaterialGroupJSON);
-  readonly id: string;
-  readonly roughness: number;
-  readonly metalness: number;
-  readonly emissive: string;
-  readonly emissiveIntensity: number;
-  readonly normalScale: number;
-
-  with(finish: Partial<MaterialGroupFinish>): MaterialGroup;
-  applyTo(material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial): void;
-  equals(other: MaterialGroup): boolean;
-  toJSON(): Required<MaterialGroupJSON>;
-}
-```
+`MaterialGroupJSON` holds the fields below; every field but `id` is optional.
 
 | Field | Default | Bounds |
-|---|---|---|
-| `id` | Required | Non-empty string, matching `BlockSurface.materialGroup`. |
+| --- | --- | --- |
+| `id` | Required | Non-empty string. |
 | `roughness` | `1` | `0` to `1`. |
 | `metalness` | `0` | `0` to `1`. |
 | `emissive` | `"#000000"` | A `#rrggbb` colour, stored in lower case. |
 | `emissiveIntensity` | `1` | `0` or more. |
-| `normalScale` | `1` | `0` or more. Strength of the tileset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns the relief off. |
+| `normalScale` | `1` | `0` or more. Strength of the tileset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns it off. |
 
-The instance is frozen. The constructor throws `RangeError` for a value out
-of bounds; `parse()` returns `null` instead. `with()` returns a new group.
+`MaterialGroup.defaults` holds the defaults.
 
 ## Rendering
 
 A block whose group is defined is drawn with a `MeshStandardMaterial` carrying
-the finish, even when the view's `rendering.material` is `"lambert"`. Blocks without a
-group, or naming a group the document does not define, keep the view's
-material. `applyTo()` writes only the emissive fields and `normalScale` on a
-Lambert material.
+the finish, even when the view uses `"lambert"`. Other blocks, including those
+naming an undefined group, keep the view's material. A
+[material customizer](../../concepts/rendering-and-meshing.md#material-customizers)
+runs after the finish is applied, and not again when the finish is edited
+later.
 
-The `rendering.customizer` runs after the finish is applied, so host code can
-still override it when a material is created. Editing a finish afterwards
-updates the existing materials in place, without the customizer, except when
-`normalScale` reaches or leaves `0` on a tileset with a normal atlas: those
-materials are rebuilt with or without their normal node. Defining or removing
-a group rebuilds every chunk.
+A metallic finish reflects `scene.environment`; without one, a metalness near
+`1` renders dark.
 
-A metallic finish reflects its environment. With no `scene.environment`, a
-metalness near `1` renders dark.
+## MaterialGroup
 
-## MaterialGroupList
+An immutable, validated group. The constructor throws a `RangeError` for a
+value out of bounds.
 
-`VoxelDocument.materialGroups` and `TilesetDocument.materialGroups` hold the
-groups of a document.
+#### `MaterialGroup.parse(value: unknown): MaterialGroup | null`
 
-```ts
-class MaterialGroupList implements Iterable<MaterialGroup> {
-  constructor(groups?: Iterable<unknown>);
-  readonly version: number;
-  readonly size: number;
+Like the constructor, but returns `null` for invalid input.
 
-  ids(): Set<string>;
-  has(groupId: string): boolean;
-  get(groupId: string): MaterialGroup | undefined;
-  define(group: MaterialGroup | MaterialGroupJSON): boolean;
-  apply(command: VoxelMaterialGroupCommand): VoxelMaterialGroupCommand | null;
-  remove(groupId: string): boolean;
-  replace(groups: Iterable<unknown>): void;
-  clear(): void;
-  toJSON(): MaterialGroupJSON[];
-}
-```
+#### `with(finish: Partial<MaterialGroupFinish>): MaterialGroup`
 
-`define()` returns `false` for an invalid group or one equal to the current
-definition. `replace()` and the constructor skip invalid entries and keep the
-first of duplicate IDs. Mutating the list directly emits no command; use
-`document.defineMaterialGroup()` for an edit that should sync.
+A copy with other finish values.
 
-## Commands
+#### `applyTo(material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial): void`
 
-`apply()` applies a `material-group-defined` or `material-group-removed`
-[command](../core/commands.md#material-group-commands) to the list without
-emitting it. Returns the
-command as applied, a defined group with every field filled in, or `null` when
-the list did not change.
+Writes the finish to a material, for example a block preview. A Lambert
+material only receives the emissive fields and `normalScale`.
+
+#### `equals(other: MaterialGroup): boolean`
+
+#### `toJSON(): Required<MaterialGroupJSON>`
+
+## Group lists
+
+`document.materialGroups` is a `MaterialGroupList` and `document.blendGroups`
+a `BlendGroupList`, on both `VoxelDocument` and `TilesetDocument`. Both lists
+share these members:
+
+| Member | Description |
+| --- | --- |
+| `size` | Number of groups. |
+| `version` | Increases on every change. |
+| `has(id)`, `get(id)` | Lookups. The list is also iterable. |
+| `define(group)` | Adds or replaces a group. `false` for an invalid group or one equal to the current definition. |
+| `remove(id)` | `false` for an unknown group. |
+| `replace(groups)`, `clear()` | `replace()` skips invalid entries and keeps the first of duplicated ids. |
+| `toJSON()` | The groups as JSON. |
+
+`MaterialGroupList` also has `ids()`. Changing a list directly emits no
+command; use `document.defineMaterialGroup()`, `removeMaterialGroup()`,
+`defineBlendGroup()` and `removeBlendGroup()` for edits that should reach
+peers. They emit the [commands](../core/commands.md) `material-group-defined`,
+`material-group-removed`, `blend-group-defined` and `blend-group-removed`.

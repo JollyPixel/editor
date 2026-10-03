@@ -29,7 +29,6 @@ export type { MaterialCustomizerFn } from "./view/shading/ChunkMaterialCache.ts"
 export * from "./view/atlases/index.ts";
 export * from "./view/collision/index.ts";
 export * from "./view/inspector/index.ts";
-export { MeshBuildStats } from "./view/meshing/index.ts";
 export * from "./view/meshing/BlockPieces.ts";
 export { runMeshWorker } from "./view/workers/runMeshWorker.ts";
 export type {

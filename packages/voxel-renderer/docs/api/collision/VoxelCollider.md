@@ -1,89 +1,63 @@
 # VoxelCollider
 
-`VoxelCollider` is the contract between [`VoxelView`](../core/VoxelView.md) and
-a physics backend. Collision is disabled unless `VoxelViewOptions.collider`
-supplies a factory.
+The interface between a [`VoxelView`](../core/VoxelView.md) and a physics
+engine. Collision is off unless `VoxelViewOptions.collider` provides a
+factory. [`RapierVoxelCollider`](./RapierVoxelCollider.md) is the bundled
+implementation; see [adding physics](../../guides/adding-physics.md).
 
 ## API
 
 ```ts
-interface VoxelChunkCollision {
-  origin: VoxelCoord;
-  chunks: readonly VoxelChunk[];
-  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
-}
-
-interface VoxelCollider {
-  rebuildChunk(
-    key: string,
-    collision: VoxelChunkCollision
-  ): void;
-  removeChunk(key: string): void;
-  dispose(): void;
-}
+type VoxelColliderFactory = (context: VoxelColliderContext) => VoxelCollider;
 
 interface VoxelColliderContext {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
 }
 
-type VoxelColliderFactory = (
-  context: VoxelColliderContext
-) => VoxelCollider;
-```
-
-The view calls the factory once with `document.blocks` and `view.shapes`.
-
-`rebuildChunk()` replaces any collider registered under `key`.
-`removeChunk()` is a no-op for an unknown key. Implementations own their physics
-handles and release all remaining resources from `dispose()`.
-
-`rebuildChunk()` runs whenever the view meshes a key, including one that
-draws no face; the map is then empty. A key covers one chunk cell: `chunks`
-holds the layer chunks drawn there, highest compositing priority first, and
-every one of them starts at the world-space `origin`. Layers on the chunk
-grid share a key; a layer off the chunk grid gets a key of its own with a single chunk. Voxels hidden by a higher layer stay in
-their chunk, so a collider sees them too.
-
-The map follows renderer draw groups, keyed by `ChunkGeometryKey` (`tilesetId`
-and `surface`). Vertex positions are relative to `origin`, and each geometry
-owns its index attribute while sharing CPU index storage. Respect the
-geometry's draw range when reading indices.
-
-## Geometry merging
-
-```ts
-interface MergedChunkGeometry {
-  geometry: THREE.BufferGeometry;
-  owned: boolean;
+interface VoxelCollider {
+  rebuildChunk(key: string, collision: VoxelChunkCollision): void;
+  removeChunk(key: string): void;
+  dispose(): void;
 }
 
-function mergeChunkGeometries(
-  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>
-): MergedChunkGeometry | null;
-
-function drawnIndices(
-  geometry: THREE.BufferGeometry
-): THREE.TypedArray | null;
+interface VoxelChunkCollision {
+  origin: VoxelCoord;
+  chunks: readonly VoxelChunk[];
+  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
+}
 ```
 
-The function returns `null` when there is no collision geometry. Dispose the
-returned geometry only when `owned` is `true`. Merging keeps only the
-indices inside each draw range; `drawnIndices()` returns that range for a
-single geometry.
+The view calls the factory once, with `document.blocks` and `view.shapes`.
 
-## Collision strategy
+- `rebuildChunk()` runs each time the view meshes a chunk cell, and replaces
+  whatever was registered under `key`. Keys are opaque.
+- `removeChunk()` ignores an unknown key.
+- `dispose()` releases every remaining physics object.
 
-Each block shape supplies one collision hint:
+`VoxelChunkCollision` describes one chunk cell:
 
-- `"box"` creates a cuboid sized to the shape's transformed bounds; full
-  cubes are greedily merged into as few cuboids as possible.
-- `"trimesh"` adds the shape's faces to one triangle mesh per chunk.
-- `"none"` excludes the block from collision.
+- `origin` is the world-space corner of the cell.
+- `chunks` are the [layer chunks](../world/VoxelChunk.md) drawn there, highest
+  layer first. Voxels covered by a higher layer are still in them.
+- `geometries` holds the rendered geometry per draw group, with positions
+  relative to `origin`. It is empty when the cell draws nothing. Read indices
+  within each geometry's draw range.
 
-Blocks with `collidable: false` are skipped whatever their hint.
+Hiding a layer removes its colliders. Blocks with `collidable: false` should be
+skipped; each [block shape](../blocks/BlockShape.md) also declares a
+`collisionHint`.
 
-Hiding a layer removes its colliders.
+## Geometry helpers
 
-See [adding physics](../../guides/adding-physics.md) for setup with the bundled
-Rapier implementation.
+```ts
+function mergeChunkGeometries(
+  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>
+): { geometry: THREE.BufferGeometry; owned: boolean } | null;
+
+function drawnIndices(geometry: THREE.BufferGeometry): THREE.TypedArray | null;
+```
+
+`mergeChunkGeometries()` merges the draw groups of a cell into one geometry, or
+returns `null` when there is none. Dispose the result only when `owned` is
+`true`. `drawnIndices()` returns the indices inside one geometry's draw range.

@@ -1,77 +1,57 @@
 # Creating custom shapes
 
-Extend `BlockShapeBase`, register the instance, then reference its ID from a
-`BlockDefinition`.
+Extend `BlockShapeBase`, register an instance on the view, then name its id in
+a block definition. This shape is a flat carpet lying just above the floor of
+its cell:
 
 ```ts
 import {
   BlockShapeBase,
+  Face,
   VoxelDocument,
   VoxelView,
   defineFace,
-  type Face,
   type FaceDefinition
 } from "@jolly-pixel/voxel.renderer";
 
-class MyShape extends BlockShapeBase {
-  readonly id = "myShape";
-  readonly collisionHint = "box" as const;
+class Carpet extends BlockShapeBase {
+  readonly id = "carpet";
+  readonly collisionHint = "none";
   readonly faces: readonly FaceDefinition[] = [
     defineFace({
-      face: Face.PosZ,
-      normal: [0, 0, 1],
-      vertices: [[0, 0, 1], [1, 0, 1], [1, 0.5, 1], [0, 0.5, 1]]
+      face: Face.PosY,
+      normal: [0, 1, 0],
+      vertices: [
+        [0, 0.0625, 1],
+        [1, 0.0625, 1],
+        [1, 0.0625, 0],
+        [0, 0.0625, 0]
+      ]
     })
   ];
 }
 
-const document = new VoxelDocument();
+const document = new VoxelDocument({ layers: ["Ground"] });
 const view = new VoxelView(document, {
-  shapes: [new MyShape()]
+  shapes: [new Carpet()]
 });
-```
 
-`faces` use coordinates from 0 through 1 within a voxel, as triangles or quads.
-`defineFace()` settles the two members you may leave out:
-
-- `uvs` default to the projection of the face's own vertices, so it samples
-  only the part of the tile it covers; see the
-  [face UV convention](../api/blocks/BlockShape.md#face-uv-convention)
-- `cull` defaults to the face's own direction, but only when the face lies on
-  that direction's boundary plane, so a face inset into the block needs no
-  annotation; see
-  [default culling](../api/blocks/BlockShape.md#default-culling)
-
-Pass either explicitly to opt out.
-
-`BlockShapeBase` derives `occludes()` from those faces, so the shape above
-correctly hides nothing. Implement `BlockShape` directly, or override
-`occludes()`, only when the vertices cannot say what you mean; see
-[`BlockShapeBase`](../api/blocks/BlockShapeBase.md). An incorrect `true` result
-removes visible geometry from neighbouring blocks.
-
-Registering through `view.shapes` is also supported:
-
-```ts
-view.shapes.register(new MyShape());
-```
-
-Register the shape before placing blocks that use it. Then add a matching block
-definition:
-
-```ts
-document.blocks.register({
+document.defineBlock({
   id: 10,
-  name: "Custom",
-  shapeId: "myShape",
-  collidable: true,
-  defaultTexture: {
-    col: 0,
-    row: 0
-  }
+  name: "Red carpet",
+  shapeId: "carpet",
+  collidable: false,
+  defaultTexture: { col: 0, row: 0 }
 });
 ```
 
-The [`BlockShape` reference](../api/blocks/BlockShape.md) documents face culling
-and collision hints. The [built-in shape catalog](../api/blocks/built-in-shapes.md)
-provides examples of the supported shape IDs.
+`view.shapes.register(new Carpet())` works too, for a view that already exists.
+
+`defineFace()` fills in what the face leaves out. The face sits inside the
+cell, so it is never culled against a neighbour, and its UVs are the
+projection of its vertices, so it samples the whole tile.
+`BlockShapeBase` derives `occludes()` from the faces: the carpet covers no
+side of its cell, so it hides nothing behind it.
+
+The [`BlockShape` reference](../api/blocks/BlockShape.md) covers the face
+format, default culling, the UV convention and the built-in shapes.

@@ -1,82 +1,9 @@
 # TilesetAtlases
 
-Atlases built from the declared tilesets and their loaded textures.
-[`VoxelView.atlases`](../core/VoxelView.md#properties) exposes the one the view
-uses, built over its document's tileset list.
-
-```ts
-interface TilesetAtlasesOptions {
-  tilesets?: TilesetList;
-}
-
-class TilesetAtlases {
-  readonly tilesets: TilesetList;
-  readonly defaultTilesetId: string | null;
-  readonly version: number;
-
-  constructor(options?: TilesetAtlasesOptions);
-  registerTexture(
-    tilesetId: string,
-    texture: TilesetTexture,
-    normal?: TilesetNormalTexture | null
-  ): TilesetAtlas;
-  syncAtlases(): string[];
-  get(tilesetId?: string): TilesetAtlas | undefined;
-  atlas(tilesetId?: string): TilesetAtlas;
-  resolve(tilesetId?: string): TilesetAtlas | MissingTilesetAtlas | undefined;
-  refreshAverages(): void;
-  dispose(): void;
-}
-
-const MISSING_TILESET_ID = "$missing";
-const MISSING_TILESET_DEFINITION: Readonly<ResolvedTilesetDefinition>; // 16 px, one tile
-type MissingTilesetAtlas = TilesetAtlas<THREE.DataTexture>;
-```
-
-`tilesets` is the [`TilesetList`](./tilesets.md#tilesetlist) of declared
-tilesets, created empty unless one is passed. `TilesetAtlases` reads it and
-never changes it, except in `dispose()`. A declared tileset may have no atlas yet.
-`defaultTilesetId` is the first declared ID, used by references without a
-`tilesetId`.
-
-`registerTexture()` builds the atlas of a declared tileset from its declared
-definition. It throws when the ID is not declared: declare it first with
-`tilesets.add()`, or use
-[`VoxelView.loadTileset()`](../core/VoxelView.md#methods), which does both.
-Registering an ID that already has an atlas replaces it and disposes the
-previous textures the new atlas does not reuse. `normal` is the optional
-[normal atlas](./TilesetAtlas.md), `null` by default.
-
-`syncAtlases()` realigns atlases after the list changed. It drops and disposes
-the atlas of an undeclared tileset, and rebuilds on the same textures the atlas
-of a tileset whose `tileSize` changed. It returns the affected IDs.
-
-`get()` returns the atlas of the given ID, or of the default tileset when the
-ID is omitted, and `undefined` when that tileset has no atlas. `atlas()` does
-the same lookup and throws instead.
-
-`refreshAverages()` rebuilds the average table of every atlas whose texture
-changed since it was built (see
-[distant tiles](../../concepts/rendering-and-meshing.md#distant-tiles)).
-`VoxelView.tick()` calls it, so an edit pushed through
-`TilesetAtlas.updateImage()` reaches distant faces on the next tick.
-
-`version` increases when atlases or the list change, so cached UV data can be
-invalidated. `dispose()` disposes every texture, normal textures included,
-and leaves the list, which belongs to the document.
-
-## Missing tileset
-
-`resolve()` is the lookup the mesher and the chunk materials use. It returns
-the atlas like `get()`, `undefined` while a declared tileset has no texture,
-and the missing-tileset atlas when the ID is not declared (a removed tileset,
-or no tileset at all).
-
-The missing-tileset atlas is a generated 16x16 single-tile texture, red with a
-white cross. It is created on first use, shared, and disposed by `dispose()`.
-Its faces are meshed under `MISSING_TILESET_ID`, which is also the `tilesetId`
-a `rendering.customizer` receives for them. The ID is reserved:
-`TilesetList.add()` refuses it, so it is never declared or serialized.
+The loaded atlas textures of a view, keyed by tileset id, exposed as
+[`view.atlases`](../core/VoxelView.md). It reads the document's
+[`TilesetList`](./tilesets.md#tilesetlist); a declared tileset may have no
+atlas yet.
 
 ```ts
 document.tilesets.add(definition);
@@ -84,3 +11,46 @@ view.atlases.registerTexture(definition.id, texture);
 
 const uv = view.atlases.get(definition.id)?.uvFor(0, 0);
 ```
+
+## Properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `tilesets` | `TilesetList` | The declared tilesets. Never changed by `TilesetAtlases`. |
+| `defaultTilesetId` | `string \| null` | First declared id, used by tile references without a `tilesetId`. |
+| `version` | `number` | Increases when an atlas or the list changes. |
+
+## Methods
+
+#### `registerTexture(tilesetId: string, texture: TilesetTexture, normal?: TilesetNormalTexture | null): TilesetAtlas`
+
+Builds the atlas of a declared tileset. Throws when the id is not declared;
+[`view.loadTileset()`](../core/VoxelView.md) declares and registers in one
+call. Registering an id again replaces its atlas and disposes the textures the
+new one does not reuse. `normal` is an optional
+[normal atlas](./TilesetAtlas.md#normal-atlas).
+
+#### `get(tilesetId?: string): TilesetAtlas | undefined`
+
+The atlas of a tileset, or of the default tileset when `tilesetId` is omitted.
+`undefined` when it has no atlas.
+
+#### `atlas(tilesetId?: string): TilesetAtlas`
+
+Same lookup; throws instead of returning `undefined`.
+
+#### `dispose(): void`
+
+Disposes every texture, normal textures included. The tileset list is left
+as it is.
+
+## Missing tileset
+
+Voxels whose tileset is not declared, for example after it was removed, are
+drawn with a red 16×16 tile crossed in white. Their faces use the reserved id
+`MISSING_TILESET_ID` (`"$missing"`), which is also the `tilesetId` a
+[material customizer](../../concepts/rendering-and-meshing.md#material-customizers)
+receives for them. `TilesetList.add()` refuses that id.
+
+A declared tileset without a texture is different: its faces are not drawn
+until a texture is registered.

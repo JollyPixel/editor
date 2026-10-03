@@ -1,7 +1,7 @@
 # VoxelHistory
 
-Undo/redo of voxel edits, exposed as [`document.history`](./VoxelDocument.md#properties).
-Disabled by default.
+Undo/redo of voxel edits, exposed as
+[`document.history`](./VoxelDocument.md#properties). Disabled by default.
 
 ```ts
 const document = new VoxelDocument({
@@ -16,63 +16,43 @@ document.history.redo();
 
 ## Options
 
-```ts
-interface VoxelHistoryOptions {
-  /** @default false */
-  enabled?: boolean;
-  /**
-   * Maximum number of undoable entries; the oldest is dropped first.
-   * @default 10
-   */
-  limit?: number;
-}
-```
-
-A `limit` that is not a positive integer throws a `RangeError`.
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | `boolean` | `false` | |
+| `limit` | `number` | `10` | Maximum undoable entries; the oldest is dropped first. A value that is not a positive integer throws a `RangeError`. |
 
 ## What is recorded
 
-Only local voxel edits made through [`VoxelWorld`](../world/VoxelWorld.md):
-`setVoxel`, `removeVoxel`, `setVoxelBulk` and `removeVoxelBulk`. Layer,
-object, block and tileset commands are not recorded. Silent writes are not
-recorded either: direct `VoxelLayer` writes, `document.load()`, and commands replayed
-with `apply()`, including those from peers.
+Local `setVoxel`, `removeVoxel`, `setVoxelBulk`, `removeVoxelBulk`,
+`patchVoxels` and `transformLayer` calls on
+[`VoxelWorld`](../world/VoxelWorld.md). Not recorded: layer, object, block and
+tileset commands, direct `VoxelLayer` writes, `document.load()`, and commands
+replayed with `apply()`, including those from peers.
 
-Each call becomes one entry unless it happens inside `begin()` / `commit()`
-or `world.transaction()`.
-Cells an edit leaves unchanged are ignored, and an entry with no changed cell
-is dropped. A new entry clears the redo stack.
+Each call is one entry, unless it runs inside `begin()`/`commit()` or
+`world.transaction()`. An entry that changed no cell is dropped. A new entry
+clears the redo stack.
 
-## Replay
-
-`undo()` and `redo()` write one `patchVoxels()` per layer inside a single
-`world.transaction()`, so the world emits an ordinary `"voxels-patched"`
-command per layer and the document forwards them as local commands to network
-adapters.
-
-A cell is only reverted while it still holds the value the entry left there,
-so an edit a peer made in between is kept. Cells on a layer that no longer
-exists are skipped.
+Undo and redo emit local `"voxels-patched"` commands, so peers receive them. A
+cell a peer changed since the edit is left alone, and cells on a removed layer
+are skipped.
 
 ## Properties
 
 ```ts
-class VoxelHistory extends Emitter<VoxelHistoryEvents> {
-  readonly enabled: boolean;
-  readonly limit: number;
-  readonly canUndo: boolean;
-  readonly canRedo: boolean;
-}
+readonly enabled: boolean;
+readonly limit: number;
+readonly canUndo: boolean;
+readonly canRedo: boolean;
 ```
 
 ## Methods
 
 #### `begin(): void` / `commit(): void`
 
-Groups every edit made in between into one entry, such as one brush stroke.
-A cell edited several times keeps its first `before` and last `after`.
-Calls nest; only the outermost `commit()` pushes the entry. `begin()` is a
-no-op when the history is disabled.
+Groups the edits made in between into one entry, such as one brush stroke.
+Calls nest; only the outermost `commit()` pushes the entry. `begin()` does
+nothing while the history is disabled.
 
 #### `undo(): boolean` / `redo(): boolean`
 
@@ -89,13 +69,9 @@ it.
 
 ## Events
 
-```ts
-type VoxelHistoryEvents = {
-  change: (state: { canUndo: boolean; canRedo: boolean; }) => void;
-};
-```
-
-Emitted after every push, undo, redo and non-empty clear.
+| Event | Arguments | When |
+| --- | --- | --- |
+| `change` | `{ canUndo, canRedo }` | After every push, undo, redo and non-empty `clear()`. |
 
 ```ts
 document.history.on("change", ({ canUndo, canRedo }) => {

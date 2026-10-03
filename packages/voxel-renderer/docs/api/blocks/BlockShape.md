@@ -1,25 +1,13 @@
 # BlockShape
 
-`BlockShape` describes the render and collision geometry for one shape ID. The
-built-in implementations are listed in [built-in shapes](./built-in-shapes.md).
+A shape is the geometry a block draws and collides with, named by
+`BlockDefinition.shapeId`. Every `VoxelView` registers the built-in shapes in
+`view.shapes`; add your own with the `shapes` view option or
+`view.shapes.register()`. See
+[creating custom shapes](../../guides/creating-custom-shapes.md) for a full
+example.
 
 ```ts
-type BlockShapeID =
-  | "cube"
-  | "slabBottom"
-  | "slabTop"
-  | "poleY"
-  | "pole"
-  | "ramp"
-  | "rampCornerInner"
-  | "rampCornerOuter"
-  | "stair"
-  | "stairCornerInner"
-  | "stairCornerOuter"
-  | (string & {});
-
-type BlockCollisionHint = "box" | "trimesh" | "none";
-
 interface BlockShape {
   readonly id: BlockShapeID;
   readonly faces: readonly FaceDefinition[];
@@ -27,45 +15,112 @@ interface BlockShape {
 
   occludes(face: Face): boolean;
 }
+
+type BlockShapeID = "cube" | "slabBottom" | ... | (string & {});
+type BlockCollisionHint = "box" | "trimesh" | "none";
 ```
 
-Unknown shape IDs compile because of the open string member, but the mesh
-builder cannot resolve them unless they have been registered.
+`BlockShapeID` lists the built-in ids but accepts any string. A block naming
+an unregistered shape is not drawn.
 
-`occludes()` returns `true` when the shape completely covers the requested
-axis-aligned face. Partial shapes return `false` so the mesh builder does not
-remove visible neighbour geometry. Extend
-[`BlockShapeBase`](./BlockShapeBase.md) to have it derived from `faces`.
+`occludes(face)` returns `true` when the shape covers that whole side of its
+cell, which hides the neighbour's face against it. Return `false` for partial
+coverage: a wrong `true` removes visible geometry from the neighbour.
 
-## FaceDefinition
+`collisionHint` picks the collider a
+[`VoxelCollider`](../collision/VoxelCollider.md) builds: a box, a triangle mesh
+of the faces, or nothing.
 
-A face is written as a `FaceDescriptor` and resolved into a `FaceDefinition` by
-`defineFace()`. Only the descriptor has optional members, so everything reading
-a shape sees `uvs` and `cull` already settled.
+## Built-in shapes
+
+![Available block shapes](../../images/shapes.png)
+
+| Shape id | Class | Collision | Occludes | Texture slots |
+|---|---|---|---|---|
+| `cube` | `new Cube(id?)` | box | all | six faces |
+| `slabBottom` | `new Slab("bottom", id?)` | box | `NegY` | six faces |
+| `slabTop` | `new Slab("top", id?)` | box | `PosY` | six faces |
+| `poleY` | `new PoleY()` | trimesh | none | six faces |
+| `pole` | `new Pole()` | trimesh | none | six faces |
+| `ramp` | `new Ramp(id?)` | trimesh | `NegY`, `PosZ` | no `back` |
+| `rampCornerInner` | `new RampCornerInner(id?)` | trimesh | `NegY`, `PosZ`, `PosX` | six faces |
+| `rampCornerOuter` | `new RampCornerOuter(id?)` | trimesh | `NegY` | no `top` |
+| `stair` | `new Stair(id?)` | trimesh | `NegY`, `PosZ` | adds `top.1`, `back.1` |
+| `stairCornerInner` | `new StairCornerInner(id?)` | trimesh | `NegY`, `PosZ`, `PosX` | adds `left.1`, `top.1`, `back.1` |
+| `stairCornerOuter` | `new StairCornerOuter(id?)` | trimesh | `NegY` | adds `right.1`, `top.1`, `front.1` |
+
+`Slab` takes a `SlabType` (`"top" | "bottom"`, default `"bottom"`). The six
+face slots are `right`, `left`, `top`, `bottom`, `front` and `back`; see
+[texture slots](./BlockTextures.md#texture-slots).
+
+Ceiling ramps and upside-down stairs are the same shapes placed with
+`flipY: true`, see [`VoxelTransform`](../world/VoxelTransform.md).
+
+## BlockShapeBase
+
+```ts
+abstract class BlockShapeBase implements BlockShape {
+  abstract readonly id: BlockShapeID;
+  abstract readonly faces: readonly FaceDefinition[];
+  abstract readonly collisionHint: BlockCollisionHint;
+
+  occludes(face: Face): boolean;
+}
+
+function occlusionMaskOf(faces: readonly FaceDefinition[]): number;
+```
+
+Derives `occludes()` from `faces`: a side occludes when the faces lying on its
+boundary plane cover the whole unit square. Faces sharing a side must not
+overlap, or their areas add up and the side reports covered when it is not.
+Override `occludes()` when the geometry does not tell the truth, for example a
+full quad drawn through an alpha mask. `occlusionMaskOf()` returns the same
+answer as a bitmask indexed by `Face`. Every built-in shape extends this class.
+
+## BlockShapeRegistry
+
+```ts
+class BlockShapeRegistry implements Iterable<BlockShape> {
+  readonly version: number;
+
+  static createDefault(): BlockShapeRegistry;
+  register(shape: BlockShape): this;
+  registerMany(shapes: Iterable<BlockShape>): this;
+  get(id: BlockShapeID): BlockShape | undefined;
+  has(id: BlockShapeID): boolean;
+  getAll(): IterableIterator<BlockShape>;
+  ids(): IterableIterator<BlockShapeID>;
+}
+```
+
+`register()` replaces a shape with the same id. Iteration follows registration
+order. `version` increases on each registration. `createDefault()` returns a
+registry holding the built-in shapes.
+
+## Faces
 
 ```ts
 interface FaceDescriptor {
   face: Face;
-  normal: Vec3;
-  vertices: readonly Vec3[];
-  uvs?: readonly Vec2[];
+  normal: [number, number, number];
+  vertices: readonly [number, number, number][];
+  uvs?: readonly [number, number][];
   cull?: Face | null;
+  slot?: string;
 }
 
 interface FaceDefinition {
   readonly face: Face;
-  readonly normal: Vec3;
-  readonly vertices: readonly Vec3[];
-  readonly uvs: readonly Vec2[];
+  readonly normal: [number, number, number];
+  readonly vertices: readonly [number, number, number][];
+  readonly uvs: readonly [number, number][];
   readonly cull: Face | null;
+  readonly slot?: string | null;
   readonly span?: Readonly<TileSpan>;
 }
-```
 
-`face` selects the texture slot and the default culling direction. Vertices use
-normalized block space and a face may contain three or four of them. A quad is
-triangulated as `[0, 1, 2]` and `[0, 2, 3]`. `uvs` are in normalized tile
-space, one per vertex.
+function defineFace(descriptor: FaceDescriptor): FaceDefinition;
+```
 
 ```ts
 defineFace({
@@ -75,29 +130,41 @@ defineFace({
 });
 ```
 
+A face has three or four vertices in block space, `0` to `1` on each axis.
+`face` is the side it belongs to, which picks its texture slot and its default
+culling. `defineFace()` fills in `uvs`, `cull` and `span`. `slot` pins the
+face to a named texture slot, see
+[pinning a slot](./BlockTextures.md#pinning-a-slot).
+
+```ts
+const Face = {
+  PosX: 0, NegX: 1, PosY: 2, NegY: 3, PosZ: 4, NegZ: 5
+} as const;
+```
+
 ## Default culling
 
-An omitted `cull` is derived from the geometry: it becomes `face` when every
-vertex lies on that face's own boundary plane, and `null` otherwise. A face
-inset into the block (a `slabBottom` top at `y = 0.5`, a `pole` side at
-`x = 0.375`) or spanning several planes (a `ramp` slope) is never culled. A
-boundary face is hidden by an opaque neighbour whose touching faces cover it
-entirely, whether that is the whole boundary square or matching partial faces,
-such as two `ramp` sides or two `stair` sides.
+```ts
+interface FacePlacement {
+  face: Face;
+  vertices: readonly [number, number, number][];
+}
 
-`isBoundaryFace(placement)` reports whether a face qualifies and
-`defaultCullFace(placement)` returns the derived value; both read only `face`
-and `vertices`. Pass `cull` explicitly to override the derivation, `null` to
-disable culling, or another direction to cull against something other than the
-face's own.
+function isBoundaryFace(placement: FacePlacement): boolean;
+function defaultCullFace(placement: FacePlacement): Face | null;
+```
+
+When `cull` is omitted, a face whose vertices all lie on its side's boundary
+plane is culled against that side, and any other face is never culled.
+`defaultCullFace()` returns that value. Pass `cull: null` to never cull a
+face, or another side to cull against it instead.
 
 ## Face UV convention
 
-Every built-in shape states each face's UVs as the orthographic projection of
-its own vertices, seen from outside the block, with `u` growing to the viewer's
-right and `v` upward:
+When `uvs` is omitted, each vertex is projected onto its face, seen from
+outside the block, with `u` to the right and `v` up:
 
-| Slot | `u` | `v` |
+| Face | `u` | `v` |
 |---|---|---|
 | `PosX` | `1 - z` | `y` |
 | `NegX` | `z` | `y` |
@@ -106,47 +173,22 @@ right and `v` upward:
 | `PosZ` | `x` | `y` |
 | `NegZ` | `1 - x` | `y` |
 
-`PosY` and `NegY` have no natural upward direction, so their tile is keyed to
-the back of the block: the top of the tile is `z = 0`, and the bottom edge of
-`PosY`'s tile meets the top edge of `NegZ`'s. Reading them from the other side
-would turn both half a turn.
-
-A face therefore samples exactly the part of the tile its geometry covers: a
-`pole` side spans `u` `0.375` to `0.625` rather than the whole tile, and a
-`slabBottom` side spans `v` `0` to `0.5`. One texture then reads continuously
-across neighbouring blocks whatever their shapes, and the voxel-map UV editor
-can size each face's region from the shape alone.
-
+A face samples only the part of the tile it covers: a `pole` side spans `u`
+`0.375` to `0.625`, a `slabBottom` side spans `v` `0` to `0.5`. One texture
+therefore continues across neighbouring blocks of different shapes.
 `projectFaceUv(face, vertex)` and `faceUvs(face, vertices)` compute the
-projection, and `defineFace()` applies it to any descriptor that omits `uvs`.
-Pass an explicit `uvs` to opt a face out, for instance to repeat or rotate a
-tile deliberately.
+projection. Pass explicit `uvs` to repeat or rotate a tile on purpose.
 
 ## Slanted faces
 
-The projection flattens a slanted face: a ramp slope is `√2` blocks long but
-spans `v` `0` to `1`. `faceUvSpan(face, normal)` returns how many tiles the face
-really covers along `u` and `v`, `{ u: 1, v: √2 }` for a ramp slope and
-`{ u: 1, v: 1 }` for an axis-aligned face. `defineFace()` stores it as `span`,
-or `{ u: 1, v: 1 }` when the descriptor passes its own `uvs`.
-
-A face leaning along both axes, such as the `rampCornerInner` facet, is sheared
-rather than stretched and keeps `{ u: 1, v: 1 }`.
-
-## Face
-
 ```ts
-const Face = {
-  PosX: 0,
-  NegX: 1,
-  PosY: 2,
-  NegY: 3,
-  PosZ: 4,
-  NegZ: 5
-} as const;
-
-type Face = typeof Face[keyof typeof Face];
+function faceUvSpan(
+  face: Face,
+  normal: [number, number, number]
+): Readonly<TileSpan>;
 ```
 
-See [creating custom shapes](../../guides/creating-custom-shapes.md) for a
-complete registration example.
+A ramp slope is `√2` blocks long but its UVs span `0` to `1`. `faceUvSpan()`
+returns the tiles the face really covers, `{ u: 1, v: √2 }` for a ramp slope,
+and `defineFace()` stores it as `span`. A face given explicit `uvs`, or leaning
+along both axes, keeps `{ u: 1, v: 1 }`.

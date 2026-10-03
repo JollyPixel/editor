@@ -1,7 +1,18 @@
 # BlockSurface
 
-`BlockSurface` resolves the alpha and face-side settings on a block. It is
-exported from `@jolly-pixel/voxel.renderer` with these types:
+How a block treats texture alpha and which sides of its faces it draws. The
+settings sit on the [block definition](./BlockDefinition.md) and apply to the
+whole block.
+
+```ts
+document.defineBlock({
+  id: 4,
+  name: "Leaves",
+  shapeId: "cube",
+  alphaMode: "mask",
+  alphaCutoff: 0.5
+});
+```
 
 ```ts
 type BlockAlphaMode = "opaque" | "mask" | "blend";
@@ -26,62 +37,18 @@ class BlockSurface {
 
 | Setting | Default | Behavior |
 |---|---|---|
-| `alphaMode` | `"opaque"` | Ignores texture alpha. `"mask"` discards uncovered texels; `"blend"` preserves fractional alpha. |
-| `side` | `"front"` for opaque, `"double"` otherwise | Shows outward faces only, or both outward and inward faces. |
-| `alphaCutoff` | `0.1` for mask, `0` otherwise | Mask texels below the cutoff are discarded. |
-| `materialGroup` | None | Gives the block its own chunk material on the same atlas, shared with every block naming the same group. |
-| `occludes` | Derived | True only for opaque surfaces; the shape still determines which boundaries are covered. |
+| `alphaMode` | `"opaque"` | `"opaque"` ignores texture alpha. `"mask"` discards texels below the cutoff. `"blend"` keeps fractional alpha and writes no depth. |
+| `side` | `"front"` for opaque, `"double"` otherwise | Draw the outer side of faces only, or both sides. |
+| `alphaCutoff` | the view's `rendering.alphaTest` (`0.1`) for mask, `0` otherwise | Mask threshold, `0` to `1`. |
+| `materialGroup` | none | Gives the block its own material on the same atlas, see [`MaterialGroup`](../materials/MaterialGroup.md). Each group adds a draw call per chunk. |
+| `occludes` | derived | `true` for opaque surfaces only. The shape still decides which sides are covered. |
 
-The instance is frozen. Invalid modes, sides, non-finite cutoffs outside
-`[0, 1]`, or an empty or non-string material group throw `RangeError`. Cutoffs are validated even for modes that do not
-use them. `BlockRegistry.register()` validates the same settings.
+Constructing a `BlockSurface` resolves those defaults, with `0.1` as the mask
+cutoff. The instance is frozen. An unknown mode or side, a cutoff that is not
+finite or outside `0` to `1`, or an empty material group throws `RangeError`;
+`BlockRegistry.register()` applies the same checks.
 
-`VoxelViewOptions.rendering.alphaTest` supplies the cutoff for mask blocks
-without an explicit `alphaCutoff`. Constructing `BlockSurface` directly uses `0.1`.
-Registry definitions retain optional settings; construct a surface when you
-need their resolved defaults.
-
-These settings apply to the whole block. Texture slots select tiles but do
-not override the surface policy. [`cullCoveredFaces`](./BlockDefinition.md)
-independently controls the faces a neighbour covers.
-
-A material group lets one atlas carry materials tuned apart. Declaring the
-group's finish in the document makes it travel with the map:
-
-```ts
-const document = new VoxelDocument({
-  blocks: [
-    { id: 1, name: "Sandstone", shapeId: "cube", defaultTexture },
-    { id: 2, name: "Gold", shapeId: "cube", defaultTexture, materialGroup: "gold" }
-  ],
-  materialGroups: [
-    { id: "gold", roughness: 0.35, metalness: 1 }
-  ]
-});
-```
-
-See [MaterialGroup](../materials/MaterialGroup.md). The `rendering.customizer`
-also receives the surface, so host code can still read the group:
-
-```ts
-const view = new VoxelView(document, {
-  rendering: {
-    material: "standard",
-    customizer(material, _tilesetId, surface) {
-      if (
-        material instanceof THREE.MeshStandardMaterial &&
-        surface.materialGroup === "gold"
-      ) {
-        material.metalness = 1;
-      }
-    }
-  }
-});
-```
-
-Each group adds a draw call per chunk.
-
-The legacy block property `transparent` has been removed. Use
-`alphaMode: "blend"` for smooth transparency, or `alphaMode: "mask"` for
-cutout foliage and grates. Three.js material `transparent` remains an
-internal rendering setting.
+Overlapping blended surfaces need a
+[`VoxelTransparencyPassNode`](../core/VoxelTransparencyPassNode.md) to
+composite correctly. Which covered faces a block keeps is set separately by
+[`cullCoveredFaces`](./BlockDefinition.md#covered-faces).

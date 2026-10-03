@@ -1,188 +1,87 @@
 # VoxelChunk
 
-Fixed-size, sparse 3D grid of voxel data. Chunk coordinates `(cx, cy, cz)` are in
-**chunk space**. Multiply by `chunkSize` to get the world-space origin.
+A cube of `size³` voxel cells inside a [`VoxelLayer`](./VoxelLayer.md). Custom
+[colliders](../collision/VoxelCollider.md) receive chunks in
+`VoxelChunkCollision.chunks`; other code reads voxels through
+[`VoxelWorld`](./VoxelWorld.md).
 
 ```ts
-const DEFAULT_CHUNK_SIZE = 16;
+const collider: VoxelCollider = {
+  rebuildChunk(key, { origin, chunks }) {
+    for (const chunk of chunks) {
+      for (const [index, packed] of chunk.packedEntries()) {
+        const { lx, ly, lz } = chunk.fromLinearIndex(index);
+        const blockId = voxelBlockId(packed);
+        // cell at origin + (lx, ly, lz)
+      }
+    }
+  },
+  removeChunk(key) {},
+  dispose() {}
+};
 ```
 
-## Storage
+## Coordinates
 
-Voxels are stored as packed 32-bit integers in a [`VoxelStore`](./VoxelStore.md), not as
-`{ blockId, transform }` objects. Keys and values live in typed arrays, avoiding one
-heap object per stored voxel.
+`cx`, `cy` and `cz` are chunk coordinates in the layer. Multiplied by `size`
+they give the chunk origin in layer-local space; add `layer.position` for world
+space. Methods take local coordinates `lx`, `ly`, `lz` in `0..size - 1`.
 
-Two consequences for callers:
+## Properties
 
-- `get()`, `getAt()` and `entries()` **rebuild** a `VoxelEntry` on each call. They no
-  longer return the object that was written, so compare with a deep equality check,
-  never `===`.
-- Block ids must fit in 23 bits (`1..MAX_BLOCK_ID`, 8 388 607). `packVoxel()` throws a
-  `RangeError` above that rather than truncating silently, and on id `0`, which is
-  air and has no packed form (see [air](../blocks/BlockDefinition.md#air)).
+| Property | Type | Description |
+| --- | --- | --- |
+| `cx`, `cy`, `cz` | `number` | Chunk coordinates. |
+| `size` | `number` | Side length in voxels, a power of two. Default `DEFAULT_CHUNK_SIZE` (16). |
+| `voxelCount` | `number` | Stored voxels. |
 
-The `Packed` variants below skip the object entirely and are what the mesh builders
-use.
+## Methods
 
-### Packed voxel values
+#### `getAt(lx: number, ly: number, lz: number): VoxelEntry | undefined`
 
-Chunks encode a block ID and transform byte in one non-negative 32-bit integer.
+The voxel at a local position, or `undefined` for air. Each call returns a new
+object, so compare entries by value.
+
+#### `getPackedAt(lx: number, ly: number, lz: number): PackedVoxel`
+
+Same lookup without allocating. Returns `VOXEL_ABSENT` for air.
+
+#### `entries(): IterableIterator<[number, VoxelEntry]>`
+
+#### `packedEntries(): IterableIterator<[number, PackedVoxel]>`
+
+Every stored voxel with its linear index.
+
+#### `fromLinearIndex(index: number): { lx: number; ly: number; lz: number }`
+
+#### `linearIndex(lx: number, ly: number, lz: number): number`
+
+Convert between local coordinates and the linear index the iterators yield.
+
+#### `countBlocks(): ReadonlyMap<number, number>`
+
+Voxel count per block id. Do not mutate the returned map.
+
+#### `isEmpty(): boolean`
+
+## Packed voxels
+
+Packed reads return a block id and a transform byte in one non-negative
+integer.
 
 ```ts
 type PackedVoxel = number;
 
-const MAX_BLOCK_ID: number; // 8_388_607
-const VOXEL_ABSENT: number; // -1
+const VOXEL_ABSENT = -1;
+const MAX_BLOCK_ID = 8_388_607;
+const DEFAULT_CHUNK_SIZE = 16;
 
-function packVoxel(
-  blockId: number,
-  transform: number
-): PackedVoxel;
-
+function packVoxel(blockId: number, transform: number): PackedVoxel;
 function unpackVoxel(packed: PackedVoxel): VoxelEntry;
 function voxelBlockId(packed: PackedVoxel): number;
 function voxelTransform(packed: PackedVoxel): number;
 ```
 
-`packVoxel()` stores the transform in bits 0 through 7 and the block ID in bits
-8 through 30. Only the low five transform bits carry meaning; decode them with
-[`VoxelTransform`](./VoxelTransform.md). It throws `RangeError` for air (`0`), a negative ID, or an ID
-greater than `MAX_BLOCK_ID`.
-
-`VOXEL_ABSENT` is returned by packed read methods when no voxel exists. Every
-stored `PackedVoxel` is non-negative, so `packed < 0` is a valid absence check.
-
-## Constructor
-
-```ts
-new VoxelChunk(
-  [cx, cy, cz]: [number, number, number],
-  size?: number
-)
-```
-
-> [!NOTE]
-> Chunk has a default size of 16. `size` must be a power of two because
-> `linearIndex()` composes the three local coordinates into disjoint bit fields.
-> Anything else throws a `RangeError`.
-
-## Properties
-
-```ts
-class VoxelChunk {
-  readonly cx: number;
-  readonly cy: number;
-  readonly cz: number;
-
-  // side length in voxels, always a power of two
-  readonly size: number;
-  // log2(size) and size - 1, for callers doing their own index math
-  readonly shift: number;
-  readonly mask: number;
-
-  // set true on any write; cleared by VoxelView when the chunk is queued
-  // for rebuild, so an edit during the rebuild is not swallowed
-  dirty: boolean;
-
-  // reports every later dirty change, and dirty right away when already set;
-  // VoxelLayer uses it to track its dirty chunks
-  onDirtyChange(listener: VoxelChunkDirtyListener): () => void;
-
-  readonly voxelCount: number;
-
-  // incremented on every write that reaches the store; never reset
-  readonly revision: number;
-
-  // low-level backing storage; prefer the chunk accessors
-  readonly store: VoxelStore;
-}
-```
-
-## Methods
-
-### `onDirtyChange(listener: VoxelChunkDirtyListener): () => void`
-
-Subscribes to dirty-state changes without replacing other listeners. An already
-dirty chunk immediately calls the listener with `true`. The returned function
-removes that listener only; the layer's dirty tracking remains active.
-
-```ts
-type VoxelLinearCoords = [number, number, number];
-```
-
-### `get(coords: VoxelLinearCoords): VoxelEntry | undefined`
-
-### `getAt(lx: number, ly: number, lz: number): VoxelEntry | undefined`
-
-Same lookup as `get()` without the tuple.
-
-### `getPackedAt(lx: number, ly: number, lz: number): PackedVoxel`
-
-Allocation-free lookup returning the packed integer, or `VOXEL_ABSENT` (`-1`) when the
-position is empty. This is what the mesh builder calls once per voxel face.
-
-### `set(coords: VoxelLinearCoords, entry: VoxelEntry): void`
-
-### `setPackedAt(lx: number, ly: number, lz: number, packed: PackedVoxel): void`
-
-### `loadPackedEntries(cells: ArrayLike<number>, voxels: ArrayLike<PackedVoxel>): void`
-
-Write `voxels` at the linear indices in `cells`, reserving storage once and
-widening the bounds from the indices. Indices must be below `size³`.
-
-### `mayContain(lx: number, ly: number, lz: number): boolean`
-
-`false` when the position is provably empty, using a conservative bounding box
-of every written voxel. A `true` result still needs a `getAt()` to confirm.
-The box only grows. `delete()` never shrinks it, so the result stays valid at
-the cost of becoming loose after erasures.
-
-### `delete(coords: VoxelLinearCoords): boolean`
-
-Removes the voxel and returns `true`; returns `false` when the position was already
-empty.
-
-### `isEmpty(): boolean`
-
-### `clone(): VoxelChunk`
-
-A detached copy holding the same coordinates, size, voxels and conservative
-bounds. The copy owns its storage, so writing to it never reaches the source.
-It is always returned `dirty`, so a renderer meshes it on the next tick.
-
-### `copyFrom(source: VoxelChunk): void`
-
-Replaces the voxel storage and conservative bounds with those from `source`.
-The chunk keeps its identity and becomes dirty. The source remains independent.
-Both chunks must have the same size.
-
-### `countBlocks(): ReadonlyMap<number, number>`
-
-Voxel count per block id; the transform is ignored. The histogram is cached
-against `revision` and rebuilt by the first call after a write, so repeated
-calls on an unchanged chunk return the same map. Do not mutate it.
-
-### `entries(): IterableIterator<[number, VoxelEntry]>`
-
-Iterates all stored entries as `[linearIndex, VoxelEntry]` pairs. Allocates a tuple and
-an entry object per voxel.
-
-### `packedEntries(): IterableIterator<[number, PackedVoxel]>`
-
-Same walk, yielding the packed integer instead of an entry object.
-
-### `linearIndex(lx: number, ly: number, lz: number): number`
-
-Converts local chunk coordinates to the flat key used for sparse storage.
-
-### `fromLinearIndex(idx: number): { lx: number; ly: number; lz: number }`
-
-Inverse of `linearIndex`.
-
-### `toString(): string`
-
-Returns the chunk key as `"cx,cy,cz"`.
-
-The low-level sparse backing store has a separate
-[`VoxelStore`](./VoxelStore.md) reference.
+`packVoxel()` throws a `RangeError` for air (`0`), a negative id, or an id
+above `MAX_BLOCK_ID`. Any packed value below zero means no voxel. Decode the
+transform byte with [`VoxelTransform`](./VoxelTransform.md).

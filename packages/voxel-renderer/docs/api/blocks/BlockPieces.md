@@ -1,12 +1,11 @@
 # BlockPieces
 
-Textured single-block geometry for previews and ghosts: a library thumbnail,
-a block under the cursor, a template being placed. Tile UVs go through the
-chunk mesher's path, so tile rotation and the `$missing` fallback look the
+Textured geometry of a single block, for thumbnails, a block under the cursor
+or a template being placed. Tile rotation and the `$missing` tileset look the
 same as in the world.
 
 ```ts
-import { BlockPieces } from "@jolly-pixel/voxel.renderer";
+import { BlockPieces, VoxelTransform } from "@jolly-pixel/voxel.renderer";
 
 const pieces = new BlockPieces({
   shapes: view.shapes,
@@ -39,24 +38,32 @@ interface BlockPiece {
 class BlockPieces {
   constructor(options: BlockPiecesOptions);
 
-  pieceOf(block: ResolvedBlockDefinition, transform?: VoxelTransform): BlockPiece | null;
-  geometryOf(block: ResolvedBlockDefinition, transform?: VoxelTransform): THREE.BufferGeometry | null;
+  pieceOf(
+    block: ResolvedBlockDefinition,
+    transform?: VoxelTransform
+  ): BlockPiece | null;
+  geometryOf(
+    block: ResolvedBlockDefinition,
+    transform?: VoxelTransform
+  ): THREE.BufferGeometry | null;
   textureOf(block: ResolvedBlockDefinition): THREE.Texture | null;
   emptySlotsOf(block: ResolvedBlockDefinition): string[];
   clear(): void;
 }
 ```
 
-`geometryOf()` builds a new indexed geometry in block space, `0` to `1` on each
-axis, with one group per [texture slot](./shapeSlots.md). A slot's group uses
-material index `BLOCK_PIECE_EMPTY_GROUP` when `emptyTile` reports its tile as
-empty, and `BLOCK_PIECE_TEXTURED_GROUP` otherwise. Without a probe, a slot with
-no tile is the only empty one. It returns `null` for an unknown shape. The
-caller owns the geometry.
+`geometryOf()` returns a new geometry in block space, `0` to `1`, with one
+group per [texture slot](./BlockTextures.md#texture-slots). A slot whose tile
+`emptyTile` reports empty uses material index `BLOCK_PIECE_EMPTY_GROUP`, the
+others `BLOCK_PIECE_TEXTURED_GROUP`. Without a probe, only a slot with no tile
+is empty. It returns `null` for an unknown shape, and the caller owns the
+result.
 
-`textureOf()` is the atlas texture of the block's default tileset, or the
-`$missing` texture when that tileset is not declared.
+`emptySlotsOf()` lists the slots `geometryOf()` puts in the empty group.
 
-`pieceOf()` caches a piece per block object and transform, and owns its
+`textureOf()` returns the atlas texture of the tileset `defaultTexture` names,
+or the `$missing` texture when that tileset is not declared.
+
+`pieceOf()` caches one piece per block object and transform, and owns its
 geometry: do not dispose or transform it. The cache empties when the atlases
-change; `clear()` empties it and disposes every cached geometry.
+change. `clear()` empties it and disposes the cached geometries.

@@ -49,7 +49,7 @@ layer changes, and edits along a chunk boundary can mark chunks dirty.
 ### Voxel Layer
 
 A named, ordered collection of voxels. A voxel layer has its own visibility
-and world-space offset, and divides its voxel data into chunks.
+and world-space position, and divides its voxel data into chunks.
 
 ### Layer Rank
 
@@ -76,10 +76,11 @@ A named group of voxels saved with the world and never drawn. Placing a
 template copies its voxels into a voxel layer around its pivot, optionally
 turned or mirrored; the placed voxels keep no link to the template.
 
-### Layer Offset
+### Layer Position
 
-A world-space translation applied to every voxel in one layer. Changing the
-offset moves the layer without rewriting its stored voxel positions.
+The world-space location of a layer's local origin, applied to every voxel in
+the layer. Changing the position moves the layer without rewriting its stored
+voxel positions.
 
 ## Blocks and appearance
 
@@ -108,8 +109,8 @@ and may take part in occlusion.
 ### Transparent Block
 
 A block whose texture may contain visible holes, such as leaves or a grate. It
-does not hide a neighboring block face, except when the same transparent block
-fully covers their shared face.
+does not hide a neighboring block face. Faces shared by two voxels of the same
+transparent block are kept unless the block sets `cullCoveredFaces: true`.
 
 ### Tileset
 

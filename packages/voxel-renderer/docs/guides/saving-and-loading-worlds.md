@@ -1,30 +1,49 @@
 # Saving and loading worlds
 
-`VoxelDocument.save()` returns plain JSON containing layers, objects and the
-linked tileset definitions. Blocks are not part of it: a world only stores
-the ids its tilesets project, so save the block definitions with the tileset
-they belong to (see [`TilesetDocument`](../api/tilesets/TilesetDocument.md))
-or define them in code.
+## Loading tilesets
+
+Fetch tileset images before constructing the view, so no asynchronous work
+runs inside ECS lifecycle methods:
 
 ```ts
-const snapshot = sourceDocument.save();
+import {
+  VoxelDocument,
+  VoxelView,
+  loadTilesets
+} from "@jolly-pixel/voxel.renderer";
 
-localStorage.setItem(
-  "map",
-  JSON.stringify(snapshot)
-);
+const document = new VoxelDocument();
+const view = new VoxelView(document, {
+  tilesets: await loadTilesets([
+    { id: "default", src: "tileset.png", tileSize: 16 }
+  ])
+});
 ```
 
-Load the snapshot's textures before restoring it:
+Tile references without a `tilesetId` use the first declared tileset.
+
+## Saving
+
+`VoxelDocument.save()` returns plain JSON with the layers, object layers,
+templates and the declared tilesets. Blocks are not saved with the world:
+save them with the tileset they belong to (see
+[`TilesetDocument`](../api/tilesets/TilesetDocument.md)) or define them in
+code.
 
 ```ts
-const snapshot = JSON.parse(
-  localStorage.getItem("map")!
-) as VoxelWorldJSON;
+localStorage.setItem("map", JSON.stringify(document.save()));
+```
 
-const document = new VoxelDocument({
-  chunkSize: snapshot.chunkSize
-});
+## Loading
+
+Fetch the snapshot's atlases, then load it through the view:
+
+```ts
+const snapshot = parseVoxelWorld(
+  JSON.parse(localStorage.getItem("map")!)
+);
+
+const document = new VoxelDocument({ chunkSize: snapshot.chunkSize });
 const view = new VoxelView(document, {
   tilesets: await loadTilesets(snapshot.tilesets)
 });
@@ -32,17 +51,31 @@ const view = new VoxelView(document, {
 view.load(snapshot);
 ```
 
-Passing `snapshot.chunkSize` keeps the saved chunk layout. A document with
-another chunk size loads the snapshot too, and re-partitions its voxels.
+Passing `snapshot.chunkSize` keeps the saved chunk layout; another chunk size
+works too and re-partitions the voxels. `parseVoxelWorld()` validates an
+unknown value and throws `InvalidVoxelWorldError` on a malformed one.
 
-Every referenced tileset must be registered by the time `load()` applies the
-snapshot. The load leaves the block registry alone, so define or project the
-blocks the voxels reference before rendering; a voxel whose block is unknown
-is skipped until its definition arrives.
+When the view already exists, fetch only the atlases it lacks and pass them to
+`load()`:
 
-Use `parseVoxelWorld()` before treating an unknown JavaScript value as a
-saved world. Use `encodeVoxelWorld()` and `decodeVoxelWorld()` when a
-storage or network boundary works with bytes.
+```ts
+const missing = snapshot.tilesets.filter(
+  (definition) => !view.atlases.get(definition.id)
+);
 
-The [serialization reference](../api/serialization/serialization.md) documents
-the JSON schema, validation, and codec errors.
+view.load(snapshot, {
+  tilesets: await loadTilesets(missing)
+});
+```
+
+A tileset the snapshot declares without an atlas logs a warning, and its faces
+stay hidden until `view.loadTileset()` registers it.
+
+`load()` leaves the block registry alone. Define or project the blocks the
+voxels use; a voxel whose block is unknown is not drawn until its definition
+arrives.
+
+Use `encodeVoxelWorld()` and `decodeVoxelWorld()` when storage or the network
+works with bytes. See the
+[serialization reference](../api/serialization/serialization.md) for the
+format and its errors.

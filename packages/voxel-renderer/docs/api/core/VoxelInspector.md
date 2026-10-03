@@ -1,353 +1,125 @@
 # VoxelInspector
 
-[`VoxelView.inspector`](./VoxelView.md#properties) exposes a `VoxelInspector`:
-live mesh statistics, block statistics read from the world, an optional
-wireframe view of the geometry the mesh builder produced, and an outline of
-every chunk boundary.
+Debug views and statistics of a [`VoxelView`](./VoxelView.md), exposed as
+`view.inspector`: a wireframe of the meshed chunks, chunk outlines, mesh
+counters and block usage.
 
 ```ts
-import { VoxelDocument, VoxelView } from "@jolly-pixel/voxel.renderer";
-
-const document = new VoxelDocument({ layers: ["Ground"] });
-const view = new VoxelView(document);
-
-// Draw the wireframe over the textured chunks.
 view.inspector.mode = "overlay";
+view.inspector.chunkBounds = true;
 
 const { faces, culledFaces, triangles } = view.inspector.mesh.stats;
-console.log(`${faces} faces, ${culledFaces} culled, ${triangles} triangles`);
-
 const { voxels, unusedBlocks } = view.inspector.blocks.stats;
-console.log(`${voxels} voxels, ${unusedBlocks.length} unused blocks`);
 ```
 
-Mesh counters are collected on every chunk build, whatever the mode; only the
-wireframe has an additional rendering cost.
+## Options
 
-## API
+Passed as `VoxelViewOptions.inspector`.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `mode` | `"off"` | Initial [mode](#modes). |
+| `color` | `0x66FF99` | Wireframe colour. |
+| `opacity` | `0.5` | Wireframe opacity; `1` disables blending. |
+| `chunkBounds` | `false` | Outline every chunk. |
+| `chunkBoundsColor` | `0xFF3B30` | |
+
+## Properties
 
 ```ts
-class VoxelInspector {
-  mode: VoxelInspectorMode;
-  enabled: boolean;
-  chunkBounds: boolean;
-  readonly mesh: VoxelMeshInspector;
-  readonly blocks: VoxelBlockInspector;
-  readonly metrics: readonly VoxelMetric[];
+mode: "off" | "overlay" | "wireframe";
+enabled: boolean;
+chunkBounds: boolean;
+readonly mesh: { readonly stats: VoxelMeshStats };
+readonly blocks: VoxelBlockInspector;
+readonly metrics: readonly VoxelMetric[];
 
-  constructor(
-    context: VoxelInspectorContext,
-    options?: VoxelInspectorOptions
-  );
-  nextMode(): VoxelInspectorMode;
-  registerChunk(
-    key: string,
-    meshes: readonly THREE.Mesh[],
-    stats: MeshBuildStats,
-    bounds?: InspectedChunkBounds | null
-  ): void;
-  unregisterChunk(key: string): void;
-  clear(): void;
-  dispose(): void;
-}
-
-interface VoxelInspectorContext {
-  parent: THREE.Object3D;
-  solids: THREE.Object3D; // group of the textured chunk meshes
-  world: VoxelWorld;
-  blockRegistry: BlockRegistry;
-}
-
-interface VoxelMeshInspector {
-  readonly stats: VoxelMeshStats;
-}
-
-interface VoxelMetric {
-  id: string;
-  label: string;
-  unit?: "count" | "decimal" | "ms" | "percent" | "bytes";
-  better?: "higher" | "lower";
-  group?: string;
-  tile?: boolean;
-  sample(): number;
-}
-
-interface InspectedChunkBounds {
-  readonly origin: Readonly<THREE.Vector3Like>;
-  readonly size: number;
-}
+nextMode(): VoxelInspectorMode;
 ```
-
-`VoxelView` builds its inspector with its own `root` and the document's `world`
-and `blocks`; the view groups are attached under `parent`.
-
-`registerChunk()` copies the supplied statistics. Re-registering a key replaces
-its meshes and counters. `unregisterChunk()` ignores unknown keys. `clear()`
-removes all tracked chunks, overlays and boundary boxes; `dispose()` also
-releases the inspector materials and the boundary geometry. `bounds` is copied
-when registered; a chunk registered without it is still counted but never
-outlined.
 
 ## Modes
 
 | Mode | Effect |
-|---|---|
-| `"off"` (default) | chunks render normally, nothing is added to the scene graph |
-| `"overlay"` | a wireframe copy is drawn over the textured chunks |
-| `"wireframe"` | the textured chunks are hidden, leaving only the wireframe |
+| --- | --- |
+| `"off"` | Chunks render normally. |
+| `"overlay"` | A wireframe is drawn over the textured chunks. |
+| `"wireframe"` | Only the wireframe is drawn. |
 
-Wireframes reuse the chunk geometries. Switching modes never re-meshes
-anything and costs no extra vertex memory, only one draw call per chunk mesh.
-While a mode other than `"off"` is active, a `THREE.Group` named
-`"VoxelInspector"` holds them under `view.root`.
+Switching modes never remeshes. `nextMode()` cycles through the three and
+returns the new mode. `enabled = true` selects `"overlay"`, `false` selects
+`"off"`.
 
-```ts
-// Cycle off → overlay → wireframe → off, e.g. from a keybinding.
-window.addEventListener("keydown", (event) => {
-  if (event.code === "KeyG") {
-    view.inspector.nextMode();
-  }
-});
-
-// Booleans work too: `enabled = true` selects "overlay".
-view.inspector.enabled = false;
-```
-
-The initial state comes from `VoxelViewOptions.inspector`:
-
-```ts
-interface VoxelInspectorOptions {
-  /** @default "off" */
-  mode?: VoxelInspectorMode;
-  /** @default 0x66FF99 */
-  color?: THREE.ColorRepresentation;
-  /** Wireframe opacity, `1` disables blending. @default 0.5 */
-  opacity?: number;
-  /** Outlines every registered chunk. @default false */
-  chunkBounds?: boolean;
-  /** @default 0xFF3B30 */
-  chunkBoundsColor?: THREE.ColorRepresentation;
-}
-```
-
-## Chunk bounds
-
-`chunkBounds` outlines the boundary of every registered chunk. It is
-independent of `mode`: the outlines show over normally rendered chunks, over
-the wireframe overlay, or on their own.
-
-```ts
-const view = new VoxelView(document, {
-  inspector: { chunkBounds: true }
-});
-
-// Or at any time.
-view.inspector.chunkBounds = true;
-```
-
-Each box is a `THREE.LineSegments` sharing one unit-cube edge geometry and one
-material, positioned on the chunk origin and scaled to the chunk size, so the
-cost is a draw call per chunk and nothing else. They live in a `THREE.Group`
-named `"VoxelInspector:chunkBounds"` under `view.root`, attached only while
-the flag is on.
-
-A box follows the chunk it outlines. A chunk hidden by the
-[view distance](../world/ViewDistance.md) under the `"hide"` policy loses its
-box until it comes back, and one disposed under `"unload"` loses it with the
-mesh, so the outlines never outlive what they wrap. A chunk that produced no
-geometry is outlined, so allocated but empty chunks stay visible.
-
-The lines are drawn with `depthTest: false` and a high `renderOrder`. Chunk
-edges are coplanar with the voxel faces on the border, and most boxes sit
-inside solid terrain, so depth-tested lines would z-fight and stay invisible
-underground.
+`chunkBounds` outlines each meshed chunk, independently of `mode`. The outlines
+are drawn on top of the scene and follow chunks hidden or unloaded by the
+[view distance](../world/ViewDistance.md).
 
 ## Mesh statistics
 
-`inspector.mesh.stats` sums the last build of every retained chunk, so it
-follows chunk rebuilds, layer removals and `load()` without ever being stale.
-It describes what was meshed: chunks not built yet, or unloaded by the view
-distance, are missing from it. Use [block statistics](#block-statistics) to
-count what the world stores.
+`mesh.stats` sums the last build of every meshed chunk. Chunks not built yet,
+or unloaded by the view distance, are not counted.
 
-```ts
-interface VoxelMeshStats {
-  /** Chunks the mesh builder processed, including those emitting no face. */
-  chunks: number;
-  /** Chunks hidden by the view distance; counted in every total above. */
-  culledChunks: number;
-  /** Chunk meshes attached to the scene graph, i.e. one draw call each. */
-  meshes: number;
-  /** Voxels visited. */
-  voxels: number;
-  /** Voxels skipped because a higher-priority layer covers the position. */
-  hiddenVoxels: number;
-  /** Faces written to a geometry. */
-  faces: number;
-  /** Faces skipped because an opaque neighbour occludes them. */
-  culledFaces: number;
-  vertices: number;
-  triangles: number;
-  /** faces / (voxels - hiddenVoxels). */
-  facesPerSolidVoxel: number;
-  /** Vertex attributes emitted, in bytes per vertex; indices excluded. */
-  bytesPerVertex: number;
-  /** GPU data of the live chunk geometries: attributes, indices, face records. */
-  bytes: number;
-  /** Sum of the last build time of every live chunk, not a frame cost. */
-  buildTimeMs: number;
-}
-```
-
-`faces + culledFaces` is the number of face candidates, which makes the culling
-ratio directly readable:
-
-```ts
-const { faces, culledFaces } = view.inspector.mesh.stats;
-const ratio = (culledFaces / (faces + culledFaces)) * 100;
-```
-
-The derived figures are the ones worth watching for regressions:
-
-- `facesPerSolidVoxel` rises when culling stops hiding faces between
-  neighbours. If it does, inspect the occlusion masks of the blocks in the
-  measured chunks.
-- `bytesPerVertex` is read off the emitted face records, not off a constant, so
-  a record that quietly widens shows up here with no code change needed. The
-  current layout reports 2: one 8-byte
-  [face record](../../concepts/rendering-and-meshing.md#vertex-pulling) per
-  four-corner quad.
-- `bytes` is what those geometries upload: the face records plus the shared
-  four-corner quad.
-
-`MeshBuildStats` holds the counters for a single chunk build. `VoxelInspector`
-keeps a copy per chunk key and aggregates them on demand.
-
-```ts
-class MeshBuildStats {
-  voxels: number;
-  hiddenVoxels: number;
-  faces: number;
-  culledFaces: number;
-  vertices: number;
-  triangles: number;
-  geometries: number;
-  bytesPerVertex: number;
-  bytes: number;
-  buildTimeMs: number;
-
-  readonly facesPerSolidVoxel: number;
-
-  reset(): void;
-  copyFrom(source: MeshBuildStats): void;
-  clone(): MeshBuildStats;
-}
-```
-
-All counters start at `0`. `facesPerSolidVoxel` is `faces` divided by
-`voxels - hiddenVoxels`; it returns `0` when no voxel contributed geometry.
-`reset()` clears the instance. `copyFrom()` replaces every field with another
-instance's counters, and `clone()` returns an independent copy.
+| Field | Description |
+| --- | --- |
+| `chunks` | Chunks meshed, including those with no face. |
+| `culledChunks` | Of those, chunks hidden by the view distance. |
+| `meshes` | Chunk meshes in the scene, one draw call each. |
+| `voxels` | Voxels visited. |
+| `hiddenVoxels` | Voxels covered by a higher layer. |
+| `faces` | Faces drawn. |
+| `culledFaces` | Faces hidden by an opaque neighbour. |
+| `vertices`, `triangles` | |
+| `facesPerSolidVoxel` | `faces / (voxels - hiddenVoxels)`; `0` when nothing was drawn. |
+| `bytesPerVertex` | Vertex attribute bytes per vertex, indices excluded. |
+| `bytes` | GPU memory of the chunk geometries. |
+| `buildTimeMs` | Sum of each chunk's last build time, not a frame cost. |
 
 ## Metrics
 
-`inspector.metrics` describes the same counters as metric definitions a
-performance recorder can sample, so a host displays them without restating a
-label, a unit or a derived ratio.
+`metrics` lists the same counters as metric definitions for a performance
+recorder. `VoxelMetric` is compatible with `MetricDefinition` from
+`@jolly-pixel/ui/stats`.
 
 ```ts
 runtime.metrics.addSource(view.inspector);
 ```
 
-`VoxelMetric` is declared by this package and matched structurally, so nothing
-here depends on a UI library. It is compatible with `MetricDefinition` of
-`@jolly-pixel/ui/stats`, which `test/view/inspector/VoxelMetric.tst.ts` pins.
-
 | Metric | Unit | Value |
-|---|---|---|
+| --- | --- | --- |
 | `chunks` | count | `mesh.stats.chunks` |
 | `meshes` | count | `mesh.stats.meshes` |
 | `voxels` | count | `mesh.stats.voxels` |
 | `faces` | count | `mesh.stats.faces` |
 | `meshTriangles` | count | `mesh.stats.triangles` |
-| `culledFaces` | percent | culled share of every candidate face |
+| `culledFaces` | percent | `culledFaces / (faces + culledFaces)`, `0` before any build |
 | `facesPerVoxel` | decimal | `mesh.stats.facesPerSolidVoxel` |
 | `meshMemory` | bytes | `mesh.stats.bytes` |
 | `buildTimeMs` | ms | `mesh.stats.buildTimeMs` |
 
-The culled share is the ratio described above, and is `0` before anything is
-built. Every metric samples the live statistics, so one registration keeps
-following rebuilds. They are filed under the `voxel` group and set
-`tile: false`, which keeps them in a full readout rather than in a HUD
-cycling one metric at a time.
+All metrics are in the `voxel` group with `tile: false`.
 
 ## Block statistics
 
-`inspector.blocks` reads the voxels stored in `document.world` and joins them
-with `document.blocks`. Results are computed on each call and follow
-edits, remote commands and `load()` immediately, with no rebuild needed.
+`blocks` counts the voxels stored in `document.world` per block, including
+hidden layers and covered voxels. Results are computed on each call.
 
 ```ts
-class VoxelBlockInspector {
-  readonly stats: VoxelBlockStats;
-
-  constructor(options: {
-    world: VoxelWorld;
-    blockRegistry: BlockRegistry;
-  });
-  usageOf(blockId: number): VoxelBlockUsage;
-  tilesetUsageOf(tilesetId: string): VoxelTilesetUsage;
-}
-
-interface VoxelBlockStats {
-  voxels: number;
-  layers: VoxelLayerBlockStats[];
-  blocks: Map<number, number>;
-  unusedBlocks: number[];
-  orphanBlocks: number[];
-  orphanVoxels: number;
-}
-
-interface VoxelLayerBlockStats {
-  layerName: string;
-  voxels: number;
-  chunks: number;
-}
-
-interface VoxelBlockUsage {
-  blockId: number;
-  voxels: number;
-  layers: Array<{ layerName: string; voxels: number; }>;
-}
-
-interface VoxelTilesetUsage {
-  tilesetId: string;
-  blocks: number[];
-  voxels: number;
-}
+readonly stats: VoxelBlockStats;
+usageOf(blockId: number): VoxelBlockUsage;
+tilesetUsageOf(tilesetId: string): VoxelTilesetUsage;
 ```
 
-| Field | Meaning |
-|---|---|
-| `voxels` | voxels stored in every layer |
-| `layers` | voxel and chunk count per layer, in `world.getLayers()` order |
-| `blocks` | voxel count per stored block id, orphans included |
-| `unusedBlocks` | registered ids no voxel uses, in registry order |
-| `orphanBlocks` | stored ids missing from the registry, ascending |
-| `orphanVoxels` | voxels whose block id is in `orphanBlocks` |
+| `stats` field | Description |
+| --- | --- |
+| `voxels` | Voxels stored in every layer. |
+| `layers` | `{ layerName, voxels, chunks }` per layer, in `world.getLayers()` order. |
+| `blocks` | `Map` of voxel count per stored block id, orphans included. |
+| `unusedBlocks` | Registered ids no voxel uses, in registry order. |
+| `orphanBlocks` | Stored ids missing from the registry, ascending. |
+| `orphanVoxels` | Voxels whose block is in `orphanBlocks`. |
 
-Stored voxels are counted, not rendered ones: hidden layers and
-voxels covered by a `"replace"` layer all count. The mesh `hiddenVoxels`
-counter gives the rendered side.
-
-`usageOf()` lists only the layers holding the block, and returns `voxels: 0`
-with no layer for an unused or unknown id. It is the number to show before
-removing a block definition, since `block-removed` leaves its voxels in place
-as orphans.
-
-`tilesetUsageOf()` lists the registered blocks with at least one tile in the
-tileset (face textures or default texture), and the voxels of those blocks.
-A block spanning two tilesets counts toward both.
+`usageOf()` returns `{ blockId, voxels, layers }`, listing only the layers that
+hold the block. Check it before removing a block: `block-removed` leaves the
+voxels in place as orphans.
 
 ```ts
 const { voxels, layers } = view.inspector.blocks.usageOf(blockId);
@@ -356,18 +128,6 @@ if (voxels > 0) {
 }
 ```
 
-Counting relies on a per-chunk histogram cached against `VoxelChunk.revision`,
-so a query after an edit only rescans the chunks that changed. The world-side
-counters are also available directly; see
-[`VoxelWorld`](../world/VoxelWorld.md#block-counts).
-
-## Example
-
-`examples/noise-world.html` wires all three to its HUD: `G` cycles the
-wireframe modes, a `chunk bounds` checkbox toggles the outlines, and the mesh
-counters reach the panel through `runtime.metrics.addSource()`, refreshed four
-times per second.
-
-```bash
-pnpm --filter @jolly-pixel/voxel.renderer dev
-```
+`tilesetUsageOf()` returns `{ tilesetId, blocks, voxels }`: the registered
+blocks with at least one tile in the tileset, and their voxel count. A block
+using two tilesets counts toward both.

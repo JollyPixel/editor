@@ -7,7 +7,7 @@ import {
   compareLayerRanks,
   isLayerRank,
   rankBetween
-} from "../../../src/document/world/index.ts";
+} from "../../../src/document/world/layerRank.ts";
 
 describe("rankBetween", () => {
   it("returns a rank strictly between its bounds", () => {

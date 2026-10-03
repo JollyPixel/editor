@@ -13,7 +13,8 @@ import {
   FaceTemplateTable
 } from "../../../src/view/meshing/index.ts";
 import { MaterialGroupList } from "../../../src/document/materials/index.ts";
-import { AtlasAverages, TilesetAtlases } from "../../../src/view/atlases/index.ts";
+import { TilesetAtlases } from "../../../src/view/atlases/index.ts";
+import { AtlasAverages } from "../../../src/view/atlases/AtlasAverages.ts";
 import {
   makeAtlasDef,
   registerAtlas

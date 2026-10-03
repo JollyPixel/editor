@@ -1,86 +1,50 @@
 # BlockDefinition
 
-`BlockDefinition` is the authoring form accepted by `BlockRegistry.register()`
-and `VoxelDocumentOptions.blocks`. Only `id`, `name`, and `shapeId` are required.
+The authoring form of a block, accepted by `VoxelDocument.defineBlock()`,
+`BlockRegistry.register()` and `VoxelDocumentOptions.blocks`.
 
 ```ts
-interface BlockDefinition extends BlockSurfaceOptions {
-  id: number;
-  name: string;
-  shapeId: BlockShapeID;
-  faceTextures?: Partial<Record<TextureSlotKey, TileRef>>;
-  defaultTexture?: TileRef;
-  collidable?: boolean;
-  alphaMode?: BlockAlphaMode;
-  side?: BlockSide;
-  alphaCutoff?: number;
-  materialGroup?: string;
-  blendGroup?: string;
-  cullCoveredFaces?: boolean;
-  defaultTilesetId?: string;
-  properties?: BlockProperties;
-}
-```
-
-`faceTextures` is keyed by texture slot, not by face. A slot missing from it
-falls back to its base slot, then to `defaultTexture`, so a `"top.1"` written by
-no one uses the tile of `"top"`. A numeric `Face` key is read as that face's
-default slot, so definitions written before slots keep loading. A key matching
-no slot is ignored, and the view logs a warning for it; see
-[slot keys](./shapeSlots.md#slot-keys). `collidable`
-defaults to `true`. `defaultTilesetId` fills tile references that omit a
-tileset and is removed from the resolved definition.
-
-[`BlockSurface`](./BlockSurface.md) defines `alphaMode`, `side`,
-`alphaCutoff`, and `materialGroup`. Opaque blocks ignore texture alpha. Masked blocks discard
-uncovered texels before applying the layer fade. Blended blocks preserve
-fractional alpha and do not write depth; use
-[`VoxelTransparencyPassNode`](../core/VoxelTransparencyPassNode.md) to
-composite overlapping surfaces without triangle sorting.
-
-`blendGroup` names the [`BlendGroup`](../materials/BlendGroup.md) that fades
-the block's top and bottom faces into neighbouring blocks of other groups. It
-must be a non-empty string; an ungrouped block, or one naming a group the
-document does not define, never blends. Only opaque blocks blend.
-
-`cullCoveredFaces` defaults to `true` for opaque blocks and `false` for
-mask and blend blocks. `cullsCoveredFaces(definition)` returns the resolved
-value. When `true`, faces shared with another voxel of the same block are
-removed, including partially overlapping double-sided boundaries, and a face
-covered by an opaque neighbour is hidden. When `false`, the interfaces between
-voxels of the same block are retained, and a double-sided block also keeps the
-faces an opaque neighbour covers, so its interior stays complete when seen
-through its own holes. A front-sided block never shows such a face, so it
-stays hidden. Opaque blocks honor `false` for same-block interfaces, though
-their depth-tested outer faces normally hide them.
-
-Retaining every interface of a solid volume emits six faces per voxel. Set
-`cullCoveredFaces: true` on blocks used for dense volumes, such as a canopy,
-when that geometry is not worth its cost.
-
-Retained, coincident double-sided boundaries use opposing front-sided pieces,
-so each viewing direction sees one appearance of the interface. Exposed pieces
-remain double-sided. Separated slab surfaces remain exposed; merely sharing a
-block ID does not remove them. Different block IDs retain their directional
-appearances at shared transparent boundaries.
-
-```ts
-registry.register({
+document.defineBlock({
   id: 2,
   name: "Stained glass",
   shapeId: "cube",
+  defaultTexture: { tilesetId: "default", col: 4, row: 1 },
   alphaMode: "blend",
   cullCoveredFaces: true
 });
 ```
 
-```ts
-registry.register({
-  id: 1,
-  name: "Stone",
-  shapeId: "cube"
-});
-```
+## Fields
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `id` | `number` | required | Block id; `0` is air and throws. See [block ids](#block-ids). |
+| `name` | `string` | required | Display name. |
+| `shapeId` | `BlockShapeID` | required | A shape registered on the view, see [`BlockShape`](./BlockShape.md). |
+| `faceTextures` | `Partial<Record<TextureSlotKey, TileRef>>` | `{}` | Tile per [texture slot](./BlockTextures.md#texture-slots). |
+| `defaultTexture` | `TileRef` | none | Tile of every slot `faceTextures` leaves out. |
+| `collidable` | `boolean` | `true` | `false` emits no collision geometry. |
+| `alphaMode`, `side`, `alphaCutoff`, `materialGroup` | | | Surface settings, see [`BlockSurface`](./BlockSurface.md). |
+| `blendGroup` | `string` | none | [`BlendGroup`](../materials/BlendGroup.md) that fades the top and bottom faces into neighbours. Opaque blocks only. |
+| `cullCoveredFaces` | `boolean` | `true` for opaque, `false` otherwise | See [covered faces](#covered-faces). |
+| `defaultTilesetId` | `string` | none | Tileset of tile references that omit one. Removed once resolved. |
+| `properties` | `BlockProperties` | `{}` | Game data, see [custom properties](#custom-properties). |
+
+A `faceTextures` key that matches no slot of the shape is ignored, and the view
+logs a warning for it. A numeric `Face` key is read as that face's slot.
+
+`blendGroup` must be a non-empty string. A block naming a group the document
+does not define never blends.
+
+## Covered faces
+
+With `cullCoveredFaces: true`, faces shared by two voxels of the same block are
+removed, and so is a face an opaque neighbour covers. With `false`, those
+faces are kept, so a glass or foliage volume shows its inner faces through its
+own holes. Keeping them costs geometry: a solid volume then emits six faces per
+voxel. Set `true` on dense volumes such as a canopy.
+
+`cullsCoveredFaces(definition)` returns the resolved value.
 
 ## Custom properties
 
@@ -88,93 +52,50 @@ registry.register({
 type BlockProperties = Record<string, string | number | boolean>;
 ```
 
-`properties` carries arbitrary data for game code: script behavior, physics
-tuning, anything the renderer itself does not read. Nothing in the meshing,
-collision, or texturing path looks at it.
+`properties` carries data for game code. The renderer never reads it.
 
 ```ts
-registry.register({
-  id: 1,
+document.defineBlock({
+  id: 3,
   name: "Ice",
   shapeId: "cube",
   properties: {
     friction: 0.02,
-    material: "ice",
     slippery: true
   }
 });
 ```
 
-Values are limited to `string`, `boolean`, and finite `number`. Anything else,
-including nested objects, arrays, `null`, `undefined`, `NaN`, and `Infinity`, is
-dropped when the definition is resolved, as is a `__proto__` key. The limit
-holds for definitions arriving from a saved document or a remote peer, so a
-hostile payload cannot smuggle a nested value or reach the prototype chain.
-Resolved definitions always carry a `properties` map, empty when none were
-authored.
+Values are limited to strings, booleans and finite numbers. Anything else
+(objects, arrays, `null`, `undefined`, `NaN`, `Infinity`) is dropped on
+resolution, as is a `__proto__` key. `resolveBlockProperties(properties)`
+applies the same filter. A resolved definition always has a `properties` map.
 
-Because values are flat scalars, a copy is shallow and cheap. Read them with
-[`BlockRegistry.propertiesOf()`](./BlockRegistry.md) or, keyed by a world
-position, with [`VoxelDocument.blockPropertiesAt()`](../core/VoxelDocument.md#methods).
+Read them with [`BlockRegistry.propertiesOf()`](./BlockRegistry.md#reading),
+or by world position with
+[`VoxelDocument.blockPropertiesAt()`](../core/VoxelDocument.md#methods).
 
 ## ResolvedBlockDefinition
 
-`BlockRegistry` stores resolved definitions. Defaults have been applied, tuple
-tile references have been expanded, and `defaultTilesetId` is no longer present.
-
 ```ts
-type ResolvedBlockDefinition =
-  & Omit<
-    BlockDefinition,
-    | "faceTextures"
-    | "defaultTexture"
-    | "collidable"
-    | "defaultTilesetId"
-    | "properties"
-  >
-  & {
-    faceTextures: Record<string, ResolvedTileRef>;
-    defaultTexture?: ResolvedTileRef;
-    collidable: boolean;
-    properties: BlockProperties;
-  };
-
 function resolveBlockDefinition(
   definition: BlockDefinition
 ): ResolvedBlockDefinition;
 ```
 
-`resolveBlockDefinition()` returns a new object and does not mutate the input
-definition or its tile references. `BlockRegistry.register()` calls it for each
-registration.
-
-## Tile references of a block
-
-[`BlockTextures`](./BlockTextures.md) reads and transforms the `faceTextures`
-and `defaultTexture` of a resolved block.
-
-## Air
-
-```ts
-const AIR_BLOCK_ID = 0;
-
-function isAir(blockId: number): boolean;
-```
-
-ID `0` is reserved for air and is never stored. Registering a definition with
-that ID throws `Error`; packing or writing it throws `RangeError`. Remove a
-voxel with `removeVoxel()` instead.
-
-Packed reads return `VOXEL_ABSENT` for air, while object reads return
-`undefined`. See [packed voxel values](../world/VoxelChunk.md#packed-voxel-values).
+The form `BlockRegistry` stores: defaults applied, `faceTextures` and
+`properties` always present, `collidable` set, `defaultTilesetId` folded into
+the tile references. It returns a new object and leaves the input untouched.
 
 ## Block ids
 
 ```ts
+const AIR_BLOCK_ID = 0;
 const LOCAL_BLOCK_ID_BITS = 16;
 const MAX_LOCAL_BLOCK_ID = 0xFFFF;
 const MAX_TILESET_SLOT = 0x7F;
 
+function isAir(blockId: number): boolean;
 function composeBlockId(slot: number, localId: number): number;
 function tilesetSlotOf(blockId: number): number;
 function localBlockIdOf(blockId: number): number;
@@ -182,12 +103,11 @@ function isTilesetSlot(value: unknown): value is number;
 function isLocalBlockId(value: unknown): value is number;
 ```
 
-A world block id is a tileset [slot](../tilesets/tilesets.md#definitions) in
-the high bits and the block's id inside that tileset in the low 16 bits, which
-together fit the 23 bits a voxel stores. Slot `0` keeps a local id unchanged,
-so a scene that defines its blocks in code needs no slots at all.
-`composeBlockId()` throws `RangeError` for a slot above `MAX_TILESET_SLOT`, a
-local id of `0` or above `MAX_LOCAL_BLOCK_ID`, or a non-integer. The two
-accessors split an id back. A host projecting a
-[`TilesetDocument`](../tilesets/TilesetDocument.md) into a world uses them
-through [`TilesetSlot.project()`](../tilesets/tilesets.md#tilesetslot).
+Id `0` is air and is never stored: registering it throws `Error`, writing it
+throws `RangeError`. Use `removeVoxel()` to clear a cell.
+
+A world block id combines a tileset [slot](../tilesets/tilesets.md) and the
+block's id inside that tileset. Slot `0` leaves a local id unchanged, so blocks
+defined in code need no slots. `composeBlockId()` throws `RangeError` for a
+slot above `MAX_TILESET_SLOT`, a local id of `0` or above `MAX_LOCAL_BLOCK_ID`,
+or a non-integer. `tilesetSlotOf()` and `localBlockIdOf()` split an id back.
