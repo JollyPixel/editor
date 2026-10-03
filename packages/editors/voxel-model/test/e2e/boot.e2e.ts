@@ -7,7 +7,11 @@ import {
   expect
 } from "./fixtures.ts";
 import { hierarchyAction } from "./support/hierarchy.ts";
-import { blockSummary, outline } from "./support/scene.ts";
+import {
+  blockSummary,
+  outline,
+  runtimeIdle
+} from "./support/scene.ts";
 
 test("opens the requested model with its default block and texture regions", async({ page }) => {
   await expect(treeRow(page, "Block")).toBeVisible();
@@ -18,6 +22,12 @@ test("opens the requested model with its default block and texture regions", asy
     position: { x: 0, y: 0, z: 0 },
     size: { x: 1, y: 1, z: 1 }
   });
+});
+
+test("the runtime idles once the pointer is off the canvas", async({ page }) => {
+  await page.mouse.move(0, 0);
+
+  await expect.poll(() => runtimeIdle(page)).toBe(true);
 });
 
 test("the transform panel stays disabled until a block is selected", async({ page }) => {

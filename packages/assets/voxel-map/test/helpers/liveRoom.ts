@@ -8,7 +8,10 @@ import {
   type AssetKindHandler,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
-import type { RoomContext } from "@jolly-pixel/network";
+import {
+  MessageParser,
+  type RoomContext
+} from "@jolly-pixel/network";
 
 // CONSTANTS
 const kAssetId = "asset-1";
@@ -81,7 +84,12 @@ export class LiveRoom<
     clientId: string,
     payload: unknown
   ): void {
-    this.extension.onMessage(clientId, payload, this.#context);
+    const parsed = MessageParser.of<TCommand>(
+      this.extension.protocols.inbound!
+    ).parse(payload);
+    if (parsed.ok) {
+      this.extension.onMessage(clientId, parsed.val.message, this.#context);
+    }
   }
 
   resync(

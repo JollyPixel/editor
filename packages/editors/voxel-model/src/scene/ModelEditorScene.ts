@@ -37,6 +37,7 @@ import {
   type TransformLock
 } from "../features/transform/index.ts";
 import { createModelGrid } from "./modelGrid.ts";
+import { SceneWaker } from "./SceneWaker.ts";
 
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
@@ -131,15 +132,19 @@ export class ModelEditorScene extends Systems.Scene {
     });
     lighting
       .useEnvironment(createRoomEnvironment(this.world.renderer.getSource()))
-      .catch((error: unknown) => {
-        console.warn("[voxel-model] No environment map for the viewport.", error);
-      });
+      .then(
+        () => this.world.invalidate(),
+        (error: unknown) => {
+          console.warn("[voxel-model] No environment map for the viewport.", error);
+        }
+      );
 
     const textures = new BlockTextures({
       pixels,
       document,
       blocks,
-      selection
+      selection,
+      requestFrame: () => this.world.invalidate()
     });
     const hierarchy = new ModelHierarchy({
       document,
@@ -191,8 +196,18 @@ export class ModelEditorScene extends Systems.Scene {
       target: viewport,
       view
     });
+    const waker = new SceneWaker({
+      document,
+      previews,
+      pixels,
+      presence,
+      lock: collaboration.lock,
+      view,
+      requestFrame: () => this.world.invalidate()
+    });
 
     this.#disposables.push(
+      () => waker.dispose(),
       () => this.world.renderer.removeRenderComponent(viewport),
       () => glow.dispose(),
       () => highlight.dispose(),

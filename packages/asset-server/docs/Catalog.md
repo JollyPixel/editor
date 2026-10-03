@@ -309,6 +309,7 @@ interface CatalogImportOptions {
 | `importArchive(archive, { onConflict })` | Resolves the `ImportReport`. |
 | `dependencies` | Read-only `DependencyIndex` of the [dependency edges](#dependency-edges), kept in sync with the room. |
 | `dependentsOf(assetId)` | The dependents that still have a record, as `AssetRecordData`; the assets delete protection counts. |
+| `toSnapshot()` | The current records, dependency edges and folders as a `catalog:snapshot` message, for relaying the catalog to another client. |
 | `dispose()` | Leaves the room and rejects pending requests. |
 | `"change"` event | Emitted after the snapshot, each change and each folder list. |
 | `"dependencies"` event | Receives an asset ID whose outgoing edges changed. |

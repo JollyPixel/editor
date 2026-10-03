@@ -49,7 +49,17 @@ by the time an editor mounts, a leased target is loaded.
 snapshot, then throws `CatalogUnavailableError` (from
 `@jolly-pixel/asset-server/client`) and destroys its client.
 `EditorSession.connect()` accepts `catalogTimeoutMs` for supplied clients;
-without it, the caller owns connection liveness.
+without it, the caller owns connection liveness. Both take an `openCatalog`
+opener, called with the client and `{ timeoutMs }`, to open the catalog
+somewhere other than the client's own catalog room. When the opener rejects,
+the session destroys the client.
+
+```ts
+type CatalogOpener = (
+  client: EditorSessionClient,
+  options: CatalogConnectOptions
+) => Promise<CatalogClient>;
+```
 
 ### Boot steps
 
@@ -69,9 +79,10 @@ child. Each step is a [`Logger.step`](../../../engine/docs/systems/logger.md#ste
 whose `started` line has no `done`.
 
 A page that needs the catalog without a session calls
-`openCatalog(client, timeoutMs?)` instead. It resolves once the snapshot
-lands. It wraps `CatalogClient.connect`: on failure or timeout it also
-destroys the client and rethrows (`CatalogUnavailableError` on timeout). `CATALOG_TIMEOUT_MS` is the
+`openCatalog(client, timeoutMs?, open?)` instead. It resolves once the snapshot
+lands. It wraps `open`, `CatalogClient.connect` on `client` by default: on
+failure or timeout it also destroys the client and rethrows
+(`CatalogUnavailableError` on timeout). `CATALOG_TIMEOUT_MS` is the
 five-second timeout `open()` uses.
 
 `targetLease(kind)` returns that same document as a typed, refcounted

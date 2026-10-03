@@ -16,11 +16,16 @@ import type {
   StandaloneConnection,
   StandaloneWorkspace
 } from "../SessionWorkspace.ts";
+import {
+  ConnectionHandoff,
+  ParkedConnection
+} from "./ConnectionHandoff.ts";
 import { OwnerMonitor } from "./OwnerMonitor.ts";
 import {
   DISCOVERY_INTERVAL_MS,
   parseOwnerMessage,
-  openBridgeChannel
+  openBridgeChannel,
+  openSocketChannel
 } from "./protocol.ts";
 
 export class RemoteWorkspace implements StandaloneWorkspace {
@@ -31,7 +36,8 @@ export class RemoteWorkspace implements StandaloneWorkspace {
     try {
       workspace.#transport = new ChannelTransport({
         port: workspace.#channel,
-        host: await workspace.#monitor.discover()
+        host: await workspace.#monitor.discover(),
+        socketPort: (socket) => openSocketChannel(name, socket)
       });
     }
     catch (error) {
@@ -47,6 +53,7 @@ export class RemoteWorkspace implements StandaloneWorkspace {
   readonly #tab = crypto.randomUUID();
   readonly #monitor: OwnerMonitor;
   readonly #subscriptions = new AbortController();
+  readonly #handoff = new ConnectionHandoff();
   #transport: ChannelTransport | undefined;
   #closed = false;
 
@@ -93,6 +100,18 @@ export class RemoteWorkspace implements StandaloneWorkspace {
   }
 
   connect(): StandaloneConnection {
+    return this.#handoff.take() ?? this.#open();
+  }
+
+  reset(): Promise<void> {
+    throw new Error("Reset the workspace in its owner tab.");
+  }
+
+  async close(): Promise<void> {
+    this.#shutdown();
+  }
+
+  #open(): StandaloneConnection {
     const transport = this.#transport;
     if (transport === undefined || this.#closed) {
       throw new Error("The shared workspace owner is unavailable.");
@@ -108,19 +127,13 @@ export class RemoteWorkspace implements StandaloneWorkspace {
     };
   }
 
-  reset(): Promise<void> {
-    throw new Error("Reset the workspace in its owner tab.");
-  }
-
-  async close(): Promise<void> {
-    this.#shutdown();
-  }
-
   async #readLaunch(
     accepts: string
   ): Promise<EditorLaunch | undefined> {
-    const connection = this.connect();
+    const connection = this.#open();
     const catalog = await openCatalog(connection.client);
+    const parked = new ParkedConnection(connection, catalog);
+    let launch: EditorLaunch | undefined;
     try {
       const known = new Set(
         [...catalog.records()]
@@ -129,16 +142,22 @@ export class RemoteWorkspace implements StandaloneWorkspace {
       );
       const [first] = known;
 
-      return await EditorLaunch.first(catalogLaunchSources({
+      launch = await EditorLaunch.first(catalogLaunchSources({
         accepts,
         isKnown: (assetId) => known.has(assetId),
         first: () => first
       }));
     }
     finally {
-      catalog.dispose();
-      connection.client.destroy();
+      if (launch === undefined) {
+        parked.release();
+      }
+      else {
+        this.#handoff.park(parked);
+      }
     }
+
+    return launch;
   }
 
   #shutdown(
@@ -148,6 +167,7 @@ export class RemoteWorkspace implements StandaloneWorkspace {
       return;
     }
     this.#closed = true;
+    this.#handoff.close();
     this.#monitor.stop();
     this.#subscriptions.abort();
     this.#transport?.close(event);

@@ -36,6 +36,8 @@ import {
 interface Command {
   action: string;
   clientId?: string;
+  seq?: number;
+  timestamp?: number;
 }
 
 interface Harness {
@@ -136,17 +138,6 @@ describe("AssetRoomExtension", () => {
         data: { value: 7 }
       }
     ]);
-  });
-
-  test("ignores a payload the protocol cannot parse", async() => {
-    const { extension, context, appended, broadcast } = harness();
-
-    for (const payload of [{ action: "decrement" }, { type: "command" }, null]) {
-      await extension.onMessage("alice", payload, context);
-    }
-
-    assert.deepEqual(appended, []);
-    assert.deepEqual(broadcast, []);
   });
 
   test("ignores a command the protocol rejects", async() => {

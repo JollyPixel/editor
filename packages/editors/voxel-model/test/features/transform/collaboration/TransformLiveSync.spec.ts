@@ -16,16 +16,19 @@ function createHarness() {
   const room = createRoomHarness();
   room.addPeer("bob");
   const { blocks, addBlock } = createModelFixture();
+  const frames = { requested: 0 };
   const sync = new TransformLiveSync({
     room: room.room,
-    blocks
+    blocks,
+    requestFrame: () => frames.requested++
   });
 
   return {
     ...room,
     blocks,
     addBlock,
-    sync
+    sync,
+    frames
   };
 }
 
@@ -79,6 +82,20 @@ function isGlowing(
 }
 
 describe("TransformLiveSync", () => {
+  test("requests a frame for each live transform and once the stream expires", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const harness = createHarness();
+    const block = harness.addBlock();
+
+    publishLive(harness, block.uuid, 5);
+    publishLive(harness, block.uuid, 6);
+    assert.equal(harness.frames.requested, 2);
+
+    t.mock.timers.tick(5000);
+    assert.equal(harness.frames.requested, 3);
+    harness.sync.dispose();
+  });
+
   test("moves the real block to the live position", () => {
     const harness = createHarness();
     const block = harness.addBlock();

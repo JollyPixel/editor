@@ -34,7 +34,8 @@ import {
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 import {
   CATALOG_TIMEOUT_MS,
-  openCatalog
+  openCatalog,
+  type CatalogOpener
 } from "./openCatalog.ts";
 
 // CONSTANTS
@@ -65,11 +66,19 @@ export interface EditorSessionTarget {
 
 export interface EditorSessionOptions extends EditorSessionTarget {
   identity: EditorIdentityOptions;
+  /**
+   * @default joins the catalog room on the session client
+   */
+  openCatalog?: CatalogOpener;
 }
 
 export interface EditorSessionConnectOptions extends EditorSessionTarget {
   identity: PeerIdentity;
   client: EditorSessionClient;
+  /**
+   * @default joins the catalog room on `client`
+   */
+  openCatalog?: CatalogOpener;
   workspace?: SessionWorkspace;
   catalogTimeoutMs?: number;
 }
@@ -123,7 +132,11 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     } = options;
     const catalog = await logger.step(
       "catalog",
-      () => openCatalog(client, options.catalogTimeoutMs)
+      () => openCatalog(
+        client,
+        options.catalogTimeoutMs,
+        options.openCatalog
+      )
     );
 
     let session: EditorSession;

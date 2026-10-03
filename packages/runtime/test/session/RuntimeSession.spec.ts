@@ -81,12 +81,14 @@ describe("RuntimeSession", () => {
 
     try {
       document.dispatchEvent(new KeyboardEvent("keydown"));
+      window.dispatchEvent(new window.Event("gamepadconnected"));
       assert.equal(continuousWake.mock.callCount(), 0);
-      assert.equal(onDemandWake.mock.callCount(), 1);
+      assert.equal(onDemandWake.mock.callCount(), 2);
 
       onDemand.session.dispose();
       document.dispatchEvent(new KeyboardEvent("keydown"));
-      assert.equal(onDemandWake.mock.callCount(), 1);
+      window.dispatchEvent(new window.Event("gamepadconnected"));
+      assert.equal(onDemandWake.mock.callCount(), 2);
     }
     finally {
       continuous.dispose();
@@ -122,7 +124,16 @@ function startSession(
     overlay: new OverlayLayer(canvas),
     renderer: {} as Systems.ThreeRenderer,
     loop: new GameLoop({ source: new ManualFrameSource() }),
-    nextFrame
+    nextFrame,
+    world: {
+      input: {
+        gamepad: {
+          connectedGamepads: 0,
+          wasActive: false,
+          sample: () => undefined
+        }
+      }
+    }
   };
   const session = new RuntimeSession(
     host,

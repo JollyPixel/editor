@@ -61,11 +61,13 @@ function createHarness() {
     onBufferUpdated: (event) => pixelEvents.push(event)
   });
   const { document, blocks, selection, addBlock } = createModelFixture();
+  const frames = { requested: 0 };
   const textures = new BlockTextures({
     pixels,
     document,
     blocks,
-    selection
+    selection,
+    requestFrame: () => frames.requested++
   });
   const changes: ModelChange[] = [];
   document.on("change", (change) => changes.push(change));
@@ -79,7 +81,8 @@ function createHarness() {
     selection,
     addBlock,
     textures,
-    changes
+    changes,
+    frames
   };
 }
 
@@ -382,6 +385,14 @@ describe("BlockTextures UV edits", () => {
 
     assert.deepEqual(uvOf(block, 1), [80 / kTextureSize.x, 1 - (32 / kTextureSize.y)]);
     assert.deepEqual(uv.get(regionId)?.geometryFor("front"), { x: 0, y: 0, width: 16, height: 16 });
+  });
+
+  test("requests a frame for a peer drag preview", () => {
+    const { uv, regionId, textures, frames } = bound();
+
+    textures.previewPeerDrag(uv.get(regionId)!.withRect({ x: 64, y: 32, width: 16, height: 16 }));
+
+    assert.equal(frames.requested, 1);
   });
 
   test("applies a peer's in-progress net resize without touching the region", () => {

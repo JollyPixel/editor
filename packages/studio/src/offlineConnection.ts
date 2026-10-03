@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  offlineWorkspaceQuery,
-  openCatalog
+  CatalogShare,
+  offlineWorkspaceQuery
 } from "@jolly-pixel/editor.host";
 import { openSharedTabWorkspace } from "@jolly-pixel/editor.host/offline";
 import createHandlers from "virtual:jolly-pixel/handlers";
@@ -25,7 +25,7 @@ export async function connectOffline(): Promise<StudioConnection> {
   });
 
   return {
-    catalog: await openCatalog(workspace.connect().client),
+    share: await CatalogShare.open(workspace.connect().client),
     editorQuery: offlineWorkspaceQuery(kWorkspace)
   };
 }

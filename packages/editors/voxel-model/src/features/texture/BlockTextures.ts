@@ -35,6 +35,7 @@ export interface BlockTexturesOptions {
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
+  requestFrame?: () => void;
 }
 
 /**
@@ -46,6 +47,7 @@ export class BlockTextures {
   #document: ModelDocument;
   #blocks: ModelBlocks;
   #selection: BlockSelectionStore;
+  #requestFrame: () => void;
   #texture: PixelCanvasTexture;
   #bindings = new Map<string, UVGeometryBinding>();
   #restoring = false;
@@ -165,6 +167,7 @@ export class BlockTextures {
     this.#document = options.document;
     this.#blocks = options.blocks;
     this.#selection = options.selection;
+    this.#requestFrame = options.requestFrame ?? (() => undefined);
     this.#texture = new PixelCanvasTexture({
       document: pixels,
       get textureSize() {
@@ -200,6 +203,7 @@ export class BlockTextures {
     const uuid = blockUuidFromRegion(region.id);
     if (uuid !== null) {
       this.#bindings.get(uuid)?.preview(region);
+      this.#requestFrame();
     }
   }
 

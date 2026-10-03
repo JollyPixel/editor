@@ -106,7 +106,9 @@ sequenceDiagram
 Nothing in the session or the runtime needs the shell's answer, so all three
 run at once: the studio puts the target in the frame URL and posts the same
 target in `jolly-launch`. A session opened for a `?target=` the launch does
-not confirm is disposed, and a new one opens for the launch target.
+not confirm is disposed, and a new one opens for the launch target. Only the
+catalog waits for the launch, since a shell may send a port to its own catalog
+with it (see [Shell catalog](./docs/mountStandalone.md#shell-catalog)).
 
 `mount` starts with every dependency document already synced. The target is the
 exception: the session only reserves its room. The `connect` option supplies an
@@ -364,7 +366,10 @@ An IndexedDB workspace holds a Web Lock for its database name when the browser
 supports the Locks API. Direct `OfflineWorkspace.open` falls back to memory
 when another tab owns the database. `openSharedTabWorkspace` instead connects
 the second tab to the owner over BroadcastChannel with the network package's
-`ChannelTransport`, forwarding the existing network room protocol. It checks
+`ChannelTransport`, forwarding the existing network room protocol. Only owner
+discovery and connect messages use the shared `jolly-workspace-channel:<name>`;
+each socket then talks on its own `jolly-workspace-channel:<name>:<socket>`, so
+a tab never receives the traffic of another tab's sockets. It checks
 the lock before importing the back-end, so a second tab loads neither the
 back-end code nor the editor's project. The owner
 alone writes IndexedDB. If Web Locks are unavailable, the shared opener uses

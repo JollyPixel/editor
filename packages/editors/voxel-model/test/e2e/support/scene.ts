@@ -46,6 +46,14 @@ function editorOf(
   });
 }
 
+export async function runtimeIdle(
+  page: Page
+): Promise<boolean> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ runtime }) => runtime.idle);
+}
+
 export async function outline(
   page: Page
 ): Promise<string[]> {

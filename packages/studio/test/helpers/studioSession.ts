@@ -12,6 +12,7 @@ import {
   type StudioCatalog,
   type StudioSessionOptions
 } from "../../src/shell/StudioSession.ts";
+import { idleShare } from "./catalogShare.ts";
 
 // CONSTANTS
 export const MAP_RECORD: AssetRecordData = {
@@ -115,7 +116,8 @@ export function session(
     },
     frames: {
       container: frames,
-      launchOrigin: "http://localhost"
+      launchOrigin: "http://localhost",
+      share: idleShare()
     },
     storage,
     ...extra

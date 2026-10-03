@@ -1,3 +1,5 @@
+export * from "./catalog/CatalogShare.ts";
+export * from "./catalog/ShellCatalog.ts";
 export * from "./EditorLaunch.ts";
 export * from "./ShellChannel.ts";
 export * from "./sources/HostMessageLaunchSource.ts";

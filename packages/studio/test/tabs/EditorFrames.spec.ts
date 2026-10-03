@@ -22,6 +22,7 @@ import {
   type EditorFramesOptions
 } from "../../src/tabs/EditorFrames.ts";
 import type { EditorTab } from "../../src/tabs/EditorTabs.ts";
+import { idleShare } from "../helpers/catalogShare.ts";
 
 // CONSTANTS
 const kOrigin = "http://localhost";
@@ -41,6 +42,7 @@ function editorFrames(
   current = new EditorFrames({
     container,
     launchOrigin: kOrigin,
+    share: idleShare(),
     ...options
   });
 
@@ -113,6 +115,36 @@ describe("EditorFrames", () => {
         kOrigin
       ]
     ]);
+  });
+
+  test("sends a catalog port with each launch and stops the previous one", () => {
+    const served: MessagePort[] = [];
+    const stopped: MessagePort[] = [];
+    const frames = editorFrames({
+      share: {
+        serve: (connector) => {
+          served.push(connector);
+
+          return () => stopped.push(connector);
+        }
+      }
+    });
+    frames.show(kMap);
+    const transferred: unknown[] = [];
+    Object.assign(frame().contentWindow!, {
+      postMessage: (_message: unknown, _origin: string, transfer: unknown[]) => {
+        transferred.push(...transfer);
+      }
+    });
+
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    assert.strictEqual(served.length, 2);
+    assert.strictEqual(transferred.length, 2);
+    assert.deepEqual(stopped, [served[0]]);
+
+    frames.remove(kMap.id);
+    assert.deepEqual(stopped, served);
   });
 
   test("posts the page appearance to loaded frames when it changes", async() => {

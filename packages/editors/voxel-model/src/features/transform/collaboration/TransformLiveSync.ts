@@ -28,6 +28,7 @@ export interface TransformLivePayload {
 export interface TransformLiveSyncOptions {
   room: VoxelModelRoom;
   blocks: ModelBlocks;
+  requestFrame?: () => void;
 }
 
 interface LiveStream {
@@ -39,6 +40,7 @@ interface LiveStream {
 export class TransformLiveSync {
   #room: VoxelModelRoom;
   #blocks: ModelBlocks;
+  #requestFrame: () => void;
   #channel: PresenceChannel<TransformLivePayload | null>;
   #streams = new Map<string, LiveStream>();
   #throttle: LatestFrameThrottle<TransformLivePayload>;
@@ -61,6 +63,7 @@ export class TransformLiveSync {
   ) {
     this.#room = options.room;
     this.#blocks = options.blocks;
+    this.#requestFrame = options.requestFrame ?? (() => undefined);
     this.#channel = new PresenceChannel<TransformLivePayload | null>(options.room, {
       key: PRESENCE_KEYS.transformLive,
       decode: decodeLivePayload,
@@ -119,6 +122,7 @@ export class TransformLiveSync {
 
     clearTimeout(stream.timer);
     this.#blocks.applyTransform(payload.uuid, payload.transform);
+    this.#requestFrame();
     stream.timer = setTimeout(
       () => this.#endStream(clientId, { revert: true }),
       kExpiryMs
@@ -142,6 +146,7 @@ export class TransformLiveSync {
     if (options.revert) {
       this.#blocks.applyTransform(stream.uuid, stream.baseline);
     }
+    this.#requestFrame();
   }
 }
 

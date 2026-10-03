@@ -65,7 +65,7 @@ interface CatchUp {
 
 export class AssetRoomExtension<
   TCommand extends AssetCommandHeader = AssetCommandHeader
-> extends network.Extension {
+> extends network.Extension<TCommand> {
   readonly id: string;
   readonly name: string;
   readonly protocols: network.MessageProtocols;
@@ -182,20 +182,14 @@ export class AssetRoomExtension<
 
   override onMessage(
     clientId: string,
-    payload: unknown,
+    message: TCommand,
     context: network.RoomContext
   ): void {
     if (this.#deleted) {
       return;
     }
 
-    const parsed = network.MessageParser.of<TCommand>(
-      this.#commands.protocol
-    ).parse(withAuthor(payload, clientId));
-    if (!parsed.ok) {
-      return;
-    }
-    const command = parsed.val.message;
+    const command = withAuthor(message, clientId);
     this.#acks.record(clientId, command.seq);
 
     const arbitration = this.#protocol.arbitrate(command);
@@ -392,31 +386,20 @@ export class AssetRoomExtension<
   }
 }
 
-function withAuthor(
-  payload: unknown,
+function withAuthor<TCommand extends AssetCommandHeader>(
+  command: TCommand,
   clientId: string
-): unknown {
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    Array.isArray(payload)
-  ) {
-    return payload;
-  }
-
-  if (
-    "timestamp" in payload &&
-    typeof payload.timestamp === "number"
-  ) {
+): TCommand {
+  if (typeof command.timestamp === "number") {
     return {
-      ...payload,
+      ...command,
       clientId,
-      timestamp: Math.min(payload.timestamp, Date.now())
+      timestamp: Math.min(command.timestamp, Date.now())
     };
   }
 
   return {
-    ...payload,
+    ...command,
     clientId
   };
 }

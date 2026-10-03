@@ -1,10 +1,9 @@
 // Import Third-party Dependencies
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import {
   CATALOG_TIMEOUT_MS,
+  CatalogShare,
   HOST_PARAMS,
   IDENTITY_STORAGE_KEY,
-  openCatalog,
   withOfflineFallback
 } from "@jolly-pixel/editor.host";
 import { Client } from "@jolly-pixel/network/client";
@@ -15,7 +14,7 @@ import { toPeerMetadata } from "@jolly-pixel/ui/network";
 const kIdentityTitle = "Join studio";
 
 export interface StudioConnection {
-  catalog: CatalogClient;
+  share: CatalogShare;
   editorQuery: Readonly<Record<string, string>>;
 }
 
@@ -43,7 +42,9 @@ async function connectOnline(): Promise<StudioConnection> {
   });
 
   return {
-    catalog: await openCatalog(client, CATALOG_TIMEOUT_MS),
+    share: await CatalogShare.open(client, {
+      timeoutMs: CATALOG_TIMEOUT_MS
+    }),
     editorQuery: {}
   };
 }

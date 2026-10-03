@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
+import { ShellCatalog } from "../catalog/ShellCatalog.ts";
 import { EditorLaunch } from "../EditorLaunch.ts";
 import {
   parseLaunchMessage,
@@ -85,12 +86,16 @@ export class HostMessageLaunchSource implements LaunchSource {
         return;
       }
 
+      const [catalogPort] = event.ports;
       const launch = EditorLaunch.fromTarget(
         message.target,
         new ShellChannel({
           port: parent,
           origin: event.origin,
-          appearance: message.appearance ?? null
+          appearance: message.appearance ?? null,
+          catalog: catalogPort === undefined ?
+            null :
+            new ShellCatalog(catalogPort)
         })
       );
       if (launch !== undefined) {

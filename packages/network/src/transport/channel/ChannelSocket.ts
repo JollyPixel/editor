@@ -16,8 +16,9 @@ const kNormalCloseCode = 1000;
 type SocketListener = (event: ClientSocketEvent) => void;
 
 export interface ChannelSocketOptions {
+  id: string;
   /**
-   * Port the socket posts its connect, send and close messages to.
+   * Port the socket posts its send and close messages to.
    */
   port: ChannelPort;
   /**
@@ -33,7 +34,7 @@ export interface ChannelSocketOptions {
 }
 
 export class ChannelSocket implements ClientSocket {
-  readonly id = crypto.randomUUID();
+  readonly id: string;
 
   readonly #port: ChannelPort;
   readonly #host: string;
@@ -47,13 +48,10 @@ export class ChannelSocket implements ClientSocket {
   constructor(
     options: ChannelSocketOptions
   ) {
+    this.id = options.id;
     this.#port = options.port;
     this.#host = options.host;
     this.#onClose = options.onClose;
-
-    this.#post({
-      type: "connect"
-    });
   }
 
   send(
@@ -109,10 +107,10 @@ export class ChannelSocket implements ClientSocket {
     }
 
     this.#closed = true;
-    this.#onClose(this.id);
     this.#post({
       type: "close"
     });
+    this.#onClose(this.id);
 
     queueMicrotask(
       () => this.#emit("close", event)
@@ -131,7 +129,6 @@ export class ChannelSocket implements ClientSocket {
 
   #post(
     message:
-      | { type: "connect"; }
       | { type: "send"; data: string; }
       | { type: "close"; }
   ): void {

@@ -66,7 +66,6 @@ export class VoxelModelEditor {
     return EditorRuntime.create(kCanvas, {
       focusCanvas: false,
       viewHelper: true,
-      renderOnDemand: false,
       logger
     });
   }

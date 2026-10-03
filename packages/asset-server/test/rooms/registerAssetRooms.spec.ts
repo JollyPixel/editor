@@ -220,6 +220,24 @@ describe("registerAssetRooms — admission", () => {
     assert.strictEqual(appended.length, 1);
   });
 
+  test("a payload the command protocol cannot parse never reaches the room", async() => {
+    await using harness = await roomHarness({ kind: "live" });
+
+    await harness.join("A");
+    for (const payload of [{ action: "decrement" }, { type: "command" }, null]) {
+      await harness.send("A", payload);
+    }
+
+    const appended = harness.sync.eventStore.reader
+      .list(harness.assetId)
+      .filter((event) => event.eventType === COUNTER_INCREMENTED);
+    const errors = harness.clients.get("A")!.received
+      .filter((envelope) => (envelope as { kind: string; }).kind === "error");
+
+    assert.strictEqual(appended.length, 0);
+    assert.strictEqual(errors.length, 3);
+  });
+
   test("an asset id belonging to another live kind is refused", async() => {
     await using harness = await roomHarness({
       extraHandlers: [
