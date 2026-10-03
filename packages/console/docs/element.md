@@ -43,6 +43,9 @@ The console is a native `<dialog>` opened with `showModal()`. Opening first call
 layer refuses, such as a dialog with `dismissible` set to `false`, the console does not open. See
 [ui ADR-0020](../../ui/docs/adr/0020-input-scope-follows-focus.md).
 
+Each time the dialog shows, the element emits `opened` on its `CommandConsole`, which a
+[`ConsoleMirror`](./remote.md) uses to refresh its values.
+
 While open, the console pushes its own input layer, so an `EditorRuntime` keyboard ignores the
 keys typed into it. On close, focus returns to the element that held it before, found through
 shadow roots.

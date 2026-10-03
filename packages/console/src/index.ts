@@ -12,3 +12,6 @@ export type {
   ScrollbackEntry,
   ScrollbackKind
 } from "./execution/Scrollback.ts";
+export * from "./remote/ConsoleServer.ts";
+export * from "./remote/ConsoleMirror.ts";
+export * from "./remote/errors/RemoteCancelledError.ts";

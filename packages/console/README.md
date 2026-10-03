@@ -73,6 +73,7 @@ instance.
 - [Registering from features](./docs/features.md): `ConsoleFeature` and `registerConsoleFeatures`
 - [Input grammar](./docs/grammar.md): the three modes, coercion, search and completion
 - [jolly-console](./docs/element.md): mounting the element, keys and accessibility
+- [Remote consoles](./docs/remote.md): `ConsoleServer` and `ConsoleMirror`, a console served over a `MessagePort`
 
 ## 🧪 Benchmarks
 

@@ -8,7 +8,9 @@ import {
   readDebugLogger,
   type Appearance,
   type CatalogShare,
+  type FrameConsoles,
   type HostLogger,
+  type LaunchPorts,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
 
@@ -29,6 +31,7 @@ export interface EditorFramesOptions {
    * Served to each frame through a port sent with its launch.
    */
   share: Pick<CatalogShare, "serve">;
+  consoles?: Pick<FrameConsoles, "connect" | "focus">;
   onShellCommand?: (command: ShellCommand, from: string) => void;
   /**
    * @default readDebugLogger()
@@ -41,10 +44,11 @@ export class EditorFrames {
   #launchOrigin: string;
   #appearance: PageAppearance;
   #share: Pick<CatalogShare, "serve">;
+  #consoles: Pick<FrameConsoles, "connect" | "focus"> | undefined;
   #onShellCommand: ((command: ShellCommand, from: string) => void) | undefined;
   #logger: HostLogger;
   #frames = new Map<string, HTMLIFrameElement>();
-  #catalogPorts = new Map<string, () => void>();
+  #launchPorts = new Map<string, () => void>();
   #listening = new AbortController();
 
   constructor(
@@ -54,6 +58,7 @@ export class EditorFrames {
     this.#launchOrigin = options.launchOrigin ?? location.origin;
     this.#appearance = options.appearance ?? new PageAppearance();
     this.#share = options.share;
+    this.#consoles = options.consoles;
     this.#onShellCommand = options.onShellCommand;
     this.#logger = (options.logger ?? readDebugLogger()).child({
       namespace: "studio.tabs"
@@ -73,6 +78,7 @@ export class EditorFrames {
     for (const [id, frame] of this.#frames) {
       frame.hidden = id !== tab?.id;
     }
+    this.#consoles?.focus(tab?.id ?? null);
   }
 
   retitle(
@@ -88,15 +94,15 @@ export class EditorFrames {
   remove(
     id: string
   ): void {
-    this.#stopCatalog(id);
+    this.#stopPorts(id);
     this.#frames.get(id)?.remove();
     this.#frames.delete(id);
   }
 
   dispose(): void {
     this.#listening.abort();
-    for (const id of [...this.#catalogPorts.keys()]) {
-      this.#stopCatalog(id);
+    for (const id of [...this.#launchPorts.keys()]) {
+      this.#stopPorts(id);
     }
     for (const frame of this.#frames.values()) {
       frame.remove();
@@ -133,28 +139,45 @@ export class EditorFrames {
     message: unknown,
     transfer: Transferable[] = []
   ): void {
-    frame.contentWindow?.postMessage(message, this.#launchOrigin, transfer);
+    frame.contentWindow?.postMessage(
+      message,
+      this.#launchOrigin,
+      transfer
+    );
   }
 
   #launch(
     id: string,
     frame: HTMLIFrameElement
   ): void {
-    this.#stopCatalog(id);
-    const channel = new MessageChannel();
-    this.#catalogPorts.set(id, this.#share.serve(channel.port1));
+    this.#stopPorts(id);
+    const catalog = new MessageChannel();
+    const ports: LaunchPorts = {
+      catalog: catalog.port2
+    };
+    const stops = [this.#share.serve(catalog.port1)];
+    if (this.#consoles !== undefined) {
+      const consoleChannel = new MessageChannel();
+      ports.console = consoleChannel.port2;
+      stops.push(this.#consoles.connect(id, consoleChannel.port1));
+    }
+    this.#launchPorts.set(id, () => {
+      for (const stop of stops) {
+        stop();
+      }
+    });
     this.#post(
       frame,
-      launchMessage(id, this.#appearance.toJSON()),
-      [channel.port2]
+      launchMessage(id, this.#appearance.toJSON(), ports),
+      Object.values(ports).filter((port) => port !== undefined)
     );
   }
 
-  #stopCatalog(
+  #stopPorts(
     id: string
   ): void {
-    this.#catalogPorts.get(id)?.();
-    this.#catalogPorts.delete(id);
+    this.#launchPorts.get(id)?.();
+    this.#launchPorts.delete(id);
   }
 
   readonly #onMessage = (

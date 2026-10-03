@@ -115,7 +115,7 @@ sequenceDiagram
 | Message | Direction | Carries |
 |---|---|---|
 | `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density, and a port to the shell catalog |
+| `jolly-launch` | shell → frame | target asset, theme, density, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
 | `jolly-shell` | frame → shell | `open-asset` or `toggle-console` |
 | `jolly-appearance` | shell → frame | new theme or density |
@@ -126,6 +126,9 @@ sequenceDiagram
 - The shell never answers a `jolly-shell` command.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
+- The frame serves its console namespaces on the console port, and
+  `FrameConsoles` shows those of the active tab in the studio console
+  ([ADR-0019](./docs/adr/0019-the-active-editor-namespaces-join-the-studio-console.md)).
 
 ## Saved state
 

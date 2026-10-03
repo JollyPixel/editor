@@ -86,16 +86,15 @@ export class HostMessageLaunchSource implements LaunchSource {
         return;
       }
 
-      const [catalogPort] = event.ports;
+      const { catalog, console: consolePort } = message.ports;
       const launch = EditorLaunch.fromTarget(
         message.target,
         new ShellChannel({
           port: parent,
           origin: event.origin,
           appearance: message.appearance ?? null,
-          catalog: catalogPort === undefined ?
-            null :
-            new ShellCatalog(catalogPort)
+          catalog: catalog === undefined ? null : new ShellCatalog(catalog),
+          console: consolePort ?? null
         })
       );
       if (launch !== undefined) {

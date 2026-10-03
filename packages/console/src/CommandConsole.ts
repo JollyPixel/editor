@@ -33,6 +33,7 @@ export type CommandConsoleEvents = {
   "scrollback-changed": () => void;
   "open-requested": () => void;
   "close-requested": () => void;
+  opened: () => void;
 };
 
 export class CommandConsole extends Emitter<
@@ -123,7 +124,10 @@ export class CommandConsole extends Emitter<
     try {
       switch (input.mode) {
         case "variable":
-          this.#append("info", accessVariable(input));
+          this.#append(
+            "info",
+            await this.#settle(echo, accessVariable(input))
+          );
           break;
         case "command":
           await this.#runCommand(
@@ -173,20 +177,11 @@ export class CommandConsole extends Emitter<
     }
     command.signal.addEventListener("abort", abort);
     try {
-      const result = command.def.execute(values, {
+      await this.#settle(echo, command.def.execute(values, {
         print: (text) => this.#append("info", text),
         error: (text) => this.#append("error", text),
         signal: controller.signal
-      });
-      if (result instanceof Promise) {
-        this.#updatePending(echo, true);
-        try {
-          await result;
-        }
-        finally {
-          this.#updatePending(echo, false);
-        }
-      }
+      }));
     }
     finally {
       command.signal.removeEventListener("abort", abort);
@@ -194,6 +189,23 @@ export class CommandConsole extends Emitter<
 
     if (command.def.closeOnExecute) {
       this.close();
+    }
+  }
+
+  async #settle<T>(
+    echo: ScrollbackEntry,
+    result: T | Promise<T>
+  ): Promise<T> {
+    if (!(result instanceof Promise)) {
+      return result;
+    }
+
+    this.#updatePending(echo, true);
+    try {
+      return await result;
+    }
+    finally {
+      this.#updatePending(echo, false);
     }
   }
 
