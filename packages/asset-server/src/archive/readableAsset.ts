@@ -11,7 +11,6 @@ import type { AssetImportError } from "./import/AssetImport.ts";
 import { AssetArchiveError } from "./errors/AssetArchiveError.ts";
 import { UnknownAssetKindError } from "../kinds/errors/UnknownAssetKindError.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
-import { asError } from "../utils/asError.ts";
 
 /**
  * Loads the asset into a throwaway state of its kind, so export and import
@@ -21,29 +20,23 @@ export function readableAsset(
   kinds: AssetKindRegistry,
   asset: AssetArchiveAsset
 ): Result<void, AssetImportError> {
-  if (!kinds.has(asset.kind)) {
-    const error = new UnknownAssetKindError(asset.kind);
-
-    return Err(error);
+  const decoded = kinds.decode(asset.kind, asset.id, asset.data);
+  if (decoded.ok) {
+    return Ok(undefined);
+  }
+  if (decoded.val instanceof UnknownAssetKindError) {
+    return Err(decoded.val);
   }
 
-  const handler = kinds.get(asset.kind);
-  try {
-    handler.load(handler.create(asset.id), asset.data);
-  }
-  catch (cause) {
-    const error = new AssetArchiveError(
-      "unreadable-asset",
-      `Asset "${asset.path}" is not a readable "${asset.kind}": ` +
-      `${asError(cause).message}`,
-      {
-        assetId: asset.id,
-        cause
-      }
-    );
+  const error = new AssetArchiveError(
+    "unreadable-asset",
+    `Asset "${asset.path}" is not a readable "${asset.kind}": ` +
+    `${decoded.val.message}`,
+    {
+      assetId: asset.id,
+      cause: decoded.val
+    }
+  );
 
-    return Err(error);
-  }
-
-  return Ok(undefined);
+  return Err(error);
 }

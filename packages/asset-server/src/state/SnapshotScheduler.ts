@@ -7,7 +7,10 @@ import {
   type Logger
 } from "../logger.ts";
 import { contentHash } from "../utils/contentHash.ts";
-import { isAssetEventType } from "../events/AssetEvents.ts";
+import {
+  isAssetEventType,
+  SNAPSHOT_ACTOR
+} from "../events/AssetEvents.ts";
 import type { SnapshotPolicy } from "../kinds/AssetKindHandler.ts";
 import type { AssetStateStore } from "./AssetStateStore.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
@@ -17,18 +20,6 @@ import { TaskChain } from "../utils/TaskChain.ts";
 // CONSTANTS
 const kDefaultDelay = 2_000;
 const kDefaultMaxDelay = 30_000;
-const kSnapshotSource = "snapshot";
-const kSnapshotActor: EventStore.Actor = {
-  type: "system",
-  source: kSnapshotSource
-};
-
-export function isScheduledSnapshot(
-  event: EventStore.Event
-): boolean {
-  return event.actor.type === "system" &&
-    event.actor.source === kSnapshotSource;
-}
 
 interface PendingSnapshot {
   handle: ReturnType<typeof setTimeout>;
@@ -153,13 +144,18 @@ export class SnapshotScheduler {
   snapshot(
     assetId: string
   ): Promise<boolean> {
-    let chain = this.#chains.get(assetId);
-    if (chain === undefined) {
-      chain = new TaskChain();
-      this.#chains.set(assetId, chain);
-    }
+    const chain = this.#chains.get(assetId) ?? new TaskChain();
+    this.#chains.set(assetId, chain);
 
-    return chain.run(() => this.#snapshot(assetId));
+    const snapshot = chain.run(() => this.#snapshot(assetId));
+    const release = (): void => {
+      if (chain.idle && this.#chains.get(assetId) === chain) {
+        this.#chains.delete(assetId);
+      }
+    };
+    snapshot.then(release, release);
+
+    return snapshot;
   }
 
   async #snapshot(
@@ -186,7 +182,7 @@ export class SnapshotScheduler {
       assetId,
       data,
       dependencies: entry.handler.dependencies?.(entry.state),
-      actor: kSnapshotActor
+      actor: SNAPSHOT_ACTOR
     });
     if (!updated.ok) {
       this.#logger

@@ -4,7 +4,12 @@ An `AssetKindHandler` defines how one asset type is recognized, folded into
 state and serialized.
 
 ```ts
-interface AssetKindHandler<TState = unknown, TCommand = unknown> {
+type AssetCommandHeader = Partial<NetworkCommandHeader>;
+
+interface AssetKindHandler<
+  TState = unknown,
+  TCommand extends AssetCommandHeader = AssetCommandHeader
+> {
   readonly kind: string;
   readonly extensions: Readonly<Record<string, string>>;
   readonly match?: readonly string[];
@@ -20,7 +25,10 @@ interface AssetKindHandler<TState = unknown, TCommand = unknown> {
   rebind?(state: TState, idMap: ReadonlyMap<string, string>): void;
 }
 
-interface AssetCommands<TState = unknown, TCommand = unknown> {
+interface AssetCommands<
+  TState = unknown,
+  TCommand extends AssetCommandHeader = AssetCommandHeader
+> {
   readonly eventType: string;
   readonly protocol: MessageProtocol;
 
@@ -37,6 +45,11 @@ of its extensions and, when `match` is set, also matches one of those globs.
 
 Handlers are checked in registration order. The built-in `binary` handler
 receives any path that no registered handler claims.
+
+A command may carry the `network` command header (`clientId`, `seq`,
+`timestamp`), which is why `TCommand` extends `AssetCommandHeader`. The
+room stamps `clientId` and acknowledges `seq`; a command type without the
+header extends `AssetCommandHeader` and leaves its fields out.
 
 `serialize` returns the bytes stored by the asset source. A kind that supports
 live editing provides `commands.live`; other kinds have no dynamic editing
@@ -88,7 +101,7 @@ Handlers never read raw events. `foldAssetEvent` parses each event and calls
 the matching hook:
 
 ```ts
-function foldAssetEvent<TState, TCommand>(
+function foldAssetEvent<TState, TCommand extends AssetCommandHeader>(
   handler: AssetKindHandler<TState, TCommand>,
   state: TState,
   event: Event
@@ -169,6 +182,24 @@ cannot be replaced.
 `kinds.contentTypes()` merges the `extensions` of every registered kind,
 later registrations winning on a shared extension.
 
+```ts
+kinds.decode(
+  kind: string,
+  assetId: string,
+  content: Uint8Array
+): Result<DecodedAsset, Error>
+
+interface DecodedAsset {
+  readonly handler: AssetKindHandler;
+  readonly state: unknown;
+}
+```
+
+`decode` loads `content` into a fresh state of `kind`. An unregistered kind
+is returned as `UnknownAssetKindError` and a `create` or `load` that throws as
+the thrown error. Dependency computation, archive checks and archive copies
+all go through it.
+
 ## Descriptor
 
 ```ts
@@ -204,6 +235,11 @@ import { textureAssetKind } from "@jolly-pixel/asset-server";
 
 const kinds = new AssetKindRegistry([textureAssetKind()]);
 ```
+
+`builtInAssetKinds()` returns the shipped handlers a project gets on top of
+its kind packages, today `[textureAssetKind()]`; see
+[Project](./Project.md). The registry itself registers none of them, so
+`.png` stays `binary` unless a host adds `texture`.
 
 Its state is the file's bytes, exactly like `binary`, and it has no
 `commands`, so texture assets get no editing room. The kind exists to
@@ -289,7 +325,13 @@ room that appends without writing. `AssetRoomExtension` hosts the room, so a
 kind supplies only what is specific to it:
 
 ```ts
-interface AssetLiveProtocol<TCommand = unknown> {
+type AssetBroadcast<TCommand> =
+  | { readonly type: "command"; readonly data: TCommand }
+  | { readonly type: "snapshot"; readonly data: unknown };
+
+interface AssetLiveProtocol<
+  TCommand extends AssetCommandHeader = AssetCommandHeader
+> {
   readonly snapshotSchema: JSONSchema;
 
   snapshot(): unknown;
@@ -297,7 +339,7 @@ interface AssetLiveProtocol<TCommand = unknown> {
   arbitrate(
     command: TCommand
   ): AssetArbitration<TCommand> | null;
-  broadcast?(command: TCommand): AssetRoomMessage;
+  broadcast?(command: TCommand): AssetBroadcast<TCommand>;
   correct?(
     command: TCommand,
     admitted: TCommand | null
@@ -377,7 +419,7 @@ gets `{ type: "catch-up", data, version, acks }`: the command events after
 that version, read from the event store, and the previous client's last
 processed `seq`. Renames and scheduled snapshots in the range are skipped.
 The room sends a snapshot with the same `acks` instead when the resume has no
-version, the range holds more than `resumeLimit` events or any other event,
+version, a plain snapshot when the resume is malformed, the range holds more than `resumeLimit` events or any other event,
 or compaction removed its start.
 
 ```ts

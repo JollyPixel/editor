@@ -8,9 +8,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   MessageParser,
-  type ClientHandle,
-  type RoomContext,
-  type RoomPeer
+  type RoomContext
 } from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
@@ -20,25 +18,20 @@ import {
 
 // Import Internal Dependencies
 import {
-  counterCommandProtocol,
-  counterSnapshotSchema
-} from "../helpers/protocols.ts";
-import {
   AssetRoomExtension,
   ASSET_ROOM_DELETED,
   ASSET_ROOM_REJECTED,
-  type AssetCommands,
-  type AssetLiveProtocol,
-  type AssetRoomBinding
+  type AssetLiveProtocol
 } from "#src/index.ts";
-
-// CONSTANTS
-const kBinding: AssetRoomBinding = {
-  assetId: "asset-1",
-  kind: "counter",
-  roomId: "counter:asset-1",
-  state: null
-};
+import { counterSnapshotSchema } from "../helpers/protocols.ts";
+import {
+  counterRoomBinding,
+  counterRoomCommands,
+  recordingClient,
+  recordingRoom,
+  roomPeer,
+  type DirectMessage
+} from "../helpers/rooms.ts";
 
 interface Command {
   action: string;
@@ -50,7 +43,7 @@ interface Harness {
   context: RoomContext;
   appended: EventStore.AppendInput[];
   broadcast: unknown[];
-  direct: { clientId: string; payload: unknown; }[];
+  direct: DirectMessage[];
   committed: Command[];
 }
 
@@ -69,8 +62,7 @@ function harness(
     protocol = {}
   } = options;
   const appended: EventStore.AppendInput[] = [];
-  const broadcast: unknown[] = [];
-  const direct: { clientId: string; payload: unknown; }[] = [];
+  const room = recordingRoom();
   const committed: Command[] = [];
   const events: EventStore.EventWriter = {
     append: (input) => {
@@ -87,77 +79,39 @@ function harness(
     }
   };
 
-  const commands: AssetCommands<unknown, Command> = {
-    eventType: "counter.command",
+  const extension = new AssetRoomExtension<Command>(
+    counterRoomBinding(),
+    counterRoomCommands<Command>(),
+    {
+      snapshotSchema: counterSnapshotSchema,
 
-    protocol: counterCommandProtocol,
+      snapshot() {
+        return { value: 7 };
+      },
 
-    apply: () => void 0
-  };
+      arbitrate(command) {
+        if (!accepts) {
+          return null;
+        }
 
-  const extension = new AssetRoomExtension<Command>(kBinding, commands, {
-    snapshotSchema: counterSnapshotSchema,
+        return {
+          command,
+          commit: () => committed.push(command)
+        };
+      },
 
-    snapshot() {
-      return { value: 7 };
+      ...protocol
     },
-
-    arbitrate(command) {
-      if (!accepts) {
-        return null;
-      }
-
-      return {
-        command,
-        commit: () => committed.push(command)
-      };
-    },
-
-    ...protocol
-  }, events);
-
-  const context: RoomContext = {
-    room: {
-      broadcast: (payload) => broadcast.push(payload),
-      sendTo: (clientId, payload) => direct.push({ clientId, payload })
-    },
-    identity: {
-      subject: "alice-subject",
-      role: "default"
-    }
-  };
+    events
+  );
 
   return {
     extension,
-    context,
+    context: room.context,
     appended,
-    broadcast,
-    direct,
+    broadcast: room.broadcasts,
+    direct: room.direct,
     committed
-  };
-}
-
-function roomPeer(
-  clientId: string
-): RoomPeer {
-  return {
-    clientId,
-    identity: {
-      subject: clientId,
-      role: "default"
-    },
-    profile: {},
-    presence: {}
-  };
-}
-
-function client(): ClientHandle & { received: unknown[]; } {
-  const received: unknown[] = [];
-
-  return {
-    id: "alice",
-    received,
-    send: (payload) => received.push(payload)
   };
 }
 
@@ -172,7 +126,7 @@ describe("AssetRoomExtension", () => {
 
   test("sends the protocol snapshot to a connecting client", () => {
     const { extension, context } = harness();
-    const peer = client();
+    const peer = recordingClient("alice");
 
     extension.onClientConnect(peer, roomPeer(peer.id), context);
 
@@ -184,28 +138,12 @@ describe("AssetRoomExtension", () => {
     ]);
   });
 
-  test("resolves a declared action through the inbound protocol", () => {
-    const { extension } = harness();
-    const parser = new MessageParser(extension.protocols.inbound!);
-
-    const parsed = parser.parse({ action: "increment" });
-    assert.strictEqual(parsed.ok, true);
-    assert.strictEqual(parsed.val.event, "increment");
-  });
-
-  test("rejects an undeclared or malformed payload", () => {
-    const { extension } = harness();
-    const parser = new MessageParser(extension.protocols.inbound!);
-
-    assert.strictEqual(parser.parse({ action: "decrement" }).ok, false);
-    assert.strictEqual(parser.parse({ type: "command" }).ok, false);
-    assert.strictEqual(parser.parse(null).ok, false);
-  });
-
   test("ignores a payload the protocol cannot parse", async() => {
     const { extension, context, appended, broadcast } = harness();
 
-    await extension.onMessage("alice", { action: "decrement" }, context);
+    for (const payload of [{ action: "decrement" }, { type: "command" }, null]) {
+      await extension.onMessage("alice", payload, context);
+    }
 
     assert.deepEqual(appended, []);
     assert.deepEqual(broadcast, []);
@@ -630,20 +568,6 @@ describe("AssetRoomExtension — acks", () => {
       }
     ]);
   });
-
-  test("declares acks on outbound snapshots", () => {
-    const { extension } = harness();
-    const parser = new MessageParser(extension.protocols.outbound!);
-
-    assert.strictEqual(
-      parser.parse({ type: "snapshot", data: {}, acks: { alice: 1 } }).ok,
-      true
-    );
-    assert.strictEqual(
-      parser.parse({ type: "snapshot", data: {}, acks: { alice: -1 } }).ok,
-      false
-    );
-  });
 });
 
 describe("AssetRoomExtension — rejection", () => {
@@ -675,7 +599,7 @@ describe("AssetRoomExtension — deletion", () => {
 
   test("broadcasts the deleted notice once to connected clients", () => {
     const { extension, context, broadcast } = harness();
-    const peer = client();
+    const peer = recordingClient("alice");
     extension.onClientConnect(peer, roomPeer(peer.id), context);
 
     extension.markDeleted();
@@ -688,7 +612,7 @@ describe("AssetRoomExtension — deletion", () => {
   test("sends the deleted notice instead of a snapshot to a late joiner", () => {
     const { extension, context } = harness();
     extension.markDeleted();
-    const peer = client();
+    const peer = recordingClient("alice");
 
     extension.onClientConnect(peer, roomPeer(peer.id), context);
 

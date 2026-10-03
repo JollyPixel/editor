@@ -52,26 +52,6 @@ describe("ProjectFile", () => {
     assert.deepEqual(projectFile.document.editors, ["editor-a"]);
   });
 
-  test("creates a missing file with the given data", async() => {
-    await using workspace = await tempWorkspace();
-    const data: ProjectFileData = {
-      version: 1,
-      kinds: {
-        "kind-a": {
-          size: 8
-        }
-      }
-    };
-
-    const projectFile = await ProjectFile.readOrCreate(workspace.root, data);
-
-    assert.deepEqual(
-      JSON.parse(await fs.readFile(projectFile.path, "utf8")),
-      data
-    );
-    assert.deepEqual(projectFile.document, data);
-  });
-
   test("never overwrites an existing file", async() => {
     await using workspace = await tempWorkspace();
     const file = path.join(workspace.root, PROJECT_FILE_PATH);
@@ -94,7 +74,9 @@ describe("ProjectFile", () => {
     const data: ProjectFileData = {
       version: 1,
       kinds: {
-        "kind-a": {}
+        "kind-a": {
+          size: 8
+        }
       }
     };
 
@@ -104,6 +86,7 @@ describe("ProjectFile", () => {
       JSON.parse(await fs.readFile(projectFile.path, "utf8")),
       data
     );
+    assert.deepEqual(projectFile.document, data);
   });
 
   test("is stale only when the file on disk holds another document", async() => {

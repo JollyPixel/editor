@@ -9,48 +9,49 @@ import {
   silentLogger,
   type Logger
 } from "../logger.ts";
-import type { Reconciler } from "./Reconciler.ts";
 import { asError } from "../utils/asError.ts";
 
 // CONSTANTS
 const kDefaultDebounce = 200;
 
-export interface ReconciliationWatcherOptions {
+export type SourceChangeHandler = (
+  changed: ReadonlySet<AssetEntryType>
+) => Promise<void>;
+
+export interface SourceWatcherOptions {
   source: AssetSource;
-  reconciler: Reconciler;
+  onChange: SourceChangeHandler;
   /**
    * Quiet period, in milliseconds, before a batch of notifications turns
-   * into one reconciliation pass.
+   * into one `onChange` call.
    * @default 200
    */
   debounce?: number;
-  afterPass?: () => Promise<void>;
   logger?: Logger;
 }
 
 /**
- * Coalesces filesystem notifications into idempotent reconciliation passes.
+ * Coalesces source notifications into sequential `onChange` calls, each
+ * receiving the entry types notified since the previous one.
  */
-export class ReconciliationWatcher {
+export class SourceWatcher {
   #source: AssetSource;
-  #reconciler: Reconciler;
+  #onChange: SourceChangeHandler;
   #debounce: number;
-  #afterPass: () => Promise<void>;
   #logger: Logger;
 
   #unwatch: (() => void) | null = null;
   #handle: ReturnType<typeof setTimeout> | null = null;
   #running: Promise<void> | null = null;
-  #again = false;
-  #filesChanged = false;
+  #notified = new Set<AssetEntryType>();
+  #due = new Set<AssetEntryType>();
 
   constructor(
-    options: ReconciliationWatcherOptions
+    options: SourceWatcherOptions
   ) {
     this.#source = options.source;
-    this.#reconciler = options.reconciler;
+    this.#onChange = options.onChange;
     this.#debounce = options.debounce ?? kDefaultDebounce;
-    this.#afterPass = options.afterPass ?? (() => Promise.resolve());
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -79,10 +80,7 @@ export class ReconciliationWatcher {
       .withMetadata({ path, type })
       .debug("filesystem change observed");
 
-    if (type === "file") {
-      this.#filesChanged = true;
-    }
-
+    this.#notified.add(type);
     if (this.#handle !== null) {
       clearTimeout(this.#handle);
     }
@@ -91,12 +89,6 @@ export class ReconciliationWatcher {
       this.#debounce
     );
     this.#handle.unref?.();
-  }
-
-  run(): Promise<void> {
-    this.#filesChanged = true;
-
-    return this.#pass();
   }
 
   async settle(): Promise<void> {
@@ -112,52 +104,39 @@ export class ReconciliationWatcher {
       clearTimeout(this.#handle);
       this.#handle = null;
     }
+    this.#notified.clear();
 
     await this.#running;
   }
 
   #pass(): Promise<void> {
-    if (this.#handle !== null) {
-      clearTimeout(this.#handle);
-      this.#handle = null;
+    this.#handle = null;
+    for (const type of this.#notified) {
+      this.#due.add(type);
+    }
+    this.#notified.clear();
+
+    if (this.#running === null && this.#due.size > 0) {
+      this.#running = this.#drain().finally(() => {
+        this.#running = null;
+      });
     }
 
-    if (this.#running !== null) {
-      this.#again = true;
-
-      return this.#running;
-    }
-
-    const pass = this.#run();
-    this.#running = pass;
-
-    return pass;
+    return this.#running ?? Promise.resolve();
   }
 
-  async #run(): Promise<void> {
-    try {
-      do {
-        this.#again = false;
-        if (this.#filesChanged) {
-          this.#filesChanged = false;
-          await this.#reconcile();
-        }
-        await this.#afterPass().catch((error: unknown) => this.#logger
+  async #drain(): Promise<void> {
+    while (this.#due.size > 0) {
+      const changed = new Set(this.#due);
+      this.#due.clear();
+      try {
+        await this.#onChange(changed);
+      }
+      catch (error) {
+        this.#logger
           .withMetadata({ reason: asError(error).message })
-          .error("reconciliation follow-up failed"));
-      } while (this.#again);
-    }
-    finally {
-      this.#running = null;
-    }
-  }
-
-  async #reconcile(): Promise<void> {
-    const result = await this.#reconciler.reconcile();
-    if (!result.ok) {
-      this.#logger
-        .withMetadata({ reason: result.val.message })
-        .error("reconciliation failed");
+          .error("source change not handled");
+      }
     }
   }
 }

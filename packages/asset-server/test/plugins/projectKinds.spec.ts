@@ -40,13 +40,13 @@ describe("projectHandlersModule", () => {
 
     assert.strictEqual(
       projectHandlersModule(kinds),
-      "import { textureAssetKind } from \"@jolly-pixel/asset-server\";\n" +
+      "import { builtInAssetKinds } from \"@jolly-pixel/asset-server\";\n" +
       "import { ASSET_KINDS as kinds0 } from \"@scope/kind-a\";\n" +
       "\n" +
       "export default function createHandlers() {\n" +
       "  return [\n" +
       "    ...kinds0.handlers({\"chunkSize\":8}),\n" +
-      "    textureAssetKind()\n" +
+      "    ...builtInAssetKinds()\n" +
       "  ];\n" +
       "}\n"
     );
@@ -81,7 +81,7 @@ describe("createProjectKindsPlugin", () => {
     );
     await fs.writeFile(
       path.join(app, "texture.js"),
-      "export const textureAssetKind = () => ({ kind: \"texture\" });\n"
+      "export const builtInAssetKinds = () => [{ kind: \"texture\" }];\n"
     );
     const kinds = await ProjectKinds.load(
       new ProjectFile(project, {

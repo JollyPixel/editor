@@ -4,6 +4,7 @@ import { MessageParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { AssetKindHandler } from "./AssetKindHandler.ts";
+import type { AssetCommandHeader } from "./AssetLiveProtocol.ts";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
@@ -12,7 +13,10 @@ import {
 } from "../events/AssetEvents.ts";
 import { decodeContent } from "../events/inlineContent.ts";
 
-export function foldAssetEvent<TState, TCommand>(
+export function foldAssetEvent<
+  TState,
+  TCommand extends AssetCommandHeader
+>(
   handler: AssetKindHandler<TState, TCommand>,
   state: TState,
   event: EventStore.Event

@@ -7,8 +7,8 @@ import {
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import type { ArchiveBackend } from "../ArchiveBackend.ts";
 import type {
-  ArchiveBackend,
   AssetArchive,
   AssetArchiveAsset,
   AssetArchiveEntry

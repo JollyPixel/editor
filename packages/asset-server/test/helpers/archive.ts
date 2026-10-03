@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import { AssetRoom } from "@jolly-pixel/asset";
+import { Server } from "@jolly-pixel/network";
 import {
   strToU8,
   zipSync,
@@ -9,21 +11,22 @@ import {
 
 // Import Internal Dependencies
 import {
-  ASSET_ARCHIVE_MANIFEST_PATH,
   createAssetBackend,
   type AssetBackend,
   type AssetBackendOptions
 } from "#src/index.ts";
 import {
   linkContent,
-  linkHandler
+  liveLinkHandler
 } from "./kinds.ts";
+import { recordingClient } from "./rooms.ts";
 
 // CONSTANTS
 export const ARCHIVE_ACTOR: EventStore.Actor = {
   type: "user",
   id: "alice"
 };
+const kEditor = "editor";
 
 export interface ArchiveWorkspace extends AsyncDisposable {
   readonly backend: AssetBackend;
@@ -33,6 +36,10 @@ export interface ArchiveWorkspace extends AsyncDisposable {
     path: string,
     ...targets: string[]
   ): Promise<string>;
+  editLive(
+    assetId: string,
+    ...targets: string[]
+  ): Promise<void>;
 }
 
 export type ArchiveWorkspaceOptions = Pick<
@@ -49,14 +56,38 @@ export async function archiveWorkspace(
     ...options,
     source,
     eventStore,
-    handlers: [linkHandler()],
+    handlers: [liveLinkHandler()],
     watch: false
   });
+
+  let server: Server | null = null;
+  const joined = new Set<string>();
 
   return {
     backend,
     source,
     eventStore,
+    async editLive(assetId, ...targets) {
+      if (server === null) {
+        server = new Server();
+        backend.attach(server);
+        server.handleConnect(recordingClient(kEditor), {
+          subject: kEditor,
+          role: "default"
+        });
+      }
+
+      const room = new AssetRoom("link", assetId).toString();
+      if (!joined.has(room)) {
+        joined.add(room);
+        await server.handleMessage(kEditor, { room, kind: "join" });
+      }
+      await server.handleMessage(kEditor, {
+        room,
+        kind: "message",
+        payload: { action: "set", targets }
+      });
+    },
     async link(path, ...targets) {
       const created = await backend.writer.create({
         path,
@@ -67,6 +98,7 @@ export async function archiveWorkspace(
       return created.unwrap().assetId;
     },
     async [Symbol.asyncDispose]() {
+      await server?.close();
       await backend.close();
       eventStore.close();
     }
@@ -78,7 +110,7 @@ export function zipArchive(
   entries: Record<string, Uint8Array>
 ): Uint8Array {
   const files: Zippable = { ...entries };
-  files[ASSET_ARCHIVE_MANIFEST_PATH] = strToU8(JSON.stringify(manifest));
+  files["bundle.json"] = strToU8(JSON.stringify(manifest));
 
   return zipSync(files);
 }

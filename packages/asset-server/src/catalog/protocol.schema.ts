@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  defineSchema,
   MessageProtocol,
   type MessageProtocols
 } from "@jolly-pixel/network";
@@ -21,7 +22,22 @@ import {
   CATALOG_RENAME,
   CATALOG_SNAPSHOT
 } from "./client/protocol.ts";
-import { assetInlineContentSchema } from "../events/AssetEvents.schema.ts";
+import {
+  assetInlineContentSchema,
+  assetReferenceSchema
+} from "../events/AssetEvents.schema.ts";
+import {
+  ASSET_CREATED,
+  ASSET_DELETED,
+  ASSET_RENAMED,
+  ASSET_UPDATED
+} from "../events/AssetEvents.ts";
+import { PATH_CONFLICT_POLICIES } from "../writer/AssetPathAllocator.ts";
+import {
+  IMPORT_CONFLICT_POLICIES,
+  importPlanSchema,
+  importReportSchema
+} from "../archive/import/AssetImport.ts";
 
 // CONSTANTS
 const kString = { type: "string" } as const;
@@ -29,6 +45,68 @@ const kStrings = {
   type: "array",
   items: kString
 } as const;
+const kReferences = {
+  type: "array",
+  items: assetReferenceSchema
+} as const;
+const kCommandTypes = [
+  CATALOG_CREATE,
+  CATALOG_RENAME,
+  CATALOG_DELETE,
+  CATALOG_CREATE_FOLDER,
+  CATALOG_MOVE_FOLDER,
+  CATALOG_DELETE_FOLDER,
+  CATALOG_EXPORT,
+  CATALOG_PLAN,
+  CATALOG_IMPORT
+] as const;
+
+export const assetRecordSchema = defineSchema({
+  type: "object",
+  properties: {
+    id: kString,
+    kind: kString,
+    source: kString,
+    revision: kString
+  },
+  required: [
+    "id",
+    "kind",
+    "source"
+  ]
+});
+
+export const catalogChangeSchema = defineSchema({
+  type: "object",
+  properties: {
+    eventType: {
+      enum: [
+        ASSET_CREATED,
+        ASSET_UPDATED,
+        ASSET_RENAMED,
+        ASSET_DELETED
+      ]
+    },
+    assetId: kString,
+    record: {
+      oneOf: [
+        assetRecordSchema,
+        { type: "null" }
+      ]
+    },
+    dependencies: kReferences
+  },
+  required: [
+    "eventType",
+    "assetId",
+    "record"
+  ]
+});
+
+export const dependencyMapSchema = defineSchema({
+  type: "object",
+  additionalProperties: kReferences
+});
 
 export const catalogCommandProtocol = new MessageProtocol(
   {
@@ -40,9 +118,7 @@ export const catalogCommandProtocol = new MessageProtocol(
           requestId: kString,
           path: kString,
           kind: kString,
-          onConflict: {
-            enum: ["reject", "suffix"]
-          },
+          onConflict: { enum: PATH_CONFLICT_POLICIES },
           content: assetInlineContentSchema
         },
         required: [
@@ -152,9 +228,7 @@ export const catalogCommandProtocol = new MessageProtocol(
           type: { const: CATALOG_IMPORT },
           requestId: kString,
           content: assetInlineContentSchema,
-          onConflict: {
-            enum: ["replace", "keep", "copy"]
-          }
+          onConflict: { enum: IMPORT_CONFLICT_POLICIES }
         },
         required: [
           "type",
@@ -177,8 +251,21 @@ export const catalogMessageProtocol = new MessageProtocol(
         type: "object",
         properties: {
           type: { const: CATALOG_SNAPSHOT },
-          manifest: { type: "object" },
-          dependencies: { type: "object" },
+          manifest: {
+            type: "object",
+            properties: {
+              version: { const: 1 },
+              assets: {
+                type: "array",
+                items: assetRecordSchema
+              }
+            },
+            required: [
+              "version",
+              "assets"
+            ]
+          },
+          dependencies: dependencyMapSchema,
           folders: kStrings
         },
         required: [
@@ -191,7 +278,7 @@ export const catalogMessageProtocol = new MessageProtocol(
         type: "object",
         properties: {
           type: { const: CATALOG_CHANGED },
-          change: { type: "object" }
+          change: catalogChangeSchema
         },
         required: [
           "type",
@@ -212,19 +299,97 @@ export const catalogMessageProtocol = new MessageProtocol(
       {
         type: "object",
         properties: {
-          type: { const: CATALOG_APPLIED },
-          requestId: kString,
-          command: kString,
-          assetId: kString,
-          path: kString,
-          content: assetInlineContentSchema,
-          plan: { type: "object" },
-          report: { type: "object" }
+          type: { const: CATALOG_APPLIED }
         },
-        required: [
-          "type",
-          "requestId",
-          "command"
+        required: ["type"],
+        oneOf: [
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: {
+                enum: [
+                  CATALOG_CREATE,
+                  CATALOG_RENAME,
+                  CATALOG_DELETE
+                ]
+              },
+              assetId: kString
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "assetId"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: {
+                enum: [
+                  CATALOG_CREATE_FOLDER,
+                  CATALOG_MOVE_FOLDER,
+                  CATALOG_DELETE_FOLDER
+                ]
+              },
+              path: kString
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "path"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_EXPORT },
+              content: assetInlineContentSchema
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "content"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_PLAN },
+              plan: importPlanSchema
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "plan"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_IMPORT },
+              report: importReportSchema
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "report"
+            ]
+          }
         ]
       },
       {
@@ -232,7 +397,7 @@ export const catalogMessageProtocol = new MessageProtocol(
         properties: {
           type: { const: CATALOG_REJECTED },
           requestId: kString,
-          command: kString,
+          command: { enum: kCommandTypes },
           reason: kString
         },
         required: [

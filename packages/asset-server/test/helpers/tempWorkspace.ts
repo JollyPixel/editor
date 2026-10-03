@@ -7,9 +7,6 @@ export interface TempWorkspace extends AsyncDisposable {
   readonly root: string;
 }
 
-/**
- * Creates an isolated directory removed when the scope exits.
- */
 export async function tempWorkspace(): Promise<TempWorkspace> {
   const root = await fs.mkdtemp(
     path.join(os.tmpdir(), "jolly-asset-server-")

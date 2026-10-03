@@ -16,7 +16,10 @@ import { AssetPathConflictError } from "./errors/AssetPathConflictError.ts";
 import type { IdentitySidecar } from "../identity/IdentitySidecar.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 
-export type PathConflictPolicy = "reject" | "suffix";
+// CONSTANTS
+export const PATH_CONFLICT_POLICIES = ["reject", "suffix"] as const;
+
+export type PathConflictPolicy = typeof PATH_CONFLICT_POLICIES[number];
 
 export interface AssetPathAllocatorOptions {
   projector: AssetProjector;

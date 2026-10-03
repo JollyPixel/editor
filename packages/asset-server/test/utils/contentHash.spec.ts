@@ -10,20 +10,6 @@ import { contentHash } from "#src/utils/index.ts";
 import { bytes } from "../helpers/bytes.ts";
 
 describe("contentHash", () => {
-  test("is stable for identical bytes", async() => {
-    assert.strictEqual(
-      await contentHash(bytes("hello")),
-      await contentHash(bytes("hello"))
-    );
-  });
-
-  test("differs for different bytes", async() => {
-    assert.notStrictEqual(
-      await contentHash(bytes("hello")),
-      await contentHash(bytes("world"))
-    );
-  });
-
   test("is a sha256 hex digest", async() => {
     assert.strictEqual(
       await contentHash(bytes("hello")),

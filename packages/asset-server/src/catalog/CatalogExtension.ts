@@ -49,10 +49,8 @@ import {
   decodeContent,
   encodeContent
 } from "../events/inlineContent.ts";
-import type {
-  ArchiveBackend,
-  AssetArchive
-} from "../archive/AssetArchive.ts";
+import type { AssetArchive } from "../archive/AssetArchive.ts";
+import type { ArchiveBackend } from "../archive/ArchiveBackend.ts";
 import { exportAssetArchive } from "../archive/exportAssetArchive.ts";
 import { readAssetArchive } from "../archive/readAssetArchive.ts";
 import type { ArchiveLimits } from "../archive/ArchiveLimits.ts";
@@ -254,16 +252,19 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         const archive = await exportAssetArchive(backend, {
           root: command.root
         });
-        if (archive.byteLength > this.#maxContentBytes) {
+        if (!archive.ok) {
+          return archive;
+        }
+        if (archive.val.byteLength > this.#maxContentBytes) {
           return Err(new CatalogContentTooLargeError(
-            archive.byteLength,
+            archive.val.byteLength,
             this.#maxContentBytes
           ));
         }
 
         return Ok({
           command: command.type,
-          content: encodeContent(archive)
+          content: encodeContent(archive.val)
         });
       }
       case CATALOG_PLAN:

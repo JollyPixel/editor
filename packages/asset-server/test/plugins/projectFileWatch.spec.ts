@@ -40,11 +40,26 @@ describe("createProjectFileWatchPlugin", () => {
       restarts++;
       resolve();
     };
+    const checks: Promise<boolean>[] = [];
+    const isStale = projectFile.isStale.bind(projectFile);
+    projectFile.isStale = () => {
+      const check = isStale();
+      checks.push(check);
+
+      return check;
+    };
 
     try {
-      vite.watcher.emit("change", path.join(workspace.root, "other.json"));
-      await fs.writeFile(projectFile.path, "{\"version\":1,\"editors\":[]}");
       vite.watcher.emit("change", projectFile.path);
+      assert.strictEqual(checks.length, 1);
+      assert.strictEqual(await checks[0], false);
+
+      await fs.writeFile(projectFile.path, "{\"version\":1,\"editors\":[]}");
+      vite.watcher.emit("change", path.join(workspace.root, "other.json"));
+      assert.strictEqual(checks.length, 1);
+
+      vite.watcher.emit("change", projectFile.path);
+      assert.strictEqual(await checks[1], true);
       await restarted;
 
       assert.strictEqual(restarts, 1);

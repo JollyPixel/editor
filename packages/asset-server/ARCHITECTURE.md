@@ -37,8 +37,8 @@ flowchart TB
         AssetRoom -->|"domain event"| Store
         Writer -->|"lifecycle event"| Store
 
-        Store -->|"lifecycle events"| Catalog
         Store -->|"lifecycle events"| Projector
+        Projector -->|"desired state"| Catalog
         Store -->|"replay and new events"| State
 
         Catalog -->|"snapshot and changes"| CatalogRoom
@@ -105,8 +105,8 @@ sequenceDiagram
     Scheduler->>State: serialize
     Scheduler->>Writer: update with serialized bytes
     Writer->>Store: append asset.updated
-    Store->>Catalog: refresh revision
     Store->>Projector: fold lifecycle event
+    Projector->>Catalog: refresh revision
     Projector->>Files: write content
 ```
 
@@ -132,7 +132,7 @@ sequenceDiagram
     Reconciler->>Writer: record detected change
     Writer->>Store: append lifecycle event
     Store->>Projector: fold lifecycle event
-    Store->>Catalog: update record
+    Projector->>Catalog: update record
     Store->>State: load or clear if open
     Writer->>Projector: mark already projected
 

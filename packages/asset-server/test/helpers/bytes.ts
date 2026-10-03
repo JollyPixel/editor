@@ -1,6 +1,3 @@
-/**
- * Deterministic byte helpers shared by the source and sync suites.
- */
 export function bytes(
   value: string
 ): Uint8Array {

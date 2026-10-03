@@ -1,7 +1,11 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { Server } from "@jolly-pixel/network";
-import type { AssetSource } from "@jolly-pixel/asset-source";
+import type {
+  AssetEntryType,
+  AssetSource
+} from "@jolly-pixel/asset-source";
+import type { Result } from "@openally/result";
 
 // Import Internal Dependencies
 import {
@@ -20,8 +24,11 @@ import { AssetProjector } from "./projection/AssetProjector.ts";
 import { AssetStateStore } from "./state/AssetStateStore.ts";
 import { AssetWriter } from "./writer/AssetWriter.ts";
 import { SnapshotScheduler } from "./state/SnapshotScheduler.ts";
-import { Reconciler } from "./reconcile/Reconciler.ts";
-import { ReconciliationWatcher } from "./reconcile/ReconciliationWatcher.ts";
+import {
+  Reconciler,
+  type ReconcileReport
+} from "./reconcile/Reconciler.ts";
+import { SourceWatcher } from "./reconcile/SourceWatcher.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogFolders } from "./catalog/CatalogFolders.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
@@ -87,22 +94,6 @@ export type AssetBackendTuning = Omit<
   "source" | "eventStore" | "handlers" | "logger"
 >;
 
-/**
- * Internal stages exposed to tests, tooling, and hosts.
- *
- * They stay outside `AssetBackend` because their shapes are not public API.
- */
-export interface AssetBackendInternals {
-  readonly identity: IdentitySidecar;
-  readonly state: ProjectionState;
-  readonly projector: AssetProjector;
-  readonly states: AssetStateStore;
-  readonly scheduler: SnapshotScheduler;
-  readonly reconciler: Reconciler;
-  readonly watcher: ReconciliationWatcher;
-  readonly catalogExtension: CatalogExtension;
-}
-
 export interface AssetBackend extends AsyncDisposable {
   readonly source: AssetSource;
   readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
@@ -110,11 +101,12 @@ export interface AssetBackend extends AsyncDisposable {
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;
   readonly folders: CatalogFolders;
-  readonly internals: AssetBackendInternals;
 
   flush(
     assetId?: string
   ): Promise<void>;
+
+  reconcile(): Promise<Result<ReconcileReport, Error>>;
 
   attach(
     server: Server,
@@ -215,7 +207,7 @@ export async function createAssetBackend(
   });
   scheduler.start();
 
-  const catalog = new CatalogProjection({ eventStore });
+  const catalog = new CatalogProjection({ projector });
   const folders = new CatalogFolders({
     source,
     catalog,
@@ -228,18 +220,15 @@ export async function createAssetBackend(
     writer,
     logger
   });
-  const watcher = new ReconciliationWatcher({
+  const watcher = new SourceWatcher({
     source,
-    reconciler,
+    onChange: onSourceChange,
     debounce: reconcileDebounce,
-    afterPass: () => folders.refresh(),
     logger
   });
 
   if (reconcileOnStart) {
-    (await reconciler.reconcile()).orTee((error) => logger
-      .withMetadata({ reason: error.message })
-      .error("initial reconciliation failed"));
+    (await reconciler.reconcile()).orTee(logReconcileFailure);
     await projector.flush();
   }
 
@@ -258,11 +247,36 @@ export async function createAssetBackend(
       .withMetadata({ assets: backfilled })
       .info("asset dependencies backfilled");
   }
+
   async function flush(
     assetId?: string
   ): Promise<void> {
     await scheduler.flush(assetId);
     await projector.flush(assetId);
+  }
+
+  async function reconcile(): Promise<Result<ReconcileReport, Error>> {
+    const report = await reconciler.reconcile();
+    await folders.refresh();
+
+    return report;
+  }
+
+  async function onSourceChange(
+    changed: ReadonlySet<AssetEntryType>
+  ): Promise<void> {
+    if (changed.has("file")) {
+      (await reconciler.reconcile()).orTee(logReconcileFailure);
+    }
+    await folders.refresh();
+  }
+
+  function logReconcileFailure(
+    error: Error
+  ): void {
+    logger
+      .withMetadata({ reason: error.message })
+      .error("reconciliation failed");
   }
 
   const catalogExtension = new CatalogExtension({
@@ -290,18 +304,9 @@ export async function createAssetBackend(
     writer,
     catalog,
     folders,
-    internals: {
-      identity,
-      state,
-      projector,
-      states,
-      scheduler,
-      reconciler,
-      watcher,
-      catalogExtension
-    },
 
     flush,
+    reconcile,
 
     attach(server, attachOptions = {}) {
       server.register(catalogExtension);
@@ -313,8 +318,7 @@ export async function createAssetBackend(
         kinds,
         catalog,
         states,
-        projector,
-        scheduler,
+        flush,
         graceMs: attachOptions.graceMs,
         logger
       });

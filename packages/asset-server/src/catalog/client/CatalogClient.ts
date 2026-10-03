@@ -89,10 +89,11 @@ export type CatalogClientEvents = {
   dependencies: (assetId: string) => void;
 };
 
-type Reply<TType extends CatalogCommandType> = Extract<
-  CatalogApplied,
-  { command: TType; }
->;
+type Reply<TType extends CatalogCommandType> = CatalogApplied extends infer TApplied ?
+  TApplied extends { command: infer TCommand; } ?
+    TType extends TCommand ? TApplied : never :
+    never :
+  never;
 type SettledMessage = Extract<
   CatalogMessage,
   { type: typeof CATALOG_APPLIED | typeof CATALOG_REJECTED; }

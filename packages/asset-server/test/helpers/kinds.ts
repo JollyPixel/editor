@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type {
+  AssetCommandHeader,
   AssetCommands,
   AssetKindHandler,
   SnapshotPolicy
@@ -11,7 +12,8 @@ import {
 import {
   counterCommandProtocol,
   counterSnapshotSchema,
-  linkCommandProtocol
+  linkCommandProtocol,
+  linkSnapshotSchema
 } from "./protocols.ts";
 
 export const COUNTER_INCREMENTED = "counter.incremented";
@@ -20,7 +22,7 @@ export interface CounterState {
   value: number;
 }
 
-export interface CounterCommand {
+export interface CounterCommand extends AssetCommandHeader {
   action: "increment";
 }
 
@@ -90,7 +92,7 @@ export interface LinkState {
   targets: string[];
 }
 
-export interface LinkCommand {
+export interface LinkCommand extends AssetCommandHeader {
   action: "set";
   targets: string[];
 }
@@ -110,17 +112,19 @@ export function linkContent(
   return bytes(targets.join(","));
 }
 
+const kLinkCommands: AssetCommands<LinkState, LinkCommand> = {
+  eventType: LINK_TARGETS_SET,
+  protocol: linkCommandProtocol,
+  apply: (state, command) => {
+    state.targets = [...command.targets];
+  }
+};
+
 export function linkHandler(): AssetKindHandler<LinkState, LinkCommand> {
   return {
     kind: "link",
     extensions: { ".link": "text/plain; charset=utf-8" },
-    commands: {
-      eventType: LINK_TARGETS_SET,
-      protocol: linkCommandProtocol,
-      apply: (state, command) => {
-        state.targets = [...command.targets];
-      }
-    },
+    commands: kLinkCommands,
 
     create(): LinkState {
       return { targets: [] };
@@ -160,6 +164,26 @@ export function linkHandler(): AssetKindHandler<LinkState, LinkCommand> {
       idMap: ReadonlyMap<string, string>
     ): void {
       state.targets = state.targets.map((id) => idMap.get(id) ?? id);
+    }
+  };
+}
+
+export function liveLinkHandler(): AssetKindHandler<LinkState, LinkCommand> {
+  return {
+    ...linkHandler(),
+    commands: {
+      ...kLinkCommands,
+      live: (binding) => {
+        return {
+          snapshotSchema: linkSnapshotSchema,
+          snapshot: () => {
+            return { targets: [...binding.state.targets] };
+          },
+          arbitrate: (command) => {
+            return { command };
+          }
+        };
+      }
     }
   };
 }

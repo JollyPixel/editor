@@ -18,11 +18,13 @@ import {
   writableAssetPath,
   type AssetPathAllocator
 } from "./AssetPathAllocator.ts";
-import type { CreateAssetInput } from "./AssetWriter.ts";
-import type { AssetContent } from "./DependencyReader.ts";
+import type {
+  AssetPayload,
+  CreateAssetInput
+} from "./AssetWriteInput.ts";
 import { asError } from "../utils/asError.ts";
 
-export interface PlannedAsset extends AssetContent {
+export interface PlannedAsset extends AssetPayload {
   assetId: string;
   path: string;
   kind: string;

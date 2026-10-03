@@ -13,13 +13,15 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import {
   Extension,
   Server,
-  type ClientHandle,
   type RoomContext
 } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { STATE_GITIGNORE_PATH } from "#src/index.ts";
+import {
+  CATALOG_ROOM,
+  STATE_GITIGNORE_PATH
+} from "#src/index.ts";
 import {
   createAssetWorkspace,
   type AssetWorkspace
@@ -31,6 +33,7 @@ import {
 } from "../helpers/kinds.ts";
 import { counterProtocols } from "../helpers/protocols.ts";
 import { bytes } from "../helpers/bytes.ts";
+import { recordingClient } from "../helpers/rooms.ts";
 
 // CONSTANTS
 const kCompactionActor: EventStore.Actor = {
@@ -59,12 +62,6 @@ class StaticExtension extends Extension {
   }
 }
 
-function client(
-  id: string
-): ClientHandle {
-  return { id, send: () => void 0 };
-}
-
 describe("createAssetWorkspace", () => {
   test("seeds, catalogs and serves the workspace over one server", async() => {
     await using temporary = await tempWorkspace();
@@ -80,7 +77,6 @@ describe("createAssetWorkspace", () => {
       backend: { watch: false }
     });
 
-    // The seed landed on disk before the first reconciliation.
     assert.strictEqual(
       await fs.readFile(
         path.join(temporary.root, "counter.counter"),
@@ -93,8 +89,7 @@ describe("createAssetWorkspace", () => {
     const record = workspace.backend.catalog.snapshot().assets[0];
     assert.strictEqual(record.kind, "counter");
 
-    // The asset room resolves through the server the workspace built.
-    workspace.server.handleConnect(client("A"), { subject: "A", role: "default" });
+    workspace.server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
     const joined = await workspace.server.handleMessage("A", {
       room: new AssetRoom(record.kind, record.id).toString(),
       kind: "join"
@@ -175,7 +170,6 @@ describe("createAssetWorkspace", () => {
       await source.list(),
       ["a.png"]
     );
-    // The back-end still writes its own bookkeeping through that source.
     assert.match(
       new TextDecoder().decode(await source.read(STATE_GITIGNORE_PATH)),
       /events\.db/
@@ -194,7 +188,7 @@ describe("createAssetWorkspace", () => {
       backend: { watch: false }
     });
 
-    workspace.server.handleConnect(client("A"), { subject: "A", role: "default" });
+    workspace.server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
     const joined = await workspace.server.handleMessage("A", {
       room: "static-room",
       kind: "join"
@@ -216,6 +210,11 @@ describe("createAssetWorkspace", () => {
     });
 
     assert.strictEqual(workspace.server, server);
+    server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
+    assert.notStrictEqual(
+      await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" }),
+      null
+    );
   });
 
   test("leaves an event store it does not own open", async() => {
@@ -243,10 +242,6 @@ describe("createAssetWorkspace", () => {
 });
 
 describe("createAssetWorkspace — compaction", () => {
-  /**
-   * Edits one asset through a first workspace, then reopens on the same
-   * log and source so the second open replays what the first left behind.
-   */
   async function editThenReopen(
     compactOnOpen: boolean | undefined,
     eventStore: EventStore.EventStore

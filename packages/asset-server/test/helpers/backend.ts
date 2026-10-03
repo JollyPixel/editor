@@ -24,7 +24,7 @@ import {
 } from "#src/state/index.ts";
 import {
   Reconciler,
-  ReconciliationWatcher
+  SourceWatcher
 } from "#src/reconcile/index.ts";
 
 export interface SyncHarness extends AsyncDisposable {
@@ -36,7 +36,7 @@ export interface SyncHarness extends AsyncDisposable {
   readonly scheduler: SnapshotScheduler;
   readonly writer: AssetWriter;
   readonly reconciler: Reconciler;
-  readonly watcher: ReconciliationWatcher;
+  readonly watcher: SourceWatcher;
   readonly identity: IdentitySidecar;
   readonly kinds: AssetKindRegistry;
 }
@@ -49,17 +49,11 @@ export interface SyncHarnessOptions {
 }
 
 export interface ReadCounter {
-  /** Stands in for the real store, counting what its reader hands out. */
   readonly store: EventStore.EventStore;
-  /** Events returned by the reader since the last `reset`. */
   readonly read: number;
   reset(): void;
 }
 
-/**
- * Counts the events a reader materializes, so a test can pin that a
- * projection loads from the tail of the log instead of its whole history.
- */
 export function countingReads(
   store: EventStore.EventStore
 ): ReadCounter {
@@ -102,12 +96,6 @@ export function countingReads(
   };
 }
 
-/**
- * Wires source, state, projector and scheduler over in-memory backends.
- *
- * Suites that depend on the snapshot or debounce cadence enable
- * `t.mock.timers` before calling this.
- */
 export async function syncHarness(
   options: SyncHarnessOptions = {}
 ): Promise<SyncHarness> {
@@ -145,9 +133,13 @@ export async function syncHarness(
     projector,
     writer
   });
-  const watcher = new ReconciliationWatcher({
+  const watcher = new SourceWatcher({
     source,
-    reconciler,
+    onChange: async(changed) => {
+      if (changed.has("file")) {
+        await reconciler.reconcile();
+      }
+    },
     debounce: 100
   });
 

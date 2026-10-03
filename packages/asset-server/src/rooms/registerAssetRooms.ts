@@ -13,8 +13,6 @@ import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { CatalogChange } from "../catalog/client/protocol.ts";
 import type { AssetStateStore } from "../state/AssetStateStore.ts";
-import type { AssetProjector } from "../projection/AssetProjector.ts";
-import type { SnapshotScheduler } from "../state/SnapshotScheduler.ts";
 import {
   silentLogger,
   type Logger
@@ -27,8 +25,7 @@ export interface AssetRoomsOptions {
   kinds: AssetKindRegistry;
   catalog: CatalogProjection;
   states: AssetStateStore;
-  projector: AssetProjector;
-  scheduler: SnapshotScheduler;
+  flush: (assetId: string) => Promise<void>;
   graceMs?: number;
   logger?: Logger;
 }
@@ -43,8 +40,7 @@ export function registerAssetRooms(
     kinds,
     catalog,
     states,
-    projector,
-    scheduler,
+    flush,
     graceMs,
     logger = silentLogger()
   } = options;
@@ -89,7 +85,7 @@ export function registerAssetRooms(
     }
 
     const assetId = id.value;
-    if (catalog.catalog.find(id)?.kind !== kind) {
+    if (catalog.record(id.value)?.kind !== kind) {
       return refuse("unknown asset");
     }
 
@@ -120,8 +116,7 @@ export function registerAssetRooms(
         if (liveRooms.get(assetId) === extension) {
           liveRooms.delete(assetId);
         }
-        await scheduler.flush(assetId);
-        await projector.flush(assetId);
+        await flush(assetId);
         states.release(assetId);
       }
     };

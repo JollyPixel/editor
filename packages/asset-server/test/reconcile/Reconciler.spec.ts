@@ -121,6 +121,27 @@ describe("Reconciler — cold start", () => {
   });
 });
 
+describe("Reconciler — concurrent passes", () => {
+  test("a pass waits for the one in flight", async() => {
+    await using harness = await syncHarness();
+    await harness.source.write("a.png", bytes("one"));
+
+    const [first, second] = await Promise.all([
+      harness.reconciler.reconcile(),
+      harness.reconciler.reconcile()
+    ]);
+
+    assert.strictEqual(first.unwrap().created, 1);
+    assert.deepEqual(second.unwrap(), {
+      created: 0,
+      updated: 0,
+      renamed: 0,
+      deleted: 0,
+      failed: 0
+    });
+  });
+});
+
 describe("Reconciler — failures", () => {
   test("an entry that cannot be read is counted, not swallowed", async() => {
     const source = new MemoryAssetSource();

@@ -4,6 +4,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import type { AssetCommandHeader } from "../kinds/AssetLiveProtocol.ts";
 import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
 import { foldAssetEvent } from "../kinds/foldAssetEvent.ts";
 import { InvalidAssetDocumentError } from "../kinds/errors/InvalidAssetDocumentError.ts";
@@ -30,9 +31,10 @@ export interface RecordedCommand<TCommand = unknown> {
   readonly version: number;
 }
 
-interface ReplayedAsset {
+interface OpenAsset {
   readonly entry: AssetStateEntry;
-  readonly commands: RecordedCommand[];
+  version: number;
+  commandsSinceCheckpoint: RecordedCommand<AssetCommandHeader>[] | null;
 }
 
 export interface AssetStateStoreOptions {
@@ -45,10 +47,8 @@ export class AssetStateStore {
   #eventStore: EventStore.EventStore;
   #kinds: AssetKindRegistry;
   #logger: Logger;
-  #entries = new Map<string, AssetStateEntry>();
-  #versions = new Map<string, number>();
+  #open = new Map<string, OpenAsset>();
   #replays = new Map<string, Promise<AssetStateEntry>>();
-  #commandsSinceCheckpoint = new Map<string, RecordedCommand[]>();
   #unsubscribe: (() => void) | null = null;
 
   constructor(
@@ -61,14 +61,9 @@ export class AssetStateStore {
 
   start(): void {
     this.#unsubscribe ??= this.#eventStore.subscribe((event) => {
-      const entry = this.#entries.get(event.assetId);
-      if (entry !== undefined) {
-        const command = this.#fold(entry.handler, entry.state, event);
-        this.#versions.set(event.assetId, event.eventVersion);
-        const commands = this.#commandsSinceCheckpoint.get(event.assetId);
-        if (commands !== undefined) {
-          recordCommand(commands, event, command);
-        }
+      const open = this.#open.get(event.assetId);
+      if (open !== undefined) {
+        this.#follow(open, event);
       }
     });
   }
@@ -76,36 +71,34 @@ export class AssetStateStore {
   close(): void {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#entries.clear();
-    this.#versions.clear();
-    this.#commandsSinceCheckpoint.clear();
+    this.#open.clear();
   }
 
   has(
     assetId: string
   ): boolean {
-    return this.#entries.has(assetId);
+    return this.#open.has(assetId);
   }
 
   get(
     assetId: string
   ): AssetStateEntry | undefined {
-    return this.#entries.get(assetId);
+    return this.#open.get(assetId)?.entry;
   }
 
   versionOf(
     assetId: string
   ): number | undefined {
-    return this.#versions.get(assetId);
+    return this.#open.get(assetId)?.version;
   }
 
   acquire(
     assetId: string,
     kind: string
   ): Promise<AssetStateEntry> {
-    const existing = this.#entries.get(assetId);
+    const existing = this.#open.get(assetId);
     if (existing !== undefined) {
-      return Promise.resolve(existing);
+      return Promise.resolve(existing.entry);
     }
 
     const inFlight = this.#replays.get(assetId);
@@ -114,11 +107,10 @@ export class AssetStateStore {
     }
 
     const replay = this.#replay(assetId, kind)
-      .then(({ entry, commands }) => {
-        this.#entries.set(assetId, entry);
-        this.#commandsSinceCheckpoint.set(assetId, commands);
+      .then((open) => {
+        this.#open.set(assetId, open);
 
-        return entry;
+        return open.entry;
       })
       .finally(() => this.#replays.delete(assetId));
     this.#replays.set(assetId, replay);
@@ -128,9 +120,12 @@ export class AssetStateStore {
 
   takeCommandsSinceCheckpoint(
     assetId: string
-  ): RecordedCommand[] {
-    const commands = this.#commandsSinceCheckpoint.get(assetId) ?? [];
-    this.#commandsSinceCheckpoint.delete(assetId);
+  ): RecordedCommand<AssetCommandHeader>[] {
+    const open = this.#open.get(assetId);
+    const commands = open?.commandsSinceCheckpoint ?? [];
+    if (open !== undefined) {
+      open.commandsSinceCheckpoint = null;
+    }
 
     return commands;
   }
@@ -138,67 +133,73 @@ export class AssetStateStore {
   release(
     assetId: string
   ): void {
-    this.#entries.delete(assetId);
-    this.#versions.delete(assetId);
-    this.#commandsSinceCheckpoint.delete(assetId);
-  }
-
-  async serialize(
-    assetId: string,
-    kind: string
-  ): Promise<Uint8Array> {
-    const entry = this.#entries.get(assetId) ??
-      (await this.#replay(assetId, kind)).entry;
-
-    return entry.handler.serialize(entry.state);
+    this.#open.delete(assetId);
   }
 
   async #replay(
     assetId: string,
     kind: string
-  ): Promise<ReplayedAsset> {
+  ): Promise<OpenAsset> {
     const handler = this.#kinds.get(kind);
-    const state = handler.create(assetId);
-    const commands: RecordedCommand[] = [];
+    const open: OpenAsset = {
+      entry: {
+        assetId,
+        kind,
+        handler,
+        state: handler.create(assetId)
+      },
+      version: 0,
+      commandsSinceCheckpoint: []
+    };
     let events = this.#eventStore.reader.listFromCheckpoint(
       assetId,
       ASSET_CHECKPOINT_EVENT_TYPES
     );
-    let from = 0;
     let sinceYield = 0;
 
     while (events.length > 0) {
       for (const event of events) {
-        recordCommand(commands, event, this.#fold(handler, state, event));
-        from = event.eventVersion;
+        this.#follow(open, event);
         if (++sinceYield >= kReplayYieldEvery) {
           sinceYield = 0;
           await yieldToEventLoop();
         }
       }
 
-      events = this.#eventStore.reader.list(assetId, from);
+      events = this.#eventStore.reader.list(assetId, open.version);
     }
-    this.#versions.set(assetId, from);
 
-    return {
-      entry: {
-        assetId,
-        kind,
-        handler,
-        state
-      },
-      commands
-    };
+    return open;
+  }
+
+  #follow(
+    open: OpenAsset,
+    event: EventStore.Event
+  ): void {
+    const command = this.#fold(open.entry, event);
+    open.version = event.eventVersion;
+
+    const commands = open.commandsSinceCheckpoint;
+    if (commands === null) {
+      return;
+    }
+    if (kCheckpointEventTypes.has(event.eventType)) {
+      commands.length = 0;
+    }
+    else if (command !== null) {
+      commands.push({
+        command,
+        version: event.eventVersion
+      });
+    }
   }
 
   #fold(
-    handler: AssetKindHandler,
-    state: unknown,
+    entry: AssetStateEntry,
     event: EventStore.Event
-  ): unknown {
+  ): AssetCommandHeader | null {
     try {
-      return foldAssetEvent(handler, state, event);
+      return foldAssetEvent(entry.handler, entry.state, event);
     }
     catch (error) {
       const log = this.#logger.withMetadata({
@@ -217,21 +218,5 @@ export class AssetStateStore {
 
       return null;
     }
-  }
-}
-
-function recordCommand(
-  commands: RecordedCommand[],
-  event: EventStore.Event,
-  command: unknown
-): void {
-  if (kCheckpointEventTypes.has(event.eventType)) {
-    commands.length = 0;
-  }
-  else if (command !== null) {
-    commands.push({
-      command,
-      version: event.eventVersion
-    });
   }
 }

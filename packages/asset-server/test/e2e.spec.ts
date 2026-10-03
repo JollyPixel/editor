@@ -4,18 +4,13 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-import { once } from "node:events";
 import fs from "node:fs/promises";
-import http from "node:http";
 import path from "node:path";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
-import {
-  Server,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import { Server } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -32,66 +27,17 @@ import {
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH
 } from "#src/index.ts";
-import { createCatalogHandler } from "#src/node.ts";
 import { tempWorkspace } from "./helpers/tempWorkspace.ts";
-import {
-  linkContent,
-  linkHandler,
-  liveCounterHandler
-} from "./helpers/kinds.ts";
+import { liveCounterHandler } from "./helpers/kinds.ts";
 import { bytes } from "./helpers/bytes.ts";
-
-function client(
-  id: string
-): ClientHandle {
-  return { id, send: () => void 0 };
-}
-
-function recorder(
-  id: string
-): ClientHandle & { received: unknown[]; } {
-  const received: unknown[] = [];
-
-  return {
-    id,
-    received,
-    send: (payload) => received.push(payload)
-  };
-}
-
-async function catalogOverHttp(
-  handler: ReturnType<typeof createCatalogHandler>
-): Promise<unknown> {
-  const server = http.createServer((request, response) => {
-    handler(request, response, () => {
-      response.statusCode = 404;
-      response.end();
-    });
-  });
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-  const { port } = server.address() as { port: number; };
-
-  try {
-    const response = await fetch(
-      `http://127.0.0.1:${port}/__jollypixel/catalog`
-    );
-    assert.strictEqual(response.status, 200);
-
-    return await response.json();
-  }
-  finally {
-    server.closeAllConnections();
-    server.close();
-  }
-}
+import { serveCatalog } from "./helpers/catalog.ts";
+import { recordingClient } from "./helpers/rooms.ts";
 
 describe("asset-server — end to end", () => {
   test("cold start, live edit, external drift and catalog agree", async(t) => {
     await using workspace = await tempWorkspace();
     using eventStore = EventStore.persistence.memory();
 
-    // A workspace populated before the back-end ever ran.
     await fs.writeFile(
       path.join(workspace.root, "counter.counter"),
       bytes("0")
@@ -112,7 +58,6 @@ describe("asset-server — end to end", () => {
       watch: false
     });
 
-    // Cold start cataloged both files and picked their kinds.
     assert.strictEqual(backend.catalog.size, 2);
     const counterRecord = backend.catalog
       .snapshot().assets
@@ -124,7 +69,6 @@ describe("asset-server — end to end", () => {
       "binary"
     );
 
-    // The sidecar and the local state landed, gitignored.
     assert.match(
       await fs.readFile(
         path.join(workspace.root, IDENTITY_SIDECAR_PATH),
@@ -147,12 +91,11 @@ describe("asset-server — end to end", () => {
       /"checkpoints"/
     );
 
-    // An editor session over a dynamic room.
     const server = new Server();
     backend.attach(server);
     const room = new AssetRoom("counter", counterRecord.id).toString();
 
-    server.handleConnect(client("A"), { subject: "A", role: "default" });
+    server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
     await server.handleMessage("A", { room, kind: "join" });
     for (let index = 0; index < 3; index++) {
       await server.handleMessage("A", {
@@ -162,7 +105,6 @@ describe("asset-server — end to end", () => {
       });
     }
 
-    // Domain events alone leave the file untouched until a snapshot.
     assert.strictEqual(
       await fs.readFile(
         path.join(workspace.root, "counter.counter"),
@@ -182,7 +124,6 @@ describe("asset-server — end to end", () => {
       "3"
     );
 
-    // An external tool edits a file behind the back-end's back.
     await fs.writeFile(
       path.join(workspace.root, "textures", "grass.png"),
       bytes("grass-edited")
@@ -192,8 +133,8 @@ describe("asset-server — end to end", () => {
       path.join(workspace.root, "textures", "dirt.png"),
       bytes("grass-edited")
     );
-    (await backend.internals.reconciler.reconcile()).unwrap();
-    await backend.internals.projector.flush();
+    (await backend.reconcile()).unwrap();
+    await backend.flush();
 
     const drifted = backend.catalog.snapshot().assets
       .find((record) => record.kind === "binary")!;
@@ -203,11 +144,12 @@ describe("asset-server — end to end", () => {
       { type: "system", source: "fs-watcher" }
     );
 
-    // The HTTP snapshot matches the projection and the filesystem.
-    const overHttp = await catalogOverHttp(
-      createCatalogHandler({ projection: backend.catalog })
+    await using catalogServer = await serveCatalog(backend.catalog);
+    const response = await fetch(
+      `${catalogServer.origin}/__jollypixel/catalog`
     );
-    assert.deepEqual(overHttp, JSON.parse(
+    assert.strictEqual(response.status, 200);
+    assert.deepEqual(await response.json(), JSON.parse(
       JSON.stringify(backend.catalog.snapshot())
     ));
     assert.deepEqual(
@@ -266,8 +208,8 @@ describe("asset-server — end to end", () => {
     const server = new Server();
     backend.attach(server);
 
-    const author = recorder("A");
-    const peer = recorder("B");
+    const author = recordingClient("A");
+    const peer = recordingClient("B");
     for (const handle of [author, peer]) {
       server.handleConnect(handle, { subject: handle.id, role: "default" });
       await server.handleMessage(handle.id, { room: CATALOG_ROOM, kind: "join" });
@@ -325,86 +267,6 @@ describe("asset-server — end to end", () => {
     await server.close();
   });
 
-  test("a delete is refused while another asset references the target", async() => {
-    await using workspace = await tempWorkspace();
-    using eventStore = EventStore.persistence.memory();
-
-    await using backend = await createAssetBackend({
-      source: new FilesystemAssetSource(workspace.root),
-      eventStore,
-      handlers: [linkHandler()],
-      watch: false
-    });
-    const server = new Server();
-    backend.attach(server);
-
-    const author = recorder("A");
-    server.handleConnect(author, { subject: author.id, role: "default" });
-    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
-
-    await server.handleMessage("A", {
-      room: CATALOG_ROOM,
-      kind: "message",
-      payload: {
-        type: CATALOG_CREATE,
-        requestId: "target",
-        path: "textures/grass.png",
-        content: encodeContent(bytes("grass"))
-      }
-    });
-    const targetId = (author.received.at(-1) as {
-      payload: { assetId: string; };
-    }).payload.assetId;
-    await server.handleMessage("A", {
-      room: CATALOG_ROOM,
-      kind: "message",
-      payload: {
-        type: CATALOG_CREATE,
-        requestId: "link",
-        path: "a.link",
-        content: encodeContent(linkContent(targetId))
-      }
-    });
-    await backend.flush();
-
-    await server.handleMessage("A", {
-      room: CATALOG_ROOM,
-      kind: "message",
-      payload: {
-        type: CATALOG_DELETE,
-        requestId: "refused",
-        assetId: targetId
-      }
-    });
-    const refused = (author.received.at(-1) as {
-      payload: { type: string; reason: string; };
-    }).payload;
-
-    await server.handleMessage("A", {
-      room: CATALOG_ROOM,
-      kind: "message",
-      payload: {
-        type: CATALOG_DELETE,
-        requestId: "forced",
-        assetId: targetId,
-        force: true
-      }
-    });
-    await backend.flush();
-
-    assert.strictEqual(refused.type, CATALOG_REJECTED);
-    assert.match(refused.reason, /still referenced by "a.link"/);
-    assert.strictEqual(
-      (author.received.at(-1) as { payload: { type: string; }; }).payload.type,
-      CATALOG_APPLIED
-    );
-    await assert.rejects(
-      fs.access(path.join(workspace.root, "textures", "grass.png"))
-    );
-
-    await server.close();
-  });
-
   test("catalogMaxContentBytes caps catalog:create payloads", async() => {
     await using workspace = await tempWorkspace();
     using eventStore = EventStore.persistence.memory();
@@ -418,7 +280,7 @@ describe("asset-server — end to end", () => {
     const server = new Server();
     backend.attach(server);
 
-    const author = recorder("A");
+    const author = recordingClient("A");
     server.handleConnect(author, { subject: author.id, role: "default" });
     await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
 

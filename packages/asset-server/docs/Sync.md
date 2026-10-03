@@ -110,22 +110,20 @@ Each event goes through `foldAssetEvent`. A hook that throws is logged as
 `asset event not folded` and skipped, both during replay and while following
 the log, so the state keeps its last good value.
 
-Those three types are exported as `ASSET_CHECKPOINT_EVENT_TYPES`. Loading a
-projection uses the same bound: `AssetProjector.load()` and
-`CatalogProjection.load()` read from each asset's newest checkpoint rather
-than the head of the log, because an older `asset.created` or `asset.updated`
-only produces a projection the replay overwrites. `asset.renamed` is not a
-checkpoint: it folds onto the projection before it, and is read as part of the
-tail. Startup cost therefore tracks the number of assets, not the depth of the
-log. See [Workspace compaction](./Workspace.md#compaction) for removing what
+Those three types are exported as `ASSET_CHECKPOINT_EVENT_TYPES`. Loading the
+projection uses the same bound: `AssetProjector.load()` reads from each
+asset's newest checkpoint rather than the head of the log, because an older
+`asset.created` or `asset.updated` only produces a projection the replay
+overwrites. `asset.renamed` is not a checkpoint: it folds onto the projection
+before it, and is read as part of the tail. Startup cost therefore tracks the
+number of assets, not the depth of the log. `CatalogProjection` reads no
+event: it indexes the projector's desired state. See [Workspace compaction](./Workspace.md#compaction) for removing what
 this skips.
 
 ## Reconciliation
 
-The reconciler and its watcher are reached through `backend.internals`.
-
 ```ts
-reconciler.reconcile(): Promise<Result<ReconcileReport, Error>>
+backend.reconcile(): Promise<Result<ReconcileReport, Error>>
 
 interface ReconcileReport {
   readonly created: number;
@@ -138,27 +136,19 @@ interface ReconcileReport {
 
 A successful result counts lifecycle events appended during the scan. An
 unreadable entry increments `failed` without stopping other entries. Failure to
-list the source returns an error result for the whole scan.
+list the source returns an error result for the whole scan. Scans run one at a
+time: a call made during a scan waits for it, then scans again. The catalog
+folders are refreshed after each scan.
 
 Renames are recognized when one removed path and one added path have the same
 unique content hash. Ambiguous matches are recorded as deletion and creation.
 Byte-identical changes append no event.
 
-On a source with `watch()`, `ReconciliationWatcher` groups notifications using
-the configured debounce. Its public controls are:
-
-```ts
-watcher.start(): void
-watcher.notify(path: string, type: AssetEntryType): void
-watcher.run(): Promise<void>
-watcher.settle(): Promise<void>
-watcher.close(): Promise<void>
-```
-
-`run()` starts a scan immediately. `settle()` only waits for a scan already in
-progress. A batch of `"folder"` notifications alone skips the scan. The
-`afterPass` option runs after every pass, scan or not, and its failure is
-logged.
+On a source with `watch()`, the backend groups notifications that arrive
+within `reconcileDebounce` milliseconds. A batch holding a `"file"`
+notification scans the source; every batch then refreshes the catalog
+folders, so a batch of `"folder"` notifications alone only refreshes them.
+A failed scan or refresh is logged and the next batch runs normally.
 
 ## Projection state
 

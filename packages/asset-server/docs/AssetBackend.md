@@ -53,9 +53,9 @@ interface AssetBackend extends AsyncDisposable {
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;
   readonly folders: CatalogFolders;
-  readonly internals: AssetBackendInternals;
 
   flush(assetId?: string): Promise<void>;
+  reconcile(): Promise<Result<ReconcileReport, Error>>;
   attach(server: Server, options?: { graceMs?: number }): () => void;
   close(): Promise<void>;
 }
@@ -64,7 +64,9 @@ interface AssetBackend extends AsyncDisposable {
 Use [`writer`](./AssetWriter.md) for asset mutations and
 [`folders`](./Catalog.md#folders) for folders. `flush(assetId?)` waits
 for pending snapshots and source writes for one asset, or for every pending
-asset when the ID is omitted.
+asset when the ID is omitted. `reconcile()` records changes made to the
+source outside the backend, then refreshes `folders`; see
+[Reconciliation](./Sync.md#reconciliation).
 
 `attach(server)` registers the `asset-catalog` room and installs the dynamic
 asset-room resolver. Its callback clears the resolver. Existing rooms and the
@@ -74,11 +76,6 @@ Close the server before the backend so active asset rooms can flush while the
 backend is still running. `close()` stops watching, flushes pending work and
 releases backend subscriptions. It does not close the injected server or event
 store. `[Symbol.asyncDispose]` calls `close()`.
-
-The returned object also exposes `internals` for tests and hosts that need to
-drive an individual stage. The stage classes are not exported from the package
-root. Normal application code should use `writer`, `catalog`, `flush()` and
-`attach()`.
 
 ## Workspace files
 

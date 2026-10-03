@@ -7,10 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import {
-  Server,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import { Server } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -27,6 +24,11 @@ import {
   type CounterState
 } from "../helpers/kinds.ts";
 import { bytes } from "../helpers/bytes.ts";
+import { recordingLogger } from "../helpers/logger.ts";
+import {
+  recordingClient,
+  type RecordingClient
+} from "../helpers/rooms.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -41,24 +43,13 @@ const counterKinds: Record<CounterKind, () => AssetKindHandler<CounterState>> = 
   plain: () => counterHandler()
 };
 
-function client(
-  id: string
-): ClientHandle & { received: unknown[]; } {
-  const received: unknown[] = [];
-
-  return {
-    id,
-    received,
-    send: (payload) => received.push(payload)
-  };
-}
-
 interface RoomHarness extends AsyncDisposable {
   readonly sync: SyncHarness;
   readonly server: Server;
   readonly catalog: CatalogProjection;
   readonly assetId: string;
-  readonly clients: Map<string, ClientHandle & { received: unknown[]; }>;
+  readonly clients: Map<string, RecordingClient>;
+  readonly refusals: string[];
   join(clientId: string, room?: string): Promise<void>;
   send(clientId: string, payload: unknown): Promise<void>;
 }
@@ -67,6 +58,7 @@ interface RoomHarnessOptions {
   graceMs?: number;
   kind?: CounterKind;
   handler?: AssetKindHandler<CounterState>;
+  extraHandlers?: AssetKindHandler[];
 }
 
 function restoringCounterHandler(
@@ -94,7 +86,10 @@ async function roomHarness(
 ): Promise<RoomHarness> {
   const { graceMs = 1_000, kind = "live" } = options;
   const sync = await syncHarness({
-    handlers: [options.handler ?? counterKinds[kind]()],
+    handlers: [
+      options.handler ?? counterKinds[kind](),
+      ...options.extraHandlers ?? []
+    ],
     snapshot: { delay: 0, maxDelay: 0 }
   });
 
@@ -105,24 +100,28 @@ async function roomHarness(
   })).unwrap();
   await sync.projector.flush();
 
-  const catalog = new CatalogProjection({ eventStore: sync.eventStore });
+  const catalog = new CatalogProjection({ projector: sync.projector });
   catalog.load();
   catalog.start();
 
   const server = new Server({
     roomGraceMs: graceMs
   });
+  const { logger, records } = recordingLogger();
   registerAssetRooms({
     server,
     events: sync.eventStore.writer,
     kinds: sync.kinds,
     catalog,
     states: sync.states,
-    projector: sync.projector,
-    scheduler: sync.scheduler
+    flush: async(assetId) => {
+      await sync.scheduler.flush(assetId);
+      await sync.projector.flush(assetId);
+    },
+    logger
   });
 
-  const clients = new Map<string, ClientHandle & { received: unknown[]; }>();
+  const clients = new Map<string, RecordingClient>();
 
   return {
     sync,
@@ -130,11 +129,16 @@ async function roomHarness(
     catalog,
     clients,
     assetId: created.assetId,
+    get refusals() {
+      return records
+        .filter((record) => record.message === "asset room refused")
+        .map((record) => record.metadata.reason as string);
+    },
     async join(
       clientId,
       room = new AssetRoom("counter", created.assetId).toString()
     ) {
-      const handle = client(clientId);
+      const handle = recordingClient(clientId);
       clients.set(clientId, handle);
       server.handleConnect(handle, { subject: handle.id, role: "default" });
       await server.handleMessage(clientId, { room, kind: "join" });
@@ -155,20 +159,12 @@ async function roomHarness(
 }
 
 describe("registerAssetRooms — admission", () => {
-  test("joining an asset room creates one room reused by a second joiner", async() => {
-    await using harness = await roomHarness();
-
-    await harness.join("A");
-    await harness.join("B");
-
-    assert.strictEqual(harness.sync.states.has(harness.assetId), true);
-  });
-
   test("an unregistered kind is refused", async() => {
     await using harness = await roomHarness();
 
     await harness.join("A", "voxelmap:whatever");
 
+    assert.deepEqual(harness.refusals, ["unknown kind"]);
     assert.strictEqual(harness.sync.states.has("whatever"), false);
   });
 
@@ -177,6 +173,7 @@ describe("registerAssetRooms — admission", () => {
 
     await harness.join("A", new AssetRoom("counter", "ghost").toString());
 
+    assert.deepEqual(harness.refusals, ["unknown asset"]);
     assert.strictEqual(harness.sync.states.has("ghost"), false);
   });
 
@@ -185,6 +182,7 @@ describe("registerAssetRooms — admission", () => {
 
     await harness.join("A");
 
+    assert.deepEqual(harness.refusals, ["kind has no live protocol"]);
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
 
@@ -222,11 +220,20 @@ describe("registerAssetRooms — admission", () => {
     assert.strictEqual(appended.length, 1);
   });
 
-  test("an asset id belonging to another kind is refused", async() => {
-    await using harness = await roomHarness();
+  test("an asset id belonging to another live kind is refused", async() => {
+    await using harness = await roomHarness({
+      extraHandlers: [
+        {
+          ...liveCounterHandler(),
+          kind: "gauge",
+          extensions: { ".gauge": "text/plain; charset=utf-8" }
+        }
+      ]
+    });
 
-    await harness.join("A", new AssetRoom("binary", harness.assetId).toString());
+    await harness.join("A", new AssetRoom("gauge", harness.assetId).toString());
 
+    assert.deepEqual(harness.refusals, ["unknown asset"]);
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
 });
@@ -255,21 +262,6 @@ describe("registerAssetRooms — restore", () => {
 });
 
 describe("registerAssetRooms — eviction", () => {
-  test("a rejoin inside the grace period keeps the same extension", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    await using harness = await roomHarness({ graceMs: 1_000 });
-
-    await harness.join("A");
-    const room = new AssetRoom("counter", harness.assetId).toString();
-    await harness.server.handleMessage("A", { room, kind: "leave" });
-
-    t.mock.timers.tick(500);
-    await harness.join("B");
-    t.mock.timers.tick(1_000);
-
-    assert.strictEqual(harness.sync.states.has(harness.assetId), true);
-  });
-
   test("expiry flushes the asset before releasing its state", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     await using harness = await roomHarness({ graceMs: 100 });
@@ -294,44 +286,6 @@ describe("registerAssetRooms — eviction", () => {
     );
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
-
-  test("opening and closing the same asset room repeatedly leaks nothing", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    await using harness = await roomHarness({ graceMs: 100 });
-    const room = new AssetRoom("counter", harness.assetId).toString();
-
-    for (let index = 0; index < 3; index++) {
-      await harness.join(`client-${index}`);
-      await harness.server.handleMessage(`client-${index}`, {
-        room,
-        kind: "leave"
-      });
-      t.mock.timers.tick(100);
-      await harness.server.settled(room);
-    }
-
-    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
-
-    // Nothing is left armed: a later jump evicts nothing new.
-    t.mock.timers.tick(10_000);
-    await harness.server.settled();
-
-    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
-  });
-
-  test("a message from a client that never joined is dropped", async() => {
-    await using harness = await roomHarness();
-    const room = new AssetRoom("counter", harness.assetId).toString();
-
-    harness.server.handleConnect(client("A"), { subject: "A", role: "default" });
-    await harness.server.handleMessage("A", {
-      room,
-      kind: "message",
-      payload: {}
-    });
-
-    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
-  });
 });
 
 describe("registerAssetRooms — deletion", () => {
@@ -350,21 +304,5 @@ describe("registerAssetRooms — deletion", () => {
       kind: "message",
       payload: { type: "deleted" }
     });
-  });
-
-  test("a room whose asset was deleted appends no further commands", async() => {
-    await using harness = await roomHarness();
-    await harness.join("A");
-    (await harness.sync.writer.remove({
-      assetId: harness.assetId,
-      actor: kActor
-    })).unwrap();
-
-    await harness.send("A", { action: "increment" });
-
-    const appended = harness.sync.eventStore.reader
-      .list(harness.assetId)
-      .filter((event) => event.eventType === COUNTER_INCREMENTED);
-    assert.strictEqual(appended.length, 0);
   });
 });

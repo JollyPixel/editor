@@ -1,14 +1,14 @@
 // Import Third-party Dependencies
-import type { JSONSchema } from "@jolly-pixel/network";
+import type {
+  JSONSchema,
+  NetworkCommandHeader
+} from "@jolly-pixel/network";
 
 // CONSTANTS
 export const ASSET_ROOM_DELETED = "deleted";
 export const ASSET_ROOM_REJECTED = "rejected";
 
-export interface AssetRoomMessage {
-  readonly type: string;
-  readonly data: unknown;
-}
+export type AssetCommandHeader = Partial<NetworkCommandHeader>;
 
 export interface AssetRoomDeletedMessage {
   readonly type: typeof ASSET_ROOM_DELETED;
@@ -23,12 +23,20 @@ export type AssetRoomNotice =
   | AssetRoomDeletedMessage
   | AssetRoomRejectedMessage;
 
-export interface AssetArbitration<TCommand = unknown> {
+export type AssetBroadcast<TCommand> =
+  | { readonly type: "command"; readonly data: TCommand; }
+  | { readonly type: "snapshot"; readonly data: unknown; };
+
+export interface AssetArbitration<
+  TCommand extends AssetCommandHeader = AssetCommandHeader
+> {
   readonly command: TCommand;
   commit?(version?: number): void;
 }
 
-export interface AssetLiveProtocol<TCommand = unknown> {
+export interface AssetLiveProtocol<
+  TCommand extends AssetCommandHeader = AssetCommandHeader
+> {
   readonly snapshotSchema: JSONSchema;
 
   snapshot(): unknown;
@@ -41,7 +49,7 @@ export interface AssetLiveProtocol<TCommand = unknown> {
 
   broadcast?(
     command: TCommand
-  ): AssetRoomMessage;
+  ): AssetBroadcast<TCommand>;
 
   correct?(
     command: TCommand,

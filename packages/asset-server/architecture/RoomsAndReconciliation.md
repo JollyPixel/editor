@@ -25,18 +25,22 @@ defines the handler's side of this contract.
 
 ## Changes outside the backend
 
-An external tool can edit files in `AssetSource`. The watcher groups
-notifications, and `Reconciler` compares scanned paths and hashes with the
-last projected state.
+An external tool can edit files in `AssetSource`. `SourceWatcher` groups
+notifications into batches. A batch holding a file change runs `Reconciler`,
+which compares scanned paths and hashes with the last projected state; every
+batch then refreshes `CatalogFolders`. `backend.reconcile()` runs the same
+scan and refresh on demand.
 
 ```mermaid
 flowchart TB
     Tool["External tool"] --> Source[("AssetSource")]
-    Source --> Watcher["ReconciliationWatcher"]
-    Watcher --> Reconciler["Reconciler"]
+    Source --> Watcher["SourceWatcher"]
+    Watcher -->|"file batch"| Reconciler["Reconciler"]
+    Watcher -->|"every batch"| Folders["CatalogFolders"]
     Reconciler --> Writer["AssetWriter"]
     Writer --> Store[("Event store")]
-    Store --> Catalog["CatalogProjection"]
+    Store --> Projector["AssetProjector"]
+    Projector --> Catalog["CatalogProjection"]
     Store --> State["Open live state"]
 ```
 

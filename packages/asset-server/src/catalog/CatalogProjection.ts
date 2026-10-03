@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
 import {
   AssetCatalog,
   AssetId,
@@ -14,17 +13,11 @@ import {
   DependencyIndex,
   type ReadonlyDependencyIndex
 } from "./client/DependencyIndex.ts";
-import {
-  ASSET_CHECKPOINT_EVENT_TYPES,
-  ASSET_CREATED,
-  ASSET_DELETED,
-  ASSET_EVENT_PREFIX,
-  ASSET_RENAMED,
-  ASSET_UPDATED,
-  parseAssetEvent,
-  type AssetEvent,
-  type AssetEventType
-} from "../events/AssetEvents.ts";
+import type {
+  AssetProjectionChange,
+  AssetProjector
+} from "../projection/AssetProjector.ts";
+import type { AssetProjection } from "../projection/applyProjection.ts";
 
 export type CatalogProjectionEventMap = {
   changed: (
@@ -33,22 +26,22 @@ export type CatalogProjectionEventMap = {
 };
 
 export interface CatalogProjectionOptions {
-  eventStore: EventStore.EventStore;
+  projector: AssetProjector;
 }
 
 export class CatalogProjection extends Emitter<
   CatalogProjectionEventMap
 > {
-  #eventStore: EventStore.EventStore;
+  #projector: AssetProjector;
   #catalog = new AssetCatalog();
   #dependencies = new DependencyIndex();
-  #unsubscribe: (() => void) | null = null;
+  #following = false;
 
   constructor(
     options: CatalogProjectionOptions
   ) {
     super();
-    this.#eventStore = options.eventStore;
+    this.#projector = options.projector;
   }
 
   get catalog(): AssetCatalog {
@@ -66,44 +59,22 @@ export class CatalogProjection extends Emitter<
   load(): void {
     this.#catalog = new AssetCatalog();
     this.#dependencies.clear();
-    const events = this.#eventStore.reader.listFromCheckpoints({
-      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
-      eventTypePrefix: ASSET_EVENT_PREFIX
-    });
-    for (const event of events) {
-      this.apply(event);
+    for (const { assetId, projection } of this.#projector.desiredProjections()) {
+      this.#upsert(assetId, projection);
     }
   }
 
   start(): void {
-    this.#unsubscribe ??= this.#eventStore.subscribe(
-      (event) => void this.apply(event),
-      { eventTypePrefix: ASSET_EVENT_PREFIX }
-    );
+    if (!this.#following) {
+      this.#following = true;
+      this.#projector.on("changed", this.#onProjected);
+    }
   }
 
   close(): void {
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
+    this.#following = false;
+    this.#projector.off("changed", this.#onProjected);
     this.removeAllListeners();
-  }
-
-  apply(
-    event: EventStore.Event
-  ): boolean {
-    const parsed = parseAssetEvent(event);
-    if (!parsed.ok) {
-      return false;
-    }
-
-    const change = this.#fold(parsed.val);
-    if (change === null) {
-      return false;
-    }
-
-    this.emit("changed", change);
-
-    return true;
   }
 
   record(
@@ -132,74 +103,62 @@ export class CatalogProjection extends Emitter<
     }
   }
 
-  #fold(
-    event: AssetEvent
-  ): CatalogChange | null {
-    const id = new AssetId(event.assetId);
-
-    switch (event.eventType) {
-      case ASSET_CREATED:
-      case ASSET_UPDATED: {
-        const data = event.eventData;
-        if (data.dependencies !== undefined) {
-          this.#dependencies.set(event.assetId, data.dependencies);
-        }
-
-        return this.#upsert(new AssetRecord({
-          id,
-          kind: data.kind,
-          source: data.path,
-          revision: data.hash
-        }), event.eventType);
-      }
-      case ASSET_RENAMED: {
-        const data = event.eventData;
-        const previous = this.record(event.assetId);
-
-        return this.#upsert(new AssetRecord({
-          id,
-          kind: previous?.kind ?? data.kind,
-          source: data.to,
-          revision: previous?.revision ?? data.hash
-        }), event.eventType);
-      }
-      case ASSET_DELETED: {
-        if (!this.#catalog.has(id)) {
-          return null;
-        }
-
-        this.#catalog.remove(id);
-        this.#dependencies.delete(event.assetId);
-
-        return {
-          eventType: event.eventType,
-          assetId: event.assetId,
-          record: null
-        };
-      }
-      default:
-        return null;
+  readonly #onProjected = (
+    change: AssetProjectionChange
+  ): void => {
+    const catalogChange = this.#fold(change);
+    if (catalogChange !== null) {
+      this.emit("changed", catalogChange);
     }
+  };
+
+  #fold(
+    change: AssetProjectionChange
+  ): CatalogChange | null {
+    const { assetId, eventType, desired } = change;
+    if (desired === null) {
+      const id = new AssetId(assetId);
+      if (!this.#catalog.has(id)) {
+        return null;
+      }
+
+      this.#catalog.remove(id);
+      this.#dependencies.delete(assetId);
+
+      return {
+        eventType,
+        assetId,
+        record: null
+      };
+    }
+
+    const record = this.#upsert(assetId, desired);
+
+    return {
+      eventType,
+      assetId,
+      record: record.toJSON(),
+      ...(this.#dependencies.has(assetId) ?
+        { dependencies: this.#dependencies.dependenciesOf(assetId) } :
+        {})
+    };
   }
 
   #upsert(
-    record: AssetRecord,
-    eventType: AssetEventType
-  ): CatalogChange {
+    assetId: string,
+    projection: AssetProjection
+  ): AssetRecord {
+    const record = new AssetRecord({
+      id: new AssetId(assetId),
+      kind: projection.kind,
+      source: projection.path,
+      revision: projection.hash
+    });
     this.#catalog.set(record);
+    if (projection.dependencies !== undefined) {
+      this.#dependencies.set(assetId, projection.dependencies);
+    }
 
-    const assetId = record.id.value;
-    const change: CatalogChange = {
-      eventType,
-      assetId,
-      record: record.toJSON()
-    };
-
-    return this.#dependencies.has(assetId) ?
-      {
-        ...change,
-        dependencies: this.#dependencies.dependenciesOf(assetId)
-      } :
-      change;
+    return record;
   }
 }

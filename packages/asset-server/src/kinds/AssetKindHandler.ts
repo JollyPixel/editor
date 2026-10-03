@@ -3,7 +3,10 @@ import type { MessageProtocol } from "@jolly-pixel/network";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { AssetLiveProtocol } from "./AssetLiveProtocol.ts";
+import type {
+  AssetCommandHeader,
+  AssetLiveProtocol
+} from "./AssetLiveProtocol.ts";
 
 export interface SnapshotPolicy {
   /**
@@ -30,7 +33,7 @@ export interface AssetRoomBinding<TState = unknown> {
 
 export interface AssetCommands<
   TState = unknown,
-  TCommand = unknown
+  TCommand extends AssetCommandHeader = AssetCommandHeader
 > {
   readonly eventType: string;
   readonly protocol: MessageProtocol;
@@ -59,7 +62,7 @@ export interface AssetKindCompanion<TState = unknown> {
  */
 export interface AssetKindHandler<
   TState = unknown,
-  TCommand = unknown
+  TCommand extends AssetCommandHeader = AssetCommandHeader
 > {
   readonly kind: string;
   readonly extensions: Readonly<Record<string, string>>;

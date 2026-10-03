@@ -1,20 +1,16 @@
 // Import Third-party Dependencies
 import type {
-  AssetManifestData,
-  AssetRecordData,
-  AssetReferenceData
-} from "@jolly-pixel/asset";
+  Infer,
+  InferMessage
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AssetInlineContent } from "../../events/AssetEvents.schema.ts";
-import type { AssetEventType } from "../../events/AssetEvents.ts";
-import type { DependencyMap } from "./DependencyIndex.ts";
-import type { PathConflictPolicy } from "../../writer/AssetWriter.ts";
 import type {
-  ImportConflictPolicy,
-  ImportPlan,
-  ImportReport
-} from "../../archive/import/AssetImport.ts";
+  catalogChangeSchema,
+  catalogCommandProtocol,
+  catalogMessageProtocol
+} from "../protocol.schema.ts";
+import type { Immutable } from "../../utils/Immutable.ts";
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";
@@ -36,111 +32,34 @@ export const CATALOG_EXPORT = "catalog:export";
 export const CATALOG_PLAN = "catalog:plan";
 export const CATALOG_IMPORT = "catalog:import";
 
-export interface CatalogCreateCommand {
-  type: typeof CATALOG_CREATE;
-  path: string;
-  kind?: string;
-  onConflict?: PathConflictPolicy;
-  content?: AssetInlineContent;
-}
+type Without<TValue, TKey extends PropertyKey> = TValue extends unknown ?
+  Omit<TValue, TKey> :
+  never;
 
-export interface CatalogRenameCommand {
-  type: typeof CATALOG_RENAME;
-  assetId: string;
-  to: string;
-}
+export type CatalogCommand = InferMessage<typeof catalogCommandProtocol>;
+export type CatalogRequest = Without<CatalogCommand, "requestId">;
+export type CatalogCommandType = CatalogCommand["type"];
 
-export interface CatalogDeleteCommand {
-  type: typeof CATALOG_DELETE;
-  assetId: string;
-  force?: boolean;
-}
+type RequestOf<TType extends CatalogCommandType> = Extract<
+  CatalogRequest,
+  { type: TType; }
+>;
 
-export interface CatalogCreateFolderCommand {
-  type: typeof CATALOG_CREATE_FOLDER;
-  path: string;
-}
+export type CatalogCreateCommand = RequestOf<typeof CATALOG_CREATE>;
+export type CatalogRenameCommand = RequestOf<typeof CATALOG_RENAME>;
+export type CatalogDeleteCommand = RequestOf<typeof CATALOG_DELETE>;
+export type CatalogCreateFolderCommand = RequestOf<typeof CATALOG_CREATE_FOLDER>;
+export type CatalogMoveFolderCommand = RequestOf<typeof CATALOG_MOVE_FOLDER>;
+export type CatalogDeleteFolderCommand = RequestOf<typeof CATALOG_DELETE_FOLDER>;
+export type CatalogExportCommand = RequestOf<typeof CATALOG_EXPORT>;
+export type CatalogPlanCommand = RequestOf<typeof CATALOG_PLAN>;
+export type CatalogImportCommand = RequestOf<typeof CATALOG_IMPORT>;
 
-export interface CatalogMoveFolderCommand {
-  type: typeof CATALOG_MOVE_FOLDER;
-  from: string;
-  to: string;
-}
-
-export interface CatalogDeleteFolderCommand {
-  type: typeof CATALOG_DELETE_FOLDER;
-  path: string;
-}
-
-export interface CatalogExportCommand {
-  type: typeof CATALOG_EXPORT;
-  root?: string;
-}
-
-export interface CatalogPlanCommand {
-  type: typeof CATALOG_PLAN;
-  content: AssetInlineContent;
-}
-
-export interface CatalogImportCommand {
-  type: typeof CATALOG_IMPORT;
-  content: AssetInlineContent;
-  onConflict: ImportConflictPolicy;
-}
-
-export type CatalogRequest =
-  | CatalogCreateCommand
-  | CatalogRenameCommand
-  | CatalogDeleteCommand
-  | CatalogCreateFolderCommand
-  | CatalogMoveFolderCommand
-  | CatalogDeleteFolderCommand
-  | CatalogExportCommand
-  | CatalogPlanCommand
-  | CatalogImportCommand;
-
-export type CatalogCommand = CatalogRequest & { requestId: string; };
-
-export type CatalogCommandType = CatalogRequest["type"];
-
-export type CatalogApplied =
-  | { command: typeof CATALOG_CREATE; assetId: string; }
-  | { command: typeof CATALOG_RENAME; assetId: string; }
-  | { command: typeof CATALOG_DELETE; assetId: string; }
-  | { command: typeof CATALOG_CREATE_FOLDER; path: string; }
-  | { command: typeof CATALOG_MOVE_FOLDER; path: string; }
-  | { command: typeof CATALOG_DELETE_FOLDER; path: string; }
-  | { command: typeof CATALOG_EXPORT; content: AssetInlineContent; }
-  | { command: typeof CATALOG_PLAN; plan: ImportPlan; }
-  | { command: typeof CATALOG_IMPORT; report: ImportReport; };
-
-export interface CatalogChange {
-  readonly eventType: AssetEventType;
-  readonly assetId: string;
-  readonly record: AssetRecordData | null;
-  /**
-   * Every outgoing edge of the asset after the change. Absent on deletion
-   * and for assets written before edges were recorded.
-   */
-  readonly dependencies?: readonly AssetReferenceData[];
-}
-
-export type CatalogMessage =
-  | {
-    type: typeof CATALOG_SNAPSHOT;
-    manifest: AssetManifestData;
-    dependencies?: DependencyMap;
-    folders: string[];
-  }
-  | { type: typeof CATALOG_CHANGED; change: CatalogChange; }
-  | { type: typeof CATALOG_FOLDERS; folders: string[]; }
-  | (CatalogApplied & {
-    type: typeof CATALOG_APPLIED;
-    requestId: string;
-  })
-  | {
-    type: typeof CATALOG_REJECTED;
-    requestId: string;
-    command: CatalogCommandType;
-    reason: string;
-  };
+export type CatalogMessage = Immutable<
+  InferMessage<typeof catalogMessageProtocol>
+>;
+export type CatalogApplied = Without<
+  Extract<CatalogMessage, { type: typeof CATALOG_APPLIED; }>,
+  "type" | "requestId"
+>;
+export type CatalogChange = Immutable<Infer<typeof catalogChangeSchema>>;

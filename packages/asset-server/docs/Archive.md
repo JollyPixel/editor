@@ -11,7 +11,7 @@ import {
   readAssetArchive
 } from "@jolly-pixel/asset-server";
 
-const bytes = await exportAssetArchive(backend, { root: mapId });
+const bytes = (await exportAssetArchive(backend, { root: mapId })).unwrap();
 
 const archive = readAssetArchive(bytes).unwrap();
 const plan = planAssetImport(otherBackend, archive).unwrap();
@@ -21,7 +21,19 @@ const report = (await importAssetArchive(otherBackend, archive, {
 })).unwrap();
 ```
 
-The functions are browser-safe and take any `AssetBackend`. Over the network
+The functions are browser-safe and take an `ArchiveBackend`, which every
+`AssetBackend` satisfies:
+
+```ts
+interface ArchiveBackend {
+  readonly source: AssetSource;
+  readonly kinds: AssetKindRegistry;
+  readonly writer: AssetWriter;
+  readonly catalog: CatalogProjection;
+  flush(assetId?: string): Promise<void>;
+}
+```
+ Over the network
 the same operations run through the [catalog room](./Catalog.md#archives).
 
 ## Format
@@ -60,19 +72,25 @@ interface ExportAssetArchiveOptions {
   root?: string;
 }
 
+type AssetExportError =
+  | AssetArchiveError
+  | UnknownAssetKindError
+  | UnknownAssetError;
+
 exportAssetArchive(
   backend: ArchiveBackend,
   options?: ExportAssetArchiveOptions
-): Promise<Uint8Array>
+): Promise<Result<Uint8Array, AssetExportError>>
 ```
 
 Flushes the root and every asset of its closure before reading them, so
 pending edits of a dependency are part of the archive. Without `root` the
-whole workspace is exported. An unknown `root` rejects with
-`AssetArchiveError`. Each stored document is loaded into a throwaway state of
+whole workspace is exported. An unknown `root` is returned as
+`UnknownAssetError`. Each stored document is loaded into a throwaway state of
 its kind, the same check [`planAssetImport`](#planassetimport) runs, so an
 export never produces an archive its import refuses: a document that does not
-load rejects with `unreadable-asset` and the `assetId` at fault.
+load is returned as an `AssetArchiveError` with `unreadable-asset` and the
+`assetId` at fault. A source read that fails still rejects.
 
 ## readAssetArchive
 

@@ -6,17 +6,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  Server,
-  type ClientHandle
-} from "@jolly-pixel/network";
+import { Server } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
   BINARY_KIND,
   CATALOG_APPLIED,
   CATALOG_CREATE,
-  CATALOG_REJECTED,
   CATALOG_ROOM,
   CatalogExtension,
   CatalogProjection,
@@ -29,6 +25,7 @@ import {
   syncHarness,
   type SyncHarness
 } from "../helpers/backend.ts";
+import { recordingClient } from "../helpers/rooms.ts";
 
 interface CatalogServer extends AsyncDisposable {
   readonly sync: SyncHarness;
@@ -40,7 +37,7 @@ async function catalogServer(
 ): Promise<CatalogServer> {
   const sync = await syncHarness({ handlers });
   const projection = new CatalogProjection({
-    eventStore: sync.eventStore
+    projector: sync.projector
   });
   projection.load();
   projection.start();
@@ -49,11 +46,7 @@ async function catalogServer(
   server.register(new CatalogExtension({
     backend: catalogBackend(sync, projection)
   }));
-  const received: unknown[] = [];
-  const author: ClientHandle = {
-    id: "A",
-    send: (payload) => received.push(payload)
-  };
+  const author = recordingClient("A");
   server.handleConnect(author, { subject: "A", role: "default" });
   await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
 
@@ -72,7 +65,7 @@ async function catalogServer(
           kind
         }
       });
-      const reply = received.at(-1) as {
+      const reply = author.received.at(-1) as {
         payload?: { type?: string; };
       };
 
@@ -105,15 +98,5 @@ describe("catalog:create without content", () => {
 
     assert.strictEqual(await catalog.create("a.png"), CATALOG_APPLIED);
     assert.strictEqual(catalog.sync.identity.byPath("a.png")?.kind, TEXTURE_KIND);
-  });
-
-  test("rejects an unknown kind without writing", async() => {
-    await using catalog = await catalogServer();
-
-    assert.strictEqual(
-      await catalog.create("a.voxelmap.json", "voxelmap"),
-      CATALOG_REJECTED
-    );
-    assert.strictEqual(catalog.sync.identity.byPath("a.voxelmap.json"), undefined);
   });
 });

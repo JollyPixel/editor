@@ -5,37 +5,22 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type {
-  ClientHandle,
-  RoomContext,
-  RoomPeer
-} from "@jolly-pixel/network";
-
 // Import Internal Dependencies
 import {
-  counterCommandProtocol,
-  counterSnapshotSchema
-} from "../helpers/protocols.ts";
-import {
   AssetRoomExtension,
+  type AssetCommandHeader,
   type AssetLiveProtocol
 } from "#src/index.ts";
+import { counterSnapshotSchema } from "../helpers/protocols.ts";
+import {
+  counterRoomBinding,
+  counterRoomCommands,
+  recordingClient,
+  recordingRoom,
+  roomPeer
+} from "../helpers/rooms.ts";
 
-// CONSTANTS
-const kAssetId = "asset-1";
-const kContext: RoomContext = {
-  room: {
-    broadcast: () => void 0,
-    sendTo: () => void 0
-  },
-  identity: {
-    subject: "subject",
-    role: "default"
-  }
-};
-
-interface Command {
+interface Command extends AssetCommandHeader {
   action: string;
 }
 
@@ -65,18 +50,8 @@ function snapshotRoom(
     }
   };
   const extension = new AssetRoomExtension<Command>(
-    {
-      assetId: kAssetId,
-      kind: "counter",
-      roomId: `counter:${kAssetId}`,
-      state: null,
-      version: () => room.version
-    },
-    {
-      eventType: "counter.command",
-      protocol: counterCommandProtocol,
-      apply: () => void 0
-    },
+    counterRoomBinding({ version: () => room.version }),
+    counterRoomCommands<Command>(),
     protocol,
     {
       append: () => {
@@ -85,6 +60,7 @@ function snapshotRoom(
     }
   );
 
+  const { context } = recordingRoom();
   const room: SnapshotRoom = {
     extension,
     version: 1,
@@ -92,20 +68,10 @@ function snapshotRoom(
       return encodes;
     },
     async join(clientId) {
-      const received: unknown[] = [];
-      const handle: ClientHandle = {
-        id: clientId,
-        send: (payload) => received.push(payload)
-      };
-      const peer: RoomPeer = {
-        clientId,
-        identity: kContext.identity,
-        profile: {},
-        presence: {}
-      };
-      await extension.onClientConnect(handle, peer, kContext);
+      const handle = recordingClient(clientId);
+      await extension.onClientConnect(handle, roomPeer(clientId), context);
 
-      return received;
+      return handle.received;
     }
   };
 
@@ -165,17 +131,11 @@ describe("AssetRoomExtension — encoded snapshots", () => {
       return { value: `encoded@${current.version}` };
     });
     await room.join("a");
-    const sent: unknown[] = [];
+    const resync = recordingRoom();
 
-    room.extension.onResync("a", {
-      ...kContext,
-      room: {
-        broadcast: () => void 0,
-        sendTo: (_clientId, payload) => sent.push(payload)
-      }
-    });
+    room.extension.onResync("a", resync.context);
 
-    assert.deepEqual(sent, [
+    assert.deepEqual(resync.direct.map(({ payload }) => payload), [
       { type: "snapshot", data: { value: "encoded@1" }, version: 1 }
     ]);
   });

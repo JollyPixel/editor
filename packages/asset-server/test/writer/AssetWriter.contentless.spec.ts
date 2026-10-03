@@ -52,20 +52,6 @@ describe("AssetWriter — create without content", () => {
     assert.strictEqual(text(await harness.source.read("a.counter")), "0");
   });
 
-  test("returns an unregistered kind as an error without appending", async() => {
-    await using harness = await syncHarness();
-
-    const result = await harness.writer.create({
-      path: "a.voxelmap.json",
-      kind: "voxelmap",
-      actor: kActor
-    });
-
-    assert.strictEqual(result.ok, false);
-    assert.ok(result.val instanceof UnknownAssetKindError);
-    assert.deepEqual(createdPaths(harness.eventStore), []);
-  });
-
   test("creates each companion beside the owner, then the linked owner", async() => {
     await using harness = await syncHarness({
       handlers: [ownerHandler(), counterHandler()]

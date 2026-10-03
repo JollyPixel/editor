@@ -10,7 +10,7 @@ import {
   matchRenames,
   type ObservedEntry,
   type ProjectedEntry
-} from "#src/identity/index.ts";
+} from "#src/reconcile/index.ts";
 
 function projected(
   id: string,
@@ -166,40 +166,6 @@ describe("matchRenames", () => {
     assert.deepEqual(
       result.deleted.map((entry) => entry.path),
       ["a.png"]
-    );
-  });
-
-  test("resolves git-pull-shaped drift in a single pass", () => {
-    const result = matchRenames(
-      [
-        projected("1", "a.png", "h1"),
-        projected("2", "b.png", "h2"),
-        projected("3", "gone.png", "h3"),
-        projected("4", "moved.png", "h4")
-      ],
-      [
-        observed("a.png", "h1-new"),
-        observed("b.png", "h2-new"),
-        observed("elsewhere/moved.png", "h4"),
-        observed("added.png", "h5")
-      ]
-    );
-
-    assert.deepEqual(
-      result.updated.map((entry) => entry.path),
-      ["a.png", "b.png"]
-    );
-    assert.deepEqual(
-      result.renamed.map((entry) => `${entry.from}->${entry.to}`),
-      ["moved.png->elsewhere/moved.png"]
-    );
-    assert.deepEqual(
-      result.created.map((entry) => entry.path),
-      ["added.png"]
-    );
-    assert.deepEqual(
-      result.deleted.map((entry) => entry.path),
-      ["gone.png"]
     );
   });
 

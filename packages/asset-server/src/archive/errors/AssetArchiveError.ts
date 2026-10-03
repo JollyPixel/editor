@@ -10,8 +10,7 @@ export type AssetArchiveRejection =
   | "unexpected-entry"
   | "too-large"
   | "kind-mismatch"
-  | "unreadable-asset"
-  | "unknown-root";
+  | "unreadable-asset";
 
 export interface AssetArchiveErrorOptions {
   assetId?: string;

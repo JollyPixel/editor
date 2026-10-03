@@ -1,29 +1,31 @@
 # Catalog
 
-`CatalogProjection` folds asset lifecycle events into an
-`@jolly-pixel/asset` catalog.
+`CatalogProjection` indexes the desired state of an `AssetProjector` as an
+`@jolly-pixel/asset` catalog. It reads no event itself: the projector folds
+the lifecycle events once and the catalog follows its `changed` events.
 
 ```ts
-const projection = new CatalogProjection({ eventStore });
+const projection = new CatalogProjection({ projector });
 projection.load();
 projection.start();
 ```
 
-- `load()` folds each asset's newest lifecycle checkpoint and the events
-  after it. See [Replay](./Sync.md#replay).
+- `load()` rebuilds the catalog from the projector's desired state. See
+  [Replay](./Sync.md#replay).
 - `catalog` exposes the current `AssetCatalog`.
 - `size` is the number of cataloged assets.
 - `record(assetId)` returns the `AssetRecord`, or `undefined`.
 - `dependentsOf(assetId)` returns the `AssetRecord` of each asset that
   references `assetId` and still has a record.
 - `snapshot()` returns `AssetManifestData`.
-- `changed` is emitted for each recognized lifecycle event applied to the
-  catalog. A deleted asset has `record: null`.
-- `close()` stops following appended events and removes listeners.
+- `changed` is emitted for each lifecycle event the projector folds, once
+  `start()` was called. A deleted asset has `record: null`; deleting an asset
+  the catalog does not hold emits nothing.
+- `close()` stops following the projector and removes listeners.
 
-`apply(event)` returns `false` and changes nothing for events outside the
-`asset.` prefix and for lifecycle events whose payload does not match their
-type. See [Typed payloads](./Sync.md#typed-payloads).
+Events outside the `asset.` prefix, and lifecycle events whose payload does
+not match their type, never reach the catalog: the projector skips them. See
+[Typed payloads](./Sync.md#typed-payloads).
 
 Each catalog record uses the asset content hash as its `revision`.
 
@@ -61,8 +63,9 @@ await folders.refresh();
   change.
 - `close()` stops following the projection and removes listeners.
 
-`createAssetBackend` refreshes the folders at startup and after each watcher
-pass, so folders made or removed outside the backend show up.
+`createAssetBackend` refreshes the folders at startup, after each batch of
+source notifications and after `backend.reconcile()`, so folders made or
+removed outside the backend show up.
 
 ## Dependency edges
 
@@ -115,7 +118,7 @@ server.register(new CatalogExtension({
 
 ```ts
 interface CatalogExtensionOptions {
-  backend: ArchiveBackend;
+  backend: CatalogBackend;
   id?: string;
   maxContentBytes?: number;
   archiveLimits?: ArchiveLimits;
@@ -124,8 +127,8 @@ interface CatalogExtensionOptions {
 ```
 
 - `backend` supplies the `catalog` projection the room mirrors, the
-  `writer` that runs the lifecycle commands, and the rest of the
-  [archive](./Archive.md) back-end the archive commands run against.
+  `writer` that runs the lifecycle commands, the `folders`, and the rest of
+  the [archive](./Archive.md) back-end the archive commands run against.
 - `deleteProtection` enables [delete protection](#delete-protection).
   Defaults to `true`.
 - `maxContentBytes` caps the decoded size of a `catalog:create` payload and
@@ -190,6 +193,11 @@ holds every outgoing edge of the asset after the change, and is absent on
 deletion and for an unindexed asset. `eventType` is the `AssetEventType`
 that produced the change. `catalog:folders` carries the whole sorted folder
 list each time it changes.
+
+The command and message types are derived from the schemas the room
+validates with, `catalogCommandProtocol` and `catalogMessageProtocol`. The
+server checks every outgoing message against the second one, records and
+import reports included, and drops and logs one that does not match.
 
 A successful command reaches every member as `catalog:changed`, through the
 same projection that carries reconciler writes, then the author alone gets
