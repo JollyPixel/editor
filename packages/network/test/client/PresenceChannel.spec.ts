@@ -13,7 +13,7 @@ import {
   PresenceChannel,
   type PresenceChange
 } from "#src/index.ts";
-import { RoomHarness } from "../helpers/RoomHarness.ts";
+import { RoomHarness } from "../helpers/client/RoomHarness.ts";
 
 function decodeTool(
   value: unknown

@@ -7,131 +7,20 @@ import { setImmediate as flush } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/identity.ts";
+import { identityOf } from "../../helpers/server/identity.ts";
 import {
   AssetExtension,
   client,
   harness,
   join
-} from "../../helpers/dynamicRooms.ts";
+} from "../../helpers/server/dynamicRooms.ts";
 import {
   Server,
   type RoomResolution
 } from "#src/index.ts";
-import { actionProtocols } from "../../helpers/protocols.ts";
+import { actionProtocols } from "../../helpers/protocol/protocols.ts";
 
 describe("Server — room eviction", () => {
-  test("a rejoin inside the grace period keeps the same extension", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { server, created, extensions } = harness({
-      graceMs: 1_000
-    });
-
-    await join(server, "A", "pixelart:asset-1");
-    const first = extensions.get("pixelart:asset-1");
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "leave"
-    });
-
-    t.mock.timers.tick(500);
-    await join(server, "B", "pixelart:asset-1");
-    t.mock.timers.tick(1_000);
-
-    assert.deepEqual(created, ["pixelart:asset-1"]);
-    assert.strictEqual(extensions.get("pixelart:asset-1"), first);
-    assert.strictEqual(first?.disposed, 0);
-    await server.close();
-  });
-
-  test("expiry flushes once, then disposes", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { server, evicted, extensions } = harness({
-      graceMs: 1_000
-    });
-
-    await join(server, "A", "pixelart:asset-1");
-    const extension = extensions.get("pixelart:asset-1");
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "leave"
-    });
-
-    t.mock.timers.tick(1_000);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    assert.deepEqual(evicted, ["pixelart:asset-1"]);
-    assert.strictEqual(extension?.disposed, 1);
-    await server.close();
-  });
-
-  test("a disconnect starts the grace timer too", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { server, evicted } = harness({ graceMs: 1_000 });
-
-    await join(server, "A", "pixelart:asset-1");
-    await server.handleDisconnect("A");
-
-    t.mock.timers.tick(1_000);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    assert.deepEqual(evicted, ["pixelart:asset-1"]);
-    await server.close();
-  });
-
-  test("a room with members left is not evicted", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { server, evicted } = harness({ graceMs: 1_000 });
-
-    await join(server, "A", "pixelart:asset-1");
-    await join(server, "B", "pixelart:asset-1");
-    await server.handleMessage("A", {
-      room: "pixelart:asset-1",
-      kind: "leave"
-    });
-
-    t.mock.timers.tick(5_000);
-
-    assert.deepEqual(evicted, []);
-    await server.close();
-  });
-
-  test("opening and closing the same room repeatedly leaks nothing", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { server, created, evicted } = harness({ graceMs: 100 });
-
-    for (let index = 0; index < 3; index++) {
-      await join(server, `client-${index}`, "pixelart:asset-1");
-      await server.handleMessage(`client-${index}`, {
-        room: "pixelart:asset-1",
-        kind: "leave"
-      });
-      t.mock.timers.tick(100);
-      await Promise.resolve();
-      await Promise.resolve();
-    }
-
-    // a leftover eviction timer would fire here and evict a fourth time
-    t.mock.timers.tick(10_000);
-
-    assert.strictEqual(created.length, 3);
-    assert.strictEqual(evicted.length, 3);
-    await server.close();
-  });
-
-  test("close evicts and disposes remaining rooms", async() => {
-    const { server, evicted, extensions } = harness({ graceMs: 60_000 });
-
-    await join(server, "A", "pixelart:asset-1");
-    const extension = extensions.get("pixelart:asset-1");
-    await server.close();
-
-    assert.deepEqual(evicted, ["pixelart:asset-1"]);
-    assert.strictEqual(extension?.disposed, 1);
-  });
-
   test("close disposes statically registered rooms too", async() => {
     const server = new Server();
     const extension = new AssetExtension("static-room", "static");

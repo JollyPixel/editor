@@ -5,6 +5,7 @@ import {
   wrap,
   type Result
 } from "@openally/result";
+import secureJson from "secure-json-parse";
 
 // Import Internal Dependencies
 import * as clientValidator from "./generated/client.compiled.ts";
@@ -18,6 +19,12 @@ import {
   type Infer,
   type ValidationError
 } from "../schema.ts";
+
+// CONSTANTS
+const kJsonParseOptions: secureJson.ParseOptions = {
+  protoAction: "remove",
+  constructorAction: "remove"
+};
 
 export type ClientEnvelope = Infer<typeof clientEnvelopeSchema>;
 export type ServerEnvelope = Infer<typeof serverEnvelopeSchema>;
@@ -45,7 +52,7 @@ function parseJson(
     return Ok(raw);
   }
 
-  return wrap<unknown, Error>(() => JSON.parse(raw))
+  return wrap<unknown, Error>(() => secureJson.parse(raw, kJsonParseOptions))
     .mapErr((error): EnvelopeParseError => {
       return {
         reason: "invalid-json",

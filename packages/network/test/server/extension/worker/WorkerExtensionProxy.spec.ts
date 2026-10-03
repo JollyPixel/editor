@@ -12,10 +12,10 @@ import { createLogger } from "#src/server/logger.ts";
 import {
   actionProtocols,
   OPAQUE_PROTOCOLS
-} from "../../../helpers/protocols.ts";
+} from "../../../helpers/protocol/protocols.ts";
 import { Server, type RoomContext } from "#src/index.ts";
 import type { WorkerExtensionDescriptor } from "#src/node.ts";
-import { createFakeTransportFactory } from "../../../helpers/FakeWorkerTransport.ts";
+import { createFakeTransportFactory } from "../../../helpers/server/FakeWorkerTransport.ts";
 import {
   DISPATCH_METHODS,
   type DispatchMethod,

@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/identity.ts";
+import { identityOf } from "../../helpers/server/identity.ts";
 import {
   createClient,
   serverEnvelopeOf
-} from "../../helpers/clientHandle.ts";
+} from "../../helpers/server/clientHandle.ts";
 import {
   createExtension,
   createRoom
-} from "../../helpers/serverRoom.ts";
+} from "../../helpers/server/serverRoom.ts";
 import { RightsTable } from "#src/index.ts";
-import { syncProtocols } from "../../helpers/protocols.ts";
+import { syncProtocols } from "../../helpers/protocol/protocols.ts";
 
 describe("ServerRoom — inbound protocol", () => {
   test("hands the extension a parsed message", async() => {

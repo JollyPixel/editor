@@ -6,18 +6,18 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/identity.ts";
+import { identityOf } from "../../helpers/server/identity.ts";
 import {
   createClient,
   serverEnvelopeOf,
   withoutSync
-} from "../../helpers/clientHandle.ts";
+} from "../../helpers/server/clientHandle.ts";
 import {
   createExtension,
   createRoom
-} from "../../helpers/serverRoom.ts";
+} from "../../helpers/server/serverRoom.ts";
 import { Extension } from "#src/index.ts";
-import { OPAQUE_PROTOCOLS } from "../../helpers/protocols.ts";
+import { OPAQUE_PROTOCOLS } from "../../helpers/protocol/protocols.ts";
 
 describe("ServerRoom", () => {
   test("join notifies existing members but not the joiner itself", async() => {

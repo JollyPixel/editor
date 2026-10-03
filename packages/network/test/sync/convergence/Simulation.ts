@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { Prng } from "./Prng.ts";
+import type { Choices } from "./Choices.ts";
 import {
   ToyClient,
   type ToyScenario
@@ -15,7 +15,7 @@ import { ToyServer } from "./ToyServer.ts";
 const kMaxSkew = 3;
 
 export interface SimulationOptions {
-  seed: number;
+  choices: Choices;
   scenario: ToyScenario;
   clients?: number;
   edits?: number;
@@ -26,7 +26,6 @@ export interface SimulationOptions {
 export interface SimulationResult {
   server: ToySnapshot;
   views: ToySnapshot[];
-  converged: boolean;
 }
 
 type Step = () => void;
@@ -35,19 +34,18 @@ export function simulate(
   options: SimulationOptions
 ): SimulationResult {
   const {
-    seed,
+    choices,
     scenario,
     clients: clientCount = 3,
     edits = 8,
     opaque = [],
     versioned = true
   } = options;
-  const prng = new Prng(seed);
   const server = new ToyServer(versioned);
   const clients = Array.from({ length: clientCount }, (_, index) => {
     const client = new ToyClient(
       String.fromCharCode(65 + index),
-      prng.int(kMaxSkew * 2 + 1) - kMaxSkew,
+      choices.int(kMaxSkew * 2 + 1) - kMaxSkew,
       opaque
     );
     server.connect(client.id, (message) => client.inbox.push(message));
@@ -62,7 +60,7 @@ export function simulate(
       if (remaining[index] > 0) {
         steps.push(() => {
           remaining[index]--;
-          client.edit(prng, scenario, server.now);
+          client.edit(choices, scenario, server.now);
         });
       }
       if (client.outbound > 0) {
@@ -85,29 +83,11 @@ export function simulate(
     }
 
     server.now++;
-    prng.pick(steps)();
+    choices.pick(steps)();
   }
-
-  const expected = JSON.stringify(server.state.toJSON());
-  const views = clients.map((client) => client.view.toJSON());
 
   return {
     server: server.state.toJSON(),
-    views,
-    converged: views.every((view) => JSON.stringify(view) === expected)
+    views: clients.map((client) => client.view.toJSON())
   };
-}
-
-export function divergentSeeds(
-  options: Omit<SimulationOptions, "seed">,
-  seeds: number
-): number[] {
-  const failures: number[] = [];
-  for (let seed = 1; seed <= seeds; seed++) {
-    if (!simulate({ ...options, seed }).converged) {
-      failures.push(seed);
-    }
-  }
-
-  return failures;
 }

@@ -7,14 +7,14 @@ import { setImmediate as flush } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/identity.ts";
-import { serverEnvelopeOf } from "../../helpers/clientHandle.ts";
+import { identityOf } from "../../helpers/server/identity.ts";
+import { serverEnvelopeOf } from "../../helpers/server/clientHandle.ts";
 import {
   AssetExtension,
   client,
   harness,
   join
-} from "../../helpers/dynamicRooms.ts";
+} from "../../helpers/server/dynamicRooms.ts";
 import {
   Server,
   type RoomResolution

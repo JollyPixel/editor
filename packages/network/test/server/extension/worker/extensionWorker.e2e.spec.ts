@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { WorkerExtensionProxy } from "#src/node.ts";
 import { createLogger } from "#src/server/logger.ts";
-import { OPAQUE_PROTOCOLS } from "../../../helpers/protocols.ts";
+import { OPAQUE_PROTOCOLS } from "../../../helpers/protocol/protocols.ts";
 import type {
   ClientHandle,
   RoomBroadcast,

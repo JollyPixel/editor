@@ -12,7 +12,7 @@ import {
   PresenceOnlyExtension,
   type RoomContext
 } from "#src/index.ts";
-import { actionProtocols } from "../../helpers/protocols.ts";
+import { actionProtocols } from "../../helpers/protocol/protocols.ts";
 
 function createContext(): {
   context: RoomContext;

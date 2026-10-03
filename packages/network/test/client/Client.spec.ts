@@ -16,7 +16,7 @@ import {
   FakeSocket,
   createClient,
   createOpenClient
-} from "../helpers/FakeSocket.ts";
+} from "../helpers/client/FakeSocket.ts";
 import { captureLogger } from "../helpers/captureLogger.ts";
 
 describe("Client — ready", () => {

@@ -14,7 +14,7 @@ import { captureLogger } from "../helpers/captureLogger.ts";
 import {
   createReconnectingClient,
   FakeSocket
-} from "../helpers/FakeSocket.ts";
+} from "../helpers/client/FakeSocket.ts";
 
 // CONSTANTS
 const kDropped = {

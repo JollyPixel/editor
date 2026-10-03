@@ -4,8 +4,8 @@ import {
   type ClientEnvelope,
   type CommandReconciler
 } from "#src/index.ts";
-import { RoomHarness } from "../../helpers/RoomHarness.ts";
-import type { Prng } from "./Prng.ts";
+import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
+import type { Choices } from "./Choices.ts";
 import {
   TOY_LIST_ITEMS,
   ToyDocument,
@@ -18,7 +18,7 @@ import type { ToyMessage } from "./ToyServer.ts";
 
 export type ToyScenario = "registers" | "list" | "tree" | "mixed";
 
-type ToyGenerator = (client: ToyClient, prng: Prng) => ToyBody;
+type ToyGenerator = (client: ToyClient, choices: Choices) => ToyBody;
 
 // CONSTANTS
 const kRegisterKeys = ["k0", "k1", "k2", "k3"];
@@ -81,11 +81,11 @@ export class ToyClient {
   }
 
   edit(
-    prng: Prng,
+    choices: Choices,
     scenario: ToyScenario,
     now: number
   ): void {
-    const body = this.#generate(prng, scenario);
+    const body = this.#generate(choices, scenario);
     const inverse = this.view.apply(body);
     this.#capture(this.sync.send(body, now + this.skew), inverse);
   }
@@ -151,91 +151,91 @@ export class ToyClient {
   }
 
   #generate(
-    prng: Prng,
+    choices: Choices,
     scenario: ToyScenario
   ): ToyBody {
     const generators = kGenerators[scenario];
     for (let attempt = 0; attempt < kGenerateAttempts; attempt++) {
-      const body = prng.pick(generators)(this, prng);
+      const body = choices.pick(generators)(this, choices);
       if (this.view.accepts(body)) {
         return body;
       }
     }
 
-    return generateSet(this, prng);
+    return generateSet(this, choices);
   }
 }
 
 function generateSet(
   _client: ToyClient,
-  prng: Prng
+  choices: Choices
 ): ToyBody {
   const keys = [...new Set(
-    Array.from({ length: 1 + prng.int(3) }, () => prng.pick(kRegisterKeys))
+    Array.from({ length: 1 + choices.int(3) }, () => choices.pick(kRegisterKeys))
   )];
 
   return {
     action: "set",
     keys,
-    values: keys.map(() => prng.int(100))
+    values: keys.map(() => choices.int(100))
   };
 }
 
 function generateMove(
   _client: ToyClient,
-  prng: Prng
+  choices: Choices
 ): ToyBody {
   return {
     action: "move",
-    item: prng.pick(TOY_LIST_ITEMS),
-    toIndex: prng.int(TOY_LIST_ITEMS.length)
+    item: choices.pick(TOY_LIST_ITEMS),
+    toIndex: choices.int(TOY_LIST_ITEMS.length)
   };
 }
 
 function randomParent(
   client: ToyClient,
-  prng: Prng
+  choices: Choices
 ): string | null {
   const nodes = [...client.view.tree.keys()];
 
-  return nodes.length === 0 || prng.int(3) === 0 ?
+  return nodes.length === 0 || choices.int(3) === 0 ?
     null :
-    prng.pick(nodes);
+    choices.pick(nodes);
 }
 
 function generateAdd(
   client: ToyClient,
-  prng: Prng
+  choices: Choices
 ): ToyBody {
   return {
     action: "add",
     id: client.nextNodeId(),
-    parentId: randomParent(client, prng)
+    parentId: randomParent(client, choices)
   };
 }
 
 function generateRemove(
   client: ToyClient,
-  prng: Prng
+  choices: Choices
 ): ToyBody {
   const nodes = [...client.view.tree.keys()];
 
   return nodes.length === 0 ?
-    generateAdd(client, prng) :
-    { action: "remove", id: prng.pick(nodes) };
+    generateAdd(client, choices) :
+    { action: "remove", id: choices.pick(nodes) };
 }
 
 function generateReparent(
   client: ToyClient,
-  prng: Prng
+  choices: Choices
 ): ToyBody {
   const nodes = [...client.view.tree.keys()];
 
   return nodes.length === 0 ?
-    generateAdd(client, prng) :
+    generateAdd(client, choices) :
     {
       action: "reparent",
-      id: prng.pick(nodes),
-      parentId: randomParent(client, prng)
+      id: choices.pick(nodes),
+      parentId: randomParent(client, choices)
     };
 }

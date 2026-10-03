@@ -16,7 +16,7 @@ import { captureLogger } from "../../helpers/captureLogger.ts";
 import {
   createReconnectingClient,
   type FakeSocket
-} from "../../helpers/FakeSocket.ts";
+} from "../../helpers/client/FakeSocket.ts";
 
 type TestCommand = { action: "set"; value: number; } & NetworkCommandHeader;
 

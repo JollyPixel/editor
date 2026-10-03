@@ -157,7 +157,7 @@ const client = new Client({
 | Member | Role |
 |---|---|
 | `ChannelTransportHost({ port, open, id?, socketPort? })` | answers the connections addressed to `id` (a random UUID by default) |
-| `host.close()` | closes every relayed socket and stops listening; the port stays open |
+| `host.close()` | closes every relayed socket, closes its client socket with code `1001`, and stops listening; the port stays open |
 | `ChannelTransport({ port, host, socketPort? })` | opens connections served by the host with that id |
 | `transport.connect()` | returns the `ClientSocket` a `Client` expects; throws once the transport is closed |
 | `transport.close(event?)` | closes every open socket with `event` (code `1001` by default) and stops listening |

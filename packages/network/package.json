@@ -27,7 +27,7 @@
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "build:schemas": "node scripts/compileSchemas.ts",
-    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "oxlint src test",
@@ -60,8 +60,8 @@
     "ata-validator": "1.27.1",
     "hyperid": "4.0.0",
     "loglayer": "9.4.0",
-    "picomatch": "4.0.7",
     "pino": "10.3.1",
+    "secure-json-parse": "4.1.0",
     "ts-pattern": "5.9.0",
     "ws": "8.21.3",
     "zod": "4.6.5"
@@ -75,6 +75,7 @@
     }
   },
   "devDependencies": {
-    "@types/ws": "8.18.1"
+    "@types/ws": "8.18.1",
+    "fast-check": "4.10.2"
   }
 }

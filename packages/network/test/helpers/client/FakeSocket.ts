@@ -45,7 +45,13 @@ export class FakeSocket implements ClientSocket {
   receive(
     data: unknown
   ): void {
-    this.#emit("message", { data: JSON.stringify(data) });
+    this.deliver(JSON.stringify(data));
+  }
+
+  deliver(
+    raw: string
+  ): void {
+    this.#emit("message", { data: raw });
   }
 
   serverClose(

@@ -1,5 +1,5 @@
 // Import Node.js Dependencies
-import { setTimeout } from "node:timers/promises";
+import { setImmediate } from "node:timers/promises";
 
 export async function waitFor(
   predicate: () => boolean,
@@ -12,6 +12,6 @@ export async function waitFor(
       throw new Error("waitFor: timed out");
     }
 
-    await setTimeout(5);
+    await setImmediate();
   }
 }

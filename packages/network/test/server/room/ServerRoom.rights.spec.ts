@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/identity.ts";
+import { identityOf } from "../../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
-} from "../../helpers/clientHandle.ts";
+} from "../../helpers/server/clientHandle.ts";
 import {
   createExtension,
   createRoom
-} from "../../helpers/serverRoom.ts";
+} from "../../helpers/server/serverRoom.ts";
 import { RightsTable } from "#src/index.ts";
-import { actionProtocols } from "../../helpers/protocols.ts";
+import { actionProtocols } from "../../helpers/protocol/protocols.ts";
 
 describe("ServerRoom — rights: $join", () => {
   test("a role with \"write\" on $join is admitted", async() => {

@@ -14,6 +14,7 @@ import {
 } from "./protocol.ts";
 
 // CONSTANTS
+const kGoingAwayCloseCode = 1001;
 const kProtocolErrorCloseCode = 1002;
 const kSocketEvents = [
   "open",
@@ -114,6 +115,10 @@ export class ChannelTransportHost {
       this.#onMessage
     );
     for (const relay of [...this.#relays.values()]) {
+      this.#postEvent(relay.port, relay.id, "close", {
+        code: kGoingAwayCloseCode,
+        reason: "Channel transport host closed."
+      });
       this.#release(relay);
       relay.socket.close();
     }

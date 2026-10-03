@@ -1,8 +1,6 @@
-// Import Third-party Dependencies
-import picomatch from "picomatch";
-
 // Import Internal Dependencies
 import { RightsGate } from "./RightsGate.ts";
+import { RightsPattern } from "./RightsPattern.ts";
 import { UnknownDefaultRoleError } from "../errors.ts";
 import { DEFAULT_ROLE } from "../../protocol/constants.ts";
 import type { Right } from "../../protocol/types.ts";
@@ -10,7 +8,7 @@ import type { Right } from "../../protocol/types.ts";
 export type RightsMap = Record<string, Record<string, Right>>;
 
 interface Permission {
-  isMatch: picomatch.Matcher;
+  pattern: RightsPattern;
   right: Right;
 }
 
@@ -40,7 +38,7 @@ export class RightsTable {
         role,
         Object.entries(patterns).map(([pattern, right]) => {
           return {
-            isMatch: picomatch(pattern),
+            pattern: new RightsPattern(pattern),
             right
           };
         })
@@ -79,7 +77,7 @@ export class RightsTable {
     }
 
     const rule = rules.find(
-      ({ isMatch }) => isMatch(key)
+      ({ pattern }) => pattern.matches(key)
     );
 
     return rule?.right ?? "write";

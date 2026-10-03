@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { MessageParser } from "#src/index.ts";
-import { createOpenClient } from "../helpers/FakeSocket.ts";
-import { actionCommandProtocol } from "../helpers/protocols.ts";
+import { createOpenClient } from "../helpers/client/FakeSocket.ts";
+import { actionCommandProtocol } from "../helpers/protocol/protocols.ts";
 
 describe("Room — peers mirror", () => {
   test("populates peers from a sync envelope", () => {
