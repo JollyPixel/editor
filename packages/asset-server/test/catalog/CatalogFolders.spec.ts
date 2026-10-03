@@ -39,7 +39,7 @@ interface FoldersHarness extends AsyncDisposable {
 async function foldersHarness(): Promise<FoldersHarness> {
   const sync = await syncHarness();
   const catalog = new CatalogProjection({
-    eventStore: sync.eventStore
+    projector: sync.projector
   });
   catalog.load();
   catalog.start();

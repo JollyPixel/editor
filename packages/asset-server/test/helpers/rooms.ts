@@ -7,6 +7,7 @@ import type {
 
 // Import Internal Dependencies
 import type {
+  AssetCommandHeader,
   AssetCommands,
   AssetRoomBinding
 } from "#src/index.ts";
@@ -91,7 +92,9 @@ export function counterRoomBinding(
   };
 }
 
-export function counterRoomCommands<TCommand>(): AssetCommands<unknown, TCommand> {
+export function counterRoomCommands<
+  TCommand extends AssetCommandHeader
+>(): AssetCommands<unknown, TCommand> {
   return {
     eventType: COUNTER_COMMAND,
     protocol: counterCommandProtocol,

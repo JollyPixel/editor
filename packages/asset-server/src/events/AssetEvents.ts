@@ -27,6 +27,8 @@ import { contentHash } from "../utils/contentHash.ts";
 // CONSTANTS
 export const ASSET_EVENT_PREFIX = "asset.";
 
+const kSnapshotSource = "snapshot";
+
 const kValidatorOptions = { useDefaults: false };
 const kWriteDataValidator = new Validator(
   assetWriteDataSchema,
@@ -57,6 +59,11 @@ export const ASSET_CHECKPOINT_EVENT_TYPES: readonly AssetEventType[] = [
   ASSET_UPDATED,
   ASSET_DELETED
 ];
+
+export const SNAPSHOT_ACTOR: EventStore.Actor = {
+  type: "system",
+  source: kSnapshotSource
+};
 
 export type { AssetInlineContent };
 
@@ -111,6 +118,15 @@ export function isAssetEventType(
   eventType: string
 ): boolean {
   return eventType.startsWith(ASSET_EVENT_PREFIX);
+}
+
+export function isStateNeutral(
+  event: EventStore.Event
+): boolean {
+  return event.eventType === ASSET_RENAMED || (
+    event.actor.type === "system" &&
+    event.actor.source === kSnapshotSource
+  );
 }
 
 export function actorOf(

@@ -1,4 +1,5 @@
 export * from "./AssetArchive.ts";
+export type * from "./ArchiveBackend.ts";
 export * from "./ArchiveLimits.ts";
 export * from "./import/AssetImport.ts";
 export * from "./exportAssetArchive.ts";

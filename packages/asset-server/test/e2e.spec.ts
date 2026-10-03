@@ -133,8 +133,8 @@ describe("asset-server — end to end", () => {
       path.join(workspace.root, "textures", "dirt.png"),
       bytes("grass-edited")
     );
-    (await backend.internals.reconciler.reconcile()).unwrap();
-    await backend.internals.projector.flush();
+    (await backend.reconcile()).unwrap();
+    await backend.flush();
 
     const drifted = backend.catalog.snapshot().assets
       .find((record) => record.kind === "binary")!;

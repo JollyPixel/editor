@@ -14,7 +14,7 @@ import {
   type ObservedEntry,
   type ProjectedEntry,
   type RenameMatch
-} from "../identity/matchRenames.ts";
+} from "./matchRenames.ts";
 import {
   silentLogger,
   type Logger
@@ -22,6 +22,7 @@ import {
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
 import { asError } from "../utils/asError.ts";
+import { TaskChain } from "../utils/TaskChain.ts";
 
 // CONSTANTS
 const kWatcherActor: EventStore.Actor = {
@@ -89,6 +90,7 @@ export class Reconciler {
   #writer: AssetWriter;
   #actor: EventStore.Actor;
   #logger: Logger;
+  #passes = new TaskChain();
 
   constructor(
     options: ReconcilerOptions
@@ -100,7 +102,11 @@ export class Reconciler {
     this.#logger = options.logger ?? silentLogger();
   }
 
-  async reconcile(): Promise<Result<ReconcileReport, Error>> {
+  reconcile(): Promise<Result<ReconcileReport, Error>> {
+    return this.#passes.run(() => this.#reconcile());
+  }
+
+  async #reconcile(): Promise<Result<ReconcileReport, Error>> {
     let scan: WorkspaceScan;
     try {
       scan = await this.#observe();

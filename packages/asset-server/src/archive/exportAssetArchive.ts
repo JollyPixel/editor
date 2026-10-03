@@ -4,6 +4,11 @@ import type {
   AssetReferenceData
 } from "@jolly-pixel/asset";
 import {
+  Err,
+  Ok,
+  type Result
+} from "@openally/result";
+import {
   zipSync,
   type Zippable
 } from "fflate";
@@ -12,15 +17,18 @@ import {
 import {
   ASSET_ARCHIVE_MANIFEST_PATH,
   ASSET_ARCHIVE_VERSION,
-  type ArchiveBackend,
   type AssetArchiveEntry
 } from "./AssetArchive.ts";
+import type { ArchiveBackend } from "./ArchiveBackend.ts";
+import type { AssetImportError } from "./import/AssetImport.ts";
 import {
   archiveEntryOf,
   encodeArchiveManifest
 } from "./format/ArchiveManifest.ts";
-import { AssetArchiveError } from "./errors/AssetArchiveError.ts";
 import { readableAsset } from "./readableAsset.ts";
+import { UnknownAssetError } from "../writer/errors/UnknownAssetError.ts";
+
+export type AssetExportError = AssetImportError | UnknownAssetError;
 
 export interface ExportAssetArchiveOptions {
   root?: string;
@@ -29,12 +37,16 @@ export interface ExportAssetArchiveOptions {
 export async function exportAssetArchive(
   backend: ArchiveBackend,
   options: ExportAssetArchiveOptions = {}
-): Promise<Uint8Array> {
+): Promise<Result<Uint8Array, AssetExportError>> {
   const { catalog } = backend;
   const root = await flushRoot(backend, options.root);
-  const starts = root === undefined ?
+  if (!root.ok) {
+    return root;
+  }
+
+  const starts = root.val === undefined ?
     Array.from(catalog.catalog, referenceOf) :
-    [root];
+    [root.val];
 
   const assets: AssetArchiveEntry[] = [];
   const missing: AssetReferenceData[] = [];
@@ -54,7 +66,7 @@ export async function exportAssetArchive(
       data
     });
     if (!readable.ok) {
-      throw readable.val;
+      return readable;
     }
 
     assets.push(entry);
@@ -63,35 +75,31 @@ export async function exportAssetArchive(
 
   files[ASSET_ARCHIVE_MANIFEST_PATH] = encodeArchiveManifest({
     version: ASSET_ARCHIVE_VERSION,
-    root,
+    root: root.val,
     assets,
     missing
   });
 
-  return zipSync(files);
+  return Ok(zipSync(files));
 }
 
 async function flushRoot(
   backend: ArchiveBackend,
   rootId: string | undefined
-): Promise<AssetReferenceData | undefined> {
+): Promise<Result<AssetReferenceData | undefined, UnknownAssetError>> {
   if (rootId === undefined) {
     await backend.flush();
 
-    return undefined;
+    return Ok(undefined);
   }
 
   await flushClosure(backend, rootId);
   const record = backend.catalog.record(rootId);
   if (record === undefined) {
-    throw new AssetArchiveError(
-      "unknown-root",
-      `Unknown asset "${rootId}".`,
-      { assetId: rootId }
-    );
+    return Err(new UnknownAssetError(rootId));
   }
 
-  return referenceOf(record);
+  return Ok(referenceOf(record));
 }
 
 async function flushClosure(

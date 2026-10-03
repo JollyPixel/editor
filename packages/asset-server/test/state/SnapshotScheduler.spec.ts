@@ -156,6 +156,7 @@ describe("SnapshotScheduler — cadence", () => {
     increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 1_999), 1);
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);
+    await harness.scheduler.flush();
 
     for (let elapsed = 0; elapsed < 28_500; elapsed += 1_500) {
       increment(harness, assetId);

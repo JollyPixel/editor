@@ -37,7 +37,7 @@ interface CreateAssetInput {
   kind?: string;
   assetId?: string;
   dependencies?: readonly AssetReferenceData[];
-  onPathConflict?: "reject" | "suffix";
+  onPathConflict?: PathConflictPolicy;
   alreadyProjected?: boolean;
 }
 ```
@@ -47,7 +47,8 @@ When `assetId` is omitted, the writer reuses the ID that
 already holds that ID. Otherwise it generates a new one. It resolves the kind
 from the registered path globs when `kind` is omitted.
 
-With `onPathConflict: "suffix"`, a taken path gets `-2`, `-3`, ... inserted
+`PathConflictPolicy` is `"reject" | "suffix"`, also exported as the
+`PATH_CONFLICT_POLICIES` tuple. With `onPathConflict: "suffix"`, a taken path gets `-2`, `-3`, ... inserted
 before its first extension (`maps/world.voxelmap.json` becomes
 `maps/world-2.voxelmap.json`) until the path is free. The default, `"reject"`,
 returns `AssetPathConflictError`.
@@ -103,7 +104,7 @@ catalog room's job, see
 
 Every method returns failures as an error result and appends nothing:
 
-- an unknown asset ID;
+- an unknown asset ID: `UnknownAssetError`, carrying `assetId`;
 - a path that escapes the source root, or that names the `.jollypixel/` state
   directory: `AssetPathEscapeError`. Paths are root-relative POSIX paths.
 - a `kind` passed to `create` that no handler registers:

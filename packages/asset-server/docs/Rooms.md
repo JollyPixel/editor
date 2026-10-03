@@ -10,8 +10,7 @@ const clearResolver = registerAssetRooms({
   kinds,
   catalog,
   states,
-  projector,
-  scheduler,
+  flush: (assetId) => backend.flush(assetId),
   graceMs: 30_000
 });
 ```
@@ -109,8 +108,8 @@ every event with the actor of `context.identity`.
 
 The server keeps an empty dynamic room for its configured grace period. A new
 join during that period reuses the room. When the period expires, asset-server
-snapshots pending state, writes it to the source and releases the live state
-before the extension is disposed.
+calls `flush(assetId)`, which snapshots pending state and writes it to the
+source, then releases the live state before the extension is disposed.
 
 `graceMs` overrides the server default for asset rooms. Use
 `server.settled(roomName)` to wait for asynchronous eviction. Closing the

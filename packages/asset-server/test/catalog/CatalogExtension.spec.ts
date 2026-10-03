@@ -61,7 +61,7 @@ describe("CatalogExtension — join", () => {
   test("sends the snapshot to the joining client", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     await harness.writer.create({
       path: "a.png",
@@ -94,7 +94,7 @@ describe("CatalogExtension — join", () => {
   test("every joiner gets its own snapshot", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.load();
 
@@ -117,7 +117,7 @@ describe("CatalogExtension — broadcast", () => {
   test("one broadcast per subsequent catalog event", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.load();
     projection.start();
@@ -146,7 +146,7 @@ describe("CatalogExtension — broadcast", () => {
   test("stops broadcasting once the last client left", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.start();
 
@@ -171,7 +171,7 @@ describe("CatalogExtension — broadcast", () => {
   test("dispose unsubscribes from the projection", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.start();
 
@@ -196,7 +196,7 @@ describe("CatalogExtension — broadcast", () => {
     await using harness = await syncHarness();
     const extension = new CatalogExtension({
       backend: catalogBackend(harness, new CatalogProjection({
-        eventStore: harness.eventStore
+        projector: harness.projector
       }))
     });
 
@@ -416,7 +416,7 @@ describe("CatalogExtension — server", () => {
   test("a role granted create but not delete is denied the delete", async() => {
     await using sync = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: sync.eventStore
+      projector: sync.projector
     });
     projection.load();
     projection.start();
@@ -477,7 +477,7 @@ describe("CatalogExtension — server", () => {
   test("a malformed command gets an error envelope", async() => {
     await using sync = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: sync.eventStore
+      projector: sync.projector
     });
     projection.load();
 
@@ -512,7 +512,7 @@ describe("catalog HTTP handler", () => {
   test("returns the same bytes as the snapshot", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     await harness.writer.create({
       path: "a.png",
@@ -535,7 +535,7 @@ describe("catalog HTTP handler", () => {
   test("passes other paths to the next handler", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.load();
 
@@ -555,7 +555,7 @@ describe("catalog HTTP handler", () => {
   test("ignores the query string when matching the path", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.load();
 
@@ -571,7 +571,7 @@ describe("catalog HTTP handler", () => {
   test("answers 304 while the snapshot is unchanged", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.load();
 
@@ -593,7 +593,7 @@ describe("catalog HTTP handler", () => {
   test("refuses a non-GET method", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
-      eventStore: harness.eventStore
+      projector: harness.projector
     });
     projection.load();
 

@@ -265,4 +265,19 @@ describe("AssetRoomExtension — resume", () => {
       { type: "snapshot", data: { value: 1 }, version: 1 }
     ]);
   });
+
+  test("a malformed resume is answered like a fresh join", async() => {
+    const { connect, send } = setup();
+    send("old", 4);
+
+    const { received, connected } = connect("new", {
+      clientId: "old",
+      version: 0.5
+    });
+    await connected;
+
+    assert.deepEqual(received, [
+      { type: "snapshot", data: { value: 1 }, version: 1 }
+    ]);
+  });
 });

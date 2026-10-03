@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { AssetSource } from "@jolly-pixel/asset-source";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
@@ -12,7 +13,9 @@ import {
   ASSET_EVENT_PREFIX,
   describeRejection,
   parseAssetEvent,
-  type AssetEventRejection
+  type AssetEvent,
+  type AssetEventRejection,
+  type AssetEventType
 } from "../events/AssetEvents.ts";
 import { decodeContent } from "../events/inlineContent.ts";
 import {
@@ -22,6 +25,18 @@ import {
 import type { ProjectionState } from "./ProjectionState.ts";
 import { TaskChain } from "../utils/TaskChain.ts";
 import { asError } from "../utils/asError.ts";
+
+export interface AssetProjectionChange {
+  readonly assetId: string;
+  readonly eventType: AssetEventType;
+  readonly desired: AssetProjection | null;
+}
+
+export type AssetProjectorEventMap = {
+  changed: (
+    change: AssetProjectionChange
+  ) => void;
+};
 
 interface AssetFold {
   projected: AssetProjection | null;
@@ -41,13 +56,16 @@ export interface AssetProjectorOptions {
  *
  * Idempotent writes make stale checkpoints safe to replay.
  */
-export class AssetProjector {
+export class AssetProjector extends Emitter<
+  AssetProjectorEventMap
+> {
   #source: AssetSource;
   #eventStore: EventStore.EventStore;
   #state: ProjectionState;
   #logger: Logger;
 
   #folds = new Map<string, AssetFold>();
+  #paths = new Map<string, string>();
   #dirty = new Set<string>();
   #stateDirty = false;
   #queue = new TaskChain();
@@ -56,6 +74,7 @@ export class AssetProjector {
   constructor(
     options: AssetProjectorOptions
   ) {
+    super();
     this.#source = options.source;
     this.#eventStore = options.eventStore;
     this.#state = options.state;
@@ -64,6 +83,7 @@ export class AssetProjector {
 
   load(): void {
     this.#folds.clear();
+    this.#paths.clear();
     this.#dirty.clear();
 
     const events = this.#eventStore.reader.listFromCheckpoints({
@@ -78,7 +98,14 @@ export class AssetProjector {
   start(): void {
     this.#unsubscribe ??= this.#eventStore.subscribe(
       (event) => {
-        this.#absorb(event);
+        const absorbed = this.#absorb(event);
+        if (absorbed !== null) {
+          this.emit("changed", {
+            assetId: event.assetId,
+            eventType: absorbed.eventType,
+            desired: this.desired(event.assetId)
+          });
+        }
         void this.flush(event.assetId);
       },
       { eventTypePrefix: ASSET_EVENT_PREFIX }
@@ -88,6 +115,7 @@ export class AssetProjector {
   async close(): Promise<void> {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
+    this.removeAllListeners();
 
     await this.flush();
   }
@@ -115,16 +143,21 @@ export class AssetProjector {
     return this.#folds.get(assetId)?.desired ?? null;
   }
 
+  * desiredProjections(): IterableIterator<{
+    assetId: string;
+    projection: AssetProjection;
+  }> {
+    for (const [assetId, fold] of this.#folds) {
+      if (fold.desired !== null) {
+        yield { assetId, projection: fold.desired };
+      }
+    }
+  }
+
   assetAt(
     path: string
   ): string | null {
-    for (const [assetId, fold] of this.#folds) {
-      if (fold.desired?.path === path) {
-        return assetId;
-      }
-    }
-
-    return null;
+    return this.#paths.get(path) ?? null;
   }
 
   get pending(): number {
@@ -160,12 +193,12 @@ export class AssetProjector {
 
   #absorb(
     event: EventStore.Event
-  ): void {
+  ): AssetEvent | null {
     const parsed = parseAssetEvent(event);
     if (!parsed.ok) {
       this.#reject(event, parsed.val);
 
-      return;
+      return null;
     }
 
     const assetEvent = parsed.val;
@@ -175,8 +208,12 @@ export class AssetProjector {
       desiredEventId: 0
     };
 
+    this.#unindex(event.assetId, fold.desired);
     fold.desired = applyProjection(fold.desired, assetEvent);
     fold.desiredEventId = event.eventId;
+    if (fold.desired !== null) {
+      this.#paths.set(fold.desired.path, event.assetId);
+    }
     if (event.eventId <= this.#state.checkpoint(event.assetId)) {
       fold.projected = fold.desired;
     }
@@ -185,6 +222,17 @@ export class AssetProjector {
     }
 
     this.#folds.set(event.assetId, fold);
+
+    return assetEvent;
+  }
+
+  #unindex(
+    assetId: string,
+    desired: AssetProjection | null
+  ): void {
+    if (desired !== null && this.#paths.get(desired.path) === assetId) {
+      this.#paths.delete(desired.path);
+    }
   }
 
   #reject(

@@ -8,8 +8,8 @@ consumer folds the events it needs.
 flowchart TB
     Writer["AssetWriter"] --> Store[("Event store")]
     Room["Asset room"] --> Store
-    Store --> Catalog["CatalogProjection"]
     Store --> Projector["AssetProjector"]
+    Projector --> Catalog["CatalogProjection"]
     Store --> State["AssetStateStore"]
     Projector --> Source[("AssetSource")]
     State --> Scheduler["SnapshotScheduler"]
@@ -18,8 +18,9 @@ flowchart TB
 
 ## What each view holds
 
-- **Catalog:** asset ID, kind, path, revision, and dependency edges. Lifecycle
-  events change it; domain events do not.
+- **Catalog:** asset ID, kind, path, revision, and dependency edges. It indexes
+  the projector's desired state rather than folding events itself, so
+  lifecycle events are parsed and folded once.
 - **Physical projection:** the path and content that `AssetSource` should
   contain. The projector follows lifecycle events and records its last
   processed position in `.jollypixel/state.json`.

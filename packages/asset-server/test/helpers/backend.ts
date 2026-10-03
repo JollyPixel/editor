@@ -24,7 +24,7 @@ import {
 } from "#src/state/index.ts";
 import {
   Reconciler,
-  ReconciliationWatcher
+  SourceWatcher
 } from "#src/reconcile/index.ts";
 
 export interface SyncHarness extends AsyncDisposable {
@@ -36,7 +36,7 @@ export interface SyncHarness extends AsyncDisposable {
   readonly scheduler: SnapshotScheduler;
   readonly writer: AssetWriter;
   readonly reconciler: Reconciler;
-  readonly watcher: ReconciliationWatcher;
+  readonly watcher: SourceWatcher;
   readonly identity: IdentitySidecar;
   readonly kinds: AssetKindRegistry;
 }
@@ -133,9 +133,13 @@ export async function syncHarness(
     projector,
     writer
   });
-  const watcher = new ReconciliationWatcher({
+  const watcher = new SourceWatcher({
     source,
-    reconciler,
+    onChange: async(changed) => {
+      if (changed.has("file")) {
+        await reconciler.reconcile();
+      }
+    },
     debounce: 100
   });
 

@@ -53,10 +53,13 @@ async function rebind(
   idMap: ReadonlyMap<string, string>,
   kinds: AssetKindRegistry
 ): Promise<Result<AssetArchiveAsset, AssetArchiveError>> {
-  const handler = kinds.get(asset.kind);
-  const state = handler.create(id);
+  const decoded = kinds.decode(asset.kind, id, asset.data);
+  if (!decoded.ok) {
+    return Err(uncopyable(asset, decoded.val));
+  }
+
+  const { handler, state } = decoded.val;
   try {
-    handler.load(state, asset.data);
     const references = handler.dependencies?.(state) ?? [];
     if (
       handler.rebind === undefined &&
@@ -74,15 +77,20 @@ async function rebind(
     });
   }
   catch (cause) {
-    const error = new AssetArchiveError(
-      "unreadable-asset",
-      `Cannot copy "${asset.path}": ${asError(cause).message}`,
-      {
-        assetId: asset.id,
-        cause
-      }
-    );
-
-    return Err(error);
+    return Err(uncopyable(asset, asError(cause)));
   }
+}
+
+function uncopyable(
+  asset: AssetArchiveAsset,
+  cause: Error
+): AssetArchiveError {
+  return new AssetArchiveError(
+    "unreadable-asset",
+    `Cannot copy "${asset.path}": ${cause.message}`,
+    {
+      assetId: asset.id,
+      cause
+    }
+  );
 }

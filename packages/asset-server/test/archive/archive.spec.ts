@@ -15,6 +15,7 @@ import {
 import {
   ASSET_CREATED,
   AssetArchiveError,
+  UnknownAssetError,
   UnknownAssetKindError,
   exportAssetArchive,
   importAssetArchive,
@@ -29,7 +30,6 @@ import {
   type ArchiveWorkspace
 } from "../helpers/archive.ts";
 import {
-  LINK_TARGETS_SET,
   linkContent,
   linkReference
 } from "../helpers/kinds.ts";
@@ -43,7 +43,7 @@ async function exported(
   root?: string
 ): Promise<AssetArchive> {
   return readAssetArchive(
-    await exportAssetArchive(workspace.backend, { root })
+    (await exportAssetArchive(workspace.backend, { root })).unwrap()
   ).unwrap();
 }
 
@@ -53,14 +53,7 @@ async function editLive(
   ...targets: string[]
 ): Promise<void> {
   await workspace.backend.flush(assetId);
-  await workspace.backend.internals.states.acquire(assetId, "link");
-  workspace.eventStore.writer.append({
-    assetType: "link",
-    assetId,
-    eventType: LINK_TARGETS_SET,
-    eventData: { action: "set", targets },
-    actor: ARCHIVE_ACTOR
-  }).unwrap();
+  await workspace.editLive(assetId, ...targets);
 }
 
 function createdCount(
@@ -109,7 +102,7 @@ describe("exportAssetArchive", () => {
     const map = await workspace.link("map.link");
 
     const names = Object.keys(unzipSync(
-      await exportAssetArchive(workspace.backend, { root: map })
+      (await exportAssetArchive(workspace.backend, { root: map })).unwrap()
     ));
 
     assert.deepEqual(
@@ -173,13 +166,16 @@ describe("exportAssetArchive", () => {
     );
   });
 
-  test("rejects an unknown root", async() => {
+  test("returns an unknown root as an error", async() => {
     await using workspace = await archiveWorkspace();
 
-    await assert.rejects(
-      exportAssetArchive(workspace.backend, { root: "ghost" }),
-      AssetArchiveError
-    );
+    const exported = await exportAssetArchive(workspace.backend, {
+      root: "ghost"
+    });
+
+    assert.ok(!exported.ok);
+    assert.ok(exported.val instanceof UnknownAssetError);
+    assert.strictEqual(exported.val.assetId, "ghost");
   });
 
   test("refuses a stored document that import would reject", async() => {
@@ -187,12 +183,14 @@ describe("exportAssetArchive", () => {
     const map = await workspace.link("map.link");
     await workspace.source.write("map.link", linkContent("!"));
 
-    await assert.rejects(
-      exportAssetArchive(workspace.backend, { root: map }),
-      (error: unknown) => error instanceof AssetArchiveError &&
-        error.rejection === "unreadable-asset" &&
-        error.assetId === map
-    );
+    const exported = await exportAssetArchive(workspace.backend, {
+      root: map
+    });
+
+    assert.ok(!exported.ok);
+    assert.ok(exported.val instanceof AssetArchiveError);
+    assert.strictEqual(exported.val.rejection, "unreadable-asset");
+    assert.strictEqual(exported.val.assetId, map);
   });
 });
 
@@ -672,6 +670,5 @@ describe("importAssetArchive — storage", () => {
     })).unwrap();
 
     assert.strictEqual(text(await target.source.read("map.link")), "one");
-    assert.strictEqual(target.backend.internals.projector.pending, 0);
   });
 });

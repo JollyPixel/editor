@@ -45,7 +45,7 @@ export async function catalogCommands(
 ): Promise<CatalogCommands> {
   const sync = await syncHarness();
   const projection = new CatalogProjection({
-    eventStore: sync.eventStore
+    projector: sync.projector
   });
   projection.load();
   projection.start();

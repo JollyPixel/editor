@@ -10,26 +10,40 @@ import type {
 import {
   ASSET_ROOM_DELETED,
   ASSET_ROOM_REJECTED,
+  type AssetCommandHeader,
   type AssetLiveProtocol,
-  type AssetRoomMessage,
   type AssetRoomDeletedMessage,
   type AssetRoomRejectedMessage
 } from "../kinds/AssetLiveProtocol.ts";
 import {
   actorOf,
-  ASSET_RENAMED
+  isStateNeutral
 } from "../events/AssetEvents.ts";
 import type { RecordedCommand } from "../state/AssetStateStore.ts";
-import { isScheduledSnapshot } from "../state/SnapshotScheduler.ts";
 import {
   assetRoomDeletedSchema,
   assetRoomRejectedSchema
 } from "./AssetRoomExtension.schema.ts";
+import {
+  PeerAcks,
+  type AcksField
+} from "./PeerAcks.ts";
+import { SnapshotCache } from "./SnapshotCache.ts";
 
 // CONSTANTS
 const kDefaultResumeLimit = 1_000;
 const kDefaultDepartureTimeout = 5_000;
-const kMaxDeparted = 256;
+const kResumeParser = new network.SchemaParser(network.defineSchema({
+  type: "object",
+  properties: {
+    clientId: { type: "string" },
+    version: {
+      type: "integer",
+      minimum: 0
+    }
+  },
+  required: ["clientId"]
+}));
 const kRoomProtocols = new WeakMap<
   network.MessageProtocol,
   Map<network.JSONSchema, network.MessageProtocols>
@@ -42,15 +56,7 @@ export interface AssetRoomExtensionOptions<TCommand = unknown> {
   departureTimeout?: number;
 }
 
-type SyncExtras = {
-  version?: number;
-  acks?: network.NetworkAcks;
-};
-
-interface EncodedSnapshot {
-  readonly version: number;
-  readonly data: unknown;
-}
+type AssetSyncMessage = network.NetworkSyncMessage<unknown, unknown>;
 
 interface CatchUp {
   readonly commands: unknown[];
@@ -58,7 +64,7 @@ interface CatchUp {
 }
 
 export class AssetRoomExtension<
-  TCommand = unknown
+  TCommand extends AssetCommandHeader = AssetCommandHeader
 > extends network.Extension {
   readonly id: string;
   readonly name: string;
@@ -74,11 +80,10 @@ export class AssetRoomExtension<
   #departureTimeout: number;
   #room: network.RoomBroadcast | null = null;
   #deleted = false;
-  #encoded: EncodedSnapshot | null = null;
+  #snapshots: SnapshotCache;
+  #acks = new PeerAcks();
   #members = new Set<string>();
   #departures = new Map<string, () => void>();
-  #processed = new Map<string, number>();
-  #departed = new Map<string, number>();
 
   constructor(
     binding: AssetRoomBinding,
@@ -104,6 +109,7 @@ export class AssetRoomExtension<
     this.#resumeLimit = options.resumeLimit ?? kDefaultResumeLimit;
     this.#departureTimeout = options.departureTimeout ??
       kDefaultDepartureTimeout;
+    this.#snapshots = new SnapshotCache(protocol, this.#version);
     this.#restore(options.restore ?? []);
   }
 
@@ -130,11 +136,11 @@ export class AssetRoomExtension<
     this.#room = context.room;
     this.#members.add(peer.clientId);
 
-    const resume = resumeOf(peer.resume);
-    if (resume !== null) {
-      await this.#departure(resume.clientId);
+    const resume = kResumeParser.parse(peer.resume);
+    if (resume.ok) {
+      await this.#departure(resume.val.clientId);
     }
-    const encoding = this.#encodeSnapshot();
+    const encoding = this.#snapshots.refresh();
     if (encoding !== null) {
       await encoding;
     }
@@ -148,7 +154,7 @@ export class AssetRoomExtension<
     }
 
     client.send(
-      this.#joinMessage(resume)
+      resume.ok ? this.#resumeMessage(resume.val) : this.#snapshot({})
     );
   }
 
@@ -162,7 +168,7 @@ export class AssetRoomExtension<
 
     context.room.sendTo(
       clientId,
-      this.#snapshot(this.#acksOf([clientId]))
+      this.#snapshot(this.#acks.of([clientId]))
     );
   }
 
@@ -170,16 +176,7 @@ export class AssetRoomExtension<
     clientId: string
   ): void {
     this.#members.delete(clientId);
-    const seq = this.#processed.get(clientId);
-    if (seq !== undefined) {
-      this.#processed.delete(clientId);
-      this.#departed.set(clientId, seq);
-      if (this.#departed.size > kMaxDeparted) {
-        this.#departed.delete(
-          this.#departed.keys().next().value!
-        );
-      }
-    }
+    this.#acks.depart(clientId);
     this.#departures.get(clientId)?.();
   }
 
@@ -199,10 +196,7 @@ export class AssetRoomExtension<
       return;
     }
     const command = parsed.val.message;
-    const seq = seqOf(command);
-    if (seq !== undefined) {
-      this.#processed.set(clientId, seq);
-    }
+    this.#acks.record(clientId, command.seq);
 
     const arbitration = this.#protocol.arbitrate(command);
     if (arbitration === null) {
@@ -287,18 +281,10 @@ export class AssetRoomExtension<
     return promise;
   }
 
-  #joinMessage(
-    resume: network.NetworkResume | null
-  ): AssetRoomMessage & SyncExtras {
-    if (resume === null) {
-      return this.#snapshot({});
-    }
-
-    const seq = this.#processed.get(resume.clientId) ??
-      this.#departed.get(resume.clientId);
-    const acks = seq === undefined ?
-      {} :
-      { acks: { [resume.clientId]: seq } };
+  #resumeMessage(
+    resume: network.NetworkResume
+  ): AssetSyncMessage {
+    const acks = this.#acks.resumedBy(resume.clientId);
     const caughtUp = this.#catchUp(resume.version);
     if (caughtUp === null) {
       return this.#snapshot(acks);
@@ -336,10 +322,7 @@ export class AssetRoomExtension<
       if (event.eventType === this.#commands.eventType) {
         commands.push(event.eventData);
       }
-      else if (
-        event.eventType !== ASSET_RENAMED &&
-        !isScheduledSnapshot(event)
-      ) {
+      else if (!isStateNeutral(event)) {
         return null;
       }
     }
@@ -350,53 +333,16 @@ export class AssetRoomExtension<
     };
   }
 
-  #encodeSnapshot(): Promise<void> | null {
-    const version = this.#version();
-    if (
-      this.#protocol.encodeSnapshot === undefined ||
-      version === undefined ||
-      this.#encoded?.version === version
-    ) {
-      return null;
-    }
-
-    return this.#storeEncoded(
-      version,
-      this.#protocol.encodeSnapshot()
-    );
-  }
-
-  async #storeEncoded(
-    version: number,
-    encoding: Promise<unknown>
-  ): Promise<void> {
-    try {
-      const data = await encoding;
-      if (this.#version() === version) {
-        this.#encoded = {
-          version,
-          data
-        };
-      }
-    }
-    catch {
-      this.#encoded = null;
-    }
-  }
-
   #snapshot(
-    extras: SyncExtras
-  ): AssetRoomMessage & SyncExtras {
-    const version = this.#version();
-    const encoded = this.#encoded;
+    acks: AcksField
+  ): AssetSyncMessage {
+    const { data, version } = this.#snapshots.current();
 
     return {
       type: "snapshot",
-      data: encoded !== null && encoded.version === version ?
-        encoded.data :
-        this.#protocol.snapshot(),
+      data,
       ...(version === undefined ? {} : { version }),
-      ...extras
+      ...acks
     };
   }
 
@@ -410,13 +356,13 @@ export class AssetRoomExtension<
       command,
       admitted
     ) ?? null;
-    const acks = this.#acksOf([clientId]);
+    const acks = this.#acks.of([clientId]);
     if (correction !== null) {
       room.sendTo(clientId, {
         type: "correction",
         data: correction,
         ...acks
-      });
+      } satisfies AssetSyncMessage);
 
       return;
     }
@@ -427,83 +373,23 @@ export class AssetRoomExtension<
   #broadcastOf(
     command: TCommand,
     version: number
-  ): AssetRoomMessage & SyncExtras {
+  ): AssetSyncMessage {
     const message = this.#protocol.broadcast?.(command) ?? {
       type: "command",
       data: command
     };
-    switch (message.type) {
-      case "command":
-        return {
-          ...message,
-          version
-        };
-      case "snapshot":
-        return {
-          ...message,
-          version,
-          ...this.#acksOf(this.#processed.keys())
-        };
-      default:
-        return message;
-    }
+
+    return message.type === "command" ?
+      {
+        ...message,
+        version
+      } :
+      {
+        ...message,
+        version,
+        ...this.#acks.ofEveryone()
+      };
   }
-
-  #acksOf(
-    clientIds: Iterable<string>
-  ): { acks?: network.NetworkAcks; } {
-    const acks: network.NetworkAcks = {};
-    for (const clientId of clientIds) {
-      const seq = this.#processed.get(clientId);
-      if (seq !== undefined) {
-        acks[clientId] = seq;
-      }
-    }
-
-    return Object.keys(acks).length === 0 ? {} : { acks };
-  }
-}
-
-function resumeOf(
-  value: unknown
-): network.NetworkResume | null {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("clientId" in value) ||
-    typeof value.clientId !== "string"
-  ) {
-    return null;
-  }
-  if (
-    "version" in value &&
-    typeof value.version === "number" &&
-    Number.isInteger(value.version)
-  ) {
-    return {
-      clientId: value.clientId,
-      version: value.version
-    };
-  }
-
-  return {
-    clientId: value.clientId
-  };
-}
-
-function seqOf(
-  command: unknown
-): number | undefined {
-  if (
-    typeof command === "object" &&
-    command !== null &&
-    "seq" in command &&
-    typeof command.seq === "number"
-  ) {
-    return command.seq;
-  }
-
-  return undefined;
 }
 
 function withAuthor(

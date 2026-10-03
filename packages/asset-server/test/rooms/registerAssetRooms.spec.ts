@@ -100,7 +100,7 @@ async function roomHarness(
   })).unwrap();
   await sync.projector.flush();
 
-  const catalog = new CatalogProjection({ eventStore: sync.eventStore });
+  const catalog = new CatalogProjection({ projector: sync.projector });
   catalog.load();
   catalog.start();
 
@@ -114,8 +114,10 @@ async function roomHarness(
     kinds: sync.kinds,
     catalog,
     states: sync.states,
-    projector: sync.projector,
-    scheduler: sync.scheduler,
+    flush: async(assetId) => {
+      await sync.scheduler.flush(assetId);
+      await sync.projector.flush(assetId);
+    },
     logger
   });
 

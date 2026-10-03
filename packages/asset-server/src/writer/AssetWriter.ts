@@ -28,19 +28,28 @@ import { asError } from "../utils/asError.ts";
 import { TaskChain } from "../utils/TaskChain.ts";
 import {
   AssetPathAllocator,
-  writableAssetPath,
-  type PathConflictPolicy
+  writableAssetPath
 } from "./AssetPathAllocator.ts";
 import {
   AssetCreationPlanner,
   type PlannedAsset
 } from "./AssetCreationPlanner.ts";
-import {
-  DependencyReader,
-  type AssetContent
-} from "./DependencyReader.ts";
+import { DependencyReader } from "./DependencyReader.ts";
+import type {
+  AssetPayload,
+  CreateAssetInput,
+  DeleteAssetInput,
+  RenameAssetInput,
+  UpdateAssetInput,
+  WriteOptions
+} from "./AssetWriteInput.ts";
+import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
 
-export type { PathConflictPolicy } from "./AssetPathAllocator.ts";
+export {
+  PATH_CONFLICT_POLICIES,
+  type PathConflictPolicy
+} from "./AssetPathAllocator.ts";
+export type * from "./AssetWriteInput.ts";
 
 export interface AssetWriterOptions {
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
@@ -48,42 +57,6 @@ export interface AssetWriterOptions {
   projector: AssetProjector;
   identity: IdentitySidecar;
   logger?: Logger;
-}
-
-interface WriteOptions {
-  actor: EventStore.Actor;
-  alreadyProjected?: boolean;
-}
-
-interface ContentWriteOptions extends WriteOptions, AssetContent {}
-
-export interface CreateAssetInput extends Omit<ContentWriteOptions, "data"> {
-  path: string;
-  kind?: string;
-  /**
-   * @default the serialized `create(assetId)` state of the kind, linked to
-   * a same-named asset of each of its companion kinds
-   */
-  data?: Uint8Array;
-  /**
-   * @default the id the identity sidecar records for a vacant path, else a
-   * random UUID
-   */
-  assetId?: string;
-  onPathConflict?: PathConflictPolicy;
-}
-
-export interface UpdateAssetInput extends ContentWriteOptions {
-  assetId: string;
-}
-
-export interface RenameAssetInput extends WriteOptions {
-  assetId: string;
-  to: string;
-}
-
-export interface DeleteAssetInput extends WriteOptions {
-  assetId: string;
 }
 
 export class AssetWriter {
@@ -341,11 +314,11 @@ export class AssetWriter {
 
   #current(
     assetId: string
-  ): Result<AssetProjection, Error> {
+  ): Result<AssetProjection, UnknownAssetError> {
     const current = this.#projector.desired(assetId);
 
     return current === null ?
-      Err(new Error(`Unknown asset "${assetId}".`)) :
+      Err(new UnknownAssetError(assetId)) :
       Ok(current);
   }
 
@@ -353,13 +326,13 @@ export class AssetWriter {
     assetId: string,
     path: string,
     kind: string,
-    content: AssetContent
+    payload: AssetPayload
   ): Promise<AssetWriteData> {
     return writeData(
       path,
       kind,
-      content.data,
-      this.#dependencies.resolve(assetId, kind, content)
+      payload.data,
+      this.#dependencies.resolve(assetId, kind, payload)
     );
   }
 

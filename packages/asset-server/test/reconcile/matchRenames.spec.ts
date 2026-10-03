@@ -10,7 +10,7 @@ import {
   matchRenames,
   type ObservedEntry,
   type ProjectedEntry
-} from "#src/identity/index.ts";
+} from "#src/reconcile/index.ts";
 
 function projected(
   id: string,

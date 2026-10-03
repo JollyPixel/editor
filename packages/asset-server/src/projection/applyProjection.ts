@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { AssetReferenceData } from "@jolly-pixel/asset";
+
 // Import Internal Dependencies
 import {
   ASSET_CREATED,
@@ -16,6 +19,7 @@ export interface AssetProjection {
   readonly kind: string;
   readonly hash: string;
   readonly content: AssetInlineContent;
+  readonly dependencies?: readonly AssetReferenceData[];
 }
 
 export function applyProjection(
@@ -26,12 +30,14 @@ export function applyProjection(
     case ASSET_CREATED:
     case ASSET_UPDATED: {
       const { eventData } = event;
+      const dependencies = eventData.dependencies ?? projection?.dependencies;
 
       return {
         path: eventData.path,
         kind: eventData.kind,
         hash: eventData.hash,
-        content: eventData.content
+        content: eventData.content,
+        ...(dependencies === undefined ? {} : { dependencies })
       };
     }
     case ASSET_RENAMED: {

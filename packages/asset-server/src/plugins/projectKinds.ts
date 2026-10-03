@@ -3,6 +3,7 @@ import type { Plugin } from "vite";
 
 // Import Internal Dependencies
 import { KINDS_EXPORT } from "../project/KindPackage.ts";
+import { BUILT_IN_KINDS_PACKAGE } from "../kinds/handlers/builtIn.ts";
 import type { ProjectKinds } from "../project/ProjectKinds.ts";
 
 // CONSTANTS
@@ -19,10 +20,10 @@ export function projectHandlersModule(
     `    ...kinds${index}.handlers(${JSON.stringify(kindPackage.options)}),\n`
   ));
 
-  return "import { textureAssetKind } from \"@jolly-pixel/asset-server\";\n" +
+  return `import { builtInAssetKinds } from ${JSON.stringify(BUILT_IN_KINDS_PACKAGE)};\n` +
     `${imports.join("")}\n` +
     "export default function createHandlers() {\n" +
-    `  return [\n${handlers.join("")}    textureAssetKind()\n  ];\n` +
+    `  return [\n${handlers.join("")}    ...builtInAssetKinds()\n  ];\n` +
     "}\n";
 }
 

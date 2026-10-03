@@ -4,16 +4,8 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { Logger } from "../logger.ts";
+import type { AssetPayload } from "./AssetWriteInput.ts";
 import { asError } from "../utils/asError.ts";
-
-export interface AssetContent {
-  data: Uint8Array;
-  /**
-   * Assets `data` references.
-   * @default computed by the kind handler from `data`
-   */
-  dependencies?: readonly AssetReferenceData[];
-}
 
 export interface DependencyReaderOptions {
   kinds: AssetKindRegistry;
@@ -34,10 +26,10 @@ export class DependencyReader {
   resolve(
     assetId: string,
     kind: string,
-    content: AssetContent
+    payload: AssetPayload
   ): AssetReferenceData[] {
-    const references = content.dependencies ??
-      this.#handlerDependencies(assetId, kind, content.data);
+    const references = payload.dependencies ??
+      this.#handlerDependencies(assetId, kind, payload.data);
 
     return uniqueDependencies(assetId, references);
   }
@@ -52,23 +44,33 @@ export class DependencyReader {
       return [];
     }
 
-    try {
-      const state = handler.create(assetId);
-      handler.load(state, data);
+    const decoded = this.#kinds.decode(kind, assetId, data);
+    if (!decoded.ok) {
+      return this.#skip(assetId, kind, decoded.val);
+    }
 
-      return handler.dependencies(state);
+    try {
+      return handler.dependencies(decoded.val.state);
     }
     catch (error) {
-      this.#logger
-        .withMetadata({
-          assetId,
-          kind,
-          reason: asError(error).message
-        })
-        .warn("asset dependencies not computed");
-
-      return [];
+      return this.#skip(assetId, kind, asError(error));
     }
+  }
+
+  #skip(
+    assetId: string,
+    kind: string,
+    error: Error
+  ): readonly AssetReferenceData[] {
+    this.#logger
+      .withMetadata({
+        assetId,
+        kind,
+        reason: error.message
+      })
+      .warn("asset dependencies not computed");
+
+    return [];
   }
 }
 

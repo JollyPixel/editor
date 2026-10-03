@@ -11,6 +11,7 @@ import { Emitter } from "@openally/emitt";
 import type { CatalogChange } from "./client/protocol.ts";
 import type { CatalogProjection } from "./CatalogProjection.ts";
 import { FolderMovedIntoItselfError } from "./errors/FolderMovedIntoItselfError.ts";
+import { TaskChain } from "../utils/TaskChain.ts";
 
 export type CatalogFoldersEventMap = {
   changed: (
@@ -31,7 +32,7 @@ export class CatalogFolders extends Emitter<
   #catalog: CatalogProjection;
   #flush: () => Promise<void>;
   #folders = new FolderSet();
-  #queue: Promise<unknown> = Promise.resolve();
+  #queue = new TaskChain();
 
   constructor(
     options: CatalogFoldersOptions
@@ -48,7 +49,7 @@ export class CatalogFolders extends Emitter<
   }
 
   refresh(): Promise<void> {
-    return this.#enqueue(() => this.#refresh());
+    return this.#queue.run(() => this.#refresh());
   }
 
   async create(
@@ -56,7 +57,7 @@ export class CatalogFolders extends Emitter<
   ): Promise<string> {
     const folder = normalizeAssetPath(path);
 
-    return this.#enqueue(async() => {
+    return this.#queue.run(async() => {
       await this.#source.createFolder(folder);
       await this.#refresh();
 
@@ -69,7 +70,7 @@ export class CatalogFolders extends Emitter<
   ): Promise<string> {
     const folder = normalizeAssetPath(path);
 
-    return this.#enqueue(async() => {
+    return this.#queue.run(async() => {
       await this.#flush();
       await this.#source.deleteFolder(folder);
       await this.#refresh();
@@ -88,7 +89,7 @@ export class CatalogFolders extends Emitter<
       throw new FolderMovedIntoItselfError(origin, target);
     }
 
-    return this.#enqueue(async() => {
+    return this.#queue.run(async() => {
       await this.#flush();
       await this.#refresh();
       for (const folder of this.#folders.subtree(origin)) {
@@ -106,15 +107,6 @@ export class CatalogFolders extends Emitter<
   close(): void {
     this.#catalog.off("changed", this.#onChanged);
     this.removeAllListeners();
-  }
-
-  #enqueue<TResult>(
-    task: () => Promise<TResult>
-  ): Promise<TResult> {
-    const run = this.#queue.then(task);
-    this.#queue = run.catch(() => undefined);
-
-    return run;
   }
 
   async #refresh(): Promise<void> {

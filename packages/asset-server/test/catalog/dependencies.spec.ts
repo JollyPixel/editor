@@ -191,7 +191,7 @@ describe("dependency edges on lifecycle events", () => {
 describe("CatalogProjection — dependency index", () => {
   test("follows create, update, rename and delete", async() => {
     await using harness = await syncHarness({ handlers: [linkHandler()] });
-    const projection = new CatalogProjection({ eventStore: harness.eventStore });
+    const projection = new CatalogProjection({ projector: harness.projector });
     projection.load();
     projection.start();
     const changes: CatalogChange[] = [];
@@ -243,22 +243,25 @@ describe("CatalogProjection — dependency index", () => {
       actor: kActor
     });
 
-    const projection = new CatalogProjection({ eventStore: harness.eventStore });
+    const projection = new CatalogProjection({ projector: harness.projector });
     projection.load();
 
     assert.deepEqual(projection.dependencies.dependentsOf(texture), [map]);
     assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference(texture)]);
   });
 
-  test("events without edges are reported as unindexed", () => {
+  test("events without edges are reported as unindexed", async() => {
     const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
     legacyCreated(eventStore, "old", "old.link", linkContent("a"));
 
-    const projection = new CatalogProjection({ eventStore });
-    projection.load();
+    {
+      await using harness = await syncHarness({ eventStore });
+      const projection = new CatalogProjection({ projector: harness.projector });
+      projection.load();
 
-    assert.deepEqual(unindexedIds(projection), ["old"]);
-    assert.deepEqual(projection.dependencies.toJSON(), {});
+      assert.deepEqual(unindexedIds(projection), ["old"]);
+      assert.deepEqual(projection.dependencies.toJSON(), {});
+    }
     eventStore.close();
   });
 });

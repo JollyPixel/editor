@@ -4,7 +4,6 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { Infer } from "ata-validator";
 
 // Import Internal Dependencies
-import type { AssetBackend } from "../createAssetBackend.ts";
 import { assetReferenceSchema } from "../events/AssetEvents.schema.ts";
 
 // CONSTANTS
@@ -65,8 +64,3 @@ export interface AssetArchive {
   readonly assets: readonly AssetArchiveAsset[];
   readonly missing: readonly AssetReferenceData[];
 }
-
-export type ArchiveBackend = Pick<
-  AssetBackend,
-  "source" | "kinds" | "writer" | "catalog" | "flush"
->;

@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
 import picomatch from "picomatch";
+import {
+  Err,
+  Ok,
+  type Result
+} from "@openally/result";
 
 // Import Internal Dependencies
 import type { AssetKindHandler } from "./AssetKindHandler.ts";
@@ -8,11 +13,17 @@ import {
   BINARY_KIND
 } from "./handlers/binary.ts";
 import { UnknownAssetKindError } from "./errors/UnknownAssetKindError.ts";
+import { asError } from "../utils/asError.ts";
 
 interface RegisteredKind {
   handler: AssetKindHandler;
   extensions: readonly string[];
   isMatch: picomatch.Matcher | null;
+}
+
+export interface DecodedAsset {
+  readonly handler: AssetKindHandler;
+  readonly state: unknown;
 }
 
 /**
@@ -88,6 +99,30 @@ export class AssetKindRegistry {
     }
 
     return registered.handler;
+  }
+
+  decode(
+    kind: string,
+    assetId: string,
+    content: Uint8Array
+  ): Result<DecodedAsset, Error> {
+    if (!this.has(kind)) {
+      return Err(new UnknownAssetKindError(kind));
+    }
+
+    const handler = this.get(kind);
+    try {
+      const state = handler.create(assetId);
+      handler.load(state, content);
+
+      return Ok({
+        handler,
+        state
+      });
+    }
+    catch (error) {
+      return Err(asError(error));
+    }
   }
 
   resolve(

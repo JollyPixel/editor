@@ -42,6 +42,10 @@ export const counterSnapshotSchema: JSONSchema = {
   type: "object"
 };
 
+export const linkSnapshotSchema: JSONSchema = {
+  type: "object"
+};
+
 export const linkCommandProtocol: MessageProtocol = new MessageProtocol({
   oneOf: [
     {

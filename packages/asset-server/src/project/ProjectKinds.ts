@@ -6,19 +6,15 @@ import type { AssetKindDescriptor } from "../kinds/AssetKindDescriptor.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import { BINARY_KIND } from "../kinds/handlers/binary.ts";
 import {
-  textureAssetKind,
-  TEXTURE_KIND
-} from "../kinds/handlers/texture.ts";
+  builtInAssetKinds,
+  BUILT_IN_KINDS_PACKAGE
+} from "../kinds/handlers/builtIn.ts";
 import {
   KindPackage,
   type PackageLoader
 } from "./KindPackage.ts";
 import { PackageResolver } from "./PackageResolver.ts";
 import type { ProjectFile } from "./ProjectFile.ts";
-
-// CONSTANTS
-const kBuiltInPackage = "@jolly-pixel/asset-server";
-const kBuiltInKinds = [BINARY_KIND, TEXTURE_KIND];
 
 export interface ProjectKindsLoadOptions {
   /**
@@ -61,7 +57,10 @@ export class ProjectKinds {
   ) {
     const list = [...packages];
     const owners = new Map<string, string>(
-      kBuiltInKinds.map((kind) => [kind, kBuiltInPackage])
+      [
+        BINARY_KIND,
+        ...builtInAssetKinds().map((handler) => handler.kind)
+      ].map((kind) => [kind, BUILT_IN_KINDS_PACKAGE])
     );
     for (const kindPackage of list) {
       for (const { kind } of kindPackage.handlers) {
@@ -82,7 +81,7 @@ export class ProjectKinds {
   handlers(): AssetKindHandler[] {
     return [
       ...this.packages.flatMap((kindPackage) => kindPackage.handlers),
-      textureAssetKind()
+      ...builtInAssetKinds()
     ];
   }
 

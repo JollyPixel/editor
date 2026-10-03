@@ -113,9 +113,10 @@ order. It imports the file `resolver` resolves, by default a
 finds the same packages. Pass `load` to import packages another way.
 
 A kind claimed by two packages throws a `TypeError` naming both, and so does a
-package claiming `binary` or `texture`, which asset-server ships itself.
-`handlers()` concatenates the packages in order and ends with
-`textureAssetKind()`; `descriptors()` concatenates the packages only.
+package claiming `binary` or a kind of `builtInAssetKinds()`, which
+asset-server ships itself. `handlers()` concatenates the packages in order and
+ends with `builtInAssetKinds()`; `descriptors()` concatenates the packages
+only.
 
 ## KindPackage
 
@@ -188,8 +189,8 @@ function projectHandlersModule(kinds: ProjectKinds): string;
 A Vite plugin serving `PROJECT_HANDLERS_MODULE_ID` to browser code, for an
 offline workspace that runs the back-end in the page. Its default export
 returns the same handlers as `kinds.handlers()`, each package called with the
-options of the project file, then `textureAssetKind()`. It applies to both the
-dev server and builds.
+options of the project file, then `builtInAssetKinds()`. It applies to both
+the dev server and builds.
 
 The module imports each package by its specifier, which Vite resolves from
 `kinds.resolver.importersOf` with browser conditions, so a project outside

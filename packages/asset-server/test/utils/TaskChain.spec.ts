@@ -71,4 +71,20 @@ describe("TaskChain", () => {
 
     await assert.doesNotReject(chain.settled());
   });
+
+  test("is idle only once every queued task settled", async() => {
+    const chain = new TaskChain();
+    assert.strictEqual(chain.idle, true);
+
+    const first = chain.run(() => setTimeout(5));
+    const second = chain.run(() => Promise.reject(new Error("boom")));
+    assert.strictEqual(chain.idle, false);
+
+    await first;
+    assert.strictEqual(chain.idle, false);
+    await second.catch(() => null);
+    await chain.settled();
+
+    assert.strictEqual(chain.idle, true);
+  });
 });

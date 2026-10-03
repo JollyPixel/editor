@@ -3,17 +3,24 @@
  */
 export class TaskChain {
   #tail: Promise<unknown> = Promise.resolve();
+  #queued = 0;
+
+  get idle(): boolean {
+    return this.#queued === 0;
+  }
 
   run<TResult>(
     task: () => Promise<TResult>
   ): Promise<TResult> {
+    this.#queued += 1;
     const next = this.#tail.then(
       task,
       task
     );
-    this.#tail = next.catch(
-      () => void 0
-    );
+    const settle = (): void => {
+      this.#queued -= 1;
+    };
+    this.#tail = next.then(settle, settle);
 
     return next;
   }

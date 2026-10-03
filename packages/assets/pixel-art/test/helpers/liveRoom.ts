@@ -4,6 +4,7 @@ import { AssetRoom } from "@jolly-pixel/asset";
 import {
   AssetRoomExtension,
   foldAssetEvent,
+  type AssetCommandHeader,
   type AssetKindHandler,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
@@ -12,7 +13,10 @@ import type { RoomContext } from "@jolly-pixel/network";
 // CONSTANTS
 const kAssetId = "asset-1";
 
-export class LiveRoom<TState, TCommand> {
+export class LiveRoom<
+  TState,
+  TCommand extends AssetCommandHeader
+> {
   readonly state: TState;
   readonly extension: AssetRoomExtension<TCommand>;
 

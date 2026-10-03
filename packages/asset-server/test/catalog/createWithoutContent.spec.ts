@@ -37,7 +37,7 @@ async function catalogServer(
 ): Promise<CatalogServer> {
   const sync = await syncHarness({ handlers });
   const projection = new CatalogProjection({
-    eventStore: sync.eventStore
+    projector: sync.projector
   });
   projection.load();
   projection.start();

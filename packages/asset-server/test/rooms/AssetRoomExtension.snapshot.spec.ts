@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   AssetRoomExtension,
+  type AssetCommandHeader,
   type AssetLiveProtocol
 } from "#src/index.ts";
 import { counterSnapshotSchema } from "../helpers/protocols.ts";
@@ -19,7 +20,7 @@ import {
   roomPeer
 } from "../helpers/rooms.ts";
 
-interface Command {
+interface Command extends AssetCommandHeader {
   action: string;
 }
 

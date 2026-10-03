@@ -6,8 +6,8 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
+import type { ArchiveBackend } from "../ArchiveBackend.ts";
 import type {
-  ArchiveBackend,
   AssetArchive,
   AssetArchiveAsset,
   AssetArchiveEntry
