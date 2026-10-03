@@ -1,5 +1,38 @@
 # @jolly-pixel/asset-server
 
+## 6.0.0
+
+### Major Changes
+
+- [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - `AssetSource` gains `folders()`, `createFolder` and `deleteFolder`, so empty folders persist, plus `FolderSet`; `watch` callbacks also receive whether a file or a folder changed.
+  The catalog room lists folders through `CatalogFolders` (`backend.folders`), with `catalog:create-folder`, `catalog:move-folder`, `catalog:delete-folder` and `catalog:folders`; `CatalogClient` adds `folders()`, `createFolder`, `moveFolder` and `removeFolder`.
+
+- [#863](https://github.com/JollyPixel/editor/pull/863) [`6adf788`](https://github.com/JollyPixel/editor/commit/6adf788e94caa25e8550d3eed89e3720e52ab0fc) Thanks [@fraxken](https://github.com/fraxken)! - `CatalogProjection` now indexes an `AssetProjector` (`{ projector }`), `backend.internals` is replaced by `backend.reconcile()`, `AssetStateStore.serialize()` is removed, and `exportAssetArchive` returns a `Result` with `UnknownAssetError` for an unknown root.
+  Live commands extend `AssetCommandHeader`, `broadcast` returns an `AssetBroadcast`, catalog protocol types derive from their schemas, and `builtInAssetKinds()` and `AssetKindRegistry.decode()` are added.
+
+### Minor Changes
+
+- [#865](https://github.com/JollyPixel/editor/pull/865) [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f) Thanks [@fraxken](https://github.com/fraxken)! - `AssetRoomExtension.onMessage` takes the command the network server already validated and no longer parses it a second time.
+  `CatalogClient.toSnapshot()` returns its current state as a `catalog:snapshot` message.
+
+- [#857](https://github.com/JollyPixel/editor/pull/857) [`bf73b63`](https://github.com/JollyPixel/editor/commit/bf73b63a919ab87d1f6824754b07133e38b4719e) Thanks [@fraxken](https://github.com/fraxken)! - Add `ProjectFile`, `ProjectKinds` and `KindPackage` to load the kind packages a project lists in `.jollypixel/project.json`, checking their options against each package's `optionsSchema`.
+  Add the `AssetKindPackage` type kind packages export as `ASSET_KINDS`, and `SNAPSHOT_POLICY_SCHEMA`.
+  Add `PackageResolver` to resolve kind packages from the project root, fallbacks or local folders, `createProjectKindsPlugin` serving their handlers to browser code, and `createProjectFileWatchPlugin` restarting the dev server when the project file changes.
+
+- [#867](https://github.com/JollyPixel/editor/pull/867) [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Open asset rooms broadcast a fresh snapshot when their content is replaced from outside (`AssetStateStore` emits `replaced`), and `peerPresence.uvSelections` outlines each peer's selected UV region below the local selection.
+  Truncated `@jolly-pixel/ui` labels show their full text on hover (`overflow-title="off"` disables it), `jolly-pane-group` tabs collapse to their icon when the strip is too narrow, and `jolly-tree` takes `swatch-position="start"`.
+
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
+  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
+  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+
+### Patch Changes
+
+- Updated dependencies [[`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b), [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f), [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4), [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681)]:
+  - @jolly-pixel/asset-source@4.0.0
+  - @jolly-pixel/network@5.1.0
+  - @jolly-pixel/event-store@4.1.0
+
 ## 5.0.0
 
 ### Major Changes

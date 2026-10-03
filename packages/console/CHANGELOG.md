@@ -1,5 +1,17 @@
 # @jolly-pixel/console
 
+## 1.2.0
+
+### Minor Changes
+
+- [#873](https://github.com/JollyPixel/editor/pull/873) [`eedfaa1`](https://github.com/JollyPixel/editor/commit/eedfaa1d70238285bffcf9cfc920a945ed305119) Thanks [@fraxken](https://github.com/fraxken)! - Add `ConsoleServer` and `ConsoleMirror` to serve a console's namespaces over a `MessagePort` and show them in another page's console.
+  A variable `set` may now return a promise, and `jolly-console` emits `opened` on its `CommandConsole` each time it shows.
+
+### Patch Changes
+
+- Updated dependencies [[`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce), [`e780033`](https://github.com/JollyPixel/editor/commit/e7800335b131d45645d4a62459684993d8b87af8), [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b)]:
+  - @jolly-pixel/ui@3.3.0
+
 ## 1.1.0
 
 ### Minor Changes

@@ -1,5 +1,18 @@
 # @jolly-pixel/asset-source
 
+## 4.0.0
+
+### Major Changes
+
+- [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - `AssetSource` gains `folders()`, `createFolder` and `deleteFolder`, so empty folders persist, plus `FolderSet`; `watch` callbacks also receive whether a file or a folder changed.
+  The catalog room lists folders through `CatalogFolders` (`backend.folders`), with `catalog:create-folder`, `catalog:move-folder`, `catalog:delete-folder` and `catalog:folders`; `CatalogClient` adds `folders()`, `createFolder`, `moveFolder` and `removeFolder`.
+
+### Minor Changes
+
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
+  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
+  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+
 ## 3.0.0
 
 ### Major Changes

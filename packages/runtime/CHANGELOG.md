@@ -1,5 +1,16 @@
 # @jolly-pixel/runtime
 
+## 6.0.1
+
+### Patch Changes
+
+- [#855](https://github.com/JollyPixel/editor/pull/855) [`13a706d`](https://github.com/JollyPixel/editor/commit/13a706dc84a7dfaafc925ead7932eb6199533203) Thanks [@fraxken](https://github.com/fraxken)! - With `renderOnDemand`, the runtime keeps rendering while the pointer hovers the canvas instead of idling a few frames after the last input.
+  An idle runtime now samples connected gamepads once per animation frame and wakes on a press, so the first press is no longer missed.
+- Updated dependencies [[`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce), [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`e780033`](https://github.com/JollyPixel/editor/commit/e7800335b131d45645d4a62459684993d8b87af8), [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b)]:
+  - @jolly-pixel/ui@3.3.0
+  - @jolly-pixel/loop@2.0.0
+  - @jolly-pixel/engine@7.1.0
+
 ## 6.0.0
 
 ### Major Changes

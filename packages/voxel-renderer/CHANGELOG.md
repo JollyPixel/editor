@@ -1,5 +1,22 @@
 # @jolly-pixel/voxel.renderer
 
+## 8.0.0
+
+### Major Changes
+
+- [#872](https://github.com/JollyPixel/editor/pull/872) [`9153958`](https://github.com/JollyPixel/editor/commit/91539588561132385e6fe1071f629939693bdc59) Thanks [@fraxken](https://github.com/fraxken)! - Stop exporting internals: `VoxelStore`, `compareLayerRanks`, `isLayerRank`, `RankedLayer`, `AtlasAverages`, `createMissingTilesetAtlas`, `MissingTilesetAtlas`, `MeshBuildStats`, `VoxelInspectorContext`, `InspectedChunkBounds`, `VoxelTemplatesOptions`, `VoxelObjectLayerDispatch` and `VoxelBlockInspectorOptions`.
+  The API documentation is rewritten around the consumer surface.
+
+### Minor Changes
+
+- [#862](https://github.com/JollyPixel/editor/pull/862) [`5563478`](https://github.com/JollyPixel/editor/commit/55634788aa98ea5616d9b2e3c58c3f6987b94f19) Thanks [@fraxken](https://github.com/fraxken)! - Add normal maps: pixel-draw derives an undoable, synced `NormalMap` per UV island (`NormalMapConfig`, `normal-map-*` commands) and can preview it through `PixelArtCanvas.textureView`.
+  Voxel-renderer lights tilesets with a tangent-space normal atlas (`loadTileset(def, texture, { normal })`, `TilesetAtlas.normal`), scaled per material group by `MaterialGroup.normalScale`.
+
+### Patch Changes
+
+- Updated dependencies [[`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd)]:
+  - @jolly-pixel/engine@7.1.0
+
 ## 7.0.0
 
 ### Major Changes
