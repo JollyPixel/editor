@@ -107,6 +107,8 @@ frames on:
 - keyboard, pointer, wheel, and drag-and-drop events in the page;
 - window `resize`, `focus`, and `blur`;
 - a resize of the canvas container or a device pixel ratio change;
+- a `gamepadconnected` event, or a held button or stick on a connected
+  gamepad, sampled once per animation frame while idle without rendering;
 - every frame while the pointer hovers the canvas;
 - every frame after which a key, button, or touch is still held, or a
   [`world.keepAlive()`](../../../engine/docs/systems/world.md#rendering-on-demand)
@@ -114,8 +116,7 @@ frames on:
 
 Any other change to what is drawn must call
 [`world.invalidate()`](../../../engine/docs/systems/world.md#rendering-on-demand).
-Gamepads are polled, so their first press after going idle is missed. The HUD
-shows an `IDLE` badge while `idle` is `true`.
+The HUD shows an `IDLE` badge while `idle` is `true`.
 
 ## Startup tracing
 

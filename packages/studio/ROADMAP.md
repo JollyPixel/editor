@@ -41,8 +41,9 @@ Opening an editor tab is measured from the double-click to
 step logs its duration. A voxel-map tab opens in about 0.9 s cold and 0.45 s
 warm, down from 2.1 s and 0.9 s. A joining client now receives pixel snapshots
 as PNG, cached per room version; a cold room reads its log once; voxel-map no
-longer waits for its hidden metrics panel. What is left (render on demand,
-shared editor chunks, the shared main thread, one catalog per frame) is
+longer waits for its hidden metrics panel. Every editor renders on demand,
+and frames read the catalog through the shell (ADR-0018). What is left
+(server write path, catalog rebuilds, shared editor chunks, mesh workers) is
 planned in [PERFORMANCE.md](./PERFORMANCE.md).
 
 ## Waiting for a trigger

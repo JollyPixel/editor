@@ -6,12 +6,22 @@ import type { Runtime } from "../Runtime.ts";
 import { mountFocusHint } from "../ui/focus/mountFocusHint.ts";
 import { mountViewHelper } from "../ui/viewHelper/mountViewHelper.ts";
 import { PageActivity } from "./PageActivity.ts";
+import {
+  GamepadActivity,
+  type GamepadPoller
+} from "./GamepadActivity.ts";
 import type { RuntimeSessionSettings } from "./RuntimeSessionSettings.ts";
 
 export type RuntimeSessionHost = Pick<
   Runtime,
   "canvas" | "overlay" | "renderer" | "loop" | "nextFrame"
->;
+> & {
+  readonly world: {
+    readonly input: {
+      readonly gamepad: GamepadPoller;
+    };
+  };
+};
 
 interface Disposable {
   dispose(): void;
@@ -52,12 +62,7 @@ export class RuntimeSession {
     }
 
     if (settings.renderOnDemand) {
-      this.#mounted.push(
-        new PageActivity(
-          host.canvas,
-          () => host.loop.invalidate()
-        )
-      );
+      this.#watchActivity();
     }
 
     if (settings.suspendWhenHidden) {
@@ -70,6 +75,28 @@ export class RuntimeSession {
 
     for (const mounted of this.#mounted.splice(0)) {
       mounted.dispose();
+    }
+  }
+
+  #watchActivity(): void {
+    const { canvas, loop, world } = this.#host;
+
+    this.#mounted.push(
+      new PageActivity(
+        canvas,
+        () => loop.invalidate()
+      )
+    );
+    const view = canvas.ownerDocument.defaultView;
+    if (view !== null) {
+      this.#mounted.push(
+        new GamepadActivity(
+          world.input.gamepad,
+          loop,
+          view,
+          () => loop.invalidate()
+        )
+      );
     }
   }
 

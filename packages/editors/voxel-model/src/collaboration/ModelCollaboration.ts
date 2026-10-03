@@ -83,7 +83,8 @@ export class ModelCollaboration {
       });
     this.live = new TransformLiveSync({
       room,
-      blocks
+      blocks,
+      requestFrame: () => options.world.invalidate()
     });
     this.lock = new TransformLock({ room });
     this.fields = new RoomPresenceSource(room, {
