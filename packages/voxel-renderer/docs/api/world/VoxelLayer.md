@@ -1,248 +1,122 @@
 # VoxelLayer
 
-A named, ordered collection of `VoxelChunk`s. Returned by `VoxelWorld.addLayer()`.
+A named voxel layer with its own position in the world. Get one from
+`world.addLayer()` or `world.getLayer()` on a [`VoxelWorld`](./VoxelWorld.md).
 
-## VoxelLayerOptions
+> [!IMPORTANT]
+> Writes made on a layer (`setVoxelAt`, `setPackedVoxelAt`, `removeVoxelAt`,
+> `rebase`, `mergeFrom`) are raw: they emit no command, add no
+> [history](../core/VoxelHistory.md) step and reach no recorder. Edit through
+> [`VoxelWorld`](./VoxelWorld.md) for synced and undoable changes. The same
+> applies to assigning the properties below: use `world.updateLayer()`,
+> `world.setLayerPosition()` and the other world methods.
 
 ```ts
-interface VoxelLayerConfigurableOptions {
-  /** Defaults to "composite". */
-  compositing?: "replace" | "composite";
-  /**
-   * Whether the layer is visible by default.
-   * @default true
-   */
-  visible?: boolean;
-  /**
-   * Arbitrary layer properties.
-   * @default {}
-   */
-  properties?: Record<string, any>;
-}
+const layer = document.world.getLayer("Ground");
 
-interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
-  /** Unique layer identifier. */
-  id: string;
-  /** Human-readable layer name. */
-  name: string;
-  /**
-   * Draw order;
-   * higher values render above lower ones.
-   **/
-  order: number;
-  // fractional stack position; see VoxelWorld layer ranks. Default "V".
-  rank?: string;
-  /** Size of one voxel chunk (required). */
-  chunkSize: number;
-  /**
-   * World-space position of the layer origin.
-   * @default { x: 0, y: 0, z: 0 }
-   **/
-  position?: VoxelCoord;
-}
-
-// Carried by the "cloned" layer command; `name` is the resolved clone name.
-interface VoxelLayerCloneOptions extends Partial<VoxelLayerOptions> {
-  name: string;
-}
+layer.getVoxelAt({ x: 10, y: 5, z: 0 });
+layer.worldBounds();
 ```
+
+## Options
+
+`VoxelLayerConfigurableOptions` is what `world.addLayer()` and
+`world.updateLayer()` accept.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `compositing` | `"composite" \| "replace"` | `"composite"` | How the layer covers lower layers in the same cell. |
+| `visible` | `boolean` | `true` | Saved visibility. |
+| `properties` | `Record<string, any>` | `{}` | Free-form layer data. |
+
+`"composite"` lets only a block whose opaque shape fills the whole cell hide
+lower voxels in that cell. `"replace"` hides them under any block, masked and
+blended ones included. See
+[layer compositing](../../concepts/world-model.md#layer-compositing).
 
 ## Properties
 
-```ts
-class VoxelLayer {
-  compositing: "replace" | "composite";
-  id: string;
-  name: string;
-  order: number;
-  rank: string;
-  visible: boolean;
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Unique id, used by commands. |
+| `name` | `string` | Unique name, used by the world methods. |
+| `order` | `number` | Position in the stack; higher draws on top. |
+| `rank` | `string` | Stack position carried by layer commands. |
+| `position` | `VoxelCoord` | World position of the layer origin. |
+| `visible` | `boolean` | Saved visibility. |
+| `compositing` | `"composite" \| "replace"` | See [options](#options). |
+| `properties` | `Record<string, any>` | Free-form layer data. |
+| `chunkSize` | `number` | Read-only. |
+| `voxelCount` | `number` | Read-only. Stored voxels. |
 
-  // edge length of every chunk, in voxels
-  readonly chunkSize: number;
-  // number of currently allocated chunks
-  readonly chunkCount: number;
-  // stored voxels across all chunks
-  readonly voxelCount: number;
-  // increments whenever a chunk becomes dirty
-  readonly dirtyRevision: number;
+A layer has no `toJSON()`; use
+[`serializeVoxelLayer(layer)`](../serialization/serialization.md).
 
-  // world-space position of the layer origin
-  position: VoxelCoord;
-  properties: Record<string, any>;
-}
-```
+## Reading
 
-These properties are mutable in the TypeScript API because deserialization and
-world management update them. Application code should use the corresponding
-`VoxelWorld` methods so mesh invalidation and commands still run.
+#### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
 
-> **`position`** - locates the layer-local origin in world space. Always use
-> `VoxelWorld.setLayerPosition` or `translateLayer` so chunks are marked dirty.
+The voxel at a world position, or `undefined` for air. Each call returns a new
+object, so compare entries by value.
 
-`compositing` defaults to `"composite"`: only a block whose opaque shape covers
-all six cell boundaries suppresses lower voxels in the same cell. `"replace"`
-suppresses them for any occupying block, including masked and blended blocks.
-Change this through `world.updateLayer(name, { compositing })` to
-mark all layers dirty and emit the update. The setting survives cloning and
-serialization.
+#### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
 
-> [!NOTE]
-> A layer has no `toJSON()`: `serializeVoxelLayer(layer)` returns its
-> `VoxelLayerJSON`. See [serialization](../serialization/serialization.md#serializing-a-world).
+Same lookup without allocating. Returns `VOXEL_ABSENT` for air; see
+[packed voxels](./VoxelChunk.md#packed-voxels).
 
-## Methods
+#### `positionsOf(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
 
-### `countBlocks(): Map<number, number>`
+World positions of the voxels whose block is in `blockIds`, whatever their
+transform.
 
-Voxel count per block id, summed from each chunk's cached histogram. Returns a
-new map.
+#### `countBlocks(): Map<number, number>`
 
-### `countBlock(blockId: number): number`
+Voxel count per block id. Returns a new map.
+
+#### `countBlock(blockId: number): number`
 
 Voxels of `blockId` in the layer; `0` when none.
 
-### `positionsOf(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
+## Bounds and coordinates
 
-World positions of the layer's voxels whose block is in `blockIds`, whatever
-their transform. Chunks without any of those blocks are skipped through their
-block histogram.
+#### `localBounds(): Box3 | null`
 
-### `getOrCreateChunk(cx: number, cy: number, cz: number): VoxelChunk`
+#### `worldBounds(): Box3 | null`
 
-Returns the `VoxelChunk` at the given chunk coordinates, creating it if it does not exist.
+Voxel content bounds in layer-local or world space, or `null` for an empty
+layer. The maximum corner includes the full extent of the outermost voxels.
 
-```ts
-const chunk = layer.getOrCreateChunk(0, 0, 0);
-```
+#### `worldCenter(): Vector3`
 
-### `getChunk(cx: number, cy: number, cz: number): VoxelChunk | undefined`
+Center of `worldBounds()`. An empty layer returns its position.
 
-Returns the `VoxelChunk` at the given chunk coordinates, or `undefined` if none exists.
+#### `localToWorld(position: Vector3Like): Vector3`
 
-```ts
-const chunk = layer.getChunk(1, 0, -2);
-if (!chunk) {}
-```
+#### `worldToLocal(position: Vector3Like): Vector3`
 
-### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
+## Raw writes
 
-Read a voxel at world-space `position`.
-Returns a freshly built `VoxelEntry`, or `undefined` if empty. See the
-[storage note](./VoxelChunk.md#storage) on why the result is never `===` what was written.
+#### `setVoxelAt(position: Vector3Like, entry: VoxelEntry): void`
 
-```ts
-const entry = layer.getVoxelAt({ x: 10, y: 5, z: 0 });
-```
+#### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void`
 
-### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
+Write a voxel at a world position. `VOXEL_ABSENT` removes it.
 
-Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
+#### `removeVoxelAt(position: Vector3Like): void`
 
-### `setVoxelAt(position: Vector3Like, entry: VoxelEntry): void`
+#### `rebase(position: Vector3Like): void`
 
-Set a voxel at world-space `position`. Allocates a chunk if necessary and marks it dirty for rebuild.
+Moves the layer origin to `position` and keeps every voxel at the same world
+position. `world.rebaseLayer()` is the world equivalent.
 
-```ts
-layer.setVoxelAt({ x: 0, y: 0, z: 0 }, { blockId: 3, transform: 0 });
-```
+#### `mergeFrom(source: VoxelLayer, options?: { overwrite?: boolean }): void`
 
-### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void`
+Copies every voxel of `source` into this layer at the same world positions.
+`overwrite` defaults to `true`; `false` only fills cells this layer leaves
+empty.
 
-Allocation-free `setVoxelAt`, taking the value `packVoxel()` produces.
-`VOXEL_ABSENT` removes the voxel, like `removeVoxelAt()`.
+#### `clone(options?: Partial<VoxelLayerOptions>): VoxelLayer`
 
-### `removeVoxelAt(position: Vector3Like): void`
-
-Remove the voxel at the given world-space `position`. If the containing chunk becomes empty it is freed.
-
-```ts
-layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
-```
-
-### `localToWorld(position: Vector3Like): Vector3`
-
-Converts a layer-local coordinate to world space.
-
-### `worldToLocal(position: Vector3Like): Vector3`
-
-Converts a world-space coordinate to layer-local space.
-
-### `localBounds(): Box3 | null`
-
-Returns the voxel content bounds in layer-local space, or `null` when empty.
-The maximum corner includes the full extent of the outermost unit voxels.
-
-### `worldBounds(): Box3 | null`
-
-Returns the voxel content bounds in world space, or `null` when empty.
-
-### `worldCenter(): Vector3`
-
-Returns the center of the world-space content bounds. An empty layer returns
-its position.
-
-### `rebase(position: Vector3Like): void`
-
-Moves the layer origin to `position` and rewrites local storage so every voxel
-remains at the same world-space coordinate. Prefer `VoxelWorld.rebaseLayer()`
-when the layer belongs to a world.
-
-### `markChunkDirty(cx: number, cy: number, cz: number): void`
-
-Mark the chunk at the given chunk coordinates as dirty so it will be rebuilt.
-
-```ts
-layer.markChunkDirty(0, 0, 0);
-```
-
-### `getDirtyChunks(): IterableIterator<VoxelChunk>`
-
-Iterate only the chunks whose `dirty` flag is set, without visiting clean ones.
-
-### `loadPackedVoxels(positions: Int32Array, packed: ArrayLike<PackedVoxel>): void`
-
-Write layer-local `positions` (x, y, z triples) with their packed voxels. Each
-chunk's storage is sized once for everything it receives.
-
-### `loadPackedChunk(cx: number, cy: number, cz: number, cells: ArrayLike<number>, voxels: ArrayLike<PackedVoxel>): void`
-
-Write whole cells into one chunk, creating it when needed. `cells` holds
-linear indices within the chunk (see `VoxelChunk.linearIndex()`), each below
-`chunkSize³`, and `voxels` the packed voxel for each. The chunk is resolved and
-sized once, which makes this the fastest way to fill a layer whose chunk layout
-is known. Empty `cells` creates no chunk.
-
-### `getChunks(): IterableIterator<VoxelChunk>`
-
-Iterate allocated chunks in this layer.
-
-```ts
-for (const chunk of layer.getChunks()) {
-  // process chunk
-}
-```
-
-### `clone(options?: Partial<VoxelLayerOptions>): VoxelLayer`
-
-Creates a detached copy of the layer, including its voxels and properties. Use
-`VoxelWorld.cloneLayer()` when the clone should be added to a world.
-
-The copy owns its own chunks, position and properties; editing it never reaches
-the source. `options.chunkSize` is ignored, since the copied chunks are built
-for the source's chunk size.
-
-### `mergeFrom(source: VoxelLayer, options?: VoxelLayerMergeOptions): void`
-
-Copies every voxel from `source` into this layer, resolved in world space so
-layer positions are honoured. Prefer the world merge method when the
-operation must update world state or emit commands.
-
-`options.overwrite` defaults to `true`, letting source voxels replace target
-voxels at the same world position. Pass `false` to fill only the positions this
-layer leaves empty.
-
-### `drainPendingRemovals(): IterableIterator<VoxelChunk>`
-
-Consumes chunks that became empty and were removed from storage. Renderers use
-this iterator to dispose stale meshes; ordinary callers rarely need it.
+A detached copy with the same voxels, position and properties. `options`
+override the copied values, except `chunkSize`, which is ignored. To add a copy
+to a world, use `world.cloneLayer()`.

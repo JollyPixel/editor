@@ -127,11 +127,10 @@ the renderer package does not depend on an ECS runtime.
 - [World model](docs/concepts/world-model.md): layers, chunks, compositing, and
   ownership.
 - [Transparency](docs/api/core/VoxelTransparencyPassNode.md): scene compositing, setup, and limitations.
-- [Rendering and meshing](docs/concepts/rendering-and-meshing.md): dirty chunk
-  rebuilds and geometry layout.
-- [Loading tilesets](docs/guides/loading-and-restoring-tilesets.md),
-  [creating custom shapes](docs/guides/creating-custom-shapes.md), and
-  [saving worlds](docs/guides/saving-and-loading-worlds.md).
+- [Rendering and meshing](docs/concepts/rendering-and-meshing.md): what each
+  rendering feature does and what it costs.
+- [Saving and loading worlds](docs/guides/saving-and-loading-worlds.md) and
+  [creating custom shapes](docs/guides/creating-custom-shapes.md).
 - [Adding physics](docs/guides/adding-physics.md).
 
 ### Core and world API
@@ -144,32 +143,31 @@ the renderer package does not depend on an ECS runtime.
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
   [`VoxelTemplates`](docs/api/world/VoxelTemplates.md),
-  [`VoxelChunk`](docs/api/world/VoxelChunk.md),
-  [`VoxelStore`](docs/api/world/VoxelStore.md),
+  [`VoxelChunk` and packed voxels](docs/api/world/VoxelChunk.md),
   [`VoxelTransform`](docs/api/world/VoxelTransform.md), and
   [`ViewDistance`](docs/api/world/ViewDistance.md).
 
 ### Blocks, tilesets, and rendering API
 
 - [`BlockDefinition`](docs/api/blocks/BlockDefinition.md),
-  [`BlockRegistry` and tileset block generation](docs/api/blocks/BlockRegistry.md),
-  [`BlockShape`](docs/api/blocks/BlockShape.md),
-  [`BlockTextures`](docs/api/blocks/BlockTextures.md),
-  [`BlockShapeBase`](docs/api/blocks/BlockShapeBase.md), and
-  [`BlockShapeRegistry`](docs/api/blocks/BlockShapeRegistry.md).
-- [Built-in shapes](docs/api/blocks/built-in-shapes.md),
-  [`buildShapeGeometry`](docs/api/blocks/buildShapeGeometry.md),
-  [shape slots](docs/api/blocks/shapeSlots.md),
-  [tilesets](docs/api/tilesets/tilesets.md),
-  [`TilesetAtlases`](docs/api/tilesets/TilesetAtlases.md), and
-  [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md).
-- [Rendering, meshing, and tile wrapping](docs/concepts/rendering-and-meshing.md),
-  [`VoxelCollider`](docs/api/collision/VoxelCollider.md), and
+  [`BlockRegistry`](docs/api/blocks/BlockRegistry.md),
+  [`BlockShape` and built-in shapes](docs/api/blocks/BlockShape.md),
+  [`BlockSurface`](docs/api/blocks/BlockSurface.md),
+  [`BlockTextures` and texture slots](docs/api/blocks/BlockTextures.md), and
+  [`BlockPieces`](docs/api/blocks/BlockPieces.md).
+- [Tilesets](docs/api/tilesets/tilesets.md),
+  [`TilesetDocument`](docs/api/tilesets/TilesetDocument.md),
+  [`TilesetLink`](docs/api/tilesets/TilesetLink.md),
+  [`TilesetAtlases`](docs/api/tilesets/TilesetAtlases.md),
+  [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md),
+  [`MaterialGroup`](docs/api/materials/MaterialGroup.md), and
+  [`BlendGroup`](docs/api/materials/BlendGroup.md).
+- [`VoxelCollider`](docs/api/collision/VoxelCollider.md) and
   [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md).
 
 ### Serialization and integration API
 
-- [Serialization, world codec, and voxel objects](docs/api/serialization/serialization.md).
+- [Serialization and the world codec](docs/api/serialization/serialization.md).
 - [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md), the `@jolly-pixel/engine`
   actor component wrapping a `VoxelDocument` and a `VoxelView`.
 

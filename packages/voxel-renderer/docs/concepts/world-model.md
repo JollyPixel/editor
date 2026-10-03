@@ -1,63 +1,57 @@
 # World model
 
-A `VoxelWorld` contains named `VoxelLayer` instances. Each layer divides its
-voxel data into fixed-size `VoxelChunk` instances and stores placed objects in
-separate object layers. [Voxel templates](../api/world/VoxelTemplates.md) are
-saved with the world outside the layer stack and never drawn.
+A [`VoxelWorld`](../api/world/VoxelWorld.md) holds a stack of named voxel
+layers, a set of object layers for placed objects such as spawn points, and
+[voxel templates](../api/world/VoxelTemplates.md), which are saved with the
+world but never drawn. Each voxel layer stores its voxels in fixed-size
+chunks.
 
 ```text
 VoxelWorld
-  +-- VoxelLayer
+  +-- VoxelLayer (stacked)
   |     +-- VoxelChunk
-  |           +-- VoxelStore
-  +-- VoxelObjectLayerJSON
+  +-- object layers
   +-- VoxelTemplate
 ```
 
+A [`VoxelDocument`](../api/core/VoxelDocument.md) wraps the world with the
+block registry, the tileset declarations and the undo history. It is
+everything a peer synchronizes, and runs without a view on a server or in a
+tool.
+
 ## Layer compositing
 
-Voxel layers are evaluated from the highest `order` to the lowest. World reads
-return the first visible layer with a stored voxel at the requested position.
+Layers are sorted by `rank`; `order` is a layer's position in that stack,
+higher on top. World reads return the voxel of the highest visible layer that
+has one at the position.
 
-Mesh generation also uses each layer's `compositing` policy. The default
-`"composite"` suppresses a lower voxel only when the higher layer's block has
-opaque geometry covering all six cell boundaries. Glass, cutout blocks, and
-partial shapes preserve the lower voxel. `"replace"` suppresses lower voxels
-for any occupied cell.
+Meshing also follows each layer's `compositing` policy. The default,
+`"composite"`, hides a lower voxel only when the block above has opaque
+geometry covering all six sides of the cell, so glass, cutout blocks and
+partial shapes let the lower voxel show. `"replace"` hides lower voxels under
+any occupied cell.
 
-A hidden layer is left out of world reads, meshing, and collision.
-Translucency belongs to blocks: see `alphaMode` in
-[BlockSurface](../api/blocks/BlockSurface.md).
+A hidden layer is left out of reads, meshing and collision. Transparency is a
+property of blocks, not layers: see `alphaMode` on
+[`BlockSurface`](../api/blocks/BlockSurface.md).
 
 ## Coordinates and positions
 
-Chunk coordinates identify a chunk. Layer-local coordinates identify cells in
-a layer. Public world and layer voxel methods accept world-space positions and
-convert them through the layer position.
+World and layer voxel methods take world-space positions. A layer's position
+is the world-space location of its local origin; moving it translates every
+voxel without rewriting them. Use `VoxelWorld.setLayerPosition()` or
+`translateLayer()` so neighbouring layers re-cull their faces.
 
-A layer position is the world-space location of its local origin. It translates
-every voxel without changing chunk storage. Use `VoxelWorld.setLayerPosition()`
-or `translateLayer()` so the world recalculates cross-layer face culling.
+`VoxelLayer.localToWorld()` and `worldToLocal()` convert between the two.
+`localBounds()`, `worldBounds()` and `worldCenter()` describe the layer's
+content rather than its origin. `VoxelWorld.rebaseLayer()` moves the origin
+while keeping the content in place, and `transformLayer()` turns or mirrors
+the content around its center; a layer stores no rotation of its own.
 
-`VoxelLayer.localToWorld()` and `worldToLocal()` convert coordinates explicitly.
-`localBounds()`, `worldBounds()`, and `worldCenter()` describe the content rather
-than the origin. `VoxelWorld.rebaseLayer()` moves the origin and rewrites local
-storage so content remains at the same world positions.
-`VoxelWorld.transformLayer()` turns or mirrors the content around its center
-and rewrites the voxels; a layer stores no rotation of its own.
+## Editing
 
-## Ownership
-
-`VoxelWorld` owns layer ordering and composited reads. `VoxelLayer` owns chunks
-and direct reads or writes for one layer. `VoxelChunk` owns the fixed-size grid,
-and `VoxelStore` owns its sparse packed values.
-
-Application edits go through `VoxelWorld`, which emits the
-[layer commands](../api/core/commands.md) and marks the chunks it touched dirty;
-[`VoxelView`](../api/core/VoxelView.md) picks those up to update rendering and
-collision.
-
-One level up, [`VoxelDocument`](../api/core/VoxelDocument.md) wraps the world
-with the block registry, the tileset declarations and the history, and is the
-whole of what a peer synchronizes. A document with no view attached is what a
-headless server or an offline tool runs.
+Edit through `VoxelWorld`. Its methods emit
+[layer commands](../api/core/commands.md) and mark the touched chunks dirty,
+and a [`VoxelView`](../api/core/VoxelView.md) picks the changes up for
+rendering and collision. Writes made directly on a `VoxelLayer` emit nothing
+and are not recorded in the history.

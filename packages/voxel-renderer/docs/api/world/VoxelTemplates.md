@@ -1,11 +1,9 @@
 # Voxel templates
 
-A voxel template is a named group of voxels saved with the world. It is never
-drawn. Placing a template copies its voxels into a layer, so later edits to the
-template do not change voxels already placed.
-
-Templates live in `world.templates`, a `VoxelTemplates` keyed by id, and are
-saved in [`VoxelWorldJSON.templates`](../serialization/serialization.md#templates).
+A template is a named group of voxels saved with the world and never drawn.
+Placing it copies its voxels into a layer; later edits to the template leave
+placed voxels alone. Templates live in `world.templates` and are saved in
+`VoxelWorldJSON.templates` (see [serialization](../serialization/serialization.md)).
 
 ```ts
 const house = world.templates.createFromLayer("Draft", { name: "House" });
@@ -17,194 +15,109 @@ world.templates.place(house.id, {
 });
 ```
 
-## `VoxelTemplate`
+## VoxelTemplates
 
-```ts
-class VoxelTemplate {
-  static fromLayer(
-    layer: VoxelLayer,
-    options: VoxelTemplateLayerOptions
-  ): VoxelTemplate;
+Every method below emits a
+[template command](../core/commands.md#template-commands) on the world's
+`"command"` event, except `place()`, which emits one `"voxels-patched"` layer
+command and records one [history](../core/VoxelHistory.md) step.
 
-  readonly id: string;
-  readonly name: string;
-  readonly pivot: Readonly<VoxelCoord>;
-  readonly properties: Readonly<Record<string, any>>;
-  readonly size: Readonly<VoxelCoord>;
-  readonly voxelCount: number;
+#### `size: number`, `get(id: string)`, `toArray(): VoxelTemplate[]`
 
-  constructor(options: VoxelTemplateOptions);
+The collection is also iterable.
 
-  localVoxels(): IterableIterator<VoxelTemplateVoxel>;
-  placedVoxels(
-    position: Vector3Like,
-    transform?: VoxelTransform
-  ): IterableIterator<VoxelTemplateVoxel>;
-  placedBounds(
-    position: Vector3Like,
-    transform?: VoxelTransform
-  ): VoxelTemplateBounds;
-  placedPositionFor(
-    min: Vector3Like,
-    transform?: VoxelTransform
-  ): VoxelCoord;
-  transformed(transform: VoxelTransform): VoxelTemplate;
-  countBlocks(): Map<number, number>;
-  withPatch(patch: VoxelTemplatePatch): VoxelTemplate;
-}
+#### `createFromLayer(layerName: string, options: VoxelTemplateCaptureOptions): VoxelTemplate | undefined`
 
-interface VoxelTemplateOptions {
-  id: string;
-  name: string;
-  pivot?: VoxelCoord;
-  properties?: Record<string, any>;
-  positions: ArrayLike<number>; // x, y, z per voxel
-  voxels: ArrayLike<PackedVoxel>;
-}
+Copies the voxels of a layer into a new template. The layer is not modified.
+Returns `undefined` when the layer does not exist or no voxel is captured. An
+`id` already in use replaces that template.
 
-type VoxelTemplateVoxel = [x: number, y: number, z: number, packed: PackedVoxel];
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | | Required. |
+| `id` | `string` | unused `template_<n>` | Template id. |
+| `bounds` | `{ min: Vector3Like; max: Vector3Like }` | whole layer | World cells in `[min, max)`. A `THREE.Box3` works. |
+| `pivot` | `VoxelCoord` | bottom center | World cell that lands on the placement position. |
+| `properties` | `Record<string, any>` | `{}` | Free-form data. |
 
-interface VoxelTemplateBounds {
-  min: VoxelCoord;
-  size: VoxelCoord;
-}
-```
+#### `define(template: VoxelTemplateJSON): boolean`
 
-A template is immutable. The constructor copies `positions`, `voxels` and
-`properties`, then shifts the positions so the lowest corner of the voxels is
-`0, 0, 0`. `pivot` is given in the same space as `positions` and shifted with
-them. Without a pivot, the template pivots on its bottom center:
-`floor(size.x / 2), 0, floor(size.z / 2)`. `size` is the voxel extent on each
-axis, `0, 0, 0` for an empty template. The constructor throws a `RangeError`
-when `positions` does not hold three numbers per voxel.
+Adds a template from its JSON form, such as one saved by
+`serializeVoxelTemplate()` in another world, or replaces the one with the same
+id. Throws `InvalidVoxelWorldError` for malformed JSON.
 
-`localVoxels()` yields template-local cells with their packed voxel.
-`placedVoxels()` yields world cells once the pivot sits on `position`:
-`transform` turns and mirrors each cell offset around the pivot with
-[`transformOffset()`](./VoxelTransform.md#methods), and each voxel's own
-transform becomes `voxelTransform.followedBy(transform)`, so turned blocks keep
-facing the right way.
+#### `update(id: string, patch: VoxelTemplatePatch): boolean`
 
-`placedBounds()` is the box `placedVoxels()` fills: its lowest cell and its
-extent on each axis, without walking the voxels. `placedPositionFor()` is its
-inverse: the pivot position whose placed box starts at `min`, used to drag a
-placement by its box.
+Changes `name`, `pivot` (template-local) or `properties`. Voxels cannot be
+patched; define the template again to change them.
 
-`transformed()` returns a copy whose voxels are the placed voxels turned
-around the pivot, shifted back so the lowest corner is `0, 0, 0`. The pivot
-cell moves with them.
+#### `transform(id: string, transform: VoxelTransformOptions): boolean`
 
-`withPatch()` returns a copy with another `name`, `pivot` or `properties`.
+Turns and mirrors the stored voxels around the pivot. Returns `false` for the
+identity transform.
 
-`VoxelTemplate.fromLayer()` copies the voxels of a layer into a template that
-is not added to any world, for example to preview a layer somewhere else.
-`VoxelTemplateLayerOptions` is
-[`VoxelTemplateCaptureOptions`](#createfromlayerlayername-options) with a
-required `id`; `bounds` and `pivot` are in world space. An empty layer, or
-`bounds` that hold no voxel, gives an empty template.
+#### `remove(id: string): boolean`
 
-## `VoxelTemplates`
+`update()`, `transform()` and `remove()` return `false` and emit nothing for an
+unknown id.
 
-```ts
-class VoxelTemplates implements Iterable<VoxelTemplate> {
-  readonly size: number;
-  toArray(): VoxelTemplate[];
-  get(id: string): VoxelTemplate | undefined;
-  createFromLayer(
-    layerName: string,
-    options: VoxelTemplateCaptureOptions
-  ): VoxelTemplate | undefined;
-  define(template: VoxelTemplateJSON): boolean;
-  update(id: string, patch: VoxelTemplatePatch): boolean;
-  transform(id: string, transform: VoxelTransformOptions): boolean;
-  remove(id: string): boolean;
-  place(id: string, options: VoxelTemplatePlaceOptions): boolean;
-  countBlocks(): Map<number, number>;
-  apply(command: VoxelTemplateCommand): VoxelTemplateCommand | null;
-  restore(templates: Iterable<VoxelTemplate>): void;
-  clear(): void;
-}
+#### `place(id: string, options: VoxelTemplatePlaceOptions): boolean`
 
-interface VoxelTemplatePatch {
-  name?: string;
-  pivot?: VoxelCoord;
-  properties?: Record<string, any>;
-}
-```
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `layerName` | `string` | | An existing layer. |
+| `position` | `VoxelCoord` | | World cell the pivot lands on. |
+| `transform` | `VoxelTransformOptions` | identity | Turns and mirrors the voxels around the pivot. |
+| `overwrite` | `boolean` | `true` | `false` keeps voxels already in the layer. |
 
-Every change emits a [template command](../core/commands.md#template-commands)
-on the world's `"command"` event, except `apply()`, `restore()` and `clear()`.
-Placement emits a `"voxels-patched"` layer command instead.
+Returns `false` and writes nothing when the template or layer does not exist or
+no cell would change. To place into a new layer, add it first with
+`world.addLayer()`.
 
-### `createFromLayer(layerName, options)`
+#### `countBlocks(): Map<number, number>`
 
-```ts
-interface VoxelTemplateCaptureOptions {
-  name: string;
-  id?: string; // default: an unused "template_<n>"
-  bounds?: { min: Vector3Like; max: Vector3Like; };
-  pivot?: VoxelCoord;
-  properties?: Record<string, any>;
-}
-```
+Voxel count per block id across every template. A
+[tileset slot](../tilesets/TilesetLink.md) stays reserved while a template
+uses one of its block ids.
 
-Copies the voxels of a layer into a new template and emits
-`"template-defined"`. `bounds` and `pivot` are in world space, so the layer
-position applies: a voxel is kept when its cell lies in `[min, max)` on every
-axis, and `pivot` is the world cell that will land on the placement position.
-A `THREE.Box3` works as `bounds`. The layer is not modified.
+## VoxelTemplate
 
-Returns `undefined` and emits nothing when the layer does not exist or no voxel
-is captured. An `id` already in use replaces that template.
+An immutable template. Its voxel positions start at `0, 0, 0`.
 
-### `define(template)`
+| Property | Type | Description |
+| --- | --- | --- |
+| `id`, `name` | `string` | Identity. |
+| `pivot` | `VoxelCoord` | Template-local. Defaults to `floor(size.x / 2), 0, floor(size.z / 2)`. |
+| `size` | `VoxelCoord` | Voxel extent per axis; `0, 0, 0` when empty. |
+| `voxelCount` | `number` | Stored voxels. |
+| `properties` | `Record<string, any>` | Free-form data. |
 
-Adds a template from its JSON form, or replaces the one with the same id, and
-emits `"template-defined"`. Use it to import a template saved by
-[`serializeVoxelTemplate()`](../serialization/serialization.md#templates) from
-another world. Throws `InvalidVoxelWorldError` when `template` is malformed.
+#### `localVoxels(): IterableIterator<VoxelTemplateVoxel>`
 
-### `update(id, patch)` and `remove(id)`
+Template-local cells as `[x, y, z, packed]`.
 
-Emit `"template-updated"` and `"template-removed"`. Both return `false` and emit
-nothing when the template does not exist. A patched `pivot` is
-template-local. Voxels are never updated in place:
-define the template again to change them.
+#### `placedVoxels(position: Vector3Like, transform?: VoxelTransform): IterableIterator<VoxelTemplateVoxel>`
 
-### `transform(id, transform)`
+World cells and voxels once the pivot sits on `position`. Voxel orientations
+turn with the placement.
 
-Turns and mirrors the stored voxels around the pivot with
-[`transformed()`](#voxeltemplate) and emits `"template-defined"` with the
-result. `transform` takes `VoxelTransformOptions`. Returns `false` and emits
-nothing for the identity transform or an unknown template.
+#### `placedBounds(position: Vector3Like, transform?: VoxelTransform): VoxelTemplateBounds`
 
-### `place(id, options)`
+The `{ min, size }` box `placedVoxels()` fills.
 
-```ts
-interface VoxelTemplatePlaceOptions {
-  layerName: string;
-  position: VoxelCoord;
-  transform?: VoxelTransformOptions; // default: identity
-  overwrite?: boolean; // default: true
-}
-```
+#### `placedPositionFor(min: Vector3Like, transform?: VoxelTransform): VoxelCoord`
 
-Writes the [placed voxels](#voxeltemplate) into an existing layer through
-[`world.patchVoxels()`](./VoxelWorld.md#patchvoxelslayername-string-cells-readonly-number-void),
-so the placement is one `"voxels-patched"` command and one
-[history](../core/VoxelHistory.md) step. `position` is a world cell. With
-`overwrite: false`, cells already holding a voxel in that layer keep it.
+The placement position whose placed box starts at `min`.
 
-Returns `false` and writes nothing when the template or layer does not exist,
-or when no cell would be written. To place into a new layer, add it first:
+#### `transformed(transform: VoxelTransform): VoxelTemplate`
 
-```ts
-world.addLayer("House 1");
-world.templates.place(house.id, { layerName: "House 1", position });
-```
+#### `withPatch(patch: VoxelTemplatePatch): VoxelTemplate`
 
-### `countBlocks()`
+Copies with turned voxels, or with another `name`, `pivot` or `properties`.
 
-Voxel count per block id across every template. A tileset slot stays reserved
-while a template still uses one of its block ids, so a tileset added later
-cannot take it over.
+#### `countBlocks(): Map<number, number>`
+
+#### `VoxelTemplate.fromLayer(layer: VoxelLayer, options): VoxelTemplate`
+
+Builds a template that belongs to no world, for example to preview a layer.
+`options` are the `createFromLayer()` options with a required `id`.

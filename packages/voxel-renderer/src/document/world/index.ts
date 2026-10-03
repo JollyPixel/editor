@@ -2,13 +2,16 @@ export * from "./types.ts";
 export * from "./storage/packedVoxel.ts";
 export * from "./editing/voxelPatch.ts";
 export * from "./storage/VoxelChunk.ts";
-export * from "./storage/VoxelStore.ts";
 export * from "./VoxelLayer.ts";
-export * from "./layerRank.ts";
+export { rankBetween } from "./layerRank.ts";
 export * from "./VoxelWorld.ts";
-export * from "./objects/VoxelObjectLayers.ts";
+export { VoxelObjectLayers } from "./objects/VoxelObjectLayers.ts";
 export * from "./objects/VoxelFootprint.ts";
 export * from "./objects/types.ts";
 export * from "./templates/VoxelTemplate.ts";
-export * from "./templates/VoxelTemplates.ts";
+export {
+  VoxelTemplates,
+  type VoxelTemplateCaptureOptions,
+  type VoxelTemplatePlaceOptions
+} from "./templates/VoxelTemplates.ts";
 export * from "./templates/types.ts";

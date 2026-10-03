@@ -1,12 +1,18 @@
 # VoxelWorld
 
-`VoxelWorld` owns voxel layers, object layers, templates, and chunk lifecycle. Read
-[the world model](../../concepts/world-model.md) for the ownership and compositing
-rules.
+The voxel layers, object layers and templates of a document, exposed as
+`document.world`. Every edit goes through it. See
+[the world model](../../concepts/world-model.md) for how layers stack.
 
-## Values and coordinates
+```ts
+const { world } = document;
 
-The world API uses these value types for positions and voxel contents:
+world.addLayer("Ground");
+world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+world.getVoxelAt({ x: 0, y: 0, z: 0 }); // { blockId: 1, transform: 0 }
+```
+
+## Coordinates and values
 
 ```ts
 interface VoxelCoord {
@@ -21,77 +27,267 @@ interface VoxelEntry {
 }
 ```
 
-Any `THREE.Vector3Like` is accepted where a method expects `VoxelCoord`.
-`VoxelEntry.blockId` refers to `BlockDefinition.id`; `0` means air and is never
-stored. The maximum block ID is 8,388,607.
+Any `THREE.Vector3Like` works where a `VoxelCoord` is expected. `blockId` is a
+[`BlockDefinition`](../blocks/BlockDefinition.md) id; `0` is air and is never
+stored. `transform` is a packed [`VoxelTransform`](./VoxelTransform.md). Reads
+build a new entry each time, so compare entries by value. Allocation-free reads
+return [packed voxels](./VoxelChunk.md#packed-voxels).
 
-`VoxelEntry` is a value type. Chunks store packed integers and build a new object
-for each unpacked read, so compare entries by value instead of identity. The
-packed API on [`VoxelChunk`](./VoxelChunk.md#packed-voxel-values) avoids that
-allocation on hot paths.
+#### `voxelCellOf(point: VoxelCoord): VoxelCoord`
 
-### `voxelCellOf(point)`
+The cell containing `point`; each component is floored, so `-0.2` gives `-1`.
 
-```ts
-function voxelCellOf(point: VoxelCoord): VoxelCoord;
-```
+#### `voxelPositionOf(point: VoxelCoord, normal: VoxelCoord, side?: "front" | "back"): VoxelCoord`
 
-Returns the whole cell containing `point`. Cells use half-open spans and the
-function floors each component. `{ x: 3.5, y: 0.5, z: 4.5 }` resolves to
-`{ x: 3, y: 0, z: 4 }`; `{ x: -0.2, y: 0, z: 0 }` resolves to x = -1.
+The cell on one side of a surface hit, such as a raycast result. `"front"`
+(default) is the empty cell the surface faces, where a new block goes. `"back"`
+is the cell that owns the surface. Works on slanted faces such as ramp slopes.
 
-### `voxelPositionOf(point, normal, side?)`
-
-```ts
-function voxelPositionOf(
-  point: VoxelCoord,
-  normal: VoxelCoord,
-  side?: "front" | "back"
-): VoxelCoord;
-```
-
-Returns the cell on one side of a surface, for example after a raycast hit.
-`"front"` is the empty cell the surface faces and is the default. `"back"` is
-the cell that owns the surface. Neither argument is modified.
-
-`"back"` nudges the point a fraction of a cell against the normal, so it holds
-for slanted faces whose hit point sits inside the cell rather than on its
-boundary, such as a ramp slope. `"front"` steps one cell from there along the
-axis the normal leans on the most, ties resolving to Y; a hit anywhere on a
-ramp slope therefore resolves to the ramp cell and places above it.
-
-## `VoxelWorld`
-
-Top-level container for a layered voxel scene. World reads examine layers from
-highest `order` to lowest. The first visible layer that has a voxel at a given
-position wins. Render-time compositing applies separate rules, described in the
-[world model](../../concepts/world-model.md#layer-compositing).
-
-### Constructor
+## Constructor
 
 ```ts
 new VoxelWorld(chunkSize?: number) // default: 16
 ```
 
-`chunkSize` must be a power of two. Every world-to-chunk conversion (on the
-write path, in the mesher, and in neighbour lookups) is a shift and a mask.
-Other sizes throw a `RangeError`.
+`chunkSize` must be a power of two, otherwise it throws a `RangeError`. A
+[`VoxelDocument`](../core/VoxelDocument.md) creates its world for you.
 
-### Properties
+| Property | Type | Description |
+| --- | --- | --- |
+| `chunkSize` | `number` | Read-only. |
+| `objectLayers` | `VoxelObjectLayers` | See [voxel objects](#voxel-objects). |
+| `templates` | `VoxelTemplates` | See [voxel templates](./VoxelTemplates.md). |
+| `voxelCount` | `number` | Stored voxels in every layer, visible or not. |
+
+## Events
 
 ```ts
-readonly chunkSize: number;
-readonly objectLayers: VoxelObjectLayers;
-readonly templates: VoxelTemplates;
+type VoxelWorldEvents = {
+  command: (command: VoxelWorldContentCommand) => void;
+};
 ```
 
-`templates` holds the world's [voxel templates](./VoxelTemplates.md).
+Every method that changes layers, voxels, object layers or templates emits one
+[command](../core/commands.md) on `"command"`. `VoxelDocument` forwards these
+as local commands. `mergeAllLayers()` and `clear()` emit nothing.
 
-Each recorder added with `addRecorder` receives the cells changed by each non-silent
-`setVoxel`, `removeVoxel`, `setVoxelBulk` and `removeVoxelBulk` call, read
-before the write. Commands applied with `apply()` are not recorded.
-[`VoxelHistory`](../core/VoxelHistory.md) adds itself when enabled; a sync
-client adds another to capture the inverse of its pending commands.
+## Layers
+
+Layer methods take names; commands carry layer ids.
+
+#### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
+
+Adds a layer on top of the stack. A taken name gets a ` (n)` suffix. See
+[`VoxelLayer`](./VoxelLayer.md#options) for the options.
+
+#### `getLayer(name: string): VoxelLayer | undefined`
+
+#### `getLayerById(id: string): VoxelLayer | undefined`
+
+#### `getLayers(): readonly VoxelLayer[]`
+
+All layers, top of the stack first.
+
+#### `uniqueLayerName(base: string): string`
+
+`base`, or `base (n)` with the first free `n`.
+
+#### `updateLayer(name: string, update: VoxelLayerUpdate): boolean`
+
+Changes `name`, `visible`, `compositing` or `properties`. A taken name gets a
+` (n)` suffix. Returns `false` for an unknown layer.
+
+#### `removeLayer(name: string): boolean`
+
+Returns `false` for an unknown layer.
+
+#### `moveLayer(name: string, direction: "up" | "down"): void`
+
+One step up or down the stack. Does nothing at the end of the stack.
+
+#### `moveLayerTo(name: string, toIndex: number): void`
+
+Moves the layer to an index of `getLayers()`, where `0` is the top. The index
+is truncated and clamped to the stack. A move to the current index emits
+nothing.
+
+#### `cloneLayer(name: string, options?: Partial<VoxelLayerOptions>): VoxelLayer | undefined`
+
+Copies a layer and its voxels under a new id, directly above the source.
+Without `options.name` the copy is named `"<name> (1)"`, `"<name> (2)"` and so
+on; a taken name is de-duplicated the same way. Returns `undefined` for an
+unknown layer.
+
+#### `mergeLayer(sourceName: string, targetName: string): boolean`
+
+Merges the source into the target and removes the source. Where both hold a
+voxel, the layer higher in the stack wins. The target keeps its visibility and
+position; its own `properties` win over the source's. Returns `false` when a
+layer is unknown or both names are the same layer.
+
+#### `mergeAllLayers(options?: { except?: Iterable<string> }): VoxelLayer[]`
+
+Collapses the layers into the lowest one, higher voxels winning. Layers named
+in `except` keep their place; each run of layers between them merges into its
+own lowest layer. Returns the remaining merged layers, top first. Emits no
+command.
+
+#### `setLayerPosition(name: string, position: VoxelCoord): void`
+
+#### `translateLayer(name: string, delta: VoxelCoord): void`
+
+Move the layer, and its voxels with it, in world space.
+
+#### `rebaseLayer(name: string, position: VoxelCoord): void`
+
+Moves the layer origin to `position` and keeps every voxel at the same world
+position.
+
+#### `transformLayer(name: string, transform: VoxelTransformOptions): void`
+
+Turns and mirrors the layer content around the center of its voxels; the layer
+position does not change. Applying the inverse restores the voxels exactly.
+One [history](../core/VoxelHistory.md) step. Does nothing for the identity
+transform or an empty layer.
+
+The layer methods above that return nothing do nothing for an unknown layer.
+
+#### `rankBetween(lower: string | null, upper: string | null): string`
+
+A layer `rank` strictly between two ranks, for building a `"layer-moved"`
+command by hand. `null` stands for the bottom or the top of the stack.
+
+## Reading voxels
+
+Reads look through the layers from the top and return the first visible voxel.
+Rendering composites layers by other rules, described in
+[layer compositing](../../concepts/world-model.md#layer-compositing).
+
+#### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
+
+`undefined` for air.
+
+#### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
+
+`VOXEL_ABSENT` for air.
+
+#### `getVoxelWithLayerAt(position: Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
+
+Also returns the layer the voxel comes from.
+
+#### `getVoxelNeighbour(position: Vector3Like, face: Face): VoxelEntry | undefined`
+
+The voxel next to `position` on the given face.
+
+#### `countBlocks(): Map<number, number>`
+
+#### `countBlock(blockId: number): number`
+
+Voxel counts per block id over every layer, visible or not.
+
+## Writing voxels
+
+Positions are world positions. With [history](../core/VoxelHistory.md)
+enabled, each call is one undo step unless it runs inside a transaction or
+`history.begin()` / `commit()`. Placing a voxel in an unknown layer throws;
+removing from one does nothing.
+
+#### `setVoxel(layerName: string, options: VoxelSetOptions): void`
+
+Places a voxel and emits `"voxel-set"`.
+
+```ts
+interface VoxelSetOptions extends VoxelTransformOptions {
+  position: Vector3Like;
+  blockId: number;
+}
+```
+
+`rotation`, `flipX`, `flipZ` and `flipY` are the
+[`VoxelTransform` options](./VoxelTransform.md#options).
+
+#### `removeVoxel(layerName: string, options: { position: Vector3Like }): void`
+
+Emits `"voxel-removed"`.
+
+#### `setVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
+
+#### `removeVoxelBulk(layerName: string, entries: { position: Vector3Like }[]): void`
+
+One `"voxels-set"` or `"voxels-removed"` command for the whole batch.
+
+```ts
+world.setVoxelBulk("Ground", [
+  { position: { x: 0, y: 0, z: 0 }, blockId: 1 },
+  { position: { x: 1, y: 0, z: 0 }, blockId: 2, rotation: VoxelRotation.CW90 }
+]);
+```
+
+#### `removeBlocks(blockIds: Iterable<number>): number`
+
+Removes every voxel of the given blocks from every layer, for example after
+deleting a block. Returns how many voxels it removed.
+
+#### `transaction<T>(fn: () => T): T`
+
+Runs `fn` and returns its result. Writes land immediately; the commands they
+emit are held until `fn` returns and go out as one `"voxels-patched"` per
+layer, holding only the cells that changed. The transaction is one history
+step. Transactions nest. If `fn` throws, the writes made so far are still
+emitted.
+
+```ts
+world.transaction(() => {
+  for (const cell of island) {
+    world.setVoxel("Ground", { position: cell, blockId: 1 });
+  }
+});
+```
+
+#### `patchVoxels(layerName: string, cells: readonly number[]): void`
+
+Writes `VOXEL_PATCH_STRIDE` (5) numbers per cell, `x, y, z, blockId,
+transform`, and emits them as one `"voxels-patched"`. A `blockId` of `0`
+removes the voxel. The fastest way to write generated terrain. Throws a
+`RangeError` when the length is not a multiple of 5, or for an invalid block
+id, after writing the cells before it.
+
+```ts
+world.patchVoxels("Ground", [
+  0, 0, 0, 1, 0,
+  1, 0, 0, 0, 0
+]);
+```
+
+`voxelPatchCells(cells)` iterates a patch as `{ x, y, z, blockId, transform }`
+objects, for example to read a received command.
+
+#### `clear(): void`
+
+Removes every voxel layer, object layer and template. Emits nothing.
+
+## Applying commands
+
+#### `apply(command: VoxelWorldContentCommand, logger?: VoxelLogger): VoxelWorldContentCommand | null`
+
+Replays a command, for example one received from a peer, without emitting it.
+On a document, use [`document.apply()`](../core/VoxelDocument.md) instead.
+
+Returns the command as this world applied it, or `null` when nothing changed: a
+`"layer-moved"` index comes back clamped, a `"cloned"` name unique, and
+`"voxels-patched"` keeps only the cells that changed. A voxel command for an
+unknown layer returns `null` and logs a warning on `logger`. An unknown action
+throws.
+
+#### `silently<T>(fn: () => T): T`
+
+Runs `fn` with the `"command"` event muted. Use it for changes peers already
+have. Nests.
+
+## Recorders
+
+A recorder receives the cells changed by each emitted voxel write, read before
+the write. [`VoxelHistory`](../core/VoxelHistory.md) is one.
 
 ```ts
 interface VoxelEditRecorder {
@@ -106,469 +302,104 @@ interface VoxelCellChange {
 }
 ```
 
-`VoxelWorld` extends `Emitter<VoxelWorldEvents>` from `@openally/emitt`:
-
-```ts
-type VoxelWorldEvents = {
-  command: (command: VoxelWorldContentCommand) => void;
-};
-
-type VoxelWorldContentCommand = VoxelLayerCommand | VoxelTemplateCommand;
-```
-
-Every mutating method below emits a [layer command](../core/commands.md#layer-commands),
-and every template change a [template command](../core/commands.md#template-commands),
-on `"command"`, so an editor or a network adapter can mirror local edits
-without wrapping the world. [`VoxelDocument`](../core/VoxelDocument.md#events)
-forwards these as local commands. The exceptions are `restoreLayer`,
-`mergeAllLayers`, `markAllDirty` and `clear`, which stay silent. Each emitting method builds its command and applies
-it through the same path as `apply()`.
-
-### Methods
-
-#### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
-
-Creates a new layer on top of the stack, with the highest compositing
-priority and a random UUID as its id. A taken name gets a ` (n)` suffix.
-
-#### `restoreLayer(options: VoxelLayerRestoreOptions): VoxelLayer`
-
-Puts a layer in the stack with the given `id`, `name` and optional `rank`,
-`position`, `visible`, `compositing` and `properties`, without emitting a
-command. Without `rank` it goes on top. Deserialization uses it.
-
-```ts
-type VoxelLayerRestoreOptions = Omit<VoxelLayerOptions, "chunkSize" | "order">;
-```
-
-#### `updateLayer(name: string, options: VoxelLayerUpdate): boolean`
-
-Updates the name, visibility, compositing, or properties. A name another
-layer holds gets a ` (n)` suffix. Returns `false` when the layer does not
-exist.
-
-```ts
-interface VoxelLayerUpdate extends Partial<VoxelLayerConfigurableOptions> {
-  name?: string;
-}
-```
-
-#### `removeLayer(name: string): boolean`
-
-Removes a layer by name. Marks all chunks in every layer dirty so faces culled against
-the removed layer are re-evaluated. Returns `false` if not found.
-
-#### `moveLayer(name: string, direction: "up" | "down"): void`
-
-Moves the layer one step in the given direction. `"up"` raises the layer's
-compositing priority, `"down"` lowers it. Does nothing when the layer is
-already at that end of the stack.
-
-#### `moveLayerTo(name: string, toIndex: number): void`
-
-Moves the layer to an absolute position in `getLayers()` order, where index 0
-is the highest compositing priority. `toIndex` is truncated and clamped to the
-stack, so an out-of-range index lands the layer at the nearest end. A move that
-leaves the layer where it already sits does nothing and emits nothing. The
-command carries the rank between the new neighbours, not the index.
-
-#### `getLayerById(id: string): VoxelLayer | undefined`
-
-Finds a layer by id. Commands name voxel layers by id; the methods on this
-page take names.
-
-### Layer ranks
-
-Every voxel layer has an id, unique across peers, and a `rank`: a
-fractional-index string over `0-9A-Za-z` that never ends with `0`. The
-stack sorts by rank, highest on top, then by id when two ranks tie, so
-concurrent moves of different layers keep both intents and every peer ends
-with the same order.
-
-```ts
-function rankBetween(lower: string | null, upper: string | null): string;
-function compareLayerRanks(left: RankedLayer, right: RankedLayer): number;
-function isLayerRank(value: unknown): value is string;
-```
-
-`rankBetween` returns a rank strictly between two ranks; `null` stands for
-the bottom or the top of the stack. When `lower >= upper` it returns a rank
-above `lower`.
-
-Every change to the stack re-numbers each layer's `order` densely and
-descending from the resulting sequence, so `order` is the draw order the
-renderer reads, not an identifier.
-
-#### `setLayerPosition(name: string, position: VoxelCoord): void`
-
-Sets the world-space translation of a layer. All voxels in that layer are shifted by
-`position`: a voxel stored at local `{0,0,0}` will appear at `{position.x, position.y, position.z}`
-in world space. Marks all chunks in every layer dirty so cross-layer face culling is
-re-evaluated on the next frame. No-op if the layer is not found.
-
-#### `translateLayer(name: string, delta: VoxelCoord): void`
-
-Adds `delta` to the layer's current position. Equivalent to calling `setLayerPosition` with
-`layer.position + delta`. Marks all chunks dirty. No-op if the layer is not found.
-
-#### `rebaseLayer(name: string, position: VoxelCoord): void`
-
-Moves the layer origin to `position` while preserving every voxel's world-space
-location. Local chunk storage is rewritten and all layers are marked dirty.
-No-op if the layer is not found.
-
-#### `transformLayer(name: string, transform: VoxelTransformOptions): void`
-
-Turns and mirrors every voxel of the layer around the center of its voxel
-bounds, so the content stays where it is. Each cell's offset from the center
-goes through [`transformOffset()`](./VoxelTransform.md#methods) and each voxel's
-own transform becomes `voxelTransform.followedBy(transform)`, so turned blocks
-keep facing the right way. The layer position is unchanged and plays no part.
-
-When one of the X and Z extents is odd and the other even, a quarter turn
-around the exact center would land between cells. The pivot then moves half a
-cell to a fixed grid of points that every later turn or flip of the layer
-reuses, so any sequence that composes to the identity (four quarter turns, a
-turn and its inverse, a flip twice) restores the voxels exactly. In that case
-a 180° turn or a flip along the moved axis also shifts the content by one cell.
-
-The voxels are rewritten, so the change is one
-[history](../core/VoxelHistory.md) step and emits one `"layer-transformed"`
-command, or a `"voxels-patched"` command inside a `transaction()`. No-op, with
-no command, for the identity transform, an empty layer or an unknown layer.
-
-#### `getLayer(name: string): VoxelLayer | undefined`
-
-#### `getLayers(): readonly VoxelLayer[]`
-
-All layers, sorted highest `order` first.
-
-#### `cloneLayer(name: string, options?: Partial<VoxelLayerOptions>): VoxelLayer | undefined`
-
-Clones a layer, voxels included, under a new UUID, and inserts the copy directly above the source,
-renumbering the whole stack and marking every layer's chunks dirty, since the
-copy now covers the layers below it. Other layer options can override the
-source values.
-Returns `undefined` when the source layer does not exist.
-
-`options.name` is optional; when omitted the world derives an unused name from
-the source (`"layer"` becomes `"layer (1)"`, then `"layer (2)"`). A name that is
-already taken is de-duplicated the same way, so layer names stay unique. The
-emitted `"cloned"` command carries the resolved name, so a peer replaying the
-command produces the same layer rather than deriving a name of its own.
-
-#### `uniqueLayerName(base: string): string`
-
-The first layer name not already in use, derived from `base` by appending
-`" (n)"`. Returns `base` unchanged when it is free.
-
-#### `mergeLayer(sourceName: string, targetName: string): boolean`
-
-Merges the source layer into the target and removes the source from the world.
-Returns `false` when either layer does not exist, or when both names resolve to
-the same layer.
-
-Overlapping voxels are resolved by stack position: the layer with the higher
-`order` wins, whichever of the two is the source. A merge therefore never
-changes what an opaque stack looks like, in either direction.
-
-The target keeps its own `visible` and position. The source's
-`properties` are folded in behind the target's, so keys already present on the
-target win and the rest carry over.
-
-#### `mergeAllLayers(options?: VoxelMergeAllLayersOptions): VoxelLayer[]`
-
-```ts
-interface VoxelMergeAllLayersOptions {
-  except?: Iterable<string>;
-}
-```
-
-Collapses the voxel layers into the lowest-order layer. Higher-order voxels win at
-overlapping world positions, and every other merged layer is removed. Properties
-of the removed layers are folded in behind the target's, as with `mergeLayer`.
-
-Layers named in `except` are left alone and keep their place in the stack. Each
-unbroken run of layers between them merges on its own into the lowest layer of
-that run, so a kept layer still covers the layers below it and stays covered by
-the ones above it. Names that match no layer are ignored.
-
-Returns the resulting layers, highest `order` first: one per run, or an empty
-array for an empty world or when every layer is excluded.
-
-#### `getVoxelAt(position: THREE.Vector3Like): VoxelEntry | undefined`
-
-Composited read. Returns the voxel from the highest-priority visible layer
-at that position. Returns `undefined` for air.
-
-#### `getPackedVoxelAt(position: THREE.Vector3Like): PackedVoxel`
-
-Allocation-free `getVoxelAt`, returning `VOXEL_ABSENT` (`-1`) for air.
-
-#### `getVoxelWithLayerAt(position: THREE.Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
-
-Same compositing rules as `getVoxelAt`, but also returns the owning `VoxelLayer` so callers
-can inspect layer-level properties (e.g. `properties`) of the resolved voxel.
-
-#### `getVoxelNeighbour(position: THREE.Vector3Like, face: Face): VoxelEntry | undefined`
-
-Composited read of the voxel immediately adjacent to `position` in the given face direction.
-
-#### `setVoxel(layerName: string, options: VoxelSetOptions): void`
-
-Places a voxel at a world-space position, packing rotation and flips for you,
-and emits `"voxel-set"`.
-
-```ts
-interface VoxelSetOptions extends VoxelTransformOptions {
-  position: THREE.Vector3Like;
-  blockId: number;
-  /** Y-axis rotation in 90° steps. Default: `VoxelRotation.None`. */
-  rotation?: VoxelRotation;
-  /** Mirror the block on the X axis. Default: `false`. */
-  flipX?: boolean;
-  /** Mirror the block on the Z axis. Default: `false`. */
-  flipZ?: boolean;
-  /** Mirror the block geometry around y = 0.5 (upside-down). */
-  flipY?: boolean;
-}
-```
-
-The rotation and flip fields come from
-[`VoxelTransformOptions`](./VoxelTransform.md), which packs them into the
-transform byte a chunk stores. A rotation outside `0..3` wraps rather than
-spilling into the flip bits.
-
-#### `removeVoxel(layerName: string, options: VoxelRemoveOptions): void`
-
-Removes the voxel at a world-space position and emits `"voxel-removed"`.
-
-```ts
-interface VoxelRemoveOptions {
-  position: THREE.Vector3Like;
-}
-```
-
-#### `setVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
-
-Places several voxels and emits a single `"voxels-set"` for the batch.
-
-```ts
-world.setVoxelBulk("Ground", [
-  { position: { x: 0, y: 0, z: 0 }, blockId: 1 },
-  { position: { x: 1, y: 0, z: 0 }, blockId: 2, rotation: VoxelRotation.CW90 }
-]);
-```
-
-#### `removeVoxelBulk(layerName: string, entries: VoxelRemoveOptions[]): void`
-
-Removes several voxels and emits a single `"voxels-removed"` for the batch.
-Removing from a layer that does not exist changes nothing and emits nothing.
-
-#### `removeBlocks(blockIds: Iterable<number>): number`
-
-Removes every voxel of the given blocks from every layer and returns how many
-it removed. Each layer emits `"voxels-removed"` commands of at most 4096
-entries; a layer without such voxels emits nothing. Use it to clear the voxels
-a deleted block left behind.
-
-#### `transaction<T>(fn: () => T): T`
-
-Runs `fn` and returns its result. Use it for large writes; for world
-generation, `patchVoxels()` is faster. Writes land immediately, but the voxel
-commands they emit are held until `fn` returns:
-
-- dirty chunks are marked once per touched chunk rather than once per voxel,
-  in every layer;
-- the changed cells go out as one `"voxels-patched"` per layer, where the
-  last write to a cell wins and cells that end up unchanged are left out;
-- the history records the whole transaction as a single undo step.
-
-A nested `transaction` joins the outer one. A layer, object, block or tileset
-command inside the transaction first flushes the pending cells, so peers see
-the same order. If `fn` throws, the writes made so far are still flushed.
-
-```ts
-world.transaction(() => {
-  for (const cell of island) {
-    world.setVoxel("Ground", { position: cell, blockId: Block.Stone });
-  }
-});
-```
-
-#### `patchVoxels(layerName: string, cells: readonly number[]): void`
-
-Applies a flat patch and emits it as one `"voxels-patched"`, or nothing when
-called through `apply()`. `cells` holds `VOXEL_PATCH_STRIDE` (5) numbers per
-cell: `x, y, z, blockId, transform`, in world space. A `blockId` of `0`
-removes the voxel. Throws a `RangeError` when the length is not a multiple
-of 5.
-
-This is the fastest way to write generated voxels, faster than `setVoxel` in a
-`transaction()` even counting the time to build the array: the cells are
-written straight to the layer and emitted as given (a copy), without comparing
-each cell to its previous value. Cells that change nothing, or repeat a cell, stay in the
-emitted patch. Dirty chunks are marked once per touched chunk, as in a
-transaction. If a cell has an invalid block id, the cells before it stay
-written and are emitted, then the `RangeError` is thrown.
-
-Inside a `transaction()`, through `apply()`, or while the history records, the
-patch goes through a transaction instead: its cells join the transaction's
-patch, `apply()` returns only the cells that changed, and the history records a
-single undo step.
-
-```ts
-world.patchVoxels("Ground", [
-  0, 0, 0, 1, 0,
-  1, 0, 0, 0, 0
-]);
-
-for (const { x, y, z, blockId } of voxelPatchCells(command.metadata.cells)) {
-  // ...
-}
-```
-
-#### `getAllChunks(): IterableIterator<IterableLayerChunk>`
-
-Iterates over every chunk across all layers.
-
-#### `getAllDirtyChunks(): IterableIterator<IterableLayerChunk>`
-
-Iterates over chunks whose `dirty` flag is set.
-
-```ts
-interface IterableLayerChunk {
-  layer: VoxelLayer;
-  chunk: VoxelChunk;
-}
-```
-
-#### `getAllChunksToBeRemoved(): IterableIterator<IterableLayerChunk>`
-
-Consumes chunks whose meshes must be removed because their layer disappeared or
-the chunk became empty. This is renderer-facing lifecycle plumbing.
-
-#### `markAllDirty(): void`
-
-Marks every chunk of every layer dirty for rebuild.
-
-#### `clear(): void`
-
-Removes all voxel layers, object layers and templates.
-
-### Block counts
-
-Counts cover the stored voxels of every layer, whatever their visibility or
-compositing. They are computed from per-chunk histograms cached
-against `VoxelChunk.revision`, so only chunks written since the last query are
-rescanned. [`VoxelInspector.blocks`](../core/VoxelInspector.md#block-statistics)
-builds its registry-aware statistics on top of them.
-
-#### `voxelCount: number`
-
-Read-only total of stored voxels.
-
-#### `countBlocks(): Map<number, number>`
-
-Voxel count per block id across all layers. Returns a new map.
-
-#### `countBlock(blockId: number): number`
-
-Voxels of `blockId` across all layers; `0` when none.
-
-### Commands
-
-#### `apply(command: VoxelWorldContentCommand, logger?: VoxelLogger): VoxelWorldContentCommand | null`
-
-Replays a layer or template command onto this world without emitting it, so a network
-adapter cannot echo it back. Every action of the union is handled; an unknown
-one throws. On a document, prefer
-[`document.apply()`](../core/VoxelDocument.md#methods), which emits it once with
-its origin.
-
-Returns the command the world would have emitted for the same local change, or
-`null` when nothing changed. A `layer-moved` index comes back clamped, a
-`cloned` name comes back unique, and a `voxels-patched` keeps only the cells
-that changed. Pending writes of an open `transaction()` are emitted first, so
-they keep their place in the stream.
-
-A voxel command naming a layer this world no longer has is dropped rather than
-thrown, since a peer can still be painting a layer that was just merged or
-removed here, and `apply()` returns `null`. The optional `logger` receives a
-warning for each dropped command
-(`VoxelWorld: dropped '<action>' for unknown layer '<name>'.`); without one the
-drop is silent. Local writes that place a voxel, such as `setVoxel`, still
-throw for an unknown layer, which stays a programming error.
-
-#### `silently<T>(fn: () => T): T`
-
-Runs `fn` with the `"command"` event muted and returns its result. Use it for
-mutations peers already know about. Nesting is safe.
-
-```ts
-world.silently(() => world.setVoxel("Ground", { position, blockId: 1 }));
-```
-
-#### `addRecorder(recorder: VoxelEditRecorder, options?: VoxelRecorderOptions): void`
+#### `addRecorder(recorder: VoxelEditRecorder, options?: { includeUnrecorded?: boolean }): void`
 
 #### `removeRecorder(recorder: VoxelEditRecorder): boolean`
 
-Adds or removes a recorder. `removeRecorder` returns `false` when the
-recorder was not added.
-
-```ts
-interface VoxelRecorderOptions {
-  // Also receive the edits made inside unrecorded(). Default false.
-  includeUnrecorded?: boolean;
-}
-```
+`removeRecorder()` returns `false` when the recorder was not added.
 
 #### `unrecorded<T>(fn: () => T): T`
 
-Runs `fn` and returns its result; edits made inside reach only the recorders
-added with `includeUnrecorded`. [`VoxelHistory`](../core/VoxelHistory.md)
-replays undo and redo through it; a sync client records them to invert its
-pending commands.
+Runs `fn`; its writes reach only recorders added with `includeUnrecorded`.
 
-### Object layer management
+## Voxel objects
 
-Object layers hold placed objects (spawn points, trigger zones, etc.) rather than
-voxel data. They live in `world.objectLayers`, a `VoxelObjectLayers` keyed by
-name, and are serialised as part of `VoxelWorldJSON`. Every change emits a
-command on the world's `"command"` event, except `apply()` and `restore()`.
+Object layers hold placed objects such as spawn points and trigger zones. They
+live in `world.objectLayers`, keyed by name, and are saved with the world.
+Object coordinates may be fractional.
 
 ```ts
-class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
-  readonly size: number;
-  toArray(): VoxelObjectLayerJSON[];
-  get(name: string): VoxelObjectLayerJSON | undefined;
-  getObject(layerName: string, objectId: string): VoxelObjectJSON | undefined;
-  add(name: string): VoxelObjectLayerJSON;
-  remove(name: string): boolean;
-  update(name: string, patch: { visible?: boolean; }): boolean;
-  addObject(layerName: string, object: VoxelObjectJSON): boolean;
-  removeObject(layerName: string, objectId: string): boolean;
-  moveObject(fromLayerName: string, objectId: string, toLayerName: string): boolean;
-  updateObject(layerName: string, objectId: string, patch: Partial<VoxelObjectJSON>): boolean;
-  apply(command: VoxelObjectLayerCommand): VoxelObjectLayerCommand | null;
-  restore(layers: Iterable<VoxelObjectLayerJSON>): void;
+world.objectLayers.add("Spawns");
+world.objectLayers.addObject("Spawns", {
+  id: "player",
+  name: "Player",
+  x: 4,
+  y: 1,
+  z: 4,
+  visible: true
+});
+```
+
+```ts
+interface VoxelObjectJSON {
+  id: string; // unique within its layer
+  name: string;
+  type?: string;
+  x: number;
+  y: number;
+  z: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
+  visible: boolean;
+  color?: string;
+  locked?: boolean;
+  properties?: Record<string, string | number | boolean>;
+}
+
+interface VoxelObjectLayerJSON {
+  id: string;
+  name: string;
+  visible: boolean;
+  order: number;
+  objects: VoxelObjectJSON[];
 }
 ```
 
-`add()` creates a visible layer whose `order` is the current object layer count
-and returns the new descriptor. `toArray()` lists the layers in insertion order.
-`getObject()` finds an object by its layer and id; object ids are only unique
-within a layer.
-The other methods return `false` when a named layer or object is not found.
+Property values other than strings, numbers and booleans are dropped when the
+world is saved.
 
-`apply()` applies an [object layer command](../core/commands.md#layer-commands)
-without dispatching it and returns it, or `null` when it changed nothing.
-`restore()` replaces every layer, copying each object list, and emits nothing;
-deserialization uses it.
+### VoxelObjectLayers
 
-`moveObject()` keeps the same object instance and emits a single
-`"object-moved"` command. It also returns `false` when both names resolve to
-the same layer. Prefer it over `removeObject()` followed by `addObject()`: the
-pair emits two independent commands, so two peers reparenting the same object at
-once would each apply the other's add and leave the object duplicated in two
-layers.
+Every change emits an object layer command on the world's `"command"` event.
+The methods returning `boolean` return `false` when the named layer or object
+does not exist.
+
+| Member | Description |
+| --- | --- |
+| `size` | Number of object layers. |
+| `toArray()` | Layers in insertion order. |
+| `get(name)` | A layer, or `undefined`. |
+| `getObject(layerName, objectId)` | An object, or `undefined`. |
+| `add(name)` | Adds a visible layer and returns it. |
+| `remove(name)` | Removes a layer and its objects. |
+| `update(name, { visible })` | Shows or hides a layer. |
+| `addObject(layerName, object)` | Adds an object. |
+| `removeObject(layerName, objectId)` | Removes an object. |
+| `updateObject(layerName, objectId, patch)` | Merges `patch` into an object. |
+| `moveObject(fromLayerName, objectId, toLayerName)` | Moves an object to another layer. `false` when both names are the same layer. |
+
+Use `moveObject()` rather than `removeObject()` followed by `addObject()`: it
+emits one command, so two peers moving the same object at once cannot duplicate
+it.
+
+### VoxelFootprint
+
+The whole-cell area an object covers on the ground, `width` along x and
+`height` along z.
+
+```ts
+const footprint = VoxelFootprint.of(object);
+
+footprint.equals(new VoxelFootprint(2, 1));
+```
+
+| Member | Description |
+| --- | --- |
+| `new VoxelFootprint(width, height)` | Each extent is rounded to a whole cell, at least `1`. |
+| `VoxelFootprint.of(object)` | The footprint of an object; a missing `width` or `height` counts as `1`. |
+| `VoxelFootprint.Unit` | A 1×1 footprint. |
+| `VoxelFootprint.normalizeExtent(value)` | Rounds to a whole cell; zero, negative and invalid values give `1`. |
+| `width`, `height` | Read-only. |
+| `equals(other)` | Compares by value. |
+| `toJSON()` | `{ width, height }`, ready to spread into an object or a patch. |

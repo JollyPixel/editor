@@ -1,112 +1,87 @@
 # VoxelTransform
 
-Immutable Y-rotation and mirror flags for a single voxel. It owns the bit layout
-that [`VoxelChunk`](./VoxelChunk.md#packed-voxel-values) stores in the low byte
-of a packed voxel.
+Immutable quarter-turn rotation around Y and mirror flags for one voxel.
+`world.setVoxel()` takes the same options and packs them for you.
 
-Only 32 distinct transforms exist, so instances are interned: `fromPacked()`
-allocates at most once per value and is safe to call from a mesh build.
+```ts
+import { VoxelRotation, VoxelTransform } from "@jolly-pixel/voxel.renderer";
 
-## Constructor
+document.world.setVoxel("Ground", {
+  position: { x: 0, y: 0, z: 0 },
+  blockId: 3,
+  rotation: VoxelRotation.CW90,
+  flipX: true
+});
+
+const { transform } = document.world.getVoxelAt({ x: 0, y: 0, z: 0 });
+VoxelTransform.fromPacked(transform).rotation; // 3
+```
+
+## Options
 
 ```ts
 new VoxelTransform(options?: VoxelTransformOptions)
-
-interface VoxelTransformOptions {
-  /** Quarter turns around Y. Values outside 0..3 wrap. Default: `0`. */
-  rotation?: number;
-  /** Mirrors the block around x = 0.5. Default: `false`. */
-  flipX?: boolean;
-  /** Mirrors the block around z = 0.5. Default: `false`. */
-  flipZ?: boolean;
-  /** Mirrors the block around y = 0.5. Default: `false`. */
-  flipY?: boolean;
-}
 ```
 
-`rotation` accepts any number and wraps to `0..3`, so an out-of-range value from
-a network payload normalizes instead of corrupting the neighbouring flip bits.
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `rotation` | `number` | `0` | Quarter turns around Y. Values outside `0..3` wrap. |
+| `flipX` | `boolean` | `false` | Mirrors the block around `x = 0.5`. |
+| `flipZ` | `boolean` | `false` | Mirrors the block around `z = 0.5`. |
+| `flipY` | `boolean` | `false` | Mirrors the block around `y = 0.5`, for ceiling ramps and upside-down stairs. |
 
-## Properties
+The flips combine freely with each other and with `rotation`.
+
+## VoxelRotation
 
 ```ts
-class VoxelTransform {
-  readonly rotation: VoxelRotationStep;
-  readonly flipX: boolean;
-  readonly flipZ: boolean;
-  readonly flipY: boolean;
-
-  // encoded form stored in a chunk
-  readonly packed: number;
-}
+const VoxelRotation = {
+  None: 0,
+  CCW90: 1,
+  Deg180: 2,
+  CW90: 3
+} as const;
 
 type VoxelRotationStep = 0 | 1 | 2 | 3;
 ```
 
-Instances are frozen. `packed` lays the flags out as rotation in bits 0-1,
-`flipX` in bit 2, `flipZ` in bit 3, and `flipY` in bit 4.
+## Properties
 
-```ts
-const VOXEL_TRANSFORM_MASK: number; // 0b11111
-```
+| Property | Type | Description |
+| --- | --- | --- |
+| `rotation` | `VoxelRotationStep` | Quarter turns around Y, wrapped to `0..3`. |
+| `flipX`, `flipZ`, `flipY` | `boolean` | Mirror flags. |
+| `packed` | `number` | Encoded form, the `transform` of a `VoxelEntry`. |
 
-`packVoxel()` reserves a full byte for the transform, so the three bits above
-`VOXEL_TRANSFORM_MASK` are unused and free for future flags.
+`VOXEL_TRANSFORM_MASK` covers the bits of `packed` that carry meaning.
 
-## Static methods
+## Static members
 
-#### `VoxelTransform.Identity: VoxelTransform`
+#### `VoxelTransform.Identity`
 
 No rotation, no mirroring. Packs to `0`.
 
 #### `VoxelTransform.fromPacked(packed: number): VoxelTransform`
 
-Decodes a packed transform, ignoring bits outside `VOXEL_TRANSFORM_MASK`. It
-accepts a whole packed voxel's transform byte, not just the five meaningful
-bits.
+Decodes a packed transform. Bits outside `VOXEL_TRANSFORM_MASK` are ignored.
 
 #### `VoxelTransform.pack(options?: VoxelTransformOptions): number`
 
-Returns the packed bits `new VoxelTransform(options).packed` would hold,
-without allocating.
+The `packed` value `new VoxelTransform(options)` would hold.
 
 ## Methods
 
 #### `equals(other: VoxelTransform): boolean`
 
-Compares the packed forms.
-
 #### `followedBy(outer: VoxelTransform): VoxelTransform`
 
-The transform that applies this one, then `outer`. Placing a turned
-[template](./VoxelTemplates.md) composes each voxel's transform with the
-placement transform this way.
+The transform that applies this one, then `outer`.
 
 #### `transformOffset(offset: Vector3Like): Vector3Like`
 
-Moves a whole-cell offset, measured from the cell the transform turns around,
-the way the transform moves a block inside its cell. Rotation turns x and z;
-`flipX`, `flipZ` and `flipY` negate one axis. Returns a new object.
+Moves a whole-cell offset from the pivot cell the way the transform moves a
+block. Returns a new object.
 
 #### `toJSON(): number`
 
-Returns `packed`, so a transform serializes as the number a chunk stores.
-
-## Example
-
-```ts
-import { VoxelTransform } from "@jolly-pixel/voxel.renderer";
-
-const transform = new VoxelTransform({
-  rotation: 1,
-  flipX: true
-});
-
-layer.setVoxelAt(
-  { x: 0, y: 0, z: 0 },
-  { blockId: 3, transform: transform.packed }
-);
-
-const stored = layer.getVoxelAt({ x: 0, y: 0, z: 0 });
-VoxelTransform.fromPacked(stored.transform).rotation; // 1
-```
+Returns `packed`.

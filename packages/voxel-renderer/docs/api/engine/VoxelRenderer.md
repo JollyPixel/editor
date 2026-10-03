@@ -1,10 +1,8 @@
 # VoxelRenderer
 
-`VoxelRenderer` runs a [`VoxelView`](../core/VoxelView.md) through the
-JollyPixel actor-component lifecycle. It attaches the view root and
-initializes it during `awake()`, ticks the view during `update()`, and removes
-and disposes it during `destroy()`. This entry point requires the optional peer
-`@jolly-pixel/engine`.
+A JollyPixel actor component that runs a [`VoxelView`](../core/VoxelView.md):
+it attaches and initializes the view on `awake()`, ticks it on `update()` and
+disposes it on `destroy()`. Requires the optional peer `@jolly-pixel/engine`.
 
 ```ts
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
@@ -18,45 +16,38 @@ const renderer = actor.addComponentAndGet(VoxelRenderer, {
   }
 });
 
-renderer.document.world.setVoxel("Ground", {
-  position: { x: 0, y: 0, z: 0 },
-  blockId: 1
-});
+renderer.document.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
 ```
 
-## API
+## Options
+
+Every [`VoxelViewOptions`](../core/VoxelView.md#options) field, plus:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `document` | `VoxelDocument \| VoxelDocumentOptions` | The document to draw, or options for one the renderer creates. |
+| `focus` | `THREE.Object3D \| null` | Object whose world position becomes `view.focus` on every update. `null` leaves `view.focus` as it is. |
+
+`logger` defaults to the actor world's logger.
+
+## Properties
 
 ```ts
-interface VoxelRendererOptions extends VoxelViewOptions {
-  /** A document to draw, or the options of one the renderer builds. */
-  document?: VoxelDocument | VoxelDocumentOptions;
-  focus?: THREE.Object3D | null;
-}
-
-class VoxelRenderer extends ActorComponent {
-  readonly document: VoxelDocument;
-  readonly view: VoxelView;
-  focus: THREE.Object3D | null;
-
-  constructor(actor: Actor<any>, options?: VoxelRendererOptions);
-  awake(): void;
-  update(deltaTime: number): void;
-  destroy(): void;
-}
+readonly document: VoxelDocument;
+readonly view: VoxelView;
+focus: THREE.Object3D | null;
 ```
 
-A document passed as an instance belongs to its owner: `destroy()` disposes the
-view only. A document built from options, or from nothing, belongs to the
-renderer and is disposed with it. Pass an instance to draw a document that
-outlives the actor, such as one synchronized over the network.
+## Ownership
 
-The actor world's logger is used unless `options.logger` is supplied; it is
-handed to the document the renderer builds and to the view. When a focus
-object is set, its world position is converted to view-root local coordinates
-on every update before the view ticks.
+A document passed as an instance stays with its owner: `destroy()` disposes
+only the view. A document created from options is disposed with the
+component. Pass an instance for a document that outlives the actor, such as a
+synchronized one.
+
+## Frame requests
 
 The view's [frame requests](../core/VoxelView.md#frame-requests) call
-`world.invalidate()`, then `options.requestFrame` when given, and the renderer
-keeps the world animating while `view.pendingRebuilds` is above zero. A runtime
-that renders on demand therefore draws edits, loads and mesh worker results
-without further wiring.
+`world.invalidate()` and then `options.requestFrame` when given. The component
+keeps the world rendering while `view.pendingRebuilds` is above zero, so an
+on-demand runtime needs no extra wiring.
