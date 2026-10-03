@@ -1,9 +1,15 @@
 // Import Internal Dependencies
 import { WEBSOCKET_AUTH_PROTOCOL_PREFIX } from "../../transport/constants.ts";
 import type { AuthenticationRequest } from "./AuthenticationProvider.ts";
+import { InvalidCredentialError } from "./errors/InvalidCredentialError.ts";
 
 // CONSTANTS
 const kProtocolHeader = "sec-websocket-protocol";
+const kBase64UrlAlphabet = /^[A-Za-z0-9_-]*$/;
+const kUtf8 = new TextDecoder("utf-8", {
+  fatal: true,
+  ignoreBOM: true
+});
 
 function offeredProtocols(
   request: AuthenticationRequest
@@ -23,14 +29,19 @@ function offeredProtocols(
 
 function decodeBase64Url(
   value: string
-): string | null {
-  try {
-    return Buffer
-      .from(value.replaceAll("-", "+").replaceAll("_", "/"), "base64")
-      .toString("utf8");
+): string {
+  if (!kBase64UrlAlphabet.test(value) || value.length % 4 === 1) {
+    throw new InvalidCredentialError("the credential is not base64url");
   }
-  catch {
-    return null;
+
+  try {
+    return kUtf8.decode(Buffer.from(value, "base64url"));
+  }
+  catch (cause) {
+    throw new InvalidCredentialError(
+      "the credential is not UTF-8",
+      { cause }
+    );
   }
 }
 

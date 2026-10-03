@@ -12,7 +12,7 @@ import {
   type NetworkCommandHeader,
   type NetworkServerMessage
 } from "#src/index.ts";
-import { RoomHarness } from "../../helpers/RoomHarness.ts";
+import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
 
 type TestCommand = (
   | { action: "paint"; keys: string[]; value: number; }

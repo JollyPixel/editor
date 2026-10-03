@@ -35,7 +35,14 @@ export class PasswordAuthentication implements AuthenticationProvider {
   async authenticate(
     request: AuthenticationRequest
   ): Promise<PeerIdentity | null> {
-    const credential = readCredential(request);
+    let credential: string | null;
+    try {
+      credential = readCredential(request);
+    }
+    catch {
+      return null;
+    }
+
     if (credential === null) {
       if (this.#mandatory) {
         return null;

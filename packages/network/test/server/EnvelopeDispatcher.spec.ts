@@ -6,8 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/identity.ts";
-import { createClient } from "../helpers/clientHandle.ts";
+import { identityOf } from "../helpers/server/identity.ts";
+import { createClient } from "../helpers/server/clientHandle.ts";
 import { EnvelopeDispatcher } from "#src/server/EnvelopeDispatcher.ts";
 import { ClientSessions } from "#src/server/ClientSessions.ts";
 import { RoomRegistry } from "#src/server/room/RoomRegistry.ts";
@@ -17,7 +17,7 @@ import {
   RightsTable,
   type ClientEnvelope
 } from "#src/index.ts";
-import { actionProtocols } from "../helpers/protocols.ts";
+import { actionProtocols } from "../helpers/protocol/protocols.ts";
 
 interface Harness {
   dispatcher: EnvelopeDispatcher;

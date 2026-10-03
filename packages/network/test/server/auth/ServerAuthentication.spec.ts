@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { createClient } from "../../helpers/clientHandle.ts";
+import { createClient } from "../../helpers/server/clientHandle.ts";
 import {
   PresenceOnlyExtension,
   RightsTable,

@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/identity.ts";
+import { identityOf } from "../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
-} from "../helpers/clientHandle.ts";
-import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+} from "../helpers/server/clientHandle.ts";
+import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import {
   Server,
   UngatedExtensionError
 } from "#src/index.ts";
-import { actionProtocols } from "../helpers/protocols.ts";
+import { actionProtocols } from "../helpers/protocol/protocols.ts";
 
 describe("Server", () => {
   test("does not notify an extension until the client joins its room", async() => {

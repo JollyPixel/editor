@@ -169,7 +169,10 @@ export class ClientRoom<
   updatePresence(
     patch: PeerMetadata
   ): void {
-    Object.assign(this.#presence, patch);
+    this.#presence = {
+      ...this.#presence,
+      ...patch
+    };
     if (this.#state === "joined") {
       this.#send({
         room: this.id,

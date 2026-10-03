@@ -23,7 +23,7 @@ import {
   DEFAULT_WEBSOCKET_PATH,
   WEBSOCKET_PROTOCOL
 } from "#src/transport/constants.ts";
-import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 
 describe("WebsocketTransport + Client (integration)", () => {

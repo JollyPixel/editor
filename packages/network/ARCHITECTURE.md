@@ -84,7 +84,9 @@ The schemas in
 both the TypeScript envelope types and the checked-in validators. The server
 parses only client envelope kinds and the browser parses only server envelope
 kinds. An envelope sent in the wrong direction is rejected before routing.
-Unknown properties remain compatible with older peers.
+Unknown properties remain compatible with older peers. Both sides parse frames
+with `secure-json-parse`, which drops `__proto__` keys, and `constructor` keys
+that carry a `prototype`, at any depth.
 
 ## Connecting and joining
 

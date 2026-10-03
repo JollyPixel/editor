@@ -20,7 +20,7 @@ import {
 } from "#src/transport/channel.ts";
 import { parseChannelTransportMessage } from "#src/transport/channel/protocol.ts";
 import { LoopbackTransport } from "#src/transport/loopback.ts";
-import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 
 function createRelay(
@@ -391,7 +391,8 @@ describe("ChannelTransport + ChannelTransportHost with a port per socket", () =>
     relay.host.close();
 
     await waitFor(() => relay.extension.disconnected.length === 1);
-    assert.deepEqual(relay.closedPorts, ["port1"]);
+    await waitFor(() => relay.closedPorts.length === 2);
+    assert.deepEqual(relay.closedPorts, ["port1", "port2"]);
   });
 
   test("the host ignores sends on the shared port", () => {

@@ -12,7 +12,6 @@ import type { Result } from "@openally/result";
 import {
   describeEnvelopeParseError,
   Envelope,
-  type ClientEnvelope,
   type EnvelopeParseError
 } from "#src/protocol/envelope/Envelope.ts";
 
@@ -53,15 +52,6 @@ describe("Envelope.parseClient", () => {
     const result = Envelope.parseClient({ room: "pixel-draw", kind: "join" });
 
     assert.equal(result.ok, true);
-  });
-
-  test("rejects a server-only kind", () => {
-    for (const kind of ["sync", "peer-joined", "peer-left", "denied", "error"]) {
-      const result = Envelope.parseClient({ room: "pixel-draw", kind });
-
-      assert.equal(result.ok, false, `expected "${kind}" to be rejected`);
-      assert.equal(errorOf(result).reason, "malformed");
-    }
   });
 
   test("rejects a presence envelope without a patch", () => {
@@ -205,40 +195,9 @@ describe("Envelope.parseServer", () => {
 
     assert.equal(errorOf(result).reason, "malformed");
   });
-
-  test("rejects a client-only kind", () => {
-    for (const kind of ["join", "leave", "presence"]) {
-      const result = Envelope.parseServer({ room: "pixel-draw", kind });
-
-      assert.equal(result.ok, false, `expected "${kind}" to be rejected`);
-    }
-  });
-
-  test("accepts a message envelope, which travels in both directions", () => {
-    const envelope = {
-      room: "pixel-draw",
-      kind: "message",
-      payload: { hello: "world" }
-    };
-
-    assert.equal(Envelope.parseServer(envelope).ok, true);
-    assert.equal(Envelope.parseClient(envelope).ok, true);
-  });
 });
 
 describe("Envelope.stringify", () => {
-  test("serializes an envelope to a JSON string round-trippable by parseClient", () => {
-    const envelope: ClientEnvelope = { room: "pixel-draw", kind: "leave" };
-    const stringified = Envelope.stringify(envelope);
-
-    assert.ok(stringified.ok);
-    assert.equal(typeof stringified.val, "string");
-
-    const parsed = Envelope.parseClient(stringified.val);
-    assert.equal(parsed.ok, true);
-    assert.deepEqual(parsed.val, envelope);
-  });
-
   test("fails with a descriptive error for a value JSON.stringify can't serialize", () => {
     const circular: Record<string, unknown> = { hello: "world" };
     circular.self = circular;

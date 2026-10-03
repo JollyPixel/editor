@@ -13,7 +13,7 @@ import {
   type PeerIdentity
 } from "#src/index.ts";
 import { LoopbackTransport } from "#src/transport/loopback.ts";
-import { RecordingExtension } from "../helpers/RecordingExtension.ts";
+import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 
 function createLoopback(): {

@@ -12,7 +12,7 @@ import {
   CATCH_UP_EVENT,
   SNAPSHOT_EVENT
 } from "#src/protocol/constants.ts";
-import { actionCommandProtocol } from "../helpers/protocols.ts";
+import { actionCommandProtocol } from "../helpers/protocol/protocols.ts";
 
 describe("serverMessageProtocol", () => {
   test("names a snapshot with the reserved event and a command or correction with its action", () => {

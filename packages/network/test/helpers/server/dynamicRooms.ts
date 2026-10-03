@@ -7,7 +7,7 @@ import {
   type MessageProtocols,
   type RoomResolution
 } from "#src/index.ts";
-import { OPAQUE_PROTOCOLS } from "./protocols.ts";
+import { OPAQUE_PROTOCOLS } from "../protocol/protocols.ts";
 
 export class AssetExtension extends Extension {
   readonly id: string;

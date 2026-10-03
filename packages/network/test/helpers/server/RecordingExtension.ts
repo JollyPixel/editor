@@ -6,7 +6,7 @@ import {
   type RoomContext,
   type RoomPeer
 } from "#src/index.ts";
-import { OPAQUE_PROTOCOLS } from "./protocols.ts";
+import { OPAQUE_PROTOCOLS } from "../protocol/protocols.ts";
 
 export interface RecordedMessage {
   clientId: string;

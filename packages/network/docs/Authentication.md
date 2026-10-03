@@ -77,6 +77,7 @@ new PasswordAuthentication({
 | the right password | `role` | `role` |
 | nothing | `defaultRole` | refused |
 | a wrong password | refused | refused |
+| a credential that is not base64url UTF-8 | refused | refused |
 
 Passwords are processed with Node.js `scrypt` and a random salt. Derived keys are
 compared with `timingSafeEqual`, so the password itself is never retained for
@@ -106,6 +107,8 @@ const client = new Client({
 ```
 
 `credential` is an opaque string. It is the password for `PasswordAuthentication` and would be the token for a future JWT provider; the client knows neither.
+
+A provider reads it back with `readCredential(request)`. It returns `null` when the client offered no credential and throws `InvalidCredentialError` when the token is not base64url-encoded UTF-8.
 
 ## Rejection
 

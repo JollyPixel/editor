@@ -5,25 +5,38 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import fc from "fast-check";
+
 // Import Internal Dependencies
+import { Choices } from "./Choices.ts";
 import {
-  divergentSeeds,
   simulate,
   type SimulationOptions
 } from "./Simulation.ts";
 
 // CONSTANTS
-const kSeeds = 1_000;
+const kRuns = 1_000;
+const kMaxChoice = 255;
+const kChoices = fc.array(fc.nat({ max: kMaxChoice }), {
+  maxLength: 1_000,
+  size: "max"
+});
 
 function assertConverges(
-  options: Omit<SimulationOptions, "seed">
+  options: Omit<SimulationOptions, "choices">
 ): void {
-  const failures = divergentSeeds(options, kSeeds);
-  if (failures.length > 0) {
-    assert.fail(
-      `${failures.length}/${kSeeds} seeds diverge, first: ${failures.slice(0, 10).join(", ")}`
-    );
-  }
+  fc.assert(
+    fc.property(kChoices, (stream) => {
+      const { server, views } = simulate({
+        ...options,
+        choices: new Choices(stream)
+      });
+
+      assert.deepStrictEqual(views, views.map(() => server));
+    }),
+    { numRuns: kRuns }
+  );
 }
 
 describe("CommandSync convergence", () => {
@@ -53,12 +66,5 @@ describe("CommandSync convergence", () => {
 
   test("mixed commands converge when conflicts compare timestamps", () => {
     assertConverges({ scenario: "mixed", versioned: false });
-  });
-
-  test("a run is deterministic for its seed", () => {
-    assert.deepStrictEqual(
-      simulate({ seed: 7, scenario: "mixed" }),
-      simulate({ seed: 7, scenario: "mixed" })
-    );
   });
 });

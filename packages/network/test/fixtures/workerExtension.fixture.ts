@@ -5,7 +5,7 @@ import {
   type RoomContext,
   type RoomPeer
 } from "#src/index.ts";
-import { OPAQUE_PROTOCOLS } from "../helpers/protocols.ts";
+import { OPAQUE_PROTOCOLS } from "../helpers/protocol/protocols.ts";
 
 export interface FixtureWorkerData {
   greeting?: string;

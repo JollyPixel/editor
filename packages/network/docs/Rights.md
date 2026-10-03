@@ -43,7 +43,7 @@ Keys are `${extension.name}.${event}`.
 
 - `extension.name` is the extension's *type*, not a room `id` — one rule covers every room backed by the same extension class.
 - `event` is a domain event name, or one of the reserved `$join` / `$presence` / `$message` / `$snapshot`.
-- `*` matches anything, including `.`; every other character is literal.
+- `*` matches any run of characters, including `.` and `/`; every other character is literal, and matching is case-sensitive.
 - First matching pattern wins, in declaration order — put exceptions before catch-alls.
 
 Domain event names come from the extension's [message protocols](./Extension.md#message-protocols): each schema variant names one event, and `protocol.events` lists them. An event name that appears in no variant can never match a message, so a rule mentioning it is dead.

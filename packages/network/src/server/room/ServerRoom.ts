@@ -337,7 +337,10 @@ export class ServerRoom {
       return;
     }
 
-    Object.assign(record.presence, patch);
+    record.presence = {
+      ...record.presence,
+      ...patch
+    };
     this.#members.send({
       room: this.id,
       kind: "peer-presence",
