@@ -19,13 +19,18 @@ const kAppearanceSchema = z.object({
   theme: z.enum(THEME_MODES),
   density: z.enum(DENSITIES)
 });
+const kLaunchPortsSchema = z.object({
+  catalog: z.instanceof(MessagePort).optional(),
+  console: z.instanceof(MessagePort).optional()
+});
 const kReadyMessageSchema = z.object({
   type: z.literal(READY_MESSAGE_TYPE)
 });
 const kLaunchMessageSchema = z.object({
   type: z.literal(LAUNCH_MESSAGE_TYPE),
   target: z.string(),
-  appearance: kAppearanceSchema.optional().catch(undefined)
+  appearance: kAppearanceSchema.optional().catch(undefined),
+  ports: kLaunchPortsSchema.catch({})
 });
 const kShellCommandSchema = z.discriminatedUnion("command", [
   z.object({
@@ -51,6 +56,12 @@ export interface LaunchMessage {
   type: typeof LAUNCH_MESSAGE_TYPE;
   target: string;
   appearance?: Appearance;
+  ports: LaunchPorts;
+}
+
+export interface LaunchPorts {
+  catalog?: MessagePort;
+  console?: MessagePort;
 }
 
 export interface ShellOpenAssetCommand {
@@ -91,12 +102,17 @@ export interface ShellChannelOptions {
    * @default null
    */
   catalog?: ShellCatalog | null;
+  /**
+   * @default null
+   */
+  console?: MessagePort | null;
 }
 
 export class ShellChannel {
   readonly origin: string;
   readonly appearance: Appearance | null;
   readonly catalog: ShellCatalog | null;
+  readonly console: MessagePort | null;
 
   #port: ShellPort;
 
@@ -107,6 +123,7 @@ export class ShellChannel {
     this.origin = options.origin;
     this.appearance = options.appearance ?? null;
     this.catalog = options.catalog ?? null;
+    this.console = options.console ?? null;
   }
 
   openAsset(
@@ -150,12 +167,14 @@ export class ShellChannel {
 
 export function launchMessage(
   target: string,
-  appearance: Appearance
+  appearance: Appearance,
+  ports: LaunchPorts = {}
 ): LaunchMessage {
   return {
     type: LAUNCH_MESSAGE_TYPE,
     target,
-    appearance
+    appearance,
+    ports
   };
 }
 

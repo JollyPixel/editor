@@ -9,9 +9,10 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  CatalogShare,
-  EditorConsole
+import {
+  FrameConsoles,
+  type CatalogShare,
+  type EditorConsole
 } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
@@ -90,7 +91,10 @@ export class Studio extends LitElement {
       },
       frames: {
         container: this._frames,
-        share: options.share
+        share: options.share,
+        consoles: options.console === undefined ?
+          undefined :
+          new FrameConsoles({ commands: options.console.commands })
       },
       onTabsChange: this.#syncOpenTabs,
       onToggleConsole: () => {

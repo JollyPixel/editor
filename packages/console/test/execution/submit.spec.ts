@@ -85,6 +85,31 @@ describe("variables", () => {
     ]);
   });
 
+  test("an async setter keeps the echo pending and reads back once it settles", async() => {
+    let name = "a";
+    const write = Promise.withResolvers<false | undefined>();
+    const commands = new CommandConsole();
+    commands.registerVariable("name", {
+      type: "string",
+      description: "",
+      get: () => name,
+      set: (value) => write.promise.then((result) => {
+        name = value;
+
+        return result;
+      })
+    });
+
+    const submitted = commands.submit("name b");
+    await Promise.resolve();
+    assert.equal(commands.scrollback[0].pending, true);
+    write.resolve(undefined);
+    await submitted;
+
+    assert.equal(commands.scrollback[0].pending, false);
+    assert.deepEqual(lines(commands), ["echo: name b", "info: b"]);
+  });
+
   test("a value with spaces must be quoted", async() => {
     const values: string[] = [];
     const commands = new CommandConsole();

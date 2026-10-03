@@ -11,6 +11,7 @@ import { setImmediate } from "node:timers/promises";
 import {
   APPEARANCE_MESSAGE_TYPE,
   LAUNCH_MESSAGE_TYPE,
+  parseLaunchMessage,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE,
   type ShellCommand
@@ -105,16 +106,24 @@ describe("EditorFrames", () => {
     postFrom(window, { type: READY_MESSAGE_TYPE });
     postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
 
-    assert.deepEqual(posted, [
+    assert.deepEqual(
+      posted.map(([message, origin]) => {
+        const { ports, ...launch } = parseLaunchMessage(message)!;
+
+        return [launch, Object.keys(ports), origin];
+      }),
       [
-        {
-          type: LAUNCH_MESSAGE_TYPE,
-          target: "map-1",
-          appearance: { theme: "dark", density: "comfortable" }
-        },
-        kOrigin
+        [
+          {
+            type: LAUNCH_MESSAGE_TYPE,
+            target: "map-1",
+            appearance: { theme: "dark", density: "comfortable" }
+          },
+          ["catalog"],
+          kOrigin
+        ]
       ]
-    ]);
+    );
   });
 
   test("sends a catalog port with each launch and stops the previous one", () => {
@@ -145,6 +154,48 @@ describe("EditorFrames", () => {
 
     frames.remove(kMap.id);
     assert.deepEqual(stopped, served);
+  });
+
+  test("connects a console port with each launch and focuses the shown frame", () => {
+    const calls: string[] = [];
+    const frames = editorFrames({
+      consoles: {
+        connect: (id) => {
+          calls.push(`connect ${id}`);
+
+          return () => calls.push(`disconnect ${id}`);
+        },
+        focus: (id) => calls.push(`focus ${id}`)
+      }
+    });
+    frames.show(kMap);
+    const launches: Array<[unknown, unknown[]]> = [];
+    Object.assign(frame().contentWindow!, {
+      postMessage: (message: unknown, _origin: string, transfer: unknown[]) => {
+        launches.push([message, transfer]);
+      }
+    });
+
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    frames.show(null);
+    frames.remove(kMap.id);
+
+    assert.deepEqual(calls, [
+      "focus map-1",
+      "connect map-1",
+      "disconnect map-1",
+      "connect map-1",
+      "focus null",
+      "disconnect map-1"
+    ]);
+    for (const [message, transferred] of launches) {
+      const ports = parseLaunchMessage(message)?.ports;
+      assert.ok(ports?.catalog instanceof MessagePort);
+      assert.ok(ports.console instanceof MessagePort);
+      assert.deepEqual(transferred, [ports.catalog, ports.console]);
+    }
+    assert.strictEqual(launches.length, 2);
   });
 
   test("posts the page appearance to loaded frames when it changes", async() => {

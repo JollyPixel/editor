@@ -11,6 +11,7 @@ import {
   editorFrames,
   expectEditorReady,
   homeTab,
+  MAP,
   MODEL,
   openFromHome,
   openShell,
@@ -120,4 +121,28 @@ test("an editor frame opens the shell console, which themes every frame", async(
   const model = page.locator("#editor-frames iframe[src*='voxel-model']").contentFrame();
   await expect(model.locator("jolly-scope").first())
     .toHaveAttribute("theme", "light", { timeout: 30_000 });
+});
+
+test("the shell console reaches the commands of the active editor only", async({ page }) => {
+  test.slow();
+  await openShell(page);
+  await treeRow(page, MAP).dblclick();
+  await expectEditorReady(editorFrames(page).contentFrame());
+  const prompt = page.getByRole("combobox", { name: "Command" });
+  const lastEntry = page.getByRole("log").locator(".entry").last();
+
+  await page.keyboard.press("Control+k");
+  await prompt.fill("brush.size 3");
+  await prompt.press("Enter");
+  await expect(lastEntry).toHaveText("3");
+  await prompt.fill("/help brush");
+  await prompt.press("Enter");
+  await expect(lastEntry).toContainText("brush.axis");
+  await page.keyboard.press("Escape");
+
+  await homeTab(page).click();
+  await page.keyboard.press("Control+k");
+  await prompt.fill("/help brush");
+  await prompt.press("Enter");
+  await expect(lastEntry).toContainText("Nothing is registered as \"brush\"");
 });

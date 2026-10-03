@@ -8,6 +8,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { CommandConsole } from "@jolly-pixel/console";
+import {
+  MemoryStorageAdapter,
+  type StorageAdapter
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -28,8 +32,10 @@ function scopes(
   });
 }
 
-function commands(): CommandConsole {
-  mounted = mountConsole();
+function commands(
+  storage: StorageAdapter = new MemoryStorageAdapter()
+): CommandConsole {
+  mounted = mountConsole({ storage });
 
   return mounted.commands;
 }
@@ -133,5 +139,50 @@ describe("density variable", () => {
       lastLine(page),
       "error: This page has no jolly-scope"
     );
+  });
+});
+
+describe("appearance persistence", () => {
+  test("a write is restored by the next console on the storage", async() => {
+    const storage = new MemoryStorageAdapter();
+    scopes(1);
+    const page = commands(storage);
+    await page.submit("theme light");
+    await page.submit("density compact");
+    mounted?.dispose();
+    document.body.replaceChildren();
+
+    const [scope] = scopes(1);
+    scope.setAttribute("theme", "dark");
+    scope.setAttribute("density", "comfortable");
+    commands(storage);
+
+    assert.equal(storage.get("jolly-pixel:theme"), "light");
+    assert.equal(storage.get("jolly-pixel:density"), "compact");
+    assert.equal(scope.getAttribute("theme"), "light");
+    assert.equal(scope.getAttribute("density"), "compact");
+  });
+
+  test("an invalid stored value keeps the page appearance", () => {
+    const storage = new MemoryStorageAdapter();
+    storage.set("jolly-pixel:theme", "neon");
+    storage.set("jolly-pixel:density", "compact");
+    const [scope] = scopes(1);
+    scope.setAttribute("theme", "dark");
+    scope.setAttribute("density", "comfortable");
+
+    commands(storage);
+
+    assert.equal(scope.getAttribute("theme"), "dark");
+    assert.equal(scope.getAttribute("density"), "compact");
+  });
+
+  test("a rejected write stores nothing", async() => {
+    const storage = new MemoryStorageAdapter();
+    const page = commands(storage);
+
+    await page.submit("theme dark");
+
+    assert.equal(storage.get("jolly-pixel:theme"), null);
   });
 });

@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   CommandConsole,
+  ConsoleServer,
   isToggleShortcut
 } from "@jolly-pixel/console";
 
@@ -13,6 +14,9 @@ export function forwardConsole(
   shell: ShellChannel
 ): PageConsole {
   const commands = new CommandConsole();
+  const server = shell.console === null ?
+    null :
+    new ConsoleServer(commands, shell.console);
   const page = new PageAppearance();
   if (shell.appearance !== null) {
     page.apply(shell.appearance);
@@ -32,6 +36,7 @@ export function forwardConsole(
     commands,
     dispose() {
       listening.abort();
+      server?.close();
       commands.unregister();
     }
   };

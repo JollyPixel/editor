@@ -19,8 +19,8 @@ variables an editor page registers. An editor page launched by the shell (a laun
 A page opened directly, or framed by something else, keeps its own console as before.
 
 The editor still receives a `CommandConsole` as `context.commands` and registers its features on
-it, so editors do not branch on where they run. Those namespaces are unreachable inside the
-studio for now.
+it, so editors do not branch on where they run. The studio console shows the namespaces of the
+active editor ([ADR-0019](./0019-the-active-editor-namespaces-join-the-studio-console.md)).
 
 ## Considered Options
 
@@ -30,7 +30,8 @@ studio for now.
   but the shell talks to frames through `postMessage` only
   ([ADR-0002](./0002-the-shell-consumes-data-only.md)), which keeps cross-origin editors possible.
 - **Bridging editor commands into the shell console.** Needs a request and response channel for
-  suggestions and output. Deferred until an editor command is missed in the studio.
+  suggestions and output. Deferred at first, then built in
+  [ADR-0019](./0019-the-active-editor-namespaces-join-the-studio-console.md).
 
 ## Consequences
 
@@ -40,3 +41,5 @@ studio for now.
   "never replies" holds for commands only.
 - An appearance change made by anything other than the console, such as a future settings pane,
   reaches the frames the same way, because the shell watches the scope attributes.
+- The shell's `theme` and `density` are stored in `localStorage` by `mountConsole` and restored
+  before the first frame launches, so frames boot on the restored values. Frames store nothing.

@@ -247,28 +247,45 @@ describe("HostMessageLaunchSource", () => {
     ]);
   });
 
-  test("gives the shell channel the catalog port sent with the launch", async(context) => {
+  test("gives the shell channel the ports the launch carries", async(context) => {
     const parent = fakeParent();
     context.after(frameIn(parent));
-    const channel = new MessageChannel();
-    context.after(() => channel.port1.close());
-    const catalogs: unknown[] = [];
+    const catalog = new MessageChannel();
+    const consolePorts = new MessageChannel();
+    context.after(() => {
+      catalog.port1.close();
+      consolePorts.port1.close();
+    });
+    const launches = [
+      { catalog: catalog.port2 },
+      { catalog: catalog.port2, console: consolePorts.port2 },
+      { console: consolePorts.port2 },
+      undefined
+    ];
+    const received: Array<[boolean, boolean]> = [];
 
-    for (const ports of [[channel.port2], []]) {
+    for (const ports of launches) {
       const pending = new HostMessageLaunchSource({
         origins: [kStudioOrigin]
       }).read();
       window.dispatchEvent(new MessageEvent("message", {
         source: parent,
         origin: kStudioOrigin,
-        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" },
-        ports
+        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host", ports }
       }));
-      catalogs.push((await pending)?.shell?.catalog);
+      const shell = (await pending)?.shell;
+      received.push([
+        shell?.catalog instanceof ShellCatalog,
+        shell?.console === consolePorts.port2
+      ]);
     }
 
-    assert.ok(catalogs[0] instanceof ShellCatalog);
-    assert.strictEqual(catalogs[1], null);
+    assert.deepEqual(received, [
+      [true, false],
+      [true, true],
+      [false, true],
+      [false, false]
+    ]);
   });
 
   test("gives the shell channel a valid launch appearance only", async(context) => {

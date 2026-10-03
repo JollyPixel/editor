@@ -6,6 +6,12 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  CommandConsole,
+  ConsoleMirror
+} from "@jolly-pixel/console";
+
 // Import Internal Dependencies
 import type { Appearance } from "#src/appearance/PageAppearance.ts";
 import { forwardConsole } from "#src/console/forwardConsole.ts";
@@ -25,7 +31,8 @@ interface FakeShell {
 }
 
 function fakeShell(
-  appearance: Appearance | null = null
+  appearance: Appearance | null = null,
+  consolePort: MessagePort | null = null
 ): FakeShell {
   const posted: unknown[] = [];
   const port = Object.assign(new MessageChannel().port1, {
@@ -38,7 +45,8 @@ function fakeShell(
     shell: new ShellChannel({
       port,
       origin: kShellOrigin,
-      appearance
+      appearance,
+      console: consolePort
     }),
     posted,
     push: (pushed) => {
@@ -125,6 +133,34 @@ describe("forwardConsole", () => {
     assert.equal(element.getAttribute("theme"), "light");
     assert.equal(element.getAttribute("density"), "default");
     page.dispose();
+  });
+
+  test("serves the editor's namespaces on the launch console port", async(context) => {
+    const channel = new MessageChannel();
+    const page = forwardConsole(fakeShell(null, channel.port1).shell);
+    const shellConsole = new CommandConsole();
+    const mirror = new ConsoleMirror(channel.port2, shellConsole);
+    const mirrored = Promise.withResolvers<void>();
+    const stop = shellConsole.subscribe("registry-changed", mirrored.resolve);
+    context.after(() => {
+      stop();
+      mirror.close();
+      page.dispose();
+    });
+
+    mirror.active = true;
+    page.commands.registerNamespace("brush").registerVariable("size", {
+      type: "number",
+      description: "Brush size",
+      get: () => 3,
+      set: () => undefined
+    });
+    await mirrored.promise;
+
+    assert.equal(
+      shellConsole.registry.resolveVariable("brush.size")?.def.get(),
+      3
+    );
   });
 
   test("dispose stops forwarding and following", () => {

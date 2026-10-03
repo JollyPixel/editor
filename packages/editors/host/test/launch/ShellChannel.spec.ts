@@ -63,15 +63,17 @@ describe("ShellChannel message guards", () => {
     assert.equal(isReadyMessage(null), false);
   });
 
-  test("parses a launch and drops an invalid appearance", () => {
+  test("parses a launch and drops an invalid appearance or ports", () => {
     assert.deepEqual(parseLaunchMessage({
       type: LAUNCH_MESSAGE_TYPE,
       target: "x",
-      appearance: { theme: "pink", density: "compact" }
+      appearance: { theme: "pink", density: "compact" },
+      ports: { catalog: "not a port" }
     }), {
       type: LAUNCH_MESSAGE_TYPE,
       target: "x",
-      appearance: undefined
+      appearance: undefined,
+      ports: {}
     });
     assert.equal(parseLaunchMessage({ type: LAUNCH_MESSAGE_TYPE }), undefined);
     assert.equal(parseLaunchMessage({ target: "x" }), undefined);

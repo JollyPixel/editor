@@ -146,6 +146,7 @@ export class ConsoleElement extends LitElement {
     this._log?.followLatest();
     this.#refresh();
     this._input?.focus();
+    this.console.emit("opened");
   }
 
   hide(): void {

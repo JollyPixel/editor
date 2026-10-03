@@ -24,3 +24,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0016](./0016-the-project-file-lists-editors-and-kinds.md) | The project file lists editors and kinds |
 | [0017](./0017-project-packages-are-trusted-code.md) | Project packages are trusted code |
 | [0018](./0018-frames-read-the-catalog-through-the-shell.md) | Frames read the catalog through the shell |
+| [0019](./0019-the-active-editor-namespaces-join-the-studio-console.md) | The active editor's namespaces join the studio console |

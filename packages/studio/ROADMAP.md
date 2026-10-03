@@ -52,8 +52,3 @@ planned in [PERFORMANCE.md](./PERFORMANCE.md).
   but no editor calls `context.shell` since the voxel-map Paint action was
   dropped. Title and dirty state are the expected next commands; add them
   when an editor needs the shell to show either.
-- **Editor commands in the studio console.** A framed editor still registers
-  its namespaces (`brush`, `keybind`) on `context.commands`, but only the
-  shell's console shows, so they are out of reach inside the studio. Reaching
-  them needs a request and response channel, such as a port in the launch
-  like the catalog's ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).

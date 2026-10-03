@@ -113,16 +113,24 @@ the launch:
   `jolly-console` element to `document.body`, and Ctrl+K opens it.
 - With a shell channel, the shell's console takes precedence. The page mounts
   no element, Ctrl+K posts the `toggle-console` command to the shell, and the
-  page follows the shell's [appearance](#appearance). The editor's
-  registrations still land on `context.commands`, but nothing displays them.
+  page follows the shell's [appearance](#appearance). When the launch carries a
+  [console port](#shell-console), the page serves the namespaces registered on
+  `context.commands` there, and the shell shows them while the frame is its
+  active editor. Without one, nothing displays them.
 
-`mountConsole` registers two root variables, neither persisted:
+`mountConsole` registers two root variables:
 
 - `theme`, an enum of `light`, `dark` and `auto`. A write sets the `theme`
   attribute of every `jolly-scope` on the page, and `auto` removes it so the
   scopes follow the system.
 - `density`, an enum of `compact`, `default` and `comfortable`. A write sets
   the `density` attribute of every `jolly-scope` on the page.
+
+A successful write is stored under `jolly-pixel:theme` or
+`jolly-pixel:density`. `mountConsole` applies the stored values to every
+`jolly-scope` before it registers the variables, so they survive a reload.
+An invalid or missing value leaves the page's own attribute. A page with a
+shell channel stores nothing and follows the shell.
 
 When a boot step fails, the element is removed and every registration is
 dropped, so the retry of the [offline fallback](#offline-fallback) mounts a
@@ -133,7 +141,12 @@ A page that boots without `mountStandalone`, such as the studio shell, mounts
 the same console itself:
 
 ```ts
-function mountConsole(parent?: HTMLElement): EditorConsole;
+function mountConsole(options?: MountConsoleOptions): EditorConsole;
+
+interface MountConsoleOptions {
+  parent?: HTMLElement;
+  storage?: StorageAdapter;
+}
 
 interface EditorConsole {
   readonly commands: CommandConsole;
@@ -142,8 +155,9 @@ interface EditorConsole {
 }
 ```
 
-`parent` defaults to `document.body`. `dispose()` removes the element and
-every registration.
+`parent` defaults to `document.body`. `storage` is a `StorageAdapter` from
+`@jolly-pixel/ui`, a `LocalStorageAdapter` by default. `dispose()` removes the
+element and every registration.
 
 An editor registers its namespaces as a list of
 [console features](../../../console/docs/features.md) and unregisters them in
@@ -438,6 +452,7 @@ class ShellChannel {
   readonly origin: string;
   readonly appearance: Appearance | null;
   readonly catalog: ShellCatalog | null;
+  readonly console: MessagePort | null;
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
   onAppearance(
@@ -454,16 +469,18 @@ class ShellChannel {
 
 A shell that listens on its own window narrows what a frame posts with
 `isReadyMessage(data)` and `isShellCommand(data)`, and answers with
-`launchMessage(target, appearance)`. `parseLaunchMessage(data)` is the frame's
-side: it returns the launch message, without an invalid `appearance`, or
-`undefined`. `READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE`
-and `APPEARANCE_MESSAGE_TYPE` name the four messages.
+`launchMessage(target, appearance, ports?)`. `parseLaunchMessage(data)` is the
+frame's side: it returns the launch message, without an invalid `appearance`
+and with `ports` reset to `{}` when they are not ports, or `undefined`.
+`READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE` and
+`APPEARANCE_MESSAGE_TYPE` name the four messages.
 
 ### Shell catalog
 
-A shell can transfer a `MessagePort` with `jolly-launch`. The channel then has
-a `ShellCatalog` as `catalog`, and the session opens its `CatalogClient` there
-instead of joining the catalog room on its own client. `ShellCatalog` is a
+A shell can send a `MessagePort` as `ports.catalog` of `jolly-launch`, listed
+in the transfer list too. The channel then has a `ShellCatalog` as `catalog`,
+and the session opens its `CatalogClient` there instead of joining the
+catalog room on its own client. `ShellCatalog` is a
 `CatalogRoomSource`, so `CatalogClient.connect(catalog, options?)` opens one;
 each gets its own port, sent with `{ type: "jolly-catalog-open" }` on the
 launch port. Without a port, `catalog` is `null` and the session opens its
@@ -479,7 +496,7 @@ const share = await CatalogShare.open(client, { timeoutMs: 5_000 });
 const channel = new MessageChannel();
 const stop = share.serve(channel.port1);
 frame.contentWindow.postMessage(
-  launchMessage(target, appearance),
+  launchMessage(target, appearance, { catalog: channel.port2 }),
   origin,
   [channel.port2]
 );
@@ -491,6 +508,53 @@ to the port that sent it. `stop()` closes the launch port and every port
 opened through it; `share.dispose()` stops relaying for every frame and
 disposes `share.catalog`.
 
+### Shell console
+
+A shell can also send a port as `ports.console`. The channel exposes it as
+`console`, `null` without one, and the page serves its `CommandConsole` on
+it with a [`ConsoleServer`](../../../console/docs/remote.md). Only the
+namespaces cross; root registrations stay on the page.
+
+Both ports travel in the message itself, so each keeps its name:
+
+```ts
+const catalog = new MessageChannel();
+const consolePorts = new MessageChannel();
+const stopCatalog = share.serve(catalog.port1);
+const stopConsole = consoles.connect(frameId, consolePorts.port1);
+const ports: LaunchPorts = {
+  catalog: catalog.port2,
+  console: consolePorts.port2
+};
+frame.contentWindow.postMessage(
+  launchMessage(target, appearance, ports),
+  origin,
+  [catalog.port2, consolePorts.port2]
+);
+```
+
+`FrameConsoles` is the shell's side. It mirrors each frame's console on the
+shell console with a `ConsoleMirror`, and only the focused frame's is active:
+
+```ts
+class FrameConsoles {
+  constructor(options: {
+    commands: CommandConsole;
+    logger?: HostLogger;
+  });
+  connect(id: string, port: MessagePort): () => void;
+  focus(id: string | null): void;
+}
+```
+
+`focus(id)` removes the previous frame's namespaces and shows those of `id`,
+as soon as it connects if it has not yet; `null` shows none.
+`connect` replaces the port of an id already connected, which is how a
+reloaded frame takes over, and the returned function closes the mirror. A
+frame namespace whose name the shell console already uses stays hidden, and
+`logger` (default `readDebugLogger()`, namespace `host.console`) warns
+`editor namespace hidden by the shell` with the frame id and the namespace.
+
 A launch read from the query string or the injected element has no channel,
 so `context.shell` is `null` and an editor hides what only a shell can do.
 
@@ -501,12 +565,17 @@ A shell keeps its frames on its own theme and density. It adds
 `launchMessage` and `appearanceMessage(appearance)`:
 
 ```ts
-{ type: "jolly-launch", target: string, appearance?: Appearance }
+{ type: "jolly-launch", target: string, appearance?: Appearance, ports: LaunchPorts }
 { type: "jolly-appearance", appearance: Appearance }
 
 interface Appearance {
   theme: ThemeMode;
   density: Density;
+}
+
+interface LaunchPorts {
+  catalog?: MessagePort;
+  console?: MessagePort;
 }
 ```
 

@@ -3,7 +3,9 @@ import { CommandConsole } from "@jolly-pixel/console";
 import "@jolly-pixel/console/element";
 import {
   DENSITIES,
-  THEME_MODES
+  LocalStorageAdapter,
+  THEME_MODES,
+  type StorageAdapter
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -11,6 +13,7 @@ import {
   PageAppearance,
   type Appearance
 } from "../appearance/PageAppearance.ts";
+import { StoredAppearance } from "../appearance/StoredAppearance.ts";
 
 export interface PageConsole {
   readonly commands: CommandConsole;
@@ -22,14 +25,33 @@ export interface EditorConsole extends PageConsole {
   readonly element: HTMLElementTagNameMap["jolly-console"];
 }
 
+export interface MountConsoleOptions {
+  /**
+   * @default document.body
+   */
+  parent?: HTMLElement;
+  /**
+   * @default new LocalStorageAdapter()
+   */
+  storage?: StorageAdapter;
+}
+
 export function mountConsole(
-  parent: HTMLElement = document.body
+  options: MountConsoleOptions = {}
 ): EditorConsole {
+  const {
+    parent = document.body,
+    storage = new LocalStorageAdapter()
+  } = options;
+
+  const appearance = new StoredAppearance({
+    page: new PageAppearance(parent.ownerDocument),
+    storage
+  });
+  appearance.restore();
+
   const commands = new CommandConsole();
-  registerAppearanceVariables(
-    commands,
-    new PageAppearance(parent.ownerDocument)
-  );
+  registerAppearanceVariables(commands, appearance);
 
   const element = parent.ownerDocument.createElement(
     "jolly-console"

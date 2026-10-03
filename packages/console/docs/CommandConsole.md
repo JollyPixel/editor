@@ -134,7 +134,9 @@ calls `set`, then prints what `get` returns. Printing the read-back value shows 
 with the input: a store that clamps `brush.size 999` to 16 prints `16`.
 
 `set` rejects a write by returning `false` (printed as `brush.mode rejected "x"`) or by throwing,
-in which case the error's `message` is printed. A variable that should outlive a reload persists
+in which case the error's `message` is printed. It may also return a promise of either result:
+the echo entry stays pending until it settles, then the value is read back as above. `get` is
+always synchronous. A variable that should outlive a reload persists
 itself in its setter; the console writes nothing to storage.
 
 ## Names and overwrites
@@ -224,6 +226,7 @@ as `registry.root`.
 | `scrollback-changed` | an entry is appended or settles, or the scrollback is cleared |
 | `open-requested` | `open()` was called |
 | `close-requested` | `close()` was called, or a `closeOnExecute` command resolved |
+| `opened` | a mounted `jolly-console` showed its dialog |
 
 ```ts
 const stop = commands.subscribe("scrollback-changed", render);

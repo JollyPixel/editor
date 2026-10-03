@@ -87,7 +87,7 @@ export interface StringVariableDef {
   get(): string;
   set(
     value: string
-  ): VariableSetResult;
+  ): VariableSetResult | Promise<VariableSetResult>;
 }
 
 export interface NumberVariableDef {
@@ -96,7 +96,7 @@ export interface NumberVariableDef {
   get(): number;
   set(
     value: number
-  ): VariableSetResult;
+  ): VariableSetResult | Promise<VariableSetResult>;
 }
 
 export interface BooleanVariableDef {
@@ -105,7 +105,7 @@ export interface BooleanVariableDef {
   get(): boolean;
   set(
     value: boolean
-  ): VariableSetResult;
+  ): VariableSetResult | Promise<VariableSetResult>;
 }
 
 export interface EnumVariableDef<
@@ -117,7 +117,7 @@ export interface EnumVariableDef<
   get(): TValue;
   set(
     value: TValue
-  ): VariableSetResult;
+  ): VariableSetResult | Promise<VariableSetResult>;
 }
 
 export type VariableDef<
