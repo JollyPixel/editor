@@ -10,6 +10,7 @@ import {
   MessageParser,
   MessageProtocol
 } from "@jolly-pixel/network";
+import { NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -75,6 +76,34 @@ describe("tilesetCommandProtocol", () => {
     }), true);
   });
 
+  test("accepts normal map commands and a material group normal scale", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "normal-map-toggled",
+      metadata: {
+        config: NormalMapConfig.create().toJSON()
+      }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "normal-map-zone-set",
+      metadata: {
+        zone: { regionId: "block-1", settings: "off" },
+        index: 0
+      }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "stone", normalScale: 2.5 }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "stone", normalScale: -1 }
+    }), false);
+  });
+
   test("rejects a layer command, a bad finish or a bad tile size", () => {
     assert.strictEqual(accepts({
       ...kHeader,
@@ -129,6 +158,13 @@ describe("tilesetSnapshotSchema", () => {
     };
 
     assert.strictEqual(parser.parse(snapshot).ok, true);
+    assert.strictEqual(parser.parse({
+      ...snapshot,
+      pixels: {
+        ...snapshot.pixels,
+        normalMap: NormalMapConfig.create().toJSON()
+      }
+    }).ok, true);
     assert.strictEqual(parser.parse({ ...snapshot, pixels: {} }).ok, false);
     assert.strictEqual(
       parser.parse({ ...snapshot, materialGroups: [{ id: "" }] }).ok,

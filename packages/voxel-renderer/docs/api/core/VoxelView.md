@@ -376,7 +376,15 @@ chunks to be meshed.
 ## Methods
 
 ```ts
-loadTileset(def: TilesetDefinition, texture: TilesetTexture): void;
+interface TilesetLoadOptions {
+  normal?: TilesetNormalTexture;
+}
+
+loadTileset(
+  def: TilesetDefinition,
+  texture: TilesetTexture,
+  options?: TilesetLoadOptions
+): void;
 load(data: VoxelWorldJSON, options?: VoxelViewLoadOptions): void;
 markAllChunksDirty(source?: string): void;
 ```
@@ -389,6 +397,12 @@ it, so a resized source image or tile grid takes effect. An atlas loaded from
 outside the edit stream is local to this client; use
 [`VoxelDocument.addTileset()`](./VoxelDocument.md#methods) to tell peers
 about one.
+
+`options.normal` is a tangent-space normal atlas laid out like `texture`; the
+chunk materials of the tileset then light their faces with it (see
+[normal maps](../../concepts/rendering-and-meshing.md#normal-maps)). Loading
+the tileset again without it removes the relief. Either way the tileset's
+chunk materials are rebuilt.
 
 A tileset removed from the document keeps its voxels, drawn with the
 [missing-tileset texture](../tilesets/TilesetAtlases.md#missing-tileset), a red
@@ -408,8 +422,9 @@ interface VoxelViewLoadOptions {
 ```
 
 Sources whose atlas is already loaded are ignored. The others are declared and
-their textures registered, then the document loads the snapshot and the world
-is meshed. A tileset the snapshot declares without an atlas logs a warning and
+their textures registered, with their `normal` atlas when they carry one, then
+the document loads the snapshot and the world is meshed. A tileset the
+snapshot declares without an atlas logs a warning and
 its faces stay hidden until `loadTileset()` registers it. See
 [`VoxelDocument.load()`](./VoxelDocument.md#methods) for what the snapshot
 replaces.

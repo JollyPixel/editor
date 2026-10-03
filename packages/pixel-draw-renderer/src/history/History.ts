@@ -96,6 +96,25 @@ export class History {
           }
         ];
 
+      case "uv-delete":
+        return entry.normalMapZone ?
+          [
+            {
+              action: "normal-map-zone-set",
+              metadata: entry.normalMapZone,
+              originTimestamp: timestamp
+            }
+          ] :
+          [];
+
+      case "normal-map":
+        return [
+          {
+            ...entry.undo,
+            originTimestamp: timestamp
+          }
+        ];
+
       default:
         return [];
     }
@@ -152,6 +171,14 @@ export class History {
               positions: entry.positions,
               colors: entry.afterColors
             },
+            originTimestamp: timestamp
+          }
+        ];
+
+      case "normal-map":
+        return [
+          {
+            ...entry.redo,
             originTimestamp: timestamp
           }
         ];

@@ -376,6 +376,7 @@ Use `loadTilesets()` before constructing a [`VoxelView`](../core/VoxelView.md).
 interface TilesetSource {
   def: TilesetDefinition;
   texture: THREE.Texture<HTMLImageElement>;
+  normal?: TilesetNormalTexture;
 }
 
 interface TextureSourceLoader {
@@ -400,6 +401,10 @@ definition without `src` is skipped. The
 optional `manager` reports Three.js loading progress; `loader` allows callers
 to supply a compatible texture loader. Pass the result through
 `VoxelViewOptions.tilesets`.
+
+`loadTilesets()` never fills `normal`. Add a
+[normal atlas](../../concepts/rendering-and-meshing.md#normal-maps) to a
+source before handing it to the view.
 
 The [loading and restoring tilesets guide](../../guides/loading-and-restoring-tilesets.md)
 shows initial loading and saved-world restoration.

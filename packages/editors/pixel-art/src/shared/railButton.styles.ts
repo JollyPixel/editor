@@ -40,6 +40,8 @@ export const railButtonStyles = css`
   }
 
   .rail-btn:disabled {
+    --jolly-icon-tone-strength: 0%;
+
     color: var(--color-border);
     cursor: default;
   }

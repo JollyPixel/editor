@@ -6,6 +6,7 @@ import type {
   AtlasSize,
   ResolvedTilesetDefinition,
   TilesetDefinition,
+  TilesetNormalTexture,
   TilesetTexture,
   TilesetUVRegion,
   TileRotation,
@@ -67,18 +68,21 @@ export class TilesetAtlas<
 > {
   readonly def: ResolvedTilesetDefinition;
   readonly texture: TTexture;
+  readonly normal: TilesetNormalTexture | null;
 
   constructor(
     def: TilesetDefinition,
-    texture: TTexture
+    texture: TTexture,
+    normal: TilesetNormalTexture | null = null
   ) {
     this.def = resolveTilesetDefinition(def, texture.image);
     this.texture = texture;
+    this.normal = normal;
 
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.generateMipmaps = false;
+    configureTexture(texture, THREE.SRGBColorSpace);
+    if (normal !== null) {
+      configureTexture(normal, THREE.NoColorSpace);
+    }
   }
 
   uvFor(
@@ -97,4 +101,48 @@ export class TilesetAtlas<
     this.texture.image = image;
     this.texture.needsUpdate = true;
   }
+
+  updateNormal(
+    image: AtlasSize
+  ): void {
+    if (this.normal === null) {
+      throw new Error(
+        `TilesetAtlas: tileset "${this.def.id}" has no normal texture.`
+      );
+    }
+
+    this.normal.image = image;
+    this.normal.needsUpdate = true;
+  }
+
+  disposeReplacedBy(
+    next: TilesetAtlas<TTexture>
+  ): void {
+    const kept = next.#textures();
+    for (const texture of this.#textures()) {
+      if (!kept.includes(texture)) {
+        texture.dispose();
+      }
+    }
+  }
+
+  dispose(): void {
+    for (const texture of this.#textures()) {
+      texture.dispose();
+    }
+  }
+
+  #textures(): THREE.Texture<AtlasSize>[] {
+    return this.normal === null ? [this.texture] : [this.texture, this.normal];
+  }
+}
+
+function configureTexture(
+  texture: THREE.Texture<AtlasSize>,
+  colorSpace: THREE.ColorSpace
+): void {
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.colorSpace = colorSpace;
+  texture.generateMipmaps = false;
 }

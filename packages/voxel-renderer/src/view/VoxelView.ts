@@ -48,6 +48,7 @@ import { VoxelLayerVisibility } from "./VoxelLayerVisibility.ts";
 import type { TilesetSource } from "./atlases/loadTilesets.ts";
 import type {
   TilesetDefinition,
+  TilesetNormalTexture,
   TilesetTexture
 } from "../document/tilesets/types.ts";
 import type { VoxelWorldJSON } from "../document/serialization/types.ts";
@@ -59,6 +60,10 @@ export interface VoxelViewLoadOptions
    * Atlases to register before loading a world that uses them.
    */
   tilesets?: Iterable<TilesetSource>;
+}
+
+export interface TilesetLoadOptions {
+  normal?: TilesetNormalTexture;
 }
 
 export interface VoxelViewOptions {
@@ -324,9 +329,9 @@ export class VoxelView {
       rendering
     );
 
-    for (const { def, texture } of tilesets) {
+    for (const { def, texture, normal } of tilesets) {
       if (!this.atlases.get(def.id)) {
-        this.loadTileset(def, texture);
+        this.loadTileset(def, texture, { normal });
       }
     }
 
@@ -360,10 +365,11 @@ export class VoxelView {
 
   loadTileset(
     def: TilesetDefinition,
-    texture: TilesetTexture
+    texture: TilesetTexture,
+    options: TilesetLoadOptions = {}
   ): void {
     this.document.tilesets.declare(def);
-    this.atlases.registerTexture(def.id, texture);
+    this.atlases.registerTexture(def.id, texture, options.normal);
     this.#logger.debug(
       `Loaded tileset '${def.id}' from '${def.src ?? def.asset?.id}'`
     );
@@ -379,10 +385,10 @@ export class VoxelView {
     const { tilesets = [], mergeLayers } = options;
 
     const declared: TilesetDefinition[] = [];
-    for (const { def, texture } of tilesets) {
+    for (const { def, texture, normal } of tilesets) {
       if (!this.atlases.get(def.id)) {
         this.document.tilesets.declare(def);
-        this.atlases.registerTexture(def.id, texture);
+        this.atlases.registerTexture(def.id, texture, normal);
         declared.push(def);
       }
     }

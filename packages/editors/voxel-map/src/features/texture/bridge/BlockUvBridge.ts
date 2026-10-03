@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type {
   ResolvedBlockDefinition,
+  TilesetSlot,
   VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type {
@@ -9,11 +10,13 @@ import type {
   UVRegion,
   UVRegionData
 } from "@jolly-pixel/pixel-draw.renderer";
+import { BlockProjection } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../../document/index.ts";
 import { BlockUv } from "../uv/BlockUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
+import { SlotRegionIds } from "./SlotRegionIds.ts";
 import type { BrushStore } from "../../../state/index.ts";
 import type { BlockWriter } from "../../tilesets/TilesetBinding.ts";
 
@@ -30,7 +33,7 @@ export class BlockUvBridge {
   readonly #blocks: Pick<BlockWriter, "defineBlock">;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
-  #tilesetId: string | null = null;
+  #regions: SlotRegionIds | null = null;
   #tileSize = 1;
   #rebuilding = false;
   #applying = false;
@@ -48,7 +51,8 @@ export class BlockUvBridge {
     this.#blocks = options.blocks ?? view.document;
     this.#selection = new BlockUvSelectionSync(
       uv,
-      options.brush
+      options.brush,
+      () => this.#regions
     );
     this.#runLocalRestore = options.runLocalRestore ?? ((fn) => fn());
 
@@ -65,13 +69,16 @@ export class BlockUvBridge {
   }
 
   setActiveTileset(
-    tilesetId: string,
+    slot: TilesetSlot,
     tileSize: number
   ): void {
-    if (this.#tilesetId === tilesetId && this.#tileSize === tileSize) {
+    if (
+      this.#regions?.slot.equals(slot) &&
+      this.#tileSize === tileSize
+    ) {
       return;
     }
-    this.#tilesetId = tilesetId;
+    this.#regions = new SlotRegionIds(slot);
     this.#tileSize = tileSize;
     this.#rebuild();
   }
@@ -89,13 +96,14 @@ export class BlockUvBridge {
   }
 
   #blocksOnActiveTileset(): ResolvedBlockDefinition[] {
-    const tilesetId = this.#tilesetId;
-    if (tilesetId === null) {
+    const slot = this.#regions?.slot;
+    if (slot === undefined) {
       return [];
     }
 
     return [...this.#view.document.blocks.getAll()].filter(
-      (block) => this.#uvOf(block).usesTileset(tilesetId)
+      (block) => slot.owns(block.id) &&
+        this.#uvOf(block).layout.usesTileset(slot.id)
     );
   }
 
@@ -128,7 +136,7 @@ export class BlockUvBridge {
       this.#runLocalRestore(() => {
         for (const region of [...this.#uv.regions]) {
           if (
-            BlockUv.blockIdOf(region.id) !== null &&
+            BlockProjection.localBlockIdOf(region.id) !== null &&
             !desired.has(region.id)
           ) {
             this.#uv.delete(region.id);
@@ -168,7 +176,7 @@ export class BlockUvBridge {
       this.#cancelDrag();
     }
 
-    const blockId = BlockUv.blockIdOf(region.id);
+    const blockId = this.#blockIdOf(region.id);
     if (blockId === null) {
       return;
     }
@@ -294,10 +302,16 @@ export class BlockUvBridge {
     return true;
   }
 
+  #blockIdOf(
+    regionId: string
+  ): number | null {
+    return this.#regions?.blockIdOf(regionId) ?? null;
+  }
+
   #blockOf(
     id: string
   ): ResolvedBlockDefinition | undefined {
-    const blockId = BlockUv.blockIdOf(id);
+    const blockId = this.#blockIdOf(id);
     const block = blockId === null ?
       undefined :
       this.#view.document.blocks.get(blockId);
@@ -312,7 +326,7 @@ export class BlockUvBridge {
       return;
     }
 
-    const blockId = BlockUv.blockIdOf(event.region.id);
+    const blockId = this.#blockIdOf(event.region.id);
     if (blockId === null) {
       return;
     }

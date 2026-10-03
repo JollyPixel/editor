@@ -224,6 +224,40 @@ an opaque canvas, because the coverage is written as alpha.
 which `TilesetAtlas.updateImage()` does. `VoxelView.tick()` refreshes every
 atlas through `TilesetAtlases.refreshAverages()`.
 
+## Normal maps
+
+A tileset can be loaded with a tangent-space normal atlas next to its colour
+atlas. The renderer only reads it: generating one is the host's job, whether
+the atlas is painted by hand or derived from the pixels.
+
+```ts
+view.loadTileset(definition, texture, { normal: normalTexture });
+```
+
+The normal atlas has the same layout, size and orientation as the colour
+atlas. Normals use the OpenGL convention: red points right and green points up
+in the image. `TilesetAtlas` samples it like the colour atlas, nearest and
+without mipmaps, but in `NoColorSpace` so the vectors stay linear.
+
+Chunk materials then get a `normalNode`. It samples the normal atlas with the
+same clamped and remapped UV as the colour, so [blend
+groups](../api/materials/BlendGroup.md), tile rotation and the half-texel inset
+stay aligned. The tangent frame comes from the screen derivatives of the view
+position and of the texel coordinate, so rotated, flipped, ramp and diagonal
+faces need no tangent data. Working in texels keeps both axes at the same
+scale in an atlas that is wider than it is tall.
+
+The relief fades to the geometric normal as a pixel starts covering several
+texels, with the weight [distant tiles](#distant-tiles) use for their colour,
+so far terrain does not shimmer. Flat distant faces past
+[`range.farDistance`](#far-distance) have no relief at all.
+
+The strength is the [`normalScale`](../api/materials/MaterialGroup.md) of the
+block's material group, `1` without a group. A group with `normalScale: 0`, or
+a tileset without a normal atlas, gets no `normalNode`. The shadow pass
+ignores the relief. Both the Lambert and the Standard material use it; under
+Standard, a low roughness also adds specular highlights on the relief.
+
 ## Far distance
 
 `range.farDistance`, measured in chunks from `focus` to a chunk centre, trades

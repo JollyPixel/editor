@@ -126,3 +126,41 @@ describe("TilesetAtlas.updateImage", () => {
     assert.ok(texture.version > version);
   });
 });
+
+describe("TilesetAtlas normal texture", () => {
+  it("samples the normal texture as linear nearest data without mipmaps", () => {
+    const normal = readableTexture(64, 64);
+    const atlas = new TilesetAtlas(kDefinition, mockTexture(), normal);
+
+    assert.equal(atlas.normal, normal);
+    assert.equal(normal.colorSpace, THREE.NoColorSpace);
+    assert.equal(normal.magFilter, THREE.NearestFilter);
+    assert.equal(normal.minFilter, THREE.NearestFilter);
+    assert.equal(normal.generateMipmaps, false);
+  });
+
+  it("has none by default", () => {
+    assert.equal(new TilesetAtlas(kDefinition, mockTexture()).normal, null);
+  });
+
+  it("replaces the normal image and flags it for re-upload", () => {
+    const normal = readableTexture(64, 64);
+    const atlas = new TilesetAtlas(kDefinition, mockTexture(), normal);
+    const version = normal.version;
+
+    const next = { width: 64, height: 64 };
+    atlas.updateNormal(next);
+
+    assert.equal(normal.image, next);
+    assert.ok(normal.version > version);
+  });
+
+  it("refuses a normal image update without a normal texture", () => {
+    const atlas = new TilesetAtlas(kDefinition, mockTexture());
+
+    assert.throws(
+      () => atlas.updateNormal({ width: 64, height: 64 }),
+      /tileset "default" has no normal texture/
+    );
+  });
+});

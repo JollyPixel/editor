@@ -2,6 +2,7 @@
 import { resolveColor } from "../utils/colors.ts";
 import { RectArea } from "../utils/RectArea.ts";
 import { UVRegionCollection } from "../uv/region/UVRegionCollection.ts";
+import type { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 import type {
   ByteColorInput,
   RGBA8,
@@ -123,6 +124,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   #working: Uint8ClampedArray;
 
   readonly uvRegions = new UVRegionCollection();
+  normalMap: NormalMapConfig | null = null;
 
   constructor(
     options: PixelBufferOptions
@@ -210,10 +212,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return this.#maxSize;
   }
 
-  /**
-   * Whether `resize` and `replacePixels` would accept the size, that is
-   * positive integers no greater than `maxSize`. Both throw otherwise.
-   */
   acceptsSize(
     size: Vec2
   ): boolean {
@@ -378,9 +376,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     ];
   }
 
-  /**
-   * Returns transparent pixels for out-of-bounds positions.
-   */
   samplePixels(
     positions: Vec2[]
   ): RGBA8[] {
@@ -409,10 +404,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return colors;
   }
 
-  /**
-   * Whether any pixel in `rect` isn't fully opaque. Out-of-bounds cells
-   * count as transparent, same as samplePixel(s).
-   */
   hasTransparency(
     rect: SelectionRect
   ): boolean {

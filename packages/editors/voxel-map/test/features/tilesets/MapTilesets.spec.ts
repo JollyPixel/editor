@@ -64,6 +64,10 @@ function makePixels(
       size: () => {
         return { x: 64, y: 64 };
       },
+      normalMap: null,
+      normals: new Emitter(),
+      useIslandFaces: () => () => undefined,
+      invalidateIslands: () => undefined,
       hasTransparency: transparent
     }
   );

@@ -2,11 +2,15 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { TilesetDefinition } from "../../document/tilesets/types.ts";
+import type {
+  TilesetDefinition,
+  TilesetNormalTexture
+} from "../../document/tilesets/types.ts";
 
 export interface TilesetSource {
   def: TilesetDefinition;
   texture: THREE.Texture<HTMLImageElement>;
+  normal?: TilesetNormalTexture;
 }
 
 export interface TextureSourceLoader {

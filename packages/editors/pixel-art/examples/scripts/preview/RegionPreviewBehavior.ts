@@ -22,6 +22,7 @@ const kPositionLerpRate = 6;
 
 export interface RegionPreviewStyle {
   rotating: boolean;
+  normalMap: THREE.Texture | null;
   readonly borderColor: THREE.Color;
 }
 
@@ -47,6 +48,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
   readonly mesh: THREE.Mesh;
 
   readonly #shape: PreviewShape;
+  readonly #surface: THREE.MeshStandardMaterial;
   readonly #binding: UVGeometryBinding;
   readonly #borderMaterial: THREE.MeshBasicMaterial;
   readonly #selectionColor: THREE.Color;
@@ -72,12 +74,14 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
     this.#shape = resolvePreviewShape(region, this.#borderMaterial);
     this.#selectionColor = new THREE.Color(region.color);
 
+    this.#surface = new THREE.MeshStandardMaterial({
+      map: canvasTexture,
+      normalMap: style.normalMap,
+      transparent: true
+    });
     this.mesh = new THREE.Mesh(
       this.#shape.geometry,
-      new THREE.MeshStandardMaterial({
-        map: canvasTexture,
-        transparent: true
-      })
+      this.#surface
     );
     this.mesh.userData.regionId = region.id;
 
@@ -150,6 +154,10 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
     this.#borderMaterial.color.copy(
       this.#selected ? this.#selectionColor : this.#style.borderColor
     );
+    if (this.#surface.normalMap !== this.#style.normalMap) {
+      this.#surface.normalMap = this.#style.normalMap;
+      this.#surface.needsUpdate = true;
+    }
   }
 
   protected override onDestroy(): void {

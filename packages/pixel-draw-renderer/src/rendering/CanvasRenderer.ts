@@ -57,6 +57,7 @@ export class CanvasRenderer {
   #backgroundColor: string;
   #viewport: DefaultViewport;
   #canvasBuffer: CanvasBuffer;
+  #textureSource: HTMLCanvasElement | null = null;
 
   readonly floatingSelection: FloatingSelection = new FloatingSelection();
   readonly peerStrokes: PeerStrokes = new PeerStrokes();
@@ -117,6 +118,17 @@ export class CanvasRenderer {
     this.drawFrame();
   }
 
+  get textureSource(): HTMLCanvasElement | null {
+    return this.#textureSource;
+  }
+
+  set textureSource(
+    source: HTMLCanvasElement | null
+  ) {
+    this.#textureSource = source;
+    this.drawFrame();
+  }
+
   get cursor(): string {
     return this.#canvas.style.cursor;
   }
@@ -170,7 +182,14 @@ export class CanvasRenderer {
       camera.x,
       camera.y
     );
-    if (
+    if (this.#textureSource !== null) {
+      this.#ctx.drawImage(
+        this.#textureSource,
+        0,
+        0
+      );
+    }
+    else if (
       this.floatingSelection.isActive ||
       this.peerStrokes.isActive ||
       this.peerFloatingSelections.isActive

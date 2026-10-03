@@ -8,6 +8,7 @@ import {
 } from "three/tsl";
 
 // Import Internal Dependencies
+import { renderFrames } from "./renderFrames.ts";
 import type { VoxelView } from "../../../../src/view/VoxelView.ts";
 import { createView } from "../../../helpers/view.ts";
 import { voxelTransparencyPass } from "../../../../src/view/postprocess/VoxelTransparencyPassNode.ts";
@@ -16,33 +17,6 @@ import type { BlockAlphaMode, BlockSide } from "../../../../src/document/blocks/
 
 // CONSTANTS
 const kSettleFrames = 6;
-
-function renderFrames(
-  renderer: THREE.WebGPURenderer,
-  frames: number,
-  draw: () => void
-): Promise<void> {
-  const { promise, resolve, reject } = Promise.withResolvers<void>();
-  let remaining = frames;
-  void renderer.setAnimationLoop(() => {
-    try {
-      draw();
-    }
-    catch (error) {
-      void renderer.setAnimationLoop(null);
-      reject(error);
-
-      return;
-    }
-    remaining--;
-    if (remaining === 0) {
-      void renderer.setAnimationLoop(null);
-      resolve();
-    }
-  });
-
-  return promise;
-}
 
 function chunkGroupOf(
   view: VoxelView

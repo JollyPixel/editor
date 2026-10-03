@@ -292,6 +292,7 @@ export class TextureSet {
     for (const { host } of this.#entries.values()) {
       host.hidden = host !== visible;
     }
+
     if (visible !== null) {
       visible.hidden = false;
     }
@@ -303,8 +304,18 @@ export class TextureSet {
     for (const type of kUvRefreshEvents) {
       canvas.uv.on(type, this.#refresh);
     }
-    canvas.selectionEvents.on("selection-state-changed", this.#refresh);
-    canvas.canvas().addEventListener("wheel", this.#onWheel);
+    canvas.selectionEvents.on(
+      "selection-state-changed",
+      this.#refresh
+    );
+    canvas.document.on(
+      "normal-map-changed",
+      this.#refresh
+    );
+    canvas.canvas().addEventListener(
+      "wheel",
+      this.#onWheel
+    );
   }
 
   #unsubscribe(
@@ -313,8 +324,18 @@ export class TextureSet {
     for (const type of kUvRefreshEvents) {
       canvas.uv.off(type, this.#refresh);
     }
-    canvas.selectionEvents.off("selection-state-changed", this.#refresh);
-    canvas.canvas().removeEventListener("wheel", this.#onWheel);
+    canvas.selectionEvents.off(
+      "selection-state-changed",
+      this.#refresh
+    );
+    canvas.document.off(
+      "normal-map-changed",
+      this.#refresh
+    );
+    canvas.canvas().removeEventListener(
+      "wheel",
+      this.#onWheel
+    );
   }
 
   readonly #refresh = (): void => {

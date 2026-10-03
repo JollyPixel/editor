@@ -52,6 +52,7 @@ import {
   uvSlotMask
 } from "./uv/region/uvSlotMask.ts";
 import type { UVGeometry } from "./uv/geometry/types.ts";
+import type { NormalMapData } from "./normal/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { resolveColor } from "./utils/colors.ts";
 import type {
@@ -59,6 +60,7 @@ import type {
   ByteColorInput,
   Mode,
   PeerStrokePixel,
+  TextureView,
   Vec2
 } from "./types.ts";
 import type {
@@ -73,7 +75,16 @@ import type {
   DecodedSelection
 } from "./clipboard/types.ts";
 
+// CONSTANTS
+const kNoModes: ReadonlySet<Mode> = new Set();
+const kPixelWritingModes: ReadonlySet<Mode> = new Set([
+  "paint",
+  "erase",
+  "fill"
+]);
+
 export type { Mode };
+export type { TextureView };
 export type { HistoryState };
 
 export interface ClearTextureOptions {
@@ -133,6 +144,7 @@ export class PixelArtCanvas {
   #tools: Tools;
   #clipboard: SelectionClipboard;
   #clipboardPending = false;
+  #displacedMode: Mode | null = null;
   #onClipboardResult?: (result: ClipboardOperationResult) => void;
   #onDocumentDrawEnd = () => this.#onDrawEnd?.();
   #onDocumentHistoryChanged = (state: HistoryState) => this.#onHistoryChange?.(state);
@@ -312,7 +324,46 @@ export class PixelArtCanvas {
   set mode(
     mode: Mode
   ) {
+    if (mode === this.mode || this.unavailableModes.has(mode)) {
+      return;
+    }
+
+    this.#displacedMode = null;
     this.#router.mode = mode;
+  }
+
+  get textureView(): TextureView {
+    return this.#view.textureView;
+  }
+
+  set textureView(
+    view: TextureView
+  ) {
+    if (view === this.#view.textureView) {
+      return;
+    }
+
+    this.#view.textureView = view;
+    this.#tools.select.readOnly = this.pixelsReadOnly;
+    if (this.unavailableModes.has(this.mode)) {
+      this.#displacedMode = this.mode;
+      this.#router.mode = "move";
+    }
+    else if (
+      this.#displacedMode !== null &&
+      !this.unavailableModes.has(this.#displacedMode)
+    ) {
+      this.#router.mode = this.#displacedMode;
+      this.#displacedMode = null;
+    }
+  }
+
+  get pixelsReadOnly(): boolean {
+    return this.#view.textureView === "normal";
+  }
+
+  get unavailableModes(): ReadonlySet<Mode> {
+    return this.pixelsReadOnly ? kPixelWritingModes : kNoModes;
   }
 
   get backgroundColor(): string {
@@ -543,9 +594,10 @@ export class PixelArtCanvas {
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
-    uvRegions: (UVRegion | UVRegionData)[] = []
+    uvRegions: (UVRegion | UVRegionData)[] = [],
+    normalMap: NormalMapData | null = null
   ): void {
-    this.document.loadSnapshot(size, pixels, uvRegions);
+    this.document.loadSnapshot(size, pixels, uvRegions, normalMap);
   }
 
   runLocalRestore<T>(
@@ -582,6 +634,12 @@ export class PixelArtCanvas {
   }
 
   async pasteClipboard(): Promise<ClipboardOperationResult> {
+    if (this.pixelsReadOnly) {
+      return this.#reportClipboardResult({
+        operation: "paste",
+        code: "paste-failed"
+      });
+    }
     if (this.#clipboardPending) {
       return this.#reportClipboardResult({
         operation: "paste",

@@ -5,6 +5,7 @@ import {
   Fill,
   isUVGeometry,
   isUVRegionData,
+  NormalMapConfig,
   type PixelBuffer
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -12,6 +13,7 @@ import {
 import type { PixelWireCommand } from "./types.ts";
 import {
   narrowPixelCommand,
+  normalMapKeys,
   paintedPositions,
   pixelKey,
   uvRegionKeys,
@@ -53,6 +55,7 @@ export interface PixelCommandArbiterOptions {
 export class PixelCommandArbiter {
   #pixelTracker: network.ConflictTracker;
   #regionTracker: network.ConflictTracker;
+  #normalMapTracker: network.ConflictTracker;
 
   constructor(
     options: PixelCommandArbiterOptions = {}
@@ -61,6 +64,7 @@ export class PixelCommandArbiter {
       new network.LastWriteWinsResolver();
     this.#pixelTracker = new network.ConflictTracker(resolver);
     this.#regionTracker = new network.ConflictTracker(resolver);
+    this.#normalMapTracker = new network.ConflictTracker(resolver);
   }
 
   admit(
@@ -102,6 +106,17 @@ export class PixelCommandArbiter {
           command,
           Fill.matchAll(buffer, command.metadata.fromColor).map(pixelKey)
         );
+      case "normal-map-toggled":
+        return isValidNormalMap(command) ?
+          {
+            command,
+            commit: (version) => this.#normalMapTracker.reset(command, version)
+          } :
+          null;
+      case "normal-map-defaults-patched":
+      case "normal-map-zone-set":
+      case "normal-map-zone-deleted":
+        return this.#normalMapTracker.admit(command, normalMapKeys(command));
     }
   }
 
@@ -133,6 +148,14 @@ export class PixelCommandArbiter {
           uvRegionKeys(command.metadata.id),
           version
         );
+        break;
+      case "normal-map-toggled":
+        this.#normalMapTracker.reset(command, version);
+        break;
+      case "normal-map-defaults-patched":
+      case "normal-map-zone-set":
+      case "normal-map-zone-deleted":
+        this.#normalMapTracker.record(command, normalMapKeys(command), version);
         break;
       default:
         break;
@@ -178,6 +201,14 @@ export class PixelCommandArbiter {
       uvConflictKeys(command, buffer)
     );
   }
+}
+
+function isValidNormalMap(
+  command: Extract<PixelWireCommand, { action: "normal-map-toggled"; }>
+): boolean {
+  const { config } = command.metadata;
+
+  return config === null || NormalMapConfig.parse(config) !== null;
 }
 
 function isValidRotation(

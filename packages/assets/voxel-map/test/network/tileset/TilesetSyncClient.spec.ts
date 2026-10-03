@@ -12,6 +12,8 @@ import {
   encodePngPixels,
   type PixelBufferHookEvent,
   type PixelBufferHookListener,
+  NormalMapConfig,
+  type NormalMapData,
   type UVRegionData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -45,6 +47,7 @@ interface LoadedSnapshot {
   size: Vec2;
   pixels: Uint8ClampedArray;
   uvRegions: readonly (UVRegionData | { toJSON(): UVRegionData; })[];
+  normalMap: NormalMapData | null;
 }
 
 class PixelsRecorder implements PixelSyncTarget {
@@ -83,9 +86,15 @@ class PixelsRecorder implements PixelSyncTarget {
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
-    uvRegions: readonly (UVRegionData | { toJSON(): UVRegionData; })[] = []
+    uvRegions: readonly (UVRegionData | { toJSON(): UVRegionData; })[] = [],
+    normalMap: NormalMapData | null = null
   ): void {
-    this.loaded.push({ size, pixels, uvRegions });
+    this.loaded.push({
+      size,
+      pixels,
+      uvRegions,
+      normalMap
+    });
   }
 }
 
@@ -205,6 +214,29 @@ describe("TilesetSyncClient", () => {
     assert.equal(pixels.remote[0]?.action, "stroke");
     assert.equal(tileset.blocks.has(2), false);
     assert.equal(room.sentCommands.length, 0);
+  });
+
+  it("hands the normal map settings to the pixels with the snapshot and later commands", () => {
+    const { room, pixels } = harness();
+    const config = NormalMapConfig.create().toJSON();
+    const base = snapshot();
+
+    room.simulateSnapshot({
+      ...base,
+      pixels: {
+        ...base.pixels,
+        normalMap: config
+      }
+    });
+    room.simulateCommand({
+      ...kPeerHeader,
+      action: "normal-map-toggled",
+      metadata: { config: null }
+    });
+
+    assert.deepEqual(pixels.loaded[0]?.normalMap, config);
+    assert.equal(pixels.remote[0]?.action, "normal-map-toggled");
+    assert.deepEqual(pixels.remote[0].metadata, { config: null });
   });
 
   it("ignores the echo of its own command", () => {

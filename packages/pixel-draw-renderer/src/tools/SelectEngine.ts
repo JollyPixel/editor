@@ -84,6 +84,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   #moveBlankSource = true;
   #publishedHasSelection = false;
   #publishedIsFloating = false;
+  #readOnly = false;
 
   constructor(
     options: SelectEngineOptions
@@ -140,13 +141,27 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.clear();
   }
 
+  get readOnly(): boolean {
+    return this.#readOnly;
+  }
+
+  set readOnly(
+    readOnly: boolean
+  ) {
+    if (readOnly && !this.#readOnly) {
+      this.clear();
+    }
+    this.#readOnly = readOnly;
+  }
+
+  get editable(): boolean {
+    return !this.#readOnly && this.#select.state === "selected";
+  }
+
   handleStart(
     pos: Vec2
   ): void {
-    if (
-      this.#select.state === "selected" &&
-      this.#select.hitTest(pos)
-    ) {
+    if (this.editable && this.#select.hitTest(pos)) {
       this.#startMoveAt(pos);
 
       return;
@@ -333,6 +348,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   ): boolean {
     const expectedLength = snapshot.rect.width * snapshot.rect.height;
     if (
+      this.#readOnly ||
       snapshot.pixels.length !== expectedLength ||
       snapshot.mask.length !== expectedLength ||
       !snapshot.mask.some(Boolean)
@@ -357,7 +373,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   }
 
   delete(): boolean {
-    if (this.#select.state !== "selected") {
+    if (!this.editable) {
       return false;
     }
 
@@ -393,7 +409,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   rotate(
     direction: RotationDirection = "cw"
   ): boolean {
-    if (this.#select.state !== "selected") {
+    if (!this.editable) {
       return false;
     }
 
@@ -442,7 +458,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   #handleFlip(
     flip: (select: Select) => SelectionRect | null
   ): boolean {
-    if (this.#select.state !== "selected") {
+    if (!this.editable) {
       return false;
     }
 

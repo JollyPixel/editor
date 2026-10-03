@@ -11,7 +11,8 @@ import { BlockUvBridge } from "../../../../src/features/texture/bridge/BlockUvBr
 import {
   makeBlock,
   makeFakeVoxelEngine,
-  makeUv
+  makeUv,
+  tilesetSlot
 } from "./blockUvFixtures.ts";
 
 // CONSTANTS
@@ -43,7 +44,7 @@ function setup() {
   );
   const uv = makeUv();
   const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
-  bridge.setActiveTileset("atlas", 16);
+  bridge.setActiveTileset(tilesetSlot("atlas"), 16);
 
   return { ...engine, uv, bridge };
 }

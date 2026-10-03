@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
-import type { ReactiveControllerHost } from "lit";
+import {
+  html,
+  nothing,
+  type ReactiveControllerHost,
+  type TemplateResult
+} from "lit";
 
 // Import Internal Dependencies
 import type { TextureImportOrigin } from "./textures.ts";
@@ -27,6 +32,24 @@ export class TextureBusy {
 
   get state(): TextureBusyState | null {
     return this.#state;
+  }
+
+  render(): TemplateResult | typeof nothing {
+    if (this.#state === null) {
+      return nothing;
+    }
+
+    return html`
+      <div
+        class="stage-busy"
+        part="stage-busy"
+        role="status"
+        aria-live="polite"
+      >
+        <jolly-spinner></jolly-spinner>
+        <span>${this.#state.label}</span>
+      </div>
+    `;
   }
 
   begin(

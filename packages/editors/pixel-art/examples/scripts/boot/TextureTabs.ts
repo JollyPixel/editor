@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
   createPixelArtDocument,
+  UVMap,
   type PixelArtCanvas,
   type PixelArtDocumentData
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -113,14 +114,14 @@ export class TextureTabs {
   async #add(
     detail: TextureAddRequestDetail
   ): Promise<void> {
-    const { name, source } = detail;
+    const { name, source, uvSize } = detail;
     try {
       await delay(this.#addDelay);
       const { catalog } = this.#session;
       const assetId = await createPixelArtAsset(
         catalog,
         `${name}${PIXEL_ART_EXTENSION}`,
-        documentFromCanvas(source)
+        documentFromCanvas(source, uvSize)
       );
       const lease = this.#session.assets.open(TEXTURE_DOCUMENT_KIND, assetId);
       lease.document.buffer.loadTexture(source);
@@ -131,6 +132,10 @@ export class TextureTabs {
         document: lease.document
       });
       await this.attach(assetId, lease, canvas);
+      const [region] = canvas.uv.regions;
+      if (region !== undefined) {
+        canvas.uv.select(region.id);
+      }
     }
     catch (error) {
       console.error("[pixel-sync] could not add texture", error);
@@ -153,22 +158,34 @@ export class TextureTabs {
 }
 
 function documentFromCanvas(
-  source: HTMLCanvasElement
+  source: HTMLCanvasElement,
+  uvSize: number | null
 ): PixelArtDocumentData {
   const context = source.getContext("2d", { willReadFrequently: true });
   if (context === null) {
     throw new Error("Could not read the imported image");
   }
 
-  const { data } = context.getImageData(0, 0, source.width, source.height);
+  const size = {
+    x: source.width,
+    y: source.height
+  };
+  const { data } = context.getImageData(0, 0, size.x, size.y);
+  const document = createPixelArtDocument(size, data);
+  if (uvSize === null) {
+    return document;
+  }
 
-  return createPixelArtDocument(
-    {
-      x: source.width,
-      y: source.height
-    },
-    data
-  );
+  const region = new UVMap({ getCanvasSize: () => size }).create({
+    name: "cube 0",
+    width: uvSize,
+    height: uvSize
+  });
+
+  return {
+    ...document,
+    uvRegions: [region.toJSON()]
+  };
 }
 
 function delay(

@@ -48,10 +48,22 @@ export function clipRectToBounds(
   rect: SelectionRect,
   size: Vec2
 ): SelectionRect | null {
-  const minX = Math.max(0, rect.x);
-  const minY = Math.max(0, rect.y);
-  const maxX = Math.min(size.x, rect.x + rect.width);
-  const maxY = Math.min(size.y, rect.y + rect.height);
+  return intersectRects(rect, {
+    x: 0,
+    y: 0,
+    width: size.x,
+    height: size.y
+  });
+}
+
+export function intersectRects(
+  a: SelectionRect,
+  b: SelectionRect
+): SelectionRect | null {
+  const minX = Math.max(a.x, b.x);
+  const minY = Math.max(a.y, b.y);
+  const maxX = Math.min(a.x + a.width, b.x + b.width);
+  const maxY = Math.min(a.y + a.height, b.y + b.height);
   if (
     maxX <= minX ||
     maxY <= minY

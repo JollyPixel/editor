@@ -12,6 +12,7 @@ import {
 } from "three/tsl";
 
 // Import Internal Dependencies
+import { renderFrames } from "./renderFrames.ts";
 import { createView } from "../../../helpers/view.ts";
 import type { BlockShapeID } from "../../../../src/document/blocks/shape/BlockShape.ts";
 import {
@@ -51,25 +52,6 @@ export interface ParityOptions {
   expanded: boolean;
   channel: ParityChannel;
   ambientOcclusion?: boolean;
-}
-
-function renderFrames(
-  renderer: THREE.WebGPURenderer,
-  frames: number,
-  draw: () => void
-): Promise<void> {
-  const { promise, resolve } = Promise.withResolvers<void>();
-  let remaining = frames;
-  void renderer.setAnimationLoop(() => {
-    draw();
-    remaining--;
-    if (remaining === 0) {
-      void renderer.setAnimationLoop(null);
-      resolve();
-    }
-  });
-
-  return promise;
 }
 
 async function atlasImage(): Promise<HTMLImageElement> {

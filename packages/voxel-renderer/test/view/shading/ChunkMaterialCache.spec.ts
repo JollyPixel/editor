@@ -18,7 +18,10 @@ import {
   makeAtlasDef,
   registerAtlas
 } from "../../helpers/atlas.ts";
-import { readableTexture } from "../../helpers/mockTexture.ts";
+import {
+  mockTexture,
+  readableTexture
+} from "../../helpers/mockTexture.ts";
 
 // CONSTANTS
 const kBlend = new BlockSurface({ alphaMode: "blend" });
@@ -298,6 +301,83 @@ describe("ChunkMaterialCache — vertex pulling", () => {
 
     assert.equal(material.map, null);
     assert.ok((material as { colorNode?: unknown; }).colorNode);
+  });
+});
+
+describe("ChunkMaterialCache — normal texture", () => {
+  const kStone = new BlockSurface({ materialGroup: "stone" });
+
+  function reliefCache(
+    materialGroups?: MaterialGroupList
+  ): ChunkMaterialCache {
+    const atlases = new TilesetAtlases();
+    atlases.tilesets.add(makeAtlasDef());
+    atlases.registerTexture("atlas", readableTexture(), mockTexture());
+
+    return new ChunkMaterialCache({
+      atlases,
+      faceTemplates: new FaceTemplateTable(),
+      materialGroups
+    });
+  }
+
+  function normalNodeOf(
+    material: THREE.Material
+  ): unknown {
+    return (material as { normalNode?: unknown; }).normalNode ?? null;
+  }
+
+  it("perturbs the normal of a tileset with a normal texture", () => {
+    assert.notEqual(normalNodeOf(reliefCache().resolve(keyOf("atlas"))), null);
+  });
+
+  it("keeps the geometric normal without a normal texture", () => {
+    assert.equal(normalNodeOf(makeCache().resolve(keyOf("atlas"))), null);
+  });
+
+  it("keeps the geometric normal on flat distant faces", () => {
+    const material = reliefCache().resolve(keyOf("atlas"), true);
+
+    assert.equal(normalNodeOf(material), null);
+  });
+
+  it("keeps the geometric normal of a group with a zero normal scale", () => {
+    const materialGroups = new MaterialGroupList([
+      { id: "stone", normalScale: 0 }
+    ]);
+
+    assert.equal(
+      normalNodeOf(reliefCache(materialGroups).resolve(keyOf("atlas", kStone))),
+      null
+    );
+  });
+
+  it("updates a non-zero normal scale in place", () => {
+    const materialGroups = new MaterialGroupList([{ id: "stone" }]);
+    const cache = reliefCache(materialGroups);
+    const stone = cache.resolve(keyOf("atlas", kStone));
+
+    materialGroups.define({ id: "stone", normalScale: 2 });
+
+    assert.equal(cache.refreshGroup("stone"), false);
+    assert.equal(cache.resolve(keyOf("atlas", kStone)), stone);
+    assert.deepEqual(stone.normalScale.toArray(), [2, 2]);
+  });
+
+  it("evicts the group materials when the normal scale reaches or leaves zero", () => {
+    const materialGroups = new MaterialGroupList([{ id: "stone" }]);
+    const cache = reliefCache(materialGroups);
+    const relief = cache.resolve(keyOf("atlas", kStone));
+
+    materialGroups.define({ id: "stone", normalScale: 0 });
+    assert.equal(cache.refreshGroup("stone"), true);
+    const flat = cache.resolve(keyOf("atlas", kStone));
+    assert.notEqual(flat, relief);
+    assert.equal(normalNodeOf(flat), null);
+
+    materialGroups.define({ id: "stone", normalScale: 1 });
+    assert.equal(cache.refreshGroup("stone"), true);
+    assert.notEqual(normalNodeOf(cache.resolve(keyOf("atlas", kStone))), null);
   });
 });
 

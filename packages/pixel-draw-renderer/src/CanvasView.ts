@@ -15,12 +15,14 @@ import {
 import {
   Viewport
 } from "./rendering/Viewport.ts";
+import { NormalMapImage } from "./rendering/NormalMapImage.ts";
 import type { ZoomOptions } from "./rendering/Zoom.ts";
 import { clamp } from "./utils/math.ts";
 import type {
   BrushHighlight,
   ByteColorInput,
   RGBA8,
+  TextureView,
   Vec2
 } from "./types.ts";
 
@@ -44,6 +46,7 @@ export class CanvasView {
     this.viewport.texture.resize(event.size);
     this.renderer.drawFrame();
   };
+  #normalImage: NormalMapImage | null = null;
   #frameRequest: number | null = null;
   #lastFrameTime = 0;
   #onViewportAnimating = () => {
@@ -163,6 +166,33 @@ export class CanvasView {
     return this.renderer.canvas();
   }
 
+  get textureView(): TextureView {
+    return this.#normalImage === null ? "albedo" : "normal";
+  }
+
+  set textureView(
+    view: TextureView
+  ) {
+    if (view === this.textureView) {
+      return;
+    }
+
+    if (view === "normal") {
+      this.#normalImage = new NormalMapImage(
+        this.#doc.normals
+      );
+      this.#normalImage.on(
+        "changed",
+        this.#onRenderStateChanged
+      );
+      this.renderer.textureSource = this.#normalImage.canvas();
+    }
+    else {
+      this.#disposeNormalImage();
+      this.renderer.textureSource = null;
+    }
+  }
+
   drawFrame(): void {
     this.renderer.drawFrame();
   }
@@ -218,12 +248,27 @@ export class CanvasView {
       this.#onRenderStateChanged
     );
 
+    this.#disposeNormalImage();
+
     const rendererCanvas = this.renderer.canvas();
     if (rendererCanvas.parentElement) {
       rendererCanvas.remove();
     }
     this.peerPresence.destroy();
     this.overlays.destroy();
+  }
+
+  #disposeNormalImage(): void {
+    if (this.#normalImage === null) {
+      return;
+    }
+
+    this.#normalImage.off(
+      "changed",
+      this.#onRenderStateChanged
+    );
+    this.#normalImage.dispose();
+    this.#normalImage = null;
   }
 
   static #computeFitZoom(

@@ -1,18 +1,13 @@
 // Import Third-party Dependencies
 import {
-  BlockTextureLayout,
   BlockTextures,
   tileRectOf,
   tileRefFromRect,
-  WHOLE_TILE_BOUNDS,
-  type BlockShape,
   type ResolvedBlockDefinition,
   type ResolvedTileRef
 } from "@jolly-pixel/voxel.renderer";
 import {
-  DEFAULT_UV_SLOTS,
   UVRegion,
-  rotateGeometry,
   rotationOf,
   type SelectionRect,
   type UVGeometry,
@@ -20,45 +15,12 @@ import {
   type UVRect,
   type UVSlot
 } from "@jolly-pixel/pixel-draw.renderer";
-
-// Import Internal Dependencies
-import {
-  blockShapeUv,
-  uvGeometryForSlot,
-  type BlockShapeUv
-} from "../../../shared/blockShapeUv.ts";
+import { BlockProjection } from "@jolly-pixel/asset.voxel-map/client";
 
 // CONSTANTS
-const kRegionIdPrefix = "block-";
 const kRegionColor = "#4488ff";
-const kBoxShapeUv: BlockShapeUv = {
-  activeFaces: [...DEFAULT_UV_SLOTS],
-  bounds: recordOfFaces(() => WHOLE_TILE_BOUNDS),
-  spans: {},
-  triangles: {},
-  parts: {},
-  faceRanges: {},
-  isBox: true
-};
 
-export class BlockUv {
-  static regionIdOf(
-    blockId: number
-  ): string {
-    return `${kRegionIdPrefix}${blockId}`;
-  }
-
-  static blockIdOf(
-    regionId: string
-  ): number | null {
-    if (!regionId.startsWith(kRegionIdPrefix)) {
-      return null;
-    }
-    const value = Number(regionId.slice(kRegionIdPrefix.length));
-
-    return Number.isNaN(value) ? null : value;
-  }
-
+export class BlockUv extends BlockProjection {
   static sameRegion(
     left: UVRegion,
     right: UVRegion
@@ -86,42 +48,6 @@ export class BlockUv {
     return false;
   }
 
-  readonly block: ResolvedBlockDefinition;
-  readonly shape: BlockShape | undefined;
-  readonly tileSize: number;
-  readonly #layout: BlockTextureLayout;
-  readonly #shapeUv: BlockShapeUv;
-
-  constructor(
-    block: ResolvedBlockDefinition,
-    shape: BlockShape | undefined,
-    tileSize: number
-  ) {
-    this.block = block;
-    this.shape = shape;
-    this.tileSize = tileSize;
-    this.#layout = BlockTextureLayout.of(block, shape);
-    this.#shapeUv = shape === undefined ? kBoxShapeUv : blockShapeUv(shape);
-  }
-
-  get textured(): boolean {
-    return this.#layout.slots.length > 0;
-  }
-
-  get isBox(): boolean {
-    return this.#shapeUv.isBox;
-  }
-
-  get regionId(): string {
-    return BlockUv.regionIdOf(this.block.id);
-  }
-
-  usesTileset(
-    tilesetId: string
-  ): boolean {
-    return this.#layout.usesTileset(tilesetId);
-  }
-
   region(): UVRegion {
     const { block } = this;
     const hasFaceTextures = Object.keys(block.faceTextures ?? {}).length > 0;
@@ -129,7 +55,7 @@ export class BlockUv {
       return this.freeRegion();
     }
 
-    if (this.#shapeUv.isBox) {
+    if (this.isBox) {
       return new UVRegion({
         id: this.regionId,
         name: block.name,
@@ -142,21 +68,17 @@ export class BlockUv {
       });
     }
 
-    return this.#freeRegion({
-      ...this.#shapeUv,
-      spans: {}
-    }).stack();
+    return this.#freeRegion(this.stackedFaces()).stack();
   }
 
   freeRegion(): UVRegion {
-    return this.#freeRegion(this.#shapeUv);
+    return this.#freeRegion(this.faces());
   }
 
   apply(
     region: UVRegion
   ): ResolvedBlockDefinition {
-    const { block, tileSize } = this;
-    const shapeUv = this.#shapeUv;
+    const { block, tileSize, shapeUv } = this;
     const textures = BlockTextures.of(block);
     const stackedSlot = region.stackedFace ??
       shapeUv.activeFaces[0] ??
@@ -212,39 +134,15 @@ export class BlockUv {
   }
 
   #freeRegion(
-    shapeUv: BlockShapeUv
+    faces: Record<UVSlot, UVGeometry>
   ): UVRegion {
-    const textureSlots = this.#layout.slots;
-    const faces = Object.fromEntries(
-      textureSlots.map(({ slot, tile }): [UVSlot, UVGeometry] => {
-        const rect = tileRectOf(
-          tile,
-          this.tileSize,
-          shapeUv.bounds[slot],
-          shapeUv.spans[slot]
-        );
-        const rotation = tile.rotation ?? 0;
-        const rotated = rotateGeometry(
-          uvGeometryForSlot(rect, shapeUv, slot),
-          rotation
-        );
-
-        return [
-          slot,
-          "shape" in rotated ?
-            { ...rotated, rect } :
-            rotatedRect(rect, rotation)
-        ];
-      })
-    ) as Record<UVSlot, UVGeometry>;
-
     return new UVRegion({
       id: this.regionId,
       name: this.block.name,
       color: kRegionColor,
       state: "free",
       faces,
-      activeFaces: textureSlots.map(({ slot }) => slot)
+      activeFaces: this.layout.slots.map(({ slot }) => slot)
     });
   }
 }
@@ -273,17 +171,6 @@ function rotatedRect(
       ...rect,
       rotation
     };
-}
-
-function recordOfFaces<TValue>(
-  valueOf: (face: UVSlot) => TValue
-): Record<UVSlot, TValue> {
-  const record = {} as Record<UVSlot, TValue>;
-  for (const face of DEFAULT_UV_SLOTS) {
-    record[face] = valueOf(face);
-  }
-
-  return record;
 }
 
 function rectsEqual(

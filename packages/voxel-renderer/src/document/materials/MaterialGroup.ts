@@ -10,6 +10,7 @@ export interface MaterialGroupJSON {
   metalness?: number;
   emissive?: string;
   emissiveIntensity?: number;
+  normalScale?: number;
 }
 
 export type MaterialGroupFinish = Required<Omit<MaterialGroupJSON, "id">>;
@@ -23,7 +24,8 @@ export class MaterialGroup {
     roughness: 1,
     metalness: 0,
     emissive: "#000000",
-    emissiveIntensity: 1
+    emissiveIntensity: 1,
+    normalScale: 1
   });
 
   readonly id: string;
@@ -31,6 +33,7 @@ export class MaterialGroup {
   readonly metalness: number;
   readonly emissive: string;
   readonly emissiveIntensity: number;
+  readonly normalScale: number;
 
   static parse(
     value: unknown
@@ -53,6 +56,7 @@ export class MaterialGroup {
     this.emissive = (json.emissive ?? defaults.emissive).toLowerCase();
     this.emissiveIntensity = json.emissiveIntensity ??
       defaults.emissiveIntensity;
+    this.normalScale = json.normalScale ?? defaults.normalScale;
     Object.freeze(this);
   }
 
@@ -71,6 +75,7 @@ export class MaterialGroup {
   ): void {
     material.emissive.set(this.emissive);
     material.emissiveIntensity = this.emissiveIntensity;
+    material.normalScale.setScalar(this.normalScale);
     if (material instanceof THREE.MeshStandardMaterial) {
       material.roughness = this.roughness;
       material.metalness = this.metalness;
@@ -84,7 +89,8 @@ export class MaterialGroup {
       this.roughness === other.roughness &&
       this.metalness === other.metalness &&
       this.emissive === other.emissive &&
-      this.emissiveIntensity === other.emissiveIntensity;
+      this.emissiveIntensity === other.emissiveIntensity &&
+      this.normalScale === other.normalScale;
   }
 
   toJSON(): Required<MaterialGroupJSON> {
@@ -93,7 +99,8 @@ export class MaterialGroup {
       roughness: this.roughness,
       metalness: this.metalness,
       emissive: this.emissive,
-      emissiveIntensity: this.emissiveIntensity
+      emissiveIntensity: this.emissiveIntensity,
+      normalScale: this.normalScale
     };
   }
 }
@@ -114,7 +121,6 @@ function problemOf(
   const fields: Map<string, unknown> = new Map(Object.entries(value));
   const id = fields.get("id");
   const emissive = fields.get("emissive");
-  const emissiveIntensity = fields.get("emissiveIntensity");
 
   if (typeof id !== "string" || id === "") {
     return "Material group id must be a non-empty string.";
@@ -131,18 +137,24 @@ function problemOf(
   ) {
     return "Emissive must be a #rrggbb colour.";
   }
-  if (
-    emissiveIntensity !== undefined &&
-    (
-      typeof emissiveIntensity !== "number" ||
-      !Number.isFinite(emissiveIntensity) ||
-      emissiveIntensity < 0
-    )
-  ) {
+  if (!isNonNegativeOrUndefined(fields.get("emissiveIntensity"))) {
     return "Emissive intensity must be a finite number of 0 or more.";
+  }
+  if (!isNonNegativeOrUndefined(fields.get("normalScale"))) {
+    return "Normal scale must be a finite number of 0 or more.";
   }
 
   return null;
+}
+
+function isNonNegativeOrUndefined(
+  value: unknown
+): boolean {
+  return value === undefined || (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0
+  );
 }
 
 function isUnitOrUndefined(

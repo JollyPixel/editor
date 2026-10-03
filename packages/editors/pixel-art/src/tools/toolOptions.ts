@@ -14,6 +14,8 @@ const kToolOptionModes = {
 
 export type ToolOptionName = keyof typeof kToolOptionModes;
 
+const kToolOptionNames = Object.keys(kToolOptionModes) as ToolOptionName[];
+
 export type ToolOptions = Record<ToolOptionName, boolean>;
 
 export interface ToolOption {
@@ -39,6 +41,14 @@ export function readToolOptions(
     fillUvClip: fill.uvClip,
     selectShape: select.shape
   };
+}
+
+export function toolOptionsChanged(
+  next: Readonly<ToolOptions>,
+  previous: Readonly<ToolOptions> | undefined
+): boolean {
+  return previous === undefined ||
+    kToolOptionNames.some((name) => next[name] !== previous[name]);
 }
 
 export function writeToolOptions(

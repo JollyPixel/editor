@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 // Import Third-party Dependencies
 import {
   BlockShapeRegistry,
+  composeBlockId,
   resolveBlockDefinition,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -29,11 +30,17 @@ function uvOf(
 }
 
 describe("BlockUv", () => {
-  it("round-trips the region id of a block", () => {
-    assert.equal(BlockUv.regionIdOf(4), "block-4");
-    assert.equal(BlockUv.blockIdOf("block-4"), 4);
-    assert.equal(BlockUv.blockIdOf("block-x"), null);
-    assert.equal(BlockUv.blockIdOf("other-4"), null);
+  it("names the region after the block's id inside its tileset", () => {
+    const block = resolveBlockDefinition({
+      id: composeBlockId(3, 4),
+      name: "Block",
+      shapeId: "cube",
+      defaultTexture: { tilesetId: "stone", col: 0, row: 0 }
+    });
+    const uv = new BlockUv(block, kShapes.get("cube"), 16);
+
+    assert.equal(uv.regionId, "block-4");
+    assert.equal(uv.region().id, "block-4");
   });
 
   it("knows the tilesets its shape samples", () => {
@@ -42,8 +49,8 @@ describe("BlockUv", () => {
     });
 
     assert.equal(uv.textured, true);
-    assert.equal(uv.usesTileset("stone"), true);
-    assert.equal(uv.usesTileset("wood"), false);
+    assert.equal(uv.layout.usesTileset("stone"), true);
+    assert.equal(uv.layout.usesTileset("wood"), false);
     assert.equal(uvOf({}).textured, false);
   });
 

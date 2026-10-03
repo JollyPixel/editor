@@ -2,6 +2,7 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
+import { renderFrames } from "./renderFrames.ts";
 import { createView } from "../../../helpers/view.ts";
 import { PulledChunkMesh } from "../../../../src/view/meshing/pulling/PulledChunkMesh.ts";
 import type { BlendGroupJSON } from "../../../../src/document/materials/BlendGroup.ts";
@@ -24,25 +25,6 @@ export interface BlendProbe {
   width: number;
   height: number;
   pixels: number[];
-}
-
-function renderFrames(
-  renderer: THREE.WebGPURenderer,
-  frames: number,
-  draw: () => void
-): Promise<void> {
-  const { promise, resolve } = Promise.withResolvers<void>();
-  let remaining = frames;
-  void renderer.setAnimationLoop(() => {
-    draw();
-    remaining--;
-    if (remaining === 0) {
-      void renderer.setAnimationLoop(null);
-      resolve();
-    }
-  });
-
-  return promise;
 }
 
 async function atlasImage(): Promise<HTMLImageElement> {

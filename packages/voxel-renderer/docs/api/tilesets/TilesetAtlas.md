@@ -7,8 +7,13 @@ Obtain it from [`TilesetAtlases.get()` or `atlas()`](./TilesetAtlases.md).
 class TilesetAtlas<TTexture extends THREE.Texture<AtlasSize> = TilesetTexture> {
   readonly def: ResolvedTilesetDefinition;
   readonly texture: TTexture;
+  readonly normal: TilesetNormalTexture | null;
 
-  constructor(definition: TilesetDefinition, texture: TTexture);
+  constructor(
+    definition: TilesetDefinition,
+    texture: TTexture,
+    normal?: TilesetNormalTexture | null
+  );
   uvFor(
     col: number,
     row: number,
@@ -17,7 +22,12 @@ class TilesetAtlas<TTexture extends THREE.Texture<AtlasSize> = TilesetTexture> {
     rotation?: TileRotation
   ): TilesetUVRegion;
   updateImage(image: TTexture["image"]): void;
+  updateNormal(image: AtlasSize): void;
+  disposeReplacedBy(next: TilesetAtlas<TTexture>): void;
+  dispose(): void;
 }
+
+type TilesetNormalTexture = THREE.Texture<AtlasSize>;
 
 function resolveTilesetDefinition(
   definition: TilesetDefinition,
@@ -36,8 +46,12 @@ function tileUvRegion(
 
 The constructor resolves `cols` and `rows` from the image with
 `resolveTilesetDefinition()`, then sets nearest-neighbour filtering, sRGB color
-space and no mipmaps on `texture`. The atlas does not own the texture:
-[`TilesetAtlases`](./TilesetAtlases.md) disposes it.
+space and no mipmaps on `texture`.
+
+`normal` is an optional tangent-space normal atlas, `null` by default. It gets
+the same filtering but `NoColorSpace`, and must share the layout and
+orientation of `texture`. See
+[normal maps](../../concepts/rendering-and-meshing.md#normal-maps).
 
 `resolveTilesetDefinition()` keeps explicit `cols` and `rows` and floors the
 partial tiles at the image edge out of the derived ones.
@@ -70,3 +84,15 @@ const atlas = view.atlases.atlas();
 
 atlas.updateImage(editor.textureCanvas());
 ```
+
+`updateNormal()` does the same for `normal`, and throws when the atlas has no
+normal texture. Attaching or removing one goes through
+[`VoxelView.loadTileset()`](../core/VoxelView.md#methods), which rebuilds the
+chunk materials.
+
+## Disposal
+
+`dispose()` disposes `texture` and `normal`. `disposeReplacedBy()` disposes
+only those `next` does not reuse, so registering the same texture again keeps
+it alive. [`TilesetAtlases`](./TilesetAtlases.md) calls both when it replaces
+or drops an atlas; code that builds an atlas itself disposes it.

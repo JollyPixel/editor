@@ -8,55 +8,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Emitter } from "@openally/emitt";
-import type {
-  CanvasBufferEvent,
-  SelectionRect,
-  Vec2
-} from "@jolly-pixel/pixel-draw.renderer";
+import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelCanvasTexture } from "#src/mesh-texturing/PixelCanvasTexture.ts";
-import type { PixelTextureSource } from "#src/mesh-texturing/types.ts";
-
-// A stand-in for PixelArtCanvas: the three members PixelTextureSource needs.
-class FakeSource extends Emitter<CanvasBufferEvent> implements PixelTextureSource {
-  textureSize: Vec2 = { x: 64, y: 32 };
-  #canvas = makeCanvas(64, 32);
-
-  get document(): this {
-    return this;
-  }
-
-  textureCanvas(): HTMLCanvasElement {
-    return this.#canvas;
-  }
-
-  swapCanvas(
-    size: Vec2
-  ): void {
-    this.#canvas = makeCanvas(size.x, size.y);
-    this.textureSize = size;
-    this.emit("replaced", { size });
-  }
-
-  paint(
-    bounds: SelectionRect
-  ): void {
-    this.emit("changed", { bounds });
-  }
-}
-
-function makeCanvas(
-  width: number,
-  height: number
-): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  return canvas;
-}
+import { FakeTextureSource } from "./fixtures/FakeTextureSource.ts";
 
 /** Collects scheduler callbacks so a test can decide when the frame runs. */
 function manualScheduler() {
@@ -79,10 +35,10 @@ function manualScheduler() {
 }
 
 describe("PixelCanvasTexture", () => {
-  let source: FakeSource;
+  let source: FakeTextureSource;
 
   beforeEach(() => {
-    source = new FakeSource();
+    source = new FakeTextureSource();
   });
 
   describe("constructor", () => {

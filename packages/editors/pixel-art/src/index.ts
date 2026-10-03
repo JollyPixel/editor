@@ -26,6 +26,8 @@ export type {
 export { ModeRail } from "./tools/ModeRail.ts";
 export { ColorPickerRail } from "./color/ColorPickerRail.ts";
 export { ColorDock } from "./color/ColorDock.ts";
+export { NormalMapDock } from "./normal/NormalMapDock.ts";
+export type { NormalMapConvention } from "./normal/NormalMapPng.ts";
 export type { ColorPickedDetail } from "./color/ColorController.ts";
 export {
   ColorSwatch,

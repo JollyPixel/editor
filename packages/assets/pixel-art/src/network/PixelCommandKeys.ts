@@ -32,6 +32,16 @@ export type PixelUvRegionWriteCommand = Exclude<
   { action: "uv-region-deleted"; }
 >;
 
+export type PixelNormalMapEditCommand = Extract<
+  PixelWireCommand,
+  {
+    action:
+      | "normal-map-defaults-patched"
+      | "normal-map-zone-set"
+      | "normal-map-zone-deleted";
+  }
+>;
+
 export function pixelKey(
   position: Vec2
 ): string {
@@ -95,8 +105,27 @@ export function pixelCommandKeys(
     case "uv-region-rotated":
     case "uv-region-state-changed":
       return uvWriteKeys(command);
+    case "normal-map-defaults-patched":
+    case "normal-map-zone-set":
+    case "normal-map-zone-deleted":
+      return normalMapKeys(command);
     default:
       return null;
+  }
+}
+
+export function normalMapKeys(
+  command: PixelNormalMapEditCommand
+): string[] {
+  switch (command.action) {
+    case "normal-map-defaults-patched":
+      return Object.keys(command.metadata.patch).map(
+        (key) => `normal-map:defaults:${key}`
+      );
+    case "normal-map-zone-set":
+      return [`normal-map:zone:${command.metadata.zone.regionId}`];
+    case "normal-map-zone-deleted":
+      return [`normal-map:zone:${command.metadata.regionId}`];
   }
 }
 

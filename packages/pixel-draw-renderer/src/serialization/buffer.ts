@@ -12,6 +12,7 @@ import {
   type PixelBufferSnapshot
 } from "./types.ts";
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
+import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 
 export function pixelArtSnapshot(
   buffer: PixelBuffer
@@ -21,7 +22,8 @@ export function pixelArtSnapshot(
     pixels: encodePixelBytes(buffer.pixels()),
     uvRegions: [
       ...buffer.uvRegions
-    ].map((region) => region.toJSON())
+    ].map((region) => region.toJSON()),
+    ...(buffer.normalMap && { normalMap: buffer.normalMap.toJSON() })
   };
 }
 
@@ -60,4 +62,7 @@ export function deserializePixelBuffer(
   for (const region of document.uvRegions) {
     buffer.uvRegions.set(region);
   }
+  buffer.normalMap = document.normalMap ?
+    NormalMapConfig.from(document.normalMap) :
+    null;
 }

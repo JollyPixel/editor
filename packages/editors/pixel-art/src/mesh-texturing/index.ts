@@ -5,6 +5,7 @@ export {
   type PixelCanvasTextureFlush,
   type PixelCanvasTextureOptions
 } from "./PixelCanvasTexture.ts";
+export { NormalMapTexture } from "./NormalMapTexture.ts";
 export {
   UVGeometryBinding,
   type UVGeometryBindingOptions
@@ -20,5 +21,6 @@ export {
 export type {
   FaceRanges,
   FaceVertexRange,
+  PixelTextureDocument,
   PixelTextureSource
 } from "./types.ts";

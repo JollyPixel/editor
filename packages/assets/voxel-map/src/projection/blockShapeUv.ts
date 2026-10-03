@@ -13,9 +13,17 @@ import type {
   UVSlot,
   UVTriangleCorner
 } from "@jolly-pixel/pixel-draw.renderer";
-import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 export type UVSlotBounds = TileBounds;
+
+export interface BlockFaceRange {
+  start: number;
+  count: number;
+}
+
+export type BlockFaceRanges = Partial<
+  Record<UVSlot, readonly BlockFaceRange[]>
+>;
 
 export interface BlockShapeUv {
   activeFaces: UVSlot[];
@@ -23,13 +31,10 @@ export interface BlockShapeUv {
   spans: Partial<Record<UVSlot, Readonly<TileSpan>>>;
   triangles: Partial<Record<UVSlot, UVTriangleCorner>>;
   parts: Partial<Record<UVSlot, UVCompoundPart[]>>;
-  faceRanges: FaceRanges;
+  faceRanges: BlockFaceRanges;
   isBox: boolean;
 }
 
-/**
- * Adapts renderer-owned texture topology into pixel-editor UV geometry.
- */
 export function blockShapeUv(shape: BlockShape): BlockShapeUv {
   const layout = shapeTextureLayout(shape);
   const activeFaces: UVSlot[] = [];
@@ -37,7 +42,7 @@ export function blockShapeUv(shape: BlockShape): BlockShapeUv {
   const spans: Partial<Record<UVSlot, Readonly<TileSpan>>> = {};
   const triangles: Partial<Record<UVSlot, UVTriangleCorner>> = {};
   const parts: Partial<Record<UVSlot, UVCompoundPart[]>> = {};
-  const faceRanges: FaceRanges = {};
+  const faceRanges: BlockFaceRanges = {};
 
   for (const entry of layout.slots) {
     const slot = entry.slot;

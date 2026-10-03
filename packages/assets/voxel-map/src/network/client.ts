@@ -10,3 +10,6 @@ export * from "./tileset/types.ts";
 export * from "./tileset/TilesetSyncClient.ts";
 export * from "./tileset/SyncedTileset.ts";
 export * from "./tileset/tilesetAssets.ts";
+export * from "../projection/blockShapeUv.ts";
+export * from "../projection/BlockProjection.ts";
+export * from "../projection/TilesetIslands.ts";

@@ -126,6 +126,29 @@ Wheel input zooms in every mode. Middle-drag, or left-drag while [`shortcuts.pan
 
 Leaving paint or erase mode cancels an armed line, and leaving paint mode also cancels the color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
 
+### `textureView` / `pixelsReadOnly` / `unavailableModes`
+
+```ts
+type TextureView = "albedo" | "normal";
+
+get textureView(): TextureView
+set textureView(value: TextureView)
+readonly pixelsReadOnly: boolean;
+readonly unavailableModes: ReadonlySet<Mode>;
+```
+
+`textureView` picks what the canvas draws: the texture (`"albedo"`, the default) or its generated [normal map](./normal/NormalMap.md) (`"normal"`). It is view state: it is not stored in the document and not synchronized. The normal view retains `document.normals` and releases it when the view goes back to albedo or the canvas is destroyed.
+
+`pixelsReadOnly` is `true` in the normal view. `unavailableModes` holds the modes the current view refuses: empty in the albedo view, `"paint"`, `"erase"` and `"fill"` in the normal view. It returns the same set until the view changes, so it can be bound to a property directly.
+
+The normal view is read-only for pixels:
+
+- `"paint"`, `"erase"` and `"fill"` are unavailable. Entering the view from one of them switches to `"move"`, and setting one of them is ignored. Going back to the albedo view restores that mode, unless another mode was set in the normal view.
+- Entering the view clears the selection. A selection can still be drawn and copied, but it does not move, and delete, rotate, flip and `pasteClipboard()` are refused. Paste reports `paste-failed`.
+- UV mode works as in the albedo view.
+
+Programmatic writes such as `commitPixels()`, `clearTexture()` and remote commands still apply, and the normal view follows them.
+
 ## Texture
 
 ```ts

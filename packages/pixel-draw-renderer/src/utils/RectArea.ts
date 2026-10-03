@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import { clipRectToBounds, pointInRect } from "./math.ts";
+import {
+  clipRectToBounds,
+  intersectRects,
+  pointInRect
+} from "./math.ts";
 import type {
   SelectionRect,
   Vec2
@@ -102,6 +106,48 @@ export class RectArea implements Iterable<RectCell> {
     return clipRectToBounds(this.#rect, bounds);
   }
 
+  grown(
+    amount: number
+  ): RectArea {
+    return new RectArea({
+      x: this.#rect.x - amount,
+      y: this.#rect.y - amount,
+      width: this.#rect.width + (amount * 2),
+      height: this.#rect.height + (amount * 2)
+    });
+  }
+
+  union(
+    rect: SelectionRect
+  ): RectArea {
+    const x = Math.min(this.#rect.x, rect.x);
+    const y = Math.min(this.#rect.y, rect.y);
+
+    return new RectArea({
+      x,
+      y,
+      width: Math.max(this.#rect.x + this.#rect.width, rect.x + rect.width) - x,
+      height: Math.max(this.#rect.y + this.#rect.height, rect.y + rect.height) - y
+    });
+  }
+
+  clippedTo(
+    rect: SelectionRect
+  ): RectArea | null {
+    const clipped = intersectRects(this.#rect, rect);
+
+    return clipped === null ? null : new RectArea(clipped);
+  }
+
+  touchesEdgeOf(
+    rect: SelectionRect
+  ): boolean {
+    return this.#rect.x === rect.x ||
+      this.#rect.y === rect.y ||
+      this.#rect.x + this.#rect.width === rect.x + rect.width ||
+      this.#rect.y + this.#rect.height === rect.y + rect.height;
+  }
+
   * [Symbol.iterator](): IterableIterator<RectCell> {
     const { x, y, width, height } = this.#rect;
     let sourceIndex = 0;
@@ -120,9 +166,6 @@ export class RectArea implements Iterable<RectCell> {
     }
   }
 
-  /**
-   * Iterates clipped row spans while preserving indices in the source area.
-   */
   * rowsWithin(
     bounds: Vec2
   ): IterableIterator<RectRow> {

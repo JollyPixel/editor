@@ -100,6 +100,22 @@ The quarter turns a UV slot's mapping has taken, clockwise in texture space. It 
 
 Changing a UV rectangle's size independently of the mesh. A stacked region resizes whole and resets every face to the new size. An unfolded or free region resizes one slot; in an unfolded net, faces act as solid boxes: a growing face pushes the faces it runs into, a shrinking one pulls back the faces that touched it, and faces out of contact stay put. Regions with a triangle or compound face cannot be resized.
 
+### Normal Map
+
+Per-pixel surface directions derived from the texture, its islands and the document's normal map settings. The document stores only the settings; the normal pixels are generated when a consumer asks for them, so they never go stale against the texture. Normals point right (red) and up in the image (green).
+
+### Island
+
+An area of the texture that normal map generation never samples across. Islands follow the UV slot faces, or the faces a host supplies in their place: faces whose pixels overlap form one island, faces that only touch stay separate, and pixels covered by no face form one remainder island.
+
+### Normal Map Zone
+
+An override of the normal map settings for one UV region, addressed by region id with no geometry of its own. A zone can turn the normal map off for the islands the region touches. A zone whose region is missing is kept and ignored.
+
+### Texture View
+
+What the canvas draws for the texture: its pixels (*albedo*) or its generated normal map (*normal*). It is view state, never stored or synchronized. The normal view is read-only for pixels: modes that write pixels are unavailable and a selection cannot move, delete or transform pixels.
+
 ### History Entry
 
 The reversible record of one local edit, used by undo and redo.
@@ -112,3 +128,4 @@ The reversible record of one local edit, used by undo and redo.
 - Use **selection** for a region already in the texture and **floating selection** for pending pasted content.
 - Use **UV region** for one mapping and **UV map** for the collection that manages all mappings.
 - Use **mode** for input routing and **tool** for editing behavior.
+- Use **normal map** for the generated directions and **normal map settings** for what the document stores; use **island** for a generation area, never *tile* or *chunk*.

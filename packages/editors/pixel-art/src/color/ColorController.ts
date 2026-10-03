@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { ReactiveControllerHost } from "lit";
+import {
+  html,
+  type ReactiveControllerHost,
+  type TemplateResult
+} from "lit";
 import type {
   BrushColorSlot,
   PixelArtCanvas
@@ -110,6 +114,24 @@ export class ColorController {
   ): void {
     this.#applyActive(color);
     this.#host.requestUpdate();
+  }
+
+  renderDock(): TemplateResult {
+    const { hex, opacity } = this.foreground;
+
+    return html`
+      <color-dock
+        class="color-dock"
+        part="color-dock"
+        ?open=${this.#docked}
+        ?inert=${!this.#docked}
+        .color=${hex}
+        .opacity=${opacity}
+        @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
+          this.changeActive(event.detail);
+        }}
+      ></color-dock>
+    `;
   }
 
   swap(): void {

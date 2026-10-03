@@ -74,6 +74,22 @@ describe("TilesetAtlases.registerTexture", () => {
     manager.registerTexture("atlas", mockTexture());
     assert.equal(first.disposed, 1);
   });
+
+  it("keeps the normal texture it is handed again and disposes a replaced one", () => {
+    const manager = new TilesetAtlases();
+    const texture = mockTexture();
+    const normal = countingTexture();
+    registerAtlas(manager, makeAtlasDef(), texture);
+
+    manager.registerTexture("atlas", texture, normal.texture);
+    manager.registerTexture("atlas", texture, normal.texture);
+    assert.equal(normal.disposed, 0);
+    assert.equal(manager.atlas("atlas").normal, normal.texture);
+
+    manager.registerTexture("atlas", texture);
+    assert.equal(normal.disposed, 1);
+    assert.equal(manager.atlas("atlas").normal, null);
+  });
 });
 
 describe("TilesetAtlases.get", () => {
@@ -211,6 +227,29 @@ describe("TilesetAtlases.syncAtlases", () => {
     assert.equal(a.disposed, 0);
   });
 
+  it("keeps the normal texture of a rebuilt atlas", () => {
+    const manager = new TilesetAtlases();
+    const normal = mockTexture();
+    manager.tilesets.add(makeAtlasDef());
+    manager.registerTexture("atlas", mockTexture(), normal);
+    manager.tilesets.declare(makeAtlasDef({ tileSize: 32 }));
+
+    assert.deepEqual(manager.syncAtlases(), ["atlas"]);
+    assert.equal(manager.atlas("atlas").normal, normal);
+  });
+
+  it("disposes the normal texture of a dropped atlas", () => {
+    const manager = new TilesetAtlases();
+    const normal = countingTexture();
+    manager.tilesets.add(makeAtlasDef());
+    manager.registerTexture("atlas", mockTexture(), normal.texture);
+    manager.tilesets.remove("atlas");
+
+    manager.syncAtlases();
+
+    assert.equal(normal.disposed, 1);
+  });
+
   it("returns nothing when atlases match the declarations", () => {
     const manager = new TilesetAtlases();
     registerAtlas(manager);
@@ -225,10 +264,13 @@ describe("TilesetAtlases.dispose", () => {
   it("disposes every texture and keeps the declarations it does not own", () => {
     const manager = new TilesetAtlases();
     const texture = countingTexture();
-    registerAtlas(manager, makeAtlasDef(), texture.texture);
+    const normal = countingTexture();
+    manager.tilesets.add(makeAtlasDef());
+    manager.registerTexture("atlas", texture.texture, normal.texture);
     manager.dispose();
 
     assert.equal(texture.disposed, 1);
+    assert.equal(normal.disposed, 1);
     assert.equal(manager.get("atlas"), undefined);
     assert.ok(manager.tilesets.has("atlas"));
   });

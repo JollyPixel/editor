@@ -19,7 +19,8 @@ export async function encodePixelSnapshot(
   return {
     size,
     pixels: await encodePngPixels(buffer.pixels(), size),
-    uvRegions
+    uvRegions,
+    ...(buffer.normalMap && { normalMap: buffer.normalMap.toJSON() })
   };
 }
 
@@ -27,14 +28,24 @@ export function loadPixelSnapshot(
   target: Pick<PixelDocument, "loadSnapshot">,
   snapshot: PixelWireSnapshot
 ): void | Promise<void> {
-  const { size, pixels, uvRegions } = snapshot;
+  const { size, pixels, uvRegions, normalMap = null } = snapshot;
   if (typeof pixels === "string") {
-    target.loadSnapshot(size, decodePixelBytes(pixels), uvRegions);
+    target.loadSnapshot(
+      size,
+      decodePixelBytes(pixels),
+      uvRegions,
+      normalMap
+    );
 
     return undefined;
   }
 
   return decodePngPixels(pixels, size).then((decoded) => {
-    target.loadSnapshot(size, decoded, uvRegions);
+    target.loadSnapshot(
+      size,
+      decoded,
+      uvRegions,
+      normalMap
+    );
   });
 }

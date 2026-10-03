@@ -23,7 +23,8 @@ export {
   type HistoryState,
   type PixelArtCanvasOptions,
   type ClearTextureOptions,
-  type Mode
+  type Mode,
+  type TextureView
 } from "./PixelArtCanvas.ts";
 export {
   PixelDocument,
@@ -60,11 +61,48 @@ export {
   type PngPixels
 } from "./serialization/index.ts";
 export type {
+  NormalMapCommand,
   PixelBufferHookAction,
   PixelBufferHookEvent,
   PixelBufferHookListener,
   UVRegionRotation
 } from "./buffer/hooks.ts";
+export {
+  NormalMap,
+  type NormalMapEvent,
+  type NormalMapSource
+} from "./normal/NormalMap.ts";
+export {
+  NormalMapConfig,
+  DEFAULT_NORMAL_MAP_SETTINGS
+} from "./normal/NormalMapConfig.ts";
+export {
+  InvalidNormalMapSettingsError
+} from "./normal/errors/InvalidNormalMapSettingsError.ts";
+export { NormalMapGenerator } from "./normal/NormalMapGenerator.ts";
+export { IslandMap } from "./normal/IslandMap.ts";
+export {
+  NORMAL_MAP_BEVEL_PROFILES,
+  NORMAL_MAP_BORDERS,
+  NORMAL_MAP_HEIGHTS,
+  type IndexedNormalMapZone,
+  type Island,
+  type IslandFace,
+  type NormalMapBevel,
+  type NormalMapBevelProfile,
+  type NormalMapBorder,
+  type NormalMapData,
+  type NormalMapHeight,
+  type NormalMapInput,
+  type NormalMapSettings,
+  type NormalMapZone,
+  type ResolvedNormalMapSettings
+} from "./normal/types.ts";
+export {
+  applyNormalMapCommand,
+  isNormalMapCommand,
+  type NormalMapCommandAction
+} from "./sync/normalMapCommands.ts";
 export {
   HistoryStack,
   type HistoryStackOptions
@@ -72,6 +110,7 @@ export {
 export type {
   HistoryEntry,
   HistoryEntryInput,
+  HistoryNormalMapEntry,
   HistoryResizedEntry,
   HistorySelectEditEntry,
   HistoryStrokeEntry,

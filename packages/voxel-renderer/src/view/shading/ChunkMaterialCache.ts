@@ -34,7 +34,8 @@ interface ChunkMaterialEntry {
   material: ChunkMaterial;
   tilesetId: string;
   surface: BlockSurface;
-  far: boolean;
+  normal: THREE.Texture | null;
+  relief: boolean;
 }
 
 export interface ChunkMaterialCacheOptions {
@@ -105,8 +106,6 @@ export class ChunkMaterialCache {
     geometryKey: ChunkGeometryKey,
     far = false
   ): ChunkMaterial {
-    const { tilesetId, surface } = geometryKey;
-    const blended = geometryKey.blended && !far;
     const key = `${geometryKey}:far=${far}`;
 
     const cached = this.#materials.get(key);
@@ -114,22 +113,11 @@ export class ChunkMaterialCache {
       return cached;
     }
 
-    const material = this.#create(
-      tilesetId,
-      surface,
-      far,
-      blended
-    );
-    this.#materials.set(key, material);
-    this.#entries.set(material, {
-      key,
-      material,
-      tilesetId,
-      surface,
-      far
-    });
+    const entry = this.#create(key, geometryKey, far);
+    this.#materials.set(key, entry.material);
+    this.#entries.set(entry.material, entry);
 
-    return material;
+    return entry.material;
   }
 
   retain(
@@ -163,7 +151,8 @@ export class ChunkMaterialCache {
     const group = this.#materialGroups?.get(groupId);
     let evicted = false;
 
-    for (const { material, surface } of this.#entries.values()) {
+    for (const entry of this.#entries.values()) {
+      const { material, surface, normal, relief } = entry;
       if (surface.materialGroup !== groupId) {
         continue;
       }
@@ -171,7 +160,8 @@ export class ChunkMaterialCache {
       const standard = material instanceof THREE.MeshStandardMaterial;
       if (
         group !== undefined &&
-        standard === this.#usesStandard(group)
+        standard === this.#usesStandard(group) &&
+        relief === hasRelief(normal, group)
       ) {
         group.applyTo(material);
         continue;
@@ -185,11 +175,11 @@ export class ChunkMaterialCache {
   }
 
   #create(
-    tilesetId: string,
-    surface: BlockSurface,
-    far: boolean,
-    blended: boolean
-  ): ChunkMaterial {
+    key: string,
+    geometryKey: ChunkGeometryKey,
+    far: boolean
+  ): ChunkMaterialEntry {
+    const { tilesetId, surface } = geometryKey;
     const atlas = this.#atlases.resolve(tilesetId);
     if (atlas === undefined) {
       throw new Error(
@@ -225,12 +215,20 @@ export class ChunkMaterialCache {
     const averages = this.tileAveraging ?
       AtlasAverages.of(texture)?.texture :
       null;
-    const inputs = enableVertexPulling(material, this.faceTemplates, blended);
+    const flat = far && averages !== null && averages !== undefined;
+    const normal = flat ? null : atlas.normal;
+    const relief = hasRelief(normal, group);
+    const inputs = enableVertexPulling(
+      material,
+      this.faceTemplates,
+      geometryKey.blended && !far
+    );
     enableTileShading(material, inputs, {
       surface,
       aoStrength: this.aoStrength,
       averages,
-      flat: far && averages !== null && averages !== undefined,
+      normal: relief ? normal : null,
+      flat,
       alphaToCoverage
     });
     material.map = null;
@@ -241,7 +239,14 @@ export class ChunkMaterialCache {
       surface
     );
 
-    return material;
+    return {
+      key,
+      material,
+      tilesetId,
+      surface,
+      normal,
+      relief
+    };
   }
 
   invalidate(
@@ -299,4 +304,11 @@ export class ChunkMaterialCache {
     this.#references.delete(material);
     material.dispose();
   }
+}
+
+function hasRelief(
+  normal: THREE.Texture | null,
+  group: MaterialGroup | undefined
+): boolean {
+  return normal !== null && (group === undefined || group.normalScale > 0);
 }
