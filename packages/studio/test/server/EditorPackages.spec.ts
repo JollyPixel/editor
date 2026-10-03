@@ -8,9 +8,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+// Import Third-party Dependencies
+import { PackageResolver } from "@jolly-pixel/asset-server/node";
+
 // Import Internal Dependencies
 import { EditorPackage } from "../../server/EditorPackage.ts";
 import { EditorPackages } from "../../server/EditorPackages.ts";
+import { STUDIO_ROOT } from "../../server/StudioProject.ts";
 import {
   createTempDir,
   removeTempDir
@@ -20,25 +24,26 @@ import {
 const kRoots: string[] = [];
 
 async function createRoot(): Promise<string> {
-  const root = await createTempDir("studio-editor-");
+  const root = await fs.realpath(await createTempDir("studio-editor-"));
   kRoots.push(root);
 
   return root;
 }
 
 async function createPackage(
+  directory: string,
   editor: unknown
 ): Promise<string> {
-  const root = await createRoot();
+  await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(
-    path.join(root, "package.json"),
+    path.join(directory, "package.json"),
     JSON.stringify({
       name: "editor",
       jollypixel: { editor }
     })
   );
 
-  return root;
+  return directory;
 }
 
 describe("EditorPackages", () => {
@@ -47,39 +52,35 @@ describe("EditorPackages", () => {
   });
 
   test("reads the editor manifest of each located package", async() => {
-    const voxelMap = await createPackage({
+    const root = await createRoot();
+    const voxelMap = await createPackage(path.join(root, "voxel-map"), {
       name: "voxel-map",
       kinds: ["voxelmap"]
     });
-    const pixelArt = await createPackage({
+    const pixelArt = await createPackage(path.join(root, "pixel-art"), {
       name: "pixel-art",
       kinds: ["pixelart"],
       dist: "dist-page"
     });
-    const roots = new Map([
-      ["@jolly-pixel/editor.voxel-map", voxelMap],
-      ["@jolly-pixel/editor.pixel-art", pixelArt]
-    ]);
-    const located: string[] = [];
-    const editors = EditorPackages.read(roots.keys(), (packageName) => {
-      located.push(packageName);
+    const editors = EditorPackages.read(
+      ["./voxel-map", "./pixel-art"],
+      new PackageResolver(root)
+    );
 
-      return roots.get(packageName) ?? "";
-    });
-
-    assert.deepEqual(located, [...roots.keys()]);
     assert.deepEqual([...editors], [
       new EditorPackage({
-        package: "@jolly-pixel/editor.voxel-map",
+        package: "./voxel-map",
         name: "voxel-map",
         kinds: ["voxelmap"],
-        dist: path.join(voxelMap, "dist")
+        dist: path.join(voxelMap, "dist"),
+        prebuilt: false
       }),
       new EditorPackage({
-        package: "@jolly-pixel/editor.pixel-art",
+        package: "./pixel-art",
         name: "pixel-art",
         kinds: ["pixelart"],
-        dist: path.join(pixelArt, "dist-page")
+        dist: path.join(pixelArt, "dist-page"),
+        prebuilt: false
       })
     ]);
     assert.deepEqual(editors.descriptors(), [
@@ -95,28 +96,59 @@ describe("EditorPackages", () => {
   });
 
   test("reads the editor packages installed in the studio", () => {
-    const [voxelMap, voxelModel, pixelArt] = EditorPackages.read([
-      "@jolly-pixel/editor.voxel-map",
-      "@jolly-pixel/editor.voxel-model",
-      "@jolly-pixel/editor.pixel-art"
-    ]);
+    const [voxelMap, voxelModel, pixelArt] = EditorPackages.read(
+      [
+        "@jolly-pixel/editor.voxel-map",
+        "@jolly-pixel/editor.voxel-model",
+        "@jolly-pixel/editor.pixel-art"
+      ],
+      new PackageResolver(STUDIO_ROOT)
+    );
 
     assert.deepEqual(voxelMap.kinds, ["voxelmap"]);
     assert.deepEqual(voxelModel.kinds, ["voxelmodel"]);
     assert.deepEqual(pixelArt.kinds, ["pixelart"]);
     assert.match(voxelMap.dist, /[\\/]voxel-map[\\/]dist$/);
     assert.match(pixelArt.dist, /[\\/]pixel-art[\\/]dist-page$/);
+    assert.ok(!voxelMap.prebuilt);
+  });
+
+  test("requires the built page of a package installed in node_modules", async() => {
+    const root = await createRoot();
+    const directory = await createPackage(
+      path.join(root, "node_modules", "editor"),
+      {
+        name: "voxel-map",
+        kinds: ["voxelmap"]
+      }
+    );
+    const dist = path.join(directory, "dist");
+    const resolver = new PackageResolver(root);
+
+    assert.throws(
+      () => EditorPackages.read(["editor"], resolver),
+      {
+        name: "TypeError",
+        message: `"editor" has no built page at "${dist}".`
+      }
+    );
+
+    await fs.mkdir(dist);
+    const [editor] = EditorPackages.read(["editor"], resolver);
+
+    assert.ok(editor.prebuilt);
   });
 
   test("rejects a package without an editor manifest", async() => {
     const root = await createRoot();
-    await fs.writeFile(path.join(root, "package.json"), "{}");
+    await fs.mkdir(path.join(root, "editor"));
+    await fs.writeFile(path.join(root, "editor", "package.json"), "{}");
 
     assert.throws(
-      () => EditorPackages.read(["editor"], () => root),
+      () => EditorPackages.read(["./editor"], new PackageResolver(root)),
       {
         name: "TypeError",
-        message: /"editor" declares an invalid "jollypixel.editor" manifest:\n.*at jollypixel/s
+        message: /"\.\/editor" declares an invalid "jollypixel.editor" manifest:\n.*at jollypixel/s
       }
     );
   });
@@ -131,27 +163,31 @@ describe("EditorPackages", () => {
       { name: "voxel-map", kinds: "voxelmap" }
     ];
     for (const manifest of manifests) {
-      const root = await createPackage(manifest);
+      const root = await createRoot();
+      await createPackage(path.join(root, "editor"), manifest);
 
       assert.throws(
-        () => EditorPackages.read(["editor"], () => root),
+        () => EditorPackages.read(["./editor"], new PackageResolver(root)),
         {
           name: "TypeError",
-          message: /"editor" declares an invalid "jollypixel.editor" manifest/
+          message: /"\.\/editor" declares an invalid "jollypixel.editor" manifest/
         }
       );
     }
   });
 
   test("rejects two packages declaring the same editor", async() => {
-    const root = await createPackage({
-      name: "voxel-map",
-      kinds: ["voxelmap"]
-    });
+    const root = await createRoot();
+    for (const folder of ["a", "b"]) {
+      await createPackage(path.join(root, folder), {
+        name: "voxel-map",
+        kinds: ["voxelmap"]
+      });
+    }
 
     assert.throws(
-      () => EditorPackages.read(["a", "b"], () => root),
-      /Editor "voxel-map" is declared by both "a" and "b"/
+      () => EditorPackages.read(["./a", "./b"], new PackageResolver(root)),
+      /Editor "voxel-map" is declared by both "\.\/a" and "\.\/b"/
     );
   });
 });

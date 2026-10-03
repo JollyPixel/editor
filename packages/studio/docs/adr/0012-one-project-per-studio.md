@@ -19,5 +19,5 @@ meaning and never exports a type with that word; the studio's word is project.
 ## Consequences
 
 The studio's handlers come from the project file
-([ADR-0016](./0016-the-project-file-lists-editors-and-kinds.md)). Each editor's own Vite config
-and offline workspace still register theirs until they open a project the same way.
+([ADR-0016](./0016-the-project-file-lists-editors-and-kinds.md)), and so do those of each
+editor's own Vite config and offline workspace.

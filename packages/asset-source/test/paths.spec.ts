@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   AssetPathEscapeError,
+  FolderSet,
   isStatePath,
   normalizeAssetPath,
   safeAssetPath,
@@ -103,5 +104,67 @@ describe("isStatePath", () => {
     ]) {
       assert.strictEqual(isStatePath(input), false, input);
     }
+  });
+});
+
+describe("FolderSet", () => {
+  test("adding a folder adds its parents once", () => {
+    const folders = new FolderSet()
+      .add("maps/world")
+      .add("maps");
+
+    assert.deepEqual(folders.toJSON(), [
+      "maps",
+      "maps/world"
+    ]);
+  });
+
+  test("addParentsOf adds the folders above a path but not the path", () => {
+    const folders = new FolderSet().addParentsOf("maps/world/a.json");
+
+    assert.deepEqual(folders.toJSON(), [
+      "maps",
+      "maps/world"
+    ]);
+  });
+
+  test("subtree lists the root and the folders under it, not lookalikes", () => {
+    const folders = new FolderSet([
+      "maps/world",
+      "mapsuffix",
+      "tiles"
+    ]);
+
+    assert.deepEqual(folders.subtree("maps"), [
+      "maps",
+      "maps/world"
+    ]);
+  });
+
+  test("prune removes the subtree folders holding none of the files", () => {
+    const folders = new FolderSet([
+      "maps/draft/deep",
+      "maps/world",
+      "mapsuffix"
+    ]);
+
+    const pruned = folders.prune("maps", ["maps/world/a.json"]);
+
+    assert.deepEqual(pruned, [
+      "maps/draft",
+      "maps/draft/deep"
+    ]);
+    assert.deepEqual(folders.toJSON(), [
+      "maps",
+      "maps/world",
+      "mapsuffix"
+    ]);
+  });
+
+  test("equals compares contents regardless of insertion order", () => {
+    const left = new FolderSet(["a", "b"]);
+
+    assert.strictEqual(left.equals(new FolderSet(["b", "a"])), true);
+    assert.strictEqual(left.equals(new FolderSet(["a"])), false);
   });
 });

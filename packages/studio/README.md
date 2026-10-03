@@ -18,7 +18,7 @@ $ pnpm -r build
 $ pnpm --filter @jolly-pixel/studio dev
 ```
 
-The project root defaults to `project/`, seeded on first boot. Set `JOLLY_PROJECT` to open another directory. Restart the dev server after editing `.jollypixel/project.json`.
+The project root defaults to `project/`, seeded on first boot. Set `JOLLY_PROJECT` to open another directory. The packages `.jollypixel/project.json` lists resolve from the project's `node_modules`, then from the studio's; an entry starting with `./` names a folder of the project. The dev server restarts when that file changes.
 
 | Query parameter | Effect |
 |---|---|

@@ -5,10 +5,6 @@ import {
   rememberQueryUsername
 } from "@jolly-pixel/editor.host";
 import { showConfirm } from "@jolly-pixel/ui";
-import {
-  editors,
-  kinds
-} from "virtual:jolly-pixel/project";
 
 // Import Internal Dependencies
 import { connectStudio } from "./connection.ts";
@@ -16,6 +12,7 @@ import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
 } from "./editors/EditorDescriptor.ts";
+import { ProjectManifest } from "./editors/ProjectManifest.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import "./icons.ts";
 import type { Studio } from "./shell/Studio.ts";
@@ -43,12 +40,15 @@ async function boot(): Promise<void> {
     rememberQueryUsername();
   }
   const editorConsole = mountConsole();
-  const connection = await connectStudio();
+  const [connection, manifest] = await Promise.all([
+    connectStudio(),
+    ProjectManifest.fetch(document.baseURI)
+  ]);
   const studio = required("jolly-studio");
   await studio.attach({
     console: editorConsole,
     catalog: connection.catalog,
-    editors: createEditorRegistry(connection.editorQuery),
+    editors: createEditorRegistry(manifest, connection.editorQuery),
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",
       message: `Close "${tab.label}" to open another editor?`,
@@ -66,13 +66,14 @@ async function boot(): Promise<void> {
 }
 
 function createEditorRegistry(
+  manifest: ProjectManifest,
   query: Readonly<Record<string, string>>
 ): EditorRegistry {
   const registry = new EditorRegistry({ query });
-  for (const descriptor of kinds) {
+  for (const descriptor of manifest.kinds) {
     registry.registerKind(descriptor);
   }
-  for (const editor of editors) {
+  for (const editor of manifest.editors) {
     registry.registerEditor(editor);
   }
 

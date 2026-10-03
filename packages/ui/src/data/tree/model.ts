@@ -114,7 +114,7 @@ export class TreeSnapshot<
             node.children,
             indexed,
             depth + 1,
-            visible && expanded.has(node.id)
+            visible && isOpen(node, expanded)
           );
         }
       }
@@ -207,7 +207,16 @@ export function hasChildren<TData>(
 export function isExpandable<TData>(
   node: TreeNode<TData>
 ): boolean {
-  return node.children !== undefined && node.children.length > 0;
+  return node.collapsible !== false &&
+    node.children !== undefined &&
+    node.children.length > 0;
+}
+
+export function isOpen<TData>(
+  node: TreeNode<TData>,
+  expanded: ReadonlySet<string>
+): boolean {
+  return node.collapsible === false || expanded.has(node.id);
 }
 
 export function flattenVisible<TData>(

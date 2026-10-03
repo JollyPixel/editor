@@ -1,5 +1,4 @@
 // Import Node.js Dependencies
-import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
 // Import Internal Dependencies
@@ -14,6 +13,7 @@ import {
   KindPackage,
   type PackageLoader
 } from "./KindPackage.ts";
+import { PackageResolver } from "./PackageResolver.ts";
 import type { ProjectFile } from "./ProjectFile.ts";
 
 // CONSTANTS
@@ -22,19 +22,29 @@ const kBuiltInKinds = [BINARY_KIND, TEXTURE_KIND];
 
 export interface ProjectKindsLoadOptions {
   /**
-   * @default imports the package resolved from the project root
+   * @default new PackageResolver(file.root)
+   */
+  resolver?: PackageResolver;
+  /**
+   * @default imports the file `resolver` resolves
    */
   load?: PackageLoader;
 }
 
 export class ProjectKinds {
   readonly packages: readonly KindPackage[];
+  readonly resolver: PackageResolver;
 
   static async load(
     file: ProjectFile,
     options: ProjectKindsLoadOptions = {}
   ): Promise<ProjectKinds> {
-    const { load = packageLoaderFrom(file.path) } = options;
+    const {
+      resolver = new PackageResolver(file.root),
+      load = (packageName) => import(
+        pathToFileURL(resolver.resolve(packageName)).href
+      )
+    } = options;
     const packages = await Promise.all(
       Array.from(
         file.kinds,
@@ -42,11 +52,12 @@ export class ProjectKinds {
       )
     );
 
-    return new ProjectKinds(packages);
+    return new ProjectKinds(packages, resolver);
   }
 
   constructor(
-    packages: Iterable<KindPackage>
+    packages: Iterable<KindPackage>,
+    resolver: PackageResolver
   ) {
     const list = [...packages];
     const owners = new Map<string, string>(
@@ -65,6 +76,7 @@ export class ProjectKinds {
     }
 
     this.packages = list;
+    this.resolver = resolver;
   }
 
   handlers(): AssetKindHandler[] {
@@ -77,14 +89,4 @@ export class ProjectKinds {
   descriptors(): AssetKindDescriptor[] {
     return this.packages.flatMap((kindPackage) => kindPackage.descriptors);
   }
-}
-
-function packageLoaderFrom(
-  file: string
-): PackageLoader {
-  const require = createRequire(file);
-
-  return (packageName) => import(
-    pathToFileURL(require.resolve(packageName)).href
-  );
 }

@@ -9,7 +9,7 @@ overview beside it, which counts the assets per kind and lists the open editors.
 fills the whole workbench, with no dock beside its frame.
 
 `<studio-home>` is hidden, never unmounted, while an editor tab is active, so the tree keeps its
-expanded folders, selection, scroll and draft folders across tab switches. Its dock layout is
+expanded folders, selection and scroll across tab switches. Its dock layout is
 saved under `studio:home-layout`; the old `studio:layout` key, which could hold a collapsed dock,
 is no longer read.
 

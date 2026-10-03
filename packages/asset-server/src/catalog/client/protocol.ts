@@ -22,12 +22,16 @@ export const ARCHIVE_MIME_TYPE = "application/zip";
 
 export const CATALOG_SNAPSHOT = "catalog:snapshot";
 export const CATALOG_CHANGED = "catalog:changed";
+export const CATALOG_FOLDERS = "catalog:folders";
 export const CATALOG_APPLIED = "catalog:applied";
 export const CATALOG_REJECTED = "catalog:rejected";
 
 export const CATALOG_CREATE = "catalog:create";
 export const CATALOG_RENAME = "catalog:rename";
 export const CATALOG_DELETE = "catalog:delete";
+export const CATALOG_CREATE_FOLDER = "catalog:create-folder";
+export const CATALOG_MOVE_FOLDER = "catalog:move-folder";
+export const CATALOG_DELETE_FOLDER = "catalog:delete-folder";
 export const CATALOG_EXPORT = "catalog:export";
 export const CATALOG_PLAN = "catalog:plan";
 export const CATALOG_IMPORT = "catalog:import";
@@ -52,6 +56,22 @@ export interface CatalogDeleteCommand {
   force?: boolean;
 }
 
+export interface CatalogCreateFolderCommand {
+  type: typeof CATALOG_CREATE_FOLDER;
+  path: string;
+}
+
+export interface CatalogMoveFolderCommand {
+  type: typeof CATALOG_MOVE_FOLDER;
+  from: string;
+  to: string;
+}
+
+export interface CatalogDeleteFolderCommand {
+  type: typeof CATALOG_DELETE_FOLDER;
+  path: string;
+}
+
 export interface CatalogExportCommand {
   type: typeof CATALOG_EXPORT;
   root?: string;
@@ -72,6 +92,9 @@ export type CatalogRequest =
   | CatalogCreateCommand
   | CatalogRenameCommand
   | CatalogDeleteCommand
+  | CatalogCreateFolderCommand
+  | CatalogMoveFolderCommand
+  | CatalogDeleteFolderCommand
   | CatalogExportCommand
   | CatalogPlanCommand
   | CatalogImportCommand;
@@ -84,6 +107,9 @@ export type CatalogApplied =
   | { command: typeof CATALOG_CREATE; assetId: string; }
   | { command: typeof CATALOG_RENAME; assetId: string; }
   | { command: typeof CATALOG_DELETE; assetId: string; }
+  | { command: typeof CATALOG_CREATE_FOLDER; path: string; }
+  | { command: typeof CATALOG_MOVE_FOLDER; path: string; }
+  | { command: typeof CATALOG_DELETE_FOLDER; path: string; }
   | { command: typeof CATALOG_EXPORT; content: AssetInlineContent; }
   | { command: typeof CATALOG_PLAN; plan: ImportPlan; }
   | { command: typeof CATALOG_IMPORT; report: ImportReport; };
@@ -104,8 +130,10 @@ export type CatalogMessage =
     type: typeof CATALOG_SNAPSHOT;
     manifest: AssetManifestData;
     dependencies?: DependencyMap;
+    folders: string[];
   }
   | { type: typeof CATALOG_CHANGED; change: CatalogChange; }
+  | { type: typeof CATALOG_FOLDERS; folders: string[]; }
   | (CatalogApplied & {
     type: typeof CATALOG_APPLIED;
     requestId: string;

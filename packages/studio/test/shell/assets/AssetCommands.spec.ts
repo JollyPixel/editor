@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import type { AssetKindEntry } from "../../../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
 import {
+  AssetTreeModel,
   assetNodeId,
   folderNodeId,
   type AssetRelocation
@@ -30,15 +31,20 @@ const kMapKind: AssetKindEntry = {
 interface CommandsProbe {
   commands: AssetCommands;
   errors: string[];
+  calls: string[];
   created: Parameters<AssetCommandCatalog["create"]>[];
 }
 
 function commandsFailingAt(
   failAt: number
 ): CommandsProbe {
-  let calls = 0;
-  async function fail(): Promise<void> {
-    if (calls++ === failAt) {
+  const calls: string[] = [];
+  async function call(
+    name: string,
+    target: string
+  ): Promise<void> {
+    calls.push(`${name} ${target}`);
+    if (calls.length - 1 === failAt) {
       throw new Error("disk full");
     }
   }
@@ -46,12 +52,23 @@ function commandsFailingAt(
   const catalog: AssetCommandCatalog = {
     create: async(...args) => {
       created.push(args);
-      await fail();
+      await call("create", args[0]);
 
       return "created";
     },
-    rename: fail,
-    remove: fail,
+    rename: (assetId) => call("rename", assetId),
+    remove: (assetId) => call("remove", assetId),
+    createFolder: async(path) => {
+      await call("createFolder", path);
+
+      return path;
+    },
+    moveFolder: async(from, to) => {
+      await call("moveFolder", `${from} ${to}`);
+
+      return to;
+    },
+    removeFolder: (path) => call("removeFolder", path),
     exportArchive: async() => new Uint8Array()
   };
   const errors: string[] = [];
@@ -62,6 +79,7 @@ function commandsFailingAt(
       onError: (message) => errors.push(message)
     }),
     errors,
+    calls,
     created
   };
 }
@@ -73,6 +91,7 @@ function relocationOf(
 ): AssetRelocation {
   return {
     nodeId: folderNodeId(AssetPath.parse(from)),
+    type: "folder",
     from: AssetPath.parse(from),
     to: AssetPath.parse(to),
     renames: Array.from({ length: count }, (_, index) => {
@@ -118,7 +137,7 @@ describe("AssetCommands", () => {
   });
 
   test("counts every asset of a move of several rows", async() => {
-    const { commands, errors } = commandsFailingAt(2);
+    const { commands, errors } = commandsFailingAt(3);
     const failed = relocationOf("models", "world/models", 2);
 
     assert.equal(
@@ -148,5 +167,88 @@ describe("AssetCommands", () => {
 
     assert.deepEqual(owner.errors, ["Deleted 1 of 2 assets: disk full"]);
     assert.deepEqual(folder.errors, ['Deleted 1 of 3 assets under "maps": disk full']);
+  });
+
+  test("creates a folder, or reports the refusal", async() => {
+    const created = commandsFailingAt(-1);
+    const refused = commandsFailingAt(0);
+
+    assert.equal(await created.commands.createFolder(AssetPath.parse("maps/draft")), true);
+    assert.equal(await refused.commands.createFolder(AssetPath.parse("maps/draft")), false);
+    assert.deepEqual(created.calls, ["createFolder maps/draft"]);
+    assert.deepEqual(refused.errors, ['Could not create "draft": disk full']);
+  });
+
+  test("moves a folder once its assets are renamed", async() => {
+    const { commands, calls } = commandsFailingAt(-1);
+
+    assert.equal(
+      await commands.relocate([relocationOf("maps", "worlds", 1)], "rename"),
+      null
+    );
+    assert.deepEqual(calls, [
+      "rename maps-0",
+      "moveFolder maps worlds"
+    ]);
+  });
+
+  test("reports an unfinished folder move without undoing its renames", async() => {
+    const { commands, errors } = commandsFailingAt(1);
+
+    assert.equal(
+      await commands.relocate([relocationOf("maps", "worlds", 1)], "rename"),
+      null
+    );
+    assert.deepEqual(errors, ['Could not finish renaming "maps": disk full']);
+  });
+
+  test("leaves the folders alone when an asset moves", async() => {
+    const { commands, calls } = commandsFailingAt(-1);
+    const relocation: AssetRelocation = {
+      ...relocationOf("maps/a.png", "a.png", 1),
+      type: "asset"
+    };
+
+    await commands.relocate([relocation], "move");
+
+    assert.deepEqual(calls, ["rename maps/a.png-0"]);
+  });
+
+  test("deletes the folders of a deletion after their assets", async() => {
+    const { commands, calls } = commandsFailingAt(-1);
+    const deletion = companionModelOf().deletionOf([kMaps]);
+
+    await commands.remove(deletion, false);
+
+    assert.strictEqual(calls.length, deletion.assets.length + 1);
+    assert.strictEqual(calls.at(-1), "removeFolder maps");
+  });
+
+  test("names the folder whose removal fails", async() => {
+    const drafts = AssetPath.parse("drafts");
+    const model = new AssetTreeModel([], { folders: [drafts] });
+    const { commands, errors } = commandsFailingAt(0);
+
+    await commands.remove(model.deletionOf([folderNodeId(drafts)]), false);
+
+    assert.deepEqual(errors, ['Could not delete "drafts": disk full']);
+  });
+
+  test("keeps deleting the other folders when one removal fails", async() => {
+    const drafts = AssetPath.parse("drafts");
+    const scratch = AssetPath.parse("scratch");
+    const model = new AssetTreeModel([], { folders: [drafts, scratch] });
+    const { commands, calls, errors } = commandsFailingAt(0);
+
+    await commands.remove(
+      model.deletionOf([folderNodeId(drafts), folderNodeId(scratch)]),
+      false
+    );
+
+    assert.deepEqual(calls, [
+      "removeFolder drafts",
+      "removeFolder scratch"
+    ]);
+    assert.deepEqual(errors, ['Could not delete "drafts": disk full']);
   });
 });

@@ -4,12 +4,11 @@ import checker from "vite-plugin-checker";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
-  createAssetWorkspacePlugin
+  createAssetWorkspacePlugin,
+  ProjectFile,
+  ProjectKinds
 } from "@jolly-pixel/asset-server/node";
-import {
-  PIXEL_ART_KIND,
-  pixelArtAssetKind
-} from "@jolly-pixel/asset.pixel-art";
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -39,6 +38,17 @@ const kWorkspaceBrowserEntries = [
   "@jolly-pixel/ui/network"
 ];
 
+const kinds = await ProjectKinds.load(
+  new ProjectFile(import.meta.dirname, {
+    version: 1,
+    kinds: {
+      "@jolly-pixel/asset.pixel-art": {
+        defaultSize: TEXTURE_SIZE
+      }
+    }
+  })
+);
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const e2e = mode === kE2EMode;
@@ -64,11 +74,7 @@ export default defineConfig(({ mode }) => {
         root: import.meta.dirname,
         source: new MemoryAssetSource(),
         eventStore: EventStore.persistence.memory(),
-        handlers: [
-          pixelArtAssetKind({
-            defaultSize: TEXTURE_SIZE
-          })
-        ],
+        handlers: kinds.handlers(),
         seed: {
           [DEMO_ASSET_PATH]: {
             id: DEMO_ASSET_ID,

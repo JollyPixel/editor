@@ -68,9 +68,9 @@ describe("ReconciliationWatcher — debounce", () => {
       return original();
     };
 
-    harness.watcher.notify("a.png");
-    harness.watcher.notify("b.png");
-    harness.watcher.notify("c.png");
+    harness.watcher.notify("a.png", "file");
+    harness.watcher.notify("b.png", "file");
+    harness.watcher.notify("c.png", "file");
     t.mock.timers.tick(100);
     await harness.watcher.settle();
 
@@ -106,7 +106,7 @@ describe("ReconciliationWatcher — debounce", () => {
       return original();
     };
 
-    harness.watcher.notify("a.png");
+    harness.watcher.notify("a.png", "file");
     await harness.watcher.close();
     t.mock.timers.tick(1_000);
     await harness.watcher.settle();
@@ -121,6 +121,53 @@ describe("ReconciliationWatcher — debounce", () => {
     harness.watcher.start();
 
     assert.strictEqual(harness.watcher.watching, false);
+  });
+
+  test("runs the follow-up after each pass, even when it fails", async() => {
+    await using harness = await syncHarness();
+    let followUps = 0;
+    const watcher = new ReconciliationWatcher({
+      source: harness.source,
+      reconciler: harness.reconciler,
+      afterPass: () => {
+        followUps += 1;
+
+        return Promise.reject(new Error("folders unreadable"));
+      }
+    });
+
+    await watcher.run();
+    await watcher.run();
+
+    assert.strictEqual(followUps, 2);
+  });
+
+  test("a folder-only burst runs the follow-up without reconciling", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    await using harness = await syncHarness();
+    let passes = 0;
+    let followUps = 0;
+    harness.reconciler.reconcile = () => {
+      passes += 1;
+
+      throw new Error("folder events must not reconcile");
+    };
+    const watcher = new ReconciliationWatcher({
+      source: harness.source,
+      reconciler: harness.reconciler,
+      debounce: 100,
+      afterPass: async() => {
+        followUps += 1;
+      }
+    });
+
+    watcher.notify("maps", "folder");
+    watcher.notify("maps/draft", "folder");
+    t.mock.timers.tick(100);
+    await watcher.settle();
+
+    assert.strictEqual(passes, 0);
+    assert.strictEqual(followUps, 1);
   });
 });
 
@@ -137,7 +184,7 @@ describe("ReconciliationWatcher — round trip", () => {
     await harness.projector.flush();
     const before = lifecycleCount(harness.eventStore);
 
-    harness.watcher.notify("a.png");
+    harness.watcher.notify("a.png", "file");
     t.mock.timers.tick(100);
     await harness.watcher.settle();
 
@@ -156,7 +203,7 @@ describe("ReconciliationWatcher — round trip", () => {
     const before = lifecycleCount(harness.eventStore);
 
     await harness.source.write("a.png", bytes("edited"));
-    harness.watcher.notify("a.png");
+    harness.watcher.notify("a.png", "file");
     t.mock.timers.tick(100);
     await harness.watcher.settle();
     await harness.projector.flush();
@@ -223,7 +270,7 @@ describe("ReconciliationWatcher browser timers", () => {
     t.mock.method(globalThis, "setTimeout", () => 1);
     const clear = t.mock.method(globalThis, "clearTimeout", () => void 0);
 
-    harness.watcher.notify("a.bin");
+    harness.watcher.notify("a.bin", "file");
     await harness.watcher.close();
 
     assert.equal(clear.mock.calls[0].arguments[0], 1);

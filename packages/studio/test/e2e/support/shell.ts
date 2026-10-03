@@ -13,7 +13,7 @@ export const MODEL = "model.voxelmodel.json";
 export const TEXTURE = "model.pixelart";
 export const MAP_TAB = "overworld";
 export const MODEL_TAB = "model";
-export const SEED_ROW_COUNT = 4;
+export const SEED_ROW_COUNT = 6;
 const kEditorBootTimeout = 30_000;
 
 export function assetRows(

@@ -1,19 +1,15 @@
 // Import Third-party Dependencies
-import {
-  textureAssetKind,
-  type AssetBackendTuning,
-  type AssetKindHandler,
-  type AssetSeedMap
+import type {
+  AssetBackendTuning,
+  AssetSeedMap
 } from "@jolly-pixel/asset-server";
 import {
   createVoxelMapDocument,
   encodeTilesetDocument,
   tilesetAsset,
-  tilesetAssetKind,
   tilesetDocumentFromPng,
   TILESET_KIND,
   VOXEL_MAP_KIND,
-  voxelMapAssetKind,
   type TilesetAssetDocument
 } from "@jolly-pixel/asset.voxel-map";
 import {
@@ -34,7 +30,6 @@ export const WORLD_BACKEND_TUNING = {
 } as const satisfies AssetBackendTuning;
 
 export interface WorldProject {
-  handlers: AssetKindHandler[];
   seed: AssetSeedMap;
   backend: AssetBackendTuning;
 }
@@ -54,11 +49,6 @@ export async function createWorldProject(
   const tileset = await createDefaultTileset(tilesetPng);
 
   return {
-    handlers: [
-      tilesetAssetKind(),
-      voxelMapAssetKind(),
-      textureAssetKind()
-    ],
     seed: {
       "tilesets/block.tileset.json": {
         id: tilesetAssetId,

@@ -89,6 +89,65 @@ describe("ProjectFile", () => {
     assert.strictEqual(await fs.readFile(file, "utf8"), "{\"version\":1}");
   });
 
+  test("opens the file on disk, creating it when missing", async() => {
+    await using workspace = await tempWorkspace();
+    const data: ProjectFileData = {
+      version: 1,
+      kinds: {
+        "kind-a": {}
+      }
+    };
+
+    const projectFile = await ProjectFile.open(workspace.root, data);
+
+    assert.deepEqual(
+      JSON.parse(await fs.readFile(projectFile.path, "utf8")),
+      data
+    );
+  });
+
+  test("is stale only when the file on disk holds another document", async() => {
+    await using workspace = await tempWorkspace();
+    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+      version: 1
+    });
+
+    assert.strictEqual(await projectFile.isStale(), false);
+
+    await fs.writeFile(projectFile.path, "{ \"version\": 1 }\n");
+    assert.strictEqual(await projectFile.isStale(), false);
+
+    await fs.writeFile(projectFile.path, "{\"version\":1,\"editors\":[]}");
+    assert.strictEqual(await projectFile.isStale(), true);
+
+    await fs.writeFile(projectFile.path, "{");
+    assert.strictEqual(await projectFile.isStale(), true);
+
+    await fs.rm(projectFile.path);
+    assert.strictEqual(await projectFile.isStale(), true);
+  });
+
+  test("opens in memory without reading or writing the root", async() => {
+    await using workspace = await tempWorkspace();
+    const file = path.join(workspace.root, PROJECT_FILE_PATH);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, "{\"version\":1}");
+
+    const projectFile = await ProjectFile.open(
+      workspace.root,
+      {
+        version: 1,
+        kinds: {
+          "kind-a": {}
+        }
+      },
+      { inMemory: true }
+    );
+
+    assert.deepEqual([...projectFile.kinds.keys()], ["kind-a"]);
+    assert.strictEqual(await fs.readFile(file, "utf8"), "{\"version\":1}");
+  });
+
   test("names the file when it is invalid", () => {
     const documents = [
       "{",

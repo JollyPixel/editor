@@ -1,258 +1,182 @@
 # Architecture
 
-`@jolly-pixel/studio` opens one project: it runs one asset back-end, lists
-the project's assets in a tree and opens one editor page per tab. Design
-decisions live in the [ADRs](./docs/adr/README.md), open work in the
-[roadmap](./ROADMAP.md); the words used here are defined in the
-[glossary](./GLOSSARY.md).
+`@jolly-pixel/studio` opens one project: one asset back-end, one asset tree,
+one editor page per tab.
 
-## System map
+See also: [ADRs](./docs/adr/README.md) · [roadmap](./ROADMAP.md) ·
+[glossary](./GLOSSARY.md)
+
+## Big picture
 
 ```mermaid
 flowchart TB
-  subgraph Vite["vite.config.ts"]
-    direction TB
-    Project["StudioProject<br/>.jollypixel/project.json"]
-    Modules["projectModulesPlugin<br/>virtual modules"]
-    Pages["editorPagesPlugin<br/>EditorPages /editors/&lt;name&gt;/"]
-    Backend["createAssetWorkspacePlugin<br/>project kinds + seed"]
-    Project --> Modules
-    Project --> Pages
-    Project --> Backend
-  end
-
-  subgraph Shell["Shell page"]
-    direction TB
-    Boot["src/index.ts"]
-    Connection["connectStudio<br/>online or offline catalog"]
-    Registry["EditorRegistry<br/>kinds + editors"]
-    Studio["&lt;jolly-studio&gt;"]
-    Home["&lt;studio-home&gt;<br/>asset dock + project overview"]
-    Browser["&lt;asset-browser&gt;<br/>AssetTreeModel, AssetPath"]
-    Session["StudioSession"]
-    Tabs["EditorTabs<br/>strip, cap, order"]
-    FrameStack["EditorFrames<br/>iframe stack + messages"]
-    Boot --> Connection
-    Boot --> Registry
-    Boot --> Studio
-    Studio --> Home
-    Home --> Browser
-    Studio --> Session
-    Session --> Tabs
-    Session --> FrameStack
-    Tabs --> FrameStack
-  end
-
-  subgraph Frames["Editor frames"]
-    direction TB
-    Frame["iframe /editors/&lt;name&gt;/?target=&lt;id&gt;<br/>editor.host mountStandalone"]
-  end
-
-  Modules -.->|"virtual:jolly-pixel/project"| Registry
-  Pages -.->|"built page folder"| Frame
-  Connection <-->|"CatalogClient"| Backend
-  Browser <-->|"records, rename, delete, export"| Backend
-  FrameStack <-->|"jolly-ready, jolly-launch, jolly-shell, jolly-appearance"| Frame
-  Frame <-->|"own client, asset rooms"| Backend
+  File[".jollypixel/project.json"]
+  Server["Vite server<br/>back-end, editor pages, manifest"]
+  Shell["Shell page<br/>asset tree + tabs"]
+  Frame["Editor iframe<br/>one per tab"]
+  File --> Server
+  Server -->|"catalog, manifest"| Shell
+  Shell <-->|"postMessage"| Frame
+  Frame <-->|"asset rooms"| Server
 ```
 
-The shell holds data only: kind descriptors, editor names and kinds, catalog
-records. Kind code runs in the back-end handlers and editor code runs in the
-frames. The shell and the frames talk through `postMessage` on one origin and
-never share objects.
+- The shell holds **data only**: kind descriptors, editor names, catalog records.
+- Kind code runs in the back-end, editor code runs in the frames.
+- Shell and frames share one origin but never share objects.
 
-## Server side
+## Server
 
-`vite.config.ts` opens the project with `StudioProject.open`
-([ADR-0016](./docs/adr/0016-the-project-file-lists-editors-and-kinds.md)).
-It writes the default `.jollypixel/project.json` when the root has none,
-reads the `jollypixel.editor` manifest of each package under `editors` into
-`EditorPackages`, and loads each package under `kinds` through asset-server's
-`ProjectKinds`. The `e2e` and `static` modes load `DEFAULT_PROJECT_FILE` with
-`StudioProject.load` instead, so a local project file never changes what they
-test or ship. The code under `server/` knows nothing of Vite; `vite/` only
-adapts it.
+```mermaid
+flowchart TB
+  Open["StudioProject.open"]
+  Editors["EditorPackages"]
+  Kinds["ProjectKinds"]
+  Pages["/editors/&lt;name&gt;/"]
+  Manifest["project-manifest.json"]
+  Backend["asset back-end"]
+  Handlers["virtual:jolly-pixel/handlers"]
+  Open --> Editors
+  Open --> Kinds
+  Editors --> Pages
+  Editors --> Manifest
+  Kinds --> Manifest
+  Kinds --> Backend
+  Kinds --> Handlers
+```
 
-`EditorPages` serves each editor's built page folder at `/editors/<name>/`
-and answers `404` for any other path under that prefix. A build copies the
-page folders into `dist/editors/`. `projectModulesPlugin` serves two
-modules: `virtual:jolly-pixel/project` exports the editor descriptors and the
-kind descriptors to the shell, and `virtual:jolly-pixel/handlers` builds the
-kind handlers for the offline workspace only.
+- `StudioProject.open` writes a default project file when none exists
+  ([ADR-0016](./docs/adr/0016-the-project-file-lists-editors-and-kinds.md)).
+- Packages resolve through `PackageResolver`: project `node_modules`, then the
+  studio's. `./` or `../` means a project folder.
+- An editor from `node_modules` is prebuilt and never watched
+  ([ADR-0017](./docs/adr/0017-project-packages-are-trusted-code.md)).
+- Editing the project file restarts the dev server.
+- `server/` knows nothing of Vite; `vite/` only adapts it.
 
-`createAssetWorkspacePlugin` runs the catalog and the asset rooms on the
-project root, with `project.kinds.handlers()` (the packages' handlers and
-`texture`) and the seed of `createStudioSeed` (`src/seed.ts`). The shell's
-offline workspace takes its handlers from `virtual:jolly-pixel/handlers`,
-which ends with `texture` too, and its seed from `loadStudioSeed`, so both
-back-ends know the same kinds and seed the same assets.
+| Mode | Project file | Back-end | Editor pages |
+|---|---|---|---|
+| `dev` | on disk | project root | each page folder |
+| `e2e` | in memory | in memory, fixed port | same |
+| `static` | in memory | none, shell starts offline | `dist/editors/`, offline-only |
 
-| Mode | Back-end | Editor pages |
-|---|---|---|
-| `dev` | project root on disk | each editor's page folder |
-| `e2e` | in memory, fixed port | same |
-| `static` | none, the shell starts offline | copied into `dist/editors/`, built offline-only |
+Online and offline back-ends get the same handlers (plus `texture`) and the
+same seed (`src/seed.ts`).
 
 ## Boot
 
 ```mermaid
 sequenceDiagram
-  autonumber
   participant I as src/index.ts
   participant C as connectStudio
-  participant R as EditorRegistry
   participant S as jolly-studio
-  participant B as asset-browser
-
-  I->>C: connectStudio()
-  alt online
-    C->>C: promptPeerIdentity, Client, openCatalog
-  else offline, static or unreachable
-    C->>C: openSharedTabWorkspace("studio")
+  par
+    I->>I: fetch project-manifest.json
+  and
+    I->>C: connect
+    C-->>I: catalog
   end
-  C-->>I: catalog, editorQuery
-  I->>R: registerKind(descriptor) per kind
-  I->>R: registerEditor(editor) per manifest entry
-  I->>S: attach({ catalog, editors, confirmEvict })
-  S->>S: new StudioSession(kinds, EditorTabs, EditorFrames)
-  S->>B: options { catalog, kinds } through studio-home
-  B->>B: build AssetTreeModel from catalog records
-  S->>S: restoreTabs() from studio:tabs
+  I->>I: register kinds + editors
+  I->>S: attach
+  S->>S: build tree, restore tabs
 ```
 
-An unreachable catalog offers Retry or the offline workspace. Offline,
-`editorQuery` is `{ offline, workspace: "studio" }`, added to every editor
-page URL so the frames join the same browser workspace.
+- The manifest loads while the username prompt is open.
+- Catalog unreachable: Retry, or go offline.
+- Offline adds `{ offline, workspace: "studio" }` to every editor URL, so the
+  frames join the same browser workspace.
 
 ## Opening an asset
 
 ```mermaid
 sequenceDiagram
-  autonumber
   participant B as asset-browser
   participant S as StudioSession
-  participant R as EditorRegistry
   participant T as EditorTabs
   participant E as EditorFrames
   participant F as Editor frame
-
-  B->>S: asset-open { assetId }
-  S->>R: pageUrl(record.kind, assetId)
-  R-->>S: editors/<name>/?...&target=<id>, or nothing
-  S->>T: open({ id, label, url, icon })
-  alt already open
-    T->>T: focus the tab
-  else cap reached
-    T->>T: confirmEvict(least recently active)
-    T->>T: close it, or give up on cancel
-  end
+  B->>S: asset-open
+  S->>T: open(tab)
   T->>E: show(tab)
-  E->>F: create the iframe on first focus
+  E->>F: create iframe
   F->>E: jolly-ready
-  E->>F: jolly-launch { target, appearance }
-  F->>F: mountStandalone boots the editor
+  E->>F: jolly-launch
 ```
 
-A kind without an editor returns no URL and opens nothing; its rows show
-`no editor`. Tabs are keyed by asset id, so a second activation focuses the
-open tab. A tab label is the asset name without the extension its kind
-declares (`AssetKindSet.displayNameFor`), with the full path as tooltip.
-Closing a tab removes its iframe, which ends the editor's session.
-A tab creates its iframe when first focused, and inactive frames stay
-mounted with `display: none`.
+- Kind without an editor: nothing opens, the row shows `no editor`.
+- Already open: the tab gets focus.
+- Tab cap reached: confirm closing the least recently used tab.
+- The iframe is created on first focus. Hidden tabs keep theirs
+  (`display: none`). Closing a tab removes it.
+- `EditorTabs` and `EditorFrames` are plain controllers, not Lit templates:
+  moving an iframe reloads it.
 
-`EditorTabs` and `EditorFrames` stay imperative controllers beside the Lit
-elements: moving or re-creating an iframe reloads it, so no template owns the
-frames. `EditorTabs` owns the strip, the cap and the order, and tells
-`EditorFrames` which tab to show, retitle or drop. `EditorFrames` owns the
-iframes and every message exchanged with them.
+## Frame messages
 
-## Tab persistence
+| Message | Direction | Carries |
+|---|---|---|
+| `jolly-ready` | frame → shell | nothing |
+| `jolly-launch` | shell → frame | target asset, theme, density |
+| `jolly-shell` | frame → shell | `open-asset` or `toggle-console` |
+| `jolly-appearance` | shell → frame | new theme or density |
 
-Every open, close, move or focus makes `StudioSession` write the tab ids, in
-strip order, and the active id to `studio:tabs` in `localStorage`, through
-the `SavedTabs` value object. `restoreTabs` reopens them in the background,
-skips assets that are gone or have no editor, stops at the cap and focuses
-the saved active tab, which is the only one to load its frame.
+- `EditorFrames` ignores messages from any other window.
+- The shell never answers a `jolly-shell` command.
+- One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
+  ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
 
-## Shell commands
+## Saved state
 
-A frame launched through `jolly-launch` gets a `ShellChannel` and may post
-`{ type: "jolly-shell", command }`. `EditorFrames` accepts messages only
-from its own frames and hands commands to `StudioSession`, which runs
-`open-asset` exactly like a tree activation and passes `toggle-console` to
-the studio's console. The shell never replies to a command; the only message
-it pushes on the channel is `jolly-appearance`.
+| Key | Storage | Holds |
+|---|---|---|
+| `studio:tabs` | `localStorage` | open tab ids in order, active id |
+| `studio:home-layout` | `localStorage` | asset dock size |
+| `studio:asset-kind` | `localStorage` | kind filter |
+| `jolly-pixel:username` | `sessionStorage` | peer name, shared with frames |
 
-## Console and appearance
-
-The shell mounts the `jolly-console` of `editor.host` with its `theme` and
-`density` variables. A frame launched by the shell mounts no console of its
-own: Ctrl+K inside it posts `toggle-console`, so one console serves the
-whole studio ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
-
-`EditorFrames` reads the theme and density of the shell's `jolly-scope`
-elements through `PageAppearance` and watches their attributes. It sends the
-current values in each `jolly-launch` and posts `jolly-appearance` to every
-loaded frame on a change, whatever wrote the attributes.
+Restoring tabs skips missing assets and kinds without an editor, stops at the
+cap, and loads only the active frame.
 
 ## Home
 
-The fixed Home tab shows `<studio-home>`, a sibling of the editor frames in
-the workbench. It holds the asset dock, resizable and saved under
-`studio:home-layout`, and `<project-overview>`. An editor tab fills the
-workbench; `EditorTabs` only hides Home, so the tree keeps its state across
-tab switches ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
+```mermaid
+flowchart TB
+  Home["studio-home"]
+  Dock["asset dock"]
+  Overview["project-overview"]
+  Browser["asset-browser"]
+  Home --> Dock
+  Home --> Overview
+  Dock --> Browser
+```
 
-`<project-overview>` counts the catalog records per kind through
-`AssetTally`, every registered kind first, then unknown kinds by name. It
-lists the open editors from `StudioSession`'s `onTabsChange`, which also
-fires on a catalog rename; a click sends `asset-open`, which focuses the tab.
+- Home is a fixed tab. Opening an editor hides it, so the tree keeps its state
+  ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
+- `project-overview` counts assets per kind (`AssetTally`) and lists open
+  editors.
 
 ## Asset browser
 
-`<asset-browser>` holds a kind filter, a toolbar and a `jolly-tree` bound to
-the `CatalogClient`. Folders start expanded, and the user's toggles survive
-catalog changes.
+| Action | Trigger | Rule |
+|---|---|---|
+| Open | double-click, Enter | |
+| Rename | F2 | keeps the extension, no `/` (moving is a drag) |
+| Delete | Delete | dialog lists the assets that still reference it |
+| New asset | toolbar, menu | back-end writes the default content, then rename starts |
+| New folder | toolbar, menu | created in the project, then rename starts |
+| Export | toolbar, menu | `<stem>.zip` with dependencies, not on folders |
 
-- The kind filter is a `jolly-button-group`: All, then one button per
-  registered kind. The choice is kept under `studio:asset-kind`.
-- Double-click or Enter opens an asset. F2 or the Rename action edits the
-  name in place; an asset keeps its extension, since reconciliation infers
-  the kind from it. A name holding a separator is refused: moving is a drag.
-- Delete opens `<asset-delete-dialog>`, listing the live assets outside the
-  deleted set that still reference it, from `dependentsOf`. Confirming forces
-  each command.
-- New asset lists one item per registered kind, labelled and iconed from
-  its descriptor. It sends `CatalogClient.create` with no content, the path
-  `New <label><extension>` in the selected folder and `onConflict: "suffix"`.
-  The back-end writes the kind's default state and its companions, so the
-  shell never loads a handler. Once the record reaches the tree, the row is
-  selected and its name edited in place, as with New folder.
-- Export downloads the selected asset and its dependencies as `<stem>.zip`
-  from `CatalogClient.exportArchive`. It is disabled on a folder: an archive
-  has a single root.
-- A right-click, Shift+F10 or the menu key opens a `jolly-context-menu` with
-  the same actions, plus Open on a single asset. Below the rows it only
-  offers New folder and New asset, created at the root. The toolbar and the menu read
-  which actions apply from `AssetSelection`, and an action re-checks it
-  against the current tree before it runs.
-- Failures go to the `jolly-log` over the workbench.
-
-The shell prompts for a username once with `promptPeerIdentity`, under the
-host's `jolly-pixel:username` key. Same-origin frames in the same browser
-tab share `sessionStorage`, so the editor pages find the name and do not
-prompt again.
+- Context menu: right-click, Shift+F10 or the menu key.
+- `AssetSelection` decides which actions apply, and re-checks before running.
+- Errors go to the `jolly-log`.
 
 ## Catalog changes
 
-`StudioSession` listens to catalog `change`: a tab whose asset was deleted
-closes, a renamed asset relabels its tab and its tooltip. `<asset-browser>` rebuilds its
-`AssetTreeModel` on `change` and `dependencies`, from the records, the
-dependency edges and its draft folders, and keeps the expanded folders, the
-selection and the kind filter. Folders are path prefixes, so a folder
-rename or delete sends one catalog command per asset under it; an owner's
-rename or move adds one per companion.
+- Asset deleted: its tab closes.
+- Asset renamed: its tab label and tooltip update.
+- The tree rebuilds but keeps expanded folders, selection and filter.
+- Folders live in the asset source: renaming one sends one command per asset
+  inside, plus one per companion, then one `catalog:move-folder` that carries
+  its empty folders over and deletes the old one.
 
 ## Editor pages
 
@@ -262,28 +186,33 @@ rename or move adds one per companion.
 | `voxel-model` | `@jolly-pixel/editor.voxel-model` | `dist/` | `voxelmodel` |
 | `pixel-art` | `@jolly-pixel/editor.pixel-art` | `dist-page/` | `pixelart` |
 
-Each page bundles its own copy of `editor.host` and `@jolly-pixel/ui`, so a
-change to either reaches a tab only after that page is rebuilt. The
-pixel-art package builds its library with `tsc`; its page has its own
-`build:page` script, which the studio `build` script runs.
+```mermaid
+flowchart TB
+  Watch["pnpm dev:editors"]
+  Folder["page folder rebuilt"]
+  Event["HMR: studio:editor-page-rebuilt"]
+  Reload["reload that editor's tabs"]
+  Watch --> Folder
+  Folder -->|"quiet for EDITOR_PAGE_SETTLE_MS"| Event
+  Event --> Reload
+```
 
-`dev:editors` runs every `build:watch` script in parallel: `tsc` in watch
-mode for `ui` and `editor.host`, `vite build --watch` for each page. The dev
-server watches the page folders and, once a folder has been quiet for
-`EDITOR_PAGE_SETTLE_MS`, sends `studio:editor-page-rebuilt` with the editor
-name over the HMR socket. The shell then reloads that editor's tabs: the
-active frame at once, the others on their next focus.
+- Each page bundles its own `editor.host` and `@jolly-pixel/ui`: change
+  either, rebuild the page.
+- Reload hits the active tab now, the others on next focus.
+- `pixel-art` builds its page with `build:page`, which the studio `build`
+  runs.
 
 ## Layout
 
 | Path | Role |
 |---|---|
-| `server/` | `StudioProject`, `EditorPackages`, `EditorPages`, `EditorPagesWatcher`: the project file, editor manifests and pages, without Vite |
-| `vite.config.ts`, `vite/` | back-end plugin, editor pages plugin, project modules plugin |
-| `src/index.ts` | boot: connection, registry, `<jolly-studio>` |
-| `src/connection.ts`, `src/offlineConnection.ts` | online catalog with offline fallback |
-| `src/seed.ts` | `createStudioSeed`, `loadStudioSeed`: the seed for both back-ends |
-| `src/catalog/` | `AssetPath`, `AssetTreeModel`, `AssetKindSet`, `AssetTally`, `AssetCompanions`, `AssetDeletion`, `AssetSelection`, `DraftFolders`: pure tree decisions |
-| `src/editors/` | `EditorRegistry`, `EditorDescriptor` |
-| `src/tabs/` | `EditorTabs`: strip, tab cap, order; `EditorFrames`: iframe stack, handshake, shell commands, appearance; `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, `home/`: `<studio-home>`, `<project-overview>`, `assets/`: `<asset-browser>`, `AssetCommands`, asset menu, delete dialog |
+| `server/` | project file, editor packages and pages, no Vite |
+| `vite.config.ts`, `vite/` | Vite plugins |
+| `src/index.ts` | boot |
+| `src/connection.ts`, `src/offlineConnection.ts` | online catalog, offline fallback |
+| `src/seed.ts` | seed for both back-ends |
+| `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
+| `src/editors/` | `EditorRegistry`, `ProjectManifest` |
+| `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser |

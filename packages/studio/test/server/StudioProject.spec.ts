@@ -64,12 +64,14 @@ async function writeProjectFile(
   return file;
 }
 
-async function createEditorPackage(
+async function installEditorPackage(
+  root: string,
   name: string
 ): Promise<string> {
-  const root = await createRoot();
+  const directory = path.join(root, "node_modules", name);
+  await fs.mkdir(path.join(directory, "dist"), { recursive: true });
   await fs.writeFile(
-    path.join(root, "package.json"),
+    path.join(directory, "package.json"),
     JSON.stringify({
       name,
       jollypixel: {
@@ -81,7 +83,7 @@ async function createEditorPackage(
     })
   );
 
-  return root;
+  return directory;
 }
 
 describe("StudioProject", () => {
@@ -124,7 +126,7 @@ describe("StudioProject", () => {
   describe("open", () => {
     test("resolves the editors and the kinds of the project file", async() => {
       const root = await createRoot();
-      const editorRoot = await createEditorPackage("editor-a");
+      await installEditorPackage(root, "editor-a");
       await writeProjectFile(root, {
         version: 1,
         editors: ["editor-a"],
@@ -134,7 +136,6 @@ describe("StudioProject", () => {
       });
 
       const project = await StudioProject.open(root, {
-        locate: () => editorRoot,
         load: loadKinds
       });
 
@@ -148,6 +149,67 @@ describe("StudioProject", () => {
       assert.deepEqual(
         project.kinds.handlers().map((handler) => handler.kind),
         ["kind-a", "texture"]
+      );
+    });
+
+    test("resolves packages from the project before the studio", async() => {
+      const root = await createRoot();
+      const installed = await installEditorPackage(root, "editor-a");
+      const local = path.join(root, "editors", "local");
+      await fs.mkdir(local, { recursive: true });
+      await fs.writeFile(
+        path.join(local, "package.json"),
+        JSON.stringify({
+          jollypixel: {
+            editor: {
+              name: "local",
+              kinds: ["local-kind"]
+            }
+          }
+        })
+      );
+      const kind = path.join(root, "kinds", "local");
+      await fs.mkdir(kind, { recursive: true });
+      await fs.writeFile(
+        path.join(kind, "package.json"),
+        JSON.stringify({
+          type: "module",
+          main: "./index.js"
+        })
+      );
+      await fs.writeFile(
+        path.join(kind, "index.js"),
+        "export const ASSET_KINDS = {\n" +
+        "  descriptors: [],\n" +
+        "  optionsSchema: { type: \"object\" },\n" +
+        "  handlers: () => [{ kind: \"local-kind\" }]\n" +
+        "};\n"
+      );
+      await writeProjectFile(root, {
+        version: 1,
+        editors: ["editor-a", "./editors/local"],
+        kinds: {
+          "./kinds/local": {},
+          "@jolly-pixel/asset.voxel-model": {}
+        }
+      });
+
+      const project = await StudioProject.open(root);
+      const [editorA, localEditor] = project.editors;
+
+      assert.strictEqual(
+        editorA.dist,
+        path.join(await fs.realpath(installed), "dist")
+      );
+      assert.ok(editorA.prebuilt);
+      assert.ok(!localEditor.prebuilt);
+      assert.strictEqual(
+        localEditor.dist,
+        path.join(await fs.realpath(local), "dist")
+      );
+      assert.deepEqual(
+        project.kinds.handlers().map((handler) => handler.kind),
+        ["local-kind", "voxelmodel", "texture"]
       );
     });
 
@@ -169,6 +231,16 @@ describe("StudioProject", () => {
         project.kinds.descriptors().map((descriptor) => descriptor.kind),
         ["pixelart", "tileset", "voxelmap", "voxelmodel"]
       );
+    });
+
+    test("opens the default project in memory without touching the root", async() => {
+      const root = await createRoot();
+      const project = await StudioProject.open(root, {
+        inMemory: true
+      });
+
+      assert.deepEqual(project.file.document, DEFAULT_PROJECT_FILE);
+      assert.deepEqual(await fs.readdir(root), []);
     });
 
     test("never overwrites an existing project file", async() => {

@@ -17,8 +17,14 @@ void bootStandalone(PixelArtEditor, {
   debugHandle: "pixelArtEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const { createPixelArtProject } = await import("./pixelArtProject.ts");
+    const [{ createPixelArtProject }, { default: createHandlers }] = await Promise.all([
+      import("./pixelArtProject.ts"),
+      import("virtual:jolly-pixel/handlers")
+    ]);
 
-    return createPixelArtProject();
+    return {
+      ...createPixelArtProject(),
+      handlers: createHandlers()
+    };
   }
 });

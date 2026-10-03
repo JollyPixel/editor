@@ -17,8 +17,14 @@ void bootStandalone(VoxelMapEditor, {
   debugHandle: "voxelMapEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const { loadWorldProject } = await import("./boot/worldProject.ts");
+    const [{ loadWorldProject }, { default: createHandlers }] = await Promise.all([
+      import("./boot/worldProject.ts"),
+      import("virtual:jolly-pixel/handlers")
+    ]);
 
-    return loadWorldProject();
+    return {
+      ...await loadWorldProject(),
+      handlers: createHandlers()
+    };
   }
 });

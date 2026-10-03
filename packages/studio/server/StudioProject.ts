@@ -4,23 +4,22 @@ import path from "node:path";
 // Import Third-party Dependencies
 import * as z from "zod";
 import {
+  PackageResolver,
   ProjectFile,
   ProjectKinds,
   type PackageLoader,
-  type ProjectFileData
+  type ProjectFileData,
+  type ProjectFileOpenOptions
 } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
-import {
-  EditorPackage,
-  type PackageLocator
-} from "./EditorPackage.ts";
 import { EditorPackages } from "./EditorPackages.ts";
 import { TEXTURE_SIZE } from "../src/seed.ts";
 
 // CONSTANTS
 export const PROJECT_ROOT_ENV = "JOLLY_PROJECT";
 export const DEFAULT_PROJECT_DIR = "project";
+export const STUDIO_ROOT = path.join(import.meta.dirname, "..");
 export const DEFAULT_PROJECT_FILE: ProjectFileData = {
   version: 1,
   editors: [
@@ -42,24 +41,24 @@ const kEditorsSectionSchema = z.object({
 
 export interface StudioProjectLoadOptions {
   /**
-   * @default EditorPackage.locate
+   * @default the project root, then `STUDIO_ROOT`
    */
-  locate?: PackageLocator;
+  resolver?: PackageResolver;
   /**
-   * @default a dynamic import resolved from the studio
+   * @default imports the file resolver.resolve returns
    */
   load?: PackageLoader;
 }
+
+export interface StudioProjectOpenOptions extends
+  StudioProjectLoadOptions,
+  ProjectFileOpenOptions {}
 
 export class StudioProject {
   readonly file: ProjectFile;
   readonly editors: EditorPackages;
   readonly kinds: ProjectKinds;
 
-  /**
-   * Resolves `PROJECT_ROOT_ENV` against `base`, defaulting to
-   * `DEFAULT_PROJECT_DIR`.
-   */
   static resolveRoot(
     base: string,
     env: NodeJS.ProcessEnv = process.env
@@ -74,15 +73,12 @@ export class StudioProject {
     );
   }
 
-  /**
-   * Writes `DEFAULT_PROJECT_FILE` first when the project has no project file.
-   */
   static async open(
     root: string,
-    options: StudioProjectLoadOptions = {}
+    options: StudioProjectOpenOptions = {}
   ): Promise<StudioProject> {
     return StudioProject.load(
-      await ProjectFile.readOrCreate(root, DEFAULT_PROJECT_FILE),
+      await ProjectFile.open(root, DEFAULT_PROJECT_FILE, options),
       options
     );
   }
@@ -92,8 +88,10 @@ export class StudioProject {
     options: StudioProjectLoadOptions = {}
   ): Promise<StudioProject> {
     const {
-      locate = EditorPackage.locate,
-      load = (packageName) => import(packageName)
+      resolver = new PackageResolver(file.root, {
+        fallbacks: [STUDIO_ROOT]
+      }),
+      load
     } = options;
     const section = kEditorsSectionSchema.safeParse(file.document);
     if (!section.success) {
@@ -104,8 +102,11 @@ export class StudioProject {
 
     return new StudioProject(
       file,
-      EditorPackages.read(section.data.editors, locate),
-      await ProjectKinds.load(file, { load })
+      EditorPackages.read(section.data.editors, resolver),
+      await ProjectKinds.load(file, {
+        resolver,
+        load
+      })
     );
   }
 

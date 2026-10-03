@@ -1,17 +1,10 @@
 // Import Third-party Dependencies
-import type {
-  AssetKindHandler,
-  AssetSeedMap
-} from "@jolly-pixel/asset-server";
-import {
-  PIXEL_ART_KIND,
-  pixelArtAssetKind
-} from "@jolly-pixel/asset.pixel-art";
+import type { AssetSeedMap } from "@jolly-pixel/asset-server";
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
   createVoxelModelDocument,
   encodeVoxelModelDocument,
-  VOXEL_MODEL_KIND,
-  voxelModelAssetKind
+  VOXEL_MODEL_KIND
 } from "@jolly-pixel/asset.voxel-model";
 
 // CONSTANTS
@@ -21,7 +14,6 @@ export const TEXTURE_SIZE = {
 };
 
 export interface ModelProject {
-  handlers: AssetKindHandler[];
   seed: AssetSeedMap;
 }
 
@@ -42,10 +34,6 @@ export function createModelProject(
   textureAssetId: string
 ): ModelProject {
   return {
-    handlers: [
-      voxelModelAssetKind(),
-      pixelArtAssetKind({ defaultSize: TEXTURE_SIZE })
-    ],
     seed: {
       "textures/model.pixelart": {
         id: textureAssetId,

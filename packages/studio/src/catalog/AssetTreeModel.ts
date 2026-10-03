@@ -53,8 +53,8 @@ export interface AssetDependencies {
 export interface AssetTreeOptions {
   presenter?: AssetKindPresenter;
   /**
-   * Shows only the assets of this kind and the folders holding them.
-   * Folder relocations and deletions still cover every asset under them.
+   * Shows only the assets of this kind and their companions; every folder
+   * still shows. Folder relocations and deletions cover every asset under them.
    */
   kind?: string | null;
   dependencies?: AssetDependencies;
@@ -68,6 +68,7 @@ export interface AssetRename {
 
 export interface AssetRelocation {
   nodeId: string;
+  type: AssetNodeData["type"];
   from: AssetPath;
   to: AssetPath;
   renames: AssetRename[];
@@ -126,7 +127,9 @@ export class AssetTreeModel {
 
     const leaves = new Map<string, AssetLeaf>();
     for (const asset of this.#assets.values()) {
-      if (!options.kind || options.kind === asset.kind) {
+      this.#folderAt(asset.path.parent);
+      const kinds = [asset.kind, this.#ownerOf(asset.id)?.kind];
+      if (!options.kind || kinds.includes(options.kind)) {
         leaves.set(asset.id, {
           asset,
           node: assetNode(asset, options.presenter)
@@ -138,12 +141,13 @@ export class AssetTreeModel {
       const owner = ownerId === undefined ?
         undefined :
         leaves.get(ownerId)?.node;
-      this.#add(
-        owner === undefined ?
-          this.#folderAt(asset.path.parent) :
-          owner.children ??= [],
-        node
-      );
+      if (owner === undefined) {
+        this.#add(this.#folderAt(asset.path.parent), node);
+      }
+      else {
+        owner.collapsible = false;
+        this.#add(owner.children ??= [], node);
+      }
     }
     for (const folder of options.folders ?? []) {
       this.#folderAt(folder);
@@ -353,10 +357,19 @@ export class AssetTreeModel {
 
     return {
       nodeId,
+      type: data.type,
       from: data.path,
       to,
       renames
     };
+  }
+
+  #ownerOf(
+    assetId: string
+  ): AssetLeafData | undefined {
+    const ownerId = this.#companions.ownerOf(assetId);
+
+    return ownerId === undefined ? undefined : this.#assets.get(ownerId);
   }
 
   #assertVacant(

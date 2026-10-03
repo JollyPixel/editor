@@ -25,7 +25,13 @@ export type RelocationVerb = "rename" | "move";
 
 export type AssetCommandCatalog = Pick<
   CatalogClient,
-  "create" | "rename" | "remove" | "exportArchive"
+  | "create"
+  | "rename"
+  | "remove"
+  | "createFolder"
+  | "moveFolder"
+  | "removeFolder"
+  | "exportArchive"
 >;
 
 export interface AssetCommandsOptions {
@@ -66,31 +72,49 @@ export class AssetCommands {
     }
   }
 
+  async createFolder(
+    path: AssetPath
+  ): Promise<boolean> {
+    try {
+      await this.#catalog.createFolder(path.toString());
+
+      return true;
+    }
+    catch (error) {
+      this.#onError(`Could not create "${path.name}": ${reasonOf(error)}`);
+
+      return false;
+    }
+  }
+
   async relocate(
     relocations: readonly AssetRelocation[],
     verb: RelocationVerb
   ): Promise<AssetRelocation | null> {
     let applied = 0;
     for (const relocation of relocations) {
-      for (const rename of relocation.renames) {
-        try {
+      try {
+        for (const rename of relocation.renames) {
           await this.#catalog.rename(
             rename.assetId,
             rename.to
           );
+          applied++;
         }
-        catch (error) {
-          this.#onError(relocationFailure({
-            verb,
-            relocations,
-            failed: relocation,
-            applied,
-            error
-          }));
+      }
+      catch (error) {
+        this.#onError(relocationFailure({
+          verb,
+          relocations,
+          failed: relocation,
+          applied,
+          error
+        }));
 
-          return relocation;
-        }
-        applied++;
+        return relocation;
+      }
+      if (relocation.type === "folder") {
+        await this.#moveFolder(relocation, verb);
       }
     }
 
@@ -121,6 +145,17 @@ export class AssetCommands {
           error
         )
       );
+
+      return;
+    }
+
+    for (const folder of deletion.folders) {
+      try {
+        await this.#catalog.removeFolder(folder.toString());
+      }
+      catch (error) {
+        this.#onError(`Could not delete "${folder.name}": ${reasonOf(error)}`);
+      }
     }
   }
 
@@ -136,6 +171,24 @@ export class AssetCommands {
     }
     catch (error) {
       this.#onError(`Could not export "${asset.path.name}": ${reasonOf(error)}`);
+    }
+  }
+
+  async #moveFolder(
+    relocation: AssetRelocation,
+    verb: RelocationVerb
+  ): Promise<void> {
+    try {
+      await this.#catalog.moveFolder(
+        relocation.from.toString(),
+        relocation.to.toString()
+      );
+    }
+    catch (error) {
+      const doing = verb === "rename" ? "renaming" : "moving";
+      this.#onError(
+        `Could not finish ${doing} "${relocation.from.name}": ${reasonOf(error)}`
+      );
     }
   }
 }

@@ -3,9 +3,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Third-party Dependencies
-import { defineConfig } from "vite";
 import {
-  createAssetWorkspacePlugin
+  defineConfig,
+  type UserConfig
+} from "vite";
+import {
+  createAssetWorkspacePlugin,
+  createProjectFileWatchPlugin,
+  createProjectKindsPlugin,
+  ProjectFile,
+  ProjectKinds,
+  type ProjectFileData
 } from "@jolly-pixel/asset-server/node";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
@@ -18,6 +26,13 @@ import { createWorldProject } from "./src/boot/worldProject.ts";
 // CONSTANTS
 const kE2EMode = "e2e";
 const kTilesetAssetId = "tileset-default";
+const kAssetsRoot = path.join(import.meta.dirname, "assets");
+const kProjectFile: ProjectFileData = {
+  version: 1,
+  kinds: {
+    "@jolly-pixel/asset.voxel-map": {}
+  }
+};
 const kTilesetFile = path.join(
   import.meta.dirname,
   "public",
@@ -52,9 +67,14 @@ const project = await createWorldProject(
   kTilesetAssetId
 );
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
   const e2e = mode === kE2EMode;
   const staticHosting = mode === "static";
+  const inMemory = command === "build" || e2e;
+  const projectFile = await ProjectFile.open(kAssetsRoot, kProjectFile, {
+    inMemory
+  });
+  const kinds = await ProjectKinds.load(projectFile);
 
   return {
     base: "./",
@@ -72,9 +92,11 @@ export default defineConfig(({ mode }) => {
         force: true
       } :
       undefined,
-    plugins: staticHosting ? [] : [
-      createAssetWorkspacePlugin({
-        root: path.join(import.meta.dirname, "assets"),
+    plugins: [
+      createProjectKindsPlugin(kinds),
+      inMemory ? null : createProjectFileWatchPlugin(projectFile),
+      staticHosting ? null : createAssetWorkspacePlugin({
+        root: kAssetsRoot,
         ...(e2e ?
           {
             source: new MemoryAssetSource(),
@@ -82,6 +104,7 @@ export default defineConfig(({ mode }) => {
           } :
           {}),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
+        handlers: kinds.handlers(),
         ...project
       })
     ]

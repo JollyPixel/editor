@@ -45,7 +45,7 @@ const kModel = new AssetTreeModel(kRecords);
 const kMaps = folderNodeId(AssetPath.parse("maps"));
 const kTextures = folderNodeId(AssetPath.parse("textures"));
 
-describe("AssetTreeModel draft folders", () => {
+describe("AssetTreeModel empty folders", () => {
   test("shows an empty folder, whatever the kind filter", () => {
     const model = new AssetTreeModel(kRecords, {
       kind: "voxelmap",
@@ -53,7 +53,8 @@ describe("AssetTreeModel draft folders", () => {
     });
 
     assert.deepEqual(shape(model.nodes), [
-      ["maps", [["caves", [["deep", []]]], "overworld.voxelmap.json"]]
+      ["maps", [["caves", [["deep", []]]], "overworld.voxelmap.json"]],
+      ["textures", [["old", []]]]
     ]);
     assert.equal(
       model.dropFolder({
@@ -70,8 +71,15 @@ describe("AssetTreeModel draft folders", () => {
     });
     const relocation = model.renameOf(folderNodeId(AssetPath.parse("drafts")), "levels");
 
+    assert.equal(relocation?.type, "folder");
     assert.equal(relocation?.to.toString(), "levels");
     assert.deepEqual(relocation?.renames, []);
+  });
+
+  test("tags an asset relocation with its node type", () => {
+    const relocation = kModel.renameOf(assetNodeId("readme"), "notes");
+
+    assert.equal(relocation?.type, "asset");
   });
 
   test("names a new folder after a path no folder, asset or hidden asset holds", () => {

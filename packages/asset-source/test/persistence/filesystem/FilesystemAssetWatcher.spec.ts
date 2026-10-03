@@ -10,12 +10,18 @@ import path from "node:path";
 import type { ChokidarOptions } from "chokidar";
 
 // Import Internal Dependencies
+import type { AssetEntryType } from "#src/AssetSource.ts";
 import {
   FilesystemAssetWatcher,
   type FilesystemWatchHandle
 } from "#src/persistence/filesystem/FilesystemAssetWatcher.ts";
 
-type FilesystemEvent = "add" | "change" | "unlink";
+type FilesystemEvent =
+  | "add"
+  | "addDir"
+  | "change"
+  | "unlink"
+  | "unlinkDir";
 type FilesystemListener = (absolute: string) => void;
 
 class FakeWatchHandle implements FilesystemWatchHandle {
@@ -61,7 +67,10 @@ interface WatchHarness {
 
 function watchHarness(
   root: string,
-  onChange: (assetPath: string) => void,
+  onChange: (
+    assetPath: string,
+    type: AssetEntryType
+  ) => void,
   isIgnored: (assetPath: string) => boolean = () => false
 ): WatchHarness {
   const handle = new FakeWatchHandle();
@@ -95,12 +104,12 @@ function watchHarness(
 }
 
 describe("FilesystemAssetWatcher", () => {
-  test("reports file events as root-relative POSIX paths", () => {
+  test("reports file events as root-relative POSIX file paths", () => {
     const root = path.resolve("workspace");
     const changes: string[] = [];
     const { handle } = watchHarness(
       root,
-      (assetPath) => changes.push(assetPath)
+      (assetPath, type) => changes.push(`${type}:${assetPath}`)
     );
     const absolute = path.join(root, "textures", "grass.png");
 
@@ -109,9 +118,28 @@ describe("FilesystemAssetWatcher", () => {
     handle.emit("unlink", absolute);
 
     assert.deepEqual(changes, [
-      "textures/grass.png",
-      "textures/grass.png",
-      "textures/grass.png"
+      "file:textures/grass.png",
+      "file:textures/grass.png",
+      "file:textures/grass.png"
+    ]);
+  });
+
+  test("reports folder events as root-relative POSIX folder paths", () => {
+    const root = path.resolve("workspace");
+    const changes: string[] = [];
+    const { handle } = watchHarness(
+      root,
+      (assetPath, type) => changes.push(`${type}:${assetPath}`)
+    );
+    const absolute = path.join(root, "textures", "empty");
+
+    handle.emit("addDir", absolute);
+    handle.emit("unlinkDir", absolute);
+    handle.emit("addDir", root);
+
+    assert.deepEqual(changes, [
+      "folder:textures/empty",
+      "folder:textures/empty"
     ]);
   });
 

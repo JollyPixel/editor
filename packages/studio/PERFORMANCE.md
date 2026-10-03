@@ -18,8 +18,6 @@ voxel-map keep-alives. Left:
 - voxel-model passes `renderOnDemand: false`. Its async paths (environment
   map load in `ModelEditorScene`, `BlockTextures`, selection and presence
   stores) need auditing before it opts in.
-- `BlockTurntable` keeps its own WebGLRenderer spinning while the block
-  library is visible; a deliberate animation, worth pausing when not hovered.
 - A gamepad is polled, so its first press after the runtime idles is missed.
 
 ## 2. Shared editor chunks
@@ -49,7 +47,7 @@ Plan: spike a studio-owned multi-page config first. Then serve `assets/*` with
 `immutable` through servo's `setHeaders` (dev mode forces `no-cache` today),
 keeping `index.html`, `main.css` and `textures/` revalidated.
 
-Open decision: this conflicts with ROADMAP step 2 (external editors). Either a
+Open decision: this conflicts with external editors (ADR-0016, ADR-0017). Either a
 joint build for in-repo editors only, with external editors self-contained, or
 an import map that serves three, lit, ui and editor.host once and makes every
 editor treat them as external (fits external editors, couples versions).
@@ -84,7 +82,7 @@ Editor frames share the shell's origin, so they run on its main thread.
   in the shell's process; a different site (or `sandbox` without
   `allow-same-origin`) breaks the shared `sessionStorage` identity, the
   offline workspace lock and BroadcastChannel, and changes ADR-0005's WebGL
-  context budget. Wait for ROADMAP step 3 (identity in the launch message) and
+  context budget. Wait for ROADMAP step 1 (identity in the launch message) and
   a `MessagePort` in the launch message.
 
 ## 4. One catalog per frame

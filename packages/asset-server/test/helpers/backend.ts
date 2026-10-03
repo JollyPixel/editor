@@ -6,8 +6,10 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import {
   AssetKindRegistry,
   AssetWriter,
+  CatalogFolders,
   type ArchiveBackend,
   type AssetKindHandler,
+  type CatalogBackend,
   type CatalogProjection,
   type SnapshotPolicy
 } from "#src/index.ts";
@@ -186,5 +188,21 @@ export function archiveBackend(
       await sync.scheduler.flush(assetId);
       await sync.projector.flush(assetId);
     }
+  };
+}
+
+export function catalogBackend(
+  sync: SyncHarness,
+  catalog: CatalogProjection
+): CatalogBackend {
+  const backend = archiveBackend(sync, catalog);
+
+  return {
+    ...backend,
+    folders: new CatalogFolders({
+      source: sync.source,
+      catalog,
+      flush: () => backend.flush()
+    })
   };
 }

@@ -212,7 +212,9 @@ change the spacing between them (defaults to 16px).
 ## Row layout
 
 A row with children starts with its expand toggle, outside the hover and
-selection highlight. A row without children reserves the same width inside the
+selection highlight. `TreeNode.collapsible: false` drops the toggle and keeps
+the children shown, for rows that belong with their parent; ArrowRight and
+ArrowLeft then move to the first child and to the parent. A row without children reserves the same width inside the
 highlight, so icons stay aligned across a level and the highlight reaches the
 row's start. When no node has children, that space is dropped.
 

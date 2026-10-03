@@ -19,8 +19,14 @@ void bootStandalone(VoxelModelEditor, {
   debugHandle: "voxelModelEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const { createModelProject } = await import("./boot/modelProject.ts");
+    const [{ createModelProject }, { default: createHandlers }] = await Promise.all([
+      import("./boot/modelProject.ts"),
+      import("virtual:jolly-pixel/handlers")
+    ]);
 
-    return createModelProject(crypto.randomUUID());
+    return {
+      ...createModelProject(crypto.randomUUID()),
+      handlers: createHandlers()
+    };
   }
 });

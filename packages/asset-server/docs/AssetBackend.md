@@ -52,6 +52,7 @@ interface AssetBackend extends AsyncDisposable {
   readonly kinds: AssetKindRegistry;
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;
+  readonly folders: CatalogFolders;
   readonly internals: AssetBackendInternals;
 
   flush(assetId?: string): Promise<void>;
@@ -60,7 +61,8 @@ interface AssetBackend extends AsyncDisposable {
 }
 ```
 
-Use [`writer`](./AssetWriter.md) for asset mutations. `flush(assetId?)` waits
+Use [`writer`](./AssetWriter.md) for asset mutations and
+[`folders`](./Catalog.md#folders) for folders. `flush(assetId?)` waits
 for pending snapshots and source writes for one asset, or for every pending
 asset when the ID is omitted.
 

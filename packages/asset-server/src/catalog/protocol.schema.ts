@@ -9,9 +9,13 @@ import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
+  CATALOG_CREATE_FOLDER,
   CATALOG_DELETE,
+  CATALOG_DELETE_FOLDER,
   CATALOG_EXPORT,
+  CATALOG_FOLDERS,
   CATALOG_IMPORT,
+  CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -21,6 +25,10 @@ import { assetInlineContentSchema } from "../events/AssetEvents.schema.ts";
 
 // CONSTANTS
 const kString = { type: "string" } as const;
+const kStrings = {
+  type: "array",
+  items: kString
+} as const;
 
 export const catalogCommandProtocol = new MessageProtocol(
   {
@@ -70,6 +78,47 @@ export const catalogCommandProtocol = new MessageProtocol(
           "type",
           "requestId",
           "assetId"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_CREATE_FOLDER },
+          requestId: kString,
+          path: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "path"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_MOVE_FOLDER },
+          requestId: kString,
+          from: kString,
+          to: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "from",
+          "to"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_DELETE_FOLDER },
+          requestId: kString,
+          path: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "path"
         ]
       },
       {
@@ -129,11 +178,13 @@ export const catalogMessageProtocol = new MessageProtocol(
         properties: {
           type: { const: CATALOG_SNAPSHOT },
           manifest: { type: "object" },
-          dependencies: { type: "object" }
+          dependencies: { type: "object" },
+          folders: kStrings
         },
         required: [
           "type",
-          "manifest"
+          "manifest",
+          "folders"
         ]
       },
       {
@@ -150,10 +201,22 @@ export const catalogMessageProtocol = new MessageProtocol(
       {
         type: "object",
         properties: {
+          type: { const: CATALOG_FOLDERS },
+          folders: kStrings
+        },
+        required: [
+          "type",
+          "folders"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
           type: { const: CATALOG_APPLIED },
           requestId: kString,
           command: kString,
           assetId: kString,
+          path: kString,
           content: assetInlineContentSchema,
           plan: { type: "object" },
           report: { type: "object" }

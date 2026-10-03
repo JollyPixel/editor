@@ -18,15 +18,15 @@ The shell never loads an asset kind's handler or an editor's code. It learns a k
 }
 ```
 
-`EditorPackages` reads the manifests at build time. The `virtual:jolly-pixel/project` module
-serves their `{ name, kinds }[]` with the descriptors of the project's kind packages
-([ADR-0016](./0016-the-project-file-lists-editors-and-kinds.md)). `EditorRegistry` turns both
-into kind icons and page URLs.
+`EditorPackages` reads the manifests when the server starts. The server serves their
+`{ name, kinds }[]` and the descriptors of the project's kind packages as
+`project-manifest.json` ([ADR-0016](./0016-the-project-file-lists-editors-and-kinds.md)); the
+shell fetches it at boot, and `EditorRegistry` turns it into kind icons and page URLs.
 Kind code runs in the back-end handlers, editor code in the frames, and the shell talks to the
 frames through `postMessage` only.
 
-This is what lets kinds and editors come from outside the monorepo later: the shell needs a
-descriptor and a manifest, never an import.
+This is what lets kinds and editors come from outside the monorepo: the shell needs a descriptor
+and a manifest, never an import, and its bundle carries no project data.
 
 ## Considered Options
 

@@ -5,24 +5,23 @@ import path from "node:path";
 // Import Third-party Dependencies
 import {
   defineConfig,
+  searchForWorkspaceRoot,
   type Plugin
 } from "vite";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   createAssetWorkspacePlugin,
-  ProjectFile
+  createProjectFileWatchPlugin,
+  createProjectKindsPlugin
 } from "@jolly-pixel/asset-server/node";
 import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { EditorPages } from "./server/EditorPages.ts";
-import {
-  DEFAULT_PROJECT_FILE,
-  StudioProject
-} from "./server/StudioProject.ts";
+import { StudioProject } from "./server/StudioProject.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
-import { projectModulesPlugin } from "./vite/projectModules.ts";
+import { projectManifestPlugin } from "./vite/projectManifestPlugin.ts";
 import { createStudioSeed } from "./src/seed.ts";
 
 // CONSTANTS
@@ -52,19 +51,30 @@ async function assetWorkspacePlugin(
 
 export default defineConfig(async({ mode }) => {
   const e2e = mode === "e2e";
-  const root = StudioProject.resolveRoot(import.meta.dirname);
-  const project = e2e || mode === "static" ?
-    await StudioProject.load(new ProjectFile(root, DEFAULT_PROJECT_FILE)) :
-    await StudioProject.open(root);
+  const inMemory = e2e || mode === "static";
+  const project = await StudioProject.open(
+    StudioProject.resolveRoot(import.meta.dirname),
+    { inMemory }
+  );
 
   return {
     base: "./",
-    server: e2e ? {
-      port: PORTS.studio,
-      strictPort: true
-    } : undefined,
+    server: {
+      ...(e2e ? {
+        port: PORTS.studio,
+        strictPort: true
+      } : {}),
+      fs: {
+        allow: [
+          searchForWorkspaceRoot(import.meta.dirname),
+          ...project.kinds.resolver.directories
+        ]
+      }
+    },
     plugins: [
-      projectModulesPlugin(project),
+      createProjectKindsPlugin(project.kinds),
+      projectManifestPlugin(project),
+      inMemory ? null : createProjectFileWatchPlugin(project.file),
       editorPagesPlugin(new EditorPages(project.editors)),
       mode === "static" ? null : await assetWorkspacePlugin(project, e2e)
     ]
