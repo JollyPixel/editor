@@ -8,7 +8,8 @@ import { AtomicFile } from "@openally/atomic-fs";
 // Import Internal Dependencies
 import type {
   AssetEntryType,
-  AssetSource
+  AssetSource,
+  AssetWatchOptions
 } from "../../AssetSource.ts";
 import { FilesystemAssetWatcher } from "./FilesystemAssetWatcher.ts";
 import { FilesystemPathResolver } from "./FilesystemPathResolver.ts";
@@ -199,12 +200,15 @@ export class FilesystemAssetSource implements AssetSource {
     onChange: (
       path: string,
       type: AssetEntryType
-    ) => void
+    ) => void,
+    options: AssetWatchOptions = {}
   ): () => void {
     const watcher = new FilesystemAssetWatcher(
       {
         root: this.root,
-        isIgnored: this.#isIgnored
+        isIgnored: this.#isIgnored,
+        isTemporary: this.#atomic.isTemporary,
+        onReady: options.onReady
       },
       onChange
     );

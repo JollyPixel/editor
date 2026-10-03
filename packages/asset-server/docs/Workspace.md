@@ -57,7 +57,8 @@ starter documents before the backend starts.
 by the workspace. `logger` defaults to a silent logger; when it is omitted,
 the server keeps its own default. `backend` passes extra
 [`AssetBackendOptions`](./AssetBackend.md#options) and defaults to `{}`.
-`compactOnOpen` defaults to `true`.
+`compactOnOpen` defaults to `true`, and also sets the backend option
+`compactOnSnapshot` unless `backend` sets it.
 
 `close()` detaches the room resolver, closes the backend, and closes the
 event store if the workspace created it. It leaves the server and source

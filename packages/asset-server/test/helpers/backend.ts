@@ -46,6 +46,7 @@ export interface SyncHarnessOptions {
   snapshot?: SnapshotPolicy;
   source?: MemoryAssetSource;
   eventStore?: EventStore.EventStore;
+  compact?: boolean;
 }
 
 export interface ReadCounter {
@@ -124,7 +125,8 @@ export async function syncHarness(
     states,
     projector,
     writer,
-    snapshot: options.snapshot
+    snapshot: options.snapshot,
+    compact: options.compact
   });
   scheduler.start();
 
@@ -135,9 +137,9 @@ export async function syncHarness(
   });
   const watcher = new SourceWatcher({
     source,
-    onChange: async(changed) => {
-      if (changed.has("file")) {
-        await reconciler.reconcile();
+    onChange: async(files) => {
+      if (files.size > 0) {
+        await reconciler.reconcile(files);
       }
     },
     debounce: 100

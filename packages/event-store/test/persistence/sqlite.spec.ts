@@ -109,6 +109,75 @@ describe("SqliteEventStore — version invariant", () => {
   });
 });
 
+describe("SqliteEventStore — journal", () => {
+  test("opens a file in WAL mode with incremental vacuum", async(t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "event-store-wal-"));
+    t.after(
+      () => fs.rmSync(root, { force: true, recursive: true })
+    );
+
+    const file = path.join(root, "events.db");
+    const store = await EventStore.persistence.sqlite(file);
+    store.close();
+
+    using db = new DatabaseSync(file);
+    assert.deepEqual(
+      { ...db.prepare("PRAGMA journal_mode").get() },
+      { journal_mode: "wal" }
+    );
+    assert.deepEqual(
+      { ...db.prepare("PRAGMA auto_vacuum").get() },
+      { auto_vacuum: 2 }
+    );
+  });
+
+  test("converts an existing file to incremental vacuum", async(t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "event-store-wal-"));
+    t.after(
+      () => fs.rmSync(root, { force: true, recursive: true })
+    );
+
+    const file = path.join(root, "events.db");
+    const legacy = new DatabaseSync(file);
+    legacy.exec(SQL_SCHEMA);
+    legacy.close();
+
+    using store = await EventStore.persistence.sqlite(file);
+    append(store, "a1", { x: 1 });
+    store.close();
+
+    using db = new DatabaseSync(file);
+    assert.deepEqual(
+      { ...db.prepare("PRAGMA auto_vacuum").get() },
+      { auto_vacuum: 2 }
+    );
+  });
+
+  test("reclaims compacted pages without a full vacuum", async(t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "event-store-wal-"));
+    t.after(
+      () => fs.rmSync(root, { force: true, recursive: true })
+    );
+
+    const file = path.join(root, "events.db");
+    using store = await EventStore.persistence.sqlite(file);
+    const payload = { blob: "x".repeat(64 * 1024) };
+    append(store, "a1", payload, "asset.created");
+    append(store, "a1", payload, "asset.updated");
+
+    const report = store.compact({
+      checkpointEventTypes: ["asset.created", "asset.updated"]
+    });
+
+    using db = new DatabaseSync(file);
+    assert.strictEqual(report.removed, 1);
+    assert.deepEqual(
+      { ...db.prepare("PRAGMA freelist_count").get() },
+      { freelist_count: 0 }
+    );
+  });
+});
+
 describe("SqliteEventStore — subpath entrypoint", () => {
   test("exposes the same factory as persistence.sqlite", async() => {
     using store = await createSqliteEventStore();

@@ -69,6 +69,7 @@ interface WorkspaceScan {
    * Listed but unreadable. Excluded from both sides of the diff.
    */
   readonly unreadable: Set<string>;
+  readonly writing: Set<string>;
 }
 
 export interface ReconcilerOptions {
@@ -102,14 +103,22 @@ export class Reconciler {
     this.#logger = options.logger ?? silentLogger();
   }
 
-  reconcile(): Promise<Result<ReconcileReport, Error>> {
-    return this.#passes.run(() => this.#reconcile());
+  reconcile(
+    paths?: Iterable<string>
+  ): Promise<Result<ReconcileReport, Error>> {
+    const scope = paths === undefined ? null : new Set(paths);
+
+    return this.#passes.run(() => this.#reconcile(scope));
   }
 
-  async #reconcile(): Promise<Result<ReconcileReport, Error>> {
+  async #reconcile(
+    scope: ReadonlySet<string> | null
+  ): Promise<Result<ReconcileReport, Error>> {
     let scan: WorkspaceScan;
     try {
-      scan = await this.#observe();
+      scan = await this.#observe(
+        scope === null ? await this.#source.list() : await this.#present(scope)
+      );
     }
     catch (error) {
       return Err(asError(error));
@@ -117,7 +126,11 @@ export class Reconciler {
 
     const projected: ProjectedEntry[] = [];
     for (const { assetId, projection } of this.#projector.projections()) {
-      if (scan.unreadable.has(projection.path)) {
+      if (
+        scan.unreadable.has(projection.path) ||
+        scan.writing.has(projection.path) ||
+        (scope !== null && !scope.has(projection.path))
+      ) {
         continue;
       }
 
@@ -133,6 +146,12 @@ export class Reconciler {
       projected,
       scan.entries
     );
+    if (
+      scope !== null &&
+      (diff.created.length > 0 || diff.deleted.length > 0)
+    ) {
+      return this.#reconcile(null);
+    }
     const report: MutableReport = {
       created: 0,
       updated: 0,
@@ -239,10 +258,28 @@ export class Reconciler {
       report.failed;
   }
 
-  async #observe(): Promise<WorkspaceScan> {
-    const paths = await this.#source.list();
+  async #present(
+    scope: ReadonlySet<string>
+  ): Promise<string[]> {
+    const present: string[] = [];
+    for (const path of scope) {
+      if (
+        this.#source.isIgnored?.(path) !== true &&
+        await this.#source.exists(path)
+      ) {
+        present.push(path);
+      }
+    }
+
+    return present;
+  }
+
+  async #observe(
+    paths: readonly string[]
+  ): Promise<WorkspaceScan> {
     const entries: ObservedEntry[] = [];
     const unreadable = new Set<string>();
+    const writing = new Set<string>();
 
     for (let index = 0; index < paths.length; index += kReadConcurrency) {
       const batch = paths.slice(
@@ -280,7 +317,10 @@ export class Reconciler {
       );
 
       for (const { path, entry } of results) {
-        if (entry === null) {
+        if (this.#projector.isWriting(path)) {
+          writing.add(path);
+        }
+        else if (entry === null) {
           unreadable.add(path);
         }
         else {
@@ -291,7 +331,8 @@ export class Reconciler {
 
     return {
       entries,
-      unreadable
+      unreadable,
+      writing
     };
   }
 }

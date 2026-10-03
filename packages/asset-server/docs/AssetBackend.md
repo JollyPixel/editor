@@ -21,6 +21,7 @@ interface AssetBackendOptions {
   catalogMaxContentBytes?: number;
   catalogArchiveLimits?: ArchiveLimits;
   catalogDeleteProtection?: boolean;
+  compactOnSnapshot?: boolean;
   logger?: Logger;
 }
 ```
@@ -34,6 +35,9 @@ paths use the built-in `binary` kind.
 
 `reconcileOnStart` and `watch` default to `true`. `watch` only has an effect
 when the source supports it. `reconcileDebounce` defaults to 200 ms.
+
+With `compactOnSnapshot` (default `false`), each scheduled snapshot first
+compacts its asset stream. See [Sync](./Sync.md#snapshots).
 
 `catalogMaxContentBytes` defaults to 16 MiB of decoded content for catalog
 create and archive commands. See [Catalog](./Catalog.md#network-room).

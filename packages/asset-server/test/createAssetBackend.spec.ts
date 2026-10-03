@@ -10,7 +10,8 @@ import { setTimeout } from "node:timers/promises";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   MemoryAssetSource,
-  type AssetEntryType
+  type AssetEntryType,
+  type AssetWatchOptions
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
@@ -19,6 +20,7 @@ import {
   type AssetBackend
 } from "#src/index.ts";
 import { bytes } from "./helpers/bytes.ts";
+import { recordingLogger } from "./helpers/logger.ts";
 
 type ChangeListener = (path: string, type: AssetEntryType) => void;
 
@@ -26,9 +28,11 @@ class WatchedSource extends MemoryAssetSource {
   #listener: ChangeListener | null = null;
 
   watch(
-    onChange: ChangeListener
+    onChange: ChangeListener,
+    options: AssetWatchOptions = {}
   ): () => void {
     this.#listener = onChange;
+    options.onReady?.();
 
     return () => {
       this.#listener = null;
@@ -107,5 +111,38 @@ describe("createAssetBackend — reconcile", () => {
     assert.strictEqual(report.created, 1);
     assert.strictEqual(backend.catalog.size, 1);
     assert.deepEqual(backend.folders.toJSON(), ["maps"]);
+  });
+});
+
+describe("createAssetBackend — append errors", () => {
+  test("leaves a failed conditional append to the appender", async() => {
+    const { logger, records } = recordingLogger();
+    await using backend = await createAssetBackend({
+      source: new MemoryAssetSource(),
+      eventStore: EventStore.persistence.memory(),
+      watch: false,
+      logger
+    });
+
+    const appended = backend.eventStore.writer.append({
+      assetType: "binary",
+      assetId: "a1",
+      eventType: "asset.deleted",
+      eventData: {
+        path: "a.png",
+        kind: "binary"
+      },
+      actor: {
+        type: "system",
+        source: "test"
+      },
+      expectedVersion: 3
+    });
+
+    assert.ok(appended.err);
+    assert.deepEqual(
+      records.filter((record) => record.level === "error"),
+      []
+    );
   });
 });

@@ -16,6 +16,7 @@ import {
   toJson,
   type EventFields
 } from "../serialize.ts";
+import { EventVersionConflictError } from "../errors/EventVersionConflictError.ts";
 
 type EventPredicate = (
   event: Event
@@ -38,8 +39,18 @@ export class MemoryEventLog implements EventLog {
       assetId,
       eventType,
       eventData,
-      actor
+      actor,
+      expectedVersion
     } = input;
+
+    const head = this.#versionByAsset.get(assetId) ?? 0;
+    if (expectedVersion !== undefined && expectedVersion !== head) {
+      throw new EventVersionConflictError(
+        assetId,
+        expectedVersion,
+        head
+      );
+    }
 
     const fields: EventFields = {
       eventId: this.#nextEventId,
@@ -47,7 +58,7 @@ export class MemoryEventLog implements EventLog {
       assetId,
       eventType,
       eventDataJson: toJson(eventData, "eventData"),
-      eventVersion: (this.#versionByAsset.get(assetId) ?? 0) + 1,
+      eventVersion: head + 1,
       actorJson: toJson(actor, "actor"),
       createdAt: new Date().toISOString()
     };
@@ -137,7 +148,10 @@ export class MemoryEventLog implements EventLog {
   ): CompactReport {
     this.#assertOpen();
 
-    const checkpoints = this.#checkpoints(options.checkpointEventTypes);
+    const checkpoints = this.#checkpoints(
+      options.checkpointEventTypes,
+      options.assetId
+    );
     const before = this.#events.length;
 
     this.#events = this.#events.filter(
@@ -179,7 +193,8 @@ export class MemoryEventLog implements EventLog {
   }
 
   #checkpoints(
-    eventTypes: readonly string[]
+    eventTypes: readonly string[],
+    assetId?: string
   ): Map<string, number> {
     const wanted = new Set(eventTypes);
     const checkpoints = new Map<string, number>();
@@ -187,7 +202,10 @@ export class MemoryEventLog implements EventLog {
       return checkpoints;
     }
 
-    for (const event of this.#events) {
+    const events = assetId === undefined ?
+      this.#events :
+      this.#streams.get(assetId) ?? [];
+    for (const event of events) {
       if (
         wanted.has(event.eventType) &&
         event.eventId > (checkpoints.get(event.assetId) ?? 0)

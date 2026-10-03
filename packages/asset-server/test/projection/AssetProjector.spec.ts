@@ -16,10 +16,7 @@ import {
   ProjectionState,
   type AssetProjectionChange
 } from "#src/projection/index.ts";
-import {
-  decodeContent,
-  encodeContent
-} from "#src/events/inlineContent.ts";
+import { encodeContent } from "#src/events/inlineContent.ts";
 import {
   countingReads,
   syncHarness
@@ -63,7 +60,7 @@ describe("AssetProjector — load reads the tail of the log", () => {
 
     assert.strictEqual(counter.read, 1);
     assert.strictEqual(
-      text(decodeContent(projector.desired(created.assetId)!.content)),
+      text((await projector.read(created.assetId))!),
       "20"
     );
   });
@@ -96,7 +93,7 @@ describe("AssetProjector — load reads the tail of the log", () => {
 
     const desired = projector.desired(created.assetId)!;
     assert.strictEqual(desired.path, "b.png");
-    assert.strictEqual(text(decodeContent(desired.content)), "two");
+    assert.strictEqual(text((await projector.read(created.assetId))!), "two");
   });
 
   test("folds a deletion as the newest checkpoint", async() => {
@@ -161,7 +158,7 @@ describe("AssetProjector — lifecycle events land on the source", () => {
     );
   });
 
-  test("a rename moves the content without re-reading the old path", async() => {
+  test("a rename moves the projected file", async() => {
     await using harness = await syncHarness();
 
     const created = (await harness.writer.create({
@@ -184,6 +181,41 @@ describe("AssetProjector — lifecycle events land on the source", () => {
     assert.strictEqual(
       (await harness.source.list()).includes("a.png"),
       false
+    );
+  });
+
+  test("a projected asset is read back from its file, not held", async() => {
+    await using harness = await syncHarness();
+
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("hello"),
+      actor: kActor
+    })).unwrap();
+    await harness.projector.flush();
+    await harness.source.write("a.png", bytes("on disk"));
+
+    assert.strictEqual(
+      text((await harness.projector.read(created.assetId))!),
+      "on disk"
+    );
+  });
+
+  test("an asset waiting for its write is read from the event", async() => {
+    await using harness = await syncHarness();
+    harness.source.write = () => Promise.reject(new Error("disk full"));
+
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("hello"),
+      actor: kActor
+    })).unwrap();
+    await harness.projector.flush();
+
+    assert.strictEqual(harness.projector.pending, 1);
+    assert.strictEqual(
+      text((await harness.projector.read(created.assetId))!),
+      "hello"
     );
   });
 

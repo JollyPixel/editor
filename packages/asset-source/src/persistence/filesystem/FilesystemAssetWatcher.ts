@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import path from "node:path";
+
 // Import Third-party Dependencies
 import chokidar, { type ChokidarOptions } from "chokidar";
 
@@ -19,6 +22,10 @@ export interface FilesystemWatchHandle {
     event: FilesystemEvent,
     listener: FilesystemListener
   ): FilesystemWatchHandle;
+  on(
+    event: "ready",
+    listener: () => void
+  ): FilesystemWatchHandle;
   removeAllListeners(): FilesystemWatchHandle;
   close(): Promise<void>;
 }
@@ -31,6 +38,8 @@ export type FilesystemWatchFactory = (
 export interface FilesystemAssetWatcherOptions {
   root: string;
   isIgnored: AssetPathMatcher;
+  isTemporary?: (name: string) => boolean;
+  onReady?: () => void;
   watch?: FilesystemWatchFactory;
 }
 
@@ -47,7 +56,7 @@ export class FilesystemAssetWatcher {
     const watch = options.watch ?? chokidar.watch;
     this.#watcher = watch(options.root, {
       persistent: true,
-      ignoreInitial: false,
+      ignoreInitial: true,
       awaitWriteFinish: {
         stabilityThreshold: 120,
         pollInterval: 30
@@ -62,6 +71,7 @@ export class FilesystemAssetWatcher {
       }
     });
 
+    const isTemporary = options.isTemporary ?? (() => false);
     function notify(
       type: AssetEntryType
     ): FilesystemListener {
@@ -72,7 +82,8 @@ export class FilesystemAssetWatcher {
         );
         if (
           relative !== null &&
-          !options.isIgnored(relative)
+          !options.isIgnored(relative) &&
+          (type === "folder" || !isTemporary(path.basename(absolute)))
         ) {
           onChange(relative, type);
         }
@@ -83,7 +94,8 @@ export class FilesystemAssetWatcher {
       .on("change", notify("file"))
       .on("unlink", notify("file"))
       .on("addDir", notify("folder"))
-      .on("unlinkDir", notify("folder"));
+      .on("unlinkDir", notify("folder"))
+      .on("ready", () => options.onReady?.());
   }
 
   close(): void {

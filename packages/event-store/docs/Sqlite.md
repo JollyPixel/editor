@@ -23,6 +23,20 @@ Passing a file path creates or opens a durable database, and creates the
 directories leading to it. The default location is `":memory:"`, which lasts
 only until its SQLite connection closes and touches no filesystem path.
 
+## Journal
+
+For a file location, the factory sets these before running the schema:
+
+| Pragma | Value | Effect |
+|---|---|---|
+| `auto_vacuum` | `INCREMENTAL` | A file created without it is converted once with `VACUUM` |
+| `journal_mode` | `WAL` | Writes go to `<location>-wal`; readers do not block the writer |
+| `synchronous` | `NORMAL` | No fsync per commit; a power loss can drop the last commits, a process crash cannot |
+
+SQLite keeps `<location>-wal` and `<location>-shm` next to the database while
+a connection is open and removes them on a clean close. A connection passed to
+`SqliteEventLog` keeps whatever pragmas its owner set.
+
 The factory returns a promise because the main package entry point loads the
 Node-only backend when the factory is called. Importing the main entry point is
 safe in a browser bundle as long as the SQLite factory is not called.
@@ -76,6 +90,11 @@ from storing the same version for one asset. If SQLite rejects the insert,
 ## Compaction
 
 [`compact`](./EventStore.md#compaction) deletes superseded rows. With the
-default `reclaim: true`, it runs `VACUUM` after a deletion so the file can
-release freed pages. Pass `reclaim: false` to skip `VACUUM` and leave the file
-at its current size.
+default `reclaim: true`, it releases the freed pages after a deletion: with
+`PRAGMA incremental_vacuum` when the database uses incremental auto-vacuum (the
+factory's default), with `VACUUM` otherwise. Pass `reclaim: false` to keep the
+freed pages; later inserts reuse them, so the file stops growing without
+shrinking.
+
+A conditional append (`expectedVersion`) checks the asset's newest version in
+the same `INSERT` statement that assigns the next one.

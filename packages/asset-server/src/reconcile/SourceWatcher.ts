@@ -15,7 +15,7 @@ import { asError } from "../utils/asError.ts";
 const kDefaultDebounce = 200;
 
 export type SourceChangeHandler = (
-  changed: ReadonlySet<AssetEntryType>
+  files: ReadonlySet<string>
 ) => Promise<void>;
 
 export interface SourceWatcherOptions {
@@ -32,7 +32,8 @@ export interface SourceWatcherOptions {
 
 /**
  * Coalesces source notifications into sequential `onChange` calls, each
- * receiving the entry types notified since the previous one.
+ * receiving the file paths notified since the previous one. A batch of
+ * folder notifications alone calls `onChange` with no file.
  */
 export class SourceWatcher {
   #source: AssetSource;
@@ -41,10 +42,11 @@ export class SourceWatcher {
   #logger: Logger;
 
   #unwatch: (() => void) | null = null;
+  #ready: Promise<void> = Promise.resolve();
   #handle: ReturnType<typeof setTimeout> | null = null;
   #running: Promise<void> | null = null;
-  #notified = new Set<AssetEntryType>();
-  #due = new Set<AssetEntryType>();
+  #notified = new ChangeBatch();
+  #due = new ChangeBatch();
 
   constructor(
     options: SourceWatcherOptions
@@ -59,17 +61,22 @@ export class SourceWatcher {
     return this.#unwatch !== null;
   }
 
-  start(): void {
-    if (
-      this.#unwatch !== null ||
-      this.#source.watch === undefined
-    ) {
-      return;
+  start(): Promise<void> {
+    if (this.#unwatch !== null) {
+      return this.#ready;
+    }
+    if (this.#source.watch === undefined) {
+      return Promise.resolve();
     }
 
+    const ready = Promise.withResolvers<void>();
+    this.#ready = ready.promise;
     this.#unwatch = this.#source.watch(
-      (path, type) => this.notify(path, type)
+      (path, type) => this.notify(path, type),
+      { onReady: () => ready.resolve() }
     );
+
+    return this.#ready;
   }
 
   notify(
@@ -80,7 +87,7 @@ export class SourceWatcher {
       .withMetadata({ path, type })
       .debug("filesystem change observed");
 
-    this.#notified.add(type);
+    this.#notified.add(path, type);
     if (this.#handle !== null) {
       clearTimeout(this.#handle);
     }
@@ -104,19 +111,17 @@ export class SourceWatcher {
       clearTimeout(this.#handle);
       this.#handle = null;
     }
-    this.#notified.clear();
+    this.#notified = new ChangeBatch();
 
     await this.#running;
   }
 
   #pass(): Promise<void> {
     this.#handle = null;
-    for (const type of this.#notified) {
-      this.#due.add(type);
-    }
-    this.#notified.clear();
+    this.#due.merge(this.#notified);
+    this.#notified = new ChangeBatch();
 
-    if (this.#running === null && this.#due.size > 0) {
+    if (this.#running === null && !this.#due.empty) {
       this.#running = this.#drain().finally(() => {
         this.#running = null;
       });
@@ -126,11 +131,11 @@ export class SourceWatcher {
   }
 
   async #drain(): Promise<void> {
-    while (this.#due.size > 0) {
-      const changed = new Set(this.#due);
-      this.#due.clear();
+    while (!this.#due.empty) {
+      const { files } = this.#due;
+      this.#due = new ChangeBatch();
       try {
-        await this.#onChange(changed);
+        await this.#onChange(files);
       }
       catch (error) {
         this.#logger
@@ -138,5 +143,35 @@ export class SourceWatcher {
           .error("source change not handled");
       }
     }
+  }
+}
+
+class ChangeBatch {
+  readonly files = new Set<string>();
+  #folders = false;
+
+  get empty(): boolean {
+    return this.files.size === 0 && !this.#folders;
+  }
+
+  add(
+    path: string,
+    type: AssetEntryType
+  ): void {
+    if (type === "file") {
+      this.files.add(path);
+    }
+    else {
+      this.#folders = true;
+    }
+  }
+
+  merge(
+    batch: ChangeBatch
+  ): void {
+    for (const path of batch.files) {
+      this.files.add(path);
+    }
+    this.#folders ||= batch.#folders;
   }
 }

@@ -226,12 +226,16 @@ export class Server {
     fields: EnvelopeFields,
     outcome: DispatchOutcome
   ): void {
+    const dropped = outcome.outcome === "dropped";
+    if (!dropped && !this.logger.isLevelEnabled("debug")) {
+      return;
+    }
+
     const wideEvent = this.logger.withMetadata({
       ...fields,
       ...outcome
     });
-
-    if (outcome.outcome === "dropped") {
+    if (dropped) {
       wideEvent.warn("envelope handled");
 
       return;

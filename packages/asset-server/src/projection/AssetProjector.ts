@@ -17,11 +17,8 @@ import {
   type AssetEventRejection,
   type AssetEventType
 } from "../events/AssetEvents.ts";
-import { decodeContent } from "../events/inlineContent.ts";
-import {
-  applyProjection,
-  type AssetProjection
-} from "./applyProjection.ts";
+import type { AssetProjection } from "./applyProjection.ts";
+import { AssetFold } from "./AssetFold.ts";
 import type { ProjectionState } from "./ProjectionState.ts";
 import { TaskChain } from "../utils/TaskChain.ts";
 import { asError } from "../utils/asError.ts";
@@ -37,12 +34,6 @@ export type AssetProjectorEventMap = {
     change: AssetProjectionChange
   ) => void;
 };
-
-interface AssetFold {
-  projected: AssetProjection | null;
-  desired: AssetProjection | null;
-  desiredEventId: number;
-}
 
 export interface AssetProjectorOptions {
   source: AssetSource;
@@ -67,6 +58,7 @@ export class AssetProjector extends Emitter<
   #folds = new Map<string, AssetFold>();
   #paths = new Map<string, string>();
   #dirty = new Set<string>();
+  #writing = new Set<string>();
   #stateDirty = false;
   #queue = new TaskChain();
   #unsubscribe: (() => void) | null = null;
@@ -160,6 +152,18 @@ export class AssetProjector extends Emitter<
     return this.#paths.get(path) ?? null;
   }
 
+  async read(
+    assetId: string
+  ): Promise<Uint8Array | null> {
+    return this.#folds.get(assetId)?.read(this.#source) ?? null;
+  }
+
+  isWriting(
+    path: string
+  ): boolean {
+    return this.#writing.has(path);
+  }
+
   get pending(): number {
     return this.#dirty.size;
   }
@@ -179,7 +183,7 @@ export class AssetProjector extends Emitter<
       return;
     }
 
-    fold.projected = fold.desired;
+    fold.settle();
     this.#dirty.delete(assetId);
     this.#state.advance(assetId, fold.desiredEventId);
     this.#stateDirty = true;
@@ -202,20 +206,15 @@ export class AssetProjector extends Emitter<
     }
 
     const assetEvent = parsed.val;
-    const fold = this.#folds.get(event.assetId) ?? {
-      projected: null,
-      desired: null,
-      desiredEventId: 0
-    };
+    const fold = this.#folds.get(event.assetId) ?? new AssetFold();
 
     this.#unindex(event.assetId, fold.desired);
-    fold.desired = applyProjection(fold.desired, assetEvent);
-    fold.desiredEventId = event.eventId;
+    fold.apply(assetEvent, event.eventId);
     if (fold.desired !== null) {
       this.#paths.set(fold.desired.path, event.assetId);
     }
     if (event.eventId <= this.#state.checkpoint(event.assetId)) {
-      fold.projected = fold.desired;
+      fold.settle();
     }
     else {
       this.#dirty.add(event.assetId);
@@ -292,9 +291,13 @@ export class AssetProjector extends Emitter<
       return;
     }
 
-    const { projected, desired, desiredEventId } = fold;
+    const {
+      projected,
+      desired,
+      desiredEventId
+    } = fold;
     try {
-      await this.#applyOperations(projected, desired);
+      await this.#applyOperations(fold);
     }
     catch (error) {
       const { message: reason } = asError(error);
@@ -307,25 +310,27 @@ export class AssetProjector extends Emitter<
       return;
     }
 
-    fold.projected = desired;
-    if (fold.desiredEventId === desiredEventId) {
+    fold.settle(desired);
+    if (fold.settled) {
       this.#dirty.delete(assetId);
     }
     this.#state.advance(assetId, desiredEventId);
     this.#stateDirty = true;
-    this.#logger
-      .withMetadata({
-        assetId,
-        eventId: desiredEventId,
-        path: desired?.path ?? projected?.path
-      })
-      .debug("asset projected");
+    if (this.#logger.isLevelEnabled("debug")) {
+      this.#logger
+        .withMetadata({
+          assetId,
+          eventId: desiredEventId,
+          path: desired?.path ?? projected?.path
+        })
+        .debug("asset projected");
+    }
   }
 
   async #applyOperations(
-    projected: AssetProjection | null,
-    desired: AssetProjection | null
+    fold: AssetFold
   ): Promise<void> {
+    const { projected, desired } = fold;
     if (desired === null) {
       if (projected !== null) {
         await this.#source.delete(projected.path);
@@ -336,14 +341,31 @@ export class AssetProjector extends Emitter<
 
     const moved = projected !== null && projected.path !== desired.path;
     if (projected === null || moved || projected.hash !== desired.hash) {
-      await this.#source.write(
-        desired.path,
-        decodeContent(desired.content)
-      );
+      this.#writing.add(desired.path);
+      try {
+        await this.#source.write(
+          desired.path,
+          await this.#contentOf(fold)
+        );
+      }
+      finally {
+        this.#writing.delete(desired.path);
+      }
     }
 
     if (moved) {
       await this.#source.delete(projected.path);
     }
+  }
+
+  async #contentOf(
+    fold: AssetFold
+  ): Promise<Uint8Array> {
+    const data = await fold.read(this.#source);
+    if (data === null) {
+      throw new Error("asset content is neither held nor projected");
+    }
+
+    return data;
   }
 }

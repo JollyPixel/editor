@@ -400,3 +400,42 @@ describe("AssetStateStore — fault isolation", () => {
     assert.strictEqual(records.length, 1);
   });
 });
+
+describe("AssetStateStore — scheduled snapshots", () => {
+  test("a live snapshot advances the version without a load", async() => {
+    const { handler, folded } = recordingCounterHandler();
+    await using harness = await syncHarness({ handlers: [handler] });
+    const assetId = await counterAsset(harness);
+    await harness.states.acquire(assetId, "counter");
+    increment(harness, assetId);
+
+    folded.length = 0;
+    await harness.scheduler.flush(assetId);
+
+    assert.strictEqual(
+      harness.eventStore.reader.list(assetId).at(-1)?.eventType,
+      ASSET_UPDATED
+    );
+    assert.deepEqual(folded, []);
+    assert.strictEqual(
+      harness.states.versionOf(assetId),
+      harness.eventStore.reader.list(assetId).at(-1)?.eventVersion
+    );
+  });
+
+  test("a replay still loads the snapshot it starts from", async() => {
+    const { handler, folded } = recordingCounterHandler();
+    await using harness = await syncHarness({ handlers: [handler] });
+    const assetId = await counterAsset(harness);
+    await harness.states.acquire(assetId, "counter");
+    increment(harness, assetId);
+    await harness.scheduler.snapshot(assetId);
+    harness.states.release(assetId);
+
+    folded.length = 0;
+    const entry = await harness.states.acquire(assetId, "counter");
+
+    assert.deepEqual(folded, ["load"]);
+    assert.strictEqual((entry.state as CounterState).value, 1);
+  });
+});

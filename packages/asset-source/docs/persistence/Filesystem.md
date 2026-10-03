@@ -55,16 +55,19 @@ matcher without accessing the filesystem.
 ## Watching
 
 ```ts
-const stop = source.watch((path, type) => {
-  console.log(type, path);
-});
+const stop = source.watch(
+  (path, type) => console.log(type, path),
+  { onReady: () => console.log("watching") }
+);
 
 stop();
 ```
 
 The callback receives the same root-relative POSIX path for additions,
-changes and removals of files and folders. Existing files and folders are also
-reported when the watcher starts.
+changes and removals of files and folders. Entries that already exist when the
+watcher starts are not reported, and neither are the temporary files of
+atomic writes. `onReady` is called once the initial scan is done; a change
+made before it may go unreported.
 `type` is `"file"` or `"folder"`. The callback does not say whether the entry
 was added, changed or removed, so callers should read or list the source when
 they need the current state.

@@ -67,7 +67,7 @@ export class ServerRoom {
     this.id = id;
     this.#extension = extension;
     this.#rights = rights.scope(extension.name);
-    this.#logger = (options.logger ?? createLogger()).withContext({
+    this.#logger = (options.logger ?? createLogger()).child().withContext({
       room: this.id
     });
 
@@ -352,13 +352,15 @@ export class ServerRoom {
         .check(peerRole, PRESENCE_EVENT) !== "void"
     });
 
-    this.#logger
-      .withMetadata({
-        clientId,
-        role,
-        outcome: "applied"
-      })
-      .debug("presence update");
+    if (this.#logger.isLevelEnabled("debug")) {
+      this.#logger
+        .withMetadata({
+          clientId,
+          role,
+          outcome: "applied"
+        })
+        .debug("presence update");
+    }
   }
 
   async message(

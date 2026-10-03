@@ -25,12 +25,12 @@ type FilesystemEvent =
 type FilesystemListener = (absolute: string) => void;
 
 class FakeWatchHandle implements FilesystemWatchHandle {
-  readonly listeners = new Map<FilesystemEvent, FilesystemListener>();
+  readonly listeners = new Map<FilesystemEvent | "ready", FilesystemListener>();
   closeCount = 0;
   removeAllListenersCount = 0;
 
   on(
-    event: FilesystemEvent,
+    event: FilesystemEvent | "ready",
     listener: FilesystemListener
   ): FilesystemWatchHandle {
     this.listeners.set(event, listener);
@@ -52,7 +52,7 @@ class FakeWatchHandle implements FilesystemWatchHandle {
   }
 
   emit(
-    event: FilesystemEvent,
+    event: FilesystemEvent | "ready",
     absolute: string
   ): void {
     this.listeners.get(event)?.(absolute);
@@ -71,7 +71,9 @@ function watchHarness(
     assetPath: string,
     type: AssetEntryType
   ) => void,
-  isIgnored: (assetPath: string) => boolean = () => false
+  isIgnored: (assetPath: string) => boolean = () => false,
+  isTemporary?: (name: string) => boolean,
+  onReady?: () => void
 ): WatchHarness {
   const handle = new FakeWatchHandle();
   let options: ChokidarOptions = {};
@@ -90,6 +92,8 @@ function watchHarness(
     {
       root,
       isIgnored,
+      isTemporary,
+      onReady,
       watch
     },
     onChange
@@ -159,6 +163,40 @@ describe("FilesystemAssetWatcher", () => {
     assert.deepEqual(changes, ["sprite.png"]);
   });
 
+  test("reports readiness once the initial scan is done", () => {
+    const root = path.resolve("workspace");
+    let ready = 0;
+    const { handle } = watchHarness(
+      root,
+      () => undefined,
+      () => false,
+      undefined,
+      () => ready++
+    );
+
+    assert.strictEqual(ready, 0);
+    handle.emit("ready", root);
+
+    assert.strictEqual(ready, 1);
+  });
+
+  test("filters the temporary files of atomic writes", () => {
+    const root = path.resolve("workspace");
+    const changes: string[] = [];
+    const { handle } = watchHarness(
+      root,
+      (assetPath) => changes.push(assetPath),
+      () => false,
+      (name) => name.endsWith(".tmp")
+    );
+
+    handle.emit("add", path.join(root, "sprite.png.tmp"));
+    handle.emit("unlink", path.join(root, "sprite.png.tmp"));
+    handle.emit("change", path.join(root, "sprite.png"));
+
+    assert.deepEqual(changes, ["sprite.png"]);
+  });
+
   test("configures initial events, stable writes, and traversal ignores", () => {
     const root = path.resolve("workspace");
     const { options } = watchHarness(
@@ -168,7 +206,7 @@ describe("FilesystemAssetWatcher", () => {
     );
 
     assert.strictEqual(options.persistent, true);
-    assert.strictEqual(options.ignoreInitial, false);
+    assert.strictEqual(options.ignoreInitial, true);
     assert.deepEqual(options.awaitWriteFinish, {
       stabilityThreshold: 120,
       pollInterval: 30

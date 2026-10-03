@@ -117,5 +117,22 @@ for (const backend of backends) {
         [{ v: 2 }, { v: 3 }]
       );
     });
+
+    test("compacts only the given asset", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "asset.created");
+      append(store, "a1", {}, "asset.updated");
+      append(store, "a2", {}, "asset.created");
+      append(store, "a2", {}, "asset.updated");
+
+      const report = store.compact({
+        checkpointEventTypes: ["asset.created", "asset.updated"],
+        assetId: "a1"
+      });
+
+      assert.deepEqual(report, { removed: 1, assets: 1 });
+      assert.strictEqual(store.reader.list("a1").length, 1);
+      assert.strictEqual(store.reader.list("a2").length, 2);
+    });
   });
 }

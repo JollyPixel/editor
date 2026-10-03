@@ -136,6 +136,7 @@ export async function createAssetWorkspace(
   }
 
   const backend = await createAssetBackend({
+    compactOnSnapshot: compactOnOpen,
     ...tuning,
     source,
     eventStore,

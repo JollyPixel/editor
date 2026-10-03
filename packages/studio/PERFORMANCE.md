@@ -5,88 +5,35 @@ the double-click to `data-editor-state="ready"` with `jolly-pixel:debug` set to
 `*`, against a baseline worktree with interleaved runs: machine speed drifts
 too much for anything else.
 
-Suggested order: 1 (it loses data) and 2; then the small ones: 9, 13, 10, 3,
-12, 18; then 17, 4, 11 and 14; the rest as they come. Items 19 to 22 form two
-chains: 19 then 20 (shared chunks), 21 then 22 (mesh workers).
+Suggested order: the small ones first: 9, 13, 10, 12, 18; then 17, 11 and 14;
+the rest as they come. Items 19 to 22 form two chains: 19 then 20 (shared
+chunks), 21 then 22 (mesh workers).
 
 ## Server
 
-### 1. Snapshots reload the live state
+Items 1 to 8 landed on 2026-10-03 (`event-store`, `asset-server`,
+`asset-source`, `network`):
 
-`AssetStateStore.#follow` folds every event, including the `asset.updated`
-the snapshot scheduler appends itself (`SnapshotScheduler.ts`), and
-`foldAssetEvent` then calls `handler.load()`: a full voxel world rebuild or a
-PNG decode every 2 to 30 s per open asset. The scheduler awaits `serialize`
-and `contentHash` before appending, so a command applied in that gap is
-overwritten by the older bytes. Reproduced in the package harness: two
-increments, a snapshot, one increment during it, and the live value ends at 2
-instead of 3.
-
-Fix: treat state-neutral snapshot-actor events as version-only (advance the
-open version, skip `load`).
-
-### 2. SQLite journal settings
-
-`event-store/src/persistence/sqlite/index.ts` opens `DatabaseSync` with no
-pragmas, so every append runs with the rollback journal and
-`synchronous=FULL`. With the real `SqliteEventLog`, a small append takes
-3.67 ms by default and 0.049 ms with WAL and `synchronous=NORMAL`; a 2 MB
-snapshot event drops from 11.9 ms to 8.2 ms. Painting at 60 commands/s spends
-about 22% of the server thread in fsync, and joins, presence and catalog
-messages wait behind it.
-
-Fix: `PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;` after open, and
-ignore the `-shm`/`-wal` files.
-
-### 3. Cache voxel snapshots by version
-
-pixel-art has `encodeSnapshot` and a PNG cache per room version; voxel-map
-and voxel-model have neither, so `SnapshotCache.current()` serializes the
-whole document again for every join and resync, then validates it outbound.
-
-Fix: cache `snapshot()` per room version, as pixel-art does.
-
-### 4. Reconcile only what changed
-
-`reconcile/SourceWatcher.ts` drops the changed paths and
-`createAssetBackend.ts` reconciles the whole workspace: `Reconciler` reads and
-hashes every file. The projector's own snapshot writes echo back through
-chokidar and trigger the same full scan. `FilesystemAssetWatcher` sets
-`ignoreInitial: false`, which repeats the `reconcileOnStart` pass at boot.
-Cost grows with workspace size.
-
-Fix: reconcile the changed paths, ignore the projector's own (path, hash)
-writes, set `ignoreInitial: true`.
-
-### 5. Event log growth
-
-Every snapshot appends the full asset as base64. Compaction and a synchronous
-`VACUUM` run only at open (`createAssetWorkspace.ts`, `sqlite/log.ts`), so the
-log grows for the whole session and the next boot pays for it.
-
-Fix: prune superseded events after each snapshot, keeping a `resumeLimit`
-window, and switch to incremental vacuum.
-
-### 6. Projector memory
-
-`projection/applyProjection.ts` keeps every asset's base64 content for the
-process lifetime: about 1.33x the workspace size in heap, plus parse time at
-boot.
-
-### 7. Redundant validation and serialization
-
-Each command is validated three times: inbound in `ServerRoom`, again when
-folded in `foldAssetEvent`, and outbound per broadcast. `SqliteEventLog.insert`
-stringifies the event and parses it back (`serialize.ts`), then the broadcast
-stringifies it again. Not measured.
-
-Fix: trust validated commands when folding live, skip outbound validation for
-command messages, return the input from `insert`.
-
-### 8. Disabled debug logs still build metadata
-
-`Server.ts` and `createAssetBackend.ts` build LogLayer metadata for debug
-calls that pino then drops. Fix: set the LogLayer level to match pino.
+1. Snapshots append with `expectedVersion`, so a command folded while the
+   state serializes makes the snapshot fail and reschedule instead of landing
+   after it; the live state folds its own snapshot as a version bump.
+2. SQLite files open with WAL, `synchronous=NORMAL` and incremental vacuum:
+   a small append went from 2.95 ms to 0.097 ms.
+3. `SnapshotCache` keeps the plain snapshot per room version: a 65,536-voxel
+   map skipped 2.9 ms of `toJSON` per join or resync.
+4. Watch batches reconcile their paths only, widening to a full scan on a
+   creation or deletion; paths the projector is writing are skipped; the
+   watcher ignores initial and temporary entries and reports `onReady`,
+   which the back-end awaits before its startup scan.
+5. `compactOnSnapshot` (on in workspaces) compacts each asset to its current
+   checkpoint before a snapshot, so the log holds at most two snapshots per
+   asset and clients still resume across one.
+6. The projector drops asset bytes once written and reads the file back when
+   a rename or backfill needs them.
+7. Rejected, see below.
+8. LogLayer follows the pino level, hot debug calls check
+   `isLevelEnabled`, and room loggers use `child()` (rooms used to write
+   their `room` into the shared Server logger context).
 
 ## Shell and frames
 
@@ -267,6 +214,15 @@ with a warning when not isolated). voxel-model has no `VoxelView`. Workers
 help loads and edits of large maps, not steady-state rendering.
 
 ### Considered and rejected
+
+- **Returning the input from `insert`.** The parse-back costs 2.6 ms per 2 MB
+  snapshot event and 3 µs per command, and the event-store contract promises
+  an un-aliased, JSON-normalized event from `append`.
+- **Skipping the fold validation of room commands.** Not measured; the same
+  check costs 0.1 µs per command outbound, and skipping it needed a flag set
+  around each append that relied on synchronous subscribers.
+- **Skipping outbound validation.** It costs 2 µs for a 258 KB voxel world
+  snapshot and 0.1 µs per command; not worth a network API change.
 
 - **OffscreenCanvas runtime.** The Lit UI mutates the same `VoxelWorld`
   synchronously (`BlockLibrary`, `VoxelLayerPanel`, `TemplatePanel`, the
