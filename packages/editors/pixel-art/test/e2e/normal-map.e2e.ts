@@ -13,10 +13,10 @@ import type * as THREE from "three";
 import {
   test,
   expect,
-  demo
+  playground
 } from "./fixtures.ts";
-import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import {
+  TEXTURE_SIZE,
   addUvRegion,
   clickTexturePixel,
   readRenderedPixels,
@@ -174,13 +174,13 @@ test("switching back to Albedo restores the tool the Normal view displaced", asy
 });
 
 test.describe("3D preview", () => {
-  test.use({ editor: demo({ runtime: true }) });
+  test.use({ editor: playground({ runtime: true }) });
 
   function previewNormalMaps(
     panel: Locator
   ): Promise<boolean[]> {
     return panel.page().evaluate(() => {
-      const meshes = window.pixelArtDemo?.preview?.scene.meshes ?? [];
+      const meshes = window.pixelArtEditor?.preview?.scene.meshes ?? [];
 
       return meshes.map((mesh) => {
         const { material } = mesh as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;

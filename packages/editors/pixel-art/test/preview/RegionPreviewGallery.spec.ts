@@ -11,8 +11,8 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { RegionPreview } from "../../examples/scripts/preview/RegionPreviewBehavior.ts";
-import { RegionPreviewGallery } from "../../examples/scripts/preview/RegionPreviewGallery.ts";
+import type { RegionPreview } from "../../page/scripts/preview/RegionPreviewBehavior.ts";
+import { RegionPreviewGallery } from "../../page/scripts/preview/RegionPreviewGallery.ts";
 
 class FakePreview implements RegionPreview {
   readonly mesh = new THREE.Mesh();

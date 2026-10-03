@@ -3,17 +3,12 @@ import type {
   CommandConsole,
   RegistrationHandle
 } from "@jolly-pixel/console";
-import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { DemoPreview } from "./DemoPreview.ts";
-import { ROTATION_STORAGE_KEY } from "../config.ts";
-
-// CONSTANTS
-const kStorage = new LocalStorageAdapter();
+import type { PreviewPane } from "./PreviewPane.ts";
 
 export interface PreviewConsoleContext {
-  preview: DemoPreview;
+  preview: PreviewPane;
 }
 
 export function previewConsole(
@@ -27,10 +22,9 @@ export function previewConsole(
   namespace.registerVariable("rotate", {
     type: "boolean",
     description: "Spin the preview shapes",
-    get: () => preview.scene.rotating,
+    get: () => preview.rotating,
     set: (rotating) => {
-      preview.scene.rotating = rotating;
-      kStorage.set(ROTATION_STORAGE_KEY, String(rotating));
+      preview.rotating = rotating;
     }
   });
 

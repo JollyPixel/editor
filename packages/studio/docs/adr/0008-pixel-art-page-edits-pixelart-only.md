@@ -5,13 +5,13 @@ status: accepted
 # The pixel-art page edits `pixelart` assets only
 
 Pixel-art is a library with a host-mounted demo. Its studio page lives in
-`packages/editors/pixel-art/page/`, outside `src/`, and `vite.page.config.ts` builds it to
+`packages/editors/pixel-art/page/`, outside `src/`, and the package `vite.config.ts` builds it to
 `dist-page/`, so the `tsc` library build and its dependencies stay as they were. The package's
 `jollypixel.editor` manifest points the studio at that folder.
 
 The page opens one texture, the target, over its synced document with presence and the stored key
 bindings. It has no runtime preview, rotation toggle or demo parameters; importing replaces the
-texture, and adding a texture as a new asset stays a demo feature.
+texture, and adding a texture as a new asset stays a dev-server playground feature.
 
 Tilesets are not pixel-art assets: the `tileset` kind holds pixels and blocks, and its pixels are
 edited only inside voxel-map. The voxel-map Paint tab has no "open in a tab" action.

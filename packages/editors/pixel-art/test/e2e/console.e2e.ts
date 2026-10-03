@@ -9,7 +9,7 @@ import { waitForEditor } from "@jolly-pixel/e2e/editor";
 import {
   test,
   expect,
-  demo
+  playground
 } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
@@ -90,12 +90,12 @@ test("the density variable resizes the panel rows", async({ panel, page }) => {
 });
 
 test.describe("3D preview", () => {
-  test.use({ editor: demo({ runtime: true }) });
+  test.use({ editor: playground({ runtime: true }) });
 
   function rotating(
     page: Page
   ): Promise<boolean | undefined> {
-    return page.evaluate(() => window.pixelArtDemo?.preview?.scene.rotating);
+    return page.evaluate(() => window.pixelArtEditor?.preview?.scene.rotating);
   }
 
   test("preview.rotate stops the spin across a reload", async({ page }) => {

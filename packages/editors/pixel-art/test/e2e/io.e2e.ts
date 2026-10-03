@@ -8,9 +8,9 @@ import { decodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
-import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import {
   CLEAR,
+  TEXTURE_SIZE,
   activeMode,
   dragFileOver,
   dropFile,

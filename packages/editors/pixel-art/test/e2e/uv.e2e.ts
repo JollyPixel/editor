@@ -5,7 +5,7 @@ import type { Locator } from "@playwright/test";
 import {
   test,
   expect,
-  demo
+  playground
 } from "./fixtures.ts";
 import {
   clickTexturePixel,
@@ -265,13 +265,13 @@ test("Show all and region labels toggle independently", async({ panel }) => {
 });
 
 test.describe("3D preview", () => {
-  test.use({ editor: demo({ runtime: true }) });
+  test.use({ editor: playground({ runtime: true }) });
 
   function previewMeshCount(
     panel: Locator
   ): Promise<number> {
     return panel.page().evaluate(
-      () => window.pixelArtDemo?.preview?.scene.meshCount ?? -1
+      () => window.pixelArtEditor?.preview?.scene.meshCount ?? -1
     );
   }
 

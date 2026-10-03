@@ -5,7 +5,7 @@ import type { Locator } from "@playwright/test";
 import {
   test,
   expect,
-  demo
+  playground
 } from "./fixtures.ts";
 import {
   importFile,
@@ -47,7 +47,7 @@ function activeRegions(
 }
 
 test.describe("UV size on import", () => {
-  test.use({ editor: demo({ importPolicy: "ask" }) });
+  test.use({ editor: playground({ importPolicy: "ask" }) });
 
   test("Add as new creates a cube of the picked UV size", async({ panel, page }) => {
     const tabs = panel.getByRole("tab");

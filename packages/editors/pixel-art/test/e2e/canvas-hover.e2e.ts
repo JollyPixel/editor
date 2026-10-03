@@ -5,7 +5,7 @@ import type { Locator } from "@playwright/test";
 import {
   test,
   expect,
-  demo
+  playground
 } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
@@ -25,13 +25,13 @@ test("the panel reports the pointer entering and leaving the canvas", async({ pa
 });
 
 test.describe("3D preview", () => {
-  test.use({ editor: demo({ runtime: true }) });
+  test.use({ editor: playground({ runtime: true }) });
 
   function keyboardSuspended(
     panel: Locator
   ): Promise<boolean | undefined> {
     return panel.page().evaluate(
-      () => window.pixelArtDemo?.preview?.editorRuntime.runtime.world.input.keyboard.suspended
+      () => window.pixelArtEditor?.preview?.editorRuntime.runtime.world.input.keyboard.suspended
     );
   }
 

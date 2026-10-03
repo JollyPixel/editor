@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { centeredGridPositions } from "../../examples/scripts/preview/centeredGrid.ts";
+import { centeredGridPositions } from "../../page/scripts/preview/centeredGrid.ts";
 
 describe("centeredGridPositions", () => {
   test("returns no positions for an empty gallery", () => {

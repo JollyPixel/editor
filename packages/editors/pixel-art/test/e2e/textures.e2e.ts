@@ -5,10 +5,10 @@ import type { Locator } from "@playwright/test";
 import {
   test,
   expect,
-  demo
+  playground
 } from "./fixtures.ts";
-import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import {
+  TEXTURE_SIZE,
   clickTexturePixel,
   dropFile,
   importFile,
@@ -66,7 +66,7 @@ async function waitForTextureSync(
 ): Promise<string> {
   const id = (await panelState(panel)).activeTextureId!;
   await panel.page().waitForFunction(
-    (textureId) => window.pixelArtDemo?.tabs.isSynced(textureId) === true,
+    (textureId) => window.pixelArtEditor?.tabs.isSynced(textureId) === true,
     id
   );
 
@@ -91,7 +91,7 @@ async function addThroughDialog(
 }
 
 test.describe("import policy ask", () => {
-  test.use({ editor: demo({ importPolicy: "ask" }) });
+  test.use({ editor: playground({ importPolicy: "ask" }) });
 
   test("Replace current replaces the active texture without a tab", async({ panel, page }) => {
     await importPng(panel, uniqueName("ask-replace"));
@@ -227,7 +227,7 @@ test.describe("import policy ask", () => {
 });
 
 test.describe("import policy add", () => {
-  test.use({ editor: demo({ importPolicy: "add" }) });
+  test.use({ editor: playground({ importPolicy: "add" }) });
 
   test("Import adds a tab without asking", async({ panel, page }) => {
     const name = uniqueName("add");
@@ -241,7 +241,7 @@ test.describe("import policy add", () => {
 });
 
 test.describe("import progress", () => {
-  test.use({ editor: demo({ importPolicy: "ask", addDelay: 1_500 }) });
+  test.use({ editor: playground({ importPolicy: "ask", addDelay: 1_500 }) });
 
   test("a busy scrim covers the stage until the host has added the texture", async({ panel, page }) => {
     const busy = panel.locator(".stage-busy");

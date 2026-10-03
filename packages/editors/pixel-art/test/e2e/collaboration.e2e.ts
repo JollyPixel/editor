@@ -5,7 +5,7 @@ import { waitForEditor } from "@jolly-pixel/e2e/editor";
 import {
   test,
   expect,
-  demoPanel
+  editorPanel
 } from "./fixtures.ts";
 import {
   BLACK,
@@ -16,7 +16,7 @@ import {
 } from "./utils.ts";
 
 test("strokes and undos reach a peer and survive a reload", async({ panel, page, peer }) => {
-  const peerPanel = demoPanel(peer);
+  const peerPanel = editorPanel(peer);
   const pixel = [{ x: 10, y: 10 }];
 
   await setMode(panel, "paint");
