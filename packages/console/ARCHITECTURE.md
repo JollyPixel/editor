@@ -144,7 +144,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    Standalone["mountStandalone(definition)"] --> Mount["mountConsole()<br/>CommandConsole, root theme variable,<br/>jolly-console on body"]
+    Standalone["mountStandalone(definition)"] --> Mount["mountConsole()<br/>CommandConsole, stored theme and density,<br/>jolly-console on body"]
     Mount --> Boot["launch, session, definition.mount()"]
     Boot --> Context["EditorContext.commands"]
     Boot -->|"boot fails"| Dispose["dispose()<br/>element removed, registry cleared"]

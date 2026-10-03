@@ -118,13 +118,19 @@ the launch:
   `context.commands` there, and the shell shows them while the frame is its
   active editor. Without one, nothing displays them.
 
-`mountConsole` registers two root variables, neither persisted:
+`mountConsole` registers two root variables:
 
 - `theme`, an enum of `light`, `dark` and `auto`. A write sets the `theme`
   attribute of every `jolly-scope` on the page, and `auto` removes it so the
   scopes follow the system.
 - `density`, an enum of `compact`, `default` and `comfortable`. A write sets
   the `density` attribute of every `jolly-scope` on the page.
+
+A successful write is stored under `jolly-pixel:theme` or
+`jolly-pixel:density`. `mountConsole` applies the stored values to every
+`jolly-scope` before it registers the variables, so they survive a reload.
+An invalid or missing value leaves the page's own attribute. A page with a
+shell channel stores nothing and follows the shell.
 
 When a boot step fails, the element is removed and every registration is
 dropped, so the retry of the [offline fallback](#offline-fallback) mounts a
@@ -135,7 +141,12 @@ A page that boots without `mountStandalone`, such as the studio shell, mounts
 the same console itself:
 
 ```ts
-function mountConsole(parent?: HTMLElement): EditorConsole;
+function mountConsole(options?: MountConsoleOptions): EditorConsole;
+
+interface MountConsoleOptions {
+  parent?: HTMLElement;
+  storage?: StorageAdapter;
+}
 
 interface EditorConsole {
   readonly commands: CommandConsole;
@@ -144,8 +155,9 @@ interface EditorConsole {
 }
 ```
 
-`parent` defaults to `document.body`. `dispose()` removes the element and
-every registration.
+`parent` defaults to `document.body`. `storage` is a `StorageAdapter` from
+`@jolly-pixel/ui`, a `LocalStorageAdapter` by default. `dispose()` removes the
+element and every registration.
 
 An editor registers its namespaces as a list of
 [console features](../../../console/docs/features.md) and unregisters them in
