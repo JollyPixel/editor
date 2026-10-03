@@ -1,5 +1,12 @@
 # @jolly-pixel/color
 
+## 1.1.2
+
+### Patch Changes
+
+- [#852](https://github.com/JollyPixel/editor/pull/852) [`09eabd6`](https://github.com/JollyPixel/editor/commit/09eabd676125ee69ac8e823815c62fd01b4feb5a) Thanks [@fraxken](https://github.com/fraxken)! - Faster hex and named-color parsing and hex/rgb formatting through lookup tables and packed-integer hex decoding.
+  `parseColor` no longer resolves `Object.prototype` keys such as `constructor` to black.
+
 ## 1.1.1
 
 ### Patch Changes

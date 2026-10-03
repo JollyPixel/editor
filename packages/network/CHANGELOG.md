@@ -1,5 +1,21 @@
 # @jolly-pixel/network
 
+## 5.1.0
+
+### Minor Changes
+
+- [#865](https://github.com/JollyPixel/editor/pull/865) [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f) Thanks [@fraxken](https://github.com/fraxken)! - `ChannelTransport` and `ChannelTransportHost` accept a `socketPort` factory that gives each socket its own port, so a shared `BroadcastChannel` only carries connect messages.
+  The host follows each client's choice and closes a socket it cannot give a port with code `1002`.
+
+- [#868](https://github.com/JollyPixel/editor/pull/868) [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4) Thanks [@fraxken](https://github.com/fraxken)! - Envelopes are parsed with `secure-json-parse` (dropping `__proto__` and `constructor.prototype` keys), and presence patches no longer use `Object.assign`.
+  `readCredential` throws the new `InvalidCredentialError` for a token that is not base64url UTF-8, rights patterns follow the documented rules (only `*` is special), and `ChannelTransportHost.close()` now closes client sockets with code `1001`.
+
+### Patch Changes
+
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
+  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
+  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+
 ## 5.0.0
 
 ### Major Changes

@@ -1,5 +1,25 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 7.1.0
+
+### Minor Changes
+
+- [#867](https://github.com/JollyPixel/editor/pull/867) [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Open asset rooms broadcast a fresh snapshot when their content is replaced from outside (`AssetStateStore` emits `replaced`), and `peerPresence.uvSelections` outlines each peer's selected UV region below the local selection.
+  Truncated `@jolly-pixel/ui` labels show their full text on hover (`overflow-title="off"` disables it), `jolly-pane-group` tabs collapse to their icon when the strip is too narrow, and `jolly-tree` takes `swatch-position="start"`.
+
+- [#862](https://github.com/JollyPixel/editor/pull/862) [`5563478`](https://github.com/JollyPixel/editor/commit/55634788aa98ea5616d9b2e3c58c3f6987b94f19) Thanks [@fraxken](https://github.com/fraxken)! - Add normal maps: pixel-draw derives an undoable, synced `NormalMap` per UV island (`NormalMapConfig`, `normal-map-*` commands) and can preview it through `PixelArtCanvas.textureView`.
+  Voxel-renderer lights tilesets with a tangent-space normal atlas (`loadTileset(def, texture, { normal })`, `TilesetAtlas.normal`), scaled per material group by `MaterialGroup.normalScale`.
+
+- [#858](https://github.com/JollyPixel/editor/pull/858) [`d72dd94`](https://github.com/JollyPixel/editor/commit/d72dd94be9788d77af1b9b8e027b8a77887ebcce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `UVMap.labelScope` (`"all" | "selected"`) to label only the selected UV region while keeping every border visible.
+
+- [#853](https://github.com/JollyPixel/editor/pull/853) [`9639459`](https://github.com/JollyPixel/editor/commit/963945920d90416d0c085c1d1e80e533c8155c3f) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add UV resize handles (`uv.resizable`, `UVMap.resize()`). `"region-dragging"` now carries the previewed `region` for moves and resizes, and `PeerUVPreviewState` holds a `region`.
+
+### Patch Changes
+
+- Updated dependencies [[`09eabd6`](https://github.com/JollyPixel/editor/commit/09eabd676125ee69ac8e823815c62fd01b4feb5a), [`797aeb9`](https://github.com/JollyPixel/editor/commit/797aeb960560778e6f71219197859bb001f2045a)]:
+  - @jolly-pixel/color@1.1.2
+  - @jolly-pixel/image@2.0.1
+
 ## 7.0.0
 
 ### Major Changes

@@ -1,5 +1,22 @@
 # @jolly-pixel/ui
 
+## 3.3.0
+
+### Minor Changes
+
+- [#867](https://github.com/JollyPixel/editor/pull/867) [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Open asset rooms broadcast a fresh snapshot when their content is replaced from outside (`AssetStateStore` emits `replaced`), and `peerPresence.uvSelections` outlines each peer's selected UV region below the local selection.
+  Truncated `@jolly-pixel/ui` labels show their full text on hover (`overflow-title="off"` disables it), `jolly-pane-group` tabs collapse to their icon when the strip is too narrow, and `jolly-tree` takes `swatch-position="start"`.
+
+- [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - `TreeNode.collapsible: false` keeps a branch's children shown in `jolly-tree`, with no expand toggle.
+
+### Patch Changes
+
+- [#854](https://github.com/JollyPixel/editor/pull/854) [`e780033`](https://github.com/JollyPixel/editor/commit/e7800335b131d45645d4a62459684993d8b87af8) Thanks [@fraxken](https://github.com/fraxken)! - Faster large trees, dock and floating drags, scrubbing, graphs, stats and presence locks: fewer per-row lookups, DOM measurements and re-renders, with identical output.
+  `jolly-tree` no longer re-renders when `selected` or `expanded` receives an equal array.
+- Updated dependencies [[`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f), [`09eabd6`](https://github.com/JollyPixel/editor/commit/09eabd676125ee69ac8e823815c62fd01b4feb5a), [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4), [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681)]:
+  - @jolly-pixel/network@5.1.0
+  - @jolly-pixel/color@1.1.2
+
 ## 3.2.0
 
 ### Minor Changes

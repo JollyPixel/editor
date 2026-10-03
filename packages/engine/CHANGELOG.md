@@ -1,5 +1,19 @@
 # @jolly-pixel/engine
 
+## 7.1.0
+
+### Minor Changes
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Time scale support: `FrameSchedule.unscaledDelta`, `GameLoop.step()` for frame-by-frame debugging, and a step budget that grows with `timeScale` above 1.
+  Add `world.time` (game, wall-clock and fixed-step time); `Camera3DControls` and `OrbitFlyCamera` move in wall-clock time, so they work in slow motion and while paused.
+  `World.tick` samples input once per frame and publishes it to each fixed step and to the rendered frame, so a press on a frame without a step reaches the next one.
+
+### Patch Changes
+
+- Updated dependencies [[`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd)]:
+  - @jolly-pixel/controls@4.0.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.0.0
 
 ### Major Changes
