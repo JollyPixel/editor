@@ -162,7 +162,7 @@ flowchart TB
 | Rename | F2 | keeps the extension, no `/` (moving is a drag) |
 | Delete | Delete | dialog lists the assets that still reference it |
 | New asset | toolbar, menu | back-end writes the default content, then rename starts |
-| New folder | toolbar, menu | draft folder until an asset lands in it |
+| New folder | toolbar, menu | created in the project, then rename starts |
 | Export | toolbar, menu | `<stem>.zip` with dependencies, not on folders |
 
 - Context menu: right-click, Shift+F10 or the menu key.
@@ -174,8 +174,9 @@ flowchart TB
 - Asset deleted: its tab closes.
 - Asset renamed: its tab label and tooltip update.
 - The tree rebuilds but keeps expanded folders, selection and filter.
-- Folders are path prefixes: renaming one sends one command per asset inside,
-  plus one per companion.
+- Folders live in the asset source: renaming one sends one command per asset
+  inside, plus one per companion, then one `catalog:move-folder` that carries
+  its empty folders over and deletes the old one.
 
 ## Editor pages
 

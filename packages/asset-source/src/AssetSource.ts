@@ -1,3 +1,5 @@
+export type AssetEntryType = "file" | "folder";
+
 /**
  * Physical store using root-relative POSIX paths.
  */
@@ -26,11 +28,24 @@ export interface AssetSource {
 
   list(): Promise<string[]>;
 
+  folders(): Promise<string[]>;
+
+  createFolder(
+    path: string
+  ): Promise<void>;
+
+  deleteFolder(
+    path: string
+  ): Promise<void>;
+
   isIgnored?(
     path: string
   ): boolean;
 
   watch?(
-    onChange: (path: string) => void
+    onChange: (
+      path: string,
+      type: AssetEntryType
+    ) => void
   ): () => void;
 }

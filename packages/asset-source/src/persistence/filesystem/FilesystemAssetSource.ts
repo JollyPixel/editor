@@ -1,18 +1,32 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
+import path from "node:path";
 
 // Import Third-party Dependencies
 import { AtomicFile } from "@openally/atomic-fs";
 
 // Import Internal Dependencies
-import type { AssetSource } from "../../AssetSource.ts";
+import type {
+  AssetEntryType,
+  AssetSource
+} from "../../AssetSource.ts";
 import { FilesystemAssetWatcher } from "./FilesystemAssetWatcher.ts";
 import { FilesystemPathResolver } from "./FilesystemPathResolver.ts";
 import {
   createIgnoredPathMatcher,
   type AssetPathMatcher
 } from "./ignoredPaths.ts";
-import { walk } from "./walk.ts";
+import {
+  walk,
+  walkFolders
+} from "./walk.ts";
+
+// CONSTANTS
+const kIgnoredRmdirCodes = new Set([
+  "ENOENT",
+  "ENOTEMPTY",
+  "EEXIST"
+]);
 
 export interface FilesystemAssetSourceOptions {
   /**
@@ -135,8 +149,57 @@ export class FilesystemAssetSource implements AssetSource {
     return files.sort();
   }
 
+  async folders(): Promise<string[]> {
+    const folders: string[] = [];
+    const asyncIterable = walkFolders(
+      this.root,
+      {
+        isIgnored: this.#isIgnored,
+        isTemporary: this.#atomic.isTemporary
+      }
+    );
+    for await (const folder of asyncIterable) {
+      folders.push(folder);
+    }
+
+    return folders.sort();
+  }
+
+  async createFolder(
+    assetPath: string
+  ): Promise<void> {
+    await fs.mkdir(
+      await this.#paths.contained(assetPath),
+      { recursive: true }
+    );
+  }
+
+  async deleteFolder(
+    assetPath: string
+  ): Promise<void> {
+    const folder = await this.#paths.contained(assetPath);
+    const nested: string[] = [];
+    const asyncIterable = walkFolders(
+      folder,
+      {
+        isIgnored: () => false,
+        isTemporary: this.#atomic.isTemporary
+      }
+    );
+    for await (const relative of asyncIterable) {
+      nested.push(path.join(folder, relative));
+    }
+
+    for (const directory of [...nested.reverse(), folder]) {
+      await removeEmptyDirectory(directory);
+    }
+  }
+
   watch(
-    onChange: (path: string) => void
+    onChange: (
+      path: string,
+      type: AssetEntryType
+    ) => void
   ): () => void {
     const watcher = new FilesystemAssetWatcher(
       {
@@ -147,5 +210,18 @@ export class FilesystemAssetSource implements AssetSource {
     );
 
     return () => watcher.close();
+  }
+}
+
+async function removeEmptyDirectory(
+  directory: string
+): Promise<void> {
+  try {
+    await fs.rmdir(directory);
+  }
+  catch (error: any) {
+    if (!kIgnoredRmdirCodes.has(error.code)) {
+      throw error;
+    }
   }
 }

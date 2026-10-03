@@ -20,9 +20,13 @@ import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
+  CATALOG_CREATE_FOLDER,
   CATALOG_DELETE,
+  CATALOG_DELETE_FOLDER,
   CATALOG_EXPORT,
+  CATALOG_FOLDERS,
   CATALOG_IMPORT,
+  CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_RENAME,
   CATALOG_REJECTED,
@@ -34,6 +38,7 @@ import {
   type CatalogDeleteCommand,
   type CatalogMessage
 } from "./client/protocol.ts";
+import type { CatalogFolders } from "./CatalogFolders.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
 import {
@@ -60,8 +65,12 @@ import { asError } from "../utils/asError.ts";
 // CONSTANTS
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 
+export interface CatalogBackend extends ArchiveBackend {
+  readonly folders: CatalogFolders;
+}
+
 export interface CatalogExtensionOptions {
-  backend: ArchiveBackend;
+  backend: CatalogBackend;
   id?: string;
   maxContentBytes?: number;
   /**
@@ -80,13 +89,14 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   readonly name = CATALOG_ROOM;
   readonly protocols: MessageProtocols = catalogProtocols;
 
-  #backend: ArchiveBackend;
+  #backend: CatalogBackend;
   #maxContentBytes: number;
   #archiveLimits: ArchiveLimits;
   #deleteProtection: boolean;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
   #onChanged: (change: CatalogChange) => void;
+  #onFolders: (folders: readonly string[]) => void;
 
   constructor(
     options: CatalogExtensionOptions
@@ -102,9 +112,17 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       type: CATALOG_CHANGED,
       change
     } satisfies CatalogMessage);
+    this.#onFolders = (folders) => this.#broadcast?.broadcast({
+      type: CATALOG_FOLDERS,
+      folders: [...folders]
+    } satisfies CatalogMessage);
     this.#backend.catalog.on(
       "changed",
       this.#onChanged
+    );
+    this.#backend.folders.on(
+      "changed",
+      this.#onFolders
     );
   }
 
@@ -116,11 +134,12 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#broadcast = context.room;
     this.#members.add(client.id);
 
-    const { catalog } = this.#backend;
+    const { catalog, folders } = this.#backend;
     context.room.sendTo(client.id, {
       type: CATALOG_SNAPSHOT,
       manifest: catalog.snapshot(),
-      dependencies: catalog.dependencies.toJSON()
+      dependencies: catalog.dependencies.toJSON(),
+      folders: folders.toJSON()
     } satisfies CatalogMessage);
   }
 
@@ -160,6 +179,10 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#backend.catalog.off(
       "changed",
       this.#onChanged
+    );
+    this.#backend.folders.off(
+      "changed",
+      this.#onFolders
     );
     this.#members.clear();
     this.#broadcast = null;
@@ -212,6 +235,21 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
         return applied(command.type, written);
       }
+      case CATALOG_CREATE_FOLDER:
+        return Ok({
+          command: command.type,
+          path: await backend.folders.create(command.path)
+        });
+      case CATALOG_MOVE_FOLDER:
+        return Ok({
+          command: command.type,
+          path: await backend.folders.move(command.from, command.to)
+        });
+      case CATALOG_DELETE_FOLDER:
+        return Ok({
+          command: command.type,
+          path: await backend.folders.delete(command.path)
+        });
       case CATALOG_EXPORT: {
         const archive = await exportAssetArchive(backend, {
           root: command.root

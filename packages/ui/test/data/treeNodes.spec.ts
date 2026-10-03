@@ -56,6 +56,23 @@ describe("Data.flattenVisible", () => {
       [null, "a", "a", "a2", null]
     );
   });
+
+  test("shows a non-collapsible branch's children without expanding it", () => {
+    const nodes: TreeNode[] = [
+      {
+        id: "owner",
+        label: "Owner",
+        collapsible: false,
+        children: [{ id: "companion", label: "Companion" }]
+      }
+    ];
+    const rows = flattenVisible(nodes, new Set());
+
+    assert.deepEqual(
+      rows.map((row) => [row.node.id, row.depth]),
+      [["owner", 0], ["companion", 1]]
+    );
+  });
 });
 
 describe("Data.findNode", () => {
@@ -126,6 +143,10 @@ describe("Data.isExpandable", () => {
 
   test("is true for a branch with at least one child", () => {
     assert.equal(isExpandable(TREE[0]), true);
+  });
+
+  test("is false for a non-collapsible branch", () => {
+    assert.equal(isExpandable({ ...TREE[0], collapsible: false }), false);
   });
 });
 

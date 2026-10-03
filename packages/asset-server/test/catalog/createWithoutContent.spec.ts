@@ -25,7 +25,7 @@ import {
   type AssetKindHandler
 } from "#src/index.ts";
 import {
-  archiveBackend,
+  catalogBackend,
   syncHarness,
   type SyncHarness
 } from "../helpers/backend.ts";
@@ -47,7 +47,7 @@ async function catalogServer(
 
   const server = new Server();
   server.register(new CatalogExtension({
-    backend: archiveBackend(sync, projection)
+    backend: catalogBackend(sync, projection)
   }));
   const received: unknown[] = [];
   const author: ClientHandle = {

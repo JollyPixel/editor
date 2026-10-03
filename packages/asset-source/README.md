@@ -8,8 +8,8 @@
 
 ## 💡 About 
 
-An `AssetSource` stores bytes under root-relative POSIX paths. Its four common
-operations read, write, delete and list assets. Both built-in sources normalize
+An `AssetSource` stores bytes under root-relative POSIX paths. It reads,
+writes, deletes and lists assets, and keeps the folders holding them. Both built-in sources normalize
 path separators and reject paths that escape their root.
 
 ```mermaid
@@ -59,6 +59,8 @@ await source.write(
 All persistence sources implement this contract:
 
 ```ts
+type AssetEntryType = "file" | "folder";
+
 interface AssetSource {
   // Rejects when the asset is missing.
   read(path: string): Promise<Uint8Array>;
@@ -70,10 +72,16 @@ interface AssetSource {
   delete(path: string): Promise<void>;
   // Returns sorted paths, excluding .jollypixel/ state files.
   list(): Promise<string[]>;
+  // Returns sorted folder paths, empty folders included.
+  folders(): Promise<string[]>;
+  // Creates the folder and its missing parents.
+  createFolder(path: string): Promise<void>;
+  // Removes the folder and its sub-folders, keeping any that holds a file.
+  deleteFolder(path: string): Promise<void>;
   // Optional: reports whether a path is hidden from listing and watching.
   isIgnored?(path: string): boolean;
   // Optional: reports changed paths and returns a function to stop watching.
-  watch?(onChange: (path: string) => void): () => void;
+  watch?(onChange: (path: string, type: AssetEntryType) => void): () => void;
 }
 ```
 
@@ -82,6 +90,9 @@ interface AssetSource {
 > Paths are normalized to root-relative POSIX form. Empty, absolute and
 > root-escaping paths are rejected. State files remain available to direct
 > storage operations.
+
+Writing a file creates its folders, and deleting the file keeps them. A folder
+stays, empty or not, until `deleteFolder` removes it.
 
 ### 📦 Persistence
 

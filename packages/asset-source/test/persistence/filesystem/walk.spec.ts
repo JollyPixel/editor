@@ -16,6 +16,7 @@ import {
 } from "#src/persistence/filesystem/ignoredPaths.ts";
 import {
   walk,
+  walkFolders,
   type WalkOptions
 } from "#src/persistence/filesystem/walk.ts";
 import { tempWorkspace } from "../../helpers/tempWorkspace.ts";
@@ -86,6 +87,25 @@ describe("walk", () => {
     );
 
     assert.deepEqual(files, []);
+  });
+
+  test("walkFolders yields every folder but the ignored ones", async() => {
+    await using workspace = await tempWorkspace();
+    await writeFiles(workspace.root, [
+      "maps/world/overworld.json",
+      "skip/nested/sprite.png"
+    ]);
+    await fs.mkdir(path.join(workspace.root, "empty"));
+
+    const folders = await collect(
+      walkFolders(workspace.root, walkOptions(["skip/**"]))
+    );
+
+    assert.deepEqual(folders.sort(), [
+      "empty",
+      "maps",
+      "maps/world"
+    ]);
   });
 
   test("never opens an ignored directory", async(t) => {

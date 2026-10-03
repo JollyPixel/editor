@@ -16,7 +16,8 @@ import {
   MODEL,
   openShell,
   renameTo,
-  SEED_ROW_COUNT
+  SEED_ROW_COUNT,
+  TEXTURE
 } from "./support/shell.ts";
 
 test("filters the asset tree by kind", async({ page }) => {
@@ -24,8 +25,10 @@ test("filters the asset tree by kind", async({ page }) => {
   const kinds = page.locator("asset-browser jolly-button-group");
 
   await kinds.getByRole("radio", { name: "Voxel map" }).click();
-  await expect(assetRows(page)).toHaveCount(2);
+  await expect(assetRows(page)).toHaveCount(4);
   await expect(treeRow(page, MAP)).toBeVisible();
+  await expect(treeRow(page, "overworld.tileset.json")).toBeVisible();
+  await expect(treeRow(page, "models")).toBeVisible();
 
   await kinds.getByRole("radio", { name: "All kinds" }).click();
   await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
@@ -44,6 +47,16 @@ test("moves several selected rows into a new folder", async({ page }) => {
   await treeRow(page, "world").getByRole("button", { name: "Expand" }).click();
   await expect(treeRow(page, "maps")).toBeVisible();
   await expect(treeRow(page, "models")).toBeVisible();
+});
+
+test("a folder emptied by a move stays in the tree", async({ page }) => {
+  await openShell(page);
+
+  await dragTo(page, treeRow(page, MODEL), await centerOf(treeRow(page, "maps")));
+
+  await expect(treeRow(page, "models")).toBeVisible();
+  await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
+  await expect(treeRow(page, TEXTURE)).toBeVisible();
 });
 
 test("deleting an asset can keep its companion", async({ page }) => {

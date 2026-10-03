@@ -1,11 +1,13 @@
 # Tree data and functions
 
 `TreeNode<TData>` has a required `id` and `label`, plus optional `children`,
-`icon`, `visible`, `locked`, and `data` properties. The presence of `children`
-marks a branch, including an empty array. `hasChildren(node)` reflects that
-branch status; `isExpandable(node)` is `true` only when `children` holds at
-least one entry, which `jolly-tree` uses to decide whether a row gets an
-expand toggle.
+`collapsible`, `icon`, `visible`, `locked`, and `data` properties. The
+presence of `children` marks a branch, including an empty array.
+`hasChildren(node)` reflects that branch status; `isExpandable(node)` is
+`true` only when `children` holds at least one entry and `collapsible` is not
+`false`, which `jolly-tree` uses to decide whether a row gets an expand
+toggle. A branch with `collapsible: false` always shows its children,
+whatever `expanded` holds.
 
 `FlatTreeRow` is the flattened row shape. `TreeDropWhere` is `"above"`,
 `"inside"`, or `"below"`.

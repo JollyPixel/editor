@@ -148,13 +148,14 @@ describe("AssetTreeModel", () => {
 });
 
 describe("AssetTreeModel kind filter", () => {
-  test("shows only the assets of the kind and the folders holding them", () => {
+  test("shows only the assets of the kind, and every folder", () => {
     const model = new AssetTreeModel(kRecords, { kind: "pixelart" });
 
     assert.deepEqual(shape(model.nodes), [
+      ["maps", []],
       ["textures", [["blocks", ["stone.pixelart"]], "A.pixelart", "b.pixelart"]]
     ]);
-    assert.equal(model.has(kMaps), false);
+    assert.equal(model.has(kMaps), true);
     assert.equal(model.has(assetNodeId("readme")), false);
   });
 

@@ -48,24 +48,33 @@ The `ignore` option adds case-insensitive globs to `DEFAULT_IGNORED_PATHS`:
 ]
 ```
 
-Ignored paths are excluded from `list()` and `watch()`. Direct `read`, `write`
-and `delete` calls can still use them. `isIgnored(path)` applies the same
+Ignored paths are excluded from `list()`, `folders()` and `watch()`. Direct
+`read`, `write` and `delete` calls can still use them. `isIgnored(path)` applies the same
 matcher without accessing the filesystem.
 
 ## Watching
 
 ```ts
-const stop = source.watch((path) => {
-  console.log(path);
+const stop = source.watch((path, type) => {
+  console.log(type, path);
 });
 
 stop();
 ```
 
 The callback receives the same root-relative POSIX path for additions,
-changes and removals. Existing files are also reported when the watcher starts.
-The callback does not receive the event kind, so callers should read or list
-the source when they need the current state.
+changes and removals of files and folders. Existing files and folders are also
+reported when the watcher starts.
+`type` is `"file"` or `"folder"`. The callback does not say whether the entry
+was added, changed or removed, so callers should read or list the source when
+they need the current state.
+
+## Folders
+
+Folders are directories. `folders()` lists every directory under `root` that
+is not ignored. `deleteFolder` removes the empty directories of the subtree,
+deepest first, and leaves any directory that still holds an entry, an ignored
+file included.
 
 ## Resolving paths
 

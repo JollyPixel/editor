@@ -25,6 +25,8 @@ export interface TreeNode<
   id: string;
   label: string;
   children?: TreeNode<TData>[];
+  /** `false` keeps the children shown, with no expand toggle. */
+  collapsible?: boolean;
   icon?: IconName;
   visible?: boolean;
   locked?: boolean;

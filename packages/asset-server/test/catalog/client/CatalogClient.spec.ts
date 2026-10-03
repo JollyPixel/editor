@@ -8,7 +8,11 @@ import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
+  CATALOG_CREATE_FOLDER,
   CATALOG_DELETE,
+  CATALOG_DELETE_FOLDER,
+  CATALOG_FOLDERS,
+  CATALOG_MOVE_FOLDER,
   CATALOG_RENAME,
   CATALOG_REJECTED,
   CATALOG_ROOM,
@@ -79,7 +83,8 @@ function snapshot(
           source: "textures/a.pixelart"
         }
       ]
-    }
+    },
+    folders: []
   });
 }
 
@@ -168,6 +173,85 @@ describe("CatalogClient", () => {
         data: btoa(String.fromCharCode(1, 2))
       }
     });
+  });
+
+  test("mirrors the folders of the snapshot and later folder lists", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    let changes = 0;
+    client.on("change", () => changes++);
+
+    room.receive({
+      type: CATALOG_SNAPSHOT,
+      manifest: {
+        version: 1,
+        assets: []
+      },
+      folders: ["maps"]
+    });
+    await client.ready;
+    const atSnapshot = [...client.folders()];
+    room.receive({
+      type: CATALOG_FOLDERS,
+      folders: ["maps", "maps/draft"]
+    });
+
+    assert.deepEqual(atSnapshot, ["maps"]);
+    assert.deepEqual([...client.folders()], ["maps", "maps/draft"]);
+    assert.strictEqual(changes, 2);
+  });
+
+  test("sends folder commands and resolves with the folder path", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    const created = client.createFolder("maps/draft");
+    await flush();
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(0),
+      command: CATALOG_CREATE_FOLDER,
+      path: "maps/draft"
+    });
+    const moved = client.moveFolder("maps", "levels");
+    await flush();
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(1),
+      command: CATALOG_MOVE_FOLDER,
+      path: "levels"
+    });
+    const removed = client.removeFolder("levels");
+    await flush();
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(2),
+      command: CATALOG_DELETE_FOLDER,
+      path: "levels"
+    });
+
+    assert.strictEqual(await created, "maps/draft");
+    assert.strictEqual(await moved, "levels");
+    await removed;
+    assert.deepEqual(room.sent, [
+      {
+        type: CATALOG_CREATE_FOLDER,
+        requestId: room.requestId(0),
+        path: "maps/draft"
+      },
+      {
+        type: CATALOG_MOVE_FOLDER,
+        requestId: room.requestId(1),
+        from: "maps",
+        to: "levels"
+      },
+      {
+        type: CATALOG_DELETE_FOLDER,
+        requestId: room.requestId(2),
+        path: "levels"
+      }
+    ]);
   });
 
   test("sends a create without content for a null content", async() => {
@@ -320,7 +404,8 @@ describe("CatalogClient — dependencies", () => {
       dependencies: {
         map: [reference("a")],
         a: [reference("b")]
-      }
+      },
+      folders: []
     });
 
     assert.deepEqual(client.dependencies.dependenciesOf("map"), [reference("a")]);
@@ -374,7 +459,8 @@ describe("CatalogClient — dependencies", () => {
       manifest: { version: 1, assets: [] },
       dependencies: {
         map: [reference("a")]
-      }
+      },
+      folders: []
     });
 
     assert.deepEqual(client.dependencies.dependentsOf("a"), ["map"]);

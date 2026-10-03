@@ -1,6 +1,9 @@
 // Import Internal Dependencies
 import type { TreeDropWhere } from "./contract.ts";
-import type { FlatTreeRow } from "./model.ts";
+import {
+  isOpen,
+  type FlatTreeRow
+} from "./model.ts";
 
 export interface TreeDropTarget {
   targetId: string;
@@ -188,7 +191,7 @@ export function resolveTreeKey<TData>(
     };
   }
   if (key === "ArrowRight" && activeRow.node.children !== undefined) {
-    if (!expanded.has(activeId)) {
+    if (!isOpen(activeRow.node, expanded)) {
       return {
         kind: "toggle-expand",
         id: activeId,
@@ -204,7 +207,11 @@ export function resolveTreeKey<TData>(
       null;
   }
   if (key === "ArrowLeft") {
-    if (activeRow.node.children !== undefined && expanded.has(activeId)) {
+    if (
+      activeRow.node.children !== undefined &&
+      activeRow.node.collapsible !== false &&
+      expanded.has(activeId)
+    ) {
       return {
         kind: "toggle-expand",
         id: activeId,

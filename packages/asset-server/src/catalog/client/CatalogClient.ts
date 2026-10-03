@@ -7,9 +7,13 @@ import {
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
+  CATALOG_CREATE_FOLDER,
   CATALOG_DELETE,
+  CATALOG_DELETE_FOLDER,
   CATALOG_EXPORT,
+  CATALOG_FOLDERS,
   CATALOG_IMPORT,
+  CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -117,6 +121,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
   readonly #room: CatalogRoom;
   readonly #records = new Map<string, AssetRecordData>();
+  #folders: readonly string[] = [];
   readonly #dependencies = new DependencyIndex();
   readonly #pending = new Map<string, Settle>();
   readonly #ready = Promise.withResolvers<void>();
@@ -146,6 +151,10 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     assetId: string
   ): AssetRecordData | undefined {
     return this.#records.get(assetId);
+  }
+
+  folders(): IterableIterator<string> {
+    return this.#folders.values();
   }
 
   dependentsOf(
@@ -191,6 +200,39 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       type: CATALOG_DELETE,
       assetId,
       force: options.force
+    });
+  }
+
+  async createFolder(
+    path: string
+  ): Promise<string> {
+    const reply = await this.#request({
+      type: CATALOG_CREATE_FOLDER,
+      path
+    });
+
+    return reply.path;
+  }
+
+  async moveFolder(
+    from: string,
+    to: string
+  ): Promise<string> {
+    const reply = await this.#request({
+      type: CATALOG_MOVE_FOLDER,
+      from,
+      to
+    });
+
+    return reply.path;
+  }
+
+  async removeFolder(
+    path: string
+  ): Promise<void> {
+    await this.#request({
+      type: CATALOG_DELETE_FOLDER,
+      path
     });
   }
 
@@ -287,6 +329,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         for (const record of message.manifest.assets) {
           this.#records.set(record.id, record);
         }
+        this.#folders = [...message.folders];
         const changed = this.#replaceDependencies(message.dependencies ?? {});
         this.#ready.resolve();
         this.emit("change");
@@ -312,6 +355,10 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         }
         break;
       }
+      case CATALOG_FOLDERS:
+        this.#folders = [...message.folders];
+        this.emit("change");
+        break;
       default: {
         const settle = this.#pending.get(message.requestId);
         this.#pending.delete(message.requestId);

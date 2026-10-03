@@ -2,10 +2,16 @@
 import chokidar, { type ChokidarOptions } from "chokidar";
 
 // Import Internal Dependencies
+import type { AssetEntryType } from "../../AssetSource.ts";
 import { toRelativePosix } from "./toRelativePosix.ts";
 import type { AssetPathMatcher } from "./ignoredPaths.ts";
 
-type FilesystemEvent = "add" | "change" | "unlink";
+type FilesystemEvent =
+  | "add"
+  | "addDir"
+  | "change"
+  | "unlink"
+  | "unlinkDir";
 type FilesystemListener = (absolute: string) => void;
 
 export interface FilesystemWatchHandle {
@@ -33,7 +39,10 @@ export class FilesystemAssetWatcher {
 
   constructor(
     options: FilesystemAssetWatcherOptions,
-    onChange: (assetPath: string) => void
+    onChange: (
+      assetPath: string,
+      type: AssetEntryType
+    ) => void
   ) {
     const watch = options.watch ?? chokidar.watch;
     this.#watcher = watch(options.root, {
@@ -54,25 +63,27 @@ export class FilesystemAssetWatcher {
     });
 
     function notify(
-      absolute: string
-    ): void {
-      const relative = toRelativePosix(
-        options.root,
-        absolute
-      );
-      if (
-        relative === null ||
-        options.isIgnored(relative)
-      ) {
-        return;
-      }
-
-      onChange(relative);
+      type: AssetEntryType
+    ): FilesystemListener {
+      return (absolute) => {
+        const relative = toRelativePosix(
+          options.root,
+          absolute
+        );
+        if (
+          relative !== null &&
+          !options.isIgnored(relative)
+        ) {
+          onChange(relative, type);
+        }
+      };
     }
     this.#watcher
-      .on("add", notify)
-      .on("change", notify)
-      .on("unlink", notify);
+      .on("add", notify("file"))
+      .on("change", notify("file"))
+      .on("unlink", notify("file"))
+      .on("addDir", notify("folder"))
+      .on("unlinkDir", notify("folder"));
   }
 
   close(): void {

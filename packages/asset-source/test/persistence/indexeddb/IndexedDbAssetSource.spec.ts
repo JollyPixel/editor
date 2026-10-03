@@ -91,4 +91,26 @@ describe("IndexedDbAssetSource", () => {
 
     await assert.rejects(() => source.write("a.png", bytes("x")));
   });
+
+  test("lists the folders of files written before folders were stored", async() => {
+    const factory = new IDBFactory();
+    const request = factory.open("w", 1);
+    request.onupgradeneeded = () => {
+      request.result
+        .createObjectStore("files")
+        .put(bytes("{}"), "maps/world/a.json");
+    };
+    const legacy = await new Promise<IDBDatabase>((resolve) => {
+      request.onsuccess = () => resolve(request.result);
+    });
+    legacy.close();
+
+    const source = await IndexedDbAssetSource.open({ name: "w", factory });
+
+    assert.deepEqual(await source.folders(), [
+      "maps",
+      "maps/world"
+    ]);
+    source.close();
+  });
 });

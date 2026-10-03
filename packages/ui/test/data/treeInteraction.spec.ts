@@ -9,7 +9,10 @@ import {
 import {
   beginKeyboardMove,
   cycleKeyboardDropWhere,
-  moveKeyboardCursor
+  idleTreeInteraction,
+  moveKeyboardCursor,
+  resolveTreeKey,
+  type TreeKeyAction
 } from "../../src/data/tree/interaction.ts";
 import { flattenVisible } from "../../src/data/tree/model.ts";
 import type { TreeNode } from "../../src/data/tree/contract.ts";
@@ -68,5 +71,54 @@ describe("tree keyboard move interaction", () => {
         suppressClick: false
       }
     );
+  });
+});
+
+describe("tree arrow keys on a non-collapsible branch", () => {
+  const nodes: TreeNode[] = [
+    {
+      id: "folder",
+      label: "Folder",
+      children: [
+        {
+          id: "owner",
+          label: "Owner",
+          collapsible: false,
+          children: [{ id: "companion", label: "Companion" }]
+        }
+      ]
+    }
+  ];
+  const expanded = new Set(["folder", "owner"]);
+  const rows = flattenVisible(nodes, expanded);
+
+  function keyOn(
+    key: string,
+    activeId: string
+  ): TreeKeyAction | null {
+    return resolveTreeKey({
+      key,
+      rows,
+      activeId,
+      interaction: idleTreeInteraction(),
+      selected: [activeId],
+      expanded,
+      reorderable: false,
+      renamableIds: new Set()
+    });
+  }
+
+  test("ArrowRight selects the first child", () => {
+    assert.deepEqual(keyOn("ArrowRight", "owner"), {
+      kind: "select",
+      id: "companion"
+    });
+  });
+
+  test("ArrowLeft selects the parent instead of collapsing", () => {
+    assert.deepEqual(keyOn("ArrowLeft", "owner"), {
+      kind: "select",
+      id: "folder"
+    });
   });
 });

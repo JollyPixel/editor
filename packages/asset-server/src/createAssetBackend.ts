@@ -23,6 +23,7 @@ import { SnapshotScheduler } from "./state/SnapshotScheduler.ts";
 import { Reconciler } from "./reconcile/Reconciler.ts";
 import { ReconciliationWatcher } from "./reconcile/ReconciliationWatcher.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
+import { CatalogFolders } from "./catalog/CatalogFolders.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
 import type { ArchiveLimits } from "./archive/ArchiveLimits.ts";
 import { backfillDependencies } from "./reconcile/backfillDependencies.ts";
@@ -108,6 +109,7 @@ export interface AssetBackend extends AsyncDisposable {
   readonly kinds: AssetKindRegistry;
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;
+  readonly folders: CatalogFolders;
   readonly internals: AssetBackendInternals;
 
   flush(
@@ -213,6 +215,13 @@ export async function createAssetBackend(
   });
   scheduler.start();
 
+  const catalog = new CatalogProjection({ eventStore });
+  const folders = new CatalogFolders({
+    source,
+    catalog,
+    flush
+  });
+
   const reconciler = new Reconciler({
     source,
     projector,
@@ -223,10 +232,9 @@ export async function createAssetBackend(
     source,
     reconciler,
     debounce: reconcileDebounce,
+    afterPass: () => folders.refresh(),
     logger
   });
-
-  const catalog = new CatalogProjection({ eventStore });
 
   if (reconcileOnStart) {
     (await reconciler.reconcile()).orTee((error) => logger
@@ -237,6 +245,7 @@ export async function createAssetBackend(
 
   catalog.load();
   catalog.start();
+  await folders.refresh();
   const backfilled = await backfillDependencies({
     catalog,
     kinds,
@@ -262,6 +271,7 @@ export async function createAssetBackend(
       kinds,
       writer,
       catalog,
+      folders,
       flush
     },
     maxContentBytes: catalogMaxContentBytes,
@@ -279,6 +289,7 @@ export async function createAssetBackend(
     kinds,
     writer,
     catalog,
+    folders,
     internals: {
       identity,
       state,
@@ -315,6 +326,7 @@ export async function createAssetBackend(
       await projector.close();
       states.close();
       catalogExtension.dispose();
+      folders.close();
       catalog.close();
       eventStore.writer.off("append", onAppend);
       eventStore.writer.off("error", onAppendError);

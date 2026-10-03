@@ -27,6 +27,43 @@ type. See [Typed payloads](./Sync.md#typed-payloads).
 
 Each catalog record uses the asset content hash as its `revision`.
 
+## Folders
+
+Folders are not lifecycle events: they live in the [asset source](../../asset-source/README.md#assetsource),
+where writing a file creates its folders and deleting it keeps them.
+`CatalogFolders` mirrors them for the room.
+
+```ts
+const folders = new CatalogFolders({
+  source,
+  catalog: projection,
+  flush: () => backend.flush()
+});
+await folders.refresh();
+```
+
+`flush` resolves once pending source writes have landed. `refresh`, `create`,
+`move` and `delete` run one at a time, in call order.
+
+- `refresh()` reads `source.folders()` and adds the folders of every cataloged
+  asset, projected or not.
+- Each `changed` catalog record adds its folders, so a folder an asset leaves
+  stays listed.
+- `create(path)` creates the folder in the source, refreshes and resolves its
+  normalized path.
+- `move(from, to)` flushes, recreates `from` and every folder under it at
+  `to`, deletes `from` with `source.deleteFolder`, refreshes and resolves the
+  normalized `to`. Assets under `from` are not moved: rename them first. A
+  `to` inside `from` rejects with `FolderMovedIntoItselfError`.
+- `delete(path)` flushes, removes the folder with `source.deleteFolder`, then
+  refreshes, so a folder still holding a file comes back.
+- `toJSON()` returns the sorted paths. `changed` receives them whenever they
+  change.
+- `close()` stops following the projection and removes listeners.
+
+`createAssetBackend` refreshes the folders at startup and after each watcher
+pass, so folders made or removed outside the backend show up.
+
 ## Dependency edges
 
 The projection also indexes which assets reference which. Edges come from the
@@ -110,6 +147,9 @@ writer for the usual setup, capped by the `catalogMaxContentBytes` and
 { type: "catalog:create", requestId, path, kind?, onConflict?, content?: AssetInlineContent }
 { type: "catalog:rename", requestId, assetId, to }
 { type: "catalog:delete", requestId, assetId, force? }
+{ type: "catalog:create-folder", requestId, path }
+{ type: "catalog:move-folder", requestId, from, to }
+{ type: "catalog:delete-folder", requestId, path }
 { type: "catalog:export", requestId, root? }
 { type: "catalog:plan", requestId, content: AssetInlineContent }
 { type: "catalog:import", requestId, content: AssetInlineContent, onConflict: "replace" | "keep" | "copy" }
@@ -125,15 +165,20 @@ asset's own room.
 The room runs each command through `AssetWriter`, attributed to
 `actorOf(context.identity)` (see [Actors](./Rooms.md#actors)). Paths follow
 the writer rules, see
-[Errors](./AssetWriter.md#errors). A folder is not an entity: renaming one
-means renaming each asset under it, one command at a time.
+[Errors](./AssetWriter.md#errors). Renaming or moving a folder means renaming
+each asset under it, one command at a time, then sending `catalog:move-folder`
+to carry its empty folders over and remove the old one.
+
+The folder commands go through [`CatalogFolders`](#folders).
 
 ### Messages
 
 ```ts
-{ type: "catalog:snapshot", manifest: AssetManifestData, dependencies?: DependencyMap }
+{ type: "catalog:snapshot", manifest: AssetManifestData, dependencies?: DependencyMap, folders: string[] }
 { type: "catalog:changed", change: { eventType, assetId, record, dependencies? } }
+{ type: "catalog:folders", folders: string[] }
 { type: "catalog:applied", requestId, command, assetId }
+{ type: "catalog:applied", requestId, command: "catalog:create-folder" | "catalog:move-folder" | "catalog:delete-folder", path }
 { type: "catalog:applied", requestId, command: "catalog:export", content: AssetInlineContent }
 { type: "catalog:applied", requestId, command: "catalog:plan", plan: ImportPlan }
 { type: "catalog:applied", requestId, command: "catalog:import", report: ImportReport }
@@ -143,7 +188,8 @@ means renaming each asset under it, one command at a time.
 `dependencies` maps each indexed asset to its outgoing edges. On a change it
 holds every outgoing edge of the asset after the change, and is absent on
 deletion and for an unindexed asset. `eventType` is the `AssetEventType`
-that produced the change.
+that produced the change. `catalog:folders` carries the whole sorted folder
+list each time it changes.
 
 A successful command reaches every member as `catalog:changed`, through the
 same projection that carries reconciler writes, then the author alone gets
@@ -219,6 +265,7 @@ const assetId = await catalog.create("textures/new.pixelart", bytes, {
 });
 await catalog.rename(assetId, "textures/stone.pixelart");
 await catalog.remove(assetId, { force: true });
+await catalog.createFolder("textures/drafts");
 ```
 
 ```ts
@@ -244,6 +291,9 @@ interface CatalogImportOptions {
 |---|---|
 | `ready` | Resolves on the first `catalog:snapshot`. |
 | `records()` / `record(assetId)` | Current `AssetRecordData`, kept in sync with `catalog:changed`. |
+| `folders()` | Current sorted folder paths, empty ones included, kept in sync with `catalog:folders`. |
+| `createFolder(path)` / `removeFolder(path)` | `createFolder` resolves the normalized path; `removeFolder` resolves once applied and keeps any sub-folder that still holds a file. |
+| `moveFolder(from, to)` | Carries the folders under `from` over to `to`, removes `from` and resolves the normalized `to`. Rename the assets under `from` first. |
 | `create(path, content, options?)` | Resolves the created asset ID. A `null` `content` creates the kind's default state with its companions. `options` takes `kind` and `onConflict`. |
 | `rename(assetId, to)` / `remove(assetId, options?)` | Resolve once applied. `remove` takes `force` to bypass [delete protection](#delete-protection). |
 | `exportArchive(root?)` | Resolves the [archive](./Archive.md) bytes of `root`, or of the whole workspace. |
@@ -252,7 +302,7 @@ interface CatalogImportOptions {
 | `dependencies` | Read-only `DependencyIndex` of the [dependency edges](#dependency-edges), kept in sync with the room. |
 | `dependentsOf(assetId)` | The dependents that still have a record, as `AssetRecordData`; the assets delete protection counts. |
 | `dispose()` | Leaves the room and rejects pending requests. |
-| `"change"` event | Emitted after the snapshot and each change. |
+| `"change"` event | Emitted after the snapshot, each change and each folder list. |
 | `"dependencies"` event | Receives an asset ID whose outgoing edges changed. |
 
 `CatalogClient.connect(rooms, options?)` opens the `CATALOG_ROOM` room on

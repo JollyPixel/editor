@@ -149,14 +149,16 @@ the configured debounce. Its public controls are:
 
 ```ts
 watcher.start(): void
-watcher.notify(path: string): void
+watcher.notify(path: string, type: AssetEntryType): void
 watcher.run(): Promise<void>
 watcher.settle(): Promise<void>
 watcher.close(): Promise<void>
 ```
 
 `run()` starts a scan immediately. `settle()` only waits for a scan already in
-progress.
+progress. A batch of `"folder"` notifications alone skips the scan. The
+`afterPass` option runs after every pass, scan or not, and its failure is
+logged.
 
 ## Projection state
 

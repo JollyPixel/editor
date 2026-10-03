@@ -18,7 +18,6 @@ import {
 
 test("opens a pixel-art texture in the pixel-art editor page", async({ page }) => {
   await openShell(page);
-  await treeRow(page, MODEL).getByRole("button", { name: "Expand" }).click();
   await treeRow(page, TEXTURE).dblclick();
 
   const frame = editorFrames(page);
@@ -62,7 +61,6 @@ test("creates a map, a model and a texture from the tree and opens each", async(
     await renameField(page).press("Escape");
 
     if (asset.companion !== null) {
-      await treeRow(page, asset.file).getByRole("button", { name: "Expand" }).click();
       await expect(treeRow(page, asset.companion)).toBeVisible();
     }
 
@@ -77,7 +75,6 @@ test("creates a map, a model and a texture from the tree and opens each", async(
 test("an editor frame opens the shell console, which themes every frame", async({ page }) => {
   test.slow();
   await openShell(page);
-  await treeRow(page, MODEL).getByRole("button", { name: "Expand" }).click();
   await treeRow(page, TEXTURE).dblclick();
   const texture = editorFrames(page).contentFrame();
   await expectEditorReady(texture);

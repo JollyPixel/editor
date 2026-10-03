@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { AssetSource } from "@jolly-pixel/asset-source";
+import type {
+  AssetEntryType,
+  AssetSource
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
@@ -7,6 +10,7 @@ import {
   type Logger
 } from "../logger.ts";
 import type { Reconciler } from "./Reconciler.ts";
+import { asError } from "../utils/asError.ts";
 
 // CONSTANTS
 const kDefaultDebounce = 200;
@@ -20,6 +24,7 @@ export interface ReconciliationWatcherOptions {
    * @default 200
    */
   debounce?: number;
+  afterPass?: () => Promise<void>;
   logger?: Logger;
 }
 
@@ -30,12 +35,14 @@ export class ReconciliationWatcher {
   #source: AssetSource;
   #reconciler: Reconciler;
   #debounce: number;
+  #afterPass: () => Promise<void>;
   #logger: Logger;
 
   #unwatch: (() => void) | null = null;
   #handle: ReturnType<typeof setTimeout> | null = null;
   #running: Promise<void> | null = null;
   #again = false;
+  #filesChanged = false;
 
   constructor(
     options: ReconciliationWatcherOptions
@@ -43,6 +50,7 @@ export class ReconciliationWatcher {
     this.#source = options.source;
     this.#reconciler = options.reconciler;
     this.#debounce = options.debounce ?? kDefaultDebounce;
+    this.#afterPass = options.afterPass ?? (() => Promise.resolve());
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -58,42 +66,37 @@ export class ReconciliationWatcher {
       return;
     }
 
-    this.#unwatch = this.#source.watch((path) => this.notify(path));
+    this.#unwatch = this.#source.watch(
+      (path, type) => this.notify(path, type)
+    );
   }
 
   notify(
-    path: string
+    path: string,
+    type: AssetEntryType
   ): void {
     this.#logger
-      .withMetadata({ path })
+      .withMetadata({ path, type })
       .debug("filesystem change observed");
+
+    if (type === "file") {
+      this.#filesChanged = true;
+    }
 
     if (this.#handle !== null) {
       clearTimeout(this.#handle);
     }
     this.#handle = setTimeout(
-      () => void this.run(),
+      () => void this.#pass(),
       this.#debounce
     );
     this.#handle.unref?.();
   }
 
   run(): Promise<void> {
-    if (this.#handle !== null) {
-      clearTimeout(this.#handle);
-      this.#handle = null;
-    }
+    this.#filesChanged = true;
 
-    if (this.#running !== null) {
-      this.#again = true;
-
-      return this.#running;
-    }
-
-    const pass = this.#run();
-    this.#running = pass;
-
-    return pass;
+    return this.#pass();
   }
 
   async settle(): Promise<void> {
@@ -113,20 +116,48 @@ export class ReconciliationWatcher {
     await this.#running;
   }
 
+  #pass(): Promise<void> {
+    if (this.#handle !== null) {
+      clearTimeout(this.#handle);
+      this.#handle = null;
+    }
+
+    if (this.#running !== null) {
+      this.#again = true;
+
+      return this.#running;
+    }
+
+    const pass = this.#run();
+    this.#running = pass;
+
+    return pass;
+  }
+
   async #run(): Promise<void> {
     try {
       do {
         this.#again = false;
-        const result = await this.#reconciler.reconcile();
-        if (!result.ok) {
-          this.#logger
-            .withMetadata({ reason: result.val.message })
-            .error("reconciliation failed");
+        if (this.#filesChanged) {
+          this.#filesChanged = false;
+          await this.#reconcile();
         }
+        await this.#afterPass().catch((error: unknown) => this.#logger
+          .withMetadata({ reason: asError(error).message })
+          .error("reconciliation follow-up failed"));
       } while (this.#again);
     }
     finally {
       this.#running = null;
+    }
+  }
+
+  async #reconcile(): Promise<void> {
+    const result = await this.#reconciler.reconcile();
+    if (!result.ok) {
+      this.#logger
+        .withMetadata({ reason: result.val.message })
+        .error("reconciliation failed");
     }
   }
 }

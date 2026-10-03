@@ -15,7 +15,7 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0007](./0007-page-urls-are-relative-to-the-shell.md) | Editor page URLs are relative to the shell, back-end URLs are origin-absolute |
 | [0008](./0008-pixel-art-page-edits-pixelart-only.md) | The pixel-art page edits `pixelart` assets only |
 | [0009](./0009-editor-entries-never-await-their-mount.md) | Editor entries never top-level-await their mount |
-| [0010](./0010-folders-are-path-prefixes.md) | Folders are path prefixes, and partial folder commands are not rolled back |
+| [0010](./0010-folders-live-in-the-asset-source.md) | Folders live in the asset source, and partial folder commands are not rolled back |
 | [0011](./0011-one-lit-element-per-panel.md) | One Lit element per panel, pure decisions in value objects |
 | [0012](./0012-one-project-per-studio.md) | One project per studio, seeded without overwriting |
 | [0013](./0013-companions-are-derived-from-names-and-edges.md) | Companions are derived from names and dependency edges |

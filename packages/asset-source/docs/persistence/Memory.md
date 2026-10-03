@@ -21,6 +21,9 @@ The constructor, `write` and `writeIfAbsent` copy their input bytes. `read` also
 returns a copy, so changing a supplied or returned array does not change the
 stored asset. Each source has its own data.
 
+Folders are kept as a set of paths beside the files: `write` adds the folders
+of its path and `createFolder` adds one with its parents.
+
 The source implements the shared [`AssetSource`](../../README.md#assetsource) storage
 contract. It does not provide `isIgnored` or `watch`.
 

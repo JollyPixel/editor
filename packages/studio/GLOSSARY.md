@@ -45,28 +45,25 @@ asset actions and the tree of catalog records.
 
 ### Folder
 
-A path prefix shared by assets in the tree. Folders have no catalog record:
-renaming or deleting one sends one catalog command per asset under it.
-
-### Draft folder
-
-A folder made with the New folder action that holds no asset yet. It lives
-in the browser only: it can be renamed, moved and dropped into, and it
-becomes an ordinary folder once an asset lands in it. A reload forgets it.
+A directory of the asset source, listed by the catalog room. It stays, empty
+or not, until it is deleted: moving its last asset out keeps it. Renaming or
+deleting one sends one catalog command per asset under it, then one per
+folder.
 
 ### Companion
 
 An asset nested under another in the tree: same folder, same name before the
 first dot, and referenced by that other asset, its owner
-(`overworld.tileset.json` under `overworld.voxelmap.json`). Renaming or
-moving the owner takes its companions along; deleting it offers to delete
-them too. The pairing is derived from paths and dependency edges, never
-stored.
+(`overworld.tileset.json` under `overworld.voxelmap.json`). An owner cannot be
+collapsed, so its companions always show. Renaming or moving the owner takes
+its companions
+along; deleting it offers to delete them too. The pairing is derived from
+paths and dependency edges, never stored.
 
 ### Kind filter
 
-The button group above the tree. A kind shows only its assets and the
-folders holding them. The choice is kept per browser.
+The button group above the tree. A kind shows only its assets and their
+companions; every folder still shows. The choice is kept per browser.
 
 ### Kind descriptor
 

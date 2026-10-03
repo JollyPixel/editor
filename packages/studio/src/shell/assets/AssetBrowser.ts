@@ -37,7 +37,6 @@ import {
   folderNodeId,
   type AssetRelocation
 } from "../../catalog/AssetTreeModel.ts";
-import { DraftFolders } from "../../catalog/DraftFolders.ts";
 import {
   AssetCommands,
   type RelocationVerb
@@ -89,9 +88,6 @@ export class AssetBrowser extends LitElement {
   declare _pendingLabels: ReadonlyMap<string, string>;
 
   @state()
-  declare _drafts: DraftFolders;
-
-  @state()
   declare _kind: string;
 
   @query("jolly-tree")
@@ -119,7 +115,6 @@ export class AssetBrowser extends LitElement {
     this._expanded = null;
     this._selected = [];
     this._pendingLabels = new Map();
-    this._drafts = DraftFolders.EMPTY;
     this._kind = this.#storage.get(kKindStorageKey) ?? "";
   }
 
@@ -145,7 +140,7 @@ export class AssetBrowser extends LitElement {
     if (changed.has("options")) {
       this.#listen();
     }
-    else if (changed.has("_kind") || changed.has("_drafts")) {
+    else if (changed.has("_kind")) {
       this.#rebuild();
     }
   }
@@ -289,17 +284,12 @@ export class AssetBrowser extends LitElement {
       this.#followFolder(relocation);
     }
     this._pendingLabels = labels;
-    this._drafts = this._drafts.rebased(relocations);
 
     const failed = await commands.relocate(relocations, verb);
     if (failed !== null) {
       const restored = new Map(this._pendingLabels);
       restored.delete(failed.nodeId);
       this._pendingLabels = restored;
-      this._drafts = this._drafts.rebased([{
-        from: failed.to,
-        to: failed.from
-      }]);
     }
   }
 
@@ -313,18 +303,15 @@ export class AssetBrowser extends LitElement {
 
     const deletion = this._model.deletionOf(nodeIds);
     if (deletion.isEmpty) {
-      this._drafts = this._drafts.without(deletion.folders);
+      await commands.remove(deletion, false);
 
       return;
     }
 
     const confirmation = await this._deleteDialog.open(deletion);
-    if (confirmation === null) {
-      return;
+    if (confirmation !== null) {
+      await commands.remove(deletion, confirmation.companions);
     }
-
-    this._drafts = this._drafts.without(deletion.folders);
-    await commands.remove(deletion, confirmation.companions);
   }
 
   #selection(
@@ -381,8 +368,12 @@ export class AssetBrowser extends LitElement {
     parent: AssetPath
   ): Promise<void> {
     const path = this._model.vacantFolder(parent, kNewFolderName);
+    const created = await this.#commands?.createFolder(path) ?? false;
+    if (!created) {
+      return;
+    }
+
     const nodeId = folderNodeId(path);
-    this._drafts = this._drafts.with(path);
     if (!parent.isRoot) {
       this.#toggle(folderNodeId(parent), true);
     }
@@ -492,8 +483,8 @@ export class AssetBrowser extends LitElement {
 
   readonly #rebuild = (): void => {
     const records = [...this.#catalog?.records() ?? []];
-    this._drafts = this._drafts.unpopulated(
-      records.map((record) => AssetPath.parse(record.source))
+    const folders = [...this.#catalog?.folders() ?? []].map(
+      (folder) => AssetPath.parse(folder)
     );
 
     const kinds = this.#kinds;
@@ -501,12 +492,12 @@ export class AssetBrowser extends LitElement {
       presenter: kinds,
       kind: kinds.has(this._kind) ? this._kind : null,
       dependencies: this.#catalog?.dependencies,
-      folders: this._drafts
+      folders
     });
     this._model = model;
     this._expanded ??= this.#catalog === null ?
       null :
-      new Set(new AssetTreeModel(records).folderIds());
+      new Set(model.folderIds());
     this._selected = this._selected.filter((nodeId) => model.has(nodeId));
 
     const labels = new Map(this._pendingLabels);

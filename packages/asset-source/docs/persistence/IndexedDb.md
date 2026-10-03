@@ -1,7 +1,8 @@
 # IndexedDB persistence
 
-`IndexedDbAssetSource` keeps assets in the browser, in one IndexedDB object
-store keyed by asset path. It survives a page reload.
+`IndexedDbAssetSource` keeps assets in the browser, in a `files` object store
+keyed by asset path and a `folders` store keyed by folder path. It survives a
+page reload.
 
 ```ts
 import { IndexedDbAssetSource } from "@jolly-pixel/asset-source";
@@ -34,6 +35,8 @@ source.close(): void
 - `write` and `writeIfAbsent` copy their input bytes, and `read` returns a
   copy.
 - `list()` leaves out the `.jollypixel/` state files, which stay readable.
+- A database created before the `folders` store is upgraded when opened, and
+  the folders of the files it already held are stored then.
 - `destroy` deletes the database. It waits for every open connection, so
   `close()` the source first.
 

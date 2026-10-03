@@ -123,7 +123,8 @@ export function snapshotMessage(
       version: 1,
       assets
     },
-    dependencies
+    dependencies,
+    folders: []
   };
 }
 

@@ -48,6 +48,13 @@ describe("AssetTreeModel companions", () => {
     ]);
   });
 
+  test("keeps an owner's companions shown, with no expand toggle", () => {
+    const model = companionModelOf();
+
+    assert.equal(model.node(assetNodeId("map-overworld"))?.collapsible, false);
+    assert.equal(model.node(assetNodeId("map-cave"))?.collapsible, undefined);
+  });
+
   test("nests nothing without dependencies", () => {
     const model = new AssetTreeModel(COMPANION_RECORDS);
 
@@ -105,7 +112,22 @@ describe("AssetTreeModel companions", () => {
       dependencies: dependenciesOf(COMPANION_EDGES)
     });
 
-    assert.deepEqual(shape(model.nodes), [["maps", ["overworld.tileset.json"]]]);
+    assert.deepEqual(shape(model.nodes), [
+      ["maps", ["overworld.tileset.json"]],
+      ["models", []]
+    ]);
+  });
+
+  test("keeps a companion of another kind under its shown owner", () => {
+    const model = new AssetTreeModel(COMPANION_RECORDS, {
+      kind: "voxelmodel",
+      dependencies: dependenciesOf(COMPANION_EDGES)
+    });
+
+    assert.deepEqual(shape(model.nodes), [
+      ["maps", []],
+      ["models", [["hero.voxelmodel.json", ["hero.pixelart"]]]]
+    ]);
   });
 
   test("renames companions with their owner, keeping their extensions", () => {

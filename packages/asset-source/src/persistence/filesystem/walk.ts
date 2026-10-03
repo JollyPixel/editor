@@ -12,10 +12,37 @@ export interface WalkOptions {
   isTemporary: (name: string) => boolean;
 }
 
+interface WalkEntry {
+  path: string;
+  folder: boolean;
+}
+
 export async function* walk(
   root: string,
   options: WalkOptions
 ): AsyncIterableIterator<string> {
+  for await (const entry of walkEntries(root, options)) {
+    if (!entry.folder) {
+      yield entry.path;
+    }
+  }
+}
+
+export async function* walkFolders(
+  root: string,
+  options: WalkOptions
+): AsyncIterableIterator<string> {
+  for await (const entry of walkEntries(root, options)) {
+    if (entry.folder) {
+      yield entry.path;
+    }
+  }
+}
+
+async function* walkEntries(
+  root: string,
+  options: WalkOptions
+): AsyncIterableIterator<WalkEntry> {
   const directory = await openRoot(root);
   if (directory === null) {
     return;
@@ -32,7 +59,7 @@ async function* walkDirectory(
   root: string,
   directory: Dir,
   options: WalkOptions
-): AsyncIterableIterator<string> {
+): AsyncIterableIterator<WalkEntry> {
   for await (const dirent of directory) {
     const absolute = path.join(directory.path, dirent.name);
     const relative = toRelativePosix(
@@ -47,6 +74,10 @@ async function* walkDirectory(
     }
 
     if (dirent.isDirectory()) {
+      yield {
+        path: relative,
+        folder: true
+      };
       yield* walkDirectory(
         root,
         await fs.opendir(absolute),
@@ -57,7 +88,10 @@ async function* walkDirectory(
       dirent.isFile() &&
       !options.isTemporary(dirent.name)
     ) {
-      yield relative;
+      yield {
+        path: relative,
+        folder: false
+      };
     }
   }
 }

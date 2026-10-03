@@ -59,6 +59,37 @@ class AssetPathEscapeError extends Error {
 `path` contains the rejected input. `reason` contains the rejection reported
 by `safeAssetPath`, or a policy reason supplied by the caller.
 
+### Folder paths
+
+```ts
+class FolderSet implements Iterable<string> {
+  constructor(folders?: Iterable<string>);
+  readonly size: number;
+  has(folder: string): boolean;
+  add(folder: string): this;
+  addParentsOf(assetPath: string): this;
+  subtree(root: string): string[];
+  prune(root: string, files: Iterable<string>): string[];
+  equals(other: FolderSet): boolean;
+  toJSON(): string[];
+}
+
+isWithinFolder(path: string, folder: string): boolean
+```
+
+A `FolderSet` holds normalized folder paths and always holds the parents of
+each folder it holds. `add` adds a folder with its parents, and `addParentsOf`
+adds the folders above a path: `"maps/world/a.json"` adds `"maps"` and
+`"maps/world"`. The set is mutable.
+
+- `subtree(root)` returns `root` and the folders under it, sorted.
+- `prune(root, files)` removes the folders of `subtree(root)` that hold none
+  of `files`, at any depth, and returns them sorted.
+- `equals` compares contents, and `toJSON()` returns the sorted paths.
+
+`isWithinFolder` reports whether a normalized path is `folder` or lies
+anywhere below it.
+
 ### `toRelativePosix`
 
 ```ts
