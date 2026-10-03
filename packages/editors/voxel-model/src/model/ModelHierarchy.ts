@@ -36,6 +36,8 @@ export interface ModelHierarchyOptions {
 }
 
 export interface DuplicateOptions {
+  /** Falls back to `duplicateNameOf` the source name when empty. */
+  name?: string;
   includeChildren: boolean;
   mirrorAxes: MirrorAxes;
 }
@@ -134,7 +136,7 @@ export class ModelHierarchy {
     const duplicateId = this.#duplicateNode(
       source,
       {
-        name: `${source.name} Copy`,
+        name: options.name || duplicateNameOf(source.name),
         parentId: source.parentId,
         beforeId: this.#document.tree.nextSiblingOf(source.id)
       },
@@ -231,4 +233,10 @@ export class ModelHierarchy {
 
     return duplicateId;
   }
+}
+
+export function duplicateNameOf(
+  name: string
+): string {
+  return `${name} Copy`;
 }

@@ -13,7 +13,7 @@ import {
 export type NodeKind = "Block" | "Folder";
 
 export interface AddNodeOptions {
-  /** Adds inside this row through its menu instead of at the root. */
+  /** Adds inside this row through its menu instead of the header button. */
   under?: string;
 }
 
@@ -82,20 +82,19 @@ export async function openMaterial(
   await row.getByRole("button", { name: /material/i }).click();
   const library = materialTab(page);
   await expect(library).toBeVisible();
-  await expect(materialBlockBar(page)).toContainText(name);
 
   return library;
 }
 
-export function materialBlockBar(
+export function materialFooter(
   page: Page
 ): Locator {
-  return materialTab(page).locator(".block-bar");
+  return materialTab(page).locator(".footer");
 }
 
 export async function materialTool(
   page: Page,
-  name: "New Material" | "New Folder" | "Duplicate" | "Delete"
+  name: "New Material" | "Duplicate" | "Delete"
 ): Promise<void> {
   await materialTab(page)
     .getByRole("toolbar", { name: "Material tools" })

@@ -26,6 +26,7 @@ import {
   type GizmoTool,
   type TransformMode
 } from "./gizmoTools.ts";
+import { TRANSFORM_MODES } from "../transformModes.ts";
 import { RenderOrder } from "../../../scene/renderOrder.ts";
 
 // CONSTANTS
@@ -74,6 +75,8 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   #controls: readonly TransformControls[];
   #mode: TransformMode | null = null;
   #space: GizmoSpace = "local";
+  #enabled = true;
+  #pivotBlock: ModelBlock | null = null;
   #start: BlockTransformJSON | null = null;
 
   #onStart = (): void => {
@@ -116,7 +119,10 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
 
   #sync = (): void => {
     const block = this.#selectedBlock();
-    const active = block === null || this.#lock.lockedBy(block.uuid) !== null ?
+    this.#syncPivotMarker(block);
+    const active = !this.#enabled ||
+      block === null ||
+      this.#lock.lockedBy(block.uuid) !== null ?
       null :
       this.#activeTool();
 
@@ -182,6 +188,21 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     return this.#activeTool()?.controls ?? null;
   }
 
+  get enabled(): boolean {
+    return this.#enabled;
+  }
+
+  set enabled(
+    enabled: boolean
+  ) {
+    if (enabled === this.#enabled) {
+      return;
+    }
+
+    this.#enabled = enabled;
+    this.#sync();
+  }
+
   configure(
     mode: TransformMode,
     space: GizmoSpace
@@ -214,6 +235,23 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
 
   #activeTool(): GizmoTool | null {
     return this.#mode === null ? null : this.#tools[this.#mode];
+  }
+
+  #syncPivotMarker(
+    selected: ModelBlock | null
+  ): void {
+    const block = this.#enabled &&
+      this.#mode !== null &&
+      TRANSFORM_MODES[this.#mode].showsPivot ?
+      selected :
+      null;
+    if (this.#pivotBlock !== null && this.#pivotBlock !== block) {
+      this.#pivotBlock.pivotMarkerVisible = false;
+    }
+    if (block !== null) {
+      block.pivotMarkerVisible = true;
+    }
+    this.#pivotBlock = block;
   }
 }
 

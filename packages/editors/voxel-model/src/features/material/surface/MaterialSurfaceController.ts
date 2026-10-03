@@ -10,7 +10,6 @@ import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
-  BlockSelectionStore,
   MaterialFocusStore,
   MaterialPreviews,
   PresenceStore,
@@ -20,7 +19,6 @@ import { WorkspaceController } from "../../../shared/WorkspaceController.ts";
 
 export interface MaterialSurfaceWorkspace {
   document: ModelDocument;
-  selection: BlockSelectionStore;
   materialFocus: MaterialFocusStore;
   presence: PresenceStore;
   previews: MaterialPreviews;
@@ -36,7 +34,6 @@ export class MaterialSurfaceController {
     materialId: string | null
   ): void => {
     this.#endPreview();
-    this.showUsers(false);
     this.#materialId = materialId;
     this.#host.requestUpdate();
   };
@@ -72,12 +69,6 @@ export class MaterialSurfaceController {
     };
   }
 
-  get uses(): number {
-    return this.#materialId === null ?
-      0 :
-      this.#workspace?.document.tree.blocksUsing(this.#materialId).length ?? 0;
-  }
-
   get editors(): readonly PresencePeer[] {
     return this.#materialId === null ?
       [] :
@@ -86,22 +77,6 @@ export class MaterialSurfaceController {
 
   get lit(): boolean {
     return this.#workspace?.view.settings.shading !== "flat";
-  }
-
-  showUsers(
-    shown: boolean
-  ): void {
-    const workspace = this.#workspace;
-    if (workspace === null) {
-      return;
-    }
-
-    const materialId = this.#materialId;
-    workspace.selection.emphasize(
-      shown && materialId !== null ?
-        workspace.document.tree.blocksUsing(materialId) :
-        []
-    );
   }
 
   attach(
@@ -174,8 +149,7 @@ export class MaterialSurfaceController {
       view.subscribe("change", this.#onUpdate),
       previews.subscribe("change", this.#onUpdate),
       presence.subscribe("materialEditsChange", this.#onUpdate),
-      () => this.#endPreview(),
-      () => this.showUsers(false)
+      () => this.#endPreview()
     ];
   }
 }

@@ -28,6 +28,7 @@ import {
 import type { CollaboratorPresence } from "../peer/types.ts";
 import { LockController } from "../peer/LockController.ts";
 import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
+import { revealOverflowTitle } from "../interaction/overflowTitle.ts";
 
 // Registers the icon used by the revert gutter.
 import "../icon/Icon.ts";
@@ -314,7 +315,10 @@ export abstract class JollyField<TValue> extends LitElement {
       >
         <div class="leading">
           <span class="gutter"></span>
-          ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
+          ${this.label === "" ? nothing : html`<span
+            class="label"
+            @pointerenter=${revealOverflowTitle}
+          >${this.label}</span>`}
         </div>
         <div class="content">
           <div class="value">${this.renderValue()}</div>

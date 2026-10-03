@@ -131,6 +131,7 @@ export class CanvasView {
       cursors: this.overlays.peerCursors,
       strokes: this.renderer.peerStrokes,
       uv: this.overlays.peerUvPreview,
+      uvSelections: this.overlays.peerUvSelections,
       selectionOutlines: this.overlays.peerSelectionOutlines,
       floatingSelections: this.renderer.peerFloatingSelections
     });

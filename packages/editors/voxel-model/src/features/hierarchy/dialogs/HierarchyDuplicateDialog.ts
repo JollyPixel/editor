@@ -21,10 +21,12 @@ const kAxes = ["x", "y", "z"] as const;
 type MirrorAxis = typeof kAxes[number];
 
 export interface HierarchyDuplicateContext {
+  defaultName: string;
   hasChildren: boolean;
 }
 
 export interface HierarchyDuplicateResult {
+  name: string;
   includeChildren: boolean;
   mirrorAxes: MirrorAxes;
 }
@@ -46,6 +48,9 @@ export class HierarchyDuplicateDialog extends EditorDialog<
   `;
 
   @state()
+  declare private name: string;
+
+  @state()
   declare private hasChildren: boolean;
 
   @state()
@@ -56,6 +61,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
 
   constructor() {
     super();
+    this.name = "";
     this.hasChildren = false;
     this.includeChildren = true;
     this.mirrorAxes = {
@@ -77,6 +83,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
   protected reset(
     context: HierarchyDuplicateContext
   ): void {
+    this.name = context.defaultName;
     this.hasChildren = context.hasChildren;
     this.includeChildren = true;
     this.mirrorAxes = {
@@ -88,17 +95,24 @@ export class HierarchyDuplicateDialog extends EditorDialog<
 
   protected result(): HierarchyDuplicateResult {
     return {
+      name: this.name.trim(),
       includeChildren: this.hasChildren && this.includeChildren,
       mirrorAxes: { ...this.mirrorAxes }
     };
   }
 
   protected focusTarget(): HTMLElement | null {
-    return this.confirmButton;
+    return this.renderRoot.querySelector("jolly-text");
   }
 
   protected renderFields(): TemplateResult {
     return html`
+      <jolly-text
+        label="Name"
+        .value=${this.name}
+        @jolly-input=${this.#onName}
+        @jolly-change=${this.#onName}
+      ></jolly-text>
       ${this.hasChildren ? html`
         <jolly-checkbox
           label="Duplicate children too"
@@ -119,6 +133,12 @@ export class HierarchyDuplicateDialog extends EditorDialog<
         `)}
       </div>
     `;
+  }
+
+  #onName(
+    event: CustomEvent<JollyChangeDetail<string>>
+  ): void {
+    this.name = event.detail.value;
   }
 
   #onIncludeChildren(

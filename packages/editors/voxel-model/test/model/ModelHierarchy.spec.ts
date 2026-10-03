@@ -296,7 +296,7 @@ describe("ModelHierarchy.rename", () => {
 });
 
 describe("ModelHierarchy.duplicate", () => {
-  test("copies a block next to its source with a Copy suffix and its UV layout", () => {
+  test("copies a block under the given name with its UV layout", () => {
     const { document, blocks, addBlock, hierarchy } = createHarness();
     const source = addBlock({
       name: "Arm",
@@ -305,12 +305,13 @@ describe("ModelHierarchy.duplicate", () => {
     });
 
     const duplicateId = hierarchy.duplicate(source.uuid, {
+      name: "Left Arm",
       includeChildren: false,
       mirrorAxes: kNoMirror
     });
 
     assert.ok(duplicateId);
-    assert.equal(blocks.get(duplicateId)?.name, "Arm Copy");
+    assert.equal(blocks.get(duplicateId)?.name, "Left Arm");
     assert.deepEqual(blocks.get(duplicateId)?.transform, source.transform);
     assert.deepEqual(document.tree.block(duplicateId)?.uv, layoutAt(7));
   });
@@ -327,6 +328,19 @@ describe("ModelHierarchy.duplicate", () => {
 
     assert.equal(document.tree.block(duplicateId!)?.materialId, metalId);
     assert.equal(document.tree.materials.size, 1);
+  });
+
+  test("names the copy after its source when no name is given", () => {
+    const { blocks, addBlock, hierarchy } = createHarness();
+    const source = addBlock({ name: "Arm" });
+
+    const duplicateId = hierarchy.duplicate(source.uuid, {
+      name: "",
+      includeChildren: false,
+      mirrorAxes: kNoMirror
+    });
+
+    assert.equal(blocks.get(duplicateId!)?.name, "Arm Copy");
   });
 
   test("copies a folder subtree, keeping child names", () => {

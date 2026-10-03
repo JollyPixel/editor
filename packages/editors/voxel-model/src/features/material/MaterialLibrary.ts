@@ -44,7 +44,6 @@ import {
   MaterialSurfaceController,
   type MaterialSurfaceWorkspace
 } from "./surface/MaterialSurfaceController.ts";
-import { blockCount } from "./blockCount.ts";
 import {
   MATERIAL_PRESETS,
   type MaterialPreset
@@ -109,7 +108,6 @@ export class MaterialLibrary extends LitElement {
     const { edited } = this.#surface;
 
     return html`
-      ${this.#renderBlockBar(state.block)}
       <div class="layout" @paste=${this.#onPaste}>
         <section class="library">
           ${this.#renderActions(state)}
@@ -121,6 +119,7 @@ export class MaterialLibrary extends LitElement {
             reorderable
             row-drag
             renamable
+            swatch-position="start"
             @copy=${this.#onCopy}
             @jolly-select=${controller.handleSelect}
             @jolly-activate=${controller.handleActivate}
@@ -137,9 +136,7 @@ export class MaterialLibrary extends LitElement {
         <section class="editor">
           <div class="scroll">
             ${edited === null ?
-              html`<p class="empty">${state.selectedId === null ?
-                "Pick a material or create one." :
-                "Pick a material in this folder, or drop one into it."}</p>` :
+              html`<p class="empty">Pick a material or create one.</p>` :
               this.#renderFields(edited, state.block)}
           </div>
         </section>
@@ -165,13 +162,6 @@ export class MaterialLibrary extends LitElement {
           @click=${this.#tool(null, "new-material")}
         ></jolly-button>
         <jolly-button
-          icon="folder-add"
-          icon-only
-          label="New Folder"
-          title="New folder"
-          @click=${this.#tool(null, "new-folder")}
-        ></jolly-button>
-        <jolly-button
           icon="action-duplicate"
           icon-only
           label="Duplicate"
@@ -184,8 +174,17 @@ export class MaterialLibrary extends LitElement {
           icon-only
           label="Delete"
           title="Delete"
-          ?disabled=${state.selectedId === null}
-          @click=${this.#tool(state.selectedId, "delete")}
+          ?disabled=${state.editedId === null}
+          @click=${this.#tool(state.editedId, "delete")}
+        ></jolly-button>
+        <jolly-button
+          class="help-toggle"
+          icon="info"
+          icon-only
+          label="Help"
+          title=${this.help ? "Hide help" : "Show help"}
+          aria-pressed=${this.help ? "true" : "false"}
+          @click=${this.#toggleHelp}
         ></jolly-button>
       </div>
     `;
@@ -214,7 +213,7 @@ export class MaterialLibrary extends LitElement {
     block: SelectedBlockState | null
   ): TemplateResult {
     return html`
-      ${this.#renderHeader(edited, block)}
+      ${this.#renderEditors()}
       ${this.help ? html`<p class="help">${MATERIAL_HELP}</p>` : nothing}
       <div class="fields">
         <jolly-text
@@ -228,6 +227,7 @@ export class MaterialLibrary extends LitElement {
         ></jolly-text>
       </div>
       ${SURFACE_GROUPS.map((group) => this.#renderGroup(group, edited))}
+      ${this.#renderFooter(edited, block)}
     `;
   }
 
@@ -249,39 +249,46 @@ export class MaterialLibrary extends LitElement {
     `;
   }
 
-  #renderHeader(
-    edited: ModelMaterialJSON,
-    block: SelectedBlockState | null
-  ): TemplateResult {
-    const { uses, editors } = this.#surface;
-    const applied = block?.materialId === edited.id;
+  #renderEditors(): TemplateResult | typeof nothing {
+    const { editors } = this.#surface;
+    if (editors.length === 0) {
+      return nothing;
+    }
 
     return html`
       <div class="header">
-        <span
-          class="uses"
-          tabindex=${uses === 0 ? nothing : "0"}
-          @pointerenter=${this.#onShowUsers}
-          @pointerleave=${this.#onHideUsers}
-          @focus=${this.#onShowUsers}
-          @blur=${this.#onHideUsers}
-        >${uses === 0 ? "Not used yet" : `Used by ${blockCount(uses)}`}</span>
-        ${editors.length === 0 ?
-          nothing :
-          html`
-            <span class="editors">
-              ${editors.map((peer) => html`
-                <span class="editor-dot" style="background: ${peer.color}"></span>
-              `)}
-              ${editingLabel(editors)}
-            </span>
-          `}
+        <span class="editors">
+          ${editors.map((peer) => html`
+            <span class="editor-dot" style="background: ${peer.color}"></span>
+          `)}
+          ${editingLabel(editors)}
+        </span>
+      </div>
+    `;
+  }
+
+  #renderFooter(
+    edited: ModelMaterialJSON,
+    block: SelectedBlockState | null
+  ): TemplateResult {
+    if (block === null) {
+      return html`
+        <div class="footer">
+          <jolly-button
+            title="Select a block to apply this material"
+            disabled
+          >Apply</jolly-button>
+        </div>
+      `;
+    }
+
+    const applied = block.materialId === edited.id;
+
+    return html`
+      <div class="footer">
         <jolly-button
-          class="apply"
-          title=${applyReason(block, applied, edited.name)}
-          ?disabled=${block === null || applied}
-          @click=${() => this.#controller.assign(edited.id)}
-        >${block === null ? "Apply" : `Apply to ${block.name}`}</jolly-button>
+          @click=${() => this.#controller.assign(applied ? null : edited.id)}
+        >${applied ? `Remove from ${block.name}` : `Apply to ${block.name}`}</jolly-button>
       </div>
     `;
   }
@@ -325,41 +332,6 @@ export class MaterialLibrary extends LitElement {
     this.#preferences.set(kHelpKey, this.help ? "on" : "off");
   }
 
-  #renderBlockBar(
-    block: SelectedBlockState | null
-  ): TemplateResult {
-    return html`
-      <div class="block-bar ${block === null ? "idle" : ""}">
-        <span class="block-summary">
-          ${block === null ?
-            "No block selected" :
-            html`<strong>${block.name}</strong> ${block.materialName === null ?
-              "has no material" :
-              `uses ${block.materialName}`}`}
-        </span>
-        ${block === null || block.materialName === null ?
-          nothing :
-          html`
-            <jolly-button
-              icon="close"
-              icon-only
-              label="Clear Material"
-              title=${`Take ${block.materialName} off ${block.name}`}
-              @click=${() => this.#controller.assign(null)}
-            ></jolly-button>
-          `}
-        <jolly-button
-          icon="info"
-          icon-only
-          label="Help"
-          title=${this.help ? "Hide help" : "Show help"}
-          aria-pressed=${this.help ? "true" : "false"}
-          @click=${this.#toggleHelp}
-        ></jolly-button>
-      </div>
-    `;
-  }
-
   #openPresetMenu(
     choose: (preset: MaterialPreset) => void,
     point: MenuPoint
@@ -391,14 +363,6 @@ export class MaterialLibrary extends LitElement {
     await this.tree.updateComplete;
     this.tree.beginRename(id);
   }
-
-  readonly #onShowUsers = (): void => {
-    this.#surface.showUsers(true);
-  };
-
-  readonly #onHideUsers = (): void => {
-    this.#surface.showUsers(false);
-  };
 
   #listen<TKey extends SurfaceField["key"]>(
     key: TKey,
@@ -454,20 +418,6 @@ function editingLabel(
   return editors.length === 2 ?
     `${first.displayName} and ${second.displayName} are editing` :
     `${first.displayName} and ${editors.length - 1} others are editing`;
-}
-
-function applyReason(
-  block: SelectedBlockState | null,
-  applied: boolean,
-  materialName: string
-): string {
-  if (block === null) {
-    return "Select a block to apply this material to";
-  }
-
-  return applied ?
-    `${block.name} already uses ${materialName}` :
-    `Give ${materialName} to ${block.name}`;
 }
 
 function isTextEntry(

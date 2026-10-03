@@ -9,7 +9,7 @@ export default defineE2EConfig({
   command: "pnpm run dev:e2e",
   ciWorkers: 2,
   viewport: {
-    width: 960,
+    width: 820,
     height: 540
   }
 });

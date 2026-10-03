@@ -27,6 +27,7 @@ tree.expanded = ["scene"];
 | `renamable` | `boolean` | `false` |
 | `activateOnDoubleClick` | `boolean` | `false` |
 | `indentGuides` | `boolean` | `false` |
+| `swatchPosition` | `TreeSwatchPosition` | `"end"` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 
 The component does not mutate these arrays after user input. Consumers write
@@ -118,7 +119,10 @@ empty or absent list render no badge container at all.
 ## Sampling a property with a swatch
 
 `TreeNode.swatch` draws one small square after the detail and before the
-badges, sampling a property the row's object owns, such as a material. `color`
+badges, sampling a property the row's object owns, such as a material. When the
+swatch stands for the row itself, as in a list of materials, set
+`swatch-position="start"` on the tree: every swatch then sits before the label,
+where an icon would. `color`
 fills it with any CSS colour, and a checkerboard shows through a translucent
 one. `ring` outlines it in a second colour. `title` is its tooltip and
 accessible name.
@@ -134,6 +138,11 @@ selected row. Clicking a swatch emits `jolly-activate-swatch` and neither
 selects nor renames the row, so a consumer opens the property's editor there.
 Unlike a badge, a swatch is a click target. It is not a tab stop: the keyboard
 reaches the same editor through the row. A row has at most one swatch.
+
+## Long labels
+
+A row label that does not fit is cut off with an ellipsis and shows its full
+text on hover, see [overflow titles](../interaction/README.md#overflow-titles).
 
 ## Showing a row detail
 

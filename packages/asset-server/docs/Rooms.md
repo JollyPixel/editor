@@ -132,6 +132,17 @@ every command, and a client joining during the grace period receives the
 notice instead of a snapshot. The room itself is evicted as usual once its
 members leave.
 
+## Replaced content
+
+When the content of an open room's asset is replaced from outside the room,
+such as a file edited on disk or an archive import, the room broadcasts a
+fresh `snapshot` with the new version to every member. Clients load it as they
+would a resync. Scheduled snapshots of the room's own edits do not trigger
+it. See [Replay](./Sync.md#replay) for the `replaced` event behind it.
+
+`AssetRoomExtension.reload()` sends that snapshot directly. It does nothing
+once the asset is deleted or before any member has joined.
+
 Rights use the extension's `name`, which asset handlers normally set to the
 asset kind. This gives every room of one kind the same rights scope.
 `AssetRoomExtension` names each event after the command's `action` when the

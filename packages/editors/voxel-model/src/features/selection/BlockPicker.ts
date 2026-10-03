@@ -65,7 +65,9 @@ export class BlockPicker extends ActorComponent {
       this.#camera.threeCamera
     );
 
-    const [hit] = this.#raycaster.intersectObjects(this.#meshList(), false);
+    const hit = this.#raycaster
+      .intersectObjects(this.#meshList(), false)
+      .find((intersection) => intersection.object.visible);
     const hovered = hit === undefined ?
       null :
       this.#blocks.fromMesh(hit.object)?.uuid ?? null;

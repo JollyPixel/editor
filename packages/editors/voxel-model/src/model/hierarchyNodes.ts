@@ -49,6 +49,17 @@ export function buildHierarchyNodes(
   return build(null);
 }
 
+export function* blockIdsUnder(
+  node: HierarchyNode
+): IterableIterator<string> {
+  for (const child of node.children) {
+    if (child.kind === "block") {
+      yield child.id;
+    }
+    yield* blockIdsUnder(child);
+  }
+}
+
 export function findHierarchyNode(
   nodes: readonly HierarchyNode[],
   id: string

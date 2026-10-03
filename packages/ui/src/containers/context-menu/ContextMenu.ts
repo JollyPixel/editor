@@ -20,6 +20,7 @@ import { PopoverController } from "../../field/PopoverController.ts";
 import type { AnchorRect } from "../../geometry/anchoredPosition.ts";
 import "../../icon/Icon.ts";
 import type { IconName } from "../../icon/registry.ts";
+import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 
 export interface ContextMenuItem {
   id: string;
@@ -186,7 +187,10 @@ export class ContextMenu extends LitElement {
             aria-hidden="true"
           ></jolly-icon>` :
           nothing}
-        <span class="label">${item.label}</span>
+        <span
+          class="label"
+          @pointerenter=${revealOverflowTitle}
+        >${item.label}</span>
       </button>
     `;
   }

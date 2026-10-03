@@ -13,6 +13,7 @@ import {
 // Import Internal Dependencies
 import { propertyRowStyles } from "./PropertyRow.styles.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
+import { revealOverflowTitle } from "../interaction/overflowTitle.ts";
 import type {
   FieldAlign,
   FieldLabelPosition
@@ -65,7 +66,10 @@ export class PropertyRow extends LitElement {
     return html`
       <div class="row">
         <div class="leading">
-          ${this.label === "" ? nothing : html`<span class="label">${this.label}</span>`}
+          ${this.label === "" ? nothing : html`<span
+            class="label"
+            @pointerenter=${revealOverflowTitle}
+          >${this.label}</span>`}
         </div>
         <div class="value"><slot></slot></div>
       </div>

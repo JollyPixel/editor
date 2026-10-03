@@ -8,26 +8,7 @@ export const materialLibraryStyles = css`
     height: 100%;
     min-height: 0;
     box-sizing: border-box;
-  }
-
-  .block-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--jolly-space-2, 8px);
-    padding: var(--jolly-space-1, 4px) var(--jolly-space-2, 8px);
-    border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
-  }
-
-  .block-summary {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .block-bar.idle .block-summary {
-    color: var(--jolly-text-muted, inherit);
+    container-type: inline-size;
   }
 
   .header {
@@ -39,20 +20,10 @@ export const materialLibraryStyles = css`
     border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
   }
 
-  .uses {
-    color: var(--jolly-text-muted, inherit);
-  }
-
-  .uses[tabindex] {
-    cursor: default;
-    text-decoration: underline dotted;
-    text-underline-offset: 3px;
-  }
-
-  .uses[tabindex]:hover,
-  .uses[tabindex]:focus-visible {
-    color: var(--jolly-text, inherit);
-    outline: none;
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: var(--jolly-space-2, 8px);
   }
 
   .editors {
@@ -86,10 +57,26 @@ export const materialLibraryStyles = css`
     border-right: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
   }
 
+  @container (width < 480px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(96px, 30%) minmax(0, 1fr);
+    }
+
+    .library {
+      border-right: 0;
+      border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
+    }
+  }
+
   .actions {
     display: flex;
     gap: var(--jolly-space-1, 4px);
     padding: var(--jolly-space-1, 4px);
+  }
+
+  .help-toggle {
+    margin-left: auto;
   }
 
   jolly-tree {

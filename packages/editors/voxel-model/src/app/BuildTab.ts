@@ -6,7 +6,10 @@ import {
   type PropertyValues,
   type TemplateResult
 } from "lit";
-import { property } from "lit/decorators.js";
+import {
+  property,
+  query
+} from "lit/decorators.js";
 import {
   FieldBinding,
   type JollyOption
@@ -24,6 +27,9 @@ import {
 
 // Import Internal Dependencies
 import { WorkspaceController } from "../shared/WorkspaceController.ts";
+import "../features/transform/TransformPanel.ts";
+import type { TransformPanel } from "../features/transform/TransformPanel.ts";
+import type { TransformWorkspace } from "../features/transform/TransformPanelController.ts";
 
 // CONSTANTS
 const kTextureSizeValues = [
@@ -49,7 +55,10 @@ export class BuildTab extends LitElement {
   declare canvas: PixelArtCanvas | null;
 
   @property({ attribute: false })
-  declare model: ModelDocument | null;
+  declare workspace: TransformWorkspace | null;
+
+  @query("jolly-model-editor-transform")
+  declare private transformElement: TransformPanel;
 
   #width = textureAxisBinding(this, "x");
   #height = textureAxisBinding(this, "y");
@@ -64,6 +73,10 @@ export class BuildTab extends LitElement {
 
     :host([hidden]) {
       display: none;
+    }
+
+    jolly-folder[key="transform"]::part(header) {
+      font-size: calc(var(--jolly-font-size, 11px) + 2px);
     }
 
     section {
@@ -106,27 +119,37 @@ export class BuildTab extends LitElement {
   };
 
   #remeasure = (): void => {
-    this.#extent = blockUvExtent(
-      [...this.model?.tree.blocks() ?? []].map((block) => block.uv)
-    );
+    const blocks = this.workspace?.document.tree.blocks() ?? [];
+    this.#extent = blockUvExtent([...blocks].map((block) => block.uv));
     this.requestUpdate();
   };
 
   constructor() {
     super();
     this.canvas = null;
-    this.model = null;
+    this.workspace = null;
   }
 
   override willUpdate(
     changedProperties: PropertyValues<this>
   ): void {
-    if (changedProperties.has("canvas") || changedProperties.has("model")) {
+    if (
+      changedProperties.has("canvas") ||
+      changedProperties.has("workspace")
+    ) {
       this.#remeasure();
       this.#sources.attach({
         canvas: this.canvas,
-        model: this.model
+        model: this.workspace?.document ?? null
       });
+    }
+  }
+
+  override updated(
+    changedProperties: PropertyValues<this>
+  ): void {
+    if (changedProperties.has("workspace") && this.workspace !== null) {
+      this.transformElement.attach(this.workspace);
     }
   }
 
@@ -134,6 +157,14 @@ export class BuildTab extends LitElement {
     const extent = this.#extent;
 
     return html`
+      <jolly-folder
+        key="transform"
+        label="Transform"
+        .collapsible=${false}
+        flush
+      >
+        <jolly-model-editor-transform></jolly-model-editor-transform>
+      </jolly-folder>
       <section id="texture">
         <jolly-property-row label="Texture">
           <jolly-select
@@ -215,3 +246,9 @@ function textureAxisBinding(
 }
 
 customElements.define("jolly-model-editor-build", BuildTab);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "jolly-model-editor-build": BuildTab;
+  }
+}

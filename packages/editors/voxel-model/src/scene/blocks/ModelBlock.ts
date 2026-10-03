@@ -115,6 +115,16 @@ export class ModelBlock {
     }
   }
 
+  get visible(): boolean {
+    return this.mesh.visible;
+  }
+
+  set visible(
+    visible: boolean
+  ) {
+    this.mesh.visible = visible;
+  }
+
   get texture(): THREE.Texture | null {
     return this.mesh.material.map;
   }

@@ -25,6 +25,12 @@ import {
   resolveActiveTab,
   tabNavigationTarget
 } from "./tabSelection.ts";
+import {
+  naturalTabsWidth,
+  tabLabelsFit,
+  type TabExtent
+} from "./tabCompaction.ts";
+import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 import type { Rect } from "../../geometry/Rect.ts";
 import { horizontalInsertionLine } from "../../interaction/drag/DragSession.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
@@ -49,6 +55,9 @@ export class PaneGroup extends LitElement {
   @state()
   declare _dragging: string;
 
+  @state()
+  declare _compact: boolean;
+
   @query(".tabs")
   declare _tabs: HTMLElement;
 
@@ -56,6 +65,7 @@ export class PaneGroup extends LitElement {
   declare _slot: HTMLSlotElement;
 
   #managed = false;
+  #resizeObserver = new ResizeObserver(() => this.#fitTabs());
 
   constructor() {
     super();
@@ -64,11 +74,18 @@ export class PaneGroup extends LitElement {
     this._panes = [];
     this._grabbed = false;
     this._dragging = "";
+    this._compact = false;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.#managed = this.closest("jolly-dock-layout") !== null;
+    this.#resizeObserver.observe(this);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.#resizeObserver.disconnect();
   }
 
   override render(): TemplateResult {
@@ -86,6 +103,8 @@ export class PaneGroup extends LitElement {
       >
         ${this._panes.map((pane, index) => {
           const selected = pane.layoutKey === this.active;
+          const heading = pane.heading || pane.layoutKey;
+          const iconOnly = this._compact && pane.icon !== "";
 
           return html`
             <button
@@ -100,10 +119,15 @@ export class PaneGroup extends LitElement {
               tabindex=${selected ? "0" : "-1"}
               ?data-grabbed=${selected && this._grabbed}
               ?data-dragging=${pane.layoutKey === this._dragging}
+              ?data-icon-only=${iconOnly}
+              title=${iconOnly ? heading : nothing}
               @click=${this.#onSelect}
               @pointerdown=${this.#onTabPointerDown}
-            >${this.#renderTabIcon(pane)}<span class="label" part="tab-label"
-              >${pane.heading || pane.layoutKey}</span></button>
+            >${this.#renderTabIcon(pane)}<span
+              class="label"
+              part="tab-label"
+              @pointerenter=${iconOnly ? nothing : revealOverflowTitle}
+            >${heading}</span></button>
           `;
         })}
       </div>
@@ -120,6 +144,7 @@ export class PaneGroup extends LitElement {
   protected override updated(
     changed: Map<PropertyKey, unknown>
   ): void {
+    this.#fitTabs();
     for (const pane of this._panes) {
       if (pane.parentElement === this) {
         pane.inactive = pane.layoutKey !== this.active;
@@ -221,6 +246,19 @@ export class PaneGroup extends LitElement {
         aria-hidden="true"
       ></jolly-icon>
     `;
+  }
+
+  #fitTabs(): void {
+    const tabs = this._tabs;
+    if (!tabs) {
+      return;
+    }
+
+    const naturalWidth = naturalTabsWidth(
+      this.#tabButtons().map(tabExtentOf),
+      columnGapOf(tabs)
+    );
+    this._compact = !tabLabelsFit(naturalWidth, tabs.clientWidth);
   }
 
   #tabButtons(): HTMLButtonElement[] {
@@ -349,6 +387,26 @@ export class PaneGroup extends LitElement {
       command
     });
   }
+}
+
+function tabExtentOf(
+  tab: HTMLButtonElement
+): TabExtent {
+  const label = tab.querySelector(".label");
+
+  return {
+    tabWidth: tab.getBoundingClientRect().width,
+    labelWidth: label?.clientWidth ?? 0,
+    labelContentWidth: label?.scrollWidth ?? 0,
+    labelHidden: tab.hasAttribute("data-icon-only"),
+    innerGap: columnGapOf(tab)
+  };
+}
+
+function columnGapOf(
+  element: Element
+): number {
+  return Number.parseFloat(getComputedStyle(element).columnGap) || 0;
 }
 
 export function isPaneGroup(

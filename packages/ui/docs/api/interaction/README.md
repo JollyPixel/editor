@@ -25,6 +25,37 @@ is already against the anchor. A popover opened another way, such as with
 Each placement sets `--jolly-overlay-origin` on the popover to the point
 nearest the anchor's center, which the overlay motion scales from.
 
+## Overflow titles
+
+A label cut off with an ellipsis shows its full text as a native tooltip while
+the pointer is over it. A label that fits gets no tooltip. Tree rows, field and
+`jolly-property-row` labels, `jolly-folder` headers, context menu items and
+pane group tabs all do this.
+
+The `overflow-title` attribute turns it off. It works on any element, and the
+nearest ancestor that has it wins, across shadow boundaries. Only `"off"`
+disables. Any other value turns it back on below an `"off"`. With no attribute
+anywhere, it is on.
+
+```html
+<jolly-scope overflow-title="off">
+  <jolly-tree overflow-title="on"></jolly-tree>
+  <jolly-text label="Name"></jolly-text>
+</jolly-scope>
+```
+
+The check runs when the pointer enters the label, so it reflects the label's
+size at that moment. `revealOverflowTitle` is that `pointerenter` handler, for
+truncating labels a consumer renders itself:
+
+```ts
+html`<span class="label" @pointerenter=${revealOverflowTitle}>${name}</span>`;
+```
+
+`syncOverflowTitle(element)` applies the same rule directly: it sets the
+element's `title` to its text while `scrollWidth` exceeds `clientWidth` and
+the attribute allows it, and removes the `title` otherwise.
+
 ## Input layers
 
 `inputLayers` records which keyboard events belong to the UI. While any layer

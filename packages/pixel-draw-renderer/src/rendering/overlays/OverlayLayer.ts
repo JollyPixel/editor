@@ -3,6 +3,7 @@ import { SVG_NS } from "../constants.ts";
 import { PeerCursors } from "../presence/PeerCursors.ts";
 import { PeerSelectionOutlines } from "../presence/PeerSelectionOutlines.ts";
 import { PeerUVPreview } from "../presence/PeerUVPreview.ts";
+import { PeerUVSelections } from "../presence/PeerUVSelections.ts";
 import { BrushHighlightView } from "./BrushHighlight.ts";
 import { LinePreview } from "./LinePreview.ts";
 import { SelectionOutline } from "./SelectionOutline.ts";
@@ -40,6 +41,7 @@ export class OverlayLayer {
   readonly uvOverlay: UVRegionLayer;
   readonly peerCursors: PeerCursors;
   readonly peerUvPreview: PeerUVPreview;
+  readonly peerUvSelections: PeerUVSelections;
   readonly peerSelectionOutlines: PeerSelectionOutlines;
 
   constructor(
@@ -58,6 +60,7 @@ export class OverlayLayer {
       options.viewport,
       this.uvOverlay
     );
+    this.peerUvSelections = new PeerUVSelections(this.uvOverlay);
     this.brushHighlight = new BrushHighlightView(
       this.#svg,
       options.viewport,

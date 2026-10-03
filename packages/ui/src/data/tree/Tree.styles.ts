@@ -159,6 +159,10 @@ export const treeStyles = css`
     cursor: pointer;
   }
 
+  :host([swatch-position="start"]) .swatch {
+    margin-inline: 0;
+  }
+
   .swatch[data-empty="true"] {
     visibility: hidden;
     border-style: dashed;

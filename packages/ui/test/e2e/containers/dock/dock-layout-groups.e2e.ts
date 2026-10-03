@@ -57,6 +57,30 @@ test.describe("DockLayout groups", () => {
     await expect(visible).toHaveText("layers paint");
   });
 
+  test("tabs with an icon collapse to it when the labels no longer fit", async({ page }) => {
+    const group = page.locator("jolly-pane-group");
+    const general = group.locator(".tab[data-key='general']");
+    const dock = page.locator("jolly-dock[key='left']");
+
+    await expect(general).not.toHaveAttribute("data-icon-only");
+    await expect(general).not.toHaveAttribute("title");
+
+    await group.evaluate((element) => {
+      (element as HTMLElement).style.width = "120px";
+    });
+    await expect(general).toHaveAttribute("data-icon-only");
+    await expect(general).toHaveAttribute("title", "General");
+    await expect(general).toHaveAccessibleName("General");
+    await expect(group.locator(".tab[data-key='blocks']")).not.toHaveAttribute("data-icon-only");
+
+    await group.evaluate((element) => {
+      (element as HTMLElement).style.width = "";
+    });
+    await expect(dock).toBeVisible();
+    await expect(general).not.toHaveAttribute("data-icon-only");
+    await expect(general).toHaveText("General");
+  });
+
   test("a pane icon leads its tab, its header and its drag ghost", async({ page }) => {
     const general = page.locator("jolly-pane-group .tab", { hasText: "General" });
     const layersHeader = page.locator("jolly-pane[key='layers'] .header");

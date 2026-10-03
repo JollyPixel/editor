@@ -101,46 +101,16 @@ describe("MaterialSurfaceController", () => {
     assert.deepEqual(harness.actions, []);
   });
 
-  test("puts the stored surface back when another row is picked mid-preview", () => {
+  test("puts the stored surface back when the row is let go mid-preview", () => {
     const harness = createMaterialHarness();
     const block = harness.addBlock({ materialId: harness.glass });
-    const folder = harness.controller.createFolder()!;
     harness.controller.select(harness.glass);
 
     harness.surface.preview(METAL_SURFACE);
-    harness.controller.select(folder);
+    harness.controller.select(null);
 
     assert.deepEqual(block.surface, GLASS_SURFACE);
     assert.equal(harness.surface.edited, null);
-  });
-
-  test("counts the blocks using the edited material and outlines them on request", () => {
-    const harness = createMaterialHarness();
-    const arm = harness.addBlock({ materialId: harness.glass });
-    const leg = harness.addBlock({ materialId: harness.glass });
-    harness.addBlock();
-    harness.controller.select(harness.glass);
-
-    assert.equal(harness.surface.uses, 2);
-
-    harness.surface.showUsers(true);
-    assert.deepEqual(harness.selection.emphasized, [arm.uuid, leg.uuid]);
-
-    harness.surface.showUsers(false);
-    assert.deepEqual(harness.selection.emphasized, []);
-  });
-
-  test("stops outlining the users when another material is edited", () => {
-    const harness = createMaterialHarness();
-    harness.addBlock({ materialId: harness.glass });
-    const metal = harness.document.addMaterial({ name: "Metal" })!;
-    harness.controller.select(harness.glass);
-    harness.surface.showUsers(true);
-
-    harness.controller.select(metal);
-
-    assert.deepEqual(harness.selection.emphasized, []);
-    assert.equal(harness.surface.uses, 0);
   });
 
   test("follows whether the viewport shades with light", () => {

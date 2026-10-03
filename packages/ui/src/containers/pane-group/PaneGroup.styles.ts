@@ -5,7 +5,8 @@ import { css } from "lit";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
 import {
   focusRing,
-  truncate
+  truncate,
+  visuallyHidden
 } from "../../theme/styles/mixins.ts";
 
 export const paneGroupStyles = css`
@@ -69,6 +70,14 @@ export const paneGroupStyles = css`
     min-width: 0;
 
     ${truncate}
+  }
+
+  .tab[data-icon-only] {
+    flex-shrink: 0;
+  }
+
+  .tab[data-icon-only] .label {
+    ${visuallyHidden}
   }
 
   .tab:hover {

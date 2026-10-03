@@ -14,12 +14,12 @@ import {
 import {
   addNode,
   hierarchyAction,
-  materialBlockBar,
   materialTab,
   rowMenu
 } from "./support/hierarchy.ts";
 import {
   blockSummary,
+  blockVisible,
   outline,
   selectedBlock
 } from "./support/scene.ts";
@@ -33,12 +33,13 @@ test("a new block is listed, selected and given its texture region", async({ pag
   expect(await selectedBlock(page)).toBe("Arm");
 });
 
-test("the header adds at the root and a row menu adds inside the row", async({ page }) => {
+test("a row menu adds inside the row and the header adds under the selection", async({ page }) => {
   await addNode(page, "Block", "Arm", { under: "Block" });
   await expect(treeRow(page, "Arm")).toHaveAttribute("aria-selected", "true");
-  await addNode(page, "Block", "Leg");
+  await addNode(page, "Block", "Hand");
+  await addNode(page, "Folder", "Fingers");
 
-  expect(await outline(page)).toEqual(["Block", "  Arm", "Leg"]);
+  expect(await outline(page)).toEqual(["Block", "  Arm", "    Hand", "      Fingers/"]);
 });
 
 test("a cancelled dialog adds nothing", async({ page }) => {
@@ -97,6 +98,37 @@ test("a row is reparented with the keyboard move state", async({ page }) => {
   await expect.poll(() => outline(page)).toEqual(["Block", "  Arm"]);
 });
 
+test("a block row eye hides and shows only that block", async({ page }) => {
+  await addNode(page, "Block", "Arm", { under: "Block" });
+
+  await treeRow(page, "Block").getByRole("button", { name: "Hide" }).click();
+  await expect(treeRow(page, "Block").getByRole("button", { name: "Show" })).toBeVisible();
+  expect(await blockVisible(page, "Block")).toBe(false);
+  expect(await blockVisible(page, "Arm")).toBe(true);
+
+  await treeRow(page, "Block").getByRole("button", { name: "Show" }).click();
+  await expect(treeRow(page, "Block").getByRole("button", { name: "Hide" })).toBeVisible();
+  expect(await blockVisible(page, "Block")).toBe(true);
+});
+
+test("a folder eye hides its blocks and turns back on when one is shown", async({ page }) => {
+  await addNode(page, "Folder", "Limbs");
+  await addNode(page, "Block", "Arm", { under: "Limbs" });
+  await addNode(page, "Block", "Leg", { under: "Limbs" });
+
+  await treeRow(page, "Limbs").getByRole("button", { name: "Hide" }).click();
+  expect(await blockVisible(page, "Arm")).toBe(false);
+  expect(await blockVisible(page, "Leg")).toBe(false);
+
+  await treeRow(page, "Arm").getByRole("button", { name: "Show" }).click();
+  await expect(treeRow(page, "Limbs").getByRole("button", { name: "Hide" })).toBeVisible();
+
+  await treeRow(page, "Limbs").getByRole("button", { name: "Hide" }).click();
+  await treeRow(page, "Limbs").getByRole("button", { name: "Show" }).click();
+  expect(await blockVisible(page, "Arm")).toBe(true);
+  expect(await blockVisible(page, "Leg")).toBe(true);
+});
+
 test("a duplicate copies the subtree and mirrors it", async({ page }) => {
   await treeRow(page, "Block").click();
   await page.getByRole("radio", { name: "Pos" }).check();
@@ -107,6 +139,7 @@ test("a duplicate copies the subtree and mirrors it", async({ page }) => {
   await treeRow(page, "Block").click();
   await hierarchyAction(page, "Duplicate").click();
   const form = dialog(page, "Duplicate");
+  await expect(textField(form, "Name")).toHaveValue("Block Copy");
   await expect(checkboxField(form, "Duplicate children too")).toBeChecked();
   await checkboxField(form, "X").check();
   await form.getByRole("button", { name: "Duplicate" }).click();
@@ -142,7 +175,6 @@ test("a row menu renames in place and opens the Material tab", async({ page }) =
 
   await (await rowMenu(page, "Torso")).getByRole("menuitem", { name: "Material…" }).click();
   await expect(materialTab(page)).toBeVisible();
-  await expect(materialBlockBar(page)).toContainText("Torso");
 });
 
 test("a right-click below the rows adds at the root, with no row actions", async({ page }) => {
@@ -162,14 +194,16 @@ test("a right-click below the rows adds at the root, with no row actions", async
   await expect.poll(() => outline(page)).toEqual(["Block", "Props/"]);
 });
 
-test("a row menu duplicates next to the row and deletes it", async({ page }) => {
+test("a row menu duplicates next to the row under a new name and deletes it", async({ page }) => {
   await addNode(page, "Block", "Arm");
 
   await (await rowMenu(page, "Block")).getByRole("menuitem", { name: "Duplicate" }).click();
-  await dialog(page, "Duplicate").getByRole("button", { name: "Duplicate" }).click();
-  await expect.poll(() => outline(page)).toEqual(["Block", "Block Copy", "Arm"]);
+  const form = dialog(page, "Duplicate");
+  await textField(form, "Name").fill("Torso");
+  await form.getByRole("button", { name: "Duplicate" }).click();
+  await expect.poll(() => outline(page)).toEqual(["Block", "Torso", "Arm"]);
 
-  await (await rowMenu(page, "Block Copy")).getByRole("menuitem", { name: "Delete" }).click();
+  await (await rowMenu(page, "Torso")).getByRole("menuitem", { name: "Delete" }).click();
   await dialog(page, "Delete Block").getByRole("button", { name: "Delete" }).click();
 
   await expect.poll(() => outline(page)).toEqual(["Block", "Arm"]);
