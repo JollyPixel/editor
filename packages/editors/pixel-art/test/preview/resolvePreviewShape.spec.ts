@@ -11,7 +11,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { resolvePreviewShapeKind } from "../../examples/scripts/preview/resolvePreviewShape.ts";
+import { resolvePreviewShapeKind } from "../../page/scripts/preview/resolvePreviewShape.ts";
 
 // CONSTANTS
 const kRect: SelectionRect = {

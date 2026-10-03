@@ -179,7 +179,7 @@ item 18 for warm opens. It has to solve:
   different kinds list per editor: one module id cannot serve three lists;
 - separate `public/` folders: each `main.css`, and voxel-map's
   `textures/tileset.png` fetched by relative URL (`src/boot/worldProject.ts`);
-- pixel-art builds `page/index.html` (`vite.page.config.ts`, `root: "page"`)
+- pixel-art builds `page/index.html` (`vite.config.ts`, `root: "page"`)
   and imports `../../src/index.ts`, while voxel-map and voxel-model import
   their package `dist`;
 - voxel-model sets the deprecated `esbuild.target: "es2024"` and runs

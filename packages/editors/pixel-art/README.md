@@ -49,41 +49,36 @@ const canvas = await panel.initialize({
 > [!TIP]
 > See [Voxel-Map](../voxel-map/README.md) editor for a live integration on this editor.
 
-## 🚀 Running the example
+## 🖼️ Editor page
 
-`examples/` is a Lit toolbar panel driving `PixelArtCanvas` and painting live
-Cube and Ramp previews in Three.js, with multiplayer sync via
-`@jolly-pixel/network`.
+`page/` is the one editor app: the [studio](../../studio/README.md) opens it
+for `pixelart` assets (declared by the `jollypixel.editor` field of
+`package.json`), and the dev server serves it as a playground. It boots
+through [`@jolly-pixel/editor.host`](../host/README.md) `bootStandalone()`,
+and `PixelArtEditor` mounts `<pixel-draw-panel>` over the launch target with
+presence, the stored key bindings and texture tabs.
 
-The demo boots through [`@jolly-pixel/editor.host`](../host/README.md):
-`examples/scripts/main.ts` hands its definition to `mountStandalone()`, which
-opens the session on the launch target (the seeded `demo-canvas` asset, or
-`?target=<assetId>`). `examples/scripts/boot/` builds the target document,
-the preview and the texture tabs, which lease every added texture from the
-session. UV-driven Three.js rendering lives in `examples/scripts/preview/`. Shape-specific geometry lives under
-`preview/shapes/`; the gallery, picker, UV projection, and animation remain
-shape-neutral.
+`PixelArtFeatures` picks what the app turns on:
+
+| Feature | Built page (`editor`) | Dev server (`playground`) |
+|---|---|---|
+| 3D preview of the UV regions | off | on, `?runtime=off` hides it |
+| Starter UV region | off | on, `?empty` skips it |
+| UV create and delete | off | on |
+| Import policy | `replace` | `ask`, `?import-policy=` overrides |
+| Scope appearance | dark, comfortable | from the OS |
+
+The built page reads no feature query parameters, and the preview code
+(`page/scripts/preview/`, Cube and Ramp shapes in Three.js) is left out of
+its bundle.
 
 ```bash
 pnpm --filter @jolly-pixel/editor.pixel-art dev
-```
-
-Open `http://localhost:3000` to see the interactive demo.
-
-## 🖼️ Editor page
-
-`page/` is the editor page the [studio](../../studio/README.md) opens for
-`pixelart` assets, declared by the `jollypixel.editor` field of
-`package.json`. `PixelArtEditor` mounts `<pixel-draw-panel>` over the launch
-target, with presence and the stored key bindings. It has no 3D preview and
-no demo query parameters. The demo and the page share `PanelScope` and
-`TEXTURE_DOCUMENT_KIND` from `src/`.
-
-```bash
 pnpm --filter @jolly-pixel/editor.pixel-art build:page
 ```
 
-The page builds to `dist-page/`, leaving the library's `dist/` alone.
+The dev server listens on `http://localhost:3000` and seeds one texture. The
+page builds to `dist-page/`, leaving the library's `dist/` alone.
 `build:page:static` builds the variant that always starts offline, for the
 studio's static build.
 
@@ -98,11 +93,11 @@ studio's static build.
 pnpm --filter @jolly-pixel/editor.pixel-art test:e2e
 ```
 
-Playwright drives the `examples/` demo (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
+Playwright drives the editor page in its playground profile (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
 
-The suite serves the demo with `vite --mode e2e` (`pnpm run dev:e2e`). That mode skips the TypeScript checker and pre-bundles the workspace packages the browser imports (`kWorkspaceBrowserEntries` in `vite.config.ts`), see the [e2e README](../../e2e/README.md#-starting-a-new-suite). Add any new `@jolly-pixel/*` entry point the demo or `src/` imports to that list.
+The suite serves the page with `vite --mode e2e` (`pnpm run dev:e2e`). That mode skips the TypeScript checker and pre-bundles the workspace packages the browser imports (`kWorkspaceBrowserEntries` in `vite.config.ts`), see the [e2e README](../../e2e/README.md#-starting-a-new-suite). Add any new `@jolly-pixel/*` entry point the page or `src/` imports to that list.
 
-Each test creates its own blank canvas through the catalog and opens the demo on it, so tests share no state. Only the `3D preview` tests boot the runtime; they pass `?max-fps=` (`kRuntimeMaxFps` in `test/e2e/fixtures.ts`) to the demo. Headless Chromium renders that scene in software at roughly 300ms a frame, so any cap above ~2 fps renders back to back, starves the main thread and stalls every dispatched input event.
+Each test creates its own blank 80x80 canvas through the catalog and opens the page on it, so tests share no state. Only the `3D preview` tests boot the runtime; they pass `?max-fps=` (`kRuntimeMaxFps` in `test/e2e/fixtures.ts`) to the page. Headless Chromium renders that scene in software at roughly 300ms a frame, so any cap above ~2 fps renders back to back, starves the main thread and stalls every dispatched input event.
 
 ## Contributors Guide
 

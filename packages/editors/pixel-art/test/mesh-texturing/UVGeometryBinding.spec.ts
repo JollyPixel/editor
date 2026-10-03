@@ -20,7 +20,7 @@ import { UVGeometryBinding } from "#src/mesh-texturing/UVGeometryBinding.ts";
 import { clampUvRegion } from "#src/mesh-texturing/clampUvRegion.ts";
 import type { FaceRanges } from "#src/mesh-texturing/types.ts";
 import { edgeOf, regionOf } from "./regionAttributes.ts";
-import { boxFaceRanges } from "../../examples/scripts/preview/shapes/faceRanges.ts";
+import { boxFaceRanges } from "../../page/scripts/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
 const kTextureSize: Vec2 = { x: 64, y: 64 };

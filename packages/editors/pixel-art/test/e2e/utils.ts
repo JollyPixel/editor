@@ -7,12 +7,15 @@ import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
-import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 // CONSTANTS
 export const BLACK = "#000000ff";
 export const CLEAR = "#00000000";
+export const TEXTURE_SIZE = {
+  x: 80,
+  y: 80
+};
 
 const kModeLabel: Record<Mode, string> = {
   move: "Move",

@@ -5,21 +5,21 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   createAssetWorkspacePlugin,
+  createProjectKindsPlugin,
   ProjectFile,
   ProjectKinds
 } from "@jolly-pixel/asset-server/node";
-import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import { PORTS } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
-  DEMO_ASSET_ID,
-  DEMO_ASSET_PATH,
+  createPixelArtSeed,
   TEXTURE_SIZE
-} from "./examples/scripts/config.ts";
+} from "./page/scripts/pixelArtProject.ts";
 
 // CONSTANTS
 const kE2EMode = "e2e";
+const kTextureAssetId = "texture-default";
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
 const kWorkspaceBrowserEntries = [
   "@jolly-pixel/asset.pixel-art/client",
@@ -50,11 +50,17 @@ const kinds = await ProjectKinds.load(
 );
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const e2e = mode === kE2EMode;
+  const serve = command === "serve";
 
   return {
-    root: "examples",
+    root: "page",
+    base: "./",
+    build: {
+      outDir: "../dist-page",
+      emptyOutDir: true
+    },
     server: {
       port: PORTS.pixelArt,
       strictPort: true,
@@ -67,25 +73,21 @@ export default defineConfig(({ mode }) => {
       } :
       undefined,
     plugins: [
-      checker({
-        typescript: !e2e
-      }),
-      createAssetWorkspacePlugin({
-        root: import.meta.dirname,
-        source: new MemoryAssetSource(),
-        eventStore: EventStore.persistence.memory(),
-        handlers: kinds.handlers(),
-        seed: {
-          [DEMO_ASSET_PATH]: {
-            id: DEMO_ASSET_ID,
-            kind: PIXEL_ART_KIND
+      serve && !e2e ? checker({ typescript: true }) : null,
+      createProjectKindsPlugin(kinds),
+      serve ?
+        createAssetWorkspacePlugin({
+          root: import.meta.dirname,
+          source: new MemoryAssetSource(),
+          eventStore: EventStore.persistence.memory(),
+          handlers: kinds.handlers(),
+          seed: createPixelArtSeed(kTextureAssetId),
+          launch: () => kTextureAssetId,
+          backend: {
+            catalogMaxContentBytes: kCatalogMaxContentBytes
           }
-        },
-        launch: () => DEMO_ASSET_ID,
-        backend: {
-          catalogMaxContentBytes: kCatalogMaxContentBytes
-        }
-      })
+        }) :
+        null
     ]
   };
 });

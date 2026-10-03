@@ -17,8 +17,8 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { TEXTURE_SIZE } from "../../examples/scripts/config.ts";
-import type { PixelArtDemo } from "../../examples/scripts/boot/PixelArtDemo.ts";
+import { TEXTURE_SIZE } from "./utils.ts";
+import type { PixelArtEditor } from "../../page/scripts/PixelArtEditor.ts";
 import type { TextureImportPolicy } from "../../src/index.ts";
 
 export { expect } from "@playwright/test";
@@ -32,15 +32,15 @@ const kTransparent = {
   a: 0
 };
 
-export interface DemoOptions {
+export interface PlaygroundOptions {
   runtime?: boolean;
   maxFps?: number;
   importPolicy?: TextureImportPolicy;
   addDelay?: number;
 }
 
-export function demo(
-  options: DemoOptions = {}
+export function playground(
+  options: PlaygroundOptions = {}
 ): OpenEditorOptions {
   const {
     runtime = false,
@@ -66,14 +66,14 @@ export function demo(
   };
 }
 
-export function demoPanel(
+export function editorPanel(
   page: Page
 ): Locator {
   return page.locator("pixel-draw-panel");
 }
 
 export const test = editorFixture<EditorTarget>({
-  editor: demo(),
+  editor: playground(),
   async create(catalog) {
     const blank = new PixelBuffer({
       size: TEXTURE_SIZE,
@@ -91,12 +91,12 @@ export const test = editorFixture<EditorTarget>({
   panel: Locator;
 }>({
   panel: async({ page }, use) => {
-    await use(demoPanel(page));
+    await use(editorPanel(page));
   }
 });
 
 declare global {
   interface Window {
-    pixelArtDemo?: PixelArtDemo;
+    pixelArtEditor?: PixelArtEditor;
   }
 }

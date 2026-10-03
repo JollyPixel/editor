@@ -3,15 +3,20 @@ import {
   PixelCollaboration,
   createPixelArtAsset,
   PIXEL_ART_EXTENSION,
-  type PixelArtRoom
+  type PixelServerMessage,
+  type PixelWireCommand
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
   createPixelArtDocument,
   UVMap,
   type PixelArtCanvas,
-  type PixelArtDocumentData
+  type PixelArtDocumentData,
+  type PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
-import type { EditorSession } from "@jolly-pixel/editor.host";
+import type {
+  AssetLease,
+  EditorSession
+} from "@jolly-pixel/editor.host";
 import {
   peerProfileColor,
   readUsername
@@ -22,16 +27,16 @@ import type {
   PixelDrawPanel,
   TextureAddRequestDetail,
   TextureCloseRequestDetail
-} from "../../../src/index.ts";
+} from "../../src/index.ts";
 import {
   TEXTURE_DOCUMENT_KIND
-} from "../../../src/textures/textureDocumentKind.ts";
+} from "../../src/textures/textureDocumentKind.ts";
 
-export interface TabTexture {
-  readonly room: PixelArtRoom;
-  readonly ready: Promise<void>;
-  release(): void;
-}
+export type TextureLease = AssetLease<
+  PixelDocument,
+  PixelWireCommand,
+  PixelServerMessage
+>;
 
 export interface TextureTabsOptions {
   panel: PixelDrawPanel;
@@ -40,7 +45,7 @@ export interface TextureTabsOptions {
 }
 
 interface BoundTab {
-  texture: TabTexture;
+  texture: TextureLease;
   collaboration: PixelCollaboration;
 }
 
@@ -69,10 +74,10 @@ export class TextureTabs {
   }
 
   attach(
-    textureId: string,
-    texture: TabTexture,
+    texture: TextureLease,
     canvas: PixelArtCanvas
   ): Promise<void> {
+    const textureId = texture.record.id;
     this.#bound.set(textureId, {
       texture,
       collaboration: new PixelCollaboration({
@@ -131,7 +136,7 @@ export class TextureTabs {
         tooltip: catalog.record(assetId)?.source ?? `${name}${PIXEL_ART_EXTENSION}`,
         document: lease.document
       });
-      await this.attach(assetId, lease, canvas);
+      await this.attach(lease, canvas);
       const [region] = canvas.uv.regions;
       if (region !== undefined) {
         canvas.uv.select(region.id);

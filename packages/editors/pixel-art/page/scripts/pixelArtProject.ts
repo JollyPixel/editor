@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { OfflineProject } from "@jolly-pixel/editor.host";
+import type { AssetSeedMap } from "@jolly-pixel/asset-server";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 
 // CONSTANTS
@@ -8,13 +8,13 @@ export const TEXTURE_SIZE = {
   y: 64
 };
 
-export function createPixelArtProject(): Omit<OfflineProject, "handlers"> {
+export function createPixelArtSeed(
+  textureId: string = crypto.randomUUID()
+): AssetSeedMap {
   return {
-    seed: {
-      "textures/texture.pixelart": {
-        id: crypto.randomUUID(),
-        kind: PIXEL_ART_KIND
-      }
+    "textures/texture.pixelart": {
+      id: textureId,
+      kind: PIXEL_ART_KIND
     }
   };
 }

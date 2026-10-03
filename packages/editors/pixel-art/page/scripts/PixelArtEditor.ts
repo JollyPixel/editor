@@ -3,21 +3,15 @@ import {
   registerConsoleFeatures,
   type RegistrationHandle
 } from "@jolly-pixel/console";
-import {
-  PIXEL_ART_KIND,
-  PixelCollaboration
-} from "@jolly-pixel/asset.pixel-art/client";
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art/client";
 import type {
-  AssetLease,
   EditorContext,
-  EditorSession
+  EditorSession,
+  PageEditorDefinition
 } from "@jolly-pixel/editor.host";
-import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import type { Runtime } from "@jolly-pixel/runtime";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
-import {
-  peerProfileColor,
-  readUsername
-} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -30,35 +24,64 @@ import {
   TEXTURE_DOCUMENT_KIND
 } from "../../src/textures/textureDocumentKind.ts";
 import { suggestTextureName } from "../../src/textures/textures.ts";
+import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
+import {
+  TextureTabs,
+  type TextureLease
+} from "./TextureTabs.ts";
+import type { PreviewPane } from "./preview/PreviewPane.ts";
 
 // CONSTANTS
 const kZoom = {
   min: 1,
   max: 32
 };
+const kStarterRegionId = "pixel-draw-demo:starter-region";
+const kStarterRegionSize = 16;
+
+export type PreviewPaneLoader = () => Promise<typeof PreviewPane>;
+
+export interface PixelArtEditorOptions {
+  features: PixelArtFeatures;
+  loadPreview: PreviewPaneLoader | null;
+}
 
 export interface PixelArtEditorParts {
   panel: PixelDrawPanel;
   scope: PanelScope;
+  preview: PreviewPane | null;
   session: EditorSession;
-  target: AssetLease<PixelDocument>;
-  collaboration: PixelCollaboration;
+  target: TextureLease;
+  tabs: TextureTabs;
   keybindings: () => void;
   consoleFeatures: RegistrationHandle;
 }
 
 export class PixelArtEditor {
-  static readonly accepts = PIXEL_ART_KIND;
-  static readonly identity = {
-    title: "Join pixel art"
-  };
-  static readonly kinds = [TEXTURE_DOCUMENT_KIND];
+  static definition(
+    options: PixelArtEditorOptions
+  ): PageEditorDefinition<PixelArtEditor> {
+    return {
+      accepts: PIXEL_ART_KIND,
+      identity: {
+        title: "Join pixel art"
+      },
+      kinds: [TEXTURE_DOCUMENT_KIND],
+      mount: (context) => PixelArtEditor.mount(context, options)
+    };
+  }
 
   static async mount(
-    context: EditorContext
+    context: EditorContext,
+    options: PixelArtEditorOptions
   ): Promise<PixelArtEditor> {
+    const { features, loadPreview } = options;
     const { session, commands } = context;
     const panel = document.querySelector("pixel-draw-panel")!;
+    panel.allowUvCreateDelete = features.uvCreateDelete;
+    panel.textureImportPolicy = features.importPolicy;
+    const previewType = loadPreview === null ? null : await loadPreview();
+    previewType?.layout(panel);
     const scope = new PanelScope(
       panel,
       document.querySelector("jolly-scope")!
@@ -84,18 +107,31 @@ export class PixelArtEditor {
         size: 1
       }
     });
+    const preview = previewType === null ?
+      null :
+      await previewType.open({
+        panel,
+        canvasManager: canvas,
+        commands
+      });
+
+    const tabs = new TextureTabs({
+      panel,
+      session,
+      addDelay: features.addDelay
+    });
+    await tabs.attach(target, canvas);
+    if (features.starterRegion) {
+      selectStarterRegion(canvas);
+    }
 
     return new PixelArtEditor({
       panel,
       scope,
+      preview,
       session,
       target,
-      collaboration: new PixelCollaboration({
-        room: target.room,
-        canvas,
-        label: (_clientId, profile) => readUsername(profile),
-        color: peerProfileColor
-      }),
+      tabs,
       keybindings: keyBindingSettings.subscribe("change", (keyBindings) => {
         panel.keyBindings = keyBindings;
       }),
@@ -108,35 +144,49 @@ export class PixelArtEditor {
   }
 
   readonly #scope: PanelScope;
-  readonly #target: AssetLease<PixelDocument>;
-  readonly #collaboration: PixelCollaboration;
   readonly #keybindings: () => void;
   readonly #consoleFeatures: RegistrationHandle;
 
   readonly ready: Promise<void>;
-  readonly runtime = null;
+  readonly runtime: Runtime | null;
   readonly panel: PixelDrawPanel;
+  readonly preview: PreviewPane | null;
   readonly session: EditorSession;
+  readonly tabs: TextureTabs;
 
   constructor(
     parts: PixelArtEditorParts
   ) {
     this.panel = parts.panel;
+    this.preview = parts.preview;
     this.session = parts.session;
+    this.tabs = parts.tabs;
     this.#scope = parts.scope;
-    this.#target = parts.target;
-    this.#collaboration = parts.collaboration;
     this.#keybindings = parts.keybindings;
     this.#consoleFeatures = parts.consoleFeatures;
+    this.runtime = parts.preview?.editorRuntime.runtime ?? null;
     this.ready = parts.target.ready;
   }
 
   dispose(): void {
     this.#consoleFeatures.unregister();
     this.#keybindings();
-    this.#collaboration.destroy();
+    this.preview?.dispose();
     this.#scope.dispose();
-    this.#target.release();
+    this.tabs.dispose();
     this.session.dispose();
   }
+}
+
+function selectStarterRegion(
+  canvas: PixelArtCanvas
+): void {
+  const [existingRegion] = canvas.uv.regions;
+  const region = existingRegion ?? canvas.uv.create({
+    id: kStarterRegionId,
+    name: "cube 0",
+    width: kStarterRegionSize,
+    height: kStarterRegionSize
+  });
+  canvas.uv.select(region.id);
 }
