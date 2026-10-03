@@ -1,5 +1,9 @@
 export type AssetEntryType = "file" | "folder";
 
+export interface AssetWatchOptions {
+  onReady?: () => void;
+}
+
 /**
  * Physical store using root-relative POSIX paths.
  */
@@ -46,6 +50,7 @@ export interface AssetSource {
     onChange: (
       path: string,
       type: AssetEntryType
-    ) => void
+    ) => void,
+    options?: AssetWatchOptions
   ): () => void;
 }

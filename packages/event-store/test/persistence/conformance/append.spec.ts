@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { EventVersionConflictError } from "#src/index.ts";
 import {
   append,
   backends,
@@ -125,6 +126,62 @@ for (const backend of backends) {
       assert.strictEqual(event.eventId, 1);
       assert.strictEqual(event.eventVersion, 1);
       assert.strictEqual(store.reader.listAll().length, 1);
+    });
+  });
+
+  describe(`${backend.name} — expectedVersion`, () => {
+    test("appends when the asset is at the expected version", async() => {
+      using store = await backend.create();
+      append(store, "a1");
+
+      const result = store.writer.append({
+        assetType: "texture",
+        assetId: "a1",
+        eventType: "pixel-set",
+        eventData: {},
+        actor: USER_ACTOR,
+        expectedVersion: 1
+      });
+
+      assert.strictEqual(result.unwrap().eventVersion, 2);
+    });
+
+    test("expects version 0 for an empty stream", async() => {
+      using store = await backend.create();
+
+      const result = store.writer.append({
+        assetType: "texture",
+        assetId: "a1",
+        eventType: "pixel-set",
+        eventData: {},
+        actor: USER_ACTOR,
+        expectedVersion: 0
+      });
+
+      assert.strictEqual(result.unwrap().eventVersion, 1);
+    });
+
+    test("rejects a stale expected version without appending", async() => {
+      using store = await backend.create();
+      append(store, "a1");
+      append(store, "a1");
+
+      const result = store.writer.append({
+        assetType: "texture",
+        assetId: "a1",
+        eventType: "pixel-set",
+        eventData: {},
+        actor: USER_ACTOR,
+        expectedVersion: 1
+      });
+
+      assert.strictEqual(result.ok, false);
+      const error = result.val;
+      assert.ok(error instanceof EventVersionConflictError);
+      assert.strictEqual(error.assetId, "a1");
+      assert.strictEqual(error.expectedVersion, 1);
+      assert.strictEqual(error.actualVersion, 2);
+      assert.strictEqual(append(store, "a1").eventVersion, 3);
     });
   });
 

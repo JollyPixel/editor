@@ -8,6 +8,7 @@ import {
 } from "../logger.ts";
 import { contentHash } from "../utils/contentHash.ts";
 import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
   isAssetEventType,
   SNAPSHOT_ACTOR
 } from "../events/AssetEvents.ts";
@@ -20,11 +21,14 @@ import { TaskChain } from "../utils/TaskChain.ts";
 // CONSTANTS
 const kDefaultDelay = 2_000;
 const kDefaultMaxDelay = 30_000;
+const kFlushAttempts = 3;
 
 interface PendingSnapshot {
   handle: ReturnType<typeof setTimeout>;
   firstEventAt: number;
 }
+
+type SnapshotOutcome = "written" | "skipped" | "superseded";
 
 export interface SnapshotSchedulerOptions {
   eventStore: EventStore.EventStore;
@@ -32,6 +36,7 @@ export interface SnapshotSchedulerOptions {
   projector: AssetProjector;
   writer: AssetWriter;
   snapshot?: SnapshotPolicy;
+  compact?: boolean;
   logger?: Logger;
 }
 
@@ -46,6 +51,7 @@ export class SnapshotScheduler {
   #projector: AssetProjector;
   #writer: AssetWriter;
   #policy: Required<SnapshotPolicy>;
+  #compact: boolean;
   #logger: Logger;
 
   #pending = new Map<string, PendingSnapshot>();
@@ -63,6 +69,7 @@ export class SnapshotScheduler {
       delay: options.snapshot?.delay ?? kDefaultDelay,
       maxDelay: options.snapshot?.maxDelay ?? kDefaultMaxDelay
     };
+    this.#compact = options.compact ?? false;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -130,7 +137,11 @@ export class SnapshotScheduler {
       [assetId].filter((id) => this.#pending.has(id));
 
     for (const target of targets) {
-      await this.snapshot(target);
+      for (let attempt = 0; attempt < kFlushAttempts; attempt++) {
+        if (await this.#run(target) !== "superseded") {
+          break;
+        }
+      }
     }
 
     const chains = assetId === undefined ?
@@ -141,9 +152,15 @@ export class SnapshotScheduler {
     );
   }
 
-  snapshot(
+  async snapshot(
     assetId: string
   ): Promise<boolean> {
+    return await this.#run(assetId) === "written";
+  }
+
+  #run(
+    assetId: string
+  ): Promise<SnapshotOutcome> {
     const chain = this.#chains.get(assetId) ?? new TaskChain();
     this.#chains.set(assetId, chain);
 
@@ -160,7 +177,7 @@ export class SnapshotScheduler {
 
   async #snapshot(
     assetId: string
-  ): Promise<boolean> {
+  ): Promise<SnapshotOutcome> {
     const pending = this.#pending.get(assetId);
     if (pending !== undefined) {
       clearTimeout(pending.handle);
@@ -168,35 +185,67 @@ export class SnapshotScheduler {
     }
 
     const entry = this.#states.get(assetId);
+    const version = this.#states.versionOf(assetId);
     const desired = this.#projector.desired(assetId);
-    if (entry === undefined || desired === null) {
-      return false;
+    if (
+      entry === undefined ||
+      version === undefined ||
+      desired === null
+    ) {
+      return "skipped";
     }
 
+    const dependencies = entry.handler.dependencies?.(entry.state);
     const data = await entry.handler.serialize(entry.state);
     if (await contentHash(data) === desired.hash) {
-      return false;
+      return "skipped";
     }
 
+    if (this.#compact) {
+      this.#compactBeforeSnapshot(assetId);
+    }
     const updated = await this.#writer.update({
       assetId,
       data,
-      dependencies: entry.handler.dependencies?.(entry.state),
-      actor: SNAPSHOT_ACTOR
+      dependencies,
+      actor: SNAPSHOT_ACTOR,
+      expectedVersion: version
     });
     if (!updated.ok) {
-      this.#logger
-        .withMetadata({
-          assetId,
-          reason: updated.val.message
-        })
-        .error("asset snapshot failed");
+      const log = this.#logger.withMetadata({
+        assetId,
+        reason: updated.val.message
+      });
+      if (this.#states.versionOf(assetId) !== version) {
+        log.debug("asset snapshot superseded");
 
-      return false;
+        return "superseded";
+      }
+      log.error("asset snapshot failed");
+
+      return "skipped";
     }
 
     await this.#projector.flush(assetId);
 
-    return true;
+    return "written";
+  }
+
+  #compactBeforeSnapshot(
+    assetId: string
+  ): void {
+    const report = this.#eventStore.compact({
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
+      assetId,
+      reclaim: false
+    });
+    if (report.removed > 0) {
+      this.#logger
+        .withMetadata({
+          assetId,
+          removed: report.removed
+        })
+        .debug("asset events compacted");
+    }
   }
 }

@@ -117,6 +117,10 @@ The conflict check reads the desired state, so a path claimed by an event that
 is not written to the source yet is already taken. Two assets can therefore
 never share a file. A deleted asset frees its path.
 
+Every write input also accepts `expectedVersion`: the write is appended only
+while the asset stream is at that version, and otherwise returns the
+`EventVersionConflictError` of `@jolly-pixel/event-store`.
+
 Call `backend.flush(assetId)` when the caller must wait for the resulting
 source write. The `alreadyProjected` input option is reserved for source-backed
 reconciliation, where the bytes already exist in the source.

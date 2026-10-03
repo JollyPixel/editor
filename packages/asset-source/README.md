@@ -81,7 +81,11 @@ interface AssetSource {
   // Optional: reports whether a path is hidden from listing and watching.
   isIgnored?(path: string): boolean;
   // Optional: reports changed paths and returns a function to stop watching.
-  watch?(onChange: (path: string, type: AssetEntryType) => void): () => void;
+  // Calls options.onReady once changes are reported.
+  watch?(
+    onChange: (path: string, type: AssetEntryType) => void,
+    options?: { onReady?: () => void; }
+  ): () => void;
 }
 ```
 

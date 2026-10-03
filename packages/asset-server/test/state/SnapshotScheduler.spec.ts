@@ -11,11 +11,18 @@ import { setImmediate } from "node:timers/promises";
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { ASSET_UPDATED } from "#src/index.ts";
+import {
+  ASSET_UPDATED,
+  AssetKindRegistry,
+  type AssetKindHandler
+} from "#src/index.ts";
+import { AssetStateStore } from "#src/state/index.ts";
 import { syncHarness, type SyncHarness } from "../helpers/backend.ts";
 import {
   counterHandler,
-  COUNTER_INCREMENTED
+  COUNTER_INCREMENTED,
+  type CounterCommand,
+  type CounterState
 } from "../helpers/kinds.ts";
 import {
   bytes,
@@ -64,6 +71,51 @@ async function pendingAfter(
   await setImmediate();
 
   return harness.scheduler.pending;
+}
+
+interface GatedCounter {
+  readonly handler: AssetKindHandler<CounterState, CounterCommand>;
+  hold(): {
+    serializing: Promise<void>;
+    release(): void;
+  };
+}
+
+function gatedCounter(): GatedCounter {
+  const base = counterHandler({ delay: 60_000, maxDelay: 120_000 });
+  let gate: {
+    started: PromiseWithResolvers<void>;
+    released: PromiseWithResolvers<void>;
+  } | null = null;
+
+  return {
+    handler: {
+      ...base,
+      async serialize(state) {
+        const value = state.value;
+        const current = gate;
+        gate = null;
+        if (current !== null) {
+          current.started.resolve();
+          await current.released.promise;
+        }
+
+        return bytes(String(value));
+      }
+    },
+    hold() {
+      gate = {
+        started: Promise.withResolvers<void>(),
+        released: Promise.withResolvers<void>()
+      };
+      const { started, released } = gate;
+
+      return {
+        serializing: started.promise,
+        release: () => released.resolve()
+      };
+    }
+  };
 }
 
 describe("SnapshotScheduler — cadence", () => {
@@ -313,5 +365,90 @@ describe("SnapshotScheduler browser timers", () => {
     assert.equal(harness.scheduler.pending, 0);
     assert.equal(clear.mock.calls[0].arguments[0], 1);
     assert.equal(text(await harness.source.read("a.counter")), "1");
+  });
+});
+
+describe("SnapshotScheduler — concurrent commands", () => {
+  test("a command folded while serializing is not lost", async() => {
+    const counter = gatedCounter();
+    await using harness = await syncHarness({
+      handlers: [counter.handler]
+    });
+    const assetId = await counterAsset(harness);
+    increment(harness, assetId);
+    increment(harness, assetId);
+
+    const gate = counter.hold();
+    const snapshot = harness.scheduler.snapshot(assetId);
+    await gate.serializing;
+    increment(harness, assetId);
+    gate.release();
+
+    assert.strictEqual(await snapshot, false);
+    const live = harness.states.get(assetId)!.state as CounterState;
+    assert.strictEqual(live.value, 3);
+    assert.strictEqual(harness.scheduler.pending, 1);
+
+    await harness.scheduler.flush();
+    assert.strictEqual(text(await harness.source.read("a.counter")), "3");
+
+    const replayed = new AssetStateStore({
+      eventStore: harness.eventStore,
+      kinds: new AssetKindRegistry([counter.handler])
+    });
+    const entry = await replayed.acquire(assetId, "counter");
+    assert.strictEqual((entry.state as CounterState).value, 3);
+  });
+
+  test("flush retries a snapshot a command superseded", async() => {
+    const counter = gatedCounter();
+    await using harness = await syncHarness({
+      handlers: [counter.handler]
+    });
+    const assetId = await counterAsset(harness);
+    increment(harness, assetId);
+
+    const gate = counter.hold();
+    const flushed = harness.scheduler.flush(assetId);
+    await gate.serializing;
+    increment(harness, assetId);
+    gate.release();
+    await flushed;
+
+    assert.strictEqual(harness.scheduler.pending, 0);
+    assert.strictEqual(text(await harness.source.read("a.counter")), "2");
+  });
+});
+
+describe("SnapshotScheduler — compaction", () => {
+  test("keeps the whole log without compaction", async() => {
+    await using harness = await syncHarness({
+      handlers: [counterHandler()]
+    });
+    const assetId = await counterAsset(harness);
+    increment(harness, assetId);
+    await harness.scheduler.snapshot(assetId);
+
+    assert.strictEqual(harness.eventStore.reader.list(assetId).length, 3);
+  });
+
+  test("keeps the previous snapshot and the commands since", async() => {
+    await using harness = await syncHarness({
+      handlers: [counterHandler()],
+      compact: true
+    });
+    const assetId = await counterAsset(harness);
+    increment(harness, assetId);
+    increment(harness, assetId);
+    await harness.scheduler.snapshot(assetId);
+    increment(harness, assetId);
+    await harness.scheduler.snapshot(assetId);
+
+    assert.deepEqual(
+      harness.eventStore.reader.list(assetId).map(
+        (event) => event.eventVersion
+      ),
+      [4, 5, 6]
+    );
   });
 });

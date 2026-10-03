@@ -27,20 +27,24 @@ interface Command extends AssetCommandHeader {
 interface SnapshotRoom {
   readonly extension: AssetRoomExtension<Command>;
   readonly encodes: number;
+  readonly snapshots: number;
   version: number;
   join(clientId: string): Promise<unknown[]>;
 }
 
 function snapshotRoom(
-  encodeSnapshot: (room: SnapshotRoom) => Promise<unknown>
+  encodeSnapshot?: (room: SnapshotRoom) => Promise<unknown>
 ): SnapshotRoom {
   let encodes = 0;
+  let snapshots = 0;
   const protocol: AssetLiveProtocol<Command> = {
     snapshotSchema: counterSnapshotSchema,
     snapshot: () => {
+      snapshots++;
+
       return { value: `plain@${room.version}` };
     },
-    encodeSnapshot: () => {
+    encodeSnapshot: encodeSnapshot === undefined ? undefined : () => {
       encodes++;
 
       return encodeSnapshot(room);
@@ -66,6 +70,9 @@ function snapshotRoom(
     version: 1,
     get encodes() {
       return encodes;
+    },
+    get snapshots() {
+      return snapshots;
     },
     async join(clientId) {
       const handle = recordingClient(clientId);
@@ -136,6 +143,45 @@ describe("AssetRoomExtension — encoded snapshots", () => {
     room.extension.onResync("a", resync.context);
 
     assert.deepEqual(resync.direct.map(({ payload }) => payload), [
+      { type: "snapshot", data: { value: "encoded@1" }, version: 1 }
+    ]);
+  });
+});
+
+describe("AssetRoomExtension — plain snapshots", () => {
+  test("joins and resyncs at one version share one snapshot", async() => {
+    const room = snapshotRoom();
+
+    await room.join("a");
+    await room.join("b");
+    room.extension.onResync("a", recordingRoom().context);
+
+    assert.strictEqual(room.snapshots, 1);
+  });
+
+  test("a new version takes a new snapshot", async() => {
+    const room = snapshotRoom();
+
+    await room.join("a");
+    room.version = 2;
+    const received = await room.join("b");
+
+    assert.strictEqual(room.snapshots, 2);
+    assert.deepEqual(received, [
+      { type: "snapshot", data: { value: "plain@2" }, version: 2 }
+    ]);
+  });
+
+  test("an encoded snapshot replaces the plain one of its version", async() => {
+    const room = snapshotRoom(async(current) => {
+      return { value: `encoded@${current.version}` };
+    });
+    const resync = recordingRoom();
+    room.extension.onResync("a", resync.context);
+
+    const received = await room.join("b");
+
+    assert.deepEqual(received, [
       { type: "snapshot", data: { value: "encoded@1" }, version: 1 }
     ]);
   });

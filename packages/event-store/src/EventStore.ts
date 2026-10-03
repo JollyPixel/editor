@@ -51,6 +51,7 @@ export interface AppendInput {
   eventType: string;
   eventData: unknown;
   actor: Actor;
+  expectedVersion?: number;
 }
 
 export type TypedAppendInput<
@@ -62,6 +63,7 @@ export type TypedAppendInput<
   eventType: K;
   eventData: TMap[K];
   actor: Actor;
+  expectedVersion?: number;
 };
 
 export interface ListAllOptions {
@@ -96,6 +98,7 @@ export interface CompactOptions {
    * @default true
    */
   reclaim?: boolean;
+  assetId?: string;
 }
 
 export interface CompactReport {

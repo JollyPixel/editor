@@ -361,7 +361,8 @@ export class AssetWriter {
       assetId,
       eventType,
       eventData,
-      actor: options.actor
+      actor: options.actor,
+      expectedVersion: options.expectedVersion
     });
     if (
       result.ok &&

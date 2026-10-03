@@ -80,7 +80,7 @@ export class WorkerExtensionProxy extends Extension {
     this.name = descriptor.name;
     this.protocols = descriptor.protocols;
     this.#descriptor = descriptor;
-    this.#logger = options.logger.withContext({
+    this.#logger = options.logger.child().withContext({
       room: descriptor.id
     });
     this.#transportFactory = options.transportFactory ??

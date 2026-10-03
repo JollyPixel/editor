@@ -21,6 +21,7 @@ import {
   materializeEvent,
   toJson
 } from "../serialize.ts";
+import { EventVersionConflictError } from "../errors/EventVersionConflictError.ts";
 import { SqliteConnection } from "./connection.ts";
 import {
   ALIASED_EVENT_COLUMNS,
@@ -32,14 +33,17 @@ import {
   escapeGlob,
   placeholdersFor
 } from "./sql.ts";
+import { reclaimStatement } from "./vacuum.ts";
 
 export class SqliteEventLog implements EventLog {
   #connection: SqliteConnection;
+  #reclaimStatement: string;
 
   constructor(
     db: DatabaseSync
   ) {
     this.#connection = new SqliteConnection(db);
+    this.#reclaimStatement = reclaimStatement(db);
   }
 
   insert(
@@ -52,7 +56,8 @@ export class SqliteEventLog implements EventLog {
       assetId,
       eventType,
       eventData,
-      actor
+      actor,
+      expectedVersion
     } = input;
 
     const eventDataJson = toJson(eventData, "eventData");
@@ -65,18 +70,31 @@ export class SqliteEventLog implements EventLog {
     }>(
       `INSERT INTO events (asset_type, asset_id, event_type, event_data,
            event_version, actor, created_at)
-         VALUES (?, ?, ?, ?,
-           (SELECT COALESCE(MAX(event_version), 0) + 1 FROM events WHERE asset_id = ?),
-           ?, ?)
+         SELECT ?, ?, ?, ?, head.version + 1, ?, ?
+         FROM (
+           SELECT COALESCE(MAX(event_version), 0) AS version
+           FROM events
+           WHERE asset_id = ?
+         ) head
+         WHERE ? IS NULL OR head.version = ?
          RETURNING event_id, event_version`,
       assetType,
       assetId,
       eventType,
       eventDataJson,
-      assetId,
       actorJson,
-      createdAt
+      createdAt,
+      assetId,
+      expectedVersion ?? null,
+      expectedVersion ?? null
     );
+    if (row === undefined && expectedVersion !== undefined) {
+      throw new EventVersionConflictError(
+        assetId,
+        expectedVersion,
+        this.#head(assetId)
+      );
+    }
     if (row === undefined) {
       throw new Error("insert did not return the stored event");
     }
@@ -203,7 +221,8 @@ export class SqliteEventLog implements EventLog {
 
     const {
       checkpointEventTypes,
-      reclaim = true
+      reclaim = true,
+      assetId
     } = options;
     if (checkpointEventTypes.length === 0) {
       return {
@@ -213,11 +232,15 @@ export class SqliteEventLog implements EventLog {
     }
 
     const placeholders = placeholdersFor(checkpointEventTypes);
+    const assetCondition = assetId === undefined ? "" : "AND asset_id = ?";
+    const scope: SQLInputValue[] = assetId === undefined ?
+      [...checkpointEventTypes] :
+      [...checkpointEventTypes, assetId];
     const counted = this.#connection.get<{ assets: number; }>(
       `SELECT COUNT(DISTINCT asset_id) AS assets
        FROM events
-       WHERE event_type IN (${placeholders})`,
-      ...checkpointEventTypes
+       WHERE event_type IN (${placeholders}) ${assetCondition}`,
+      ...scope
     );
 
     const removed = this.#connection.run(
@@ -228,16 +251,16 @@ export class SqliteEventLog implements EventLog {
          JOIN (
            SELECT asset_id, MAX(event_id) AS head
            FROM events
-           WHERE event_type IN (${placeholders})
+           WHERE event_type IN (${placeholders}) ${assetCondition}
            GROUP BY asset_id
          ) h ON h.asset_id = e.asset_id
          WHERE e.event_id < h.head
        )`,
-      ...checkpointEventTypes
+      ...scope
     );
 
     if (reclaim && removed > 0) {
-      this.#connection.exec("VACUUM");
+      this.#connection.exec(this.#reclaimStatement);
     }
 
     return {
@@ -248,6 +271,19 @@ export class SqliteEventLog implements EventLog {
 
   close(): void {
     this.#connection.close();
+  }
+
+  #head(
+    assetId: string
+  ): number {
+    const row = this.#connection.get<{ version: number; }>(
+      `SELECT COALESCE(MAX(event_version), 0) AS version
+       FROM events
+       WHERE asset_id = ?`,
+      assetId
+    );
+
+    return row?.version ?? 0;
   }
 
   #query(

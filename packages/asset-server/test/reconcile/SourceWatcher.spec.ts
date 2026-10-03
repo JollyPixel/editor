@@ -10,10 +10,7 @@ import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import {
-  MemoryAssetSource,
-  type AssetEntryType
-} from "@jolly-pixel/asset-source";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 
 // Import Internal Dependencies
@@ -56,15 +53,15 @@ async function waitFor(
 
 function recordingWatcher(
   onChange: SourceChangeHandler = async() => void 0
-): { watcher: SourceWatcher; passes: AssetEntryType[][]; } {
-  const passes: AssetEntryType[][] = [];
+): { watcher: SourceWatcher; passes: string[][]; } {
+  const passes: string[][] = [];
   const watcher = new SourceWatcher({
     source: new MemoryAssetSource(),
     debounce: 100,
-    onChange: (changed) => {
-      passes.push([...changed].sort());
+    onChange: (files) => {
+      passes.push([...files].sort());
 
-      return onChange(changed);
+      return onChange(files);
     }
   });
 
@@ -85,7 +82,19 @@ describe("SourceWatcher — debounce", () => {
     t.mock.timers.tick(100);
     await watcher.settle();
 
-    assert.deepEqual(passes, [["file", "folder"]]);
+    assert.deepEqual(passes, [["a.png", "c.png"]]);
+  });
+
+  test("reports a path notified twice once", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    const { watcher, passes } = recordingWatcher();
+
+    watcher.notify("a.png", "file");
+    watcher.notify("a.png", "file");
+    t.mock.timers.tick(100);
+    await watcher.settle();
+
+    assert.deepEqual(passes, [["a.png"]]);
   });
 
   test("a burst that settles during a call runs one more call", async(t) => {
@@ -101,7 +110,7 @@ describe("SourceWatcher — debounce", () => {
     t.mock.timers.tick(100);
     await watcher.settle();
 
-    assert.deepEqual(passes, [["file"], ["folder"]]);
+    assert.deepEqual(passes, [["a.png"], []]);
   });
 
   test("keeps calling after a failing handler", async(t) => {
@@ -132,10 +141,10 @@ describe("SourceWatcher — debounce", () => {
     assert.deepEqual(passes, []);
   });
 
-  test("start is a no-op for a source without watch", () => {
+  test("start is a no-op for a source without watch", async() => {
     const { watcher } = recordingWatcher();
 
-    watcher.start();
+    await watcher.start();
 
     assert.strictEqual(watcher.watching, false);
   });
@@ -162,12 +171,12 @@ describe("SourceWatcher — real filesystem (integration)", () => {
     const reconciler = new Reconciler({ source, projector, writer });
     const watcher = new SourceWatcher({
       source,
-      onChange: async() => {
-        await reconciler.reconcile();
+      onChange: async(files) => {
+        await reconciler.reconcile(files);
       },
       debounce: 50
     });
-    watcher.start();
+    await watcher.start();
 
     try {
       assert.strictEqual(watcher.watching, true);

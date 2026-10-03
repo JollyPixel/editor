@@ -6,15 +6,15 @@ export interface RoomSnapshot {
   readonly version: number | undefined;
 }
 
-interface EncodedSnapshot {
+interface VersionedSnapshot extends RoomSnapshot {
   readonly version: number;
-  readonly data: unknown;
 }
 
 export class SnapshotCache {
   #protocol: Pick<AssetLiveProtocol, "snapshot" | "encodeSnapshot">;
   #version: () => number | undefined;
-  #encoded: EncodedSnapshot | null = null;
+  #plain: VersionedSnapshot | null = null;
+  #encoded: VersionedSnapshot | null = null;
 
   constructor(
     protocol: Pick<AssetLiveProtocol, "snapshot" | "encodeSnapshot">,
@@ -42,14 +42,23 @@ export class SnapshotCache {
 
   current(): RoomSnapshot {
     const version = this.#version();
-    const encoded = this.#encoded;
+    if (version === undefined) {
+      return {
+        version,
+        data: this.#protocol.snapshot()
+      };
+    }
+    if (this.#encoded?.version === version) {
+      return this.#encoded;
+    }
+    if (this.#plain?.version !== version) {
+      this.#plain = {
+        version,
+        data: this.#protocol.snapshot()
+      };
+    }
 
-    return {
-      version,
-      data: encoded !== null && encoded.version === version ?
-        encoded.data :
-        this.#protocol.snapshot()
-    };
+    return this.#plain;
   }
 
   async #store(

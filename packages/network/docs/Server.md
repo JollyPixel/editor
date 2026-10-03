@@ -32,7 +32,7 @@ interface ServerOptions {
 
 - `register(extension)` — registers a static room under `extension.id`. Pass an `Extension`, including a [worker proxy](./Extension.md#worker-extensions) from `@jolly-pixel/network/node`.
 - `close()` — stops workers and disposes rooms. Call it before process exit when using worker extensions. Also available as `[Symbol.asyncDispose]` for `await using`.
-- `logger` — a `loglayer` `ILogLayer` passed to every room.
+- `logger` — a `loglayer` `ILogLayer`. Each room logs through a child that adds its `room` to the context. The default is a pino logger whose LogLayer level follows pino (`info` unless configured), so disabled `debug` calls are dropped before their metadata is built.
 - `rights` — see [Rights](./Rights.md). One table for the whole server; there is no per-room override.
 - `auth`, `defaultRole` — see [Authentication](./Authentication.md). Constructing a server whose `defaultRole` is absent from `rights` throws `UnknownDefaultRoleError`.
 - `authenticate(attempt)` — runs the provider against `{ clientId, url, headers }`, filling in `defaultRole`. Resolves to the `PeerIdentity` to admit, or `null` to refuse. It never rejects: a provider that throws or rejects refuses the client and is logged. Transports call it before opening a session.

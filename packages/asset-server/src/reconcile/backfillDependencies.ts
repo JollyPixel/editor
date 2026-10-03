@@ -6,7 +6,6 @@ import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
-import { decodeContent } from "../events/inlineContent.ts";
 import {
   silentLogger,
   type Logger
@@ -53,9 +52,14 @@ export async function backfillDependencies(
       continue;
     }
 
+    const data = await projector.read(assetId);
+    if (data === null) {
+      continue;
+    }
+
     const result = await writer.update({
       assetId,
-      data: decodeContent(desired.content),
+      data,
       actor: kBackfillActor,
       alreadyProjected: projector.projected(assetId)?.hash === desired.hash
     });

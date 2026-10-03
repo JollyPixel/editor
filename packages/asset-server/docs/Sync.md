@@ -74,6 +74,22 @@ configured quiet period, capped by the maximum delay. The resulting
 actor. A snapshot is skipped when the serialized bytes have the current content
 hash.
 
+The snapshot is appended with `expectedVersion` set to the asset version read
+before `serialize`. A command appended while the state was serializing makes
+that append fail, so a snapshot never lands after a command it does not hold;
+the command has already scheduled the next snapshot. `flush` retries a
+superseded snapshot up to three times.
+
+The live state folds its own snapshot as a version bump, without `load`: the
+bytes are a serialization of that same state. A replay still loads the
+checkpoint it starts from.
+
+With `compactOnSnapshot`, each snapshot first compacts that asset stream down
+to its current checkpoint, then appends. The stream keeps the previous
+snapshot, the commands since and the new snapshot, so a client can resume from
+any version since the previous snapshot. Freed pages are left to later
+appends.
+
 `backend.flush(assetId?)`, room eviction and backend shutdown flush pending
 snapshots. See [Asset kinds](./AssetKinds.md#snapshot-policy) for cadence.
 
@@ -143,6 +159,11 @@ interface ReconcileReport {
 }
 ```
 
+`reconcile(paths?)` scans only `paths` when given. Such a pass widens to the
+whole source as soon as it finds a creation or a deletion, so a rename whose
+two paths were notified apart is still matched. A path the projector is writing
+is left out of both sides of the diff; the write notifies it again once done.
+
 A successful result counts lifecycle events appended during the scan. An
 unreadable entry increments `failed` without stopping other entries. Failure to
 list the source returns an error result for the whole scan. Scans run one at a
@@ -153,9 +174,11 @@ Renames are recognized when one removed path and one added path have the same
 unique content hash. Ambiguous matches are recorded as deletion and creation.
 Byte-identical changes append no event.
 
-On a source with `watch()`, the backend groups notifications that arrive
-within `reconcileDebounce` milliseconds. A batch holding a `"file"`
-notification scans the source; every batch then refreshes the catalog
+On a source with `watch()`, the backend starts watching before the startup
+scan and waits for the source to report it ready, so a change made while it
+boots is either scanned or notified. Notifications that arrive within
+`reconcileDebounce` milliseconds form one batch. A batch holding `"file"`
+notifications scans those paths; every batch then refreshes the catalog
 folders, so a batch of `"folder"` notifications alone only refreshes them.
 A failed scan or refresh is logged and the next batch runs normally.
 

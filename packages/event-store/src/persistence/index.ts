@@ -20,3 +20,4 @@ export const persistence = {
 
 export { createEventStore } from "./createEventStore.ts";
 export type { EventLog } from "./EventLog.ts";
+export { EventVersionConflictError } from "./errors/EventVersionConflictError.ts";

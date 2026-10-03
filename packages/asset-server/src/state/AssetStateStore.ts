@@ -194,7 +194,9 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
     open: OpenAsset,
     event: EventStore.Event
   ): void {
-    const command = this.#fold(open.entry, event);
+    const command = open.version > 0 && isStateNeutral(event) ?
+      null :
+      this.#fold(open.entry, event);
     open.version = event.eventVersion;
 
     const commands = open.commandsSinceCheckpoint;

@@ -10,6 +10,7 @@ import type {
 import { createEventStore } from "../createEventStore.ts";
 import { SQL_SCHEMA } from "./schema.ts";
 import { SqliteEventLog } from "./log.ts";
+import { enableIncrementalVacuum } from "./vacuum.ts";
 
 // CONSTANTS
 const kInMemoryLocation = ":memory:";
@@ -29,6 +30,10 @@ export async function createSqliteEventStore<
   }
 
   const db = new DatabaseSync(location);
+  if (location !== kInMemoryLocation) {
+    enableIncrementalVacuum(db);
+    db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
+  }
   db.exec(SQL_SCHEMA);
 
   return createEventStore<TMap>(

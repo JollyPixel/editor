@@ -17,6 +17,7 @@ export interface AssetPayload {
 export interface WriteOptions {
   actor: EventStore.Actor;
   alreadyProjected?: boolean;
+  expectedVersion?: number;
 }
 
 interface PayloadWriteOptions extends WriteOptions, AssetPayload {}

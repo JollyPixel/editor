@@ -42,6 +42,7 @@ export interface AppendInput {
   eventType: string;
   eventData: unknown;
   actor: Actor;
+  expectedVersion?: number;
 }
 
 export interface Event {
@@ -120,6 +121,24 @@ writer.append(input: AppendInput): Result<Event, Error>
 
 `append` returns the stored event on success, including the `eventId` and
 `eventVersion` assigned by the backend. Failures are returned as `Result` errors.
+
+### Expected version
+
+`expectedVersion` makes the append conditional: it succeeds only while the
+asset's newest `eventVersion` equals it (`0` for an empty stream). Otherwise
+`append` returns an `EventVersionConflictError` and stores nothing:
+
+```ts
+class EventVersionConflictError extends Error {
+  readonly assetId: string;
+  readonly expectedVersion: number;
+  readonly actualVersion: number;
+}
+```
+
+The check and the insert are one statement, so another connection cannot
+append in between. A writer that derived the event from state at version `v`
+passes `v` to make sure nothing landed since.
 
 ### Events
 
@@ -228,6 +247,7 @@ only each checkpoint and its following events.
 export interface CompactOptions {
   checkpointEventTypes: readonly string[];
   reclaim?: boolean;
+  assetId?: string;
 }
 
 export interface CompactReport {
@@ -239,7 +259,7 @@ export interface CompactReport {
 `compact` removes every event stored before each asset's newest checkpoint,
 which is exactly the set `listFromCheckpoints` already skips. An asset holding
 no checkpoint keeps its whole stream, and an empty `checkpointEventTypes`
-removes nothing.
+removes nothing. `assetId` limits the pass to one asset.
 
 > [!WARNING]
 > Compaction is destructive and irreversible. Only call it when the checkpoint

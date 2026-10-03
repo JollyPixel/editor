@@ -1,17 +1,11 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { Server } from "@jolly-pixel/network";
-import type {
-  AssetEntryType,
-  AssetSource
-} from "@jolly-pixel/asset-source";
+import type { AssetSource } from "@jolly-pixel/asset-source";
 import type { Result } from "@openally/result";
 
 // Import Internal Dependencies
-import {
-  STATE_GITIGNORE_CONTENT,
-  STATE_GITIGNORE_PATH
-} from "./stateDirectory.ts";
+import { ensureStateGitignore } from "./stateDirectory.ts";
 import type { AssetEventDataMap } from "./events/AssetEvents.ts";
 import { IdentitySidecar } from "./identity/IdentitySidecar.ts";
 import { AssetKindRegistry } from "./kinds/AssetKindRegistry.ts";
@@ -82,6 +76,7 @@ export interface AssetBackendOptions {
    * @default true
    */
   catalogDeleteProtection?: boolean;
+  compactOnSnapshot?: boolean;
   logger?: Logger;
 }
 
@@ -133,12 +128,17 @@ export async function createAssetBackend(
     catalogMaxContentBytes,
     catalogArchiveLimits,
     catalogDeleteProtection,
+    compactOnSnapshot = false,
     logger = silentLogger()
   } = options;
 
   function onAppend(
     event: EventStore.Event
   ): void {
+    if (!logger.isLevelEnabled("debug")) {
+      return;
+    }
+
     logger
       .withMetadata({
         assetType: event.assetType,
@@ -152,6 +152,10 @@ export async function createAssetBackend(
     error: Error,
     input: EventStore.AppendInput
   ): void {
+    if (input.expectedVersion !== undefined) {
+      return;
+    }
+
     logger
       .withMetadata({
         assetType: input.assetType,
@@ -166,10 +170,7 @@ export async function createAssetBackend(
   eventStore.writer.on("error", onAppendError);
 
   const kinds = new AssetKindRegistry(handlers);
-  await source.writeIfAbsent(
-    STATE_GITIGNORE_PATH,
-    new TextEncoder().encode(STATE_GITIGNORE_CONTENT)
-  );
+  await ensureStateGitignore(source);
 
   const state = await ProjectionState.load(source, logger);
   const projector = new AssetProjector({
@@ -203,6 +204,7 @@ export async function createAssetBackend(
     projector,
     writer,
     snapshot,
+    compact: compactOnSnapshot,
     logger
   });
   scheduler.start();
@@ -227,25 +229,39 @@ export async function createAssetBackend(
     logger
   });
 
-  if (reconcileOnStart) {
-    (await reconciler.reconcile()).orTee(logReconcileFailure);
-    await projector.flush();
+  const booting = boot();
+  try {
+    await booting;
+  }
+  catch (error) {
+    await watcher.close();
+    throw error;
   }
 
-  catalog.load();
-  catalog.start();
-  await folders.refresh();
-  const backfilled = await backfillDependencies({
-    catalog,
-    kinds,
-    projector,
-    writer,
-    logger
-  });
-  if (backfilled > 0) {
-    logger
-      .withMetadata({ assets: backfilled })
-      .info("asset dependencies backfilled");
+  async function boot(): Promise<void> {
+    if (watch) {
+      await watcher.start();
+    }
+    if (reconcileOnStart) {
+      (await reconciler.reconcile()).orTee(logReconcileFailure);
+      await projector.flush();
+    }
+
+    catalog.load();
+    catalog.start();
+    await folders.refresh();
+    const backfilled = await backfillDependencies({
+      catalog,
+      kinds,
+      projector,
+      writer,
+      logger
+    });
+    if (backfilled > 0) {
+      logger
+        .withMetadata({ assets: backfilled })
+        .info("asset dependencies backfilled");
+    }
   }
 
   async function flush(
@@ -263,10 +279,11 @@ export async function createAssetBackend(
   }
 
   async function onSourceChange(
-    changed: ReadonlySet<AssetEntryType>
+    files: ReadonlySet<string>
   ): Promise<void> {
-    if (changed.has("file")) {
-      (await reconciler.reconcile()).orTee(logReconcileFailure);
+    await booting;
+    if (files.size > 0) {
+      (await reconciler.reconcile(files)).orTee(logReconcileFailure);
     }
     await folders.refresh();
   }
@@ -292,10 +309,6 @@ export async function createAssetBackend(
     archiveLimits: catalogArchiveLimits,
     deleteProtection: catalogDeleteProtection
   });
-
-  if (watch) {
-    watcher.start();
-  }
 
   const backend: AssetBackend = {
     source,

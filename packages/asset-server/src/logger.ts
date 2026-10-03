@@ -12,5 +12,5 @@ export function silentLogger(): Logger {
     transport: new BlankTransport({
       shipToLogger: () => []
     })
-  });
+  }).disableLogging();
 }
