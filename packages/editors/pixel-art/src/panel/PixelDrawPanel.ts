@@ -34,6 +34,8 @@ import { SelectToolbarController } from "../tools/SelectToolbarController.ts";
 import { TextureDropController } from "../textures/import/TextureDropController.ts";
 import { renderHistoryFileToolbar } from "./historyFileToolbar.ts";
 import { renderBrushSizeOverlay } from "../tools/brushSizeOverlay.ts";
+import { NormalMapController } from "../normal/NormalMapController.ts";
+import { DockSlot } from "./DockSlot.ts";
 import {
   ColorController,
   type ColorPickedDetail
@@ -73,8 +75,10 @@ import {
 } from "../textures/textures.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
+import "../normal/NormalMapDock.ts";
 
 // CONSTANTS
+const kNoModes: ReadonlySet<Mode> = new Set();
 const kDefaultTextureId = "default";
 const kDefaultTextureName = "Texture";
 
@@ -142,6 +146,9 @@ export class PixelDrawPanel extends LitElement {
   @property({ type: Boolean, reflect: true, attribute: "color-docked" })
   declare colorDocked: boolean;
 
+  @property({ type: Boolean, reflect: true, attribute: "normal-map" })
+  declare normalMap: boolean;
+
   @property({
     type: String,
     reflect: true,
@@ -186,6 +193,7 @@ export class PixelDrawPanel extends LitElement {
     onActivate: () => {
       this.#selectToolbar.clearStatus();
       this.#importer.status.clear();
+      this.#normalMaps.onActivate();
     },
     onModeChange: (mode) => this.#selectToolbar.onModeChange(mode === "select"),
     onClipboardResult: (result) => this.#selectToolbar.onClipboardResult(result)
@@ -202,6 +210,12 @@ export class PixelDrawPanel extends LitElement {
     importer: this.#importer
   });
   readonly #colors = new ColorController(this, this.#activeCanvas);
+  readonly #docks = new DockSlot(this, () => this.#syncColorDocked());
+  readonly #normalMaps = new NormalMapController(this, {
+    canvas: this.#activeCanvas,
+    canvases: () => [...this.#textures.values()].map((entry) => entry.canvas),
+    docks: this.#docks
+  });
   readonly #keyboard = new CanvasKeyboardController(
     this,
     () => this.canvasManager?.shortcuts ?? null
@@ -218,6 +232,7 @@ export class PixelDrawPanel extends LitElement {
     this.uvAccess = "edit";
     this.theme = "auto";
     this.colorDocked = false;
+    this.normalMap = false;
     this.textureImportPolicy = "replace";
     this.texturesClosable = true;
     this.textureTabs = "auto";
@@ -300,7 +315,10 @@ export class PixelDrawPanel extends LitElement {
     changedProperties: PropertyValues<this>
   ): void {
     if (changedProperties.has("colorDocked")) {
-      this.#colors.docked = this.colorDocked;
+      this.#docks.toggle("color", this.colorDocked);
+    }
+    if (changedProperties.has("normalMap") && !this.normalMap) {
+      this.#normalMaps.disable();
     }
     if (changedProperties.has("uvAccess")) {
       this.#applyUvAccess();
@@ -479,12 +497,18 @@ export class PixelDrawPanel extends LitElement {
     }));
   }
 
-  #onDockToggle(): void {
-    this.colorDocked = !this.colorDocked;
+  #syncColorDocked(): void {
+    const docked = this.#docks.isOpen("color");
+    this.#colors.docked = docked;
+    if (docked === this.colorDocked) {
+      return;
+    }
+
+    this.colorDocked = docked;
     this.dispatchEvent(new CustomEvent<boolean>("color-docked-change", {
       bubbles: true,
       composed: true,
-      detail: this.colorDocked
+      detail: docked
     }));
   }
 
@@ -513,22 +537,12 @@ export class PixelDrawPanel extends LitElement {
     }));
   }
 
-  #onTextureTabClose(
+  #forwardTabRequest(
+    type: "texture-close-request" | "texture-edit-request",
     event: CustomEvent<JollyTabChangeDetail>
   ): void {
     event.stopPropagation();
-    this.dispatchEvent(new CustomEvent<TextureCloseRequestDetail>("texture-close-request", {
-      bubbles: true,
-      composed: true,
-      detail: { id: event.detail.value }
-    }));
-  }
-
-  #onTextureTabAction(
-    event: CustomEvent<JollyTabChangeDetail>
-  ): void {
-    event.stopPropagation();
-    this.dispatchEvent(new CustomEvent<TextureEditRequestDetail>("texture-edit-request", {
+    this.dispatchEvent(new CustomEvent<TextureCloseRequestDetail>(type, {
       bubbles: true,
       composed: true,
       detail: { id: event.detail.value }
@@ -593,25 +607,6 @@ export class PixelDrawPanel extends LitElement {
     return resolveThemeColor(this, "--color-canvas-bg");
   }
 
-  #renderBusy() {
-    const busy = this.#importer.busy.state;
-    if (busy === null) {
-      return nothing;
-    }
-
-    return html`
-      <div
-        class="stage-busy"
-        part="stage-busy"
-        role="status"
-        aria-live="polite"
-      >
-        <jolly-spinner></jolly-spinner>
-        <span>${busy.label}</span>
-      </div>
-    `;
-  }
-
   #renderTextureTabs() {
     if (this.textureTabs === "auto" && this.#textures.size < 2) {
       return nothing;
@@ -628,10 +623,10 @@ export class PixelDrawPanel extends LitElement {
           this.#activateTexture(event.detail.value, "user");
         }}
         @jolly-tab-close=${(event: CustomEvent<JollyTabChangeDetail>) => {
-          this.#onTextureTabClose(event);
+          this.#forwardTabRequest("texture-close-request", event);
         }}
         @jolly-tab-action=${(event: CustomEvent<JollyTabChangeDetail>) => {
-          this.#onTextureTabAction(event);
+          this.#forwardTabRequest("texture-edit-request", event);
         }}
       >
         ${repeat(
@@ -672,6 +667,7 @@ export class PixelDrawPanel extends LitElement {
     const canvas = this.canvasManager;
     const mode = canvas?.mode ?? "paint";
     const policy = this.#uvPolicy;
+    const normalMaps = this.normalMap ? this.#normalMaps : null;
 
     return html`
       <div class="rail" part="rail">
@@ -679,6 +675,7 @@ export class PixelDrawPanel extends LitElement {
           .mode=${mode}
           .options=${canvas ? readToolOptions(canvas) : DEFAULT_TOOL_OPTIONS}
           .uvAccess=${this.uvAccess}
+          .unavailableModes=${canvas?.unavailableModes ?? kNoModes}
           @mode-change=${(event: CustomEvent<Mode>) => {
             this.#editCanvas((target) => {
               target.mode = event.detail;
@@ -703,7 +700,7 @@ export class PixelDrawPanel extends LitElement {
             this.#colors.changeBackground(event.detail);
           }}
           @swap=${() => this.#colors.swap()}
-          @dock-toggle=${() => this.#onDockToggle()}
+          @dock-toggle=${() => this.#docks.toggle("color")}
         ></color-picker-rail>
       </div>
 
@@ -723,7 +720,7 @@ export class PixelDrawPanel extends LitElement {
             @mouseenter=${() => this.#keyboard.hover(true)}
             @mouseleave=${() => this.#keyboard.hover(false)}
           ></div>
-          ${this.#renderBusy()}
+          ${this.#importer.busy.render()}
           ${this.#textureDrop.render()}
           <div
             class="drop-status"
@@ -737,27 +734,24 @@ export class PixelDrawPanel extends LitElement {
           ${this.#selectToolbar.render(mode === "select")}
           ${this.#uvToolbar.render(
             mode === "uv" && policy.uvMode,
-            this.allowUvCreateDelete
+            this.allowUvCreateDelete,
+            normalMaps?.renderOverrideButton() ?? nothing
           )}
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,
             importer: this.#importer,
-            trailing: policy.visibilityInBottomBar ?
-              this.#uvToolbar.renderVisibilityToggles() :
-              nothing
+            exportExtra: normalMaps?.renderExportButton() ?? nothing,
+            trailing: [
+              normalMaps?.renderViewSwitch() ?? nothing,
+              policy.visibilityInBottomBar ?
+                this.#uvToolbar.renderVisibilityToggles() :
+                nothing
+            ]
           })}
         </div>
-        <color-dock
-          class="color-dock"
-          part="color-dock"
-          ?open=${this.colorDocked}
-          ?inert=${!this.colorDocked}
-          .color=${this.#colors.foreground.hex}
-          .opacity=${this.#colors.foreground.opacity}
-          @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
-            this.#colors.changeActive(event.detail);
-          }}
-        ></color-dock>
+        <div class="dock-slot" part="dock-slot">
+          ${this.#colors.renderDock()}${normalMaps?.renderDock() ?? nothing}
+        </div>
       </div>
     `;
   }

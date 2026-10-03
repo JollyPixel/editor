@@ -63,6 +63,7 @@ export interface TextureAddRequestDetail {
   name: string;
   source: HTMLCanvasElement;
   origin: TextureImportOrigin;
+  uvSize: number | null;
   respondWith(work: Promise<unknown>): void;
 }
 

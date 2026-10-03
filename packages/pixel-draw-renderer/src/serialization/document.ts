@@ -8,6 +8,7 @@ import {
 } from "./types.ts";
 import { encodePixelBytes } from "./pixelBytes.ts";
 import { isUVRegionData } from "../uv/region/validation.ts";
+import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 import type { Vec2 } from "../types.ts";
 
 export function createPixelArtDocument(
@@ -66,12 +67,21 @@ export function parsePixelArtDocument(
     throw new InvalidPixelArtDocumentError("uvRegions contains invalid data");
   }
 
-  return {
+  const parsed: PixelArtDocumentData = {
     version: PIXEL_ART_DOCUMENT_VERSION,
     size: document.size,
     pixels: document.pixels,
     uvRegions: document.uvRegions
   };
+  if (document.normalMap !== undefined) {
+    const normalMap = NormalMapConfig.parse(document.normalMap);
+    if (normalMap === null) {
+      throw new InvalidPixelArtDocumentError("normalMap contains invalid data");
+    }
+    parsed.normalMap = normalMap.toJSON();
+  }
+
+  return parsed;
 }
 
 export function encodePixelArtDocument(

@@ -22,8 +22,11 @@ interface PixelArtDocumentData {
   /** Base64 RGBA, row-major, 4 bytes per pixel. */
   readonly pixels: string;
   readonly uvRegions: UVRegionData[];
+  readonly normalMap?: NormalMapData;
 }
 ```
+
+`normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A document without it loads with the feature off, so `version` stays `1`. `PixelBuffer.normalMap` carries it through `serializePixelBuffer`, `deserializePixelBuffer` and `pixelArtSnapshot`.
 
 Deliberately not a PNG. The document carries UV regions, which an image
 format cannot, and encoding one needs no image codec on the server, where
@@ -51,8 +54,8 @@ construction instead of by convention.
 | `decodePngPixels(pixels, size)` | `PngPixels` → `Uint8ClampedArray` |
 
 `decodePixelArtDocument` validates rather than asserts, because a document
-reaches it from persistence: an unsupported version, a non-integer size, or
-pixels shorter than the declared size all throw
+reaches it from persistence: an unsupported version, a non-integer size,
+invalid `normalMap` settings, or pixels shorter than the declared size all throw
 `InvalidPixelArtDocumentError`. `deserializePixelBuffer` throws the same error
 for a size the target buffer would refuse. `createPixelArtDocument` throws it
 for a non-positive size or a `pixels` length other than `x * y * 4`.

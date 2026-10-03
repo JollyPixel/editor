@@ -19,7 +19,10 @@ import {
   MessageParser,
   MessageProtocol
 } from "@jolly-pixel/network";
-import { decodePngPixels } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  decodePngPixels,
+  NormalMapConfig
+} from "@jolly-pixel/pixel-draw.renderer";
 import { TILESET_DOCUMENT_COMMAND_ACTIONS } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -212,6 +215,73 @@ describe("tilesetAssetKind", () => {
       [...restored.document.blocks].map(({ id, shapeId }) => [id, shapeId]),
       [[1, "cube"], [3, "slope"]]
     );
+  });
+
+  test("normal map commands fold into the pixels and survive serialization", async() => {
+    const handler = tilesetAssetKind();
+    const state = handler.create("asset-1");
+    foldAssetEvent(handler, state, documentEvent(seeded()));
+
+    foldAssetEvent(handler, state, event(TILESET_COMMAND, {
+      ...kHeader,
+      action: "normal-map-toggled",
+      metadata: {
+        config: NormalMapConfig.create().toJSON()
+      }
+    }));
+    foldAssetEvent(handler, state, event(TILESET_COMMAND, {
+      ...kHeader,
+      seq: 2,
+      action: "normal-map-zone-set",
+      metadata: {
+        zone: { regionId: "block-1", settings: { strength: 4 } },
+        index: 0
+      }
+    }));
+
+    const expected = NormalMapConfig.create()
+      .withZone({ regionId: "block-1", settings: { strength: 4 } })
+      .toJSON();
+    const document = decodeTilesetDocument(await handler.serialize(state));
+    assert.deepEqual(document.pixels.normalMap, expected);
+
+    const restored = handler.create("asset-1");
+    foldAssetEvent(handler, restored, documentEvent(document));
+    assert.deepEqual(restored.pixels.normalMap?.toJSON(), expected);
+  });
+
+  test("live() snapshots carry the normal map settings", async() => {
+    const handler = tilesetAssetKind();
+    const state = handler.create("asset-1");
+    foldAssetEvent(handler, state, documentEvent(seeded()));
+    state.pixels.normalMap = NormalMapConfig.create();
+    const protocol = handler.commands!.live!({
+      assetId: "asset-1",
+      kind: TILESET_KIND,
+      roomId: `${TILESET_KIND}:asset-1`,
+      state
+    });
+    const expected = NormalMapConfig.create().toJSON();
+
+    const snapshot = protocol.snapshot() as TilesetSnapshot;
+    const encoded = await protocol.encodeSnapshot!() as TilesetSnapshot;
+
+    assert.deepEqual(snapshot.pixels.normalMap, expected);
+    assert.deepEqual(encoded.pixels.normalMap, expected);
+  });
+
+  test("a delete drops the normal map", () => {
+    const handler = tilesetAssetKind();
+    const state = handler.create("asset-1");
+    foldAssetEvent(handler, state, documentEvent(seeded()));
+    state.pixels.normalMap = NormalMapConfig.create();
+
+    foldAssetEvent(handler, state, event(ASSET_DELETED, {
+      path: "textures/stone.tileset.json",
+      kind: TILESET_KIND
+    }));
+
+    assert.equal(state.pixels.normalMap, null);
   });
 
   test("declares the pixel and tileset document command stream", () => {

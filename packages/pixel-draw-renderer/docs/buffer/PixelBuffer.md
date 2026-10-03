@@ -123,3 +123,11 @@ uvRegions.remove(id: string): void
 uvRegions.clear(): void
 ```
 
+## Normal map
+
+```ts
+normalMap: NormalMapConfig | null
+```
+
+The texture's [normal map settings](../normal/NormalMapConfig.md), `null` while the feature is off. Included in [`pixelArtSnapshot()`](../serialization/index.md) when set. A headless owner applies normal map commands with [`applyNormalMapCommand()`](../normal/NormalMapConfig.md#commands).
+

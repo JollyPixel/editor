@@ -8,7 +8,8 @@ import { BlockUv } from "../../../../src/features/texture/uv/BlockUv.ts";
 import {
   makeBlock,
   makeFakeVoxelEngine,
-  makeUv
+  makeUv,
+  tilesetSlot
 } from "./blockUvFixtures.ts";
 
 function setupShape(
@@ -26,7 +27,7 @@ function setupShape(
     defaultTexture: { col: 2, row: 2, tilesetId: "atlas" }
   });
   const bridge = new BlockUvBridge(uv, view, bridgeOptions);
-  bridge.setActiveTileset("atlas", 16);
+  bridge.setActiveTileset(tilesetSlot("atlas"), 16);
 
   return { view, uv, bridge };
 }
@@ -38,7 +39,7 @@ describe("BlockUvBridge / rotation", () => {
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveTileset("atlas", 16);
+      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
 
       uv.rotate("block-1", "cw");
 
@@ -73,7 +74,7 @@ describe("BlockUvBridge / rotation", () => {
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveTileset("atlas", 16);
+      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
 
       assert.deepEqual(uv.get("block-1")!.geometryFor("top"), {
         x: 16,
@@ -94,7 +95,7 @@ describe("BlockUvBridge / rotation", () => {
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveTileset("atlas", 16);
+      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
       uv.setState("block-1", "free");
 
       uv.rotate("block-1", "cw", "top");

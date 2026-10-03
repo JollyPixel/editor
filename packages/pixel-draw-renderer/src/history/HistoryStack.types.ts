@@ -8,6 +8,8 @@ import type {
   UVSlot,
   UVRegionData
 } from "../uv/region/UVRegion.ts";
+import type { IndexedNormalMapZone } from "../normal/types.ts";
+import type { NormalMapCommand } from "../buffer/hooks.ts";
 
 export interface HistoryStrokeEntry {
   action: "stroke";
@@ -57,6 +59,7 @@ export interface HistoryUvDeleteEntry {
   action: "uv-delete";
   timestamp: number;
   region: UVRegionData;
+  normalMapZone?: IndexedNormalMapZone;
 }
 
 export interface HistoryUvMoveEntry {
@@ -85,6 +88,13 @@ export interface HistoryUvRotateEntry {
   after: UVRegionData;
 }
 
+export interface HistoryNormalMapEntry {
+  action: "normal-map";
+  timestamp: number;
+  redo: NormalMapCommand;
+  undo: NormalMapCommand;
+}
+
 export type HistoryEntry =
   | HistoryStrokeEntry
   | HistoryResizedEntry
@@ -94,7 +104,8 @@ export type HistoryEntry =
   | HistoryUvDeleteEntry
   | HistoryUvMoveEntry
   | HistoryUvStateEntry
-  | HistoryUvRotateEntry;
+  | HistoryUvRotateEntry
+  | HistoryNormalMapEntry;
 
 export type HistoryEntryInput =
   | Omit<HistoryStrokeEntry, "timestamp">
@@ -105,4 +116,5 @@ export type HistoryEntryInput =
   | Omit<HistoryUvDeleteEntry, "timestamp">
   | Omit<HistoryUvMoveEntry, "timestamp">
   | Omit<HistoryUvStateEntry, "timestamp">
-  | Omit<HistoryUvRotateEntry, "timestamp">;
+  | Omit<HistoryUvRotateEntry, "timestamp">
+  | Omit<HistoryNormalMapEntry, "timestamp">;

@@ -26,6 +26,9 @@ interface HistoryStackOptions {
 | `"uv-move"` | Region `id`, `face` (`null` unless the region is free), and `oldRect` / `newRect` |
 | `"uv-state"` | Region `id` and full `before` / `after` snapshots |
 | `"uv-rotate"` | Region `id`, rotated `face` (`null` unless the region is free), and full `before` / `after` snapshots |
+| `"normal-map"` | The `redo` command that was sent and the `undo` command that reverts it |
+
+A `"uv-delete"` entry also carries the `normalMapZone` the deletion removed, as `{ zone, index }`. `HistoryStack` leaves normal map entries to `PixelDocument`, which applies them on undo and redo.
 
 > [!NOTE]
 > When used through `PixelArtCanvas`, undo and redo emit mutation hooks. An attached sync client can propagate the resulting pixel and UV changes. See [uv/UVMap.md](../uv/UVMap.md#history--network).

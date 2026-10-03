@@ -9,6 +9,11 @@ import type {
   UVSlot,
   UVRegionData
 } from "../uv/region/UVRegion.ts";
+import type {
+  IndexedNormalMapZone,
+  NormalMapData,
+  NormalMapSettings
+} from "../normal/types.ts";
 
 /**
  * `originTimestamp` preserves the original network timestamp during replay.
@@ -86,6 +91,35 @@ export type PixelBufferHookEvent =
   | {
     action: "uv-region-rotated";
     metadata: UVRegionRotation;
+    originTimestamp?: number;
+  }
+  | NormalMapCommand;
+
+export type NormalMapCommand =
+  | {
+    action: "normal-map-toggled";
+    metadata: {
+      config: NormalMapData | null;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "normal-map-defaults-patched";
+    metadata: {
+      patch: Partial<NormalMapSettings>;
+    };
+    originTimestamp?: number;
+  }
+  | {
+    action: "normal-map-zone-set";
+    metadata: IndexedNormalMapZone;
+    originTimestamp?: number;
+  }
+  | {
+    action: "normal-map-zone-deleted";
+    metadata: {
+      regionId: string;
+    };
     originTimestamp?: number;
   };
 

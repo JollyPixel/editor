@@ -20,7 +20,7 @@ None of the three fire for `replacePixels()` or `copyToMaster()`; callers drive 
 
 `PixelDocument` forwards all three, and `PixelArtCanvas.document` exposes it.
 
-Unlike `PixelBuffer.pixels()`, `CanvasBuffer.pixels()` returns a copy.
+Unlike `PixelBuffer.pixels()`, `CanvasBuffer.pixels()` returns a copy. `pixels({ copy: false })` returns the working pixels themselves, for a reader that must not allocate per frame; do not write to them.
 
 `writePixels(pixels)` overwrites the texture with RGBA data of the current size, keeping the same canvas element. Like `replacePixels()`, it resets the retained master data.
 

@@ -20,7 +20,8 @@ describe("MaterialGroup", () => {
       roughness: 1,
       metalness: 0,
       emissive: "#000000",
-      emissiveIntensity: 1
+      emissiveIntensity: 1,
+      normalScale: 1
     });
     assert.ok(Object.isFrozen(group));
   });
@@ -40,7 +41,9 @@ describe("MaterialGroup", () => {
       { id: "a", metalness: NaN },
       { id: "a", emissive: "red" },
       { id: "a", emissiveIntensity: -1 },
-      { id: "a", emissiveIntensity: Infinity }
+      { id: "a", emissiveIntensity: Infinity },
+      { id: "a", normalScale: -0.5 },
+      { id: "a", normalScale: NaN }
     ];
     for (const json of invalid) {
       assert.throws(() => new MaterialGroup(json), RangeError);
@@ -69,25 +72,37 @@ describe("MaterialGroup", () => {
       roughness: 0.25,
       metalness: 1,
       emissive: "#ff0000",
-      emissiveIntensity: 2
+      emissiveIntensity: 2,
+      normalScale: 0.5
     }).applyTo(material);
 
     assert.equal(material.roughness, 0.25);
     assert.equal(material.metalness, 1);
     assert.equal(material.emissive.getHexString(), "ff0000");
     assert.equal(material.emissiveIntensity, 2);
+    assert.deepEqual(material.normalScale.toArray(), [0.5, 0.5]);
   });
 
-  it("applies the emissive fields to a lambert material", () => {
+  it("applies the emissive fields and normal scale to a lambert material", () => {
     const material = new THREE.MeshLambertMaterial();
     new MaterialGroup({
       id: "lava",
       emissive: "#00ff00",
-      emissiveIntensity: 0.5
+      emissiveIntensity: 0.5,
+      normalScale: 2
     }).applyTo(material);
 
     assert.equal(material.emissive.getHexString(), "00ff00");
     assert.equal(material.emissiveIntensity, 0.5);
+    assert.deepEqual(material.normalScale.toArray(), [2, 2]);
+  });
+
+  it("treats normal scale as part of the finish", () => {
+    const group = new MaterialGroup({ id: "stone" });
+    const flat = group.with({ normalScale: 0 });
+
+    assert.equal(flat.normalScale, 0);
+    assert.ok(!group.equals(flat));
   });
 });
 

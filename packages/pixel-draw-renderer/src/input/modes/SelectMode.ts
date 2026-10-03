@@ -32,7 +32,7 @@ export class SelectMode extends InteractionMode {
       return "grabbing";
     }
 
-    return this.#select.hasSelection ? "grab" : "";
+    return this.#select.editable ? "grab" : "";
   }
 
   onPrimaryDown(

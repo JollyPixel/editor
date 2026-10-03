@@ -312,7 +312,8 @@ describe("VoxelDocument - material groups", () => {
         roughness: 1,
         metalness: 1,
         emissive: "#000000",
-        emissiveIntensity: 1
+        emissiveIntensity: 1,
+        normalScale: 1
       }
     }]);
   });
@@ -339,7 +340,8 @@ describe("VoxelDocument - material groups", () => {
       roughness: 0.3,
       metalness: 1,
       emissive: "#000000",
-      emissiveIntensity: 1
+      emissiveIntensity: 1,
+      normalScale: 1
     }]);
   });
 });

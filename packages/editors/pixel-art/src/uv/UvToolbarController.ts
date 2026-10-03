@@ -2,7 +2,8 @@
 import {
   html,
   nothing,
-  type ReactiveControllerHost
+  type ReactiveControllerHost,
+  type TemplateResult
 } from "lit";
 import { PopoverController } from "@jolly-pixel/ui";
 import type {
@@ -281,7 +282,8 @@ export class UvToolbarController {
 
   render(
     active: boolean,
-    allowCreateDelete: boolean
+    allowCreateDelete: boolean,
+    extra: TemplateResult | typeof nothing = nothing
   ) {
     const uv = this.#canvas()?.uv;
     if (!active || !uv) {
@@ -293,6 +295,7 @@ export class UvToolbarController {
         ${allowCreateDelete ? this.#renderCreateDelete(uv) : nothing}
         ${this.#renderStateDropdown(uv)}
         ${this.#renderRotateButtons(uv)}
+        ${extra}
         ${this.renderVisibilityToggles()}
       </div>
     `;

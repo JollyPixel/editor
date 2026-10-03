@@ -26,6 +26,7 @@ import {
 } from "../uv/UvAccessPolicy.ts";
 import {
   DEFAULT_TOOL_OPTIONS,
+  toolOptionsChanged,
   type ToolOption,
   type ToolOptionName,
   type ToolOptions
@@ -157,11 +158,14 @@ export class ModeRail extends LitElement {
   @property({ type: String })
   declare mode: Mode;
 
-  @property({ attribute: false })
+  @property({ attribute: false, hasChanged: toolOptionsChanged })
   declare options: ToolOptions;
 
   @property({ type: String })
   declare uvAccess: UvAccess;
+
+  @property({ attribute: false })
+  declare unavailableModes: ReadonlySet<Mode>;
 
   #hoveredMode: Mode | null = null;
 
@@ -170,6 +174,7 @@ export class ModeRail extends LitElement {
     this.mode = "paint";
     this.options = DEFAULT_TOOL_OPTIONS;
     this.uvAccess = "edit";
+    this.unavailableModes = new Set();
   }
 
   #emit<T>(
@@ -257,7 +262,10 @@ export class ModeRail extends LitElement {
     fillClip: boolean
   ) {
     const { mode, icon, label, variant, uvToggle } = item;
-    const flyoutButtons = this.#flyoutButtons(item, fillClip);
+    const unavailable = this.unavailableModes.has(mode);
+    const flyoutButtons = unavailable ?
+      [] :
+      this.#flyoutButtons(item, fillClip);
     const displayIcon = variant && this.options[variant.option] ? variant.icon : icon;
     const showBadge = uvToggle && fillClip && this.options[uvToggle.option];
 
@@ -276,6 +284,7 @@ export class ModeRail extends LitElement {
           part="mode-button"
           aria-label=${label}
           aria-pressed=${this.mode === mode}
+          ?disabled=${unavailable}
           @click=${(event: MouseEvent) => {
             this.#emit<Mode>("mode-change", mode);
             blurTarget(event);

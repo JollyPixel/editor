@@ -62,6 +62,8 @@ The document owns every UV region until `disownUvRegions` hands the ones `filter
 | `replaced` | `{ size }` | all pixels were replaced (texture load, remote replace, snapshot, history) |
 | `draw-end` | none | a stroke, fill or selection edit landed, local or remote, and after undo or redo |
 | `history-changed` | `HistoryState` | the history stack changed |
+| `islands-changed` | none | the [`islands`](#normal-map) map is out of date |
+| `normal-map-changed` | `{ config, regionIds }` | the normal map settings changed, locally or remotely; `regionIds` lists the regions whose zone changed, `null` when every island is affected |
 | `reset` | none | a remote resize, texture replacement or snapshot replaced the texture; views drop transient state such as a floating selection |
 
 ## Queries
@@ -89,6 +91,33 @@ redo(): HistoryEntry | null;
 
 `commitStroke` records pixels already written to the buffer; `commitPixels` writes them first. Each records history and emits one `onBufferUpdated` command.
 
+## Normal map
+
+```ts
+readonly normalMap: NormalMapConfig | null;
+readonly normals: NormalMap;
+readonly islands: IslandMap;
+
+useIslandFaces(faces: () => Iterable<IslandFace>): () => void;
+invalidateIslands(): void;
+
+enableNormalMap(config?: NormalMapConfig): void;
+disableNormalMap(): void;
+patchNormalMapDefaults(patch: Partial<NormalMapSettings>): void;
+setNormalMapZone(zone: NormalMapZone): void;
+deleteNormalMapZone(regionId: string): void;
+```
+
+`normalMap` holds the committed [settings](./normal/NormalMapConfig.md), `null` while the feature is off. `normals` is the generated [`NormalMap`](./normal/NormalMap.md), created on first access and idle until retained. To show settings while a slider is dragged, use [`normals.preview()`](./normal/NormalMap.md#preview) and commit on release.
+
+`islands` is the [island map](./normal/IslandMap.md) of the UV regions, built on first access and kept until a region is created, deleted, moved, rotated or changes state, or the texture is resized or replaced. Each of these emits `islands-changed`, and the next read rebuilds the map. `normals` reads its islands from here.
+
+`useIslandFaces` builds the islands from the given faces instead of the UV regions, for a host that places its faces itself, such as a voxel tileset. Region changes then leave the islands alone: the host calls `invalidateIslands` when its faces change, and a resize or replace still rebuilds them. The returned function goes back to the UV regions, unless another `useIslandFaces` call replaced these faces since.
+
+Each edit records one `"normal-map"` history entry and emits one [command](./normal/NormalMapConfig.md#commands). `enableNormalMap` defaults to `NormalMapConfig.create()`. A defaults patch sends only the patched fields. Patches and zone edits are ignored while the feature is off. An invalid setting throws `InvalidNormalMapSettingsError` and records nothing.
+
+Deleting a UV region the document owns removes its zone in the same history entry, and undo restores both. An external region keeps its zone, which the generator ignores while the region is missing.
+
 ## Remote state
 
 ```ts
@@ -96,9 +125,10 @@ applyRemoteCommand(event: PixelBufferHookEvent): void;
 loadSnapshot(
   size: Vec2,
   pixels: Uint8ClampedArray,
-  uvRegions?: (UVRegion | UVRegionData)[]
+  uvRegions?: (UVRegion | UVRegionData)[],
+  normalMap?: NormalMapData | null
 ): void;
 runLocalRestore<T>(fn: () => T): T;
 ```
 
-Remote commands mutate the document without recording history or echoing a command. A remote resize or texture replacement clears history, and `loadSnapshot` replaces pixels and UV regions and clears history. `runLocalRestore` runs `fn` with the same suppression, for restoring state that must not be broadcast.
+Remote commands mutate the document without recording history or echoing a command. A remote resize or texture replacement clears history, and `loadSnapshot` replaces pixels, UV regions and normal map settings and clears history. A snapshot without `normalMap` turns the feature off. `runLocalRestore` runs `fn` with the same suppression, for restoring state that must not be broadcast.

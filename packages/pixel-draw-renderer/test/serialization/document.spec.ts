@@ -15,6 +15,7 @@ import {
   serializePixelBuffer
 } from "#src/serialization/index.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
+import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
 
 function bytes(
   payload: unknown
@@ -92,6 +93,48 @@ describe("PixelArtDocument", () => {
     );
 
     assert.deepEqual([...target.uvRegions], []);
+  });
+
+  test("round-trips the normal map settings", () => {
+    const source = new PixelBuffer({ size: { x: 2, y: 2 } });
+    source.normalMap = NormalMapConfig.create({ strength: 4 })
+      .withZone({ regionId: "glass", settings: "off" });
+    const target = new PixelBuffer({ size: { x: 2, y: 2 } });
+
+    const document = decodePixelArtDocument(
+      encodePixelArtDocument(serializePixelBuffer(source))
+    );
+    deserializePixelBuffer(document, target);
+
+    assert.deepEqual(document.normalMap, source.normalMap.toJSON());
+    assert.deepEqual(target.normalMap?.toJSON(), source.normalMap.toJSON());
+  });
+
+  test("a document without normal map settings leaves the feature off", () => {
+    const target = new PixelBuffer({ size: { x: 2, y: 2 } });
+    target.normalMap = NormalMapConfig.create();
+    const document = serializePixelBuffer(new PixelBuffer({ size: { x: 2, y: 2 } }));
+
+    deserializePixelBuffer(decodePixelArtDocument(bytes(document)), target);
+
+    assert.equal("normalMap" in document, false);
+    assert.equal(target.normalMap, null);
+  });
+
+  test("rejects invalid normal map settings", () => {
+    assert.throws(
+      () => decodePixelArtDocument(bytes({
+        version: 1,
+        size: { x: 1, y: 1 },
+        pixels: "",
+        uvRegions: [],
+        normalMap: {
+          defaults: { strength: 2 },
+          zones: []
+        }
+      })),
+      InvalidPixelArtDocumentError
+    );
   });
 
   test("rejects a payload that is not JSON", () => {

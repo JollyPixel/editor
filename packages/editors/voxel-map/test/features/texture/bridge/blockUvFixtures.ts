@@ -2,6 +2,7 @@
 import {
   BlockRegistry,
   BlockShapeRegistry,
+  TilesetSlot,
   type VoxelView,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -80,6 +81,16 @@ export function makeFakeVoxelEngine(): {
     dirtyReasons,
     bridgeOptions
   };
+}
+
+export function tilesetSlot(
+  id: string,
+  slot = 0
+): TilesetSlot {
+  return new TilesetSlot({
+    id,
+    slot
+  });
 }
 
 export function makeUv(): UVMap {

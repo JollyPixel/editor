@@ -9,12 +9,10 @@ import type {
   SelectionRect,
   UVGeometry
 } from "@jolly-pixel/pixel-draw.renderer";
-
-// Import Internal Dependencies
 import {
   blockShapeUv,
   uvGeometryForSlot
-} from "../../shared/blockShapeUv.ts";
+} from "@jolly-pixel/asset.voxel-map/client";
 
 export interface BlockTextureRects {
   block: ResolvedBlockDefinition;

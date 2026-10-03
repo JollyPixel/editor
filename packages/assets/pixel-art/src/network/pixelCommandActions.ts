@@ -12,7 +12,11 @@ const kActions: { readonly [TAction in PixelCommandAction]: true; } = {
   "uv-region-deleted": true,
   "uv-region-moved": true,
   "uv-region-state-changed": true,
-  "uv-region-rotated": true
+  "uv-region-rotated": true,
+  "normal-map-toggled": true,
+  "normal-map-defaults-patched": true,
+  "normal-map-zone-set": true,
+  "normal-map-zone-deleted": true
 };
 
 export type PixelCommandAction = PixelBufferHookEvent["action"];

@@ -4,13 +4,20 @@ import type { Node } from "three/webgpu";
 import {
   abs,
   clamp,
+  cross,
   dFdx,
   dFdy,
+  dot,
   float,
   floor,
   Fn,
+  inverseSqrt,
   max,
+  mix,
+  normalView,
+  positionView,
   reference,
+  select,
   texture,
   varying,
   vec2,
@@ -65,12 +72,19 @@ export interface TileShadingOptions {
   surface?: BlockSurface;
   aoStrength?: AoStrengthUniform;
   averages?: THREE.Texture | null;
+  normal?: THREE.Texture | null;
   flat?: boolean;
   alphaToCoverage?: boolean;
 }
 
 interface TileColorOptions extends TileShadingOptions {
   inputs: TileInputs;
+}
+
+interface TileNormalInputs {
+  map: THREE.Texture;
+  uv: Vec2Node;
+  texel: Vec2Node;
 }
 
 interface TileSample {
@@ -114,15 +128,23 @@ export function enableTileShading(
     region.xy.add(region.zw)
   );
   const size = atlasSize(map);
+  const texel = inputs.uv.mul(size);
   const sampled = texture(map, clamped).level(float(0));
 
+  if (options.normal) {
+    applyTileNormal(material, {
+      map: options.normal,
+      uv: clamped,
+      texel
+    });
+  }
   applyTileColor(
     material,
     {
       sampled: tile === undefined ?
         sampled :
         vec4(sampled.rgb.mul(tile.shade), sampled.a),
-      texel: inputs.uv.mul(size),
+      texel,
       position: clamped.mul(size),
       region: tile?.region
     },
@@ -154,7 +176,7 @@ function applyTileColor(
     brightness = inputs.faceBrightness;
   }
   else if (averages && map) {
-    const footprint = abs(dFdx(sample.texel)).add(abs(dFdy(sample.texel)));
+    const footprint = texelFootprint(sample.texel);
     diffuse = footprintAverage(
       map,
       averages,
@@ -244,13 +266,55 @@ function footprintAverage(
     sum.a.div(area)
   );
 
-  const weight = clamp(
+  return lerp(sample.sampled, average, minificationWeight(footprint));
+}
+
+function texelFootprint(
+  texel: Vec2Node
+): Vec2Node {
+  return abs(dFdx(texel)).add(abs(dFdy(texel)));
+}
+
+function minificationWeight(
+  footprint: Vec2Node
+): FloatNode {
+  return clamp(
     max(footprint.x, footprint.y).sub(1),
     float(0),
     float(1)
   );
+}
 
-  return lerp(sample.sampled, average, weight);
+function applyTileNormal(
+  material: TileShadedMaterial,
+  inputs: TileNormalInputs
+): void {
+  const { map, uv, texel } = inputs;
+  const scale = reference("normalScale", "vec2", material);
+  const fade = minificationWeight(texelFootprint(texel));
+
+  (material as { normalNode?: unknown; }).normalNode = Fn(() => {
+    const geometric = normalView;
+    const q0 = dFdx(positionView);
+    const q1 = dFdy(positionView);
+    const st0 = dFdx(texel);
+    const st1 = dFdy(texel);
+    const q1Perp = cross(q1, geometric);
+    const q0Perp = cross(geometric, q0);
+    const tangent = q1Perp.mul(st0.x).add(q0Perp.mul(st1.x));
+    const bitangent = q1Perp.mul(st0.y).add(q0Perp.mul(st1.y));
+    const det = max(dot(tangent, tangent), dot(bitangent, bitangent));
+    const frameScale = select(det.equal(0), float(0), inverseSqrt(det));
+
+    const encoded = texture(map, uv).level(float(0)).xyz.mul(2).sub(1);
+    const relief = tangent.mul(encoded.x.mul(scale.x))
+      .add(bitangent.mul(encoded.y.mul(scale.y)))
+      .mul(frameScale)
+      .add(geometric.mul(encoded.z))
+      .normalize();
+
+    return mix(relief, geometric, fade).normalize();
+  })();
 }
 
 function texelBounds(

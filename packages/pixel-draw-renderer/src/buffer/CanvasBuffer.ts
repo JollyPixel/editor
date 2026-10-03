@@ -23,6 +23,10 @@ interface CanvasColorGroup {
 
 export type CanvasBufferOptions = PixelBufferOptions;
 
+export interface CanvasBufferPixelsOptions {
+  copy?: boolean;
+}
+
 export type CanvasBufferEvent = {
   changed: (
     event: { bounds: SelectionRect; }
@@ -181,8 +185,12 @@ export class CanvasBuffer extends Emitter<
     );
   }
 
-  pixels(): Uint8ClampedArray {
-    return this.#buffer.pixels().slice();
+  pixels(
+    options: CanvasBufferPixelsOptions = {}
+  ): Uint8ClampedArray {
+    const pixels = this.#buffer.pixels();
+
+    return options.copy === false ? pixels : pixels.slice();
   }
 
   writePixels(

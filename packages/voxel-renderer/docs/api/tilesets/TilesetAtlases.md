@@ -15,7 +15,11 @@ class TilesetAtlases {
   readonly version: number;
 
   constructor(options?: TilesetAtlasesOptions);
-  registerTexture(tilesetId: string, texture: TilesetTexture): TilesetAtlas;
+  registerTexture(
+    tilesetId: string,
+    texture: TilesetTexture,
+    normal?: TilesetNormalTexture | null
+  ): TilesetAtlas;
   syncAtlases(): string[];
   get(tilesetId?: string): TilesetAtlas | undefined;
   atlas(tilesetId?: string): TilesetAtlas;
@@ -40,10 +44,11 @@ definition. It throws when the ID is not declared: declare it first with
 `tilesets.add()`, or use
 [`VoxelView.loadTileset()`](../core/VoxelView.md#methods), which does both.
 Registering an ID that already has an atlas replaces it and disposes the
-previous texture when it differs.
+previous textures the new atlas does not reuse. `normal` is the optional
+[normal atlas](./TilesetAtlas.md), `null` by default.
 
 `syncAtlases()` realigns atlases after the list changed. It drops and disposes
-the atlas of an undeclared tileset, and rebuilds on the same texture the atlas
+the atlas of an undeclared tileset, and rebuilds on the same textures the atlas
 of a tileset whose `tileSize` changed. It returns the affected IDs.
 
 `get()` returns the atlas of the given ID, or of the default tileset when the
@@ -57,8 +62,8 @@ changed since it was built (see
 `TilesetAtlas.updateImage()` reaches distant faces on the next tick.
 
 `version` increases when atlases or the list change, so cached UV data can be
-invalidated. `dispose()` disposes every texture and leaves the list, which
-belongs to the document.
+invalidated. `dispose()` disposes every texture, normal textures included,
+and leaves the list, which belongs to the document.
 
 ## Missing tileset
 

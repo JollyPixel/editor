@@ -85,6 +85,10 @@ export class BlockMaterialFinish extends LitElement {
     this,
     materialFinishSource(this.#port, "emissiveIntensity")
   );
+  #normalScale = new FieldBinding(
+    this,
+    materialFinishSource(this.#port, "normalScale")
+  );
 
   readonly #onMaterialGroupsChanged = (): void => {
     this.requestUpdate();
@@ -172,6 +176,16 @@ export class BlockMaterialFinish extends LitElement {
         @jolly-input=${this.#emissiveIntensity.input}
         @jolly-change=${this.#emissiveIntensity.commit}
       ></jolly-number>
+      <jolly-slider
+        label="Normal strength"
+        description="Relief from the tileset normal map, 0 turns it off"
+        min="0"
+        max="3"
+        step="0.1"
+        .value=${this.#normalScale.value}
+        @jolly-input=${this.#normalScale.input}
+        @jolly-change=${this.#normalScale.commit}
+      ></jolly-slider>
     `;
   }
 }

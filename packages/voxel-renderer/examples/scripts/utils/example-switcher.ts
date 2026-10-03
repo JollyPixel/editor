@@ -13,7 +13,8 @@ const kExamples: Record<string, string> = {
   "Block Shapes": "/shapes.html",
   "Tileset UV": "/tileset.html",
   "Noise World": "/noise-world.html",
-  "Transparency & Light": "/transparency.html"
+  "Transparency & Light": "/transparency.html",
+  "Normal Map": "/normal-map.html"
 };
 
 export interface ExamplePaneOptions {

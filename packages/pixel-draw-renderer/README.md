@@ -159,6 +159,10 @@ manager.redo();
   - [`SelectTool`](./docs/tools/SelectTool.md)
   - [`CanvasShortcuts`](./docs/input/CanvasShortcuts.md)
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
+- Normal map
+  - [`NormalMap`](./docs/normal/NormalMap.md)
+  - [`NormalMapConfig`](./docs/normal/NormalMapConfig.md)
+  - [`IslandMap`](./docs/normal/IslandMap.md)
 - [`Serialization`](./docs/serialization/index.md)
 - [Integration primitives](./docs/IntegrationPrimitives.md)
 
@@ -199,8 +203,8 @@ export interface RGBA {
 
 ## 🧪 Benchmarks
 
-The default command measures `PixelBuffer`, editing tools, history, and color
-conversion without a DOM. The browser command starts Vite and
+The default command measures `PixelBuffer`, editing tools, history, color
+conversion, and normal map generation without a DOM. The browser command starts Vite and
 Chromium to measure canvas synchronization and frame rendering.
 
 ```bash

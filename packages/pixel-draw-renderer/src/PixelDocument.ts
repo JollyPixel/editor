@@ -27,6 +27,15 @@ import {
   rectOf
 } from "./uv/geometry/geometry.ts";
 import type { UVGeometry } from "./uv/geometry/types.ts";
+import { NormalMap } from "./normal/NormalMap.ts";
+import { NormalMapConfig } from "./normal/NormalMapConfig.ts";
+import { IslandMap } from "./normal/IslandMap.ts";
+import type {
+  IslandFace,
+  NormalMapData,
+  NormalMapSettings,
+  NormalMapZone
+} from "./normal/types.ts";
 import type {
   UVRegion,
   UVRegionData
@@ -36,6 +45,15 @@ import type {
   RGBA8,
   Vec2
 } from "./types.ts";
+
+// CONSTANTS
+const kIslandEvents = [
+  "region-created",
+  "region-deleted",
+  "region-moved",
+  "region-state-changed",
+  "region-rotated"
+] as const;
 
 export interface PixelDocumentOptions {
   size: Vec2;
@@ -54,6 +72,11 @@ export type PixelDocumentEvent = CanvasBufferEvent & {
   "buffer-updated": (event: PixelBufferHookEvent) => void;
   "draw-end": () => void;
   "history-changed": (state: HistoryState) => void;
+  "islands-changed": () => void;
+  "normal-map-changed": (event: {
+    config: NormalMapConfig | null;
+    regionIds: string[] | null;
+  }) => void;
   reset: () => void;
 };
 
@@ -66,6 +89,9 @@ export class PixelDocument extends Emitter<
 
   #edits: DocumentEdits;
   #onBufferUpdated: PixelBufferHookListener | undefined;
+  #normals: NormalMap | null = null;
+  #islands: IslandMap | null = null;
+  #islandFaces: (() => Iterable<IslandFace>) | null = null;
 
   constructor(
     options: PixelDocumentOptions
@@ -101,7 +127,11 @@ export class PixelDocument extends Emitter<
       history: this.history,
       uvMap: this.uv,
       onDrawEnd: () => this.emit("draw-end"),
-      onReset: () => this.emit("reset")
+      onReset: () => this.emit("reset"),
+      onNormalMapChanged: (regionIds) => this.emit("normal-map-changed", {
+        config: this.normalMap,
+        regionIds
+      })
     });
     this.#onBufferUpdated = options.onBufferUpdated;
     this.#edits.onBufferUpdated = (event) => {
@@ -110,8 +140,17 @@ export class PixelDocument extends Emitter<
     };
 
     this.buffer.on("changed", (event) => this.emit("changed", event));
-    this.buffer.on("resized", (event) => this.emit("resized", event));
-    this.buffer.on("replaced", (event) => this.emit("replaced", event));
+    this.buffer.on("resized", (event) => {
+      this.invalidateIslands();
+      this.emit("resized", event);
+    });
+    this.buffer.on("replaced", (event) => {
+      this.invalidateIslands();
+      this.emit("replaced", event);
+    });
+    for (const event of kIslandEvents) {
+      this.uv.on(event, this.#onRegionsChanged);
+    }
   }
 
   get onBufferUpdated(): PixelBufferHookListener | undefined {
@@ -122,6 +161,49 @@ export class PixelDocument extends Emitter<
     fn: PixelBufferHookListener | undefined
   ) {
     this.#onBufferUpdated = fn;
+  }
+
+  get normalMap(): NormalMapConfig | null {
+    return this.#edits.normalMap;
+  }
+
+  get islands(): IslandMap {
+    this.#islands ??= this.#islandFaces === null ?
+      IslandMap.fromRegions(this.buffer.size(), this.uv.regions) :
+      IslandMap.fromFaces(this.buffer.size(), this.#islandFaces());
+
+    return this.#islands;
+  }
+
+  get normals(): NormalMap {
+    this.#normals ??= new NormalMap({
+      size: () => this.buffer.size(),
+      pixels: () => this.buffer.pixels({ copy: false }),
+      islands: () => this.islands,
+      config: () => this.normalMap,
+      connect: (normalMap) => this.#connectNormalMap(normalMap)
+    });
+
+    return this.#normals;
+  }
+
+  useIslandFaces(
+    faces: () => Iterable<IslandFace>
+  ): () => void {
+    this.#islandFaces = faces;
+    this.invalidateIslands();
+
+    return () => {
+      if (this.#islandFaces === faces) {
+        this.#islandFaces = null;
+        this.invalidateIslands();
+      }
+    };
+  }
+
+  invalidateIslands(): void {
+    this.#islands = null;
+    this.emit("islands-changed");
   }
 
   disownUvRegions(
@@ -213,6 +295,34 @@ export class PixelDocument extends Emitter<
     this.#edits.clearTexture(keepMask);
   }
 
+  enableNormalMap(
+    config: NormalMapConfig = NormalMapConfig.create()
+  ): void {
+    this.#edits.toggleNormalMap(config);
+  }
+
+  disableNormalMap(): void {
+    this.#edits.toggleNormalMap(null);
+  }
+
+  patchNormalMapDefaults(
+    patch: Partial<NormalMapSettings>
+  ): void {
+    this.#edits.patchNormalMapDefaults(patch);
+  }
+
+  setNormalMapZone(
+    zone: NormalMapZone
+  ): void {
+    this.#edits.setNormalMapZone(zone);
+  }
+
+  deleteNormalMapZone(
+    regionId: string
+  ): void {
+    this.#edits.deleteNormalMapZone(regionId);
+  }
+
   undo(): HistoryEntry | null {
     return this.#edits.undo();
   }
@@ -230,14 +340,47 @@ export class PixelDocument extends Emitter<
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
-    uvRegions: (UVRegion | UVRegionData)[] = []
+    uvRegions: (UVRegion | UVRegionData)[] = [],
+    normalMap: NormalMapData | null = null
   ): void {
-    this.#edits.loadSnapshot(size, pixels, uvRegions);
+    this.#edits.loadSnapshot(size, pixels, uvRegions, normalMap);
   }
 
   runLocalRestore<T>(
     fn: () => T
   ): T {
     return this.#edits.runLocalRestore(fn);
+  }
+
+  readonly #onRegionsChanged = (): void => {
+    if (this.#islandFaces === null) {
+      this.invalidateIslands();
+    }
+  };
+
+  #connectNormalMap(
+    normalMap: NormalMap
+  ): () => void {
+    const unsubscribers = [
+      this.buffer.subscribe(
+        "changed",
+        (event) => normalMap.invalidate(event.bounds)
+      ),
+      this.subscribe("islands-changed", () => normalMap.invalidateIslands()),
+      this.subscribe("normal-map-changed", (event) => {
+        if (event.regionIds === null) {
+          normalMap.invalidateAll();
+        }
+        else {
+          normalMap.invalidateRegions(event.regionIds);
+        }
+      })
+    ];
+
+    return () => {
+      for (const unsubscribe of unsubscribers) {
+        unsubscribe();
+      }
+    };
   }
 }

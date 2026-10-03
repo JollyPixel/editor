@@ -214,6 +214,7 @@ export class TilesetState {
       size
     );
     this.pixels.uvRegions.clear();
+    this.pixels.normalMap = null;
     this.document.clear(this.document.tileSize);
   }
 }

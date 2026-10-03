@@ -56,6 +56,7 @@ export class PixelPreviewScene extends Systems.Scene {
     this.#canvasManager = options.canvasManager;
     this.#style = {
       rotating: options.rotating,
+      normalMap: null,
       borderColor: new THREE.Color(kSceneAppearances.light.borderColor)
     };
   }
@@ -65,13 +66,20 @@ export class PixelPreviewScene extends Systems.Scene {
   }
 
   get meshCount(): number {
-    return this.#binding?.gallery.meshes.length ?? 0;
+    return this.meshes.length;
+  }
+
+  get meshes(): THREE.Object3D[] {
+    return this.#binding?.gallery.meshes ?? [];
   }
 
   override awake(): void {
     const scene = this.world.sceneManager.getSource();
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    sun.position.set(3, 4, 5);
     scene.add(
-      new THREE.HemisphereLight(0xffffff, 0x76848c, 2.8)
+      new THREE.HemisphereLight(0xffffff, 0x76848c, 1.8),
+      sun
     );
 
     const orbitCamera = this.world.createActor("camera")
@@ -134,6 +142,7 @@ export class PixelPreviewScene extends Systems.Scene {
   ): CanvasBinding {
     const canvasManager = this.#canvasManager;
     const texture = new PixelCanvasTexture(canvasManager);
+    this.#style.normalMap = texture.normalTexture();
     const gallery = new RegionPreviewGallery({
       canvasManager,
       createPreview: (region, textureSize) => this.world
@@ -146,6 +155,9 @@ export class PixelPreviewScene extends Systems.Scene {
         })
     });
     texture.on("resized", () => gallery.refreshTextureSize());
+    texture.on("normal-map-toggled", () => {
+      this.#style.normalMap = texture.normalTexture();
+    });
 
     const picker = new RegionPreviewPicker({
       uv: canvasManager.uv,
@@ -170,5 +182,6 @@ export class PixelPreviewScene extends Systems.Scene {
     this.#binding.gallery.dispose();
     this.#binding.texture.dispose();
     this.#binding = null;
+    this.#style.normalMap = null;
   }
 }

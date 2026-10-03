@@ -29,6 +29,17 @@ flowchart TB
 
 A world engine never receives block commands from its room. The host leases every linked tileset, projects its blocks into the world's block registry under the link's slot, and edits blocks through the tileset room.
 
+A tileset's normal map settings live in its pixel document and travel as pixel commands. The normal pixels are never stored: the pixel document generates them on the client. `TilesetIslands` hands it one island per block face projected onto the atlas, so a tile never samples its neighbour, and the texture editor and the 3D view read the same map.
+
+```mermaid
+flowchart TB
+    TilesetBlocks["TilesetDocument blocks"] --> Projection["BlockProjection"]
+    Projection --> Islands["IslandMap"]
+    Islands --> TilesetIslands["TilesetIslands"]
+    TilesetIslands --> TilesetPixels["PixelDocument pixels and normalMap"]
+    TilesetPixels --> NormalMap["PixelDocument.normals"]
+```
+
 ## Collision keys
 
 ```mermaid

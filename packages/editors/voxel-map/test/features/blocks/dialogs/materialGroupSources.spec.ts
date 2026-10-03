@@ -99,8 +99,21 @@ describe("materialFinishSource", () => {
       roughness: 0.4,
       metalness: 1,
       emissive: "#ff0000",
-      emissiveIntensity: 1
+      emissiveIntensity: 1,
+      normalScale: 1
     });
+  });
+
+  it("edits the normal strength and keeps it at zero or more", () => {
+    const port = makePort("gold", new MaterialGroupList([{ id: "gold" }]));
+    const source = materialFinishSource(port, "normalScale");
+
+    assert.equal(source.read(), 1);
+    source.write(2.5, true);
+    source.write(-1, true);
+
+    assert.equal(port.groups.get("gold")?.normalScale, 2.5);
+    assert.equal(port.writes, 1);
   });
 
   it("drops an out of range or unchanged value", () => {

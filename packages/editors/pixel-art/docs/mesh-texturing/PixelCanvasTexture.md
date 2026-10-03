@@ -12,7 +12,7 @@ const material = new THREE.MeshStandardMaterial({
 });
 ```
 
-The source is structural — `document`, `textureSize` and `textureCanvas()`. `PixelArtCanvas` satisfies it; so does a stub.
+The source is structural: `document`, `textureSize` and `textureCanvas()`. `document` needs `on`/`off` for the document events plus `normalMap` and `normals` (`PixelTextureDocument`). `PixelArtCanvas` satisfies it; so does a `PixelDocument` wrapped as in voxel-model's `BlockTextures`.
 
 ## Options
 
@@ -48,10 +48,28 @@ function onFrame() {
 }
 ```
 
+## `normalTexture()`
+
+```ts
+normalTexture(): THREE.DataTexture | null
+```
+
+Returns a texture over the document's generated [normal map](../../../../pixel-draw-renderer/docs/normal/NormalMap.md), or `null` while the document has no normal map settings. The texture uses `NoColorSpace`, `NearestFilter`, no mipmaps and `flipY` like the albedo texture, so both share UVs. It is created on the first call, which retains the normal map, and is updated whenever the map is regenerated.
+
+```ts
+material.normalMap = bridge.normalTexture();
+bridge.on("normal-map-toggled", () => {
+  material.normalMap = bridge.normalTexture();
+  material.needsUpdate = true;
+});
+```
+
 ## Events
 
 `resized` carries the new `{ size }` after either a buffer resize or a texture replacement. Consumers holding their own copy of the texture size re-read it here. Both cases also mark the whole texture dirty.
 
+`normal-map-toggled` carries `{ enabled }` when the document gains or loses its normal map settings. Turning them off disposes the normal texture and releases the normal map; `normalTexture()` returns `null` until they come back.
+
 ## `dispose()`
 
-Detaches the source subscriptions, drops any scheduled flush and disposes the texture. Idempotent.
+Detaches the source subscriptions, drops any scheduled flush and disposes the textures, releasing the normal map. Idempotent.

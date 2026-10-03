@@ -34,6 +34,18 @@ import {
   applyColorGroups,
   groupPositionsByColor
 } from "../buffer/colorGroups.ts";
+import type { NormalMapConfig } from "../normal/NormalMapConfig.ts";
+import type {
+  NormalMapData,
+  NormalMapSettings,
+  NormalMapZone
+} from "../normal/types.ts";
+import {
+  NormalMapEdits,
+  type NormalMapChange,
+  type NormalMapChangedListener
+} from "./NormalMapEdits.ts";
+import { isNormalMapCommand } from "./normalMapCommands.ts";
 
 export type UVRegionFilter = (id: string) => boolean;
 
@@ -48,6 +60,7 @@ export interface DocumentEditsOptions {
   uvMap: UVMap;
   onDrawEnd: () => void;
   onReset: () => void;
+  onNormalMapChanged: NormalMapChangedListener;
 }
 
 export class DocumentEdits {
@@ -57,6 +70,7 @@ export class DocumentEdits {
   #onBufferUpdated?: PixelBufferHookListener;
   #onDrawEnd: () => void;
   #onReset: () => void;
+  #normalMaps: NormalMapEdits;
   #isApplyingRemote = false;
   #isReplayingHistory = false;
   #disowned = new Set<UVRegionFilter>();
@@ -69,6 +83,7 @@ export class DocumentEdits {
     this.#uvMap = options.uvMap;
     this.#onDrawEnd = options.onDrawEnd;
     this.#onReset = options.onReset;
+    this.#normalMaps = new NormalMapEdits(options.onNormalMapChanged);
 
     this.#uvMap.on(
       "region-created",
@@ -100,6 +115,10 @@ export class DocumentEdits {
     fn: PixelBufferHookListener | undefined
   ) {
     this.#onBufferUpdated = fn;
+  }
+
+  get normalMap(): NormalMapConfig | null {
+    return this.#normalMaps.config;
   }
 
   disownUvRegions(
@@ -264,6 +283,30 @@ export class DocumentEdits {
     );
   }
 
+  toggleNormalMap(
+    config: NormalMapConfig | null
+  ): void {
+    this.#commitNormalMap(this.#normalMaps.toggle(config));
+  }
+
+  patchNormalMapDefaults(
+    patch: Partial<NormalMapSettings>
+  ): void {
+    this.#commitNormalMap(this.#normalMaps.patchDefaults(patch));
+  }
+
+  setNormalMapZone(
+    zone: NormalMapZone
+  ): void {
+    this.#commitNormalMap(this.#normalMaps.setZone(zone));
+  }
+
+  deleteNormalMapZone(
+    regionId: string
+  ): void {
+    this.#commitNormalMap(this.#normalMaps.deleteZone(regionId));
+  }
+
   undo(): HistoryEntry | null {
     const entry = this.#runHistoryReplay(() => this.#history.undo());
     if (!entry) {
@@ -271,7 +314,7 @@ export class DocumentEdits {
     }
 
     for (const event of History.buildUndoReplayEvents(entry)) {
-      this.#emitHook(event);
+      this.#replay(event);
     }
     this.#onDrawEnd();
 
@@ -285,7 +328,7 @@ export class DocumentEdits {
     }
 
     for (const event of History.buildRedoReplayEvents(entry)) {
-      this.#emitHook(event);
+      this.#replay(event);
     }
     this.#onDrawEnd();
 
@@ -318,10 +361,12 @@ export class DocumentEdits {
   loadSnapshot(
     size: Vec2,
     pixels: Uint8ClampedArray,
-    uvRegions: (UVRegion | UVRegionData)[] = []
+    uvRegions: (UVRegion | UVRegionData)[] = [],
+    normalMap: NormalMapData | null = null
   ): void {
     this.#isApplyingRemote = true;
     try {
+      this.#normalMaps.load(normalMap);
       this.#buffer.replacePixels(pixels, size);
       this.#uvMap.clear((region) => this.ownsUvRegion(region.id));
       for (const region of uvRegions) {
@@ -408,6 +453,7 @@ export class DocumentEdits {
 
       case "uv-region-deleted":
         this.#uvMap.delete(event.metadata.id);
+        this.#normalMaps.removeZoneOf(event.metadata.id);
         break;
 
       case "uv-region-moved":
@@ -425,7 +471,35 @@ export class DocumentEdits {
       case "uv-region-rotated":
         this.#applyRemoteRotation(event.metadata);
         break;
+
+      case "normal-map-toggled":
+      case "normal-map-defaults-patched":
+      case "normal-map-zone-set":
+      case "normal-map-zone-deleted":
+        this.#normalMaps.apply(event);
+        break;
     }
+  }
+
+  #replay(
+    event: PixelBufferHookEvent
+  ): void {
+    if (isNormalMapCommand(event)) {
+      this.#normalMaps.apply(event);
+    }
+    this.#emitHook(event);
+  }
+
+  #commitNormalMap(
+    change: NormalMapChange | null
+  ): void {
+    if (change === null) {
+      return;
+    }
+
+    this.#normalMaps.apply(change.redo);
+    this.#recordHistory(change);
+    this.#emitHook(change.redo);
   }
 
   #commitTextureReplaced(
@@ -525,10 +599,12 @@ export class DocumentEdits {
     if (!this.#tracksUv(region)) {
       return;
     }
+    const normalMapZone = this.#normalMaps.removeZoneOf(region.id);
     if (!this.#isReplayingHistory) {
       this.#history.push({
         action: "uv-delete",
-        region: region.toJSON()
+        region: region.toJSON(),
+        ...(normalMapZone && { normalMapZone })
       });
     }
     this.#onBufferUpdated?.({

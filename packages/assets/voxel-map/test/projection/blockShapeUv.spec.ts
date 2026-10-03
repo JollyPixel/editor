@@ -11,9 +11,7 @@ import {
 import { DEFAULT_UV_SLOTS } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import {
-  blockShapeUv
-} from "../../src/shared/blockShapeUv.ts";
+import { blockShapeUv } from "#src/projection/blockShapeUv.ts";
 
 // CONSTANTS
 const kShapes = BlockShapeRegistry.createDefault();

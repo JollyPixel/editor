@@ -119,16 +119,25 @@ export class TextureImporter implements ReactiveController {
   ): Promise<boolean> {
     const name = suggestTextureName(fileName);
     const policy = this.#policy();
-    const choice = policy === "ask" ?
-      await showImportTextureDialog({ name }) :
-      policy;
+    const result = policy === "ask" ?
+      await showImportTextureDialog({
+        name,
+        size: {
+          x: source.width,
+          y: source.height
+        }
+      }) :
+      {
+        choice: policy,
+        uvSize: null
+      };
 
-    if (choice === "add") {
-      this.#requestAdd(name, source, origin);
+    if (result?.choice === "add") {
+      this.#requestAdd(name, source, origin, result.uvSize);
 
       return false;
     }
-    if (choice === null || !this.#textures.has(canvas)) {
+    if (result === null || !this.#textures.has(canvas)) {
       return false;
     }
 
@@ -141,7 +150,8 @@ export class TextureImporter implements ReactiveController {
   #requestAdd(
     name: string,
     source: HTMLCanvasElement,
-    origin: TextureImportOrigin
+    origin: TextureImportOrigin,
+    uvSize: number | null
   ): void {
     const release = this.busy.begin(origin, `Adding ${name}`);
     const work: Promise<unknown>[] = [];
@@ -154,6 +164,7 @@ export class TextureImporter implements ReactiveController {
           name,
           source,
           origin,
+          uvSize,
           respondWith(promise) {
             work.push(promise);
           }

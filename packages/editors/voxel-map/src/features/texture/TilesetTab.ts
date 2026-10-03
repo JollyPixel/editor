@@ -75,7 +75,7 @@ export class TilesetTab {
 
   #apply(): void {
     this.#uvBridge.setActiveTileset(
-      this.binding.definition.id,
+      this.binding.slot,
       this.binding.opened.tileset.tileSize
     );
   }

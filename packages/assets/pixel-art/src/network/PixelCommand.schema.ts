@@ -15,6 +15,11 @@ import {
   uvRegionSchema,
   uvSlotSchema
 } from "./UVLayout.schema.ts";
+import {
+  normalMapDataSchema,
+  normalMapSettingsPatchSchema,
+  normalMapZoneSchema
+} from "./NormalMap.schema.ts";
 
 // CONSTANTS
 const kVec2Schema = defineSchema({
@@ -127,7 +132,20 @@ const kPixelCommandMetadata: Record<
       face: { type: "null" },
       region: uvRegionSchema
     }
-  ]
+  ],
+  "normal-map-toggled": [{
+    config: { oneOf: [{ type: "null" }, normalMapDataSchema] }
+  }],
+  "normal-map-defaults-patched": [{
+    patch: normalMapSettingsPatchSchema
+  }],
+  "normal-map-zone-set": [{
+    zone: normalMapZoneSchema,
+    index: { type: "integer", minimum: 0 }
+  }],
+  "normal-map-zone-deleted": [{
+    regionId: { type: "string", minLength: 1 }
+  }]
 };
 
 function metadataSchema(
@@ -183,7 +201,8 @@ export const pixelSnapshotSchema: JSONSchema = {
     uvRegions: {
       type: "array",
       items: uvRegionSchema
-    }
+    },
+    normalMap: normalMapDataSchema
   },
   required: [
     "size",

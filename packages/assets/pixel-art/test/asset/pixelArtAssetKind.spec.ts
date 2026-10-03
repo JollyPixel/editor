@@ -302,7 +302,11 @@ describe("pixelArtAssetKind", () => {
       "uv-region-deleted",
       "uv-region-moved",
       "uv-region-state-changed",
-      "uv-region-rotated"
+      "uv-region-rotated",
+      "normal-map-toggled",
+      "normal-map-defaults-patched",
+      "normal-map-zone-set",
+      "normal-map-zone-deleted"
     ]);
   });
 

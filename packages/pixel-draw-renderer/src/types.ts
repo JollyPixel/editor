@@ -16,6 +16,8 @@ export type Mode =
   | "select"
   | "uv";
 
+export type TextureView = "albedo" | "normal";
+
 export type RotationDirection = "cw" | "ccw";
 
 export interface SelectionRect {

@@ -371,6 +371,7 @@ export class TextureEditor extends WorkspaceElement {
             texture-tabs="always"
             texture-add-label="Add tileset"
             textures-editable
+            normal-map
             .uvAccess=${this.uvAccess}
             .texturesAddable=${true}
             .texturesClosable=${false}

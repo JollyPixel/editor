@@ -11,7 +11,8 @@ import {
   PixelCanvasChangeTracker,
   type PixelCanvasChangeFlush
 } from "../change-tracking/PixelCanvasChangeTracker.ts";
-import type { PixelTextureSource } from "../change-tracking/types.ts";
+import { NormalMapTexture } from "./NormalMapTexture.ts";
+import type { PixelTextureSource } from "./types.ts";
 
 export type PixelCanvasTextureFlush = PixelCanvasChangeFlush;
 
@@ -39,6 +40,7 @@ export interface PixelCanvasTextureOptions {
 
 export type PixelCanvasTextureEvent = {
   resized: (event: { size: Vec2; }) => void;
+  "normal-map-toggled": (event: { enabled: boolean; }) => void;
 };
 
 export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
@@ -46,6 +48,8 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
 
   readonly #source: PixelTextureSource;
   readonly #changes: PixelCanvasChangeTracker;
+  #normal: NormalMapTexture | null = null;
+  #normalEnabled: boolean;
   #disposed = false;
 
   constructor(
@@ -72,6 +76,27 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
     this.#changes.on("consumed", this.#onConsumed);
     this.#changes.on("resized", this.#onResized);
     this.#changes.on("replaced", this.#onReplaced);
+
+    this.#normalEnabled = source.document.normalMap !== null;
+    source.document.on(
+      "normal-map-changed",
+      this.#onNormalMapChanged
+    );
+  }
+
+  normalTexture(): THREE.DataTexture | null {
+    if (
+      this.#disposed ||
+      this.#source.document.normalMap === null
+    ) {
+      return null;
+    }
+
+    this.#normal ??= new NormalMapTexture(
+      this.#source.document.normals
+    );
+
+    return this.#normal.texture;
   }
 
   consume(): SelectionRect | null {
@@ -87,6 +112,11 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
     this.#changes.off("resized", this.#onResized);
     this.#changes.off("replaced", this.#onReplaced);
     this.#changes.dispose();
+    this.#source.document.off(
+      "normal-map-changed",
+      this.#onNormalMapChanged
+    );
+    this.#disposeNormal();
     this.texture.dispose();
   }
 
@@ -103,6 +133,24 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
     this.#reallocate();
     this.emit("resized", event);
   };
+
+  readonly #onNormalMapChanged = (): void => {
+    const enabled = this.#source.document.normalMap !== null;
+    if (enabled === this.#normalEnabled) {
+      return;
+    }
+
+    this.#normalEnabled = enabled;
+    if (!enabled) {
+      this.#disposeNormal();
+    }
+    this.emit("normal-map-toggled", { enabled });
+  };
+
+  #disposeNormal(): void {
+    this.#normal?.dispose();
+    this.#normal = null;
+  }
 
   #reallocate(): void {
     this.texture.image = this.#source.textureCanvas();

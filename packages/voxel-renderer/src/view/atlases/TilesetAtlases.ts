@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { TilesetTexture } from "../../document/tilesets/types.ts";
+import type {
+  TilesetNormalTexture,
+  TilesetTexture
+} from "../../document/tilesets/types.ts";
 import { AtlasAverages } from "./AtlasAverages.ts";
 import { TilesetAtlas } from "./TilesetAtlas.ts";
 import { TilesetList } from "../../document/tilesets/TilesetList.ts";
@@ -35,7 +38,8 @@ export class TilesetAtlases {
 
   registerTexture(
     tilesetId: string,
-    texture: TilesetTexture
+    texture: TilesetTexture,
+    normal: TilesetNormalTexture | null = null
   ): TilesetAtlas {
     const declared = this.tilesets.get(tilesetId);
     if (declared === undefined) {
@@ -44,12 +48,8 @@ export class TilesetAtlases {
       );
     }
 
-    const previous = this.#atlases.get(tilesetId);
-    if (previous !== undefined && previous.texture !== texture) {
-      previous.texture.dispose();
-    }
-
-    const atlas = new TilesetAtlas(declared, texture);
+    const atlas = new TilesetAtlas(declared, texture, normal);
+    this.#atlases.get(tilesetId)?.disposeReplacedBy(atlas);
     this.#atlases.set(tilesetId, atlas);
     this.#version++;
 
@@ -61,7 +61,7 @@ export class TilesetAtlases {
     for (const [tilesetId, atlas] of this.#atlases) {
       const declared = this.tilesets.get(tilesetId);
       if (declared === undefined) {
-        atlas.texture.dispose();
+        atlas.dispose();
         this.#atlases.delete(tilesetId);
         changed.push(tilesetId);
       }
@@ -71,7 +71,7 @@ export class TilesetAtlases {
       ) {
         this.#atlases.set(
           tilesetId,
-          new TilesetAtlas(declared, atlas.texture)
+          new TilesetAtlas(declared, atlas.texture, atlas.normal)
         );
         changed.push(tilesetId);
       }
@@ -128,10 +128,10 @@ export class TilesetAtlases {
 
   dispose(): void {
     for (const atlas of this.#atlases.values()) {
-      atlas.texture.dispose();
+      atlas.dispose();
     }
     this.#atlases.clear();
-    this.#missing?.texture.dispose();
+    this.#missing?.dispose();
     this.#missing = null;
     this.#version++;
   }

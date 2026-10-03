@@ -132,6 +132,12 @@ the whole placed voxel.
 The loaded texture prepared from a tileset for rendering. The atlas keeps the
 same tile grid as its tileset.
 
+### Normal Atlas
+
+An optional second texture of an atlas, with the same layout, holding one
+surface direction per texel. Lighting reads it to give flat faces relief. The
+renderer only consumes it; the host paints or generates it.
+
 ## Meshing and visibility
 
 ### Mesh

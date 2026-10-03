@@ -65,6 +65,27 @@ While docked there is one active color. Every change, including an eyedropper pi
 
 Docking reads the current brush colors first, so colors set through `canvasManager.brush` are picked up. The swatches and the docked picker read the brush whenever the panel renders, so a direct brush write shows up on the next panel update. The panel does not persist the docked state; hosts store `colorDocked` themselves.
 
+## Normal map
+
+The `normal-map` attribute turns on the [normal map](../../../../pixel-draw-renderer/docs/normal/NormalMap.md) controls. It is off by default. Turn it on only where the document format stores normal map settings.
+
+| Control | Where | What it does |
+|---|---|---|
+| `Albedo | Normal` (`texture-view-switch`) | Bottom toolbar, trailing | Sets the active canvas's [`textureView`](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md#textureview--pixelsreadonly--unavailablemodes). Each texture keeps its own view. Not saved, not synced. |
+| Normal map settings (`normal-map-dock-button`) | Bottom toolbar, trailing | Toggles the normal map dock. Switching to the Normal view opens it. |
+| Export normal map (`export-normal-button`) | Bottom toolbar, after Export | Downloads `texture.normal.png` in the OpenGL convention (as stored) or DirectX (green inverted). Enabled only while the texture has normal map settings. |
+| Override normal map (`uv-override-normal-button`) | UV toolbar | Adds a zone for the selected UV region and opens the dock. Disabled while the texture has no normal map settings. |
+
+The Normal view is read-only for pixels: Paint, Erase and Fill are disabled in the mode rail (switching to Normal from one of them selects Move, and switching back restores it), a selection cannot move or change pixels, and Import, Clear texture and texture drop are disabled. Move, Select and UV work as usual.
+
+The dock (`part="normal-map-dock"`, a `<normal-map-dock>`) is a 220px strip under the stage, like the color picker dock. Both docks share one slot (`part="dock-slot"`), so only one is open at a time: opening one closes the other, and the slot resizes between them without showing both.
+
+- **Normal map**, at the top of the zones column: creates the settings with the defaults, or removes them. While it is off, the dock shows only the toggle and a short description. Notes carry an info icon, and zone warnings a warning icon.
+- **Zones**: *Texture defaults*, then one row per zone with the region colour and name. A zone whose UV region is missing is struck through. A zone that loses to a newer zone on shared pixels says which regions it shares them with. Each zone has a delete button. Selecting a row selects its UV region; selecting a UV region that has a zone selects its row.
+- **Settings**: the fields of the selected row. On a zone, a field that is not overridden reads muted and shows the texture default; editing it overrides it, and the reset button returns it to the default. **Off for this UV** flattens every island the region touches. A note tells when `border: "wrap"` falls back to `"clamp"`.
+
+Sliders preview while dragged through `normals.preview()` and record one history entry on release.
+
 ## Select toolbar and clipboard
 
 Select mode shows Copy, Paste, Rotate Clockwise, Flip Horizontal, Flip Vertical and Delete. Paste stays enabled without a selection. Other actions enable after a completed rectangle, shape or paste. Clipboard failures appear beside the toolbar in a polite live region and clear automatically or when Select mode exits.
@@ -138,7 +159,7 @@ The add button sits after the tabs and stays visible when they overflow. The edi
 |---|---|
 | `replace` (default) | Replace the active texture. No dialog. |
 | `add` | Emit `texture-add-request`. |
-| `ask` | Open a dialog: Replace current, Add as new, or Cancel. |
+| `ask` | Open a dialog: Replace current, Add as new, or Cancel. A "UV size of a new texture" select (`part="import-uv-size"`) offers 16 to 256 px, 16 by default; sizes larger than the image are disabled, and the select is left out when the image is smaller than 16 px. |
 
 Paste is not affected: it always floats a selection into the active texture. The drop overlay reads "Drop image to replace texture", "Drop image to add texture" or "Drop image" according to the policy.
 
@@ -211,7 +232,7 @@ see [KeyBindingMap](../../../../controls/docs/key-binding-map.md).
 | `activeTextureId` | The active texture id, or `null` before the first texture. Setting it switches texture; unknown ids throw. |
 | `texture-import-policy` attribute / `textureImportPolicy` property (`"replace" | "add" | "ask"`, default `"replace"`) | See [texture-import-policy](#texture-import-policy). Reflects to the attribute; unknown values fall back to `"replace"`. |
 | `texture-change` event | `detail: { id, source }`. Fires whenever the active texture changes from one texture to another, so not for the first texture. `source` is `"user"` for a tab click and `"api"` for `activeTextureId`, `addTexture()` or removing the active texture. |
-| `texture-add-request` event | `detail: { name, source, origin, respondWith }`. `name` is the file name without its extension, `source` the decoded `HTMLCanvasElement`, `origin` is `"import"` or `"drop"`. See [Import progress](#import-progress) for `respondWith`. |
+| `texture-add-request` event | `detail: { name, source, origin, uvSize, respondWith }`. `name` is the file name without its extension, `source` the decoded `HTMLCanvasElement`, `origin` is `"import"` or `"drop"`. `uvSize` is the UV size picked in the `ask` dialog, `null` when no dialog was shown or it had no select; the host decides what to do with it, such as creating a starter UV region. See [Import progress](#import-progress) for `respondWith`. |
 | `texture-close-request` event | `detail: { id }`. Fires from a tab close button or middle click. |
 | `texture-create-request` event | No detail. Fires from the add button. Distinct from `texture-add-request`, which carries an imported image. |
 | `texture-edit-request` event | `detail: { id }`. Fires from a tab edit button and does not switch texture. |
@@ -226,6 +247,7 @@ see [KeyBindingMap](../../../../controls/docs/key-binding-map.md).
 | `uv-access` attribute / `uvAccess` property (`"edit" \| "view" \| "none"`, default `"edit"`) | Exposes UV editing, visibility toggles only, or nothing. See [UV access](#uv-access). Reflects to the attribute; unknown values fall back to `"edit"`. |
 | `color-docked` attribute / `colorDocked` property | Opens the docked color picker. Off by default. Reflects to the attribute. |
 | `color-docked-change` event | Fires when the user toggles the docked picker; `detail` is the new `boolean`. |
+| `normal-map` attribute / `normalMap` property | Shows the normal map controls. Off by default. Turning it off switches every texture back to the Albedo view. See [Normal map](#normal-map). |
 | `theme` attribute / property (`"light" \| "dark" \| "auto"`, default `"auto"`) | Selects the palette. `"auto"` follows the theme scope the panel is embedded in (`jolly-scope`, or any themed ancestor), falling back to `prefers-color-scheme` when there is none; `"light"`/`"dark"` force one regardless. Reflects to the attribute. |
 | `resolvedTheme` | The palette in use, `"light"` or `"dark"`: `theme`, or what `"auto"` resolves to. |
 | `theme-change` event | `detail` is the new `resolvedTheme`. Fires when `theme` changes, and when `prefers-color-scheme` changes under `"auto"`. |
@@ -238,7 +260,7 @@ Destruction is automatic: `disconnectedCallback()` destroys every texture canvas
 
 ## Sub-elements
 
-Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`, with `mode`, `options` and `uvAccess` properties; it emits `mode-change` with a `Mode` and `tool-option-change` with a `ToolOption` `{ name, value }`, where `name` is `pickColor`, `fillGlobal`, `fillUvClip` or `selectShape`), `ColorPickerRail` (`<color-picker-rail>`, with a `docked` property and a `dock-toggle` event), `ColorSwatch` (`<color-swatch>`, wraps `jolly-color-picker` in a popover, with a `disabled` property) and `ColorDock` (`<color-dock>`, a wide `jolly-color-picker` that emits `color-change`). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
+Also exported from `@jolly-pixel/editor.pixel-art`, in case you want to compose your own layout instead of the full panel: `ModeRail` (`<mode-rail>`, with `mode`, `options`, `uvAccess` and `unavailableModes` properties, the last one a `ReadonlySet<Mode>` of modes to disable, such as `PixelArtCanvas.unavailableModes`; it emits `mode-change` with a `Mode` and `tool-option-change` with a `ToolOption` `{ name, value }`, where `name` is `pickColor`, `fillGlobal`, `fillUvClip` or `selectShape`), `ColorPickerRail` (`<color-picker-rail>`, with a `docked` property and a `dock-toggle` event), `ColorSwatch` (`<color-swatch>`, wraps `jolly-color-picker` in a popover, with a `disabled` property), `ColorDock` (`<color-dock>`, a wide `jolly-color-picker` that emits `color-change`) and `NormalMapDock` (`<normal-map-dock>`, which edits the normal map settings of its `pixelDocument` directly and renders only while its `open` property is set). They're fully controlled (props in, events out) — see `PixelDrawPanel.ts` for how they're wired together.
 
 > [!IMPORTANT]
 > `lit` and `@jolly-pixel/ui` are real `dependencies` of this package (not dev-only) — they ship at runtime for anyone importing it.

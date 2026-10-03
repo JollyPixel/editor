@@ -6,7 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import type { BrushStore } from "../../../state/index.ts";
-import { BlockUv } from "../uv/BlockUv.ts";
+import type { SlotRegionIds } from "./SlotRegionIds.ts";
 
 /**
  * Keeps block-library and UV-map selection aligned.
@@ -14,14 +14,17 @@ import { BlockUv } from "../uv/BlockUv.ts";
 export class BlockUvSelectionSync {
   #uv: UVMap;
   #brush: BrushStore;
+  #regions: () => SlotRegionIds | null;
   #unsubscribe: () => void;
 
   constructor(
     uv: UVMap,
-    brush: BrushStore
+    brush: BrushStore,
+    regions: () => SlotRegionIds | null
   ) {
     this.#uv = uv;
     this.#brush = brush;
+    this.#regions = regions;
     this.#uv.on("selection-changed", this.#onSelectionChanged);
     this.#unsubscribe = this.#brush.subscribe(
       "blockChange",
@@ -45,15 +48,15 @@ export class BlockUvSelectionSync {
       return;
     }
 
-    const blockId = BlockUv.blockIdOf(event.selectedRegionId);
+    const blockId = this.#regions()?.blockIdOf(event.selectedRegionId) ?? null;
     if (blockId !== null) {
       this.#brush.blockId = blockId;
     }
   };
 
   readonly #onSelectedBlockChange = (id: number): void => {
-    const uvId = BlockUv.regionIdOf(id);
+    const uvId = this.#regions()?.regionIdOf(id) ?? null;
 
-    this.#uv.select(this.#uv.get(uvId) ? uvId : null);
+    this.#uv.select(uvId !== null && this.#uv.get(uvId) ? uvId : null);
   };
 }

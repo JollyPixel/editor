@@ -12,6 +12,8 @@ import type {
   PixelDocument,
   SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
+import { TilesetIslands } from "@jolly-pixel/asset.voxel-map/client";
+import { NormalMapTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/index.ts";
@@ -36,6 +38,8 @@ export class TilesetAtlasBridge {
   readonly #blocks: BlockWriter;
   readonly #scheduler: (callback: () => void) => void;
   readonly #unsubscribe: () => void;
+  readonly #releaseIslands: () => void;
+  #normalTexture: NormalMapTexture | null = null;
   #definition: TilesetDefinition;
   #atlas: TilesetAtlas | null = null;
   #dirty: SelectionRect | null = null;
@@ -67,6 +71,18 @@ export class TilesetAtlasBridge {
     this.syncAlphaModes();
   };
 
+  readonly #onNormalMapChanged = (): void => {
+    const enabled = this.#pixels.normalMap !== null;
+    if (enabled !== (this.#normalTexture !== null)) {
+      this.#needsFullSync = true;
+      this.#schedule();
+    }
+  };
+
+  readonly #onNormalsChanged = (): void => {
+    this.#view.requestFrame();
+  };
+
   readonly #tick = (): void => {
     this.#scheduled = false;
     if (!this.#running) {
@@ -90,12 +106,19 @@ export class TilesetAtlasBridge {
     this.#blocks = options.blocks;
     this.#scheduler = options.scheduler ??
       ((callback) => requestAnimationFrame(callback));
+    this.#releaseIslands = new TilesetIslands({
+      tileset: this.#tileset,
+      shapes: this.#view.shapes
+    }).attachTo(this.#pixels);
 
     this.#pixels.on("changed", this.#onChanged);
+    this.#pixels.on("normal-map-changed", this.#onNormalMapChanged);
     this.#pixels.on("resized", this.#onSurfaceChanged);
     this.#pixels.on("replaced", this.#onSurfaceChanged);
     this.#tileset.on("loaded", this.#onSurfaceChanged);
     this.#tileset.on("command", this.#onTilesetCommand);
+    this.#pixels.normals.on("changed", this.#onNormalsChanged);
+    this.#pixels.normals.on("resized", this.#onNormalsChanged);
     this.#unsubscribe = this.#mapDocument.subscribe(
       "reset",
       this.#onReset
@@ -116,6 +139,7 @@ export class TilesetAtlasBridge {
   }
 
   syncToThree(): void {
+    this.#syncNormalTexture();
     this.#registerAtlas();
     if (this.#atlas === null) {
       return;
@@ -137,11 +161,16 @@ export class TilesetAtlasBridge {
   destroy(): void {
     this.#running = false;
     this.#pixels.off("changed", this.#onChanged);
+    this.#pixels.off("normal-map-changed", this.#onNormalMapChanged);
     this.#pixels.off("resized", this.#onSurfaceChanged);
     this.#pixels.off("replaced", this.#onSurfaceChanged);
     this.#tileset.off("loaded", this.#onSurfaceChanged);
     this.#tileset.off("command", this.#onTilesetCommand);
+    this.#pixels.normals.off("changed", this.#onNormalsChanged);
+    this.#pixels.normals.off("resized", this.#onNormalsChanged);
     this.#unsubscribe();
+    this.#releaseIslands();
+    this.#disposeNormalTexture();
     this.#atlas = null;
   }
 
@@ -201,10 +230,12 @@ export class TilesetAtlasBridge {
     const cols = Math.floor(size.x / tileSize);
     const rows = Math.floor(size.y / tileSize);
     const current = this.#atlas?.def;
+    const normal = this.#normalTexture?.texture ?? null;
     const unchanged = current !== undefined &&
       current.tileSize === tileSize &&
       current.cols === cols &&
-      current.rows === rows;
+      current.rows === rows &&
+      this.#atlas?.normal === normal;
     if (unchanged || cols === 0 || rows === 0) {
       return;
     }
@@ -223,9 +254,25 @@ export class TilesetAtlasBridge {
         ...source,
         tileSize
       },
-      texture
+      texture,
+      normal === null ? {} : { normal }
     );
     this.#atlas = this.#view.atlases.atlas(definition.id);
+  }
+
+  #syncNormalTexture(): void {
+    if (this.#pixels.normalMap !== null) {
+      this.#normalTexture ??= new NormalMapTexture(this.#pixels.normals);
+
+      return;
+    }
+
+    this.#disposeNormalTexture();
+  }
+
+  #disposeNormalTexture(): void {
+    this.#normalTexture?.dispose();
+    this.#normalTexture = null;
   }
 }
 

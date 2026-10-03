@@ -14,12 +14,14 @@ import {
 } from "../shared/railButton.ts";
 import { showClearTextureDialog } from "../textures/clearTextureDialog.ts";
 import { isInputElement } from "../shared/dom.ts";
+import { PngFile } from "../shared/PngFile.ts";
 import type { TextureImporter } from "../textures/import/TextureImporter.ts";
 
 export interface HistoryFileToolbarOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
-  trailing: TemplateResult | typeof nothing;
+  exportExtra: TemplateResult | typeof nothing;
+  trailing: readonly (TemplateResult | typeof nothing)[];
 }
 
 async function clearTexture(
@@ -60,15 +62,7 @@ async function exportPng(
     data
   });
 
-  const url = URL.createObjectURL(
-    new Blob([png], { type: "image/png" })
-  );
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "texture.png";
-  anchor.click();
-
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  new PngFile("texture.png", png).download();
 }
 
 function openFilePicker(
@@ -87,8 +81,9 @@ function openFilePicker(
 export function renderHistoryFileToolbar(
   options: HistoryFileToolbarOptions
 ) {
-  const { importer, trailing } = options;
+  const { importer, exportExtra, trailing } = options;
   const canvas = options.canvas();
+  const readOnly = canvas?.pixelsReadOnly ?? false;
   const importing = importer.busy.state?.origin === "import";
 
   function onFileSelected(
@@ -125,7 +120,7 @@ export function renderHistoryFileToolbar(
         label: "Import texture",
         tooltip: "Import",
         icon: importing ? html`<jolly-spinner></jolly-spinner>` : "import",
-        disabled: importing,
+        disabled: importing || readOnly,
         onClick: openFilePicker
       })}
       ${renderRailButton({
@@ -139,14 +134,16 @@ export function renderHistoryFileToolbar(
           }
         }
       })}
+      ${exportExtra}
       ${RAIL_DIVIDER}
       ${renderRailButton({
         part: "clear-texture-button",
         label: "Clear texture",
         icon: "clearTexture",
+        disabled: readOnly,
         onClick: (event) => void clearTexture(event, options.canvas)
       })}
-      ${trailing === nothing ? nothing : html`${RAIL_DIVIDER}${trailing}`}
+      ${trailing.map((group) => (group === nothing ? nothing : html`${RAIL_DIVIDER}${group}`))}
       <input
         class="file-input" part="file-input"
         type="file" accept="image/png,image/*"

@@ -8,6 +8,8 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { VoxelView } from "../../src/view/VoxelView.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
+import { makeAtlasDef } from "../helpers/atlas.ts";
+import { mockTexture } from "../helpers/mockTexture.ts";
 import {
   chunkMeshes,
   makeView,
@@ -240,5 +242,37 @@ describe("VoxelView - tile minification", () => {
 
     assert.equal(view.rendering.tileMinification, "nearest");
     assert.notEqual(materialsOf(view)[0], before);
+  });
+});
+
+describe("VoxelView - normal textures", () => {
+  function normalNodeOf(
+    material: THREE.Material
+  ): unknown {
+    return (material as { normalNode?: unknown; }).normalNode ?? null;
+  }
+
+  it("lights chunks with the normal texture loaded next to the atlas", () => {
+    const view = meshedGround();
+    view.flush();
+    assert.equal(normalNodeOf(materialsOf(view)[0]), null);
+
+    view.loadTileset(makeAtlasDef(), mockTexture(), { normal: mockTexture() });
+    view.flush();
+
+    assert.notEqual(normalNodeOf(materialsOf(view)[0]), null);
+  });
+
+  it("drops the relief when the tileset is reloaded without one", () => {
+    const view = meshedGround();
+    const texture = mockTexture();
+    view.loadTileset(makeAtlasDef(), texture, { normal: mockTexture() });
+    view.flush();
+
+    view.loadTileset(makeAtlasDef(), texture);
+    view.flush();
+
+    assert.equal(view.atlases.atlas().normal, null);
+    assert.equal(normalNodeOf(materialsOf(view)[0]), null);
   });
 });

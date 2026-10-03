@@ -4,9 +4,11 @@ import {
   svg,
   type TemplateResult
 } from "lit";
+import { registerIcon } from "@jolly-pixel/ui/icon";
 
 // Import Internal Dependencies
-import { registerIcon } from "@jolly-pixel/ui/icon";
+import type { NormalMapIconName } from "./normalMapIcons.ts";
+import "./normalMapIcons.ts";
 
 export type IconName =
   | "move"
@@ -41,7 +43,8 @@ export type IconName =
   | "chevronDown"
   | "label"
   | "eye"
-  | "dockPicker";
+  | "dockPicker"
+  | NormalMapIconName;
 
 registerIcon("move", svg`
     <path

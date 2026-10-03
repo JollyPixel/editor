@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   applyColorGroups,
+  applyNormalMapCommand,
   decodePixelBytes,
   Fill,
   groupPositionsByColor,
@@ -66,6 +67,7 @@ export function applyCommandToBuffer(
 
     case "uv-region-deleted":
       buffer.uvRegions.remove(cmd.metadata.id);
+      buffer.normalMap = buffer.normalMap?.withoutZone(cmd.metadata.id) ?? null;
       break;
 
     case "uv-region-moved": {
@@ -104,5 +106,12 @@ export function applyCommandToBuffer(
       }
       break;
     }
+
+    case "normal-map-toggled":
+    case "normal-map-defaults-patched":
+    case "normal-map-zone-set":
+    case "normal-map-zone-deleted":
+      buffer.normalMap = applyNormalMapCommand(buffer.normalMap, cmd);
+      break;
   }
 }

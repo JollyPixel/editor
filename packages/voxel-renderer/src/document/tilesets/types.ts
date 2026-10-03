@@ -101,3 +101,5 @@ export interface AtlasSize {
 export type TilesetImage = HTMLImageElement | HTMLCanvasElement;
 
 export type TilesetTexture = THREE.Texture<TilesetImage>;
+
+export type TilesetNormalTexture = THREE.Texture<AtlasSize>;

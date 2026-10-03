@@ -28,6 +28,7 @@ interface MaterialGroupJSON {
   metalness?: number;
   emissive?: string;
   emissiveIntensity?: number;
+  normalScale?: number;
 }
 
 type MaterialGroupFinish = Required<Omit<MaterialGroupJSON, "id">>;
@@ -42,6 +43,7 @@ class MaterialGroup {
   readonly metalness: number;
   readonly emissive: string;
   readonly emissiveIntensity: number;
+  readonly normalScale: number;
 
   with(finish: Partial<MaterialGroupFinish>): MaterialGroup;
   applyTo(material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial): void;
@@ -57,6 +59,7 @@ class MaterialGroup {
 | `metalness` | `0` | `0` to `1`. |
 | `emissive` | `"#000000"` | A `#rrggbb` colour, stored in lower case. |
 | `emissiveIntensity` | `1` | `0` or more. |
+| `normalScale` | `1` | `0` or more. Strength of the tileset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns the relief off. |
 
 The instance is frozen. The constructor throws `RangeError` for a value out
 of bounds; `parse()` returns `null` instead. `with()` returns a new group.
@@ -66,12 +69,15 @@ of bounds; `parse()` returns `null` instead. `with()` returns a new group.
 A block whose group is defined is drawn with a `MeshStandardMaterial` carrying
 the finish, even when the view's `rendering.material` is `"lambert"`. Blocks without a
 group, or naming a group the document does not define, keep the view's
-material. `applyTo()` writes only the emissive fields on a Lambert material.
+material. `applyTo()` writes only the emissive fields and `normalScale` on a
+Lambert material.
 
 The `rendering.customizer` runs after the finish is applied, so host code can
 still override it when a material is created. Editing a finish afterwards
-updates the existing materials in place, without the customizer. Defining or
-removing a group rebuilds every chunk.
+updates the existing materials in place, without the customizer, except when
+`normalScale` reaches or leaves `0` on a tileset with a normal atlas: those
+materials are rebuilt with or without their normal node. Defining or removing
+a group rebuilds every chunk.
 
 A metallic finish reflects its environment. With no `scene.environment`, a
 metalness near `1` renders dark.

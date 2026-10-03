@@ -73,7 +73,12 @@ function dropTarget(
   canvas: PixelArtCanvas | null
 ): DropTarget | null {
   const stage = event.currentTarget;
-  if (!canvas || !(stage instanceof HTMLElement) || isInteractiveTarget(event)) {
+  if (
+    !canvas ||
+    canvas.pixelsReadOnly ||
+    !(stage instanceof HTMLElement) ||
+    isInteractiveTarget(event)
+  ) {
     return null;
   }
 

@@ -82,23 +82,51 @@ export const panelStyles = css`
     overflow: hidden;
   }
 
-  .color-dock {
-    flex: 0 0 140px;
-    height: 140px;
-    margin-bottom: -140px;
-    visibility: hidden;
-    transition:
-      margin-bottom 0.2s cubic-bezier(0.2, 0, 0, 1),
-      visibility 0.2s;
+  .dock-slot {
+    position: relative;
+    flex: 0 0 auto;
+    height: 0;
+    transition: height 0.2s cubic-bezier(0.2, 0, 0, 1);
   }
 
-  .color-dock[open] {
-    margin-bottom: 0;
+  .dock-slot:has(> .color-dock[open]) {
+    height: 140px;
+  }
+
+  .dock-slot:has(> .normal-map-dock[open]) {
+    height: 220px;
+  }
+
+  .color-dock,
+  .normal-map-dock {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    visibility: hidden;
+    transition: visibility 0.2s;
+  }
+
+  .color-dock {
+    height: 140px;
+  }
+
+  .normal-map-dock {
+    height: 220px;
+  }
+
+  .dock-slot > [open] {
     visibility: visible;
   }
 
+  .dock-slot:has(> [open]) > :not([open]) {
+    transition: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .color-dock {
+    .dock-slot,
+    .color-dock,
+    .normal-map-dock {
       transition: none;
     }
   }
@@ -363,6 +391,47 @@ export const panelStyles = css`
   .uv-state-option:hover,
   .uv-state-option:focus-visible {
     background: var(--color-bg-hover);
+  }
+
+  .view-switch {
+    display: flex;
+    padding: 2px;
+    border-radius: 5px;
+    background: var(--color-divider);
+    gap: 2px;
+  }
+
+  .view-option {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px 0 6px;
+    gap: 4px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .view-option:hover:not(:disabled, [aria-checked="true"]) {
+    color: var(--color-text);
+  }
+
+  .view-option[aria-checked="true"] {
+    background: var(--color-bg-control);
+    color: var(--color-text-on-accent);
+  }
+
+  .overlay-toolbar .view-option .icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .view-option:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
   }
 
   .overlay-toolbar-divider {

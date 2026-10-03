@@ -61,7 +61,8 @@ export const materialGroupSchema = defineSchema({
     roughness: kUnitSchema,
     metalness: kUnitSchema,
     emissive: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-    emissiveIntensity: { type: "number", minimum: 0 }
+    emissiveIntensity: { type: "number", minimum: 0 },
+    normalScale: { type: "number", minimum: 0 }
   },
   required: ["id"]
 });
