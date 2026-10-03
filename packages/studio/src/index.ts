@@ -47,7 +47,7 @@ async function boot(): Promise<void> {
   const studio = required("jolly-studio");
   await studio.attach({
     console: editorConsole,
-    catalog: connection.catalog,
+    share: connection.share,
     editors: createEditorRegistry(manifest, connection.editorQuery),
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",

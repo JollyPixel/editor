@@ -4,10 +4,12 @@ import type { PeerIdentity } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import type { LaunchSource } from "../launch/index.ts";
 import type { EditorSessionClient } from "../session/EditorSession.ts";
+import type { CatalogOpener } from "../session/openCatalog.ts";
 
 export interface StandaloneConnection {
   identity: PeerIdentity;
   client: EditorSessionClient;
+  openCatalog?: CatalogOpener;
   workspace?: SessionWorkspace;
 }
 

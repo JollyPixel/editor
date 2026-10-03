@@ -4,5 +4,6 @@ export {
   CHANNEL_TRANSPORT_TAG,
   isChannelTransportMessage,
   type ChannelPort,
+  type ChannelSocketPortFactory,
   type ChannelTransportMessage
 } from "./channel/protocol.ts";

@@ -180,6 +180,7 @@ interface MountStandaloneOptions {
 interface StandaloneConnection {
   identity: PeerIdentity;
   client: EditorSessionClient;
+  openCatalog?: CatalogOpener;
 }
 ```
 
@@ -314,7 +315,7 @@ await mountStandalone(VoxelMapEditor, {
 | `openSharedTabWorkspace({ project, name? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
 | `StandaloneWorkspace` | the members below that every workspace shares: `persistent`, `connect()`, `launchSources()`, `reset()`, `close()` |
 | `connect()` | a guest identity, a local or BroadcastChannel client and the workspace |
-| `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; a shared follower reads the owner's catalog only when its source is read |
+| `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; a shared follower reads the owner's catalog only when its source is read, and its next `connect()` reuses that catalog unless a connection was already opened |
 | `storage` / `persistent` | direct workspaces expose both; shared workspaces expose `persistent` |
 | `backend` | the `AssetBackend` on a direct `OfflineWorkspace` |
 | `reset()` | closes the owner workspace and deletes its database; unavailable in a follower tab |
@@ -430,12 +431,13 @@ new HostMessageLaunchSource({
 
 A launch that came this way carries a `ShellChannel` bound to the parent and
 to the origin of its answer. The channel posts commands back and receives
-only the shell's [appearance](#appearance), never a reply:
+the shell's [appearance](#appearance), never a reply to a command:
 
 ```ts
 class ShellChannel {
   readonly origin: string;
   readonly appearance: Appearance | null;
+  readonly catalog: ShellCatalog | null;
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
   onAppearance(
@@ -456,6 +458,38 @@ A shell that listens on its own window narrows what a frame posts with
 side: it returns the launch message, without an invalid `appearance`, or
 `undefined`. `READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE`
 and `APPEARANCE_MESSAGE_TYPE` name the four messages.
+
+### Shell catalog
+
+A shell can transfer a `MessagePort` with `jolly-launch`. The channel then has
+a `ShellCatalog` as `catalog`, and the session opens its `CatalogClient` there
+instead of joining the catalog room on its own client. `ShellCatalog` is a
+`CatalogRoomSource`, so `CatalogClient.connect(catalog, options?)` opens one;
+each gets its own port, sent with `{ type: "jolly-catalog-open" }` on the
+launch port. Without a port, `catalog` is `null` and the session opens its
+catalog as before.
+
+The shell opens its own catalog with `CatalogShare.open(client, options?)`,
+which takes the same `CatalogConnectOptions` as `CatalogClient.connect`,
+destroys `client` on failure and exposes the opened catalog as
+`share.catalog`. It then serves each launch port:
+
+```ts
+const share = await CatalogShare.open(client, { timeoutMs: 5_000 });
+const channel = new MessageChannel();
+const stop = share.serve(channel.port1);
+frame.contentWindow.postMessage(
+  launchMessage(target, appearance),
+  origin,
+  [channel.port2]
+);
+```
+
+Each port gets a snapshot of the shell's catalog, then every message of its
+room. A command a frame sends goes out on that room, and its reply goes back
+to the port that sent it. `stop()` closes the launch port and every port
+opened through it; `share.dispose()` stops relaying for every frame and
+disposes `share.catalog`.
 
 A launch read from the query string or the injected element has no channel,
 so `context.shell` is `null` and an editor hides what only a shell can do.

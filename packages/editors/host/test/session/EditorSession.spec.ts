@@ -17,6 +17,7 @@ import {
   CATALOG_APPLIED,
   CATALOG_EXPORT,
   CATALOG_ROOM,
+  CatalogClient,
   CatalogUnavailableError,
   type CatalogExportCommand
 } from "@jolly-pixel/asset-server/client";
@@ -112,6 +113,44 @@ describe("EditorSession.connect", () => {
         catalogTimeoutMs: 1
       }),
       CatalogUnavailableError
+    );
+    assert.strictEqual(client.destroyed, true);
+  });
+
+  test("uses the catalog its opener resolves without opening another", async() => {
+    const client = new FakeClient();
+    const opening = CatalogClient.connect(client);
+    client.fakeRoom(CATALOG_ROOM).receive(snapshotMessage([kMap], {}));
+    const catalog = await opening;
+
+    const session = await EditorSession.connect({
+      launch: new EditorLaunch(new AssetId("map")),
+      identity: kIdentity,
+      client,
+      openCatalog: () => Promise.resolve(catalog),
+      kinds: [],
+      accepts: "voxelmap"
+    });
+
+    assert.strictEqual(session.catalog, catalog);
+    assert.strictEqual(client.fakeRoom(CATALOG_ROOM).joins, 1);
+    session.dispose();
+  });
+
+  test("closes the client when its catalog opener rejects", async() => {
+    const client = new FakeClient();
+    const failure = new Error("no catalog");
+
+    await assert.rejects(
+      EditorSession.connect({
+        launch: new EditorLaunch(new AssetId("map")),
+        identity: kIdentity,
+        client,
+        openCatalog: () => Promise.reject(failure),
+        kinds: [],
+        accepts: "voxelmap"
+      }),
+      failure
     );
     assert.strictEqual(client.destroyed, true);
   });

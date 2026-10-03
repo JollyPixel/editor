@@ -1,5 +1,7 @@
 export * from "./launch/EditorLaunch.ts";
 export * from "./launch/ShellChannel.ts";
+export * from "./launch/catalog/CatalogShare.ts";
+export * from "./launch/catalog/ShellCatalog.ts";
 export type { LaunchSource } from "./launch/sources/LaunchSource.ts";
 export * from "./launch/sources/HostMessageLaunchSource.ts";
 export * from "./launch/sources/LastOpenedLaunchSource.ts";

@@ -62,10 +62,11 @@ state store folded into `state`. `registerAssetRooms` sets it.
 
 ## Commands
 
-A room overwrites `clientId` on each object message with the sender's
-server-side id, lowers a numeric `timestamp` ahead of the server clock to the
-server time, validates the message against the kind's `commands.protocol`
-and arbitrates it through its live protocol. A client-supplied `clientId` is
+The network server validates each message against the kind's
+`commands.protocol` and drops one that does not match before the room sees
+it. The room overwrites `clientId` with the sender's server-side id, lowers a
+numeric `timestamp` ahead of the server clock to the server time, and
+arbitrates the command through its live protocol. A client-supplied `clientId` is
 never trusted. Conflicts are decided in server order: the event version, not
 `timestamp`, is what the conflict tracker records.
 An accepted command is appended to `events`, then committed with its event

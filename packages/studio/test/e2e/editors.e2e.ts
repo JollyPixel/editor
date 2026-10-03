@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import { expect, test } from "@playwright/test";
 import { treeRow } from "@jolly-pixel/e2e";
+import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import {
   assetAction,
   assetMenu,
+  assetRows,
   editorFrames,
   expectEditorReady,
   homeTab,
@@ -13,6 +15,7 @@ import {
   openFromHome,
   openShell,
   renameField,
+  SEED_ROW_COUNT,
   TEXTURE
 } from "./support/shell.ts";
 
@@ -28,6 +31,25 @@ test("opens a pixel-art texture in the pixel-art editor page", async({ page }) =
   const editor = frame.contentFrame();
   await expectEditorReady(editor);
   await expect(editor.locator("pixel-draw-panel")).toBeVisible();
+});
+
+test("editor frames read the catalog through the shell", async({ page }) => {
+  const catalogJoins: unknown[] = [];
+  page.on("websocket", (socket) => {
+    socket.on("framesent", ({ payload }) => {
+      const envelope = typeof payload === "string" ? JSON.parse(payload) : null;
+      if (envelope?.room === CATALOG_ROOM && envelope.kind === "join") {
+        catalogJoins.push(envelope);
+      }
+    });
+  });
+  await page.goto("/?username=Guest");
+  await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
+
+  await treeRow(page, MODEL).dblclick();
+  await expectEditorReady(editorFrames(page).contentFrame());
+
+  expect(catalogJoins).toHaveLength(1);
 });
 
 test("creates a map, a model and a texture from the tree and opens each", async({ page }) => {

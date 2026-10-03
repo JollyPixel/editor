@@ -373,8 +373,8 @@ commands: {
 }
 ```
 
-The room sets `clientId` on the payload to the sender's server-side id,
-validates it against `commands.protocol`, arbitrates it,
+The network server validates the payload against `commands.protocol`, then
+the room sets `clientId` to the sender's server-side id, arbitrates it,
 appends `arbitration.command` under `commands.eventType`, then calls
 `arbitration.commit(eventVersion)` and broadcasts. `commit` runs only after the append
 lands, so a conflict tracker never records a command the store refused. The

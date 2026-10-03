@@ -54,5 +54,5 @@ planned in [PERFORMANCE.md](./PERFORMANCE.md).
 - **Editor commands in the studio console.** A framed editor still registers
   its namespaces (`brush`, `keybind`) on `context.commands`, but only the
   shell's console shows, so they are out of reach inside the studio. Reaching
-  them needs a request and response channel, which
-  [ADR-0004](./docs/adr/0004-the-shell-channel-is-one-way.md) defers.
+  them needs a request and response channel, such as a port in the launch
+  like the catalog's ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).

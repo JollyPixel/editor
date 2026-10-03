@@ -9,8 +9,10 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import type { EditorConsole } from "@jolly-pixel/editor.host";
+import type {
+  CatalogShare,
+  EditorConsole
+} from "@jolly-pixel/editor.host";
 import {
   LogQueue,
   type LogEntry
@@ -27,7 +29,7 @@ import type {
 import "./home/StudioHome.ts";
 
 export interface StudioOptions {
-  catalog: CatalogClient;
+  share: CatalogShare;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
   editors: EditorRegistry;
   console?: EditorConsole;
@@ -77,8 +79,9 @@ export class Studio extends LitElement {
     }
 
     this.#session?.dispose();
+    const { catalog } = options.share;
     const session = new StudioSession({
-      catalog: options.catalog,
+      catalog,
       editors: options.editors,
       tabs: {
         strip: this._strip,
@@ -86,7 +89,8 @@ export class Studio extends LitElement {
         confirmEvict: options.confirmEvict
       },
       frames: {
-        container: this._frames
+        container: this._frames,
+        share: options.share
       },
       onTabsChange: this.#syncOpenTabs,
       onToggleConsole: () => {
@@ -95,7 +99,7 @@ export class Studio extends LitElement {
     });
     this.#session = session;
     this._assets = {
-      catalog: options.catalog,
+      catalog,
       kinds: session.kinds
     };
     await session.restoreTabs();

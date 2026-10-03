@@ -156,9 +156,9 @@ const client = new Client({
 
 | Member | Role |
 |---|---|
-| `ChannelTransportHost({ port, open, id? })` | answers the connections addressed to `id` (a random UUID by default) |
+| `ChannelTransportHost({ port, open, id?, socketPort? })` | answers the connections addressed to `id` (a random UUID by default) |
 | `host.close()` | closes every relayed socket and stops listening; the port stays open |
-| `ChannelTransport({ port, host })` | opens connections served by the host with that id |
+| `ChannelTransport({ port, host, socketPort? })` | opens connections served by the host with that id |
 | `transport.connect()` | returns the `ClientSocket` a `Client` expects; throws once the transport is closed |
 | `transport.close(event?)` | closes every open socket with `event` (code `1001` by default) and stops listening |
 
@@ -167,3 +167,24 @@ const client = new Client({
 A port is anything with `postMessage` and `message` listeners: a `BroadcastChannel`, a `MessagePort` (started for you) or a `Worker`. Transport messages carry `CHANNEL_TRANSPORT_TAG`, so the port can carry other messages too, and `isChannelTransportMessage` tells them apart. It checks the whole message shape, so a tagged message with a missing or mistyped field is ignored.
 
 The transport does not find its host. Share `host.id` over the same port, or any other way, before connecting. A socket opened before the host listens never opens.
+
+### One port per socket
+
+A `BroadcastChannel` delivers every message to every context listening on it, so with one shared channel each tab receives, and pays to deserialize, the traffic of every other tab's sockets. Pass `socketPort` to give each socket its own port: only the connect message then travels on `port`, and everything else goes over the port that `socketPort(socketId)` opens.
+
+```ts
+const socketPort = (socket: string) => new BroadcastChannel(`workspace:${socket}`);
+
+const host = new ChannelTransportHost({
+  port: new BroadcastChannel("workspace"),
+  open: () => loopback.connect(),
+  socketPort
+});
+const transport = new ChannelTransport({
+  port: new BroadcastChannel("workspace"),
+  host: hostId,
+  socketPort
+});
+```
+
+Both factories must open the same channel for a given socket id. The connect message says whether the client opened a port, and the host follows it: a client without `socketPort` is served on `port`, and a client with one is closed with code `1002` by a host without one. Each end closes its per-socket port, calling `close()` when the port has one, once the socket closes or its transport or host closes.

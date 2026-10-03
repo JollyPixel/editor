@@ -115,11 +115,14 @@ sequenceDiagram
 | Message | Direction | Carries |
 |---|---|---|
 | `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density |
+| `jolly-launch` | shell → frame | target asset, theme, density, and a port to the shell catalog |
+| `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
 | `jolly-shell` | frame → shell | `open-asset` or `toggle-console` |
 | `jolly-appearance` | shell → frame | new theme or density |
 
 - `EditorFrames` ignores messages from any other window.
+- Frames open their catalog on the launch port, served by the shell's
+  `CatalogShare` ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).
 - The shell never answers a `jolly-shell` command.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).

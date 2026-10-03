@@ -94,6 +94,10 @@ type Reply<TType extends CatalogCommandType> = CatalogApplied extends infer TApp
     TType extends TCommand ? TApplied : never :
     never :
   never;
+type CatalogSnapshot = Extract<
+  CatalogMessage,
+  { type: typeof CATALOG_SNAPSHOT; }
+>;
 type SettledMessage = Extract<
   CatalogMessage,
   { type: typeof CATALOG_APPLIED | typeof CATALOG_REJECTED; }
@@ -164,6 +168,18 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     return this.#dependencies
       .dependentsOf(assetId)
       .flatMap((dependentId) => this.#records.get(dependentId) ?? []);
+  }
+
+  toSnapshot(): CatalogSnapshot {
+    return {
+      type: CATALOG_SNAPSHOT,
+      manifest: {
+        version: 1,
+        assets: [...this.#records.values()]
+      },
+      dependencies: this.#dependencies.toJSON(),
+      folders: this.#folders
+    };
   }
 
   async create(

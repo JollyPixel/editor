@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import { ShellCatalog } from "#src/launch/catalog/ShellCatalog.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import {
@@ -244,6 +245,30 @@ describe("HostMessageLaunchSource", () => {
         origin: kStudioOrigin
       }
     ]);
+  });
+
+  test("gives the shell channel the catalog port sent with the launch", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+    const channel = new MessageChannel();
+    context.after(() => channel.port1.close());
+    const catalogs: unknown[] = [];
+
+    for (const ports of [[channel.port2], []]) {
+      const pending = new HostMessageLaunchSource({
+        origins: [kStudioOrigin]
+      }).read();
+      window.dispatchEvent(new MessageEvent("message", {
+        source: parent,
+        origin: kStudioOrigin,
+        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" },
+        ports
+      }));
+      catalogs.push((await pending)?.shell?.catalog);
+    }
+
+    assert.ok(catalogs[0] instanceof ShellCatalog);
+    assert.strictEqual(catalogs[1], null);
   });
 
   test("gives the shell channel a valid launch appearance only", async(context) => {

@@ -5,8 +5,11 @@ import type {
 } from "../ClientSocket.ts";
 import { ChannelSocket } from "./ChannelSocket.ts";
 import {
+  CHANNEL_TRANSPORT_TAG,
   parseChannelTransportMessage,
-  type ChannelPort
+  type ChannelPort,
+  type ChannelSocketPortFactory,
+  type ChannelTransportMessage
 } from "./protocol.ts";
 
 // CONSTANTS
@@ -22,6 +25,17 @@ export interface ChannelTransportOptions {
    * Messages from other hosts on the same port are ignored.
    */
   host: string;
+  /**
+   * Opens a dedicated port for each socket. Only the connect message then
+   * travels on `port`. A host without a factory opening the same channels
+   * closes the socket.
+   */
+  socketPort?: ChannelSocketPortFactory;
+}
+
+interface SocketRecord {
+  readonly socket: ChannelSocket;
+  readonly port: ChannelPort | null;
 }
 
 /**
@@ -31,7 +45,8 @@ export interface ChannelTransportOptions {
 export class ChannelTransport {
   readonly #port: ChannelPort;
   readonly #host: string;
-  readonly #sockets = new Map<string, ChannelSocket>();
+  readonly #socketPort: ChannelSocketPortFactory | undefined;
+  readonly #sockets = new Map<string, SocketRecord>();
   #closed = false;
 
   readonly #onMessage = (event: { data: unknown; }): void => {
@@ -42,7 +57,7 @@ export class ChannelTransport {
     ) {
       this.#sockets.get(
         message.socket
-      )?.receive(message.event, message.data);
+      )?.socket.receive(message.event, message.data);
     }
   };
 
@@ -51,11 +66,8 @@ export class ChannelTransport {
   ) {
     this.#port = options.port;
     this.#host = options.host;
-    this.#port.addEventListener(
-      "message",
-      this.#onMessage
-    );
-    this.#port.start?.();
+    this.#socketPort = options.socketPort;
+    this.#listen(this.#port);
   }
 
   connect(): ClientSocket {
@@ -63,15 +75,28 @@ export class ChannelTransport {
       throw new Error("The channel transport is closed.");
     }
 
+    const id = crypto.randomUUID();
+    const port = this.#socketPort?.(id) ?? null;
+    if (port !== null) {
+      this.#listen(port);
+    }
     const socket = new ChannelSocket({
-      port: this.#port,
+      id,
+      port: port ?? this.#port,
       host: this.#host,
-      onClose: (id) => this.#sockets.delete(id)
+      onClose: (closed) => this.#release(closed)
     });
-    this.#sockets.set(
-      socket.id,
-      socket
-    );
+    this.#sockets.set(id, {
+      socket,
+      port
+    });
+    this.#port.postMessage({
+      tag: CHANNEL_TRANSPORT_TAG,
+      host: this.#host,
+      socket: id,
+      type: "connect",
+      dedicated: port !== null
+    } satisfies ChannelTransportMessage);
 
     return socket;
   }
@@ -87,12 +112,36 @@ export class ChannelTransport {
     }
 
     this.#closed = true;
-    for (const socket of this.#sockets.values()) {
+    for (const { socket } of [...this.#sockets.values()]) {
       socket.terminate(event);
     }
     this.#port.removeEventListener(
       "message",
       this.#onMessage
     );
+  }
+
+  #listen(
+    port: ChannelPort
+  ): void {
+    port.addEventListener(
+      "message",
+      this.#onMessage
+    );
+    port.start?.();
+  }
+
+  #release(
+    id: string
+  ): void {
+    const port = this.#sockets.get(id)?.port ?? null;
+    this.#sockets.delete(id);
+    if (port !== null) {
+      port.removeEventListener(
+        "message",
+        this.#onMessage
+      );
+      port.close?.();
+    }
   }
 }

@@ -8,6 +8,7 @@ import * as z from "zod";
 
 // Import Internal Dependencies
 import type { Appearance } from "../appearance/PageAppearance.ts";
+import type { ShellCatalog } from "./catalog/ShellCatalog.ts";
 
 // CONSTANTS
 export const READY_MESSAGE_TYPE = "jolly-ready";
@@ -86,11 +87,16 @@ export interface ShellChannelOptions {
    * @default null
    */
   appearance?: Appearance | null;
+  /**
+   * @default null
+   */
+  catalog?: ShellCatalog | null;
 }
 
 export class ShellChannel {
   readonly origin: string;
   readonly appearance: Appearance | null;
+  readonly catalog: ShellCatalog | null;
 
   #port: ShellPort;
 
@@ -100,6 +106,7 @@ export class ShellChannel {
     this.#port = options.port;
     this.origin = options.origin;
     this.appearance = options.appearance ?? null;
+    this.catalog = options.catalog ?? null;
   }
 
   openAsset(

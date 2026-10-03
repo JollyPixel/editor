@@ -9,7 +9,7 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0001](./0001-editors-are-built-pages-in-iframes.md) | Editors are built pages in same-origin iframes |
 | [0002](./0002-the-shell-consumes-data-only.md) | The shell consumes data only |
 | [0003](./0003-the-shell-answers-a-ready-message.md) | The shell answers a ready message with the launch |
-| [0004](./0004-the-shell-channel-is-one-way.md) | The shell channel is one-way and exists only after a parent launch |
+| [0004](./0004-the-shell-channel-is-one-way.md) | The shell channel is one-way and exists only after a parent launch (superseded by 0018) |
 | [0005](./0005-four-editor-tabs.md) | Four editor tabs, frames loaded on first focus |
 | [0006](./0006-open-tabs-persist-per-browser.md) | Open tabs persist per browser |
 | [0007](./0007-page-urls-are-relative-to-the-shell.md) | Editor page URLs are relative to the shell, back-end URLs are origin-absolute |
@@ -23,3 +23,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0015](./0015-the-studio-console-takes-precedence.md) | The studio console takes precedence over editor consoles |
 | [0016](./0016-the-project-file-lists-editors-and-kinds.md) | The project file lists editors and kinds |
 | [0017](./0017-project-packages-are-trusted-code.md) | Project packages are trusted code |
+| [0018](./0018-frames-read-the-catalog-through-the-shell.md) | Frames read the catalog through the shell |

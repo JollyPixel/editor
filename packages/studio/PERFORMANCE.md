@@ -1,19 +1,13 @@
 # @jolly-pixel/studio — performance backlog
 
-Open performance work, explored on 2026-10-02 and left for a later session.
-Measure an editor open from the double-click to `data-editor-state="ready"`
-with `jolly-pixel:debug` set to `*`, against a baseline worktree with
-interleaved runs: machine speed drifts too much for anything else.
+Open performance work. Measure an editor open from the double-click to
+`data-editor-state="ready"` with `jolly-pixel:debug` set to `*`, against a
+baseline worktree with interleaved runs: machine speed drifts too much for
+anything else.
 
-Suggested order: offline channel per socket, shared editor chunks (spike
-first), mesh workers.
+Suggested order: shared editor chunks (spike first), mesh workers.
 
 ## 1. Render on demand: follow-ups
-
-Done on 2026-10-02: `Runtime` `renderOnDemand` (see
-`runtime/docs/api/Runtime.md#rendering-on-demand`), opted in by the host
-`EditorRuntime` with `?render=continuous` as the escape hatch, and the
-voxel-map keep-alives. Left:
 
 - voxel-model passes `renderOnDemand: false`. Its async paths (environment
   map load in `ModelEditorScene`, `BlockTextures`, selection and presence
@@ -82,33 +76,4 @@ Editor frames share the shell's origin, so they run on its main thread.
   in the shell's process; a different site (or `sandbox` without
   `allow-same-origin`) breaks the shared `sessionStorage` identity, the
   offline workspace lock and BroadcastChannel, and changes ADR-0005's WebGL
-  context budget. Wait for ROADMAP step 1 (identity in the launch message) and
-  a `MessagePort` in the launch message.
-
-## 4. One catalog per frame
-
-Every frame opens its own WebSocket (`editors/host/src/session/EditorSession.ts`)
-and receives the whole catalog and dependency map from `CatalogExtension`.
-
-- **Offline, now.** Messages are not parsed twice with `JSON.parse`: every
-  context on the workspace BroadcastChannel structured-clones each frame's
-  messages and runs two zod `safeParse` passes on them
-  (`network/src/transport/channel/ChannelTransport.ts` and
-  `RemoteWorkspace`'s owner listener) before dropping them on a socket id
-  miss. Check `tag`, `type` and `socket` before zod, or better, give each
-  socket its own BroadcastChannel (`jolly-workspace-channel:<name>:<socket>`)
-  so the owner stops broadcasting.
-- **Online, later.** The shell already holds a full `CatalogClient`, and
-  `EditorSessionParts` accepts a ready-made catalog. But frames also write
-  through the catalog room (tileset create and rename, archives), and
-  ADR-0004 keeps the shell channel one-way. Revisit once a large project is
-  measured; the seam is a shell-relayed `MessagePort` in the launch message.
-- `RemoteWorkspace.#readLaunch` opens a full catalog only to build the known
-  id set, for a tab opened outside the studio.
-
-## Smaller findings
-
-- Inbound asset commands are validated twice: by `ServerRoom` and again by
-  `AssetRoomExtension.onMessage` after `withAuthor` adds the sender id.
-- Every outbound message is validated against the room's outbound protocol,
-  including full world snapshots and the catalog snapshot on each join.
+  context budget. Wait for ROADMAP step 1 (identity in the launch message).

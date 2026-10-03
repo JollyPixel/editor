@@ -128,6 +128,34 @@ describe("CatalogClient", () => {
     assert.equal(client.record("a2")?.source, "textures/b.pixelart");
   });
 
+  test("toSnapshot describes its current state as a catalog:snapshot", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+
+    snapshot(room);
+    room.receive({
+      type: CATALOG_FOLDERS,
+      folders: ["textures"]
+    });
+    await client.ready;
+
+    assert.deepEqual(client.toSnapshot(), {
+      type: CATALOG_SNAPSHOT,
+      manifest: {
+        version: 1,
+        assets: [
+          {
+            id: "a1",
+            kind: "pixelart",
+            source: "textures/a.pixelart"
+          }
+        ]
+      },
+      dependencies: {},
+      folders: ["textures"]
+    });
+  });
+
   test("waits for the snapshot before sending a request", async() => {
     const room = new FakeCatalogRoom();
     const client = new CatalogClient(room);

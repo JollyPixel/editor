@@ -39,6 +39,13 @@ export function openBridgeChannel(
   return new BroadcastChannel(kChannelPrefix + name);
 }
 
+export function openSocketChannel(
+  name: string,
+  socket: string
+): BroadcastChannel {
+  return new BroadcastChannel(`${kChannelPrefix}${name}:${socket}`);
+}
+
 export function parseOwnerMessage(
   value: unknown
 ): OwnerMessage | undefined {

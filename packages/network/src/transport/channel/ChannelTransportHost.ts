@@ -1,20 +1,28 @@
 // Import Internal Dependencies
-import type { ClientSocket } from "../ClientSocket.ts";
+import type {
+  ClientSocket,
+  ClientSocketEvent,
+  ClientSocketEventType
+} from "../ClientSocket.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
   parseChannelTransportMessage,
   toPlainEvent,
   type ChannelPort,
+  type ChannelSocketPortFactory,
   type ChannelTransportMessage
 } from "./protocol.ts";
 
 // CONSTANTS
+const kProtocolErrorCloseCode = 1002;
 const kSocketEvents = [
   "open",
   "message",
   "close",
   "error"
 ] as const;
+
+type PortListener = (event: { data: unknown; }) => void;
 
 export interface ChannelTransportHostOptions {
   /**
@@ -32,6 +40,19 @@ export interface ChannelTransportHostOptions {
    * @default crypto.randomUUID()
    */
   id?: string;
+  /**
+   * Opens the dedicated port of each socket whose client asks for one, as
+   * that client's `ChannelTransport` does. Without it, such sockets are
+   * closed with code `1002`.
+   */
+  socketPort?: ChannelSocketPortFactory;
+}
+
+interface Relay {
+  readonly id: string;
+  readonly socket: ClientSocket;
+  readonly port: ChannelPort;
+  readonly listener: PortListener | null;
 }
 
 /**
@@ -43,7 +64,8 @@ export class ChannelTransportHost {
 
   readonly #port: ChannelPort;
   readonly #open: () => ClientSocket;
-  readonly #sockets = new Map<string, ClientSocket>();
+  readonly #socketPort: ChannelSocketPortFactory | undefined;
+  readonly #relays = new Map<string, Relay>();
   #closed = false;
 
   readonly #onMessage = (event: { data: unknown; }): void => {
@@ -55,19 +77,15 @@ export class ChannelTransportHost {
       return;
     }
 
-    switch (message.type) {
-      case "connect":
-        this.#connect(message.socket);
-        break;
-      case "send":
-        this.#sockets.get(message.socket)?.send(message.data);
-        break;
-      case "close": {
-        const socket = this.#sockets.get(message.socket);
-        this.#sockets.delete(message.socket);
-        socket?.close();
-        break;
-      }
+    if (message.type === "connect") {
+      this.#connect(message.socket, message.dedicated);
+
+      return;
+    }
+
+    const relay = this.#relays.get(message.socket);
+    if (relay?.listener === null) {
+      this.#receive(relay, message);
     }
   };
 
@@ -77,6 +95,7 @@ export class ChannelTransportHost {
     this.id = options.id ?? crypto.randomUUID();
     this.#port = options.port;
     this.#open = options.open;
+    this.#socketPort = options.socketPort;
     this.#port.addEventListener(
       "message",
       this.#onMessage
@@ -94,36 +113,107 @@ export class ChannelTransportHost {
       "message",
       this.#onMessage
     );
-    for (const socket of this.#sockets.values()) {
-      socket.close();
+    for (const relay of [...this.#relays.values()]) {
+      this.#release(relay);
+      relay.socket.close();
     }
-    this.#sockets.clear();
+  }
+
+  #receive(
+    relay: Relay,
+    message: ChannelTransportMessage
+  ): void {
+    if (message.type === "send") {
+      relay.socket.send(message.data);
+    }
+    else if (message.type === "close") {
+      this.#release(relay);
+      relay.socket.close();
+    }
   }
 
   #connect(
-    id: string
+    id: string,
+    dedicated: boolean
   ): void {
-    const socket = this.#open();
-    this.#sockets.set(id, socket);
+    const port = dedicated ? this.#socketPort?.(id) ?? null : null;
+    if (dedicated && port === null) {
+      this.#postEvent(this.#port, id, "close", {
+        code: kProtocolErrorCloseCode,
+        reason: "The channel transport host opens no socket ports."
+      });
+
+      return;
+    }
+
+    const relay: Relay = {
+      id,
+      socket: this.#open(),
+      port: port ?? this.#port,
+      listener: port === null ? null : this.#listenTo(id, port)
+    };
+    this.#relays.set(id, relay);
     for (const type of kSocketEvents) {
-      socket.addEventListener(type, (event) => {
-        if (type === "close") {
-          if (this.#sockets.get(id) !== socket) {
-            return;
-          }
-          this.#sockets.delete(id);
+      relay.socket.addEventListener(type, (event) => {
+        if (this.#closed || this.#relays.get(id) !== relay) {
+          return;
         }
-        if (!this.#closed) {
-          this.#port.postMessage({
-            tag: CHANNEL_TRANSPORT_TAG,
-            host: this.id,
-            socket: id,
-            type: "event",
-            event: type,
-            data: toPlainEvent(event)
-          } satisfies ChannelTransportMessage);
+
+        this.#postEvent(relay.port, id, type, toPlainEvent(event));
+        if (type === "close") {
+          this.#release(relay);
         }
       });
+    }
+  }
+
+  #postEvent(
+    port: ChannelPort,
+    socket: string,
+    event: ClientSocketEventType,
+    data: ClientSocketEvent
+  ): void {
+    port.postMessage({
+      tag: CHANNEL_TRANSPORT_TAG,
+      host: this.id,
+      socket,
+      type: "event",
+      event,
+      data
+    } satisfies ChannelTransportMessage);
+  }
+
+  #listenTo(
+    id: string,
+    port: ChannelPort
+  ): PortListener {
+    const listener: PortListener = (event) => {
+      const message = parseChannelTransportMessage(event.data);
+      const relay = this.#relays.get(id);
+      if (
+        relay !== undefined &&
+        message !== undefined &&
+        message.host === this.id &&
+        message.socket === id
+      ) {
+        this.#receive(relay, message);
+      }
+    };
+    port.addEventListener("message", listener);
+    port.start?.();
+
+    return listener;
+  }
+
+  #release(
+    relay: Relay
+  ): void {
+    if (this.#relays.get(relay.id) === relay) {
+      this.#relays.delete(relay.id);
+    }
+    if (relay.listener !== null) {
+      relay.port.removeEventListener("message", relay.listener);
+      relay.port.close?.();
     }
   }
 }

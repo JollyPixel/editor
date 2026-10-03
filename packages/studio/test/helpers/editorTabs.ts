@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { EditorFrames } from "../../src/tabs/EditorFrames.ts";
+import { idleShare } from "./catalogShare.ts";
 import {
   EditorTabs,
   type EditorTab,
@@ -49,7 +50,8 @@ export function harness(
   const home = document.createElement("section");
   document.body.append(strip, frames, home);
   const editorFrames = new EditorFrames({
-    container: frames
+    container: frames,
+    share: idleShare()
   });
   const tabs = new EditorTabs({
     strip,

@@ -12,6 +12,7 @@ import {
   HEARTBEAT_MS,
   parseOwnerMessage,
   openBridgeChannel,
+  openSocketChannel,
   type OwnerMessage
 } from "./protocol.ts";
 
@@ -32,7 +33,8 @@ export class OwnerWorkspace implements StandaloneWorkspace {
     this.#channel = openBridgeChannel(name);
     this.#host = new ChannelTransportHost({
       port: this.#channel,
-      open: () => workspace.bridgeSocket()
+      open: () => workspace.bridgeSocket(),
+      socketPort: (socket) => openSocketChannel(name, socket)
     });
     this.#hold = workspace.connect();
     this.#channel.addEventListener("message", (event) => {
