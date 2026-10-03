@@ -106,6 +106,15 @@ interface RecordedCommand<TCommand = unknown> {
 
 A second call, or a call for an asset that was released, returns `[]`.
 
+While an asset is held, the store emits `replaced` after it folds an
+`asset.created` or `asset.updated` into the state, unless that event is a
+scheduled snapshot. A file edited on disk or an archive import triggers it.
+The state already holds the new content when listeners run:
+
+```ts
+states.on("replaced", (assetId: string) => void);
+```
+
 Each event goes through `foldAssetEvent`. A hook that throws is logged as
 `asset event not folded` and skipped, both during replay and while following
 the log, so the state keeps its last good value.

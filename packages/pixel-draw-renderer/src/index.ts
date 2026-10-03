@@ -227,3 +227,6 @@ export type {
 export type {
   PeerUVPreviewState
 } from "./rendering/presence/PeerUVPreview.ts";
+export type {
+  PeerUVSelectionState
+} from "./rendering/presence/PeerUVSelections.ts";

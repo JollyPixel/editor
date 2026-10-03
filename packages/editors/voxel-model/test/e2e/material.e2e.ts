@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  checkboxField,
   dialog,
   treeRow
 } from "@jolly-pixel/e2e";
@@ -13,7 +12,7 @@ import {
 } from "./fixtures.ts";
 import {
   addNode,
-  materialBlockBar,
+  materialFooter,
   materialMenu,
   materialRow,
   materialRowMenu,
@@ -25,9 +24,9 @@ import {
 } from "./support/hierarchy.ts";
 import {
   blockSurface,
-  emphasizedBlocks,
   materialOutline,
-  materialUses
+  materialUses,
+  selectedBlock
 } from "./support/scene.ts";
 
 test("a block's swatch opens the Material tab, where a new material goes to it", async({ page }) => {
@@ -39,8 +38,8 @@ test("a block's swatch opens the Material tab, where a new material goes to it",
     .toMatchObject({ opacity: 0.45 });
   await expect(treeRow(page, "Block").getByRole("button", { name: "Material: Glass" }))
     .toBeVisible();
-  await expect(materialRow(page, "Glass")).toHaveAttribute("aria-selected", "true");
   await expect(materialRow(page, "Glass")).toContainText("1");
+  await expect(materialRow(page, "Block")).toHaveAttribute("aria-selected", "true");
 });
 
 test("a slider drag previews on the block and is stored on release", async({ page }) => {
@@ -63,39 +62,37 @@ test("a slider drag previews on the block and is stored on release", async({ pag
     .toBeGreaterThan(0.5);
 });
 
-test("the header applies the material to the selected block, the block bar clears it", async({ page }) => {
+test("the footer applies the material to the selected block and removes it", async({ page }) => {
   await openMaterial(page, "Block");
   await newMaterial(page, "Metal");
   await addNode(page, "Block", "Arm");
   await treeRow(page, "Arm").click();
-  await expect(materialBlockBar(page)).toContainText("Arm has no material");
-  const apply = materialTab(page).getByRole("button", { name: "Apply to Arm" });
+  const footer = materialFooter(page);
 
-  await apply.click();
+  await footer.getByRole("button", { name: "Apply to Arm" }).click();
   await expect.poll(() => materialUses(page)).toEqual([["Metal", 2]]);
   expect(await blockSurface(page, "Arm")).toMatchObject({ metalness: 0.8 });
-  await expect(materialBlockBar(page)).toContainText("Arm uses Metal");
-  await expect(apply).toBeDisabled();
 
-  await materialBlockBar(page).getByRole("button", { name: "Clear Material" }).click();
+  await footer.getByRole("button", { name: "Remove from Arm" }).click();
   await expect.poll(() => materialUses(page)).toEqual([["Metal", 1]]);
   expect(await blockSurface(page, "Arm")).toBeNull();
-  await expect(materialBlockBar(page)).toContainText("Arm has no material");
+  await expect(footer.getByRole("button", { name: "Apply to Arm" })).toBeVisible();
 });
 
-test("hovering the use count outlines the blocks that use the material", async({ page }) => {
+test("a material lists the blocks using it, which follow the selection both ways", async({ page }) => {
   await openMaterial(page, "Block");
   await newMaterial(page, "Metal");
   await addNode(page, "Block", "Arm");
   await treeRow(page, "Arm").click();
-  await materialTab(page).getByRole("button", { name: "Apply to Arm" }).click();
-  const uses = materialTab(page).getByText("Used by 2 blocks");
+  await materialFooter(page).getByRole("button", { name: "Apply to Arm" }).click();
 
-  await uses.hover();
-  await expect.poll(() => emphasizedBlocks(page)).toEqual(["Block", "Arm"]);
+  await expect(materialRow(page, "Arm")).toHaveAttribute("aria-selected", "true");
+  await expect(materialRow(page, "Block")).toBeVisible();
 
-  await page.mouse.move(0, 0);
-  await expect.poll(() => emphasizedBlocks(page)).toEqual([]);
+  await materialRow(page, "Block").click();
+  await expect.poll(() => selectedBlock(page)).toBe("Block");
+  await expect(materialRow(page, "Block")).toHaveAttribute("aria-selected", "true");
+  await expect(materialFooter(page).getByRole("button", { name: "Remove from Block" })).toBeVisible();
 });
 
 test("the menus copy and paste a material, and the header deletes it", async({ page, context }) => {
@@ -116,47 +113,24 @@ test("the menus copy and paste a material, and the header deletes it", async({ p
   expect(await blockSurface(page, "Block")).toMatchObject({ metalness: 0.8 });
 });
 
-test("a new folder is renamed in place and takes materials moved with the keyboard", async({ page }) => {
+test("materials reorder with the keyboard and keep their order", async({ page }) => {
   await openMaterial(page, "Block");
   await newMaterial(page, "Glass");
   await newMaterial(page, "Metal");
-
-  await materialTool(page, "New Folder");
-  const rename = page.getByRole("textbox", { name: "Rename" });
-  await expect(rename).toBeFocused();
-  await rename.fill("Shiny");
-  await rename.press("Enter");
-  await expect.poll(() => materialOutline(page)).toEqual(["Glass", "Metal", "Shiny/"]);
+  await expect(materialTab(page).getByRole("button", { name: "New Folder" })).toHaveCount(0);
 
   const metal = materialRow(page, "Metal");
   await metal.click();
   await metal.press(" ");
-  await metal.press("ArrowDown");
+  await metal.press("ArrowLeft");
   await metal.press("ArrowLeft");
   await metal.press("Enter");
 
-  await expect.poll(() => materialOutline(page)).toEqual(["Glass", "Shiny/", "  Metal"]);
+  await expect.poll(() => materialOutline(page)).toEqual(["Metal", "Glass"]);
 
   await page.reload();
   await waitForEditor(page);
-  await expect.poll(() => materialOutline(page)).toEqual(["Glass", "Shiny/", "  Metal"]);
-});
-
-test("a folder's menu adds inside it, and deleting it can keep its materials", async({ page }) => {
-  await openMaterialTab(page);
-  await materialTool(page, "New Folder");
-  await page.getByRole("textbox", { name: "Rename" }).press("Enter");
-
-  await (await materialRowMenu(page, "Folder")).getByRole("menuitem", { name: "New Material…" }).click();
-  await materialMenu(page).getByRole("menuitem", { name: "Glow" }).click();
-  await expect.poll(() => materialOutline(page)).toEqual(["Folder/", "  Glow"]);
-
-  await (await materialRowMenu(page, "Folder")).getByRole("menuitem", { name: "Delete" }).click();
-  const form = dialog(page, "Delete Folder");
-  await checkboxField(form, "Delete its materials too").uncheck();
-  await form.getByRole("button", { name: "Delete" }).click();
-
-  await expect.poll(() => materialOutline(page)).toEqual(["Glow"]);
+  await expect.poll(() => materialOutline(page)).toEqual(["Metal", "Glass"]);
 });
 
 test("the fields sit in Color, Surface and Glow, which say when they cannot show", async({ page }) => {

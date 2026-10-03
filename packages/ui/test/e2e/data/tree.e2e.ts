@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   test,
-  expect
+  expect,
+  type Locator
 } from "@playwright/test";
 import { boxOf } from "@jolly-pixel/e2e";
 
@@ -13,9 +14,36 @@ import {
   rowOf
 } from "../support/tree.ts";
 
+function swatchOrder(
+  row: Locator
+): Promise<string[]> {
+  return row.evaluate((element) => [...element.querySelectorAll(".swatch, .label")]
+    .map((part) => part.className));
+}
+
 test.describe("Tree", () => {
   test.beforeEach(async({ page }) => {
     await openExample(page, "data/tree");
+  });
+
+  test("titles a label only while it is cut off, unless an ancestor opts out", async({ page }) => {
+    const tree = page.locator(TREE_SELECTOR);
+    const label = rowOf(page, "crate").locator(".label");
+
+    await label.hover();
+    await expect(label).not.toHaveAttribute("title");
+
+    await tree.evaluate((element) => {
+      (element as HTMLElement).style.width = "165px";
+    });
+    await page.mouse.move(0, 0);
+    await label.hover();
+    await expect(label).toHaveAttribute("title", "Crate");
+
+    await tree.evaluate((element) => element.setAttribute("overflow-title", "off"));
+    await page.mouse.move(0, 0);
+    await label.hover();
+    await expect(label).not.toHaveAttribute("title");
   });
 
   test("activates a swatch without selecting or renaming its row", async({ page }) => {
@@ -36,6 +64,17 @@ test.describe("Tree", () => {
 
     await swatch.dblclick();
     await expect(crate.locator(".rename")).toHaveCount(0);
+  });
+
+  test("draws the swatch before the label when its position is start", async({ page }) => {
+    const tree = page.locator(TREE_SELECTOR);
+    const crate = rowOf(page, "crate");
+
+    expect(await swatchOrder(crate)).toEqual(["label", "swatch"]);
+
+    await tree.evaluate((element) => element.setAttribute("swatch-position", "start"));
+
+    await expect.poll(() => swatchOrder(crate)).toEqual(["swatch", "label"]);
   });
 
   test("shows an empty swatch only on a hovered or selected row", async({ page }) => {

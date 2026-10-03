@@ -13,6 +13,7 @@ import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 import type { ModelBlock, ModelBlocks } from "../../scene/blocks/index.ts";
 import { SELECTION_HIGHLIGHT_COLOR } from "../../scene/blocks/ModelBlock.ts";
 import { RenderOrder } from "../../scene/renderOrder.ts";
+import { reconcilePeerMarks } from "../../shared/reconcilePeerMarks.ts";
 import type {
   BlockSelectionStore,
   PresenceStore
@@ -161,53 +162,28 @@ export class HighlightBridge {
   #applyPresence(
     selections: PeerMarkMap<string>
   ): void {
+    const { peerSelections } = this.#meshHighlight;
     this.#highlightedUuidByClient = reconcilePeerMarks(
       selections,
       this.#highlightedUuidByClient,
-      (clientId, uuid) => this.#meshHighlight.peerSelections.select(clientId, uuid)
+      {
+        hold: (peer, uuid) => peerSelections.select(peer.clientId, uuid),
+        release: (clientId) => peerSelections.select(clientId, null)
+      }
     );
   }
 
   #applyHoverPresence(
     hovers: PeerMarkMap<string>
   ): void {
+    const { peerHovers } = this.#meshHighlight;
     this.#hoveredUuidByClient = reconcilePeerMarks(
       hovers,
       this.#hoveredUuidByClient,
-      (clientId, uuid) => this.#meshHighlight.peerHovers.hover(clientId, uuid)
+      {
+        hold: (peer, uuid) => peerHovers.hover(peer.clientId, uuid),
+        release: (clientId) => peerHovers.hover(clientId, null)
+      }
     );
   }
-}
-
-/**
- * Diffs a peer mark map against who held which uuid last time, calling
- * `apply` once per client whose uuid changed (null when they let go).
- */
-function reconcilePeerMarks(
-  marks: PeerMarkMap<string>,
-  previous: ReadonlyMap<string, string>,
-  apply: (
-    clientId: string,
-    uuid: string | null
-  ) => void
-): Map<string, string> {
-  const next = new Map<string, string>();
-  for (const [uuid, entries] of marks) {
-    for (const mark of entries) {
-      next.set(mark.clientId, uuid);
-    }
-  }
-
-  for (const [clientId, uuid] of previous) {
-    if (next.get(clientId) !== uuid) {
-      apply(clientId, null);
-    }
-  }
-  for (const [clientId, uuid] of next) {
-    if (previous.get(clientId) !== uuid) {
-      apply(clientId, uuid);
-    }
-  }
-
-  return next;
 }

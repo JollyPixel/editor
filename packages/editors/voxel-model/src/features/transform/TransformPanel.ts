@@ -117,3 +117,9 @@ export class TransformPanel extends LitElement {
 }
 
 customElements.define("jolly-model-editor-transform", TransformPanel);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "jolly-model-editor-transform": TransformPanel;
+  }
+}

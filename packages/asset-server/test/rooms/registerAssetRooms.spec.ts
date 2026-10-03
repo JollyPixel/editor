@@ -12,6 +12,7 @@ import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
+  ASSET_UPDATED,
   CatalogProjection,
   registerAssetRooms,
   type AssetKindHandler
@@ -322,5 +323,46 @@ describe("registerAssetRooms — deletion", () => {
       kind: "message",
       payload: { type: "deleted" }
     });
+  });
+});
+
+describe("registerAssetRooms — replaced content", () => {
+  test("an update from outside the room sends every member the new snapshot", async() => {
+    await using harness = await roomHarness();
+    const room = new AssetRoom("counter", harness.assetId).toString();
+    await harness.join("A");
+    await harness.join("B");
+
+    const updated = (await harness.sync.writer.update({
+      assetId: harness.assetId,
+      data: bytes("7"),
+      actor: kActor
+    })).unwrap();
+
+    for (const id of ["A", "B"]) {
+      assert.deepEqual(harness.clients.get(id)!.received.at(-1), {
+        room,
+        kind: "message",
+        payload: {
+          type: "snapshot",
+          data: { value: 7 },
+          version: updated.eventVersion
+        }
+      });
+    }
+  });
+
+  test("a scheduled snapshot of the room's own edits sends no snapshot", async() => {
+    await using harness = await roomHarness();
+    await harness.join("A");
+    await harness.send("A", { action: "increment" });
+    const received = harness.clients.get("A")!.received;
+    const beforeSnapshot = received.length;
+
+    await harness.sync.scheduler.flush();
+
+    const last = harness.sync.eventStore.reader.list(harness.assetId).at(-1);
+    assert.strictEqual(last?.eventType, ASSET_UPDATED);
+    assert.strictEqual(received.length, beforeSnapshot);
   });
 });

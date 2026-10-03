@@ -13,14 +13,28 @@ export interface UVOverlayEntry {
   slot: UVSlot | null;
   geometry: UVGeometry;
   selected: boolean;
+  peerColor: string | null;
   stacked?: number;
+}
+
+export interface UVOverlayLayerState {
+  /** UV target keys whose borders a peer drag preview replaces. */
+  ghostSuppressed: ReadonlySet<string>;
+  /** Drawn in place of the stored region with the same id. */
+  preview: UVRegion | null;
+  /** Peer color by region id. */
+  peerSelections: ReadonlyMap<string, string>;
 }
 
 export function projectUVOverlay(
   uvMap: UVMap,
-  ghostSuppressed: ReadonlySet<string>,
-  preview: UVRegion | null
+  layer: UVOverlayLayerState
 ): UVOverlayEntry[] {
+  const {
+    ghostSuppressed,
+    preview,
+    peerSelections
+  } = layer;
   const selectedRegionId = uvMap.selectedRegionId;
   const selectedSlot = uvMap.selectedSlot;
   const entries: UVOverlayEntry[] = [];
@@ -39,6 +53,9 @@ export function projectUVOverlay(
     if (grouped && ghostSuppressed.has(regionKey)) {
       continue;
     }
+    const peerColor = region.id === selectedRegionId ?
+      null :
+      peerSelections.get(region.id) ?? null;
 
     for (const { slot, geometry } of region.slotsOf()) {
       const key = uvTargetKey({
@@ -55,7 +72,8 @@ export function projectUVOverlay(
         slot,
         geometry,
         selected: region.id === selectedRegionId &&
-          (grouped || slot === selectedSlot)
+          (grouped || slot === selectedSlot),
+        peerColor
       });
     }
   }
@@ -66,13 +84,24 @@ export function projectUVOverlay(
 export function uvOverlayPaintOrder(
   entries: UVOverlayEntry[]
 ): UVOverlayEntry[] {
-  const selected = entries.filter((entry) => entry.selected);
-  if (selected.length === 0) {
-    return entries;
+  const plain: UVOverlayEntry[] = [];
+  const peer: UVOverlayEntry[] = [];
+  const selected: UVOverlayEntry[] = [];
+  for (const entry of entries) {
+    if (entry.selected) {
+      selected.push(entry);
+    }
+    else if (entry.peerColor === null) {
+      plain.push(entry);
+    }
+    else {
+      peer.push(entry);
+    }
   }
 
   return [
-    ...entries.filter((entry) => !entry.selected),
+    ...plain,
+    ...peer,
     ...selected
   ];
 }

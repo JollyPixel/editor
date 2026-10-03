@@ -86,6 +86,7 @@ export class UVRegionLayer {
   #resizeHandles = false;
   #handles: UVResizeHandles;
   #ghostSuppressed = new Set<string>();
+  #peerSelections: ReadonlyMap<string, string> = new Map();
 
   #onChanged = () => this.#render();
 
@@ -129,6 +130,13 @@ export class UVRegionLayer {
     this.#render();
   }
 
+  setPeerSelections(
+    colorByRegion: ReadonlyMap<string, string>
+  ): void {
+    this.#peerSelections = colorByRegion;
+    this.#render();
+  }
+
   destroy(): void {
     this.#uvMap.off("changed", this.#onChanged);
 
@@ -145,11 +153,11 @@ export class UVRegionLayer {
   }
 
   #render(): void {
-    const entries = projectUVOverlay(
-      this.#uvMap,
-      this.#ghostSuppressed,
-      this.#livePreview
-    );
+    const entries = projectUVOverlay(this.#uvMap, {
+      ghostSuppressed: this.#ghostSuppressed,
+      preview: this.#livePreview,
+      peerSelections: this.#peerSelections
+    });
     const painted = uvOverlayPaintOrder(entries);
 
     this.#prune(this.#borders, painted);
@@ -166,12 +174,12 @@ export class UVRegionLayer {
 
       border.place(entry.geometry, zoom, camera);
       border.paint({
-        color: entry.region.color,
+        color: entry.peerColor ?? entry.region.color,
         strokeWidth: emphasised ?
           kSelectedStrokeWidth :
           kStrokeWidth,
         selected: entry.selected,
-        dimmed: perFace && !entry.selected
+        dimmed: perFace && !entry.selected && entry.peerColor === null
       });
       border.appendTo(this.#group);
     }

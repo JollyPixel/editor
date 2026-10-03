@@ -10,6 +10,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import {
+  ASSET_UPDATED,
   AssetKindRegistry,
   InvalidAssetDocumentError,
   type AssetKindHandler
@@ -191,6 +192,58 @@ describe("AssetStateStore — commands since checkpoint", () => {
     harness.states.release(assetId);
 
     assert.deepEqual(harness.states.takeCommandsSinceCheckpoint(assetId), []);
+  });
+});
+
+describe("AssetStateStore — replaced content", () => {
+  test("announces an update of a held asset once its state holds it", async() => {
+    await using harness = await syncHarness({ handlers: [counterHandler()] });
+    const assetId = await counterAsset(harness);
+    const entry = await harness.states.acquire(assetId, "counter");
+    const seen: Array<[string, number]> = [];
+    harness.states.on("replaced", (id) => {
+      seen.push([id, (entry.state as CounterState).value]);
+    });
+
+    (await harness.writer.update({
+      assetId,
+      data: bytes("7"),
+      actor: kActor
+    })).unwrap();
+
+    assert.deepEqual(seen, [[assetId, 7]]);
+  });
+
+  test("stays quiet for a scheduled snapshot and for commands", async() => {
+    await using harness = await syncHarness({
+      handlers: [counterHandler({ delay: 0, maxDelay: 0 })]
+    });
+    const assetId = await counterAsset(harness);
+    await harness.states.acquire(assetId, "counter");
+    const seen: string[] = [];
+    harness.states.on("replaced", (id) => seen.push(id));
+
+    increment(harness, assetId);
+    await harness.scheduler.flush();
+
+    const last = harness.eventStore.reader.list(assetId).at(-1);
+    assert.equal(last?.eventType, ASSET_UPDATED);
+    assert.deepEqual(seen, []);
+  });
+
+  test("stays quiet for an asset nobody holds", async() => {
+    await using harness = await syncHarness({ handlers: [counterHandler()] });
+    const assetId = await counterAsset(harness);
+    const seen: string[] = [];
+    harness.states.on("replaced", (id) => seen.push(id));
+
+    (await harness.writer.update({
+      assetId,
+      data: bytes("7"),
+      actor: kActor
+    })).unwrap();
+
+    assert.deepEqual(seen, []);
   });
 });
 

@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import {
-  resolveReparentMoves,
   type JollyActivateDetail,
   type JollyActivateSwatchDetail,
   type JollyRenameDetail,
@@ -15,10 +14,8 @@ import {
   decodeMaterialTransfer,
   encodeMaterialTransfer,
   type BlockNodeJSON,
-  type MaterialEntryJSON,
   type ModelChange,
   type ModelDocument,
-  type VoxelModelCommand,
   type ModelMaterialJSON,
   type ModelMaterialsReader
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -44,20 +41,20 @@ import type {
 } from "../../../shared/DeleteDialog.ts";
 import type { MaterialPreset } from "./materialPresets.ts";
 import {
-  FOLDER_MENU,
+  MATERIAL_MENU,
   ROOT_MENU,
-  materialMenu,
-  type FolderAction,
   type MaterialRowAction,
   type RootAction
 } from "./materialMenu.ts";
-import { toMaterialTreeNodes } from "./materialTreeNodes.ts";
+import {
+  toMaterialTreeNodes,
+  type MaterialUser
+} from "./materialTreeNodes.ts";
+import {
+  blockOfUsageRow,
+  usageRowId
+} from "./usageRows.ts";
 import { blockCount } from "../blockCount.ts";
-
-// CONSTANTS
-const kFolderName = "Folder";
-
-type RowAction = FolderAction | MaterialRowAction;
 
 export interface MaterialWorkspace {
   document: ModelDocument;
@@ -88,14 +85,14 @@ export interface MaterialLibraryPrompts {
 export interface SelectedBlockState {
   name: string;
   materialId: string | null;
-  materialName: string | null;
 }
 
 /** A new object whenever any of it changes. */
 export interface MaterialLibraryState {
   nodes: readonly TreeNode[];
+  /** The selected block's row when it uses the edited material, otherwise the material's row. */
   selectedId: string | null;
-  /** The selected row when it is a material, as the material focus holds it. */
+  /** The material being edited, as the material focus holds it. */
   editedId: string | null;
   expanded: readonly string[];
   block: SelectedBlockState | null;
@@ -105,26 +102,15 @@ export class MaterialLibraryController {
   #host: ReactiveControllerHost;
   #prompts: MaterialLibraryPrompts;
   #connection: WorkspaceController<MaterialWorkspace>;
-  #selectedId: string | null = null;
   #expanded = new ExpandedRows();
   #state: MaterialLibraryState | null = null;
 
   readonly #rootActions: Record<RootAction, (point: MenuPoint) => Promise<void> | void> = {
     "new-material": (point) => this.#prompts.choosePreset((preset) => this.create(preset), point),
-    "new-folder": () => this.#newFolder(null),
     paste: () => this.#pasteFromClipboard()
   };
 
-  readonly #rowActions: Record<
-    RowAction,
-    (id: string, point: MenuPoint) => Promise<void> | void
-  > = {
-    "new-material": (id, point) => this.#prompts.choosePreset(
-      (preset) => this.create(preset, id),
-      point
-    ),
-    "new-folder": (id) => this.#newFolder(id),
-    assign: (id) => this.assign(id),
+  readonly #rowActions: Record<MaterialRowAction, (id: string) => Promise<void> | void> = {
     rename: (id) => this.#prompts.beginRename(id),
     duplicate: (id) => this.duplicate(id),
     copy: (id) => this.#copyToClipboard(id),
@@ -134,31 +120,22 @@ export class MaterialLibraryController {
   #onChange = (
     change: ModelChange
   ): void => {
-    if (this.#selectedId !== null && !this.#library()?.has(this.#selectedId)) {
-      this.#pick(null);
-    }
-
     const { command } = change;
-    const parentId = landingParentOf(command);
-    if (parentId !== null) {
-      this.#expanded.expand(parentId);
-    }
     if (
       command.action === "node-material-changed" &&
       command.id === this.#workspace?.selection.selected
     ) {
       this.#followBlock();
     }
+    if (this.#material(this.#workspace?.materialFocus.edited ?? null) === undefined) {
+      this.#workspace?.materialFocus.edit(null);
+    }
     this.#invalidate();
   };
 
   #onReset = (): void => {
-    this.#pick(null);
-    this.#expanded.reset(
-      [...this.#library()?.values() ?? []]
-        .filter((entry) => entry.kind === "folder")
-        .map(({ id }) => id)
-    );
+    this.#workspace?.materialFocus.edit(null);
+    this.#expanded.reset([]);
     this.#followBlock();
     this.#invalidate();
   };
@@ -168,7 +145,7 @@ export class MaterialLibraryController {
     this.#invalidate();
   };
 
-  #onPeerEdits = (): void => {
+  #onPeerMarks = (): void => {
     this.#invalidate();
   };
 
@@ -194,8 +171,9 @@ export class MaterialLibraryController {
     return this.#state;
   }
 
-  readonly acceptDrop: TreeDropAccept = (detail) => detail.where !== "inside" ||
-    this.#library()?.get(detail.targetId)?.kind === "folder";
+  readonly acceptDrop: TreeDropAccept = (detail) => detail.where !== "inside" &&
+    !isUsageRow(detail.targetId) &&
+    !detail.movedIds.some(isUsageRow);
 
   attach(
     workspace: MaterialWorkspace
@@ -205,9 +183,11 @@ export class MaterialLibraryController {
   }
 
   select(
-    id: string | null
+    materialId: string | null
   ): void {
-    this.#pick(id);
+    this.#workspace?.materialFocus.edit(
+      this.#material(materialId) === undefined ? null : materialId
+    );
     this.#invalidate();
   }
 
@@ -215,7 +195,7 @@ export class MaterialLibraryController {
     id: string,
     name: string
   ): void {
-    const stored = this.#library()?.get(id);
+    const stored = this.#material(id);
     const trimmed = name.trim();
     if (stored !== undefined && trimmed !== "" && trimmed !== stored.name) {
       this.#workspace?.document.renameMaterial(id, trimmed);
@@ -223,28 +203,12 @@ export class MaterialLibraryController {
   }
 
   create(
-    preset: MaterialPreset,
-    parentId: string | null = null
+    preset: MaterialPreset
   ): void {
     this.#adopt(this.#workspace?.document.addMaterial({
       name: preset.label,
-      surface: preset.surface,
-      parentId
+      surface: preset.surface
     }) ?? null);
-  }
-
-  createFolder(
-    parentId: string | null = null
-  ): string | null {
-    const id = this.#workspace?.document.addMaterialFolder({
-      name: kFolderName,
-      parentId
-    }) ?? null;
-    if (id !== null) {
-      this.select(id);
-    }
-
-    return id;
   }
 
   duplicate(
@@ -267,19 +231,16 @@ export class MaterialLibraryController {
   async remove(
     id: string
   ): Promise<void> {
-    const entry = this.#library()?.get(id);
-    if (entry === undefined) {
+    const material = this.#material(id);
+    if (material === undefined) {
       return;
     }
 
-    const confirmation = this.#deleteConfirmation(entry);
-    const result = confirmation === null ?
-      { deleteChildren: true } :
-      await this.#prompts.promptDelete(confirmation);
-    if (result !== null) {
-      this.#workspace?.document.removeMaterial(id, {
-        keepContents: entry.kind === "folder" && !result.deleteChildren
-      });
+    const confirmation = this.#deleteConfirmation(material);
+    const confirmed = confirmation === null ||
+      await this.#prompts.promptDelete(confirmation) !== null;
+    if (confirmed) {
+      this.#workspace?.document.removeMaterial(id);
     }
   }
 
@@ -322,7 +283,17 @@ export class MaterialLibraryController {
   readonly handleSelect = (
     event: CustomEvent<JollySelectDetail>
   ): void => {
-    this.select(event.detail.selected[0] ?? null);
+    const id = event.detail.selected[0] ?? null;
+    const blockId = id === null ? null : blockOfUsageRow(id);
+    if (blockId === null) {
+      this.select(id);
+
+      return;
+    }
+
+    this.#workspace?.selection.select(blockId);
+    this.#followBlock();
+    this.#invalidate();
   };
 
   readonly handleActivateSwatch = (
@@ -347,12 +318,19 @@ export class MaterialLibraryController {
   readonly handleReparent = (
     event: CustomEvent<JollyReparentDetail>
   ): void => {
-    const moves = resolveReparentMoves({
-      nodes: [...this.state.nodes],
-      ...event.detail
-    });
-    for (const { id, parentId, beforeId } of moves) {
-      this.#workspace?.document.moveMaterial(id, parentId, beforeId);
+    const { movedIds: [id], targetId, where } = event.detail;
+    const library = this.#library();
+    if (library === undefined || id === targetId) {
+      return;
+    }
+
+    const beforeId = where === "above" ? targetId : library.nextSiblingOf(targetId);
+    if (id !== beforeId) {
+      this.#workspace?.document.moveMaterial(
+        id,
+        library.get(targetId)?.parentId ?? null,
+        beforeId
+      );
     }
   };
 
@@ -360,11 +338,7 @@ export class MaterialLibraryController {
     event: CustomEvent<JollyActivateDetail>
   ): void => {
     const { id } = event.detail;
-    const entry = this.#library()?.get(id);
-    if (entry?.kind === "material") {
-      this.assign(id);
-    }
-    else if (entry?.kind === "folder") {
+    if (this.#material(id) !== undefined) {
       this.#expanded.toggle(id);
       this.#invalidate();
     }
@@ -376,51 +350,30 @@ export class MaterialLibraryController {
     if (id === null) {
       return menuSession(ROOT_MENU, (action, point) => this.#rootActions[action](point));
     }
-
-    const entry = this.#library()?.get(id);
-    if (entry === undefined) {
+    if (this.#material(id) === undefined) {
       return EMPTY_MENU;
     }
 
-    return rowMenuSession<RowAction>(
-      entry.kind === "folder" ? FOLDER_MENU : materialMenu(this.#assignTarget(id)),
-      () => this.#library()?.has(id) === true,
-      (action, point) => this.#rowActions[action](id, point)
+    return rowMenuSession<MaterialRowAction>(
+      MATERIAL_MENU,
+      () => this.#material(id) !== undefined,
+      (action) => this.#rowActions[action](id)
     );
   }
 
   #deleteConfirmation(
-    entry: MaterialEntryJSON
+    material: ModelMaterialJSON
   ): DeleteContext | null {
-    if (entry.kind === "folder") {
-      return this.#library()?.childrenOf(entry.id).length ?
-        {
-          heading: "Delete Folder",
-          hasChildren: true,
-          childrenLabel: "Delete its materials too"
-        } :
-        null;
-    }
-
-    const uses = this.#workspace?.document.tree.blocksUsing(entry.id).length ?? 0;
+    const uses = this.#workspace?.document.tree.blocksUsing(material.id).length ?? 0;
 
     return uses === 0 ?
       null :
       {
         heading: "Delete Material",
         hasChildren: false,
-        message: `${entry.name} is used by ${blockCount(uses)}. ` +
+        message: `${material.name} is used by ${blockCount(uses)}. ` +
           `${uses === 1 ? "It" : "They"} will have no material.`
       };
-  }
-
-  #newFolder(
-    parentId: string | null
-  ): void {
-    const folderId = this.createFolder(parentId);
-    if (folderId !== null) {
-      this.#prompts.beginRename(folderId);
-    }
   }
 
   async #pasteFromClipboard(): Promise<void> {
@@ -446,16 +399,6 @@ export class MaterialLibraryController {
     return selected === null ? undefined : workspace?.document.tree.block(selected);
   }
 
-  #assignTarget(
-    materialId: string
-  ): string | null {
-    const block = this.#selectedBlock();
-
-    return block === undefined || block.materialId === materialId ?
-      null :
-      block.name;
-  }
-
   #adopt(
     materialId: string | null
   ): void {
@@ -470,24 +413,20 @@ export class MaterialLibraryController {
   }
 
   #followBlock(): void {
-    const materialId = this.#selectedBlock()?.materialId;
-    if (materialId !== undefined && materialId !== this.#selectedId) {
-      this.#pick(materialId);
+    const materialId = this.#selectedBlock()?.materialId ?? null;
+    if (materialId !== null && this.#material(materialId) !== undefined) {
+      this.#expanded.expand(materialId);
+      this.#workspace?.materialFocus.edit(materialId);
     }
   }
 
-  #pick(
-    id: string | null
-  ): void {
-    this.#selectedId = id;
-    let parentId = id === null ? null : this.#library()?.get(id)?.parentId ?? null;
-    while (parentId !== null) {
-      this.#expanded.expand(parentId);
-      parentId = this.#library()?.get(parentId)?.parentId ?? null;
-    }
-    this.#workspace?.materialFocus.edit(
-      this.#material(id) === undefined ? null : id
-    );
+  #highlightedRow(): string | null {
+    const edited = this.#workspace?.materialFocus.edited ?? null;
+    const block = this.#selectedBlock();
+
+    return block !== undefined && edited !== null && block.materialId === edited ?
+      usageRowId(block.id) :
+      edited;
   }
 
   #invalidate(): void {
@@ -501,11 +440,12 @@ export class MaterialLibraryController {
 
     return {
       nodes: toMaterialTreeNodes({
-        entries: [...tree?.materials.values() ?? []],
-        uses: tree?.materialUses() ?? new Map(),
-        marks: workspace?.presence.materialEdits ?? new Map()
+        materials: [...tree?.materials.materials() ?? []],
+        users: materialUsers(tree?.blocks() ?? []),
+        marks: workspace?.presence.materialEdits ?? new Map(),
+        blockMarks: workspace?.presence.blockSelections ?? new Map()
       }),
-      selectedId: this.#selectedId,
+      selectedId: this.#highlightedRow(),
       editedId: workspace?.materialFocus.edited ?? null,
       expanded: this.#expanded.ids,
       block: this.#blockState()
@@ -518,12 +458,9 @@ export class MaterialLibraryController {
       return null;
     }
 
-    const material = this.#material(block.materialId ?? null);
-
     return {
       name: block.name,
-      materialId: material?.id ?? null,
-      materialName: material?.name ?? null
+      materialId: this.#material(block.materialId ?? null)?.id ?? null
     };
   }
 
@@ -552,23 +489,30 @@ export class MaterialLibraryController {
       document.subscribe("change", this.#onChange),
       document.subscribe("reset", this.#onReset),
       selection.subscribe("select", this.#onSelectBlock),
-      presence.subscribe("materialEditsChange", this.#onPeerEdits),
+      presence.subscribe("materialEditsChange", this.#onPeerMarks),
+      presence.subscribe("blockSelectionsChange", this.#onPeerMarks),
       () => workspace.materialFocus.edit(null)
     ];
   }
 }
 
-function landingParentOf(
-  command: VoxelModelCommand
-): string | null {
-  switch (command.action) {
-    case "material-added":
-      return command.material.parentId;
-    case "material-folder-added":
-      return command.folder.parentId;
-    case "material-moved":
-      return command.parentId;
-    default:
-      return null;
+function isUsageRow(
+  rowId: string
+): boolean {
+  return blockOfUsageRow(rowId) !== null;
+}
+
+function materialUsers(
+  blocks: Iterable<BlockNodeJSON>
+): Map<string, MaterialUser[]> {
+  const users = new Map<string, MaterialUser[]>();
+  for (const { id, name, materialId } of blocks) {
+    if (materialId) {
+      const list = users.get(materialId) ?? [];
+      list.push({ id, name });
+      users.set(materialId, list);
+    }
   }
+
+  return users;
 }

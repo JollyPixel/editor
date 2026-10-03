@@ -54,6 +54,12 @@ export function registerAssetRooms(
     }
   }
   catalog.on("changed", onCatalogChanged);
+  function onStateReplaced(
+    assetId: string
+  ): void {
+    liveRooms.get(assetId)?.reload();
+  }
+  states.on("replaced", onStateReplaced);
 
   server.setRoomResolver(async(roomName): Promise<RoomResolution | null> => {
     function refuse(
@@ -124,6 +130,7 @@ export function registerAssetRooms(
 
   return () => {
     catalog.off("changed", onCatalogChanged);
+    states.off("replaced", onStateReplaced);
     liveRooms.clear();
     server.setRoomResolver(null);
   };

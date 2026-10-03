@@ -48,7 +48,8 @@ the field is locked, since the tint already names the holder.
 The label column is capped at `--jolly-label-max-width` (`45%`) so a long label
 cannot swallow the value area. A field packed next to another on one line is
 narrow enough for that cap to truncate its label; set the property to `none`
-there.
+there. A truncated label shows its full text on hover, see
+[overflow titles](../interaction/README.md#overflow-titles).
 
 ## Events
 

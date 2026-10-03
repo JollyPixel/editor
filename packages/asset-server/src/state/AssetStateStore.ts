@@ -1,11 +1,17 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import type { AssetCommandHeader } from "../kinds/AssetLiveProtocol.ts";
-import { ASSET_CHECKPOINT_EVENT_TYPES } from "../events/AssetEvents.ts";
+import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
+  ASSET_CREATED,
+  ASSET_UPDATED,
+  isStateNeutral
+} from "../events/AssetEvents.ts";
 import { foldAssetEvent } from "../kinds/foldAssetEvent.ts";
 import { InvalidAssetDocumentError } from "../kinds/errors/InvalidAssetDocumentError.ts";
 import {
@@ -18,6 +24,14 @@ import { yieldToEventLoop } from "../utils/yieldToEventLoop.ts";
 // CONSTANTS
 const kReplayYieldEvery = 250;
 const kCheckpointEventTypes = new Set<string>(ASSET_CHECKPOINT_EVENT_TYPES);
+const kContentEventTypes = new Set<string>([ASSET_CREATED, ASSET_UPDATED]);
+
+export type AssetStateStoreEventMap = {
+  /** Content loaded outside a scheduled snapshot, such as a disk edit or an archive import. */
+  replaced: (
+    assetId: string
+  ) => void;
+};
 
 export interface AssetStateEntry {
   readonly assetId: string;
@@ -43,7 +57,7 @@ export interface AssetStateStoreOptions {
   logger?: Logger;
 }
 
-export class AssetStateStore {
+export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
   #eventStore: EventStore.EventStore;
   #kinds: AssetKindRegistry;
   #logger: Logger;
@@ -54,6 +68,7 @@ export class AssetStateStore {
   constructor(
     options: AssetStateStoreOptions
   ) {
+    super();
     this.#eventStore = options.eventStore;
     this.#kinds = options.kinds;
     this.#logger = options.logger ?? silentLogger();
@@ -64,6 +79,9 @@ export class AssetStateStore {
       const open = this.#open.get(event.assetId);
       if (open !== undefined) {
         this.#follow(open, event);
+        if (replacesContent(event)) {
+          this.emit("replaced", event.assetId);
+        }
       }
     });
   }
@@ -219,4 +237,11 @@ export class AssetStateStore {
       return null;
     }
   }
+}
+
+function replacesContent(
+  event: EventStore.Event
+): boolean {
+  return kContentEventTypes.has(event.eventType) &&
+    !isStateNeutral(event);
 }

@@ -12,6 +12,9 @@ export interface TreeBadge {
   title?: string;
 }
 
+/** Where a row draws its swatch: before the label, or after the detail. */
+export type TreeSwatchPosition = "start" | "end";
+
 export interface TreeSwatch {
   title: string;
   /** Any CSS colour; empty when omitted. */

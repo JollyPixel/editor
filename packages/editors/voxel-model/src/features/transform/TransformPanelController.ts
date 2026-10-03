@@ -47,12 +47,8 @@ export class TransformPanelController {
   #onSelect = (
     uuid: string | null
   ): void => {
-    if (this.#selected !== null) {
-      this.#selected.pivotMarkerVisible = false;
-    }
     this.#selected = uuid === null ? null : this.#workspace?.blocks.get(uuid) ?? null;
     this.#syncAxisValues();
-    this.#syncPivotMarkerVisibility();
     this.#host.requestUpdate();
   };
 
@@ -102,7 +98,6 @@ export class TransformPanelController {
     this.#mode = mode;
     this.#syncAxisValues();
     this.#syncGizmo();
-    this.#syncPivotMarkerVisibility();
     this.#host.requestUpdate();
   }
 
@@ -167,12 +162,6 @@ export class TransformPanelController {
 
   #syncGizmo(): void {
     this.#workspace?.gizmo.configure(this.#mode, this.#space);
-  }
-
-  #syncPivotMarkerVisibility(): void {
-    if (this.#selected !== null) {
-      this.#selected.pivotMarkerVisible = TRANSFORM_MODES[this.#mode].showsPivot;
-    }
   }
 
   #syncAxisValues(): void {

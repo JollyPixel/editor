@@ -27,8 +27,14 @@ or two `null` values.
 
 ## Presence state types
 
-`PeerSelectionOutlineState`, `PeerFloatingSelectionState`, and
-`PeerUVPreviewState` describe the values written through `PixelArtCanvas` peer
-presence overlays. They are type-only exports. A `PeerUVPreviewState` holds the
-peer's dragged `region`, the `face` it changes or `null` for the whole region,
-and the peer `color`.
+`PeerSelectionOutlineState`, `PeerFloatingSelectionState`,
+`PeerUVPreviewState`, and `PeerUVSelectionState` describe the values written
+through `PixelArtCanvas` peer presence overlays. They are type-only exports. A
+`PeerUVPreviewState` holds the peer's dragged `region`, the `face` it changes or
+`null` for the whole region, and the peer `color`.
+
+A `PeerUVSelectionState` holds the `regionId` a peer has selected and the peer
+`color`, written with `canvas.peerPresence.uvSelections.set(clientId, state)`.
+That region's border takes the peer color and paints above plain borders but
+below the local selection. The local selection always keeps its own highlight,
+and the first peer set wins when several peers select one region.

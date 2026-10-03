@@ -10,9 +10,7 @@ import "@jolly-pixel/editor.host/ui";
 // Import Internal Dependencies
 import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
 import type { HierarchyPanel } from "../features/hierarchy/HierarchyPanel.ts";
-import type { TransformPanel } from "../features/transform/TransformPanel.ts";
 import "../features/hierarchy/HierarchyPanel.ts";
-import "../features/transform/TransformPanel.ts";
 import type { ViewPanel } from "../features/view/ViewPanel.ts";
 import "../features/view/ViewPanel.ts";
 import { WorkspaceController } from "../shared/WorkspaceController.ts";
@@ -27,9 +25,6 @@ export class RightPanel extends LitElement {
       })
     ];
   });
-
-  @query("jolly-model-editor-transform")
-  declare private transformElement: TransformPanel;
 
   @query("jolly-model-editor-hierarchy")
   declare private hierarchyElement: HierarchyPanel;
@@ -51,7 +46,6 @@ export class RightPanel extends LitElement {
       --jolly-folder-gap: var(--jolly-space-1, 4px);
     }
 
-    jolly-folder[key="transform"]::part(header),
     jolly-folder[key="collaborators"]::part(header),
     jolly-folder[key="file"]::part(header) {
       font-size: calc(var(--jolly-font-size, 11px) + 2px);
@@ -73,7 +67,6 @@ export class RightPanel extends LitElement {
     this.#workspace.attach(workspace);
 
     await this.updateComplete;
-    this.transformElement.attach(workspace);
     this.hierarchyElement.attach(workspace);
     this.viewElement.attach(workspace);
   }
@@ -106,14 +99,6 @@ export class RightPanel extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      <jolly-folder
-        key="transform"
-        label="Transform"
-        .collapsible=${false}
-        flush
-      >
-        <jolly-model-editor-transform></jolly-model-editor-transform>
-      </jolly-folder>
       <jolly-model-editor-hierarchy></jolly-model-editor-hierarchy>
       <jolly-model-editor-view></jolly-model-editor-view>
       ${this.#renderCollaborators()}

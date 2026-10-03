@@ -12,6 +12,7 @@ import {
   preset,
   type MaterialHarness
 } from "../materialHarness.ts";
+import { usageRowId } from "#src/features/material/library/usageRows.ts";
 
 // CONSTANTS
 const kMenuPoint = {
@@ -36,13 +37,14 @@ async function choose(
 function drop(
   harness: MaterialHarness,
   movedIds: string[],
-  targetId: string
+  targetId: string,
+  where: "above" | "below"
 ): void {
   harness.controller.handleReparent(new CustomEvent("jolly-reparent", {
     detail: {
       movedIds,
       targetId,
-      where: "inside"
+      where
     }
   }));
 }
@@ -150,15 +152,13 @@ describe("MaterialLibraryController selected block", () => {
     assert.equal(harness.controller.state.editedId, harness.glass);
     assert.deepEqual(harness.controller.state.block, {
       name: "Arm",
-      materialId: harness.glass,
-      materialName: "Glass"
+      materialId: harness.glass
     });
 
     harness.selection.select(leg.uuid);
     assert.deepEqual(harness.controller.state.block, {
       name: "Leg",
-      materialId: null,
-      materialName: null
+      materialId: null
     });
     assert.equal(harness.controller.state.editedId, harness.glass);
 
@@ -204,85 +204,157 @@ describe("MaterialLibraryController selected block", () => {
   });
 });
 
-describe("MaterialLibraryController folders", () => {
-  test("nests rows under their folder and opens the folders above a selected material", () => {
+describe("MaterialLibraryController block rows", () => {
+  test("lists the blocks using a material under it, in hierarchy order, with their peers", () => {
+    const harness = createHarness();
+    const arm = harness.addBlock({ name: "Arm", materialId: harness.glass });
+    harness.addBlock({ name: "Bare" });
+    const leg = harness.addBlock({ name: "Leg", materialId: harness.glass });
+    harness.presence.blockSelections = new Map([
+      [leg.uuid, [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }]]
+    ]);
+
+    const [glass] = harness.controller.state.nodes;
+
+    assert.equal(glass.detail, "2");
+    assert.deepEqual(glass.children, [
+      {
+        id: usageRowId(arm.uuid),
+        label: "Arm",
+        renamable: false
+      },
+      {
+        id: usageRowId(leg.uuid),
+        label: "Leg",
+        renamable: false,
+        badges: [{ color: "#ff0000", title: "Bob" }]
+      }
+    ]);
+  });
+
+  test("selects the block of a clicked row, and the row of a block selected elsewhere", () => {
+    const harness = createHarness();
+    const metal = harness.document.addMaterial({ name: "Metal" })!;
+    const arm = harness.addBlock({ name: "Arm", materialId: harness.glass });
+    const leg = harness.addBlock({ name: "Leg", materialId: metal });
+
+    harness.controller.handleSelect(new CustomEvent("jolly-select", {
+      detail: { selected: [usageRowId(arm.uuid)] }
+    }));
+
+    assert.equal(harness.selection.selected, arm.uuid);
+    assert.equal(harness.controller.state.selectedId, usageRowId(arm.uuid));
+    assert.equal(harness.controller.state.editedId, harness.glass);
+
+    harness.selection.select(leg.uuid);
+
+    assert.equal(harness.controller.state.selectedId, usageRowId(leg.uuid));
+    assert.equal(harness.controller.state.editedId, metal);
+    assert.ok(harness.controller.state.expanded.includes(metal));
+  });
+
+  test("highlights the selected block's row whenever its material is edited", () => {
+    const harness = createHarness();
+    const metal = harness.document.addMaterial({ name: "Metal" })!;
+    const arm = harness.addBlock({ name: "Arm", materialId: harness.glass });
+    harness.selection.select(arm.uuid);
+
+    harness.controller.select(metal);
+    assert.equal(harness.controller.state.selectedId, metal);
+
+    harness.controller.select(harness.glass);
+    assert.equal(harness.controller.state.selectedId, usageRowId(arm.uuid));
+  });
+
+  test("keeps editing a material taken off the selected block", () => {
+    const harness = createHarness();
+    const arm = harness.addBlock({ name: "Arm", materialId: harness.glass });
+    harness.selection.select(arm.uuid);
+
+    harness.controller.assign(null);
+
+    assert.equal(harness.controller.state.selectedId, harness.glass);
+    assert.equal(harness.controller.state.editedId, harness.glass);
+  });
+
+  test("refuses to drag a block row or drop next to one", () => {
+    const harness = createHarness();
+    const arm = harness.addBlock({ materialId: harness.glass });
+    const metal = harness.document.addMaterial({ name: "Metal" })!;
+    const row = usageRowId(arm.uuid);
+
+    assert.equal(
+      harness.controller.acceptDrop({ movedIds: [row], targetId: metal, where: "above" }),
+      false
+    );
+    assert.equal(
+      harness.controller.acceptDrop({ movedIds: [metal], targetId: row, where: "below" }),
+      false
+    );
+  });
+
+  test("opens a material on activation instead of applying it", () => {
+    const harness = createHarness();
+    harness.addBlock({ materialId: harness.glass });
+    const bare = harness.addBlock();
+    harness.selection.select(bare.uuid);
+    harness.actions.length = 0;
+
+    harness.controller.handleActivate(new CustomEvent("jolly-activate", {
+      detail: { id: harness.glass }
+    }));
+
+    assert.ok(harness.controller.state.expanded.includes(harness.glass));
+    assert.deepEqual(harness.actions, []);
+  });
+});
+
+describe("MaterialLibraryController order", () => {
+  test("lists materials an asset keeps in folders in one flat list", () => {
     const harness = createHarness();
     const metals = harness.document.addMaterialFolder({ name: "Metals" })!;
     const steel = harness.document.addMaterial({ name: "Steel", parentId: metals })!;
-    harness.controller.handleToggleExpand(new CustomEvent("jolly-toggle-expand", {
-      detail: {
-        id: metals,
-        expanded: false
-      }
-    }));
     const bolt = harness.addBlock({ materialId: steel });
 
     harness.selection.select(bolt.uuid);
 
-    const [, folder] = harness.controller.state.nodes;
-    assert.equal(folder.icon, "folder");
-    assert.deepEqual(folder.children?.map(({ id }) => id), [steel]);
-    assert.deepEqual(harness.controller.state.expanded, [metals]);
+    assert.deepEqual(
+      harness.controller.state.nodes.map(({ id }) => id),
+      [harness.glass, steel]
+    );
+    assert.deepEqual(harness.controller.state.expanded, [steel]);
     assert.equal(harness.controller.state.editedId, steel);
   });
 
-  test("writes nothing for a drop the tree refuses", () => {
+  test("reorders a dropped material among the others and refuses drops inside a row", () => {
     const harness = createHarness();
-    const metals = harness.controller.createFolder()!;
-    drop(harness, [harness.glass], metals);
-    harness.actions.length = 0;
+    const metal = harness.document.addMaterial({ name: "Metal" })!;
 
-    drop(harness, [metals], harness.glass);
+    drop(harness, [metal], harness.glass, "above");
 
-    assert.deepEqual(harness.actions, []);
-  });
-
-  test("moves a dropped material inside a folder and refuses drops inside a material", () => {
-    const harness = createHarness();
-    const metals = harness.controller.createFolder()!;
-
-    drop(harness, [harness.glass], metals);
-
-    assert.equal(harness.document.tree.materials.get(harness.glass)?.parentId, metals);
+    assert.deepEqual(namesOf(harness), ["Metal", "Glass"]);
     assert.equal(
-      harness.controller.acceptDrop({ movedIds: [metals], targetId: harness.glass, where: "inside" }),
+      harness.controller.acceptDrop({ movedIds: [harness.glass], targetId: metal, where: "inside" }),
       false
     );
     assert.equal(
-      harness.controller.acceptDrop({ movedIds: [harness.glass], targetId: metals, where: "above" }),
+      harness.controller.acceptDrop({ movedIds: [harness.glass], targetId: metal, where: "above" }),
       true
     );
   });
 
-  test("deletes a folder with its materials, or moves them up in its place", async() => {
-    const keep = createHarness({ deleteAnswer: { deleteChildren: false } });
-    const keptFolder = keep.document.addMaterialFolder({ name: "Metals" })!;
-    keep.document.addMaterial({ name: "Steel", parentId: keptFolder });
-    keep.document.addMaterial({ name: "Gold", parentId: keptFolder });
-    keep.document.addMaterial({ name: "Wood" });
-    keep.actions.length = 0;
+  test("moves a material next to one an asset keeps in a folder", () => {
+    const harness = createHarness();
+    const metals = harness.document.addMaterialFolder({ name: "Metals" })!;
+    const steel = harness.document.addMaterial({ name: "Steel", parentId: metals })!;
 
-    await keep.controller.remove(keptFolder);
+    drop(harness, [harness.glass], steel, "below");
 
-    assert.deepEqual(namesOf(keep), ["Glass", "Steel", "Gold", "Wood"]);
-    assert.deepEqual(keep.actions, ["material-removed"]);
-    assert.deepEqual(keep.calls.deletes, [{
-      heading: "Delete Folder",
-      hasChildren: true,
-      childrenLabel: "Delete its materials too"
-    }]);
-
-    const drop = createHarness({ deleteAnswer: { deleteChildren: true } });
-    const droppedFolder = drop.document.addMaterialFolder({ name: "Metals" })!;
-    const steel = drop.document.addMaterial({ name: "Steel", parentId: droppedFolder })!;
-    const bolt = drop.addBlock({ materialId: steel });
-
-    await drop.controller.remove(droppedFolder);
-
-    assert.deepEqual(namesOf(drop), ["Glass"]);
-    assert.equal(bolt.surface, null);
+    assert.equal(harness.document.tree.materials.get(harness.glass)?.parentId, metals);
   });
+});
 
+describe("MaterialLibraryController delete", () => {
   test("asks before deleting a material blocks use and deletes an unused one at once", async() => {
     const cancel = createHarness();
     cancel.addBlock({ materialId: cancel.glass });
@@ -307,38 +379,16 @@ describe("MaterialLibraryController folders", () => {
     assert.deepEqual(namesOf(confirm), []);
     assert.equal(block.surface, null);
   });
-
-  test("keeps a folder when its delete is cancelled and deletes an empty one at once", async() => {
-    const harness = createHarness();
-    const full = harness.document.addMaterialFolder({ name: "Full" })!;
-    harness.document.addMaterial({ name: "Steel", parentId: full });
-    const empty = harness.document.addMaterialFolder({ name: "Empty" })!;
-
-    await harness.controller.remove(full);
-    await harness.controller.remove(empty);
-
-    assert.deepEqual(namesOf(harness), ["Glass", "Full", "Steel"]);
-    assert.equal(harness.calls.deletes.length, 1);
-  });
 });
 
 describe("MaterialLibraryController.menuFor", () => {
-  test("lists the actions of the tree, a folder and a material", () => {
+  test("lists the actions of the tree and of a material", () => {
     const harness = createHarness();
-    const folder = harness.controller.createFolder()!;
 
     assert.deepEqual(labelsOf(harness.controller.menuFor(null).items), [
       "New Material…",
-      "New Folder",
       "-",
       "Paste"
-    ]);
-    assert.deepEqual(labelsOf(harness.controller.menuFor(folder).items), [
-      "New Material…",
-      "New Folder",
-      "Rename",
-      "-",
-      "Delete"
     ]);
     assert.deepEqual(labelsOf(harness.controller.menuFor(harness.glass).items), [
       "Rename",
@@ -349,28 +399,21 @@ describe("MaterialLibraryController.menuFor", () => {
     ]);
   });
 
-  test("offers a material to the selected block only when that block uses another", async() => {
+  test("offers no actions on a block listed under its material", () => {
     const harness = createHarness();
-    const block = harness.addBlock({ name: "Arm" });
+    const block = harness.addBlock({ name: "Arm", materialId: harness.glass });
     harness.selection.select(block.uuid);
 
-    assert.equal(labelsOf(harness.controller.menuFor(harness.glass).items)[0], "Assign to Arm");
-
-    await choose(harness, harness.glass, "assign");
-
+    assert.deepEqual(harness.controller.menuFor(harness.controller.state.selectedId).items, []);
     assert.equal(labelsOf(harness.controller.menuFor(harness.glass).items)[0], "Rename");
   });
 
-  test("adds a preset offered where it was asked and a folder to rename, in the row's folder", async() => {
+  test("adds the preset offered where the menu was opened", async() => {
     const harness = createHarness();
-    const folder = harness.controller.createFolder()!;
 
-    await choose(harness, folder, "new-material");
-    await choose(harness, folder, "new-folder");
+    await choose(harness, null, "new-material");
 
-    const children = harness.document.tree.materials.childrenOf(folder);
-    assert.deepEqual(children.map(({ name }) => name), ["Metal", "Folder"]);
-    assert.deepEqual(harness.calls.renamed, [children[1].id]);
+    assert.deepEqual(namesOf(harness), ["Glass", "Metal"]);
     assert.deepEqual(harness.calls.presetPoints, [kMenuPoint]);
   });
 
@@ -399,12 +442,11 @@ describe("MaterialLibraryController.menuFor", () => {
 describe("MaterialLibraryController peers", () => {
   test("shares the edited material and shows peers on the rows they edit", () => {
     const harness = createHarness();
-    const folder = harness.controller.createFolder()!;
 
     harness.controller.select(harness.glass);
     assert.equal(harness.materialFocus.edited, harness.glass);
 
-    harness.controller.select(folder);
+    harness.controller.select(null);
     assert.equal(harness.materialFocus.edited, null);
 
     harness.presence.materialEdits = new Map([

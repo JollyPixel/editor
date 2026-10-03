@@ -150,6 +150,7 @@ export class HierarchyPanel extends LitElement {
           @jolly-context-request=${this.#menu.onContextRequest}
           @jolly-select=${this.#tree.handleSelect}
           @jolly-toggle-expand=${this.#tree.handleToggleExpand}
+          @jolly-toggle-visible=${this.#tree.handleToggleVisible}
           @jolly-rename=${this.#tree.handleRename}
           @jolly-reparent=${this.#tree.handleReparent}
         ></jolly-tree>

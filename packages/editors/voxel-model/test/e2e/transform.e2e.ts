@@ -13,6 +13,7 @@ import { addNode } from "./support/hierarchy.ts";
 import {
   blockSummary,
   clickBlock,
+  gizmoAttached,
   gizmoHandlePoints,
   selectedBlock
 } from "./support/scene.ts";
@@ -48,6 +49,23 @@ async function expectAxes(
 
 test.beforeEach(async({ page }) => {
   await treeRow(page, "Block").click();
+});
+
+test("the gizmo and the transform fields belong to the Build tab", async({ page }) => {
+  const mode = page.getByRole("radiogroup", { name: "Transform mode" });
+  await expect(mode).toBeVisible();
+  await expect.poll(() => gizmoAttached(page)).toBe(true);
+
+  for (const tab of ["Paint", "Material"]) {
+    await page.getByRole("tab", { name: tab }).click();
+    await expect(mode).toBeHidden();
+    await expect.poll(() => gizmoAttached(page)).toBe(false);
+    expect(await selectedBlock(page)).toBe("Block");
+  }
+
+  await page.getByRole("tab", { name: "Build" }).click();
+  await expect(mode).toBeVisible();
+  await expect.poll(() => gizmoAttached(page)).toBe(true);
 });
 
 test("each mode edits its own component of the selected block", async({ page }) => {

@@ -122,6 +122,10 @@ export * from "./interaction/drag/dropIndex.ts";
 export * from "./interaction/drag/dragGhost.ts";
 export * from "./interaction/input/InputLayers.ts";
 export {
+  revealOverflowTitle,
+  syncOverflowTitle
+} from "./interaction/overflowTitle.ts";
+export {
   startPointerDragSession,
   type PointerDragResult,
   type PointerDragSessionHandle,

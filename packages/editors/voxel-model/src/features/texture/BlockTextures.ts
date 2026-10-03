@@ -21,6 +21,7 @@ import type {
   ModelBlock,
   ModelBlocks
 } from "../../scene/blocks/index.ts";
+import { SELECTION_HIGHLIGHT_COLOR } from "../../scene/blocks/ModelBlock.ts";
 import { BoxUvLayout } from "./BoxUvLayout.ts";
 import {
   blockRegionId,
@@ -28,7 +29,7 @@ import {
 } from "./blockRegionId.ts";
 
 // CONSTANTS
-const kBlockUvColor = "#4488ff";
+const kBlockUvColor = `#${SELECTION_HIGHLIGHT_COLOR.toString(16).padStart(6, "0")}`;
 
 export interface BlockTexturesOptions {
   pixels: PixelDocument;

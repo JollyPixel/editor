@@ -24,6 +24,7 @@ const kLeftPanelSelector = "jolly-model-editor-left-panel";
 const kRightPanelSelector = "jolly-model-editor-right-panel";
 const kMaterialLibrarySelector = "jolly-model-editor-material-library";
 const kMaterialPane = "material";
+const kBuildPane = "build";
 
 export interface EditorShellOptions {
   runtime: EditorRuntime;
@@ -36,6 +37,7 @@ export class EditorShell {
   #rightPanel: RightPanel;
   #materialPane: PaneElement;
   #materialLibrary: MaterialLibrary;
+  #workspace: ModelWorkspace | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -74,12 +76,12 @@ export class EditorShell {
 
     this.#leftPanel.setTexture(texture);
     for (const type of kLayoutEvents) {
-      layout.addEventListener(type, this.#placeLeftPanel);
+      layout.addEventListener(type, this.#onLayoutChange);
       this.#disposables.push(
-        () => layout.removeEventListener(type, this.#placeLeftPanel)
+        () => layout.removeEventListener(type, this.#onLayoutChange)
       );
     }
-    void layout.updateComplete.then(this.#placeLeftPanel);
+    void layout.updateComplete.then(this.#onLayoutChange);
     rightPanel.addEventListener(SHOW_MATERIAL_EVENT, this.#showMaterialPane);
     this.#disposables.push(
       () => rightPanel.removeEventListener(
@@ -96,8 +98,10 @@ export class EditorShell {
   adoptWorkspace(
     workspace: ModelWorkspace
   ): void {
+    this.#workspace = workspace;
     void this.#rightPanel.attach(workspace);
-    this.#leftPanel.model = workspace.document;
+    this.#leftPanel.workspace = workspace;
+    this.#syncGizmo();
     this.#materialLibrary.attach(workspace);
     this.#materialPane.presence = workspace.fields;
     this.#leftPanel.onPeerUvDragging = (region) => {
@@ -109,7 +113,18 @@ export class EditorShell {
     this.#layout.showPane(kMaterialPane);
   };
 
-  readonly #placeLeftPanel = (): void => {
+  readonly #onLayoutChange = (): void => {
+    this.#placeLeftPanel();
+    this.#syncGizmo();
+  };
+
+  #syncGizmo(): void {
+    if (this.#workspace !== null) {
+      this.#workspace.gizmo.enabled = this.#layout.paneVisible(kBuildPane);
+    }
+  }
+
+  #placeLeftPanel(): void {
     const pane = visibleTexturePane(
       (candidate) => this.#layout.paneVisible(candidate),
       this.#leftPanel.mode
@@ -123,7 +138,7 @@ export class EditorShell {
       host.append(this.#leftPanel);
     }
     this.#leftPanel.mode = pane;
-  };
+  }
 
   dispose(): void {
     for (const dispose of this.#disposables.splice(0).reverse()) {

@@ -518,6 +518,22 @@ describe("AssetRoomExtension — acks", () => {
     });
   });
 
+  test("a reload snapshot acknowledges every member", async() => {
+    const { extension, context, broadcast } = harness();
+    const peer = recordingClient("alice");
+    await extension.onClientConnect(peer, roomPeer(peer.id), context);
+
+    await extension.onMessage("bob", { action: "increment", seq: 3 }, context);
+    await extension.onMessage("alice", { action: "increment", seq: 5 }, context);
+    extension.reload();
+
+    assert.deepEqual(broadcast.at(-1), {
+      type: "snapshot",
+      data: { value: 7 },
+      acks: { bob: 3, alice: 5 }
+    });
+  });
+
   test("forgets a client's processed seq when it disconnects", async() => {
     const { extension, context, broadcast } = harness({
       protocol: {

@@ -19,7 +19,14 @@ behind a tab strip.
 `active` is the `layoutKey` of the shown pane. The default slot accepts
 `jolly-pane` children. Each tab is labelled with the pane `heading`, or its
 `layoutKey` when the heading is empty, and starts with the pane `icon` when it
-has one. Grouped panes get `grouped`, which hides their title, fold and grip,
+has one.
+
+When the strip is too narrow for every label, the tabs that have an icon show
+only the icon. They get `data-icon-only`, the heading becomes their `title`,
+and the label stays as their accessible name. Tabs without an icon keep their
+label, cut off with an [overflow title](../interaction/README.md#overflow-titles).
+The labels come back once the strip is wide enough for all of them again. The
+group measures on resize and whenever its panes change. Grouped panes get `grouped`, which hides their title, fold and grip,
 and the hidden ones get `inactive`. A grouped pane shows its header only when it
 has `actions`, and its content stays visible while `collapsed`.
 

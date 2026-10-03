@@ -30,12 +30,14 @@ import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
   type TreeDropAccept,
-  type TreeNode
+  type TreeNode,
+  type TreeSwatchPosition
 } from "./contract.ts";
 
 // Registers the chevron, eye, lock and drag glyphs.
 import "../../icon/Icon.ts";
 import { originatesInButton } from "../../dom.ts";
+import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 
 @customElement("jolly-tree")
 export class Tree<TData = unknown> extends LitElement {
@@ -93,6 +95,12 @@ export class Tree<TData = unknown> extends LitElement {
   })
   declare indentGuides: boolean;
 
+  @property({
+    reflect: true,
+    attribute: "swatch-position"
+  })
+  declare swatchPosition: TreeSwatchPosition;
+
   @property({ attribute: false })
   declare acceptDrop: TreeDropAccept | null;
 
@@ -118,6 +126,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.renamable = false;
     this.activateOnDoubleClick = false;
     this.indentGuides = false;
+    this.swatchPosition = "end";
     this.acceptDrop = null;
     this._interaction = idleTreeInteraction();
     this.#expandedIds = new Set();
@@ -234,9 +243,10 @@ export class Tree<TData = unknown> extends LitElement {
           ${node.icon === undefined ? nothing : html`
             <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
           `}
+          ${this.swatchPosition === "start" ? this.#renderSwatch(node) : nothing}
           ${this.#renderLabel(node)}
           ${node.detail ? html`<span class="detail">${node.detail}</span>` : nothing}
-          ${this.#renderSwatch(node)}
+          ${this.swatchPosition === "end" ? this.#renderSwatch(node) : nothing}
           ${this.#renderBadges(node)}
           ${node.visible === undefined ? nothing : html`
             <button
@@ -369,7 +379,10 @@ export class Tree<TData = unknown> extends LitElement {
       this._interaction.kind !== "renaming" ||
       this._interaction.id !== node.id
     ) {
-      return html`<span class="label">${node.label}</span>`;
+      return html`<span
+        class="label"
+        @pointerenter=${revealOverflowTitle}
+      >${node.label}</span>`;
     }
 
     return html`

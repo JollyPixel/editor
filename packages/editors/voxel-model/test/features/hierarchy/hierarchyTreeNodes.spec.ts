@@ -14,6 +14,10 @@ import {
 import type { HierarchyNode } from "#src/model/index.ts";
 import { materialSwatch } from "#src/shared/materialSwatch.ts";
 
+function allVisible(): boolean {
+  return true;
+}
+
 function node(
   id: string,
   kind: HierarchyNode["kind"],
@@ -44,24 +48,44 @@ describe("toTreeNodes", () => {
     const nodes = toTreeNodes([node("limbs", "folder", [
       node("arm", "block"),
       { ...node("leg", "block"), material: glass }
-    ])], new Map());
+    ])], new Map(), (id) => id !== "leg");
 
     assert.deepEqual(nodes, [{
       id: "limbs",
       label: "limbs",
       renamable: true,
       icon: "folder",
+      visible: true,
       children: [
-        { id: "arm", label: "arm", renamable: true, swatch: materialSwatch(null) },
-        { id: "leg", label: "leg", renamable: true, swatch: materialSwatch(glass) }
+        { id: "arm", label: "arm", renamable: true, swatch: materialSwatch(null), visible: true },
+        { id: "leg", label: "leg", renamable: true, swatch: materialSwatch(glass), visible: false }
       ]
     }]);
+  });
+
+  test("shows a folder visible while any block under it is, at any depth", () => {
+    const tree = [
+      node("outer", "folder", [
+        node("inner", "folder", [node("hand", "block", [node("finger", "block")])]),
+        node("arm", "block")
+      ]),
+      node("empty", "folder")
+    ];
+
+    const [outer, empty] = toTreeNodes(tree, new Map(), (id) => id === "finger");
+    assert.equal(outer.visible, true);
+    assert.equal(outer.children?.[0].visible, true);
+    assert.equal(empty.visible, undefined);
+
+    const [hidden] = toTreeNodes(tree, new Map(), (id) => id === "arm");
+    assert.equal(hidden.visible, true);
+    assert.equal(hidden.children?.[0].visible, false);
   });
 
   test("stamps up to three peer badges on the matching node, at any depth", () => {
     const marks = new Map([["arm", ["a", "b", "c", "d"].map(peer)]]);
 
-    const [root] = toTreeNodes([node("body", "block", [node("arm", "block")])], marks);
+    const [root] = toTreeNodes([node("body", "block", [node("arm", "block")])], marks, allVisible);
 
     assert.equal(root.badges, undefined);
     assert.deepEqual(root.children?.[0].badges, [
@@ -74,7 +98,7 @@ describe("toTreeNodes", () => {
 
 describe("collectExpandableIds", () => {
   test("returns an empty list when no node has children", () => {
-    assert.deepEqual(collectExpandableIds(toTreeNodes([node("a", "block")], new Map())), []);
+    assert.deepEqual(collectExpandableIds(toTreeNodes([node("a", "block")], new Map(), allVisible)), []);
   });
 
   test("returns every ancestor id, root to leaf, skipping childless nodes", () => {
@@ -83,7 +107,7 @@ describe("collectExpandableIds", () => {
         node("middle", "folder", [node("leaf", "block")]),
         node("sibling", "block")
       ])
-    ], new Map());
+    ], new Map(), allVisible);
 
     assert.deepEqual(collectExpandableIds(tree), ["root", "middle"]);
   });

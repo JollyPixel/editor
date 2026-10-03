@@ -22,7 +22,6 @@ import {
   PixelCollaboration,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
-import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 import "@jolly-pixel/ui";
 import {
   peerProfileColor,
@@ -32,6 +31,9 @@ import {
 // Import Internal Dependencies
 import "./BuildTab.ts";
 import type { TexturePane } from "./texturePanes.ts";
+import type { TransformWorkspace } from "../features/transform/TransformPanelController.ts";
+import { PeerRegionSelections } from "../features/texture/index.ts";
+import type { PresenceStore } from "../state/index.ts";
 
 // CONSTANTS
 const kDefaultZoom = {
@@ -40,6 +42,10 @@ const kDefaultZoom = {
   max: 32,
   sensitivity: 0.6
 };
+
+export interface LeftPanelWorkspace extends TransformWorkspace {
+  presence: PresenceStore;
+}
 
 export interface LeftPanelTexture {
   document: PixelDocument;
@@ -54,7 +60,7 @@ export class LeftPanel extends LitElement {
   private declare _canvas: PixelArtCanvas | null;
 
   @property({ attribute: false })
-  declare model: ModelDocument | null;
+  declare workspace: LeftPanelWorkspace | null;
 
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
@@ -64,6 +70,7 @@ export class LeftPanel extends LitElement {
   #resizeObserver: ResizeObserver | null = null;
   #texture: LeftPanelTexture | null = null;
   #collaboration: PixelCollaboration | null = null;
+  #peerRegionSelections: PeerRegionSelections | null = null;
   #initializing = false;
 
   static override styles = css`
@@ -85,7 +92,7 @@ export class LeftPanel extends LitElement {
     super();
     this.mode = "build";
     this._canvas = null;
-    this.model = null;
+    this.workspace = null;
   }
 
   setTexture(
@@ -133,6 +140,7 @@ export class LeftPanel extends LitElement {
       color: peerProfileColor,
       onRemoteUvDragging: (region) => this.onPeerUvDragging?.(region)
     });
+    this.#syncPeerRegionSelections();
   }
 
   override updated(
@@ -144,6 +152,19 @@ export class LeftPanel extends LitElement {
     ) {
       this._canvas.mode = canvasModeForTab(this.mode);
     }
+    if (changedProperties.has("workspace")) {
+      this.#syncPeerRegionSelections();
+    }
+  }
+
+  #syncPeerRegionSelections(): void {
+    this.#peerRegionSelections?.dispose();
+    this.#peerRegionSelections = this._canvas && this.workspace ?
+      new PeerRegionSelections({
+        presence: this.workspace.presence,
+        target: this._canvas.peerPresence.uvSelections
+      }) :
+      null;
   }
 
   override disconnectedCallback(): void {
@@ -157,6 +178,8 @@ export class LeftPanel extends LitElement {
       this.#resizeObserver = null;
       this.#collaboration?.destroy();
       this.#collaboration = null;
+      this.#peerRegionSelections?.dispose();
+      this.#peerRegionSelections = null;
     });
   }
 
@@ -165,7 +188,7 @@ export class LeftPanel extends LitElement {
       <jolly-model-editor-build
         ?hidden=${this.mode !== "build"}
         .canvas=${this._canvas}
-        .model=${this.model}
+        .workspace=${this.workspace}
       ></jolly-model-editor-build>
       <pixel-draw-panel uv-resize></pixel-draw-panel>
     `;

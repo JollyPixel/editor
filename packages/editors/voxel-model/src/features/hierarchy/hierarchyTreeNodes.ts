@@ -3,29 +3,51 @@ import type { TreeNode } from "@jolly-pixel/ui";
 import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { HierarchyNode } from "../../model/index.ts";
+import {
+  blockIdsUnder,
+  type HierarchyNode
+} from "../../model/index.ts";
 import { materialSwatch } from "../../shared/materialSwatch.ts";
 import { peerBadges } from "../../shared/peerBadges.ts";
 
 export function toTreeNodes(
   nodes: readonly HierarchyNode[],
-  marks: PeerMarkMap<string>
+  marks: PeerMarkMap<string>,
+  isVisible: (id: string) => boolean
 ): TreeNode[] {
   return nodes.map((node) => {
     const badges = peerBadges(node.id, marks);
-    const children = toTreeNodes(node.children, marks);
+    const children = toTreeNodes(node.children, marks, isVisible);
 
     return {
       id: node.id,
       label: node.name,
       renamable: true,
       ...node.kind === "folder" ?
-        { icon: "folder" } :
-        { swatch: materialSwatch(node.material) },
+        {
+          icon: "folder",
+          ...folderVisibility(node, isVisible)
+        } :
+        {
+          swatch: materialSwatch(node.material),
+          visible: isVisible(node.id)
+        },
       ...badges.length > 0 ? { badges } : {},
       ...children.length > 0 ? { children } : {}
     };
   });
+}
+
+function folderVisibility(
+  folder: HierarchyNode,
+  isVisible: (id: string) => boolean
+): { visible?: boolean; } {
+  const ids = [...blockIdsUnder(folder)];
+  if (ids.length === 0) {
+    return {};
+  }
+
+  return { visible: ids.some(isVisible) };
 }
 
 export function collectExpandableIds(

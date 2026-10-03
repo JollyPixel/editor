@@ -150,7 +150,7 @@ function selectBlock(
 }
 
 describe("HierarchyController.addBlock", () => {
-  test("adds at the root whatever is selected, then selects the new block", async() => {
+  test("adds under the selected block, then selects the new block", async() => {
     const harness = createHarness({
       name: { name: "Arm" }
     });
@@ -165,10 +165,20 @@ describe("HierarchyController.addBlock", () => {
         defaultName: "Block"
       }
     ]);
+    const [body] = harness.hierarchy.nodes();
+    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Arm"]]]);
+    assert.deepEqual(harness.controller.selected, [body.children[0].id]);
+  });
+
+  test("adds at the root without a selection", async() => {
+    const harness = createHarness({
+      name: { name: "Arm" }
+    });
+    harness.addBlock({ name: "Body" });
+
+    await harness.controller.addBlock();
+
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Body", "Arm"]);
-    assert.deepEqual(harness.controller.selected, [
-      harness.hierarchy.nodes()[1].id
-    ]);
   });
 
   test("falls back to the default name when the name is blank", async() => {
@@ -209,7 +219,92 @@ describe("HierarchyController.addFolder", () => {
     assert.equal(folder.kind, "folder");
     assert.equal(folder.name, "Folder");
   });
+
+  test("adds under the selected item", async() => {
+    const harness = createHarness({
+      name: { name: "Limbs" }
+    });
+    selectBlock(harness, "Body");
+
+    await harness.controller.addFolder();
+
+    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Limbs"]]]);
+    assert.equal(harness.hierarchy.nodes()[0].children[0].kind, "folder");
+  });
 });
+
+describe("HierarchyController.handleToggleVisible", () => {
+  test("hides only that block's mesh and reflects it on its row", () => {
+    const harness = createHarness();
+    const body = harness.addBlock({ name: "Body" });
+    const arm = harness.addBlock({
+      name: "Arm",
+      parentId: body.uuid
+    });
+
+    toggleVisible(harness, body.uuid, false);
+
+    assert.equal(body.mesh.visible, false);
+    assert.equal(arm.mesh.visible, true);
+    const [row] = harness.controller.nodes;
+    assert.equal(row.visible, false);
+    assert.equal(row.children?.[0].visible, true);
+  });
+
+  test("a folder follows its blocks: showing one child turns it back on", () => {
+    const harness = createHarness();
+    const folderId = harness.hierarchy.createFolder("Limbs", null)!;
+    const arm = harness.addBlock({ name: "Arm", parentId: folderId });
+    const leg = harness.addBlock({ name: "Leg", parentId: folderId });
+
+    toggleVisible(harness, folderId, false);
+    assert.deepEqual([arm.visible, leg.visible], [false, false]);
+    assert.equal(harness.controller.nodes[0].visible, false);
+
+    toggleVisible(harness, arm.uuid, true);
+    assert.equal(harness.controller.nodes[0].visible, true);
+
+    toggleVisible(harness, folderId, false);
+    assert.deepEqual([arm.visible, leg.visible], [false, false]);
+
+    toggleVisible(harness, folderId, true);
+    assert.deepEqual([arm.visible, leg.visible], [true, true]);
+  });
+
+  test("a folder reaches blocks in nested folders and under other blocks", () => {
+    const harness = createHarness();
+    const outerId = harness.hierarchy.createFolder("Outer", null)!;
+    const innerId = harness.hierarchy.createFolder("Inner", outerId)!;
+    const hand = harness.addBlock({ name: "Hand", parentId: innerId });
+    const finger = harness.addBlock({ name: "Finger", parentId: hand.uuid });
+
+    toggleVisible(harness, outerId, false);
+    assert.deepEqual([hand.visible, finger.visible], [false, false]);
+    const [outer] = harness.controller.nodes;
+    assert.equal(outer.visible, false);
+    assert.equal(outer.children?.[0].visible, false);
+
+    toggleVisible(harness, finger.uuid, true);
+    const [shown] = harness.controller.nodes;
+    assert.equal(shown.visible, true);
+    assert.equal(shown.children?.[0].visible, true);
+  });
+});
+
+function toggleVisible(
+  harness: Harness,
+  id: string,
+  visible: boolean
+): void {
+  harness.controller.handleToggleVisible(
+    new CustomEvent("jolly-toggle-visible", {
+      detail: {
+        id,
+        visible
+      }
+    })
+  );
+}
 
 describe("HierarchyController.duplicateSelected", () => {
   test("opens no dialog without a selection", async() => {
@@ -223,6 +318,7 @@ describe("HierarchyController.duplicateSelected", () => {
   test("selects and expands the copy of a subtree", async() => {
     const harness = createHarness({
       duplicate: {
+        name: "",
         includeChildren: true,
         mirrorAxes: kNoMirror
       }
@@ -235,7 +331,16 @@ describe("HierarchyController.duplicateSelected", () => {
 
     await harness.controller.duplicateSelected();
 
-    assert.deepEqual(harness.calls.duplicate, [{ hasChildren: true }]);
+    assert.deepEqual(harness.calls.duplicate, [
+      {
+        defaultName: "Body Copy",
+        hasChildren: true
+      }
+    ]);
+    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [
+      ["Body", ["Arm"]],
+      ["Body Copy", ["Arm"]]
+    ]);
     assert.equal(harness.hierarchy.nodes().length, 2);
     const [copyId] = harness.controller.selected;
     assert.notEqual(copyId, bodyUuid);
@@ -397,6 +502,7 @@ describe("HierarchyController.menuFor run", () => {
   test("duplicates and deletes the row it was opened on, not the selection", async() => {
     const harness = createHarness({
       duplicate: {
+        name: "Left Arm",
         includeChildren: false,
         mirrorAxes: kNoMirror
       },
@@ -407,10 +513,10 @@ describe("HierarchyController.menuFor run", () => {
     harness.selection.select(leg.uuid);
 
     await chooseFromMenu(harness, arm.uuid, "duplicate");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm", "Arm Copy", "Leg"]);
+    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm", "Left Arm", "Leg"]);
 
     await chooseFromMenu(harness, arm.uuid, "delete");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm Copy", "Leg"]);
+    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Left Arm", "Leg"]);
   });
 
   test("does nothing for a node removed while the menu was open", async() => {

@@ -16,7 +16,6 @@ import {
   hierarchyAction,
   materialRow,
   materialTab,
-  materialTool,
   newMaterial,
   openMaterial,
   openMaterialTab,
@@ -79,7 +78,7 @@ test("a peer sees edits, selections and appears among the collaborators", async(
   await expect(treeRow(page, "Block").getByTitle("Peer")).toBeHidden();
 });
 
-test("a peer sees who edits a material and the library's folders", async({ page, peer }) => {
+test("a peer sees who edits a material and the materials added", async({ page, peer }) => {
   test.slow();
   await openMaterial(page, "Block");
   await newMaterial(page, "Metal");
@@ -87,10 +86,10 @@ test("a peer sees who edits a material and the library's folders", async({ page,
 
   await expect(materialRow(peer, "Metal").getByTitle("E2E")).toBeVisible();
 
-  await materialTool(page, "New Folder");
-  await page.getByRole("textbox", { name: "Rename" }).press("Enter");
+  await newMaterial(page, "Glass");
 
-  await expect.poll(() => materialOutline(peer)).toEqual(["Metal", "Folder/"]);
+  await expect.poll(() => materialOutline(peer)).toEqual(["Metal", "Glass"]);
+  await expect(materialRow(peer, "Glass").getByTitle("E2E")).toBeVisible();
   await expect(materialRow(peer, "Metal").getByTitle("E2E")).toBeHidden();
 });
 

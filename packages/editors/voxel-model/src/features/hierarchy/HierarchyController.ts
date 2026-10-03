@@ -8,6 +8,7 @@ import {
   type JollyReparentDetail,
   type JollySelectDetail,
   type JollyToggleExpandDetail,
+  type JollyToggleVisibleDetail,
   type TreeNode
 } from "@jolly-pixel/ui";
 import type {
@@ -18,6 +19,8 @@ import type {
 
 // Import Internal Dependencies
 import {
+  blockIdsUnder,
+  duplicateNameOf,
   findHierarchyNode,
   type HierarchyNode,
   type ModelHierarchy
@@ -128,10 +131,6 @@ export class HierarchyController {
     this.#host.requestUpdate();
   };
 
-  #onPeerSelections = (): void => {
-    this.#rebuild();
-  };
-
   constructor(
     host: ReactiveControllerHost,
     view: HierarchyView
@@ -212,6 +211,21 @@ export class HierarchyController {
     );
   };
 
+  readonly handleToggleVisible = (
+    event: CustomEvent<JollyToggleVisibleDetail>
+  ): void => {
+    const { id, visible } = event.detail;
+    const node = this.#hierarchyNode(id);
+    if (node === null) {
+      return;
+    }
+
+    this.#workspace?.blocks.changeVisibility(
+      node.kind === "folder" ? blockIdsUnder(node) : [id],
+      visible
+    );
+  };
+
   readonly handleReparent = (
     event: CustomEvent<JollyReparentDetail>
   ): void => {
@@ -224,9 +238,13 @@ export class HierarchyController {
     }
   };
 
-  readonly addBlock = (): Promise<void> => this.#addBlock(null);
+  readonly addBlock = (): Promise<void> => this.#addBlock(
+    this.#selected[0] ?? null
+  );
 
-  readonly addFolder = (): Promise<void> => this.#addFolder(null);
+  readonly addFolder = (): Promise<void> => this.#addFolder(
+    this.#selected[0] ?? null
+  );
 
   readonly duplicateSelected = async(): Promise<void> => {
     const id = this.#selected[0];
@@ -304,6 +322,7 @@ export class HierarchyController {
 
     const hasChildren = source.children.length > 0;
     const result = await this.#view.promptDuplicate({
+      defaultName: duplicateNameOf(source.name),
       hasChildren
     });
     const workspace = this.#workspace;
@@ -311,10 +330,7 @@ export class HierarchyController {
       return;
     }
 
-    const duplicateId = workspace.hierarchy.duplicate(
-      source.id,
-      result
-    );
+    const duplicateId = workspace.hierarchy.duplicate(source.id, result);
     if (duplicateId === null) {
       return;
     }
@@ -385,6 +401,7 @@ export class HierarchyController {
   ): Array<() => void> {
     const {
       document,
+      blocks,
       selection,
       presence
     } = workspace;
@@ -392,21 +409,23 @@ export class HierarchyController {
     return [
       document.subscribe("change", this.#onChange),
       document.subscribe("reset", this.#onReset),
+      blocks.subscribe("blockVisibilityChanged", this.#rebuild),
       selection.subscribe("select", this.#onSelect),
-      presence.subscribe("blockSelectionsChange", this.#onPeerSelections)
+      presence.subscribe("blockSelectionsChange", this.#rebuild)
     ];
   }
 
-  #rebuild(): void {
+  readonly #rebuild = (): void => {
     const workspace = this.#workspace;
     if (workspace !== null) {
       this.#nodes = toTreeNodes(
         workspace.hierarchy.nodes(),
-        workspace.presence.blockSelections
+        workspace.presence.blockSelections,
+        (id) => workspace.blocks.get(id)?.visible ?? true
       );
     }
     this.#host.requestUpdate();
-  }
+  };
 }
 
 function landingParentOf(

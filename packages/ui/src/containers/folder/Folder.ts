@@ -21,6 +21,7 @@ import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
+import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 
 type ReorderCommand =
   | "cancel"
@@ -149,14 +150,20 @@ export class Folder extends LitElement {
       class="chevron"
       name="chevron"
       aria-hidden="true"
-    ></jolly-icon><span class="label">${this.label}</span></button>`;
+    ></jolly-icon><span
+      class="label"
+      @pointerenter=${revealOverflowTitle}
+    >${this.label}</span></button>`;
   }
 
   #renderTitle(): TemplateResult {
     return html`<div class="title"><span
       class="gutter"
       aria-hidden="true"
-    ></span><span class="label">${this.label}</span></div>`;
+    ></span><span
+      class="label"
+      @pointerenter=${revealOverflowTitle}
+    >${this.label}</span></div>`;
   }
 
   headerRect(): DOMRect {

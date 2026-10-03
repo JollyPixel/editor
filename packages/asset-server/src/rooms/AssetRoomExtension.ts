@@ -128,6 +128,16 @@ export class AssetRoomExtension<
     } satisfies AssetRoomDeletedMessage);
   }
 
+  reload(): void {
+    if (this.#deleted) {
+      return;
+    }
+
+    this.#room?.broadcast(
+      this.#snapshot(this.#acks.ofEveryone())
+    );
+  }
+
   override async onClientConnect(
     client: network.ClientHandle,
     peer: network.RoomPeer,

@@ -140,15 +140,6 @@ export async function blockSurface(
   }, { name, source });
 }
 
-export async function emphasizedBlocks(
-  page: Page
-): Promise<string[]> {
-  const editor = await editorOf(page);
-
-  return editor.evaluate(({ workspace }) => workspace.selection.emphasized
-    .map((uuid) => workspace.blocks.get(uuid)?.name ?? uuid));
-}
-
 export async function materialUses(
   page: Page
 ): Promise<Array<[string, number]>> {
@@ -162,6 +153,24 @@ export async function materialUses(
       (material): [string, number] => [material.name, uses.get(material.id) ?? 0]
     );
   });
+}
+
+export async function gizmoAttached(
+  page: Page
+): Promise<boolean> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ workspace }) => (workspace.gizmo.activeControls?.target ?? null) !== null);
+}
+
+export async function blockVisible(
+  page: Page,
+  name: string
+): Promise<boolean | null> {
+  const editor = await editorOf(page);
+
+  return editor.evaluate(({ workspace }, blockName) => [...workspace.blocks.values()]
+    .find((block) => block.name === blockName)?.visible ?? null, name);
 }
 
 export async function blockSummary(

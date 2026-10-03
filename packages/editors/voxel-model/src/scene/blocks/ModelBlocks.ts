@@ -29,6 +29,7 @@ import {
 export type ModelBlocksEvents = {
   blockAdded: (block: ModelBlock) => void;
   blockRemoved: (uuid: string) => void;
+  blockVisibilityChanged: (uuids: readonly string[], visible: boolean) => void;
 };
 
 export interface ModelBlocksOptions {
@@ -188,6 +189,24 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     object: THREE.Object3D
   ): ModelBlock | undefined {
     return this.#byMesh.get(object);
+  }
+
+  changeVisibility(
+    uuids: Iterable<string>,
+    visible: boolean
+  ): void {
+    const changed: string[] = [];
+    for (const uuid of uuids) {
+      const block = this.#blocks.get(uuid);
+      if (block && block.visible !== visible) {
+        block.visible = visible;
+        changed.push(uuid);
+      }
+    }
+
+    if (changed.length > 0) {
+      this.emit("blockVisibilityChanged", changed, visible);
+    }
   }
 
   applyTransform(
