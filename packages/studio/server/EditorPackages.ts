@@ -1,21 +1,24 @@
+// Import Third-party Dependencies
+import type { PackageResolver } from "@jolly-pixel/asset-server/node";
+
 // Import Internal Dependencies
 import type { EditorDescriptor } from "../src/editors/EditorDescriptor.ts";
-import {
-  EditorPackage,
-  type PackageLocator
-} from "./EditorPackage.ts";
+import { EditorPackage } from "./EditorPackage.ts";
 
 export class EditorPackages implements Iterable<EditorPackage> {
   #editors: readonly EditorPackage[];
 
   static read(
     packageNames: Iterable<string>,
-    locate: PackageLocator = EditorPackage.locate
+    resolver: PackageResolver
   ): EditorPackages {
     return new EditorPackages(
       Array.from(
         packageNames,
-        (packageName) => EditorPackage.read(packageName, locate(packageName))
+        (packageName) => EditorPackage.read(
+          packageName,
+          resolver.locate(packageName)
+        )
       )
     );
   }
@@ -42,6 +45,8 @@ export class EditorPackages implements Iterable<EditorPackage> {
   }
 
   descriptors(): EditorDescriptor[] {
-    return this.#editors.map((editor) => editor.toDescriptor());
+    return this.#editors.map(
+      (editor) => editor.toDescriptor()
+    );
   }
 }

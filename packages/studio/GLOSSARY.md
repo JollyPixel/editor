@@ -17,6 +17,7 @@ The app. One studio process opens exactly one project.
 An asset root on disk plus its configuration, `.jollypixel/project.json`,
 which lists its editor packages and kind packages. The `JOLLY_PROJECT`
 environment variable picks it, defaulting to `packages/studio/project/`.
+Its packages resolve from its own `node_modules` before the studio's.
 The back-end calls the same assets a workspace; the studio never uses that
 word for anything else.
 
@@ -77,6 +78,12 @@ icon. The shell registers one per kind it can show.
 The `jollypixel.editor` field of an editor package's `package.json`:
 `{ name, kinds, dist? }`. It tells the studio which kinds the editor opens
 and which folder holds its built page.
+
+### Project manifest
+
+`ProjectManifest`: the editor and kind descriptors of the project, served as
+`project-manifest.json` and fetched by the shell at boot. Not to be confused
+with an editor manifest.
 
 ### Editor registry
 

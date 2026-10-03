@@ -40,13 +40,17 @@ export class EditorPagesWatcher {
     editors: Iterable<EditorPackage>
   ) {
     this.#server = server;
-    this.#watchers = Array.from(editors, (editor) => this.#watch(editor));
+    this.#watchers = Array.from(
+      editors,
+      (editor) => this.#watch(editor)
+    );
   }
 
   close(): void {
     for (const watcher of this.#watchers) {
       watcher.close();
     }
+
     for (const timer of this.#pending.values()) {
       clearTimeout(timer);
     }
@@ -56,11 +60,17 @@ export class EditorPagesWatcher {
   #watch(
     editor: EditorPackage
   ): FSWatcher {
-    mkdirSync(editor.dist, { recursive: true });
+    mkdirSync(
+      editor.dist,
+      { recursive: true }
+    );
     const snapshot = new DistSnapshot(editor.dist);
 
     return watch(editor.dist, { recursive: true }, (_event, filename) => {
-      if (filename !== null && !snapshot.update(filename)) {
+      if (
+        filename !== null &&
+        !snapshot.update(filename)
+      ) {
         return;
       }
 

@@ -48,7 +48,8 @@ export function voxelMapEditor(
     package: `@jolly-pixel/editor.${name}`,
     name,
     kinds: ["voxelmap"],
-    dist
+    dist,
+    prebuilt: false
   });
 }
 

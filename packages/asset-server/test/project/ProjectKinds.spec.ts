@@ -13,6 +13,7 @@ import {
   TEXTURE_KIND
 } from "#src/index.ts";
 import {
+  PackageResolver,
   ProjectFile,
   ProjectKinds
 } from "#src/node.ts";
@@ -21,6 +22,7 @@ import {
   kindPackage,
   packageLoader
 } from "../helpers/kindPackages.ts";
+import { writeKindPackage } from "../helpers/packages.ts";
 import { tempWorkspace } from "../helpers/tempWorkspace.ts";
 
 function projectFile(
@@ -67,23 +69,9 @@ describe("ProjectKinds", () => {
 
   test("resolves the packages from the project root", async() => {
     await using workspace = await tempWorkspace();
-    const packageRoot = path.join(workspace.root, "node_modules", "kind-a");
-    await fs.mkdir(packageRoot, { recursive: true });
-    await fs.writeFile(
-      path.join(packageRoot, "package.json"),
-      JSON.stringify({
-        name: "kind-a",
-        type: "module",
-        exports: "./index.js"
-      })
-    );
-    await fs.writeFile(
-      path.join(packageRoot, "index.js"),
-      "export const ASSET_KINDS = {\n" +
-      "  descriptors: [],\n" +
-      "  optionsSchema: { type: \"object\" },\n" +
-      "  handlers: (options) => [{ kind: \"alpha\", options }]\n" +
-      "};\n"
+    await writeKindPackage(
+      path.join(workspace.root, "node_modules", "kind-a"),
+      "kind-a"
     );
     const file = path.join(workspace.root, PROJECT_FILE_PATH);
     await fs.mkdir(path.dirname(file), { recursive: true });
@@ -108,6 +96,42 @@ describe("ProjectKinds", () => {
         }
       }
     ]);
+  });
+
+  test("loads local folders and packages from the resolver's fallbacks", async() => {
+    await using workspace = await tempWorkspace();
+    const project = path.join(workspace.root, "project");
+    const host = path.join(workspace.root, "host");
+    await writeKindPackage(
+      path.join(project, "kinds", "local"),
+      "local-kind",
+      "alpha"
+    );
+    await writeKindPackage(
+      path.join(host, "node_modules", "kind-b"),
+      "kind-b",
+      "beta"
+    );
+
+    const kinds = await ProjectKinds.load(
+      new ProjectFile(project, {
+        version: 1,
+        kinds: {
+          "./kinds/local": {},
+          "kind-b": {}
+        }
+      }),
+      {
+        resolver: new PackageResolver(project, {
+          fallbacks: [host]
+        })
+      }
+    );
+
+    assert.deepEqual(
+      kinds.handlers().map((handler) => handler.kind),
+      ["alpha", "beta", TEXTURE_KIND]
+    );
   });
 
   test("names both packages of a kind claimed twice", async() => {

@@ -1,7 +1,6 @@
 // Import Node.js Dependencies
 import fs from "node:fs";
 import path from "node:path";
-import { findPackageJSON } from "node:module";
 
 // Import Third-party Dependencies
 import * as z from "zod";
@@ -10,6 +9,7 @@ import * as z from "zod";
 import type { EditorDescriptor } from "../src/editors/EditorDescriptor.ts";
 
 // CONSTANTS
+const kInstallFolder = "node_modules";
 const kPackageManifestSchema = z.object({
   jollypixel: z.object({
     editor: z.object({
@@ -20,14 +20,16 @@ const kPackageManifestSchema = z.object({
   })
 });
 
-export type PackageLocator = (packageName: string) => string;
-
 export interface EditorPackageData extends EditorDescriptor {
   package: string;
   /**
    * Absolute path of the built page folder.
    */
   dist: string;
+  /**
+   * The page ships built: it must exist when read and is never watched.
+   */
+  prebuilt: boolean;
 }
 
 export class EditorPackage implements EditorPackageData {
@@ -35,37 +37,8 @@ export class EditorPackage implements EditorPackageData {
   readonly name: string;
   readonly kinds: readonly string[];
   readonly dist: string;
+  readonly prebuilt: boolean;
 
-  static locate(
-    packageName: string
-  ): string {
-    let manifest: string | undefined;
-    let cause: unknown;
-    try {
-      manifest = findPackageJSON(
-        packageName,
-        import.meta.url
-      );
-    }
-    catch (error) {
-      cause = error;
-    }
-    if (manifest === undefined) {
-      throw new TypeError(
-        `Cannot locate the package "${packageName}".`,
-        { cause }
-      );
-    }
-
-    return fs.realpathSync(
-      path.dirname(manifest)
-    );
-  }
-
-  /**
-   * Reads the `jollypixel.editor` field of `package.json`:
-   * `{ name, kinds, dist? }`, where `dist` is relative to the package root and defaults to `"dist"`.
-   */
   static read(
     packageName: string,
     root: string
@@ -86,13 +59,20 @@ export class EditorPackage implements EditorPackageData {
     }
 
     const { name, kinds, dist } = manifest.data.jollypixel.editor;
-
-    return new EditorPackage({
+    const editor = new EditorPackage({
       package: packageName,
       name,
       kinds,
-      dist: path.resolve(root, dist)
+      dist: path.resolve(root, dist),
+      prebuilt: root.split(/[\\/]/).includes(kInstallFolder)
     });
+    if (editor.prebuilt && !fs.existsSync(editor.dist)) {
+      throw new TypeError(
+        `"${packageName}" has no built page at "${editor.dist}".`
+      );
+    }
+
+    return editor;
   }
 
   constructor(
@@ -102,6 +82,7 @@ export class EditorPackage implements EditorPackageData {
     this.name = data.name;
     this.kinds = [...data.kinds];
     this.dist = data.dist;
+    this.prebuilt = data.prebuilt;
   }
 
   toDescriptor(): EditorDescriptor {

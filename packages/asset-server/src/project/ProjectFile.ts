@@ -1,6 +1,7 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 // Import Third-party Dependencies
 import {
@@ -29,6 +30,14 @@ const kProjectFileParser = new SchemaParser(kProjectFileSchema);
 
 export type ProjectFileData = Infer<typeof kProjectFileSchema> &
   Readonly<Record<string, unknown>>;
+
+export interface ProjectFileOpenOptions {
+  /**
+   * Keeps `data` in memory without reading or writing the project file.
+   * @default false
+   */
+  inMemory?: boolean;
+}
 
 export class ProjectFile {
   readonly root: string;
@@ -61,7 +70,10 @@ export class ProjectFile {
     data: ProjectFileData
   ): Promise<ProjectFile> {
     const file = path.join(root, PROJECT_FILE_PATH);
-    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.mkdir(
+      path.dirname(file),
+      { recursive: true }
+    );
 
     try {
       await fs.writeFile(
@@ -77,6 +89,18 @@ export class ProjectFile {
     }
 
     return ProjectFile.read(root);
+  }
+
+  static async open(
+    root: string,
+    data: ProjectFileData,
+    options: ProjectFileOpenOptions = {}
+  ): Promise<ProjectFile> {
+    const { inMemory = false } = options;
+
+    return inMemory ?
+      new ProjectFile(root, data) :
+      ProjectFile.readOrCreate(root, data);
   }
 
   static parse(
@@ -114,7 +138,23 @@ export class ProjectFile {
     this.root = root;
     this.path = path.join(root, PROJECT_FILE_PATH);
     this.document = document;
-    this.kinds = new Map(Object.entries(document.kinds ?? {}));
+    this.kinds = new Map(
+      Object.entries(document.kinds ?? {})
+    );
+  }
+
+  async isStale(): Promise<boolean> {
+    try {
+      const current = ProjectFile.parse(
+        this.root,
+        await fs.readFile(this.path, "utf8")
+      );
+
+      return !isDeepStrictEqual(current.document, this.document);
+    }
+    catch {
+      return true;
+    }
   }
 }
 

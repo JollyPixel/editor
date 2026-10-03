@@ -22,3 +22,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0014](./0014-the-asset-browser-lives-on-home.md) | The asset browser lives on the Home tab |
 | [0015](./0015-the-studio-console-takes-precedence.md) | The studio console takes precedence over editor consoles |
 | [0016](./0016-the-project-file-lists-editors-and-kinds.md) | The project file lists editors and kinds |
+| [0017](./0017-project-packages-are-trusted-code.md) | Project packages are trusted code |

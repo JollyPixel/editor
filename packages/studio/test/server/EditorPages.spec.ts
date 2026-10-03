@@ -6,19 +6,29 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 // Import Internal Dependencies
+import { EditorPackage } from "../../server/EditorPackage.ts";
+import { EditorPackages } from "../../server/EditorPackages.ts";
+import { EditorPages } from "../../server/EditorPages.ts";
+import { EDITOR_PAGE_SETTLE_MS } from "../../server/EditorPagesWatcher.ts";
 import {
   BUNDLE,
   createDist,
   INDEX_HTML,
   listen,
   PASS_THROUGH_STATUS,
+  voxelMapEditor,
   voxelMapPages,
   type PagesServer
 } from "../helpers/editorPages.ts";
-import { removeTempDir } from "../helpers/tempDir.ts";
+import {
+  createTempDir,
+  removeTempDir
+} from "../helpers/tempDir.ts";
 
 describe("EditorPages", () => {
   let dist: string;
@@ -107,6 +117,49 @@ describe("EditorPages", () => {
         PASS_THROUGH_STATUS,
         `${method} ${pathname}`
       );
+    }
+  });
+
+  test("announces rebuilt pages of the editors that are not prebuilt", async() => {
+    const parent = await createTempDir("studio-prebuilt-");
+    const prebuiltDist = path.join(parent, "prebuilt", "dist");
+    const builtDist = path.join(parent, "built", "dist");
+    await fs.mkdir(prebuiltDist, { recursive: true });
+    const sent: string[] = [];
+    const watcher = new EditorPages(new EditorPackages([
+      new EditorPackage({
+        package: "@jolly-pixel/editor.prebuilt",
+        name: "prebuilt",
+        kinds: ["voxelmap"],
+        dist: prebuiltDist,
+        prebuilt: true
+      }),
+      voxelMapEditor(builtDist, "built")
+    ])).watch({
+      config: {
+        logger: {
+          warn: () => undefined
+        }
+      },
+      ws: {
+        send: (_event, payload) => sent.push(payload.name)
+      }
+    });
+
+    try {
+      await fs.writeFile(path.join(prebuiltDist, "index.html"), INDEX_HTML);
+      await fs.writeFile(path.join(builtDist, "index.html"), INDEX_HTML);
+      const deadline = Date.now() + (EDITOR_PAGE_SETTLE_MS * 10);
+      while (sent.length === 0 && Date.now() < deadline) {
+        await sleep(25);
+      }
+      await sleep(EDITOR_PAGE_SETTLE_MS * 2);
+
+      assert.deepEqual(sent, ["built"]);
+    }
+    finally {
+      watcher.close();
+      await removeTempDir(parent);
     }
   });
 });

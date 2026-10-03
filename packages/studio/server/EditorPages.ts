@@ -45,7 +45,10 @@ export class EditorPages {
   watch(
     server: EditorPagesServer
   ): EditorPagesWatcher {
-    return new EditorPagesWatcher(server, this.editors);
+    return new EditorPagesWatcher(
+      server,
+      this.editors.filter((editor) => !editor.prebuilt)
+    );
   }
 
   async copyTo(
