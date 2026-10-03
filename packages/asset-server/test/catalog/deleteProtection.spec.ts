@@ -8,19 +8,13 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
-import {
-  Client,
-  LoopbackTransport,
-  Server
-} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
   createAssetBackend,
-  silentLogger,
   type AssetBackend
 } from "#src/index.ts";
-import {
+import type {
   CatalogClient,
   CatalogRejectedError
 } from "#src/catalog/client/index.ts";
@@ -29,6 +23,7 @@ import {
   linkHandler
 } from "../helpers/kinds.ts";
 import { bytes } from "../helpers/bytes.ts";
+import { connectCatalog } from "../helpers/catalog.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -65,24 +60,15 @@ async function linkedWorkspace(
     actor: kActor
   })).unwrap();
 
-  const server = new Server({ logger: silentLogger() });
-  const detach = backend.attach(server);
-  const transport = new LoopbackTransport({ server });
-  const client = new Client({
-    socket: () => transport.connect()
-  });
-  const catalog = await CatalogClient.connect(client);
+  const connection = await connectCatalog(backend);
 
   return {
     backend,
-    catalog,
+    catalog: connection.catalog,
     targetId: target.assetId,
     linkId: link.assetId,
     async [Symbol.asyncDispose]() {
-      catalog.dispose();
-      client.destroy();
-      detach();
-      await server.close();
+      await connection[Symbol.asyncDispose]();
       await backend.close();
       eventStore.close();
     }

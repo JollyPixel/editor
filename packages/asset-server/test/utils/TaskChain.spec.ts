@@ -69,6 +69,6 @@ describe("TaskChain", () => {
 
     void chain.run(() => Promise.reject(new Error("boom"))).catch(() => null);
 
-    await chain.settled();
+    await assert.doesNotReject(chain.settled());
   });
 });

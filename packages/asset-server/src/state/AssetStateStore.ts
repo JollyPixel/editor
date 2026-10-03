@@ -143,16 +143,6 @@ export class AssetStateStore {
     this.#commandsSinceCheckpoint.delete(assetId);
   }
 
-  async serialize(
-    assetId: string,
-    kind: string
-  ): Promise<Uint8Array> {
-    const entry = this.#entries.get(assetId) ??
-      (await this.#replay(assetId, kind)).entry;
-
-    return entry.handler.serialize(entry.state);
-  }
-
   async #replay(
     assetId: string,
     kind: string

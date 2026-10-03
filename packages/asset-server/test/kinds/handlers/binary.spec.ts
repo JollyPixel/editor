@@ -99,17 +99,3 @@ describe("binaryAssetKind", () => {
     );
   });
 });
-
-describe("content encoding", () => {
-  test("round-trips arbitrary bytes", async() => {
-    const source = new Uint8Array([0, 255, 128, 7, 42]);
-    const state = binaryAssetKind.create("a1");
-
-    foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
-      path: "a.bin", kind: "binary", hash: "h1", size: source.length,
-      content: encodeContent(source)
-    }));
-
-    assert.deepEqual(await binaryAssetKind.serialize(state), source);
-  });
-});

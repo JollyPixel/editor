@@ -49,17 +49,11 @@ export interface SyncHarnessOptions {
 }
 
 export interface ReadCounter {
-  /** Stands in for the real store, counting what its reader hands out. */
   readonly store: EventStore.EventStore;
-  /** Events returned by the reader since the last `reset`. */
   readonly read: number;
   reset(): void;
 }
 
-/**
- * Counts the events a reader materializes, so a test can pin that a
- * projection loads from the tail of the log instead of its whole history.
- */
 export function countingReads(
   store: EventStore.EventStore
 ): ReadCounter {
@@ -102,12 +96,6 @@ export function countingReads(
   };
 }
 
-/**
- * Wires source, state, projector and scheduler over in-memory backends.
- *
- * Suites that depend on the snapshot or debounce cadence enable
- * `t.mock.timers` before calling this.
- */
 export async function syncHarness(
   options: SyncHarnessOptions = {}
 ): Promise<SyncHarness> {

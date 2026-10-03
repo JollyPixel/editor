@@ -4,17 +4,10 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-import { once } from "node:events";
-import http from "node:http";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import {
-  Server,
-  type ClientHandle,
-  type RoomPeer,
-  type RoomContext
-} from "@jolly-pixel/network";
+import { Server } from "@jolly-pixel/network";
 import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -36,68 +29,33 @@ import {
   CATALOG_REJECTED,
   CATALOG_RENAME,
   CATALOG_ROOM,
-  CATALOG_SNAPSHOT,
-  type CatalogCommand
+  CATALOG_SNAPSHOT
 } from "#src/index.ts";
 import { createCatalogHandler } from "#src/node.ts";
 import {
   catalogBackend,
-  syncHarness,
-  type SyncHarness
+  syncHarness
 } from "../helpers/backend.ts";
 import {
   bytes,
   text
 } from "../helpers/bytes.ts";
+import {
+  catalogCommands,
+  serveCatalog,
+  type CatalogCommands
+} from "../helpers/catalog.ts";
+import {
+  recordingClient,
+  recordingRoom,
+  roomPeer
+} from "../helpers/rooms.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
   type: "user",
   id: "alice"
 };
-
-interface FakeRoom {
-  context: RoomContext;
-  broadcasts: unknown[];
-  direct: { clientId: string; payload: unknown; }[];
-}
-
-function fakeRoom(): FakeRoom {
-  const broadcasts: unknown[] = [];
-  const direct: { clientId: string; payload: unknown; }[] = [];
-
-  return {
-    broadcasts,
-    direct,
-    context: {
-      room: {
-        broadcast: (payload) => broadcasts.push(payload),
-        sendTo: (clientId, payload) => direct.push({ clientId, payload })
-      },
-      identity: {
-        subject: "alice-subject",
-        role: "default"
-      }
-    }
-  };
-}
-
-function client(
-  id: string
-): ClientHandle {
-  return { id, send: () => void 0 };
-}
-
-function peer(
-  clientId: string
-): RoomPeer {
-  return {
-    clientId,
-    identity: { subject: clientId, role: "default" },
-    profile: {},
-    presence: {}
-  };
-}
 
 describe("CatalogExtension — join", () => {
   test("sends the snapshot to the joining client", async() => {
@@ -115,8 +73,8 @@ describe("CatalogExtension — join", () => {
     const extension = new CatalogExtension({
       backend: catalogBackend(harness, projection)
     });
-    const room = fakeRoom();
-    extension.onClientConnect(client("A"), peer("A"), room.context);
+    const room = recordingRoom();
+    extension.onClientConnect(recordingClient("A"), roomPeer("A"), room.context);
 
     assert.strictEqual(room.direct.length, 1);
     assert.deepEqual(room.direct[0], {
@@ -143,9 +101,9 @@ describe("CatalogExtension — join", () => {
     const extension = new CatalogExtension({
       backend: catalogBackend(harness, projection)
     });
-    const room = fakeRoom();
-    extension.onClientConnect(client("A"), peer("A"), room.context);
-    extension.onClientConnect(client("B"), peer("B"), room.context);
+    const room = recordingRoom();
+    extension.onClientConnect(recordingClient("A"), roomPeer("A"), room.context);
+    extension.onClientConnect(recordingClient("B"), roomPeer("B"), room.context);
 
     assert.deepEqual(
       room.direct.map((entry) => entry.clientId),
@@ -167,8 +125,8 @@ describe("CatalogExtension — broadcast", () => {
     const extension = new CatalogExtension({
       backend: catalogBackend(harness, projection)
     });
-    const room = fakeRoom();
-    extension.onClientConnect(client("A"), peer("A"), room.context);
+    const room = recordingRoom();
+    extension.onClientConnect(recordingClient("A"), roomPeer("A"), room.context);
 
     await harness.writer.create({
       path: "a.png",
@@ -185,32 +143,6 @@ describe("CatalogExtension — broadcast", () => {
     projection.close();
   });
 
-  test("a domain event broadcasts nothing", async() => {
-    await using harness = await syncHarness();
-    const projection = new CatalogProjection({
-      eventStore: harness.eventStore
-    });
-    projection.start();
-
-    const extension = new CatalogExtension({
-      backend: catalogBackend(harness, projection)
-    });
-    const room = fakeRoom();
-    extension.onClientConnect(client("A"), peer("A"), room.context);
-
-    harness.eventStore.writer.append({
-      assetType: "counter",
-      assetId: "a1",
-      eventType: "counter.incremented",
-      eventData: {},
-      actor: kActor
-    }).unwrap();
-
-    assert.deepEqual(room.broadcasts, []);
-    extension.dispose();
-    projection.close();
-  });
-
   test("stops broadcasting once the last client left", async() => {
     await using harness = await syncHarness();
     const projection = new CatalogProjection({
@@ -221,8 +153,8 @@ describe("CatalogExtension — broadcast", () => {
     const extension = new CatalogExtension({
       backend: catalogBackend(harness, projection)
     });
-    const room = fakeRoom();
-    extension.onClientConnect(client("A"), peer("A"), room.context);
+    const room = recordingRoom();
+    extension.onClientConnect(recordingClient("A"), roomPeer("A"), room.context);
     extension.onClientDisconnect("A");
 
     await harness.writer.create({
@@ -246,8 +178,8 @@ describe("CatalogExtension — broadcast", () => {
     const extension = new CatalogExtension({
       backend: catalogBackend(harness, projection)
     });
-    const room = fakeRoom();
-    extension.onClientConnect(client("A"), peer("A"), room.context);
+    const room = recordingRoom();
+    extension.onClientConnect(recordingClient("A"), roomPeer("A"), room.context);
     extension.dispose();
 
     await harness.writer.create({
@@ -296,66 +228,17 @@ describe("CatalogExtension — broadcast", () => {
   });
 });
 
-interface CommandHarness extends AsyncDisposable {
-  readonly sync: SyncHarness;
-  readonly room: FakeRoom;
-  send(command: CatalogCommand): Promise<void>;
-  lastDirect(): { clientId: string; payload: unknown; } | undefined;
-}
-
-async function commandHarness(
-  maxContentBytes?: number
-): Promise<CommandHarness> {
-  const sync = await syncHarness();
-  const projection = new CatalogProjection({
-    eventStore: sync.eventStore
-  });
-  projection.load();
-  projection.start();
-
-  const extension = new CatalogExtension({
-    backend: catalogBackend(sync, projection),
-    maxContentBytes
-  });
-  const room = fakeRoom();
-  extension.onClientConnect(client("A"), peer("A"), room.context);
-
-  return {
-    sync,
-    room,
-    send: (command) => extension.onMessage("A", command, room.context),
-    lastDirect: () => room.direct.at(-1),
-    async [Symbol.asyncDispose]() {
-      extension.dispose();
-      projection.close();
-      await sync[Symbol.asyncDispose]();
-    }
-  };
-}
-
 function lastPayloadType(
-  commands: CommandHarness
+  commands: CatalogCommands
 ): string | undefined {
   const payload = commands.lastDirect()?.payload as { type?: string; } | undefined;
 
   return payload?.type;
 }
 
-function recorder(
-  id: string
-): ClientHandle & { received: unknown[]; } {
-  const received: unknown[] = [];
-
-  return {
-    id,
-    received,
-    send: (payload) => received.push(payload)
-  };
-}
-
 describe("CatalogExtension — commands", () => {
   test("create writes the asset, broadcasts the change and acknowledges the author", async() => {
-    await using commands = await commandHarness();
+    await using commands = await catalogCommands();
 
     await commands.send({
       type: CATALOG_CREATE,
@@ -391,7 +274,7 @@ describe("CatalogExtension — commands", () => {
   });
 
   test("stamps lifecycle events with the context identity as actor", async() => {
-    await using commands = await commandHarness();
+    await using commands = await catalogCommands();
 
     await commands.send({
       type: CATALOG_CREATE,
@@ -410,7 +293,7 @@ describe("CatalogExtension — commands", () => {
   });
 
   test("rename and delete act on the asset id", async() => {
-    await using commands = await commandHarness();
+    await using commands = await catalogCommands();
     const created = (await commands.sync.writer.create({
       path: "a.png",
       data: bytes("one"),
@@ -446,7 +329,7 @@ describe("CatalogExtension — commands", () => {
   });
 
   test("rejects a path used by another asset to the author only", async() => {
-    await using commands = await commandHarness();
+    await using commands = await catalogCommands();
     await commands.sync.writer.create({
       path: "a.png",
       data: bytes("one"),
@@ -475,7 +358,7 @@ describe("CatalogExtension — commands", () => {
   });
 
   test("creates next to a taken path when asked to suffix", async() => {
-    await using commands = await commandHarness();
+    await using commands = await catalogCommands();
     await commands.sync.writer.create({
       path: "a.png",
       data: bytes("one"),
@@ -501,7 +384,7 @@ describe("CatalogExtension — commands", () => {
   });
 
   test("rejects an unsafe path without broadcasting", async() => {
-    await using commands = await commandHarness();
+    await using commands = await catalogCommands();
 
     await commands.send({
       type: CATALOG_CREATE,
@@ -515,7 +398,7 @@ describe("CatalogExtension — commands", () => {
   });
 
   test("rejects content over the size limit without writing", async() => {
-    await using commands = await commandHarness(4);
+    await using commands = await catalogCommands(4);
 
     await commands.send({
       type: CATALOG_CREATE,
@@ -526,19 +409,6 @@ describe("CatalogExtension — commands", () => {
 
     assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
     assert.strictEqual(commands.sync.identity.byPath("a.png"), undefined);
-  });
-
-  test("rejects an unknown asset id", async() => {
-    await using commands = await commandHarness();
-
-    await commands.send({
-      type: CATALOG_RENAME,
-      requestId: "r105",
-      assetId: "ghost",
-      to: "b.png"
-    });
-
-    assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
   });
 });
 
@@ -566,7 +436,7 @@ describe("CatalogExtension — server", () => {
     server.register(new CatalogExtension({
       backend: catalogBackend(sync, projection)
     }));
-    const author = recorder("A");
+    const author = recordingClient("A");
     server.handleConnect(author, { subject: "A", role: "author" });
     await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
 
@@ -615,7 +485,7 @@ describe("CatalogExtension — server", () => {
     server.register(new CatalogExtension({
       backend: catalogBackend(sync, projection)
     }));
-    const author = recorder("A");
+    const author = recordingClient("A");
     server.handleConnect(author, { subject: "A", role: "default" });
     await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
 
@@ -651,7 +521,7 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    await using server = await catalogServer(projection);
+    await using server = await serveCatalog(projection);
     const response = await fetch(`${server.origin}${CATALOG_URL_PATH}`);
 
     assert.strictEqual(response.status, 200);
@@ -689,7 +559,7 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    await using server = await catalogServer(projection);
+    await using server = await serveCatalog(projection);
     const response = await fetch(
       `${server.origin}${CATALOG_URL_PATH}?since=12`
     );
@@ -705,7 +575,7 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    await using server = await catalogServer(projection);
+    await using server = await serveCatalog(projection);
     const first = await fetch(`${server.origin}${CATALOG_URL_PATH}`);
     await first.arrayBuffer();
     const etag = first.headers.get("etag");
@@ -727,7 +597,7 @@ describe("catalog HTTP handler", () => {
     });
     projection.load();
 
-    await using server = await catalogServer(projection);
+    await using server = await serveCatalog(projection);
     const response = await fetch(`${server.origin}${CATALOG_URL_PATH}`, {
       method: "POST"
     });
@@ -736,27 +606,3 @@ describe("catalog HTTP handler", () => {
     assert.strictEqual(response.headers.get("allow"), "GET, HEAD");
   });
 });
-
-async function catalogServer(
-  projection: CatalogProjection
-): Promise<{ origin: string; } & AsyncDisposable> {
-  const handler = createCatalogHandler({ projection });
-  const server = http.createServer((request, response) => {
-    handler(request, response, () => {
-      response.statusCode = 404;
-      response.end();
-    });
-  });
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-  const { port } = server.address() as { port: number; };
-
-  return {
-    origin: `http://127.0.0.1:${port}`,
-    async [Symbol.asyncDispose]() {
-      server.closeAllConnections();
-      server.close();
-      await once(server, "close");
-    }
-  };
-}

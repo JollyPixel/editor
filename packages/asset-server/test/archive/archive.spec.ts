@@ -13,7 +13,6 @@ import {
 
 // Import Internal Dependencies
 import {
-  ASSET_ARCHIVE_MANIFEST_PATH,
   ASSET_CREATED,
   AssetArchiveError,
   UnknownAssetKindError,
@@ -115,7 +114,7 @@ describe("exportAssetArchive", () => {
 
     assert.deepEqual(
       names.sort(),
-      [ASSET_ARCHIVE_MANIFEST_PATH, "map.link"]
+      ["bundle.json", "map.link"]
     );
   });
 
@@ -309,11 +308,13 @@ describe("readAssetArchive", () => {
       { "a.link": bytes("0123456789") }
     );
 
-    const entryCap = readAssetArchive(archive, { maxEntryBytes: 4 });
-    const archiveCap = readAssetArchive(archive, { maxBytes: 12 });
+    for (const limits of [{ maxEntryBytes: 4 }, { maxBytes: 12 }]) {
+      const result = readAssetArchive(archive, limits);
 
-    assert.strictEqual(entryCap.ok, false);
-    assert.strictEqual(archiveCap.ok, false);
+      assert.strictEqual(result.ok, false);
+      assert.ok(result.val instanceof AssetArchiveError);
+      assert.strictEqual(result.val.rejection, "too-large");
+    }
     assert.strictEqual(readAssetArchive(archive).ok, true);
   });
 

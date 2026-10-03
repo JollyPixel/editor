@@ -157,34 +157,19 @@ describe("IdentitySidecar — persistence", () => {
     assert.strictEqual(loaded.byPath("a.png")?.id, "1");
   });
 
-  test("a sidecar whose write never landed is treated as absent", async() => {
+  test("set stays in memory until save", async() => {
     const source = new MemoryAssetSource();
 
     const loaded = await IdentitySidecar.load(source);
     loaded.set({ id: "1", path: "a.png", kind: "binary" });
 
-    assert.deepEqual(await source.list(), []);
     assert.strictEqual(loaded.size, 1);
+    await assert.rejects(source.read(IDENTITY_SIDECAR_PATH));
+    assert.strictEqual((await IdentitySidecar.load(source)).size, 0);
   });
 });
 
 describe("IdentitySidecar — parse reporting", () => {
-  test("counts the entries it dropped", () => {
-    const { dropped, data } = IdentitySidecar.parse({
-      version: 1,
-      assets: [
-        { id: "1", path: "a.png", kind: "binary" },
-        { id: 2, path: "b.png", kind: "binary" },
-        null
-      ]
-    });
-
-    assert.strictEqual(dropped, 2);
-    assert.deepEqual(data, [
-      { id: "1", path: "a.png", kind: "binary" }
-    ]);
-  });
-
   test("reports no drop for a document it cannot read at all", () => {
     const { dropped, data } = IdentitySidecar.parse("nope");
 

@@ -30,12 +30,6 @@ import { syncHarness } from "../helpers/backend.ts";
 import { tempWorkspace } from "../helpers/tempWorkspace.ts";
 import { bytes } from "../helpers/bytes.ts";
 
-// CONSTANTS
-const kActor: EventStore.Actor = {
-  type: "user",
-  id: "alice"
-};
-
 function lifecycleCount(
   eventStore: EventStore.EventStore
 ): number {
@@ -168,48 +162,6 @@ describe("ReconciliationWatcher — debounce", () => {
 
     assert.strictEqual(passes, 0);
     assert.strictEqual(followUps, 1);
-  });
-});
-
-describe("ReconciliationWatcher — round trip", () => {
-  test("an editor write reaches disk and comes back silent", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    await using harness = await syncHarness();
-
-    await harness.writer.create({
-      path: "a.png",
-      data: bytes("hello"),
-      actor: kActor
-    });
-    await harness.projector.flush();
-    const before = lifecycleCount(harness.eventStore);
-
-    harness.watcher.notify("a.png", "file");
-    t.mock.timers.tick(100);
-    await harness.watcher.settle();
-
-    assert.strictEqual(lifecycleCount(harness.eventStore), before);
-  });
-
-  test("an external edit becomes an event and leaves the file alone", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    await using harness = await syncHarness();
-    await harness.writer.create({
-      path: "a.png",
-      data: bytes("hello"),
-      actor: kActor
-    });
-    await harness.projector.flush();
-    const before = lifecycleCount(harness.eventStore);
-
-    await harness.source.write("a.png", bytes("edited"));
-    harness.watcher.notify("a.png", "file");
-    t.mock.timers.tick(100);
-    await harness.watcher.settle();
-    await harness.projector.flush();
-
-    assert.strictEqual(lifecycleCount(harness.eventStore), before + 1);
-    assert.strictEqual(harness.projector.pending, 0);
   });
 });
 

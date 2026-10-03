@@ -78,7 +78,7 @@ describe("serverMessageProtocol", () => {
     assert.strictEqual(correction.val.event, "voxel-set");
   });
 
-  test("declares the room version on commands and snapshots", () => {
+  test("declares a non-negative room version and acks", () => {
     const parser = new MessageParser(serverMessageProtocol({
       command: actionCommandProtocol,
       snapshot: { type: "object" }
@@ -88,6 +88,10 @@ describe("serverMessageProtocol", () => {
     assert.ok(parser.parse({ type: "snapshot", data: {}, version: 4, acks: { A: 2 } }).ok);
     assert.strictEqual(
       parser.parse({ type: "command", data: { action: "voxel-set" }, version: -1 }).ok,
+      false
+    );
+    assert.strictEqual(
+      parser.parse({ type: "snapshot", data: {}, acks: { A: -1 } }).ok,
       false
     );
   });

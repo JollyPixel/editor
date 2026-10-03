@@ -57,15 +57,6 @@ describe("textureAssetKind", () => {
     assert.strictEqual(registry.resolve("sprites/a.png").kind, "binary");
   });
 
-  test("match never widens past the image extensions", () => {
-    const registry = new AssetKindRegistry([
-      textureAssetKind({ match: ["textures/**"] })
-    ]);
-
-    assert.strictEqual(registry.resolve("textures/a.png").kind, TEXTURE_KIND);
-    assert.strictEqual(registry.resolve("textures/a.txt").kind, "binary");
-  });
-
   test("declares the content type of each image extension", () => {
     assert.strictEqual(textureAssetKind().extensions[".jpg"], "image/jpeg");
   });

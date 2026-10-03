@@ -9,7 +9,6 @@ import {
 
 // Import Internal Dependencies
 import {
-  ASSET_ARCHIVE_MANIFEST_PATH,
   createAssetBackend,
   type AssetBackend,
   type AssetBackendOptions
@@ -78,7 +77,7 @@ export function zipArchive(
   entries: Record<string, Uint8Array>
 ): Uint8Array {
   const files: Zippable = { ...entries };
-  files[ASSET_ARCHIVE_MANIFEST_PATH] = strToU8(JSON.stringify(manifest));
+  files["bundle.json"] = strToU8(JSON.stringify(manifest));
 
   return zipSync(files);
 }

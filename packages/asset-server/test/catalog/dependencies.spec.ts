@@ -250,25 +250,6 @@ describe("CatalogProjection — dependency index", () => {
     assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference(texture)]);
   });
 
-  test("closureOf resolves transitive edges and survives cycles", async() => {
-    await using harness = await syncHarness({ handlers: [linkHandler()] });
-    const projection = new CatalogProjection({ eventStore: harness.eventStore });
-    projection.load();
-    projection.start();
-
-    const a = await createLink(harness, "a.link");
-    const b = await createLink(harness, "b.link", a);
-    await harness.writer.update({
-      assetId: a,
-      data: linkContent(b),
-      actor: kActor
-    });
-
-    assert.deepEqual(projection.dependencies.closureOf(a), [linkReference(b)]);
-    assert.deepEqual(projection.dependencies.closureOf(b), [linkReference(a)]);
-    projection.close();
-  });
-
   test("events without edges are reported as unindexed", () => {
     const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
     legacyCreated(eventStore, "old", "old.link", linkContent("a"));

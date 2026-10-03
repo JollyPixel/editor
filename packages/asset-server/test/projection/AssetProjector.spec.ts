@@ -227,16 +227,20 @@ describe("AssetProjector — lifecycle events land on the source", () => {
   test("markProjected records state without writing", async() => {
     await using harness = await syncHarness();
 
-    await harness.writer.create({
+    const created = (await harness.writer.create({
       path: "a.png",
       data: bytes("hello"),
       actor: kActor,
       alreadyProjected: true
-    });
+    })).unwrap();
     await harness.projector.flush();
 
     await assert.rejects(() => harness.source.read("a.png"));
     assert.strictEqual(harness.projector.pending, 0);
+    assert.strictEqual(
+      harness.state.checkpoint(created.assetId),
+      created.eventId
+    );
   });
 });
 
@@ -384,7 +388,6 @@ describe("AssetProjector — restart convergence", () => {
       })).unwrap();
       await harness.projector.flush();
 
-      // Killed before the update reaches the source.
       source.write = () => Promise.reject(new Error("killed"));
       await harness.writer.update({
         assetId: event.assetId,
@@ -446,7 +449,7 @@ describe("AssetProjector — malformed events", () => {
     assert.strictEqual(harness.projector.pending, 0);
   });
 
-  test("a malformed event never breaks a full replay", async() => {
+  test("a malformed event keeps the replayed desired state", async() => {
     const source = new MemoryAssetSource();
     using eventStore = EventStore.persistence.memory();
     await using harness = await syncHarness({ source, eventStore });
@@ -473,7 +476,7 @@ describe("AssetProjector — malformed events", () => {
       state: await ProjectionState.load(source)
     });
 
-    assert.doesNotThrow(() => replayed.load());
+    replayed.load();
     assert.strictEqual(replayed.desired(created.val.assetId)?.path, "a.png");
   });
 });
@@ -594,7 +597,7 @@ describe("AssetProjector — rejected events", () => {
       logger
     });
 
-    assert.doesNotThrow(() => projector.load());
+    projector.load();
     assert.strictEqual(projector.desired("a1"), null);
     assert.strictEqual(projector.pending, 0);
 

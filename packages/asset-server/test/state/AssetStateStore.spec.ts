@@ -25,7 +25,7 @@ import {
   type CounterCommand,
   type CounterState
 } from "../helpers/kinds.ts";
-import { bytes, text } from "../helpers/bytes.ts";
+import { bytes } from "../helpers/bytes.ts";
 import { recordingLogger } from "../helpers/logger.ts";
 
 // CONSTANTS
@@ -137,26 +137,6 @@ describe("AssetStateStore — checkpointed replay", () => {
 
     assert.deepEqual(folded, ["load", COUNTER_INCREMENTED]);
     assert.strictEqual((entry.state as CounterState).value, 1);
-  });
-
-  test("serialize() replays through the same checkpoint for a cold asset", async() => {
-    const { handler, folded } = recordingCounterHandler();
-    await using harness = await syncHarness({
-      handlers: [handler],
-      snapshot: { delay: 0, maxDelay: 0 }
-    });
-    const assetId = await counterAsset(harness);
-
-    await harness.states.acquire(assetId, "counter");
-    increment(harness, assetId);
-    await harness.scheduler.flush();
-    harness.states.release(assetId);
-
-    folded.length = 0;
-    const data = await harness.states.serialize(assetId, "counter");
-
-    assert.deepEqual(folded, ["load"]);
-    assert.strictEqual(text(data), "1");
   });
 });
 

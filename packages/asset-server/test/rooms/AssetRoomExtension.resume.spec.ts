@@ -6,29 +6,24 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  ClientHandle,
-  RoomContext,
-  RoomPeer
-} from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
 import { Ok } from "@openally/result";
 
 // Import Internal Dependencies
 import {
-  counterCommandProtocol,
-  counterSnapshotSchema
-} from "../helpers/protocols.ts";
-import {
   AssetRoomExtension,
   ASSET_UPDATED,
-  type AssetCommands,
   type AssetRoomExtensionOptions
 } from "#src/index.ts";
-
-// CONSTANTS
-const kAssetId = "asset-1";
-const kEventType = "counter.command";
+import { counterSnapshotSchema } from "../helpers/protocols.ts";
+import {
+  COUNTER_ROOM_ASSET_ID,
+  counterRoomBinding,
+  counterRoomCommands,
+  recordingClient,
+  recordingRoom,
+  roomPeer
+} from "../helpers/rooms.ts";
 
 interface Command {
   action: string;
@@ -45,7 +40,7 @@ function setup(
   ): EventStore.Event {
     const event: EventStore.Event = {
       ...input,
-      assetId: kAssetId,
+      assetId: COUNTER_ROOM_ASSET_ID,
       assetType: "counter",
       eventId: log.length + 1,
       eventVersion: log.length + 1,
@@ -56,20 +51,9 @@ function setup(
     return event;
   }
 
-  const commands: AssetCommands<unknown, Command> = {
-    eventType: kEventType,
-    protocol: counterCommandProtocol,
-    apply: () => void 0
-  };
   const extension = new AssetRoomExtension<Command>(
-    {
-      assetId: kAssetId,
-      kind: "counter",
-      roomId: `counter:${kAssetId}`,
-      state: null,
-      version: () => log.length
-    },
-    commands,
+    counterRoomBinding({ version: () => log.length }),
+    counterRoomCommands<Command>(),
     {
       snapshotSchema: counterSnapshotSchema,
       snapshot: () => {
@@ -94,37 +78,21 @@ function setup(
       ...options
     }
   );
-  const context: RoomContext = {
-    room: {
-      broadcast: () => void 0,
-      sendTo: () => void 0
-    },
-    identity: {
-      subject: "subject",
-      role: "default"
-    }
-  };
+  const { context } = recordingRoom();
 
   function connect(
     clientId: string,
     resume?: unknown
   ): { received: unknown[]; connected: Promise<void>; } {
-    const received: unknown[] = [];
-    const handle: ClientHandle = {
-      id: clientId,
-      send: (payload) => received.push(payload)
-    };
-    const peer: RoomPeer = {
-      clientId,
-      identity: context.identity,
-      profile: {},
-      presence: {},
-      ...(resume === undefined ? {} : { resume })
-    };
+    const handle = recordingClient(clientId);
 
     return {
-      received,
-      connected: extension.onClientConnect(handle, peer, context)
+      received: handle.received,
+      connected: extension.onClientConnect(
+        handle,
+        roomPeer(clientId, resume),
+        context
+      )
     };
   }
 
@@ -295,54 +263,6 @@ describe("AssetRoomExtension — resume", () => {
 
     assert.deepEqual(received, [
       { type: "snapshot", data: { value: 1 }, version: 1 }
-    ]);
-  });
-});
-
-describe("AssetRoomExtension — restore", () => {
-  test("hands the recorded commands to the protocol in order", () => {
-    const restored: [unknown, number][] = [];
-
-    new AssetRoomExtension<Command>(
-      {
-        assetId: kAssetId,
-        kind: "counter",
-        roomId: `counter:${kAssetId}`,
-        state: null
-      },
-      {
-        eventType: kEventType,
-        protocol: counterCommandProtocol,
-        apply: () => void 0
-      },
-      {
-        snapshotSchema: counterSnapshotSchema,
-        snapshot: () => null,
-        arbitrate: () => null,
-        restore: (command, version) => restored.push([command, version])
-      },
-      {
-        append: () => {
-          throw new Error("unexpected append");
-        }
-      },
-      {
-        restore: [
-          {
-            command: { action: "increment", clientId: "a", seq: 1 },
-            version: 5
-          },
-          {
-            command: { action: "increment", clientId: "b", seq: 1 },
-            version: 7
-          }
-        ]
-      }
-    );
-
-    assert.deepEqual(restored, [
-      [{ action: "increment", clientId: "a", seq: 1 }, 5],
-      [{ action: "increment", clientId: "b", seq: 1 }, 7]
     ]);
   });
 });

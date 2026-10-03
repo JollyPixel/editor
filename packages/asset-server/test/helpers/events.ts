@@ -9,10 +9,6 @@ const kSystemActor: EventStore.Actor = {
 
 let nextEventId = 1;
 
-/**
- * Builds a standalone Event, for handlers and projections tested without
- * a store behind them.
- */
 export function assetEvent(
   eventType: string,
   eventData: unknown,
