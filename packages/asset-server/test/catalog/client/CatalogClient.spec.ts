@@ -103,7 +103,7 @@ describe("CatalogClient", () => {
     await client.ready;
     room.receive({
       type: CATALOG_CHANGED,
-      change: {
+      changes: [{
         eventType: "asset.created",
         assetId: "a2",
         record: {
@@ -111,15 +111,15 @@ describe("CatalogClient", () => {
           kind: "pixelart",
           source: "textures/b.pixelart"
         }
-      }
+      }]
     });
     room.receive({
       type: CATALOG_CHANGED,
-      change: {
+      changes: [{
         eventType: "asset.deleted",
         assetId: "a1",
         record: null
-      }
+      }]
     });
 
     assert.equal(room.joined, true);
@@ -327,6 +327,44 @@ describe("CatalogClient", () => {
     });
   });
 
+  test("rejects a single rename or remove the server did not apply", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    const renamed = client.rename("a1", "textures/z.pixelart");
+    const removed = client.remove("a2");
+    await flush();
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(0),
+      command: CATALOG_RENAME,
+      applied: 0,
+      failure: "path is already used"
+    });
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(1),
+      command: CATALOG_DELETE,
+      applied: 0,
+      failure: "asset has dependents"
+    });
+
+    await assert.rejects(renamed, (error) => {
+      assert.ok(error instanceof CatalogRejectedError);
+      assert.equal(error.message, "path is already used");
+      assert.equal(error.command, CATALOG_RENAME);
+
+      return true;
+    });
+    await assert.rejects(removed, (error) => {
+      assert.ok(error instanceof CatalogRejectedError);
+      assert.equal(error.command, CATALOG_DELETE);
+
+      return true;
+    });
+  });
+
   test("ignores replies with an unknown request id", async() => {
     const room = new FakeCatalogRoom();
     const client = new CatalogClient(room);
@@ -338,13 +376,13 @@ describe("CatalogClient", () => {
       type: CATALOG_APPLIED,
       requestId: "unknown",
       command: CATALOG_RENAME,
-      assetId: "a1"
+      applied: 1
     });
     room.receive({
       type: CATALOG_APPLIED,
       requestId: room.requestId(0),
       command: CATALOG_DELETE,
-      assetId: "a1"
+      applied: 1
     });
 
     await removed;
@@ -364,16 +402,104 @@ describe("CatalogClient", () => {
       {
         type: CATALOG_DELETE,
         requestId: room.requestId(0),
-        assetId: "a1",
+        assetIds: ["a1"],
         force: undefined
       },
       {
         type: CATALOG_DELETE,
         requestId: room.requestId(1),
-        assetId: "a1",
+        assetIds: ["a1"],
         force: true
       }
     ]);
+  });
+
+  test("renames and removes many assets with one command each", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    const renamed = client.renameMany([
+      { assetId: "a1", to: "x.pixelart" },
+      { assetId: "a2", to: "y.pixelart" }
+    ]);
+    const removed = client.removeMany(["a1", "a2"], { force: true });
+    await flush();
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(0),
+      command: CATALOG_RENAME,
+      applied: 2
+    });
+    room.receive({
+      type: CATALOG_APPLIED,
+      requestId: room.requestId(1),
+      command: CATALOG_DELETE,
+      applied: 1,
+      failure: "asset has dependents"
+    });
+
+    assert.deepEqual(await renamed, { applied: 2 });
+    assert.deepEqual(await removed, {
+      applied: 1,
+      failure: "asset has dependents"
+    });
+    assert.deepEqual(room.sent, [
+      {
+        type: CATALOG_RENAME,
+        requestId: room.requestId(0),
+        renames: [
+          { assetId: "a1", to: "x.pixelart" },
+          { assetId: "a2", to: "y.pixelart" }
+        ]
+      },
+      {
+        type: CATALOG_DELETE,
+        requestId: room.requestId(1),
+        assetIds: ["a1", "a2"],
+        force: true
+      }
+    ]);
+  });
+
+  test("sends nothing for an empty list", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+
+    assert.deepEqual(await client.renameMany([]), { applied: 0 });
+    assert.deepEqual(await client.removeMany([]), { applied: 0 });
+    assert.deepEqual(room.sent, []);
+  });
+
+  test("applies a list of changes before one change event", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+    const seen: string[][] = [];
+    client.on("change", () => seen.push([...client.records()].map(({ id }) => id)));
+
+    room.receive({
+      type: CATALOG_CHANGED,
+      changes: [
+        {
+          eventType: "asset.created",
+          assetId: "a2",
+          record: {
+            id: "a2",
+            kind: "pixelart",
+            source: "textures/b.pixelart"
+          }
+        },
+        {
+          eventType: "asset.deleted",
+          assetId: "a1",
+          record: null
+        }
+      ]
+    });
+
+    assert.deepEqual(seen, [["a2"]]);
   });
 
   test("rejects pending requests and leaves the room on dispose", async() => {
@@ -407,7 +533,7 @@ describe("CatalogClient — dependencies", () => {
   ): void {
     room.receive({
       type: CATALOG_CHANGED,
-      change: {
+      changes: [{
         eventType: "asset.updated",
         assetId,
         record: {
@@ -416,7 +542,7 @@ describe("CatalogClient — dependencies", () => {
           source: `${assetId}.voxelmap.json`
         },
         dependencies
-      }
+      }]
     });
   }
 
@@ -454,11 +580,11 @@ describe("CatalogClient — dependencies", () => {
     changed(room, "map", [reference("b")]);
     room.receive({
       type: CATALOG_CHANGED,
-      change: {
+      changes: [{
         eventType: "asset.deleted",
         assetId: "map",
         record: null
-      }
+      }]
     });
 
     assert.deepEqual(emitted, ["map", "map", "map"]);
@@ -586,7 +712,7 @@ describe("CatalogClient — replies", () => {
       type: CATALOG_APPLIED,
       requestId: room.requestId(0),
       command: CATALOG_DELETE,
-      assetId: "a1"
+      applied: 1
     });
 
     await assert.rejects(renamed, (error: unknown) => {

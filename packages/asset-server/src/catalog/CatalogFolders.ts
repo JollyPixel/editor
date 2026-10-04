@@ -41,7 +41,10 @@ export class CatalogFolders extends Emitter<
     this.#source = options.source;
     this.#catalog = options.catalog;
     this.#flush = options.flush;
-    this.#catalog.on("changed", this.#onChanged);
+    this.#catalog.on(
+      "changed",
+      this.#onChanged
+    );
   }
 
   toJSON(): string[] {
@@ -49,7 +52,9 @@ export class CatalogFolders extends Emitter<
   }
 
   refresh(): Promise<void> {
-    return this.#queue.run(() => this.#refresh());
+    return this.#queue.run(
+      () => this.#refresh()
+    );
   }
 
   async create(
@@ -86,7 +91,10 @@ export class CatalogFolders extends Emitter<
     const origin = normalizeAssetPath(from);
     const target = normalizeAssetPath(to);
     if (isWithinFolder(target, origin)) {
-      throw new FolderMovedIntoItselfError(origin, target);
+      throw new FolderMovedIntoItselfError(
+        origin,
+        target
+      );
     }
 
     return this.#queue.run(async() => {
@@ -105,24 +113,25 @@ export class CatalogFolders extends Emitter<
   }
 
   close(): void {
-    this.#catalog.off("changed", this.#onChanged);
+    this.#catalog.off(
+      "changed",
+      this.#onChanged
+    );
     this.removeAllListeners();
   }
 
   async #refresh(): Promise<void> {
-    const folders = new FolderSet(await this.#source.folders());
+    const folders = new FolderSet(
+      await this.#source.folders()
+    );
     for (const record of this.#catalog.catalog) {
       folders.addParentsOf(record.source);
     }
 
     if (!folders.equals(this.#folders)) {
       this.#folders = folders;
-      this.#emitChanged();
+      this.emit("changed", this.toJSON());
     }
-  }
-
-  #emitChanged(): void {
-    this.emit("changed", this.toJSON());
   }
 
   readonly #onChanged = (
@@ -133,9 +142,11 @@ export class CatalogFolders extends Emitter<
     }
 
     const { size } = this.#folders;
-    this.#folders.addParentsOf(change.record.source);
+    this.#folders.addParentsOf(
+      change.record.source
+    );
     if (this.#folders.size !== size) {
-      this.#emitChanged();
+      this.emit("changed", this.toJSON());
     }
   };
 }

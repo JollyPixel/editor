@@ -18,7 +18,10 @@ import {
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MAP_KIND } from "@jolly-pixel/asset.voxel-map";
-import { PORTS } from "@jolly-pixel/e2e";
+import {
+  PORTS,
+  prebundleWorkspace
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { createWorldProject } from "./src/boot/worldProject.ts";
@@ -39,28 +42,6 @@ const kTilesetFile = path.join(
   "textures",
   "tileset.png"
 );
-const kWorkspaceBrowserEntries = [
-  "@jolly-pixel/asset",
-  "@jolly-pixel/asset-server",
-  "@jolly-pixel/asset.pixel-art/client",
-  "@jolly-pixel/asset.voxel-map",
-  "@jolly-pixel/asset.voxel-map/client",
-  "@jolly-pixel/color",
-  "@jolly-pixel/console",
-  "@jolly-pixel/console/element",
-  "@jolly-pixel/editor.host",
-  "@jolly-pixel/editor.host/ui",
-  "@jolly-pixel/editor.pixel-art",
-  "@jolly-pixel/engine",
-  "@jolly-pixel/network/client",
-  "@jolly-pixel/pixel-draw.renderer",
-  "@jolly-pixel/resize-handle",
-  "@jolly-pixel/three",
-  "@jolly-pixel/ui",
-  "@jolly-pixel/ui/network",
-  "@jolly-pixel/voxel.renderer",
-  "@jolly-pixel/voxel.renderer/engine"
-];
 
 const project = await createWorldProject(
   await fs.readFile(kTilesetFile),
@@ -86,13 +67,8 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
       {
         allowedHosts: true
       },
-    optimizeDeps: e2e ?
-      {
-        include: kWorkspaceBrowserEntries,
-        force: true
-      } :
-      undefined,
     plugins: [
+      prebundleWorkspace(),
       createProjectKindsPlugin(kinds),
       inMemory ? null : createProjectFileWatchPlugin(projectFile),
       staticHosting ? null : createAssetWorkspacePlugin({

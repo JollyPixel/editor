@@ -18,7 +18,10 @@ import {
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
-import { PORTS } from "@jolly-pixel/e2e";
+import {
+  PORTS,
+  prebundleWorkspace
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -39,23 +42,6 @@ const kProjectFile: ProjectFileData = {
     }
   }
 };
-const kWorkspaceBrowserEntries = [
-  "@jolly-pixel/asset.pixel-art",
-  "@jolly-pixel/asset.pixel-art/client",
-  "@jolly-pixel/asset.voxel-model",
-  "@jolly-pixel/asset.voxel-model/client",
-  "@jolly-pixel/editor.host",
-  "@jolly-pixel/editor.host/ui",
-  "@jolly-pixel/editor.pixel-art",
-  "@jolly-pixel/editor.pixel-art/mesh-texturing",
-  "@jolly-pixel/engine",
-  "@jolly-pixel/network/client",
-  "@jolly-pixel/pixel-draw.renderer",
-  "@jolly-pixel/three",
-  "@jolly-pixel/ui",
-  "@jolly-pixel/ui/icon",
-  "@jolly-pixel/ui/network"
-];
 
 export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
   const e2e = mode === kE2EMode;
@@ -74,13 +60,8 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
         strictPort: true
       } :
       undefined,
-    optimizeDeps: e2e ?
-      {
-        include: kWorkspaceBrowserEntries,
-        force: true
-      } :
-      undefined,
     plugins: [
+      prebundleWorkspace(),
       checker({
         typescript: false
       }),

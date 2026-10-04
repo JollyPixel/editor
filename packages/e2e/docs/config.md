@@ -1,7 +1,8 @@
 # Config
 
 `defineE2EConfig()` builds the Playwright config of a suite. `PORTS` gives each
-suite its dev server port.
+suite its dev server port. `prebundleWorkspace()` pre-bundles the workspace
+packages its page loads.
 
 ## `defineE2EConfig(options): PlaywrightTestConfig`
 
@@ -46,3 +47,33 @@ On CI a failed test retries once.
 `server.port`.
 
 `baseUrl(port)` gives `http://localhost:<port>`.
+
+## `prebundleWorkspace(): Plugin`
+
+```ts
+// Import Third-party Dependencies
+import { defineConfig } from "vite";
+import {
+  PORTS,
+  prebundleWorkspace
+} from "@jolly-pixel/e2e";
+
+export default defineConfig({
+  server: {
+    port: PORTS.voxelModel
+  },
+  plugins: [
+    prebundleWorkspace()
+  ]
+});
+```
+
+A Vite plugin that runs only on `vite --mode e2e`. Before the dependency
+optimizer starts, it follows the module scripts of the root `index.html`
+through the server's own resolution, local files and virtual modules
+included (such as
+`virtual:jolly-pixel/handlers`), and adds every `@jolly-pixel/*` specifier
+they import to `optimizeDeps.include`, with `force: true`. It skips
+`import type` and `export type`, but keeps `import { type X }`, which still
+loads the module. It never reads `node_modules` nor the packages it lists:
+anything those import is bundled with them.

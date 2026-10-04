@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { CatalogBatchReport } from "@jolly-pixel/asset-server/client";
+
 // Import Internal Dependencies
 import type { AssetKindEntry } from "../../../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
@@ -32,6 +35,7 @@ interface CommandsProbe {
   commands: AssetCommands;
   errors: string[];
   calls: string[];
+  lists: string[];
   created: Parameters<AssetCommandCatalog["create"]>[];
 }
 
@@ -48,6 +52,31 @@ function commandsFailingAt(
       throw new Error("disk full");
     }
   }
+  const lists: string[] = [];
+  async function callEach(
+    name: string,
+    targets: string[]
+  ): Promise<CatalogBatchReport> {
+    if (targets.length === 0) {
+      return { applied: 0 };
+    }
+    lists.push(`${name} ${targets.length}`);
+    let applied = 0;
+    for (const target of targets) {
+      try {
+        await call(name, target);
+      }
+      catch (error) {
+        return {
+          applied,
+          failure: (error as Error).message
+        };
+      }
+      applied++;
+    }
+
+    return { applied };
+  }
   const created: Parameters<AssetCommandCatalog["create"]>[] = [];
   const catalog: AssetCommandCatalog = {
     create: async(...args) => {
@@ -56,8 +85,11 @@ function commandsFailingAt(
 
       return "created";
     },
-    rename: (assetId) => call("rename", assetId),
-    remove: (assetId) => call("remove", assetId),
+    renameMany: (renames) => callEach(
+      "rename",
+      Array.from(renames, (rename) => rename.assetId)
+    ),
+    removeMany: (assetIds) => callEach("remove", [...assetIds]),
     createFolder: async(path) => {
       await call("createFolder", path);
 
@@ -80,6 +112,7 @@ function commandsFailingAt(
     }),
     errors,
     calls,
+    lists,
     created
   };
 }
@@ -137,7 +170,7 @@ describe("AssetCommands", () => {
   });
 
   test("counts every asset of a move of several rows", async() => {
-    const { commands, errors } = commandsFailingAt(3);
+    const { commands, errors, calls } = commandsFailingAt(2);
     const failed = relocationOf("models", "world/models", 2);
 
     assert.equal(
@@ -145,6 +178,30 @@ describe("AssetCommands", () => {
       failed
     );
     assert.deepEqual(errors, ["Moved 2 of 3 assets: disk full"]);
+    assert.strictEqual(calls.at(-1), "moveFolder maps world/maps");
+  });
+
+  test("renames the assets of every row in one list", async() => {
+    const { commands, lists, calls } = commandsFailingAt(-1);
+
+    await commands.relocate([
+      relocationOf("maps", "world/maps", 2),
+      relocationOf("models", "world/models", 1)
+    ], "move");
+
+    assert.deepEqual(lists, ["rename 3"]);
+    assert.deepEqual(calls.slice(3), [
+      "moveFolder maps world/maps",
+      "moveFolder models world/models"
+    ]);
+  });
+
+  test("deletes the assets of a deletion in one list", async() => {
+    const { commands, lists } = commandsFailingAt(-1);
+
+    await commands.remove(companionModelOf().deletionOf([kMaps]), true);
+
+    assert.deepEqual(lists, ["remove 3"]);
   });
 
   test("names the project root when a move there fails", async() => {

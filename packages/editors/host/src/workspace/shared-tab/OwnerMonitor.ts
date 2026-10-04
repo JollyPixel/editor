@@ -2,8 +2,6 @@
 import {
   DISCOVERY_INTERVAL_MS,
   DISCOVERY_TIMEOUT_MS,
-  HEARTBEAT_MS,
-  OWNER_LOSS_MS,
   type OwnerMessage,
   type OwnerPort
 } from "./protocol.ts";
@@ -11,16 +9,17 @@ import {
 export interface OwnerMonitorOptions {
   channel: OwnerPort;
   tab: string;
+  lock: string;
   onLost: () => void;
 }
 
 export class OwnerMonitor {
   readonly #channel: OwnerPort;
   readonly #tab: string;
+  readonly #lock: string;
   readonly #onLost: () => void;
+  readonly #watch = new AbortController();
   #owner: string | undefined;
-  #lastSeen = Date.now();
-  #interval: ReturnType<typeof setInterval> | undefined;
   #stopped = false;
   #discovered: (() => void) | null = null;
 
@@ -29,6 +28,7 @@ export class OwnerMonitor {
   ) {
     this.#channel = options.channel;
     this.#tab = options.tab;
+    this.#lock = options.lock;
     this.#onLost = options.onLost;
   }
 
@@ -41,20 +41,7 @@ export class OwnerMonitor {
   ): void {
     if (message.type === "owner") {
       this.#owner = message.owner;
-      this.#lastSeen = Date.now();
       this.#discovered?.();
-    }
-    else if (
-      message.type === "heartbeat" &&
-      message.owner === this.#owner
-    ) {
-      this.#lastSeen = Date.now();
-    }
-    else if (
-      message.type === "stopping" &&
-      message.owner === this.#owner
-    ) {
-      this.#lose();
     }
   }
 
@@ -78,18 +65,26 @@ export class OwnerMonitor {
         throw new Error("The shared workspace owner did not respond.");
       }
     }
-    this.#interval = setInterval(() => {
-      if (Date.now() - this.#lastSeen > OWNER_LOSS_MS) {
-        this.#lose();
-      }
-    }, HEARTBEAT_MS);
+    this.#watchLock();
 
     return this.#owner;
   }
 
   stop(): void {
     this.#stopped = true;
-    clearInterval(this.#interval);
+    this.#watch.abort();
+  }
+
+  #watchLock(): void {
+    if (this.#stopped) {
+      return;
+    }
+
+    globalThis.navigator.locks.request(
+      this.#lock,
+      { signal: this.#watch.signal },
+      () => this.#lose()
+    ).catch(() => undefined);
   }
 
   #lose(): void {

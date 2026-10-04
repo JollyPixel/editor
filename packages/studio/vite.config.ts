@@ -15,7 +15,10 @@ import {
   createProjectFileWatchPlugin,
   createProjectKindsPlugin
 } from "@jolly-pixel/asset-server/node";
-import { PORTS } from "@jolly-pixel/e2e";
+import {
+  PORTS,
+  prebundleWorkspace
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { EditorPages } from "./server/EditorPages.ts";
@@ -72,6 +75,7 @@ export default defineConfig(async({ mode }) => {
       }
     },
     plugins: [
+      prebundleWorkspace(),
       createProjectKindsPlugin(project.kinds),
       projectManifestPlugin(project),
       inMemory ? null : createProjectFileWatchPlugin(project.file),

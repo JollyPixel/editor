@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   ARCHIVE_MIME_TYPE,
+  type CatalogBatchReport,
   type CatalogClient
 } from "@jolly-pixel/asset-server/client";
 
@@ -26,8 +27,8 @@ export type RelocationVerb = "rename" | "move";
 export type AssetCommandCatalog = Pick<
   CatalogClient,
   | "create"
-  | "rename"
-  | "remove"
+  | "renameMany"
+  | "removeMany"
   | "createFolder"
   | "moveFolder"
   | "removeFolder"
@@ -91,27 +92,21 @@ export class AssetCommands {
     relocations: readonly AssetRelocation[],
     verb: RelocationVerb
   ): Promise<AssetRelocation | null> {
-    let applied = 0;
+    const report = await settle(this.#catalog.renameMany(
+      relocations.flatMap((relocation) => relocation.renames)
+    ));
+    const failed = relocationAt(relocations, report.applied);
     for (const relocation of relocations) {
-      try {
-        for (const rename of relocation.renames) {
-          await this.#catalog.rename(
-            rename.assetId,
-            rename.to
-          );
-          applied++;
-        }
-      }
-      catch (error) {
+      if (report.failure !== undefined && relocation === failed) {
         this.#onError(relocationFailure({
           verb,
           relocations,
-          failed: relocation,
-          applied,
-          error
+          failed,
+          applied: report.applied,
+          reason: report.failure
         }));
 
-        return relocation;
+        return failed;
       }
       if (relocation.type === "folder") {
         await this.#moveFolder(relocation, verb);
@@ -126,23 +121,17 @@ export class AssetCommands {
     withCompanions: boolean
   ): Promise<void> {
     const assets = deletion.removals(withCompanions);
-    let removed = 0;
-    try {
-      for (const asset of assets) {
-        await this.#catalog.remove(
-          asset.id,
-          { force: true }
-        );
-        removed++;
-      }
-    }
-    catch (error) {
+    const report = await settle(this.#catalog.removeMany(
+      assets.map((asset) => asset.id),
+      { force: true }
+    ));
+    if (report.failure !== undefined) {
       this.#onError(
         removalFailure(
           deletion.targets,
-          removed,
+          report.applied,
           assets,
-          error
+          report.failure
         )
       );
 
@@ -198,14 +187,19 @@ interface RelocationFailure {
   relocations: readonly AssetRelocation[];
   failed: AssetRelocation;
   applied: number;
-  error: unknown;
+  reason: string;
 }
 
 function relocationFailure(
   failure: RelocationFailure
 ): string {
-  const { verb, relocations, failed, applied } = failure;
-  const reason = reasonOf(failure.error);
+  const {
+    verb,
+    relocations,
+    failed,
+    applied,
+    reason
+  } = failure;
   if (relocations.length > 1) {
     const total = relocations.reduce(
       (sum, relocation) => sum + relocation.renames.length,
@@ -235,9 +229,8 @@ function removalFailure(
   targets: readonly AssetNodeData[],
   removed: number,
   assets: readonly AssetLeafData[],
-  error: unknown
+  reason: string
 ): string {
-  const reason = reasonOf(error);
   const [target] = targets;
   const single = targets.length === 1 ? target : undefined;
   const [asset] = assets;
@@ -248,6 +241,35 @@ function removalFailure(
   return single?.type === "folder" ?
     `Deleted ${removed} of ${assets.length} assets under "${single.path.name}": ${reason}` :
     `Deleted ${removed} of ${assets.length} assets: ${reason}`;
+}
+
+function relocationAt(
+  relocations: readonly AssetRelocation[],
+  renameIndex: number
+): AssetRelocation | undefined {
+  let start = 0;
+  for (const relocation of relocations) {
+    start += relocation.renames.length;
+    if (renameIndex < start) {
+      return relocation;
+    }
+  }
+
+  return undefined;
+}
+
+async function settle(
+  request: Promise<CatalogBatchReport>
+): Promise<CatalogBatchReport> {
+  try {
+    return await request;
+  }
+  catch (error) {
+    return {
+      applied: 0,
+      failure: reasonOf(error)
+    };
+  }
 }
 
 function reasonOf(

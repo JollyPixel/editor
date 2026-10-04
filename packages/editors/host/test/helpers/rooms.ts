@@ -135,12 +135,12 @@ export function changedMessage(
 ): CatalogMessage {
   return {
     type: CATALOG_CHANGED,
-    change: {
+    changes: [{
       eventType: record === null ? "asset.deleted" : "asset.updated",
       assetId,
       record,
       dependencies
-    }
+    }]
   };
 }
 

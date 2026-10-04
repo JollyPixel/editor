@@ -130,16 +130,18 @@ describe("schema-derived catalog types", () => {
   test("a command type narrows to its own fields", () => {
     expect<CatalogDeleteCommand>().type.toBeAssignableTo<{
       readonly type: "catalog:delete";
-      readonly assetId: string;
+      readonly assetIds: readonly string[];
       readonly force?: boolean;
     }>();
     expect<keyof CatalogDeleteCommand>()
-      .type.toBe<"type" | "assetId" | "force">();
+      .type.toBe<"type" | "assetIds" | "force">();
   });
 
   test("an applied reply pairs each command with its result", () => {
     expect<Extract<CatalogApplied, { assetId: string; }>["command"]>()
-      .type.toBe<"catalog:create" | "catalog:rename" | "catalog:delete">();
+      .type.toBe<"catalog:create">();
+    expect<Extract<CatalogApplied, { applied: number; }>["command"]>()
+      .type.toBe<"catalog:rename" | "catalog:delete">();
     expect<Extract<CatalogApplied, { content: unknown; }>["command"]>()
       .type.toBe<"catalog:export">();
   });

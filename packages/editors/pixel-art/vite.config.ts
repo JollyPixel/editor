@@ -9,7 +9,10 @@ import {
   ProjectFile,
   ProjectKinds
 } from "@jolly-pixel/asset-server/node";
-import { PORTS } from "@jolly-pixel/e2e";
+import {
+  PORTS,
+  prebundleWorkspace
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -21,22 +24,6 @@ import {
 const kE2EMode = "e2e";
 const kTextureAssetId = "texture-default";
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
-const kWorkspaceBrowserEntries = [
-  "@jolly-pixel/asset.pixel-art/client",
-  "@jolly-pixel/color",
-  "@jolly-pixel/console",
-  "@jolly-pixel/console/element",
-  "@jolly-pixel/controls",
-  "@jolly-pixel/editor.host",
-  "@jolly-pixel/engine",
-  "@jolly-pixel/image",
-  "@jolly-pixel/image/browser",
-  "@jolly-pixel/pixel-draw.renderer",
-  "@jolly-pixel/runtime",
-  "@jolly-pixel/ui",
-  "@jolly-pixel/ui/icon",
-  "@jolly-pixel/ui/network"
-];
 
 const kinds = await ProjectKinds.load(
   new ProjectFile(import.meta.dirname, {
@@ -66,13 +53,8 @@ export default defineConfig(({ command, mode }) => {
       strictPort: true,
       allowedHosts: true
     },
-    optimizeDeps: e2e ?
-      {
-        include: kWorkspaceBrowserEntries,
-        force: true
-      } :
-      undefined,
     plugins: [
+      prebundleWorkspace(),
       serve && !e2e ? checker({ typescript: true }) : null,
       createProjectKindsPlugin(kinds),
       serve ?

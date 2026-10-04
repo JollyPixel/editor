@@ -5,55 +5,8 @@ the double-click to `data-editor-state="ready"` with `jolly-pixel:debug` set to
 `*`, against a baseline worktree with interleaved runs: machine speed drifts
 too much for anything else.
 
-Items are in suggested order. Items 6 to 9 form two chains: 6 then 7 (shared
-chunks), 8 then 9 (mesh workers).
-
-## Shell and frames
-
-### 1. Dev and e2e module graph
-
-In dev the shell loads 724 modules (26.5 MB of transformed JS) at boot; the
-crawl alone takes 1.7 s cold. The shell imports the `editor.host` root barrel,
-which re-exports `EditorRuntime`, `PeerFrustums` and `bootStandalone`, and
-`workspace/index.ts` statically re-exports `OfflineWorkspace`, which pulls the
-network `Server`. The production build drops both through `sideEffects`, but
-dev serves every module the barrels name. The editors' e2e fix of 2026-09-28
-(795 to 114 requests) was not applied to the studio.
-
-Fix: an `optimizeDeps.include` list for studio dev/e2e, and no static
-`OfflineWorkspace` re-export in the host workspace barrel.
-
-### 2. Batch folder operations
-
-`AssetCommands` `relocate` and `remove` await one `catalog.rename` or
-`catalog.remove` per asset, so a folder of K assets costs K serial round trips
-and K catalog rebuilds in the shell and every frame (one rebuild takes 2.5 ms
-at 1000 assets and 7.8 ms at 3000).
-
-Fix: a batch catalog command next to `catalog:move-folder`; short of that,
-send the requests together and await them once (ADR-0010 already accepts
-partial application).
-
-### 3. Mount editors before snapshots arrive
-
-`EditorSession` awaits the target and every dependency lease before
-`StandaloneEditor` mounts, so device setup, scene awake and `VoxelRenderer`
-setup start only after the network round trip and decode, although
-`EditorScene` already handles a late `reset`. Compare the `host.session` and
-`mount` step durations before changing anything.
-
-Fix: expose `session.ready` and await it alongside the mount.
-
-### 5. Offline owner heartbeat under timer throttling
-
-`RemoteWorkspace` reloads once the owner misses heartbeats for 12 s
-(`HEARTBEAT_MS` 2000, `OWNER_LOSS_MS` 12000 in `shared-tab/protocol.ts`).
-Chrome's intensive throttling of tabs hidden for 5 minutes or more could make
-every frame reboot when the user comes back. Inferred from the throttling
-rules, not reproduced.
-
-Fix: detect owner loss with a pending Web Lock request, or skip the check
-while `document.hidden`.
+Items are in suggested order and form two chains: 1 then 2 (shared
+chunks), 3 then 4 (mesh workers).
 
 ## Editor bundles
 
@@ -64,7 +17,7 @@ resolves one `three@0.186.1` and one `lit@3.3.3`. The studio server caches
 hashed `assets/` files as immutable, so warm opens only revalidate
 `index.html`, `main.css` and `textures/`.
 
-### 6. Shared dependencies: decide for external editors
+### 1. Shared dependencies: decide for external editors
 
 ADR-0016 lets the project file list editor packages from `node_modules`, and
 `EditorPackage.prebuilt` ships them as self-contained dists; ADR-0017 makes
@@ -72,9 +25,9 @@ them trusted same-origin code. Neither covers shared chunks. Choose between a
 joint build for in-repo editors only (external editors stay self-contained)
 and an import map that serves three, lit, ui and editor.host once to every
 editor (fits external editors, couples their versions), and record it in an
-ADR. Blocks item 7.
+ADR. Blocks item 2.
 
-### 7. Spike a multi-page build
+### 2. Spike a multi-page build
 
 A studio-owned config for the in-repo editors that keeps
 `editors/<name>/index.html` (frames load `editors/<name>/?target=`). Payoff:
@@ -97,7 +50,7 @@ to solve:
 
 Editor frames share the shell's origin, so they run on its main thread.
 
-### 8. Cross-origin isolation headers
+### 3. Cross-origin isolation headers
 
 Mesh workers share stores through `SharedArrayBuffer`, which needs
 `crossOriginIsolated`: COOP `same-origin` and COEP `require-corp` on the
@@ -106,21 +59,31 @@ servo `setHeaders`, and on voxel-map's dev server (voxel-renderer's own
 `vite.config.ts` is the reference). No cross-origin resource found that would
 break; detect-gpu is skipped because editors pass `maxFps`. Check the shell,
 the frames and the offline back-end still work, and document the main-thread
-fallback for static hosts without headers. Blocks item 9.
+fallback for static hosts without headers. Blocks item 4.
 
-### 9. Mesh workers in voxel-map
+### 4. Mesh workers in voxel-map
 
 Add a worker file calling `runMeshWorker(self)` and pass `meshing: { workers:
 { createWorker, count } }` where `VoxelRenderer` is added in
 `editors/voxel-map/src/scene/EditorScene.ts` (reference:
 `voxel-renderer/examples/scripts/demo-noise-world.ts`), with `worker.format:
-"es"`. Check the e2e `optimizeDeps` list with `import.meta.url` workers, and
-add an e2e check of the fallback (`ChunkMeshWorkers` meshes on the main thread
-with a warning when not isolated). voxel-model has no `VoxelView`. Workers
-help loads and edits of large maps, not steady-state rendering.
+"es"`. Give `prebundleWorkspace` a way to leave the worker package out if e2e
+mode breaks its `import.meta.url` worker, and add an e2e check of the
+fallback (`ChunkMeshWorkers` meshes on the main thread with a warning when not
+isolated). voxel-model has no `VoxelView`. Workers help loads and edits of
+large maps, not steady-state rendering.
 
 ## Considered and rejected
 
+- **Mounting editors before snapshots arrive.** Measured on 2026-10-04,
+  three runs per editor, offline and online. In voxel-map and voxel-model the
+  runtime's `renderer` step takes 350 to 410 ms on the main thread while the
+  session runs. The session's own steps (catalog, target, dependencies) take
+  25 to 235 ms, but its leases open only once the renderer releases the thread
+  (catalog done at 252 ms, target started at 516 ms). The renderer and the
+  session finish within about 70 ms of each other, and mount then takes 57 to
+  79 ms for a map. pixel-art has no runtime and spends about 20 ms in each of
+  session and mount.
 - **Returning the input from `insert`.** The parse-back costs 2.6 ms per 2 MB
   snapshot event and 3 µs per command, and the event-store contract promises
   an un-aliased, JSON-normalized event from `append`.
@@ -142,8 +105,9 @@ help loads and edits of large maps, not steady-state rendering.
   unchanged sizes covers the tab-switch reallocation.
 - **Coalescing catalog events on a microtask.** `change` fires once per
   message after the state is applied, and each relayed delta is its own
-  message task, so a microtask flag would merge nothing; bursts across
-  deltas belong to item 2.
+  message task, so a microtask flag would merge nothing. Folder moves and
+  deletions send one `catalog:rename` or `catalog:delete` list, whose changes
+  reach members in one `catalog:changed`.
 - **Memoizing the tree's `expanded` array.** `jolly-tree` compares `expanded`
   and `selected` by content (`idListChanged`), so a new array with the same
   ids does not rebuild the `TreeSnapshot`.

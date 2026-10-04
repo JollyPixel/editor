@@ -24,7 +24,10 @@ export class DependencyIndex {
     dependencies: readonly AssetReferenceData[]
   ): boolean {
     const previous = this.#outgoing.get(assetId);
-    if (previous !== undefined && sameReferences(previous, dependencies)) {
+    if (
+      previous !== undefined &&
+      sameReferences(previous, dependencies)
+    ) {
       return false;
     }
 
@@ -65,13 +68,17 @@ export class DependencyIndex {
   dependenciesOf(
     assetId: string
   ): readonly AssetReferenceData[] {
-    return this.#outgoing.get(assetId)?.map(copyReference) ?? [];
+    return this.#outgoing.get(
+      assetId
+    )?.map(copyReference) ?? [];
   }
 
   dependentsOf(
     assetId: string
   ): readonly string[] {
-    return [...this.#incoming.get(assetId) ?? []];
+    return [
+      ...this.#incoming.get(assetId) ?? []
+    ];
   }
 
   closureOf(
@@ -85,7 +92,9 @@ export class DependencyIndex {
       for (const reference of this.#outgoing.get(queue[index]) ?? []) {
         if (!visited.has(reference.id)) {
           visited.add(reference.id);
-          closure.push(copyReference(reference));
+          closure.push(
+            copyReference(reference)
+          );
           queue.push(reference.id);
         }
       }
@@ -107,7 +116,9 @@ export class DependencyIndex {
       for (const dependency of this.#outgoing.get(reference.id) ?? []) {
         visit(dependency);
       }
-      ordered.push(copyReference(reference));
+      ordered.push(
+        copyReference(reference)
+      );
     };
 
     for (const start of starts) {

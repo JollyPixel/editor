@@ -232,10 +232,10 @@ describe("asset-server — end to end", () => {
       "grass"
     );
     const changed = peer.received.at(-1) as {
-      payload: { type: string; change: { record: { source: string; }; }; };
+      payload: { type: string; changes: { record: { source: string; }; }[]; };
     };
     assert.strictEqual(changed.payload.type, CATALOG_CHANGED);
-    assert.strictEqual(changed.payload.change.record.source, "textures/grass.png");
+    assert.strictEqual(changed.payload.changes[0].record.source, "textures/grass.png");
     assert.strictEqual(
       (author.received.at(-1) as { payload: { type: string; }; }).payload.type,
       CATALOG_APPLIED
@@ -252,16 +252,19 @@ describe("asset-server — end to end", () => {
       payload: {
         type: CATALOG_DELETE,
         requestId: "r101",
-        assetId: counter.id
+        assetIds: [counter.id]
       }
     });
     await backend.flush();
 
-    assert.deepEqual(peer.received.at(-1), {
-      room,
-      kind: "message",
-      payload: { type: "deleted" }
-    });
+    assert.deepEqual(
+      peer.received.filter((envelope) => (envelope as { room: string; }).room === room).at(-1),
+      {
+        room,
+        kind: "message",
+        payload: { type: "deleted" }
+      }
+    );
     await assert.rejects(fs.access(path.join(workspace.root, "a.counter")));
 
     await server.close();
