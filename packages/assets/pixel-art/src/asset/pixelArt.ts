@@ -4,7 +4,8 @@ import {
   createPixelBufferFromPng,
   encodePixelArtDocument,
   PixelBuffer,
-  serializePixelBuffer,
+  PixelDocumentState,
+  serializePixelDocument,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -31,8 +32,14 @@ export interface EncodedPixelArt {
 export function createPixelArtDocument(
   size: Vec2
 ): Uint8Array {
+  const state = new PixelDocumentState({
+    buffer: new PixelBuffer({
+      size
+    })
+  });
+
   return encodePixelArtDocument(
-    serializePixelBuffer(new PixelBuffer({ size }))
+    serializePixelDocument(state)
   );
 }
 
@@ -40,9 +47,14 @@ export async function pixelArtDocumentFromPng(
   png: Uint8Array
 ): Promise<EncodedPixelArt> {
   const buffer = await createPixelBufferFromPng(png);
+  const state = new PixelDocumentState({
+    buffer
+  });
 
   return {
     size: buffer.size(),
-    content: encodePixelArtDocument(serializePixelBuffer(buffer))
+    content: encodePixelArtDocument(
+      serializePixelDocument(state)
+    )
   };
 }

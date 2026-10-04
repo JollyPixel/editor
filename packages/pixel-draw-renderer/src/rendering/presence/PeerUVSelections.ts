@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { PeerLayer } from "./PeerLayer.ts";
 import type { UVRegionLayer } from "../overlays/UVRegions.ts";
 
 export interface PeerUVSelectionState {
@@ -6,44 +7,34 @@ export interface PeerUVSelectionState {
   color: string;
 }
 
-export class PeerUVSelections {
+export class PeerUVSelections extends PeerLayer<PeerUVSelectionState> {
   #uvOverlay: UVRegionLayer;
-  #states = new Map<string, PeerUVSelectionState>();
 
   constructor(
     uvOverlay: UVRegionLayer
   ) {
+    super();
     this.#uvOverlay = uvOverlay;
   }
 
-  set(
+  override set(
     clientId: string,
     state: PeerUVSelectionState
   ): void {
-    this.#states.set(clientId, { ...state });
+    super.set(clientId, { ...state });
+  }
+
+  protected override stateChanged(): void {
     this.#sync();
   }
 
-  remove(
-    clientId: string
-  ): void {
-    if (this.#states.delete(clientId)) {
-      this.#sync();
-    }
-  }
-
-  clearAll(): void {
-    this.#states.clear();
+  protected override stateRemoved(): void {
     this.#sync();
-  }
-
-  destroy(): void {
-    this.clearAll();
   }
 
   #sync(): void {
     const colorByRegion = new Map<string, string>();
-    for (const { regionId, color } of this.#states.values()) {
+    for (const [, { regionId, color }] of this.states()) {
       if (!colorByRegion.has(regionId)) {
         colorByRegion.set(regionId, color);
       }

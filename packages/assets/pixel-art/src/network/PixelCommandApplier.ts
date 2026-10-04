@@ -1,11 +1,7 @@
 // Import Third-party Dependencies
 import {
-  applyColorGroups,
-  applyNormalMapCommand,
-  decodePixelBytes,
-  Fill,
-  groupPositionsByColor,
-  type PixelBuffer
+  toDocumentCommand,
+  type PixelDocumentState
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -14,104 +10,11 @@ import type {
 } from "./types.ts";
 import { unpackPixelCommand } from "./PixelWireCodec.ts";
 
-export function applyCommandToBuffer(
-  buffer: PixelBuffer,
+export function applyPixelCommand(
+  state: PixelDocumentState,
   command: PixelWireCommand
 ): void {
-  const cmd = unpackPixelCommand(command);
-
-  switch (cmd.action) {
-    case "stroke":
-      buffer.drawPixels(
-        cmd.metadata.positions,
-        cmd.metadata.color
-      );
-      buffer.copyToMaster();
-      break;
-
-    case "resized":
-      buffer.resize(cmd.metadata.size);
-      break;
-
-    case "texture-replaced":
-      buffer.replacePixels(
-        decodePixelBytes(cmd.metadata.pixels),
-        cmd.metadata.size
-      );
-      break;
-
-    case "global-fill": {
-      const positions = Fill.matchAll(
-        buffer,
-        cmd.metadata.fromColor
-      );
-      buffer.drawPixels(positions, cmd.metadata.toColor);
-      buffer.copyToMaster();
-      break;
-    }
-
-    case "select-edit": {
-      const groupedColors = groupPositionsByColor(
-        cmd.metadata.positions,
-        cmd.metadata.colors
-      );
-      applyColorGroups(buffer, groupedColors);
-      buffer.copyToMaster();
-      break;
-    }
-
-    case "uv-region-created":
-    case "uv-region-state-changed":
-      buffer.uvRegions.set(cmd.metadata.region);
-      break;
-
-    case "uv-region-deleted":
-      buffer.uvRegions.remove(cmd.metadata.id);
-      buffer.normalMap = buffer.normalMap?.withoutZone(cmd.metadata.id) ?? null;
-      break;
-
-    case "uv-region-moved": {
-      const existing = buffer.uvRegions.get(cmd.metadata.id);
-      if (existing) {
-        const { face, rect } = cmd.metadata;
-        const current = face === null ?
-          existing.bounds :
-          existing.rectFor(face);
-        buffer.uvRegions.set(
-          existing.withRect(
-            {
-              ...current,
-              x: rect.x,
-              y: rect.y
-            },
-            face ?? undefined
-          )
-        );
-      }
-      break;
-    }
-
-    case "uv-region-rotated": {
-      const rotation = cmd.metadata;
-      if (rotation.face === null) {
-        buffer.uvRegions.set(rotation.region);
-        break;
-      }
-
-      const existing = buffer.uvRegions.get(rotation.id);
-      if (existing) {
-        buffer.uvRegions.set(
-          existing.withGeometry(rotation.face, rotation.geometry)
-        );
-      }
-      break;
-    }
-
-    case "normal-map-toggled":
-    case "normal-map-defaults-patched":
-    case "normal-map-zone-set":
-    case "normal-map-zone-deleted":
-      buffer.normalMap = applyNormalMapCommand(buffer.normalMap, cmd);
-      break;
-  }
+  state.apply(
+    toDocumentCommand(unpackPixelCommand(command))
+  );
 }

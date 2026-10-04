@@ -62,7 +62,6 @@ export class PeerCursors extends PeerRegistry<
       "filter"
     );
     filter.setAttribute("id", this.#shadowFilterId);
-    // Expand the default filter bounds so the blurred shadow is not clipped.
     filter.setAttribute("x", "-50%");
     filter.setAttribute("y", "-50%");
     filter.setAttribute("width", "200%");
@@ -84,54 +83,7 @@ export class PeerCursors extends PeerRegistry<
     return defs;
   }
 
-  protected render(
-    clientId: string,
-    state: PeerCursorState
-  ): void {
-    if (!state.pos) {
-      this.view(
-        clientId
-      )?.group.setAttribute("visibility", "hidden");
-
-      return;
-    }
-
-    const elements = this.view(
-      clientId
-    ) ?? this.#createElements(clientId);
-    const zoom = this.#viewport.zoom.value;
-    const camera = this.#viewport.camera;
-    const x = state.pos.x * zoom + camera.x;
-    const y = state.pos.y * zoom + camera.y;
-
-    elements.group.setAttribute(
-      "visibility",
-      "visible"
-    );
-    elements.group.setAttribute(
-      "transform",
-      `translate(${x}, ${y})`
-    );
-    elements.arrow.setAttribute(
-      "fill",
-      state.color
-    );
-    elements.labelText.setAttribute(
-      "fill",
-      state.color
-    );
-    elements.labelText.textContent = state.label ?? "";
-  }
-
-  protected disposeView(
-    view: PeerCursorElements
-  ): void {
-    view.group.remove();
-  }
-
-  #createElements(
-    clientId: string
-  ): PeerCursorElements {
+  protected createView(): PeerCursorElements {
     const group = document.createElementNS(SVG_NS, "g");
     Object.assign(group.style, {
       pointerEvents: "none"
@@ -159,13 +111,35 @@ export class PeerCursors extends PeerRegistry<
     group.appendChild(labelText);
 
     this.#svg.appendChild(group);
-    const elements: PeerCursorElements = {
+
+    return {
       group,
       arrow,
       labelText
     };
-    this.setView(clientId, elements);
+  }
 
-    return elements;
+  protected renderView(
+    elements: PeerCursorElements,
+    state: PeerCursorState
+  ): void {
+    if (!state.pos) {
+      elements.group.setAttribute("visibility", "hidden");
+
+      return;
+    }
+
+    const { x, y } = this.#viewport.toScreen(state.pos);
+    elements.group.setAttribute("visibility", "visible");
+    elements.group.setAttribute("transform", `translate(${x}, ${y})`);
+    elements.arrow.setAttribute("fill", state.color);
+    elements.labelText.setAttribute("fill", state.color);
+    elements.labelText.textContent = state.label ?? "";
+  }
+
+  protected disposeView(
+    view: PeerCursorElements
+  ): void {
+    view.group.remove();
   }
 }

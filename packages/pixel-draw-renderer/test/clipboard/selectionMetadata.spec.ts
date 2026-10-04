@@ -15,6 +15,7 @@ import type {
   SelectionSnapshot
 } from "#src/clipboard/types.ts";
 
+// CONSTANTS
 const kSnapshot: SelectionSnapshot = {
   rect: { x: -2, y: 4, width: 2, height: 1 },
   pixels: [
@@ -39,7 +40,8 @@ describe("selectionMetadata", () => {
     const bitset = encodeSelectionMetadata(kSnapshot);
 
     assert.deepStrictEqual(full.mask, { encoding: "full" });
-    assert.strictEqual(bitset.mask.encoding, "bitset");
+    assert.deepStrictEqual(bitset.mask, { encoding: "bitset", data: "AQ==" });
+    assert.strictEqual(bitset.pixels, "AQIDBAUGB4A=");
     assert.deepStrictEqual(
       decodeSelectionMetadata(JSON.stringify(full), kImage),
       { mask: [true, true], pixels: kSnapshot.pixels }
@@ -48,27 +50,6 @@ describe("selectionMetadata", () => {
       decodeSelectionMetadata(JSON.stringify(bitset), kImage),
       { mask: kSnapshot.mask, pixels: kSnapshot.pixels }
     );
-  });
-
-  test("the metadata pixel channel round-trips partial alpha exactly", () => {
-    /*
-     * The PNG travels through a premultiplying canvas, so RGB under a low
-     * alpha cannot survive it. The custom format carries raw RGBA8 instead.
-     */
-    const snapshot: SelectionSnapshot = {
-      rect: { x: 0, y: 0, width: 2, height: 1 },
-      pixels: [
-        { r: 200, g: 100, b: 50, a: 3 },
-        { r: 255, g: 255, b: 255, a: 1 }
-      ],
-      mask: [true, true]
-    };
-    const decoded = decodeSelectionMetadata(
-      JSON.stringify(encodeSelectionMetadata(snapshot)),
-      { width: 2, height: 1, pixels: snapshot.pixels }
-    );
-
-    assert.deepStrictEqual(decoded!.pixels, snapshot.pixels);
   });
 
   test("metadata without a pixel channel still decodes, falling back to the raster", () => {

@@ -1,11 +1,13 @@
+// Import Third-party Dependencies
+import type { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
+import { createCanvas2D } from "./Canvas2D.ts";
 import { toCssColor } from "../utils/colors.ts";
-import type {
-  ByteColorInput,
-  RGBA8
-} from "../types.ts";
+import type { ByteColorInput } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { DefaultViewport } from "./Viewport.ts";
+import { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
 import {
   FloatingSelection
 } from "./compositing/FloatingSelection.ts";
@@ -15,6 +17,11 @@ import {
 import {
   PeerFloatingSelections
 } from "./presence/PeerFloatingSelections.ts";
+
+interface ContentLayer extends Pick<Emitter<{ changed: () => void; }>, "on" | "off"> {
+  readonly isActive: boolean;
+  draw(ctx: CanvasRenderingContext2D): void;
+}
 
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
@@ -40,9 +47,9 @@ export interface CanvasRendererOptions {
   /**
    * Explicit fill for a peer's vacated selection-move footprint, mirroring
    * `PixelArtCanvasOptions.select.eraseColor` so both clients blank it equally.
-   * @default null (dominant neighbor color)
+   * @default dominant neighbor color
    */
-  eraseColor?: RGBA8 | null;
+  eraseColor?: SelectionEraseColor;
 }
 
 export class CanvasRenderer {
@@ -52,6 +59,8 @@ export class CanvasRenderer {
   #bgCtx: CanvasRenderingContext2D;
   #contentCanvas: HTMLCanvasElement;
   #contentCtx: CanvasRenderingContext2D;
+  #contentLayers: readonly ContentLayer[];
+  #onContentChanged = () => this.drawFrame();
   #bgSquareSize: number;
   #bgColors: { odd: string; even: string; };
   #backgroundColor: string;
@@ -75,7 +84,7 @@ export class CanvasRenderer {
         even: "#666"
       },
       backgroundColor = "#555555",
-      eraseColor = null
+      eraseColor = new SelectionEraseColor()
     } = options;
 
     this.#viewport = viewport;
@@ -91,16 +100,18 @@ export class CanvasRenderer {
     };
     this.#backgroundColor = toCssColor(backgroundColor);
 
-    this.#canvas = document.createElement("canvas");
-    this.#ctx = this.#canvas.getContext("2d")!;
-    this.#ctx.imageSmoothingEnabled = false;
+    ({ canvas: this.#canvas, context: this.#ctx } = createCanvas2D(0, 0));
+    ({ canvas: this.#bgCanvas, context: this.#bgCtx } = createCanvas2D(0, 0));
+    ({ canvas: this.#contentCanvas, context: this.#contentCtx } = createCanvas2D(0, 0));
 
-    this.#bgCanvas = document.createElement("canvas");
-    this.#bgCtx = this.#bgCanvas.getContext("2d")!;
-
-    this.#contentCanvas = document.createElement("canvas");
-    this.#contentCtx = this.#contentCanvas.getContext("2d")!;
-    this.#contentCtx.imageSmoothingEnabled = false;
+    this.#contentLayers = [
+      this.peerFloatingSelections,
+      this.floatingSelection,
+      this.peerStrokes
+    ];
+    for (const layer of this.#contentLayers) {
+      layer.on("changed", this.#onContentChanged);
+    }
   }
 
   canvas(): HTMLCanvasElement {
@@ -170,8 +181,6 @@ export class CanvasRenderer {
       texPixelH
     );
     this.#ctx.clip();
-
-    this.#ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.#ctx.drawImage(this.#bgCanvas, 0, 0);
 
     this.#ctx.setTransform(
@@ -189,11 +198,7 @@ export class CanvasRenderer {
         0
       );
     }
-    else if (
-      this.floatingSelection.isActive ||
-      this.peerStrokes.isActive ||
-      this.peerFloatingSelections.isActive
-    ) {
+    else if (this.#contentLayers.some((layer) => layer.isActive)) {
       this.#drawContent();
       this.#ctx.drawImage(
         this.#contentCanvas,
@@ -236,9 +241,9 @@ export class CanvasRenderer {
       0,
       0
     );
-    this.peerFloatingSelections.draw(this.#contentCtx);
-    this.floatingSelection.draw(this.#contentCtx);
-    this.peerStrokes.draw(this.#contentCtx);
+    for (const layer of this.#contentLayers) {
+      layer.draw(this.#contentCtx);
+    }
   }
 
   resize(
@@ -292,11 +297,12 @@ export class CanvasRenderer {
     }
 
     parent.appendChild(this.#canvas);
+  }
 
-    const bounds = parent.getBoundingClientRect();
-    this.resize(
-      bounds.width,
-      bounds.height
-    );
+  destroy(): void {
+    for (const layer of this.#contentLayers) {
+      layer.off("changed", this.#onContentChanged);
+    }
+    this.#canvas.remove();
   }
 }

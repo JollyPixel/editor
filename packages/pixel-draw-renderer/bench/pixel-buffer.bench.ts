@@ -41,9 +41,10 @@ const suite = defineSuite("PixelBuffer (buffer/PixelBuffer)", (bench) => {
   const stroke64 = randomPositions(64, { x: 256, y: 256 }, rng);
   const stroke1024 = randomPositions(1024, { x: 256, y: 256 }, rng);
   const color = randomColor(rng);
-  const regionPixels = new Array<RGBA8>(
-    kClippedRegion.width * kClippedRegion.height
-  ).fill(color);
+  const regionPixels = Array.from(
+    { length: kClippedRegion.width * kClippedRegion.height },
+    () => color
+  );
   const regionMask = Array.from(
     { length: regionPixels.length },
     (_, index) => (index & 1) === 0
@@ -69,9 +70,6 @@ const suite = defineSuite("PixelBuffer (buffer/PixelBuffer)", (bench) => {
     })
     .add("drawPixels / 1024-px stroke", () => {
       buffer256.drawPixels(stroke1024, color);
-    })
-    .add("drawRegion / clipped 256x256", () => {
-      buffer256.drawRegion(kClippedRegion, regionPixels);
     })
     .add("drawMaskedRegion / clipped 256x256, 50% mask", () => {
       buffer256.drawMaskedRegion(kClippedRegion, regionPixels, regionMask);

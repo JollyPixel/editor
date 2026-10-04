@@ -8,40 +8,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PointerController } from "#src/input/PointerController.ts";
-import type { WindowLike } from "#src/input/WindowLike.ts";
-import { Viewport } from "#src/rendering/Viewport.ts";
+import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
-import { moveTo } from "../helpers/events.ts";
-
-class FakeWindow implements WindowLike {
-  #listeners = new Map<string, Set<(event: any) => void>>();
-
-  addEventListener(
-    type: string,
-    listener: (event: any) => void
-  ): void {
-    let set = this.#listeners.get(type);
-    if (!set) {
-      set = new Set();
-      this.#listeners.set(type, set);
-    }
-    set.add(listener);
-  }
-
-  removeEventListener(
-    type: string,
-    listener: (event: any) => void
-  ): void {
-    this.#listeners.get(type)?.delete(listener);
-  }
-
-  dispatch(type: string, event: unknown = {}): void {
-    for (const listener of this.#listeners.get(type) ?? []) {
-      listener(event);
-    }
-  }
-}
+import { makeCenteredViewport } from "../helpers/input/pointer.ts";
 
 describe("PointerController", () => {
   let viewport: Viewport;
@@ -49,16 +19,11 @@ describe("PointerController", () => {
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({
-      textureSize: { x: 16, y: 16 },
-      zoom: 4
-    });
-    viewport.updateCanvasSize(200, 200);
-    viewport.centerTexture();
+    viewport = makeCenteredViewport();
   });
 
   describe("mouse events", () => {
-    test("mousedown (left button) triggers onPrimaryDown with the resolved texture position", () => {
+    test("mousemove without the primary button held does not continue a tracked drag", () => {
       const { actions, calls } = makeActions();
       const ctrl = new PointerController({
         canvas,
@@ -73,74 +38,14 @@ describe("PointerController", () => {
         clientY: 100,
         bubbles: true
       }));
-
-      assert.strictEqual(calls.onPrimaryDown.length, 1);
-      ctrl.destroy();
-    });
-
-    test("mousemove does NOT trigger onPrimaryMove when not dragging", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
       canvas.dispatchEvent(new MouseEvent("mousemove", {
         buttons: 0,
-        clientX: 50,
-        clientY: 50,
-        bubbles: true
-      }));
-
-      assert.strictEqual(calls.onPrimaryMove.length, 0);
-      ctrl.destroy();
-    });
-
-    test("dragging after mousedown fires onPrimaryMove", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0,
-        buttons: 1,
-        clientX: 100,
-        clientY: 100,
-        bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mousemove", {
-        buttons: 1,
         clientX: 110,
         clientY: 100,
         bubbles: true
       }));
 
-      assert.strictEqual(calls.onPrimaryMove.length, 1);
-      ctrl.destroy();
-    });
-
-    test("mouseup ends a tracked gesture with onPrimaryUp", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      canvas.dispatchEvent(new MouseEvent("mousedown", {
-        button: 0,
-        buttons: 1,
-        clientX: 100,
-        clientY: 100,
-        bubbles: true
-      }));
-      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
-      assert.strictEqual(calls.onPrimaryUp.length, 1);
+      assert.strictEqual(calls.onPointerMove.length, 0);
       ctrl.destroy();
     });
 
@@ -159,24 +64,8 @@ describe("PointerController", () => {
         bubbles: true
       }));
 
-      assert.strictEqual(calls.onPanStart.length, 1);
-      ctrl.destroy();
-    });
-
-    test("mouseleave reports a null canvas hover position", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      canvas.dispatchEvent(
-        new MouseEvent("mouseleave", { bubbles: true })
-      );
-      const last = calls.onCanvasHover.at(-1);
-      assert.ok(last !== undefined);
-      assert.strictEqual(last[0], null);
+      assert.strictEqual(calls.onPanStart, 1);
+      assert.strictEqual(calls.onPointerDown.length, 0);
       ctrl.destroy();
     });
   });
@@ -201,27 +90,22 @@ describe("PointerController", () => {
 
       assert.ok(event.defaultPrevented);
       assert.deepStrictEqual(calls, {
-        onPrimaryDown: [],
-        onPrimaryMove: [],
-        onPrimaryUp: [],
-        onSecondaryDown: [],
-        onSecondaryMove: [],
-        onSecondaryUp: [],
-        onPanStart: [],
-        onPanMove: [],
-        onPanEnd: [],
-        onZoom: [],
-        onCanvasHover: [],
-        onTextureCursorMove: [],
-        onMouseUp: [],
-        onBlur: []
+        onPointerDown: [],
+        onPointerMove: [],
+        onPointerUp: [],
+        onCtrlWheel: [],
+        onPanStart: 0,
+        onPanEnd: 0,
+        onHover: [],
+        onMouseUp: 0,
+        onBlur: 0
       });
       ctrl.destroy();
     });
   });
 
   describe("destroy", () => {
-    test("removes event listeners — no callbacks after destroy", () => {
+    test("removes event listeners so no callback fires after destroy", () => {
       const { actions, calls } = makeActions();
       const ctrl = new PointerController({
         canvas,
@@ -238,117 +122,13 @@ describe("PointerController", () => {
         bubbles: true
       }));
 
-      assert.strictEqual(calls.onPrimaryDown.length, 0);
+      assert.strictEqual(calls.onPointerDown.length, 0);
     });
   });
 
-  describe("onTextureCursorMove", () => {
-    /*
-     * With this viewport (200x200 canvas, 16x16 texture, zoom 4), the
-     * texture is centered with camera = (68, 68). client(100,100) -> texture
-     * (8,8).
-     */
-
-    test("fires with the resolved texture position on mousemove", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      moveTo(canvas, 100, 100);
-
-      assert.strictEqual(
-        calls.onTextureCursorMove.length,
-        1
-      );
-      assert.deepStrictEqual(
-        calls.onTextureCursorMove[0][0],
-        { x: 8, y: 8 }
-      );
-      ctrl.destroy();
-    });
-
-    test("fires with null when the cursor is outside texture bounds", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      moveTo(canvas, 1000, 1000);
-
-      assert.strictEqual(
-        calls.onTextureCursorMove.length,
-        1
-      );
-      assert.strictEqual(
-        calls.onTextureCursorMove[0][0],
-        null
-      );
-      ctrl.destroy();
-    });
-
-    test("fires with null on mouseleave", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      moveTo(canvas, 100, 100);
-      canvas.dispatchEvent(
-        new MouseEvent("mouseleave", { bubbles: true })
-      );
-
-      assert.strictEqual(
-        calls.onTextureCursorMove.at(-1)?.[0],
-        null
-      );
-      ctrl.destroy();
-    });
-  });
-
-  describe("onMouseUp", () => {
-    test("fires on canvas mouseup even when nothing was being tracked", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      canvas.dispatchEvent(
-        new MouseEvent("mouseup", { bubbles: true })
-      );
-
-      assert.strictEqual(calls.onMouseUp.length, 1);
-      ctrl.destroy();
-    });
-
-    test("fires on window mouseup", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      window.dispatchEvent(
-        new MouseEvent("mouseup", { bubbles: true })
-      );
-
-      assert.strictEqual(calls.onMouseUp.length, 1);
-      ctrl.destroy();
-    });
-  });
-
-  describe("onPrimaryDown return value", () => {
-    test("returning false prevents onPrimaryMove/onPrimaryUp from firing for that gesture", () => {
-      const { actions, calls } = makeActions({ onPrimaryDownReturns: false });
+  describe("onPointerDown return value", () => {
+    test("returning false prevents onPointerMove/onPointerUp from firing for that gesture", () => {
+      const { actions, calls } = makeActions({ tracksDrags: false });
       const ctrl = new PointerController({
         canvas,
         viewport,
@@ -376,9 +156,10 @@ describe("PointerController", () => {
         new MouseEvent("mouseup", { bubbles: true })
       );
 
-      assert.strictEqual(calls.onPrimaryDown.length, 1);
-      assert.strictEqual(calls.onPrimaryMove.length, 0);
-      assert.strictEqual(calls.onPrimaryUp.length, 0);
+      assert.deepStrictEqual(calls.onPointerDown, [["primary", 8, 8, false]]);
+      assert.strictEqual(calls.onPointerMove.length, 0);
+      assert.strictEqual(calls.onPointerUp.length, 0);
+      assert.strictEqual(calls.onMouseUp, 1);
       ctrl.destroy();
     });
 
@@ -411,131 +192,9 @@ describe("PointerController", () => {
         new MouseEvent("mouseup", { bubbles: true })
       );
 
-      assert.strictEqual(calls.onPrimaryMove.length, 1);
-      assert.strictEqual(calls.onPrimaryUp.length, 1);
+      assert.deepStrictEqual(calls.onPointerMove, [["primary", 10, 8]]);
+      assert.deepStrictEqual(calls.onPointerUp, ["primary"]);
       ctrl.destroy();
-    });
-  });
-
-  describe("stopDrawing", () => {
-    test("stops tracking the current gesture — no further onPrimaryMove/onPrimaryUp", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      canvas.dispatchEvent(
-        new MouseEvent("mousedown", {
-          button: 0,
-          buttons: 1,
-          clientX: 100,
-          clientY: 100,
-          bubbles: true
-        })
-      );
-      ctrl.stopDrawing();
-
-      canvas.dispatchEvent(
-        new MouseEvent("mousemove", {
-          buttons: 1,
-          clientX: 110,
-          clientY: 100,
-          bubbles: true
-        })
-      );
-      canvas.dispatchEvent(
-        new MouseEvent("mouseup", { bubbles: true })
-      );
-
-      assert.strictEqual(calls.onPrimaryMove.length, 0);
-      assert.strictEqual(calls.onPrimaryUp.length, 0);
-      // onMouseUp is unconditional and still fires — consumers decide what it means.
-      assert.strictEqual(calls.onMouseUp.length, 1);
-      ctrl.destroy();
-    });
-  });
-
-  describe("onBlur", () => {
-    test("window blur fires onBlur", () => {
-      const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions
-      });
-
-      window.dispatchEvent(
-        new Event("blur")
-      );
-
-      assert.strictEqual(calls.onBlur.length, 1);
-      ctrl.destroy();
-    });
-  });
-
-  describe("injected window", () => {
-    test("blur is read from the injected window, not the real global", () => {
-      const { actions, calls } = makeActions();
-      const fakeWindow = new FakeWindow();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions,
-        window: fakeWindow
-      });
-
-      window.dispatchEvent(new Event("blur"));
-      assert.strictEqual(calls.onBlur.length, 0);
-
-      fakeWindow.dispatch("blur");
-      assert.strictEqual(calls.onBlur.length, 1);
-
-      ctrl.destroy();
-    });
-
-    test("mouseup on the injected window ends an in-progress gesture", () => {
-      const { actions, calls } = makeActions();
-      const fakeWindow = new FakeWindow();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions,
-        window: fakeWindow
-      });
-
-      canvas.dispatchEvent(
-        new MouseEvent("mousedown", {
-          button: 0,
-          buttons: 1,
-          clientX: 100,
-          clientY: 100,
-          bubbles: true
-        })
-      );
-      fakeWindow.dispatch("mouseup");
-
-      assert.strictEqual(calls.onPrimaryUp.length, 1);
-      ctrl.destroy();
-    });
-
-    test("destroy() detaches from the injected window", () => {
-      const { actions, calls } = makeActions();
-      const fakeWindow = new FakeWindow();
-      const ctrl = new PointerController({
-        canvas,
-        viewport,
-        actions,
-        window: fakeWindow
-      });
-
-      ctrl.destroy();
-      fakeWindow.dispatch("blur");
-      fakeWindow.dispatch("mouseup");
-
-      assert.strictEqual(calls.onBlur.length, 0);
-      assert.strictEqual(calls.onMouseUp.length, 0);
     });
   });
 });

@@ -7,9 +7,9 @@ server, so a browser can read and write a document without pulling either in.
 ```ts
 import {
   decodePixelArtDocument,
-  deserializePixelBuffer,
+  deserializePixelDocument,
   encodePixelArtDocument,
-  serializePixelBuffer
+  serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 ```
 
@@ -26,7 +26,7 @@ interface PixelArtDocumentData {
 }
 ```
 
-`normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A document without it loads with the feature off, so `version` stays `1`. `PixelBuffer.normalMap` carries it through `serializePixelBuffer`, `deserializePixelBuffer` and `pixelArtSnapshot`.
+`normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A document without it loads with the feature off, so `version` stays `1`. `PixelDocumentState.normalMap` carries it through `serializePixelDocument`, `deserializePixelDocument` and `pixelArtSnapshot`.
 
 Deliberately not a PNG. The document carries UV regions, which an image
 format cannot, and encoding one needs no image codec on the server, where
@@ -42,9 +42,9 @@ construction instead of by convention.
 | Function | Purpose |
 |---|---|
 | `createPixelArtDocument(size, pixels?)` | size + RGBA8 bytes → `PixelArtDocumentData`; `pixels` defaults to transparent |
-| `serializePixelBuffer(buffer)` | `PixelBuffer` → `PixelArtDocumentData` |
-| `deserializePixelBuffer(document, buffer)` | `PixelArtDocumentData` → `PixelBuffer` |
-| `pixelArtSnapshot(buffer)` | `PixelBuffer` → `PixelBufferSnapshot`, for the wire |
+| `serializePixelDocument(state)` | [`PixelDocumentState`](../PixelDocumentState.md) → `PixelArtDocumentData` |
+| `deserializePixelDocument(document, state)` | `PixelArtDocumentData` → `PixelDocumentState` of a `PixelBuffer` |
+| `pixelArtSnapshot(state)` | `PixelDocumentState` → `PixelBufferSnapshot`, for the wire |
 | `encodePixelArtDocument(document)` | document → UTF-8 JSON bytes |
 | `decodePixelArtDocument(bytes)` | JSON bytes → validated document |
 | `parsePixelArtDocument(value)` | already-parsed JSON → validated document |
@@ -54,9 +54,9 @@ construction instead of by convention.
 | `decodePngPixels(pixels, size)` | `PngPixels` → `Uint8ClampedArray` |
 
 `decodePixelArtDocument` validates rather than asserts, because a document
-reaches it from persistence: an unsupported version, a non-integer size,
+reaches it from persistence: an unsupported version, a size that is not a pair of positive integers,
 invalid `normalMap` settings, or pixels shorter than the declared size all throw
-`InvalidPixelArtDocumentError`. `deserializePixelBuffer` throws the same error
+`InvalidPixelArtDocumentError`. `deserializePixelDocument` throws the same error
 for a size the target buffer would refuse. `createPixelArtDocument` throws it
 for a non-positive size or a `pixels` length other than `x * y * 4`.
 
@@ -90,14 +90,15 @@ documents keep base64 RGBA8.
 import {
   createPixelBufferFromPng,
   encodePixelArtDocument,
-  serializePixelBuffer
+  PixelDocumentState,
+  serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 const buffer = await createPixelBufferFromPng(
   await fs.readFile("textures/tileset.png")
 );
 const document = encodePixelArtDocument(
-  serializePixelBuffer(buffer)
+  serializePixelDocument(new PixelDocumentState({ buffer }))
 );
 ```
 

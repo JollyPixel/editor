@@ -37,7 +37,6 @@ describe("Viewport coordinates", () => {
       });
       vp.updateCanvasSize(100, 80);
       vp.centerTexture();
-      // Pushing the texture right moves the visible centre left over it.
       vp.applyPan(6, 0);
 
       assert.deepStrictEqual(
@@ -65,27 +64,6 @@ describe("Viewport coordinates", () => {
     });
   });
 
-  describe("mouseCanvasPosition", () => {
-    test("subtracts bounding rect left/top", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-
-      const bounds = { left: 50, top: 30 } as DOMRect;
-      const pos = vp.mouseCanvasPosition(
-        150,
-        80,
-        bounds
-      );
-
-      assert.strictEqual(pos.x, 100);
-      assert.strictEqual(pos.y, 50);
-    });
-  });
-
   describe("mouseTexturePosition", () => {
     test("converts canvas coords to texture coords", () => {
       const vp = new Viewport({
@@ -98,14 +76,12 @@ describe("Viewport coordinates", () => {
       vp.updateCanvasSize(200, 200);
       vp.centerTexture();
 
-      // camera should be (200/2 - 16*4/2) = 100-32 = 68
       const bounds = {
         left: 0,
         top: 0,
         right: 200,
         bottom: 200
       } as DOMRect;
-      // mouseX=68 → canvasX=68 → textureX = (68 - camera.x) / zoom = 0
       const pos = vp.mouseTexturePosition(
         vp.camera.x,
         vp.camera.y,
@@ -140,7 +116,7 @@ describe("Viewport coordinates", () => {
       assert.strictEqual(pos, null);
     });
 
-    test("returns coords when limit=false even if out of bounds", () => {
+    test("returns unbounded coords when limit=false", () => {
       const vp = new Viewport({
         textureSize: {
           x: 16,
@@ -156,7 +132,7 @@ describe("Viewport coordinates", () => {
         { bounds, limit: false }
       );
 
-      assert.ok(pos !== null);
+      assert.deepStrictEqual(pos, { x: -250, y: -250 });
     });
   });
 
@@ -179,7 +155,7 @@ describe("Viewport coordinates", () => {
       );
     }
 
-    test("returns the centre of the texel in client coordinates", () => {
+    test("returns the centre of the pixel in client coordinates", () => {
       const vp = new Viewport({
         textureSize: {
           x: 16,

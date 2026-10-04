@@ -6,11 +6,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { makeMap, type EventPayload } from "../../helpers/uv-map.ts";
+import {
+  makeUvMap,
+  type EventPayload
+} from "../../helpers/uv/map.ts";
 
 describe("UVMap — move", () => {
   test("updates the rect and emits region-moved with the previous rect", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     const events: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => events.push(e));
@@ -32,7 +35,7 @@ describe("UVMap — move", () => {
   });
 
   test("clamps the destination rect to canvas bounds", () => {
-    const map = makeMap({ x: 16, y: 16 });
+    const map = makeUvMap({ x: 16, y: 16 });
     const region = map.create({ width: 4, height: 4 });
 
     map.move(
@@ -47,7 +50,7 @@ describe("UVMap — move", () => {
   });
 
   test("returns false for an unknown id", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     assert.ok(
       !map.move("no-such", {
         x: 0, y: 0, width: 1, height: 1
@@ -56,7 +59,7 @@ describe("UVMap — move", () => {
   });
 
   test("moves a single face of an free region, leaving the others put", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
     const events: EventPayload<"region-moved">[] = [];
@@ -76,7 +79,7 @@ describe("UVMap — move", () => {
   });
 
   test("refuses to move an free region when no face is given", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
     const events: EventPayload<"region-moved">[] = [];
@@ -89,8 +92,26 @@ describe("UVMap — move", () => {
     assert.strictEqual(events.length, 0);
   });
 
+  test("rejects a slot the free region does not own", () => {
+    const map = makeUvMap();
+    const region = map.create({ width: 4, height: 4 });
+    map.setState(region.id, "free");
+
+    assert.strictEqual(map.move(
+      region.id,
+      { x: 2, y: 2, width: 4, height: 4 },
+      "missing"
+    ), false);
+    assert.deepStrictEqual(map.get(region.id)?.rectFor("front"), {
+      x: 0,
+      y: 0,
+      width: 4,
+      height: 4
+    });
+  });
+
   test("ignores the face argument for a stacked region", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
 
     assert.ok(map.move(region.id, { x: 8, y: 8, width: 4, height: 4 }, "top"));
@@ -103,7 +124,7 @@ describe("UVMap — move", () => {
 
 describe("UVMap — previewMove", () => {
   test("emits region-dragging with the clamped region, without storing it", () => {
-    const map = makeMap({ x: 16, y: 16 });
+    const map = makeUvMap({ x: 16, y: 16 });
     const region = map.create({ width: 4, height: 4 });
     const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (e) => events.push(e));
@@ -128,7 +149,7 @@ describe("UVMap — previewMove", () => {
   });
 
   test("carries the face for an free region", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
     const events: EventPayload<"region-dragging">[] = [];
@@ -140,7 +161,7 @@ describe("UVMap — previewMove", () => {
   });
 
   test("carries moved triangle geometry without mutating its corner", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({
       width: 4,
       height: 4,
@@ -162,7 +183,7 @@ describe("UVMap — previewMove", () => {
   });
 
   test("does not record history or affect move()'s previousRect bookkeeping", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     const moveEvents: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => moveEvents.push(e));
@@ -185,7 +206,7 @@ describe("UVMap — previewMove", () => {
   });
 
   test("is a no-op for an unknown id", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (e) => events.push(e));
 

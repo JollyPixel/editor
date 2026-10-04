@@ -16,7 +16,7 @@ import {
   unpackPixelCommand,
   type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
-import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelCommand } from "@jolly-pixel/pixel-draw.renderer";
 import type {
   TilesetDocument,
   TilesetDocumentListener
@@ -80,9 +80,9 @@ export class TilesetSyncClient extends CommandSync<
   #basis = new ReplayBasis();
 
   #sendPixelCommand = (
-    event: PixelBufferHookEvent
+    command: PixelCommand
   ): void => {
-    const { originTimestamp, ...body } = packPixelEvent(event);
+    const { originTimestamp, ...body } = packPixelEvent(command);
     this.send(body, originTimestamp, this.#basis.of(originTimestamp));
   };
 
@@ -108,7 +108,7 @@ export class TilesetSyncClient extends CommandSync<
 
     this.#pixels = pixels;
     this.#tileset = tileset;
-    pixels.on("buffer-updated", this.#sendPixelCommand);
+    pixels.on("command", this.#sendPixelCommand);
     this.on(
       "acknowledged",
       (command, version) => this.#basis.learn(command.timestamp, version)
@@ -118,7 +118,7 @@ export class TilesetSyncClient extends CommandSync<
   }
 
   override destroy(): void {
-    this.#pixels.off("buffer-updated", this.#sendPixelCommand);
+    this.#pixels.off("command", this.#sendPixelCommand);
     this.#tileset.off("command", this.#sendTilesetCommand);
     super.destroy();
   }

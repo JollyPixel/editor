@@ -6,153 +6,26 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { InteractionRouter } from "#src/input/InteractionRouter.ts";
-import { InteractionMode } from "#src/input/modes/InteractionMode.ts";
-import type { Viewport } from "#src/rendering/Viewport.ts";
-import type {
-  Mode,
-  RotationDirection,
-  Vec2
-} from "#src/types.ts";
+import type { Mode } from "#src/types.ts";
+import {
+  FakeMode,
+  makeRouter
+} from "../helpers/input/router.ts";
 
-class FakeMode extends InteractionMode {
-  readonly id: Mode;
-  readonly calls: string[] = [];
-  #cursor: string;
-
-  constructor(
-    id: Mode,
-    cursor = ""
-  ) {
-    super();
-    this.id = id;
-    this.#cursor = cursor;
-  }
-
-  onEnter(previous: Mode): void {
-    this.calls.push(`enter:${previous}`);
-  }
-
-  onExit(next: Mode): void {
-    this.calls.push(`exit:${next}`);
-  }
-
-  cursor(): string {
-    return this.#cursor;
-  }
-
-  highlightSize(brushSize: number): number {
-    return brushSize * 2;
-  }
-
-  onPrimaryDown(pos: Vec2, canvasPos: Vec2): boolean {
-    this.calls.push(`down:${pos.x},${pos.y}@${canvasPos.x},${canvasPos.y}`);
-
-    return true;
-  }
-
-  onPrimaryMove(pos: Vec2, canvasPos: Vec2): void {
-    this.calls.push(`move:${pos.x},${pos.y}@${canvasPos.x},${canvasPos.y}`);
-  }
-
-  onPrimaryUp(): void {
-    this.calls.push("up");
-  }
-
-  onLineHeldChange(
-    held: boolean
-  ): void {
-    this.calls.push(held ? "line-held" : "line-released");
-  }
-
-  onBlur(): void {
-    this.calls.push("blur");
-  }
-
-  onCopy(): boolean {
-    this.calls.push("copy");
-
-    return true;
-  }
-
-  onPaste(): boolean {
-    this.calls.push("paste");
-
-    return false;
-  }
-
-  onDelete(): boolean {
-    this.calls.push("delete");
-
-    return true;
-  }
-
-  onRotate(direction: RotationDirection): boolean {
-    this.calls.push(`rotate:${direction}`);
-
-    return true;
-  }
-
-  onFlipHorizontal(): boolean {
-    this.calls.push("flip-horizontal");
-
-    return false;
-  }
-
-  onFlipVertical(): boolean {
-    this.calls.push("flip-vertical");
-
-    return true;
-  }
-}
-
-interface Recorder {
-  pan: [number, number][];
-  zoom: [number, number, number][];
-  cursor: string[];
-}
-
-function makeRouter(
-  options: {
-    modes?: FakeMode[];
-    defaultMode?: Mode;
-    onUndo?: () => boolean;
-    onRedo?: () => boolean;
-  } = {}
-): { router: InteractionRouter; recorder: Recorder; modes: FakeMode[]; } {
-  const modes = options.modes ?? [
-    new FakeMode("paint"),
-    new FakeMode("select", "grab")
-  ];
-  const recorder: Recorder = {
-    pan: [],
-    zoom: [],
-    cursor: []
-  };
-
-  const viewport = {
-    applyPan: (dx: number, dy: number) => recorder.pan.push([dx, dy]),
-    applyZoom: (delta: number, mx: number, my: number) => recorder.zoom.push([delta, mx, my])
-  } as unknown as Viewport;
-
-  const router = new InteractionRouter({
-    modes,
-    defaultMode: options.defaultMode ?? "paint",
-    viewport,
-    setCursor: (cursor) => recorder.cursor.push(cursor),
-    onUndo: options.onUndo ?? (() => false),
-    onRedo: options.onRedo ?? (() => false)
+function makeModalRouter() {
+  return makeRouter({
+    modes: [
+      new FakeMode("paint", { writesPixels: true }),
+      new FakeMode("fill", { writesPixels: true }),
+      new FakeMode("select"),
+      new FakeMode("move", { cursor: "grab" })
+    ],
+    defaultMode: "fill"
   });
-
-  return {
-    router,
-    recorder,
-    modes
-  };
 }
 
 describe("InteractionRouter", () => {
-  test("starts on the default mode without an onEnter or cursor sync", () => {
+  test("starts on the default mode without an exit or cursor sync", () => {
     const { router, recorder, modes } = makeRouter();
 
     assert.strictEqual(router.mode, "paint");
@@ -167,32 +40,19 @@ describe("InteractionRouter", () => {
     );
   });
 
-  test("forwards pointer actions to the active mode and returns its result", () => {
-    const { router, modes } = makeRouter();
-
-    const handled = router.onPrimaryDown({ x: 4, y: 7 }, { x: 40, y: 70 });
-    router.onPrimaryMove({ x: 5, y: 8 }, { x: 50, y: 80 });
-    router.onPrimaryUp();
-
-    assert.strictEqual(handled, true);
-    assert.deepStrictEqual(
-      modes[0].calls,
-      ["down:4,7@40,70", "move:5,8@50,80", "up"]
-    );
-  });
-
-  test("switching mode runs the leaving onExit then the entering onEnter, then syncs the cursor", () => {
+  test("switching mode runs the leaving onExit, syncs the cursor and reports the change", () => {
     const { router, recorder, modes } = makeRouter();
 
     router.mode = "select";
 
     assert.strictEqual(router.mode, "select");
-    assert.deepStrictEqual(modes[0].calls, ["exit:select"]);
-    assert.deepStrictEqual(modes[1].calls, ["enter:paint"]);
+    assert.deepStrictEqual(modes[0].calls, ["exit"]);
+    assert.deepStrictEqual(modes[1].calls, []);
     assert.deepStrictEqual(recorder.cursor, ["grab"]);
+    assert.deepStrictEqual(recorder.modeChanges, [["select", "paint"]]);
   });
 
-  test("setting the current mode again is a no-op (no exit/enter/cursor)", () => {
+  test("setting the current mode again is a no-op (no exit/cursor)", () => {
     const { router, recorder, modes } = makeRouter();
 
     router.mode = "paint";
@@ -214,138 +74,48 @@ describe("InteractionRouter", () => {
     assert.deepStrictEqual(modes[0].calls, []);
   });
 
-  test("re-syncs the cursor after a primary press/release and on blur", () => {
-    const { router, recorder } = makeRouter({
-      modes: [new FakeMode("select", "grab")],
-      defaultMode: "select"
+  describe("pixelsReadOnly", () => {
+    test("makes the pixel-writing modes unavailable", () => {
+      const { router } = makeModalRouter();
+
+      assert.strictEqual(router.unavailableModes.size, 0);
+      router.pixelsReadOnly = true;
+
+      assert.deepStrictEqual([...router.unavailableModes], ["paint", "fill"]);
+      assert.strictEqual(router.unavailableModes, router.unavailableModes);
     });
 
-    router.onPrimaryDown({ x: 1, y: 1 }, { x: 1, y: 1 });
-    router.onPrimaryUp();
-    router.onBlur();
+    test("displaces a pixel-writing mode to move, then restores it", () => {
+      const { router, recorder } = makeModalRouter();
 
-    assert.deepStrictEqual(
-      recorder.cursor,
-      ["grab", "grab", "grab"]
-    );
-  });
+      router.pixelsReadOnly = true;
+      assert.strictEqual(router.mode, "move");
 
-  test("routes edit shortcuts to the active mode and returns whether it handled them", () => {
-    const { router, modes } = makeRouter({
-      modes: [new FakeMode("select")],
-      defaultMode: "select"
+      router.pixelsReadOnly = false;
+      assert.strictEqual(router.mode, "fill");
+      assert.deepStrictEqual(
+        recorder.modeChanges,
+        [["move", "fill"], ["fill", "move"]]
+      );
     });
 
-    const handled = [
-      router.copy(),
-      router.paste(),
-      router.delete(),
-      router.rotate("ccw"),
-      router.flipHorizontal(),
-      router.flipVertical()
-    ];
+    test("ignores an unavailable mode", () => {
+      const { router } = makeModalRouter();
 
-    assert.deepStrictEqual(handled, [true, false, true, true, false, true]);
-    assert.deepStrictEqual(
-      modes[0].calls,
-      ["copy", "paste", "delete", "rotate:ccw", "flip-horizontal", "flip-vertical"]
-    );
-  });
+      router.pixelsReadOnly = true;
+      router.mode = "paint";
 
-  test("lineHeld reports each change once to the active mode", () => {
-    const { router, modes } = makeRouter();
-
-    router.lineHeld = true;
-    router.lineHeld = true;
-    router.lineHeld = false;
-    router.lineHeld = false;
-
-    assert.strictEqual(router.lineHeld, false);
-    assert.deepStrictEqual(modes[0].calls, ["line-held", "line-released"]);
-  });
-
-  test("blur clears both held modifiers without a separate release", () => {
-    const { router, recorder, modes } = makeRouter({
-      modes: [new FakeMode("paint", "crosshair")],
-      defaultMode: "paint"
+      assert.strictEqual(router.mode, "move");
     });
 
-    router.panHeld = true;
-    router.lineHeld = true;
-    router.onBlur();
+    test("a mode chosen while read-only replaces the displaced one", () => {
+      const { router } = makeModalRouter();
 
-    assert.strictEqual(router.panHeld, false);
-    assert.strictEqual(router.lineHeld, false);
-    assert.deepStrictEqual(modes[0].calls, ["line-held", "blur"]);
-    assert.deepStrictEqual(recorder.cursor, ["grab", "crosshair"]);
-  });
+      router.pixelsReadOnly = true;
+      router.mode = "select";
+      router.pixelsReadOnly = false;
 
-  test("handles pan and zoom itself, never touching the active mode", () => {
-    const { router, recorder, modes } = makeRouter();
-
-    router.onPanMove({ x: 3, y: -4 });
-    router.onZoom(120, { x: 10, y: 20 });
-
-    assert.deepStrictEqual(recorder.pan, [[3, -4]]);
-    assert.deepStrictEqual(recorder.zoom, [[120, 10, 20]]);
-    assert.deepStrictEqual(modes[0].calls, []);
-  });
-
-  test("a pan gesture shows grabbing, then restores the mode cursor on end", () => {
-    const { router, recorder } = makeRouter({
-      modes: [new FakeMode("paint", "crosshair")],
-      defaultMode: "paint"
+      assert.strictEqual(router.mode, "select");
     });
-
-    router.onPanStart();
-    router.onPanEnd();
-
-    assert.deepStrictEqual(recorder.cursor, ["grabbing", "crosshair"]);
-  });
-
-  test("panHeld arms a grab cursor and a pan restores to grab while it stays held", () => {
-    const { router, recorder } = makeRouter({
-      modes: [new FakeMode("paint", "crosshair")],
-      defaultMode: "paint"
-    });
-
-    router.panHeld = true;
-    router.panHeld = true;
-    router.onPanStart();
-    router.onPanEnd();
-    router.panHeld = false;
-
-    assert.deepStrictEqual(
-      recorder.cursor,
-      ["grab", "grabbing", "grab", "crosshair"]
-    );
-  });
-
-  test("delegates undo/redo to the injected callbacks", () => {
-    let undo = 0;
-    let redo = 0;
-    const { router } = makeRouter({
-      onUndo: () => {
-        undo++;
-
-        return true;
-      },
-      onRedo: () => {
-        redo++;
-
-        return false;
-      }
-    });
-
-    assert.strictEqual(router.undo(), true);
-    assert.strictEqual(router.redo(), false);
-    assert.strictEqual(undo, 1);
-    assert.strictEqual(redo, 1);
-  });
-
-  test("highlightBrushSize delegates to the active mode", () => {
-    const { router } = makeRouter();
-
-    assert.strictEqual(router.highlightBrushSize(5), 10);
   });
 });

@@ -11,11 +11,33 @@ import {
   decodePixelArtDocument,
   encodePixelArtDocument,
   InvalidPixelArtDocumentError,
-  deserializePixelBuffer,
-  serializePixelBuffer
+  deserializePixelDocument,
+  serializePixelDocument
 } from "#src/serialization/index.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
+import { PixelDocumentState } from "#src/sync/PixelDocumentState.ts";
+import type { Vec2 } from "#src/types.ts";
 import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
+import { encodePixelBytes } from "#src/serialization/pixelBytes.ts";
+
+function stateOf(
+  size: Vec2,
+  maxSize?: number
+): PixelDocumentState {
+  return new PixelDocumentState({
+    buffer: new PixelBuffer({ size, maxSize })
+  });
+}
+
+function enableNormalMap(
+  state: PixelDocumentState,
+  config: NormalMapConfig
+): void {
+  state.apply({
+    action: "normal-map-toggled",
+    metadata: { config: config.toJSON() }
+  });
+}
 
 function bytes(
   payload: unknown
@@ -25,8 +47,8 @@ function bytes(
 
 describe("PixelArtDocument", () => {
   test("round-trips pixels and size", () => {
-    const source = new PixelBuffer({ size: { x: 3, y: 2 } });
-    source.drawPixels(
+    const source = stateOf({ x: 3, y: 2 });
+    source.buffer.drawPixels(
       [{ x: 1, y: 1 }],
       {
         r: 10,
@@ -36,19 +58,19 @@ describe("PixelArtDocument", () => {
       }
     );
 
-    const target = new PixelBuffer({ size: { x: 1, y: 1 } });
-    deserializePixelBuffer(
-      decodePixelArtDocument(encodePixelArtDocument(serializePixelBuffer(source))),
+    const target = stateOf({ x: 1, y: 1 });
+    deserializePixelDocument(
+      decodePixelArtDocument(encodePixelArtDocument(serializePixelDocument(source))),
       target
     );
 
-    assert.deepEqual(target.size(), { x: 3, y: 2 });
-    assert.deepEqual(target.pixels(), source.pixels());
+    assert.deepEqual(target.buffer.size(), { x: 3, y: 2 });
+    assert.deepEqual(target.buffer.pixels(), source.buffer.pixels());
   });
 
   test("round-trips UV regions", () => {
-    const source = new PixelBuffer({ size: { x: 4, y: 4 } });
-    source.uvRegions.set({
+    const source = stateOf({ x: 4, y: 4 });
+    source.uv.restore({
       state: "stacked",
       id: "region-1",
       color: "#ff0000",
@@ -60,22 +82,22 @@ describe("PixelArtDocument", () => {
       }
     });
 
-    const target = new PixelBuffer({ size: { x: 4, y: 4 } });
-    deserializePixelBuffer(
-      decodePixelArtDocument(encodePixelArtDocument(serializePixelBuffer(source))),
+    const target = stateOf({ x: 4, y: 4 });
+    deserializePixelDocument(
+      decodePixelArtDocument(encodePixelArtDocument(serializePixelDocument(source))),
       target
     );
 
     assert.deepEqual(
-      [...target.uvRegions].map((region) => region.toJSON()),
-      [...source.uvRegions].map((region) => region.toJSON())
+      [...target.uv].map((region) => region.toJSON()),
+      [...source.uv].map((region) => region.toJSON())
     );
   });
 
   test("a document is complete state, not a patch", () => {
-    const source = new PixelBuffer({ size: { x: 2, y: 2 } });
-    const target = new PixelBuffer({ size: { x: 2, y: 2 } });
-    target.uvRegions.set({
+    const source = stateOf({ x: 2, y: 2 });
+    const target = stateOf({ x: 2, y: 2 });
+    target.uv.restore({
       state: "stacked",
       id: "stale",
       color: "#00ff00",
@@ -87,35 +109,36 @@ describe("PixelArtDocument", () => {
       }
     });
 
-    deserializePixelBuffer(
-      decodePixelArtDocument(encodePixelArtDocument(serializePixelBuffer(source))),
+    deserializePixelDocument(
+      decodePixelArtDocument(encodePixelArtDocument(serializePixelDocument(source))),
       target
     );
 
-    assert.deepEqual([...target.uvRegions], []);
+    assert.deepEqual([...target.uv], []);
   });
 
   test("round-trips the normal map settings", () => {
-    const source = new PixelBuffer({ size: { x: 2, y: 2 } });
-    source.normalMap = NormalMapConfig.create({ strength: 4 })
+    const source = stateOf({ x: 2, y: 2 });
+    const normalMap = NormalMapConfig.create({ strength: 4 })
       .withZone({ regionId: "glass", settings: "off" });
-    const target = new PixelBuffer({ size: { x: 2, y: 2 } });
+    enableNormalMap(source, normalMap);
+    const target = stateOf({ x: 2, y: 2 });
 
     const document = decodePixelArtDocument(
-      encodePixelArtDocument(serializePixelBuffer(source))
+      encodePixelArtDocument(serializePixelDocument(source))
     );
-    deserializePixelBuffer(document, target);
+    deserializePixelDocument(document, target);
 
-    assert.deepEqual(document.normalMap, source.normalMap.toJSON());
-    assert.deepEqual(target.normalMap?.toJSON(), source.normalMap.toJSON());
+    assert.deepEqual(document.normalMap, normalMap.toJSON());
+    assert.deepEqual(target.normalMap?.toJSON(), normalMap.toJSON());
   });
 
   test("a document without normal map settings leaves the feature off", () => {
-    const target = new PixelBuffer({ size: { x: 2, y: 2 } });
-    target.normalMap = NormalMapConfig.create();
-    const document = serializePixelBuffer(new PixelBuffer({ size: { x: 2, y: 2 } }));
+    const target = stateOf({ x: 2, y: 2 });
+    enableNormalMap(target, NormalMapConfig.create());
+    const document = serializePixelDocument(stateOf({ x: 2, y: 2 }));
 
-    deserializePixelBuffer(decodePixelArtDocument(bytes(document)), target);
+    deserializePixelDocument(decodePixelArtDocument(bytes(document)), target);
 
     assert.equal("normalMap" in document, false);
     assert.equal(target.normalMap, null);
@@ -168,6 +191,21 @@ describe("PixelArtDocument", () => {
     );
   });
 
+  test("rejects a size that is not positive", () => {
+    assert.throws(
+      () => decodePixelArtDocument(bytes({
+        version: 1,
+        size: { x: 0, y: 1 },
+        pixels: "",
+        uvRegions: []
+      })),
+      {
+        name: "InvalidPixelArtDocumentError",
+        message: /size is not a pair of positive integers/
+      }
+    );
+  });
+
   test("rejects malformed UV region data", () => {
     assert.throws(
       () => decodePixelArtDocument(bytes({
@@ -208,27 +246,27 @@ describe("PixelArtDocument", () => {
   });
 
   test("rejects a size the buffer would refuse", () => {
-    const buffer = new PixelBuffer({
-      size: { x: 2, y: 2 },
-      maxSize: 4
-    });
+    const buffer = stateOf({ x: 2, y: 2 }, 4);
 
     assert.throws(
-      () => deserializePixelBuffer({
+      () => deserializePixelDocument({
         version: 1,
         size: { x: 99, y: 2 },
-        pixels: "",
+        pixels: encodePixelBytes(new Uint8Array(99 * 2 * 4)),
         uvRegions: []
       }, buffer),
-      InvalidPixelArtDocumentError
+      {
+        name: "InvalidPixelArtDocumentError",
+        message: /exceeds the buffer bounds/
+      }
     );
   });
 
   test("rejects pixels shorter than the declared size", () => {
-    const buffer = new PixelBuffer({ size: { x: 2, y: 2 } });
+    const buffer = stateOf({ x: 2, y: 2 });
 
     assert.throws(
-      () => deserializePixelBuffer({
+      () => deserializePixelDocument({
         version: 1,
         size: { x: 2, y: 2 },
         pixels: "AAAA",
@@ -242,21 +280,21 @@ describe("PixelArtDocument", () => {
 describe("createPixelArtDocument", () => {
   test("creates a transparent document of the given size", () => {
     const document = createPixelArtDocument({ x: 2, y: 3 });
-    const target = new PixelBuffer({ size: { x: 1, y: 1 } });
-    deserializePixelBuffer(document, target);
+    const target = stateOf({ x: 1, y: 1 });
+    deserializePixelDocument(document, target);
 
     assert.deepEqual(document.size, { x: 2, y: 3 });
     assert.deepEqual(document.uvRegions, []);
-    assert.deepEqual(target.size(), { x: 2, y: 3 });
-    assert.ok(target.pixels().every((value) => value === 0));
+    assert.deepEqual(target.buffer.size(), { x: 2, y: 3 });
+    assert.ok(target.buffer.pixels().every((value) => value === 0));
   });
 
-  test("encodes the given pixels", () => {
+  test("encodes the given pixels as base64 RGBA8", () => {
     const pixels = new Uint8ClampedArray([1, 2, 3, 4]);
-    const target = new PixelBuffer({ size: { x: 1, y: 1 } });
-    deserializePixelBuffer(createPixelArtDocument({ x: 1, y: 1 }, pixels), target);
 
-    assert.deepEqual([...target.pixels()], [1, 2, 3, 4]);
+    const document = createPixelArtDocument({ x: 1, y: 1 }, pixels);
+
+    assert.equal(document.pixels, "AQIDBA==");
   });
 
   test("rejects an empty size or a pixel length mismatch", () => {

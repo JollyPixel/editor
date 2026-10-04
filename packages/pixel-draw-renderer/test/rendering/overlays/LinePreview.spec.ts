@@ -14,11 +14,16 @@ import {
 } from "../../helpers/overlay.ts";
 
 describe("LinePreview", () => {
-  test("drawLine() shows two line elements through the pixel centers", () => {
+  test("drawLine() shows two line elements through the pixel centers of a panned camera", () => {
     const svg = makeSvg();
+    const viewport = makeViewport();
+    viewport.camera = {
+      x: 3,
+      y: -5
+    };
     const overlay = new LinePreview(
       svg,
-      makeViewport(),
+      viewport,
       makeBrush()
     );
 
@@ -38,11 +43,10 @@ describe("LinePreview", () => {
         line.getAttribute("visibility"),
         "visible"
       );
-      // zoom 4, camera (0,0): center of (1,1) -> (6,6), center of (2,1) -> (10,6)
-      assert.strictEqual(line.getAttribute("x1"), "6");
-      assert.strictEqual(line.getAttribute("y1"), "6");
-      assert.strictEqual(line.getAttribute("x2"), "10");
-      assert.strictEqual(line.getAttribute("y2"), "6");
+      assert.strictEqual(line.getAttribute("x1"), "9");
+      assert.strictEqual(line.getAttribute("y1"), "1");
+      assert.strictEqual(line.getAttribute("x2"), "13");
+      assert.strictEqual(line.getAttribute("y2"), "1");
     });
   });
 

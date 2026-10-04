@@ -135,6 +135,28 @@ describe("NormalMapConfig", () => {
     });
   });
 
+  describe("from", () => {
+    test("throws on defaults missing a setting", () => {
+      const { strength: _strength, ...defaults } = validData().defaults;
+      const data: NormalMapData = JSON.parse(JSON.stringify({ defaults, zones: [] }));
+
+      assert.throws(
+        () => NormalMapConfig.from(data),
+        InvalidNormalMapSettingsError
+      );
+    });
+
+    test("throws on two zones for one region", () => {
+      const data = validData();
+      data.zones.push({ regionId: "brick", settings: "off" });
+
+      assert.throws(
+        () => NormalMapConfig.from(data),
+        RangeError
+      );
+    });
+  });
+
   describe("zones", () => {
     test("withZone appends a new zone and replaces an existing one in place", () => {
       const config = NormalMapConfig.from(validData())

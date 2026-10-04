@@ -1,0 +1,17 @@
+// Import Internal Dependencies
+import {
+  UVMap,
+  type UVMapEvent,
+  type UVMapEventType
+} from "#src/uv/map/UVMap.ts";
+import type { Vec2 } from "#src/types.ts";
+
+export type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
+
+export function makeUvMap(
+  size: Vec2 = { x: 32, y: 32 }
+): UVMap {
+  return new UVMap({
+    getCanvasSize: () => size
+  });
+}

@@ -12,12 +12,13 @@ import {
 } from "@jolly-pixel/asset-server";
 import {
   decodePixelArtDocument,
-  deserializePixelBuffer,
+  deserializePixelDocument,
   encodePixelArtDocument,
   InvalidPixelArtDocumentError,
   pixelArtSnapshot,
   PixelBuffer,
-  serializePixelBuffer,
+  PixelDocumentState,
+  serializePixelDocument,
   type PixelArtDocumentData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -29,7 +30,7 @@ import {
   PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND
 } from "./pixelArt.ts";
-import { applyCommandToBuffer } from "../network/PixelCommandApplier.ts";
+import { applyPixelCommand } from "../network/PixelCommandApplier.ts";
 import { encodePixelSnapshot } from "../network/PixelSnapshotCodec.ts";
 import {
   pixelCommandProtocol,
@@ -55,37 +56,40 @@ const kOptionsSchema = defineSchema({
 });
 
 export class PixelArtState {
-  readonly buffer: PixelBuffer;
+  readonly document: PixelDocumentState;
 
   constructor(
     size: Vec2
   ) {
-    this.buffer = new PixelBuffer({
-      size
+    this.document = new PixelDocumentState({
+      buffer: new PixelBuffer({
+        size
+      })
     });
   }
 
   toJSON(): PixelArtDocumentData {
-    return serializePixelBuffer(this.buffer);
+    return serializePixelDocument(this.document);
   }
 
   load(
     document: PixelArtDocumentData
   ): void {
-    deserializePixelBuffer(
+    deserializePixelDocument(
       document,
-      this.buffer
+      this.document
     );
   }
 
   clear(): void {
-    const size = this.buffer.size();
+    const { buffer } = this.document;
+    const size = buffer.size();
 
-    this.buffer.replacePixels(
+    buffer.replacePixels(
       new Uint8ClampedArray(size.x * size.y * 4),
       size
     );
-    this.buffer.uvRegions.clear();
+    this.document.uv.clear();
   }
 }
 
@@ -156,8 +160,8 @@ export function pixelArtAssetKind(
       protocol: pixelCommandProtocol,
 
       apply(state, command) {
-        applyCommandToBuffer(
-          state.buffer,
+        applyPixelCommand(
+          state.document,
           command
         );
       },
@@ -169,11 +173,11 @@ export function pixelArtAssetKind(
 
         return {
           snapshotSchema: pixelSnapshotSchema,
-          snapshot: () => pixelArtSnapshot(state.buffer),
-          encodeSnapshot: () => encodePixelSnapshot(state.buffer),
-          arbitrate: (command) => arbiter.admit(state.buffer, command),
+          snapshot: () => pixelArtSnapshot(state.document),
+          encodeSnapshot: () => encodePixelSnapshot(state.document),
+          arbitrate: (command) => arbiter.admit(state.document, command),
           correct: (command, admitted) => correctPixelCommand(
-            state.buffer,
+            state.document.buffer,
             command,
             admitted
           ),

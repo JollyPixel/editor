@@ -6,11 +6,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { makeMap, type EventPayload } from "../../helpers/uv-map.ts";
+import {
+  makeUvMap,
+  type EventPayload
+} from "../../helpers/uv/map.ts";
 
 describe("UVMap — selectedSlot", () => {
   test("stays null for a stacked region", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
 
     map.select(region.id, "top");
@@ -19,7 +22,7 @@ describe("UVMap — selectedSlot", () => {
   });
 
   test("defaults to front when an free region is selected without a face", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
 
@@ -29,7 +32,7 @@ describe("UVMap — selectedSlot", () => {
   });
 
   test("keeps the requested face for an free region", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
 
@@ -39,7 +42,7 @@ describe("UVMap — selectedSlot", () => {
   });
 
   test("defaults to the first active face for custom topology", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({
       width: 4,
       height: 4,
@@ -52,7 +55,7 @@ describe("UVMap — selectedSlot", () => {
   });
 
   test("replaces an inactive requested face with the first active face", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({
       width: 4,
       height: 4,
@@ -64,19 +67,8 @@ describe("UVMap — selectedSlot", () => {
     assert.strictEqual(map.selectedSlot, "top");
   });
 
-  test("is renormalized when the selected region stacks", () => {
-    const map = makeMap();
-    const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
-    map.select(region.id, "bottom");
-
-    map.setState(region.id, "stacked");
-
-    assert.strictEqual(map.selectedSlot, null);
-  });
-
-  test("emits selection-changed when stacking clears the face", () => {
-    const map = makeMap();
+  test("is cleared and emits selection-changed when the selected region stacks", () => {
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
     map.select(region.id, "bottom");
@@ -85,13 +77,14 @@ describe("UVMap — selectedSlot", () => {
 
     map.setState(region.id, "stacked");
 
+    assert.strictEqual(map.selectedSlot, null);
     assert.deepStrictEqual(events, [
       { selectedRegionId: region.id, selectedSlot: null }
     ]);
   });
 
   test("emits selection-changed when the face alone changes", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "free");
     map.select(region.id, "front");
@@ -108,14 +101,14 @@ describe("UVMap — selectedSlot", () => {
 
 describe("UVMap — select / visibility", () => {
   test("nothing is visible by default", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
 
     assert.ok(!map.isVisible(region.id));
   });
 
   test("a selected region becomes visible", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
 
     map.select(region.id);
@@ -123,7 +116,7 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("showAll makes every region visible regardless of selection", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const a = map.create({ width: 4, height: 4 });
     const b = map.create({ width: 4, height: 4 });
 
@@ -133,7 +126,7 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("ignores selecting an unknown id", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.select(region.id);
 
@@ -143,7 +136,7 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("select(null) deselects", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     map.select(region.id);
 
@@ -153,7 +146,7 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("emits selection-changed only when the selection actually changes", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));
@@ -166,7 +159,7 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("emits visibility-changed only when showAll actually changes", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const events: EventPayload<"visibility-changed">[] = [];
     map.on("visibility-changed", (e) => events.push(e));
 
@@ -178,11 +171,11 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("region labels are hidden by default", () => {
-    assert.strictEqual(makeMap().showRegionLabels, false);
+    assert.strictEqual(makeUvMap().showRegionLabels, false);
   });
 
   test("emits label-visibility-changed only when the preference changes", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const events: EventPayload<"label-visibility-changed">[] = [];
     map.on("label-visibility-changed", (e) => events.push(e));
 
@@ -197,11 +190,11 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("labels every visible region by default", () => {
-    assert.strictEqual(makeMap().labelScope, "all");
+    assert.strictEqual(makeUvMap().labelScope, "all");
   });
 
   test("emits label-scope-changed only when the scope changes", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const events: EventPayload<"label-scope-changed">[] = [];
     let changes = 0;
     map.on("label-scope-changed", (e) => events.push(e));
@@ -219,7 +212,7 @@ describe("UVMap — select / visibility", () => {
   });
 
   test("emits one consolidated change signal per visible mutation", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     let changes = 0;
     map.on("changed", () => changes++);
 

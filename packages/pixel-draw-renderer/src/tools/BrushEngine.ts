@@ -2,28 +2,25 @@
 import { formatHex8 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
+import { Stroke } from "./Stroke.ts";
 import type {
   Brush,
   BrushColorSlot,
   BrushPaintSource
 } from "./Brush.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
-import type { EditPipeline } from "../sync/EditPipeline.ts";
+import type { PixelDocument } from "../PixelDocument.ts";
 import type {
   PeerStrokePixel,
-  RGBA8,
-  Vec2
+  RGBA8
 } from "../types.ts";
 
 export interface BrushEngineOptions {
   brush: Brush;
-  canvasBuffer: CanvasBuffer;
+  document: Pick<PixelDocument, "buffer" | "recordStroke">;
   canvas: HTMLCanvasElement;
-  pipeline: EditPipeline;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
-
-export type BrushPaintMode = "brush" | "erase";
 
 export interface BrushTool {
   pickArmed: boolean;
@@ -38,38 +35,20 @@ export class BrushEngine implements BrushTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
   #canvas: HTMLCanvasElement;
-  #pipeline: EditPipeline;
+  #document: Pick<PixelDocument, "recordStroke">;
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
-  #strokeDirty = new Map<string, Vec2>();
-  #strokeBefore = new Map<string, RGBA8>();
-  #strokeColor: RGBA8 | null = null;
-  #activeSlot: BrushColorSlot | null = null;
+  #stroke: Stroke | null = null;
   #pickArmed = false;
-  #paintMode: BrushPaintMode = "brush";
 
   constructor(
     options: BrushEngineOptions
   ) {
     this.#brush = options.brush;
-    this.#canvasBuffer = options.canvasBuffer;
+    this.#canvasBuffer = options.document.buffer;
     this.#canvas = options.canvas;
-    this.#pipeline = options.pipeline;
+    this.#document = options.document;
     this.#onProgress = options.onProgress;
-  }
-
-  get isActive(): BrushColorSlot | false {
-    return this.#activeSlot ?? false;
-  }
-
-  get paintMode(): BrushPaintMode {
-    return this.#paintMode;
-  }
-
-  set paintMode(
-    mode: BrushPaintMode
-  ) {
-    this.#paintMode = mode;
   }
 
   get pickArmed(): boolean {
@@ -97,9 +76,9 @@ export class BrushEngine implements BrushTool {
       return null;
     }
 
-    const [r, g, b, a] = this.#canvasBuffer.samplePixel(tx, ty);
-    const hex = formatHex8({ r, g, b, a: 255 });
-    const opacity = a / 255;
+    const [color] = this.#canvasBuffer.samplePixels([{ x: tx, y: ty }]);
+    const hex = formatHex8({ ...color, a: 255 });
+    const opacity = color.a / 255;
     this.#brush[slot].set(hex, opacity);
     this.#pickArmed = false;
 
@@ -110,99 +89,53 @@ export class BrushEngine implements BrushTool {
     });
     this.#canvas.dispatchEvent(event);
 
-    return { r, g, b, a };
+    return color;
   }
 
   startStroke(
     tx: number,
     ty: number,
-    slot: BrushColorSlot = "primary"
+    source: BrushPaintSource
   ): void {
-    this.#activeSlot = slot;
-    this.#stamp(tx, ty);
+    this.endStroke();
+    this.#stroke = new Stroke(
+      source,
+      this.#brush.colorFor(source)
+    );
+    this.#stamp(this.#stroke, tx, ty);
   }
 
   continueStroke(
     tx: number,
     ty: number
   ): void {
-    this.#stamp(tx, ty);
+    if (this.#stroke) {
+      this.#stamp(this.#stroke, tx, ty);
+    }
   }
 
-  endStroke(): void {
+  endStroke(): BrushPaintSource | null {
+    const stroke = this.#stroke;
+    if (stroke === null) {
+      return null;
+    }
+
+    this.#stroke = null;
     this.#canvasBuffer.copyToMaster();
-    this.#commit();
-    this.#activeSlot = null;
+    stroke.recordTo(this.#document);
     this.#onProgress?.([]);
+
+    return stroke.source;
   }
 
   #stamp(
+    stroke: Stroke,
     tx: number,
     ty: number
   ): void {
-    const rgba = this.#brush.colorFor(this.#paintSource());
-
     const affected = [...this.#brush.affectedPixels(tx, ty)];
-    for (const pixel of affected) {
-      const key = `${pixel.x},${pixel.y}`;
-      if (!this.#strokeDirty.has(key)) {
-        const [r, g, b, a] = this.#canvasBuffer.samplePixel(
-          pixel.x,
-          pixel.y
-        );
-        this.#strokeBefore.set(key, { r, g, b, a });
-      }
-      this.#strokeDirty.set(key, pixel);
-    }
-
-    this.#canvasBuffer.drawPixels(affected, rgba);
-
-    this.#strokeColor ??= rgba;
-    this.#onProgress?.(this.#currentStrokePixels());
-  }
-
-  #paintSource(): BrushPaintSource {
-    return this.#paintMode === "erase" ?
-      "erase" :
-      this.#activeSlot ?? "primary";
-  }
-
-  #currentStrokePixels(): PeerStrokePixel[] {
-    const color = this.#strokeColor;
-    if (!color) {
-      return [];
-    }
-
-    return [...this.#strokeDirty.values()].map((pos) => {
-      return { ...pos, color };
-    });
-  }
-
-  #commit(): void {
-    if (
-      this.#strokeDirty.size === 0 ||
-      this.#strokeColor === null
-    ) {
-      this.#strokeDirty.clear();
-      this.#strokeBefore.clear();
-      this.#strokeColor = null;
-
-      return;
-    }
-
-    const positions = [...this.#strokeDirty.values()];
-    const beforeColors = positions.map(
-      (pixel) => this.#strokeBefore.get(`${pixel.x},${pixel.y}`)!
-    );
-    const color = this.#strokeColor;
-    this.#strokeDirty.clear();
-    this.#strokeBefore.clear();
-    this.#strokeColor = null;
-
-    this.#pipeline.commitStroke(
-      positions,
-      color,
-      beforeColors
-    );
+    stroke.cover(affected, this.#canvasBuffer);
+    this.#canvasBuffer.drawPixels(affected, stroke.color);
+    this.#onProgress?.(stroke.paintedPixels());
   }
 }

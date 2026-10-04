@@ -8,14 +8,25 @@ export class FakeFrames {
   constructor(
     t: TestContext
   ) {
-    t.mock.method(globalThis, "requestAnimationFrame", (callback: () => void) => {
-      this.#pending.set(this.#next, callback);
+    t.mock.method(
+      globalThis,
+      "requestAnimationFrame",
+      (callback: () => void) => {
+        this.#pending.set(
+          this.#next,
+          callback
+        );
 
-      return this.#next++;
-    });
-    t.mock.method(globalThis, "cancelAnimationFrame", (id: number) => {
-      this.#pending.delete(id);
-    });
+        return this.#next++;
+      }
+    );
+    t.mock.method(
+      globalThis,
+      "cancelAnimationFrame",
+      (id: number) => {
+        this.#pending.delete(id);
+      }
+    );
   }
 
   get length(): number {
@@ -23,7 +34,9 @@ export class FakeFrames {
   }
 
   run(): void {
-    const callbacks = [...this.#pending.values()];
+    const callbacks = [
+      ...this.#pending.values()
+    ];
     this.#pending.clear();
     for (const callback of callbacks) {
       callback();

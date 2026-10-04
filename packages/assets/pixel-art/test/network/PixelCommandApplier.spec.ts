@@ -9,11 +9,14 @@ import assert from "node:assert/strict";
 import {
   encodePixelBytes,
   PixelBuffer,
+  PixelDocument,
+  PixelDocumentState,
   UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { applyCommandToBuffer } from "#src/network/PixelCommandApplier.ts";
+import { applyPixelCommand } from "#src/network/PixelCommandApplier.ts";
+import { unpackPixelCommand } from "#src/network/PixelWireCodec.ts";
 import {
   command,
   freeRegion,
@@ -21,130 +24,150 @@ import {
   stackedRegion
 } from "../fixtures/commands.ts";
 
-function makeBuffer(
+function makeState(
   size = { x: 8, y: 8 }
-): PixelBuffer {
-  return new PixelBuffer({ size });
+): PixelDocumentState {
+  return new PixelDocumentState({
+    buffer: new PixelBuffer({ size })
+  });
 }
 
-describe("applyCommandToBuffer", () => {
+describe("applyPixelCommand", () => {
   test("stroke draws its color at every position", () => {
-    const buffer = makeBuffer();
+    const state = makeState();
 
-    applyCommandToBuffer(buffer, command("stroke", {
+    applyPixelCommand(state, command("stroke", {
       color: { r: 1, g: 2, b: 3, a: 255 },
       positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
     }));
 
-    assert.deepStrictEqual(buffer.samplePixel(0, 0), [1, 2, 3, 255]);
-    assert.deepStrictEqual(buffer.samplePixel(1, 1), [1, 2, 3, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(0, 0), [1, 2, 3, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(1, 1), [1, 2, 3, 255]);
   });
 
   test("select-edit writes each position's own color", () => {
-    const buffer = makeBuffer();
+    const state = makeState();
 
-    applyCommandToBuffer(buffer, command("select-edit", {
+    applyPixelCommand(state, command("select-edit", {
       positions: [{ x: 0, y: 0 }, { x: 1, y: 0 }],
       colors: [gray(1), gray(9)]
     }));
 
-    assert.deepStrictEqual(buffer.samplePixel(0, 0), [1, 1, 1, 255]);
-    assert.deepStrictEqual(buffer.samplePixel(1, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(0, 0), [1, 1, 1, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(1, 0), [9, 9, 9, 255]);
   });
 
-  test("resized resizes the buffer", () => {
-    const buffer = makeBuffer();
+  test("resized resizes the state", () => {
+    const state = makeState();
 
-    applyCommandToBuffer(buffer, command("resized", { size: { x: 8, y: 2 } }));
+    applyPixelCommand(state, command("resized", { size: { x: 8, y: 2 } }));
 
-    assert.deepStrictEqual(buffer.size(), { x: 8, y: 2 });
+    assert.deepStrictEqual(state.buffer.size(), { x: 8, y: 2 });
   });
 
-  test("texture-replaced replaces the buffer size and pixels", () => {
-    const buffer = makeBuffer();
+  test("texture-replaced replaces the state size and pixels", () => {
+    const state = makeState();
     const pixels = new Uint8Array(2 * 2 * 4).fill(9);
 
-    applyCommandToBuffer(buffer, command("texture-replaced", {
+    applyPixelCommand(state, command("texture-replaced", {
       size: { x: 2, y: 2 },
       pixels: encodePixelBytes(pixels)
     }));
 
-    assert.deepStrictEqual(buffer.size(), { x: 2, y: 2 });
-    assert.deepStrictEqual(buffer.samplePixel(0, 0), [9, 9, 9, 9]);
+    assert.deepStrictEqual(state.buffer.size(), { x: 2, y: 2 });
+    assert.deepStrictEqual(state.buffer.samplePixel(0, 0), [9, 9, 9, 9]);
   });
 
   test("global-fill repaints only the pixels matching fromColor", () => {
-    const buffer = makeBuffer({ x: 3, y: 1 });
-    buffer.drawPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }], gray(1));
-    buffer.drawPixels([{ x: 2, y: 0 }], gray(5));
+    const state = makeState({ x: 3, y: 1 });
+    state.buffer.drawPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }], gray(1));
+    state.buffer.drawPixels([{ x: 2, y: 0 }], gray(5));
 
-    applyCommandToBuffer(buffer, command("global-fill", {
+    applyPixelCommand(state, command("global-fill", {
       fromColor: gray(1),
       toColor: gray(9)
     }));
 
-    assert.deepStrictEqual(buffer.samplePixel(0, 0), [9, 9, 9, 255]);
-    assert.deepStrictEqual(buffer.samplePixel(1, 0), [9, 9, 9, 255]);
-    assert.deepStrictEqual(buffer.samplePixel(2, 0), [5, 5, 5, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(0, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(1, 0), [9, 9, 9, 255]);
+    assert.deepStrictEqual(state.buffer.samplePixel(2, 0), [5, 5, 5, 255]);
   });
 
   test("uv-region-created stores the region", () => {
-    const buffer = makeBuffer();
+    const state = makeState();
 
-    applyCommandToBuffer(buffer, command("uv-region-created", { region: stackedRegion("r1") }));
+    applyPixelCommand(state, command("uv-region-created", { region: stackedRegion("r1") }));
 
-    assert.deepStrictEqual(buffer.uvRegions.get("r1")?.toJSON(), stackedRegion("r1"));
+    assert.deepStrictEqual(state.uv.get("r1")?.toJSON(), stackedRegion("r1"));
   });
 
   test("uv-region-deleted removes the region", () => {
-    const buffer = makeBuffer();
-    buffer.uvRegions.set(stackedRegion("r1"));
+    const state = makeState();
+    state.uv.restore(stackedRegion("r1"));
 
-    applyCommandToBuffer(buffer, command("uv-region-deleted", { id: "r1" }));
+    applyPixelCommand(state, command("uv-region-deleted", { id: "r1" }));
 
-    assert.strictEqual(buffer.uvRegions.get("r1"), undefined);
+    assert.strictEqual(state.uv.get("r1"), undefined);
   });
 
   test("uv-region-moved updates the region rect and keeps its color", () => {
-    const buffer = makeBuffer();
+    const state = makeState();
     const rect = { x: 4, y: 4, width: 2, height: 2 };
-    buffer.uvRegions.set(stackedRegion("r1"));
+    state.uv.restore(stackedRegion("r1"));
 
-    applyCommandToBuffer(buffer, command("uv-region-moved", { id: "r1", face: null, rect }));
+    applyPixelCommand(state, command("uv-region-moved", { id: "r1", face: null, rect }));
 
-    assert.deepStrictEqual(buffer.uvRegions.get("r1")?.toJSON(), stackedRegion("r1", rect));
+    assert.deepStrictEqual(state.uv.get("r1")?.toJSON(), stackedRegion("r1", rect));
+  });
+
+  test("uv-region-moved clamps the region inside the texture like a pixel document", () => {
+    const state = makeState();
+    const document = new PixelDocument({ size: { x: 8, y: 8 } });
+    const moved = command("uv-region-moved", {
+      id: "r1",
+      face: null,
+      rect: { x: 7, y: 7, width: 2, height: 2 }
+    });
+    state.uv.restore(stackedRegion("r1"));
+    document.uv.restore(stackedRegion("r1"));
+
+    applyPixelCommand(state, moved);
+    document.applyRemoteCommand(unpackPixelCommand(moved));
+
+    assert.deepStrictEqual(state.uv.get("r1")?.bounds, { x: 6, y: 6, width: 2, height: 2 });
+    assert.deepStrictEqual(state.uv.get("r1")?.toJSON(), document.uv.get("r1")?.toJSON());
   });
 
   test("uv-region-moved moves a single face of a free region", () => {
-    const buffer = makeBuffer();
-    buffer.uvRegions.set(new UVRegion(stackedRegion("r1")).free());
+    const state = makeState();
+    state.uv.restore(new UVRegion(stackedRegion("r1")).free());
 
-    applyCommandToBuffer(buffer, command("uv-region-moved", {
+    applyPixelCommand(state, command("uv-region-moved", {
       id: "r1",
       face: "top",
       rect: { x: 4, y: 4, width: 2, height: 2 }
     }));
 
-    const region = buffer.uvRegions.get("r1")!;
+    const region = state.uv.get("r1")!;
     assert.deepStrictEqual(region.rectFor("top"), { x: 4, y: 4, width: 2, height: 2 });
     assert.deepStrictEqual(region.rectFor("front"), { x: 0, y: 0, width: 2, height: 2 });
   });
 
   test("uv-region-state-changed replaces the stored region", () => {
-    const buffer = makeBuffer();
-    buffer.uvRegions.set(stackedRegion("r1"));
+    const state = makeState();
+    state.uv.restore(stackedRegion("r1"));
 
-    applyCommandToBuffer(buffer, command("uv-region-state-changed", { region: freeRegion("r1") }));
+    applyPixelCommand(state, command("uv-region-state-changed", { region: freeRegion("r1") }));
 
-    assert.strictEqual(buffer.uvRegions.get("r1")?.state, "free");
+    assert.strictEqual(state.uv.get("r1")?.state, "free");
   });
 
   test("region commands for an unknown region are no-ops", () => {
-    const buffer = makeBuffer();
+    const state = makeState();
 
     assert.doesNotThrow(() => {
-      applyCommandToBuffer(buffer, command("uv-region-deleted", { id: "missing" }));
-      applyCommandToBuffer(buffer, command("uv-region-moved", {
+      applyPixelCommand(state, command("uv-region-deleted", { id: "missing" }));
+      applyPixelCommand(state, command("uv-region-moved", {
         id: "missing",
         face: null,
         rect: { x: 0, y: 0, width: 1, height: 1 }
@@ -153,57 +176,57 @@ describe("applyCommandToBuffer", () => {
   });
 });
 
-describe("applyCommandToBuffer — uv rotation", () => {
+describe("applyPixelCommand — uv rotation", () => {
   test("uv-region-moved keeps the stored size", () => {
-    const buffer = makeBuffer();
-    buffer.uvRegions.set(new UVRegion(stackedRegion("r1")).rotated("cw"));
+    const state = makeState();
+    state.uv.restore(new UVRegion(stackedRegion("r1")).rotated("cw"));
 
-    applyCommandToBuffer(buffer, command("uv-region-moved", {
+    applyPixelCommand(state, command("uv-region-moved", {
       id: "r1",
       face: null,
       rect: { x: 4, y: 4, width: 6, height: 1 }
     }));
 
     assert.deepStrictEqual(
-      buffer.uvRegions.get("r1")!.geometryFor("front"),
+      state.uv.get("r1")!.geometryFor("front"),
       { x: 4, y: 4, width: 2, height: 2, rotation: 1 }
     );
   });
 
   test("a slot rotation replaces only that slot geometry", () => {
-    const buffer = makeBuffer();
-    buffer.uvRegions.set(freeRegion("r1"));
+    const state = makeState();
+    state.uv.restore(freeRegion("r1"));
     const geometry = { x: 0, y: 0, width: 2, height: 2, rotation: 1 as const };
 
-    applyCommandToBuffer(buffer, command("uv-region-rotated", {
+    applyPixelCommand(state, command("uv-region-rotated", {
       id: "r1",
       face: "top",
       geometry
     }));
 
-    const region = buffer.uvRegions.get("r1")!;
+    const region = state.uv.get("r1")!;
     assert.deepStrictEqual(region.geometryFor("top"), geometry);
     assert.strictEqual(region.geometryFor("front").rotation, undefined);
   });
 
   test("a region rotation replaces the stored region", () => {
-    const buffer = makeBuffer();
-    buffer.uvRegions.set(stackedRegion("r1"));
+    const state = makeState();
+    state.uv.restore(stackedRegion("r1"));
     const rotated = new UVRegion(stackedRegion("r1")).rotated("ccw").toJSON();
 
-    applyCommandToBuffer(buffer, command("uv-region-rotated", {
+    applyPixelCommand(state, command("uv-region-rotated", {
       id: "r1",
       face: null,
       region: rotated
     }));
 
-    assert.deepStrictEqual(buffer.uvRegions.get("r1")!.toJSON(), rotated);
+    assert.deepStrictEqual(state.uv.get("r1")!.toJSON(), rotated);
   });
 
   test("a slot rotation of an unknown region is a no-op", () => {
-    const buffer = makeBuffer();
+    const state = makeState();
 
-    assert.doesNotThrow(() => applyCommandToBuffer(buffer, command("uv-region-rotated", {
+    assert.doesNotThrow(() => applyPixelCommand(state, command("uv-region-rotated", {
       id: "missing",
       face: "top",
       geometry: { x: 0, y: 0, width: 1, height: 1 }

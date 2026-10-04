@@ -7,27 +7,22 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent, PixelBufferHookListener } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { moveTo } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — line tool (Shift)", () => {
-  /*
-   * 200x200 container, 16x16 texture, zoom 4 -> centered camera (68, 68).
-   * client(100,100) -> texture (8,8); client(128,100) -> texture (15,8).
-   */
-
-  function makeManager(onBufferUpdated: PixelBufferHookListener): PixelArtCanvas {
+  function makeManager(onCommand: (command: PixelCommand) => void): PixelArtCanvas {
     return createPixelArtCanvas({
       texture: { size: { x: 16, y: 16 } },
       zoom: { default: 4 },
       brush: { size: 1, maxSize: 1 },
-      onBufferUpdated
+      onCommand
     }).manager;
   }
 
   test("Shift-arm-then-mousedown commits a brush-stamped line as a single stroke", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -47,7 +42,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
   });
 
   test("Shift then mousedown with no movement paints a single pixel (zero-length fallback)", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -65,7 +60,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
   });
 
   test("Shift-arm-then-right-click commits a line with the secondary color", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = createPixelArtCanvas({
       texture: { size: { x: 16, y: 16 } },
       zoom: { default: 4 },
@@ -75,7 +70,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
         color: "#FF0000",
         secondaryColor: "#00FF00"
       },
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     }).manager;
     const canvas = manager.canvas();
 
@@ -96,7 +91,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
   });
 
   test("committing via mousedown does not chain into a freehand stroke while still held", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -119,7 +114,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
   test(
     "holding Shift through a commit re-arms the line from the committed endpoint (chained polyline)",
     () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = makeManager((event) => events.push(event));
       const canvas = manager.canvas();
 
@@ -151,7 +146,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
   );
 
   test("releasing Shift after a commit does not re-arm the line tool", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -184,7 +179,7 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
   });
 
   test("Shift pressed mid-stroke commits the in-progress stroke, then commits the line on mouseup", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -209,21 +204,31 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.destroy();
   });
 
-  test("releasing lineHeld without mousedown cancels the line — nothing committed", () => {
-    const events: PixelBufferHookEvent[] = [];
+  test("releasing lineHeld without mousedown cancels the line; the next click is freehand", () => {
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
     moveTo(canvas, 100, 100);
     manager.shortcuts.lineHeld = true;
+    moveTo(canvas, 128, 100);
     manager.shortcuts.lineHeld = false;
-
     assert.strictEqual(events.length, 0);
+
+    canvas.dispatchEvent(new MouseEvent("mousedown", {
+      button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
+    }));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    assert.strictEqual(events.length, 1);
+    const event = events[0];
+    assert.strictEqual(event.action, "stroke");
+    assert.deepStrictEqual(event.metadata.positions, [{ x: 15, y: 8 }]);
     manager.destroy();
   });
 
   test("setting mode away from 'paint' cancels an armed line", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -232,13 +237,24 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.mode = "move";
 
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
-
     assert.strictEqual(events.length, 0, "the cancelled line must not commit on the next mouseup");
+
+    manager.mode = "paint";
+    moveTo(canvas, 128, 100);
+    canvas.dispatchEvent(new MouseEvent("mousedown", {
+      button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
+    }));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    assert.strictEqual(events.length, 1);
+    const event = events[0];
+    assert.strictEqual(event.action, "stroke");
+    assert.deepStrictEqual(event.metadata.positions, [{ x: 15, y: 8 }]);
     manager.destroy();
   });
 
   test("window blur cancels an armed line", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));
     const canvas = manager.canvas();
 
@@ -255,30 +271,6 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
       events.length,
       1,
       "after blur cancels the line, mousedown behaves as a normal freehand stroke"
-    );
-    manager.destroy();
-  });
-
-  test("setting lineHeld again does not reset the armed startPosition", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = makeManager((event) => events.push(event));
-    const canvas = manager.canvas();
-
-    moveTo(canvas, 100, 100);
-    manager.shortcuts.lineHeld = true;
-    moveTo(canvas, 128, 100);
-    manager.shortcuts.lineHeld = true;
-
-    canvas.dispatchEvent(new MouseEvent("mousedown", {
-      button: 0, buttons: 1, clientX: 128, clientY: 100, bubbles: true
-    }));
-
-    const event = events[0];
-    assert.strictEqual(event.action, "stroke");
-    assert.strictEqual(
-      event.metadata.positions.length,
-      8,
-      "start should still be (8,8)"
     );
     manager.destroy();
   });

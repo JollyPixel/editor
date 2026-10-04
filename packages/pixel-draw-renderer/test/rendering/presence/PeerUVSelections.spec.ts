@@ -10,10 +10,11 @@ import { PeerUVSelections } from "#src/rendering/presence/PeerUVSelections.ts";
 import type { UVMap } from "#src/uv/map/UVMap.ts";
 import {
   makeSvg,
-  makeUvMap,
   makeUvOverlay,
   makeViewport
 } from "../../helpers/overlay.ts";
+import { makeUvMap } from "../../helpers/uv/map.ts";
+import { uvBorderRects } from "../../helpers/uv/borders.ts";
 
 // CONSTANTS
 const kRegionColor = "#123456";
@@ -26,7 +27,7 @@ function setup(): {
   selections: PeerUVSelections;
 } {
   const svg = makeSvg();
-  const map = makeUvMap();
+  const map = makeUvMap({ x: 64, y: 64 });
   const selections = new PeerUVSelections(
     makeUvOverlay(svg, makeViewport(), map)
   );
@@ -47,16 +48,10 @@ function setup(): {
   };
 }
 
-function borders(
-  svg: SVGElement
-): SVGRectElement[] {
-  return [...svg.querySelectorAll<SVGRectElement>("g > rect:last-child")];
-}
-
 function strokes(
   svg: SVGElement
 ): Array<string | null> {
-  return borders(svg).map((rect) => rect.getAttribute("stroke"));
+  return uvBorderRects(svg).map((border) => border.getAttribute("stroke"));
 }
 
 describe("PeerUVSelections", () => {
@@ -68,7 +63,7 @@ describe("PeerUVSelections", () => {
       color: kPeerColor
     });
 
-    const peerBorder = borders(svg).at(-1)!;
+    const peerBorder = uvBorderRects(svg).at(-1)!;
     assert.deepStrictEqual(strokes(svg), [kRegionColor, kPeerColor]);
     assert.strictEqual(peerBorder.style.strokeWidth, "2");
     assert.strictEqual(peerBorder.style.fill, "none");
@@ -84,7 +79,7 @@ describe("PeerUVSelections", () => {
     });
 
     assert.deepStrictEqual(strokes(svg), [kPeerColor, kRegionColor]);
-    assert.strictEqual(borders(svg).at(-1)!.style.fill, kRegionColor);
+    assert.strictEqual(uvBorderRects(svg).at(-1)!.style.fill, kRegionColor);
   });
 
   test("keeps the local highlight when a peer selects the same region", () => {
@@ -97,7 +92,7 @@ describe("PeerUVSelections", () => {
     });
 
     assert.deepStrictEqual(strokes(svg), [kRegionColor, kRegionColor]);
-    assert.strictEqual(borders(svg).at(-1)!.style.fill, kRegionColor);
+    assert.strictEqual(uvBorderRects(svg).at(-1)!.style.fill, kRegionColor);
   });
 
   test("shows the peer color again once the local selection moves away", () => {
@@ -141,9 +136,9 @@ describe("PeerUVSelections", () => {
       color: kPeerColor
     });
 
-    const peerGroups = borders(svg)
+    const peerGroups = uvBorderRects(svg)
       .filter((rect) => rect.getAttribute("stroke") === kPeerColor)
-      .map((rect) => rect.parentElement!.style.opacity);
+      .map((border) => border.element.parentElement?.style.opacity);
     assert.ok(peerGroups.length > 1);
     assert.ok(peerGroups.every((opacity) => opacity === ""));
   });
@@ -171,11 +166,5 @@ describe("PeerUVSelections", () => {
     });
     selections.destroy();
     assert.deepStrictEqual(strokes(svg), [kRegionColor, kRegionColor]);
-  });
-
-  test("removing an unknown peer is a no-op", () => {
-    const { selections } = setup();
-
-    assert.doesNotThrow(() => selections.remove("nobody"));
   });
 });

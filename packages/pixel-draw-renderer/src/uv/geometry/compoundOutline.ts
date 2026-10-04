@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { Vec2 } from "../../types.ts";
+import { outlinePoints } from "./geometry.ts";
 import type { UVCompoundPart } from "./types.ts";
 
 // CONSTANTS
@@ -32,7 +33,7 @@ function polygonEdges(
   part: UVCompoundPart
 ): Edge[] {
   const points = clockwise(
-    partPoints(part)
+    "shape" in part ? outlinePoints(part.rect, part.corner) : outlinePoints(part, null)
   );
 
   return points.map((from, index) => {
@@ -41,48 +42,6 @@ function polygonEdges(
       to: points[(index + 1) % points.length]
     };
   });
-}
-
-function partPoints(
-  part: UVCompoundPart
-): Vec2[] {
-  const rect = "shape" in part ? part.rect : part;
-  const left = rect.x;
-  const top = rect.y;
-  const right = rect.x + rect.width;
-  const bottom = rect.y + rect.height;
-
-  if (!("shape" in part)) {
-    return [
-      { x: left, y: top },
-      { x: right, y: top },
-      { x: right, y: bottom },
-      { x: left, y: bottom }
-    ];
-  }
-
-  return {
-    "top-left": [
-      { x: left, y: top },
-      { x: right, y: top },
-      { x: left, y: bottom }
-    ],
-    "top-right": [
-      { x: left, y: top },
-      { x: right, y: top },
-      { x: right, y: bottom }
-    ],
-    "bottom-left": [
-      { x: left, y: top },
-      { x: left, y: bottom },
-      { x: right, y: bottom }
-    ],
-    "bottom-right": [
-      { x: right, y: top },
-      { x: right, y: bottom },
-      { x: left, y: bottom }
-    ]
-  }[part.corner];
 }
 
 function clockwise(

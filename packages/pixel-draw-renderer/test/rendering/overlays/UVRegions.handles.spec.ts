@@ -9,9 +9,9 @@ import assert from "node:assert/strict";
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import {
   makeSvg,
-  makeViewport,
-  makeUvMap
+  makeViewport
 } from "../../helpers/overlay.ts";
+import { makeUvMap } from "../../helpers/uv/map.ts";
 
 describe("UVRegionLayer — resize handles", () => {
   function handles(
@@ -22,7 +22,7 @@ describe("UVRegionLayer — resize handles", () => {
 
   test("draws corners on the selected region only while enabled, never on a net", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
     const layer = new UVRegionLayer(svg, makeViewport(), map);
     const region = map.create({ width: 4, height: 4 });
     map.select(region.id);
@@ -42,7 +42,7 @@ describe("UVRegionLayer — resize handles", () => {
 
   test("hides them while a drag is previewed", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
     const layer = new UVRegionLayer(svg, makeViewport(), map);
     const region = map.create({ width: 4, height: 4 });
     map.select(region.id);

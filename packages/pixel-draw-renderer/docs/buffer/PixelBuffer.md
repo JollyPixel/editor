@@ -16,7 +16,7 @@ interface PixelBufferOptions {
 }
 ```
 
-The `size` dimensions and `maxSize` must be positive integers. Neither size dimension may exceed `maxSize`. Invalid values throw `RangeError`.
+The `size` dimensions and `maxSize` must be positive integers. Neither size dimension may exceed `maxSize`. Invalid values throw `RangeError`. `acceptsSize(size)` answers the same check without throwing, and `assertSize(size)` throws as the constructor does.
 
 The buffer is initialized with `defaultColor`.
 
@@ -55,13 +55,13 @@ drawPixels(positions: Iterable<Vec2>, color: RGBA): void
 
 Stamps one color across multiple positions. Out-of-bounds positions are silently skipped.
 
-### `drawRegion(rect, pixels)`
+### `drawColorGroups(groups)`
 
 ```ts
-drawRegion(rect: SelectionRect, pixels: RGBA[]): void
+drawColorGroups(groups: Iterable<ColorGroup>): void
 ```
 
-Writes a rectangular block of row-major colors. The array contains `rect.width * rect.height` entries. Out-of-bounds positions are skipped.
+Stamps each group's color across its positions, as `drawPixels` does.
 
 ### `drawMaskedRegion(rect, pixels, mask)`
 
@@ -69,7 +69,7 @@ Writes a rectangular block of row-major colors. The array contains `rect.width *
 drawMaskedRegion(rect: SelectionRect, pixels: RGBA[], mask: boolean[]): void
 ```
 
-Same as `drawRegion`, but skips cells where `mask[i]` is `false`. Used for non-rectangular (shape-selected) regions.
+Writes a rectangular block of row-major colors, skipping cells where `mask[i]` is `false`. The arrays contain `rect.width * rect.height` entries. Out-of-bounds positions are skipped.
 
 ### `copyToMaster()`
 
@@ -95,6 +95,14 @@ samplePixels(positions: Vec2[]): RGBA[]
 
 Batch `samplePixel`. Out-of-bounds positions return `{ r: 0, g: 0, b: 0, a: 0 }`.
 
+### `positionsOf(color, mask?)`
+
+```ts
+positionsOf(color: RGBA, mask?: Uint8Array): Vec2[]
+```
+
+Returns every position holding exactly `color`, row by row. With a `mask`, positions whose mask entry is `0` are skipped. A `global-fill` command repaints these positions.
+
 ### `hasTransparency(rect)`
 
 ```ts
@@ -103,31 +111,5 @@ hasTransparency(rect: SelectionRect): boolean
 
 Returns `true` when `rect` contains an alpha value below `255` or extends outside the buffer. It scans the rectangle on every call.
 
-## UV regions
-
-```ts
-readonly uvRegions: UVRegionCollection
-uvRegions.size: number
-```
-
-Id-keyed [`UVRegion`](../uv/UVRegion.md) storage included in [`pixelArtSnapshot()`](../serialization/index.md). `set()` accepts a `UVRegion` or raw `UVRegionData`, and the collection is iterable.
-
-```ts
-uvRegions.get(id: string): UVRegion | undefined
-uvRegions.set(region: UVRegion | UVRegionData): void
-uvRegions.has(id: string): boolean
-uvRegions.keys(): IterableIterator<string>
-uvRegions.values(): IterableIterator<UVRegion>
-uvRegions.delete(id: string): boolean
-uvRegions.remove(id: string): void
-uvRegions.clear(): void
-```
-
-## Normal map
-
-```ts
-normalMap: NormalMapConfig | null
-```
-
-The texture's [normal map settings](../normal/NormalMapConfig.md), `null` while the feature is off. Included in [`pixelArtSnapshot()`](../serialization/index.md) when set. A headless owner applies normal map commands with [`applyNormalMapCommand()`](../normal/NormalMapConfig.md#commands).
+UV regions and normal map settings live beside the buffer in a [`PixelDocumentState`](../PixelDocumentState.md).
 

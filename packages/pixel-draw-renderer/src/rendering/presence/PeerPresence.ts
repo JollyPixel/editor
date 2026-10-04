@@ -36,7 +36,6 @@ export class PeerPresence {
 
   refresh(): void {
     this.cursors.refresh();
-    this.uv.refresh();
     this.selectionOutlines.refresh();
   }
 

@@ -159,23 +159,23 @@ Removes a region and emits `"region-deleted"`. Deleting the selected region also
 ### `move(id, rect, slot?)`
 
 ```ts
-move(id: string, rect: SelectionRect, slot?: UVSlot): boolean
+move(id: string, rect: SelectionRect, slot?: UVSlot | null): boolean
 ```
 
-Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. Only the position of `rect` is used: the region keeps its current size and rotation, so a move computed before a rotation cannot undo it. The position is clamped to the canvas. Returns `false` when the id is unknown or a free region has no `slot`.
+Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. Only the position of `rect` is used: the region keeps its current size and rotation, so a move computed before a rotation cannot undo it. The position is clamped to the canvas. Returns `false` when the id is unknown or a free region has no active `slot`.
 
 ### `previewMove(id, rect, slot?)`
 
 ```ts
-previewMove(id: string, rect: SelectionRect, slot?: UVSlot): UVRegion | null
+previewMove(id: string, rect: SelectionRect, slot?: UVSlot | null): UVRegion | null
 ```
 
-Emits `"region-dragging"` with the region `move()` would commit for the same arguments, and returns it. The stored region, history and network state remain unchanged. Returns `null` for an unknown id or a free region without `slot`.
+Emits `"region-dragging"` with the region `move()` would commit for the same arguments, and returns it. The stored region, history and network state remain unchanged. Returns `null` for an unknown id or a free region without an active `slot`.
 
 ### `resize(id, rect, slot?, options?)`
 
 ```ts
-resize(id: string, rect: SelectionRect, slot?: UVSlot, options?: UVResizeOptions): boolean
+resize(id: string, rect: SelectionRect, slot?: UVSlot | null, options?: UVResizeOptions): boolean
 ```
 
 Gives a stacked region, or one active `slot` of an unfolded or free region, the size and position of `rect`, following [`UVRegion.resized()`](./UVRegion.md#resizedrect-slot-options). Sizes below 1px are raised to 1px. Moved edges stop at the canvas border; for an unfolded net, that includes the faces sliding with an edge. A net already past the border is not pulled back, but it cannot grow further out.
@@ -185,20 +185,28 @@ The new region is committed like a state change: it emits `"region-state-changed
 ### `previewResize(id, rect, slot?, options?)`
 
 ```ts
-previewResize(id: string, rect: SelectionRect, slot?: UVSlot, options?: UVResizeOptions): UVRegion | null
+previewResize(id: string, rect: SelectionRect, slot?: UVSlot | null, options?: UVResizeOptions): UVRegion | null
 ```
 
 Emits `"region-dragging"` with the region `resize()` would commit for the same arguments, and returns it. The stored region, history and network state remain unchanged. Returns `null` for an unknown id.
 
+
+### `endPreview(id, committed)`
+
+```ts
+endPreview(id: string, committed: boolean): void
+```
+
+Emits `"region-drag-ended"`, closing the preview lifecycle `previewMove()` and `previewResize()` open. Call it once per drag, whether it committed or not.
 ### `setState(id, state, slot?)`
 
 ```ts
-setState(id: string, state: UVRegionState, slot?: UVSlot): boolean
+setState(id: string, state: UVRegionState, slot?: UVSlot | null): boolean
 ```
 
 Moves a region to one of the three states, emitting `"region-state-changed"` with the previous region as serialized data. Returns `false` for an unknown id or a transition that changes nothing.
 
-`face` applies to `"stacked"` only, where it picks between equally large candidate faces. The geometry each state produces is described on [`UVRegion`](./UVRegion.md).
+`slot` applies to `"stacked"` only, where it picks between equally large candidate faces. The geometry each state produces is described on [`UVRegion`](./UVRegion.md).
 
 `"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` packs the net wherever the region already sits, then `setState()` shifts the whole net back inside the canvas if it overhangs. A net larger than the texture is shifted to `0, 0` and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
 
@@ -215,7 +223,7 @@ Replaces a region's name and keeps everything else, emitting `"region-state-chan
 ### `rotate(id, direction, slot?)`
 
 ```ts
-rotate(id: string, direction: RotationDirection, slot?: UVSlot): boolean
+rotate(id: string, direction: RotationDirection, slot?: UVSlot | null): boolean
 
 type RotationDirection = "cw" | "ccw";
 ```
@@ -224,16 +232,16 @@ Turns a region 90 degrees and emits `"region-rotated"` with the previous region 
 
 - **stacked**: the shared rect and every slot.
 - **unfolded**: the whole net as one piece around its bounds.
-- **free**: only `slot`, in place. Without a known `slot` nothing turns.
+- **free**: only `slot`, in place. Without an active `slot` nothing turns.
 
-The top-left corner stays fixed and a non-square rect swaps its width and height. The result is then clamped into the canvas: the whole region for stacked and unfolded, only the turned slot for free. Returns `false` for an unknown id or a free region without `slot`. See [`UVRegion.rotated()`](./UVRegion.md#rotateddirection-slot) for the geometry.
+The top-left corner stays fixed and a non-square rect swaps its width and height. The result is then clamped into the canvas: the whole region for stacked and unfolded, only the turned slot for free. Returns `false` for an unknown id or a free region without an active `slot`. See [`UVRegion.rotated()`](./UVRegion.md#rotateddirection-slot) for the geometry.
 
 In UV mode, `shortcuts.rotate("cw")` and `shortcuts.rotate("ccw")` rotate the selected region, or the selected slot of a free region, clockwise and counter-clockwise. They do nothing during a drag.
 
 ### `select(id, slot?)`
 
 ```ts
-select(id: string | null, slot?: UVSlot): void
+select(id: string | null, slot?: UVSlot | null): void
 ```
 
 Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
@@ -254,7 +262,7 @@ restoreRotation(region: UVRegion | UVRegionData, face?: UVSlot | null): boolean
 clear(filter?: (region: UVRegion) => boolean): void
 ```
 
-Deletes every region, or only those `filter` accepts. Once the map is empty, cascading placement and the color palette reset.
+Deletes every region, or only those `filter` accepts, as one batch: a `"region-deleted"` per region, then `"selection-changed"` when the selected region went, then a single `"changed"`. Once the map is empty, cascading placement and the color palette reset.
 
 ### `on(type, listener)` / `off(type, listener)`
 
@@ -265,4 +273,4 @@ off<T extends UVMapEventType>(type: T, listener: UVMapListener<T>): void
 
 Adds or removes a typed event listener.
 
-Undo, redo and network sync consume the same mutation events. See [`HistoryStack`](../history/HistoryStack.md) and [`PixelBuffer`](../buffer/PixelBuffer.md).
+A [`PixelDocument`](../PixelDocument.md) turns the mutation events of the regions it owns into [commands](../PixelCommand.md) and [history entries](../history/HistoryStack.md#entries), and applies remote commands through the same map.

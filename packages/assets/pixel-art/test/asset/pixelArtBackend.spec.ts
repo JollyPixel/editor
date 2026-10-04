@@ -22,10 +22,11 @@ import {
 } from "@jolly-pixel/asset-server";
 import {
   decodePixelArtDocument,
-  deserializePixelBuffer,
+  deserializePixelDocument,
   encodePixelArtDocument,
   PixelBuffer,
-  serializePixelBuffer
+  PixelDocumentState,
+  serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -106,16 +107,18 @@ function replay(
     foldAssetEvent(handler, state, event);
   }
 
-  return state.buffer;
+  return state.document.buffer;
 }
 
 function bufferFromFile(
   data: Uint8Array
 ): PixelBuffer {
-  const buffer = new PixelBuffer({ size: kSize });
-  deserializePixelBuffer(decodePixelArtDocument(data), buffer);
+  const state = new PixelDocumentState({
+    buffer: new PixelBuffer({ size: kSize })
+  });
+  deserializePixelDocument(decodePixelArtDocument(data), state);
 
-  return buffer;
+  return state.buffer;
 }
 
 describe("pixel-art asset kind over a real back-end", () => {
@@ -128,7 +131,9 @@ describe("pixel-art asset kind over a real back-end", () => {
       await fs.writeFile(
         path.join(root, kDocumentPath),
         encodePixelArtDocument(
-          serializePixelBuffer(new PixelBuffer({ size: kSize }))
+          serializePixelDocument(
+            new PixelDocumentState({ buffer: new PixelBuffer({ size: kSize }) })
+          )
         )
       );
 
@@ -209,7 +214,9 @@ describe("pixel-art asset kind over a real back-end", () => {
       await fs.writeFile(
         path.join(root, "a.pixelart"),
         encodePixelArtDocument(
-          serializePixelBuffer(new PixelBuffer({ size: kSize }))
+          serializePixelDocument(
+            new PixelDocumentState({ buffer: new PixelBuffer({ size: kSize }) })
+          )
         )
       );
 

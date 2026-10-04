@@ -6,60 +6,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  UVMap,
-  type UVMapEvent,
-  type UVMapEventType
-} from "#src/uv/map/UVMap.ts";
-import { UVController } from "#src/tools/uv/UVController.ts";
-import {
-  DEFAULT_UV_SLOTS,
-  type UVRegion
-} from "#src/uv/region/UVRegion.ts";
-import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-
-type EventPayload<T extends UVMapEventType> = Parameters<UVMapEvent[T]>[0];
-
-/*
- * UVController only calls overlay.setLivePreview and sets resizeHandles;
- * FakeOverlay implements that structural subset and is cast to UVRegionLayer
- * at the single injection site.
- */
-class FakeOverlay {
-  previews: (UVRegion | null)[] = [];
-  resizeHandles = false;
-
-  setLivePreview(
-    region: UVRegion | null
-  ): void {
-    this.previews.push(region);
-  }
-}
-
-const kIdentityView = {
-  zoom: { value: 1 },
-  camera: { x: 0, y: 0 }
-};
-
-function makeSetup(
-  size = { x: 32, y: 32 },
-  deselectOnEmptyClick?: boolean
-): { map: UVMap; overlay: FakeOverlay; controller: UVController; } {
-  const map = new UVMap({ getCanvasSize: () => size });
-  const overlay = new FakeOverlay();
-  const controller = new UVController({
-    uvMap: map,
-    overlay: overlay as unknown as UVRegionLayer,
-    deselectOnEmptyClick,
-    viewport: kIdentityView
-  });
-
-  return { map, overlay, controller };
-}
+import type { EventPayload } from "../../helpers/uv/map.ts";
+import { makeUvControllerSetup } from "../../helpers/uv/controller.ts";
 
 describe("UVController — hit-test / select on miss", () => {
   test("does not select the empty half of a triangular face", () => {
-    const { map, controller } = makeSetup();
+    const { map, controller } = makeUvControllerSetup();
     map.restore({
       id: "ramp",
       color: "#f00",
@@ -85,35 +37,8 @@ describe("UVController — hit-test / select on miss", () => {
     assert.strictEqual(map.selectedRegionId, null);
   });
 
-  test("does not select outside a triangle's bounding rect", () => {
-    const { map, controller } = makeSetup();
-    map.restore({
-      id: "triangle",
-      color: "#f00",
-      state: "free",
-      activeFaces: ["left"],
-      faces: {
-        front: { x: 0, y: 0, width: 8, height: 8 },
-        back: { x: 0, y: 0, width: 8, height: 8 },
-        left: {
-          shape: "triangle",
-          corner: "top-right",
-          rect: { x: 0, y: 0, width: 8, height: 8 }
-        },
-        right: { x: 0, y: 0, width: 8, height: 8 },
-        top: { x: 0, y: 0, width: 8, height: 8 },
-        bottom: { x: 0, y: 0, width: 8, height: 8 }
-      }
-    });
-    map.showAll = true;
-
-    controller.handleStart({ x: 100, y: -100 });
-
-    assert.strictEqual(map.selectedRegionId, null);
-  });
-
   test("selects a visible region hit by handleStart", () => {
-    const { map, controller } = makeSetup();
+    const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
 
@@ -123,7 +48,7 @@ describe("UVController — hit-test / select on miss", () => {
   });
 
   test("cannot hit an invisible region", () => {
-    const { map, controller } = makeSetup();
+    const { map, controller } = makeUvControllerSetup();
     map.create({ width: 8, height: 8 });
 
     controller.handleStart({ x: 2, y: 2 });
@@ -132,7 +57,7 @@ describe("UVController — hit-test / select on miss", () => {
   });
 
   test("deselects on a miss", () => {
-    const { map, controller } = makeSetup();
+    const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
     controller.handleStart({ x: 2, y: 2 });
@@ -146,7 +71,7 @@ describe("UVController — hit-test / select on miss", () => {
 
 describe("UVController — deselectOnEmptyClick: false", () => {
   test("keeps the selection on a miss and emits no selection-changed", () => {
-    const { map, controller } = makeSetup({ x: 32, y: 32 }, false);
+    const { map, controller } = makeUvControllerSetup({ x: 32, y: 32 }, false);
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
     controller.handleStart({ x: 2, y: 2 });
@@ -160,7 +85,7 @@ describe("UVController — deselectOnEmptyClick: false", () => {
   });
 
   test("a miss starts no drag, so the selected region cannot move", () => {
-    const { map, overlay, controller } = makeSetup({ x: 32, y: 32 }, false);
+    const { map, overlay, controller } = makeUvControllerSetup({ x: 32, y: 32 }, false);
     const region = map.create({ width: 8, height: 8 });
     map.showAll = true;
     controller.handleStart({ x: 2, y: 2 });
@@ -171,7 +96,6 @@ describe("UVController — deselectOnEmptyClick: false", () => {
     controller.handleMove({ x: 24, y: 24 });
     controller.handleEnd();
 
-    assert.ok(!controller.isDragging);
     assert.strictEqual(overlay.previews.length, 0);
     assert.deepStrictEqual(
       map.get(region.id)!.rectFor("front"),
@@ -180,7 +104,7 @@ describe("UVController — deselectOnEmptyClick: false", () => {
   });
 
   test("a miss still restarts the click cycle over coincident regions", () => {
-    const { map, controller } = makeSetup({ x: 32, y: 32 }, false);
+    const { map, controller } = makeUvControllerSetup({ x: 32, y: 32 }, false);
     const first = map.restore({
       id: "first",
       color: "#f00",
@@ -216,401 +140,23 @@ describe("UVController — deselectOnEmptyClick: false", () => {
   });
 });
 
-describe("UVController — drag to move", () => {
-  test("does not commit the move until handleEnd", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 6, y: 6 });
-
-    assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      region.rectFor("front")
-    );
-  });
-
-  test("commits the accumulated delta on handleEnd", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 6, y: 6 });
-    controller.handleEnd();
-
-    assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      { x: 4, y: 4, width: 8, height: 8 }
-    );
-  });
-
-  test("does not move the region for a click without dragging", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleEnd();
-
-    assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      region.rectFor("front")
-    );
-  });
-
-  test("clamps the live drag preview to canvas bounds", () => {
-    const { map, overlay, controller } = makeSetup({
-      x: 16,
-      y: 16
-    });
+describe("UVController — rotate", () => {
+  test("refuses to rotate while a drag is in progress and rotates once it ends", () => {
+    const { map, controller } = makeUvControllerSetup();
     map.create({ width: 8, height: 8 });
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 100, y: 100 });
-
-    assert.deepStrictEqual(
-      overlay.previews.at(-1)?.bounds,
-      { x: 8, y: 8, width: 8, height: 8 }
-    );
-  });
-
-  test("clears the live preview on handleEnd", () => {
-    const { controller, overlay, map } = makeSetup();
-    map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 6, y: 6 });
-    controller.handleEnd();
-
-    assert.strictEqual(overlay.previews.at(-1), null);
-  });
-
-  test("cancelDrag discards the in-progress drag without committing", () => {
-    const { map, controller, overlay } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 6, y: 6 });
-    controller.cancelDrag();
-    controller.handleEnd();
-
-    assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      region.rectFor("front")
-    );
-    assert.strictEqual(overlay.previews.at(-1), null);
-  });
-
-  test("handleMove/handleEnd are no-ops without an active drag", () => {
-    const { controller } = makeSetup();
-
-    assert.doesNotThrow(() => {
-      controller.handleMove({ x: 1, y: 1 });
-      controller.handleEnd();
-    });
-  });
-
-  describe("live drag preview (region-dragging)", () => {
-    test("toggling aligned edges re-previews only a drag that has moved", () => {
-      const { map, controller } = makeSetup();
-      map.create({ width: 8, height: 8 });
-      map.showAll = true;
-      const events: EventPayload<"region-dragging">[] = [];
-      map.on("region-dragging", (e) => events.push(e));
-
-      controller.handleStart({ x: 2, y: 2 });
-      controller.alignEdges(true);
-      assert.strictEqual(events.length, 0);
-
-      controller.handleMove({ x: 6, y: 6 });
-      controller.alignEdges(false);
-      assert.strictEqual(events.length, 2);
-    });
-
-    test("handleMove emits a live preview via UVMap on every move, without committing", () => {
-      const { map, controller } = makeSetup();
-      const region = map.create({ width: 8, height: 8 });
-      map.showAll = true;
-      const events: EventPayload<"region-dragging">[] = [];
-      map.on("region-dragging", (e) => events.push(e));
-
-      controller.handleStart({ x: 2, y: 2 });
-      controller.handleMove({ x: 6, y: 6 });
-      controller.handleMove({ x: 7, y: 7 });
-
-      assert.deepStrictEqual(events.map((e) => e.region.bounds), [
-        { x: 4, y: 4, width: 8, height: 8 },
-        { x: 5, y: 5, width: 8, height: 8 }
-      ]);
-      assert.deepStrictEqual(
-        map.get(region.id)!.rectFor("front"),
-        region.rectFor("front"),
-        "not committed yet"
-      );
-    });
-
-    test("cancelDrag reverts the preview to the region's actual (unchanged) rect", () => {
-      const { map, controller } = makeSetup();
-      const region = map.create({ width: 8, height: 8 });
-      map.showAll = true;
-      const events: EventPayload<"region-dragging">[] = [];
-      map.on("region-dragging", (e) => events.push(e));
-
-      controller.handleStart({ x: 2, y: 2 });
-      controller.handleMove({ x: 6, y: 6 });
-      controller.cancelDrag();
-
-      assert.deepStrictEqual(
-        events.at(-1)!.region.bounds,
-        region.rectFor("front")
-      );
-    });
-  });
-});
-
-describe("UVController — cycling through an overlapping stack", () => {
-  test("a repeat click advances to the next face of the stack", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
-    map.showAll = true;
-
-    const picked: (string | null)[] = [];
-    for (let index = 0; index < DEFAULT_UV_SLOTS.length; index++) {
-      controller.handleStart({ x: 2, y: 2 });
-      controller.handleEnd();
-      picked.push(map.selectedSlot);
-    }
-
-    assert.deepStrictEqual(
-      picked,
-      [...DEFAULT_UV_SLOTS],
-      "six stacked faces must each be reachable by clicking again"
-    );
-  });
-
-  test("wraps back to the first face after the last one", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
-    map.showAll = true;
-
-    for (let index = 0; index < DEFAULT_UV_SLOTS.length; index++) {
-      controller.handleStart({ x: 2, y: 2 });
-      controller.handleEnd();
-    }
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(map.selectedSlot, DEFAULT_UV_SLOTS[0]);
-  });
-
-  test("dragging a face out of the stack changes the stack, resetting the cycle", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
-    map.showAll = true;
-
-    // Pick "front", then drag it away from the shared position.
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 22, y: 22 });
-    controller.handleEnd();
-
-    // The remaining five still coincide, so this is a different stack.
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(map.selectedSlot, "back");
-  });
-
-  test("an external selection change restarts the cycle on the selected face", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleEnd();
-    assert.strictEqual(map.selectedSlot, "front");
-
-    // e.g. a 3D picker, undo, or a peer selecting for us.
-    map.select(region.id, "top");
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(
-      map.selectedSlot,
-      "top",
-      "the overlay paints the selected face last, so it is the one hit first"
-    );
+    assert.strictEqual(controller.rotate("cw"), false);
 
     controller.handleEnd();
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(
-      map.selectedSlot,
-      "bottom",
-      "the cycle then advances from the selected face"
-    );
-  });
-
-  test("a miss resets the cycle", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleEnd();
-    controller.handleStart({ x: 30, y: 30 });
-    controller.handleEnd();
-    map.showAll = true;
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(map.selectedSlot, "front");
-  });
-
-  test("dragging moves the face the cycle landed on", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleEnd();
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleMove({ x: 6, y: 6 });
-    controller.handleEnd();
-
-    const stored = map.get(region.id)!;
-    assert.deepStrictEqual(
-      stored.rectFor("back"),
-      { x: 4, y: 4, width: 8, height: 8 },
-      "the second click selected back, so back is what moves"
-    );
-    assert.deepStrictEqual(
-      stored.rectFor("front"),
-      { x: 0, y: 0, width: 8, height: 8 },
-      "front must stay where it was"
-    );
-  });
-
-  test("a face dragged over another one stays selected on the next click", () => {
-    const { map, controller } = makeSetup();
-    const below = map.create({ id: "below", width: 8, height: 8 });
-    const above = map.create({ id: "above", width: 8, height: 8 });
-    map.showAll = true;
-    map.move(below.id, { x: 0, y: 0, width: 8, height: 8 });
-    map.move(above.id, { x: 16, y: 16, width: 8, height: 8 });
-
-    // Drag "above" until its top-left corner overlaps "below".
-    controller.handleStart({ x: 20, y: 20 });
-    controller.handleMove({ x: 8, y: 8 });
-    controller.handleEnd();
-
-    controller.handleStart({ x: 6, y: 6 });
-
-    assert.strictEqual(
-      map.selectedRegionId,
-      "above",
-      "the region painted on top wins the hit, not the one created first"
-    );
-
-    controller.handleEnd();
-    controller.handleStart({ x: 6, y: 6 });
-
-    assert.strictEqual(
-      map.selectedRegionId,
-      "above",
-      "repeat clicks must not cycle down into a region that only overlaps"
-    );
-  });
-
-  test("a partly overlapped region is unreachable under the one on top", () => {
-    const { map, controller } = makeSetup();
-    map.restore({
-      id: "below",
-      color: "#f00",
-      state: "stacked",
-      rect: { x: 0, y: 0, width: 8, height: 8 }
-    });
-    map.restore({
-      id: "above",
-      color: "#0f0",
-      state: "stacked",
-      rect: { x: 4, y: 4, width: 8, height: 8 }
-    });
-    map.showAll = true;
-
-    for (let index = 0; index < 4; index++) {
-      controller.handleStart({ x: 6, y: 6 });
-      controller.handleEnd();
-      assert.strictEqual(map.selectedRegionId, "above");
-    }
-
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(
-      map.selectedRegionId,
-      "below",
-      "the uncovered part of the region below stays selectable"
-    );
-  });
-
-  test("a stacked region is a single-entry stack, so repeat clicks keep it selected", () => {
-    const { map, controller } = makeSetup();
-    const region = map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.handleEnd();
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.strictEqual(map.selectedRegionId, region.id);
-    assert.strictEqual(map.selectedSlot, null);
-  });
-});
-
-describe("UVController — isDragging", () => {
-  test("is false until a drag starts, true while dragging, false again after handleEnd", () => {
-    const { map, controller } = makeSetup();
-    map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    assert.ok(!controller.isDragging);
-
-    controller.handleStart({ x: 2, y: 2 });
-    assert.ok(controller.isDragging);
-
-    controller.handleEnd();
-    assert.ok(!controller.isDragging);
-  });
-
-  test("stays false when handleStart misses (no drag to track)", () => {
-    const { controller } = makeSetup();
-
-    controller.handleStart({ x: 2, y: 2 });
-
-    assert.ok(!controller.isDragging);
-  });
-
-  test("is false again after cancelDrag", () => {
-    const { map, controller } = makeSetup();
-    map.create({ width: 8, height: 8 });
-    map.showAll = true;
-
-    controller.handleStart({ x: 2, y: 2 });
-    controller.cancelDrag();
-
-    assert.ok(!controller.isDragging);
+    assert.strictEqual(controller.rotate("cw"), true);
   });
 });
 
 describe("UVController — handleDelete", () => {
   test("deletes the selected region and returns true", () => {
-    const { map, controller } = makeSetup();
+    const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
     map.select(region.id);
 
@@ -621,7 +167,7 @@ describe("UVController — handleDelete", () => {
   });
 
   test("returns false when nothing is selected", () => {
-    const { controller } = makeSetup();
+    const { controller } = makeUvControllerSetup();
 
     assert.ok(!controller.handleDelete());
   });

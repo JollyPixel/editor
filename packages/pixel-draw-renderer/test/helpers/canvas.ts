@@ -3,32 +3,42 @@ import {
   PixelArtCanvas,
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
-import { makeContainer } from "./dom.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
+import {
+  makeContainer,
+  overlayOf
+} from "./dom.ts";
+
+// CONSTANTS
+const kDefaultTexture = {
+  maxSize: 32,
+  size: {
+    x: 8,
+    y: 8
+  }
+};
+
+export interface TestCanvasOptions extends PixelArtCanvasOptions {
+  onCommand?: (command: PixelCommand) => void;
+}
 
 export interface CreatedPixelArtCanvas {
   manager: PixelArtCanvas;
   canvas: HTMLCanvasElement;
+  overlay: SVGSVGElement;
   container: HTMLDivElement;
-  children: HTMLCanvasElement[];
 }
 
-const kDefaultTexture = {
-  maxSize: 32,
-  size: { x: 8, y: 8 }
-};
-
-/**
- * Builds a container + PixelArtCanvas with sensible defaults (an 8x8
- * texture), so specs only pass the options that actually vary per test.
- */
 export function createPixelArtCanvas(
-  overrides: PixelArtCanvasOptions = {},
+  overrides: TestCanvasOptions = {},
   containerSize?: number
 ): CreatedPixelArtCanvas {
-  const { container, children } = makeContainer(
-    containerSize
-  );
-  const { texture, ...rest } = overrides;
+  const container = makeContainer(containerSize);
+  const {
+    texture,
+    onCommand,
+    ...rest
+  } = overrides;
 
   const manager = new PixelArtCanvas(container, {
     texture: {
@@ -37,11 +47,14 @@ export function createPixelArtCanvas(
     },
     ...rest
   });
+  if (onCommand) {
+    manager.document.on("command", onCommand);
+  }
 
   return {
     manager,
-    canvas: children[0],
-    container,
-    children
+    canvas: manager.canvas(),
+    overlay: overlayOf(container),
+    container
   };
 }

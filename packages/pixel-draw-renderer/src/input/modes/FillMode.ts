@@ -1,5 +1,7 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
+import type { PointerPosition } from "../InputActions.ts";
+import type { BrushColorSlot } from "../../tools/Brush.ts";
 import type { FillEngine } from "../../tools/FillEngine.ts";
 import type {
   BrushHighlightView
@@ -9,6 +11,10 @@ import type {
   Vec2
 } from "../../types.ts";
 
+function singlePixel(): number {
+  return 1;
+}
+
 export interface FillModeOptions {
   fill: FillEngine;
   highlight: BrushHighlightView;
@@ -16,6 +22,7 @@ export interface FillModeOptions {
 
 export class FillMode extends InteractionMode {
   readonly id: Mode = "fill";
+  readonly writesPixels = true;
 
   #fill: FillEngine;
   #highlight: BrushHighlightView;
@@ -32,29 +39,14 @@ export class FillMode extends InteractionMode {
     this.#highlight.hide();
   }
 
-  highlightSize(): number {
-    return 1;
-  }
-
-  onPrimaryDown(
-    pos: Vec2
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition
   ): boolean {
     this.#fill.run(
-      pos.x,
-      pos.y,
-      "primary"
-    );
-
-    return false;
-  }
-
-  onSecondaryDown(
-    pos: Vec2
-  ): boolean {
-    this.#fill.run(
-      pos.x,
-      pos.y,
-      "secondary"
+      position.texture.x,
+      position.texture.y,
+      slot
     );
 
     return false;
@@ -65,7 +57,8 @@ export class FillMode extends InteractionMode {
   ): void {
     this.#highlight.update(
       position?.x ?? null,
-      position?.y ?? null
+      position?.y ?? null,
+      singlePixel
     );
   }
 }

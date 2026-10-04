@@ -116,16 +116,32 @@ describe("IslandMap", () => {
   });
 
   test("fromRegions uses the active slots of every region", () => {
-    const region = UVRegion.from({
-      id: "cube",
+    const net = UVRegion.from({
+      id: "net",
+      color: "#fff",
+      state: "unfolded",
+      faces: {
+        front: { x: 0, y: 0, width: 1, height: 1 },
+        back: { x: 1, y: 0, width: 1, height: 1 },
+        side: { x: 2, y: 0, width: 1, height: 1 }
+      },
+      activeFaces: ["front", "side"]
+    });
+    const cap = UVRegion.from({
+      id: "cap",
       color: "#fff",
       state: "stacked",
-      rect: { x: 1, y: 0, width: 1, height: 1 }
+      rect: { x: 4, y: 0, width: 1, height: 1 }
     });
-    const map = IslandMap.fromRegions({ x: 2, y: 1 }, [region]);
+    const map = IslandMap.fromRegions({ x: 5, y: 1 }, [net, cap]);
 
-    assert.deepEqual(islandRows(map), ["10"]);
-    assert.deepEqual([...map.islands[0].regionIds], ["cube"]);
+    assert.deepEqual(islandRows(map), ["03132"]);
+    assert.deepEqual(
+      map.islandsOf("net").map((island) => island.index),
+      [0, 1]
+    );
+    assert.deepEqual([...map.islands[2].regionIds], ["cap"]);
+    assert.equal(map.islands[3].isRemainder, true);
   });
 
   test("finds the islands of a region and within a rect", () => {

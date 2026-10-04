@@ -27,7 +27,8 @@ import {
   encodePixelArtDocument,
   PixelBuffer,
   pixelArtSnapshot,
-  serializePixelBuffer
+  PixelDocumentState,
+  serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -79,7 +80,9 @@ function event(
 function documentEvent(
   buffer: PixelBuffer
 ): EventStore.Event {
-  const data = encodePixelArtDocument(serializePixelBuffer(buffer));
+  const data = encodePixelArtDocument(
+    serializePixelDocument(new PixelDocumentState({ buffer }))
+  );
 
   return event(ASSET_CREATED, {
     path: "a.pixelart",
@@ -155,7 +158,7 @@ describe("pixelArtAssetKind", () => {
   test("creates a buffer at the default size", () => {
     const state = pixelArtAssetKind().create("asset-1");
 
-    assert.deepEqual(state.buffer.size(), { x: 32, y: 32 });
+    assert.deepEqual(state.document.buffer.size(), { x: 32, y: 32 });
   });
 
   test("honours a configured default size", () => {
@@ -163,7 +166,7 @@ describe("pixelArtAssetKind", () => {
       defaultSize: { x: 8, y: 8 }
     }).create("asset-1");
 
-    assert.deepEqual(state.buffer.size(), { x: 8, y: 8 });
+    assert.deepEqual(state.document.buffer.size(), { x: 8, y: 8 });
   });
 
   test("a lifecycle event loads the whole document", () => {
@@ -174,8 +177,8 @@ describe("pixelArtAssetKind", () => {
 
     foldAssetEvent(handler, state, documentEvent(source));
 
-    assert.deepEqual(state.buffer.size(), { x: 4, y: 4 });
-    assert.deepEqual(state.buffer.samplePixel(2, 2), kRedTuple);
+    assert.deepEqual(state.document.buffer.size(), { x: 4, y: 4 });
+    assert.deepEqual(state.document.buffer.samplePixel(2, 2), kRedTuple);
   });
 
   test("a domain command mutates the folded buffer", () => {
@@ -190,7 +193,7 @@ describe("pixelArtAssetKind", () => {
       event(PIXEL_ART_COMMAND, strokeCommand([{ x: 1, y: 1 }]))
     );
 
-    assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
+    assert.deepEqual(state.document.buffer.samplePixel(1, 1), kRedTuple);
   });
 
   test("a packed domain command mutates the folded buffer", () => {
@@ -205,7 +208,7 @@ describe("pixelArtAssetKind", () => {
       event(PIXEL_ART_COMMAND, packed(strokeCommand([{ x: 1, y: 1 }])))
     );
 
-    assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
+    assert.deepEqual(state.document.buffer.samplePixel(1, 1), kRedTuple);
   });
 
   test("a delete erases the pixels and keeps the size", () => {
@@ -222,9 +225,9 @@ describe("pixelArtAssetKind", () => {
       kind: PIXEL_ART_KIND
     }));
 
-    assert.deepEqual(state.buffer.size(), { x: 8, y: 8 });
+    assert.deepEqual(state.document.buffer.size(), { x: 8, y: 8 });
     assert.deepEqual(
-      state.buffer.pixels(),
+      state.document.buffer.pixels(),
       new Uint8ClampedArray(8 * 8 * 4)
     );
   });
@@ -234,11 +237,11 @@ describe("pixelArtAssetKind", () => {
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
-    const before = Uint8ClampedArray.from(state.buffer.pixels());
+    const before = Uint8ClampedArray.from(state.document.buffer.pixels());
 
     foldAssetEvent(handler, state, event("something.else", { nope: true }));
 
-    assert.deepEqual(state.buffer.pixels(), before);
+    assert.deepEqual(state.document.buffer.pixels(), before);
   });
 
   test("a malformed document throws before touching the buffer", () => {
@@ -261,7 +264,7 @@ describe("pixelArtAssetKind", () => {
         content: encodeContent(new TextEncoder().encode("{{"))
       }));
     }, InvalidAssetDocumentError);
-    assert.deepEqual(state.buffer.samplePixel(1, 1), kRedTuple);
+    assert.deepEqual(state.document.buffer.samplePixel(1, 1), kRedTuple);
   });
 
   test("serialize round-trips through apply", async() => {
@@ -285,7 +288,7 @@ describe("pixelArtAssetKind", () => {
       content: encodeContent(data)
     }));
 
-    assert.deepEqual(second.buffer.pixels(), first.buffer.pixels());
+    assert.deepEqual(second.document.buffer.pixels(), first.document.buffer.pixels());
   });
 
   test("declares the pixel command stream", () => {
@@ -315,7 +318,7 @@ describe("pixelArtAssetKind", () => {
       defaultSize: { x: 4, y: 4 }
     });
     const state = handler.create("asset-1");
-    const before = Uint8ClampedArray.from(state.buffer.pixels());
+    const before = Uint8ClampedArray.from(state.document.buffer.pixels());
 
     foldAssetEvent(handler, state, event(PIXEL_ART_COMMAND, {
       ...strokeCommand([{ x: 1, y: 1 }]),
@@ -323,7 +326,7 @@ describe("pixelArtAssetKind", () => {
     }));
     foldAssetEvent(handler, state, event(PIXEL_ART_COMMAND, null));
 
-    assert.deepEqual(state.buffer.pixels(), before);
+    assert.deepEqual(state.document.buffer.pixels(), before);
   });
 
   test("live() gives each room its own conflict tracker", () => {
@@ -363,7 +366,7 @@ describe("pixelArtAssetKind", () => {
   test("correct() restores the authoritative colors of every pixel of a rejected stroke", () => {
     const handler = pixelArtAssetKind({ defaultSize: { x: 4, y: 4 } });
     const state = handler.create("asset-1");
-    state.buffer.drawPixels([{ x: 1, y: 0 }], kRed);
+    state.document.buffer.drawPixels([{ x: 1, y: 0 }], kRed);
     const protocol = liveProtocol(state);
     const rejected = stroke([{ x: 0, y: 0 }, { x: 1, y: 0 }], 1_000, "bob");
 
@@ -408,7 +411,7 @@ describe("pixelArtAssetKind", () => {
   test("live() encodes the snapshot pixels as a PNG", async() => {
     const handler = pixelArtAssetKind({ defaultSize: { x: 2, y: 2 } });
     const state = handler.create("asset-1");
-    state.buffer.pixels().set(kRedTuple, 4);
+    state.document.buffer.pixels().set(kRedTuple, 4);
     const protocol = handler.commands!.live!(binding(state));
     const parser = new MessageParser(new MessageProtocol({
       title: "snapshot",
@@ -422,7 +425,7 @@ describe("pixelArtAssetKind", () => {
     assert.ok(typeof pixels !== "string");
     assert.deepEqual(
       [...await decodePngPixels(pixels, size)],
-      [...state.buffer.pixels()]
+      [...state.document.buffer.pixels()]
     );
   });
 
@@ -433,7 +436,7 @@ describe("pixelArtAssetKind", () => {
 
     assert.deepEqual(
       protocol.snapshot(),
-      pixelArtSnapshot(state.buffer)
+      pixelArtSnapshot(state.document)
     );
   });
 });

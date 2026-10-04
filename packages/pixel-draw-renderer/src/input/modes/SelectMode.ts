@@ -1,10 +1,11 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
+import type { PointerPosition } from "../InputActions.ts";
+import type { BrushColorSlot } from "../../tools/Brush.ts";
 import type { SelectEngine } from "../../tools/SelectEngine.ts";
 import type {
   Mode,
-  RotationDirection,
-  Vec2
+  RotationDirection
 } from "../../types.ts";
 
 export interface SelectModeOptions {
@@ -35,22 +36,34 @@ export class SelectMode extends InteractionMode {
     return this.#select.editable ? "grab" : "";
   }
 
-  onPrimaryDown(
-    pos: Vec2
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition
   ): boolean {
-    this.#select.handleStart(pos);
+    if (slot !== "primary") {
+      return false;
+    }
+
+    this.#select.handleStart(position.texture);
 
     return true;
   }
 
-  onPrimaryMove(
-    pos: Vec2
+  onPointerMove(
+    slot: BrushColorSlot,
+    position: PointerPosition
   ): void {
-    this.#select.handleMove(pos);
+    if (slot === "primary") {
+      this.#select.handleMove(position.texture);
+    }
   }
 
-  onPrimaryUp(): void {
-    this.#select.handleEnd();
+  onPointerUp(
+    slot: BrushColorSlot
+  ): void {
+    if (slot === "primary") {
+      this.#select.handleEnd();
+    }
   }
 
   onDelete(): boolean {

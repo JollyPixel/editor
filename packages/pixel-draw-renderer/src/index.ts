@@ -6,12 +6,8 @@ export {
   type BrushPaintSource
 } from "./tools/Brush.ts";
 export type { BrushTool } from "./tools/BrushEngine.ts";
+export type { FillTool } from "./tools/FillEngine.ts";
 export type {
-  FillGlobalCommit,
-  FillTool
-} from "./tools/FillEngine.ts";
-export type {
-  SelectEditEntry,
   SelectEngineEvent,
   SelectionProgressEvent,
   SelectTool
@@ -31,7 +27,26 @@ export {
   type PixelDocumentEvent,
   type PixelDocumentOptions
 } from "./PixelDocument.ts";
-export type { UVRegionFilter } from "./sync/DocumentEdits.ts";
+export type { UVRegionFilter } from "./sync/UVOwnership.ts";
+export {
+  PixelDocumentState,
+  type NormalMapChangedListener,
+  type PixelDocumentSnapshot,
+  type PixelDocumentStateOptions
+} from "./sync/PixelDocumentState.ts";
+export {
+  toDocumentCommand,
+  toPixelCommand,
+  type DocumentCommand,
+  type NormalMapCommand,
+  type PixelCommand,
+  type PixelCommandAction,
+  type UVRegionRotation
+} from "./sync/PixelCommand.ts";
+export type {
+  GlobalFill,
+  SelectionEdit
+} from "./sync/LocalEdit.types.ts";
 export type { CanvasBufferEvent } from "./buffer/CanvasBuffer.ts";
 export {
   PixelBuffer,
@@ -49,8 +64,8 @@ export {
   InvalidPixelArtDocumentError,
   parsePixelArtDocument,
   pixelArtSnapshot,
-  serializePixelBuffer,
-  deserializePixelBuffer,
+  serializePixelDocument,
+  deserializePixelDocument,
   encodePixelBytes,
   decodePixelBytes,
   encodePngPixels,
@@ -60,13 +75,6 @@ export {
   type PixelBufferSnapshot,
   type PngPixels
 } from "./serialization/index.ts";
-export type {
-  NormalMapCommand,
-  PixelBufferHookAction,
-  PixelBufferHookEvent,
-  PixelBufferHookListener,
-  UVRegionRotation
-} from "./buffer/hooks.ts";
 export {
   NormalMap,
   type NormalMapEvent,
@@ -99,7 +107,6 @@ export {
   type ResolvedNormalMapSettings
 } from "./normal/types.ts";
 export {
-  applyNormalMapCommand,
   isNormalMapCommand,
   type NormalMapCommandAction
 } from "./sync/normalMapCommands.ts";
@@ -108,23 +115,16 @@ export {
   type HistoryStackOptions
 } from "./history/HistoryStack.ts";
 export type {
+  HistoryEdit,
   HistoryEntry,
-  HistoryEntryInput,
-  HistoryNormalMapEntry,
-  HistoryResizedEntry,
-  HistorySelectEditEntry,
-  HistoryStrokeEntry,
-  HistoryTextureReplacedEntry,
-  HistoryUvCreateEntry,
-  HistoryUvDeleteEntry,
-  HistoryUvMoveEntry,
-  HistoryUvRotateEntry,
-  HistoryUvStateEntry
-} from "./history/HistoryStack.types.ts";
+  SelectionChange,
+  SelectionFootprint
+} from "./history/HistoryEntry.ts";
 export type {
   CanvasViewport,
   ClientOrigin,
-  DefaultViewport
+  DefaultViewport,
+  ScreenProjection
 } from "./rendering/Viewport.ts";
 export { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 export {
@@ -186,9 +186,7 @@ export {
   type UVCompoundPart,
   type UVNormalizedRect
 } from "./uv/region/UVRegion.ts";
-export { UVRegionCollection } from "./uv/region/UVRegionCollection.ts";
 export {
-  applyColorGroups,
   groupPositionsByColor,
   type ColorGroup
 } from "./buffer/colorGroups.ts";

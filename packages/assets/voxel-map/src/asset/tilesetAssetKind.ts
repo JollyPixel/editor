@@ -11,17 +11,18 @@ import {
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 import {
-  applyCommandToBuffer,
+  applyPixelCommand,
   correctPixelCommand,
   encodePixelSnapshot,
   isPixelCommand
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
-  deserializePixelBuffer,
+  deserializePixelDocument,
   parsePixelArtDocument,
   pixelArtSnapshot,
   PixelBuffer,
-  serializePixelBuffer,
+  PixelDocumentState,
+  serializePixelDocument,
   type PixelArtDocumentData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -145,14 +146,16 @@ export interface TilesetStateOptions {
 }
 
 export class TilesetState {
-  readonly pixels: PixelBuffer;
+  readonly pixels: PixelDocumentState;
   readonly document: TilesetDocument;
 
   constructor(
     options: TilesetStateOptions
   ) {
-    this.pixels = new PixelBuffer({
-      size: options.size
+    this.pixels = new PixelDocumentState({
+      buffer: new PixelBuffer({
+        size: options.size
+      })
     });
     this.document = new TilesetDocument({
       tileSize: options.tileSize
@@ -162,7 +165,7 @@ export class TilesetState {
   toJSON(): TilesetAssetDocument {
     return {
       version: TILESET_DOCUMENT_VERSION,
-      pixels: serializePixelBuffer(this.pixels),
+      pixels: serializePixelDocument(this.pixels),
       ...this.document.toJSON()
     };
   }
@@ -191,14 +194,14 @@ export class TilesetState {
       blocks: document.blocks,
       materialGroups: document.materialGroups
     });
-    deserializePixelBuffer(document.pixels, this.pixels);
+    deserializePixelDocument(document.pixels, this.pixels);
   }
 
   applyCommand(
     command: TilesetNetworkCommand
   ): void {
     if (isPixelCommand(command)) {
-      applyCommandToBuffer(this.pixels, command);
+      applyPixelCommand(this.pixels, command);
 
       return;
     }
@@ -207,14 +210,12 @@ export class TilesetState {
   }
 
   clear(): void {
-    const size = this.pixels.size();
+    const size = this.pixels.buffer.size();
 
-    this.pixels.replacePixels(
-      new Uint8ClampedArray(size.x * size.y * 4),
-      size
-    );
-    this.pixels.uvRegions.clear();
-    this.pixels.normalMap = null;
+    this.pixels.load({
+      size,
+      pixels: new Uint8ClampedArray(size.x * size.y * 4)
+    });
     this.document.clear(this.document.tileSize);
   }
 }
@@ -316,7 +317,7 @@ function correctTilesetCommand(
   }
 
   return correctPixelCommand(
-    state.pixels,
+    state.pixels.buffer,
     command,
     admitted !== null && isPixelCommand(admitted) ? admitted : null
   );

@@ -41,13 +41,13 @@ describe("applyNormalMapCommand", () => {
     });
     config = applyNormalMapCommand(config, {
       action: "normal-map-zone-deleted",
-      metadata: { regionId: "glass" }
+      metadata: { regionId: "brick" }
     });
 
     assert.equal(config?.defaults.strength, 5);
     assert.deepEqual(
       config?.zones.map((zone) => zone.regionId),
-      ["brick", "moss"]
+      ["moss", "glass"]
     );
   });
 

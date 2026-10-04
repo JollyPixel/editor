@@ -47,6 +47,6 @@ Narrows the fill with a [UV clip](../../GLOSSARY.md#uv-clip). It combines with `
 
 Every region counts, whatever [`UVMap.isVisible()`](../uv/UVMap.md) returns. Inactive slots do not clip. A pixel belongs to a slot when its center lies inside the slot geometry, so triangles clip on their diagonal.
 
-A clipped global fill is committed as a `stroke` hook event with its positions. Only an unclipped global fill emits `global-fill`, whose receivers recolor the whole texture.
+A clipped global fill is committed as a `stroke` command with its positions. Only an unclipped global fill emits `global-fill`, whose receivers recolor the whole texture.
 
 The default is `false`. The value persists across mode changes.

@@ -13,8 +13,6 @@ export const SUPPORTED_RASTER_TYPES = [
   "image/gif"
 ] as const;
 
-export type SupportedRasterType = typeof SUPPORTED_RASTER_TYPES[number];
-
 /**
  * A selection placed on the texture: `pixels` and `mask` are row-major over
  * `rect`.
@@ -99,7 +97,3 @@ export interface DecodedRasterImage {
 export type RasterBlobDecoder = (
   blob: Blob
 ) => Promise<DecodedRasterImage>;
-
-export type SelectionPngEncoder = (
-  snapshot: SelectionSnapshot
-) => Promise<Blob>;

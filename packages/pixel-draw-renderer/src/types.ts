@@ -43,7 +43,6 @@ export interface PeerStrokePixel {
 }
 
 export interface BrushHighlight {
-  readonly size: number;
   readonly colorInline: string;
   readonly colorOutline: string;
 }

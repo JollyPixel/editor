@@ -6,27 +6,40 @@ import {
   CanvasBuffer,
   type CanvasBufferEvent
 } from "./buffer/CanvasBuffer.ts";
-import type {
-  PixelBufferHookEvent,
-  PixelBufferHookListener
-} from "./buffer/hooks.ts";
 import {
   History,
   type HistoryState
 } from "./history/History.ts";
-import type { HistoryEntry } from "./history/HistoryStack.types.ts";
+import type {
+  HistoryEdit,
+  HistoryEntry
+} from "./history/HistoryEntry.ts";
+import { PixelDocumentState } from "./sync/PixelDocumentState.ts";
+import { EditRecorder } from "./sync/EditRecorder.ts";
 import {
-  DocumentEdits,
+  selectEditOf,
+  strokeOf,
+  strokesOf,
+  textureOf,
+  type DocumentCommand,
+  type PixelCommand
+} from "./sync/PixelCommand.ts";
+import { NormalMapChange } from "./sync/NormalMapChange.ts";
+import {
+  UVOwnership,
   type UVRegionFilter
-} from "./sync/DocumentEdits.ts";
-import type { FillGlobalCommit } from "./tools/FillEngine.ts";
-import type { SelectEditEntry } from "./tools/SelectEngine.ts";
-import { UVMap } from "./uv/map/UVMap.ts";
+} from "./sync/UVOwnership.ts";
+import type {
+  GlobalFill,
+  SelectionEdit
+} from "./sync/LocalEdit.types.ts";
+import type { UVMap } from "./uv/map/UVMap.ts";
 import {
-  pointInGeometry,
+  coveredPixels,
   rectOf
 } from "./uv/geometry/geometry.ts";
 import type { UVGeometry } from "./uv/geometry/types.ts";
+import { RectArea } from "./utils/RectArea.ts";
 import { NormalMap } from "./normal/NormalMap.ts";
 import { NormalMapConfig } from "./normal/NormalMapConfig.ts";
 import { IslandMap } from "./normal/IslandMap.ts";
@@ -63,13 +76,11 @@ export interface PixelDocumentOptions {
   history?: {
     enabled?: boolean;
     limit?: number;
-    onChange?: (state: HistoryState) => void;
   };
-  onBufferUpdated?: PixelBufferHookListener;
 }
 
 export type PixelDocumentEvent = CanvasBufferEvent & {
-  "buffer-updated": (event: PixelBufferHookEvent) => void;
+  command: (command: PixelCommand) => void;
   "draw-end": () => void;
   "history-changed": (state: HistoryState) => void;
   "islands-changed": () => void;
@@ -87,8 +98,9 @@ export class PixelDocument extends Emitter<
   readonly uv: UVMap;
   readonly history: History;
 
-  #edits: DocumentEdits;
-  #onBufferUpdated: PixelBufferHookListener | undefined;
+  #state: PixelDocumentState<CanvasBuffer>;
+  #ownership: UVOwnership;
+  #recorder: EditRecorder;
   #normals: NormalMap | null = null;
   #islands: IslandMap | null = null;
   #islandFaces: (() => Iterable<IslandFace>) | null = null;
@@ -108,36 +120,35 @@ export class PixelDocument extends Emitter<
       this.buffer.loadTexture(options.init);
     }
 
-    this.uv = new UVMap({
-      getCanvasSize: () => this.buffer.size()
-    });
-
-    const onHistoryChange = options.history?.onChange;
-    this.history = new History(this.buffer, this.uv, {
-      enabled: options.history?.enabled,
-      limit: options.history?.limit,
-      onChange: (state) => {
-        onHistoryChange?.(state);
-        this.emit("history-changed", state);
-      }
-    });
-
-    this.#edits = new DocumentEdits({
+    this.#state = new PixelDocumentState({
       buffer: this.buffer,
-      history: this.history,
-      uvMap: this.uv,
-      onDrawEnd: () => this.emit("draw-end"),
-      onReset: () => this.emit("reset"),
       onNormalMapChanged: (regionIds) => this.emit("normal-map-changed", {
         config: this.normalMap,
         regionIds
       })
     });
-    this.#onBufferUpdated = options.onBufferUpdated;
-    this.#edits.onBufferUpdated = (event) => {
-      this.#onBufferUpdated?.(event);
-      this.emit("buffer-updated", event);
-    };
+    this.uv = this.#state.uv;
+    this.history = new History({
+      enabled: options.history?.enabled,
+      limit: options.history?.limit,
+      onChange: (state) => this.emit("history-changed", state)
+    });
+    this.#ownership = new UVOwnership({
+      uv: this.uv,
+      isRecording: () => this.#recorder.recording,
+      removeNormalMapZoneOf: (regionId) => this.#state.removeNormalMapZoneOf(regionId),
+      record: (edit) => this.#recorder.record(edit.redo, edit)
+    });
+    this.#recorder = new EditRecorder({
+      state: this.#state,
+      history: this.history,
+      ownership: this.#ownership,
+      listeners: {
+        command: (command) => this.emit("command", command),
+        drawEnd: () => this.emit("draw-end"),
+        reset: () => this.emit("reset")
+      }
+    });
 
     this.buffer.on("changed", (event) => this.emit("changed", event));
     this.buffer.on("resized", (event) => {
@@ -153,18 +164,8 @@ export class PixelDocument extends Emitter<
     }
   }
 
-  get onBufferUpdated(): PixelBufferHookListener | undefined {
-    return this.#onBufferUpdated;
-  }
-
-  set onBufferUpdated(
-    fn: PixelBufferHookListener | undefined
-  ) {
-    this.#onBufferUpdated = fn;
-  }
-
   get normalMap(): NormalMapConfig | null {
-    return this.#edits.normalMap;
+    return this.#state.normalMap;
   }
 
   get islands(): IslandMap {
@@ -209,13 +210,13 @@ export class PixelDocument extends Emitter<
   disownUvRegions(
     filter: UVRegionFilter
   ): () => void {
-    return this.#edits.disownUvRegions(filter);
+    return this.#ownership.disown(filter);
   }
 
   ownsUvRegion(
     id: string
   ): boolean {
-    return this.#edits.ownsUvRegion(id);
+    return this.#ownership.owns(id);
   }
 
   size(): Vec2 {
@@ -225,116 +226,163 @@ export class PixelDocument extends Emitter<
   hasTransparency(
     geometry: UVGeometry
   ): boolean {
-    if (!("shape" in geometry)) {
-      return this.buffer.hasTransparency(geometry);
+    const size = this.buffer.size();
+    const area = RectArea.from(rectOf(geometry));
+    if (area.isEmpty) {
+      return false;
+    }
+    if (!area.fitsWithin(size)) {
+      return true;
     }
 
-    const bounds = rectOf(geometry);
-    const maxX = Math.ceil(bounds.x + bounds.width);
-    const maxY = Math.ceil(bounds.y + bounds.height);
-    for (let y = Math.floor(bounds.y); y < maxY; y++) {
-      for (let x = Math.floor(bounds.x); x < maxX; x++) {
-        if (
-          pointInGeometry(
-            { x: x + 0.5, y: y + 0.5 },
-            geometry
-          ) &&
-          this.buffer.samplePixel(x, y)[3] < 255
-        ) {
-          return true;
-        }
+    const pixels = this.buffer.pixels({ copy: false });
+    for (const index of coveredPixels(geometry, size)) {
+      if (pixels[(index * 4) + 3] < 255) {
+        return true;
       }
     }
 
     return false;
   }
 
-  commitStroke(
+  paintPixels(
+    pixels: Vec2[],
+    color: RGBA8,
+    beforeColor?: RGBA8
+  ): void {
+    if (pixels.length === 0) {
+      return;
+    }
+
+    const undo = this.#undoable(() => (beforeColor ?
+      [strokeOf(pixels, beforeColor)] :
+      strokesOf(pixels, this.buffer.samplePixels(pixels))));
+    const stroke = strokeOf(pixels, color);
+    this.#state.apply(stroke);
+    this.#commitDrawing([stroke], { redo: [stroke], undo });
+  }
+
+  paintGlobalFill(
+    fill: GlobalFill
+  ): void {
+    const { positions, fromColor, toColor } = fill;
+    const stroke = strokeOf(positions, toColor);
+
+    this.#state.apply(stroke);
+    this.#commitDrawing(
+      [{ action: "global-fill", metadata: { fromColor, toColor } }],
+      { redo: [stroke], undo: [strokeOf(positions, fromColor)] }
+    );
+  }
+
+  recordStroke(
     pixels: Vec2[],
     color: RGBA8,
     beforeColors: RGBA8[]
   ): void {
-    this.#edits.commitStroke(pixels, color, beforeColors);
+    const stroke = strokeOf(pixels, color);
+
+    this.#commitDrawing([stroke], {
+      redo: [stroke],
+      undo: this.#undoable(() => strokesOf(pixels, beforeColors))
+    });
   }
 
-  commitPixels(
-    pixels: Vec2[],
-    color: RGBA8,
-    uniformBeforeColor?: RGBA8
+  paintSelectionEdit(
+    edit: SelectionEdit
   ): void {
-    this.#edits.commitPixels(pixels, color, uniformBeforeColor);
-  }
+    const { positions, before, after } = edit;
+    const redo = selectEditOf(positions, edit.afterColors);
 
-  commitGlobalFill(
-    commit: FillGlobalCommit
-  ): void {
-    this.#edits.commitGlobalFill(commit);
-  }
-
-  commitSelectionEdit(
-    entry: SelectEditEntry
-  ): void {
-    this.#edits.commitSelectionEdit(entry);
+    this.#state.apply(redo);
+    this.#commitDrawing([redo], {
+      redo: [redo],
+      undo: [selectEditOf(positions, edit.beforeColors)],
+      selection: { before, after }
+    });
   }
 
   resize(
     size: Vec2
   ): void {
-    this.#edits.resize(size);
+    const undo = this.#textureSnapshot();
+    const resized: DocumentCommand = {
+      action: "resized",
+      metadata: { size: structuredClone(size) }
+    };
+
+    this.#state.apply(resized);
+    this.#recorder.record([resized], { redo: this.#textureSnapshot(), undo });
   }
 
   replaceTexture(
     source: HTMLCanvasElement | HTMLImageElement
   ): void {
-    this.#edits.replaceTexture(source);
+    this.#commitTexture(() => this.buffer.loadTexture(source));
   }
 
   clearTexture(
     keepMask?: Uint8Array
   ): void {
-    this.#edits.clearTexture(keepMask);
+    const pixels = this.buffer.pixels();
+    if (keepMask) {
+      for (let index = 0; index < keepMask.length; index++) {
+        if (keepMask[index] === 0) {
+          const byteIndex = index * 4;
+          pixels[byteIndex] = 0;
+          pixels[byteIndex + 1] = 0;
+          pixels[byteIndex + 2] = 0;
+          pixels[byteIndex + 3] = 0;
+        }
+      }
+    }
+    else {
+      pixels.fill(0);
+    }
+
+    this.#commitTexture(() => this.buffer.replacePixels(pixels, this.buffer.size()));
   }
 
   enableNormalMap(
     config: NormalMapConfig = NormalMapConfig.create()
   ): void {
-    this.#edits.toggleNormalMap(config);
+    this.#commitNormalMap(NormalMapChange.toggle(this.normalMap, config));
   }
 
   disableNormalMap(): void {
-    this.#edits.toggleNormalMap(null);
+    this.#commitNormalMap(NormalMapChange.toggle(this.normalMap, null));
   }
 
   patchNormalMapDefaults(
     patch: Partial<NormalMapSettings>
   ): void {
-    this.#edits.patchNormalMapDefaults(patch);
+    this.#commitNormalMap(NormalMapChange.patchDefaults(this.normalMap, patch));
   }
 
   setNormalMapZone(
     zone: NormalMapZone
   ): void {
-    this.#edits.setNormalMapZone(zone);
+    this.#commitNormalMap(NormalMapChange.setZone(this.normalMap, zone));
   }
 
   deleteNormalMapZone(
     regionId: string
   ): void {
-    this.#edits.deleteNormalMapZone(regionId);
+    this.#commitNormalMap(NormalMapChange.deleteZone(this.normalMap, regionId));
   }
 
   undo(): HistoryEntry | null {
-    return this.#edits.undo();
+    return this.#recorder.undo();
   }
 
   redo(): HistoryEntry | null {
-    return this.#edits.redo();
+    return this.#recorder.redo();
   }
 
   applyRemoteCommand(
-    event: PixelBufferHookEvent
+    command: PixelCommand
   ): void {
-    this.#edits.applyRemoteCommand(event);
+    this.#recorder.applyRemote(command);
   }
 
   loadSnapshot(
@@ -343,13 +391,18 @@ export class PixelDocument extends Emitter<
     uvRegions: (UVRegion | UVRegionData)[] = [],
     normalMap: NormalMapData | null = null
   ): void {
-    this.#edits.loadSnapshot(size, pixels, uvRegions, normalMap);
+    this.#recorder.load({
+      size,
+      pixels,
+      uvRegions,
+      normalMap
+    });
   }
 
   runLocalRestore<T>(
     fn: () => T
   ): T {
-    return this.#edits.runLocalRestore(fn);
+    return this.#recorder.silently(fn);
   }
 
   readonly #onRegionsChanged = (): void => {
@@ -357,6 +410,49 @@ export class PixelDocument extends Emitter<
       this.invalidateIslands();
     }
   };
+
+  #undoable(
+    build: () => DocumentCommand[]
+  ): DocumentCommand[] {
+    return this.history.enabled && this.#recorder.recording ? build() : [];
+  }
+
+  #textureSnapshot(): DocumentCommand[] {
+    return this.#undoable(() => [
+      textureOf(this.buffer.size(), this.buffer.pixels())
+    ]);
+  }
+
+  #commitTexture(
+    replace: () => void
+  ): void {
+    const undo = this.#textureSnapshot();
+    replace();
+
+    this.#recorder.record(
+      [textureOf(this.buffer.size(), this.buffer.pixels({ copy: false }))],
+      { redo: this.#textureSnapshot(), undo }
+    );
+  }
+
+  #commitNormalMap(
+    change: NormalMapChange | null
+  ): void {
+    if (change === null) {
+      return;
+    }
+
+    this.#state.apply(change.redo);
+    this.#recorder.record([change.redo], { redo: [change.redo], undo: [change.undo] });
+  }
+
+  #commitDrawing(
+    emitted: DocumentCommand[],
+    edit: HistoryEdit
+  ): void {
+    this.#recorder.record(emitted, edit);
+    this.emit("draw-end");
+  }
 
   #connectNormalMap(
     normalMap: NormalMap

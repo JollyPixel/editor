@@ -7,6 +7,7 @@ import {
   type PixelArtDocumentData
 } from "./types.ts";
 import { encodePixelBytes } from "./pixelBytes.ts";
+import { TextureBounds } from "../buffer/TextureBounds.ts";
 import { isUVRegionData } from "../uv/region/validation.ts";
 import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 import type { Vec2 } from "../types.ts";
@@ -15,11 +16,7 @@ export function createPixelArtDocument(
   size: Vec2,
   pixels: Uint8Array | Uint8ClampedArray = new Uint8Array(size.x * size.y * 4)
 ): PixelArtDocumentData {
-  if (
-    !isSize(size) ||
-    size.x <= 0 ||
-    size.y <= 0
-  ) {
+  if (!TextureBounds.isSize(size)) {
     throw new InvalidPixelArtDocumentError("size is not a pair of positive integers");
   }
 
@@ -54,8 +51,8 @@ export function parsePixelArtDocument(
       `unsupported version ${String(document.version)}`
     );
   }
-  if (!isSize(document.size)) {
-    throw new InvalidPixelArtDocumentError("size is not a pair of integers");
+  if (!TextureBounds.isSize(document.size)) {
+    throw new InvalidPixelArtDocumentError("size is not a pair of positive integers");
   }
   if (typeof document.pixels !== "string") {
     throw new InvalidPixelArtDocumentError("pixels is not a base64 string");
@@ -109,15 +106,4 @@ export function decodePixelArtDocument(
   }
 
   return parsePixelArtDocument(parsed);
-}
-
-function isSize(
-  value: unknown
-): value is Vec2 {
-  return typeof value === "object" &&
-    value !== null &&
-    "x" in value &&
-    "y" in value &&
-    Number.isInteger(value.x) &&
-    Number.isInteger(value.y);
 }

@@ -294,7 +294,7 @@ test.describe("3D preview", () => {
         creations++;
       }
       canvas.uv.on("region-created", count);
-      canvas.applyRemoteCommand({
+      canvas.document.applyRemoteCommand({
         action: "uv-region-created",
         metadata: { region: region.toJSON() }
       });

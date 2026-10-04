@@ -1,30 +1,63 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UVMap } from "#src/uv/map/UVMap.ts";
+import { UVRegion } from "#src/uv/region/UVRegion.ts";
+import type { UVMap } from "#src/uv/map/UVMap.ts";
+import {
+  makeUvMap,
+  type EventPayload
+} from "../../helpers/uv/map.ts";
 
-describe("UVMap slot boundaries", () => {
-  test("rejects a slot the free region does not own", () => {
-    const map = new UVMap({
-      getCanvasSize: () => {
-        return { x: 32, y: 32 };
-      }
-    });
-    const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+function makeFreeWithInactiveSlot(): UVMap {
+  const map = makeUvMap({ x: 64, y: 64 });
+  map.restore(new UVRegion({
+    id: "r1",
+    color: "#f00",
+    state: "free",
+    faces: {
+      front: { x: 0, y: 0, width: 4, height: 4 },
+      back: { x: 8, y: 0, width: 4, height: 4 }
+    },
+    activeFaces: ["front"]
+  }));
 
-    assert.equal(map.move(
-      region.id,
-      { x: 2, y: 2, width: 4, height: 4 },
-      "missing"
-    ), false);
-    assert.deepEqual(map.get(region.id)?.rectFor("front"), {
-      x: 0,
-      y: 0,
-      width: 4,
-      height: 4
-    });
+  return map;
+}
+
+describe("UVMap — inactive slots", () => {
+  test("refuses to move an inactive slot", () => {
+    const map = makeFreeWithInactiveSlot();
+
+    assert.strictEqual(map.move("r1", { x: 20, y: 20, width: 4, height: 4 }, "back"), false);
+    assert.deepStrictEqual(map.get("r1")?.rectFor("back"), { x: 8, y: 0, width: 4, height: 4 });
+  });
+
+  test("refuses to rotate an inactive slot", () => {
+    assert.strictEqual(makeFreeWithInactiveSlot().rotate("r1", "cw", "back"), false);
+  });
+
+  test("never selects an inactive slot", () => {
+    const map = makeFreeWithInactiveSlot();
+
+    map.select("r1", "back");
+
+    assert.strictEqual(map.selectedSlot, "front");
+  });
+});
+
+describe("UVMap — endPreview", () => {
+  test("emits region-drag-ended with the commit outcome", () => {
+    const map = makeUvMap();
+    const events: EventPayload<"region-drag-ended">[] = [];
+    map.on("region-drag-ended", (event) => events.push(event));
+
+    map.endPreview("r1", true);
+
+    assert.deepStrictEqual(events, [{ id: "r1", committed: true }]);
   });
 });

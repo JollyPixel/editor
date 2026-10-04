@@ -2,6 +2,8 @@
 /* eslint-disable no-empty-function */
 
 // Import Internal Dependencies
+import type { BrushColorSlot } from "../../tools/Brush.ts";
+import type { PointerPosition } from "../InputActions.ts";
 import type {
   Mode,
   RotationDirection,
@@ -10,56 +12,34 @@ import type {
 
 export abstract class InteractionMode {
   abstract readonly id: Mode;
+  readonly writesPixels: boolean = false;
+  readonly pansOnPrimary: boolean = false;
 
-  onEnter(_previous: Mode): void {}
-  onExit(_next: Mode): void {}
+  onExit(): void {}
 
-  /**
-   * Re-evaluated after pointer, blur, and mode transitions.
-   */
   cursor(): string {
     return "";
   }
 
-  /**
-   * Defaults to the brush size when the mode has no custom highlight.
-   */
-  highlightSize(brushSize: number): number {
-    return brushSize;
-  }
-
-  onPrimaryDown(
-    _pos: Vec2,
-    _canvasPos: Vec2
-  ): boolean {
-    return false;
-  }
-
-  onPrimaryMove(
-    _pos: Vec2,
-    _canvasPos: Vec2
-  ): void {}
-  onPrimaryUp(): void {}
-
-  onSecondaryDown(
-    _pos: Vec2,
+  onPointerDown(
+    _slot: BrushColorSlot,
+    _position: PointerPosition,
     _ctrlKey: boolean
   ): boolean {
     return false;
   }
 
-  onSecondaryMove(_pos: Vec2): void {}
-  onSecondaryUp(): void {}
+  onPointerMove(
+    _slot: BrushColorSlot,
+    _position: PointerPosition
+  ): void {}
+  onPointerUp(_slot: BrushColorSlot): void {}
   onHover(_position: Vec2 | null): void {}
-  onCursorMove(_pos: Vec2 | null): void {}
+  onCursorMove(_position: Vec2 | null): void {}
   onMouseUp(): void {}
   onLineHeldChange(_held: boolean): void {}
   onBlur(): void {}
-  onCopy(): boolean {
-    return false;
-  }
-
-  onPaste(): boolean {
+  onCtrlWheel(_delta: number): boolean {
     return false;
   }
 

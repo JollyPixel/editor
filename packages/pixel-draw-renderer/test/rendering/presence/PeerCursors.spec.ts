@@ -9,29 +9,10 @@ import assert from "node:assert/strict";
 import {
   PeerCursors
 } from "#src/rendering/presence/PeerCursors.ts";
-import { Zoom } from "#src/rendering/Zoom.ts";
 import {
   makeSvg,
   makeViewport
 } from "../../helpers/overlay.ts";
-import type { DefaultViewport } from "#src/rendering/Viewport.ts";
-import type { Vec2 } from "#src/types.ts";
-
-type MutableViewport = DefaultViewport & { camera: Vec2; };
-
-function makeMutableViewport(): MutableViewport {
-  return {
-    zoom: new Zoom({
-      default: 4
-    }),
-    camera: {
-      x: 0,
-      y: 0
-    },
-    canvasWidth: 800,
-    canvasHeight: 600
-  };
-}
 
 describe("PeerCursors — set", () => {
   test("renders a visible arrow+label at the texture position, zoom 4 camera (0,0)", () => {
@@ -79,7 +60,7 @@ describe("PeerCursors — set", () => {
     );
   });
 
-  test("renders an empty label when none is given", () => {
+  test("a later update without a label clears the previous label", () => {
     const svg = makeSvg();
     const overlay = new PeerCursors(
       svg,
@@ -90,6 +71,14 @@ describe("PeerCursors — set", () => {
       "peer-A",
       {
         pos: { x: 0, y: 0 },
+        color: "#ff0000",
+        label: "Alice"
+      }
+    );
+    overlay.set(
+      "peer-A",
+      {
+        pos: { x: 1, y: 0 },
         color: "#ff0000"
       }
     );
@@ -131,34 +120,6 @@ describe("PeerCursors — set", () => {
       "hidden"
     );
   });
-
-  test("tracks multiple peers independently", () => {
-    const svg = makeSvg();
-    const overlay = new PeerCursors(
-      svg,
-      makeViewport()
-    );
-
-    overlay.set(
-      "peer-A",
-      {
-        pos: { x: 0, y: 0 },
-        color: "#ff0000"
-      }
-    );
-    overlay.set(
-      "peer-B",
-      {
-        pos: { x: 1, y: 1 },
-        color: "#00ff00"
-      }
-    );
-
-    assert.strictEqual(
-      svg.querySelectorAll("path").length,
-      2
-    );
-  });
 });
 
 describe("PeerCursors — remove", () => {
@@ -184,15 +145,29 @@ describe("PeerCursors — remove", () => {
     );
   });
 
-  test("removing an unknown peer is a no-op", () => {
+  test("removing an unknown peer leaves other peers drawn", () => {
     const svg = makeSvg();
     const overlay = new PeerCursors(
       svg,
       makeViewport()
     );
 
-    assert.doesNotThrow(
-      () => overlay.remove("nobody")
+    overlay.set(
+      "peer-A",
+      {
+        pos: { x: 0, y: 0 },
+        color: "#ff0000"
+      }
+    );
+    overlay.remove("nobody");
+
+    assert.strictEqual(
+      svg.querySelectorAll("path").length,
+      1
+    );
+    assert.strictEqual(
+      svg.querySelector("path")!.getAttribute("fill"),
+      "#ff0000"
     );
   });
 });
@@ -200,7 +175,7 @@ describe("PeerCursors — remove", () => {
 describe("PeerCursors — refresh", () => {
   test("re-projects the stored position against a changed camera", () => {
     const svg = makeSvg();
-    const viewport = makeMutableViewport();
+    const viewport = makeViewport();
     const overlay = new PeerCursors(
       svg,
       viewport
@@ -230,7 +205,7 @@ describe("PeerCursors — refresh", () => {
 });
 
 describe("PeerCursors — destroy", () => {
-  test("removes every tracked peer's group", () => {
+  test("tracks one group per peer and removes every one of them", () => {
     const svg = makeSvg();
     const overlay = new PeerCursors(
       svg,
@@ -251,6 +226,8 @@ describe("PeerCursors — destroy", () => {
         color: "#00ff00"
       }
     );
+    assert.strictEqual(svg.querySelectorAll("path").length, 2);
+
     overlay.destroy();
 
     assert.strictEqual(svg.querySelectorAll("path").length, 0);

@@ -14,15 +14,20 @@ export interface UVOverlayEntry {
   geometry: UVGeometry;
   selected: boolean;
   peerColor: string | null;
-  stacked?: number;
 }
 
 export interface UVOverlayLayerState {
-  /** UV target keys whose borders a peer drag preview replaces. */
+  /**
+   * UV target keys whose borders a peer drag preview replaces.
+   */
   ghostSuppressed: ReadonlySet<string>;
-  /** Drawn in place of the stored region with the same id. */
+  /**
+   * Drawn in place of the stored region with the same id.
+   */
   preview: UVRegion | null;
-  /** Peer color by region id. */
+  /**
+   * Peer color by region id.
+   */
   peerSelections: ReadonlyMap<string, string>;
 }
 

@@ -13,7 +13,7 @@ import {
 import { UVRegion } from "#src/uv/region/UVRegion.ts";
 import type { UVGeometry } from "#src/uv/geometry/types.ts";
 import type { Vec2 } from "#src/types.ts";
-import { makeMap } from "../../helpers/uv-map.ts";
+import { makeUvMap } from "../../helpers/uv/map.ts";
 
 function maskRows(
   mask: Uint8Array,
@@ -166,7 +166,7 @@ describe("uvSlotGeometries", () => {
   });
 
   test("includes regions hidden by the UV map view state", () => {
-    const map = makeMap({ x: 8, y: 8 });
+    const map = makeUvMap({ x: 8, y: 8 });
     const region = map.restore({
       id: "hidden",
       color: "#fff",

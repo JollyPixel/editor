@@ -66,19 +66,14 @@ export class LinePreview {
     start: Vec2,
     end: Vec2
   ): void {
-    const zoom = this.#viewport.zoom.value;
-    const camera = this.#viewport.camera;
-
-    const x1 = (start.x + 0.5) * zoom + camera.x;
-    const y1 = (start.y + 0.5) * zoom + camera.y;
-    const x2 = (end.x + 0.5) * zoom + camera.x;
-    const y2 = (end.y + 0.5) * zoom + camera.y;
+    const from = this.#viewport.toScreen({ x: start.x + 0.5, y: start.y + 0.5 });
+    const to = this.#viewport.toScreen({ x: end.x + 0.5, y: end.y + 0.5 });
 
     for (const line of [this.#outline, this.#inline]) {
-      line.setAttribute("x1", String(x1));
-      line.setAttribute("y1", String(y1));
-      line.setAttribute("x2", String(x2));
-      line.setAttribute("y2", String(y2));
+      line.setAttribute("x1", String(from.x));
+      line.setAttribute("y1", String(from.y));
+      line.setAttribute("x2", String(to.x));
+      line.setAttribute("y2", String(to.y));
       line.setAttribute("visibility", "visible");
     }
   }

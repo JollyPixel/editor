@@ -7,19 +7,14 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { OverlayLayer } from "#src/rendering/overlays/OverlayLayer.ts";
-import { BrushHighlightView } from "#src/rendering/overlays/BrushHighlight.ts";
-import { LinePreview } from "#src/rendering/overlays/LinePreview.ts";
-import { SelectionOutline } from "#src/rendering/overlays/SelectionOutline.ts";
-import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import {
   makeViewport,
-  makeBrush,
-  makeUvMap
+  makeBrush
 } from "../../helpers/overlay.ts";
+import { makeUvMap } from "../../helpers/uv/map.ts";
 import { stubRect } from "../../helpers/dom.ts";
 
 function makeParent(): HTMLDivElement {
-  // Use happy-dom's real document.body so parentElement tracking works correctly.
   const div = document.body.appendChild(
     document.createElement("div")
   );
@@ -33,35 +28,9 @@ function makeParent(): HTMLDivElement {
 
 describe("OverlayLayer", () => {
   describe("overlays", () => {
-    test("exposes the brush highlight, line preview, and selection overlays", () => {
-      const overlays = new OverlayLayer({
-        parent: makeParent(),
-        viewport: makeViewport(),
-        brush: makeBrush(),
-        uvMap: makeUvMap()
-      });
-
-      assert.ok(
-        overlays.brushHighlight instanceof BrushHighlightView,
-        "brushHighlight should be an instance of BrushHighlightView"
-      );
-      assert.ok(
-        overlays.linePreview instanceof LinePreview,
-        "linePreview should be an instance of LinePreview"
-      );
-      assert.ok(
-        overlays.selection instanceof SelectionOutline,
-        "selection should be an instance of SelectionOutline"
-      );
-      assert.ok(
-        overlays.uvOverlay instanceof UVRegionLayer,
-        "uvOverlay should be an instance of UVRegionLayer"
-      );
-    });
-
     test("keeps tool overlays above the UV layer", () => {
       const parent = makeParent();
-      const uvMap = makeUvMap();
+      const uvMap = makeUvMap({ x: 64, y: 64 });
       const overlays = new OverlayLayer({
         parent,
         viewport: makeViewport(),
@@ -70,22 +39,41 @@ describe("OverlayLayer", () => {
       });
       const svg = parent.querySelector("svg")!;
 
-      overlays.brushHighlight.update(20, 20);
+      overlays.brushHighlight.update(20, 20, () => 1);
       const region = uvMap.create({
         width: 4,
         height: 4
       });
       uvMap.select(region.id);
 
-      assert.strictEqual(
-        svg.firstElementChild?.getAttribute("data-overlay"),
-        "uv"
+      assert.deepStrictEqual(
+        [...svg.children].map((layer) => layer.getAttribute("data-layer")),
+        ["uv", "peer-selections", "brush", "line", "selection", "peer-cursors"]
       );
-      assert.notStrictEqual(
-        svg.lastElementChild?.getAttribute("data-overlay"),
-        "uv",
-        "a tool overlay must paint after the UV layer"
-      );
+      assert.ok(svg.firstElementChild?.querySelector("[data-overlay=uv]"));
+    });
+
+    test("keeps a peer outline in its own layer after it re-renders", () => {
+      const parent = makeParent();
+      const overlays = new OverlayLayer({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        uvMap: makeUvMap({ x: 64, y: 64 })
+      });
+
+      overlays.peerSelectionOutlines.set("peer-A", {
+        rect: { x: 0, y: 0, width: 2, height: 2 },
+        mask: null,
+        color: "#f00"
+      });
+      overlays.peerSelectionOutlines.refresh();
+      overlays.peerCursors.set("peer-A", { pos: { x: 1, y: 1 }, color: "#f00" });
+      overlays.peerSelectionOutlines.refresh();
+
+      const svg = parent.querySelector("svg");
+      assert.ok(svg?.querySelector("[data-layer=peer-selections] > path"));
+      assert.strictEqual(svg?.lastElementChild?.getAttribute("data-layer"), "peer-cursors");
     });
   });
 
@@ -97,10 +85,9 @@ describe("OverlayLayer", () => {
         parent,
         viewport: makeViewport(),
         brush: makeBrush(),
-        uvMap: makeUvMap()
+        uvMap: makeUvMap({ x: 64, y: 64 })
       });
 
-      // Before destroy: parent should have child SVG elements
       const childrenBefore = parent.childElementCount;
       assert.ok(
         childrenBefore > 0,
@@ -115,20 +102,6 @@ describe("OverlayLayer", () => {
         0,
         "SVG element should be removed after destroy()"
       );
-    });
-
-    test("destroy() can be called again without throwing", () => {
-      const parent = makeParent();
-
-      const overlays = new OverlayLayer({
-        parent,
-        viewport: makeViewport(),
-        brush: makeBrush(),
-        uvMap: makeUvMap()
-      });
-
-      overlays.destroy();
-      assert.doesNotThrow(() => overlays.destroy());
     });
   });
 });

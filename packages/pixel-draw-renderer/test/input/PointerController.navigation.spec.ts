@@ -8,9 +8,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PointerController } from "#src/input/PointerController.ts";
-import { Viewport } from "#src/rendering/Viewport.ts";
+import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
+import { makeCenteredViewport } from "../helpers/input/pointer.ts";
 import { wheel } from "../helpers/events.ts";
 
 describe("PointerController navigation", () => {
@@ -19,22 +20,17 @@ describe("PointerController navigation", () => {
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({
-      textureSize: { x: 16, y: 16 },
-      zoom: 4
-    });
-    viewport.updateCanvasSize(200, 200);
-    viewport.centerTexture();
+    viewport = makeCenteredViewport();
   });
 
   describe("primary-drag pan (navigation mode)", () => {
-    test("left-drag pans instead of drawing when shouldPanOnPrimary returns true", () => {
-      const { actions, calls } = makeActions();
+    test("left-drag pans the viewport instead of drawing when the actions pan on primary", (t) => {
+      const applyPan = t.mock.method(viewport, "applyPan");
+      const { actions, calls } = makeActions({ pansOnPrimary: true });
       const ctrl = new PointerController({
         canvas,
         viewport,
-        actions,
-        shouldPanOnPrimary: () => true
+        actions
       });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -52,14 +48,17 @@ describe("PointerController navigation", () => {
       }));
       window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-      assert.strictEqual(calls.onPrimaryDown.length, 0);
-      assert.strictEqual(calls.onPanStart.length, 1);
-      assert.deepStrictEqual(calls.onPanMove, [[30, 18]]);
-      assert.strictEqual(calls.onPanEnd.length, 1);
+      assert.strictEqual(calls.onPointerDown.length, 0);
+      assert.strictEqual(calls.onPanStart, 1);
+      assert.deepStrictEqual(
+        applyPan.mock.calls.map((call) => call.arguments),
+        [[30, 18]]
+      );
+      assert.strictEqual(calls.onPanEnd, 1);
       ctrl.destroy();
     });
 
-    test("left-drag draws when shouldPanOnPrimary returns false (default)", () => {
+    test("left-drag draws at the resolved texture position otherwise", () => {
       const { actions, calls } = makeActions();
       const ctrl = new PointerController({
         canvas,
@@ -75,19 +74,18 @@ describe("PointerController navigation", () => {
         bubbles: true
       }));
 
-      assert.strictEqual(calls.onPrimaryDown.length, 1);
-      assert.strictEqual(calls.onPanStart.length, 0);
+      assert.deepStrictEqual(calls.onPointerDown, [["primary", 8, 8, false]]);
+      assert.strictEqual(calls.onPanStart, 0);
       ctrl.destroy();
     });
   });
 
   test("window blur ends a primary-drag pan", () => {
-    const { actions, calls } = makeActions();
+    const { actions, calls } = makeActions({ pansOnPrimary: true });
     const ctrl = new PointerController({
       canvas,
       viewport,
-      actions,
-      shouldPanOnPrimary: () => true
+      actions
     });
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -99,13 +97,14 @@ describe("PointerController navigation", () => {
     }));
     window.dispatchEvent(new Event("blur"));
 
-    assert.strictEqual(calls.onPanEnd.length, 1);
-    assert.strictEqual(calls.onBlur.length, 1);
+    assert.strictEqual(calls.onPanEnd, 1);
+    assert.strictEqual(calls.onBlur, 1);
     ctrl.destroy();
   });
 
   describe("wheel zoom", () => {
-    test("pixel-mode wheel passes deltaY straight through to onZoom", () => {
+    test("pixel-mode wheel zooms the viewport by deltaY, then reports the hover", (t) => {
+      const applyZoom = t.mock.method(viewport, "applyZoom");
       const { actions, calls } = makeActions();
       const ctrl = new PointerController({
         canvas,
@@ -115,13 +114,15 @@ describe("PointerController navigation", () => {
 
       canvas.dispatchEvent(wheel({ deltaY: 100 }));
 
-      assert.strictEqual(calls.onZoom.length, 1);
-      assert.strictEqual(calls.onZoom[0][0], 100);
+      assert.strictEqual(applyZoom.mock.callCount(), 1);
+      assert.strictEqual(applyZoom.mock.calls[0].arguments[0], 100);
+      assert.strictEqual(calls.onHover.length, 1);
       ctrl.destroy();
     });
 
-    test("line-mode wheel is normalized to an approximate pixel delta", () => {
-      const { actions, calls } = makeActions();
+    test("line-mode wheel is normalized to an approximate pixel delta", (t) => {
+      const applyZoom = t.mock.method(viewport, "applyZoom");
+      const { actions } = makeActions();
       const ctrl = new PointerController({
         canvas,
         viewport,
@@ -130,11 +131,12 @@ describe("PointerController navigation", () => {
 
       canvas.dispatchEvent(wheel({ deltaY: 3, deltaMode: 1 }));
 
-      assert.strictEqual(calls.onZoom[0][0], 48);
+      assert.strictEqual(applyZoom.mock.calls[0].arguments[0], 48);
       ctrl.destroy();
     });
 
-    test("ctrl+wheel drives zoom when it is not otherwise handled", () => {
+    test("ctrl+wheel zooms when the actions do not handle it", (t) => {
+      const applyZoom = t.mock.method(viewport, "applyZoom");
       const { actions, calls } = makeActions();
       const ctrl = new PointerController({
         canvas,
@@ -145,25 +147,26 @@ describe("PointerController navigation", () => {
       const event = wheel({ deltaY: -8, ctrlKey: true });
       canvas.dispatchEvent(event);
 
-      assert.strictEqual(calls.onZoom.length, 1);
-      assert.strictEqual(calls.onZoom[0][0], -8);
+      assert.deepStrictEqual(calls.onCtrlWheel, [-8]);
+      assert.strictEqual(applyZoom.mock.callCount(), 1);
+      assert.strictEqual(applyZoom.mock.calls[0].arguments[0], -8);
       assert.ok(event.defaultPrevented);
       ctrl.destroy();
     });
 
-    test("a handled ctrl+wheel suppresses zoom and the browser default", () => {
-      const { actions, calls } = makeActions();
+    test("a handled ctrl+wheel suppresses zoom and the browser default", (t) => {
+      const applyZoom = t.mock.method(viewport, "applyZoom");
+      const { actions } = makeActions({ handlesCtrlWheel: true });
       const ctrl = new PointerController({
         canvas,
         viewport,
-        actions,
-        onCtrlWheel: () => true
+        actions
       });
 
       const event = wheel({ deltaY: -8, ctrlKey: true });
       canvas.dispatchEvent(event);
 
-      assert.strictEqual(calls.onZoom.length, 0);
+      assert.strictEqual(applyZoom.mock.callCount(), 0);
       assert.ok(event.defaultPrevented);
       ctrl.destroy();
     });

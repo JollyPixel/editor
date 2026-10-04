@@ -56,7 +56,7 @@ export class TilesetTab {
       color: peerProfileColor
     });
     this.#uvBridge = new BlockUvBridge(canvas.uv, view, {
-      runLocalRestore: (fn) => canvas.runLocalRestore(fn),
+      runLocalRestore: (fn) => canvas.document.runLocalRestore(fn),
       brush: options.brush,
       mapDocument: options.mapDocument,
       blocks: options.blocks

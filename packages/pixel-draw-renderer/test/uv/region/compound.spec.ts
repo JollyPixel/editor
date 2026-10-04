@@ -6,12 +6,10 @@ import assert from "node:assert/strict";
 import {
   copyGeometry,
   geometryAt,
-  partsOf,
   pointInGeometry,
   rectOf,
   triangleCornerOf
 } from "../../../src/uv/geometry/geometry.ts";
-import { UVSlotMap } from "../../../src/uv/region/UVSlotMap.ts";
 import { UVRegion } from "../../../src/uv/region/UVRegion.ts";
 import type {
   UVCompound,
@@ -49,13 +47,6 @@ describe("compound geometry", () => {
     );
   });
 
-  test("rejects a point outside the bounds", () => {
-    assert.equal(
-      pointInGeometry({ x: 40, y: 2 }, kStairSide),
-      false
-    );
-  });
-
   test("scales its parts with new bounds, keeping the notch proportional", () => {
     const moved = geometryAt(
       kStairSide,
@@ -68,7 +59,7 @@ describe("compound geometry", () => {
     assert.equal(pointInGeometry({ x: 36, y: 60 }, moved), true);
   });
 
-  test("round-trips through toJSON without sharing part objects", () => {
+  test("copyGeometry copies a compound without sharing part objects", () => {
     const copy = copyGeometry(kStairSide) as UVCompound;
 
     assert.deepStrictEqual(copy, kStairSide);
@@ -109,55 +100,6 @@ describe("geometry helpers", () => {
       "bottom-left"
     );
   });
-
-  test("partsOf places each part in the geometry's own space", () => {
-    assert.deepStrictEqual(partsOf(kStairSide), [
-      { x: 0, y: 8, width: 16, height: 8 },
-      { x: 8, y: 0, width: 8, height: 8 }
-    ]);
-  });
-
-  test("partsOf yields a non-compound geometry unchanged", () => {
-    const rect = { x: 1, y: 2, width: 3, height: 4 };
-
-    assert.deepStrictEqual(partsOf(rect), [rect]);
-  });
-});
-
-describe("UVSlotMap — open slot list", () => {
-  test("carries the slots it was given, in order", () => {
-    const map = new UVSlotMap({
-      top: { x: 0, y: 0, width: 1, height: 1 },
-      "top.1": { x: 2, y: 0, width: 1, height: 1 }
-    });
-
-    assert.deepStrictEqual(map.slots, ["top", "top.1"]);
-    assert.equal(map.has("top.1"), true);
-    assert.equal(map.has("bottom"), false);
-  });
-
-  test("rejects an unknown slot", () => {
-    const map = new UVSlotMap({
-      top: { x: 5, y: 0, width: 1, height: 1 }
-    });
-
-    assert.throws(() => map.get("nope"), RangeError);
-  });
-
-  test("translating keeps every slot", () => {
-    const map = new UVSlotMap({
-      top: { x: 0, y: 0, width: 1, height: 1 },
-      "top.1": { x: 2, y: 0, width: 1, height: 1 }
-    }).translated(10, 0);
-
-    assert.deepStrictEqual(map.slots, ["top", "top.1"]);
-    assert.deepStrictEqual(map.get("top.1"), {
-      x: 12,
-      y: 0,
-      width: 1,
-      height: 1
-    });
-  });
 });
 
 describe("UVRegion — a shape's own slots", () => {
@@ -167,7 +109,7 @@ describe("UVRegion — a shape's own slots", () => {
     "top.1": { x: 0, y: 0, width: 16, height: 16 }
   };
 
-  test("keeps eight-slot topology through facesOf", () => {
+  test("slotsOf carries the three slots it was given, in order", () => {
     const region = new UVRegion({
       id: "block-1",
       color: "#fff",
@@ -180,6 +122,7 @@ describe("UVRegion — a shape's own slots", () => {
       ["right", "top", "top.1"]
     );
     assert.deepStrictEqual(region.slots, ["right", "top", "top.1"]);
+    assert.throws(() => region.geometryFor("bottom"), RangeError);
   });
 
   test("stack skips a compound when picking the face to stack onto", () => {

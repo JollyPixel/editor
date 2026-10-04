@@ -1,5 +1,7 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
+import type { PointerPosition } from "../InputActions.ts";
+import type { BrushColorSlot } from "../../tools/Brush.ts";
 import type { UVController } from "../../tools/uv/UVController.ts";
 import type {
   Mode,
@@ -44,24 +46,34 @@ export class UVMode extends InteractionMode {
     this.#uv.alignEdges(held);
   }
 
-  onPrimaryDown(
-    _pos: Vec2,
-    canvasPos: Vec2
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition
   ): boolean {
-    this.#uv.handleStart(canvasPos);
+    if (slot !== "primary") {
+      return false;
+    }
+
+    this.#uv.handleStart(position.canvas);
 
     return true;
   }
 
-  onPrimaryMove(
-    _pos: Vec2,
-    canvasPos: Vec2
+  onPointerMove(
+    slot: BrushColorSlot,
+    position: PointerPosition
   ): void {
-    this.#uv.handleMove(canvasPos);
+    if (slot === "primary") {
+      this.#uv.handleMove(position.canvas);
+    }
   }
 
-  onPrimaryUp(): void {
-    this.#uv.handleEnd();
+  onPointerUp(
+    slot: BrushColorSlot
+  ): void {
+    if (slot === "primary") {
+      this.#uv.handleEnd();
+    }
   }
 
   onDelete(): boolean {

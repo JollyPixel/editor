@@ -1,22 +1,19 @@
 // Import Internal Dependencies
 import { createCanvas2D } from "../Canvas2D.ts";
-import type { RGBA8, SelectionRect } from "../../types.ts";
+import type {
+  RGBA8,
+  SelectionRect
+} from "../../types.ts";
 
-/**
- * Rect-sized canvas filled with `color` only where `mask` is true.
- * Used for masked erase fill and destination-out stencils.
- * Shared by FloatingSelection and PeerFloatingSelections.
- */
 export function buildMaskedFillCanvas(
   rect: SelectionRect,
-  mask: boolean[],
+  mask: readonly boolean[],
   color: RGBA8
 ): HTMLCanvasElement {
   const {
     canvas,
     context: ctx
   } = createCanvas2D(rect.width, rect.height);
-  ctx.imageSmoothingEnabled = false;
 
   const imageData = ctx.createImageData(
     rect.width,
@@ -37,19 +34,15 @@ export function buildMaskedFillCanvas(
   return canvas;
 }
 
-/**
- * Rect-sized canvas from row-major `pixels`, alpha zeroed outside `mask`.
- */
 export function buildMaskedContentCanvas(
   rect: SelectionRect,
-  pixels: RGBA8[],
-  mask: boolean[]
+  pixels: readonly RGBA8[],
+  mask: readonly boolean[]
 ): HTMLCanvasElement {
   const {
     canvas,
     context: ctx
   } = createCanvas2D(rect.width, rect.height);
-  ctx.imageSmoothingEnabled = false;
 
   const imageData = ctx.createImageData(
     rect.width,

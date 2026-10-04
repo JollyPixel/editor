@@ -1,81 +1,23 @@
 // Import Node.js Dependencies
 import {
   describe,
-  test,
-  beforeEach
+  test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  PixelArtCanvas,
-  type PixelArtCanvasOptions
-} from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { readPixel } from "./fixtures/canvas.ts";
-import { makeContainer } from "./helpers/dom.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import {
   paintHorizontalPair,
   selectHorizontalPair
 } from "./helpers/select.ts";
+import { createSelectCanvas } from "./helpers/select-canvas/manager.ts";
 
 describe("PixelArtCanvas — select mode rotate/flip", () => {
-  let container: HTMLDivElement;
-
-  beforeEach(() => {
-    ({ container } = makeContainer());
-  });
-
-  /*
-   * 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
-   * client 84 + n*4 -> texture n, exactly (chosen to land on pixel starts,
-   * no floor-rounding ambiguity).
-   */
-
-  function makeManager(
-    options: PixelArtCanvasOptions = {}
-  ): PixelArtCanvas {
-    return new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      zoom: { default: 4 },
-      ...options
-    });
-  }
-
-  test("rotating clockwise turns a non-square selection 90deg clockwise around its center", () => {
-    const manager = makeManager();
-    const canvas = manager.canvas();
-
-    paintHorizontalPair(manager);
-    manager.mode = "select";
-    selectHorizontalPair(canvas);
-
-    manager.shortcuts.rotate("cw");
-
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8),
-      [255, 255, 255, 255],
-      "old footprint vacated with the dominant (white) surrounding color"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 3, y: 2 }, 8),
-      [0, 0, 0, 255],
-      "rotated: the left pixel is now on top"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 3, y: 3 }, 8),
-      [255, 0, 0, 255],
-      "rotated: the right pixel is now on the bottom"
-    );
-    manager.destroy();
-  });
-
   test("rotating counter-clockwise turns a selection 90deg counter-clockwise", () => {
-    const manager = makeManager();
+    const manager = createSelectCanvas();
     const canvas = manager.canvas();
 
     paintHorizontalPair(manager);
@@ -97,31 +39,8 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("flipHorizontal() mirrors the active selection's content left-right in place", () => {
-    const manager = makeManager();
-    const canvas = manager.canvas();
-
-    paintHorizontalPair(manager);
-    manager.mode = "select";
-    selectHorizontalPair(canvas);
-
-    manager.shortcuts.flipHorizontal();
-
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 2, y: 2 }, 8),
-      [255, 0, 0, 255],
-      "mirrored: red is now on the left"
-    );
-    assert.deepStrictEqual(
-      readPixel(manager.texture, { x: 3, y: 2 }, 8),
-      [0, 0, 0, 255],
-      "mirrored: black is now on the right"
-    );
-    manager.destroy();
-  });
-
   test("flipVertical() mirrors the active selection's content top-bottom in place", () => {
-    const manager = makeManager();
+    const manager = createSelectCanvas();
     const canvas = manager.canvas();
 
     manager.brush.primary.set("#000000");
@@ -151,22 +70,8 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test("rotate and flip shortcuts are no-ops without an active selection", () => {
-    const manager = makeManager();
-    const before = manager.texture.slice();
-
-    assert.doesNotThrow(() => {
-      manager.shortcuts.rotate("cw");
-      manager.shortcuts.flipHorizontal();
-      manager.shortcuts.flipVertical();
-    });
-
-    assert.deepStrictEqual(manager.texture, before);
-    manager.destroy();
-  });
-
   test("tools.select rotate/flip mirror the shortcuts, and no-op safely without a selection", () => {
-    const manager = makeManager();
+    const manager = createSelectCanvas();
     const canvas = manager.canvas();
 
     assert.ok(!manager.tools.select.rotate(), "no selection yet");
@@ -191,36 +96,183 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
     manager.destroy();
   });
 
-  test(
-    "rotate/flip fire onDrawEnd and a 'select-edit' onBufferUpdated each, same as move/delete/paste",
-    () => {
-      let drawEndCount = 0;
-      const events: PixelBufferHookEvent[] = [];
-      const manager = makeManager({
-        onDrawEnd: () => {
-          drawEndCount++;
-        },
-        onBufferUpdated: (event) => events.push(event)
+  test("rotate, flip and delete each fire onDrawEnd and a 'select-edit' onBufferUpdated", () => {
+    let drawEndCount = 0;
+    const events: PixelCommand[] = [];
+    const manager = createSelectCanvas({
+      onDrawEnd: () => {
+        drawEndCount++;
+      },
+      onCommand: (event) => events.push(event)
+    });
+    const canvas = manager.canvas();
+
+    paintHorizontalPair(manager);
+    drawEndCount = 0;
+    events.length = 0;
+
+    manager.mode = "select";
+    selectHorizontalPair(canvas);
+
+    manager.shortcuts.rotate("cw");
+    manager.shortcuts.flipHorizontal();
+    manager.shortcuts.flipVertical();
+    manager.shortcuts.delete();
+
+    assert.strictEqual(drawEndCount, 4);
+    assert.strictEqual(events.length, 4);
+    for (const event of events) {
+      assert.strictEqual(event.action, "select-edit");
+    }
+    manager.destroy();
+  });
+
+  describe("undo/redo", () => {
+    test("undo/redo covers a clockwise Rotate around the selection's center", () => {
+      const manager = createSelectCanvas({
+        history: { enabled: true }
       });
       const canvas = manager.canvas();
 
       paintHorizontalPair(manager);
-      drawEndCount = 0;
-      events.length = 0;
-
       manager.mode = "select";
       selectHorizontalPair(canvas);
 
       manager.shortcuts.rotate("cw");
-      manager.shortcuts.flipHorizontal();
-      manager.shortcuts.flipVertical();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 255, 255, 255],
+        "old footprint vacated with the dominant (white) surrounding color"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [0, 0, 0, 255],
+        "rotated: the left pixel is now on top"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 3 }, 8),
+        [255, 0, 0, 255],
+        "rotated: the right pixel is now on the bottom"
+      );
 
-      assert.strictEqual(drawEndCount, 3);
-      assert.strictEqual(events.length, 3);
-      for (const event of events) {
-        assert.strictEqual(event.action, "select-edit");
-      }
+      manager.shortcuts.undo();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [0, 0, 0, 255],
+        "undo restores the pre-rotate layout"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [255, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 3 }, 8),
+        [255, 255, 255, 255]
+      );
+
+      manager.shortcuts.redo();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 255, 255, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [0, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 3 }, 8),
+        [255, 0, 0, 255]
+      );
       manager.destroy();
-    }
-  );
+    });
+
+    test("undoing a Rotate resyncs the selection box, so a follow-up rotate doesn't corrupt pixels", () => {
+      const manager = createSelectCanvas({
+        history: { enabled: true }
+      });
+      const canvas = manager.canvas();
+
+      paintHorizontalPair(manager);
+      manager.mode = "select";
+      selectHorizontalPair(canvas);
+
+      manager.shortcuts.rotate("cw");
+      manager.shortcuts.undo();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [0, 0, 0, 255],
+        "sanity: undo restored the pre-rotate layout"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [255, 0, 0, 255]
+      );
+
+      manager.shortcuts.rotate("cw");
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 255, 255, 255],
+        "the real pre-rotate footprint got erased with the dominant (white) surrounding color"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [0, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 3 }, 8),
+        [255, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 4, y: 3 }, 8),
+        [255, 255, 255, 255],
+        "a pixel outside the stale post-rotate footprint must stay untouched"
+      );
+      manager.destroy();
+    });
+
+    test("undo/redo covers a horizontal Flip in place", () => {
+      const manager = createSelectCanvas({
+        history: { enabled: true }
+      });
+      const canvas = manager.canvas();
+
+      paintHorizontalPair(manager);
+      manager.mode = "select";
+      selectHorizontalPair(canvas);
+
+      manager.shortcuts.flipHorizontal();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 0, 0, 255],
+        "mirrored: red is now on the left"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [0, 0, 0, 255],
+        "mirrored: black is now on the right"
+      );
+
+      manager.shortcuts.undo();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [0, 0, 0, 255],
+        "undo restores the pre-flip layout"
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [255, 0, 0, 255]
+      );
+
+      manager.shortcuts.redo();
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 2, y: 2 }, 8),
+        [255, 0, 0, 255]
+      );
+      assert.deepStrictEqual(
+        readPixel(manager.texture, { x: 3, y: 2 }, 8),
+        [0, 0, 0, 255]
+      );
+      manager.destroy();
+    });
+  });
 });

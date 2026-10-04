@@ -1,44 +1,35 @@
 // Import Node.js Dependencies
 import {
   describe,
-  test,
-  beforeEach
+  test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
+import type {
   PixelArtCanvas,
-  type PixelArtCanvasOptions
+  PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
-import { makeContainer } from "./helpers/dom.ts";
+import {
+  createPixelArtCanvas,
+  type CreatedPixelArtCanvas
+} from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — selection size label", () => {
-  let container: HTMLDivElement;
-  // Appended in order: the interactive canvas, then the SVG overlay.
-  let appended: HTMLCanvasElement[];
-
-  beforeEach(() => {
-    ({ container, children: appended } = makeContainer());
-  });
-
-  // 200x200 container, 8x8 texture, zoom 4 -> centered camera (84, 84).
   function makeManager(
     options: PixelArtCanvasOptions = {}
-  ): PixelArtCanvas {
-    return new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
+  ): CreatedPixelArtCanvas {
+    return createPixelArtCanvas({
       zoom: { default: 4 },
       ...options
     });
   }
 
-  function sizeLabel(): Element | null {
-    return appended[1].querySelector(
+  function sizeLabel(
+    overlay: SVGSVGElement
+  ): Element | null {
+    return overlay.querySelector(
       "[data-overlay='selection-size']"
     );
   }
@@ -49,7 +40,6 @@ describe("PixelArtCanvas — selection size label", () => {
     const canvas = manager.canvas();
 
     manager.mode = "select";
-    // client 92..100 -> texture (2,2)..(4,4), a 3x3 selection.
     canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
     canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
     canvas.dispatchEvent(
@@ -58,34 +48,33 @@ describe("PixelArtCanvas — selection size label", () => {
   }
 
   test("a dragged selection shows its size, and deselecting hides it", () => {
-    const manager = makeManager();
+    const { manager, overlay } = makeManager();
 
     dragSelection(manager);
 
-    assert.strictEqual(sizeLabel()?.textContent, "3×3");
+    assert.strictEqual(sizeLabel(overlay)?.textContent, "3×3");
     assert.strictEqual(
-      sizeLabel()?.getAttribute("visibility"),
+      sizeLabel(overlay)?.getAttribute("visibility"),
       "visible"
     );
 
-    // Leaving select mode deselects.
     manager.mode = "paint";
 
     assert.strictEqual(
-      sizeLabel()?.getAttribute("visibility"),
+      sizeLabel(overlay)?.getAttribute("visibility"),
       "hidden"
     );
     manager.destroy();
   });
 
   test("select.sizeLabel: false renders no label", () => {
-    const manager = makeManager({
+    const { manager, overlay } = makeManager({
       select: { sizeLabel: false }
     });
 
     dragSelection(manager);
 
-    assert.strictEqual(sizeLabel(), null);
+    assert.strictEqual(sizeLabel(overlay), null);
     manager.destroy();
   });
 });

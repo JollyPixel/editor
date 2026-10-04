@@ -3,7 +3,8 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import {
   createPixelArtDocument,
   createPixelBufferFromPng,
-  serializePixelBuffer,
+  PixelDocumentState,
+  serializePixelDocument,
   type PixelArtDocumentData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -127,7 +128,7 @@ export async function tilesetDocumentFromPng(
 
   return createTilesetDocument({
     tileSize,
-    pixels: serializePixelBuffer(buffer),
+    pixels: serializePixelDocument(new PixelDocumentState({ buffer })),
     blocks: blocksFromTileset(
       {
         cols: Math.floor(size.x / tileSize),

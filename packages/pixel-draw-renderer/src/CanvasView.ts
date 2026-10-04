@@ -16,12 +16,11 @@ import {
   Viewport
 } from "./rendering/Viewport.ts";
 import { NormalMapImage } from "./rendering/NormalMapImage.ts";
+import type { SelectionEraseColor } from "./selection/SelectionEraseColor.ts";
 import type { ZoomOptions } from "./rendering/Zoom.ts";
-import { clamp } from "./utils/math.ts";
 import type {
   BrushHighlight,
   ByteColorInput,
-  RGBA8,
   TextureView,
   Vec2
 } from "./types.ts";
@@ -35,7 +34,7 @@ export interface CanvasViewOptions {
     squareSize: number;
   };
   brushHighlight: BrushHighlight;
-  eraseColor?: RGBA8 | null;
+  eraseColor?: SelectionEraseColor;
   selectionSizeLabel?: boolean;
 }
 
@@ -80,11 +79,9 @@ export class CanvasView {
     const { parent } = options;
     const textureSize = doc.size();
 
-    const initialBounds = parent.getBoundingClientRect();
-    const zoomDefault = options.zoom?.default ?? CanvasView.#computeFitZoom(
-      initialBounds,
-      textureSize,
-      { min: options.zoom?.min, max: options.zoom?.max }
+    const zoomDefault = options.zoom?.default ?? CanvasView.#fitZoom(
+      parent.getBoundingClientRect(),
+      textureSize
     );
 
     this.viewport = new Viewport({
@@ -139,18 +136,6 @@ export class CanvasView {
     doc.on("changed", this.#onRenderStateChanged);
     doc.on("resized", this.#onTextureSizeChanged);
     doc.on("replaced", this.#onTextureSizeChanged);
-    this.renderer.floatingSelection.on(
-      "changed",
-      this.#onRenderStateChanged
-    );
-    this.renderer.peerStrokes.on(
-      "changed",
-      this.#onRenderStateChanged
-    );
-    this.renderer.peerFloatingSelections.on(
-      "changed",
-      this.#onRenderStateChanged
-    );
   }
 
   get backgroundColor(): string {
@@ -194,10 +179,6 @@ export class CanvasView {
     }
   }
 
-  drawFrame(): void {
-    this.renderer.drawFrame();
-  }
-
   refresh(): void {
     this.renderer.drawFrame();
     this.overlays.refresh();
@@ -236,25 +217,10 @@ export class CanvasView {
     );
     this.#doc.off("resized", this.#onTextureSizeChanged);
     this.#doc.off("replaced", this.#onTextureSizeChanged);
-    this.renderer.floatingSelection.off(
-      "changed",
-      this.#onRenderStateChanged
-    );
-    this.renderer.peerStrokes.off(
-      "changed",
-      this.#onRenderStateChanged
-    );
-    this.renderer.peerFloatingSelections.off(
-      "changed",
-      this.#onRenderStateChanged
-    );
 
     this.#disposeNormalImage();
 
-    const rendererCanvas = this.renderer.canvas();
-    if (rendererCanvas.parentElement) {
-      rendererCanvas.remove();
-    }
+    this.renderer.destroy();
     this.peerPresence.destroy();
     this.overlays.destroy();
   }
@@ -272,25 +238,19 @@ export class CanvasView {
     this.#normalImage = null;
   }
 
-  static #computeFitZoom(
-    containerSize: { width: number; height: number; },
-    textureSize: Vec2,
-    zoomBounds: { min?: number; max?: number; }
-  ): number {
-    const zoomMin = zoomBounds.min ?? 1;
-    const zoomMax = zoomBounds.max ?? 32;
-
-    if (containerSize.width <= 0 || containerSize.height <= 0) {
-      return clamp(4, zoomMin, zoomMax);
+  static #fitZoom(
+    container: { width: number; height: number; },
+    textureSize: Vec2
+  ): number | undefined {
+    if (container.width <= 0 || container.height <= 0) {
+      return undefined;
     }
 
     const kFitPadding = 0.9;
-    const fit = Math.min(
-      containerSize.width / textureSize.x,
-      containerSize.height / textureSize.y
-    ) * kFitPadding;
 
-    return clamp(Math.floor(fit), zoomMin, zoomMax);
+    return Math.floor(
+      Math.min(container.width / textureSize.x, container.height / textureSize.y) * kFitPadding
+    );
   }
 }
 

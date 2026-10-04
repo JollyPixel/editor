@@ -18,15 +18,14 @@ const kRed = {
 };
 
 describe("CanvasView", () => {
-  test("destroy() unsubscribes every repaint source", () => {
+  test("destroy() unsubscribes every repaint source and detaches the canvas", () => {
     const doc = new PixelDocument({
       size: { x: 2, y: 2 }
     });
-    const { container } = makeContainer();
+    const container = makeContainer();
     const view = new CanvasView(doc, {
       parent: container,
       brushHighlight: {
-        size: 1,
         colorInline: "#fff",
         colorOutline: "#000"
       }
@@ -49,7 +48,10 @@ describe("CanvasView", () => {
       mask: [true],
       blankSource: true
     });
-    assert.strictEqual(drawCount, 4);
+    doc.buffer.resize({ x: 3, y: 3 });
+    doc.buffer.replacePixels(new Uint8ClampedArray(2 * 2 * 4), { x: 2, y: 2 });
+    assert.strictEqual(drawCount, 6);
+    assert.strictEqual(view.canvas().parentElement, container);
 
     view.destroy();
 
@@ -62,6 +64,9 @@ describe("CanvasView", () => {
       mask: [true],
       blankSource: true
     });
-    assert.strictEqual(drawCount, 4);
+    doc.buffer.resize({ x: 4, y: 4 });
+    doc.buffer.replacePixels(new Uint8ClampedArray(3 * 3 * 4), { x: 3, y: 3 });
+    assert.strictEqual(drawCount, 6);
+    assert.strictEqual(view.canvas().parentElement, null);
   });
 });

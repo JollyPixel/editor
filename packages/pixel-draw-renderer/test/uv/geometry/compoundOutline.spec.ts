@@ -7,20 +7,13 @@ import { compoundOutline } from "../../../src/uv/geometry/compoundOutline.ts";
 import type { UVCompoundPart } from "../../../src/uv/geometry/types.ts";
 import type { Vec2 } from "../../../src/types.ts";
 
-/*
- * CONSTANTS
- * The two quads a stair emits for its side slot, an L open at the top left.
- */
-const kStairSide: readonly UVCompoundPart[] = [
+// CONSTANTS
+const kStairSideOpenAtTopLeft: readonly UVCompoundPart[] = [
   { x: 0, y: 0.5, width: 1, height: 0.5 },
   { x: 0.5, y: 0, width: 0.5, height: 0.5 }
 ];
 
-/**
- * Rotates a loop so it starts at its lowest key, making a comparison
- * independent of where the walk began.
- */
-function normalize(
+function startAtLowestPoint(
   loop: readonly Vec2[]
 ): Vec2[] {
   const keys = loop.map((point) => `${point.x},${point.y}`);
@@ -36,12 +29,12 @@ function normalize(
 
 describe("compoundOutline", () => {
   test("drops the edge two rectangles share, leaving one L loop", () => {
-    const loops = compoundOutline(kStairSide);
+    const loops = compoundOutline(kStairSideOpenAtTopLeft);
 
     assert.ok(loops, "the parts stitch into loops");
     assert.strictEqual(loops.length, 1);
     assert.deepStrictEqual(
-      normalize(loops[0]),
+      startAtLowestPoint(loops[0]),
       [
         { x: 0, y: 0.5 },
         { x: 0.5, y: 0.5 },
@@ -70,7 +63,7 @@ describe("compoundOutline", () => {
     assert.ok(loops, "the parts stitch into loops");
     assert.strictEqual(loops.length, 1);
     assert.deepStrictEqual(
-      normalize(loops[0]),
+      startAtLowestPoint(loops[0]),
       [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
@@ -90,7 +83,7 @@ describe("compoundOutline", () => {
     assert.ok(loops, "the parts stitch into loops");
     assert.strictEqual(loops.length, 1);
     assert.deepStrictEqual(
-      normalize(loops[0]),
+      startAtLowestPoint(loops[0]),
       [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
@@ -115,7 +108,7 @@ describe("compoundOutline", () => {
     assert.ok(loops, "the parts stitch into loops");
     assert.strictEqual(loops.length, 1);
     assert.deepStrictEqual(
-      normalize(loops[0]),
+      startAtLowestPoint(loops[0]),
       [
         { x: 0, y: 0 },
         { x: 1, y: 0.5 },
@@ -136,7 +129,7 @@ describe("compoundOutline", () => {
     assert.ok(loops, "the parts stitch into loops");
     assert.strictEqual(loops.length, 2);
 
-    const [outer, hole] = loops.map(normalize).sort(
+    const [outer, counterClockwiseHole] = loops.map(startAtLowestPoint).sort(
       (a, b) => a[0].x - b[0].x
     );
     assert.deepStrictEqual(outer, [
@@ -145,8 +138,7 @@ describe("compoundOutline", () => {
       { x: 1, y: 1 },
       { x: 0, y: 1 }
     ]);
-    // Counter-clockwise, so the nonzero fill rule reads it as a hole.
-    assert.deepStrictEqual(hole, [
+    assert.deepStrictEqual(counterClockwiseHole, [
       { x: 0.25, y: 0.25 },
       { x: 0.25, y: 0.75 },
       { x: 0.75, y: 0.75 },
@@ -176,7 +168,7 @@ describe("compoundOutline", () => {
 
     assert.ok(loops, "the parts stitch into loops");
     assert.deepStrictEqual(
-      loops.map(normalize),
+      loops.map(startAtLowestPoint),
       [
         [
           { x: 0, y: 0 },

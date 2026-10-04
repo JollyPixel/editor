@@ -13,6 +13,7 @@ export class BrushHighlightView {
   #group: SVGGElement;
   #cursorX: number | null = null;
   #cursorY: number | null = null;
+  #size: () => number = () => 1;
 
   constructor(
     svg: SVGElement,
@@ -66,10 +67,12 @@ export class BrushHighlightView {
 
   update(
     x: number | null,
-    y: number | null
+    y: number | null,
+    size: () => number
   ): void {
     this.#cursorX = x;
     this.#cursorY = y;
+    this.#size = size;
     this.refresh();
   }
 
@@ -81,32 +84,15 @@ export class BrushHighlightView {
     }
 
     const zoom = this.#viewport.zoom.value;
-    const camera = this.#viewport.camera;
-    const brushSize = this.#brush.size;
+    const brushSize = this.#size();
     const highlightBrushSize = brushSize * zoom;
+    const texel = this.#viewport.toTexture({ x: this.#cursorX, y: this.#cursorY });
+    const cell = this.#viewport.toScreen({ x: Math.floor(texel.x), y: Math.floor(texel.y) });
+    const offset = (brushSize % 2 === 0 ? 0 : zoom / 2) - (highlightBrushSize / 2);
 
-    const offsetX = camera.x % zoom;
-    const offsetY = camera.y % zoom;
-
-    const gridedX = this.#cursorX - (this.#cursorX - offsetX) % zoom;
-    const gridedY = this.#cursorY - (this.#cursorY - offsetY) % zoom;
-
-    let translate = "translate";
-    if (brushSize % 2 === 0) {
-      const translateX = gridedX - highlightBrushSize / 2;
-      const translateY = gridedY - highlightBrushSize / 2;
-
-      translate += `(${translateX}, ${translateY})`;
-    }
-    else {
-      const translateX = gridedX - highlightBrushSize / 2 + zoom / 2;
-      const translateY = gridedY - highlightBrushSize / 2 + zoom / 2;
-
-      translate += `(${translateX}, ${translateY})`;
-    }
     this.#group.setAttribute(
       "transform",
-      `${translate} scale(${highlightBrushSize})`
+      `translate(${cell.x + offset}, ${cell.y + offset}) scale(${highlightBrushSize})`
     );
     this.#group.setAttribute("visibility", "visible");
   }

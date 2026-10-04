@@ -3,6 +3,7 @@ import type {
   SelectionRect,
   Vec2
 } from "../../types.ts";
+import type { ScreenProjection } from "../Viewport.ts";
 
 // CONSTANTS
 const kDirections: readonly Vec2[] = [
@@ -13,30 +14,30 @@ const kDirections: readonly Vec2[] = [
 ];
 const kTurnPreference: readonly number[] = [1, 0, 3, 2];
 
-export interface SelectionContourScreen {
-  zoom: number;
-  camera: Vec2;
-}
-
-export function selectionContourPath(
-  loop: Vec2[],
+export function selectionOutlinePath(
   rect: SelectionRect,
-  screen: SelectionContourScreen
+  mask: readonly boolean[] | null,
+  view: ScreenProjection
 ): string {
-  function toScreenPoint(point: Vec2): string {
-    const x = (rect.x + point.x) * screen.zoom + screen.camera.x;
-    const y = (rect.y + point.y) * screen.zoom + screen.camera.y;
+  const loops = mask === null || mask.every(Boolean) ?
+    [[{ x: 0, y: 0 }, { x: rect.width, y: 0 }, { x: rect.width, y: rect.height }, { x: 0, y: rect.height }]] :
+    traceSelectionContour(rect.width, rect.height, mask);
 
-    return `${x} ${y}`;
-  }
+  return loops.map((loop) => {
+    const points = loop.map((point) => {
+      const { x, y } = view.toScreen({ x: rect.x + point.x, y: rect.y + point.y });
 
-  return `M ${loop.map(toScreenPoint).join(" L ")} Z`;
+      return `${x} ${y}`;
+    });
+
+    return `M ${points.join(" L ")} Z`;
+  }).join(" ");
 }
 
 export function traceSelectionContour(
   width: number,
   height: number,
-  mask: boolean[]
+  mask: readonly boolean[]
 ): Vec2[][] {
   const edges = collectBoundaryEdges(width, height, mask);
   const loops: Vec2[][] = [];
@@ -65,7 +66,7 @@ function edgeKey(
 function collectBoundaryEdges(
   width: number,
   height: number,
-  mask: boolean[]
+  mask: readonly boolean[]
 ): Set<string> {
   function isSelected(
     x: number,

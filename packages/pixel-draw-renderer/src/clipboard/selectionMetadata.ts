@@ -1,11 +1,16 @@
 // Import Third-party Dependencies
 import {
+  imageDataToPixels,
+  pixelsToImageData
+} from "@jolly-pixel/color";
+import {
   fromUint8Array,
   isValid,
   toUint8Array
 } from "js-base64";
 
 // Import Internal Dependencies
+import { filledArray } from "../utils/array.ts";
 import type {
   DecodedRasterImage,
   SelectionClipboardMetadataV1,
@@ -52,19 +57,10 @@ function encodeMask(
 function encodePixels(
   pixels: RGBA8[]
 ): string {
-  const bytes = new Uint8Array(
-    pixels.length * 4
-  );
+  const bytes = new Uint8ClampedArray(pixels.length * 4);
+  pixelsToImageData(pixels, bytes);
 
-  for (let i = 0; i < pixels.length; i++) {
-    const offset = i * 4;
-    bytes[offset] = pixels[i].r;
-    bytes[offset + 1] = pixels[i].g;
-    bytes[offset + 2] = pixels[i].b;
-    bytes[offset + 3] = pixels[i].a;
-  }
-
-  return fromUint8Array(bytes);
+  return fromUint8Array(new Uint8Array(bytes.buffer));
 }
 
 function decodeBase64(
@@ -122,7 +118,7 @@ function decodeMask(
 
   const mask = value as Record<string, unknown>;
   if (mask.encoding === "full") {
-    return new Array(length).fill(true);
+    return filledArray(length, true);
   }
   if (mask.encoding !== "bitset") {
     return null;
@@ -136,7 +132,7 @@ function decodeMask(
     return null;
   }
 
-  const result = new Array<boolean>(length);
+  const result: boolean[] = [];
   for (let i = 0; i < length; i++) {
     result[i] = (bytes[Math.floor(i / 8)] & (1 << (i % 8))) !== 0;
   }
@@ -160,18 +156,9 @@ function decodePixels(
     return null;
   }
 
-  const pixels = new Array<RGBA8>(length);
-  for (let i = 0; i < length; i++) {
-    const offset = i * 4;
-    pixels[i] = {
-      r: bytes[offset],
-      g: bytes[offset + 1],
-      b: bytes[offset + 2],
-      a: bytes[offset + 3]
-    };
-  }
-
-  return pixels;
+  return imageDataToPixels(
+    new Uint8ClampedArray(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  );
 }
 
 export function encodeSelectionMetadata(

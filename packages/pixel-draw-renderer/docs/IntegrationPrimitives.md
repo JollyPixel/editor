@@ -4,12 +4,15 @@ The package root exports the renderer-owned operations used by persistence and
 collaboration adapters. `@jolly-pixel/asset.pixel-art` uses these APIs without
 importing renderer source files.
 
-## Buffer command helpers
+## Commands
 
+[`PixelDocumentState`](./PixelDocumentState.md) applies [`PixelCommand`](./PixelCommand.md)s
+without a DOM, with the same code a `PixelDocument` runs for remote commands,
+undo and redo. `toDocumentCommand()` decodes a command's texture bytes before
+it is applied. `PixelBuffer.positionsOf()` returns the positions a
+`global-fill` repaints, for adapters that compute its conflict keys.
 `groupPositionsByColor()` converts parallel position and RGBA arrays into
-`ColorGroup` records. `applyColorGroups()` writes those records to a
-`PixelBuffer`. `Fill.matchAll()` returns every position matching an RGBA color;
-adapters use it to replay global-fill commands with the renderer's fill rules.
+`ColorGroup` records for `drawColorGroups()`.
 
 ## UV validation and conflict keys
 
@@ -31,7 +34,7 @@ or two `null` values.
 `PeerUVPreviewState`, and `PeerUVSelectionState` describe the values written
 through `PixelArtCanvas` peer presence overlays. They are type-only exports. A
 `PeerUVPreviewState` holds the peer's dragged `region`, the `face` it changes or
-`null` for the whole region, and the peer `color`.
+`null` for the whole region, and the peer `color`. The UV overlay draws it as a dashed border in place of that region's own border, above the stored borders.
 
 A `PeerUVSelectionState` holds the `regionId` a peer has selected and the peer
 `color`, written with `canvas.peerPresence.uvSelections.set(clientId, state)`.

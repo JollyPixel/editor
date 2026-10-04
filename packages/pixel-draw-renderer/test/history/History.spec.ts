@@ -10,166 +10,88 @@ import {
   History,
   type HistoryState
 } from "#src/history/History.ts";
-import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
-import { UVMap } from "#src/uv/map/UVMap.ts";
-import type { RGBA8 } from "#src/types.ts";
+import type { HistoryEdit } from "#src/history/HistoryEntry.ts";
 
 // CONSTANTS
-const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
-const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
-
-function makeBuffer(): PixelBuffer {
-  return new PixelBuffer({
-    size: { x: 4, y: 4 },
-    defaultColor: kWhite,
-    maxSize: 8
-  });
-}
-
-function makeUvMap(): UVMap {
-  return new UVMap({ getCanvasSize: () => {
-    return { x: 4, y: 4 };
-  } });
-}
+const kEdit: HistoryEdit = {
+  redo: [
+    {
+      action: "resized",
+      metadata: { size: { x: 2, y: 2 } }
+    }
+  ],
+  undo: [
+    {
+      action: "resized",
+      metadata: { size: { x: 1, y: 1 } }
+    }
+  ]
+};
 
 describe("History", () => {
   describe("disabled (default)", () => {
-    test("push/undo/redo are no-ops and canUndo/canRedo stay false", () => {
-      const controller = new History(
-        makeBuffer(),
-        makeUvMap()
-      );
-
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
+    test("push/undo/redo/clear are no-ops that never fire onChange or replay", () => {
+      const states: HistoryState[] = [];
+      const replayed: unknown[] = [];
+      const history = new History({
+        onChange: (state) => states.push(state)
       });
 
-      assert.ok(!controller.enabled);
-      assert.ok(!controller.canUndo);
-      assert.strictEqual(controller.undo(), null);
-      assert.ok(!controller.canRedo);
-      assert.strictEqual(controller.redo(), null);
+      history.push(kEdit);
+
+      assert.ok(!history.enabled);
+      assert.ok(!history.canUndo);
+      assert.strictEqual(history.undo((entry) => replayed.push(entry)), null);
+      assert.ok(!history.canRedo);
+      assert.strictEqual(history.redo((entry) => replayed.push(entry)), null);
+
+      history.clear();
+      assert.strictEqual(states.length, 0);
+      assert.strictEqual(replayed.length, 0);
     });
   });
 
-  describe("enabled", () => {
-    test("push records an entry that undo/redo replay against the buffer", () => {
-      const buffer = makeBuffer();
-      const controller = new History(
-        buffer,
-        makeUvMap(),
-        { enabled: true }
-      );
+  describe("push", () => {
+    test("stamps the edit with a timestamp", (t) => {
+      t.mock.timers.enable({ apis: ["Date"], now: 1234 });
+      const history = new History({ enabled: true });
 
-      buffer.drawPixels([{ x: 0, y: 0 }], kRed);
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
-      assert.ok(controller.canUndo);
+      history.push(kEdit);
 
-      const undone = controller.undo();
-      assert.strictEqual(undone?.action, "stroke");
       assert.deepStrictEqual(
-        buffer.samplePixel(0, 0),
-        [255, 255, 255, 255]
+        history.undo(() => undefined),
+        { ...kEdit, timestamp: 1234 }
       );
-      assert.ok(!controller.canUndo);
-      assert.ok(controller.canRedo);
-
-      const redone = controller.redo();
-      assert.strictEqual(redone?.action, "stroke");
-      assert.deepStrictEqual(
-        buffer.samplePixel(0, 0),
-        [255, 0, 0, 255]
-      );
-      assert.ok(!controller.canRedo);
-    });
-
-    test("clear discards both stacks", () => {
-      const controller = new History(
-        makeBuffer(),
-        makeUvMap(),
-        { enabled: true }
-      );
-
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
-      controller.undo();
-      assert.ok(controller.canRedo);
-
-      controller.clear();
-      assert.ok(!controller.canUndo);
-      assert.ok(!controller.canRedo);
-    });
-
-    test("limit bounds the undo stack", () => {
-      const buffer = makeBuffer();
-      const controller = new History(
-        buffer,
-        makeUvMap(),
-        { enabled: true, limit: 1 }
-      );
-
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 1, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
-
-      assert.notStrictEqual(controller.undo(), null);
-      assert.strictEqual(controller.undo(), null);
     });
   });
 
   describe("onChange", () => {
-    test("fires after push, undo, redo, and clear — never on a no-op", () => {
+    test("fires after push, undo, redo, and clear, never on a no-op", () => {
       const states: HistoryState[] = [];
-      const controller = new History(makeBuffer(), makeUvMap(), {
+      const history = new History({
         enabled: true,
         onChange: (state) => states.push(state)
       });
 
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
+      history.push(kEdit);
       assert.deepStrictEqual(
         states.at(-1),
         { canUndo: true, canRedo: false }
       );
 
-      controller.undo();
+      history.undo(() => undefined);
       assert.deepStrictEqual(
         states.at(-1),
         { canUndo: false, canRedo: true }
       );
 
-      controller.redo();
+      history.redo(() => undefined);
       assert.deepStrictEqual(
         states.at(-1),
         { canUndo: true, canRedo: false }
       );
 
-      controller.clear();
+      history.clear();
       assert.deepStrictEqual(
         states.at(-1),
         { canUndo: false, canRedo: false }
@@ -177,29 +99,24 @@ describe("History", () => {
 
       assert.strictEqual(states.length, 4);
 
-      controller.undo();
-      controller.redo();
+      history.undo(() => undefined);
+      history.redo(() => undefined);
       assert.strictEqual(states.length, 4);
     });
 
-    test("does not fire on a disabled controller", () => {
-      const states: HistoryState[] = [];
-      const controller = new History(makeBuffer(), makeUvMap(), {
-        enabled: false,
-        onChange: (state) => states.push(state)
+    test("fires only after the replay ran", () => {
+      const order: string[] = [];
+      const history = new History({
+        enabled: true,
+        onChange: () => order.push("change")
       });
+      history.push(kEdit);
+      order.length = 0;
 
-      controller.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
-      controller.undo();
-      controller.redo();
-      controller.clear();
+      history.undo(() => order.push("replay"));
+      history.redo(() => order.push("replay"));
 
-      assert.strictEqual(states.length, 0);
+      assert.deepStrictEqual(order, ["replay", "change", "replay", "change"]);
     });
   });
 });

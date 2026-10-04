@@ -41,14 +41,6 @@ describe("Brush", () => {
       assert.strictEqual(brush.secondary.opacity, 1);
     });
 
-    test("primary.asString() is a valid rgba() string right after construction", () => {
-      const brush = new Brush();
-      assert.match(
-        brush.primary.asString(),
-        /rgba\(0, 0, 0, 1\)/
-      );
-    });
-
     test("constructor accepts a secondaryColor option", () => {
       const brush = new Brush({
         secondaryColor: "#00ff00"
@@ -191,53 +183,7 @@ describe("Brush", () => {
     });
   });
 
-  describe("colorFor", () => {
-    test("resolves each brush color slot", () => {
-      const brush = new Brush({
-        color: "#FF0000",
-        secondaryColor: "#00FF00"
-      });
-
-      assert.deepStrictEqual(
-        brush.colorFor("primary"),
-        { r: 255, g: 0, b: 0, a: 255 }
-      );
-      assert.deepStrictEqual(
-        brush.colorFor("secondary"),
-        { r: 0, g: 255, b: 0, a: 255 }
-      );
-    });
-
-    test("erase is transparent by default", () => {
-      const brush = new Brush();
-
-      assert.deepStrictEqual(
-        brush.colorFor("erase"),
-        { r: 0, g: 0, b: 0, a: 0 }
-      );
-    });
-
-    test("eraseColor overrides the erased color", () => {
-      const brush = new Brush({ eraseColor: "#0000FF" });
-
-      assert.deepStrictEqual(
-        brush.colorFor("erase"),
-        { r: 0, g: 0, b: 255, a: 255 }
-      );
-    });
-  });
-
   describe("affectedPixels", () => {
-    test("returns an iterable, not an array", () => {
-      const brush = new Brush({ size: 1, maxSize: 32 });
-      const result = brush.affectedPixels(5, 5);
-      assert.ok(!Array.isArray(result));
-      assert.strictEqual(
-        typeof result[Symbol.iterator],
-        "function"
-      );
-    });
-
     test("size 1 affects only the center pixel", () => {
       const brush = new Brush({ size: 1, maxSize: 32 });
       const pixels = [...brush.affectedPixels(5, 5)];
@@ -245,22 +191,32 @@ describe("Brush", () => {
       assert.deepStrictEqual(pixels[0], { x: 5, y: 5 });
     });
 
-    test("size 2 affects 4 pixels (even, offset left/up)", () => {
+    test("size 2 covers the center and the pixels left of and above it", () => {
       const brush = new Brush({ size: 2, maxSize: 32 });
-      const pixels = [...brush.affectedPixels(0, 0)];
-      assert.strictEqual(pixels.length, 4);
+      const pixels = [...brush.affectedPixels(5, 5)];
+
+      assert.deepStrictEqual(
+        new Set(pixels.map(({ x, y }) => `${x},${y}`)),
+        new Set(["4,4", "5,4", "4,5", "5,5"])
+      );
     });
 
-    test("size 3 affects 9 pixels", () => {
+    test("size 3 covers a 3x3 square centered on the pixel", () => {
       const brush = new Brush({ size: 3, maxSize: 32 });
       const pixels = [...brush.affectedPixels(5, 5)];
-      assert.strictEqual(pixels.length, 9);
-    });
+      const xs = pixels.map(({ x }) => x);
+      const ys = pixels.map(({ y }) => y);
 
-    test("size 4 affects 16 pixels", () => {
-      const brush = new Brush({ size: 4, maxSize: 32 });
-      const pixels = [...brush.affectedPixels(5, 5)];
-      assert.strictEqual(pixels.length, 16);
+      assert.strictEqual(pixels.length, 9);
+      assert.deepStrictEqual(
+        {
+          minX: Math.min(...xs),
+          maxX: Math.max(...xs),
+          minY: Math.min(...ys),
+          maxY: Math.max(...ys)
+        },
+        { minX: 4, maxX: 6, minY: 4, maxY: 6 }
+      );
     });
   });
 });

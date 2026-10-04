@@ -1,12 +1,7 @@
-/*
- * Factories shared across the SVG overlay specs (BrushHighlight, LinePreview,
- * Selection, UV) and OverlayLayer.
- */
-
 // Import Internal Dependencies
 import { SVG_NS } from "#src/rendering/constants.ts";
 import { Zoom } from "#src/rendering/Zoom.ts";
-import { UVMap } from "#src/uv/map/UVMap.ts";
+import type { UVMap } from "#src/uv/map/UVMap.ts";
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type {
   DefaultViewport
@@ -15,6 +10,7 @@ import type {
   BrushHighlight,
   Vec2
 } from "#src/types.ts";
+import { makeUvMap } from "./uv/map.ts";
 
 type MutableViewport = DefaultViewport & {
   camera: Vec2;
@@ -28,40 +24,53 @@ export function makeSvg(): SVGElement {
 
 export function makeViewport(
   zoom = 4,
-  canvas: Vec2 = { x: 800, y: 600 }
+  canvas: Vec2 = { x: 800, y: 600 },
+  camera: Vec2 = { x: 0, y: 0 }
 ): MutableViewport {
   return {
     zoom: new Zoom({
       default: zoom
     }),
-    camera: { x: 0, y: 0 },
+    camera,
     canvasWidth: canvas.x,
-    canvasHeight: canvas.y
+    canvasHeight: canvas.y,
+    toScreen(point) {
+      return {
+        x: (point.x * this.zoom.value) + this.camera.x,
+        y: (point.y * this.zoom.value) + this.camera.y
+      };
+    },
+    toScreenRect(rect) {
+      return {
+        ...this.toScreen(rect),
+        width: rect.width * this.zoom.value,
+        height: rect.height * this.zoom.value
+      };
+    },
+    toTexture(point) {
+      return {
+        x: (point.x - this.camera.x) / this.zoom.value,
+        y: (point.y - this.camera.y) / this.zoom.value
+      };
+    }
   };
 }
 
-export function makeBrush(
-  size = 1
-): BrushHighlight {
+export function makeBrush(): BrushHighlight {
   return {
-    size,
     colorInline: "#FFF",
     colorOutline: "#000"
   };
 }
 
-export function makeUvMap(
-  size: Vec2 = { x: 64, y: 64 }
-): UVMap {
-  return new UVMap({
-    getCanvasSize: () => size
-  });
-}
-
 export function makeUvOverlay(
   svg: SVGElement,
   viewport: DefaultViewport,
-  uvMap: UVMap = makeUvMap()
+  uvMap: UVMap = makeUvMap({ x: 64, y: 64 })
 ): UVRegionLayer {
-  return new UVRegionLayer(svg, viewport, uvMap);
+  return new UVRegionLayer(
+    svg,
+    viewport,
+    uvMap
+  );
 }

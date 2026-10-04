@@ -1,8 +1,8 @@
 // Import Internal Dependencies
 import { resolveColor } from "../utils/colors.ts";
 import { RectArea } from "../utils/RectArea.ts";
-import { UVRegionCollection } from "../uv/region/UVRegionCollection.ts";
-import type { NormalMapConfig } from "../normal/NormalMapConfig.ts";
+import { TextureBounds } from "./TextureBounds.ts";
+import type { ColorGroup } from "./colorGroups.ts";
 import type {
   ByteColorInput,
   RGBA8,
@@ -84,47 +84,18 @@ function fillPixels(
   }
 }
 
-function assertMaxSize(
-  maxSize: number
-): void {
-  if (!Number.isInteger(maxSize) || maxSize <= 0) {
-    throw new RangeError("PixelBuffer maxSize must be a positive integer");
-  }
-}
-
-function assertSize(
-  size: Vec2,
-  maxSize: number
-): void {
-  if (
-    !Number.isInteger(size.x) ||
-    !Number.isInteger(size.y) ||
-    size.x <= 0 ||
-    size.y <= 0 ||
-    size.x > maxSize ||
-    size.y > maxSize
-  ) {
-    throw new RangeError(
-      `PixelBuffer dimensions must be positive integers no greater than ${maxSize}`
-    );
-  }
-}
-
 /**
- * Stores raw RGBA8 pixel data and UV regions without DOM APIs.
+ * Stores raw RGBA8 pixel data without DOM APIs.
  */
 export class PixelBuffer implements DefaultPixelBuffer {
   #width: number;
   #height: number;
-  #maxSize: number;
+  #bounds: TextureBounds;
   #master: Uint8ClampedArray;
   #masterWidth: number;
   #masterHeight: number;
   #masterFill: RGBA8;
   #working: Uint8ClampedArray;
-
-  readonly uvRegions = new UVRegionCollection();
-  normalMap: NormalMapConfig | null = null;
 
   constructor(
     options: PixelBufferOptions
@@ -135,10 +106,9 @@ export class PixelBuffer implements DefaultPixelBuffer {
       maxSize = 2048
     } = options;
 
-    assertMaxSize(maxSize);
-    assertSize(size, maxSize);
+    this.#bounds = new TextureBounds(maxSize);
+    this.#bounds.assert(size);
 
-    this.#maxSize = maxSize;
     this.#width = size.x;
     this.#height = size.y;
     const fillColor = resolveColor(defaultColor);
@@ -209,27 +179,25 @@ export class PixelBuffer implements DefaultPixelBuffer {
   }
 
   get maxSize(): number {
-    return this.#maxSize;
+    return this.#bounds.maxSize;
   }
 
   acceptsSize(
     size: Vec2
   ): boolean {
-    return Number.isInteger(size.x) &&
-      Number.isInteger(size.y) &&
-      size.x > 0 &&
-      size.y > 0 &&
-      size.x <= this.#maxSize &&
-      size.y <= this.#maxSize;
+    return this.#bounds.accepts(size);
+  }
+
+  assertSize(
+    size: Vec2
+  ): void {
+    this.#bounds.assert(size);
   }
 
   resize(
     size: Vec2
   ): void {
-    assertSize(
-      size,
-      this.#maxSize
-    );
+    this.#bounds.assert(size);
     this.#ensureMasterSize(size);
 
     const next = new Uint8ClampedArray(
@@ -248,9 +216,6 @@ export class PixelBuffer implements DefaultPixelBuffer {
     this.#working = next;
   }
 
-  /**
-   * Returns the mutable working buffer.
-   */
   pixels(): Uint8ClampedArray {
     return this.#working;
   }
@@ -259,7 +224,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
     pixels: Uint8ClampedArray,
     size: Vec2
   ): void {
-    assertSize(size, this.#maxSize);
+    this.#bounds.assert(size);
 
     const expectedLength = size.x * size.y * 4;
     this.#width = size.x;
@@ -293,27 +258,11 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
   }
 
-  drawRegion(
-    rect: SelectionRect,
-    pixels: RGBA8[]
+  drawColorGroups(
+    groups: Iterable<ColorGroup>
   ): void {
-    const size = this.size();
-    const area = RectArea.from(rect);
-
-    for (const row of area.rowsWithin(size)) {
-      let sourceIndex = row.sourceIndex;
-      let index = row.indexInBounds * 4;
-      const sourceEnd = sourceIndex + row.length;
-
-      while (sourceIndex < sourceEnd) {
-        const { r, g, b, a } = pixels[sourceIndex];
-        this.#working[index] = r;
-        this.#working[index + 1] = g;
-        this.#working[index + 2] = b;
-        this.#working[index + 3] = a;
-        sourceIndex++;
-        index += 4;
-      }
+    for (const group of groups) {
+      this.drawPixels(group.positions, group.color);
     }
   }
 
@@ -379,9 +328,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   samplePixels(
     positions: Vec2[]
   ): RGBA8[] {
-    const colors: RGBA8[] = new Array(
-      positions.length
-    );
+    const colors: RGBA8[] = [];
 
     for (let i = 0; i < positions.length; i++) {
       const { x, y } = positions[i];
@@ -402,6 +349,32 @@ export class PixelBuffer implements DefaultPixelBuffer {
     }
 
     return colors;
+  }
+
+  positionsOf(
+    color: RGBA8,
+    mask?: Uint8Array
+  ): Vec2[] {
+    const pixels = this.#working;
+    const positions: Vec2[] = [];
+    let byteIndex = 0;
+
+    for (let y = 0; y < this.#height; y++) {
+      for (let x = 0; x < this.#width; x++) {
+        if (
+          mask?.[byteIndex / 4] !== 0 &&
+          pixels[byteIndex] === color.r &&
+          pixels[byteIndex + 1] === color.g &&
+          pixels[byteIndex + 2] === color.b &&
+          pixels[byteIndex + 3] === color.a
+        ) {
+          positions.push({ x, y });
+        }
+        byteIndex += 4;
+      }
+    }
+
+    return positions;
   }
 
   hasTransparency(

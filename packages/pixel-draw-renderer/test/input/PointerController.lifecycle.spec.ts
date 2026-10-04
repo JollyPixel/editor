@@ -8,42 +8,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PointerController } from "#src/input/PointerController.ts";
-import type { WindowLike } from "#src/input/WindowLike.ts";
-import { Viewport } from "#src/rendering/Viewport.ts";
+import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
-
-class FakeWindow implements WindowLike {
-  #listeners = new Map<string, Set<(event: any) => void>>();
-
-  addEventListener(
-    type: string,
-    listener: (event: any) => void
-  ): void {
-    let listeners = this.#listeners.get(type);
-    if (!listeners) {
-      listeners = new Set();
-      this.#listeners.set(type, listeners);
-    }
-    listeners.add(listener);
-  }
-
-  removeEventListener(
-    type: string,
-    listener: (event: any) => void
-  ): void {
-    this.#listeners.get(type)?.delete(listener);
-  }
-
-  dispatch(
-    type: string,
-    event: unknown
-  ): void {
-    for (const listener of this.#listeners.get(type) ?? []) {
-      listener(event);
-    }
-  }
-}
+import { FakeWindow } from "../helpers/input/window.ts";
+import { makeCenteredViewport } from "../helpers/input/pointer.ts";
 
 describe("PointerController lifecycle", () => {
   let viewport: Viewport;
@@ -51,12 +20,7 @@ describe("PointerController lifecycle", () => {
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({
-      textureSize: { x: 16, y: 16 },
-      zoom: 4
-    });
-    viewport.updateCanvasSize(200, 200);
-    viewport.centerTexture();
+    viewport = makeCenteredViewport();
   });
 
   test("primary dragging continues while another mouse button is held", () => {
@@ -79,7 +43,7 @@ describe("PointerController lifecycle", () => {
       clientY: 100
     }));
 
-    assert.strictEqual(calls.onPrimaryMove.length, 1);
+    assert.strictEqual(calls.onPointerMove.length, 1);
     controller.destroy();
   });
 
@@ -105,8 +69,8 @@ describe("PointerController lifecycle", () => {
     }));
     window.dispatchEvent(new MouseEvent("mouseup"));
 
-    assert.strictEqual(calls.onPrimaryUp.length, 1);
-    assert.strictEqual(calls.onPrimaryMove.length, 0);
+    assert.deepStrictEqual(calls.onPointerUp, ["primary"]);
+    assert.strictEqual(calls.onPointerMove.length, 0);
     controller.destroy();
   });
 
@@ -128,8 +92,8 @@ describe("PointerController lifecycle", () => {
     canvas.dispatchEvent(new MouseEvent("mouseup"));
     fakeWindow.dispatch("mouseup", { target: canvas });
 
-    assert.strictEqual(calls.onMouseUp.length, 1);
-    assert.strictEqual(calls.onPanEnd.length, 1);
+    assert.strictEqual(calls.onMouseUp, 1);
+    assert.strictEqual(calls.onPanEnd, 1);
     controller.destroy();
   });
 });

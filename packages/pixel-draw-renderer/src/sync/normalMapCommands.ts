@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { NormalMapCommand } from "../buffer/hooks.ts";
+import type { NormalMapCommand } from "./PixelCommand.ts";
 import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 
 // CONSTANTS
@@ -39,5 +39,18 @@ export function applyNormalMapCommand(
 
     case "normal-map-zone-deleted":
       return config?.withoutZone(command.metadata.regionId) ?? null;
+  }
+}
+
+export function normalMapRegionIds(
+  command: NormalMapCommand
+): string[] | null {
+  switch (command.action) {
+    case "normal-map-zone-set":
+      return [command.metadata.zone.regionId];
+    case "normal-map-zone-deleted":
+      return [command.metadata.regionId];
+    default:
+      return null;
   }
 }

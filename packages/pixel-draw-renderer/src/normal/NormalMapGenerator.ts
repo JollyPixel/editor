@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { IslandJob } from "./IslandJob.ts";
+import { RectArea } from "../utils/RectArea.ts";
 import type {
   Island,
   NormalMapInput
@@ -35,21 +36,21 @@ export class NormalMapGenerator {
     input: NormalMapInput,
     output: Uint8ClampedArray,
     island: Island,
-    area?: SelectionRect
+    area: SelectionRect = island.bounds
   ): SelectionRect | null {
-    const job = IslandJob.plan(input, island, area);
+    const settings = input.config?.resolve(island.regionIds) ?? "off";
+    if (settings === "off") {
+      return NormalMapGenerator.#writeFlat(input, output, island, area);
+    }
+
+    const job = IslandJob.plan(input, island, settings, area);
     if (job === null) {
       return null;
     }
 
-    if (job.off) {
-      this.#writeFlat(job, output);
-    }
-    else {
-      this.#reserve(job.area);
-      this.#fillHeights(job);
-      this.#writeNormals(job, output);
-    }
+    this.#reserve(job.area);
+    this.#fillHeights(job);
+    this.#writeNormals(job, output);
 
     return { ...job.target };
   }
@@ -260,11 +261,20 @@ export class NormalMapGenerator {
     }
   }
 
-  #writeFlat(
-    job: IslandJob,
-    output: Uint8ClampedArray
-  ): void {
-    const { indices, index, width, target } = job;
+  static #writeFlat(
+    input: NormalMapInput,
+    output: Uint8ClampedArray,
+    island: Island,
+    area: SelectionRect
+  ): SelectionRect | null {
+    const target = RectArea.from(area).clippedTo(island.bounds)?.bounds;
+    if (target === undefined) {
+      return null;
+    }
+
+    const { indices } = input.islands;
+    const { index } = island;
+    const width = input.size.x;
     const words = new Uint32Array(output.buffer, output.byteOffset, output.length >> 2);
     for (let y = target.y; y < target.y + target.height; y++) {
       for (let x = target.x; x < target.x + target.width; x++) {
@@ -274,6 +284,8 @@ export class NormalMapGenerator {
         }
       }
     }
+
+    return target;
   }
 
   static #pack(

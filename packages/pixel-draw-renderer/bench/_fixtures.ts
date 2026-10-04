@@ -24,7 +24,7 @@ export function randomPositions(
   size: Vec2,
   rng: () => number
 ): Vec2[] {
-  const positions: Vec2[] = new Array(count);
+  const positions: Vec2[] = [];
 
   for (let i = 0; i < count; i++) {
     positions[i] = {

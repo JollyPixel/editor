@@ -30,7 +30,7 @@ describe("network entry points", () => {
   });
 
   test("server entry exports the authoritative server API", () => {
-    assert.strictEqual(typeof server.applyCommandToBuffer, "function");
+    assert.strictEqual(typeof server.applyPixelCommand, "function");
     assert.strictEqual(Array.isArray(server.pixelCommandSchemas), true);
     assert.strictEqual(typeof server.isPixelCommandAction, "function");
   });

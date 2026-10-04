@@ -1,19 +1,8 @@
 // Import Internal Dependencies
-import {
-  clipRectToBounds,
-  intersectRects,
-  pointInRect
-} from "./math.ts";
 import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-
-export interface RectCell extends Vec2 {
-  readonly localX: number;
-  readonly localY: number;
-  readonly sourceIndex: number;
-}
 
 export interface RectRow {
   readonly x: number;
@@ -26,7 +15,7 @@ export interface RectRow {
 /**
  * Immutable row-major view over a rectangle of pixels.
  */
-export class RectArea implements Iterable<RectCell> {
+export class RectArea {
   readonly #rect: SelectionRect;
 
   static from(
@@ -75,21 +64,19 @@ export class RectArea implements Iterable<RectCell> {
   constructor(
     rect: SelectionRect
   ) {
-    this.#rect = { ...rect };
+    this.#rect = {
+      ...rect
+    };
   }
 
   get bounds(): SelectionRect {
-    return { ...this.#rect };
+    return {
+      ...this.#rect
+    };
   }
 
   get isEmpty(): boolean {
     return this.#rect.width <= 0 || this.#rect.height <= 0;
-  }
-
-  contains(
-    position: Vec2
-  ): boolean {
-    return pointInRect(position, this.#rect);
   }
 
   fitsWithin(
@@ -103,7 +90,12 @@ export class RectArea implements Iterable<RectCell> {
   intersection(
     bounds: Vec2
   ): SelectionRect | null {
-    return clipRectToBounds(this.#rect, bounds);
+    return RectArea.#intersect(this.#rect, {
+      x: 0,
+      y: 0,
+      width: bounds.x,
+      height: bounds.y
+    });
   }
 
   grown(
@@ -126,17 +118,28 @@ export class RectArea implements Iterable<RectCell> {
     return new RectArea({
       x,
       y,
-      width: Math.max(this.#rect.x + this.#rect.width, rect.x + rect.width) - x,
-      height: Math.max(this.#rect.y + this.#rect.height, rect.y + rect.height) - y
+      width: Math.max(
+        this.#rect.x + this.#rect.width,
+        rect.x + rect.width
+      ) - x,
+      height: Math.max(
+        this.#rect.y + this.#rect.height,
+        rect.y + rect.height
+      ) - y
     });
   }
 
   clippedTo(
     rect: SelectionRect
   ): RectArea | null {
-    const clipped = intersectRects(this.#rect, rect);
+    const clipped = RectArea.#intersect(
+      this.#rect,
+      rect
+    );
 
-    return clipped === null ? null : new RectArea(clipped);
+    return clipped === null
+      ? null
+      : new RectArea(clipped);
   }
 
   touchesEdgeOf(
@@ -146,24 +149,6 @@ export class RectArea implements Iterable<RectCell> {
       this.#rect.y === rect.y ||
       this.#rect.x + this.#rect.width === rect.x + rect.width ||
       this.#rect.y + this.#rect.height === rect.y + rect.height;
-  }
-
-  * [Symbol.iterator](): IterableIterator<RectCell> {
-    const { x, y, width, height } = this.#rect;
-    let sourceIndex = 0;
-
-    for (let localY = 0; localY < height; localY++) {
-      for (let localX = 0; localX < width; localX++) {
-        yield {
-          x: x + localX,
-          y: y + localY,
-          localX,
-          localY,
-          sourceIndex
-        };
-        sourceIndex++;
-      }
-    }
   }
 
   * rowsWithin(
@@ -191,5 +176,28 @@ export class RectArea implements Iterable<RectCell> {
       sourceIndex += this.#rect.width;
       indexInBounds += bounds.x;
     }
+  }
+
+  static #intersect(
+    a: SelectionRect,
+    b: SelectionRect
+  ): SelectionRect | null {
+    const minX = Math.max(a.x, b.x);
+    const minY = Math.max(a.y, b.y);
+    const maxX = Math.min(a.x + a.width, b.x + b.width);
+    const maxY = Math.min(a.y + a.height, b.y + b.height);
+    if (
+      maxX <= minX ||
+      maxY <= minY
+    ) {
+      return null;
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
   }
 }

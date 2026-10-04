@@ -4,7 +4,7 @@ import {
   isPixelCommand,
   PixelCommandArbiter
 } from "@jolly-pixel/asset.pixel-art/server";
-import type { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelDocumentState } from "@jolly-pixel/pixel-draw.renderer";
 import { localBlock } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -19,7 +19,7 @@ export interface TilesetCommandArbiterOptions {
 }
 
 export interface TilesetArbiterState {
-  readonly pixels: PixelBuffer;
+  readonly pixels: PixelDocumentState;
 }
 
 export class TilesetCommandArbiter {

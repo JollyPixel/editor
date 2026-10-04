@@ -3,75 +3,52 @@ import {
   StrokeMode,
   type StrokeModeOptions
 } from "./StrokeMode.ts";
+import type { PointerPosition } from "../InputActions.ts";
+import type { BrushColorSlot } from "../../tools/Brush.ts";
 import type { BrushEngine } from "../../tools/BrushEngine.ts";
-import type {
-  Mode,
-  Vec2
-} from "../../types.ts";
 
-export type PaintModeOptions = StrokeModeOptions;
+export type PaintModeOptions = Omit<StrokeModeOptions, "id" | "erase">;
 
 export class PaintMode extends StrokeMode {
-  readonly id: Mode = "paint";
-
-  #brush: BrushEngine;
+  #engine: BrushEngine;
 
   constructor(
     options: PaintModeOptions
   ) {
-    super(options);
-    this.#brush = options.brush;
+    super({
+      ...options,
+      id: "paint",
+      erase: false
+    });
+    this.#engine = options.engine;
   }
 
   onExit(): void {
     super.onExit();
-    this.#brush.pickArmed = false;
+    this.#engine.pickArmed = false;
   }
 
-  highlightSize(
-    brushSize: number
-  ): number {
-    return this.#brush.pickArmed ? 1 : brushSize;
+  highlightSize(): number {
+    return this.#engine.pickArmed ? 1 : super.highlightSize();
   }
 
-  onPrimaryDown(
-    pos: Vec2
-  ): boolean {
-    if (this.#brush.pickArmed) {
-      this.#brush.pick(pos.x, pos.y);
-
-      return false;
-    }
-
-    return super.onPrimaryDown(pos);
-  }
-
-  onSecondaryDown(
-    pos: Vec2,
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition,
     ctrlKey: boolean
   ): boolean {
-    if (this.#brush.pickArmed) {
-      this.#brush.pick(
-        pos.x,
-        pos.y,
-        "secondary"
-      );
+    const { x, y } = position.texture;
+    if (this.#engine.pickArmed) {
+      this.#engine.pick(x, y, slot);
+
+      return false;
+    }
+    if (ctrlKey && slot === "secondary") {
+      this.#engine.pick(x, y);
 
       return false;
     }
 
-    if (ctrlKey) {
-      this.#brush.pick(
-        pos.x,
-        pos.y
-      );
-
-      return false;
-    }
-
-    return super.onSecondaryDown(
-      pos,
-      ctrlKey
-    );
+    return super.onPointerDown(slot, position, ctrlKey);
   }
 }

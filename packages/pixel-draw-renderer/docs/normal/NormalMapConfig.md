@@ -64,7 +64,7 @@ interface NormalMapData {
 }
 ```
 
-`from` trusts its input. `parse` returns `null` for invalid data: an incomplete `defaults`, an out-of-range value, an even `levels`, an empty `regionId`, or two zones for one region. Unknown setting keys are dropped.
+`from` throws for invalid data: `InvalidNormalMapSettingsError` for an incomplete `defaults` or an out-of-range value, `RangeError` for two zones for one region. `parse` returns `null` for the same cases and for an empty `regionId` or a value of the wrong shape. Unknown setting keys are dropped.
 
 `create`, `withDefaults` and `withZone` throw `InvalidNormalMapSettingsError` for an out-of-range setting value. `NORMAL_MAP_HEIGHTS`, `NORMAL_MAP_BORDERS` and `NORMAL_MAP_BEVEL_PROFILES` list the accepted values of the enumerated settings.
 
@@ -96,14 +96,10 @@ toJSON(): NormalMapData;
 ## Commands
 
 ```ts
-function applyNormalMapCommand(
-  config: NormalMapConfig | null,
-  command: NormalMapCommand
-): NormalMapConfig | null;
 function isNormalMapCommand(command: { action: string }): boolean;
 ```
 
-`applyNormalMapCommand` applies one command to a config, `null` meaning the feature is off. Patches and zone commands on `null` stay `null`. `isNormalMapCommand` narrows any command union to the four actions below.
+Normal map commands are [pixel commands](../PixelCommand.md), applied by [`PixelDocumentState`](../PixelDocumentState.md). Patches and zone commands leave a disabled feature off. `isNormalMapCommand` narrows any command union to the four actions below.
 
 | Action | Metadata |
 |---|---|
@@ -112,4 +108,4 @@ function isNormalMapCommand(command: { action: string }): boolean;
 | `normal-map-zone-set` | `{ zone: NormalMapZone, index: number }` |
 | `normal-map-zone-deleted` | `{ regionId: string }` |
 
-`normal-map-zone-set` replaces the region's zone in place, or inserts a new zone at `index`. Commands carry only the change: undo data stays in the [history entry](../history/HistoryStack.md).
+`normal-map-zone-set` replaces the region's zone in place, or inserts a new zone at `index`. Commands carry only the change: undo data stays in the [history entry](../history/HistoryStack.md#entries).

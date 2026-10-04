@@ -86,7 +86,7 @@ type UVRegionData =
 
 `state` is required, and payloads written before the three-state rename do not load. Stacked regions use optional `faces` and `activeFaces` to retain custom topology for a later `free()` or `unfold()`, and `stackedFace` records which face `rect` was taken from. A payload may still place those faces away from `rect`, in which case `free()` restores them around it; `stack()` itself writes them onto `rect`.
 
-`activeFaces` defaults to the slots `faces` carries, keeps the order it was given, and drops any slot the region has no geometry for. A triangle occupies the half of `rect` containing the named right-angle corner. A compound covers the union of its `parts`, each positioned in the `0` to `1` space of `rect` so parts scale with it. Normalized parts must remain inside that space and have positive dimensions. The area no part covers, such as the notch of an L, is outside the region.
+`activeFaces` defaults to the slots `faces` carries, keeps the order it was given, and drops any slot the region has no geometry for. The constructor throws a `RangeError` when no active slot is left. A triangle occupies the half of `rect` containing the named right-angle corner. A compound covers the union of its `parts`, each positioned in the `0` to `1` space of `rect` so parts scale with it. Normalized parts must remain inside that space and have positive dimensions. The area no part covers, such as the notch of an L, is outside the region.
 
 A geometry is stored as it looks after rotation: a rotated rect has its width and height swapped, a triangle names the corner it now occupies, and compound parts sit where they turned to. `rotation` only tells a mesh consumer how to orient its UVs inside that rect, and is left out when it is `0`. A stacked region keeps its rotation on `rect`, shared by every slot. [`rotateUv()`](#rotateuvu-v-turns) and [`rotateCorner()`](#rotatecornercorner-turns) turn mesh UVs to match.
 
@@ -109,13 +109,13 @@ Slot names are labels. The consumer decides how `"front"`, `"top"` and any furth
 
 ## Methods
 
-### `rectFor(slot)`
+### `rectFor(slot?)`
 
 ```ts
-rectFor(slot: UVSlot): SelectionRect
+rectFor(slot?: UVSlot | null): SelectionRect
 ```
 
-Returns a copy of the rectangle sampled by `slot`. Only a free region answers per slot; a stacked or unfolded region returns `bounds` whatever slot is asked for, because it moves as one.
+Returns a copy of the rectangle sampled by `slot`. Only a free region answers per slot; a stacked or unfolded region returns `bounds` whatever slot is asked for, because it moves as one. `null`, the default, returns `bounds`.
 
 ### `geometryFor(slot)`
 
@@ -158,7 +158,7 @@ Nothing here knows about the canvas. A net larger than the texture keeps going p
 ### `stack(slot?)`
 
 ```ts
-stack(slot?: UVSlot): UVRegion
+stack(slot?: UVSlot | null): UVRegion
 ```
 
 Uses the largest active slot's rectangle as the shared rectangle, so a partial slot such as a stair's tread never becomes the region's footprint. `slot` only picks between equally large ones, and a rectangle wins over a triangle or a compound at the same size. Slot topology is retained, but per-slot positions are not: every slot is stacked on the shared rectangle.
@@ -170,21 +170,21 @@ When the active faces carry different rotations, the stacked region takes the mo
 ### `rotated(direction, slot?)`
 
 ```ts
-rotated(direction: RotationDirection, slot?: UVSlot): UVRegion
+rotated(direction: RotationDirection, slot?: UVSlot | null): UVRegion
 ```
 
 Turns the region 90 degrees clockwise (`"cw"`) or counter-clockwise (`"ccw"`), keeping each rect's top-left corner:
 
 - **stacked**: the shared rect and every slot turn together.
 - **unfolded**: the whole net turns as one piece around its `bounds`, whose top-left corner stays put.
-- **free**: only `slot` turns in place. Returns `this` when `slot` is missing or unknown.
+- **free**: only `slot` turns in place. Returns `this` when `slot` is `null` or not active.
 
 Four turns return the starting geometry. Nothing here knows about the canvas; [`UVMap.rotate()`](./UVMap.md#rotateid-direction-slot) clamps the result.
 
 ### `resized(rect, slot?, options?)`
 
 ```ts
-resized(rect: SelectionRect, slot?: UVSlot, options?: UVResizeOptions): UVRegion
+resized(rect: SelectionRect, slot?: UVSlot | null, options?: UVResizeOptions): UVRegion
 
 interface UVResizeOptions {
   aligned?: boolean;
@@ -205,15 +205,38 @@ Rotation is kept. Returns `this` when the region is not `resizable`, `slot` is m
 withGeometry(slot: UVSlot, geometry: UVGeometry): UVRegion
 ```
 
-Replaces one slot's geometry of a free region, as a network peer does when it receives a slot rotation. Returns `this` for any other state or an unknown slot.
+Replaces one slot's geometry of a free region, as a network peer does when it receives a slot rotation. Returns `this` for any other state or a slot that is not active.
 
-### `withRect(rect, face?)`
+### `movedTo(position, slot?)`
 
 ```ts
-withRect(rect: SelectionRect, face?: UVSlot): UVRegion
+movedTo(position: Vec2, slot?: UVSlot | null): UVRegion
 ```
 
-Replaces the shared rectangle when stacked, or one face's bounds when free, keeping its rotation. An unfolded region translates every face by `rect` minus its current `bounds` and ignores `face` entirely. It returns `this` when a free region has no `face`.
+Moves the region so its rectangle starts at `position`, keeping every size and rotation. A stacked or unfolded region moves whole and ignores `slot`. A free region moves only `slot`, and returns `this` when `slot` is `null` or not active. Returns `this` when nothing moves.
+
+### `isTarget(slot)`
+
+```ts
+isTarget(slot: UVSlot | null): slot is UVSlot
+```
+
+Whether `slot` is one of the active slots. Every per-slot operation (`movedTo`, `rotated`, `resized`, `withGeometry`) and [`UVMap`](./UVMap.md) selection act only on active slots.
+
+### `resizeTargets(selectedSlot)`
+
+```ts
+resizeTargets(selectedSlot: UVSlot | null): UVResizeTarget[]
+
+interface UVResizeTarget {
+  id: string;
+  slot: UVSlot | null;
+  rect: SelectionRect;
+  handles: readonly UVResizeHandle[];
+}
+```
+
+The rectangles a resize drag can grab, with the edges and corners each offers: the shared rectangle with every handle when stacked, every net face with only its east and south edges when unfolded, and `selectedSlot` with every handle when free. Empty when the region is not `resizable`.
 
 ### `translated(delta)`
 

@@ -1,174 +1,141 @@
 // Import Internal Dependencies
-import {
-  Line,
-  type LineCommitTrigger
-} from "./Line.ts";
+import { Line } from "./Line.ts";
 import type {
   Brush,
-  BrushColorSlot,
   BrushPaintSource
 } from "./Brush.ts";
-import type { BrushPaintMode } from "./BrushEngine.ts";
-import type { EditPipeline } from "../sync/EditPipeline.ts";
+import type { PixelDocument } from "../PixelDocument.ts";
 import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
+import { positionKey } from "../utils/math.ts";
 import type {
   PeerStrokePixel,
   Vec2
 } from "../types.ts";
 
+export type LineCommitTrigger = "mousedown" | "mouseup";
+
+interface PendingLine {
+  start: Vec2;
+  end: Vec2;
+  trigger: LineCommitTrigger;
+  source: BrushPaintSource;
+}
+
 export interface LineEngineOptions {
   brush: Brush;
   linePreview: LinePreview;
-  pipeline: EditPipeline;
+  document: Pick<PixelDocument, "paintPixels">;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
 export class LineEngine {
-  #line = new Line();
   #brush: Brush;
   #linePreview: LinePreview;
-  #pipeline: EditPipeline;
+  #document: Pick<PixelDocument, "paintPixels">;
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
-  #lastCursorPos: Vec2 | null = null;
-  #lineHeld = false;
-  #colorSlot: BrushColorSlot = "primary";
-  #paintMode: BrushPaintMode = "brush";
+  #cursor: Vec2 | null = null;
+  #pending: PendingLine | null = null;
 
   constructor(
     options: LineEngineOptions
   ) {
     this.#brush = options.brush;
     this.#linePreview = options.linePreview;
-    this.#pipeline = options.pipeline;
+    this.#document = options.document;
     this.#onProgress = options.onProgress;
   }
 
-  get isArmed(): boolean {
-    return this.#line.isArmed;
-  }
-
-  get commitTrigger(): LineCommitTrigger {
-    return this.#line.commitTrigger;
-  }
-
-  set lineHeld(
-    held: boolean
-  ) {
-    this.#lineHeld = held;
-  }
-
-  get paintMode(): BrushPaintMode {
-    return this.#paintMode;
-  }
-
-  set paintMode(
-    mode: BrushPaintMode
-  ) {
-    this.#paintMode = mode;
+  commitsOn(
+    trigger: LineCommitTrigger
+  ): boolean {
+    return this.#pending?.trigger === trigger;
   }
 
   updateCursor(
-    pos: Vec2 | null
+    position: Vec2 | null
   ): void {
-    this.#lastCursorPos = pos;
-    if (this.#line.isArmed && pos) {
-      this.#line.update(pos);
+    this.#cursor = position;
+    if (this.#pending && position) {
+      this.#pending.end = position;
       this.refreshPreview();
     }
   }
 
   arm(
-    commitTrigger: LineCommitTrigger,
-    colorSlot: BrushColorSlot = "primary"
+    trigger: LineCommitTrigger,
+    source: BrushPaintSource
   ): void {
-    if (!this.#lastCursorPos) {
-      return;
+    if (this.#cursor) {
+      this.#armAt(this.#cursor, trigger, source);
     }
-
-    this.#line.arm(
-      this.#lastCursorPos,
-      commitTrigger
-    );
-    this.#colorSlot = colorSlot;
-    this.refreshPreview();
   }
 
   commit(
-    colorSlot: BrushColorSlot = this.#colorSlot
+    source?: BrushPaintSource
   ): void {
-    const points = this.#line.commit();
-    this.#linePreview.clear();
-    if (!points) {
+    const pending = this.#pending;
+    if (pending === null) {
       return;
     }
 
-    this.#pipeline.commitPixels(
-      this.#stampLinePixels(points),
-      this.#paintSource(colorSlot)
+    const lineSource = source ?? pending.source;
+    this.#linePreview.clear();
+    this.#document.paintPixels(
+      this.#stamp(pending),
+      this.#brush.colorFor(lineSource)
     );
     this.#onProgress?.([]);
-
-    if (this.#lineHeld) {
-      this.#line.arm(
-        points.at(-1) ?? points[0],
-        "mousedown"
-      );
-      this.#colorSlot = colorSlot;
-      this.refreshPreview();
-    }
+    this.#armAt(pending.end, "mousedown", lineSource);
   }
 
-  cancelIfArmed(): void {
-    if (!this.#line.isArmed) {
+  cancel(): void {
+    if (this.#pending === null) {
       return;
     }
 
-    this.#line.cancel();
+    this.#pending = null;
     this.#linePreview.clear();
+    this.#onProgress?.([]);
   }
 
   refreshPreview(): void {
-    if (!this.#line.isArmed) {
+    const pending = this.#pending;
+    if (pending === null) {
       return;
     }
 
-    const points = this.#line.previewPoints ?? [];
-    if (points.length > 0) {
-      this.#linePreview.drawLine(
-        points[0],
-        points.at(-1) ?? points[0]
-      );
+    this.#linePreview.drawLine(pending.start, pending.end);
 
-      const color = this.#brush.colorFor(
-        this.#paintSource(this.#colorSlot)
-      );
-      this.#onProgress?.(
-        this.#stampLinePixels(points).map((pos) => {
-          return { ...pos, color };
-        })
-      );
-    }
+    const color = this.#brush.colorFor(pending.source);
+    this.#onProgress?.(
+      this.#stamp(pending).map((position) => {
+        return { ...position, color };
+      })
+    );
   }
 
-  #paintSource(
-    colorSlot: BrushColorSlot
-  ): BrushPaintSource {
-    return this.#paintMode === "erase" ? "erase" : colorSlot;
+  #armAt(
+    start: Vec2,
+    trigger: LineCommitTrigger,
+    source: BrushPaintSource
+  ): void {
+    this.#pending = {
+      start,
+      end: start,
+      trigger,
+      source
+    };
+    this.refreshPreview();
   }
 
-  #stampLinePixels(
-    points: Vec2[]
+  #stamp(
+    line: PendingLine
   ): Vec2[] {
     const stamped = new Map<string, Vec2>();
-    for (const point of points) {
-      const affectedPixels = this.#brush.affectedPixels(
-        point.x,
-        point.y
-      );
-
-      for (const pixel of affectedPixels) {
-        stamped.set(`${pixel.x},${pixel.y}`, pixel);
+    for (const point of Line.rasterize(line.start, line.end)) {
+      for (const pixel of this.#brush.affectedPixels(point.x, point.y)) {
+        stamped.set(positionKey(pixel), pixel);
       }
     }
 

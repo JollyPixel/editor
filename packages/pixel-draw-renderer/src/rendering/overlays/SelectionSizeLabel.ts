@@ -62,14 +62,13 @@ export class SelectionSizeLabel {
       return;
     }
 
-    const zoom = this.#viewport.zoom.value;
-    const camera = this.#viewport.camera;
     const canvasWidth = this.#viewport.canvasWidth;
     const canvasHeight = this.#viewport.canvasHeight;
-    const left = rect.x * zoom + camera.x;
-    const top = rect.y * zoom + camera.y;
-    const right = left + rect.width * zoom;
-    const bottom = top + rect.height * zoom;
+    const screen = this.#viewport.toScreenRect(rect);
+    const left = screen.x;
+    const top = screen.y;
+    const right = left + screen.width;
+    const bottom = top + screen.height;
 
     const offscreen = right < 0 ||
       bottom < 0 ||
@@ -84,7 +83,6 @@ export class SelectionSizeLabel {
     const label = `${rect.width}×${rect.height}`;
     const width = label.length * kCharWidth;
     const below = bottom + kGap;
-    // Flip above the box rather than let the label fall out of view.
     const y = below > canvasHeight - kMargin ? top - kGap + kFontSize : below;
 
     this.#text.textContent = label;

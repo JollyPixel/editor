@@ -2,11 +2,10 @@
 import * as network from "@jolly-pixel/network";
 import {
   DEFAULT_UV_SLOTS,
-  Fill,
   isUVGeometry,
   isUVRegionData,
   NormalMapConfig,
-  type PixelBuffer
+  type PixelDocumentState
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -37,7 +36,7 @@ export type PixelReplacementCommand = Extract<
 
 function uvConflictKeys(
   command: PixelUvRegionCommand,
-  buffer: PixelBuffer
+  state: PixelDocumentState
 ): string[] {
   if (command.action !== "uv-region-deleted") {
     return uvWriteKeys(command);
@@ -45,7 +44,7 @@ function uvConflictKeys(
 
   const { id } = command.metadata;
 
-  return uvRegionKeys(id, buffer.uvRegions.get(id)?.slots ?? DEFAULT_UV_SLOTS);
+  return uvRegionKeys(id, state.uv.get(id)?.slots ?? DEFAULT_UV_SLOTS);
 }
 
 export interface PixelCommandArbiterOptions {
@@ -68,7 +67,7 @@ export class PixelCommandArbiter {
   }
 
   admit(
-    buffer: PixelBuffer,
+    state: PixelDocumentState,
     command: PixelWireCommand
   ): network.Admission<PixelWireCommand> | null {
     switch (command.action) {
@@ -87,24 +86,24 @@ export class PixelCommandArbiter {
           null;
       case "uv-region-state-changed":
         return isUVRegionData(command.metadata.region) ?
-          this.#admitUvRegion(buffer, command) :
+          this.#admitUvRegion(state, command) :
           null;
       case "uv-region-rotated":
         return isValidRotation(command) ?
-          this.#admitUvRegion(buffer, command) :
+          this.#admitUvRegion(state, command) :
           null;
       case "uv-region-moved":
       case "uv-region-deleted":
-        return this.#admitUvRegion(buffer, command);
+        return this.#admitUvRegion(state, command);
       case "resized":
       case "texture-replaced":
-        return buffer.acceptsSize(command.metadata.size) ?
+        return state.buffer.acceptsSize(command.metadata.size) ?
           this.#admitReplacement(command) :
           null;
       case "global-fill":
         return this.#pixelTracker.admit(
           command,
-          Fill.matchAll(buffer, command.metadata.fromColor).map(pixelKey)
+          state.buffer.positionsOf(command.metadata.fromColor).map(pixelKey)
         );
       case "normal-map-toggled":
         return isValidNormalMap(command) ?
@@ -193,12 +192,12 @@ export class PixelCommandArbiter {
   }
 
   #admitUvRegion(
-    buffer: PixelBuffer,
+    state: PixelDocumentState,
     command: PixelUvRegionCommand
   ): network.Admission<PixelWireCommand> | null {
     return this.#regionTracker.admit(
       command,
-      uvConflictKeys(command, buffer)
+      uvConflictKeys(command, state)
     );
   }
 }

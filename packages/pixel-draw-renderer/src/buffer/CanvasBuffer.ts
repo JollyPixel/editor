@@ -15,11 +15,7 @@ import type {
 import type {
   DefaultPixelBuffer
 } from "./types.ts";
-
-interface CanvasColorGroup {
-  color: RGBA8;
-  positions: Vec2[];
-}
+import type { ColorGroup } from "./colorGroups.ts";
 
 export type CanvasBufferOptions = PixelBufferOptions;
 
@@ -114,18 +110,7 @@ export class CanvasBuffer extends Emitter<
         x: source.naturalWidth || source.width,
         y: source.naturalHeight || source.height
       };
-    if (
-      !Number.isInteger(sourceSize.x) ||
-      !Number.isInteger(sourceSize.y) ||
-      sourceSize.x <= 0 ||
-      sourceSize.y <= 0 ||
-      sourceSize.x > this.maxSize ||
-      sourceSize.y > this.maxSize
-    ) {
-      throw new RangeError(
-        `PixelBuffer dimensions must be positive integers no greater than ${this.maxSize}`
-      );
-    }
+    this.#buffer.assertSize(sourceSize);
 
     let canvas: HTMLCanvasElement;
     if ("getContext" in source) {
@@ -193,29 +178,6 @@ export class CanvasBuffer extends Emitter<
     return options.copy === false ? pixels : pixels.slice();
   }
 
-  writePixels(
-    pixels: Uint8ClampedArray
-  ): void {
-    const size = this.#buffer.size();
-    this.#buffer.replacePixels(
-      pixels,
-      size
-    );
-    this.#syncCanvasFromBuffer();
-
-    this.emit(
-      "changed",
-      {
-        bounds: {
-          x: 0,
-          y: 0,
-          width: size.x,
-          height: size.y
-        }
-      }
-    );
-  }
-
   drawPixels(
     pixels: Iterable<Vec2>,
     color: RGBA8
@@ -225,25 +187,11 @@ export class CanvasBuffer extends Emitter<
       positions,
       color
     );
-
-    const size = this.#buffer.size();
-    const dirtyArea = RectArea.bounding(
-      positions,
-      size
-    );
-    if (dirtyArea === null) {
-      return;
-    }
-
-    this.#resyncCanvasRegion(dirtyArea.bounds);
-    this.emit(
-      "changed",
-      { bounds: dirtyArea.bounds }
-    );
+    this.#refreshPositions(positions);
   }
 
   drawColorGroups(
-    groups: Iterable<CanvasColorGroup>
+    groups: Iterable<ColorGroup>
   ): void {
     const positions: Vec2[] = [];
 
@@ -256,36 +204,7 @@ export class CanvasBuffer extends Emitter<
         positions.push(position);
       }
     }
-
-    const size = this.#buffer.size();
-    const dirtyArea = RectArea.bounding(
-      positions,
-      size
-    );
-    if (dirtyArea === null) {
-      return;
-    }
-
-    this.#resyncCanvasRegion(dirtyArea.bounds);
-    this.emit(
-      "changed",
-      { bounds: dirtyArea.bounds }
-    );
-  }
-
-  drawRegion(
-    rect: SelectionRect,
-    pixels: RGBA8[]
-  ): void {
-    this.#buffer.drawRegion(
-      rect,
-      pixels
-    );
-    this.#resyncCanvasRegion(rect);
-    this.emit(
-      "changed",
-      { bounds: rect }
-    );
+    this.#refreshPositions(positions);
   }
 
   drawMaskedRegion(
@@ -298,10 +217,28 @@ export class CanvasBuffer extends Emitter<
       pixels,
       mask
     );
-    this.#resyncCanvasRegion(rect);
+    this.#refresh(rect);
+  }
+
+  #refreshPositions(
+    positions: Vec2[]
+  ): void {
+    const dirtyArea = RectArea.bounding(
+      positions,
+      this.#buffer.size()
+    );
+    if (dirtyArea !== null) {
+      this.#refresh(dirtyArea.bounds);
+    }
+  }
+
+  #refresh(
+    bounds: SelectionRect
+  ): void {
+    this.#resyncCanvasRegion(bounds);
     this.emit(
       "changed",
-      { bounds: rect }
+      { bounds }
     );
   }
 
@@ -357,6 +294,13 @@ export class CanvasBuffer extends Emitter<
     positions: Vec2[]
   ): RGBA8[] {
     return this.#buffer.samplePixels(positions);
+  }
+
+  positionsOf(
+    color: RGBA8,
+    mask?: Uint8Array
+  ): Vec2[] {
+    return this.#buffer.positionsOf(color, mask);
   }
 
   hasTransparency(

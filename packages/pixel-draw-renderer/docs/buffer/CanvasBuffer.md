@@ -8,21 +8,19 @@ Internal DOM adapter around [`PixelBuffer`](./PixelBuffer.md). `PixelArtCanvas` 
 
 | Event | Payload | Emitted by |
 |---|---|---|
-| `changed` | `{ bounds: SelectionRect }` | `drawPixels`, `drawColorGroups`, `drawRegion`, `drawMaskedRegion`, `writePixels` |
+| `changed` | `{ bounds: SelectionRect }` | `drawPixels`, `drawColorGroups`, `drawMaskedRegion` |
 | `resized` | `{ size: Vec2 }` | `resize` |
-| `replaced` | `{ size: Vec2 }` | `loadTexture` |
+| `replaced` | `{ size: Vec2 }` | `loadTexture`, `replacePixels` |
 
-`bounds` is the area the mutation touched: the bounding box of the written positions for the pixel paths, the target rect for the region paths, and the whole texture for `writePixels`. A consumer holding a texture over `canvas()` can repaint just that area.
+`bounds` is the area the mutation touched: the bounding box of the written positions for the pixel paths and the target rect for `drawMaskedRegion`. A consumer holding a texture over `canvas()` can repaint just that area.
 
-`resized` and `replaced` are distinct because they mean different things downstream. `resize()` keeps the same canvas *element* and only changes its dimensions, so a bound texture needs a refresh flag. `loadTexture()` swaps the element, so a bound texture has to re-point at the new one.
+`resized` and `replaced` are distinct because they mean different things downstream. `resize()` keeps the same canvas *element* and only changes its dimensions, so a bound texture needs a refresh flag. `loadTexture()` and `replacePixels()` replace the whole texture, so a bound texture re-uploads it.
 
-None of the three fire for `replacePixels()` or `copyToMaster()`; callers drive those explicitly.
+`copyToMaster()` emits nothing.
 
 `PixelDocument` forwards all three, and `PixelArtCanvas.document` exposes it.
 
 Unlike `PixelBuffer.pixels()`, `CanvasBuffer.pixels()` returns a copy. `pixels({ copy: false })` returns the working pixels themselves, for a reader that must not allocate per frame; do not write to them.
-
-`writePixels(pixels)` overwrites the texture with RGBA data of the current size, keeping the same canvas element. Like `replacePixels()`, it resets the retained master data.
 
 ## Reading pixels
 
