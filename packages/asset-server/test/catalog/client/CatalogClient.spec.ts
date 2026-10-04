@@ -479,6 +479,31 @@ describe("CatalogClient — dependencies", () => {
     assert.deepEqual(client.dependencies.dependentsOf("a"), []);
   });
 
+  test("emits one change per message after the edges are applied", () => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    const seen: { id: string; kind: string; }[][] = [];
+    client.on("change", () => {
+      seen.push(client.dependencies.closureOf("map"));
+    });
+
+    room.receive({
+      type: CATALOG_SNAPSHOT,
+      manifest: { version: 1, assets: [] },
+      dependencies: {
+        map: [reference("a")],
+        a: [reference("b")]
+      },
+      folders: []
+    });
+    changed(room, "map", [reference("c")]);
+
+    assert.deepEqual(seen, [
+      [reference("a"), reference("b")],
+      [reference("c")]
+    ]);
+  });
+
   test("dependentsOf lists only the dependents with a record", () => {
     const room = new FakeCatalogRoom();
     const client = new CatalogClient(room);

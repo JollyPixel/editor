@@ -36,15 +36,7 @@ not `document`.
 
 ## Performance
 
-Opening an editor tab is measured from the double-click to
-`data-editor-state="ready"`, with `jolly-pixel:debug` set to `*` so each boot
-step logs its duration. A voxel-map tab opens in about 0.9 s cold and 0.45 s
-warm, down from 2.1 s and 0.9 s. A joining client now receives pixel snapshots
-as PNG, cached per room version; a cold room reads its log once; voxel-map no
-longer waits for its hidden metrics panel. Every editor renders on demand,
-and frames read the catalog through the shell (ADR-0018). What is left
-(server write path, catalog rebuilds, shared editor chunks, mesh workers) is
-planned in [PERFORMANCE.md](./PERFORMANCE.md).
+Tracked in [PERFORMANCE.md](./PERFORMANCE.md), with how to measure.
 
 ## Waiting for a trigger
 

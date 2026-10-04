@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "sideEffects": [
+    "./dist/ui/*.js"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

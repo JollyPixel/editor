@@ -244,13 +244,11 @@ export class AssetBrowser extends LitElement {
       onError: (message) => this.#error(message)
     });
     this.#catalog?.on("change", this.#rebuild);
-    this.#catalog?.on("dependencies", this.#rebuild);
     this.#rebuild();
   }
 
   #unlisten(): void {
     this.#catalog?.off("change", this.#rebuild);
-    this.#catalog?.off("dependencies", this.#rebuild);
   }
 
   #toggle(

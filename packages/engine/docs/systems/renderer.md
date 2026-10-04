@@ -221,7 +221,9 @@ within the viewport.
 `resize()` is called automatically on every draw, and the pending
 size is fed by a `ResizeObserver` installed by `observeResize()`
 (wired up by [World](world.md)). It is a no-op unless the observer
-reported a new size.
+reported a size other than the one last applied. A zero size, as
+in a hidden iframe, is skipped: showing the canvas again at its
+previous size does not reallocate the frame buffers.
 
 The renderer emits a `"resize"` event after each actual size
 change:
