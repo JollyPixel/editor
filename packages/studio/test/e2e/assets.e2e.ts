@@ -113,10 +113,14 @@ test("the menu below the rows adds a folder at the root", async({ page }) => {
   const menu = assetMenu(page);
   await expect(menu.getByRole("menuitem")).toHaveText([
     "New folder",
-    "New pixel art",
-    "New tileset",
-    "New voxel map",
-    "New voxel model"
+    "New asset"
+  ]);
+  await menu.getByRole("menuitem", { name: "New asset" }).hover();
+  await expect(page.getByRole("menu", { name: "New asset" }).getByRole("menuitem")).toHaveText([
+    "Pixel art",
+    "Tileset",
+    "Voxel map",
+    "Voxel model"
   ]);
   await menu.getByRole("menuitem", { name: "New folder" }).click();
   await renameTo(page, "world");

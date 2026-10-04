@@ -58,19 +58,19 @@ test("creates a map, a model and a texture from the tree and opens each", async(
   await openShell(page);
   const assets = [
     {
-      kind: "New voxel map",
+      kind: "Voxel map",
       file: "New voxel map.voxelmap.json",
       companion: "New voxel map.tileset.json",
       editor: "voxel-map"
     },
     {
-      kind: "New voxel model",
+      kind: "Voxel model",
       file: "New voxel model.voxelmodel.json",
       companion: "New voxel model.pixelart",
       editor: "voxel-model"
     },
     {
-      kind: "New pixel art",
+      kind: "Pixel art",
       file: "New pixel art.pixelart",
       companion: null,
       editor: "pixel-art"
@@ -79,7 +79,7 @@ test("creates a map, a model and a texture from the tree and opens each", async(
 
   for (const asset of assets) {
     await assetAction(page, "New asset").click();
-    await assetMenu(page).getByRole("menuitem", { name: asset.kind }).click();
+    await assetMenu(page).getByRole("menuitem", { name: asset.kind, exact: true }).click();
     await expect(renameField(page)).toHaveValue(asset.file);
     await renameField(page).press("Escape");
 

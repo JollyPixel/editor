@@ -23,7 +23,9 @@ popup.hide();
 is already against the anchor. A popover opened another way, such as with
 `popovertarget`, is placed on its `toggle` event, which can come a frame late.
 Each placement sets `--jolly-overlay-origin` on the popover to the point
-nearest the anchor's center, which the overlay motion scales from.
+nearest the anchor's center, which the overlay motion scales from, then calls
+`onReposition`. That includes the placements on scroll and resize, so content
+anchored inside the popover can follow it.
 
 ## Overflow titles
 

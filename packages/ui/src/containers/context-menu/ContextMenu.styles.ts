@@ -45,7 +45,12 @@ export const contextMenuStyles = css`
     cursor: default;
   }
 
-  .item:focus {
+  .branch {
+    display: contents;
+  }
+
+  .item:focus,
+  .item[aria-expanded="true"] {
     outline: none;
     background: var(--jolly-control-bg-hover, ${kFallback.controlBg});
   }
@@ -65,7 +70,8 @@ export const contextMenuStyles = css`
     opacity: 0.6;
   }
 
-  .icon {
+  .icon,
+  .chevron {
     flex: 0 0 auto;
     width: 12px;
     height: 12px;

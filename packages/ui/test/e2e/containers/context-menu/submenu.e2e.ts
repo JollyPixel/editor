@@ -1,0 +1,139 @@
+// Import Third-party Dependencies
+import {
+  test,
+  expect,
+  type Page
+} from "@playwright/test";
+
+// Import Internal Dependencies
+import { openExample } from "../../support/gallery.ts";
+
+function menuItem(
+  page: Page,
+  name: string
+) {
+  return page.getByRole("menuitem", { name, exact: true });
+}
+
+async function openOn(
+  page: Page,
+  name: string
+) {
+  await page.locator("button.row", { hasText: name }).click({ button: "right" });
+  await expect(page.getByRole("menu", { name: "Row actions" })).toBeVisible();
+}
+
+test.describe("Context menu submenus", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "containers/context-menu");
+  });
+
+  test("hovering opens a cascade on the right and a nested choice is emitted", async({ page }) => {
+    await openOn(page, "Arm");
+    const root = page.getByRole("menu", { name: "Row actions" });
+
+    await menuItem(page, "Add").hover();
+    const add = page.getByRole("menu", { name: "Add" });
+    await expect(add).toBeVisible();
+    await expect(menuItem(page, "Add")).toHaveAttribute("aria-expanded", "true");
+    await expect(menuItem(page, "Add")).toBeFocused();
+
+    const rootBox = (await root.boundingBox())!;
+    const addBox = (await add.boundingBox())!;
+    expect(addBox.x).toBeGreaterThanOrEqual(rootBox.x + rootBox.width - 1);
+
+    await menuItem(page, "Shape").hover();
+    await expect(page.getByRole("menu", { name: "Shape" })).toBeVisible();
+    await menuItem(page, "Sphere").click();
+
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(page.locator("main > div")).toHaveAttribute("data-result", "add-sphere:Arm");
+    await expect(page.locator("button.row", { hasText: "Arm" })).toBeFocused();
+  });
+
+  test("the keyboard walks into and out of a submenu", async({ page }) => {
+    await openOn(page, "Torso");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(menuItem(page, "Add")).toBeFocused();
+
+    await page.keyboard.press("ArrowRight");
+    await expect(menuItem(page, "Bone")).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await expect(menuItem(page, "Add")).toBeFocused();
+    await expect(page.getByRole("menu", { name: "Add" })).toBeHidden();
+
+    await page.keyboard.press("Enter");
+    await expect(menuItem(page, "Bone")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu", { name: "Add" })).toBeHidden();
+    await expect(menuItem(page, "Add")).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(page.locator("main > div")).not.toHaveAttribute("data-result");
+  });
+
+  test("resting on a plain item closes the open submenu", async({ page }) => {
+    await openOn(page, "Torso");
+    await menuItem(page, "Add").hover();
+    await expect(page.getByRole("menu", { name: "Add" })).toBeVisible();
+
+    await menuItem(page, "Duplicate").hover();
+
+    await expect(page.getByRole("menu", { name: "Add" })).toBeHidden();
+    await expect(page.getByRole("menu", { name: "Row actions" })).toBeVisible();
+  });
+
+  test("opens on the left near the right edge of the viewport", async({ page }) => {
+    const viewport = page.viewportSize()!;
+    await page.locator("jolly-context-menu").evaluate((
+      menu: HTMLElementTagNameMap["jolly-context-menu"],
+      width
+    ) => {
+      menu.items = [
+        {
+          id: "more",
+          label: "More",
+          items: [{ id: "one", label: "One" }]
+        }
+      ];
+      menu.openAt(width - 180, 40);
+    }, viewport.width);
+
+    await page.keyboard.press("ArrowRight");
+    const submenu = page.getByRole("menu", { name: "More" });
+    await expect(menuItem(page, "One")).toBeFocused();
+
+    const rootBox = (await page.getByRole("menu", { name: "Row actions" }).boundingBox())!;
+    const submenuBox = (await submenu.boundingBox())!;
+    expect(submenuBox.x + submenuBox.width).toBeLessThanOrEqual(rootBox.x + 1);
+  });
+
+  test("follows its menu when a resize pushes the menu back into the viewport", async({ page }) => {
+    await page.locator("jolly-context-menu").evaluate((
+      menu: HTMLElementTagNameMap["jolly-context-menu"]
+    ) => {
+      menu.items = [
+        {
+          id: "more",
+          label: "More",
+          items: [{ id: "one", label: "One" }]
+        }
+      ];
+      menu.openAt(400, 40);
+    });
+    await page.keyboard.press("ArrowRight");
+    await expect(menuItem(page, "One")).toBeFocused();
+
+    await page.setViewportSize({ width: 420, height: 400 });
+
+    const root = page.getByRole("menu", { name: "Row actions" });
+    const submenu = page.getByRole("menu", { name: "More" });
+    await expect.poll(async() => (await root.boundingBox())!.x).toBeLessThan(400);
+    const rootBox = (await root.boundingBox())!;
+    const submenuBox = (await submenu.boundingBox())!;
+    expect(submenuBox.x + submenuBox.width).toBeLessThanOrEqual(rootBox.x + 1);
+    expect(submenuBox.x).toBeGreaterThanOrEqual(0);
+  });
+});
