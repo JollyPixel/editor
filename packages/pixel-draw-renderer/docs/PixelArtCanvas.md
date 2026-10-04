@@ -234,6 +234,30 @@ A paste lands as a floating selection: pixel-sharp, movable, and not yet written
 
 `selectionEvents`'s `selection-state-changed` reports `isFloating` alongside `hasSelection` so a UI can distinguish a pending paste from a plain selection.
 
+### Selection presence
+
+`canvas.selectionPresence` returns a `SelectionPresence` value object for the
+current selection, or `null` when no selection exists. Its `toJSON()` method
+returns an independent `SelectionPresenceData` snapshot in texture coordinates.
+
+`selectionEvents` emits `selection-presence-changed` with this value whenever
+selection geometry, content or lifecycle state changes. This includes gesture
+start and end, shape selection, resizing, paste, transforms, deletion, history
+restoration and discard. Viewport refreshes do not emit selection changes.
+Subscribe before reading the getter when attaching another view.
+
+```ts
+canvas.selectionEvents.on("selection-presence-changed", (presence) => {
+  renderSelection(presence?.toJSON() ?? null);
+});
+renderSelection(canvas.selectionPresence?.toJSON() ?? null);
+```
+
+Completed selections remain present after a move or transform commits, and
+after deleting their texture pixels. A cleared selection reports `null`.
+The older gesture events retain their existing behavior; `selection-idle`
+means a gesture ended and does not imply that the selection was cleared.
+
 ### Pixel accuracy
 
 Reading is exact wherever the platform allows it: `@jolly-pixel/image/browser` tries WebCodecs `ImageDecoder` first, then its own PNG decoder, and only then a canvas, whose premultiplied backing store cannot reproduce RGB under a low alpha. See [the ladder](https://github.com/JollyPixel/editor/blob/main/packages/image/docs/raster.md). `decodeRasterBlob()` is exported and shares this path, in the `RGBA8[]` shape the clipboard uses.

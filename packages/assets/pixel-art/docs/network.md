@@ -45,10 +45,40 @@ Use the individual helpers when an editor needs only some previews:
 
 - `PixelCursorSync` sends cursor movement through `cursor`.
 - `PixelStrokeGhostSync` sends an in-progress stroke through `strokeGhost`.
-- `SelectionGhostSync` sends selection gestures through `selectionGhost`.
+- `SelectionGhostSync` sends the full selection lifecycle through `selectionGhost`.
 - `UVGhostSync` sends UV drags and resizes through `uvGhost` as `{ id, face, layout }`: the region as the drag shows it, and the only slot it changes, or `null` for the whole region.
 
-Each helper takes `room` and `canvas`; cursor also needs `label` and `color`, while selection and UV need `color`. `UVGhostSync` also takes `onRemoteRegionDragging(region)`, called with the `UVRegion` of each peer drag on top of the built-in overlay. They replay existing `room.peers` presence on construction. Stroke, selection, and UV payloads are coalesced per animation frame. A `strokeGhost` frame, `{ from, spans: [{ color, xy }] }`, carries only the pixels added since the previous frame, starting at index `from`. A frame with `from: 0` restarts the stroke, as a line preview does when it moves. A peer that joins mid-stroke sees only the pixels sent after it joined. A preview stays until its peer publishes `null`, which happens when a stroke, drag or selection ends, or until the peer leaves. Previews never edit the authoritative buffer. Accepted commands and snapshots clear overlapping or superseded ghosts. A malformed payload, such as a selection rectangle without numeric bounds or a stroke pixel without an RGBA color, clears that peer's preview.
+Each helper takes `room` and `canvas`; cursor also needs `label` and `color`, while selection and UV need `color`. `UVGhostSync` also takes `onRemoteRegionDragging(region)`, called with the `UVRegion` of each peer drag on top of the built-in overlay. They replay existing `room.peers` presence on construction. Stroke and UV payloads and selection gesture updates are coalesced per animation frame. A `strokeGhost` frame, `{ from, spans: [{ color, xy }] }`, carries only the pixels added since the previous frame, starting at index `from`. A frame with `from: 0` restarts the stroke, as a line preview does when it moves. A peer that joins mid-stroke sees only the pixels sent after it joined. A preview stays until its peer publishes `null`, which happens when a stroke or UV drag ends, or until the peer leaves. Previews never edit the authoritative buffer. Accepted commands and snapshots clear overlapping or superseded stroke and UV ghosts. A malformed payload, such as a selection rectangle without numeric bounds or a stroke pixel without an RGBA color, clears that peer's preview.
+
+
+Selection presence has no timeout. Completing a selection, committing a move, resizing,
+transforming, deleting texture pixels, undoing or redoing retains the final outline. Shape
+selection masks include their holes. Deselecting, leaving select mode, deleting a floating
+paste, replacing or resizing the texture, or destroying the synchronizer publishes
+`null`. Peer departure removes the outline and floating preview. Selection presence is
+scoped to room membership and is excluded from asset snapshots and history.
+
+The helper subscribes to `selection-presence-changed` and immediately publishes
+`canvas.selectionPresence` on attachment. Creating, resizing and moving updates are
+coalesced per animation frame; stationary states and clears publish immediately and cancel
+queued previews. Existing room presence is replayed on construction, room sync and peer
+join. Document snapshots rebuild remote selection views from retained presence. Pixel
+commands, including overlapping edits from other peers, do not clear selection presence.
+
+`SelectionGhostPayload` is the wire representation. Its phases are `creating` and
+`resizing` with a rectangle, `selected` with a rectangle and mask, and `moving` and
+`floating` with source and live rectangles, pixels, mask, erase color and `blankSource`.
+Masks are `"full"` or base64 bitsets, with each row-major mask bit stored least-significant
+bit first. Pixels are base64 row-major RGBA8, preserving alpha-zero RGB bytes. Floating
+previews render the owner's pixels and erase color instead of sampling the receiver's
+texture. Moving previews erase the source only when `blankSource` is true; floating
+paste previews never erase it.
+
+Decoding validates safe integer geometry, positive dimensions, matching source/live sizes,
+mask and pixel lengths, selected mask cells and RGBA bytes. Content is limited to the
+receiver's `maxTextureSize ** 2` pixels before decoding arrays; creating and resizing
+outlines may extend beyond those bounds. Invalid presence clears that peer's selection.
+The packed selection format requires peers to use the updated client together.
 
 `peerStyle(room, style)` binds a `PeerColor` or `PeerLabel` to the room's peer profiles and returns `(clientId) => string`.
 

@@ -64,7 +64,16 @@ A completed rectangular or shape-masked region of the texture that can be moved,
 
 Pasted content held above the texture until it is deposited. It can be moved, but is not yet stored in the pixel buffer.
 
+### Selection Presence
+
+An immutable description of the current selection for another view. It includes
+creating and resizing bounds, a completed selection's bounds and mask, or a
+moving or floating selection's exact pixels, mask and preview erase color.
+`SelectionPresence` owns and validates this data; its snapshots are independent
+copies. Room membership and network retention belong to the network context.
+
 ### UV Region
+
 
 A named texture area mapped to one or more mesh texture slots. A region may use one shared rectangle or separate geometry for individual slots.
 

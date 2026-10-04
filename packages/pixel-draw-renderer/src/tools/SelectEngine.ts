@@ -4,6 +4,8 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { SelectEngineEvent } from "./SelectEngine.events.ts";
+import { SelectionPresence } from "../selection/SelectionPresence.ts";
+import type { SelectState } from "./SelectState.ts";
 import type { SelectionSnapshot } from "../clipboard/types.ts";
 import { SelectionContent } from "../selection/SelectionContent.ts";
 import type { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
@@ -68,39 +70,11 @@ export interface SelectTool {
   delete(): boolean;
 }
 
-type SelectState =
-  | {
-    kind: "idle";
-  }
-  | {
-    kind: "creating";
-    start: Vec2;
-    rect: SelectionRect;
-  }
-  | {
-    kind: "selected";
-    content: SelectionContent;
-    floating: boolean;
-  }
-  | {
-    kind: "resizing";
-    content: SelectionContent;
-    corner: ResizeCorner;
-    origin: Vec2;
-    rect: SelectionRect;
-  }
-  | {
-    kind: "moving";
-    content: SelectionContent;
-    floating: boolean;
-    origin: Vec2;
-    live: SelectionContent;
-  };
-
 type SelectedState = Extract<SelectState, { kind: "selected"; }>;
 
 export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTool {
   #state: SelectState = { kind: "idle" };
+  #publishedPresenceState: SelectState = this.#state;
   #canvasBuffer: CanvasBuffer;
   #floatingSelection: FloatingSelection;
   #selectionOverlay: SelectionOutline;
@@ -123,6 +97,19 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.#eraseColor = options.eraseColor;
     this.#document = options.document;
     this.#viewport = options.viewport;
+  }
+
+  get presence(): SelectionPresence | null {
+    const state = this.#state;
+    let eraseColor: RGBA8 | undefined;
+    if (state.kind === "moving") {
+      eraseColor = state.eraseColor;
+    }
+    else if (state.kind === "selected" && state.floating) {
+      eraseColor = this.#eraseColor.resolve(this.#canvasBuffer, state.content.rect);
+    }
+
+    return SelectionPresence.capture(state, eraseColor);
   }
 
   get isDragging(): boolean {
@@ -233,7 +220,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     else {
       const rect = SelectEngine.#spanning(pos, pos);
       this.#state = { kind: "creating", start: pos, rect };
-      this.#selectionOverlay.draw(rect);
+      this.refreshOverlay();
     }
   }
 
@@ -281,6 +268,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
         }
       );
     }
+    this.#publishPresence();
   }
 
   handleEnd(): void {
@@ -335,6 +323,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     );
     this.#commit(state.content, erased, false);
     this.#state = { ...state, content: erased };
+    this.#publishPresence();
 
     return true;
   }
@@ -365,6 +354,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.#state = { kind: "idle" };
     this.#selectionOverlay.clear();
     this.#floatingSelection.clear();
+    this.#publishPresence();
 
     // An interrupted gesture has no command, so clear its peer ghost explicitly.
     if (interruptedGesture) {
@@ -398,6 +388,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       default:
         state satisfies never;
     }
+    this.#publishPresence();
   }
 
   syncSelectionAfterHistory(
@@ -418,20 +409,22 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     pos: Vec2
   ): void {
     const { content, floating } = state;
+    const eraseColor = this.#eraseColor.resolve(this.#canvasBuffer, content.rect);
 
     this.#state = {
       kind: "moving",
       content,
       floating,
       origin: pos,
-      live: content
+      live: content,
+      eraseColor
     };
     this.refreshOverlay();
     this.#floatingSelection.create({
       sourceRect: content.rect,
       pixels: content.pixels,
       mask: content.mask,
-      eraseColor: this.#eraseColor.resolve(this.#canvasBuffer, content.rect),
+      eraseColor,
       blankSource: !floating
     });
   }
@@ -455,7 +448,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.#state = { kind: "selected", content, floating: false };
     this.refreshOverlay();
     this.#publishSelectionState();
-    // Shape selection has no command, so clear its peer ghost explicitly.
     this.emit("selection-idle");
   }
 
@@ -647,6 +639,14 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
         isFloating
       }
     );
+  }
+
+  #publishPresence(): void {
+    if (this.#publishedPresenceState === this.#state) {
+      return;
+    }
+    this.#publishedPresenceState = this.#state;
+    this.emit("selection-presence-changed", this.presence);
   }
 
   #resizableContent(): SelectionContent | null {
