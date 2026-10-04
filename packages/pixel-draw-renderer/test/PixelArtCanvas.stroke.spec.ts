@@ -156,7 +156,20 @@ describe("PixelArtCanvas — strokes", () => {
     assert.deepStrictEqual(line.metadata.color, kGreen);
     assert.deepStrictEqual(
       line.metadata.positions,
-      [9, 10, 11].map((x) => {
+      [8, 9, 10, 11].map((x) => {
+        return { x, y: 8 };
+      })
+    );
+    manager.shortcuts.lineHeld = false;
+    moveTo(canvas, 116, 100);
+    manager.shortcuts.lineHeld = true;
+    canvas.dispatchEvent(mouseEvent("mousedown", 120, 100));
+
+    const nextLine = commands.at(-1);
+    assert.strictEqual(nextLine?.action, "stroke");
+    assert.deepStrictEqual(
+      nextLine?.metadata.positions,
+      [8, 9, 10, 11, 12, 13].map((x) => {
         return { x, y: 8 };
       })
     );

@@ -63,12 +63,18 @@ export class StrokeMode extends InteractionMode {
     _ctrlKey: boolean
   ): boolean {
     const source = this.#sourceFor(slot);
+    this.#line.updateCursor(position.boundedTexture);
     if (this.#line.commitsOn("mousedown")) {
-      this.#line.commit(source);
+      if (position.boundedTexture) {
+        this.#line.commit(source);
+      }
 
       return false;
     }
 
+    if (position.boundedTexture) {
+      this.#line.rememberClick(position.boundedTexture);
+    }
     this.#engine.startStroke(
       position.texture.x,
       position.texture.y,
