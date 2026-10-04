@@ -190,6 +190,22 @@ describe("ConsoleMirror", () => {
     ]);
   });
 
+  test("does not send a command with an already-aborted signal", async() => {
+    const { shell, brush } = await bridge();
+    const command = shell.registry.resolveCommand("brush.grow");
+    assert.ok(command);
+    const controller = new AbortController();
+    controller.abort();
+
+    await assert.rejects(Promise.resolve(command.def.execute({ delta: 3 }, {
+      print: () => undefined,
+      error: () => undefined,
+      signal: controller.signal
+    })), /cancelled/);
+
+    assert.equal(brush.size, 1);
+  });
+
   test("prints the message of a command that fails in the frame", async() => {
     const { shell } = await bridge();
 
