@@ -87,6 +87,11 @@ export class ConsoleElement extends LitElement {
     this._caretAtEnd = true;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#bind(this.console);
+  }
+
   get open(): boolean {
     return this._dialog?.open ?? false;
   }
