@@ -9,102 +9,65 @@ import assert from "node:assert/strict";
 import {
   HistoryStack
 } from "#src/history/HistoryStack.ts";
-import type { RGBA8 } from "#src/types.ts";
-import {
-  HISTORY_TEXTURE_SIZE,
-  makeHistoryBuffer
-} from "../helpers/history/buffer.ts";
-import { makeUvMap } from "../helpers/uv/map.ts";
-
-// CONSTANTS
-const kRed: RGBA8 = { r: 255, g: 0, b: 0, a: 255 };
-const kBlue: RGBA8 = { r: 0, g: 0, b: 255, a: 255 };
-const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 
 describe("HistoryStack", () => {
   describe("canUndo / canRedo", () => {
     test("both false on a fresh stack; canUndo becomes true after a push", () => {
-      const stack = new HistoryStack(
-        makeHistoryBuffer(),
-        makeUvMap(HISTORY_TEXTURE_SIZE)
-      );
+      const stack = new HistoryStack<string>();
       assert.ok(!stack.canUndo);
       assert.ok(!stack.canRedo);
 
-      stack.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
+      stack.push("a");
 
       assert.ok(stack.canUndo);
       assert.ok(!stack.canRedo);
     });
   });
 
+  describe("undo / redo", () => {
+    test("move entries between the stacks and return them", () => {
+      const stack = new HistoryStack<string>();
+      stack.push("a");
+      stack.push("b");
+
+      assert.equal(stack.undo(), "b");
+      assert.equal(stack.undo(), "a");
+      assert.equal(stack.undo(), null);
+      assert.equal(stack.redo(), "a");
+      assert.equal(stack.redo(), "b");
+      assert.equal(stack.redo(), null);
+    });
+  });
+
   describe("push", () => {
     test("clears the redo stack", () => {
-      const buffer = makeHistoryBuffer();
-      const stack = new HistoryStack(
-        buffer,
-        makeUvMap(HISTORY_TEXTURE_SIZE)
-      );
+      const stack = new HistoryStack<string>();
 
-      stack.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
+      stack.push("a");
       stack.undo();
       assert.ok(stack.canRedo);
 
-      stack.push({
-        action: "stroke",
-        positions: [{ x: 1, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kBlue
-      });
+      stack.push("b");
       assert.ok(!stack.canRedo);
     });
 
     test("evicts the oldest entry once past the configured limit", () => {
-      const buffer = makeHistoryBuffer();
-      const stack = new HistoryStack(
-        buffer,
-        makeUvMap(HISTORY_TEXTURE_SIZE),
-        { limit: 2 }
-      );
+      const stack = new HistoryStack<number>({ limit: 2 });
 
       for (let i = 0; i < 3; i++) {
-        stack.push({
-          action: "stroke",
-          positions: [{ x: i, y: 0 }],
-          beforeColors: [kWhite],
-          afterColor: kRed
-        });
+        stack.push(i);
       }
 
-      assert.notStrictEqual(stack.undo(), null);
-      assert.notStrictEqual(stack.undo(), null);
-      assert.strictEqual(stack.undo(), null);
+      assert.equal(stack.undo(), 2);
+      assert.equal(stack.undo(), 1);
+      assert.equal(stack.undo(), null);
     });
 
     test("defaults to a limit of 10", () => {
-      const buffer = makeHistoryBuffer();
-      const stack = new HistoryStack(
-        buffer,
-        makeUvMap(HISTORY_TEXTURE_SIZE)
-      );
+      const stack = new HistoryStack<number>();
 
       for (let i = 0; i < 11; i++) {
-        stack.push({
-          action: "stroke",
-          positions: [{ x: 0, y: 0 }],
-          beforeColors: [kWhite],
-          afterColor: kRed
-        });
+        stack.push(i);
       }
 
       let undoCount = 0;
@@ -117,18 +80,9 @@ describe("HistoryStack", () => {
 
   describe("clear", () => {
     test("discards both stacks", () => {
-      const buffer = makeHistoryBuffer();
-      const stack = new HistoryStack(
-        buffer,
-        makeUvMap(HISTORY_TEXTURE_SIZE)
-      );
+      const stack = new HistoryStack<string>();
 
-      stack.push({
-        action: "stroke",
-        positions: [{ x: 0, y: 0 }],
-        beforeColors: [kWhite],
-        afterColor: kRed
-      });
+      stack.push("a");
       stack.undo();
       assert.ok(stack.canRedo);
 

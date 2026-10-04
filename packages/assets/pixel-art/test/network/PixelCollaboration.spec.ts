@@ -34,7 +34,7 @@ describe("PixelCollaboration", () => {
 
     canvas.onCursorMove?.({ x: 1, y: 1 });
     canvas.onStrokeProgress?.([{ x: 1, y: 1, color: { r: 0, g: 0, b: 0, a: 255 } }]);
-    canvas.onBufferUpdated?.({
+    canvas.document.emit("command", {
       action: "resized",
       metadata: { size: { x: 4, y: 4 } }
     });

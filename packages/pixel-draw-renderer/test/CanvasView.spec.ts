@@ -26,7 +26,6 @@ describe("CanvasView", () => {
     const view = new CanvasView(doc, {
       parent: container,
       brushHighlight: {
-        size: 1,
         colorInline: "#fff",
         colorOutline: "#000"
       }

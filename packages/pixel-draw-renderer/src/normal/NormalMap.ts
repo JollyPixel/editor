@@ -211,22 +211,17 @@ export class NormalMap extends Emitter<NormalMapEvent> {
       };
     }
 
-    const areas = new Map<number, RectArea | null>();
+    const areas = new Map<number, RectArea>();
     for (const regionId of this.#dirtyRegions) {
       for (const island of islands.islandsOf(regionId)) {
-        areas.set(island.index, null);
+        areas.set(island.index, RectArea.from(island.bounds));
       }
     }
     for (const rect of this.#dirtyRects) {
       const grown = RectArea.from(rect).grown(1);
       for (const island of islands.islandsWithin(grown.bounds)) {
         const area = areas.get(island.index);
-        if (area === undefined) {
-          areas.set(island.index, grown);
-        }
-        else if (area !== null) {
-          areas.set(island.index, area.union(grown.bounds));
-        }
+        areas.set(island.index, area === undefined ? grown : area.union(grown.bounds));
       }
     }
 
@@ -236,7 +231,7 @@ export class NormalMap extends Emitter<NormalMapEvent> {
         input,
         this.#output,
         islands.islands[index],
-        area?.bounds
+        area.bounds
       );
       if (rect !== null) {
         written = written === null

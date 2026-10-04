@@ -6,6 +6,7 @@ import { clamp } from "../utils/math.ts";
 import { ViewportTexture } from "./ViewportTexture.ts";
 import { Zoom } from "./Zoom.ts";
 import type {
+  SelectionRect,
   Vec2
 } from "../types.ts";
 
@@ -14,7 +15,19 @@ const kFramePadding = 8;
 
 export type ClientOrigin = Pick<DOMRectReadOnly, "left" | "top">;
 
-export interface DefaultViewport {
+export interface ScreenProjection {
+  toScreen(
+    point: Readonly<Vec2>
+  ): Vec2;
+  toScreenRect(
+    rect: Readonly<SelectionRect>
+  ): SelectionRect;
+  toTexture(
+    point: Readonly<Vec2>
+  ): Vec2;
+}
+
+export interface DefaultViewport extends ScreenProjection {
   readonly zoom: Zoom;
   readonly camera: Readonly<Vec2>;
   readonly canvasWidth: number;
@@ -334,6 +347,40 @@ export class Viewport extends Emitter<
     this.emit("changed");
   }
 
+  toScreen(
+    point: Readonly<Vec2>
+  ): Vec2 {
+    const zoom = this.zoom.value;
+
+    return {
+      x: (point.x * zoom) + this.#camera.x,
+      y: (point.y * zoom) + this.#camera.y
+    };
+  }
+
+  toScreenRect(
+    rect: Readonly<SelectionRect>
+  ): SelectionRect {
+    const zoom = this.zoom.value;
+
+    return {
+      ...this.toScreen(rect),
+      width: rect.width * zoom,
+      height: rect.height * zoom
+    };
+  }
+
+  toTexture(
+    point: Readonly<Vec2>
+  ): Vec2 {
+    const zoom = this.zoom.value;
+
+    return {
+      x: (point.x - this.#camera.x) / zoom,
+      y: (point.y - this.#camera.y) / zoom
+    };
+  }
+
   visibleCenter(): Vec2 {
     const size = this.#texture.size;
     const zoom = this.zoom.value;
@@ -352,17 +399,6 @@ export class Viewport extends Emitter<
     };
   }
 
-  mouseCanvasPosition(
-    mx: number,
-    my: number,
-    bounds: DOMRect
-  ): Vec2 {
-    return {
-      x: Math.floor(mx - bounds.left),
-      y: Math.floor(my - bounds.top)
-    };
-  }
-
   textureClientPosition(
     point: Readonly<Vec2>,
     bounds: ClientOrigin
@@ -375,6 +411,16 @@ export class Viewport extends Emitter<
     };
   }
 
+  mouseTexturePosition(
+    mx: number,
+    my: number,
+    parameters: MouseTexturePositionOptions & { limit?: false; }
+  ): Vec2;
+  mouseTexturePosition(
+    mx: number,
+    my: number,
+    parameters: MouseTexturePositionOptions
+  ): Vec2 | null;
   mouseTexturePosition(
     mx: number,
     my: number,

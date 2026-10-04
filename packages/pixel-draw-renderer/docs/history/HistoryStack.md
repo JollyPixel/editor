@@ -1,9 +1,9 @@
 # HistoryStack
 
-Bounded undo/redo stack for `PixelArtCanvas`. Most consumers use `PixelArtCanvas.undo()`/`redo()` rather than this class directly. See [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo).
+Bounded undo/redo stack. It stores entries and moves them between its two stacks; it applies nothing. `PixelDocument` keeps its [entries](#entries) in one, and most consumers use `PixelArtCanvas.undo()`/`redo()`. See [PixelArtCanvas.md](../PixelArtCanvas.md#undo--redo--canundo--canredo).
 
 ```ts
-new HistoryStack(buffer: DefaultPixelBuffer, uvMap: UVMap, options?: HistoryStackOptions)
+new HistoryStack<TEntry>(options?: HistoryStackOptions)
 ```
 
 ```ts
@@ -14,24 +14,6 @@ interface HistoryStackOptions {
 ```
 
 `limit` caps the undo stack; pushing past it drops the oldest entry.
-
-## Entry actions
-
-| Action | What it records |
-|---|---|
-| `"stroke"` | `beforeColors` per-position, `afterColor` single color |
-| `"resized"` / `"texture-replaced"` | `beforeSize` / `afterSize` and whole-buffer `beforePixels` / `afterPixels` snapshots |
-| `"select-edit"` | Per-position `beforeColors` / `afterColors` and selection metadata used by `PixelArtCanvas` while select mode is active |
-| `"uv-create"` / `"uv-delete"` | Full `region` (undo calls the inverse `UVMap` method) |
-| `"uv-move"` | Region `id`, `face` (`null` unless the region is free), and `oldRect` / `newRect` |
-| `"uv-state"` | Region `id` and full `before` / `after` snapshots |
-| `"uv-rotate"` | Region `id`, rotated `face` (`null` unless the region is free), and full `before` / `after` snapshots |
-| `"normal-map"` | The `redo` command that was sent and the `undo` command that reverts it |
-
-A `"uv-delete"` entry also carries the `normalMapZone` the deletion removed, as `{ zone, index }`. `HistoryStack` leaves normal map entries to `PixelDocument`, which applies them on undo and redo.
-
-> [!NOTE]
-> When used through `PixelArtCanvas`, undo and redo emit mutation hooks. An attached sync client can propagate the resulting pixel and UV changes. See [uv/UVMap.md](../uv/UVMap.md#history--network).
 
 ## API
 
@@ -45,26 +27,19 @@ get canRedo(): boolean
 ### `push(entry)`
 
 ```ts
-push(entry: HistoryEntryInput): void
+push(entry: TEntry): void
 ```
 
-Stamps `Date.now()` and pushes onto the undo stack, clearing redo. Drops the oldest entry when `limit` is exceeded.
+Pushes onto the undo stack and clears the redo stack. Drops the oldest entry when `limit` is exceeded.
 
-### `undo()`
+### `undo()` / `redo()`
 
 ```ts
-undo(): HistoryEntry | null
+undo(): TEntry | null
+redo(): TEntry | null
 ```
 
-Reverts the most recent entry and moves it to the redo stack. Returns `null` if nothing to undo.
-
-### `redo()`
-
-```ts
-redo(): HistoryEntry | null
-```
-
-Re-applies the most recently undone entry and moves it back to the undo stack. Returns `null` if nothing to redo.
+Moves the most recent entry to the other stack and returns it, or returns `null` when that stack is empty.
 
 ### `clear()`
 
@@ -72,4 +47,27 @@ Re-applies the most recently undone entry and moves it back to the undo stack. R
 clear(): void
 ```
 
-Discards both stacks. Call when the buffer is replaced from outside (e.g. remote resize or snapshot); `PixelArtCanvas` does this automatically.
+Discards both stacks.
+
+## Entries
+
+```ts
+interface HistoryEntry {
+  timestamp: number;
+  redo: DocumentCommand[];
+  undo: DocumentCommand[];
+  selection?: SelectionChange;
+}
+
+interface SelectionChange {
+  before: SelectionFootprint;
+  after: SelectionFootprint;
+}
+
+interface SelectionFootprint {
+  rect: SelectionRect;
+  mask: boolean[];
+}
+```
+
+A `PixelDocument` entry holds the [commands](../PixelCommand.md) that redo and undo one local edit. Undo applies `undo`, redo applies `redo`, and both emit the applied commands with `originTimestamp` set to `timestamp`. A stroke's `undo` holds one `stroke` per previous color. A resize, texture replacement or clear holds the whole texture before and after as `texture-replaced`. A UV region deletion also restores the region's normal map zone. `selection` is set by selection edits; `PixelArtCanvas` uses it to restore the selection outline while select mode is active.

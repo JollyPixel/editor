@@ -34,10 +34,10 @@ describe("BrushHighlightView", () => {
       const overlay = new BrushHighlightView(
         svg,
         viewport,
-        makeBrush(brushSize)
+        makeBrush()
       );
 
-      overlay.update(13, 21);
+      overlay.update(13, 21, () => brushSize);
       const group = svg.querySelector("g");
 
       assert.ok(group, "highlight group should exist");
@@ -58,11 +58,11 @@ describe("BrushHighlightView", () => {
     const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
-      makeBrush(1)
+      makeBrush()
     );
 
-    overlay.update(10, 10);
-    overlay.update(null, null);
+    overlay.update(10, 10, () => 1);
+    overlay.update(null, null, () => 1);
 
     const group = svg.querySelector("g");
     assert.strictEqual(
@@ -72,22 +72,16 @@ describe("BrushHighlightView", () => {
     );
   });
 
-  test("refresh() redraws the current cursor position with the latest brush size", () => {
+  test("refresh() redraws the current cursor position with the latest size", () => {
     const svg = makeSvg();
     let brushSize = 1;
     const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
-      {
-        get size() {
-          return brushSize;
-        },
-        colorInline: "#fff",
-        colorOutline: "#000"
-      }
+      makeBrush()
     );
 
-    overlay.update(10, 10);
+    overlay.update(10, 10, () => brushSize);
     brushSize = 2;
     overlay.refresh();
 
@@ -103,10 +97,10 @@ describe("BrushHighlightView", () => {
     const overlay = new BrushHighlightView(
       svg,
       makeViewport(),
-      makeBrush(1)
+      makeBrush()
     );
 
-    overlay.update(10, 10);
+    overlay.update(10, 10, () => 1);
     overlay.hide();
 
     const group = svg.querySelector("g");
@@ -115,5 +109,19 @@ describe("BrushHighlightView", () => {
       "hidden",
       "highlight group should be hidden"
     );
+  });
+
+  test("update() snaps to the cell under a cursor left of and above the texture", () => {
+    const svg = makeSvg();
+    const viewport = makeViewport();
+    viewport.camera = {
+      x: 6,
+      y: 10
+    };
+    const overlay = new BrushHighlightView(svg, viewport, makeBrush());
+
+    overlay.update(1, 1, () => 1);
+
+    assert.strictEqual(svg.querySelector("g")?.getAttribute("transform"), "translate(-2, -2) scale(4)");
   });
 });

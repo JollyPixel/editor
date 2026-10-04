@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { stroke } from "./helpers/events.ts";
@@ -87,7 +87,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
 
   describe("global fill round trip", () => {
     test("undo/redo of a global fill restores the exact colors and re-emits a full-position stroke", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = createPixelArtCanvas({
         texture: {
           size: { x: 4, y: 4 }
@@ -100,7 +100,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
         history: {
           enabled: true
         },
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
       manager.tools.fill.global = true;
 

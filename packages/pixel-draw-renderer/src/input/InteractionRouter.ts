@@ -1,41 +1,40 @@
 // Import Internal Dependencies
 import type { InteractionMode } from "./modes/InteractionMode.ts";
-import type { InputActions } from "./InputActions.ts";
-import type { CanvasShortcuts } from "./CanvasShortcuts.ts";
-import type { Viewport } from "../rendering/Viewport.ts";
+import type {
+  InputActions,
+  PointerPosition
+} from "./InputActions.ts";
+import type { BrushColorSlot } from "../tools/Brush.ts";
 import type {
   Mode,
   RotationDirection,
   Vec2
 } from "../types.ts";
 
+// CONSTANTS
+const kNoModes: ReadonlySet<Mode> = new Set();
+const kReadOnlyFallbackMode: Mode = "move";
+
 export interface InteractionRouterOptions {
   modes: InteractionMode[];
   defaultMode: Mode;
-  viewport: Viewport;
   setCursor: (cursor: string) => void;
-  onUndo: () => boolean;
-  onRedo: () => boolean;
-  onCopy: () => boolean;
-  onPaste: () => boolean;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
 }
 
 export type ExternalCursorMoveListener = (pos: Vec2 | null) => void;
 
-export class InteractionRouter implements InputActions, CanvasShortcuts {
+export class InteractionRouter implements InputActions {
   #modes: Map<Mode, InteractionMode>;
+  #pixelWritingModes: ReadonlySet<Mode>;
   #active: InteractionMode;
-  #viewport: Viewport;
+  #displaced: InteractionMode | null = null;
+  #pixelsReadOnly = false;
   #setCursor: (cursor: string) => void;
-  #onUndo: () => boolean;
-  #onRedo: () => boolean;
-  #onCopy: () => boolean;
-  #onPaste: () => boolean;
   #onModeChange?: (mode: Mode, previousMode: Mode) => void;
   #textureCursor: Vec2 | null = null;
-  #panHeld: boolean = false;
-  #lineHeld: boolean = false;
+  #panHeld = false;
+  #lineHeld = false;
   #isPanning = false;
   onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
@@ -45,6 +44,11 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
     this.#modes = new Map(
       options.modes.map((mode) => [mode.id, mode])
     );
+    this.#pixelWritingModes = new Set(
+      options.modes
+        .filter((mode) => mode.writesPixels)
+        .map((mode) => mode.id)
+    );
 
     const active = this.#modes.get(options.defaultMode);
     if (!active) {
@@ -52,12 +56,7 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
     }
 
     this.#active = active;
-    this.#viewport = options.viewport;
     this.#setCursor = options.setCursor;
-    this.#onUndo = options.onUndo;
-    this.#onRedo = options.onRedo;
-    this.#onCopy = options.onCopy;
-    this.#onPaste = options.onPaste;
     this.#onModeChange = options.onModeChange;
   }
 
@@ -68,144 +67,54 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
   set mode(
     next: Mode
   ) {
-    if (next === this.#active.id) {
+    if (
+      next === this.#active.id ||
+      this.unavailableModes.has(next)
+    ) {
       return;
     }
 
-    const mode = this.#modes.get(next);
-    if (!mode) {
-      throw new Error(`Unknown mode: "${next}"`);
+    const mode = this.#modeOf(next);
+    this.#displaced = null;
+    this.#activate(mode);
+  }
+
+  get unavailableModes(): ReadonlySet<Mode> {
+    return this.#pixelsReadOnly ? this.#pixelWritingModes : kNoModes;
+  }
+
+  get pixelsReadOnly(): boolean {
+    return this.#pixelsReadOnly;
+  }
+
+  set pixelsReadOnly(
+    readOnly: boolean
+  ) {
+    if (readOnly === this.#pixelsReadOnly) {
+      return;
     }
 
-    const previous = this.#active.id;
-    this.#active.onExit(next);
-    this.#active = mode;
-    this.#active.onEnter(previous);
-    this.#syncCursor();
-    this.#onModeChange?.(next, previous);
+    this.#pixelsReadOnly = readOnly;
+    if (this.unavailableModes.has(this.#active.id)) {
+      this.#displaced = this.#active;
+      this.#activate(this.#modeOf(kReadOnlyFallbackMode));
+    }
+    else if (
+      this.#displaced !== null &&
+      !this.unavailableModes.has(this.#displaced.id)
+    ) {
+      const displaced = this.#displaced;
+      this.#displaced = null;
+      this.#activate(displaced);
+    }
   }
 
   get textureCursor(): Vec2 | null {
     return this.#textureCursor ? { ...this.#textureCursor } : null;
   }
 
-  highlightBrushSize(
-    brushSize: number
-  ): number {
-    return this.#active.highlightSize(brushSize);
-  }
-
-  #syncCursor(): void {
-    this.#setCursor(this.#active.cursor());
-  }
-
-  onPrimaryDown(
-    position: Vec2,
-    canvasPosition: Vec2
-  ): boolean {
-    const shouldTrackDrag = this.#active.onPrimaryDown(
-      position,
-      canvasPosition
-    );
-    this.#syncCursor();
-
-    return shouldTrackDrag;
-  }
-
-  onPrimaryMove(
-    position: Vec2,
-    canvasPosition: Vec2
-  ): void {
-    this.#active.onPrimaryMove(position, canvasPosition);
-  }
-
-  onPrimaryUp(): void {
-    this.#active.onPrimaryUp();
-    this.#syncCursor();
-  }
-
-  onSecondaryDown(
-    position: Vec2,
-    ctrlKey: boolean
-  ): boolean {
-    return this.#active.onSecondaryDown(
-      position,
-      ctrlKey
-    );
-  }
-
-  onSecondaryMove(
-    position: Vec2
-  ): void {
-    this.#active.onSecondaryMove(position);
-  }
-
-  onSecondaryUp(): void {
-    this.#active.onSecondaryUp();
-  }
-
-  onPanStart(): void {
-    this.#isPanning = true;
-    this.#setCursor("grabbing");
-  }
-
-  onPanMove(
-    delta: Vec2
-  ): void {
-    this.#viewport.applyPan(
-      delta.x,
-      delta.y
-    );
-  }
-
-  onPanEnd(): void {
-    this.#isPanning = false;
-    if (this.#panHeld) {
-      this.#setCursor("grab");
-
-      return;
-    }
-
-    this.#syncCursor();
-  }
-
-  onZoom(
-    delta: number,
-    center: Vec2
-  ): void {
-    this.#viewport.applyZoom(
-      delta,
-      center.x,
-      center.y
-    );
-  }
-
-  onCanvasHover(
-    position: Vec2 | null
-  ): void {
-    this.#active.onHover(position);
-    if (!this.#isPanning && !this.#panHeld) {
-      this.#syncCursor();
-    }
-  }
-
-  onTextureCursorMove(
-    position: Vec2 | null
-  ): void {
-    this.#textureCursor = position ? { ...position } : null;
-    this.#active.onCursorMove(position);
-    this.onExternalCursorMove?.(position);
-  }
-
-  onMouseUp(): void {
-    this.#active.onMouseUp();
-  }
-
-  onBlur(): void {
-    this.#panHeld = false;
-    this.#lineHeld = false;
-    this.#active.onBlur();
-    this.#syncCursor();
+  get pansOnPrimary(): boolean {
+    return this.#panHeld || this.#active.pansOnPrimary;
   }
 
   get panHeld(): boolean {
@@ -220,12 +129,7 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
     }
 
     this.#panHeld = held;
-    if (held) {
-      this.#setCursor("grab");
-    }
-    else {
-      this.#syncCursor();
-    }
+    this.#syncCursor();
   }
 
   get lineHeld(): boolean {
@@ -243,24 +147,76 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
     this.#active.onLineHeldChange(held);
   }
 
-  copy(): boolean {
-    return this.#onCopy();
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition,
+    ctrlKey: boolean
+  ): boolean {
+    const tracked = this.#active.onPointerDown(
+      slot,
+      position,
+      ctrlKey
+    );
+    this.#syncCursor();
+
+    return tracked;
   }
 
-  paste(): boolean {
-    return this.#onPaste();
+  onPointerMove(
+    slot: BrushColorSlot,
+    position: PointerPosition
+  ): void {
+    this.#active.onPointerMove(slot, position);
+  }
+
+  onPointerUp(
+    slot: BrushColorSlot
+  ): void {
+    this.#active.onPointerUp(slot);
+    this.#syncCursor();
+  }
+
+  onCtrlWheel(
+    delta: number
+  ): boolean {
+    return this.#active.onCtrlWheel(delta);
+  }
+
+  onPanStart(): void {
+    this.#isPanning = true;
+    this.#syncCursor();
+  }
+
+  onPanEnd(): void {
+    this.#isPanning = false;
+    this.#syncCursor();
+  }
+
+  onHover(
+    position: PointerPosition | null
+  ): void {
+    this.#active.onHover(position?.canvas ?? null);
+    this.#syncCursor();
+
+    const textureCursor = position?.boundedTexture ?? null;
+    this.#textureCursor = textureCursor;
+    this.#active.onCursorMove(textureCursor);
+    this.onExternalCursorMove?.(textureCursor);
+  }
+
+  onMouseUp(): void {
+    this.#active.onMouseUp();
+  }
+
+  onBlur(): void {
+    this.#panHeld = false;
+    this.#lineHeld = false;
+    this.#active.onBlur();
+    this.#syncCursor();
   }
 
   delete(): boolean {
     return this.#active.onDelete();
-  }
-
-  undo(): boolean {
-    return this.#onUndo();
-  }
-
-  redo(): boolean {
-    return this.#onRedo();
   }
 
   rotate(
@@ -275,5 +231,38 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
 
   flipVertical(): boolean {
     return this.#active.onFlipVertical();
+  }
+
+  #modeOf(
+    id: Mode
+  ): InteractionMode {
+    const mode = this.#modes.get(id);
+    if (!mode) {
+      throw new Error(`Unknown mode: "${id}"`);
+    }
+
+    return mode;
+  }
+
+  #activate(
+    mode: InteractionMode
+  ): void {
+    const previous = this.#active;
+    previous.onExit();
+    this.#active = mode;
+    this.#syncCursor();
+    this.#onModeChange?.(mode.id, previous.id);
+  }
+
+  #cursor(): string {
+    if (this.#isPanning) {
+      return "grabbing";
+    }
+
+    return this.#panHeld ? "grab" : this.#active.cursor();
+  }
+
+  #syncCursor(): void {
+    this.#setCursor(this.#cursor());
   }
 }

@@ -34,7 +34,6 @@ interface PixelArtCanvasOptions {
   select?: SelectOptions;
   uv?: UVOptions;
   onDrawEnd?: () => void;
-  onBufferUpdated?: PixelBufferHookListener;
   history?: HistoryOptions;
   onHistoryChange?: (state: HistoryState) => void;
   clipboard?: ClipboardAdapter | null;
@@ -83,7 +82,7 @@ type ColorInput = string | Color;
 
 ### `document`
 
-An existing [`PixelDocument`](./PixelDocument.md) to edit instead of creating one. `texture` and `history` are then ignored, and `onBufferUpdated` replaces the document hook only when given. Destroying the canvas leaves the document intact.
+An existing [`PixelDocument`](./PixelDocument.md) to edit instead of creating one. `texture` and `history` are then ignored. Destroying the canvas leaves the document intact.
 
 ## Interaction
 
@@ -199,6 +198,4 @@ Called after the history stack is pushed, undone, redone or cleared. The callbac
 
 Called after a stroke, global fill or selection edit is applied. It also runs after equivalent remote edits and successful undo or redo. Resizing, texture replacement and UV changes do not call it directly.
 
-### `onBufferUpdated`
-
-Receives local pixel and UV mutation commands, including undo and redo replay. Commands applied through the remote API do not fire it again.
+Local pixel and UV commands, undo and redo included, are emitted by the document: subscribe with `canvas.document.on("command", listener)`. See [`PixelDocument`](./PixelDocument.md#events).

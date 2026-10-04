@@ -55,7 +55,7 @@ canvas.document.on("replaced", () => {
 });
 ```
 
-`changed` fires for remote peer strokes as well as local ones; `onDrawEnd` and the buffer hooks do not.
+`changed` fires for every pixel write, local or remote; the document `command` event fires for local edits only.
 
 ### `brush`
 
@@ -78,7 +78,13 @@ Creates, moves and selects texture regions. See [`UVMap`](./uv/UVMap.md).
 Read-only camera and zoom state, plus the canvas element size in screen pixels:
 
 ```ts
-interface DefaultViewport {
+interface ScreenProjection {
+  toScreen(point: Readonly<Vec2>): Vec2;
+  toScreenRect(rect: Readonly<SelectionRect>): SelectionRect;
+  toTexture(point: Readonly<Vec2>): Vec2;
+}
+
+interface DefaultViewport extends ScreenProjection {
   readonly camera: Readonly<Vec2>;
   readonly zoom: Zoom;
   readonly canvasWidth: number;
@@ -94,6 +100,8 @@ interface CanvasViewport extends DefaultViewport {
 ```
 
 `canvasWidth` and `canvasHeight` are `0` until the canvas is first sized, and follow every resize.
+
+`toScreen()` and `toScreenRect()` map texture coordinates to canvas pixels, `toTexture()` maps canvas pixels back to fractional texture coordinates. They follow the current zoom and camera.
 
 `textureClientPosition(point, bounds)` returns the client coordinates of the centre of the texel at `point`, for `bounds` taken from `canvas().getBoundingClientRect()`. It is the inverse of the pointer mapping: a pointer event at the returned position lands on `point`, at any zoom and pan. `point` may lie outside the texture.
 
@@ -121,6 +129,8 @@ set mode(value: Mode)
 | `"uv"` | Select or drag a visible UV region. | No action. |
 
 Erase mode is paint mode writing `brush.erase` (transparent unless [`brush.eraseColor`](./tools/Brush.md#types) says otherwise): same brush size, same footprint, same straight line, but neither mouse button paints a brush color and the color picker stays out of reach.
+
+A stroke keeps the color it started with: changing a brush color mid-drag affects the next stroke. A drag belongs to the button that started it. Pressing the other button during the drag does nothing, and releasing the other button does not end it.
 
 Wheel input zooms in every mode. Middle-drag, or left-drag while [`shortcuts.panHeld`](./input/CanvasShortcuts.md#panheld) is set, pans the view. In paint and erase modes, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
 
@@ -171,7 +181,7 @@ hasTransparency(geometry: UVGeometry): boolean
 
 ### `textureSize`
 
-Gets or resizes the texture. Shrinking hides committed pixels outside the new bounds; growing can restore pixels retained by the master buffer. Dimensions must be positive integers no greater than [`texture.maxSize`](./PixelArtCanvasOptions.md#texturemaxsize).
+Gets or resizes the texture. Shrinking hides committed pixels outside the new bounds; growing can restore pixels retained by the master buffer. Dimensions must be positive integers no greater than [`texture.maxSize`](./PixelArtCanvasOptions.md#texturemaxsize); other values throw a `RangeError` and leave the texture and selection unchanged.
 
 `maxTextureSize` exposes that validated limit for import UIs.
 
@@ -191,11 +201,11 @@ Makes pixels transparent. By default, pixels inside a [UV slot](../GLOSSARY.md#u
 
 Slot membership uses every region, whatever [`UVMap.isVisible()`](./uv/UVMap.md) returns, and only the active slots of each region. A pixel belongs to a slot when its center lies inside the slot geometry, the same rule as `hasTransparency()`.
 
-The clear is one `texture-replaced` history entry and one `texture-replaced` hook event. The document emits `changed` for the whole texture, and the current selection is discarded, as with the `texture` setter.
+The clear is one history entry and one `texture-replaced` command. The document emits `replaced`.
 
 ### `commitPixels()`
 
-Paints a precomputed set of texture coordinates as one edit. The color slot defaults to `"primary"`; an empty array does nothing.
+Paints a precomputed set of texture coordinates as one edit with the brush color of the slot, `"primary"` by default, through [`document.paintPixels()`](./PixelDocument.md#edits). An empty array does nothing.
 
 ### `hasTransparency()`
 
@@ -247,7 +257,7 @@ canRedo(): boolean
 
 History must be enabled through [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history). Each method returns whether the requested operation is available or succeeded.
 
-A remote resize, remote texture replacement or snapshot load clears local history. See [`HistoryStack`](./history/HistoryStack.md) for recorded edit types and replay behavior.
+A remote resize, remote texture replacement or snapshot load clears local history. See [history entries](./history/HistoryStack.md#entries) for what each edit records and how it replays.
 
 ## View and canvas elements
 
@@ -277,7 +287,7 @@ Frames the texture in the current viewport, one axis at a time. An axis where th
 
 ### `canvas()` / `textureCanvas()`
 
-`canvas()` returns the visible canvas. `textureCanvas()` returns the off-screen canvas containing the current texture. Direct writes to the texture canvas bypass history and mutation hooks.
+`canvas()` returns the visible canvas. `textureCanvas()` returns the off-screen canvas containing the current texture. Direct writes to the texture canvas bypass history and commands.
 
 ## DOM lifecycle
 
@@ -302,4 +312,11 @@ Removes input listeners and unmounts the canvas and overlays.
 
 ## Network integration
 
-`PixelArtCanvas` also exposes mutation hooks, presence callbacks and peer overlays used by the multiplayer helpers.
+`PixelArtCanvas` exposes presence callbacks and peer overlays used by the multiplayer helpers. Commands, remote commands, snapshots and `runLocalRestore` belong to [`document`](./PixelDocument.md#remote-state).
+
+```ts
+onCursorMove?: (position: Vec2 | null) => void;
+onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
+```
+
+`onCursorMove` receives the texture position under the pointer, or `null` off the texture. `onStrokeProgress` receives the pixels of the stroke or line preview in progress: every pixel so far in one color, as a new array on each call, then an empty array when the stroke ends or the line is drawn or cancelled.

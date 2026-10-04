@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { rgba8Equal } from "../utils/colors.ts";
 import type {
   RGBA8,
   Vec2
@@ -98,19 +99,13 @@ export class Fill {
       return [];
     }
 
-    const pixels = buffer.pixels();
-    const seedIndex = ((seed.y * size.x) + seed.x) * 4;
-    if (
-      pixels[seedIndex] === fillColor.r &&
-      pixels[seedIndex + 1] === fillColor.g &&
-      pixels[seedIndex + 2] === fillColor.b &&
-      pixels[seedIndex + 3] === fillColor.a
-    ) {
+    const [seedColor] = buffer.samplePixels([seed]);
+    if (rgba8Equal(seedColor, fillColor)) {
       return [];
     }
 
     return connectedRegion(
-      pixels,
+      buffer.pixels(),
       size,
       seed,
       mask
@@ -127,33 +122,5 @@ export class Fill {
     }
 
     return connectedRegion(buffer.pixels(), size, seed);
-  }
-
-  static matchAll(
-    buffer: DefaultPixelBuffer,
-    color: RGBA8,
-    mask?: Uint8Array
-  ): Vec2[] {
-    const size = buffer.size();
-    const pixels = buffer.pixels();
-    const positions: Vec2[] = [];
-    let byteIndex = 0;
-
-    for (let y = 0; y < size.y; y++) {
-      for (let x = 0; x < size.x; x++) {
-        if (
-          mask?.[byteIndex / 4] !== 0 &&
-          pixels[byteIndex] === color.r &&
-          pixels[byteIndex + 1] === color.g &&
-          pixels[byteIndex + 2] === color.b &&
-          pixels[byteIndex + 3] === color.a
-        ) {
-          positions.push({ x, y });
-        }
-        byteIndex += 4;
-      }
-    }
-
-    return positions;
   }
 }

@@ -3,24 +3,25 @@ import {
   decodePixelBytes,
   decodePngPixels,
   encodePngPixels,
-  type PixelBuffer,
-  type PixelDocument
+  type PixelDocument,
+  type PixelDocumentState
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { PixelWireSnapshot } from "./types.ts";
 
 export async function encodePixelSnapshot(
-  buffer: PixelBuffer
+  state: PixelDocumentState
 ): Promise<PixelWireSnapshot> {
+  const { buffer, normalMap } = state;
   const size = buffer.size();
-  const uvRegions = [...buffer.uvRegions].map((region) => region.toJSON());
+  const uvRegions = [...state.uv].map((region) => region.toJSON());
 
   return {
     size,
     pixels: await encodePngPixels(buffer.pixels(), size),
     uvRegions,
-    ...(buffer.normalMap && { normalMap: buffer.normalMap.toJSON() })
+    ...(normalMap && { normalMap: normalMap.toJSON() })
   };
 }
 

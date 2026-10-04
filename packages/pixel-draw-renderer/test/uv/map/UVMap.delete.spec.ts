@@ -105,4 +105,24 @@ describe("UVMap — clear", () => {
       { x: 0, y: 0, width: 4, height: 4 }
     );
   });
+
+  test("emits every region-deleted before a single selection-changed and changed", () => {
+    const map = makeUvMap();
+    const first = map.create({ width: 4, height: 4 });
+    map.create({ width: 4, height: 4 });
+    map.select(first.id);
+    const events: string[] = [];
+    map.on("region-deleted", () => events.push("region-deleted"));
+    map.on("selection-changed", () => events.push("selection-changed"));
+    map.on("changed", () => events.push("changed"));
+
+    map.clear();
+
+    assert.deepStrictEqual(events, [
+      "region-deleted",
+      "region-deleted",
+      "selection-changed",
+      "changed"
+    ]);
+  });
 });

@@ -10,68 +10,28 @@ import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { TEST_MAX_SIZE } from "../helpers/buffer/maxSize.ts";
 
 describe("PixelBuffer", () => {
-  describe("drawRegion", () => {
-    test("writes per-pixel colors in row-major order", () => {
+  describe("drawColorGroups", () => {
+    test("writes each group's positions with its color", () => {
       const buf = new PixelBuffer({
         size: { x: 4, y: 4 },
         maxSize: TEST_MAX_SIZE
       });
-      const red = { r: 255, g: 0, b: 0, a: 255 };
-      const blue = { r: 0, g: 0, b: 255, a: 255 };
 
-      buf.drawRegion({
-        x: 1, y: 1, width: 2, height: 1
-      }, [red, blue]);
+      buf.drawColorGroups([
+        {
+          color: { r: 255, g: 0, b: 0, a: 255 },
+          positions: [{ x: 0, y: 0 }, { x: 1, y: 0 }]
+        },
+        {
+          color: { r: 0, g: 0, b: 255, a: 255 },
+          positions: [{ x: 3, y: 3 }]
+        }
+      ]);
 
-      assert.deepStrictEqual(
-        buf.samplePixel(1, 1),
-        [255, 0, 0, 255]
-      );
-      assert.deepStrictEqual(
-        buf.samplePixel(2, 1),
-        [0, 0, 255, 255]
-      );
-    });
-
-    test("ignores positions outside the buffer bounds", () => {
-      const buf = new PixelBuffer({
-        size: { x: 4, y: 4 },
-        maxSize: TEST_MAX_SIZE
-      });
-      const color = { r: 9, g: 9, b: 9, a: 255 };
-
-      buf.drawRegion({
-        x: 2, y: 2, width: 4, height: 4
-      }, Array.from({ length: 16 }, () => color));
-
-      assert.deepStrictEqual(buf.samplePixel(3, 3), [9, 9, 9, 255]);
-      assert.deepStrictEqual(buf.samplePixel(0, 3), [255, 255, 255, 255]);
-      assert.deepStrictEqual(buf.samplePixel(1, 3), [255, 255, 255, 255]);
-    });
-
-    test("preserves source alignment when clipping the top and left edges", () => {
-      const buf = new PixelBuffer({
-        size: { x: 2, y: 2 },
-        maxSize: TEST_MAX_SIZE
-      });
-      const pixels = Array.from({ length: 9 }, (_, index) => {
-        return {
-          r: index,
-          g: 0,
-          b: 0,
-          a: 255
-        };
-      });
-
-      buf.drawRegion(
-        { x: -1, y: -1, width: 3, height: 3 },
-        pixels
-      );
-
-      assert.deepStrictEqual(buf.samplePixel(0, 0), [4, 0, 0, 255]);
-      assert.deepStrictEqual(buf.samplePixel(1, 0), [5, 0, 0, 255]);
-      assert.deepStrictEqual(buf.samplePixel(0, 1), [7, 0, 0, 255]);
-      assert.deepStrictEqual(buf.samplePixel(1, 1), [8, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(0, 0), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(1, 0), [255, 0, 0, 255]);
+      assert.deepStrictEqual(buf.samplePixel(3, 3), [0, 0, 255, 255]);
+      assert.deepStrictEqual(buf.samplePixel(2, 2), [255, 255, 255, 255]);
     });
   });
 

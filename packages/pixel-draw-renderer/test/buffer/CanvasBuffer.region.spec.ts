@@ -14,7 +14,7 @@ import {
 import { TEST_MAX_SIZE } from "../helpers/buffer/maxSize.ts";
 
 describe("CanvasBuffer", () => {
-  describe("drawRegion", () => {
+  describe("drawMaskedRegion with a full mask", () => {
     test("clips to the in-bounds intersection when the rect extends past the buffer edge", () => {
       const buf = new CanvasBuffer({
         size: { x: 4, y: 4 },
@@ -23,12 +23,16 @@ describe("CanvasBuffer", () => {
       });
       const color = { r: 9, g: 9, b: 9, a: 255 };
 
-      buf.drawRegion({
-        x: 2,
-        y: 2,
-        width: 4,
-        height: 4
-      }, Array.from({ length: 16 }, () => color));
+      buf.drawMaskedRegion(
+        {
+          x: 2,
+          y: 2,
+          width: 4,
+          height: 4
+        },
+        Array.from({ length: 16 }, () => color),
+        Array.from({ length: 16 }, () => true)
+      );
 
       const mirror = mockContextOf(buf.canvas()).pixels;
       assert.deepStrictEqual(readPixel(mirror, { x: 2, y: 2 }, 4), [9, 9, 9, 255]);
@@ -51,9 +55,10 @@ describe("CanvasBuffer", () => {
         };
       });
 
-      buf.drawRegion(
+      buf.drawMaskedRegion(
         { x: -1, y: -1, width: 3, height: 3 },
-        pixels
+        pixels,
+        Array.from({ length: 9 }, () => true)
       );
 
       const canvasPixels = mockContextOf(buf.canvas()).pixels;
@@ -117,39 +122,23 @@ describe("CanvasBuffer", () => {
   });
 
   describe("region writes outside the buffer", () => {
-    const kOutOfBoundsRect = { x: 10, y: 10, width: 2, height: 2 };
-    const kOutOfBoundsPixels = Array.from(
-      { length: 4 },
-      () => {
-        return { r: 1, g: 1, b: 1, a: 1 };
-      }
-    );
-    for (const write of [
-      {
-        method: "drawRegion",
-        run: (buf: CanvasBuffer) => buf.drawRegion(kOutOfBoundsRect, kOutOfBoundsPixels)
-      },
-      {
-        method: "drawMaskedRegion",
-        run: (buf: CanvasBuffer) => buf.drawMaskedRegion(
-          kOutOfBoundsRect,
-          kOutOfBoundsPixels,
-          Array.from({ length: 4 }, () => true)
-        )
-      }
-    ]) {
-      test(`${write.method} skips the canvas sync when the rect is entirely out of bounds`, () => {
-        const buf = new CanvasBuffer({
-          size: { x: 4, y: 4 },
-          maxSize: TEST_MAX_SIZE
-        });
-        const ctx = mockContextOf(buf.canvas());
-        const before = ctx.putImageDataCallCount;
-
-        write.run(buf);
-
-        assert.strictEqual(ctx.putImageDataCallCount, before);
+    test("drawMaskedRegion skips the canvas sync when the rect is entirely out of bounds", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: TEST_MAX_SIZE
       });
-    }
+      const ctx = mockContextOf(buf.canvas());
+      const before = ctx.putImageDataCallCount;
+
+      buf.drawMaskedRegion(
+        { x: 10, y: 10, width: 2, height: 2 },
+        Array.from({ length: 4 }, () => {
+          return { r: 1, g: 1, b: 1, a: 1 };
+        }),
+        Array.from({ length: 4 }, () => true)
+      );
+
+      assert.strictEqual(ctx.putImageDataCallCount, before);
+    });
   });
 });

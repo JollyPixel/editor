@@ -81,21 +81,6 @@ describe("CanvasBuffer", () => {
       assert.deepStrictEqual(buf.samplePixel(5, 6), [0, 0, 255, 255]);
     });
 
-    test("drawRegion reports the written rect", () => {
-      const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: TEST_MAX_SIZE });
-      const bounds = boundsOf(buf);
-      const rect = { x: 2, y: 1, width: 3, height: 2 };
-
-      buf.drawRegion(
-        rect,
-        Array.from({ length: 6 }, () => {
-          return { r: 1, g: 1, b: 1, a: 255 };
-        })
-      );
-
-      assert.deepStrictEqual(bounds(), [rect]);
-    });
-
     test("drawMaskedRegion reports the written rect", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: TEST_MAX_SIZE });
       const bounds = boundsOf(buf);

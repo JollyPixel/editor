@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   PixelDocument,
   UVRegion,
-  type PixelBufferHookEvent
+  type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   createBlockTransform,
@@ -54,12 +54,12 @@ function torsoSnapshot(
 }
 
 function createHarness() {
-  const pixelEvents: PixelBufferHookEvent[] = [];
+  const pixelEvents: PixelCommand[] = [];
   const pixels = new PixelDocument({
     size: kTextureSize,
-    history: { enabled: true },
-    onBufferUpdated: (event) => pixelEvents.push(event)
+    history: { enabled: true }
   });
+  pixels.on("command", (command) => pixelEvents.push(command));
   const { document, blocks, selection, addBlock } = createModelFixture();
   const frames = { requested: 0 };
   const textures = new BlockTextures({
@@ -379,7 +379,7 @@ describe("BlockTextures UV edits", () => {
 
   test("applies a peer's in-progress drag without touching the region", () => {
     const { uv, block, regionId, textures } = bound();
-    const moved = uv.get(regionId)!.withRect({ x: 64, y: 32, width: 16, height: 16 });
+    const moved = uv.get(regionId)!.movedTo({ x: 64, y: 32 });
 
     textures.previewPeerDrag(moved);
 
@@ -390,7 +390,7 @@ describe("BlockTextures UV edits", () => {
   test("requests a frame for a peer drag preview", () => {
     const { uv, regionId, textures, frames } = bound();
 
-    textures.previewPeerDrag(uv.get(regionId)!.withRect({ x: 64, y: 32, width: 16, height: 16 }));
+    textures.previewPeerDrag(uv.get(regionId)!.movedTo({ x: 64, y: 32 }));
 
     assert.equal(frames.requested, 1);
   });

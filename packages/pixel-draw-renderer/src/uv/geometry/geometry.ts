@@ -10,6 +10,7 @@ import type {
   UVGeometry,
   UVNormalizedRect,
   UVQuarterTurn,
+  UVRect,
   UVTriangleCorner
 } from "./types.ts";
 
@@ -71,6 +72,12 @@ function partContains(
     (x - rect.x) / rect.width,
     (y - rect.y) / rect.height
   );
+}
+
+export function isRectGeometry(
+  geometry: UVGeometry
+): geometry is UVRect {
+  return !("shape" in geometry);
 }
 
 export function copyRect(
@@ -199,6 +206,54 @@ export function pointInGeometry(
   return geometry.parts.some(
     (part) => partContains(part, x, y)
   );
+}
+
+export function outlinePoints(
+  rect: SelectionRect,
+  corner: UVTriangleCorner | null
+): Vec2[] {
+  const left = rect.x;
+  const top = rect.y;
+  const right = rect.x + rect.width;
+  const bottom = rect.y + rect.height;
+
+  switch (corner) {
+    case null:
+      return [{ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }];
+    case "top-left":
+      return [{ x: left, y: top }, { x: right, y: top }, { x: left, y: bottom }];
+    case "top-right":
+      return [{ x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }];
+    case "bottom-left":
+      return [{ x: left, y: top }, { x: left, y: bottom }, { x: right, y: bottom }];
+    case "bottom-right":
+      return [{ x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }];
+    default:
+      return corner satisfies never;
+  }
+}
+
+export function* coveredPixels(
+  geometry: UVGeometry,
+  size: Vec2
+): IterableIterator<number> {
+  const bounds = rectOf(geometry);
+  const minX = Math.max(0, Math.ceil(bounds.x - 0.5));
+  const minY = Math.max(0, Math.ceil(bounds.y - 0.5));
+  const maxX = Math.min(size.x, Math.ceil(bounds.x + bounds.width - 0.5));
+  const maxY = Math.min(size.y, Math.ceil(bounds.y + bounds.height - 0.5));
+  const center: Vec2 = { x: 0, y: 0 };
+  const isRect = isRectGeometry(geometry);
+
+  for (let y = minY; y < maxY; y++) {
+    center.y = y + 0.5;
+    for (let x = minX; x < maxX; x++) {
+      center.x = x + 0.5;
+      if (isRect || pointInGeometry(center, geometry)) {
+        yield (y * size.x) + x;
+      }
+    }
+  }
 }
 
 export function triangleCornerOf(

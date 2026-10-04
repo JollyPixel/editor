@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import type { UVRegionData } from "#src/uv/region/UVRegion.ts";
 import {
   createDocument,
@@ -23,13 +23,13 @@ const kRed = {
 
 describe("PixelDocument", () => {
   describe("local edits", () => {
-    test("commitPixels paints, records history and emits one hook", () => {
-      const events: PixelBufferHookEvent[] = [];
+    test("paintPixels paints, records history and emits one command", () => {
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
       let drawEnds = 0;
       doc.on("draw-end", () => drawEnds++);
 
-      doc.commitPixels([{ x: 1, y: 1 }], kRed);
+      doc.paintPixels([{ x: 1, y: 1 }], kRed);
 
       assert.deepEqual(pixelAt(doc, 1, 1), [255, 0, 0, 255]);
       assert.equal(doc.history.canUndo, true);
@@ -38,28 +38,28 @@ describe("PixelDocument", () => {
       assert.equal(drawEnds, 1);
     });
 
-    test("undo restores pixels and emits the replay hooks", () => {
-      const events: PixelBufferHookEvent[] = [];
+    test("undo restores pixels and emits the replayed commands", () => {
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
       const before = pixelAt(doc, 0, 0);
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
 
       const entry = doc.undo();
 
-      assert.equal(entry?.action, "stroke");
+      assert.deepEqual(entry?.undo.map(({ action }) => action), ["stroke"]);
       assert.deepEqual(pixelAt(doc, 0, 0), before);
       assert.equal(events.length, 1);
       assert.equal(events[0].action, "stroke");
 
-      assert.equal(doc.redo()?.action, "stroke");
+      assert.deepEqual(doc.redo()?.redo.map(({ action }) => action), ["stroke"]);
       assert.deepEqual(pixelAt(doc, 0, 0), [255, 0, 0, 255]);
       assert.equal(events.length, 2);
       assert.equal(events[1].action, "stroke");
     });
 
     test("a UV resize syncs as a state change and undoes in one step", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
       const region = doc.uv.create({ width: 2, height: 2 });
       events.length = 0;
@@ -76,23 +76,18 @@ describe("PixelDocument", () => {
       assert.equal(doc.uv.get(region.id)!.bounds.width, 3);
     });
 
-    test("emits buffer-updated with the hook command, and not for remote commands", () => {
-      const hooked: PixelBufferHookEvent[] = [];
-      const emitted: PixelBufferHookEvent[] = [];
-      const doc = createDocument(hooked);
-      doc.on("buffer-updated", (event) => emitted.push(event));
+    test("emits a command for local edits and none for remote commands", () => {
+      const emitted: PixelCommand[] = [];
+      const doc = createDocument(emitted);
 
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
       doc.applyRemoteCommand({
         action: "stroke",
         metadata: { color: kRed, positions: [{ x: 2, y: 3 }] }
       });
-      doc.onBufferUpdated = undefined;
-      doc.commitPixels([{ x: 1, y: 0 }], kRed);
+      doc.paintPixels([{ x: 1, y: 0 }], kRed);
 
-      assert.equal(hooked.length, 1);
       assert.deepEqual(emitted.map(({ action }) => action), ["stroke", "stroke"]);
-      assert.equal(emitted[0], hooked[0]);
     });
 
     test("forwards history changes as an event", () => {
@@ -100,7 +95,7 @@ describe("PixelDocument", () => {
       const states: boolean[] = [];
       doc.on("history-changed", (state) => states.push(state.canUndo));
 
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
 
       assert.deepEqual(states, [true]);
     });
@@ -108,10 +103,10 @@ describe("PixelDocument", () => {
 
   describe("loadSnapshot", () => {
     test("replaces pixels and UV regions, clears history, emits reset", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
       const previous = doc.uv.create({ width: 2, height: 2 });
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
       let resets = 0;
       doc.on("reset", () => resets++);

@@ -5,17 +5,7 @@ import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type { Vec2 } from "#src/types.ts";
 import { makeUvMap } from "./map.ts";
 import { FakeOverlay } from "./overlay.ts";
-
-// CONSTANTS
-const kIdentityView = {
-  zoom: {
-    value: 1
-  },
-  camera: {
-    x: 0,
-    y: 0
-  }
-};
+import { makeViewport } from "../overlay.ts";
 
 export interface UVControllerSetup {
   map: UVMap;
@@ -33,7 +23,7 @@ export function makeUvControllerSetup(
     uvMap: map,
     overlay: overlay as unknown as UVRegionLayer,
     deselectOnEmptyClick,
-    viewport: kIdentityView
+    viewport: makeViewport(1)
   });
 
   return {

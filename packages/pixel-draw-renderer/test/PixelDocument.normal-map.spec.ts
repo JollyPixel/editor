@@ -10,7 +10,7 @@ import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
 import {
   InvalidNormalMapSettingsError
 } from "#src/normal/errors/InvalidNormalMapSettingsError.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import {
   addRegion,
   createNormalMapDocument,
@@ -23,7 +23,7 @@ describe("PixelDocument normal map", () => {
   });
 
   test("enable and disable are undoable commands", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const doc = createNormalMapDocument(events);
     const changes: (string[] | null)[] = [];
     doc.on("normal-map-changed", (event) => changes.push(event.regionIds));
@@ -40,16 +40,16 @@ describe("PixelDocument normal map", () => {
     doc.disableNormalMap();
     assert.equal(doc.normalMap, null);
 
-    assert.equal(doc.undo()?.action, "normal-map");
+    assert.equal(doc.undo()?.undo[0].action, "normal-map-toggled");
     assert.notEqual(doc.normalMap, null);
     assert.equal(events.at(-1)?.action, "normal-map-toggled");
-    assert.equal(doc.undo()?.action, "normal-map");
+    assert.equal(doc.undo()?.undo[0].action, "normal-map-toggled");
     assert.equal(doc.normalMap, null);
     assert.deepEqual(changes, [null, null, null, null]);
   });
 
   test("patching defaults sends only the patched fields", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const doc = createNormalMapDocument(events);
     doc.enableNormalMap();
 
@@ -75,7 +75,7 @@ describe("PixelDocument normal map", () => {
   });
 
   test("an invalid patch throws without recording anything", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const doc = createNormalMapDocument(events);
     doc.enableNormalMap();
     events.length = 0;
@@ -87,13 +87,13 @@ describe("PixelDocument normal map", () => {
 
     assert.equal(events.length, 0);
     assert.equal(doc.normalMap?.defaults.strength, 2);
-    assert.equal(doc.undo()?.action, "normal-map");
+    assert.equal(doc.undo()?.undo[0].action, "normal-map-toggled");
     assert.equal(doc.normalMap, null);
     assert.equal(doc.history.canUndo, false);
   });
 
   test("edits are ignored while the feature is off", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const doc = createNormalMapDocument(events);
 
     doc.patchNormalMapDefaults({ strength: 5 });
@@ -107,7 +107,7 @@ describe("PixelDocument normal map", () => {
 
   describe("remote commands", () => {
     test("apply without history or echo", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createNormalMapDocument(events);
 
       doc.applyRemoteCommand({

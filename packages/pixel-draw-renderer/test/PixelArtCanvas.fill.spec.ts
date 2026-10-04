@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { stroke } from "./helpers/events.ts";
@@ -65,7 +65,7 @@ describe("PixelArtCanvas — fill mode", () => {
         zoom: { default: 4 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -92,7 +92,7 @@ describe("PixelArtCanvas — fill mode", () => {
         texture: { size: { x: 16, y: 16 } },
         zoom: { default: 4 },
         defaultMode: "fill",
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -213,12 +213,12 @@ describe("PixelArtCanvas — fill mode", () => {
     });
 
     test("is a no-op when the seed already matches the brush color", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = createPixelArtCanvas({
         zoom: { default: 1 },
         defaultMode: "fill",
         brush: { color: "#FFFFFF" },
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
       manager.tools.fill.global = true;
 

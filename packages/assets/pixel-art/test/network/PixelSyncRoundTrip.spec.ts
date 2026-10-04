@@ -75,7 +75,7 @@ function setup() {
     eventStore.writer
   );
   const { context, broadcasts } = createRoomContext();
-  const { buffer } = state;
+  const { buffer } = state.document;
 
   function receive(
     clientId: string,
@@ -94,7 +94,7 @@ function setup() {
     history: { enabled: true }
   });
   new PixelSyncClient({ room, document: manager.document });
-  room.deliverSnapshot(pixelArtSnapshot(buffer));
+  room.deliverSnapshot(pixelArtSnapshot(state.document));
 
   function paintPixelOneOne(): void {
     canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));

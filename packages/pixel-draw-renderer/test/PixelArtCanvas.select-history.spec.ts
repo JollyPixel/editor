@@ -227,4 +227,55 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
     );
     manager.destroy();
   });
+
+  test("undoing a texture clear discards the selection", () => {
+    const manager = createSelectCanvas({
+      history: { enabled: true }
+    });
+    const canvas = manager.canvas();
+    manager.clearTexture({ includeUV: true });
+    manager.mode = "select";
+    canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    assert.ok(manager.tools.select.hasSelection);
+
+    manager.shortcuts.undo();
+
+    assert.ok(!manager.tools.select.hasSelection);
+    manager.destroy();
+  });
+
+  test("a move partly off the texture records only pixels inside it", () => {
+    const manager = createSelectCanvas({
+      history: { enabled: true }
+    });
+    const canvas = manager.canvas();
+    const positions: { x: number; y: number; }[] = [];
+    manager.document.on("command", (command) => {
+      if (command.action === "select-edit") {
+        positions.push(...command.metadata.positions);
+      }
+    });
+    manager.mode = "select";
+    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+    canvas.dispatchEvent(mouseEvent("mousemove", 112, 92));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+    assert.deepStrictEqual(
+      positions.filter(({ x }) => x >= 8),
+      []
+    );
+    assert.ok(positions.some(({ x }) => x === 7));
+    manager.shortcuts.undo();
+    assert.deepStrictEqual(
+      readPixel(manager.texture, { x: 7, y: 2 }, 8),
+      [255, 255, 255, 255]
+    );
+    manager.destroy();
+  });
 });

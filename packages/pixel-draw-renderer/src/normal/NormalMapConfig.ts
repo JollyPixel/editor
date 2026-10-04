@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { NormalMapSettingsPatch } from "./NormalMapSettingsPatch.ts";
+import { InvalidNormalMapSettingsError } from "./errors/InvalidNormalMapSettingsError.ts";
 import type {
   NormalMapData,
   NormalMapSettings,
@@ -54,32 +55,18 @@ export class NormalMapConfig {
       return null;
     }
 
-    const defaults = NormalMapSettingsPatch.parse(
-      value.defaults
-    );
-    if (
-      defaults === null ||
-      !defaults.isComplete
-    ) {
+    const defaults = NormalMapSettingsPatch.parse(value.defaults);
+    const zones = value.zones.map((item) => NormalMapConfig.#parseZone(item));
+    if (defaults === null || zones.some((zone) => zone === null)) {
       return null;
     }
 
-    const zones: NormalMapZone[] = [];
-    for (const item of value.zones) {
-      const zone = NormalMapConfig.#parseZone(item);
-      if (
-        zone === null ||
-        zones.some((other) => other.regionId === zone.regionId)
-      ) {
-        return null;
-      }
-      zones.push(zone);
+    try {
+      return new NormalMapConfig(defaults.values, zones.filter((zone) => zone !== null));
     }
-
-    return new NormalMapConfig(
-      defaults.applyTo(DEFAULT_NORMAL_MAP_SETTINGS),
-      zones
-    );
+    catch {
+      return null;
+    }
   }
 
   static #parseZone(
@@ -126,13 +113,21 @@ export class NormalMapConfig {
   }
 
   constructor(
-    defaults: Readonly<NormalMapSettings>,
+    defaults: Readonly<Partial<NormalMapSettings>>,
     zones: readonly Readonly<NormalMapZone>[]
   ) {
-    this.defaults = Object.freeze({
-      ...defaults,
-      bevel: Object.freeze({ ...defaults.bevel })
-    });
+    const patch = new NormalMapSettingsPatch(defaults);
+    const missing = patch.missingKey;
+    if (missing !== null) {
+      throw new InvalidNormalMapSettingsError(missing, undefined);
+    }
+
+    const regionIds = new Set(zones.map((zone) => zone.regionId));
+    if (regionIds.size !== zones.length) {
+      throw new RangeError("Normal map zones must target distinct regions");
+    }
+
+    this.defaults = patch.applyTo(DEFAULT_NORMAL_MAP_SETTINGS);
     this.zones = Object.freeze(
       zones.map(NormalMapConfig.#freezeZone)
     );

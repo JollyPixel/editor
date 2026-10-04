@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type {
-  PixelBufferHookEvent
-} from "#src/buffer/hooks.ts";
+  PixelCommand
+} from "#src/sync/PixelCommand.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   mouseEvent,
@@ -25,7 +25,7 @@ const kTransparent = {
 };
 
 function makeManager(
-  events: PixelBufferHookEvent[],
+  events: PixelCommand[],
   size = 1
 ): PixelArtCanvas {
   const { manager } = createPixelArtCanvas({
@@ -40,7 +40,7 @@ function makeManager(
       color: "#000000",
       secondaryColor: "#00FF00"
     },
-    onBufferUpdated: (event) => events.push(event)
+    onCommand: (event) => events.push(event)
   });
   manager.mode = "erase";
 
@@ -48,7 +48,7 @@ function makeManager(
 }
 
 function strokedPositions(
-  event: PixelBufferHookEvent
+  event: PixelCommand
 ): { x: number; y: number; }[] {
   assert.strictEqual(event.action, "stroke");
 
@@ -57,7 +57,7 @@ function strokedPositions(
 
 describe("PixelArtCanvas — erase mode", () => {
   test("a drag clears pixels to transparent instead of painting", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager(events);
 
     stroke(manager.canvas(), [[100, 100], [108, 100]]);
@@ -82,7 +82,7 @@ describe("PixelArtCanvas — erase mode", () => {
   });
 
   test("right-click erases instead of painting the secondary color", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager(events);
 
     stroke(manager.canvas(), [[100, 100]], 2);
@@ -100,7 +100,7 @@ describe("PixelArtCanvas — erase mode", () => {
   });
 
   test("the brush size drives the erased footprint", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager(events, 4);
 
     stroke(manager.canvas(), [[100, 100]]);
@@ -116,7 +116,7 @@ describe("PixelArtCanvas — erase mode", () => {
   });
 
   test("Shift arms a line that erases on mousedown", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager(events);
     const canvas = manager.canvas();
 
@@ -134,7 +134,7 @@ describe("PixelArtCanvas — erase mode", () => {
   });
 
   test("leaving erase mode restores brush painting", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager(events);
 
     stroke(manager.canvas(), [[100, 100]]);
@@ -151,7 +151,7 @@ describe("PixelArtCanvas — erase mode", () => {
   });
 
   test("brush.eraseColor overrides what erase mode writes", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const { manager } = createPixelArtCanvas({
       texture: {
         size: { x: 16, y: 16 },
@@ -164,7 +164,7 @@ describe("PixelArtCanvas — erase mode", () => {
         eraseColor: "#0000FF"
       },
       defaultMode: "erase",
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     });
 
     stroke(manager.canvas(), [[100, 100]]);

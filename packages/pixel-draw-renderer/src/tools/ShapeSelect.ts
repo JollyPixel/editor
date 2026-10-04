@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { filledArray } from "../utils/array.ts";
 import { Fill } from "./Fill.ts";
+import { RectArea } from "../utils/RectArea.ts";
 import type {
   SelectionRect,
   Vec2
@@ -24,11 +25,11 @@ export class ShapeSelect {
       buffer,
       seed
     );
-    if (region.length === 0) {
+    const rect = RectArea.bounding(region)?.bounds;
+    if (rect === undefined) {
       return null;
     }
 
-    const rect = ShapeSelect.#boundingRect(region);
     const mask = ShapeSelect.#fillEnclosedHoles(
       region,
       rect
@@ -43,29 +44,6 @@ export class ShapeSelect {
     }
 
     return { rect, mask };
-  }
-
-  static #boundingRect(
-    positions: Vec2[]
-  ): SelectionRect {
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const { x, y } of positions) {
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
-
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX + 1,
-      height: maxY - minY + 1
-    };
   }
 
   static #fillEnclosedHoles(

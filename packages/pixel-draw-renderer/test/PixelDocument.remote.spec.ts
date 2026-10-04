@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { fromUint8Array } from "js-base64";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import {
   createDocument,
   pixelAt
@@ -22,7 +22,7 @@ const kRed = {
   b: 0,
   a: 255
 };
-const kDrawingCommands: PixelBufferHookEvent[] = [
+const kDrawingCommands: PixelCommand[] = [
   {
     action: "stroke",
     metadata: { color: kRed, positions: [{ x: 0, y: 0 }] }
@@ -43,9 +43,9 @@ const kDrawingCommands: PixelBufferHookEvent[] = [
 describe("PixelDocument", () => {
   describe("remote commands", () => {
     test("applies a stroke without echoing a hook or recording history, keeping local history", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
       let changed = 0;
       doc.on("changed", () => changed++);
@@ -78,9 +78,9 @@ describe("PixelDocument", () => {
     }
 
     test("a remote resize emits resized then reset, clears history and does not echo", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
       const order: string[] = [];
       doc.on("resized", () => order.push("resized"));
@@ -98,9 +98,9 @@ describe("PixelDocument", () => {
     });
 
     test("remote texture-replaced decodes pixels, clears history, emits replaced then reset, no echo", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
       const order: string[] = [];
       doc.on("replaced", (event) => order.push(`replaced:${event.size.x}`));

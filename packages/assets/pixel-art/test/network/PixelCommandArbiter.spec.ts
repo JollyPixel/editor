@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   PixelBuffer,
+  PixelDocumentState,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -32,23 +33,25 @@ const kRect: SelectionRect = {
 
 function setup(): {
   arbiter: PixelCommandArbiter;
-  buffer: PixelBuffer;
+  state: PixelDocumentState;
 } {
   return {
     arbiter: new PixelCommandArbiter(),
-    buffer: new PixelBuffer({
-      size: { x: 4, y: 4 },
-      maxSize: 8
+    state: new PixelDocumentState({
+      buffer: new PixelBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: 8
+      })
     })
   };
 }
 
 function accept(
   arbiter: PixelCommandArbiter,
-  buffer: PixelBuffer,
+  state: PixelDocumentState,
   pixelCommand: PixelWireCommand
 ): PixelWireCommand | null {
-  const arbitration = arbiter.admit(buffer, pixelCommand);
+  const arbitration = arbiter.admit(state, pixelCommand);
   arbitration?.commit();
 
   return arbitration?.command ?? null;
@@ -56,19 +59,19 @@ function accept(
 
 describe("PixelCommandArbiter — pixels", () => {
   test("accepts an uncontested stroke unchanged", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const stroke = command("stroke", {
       color: gray(1),
       positions: [{ x: 1, y: 1 }]
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stroke), stroke);
+    assert.strictEqual(accept(arbiter, state, stroke), stroke);
   });
 
   test("accepts a newer stroke from another client at the same pixel", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const positions = [{ x: 0, y: 0 }];
-    accept(arbiter, buffer, command("stroke", { color: gray(1), positions }, {
+    accept(arbiter, state, command("stroke", { color: gray(1), positions }, {
       clientId: "A",
       timestamp: 500
     }));
@@ -77,27 +80,27 @@ describe("PixelCommandArbiter — pixels", () => {
       timestamp: 900
     });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, newer), newer);
+    assert.deepStrictEqual(accept(arbiter, state, newer), newer);
   });
 
   test("accepts an uncontested packed stroke unchanged", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const stroke = packed(command("stroke", {
       color: gray(1),
       positions: [{ x: 1, y: 1 }]
     }));
 
-    assert.strictEqual(accept(arbiter, buffer, stroke), stroke);
+    assert.strictEqual(accept(arbiter, state, stroke), stroke);
   });
 
   test("narrows a stroke to the positions that won, packed", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("stroke", {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("stroke", {
       color: gray(9),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "late", timestamp: 2000 }));
 
-    const accepted = accept(arbiter, buffer, command("stroke", {
+    const accepted = accept(arbiter, state, command("stroke", {
       color: gray(1),
       positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
     }, { clientId: "early", timestamp: 1000 }));
@@ -109,9 +112,9 @@ describe("PixelCommandArbiter — pixels", () => {
   });
 
   test("rejects a stroke when every position lost", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const positions = [{ x: 0, y: 0 }];
-    accept(arbiter, buffer, command("stroke", { color: gray(1), positions }, {
+    accept(arbiter, state, command("stroke", { color: gray(1), positions }, {
       clientId: "late",
       timestamp: 2000
     }));
@@ -121,14 +124,14 @@ describe("PixelCommandArbiter — pixels", () => {
       timestamp: 1000
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("accepts an older undo replay from the client that wrote the pixel", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const positions = [{ x: 0, y: 0 }];
     for (const timestamp of [100, 200, 200]) {
-      accept(arbiter, buffer, command("stroke", { color: gray(1), positions }, {
+      accept(arbiter, state, command("stroke", { color: gray(1), positions }, {
         clientId: "A",
         timestamp
       }));
@@ -139,17 +142,17 @@ describe("PixelCommandArbiter — pixels", () => {
       timestamp: 100
     });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, replay), replay);
+    assert.deepStrictEqual(accept(arbiter, state, replay), replay);
   });
 
   test("narrows a select-edit's positions and colors together, packed", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("stroke", {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("stroke", {
       color: gray(9),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "A", timestamp: 900 }));
 
-    const accepted = accept(arbiter, buffer, command("select-edit", {
+    const accepted = accept(arbiter, state, command("select-edit", {
       positions: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
       colors: [gray(1), gray(2)]
     }, { clientId: "B", timestamp: 500 }));
@@ -161,8 +164,8 @@ describe("PixelCommandArbiter — pixels", () => {
   });
 
   test("rejects a select-edit when every position lost", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("stroke", {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("stroke", {
       color: gray(9),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "A", timestamp: 900 }));
@@ -172,20 +175,20 @@ describe("PixelCommandArbiter — pixels", () => {
       colors: [gray(1)]
     }, { clientId: "B", timestamp: 500 });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("rejects a select-edit whose colors do not match its positions", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
 
-    assert.strictEqual(accept(arbiter, buffer, command("select-edit", {
+    assert.strictEqual(accept(arbiter, state, command("select-edit", {
       positions: [{ x: 0, y: 0 }],
       colors: []
     })), null);
   });
 
   test("rejects a packed select-edit whose colors do not match its positions", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const mismatched: PixelWireCommand = {
       clientId: "client-A",
       seq: 1,
@@ -197,36 +200,36 @@ describe("PixelCommandArbiter — pixels", () => {
       }
     };
 
-    assert.strictEqual(accept(arbiter, buffer, mismatched), null);
+    assert.strictEqual(accept(arbiter, state, mismatched), null);
   });
 
-  test("leaves the buffer untouched", () => {
-    const { arbiter, buffer } = setup();
-    const before = Uint8ClampedArray.from(buffer.pixels());
+  test("leaves the state untouched", () => {
+    const { arbiter, state } = setup();
+    const before = Uint8ClampedArray.from(state.buffer.pixels());
 
-    accept(arbiter, buffer, command("stroke", {
+    accept(arbiter, state, command("stroke", {
       color: gray(1),
       positions: [{ x: 0, y: 0 }]
     }));
 
-    assert.deepStrictEqual(buffer.pixels(), before);
+    assert.deepStrictEqual(state.buffer.pixels(), before);
   });
 
-  test("rejects a size the buffer would refuse", () => {
-    const { arbiter, buffer } = setup();
+  test("rejects a size the state would refuse", () => {
+    const { arbiter, state } = setup();
 
-    assert.strictEqual(accept(arbiter, buffer, command("resized", { size: { x: 99, y: 4 } })), null);
-    assert.strictEqual(accept(arbiter, buffer, command("resized", { size: { x: 0, y: 4 } })), null);
-    assert.notStrictEqual(accept(arbiter, buffer, command("resized", { size: { x: 8, y: 8 } })), null);
+    assert.strictEqual(accept(arbiter, state, command("resized", { size: { x: 99, y: 4 } })), null);
+    assert.strictEqual(accept(arbiter, state, command("resized", { size: { x: 0, y: 4 } })), null);
+    assert.notStrictEqual(accept(arbiter, state, command("resized", { size: { x: 8, y: 8 } })), null);
   });
 
   test("a replacement supersedes every pixel, rejecting older strokes from others", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("stroke", {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("stroke", {
       color: gray(1),
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "A", timestamp: 100 }));
-    accept(arbiter, buffer, command("texture-replaced", {
+    accept(arbiter, state, command("texture-replaced", {
       size: { x: 4, y: 4 },
       pixels: ""
     }, { clientId: "B", timestamp: 500 }));
@@ -240,15 +243,15 @@ describe("PixelCommandArbiter — pixels", () => {
       positions: [{ x: 3, y: 3 }]
     }, { clientId: "C", timestamp: 600 });
 
-    assert.strictEqual(accept(arbiter, buffer, older), null);
-    assert.strictEqual(accept(arbiter, buffer, newer), newer);
+    assert.strictEqual(accept(arbiter, state, older), null);
+    assert.strictEqual(accept(arbiter, state, newer), newer);
   });
 });
 
 describe("PixelCommandArbiter — uv regions", () => {
   test("rejects a stale move of a region moved by a newer command", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -258,12 +261,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("rejects a stale delete of a region moved by a newer command", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -273,12 +276,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("rejects a stale move of a region deleted by a newer command", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-deleted", { id: "r1" }, {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-deleted", { id: "r1" }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -288,12 +291,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("rejects a delete older than a move of a derived slot", () => {
-    const { arbiter, buffer } = setup();
-    buffer.uvRegions.set({
+    const { arbiter, state } = setup();
+    state.uv.restore({
       id: "block-1",
       color: "#fff",
       state: "free",
@@ -302,7 +305,7 @@ describe("PixelCommandArbiter — uv regions", () => {
         "top.1": kRect
       }
     });
-    accept(arbiter, buffer, command("uv-region-moved", { id: "block-1", face: "top.1", rect: kRect }, {
+    accept(arbiter, state, command("uv-region-moved", { id: "block-1", face: "top.1", rect: kRect }, {
       clientId: "late",
       timestamp: 2000
     }));
@@ -312,12 +315,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 1000
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("commands on different regions never conflict", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-moved", { id: "r1", face: null, rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -327,12 +330,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 100
     });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, older), older);
+    assert.deepStrictEqual(accept(arbiter, state, older), older);
   });
 
   test("moves of different faces of one region never conflict", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-moved", { id: "r1", face: "top", rect: kRect }, {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-moved", { id: "r1", face: "top", rect: kRect }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -342,12 +345,12 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, older), older);
+    assert.deepStrictEqual(accept(arbiter, state, older), older);
   });
 
   test("a state change claims every face, rejecting an older face move", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-state-changed", { region: freeRegion("r1") }, {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-state-changed", { region: freeRegion("r1") }, {
       clientId: "A",
       timestamp: 900
     }));
@@ -357,22 +360,22 @@ describe("PixelCommandArbiter — uv regions", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("rejects a region whose active face has no geometry", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const region = {
       ...freeRegion("r1"),
       activeFaces: ["top", "top.1"]
     };
 
-    assert.strictEqual(accept(arbiter, buffer, command("uv-region-created", { region })), null);
-    assert.strictEqual(accept(arbiter, buffer, command("uv-region-state-changed", { region })), null);
+    assert.strictEqual(accept(arbiter, state, command("uv-region-created", { region })), null);
+    assert.strictEqual(accept(arbiter, state, command("uv-region-state-changed", { region })), null);
   });
 
   test("rejects a compound part outside normalized space", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const region = {
       id: "r1",
       color: "#f00",
@@ -386,21 +389,21 @@ describe("PixelCommandArbiter — uv regions", () => {
       }
     };
 
-    assert.strictEqual(accept(arbiter, buffer, command("uv-region-created", { region })), null);
+    assert.strictEqual(accept(arbiter, state, command("uv-region-created", { region })), null);
   });
 
   test("accepts a consistent region", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     const created = command("uv-region-created", { region: freeRegion("r1") });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, created), created);
+    assert.deepStrictEqual(accept(arbiter, state, created), created);
   });
 });
 
 describe("PixelCommandArbiter — uv rotation", () => {
   test("a slot rotation only claims its own slot", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-rotated", {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-rotated", {
       id: "r1",
       face: "top",
       geometry: { ...kRect, rotation: 1 }
@@ -418,13 +421,13 @@ describe("PixelCommandArbiter — uv rotation", () => {
       timestamp: 500
     });
 
-    assert.deepStrictEqual(accept(arbiter, buffer, otherFace), otherFace);
-    assert.strictEqual(accept(arbiter, buffer, sameFace), null);
+    assert.deepStrictEqual(accept(arbiter, state, otherFace), otherFace);
+    assert.strictEqual(accept(arbiter, state, sameFace), null);
   });
 
   test("a region rotation claims every slot", () => {
-    const { arbiter, buffer } = setup();
-    accept(arbiter, buffer, command("uv-region-rotated", {
+    const { arbiter, state } = setup();
+    accept(arbiter, state, command("uv-region-rotated", {
       id: "r1",
       face: null,
       region: freeRegion("r1")
@@ -438,18 +441,18 @@ describe("PixelCommandArbiter — uv rotation", () => {
       timestamp: 500
     });
 
-    assert.strictEqual(accept(arbiter, buffer, stale), null);
+    assert.strictEqual(accept(arbiter, state, stale), null);
   });
 
   test("rejects an invalid rotation payload", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
 
-    assert.strictEqual(accept(arbiter, buffer, command("uv-region-rotated", {
+    assert.strictEqual(accept(arbiter, state, command("uv-region-rotated", {
       id: "r1",
       face: "top",
       geometry: { ...kRect, width: 0 }
     })), null);
-    assert.strictEqual(accept(arbiter, buffer, command("uv-region-rotated", {
+    assert.strictEqual(accept(arbiter, state, command("uv-region-rotated", {
       id: "r2",
       face: null,
       region: freeRegion("r1")
@@ -459,10 +462,10 @@ describe("PixelCommandArbiter — uv rotation", () => {
 
 describe("PixelCommandArbiter — server order", () => {
   test("a global fill claims the pixels it repaints", () => {
-    const { arbiter, buffer } = setup();
-    const [r, g, b, a] = buffer.samplePixel(3, 3);
+    const { arbiter, state } = setup();
+    const [r, g, b, a] = state.buffer.samplePixel(3, 3);
     const fill = arbiter.admit(
-      buffer,
+      state,
       command("global-fill", { fromColor: { r, g, b, a }, toColor: gray(9) }, { clientId: "B" })
     );
     fill?.commit(5);
@@ -472,11 +475,11 @@ describe("PixelCommandArbiter — server order", () => {
       positions: [{ x: 3, y: 3 }]
     }, { clientId: "A", basis: 4 }));
 
-    assert.strictEqual(arbiter.admit(buffer, undo), null);
+    assert.strictEqual(arbiter.admit(state, undo), null);
   });
 
   test("restore records a past stroke so an older replay loses to it", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     arbiter.restore(packed(command("stroke", {
       color: gray(2),
       positions: [{ x: 0, y: 0 }]
@@ -491,15 +494,15 @@ describe("PixelCommandArbiter — server order", () => {
       positions: [{ x: 0, y: 0 }]
     }, { clientId: "A", timestamp: 1 }));
 
-    assert.strictEqual(arbiter.admit(buffer, replay), null);
-    assert.notStrictEqual(arbiter.admit(buffer, fresh), null);
+    assert.strictEqual(arbiter.admit(state, replay), null);
+    assert.notStrictEqual(arbiter.admit(state, fresh), null);
   });
 
   test("restore of a replacement rejects replays older than it", () => {
-    const { arbiter, buffer } = setup();
+    const { arbiter, state } = setup();
     arbiter.restore(command("resized", { size: { x: 4, y: 4 } }, { clientId: "B" }), 3);
 
-    assert.strictEqual(arbiter.admit(buffer, packed(command("stroke", {
+    assert.strictEqual(arbiter.admit(state, packed(command("stroke", {
       color: gray(1),
       positions: [{ x: 1, y: 1 }]
     }, { clientId: "A", basis: 2 }))), null);

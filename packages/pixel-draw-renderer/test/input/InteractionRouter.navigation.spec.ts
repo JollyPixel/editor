@@ -14,7 +14,7 @@ import {
 describe("InteractionRouter", () => {
   test("blur clears both held modifiers without a separate release", () => {
     const { router, recorder, modes } = makeRouter({
-      modes: [new FakeMode("paint", "crosshair")],
+      modes: [new FakeMode("paint", { cursor: "crosshair" })],
       defaultMode: "paint"
     });
 
@@ -28,20 +28,9 @@ describe("InteractionRouter", () => {
     assert.deepStrictEqual(recorder.cursor, ["grab", "crosshair"]);
   });
 
-  test("handles pan and zoom itself, never touching the active mode", () => {
-    const { router, recorder, modes } = makeRouter();
-
-    router.onPanMove({ x: 3, y: -4 });
-    router.onZoom(120, { x: 10, y: 20 });
-
-    assert.deepStrictEqual(recorder.pan, [[3, -4]]);
-    assert.deepStrictEqual(recorder.zoom, [[120, 10, 20]]);
-    assert.deepStrictEqual(modes[0].calls, []);
-  });
-
   test("a pan gesture shows grabbing, then restores the mode cursor on end", () => {
     const { router, recorder } = makeRouter({
-      modes: [new FakeMode("paint", "crosshair")],
+      modes: [new FakeMode("paint", { cursor: "crosshair" })],
       defaultMode: "paint"
     });
 
@@ -53,7 +42,7 @@ describe("InteractionRouter", () => {
 
   test("panHeld arms a grab cursor and a pan restores to grab while it stays held", () => {
     const { router, recorder } = makeRouter({
-      modes: [new FakeMode("paint", "crosshair")],
+      modes: [new FakeMode("paint", { cursor: "crosshair" })],
       defaultMode: "paint"
     });
 
@@ -67,5 +56,38 @@ describe("InteractionRouter", () => {
       recorder.cursor,
       ["grab", "grabbing", "grab", "crosshair"]
     );
+  });
+
+  test("panning keeps the grabbing cursor while panHeld changes or the pointer hovers", () => {
+    const { router, recorder } = makeRouter({
+      modes: [new FakeMode("paint", { cursor: "crosshair" })],
+      defaultMode: "paint"
+    });
+
+    router.onPanStart();
+    router.panHeld = true;
+    router.onHover(null);
+
+    assert.deepStrictEqual(
+      recorder.cursor,
+      ["grabbing", "grabbing", "grabbing"]
+    );
+  });
+
+  test("a primary drag pans while panHeld is set or when the active mode pans on primary", () => {
+    const { router } = makeRouter({
+      modes: [
+        new FakeMode("paint"),
+        new FakeMode("move", { pansOnPrimary: true })
+      ],
+      defaultMode: "paint"
+    });
+
+    assert.strictEqual(router.pansOnPrimary, false);
+    router.panHeld = true;
+    assert.strictEqual(router.pansOnPrimary, true);
+    router.panHeld = false;
+    router.mode = "move";
+    assert.strictEqual(router.pansOnPrimary, true);
   });
 });

@@ -28,9 +28,6 @@ export interface OverlayLayerOptions {
   selectionSizeLabel?: boolean;
 }
 
-/**
- * Creates UV first so tool overlays paint above region borders.
- */
 export class OverlayLayer {
   #parentHtmlElement: HTMLDivElement;
   #svg: SVGElement;
@@ -47,44 +44,52 @@ export class OverlayLayer {
   constructor(
     options: OverlayLayerOptions
   ) {
+    const { viewport, brush } = options;
     this.#parentHtmlElement = options.parent;
     this.#svg = this.#init();
 
-    this.uvOverlay = new UVRegionLayer(
-      this.#svg,
-      options.viewport,
-      options.uvMap
-    );
-    this.peerUvPreview = new PeerUVPreview(
-      this.#svg,
-      options.viewport,
-      this.uvOverlay
-    );
+    const [
+      uvGroup,
+      peerSelectionGroup,
+      brushGroup,
+      lineGroup,
+      selectionGroup,
+      cursorGroup
+    ] = OverlayLayer.#layers(this.#svg, [
+      "uv",
+      "peer-selections",
+      "brush",
+      "line",
+      "selection",
+      "peer-cursors"
+    ]);
+
+    this.uvOverlay = new UVRegionLayer(uvGroup, viewport, options.uvMap);
+    this.peerUvPreview = new PeerUVPreview(this.uvOverlay);
     this.peerUvSelections = new PeerUVSelections(this.uvOverlay);
-    this.brushHighlight = new BrushHighlightView(
-      this.#svg,
-      options.viewport,
-      options.brush
-    );
-    this.linePreview = new LinePreview(
-      this.#svg,
-      options.viewport,
-      options.brush
-    );
+    this.peerSelectionOutlines = new PeerSelectionOutlines(peerSelectionGroup, viewport);
+    this.brushHighlight = new BrushHighlightView(brushGroup, viewport, brush);
+    this.linePreview = new LinePreview(lineGroup, viewport, brush);
     this.selection = new SelectionOutline(
-      this.#svg,
-      options.viewport,
-      options.brush,
+      selectionGroup,
+      viewport,
+      brush,
       { sizeLabel: options.selectionSizeLabel }
     );
-    this.peerCursors = new PeerCursors(
-      this.#svg,
-      options.viewport
-    );
-    this.peerSelectionOutlines = new PeerSelectionOutlines(
-      this.#svg,
-      options.viewport
-    );
+    this.peerCursors = new PeerCursors(cursorGroup, viewport);
+  }
+
+  static #layers(
+    svg: SVGElement,
+    names: readonly string[]
+  ): SVGGElement[] {
+    return names.map((name) => {
+      const group = document.createElementNS(SVG_NS, "g");
+      group.setAttribute("data-layer", name);
+      svg.appendChild(group);
+
+      return group;
+    });
   }
 
   #init(): SVGElement {

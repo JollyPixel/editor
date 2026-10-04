@@ -156,7 +156,7 @@ describe("tilesetAssetKind", () => {
 
     foldAssetEvent(handler, state, documentEvent(seeded()));
 
-    assert.deepEqual(state.pixels.size(), { x: 16, y: 16 });
+    assert.deepEqual(state.pixels.buffer.size(), { x: 16, y: 16 });
     assert.equal(state.document.tileSize, 8);
     assert.equal(state.document.blocks.get(1)?.shapeId, "cube");
     assert.equal(state.document.materialGroups.get("gold")?.metalness, 1);
@@ -166,7 +166,7 @@ describe("tilesetAssetKind", () => {
     const handler = tilesetAssetKind({ tileSize: 32 });
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(seeded()));
-    state.pixels.drawPixels(
+    state.pixels.buffer.drawPixels(
       [{ x: 1, y: 1 }],
       {
         r: 255,
@@ -181,9 +181,9 @@ describe("tilesetAssetKind", () => {
       kind: TILESET_KIND
     }));
 
-    assert.deepEqual(state.pixels.size(), { x: 16, y: 16 });
+    assert.deepEqual(state.pixels.buffer.size(), { x: 16, y: 16 });
     assert.deepEqual(
-      state.pixels.pixels(),
+      state.pixels.buffer.pixels(),
       new Uint8ClampedArray(16 * 16 * 4)
     );
     assert.equal(state.document.tileSize, 8);
@@ -209,7 +209,7 @@ describe("tilesetAssetKind", () => {
     const restored = handler.create("asset-1");
     foldAssetEvent(handler, restored, documentEvent(document));
 
-    assert.deepEqual(restored.pixels.samplePixel(1, 1), [0, 0, 0, 255]);
+    assert.deepEqual(restored.pixels.buffer.samplePixel(1, 1), [0, 0, 0, 255]);
     assert.equal(restored.document.tileSize, 16);
     assert.deepEqual(
       [...restored.document.blocks].map(({ id, shapeId }) => [id, shapeId]),
@@ -254,7 +254,10 @@ describe("tilesetAssetKind", () => {
     const handler = tilesetAssetKind();
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(seeded()));
-    state.pixels.normalMap = NormalMapConfig.create();
+    state.pixels.apply({
+      action: "normal-map-toggled",
+      metadata: { config: NormalMapConfig.create().toJSON() }
+    });
     const protocol = handler.commands!.live!({
       assetId: "asset-1",
       kind: TILESET_KIND,
@@ -274,7 +277,10 @@ describe("tilesetAssetKind", () => {
     const handler = tilesetAssetKind();
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(seeded()));
-    state.pixels.normalMap = NormalMapConfig.create();
+    state.pixels.apply({
+      action: "normal-map-toggled",
+      metadata: { config: NormalMapConfig.create().toJSON() }
+    });
 
     foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "textures/stone.tileset.json",
@@ -334,7 +340,7 @@ describe("tilesetAssetKind", () => {
     assert.ok(typeof pixels.pixels !== "string");
     assert.deepEqual(
       [...await decodePngPixels(pixels.pixels, pixels.size)],
-      [...state.pixels.pixels()]
+      [...state.pixels.buffer.pixels()]
     );
     assert.deepEqual(pixels.size, plainPixels.size);
   });
@@ -402,7 +408,7 @@ describe("tilesetAssetKind", () => {
     assert.strictEqual(correction?.action, "select-edit");
     assert.deepEqual(correction.metadata, {
       xy: [1, 1],
-      rgba: [...state.pixels.samplePixel(1, 1)]
+      rgba: [...state.pixels.buffer.samplePixel(1, 1)]
     });
     assert.strictEqual(protocol.correct!(blockCommand(3), null), null);
   });

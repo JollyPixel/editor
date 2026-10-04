@@ -10,11 +10,12 @@ import { MessageParser } from "@jolly-pixel/network";
 import {
   NormalMapConfig,
   PixelBuffer,
+  PixelDocumentState,
   PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { applyCommandToBuffer } from "#src/network/PixelCommandApplier.ts";
+import { applyPixelCommand } from "#src/network/PixelCommandApplier.ts";
 import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
 import { pixelCommandProtocol } from "#src/network/PixelCommand.schema.ts";
 import {
@@ -38,44 +39,46 @@ function accepts(
   return new MessageParser(pixelCommandProtocol).parse(payload).ok;
 }
 
-function enabledBuffer(): PixelBuffer {
-  const buffer = new PixelBuffer({ size: { x: 4, y: 4 } });
-  applyCommandToBuffer(buffer, kEnabled);
+function enabledState(): PixelDocumentState {
+  const state = new PixelDocumentState({
+    buffer: new PixelBuffer({ size: { x: 4, y: 4 } })
+  });
+  applyPixelCommand(state, kEnabled);
 
-  return buffer;
+  return state;
 }
 
 describe("normal map commands", () => {
-  describe("applyCommandToBuffer", () => {
-    test("toggles and patches the buffer config", () => {
-      const buffer = enabledBuffer();
+  describe("applyPixelCommand", () => {
+    test("toggles and patches the state config", () => {
+      const state = enabledState();
 
-      applyCommandToBuffer(buffer, command("normal-map-defaults-patched", {
+      applyPixelCommand(state, command("normal-map-defaults-patched", {
         patch: { strength: 6 }
       }));
-      applyCommandToBuffer(buffer, command("normal-map-zone-set", kZoneOff));
+      applyPixelCommand(state, command("normal-map-zone-set", kZoneOff));
 
-      assert.equal(buffer.normalMap?.defaults.strength, 6);
-      assert.equal(buffer.normalMap?.zoneOf("a")?.settings, "off");
+      assert.equal(state.normalMap?.defaults.strength, 6);
+      assert.equal(state.normalMap?.zoneOf("a")?.settings, "off");
 
-      applyCommandToBuffer(buffer, command("normal-map-zone-deleted", {
+      applyPixelCommand(state, command("normal-map-zone-deleted", {
         regionId: "a"
       }));
-      assert.deepEqual(buffer.normalMap?.zones, []);
+      assert.deepEqual(state.normalMap?.zones, []);
 
-      applyCommandToBuffer(buffer, command("normal-map-toggled", {
+      applyPixelCommand(state, command("normal-map-toggled", {
         config: null
       }));
-      assert.equal(buffer.normalMap, null);
+      assert.equal(state.normalMap, null);
     });
 
     test("a region deletion drops its zone", () => {
-      const buffer = enabledBuffer();
-      applyCommandToBuffer(buffer, command("normal-map-zone-set", kZoneOff));
+      const state = enabledState();
+      applyPixelCommand(state, command("normal-map-zone-set", kZoneOff));
 
-      applyCommandToBuffer(buffer, command("uv-region-deleted", { id: "a" }));
+      applyPixelCommand(state, command("uv-region-deleted", { id: "a" }));
 
-      assert.deepEqual(buffer.normalMap?.zones, []);
+      assert.deepEqual(state.normalMap?.zones, []);
     });
   });
 
@@ -115,16 +118,16 @@ describe("normal map commands", () => {
   describe("PixelCommandArbiter", () => {
     test("drops an older patch of the same field", () => {
       const arbiter = new PixelCommandArbiter();
-      const buffer = enabledBuffer();
-      const newer = arbiter.admit(buffer, command("normal-map-defaults-patched", {
+      const state = enabledState();
+      const newer = arbiter.admit(state, command("normal-map-defaults-patched", {
         patch: { strength: 6 }
       }, { clientId: "B", timestamp: 900 }));
       newer?.commit();
 
-      const older = arbiter.admit(buffer, command("normal-map-defaults-patched", {
+      const older = arbiter.admit(state, command("normal-map-defaults-patched", {
         patch: { strength: 3 }
       }, { clientId: "A", timestamp: 500 }));
-      const otherField = arbiter.admit(buffer, command("normal-map-defaults-patched", {
+      const otherField = arbiter.admit(state, command("normal-map-defaults-patched", {
         patch: { invert: true }
       }, { clientId: "A", timestamp: 500 }));
 
@@ -134,13 +137,13 @@ describe("normal map commands", () => {
 
     test("a zone deletion conflicts with a newer set of the same zone", () => {
       const arbiter = new PixelCommandArbiter();
-      const buffer = enabledBuffer();
-      arbiter.admit(buffer, command("normal-map-zone-set", kZoneOff, {
+      const state = enabledState();
+      arbiter.admit(state, command("normal-map-zone-set", kZoneOff, {
         clientId: "B",
         timestamp: 900
       }))?.commit();
 
-      const older = arbiter.admit(buffer, command("normal-map-zone-deleted", {
+      const older = arbiter.admit(state, command("normal-map-zone-deleted", {
         regionId: "a"
       }, { clientId: "A", timestamp: 500 }));
 
@@ -156,7 +159,7 @@ describe("normal map commands", () => {
       ];
 
       assert.equal(
-        arbiter.admit(enabledBuffer(), command("normal-map-toggled", {
+        arbiter.admit(enabledState(), command("normal-map-toggled", {
           config
         })),
         null
@@ -165,12 +168,12 @@ describe("normal map commands", () => {
   });
 
   test("snapshots carry the config", async() => {
-    const buffer = enabledBuffer();
-    applyCommandToBuffer(buffer, command("normal-map-zone-set", kZoneOff));
+    const state = enabledState();
+    applyPixelCommand(state, command("normal-map-zone-set", kZoneOff));
     const document = new PixelDocument({ size: { x: 1, y: 1 } });
 
-    await loadPixelSnapshot(document, await encodePixelSnapshot(buffer));
+    await loadPixelSnapshot(document, await encodePixelSnapshot(state));
 
-    assert.deepEqual(document.normalMap?.toJSON(), buffer.normalMap?.toJSON());
+    assert.deepEqual(document.normalMap?.toJSON(), state.normalMap?.toJSON());
   });
 });

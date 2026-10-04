@@ -1,52 +1,35 @@
 // Import Internal Dependencies
+import type { BrushColorSlot } from "../tools/Brush.ts";
 import type { Vec2 } from "../types.ts";
 
+export interface PointerPosition {
+  canvas: Vec2;
+  texture: Vec2;
+  boundedTexture: Vec2 | null;
+}
+
 export interface InputActions {
-  /**
-   * Returns whether the primary drag should be tracked.
-   */
-  onPrimaryDown(
-    position: Vec2,
-    canvasPosition: Vec2
-  ): boolean;
-  onPrimaryMove(
-    position: Vec2,
-    canvasPosition: Vec2
-  ): void;
-  onPrimaryUp(): void;
-  /**
-   * Returns whether the secondary drag should be tracked.
-   */
-  onSecondaryDown(
-    position: Vec2,
+  readonly pansOnPrimary: boolean;
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition,
     ctrlKey: boolean
   ): boolean;
-  onSecondaryMove(
-    position: Vec2
+  onPointerMove(
+    slot: BrushColorSlot,
+    position: PointerPosition
   ): void;
-  onSecondaryUp(): void;
+  onPointerUp(
+    slot: BrushColorSlot
+  ): void;
+  onCtrlWheel(
+    delta: number
+  ): boolean;
   onPanStart(): void;
-  onPanMove(delta: Vec2): void;
   onPanEnd(): void;
-  onZoom(
-    delta: number,
-    center: Vec2
+  onHover(
+    position: PointerPosition | null
   ): void;
-  /**
-   * Reports the canvas position, or `null` outside the canvas.
-   */
-  onCanvasHover(
-    position: Vec2 | null
-  ): void;
-  /**
-   * Reports the bounded texture position, or `null` outside the texture.
-   */
-  onTextureCursorMove(
-    position: Vec2 | null
-  ): void;
-  /**
-   * Receives every canvas or window mouseup.
-   */
   onMouseUp(): void;
   onBlur(): void;
 }

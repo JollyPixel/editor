@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import {
   createDocument,
   pixelAt
@@ -55,7 +55,7 @@ describe("PixelDocument", () => {
     });
 
     test("edits an external region without commands or history", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.disownUvRegions(isExternal);
 
@@ -76,7 +76,7 @@ describe("PixelDocument", () => {
     });
 
     test("keeps commands for owned regions and pixel edits", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.disownUvRegions(isExternal);
 
@@ -90,7 +90,7 @@ describe("PixelDocument", () => {
         width: 4,
         height: 4
       });
-      doc.commitPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
 
       assert.deepEqual(
         events.map((event) => event.action),

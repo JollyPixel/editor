@@ -132,7 +132,7 @@ export class UvToolbarController {
     uv.setState(
       regionId,
       state,
-      state === "stacked" ? uv.selectedSlot ?? undefined : undefined
+      state === "stacked" ? uv.selectedSlot : null
     );
   }
 
@@ -202,14 +202,14 @@ export class UvToolbarController {
         label: `Rotate ${target} counter-clockwise`,
         tooltip: `Rotate ${target} 90° counter-clockwise`,
         icon: "rotateCounterClockwise",
-        onClick: () => uv.rotate(regionId, "ccw", slot ?? undefined)
+        onClick: () => uv.rotate(regionId, "ccw", slot)
       })}
       ${renderRailButton({
         part: "uv-rotate-cw-button",
         label: `Rotate ${target} clockwise`,
         tooltip: `Rotate ${target} 90° clockwise`,
         icon: "rotateClockwise",
-        onClick: () => uv.rotate(regionId, "cw", slot ?? undefined)
+        onClick: () => uv.rotate(regionId, "cw", slot)
       })}
     `;
   }

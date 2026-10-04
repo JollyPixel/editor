@@ -77,6 +77,9 @@ export function stroke(
     canvas.dispatchEvent(event);
   }
   canvas.dispatchEvent(
-    new MouseEvent("mouseup", { bubbles: true })
+    new MouseEvent("mouseup", {
+      button,
+      bubbles: true
+    })
   );
 }

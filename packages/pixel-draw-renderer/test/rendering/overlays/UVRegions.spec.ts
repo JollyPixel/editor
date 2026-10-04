@@ -149,7 +149,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
     map.select(null);
     assert.strictEqual(
-      svg.querySelectorAll("rect").length,
+      uvBorderRects(svg).length,
       0,
       "no rect when region is deselected"
     );
@@ -174,7 +174,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
     map.delete(region.id);
     assert.strictEqual(
-      svg.querySelectorAll("rect").length,
+      uvBorderRects(svg).length,
       0,
       "no rect when region is deleted"
     );
@@ -252,7 +252,7 @@ describe("UVRegionLayer — destroy", () => {
 
     overlay.destroy();
     assert.strictEqual(
-      svg.querySelectorAll("rect").length,
+      uvBorderRects(svg).length,
       0,
       "no rect after destroy"
     );
@@ -262,7 +262,7 @@ describe("UVRegionLayer — destroy", () => {
       { x: 1, y: 1, width: 2, height: 2 }
     );
     assert.strictEqual(
-      svg.querySelectorAll("rect").length,
+      uvBorderRects(svg).length,
       0,
       "no rect after move"
     );

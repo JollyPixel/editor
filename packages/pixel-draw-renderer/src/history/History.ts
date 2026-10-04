@@ -1,24 +1,9 @@
-// Import Third-party Dependencies
-import { fromUint8Array } from "js-base64";
-
 // Import Internal Dependencies
-import {
-  HistoryStack
-} from "./HistoryStack.ts";
+import { HistoryStack } from "./HistoryStack.ts";
 import type {
-  HistoryEntry,
-  HistoryEntryInput
-} from "./HistoryStack.types.ts";
-import {
-  groupPositionsByColor
-} from "../buffer/colorGroups.ts";
-import type {
-  DefaultPixelBuffer
-} from "../buffer/types.ts";
-import type {
-  PixelBufferHookEvent
-} from "../buffer/hooks.ts";
-import type { UVMap } from "../uv/map/UVMap.ts";
+  HistoryEdit,
+  HistoryEntry
+} from "./HistoryEntry.ts";
 
 export interface HistoryState {
   canUndo: boolean;
@@ -37,167 +22,17 @@ export interface HistoryOptions {
   onChange?: (state: HistoryState) => void;
 }
 
+export type HistoryReplay = (entry: HistoryEntry) => void;
+
 export class History {
-  static buildUndoReplayEvents(
-    entry: HistoryEntry
-  ): PixelBufferHookEvent[] {
-    const { timestamp } = entry;
-
-    switch (entry.action) {
-      case "stroke":
-        return groupPositionsByColor(
-          entry.positions,
-          entry.beforeColors
-        ).map((group) => {
-          return {
-            action: "stroke",
-            metadata: {
-              color: group.color,
-              positions: group.positions
-            },
-            originTimestamp: timestamp
-          };
-        });
-
-      case "resized":
-        return [
-          {
-            action: "resized",
-            metadata: {
-              size: entry.beforeSize
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "texture-replaced":
-        return [
-          {
-            action: "texture-replaced",
-            metadata: {
-              size: entry.beforeSize,
-              pixels: fromUint8Array(
-                new Uint8Array(entry.beforePixels)
-              )
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "select-edit":
-        return [
-          {
-            action: "select-edit",
-            metadata: {
-              positions: entry.positions,
-              colors: entry.beforeColors
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "uv-delete":
-        return entry.normalMapZone ?
-          [
-            {
-              action: "normal-map-zone-set",
-              metadata: entry.normalMapZone,
-              originTimestamp: timestamp
-            }
-          ] :
-          [];
-
-      case "normal-map":
-        return [
-          {
-            ...entry.undo,
-            originTimestamp: timestamp
-          }
-        ];
-
-      default:
-        return [];
-    }
-  }
-
-  static buildRedoReplayEvents(
-    entry: HistoryEntry
-  ): PixelBufferHookEvent[] {
-    const { timestamp } = entry;
-
-    switch (entry.action) {
-      case "stroke":
-        return [
-          {
-            action: "stroke",
-            metadata: {
-              color: entry.afterColor,
-              positions: entry.positions
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "resized":
-        return [
-          {
-            action: "resized",
-            metadata: {
-              size: entry.afterSize
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "texture-replaced":
-        return [
-          {
-            action: "texture-replaced",
-            metadata: {
-              size: entry.afterSize,
-              pixels: fromUint8Array(
-                new Uint8Array(entry.afterPixels)
-              )
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "select-edit":
-        return [
-          {
-            action: "select-edit",
-            metadata: {
-              positions: entry.positions,
-              colors: entry.afterColors
-            },
-            originTimestamp: timestamp
-          }
-        ];
-
-      case "normal-map":
-        return [
-          {
-            ...entry.redo,
-            originTimestamp: timestamp
-          }
-        ];
-
-      default:
-        return [];
-    }
-  }
-
-  #stack?: HistoryStack;
+  #stack?: HistoryStack<HistoryEntry>;
   #onChange?: (state: HistoryState) => void;
 
   constructor(
-    buffer: DefaultPixelBuffer,
-    uvMap: UVMap,
     options: HistoryOptions = {}
   ) {
     if (options.enabled) {
-      this.#stack = new HistoryStack(buffer, uvMap, {
+      this.#stack = new HistoryStack({
         limit: options.limit
       });
     }
@@ -217,32 +52,35 @@ export class History {
   }
 
   push(
-    entry: HistoryEntryInput
+    edit: HistoryEdit
   ): void {
     if (!this.#stack) {
       return;
     }
 
-    this.#stack.push(entry);
+    this.#stack.push({
+      ...edit,
+      timestamp: Date.now()
+    });
     this.#notify();
   }
 
-  undo(): HistoryEntry | null {
-    const entry = this.#stack?.undo() ?? null;
-    if (entry) {
-      this.#notify();
-    }
-
-    return entry;
+  undo(
+    replay: HistoryReplay
+  ): HistoryEntry | null {
+    return this.#replay(
+      this.#stack?.undo() ?? null,
+      replay
+    );
   }
 
-  redo(): HistoryEntry | null {
-    const entry = this.#stack?.redo() ?? null;
-    if (entry) {
-      this.#notify();
-    }
-
-    return entry;
+  redo(
+    replay: HistoryReplay
+  ): HistoryEntry | null {
+    return this.#replay(
+      this.#stack?.redo() ?? null,
+      replay
+    );
   }
 
   clear(): void {
@@ -252,6 +90,18 @@ export class History {
 
     this.#stack.clear();
     this.#notify();
+  }
+
+  #replay(
+    entry: HistoryEntry | null,
+    replay: HistoryReplay
+  ): HistoryEntry | null {
+    if (entry !== null) {
+      replay(entry);
+      this.#notify();
+    }
+
+    return entry;
   }
 
   #notify(): void {

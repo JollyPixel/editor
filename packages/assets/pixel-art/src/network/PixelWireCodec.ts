@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type {
-  PixelBufferHookEvent,
+  PixelCommand,
   RGBA8,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -110,7 +110,7 @@ export function selectEditPixels(
 }
 
 export function packPixelEvent(
-  event: PixelBufferHookEvent
+  event: PixelCommand
 ): PixelWireEvent {
   switch (event.action) {
     case "stroke":

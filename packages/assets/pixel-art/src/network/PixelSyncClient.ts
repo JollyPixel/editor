@@ -5,8 +5,7 @@ import {
 } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
-  PixelBufferHookEvent,
-  PixelBufferHookListener,
+  PixelCommand,
   PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -28,8 +27,8 @@ export interface PixelSyncTarget extends Pick<
   PixelDocument,
   "applyRemoteCommand" | "loadSnapshot"
 > {
-  on(event: "buffer-updated", listener: PixelBufferHookListener): unknown;
-  off(event: "buffer-updated", listener: PixelBufferHookListener): unknown;
+  on(event: "command", listener: (command: PixelCommand) => void): unknown;
+  off(event: "command", listener: (command: PixelCommand) => void): unknown;
 }
 
 export interface PixelSyncClientOptions {
@@ -47,9 +46,9 @@ export class PixelSyncClient extends CommandSync<
   #basis = new ReplayBasis();
 
   #sendLocalCommand = (
-    event: PixelBufferHookEvent
+    command: PixelCommand
   ): void => {
-    const { originTimestamp, ...body } = packPixelEvent(event);
+    const { originTimestamp, ...body } = packPixelEvent(command);
     this.send(body, originTimestamp, this.#basis.of(originTimestamp));
   };
 
@@ -64,7 +63,7 @@ export class PixelSyncClient extends CommandSync<
     const { document } = options;
 
     this.#document = document;
-    document.on("buffer-updated", this.#sendLocalCommand);
+    document.on("command", this.#sendLocalCommand);
     this.on(
       "acknowledged",
       (command, version) => this.#basis.learn(command.timestamp, version)
@@ -76,7 +75,7 @@ export class PixelSyncClient extends CommandSync<
   }
 
   override destroy(): void {
-    this.#document.off("buffer-updated", this.#sendLocalCommand);
+    this.#document.off("command", this.#sendLocalCommand);
     super.destroy();
   }
 }

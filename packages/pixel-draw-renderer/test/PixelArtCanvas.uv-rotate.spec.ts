@@ -6,17 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type {
-  PixelArtCanvas,
-  PixelArtCanvasOptions
-} from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
-import { createPixelArtCanvas } from "./helpers/canvas.ts";
+import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
+import {
+  createPixelArtCanvas,
+  type TestCanvasOptions
+} from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — uv rotation", () => {
   function makeManager(
-    options: PixelArtCanvasOptions = {}
+    options: TestCanvasOptions = {}
   ): PixelArtCanvas {
     return createPixelArtCanvas({
       zoom: { default: 4 },
@@ -100,9 +100,9 @@ describe("PixelArtCanvas — uv rotation", () => {
   });
 
   test("a region rotation broadcasts the whole region", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager({
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     });
     const region = selectedRegion(manager);
     events.length = 0;
@@ -128,9 +128,9 @@ describe("PixelArtCanvas — uv rotation", () => {
   });
 
   test("a free slot rotation broadcasts only that slot", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager({
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     });
     const region = selectedRegion(manager);
     manager.uv.setState(region.id, "free");
@@ -152,11 +152,11 @@ describe("PixelArtCanvas — uv rotation", () => {
   });
 
   test("applyRemoteCommand applies a slot rotation without broadcasting or recording history", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeManager({
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     });
-    manager.applyRemoteCommand({
+    manager.document.applyRemoteCommand({
       action: "uv-region-created",
       metadata: {
         region: {
@@ -171,7 +171,7 @@ describe("PixelArtCanvas — uv rotation", () => {
     });
     const region = manager.uv.get("remote")!;
 
-    manager.applyRemoteCommand({
+    manager.document.applyRemoteCommand({
       action: "uv-region-rotated",
       metadata: {
         id: region.id,

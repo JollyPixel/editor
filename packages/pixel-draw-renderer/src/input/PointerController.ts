@@ -1,20 +1,25 @@
 // Import Internal Dependencies
 import type { Viewport } from "../rendering/Viewport.ts";
+import type { BrushColorSlot } from "../tools/Brush.ts";
 import type { Vec2 } from "../types.ts";
-import type { InputActions } from "./InputActions.ts";
+import type {
+  InputActions,
+  PointerPosition
+} from "./InputActions.ts";
 import type { WindowLike } from "./WindowLike.ts";
 
 // CONSTANTS
-const kMouseButton = {
-  primary: 0,
-  auxiliary: 1,
-  secondary: 2
-} as const;
+const kAuxiliaryButton = 1;
 
-const kMouseButtonMask = {
+const kButtonSlots: ReadonlyMap<number, BrushColorSlot> = new Map([
+  [0, "primary"],
+  [2, "secondary"]
+]);
+
+const kSlotButtonMasks: Record<BrushColorSlot, number> = {
   primary: 1,
   secondary: 2
-} as const;
+};
 
 const kWheelDeltaMode = {
   pixel: 0,
@@ -26,13 +31,6 @@ const kWheelDeltaMode = {
 const kWheelLineDeltaPixels = 16;
 const kWheelPageDeltaPixels = 100;
 
-function isMouseButtonPressed(
-  buttons: number,
-  buttonMask: number
-): boolean {
-  return (buttons & buttonMask) !== 0;
-}
-
 export interface PointerControllerOptions {
   canvas: HTMLCanvasElement;
   viewport: Viewport;
@@ -42,14 +40,6 @@ export interface PointerControllerOptions {
    * @default window
    */
   window?: WindowLike;
-  /**
-   * When it returns `true`, a plain primary drag pans.
-   */
-  shouldPanOnPrimary: () => boolean;
-  /**
-   * Handles Ctrl+wheel before zoom. Return `true` to suppress zoom.
-   */
-  onCtrlWheel: (delta: number) => boolean;
 }
 
 export class PointerController {
@@ -57,15 +47,8 @@ export class PointerController {
   #viewport: Viewport;
   #actions: InputActions;
   #inputWindow: WindowLike;
-  #isPanning: boolean = false;
-  #panPosition: Vec2 = {
-    x: 0,
-    y: 0
-  };
-  #isDraggingPrimary: boolean = false;
-  #isDraggingSecondary: boolean = false;
-  #shouldPanOnPrimary: () => boolean;
-  #onCtrlWheel: (delta: number) => boolean;
+  #panAnchor: Vec2 | null = null;
+  #dragging: BrushColorSlot | null = null;
 
   constructor(
     options: PointerControllerOptions
@@ -81,14 +64,8 @@ export class PointerController {
     this.#viewport = viewport;
     this.#actions = actions;
     this.#inputWindow = inputWindow;
-    this.#shouldPanOnPrimary = options.shouldPanOnPrimary;
-    this.#onCtrlWheel = options.onCtrlWheel;
 
     this.#addEventListeners();
-  }
-
-  stopDrawing(): void {
-    this.#isDraggingPrimary = false;
   }
 
   destroy(): void {
@@ -119,67 +96,62 @@ export class PointerController {
     this.#inputWindow.removeEventListener("blur", this.#handleWindowBlur);
   }
 
-  #resolveTexturePosition(
+  #positionOf(
     event: MouseEvent
-  ): Vec2 | null {
+  ): PointerPosition {
     const bounds = this.#canvas.getBoundingClientRect();
-
-    return this.#viewport.mouseTexturePosition(
-      event.clientX,
-      event.clientY,
+    const { clientX, clientY } = event;
+    const texture = this.#viewport.mouseTexturePosition(
+      clientX,
+      clientY,
       { bounds }
     );
+
+    return {
+      canvas: {
+        x: Math.floor(clientX - bounds.left),
+        y: Math.floor(clientY - bounds.top)
+      },
+      texture,
+      boundedTexture: this.#viewport.texture.contains(texture) ?
+        { ...texture } :
+        null
+    };
   }
 
-  #resolveBoundedTexturePosition(
+  #isHeld(
+    slot: BrushColorSlot,
     event: MouseEvent
-  ): Vec2 | null {
-    const bounds = this.#canvas.getBoundingClientRect();
-
-    return this.#viewport.mouseTexturePosition(
-      event.clientX,
-      event.clientY,
-      {
-        bounds,
-        limit: true
-      }
-    );
+  ): boolean {
+    return (event.buttons & kSlotButtonMasks[slot]) !== 0;
   }
 
-  #resolveCanvasPosition(
-    event: MouseEvent
-  ): Vec2 {
-    const bounds = this.#canvas.getBoundingClientRect();
-
-    return this.#viewport.mouseCanvasPosition(
-      event.clientX,
-      event.clientY,
-      bounds
-    );
-  }
-
-  #endTrackedDrags(): void {
-    if (this.#isDraggingPrimary) {
-      this.#isDraggingPrimary = false;
-      this.#actions.onPrimaryUp();
+  #endDrag(): void {
+    const slot = this.#dragging;
+    if (slot === null) {
+      return;
     }
 
-    if (this.#isDraggingSecondary) {
-      this.#isDraggingSecondary = false;
-      this.#actions.onSecondaryUp();
-    }
+    this.#dragging = null;
+    this.#actions.onPointerUp(slot);
   }
 
-  #reportMouseUp(): void {
-    this.#endTrackedDrags();
+  #release(
+    event: MouseEvent
+  ): void {
+    if (
+      this.#dragging !== null &&
+      kButtonSlots.get(event.button) === this.#dragging
+    ) {
+      this.#endDrag();
+    }
     this.#actions.onMouseUp();
   }
 
   #beginPan(
     event: MouseEvent
   ): void {
-    this.#isPanning = true;
-    this.#panPosition = {
+    this.#panAnchor = {
       x: event.clientX,
       y: event.clientY
     };
@@ -187,48 +159,41 @@ export class PointerController {
   }
 
   #endPan(): void {
-    if (!this.#isPanning) {
+    if (this.#panAnchor === null) {
       return;
     }
 
-    this.#isPanning = false;
+    this.#panAnchor = null;
     this.#actions.onPanEnd();
   }
 
   #handleMouseDown = (
     event: MouseEvent
   ): void => {
-    switch (event.button) {
-      case kMouseButton.primary: {
-        if (this.#shouldPanOnPrimary()) {
-          this.#beginPan(event);
+    if (event.button === kAuxiliaryButton) {
+      this.#beginPan(event);
 
-          return;
-        }
+      return;
+    }
 
-        const position = this.#resolveTexturePosition(event);
-        if (position) {
-          this.#isDraggingPrimary = this.#actions.onPrimaryDown(
-            position,
-            this.#resolveCanvasPosition(event)
-          );
-        }
+    const slot = kButtonSlots.get(event.button);
+    if (slot === undefined) {
+      return;
+    }
+    if (slot === "primary" && this.#actions.pansOnPrimary) {
+      this.#beginPan(event);
 
+      return;
+    }
+    if (this.#dragging !== null) {
+      if (this.#isHeld(this.#dragging, event)) {
         return;
       }
-      case kMouseButton.secondary: {
-        const position = this.#resolveTexturePosition(event);
-        if (position) {
-          this.#isDraggingSecondary = this.#actions.onSecondaryDown(
-            position,
-            event.ctrlKey
-          );
-        }
+      this.#endDrag();
+    }
 
-        return;
-      }
-      case kMouseButton.auxiliary:
-        this.#beginPan(event);
+    if (this.#actions.onPointerDown(slot, this.#positionOf(event), event.ctrlKey)) {
+      this.#dragging = slot;
     }
   };
 
@@ -237,44 +202,25 @@ export class PointerController {
   ): void => {
     event.preventDefault();
 
-    this.#actions.onCanvasHover(
-      this.#resolveCanvasPosition(event)
-    );
-    this.#actions.onTextureCursorMove(
-      this.#resolveBoundedTexturePosition(event)
-    );
+    const position = this.#positionOf(event);
+    this.#actions.onHover(position);
 
     if (
-      isMouseButtonPressed(event.buttons, kMouseButtonMask.primary) &&
-      this.#isDraggingPrimary
+      this.#dragging !== null &&
+      this.#isHeld(this.#dragging, event)
     ) {
-      const position = this.#resolveTexturePosition(event);
-      if (position) {
-        this.#actions.onPrimaryMove(
-          position,
-          this.#resolveCanvasPosition(event)
-        );
-      }
-    }
-
-    if (
-      isMouseButtonPressed(event.buttons, kMouseButtonMask.secondary) &&
-      this.#isDraggingSecondary
-    ) {
-      const position = this.#resolveTexturePosition(event);
-      if (position) {
-        this.#actions.onSecondaryMove(position);
-      }
+      this.#actions.onPointerMove(this.#dragging, position);
     }
   };
 
   #handleMouseLeave = (): void => {
-    this.#actions.onCanvasHover(null);
-    this.#actions.onTextureCursorMove(null);
+    this.#actions.onHover(null);
   };
 
-  #handleMouseUp = (): void => {
-    this.#reportMouseUp();
+  #handleMouseUp = (
+    event: MouseEvent
+  ): void => {
+    this.#release(event);
   };
 
   #normalizeWheelDelta(
@@ -299,16 +245,17 @@ export class PointerController {
     const delta = this.#normalizeWheelDelta(
       event
     );
-    if (event.ctrlKey && this.#onCtrlWheel(delta)) {
+    if (event.ctrlKey && this.#actions.onCtrlWheel(delta)) {
       return;
     }
 
-    const center = this.#resolveCanvasPosition(event);
-    this.#actions.onZoom(
+    const position = this.#positionOf(event);
+    this.#viewport.applyZoom(
       delta,
-      center
+      position.canvas.x,
+      position.canvas.y
     );
-    this.#actions.onCanvasHover(center);
+    this.#actions.onHover(position);
   };
 
   #handleContextMenu = (
@@ -320,20 +267,17 @@ export class PointerController {
   #handleWindowMouseMove = (
     event: MouseEvent
   ): void => {
-    if (!this.#isPanning) {
+    if (this.#panAnchor === null) {
       return;
     }
 
-    const nextPosition = {
+    const dx = event.clientX - this.#panAnchor.x;
+    const dy = event.clientY - this.#panAnchor.y;
+    this.#panAnchor = {
       x: event.clientX,
       y: event.clientY
     };
-    const delta = {
-      x: nextPosition.x - this.#panPosition.x,
-      y: nextPosition.y - this.#panPosition.y
-    };
-    this.#panPosition = nextPosition;
-    this.#actions.onPanMove(delta);
+    this.#viewport.applyPan(dx, dy);
   };
 
   #handleWindowMouseUp = (
@@ -345,12 +289,12 @@ export class PointerController {
       return;
     }
 
-    this.#reportMouseUp();
+    this.#release(event);
   };
 
   #handleWindowBlur = (): void => {
     this.#endPan();
-    this.#endTrackedDrags();
+    this.#endDrag();
     this.#actions.onBlur();
   };
 }

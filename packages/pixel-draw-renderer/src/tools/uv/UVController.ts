@@ -1,31 +1,17 @@
 // Import Internal Dependencies
-import {
-  geometryKey,
-  pointInGeometry,
-  rectOf
-} from "../../uv/geometry/geometry.ts";
+import { rectOf } from "../../uv/geometry/geometry.ts";
 import {
   UV_RESIZE_CURSORS,
   resizeHandleAt,
-  resizeTargets,
-  type UVResizeHit,
-  type UVView
-} from "../../uv/region/resizeHandles.ts";
-import {
-  UVMoveGesture,
-  UVResizeGesture,
-  type UVGesture
-} from "./UVGesture.ts";
-import { uvTargetKey } from "../../uv/region/UVTarget.ts";
+  type UVResizeHit
+} from "./resizeHandles.ts";
+import { UVGesture } from "./UVGesture.ts";
+import { UVPickCycle } from "./UVPickCycle.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
-import type {
-  UVSlot,
-  UVGeometry,
-  UVRegion
-} from "../../uv/region/UVRegion.ts";
 import type {
   UVRegionLayer
 } from "../../rendering/overlays/UVRegions.ts";
+import type { ScreenProjection } from "../../rendering/Viewport.ts";
 import type {
   RotationDirection,
   Vec2
@@ -39,7 +25,7 @@ export interface UVControllerOptions {
    * @default true
    */
   deselectOnEmptyClick?: boolean;
-  viewport: UVView;
+  viewport: ScreenProjection;
   resizable?: boolean;
 }
 
@@ -47,72 +33,13 @@ export interface UVTool {
   resizable: boolean;
 }
 
-interface HitCandidate {
-  region: UVRegion;
-  face: UVSlot | null;
-  geometry: UVGeometry;
-}
-
-interface PickState {
-  key: string;
-  index: number;
-  regionId: string;
-  face: UVSlot | null;
-}
-
-function stackKey(
-  candidates: HitCandidate[]
-): string {
-  return JSON.stringify(
-    candidates.map((candidate) => uvTargetKey({
-      regionId: candidate.region.id,
-      slot: candidate.face
-    }))
-  );
-}
-
-function topIndex(
-  candidates: HitCandidate[],
-  selectedRegionId: string | null,
-  selectedSlot: UVSlot | null
-): number {
-  if (selectedRegionId === null) {
-    return candidates.length - 1;
-  }
-
-  const painted = candidates.findIndex(
-    ({ region, face }) => region.id === selectedRegionId &&
-      (selectedSlot === null || face === selectedSlot)
-  );
-
-  return painted === -1 ? candidates.length - 1 : painted;
-}
-
-function topStack(
-  candidates: HitCandidate[],
-  selectedRegionId: string | null,
-  selectedSlot: UVSlot | null
-): HitCandidate[] {
-  const top = candidates[
-    topIndex(candidates, selectedRegionId, selectedSlot)
-  ];
-  const key = geometryKey(top.geometry);
-
-  return candidates.filter(
-    (candidate) => geometryKey(candidate.geometry) === key
-  );
-}
-
-/**
- * Advances repeat clicks through overlapping UV regions.
- */
 export class UVController implements UVTool {
   #uvMap: UVMap;
   #overlay: UVRegionLayer;
   #gesture: UVGesture | null = null;
-  #pick: PickState | null = null;
+  #picks: UVPickCycle;
   #deselectOnEmptyClick: boolean;
-  #viewport: UVView;
+  #viewport: ScreenProjection;
   #resizable: boolean;
   #hoverPoint: Vec2 | null = null;
   #aligned = false;
@@ -122,6 +49,7 @@ export class UVController implements UVTool {
   ) {
     this.#uvMap = options.uvMap;
     this.#overlay = options.overlay;
+    this.#picks = new UVPickCycle(options.uvMap);
     this.#deselectOnEmptyClick = options.deselectOnEmptyClick ?? true;
     this.#viewport = options.viewport;
     this.#resizable = options.resizable ?? false;
@@ -184,28 +112,25 @@ export class UVController implements UVTool {
   handleStart(
     point: Vec2
   ): void {
-    const pointer = this.#texturePoint(point);
+    const pointer = this.#viewport.toTexture(point);
     const handle = this.#resizeHit(point);
     if (handle !== null) {
-      this.#pick = null;
-      this.#gesture = new UVResizeGesture(this.#uvMap, {
-        id: handle.id,
-        slot: handle.slot,
-        handle: handle.handle,
-        rect: handle.rect,
-        origin: pointer
-      });
+      this.#picks.reset();
+      this.#gesture = UVGesture.resize(
+        this.#uvMap,
+        { id: handle.id, slot: handle.slot, rect: handle.rect, origin: pointer },
+        handle.handle
+      );
 
       return;
     }
 
-    const pos = {
+    const position = {
       x: Math.floor(pointer.x),
       y: Math.floor(pointer.y)
     };
-    const hits = this.#hitStack(pos);
-    if (hits.length === 0) {
-      this.#pick = null;
+    const pick = this.#picks.pickAt(position);
+    if (pick === null) {
       if (this.#deselectOnEmptyClick) {
         this.#uvMap.select(null);
       }
@@ -213,34 +138,13 @@ export class UVController implements UVTool {
       return;
     }
 
-    const selectedRegionId = this.#uvMap.selectedRegionId;
-    const selectedSlot = this.#uvMap.selectedSlot;
-    const candidates = topStack(hits, selectedRegionId, selectedSlot);
-    const key = stackKey(candidates);
-    const index = this.#shouldAdvance(key) ?
-      (this.#pick!.index + 1) % candidates.length :
-      Math.max(
-        candidates.findIndex(
-          ({ region, face }) => region.id === selectedRegionId &&
-            (selectedSlot === null || face === selectedSlot)
-        ),
-        0
-      );
-    const { region, face, geometry } = candidates[index];
+    const { region, face, geometry } = pick;
     const grouped = region.movementScope === "region";
-
-    this.#uvMap.select(region.id, face ?? undefined);
-    this.#pick = {
-      key,
-      index,
-      regionId: this.#uvMap.selectedRegionId!,
-      face: this.#uvMap.selectedSlot
-    };
-    this.#gesture = new UVMoveGesture(this.#uvMap, {
+    this.#gesture = UVGesture.move(this.#uvMap, {
       id: region.id,
-      face: grouped ? null : face,
+      slot: grouped ? null : face,
       rect: grouped ? region.bounds : rectOf(geometry),
-      origin: pos
+      origin: position
     });
   }
 
@@ -248,7 +152,7 @@ export class UVController implements UVTool {
     point: Vec2
   ): void {
     const gesture = this.#gesture;
-    if (gesture?.move(this.#texturePoint(point))) {
+    if (gesture?.move(this.#viewport.toTexture(point))) {
       this.#showPreview(gesture);
     }
   }
@@ -258,7 +162,7 @@ export class UVController implements UVTool {
   }
 
   cancelDrag(): void {
-    this.#pick = null;
+    this.#picks.reset();
     this.#finish(false);
   }
 
@@ -270,11 +174,7 @@ export class UVController implements UVTool {
       return false;
     }
 
-    return this.#uvMap.rotate(
-      id,
-      direction,
-      this.#uvMap.selectedSlot ?? undefined
-    );
+    return this.#uvMap.rotate(id, direction, this.#uvMap.selectedSlot);
   }
 
   handleDelete(): boolean {
@@ -283,7 +183,7 @@ export class UVController implements UVTool {
       return false;
     }
 
-    this.#pick = null;
+    this.#picks.reset();
 
     return this.#uvMap.delete(id);
   }
@@ -307,32 +207,12 @@ export class UVController implements UVTool {
     }
 
     this.#gesture = null;
-    let committed = false;
-    if (commit) {
-      committed = gesture.commit({
-        aligned: this.#aligned
-      });
-    }
-    else {
+    const committed = commit && gesture.commit({ aligned: this.#aligned });
+    if (!commit) {
       gesture.restore();
     }
     this.#overlay.setLivePreview(null);
-    this.#uvMap.emit("region-drag-ended", {
-      id: gesture.id,
-      committed
-    });
-  }
-
-  #texturePoint(
-    point: Vec2
-  ): Vec2 {
-    const zoom = this.#viewport.zoom.value;
-    const camera = this.#viewport.camera;
-
-    return {
-      x: (point.x - camera.x) / zoom,
-      y: (point.y - camera.y) / zoom
-    };
+    this.#uvMap.endPreview(gesture.id, committed);
   }
 
   #resizeHit(
@@ -349,50 +229,9 @@ export class UVController implements UVTool {
     }
 
     return resizeHandleAt(
-      resizeTargets(region, this.#uvMap.selectedSlot),
+      region.resizeTargets(this.#uvMap.selectedSlot),
       point,
       this.#viewport
     );
-  }
-
-  #shouldAdvance(
-    key: string
-  ): boolean {
-    if (
-      this.#pick === null ||
-      this.#pick.key !== key
-    ) {
-      return false;
-    }
-
-    return this.#uvMap.selectedRegionId === this.#pick.regionId &&
-      this.#uvMap.selectedSlot === this.#pick.face;
-  }
-
-  #hitStack(
-    pos: Vec2
-  ): HitCandidate[] {
-    const candidates: HitCandidate[] = [];
-
-    for (const region of this.#uvMap.regions) {
-      const isRegionVisible = this.#uvMap.isVisible(
-        region.id
-      );
-      if (!isRegionVisible) {
-        continue;
-      }
-
-      for (const { slot: face, geometry } of region.slotsOf()) {
-        if (pointInGeometry(pos, geometry)) {
-          candidates.push({
-            region,
-            face,
-            geometry
-          });
-        }
-      }
-    }
-
-    return candidates;
   }
 }

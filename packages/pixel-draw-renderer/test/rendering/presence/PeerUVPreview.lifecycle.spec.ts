@@ -13,128 +13,84 @@ import {
   makeViewport
 } from "../../helpers/overlay.ts";
 import { makeUvMap } from "../../helpers/uv/map.ts";
+import { uvBorderRects } from "../../helpers/uv/borders.ts";
 import {
   RECT_GHOST,
   TRIANGLE_GHOST,
   stackedGhost
 } from "../../helpers/presence/uvPreview.ts";
 
-describe("PeerUVPreview — remove", () => {
-  test("removes the peer's border from the svg", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const ghosts = new PeerUVPreview(
-      svg,
-      viewport,
-      makeUvOverlay(svg, viewport)
-    );
+function makeGhosts(
+  uvMap = makeUvMap({ x: 64, y: 64 })
+): { svg: SVGElement; ghosts: PeerUVPreview; } {
+  const svg = makeSvg();
+  const overlay = makeUvOverlay(svg, makeViewport(), uvMap);
+
+  return { svg, ghosts: new PeerUVPreview(overlay) };
+}
+
+describe("PeerUVPreview — lifecycle", () => {
+  test("remove() drops the peer's ghost", () => {
+    const { svg, ghosts } = makeGhosts();
 
     ghosts.set("peer-A", RECT_GHOST);
     ghosts.remove("peer-A");
 
-    assert.strictEqual(
-      svg.querySelectorAll("rect").length,
-      0,
-      "old rect elements removed"
-    );
-  });
-});
-
-describe("PeerUVPreview — removeByRegion", () => {
-  test("clears whichever peer's ghost matches the region id, regardless of clientId", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const ghosts = new PeerUVPreview(
-      svg,
-      viewport,
-      makeUvOverlay(svg, viewport)
-    );
-
-    ghosts.set("peer-A", RECT_GHOST);
-    ghosts.removeByRegion(RECT_GHOST.region.id);
-
-    assert.strictEqual(
-      svg.querySelectorAll("rect").length,
-      0,
-      "old rect elements removed"
-    );
+    assert.strictEqual(uvBorderRects(svg).length, 0);
   });
 
-  test("leaves other peers' ghosts for unrelated regions untouched", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const ghosts = new PeerUVPreview(
-      svg,
-      viewport,
-      makeUvOverlay(svg, viewport)
-    );
+  test("removeByRegion() drops every ghost of that region and keeps the others", () => {
+    const { svg, ghosts } = makeGhosts();
 
     ghosts.set("peer-A", RECT_GHOST);
     ghosts.set("peer-B", TRIANGLE_GHOST);
     ghosts.removeByRegion(RECT_GHOST.region.id);
-
-    assert.strictEqual(
-      svg.querySelectorAll("rect").length,
-      0
-    );
-    assert.strictEqual(
-      svg.querySelectorAll("polygon").length,
-      2,
-      "peer-B's unrelated ghost remains"
-    );
-  });
-
-  test("is a no-op for an unknown region id", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
-    const ghosts = new PeerUVPreview(
-      svg,
-      viewport,
-      makeUvOverlay(svg, viewport)
-    );
-
-    ghosts.set("peer-A", RECT_GHOST);
     ghosts.removeByRegion("unknown-region");
-    assert.strictEqual(
-      svg.querySelectorAll("rect").length,
-      2,
-      "unaffected"
-    );
+
+    assert.strictEqual(uvBorderRects(svg).length, 1);
+    assert.strictEqual(uvBorderRects(svg)[0].getAttribute("stroke"), "#00ff00");
   });
-});
 
-describe("PeerUVPreview — clearAll", () => {
-  test("removes every peer's border and restores the suppressed classical border", () => {
-    const svg = makeSvg();
-    const viewport = makeViewport();
+  test("clearAll() drops every ghost and restores the solid border it replaced", () => {
     const uvMap = makeUvMap({ x: 64, y: 64 });
-    const uvOverlay = makeUvOverlay(svg, viewport, uvMap);
-    const ghosts = new PeerUVPreview(svg, viewport, uvOverlay);
-
-    const region = uvMap.create({
-      width: 2,
-      height: 3,
-      id: "region-A",
-      color: "#123456"
-    });
+    const { svg, ghosts } = makeGhosts(uvMap);
+    const region = uvMap.create({ width: 2, height: 3, id: "region-A", color: "#123456" });
     uvMap.select(region.id);
-    ghosts.set(
-      "peer-A",
-      stackedGhost(region.id, { x: 2, y: 3, width: 5, height: 6 })
-    );
+
+    ghosts.set("peer-A", stackedGhost(region.id, { x: 2, y: 3, width: 5, height: 6 }));
     ghosts.set("peer-B", TRIANGLE_GHOST);
     ghosts.clearAll();
 
-    assert.strictEqual(svg.querySelectorAll("polygon").length, 0);
-    const rectsAfterClear = svg.querySelectorAll("rect");
-    assert.strictEqual(
-      rectsAfterClear.length,
-      2,
-      "classical border restored"
-    );
-    assert.ok(
-      !rectsAfterClear[1].hasAttribute("stroke-dasharray"),
-      "the restored border is solid, not the ghost"
-    );
+    const borders = uvBorderRects(svg);
+    assert.strictEqual(borders.length, 1);
+    assert.ok(!borders[0].hasAttribute("stroke-dasharray"));
+  });
+});
+
+describe("PeerUVPreview — replaces the stored border", () => {
+  test("hides the region's own border while a peer's ghost for it is active", () => {
+    const uvMap = makeUvMap({ x: 64, y: 64 });
+    const { svg, ghosts } = makeGhosts(uvMap);
+    const region = uvMap.create({ width: 2, height: 3, id: "region-A", color: "#123456" });
+    uvMap.select(region.id);
+
+    ghosts.set("peer-A", stackedGhost(region.id, { x: 2, y: 3, width: 5, height: 6 }));
+    assert.strictEqual(uvBorderRects(svg).length, 1);
+    assert.ok(uvBorderRects(svg)[0].getAttribute("stroke-dasharray"));
+
+    ghosts.remove("peer-A");
+    assert.strictEqual(uvBorderRects(svg).length, 1);
+    assert.ok(!uvBorderRects(svg)[0].hasAttribute("stroke-dasharray"));
+  });
+
+  test("a ghost for another region leaves this region's border alone", () => {
+    const uvMap = makeUvMap({ x: 64, y: 64 });
+    const { svg, ghosts } = makeGhosts(uvMap);
+    const region = uvMap.create({ width: 2, height: 3, id: "region-A", color: "#123456" });
+    uvMap.select(region.id);
+
+    ghosts.set("peer-A", stackedGhost("region-B", { x: 2, y: 3, width: 5, height: 6 }));
+
+    assert.strictEqual(uvBorderRects(svg).length, 2);
   });
 });

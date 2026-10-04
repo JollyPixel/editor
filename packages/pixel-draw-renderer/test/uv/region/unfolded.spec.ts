@@ -66,7 +66,7 @@ describe("UVRegion — unfold", () => {
   test("repacks a hand-arranged free region, discarding its layout", () => {
     const arranged = stackedRegion()
       .free()
-      .withRect({ x: 40, y: 40, width: 4, height: 4 }, "top");
+      .resized({ x: 40, y: 40, width: 4, height: 4 }, "top");
 
     assert.deepStrictEqual(
       rects(arranged.unfold()).top,
@@ -159,22 +159,22 @@ describe("UVRegion — transitions out of unfolded", () => {
 });
 
 describe("UVRegion — moving an unfolded region", () => {
-  test("withRect translates every face by the bounds delta", () => {
+  test("movedTo translates every face by the bounds delta", () => {
     const moved = stackedRegion()
       .unfold()
-      .withRect({ x: 5, y: 7, width: 8, height: 12 });
+      .movedTo({ x: 5, y: 7 });
 
     assert.deepStrictEqual(moved.bounds, { x: 5, y: 7, width: 8, height: 12 });
     assert.deepStrictEqual(rects(moved).bottom, { x: 9, y: 15, width: 4, height: 4 });
   });
 
-  test("withRect ignores the face argument", () => {
-    const target = { x: 5, y: 7, width: 8, height: 12 };
+  test("movedTo ignores the slot argument", () => {
+    const target = { x: 5, y: 7 };
     const unfolded = stackedRegion().unfold();
 
     assert.deepStrictEqual(
-      rects(unfolded.withRect(target, "top")),
-      rects(unfolded.withRect(target))
+      rects(unfolded.movedTo(target, "top")),
+      rects(unfolded.movedTo(target))
     );
   });
 

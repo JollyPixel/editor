@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { mouseEvent } from "./helpers/events.ts";
+import { stubRect } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 
 describe("PixelArtCanvas — rectangle selection bounds", () => {
@@ -19,26 +20,20 @@ describe("PixelArtCanvas — rectangle selection bounds", () => {
     canvas.dispatchEvent(mouseEvent("mousedown", 76, 76));
     canvas.dispatchEvent(mouseEvent("mousemove", 124, 124));
 
-    const selectionRects = [
-      ...overlay.querySelectorAll("rect[stroke-dasharray]")
+    const outlines = [
+      ...overlay.querySelectorAll("[data-overlay=selection]")
     ];
-    assert.strictEqual(selectionRects.length, 2);
-    for (const rect of selectionRects) {
-      assert.strictEqual(rect.getAttribute("x"), "76");
-      assert.strictEqual(rect.getAttribute("y"), "76");
-      assert.strictEqual(rect.getAttribute("width"), "52");
-      assert.strictEqual(rect.getAttribute("height"), "52");
+    assert.strictEqual(outlines.length, 2);
+    for (const outline of outlines) {
+      assert.strictEqual(outline.getAttribute("d"), "M 76 76 L 128 76 L 128 128 L 76 128 Z");
     }
 
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    for (const rect of selectionRects) {
-      assert.strictEqual(rect.getAttribute("x"), "84");
-      assert.strictEqual(rect.getAttribute("y"), "84");
-      assert.strictEqual(rect.getAttribute("width"), "32");
-      assert.strictEqual(rect.getAttribute("height"), "32");
+    for (const outline of outlines) {
+      assert.strictEqual(outline.getAttribute("d"), "M 84 84 L 116 84 L 116 116 L 84 116 Z");
     }
     assert.ok(manager.tools.select.hasSelection);
     manager.destroy();
@@ -57,6 +52,23 @@ describe("PixelArtCanvas — rectangle selection bounds", () => {
     );
 
     assert.ok(!manager.tools.select.hasSelection);
+    manager.destroy();
+  });
+
+  test("redraws the rectangle being drawn when the viewport moves", () => {
+    const { manager, canvas, overlay, container } = createPixelArtCanvas({
+      zoom: { default: 4 }
+    });
+
+    manager.mode = "select";
+    canvas.dispatchEvent(mouseEvent("mousedown", 76, 76));
+    canvas.dispatchEvent(mouseEvent("mousemove", 124, 124));
+    stubRect(container, { width: 300, height: 300 });
+    manager.onResize();
+
+    for (const outline of overlay.querySelectorAll("[data-overlay=selection]")) {
+      assert.strictEqual(outline.getAttribute("d"), "M 126 126 L 178 126 L 178 178 L 126 178 Z");
+    }
     manager.destroy();
   });
 });

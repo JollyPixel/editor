@@ -19,32 +19,28 @@ import {
   UVController,
   type UVTool
 } from "./uv/UVController.ts";
-import type { UVMap } from "../uv/map/UVMap.ts";
-import type { UVView } from "../uv/region/resizeHandles.ts";
+import type { ScreenProjection } from "../rendering/Viewport.ts";
 import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
-import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
-import type { EditPipeline } from "../sync/EditPipeline.ts";
+import type { PixelDocument } from "../PixelDocument.ts";
 import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import type { SelectionOutline } from "../rendering/overlays/SelectionOutline.ts";
+import type { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
 import type {
-  PeerStrokePixel,
-  RGBA8
+  PeerStrokePixel
 } from "../types.ts";
 
 export interface ToolsOptions {
   brush: Brush;
-  canvasBuffer: CanvasBuffer;
+  document: PixelDocument;
   renderer: CanvasRenderer;
   linePreview: LinePreview;
   selectionOverlay: SelectionOutline;
-  eraseColor: RGBA8 | null;
-  uvMap: UVMap;
+  eraseColor: SelectionEraseColor;
   uvOverlay: UVRegionLayer;
   uvDeselectOnEmptyClick?: boolean;
   uvResizable?: boolean;
-  viewport: UVView;
-  pipeline: EditPipeline;
+  viewport: ScreenProjection;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
@@ -65,38 +61,36 @@ export class Tools {
   constructor(
     options: ToolsOptions
   ) {
+    const { document } = options;
+
     this.brush = new BrushEngine({
       brush: options.brush,
-      canvasBuffer: options.canvasBuffer,
+      document,
       canvas: options.renderer.canvas(),
-      pipeline: options.pipeline,
       onProgress: options.onProgress
     });
 
     this.fill = new FillEngine({
       brush: options.brush,
-      canvasBuffer: options.canvasBuffer,
-      pipeline: options.pipeline,
-      uvMap: options.uvMap
+      document
     });
 
     this.line = new LineEngine({
       brush: options.brush,
       linePreview: options.linePreview,
-      pipeline: options.pipeline,
+      document,
       onProgress: options.onProgress
     });
 
     this.select = new SelectEngine({
-      canvasBuffer: options.canvasBuffer,
+      document,
       floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
-      eraseColor: options.eraseColor,
-      pipeline: options.pipeline
+      eraseColor: options.eraseColor
     });
 
     this.uv = new UVController({
-      uvMap: options.uvMap,
+      uvMap: document.uv,
       overlay: options.uvOverlay,
       deselectOnEmptyClick: options.uvDeselectOnEmptyClick,
       resizable: options.uvResizable,

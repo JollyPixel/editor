@@ -54,6 +54,10 @@ get isFloating(): boolean
 
 A rectangular selection is clipped to the texture when the drag ends. A rectangle outside the texture is discarded. Rectangle and shape selections containing only one selected pixel are also discarded.
 
+The selection is discarded, without depositing a floating paste, whenever the document emits `resized` or `replaced`: a resize, a texture replacement or clear, their undo and redo, the remote equivalents, and `loadSnapshot()`.
+
+A move, transform, delete or deposit is one `select-edit` command listing only the pixels inside the texture.
+
 ## Grabbing a selection
 
 A drag starts a move only when it begins on a selected pixel. Masked-out cells inside the bounding rectangle are holes: clicking one starts a new selection instead. Rectangular selections have no holes, so any point inside them grabs.

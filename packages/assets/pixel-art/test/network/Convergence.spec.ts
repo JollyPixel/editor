@@ -86,7 +86,7 @@ describe("pixel-art convergence", () => {
     flush();
     deliver();
 
-    assert.deepStrictEqual(server.state.buffer.samplePixel(1, 1), kBlack);
+    assert.deepStrictEqual(server.state.document.buffer.samplePixel(1, 1), kBlack);
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kBlack);
     manager.destroy();
   });
@@ -110,7 +110,7 @@ describe("pixel-art convergence", () => {
     flush();
     deliver();
 
-    assert.deepStrictEqual(server.state.buffer.samplePixel(1, 1), kBlack);
+    assert.deepStrictEqual(server.state.document.buffer.samplePixel(1, 1), kBlack);
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kBlack);
     manager.destroy();
   });
@@ -140,7 +140,7 @@ describe("pixel-art convergence", () => {
     }, { clientId: "A", timestamp: 1 }));
     deliver();
 
-    assert.deepStrictEqual(server.state.buffer.samplePixel(1, 1), kBlueBytes);
+    assert.deepStrictEqual(server.state.document.buffer.samplePixel(1, 1), kBlueBytes);
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kBlueBytes);
     manager.destroy();
   });

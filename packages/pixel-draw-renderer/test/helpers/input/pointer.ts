@@ -1,8 +1,4 @@
 // Import Internal Dependencies
-import {
-  PointerController,
-  type PointerControllerOptions
-} from "#src/input/PointerController.ts";
 import { Viewport } from "#src/rendering/Viewport.ts";
 
 export function makeCenteredViewport(): Viewport {
@@ -20,18 +16,4 @@ export function makeCenteredViewport(): Viewport {
   viewport.centerTexture();
 
   return viewport;
-}
-
-export type CreatePointerControllerOptions =
-  Omit<PointerControllerOptions, "shouldPanOnPrimary" | "onCtrlWheel"> &
-  Partial<Pick<PointerControllerOptions, "shouldPanOnPrimary" | "onCtrlWheel">>;
-
-export function createPointerController(
-  options: CreatePointerControllerOptions
-): PointerController {
-  return new PointerController({
-    shouldPanOnPrimary: () => false,
-    onCtrlWheel: () => false,
-    ...options
-  });
 }

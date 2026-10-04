@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
 import {
+  imageDataToPixels,
+  pixelsToImageData
+} from "@jolly-pixel/color";
+import {
   fromUint8Array,
   isValid,
   toUint8Array
@@ -53,19 +57,10 @@ function encodeMask(
 function encodePixels(
   pixels: RGBA8[]
 ): string {
-  const bytes = new Uint8Array(
-    pixels.length * 4
-  );
+  const bytes = new Uint8ClampedArray(pixels.length * 4);
+  pixelsToImageData(pixels, bytes);
 
-  for (let i = 0; i < pixels.length; i++) {
-    const offset = i * 4;
-    bytes[offset] = pixels[i].r;
-    bytes[offset + 1] = pixels[i].g;
-    bytes[offset + 2] = pixels[i].b;
-    bytes[offset + 3] = pixels[i].a;
-  }
-
-  return fromUint8Array(bytes);
+  return fromUint8Array(new Uint8Array(bytes.buffer));
 }
 
 function decodeBase64(
@@ -161,18 +156,9 @@ function decodePixels(
     return null;
   }
 
-  const pixels: RGBA8[] = [];
-  for (let i = 0; i < length; i++) {
-    const offset = i * 4;
-    pixels[i] = {
-      r: bytes[offset],
-      g: bytes[offset + 1],
-      b: bytes[offset + 2],
-      a: bytes[offset + 3]
-    };
-  }
-
-  return pixels;
+  return imageDataToPixels(
+    new Uint8ClampedArray(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  );
 }
 
 export function encodeSelectionMetadata(

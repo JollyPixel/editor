@@ -11,6 +11,7 @@ import type { UVSlot } from "#src/uv/region/UVRegion.ts";
 import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import { makeUvMap } from "../../helpers/uv/map.ts";
 import { FakeOverlay } from "../../helpers/uv/overlay.ts";
+import { makeViewport } from "../../helpers/overlay.ts";
 
 describe("UVController — dragging an unfolded region", () => {
   function makeSetup() {
@@ -19,10 +20,7 @@ describe("UVController — dragging an unfolded region", () => {
     const controller = new UVController({
       uvMap: map,
       overlay: overlay as unknown as UVRegionLayer,
-      viewport: {
-        zoom: { value: 1 },
-        camera: { x: 0, y: 0 }
-      }
+      viewport: makeViewport(1)
     });
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "unfolded");

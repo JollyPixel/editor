@@ -70,16 +70,16 @@ function hasValidDecodedDimensions(
     image.height > 0;
 }
 
-function pasteFailure(
-  code: "decode-failed" | "image-empty" | "no-image",
-  source: "system" | "internal" = "system"
+function pasteResult(
+  result: Omit<ClipboardOperationResult, "operation">,
+  selection?: DecodedSelection
 ): ClipboardSelectionResult {
   return {
     result: {
       operation: "paste",
-      code,
-      source
-    }
+      ...result
+    },
+    ...(selection && { selection })
   };
 }
 
@@ -181,7 +181,7 @@ export class SelectionClipboard {
       );
     }
 
-    return pasteFailure("no-image");
+    return pasteResult({ code: "no-image", source: "system" });
   }
 
   async #readItem(
@@ -196,27 +196,20 @@ export class SelectionClipboard {
       );
     }
     catch {
-      return pasteFailure("decode-failed");
+      return pasteResult({ code: "decode-failed", source: "system" });
     }
 
     if (!hasValidDecodedDimensions(image)) {
-      return pasteFailure("decode-failed");
+      return pasteResult({ code: "decode-failed", source: "system" });
     }
     if (
       image.width > maxSize ||
       image.height > maxSize
     ) {
-      return {
-        result: {
-          operation: "paste",
-          code: "image-too-large",
-          source: "system",
-          maxSize
-        }
-      };
+      return pasteResult({ code: "image-too-large", source: "system", maxSize });
     }
     if (image.pixels.length !== image.width * image.height) {
-      return pasteFailure("decode-failed");
+      return pasteResult({ code: "decode-failed", source: "system" });
     }
 
     const metadata = await this.#readMetadata(
@@ -227,25 +220,17 @@ export class SelectionClipboard {
       (pixel) => pixel.a > 0
     );
     if (!mask.some(Boolean)) {
-      return pasteFailure("image-empty");
+      return pasteResult({ code: "image-empty", source: "system" });
     }
 
-    return {
-      result: {
-        operation: "paste",
-        code: "pasted",
-        source: "system"
-      },
-      selection: {
-        width: image.width,
-        height: image.height,
-        // Our own metadata carries exact RGBA8; the PNG does not.
-        pixels: clonePixels(
-          metadata?.pixels ?? image.pixels
-        ),
-        mask
-      }
-    };
+    return pasteResult({ code: "pasted", source: "system" }, {
+      width: image.width,
+      height: image.height,
+      pixels: clonePixels(
+        metadata?.pixels ?? image.pixels
+      ),
+      mask
+    });
   }
 
   #readInternal(
@@ -253,42 +238,23 @@ export class SelectionClipboard {
     failureCode: "no-image" | "access-denied"
   ): ClipboardSelectionResult {
     if (!this.#internal) {
-      return {
-        result: {
-          operation: "paste",
-          code: failureCode
-        }
-      };
+      return pasteResult({ code: failureCode });
     }
     if (
       this.#internal.rect.width > maxSize ||
       this.#internal.rect.height > maxSize
     ) {
-      return {
-        result: {
-          operation: "paste",
-          code: "image-too-large",
-          source: "internal",
-          maxSize
-        }
-      };
+      return pasteResult({ code: "image-too-large", source: "internal", maxSize });
     }
 
-    return {
-      result: {
-        operation: "paste",
-        code: "pasted",
-        source: "internal"
-      },
-      selection: {
-        width: this.#internal.rect.width,
-        height: this.#internal.rect.height,
-        pixels: clonePixels(this.#internal.pixels),
-        mask: [
-          ...this.#internal.mask
-        ]
-      }
-    };
+    return pasteResult({ code: "pasted", source: "internal" }, {
+      width: this.#internal.rect.width,
+      height: this.#internal.rect.height,
+      pixels: clonePixels(this.#internal.pixels),
+      mask: [
+        ...this.#internal.mask
+      ]
+    });
   }
 
   async #readMetadata(

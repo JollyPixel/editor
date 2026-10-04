@@ -245,4 +245,24 @@ describe("PeerFloatingSelections — set + draw", () => {
       "resampled the blue pixel at the new sourceRect"
     );
   });
+
+  test("a new mask on the same sourceRect rebuilds the ghost", () => {
+    const buf = makeFloatingSourceBuffer();
+    const ghosts = new PeerFloatingSelections(buf, FLOATING_ERASE_COLOR);
+    const state: PeerFloatingSelectionState = {
+      sourceRect: { x: 0, y: 0, width: 2, height: 1 },
+      liveRect: { x: 5, y: 5, width: 2, height: 1 },
+      mask: [true, false],
+      blankSource: false
+    };
+
+    ghosts.set("peer-A", state);
+    ghosts.set("peer-A", { ...state, mask: [false, true] });
+
+    const dest = makeCanvas(10);
+    ghosts.draw(mockContextOf(dest).asRenderingContext());
+
+    assert.deepStrictEqual(readPixel(canvasPixels(dest), { x: 5, y: 5 }, 10), [0, 0, 0, 0]);
+    assert.deepStrictEqual(readPixel(canvasPixels(dest), { x: 6, y: 5 }, 10), [0, 0, 255, 255]);
+  });
 });

@@ -64,27 +64,6 @@ describe("Viewport coordinates", () => {
     });
   });
 
-  describe("mouseCanvasPosition", () => {
-    test("subtracts bounding rect left/top", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-
-      const bounds = { left: 50, top: 30 } as DOMRect;
-      const pos = vp.mouseCanvasPosition(
-        150,
-        80,
-        bounds
-      );
-
-      assert.strictEqual(pos.x, 100);
-      assert.strictEqual(pos.y, 50);
-    });
-  });
-
   describe("mouseTexturePosition", () => {
     test("converts canvas coords to texture coords", () => {
       const vp = new Viewport({

@@ -82,6 +82,21 @@ describe("UVRegion", () => {
       assert.strictEqual(UVRegion.from(region), region);
     });
 
+    test("rejects a region with no active slot it has geometry for", () => {
+      for (const activeFaces of [[], ["missing"]]) {
+        assert.throws(
+          () => new UVRegion({
+            state: "free",
+            id: "r1",
+            color: "#f00",
+            faces: { front: REGION_RECT },
+            activeFaces
+          }),
+          RangeError
+        );
+      }
+    });
+
     test("from() builds an instance out of raw data", () => {
       const region = UVRegion.from({ state: "stacked", id: "r1", color: "#f00", rect: REGION_RECT });
 

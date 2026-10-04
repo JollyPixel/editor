@@ -28,14 +28,14 @@ describe("PixelArtState", () => {
   test("starts at the provided default size", () => {
     const state = new PixelArtState({ x: 4, y: 3 });
 
-    assert.deepEqual(state.buffer.size(), { x: 4, y: 3 });
+    assert.deepEqual(state.document.buffer.size(), { x: 4, y: 3 });
     assert.deepEqual(state.toJSON().size, { x: 4, y: 3 });
     assert.equal(state.toJSON().version, 1);
   });
 
   test("round-trips a document through toJSON and load", () => {
     const source = new PixelArtState({ x: 2, y: 2 });
-    source.buffer.drawPixels(
+    source.document.buffer.drawPixels(
       [{ x: 1, y: 0 }],
       {
         r: 9,
@@ -44,16 +44,16 @@ describe("PixelArtState", () => {
         a: 255
       }
     );
-    source.buffer.uvRegions.set(kRegion);
+    source.document.uv.restore(kRegion);
 
     const target = new PixelArtState({ x: 1, y: 1 });
     target.load(source.toJSON());
 
-    assert.deepEqual(target.buffer.size(), { x: 2, y: 2 });
-    assert.deepEqual(target.buffer.pixels(), source.buffer.pixels());
+    assert.deepEqual(target.document.buffer.size(), { x: 2, y: 2 });
+    assert.deepEqual(target.document.buffer.pixels(), source.document.buffer.pixels());
     assert.deepEqual(
-      [...target.buffer.uvRegions].map((region) => region.toJSON()),
-      [...source.buffer.uvRegions].map((region) => region.toJSON())
+      [...target.document.uv].map((region) => region.toJSON()),
+      [...source.document.uv].map((region) => region.toJSON())
     );
   });
 
@@ -61,7 +61,7 @@ describe("PixelArtState", () => {
     const state = new PixelArtState({ x: 2, y: 2 });
 
     state.load(new PixelArtState({ x: 4, y: 4 }).toJSON());
-    state.buffer.drawPixels(
+    state.document.buffer.drawPixels(
       [{ x: 0, y: 0 }],
       {
         r: 1,
@@ -70,15 +70,15 @@ describe("PixelArtState", () => {
         a: 255
       }
     );
-    state.buffer.uvRegions.set(kRegion);
+    state.document.uv.restore(kRegion);
 
     state.clear();
 
-    assert.deepEqual(state.buffer.size(), { x: 4, y: 4 });
+    assert.deepEqual(state.document.buffer.size(), { x: 4, y: 4 });
     assert.deepEqual(
-      state.buffer.pixels(),
+      state.document.buffer.pixels(),
       new Uint8ClampedArray(4 * 4 * 4)
     );
-    assert.deepEqual([...state.buffer.uvRegions], []);
+    assert.deepEqual([...state.document.uv], []);
   });
 });

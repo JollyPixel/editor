@@ -71,9 +71,6 @@ const suite = defineSuite("PixelBuffer (buffer/PixelBuffer)", (bench) => {
     .add("drawPixels / 1024-px stroke", () => {
       buffer256.drawPixels(stroke1024, color);
     })
-    .add("drawRegion / clipped 256x256", () => {
-      buffer256.drawRegion(kClippedRegion, regionPixels);
-    })
     .add("drawMaskedRegion / clipped 256x256, 50% mask", () => {
       buffer256.drawMaskedRegion(kClippedRegion, regionPixels, regionMask);
     })

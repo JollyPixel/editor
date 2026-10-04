@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { readPixel } from "./fixtures/canvas.ts";
@@ -19,11 +19,11 @@ const kWhite = [255, 255, 255, 255];
 const kTransparent = [0, 0, 0, 0];
 
 function makeCanvasWithSlot(
-  events: PixelBufferHookEvent[] = []
+  events: PixelCommand[] = []
 ): PixelArtCanvas {
   const { manager } = createPixelArtCanvas({
     history: { enabled: true },
-    onBufferUpdated: (event) => events.push(event)
+    onCommand: (event) => events.push(event)
   });
   manager.uv.restore({
     id: "slot",
@@ -85,7 +85,7 @@ describe("PixelArtCanvas.clearTexture", () => {
   });
 
   test("emits one texture-replaced hook event with the cleared pixels", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = makeCanvasWithSlot(events);
 
     manager.clearTexture();
@@ -108,16 +108,14 @@ describe("PixelArtCanvas.clearTexture", () => {
     manager.destroy();
   });
 
-  test("emits a changed event covering the whole texture", () => {
+  test("emits a replaced event for the whole texture", () => {
     const manager = makeCanvasWithSlot();
-    const bounds: unknown[] = [];
-    manager.document.on("changed", (event) => bounds.push(event.bounds));
+    const replaced: unknown[] = [];
+    manager.document.on("replaced", (event) => replaced.push(event.size));
 
     manager.clearTexture();
 
-    assert.deepStrictEqual(bounds, [
-      { x: 0, y: 0, width: 8, height: 8 }
-    ]);
+    assert.deepStrictEqual(replaced, [{ x: 8, y: 8 }]);
     manager.destroy();
   });
 });

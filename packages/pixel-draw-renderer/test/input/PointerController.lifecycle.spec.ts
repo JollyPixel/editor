@@ -7,14 +7,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { PointerController } from "#src/input/PointerController.ts";
 import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
 import { FakeWindow } from "../helpers/input/window.ts";
-import {
-  createPointerController,
-  makeCenteredViewport
-} from "../helpers/input/pointer.ts";
+import { makeCenteredViewport } from "../helpers/input/pointer.ts";
 
 describe("PointerController lifecycle", () => {
   let viewport: Viewport;
@@ -27,7 +25,7 @@ describe("PointerController lifecycle", () => {
 
   test("primary dragging continues while another mouse button is held", () => {
     const { actions, calls } = makeActions();
-    const controller = createPointerController({
+    const controller = new PointerController({
       canvas,
       viewport,
       actions
@@ -45,13 +43,13 @@ describe("PointerController lifecycle", () => {
       clientY: 100
     }));
 
-    assert.strictEqual(calls.onPrimaryMove.length, 1);
+    assert.strictEqual(calls.onPointerMove.length, 1);
     controller.destroy();
   });
 
   test("window blur ends active drags and clears their tracking state", () => {
     const { actions, calls } = makeActions();
-    const controller = createPointerController({
+    const controller = new PointerController({
       canvas,
       viewport,
       actions
@@ -71,15 +69,15 @@ describe("PointerController lifecycle", () => {
     }));
     window.dispatchEvent(new MouseEvent("mouseup"));
 
-    assert.strictEqual(calls.onPrimaryUp.length, 1);
-    assert.strictEqual(calls.onPrimaryMove.length, 0);
+    assert.deepStrictEqual(calls.onPointerUp, ["primary"]);
+    assert.strictEqual(calls.onPointerMove.length, 0);
     controller.destroy();
   });
 
   test("does not report a bubbling canvas mouseup twice", () => {
     const { actions, calls } = makeActions();
     const fakeWindow = new FakeWindow();
-    const controller = createPointerController({
+    const controller = new PointerController({
       canvas,
       viewport,
       actions,
@@ -94,8 +92,8 @@ describe("PointerController lifecycle", () => {
     canvas.dispatchEvent(new MouseEvent("mouseup"));
     fakeWindow.dispatch("mouseup", { target: canvas });
 
-    assert.strictEqual(calls.onMouseUp.length, 1);
-    assert.strictEqual(calls.onPanEnd.length, 1);
+    assert.strictEqual(calls.onMouseUp, 1);
+    assert.strictEqual(calls.onPanEnd, 1);
     controller.destroy();
   });
 });

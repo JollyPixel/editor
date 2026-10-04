@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
+import { SelectionEraseColor } from "#src/selection/SelectionEraseColor.ts";
 import type { RGBA8 } from "#src/types.ts";
 
 // CONSTANTS
@@ -17,12 +18,12 @@ export const FLOATING_SOURCE_BLUE: RGBA8 = {
   b: 255,
   a: 255
 };
-export const FLOATING_ERASE_COLOR: RGBA8 = {
+export const FLOATING_ERASE_COLOR = new SelectionEraseColor({
   r: 9,
   g: 9,
   b: 9,
   a: 255
-};
+});
 
 export function makeFloatingSourceBuffer(): CanvasBuffer {
   const buf = new CanvasBuffer({

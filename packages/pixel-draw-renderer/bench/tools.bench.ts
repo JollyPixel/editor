@@ -8,7 +8,7 @@ import {
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
 import { Line } from "../src/tools/Line.ts";
 import { Brush } from "../src/tools/Brush.ts";
-import { Select } from "../src/tools/Select.ts";
+import { SelectionContent } from "../src/selection/SelectionContent.ts";
 import { ShapeSelect } from "../src/tools/ShapeSelect.ts";
 import { traceSelectionContour } from "../src/rendering/overlays/selectionContour.ts";
 import type { RGBA8 } from "../src/types.ts";
@@ -37,12 +37,11 @@ const suite = defineSuite("Tools (tools/*)", (bench) => {
       mask[(y * kSide) + x] = !insideHole;
     }
   }
-  const rotatedSelection = new Select();
-  rotatedSelection.selectRegion(
-    { x: 0, y: 0, width: kSide, height: kSide },
-    snapshot,
-    Array.from({ length: kSide * kSide }, () => true)
-  );
+  const rotatedSelection = new SelectionContent({
+    rect: { x: 0, y: 0, width: kSide, height: kSide },
+    pixels: snapshot,
+    mask: Array.from({ length: kSide * kSide }, () => true)
+  });
 
   bench
     .add("Brush.affectedPixels / 1x1", () => {
@@ -85,15 +84,15 @@ const suite = defineSuite("Tools (tools/*)", (bench) => {
       () => ShapeSelect.compute(buffer, { x: 128, y: 128 })
     )
     .add(
-      "Select.captureSnapshot / 256x256",
-      () => Select.captureSnapshot(
+      "SelectionContent.capture / 256x256",
+      () => SelectionContent.capture(
         buffer,
         { x: 0, y: 0, width: kSide, height: kSide }
       )
     )
     .add(
-      "Select.rotate (snapshot + mask) / 256x256",
-      () => rotatedSelection.rotate("cw")
+      "SelectionContent.rotated (pixels + mask) / 256x256",
+      () => rotatedSelection.rotated("cw")
     )
     .add(
       "traceSelectionContour / rectangle with hole 256x256",

@@ -20,36 +20,25 @@ import {
 export class UVSlotMap {
   readonly #slots: Map<UVSlot, UVGeometry>;
 
-  static map<T>(
-    fn: (face: UVSlot) => T,
-    faces: readonly UVSlot[] = DEFAULT_UV_SLOTS
-  ): Record<UVSlot, T> {
-    return Object.fromEntries(
-      faces.map((face) => [face, fn(face)])
-    );
-  }
-
   static shared(
-    rect: SelectionRect,
+    geometry: UVGeometry,
     faces: readonly UVSlot[] = DEFAULT_UV_SLOTS
   ): UVSlotMap {
     return new UVSlotMap(
-      UVSlotMap.map(() => rect, faces)
+      Object.fromEntries(faces.map((face) => [face, geometry]))
     );
   }
 
   constructor(
     slots: Record<UVSlot, UVGeometry>
   ) {
-    const names = Object.keys(slots);
-    if (names.length === 0) {
+    const entries = Object.entries(slots);
+    if (entries.length === 0) {
       throw new RangeError("A UV slot map must contain at least one slot");
     }
 
     this.#slots = new Map(
-      names.map(
-        (slot) => [slot, copyGeometry(slots[slot])]
-      )
+      entries.map(([slot, geometry]) => [slot, copyGeometry(geometry)])
     );
   }
 
@@ -74,10 +63,6 @@ export class UVSlotMap {
     return copyGeometry(geometry);
   }
 
-  get primarySlot(): UVSlot {
-    return this.#slots.keys().next().value!;
-  }
-
   withSlot(
     slot: UVSlot,
     geometry: UVGeometry
@@ -86,112 +71,84 @@ export class UVSlotMap {
       throw new RangeError(`Unknown UV slot "${slot}"`);
     }
 
-    return new UVSlotMap(
-      UVSlotMap.map(
-        (mapSlot) => (
-          mapSlot === slot ? geometry : this.#slots.get(mapSlot)!
-        ),
-        this.slots
-      )
-    );
+    return this.withSlots(new Map([[slot, geometry]]));
   }
 
   withSlots(
     entries: ReadonlyMap<UVSlot, UVGeometry>
   ): UVSlotMap {
-    return new UVSlotMap(
-      UVSlotMap.map(
-        (slot) => entries.get(slot) ?? this.#slots.get(slot)!,
-        this.slots
-      )
-    );
+    return this.#mapped((geometry, slot) => entries.get(slot) ?? geometry);
   }
 
   stackedAt(
     origin: Vec2
   ): UVSlotMap {
-    return new UVSlotMap(
-      UVSlotMap.map(
-        (slot) => {
-          const geometry = this.#slots.get(slot)!;
-
-          return geometryAt(geometry, {
-            ...rectOf(geometry),
-            x: origin.x,
-            y: origin.y
-          });
-        },
-        this.slots
-      )
-    );
+    return this.#mapped((geometry) => geometryAt(geometry, {
+      ...rectOf(geometry),
+      x: origin.x,
+      y: origin.y
+    }));
   }
 
   translated(
     dx: number,
     dy: number
   ): UVSlotMap {
-    return new UVSlotMap(
-      UVSlotMap.map(
-        (slot) => {
-          const geometry = this.#slots.get(slot)!;
-          const rect = rectOf(geometry);
+    return this.#mapped((geometry) => {
+      const rect = rectOf(geometry);
 
-          return geometryAt(geometry, {
-            ...rect,
-            x: rect.x + dx,
-            y: rect.y + dy
-          });
-        },
-        this.slots
-      )
-    );
+      return geometryAt(geometry, {
+        ...rect,
+        x: rect.x + dx,
+        y: rect.y + dy
+      });
+    });
   }
 
   rotated(
     turns: number,
     slots: readonly UVSlot[] = this.slots
   ): UVSlotMap {
-    return this.withSlots(
-      new Map(
-        slots.map((slot) => [
-          slot,
-          rotateGeometry(this.get(slot), turns)
-        ])
-      )
-    );
+    return this.#mapped((geometry, slot) => (
+      slots.includes(slot) ? rotateGeometry(geometry, turns) : geometry
+    ));
   }
 
   rotatedWithin(
     frame: SelectionRect,
     turns: number
   ): UVSlotMap {
-    return new UVSlotMap(
-      UVSlotMap.map(
-        (slot) => {
-          let geometry = this.#slots.get(slot)!;
-          let height = frame.height;
-          let width = frame.width;
-          for (let turn = 0; turn < quarterTurn(turns); turn++) {
-            const rect = rectOf(geometry);
-            geometry = geometryAt(rotateGeometry(geometry, 1), {
-              ...rotateRect(rect, 1),
-              x: frame.x + height - (rect.y - frame.y + rect.height),
-              y: frame.y + (rect.x - frame.x)
-            });
-            [width, height] = [height, width];
-          }
+    return this.#mapped((source) => {
+      let geometry = source;
+      let height = frame.height;
+      let width = frame.width;
+      for (let turn = 0; turn < quarterTurn(turns); turn++) {
+        const rect = rectOf(geometry);
+        geometry = geometryAt(rotateGeometry(geometry, 1), {
+          ...rotateRect(rect, 1),
+          x: frame.x + height - (rect.y - frame.y + rect.height),
+          y: frame.y + (rect.x - frame.x)
+        });
+        [width, height] = [height, width];
+      }
 
-          return geometry;
-        },
-        this.slots
-      )
-    );
+      return geometry;
+    });
   }
 
   toJSON(): Record<UVSlot, UVGeometry> {
-    return UVSlotMap.map(
-      (slot) => copyGeometry(this.#slots.get(slot)!),
-      this.slots
+    return Object.fromEntries(
+      [...this.#slots].map(([slot, geometry]) => [slot, copyGeometry(geometry)])
+    );
+  }
+
+  #mapped(
+    transform: (geometry: UVGeometry, slot: UVSlot) => UVGeometry
+  ): UVSlotMap {
+    return new UVSlotMap(
+      Object.fromEntries(
+        [...this.#slots].map(([slot, geometry]) => [slot, transform(geometry, slot)])
+      )
     );
   }
 }

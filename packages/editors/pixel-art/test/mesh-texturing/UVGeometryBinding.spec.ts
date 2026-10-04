@@ -298,7 +298,7 @@ describe("UVGeometryBinding", () => {
       const binding = bindCreated();
       const region = uv.get("tracked")!;
 
-      binding.preview(region.withRect({ x: 32, y: 0, width: 16, height: 16 }));
+      binding.preview(region.movedTo({ x: 32, y: 0 }));
 
       assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
     });

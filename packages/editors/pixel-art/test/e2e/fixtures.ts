@@ -13,7 +13,8 @@ import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
   encodePixelArtDocument,
   PixelBuffer,
-  serializePixelBuffer
+  PixelDocumentState,
+  serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -81,7 +82,9 @@ export const test = editorFixture<EditorTarget>({
     });
     const id = await catalog.create(
       `${e2eFolder()}/canvas.pixelart`,
-      encodePixelArtDocument(serializePixelBuffer(blank)),
+      encodePixelArtDocument(
+        serializePixelDocument(new PixelDocumentState({ buffer: blank }))
+      ),
       { kind: PIXEL_ART_KIND }
     );
 

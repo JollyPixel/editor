@@ -2,12 +2,13 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { filledArray } from "../utils/array.ts";
-import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { SelectEngineEvent } from "./SelectEngine.events.ts";
 import type { SelectionSnapshot } from "../clipboard/types.ts";
-import { clipRectToBounds } from "../utils/math.ts";
+import { SelectionContent } from "../selection/SelectionContent.ts";
+import type { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
+import { RectArea } from "../utils/RectArea.ts";
+import { positionKey } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
   FloatingSelection
@@ -15,7 +16,8 @@ import type {
 import type {
   SelectionOutline
 } from "../rendering/overlays/SelectionOutline.ts";
-import type { EditPipeline } from "../sync/EditPipeline.ts";
+import type { SelectionFootprint } from "../history/HistoryEntry.ts";
+import type { PixelDocument } from "../PixelDocument.ts";
 import type {
   RGBA8,
   RotationDirection,
@@ -28,27 +30,11 @@ export type {
   SelectionProgressEvent
 } from "./SelectEngine.events.ts";
 
-export interface SelectEditEntry {
-  positions: Vec2[];
-  beforeColors: RGBA8[];
-  afterColors: RGBA8[];
-  oldRect: SelectionRect;
-  newRect: SelectionRect;
-  oldMask: boolean[];
-  newMask: boolean[];
-}
-
 export interface SelectEngineOptions {
-  canvasBuffer: CanvasBuffer;
+  document: Pick<PixelDocument, "buffer" | "paintSelectionEdit">;
   floatingSelection: FloatingSelection;
   selectionOverlay: SelectionOutline;
-  /**
-   * Explicit fill for a vacated footprint (Move/Rotate/Flip source, or
-   * Delete), overriding the smart default below. `null` when not
-   * configured by the consumer.
-   */
-  eraseColor: RGBA8 | null;
-  pipeline: EditPipeline;
+  eraseColor: SelectionEraseColor;
 }
 
 export interface SelectTool {
@@ -73,16 +59,38 @@ export interface SelectTool {
   delete(): boolean;
 }
 
+type SelectState =
+  | {
+    kind: "idle";
+  }
+  | {
+    kind: "creating";
+    start: Vec2;
+    rect: SelectionRect;
+  }
+  | {
+    kind: "selected";
+    content: SelectionContent;
+    floating: boolean;
+  }
+  | {
+    kind: "moving";
+    content: SelectionContent;
+    floating: boolean;
+    origin: Vec2;
+    live: SelectionContent;
+  };
+
+type SelectedState = Extract<SelectState, { kind: "selected"; }>;
+
 export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTool {
-  #select = new Select();
+  #state: SelectState = { kind: "idle" };
   #canvasBuffer: CanvasBuffer;
   #floatingSelection: FloatingSelection;
   #selectionOverlay: SelectionOutline;
-  #eraseColor: RGBA8 | null;
-  #pipeline: EditPipeline;
+  #eraseColor: SelectionEraseColor;
+  #document: Pick<PixelDocument, "paintSelectionEdit">;
   #shapeMode = false;
-  #moveSourceRect: SelectionRect | null = null;
-  #moveBlankSource = true;
   #publishedHasSelection = false;
   #publishedIsFloating = false;
   #readOnly = false;
@@ -91,36 +99,25 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     options: SelectEngineOptions
   ) {
     super();
-    this.#canvasBuffer = options.canvasBuffer;
+    this.#canvasBuffer = options.document.buffer;
     this.#floatingSelection = options.floatingSelection;
     this.#selectionOverlay = options.selectionOverlay;
     this.#eraseColor = options.eraseColor;
-    this.#pipeline = options.pipeline;
-  }
-
-  /**
-   * Uses the explicit erase color or the dominant border color.
-   */
-  #resolveEraseColor(
-    rect: SelectionRect
-  ): RGBA8 {
-    return Select.resolveEraseColor(
-      this.#canvasBuffer,
-      rect,
-      this.#eraseColor
-    );
+    this.#document = options.document;
   }
 
   get isDragging(): boolean {
-    return this.#select.state === "moving";
+    return this.#state.kind === "moving";
   }
 
   get hasSelection(): boolean {
-    return this.#select.state === "selected" || this.#select.state === "moving";
+    return this.#state.kind === "selected" || this.#state.kind === "moving";
   }
 
   get isFloating(): boolean {
-    return this.#select.floating;
+    const state = this.#state;
+
+    return (state.kind === "selected" || state.kind === "moving") && state.floating;
   }
 
   get shape(): boolean {
@@ -152,14 +149,19 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   }
 
   get editable(): boolean {
-    return !this.#readOnly && this.#select.state === "selected";
+    return !this.#readOnly && this.#state.kind === "selected";
   }
 
   handleStart(
     pos: Vec2
   ): void {
-    if (this.editable && this.#select.hitTest(pos)) {
-      this.#startMoveAt(pos);
+    const state = this.#state;
+    if (
+      !this.#readOnly &&
+      state.kind === "selected" &&
+      state.content.hitTest(pos)
+    ) {
+      this.#startMove(state, pos);
 
       return;
     }
@@ -170,32 +172,186 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       this.#startShapeSelection(pos);
     }
     else {
-      const rect = this.#select.startCreate(pos);
-      this.#selectionOverlay.drawRect(rect);
+      const rect = SelectEngine.#spanning(pos, pos);
+      this.#state = { kind: "creating", start: pos, rect };
+      this.#selectionOverlay.draw(rect);
     }
   }
 
-  #startMoveAt(
+  handleMove(
     pos: Vec2
   ): void {
-    this.#select.startMove(pos);
+    const state = this.#state;
 
-    const rect = this.#select.rect;
-    const snapshot = this.#select.snapshot;
-    const mask = this.#select.mask;
-    if (rect && snapshot && mask) {
-      const blankSource = !this.#select.floating;
-      const eraseColor = this.#resolveEraseColor(rect);
-      this.#floatingSelection.create({
-        sourceRect: rect,
-        pixels: snapshot,
-        mask,
-        eraseColor,
-        blankSource
-      });
-      this.#moveSourceRect = rect;
-      this.#moveBlankSource = blankSource;
+    if (state.kind === "creating") {
+      const rect = SelectEngine.#spanning(state.start, pos);
+      this.#state = { ...state, rect };
+      this.#selectionOverlay.draw(rect);
+      this.emit(
+        "selection-progress",
+        { phase: "creating", rect }
+      );
     }
+    else if (state.kind === "moving") {
+      const live = state.content.movedTo({
+        x: state.content.rect.x + pos.x - state.origin.x,
+        y: state.content.rect.y + pos.y - state.origin.y
+      });
+      this.#state = { ...state, live };
+      this.#selectionOverlay.draw(live.rect, live.mask);
+      this.#floatingSelection.updatePosition(live.rect);
+      this.emit(
+        "selection-progress",
+        {
+          phase: "moving",
+          sourceRect: state.content.rect,
+          liveRect: live.rect,
+          mask: live.mask,
+          blankSource: !state.floating
+        }
+      );
+    }
+  }
+
+  handleEnd(): void {
+    const state = this.#state;
+
+    if (state.kind === "creating") {
+      this.#finishCreate(state.rect);
+    }
+    else if (state.kind === "moving") {
+      this.#finishMove(state);
+    }
+  }
+
+  exportSelection(): SelectionSnapshot | null {
+    return this.#state.kind === "selected" ? this.#state.content.toJSON() : null;
+  }
+
+  importSelection(
+    snapshot: SelectionSnapshot
+  ): boolean {
+    const content = this.#readOnly ? null : SelectionContent.parse(snapshot);
+    if (content === null) {
+      return false;
+    }
+
+    this.clear();
+    this.#state = { kind: "selected", content, floating: true };
+    this.#showFloatingSelection(content);
+    this.#selectionOverlay.draw(content.rect, content.mask);
+    this.#publishSelectionState();
+
+    return true;
+  }
+
+  delete(): boolean {
+    const state = this.#state;
+    if (this.#readOnly || state.kind !== "selected") {
+      return false;
+    }
+
+    if (state.floating) {
+      this.discard();
+
+      return true;
+    }
+
+    const erased = state.content.erased(
+      this.#eraseColor.resolve(this.#canvasBuffer, state.content.rect)
+    );
+    this.#commit(state.content, erased, false);
+    this.#state = { ...state, content: erased };
+
+    return true;
+  }
+
+  rotate(
+    direction: RotationDirection = "cw"
+  ): boolean {
+    return this.#transform((content) => content.rotated(direction));
+  }
+
+  flipHorizontal(): boolean {
+    return this.#transform((content) => content.flippedHorizontal());
+  }
+
+  flipVertical(): boolean {
+    return this.#transform((content) => content.flippedVertical());
+  }
+
+  clear(): void {
+    this.#depositFloating();
+    this.discard();
+  }
+
+  discard(): void {
+    const interruptedGesture = this.#state.kind === "creating" || this.#state.kind === "moving";
+
+    this.#state = { kind: "idle" };
+    this.#selectionOverlay.clear();
+    this.#floatingSelection.clear();
+
+    // An interrupted gesture has no command, so clear its peer ghost explicitly.
+    if (interruptedGesture) {
+      this.emit("selection-idle");
+    }
+    this.#publishSelectionState();
+  }
+
+  refreshOverlay(): void {
+    const state = this.#state;
+
+    switch (state.kind) {
+      case "creating":
+        this.#selectionOverlay.draw(state.rect);
+        break;
+      case "selected":
+        this.#selectionOverlay.draw(state.content.rect, state.content.mask);
+        break;
+      case "moving":
+        this.#selectionOverlay.draw(state.live.rect, state.live.mask);
+        break;
+      case "idle":
+        break;
+      default:
+        state satisfies never;
+    }
+  }
+
+  syncSelectionAfterHistory(
+    footprint: SelectionFootprint
+  ): void {
+    const content = SelectionContent.capture(
+      this.#canvasBuffer,
+      footprint.rect,
+      [...footprint.mask]
+    );
+    this.#state = { kind: "selected", content, floating: false };
+    this.#selectionOverlay.draw(content.rect, content.mask);
+    this.#publishSelectionState();
+  }
+
+  #startMove(
+    state: SelectedState,
+    pos: Vec2
+  ): void {
+    const { content, floating } = state;
+
+    this.#state = {
+      kind: "moving",
+      content,
+      floating,
+      origin: pos,
+      live: content
+    };
+    this.#floatingSelection.create({
+      sourceRect: content.rect,
+      pixels: content.pixels,
+      mask: content.mask,
+      eraseColor: this.#eraseColor.resolve(this.#canvasBuffer, content.rect),
+      blankSource: !floating
+    });
   }
 
   #startShapeSelection(
@@ -209,424 +365,164 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       return;
     }
 
-    const snapshot = Select.captureSnapshot(
+    const content = SelectionContent.capture(
       this.#canvasBuffer,
-      shape.rect
-    );
-    this.#select.selectRegion(
-      shape.rect,
-      snapshot,
-      shape.mask
-    );
-    this.#selectionOverlay.drawMask(
       shape.rect,
       shape.mask
     );
+    this.#state = { kind: "selected", content, floating: false };
+    this.#selectionOverlay.draw(content.rect, content.mask);
     this.#publishSelectionState();
     // Shape selection has no command, so clear its peer ghost explicitly.
     this.emit("selection-idle");
   }
 
-  handleMove(
-    pos: Vec2
+  #finishCreate(
+    rect: SelectionRect
   ): void {
-    if (this.#select.state === "creating") {
-      const rect = this.#select.updateCreate(pos);
-      if (rect) {
-        this.#selectionOverlay.drawRect(rect);
-        this.emit(
-          "selection-progress",
-          { phase: "creating", rect }
-        );
-      }
-
-      return;
-    }
-
-    if (this.#select.state === "moving") {
-      const rect = this.#select.updateMove(pos);
-      const mask = this.#select.mask;
-      if (rect && mask) {
-        this.#selectionOverlay.drawMask(rect, mask);
-        this.#floatingSelection.updatePosition(rect);
-      }
-      if (rect && mask && this.#moveSourceRect) {
-        this.emit(
-          "selection-progress",
-          {
-            phase: "moving",
-            sourceRect: this.#moveSourceRect,
-            liveRect: rect,
-            mask,
-            blankSource: this.#moveBlankSource
-          }
-        );
-      }
-    }
-  }
-
-  handleEnd(): void {
-    if (this.#select.state === "creating") {
-      const rect = this.#select.rect;
-      const finalRect = rect
-        ? clipRectToBounds(rect, this.#canvasBuffer.size())
-        : null;
-      if (
-        !finalRect ||
-        (finalRect.width === 1 && finalRect.height === 1)
-      ) {
-        this.clear();
-
-        return;
-      }
-
-      const snapshot = Select.captureSnapshot(
-        this.#canvasBuffer,
-        finalRect
-      );
-      this.#select.finishCreate(
-        snapshot,
-        finalRect
-      );
-      this.#selectionOverlay.drawRect(finalRect);
-      this.#publishSelectionState();
-      // Creation has no command, so clear its peer ghost explicitly.
-      this.emit("selection-idle");
-
-      return;
-    }
-
-    if (this.#select.state === "moving") {
-      const snapshot = this.#select.snapshot;
-      const mask = this.#select.mask;
-      const result = this.#select.finishMove();
-      this.#floatingSelection.clear();
-      this.#moveSourceRect = null;
-
-      if (result && snapshot && mask) {
-        this.#commitFootprintChange({
-          oldRect: result.source,
-          oldMask: mask,
-          newRect: result.dest,
-          newMask: mask,
-          newContent: snapshot,
-          skipErase: result.skipErase
-        });
-        // Drop the pending ghost tick after sending the command.
-        this.emit("selection-committed");
-      }
-      else {
-        // A no-op drag has no command, so clear its peer ghost explicitly.
-        this.emit("selection-idle");
-      }
-
-      const rect = this.#select.rect;
-      const currentMask = this.#select.mask;
-      if (rect && currentMask) {
-        this.#selectionOverlay.drawMask(
-          rect,
-          currentMask
-        );
-      }
-      this.#publishSelectionState();
-    }
-  }
-
-  exportSelection(): SelectionSnapshot | null {
-    if (this.#select.state !== "selected") {
-      return null;
-    }
-
-    return this.#select.exportSnapshot();
-  }
-
-  importSelection(
-    snapshot: SelectionSnapshot
-  ): boolean {
-    const expectedLength = snapshot.rect.width * snapshot.rect.height;
+    const finalRect = RectArea.from(rect).intersection(this.#canvasBuffer.size());
     if (
-      this.#readOnly ||
-      snapshot.pixels.length !== expectedLength ||
-      snapshot.mask.length !== expectedLength ||
-      !snapshot.mask.some(Boolean)
+      finalRect === null ||
+      (finalRect.width === 1 && finalRect.height === 1)
     ) {
-      return false;
+      this.clear();
+
+      return;
     }
 
-    this.clear();
-    this.#select.importSnapshot(snapshot);
-    this.#showFloatingSelection(
-      snapshot.rect,
-      snapshot.pixels,
-      snapshot.mask
-    );
-    this.#selectionOverlay.drawMask(
-      snapshot.rect,
-      snapshot.mask
-    );
+    this.#state = {
+      kind: "selected",
+      content: SelectionContent.capture(this.#canvasBuffer, finalRect),
+      floating: false
+    };
+    this.#selectionOverlay.draw(finalRect);
     this.#publishSelectionState();
-
-    return true;
+    this.emit("selection-idle");
   }
 
-  delete(): boolean {
-    if (!this.editable) {
-      return false;
-    }
+  #finishMove(
+    state: Extract<SelectState, { kind: "moving"; }>
+  ): void {
+    const { content, live, floating } = state;
+    const moved = live.rect.x !== content.rect.x || live.rect.y !== content.rect.y;
 
-    if (this.#select.floating) {
-      this.discard();
-
-      return true;
-    }
-
-    const rect = this.#select.rect;
-    const mask = this.#select.mask;
-    if (!rect || !mask) {
-      return false;
-    }
-
-    const eraseColor = this.#resolveEraseColor(rect);
-    const eraseColors = filledArray(
-      rect.width * rect.height,
-      eraseColor
-    );
-    this.#commitFootprintChange({
-      oldRect: rect,
-      oldMask: mask,
-      newRect: rect,
-      newMask: mask,
-      newContent: eraseColors,
-      skipErase: true
-    });
-    this.#select.markErased(eraseColor);
-
-    return true;
-  }
-
-  rotate(
-    direction: RotationDirection = "cw"
-  ): boolean {
-    if (!this.editable) {
-      return false;
-    }
-
-    const isFloating = this.#select.floating;
-    const oldMask = this.#select.mask;
-    const result = this.#select.rotate(direction);
-    const snapshot = this.#select.snapshot;
-    const newMask = this.#select.mask;
-    if (!result || !snapshot || !oldMask || !newMask) {
-      return false;
-    }
-
-    if (isFloating) {
-      this.#showFloatingSelection(
-        result.newRect,
-        snapshot,
-        newMask
-      );
-    }
-    else {
-      this.#commitFootprintChange({
-        oldRect: result.oldRect,
-        oldMask,
-        newRect: result.newRect,
-        newMask,
-        newContent: snapshot,
-        skipErase: false
-      });
-    }
-    this.#selectionOverlay.drawMask(
-      result.newRect,
-      newMask
-    );
-
-    return true;
-  }
-
-  flipHorizontal(): boolean {
-    return this.#handleFlip((select) => select.flipHorizontal());
-  }
-
-  flipVertical(): boolean {
-    return this.#handleFlip((select) => select.flipVertical());
-  }
-
-  #handleFlip(
-    flip: (select: Select) => SelectionRect | null
-  ): boolean {
-    if (!this.editable) {
-      return false;
-    }
-
-    const isFloating = this.#select.floating;
-    const oldMask = this.#select.mask;
-    const rect = flip(this.#select);
-    const snapshot = this.#select.snapshot;
-    const newMask = this.#select.mask;
-    if (!rect || !snapshot || !oldMask || !newMask) {
-      return false;
-    }
-
-    if (isFloating) {
-      this.#showFloatingSelection(
-        rect,
-        snapshot,
-        newMask
-      );
-    }
-    else {
-      this.#commitFootprintChange({
-        oldRect: rect,
-        oldMask,
-        newRect: rect,
-        newMask,
-        newContent: snapshot,
-        skipErase: false
-      });
-    }
-    this.#selectionOverlay.drawMask(rect, newMask);
-
-    return true;
-  }
-
-  clear(): void {
-    this.#depositFloating();
-    this.discard();
-  }
-
-  discard(): void {
-    const interruptedGesture = this.#select.state === "creating" || this.#select.state === "moving";
-
-    this.#select.clear();
-    this.#selectionOverlay.clear();
     this.#floatingSelection.clear();
-    this.#moveSourceRect = null;
+    this.#state = { kind: "selected", content: live, floating: false };
 
-    // An interrupted gesture has no command, so clear its peer ghost explicitly.
-    if (interruptedGesture) {
+    if (moved || floating) {
+      this.#commit(content, live, !floating);
+      this.emit("selection-committed");
+    }
+    else {
       this.emit("selection-idle");
     }
+
+    this.#selectionOverlay.draw(live.rect, live.mask);
     this.#publishSelectionState();
+  }
+
+  #transform(
+    transform: (content: SelectionContent) => SelectionContent
+  ): boolean {
+    const state = this.#state;
+    if (this.#readOnly || state.kind !== "selected") {
+      return false;
+    }
+
+    const content = transform(state.content);
+    if (state.floating) {
+      this.#showFloatingSelection(content);
+    }
+    else {
+      this.#commit(state.content, content, true);
+    }
+    this.#state = { ...state, content };
+    this.#selectionOverlay.draw(content.rect, content.mask);
+
+    return true;
   }
 
   #depositFloating(): void {
-    if (
-      this.#select.state !== "selected" ||
-      !this.#select.floating
-    ) {
+    const state = this.#state;
+    if (state.kind !== "selected" || !state.floating) {
       return;
     }
 
-    const rect = this.#select.rect;
-    const mask = this.#select.mask;
-    const snapshot = this.#select.snapshot;
-    if (!rect || !mask || !snapshot) {
-      return;
-    }
-
-    this.#select.markDeposited();
-    this.#commitFootprintChange({
-      oldRect: rect,
-      oldMask: mask,
-      newRect: rect,
-      newMask: mask,
-      newContent: snapshot,
-      skipErase: true
-    });
+    this.#state = { ...state, floating: false };
+    this.#commit(state.content, state.content, false);
     this.emit("selection-committed");
   }
 
-  refreshOverlay(): void {
-    const rect = this.#select.rect;
-    const mask = this.#select.mask;
-
-    if (rect && mask) {
-      this.#selectionOverlay.drawMask(rect, mask);
-    }
-  }
-
   #showFloatingSelection(
-    rect: SelectionRect,
-    pixels: RGBA8[],
-    mask: boolean[]
+    content: SelectionContent
   ): void {
     this.#floatingSelection.create({
-      sourceRect: rect,
-      pixels,
-      mask,
-      eraseColor: this.#resolveEraseColor(rect),
+      sourceRect: content.rect,
+      pixels: content.pixels,
+      mask: content.mask,
+      eraseColor: this.#eraseColor.resolve(this.#canvasBuffer, content.rect),
       blankSource: false
     });
   }
 
-  #commitFootprintChange(
-    change: {
-      oldRect: SelectionRect;
-      oldMask: boolean[];
-      newRect: SelectionRect;
-      newMask: boolean[];
-      newContent: RGBA8[];
-      skipErase: boolean;
-    }
+  #commit(
+    before: SelectionContent,
+    after: SelectionContent,
+    vacate: boolean
   ): void {
-    const {
-      oldRect,
-      oldMask,
-      newRect,
-      newMask,
-      newContent,
-      skipErase
-    } = change;
+    const positions = this.#footprintPositions(before, after);
+    const beforeColors = this.#canvasBuffer.samplePixels(positions);
+    const eraseColor: RGBA8 | null = vacate ?
+      this.#eraseColor.resolve(this.#canvasBuffer, before.rect) :
+      null;
+    const afterColors = positions.map((position, index) => {
+      if (after.hitTest(position)) {
+        return after.colorAt(position);
+      }
 
-    const positions = unionMaskedPositions(
-      { rect: oldRect, mask: oldMask },
-      { rect: newRect, mask: newMask }
-    );
-    const beforeColors = this.#canvasBuffer.samplePixels(
-      positions
-    );
+      return eraseColor !== null && before.hitTest(position) ?
+        eraseColor :
+        beforeColors[index];
+    });
 
-    if (!skipErase) {
-      const eraseColor = this.#resolveEraseColor(oldRect);
-      this.#canvasBuffer.drawPixels(
-        maskedPositions({ rect: oldRect, mask: oldMask }),
-        eraseColor
-      );
-    }
-    this.#canvasBuffer.drawMaskedRegion(
-      newRect,
-      newContent,
-      newMask
-    );
-    this.#canvasBuffer.copyToMaster();
-
-    const afterColors = this.#canvasBuffer.samplePixels(
-      positions
-    );
-    this.#pipeline.commitSelectionEdit({
+    this.#document.paintSelectionEdit({
       positions,
       beforeColors,
       afterColors,
-      oldRect,
-      newRect,
-      oldMask,
-      newMask
+      before: {
+        rect: { ...before.rect },
+        mask: [...before.mask]
+      },
+      after: {
+        rect: { ...after.rect },
+        mask: [...after.mask]
+      }
     });
   }
 
-  syncSelectionAfterHistory(
-    rect: SelectionRect,
-    mask: boolean[]
-  ): void {
-    const snapshot = Select.captureSnapshot(
-      this.#canvasBuffer,
-      rect
-    );
-    this.#select.restoreRect(rect, snapshot, mask);
-    this.#selectionOverlay.drawMask(rect, mask);
-    this.#publishSelectionState();
+  #footprintPositions(
+    before: SelectionContent,
+    after: SelectionContent
+  ): Vec2[] {
+    const size = this.#canvasBuffer.size();
+    const seen = new Set<string>();
+    const positions: Vec2[] = [];
+
+    for (const content of [before, after]) {
+      for (const position of content.positions()) {
+        const key = positionKey(position);
+        if (
+          position.x >= 0 && position.x < size.x &&
+          position.y >= 0 && position.y < size.y &&
+          !seen.has(key)
+        ) {
+          seen.add(key);
+          positions.push(position);
+        }
+      }
+    }
+
+    return positions;
   }
 
   #publishSelectionState(): void {
@@ -649,48 +545,16 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       }
     );
   }
-}
 
-interface MaskedFootprint {
-  rect: SelectionRect;
-  mask: boolean[];
-}
-
-function* maskedPositions(
-  footprint: MaskedFootprint
-): IterableIterator<Vec2> {
-  const { rect, mask } = footprint;
-
-  for (let y = 0; y < rect.height; y++) {
-    for (let x = 0; x < rect.width; x++) {
-      if (mask[(y * rect.width) + x]) {
-        yield {
-          x: rect.x + x,
-          y: rect.y + y
-        };
-      }
-    }
+  static #spanning(
+    a: Vec2,
+    b: Vec2
+  ): SelectionRect {
+    return {
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      width: Math.abs(b.x - a.x) + 1,
+      height: Math.abs(b.y - a.y) + 1
+    };
   }
-}
-
-function unionMaskedPositions(
-  a: MaskedFootprint,
-  b: MaskedFootprint
-): Vec2[] {
-  const seen = new Set<string>();
-  const result: Vec2[] = [];
-
-  const positions = [
-    ...maskedPositions(a),
-    ...maskedPositions(b)
-  ];
-  for (const pos of positions) {
-    const key = `${pos.x},${pos.y}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      result.push(pos);
-    }
-  }
-
-  return result;
 }

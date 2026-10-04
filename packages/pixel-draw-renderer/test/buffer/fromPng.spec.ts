@@ -71,7 +71,6 @@ describe("createPixelBufferFromPng", () => {
       [...buffer.pixels()].slice(0, 8),
       [0, 0, 3, 255, 1, 0, 3, 255]
     );
-    assert.equal([...buffer.uvRegions].length, 0);
   });
 
   test("keeps the default ceiling for images smaller than it", async() => {

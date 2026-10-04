@@ -1,9 +1,5 @@
 // Import Internal Dependencies
-import {
-  pointInGeometry,
-  rectOf
-} from "../uv/geometry/geometry.ts";
-import type { UVGeometry } from "../uv/geometry/types.ts";
+import { coveredPixels } from "../uv/geometry/geometry.ts";
 import type { UVRegion } from "../uv/region/UVRegion.ts";
 import type {
   SelectionRect,
@@ -68,7 +64,7 @@ export class IslandMap {
       const faceIndex = covered.length;
       let covers = false;
 
-      for (const index of IslandMap.#coveredPixels(face.geometry, size)) {
+      for (const index of coveredPixels(face.geometry, size)) {
         if (!covers) {
           covers = true;
           parents.push(faceIndex);
@@ -134,39 +130,6 @@ export class IslandMap {
       islands,
       indices
     );
-  }
-
-  static* #coveredPixels(
-    geometry: UVGeometry,
-    size: Vec2
-  ): IterableIterator<number> {
-    const bounds = rectOf(geometry);
-    const isRect = !("shape" in geometry);
-    const minX = Math.max(0, Math.ceil(bounds.x - 0.5));
-    const minY = Math.max(0, Math.ceil(bounds.y - 0.5));
-    const maxX = Math.min(size.x, Math.ceil(bounds.x + bounds.width - 0.5));
-    const maxY = Math.min(size.y, Math.ceil(bounds.y + bounds.height - 0.5));
-    const center: Vec2 = { x: 0, y: 0 };
-
-    if (isRect) {
-      for (let y = minY; y < maxY; y++) {
-        for (let x = minX; x < maxX; x++) {
-          yield (y * size.x) + x;
-        }
-      }
-
-      return;
-    }
-
-    for (let y = minY; y < maxY; y++) {
-      center.y = y + 0.5;
-      for (let x = minX; x < maxX; x++) {
-        center.x = x + 0.5;
-        if (pointInGeometry(center, geometry)) {
-          yield (y * size.x) + x;
-        }
-      }
-    }
   }
 
   constructor(

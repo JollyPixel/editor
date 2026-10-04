@@ -2,7 +2,7 @@
 import type * as network from "@jolly-pixel/network";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
-  PixelBufferHookEvent,
+  PixelCommand,
   PixelBufferSnapshot,
   PngPixels,
   RGBA8,
@@ -17,7 +17,7 @@ export interface PixelWireSnapshot extends Omit<PixelBufferSnapshot, "pixels"> {
   pixels: string | PngPixels;
 }
 
-export type PixelNetworkCommand = PixelBufferHookEvent & network.NetworkCommandHeader;
+export type PixelNetworkCommand = PixelCommand & network.NetworkCommandHeader;
 
 export interface PackedStrokeMetadata {
   color: RGBA8;
@@ -41,7 +41,7 @@ export type PackedPixelEvent =
     originTimestamp?: number;
   };
 
-export type PixelWireEvent = PixelBufferHookEvent | PackedPixelEvent;
+export type PixelWireEvent = PixelCommand | PackedPixelEvent;
 
 export type PixelWireCommand = PixelWireEvent & network.NetworkCommandHeader;
 
@@ -81,6 +81,6 @@ export type SelectionGhostPayload =
     phase: "moving";
     sourceRect: SelectionRect;
     liveRect: SelectionRect;
-    mask: boolean[];
+    mask: readonly boolean[];
     blankSource: boolean;
   };

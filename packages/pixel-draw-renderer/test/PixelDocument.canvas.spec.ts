@@ -52,9 +52,9 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
       onHistoryChange: () => historyChanges++
     });
 
-    doc.commitPixels([{ x: 0, y: 0 }], kRed);
+    doc.paintPixels([{ x: 0, y: 0 }], kRed);
     manager.destroy();
-    doc.commitPixels([{ x: 1, y: 0 }], kRed);
+    doc.paintPixels([{ x: 1, y: 0 }], kRed);
 
     assert.equal(drawEnds, 1);
     assert.equal(historyChanges, 1);

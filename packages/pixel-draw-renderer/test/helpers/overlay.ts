@@ -24,23 +24,40 @@ export function makeSvg(): SVGElement {
 
 export function makeViewport(
   zoom = 4,
-  canvas: Vec2 = { x: 800, y: 600 }
+  canvas: Vec2 = { x: 800, y: 600 },
+  camera: Vec2 = { x: 0, y: 0 }
 ): MutableViewport {
   return {
     zoom: new Zoom({
       default: zoom
     }),
-    camera: { x: 0, y: 0 },
+    camera,
     canvasWidth: canvas.x,
-    canvasHeight: canvas.y
+    canvasHeight: canvas.y,
+    toScreen(point) {
+      return {
+        x: (point.x * this.zoom.value) + this.camera.x,
+        y: (point.y * this.zoom.value) + this.camera.y
+      };
+    },
+    toScreenRect(rect) {
+      return {
+        ...this.toScreen(rect),
+        width: rect.width * this.zoom.value,
+        height: rect.height * this.zoom.value
+      };
+    },
+    toTexture(point) {
+      return {
+        x: (point.x - this.camera.x) / this.zoom.value,
+        y: (point.y - this.camera.y) / this.zoom.value
+      };
+    }
   };
 }
 
-export function makeBrush(
-  size = 1
-): BrushHighlight {
+export function makeBrush(): BrushHighlight {
   return {
-    size,
     colorInline: "#FFF",
     colorOutline: "#000"
   };

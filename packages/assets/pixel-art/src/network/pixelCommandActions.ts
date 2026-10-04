@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { PixelBufferHookEvent } from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelCommand } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
 const kActions: { readonly [TAction in PixelCommandAction]: true; } = {
@@ -19,7 +19,7 @@ const kActions: { readonly [TAction in PixelCommandAction]: true; } = {
   "normal-map-zone-deleted": true
 };
 
-export type PixelCommandAction = PixelBufferHookEvent["action"];
+export type PixelCommandAction = PixelCommand["action"];
 
 export const PIXEL_COMMAND_ACTIONS: readonly PixelCommandAction[] = Object.keys(
   kActions

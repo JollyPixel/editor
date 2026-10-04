@@ -1,21 +1,21 @@
 # Pixel-art architecture
 
-`PixelArtState` holds the authoritative `PixelBuffer`. The server opens one room per asset; the browser keeps a `PixelDocument` in sync with it. The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
+`PixelArtState` holds the authoritative `PixelDocumentState`: pixels, UV regions and normal map settings. The server opens one room per asset; the browser keeps a `PixelDocument` in sync with it. The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
 
 ```mermaid
 flowchart TB
-    Document["PixelDocument"] -->|"local buffer event"| Sync["PixelSyncClient"]
+    Document["PixelDocument"] -->|"command event"| Sync["PixelSyncClient"]
     Sync --> Room["Asset room"]
     Room -->|"validate"| Arbiter["PixelCommandArbiter"]
     Arbiter -->|"admission"| Log["Event log"]
-    Log -->|"fold"| State["PixelArtState.buffer"]
+    Log -->|"fold"| State["PixelArtState.document"]
     Room -->|"command, correction or snapshot"| Sync
     Canvas["Canvas presence helpers"] <--> Room
 ```
 
 ## Edits and conflicts
 
-`commands.apply` is the sole writer of the server buffer. The arbiter checks the current buffer; its conflict trackers commit only after the event append succeeds. Event replay uses the same apply function.
+`commands.apply` is the sole writer of the server state, through `PixelDocumentState.apply`. The arbiter checks the current buffer; its conflict trackers commit only after the event append succeeds. Event replay uses the same apply function.
 
 ```mermaid
 flowchart TB

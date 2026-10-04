@@ -80,7 +80,7 @@ describe("UVRegion", () => {
     });
 
     test("round-trips through JSON", () => {
-      const region = makeFree().withRect({ x: 5, y: 5, width: 1, height: 1 }, "bottom");
+      const region = makeFree().resized({ x: 5, y: 5, width: 1, height: 1 }, "bottom");
       const restored = UVRegion.from(
         JSON.parse(JSON.stringify(region)) as ReturnType<UVRegion["toJSON"]>
       );

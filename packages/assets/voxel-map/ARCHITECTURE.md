@@ -22,7 +22,7 @@ flowchart TB
     TilesetRoom --> TilesetArbiter["TilesetCommandArbiter"]
     TilesetArbiter --> TilesetLog["Event log"]
     TilesetLog --> TilesetState["TilesetState"]
-    TilesetState --> Buffer["PixelBuffer"]
+    TilesetState --> Buffer["PixelDocumentState"]
     TilesetState --> Definitions["TilesetDocument"]
     TilesetRoom -->|"command, correction or snapshot"| TilesetSync
 ```

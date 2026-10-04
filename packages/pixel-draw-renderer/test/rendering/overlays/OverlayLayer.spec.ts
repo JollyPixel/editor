@@ -39,22 +39,41 @@ describe("OverlayLayer", () => {
       });
       const svg = parent.querySelector("svg")!;
 
-      overlays.brushHighlight.update(20, 20);
+      overlays.brushHighlight.update(20, 20, () => 1);
       const region = uvMap.create({
         width: 4,
         height: 4
       });
       uvMap.select(region.id);
 
-      assert.strictEqual(
-        svg.firstElementChild?.getAttribute("data-overlay"),
-        "uv"
+      assert.deepStrictEqual(
+        [...svg.children].map((layer) => layer.getAttribute("data-layer")),
+        ["uv", "peer-selections", "brush", "line", "selection", "peer-cursors"]
       );
-      assert.notStrictEqual(
-        svg.lastElementChild?.getAttribute("data-overlay"),
-        "uv",
-        "a tool overlay must paint after the UV layer"
-      );
+      assert.ok(svg.firstElementChild?.querySelector("[data-overlay=uv]"));
+    });
+
+    test("keeps a peer outline in its own layer after it re-renders", () => {
+      const parent = makeParent();
+      const overlays = new OverlayLayer({
+        parent,
+        viewport: makeViewport(),
+        brush: makeBrush(),
+        uvMap: makeUvMap({ x: 64, y: 64 })
+      });
+
+      overlays.peerSelectionOutlines.set("peer-A", {
+        rect: { x: 0, y: 0, width: 2, height: 2 },
+        mask: null,
+        color: "#f00"
+      });
+      overlays.peerSelectionOutlines.refresh();
+      overlays.peerCursors.set("peer-A", { pos: { x: 1, y: 1 }, color: "#f00" });
+      overlays.peerSelectionOutlines.refresh();
+
+      const svg = parent.querySelector("svg");
+      assert.ok(svg?.querySelector("[data-layer=peer-selections] > path"));
+      assert.strictEqual(svg?.lastElementChild?.getAttribute("data-layer"), "peer-cursors");
     });
   });
 

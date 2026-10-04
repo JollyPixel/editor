@@ -86,7 +86,7 @@ describe("UVRegion", () => {
       });
 
       const restored = region
-        .withRect({ ...REGION_RECT, x: 40, y: 30 }, "top")
+        .movedTo({ x: 40, y: 30 }, "top")
         .stack()
         .free();
 
@@ -116,9 +116,9 @@ describe("UVRegion", () => {
 
       const moved = { ...REGION_RECT, x: 20, y: 10 };
       const restored = region
-        .withRect({ ...REGION_RECT, x: 40, y: 30 }, "top")
+        .movedTo({ x: 40, y: 30 }, "top")
         .stack()
-        .withRect(moved)
+        .movedTo(moved)
         .free();
 
       for (const face of DEFAULT_UV_SLOTS) {
@@ -146,7 +146,7 @@ describe("UVRegion", () => {
       });
 
       const stacked = region.stack();
-      const moved = stacked.withRect({
+      const moved = stacked.movedTo({
         ...stacked.rectFor("front"),
         x: stacked.rectFor("front").x + 20,
         y: stacked.rectFor("front").y + 10

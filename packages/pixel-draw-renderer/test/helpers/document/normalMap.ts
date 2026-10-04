@@ -1,11 +1,11 @@
 // Import Internal Dependencies
 import { PixelDocument } from "#src/PixelDocument.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 
 export function createNormalMapDocument(
-  events: PixelBufferHookEvent[] = []
+  events: PixelCommand[] = []
 ): PixelDocument {
-  return new PixelDocument({
+  const doc = new PixelDocument({
     size: {
       x: 8,
       y: 8
@@ -13,9 +13,11 @@ export function createNormalMapDocument(
     history: {
       enabled: true,
       limit: 50
-    },
-    onBufferUpdated: (event) => events.push(event)
+    }
   });
+  doc.on("command", (command) => events.push(command));
+
+  return doc;
 }
 
 export function addRegion(

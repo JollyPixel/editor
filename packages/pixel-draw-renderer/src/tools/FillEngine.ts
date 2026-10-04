@@ -7,30 +7,22 @@ import type {
 import type {
   CanvasBuffer
 } from "../buffer/CanvasBuffer.ts";
-import type { EditPipeline } from "../sync/EditPipeline.ts";
+import type { PixelDocument } from "../PixelDocument.ts";
 import type { UVMap } from "../uv/map/UVMap.ts";
 import { pointInGeometry } from "../uv/geometry/geometry.ts";
 import {
   uvSlotGeometries,
   uvSlotMask
 } from "../uv/region/uvSlotMask.ts";
-import type {
-  RGBA8,
-  Vec2
-} from "../types.ts";
-
-export interface FillGlobalCommit {
-  positions: Vec2[];
-  beforeColors: RGBA8[];
-  fromColor: RGBA8;
-  toColor: RGBA8;
-}
+import { rgba8Equal } from "../utils/colors.ts";
+import type { Vec2 } from "../types.ts";
 
 export interface FillEngineOptions {
   brush: Brush;
-  canvasBuffer: CanvasBuffer;
-  pipeline: EditPipeline;
-  uvMap: UVMap;
+  document: Pick<
+    PixelDocument,
+    "buffer" | "uv" | "paintPixels" | "paintGlobalFill"
+  >;
 }
 
 export interface FillTool {
@@ -41,7 +33,7 @@ export interface FillTool {
 export class FillEngine implements FillTool {
   #brush: Brush;
   #canvasBuffer: CanvasBuffer;
-  #pipeline: EditPipeline;
+  #document: Pick<PixelDocument, "paintPixels" | "paintGlobalFill">;
   #uvMap: UVMap;
   #global = false;
   #uvClip = false;
@@ -50,9 +42,9 @@ export class FillEngine implements FillTool {
     options: FillEngineOptions
   ) {
     this.#brush = options.brush;
-    this.#canvasBuffer = options.canvasBuffer;
-    this.#pipeline = options.pipeline;
-    this.#uvMap = options.uvMap;
+    this.#canvasBuffer = options.document.buffer;
+    this.#document = options.document;
+    this.#uvMap = options.document.uv;
   }
 
   get global(): boolean {
@@ -90,11 +82,7 @@ export class FillEngine implements FillTool {
       return;
     }
 
-    const [r, g, b, a] = this.#canvasBuffer.samplePixel(
-      tx,
-      ty
-    );
-    const beforeColor = { r, g, b, a };
+    const [beforeColor] = this.#canvasBuffer.samplePixels([seed]);
     const fillColor = this.#brush[slot].asRGBA();
     const positions = Fill.floodFill(
       this.#canvasBuffer,
@@ -102,9 +90,9 @@ export class FillEngine implements FillTool {
       fillColor,
       this.#clipMask(seed)
     );
-    this.#pipeline.commitPixels(
+    this.#document.paintPixels(
       positions,
-      slot,
+      fillColor,
       beforeColor
     );
   }
@@ -113,30 +101,14 @@ export class FillEngine implements FillTool {
     seed: Vec2,
     slot: BrushColorSlot
   ): void {
-    const [sr, sg, sb, sa] = this.#canvasBuffer.samplePixel(
-      seed.x,
-      seed.y
-    );
-    const fromColor: RGBA8 = {
-      r: sr,
-      g: sg,
-      b: sb,
-      a: sa
-    };
+    const [fromColor] = this.#canvasBuffer.samplePixels([seed]);
     const toColor = this.#brush[slot].asRGBA();
-
-    if (
-      fromColor.r === toColor.r &&
-      fromColor.g === toColor.g &&
-      fromColor.b === toColor.b &&
-      fromColor.a === toColor.a
-    ) {
+    if (rgba8Equal(fromColor, toColor)) {
       return;
     }
 
     const mask = this.#clipMask(seed);
-    const positions = Fill.matchAll(
-      this.#canvasBuffer,
+    const positions = this.#canvasBuffer.positionsOf(
       fromColor,
       mask
     );
@@ -145,21 +117,17 @@ export class FillEngine implements FillTool {
     }
 
     if (mask) {
-      this.#pipeline.commitPixels(
+      this.#document.paintPixels(
         positions,
-        slot,
+        toColor,
         fromColor
       );
 
       return;
     }
 
-    const beforeColors = positions.map(
-      () => fromColor
-    );
-    this.#pipeline.commitGlobalFill({
+    this.#document.paintGlobalFill({
       positions,
-      beforeColors,
       fromColor,
       toColor
     });

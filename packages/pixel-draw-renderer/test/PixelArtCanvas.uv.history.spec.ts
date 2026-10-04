@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { createUvCanvas } from "./helpers/uv/canvas.ts";
 
 describe("PixelArtCanvas — uv mode", () => {
@@ -130,9 +130,9 @@ describe("PixelArtCanvas — uv mode", () => {
 
   describe("network hook", () => {
     test("create/move/delete each emit exactly one hook event of the matching action", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = createUvCanvas({
-        onBufferUpdated: (e) => events.push(e)
+        onCommand: (e) => events.push(e)
       });
 
       const region = manager.uv.create({
@@ -153,9 +153,9 @@ describe("PixelArtCanvas — uv mode", () => {
     });
 
     test("undo of a move broadcasts the inverse uv-region-moved event", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = createUvCanvas({
-        onBufferUpdated: (e) => events.push(e)
+        onCommand: (e) => events.push(e)
       });
 
       const region = manager.uv.create({
@@ -181,12 +181,12 @@ describe("PixelArtCanvas — uv mode", () => {
     });
 
     test("applyRemoteCommand restores a remote region without re-broadcasting or recording history", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = createUvCanvas({
-        onBufferUpdated: (e) => events.push(e)
+        onCommand: (e) => events.push(e)
       });
 
-      manager.applyRemoteCommand({
+      manager.document.applyRemoteCommand({
         action: "uv-region-created",
         metadata: {
           region: {

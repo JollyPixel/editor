@@ -1,12 +1,12 @@
 // Import Internal Dependencies
-import type {
-  PixelArtCanvas,
-  PixelArtCanvasOptions
-} from "#src/PixelArtCanvas.ts";
-import { createPixelArtCanvas } from "../canvas.ts";
+import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
+import {
+  createPixelArtCanvas,
+  type TestCanvasOptions
+} from "../canvas.ts";
 
 export function createSelectCanvas(
-  options: PixelArtCanvasOptions = {}
+  options: TestCanvasOptions = {}
 ): PixelArtCanvas {
   return createPixelArtCanvas({
     zoom: {

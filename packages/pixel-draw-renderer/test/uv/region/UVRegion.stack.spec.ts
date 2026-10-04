@@ -20,7 +20,7 @@ describe("UVRegion", () => {
   describe("stack", () => {
     test("keeps the front face by default and ignores a requested face smaller than the largest one", () => {
       const moved = makeFree()
-        .withRect({ x: 9, y: 9, width: 1, height: 1 }, "top");
+        .resized({ x: 9, y: 9, width: 1, height: 1 }, "top");
 
       for (const stacked of [moved.stack(), moved.stack("top")]) {
         assert.strictEqual(stacked.state, "stacked");

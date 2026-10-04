@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { stubRect } from "./helpers/dom.ts";
+import { uvBorderRects } from "./helpers/uv/borders.ts";
 
 describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => {
   test("the UV overlay follows the camera shift caused by a container resize", () => {
@@ -22,7 +23,7 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
     manager.uv.create({ width: 4, height: 4 });
     manager.uv.showAll = true;
 
-    const uvRegionBorder = svg.querySelector("g:not([visibility]) > rect:last-child")!;
+    const [uvRegionBorder] = uvBorderRects(svg);
     assert.strictEqual(uvRegionBorder.getAttribute("x"), "84");
     assert.strictEqual(uvRegionBorder.getAttribute("y"), "84");
 
@@ -79,9 +80,8 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
       })
     );
 
-    const selectionOutline = [...svg.querySelectorAll(":scope > rect")]
-      .find((el) => el.getAttribute("visibility") === "visible")!;
-    assert.strictEqual(selectionOutline.getAttribute("x"), "92");
+    const selectionOutline = svg.querySelector("[data-overlay=selection]");
+    assert.ok(selectionOutline?.getAttribute("d")?.startsWith("M 92 92 "));
 
     stubRect(container, {
       width: 300,
@@ -89,9 +89,8 @@ describe("PixelArtCanvas — onResize (SVG overlay refresh, regression)", () => 
     });
     manager.onResize();
 
-    assert.strictEqual(
-      selectionOutline.getAttribute("x"),
-      "142",
+    assert.ok(
+      selectionOutline?.getAttribute("d")?.startsWith("M 142 142 "),
       "the selection outline must follow the camera shift from resizeCanvas"
     );
     manager.destroy();

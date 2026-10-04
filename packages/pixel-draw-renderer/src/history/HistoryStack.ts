@@ -1,17 +1,3 @@
-// Import Internal Dependencies
-import type {
-  DefaultPixelBuffer
-} from "../buffer/types.ts";
-import type { UVMap } from "../uv/map/UVMap.ts";
-import type {
-  HistoryEntry,
-  HistoryEntryInput
-} from "./HistoryStack.types.ts";
-import {
-  applyColorGroups,
-  groupPositionsByColor
-} from "../buffer/colorGroups.ts";
-
 // CONSTANTS
 const kDefaultLimit = 10;
 
@@ -22,20 +8,14 @@ export interface HistoryStackOptions {
   limit?: number;
 }
 
-export class HistoryStack {
-  #buffer: DefaultPixelBuffer;
-  #uvMap: UVMap;
+export class HistoryStack<TEntry> {
   #limit: number;
-  #undoStack: HistoryEntry[] = [];
-  #redoStack: HistoryEntry[] = [];
+  #undoStack: TEntry[] = [];
+  #redoStack: TEntry[] = [];
 
   constructor(
-    buffer: DefaultPixelBuffer,
-    uvMap: UVMap,
     options: HistoryStackOptions = {}
   ) {
-    this.#buffer = buffer;
-    this.#uvMap = uvMap;
     this.#limit = options.limit ?? kDefaultLimit;
   }
 
@@ -48,12 +28,9 @@ export class HistoryStack {
   }
 
   push(
-    entry: HistoryEntryInput
+    entry: TEntry
   ): void {
-    this.#undoStack.push({
-      ...entry,
-      timestamp: Date.now()
-    });
+    this.#undoStack.push(entry);
 
     if (this.#undoStack.length > this.#limit) {
       this.#undoStack.shift();
@@ -61,25 +38,23 @@ export class HistoryStack {
     this.#redoStack = [];
   }
 
-  undo(): HistoryEntry | null {
+  undo(): TEntry | null {
     const entry = this.#undoStack.pop();
-    if (!entry) {
+    if (entry === undefined) {
       return null;
     }
 
-    this.#applyBefore(entry);
     this.#redoStack.push(entry);
 
     return entry;
   }
 
-  redo(): HistoryEntry | null {
+  redo(): TEntry | null {
     const entry = this.#redoStack.pop();
-    if (!entry) {
+    if (entry === undefined) {
       return null;
     }
 
-    this.#applyAfter(entry);
     this.#undoStack.push(entry);
 
     return entry;
@@ -88,122 +63,5 @@ export class HistoryStack {
   clear(): void {
     this.#undoStack = [];
     this.#redoStack = [];
-  }
-
-  #applyBefore(
-    entry: HistoryEntry
-  ): void {
-    switch (entry.action) {
-      case "stroke": {
-        const groupedColors = groupPositionsByColor(
-          entry.positions,
-          entry.beforeColors
-        );
-        applyColorGroups(this.#buffer, groupedColors);
-
-        this.#buffer.copyToMaster();
-        break;
-      }
-
-      case "select-edit": {
-        const groupedColors = groupPositionsByColor(
-          entry.positions,
-          entry.beforeColors
-        );
-        applyColorGroups(this.#buffer, groupedColors);
-
-        this.#buffer.copyToMaster();
-        break;
-      }
-
-      case "resized":
-      case "texture-replaced":
-        this.#buffer.replacePixels(
-          entry.beforePixels,
-          entry.beforeSize
-        );
-        break;
-
-      case "uv-create":
-        this.#uvMap.delete(entry.region.id);
-        break;
-
-      case "uv-delete":
-        this.#uvMap.restore(entry.region);
-        break;
-
-      case "uv-move":
-        this.#uvMap.move(
-          entry.id,
-          entry.oldRect,
-          entry.face ?? undefined
-        );
-        break;
-
-      case "uv-state":
-        this.#uvMap.restoreState(entry.before);
-        break;
-
-      case "uv-rotate":
-        this.#uvMap.restoreRotation(entry.before, entry.face);
-        break;
-    }
-  }
-
-  #applyAfter(
-    entry: HistoryEntry
-  ): void {
-    switch (entry.action) {
-      case "stroke":
-        this.#buffer.drawPixels(
-          entry.positions,
-          entry.afterColor
-        );
-        this.#buffer.copyToMaster();
-        break;
-
-      case "select-edit": {
-        const groupedColors = groupPositionsByColor(
-          entry.positions,
-          entry.afterColors
-        );
-        applyColorGroups(this.#buffer, groupedColors);
-
-        this.#buffer.copyToMaster();
-        break;
-      }
-
-      case "resized":
-      case "texture-replaced":
-        this.#buffer.replacePixels(
-          entry.afterPixels,
-          entry.afterSize
-        );
-        break;
-
-      case "uv-create":
-        this.#uvMap.restore(entry.region);
-        break;
-
-      case "uv-delete":
-        this.#uvMap.delete(entry.region.id);
-        break;
-
-      case "uv-move":
-        this.#uvMap.move(
-          entry.id,
-          entry.newRect,
-          entry.face ?? undefined
-        );
-        break;
-
-      case "uv-state":
-        this.#uvMap.restoreState(entry.after);
-        break;
-
-      case "uv-rotate":
-        this.#uvMap.restoreRotation(entry.after, entry.face);
-        break;
-    }
   }
 }

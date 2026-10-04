@@ -3,6 +3,7 @@ import {
   PixelArtCanvas,
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import {
   makeContainer,
   overlayOf
@@ -17,6 +18,10 @@ const kDefaultTexture = {
   }
 };
 
+export interface TestCanvasOptions extends PixelArtCanvasOptions {
+  onCommand?: (command: PixelCommand) => void;
+}
+
 export interface CreatedPixelArtCanvas {
   manager: PixelArtCanvas;
   canvas: HTMLCanvasElement;
@@ -25,12 +30,13 @@ export interface CreatedPixelArtCanvas {
 }
 
 export function createPixelArtCanvas(
-  overrides: PixelArtCanvasOptions = {},
+  overrides: TestCanvasOptions = {},
   containerSize?: number
 ): CreatedPixelArtCanvas {
   const container = makeContainer(containerSize);
   const {
     texture,
+    onCommand,
     ...rest
   } = overrides;
 
@@ -41,6 +47,9 @@ export function createPixelArtCanvas(
     },
     ...rest
   });
+  if (onCommand) {
+    manager.document.on("command", onCommand);
+  }
 
   return {
     manager,

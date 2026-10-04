@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { PixelBuffer } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  PixelBuffer,
+  PixelDocumentState
+} from "@jolly-pixel/pixel-draw.renderer";
 import type { PixelNetworkCommand } from "@jolly-pixel/asset.pixel-art/client";
 
 // Import Internal Dependencies
@@ -34,7 +37,9 @@ function harness() {
   return {
     arbiter: new TilesetCommandArbiter(),
     state: {
-      pixels: new PixelBuffer({ size: { x: 4, y: 4 } })
+      pixels: new PixelDocumentState({
+        buffer: new PixelBuffer({ size: { x: 4, y: 4 } })
+      })
     }
   };
 }

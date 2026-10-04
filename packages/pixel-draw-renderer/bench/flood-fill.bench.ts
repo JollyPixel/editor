@@ -103,14 +103,14 @@ const suite = defineSuite("Flood fill (tools/Fill)", (bench) => {
     .add("connectedRegion / 256x256 (65k px)", () => {
       Fill.connectedRegion(buffer256, { x: 128, y: 128 });
     })
-    .add("matchAll / 256x256 (all match)", () => {
-      Fill.matchAll(buffer256, kWhite);
+    .add("positionsOf / 256x256 (all match)", () => {
+      buffer256.positionsOf(kWhite);
     })
-    .add("matchAll / 512x512 (all match)", () => {
-      Fill.matchAll(buffer512, kWhite);
+    .add("positionsOf / 512x512 (all match)", () => {
+      buffer512.positionsOf(kWhite);
     })
-    .add("matchAll / 256x256 (no match)", () => {
-      Fill.matchAll(buffer256, kBlack);
+    .add("positionsOf / 256x256 (no match)", () => {
+      buffer256.positionsOf(kBlack);
     });
 });
 

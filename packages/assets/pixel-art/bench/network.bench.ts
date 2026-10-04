@@ -7,6 +7,7 @@ import {
 import * as network from "@jolly-pixel/network";
 import {
   PixelBuffer,
+  PixelDocumentState,
   type RGBA8,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -15,7 +16,7 @@ import {
 import {
   randomPositions
 } from "./_fixtures.ts";
-import { applyCommandToBuffer } from "../src/network/PixelCommandApplier.ts";
+import { applyPixelCommand } from "../src/network/PixelCommandApplier.ts";
 import type { PixelNetworkCommand } from "../src/network/types.ts";
 
 // CONSTANTS
@@ -32,7 +33,9 @@ const suite = defineSuite("Network (network/*)", (bench) => {
   const rng = mulberry32();
   const size: Vec2 = { x: kSide, y: kSide };
 
-  const strokeBuffer = new PixelBuffer({ size, maxSize: kSide });
+  const strokeState = new PixelDocumentState({
+    buffer: new PixelBuffer({ size, maxSize: kSide })
+  });
   const strokeCommand = header({
     action: "stroke",
     metadata: {
@@ -41,7 +44,9 @@ const suite = defineSuite("Network (network/*)", (bench) => {
     }
   });
 
-  const fillBuffer = new PixelBuffer({ size, maxSize: kSide });
+  const fillState = new PixelDocumentState({
+    buffer: new PixelBuffer({ size, maxSize: kSide })
+  });
   const whitePixels = new Uint8ClampedArray(kSide * kSide * 4).fill(255);
   const fillCommand = header({
     action: "global-fill",
@@ -52,15 +57,15 @@ const suite = defineSuite("Network (network/*)", (bench) => {
   const contexts = buildResolveContexts(kResolveBatch, rng);
 
   bench
-    .add("applyCommandToBuffer / stroke (256 px)", () => {
-      applyCommandToBuffer(strokeBuffer, strokeCommand);
+    .add("applyPixelCommand / stroke (256 px)", () => {
+      applyPixelCommand(strokeState, strokeCommand);
     })
-    .add("applyCommandToBuffer / global-fill 256x256", () => {
-      applyCommandToBuffer(fillBuffer, fillCommand);
+    .add("applyPixelCommand / global-fill 256x256", () => {
+      applyPixelCommand(fillState, fillCommand);
     }, {
       // Reset white before each run so `global-fill` keeps worst-case coverage.
       beforeEach() {
-        fillBuffer.replacePixels(whitePixels, size);
+        fillState.buffer.replacePixels(whitePixels, size);
       }
     })
     .add(`LastWriteWinsResolver.resolve / x${kResolveBatch}`, () => {

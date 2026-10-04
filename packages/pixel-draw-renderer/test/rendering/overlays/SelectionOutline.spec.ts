@@ -15,180 +15,77 @@ import {
   makeBrush
 } from "../../helpers/overlay.ts";
 
+function makeOutline(
+  viewport = makeViewport()
+): { svg: SVGElement; overlay: SelectionOutline; } {
+  const svg = makeSvg();
+
+  return {
+    svg,
+    overlay: new SelectionOutline(svg, viewport, makeBrush())
+  };
+}
+
 describe("SelectionOutline", () => {
-  test("drawRect() shows a dashed outline+inline rect pair in screen space", () => {
-    const svg = makeSvg();
-    const overlay = new SelectionOutline(
-      svg,
-      makeViewport(),
-      makeBrush()
-    );
+  test("draw() shows a dashed outline+inline path pair around the rect in screen space", () => {
+    const { svg, overlay } = makeOutline();
 
-    overlay.drawRect({
-      x: 1,
-      y: 1,
-      width: 2,
-      height: 3
-    });
+    overlay.draw({ x: 1, y: 1, width: 2, height: 3 });
 
-    const rects = svg.querySelectorAll("rect");
-    assert.strictEqual(
-      rects.length,
-      2,
-      "one outline rect + one inline rect"
-    );
-    for (const rect of rects) {
-      assert.strictEqual(rect.getAttribute("visibility"), "visible");
-      assert.strictEqual(rect.getAttribute("x"), "4");
-      assert.strictEqual(rect.getAttribute("y"), "4");
-      assert.strictEqual(rect.getAttribute("width"), "8");
-      assert.strictEqual(rect.getAttribute("height"), "12");
-      assert.ok(
-        rect.getAttribute("stroke-dasharray"),
-        "should be dashed"
-      );
+    const paths = svg.querySelectorAll("path");
+    assert.strictEqual(paths.length, 2, "one outline path + one inline path");
+    for (const path of paths) {
+      assert.strictEqual(path.getAttribute("visibility"), "visible");
+      assert.strictEqual(path.getAttribute("d"), "M 4 4 L 12 4 L 12 16 L 4 16 Z");
+      assert.ok(path.getAttribute("stroke-dasharray"), "should be dashed");
     }
   });
 
-  test("clear() hides the selection rect", () => {
-    const svg = makeSvg();
-    const overlay = new SelectionOutline(
-      svg,
-      makeViewport(),
-      makeBrush()
-    );
+  test("a full-true mask draws the same rectangle as no mask", () => {
+    const { svg, overlay } = makeOutline();
+    const rect = { x: 1, y: 1, width: 2, height: 3 };
 
-    overlay.drawRect({
-      x: 0,
-      y: 0,
-      width: 1,
-      height: 1
-    });
+    overlay.draw(rect);
+    const plain = svg.querySelector("path")?.getAttribute("d");
+    overlay.draw(rect, Array.from({ length: 6 }, () => true));
+
+    assert.strictEqual(svg.querySelector("path")?.getAttribute("d"), plain);
+  });
+
+  test("a partial mask traces the mask contour in screen space", () => {
+    const viewport = makeViewport();
+    viewport.camera = { x: 3, y: -5 };
+    const { svg, overlay } = makeOutline(viewport);
+
+    overlay.draw({ x: 1, y: 2, width: 2, height: 2 }, [
+      true, false,
+      false, false
+    ]);
+
+    for (const path of svg.querySelectorAll("path")) {
+      assert.strictEqual(path.getAttribute("visibility"), "visible");
+      assert.strictEqual(path.getAttribute("d"), "M 7 3 L 11 3 L 11 7 L 7 7 Z");
+    }
+  });
+
+  test("clear() hides the path pair", () => {
+    const { svg, overlay } = makeOutline();
+
+    overlay.draw({ x: 0, y: 0, width: 2, height: 2 }, [true, false, false, false]);
     overlay.clear();
 
-    const rects = svg.querySelectorAll("rect");
-    for (const rect of rects) {
-      assert.strictEqual(
-        rect.getAttribute("visibility"),
-        "hidden"
-      );
+    for (const path of svg.querySelectorAll("path")) {
+      assert.strictEqual(path.getAttribute("visibility"), "hidden");
     }
   });
 
-  describe("drawMask", () => {
-    test("a full-true mask degenerates to the same rendering as drawRect", () => {
-      const svg = makeSvg();
-      const overlay = new SelectionOutline(
-        svg,
-        makeViewport(),
-        makeBrush()
-      );
+  test("the size label reports the bounding box, not the traced mask", () => {
+    const { svg, overlay } = makeOutline();
 
-      overlay.drawMask({
-        x: 1,
-        y: 1,
-        width: 2,
-        height: 3
-      }, Array.from({ length: 6 }, () => true));
+    overlay.draw({ x: 0, y: 0, width: 2, height: 2 }, [true, false, false, false]);
 
-      const rects = svg.querySelectorAll("rect");
-      assert.strictEqual(rects.length, 2);
-      for (const rect of rects) {
-        assert.strictEqual(
-          rect.getAttribute("visibility"),
-          "visible",
-          "visible rects"
-        );
-      }
-      const paths = svg.querySelectorAll("path");
-      for (const path of paths) {
-        assert.strictEqual(
-          path.getAttribute("visibility"),
-          "hidden",
-          "hidden paths"
-        );
-      }
-    });
-
-    test("a partial mask renders a visible path pair tracing the mask in screen space", () => {
-      const svg = makeSvg();
-      const viewport = makeViewport();
-      viewport.camera = {
-        x: 3,
-        y: -5
-      };
-      const overlay = new SelectionOutline(
-        svg,
-        viewport,
-        makeBrush()
-      );
-
-      overlay.drawMask({
-        x: 1,
-        y: 2,
-        width: 2,
-        height: 2
-      }, [
-        true, false,
-        false, false
-      ]);
-
-      const rects = svg.querySelectorAll("rect");
-      for (const rect of rects) {
-        assert.strictEqual(rect.getAttribute("visibility"), "hidden");
-      }
-      const paths = svg.querySelectorAll("path");
-      assert.strictEqual(paths.length, 2);
-      for (const path of paths) {
-        assert.strictEqual(path.getAttribute("visibility"), "visible");
-        assert.strictEqual(
-          path.getAttribute("d"),
-          "M 7 3 L 11 3 L 11 7 L 7 7 Z"
-        );
-      }
-    });
-
-    test("clear() also hides the path pair", () => {
-      const svg = makeSvg();
-      const overlay = new SelectionOutline(
-        svg,
-        makeViewport(),
-        makeBrush()
-      );
-
-      overlay.drawMask({
-        x: 0,
-        y: 0,
-        width: 2,
-        height: 2
-      }, [true, false, false, false]);
-      overlay.clear();
-
-      for (const path of svg.querySelectorAll("path")) {
-        assert.strictEqual(path.getAttribute("visibility"), "hidden");
-      }
-    });
-  });
-
-  describe("size label", () => {
-    test("drawMask() reports the bounding box, not the traced mask", () => {
-      const svg = makeSvg();
-      const overlay = new SelectionOutline(
-        svg,
-        makeViewport(),
-        makeBrush()
-      );
-
-      overlay.drawMask({
-        x: 0,
-        y: 0,
-        width: 2,
-        height: 2
-      }, [true, false, false, false]);
-
-      const label = svg.querySelector("[data-overlay='selection-size']")!;
-      assert.strictEqual(label.getAttribute("visibility"), "visible");
-      assert.strictEqual(label.textContent, "2×2");
-    });
+    const label = svg.querySelector("[data-overlay='selection-size']");
+    assert.strictEqual(label?.getAttribute("visibility"), "visible");
+    assert.strictEqual(label?.textContent, "2×2");
   });
 });

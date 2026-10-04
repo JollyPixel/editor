@@ -159,6 +159,8 @@ manager.redo();
   - [`SelectTool`](./docs/tools/SelectTool.md)
   - [`CanvasShortcuts`](./docs/input/CanvasShortcuts.md)
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
+- [`PixelDocumentState`](./docs/PixelDocumentState.md)
+- [`PixelCommand`](./docs/PixelCommand.md)
 - Normal map
   - [`NormalMap`](./docs/normal/NormalMap.md)
   - [`NormalMapConfig`](./docs/normal/NormalMapConfig.md)

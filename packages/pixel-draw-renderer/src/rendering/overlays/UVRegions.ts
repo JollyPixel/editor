@@ -1,15 +1,8 @@
-// Import Third-party Dependencies
-import { contrastingColor } from "@jolly-pixel/color";
-
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import {
-  geometryKey,
-  rectOf,
-  triangleCornerOf
-} from "../../uv/geometry/geometry.ts";
 import { uvTargetKey } from "../../uv/region/UVTarget.ts";
 import { UVRegionBorder } from "./UVRegionBorder.ts";
+import { UVRegionLabels } from "./UVRegionLabels.ts";
 import { UVResizeHandles } from "./UVResizeHandles.ts";
 import {
   projectUVOverlay,
@@ -19,73 +12,37 @@ import {
 import type { DefaultViewport } from "../Viewport.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
-  UVSlot,
   UVGeometry,
-  UVRegion
+  UVRegion,
+  UVSlot
 } from "../../uv/region/UVRegion.ts";
-import type { Vec2 } from "../../types.ts";
 
 // CONSTANTS
 const kStrokeWidth = 2;
 const kSelectedStrokeWidth = 3;
-const kLabelFontSize = 10;
-const kLabelPadding = 3;
-const kLabelCasingWidth = "3";
-// Hide labels on tiny rects.
-const kLabelMinScreenSize = 40;
-const kLabelMaxLength = 20;
 
-function entryKey(
-  id: string,
-  face: UVSlot | null
-): string {
-  return uvTargetKey({
-    regionId: id,
-    slot: face
-  });
+export interface UVPeerPreview {
+  region: UVRegion;
+  face: UVSlot | null;
+  color: string;
 }
 
-function faceLabel(
-  entry: UVOverlayEntry
-): string {
-  const hidden = (entry.stacked ?? 1) - 1;
-
-  return hidden > 0 ? `${entry.slot} +${hidden}` : entry.slot ?? "";
+interface UVPreviewEntry {
+  key: string;
+  geometry: UVGeometry;
+  color: string;
 }
 
-function truncateLabel(
-  value: string
-): string {
-  const characters = [...value];
-  if (characters.length <= kLabelMaxLength) {
-    return value;
-  }
-
-  return `${characters.slice(0, kLabelMaxLength - 1).join("")}…`;
-}
-
-function regionLabel(
-  region: UVRegion
-): string {
-  const name = region.name?.trim();
-  const value = name || region.id;
-
-  return `(${truncateLabel(value)})`;
-}
-
-/**
- * Paints selected faces last and dims other free faces.
- */
 export class UVRegionLayer {
   #viewport: DefaultViewport;
   #uvMap: UVMap;
   #group: SVGGElement;
   #borders = new Map<string, UVRegionBorder>();
-  #labels = new Map<string, SVGTextElement>();
+  #labels: UVRegionLabels;
   #livePreview: UVRegion | null = null;
   #resizeHandles = false;
   #handles: UVResizeHandles;
-  #ghostSuppressed = new Set<string>();
+  #peerPreviews: ReadonlyMap<string, UVPeerPreview> = new Map();
   #peerSelections: ReadonlyMap<string, string> = new Map();
 
   #onChanged = () => this.#render();
@@ -95,10 +52,13 @@ export class UVRegionLayer {
     viewport: DefaultViewport,
     uvMap: UVMap
   ) {
-    this.#group = this.#init(svg);
-    this.#handles = new UVResizeHandles(this.#group);
+    this.#group = document.createElementNS(SVG_NS, "g");
+    this.#group.setAttribute("data-overlay", "uv");
+    svg.appendChild(this.#group);
     this.#viewport = viewport;
     this.#uvMap = uvMap;
+    this.#labels = new UVRegionLabels(this.#group, viewport, uvMap);
+    this.#handles = new UVResizeHandles(this.#group);
 
     this.#uvMap.on("changed", this.#onChanged);
   }
@@ -121,12 +81,10 @@ export class UVRegionLayer {
     this.#render();
   }
 
-  setGhostSuppressed(
-    entries: Iterable<{ id: string; face: UVSlot | null; }>
+  setPeerPreviews(
+    previews: ReadonlyMap<string, UVPeerPreview>
   ): void {
-    this.#ghostSuppressed = new Set(
-      [...entries].map(({ id, face }) => entryKey(id, face))
-    );
+    this.#peerPreviews = previews;
     this.#render();
   }
 
@@ -144,52 +102,97 @@ export class UVRegionLayer {
       border.remove();
     }
     this.#borders.clear();
-    for (const label of this.#labels.values()) {
-      label.remove();
-    }
-    this.#labels.clear();
+    this.#labels.destroy();
     this.#handles.destroy();
     this.#group.remove();
   }
 
   #render(): void {
     const entries = projectUVOverlay(this.#uvMap, {
-      ghostSuppressed: this.#ghostSuppressed,
+      ghostSuppressed: new Set(
+        [...this.#peerPreviews.values()].map(
+          ({ region, face }) => uvTargetKey({ regionId: region.id, slot: face })
+        )
+      ),
       preview: this.#livePreview,
       peerSelections: this.#peerSelections
     });
     const painted = uvOverlayPaintOrder(entries);
-
-    this.#prune(this.#borders, painted);
-
-    const zoom = this.#viewport.zoom.value;
-    const camera = this.#viewport.camera;
+    const previews = this.#previewEntries();
+    this.#pruneBorders([...painted, ...previews]);
 
     for (const entry of painted) {
-      const border = this.#borders.get(
-        entry.key
-      ) ?? this.#createBorder(entry.key, entry.geometry);
-      const perFace = entry.region.movementScope === "slot";
       const emphasised = entry.selected && entry.region.state !== "stacked";
-
-      border.place(entry.geometry, zoom, camera);
-      border.paint({
+      this.#placeBorder(entry.key, entry.geometry, {
         color: entry.peerColor ?? entry.region.color,
-        strokeWidth: emphasised ?
-          kSelectedStrokeWidth :
-          kStrokeWidth,
+        strokeWidth: emphasised ? kSelectedStrokeWidth : kStrokeWidth,
         selected: entry.selected,
-        dimmed: perFace && !entry.selected && entry.peerColor === null
+        dimmed: entry.region.movementScope === "slot" && !entry.selected && entry.peerColor === null
       });
-      border.appendTo(this.#group);
+    }
+    for (const preview of previews) {
+      this.#placeBorder(preview.key, preview.geometry, {
+        color: preview.color,
+        strokeWidth: kStrokeWidth,
+        selected: false,
+        dimmed: false,
+        dashed: true,
+        casing: false
+      });
     }
 
-    this.#renderLabels(entries, zoom, camera);
+    this.#labels.render(entries);
     this.#handles.render(
       this.#handleRegion(entries),
       this.#uvMap.selectedSlot,
       this.#viewport
     );
+  }
+
+  #placeBorder(
+    key: string,
+    geometry: UVGeometry,
+    style: Parameters<UVRegionBorder["paint"]>[0]
+  ): void {
+    let border = this.#borders.get(key);
+    if (border === undefined) {
+      border = new UVRegionBorder();
+      this.#borders.set(key, border);
+    }
+
+    border.place(geometry, this.#viewport);
+    border.paint(style);
+    border.appendTo(this.#group);
+  }
+
+  #previewEntries(): UVPreviewEntry[] {
+    const entries: UVPreviewEntry[] = [];
+    for (const [clientId, { region, face, color }] of this.#peerPreviews) {
+      const geometries = face === null ?
+        region.slotsOf() :
+        [{ slot: face, geometry: region.geometryFor(face) }];
+      for (const { slot, geometry } of geometries) {
+        entries.push({
+          key: `peer:${clientId}:${uvTargetKey({ regionId: region.id, slot })}`,
+          geometry,
+          color
+        });
+      }
+    }
+
+    return entries;
+  }
+
+  #pruneBorders(
+    keep: readonly { key: string; }[]
+  ): void {
+    const keys = new Set(keep.map((entry) => entry.key));
+    for (const [key, border] of this.#borders) {
+      if (!keys.has(key)) {
+        border.remove();
+        this.#borders.delete(key);
+      }
+    }
   }
 
   #handleRegion(
@@ -201,221 +204,5 @@ export class UVRegionLayer {
     }
 
     return entries.find((entry) => entry.region.id === id)?.region ?? null;
-  }
-
-  #renderLabels(
-    entries: UVOverlayEntry[],
-    zoom: number,
-    camera: Vec2
-  ): void {
-    const showRegionLabels = this.#uvMap.showRegionLabels;
-    const selectedOnly = this.#uvMap.labelScope === "selected";
-    const groups = new Map<string, UVOverlayEntry[]>();
-    for (const entry of entries) {
-      if (
-        selectedOnly &&
-        entry.region.id !== this.#uvMap.selectedRegionId
-      ) {
-        continue;
-      }
-      if (entry.slot === null) {
-        if (showRegionLabels) {
-          groups.set(entry.key, [entry]);
-        }
-        continue;
-      }
-
-      const key = `${entry.region.id}|${geometryKey(entry.geometry)}`;
-      const group = groups.get(key);
-      if (group) {
-        group.push(entry);
-      }
-      else {
-        groups.set(key, [entry]);
-      }
-    }
-
-    const labelled: UVOverlayEntry[] = [];
-    for (const group of groups.values()) {
-      const entry = group.find(
-        (candidate) => candidate.selected
-      ) ?? group[0];
-
-      if (
-        rectOf(entry.geometry).width * zoom < kLabelMinScreenSize ||
-        rectOf(entry.geometry).height * zoom < kLabelMinScreenSize
-      ) {
-        continue;
-      }
-
-      labelled.push({
-        ...entry,
-        stacked: group.length
-      });
-    }
-
-    this.#prune(this.#labels, labelled);
-
-    for (const entry of labelled) {
-      const el = this.#labels.get(entry.key) ?? this.#createLabel(entry.key);
-
-      el.setAttribute("fill", entry.region.color);
-      // Paint-order draws the text casing beneath the glyphs.
-      el.setAttribute("stroke", contrastingColor(entry.region.color));
-      const { x, y } = this.#labelPosition(entry.geometry, zoom, camera);
-      const corner = triangleCornerOf(entry.geometry);
-      const rightAligned =
-        corner === "top-right" || corner === "bottom-right";
-      el.setAttribute("x", String(x));
-      el.setAttribute("y", String(y));
-      el.setAttribute("text-anchor", rightAligned ? "end" : "start");
-      this.#setLabelContent(
-        el,
-        entry,
-        showRegionLabels,
-        x,
-        y
-      );
-
-      this.#group.appendChild(el);
-    }
-  }
-
-  #prune<T extends { remove(): void; }>(
-    elements: Map<string, T>,
-    keep: UVOverlayEntry[]
-  ): void {
-    const keys = new Set(keep.map((entry) => entry.key));
-
-    for (const [key, el] of elements) {
-      if (!keys.has(key)) {
-        el.remove();
-        elements.delete(key);
-      }
-    }
-  }
-
-  #createBorder(
-    key: string,
-    geometry: UVGeometry
-  ): UVRegionBorder {
-    const border = new UVRegionBorder(geometry);
-    this.#borders.set(key, border);
-
-    return border;
-  }
-
-  #init(
-    svg: SVGElement
-  ): SVGGElement {
-    const group = document.createElementNS(SVG_NS, "g");
-
-    group.setAttribute("data-overlay", "uv");
-    svg.appendChild(group);
-
-    return group;
-  }
-
-  #labelPosition(
-    geometry: UVGeometry,
-    zoom: number,
-    camera: Vec2
-  ): Vec2 {
-    const rect = rectOf(geometry);
-    const screen = {
-      x: rect.x * zoom + camera.x,
-      y: rect.y * zoom + camera.y,
-      width: rect.width * zoom,
-      height: rect.height * zoom
-    };
-    const corner = triangleCornerOf(geometry);
-    if (corner === null) {
-      return {
-        x: screen.x + kLabelPadding,
-        y: screen.y + kLabelPadding + kLabelFontSize
-      };
-    }
-    if (corner === "top-right") {
-      return {
-        x: screen.x + screen.width - kLabelPadding,
-        y: screen.y + kLabelPadding + kLabelFontSize
-      };
-    }
-    if (corner === "bottom-left") {
-      return {
-        x: screen.x + kLabelPadding,
-        y: screen.y + screen.height - kLabelPadding
-      };
-    }
-    if (corner === "bottom-right") {
-      return {
-        x: screen.x + screen.width - kLabelPadding,
-        y: screen.y + screen.height - kLabelPadding
-      };
-    }
-
-    return {
-      x: screen.x + kLabelPadding,
-      y: screen.y + kLabelPadding + kLabelFontSize
-    };
-  }
-
-  #createLabel(
-    key: string
-  ): SVGTextElement {
-    const el = document.createElementNS(SVG_NS, "text");
-
-    Object.assign(el.style, {
-      pointerEvents: "none",
-      fontSize: `${kLabelFontSize}px`,
-      fontFamily: "system-ui, sans-serif",
-      userSelect: "none"
-    });
-    el.setAttribute("paint-order", "stroke");
-    el.setAttribute("stroke-width", kLabelCasingWidth);
-    el.setAttribute("stroke-linejoin", "round");
-
-    this.#group.appendChild(el);
-    this.#labels.set(key, el);
-
-    return el;
-  }
-
-  #setLabelContent(
-    el: SVGTextElement,
-    entry: UVOverlayEntry,
-    showRegionLabels: boolean,
-    x: number,
-    y: number
-  ): void {
-    if (!showRegionLabels) {
-      el.textContent = faceLabel(entry);
-
-      return;
-    }
-
-    if (entry.slot === null) {
-      el.textContent = regionLabel(entry.region);
-
-      return;
-    }
-
-    el.replaceChildren();
-    const corner = triangleCornerOf(entry.geometry);
-    const bottomAligned =
-      corner === "bottom-left" || corner === "bottom-right";
-    const firstY = bottomAligned ? y - kLabelFontSize : y;
-
-    const identity = document.createElementNS(SVG_NS, "tspan");
-    identity.setAttribute("x", String(x));
-    identity.setAttribute("y", String(firstY));
-    identity.textContent = regionLabel(entry.region);
-    el.appendChild(identity);
-
-    const face = document.createElementNS(SVG_NS, "tspan");
-    face.setAttribute("x", String(x));
-    face.setAttribute("y", String(firstY + kLabelFontSize));
-    face.textContent = faceLabel(entry);
-    el.appendChild(face);
   }
 }

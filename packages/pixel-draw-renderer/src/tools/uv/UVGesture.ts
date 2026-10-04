@@ -3,12 +3,13 @@ import { clampRectPosition } from "../../utils/math.ts";
 import { sameRect } from "../../uv/geometry/geometry.ts";
 import {
   UV_RESIZE_CURSORS,
-  resizedRect,
-  type UVResizeHandle
-} from "../../uv/region/resizeHandles.ts";
+  resizedRect
+} from "./resizeHandles.ts";
+import type { UVResizeHandle } from "../../uv/region/layout/UVResizeTarget.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
   UVRegion,
+  UVResizeOptions,
   UVSlot
 } from "../../uv/region/UVRegion.ts";
 import type {
@@ -16,118 +17,81 @@ import type {
   Vec2
 } from "../../types.ts";
 
-export interface UVGestureModifiers {
-  aligned: boolean;
-}
-
-export interface UVGesture {
-  readonly id: string;
-  readonly cursor: string;
-  readonly moved: boolean;
-  move(pointer: Vec2): boolean;
-  preview(modifiers: UVGestureModifiers): UVRegion | null;
-  commit(modifiers: UVGestureModifiers): boolean;
-  restore(): void;
-}
-
-export interface UVMoveGestureOptions {
+export interface UVGestureTarget {
   id: string;
-  face: UVSlot | null;
+  slot: UVSlot | null;
   rect: SelectionRect;
   origin: Vec2;
 }
 
-export class UVMoveGesture implements UVGesture {
+interface UVRectEdit {
+  readonly cursor: string;
+  rectAt(pointer: Vec2): SelectionRect;
+  preview(rect: SelectionRect, options: UVResizeOptions): UVRegion | null;
+  commit(rect: SelectionRect, options: UVResizeOptions): boolean;
+}
+
+export class UVGesture {
   readonly id: string;
-  readonly cursor = "grabbing";
-  #uvMap: UVMap;
-  #face: UVSlot | undefined;
-  #origin: Vec2;
-  #baseRect: SelectionRect;
+  readonly #edit: UVRectEdit;
+  readonly #baseRect: SelectionRect;
   #liveRect: SelectionRect;
 
-  constructor(
+  static move(
     uvMap: UVMap,
-    options: UVMoveGestureOptions
-  ) {
-    this.id = options.id;
-    this.#uvMap = uvMap;
-    this.#face = options.face ?? undefined;
-    this.#origin = {
-      x: Math.floor(options.origin.x),
-      y: Math.floor(options.origin.y)
+    target: UVGestureTarget
+  ): UVGesture {
+    const { id, slot, rect } = target;
+    const origin = {
+      x: Math.floor(target.origin.x),
+      y: Math.floor(target.origin.y)
     };
-    this.#baseRect = { ...options.rect };
-    this.#liveRect = { ...options.rect };
+
+    return new UVGesture(target, {
+      cursor: "grabbing",
+      rectAt: (pointer) => clampRectPosition(
+        {
+          ...rect,
+          x: rect.x + Math.floor(pointer.x) - origin.x,
+          y: rect.y + Math.floor(pointer.y) - origin.y
+        },
+        uvMap.canvasSize()
+      ),
+      preview: (live) => uvMap.previewMove(id, live, slot),
+      commit: (live) => uvMap.move(id, live, slot)
+    });
   }
 
-  get moved(): boolean {
-    return !sameRect(this.#liveRect, this.#baseRect);
+  static resize(
+    uvMap: UVMap,
+    target: UVGestureTarget,
+    handle: UVResizeHandle
+  ): UVGesture {
+    const { id, slot, rect, origin } = target;
+
+    return new UVGesture(target, {
+      cursor: UV_RESIZE_CURSORS[handle],
+      rectAt: (pointer) => resizedRect(rect, handle, {
+        x: Math.round(pointer.x - origin.x),
+        y: Math.round(pointer.y - origin.y)
+      }),
+      preview: (live, options) => uvMap.previewResize(id, live, slot, options),
+      commit: (live, options) => uvMap.resize(id, live, slot, options)
+    });
   }
-
-  move(
-    pointer: Vec2
-  ): boolean {
-    const rect = clampRectPosition(
-      {
-        ...this.#baseRect,
-        x: this.#baseRect.x + Math.floor(pointer.x) - this.#origin.x,
-        y: this.#baseRect.y + Math.floor(pointer.y) - this.#origin.y
-      },
-      this.#uvMap.canvasSize()
-    );
-    if (sameRect(rect, this.#liveRect)) {
-      return false;
-    }
-
-    this.#liveRect = rect;
-
-    return true;
-  }
-
-  preview(): UVRegion | null {
-    return this.#uvMap.previewMove(this.id, this.#liveRect, this.#face);
-  }
-
-  commit(): boolean {
-    return this.moved && this.#uvMap.move(this.id, this.#liveRect, this.#face);
-  }
-
-  restore(): void {
-    this.#uvMap.previewMove(this.id, this.#baseRect, this.#face);
-  }
-}
-
-export interface UVResizeGestureOptions {
-  id: string;
-  slot: UVSlot | undefined;
-  handle: UVResizeHandle;
-  rect: SelectionRect;
-  origin: Vec2;
-}
-
-export class UVResizeGesture implements UVGesture {
-  readonly id: string;
-  readonly cursor: string;
-  #uvMap: UVMap;
-  #slot: UVSlot | undefined;
-  #handle: UVResizeHandle;
-  #origin: Vec2;
-  #baseRect: SelectionRect;
-  #liveRect: SelectionRect;
 
   constructor(
-    uvMap: UVMap,
-    options: UVResizeGestureOptions
+    target: UVGestureTarget,
+    edit: UVRectEdit
   ) {
-    this.id = options.id;
-    this.cursor = UV_RESIZE_CURSORS[options.handle];
-    this.#uvMap = uvMap;
-    this.#slot = options.slot;
-    this.#handle = options.handle;
-    this.#origin = { ...options.origin };
-    this.#baseRect = { ...options.rect };
-    this.#liveRect = { ...options.rect };
+    this.id = target.id;
+    this.#edit = edit;
+    this.#baseRect = { ...target.rect };
+    this.#liveRect = { ...target.rect };
+  }
+
+  get cursor(): string {
+    return this.#edit.cursor;
   }
 
   get moved(): boolean {
@@ -137,14 +101,7 @@ export class UVResizeGesture implements UVGesture {
   move(
     pointer: Vec2
   ): boolean {
-    const rect = resizedRect(
-      this.#baseRect,
-      this.#handle,
-      {
-        x: Math.round(pointer.x - this.#origin.x),
-        y: Math.round(pointer.y - this.#origin.y)
-      }
-    );
+    const rect = this.#edit.rectAt(pointer);
     if (sameRect(rect, this.#liveRect)) {
       return false;
     }
@@ -155,28 +112,18 @@ export class UVResizeGesture implements UVGesture {
   }
 
   preview(
-    modifiers: UVGestureModifiers
+    options: UVResizeOptions
   ): UVRegion | null {
-    return this.#uvMap.previewResize(
-      this.id,
-      this.#liveRect,
-      this.#slot,
-      modifiers
-    );
+    return this.#edit.preview(this.#liveRect, options);
   }
 
   commit(
-    modifiers: UVGestureModifiers
+    options: UVResizeOptions
   ): boolean {
-    return this.#uvMap.resize(
-      this.id,
-      this.#liveRect,
-      this.#slot,
-      modifiers
-    );
+    return this.moved && this.#edit.commit(this.#liveRect, options);
   }
 
   restore(): void {
-    this.#uvMap.previewResize(this.id, this.#baseRect, this.#slot);
+    this.#edit.preview(this.#baseRect, {});
   }
 }

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { stroke } from "./helpers/events.ts";
 import { readPixel } from "./fixtures/canvas.ts";
@@ -25,14 +25,14 @@ describe("PixelArtCanvas — fill mode", () => {
     }
 
     function makeClipped(
-      events: PixelBufferHookEvent[] = []
+      events: PixelCommand[] = []
     ) {
       const created = createPixelArtCanvas({
         zoom: { default: 1 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
         history: { enabled: true },
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
       created.manager.tools.fill.uvClip = true;
 
@@ -54,7 +54,7 @@ describe("PixelArtCanvas — fill mode", () => {
     });
 
     test("a slot edge stops a same-color flood seeded inside the slot", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = makeClipped(events);
       manager.uv.restore({
         id: "slot",
@@ -127,7 +127,7 @@ describe("PixelArtCanvas — fill mode", () => {
     });
 
     test("a clipped global fill emits a stroke, never global-fill", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = makeClipped(events);
       manager.tools.fill.global = true;
       manager.uv.restore({
@@ -154,7 +154,7 @@ describe("PixelArtCanvas — fill mode", () => {
     });
 
     test("an unclipped global fill still emits global-fill", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = makeClipped(events);
       manager.tools.fill.global = true;
       manager.tools.fill.uvClip = false;
@@ -195,8 +195,8 @@ describe("PixelArtCanvas — fill mode", () => {
 
     for (const global of [false, true]) {
       test(`without regions matches a plain fill (global: ${global})`, () => {
-        const plainEvents: PixelBufferHookEvent[] = [];
-        const clippedEvents: PixelBufferHookEvent[] = [];
+        const plainEvents: PixelCommand[] = [];
+        const clippedEvents: PixelCommand[] = [];
         const plain = makeClipped(plainEvents);
         plain.manager.tools.fill.uvClip = false;
         plain.manager.tools.fill.global = global;

@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import {
   addRegion,
   createNormalMapDocument,
@@ -16,7 +16,7 @@ import {
 describe("PixelDocument normal map", () => {
   describe("zones", () => {
     test("setting a new zone undoes as a deletion", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createNormalMapDocument(events);
       doc.enableNormalMap();
       const changes: (string[] | null)[] = [];
@@ -42,7 +42,7 @@ describe("PixelDocument normal map", () => {
     });
 
     test("undoing a replacement restores the previous zone", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createNormalMapDocument(events);
       doc.enableNormalMap();
       doc.setNormalMapZone({ regionId: "a", settings: { invert: true } });
@@ -87,7 +87,7 @@ describe("PixelDocument normal map", () => {
     });
 
     test("deleting an owned UV region removes its zone in the same entry", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const doc = createNormalMapDocument(events);
       doc.enableNormalMap();
       addRegion(doc, "a");
@@ -102,7 +102,10 @@ describe("PixelDocument normal map", () => {
         metadata: { id: "a" }
       });
 
-      assert.equal(doc.undo()?.action, "uv-delete");
+      assert.deepEqual(
+        doc.undo()?.undo.map(({ action }) => action),
+        ["uv-region-created", "normal-map-zone-set"]
+      );
       assert.notEqual(doc.uv.get("a"), undefined);
       assert.deepEqual(zoneIds(doc), ["a", "b"]);
       assert.deepEqual(

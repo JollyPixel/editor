@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   encodePngPixels,
-  type PixelBufferHookEvent
+  type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -25,13 +25,13 @@ import { callsOf } from "../helpers/mock.ts";
 import { MockRoom } from "../helpers/room.ts";
 
 // CONSTANTS
-const kResized: PixelBufferHookEvent = {
+const kResized: PixelCommand = {
   action: "resized",
   metadata: { size: { x: 1, y: 1 } }
 };
 
 class Host extends MockEmitter<{
-  "buffer-updated": (event: PixelBufferHookEvent) => void;
+  command: (event: PixelCommand) => void;
 }> {
   applyRemoteCommand = mock.fn();
   loadSnapshot = mock.fn();
@@ -57,24 +57,24 @@ function setup() {
 }
 
 describe("PixelSyncClient — document events", () => {
-  test("sends each buffer-updated command", () => {
+  test("sends each document command", () => {
     const { room, host } = setup();
 
-    host.emit("buffer-updated", kResized);
+    host.emit("command", kResized);
 
     assert.strictEqual(room.sent.length, 1);
   });
 
-  test("keeps the document onBufferUpdated hook free", () => {
+  test("shares the command event with other listeners", () => {
     const { manager: canvas } = createPixelArtCanvas();
-    const hooked: PixelBufferHookEvent[] = [];
-    canvas.document.onBufferUpdated = (event) => hooked.push(event);
+    const heard: PixelCommand[] = [];
+    canvas.document.on("command", (event) => heard.push(event));
     const room = new MockRoom({ clientId: "client-A" });
     new PixelSyncClient({ room, document: canvas.document });
 
-    canvas.document.commitPixels([{ x: 0, y: 0 }], gray(1));
+    canvas.document.paintPixels([{ x: 0, y: 0 }], gray(1));
 
-    assert.strictEqual(hooked.length, 1);
+    assert.strictEqual(heard.length, 1);
     assert.strictEqual(room.sent.length, 1);
     canvas.destroy();
   });
@@ -85,8 +85,8 @@ describe("PixelSyncClient — local mutations", () => {
     t.mock.timers.enable({ apis: ["Date"], now: 1000 });
     const { room, host } = setup();
 
-    host.emit("buffer-updated", kResized);
-    host.emit("buffer-updated", kResized);
+    host.emit("command", kResized);
+    host.emit("command", kResized);
 
     assert.deepStrictEqual(room.sent, [
       command("resized", kResized.metadata, { clientId: "client-A", seq: 1, timestamp: 1000 }),
@@ -98,11 +98,11 @@ describe("PixelSyncClient — local mutations", () => {
     t.mock.timers.enable({ apis: ["Date"], now: 1000 });
     const { room, host } = setup();
 
-    host.emit("buffer-updated", {
+    host.emit("command", {
       action: "stroke",
       metadata: { color: gray(1), positions: [{ x: 2, y: 3 }] }
     });
-    host.emit("buffer-updated", {
+    host.emit("command", {
       action: "select-edit",
       metadata: { positions: [{ x: 4, y: 5 }], colors: [gray(2)] }
     });
@@ -229,7 +229,7 @@ describe("PixelSyncClient — destroy", () => {
 
     client.destroy();
     room.deliverSnapshot();
-    host.emit("buffer-updated", kResized);
+    host.emit("command", kResized);
 
     assert.strictEqual(host.loadSnapshot.mock.callCount(), 0);
     assert.strictEqual(room.sent.length, 0);

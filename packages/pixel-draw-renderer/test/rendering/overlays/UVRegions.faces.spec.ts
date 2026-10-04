@@ -204,11 +204,15 @@ describe("UVRegionLayer — unfolded regions", () => {
     );
   });
 
-  test("a suppressed region ghost hides all of its faces", () => {
-    const { svg, overlay } = makeUnfolded();
+  test("a peer preview of the region replaces every face with a dashed ghost", () => {
+    const { svg, map, overlay } = makeUnfolded();
+    const region = map.get("r1");
+    assert.ok(region);
 
-    overlay.setGhostSuppressed([{ id: "r1", face: null }]);
+    overlay.setPeerPreviews(new Map([["peer-A", { region, face: null, color: "#f00" }]]));
 
-    assert.strictEqual(uvBorderRects(svg).length, 0);
+    const borders = uvBorderRects(svg);
+    assert.strictEqual(borders.length, 6);
+    assert.ok(borders.every((border) => border.hasAttribute("stroke-dasharray")));
   });
 });

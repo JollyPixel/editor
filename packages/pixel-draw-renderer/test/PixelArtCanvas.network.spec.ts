@@ -11,7 +11,7 @@ import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { stroke } from "./helpers/events.ts";
@@ -25,11 +25,11 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
 
   describe("stroke", () => {
     test("emits a single 'stroke' event on mouseup, deduped across moves", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = createPixelArtCanvas({
         zoom: { default: 4 },
         brush: { size: 1, maxSize: 1 },
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
 
       stroke(
@@ -61,14 +61,14 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
 
   describe("resized", () => {
     test("setTextureSize emits a 'resized' event", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = new PixelArtCanvas(container, {
         texture: {
           maxSize: 32,
           size: { x: 8, y: 8 }
-        },
-        onBufferUpdated: (event) => events.push(event)
+        }
       });
+      manager.document.on("command", (event) => events.push(event));
 
       manager.textureSize = { x: 16, y: 4 };
 
@@ -83,26 +83,31 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
       manager.destroy();
     });
 
-    test("invalid size does not emit an event", () => {
-      const events: PixelBufferHookEvent[] = [];
+    test("invalid size throws a RangeError and does not emit an event", () => {
+      const events: PixelCommand[] = [];
       const manager = new PixelArtCanvas(container, {
         texture: {
           maxSize: 32,
           size: { x: 8, y: 8 }
-        },
-        onBufferUpdated: (event) => events.push(event)
+        }
       });
+      manager.document.on("command", (event) => events.push(event));
 
-      manager.textureSize = { x: 0, y: 4 };
-
+      assert.throws(
+        () => {
+          manager.textureSize = { x: 0, y: 4 };
+        },
+        RangeError
+      );
       assert.strictEqual(events.length, 0);
+      assert.deepStrictEqual(manager.textureSize, { x: 8, y: 8 });
       manager.destroy();
     });
   });
 
   describe("global-fill", () => {
     test("emits a compact 'global-fill' event (fromColor/toColor, no positions)", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const { manager, canvas } = createPixelArtCanvas({
         texture: {
           size: { x: 16, y: 16 }
@@ -110,7 +115,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
         zoom: { default: 4 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
-        onBufferUpdated: (event) => events.push(event)
+        onCommand: (event) => events.push(event)
       });
       manager.tools.fill.global = true;
 
@@ -142,14 +147,14 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
 
   describe("texture-replaced", () => {
     test("setTexture emits a 'texture-replaced' event with decodable base64 pixels", () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = new PixelArtCanvas(container, {
         texture: {
           maxSize: 32,
           size: { x: 4, y: 4 }
-        },
-        onBufferUpdated: (event) => events.push(event)
+        }
       });
+      manager.document.on("command", (event) => events.push(event));
 
       const externalCanvas = document.createElement("canvas");
       externalCanvas.width = 4;
@@ -184,16 +189,16 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
   test(
     "select-edit: applies each position's own color without re-emitting onBufferUpdated (echo guard)",
     () => {
-      const events: PixelBufferHookEvent[] = [];
+      const events: PixelCommand[] = [];
       const manager = new PixelArtCanvas(container, {
         texture: {
           maxSize: 32,
           size: { x: 8, y: 8 }
-        },
-        onBufferUpdated: (event) => events.push(event)
+        }
       });
+      manager.document.on("command", (event) => events.push(event));
 
-      manager.applyRemoteCommand({
+      manager.document.applyRemoteCommand({
         action: "select-edit",
         metadata: {
           positions: [
@@ -221,16 +226,16 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
   );
 
   test("global-fill: recomputes matching pixels from fromColor and repaints them toColor", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(container, {
       texture: {
         maxSize: 32,
         size: { x: 4, y: 4 }
-      },
-      onBufferUpdated: (event) => events.push(event)
+      }
     });
+    manager.document.on("command", (event) => events.push(event));
 
-    manager.applyRemoteCommand({
+    manager.document.applyRemoteCommand({
       action: "global-fill",
       metadata: {
         fromColor: { r: 255, g: 255, b: 255, a: 255 },

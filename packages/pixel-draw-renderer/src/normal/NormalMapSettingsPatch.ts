@@ -23,31 +23,23 @@ type SettingGuards = {
 const kHeights: ReadonlySet<unknown> = new Set(NORMAL_MAP_HEIGHTS);
 const kBorders: ReadonlySet<unknown> = new Set(NORMAL_MAP_BORDERS);
 const kProfiles: ReadonlySet<unknown> = new Set(NORMAL_MAP_BEVEL_PROFILES);
-const kKeys: readonly SettingKey[] = [
-  "height",
-  "invert",
-  "strength",
-  "border",
-  "bevel",
-  "edgeIntensity",
-  "levels"
-];
 const kGuards: SettingGuards = {
   height: (value): value is NormalMapHeight => kHeights.has(value),
-  border: (value): value is NormalMapBorder => kBorders.has(value),
   invert: (value): value is boolean => typeof value === "boolean",
   strength: (value): value is number => isNonNegative(value),
-  edgeIntensity: (value): value is number => isNonNegative(value),
-  levels: (value): value is number => Number.isInteger(value) &&
-    (value === 0 || (Number(value) >= 3 && Number(value) % 2 === 1)),
+  border: (value): value is NormalMapBorder => kBorders.has(value),
   bevel: (value): value is NormalMapBevel => typeof value === "object" &&
     value !== null &&
     "width" in value &&
     "profile" in value &&
     isNonNegative(value.width) &&
     value.width > 0 &&
-    kProfiles.has(value.profile)
+    kProfiles.has(value.profile),
+  edgeIntensity: (value): value is number => isNonNegative(value),
+  levels: (value): value is number => Number.isInteger(value) &&
+    (value === 0 || (Number(value) >= 3 && Number(value) % 2 === 1))
 };
+const kKeys: readonly SettingKey[] = Object.keys(kGuards).filter(isSettingKey);
 
 export class NormalMapSettingsPatch {
   readonly values: Readonly<Partial<NormalMapSettings>>;
@@ -111,10 +103,8 @@ export class NormalMapSettingsPatch {
     );
   }
 
-  get isComplete(): boolean {
-    return kKeys.every(
-      (key) => this.values[key] !== undefined
-    );
+  get missingKey(): SettingKey | null {
+    return kKeys.find((key) => this.values[key] === undefined) ?? null;
   }
 
   applyTo(
@@ -123,9 +113,7 @@ export class NormalMapSettingsPatch {
     return Object.freeze({
       ...settings,
       ...this.values,
-      bevel: Object.freeze({
-        ...(this.values.bevel ?? settings.bevel)
-      })
+      bevel: this.values.bevel ?? settings.bevel
     });
   }
 
@@ -137,6 +125,12 @@ export class NormalMapSettingsPatch {
 
     return values;
   }
+}
+
+function isSettingKey(
+  key: string
+): key is SettingKey {
+  return key in kGuards;
 }
 
 function isNonNegative(

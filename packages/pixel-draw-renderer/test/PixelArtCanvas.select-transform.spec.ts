@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { readPixel } from "./fixtures/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import {
@@ -98,12 +98,12 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
 
   test("rotate, flip and delete each fire onDrawEnd and a 'select-edit' onBufferUpdated", () => {
     let drawEndCount = 0;
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = createSelectCanvas({
       onDrawEnd: () => {
         drawEndCount++;
       },
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     });
     const canvas = manager.canvas();
 

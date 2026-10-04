@@ -11,10 +11,14 @@ import {
   randomPositions
 } from "./_fixtures.ts";
 import { PixelBuffer } from "../src/buffer/PixelBuffer.ts";
-import { HistoryStack } from "../src/history/HistoryStack.ts";
+import { History } from "../src/history/History.ts";
+import type { HistoryEdit } from "../src/history/HistoryEntry.ts";
 import { groupPositionsByColor } from "../src/buffer/colorGroups.ts";
-import { UVMap } from "../src/uv/map/UVMap.ts";
-import type { HistoryStrokeEntry } from "../src/history/HistoryStack.types.ts";
+import { PixelDocumentState } from "../src/sync/PixelDocumentState.ts";
+import {
+  strokeOf,
+  strokesOf
+} from "../src/sync/PixelCommand.ts";
 import type { RGBA8, Vec2 } from "../src/types.ts";
 
 // CONSTANTS
@@ -25,25 +29,20 @@ const kGroupCount = 4096;
  * Benchmarks undo/redo replay and `groupPositionsByColor`.
  * Grouping cost scales with distinct color count.
  */
-const suite = defineSuite("History (history/HistoryStack)", (bench) => {
+const suite = defineSuite("History (history/History)", (bench) => {
   const rng = mulberry32();
-  const buffer = new PixelBuffer({
-    size: { x: kSide, y: kSide },
-    maxSize: kSide
+  const state = new PixelDocumentState({
+    buffer: new PixelBuffer({
+      size: { x: kSide, y: kSide },
+      maxSize: kSide
+    })
   });
-  const uvMap = new UVMap({
-    getCanvasSize() {
-      return { x: kSide, y: kSide };
-    }
-  });
-  const history = new HistoryStack(buffer, uvMap);
+  const history = new History({ enabled: true });
 
   const positions = randomPositions(256, { x: kSide, y: kSide }, rng);
-  const strokeEntry: Omit<HistoryStrokeEntry, "timestamp"> = {
-    action: "stroke",
-    positions,
-    beforeColors: positions.map(() => randomColor(rng)),
-    afterColor: { r: 0, g: 0, b: 0, a: 255 }
+  const strokeEdit: HistoryEdit = {
+    redo: [strokeOf(positions, { r: 0, g: 0, b: 0, a: 255 })],
+    undo: strokesOf(positions, positions.map(() => randomColor(rng)))
   };
 
   const fewColors = buildGroupInput(kGroupCount, 4, rng);
@@ -51,9 +50,9 @@ const suite = defineSuite("History (history/HistoryStack)", (bench) => {
 
   bench
     .add("push -> undo -> redo / 256-px stroke", () => {
-      history.push(strokeEntry);
-      history.undo();
-      history.redo();
+      history.push(strokeEdit);
+      history.undo((entry) => entry.undo.forEach((command) => state.apply(command)));
+      history.redo((entry) => entry.redo.forEach((command) => state.apply(command)));
     })
     .add("groupPositionsByColor / 4096 px, 4 colors", () => {
       groupPositionsByColor(fewColors.positions, fewColors.colors);

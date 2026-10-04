@@ -7,13 +7,7 @@ import type {
   SelectionRect,
   Vec2
 } from "../../types.ts";
-import {
-  clampRegion,
-  clampRotatedRegion,
-  moveRegion,
-  resizeRegion
-} from "./canvasBounds.ts";
-import { UVRegionCollection } from "../region/UVRegionCollection.ts";
+import { CanvasBounds } from "./CanvasBounds.ts";
 import {
   UVRegionFactory,
   type UVRegionCreateOptions
@@ -44,15 +38,17 @@ export interface UVMapOptions {
 
 export type UVLabelScope = "all" | "selected";
 
-// CONSTANTS
-const kDefaultSlot: UVSlot = "front";
+type UVRegionChange = (
+  region: UVRegion,
+  previous: UVRegionData
+) => void;
 
 export class UVMap extends Emitter<
   UVMapEvent
 > implements Iterable<UVRegion> {
   #getCanvasSize: () => Vec2;
   #factory: UVRegionFactory;
-  #regions = new UVRegionCollection();
+  #regions = new Map<string, UVRegion>();
   #selectedRegionId: string | null = null;
   #selectedSlot: UVSlot | null = null;
   #showAll = false;
@@ -149,9 +145,9 @@ export class UVMap extends Emitter<
 
   select(
     id: string | null,
-    slot?: UVSlot
+    slot: UVSlot | null = null
   ): void {
-    if (this.#applySelection(id, slot ?? null)) {
+    if (this.#applySelection(id, slot)) {
       this.#emitSelectionChanged();
       this.emit("changed");
     }
@@ -162,86 +158,62 @@ export class UVMap extends Emitter<
   ): UVRegion {
     const region = this.#factory.create(options);
 
-    this.#regions.set(region);
-    this.emit("region-created", {
-      region
-    });
+    this.#regions.set(region.id, region);
+    this.emit("region-created", { region });
     this.emit("changed");
 
     return region;
   }
 
   restore(
-    region: UVRegion | UVRegionData
+    value: UVRegion | UVRegionData
   ): UVRegion {
-    const stored = UVRegion.from(region);
-    if (this.#regions.has(stored.id)) {
-      this.restoreState(stored);
+    const region = UVRegion.from(value);
+    if (this.#regions.has(region.id)) {
+      this.restoreState(region);
 
-      return this.#regions.get(stored.id) ?? stored;
+      return region;
     }
 
-    this.#regions.set(stored);
-
-    this.emit("region-created", {
-      region: stored
-    });
+    this.#regions.set(region.id, region);
+    this.emit("region-created", { region });
     this.emit("changed");
 
-    return stored;
+    return region;
   }
 
   delete(
     id: string
   ): boolean {
-    const region = this.#regions.get(id);
-    if (!region) {
-      return false;
-    }
+    return this.#deleteWhere((region) => region.id === id) > 0;
+  }
 
-    this.#regions.delete(id);
-    const selectionChanged = this.#selectedRegionId === id;
-    if (selectionChanged) {
-      this.#selectedRegionId = null;
-      this.#selectedSlot = null;
+  clear(
+    filter: (region: UVRegion) => boolean = () => true
+  ): void {
+    this.#deleteWhere(filter);
+    if (this.#regions.size === 0) {
+      this.#factory.reset();
     }
-    this.emit(
-      "region-deleted",
-      { region }
-    );
-    if (selectionChanged) {
-      this.#emitSelectionChanged();
-    }
-    this.emit("changed");
-
-    return true;
   }
 
   move(
     id: string,
     rect: SelectionRect,
-    slot?: UVSlot
+    slot: UVSlot | null = null
   ): boolean {
     const region = this.#regions.get(id);
-    if (!region) {
+    const target = region === undefined ? undefined : this.#movementTarget(region, slot);
+    if (region === undefined || target === undefined) {
       return false;
     }
 
-    const target = this.#resolveSlot(region, slot);
-    if (target === undefined) {
-      return false;
-    }
-
-    const previousRect = region.rectFor(
-      target ?? kDefaultSlot
-    );
-    const moved = moveRegion(region, rect, target, this.#getCanvasSize());
-    this.#regions.set(moved);
-
+    const moved = this.#bounds().move(region, rect, target);
+    this.#regions.set(id, moved);
     this.emit("region-moved", {
       region: moved,
       face: target,
-      previousRect
+      previousRect: region.rectFor(target)
     });
     this.emit("changed");
 
@@ -251,49 +223,34 @@ export class UVMap extends Emitter<
   previewMove(
     id: string,
     rect: SelectionRect,
-    slot?: UVSlot
+    slot: UVSlot | null = null
   ): UVRegion | null {
     const region = this.#regions.get(id);
-    if (!region) {
+    const target = region === undefined ? undefined : this.#movementTarget(region, slot);
+    if (region === undefined || target === undefined) {
       return null;
     }
 
-    const target = this.#resolveSlot(
-      region,
-      slot
-    );
-    if (target === undefined) {
-      return null;
-    }
-
-    return this.#previewed(
-      moveRegion(region, rect, target, this.#getCanvasSize()),
-      target
-    );
+    return this.#previewed(this.#bounds().move(region, rect, target), target);
   }
 
   resize(
     id: string,
     rect: SelectionRect,
-    slot?: UVSlot,
+    slot: UVSlot | null = null,
     options: UVResizeOptions = {}
   ): boolean {
     return this.#replace(
       id,
-      (region) => resizeRegion(
-        region,
-        rect,
-        slot,
-        options,
-        this.#getCanvasSize()
-      )
+      (region) => this.#bounds().resize(region, rect, slot, options),
+      this.#stateChanged
     );
   }
 
   previewResize(
     id: string,
     rect: SelectionRect,
-    slot?: UVSlot,
+    slot: UVSlot | null = null,
     options: UVResizeOptions = {}
   ): UVRegion | null {
     const region = this.#regions.get(id);
@@ -301,29 +258,25 @@ export class UVMap extends Emitter<
       return null;
     }
 
-    return this.#previewed(
-      resizeRegion(region, rect, slot, options, this.#getCanvasSize()),
-      slot ?? null
-    );
+    return this.#previewed(this.#bounds().resize(region, rect, slot, options), slot);
+  }
+
+  endPreview(
+    id: string,
+    committed: boolean
+  ): void {
+    this.emit("region-drag-ended", { id, committed });
   }
 
   setState(
     id: string,
     state: UVRegionState,
-    slot?: UVSlot
+    slot: UVSlot | null = null
   ): boolean {
     return this.#replace(
       id,
-      (region) => {
-        switch (state) {
-          case "stacked":
-            return region.stack(slot);
-          case "unfolded":
-            return clampRegion(region.unfold(), this.#getCanvasSize());
-          default:
-            return region.free();
-        }
-      }
+      (region) => this.#withState(region, state, slot),
+      this.#stateChanged
     );
   }
 
@@ -333,7 +286,8 @@ export class UVMap extends Emitter<
   ): boolean {
     return this.#replace(
       id,
-      (region) => region.renamed(name)
+      (region) => region.renamed(name),
+      this.#stateChanged
     );
   }
 
@@ -342,35 +296,24 @@ export class UVMap extends Emitter<
   ): boolean {
     const next = UVRegion.from(value);
 
-    return this.#replace(
-      next.id,
-      () => next
-    );
+    return this.#replace(next.id, () => next, this.#stateChanged);
   }
 
   rotate(
     id: string,
     direction: RotationDirection,
-    slot?: UVSlot
+    slot: UVSlot | null = null
   ): boolean {
     const region = this.#regions.get(id);
-    if (!region) {
-      return false;
-    }
-
-    const face = region.movementScope === "slot" ? slot ?? null : null;
-    if (region.movementScope === "slot" && face === null) {
+    const face = region === undefined ? undefined : this.#movementTarget(region, slot);
+    if (face === undefined) {
       return false;
     }
 
     return this.#replace(
       id,
-      (current) => clampRotatedRegion(
-        current.rotated(direction, face ?? undefined),
-        face,
-        this.#getCanvasSize()
-      ),
-      face
+      (current) => this.#bounds().clampSlot(current.rotated(direction, face), face),
+      this.#rotated(face)
     );
   }
 
@@ -380,30 +323,30 @@ export class UVMap extends Emitter<
   ): boolean {
     const next = UVRegion.from(value);
 
-    return this.#replace(
-      next.id,
-      () => next,
-      face
-    );
+    return this.#replace(next.id, () => next, this.#rotated(face));
   }
 
-  clear(
-    filter: (region: UVRegion) => boolean = () => true
-  ): void {
-    for (const region of [...this.#regions.values()]) {
-      if (filter(region)) {
-        this.delete(region.id);
-      }
-    }
-    if (this.#regions.size === 0) {
-      this.#factory.reset();
+  #withState(
+    region: UVRegion,
+    state: UVRegionState,
+    slot: UVSlot | null
+  ): UVRegion {
+    switch (state) {
+      case "stacked":
+        return region.stack(slot);
+      case "unfolded":
+        return this.#bounds().clamp(region.unfold());
+      case "free":
+        return region.free();
+      default:
+        return state satisfies never;
     }
   }
 
   #replace(
     id: string,
     transform: (region: UVRegion) => UVRegion,
-    rotatedFace?: UVSlot | null
+    announce: UVRegionChange
   ): boolean {
     const region = this.#regions.get(id);
     if (!region) {
@@ -415,27 +358,12 @@ export class UVMap extends Emitter<
       return false;
     }
 
-    const previous = region.toJSON();
-    this.#regions.set(next);
-
+    this.#regions.set(id, next);
     const selectionChanged = this.#applySelection(
       this.#selectedRegionId,
       this.#selectedSlot
     );
-
-    if (rotatedFace === undefined) {
-      this.emit("region-state-changed", {
-        region: next,
-        previous
-      });
-    }
-    else {
-      this.emit("region-rotated", {
-        region: next,
-        previous,
-        face: rotatedFace
-      });
-    }
+    announce(next, region.toJSON());
     if (selectionChanged) {
       this.#emitSelectionChanged();
     }
@@ -444,17 +372,57 @@ export class UVMap extends Emitter<
     return true;
   }
 
-  #resolveSlot(
+  readonly #stateChanged: UVRegionChange = (region, previous) => {
+    this.emit("region-state-changed", { region, previous });
+  };
+
+  #rotated(
+    face: UVSlot | null
+  ): UVRegionChange {
+    return (region, previous) => {
+      this.emit("region-rotated", { region, previous, face });
+    };
+  }
+
+  #deleteWhere(
+    filter: (region: UVRegion) => boolean
+  ): number {
+    const removed = [...this.#regions.values()].filter(filter);
+    for (const region of removed) {
+      this.#regions.delete(region.id);
+    }
+
+    const selectionChanged = removed.some((region) => region.id === this.#selectedRegionId);
+    if (selectionChanged) {
+      this.#selectedRegionId = null;
+      this.#selectedSlot = null;
+    }
+    for (const region of removed) {
+      this.emit("region-deleted", { region });
+    }
+    if (selectionChanged) {
+      this.#emitSelectionChanged();
+    }
+    if (removed.length > 0) {
+      this.emit("changed");
+    }
+
+    return removed.length;
+  }
+
+  #movementTarget(
     region: UVRegion,
-    slot: UVSlot | undefined
+    slot: UVSlot | null
   ): UVSlot | null | undefined {
     if (region.movementScope === "region") {
       return null;
     }
 
-    return slot !== undefined && region.slots.includes(slot) ?
-      slot :
-      undefined;
+    return region.isTarget(slot) ? slot : undefined;
+  }
+
+  #bounds(): CanvasBounds {
+    return new CanvasBounds(this.#getCanvasSize());
   }
 
   #applySelection(
@@ -474,13 +442,9 @@ export class UVMap extends Emitter<
       return false;
     }
 
-    const activeSlots = region.slotsOf()
-      .map(({ slot }) => slot)
-      .filter((slot) => slot !== null);
     let nextSlot: UVSlot | null = null;
     if (region.movementScope === "slot") {
-      const firstActiveSlot = activeSlots[0] ?? null;
-      nextSlot = slot !== null && activeSlots.includes(slot) ? slot : firstActiveSlot;
+      nextSlot = region.isTarget(slot) ? slot : region.activeSlots[0];
     }
     const changed = this.#selectedRegionId !== id || this.#selectedSlot !== nextSlot;
     this.#selectedRegionId = id;

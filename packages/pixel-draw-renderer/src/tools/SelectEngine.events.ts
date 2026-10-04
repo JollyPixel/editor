@@ -10,7 +10,7 @@ export type SelectionProgressEvent =
     phase: "moving";
     sourceRect: SelectionRect;
     liveRect: SelectionRect;
-    mask: boolean[];
+    mask: readonly boolean[];
     blankSource: boolean;
   };
 

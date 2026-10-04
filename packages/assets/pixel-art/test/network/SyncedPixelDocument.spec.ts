@@ -60,7 +60,7 @@ describe("SyncedPixelDocument", () => {
     });
     room.deliverSnapshot(snapshotOf({ x: 4, y: 4 }));
 
-    synced.document.commitPixels([{ x: 1, y: 1 }], kRed);
+    synced.document.paintPixels([{ x: 1, y: 1 }], kRed);
 
     assert.deepStrictEqual(room.sent.map((sent) => sent.action), ["stroke"]);
     assert.strictEqual(synced.document.history.canUndo, true);
@@ -91,7 +91,7 @@ describe("SyncedPixelDocument", () => {
     room.deliverSnapshot(snapshotOf({ x: 4, y: 4 }));
 
     synced.dispose();
-    synced.document.commitPixels([{ x: 0, y: 0 }], kRed);
+    synced.document.paintPixels([{ x: 0, y: 0 }], kRed);
     room.deliverSnapshot(snapshotOf({ x: 8, y: 8 }));
 
     assert.deepStrictEqual(room.sent, []);

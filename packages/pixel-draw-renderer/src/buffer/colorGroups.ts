@@ -3,26 +3,10 @@ import type {
   RGBA8,
   Vec2
 } from "../types.ts";
-import type {
-  DefaultPixelBuffer
-} from "./types.ts";
 
 export interface ColorGroup {
   color: RGBA8;
   positions: Vec2[];
-}
-
-interface ColorGroupBuffer extends DefaultPixelBuffer {
-  drawColorGroups(
-    groups: Iterable<ColorGroup>
-  ): void;
-}
-
-function supportsColorGroups(
-  buffer: DefaultPixelBuffer
-): buffer is ColorGroupBuffer {
-  return "drawColorGroups" in buffer &&
-    typeof buffer.drawColorGroups === "function";
 }
 
 function isByte(
@@ -68,22 +52,4 @@ export function groupPositionsByColor(
   return [
     ...groups.values()
   ];
-}
-
-export function applyColorGroups(
-  buffer: DefaultPixelBuffer,
-  groups: ColorGroup[]
-): void {
-  if (supportsColorGroups(buffer)) {
-    buffer.drawColorGroups(groups);
-
-    return;
-  }
-
-  for (const group of groups) {
-    buffer.drawPixels(
-      group.positions,
-      group.color
-    );
-  }
 }

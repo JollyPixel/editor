@@ -50,7 +50,7 @@ The brush writing its erase color, transparent by default. Erasing is a stroke l
 
 ### Stroke
 
-One completed paint or line operation that applies a brush color to a set of pixel positions.
+One completed paint or line operation that applies a brush color to a set of pixel positions. The color is read once, when the stroke starts.
 
 ### Selection
 
@@ -66,7 +66,7 @@ A named texture area mapped to one or more mesh texture slots. A region may use 
 
 ### UV Slot
 
-A consumer-defined texture mapping identifier such as `front`, `top`, or `top.1`. The renderer core treats slots as open strings; a mesh integration decides which polygons each slot controls.
+A consumer-defined texture mapping identifier such as `front`, `top`, or `top.1`. The renderer core treats slots as open strings; a mesh integration decides which polygons each slot controls. A region may carry geometry for inactive slots; only active slots are drawn, selected, moved, rotated or resized.
 
 ### UV Map
 
@@ -116,9 +116,13 @@ An override of the normal map settings for one UV region, addressed by region id
 
 What the canvas draws for the texture: its pixels (*albedo*) or its generated normal map (*normal*). It is view state, never stored or synchronized. The normal view is read-only for pixels: modes that write pixels are unavailable and a selection cannot move, delete or transform pixels.
 
+### Pixel Command
+
+One change to a pixel document: a stroke, a texture resize or replacement, a UV region change, or a normal map settings change. Local edits, undo and redo emit commands, and peers apply them. *Document state* is the texture, UV map and normal map settings without history or view; it applies every command, remote, undone or redone, the same way.
+
 ### History Entry
 
-The reversible record of one local edit, used by undo and redo.
+The reversible record of one local edit, used by undo and redo: the commands that redo it and the commands that undo it.
 
 ## Naming boundaries
 

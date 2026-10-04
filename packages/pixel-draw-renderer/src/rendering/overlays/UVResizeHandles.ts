@@ -3,17 +3,15 @@ import { contrastingColor } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
-import {
-  UV_RESIZE_HANDLE_SIZE,
-  resizeTargets,
-  screenRectOf,
-  type UVView
-} from "../../uv/region/resizeHandles.ts";
+import type { ScreenProjection } from "../Viewport.ts";
 import type {
   UVRegion,
   UVSlot
 } from "../../uv/region/UVRegion.ts";
 import type { Vec2 } from "../../types.ts";
+
+// CONSTANTS
+const kHandleSize = 7;
 
 export class UVResizeHandles {
   #group: SVGGElement;
@@ -28,7 +26,7 @@ export class UVResizeHandles {
   render(
     region: UVRegion | null,
     selectedSlot: UVSlot | null,
-    view: UVView
+    view: ScreenProjection
   ): void {
     const corners = region === null ?
       [] :
@@ -41,7 +39,7 @@ export class UVResizeHandles {
       return;
     }
 
-    const half = UV_RESIZE_HANDLE_SIZE / 2;
+    const half = kHandleSize / 2;
     const fill = contrastingColor(region.color);
     corners.forEach((corner, index) => {
       const square = this.#squares[index] ?? this.#createSquare();
@@ -63,11 +61,11 @@ export class UVResizeHandles {
   #cornersOf(
     region: UVRegion,
     selectedSlot: UVSlot | null,
-    view: UVView
+    view: ScreenProjection
   ): Vec2[] {
     const corners: Vec2[] = [];
-    for (const { rect, handles } of resizeTargets(region, selectedSlot)) {
-      const screen = screenRectOf(rect, view);
+    for (const { rect, handles } of region.resizeTargets(selectedSlot)) {
+      const screen = view.toScreenRect(rect);
       const left = screen.x;
       const top = screen.y;
       const right = screen.x + screen.width;
@@ -91,8 +89,8 @@ export class UVResizeHandles {
   #createSquare(): SVGRectElement {
     const square = document.createElementNS(SVG_NS, "rect");
     square.setAttribute("part", "uv-resize-handle");
-    square.setAttribute("width", String(UV_RESIZE_HANDLE_SIZE));
-    square.setAttribute("height", String(UV_RESIZE_HANDLE_SIZE));
+    square.setAttribute("width", String(kHandleSize));
+    square.setAttribute("height", String(kHandleSize));
     square.setAttribute("stroke-width", "1");
     square.style.pointerEvents = "none";
     this.#squares.push(square);

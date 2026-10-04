@@ -73,3 +73,33 @@ describe("RectArea", () => {
     assert.strictEqual(leftOfOrigin.fitsWithin({ x: 4, y: 4 }), false);
   });
 });
+
+describe("RectArea.intersection", () => {
+  test("leaves a rectangle unchanged when it is already inside", () => {
+    assert.deepStrictEqual(
+      RectArea.from({ x: 2, y: 3, width: 4, height: 5 }).intersection({ x: 10, y: 10 }),
+      { x: 2, y: 3, width: 4, height: 5 }
+    );
+  });
+
+  test("clips every side to the bounds", () => {
+    assert.deepStrictEqual(
+      RectArea.from({ x: -2, y: -3, width: 15, height: 16 }).intersection({ x: 10, y: 10 }),
+      { x: 0, y: 0, width: 10, height: 10 }
+    );
+  });
+
+  test("preserves only the intersecting portion", () => {
+    assert.deepStrictEqual(
+      RectArea.from({ x: -3, y: 2, width: 5, height: 4 }).intersection({ x: 10, y: 10 }),
+      { x: 0, y: 2, width: 2, height: 4 }
+    );
+  });
+
+  test("returns null when the rectangle is entirely outside", () => {
+    assert.strictEqual(
+      RectArea.from({ x: -4, y: 2, width: 3, height: 4 }).intersection({ x: 10, y: 10 }),
+      null
+    );
+  });
+});

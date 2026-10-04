@@ -7,13 +7,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { PointerController } from "#src/input/PointerController.ts";
 import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
-import {
-  createPointerController,
-  makeCenteredViewport
-} from "../helpers/input/pointer.ts";
+import { makeCenteredViewport } from "../helpers/input/pointer.ts";
 import { moveTo } from "../helpers/events.ts";
 
 describe("PointerController", () => {
@@ -25,15 +23,15 @@ describe("PointerController", () => {
     viewport = makeCenteredViewport();
   });
 
-  describe("onTextureCursorMove", () => {
-    test("fires with the resolved texture position on mousemove, relative to the canvas bounds", (t) => {
+  describe("onHover", () => {
+    test("reports the canvas and texture positions relative to the canvas bounds, reading them once", (t) => {
       const { actions, calls } = makeActions();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions
       });
-      t.mock.method(
+      const bounds = t.mock.method(
         canvas,
         "getBoundingClientRect",
         () => new window.DOMRect(30, 20, 200, 200)
@@ -41,20 +39,18 @@ describe("PointerController", () => {
 
       moveTo(canvas, 130, 120);
 
-      assert.strictEqual(
-        calls.onTextureCursorMove.length,
-        1
-      );
-      assert.deepStrictEqual(
-        calls.onTextureCursorMove[0][0],
-        { x: 8, y: 8 }
-      );
+      assert.strictEqual(bounds.mock.callCount(), 1);
+      assert.deepStrictEqual(calls.onHover, [{
+        canvas: { x: 100, y: 100 },
+        texture: { x: 8, y: 8 },
+        boundedTexture: { x: 8, y: 8 }
+      }]);
       ctrl.destroy();
     });
 
-    test("fires with null when the cursor is outside texture bounds", () => {
+    test("reports a null bounded texture position when the cursor is outside the texture", () => {
       const { actions, calls } = makeActions();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions
@@ -62,20 +58,14 @@ describe("PointerController", () => {
 
       moveTo(canvas, 1000, 1000);
 
-      assert.strictEqual(
-        calls.onTextureCursorMove.length,
-        1
-      );
-      assert.strictEqual(
-        calls.onTextureCursorMove[0][0],
-        null
-      );
+      assert.strictEqual(calls.onHover.length, 1);
+      assert.strictEqual(calls.onHover[0]?.boundedTexture, null);
       ctrl.destroy();
     });
 
-    test("mouseleave reports null for both the canvas hover and the texture cursor", () => {
+    test("mouseleave reports null", () => {
       const { actions, calls } = makeActions();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions
@@ -86,14 +76,7 @@ describe("PointerController", () => {
         new MouseEvent("mouseleave", { bubbles: true })
       );
 
-      assert.strictEqual(
-        calls.onTextureCursorMove.at(-1)?.[0],
-        null
-      );
-      assert.deepStrictEqual(
-        calls.onCanvasHover.at(-1),
-        [null]
-      );
+      assert.strictEqual(calls.onHover.at(-1), null);
       ctrl.destroy();
     });
   });

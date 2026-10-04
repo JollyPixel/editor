@@ -37,7 +37,7 @@ describe("pixelArtDocumentFromPng", () => {
     pixelArtAssetKind().load(state, content);
 
     assert.deepEqual(size, { x: 3, y: 2 });
-    assert.deepEqual(state.buffer.size(), { x: 3, y: 2 });
-    assert.equal(state.buffer.pixels()[3], 255);
+    assert.deepEqual(state.document.buffer.size(), { x: 3, y: 2 });
+    assert.equal(state.document.buffer.pixels()[3], 255);
   });
 });

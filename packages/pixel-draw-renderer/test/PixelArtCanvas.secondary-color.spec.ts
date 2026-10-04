@@ -11,7 +11,7 @@ import { createPixelArtCanvas } from "./helpers/canvas.ts";
 
 describe("PixelArtCanvas — secondary color (right-click)", () => {
   function makeManager(
-    onBufferUpdated: (event: unknown) => void
+    onCommand: (event: unknown) => void
   ): PixelArtCanvas {
     return createPixelArtCanvas({
       texture: { size: { x: 16, y: 16 } },
@@ -22,7 +22,7 @@ describe("PixelArtCanvas — secondary color (right-click)", () => {
         color: "#000000",
         secondaryColor: "#00FF00"
       },
-      onBufferUpdated
+      onCommand
     }).manager;
   }
 
@@ -39,7 +39,10 @@ describe("PixelArtCanvas — secondary color (right-click)", () => {
       bubbles: true
     }));
     canvas.dispatchEvent(
-      new MouseEvent("mouseup", { bubbles: true })
+      new MouseEvent("mouseup", {
+        button: 2,
+        bubbles: true
+      })
     );
 
     assert.strictEqual(events.length, 1);
@@ -70,7 +73,7 @@ describe("PixelArtCanvas — secondary color (right-click)", () => {
         color: "#000000",
         secondaryColor: "#00FF00"
       },
-      onBufferUpdated: (event) => events.push(event)
+      onCommand: (event) => events.push(event)
     });
 
     canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -219,7 +222,10 @@ describe("PixelArtCanvas — secondary color (right-click)", () => {
       clientY: 100,
       bubbles: true
     }));
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent("mouseup", {
+      button: 2,
+      bubbles: true
+    }));
 
     assert.strictEqual(
       events.length,

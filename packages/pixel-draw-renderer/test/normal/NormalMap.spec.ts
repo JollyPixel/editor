@@ -49,7 +49,7 @@ describe("NormalMap", () => {
     const doc = createDocument();
     const normals = doc.normals;
 
-    doc.commitPixels([{ x: 1, y: 1 }], kRed);
+    doc.paintPixels([{ x: 1, y: 1 }], kRed);
 
     assert.equal(frames.length, 0);
     assert.equal(normals.pixels.length, 0);
@@ -78,8 +78,8 @@ describe("NormalMap", () => {
     const changes: SelectionRect[] = [];
     doc.normals.on("changed", (event) => changes.push(event.bounds));
 
-    doc.commitPixels([{ x: 2, y: 2 }], kRed);
-    doc.commitPixels([{ x: 3, y: 2 }], kRed);
+    doc.paintPixels([{ x: 2, y: 2 }], kRed);
+    doc.paintPixels([{ x: 3, y: 2 }], kRed);
     assert.equal(frames.length, 1);
     frames.run();
 
@@ -98,7 +98,7 @@ describe("NormalMap", () => {
     releaseA();
     assert.equal(doc.normals.retained, true);
     releaseB();
-    doc.commitPixels([{ x: 1, y: 1 }], kRed);
+    doc.paintPixels([{ x: 1, y: 1 }], kRed);
 
     assert.equal(doc.normals.retained, false);
     assert.equal(frames.length, 0);
@@ -109,7 +109,7 @@ describe("NormalMap", () => {
     new FakeFrames(t);
     const doc = createDocument();
     doc.normals.retain();
-    doc.commitPixels([{ x: 1, y: 1 }, { x: 5, y: 5 }], kRed);
+    doc.paintPixels([{ x: 1, y: 1 }, { x: 5, y: 5 }], kRed);
     doc.normals.flush();
 
     doc.uv.restore({
@@ -156,8 +156,8 @@ describe("NormalMap", () => {
       new FakeFrames(t);
       const events: string[] = [];
       const doc = createDocument();
-      doc.onBufferUpdated = (event) => events.push(event.action);
-      doc.commitPixels([{ x: 1, y: 1 }], kRed);
+      doc.on("command", (event) => events.push(event.action));
+      doc.paintPixels([{ x: 1, y: 1 }], kRed);
       events.length = 0;
       doc.normals.retain();
       const preview = doc.normalMap!.withDefaults({ strength: 8 });
@@ -174,7 +174,7 @@ describe("NormalMap", () => {
     test("a committed change drops the preview on every island", (t) => {
       new FakeFrames(t);
       const doc = createDocument();
-      doc.commitPixels([{ x: 1, y: 1 }, { x: 5, y: 5 }], kRed);
+      doc.paintPixels([{ x: 1, y: 1 }, { x: 5, y: 5 }], kRed);
       doc.uv.restore({
         id: "tile",
         color: "#fff",

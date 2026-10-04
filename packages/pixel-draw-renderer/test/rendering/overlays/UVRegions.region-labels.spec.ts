@@ -11,6 +11,7 @@ import {
   makeUvLabelSetup,
   uvLabelTexts
 } from "../../helpers/uv/labels.ts";
+import { uvBorderRects } from "../../helpers/uv/borders.ts";
 
 describe("UVRegionLayer — region labels", () => {
   function labelLines(
@@ -99,7 +100,7 @@ describe("UVRegionLayer — region labels", () => {
     map.showAll = true;
 
     assert.strictEqual(
-      svg.querySelectorAll("g > rect:last-child").length,
+      uvBorderRects(svg).length,
       2
     );
     assert.deepStrictEqual(uvLabelTexts(svg), []);
@@ -131,7 +132,7 @@ describe("UVRegionLayer — region labels", () => {
     map.labelScope = "selected";
     assert.deepStrictEqual(uvLabelTexts(svg), []);
     assert.strictEqual(
-      svg.querySelectorAll("g > rect:last-child").length,
+      uvBorderRects(svg).length,
       7,
       "every border stays drawn"
     );

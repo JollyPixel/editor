@@ -1,8 +1,4 @@
 // Import Internal Dependencies
-import {
-  clipRectToBounds,
-  intersectRects
-} from "./math.ts";
 import type {
   SelectionRect,
   Vec2
@@ -68,11 +64,15 @@ export class RectArea {
   constructor(
     rect: SelectionRect
   ) {
-    this.#rect = { ...rect };
+    this.#rect = {
+      ...rect
+    };
   }
 
   get bounds(): SelectionRect {
-    return { ...this.#rect };
+    return {
+      ...this.#rect
+    };
   }
 
   get isEmpty(): boolean {
@@ -90,7 +90,12 @@ export class RectArea {
   intersection(
     bounds: Vec2
   ): SelectionRect | null {
-    return clipRectToBounds(this.#rect, bounds);
+    return RectArea.#intersect(this.#rect, {
+      x: 0,
+      y: 0,
+      width: bounds.x,
+      height: bounds.y
+    });
   }
 
   grown(
@@ -113,17 +118,28 @@ export class RectArea {
     return new RectArea({
       x,
       y,
-      width: Math.max(this.#rect.x + this.#rect.width, rect.x + rect.width) - x,
-      height: Math.max(this.#rect.y + this.#rect.height, rect.y + rect.height) - y
+      width: Math.max(
+        this.#rect.x + this.#rect.width,
+        rect.x + rect.width
+      ) - x,
+      height: Math.max(
+        this.#rect.y + this.#rect.height,
+        rect.y + rect.height
+      ) - y
     });
   }
 
   clippedTo(
     rect: SelectionRect
   ): RectArea | null {
-    const clipped = intersectRects(this.#rect, rect);
+    const clipped = RectArea.#intersect(
+      this.#rect,
+      rect
+    );
 
-    return clipped === null ? null : new RectArea(clipped);
+    return clipped === null
+      ? null
+      : new RectArea(clipped);
   }
 
   touchesEdgeOf(
@@ -160,5 +176,28 @@ export class RectArea {
       sourceIndex += this.#rect.width;
       indexInBounds += bounds.x;
     }
+  }
+
+  static #intersect(
+    a: SelectionRect,
+    b: SelectionRect
+  ): SelectionRect | null {
+    const minX = Math.max(a.x, b.x);
+    const minY = Math.max(a.y, b.y);
+    const maxX = Math.min(a.x + a.width, b.x + b.width);
+    const maxY = Math.min(a.y + a.height, b.y + b.height);
+    if (
+      maxX <= minX ||
+      maxY <= minY
+    ) {
+      return null;
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
   }
 }

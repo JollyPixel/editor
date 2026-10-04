@@ -1,11 +1,26 @@
 // Import Internal Dependencies
-import type { InputActions } from "#src/input/InputActions.ts";
+import type {
+  InputActions,
+  PointerPosition
+} from "#src/input/InputActions.ts";
+import type { BrushColorSlot } from "#src/tools/Brush.ts";
 
-export type InputActionCalls = Record<keyof InputActions, unknown[][]>;
+export interface InputActionCalls {
+  onPointerDown: [BrushColorSlot, number, number, boolean][];
+  onPointerMove: [BrushColorSlot, number, number][];
+  onPointerUp: BrushColorSlot[];
+  onCtrlWheel: number[];
+  onPanStart: number;
+  onPanEnd: number;
+  onHover: (PointerPosition | null)[];
+  onMouseUp: number;
+  onBlur: number;
+}
 
 export interface MakeActionsOptions {
-  onPrimaryDownReturns?: boolean;
-  onSecondaryDownReturns?: boolean;
+  tracksDrags?: boolean;
+  pansOnPrimary?: boolean;
+  handlesCtrlWheel?: boolean;
 }
 
 export function makeActions(
@@ -15,88 +30,58 @@ export function makeActions(
   calls: InputActionCalls;
 } {
   const calls: InputActionCalls = {
-    onPrimaryDown: [],
-    onPrimaryMove: [],
-    onPrimaryUp: [],
-    onSecondaryDown: [],
-    onSecondaryMove: [],
-    onSecondaryUp: [],
-    onPanStart: [],
-    onPanMove: [],
-    onPanEnd: [],
-    onZoom: [],
-    onCanvasHover: [],
-    onTextureCursorMove: [],
-    onMouseUp: [],
-    onBlur: []
+    onPointerDown: [],
+    onPointerMove: [],
+    onPointerUp: [],
+    onCtrlWheel: [],
+    onPanStart: 0,
+    onPanEnd: 0,
+    onHover: [],
+    onMouseUp: 0,
+    onBlur: 0
   };
 
   const actions: InputActions = {
-    onPrimaryDown: (position) => {
-      calls.onPrimaryDown.push([
-        position.x,
-        position.y
-      ]);
-
-      return options.onPrimaryDownReturns ?? true;
-    },
-    onPrimaryMove: (position) => {
-      calls.onPrimaryMove.push([
-        position.x,
-        position.y
-      ]);
-    },
-    onPrimaryUp: () => {
-      calls.onPrimaryUp.push([]);
-    },
-    onSecondaryDown: (position, ctrlKey) => {
-      calls.onSecondaryDown.push([
-        position.x,
-        position.y,
+    pansOnPrimary: options.pansOnPrimary ?? false,
+    onPointerDown: (slot, position, ctrlKey) => {
+      calls.onPointerDown.push([
+        slot,
+        position.texture.x,
+        position.texture.y,
         ctrlKey
       ]);
 
-      return options.onSecondaryDownReturns ?? true;
+      return options.tracksDrags ?? true;
     },
-    onSecondaryMove: (position) => {
-      calls.onSecondaryMove.push([
-        position.x,
-        position.y
+    onPointerMove: (slot, position) => {
+      calls.onPointerMove.push([
+        slot,
+        position.texture.x,
+        position.texture.y
       ]);
     },
-    onSecondaryUp: () => {
-      calls.onSecondaryUp.push([]);
+    onPointerUp: (slot) => {
+      calls.onPointerUp.push(slot);
+    },
+    onCtrlWheel: (delta) => {
+      calls.onCtrlWheel.push(delta);
+
+      return options.handlesCtrlWheel ?? false;
     },
     onPanStart: () => {
-      calls.onPanStart.push([]);
-    },
-    onPanMove: (delta) => {
-      calls.onPanMove.push([
-        delta.x,
-        delta.y
-      ]);
+      calls.onPanStart++;
     },
     onPanEnd: () => {
-      calls.onPanEnd.push([]);
+      calls.onPanEnd++;
     },
-    onZoom: (delta, center) => {
-      calls.onZoom.push([
-        delta,
-        center.x,
-        center.y
-      ]);
-    },
-    onCanvasHover: (position) => {
-      calls.onCanvasHover.push([position]);
-    },
-    onTextureCursorMove: (position) => {
-      calls.onTextureCursorMove.push([position]);
+    onHover: (position) => {
+      calls.onHover.push(position);
     },
     onMouseUp: () => {
-      calls.onMouseUp.push([]);
+      calls.onMouseUp++;
     },
     onBlur: () => {
-      calls.onBlur.push([]);
+      calls.onBlur++;
     }
   };
 

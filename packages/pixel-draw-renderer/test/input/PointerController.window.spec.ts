@@ -7,14 +7,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { PointerController } from "#src/input/PointerController.ts";
 import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
 import { FakeWindow } from "../helpers/input/window.ts";
-import {
-  createPointerController,
-  makeCenteredViewport
-} from "../helpers/input/pointer.ts";
+import { makeCenteredViewport } from "../helpers/input/pointer.ts";
 
 describe("PointerController", () => {
   let viewport: Viewport;
@@ -28,7 +26,7 @@ describe("PointerController", () => {
   describe("onMouseUp", () => {
     test("fires on canvas mouseup even when nothing was being tracked", () => {
       const { actions, calls } = makeActions();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions
@@ -38,13 +36,13 @@ describe("PointerController", () => {
         new MouseEvent("mouseup", { bubbles: true })
       );
 
-      assert.strictEqual(calls.onMouseUp.length, 1);
+      assert.strictEqual(calls.onMouseUp, 1);
       ctrl.destroy();
     });
 
     test("fires on window mouseup", () => {
       const { actions, calls } = makeActions();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions
@@ -54,7 +52,7 @@ describe("PointerController", () => {
         new MouseEvent("mouseup", { bubbles: true })
       );
 
-      assert.strictEqual(calls.onMouseUp.length, 1);
+      assert.strictEqual(calls.onMouseUp, 1);
       ctrl.destroy();
     });
   });
@@ -63,7 +61,7 @@ describe("PointerController", () => {
     test("blur is read from the injected window, not the real global", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions,
@@ -71,10 +69,10 @@ describe("PointerController", () => {
       });
 
       window.dispatchEvent(new Event("blur"));
-      assert.strictEqual(calls.onBlur.length, 0);
+      assert.strictEqual(calls.onBlur, 0);
 
       fakeWindow.dispatch("blur");
-      assert.strictEqual(calls.onBlur.length, 1);
+      assert.strictEqual(calls.onBlur, 1);
 
       ctrl.destroy();
     });
@@ -82,7 +80,7 @@ describe("PointerController", () => {
     test("mouseup on the injected window ends an in-progress gesture", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions,
@@ -98,16 +96,16 @@ describe("PointerController", () => {
           bubbles: true
         })
       );
-      fakeWindow.dispatch("mouseup");
+      fakeWindow.dispatch("mouseup", { button: 0 });
 
-      assert.strictEqual(calls.onPrimaryUp.length, 1);
+      assert.deepStrictEqual(calls.onPointerUp, ["primary"]);
       ctrl.destroy();
     });
 
     test("destroy() detaches from the injected window", () => {
       const { actions, calls } = makeActions();
       const fakeWindow = new FakeWindow();
-      const ctrl = createPointerController({
+      const ctrl = new PointerController({
         canvas,
         viewport,
         actions,
@@ -116,10 +114,10 @@ describe("PointerController", () => {
 
       ctrl.destroy();
       fakeWindow.dispatch("blur");
-      fakeWindow.dispatch("mouseup");
+      fakeWindow.dispatch("mouseup", { button: 0 });
 
-      assert.strictEqual(calls.onBlur.length, 0);
-      assert.strictEqual(calls.onMouseUp.length, 0);
+      assert.strictEqual(calls.onBlur, 0);
+      assert.strictEqual(calls.onMouseUp, 0);
     });
   });
 });

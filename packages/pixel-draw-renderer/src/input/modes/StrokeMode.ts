@@ -1,9 +1,12 @@
 // Import Internal Dependencies
 import { InteractionMode } from "./InteractionMode.ts";
+import type { PointerPosition } from "../InputActions.ts";
 import type {
-  BrushEngine,
-  BrushPaintMode
-} from "../../tools/BrushEngine.ts";
+  Brush,
+  BrushColorSlot,
+  BrushPaintSource
+} from "../../tools/Brush.ts";
+import type { BrushEngine } from "../../tools/BrushEngine.ts";
 import type { LineEngine } from "../../tools/LineEngine.ts";
 import type {
   BrushHighlightView
@@ -14,129 +17,79 @@ import type {
 } from "../../types.ts";
 
 export interface StrokeModeOptions {
-  brush: BrushEngine;
+  id: Mode;
+  erase: boolean;
+  brush: Brush;
+  engine: BrushEngine;
   line: LineEngine;
   highlight: BrushHighlightView;
-  stopDrawing: () => void;
 }
 
-export abstract class StrokeMode extends InteractionMode {
-  abstract readonly id: Mode;
+export class StrokeMode extends InteractionMode {
+  readonly id: Mode;
+  readonly writesPixels = true;
 
-  #brush: BrushEngine;
+  #erase: boolean;
+  #brush: Brush;
+  #engine: BrushEngine;
   #line: LineEngine;
   #highlight: BrushHighlightView;
-  #stopDrawing: () => void;
-  #paintMode: BrushPaintMode;
+  #highlightSize = (): number => this.highlightSize();
 
   constructor(
-    options: StrokeModeOptions,
-    paintMode: BrushPaintMode = "brush"
+    options: StrokeModeOptions
   ) {
     super();
+    this.id = options.id;
+    this.#erase = options.erase;
     this.#brush = options.brush;
+    this.#engine = options.engine;
     this.#line = options.line;
     this.#highlight = options.highlight;
-    this.#stopDrawing = options.stopDrawing;
-    this.#paintMode = paintMode;
   }
 
-  #claimEngines(): void {
-    this.#brush.paintMode = this.#paintMode;
-    this.#line.paintMode = this.#paintMode;
-  }
-
-  #releaseLine(): void {
-    this.#line.lineHeld = false;
-    this.#line.cancelIfArmed();
+  highlightSize(): number {
+    return this.#brush.size;
   }
 
   onExit(): void {
     this.#highlight.hide();
-    this.#line.cancelIfArmed();
-    this.#brush.paintMode = "brush";
-    this.#line.paintMode = "brush";
+    this.#line.cancel();
   }
 
-  onPrimaryDown(
-    pos: Vec2
-  ): boolean {
-    this.#claimEngines();
-
-    if (
-      this.#line.isArmed &&
-      this.#line.commitTrigger === "mousedown"
-    ) {
-      this.#line.commit("primary");
-
-      return false;
-    }
-
-    if (this.#brush.isActive === "secondary") {
-      return false;
-    }
-
-    this.#brush.startStroke(
-      pos.x,
-      pos.y,
-      "primary"
-    );
-
-    return true;
-  }
-
-  onPrimaryMove(
-    pos: Vec2
-  ): void {
-    this.#brush.continueStroke(
-      pos.x,
-      pos.y
-    );
-  }
-
-  onPrimaryUp(): void {
-    this.#brush.endStroke();
-  }
-
-  onSecondaryDown(
-    pos: Vec2,
+  onPointerDown(
+    slot: BrushColorSlot,
+    position: PointerPosition,
     _ctrlKey: boolean
   ): boolean {
-    this.#claimEngines();
-
-    if (
-      this.#line.isArmed &&
-      this.#line.commitTrigger === "mousedown"
-    ) {
-      this.#line.commit("secondary");
+    const source = this.#sourceFor(slot);
+    if (this.#line.commitsOn("mousedown")) {
+      this.#line.commit(source);
 
       return false;
     }
 
-    if (this.#brush.isActive === "primary") {
-      return false;
-    }
-
-    this.#brush.startStroke(
-      pos.x,
-      pos.y,
-      "secondary"
+    this.#engine.startStroke(
+      position.texture.x,
+      position.texture.y,
+      source
     );
 
     return true;
   }
 
-  onSecondaryMove(
-    pos: Vec2
+  onPointerMove(
+    _slot: BrushColorSlot,
+    position: PointerPosition
   ): void {
-    this.#brush.continueStroke(
-      pos.x,
-      pos.y
+    this.#engine.continueStroke(
+      position.texture.x,
+      position.texture.y
     );
   }
 
-  onSecondaryUp(): void {
-    this.#brush.endStroke();
+  onPointerUp(): void {
+    this.#engine.endStroke();
   }
 
   onHover(
@@ -144,21 +97,19 @@ export abstract class StrokeMode extends InteractionMode {
   ): void {
     this.#highlight.update(
       position?.x ?? null,
-      position?.y ?? null
+      position?.y ?? null,
+      this.#highlightSize
     );
   }
 
   onCursorMove(
-    pos: Vec2 | null
+    position: Vec2 | null
   ): void {
-    this.#line.updateCursor(pos);
+    this.#line.updateCursor(position);
   }
 
   onMouseUp(): void {
-    if (
-      this.#line.isArmed &&
-      this.#line.commitTrigger === "mouseup"
-    ) {
+    if (this.#line.commitsOn("mouseup")) {
       this.#line.commit();
     }
   }
@@ -167,30 +118,40 @@ export abstract class StrokeMode extends InteractionMode {
     held: boolean
   ): void {
     if (!held) {
-      this.#releaseLine();
+      this.#line.cancel();
 
       return;
     }
 
-    this.#claimEngines();
-    this.#line.lineHeld = true;
+    const strokeSource = this.#engine.endStroke();
+    if (strokeSource === null) {
+      this.#line.arm("mousedown", this.#sourceFor("primary"));
+    }
+    else {
+      this.#line.arm("mouseup", strokeSource);
+    }
+  }
 
-    if (this.#brush.isActive === "primary") {
-      this.#stopDrawing();
-      this.#brush.endStroke();
-      this.#line.arm("mouseup");
-
-      return;
+  onCtrlWheel(
+    delta: number
+  ): boolean {
+    if (delta === 0) {
+      return false;
     }
 
-    if (this.#brush.isActive === "secondary") {
-      return;
-    }
+    this.#brush.size -= Math.sign(delta);
+    this.#highlight.refresh();
 
-    this.#line.arm("mousedown");
+    return true;
   }
 
   onBlur(): void {
-    this.#releaseLine();
+    this.#line.cancel();
+  }
+
+  #sourceFor(
+    slot: BrushColorSlot
+  ): BrushPaintSource {
+    return this.#erase ? "erase" : slot;
   }
 }

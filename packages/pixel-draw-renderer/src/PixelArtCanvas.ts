@@ -13,17 +13,19 @@ import {
 } from "./tools/Tools.ts";
 import type { SelectEngineEvent } from "./tools/SelectEngine.events.ts";
 import type { HistoryState } from "./history/History.ts";
+import type { SelectionFootprint } from "./history/HistoryEntry.ts";
 import {
   InteractionRouter,
   type ExternalCursorMoveListener
 } from "./input/InteractionRouter.ts";
 import { PaintMode } from "./input/modes/PaintMode.ts";
-import { EraseMode } from "./input/modes/EraseMode.ts";
+import { StrokeMode } from "./input/modes/StrokeMode.ts";
 import { FillMode } from "./input/modes/FillMode.ts";
 import { SelectMode } from "./input/modes/SelectMode.ts";
 import { UVMode } from "./input/modes/UVMode.ts";
 import { MoveMode } from "./input/modes/MoveMode.ts";
 import { PointerController } from "./input/PointerController.ts";
+import { Shortcuts } from "./input/Shortcuts.ts";
 import type { CanvasShortcuts } from "./input/CanvasShortcuts.ts";
 import type { WindowLike } from "./input/WindowLike.ts";
 import type {
@@ -34,54 +36,32 @@ import type {
   ZoomOptions
 } from "./rendering/Zoom.ts";
 import {
-  EditPipeline
-} from "./sync/EditPipeline.ts";
-import {
   PixelDocument
 } from "./PixelDocument.ts";
 import {
   CanvasView
 } from "./CanvasView.ts";
 import type { UVMap } from "./uv/map/UVMap.ts";
-import type {
-  UVRegion,
-  UVRegionData
-} from "./uv/region/UVRegion.ts";
 import {
   uvSlotGeometries,
   uvSlotMask
 } from "./uv/region/uvSlotMask.ts";
 import type { UVGeometry } from "./uv/geometry/types.ts";
-import type { NormalMapData } from "./normal/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 import { resolveColor } from "./utils/colors.ts";
+import { SelectionEraseColor } from "./selection/SelectionEraseColor.ts";
 import type {
-  BrushHighlight,
   ByteColorInput,
   Mode,
   PeerStrokePixel,
   TextureView,
   Vec2
 } from "./types.ts";
-import type {
-  PixelBufferHookEvent,
-  PixelBufferHookListener
-} from "./buffer/hooks.ts";
-import { SelectionClipboard } from "./clipboard/SelectionClipboard.ts";
-import { placeSelection } from "./tools/selectionPlacement.ts";
+import { ClipboardController } from "./clipboard/ClipboardController.ts";
 import type {
   ClipboardAdapter,
-  ClipboardOperationResult,
-  DecodedSelection
+  ClipboardOperationResult
 } from "./clipboard/types.ts";
-
-// CONSTANTS
-const kNoModes: ReadonlySet<Mode> = new Set();
-const kPixelWritingModes: ReadonlySet<Mode> = new Set([
-  "paint",
-  "erase",
-  "fill"
-]);
 
 export type { Mode };
 export type { TextureView };
@@ -120,7 +100,6 @@ export interface PixelArtCanvasOptions {
     resizable?: boolean;
   };
   onDrawEnd?: () => void;
-  onBufferUpdated?: PixelBufferHookListener;
   history?: {
     enabled?: boolean;
     limit?: number;
@@ -136,19 +115,15 @@ export class PixelArtCanvas {
   #view: CanvasView;
   #input: PointerController;
 
-  #edits: EditPipeline;
   #onDrawEnd?: () => void;
   #onHistoryChange?: (state: HistoryState) => void;
   #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
-  #clipboard: SelectionClipboard;
-  #clipboardPending = false;
-  #displacedMode: Mode | null = null;
-  #onClipboardResult?: (result: ClipboardOperationResult) => void;
+  #clipboard: ClipboardController;
   #onDocumentDrawEnd = () => this.#onDrawEnd?.();
   #onDocumentHistoryChanged = (state: HistoryState) => this.#onHistoryChange?.(state);
-  #onDocumentReset = () => this.#tools.select.discard();
+  #onTextureReplaced = () => this.#tools.select.discard();
   #onViewportChanged = () => {
     this.#view.refresh();
     this.#tools.line.refreshPreview();
@@ -171,11 +146,12 @@ export class PixelArtCanvas {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
     this.#onHistoryChange = options.onHistoryChange;
-    this.#onClipboardResult = options.onClipboardResult;
     const defaultMode: Mode = options.defaultMode ?? "paint";
-    const eraseColor = options.select?.eraseColor === undefined ?
-      null :
-      resolveColor(options.select.eraseColor);
+    const eraseColor = new SelectionEraseColor(
+      options.select?.eraseColor === undefined ?
+        null :
+        resolveColor(options.select.eraseColor)
+    );
 
     const textureSize: Vec2 = options.texture?.size
       ? { x: options.texture.size.x, y: options.texture.size.y ?? options.texture.size.x }
@@ -191,94 +167,62 @@ export class PixelArtCanvas {
         limit: options.history?.limit
       }
     });
-    if (options.onBufferUpdated) {
-      this.document.onBufferUpdated = options.onBufferUpdated;
-    }
     this.uv = this.document.uv;
 
     this.brush = new Brush(options.brush);
-
-    const brushRef = this.brush;
-    const self = this;
-
-    const brushAdapter: BrushHighlight = {
-      get size() {
-        return self.#router.highlightBrushSize(brushRef.size);
-      },
-      get colorInline() {
-        return brushRef.colorInline;
-      },
-      get colorOutline() {
-        return brushRef.colorOutline;
-      }
-    };
 
     this.#view = new CanvasView(this.document, {
       parent: parentHtmlElement,
       zoom: options.zoom,
       background: options.backgroundColor,
       backgroundTransparency: options.backgroundTransparency,
-      brushHighlight: brushAdapter,
+      brushHighlight: this.brush,
       eraseColor,
       selectionSizeLabel: options.select?.sizeLabel
     });
     this.viewport = this.#view.viewport;
     this.peerPresence = this.#view.peerPresence;
 
-    this.#edits = new EditPipeline({
-      brush: this.brush,
-      document: this.document
-    });
-
     this.#tools = new Tools({
       brush: this.brush,
-      canvasBuffer: this.document.buffer,
+      document: this.document,
       renderer: this.#view.renderer,
       linePreview: this.#view.overlays.linePreview,
       selectionOverlay: this.#view.overlays.selection,
       eraseColor,
-      uvMap: this.document.uv,
       uvOverlay: this.#view.overlays.uvOverlay,
       uvDeselectOnEmptyClick: options.uv?.deselectOnEmptyClick,
       uvResizable: options.uv?.resizable,
       viewport: this.#view.viewport,
-      pipeline: this.#edits,
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
     });
     this.tools = this.#tools;
     this.selectionEvents = this.#tools.select;
-    this.#clipboard = new SelectionClipboard({
-      adapter: resolveClipboardAdapter(options.clipboard)
-    });
 
     this.#view.viewport.on("changed", this.#onViewportChanged);
     this.document.on("draw-end", this.#onDocumentDrawEnd);
     this.document.on("history-changed", this.#onDocumentHistoryChanged);
-    this.document.on("reset", this.#onDocumentReset);
+    this.document.on("resized", this.#onTextureReplaced);
+    this.document.on("replaced", this.#onTextureReplaced);
 
+    const strokeTools = {
+      brush: this.brush,
+      engine: this.#tools.brush,
+      line: this.#tools.line,
+      highlight: this.#view.overlays.brushHighlight
+    };
     this.#router = new InteractionRouter({
       defaultMode,
-      viewport: this.#view.viewport,
       setCursor: (cursor) => {
         this.#view.renderer.cursor = cursor;
       },
-      onUndo: () => this.undo(),
-      onRedo: () => this.redo(),
-      onCopy: () => this.#handleCopyShortcut(),
-      onPaste: () => this.#handlePasteShortcut(),
       onModeChange: options.onModeChange,
       modes: [
-        new PaintMode({
-          brush: this.#tools.brush,
-          line: this.#tools.line,
-          highlight: this.#view.overlays.brushHighlight,
-          stopDrawing: () => this.#input.stopDrawing()
-        }),
-        new EraseMode({
-          brush: this.#tools.brush,
-          line: this.#tools.line,
-          highlight: this.#view.overlays.brushHighlight,
-          stopDrawing: () => this.#input.stopDrawing()
+        new PaintMode(strokeTools),
+        new StrokeMode({
+          ...strokeTools,
+          id: "erase",
+          erase: true
         }),
         new FillMode({
           fill: this.#tools.fill,
@@ -290,28 +234,24 @@ export class PixelArtCanvas {
       ]
     });
 
-    this.shortcuts = this.#router;
+    this.#clipboard = new ClipboardController({
+      adapter: options.clipboard,
+      select: this.#tools.select,
+      router: this.#router,
+      viewport: this.#view.viewport,
+      buffer: this.document.buffer,
+      onResult: options.onClipboardResult
+    });
+    this.shortcuts = new Shortcuts({
+      router: this.#router,
+      clipboard: this.#clipboard,
+      history: this
+    });
     this.#input = new PointerController({
       canvas: this.#view.renderer.canvas(),
       viewport: this.#view.viewport,
       window: options.window,
-      actions: this.#router,
-      shouldPanOnPrimary: () => this.#router.panHeld ||
-        this.#router.mode === "move",
-      onCtrlWheel: (delta) => {
-        const mode = this.#router.mode;
-        if (
-          (mode !== "paint" && mode !== "erase") ||
-          delta === 0
-        ) {
-          return false;
-        }
-
-        this.brush.size -= Math.sign(delta);
-        this.#view.overlays.brushHighlight.refresh();
-
-        return true;
-      }
+      actions: this.#router
     });
 
     this.centerTexture();
@@ -324,11 +264,6 @@ export class PixelArtCanvas {
   set mode(
     mode: Mode
   ) {
-    if (mode === this.mode || this.unavailableModes.has(mode)) {
-      return;
-    }
-
-    this.#displacedMode = null;
     this.#router.mode = mode;
   }
 
@@ -344,26 +279,17 @@ export class PixelArtCanvas {
     }
 
     this.#view.textureView = view;
-    this.#tools.select.readOnly = this.pixelsReadOnly;
-    if (this.unavailableModes.has(this.mode)) {
-      this.#displacedMode = this.mode;
-      this.#router.mode = "move";
-    }
-    else if (
-      this.#displacedMode !== null &&
-      !this.unavailableModes.has(this.#displacedMode)
-    ) {
-      this.#router.mode = this.#displacedMode;
-      this.#displacedMode = null;
-    }
+    const readOnly = view === "normal";
+    this.#tools.select.readOnly = readOnly;
+    this.#router.pixelsReadOnly = readOnly;
   }
 
   get pixelsReadOnly(): boolean {
-    return this.#view.textureView === "normal";
+    return this.#router.pixelsReadOnly;
   }
 
   get unavailableModes(): ReadonlySet<Mode> {
-    return this.pixelsReadOnly ? kPixelWritingModes : kNoModes;
+    return this.#router.unavailableModes;
   }
 
   get backgroundColor(): string {
@@ -383,12 +309,6 @@ export class PixelArtCanvas {
   reparentCanvasTo(
     newParentElement: HTMLDivElement
   ): void {
-    if (!newParentElement) {
-      console.error("PixelArtCanvas: Invalid parent element");
-
-      return;
-    }
-
     this.#view.reparentTo(newParentElement);
     this.#parentHtmlElement = newParentElement;
     this.onResize();
@@ -401,17 +321,7 @@ export class PixelArtCanvas {
   set textureSize(
     size: Vec2
   ) {
-    if (
-      size.x <= 0 ||
-      size.y <= 0
-    ) {
-      console.error("PixelArtCanvas: Texture size must be positive");
-
-      return;
-    }
-
     this.document.resize(size);
-    this.#tools.select.discard();
   }
 
   get maxTextureSize(): number {
@@ -462,7 +372,8 @@ export class PixelArtCanvas {
     this.#view.viewport.off("changed", this.#onViewportChanged);
     this.document.off("draw-end", this.#onDocumentDrawEnd);
     this.document.off("history-changed", this.#onDocumentHistoryChanged);
-    this.document.off("reset", this.#onDocumentReset);
+    this.document.off("resized", this.#onTextureReplaced);
+    this.document.off("replaced", this.#onTextureReplaced);
     this.#view.destroy();
   }
 
@@ -470,7 +381,6 @@ export class PixelArtCanvas {
     source: HTMLCanvasElement | HTMLImageElement
   ) {
     this.document.replaceTexture(source);
-    this.#tools.select.discard();
   }
 
   get texture(): Uint8ClampedArray {
@@ -488,63 +398,39 @@ export class PixelArtCanvas {
       );
 
     this.document.clearTexture(keepMask);
-    this.#tools.select.discard();
   }
 
   commitPixels(
     pixels: Vec2[],
     source: BrushPaintSource = "primary"
   ): void {
-    this.#edits.commitPixels(pixels, source);
+    this.document.paintPixels(pixels, this.brush.colorFor(source));
   }
 
   undo(): boolean {
-    const previousSize = this.textureSize;
     const entry = this.document.undo();
-    if (!entry) {
-      return false;
+    if (entry?.selection) {
+      this.#restoreSelection(entry.selection.before);
     }
 
-    if (
-      previousSize.x !== this.textureSize.x ||
-      previousSize.y !== this.textureSize.y
-    ) {
-      this.#tools.select.discard();
-    }
-    else if (entry.action === "select-edit" && this.#router.mode === "select") {
-      this.#tools.select.syncSelectionAfterHistory(
-        entry.oldRect,
-        entry.oldMask
-      );
-    }
-
-    return true;
+    return entry !== null;
   }
 
   redo(): boolean {
-    const previousSize = this.textureSize;
     const entry = this.document.redo();
-    if (!entry) {
-      return false;
+    if (entry?.selection) {
+      this.#restoreSelection(entry.selection.after);
     }
 
-    if (
-      previousSize.x !== this.textureSize.x ||
-      previousSize.y !== this.textureSize.y
-    ) {
-      this.#tools.select.discard();
-    }
-    else if (
-      entry.action === "select-edit" &&
-      this.#router.mode === "select"
-    ) {
-      this.#tools.select.syncSelectionAfterHistory(
-        entry.newRect,
-        entry.newMask
-      );
-    }
+    return entry !== null;
+  }
 
-    return true;
+  #restoreSelection(
+    footprint: SelectionFootprint
+  ): void {
+    if (this.#router.mode === "select") {
+      this.#tools.select.syncSelectionAfterHistory(footprint);
+    }
   }
 
   canUndo(): boolean {
@@ -553,16 +439,6 @@ export class PixelArtCanvas {
 
   canRedo(): boolean {
     return this.document.history.canRedo;
-  }
-
-  get onBufferUpdated(): PixelBufferHookListener | undefined {
-    return this.document.onBufferUpdated;
-  }
-
-  set onBufferUpdated(
-    fn: PixelBufferHookListener | undefined
-  ) {
-    this.document.onBufferUpdated = fn;
   }
 
   get onCursorMove(): ExternalCursorMoveListener | undefined {
@@ -585,163 +461,11 @@ export class PixelArtCanvas {
     this.#onStrokeProgress = fn;
   }
 
-  applyRemoteCommand(
-    event: PixelBufferHookEvent
-  ): void {
-    this.document.applyRemoteCommand(event);
+  copySelection(): Promise<ClipboardOperationResult> {
+    return this.#clipboard.copy();
   }
 
-  loadSnapshot(
-    size: Vec2,
-    pixels: Uint8ClampedArray,
-    uvRegions: (UVRegion | UVRegionData)[] = [],
-    normalMap: NormalMapData | null = null
-  ): void {
-    this.document.loadSnapshot(size, pixels, uvRegions, normalMap);
+  pasteClipboard(): Promise<ClipboardOperationResult> {
+    return this.#clipboard.paste();
   }
-
-  runLocalRestore<T>(
-    fn: () => T
-  ): T {
-    return this.document.runLocalRestore(fn);
-  }
-
-  async copySelection(): Promise<ClipboardOperationResult> {
-    if (this.#clipboardPending) {
-      return this.#reportClipboardResult({
-        operation: "copy",
-        code: "busy"
-      });
-    }
-
-    const snapshot = this.#tools.select.exportSelection();
-    if (!snapshot) {
-      return this.#reportClipboardResult({
-        operation: "copy",
-        code: "no-selection"
-      });
-    }
-
-    this.#clipboardPending = true;
-    try {
-      return this.#reportClipboardResult(
-        await this.#clipboard.copy(snapshot)
-      );
-    }
-    finally {
-      this.#clipboardPending = false;
-    }
-  }
-
-  async pasteClipboard(): Promise<ClipboardOperationResult> {
-    if (this.pixelsReadOnly) {
-      return this.#reportClipboardResult({
-        operation: "paste",
-        code: "paste-failed"
-      });
-    }
-    if (this.#clipboardPending) {
-      return this.#reportClipboardResult({
-        operation: "paste",
-        code: "busy"
-      });
-    }
-
-    this.#clipboardPending = true;
-    try {
-      const { result, selection } = await this.#clipboard.read(
-        this.maxTextureSize
-      );
-      if (result.code !== "pasted" || !selection) {
-        return this.#reportClipboardResult(result);
-      }
-
-      return this.#reportClipboardResult(
-        this.#floatPastedSelection(selection, result)
-      );
-    }
-    finally {
-      this.#clipboardPending = false;
-    }
-  }
-
-  #floatPastedSelection(
-    selection: DecodedSelection,
-    result: ClipboardOperationResult
-  ): ClipboardOperationResult {
-    const rect = placeSelection(selection, {
-      cursor: this.#router.textureCursor,
-      viewCenter: this.#view.viewport.visibleCenter(),
-      bounds: this.textureSize
-    });
-
-    const previousMode = this.mode;
-    this.mode = "select";
-
-    let imported: boolean;
-    try {
-      imported = this.#tools.select.importSelection({
-        rect,
-        pixels: selection.pixels,
-        mask: selection.mask
-      });
-    }
-    catch {
-      imported = false;
-    }
-    if (imported) {
-      return result;
-    }
-
-    this.#tools.select.discard();
-    this.mode = previousMode;
-
-    return {
-      operation: "paste",
-      code: "paste-failed",
-      source: result.source
-    };
-  }
-
-  #handleCopyShortcut(): boolean {
-    if (!this.#tools.select.hasSelection) {
-      return false;
-    }
-
-    void this.copySelection();
-
-    return true;
-  }
-
-  #handlePasteShortcut(): boolean {
-    void this.pasteClipboard();
-
-    return true;
-  }
-
-  #reportClipboardResult(
-    result: ClipboardOperationResult
-  ): ClipboardOperationResult {
-    this.#onClipboardResult?.(result);
-
-    return result;
-  }
-}
-
-function resolveClipboardAdapter(
-  adapter: ClipboardAdapter | null | undefined
-): ClipboardAdapter | null {
-  if (adapter !== undefined) {
-    return adapter;
-  }
-  if (
-    typeof navigator !== "undefined" &&
-    navigator.clipboard &&
-    typeof navigator.clipboard.read === "function" &&
-    typeof navigator.clipboard.write === "function"
-  ) {
-    return navigator.clipboard;
-  }
-
-  return null;
 }

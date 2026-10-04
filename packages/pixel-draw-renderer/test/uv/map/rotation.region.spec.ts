@@ -147,7 +147,7 @@ describe("UVRegion.rotated", () => {
       }
     });
 
-    const moved = region.withRect({ x: 10, y: 10, width: 4, height: 8 }, "front");
+    const moved = region.movedTo({ x: 10, y: 10 }, "front");
 
     assert.strictEqual(moved.geometryFor("front").rotation, 1);
   });

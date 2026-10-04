@@ -10,8 +10,7 @@ import type { PixelSyncTarget } from "@jolly-pixel/asset.pixel-art/client";
 import {
   encodePixelBytes,
   encodePngPixels,
-  type PixelBufferHookEvent,
-  type PixelBufferHookListener,
+  type PixelCommand,
   NormalMapConfig,
   type NormalMapData,
   type UVRegionData,
@@ -51,26 +50,26 @@ interface LoadedSnapshot {
 }
 
 class PixelsRecorder implements PixelSyncTarget {
-  readonly listeners = new Set<PixelBufferHookListener>();
-  readonly remote: PixelBufferHookEvent[] = [];
+  readonly listeners = new Set<(command: PixelCommand) => void>();
+  readonly remote: PixelCommand[] = [];
   readonly loaded: LoadedSnapshot[] = [];
 
   on(
-    _event: "buffer-updated",
-    listener: PixelBufferHookListener
+    _event: "command",
+    listener: (command: PixelCommand) => void
   ): void {
     this.listeners.add(listener);
   }
 
   off(
-    _event: "buffer-updated",
-    listener: PixelBufferHookListener
+    _event: "command",
+    listener: (command: PixelCommand) => void
   ): void {
     this.listeners.delete(listener);
   }
 
   emitLocal(
-    event: PixelBufferHookEvent
+    event: PixelCommand
   ): void {
     for (const listener of this.listeners) {
       listener(event);
@@ -78,7 +77,7 @@ class PixelsRecorder implements PixelSyncTarget {
   }
 
   applyRemoteCommand(
-    event: PixelBufferHookEvent
+    event: PixelCommand
   ): void {
     this.remote.push(event);
   }

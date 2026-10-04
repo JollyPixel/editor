@@ -3,14 +3,14 @@ import { ColorPalette } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { clamp } from "../../utils/math.ts";
-import { clampRegion } from "./canvasBounds.ts";
-import { UVSlotMap } from "../region/UVSlotMap.ts";
+import { CanvasBounds } from "./CanvasBounds.ts";
 import {
   DEFAULT_UV_SLOTS,
   UVRegion,
   type UVGeometry,
   type UVRegionState,
-  type UVSlot
+  type UVSlot,
+  type UVTriangleCorner
 } from "../region/UVRegion.ts";
 import type {
   SelectionRect,
@@ -44,7 +44,7 @@ export interface UVSlotSize {
 
 export type UVSlotGeometryTemplate = UVSlotSize & (
   | { shape: "rectangle"; }
-  | { shape: "triangle"; corner: "top-left" | "top-right" | "bottom-left" | "bottom-right"; }
+  | { shape: "triangle"; corner: UVTriangleCorner; }
 );
 
 // CONSTANTS
@@ -94,27 +94,20 @@ export class UVRegionFactory {
         ...Object.keys(slotGeometries ?? {})
       ])
     ];
-    const faces = UVSlotMap.map(
-      (slot) => geometryFrom(slotGeometries?.[slot], rect, size),
-      slots
+    const faces = Object.fromEntries(
+      slots.map((slot) => [slot, geometryFrom(slotGeometries?.[slot], rect, size)])
     );
     const activeFaces = [
       ...(activeSlots ?? DEFAULT_UV_SLOTS)
     ];
     if (state === "stacked") {
-      return hasTopology ?
-        new UVRegion({
-          ...identity,
-          state,
-          rect,
-          activeFaces,
-          faces
-        }) :
-        new UVRegion({
-          ...identity,
-          state,
-          rect
-        });
+      return new UVRegion({
+        ...identity,
+        state,
+        rect,
+        activeFaces,
+        faces
+      });
     }
 
     const spread = new UVRegion({
@@ -125,7 +118,7 @@ export class UVRegionFactory {
     });
 
     return state === "unfolded" ?
-      clampRegion(spread.unfold(), size) :
+      new CanvasBounds(size).clamp(spread.unfold()) :
       spread;
   }
 

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import type { UVGeometry } from "#src/uv/geometry/types.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
@@ -23,26 +23,6 @@ describe("PixelArtCanvas", () => {
 
   beforeEach(() => {
     container = makeContainer();
-  });
-
-  describe("onBufferUpdated getter/setter", () => {
-    test("is undefined by default and reflects the handler most recently assigned via the setter", () => {
-      const { manager } = createPixelArtCanvas();
-      const events: unknown[] = [];
-      function handler(event: unknown): void {
-        events.push(event);
-      }
-
-      assert.strictEqual(manager.onBufferUpdated, undefined);
-      manager.onBufferUpdated = handler;
-      assert.strictEqual(manager.onBufferUpdated, handler);
-      manager.commitPixels([{ x: 0, y: 0 }]);
-      assert.strictEqual(events.length, 1);
-
-      manager.onBufferUpdated = undefined;
-      assert.strictEqual(manager.onBufferUpdated, undefined);
-      manager.destroy();
-    });
   });
 
   describe("backgroundColor", () => {
@@ -111,13 +91,13 @@ describe("PixelArtCanvas", () => {
 
     for (const source of ["primary", "secondary"] as const) {
       test(`commits pixels as a single 'stroke' hook event with the ${source} brush color`, () => {
-        const events: PixelBufferHookEvent[] = [];
+        const events: PixelCommand[] = [];
         const { manager } = createPixelArtCanvas({
           brush: {
             color: "#123456",
             secondaryColor: "#00FF00"
           },
-          onBufferUpdated: (event) => events.push(event)
+          onCommand: (event) => events.push(event)
         });
         const positions = [
           { x: 1, y: 1 },
@@ -151,9 +131,9 @@ describe("PixelArtCanvas", () => {
         texture: {
           maxSize: 32,
           size: { x: 8, y: 8 }
-        },
-        onBufferUpdated: (event) => events.push(event)
+        }
       });
+      manager.document.on("command", (event) => events.push(event));
 
       manager.commitPixels([]);
 

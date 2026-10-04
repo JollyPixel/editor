@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
-import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
+import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
 import type { UVRegionData } from "#src/uv/region/UVRegion.ts";
 import { makeContainer } from "./helpers/dom.ts";
@@ -21,20 +21,20 @@ describe("PixelArtCanvas — runLocalRestore", () => {
   });
 
   test("suppresses the 'texture-replaced' broadcast while still replacing the texture", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(container, {
       texture: {
         maxSize: 32,
         size: { x: 4, y: 4 }
       },
-      history: { enabled: true },
-      onBufferUpdated: (event) => events.push(event)
+      history: { enabled: true }
     });
+    manager.document.on("command", (event) => events.push(event));
 
     const externalCanvas = document.createElement("canvas");
     externalCanvas.width = 8;
     externalCanvas.height = 8;
-    manager.runLocalRestore(() => {
+    manager.document.runLocalRestore(() => {
       manager.texture = externalCanvas;
     });
 
@@ -47,17 +47,17 @@ describe("PixelArtCanvas — runLocalRestore", () => {
   });
 
   test("suppresses uv region broadcasts and records no history", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(container, {
       texture: {
         maxSize: 32,
         size: { x: 8, y: 8 }
       },
-      history: { enabled: true },
-      onBufferUpdated: (event) => events.push(event)
+      history: { enabled: true }
     });
+    manager.document.on("command", (event) => events.push(event));
 
-    manager.runLocalRestore(() => {
+    manager.document.runLocalRestore(() => {
       manager.uv.create({
         width: 4,
         height: 4
@@ -71,16 +71,16 @@ describe("PixelArtCanvas — runLocalRestore", () => {
   });
 
   test("restores broadcasting after the scope, and on a throw", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(container, {
       texture: {
         maxSize: 32,
         size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
+      }
     });
+    manager.document.on("command", (event) => events.push(event));
 
-    assert.throws(() => manager.runLocalRestore(() => {
+    assert.throws(() => manager.document.runLocalRestore(() => {
       throw new Error("boom");
     }), /boom/);
 
@@ -97,17 +97,17 @@ describe("PixelArtCanvas — runLocalRestore", () => {
   });
 
   test("a nested scope leaves the outer one intact", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(container, {
       texture: {
         maxSize: 32,
         size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
+      }
     });
+    manager.document.on("command", (event) => events.push(event));
 
-    manager.runLocalRestore(() => {
-      manager.runLocalRestore(() => void 0);
+    manager.document.runLocalRestore(() => {
+      manager.document.runLocalRestore(() => void 0);
       manager.uv.create({
         width: 4,
         height: 4
@@ -121,15 +121,15 @@ describe("PixelArtCanvas — runLocalRestore", () => {
 
 describe("PixelArtCanvas — loadSnapshot", () => {
   test("replaces texture, UV regions and normal map silently and clears history", () => {
-    const events: PixelBufferHookEvent[] = [];
+    const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(makeContainer(), {
       texture: {
         maxSize: 32,
         size: { x: 8, y: 8 }
       },
-      history: { enabled: true },
-      onBufferUpdated: (event) => events.push(event)
+      history: { enabled: true }
     });
+    manager.document.on("command", (event) => events.push(event));
     manager.uv.create({
       width: 4,
       height: 4
@@ -144,7 +144,7 @@ describe("PixelArtCanvas — loadSnapshot", () => {
     };
     const normalMapData = NormalMapConfig.create({ strength: 3 }).toJSON();
 
-    manager.loadSnapshot(
+    manager.document.loadSnapshot(
       { x: 2, y: 1 },
       new Uint8ClampedArray([1, 2, 3, 255, 4, 5, 6, 255]),
       [snapshotRegion],
