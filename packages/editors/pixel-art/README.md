@@ -8,7 +8,9 @@
 
 ## 📌 About
 
-`<pixel-draw-panel>` and friends: a Lit-based toolbar (mode rail, colors, undo/redo, import/export, UV toolbar) wired to a [`PixelArtCanvas`][pixel-draw-renderer].
+`<pixel-draw-panel>` is the Lit UI for a [`PixelArtCanvas`][pixel-draw-renderer].
+This workspace also contains the studio editor page and Three.js adapters for
+canvas and UV-region texturing.
 
 ## 💃 Getting Started
 
@@ -84,8 +86,10 @@ studio's static build.
 
 ## 📚 API
 
-- [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): drop-in UI (`<pixel-draw-panel>`)
+- [UI components](./docs/ui.md): panel setup, texture ownership and UV access
+- [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): component API and events
 - [`KeyBindingSettings`](./docs/keybindings/KeyBindingSettings.md): per-browser shortcuts and the console `keybind` namespace
+- [Mesh texturing](./docs/mesh-texturing/README.md): canvas, normal-map and UV geometry adapters
 
 ## 🧪 Running the E2E tests
 
