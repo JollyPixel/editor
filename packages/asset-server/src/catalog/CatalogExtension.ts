@@ -13,18 +13,17 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import { match } from "ts-pattern";
 
 // Import Internal Dependencies
 import { catalogProtocols } from "./protocol.schema.ts";
 import {
   CATALOG_APPLIED,
-  CATALOG_CHANGED,
   CATALOG_CREATE,
   CATALOG_CREATE_FOLDER,
   CATALOG_DELETE,
   CATALOG_DELETE_FOLDER,
   CATALOG_EXPORT,
-  CATALOG_FOLDERS,
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
@@ -35,10 +34,14 @@ import {
   type CatalogApplied,
   type CatalogChange,
   type CatalogCommand,
-  type CatalogDeleteCommand,
-  type CatalogMessage
+  type CatalogCreateCommand,
+  type CatalogExportCommand,
+  type CatalogImportCommand,
+  type CatalogMessage,
+  type CatalogPlanCommand
 } from "./client/protocol.ts";
 import type { CatalogFolders } from "./CatalogFolders.ts";
+import { CatalogOutbox } from "./CatalogOutbox.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
 import {
@@ -93,6 +96,9 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   #deleteProtection: boolean;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
+  readonly #outbox = new CatalogOutbox(
+    (message) => this.#broadcast?.broadcast(message)
+  );
   #onChanged: (change: CatalogChange) => void;
   #onFolders: (folders: readonly string[]) => void;
 
@@ -100,20 +106,17 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     options: CatalogExtensionOptions
   ) {
     super();
+
     this.id = options.id ?? CATALOG_ROOM;
     this.#backend = options.backend;
     this.#maxContentBytes = options.maxContentBytes ??
       DEFAULT_CATALOG_MAX_CONTENT_BYTES;
-    this.#archiveLimits = { ...options.archiveLimits };
+    this.#archiveLimits = {
+      ...options.archiveLimits
+    };
     this.#deleteProtection = options.deleteProtection ?? true;
-    this.#onChanged = (change) => this.#broadcast?.broadcast({
-      type: CATALOG_CHANGED,
-      change
-    } satisfies CatalogMessage);
-    this.#onFolders = (folders) => this.#broadcast?.broadcast({
-      type: CATALOG_FOLDERS,
-      folders: [...folders]
-    } satisfies CatalogMessage);
+    this.#onChanged = (change) => this.#outbox.pushChange(change);
+    this.#onFolders = (folders) => this.#outbox.pushFolders(folders);
     this.#backend.catalog.on(
       "changed",
       this.#onChanged
@@ -158,6 +161,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     const result = await this.#execute(command, actorOf(context.identity))
       .catch((error: unknown) => Err(asError(error)));
 
+    this.#outbox.flush();
     context.room.sendTo(clientId, result.ok ?
       {
         type: CATALOG_APPLIED,
@@ -190,122 +194,179 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCommand,
     actor: EventStore.Actor
   ): Promise<Result<CatalogApplied, Error>> {
-    const backend = this.#backend;
+    const { writer, folders } = this.#backend;
 
-    switch (command.type) {
-      case CATALOG_CREATE: {
-        const data = command.content === undefined ?
-          Ok(undefined) :
-          this.#decode(command.content);
-        if (!data.ok) {
-          return data;
-        }
-
-        const written = await backend.writer.create({
-          path: command.path,
-          kind: command.kind,
-          onPathConflict: command.onConflict,
-          data: data.val,
+    return match(command)
+      .with({ type: CATALOG_CREATE }, (create) => this.#create(create, actor))
+      .with({ type: CATALOG_RENAME }, ({ type, renames }) => this.#applyEach(
+        type,
+        renames,
+        (rename) => writer.rename({
+          assetId: rename.assetId,
+          to: rename.to,
           actor
-        });
+        })
+      ))
+      .with({ type: CATALOG_DELETE }, ({ type, assetIds, force }) => this.#applyEach(
+        type,
+        assetIds,
+        (assetId) => this.#remove(assetId, force, actor)
+      ))
+      .with({ type: CATALOG_CREATE_FOLDER }, async({ type, path }) => Ok({
+        command: type,
+        path: await folders.create(path)
+      }))
+      .with({ type: CATALOG_MOVE_FOLDER }, async({ type, from, to }) => Ok({
+        command: type,
+        path: await folders.move(from, to)
+      }))
+      .with({ type: CATALOG_DELETE_FOLDER }, async({ type, path }) => Ok({
+        command: type,
+        path: await folders.delete(path)
+      }))
+      .with({ type: CATALOG_EXPORT }, (exported) => this.#export(exported))
+      .with({ type: CATALOG_PLAN }, (plan) => this.#plan(plan))
+      .with({ type: CATALOG_IMPORT }, (imported) => this.#import(imported, actor))
+      .exhaustive();
+  }
 
-        return applied(command.type, written);
-      }
-      case CATALOG_RENAME: {
-        const written = await backend.writer.rename({
-          assetId: command.assetId,
-          to: command.to,
-          actor
-        });
-
-        return applied(command.type, written);
-      }
-      case CATALOG_DELETE: {
-        const deletable = this.#deletable(command);
-        if (!deletable.ok) {
-          return deletable;
-        }
-
-        const written = await backend.writer.remove({
-          assetId: command.assetId,
-          actor
-        });
-
-        return applied(command.type, written);
-      }
-      case CATALOG_CREATE_FOLDER:
-        return Ok({
-          command: command.type,
-          path: await backend.folders.create(command.path)
-        });
-      case CATALOG_MOVE_FOLDER:
-        return Ok({
-          command: command.type,
-          path: await backend.folders.move(command.from, command.to)
-        });
-      case CATALOG_DELETE_FOLDER:
-        return Ok({
-          command: command.type,
-          path: await backend.folders.delete(command.path)
-        });
-      case CATALOG_EXPORT: {
-        const archive = await exportAssetArchive(backend, {
-          root: command.root
-        });
-        if (!archive.ok) {
-          return archive;
-        }
-        if (archive.val.byteLength > this.#maxContentBytes) {
-          return Err(new CatalogContentTooLargeError(
-            archive.val.byteLength,
-            this.#maxContentBytes
-          ));
-        }
-
-        return Ok({
-          command: command.type,
-          content: encodeContent(archive.val)
-        });
-      }
-      case CATALOG_PLAN:
-        return this.#readArchive(command.content)
-          .andThen((archive) => planAssetImport(backend, archive))
-          .map((plan) => {
-            return {
-              command: command.type,
-              plan
-            };
-          });
-      case CATALOG_IMPORT: {
-        const archive = this.#readArchive(command.content);
-        if (!archive.ok) {
-          return archive;
-        }
-
-        const report = await importAssetArchive(backend, archive.val, {
-          onConflict: command.onConflict,
-          actor
-        });
-
-        return report.map((value) => {
-          return {
-            command: command.type,
-            report: value
-          };
-        });
-      }
+  async #create(
+    command: CatalogCreateCommand,
+    actor: EventStore.Actor
+  ): Promise<Result<CatalogApplied, Error>> {
+    const data = command.content === undefined ?
+      Ok(undefined) :
+      this.#decode(command.content);
+    if (!data.ok) {
+      return data;
     }
+
+    const written = await this.#backend.writer.create({
+      path: command.path,
+      kind: command.kind,
+      onPathConflict: command.onConflict,
+      data: data.val,
+      actor
+    });
+
+    return written.map((event) => {
+      return {
+        command: command.type,
+        assetId: event.assetId
+      };
+    });
+  }
+
+  async #export(
+    command: CatalogExportCommand
+  ): Promise<Result<CatalogApplied, Error>> {
+    const archive = await exportAssetArchive(this.#backend, {
+      root: command.root
+    });
+    if (!archive.ok) {
+      return archive;
+    }
+    if (archive.val.byteLength > this.#maxContentBytes) {
+      return Err(new CatalogContentTooLargeError(
+        archive.val.byteLength,
+        this.#maxContentBytes
+      ));
+    }
+
+    return Ok({
+      command: command.type,
+      content: encodeContent(archive.val)
+    });
+  }
+
+  #plan(
+    command: CatalogPlanCommand
+  ): Result<CatalogApplied, Error> {
+    return this.#readArchive(command.content)
+      .andThen((archive) => planAssetImport(this.#backend, archive))
+      .map((plan) => {
+        return {
+          command: command.type,
+          plan
+        };
+      });
+  }
+
+  async #import(
+    command: CatalogImportCommand,
+    actor: EventStore.Actor
+  ): Promise<Result<CatalogApplied, Error>> {
+    const archive = this.#readArchive(command.content);
+    if (!archive.ok) {
+      return archive;
+    }
+
+    const report = await importAssetArchive(this.#backend, archive.val, {
+      onConflict: command.onConflict,
+      actor
+    });
+
+    return report.map((value) => {
+      return {
+        command: command.type,
+        report: value
+      };
+    });
+  }
+
+  #applyEach<TEntry>(
+    command: typeof CATALOG_RENAME | typeof CATALOG_DELETE,
+    entries: readonly TEntry[],
+    write: (entry: TEntry) => Promise<Result<EventStore.Event, Error>>
+  ): Promise<Result<CatalogApplied, Error>> {
+    return this.#outbox.hold(async() => {
+      let applied = 0;
+      for (const entry of entries) {
+        const written = await write(entry)
+          .catch((error: unknown) => Err(asError(error)));
+        if (!written.ok) {
+          return Ok({
+            command,
+            applied,
+            failure: written.val.message
+          });
+        }
+        applied++;
+      }
+
+      return Ok({
+        command,
+        applied
+      });
+    });
+  }
+
+  async #remove(
+    assetId: string,
+    force: boolean | undefined,
+    actor: EventStore.Actor
+  ): Promise<Result<EventStore.Event, Error>> {
+    const deletable = this.#deletable(assetId, force);
+    if (!deletable.ok) {
+      return deletable;
+    }
+
+    return this.#backend.writer.remove({
+      assetId,
+      actor
+    });
   }
 
   #deletable(
-    command: CatalogDeleteCommand
+    assetId: string,
+    force: boolean | undefined
   ): Result<void, AssetHasDependentsError> {
-    if (!this.#deleteProtection || command.force === true) {
+    if (!this.#deleteProtection || force === true) {
       return Ok(undefined);
     }
 
     const dependents = this.#backend.catalog
-      .dependentsOf(command.assetId)
+      .dependentsOf(assetId)
       .map((record) => {
         return {
           id: record.id.value,
@@ -315,7 +376,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
     return dependents.length === 0 ?
       Ok(undefined) :
-      Err(new AssetHasDependentsError(command.assetId, dependents));
+      Err(new AssetHasDependentsError(assetId, dependents));
   }
 
   #readArchive(
@@ -338,16 +399,4 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       )) :
       Ok(data);
   }
-}
-
-function applied(
-  command: Extract<CatalogApplied, { assetId: string; }>["command"],
-  written: Result<EventStore.Event, Error>
-): Result<CatalogApplied, Error> {
-  return written.map((event) => {
-    return {
-      command,
-      assetId: event.assetId
-    };
-  });
 }

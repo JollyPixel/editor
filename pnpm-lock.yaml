@@ -282,6 +282,9 @@ importers:
       picomatch:
         specifier: 4.0.7
         version: 4.0.7
+      ts-pattern:
+        specifier: 5.9.0
+        version: 5.9.0
       vite:
         specifier: ^8.0.0
         version: 8.3.1(@types/node@26.6.2)(esbuild@0.28.2)(yaml@2.9.0)

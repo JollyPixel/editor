@@ -114,7 +114,7 @@ describe("CatalogShare + ShellCatalog", () => {
       type: CATALOG_APPLIED,
       requestId: command.requestId,
       command: CATALOG_RENAME,
-      assetId: "map"
+      applied: 1
     });
     await renaming;
 

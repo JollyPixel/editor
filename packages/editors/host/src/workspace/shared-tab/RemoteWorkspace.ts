@@ -30,9 +30,10 @@ import {
 
 export class RemoteWorkspace implements StandaloneWorkspace {
   static async open(
-    name: string
+    name: string,
+    databaseName: string
   ): Promise<RemoteWorkspace> {
-    const workspace = new RemoteWorkspace(name);
+    const workspace = new RemoteWorkspace(name, databaseName);
     try {
       workspace.#transport = new ChannelTransport({
         port: workspace.#channel,
@@ -58,20 +59,21 @@ export class RemoteWorkspace implements StandaloneWorkspace {
   #closed = false;
 
   constructor(
-    name: string
+    name: string,
+    databaseName: string
   ) {
     this.#channel = openBridgeChannel(name);
     this.#monitor = new OwnerMonitor({
       channel: this.#channel,
       tab: this.#tab,
+      lock: databaseName,
       onLost: () => this.#ownerLost()
     });
     this.#channel.addEventListener("message", (event) => {
       const message = parseOwnerMessage(event.data);
       if (
-        message !== undefined &&
-        message.type !== "hello" &&
-        (message.tab === this.#tab || message.tab === "*")
+        message?.type === "owner" &&
+        message.tab === this.#tab
       ) {
         this.#monitor.handle(message);
       }

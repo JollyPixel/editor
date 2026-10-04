@@ -7,12 +7,12 @@ import { OwnerMonitor } from "#src/workspace/shared-tab/OwnerMonitor.ts";
 import {
   DISCOVERY_INTERVAL_MS,
   DISCOVERY_TIMEOUT_MS,
-  HEARTBEAT_MS,
-  OWNER_LOSS_MS,
   type OwnerMessage
 } from "#src/workspace/shared-tab/protocol.ts";
 
-function createMonitor() {
+function createMonitor(
+  lock = `workspace-${crypto.randomUUID()}`
+) {
   const posted: OwnerMessage[] = [];
   let lost = 0;
   const monitor = new OwnerMonitor({
@@ -20,6 +20,7 @@ function createMonitor() {
       postMessage: (message: OwnerMessage) => posted.push(message)
     },
     tab: "tab-a",
+    lock,
     onLost: () => lost++
   });
 
@@ -28,6 +29,27 @@ function createMonitor() {
     posted,
     lost: () => lost
   };
+}
+
+async function holdLock(
+  name: string
+): Promise<() => void> {
+  const held = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  void navigator.locks.request(name, () => {
+    held.resolve();
+
+    return released.promise;
+  });
+  await held.promise;
+
+  return released.resolve;
+}
+
+async function passLock(
+  name: string
+): Promise<void> {
+  await navigator.locks.request(name, () => undefined);
 }
 
 describe("OwnerMonitor", () => {
@@ -75,30 +97,31 @@ describe("OwnerMonitor", () => {
     await assert.rejects(discovered, /did not respond/);
   });
 
-  it("reports the owner lost once when it announces stopping", () => {
-    const { monitor, lost } = createMonitor();
+  it("reports the owner lost once the owner releases the workspace lock", async() => {
+    const lock = `workspace-${crypto.randomUUID()}`;
+    const release = await holdLock(lock);
+    const { monitor, lost } = createMonitor(lock);
     monitor.handle({ type: "owner", tab: "tab-a", owner: "owner-1" });
-
-    monitor.handle({ type: "stopping", tab: "*", owner: "other" });
+    await monitor.discover();
     assert.strictEqual(lost(), 0);
 
-    monitor.handle({ type: "stopping", tab: "*", owner: "owner-1" });
-    monitor.handle({ type: "stopping", tab: "*", owner: "owner-1" });
+    release();
+    await passLock(lock);
+
     assert.strictEqual(lost(), 1);
   });
 
-  it("reports the owner lost when heartbeats stop", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-    const { monitor, lost } = createMonitor();
+  it("withdraws its lock request when stopped", async() => {
+    const lock = `workspace-${crypto.randomUUID()}`;
+    const release = await holdLock(lock);
+    const { monitor, lost } = createMonitor(lock);
     monitor.handle({ type: "owner", tab: "tab-a", owner: "owner-1" });
     await monitor.discover();
 
-    t.mock.timers.tick(OWNER_LOSS_MS - HEARTBEAT_MS);
-    monitor.handle({ type: "heartbeat", tab: "*", owner: "owner-1" });
-    t.mock.timers.tick(OWNER_LOSS_MS - HEARTBEAT_MS);
-    assert.strictEqual(lost(), 0);
+    monitor.stop();
+    release();
+    await passLock(lock);
 
-    t.mock.timers.tick(HEARTBEAT_MS * 2);
-    assert.strictEqual(lost(), 1);
+    assert.strictEqual(lost(), 0);
   });
 });

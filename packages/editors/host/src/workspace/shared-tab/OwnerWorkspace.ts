@@ -9,7 +9,6 @@ import type {
   StandaloneWorkspace
 } from "../SessionWorkspace.ts";
 import {
-  HEARTBEAT_MS,
   parseOwnerMessage,
   openBridgeChannel,
   openSocketChannel,
@@ -21,7 +20,6 @@ export class OwnerWorkspace implements StandaloneWorkspace {
   readonly #channel: BroadcastChannel;
   readonly #host: ChannelTransportHost;
   readonly #hold: StandaloneConnection;
-  readonly #heartbeat: ReturnType<typeof setInterval>;
   readonly #subscriptions = new AbortController();
   #closed = false;
 
@@ -39,12 +37,6 @@ export class OwnerWorkspace implements StandaloneWorkspace {
     this.#hold = workspace.connect();
     this.#channel.addEventListener("message", (event) => {
       this.#onMessage(event.data);
-    }, { signal: this.#subscriptions.signal });
-    this.#heartbeat = setInterval(() => {
-      this.#announce("heartbeat");
-    }, HEARTBEAT_MS);
-    globalThis.window?.addEventListener("pagehide", () => {
-      this.#announce("stopping");
     }, { signal: this.#subscriptions.signal });
   }
 
@@ -74,10 +66,8 @@ export class OwnerWorkspace implements StandaloneWorkspace {
 
   async close(): Promise<void> {
     if (!this.#closed) {
-      this.#announce("stopping");
       this.#closed = true;
       this.#subscriptions.abort();
-      clearInterval(this.#heartbeat);
       this.#host.close();
       this.#channel.close();
       this.#hold.client.destroy();
@@ -94,18 +84,6 @@ export class OwnerWorkspace implements StandaloneWorkspace {
       this.#channel.postMessage({
         type: "owner",
         tab: message.tab,
-        owner: this.#host.id
-      } satisfies OwnerMessage);
-    }
-  }
-
-  #announce(
-    type: "heartbeat" | "stopping"
-  ): void {
-    if (!this.#closed) {
-      this.#channel.postMessage({
-        type,
-        tab: "*",
         owner: this.#host.id
       } satisfies OwnerMessage);
     }

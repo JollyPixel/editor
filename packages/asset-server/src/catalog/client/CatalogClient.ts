@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import {
+  match,
+  P
+} from "ts-pattern";
 
 // Import Internal Dependencies
 import {
@@ -20,6 +24,7 @@ import {
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
   type CatalogApplied,
+  type CatalogChange,
   type CatalogCommand,
   type CatalogCommandType,
   type CatalogMessage,
@@ -80,6 +85,16 @@ export interface CatalogRemoveOptions {
   force?: boolean;
 }
 
+export interface CatalogRename {
+  assetId: string;
+  to: string;
+}
+
+export interface CatalogBatchReport {
+  applied: number;
+  failure?: string;
+}
+
 export interface CatalogImportOptions {
   onConflict: ImportConflictPolicy;
 }
@@ -109,7 +124,9 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     rooms: CatalogRoomSource,
     options: CatalogConnectOptions = {}
   ): Promise<CatalogClient> {
-    const catalog = new CatalogClient(rooms.room(CATALOG_ROOM));
+    const catalog = new CatalogClient(
+      rooms.room(CATALOG_ROOM)
+    );
     try {
       await (options.timeoutMs === undefined ?
         catalog.ready :
@@ -135,6 +152,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     room: CatalogRoom
   ) {
     super();
+
     this.#room = room;
     this.#room.on("message", this.#onMessage);
     this.#room.join();
@@ -175,7 +193,9 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       type: CATALOG_SNAPSHOT,
       manifest: {
         version: 1,
-        assets: [...this.#records.values()]
+        assets: [
+          ...this.#records.values()
+        ]
       },
       dependencies: this.#dependencies.toJSON(),
       folders: this.#folders
@@ -202,22 +222,61 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     assetId: string,
     to: string
   ): Promise<void> {
-    await this.#request({
-      type: CATALOG_RENAME,
-      assetId,
-      to
-    });
+    throwOnFailure(
+      CATALOG_RENAME,
+      await this.renameMany([
+        { assetId, to }
+      ])
+    );
   }
 
   async remove(
     assetId: string,
     options: CatalogRemoveOptions = {}
   ): Promise<void> {
-    await this.#request({
+    throwOnFailure(
+      CATALOG_DELETE,
+      await this.removeMany([assetId], options)
+    );
+  }
+
+  async renameMany(
+    renames: Iterable<CatalogRename>
+  ): Promise<CatalogBatchReport> {
+    const entries = Array.from(renames, (rename) => {
+      return {
+        assetId: rename.assetId,
+        to: rename.to
+      };
+    });
+    if (entries.length === 0) {
+      return { applied: 0 };
+    }
+
+    const rawReport = await this.#request({
+      type: CATALOG_RENAME,
+      renames: entries
+    });
+
+    return reportOf(rawReport);
+  }
+
+  async removeMany(
+    assetIds: Iterable<string>,
+    options: CatalogRemoveOptions = {}
+  ): Promise<CatalogBatchReport> {
+    const entries = [...assetIds];
+    if (entries.length === 0) {
+      return { applied: 0 };
+    }
+
+    const rawReport = await this.#request({
       type: CATALOG_DELETE,
-      assetId,
+      assetIds: entries,
       force: options.force
     });
+
+    return reportOf(rawReport);
   }
 
   async createFolder(
@@ -317,7 +376,12 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         ));
       }
       else if (message.type === CATALOG_REJECTED) {
-        reject(new CatalogRejectedError(message.reason, message.command));
+        reject(
+          new CatalogRejectedError(
+            message.reason,
+            message.command
+          )
+        );
       }
       else if (message.command === request.type) {
         resolve(message);
@@ -340,49 +404,73 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   readonly #onMessage = (
     message: CatalogMessage
   ): void => {
-    switch (message.type) {
-      case CATALOG_SNAPSHOT: {
-        this.#records.clear();
-        for (const record of message.manifest.assets) {
-          this.#records.set(record.id, record);
-        }
-        this.#folders = [...message.folders];
-        const changed = this.#replaceDependencies(message.dependencies ?? {});
-        this.#ready.resolve();
-        this.emit("change");
-        for (const assetId of changed) {
-          this.emit("dependencies", assetId);
-        }
-        break;
+    match(message)
+      .with({ type: CATALOG_SNAPSHOT }, (snapshot) => this.#applySnapshot(snapshot))
+      .with({ type: CATALOG_CHANGED }, ({ changes }) => this.#applyChanges(changes))
+      .with({ type: CATALOG_FOLDERS }, ({ folders }) => this.#applyFolders(folders))
+      .with({ type: P.union(CATALOG_APPLIED, CATALOG_REJECTED) }, (reply) => this.#settle(reply))
+      .exhaustive();
+  };
+
+  #applySnapshot(
+    snapshot: CatalogSnapshot
+  ): void {
+    this.#records.clear();
+    for (const record of snapshot.manifest.assets) {
+      this.#records.set(record.id, record);
+    }
+
+    this.#folders = [...snapshot.folders];
+    const changed = this.#replaceDependencies(
+      snapshot.dependencies ?? {}
+    );
+
+    this.#ready.resolve();
+    this.emit("change");
+    for (const assetId of changed) {
+      this.emit("dependencies", assetId);
+    }
+  }
+
+  #applyChanges(
+    changes: Iterable<CatalogChange>
+  ): void {
+    const changed = new Set<string>();
+    for (const { assetId, record, dependencies } of changes) {
+      if (record === null) {
+        this.#records.delete(assetId);
       }
-      case CATALOG_CHANGED: {
-        const { assetId, record, dependencies } = message.change;
-        if (record === null) {
-          this.#records.delete(assetId);
-        }
-        else {
-          this.#records.set(assetId, record);
-        }
-        const changed = dependencies === undefined ?
-          this.#dependencies.delete(assetId) :
-          this.#dependencies.set(assetId, dependencies);
-        this.emit("change");
-        if (changed) {
-          this.emit("dependencies", assetId);
-        }
-        break;
+      else {
+        this.#records.set(assetId, record);
       }
-      case CATALOG_FOLDERS:
-        this.#folders = [...message.folders];
-        this.emit("change");
-        break;
-      default: {
-        const settle = this.#pending.get(message.requestId);
-        this.#pending.delete(message.requestId);
-        settle?.(message);
+      const edgesChanged = dependencies === undefined ?
+        this.#dependencies.delete(assetId) :
+        this.#dependencies.set(assetId, dependencies);
+      if (edgesChanged) {
+        changed.add(assetId);
       }
     }
-  };
+
+    this.emit("change");
+    for (const assetId of changed) {
+      this.emit("dependencies", assetId);
+    }
+  }
+
+  #applyFolders(
+    folders: Iterable<string>
+  ): void {
+    this.#folders = [...folders];
+    this.emit("change");
+  }
+
+  #settle(
+    reply: SettledMessage
+  ): void {
+    const settle = this.#pending.get(reply.requestId);
+    this.#pending.delete(reply.requestId);
+    settle?.(reply);
+  }
 
   #replaceDependencies(
     dependencies: DependencyMap
@@ -397,6 +485,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         changed.push(assetId);
       }
     }
+
     for (const [assetId, references] of Object.entries(dependencies)) {
       if (this.#dependencies.set(assetId, references)) {
         changed.push(assetId);
@@ -416,6 +505,7 @@ async function readyWithin(
     () => timeout.reject(new CatalogUnavailableError()),
     timeoutMs
   );
+
   try {
     await Promise.race([
       ready,
@@ -424,5 +514,28 @@ async function readyWithin(
   }
   finally {
     clearTimeout(timer);
+  }
+}
+
+function reportOf(
+  reply: Reply<typeof CATALOG_RENAME | typeof CATALOG_DELETE>
+): CatalogBatchReport {
+  return reply.failure === undefined ?
+    { applied: reply.applied } :
+    {
+      applied: reply.applied,
+      failure: reply.failure
+    };
+}
+
+function throwOnFailure(
+  command: typeof CATALOG_RENAME | typeof CATALOG_DELETE,
+  report: CatalogBatchReport
+): void {
+  if (report.failure !== undefined) {
+    throw new CatalogRejectedError(
+      report.failure,
+      command
+    );
   }
 }

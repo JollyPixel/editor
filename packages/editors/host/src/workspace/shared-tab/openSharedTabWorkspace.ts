@@ -38,7 +38,7 @@ export async function openSharedTabWorkspace(
   const databaseName = workspaceDatabaseName(name);
   const release = await acquireWorkspaceLock(databaseName);
   if (release === null) {
-    return RemoteWorkspace.open(name);
+    return RemoteWorkspace.open(name, databaseName);
   }
 
   const [{ OfflineWorkspace }, { OwnerWorkspace }] = await Promise.all([

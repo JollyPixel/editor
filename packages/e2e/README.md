@@ -89,7 +89,8 @@ test("opens the requested model with its default block", async({ page }) => {
 
 `@jolly-pixel/e2e`, for every suite:
 
-- [Config](./docs/config.md): `defineE2EConfig`, `PORTS` and `baseUrl`.
+- [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl` and the
+  `prebundleWorkspace` Vite plugin.
 - [Pointer](./docs/pointer.md): bounding boxes, drags and multi-step presses.
 - [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
 - [Sockets](./docs/sockets.md): `recordSockets`.
@@ -115,16 +116,13 @@ the package without a workspace cycle.
    suite's seed documents, and `expect`.
 4. Write `test/e2e/<feature>.e2e.ts` against that `test`. Keep domain helpers
    (scene, painting, hierarchy) in the suite's `test/e2e/support/`.
-5. Serve the page with `vite --mode e2e` and, in that mode, pre-bundle the
-   workspace packages the browser imports:
-   `optimizeDeps: { include: kWorkspaceBrowserEntries, force: true }`. Vite
-   never pre-bundles linked packages, so plain `vite` serves each file of their
-   `dist/` as its own module: about 1,000 requests per editor boot, which on a
-   CI runner is enough to push tests that boot several pages past the 30s
-   timeout. List every `@jolly-pixel/*` entry point loaded by the page, including
-   `import { type X }` imports (they still load the module); an entry left out
-   loads a second copy next to the pre-bundled one. A trace of one test should
-   show no request under `packages/*/dist/`.
+5. Serve the page with `vite --mode e2e` and add
+   [`prebundleWorkspace()`](./docs/config.md#prebundleworkspace-plugin)
+   to the Vite plugins. Vite never pre-bundles linked packages, so plain
+   `vite` serves each file of their `dist/` as its own module: about 1,000
+   requests per editor boot, which on a CI runner is enough to push tests that
+   boot several pages past the 30s timeout. A trace of one test should show no
+   request under `packages/*/dist/`.
 6. CI picks the suite up from its `test:e2e` script and runs it when the
    package or one of its workspace dependencies changes
    (`scripts/ciE2eMatrix.ts`). To keep it out of CI, add a `--skip` entry in

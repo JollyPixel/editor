@@ -55,12 +55,14 @@ export function createCatalogHandler(
       return;
     }
 
-    sendJson(request, response, {
-      body: projection.snapshot(),
-      cacheControl: "no-cache",
-      etag: true
-    }).catch(() => {
-      response.destroy();
-    });
+    sendJson(
+      request,
+      response,
+      {
+        body: projection.snapshot(),
+        cacheControl: "no-cache",
+        etag: true
+      }
+    ).catch(() => response.destroy());
   };
 }

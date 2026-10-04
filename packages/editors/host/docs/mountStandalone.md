@@ -249,7 +249,14 @@ interface BootStandaloneOptions
   forceOffline?: boolean;
 }
 
-type OfflineProject = Pick<OfflineWorkspaceOptions, "handlers" | "seed" | "backend">;
+interface OfflineProject {
+  handlers: AssetKindHandler[];
+  seed?: OfflineSeed;
+  backend?: AssetBackendTuning;
+}
+type OfflineSeed =
+  | AssetSeedMap
+  | (() => AssetSeedMap | Promise<AssetSeedMap>);
 type OfflineProjectLoader = () => OfflineProject | Promise<OfflineProject>;
 ```
 
@@ -296,8 +303,9 @@ dialog; any other error, or cancelling it, is rethrown.
 
 `@jolly-pixel/editor.host/offline` runs the asset back-end inside the page. The
 editor mounts through the same `mount` as online, with a catalog, rooms and
-leases. On `"memory"` storage nothing outlives the page; on `"indexeddb"`
-asset content and ids survive a reload.
+leases. The tab that owns the workspace stores it in IndexedDB, so asset
+content and ids survive a reload. Without Web Locks the workspace lives in
+memory and nothing outlives the page.
 
 ```ts
 import { mountStandalone } from "@jolly-pixel/editor.host";
@@ -325,13 +333,11 @@ await mountStandalone(VoxelMapEditor, {
 
 | Member | Role |
 |---|---|
-| `OfflineWorkspace.open({ handlers, seed?, storage?, name?, backend? })` | opens the storage, seeds it when empty, then starts the back-end and its server |
 | `openSharedTabWorkspace({ project, name? })` | opens the persistent workspace in one tab and connects other tabs to it over BroadcastChannel; resolves a `StandaloneWorkspace` |
 | `StandaloneWorkspace` | the members below that every workspace shares: `persistent`, `connect()`, `launchSources()`, `reset()`, `close()` |
 | `connect()` | a guest identity, a local or BroadcastChannel client and the workspace |
 | `launchSources(accepts)` | a known `?target=`, then the target last opened in this browser, then the first catalog record of the `accepts` kind; a shared follower reads the owner's catalog only when its source is read, and its next `connect()` reuses that catalog unless a connection was already opened |
-| `storage` / `persistent` | direct workspaces expose both; shared workspaces expose `persistent` |
-| `backend` | the `AssetBackend` on a direct `OfflineWorkspace` |
+| `persistent` | whether the assets outlive the page |
 | `reset()` | closes the owner workspace and deletes its database; unavailable in a follower tab |
 | `close()` | flushes, then stops the server and the back-end; safe to call twice |
 
@@ -339,15 +345,15 @@ Several clients can share one workspace. Destroying one client leaves the others
 connected; destroying the last closes the workspace. Once closing starts,
 `connect()` refuses new connections.
 
-`storage` defaults to `"memory"`. `name` defaults to `"default"` and selects
-the `jolly-workspace:<name>` database. `seed` is a seed map or a function
+`name` defaults to `"default"` and selects the `jolly-workspace:<name>`
+database. `seed` is a seed map or a function
 returning one, used only when the storage holds no asset: a seeded asset the
 user deleted does not come back. `backend` takes the
 [`AssetBackendTuning`](../../../asset-server/docs/Workspace.md) the Vite
 workspace plugin takes, such as `catalogArchiveLimits`; `watch` is always
 off.
 
-On `"indexeddb"`:
+In IndexedDB:
 
 - Give seeded assets random ids. A fixed id would make the first map of every
   user the same asset, and their archives would collide on import.
@@ -355,7 +361,9 @@ On `"indexeddb"`:
   Other tabs use the owner's catalog and asset rooms over BroadcastChannel.
   A tab that finds the lock held never calls `project` and never loads the
   back-end. When Web Locks are unavailable it returns a memory workspace.
-- Direct `OfflineWorkspace.open` still falls back to memory in a second tab.
+- A follower tab queues a request for the owner's lock and reloads when it is
+  granted, which happens once the owner closes its workspace or its tab.
+  Timer throttling in a hidden owner tab does not make followers reload.
 - Snapshots are taken after 500 ms of quiet and at most every 5 s, and pending
   ones are flushed when the page is hidden. A browser does not guarantee
   writes started while the page goes away, so the short delay is what bounds

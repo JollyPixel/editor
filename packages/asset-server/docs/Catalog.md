@@ -148,8 +148,8 @@ writer for the usual setup, capped by the `catalogMaxContentBytes` and
 
 ```ts
 { type: "catalog:create", requestId, path, kind?, onConflict?, content?: AssetInlineContent }
-{ type: "catalog:rename", requestId, assetId, to }
-{ type: "catalog:delete", requestId, assetId, force? }
+{ type: "catalog:rename", requestId, renames: { assetId, to }[] }
+{ type: "catalog:delete", requestId, assetIds: string[], force? }
 { type: "catalog:create-folder", requestId, path }
 { type: "catalog:move-folder", requestId, from, to }
 { type: "catalog:delete-folder", requestId, path }
@@ -169,8 +169,12 @@ The room runs each command through `AssetWriter`, attributed to
 `actorOf(context.identity)` (see [Actors](./Rooms.md#actors)). Paths follow
 the writer rules, see
 [Errors](./AssetWriter.md#errors). Renaming or moving a folder means renaming
-each asset under it, one command at a time, then sending `catalog:move-folder`
+each asset under it in one `renames` list, then sending `catalog:move-folder`
 to carry its empty folders over and remove the old one.
+
+A `renames` or `assetIds` list is never empty. It is applied in order and
+stops at the first refused entry; the applied entries are not rolled back.
+Renaming or deleting one asset is a list of one.
 
 The folder commands go through [`CatalogFolders`](#folders).
 
@@ -178,9 +182,10 @@ The folder commands go through [`CatalogFolders`](#folders).
 
 ```ts
 { type: "catalog:snapshot", manifest: AssetManifestData, dependencies?: DependencyMap, folders: string[] }
-{ type: "catalog:changed", change: { eventType, assetId, record, dependencies? } }
+{ type: "catalog:changed", changes: { eventType, assetId, record, dependencies? }[] }
 { type: "catalog:folders", folders: string[] }
-{ type: "catalog:applied", requestId, command, assetId }
+{ type: "catalog:applied", requestId, command: "catalog:create", assetId }
+{ type: "catalog:applied", requestId, command: "catalog:rename" | "catalog:delete", applied, failure? }
 { type: "catalog:applied", requestId, command: "catalog:create-folder" | "catalog:move-folder" | "catalog:delete-folder", path }
 { type: "catalog:applied", requestId, command: "catalog:export", content: AssetInlineContent }
 { type: "catalog:applied", requestId, command: "catalog:plan", plan: ImportPlan }
@@ -194,6 +199,13 @@ deletion and for an unindexed asset. `eventType` is the `AssetEventType`
 that produced the change. `catalog:folders` carries the whole sorted folder
 list each time it changes.
 
+`catalog:changed` usually holds one change. While a rename or delete list
+runs, the room holds back its changes and folder lists, along with any other
+change made meanwhile, and sends them before the reply: the latest folder
+list, then one `catalog:changed` with every change in order. Another command
+that replies in the meantime sends what is held so far first, so a list's
+changes can then arrive in more than one message.
+
 The command and message types are derived from the schemas the room
 validates with, `catalogCommandProtocol` and `catalogMessageProtocol`. The
 server checks every outgoing message against the second one, records and
@@ -202,7 +214,9 @@ import reports included, and drops and logs one that does not match.
 A successful command reaches every member as `catalog:changed`, through the
 same projection that carries reconciler writes, then the author alone gets
 `catalog:applied`. A failed command sends `catalog:rejected` to the author
-alone and broadcasts nothing. Both echo the command's `requestId`.
+alone and broadcasts nothing. Both echo the command's `requestId`. A rename
+or delete list always gets `catalog:applied`: `applied` counts the entries
+that went through, and `failure` is the reason of the refused entry, if any.
 
 A payload that does not match a command schema gets the room's `"error"`
 envelope. Rights are checked per command under `asset-catalog.<command type>`
@@ -226,15 +240,15 @@ See [Deleted assets](./Rooms.md#deleted-assets).
 
 ### Delete protection
 
-`catalog:delete` is refused when [`dependentsOf`](#dependency-edges)
-lists an asset, and the `reason` names up to three of them by path. A
+A `catalog:delete` entry is refused when [`dependentsOf`](#dependency-edges)
+lists an asset, and the `failure` names up to three of them by path. A
 client that warned its user resends the command with `force: true`, which
 skips the check. The `catalogDeleteProtection` backend option turns the whole
 check off.
 
 A client warns without a round trip: `CatalogClient.dependentsOf` applies the
-same rule. Deleting a folder is one command per asset, so a caller either
-deletes dependents first or forces each command.
+same rule. A delete list stops at the first protected asset, so a caller
+either deletes dependents first or forces the list.
 
 Only the room command is guarded.
 [`AssetWriter.remove`](./AssetWriter.md#update-rename-and-remove)
@@ -303,7 +317,8 @@ interface CatalogImportOptions {
 | `createFolder(path)` / `removeFolder(path)` | `createFolder` resolves the normalized path; `removeFolder` resolves once applied and keeps any sub-folder that still holds a file. |
 | `moveFolder(from, to)` | Carries the folders under `from` over to `to`, removes `from` and resolves the normalized `to`. Rename the assets under `from` first. |
 | `create(path, content, options?)` | Resolves the created asset ID. A `null` `content` creates the kind's default state with its companions. `options` takes `kind` and `onConflict`. |
-| `rename(assetId, to)` / `remove(assetId, options?)` | Resolve once applied. `remove` takes `force` to bypass [delete protection](#delete-protection). |
+| `rename(assetId, to)` / `remove(assetId, options?)` | Send a list of one and resolve once applied; a refused entry rejects with `CatalogRejectedError`. `remove` takes `force` to bypass [delete protection](#delete-protection). |
+| `renameMany(renames)` / `removeMany(assetIds, options?)` | Send one list command and resolve a `CatalogBatchReport`: `{ applied, failure? }`, `failure` set when an entry was refused. An empty list resolves `{ applied: 0 }` without sending. |
 | `exportArchive(root?)` | Resolves the [archive](./Archive.md) bytes of `root`, or of the whole workspace. |
 | `planImport(archive)` | Resolves the `ImportPlan`, writing nothing. |
 | `importArchive(archive, { onConflict })` | Resolves the `ImportReport`. |
@@ -311,7 +326,7 @@ interface CatalogImportOptions {
 | `dependentsOf(assetId)` | The dependents that still have a record, as `AssetRecordData`; the assets delete protection counts. |
 | `toSnapshot()` | The current records, dependency edges and folders as a `catalog:snapshot` message, for relaying the catalog to another client. |
 | `dispose()` | Leaves the room and rejects pending requests. |
-| `"change"` event | Emitted once per snapshot, change and folder list, after records, folders and edges are applied. A listener that rebuilds a whole view needs only this event. |
+| `"change"` event | Emitted once per snapshot, `catalog:changed` message and folder list, after records, folders and edges are applied. A listener that rebuilds a whole view needs only this event. |
 | `"dependencies"` event | Receives an asset ID whose outgoing edges changed, after `"change"`. |
 
 `CatalogClient.connect(rooms, options?)` opens the `CATALOG_ROOM` room on

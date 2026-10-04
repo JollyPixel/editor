@@ -49,6 +49,17 @@ const kReferences = {
   type: "array",
   items: assetReferenceSchema
 } as const;
+const kRenameSchema = {
+  type: "object",
+  properties: {
+    assetId: kString,
+    to: kString
+  },
+  required: [
+    "assetId",
+    "to"
+  ]
+} as const;
 const kCommandTypes = [
   CATALOG_CREATE,
   CATALOG_RENAME,
@@ -132,14 +143,16 @@ export const catalogCommandProtocol = new MessageProtocol(
         properties: {
           type: { const: CATALOG_RENAME },
           requestId: kString,
-          assetId: kString,
-          to: kString
+          renames: {
+            type: "array",
+            minItems: 1,
+            items: kRenameSchema
+          }
         },
         required: [
           "type",
           "requestId",
-          "assetId",
-          "to"
+          "renames"
         ]
       },
       {
@@ -147,13 +160,17 @@ export const catalogCommandProtocol = new MessageProtocol(
         properties: {
           type: { const: CATALOG_DELETE },
           requestId: kString,
-          assetId: kString,
+          assetIds: {
+            type: "array",
+            minItems: 1,
+            items: kString
+          },
           force: { type: "boolean" }
         },
         required: [
           "type",
           "requestId",
-          "assetId"
+          "assetIds"
         ]
       },
       {
@@ -278,11 +295,15 @@ export const catalogMessageProtocol = new MessageProtocol(
         type: "object",
         properties: {
           type: { const: CATALOG_CHANGED },
-          change: catalogChangeSchema
+          changes: {
+            type: "array",
+            minItems: 1,
+            items: catalogChangeSchema
+          }
         },
         required: [
           "type",
-          "change"
+          "changes"
         ]
       },
       {
@@ -308,13 +329,7 @@ export const catalogMessageProtocol = new MessageProtocol(
             properties: {
               type: { const: CATALOG_APPLIED },
               requestId: kString,
-              command: {
-                enum: [
-                  CATALOG_CREATE,
-                  CATALOG_RENAME,
-                  CATALOG_DELETE
-                ]
-              },
+              command: { const: CATALOG_CREATE },
               assetId: kString
             },
             required: [
@@ -322,6 +337,30 @@ export const catalogMessageProtocol = new MessageProtocol(
               "requestId",
               "command",
               "assetId"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: {
+                enum: [
+                  CATALOG_RENAME,
+                  CATALOG_DELETE
+                ]
+              },
+              applied: {
+                type: "integer",
+                minimum: 0
+              },
+              failure: kString
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "applied"
             ]
           },
           {

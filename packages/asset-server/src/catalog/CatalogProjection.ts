@@ -59,21 +59,32 @@ export class CatalogProjection extends Emitter<
   load(): void {
     this.#catalog = new AssetCatalog();
     this.#dependencies.clear();
-    for (const { assetId, projection } of this.#projector.desiredProjections()) {
-      this.#upsert(assetId, projection);
+
+    for (const data of this.#projector.desiredProjections()) {
+      const { assetId, projection } = data;
+      this.#upsert(
+        assetId,
+        projection
+      );
     }
   }
 
   start(): void {
     if (!this.#following) {
       this.#following = true;
-      this.#projector.on("changed", this.#onProjected);
+      this.#projector.on(
+        "changed",
+        this.#onProjected
+      );
     }
   }
 
   close(): void {
     this.#following = false;
-    this.#projector.off("changed", this.#onProjected);
+    this.#projector.off(
+      "changed",
+      this.#onProjected
+    );
     this.removeAllListeners();
   }
 
@@ -108,7 +119,10 @@ export class CatalogProjection extends Emitter<
   ): void => {
     const catalogChange = this.#fold(change);
     if (catalogChange !== null) {
-      this.emit("changed", catalogChange);
+      this.emit(
+        "changed",
+        catalogChange
+      );
     }
   };
 
@@ -116,6 +130,7 @@ export class CatalogProjection extends Emitter<
     change: AssetProjectionChange
   ): CatalogChange | null {
     const { assetId, eventType, desired } = change;
+
     if (desired === null) {
       const id = new AssetId(assetId);
       if (!this.#catalog.has(id)) {
@@ -132,7 +147,10 @@ export class CatalogProjection extends Emitter<
       };
     }
 
-    const record = this.#upsert(assetId, desired);
+    const record = this.#upsert(
+      assetId,
+      desired
+    );
 
     return {
       eventType,
@@ -156,7 +174,10 @@ export class CatalogProjection extends Emitter<
     });
     this.#catalog.set(record);
     if (projection.dependencies !== undefined) {
-      this.#dependencies.set(assetId, projection.dependencies);
+      this.#dependencies.set(
+        assetId,
+        projection.dependencies
+      );
     }
 
     return record;
