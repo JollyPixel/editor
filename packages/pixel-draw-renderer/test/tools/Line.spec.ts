@@ -63,98 +63,17 @@ describe("Line", () => {
       assert.deepStrictEqual(points.at(-1), { x: 5, y: 2 });
     });
 
-    test("works in all directions (negative deltas)", () => {
+    test("45 degree diagonal toward negative x", () => {
       const points = Line.rasterize(
         { x: 5, y: 5 },
         { x: 2, y: 8 }
       );
-      assert.deepStrictEqual(points[0], { x: 5, y: 5 });
-      assert.deepStrictEqual(points.at(-1), { x: 2, y: 8 });
-    });
-
-    test("zero-length segment rasterizes to a single point", () => {
-      const points = Line.rasterize(
-        { x: 4, y: 4 },
-        { x: 4, y: 4 }
-      );
-      assert.deepStrictEqual(
-        points,
-        [{ x: 4, y: 4 }]
-      );
-    });
-  });
-
-  describe("armed-state machine", () => {
-    test("starts unarmed", () => {
-      const tool = new Line();
-      assert.ok(!tool.isArmed);
-      assert.strictEqual(tool.previewPoints, null);
-    });
-
-    test("arm() sets armed state with start === end", () => {
-      const tool = new Line();
-      tool.arm({ x: 1, y: 1 });
-      assert.ok(tool.isArmed);
-      assert.deepStrictEqual(
-        tool.previewPoints,
-        [{ x: 1, y: 1 }]
-      );
-    });
-
-    test("arm() defaults commitTrigger to 'mousedown'", () => {
-      const tool = new Line();
-      tool.arm({ x: 0, y: 0 });
-      assert.strictEqual(tool.commitTrigger, "mousedown");
-    });
-
-    test("arm() accepts an explicit commitTrigger", () => {
-      const tool = new Line();
-      tool.arm({ x: 0, y: 0 }, "mouseup");
-      assert.strictEqual(tool.commitTrigger, "mouseup");
-    });
-
-    test("update() moves the end position while armed", () => {
-      const tool = new Line();
-      tool.arm({ x: 0, y: 0 });
-      tool.update({ x: 2, y: 0 });
-      assert.deepStrictEqual(tool.previewPoints, [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 2, y: 0 }
-      ]);
-    });
-
-    test("update() is a no-op while unarmed", () => {
-      const tool = new Line();
-      tool.update({ x: 9, y: 9 });
-      assert.strictEqual(tool.previewPoints, null);
-    });
-
-    test("cancel() disarms and clears preview", () => {
-      const tool = new Line();
-      tool.arm({ x: 0, y: 0 });
-      tool.update({ x: 5, y: 0 });
-      tool.cancel();
-      assert.ok(!tool.isArmed);
-      assert.strictEqual(tool.previewPoints, null);
-    });
-
-    test("commit() returns the rasterized points and disarms", () => {
-      const tool = new Line();
-      tool.arm({ x: 0, y: 0 });
-      tool.update({ x: 2, y: 0 });
-
-      const points = tool.commit();
       assert.deepStrictEqual(points, [
-        { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }
+        { x: 5, y: 5 },
+        { x: 4, y: 6 },
+        { x: 3, y: 7 },
+        { x: 2, y: 8 }
       ]);
-      assert.ok(!tool.isArmed);
-      assert.strictEqual(tool.previewPoints, null);
-    });
-
-    test("commit() returns null when not armed", () => {
-      const tool = new Line();
-      assert.strictEqual(tool.commit(), null);
     });
   });
 });

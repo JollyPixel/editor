@@ -2,6 +2,7 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import { filledArray } from "../utils/array.ts";
 import { Select } from "./Select.ts";
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { SelectEngineEvent } from "./SelectEngine.events.ts";
@@ -108,10 +109,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       rect,
       this.#eraseColor
     );
-  }
-
-  get rect(): SelectionRect | null {
-    return this.#select.rect;
   }
 
   get isDragging(): boolean {
@@ -390,9 +387,10 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     }
 
     const eraseColor = this.#resolveEraseColor(rect);
-    const eraseColors: RGBA8[] = new Array(
-      rect.width * rect.height
-    ).fill(eraseColor);
+    const eraseColors = filledArray(
+      rect.width * rect.height,
+      eraseColor
+    );
     this.#commitFootprintChange({
       oldRect: rect,
       oldMask: mask,

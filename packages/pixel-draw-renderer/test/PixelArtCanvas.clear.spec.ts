@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { toUint8Array } from "js-base64";
+
 // Import Internal Dependencies
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
@@ -94,6 +97,14 @@ describe("PixelArtCanvas.clearTexture", () => {
     const [event] = events;
     assert.ok(event.action === "texture-replaced");
     assert.deepStrictEqual(event.metadata.size, { x: 8, y: 8 });
+    const pixels = new Uint8ClampedArray(
+      toUint8Array(event.metadata.pixels)
+    );
+    assert.deepStrictEqual(readPixel(pixels, { x: 1, y: 1 }, 8), kWhite);
+    assert.deepStrictEqual(
+      readPixel(pixels, { x: 3, y: 1 }, 8),
+      kTransparent
+    );
     manager.destroy();
   });
 

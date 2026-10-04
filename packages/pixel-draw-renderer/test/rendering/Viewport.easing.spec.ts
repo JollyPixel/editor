@@ -51,9 +51,12 @@ describe("Viewport eased zoom", () => {
     vp.applyPan(10, -5);
 
     const pixel = texturePointAt(vp, 160, 165);
+    const zoomAtPan = vp.zoom.value;
     while (vp.update(16)) {
       assertPointFixed(vp, 160, 165, pixel);
     }
+    assertPointFixed(vp, 160, 165, pixel);
+    assert.ok(vp.zoom.value > zoomAtPan);
   });
 
   test("keeps camera coordinates on whole pixels", () => {

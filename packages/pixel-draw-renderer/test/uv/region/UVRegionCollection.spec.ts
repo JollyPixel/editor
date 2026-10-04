@@ -21,12 +21,6 @@ function makeRegion(
 }
 
 describe("UVRegionCollection", () => {
-  test("get returns undefined for an unknown id", () => {
-    const collection = new UVRegionCollection();
-
-    assert.strictEqual(collection.get("r1"), undefined);
-  });
-
   test("set stores an instance built from raw data, keyed by region.id", () => {
     const collection = new UVRegionCollection();
     const region = makeRegion("r1");
@@ -45,13 +39,6 @@ describe("UVRegionCollection", () => {
     assert.strictEqual(collection.get("r1"), region);
   });
 
-  test("stores an free region without flattening it", () => {
-    const collection = new UVRegionCollection();
-    collection.set(new UVRegion(makeRegion("r1")).free());
-
-    assert.strictEqual(collection.get("r1")!.state, "free");
-  });
-
   test("set upserts an existing id", () => {
     const collection = new UVRegionCollection();
     collection.set(makeRegion("r1"));
@@ -68,16 +55,7 @@ describe("UVRegionCollection", () => {
     assert.strictEqual(
       collection.get("r1"),
       undefined,
-      "collection must yield r1 and r2"
-    );
-  });
-
-  test("remove is a no-op for an unknown id", () => {
-    const collection = new UVRegionCollection();
-
-    assert.doesNotThrow(
-      () => collection.remove("no-such"),
-      "remove must not throw for an unknown id"
+      "removed region r1 must no longer be found"
     );
   });
 

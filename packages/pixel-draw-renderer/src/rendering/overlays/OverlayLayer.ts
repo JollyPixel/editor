@@ -144,10 +144,6 @@ export class OverlayLayer {
   reparentTo(
     newParentElement: HTMLDivElement
   ): void {
-    if (!this.#svg) {
-      return;
-    }
-
     if (this.#svg.parentElement) {
       this.#svg.remove();
     }

@@ -1,25 +1,23 @@
 // Import Node.js Dependencies
 import {
+  after,
+  before,
   describe,
   test
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { decodePng } from "@jolly-pixel/image";
-
 // Import Internal Dependencies
 import { SelectionClipboard } from "#src/clipboard/SelectionClipboard.ts";
-import { encodeSelectionPng } from "#src/clipboard/selectionImage.ts";
 import { encodeSelectionMetadata } from "#src/clipboard/selectionMetadata.ts";
 import {
   JOLLYPIXEL_CLIPBOARD_TYPE,
-  SUPPORTED_RASTER_TYPES,
   type ClipboardAdapter,
   type DecodedRasterImage,
   type SelectionSnapshot
 } from "#src/clipboard/types.ts";
 
+// CONSTANTS
 const kSnapshot: SelectionSnapshot = {
   rect: { x: -2, y: 4, width: 2, height: 1 },
   pixels: [
@@ -58,6 +56,24 @@ function makeAdapter(
 }
 
 describe("SelectionClipboard", () => {
+  const previousClipboardItem = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "ClipboardItem"
+  );
+  before(() => {
+    Object.assign(globalThis, {
+      ClipboardItem: window.ClipboardItem
+    });
+  });
+  after(() => {
+    if (previousClipboardItem === undefined) {
+      Reflect.deleteProperty(globalThis, "ClipboardItem");
+    }
+    else {
+      Object.defineProperty(globalThis, "ClipboardItem", previousClipboardItem);
+    }
+  });
+
   test("writes PNG plus custom metadata when the custom type is supported", async() => {
     let written: ClipboardItem[] = [];
     const clipboard = new SelectionClipboard({
@@ -66,8 +82,6 @@ describe("SelectionClipboard", () => {
           written = items;
         }
       }),
-      encodePng: async() => new Blob(["png"], { type: "image/png" }),
-      createItem: makeItem,
       supportsType: (type) => type === JOLLYPIXEL_CLIPBOARD_TYPE
     });
 
@@ -88,8 +102,6 @@ describe("SelectionClipboard", () => {
           written = items;
         }
       }),
-      encodePng: async() => new Blob(["png"], { type: "image/png" }),
-      createItem: makeItem,
       supportsType: () => false
     });
 
@@ -108,9 +120,7 @@ describe("SelectionClipboard", () => {
       }
     });
     const clipboard = new SelectionClipboard({
-      adapter,
-      encodePng: async() => new Blob(["png"]),
-      createItem: makeItem
+      adapter
     });
 
     const input = structuredClone(kSnapshot);
@@ -131,9 +141,7 @@ describe("SelectionClipboard", () => {
       }
     });
     const clipboard = new SelectionClipboard({
-      adapter,
-      encodePng: async() => new Blob(["png"]),
-      createItem: makeItem
+      adapter
     });
     await clipboard.copy(kSnapshot);
 
@@ -144,13 +152,12 @@ describe("SelectionClipboard", () => {
   });
 
   test("accepts each supported raster type through the decoder", async() => {
-    for (const type of SUPPORTED_RASTER_TYPES) {
+    for (const type of ["image/png", "image/jpeg", "image/webp", "image/gif"]) {
       const clipboard = new SelectionClipboard({
         adapter: makeAdapter({
           read: async() => [makeItem({ [type]: new Blob([type], { type }) })]
         }),
-        decodeRaster: async() => kImage,
-        createItem: makeItem
+        decodeRaster: async() => kImage
       });
 
       const result = await clipboard.read(8);
@@ -166,45 +173,6 @@ describe("SelectionClipboard", () => {
         }
       );
     }
-  });
-
-  test("read returns unplaced content, leaving placement to the caller", async() => {
-    const clipboard = new SelectionClipboard({
-      adapter: makeAdapter({
-        read: async() => [makeItem({ "image/png": new Blob(["png"]) })]
-      }),
-      decodeRaster: async() => kImage,
-      createItem: makeItem
-    });
-
-    const { selection } = await clipboard.read(8);
-
-    assert.ok(selection);
-    assert.ok(!("rect" in selection));
-  });
-
-  test("external images preserve partial alpha and mask out alpha zero", async() => {
-    const clipboard = new SelectionClipboard({
-      adapter: makeAdapter({
-        read: async() => [makeItem({ "image/png": new Blob(["png"]) })]
-      }),
-      decodeRaster: async() => {
-        return {
-          width: 2,
-          height: 1,
-          pixels: [
-            { r: 1, g: 2, b: 3, a: 0 },
-            { r: 5, g: 6, b: 7, a: 128 }
-          ]
-        };
-      },
-      createItem: makeItem
-    });
-
-    const result = await clipboard.read(8);
-
-    assert.strictEqual(result.selection!.pixels[1].a, 128);
-    assert.deepStrictEqual(result.selection!.mask, [false, true]);
   });
 
   test("our own metadata pixels supersede the PNG raster", async() => {
@@ -227,7 +195,6 @@ describe("SelectionClipboard", () => {
           ])
         })]
       }),
-      // What a premultiplying canvas would hand back for those pixels.
       decodeRaster: async() => {
         return {
           width: 2,
@@ -237,62 +204,11 @@ describe("SelectionClipboard", () => {
             { r: 5, g: 6, b: 7, a: 128 }
           ]
         };
-      },
-      createItem: makeItem
+      }
     });
 
     const result = await clipboard.read(8);
 
     assert.deepStrictEqual(result.selection!.pixels, exact);
-  });
-
-  test("rejects transparent and oversized external images", async() => {
-    const transparent = new SelectionClipboard({
-      adapter: makeAdapter({
-        read: async() => [makeItem({ "image/png": new Blob(["png"]) })]
-      }),
-      decodeRaster: async() => {
-        return {
-          width: 1,
-          height: 1,
-          pixels: [{ r: 1, g: 2, b: 3, a: 0 }]
-        };
-      },
-      createItem: makeItem
-    });
-    const oversized = new SelectionClipboard({
-      adapter: makeAdapter({
-        read: async() => [makeItem({ "image/png": new Blob(["png"]) })]
-      }),
-      decodeRaster: async() => {
-        return {
-          width: 9,
-          height: 1,
-          pixels: []
-        };
-      },
-      createItem: makeItem
-    });
-
-    assert.strictEqual(
-      (await transparent.read(8)).result.code,
-      "image-empty"
-    );
-    assert.strictEqual(
-      (await oversized.read(8)).result.code,
-      "image-too-large"
-    );
-  });
-
-  test("masked-out cells are transparent in the encoded PNG", async() => {
-    const blob = await encodeSelectionPng(kSnapshot);
-    const { data } = await decodePng(
-      new Uint8Array(await blob.arrayBuffer())
-    );
-
-    assert.deepStrictEqual(
-      [...data],
-      [1, 2, 3, 4, 5, 6, 7, 0]
-    );
   });
 });

@@ -1,44 +1,26 @@
 // Import Node.js Dependencies
 import {
-  beforeEach,
   describe,
   test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
-import { makeContainer } from "./helpers/dom.ts";
+import { createPixelArtCanvas } from "./helpers/canvas.ts";
 
 describe("PixelArtCanvas — rectangle selection bounds", () => {
-  let container: HTMLDivElement;
-  let children: HTMLCanvasElement[];
-
-  beforeEach(() => {
-    ({ container, children } = makeContainer());
-  });
-
-  function makeManager(): PixelArtCanvas {
-    return new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
+  test("can extend outside the texture while drawing, then snaps to its bounds on release", () => {
+    const { manager, canvas, overlay } = createPixelArtCanvas({
       zoom: { default: 4 }
     });
-  }
-
-  test("can extend outside the texture while drawing, then snaps to its bounds on release", () => {
-    const manager = makeManager();
-    const canvas = manager.canvas();
 
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 76, 76));
     canvas.dispatchEvent(mouseEvent("mousemove", 124, 124));
 
     const selectionRects = [
-      ...children[1].querySelectorAll("rect[stroke-dasharray]")
+      ...overlay.querySelectorAll("rect[stroke-dasharray]")
     ];
     assert.strictEqual(selectionRects.length, 2);
     for (const rect of selectionRects) {
@@ -63,8 +45,9 @@ describe("PixelArtCanvas — rectangle selection bounds", () => {
   });
 
   test("discards a completed rectangle entirely outside the texture", () => {
-    const manager = makeManager();
-    const canvas = manager.canvas();
+    const { manager, canvas } = createPixelArtCanvas({
+      zoom: { default: 4 }
+    });
 
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 40, 40));

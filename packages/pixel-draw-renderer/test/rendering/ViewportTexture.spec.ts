@@ -16,9 +16,7 @@ describe("ViewportTexture", () => {
         x: 8,
         y: 8
       };
-      const texture = new ViewportTexture({
-        size
-      });
+      const texture = makeTexture(size);
       size.x = 100;
 
       assert.strictEqual(texture.size.x, 8);
@@ -27,11 +25,9 @@ describe("ViewportTexture", () => {
 
   describe("resize", () => {
     test("replaces the size (defensive copy)", () => {
-      const texture = new ViewportTexture({
-        size: {
-          x: 8,
-          y: 8
-        }
+      const texture = makeTexture({
+        x: 8,
+        y: 8
       });
       const size = {
         x: 16,
@@ -48,15 +44,15 @@ describe("ViewportTexture", () => {
 
     test("calls onResize after the size is updated", () => {
       const sizeSeenByCallback: Vec2[] = [];
-      const texture = new ViewportTexture({
-        size: {
+      const texture = makeTexture(
+        {
           x: 8,
           y: 8
         },
-        onResize: () => sizeSeenByCallback.push({
+        () => sizeSeenByCallback.push({
           ...texture.size
         })
-      });
+      );
       texture.resize({
         x: 16,
         y: 32
@@ -70,13 +66,13 @@ describe("ViewportTexture", () => {
 
     test("passes the previous size to onResize", () => {
       const previousSizes: Vec2[] = [];
-      const texture = new ViewportTexture({
-        size: {
+      const texture = makeTexture(
+        {
           x: 8,
           y: 8
         },
-        onResize: (previous) => previousSizes.push({ ...previous })
-      });
+        (previous) => previousSizes.push({ ...previous })
+      );
       texture.resize({
         x: 16,
         y: 32
@@ -90,15 +86,15 @@ describe("ViewportTexture", () => {
 
     test("skips onResize when the size is unchanged", () => {
       let calls = 0;
-      const texture = new ViewportTexture({
-        size: {
+      const texture = makeTexture(
+        {
           x: 8,
           y: 8
         },
-        onResize: () => {
+        () => {
           calls++;
         }
-      });
+      );
       texture.resize({
         x: 8,
         y: 8
@@ -106,28 +102,13 @@ describe("ViewportTexture", () => {
 
       assert.strictEqual(calls, 0);
     });
-
-    test("does not require an onResize callback", () => {
-      const texture = new ViewportTexture({
-        size: {
-          x: 8,
-          y: 8
-        }
-      });
-
-      assert.doesNotThrow(
-        () => texture.resize({ x: 16, y: 16 })
-      );
-    });
   });
 
   describe("pixelSize", () => {
     test("returns size scaled by zoom", () => {
-      const texture = new ViewportTexture({
-        size: {
-          x: 10,
-          y: 20
-        }
+      const texture = makeTexture({
+        x: 10,
+        y: 20
       });
 
       assert.deepStrictEqual(
@@ -139,11 +120,9 @@ describe("ViewportTexture", () => {
 
   describe("contains", () => {
     test("returns true for a position within bounds", () => {
-      const texture = new ViewportTexture({
-        size: {
-          x: 16,
-          y: 16
-        }
+      const texture = makeTexture({
+        x: 16,
+        y: 16
       });
 
       assert.ok(
@@ -155,11 +134,9 @@ describe("ViewportTexture", () => {
     });
 
     test("returns false for a position outside bounds", () => {
-      const texture = new ViewportTexture({
-        size: {
-          x: 16,
-          y: 16
-        }
+      const texture = makeTexture({
+        x: 16,
+        y: 16
       });
 
       assert.ok(
@@ -174,3 +151,13 @@ describe("ViewportTexture", () => {
     });
   });
 });
+
+function makeTexture(
+  size: Vec2,
+  onResize: (previous: Readonly<Vec2>) => void = () => undefined
+): ViewportTexture {
+  return new ViewportTexture({
+    size,
+    onResize
+  });
+}

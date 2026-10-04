@@ -55,14 +55,6 @@ export abstract class InteractionMode {
   onMouseUp(): void {}
   onLineHeldChange(_held: boolean): void {}
   onBlur(): void {}
-  onCopy(): boolean {
-    return false;
-  }
-
-  onPaste(): boolean {
-    return false;
-  }
-
   onDelete(): boolean {
     return false;
   }

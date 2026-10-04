@@ -17,7 +17,7 @@ export type UVResizeHandle =
   | "se"
   | "sw";
 
-export interface UVResizeTarget {
+interface UVResizeTarget {
   id: string;
   slot: UVSlot | undefined;
   rect: SelectionRect;

@@ -7,10 +7,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PointerController } from "#src/input/PointerController.ts";
-import { Viewport } from "#src/rendering/Viewport.ts";
+import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
+import {
+  createPointerController,
+  makeCenteredViewport
+} from "../helpers/input/pointer.ts";
 
 describe("PointerController secondary (right-click) mouse events", () => {
   let viewport: Viewport;
@@ -18,19 +21,14 @@ describe("PointerController secondary (right-click) mouse events", () => {
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({
-      textureSize: { x: 16, y: 16 },
-      zoom: 4
-    });
-    viewport.updateCanvasSize(200, 200);
-    viewport.centerTexture();
+    viewport = makeCenteredViewport();
   });
 
   test(
     "mousedown (right button) triggers onSecondaryDown with the resolved texture position and ctrlKey",
     () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
         actions
@@ -45,15 +43,14 @@ describe("PointerController secondary (right-click) mouse events", () => {
         bubbles: true
       }));
 
-      assert.strictEqual(calls.onSecondaryDown.length, 1);
-      assert.ok(calls.onSecondaryDown[0][2]);
+      assert.deepStrictEqual(calls.onSecondaryDown, [[8, 8, true]]);
       ctrl.destroy();
     }
   );
 
   test("dragging after right mousedown fires onSecondaryMove", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new PointerController({
+    const ctrl = createPointerController({
       canvas,
       viewport,
       actions
@@ -79,7 +76,7 @@ describe("PointerController secondary (right-click) mouse events", () => {
 
   test("mouseup ends a tracked secondary gesture with onSecondaryUp", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new PointerController({
+    const ctrl = createPointerController({
       canvas,
       viewport,
       actions
@@ -104,7 +101,7 @@ describe("PointerController secondary (right-click) mouse events", () => {
     const { actions, calls } = makeActions({
       onSecondaryDownReturns: false
     });
-    const ctrl = new PointerController({
+    const ctrl = createPointerController({
       canvas,
       viewport,
       actions
@@ -133,9 +130,9 @@ describe("PointerController secondary (right-click) mouse events", () => {
     ctrl.destroy();
   });
 
-  test("primary and secondary drags are tracked independently", () => {
+  test("a mouseup ends every tracked drag", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new PointerController({
+    const ctrl = createPointerController({
       canvas,
       viewport,
       actions

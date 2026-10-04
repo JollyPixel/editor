@@ -2,6 +2,7 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import { filledArray } from "../../utils/array.ts";
 import { createCanvas2D } from "../Canvas2D.ts";
 import {
   buildMaskedContentCanvas,
@@ -45,16 +46,20 @@ export type FloatingSelectionEvent = {
   changed: () => void;
 };
 
+interface FloatingState {
+  canvas: HTMLCanvasElement;
+  eraseCanvas: HTMLCanvasElement;
+  maskCanvas: HTMLCanvasElement;
+  eraseIsUniform: boolean;
+  sourceRect: SelectionRect;
+  liveRect: SelectionRect;
+  blankSource: boolean;
+}
+
 export class FloatingSelection extends Emitter<
   FloatingSelectionEvent
 > {
-  #canvas: HTMLCanvasElement | null = null;
-  #eraseCanvas: HTMLCanvasElement | null = null;
-  #maskCanvas: HTMLCanvasElement | null = null;
-  #eraseIsUniform = true;
-  #sourceRect: SelectionRect | null = null;
-  #liveRect: SelectionRect | null = null;
-  #blankSource: boolean = true;
+  #state: FloatingState | null = null;
 
   create(
     options: FloatingSelectionOptions
@@ -66,29 +71,32 @@ export class FloatingSelection extends Emitter<
       eraseColor,
       blankSource = true
     } = options;
-    const effectiveMask = mask ?? new Array(
-      pixels.length
-    ).fill(true);
-
-    this.#canvas = buildMaskedContentCanvas(
-      sourceRect,
-      pixels,
-      effectiveMask
+    const effectiveMask = mask ?? filledArray(
+      pixels.length,
+      true
     );
-    this.#eraseCanvas = mask
-      ? buildMaskedFillCanvas(sourceRect, mask, eraseColor)
-      : FloatingSelection.#buildUniformEraseCanvas(
-        eraseColor
-      );
-    this.#maskCanvas = mask
-      ? buildMaskedFillCanvas(sourceRect, mask, kOpaqueMask)
-      : FloatingSelection.#buildUniformEraseCanvas(
-        kOpaqueMask
-      );
-    this.#eraseIsUniform = !mask;
-    this.#sourceRect = sourceRect;
-    this.#liveRect = sourceRect;
-    this.#blankSource = blankSource;
+
+    this.#state = {
+      canvas: buildMaskedContentCanvas(
+        sourceRect,
+        pixels,
+        effectiveMask
+      ),
+      eraseCanvas: mask
+        ? buildMaskedFillCanvas(sourceRect, mask, eraseColor)
+        : FloatingSelection.#buildUniformEraseCanvas(
+          eraseColor
+        ),
+      maskCanvas: mask
+        ? buildMaskedFillCanvas(sourceRect, mask, kOpaqueMask)
+        : FloatingSelection.#buildUniformEraseCanvas(
+          kOpaqueMask
+        ),
+      eraseIsUniform: !mask,
+      sourceRect,
+      liveRect: sourceRect,
+      blankSource
+    };
     this.emit("changed");
   }
 
@@ -114,24 +122,18 @@ export class FloatingSelection extends Emitter<
   updatePosition(
     liveRect: SelectionRect
   ): void {
-    if (!this.#canvas) {
+    if (this.#state === null) {
       return;
     }
 
-    this.#liveRect = liveRect;
+    this.#state.liveRect = liveRect;
     this.emit("changed");
   }
 
   clear(): void {
-    const wasActive = this.#canvas !== null;
+    const wasActive = this.#state !== null;
 
-    this.#canvas = null;
-    this.#eraseCanvas = null;
-    this.#maskCanvas = null;
-    this.#eraseIsUniform = true;
-    this.#sourceRect = null;
-    this.#liveRect = null;
-    this.#blankSource = true;
+    this.#state = null;
 
     if (wasActive) {
       this.emit("changed");
@@ -141,34 +143,33 @@ export class FloatingSelection extends Emitter<
   draw(
     ctx: CanvasRenderingContext2D
   ): void {
-    if (
-      !this.#canvas ||
-      !this.#sourceRect ||
-      !this.#liveRect
-    ) {
+    const state = this.#state;
+    if (state === null) {
       return;
     }
 
-    if (
-      this.#blankSource &&
-      this.#eraseCanvas &&
-      this.#maskCanvas
-    ) {
-      const source = this.#sourceRect;
-      this.#clearMaskedRect(ctx, source);
-      this.#drawAt(
+    if (state.blankSource) {
+      FloatingSelection.#clearMaskedRect(
         ctx,
-        this.#eraseCanvas,
-        source
+        state,
+        state.sourceRect
+      );
+      FloatingSelection.#drawAt(
+        ctx,
+        state,
+        state.eraseCanvas,
+        state.sourceRect
       );
     }
 
-    const live = this.#liveRect;
-    if (this.#maskCanvas) {
-      this.#clearMaskedRect(ctx, live);
-    }
+    const live = state.liveRect;
+    FloatingSelection.#clearMaskedRect(
+      ctx,
+      state,
+      live
+    );
     ctx.drawImage(
-      this.#canvas,
+      state.canvas,
       live.x,
       live.y,
       live.width,
@@ -177,34 +178,32 @@ export class FloatingSelection extends Emitter<
   }
 
   get isActive(): boolean {
-    return this.#canvas !== null;
+    return this.#state !== null;
   }
 
-  #clearMaskedRect(
+  static #clearMaskedRect(
     ctx: CanvasRenderingContext2D,
+    state: FloatingState,
     rect: SelectionRect
   ): void {
-    const maskCanvas = this.#maskCanvas;
-    if (!maskCanvas) {
-      return;
-    }
-
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
-    this.#drawAt(
+    FloatingSelection.#drawAt(
       ctx,
-      maskCanvas,
+      state,
+      state.maskCanvas,
       rect
     );
     ctx.restore();
   }
 
-  #drawAt(
+  static #drawAt(
     ctx: CanvasRenderingContext2D,
+    state: FloatingState,
     canvas: HTMLCanvasElement,
     rect: SelectionRect
   ): void {
-    if (this.#eraseIsUniform) {
+    if (state.eraseIsUniform) {
       ctx.drawImage(
         canvas,
         0,

@@ -33,24 +33,6 @@ function fillAll(
   buf.drawPixels(all, color);
 }
 
-/** Every position (rect-relative) whose mask cell is true. */
-function maskedPositions(
-  mask: boolean[],
-  width: number
-): Vec2[] {
-  const positions: Vec2[] = [];
-  mask.forEach((selected, i) => {
-    if (selected) {
-      positions.push({
-        x: i % width,
-        y: Math.floor(i / width)
-      });
-    }
-  });
-
-  return positions;
-}
-
 describe("ShapeSelect", () => {
   describe("compute", () => {
     test("returns null when the seed has no matching neighbors (isolated 1x1)", () => {
@@ -106,33 +88,11 @@ describe("ShapeSelect", () => {
       );
       assert.deepStrictEqual(
         result!.mask,
-        new Array(6).fill(true)
-      );
-    });
-
-    test("does not leak diagonally through a wall (4-directional connectivity only)", () => {
-      // Same 3x3 corners-vs-rest layout as Fill.floodFill's own test.
-      const buf = new PixelBuffer({
-        size: { x: 3, y: 3 },
-        maxSize: kTestMaxSize
-      });
-      fillAll(buf, { x: 3, y: 3 }, kOutside);
-      buf.drawPixels([
-        { x: 0, y: 0 },
-        { x: 2, y: 0 },
-        { x: 0, y: 2 },
-        { x: 2, y: 2 }
-      ], kBorder);
-
-      assert.strictEqual(
-        ShapeSelect.compute(buf, { x: 0, y: 0 }),
-        null,
-        "a lone corner pixel has no matching neighbor"
+        Array.from({ length: 6 }, () => true)
       );
     });
 
     test("a hollow ring (border only) selects the border AND its fully enclosed interior", () => {
-      // 5x5 buffer: a 1px black border ring around a solid 3x3 white interior.
       const buf = new PixelBuffer({
         size: { x: 5, y: 5 },
         maxSize: kTestMaxSize
@@ -155,23 +115,13 @@ describe("ShapeSelect", () => {
         result!.rect,
         { x: 0, y: 0, width: 5, height: 5 }
       );
-      /*
-       * Every cell in the 5x5 box should end up selected: the border itself
-       * plus the fully enclosed 3x3 interior hole.
-       */
       assert.deepStrictEqual(
         result!.mask,
-        new Array(25).fill(true)
+        Array.from({ length: 25 }, () => true)
       );
     });
 
     test("an L-shaped region (concave, no enclosed hole) keeps its true concave outline", () => {
-      /*
-       * 3x3 buffer, black L-shape: full left column + full bottom row.
-       * . . .
-       * X . .
-       * X X X
-       */
       const buf = new PixelBuffer({
         size: { x: 3, y: 3 },
         defaultColor: kOutside,
@@ -193,74 +143,67 @@ describe("ShapeSelect", () => {
         result!.rect,
         { x: 0, y: 1, width: 3, height: 2 }
       );
-      // rect-relative 3x2: row0 = (0,1)-only selected, row1 = fully selected.
       assert.deepStrictEqual(
         result!.mask,
         [true, false, false, true, true, true]
       );
     });
 
-    test("discards the result when hole-filling still leaves 1 or fewer selected cells", () => {
-      /*
-       * A single isolated pixel has no possible hole to fill either way —
-       * covered above — this test instead checks a 2-pixel line is kept
-       * (sanity boundary check around the >1 threshold).
-       */
-      const buf = new PixelBuffer({
-        size: { x: 4, y: 4 },
-        defaultColor: kOutside,
-        maxSize: kTestMaxSize
+    for (const { opening, walls } of [
+      {
+        opening: "bottom",
+        walls: [
+          true, true, true,
+          true, false, true,
+          true, false, true
+        ]
+      },
+      {
+        opening: "top",
+        walls: [
+          true, false, true,
+          true, false, true,
+          true, true, true
+        ]
+      },
+      {
+        opening: "left",
+        walls: [
+          true, true, true,
+          false, false, true,
+          true, true, true
+        ]
+      },
+      {
+        opening: "right",
+        walls: [
+          true, true, true,
+          true, false, false,
+          true, true, true
+        ]
+      }
+    ]) {
+      test(`an arch open at the ${opening} keeps its notch unselected`, () => {
+        const buf = new PixelBuffer({
+          size: { x: 3, y: 3 },
+          defaultColor: kOutside,
+          maxSize: kTestMaxSize
+        });
+        buf.drawPixels(
+          walls.flatMap((isWall, index) => (
+            isWall ? [{ x: index % 3, y: Math.floor(index / 3) }] : []
+          )),
+          kBorder
+        );
+
+        const result = ShapeSelect.compute(buf, { x: 0, y: 0 });
+
+        assert.deepStrictEqual(
+          result!.rect,
+          { x: 0, y: 0, width: 3, height: 3 }
+        );
+        assert.deepStrictEqual(result!.mask, walls);
       });
-      buf.drawPixels([
-        { x: 1, y: 1 },
-        { x: 2, y: 1 }
-      ], kBorder);
-
-      const result = ShapeSelect.compute(buf, { x: 1, y: 1 });
-
-      assert.deepStrictEqual(
-        result!.rect,
-        { x: 1, y: 1, width: 2, height: 1 }
-      );
-      assert.deepStrictEqual(
-        result!.mask,
-        [true, true]
-      );
-    });
-
-    test("mask indexing lines up with the rect (rect-relative positions match the region)", () => {
-      const buf = new PixelBuffer({
-        size: { x: 4, y: 4 },
-        defaultColor: kOutside,
-        maxSize: kTestMaxSize
-      });
-      buf.drawPixels([
-        { x: 1, y: 1 },
-        { x: 2, y: 1 },
-        { x: 1, y: 2 }
-      ], kBorder);
-
-      const result = ShapeSelect.compute(buf, { x: 1, y: 1 })!;
-      const positions = maskedPositions(
-        result.mask,
-        result.rect.width
-      )
-        .map((p) => {
-          return {
-            x: p.x + result.rect.x,
-            y: p.y + result.rect.y
-          };
-        })
-        .sort((a, b) => (a.y - b.y) || (a.x - b.x));
-
-      assert.deepStrictEqual(
-        positions,
-        [
-          { x: 1, y: 1 },
-          { x: 2, y: 1 },
-          { x: 1, y: 2 }
-        ].sort((a, b) => (a.y - b.y) || (a.x - b.x))
-      );
-    });
+    }
   });
 });

@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { filledArray } from "../utils/array.ts";
 import { pointInRect } from "../utils/math.ts";
 import type {
   RGBA8,
@@ -64,10 +65,7 @@ export class Select {
   updateCreate(
     position: Vec2
   ): SelectionRect | null {
-    if (
-      this.#state !== "creating" ||
-      !this.#createStart
-    ) {
+    if (!this.#createStart) {
       return null;
     }
 
@@ -83,17 +81,14 @@ export class Select {
     snapshot: RGBA8[],
     finalRect?: SelectionRect
   ): void {
-    if (this.#state !== "creating") {
-      return;
-    }
-
     if (finalRect) {
       this.#rect = finalRect;
     }
     this.#snapshot = snapshot;
-    this.#mask = new Array(
-      snapshot.length
-    ).fill(true);
+    this.#mask = filledArray(
+      snapshot.length,
+      true
+    );
     this.#state = "selected";
     this.#createStart = null;
   }
@@ -115,7 +110,6 @@ export class Select {
     pos: Vec2
   ): boolean {
     if (
-      this.#state !== "selected" ||
       !this.#rect ||
       !this.#mask ||
       !pointInRect(pos, this.#rect)
@@ -132,10 +126,7 @@ export class Select {
   startMove(
     position: Vec2
   ): void {
-    if (
-      this.#state !== "selected" ||
-      !this.#rect
-    ) {
+    if (!this.#rect) {
       return;
     }
 
@@ -149,7 +140,6 @@ export class Select {
     position: Vec2
   ): SelectionRect | null {
     if (
-      this.#state !== "moving" ||
       !this.#moveOrigin ||
       !this.#moveBaseRect
     ) {
@@ -169,7 +159,6 @@ export class Select {
 
   finishMove(): MoveResult | null {
     if (
-      this.#state !== "moving" ||
       !this.#moveBaseRect ||
       !this.#liveRect
     ) {
@@ -184,7 +173,6 @@ export class Select {
     this.#moveBaseRect = null;
     this.#liveRect = null;
 
-    // The move writes the content into the buffer, so it stops floating.
     const skipErase = this.#floating;
     this.#floating = false;
 
@@ -281,7 +269,6 @@ export class Select {
     direction: RotationDirection = "cw"
   ): { oldRect: SelectionRect; newRect: SelectionRect; } | null {
     if (
-      this.#state !== "selected" ||
       !this.#rect ||
       !this.#snapshot ||
       !this.#mask
@@ -310,7 +297,6 @@ export class Select {
 
   flipHorizontal(): SelectionRect | null {
     if (
-      this.#state !== "selected" ||
       !this.#rect ||
       !this.#snapshot ||
       !this.#mask
@@ -318,12 +304,12 @@ export class Select {
       return null;
     }
 
-    this.#snapshot = Select.flipSnapshotHorizontal(
+    this.#snapshot = Select.#flipGridHorizontal(
       this.#snapshot,
       this.#rect.width,
       this.#rect.height
     );
-    this.#mask = Select.flipMaskHorizontal(
+    this.#mask = Select.#flipGridHorizontal(
       this.#mask,
       this.#rect.width,
       this.#rect.height
@@ -334,7 +320,6 @@ export class Select {
 
   flipVertical(): SelectionRect | null {
     if (
-      this.#state !== "selected" ||
       !this.#rect ||
       !this.#snapshot ||
       !this.#mask
@@ -342,12 +327,12 @@ export class Select {
       return null;
     }
 
-    this.#snapshot = Select.flipSnapshotVertical(
+    this.#snapshot = Select.#flipGridVertical(
       this.#snapshot,
       this.#rect.width,
       this.#rect.height
     );
-    this.#mask = Select.flipMaskVertical(
+    this.#mask = Select.#flipGridVertical(
       this.#mask,
       this.#rect.width,
       this.#rect.height
@@ -385,8 +370,7 @@ export class Select {
 
   static dominantBorderColor(
     buffer: DefaultPixelBuffer,
-    rect: SelectionRect,
-    fallback: RGBA8
+    rect: SelectionRect
   ): RGBA8 {
     const size = buffer.size();
     const counts = new Map<string, { color: RGBA8; count: number; }>();
@@ -437,7 +421,7 @@ export class Select {
       }
     }
 
-    return best ?? fallback;
+    return best ?? kTransparent;
   }
 
   static resolveEraseColor(
@@ -449,7 +433,7 @@ export class Select {
       return explicitEraseColor;
     }
 
-    return Select.dominantBorderColor(buffer, rect, kTransparent);
+    return Select.dominantBorderColor(buffer, rect);
   }
 
   static captureSnapshot(
@@ -496,80 +480,6 @@ export class Select {
     };
   }
 
-  static rotateSnapshotCW(
-    snapshot: RGBA8[],
-    width: number,
-    height: number
-  ): RGBA8[] {
-    return Select.#rotateGrid(
-      snapshot,
-      width,
-      height,
-      "cw"
-    );
-  }
-
-  static rotateMaskCW(
-    mask: boolean[],
-    width: number,
-    height: number
-  ): boolean[] {
-    return Select.#rotateGrid(
-      mask,
-      width,
-      height,
-      "cw"
-    );
-  }
-
-  static flipSnapshotHorizontal(
-    snapshot: RGBA8[],
-    width: number,
-    height: number
-  ): RGBA8[] {
-    return Select.#flipGridHorizontal(
-      snapshot,
-      width,
-      height
-    );
-  }
-
-  static flipMaskHorizontal(
-    mask: boolean[],
-    width: number,
-    height: number
-  ): boolean[] {
-    return Select.#flipGridHorizontal(
-      mask,
-      width,
-      height
-    );
-  }
-
-  static flipSnapshotVertical(
-    snapshot: RGBA8[],
-    width: number,
-    height: number
-  ): RGBA8[] {
-    return Select.#flipGridVertical(
-      snapshot,
-      width,
-      height
-    );
-  }
-
-  static flipMaskVertical(
-    mask: boolean[],
-    width: number,
-    height: number
-  ): boolean[] {
-    return Select.#flipGridVertical(
-      mask,
-      width,
-      height
-    );
-  }
-
   static #rotateGrid<T>(
     grid: T[],
     width: number,
@@ -578,7 +488,7 @@ export class Select {
   ): T[] {
     const newWidth = height;
     const newHeight = width;
-    const result: T[] = new Array(newWidth * newHeight);
+    const result: T[] = [];
 
     for (let y = 0; y < newHeight; y++) {
       for (let x = 0; x < newWidth; x++) {
@@ -596,7 +506,7 @@ export class Select {
     width: number,
     height: number
   ): T[] {
-    const result: T[] = new Array(width * height);
+    const result: T[] = [];
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -612,7 +522,7 @@ export class Select {
     width: number,
     height: number
   ): T[] {
-    const result: T[] = new Array(width * height);
+    const result: T[] = [];
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {

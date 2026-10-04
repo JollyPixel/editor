@@ -75,18 +75,21 @@ describe("PixelArtCanvas — wheel zoom", () => {
 });
 
 describe("PixelArtCanvas — Ctrl+wheel brush size", () => {
-  test("adjusts the brush one pixel per scroll direction in paint mode", () => {
-    const { manager, canvas } = createPixelArtCanvas({
-      brush: { size: 4, maxSize: 8 }
+  for (const mode of ["paint", "erase"] as const) {
+    test(`adjusts the brush one pixel per scroll direction in ${mode} mode`, () => {
+      const { manager, canvas } = createPixelArtCanvas({
+        brush: { size: 4, maxSize: 8 },
+        defaultMode: mode
+      });
+
+      canvas.dispatchEvent(wheel({ deltaY: -100, ctrlKey: true }));
+      assert.strictEqual(manager.brush.size, 5);
+
+      canvas.dispatchEvent(wheel({ deltaY: 100, ctrlKey: true }));
+      assert.strictEqual(manager.brush.size, 4);
+      manager.destroy();
     });
-
-    canvas.dispatchEvent(wheel({ deltaY: -100, ctrlKey: true }));
-    assert.strictEqual(manager.brush.size, 5);
-
-    canvas.dispatchEvent(wheel({ deltaY: 100, ctrlKey: true }));
-    assert.strictEqual(manager.brush.size, 4);
-    manager.destroy();
-  });
+  }
 
   test("keeps Ctrl+wheel zoom in non-paint modes", () => {
     const { manager, canvas } = createPixelArtCanvas({
@@ -104,14 +107,13 @@ describe("PixelArtCanvas — Ctrl+wheel brush size", () => {
   });
 
   test("refreshes the visible brush overlay after resizing", () => {
-    const { manager, canvas, children } = createPixelArtCanvas({
+    const { manager, canvas, overlay } = createPixelArtCanvas({
       brush: { size: 4, maxSize: 8 }
     });
     moveTo(canvas, 100, 100);
 
     canvas.dispatchEvent(wheel({ deltaY: -100, ctrlKey: true }));
 
-    const overlay = children[1] as unknown as SVGElement;
     const highlight = overlay.querySelector('g[data-overlay="brush-highlight"]');
     assert.ok(
       highlight?.getAttribute("transform")?.includes(`scale(${manager.zoom.value * 5})`)

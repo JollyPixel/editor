@@ -75,8 +75,8 @@ function buildGroupInput(
     () => randomColor(rng)
   );
 
-  const positions: Vec2[] = new Array(count);
-  const colors: RGBA8[] = new Array(count);
+  const positions: Vec2[] = [];
+  const colors: RGBA8[] = [];
   for (let i = 0; i < count; i++) {
     positions[i] = { x: i, y: 0 };
     colors[i] = palette[i % palette.length];

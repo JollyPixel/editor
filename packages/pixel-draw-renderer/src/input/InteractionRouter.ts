@@ -16,8 +16,8 @@ export interface InteractionRouterOptions {
   setCursor: (cursor: string) => void;
   onUndo: () => boolean;
   onRedo: () => boolean;
-  onCopy?: () => boolean;
-  onPaste?: () => boolean;
+  onCopy: () => boolean;
+  onPaste: () => boolean;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
 }
 
@@ -56,8 +56,8 @@ export class InteractionRouter implements InputActions, CanvasShortcuts {
     this.#setCursor = options.setCursor;
     this.#onUndo = options.onUndo;
     this.#onRedo = options.onRedo;
-    this.#onCopy = options.onCopy ?? (() => this.#active.onCopy());
-    this.#onPaste = options.onPaste ?? (() => this.#active.onPaste());
+    this.#onCopy = options.onCopy;
+    this.#onPaste = options.onPaste;
     this.#onModeChange = options.onModeChange;
   }
 

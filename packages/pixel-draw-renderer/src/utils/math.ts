@@ -10,24 +10,6 @@ export function clamp(
 }
 
 /**
- * Clamps width/height to `size` (min 1) then clamps position to stay in bounds.
- */
-export function clampRectSize(
-  rect: SelectionRect,
-  size: Vec2
-): SelectionRect {
-  const width = clamp(rect.width, 1, Math.max(1, size.x));
-  const height = clamp(rect.height, 1, Math.max(1, size.y));
-
-  return {
-    width,
-    height,
-    x: clamp(rect.x, 0, Math.max(0, size.x - width)),
-    y: clamp(rect.y, 0, Math.max(0, size.y - height))
-  };
-}
-
-/**
  * Clamps rect position to stay within `size`, leaving width/height unchanged.
  */
 export function clampRectPosition(

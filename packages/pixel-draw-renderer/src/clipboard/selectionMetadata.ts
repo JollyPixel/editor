@@ -6,6 +6,7 @@ import {
 } from "js-base64";
 
 // Import Internal Dependencies
+import { filledArray } from "../utils/array.ts";
 import type {
   DecodedRasterImage,
   SelectionClipboardMetadataV1,
@@ -122,7 +123,7 @@ function decodeMask(
 
   const mask = value as Record<string, unknown>;
   if (mask.encoding === "full") {
-    return new Array(length).fill(true);
+    return filledArray(length, true);
   }
   if (mask.encoding !== "bitset") {
     return null;
@@ -136,7 +137,7 @@ function decodeMask(
     return null;
   }
 
-  const result = new Array<boolean>(length);
+  const result: boolean[] = [];
   for (let i = 0; i < length; i++) {
     result[i] = (bytes[Math.floor(i / 8)] & (1 << (i % 8))) !== 0;
   }
@@ -160,7 +161,7 @@ function decodePixels(
     return null;
   }
 
-  const pixels = new Array<RGBA8>(length);
+  const pixels: RGBA8[] = [];
   for (let i = 0; i < length; i++) {
     const offset = i * 4;
     pixels[i] = {

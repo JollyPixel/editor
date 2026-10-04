@@ -1,12 +1,7 @@
-/*
- * Factories shared across the SVG overlay specs (BrushHighlight, LinePreview,
- * Selection, UV) and OverlayLayer.
- */
-
 // Import Internal Dependencies
 import { SVG_NS } from "#src/rendering/constants.ts";
 import { Zoom } from "#src/rendering/Zoom.ts";
-import { UVMap } from "#src/uv/map/UVMap.ts";
+import type { UVMap } from "#src/uv/map/UVMap.ts";
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type {
   DefaultViewport
@@ -15,6 +10,7 @@ import type {
   BrushHighlight,
   Vec2
 } from "#src/types.ts";
+import { makeUvMap } from "./uv/map.ts";
 
 type MutableViewport = DefaultViewport & {
   camera: Vec2;
@@ -50,18 +46,14 @@ export function makeBrush(
   };
 }
 
-export function makeUvMap(
-  size: Vec2 = { x: 64, y: 64 }
-): UVMap {
-  return new UVMap({
-    getCanvasSize: () => size
-  });
-}
-
 export function makeUvOverlay(
   svg: SVGElement,
   viewport: DefaultViewport,
-  uvMap: UVMap = makeUvMap()
+  uvMap: UVMap = makeUvMap({ x: 64, y: 64 })
 ): UVRegionLayer {
-  return new UVRegionLayer(svg, viewport, uvMap);
+  return new UVRegionLayer(
+    svg,
+    viewport,
+    uvMap
+  );
 }

@@ -29,14 +29,20 @@ const suite = defineSuite("Tools (tools/*)", (bench) => {
     defaultColor: kWhite,
     maxSize: kSide
   });
-  const snapshot = new Array<RGBA8>(kSide * kSide).fill(kWhite);
-  const mask = new Array<boolean>(kSide * kSide).fill(false);
+  const snapshot = Array.from({ length: kSide * kSide }, () => kWhite);
+  const mask = Array.from({ length: kSide * kSide }, () => false);
   for (let y = 16; y < 240; y++) {
     for (let x = 16; x < 240; x++) {
       const insideHole = x >= 96 && x < 160 && y >= 96 && y < 160;
       mask[(y * kSide) + x] = !insideHole;
     }
   }
+  const rotatedSelection = new Select();
+  rotatedSelection.selectRegion(
+    { x: 0, y: 0, width: kSide, height: kSide },
+    snapshot,
+    Array.from({ length: kSide * kSide }, () => true)
+  );
 
   bench
     .add("Brush.affectedPixels / 1x1", () => {
@@ -86,8 +92,8 @@ const suite = defineSuite("Tools (tools/*)", (bench) => {
       )
     )
     .add(
-      "Select.rotateSnapshotCW / 256x256",
-      () => Select.rotateSnapshotCW(snapshot, kSide, kSide)
+      "Select.rotate (snapshot + mask) / 256x256",
+      () => rotatedSelection.rotate("cw")
     )
     .add(
       "traceSelectionContour / rectangle with hole 256x256",

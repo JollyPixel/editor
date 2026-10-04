@@ -30,10 +30,7 @@ function chunk(
   ]);
 }
 
-/**
- * Unfiltered truecolor-with-alpha, one opaque pixel per row.
- */
-function truecolorPng(
+function unfilteredRgbaPng(
   width: number,
   height: number
 ): Uint8Array {
@@ -66,7 +63,7 @@ function truecolorPng(
 describe("createPixelBufferFromPng", () => {
   test("sizes the buffer to the image and keeps its exact samples", async() => {
     const buffer = await createPixelBufferFromPng(
-      truecolorPng(3, 2)
+      unfilteredRgbaPng(3, 2)
     );
 
     assert.deepEqual(buffer.size(), { x: 3, y: 2 });
@@ -79,7 +76,7 @@ describe("createPixelBufferFromPng", () => {
 
   test("keeps the default ceiling for images smaller than it", async() => {
     const buffer = await createPixelBufferFromPng(
-      truecolorPng(4, 4)
+      unfilteredRgbaPng(4, 4)
     );
 
     assert.equal(buffer.maxSize, 2048);
@@ -87,7 +84,7 @@ describe("createPixelBufferFromPng", () => {
 
   test("raises the ceiling so an oversized atlas still fits", async() => {
     const buffer = await createPixelBufferFromPng(
-      truecolorPng(2049, 1)
+      unfilteredRgbaPng(2049, 1)
     );
 
     assert.equal(buffer.maxSize, 2049);
@@ -96,7 +93,7 @@ describe("createPixelBufferFromPng", () => {
 
   test("honours an explicit maxSize", async() => {
     const buffer = await createPixelBufferFromPng(
-      truecolorPng(4, 4),
+      unfilteredRgbaPng(4, 4),
       { maxSize: 64 }
     );
 

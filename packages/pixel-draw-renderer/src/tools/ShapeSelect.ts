@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { filledArray } from "../utils/array.ts";
 import { Fill } from "./Fill.ts";
 import type {
   SelectionRect,
@@ -73,16 +74,18 @@ export class ShapeSelect {
   ): boolean[] {
     const { width, height } = rect;
 
-    const isRegion = new Array<boolean>(
-      width * height
-    ).fill(false);
+    const isRegion = filledArray(
+      width * height,
+      false
+    );
     for (const { x, y } of region) {
       isRegion[((y - rect.y) * width) + (x - rect.x)] = true;
     }
 
-    const exteriorReachable = new Array<boolean>(
-      width * height
-    ).fill(false);
+    const exteriorReachable = filledArray(
+      width * height,
+      false
+    );
     const stack: Vec2[] = [];
     function seed(x: number, y: number): void {
       const idx = (y * width) + x;

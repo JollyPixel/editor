@@ -44,10 +44,6 @@ export function packNet(
   origin: Vec2
 ): Map<UVSlot, UVGeometry> {
   const packed = new Map<UVSlot, UVGeometry>();
-  if (cells.length === 0) {
-    return packed;
-  }
-
   const rects = cells.map(
     (cell) => rectOf(cell.geometry)
   );

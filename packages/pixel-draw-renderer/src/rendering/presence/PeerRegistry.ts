@@ -78,16 +78,6 @@ export abstract class PeerRegistry<TState, TView> {
     );
   }
 
-  /**
-   * Drops a cached view without touching its peer's state, for subclasses
-   * that must recreate a view mid-render (e.g. a shape-family change).
-   */
-  protected clearView(
-    clientId: string
-  ): void {
-    this.#views.delete(clientId);
-  }
-
   protected abstract render(
     clientId: string,
     state: TState

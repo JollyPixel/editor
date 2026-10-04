@@ -1,5 +1,5 @@
 // Import Node.js Dependencies
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import path from "node:path";
 import { describe, it } from "node:test";
 
@@ -9,7 +9,7 @@ import * as esbuild from "esbuild";
 // CONSTANTS
 const kSrcDir = path.join(import.meta.dirname, "..", "src");
 const kEntryPoints = [
-  path.join(kSrcDir, "PixelArtCanvas.ts")
+  path.join(kSrcDir, "index.ts")
 ];
 
 describe("Pixel renderer browser compatibility", () => {

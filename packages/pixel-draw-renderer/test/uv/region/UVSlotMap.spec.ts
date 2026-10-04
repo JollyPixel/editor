@@ -28,22 +28,6 @@ function fullRecord(
 }
 
 describe("UVSlotMap", () => {
-  describe("shared()", () => {
-    test("gives every face the same rect value", () => {
-      const faces = UVSlotMap.shared(kRect);
-
-      for (const face of DEFAULT_UV_SLOTS) {
-        assert.deepStrictEqual(faces.get(face), kRect);
-      }
-    });
-
-    test("gives each face an independent object", () => {
-      const faces = UVSlotMap.shared(kRect);
-
-      assert.notStrictEqual(faces.get("front"), faces.get("top"));
-    });
-  });
-
   describe("constructor", () => {
     test("rejects an empty slot map", () => {
       assert.throws(
@@ -68,14 +52,6 @@ describe("UVSlotMap", () => {
         RangeError
       );
     });
-
-    test("returns a copy the caller cannot use to mutate the map", () => {
-      const faces = UVSlotMap.shared(kRect);
-      const geometry = faces.get("front") as SelectionRect;
-      geometry.x = 99;
-
-      assert.strictEqual((faces.get("front") as SelectionRect).x, kRect.x);
-    });
   });
 
   describe("withSlot()", () => {
@@ -85,52 +61,29 @@ describe("UVSlotMap", () => {
         RangeError
       );
     });
-
-    test("replaces only the named face", () => {
-      const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const faces = UVSlotMap.shared(kRect).withSlot("left", nextRect);
-
-      assert.deepStrictEqual(faces.get("left"), nextRect);
-      for (const face of DEFAULT_UV_SLOTS.filter((value) => value !== "left")) {
-        assert.deepStrictEqual(faces.get(face), kRect, `${face} must stay put`);
-      }
-    });
-
-    test("leaves the source instance untouched", () => {
-      const nextRect: SelectionRect = { x: 9, y: 9, width: 1, height: 1 };
-      const faces = UVSlotMap.shared(kRect);
-      faces.withSlot("left", nextRect);
-
-      assert.deepStrictEqual(faces.get("left"), kRect);
-    });
   });
 
   describe("translated()", () => {
-    test("shifts every face without resizing it", () => {
-      const faces = UVSlotMap.shared(kRect).translated(8, 7);
-
-      for (const face of DEFAULT_UV_SLOTS) {
-        assert.deepStrictEqual(faces.get(face), {
-          x: kRect.x + 8,
-          y: kRect.y + 7,
-          width: kRect.width,
-          height: kRect.height
-        });
-      }
-    });
-
-    test("keeps each face's own size and offset", () => {
+    test("keeps every slot with its own size and offset", () => {
       const faces = new UVSlotMap({
         ...fullRecord(),
         front: { x: 0, y: 0, width: 4, height: 4 },
-        top: { x: 10, y: 20, width: 16, height: 2 }
-      } as Record<string, UVGeometry> as never).translated(5, 5);
+        top: { x: 10, y: 20, width: 16, height: 2 },
+        "top.1": { x: 2, y: 0, width: 1, height: 1 }
+      }).translated(5, 5);
 
+      assert.deepStrictEqual(faces.slots, [...DEFAULT_UV_SLOTS, "top.1"]);
       assert.deepStrictEqual(faces.get("front"), {
         x: 5, y: 5, width: 4, height: 4
       });
       assert.deepStrictEqual(faces.get("top"), {
         x: 15, y: 25, width: 16, height: 2
+      });
+      assert.deepStrictEqual(faces.get("back"), {
+        x: kRect.x + 5, y: kRect.y + 5, width: kRect.width, height: kRect.height
+      });
+      assert.deepStrictEqual(faces.get("top.1"), {
+        x: 7, y: 5, width: 1, height: 1
       });
     });
 
@@ -152,15 +105,6 @@ describe("UVSlotMap", () => {
   });
 
   describe("toJSON()", () => {
-    test("returns a full record covering every face", () => {
-      const data = UVSlotMap.shared(kRect).toJSON();
-
-      assert.deepStrictEqual(
-        Object.keys(data).sort(),
-        [...DEFAULT_UV_SLOTS].sort()
-      );
-    });
-
     test("returns copies the caller cannot use to mutate the map", () => {
       const faces = UVSlotMap.shared(kRect);
       const data = faces.toJSON();

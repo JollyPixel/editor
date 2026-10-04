@@ -1,19 +1,12 @@
 // Import Internal Dependencies
 import {
   clipRectToBounds,
-  intersectRects,
-  pointInRect
+  intersectRects
 } from "./math.ts";
 import type {
   SelectionRect,
   Vec2
 } from "../types.ts";
-
-export interface RectCell extends Vec2 {
-  readonly localX: number;
-  readonly localY: number;
-  readonly sourceIndex: number;
-}
 
 export interface RectRow {
   readonly x: number;
@@ -26,7 +19,7 @@ export interface RectRow {
 /**
  * Immutable row-major view over a rectangle of pixels.
  */
-export class RectArea implements Iterable<RectCell> {
+export class RectArea {
   readonly #rect: SelectionRect;
 
   static from(
@@ -86,12 +79,6 @@ export class RectArea implements Iterable<RectCell> {
     return this.#rect.width <= 0 || this.#rect.height <= 0;
   }
 
-  contains(
-    position: Vec2
-  ): boolean {
-    return pointInRect(position, this.#rect);
-  }
-
   fitsWithin(
     bounds: Vec2
   ): boolean {
@@ -146,24 +133,6 @@ export class RectArea implements Iterable<RectCell> {
       this.#rect.y === rect.y ||
       this.#rect.x + this.#rect.width === rect.x + rect.width ||
       this.#rect.y + this.#rect.height === rect.y + rect.height;
-  }
-
-  * [Symbol.iterator](): IterableIterator<RectCell> {
-    const { x, y, width, height } = this.#rect;
-    let sourceIndex = 0;
-
-    for (let localY = 0; localY < height; localY++) {
-      for (let localX = 0; localX < width; localX++) {
-        yield {
-          x: x + localX,
-          y: y + localY,
-          localX,
-          localY,
-          sourceIndex
-        };
-        sourceIndex++;
-      }
-    }
   }
 
   * rowsWithin(

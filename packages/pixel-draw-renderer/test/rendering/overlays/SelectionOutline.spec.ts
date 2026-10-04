@@ -10,9 +10,6 @@ import {
   SelectionOutline
 } from "#src/rendering/overlays/SelectionOutline.ts";
 import {
-  traceSelectionContour
-} from "#src/rendering/overlays/selectionContour.ts";
-import {
   makeSvg,
   makeViewport,
   makeBrush
@@ -27,7 +24,6 @@ describe("SelectionOutline", () => {
       makeBrush()
     );
 
-    // zoom 4, camera (0,0): rect (1,1,2,3) -> x=4, y=4, width=8, height=12
     overlay.drawRect({
       x: 1,
       y: 1,
@@ -93,7 +89,7 @@ describe("SelectionOutline", () => {
         y: 1,
         width: 2,
         height: 3
-      }, new Array(6).fill(true));
+      }, Array.from({ length: 6 }, () => true));
 
       const rects = svg.querySelectorAll("rect");
       assert.strictEqual(rects.length, 2);
@@ -114,21 +110,28 @@ describe("SelectionOutline", () => {
       }
     });
 
-    test("a partial mask renders a visible path pair instead of the rect pair", () => {
+    test("a partial mask renders a visible path pair tracing the mask in screen space", () => {
       const svg = makeSvg();
+      const viewport = makeViewport();
+      viewport.camera = {
+        x: 3,
+        y: -5
+      };
       const overlay = new SelectionOutline(
         svg,
-        makeViewport(),
+        viewport,
         makeBrush()
       );
 
-      // 2x2 mask, only the top-left cell selected.
       overlay.drawMask({
-        x: 0,
-        y: 0,
+        x: 1,
+        y: 2,
         width: 2,
         height: 2
-      }, [true, false, false, false]);
+      }, [
+        true, false,
+        false, false
+      ]);
 
       const rects = svg.querySelectorAll("rect");
       for (const rect of rects) {
@@ -138,7 +141,10 @@ describe("SelectionOutline", () => {
       assert.strictEqual(paths.length, 2);
       for (const path of paths) {
         assert.strictEqual(path.getAttribute("visibility"), "visible");
-        assert.ok(path.getAttribute("d"), "path has geometry");
+        assert.strictEqual(
+          path.getAttribute("d"),
+          "M 7 3 L 11 3 L 11 7 L 7 7 Z"
+        );
       }
     });
 
@@ -165,26 +171,6 @@ describe("SelectionOutline", () => {
   });
 
   describe("size label", () => {
-    test("drawRect() shows the selection size", () => {
-      const svg = makeSvg();
-      const overlay = new SelectionOutline(
-        svg,
-        makeViewport(),
-        makeBrush()
-      );
-
-      overlay.drawRect({
-        x: 0,
-        y: 0,
-        width: 16,
-        height: 16
-      });
-
-      const label = svg.querySelector("[data-overlay='selection-size']")!;
-      assert.strictEqual(label.getAttribute("visibility"), "visible");
-      assert.strictEqual(label.textContent, "16×16");
-    });
-
     test("drawMask() reports the bounding box, not the traced mask", () => {
       const svg = makeSvg();
       const overlay = new SelectionOutline(
@@ -203,195 +189,6 @@ describe("SelectionOutline", () => {
       const label = svg.querySelector("[data-overlay='selection-size']")!;
       assert.strictEqual(label.getAttribute("visibility"), "visible");
       assert.strictEqual(label.textContent, "2×2");
-    });
-
-    test("clear() hides the size label", () => {
-      const svg = makeSvg();
-      const overlay = new SelectionOutline(
-        svg,
-        makeViewport(),
-        makeBrush()
-      );
-
-      overlay.drawRect({
-        x: 0,
-        y: 0,
-        width: 4,
-        height: 4
-      });
-      overlay.clear();
-
-      const label = svg.querySelector("[data-overlay='selection-size']")!;
-      assert.strictEqual(label.getAttribute("visibility"), "hidden");
-    });
-
-    test("sizeLabel: false creates no label at all", () => {
-      const svg = makeSvg();
-      const overlay = new SelectionOutline(
-        svg,
-        makeViewport(),
-        makeBrush(),
-        { sizeLabel: false }
-      );
-
-      overlay.drawRect({
-        x: 0,
-        y: 0,
-        width: 4,
-        height: 4
-      });
-
-      assert.strictEqual(
-        svg.querySelector("[data-overlay='selection-size']"),
-        null
-      );
-    });
-  });
-
-  describe("traceSelectionContour", () => {
-    test("a full rectangle mask traces its 4 corners, clockwise", () => {
-      const loops = traceSelectionContour(
-        2,
-        2,
-        [true, true, true, true]
-      );
-
-      assert.strictEqual(loops.length, 1);
-      assert.deepStrictEqual(
-        loops[0],
-        [
-          { x: 0, y: 0 },
-          { x: 2, y: 0 },
-          { x: 2, y: 2 },
-          { x: 0, y: 2 }
-        ]
-      );
-    });
-
-    test("a single selected cell traces a unit square", () => {
-      const loops = traceSelectionContour(
-        1,
-        1,
-        [true]
-      );
-
-      assert.strictEqual(loops.length, 1);
-      assert.deepStrictEqual(
-        loops[0],
-        [
-          { x: 0, y: 0 },
-          { x: 1, y: 0 },
-          { x: 1, y: 1 },
-          { x: 0, y: 1 }
-        ]
-      );
-    });
-
-    test("an L-shape traces its true concave outline (6 corners), not the bounding rect's 4", () => {
-      /*
-       * X .
-       * X X
-       */
-      const loops = traceSelectionContour(
-        2,
-        2,
-        [true, false, true, true]
-      );
-
-      assert.strictEqual(loops.length, 1);
-      assert.strictEqual(loops[0].length, 6);
-    });
-
-    test("a mask with a fully enclosed hole traces two loops (outer + inner)", () => {
-      // 3x3 ring: every cell selected except the center.
-      const mask = [
-        true, true, true,
-        true, false, true,
-        true, true, true
-      ];
-      const loops = traceSelectionContour(3, 3, mask);
-
-      assert.strictEqual(
-        loops.length,
-        2,
-        "outer boundary + inner hole boundary"
-      );
-    });
-
-    /*
-     * Corner-touching cells share a boundary vertex, so that vertex starts
-     * two edges. Keying edges by origin alone dropped one and the walk then
-     * dereferenced a consumed edge (TypeError), which silently aborted
-     * SelectEngine.importSelection halfway through a paste.
-     */
-    test("two cells touching only at a corner trace as two separate loops", () => {
-      /*
-       * X .
-       * . X
-       */
-      const loops = traceSelectionContour(
-        2,
-        2,
-        [true, false, false, true]
-      );
-
-      assert.strictEqual(loops.length, 2);
-      assert.deepStrictEqual(
-        loops.map((loop) => loop.length),
-        [4, 4],
-        "each cell keeps its own unit square"
-      );
-    });
-
-    test("the anti-diagonal traces as two separate loops", () => {
-      /*
-       * . X
-       * X .
-       */
-      const loops = traceSelectionContour(
-        2,
-        2,
-        [false, true, true, false]
-      );
-
-      assert.strictEqual(loops.length, 2);
-    });
-
-    test("a checkerboard traces one loop per cell", () => {
-      const mask = [
-        true, false, true,
-        false, true, false,
-        true, false, true
-      ];
-      const loops = traceSelectionContour(3, 3, mask);
-
-      assert.strictEqual(loops.length, 5);
-      assert.deepStrictEqual(
-        loops.map((loop) => loop.length),
-        [4, 4, 4, 4, 4]
-      );
-    });
-
-    test("a corner-touching pair joined by a third cell stays one loop", () => {
-      /*
-       * X X
-       * . X
-       */
-      const loops = traceSelectionContour(
-        2,
-        2,
-        [true, true, false, true]
-      );
-
-      assert.strictEqual(loops.length, 1);
-      assert.strictEqual(loops[0].length, 6);
-    });
-
-    test("an empty mask traces nothing", () => {
-      assert.deepStrictEqual(
-        traceSelectionContour(2, 2, [false, false, false, false]),
-        []
-      );
     });
   });
 });

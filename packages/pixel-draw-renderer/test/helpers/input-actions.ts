@@ -33,12 +33,18 @@ export function makeActions(
 
   const actions: InputActions = {
     onPrimaryDown: (position) => {
-      calls.onPrimaryDown.push([position.x, position.y]);
+      calls.onPrimaryDown.push([
+        position.x,
+        position.y
+      ]);
 
       return options.onPrimaryDownReturns ?? true;
     },
     onPrimaryMove: (position) => {
-      calls.onPrimaryMove.push([position.x, position.y]);
+      calls.onPrimaryMove.push([
+        position.x,
+        position.y
+      ]);
     },
     onPrimaryUp: () => {
       calls.onPrimaryUp.push([]);
@@ -53,7 +59,10 @@ export function makeActions(
       return options.onSecondaryDownReturns ?? true;
     },
     onSecondaryMove: (position) => {
-      calls.onSecondaryMove.push([position.x, position.y]);
+      calls.onSecondaryMove.push([
+        position.x,
+        position.y
+      ]);
     },
     onSecondaryUp: () => {
       calls.onSecondaryUp.push([]);
@@ -62,13 +71,20 @@ export function makeActions(
       calls.onPanStart.push([]);
     },
     onPanMove: (delta) => {
-      calls.onPanMove.push([delta.x, delta.y]);
+      calls.onPanMove.push([
+        delta.x,
+        delta.y
+      ]);
     },
     onPanEnd: () => {
       calls.onPanEnd.push([]);
     },
     onZoom: (delta, center) => {
-      calls.onZoom.push([delta, center.x, center.y]);
+      calls.onZoom.push([
+        delta,
+        center.x,
+        center.y
+      ]);
     },
     onCanvasHover: (position) => {
       calls.onCanvasHover.push([position]);

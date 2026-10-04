@@ -16,7 +16,6 @@ import {
   type DecodedRasterImage,
   type DecodedSelection,
   type RasterBlobDecoder,
-  type SelectionPngEncoder,
   type SelectionSnapshot
 } from "./types.ts";
 import type {
@@ -26,8 +25,6 @@ import type {
 export interface SelectionClipboardOptions {
   adapter: ClipboardAdapter | null;
   decodeRaster?: RasterBlobDecoder;
-  encodePng?: SelectionPngEncoder;
-  createItem?: (data: Record<string, Blob>) => ClipboardItem;
   supportsType?: (type: string) => boolean;
 }
 
@@ -64,12 +61,6 @@ function defaultSupportsType(
     ClipboardItem.supports(type);
 }
 
-function defaultCreateItem(
-  data: Record<string, Blob>
-): ClipboardItem {
-  return new ClipboardItem(data);
-}
-
 function hasValidDecodedDimensions(
   image: DecodedRasterImage
 ): boolean {
@@ -100,8 +91,6 @@ function pasteFailure(
 export class SelectionClipboard {
   #adapter: ClipboardAdapter | null;
   #decodeRaster: RasterBlobDecoder;
-  #encodePng: SelectionPngEncoder;
-  #createItem: (data: Record<string, Blob>) => ClipboardItem;
   #supportsType: (type: string) => boolean;
   #internal: SelectionSnapshot | null = null;
 
@@ -110,13 +99,7 @@ export class SelectionClipboard {
   ) {
     this.#adapter = options.adapter;
     this.#decodeRaster = options.decodeRaster ?? decodeRasterBlob;
-    this.#encodePng = options.encodePng ?? encodeSelectionPng;
-    this.#createItem = options.createItem ?? defaultCreateItem;
     this.#supportsType = options.supportsType ?? defaultSupportsType;
-  }
-
-  get hasInternalSnapshot(): boolean {
-    return this.#internal !== null;
   }
 
   async copy(
@@ -132,7 +115,7 @@ export class SelectionClipboard {
     }
 
     try {
-      const png = await this.#encodePng(snapshot);
+      const png = await encodeSelectionPng(snapshot);
       const data: Record<string, Blob> = {
         "image/png": png
       };
@@ -144,7 +127,7 @@ export class SelectionClipboard {
         );
       }
       await this.#adapter.write(
-        [this.#createItem(data)]
+        [new ClipboardItem(data)]
       );
 
       return {

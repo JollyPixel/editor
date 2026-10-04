@@ -4,7 +4,6 @@ import type {
 } from "#src/PixelArtCanvas.ts";
 import { mouseEvent } from "./events.ts";
 
-/** A 2-wide x 1-tall pair over (2,2)-(3,2): black at (2,2), red at (3,2). */
 export function paintHorizontalPair(
   manager: PixelArtCanvas
 ): void {
@@ -18,7 +17,6 @@ export function paintHorizontalPair(
   ]);
 }
 
-/** Drags a selection rectangle over the pair painted by paintHorizontalPair. */
 export function selectHorizontalPair(
   canvas: HTMLCanvasElement
 ): void {

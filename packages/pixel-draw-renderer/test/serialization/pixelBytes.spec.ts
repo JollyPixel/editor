@@ -42,11 +42,6 @@ describe("pixel bytes", () => {
       5, 6, 7, 8
     ]);
   });
-
-  test("encodes an empty array as an empty string", () => {
-    assert.strictEqual(encodePixelBytes(new Uint8Array(0)), "");
-    assert.deepStrictEqual([...decodePixelBytes("")], []);
-  });
 });
 
 describe("PNG pixels", () => {

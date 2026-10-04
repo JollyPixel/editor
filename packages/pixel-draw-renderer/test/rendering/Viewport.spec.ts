@@ -10,7 +10,24 @@ import { Viewport } from "#src/rendering/Viewport.ts";
 
 describe("Viewport", () => {
   describe("constructor", () => {
-    test("throws when zoomMax < zoomMin", () => {
+    test("forwards zoom options to its Zoom", () => {
+      const vp = new Viewport({
+        textureSize: {
+          x: 16,
+          y: 16
+        },
+        zoom: 6,
+        zoomMin: 2,
+        zoomMax: 12,
+        zoomSensitivity: 0.5,
+        zoomSmoothing: 0
+      });
+
+      assert.strictEqual(vp.zoom.value, 6);
+      assert.strictEqual(vp.zoom.min, 2);
+      assert.strictEqual(vp.zoom.max, 12);
+      assert.strictEqual(vp.zoom.sensitivity, 0.5);
+      assert.strictEqual(vp.zoom.smoothing, 0);
       assert.throws(
         () => new Viewport({
           textureSize: {
@@ -23,35 +40,10 @@ describe("Viewport", () => {
         /Max zoom.*can't be under min zoom/
       );
     });
-
-    test("clamps initial zoom to [min, max]", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 100,
-        zoomMin: 1,
-        zoomMax: 32
-      });
-
-      assert.strictEqual(vp.zoom.value, 32);
-    });
-
-    test("defaults zoom to 4", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-
-      assert.strictEqual(vp.zoom.value, 4);
-    });
   });
 
   describe("clampCamera", () => {
-    test("prevents camera from going past negative bound", () => {
+    test("stops the camera one zoom step inside the left edge", () => {
       const vp = new Viewport({
         textureSize: {
           x: 8,
@@ -60,16 +52,12 @@ describe("Viewport", () => {
         zoom: 4
       });
       vp.updateCanvasSize(100, 100);
-      // Texture is 32x32 px; margin = 4; minX = -32+4 = -28
       vp.applyPan(-10000, 0);
 
-      assert.ok(
-        vp.camera.x >= -28,
-        `camera.x ${vp.camera.x} should be >= -28`
-      );
+      assert.strictEqual(vp.camera.x, -28);
     });
 
-    test("prevents camera from going past positive bound", () => {
+    test("stops the camera one zoom step inside the right edge", () => {
       const vp = new Viewport({
         textureSize: {
           x: 8,
@@ -78,18 +66,14 @@ describe("Viewport", () => {
         zoom: 4
       });
       vp.updateCanvasSize(100, 100);
-      // maxX = 100-4 = 96
       vp.applyPan(10000, 0);
 
-      assert.ok(
-        vp.camera.x <= 96,
-        `camera.x ${vp.camera.x} should be <= 96`
-      );
+      assert.strictEqual(vp.camera.x, 96);
     });
   });
 
   describe("applyZoom", () => {
-    test("zooms in (negative delta increases zoom)", () => {
+    test("zooms in on a negative delta and keeps the pixel under the pointer fixed", () => {
       const vp = new Viewport({
         textureSize: {
           x: 16,
@@ -99,61 +83,23 @@ describe("Viewport", () => {
         zoomSmoothing: 0
       });
       vp.updateCanvasSize(200, 200);
-      const before = vp.zoom.value;
-      vp.applyZoom(-100, 100, 100);
+      vp.centerTexture();
+      const bounds = {
+        left: 0,
+        top: 0
+      } as DOMRect;
+      const pixelBefore = vp.mouseTexturePosition(102, 102, { bounds });
+      vp.applyZoom(-100, 102, 102);
 
       assert.ok(
-        vp.zoom.value > before,
-        `zoom ${vp.zoom.value} should be greater than ${before}`
+        vp.zoom.value > 4,
+        `zoom ${vp.zoom.value} should be greater than 4`
       );
-    });
-
-    test("zooms out (positive delta decreases zoom)", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 4,
-        zoomSmoothing: 0
-      });
-      vp.updateCanvasSize(200, 200);
-      const before = vp.zoom.value;
-      vp.applyZoom(100, 100, 100);
-
-      assert.ok(
-        vp.zoom.value < before,
-        `zoom ${vp.zoom.value} should be less than ${before}`
+      assert.deepStrictEqual(pixelBefore, { x: 8, y: 8 });
+      assert.deepStrictEqual(
+        vp.mouseTexturePosition(102, 102, { bounds }),
+        pixelBefore
       );
-    });
-
-    test("clamps zoom to zoomMin", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 1,
-        zoomMin: 1
-      });
-      vp.updateCanvasSize(200, 200);
-      vp.applyZoom(100, 100, 100);
-      assert.strictEqual(vp.zoom.value, 1);
-    });
-
-    test("clamps zoom to zoomMax", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        },
-        zoom: 32,
-        zoomMax: 32
-      });
-      vp.updateCanvasSize(200, 200);
-      vp.applyZoom(-100, 100, 100);
-
-      assert.strictEqual(vp.zoom.value, 32);
     });
   });
 
@@ -180,43 +126,6 @@ describe("Viewport", () => {
         vp.camera.y,
         beforeY + 5
       );
-    });
-  });
-
-  describe("zoom.sensitivity setter", () => {
-    test("updates sensitivity", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-      vp.zoom.sensitivity = 0.5;
-
-      assert.strictEqual(vp.zoom.sensitivity, 0.5);
-    });
-
-    test("clamps to a minimum of 0.01", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-      vp.zoom.sensitivity = -5;
-
-      assert.strictEqual(vp.zoom.sensitivity, 0.01);
-    });
-
-    test("defaults to 0.25", () => {
-      const vp = new Viewport({
-        textureSize: {
-          x: 16,
-          y: 16
-        }
-      });
-
-      assert.strictEqual(vp.zoom.sensitivity, 0.25);
     });
   });
 

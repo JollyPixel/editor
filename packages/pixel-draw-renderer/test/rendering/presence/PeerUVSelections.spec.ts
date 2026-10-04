@@ -10,10 +10,10 @@ import { PeerUVSelections } from "#src/rendering/presence/PeerUVSelections.ts";
 import type { UVMap } from "#src/uv/map/UVMap.ts";
 import {
   makeSvg,
-  makeUvMap,
   makeUvOverlay,
   makeViewport
 } from "../../helpers/overlay.ts";
+import { makeUvMap } from "../../helpers/uv/map.ts";
 
 // CONSTANTS
 const kRegionColor = "#123456";
@@ -26,7 +26,7 @@ function setup(): {
   selections: PeerUVSelections;
 } {
   const svg = makeSvg();
-  const map = makeUvMap();
+  const map = makeUvMap({ x: 64, y: 64 });
   const selections = new PeerUVSelections(
     makeUvOverlay(svg, makeViewport(), map)
   );
@@ -171,11 +171,5 @@ describe("PeerUVSelections", () => {
     });
     selections.destroy();
     assert.deepStrictEqual(strokes(svg), [kRegionColor, kRegionColor]);
-  });
-
-  test("removing an unknown peer is a no-op", () => {
-    const { selections } = setup();
-
-    assert.doesNotThrow(() => selections.remove("nobody"));
   });
 });

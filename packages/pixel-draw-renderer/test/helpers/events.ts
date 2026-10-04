@@ -51,3 +51,32 @@ export function mouseEvent(
     bubbles: true
   });
 }
+
+export function stroke(
+  canvas: HTMLCanvasElement,
+  points: [number, number][],
+  button: 0 | 2 = 0
+): void {
+  const [first, ...rest] = points;
+  const buttons = button === 0 ? 1 : 2;
+  canvas.dispatchEvent(new MouseEvent("mousedown", {
+    button,
+    buttons,
+    clientX: first[0],
+    clientY: first[1],
+    bubbles: true
+  }));
+  for (const [clientX, clientY] of rest) {
+    const event = new MouseEvent("mousemove", {
+      button,
+      buttons,
+      clientX,
+      clientY,
+      bubbles: true
+    });
+    canvas.dispatchEvent(event);
+  }
+  canvas.dispatchEvent(
+    new MouseEvent("mouseup", { bubbles: true })
+  );
+}

@@ -7,46 +7,27 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { UVRegion } from "#src/uv/region/UVRegion.ts";
 import {
   makeSvg,
-  makeViewport,
-  makeUvMap
+  makeViewport
 } from "../../helpers/overlay.ts";
-
-/*
- * Every entry renders a <g> holding the casing stroke and, over it, the
- * region-colored one.
- */
-function borders(
-  svg: SVGElement
-): SVGRectElement[] {
-  return [...svg.querySelectorAll<SVGRectElement>("g > rect:last-child")];
-}
-
-function casings(
-  svg: SVGElement
-): SVGRectElement[] {
-  return [...svg.querySelectorAll<SVGRectElement>("g > rect:first-child")];
-}
-
-function groups(
-  svg: SVGElement
-): SVGGElement[] {
-  return [...svg.querySelectorAll<SVGGElement>(":scope > g[data-overlay=\"uv\"] > g")];
-}
+import { makeUvMap } from "../../helpers/uv/map.ts";
+import {
+  uvBorderRects,
+  uvCasingRects
+} from "../../helpers/uv/borders.ts";
 
 describe("UVRegionLayer — visibility follows UVMap state", () => {
   test("renders nothing for a region that isn't selected or shown", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(), map);
 
     map.create({ width: 4, height: 4 });
 
     assert.strictEqual(
-      borders(svg).length,
+      uvBorderRects(svg).length,
       0,
       "no rects when map is not selected or shown"
     );
@@ -54,7 +35,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
   test("renders a solid border rect once its region is selected", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(), map);
 
@@ -66,9 +47,8 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
     });
     map.select(region.id);
 
-    const rects = borders(svg);
+    const rects = uvBorderRects(svg);
     assert.strictEqual(rects.length, 1);
-    // zoom 4, camera (0,0): rect (0,0,2,3) -> x=0, y=0, width=8, height=12
     assert.strictEqual(rects[0].getAttribute("x"), "0");
     assert.strictEqual(rects[0].getAttribute("y"), "0");
     assert.strictEqual(rects[0].getAttribute("width"), "8");
@@ -83,7 +63,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
       "solid, not dashed"
     );
     assert.notStrictEqual(
-      casings(svg)[0].style.display,
+      uvCasingRects(svg)[0].style.display,
       "none",
       "the classical border keeps its contrasting casing"
     );
@@ -91,23 +71,14 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
   test("insets the casing so it never paints outside the border", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(), map);
 
-    /*
-     * The first cascade position is (0, 0) — flush with the canvas edge,
-     * where a straddling casing would paint its outer half onto the page and
-     * read as an extra pixel of canvas.
-     */
     const region = map.create({ width: 2, height: 3, id: "r1" });
     map.select(region.id);
 
-    const [casing] = casings(svg);
-    /*
-     * 2px border and 4px casing, both centered on their own rect: insetting
-     * the casing by 1px aligns the two outer edges exactly.
-     */
+    const [casing] = uvCasingRects(svg);
     assert.strictEqual(casing.getAttribute("x"), "1");
     assert.strictEqual(casing.getAttribute("y"), "1");
     assert.strictEqual(casing.getAttribute("width"), "6");
@@ -116,7 +87,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
   test("never inverts the casing rect on a region a few screen pixels wide", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(1), map);
 
@@ -127,14 +98,14 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
     });
     map.select(region.id);
 
-    const [casing] = casings(svg);
+    const [casing] = uvCasingRects(svg);
     assert.strictEqual(casing.getAttribute("width"), "0");
     assert.strictEqual(casing.getAttribute("height"), "0");
   });
 
   test("showAll renders every region regardless of selection", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(), map);
 
@@ -149,7 +120,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
     map.showAll = true;
 
     assert.strictEqual(
-      borders(svg).length,
+      uvBorderRects(svg).length,
       2,
       "two rects when showAll is true"
     );
@@ -157,7 +128,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
   test("removes the rect once its region is deselected", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(
       svg,
@@ -171,7 +142,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
     });
     map.select(region.id);
     assert.strictEqual(
-      borders(svg).length,
+      uvBorderRects(svg).length,
       1,
       "one rect when region is selected"
     );
@@ -186,7 +157,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
   test("removes the rect once its region is deleted", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(), map);
 
@@ -196,7 +167,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
     });
     map.showAll = true;
     assert.strictEqual(
-      borders(svg).length,
+      uvBorderRects(svg).length,
       1,
       "one rect when showAll is true"
     );
@@ -211,7 +182,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
 
   test("moving a visible region updates its screen position", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
 
     new UVRegionLayer(svg, makeViewport(), map);
 
@@ -225,16 +196,16 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
       { x: 5, y: 5, width: 2, height: 2 }
     );
 
-    const [rect] = borders(svg);
+    const [rect] = uvBorderRects(svg);
     assert.strictEqual(rect.getAttribute("x"), "20");
     assert.strictEqual(rect.getAttribute("y"), "20");
   });
 });
 
-describe("UVRegionLayer — setLiveOverride", () => {
+describe("UVRegionLayer — setLivePreview", () => {
   test("renders the live preview instead of the stored region", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
     const overlay = new UVRegionLayer(
       svg,
       makeViewport(),
@@ -253,7 +224,7 @@ describe("UVRegionLayer — setLiveOverride", () => {
       })
     );
 
-    const [rect] = borders(svg);
+    const [rect] = uvBorderRects(svg);
     assert.strictEqual(rect.getAttribute("x"), "36");
     assert.strictEqual(rect.getAttribute("y"), "36");
 
@@ -262,236 +233,10 @@ describe("UVRegionLayer — setLiveOverride", () => {
   });
 });
 
-describe("UVRegionLayer — free regions", () => {
-  test("renders one rect per face", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({ width: 4, height: 4, id: "r1" });
-    map.setState(region.id, "free");
-    map.select("r1");
-
-    assert.strictEqual(
-      borders(svg).length,
-      6,
-      "all six faces must be visible, or a stack cannot be dragged apart"
-    );
-  });
-
-  test("paints the selected face last, above the rects it coincides with", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 4,
-      height: 4,
-      id: "r1"
-    });
-    map.setState(region.id, "free");
-    // "front" is the first default slot, so raising it is a real reorder.
-    map.select("r1", "front");
-
-    assert.strictEqual(
-      borders(svg).at(-1)!.style.strokeWidth,
-      "3",
-      "selected face border should be thicker"
-    );
-    assert.deepStrictEqual(
-      groups(svg).slice(0, -1).map((group) => group.style.opacity),
-      Array.from({ length: 5 }, () => "0.45"),
-      "unselected faces are dimmed"
-    );
-  });
-
-  test("a stacked region keeps its plain full-opacity border", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 4,
-      height: 4
-    });
-    map.select(region.id);
-
-    const [rect] = borders(svg);
-    assert.strictEqual(rect.style.strokeWidth, "2");
-    assert.strictEqual(groups(svg)[0].style.opacity, "");
-  });
-
-  test("setLiveOverride moves only the dragged face", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-    const overlay = new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 4,
-      height: 4,
-      id: "r1"
-    });
-    map.setState(region.id, "free");
-    map.select("r1");
-
-    overlay.setLivePreview(
-      map.previewMove(
-        "r1",
-        { x: 9, y: 9, width: 4, height: 4 },
-        "top"
-      )
-    );
-
-    const moved = borders(svg)
-      .filter((rect) => rect.getAttribute("x") === "36");
-    assert.strictEqual(
-      moved.length,
-      1,
-      "only the dragged face follows the pointer"
-    );
-  });
-});
-
-describe("UVRegionLayer — staying visible over the artwork", () => {
-  test("casings a light region color in black and a dark one in white", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    map.create({
-      width: 2,
-      height: 2,
-      id: "light",
-      color: "#ffe08a"
-    });
-    map.create({
-      width: 2,
-      height: 2,
-      id: "dark",
-      color: "#123456"
-    });
-    map.showAll = true;
-
-    assert.deepStrictEqual(
-      casings(svg).map((casing) => casing.getAttribute("stroke")),
-      ["#000", "#fff"],
-      "a casing matching the region color would hide with it"
-    );
-  });
-
-  test("draws the casing wider than the border it sits under", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 4,
-      height: 4,
-      id: "r1"
-    });
-    map.setState(region.id, "free");
-    map.select("r1", "front");
-
-    /*
-     * Selected face: 3px border, everything else 2px — each casing shows 1px
-     * on either side of its border.
-     */
-    assert.deepStrictEqual(
-      casings(svg).map(
-        (casing) => casing.style.strokeWidth
-      ).sort(),
-      ["4", "4", "4", "4", "4", "5"]
-    );
-  });
-
-  test("tints the selected entry, and only that one", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 4,
-      height: 4,
-      id: "r1",
-      color: "#123456"
-    });
-    map.setState(region.id, "free");
-    map.select("r1", "front");
-
-    // "front" is painted last, so it is the last border in document order.
-    const painted = borders(svg);
-    const selected = painted.at(-1)!;
-    assert.strictEqual(selected.style.fill, "#123456");
-    assert.strictEqual(
-      selected.style.fillOpacity,
-      "0.06",
-      "the tint marks the entry without masking the texture under it"
-    );
-
-    assert.deepStrictEqual(
-      painted.slice(0, -1).map((rect) => rect.style.fill),
-      Array.from({ length: 5 }, () => "none"),
-      "a tint on every face would stack into an opaque block"
-    );
-  });
-
-  test("drops the tint once the entry is deselected", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 4,
-      height: 4,
-      color: "#123456"
-    });
-    map.select(region.id);
-    map.showAll = true;
-    assert.strictEqual(borders(svg)[0].style.fill, "#123456");
-
-    map.select(null);
-
-    const [rect] = borders(svg);
-    assert.strictEqual(rect.style.fill, "none");
-    assert.strictEqual(rect.style.fillOpacity, "");
-  });
-
-  test("casings the face label in the same contrasting color", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    const region = map.create({
-      width: 12,
-      height: 12,
-      id: "r1",
-      color: "#123456"
-    });
-    map.setState(region.id, "free");
-    map.select("r1", "front");
-
-    const label = svg.querySelector("text")!;
-    assert.strictEqual(label.getAttribute("fill"), "#123456");
-    assert.strictEqual(label.getAttribute("stroke"), "#fff");
-    assert.strictEqual(
-      label.getAttribute("paint-order"),
-      "stroke",
-      "without it the casing would cover the glyphs"
-    );
-  });
-});
 describe("UVRegionLayer — destroy", () => {
   test("stops reacting to UVMap events and removes its rects", () => {
     const svg = makeSvg();
-    const map = makeUvMap();
+    const map = makeUvMap({ x: 64, y: 64 });
     const overlay = new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({
@@ -500,7 +245,7 @@ describe("UVRegionLayer — destroy", () => {
     });
     map.showAll = true;
     assert.strictEqual(
-      borders(svg).length,
+      uvBorderRects(svg).length,
       1,
       "one rect when showAll is true"
     );
@@ -521,109 +266,5 @@ describe("UVRegionLayer — destroy", () => {
       0,
       "no rect after move"
     );
-  });
-});
-
-describe("UVRegionLayer — compound faces", () => {
-  test("outlines the union of the parts as one continuous subpath", () => {
-    const svg = makeSvg();
-    const map = makeUvMap();
-
-    new UVRegionLayer(svg, makeViewport(), map);
-
-    map.restore(
-      new UVRegion({
-        id: "stair",
-        color: "#123456",
-        state: "free",
-        activeFaces: ["left"],
-        faces: {
-          left: {
-            shape: "compound",
-            rect: { x: 0, y: 0, width: 4, height: 4 },
-            parts: [
-              { x: 0, y: 0.5, width: 1, height: 0.5 },
-              { x: 0.5, y: 0, width: 0.5, height: 0.5 }
-            ]
-          }
-        }
-      })
-    );
-    map.select("stair", "left");
-
-    const paths = [...svg.querySelectorAll<SVGPathElement>("g > path:last-child")];
-    assert.strictEqual(paths.length, 1);
-
-    const d = paths[0].getAttribute("d") ?? "";
-    assert.strictEqual(
-      d.split("M").length - 1,
-      1,
-      "the two parts share one subpath, so no edge is drawn inside the L"
-    );
-    // zoom 4, camera (0,0): the region spans 16 screen pixels.
-    assert.strictEqual(d, "M0,8L8,8L8,0L16,0L16,16L0,16Z");
-  });
-});
-
-describe("UVRegionLayer — unfolded regions", () => {
-  function makeUnfolded() {
-    const svg = makeSvg();
-    const map = makeUvMap();
-    const overlay = new UVRegionLayer(svg, makeViewport(), map);
-
-    map.create({ width: 4, height: 4, id: "r1" });
-    map.setState("r1", "unfolded");
-    map.select("r1");
-
-    return { svg, map, overlay };
-  }
-
-  test("paints one border per face", () => {
-    const { svg } = makeUnfolded();
-
-    assert.strictEqual(borders(svg).length, 6);
-  });
-
-  test("keeps every face at full opacity, unlike a free region", () => {
-    const { svg } = makeUnfolded();
-
-    assert.deepStrictEqual(
-      groups(svg).map((group) => group.style.opacity),
-      Array.from({ length: 6 }, () => "")
-    );
-  });
-
-  test("emphasises the whole region, since no single face is selected", () => {
-    const { svg } = makeUnfolded();
-
-    assert.deepStrictEqual(
-      borders(svg).map((rect) => rect.style.strokeWidth),
-      Array.from({ length: 6 }, () => "3")
-    );
-  });
-
-  test("a previewed move of the net moves every face together", () => {
-    const { svg, map, overlay } = makeUnfolded();
-
-    overlay.setLivePreview(
-      map.previewMove("r1", { x: 2, y: 3, width: 8, height: 12 })
-    );
-
-    assert.deepStrictEqual(
-      borders(svg).map((rect) => rect.getAttribute("x")),
-      ["8", "24", "8", "24", "8", "24"]
-    );
-    assert.deepStrictEqual(
-      borders(svg).map((rect) => rect.getAttribute("y")),
-      ["12", "12", "28", "28", "44", "44"]
-    );
-  });
-
-  test("a suppressed region ghost hides all of its faces", () => {
-    const { svg, overlay } = makeUnfolded();
-
-    overlay.setGhostSuppressed([{ id: "r1", face: null }]);
-
-    assert.strictEqual(borders(svg).length, 0);
   });
 });

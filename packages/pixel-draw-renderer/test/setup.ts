@@ -8,13 +8,8 @@ import {
 
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
+const kParentBackgroundColor = "rgb(18, 52, 86)";
 
-/*
- * happy-dom has no layout engine and no 2D canvas context, so the emulated
- * window is registered on globalThis once per test process (wired through
- * `node --import ./test/setup.ts`). getComputedStyle returns a fixed
- * background-color the PixelArtCanvas suite asserts against.
- */
 Object.assign(globalThis, {
   window: kEmulatedBrowserWindow,
   document: kEmulatedBrowserWindow.document,
@@ -25,11 +20,15 @@ Object.assign(globalThis, {
   HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement,
   Event: kEmulatedBrowserWindow.Event,
   EventTarget: kEmulatedBrowserWindow.EventTarget,
-  requestAnimationFrame: kEmulatedBrowserWindow.requestAnimationFrame.bind(kEmulatedBrowserWindow),
-  cancelAnimationFrame: kEmulatedBrowserWindow.cancelAnimationFrame.bind(kEmulatedBrowserWindow),
+  requestAnimationFrame: kEmulatedBrowserWindow.requestAnimationFrame.bind(
+    kEmulatedBrowserWindow
+  ),
+  cancelAnimationFrame: kEmulatedBrowserWindow.cancelAnimationFrame.bind(
+    kEmulatedBrowserWindow
+  ),
   getComputedStyle: () => {
     return {
-      backgroundColor: "#555555"
+      backgroundColor: kParentBackgroundColor
     };
   }
 });

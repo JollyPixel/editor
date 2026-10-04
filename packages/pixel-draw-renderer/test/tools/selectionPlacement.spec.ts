@@ -72,30 +72,31 @@ describe("placeSelection", () => {
   });
 
   test("places odd sizes so the centre pixel lands under the cursor", () => {
-    assert.deepStrictEqual(
-      placeSelection(
-        { width: 3, height: 3 },
-        {
-          cursor: { x: 5, y: 5 },
-          viewCenter: kViewCenter,
-          bounds: kBounds
-        }
-      ),
-      { x: 4, y: 4, width: 3, height: 3 }
-    );
-  });
+    const cases = [
+      {
+        size: { width: 3, height: 3 },
+        cursor: { x: 5, y: 5 },
+        expected: { x: 4, y: 4, width: 3, height: 3 }
+      },
+      {
+        size: { width: 1, height: 1 },
+        cursor: { x: 11, y: 2 },
+        expected: { x: 11, y: 2, width: 1, height: 1 }
+      }
+    ];
 
-  test("a single pixel lands exactly on the cursor", () => {
-    assert.deepStrictEqual(
-      placeSelection(
-        { width: 1, height: 1 },
-        {
-          cursor: { x: 11, y: 2 },
-          viewCenter: kViewCenter,
-          bounds: kBounds
-        }
-      ),
-      { x: 11, y: 2, width: 1, height: 1 }
-    );
+    for (const { size, cursor, expected } of cases) {
+      assert.deepStrictEqual(
+        placeSelection(
+          size,
+          {
+            cursor,
+            viewCenter: kViewCenter,
+            bounds: kBounds
+          }
+        ),
+        expected
+      );
+    }
   });
 });

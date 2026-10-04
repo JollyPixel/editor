@@ -7,11 +7,14 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { rectOf } from "#src/uv/geometry/geometry.ts";
-import { makeMap, type EventPayload } from "../../helpers/uv-map.ts";
+import {
+  makeUvMap,
+  type EventPayload
+} from "../../helpers/uv/map.ts";
 
 describe("UVMap — resize", () => {
   test("commits through region-state-changed with the previous region", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
     const events: EventPayload<"region-state-changed">[] = [];
     map.on("region-state-changed", (event) => events.push(event));
@@ -27,7 +30,7 @@ describe("UVMap — resize", () => {
   });
 
   test("stops a moved edge at the canvas border", () => {
-    const map = makeMap({ x: 32, y: 32 });
+    const map = makeUvMap({ x: 32, y: 32 });
     const region = map.create({ width: 4, height: 4 });
     map.move(region.id, { x: 26, y: 2, width: 4, height: 4 });
 
@@ -37,7 +40,7 @@ describe("UVMap — resize", () => {
   });
 
   test("stops an unfolded face once a sliding neighbor reaches the border", () => {
-    const map = makeMap({ x: 32, y: 32 });
+    const map = makeUvMap({ x: 32, y: 32 });
     const region = map.create({ width: 4, height: 4 });
     map.setState(region.id, "unfolded");
     const net = map.get(region.id)!;
@@ -58,7 +61,7 @@ describe("UVMap — resize", () => {
   });
 
   test("previews the clamped region without storing it", () => {
-    const map = makeMap({ x: 32, y: 32 });
+    const map = makeUvMap({ x: 32, y: 32 });
     const region = map.create({ width: 4, height: 4 });
     const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (event) => events.push(event));
@@ -76,7 +79,7 @@ describe("UVMap — resize", () => {
   });
 
   test("names the previewed face only for a free region", () => {
-    const map = makeMap({ x: 32, y: 32 });
+    const map = makeUvMap({ x: 32, y: 32 });
     const net = map.create({ width: 4, height: 4 });
     map.setState(net.id, "unfolded");
     const free = map.create({ width: 4, height: 4 });
@@ -91,7 +94,7 @@ describe("UVMap — resize", () => {
   });
 
   test("leaves an unchanged size uncommitted", () => {
-    const map = makeMap();
+    const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
 
     assert.equal(map.resize(region.id, region.bounds), false);

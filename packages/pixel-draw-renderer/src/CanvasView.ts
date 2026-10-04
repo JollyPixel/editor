@@ -194,10 +194,6 @@ export class CanvasView {
     }
   }
 
-  drawFrame(): void {
-    this.renderer.drawFrame();
-  }
-
   refresh(): void {
     this.renderer.drawFrame();
     this.overlays.refresh();

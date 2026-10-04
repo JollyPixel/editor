@@ -7,10 +7,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PointerController } from "#src/input/PointerController.ts";
-import { Viewport } from "#src/rendering/Viewport.ts";
+import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
+import {
+  createPointerController,
+  makeCenteredViewport
+} from "../helpers/input/pointer.ts";
 import { wheel } from "../helpers/events.ts";
 
 describe("PointerController navigation", () => {
@@ -19,18 +22,13 @@ describe("PointerController navigation", () => {
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({
-      textureSize: { x: 16, y: 16 },
-      zoom: 4
-    });
-    viewport.updateCanvasSize(200, 200);
-    viewport.centerTexture();
+    viewport = makeCenteredViewport();
   });
 
   describe("primary-drag pan (navigation mode)", () => {
     test("left-drag pans instead of drawing when shouldPanOnPrimary returns true", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
         actions,
@@ -59,12 +57,13 @@ describe("PointerController navigation", () => {
       ctrl.destroy();
     });
 
-    test("left-drag draws when shouldPanOnPrimary returns false (default)", () => {
+    test("left-drag draws at the resolved texture position when shouldPanOnPrimary returns false", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
-        actions
+        actions,
+        shouldPanOnPrimary: () => false
       });
 
       canvas.dispatchEvent(new MouseEvent("mousedown", {
@@ -75,7 +74,7 @@ describe("PointerController navigation", () => {
         bubbles: true
       }));
 
-      assert.strictEqual(calls.onPrimaryDown.length, 1);
+      assert.deepStrictEqual(calls.onPrimaryDown, [[8, 8]]);
       assert.strictEqual(calls.onPanStart.length, 0);
       ctrl.destroy();
     });
@@ -83,7 +82,7 @@ describe("PointerController navigation", () => {
 
   test("window blur ends a primary-drag pan", () => {
     const { actions, calls } = makeActions();
-    const ctrl = new PointerController({
+    const ctrl = createPointerController({
       canvas,
       viewport,
       actions,
@@ -107,7 +106,7 @@ describe("PointerController navigation", () => {
   describe("wheel zoom", () => {
     test("pixel-mode wheel passes deltaY straight through to onZoom", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
         actions
@@ -122,7 +121,7 @@ describe("PointerController navigation", () => {
 
     test("line-mode wheel is normalized to an approximate pixel delta", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
         actions
@@ -134,12 +133,13 @@ describe("PointerController navigation", () => {
       ctrl.destroy();
     });
 
-    test("ctrl+wheel drives zoom when it is not otherwise handled", () => {
+    test("ctrl+wheel drives zoom when onCtrlWheel does not handle it", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
-        actions
+        actions,
+        onCtrlWheel: () => false
       });
 
       const event = wheel({ deltaY: -8, ctrlKey: true });
@@ -153,7 +153,7 @@ describe("PointerController navigation", () => {
 
     test("a handled ctrl+wheel suppresses zoom and the browser default", () => {
       const { actions, calls } = makeActions();
-      const ctrl = new PointerController({
+      const ctrl = createPointerController({
         canvas,
         viewport,
         actions,

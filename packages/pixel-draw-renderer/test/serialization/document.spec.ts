@@ -16,6 +16,7 @@ import {
 } from "#src/serialization/index.ts";
 import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
+import { encodePixelBytes } from "#src/serialization/pixelBytes.ts";
 
 function bytes(
   payload: unknown
@@ -217,10 +218,13 @@ describe("PixelArtDocument", () => {
       () => deserializePixelBuffer({
         version: 1,
         size: { x: 99, y: 2 },
-        pixels: "",
+        pixels: encodePixelBytes(new Uint8Array(99 * 2 * 4)),
         uvRegions: []
       }, buffer),
-      InvalidPixelArtDocumentError
+      {
+        name: "InvalidPixelArtDocumentError",
+        message: /exceeds the buffer bounds/
+      }
     );
   });
 
@@ -251,12 +255,12 @@ describe("createPixelArtDocument", () => {
     assert.ok(target.pixels().every((value) => value === 0));
   });
 
-  test("encodes the given pixels", () => {
+  test("encodes the given pixels as base64 RGBA8", () => {
     const pixels = new Uint8ClampedArray([1, 2, 3, 4]);
-    const target = new PixelBuffer({ size: { x: 1, y: 1 } });
-    deserializePixelBuffer(createPixelArtDocument({ x: 1, y: 1 }, pixels), target);
 
-    assert.deepEqual([...target.pixels()], [1, 2, 3, 4]);
+    const document = createPixelArtDocument({ x: 1, y: 1 }, pixels);
+
+    assert.equal(document.pixels, "AQIDBA==");
   });
 
   test("rejects an empty size or a pixel length mismatch", () => {

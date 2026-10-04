@@ -15,11 +15,8 @@ import {
   makeBrush
 } from "../../helpers/overlay.ts";
 
-/*
- * CONSTANTS
- * Mirrors the label's own estimate: 6.2px per glyph at font-size 10.
- */
-const kCharWidth = 6.2;
+// CONSTANTS
+const kLabelGlyphWidthEstimate = 6.2;
 
 function makeLabel(
   viewport = makeViewport()
@@ -42,7 +39,6 @@ describe("SelectionSizeLabel", () => {
   test("draw() anchors the size below the bottom-right corner", () => {
     const { label, text } = makeLabel();
 
-    // zoom 4, camera (0,0): rect (1,1,16,16) -> right=68, bottom=68
     label.draw({
       x: 1,
       y: 1,
@@ -144,7 +140,6 @@ describe("SelectionSizeLabel", () => {
       makeViewport(4, { x: 800, y: 600 })
     );
 
-    // top=560, bottom=624: below (638) is past the 600px-tall viewport.
     label.draw({
       x: 0,
       y: 140,
@@ -152,7 +147,6 @@ describe("SelectionSizeLabel", () => {
       height: 16
     });
 
-    // top - gap + fontSize = 560 - 14 + 10
     assert.strictEqual(text().getAttribute("y"), "556");
   });
 
@@ -161,7 +155,6 @@ describe("SelectionSizeLabel", () => {
     viewport.camera.x = -10;
     const { label, text } = makeLabel(viewport);
 
-    // right = -10 + 4*4 = 6, which would push "4×4" off the left edge.
     label.draw({
       x: 0,
       y: 0,
@@ -169,7 +162,7 @@ describe("SelectionSizeLabel", () => {
       height: 4
     });
 
-    const expected = 4 + ("4×4".length * kCharWidth);
+    const expected = 4 + ("4×4".length * kLabelGlyphWidthEstimate);
     assert.strictEqual(
       text().getAttribute("x"),
       String(expected)
@@ -189,7 +182,6 @@ describe("SelectionSizeLabel", () => {
     });
     assert.strictEqual(text().getAttribute("visibility"), "visible");
 
-    // left = 300 * 4 = 1200, past the 800px-wide viewport.
     label.draw({
       x: 300,
       y: 0,

@@ -379,9 +379,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
   samplePixels(
     positions: Vec2[]
   ): RGBA8[] {
-    const colors: RGBA8[] = new Array(
-      positions.length
-    );
+    const colors: RGBA8[] = [];
 
     for (let i = 0; i < positions.length; i++) {
       const { x, y } = positions[i];

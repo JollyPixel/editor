@@ -1,54 +1,21 @@
 // Import Node.js Dependencies
 import {
   describe,
-  test,
-  beforeEach
+  test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  PixelArtCanvas,
-  type PixelArtCanvasOptions
-} from "#src/PixelArtCanvas.ts";
+import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { SelectionProgressEvent } from "#src/tools/SelectEngine.events.ts";
-import { makeContainer } from "./helpers/dom.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import {
   paintHorizontalPair,
   selectHorizontalPair
 } from "./helpers/select.ts";
+import { createSelectCanvas } from "./helpers/select-canvas/manager.ts";
 
-/**
- * Coverage for the `selection-progress` / `selection-committed` /
- * `selection-idle` events `SelectEngine` emits (consumed by
- * `SelectionGhostSync`) — see PixelArtCanvas.select.spec.ts for the default
- * rectangle-drag/move behavior these build on.
- */
 describe("PixelArtCanvas — select ghost events", () => {
-  let container: HTMLDivElement;
-
-  beforeEach(() => {
-    ({ container } = makeContainer());
-  });
-
-  /*
-   * Same 200x200/8x8/zoom-4 setup as PixelArtCanvas.select.spec.ts: client
-   * 84 + n*4 -> texture n.
-   */
-  function makeManager(
-    options: PixelArtCanvasOptions = {}
-  ): PixelArtCanvas {
-    return new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      zoom: { default: 4 },
-      ...options
-    });
-  }
-
   function recordEvents(
     manager: PixelArtCanvas
   ): {
@@ -71,7 +38,7 @@ describe("PixelArtCanvas — select ghost events", () => {
 
   describe("creating a new selection", () => {
     test("streams growing creating-phase rects while dragging a new marquee", () => {
-      const manager = makeManager();
+      const manager = createSelectCanvas();
       const canvas = manager.canvas();
       manager.mode = "select";
       const events = recordEvents(manager);
@@ -92,7 +59,7 @@ describe("PixelArtCanvas — select ghost events", () => {
     test(
       "finishing a valid new selection emits selection-idle exactly once, never selection-committed",
       () => {
-        const manager = makeManager();
+        const manager = createSelectCanvas();
         const canvas = manager.canvas();
         manager.mode = "select";
         const events = recordEvents(manager);
@@ -107,7 +74,7 @@ describe("PixelArtCanvas — select ghost events", () => {
     );
 
     test("a degenerate (1x1) marquee still emits selection-idle on mouseup", () => {
-      const manager = makeManager();
+      const manager = createSelectCanvas();
       const canvas = manager.canvas();
       manager.mode = "select";
       const events = recordEvents(manager);
@@ -121,7 +88,7 @@ describe("PixelArtCanvas — select ghost events", () => {
 
   describe("shape-select (magic wand)", () => {
     test("resolves instantly on click: no progress event, a single selection-idle", () => {
-      const manager = makeManager();
+      const manager = createSelectCanvas();
       const canvas = manager.canvas();
       manager.mode = "select";
       manager.tools.select.shape = true;
@@ -146,12 +113,11 @@ describe("PixelArtCanvas — select ghost events", () => {
     }
 
     test("streams moving-phase progress with sourceRect/liveRect/mask/blankSource while dragging", () => {
-      const manager = makeManager();
+      const manager = createSelectCanvas();
       selectPair(manager);
       const events = recordEvents(manager);
       const canvas = manager.canvas();
 
-      // The selection sits over (2,2)-(3,2); grab inside it and drag it.
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(mouseEvent("mousemove", 92, 100));
 
@@ -165,7 +131,7 @@ describe("PixelArtCanvas — select ghost events", () => {
     });
 
     test("a real move commits: selection-committed fires, selection-idle does not", () => {
-      const manager = makeManager();
+      const manager = createSelectCanvas();
       selectPair(manager);
       const events = recordEvents(manager);
       const canvas = manager.canvas();
@@ -179,12 +145,11 @@ describe("PixelArtCanvas — select ghost events", () => {
     });
 
     test("dropping a selection back on its own source (no-op move) emits selection-idle instead", () => {
-      const manager = makeManager();
+      const manager = createSelectCanvas();
       selectPair(manager);
       const events = recordEvents(manager);
       const canvas = manager.canvas();
 
-      // Grab the selection and release without moving it.
       canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
@@ -194,8 +159,8 @@ describe("PixelArtCanvas — select ghost events", () => {
   });
 
   describe("interrupting a gesture", () => {
-    test("clear() mid-creation emits selection-idle", () => {
-      const manager = makeManager();
+    test("toggling shape mode mid-creation emits selection-idle", () => {
+      const manager = createSelectCanvas();
       const canvas = manager.canvas();
       manager.mode = "select";
       const events = recordEvents(manager);
@@ -204,10 +169,6 @@ describe("PixelArtCanvas — select ghost events", () => {
       canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
       assert.strictEqual(events.counts.idle, 0, "sanity: nothing cleared it yet");
 
-      /*
-       * Directly exercised through the public clear-on-mode-switch surface:
-       * toggling shape mode while a gesture is active clears it.
-       */
       manager.tools.select.shape = true;
 
       assert.strictEqual(events.counts.idle, 1);

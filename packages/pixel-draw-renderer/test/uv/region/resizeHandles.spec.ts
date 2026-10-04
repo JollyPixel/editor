@@ -10,11 +10,12 @@ import {
   resizedRect,
   resizeHandleAt,
   resizeTargets,
-  type UVResizeHandle,
-  type UVResizeTarget
+  type UVResizeHandle
 } from "#src/uv/region/resizeHandles.ts";
 import { UVRegion } from "#src/uv/region/UVRegion.ts";
 import type { SelectionRect } from "#src/types.ts";
+
+type UVResizeTarget = ReturnType<typeof resizeTargets>[number];
 
 // CONSTANTS
 const kView = {
@@ -124,7 +125,7 @@ describe("resizeHandleAt", () => {
 
     for (const x of [41, 43]) {
       const hit = resizeHandleAt(net, { x, y: 26 }, kView);
-      assert.deepEqual([hit?.slot, hit?.handle], ["front", "e"]);
+      assert.deepEqual([hit?.id, hit?.slot, hit?.handle], ["r1", "front", "e"]);
     }
   });
 
@@ -136,12 +137,6 @@ describe("resizeHandleAt", () => {
     assert.equal(resizeHandleAt(face, { x: 44, y: 44 }, kView), null);
     assert.equal(resizeHandleAt(face, { x: 11, y: 26 }, kView), null);
     assert.equal(resizeHandleAt(face, { x: 26, y: 11 }, kView), null);
-  });
-
-  test("carries the target's region id and slot", () => {
-    const hit = resizeHandleAt([target(kRect, kEveryHandle, "top")], { x: 42, y: 42 }, kView);
-
-    assert.deepEqual([hit?.id, hit?.slot], ["r1", "top"]);
   });
 });
 

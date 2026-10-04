@@ -26,16 +26,6 @@ const kWheelDeltaMode = {
 const kWheelLineDeltaPixels = 16;
 const kWheelPageDeltaPixels = 100;
 
-function neverPanOnPrimary(): boolean {
-  return false;
-}
-
-function ignoreCtrlWheel(
-  _delta: number
-): boolean {
-  return false;
-}
-
 function isMouseButtonPressed(
   buttons: number,
   buttonMask: number
@@ -54,14 +44,12 @@ export interface PointerControllerOptions {
   window?: WindowLike;
   /**
    * When it returns `true`, a plain primary drag pans.
-   * @default () => false
    */
-  shouldPanOnPrimary?: () => boolean;
+  shouldPanOnPrimary: () => boolean;
   /**
    * Handles Ctrl+wheel before zoom. Return `true` to suppress zoom.
-   * @default () => false
    */
-  onCtrlWheel?: (delta: number) => boolean;
+  onCtrlWheel: (delta: number) => boolean;
 }
 
 export class PointerController {
@@ -93,15 +81,12 @@ export class PointerController {
     this.#viewport = viewport;
     this.#actions = actions;
     this.#inputWindow = inputWindow;
-    this.#shouldPanOnPrimary = options.shouldPanOnPrimary ?? neverPanOnPrimary;
-    this.#onCtrlWheel = options.onCtrlWheel ?? ignoreCtrlWheel;
+    this.#shouldPanOnPrimary = options.shouldPanOnPrimary;
+    this.#onCtrlWheel = options.onCtrlWheel;
 
     this.#addEventListeners();
   }
 
-  /**
-   * Cancels the active primary drag without calling `onPrimaryUp`.
-   */
   stopDrawing(): void {
     this.#isDraggingPrimary = false;
   }

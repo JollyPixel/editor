@@ -128,10 +128,6 @@ export class UVController implements UVTool {
     this.#overlay.resizeHandles = this.#resizable;
   }
 
-  get isDragging(): boolean {
-    return this.#gesture !== null;
-  }
-
   get resizable(): boolean {
     return this.#resizable;
   }
@@ -270,7 +266,7 @@ export class UVController implements UVTool {
     direction: RotationDirection
   ): boolean {
     const id = this.#uvMap.selectedRegionId;
-    if (id === null || this.isDragging) {
+    if (id === null || this.#gesture !== null) {
       return false;
     }
 

@@ -21,7 +21,7 @@ export class Line {
 
   arm(
     start: Vec2,
-    commitTrigger: LineCommitTrigger = "mousedown"
+    commitTrigger: LineCommitTrigger
   ): void {
     this.#armed = true;
     this.#start = start;
@@ -32,10 +32,6 @@ export class Line {
   update(
     end: Vec2
   ): void {
-    if (!this.#armed) {
-      return;
-    }
-
     this.#end = end;
   }
 

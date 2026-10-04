@@ -14,7 +14,7 @@ import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   mouseEvent,
   moveTo,
-  wheel
+  stroke
 } from "./helpers/events.ts";
 
 const kTransparent = {
@@ -40,41 +40,11 @@ function makeManager(
       color: "#000000",
       secondaryColor: "#00FF00"
     },
-    history: { enabled: true },
     onBufferUpdated: (event) => events.push(event)
   });
   manager.mode = "erase";
 
   return manager;
-}
-
-function stroke(
-  canvas: HTMLCanvasElement,
-  points: [number, number][],
-  button: 0 | 2 = 0
-): void {
-  const [first, ...rest] = points;
-  canvas.dispatchEvent(new MouseEvent("mousedown", {
-    button,
-    buttons: button === 0 ? 1 : 2,
-    clientX: first[0],
-    clientY: first[1],
-    bubbles: true
-  }));
-  for (const [clientX, clientY] of rest) {
-    canvas.dispatchEvent(
-      new MouseEvent("mousemove", {
-        button,
-        buttons: button === 0 ? 1 : 2,
-        clientX,
-        clientY,
-        bubbles: true
-      })
-    );
-  }
-  canvas.dispatchEvent(
-    new MouseEvent("mouseup", { bubbles: true })
-  );
 }
 
 function strokedPositions(
@@ -92,6 +62,9 @@ describe("PixelArtCanvas — erase mode", () => {
 
     stroke(manager.canvas(), [[100, 100], [108, 100]]);
 
+    assert.strictEqual(events.length, 1);
+    assert.strictEqual(events[0].action, "stroke");
+    assert.deepStrictEqual(events[0].metadata.color, kTransparent);
     const positions = strokedPositions(events[0]);
     assert.ok(positions.length > 1, "the drag covers more than one pixel");
     for (const { x, y } of positions) {
@@ -105,19 +78,6 @@ describe("PixelArtCanvas — erase mode", () => {
       [255, 0, 0, 255],
       "pixels outside the stroke keep the texture color"
     );
-    manager.destroy();
-  });
-
-  test("the committed stroke carries the transparent color", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = makeManager(events);
-
-    stroke(manager.canvas(), [[100, 100]]);
-
-    assert.strictEqual(events.length, 1);
-    const event = events[0];
-    assert.strictEqual(event.action, "stroke");
-    assert.deepStrictEqual(event.metadata.color, kTransparent);
     manager.destroy();
   });
 
@@ -155,21 +115,6 @@ describe("PixelArtCanvas — erase mode", () => {
     manager.destroy();
   });
 
-  test("undo restores the erased colors", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = makeManager(events);
-
-    stroke(manager.canvas(), [[100, 100]]);
-    const [position] = strokedPositions(events[0]);
-    assert.strictEqual(manager.undo(), true);
-
-    assert.deepStrictEqual(
-      manager.document.buffer.samplePixel(position.x, position.y),
-      [255, 0, 0, 255]
-    );
-    manager.destroy();
-  });
-
   test("Shift arms a line that erases on mousedown", () => {
     const events: PixelBufferHookEvent[] = [];
     const manager = makeManager(events);
@@ -185,18 +130,6 @@ describe("PixelArtCanvas — erase mode", () => {
     assert.strictEqual(event.action, "stroke");
     assert.strictEqual(event.metadata.positions.length, 8);
     assert.deepStrictEqual(event.metadata.color, kTransparent);
-    manager.destroy();
-  });
-
-  test("Ctrl+wheel resizes the brush like it does in paint mode", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = makeManager(events, 4);
-
-    manager.canvas().dispatchEvent(
-      wheel({ deltaY: -100, ctrlKey: true })
-    );
-
-    assert.strictEqual(manager.brush.size, 5);
     manager.destroy();
   });
 

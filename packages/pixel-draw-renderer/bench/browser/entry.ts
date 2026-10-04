@@ -47,7 +47,7 @@ function measure(
     }
   }
 
-  const timings = new Array<number>(samples);
+  const timings: number[] = [];
   for (let i = 0; i < samples; i++) {
     const start = performance.now();
     for (let operation = 0; operation < operationsPerSample; operation++) {

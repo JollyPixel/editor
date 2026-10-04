@@ -7,43 +7,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PointerController } from "#src/input/PointerController.ts";
-import type { WindowLike } from "#src/input/WindowLike.ts";
-import { Viewport } from "#src/rendering/Viewport.ts";
+import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
-
-class FakeWindow implements WindowLike {
-  #listeners = new Map<string, Set<(event: any) => void>>();
-
-  addEventListener(
-    type: string,
-    listener: (event: any) => void
-  ): void {
-    let listeners = this.#listeners.get(type);
-    if (!listeners) {
-      listeners = new Set();
-      this.#listeners.set(type, listeners);
-    }
-    listeners.add(listener);
-  }
-
-  removeEventListener(
-    type: string,
-    listener: (event: any) => void
-  ): void {
-    this.#listeners.get(type)?.delete(listener);
-  }
-
-  dispatch(
-    type: string,
-    event: unknown
-  ): void {
-    for (const listener of this.#listeners.get(type) ?? []) {
-      listener(event);
-    }
-  }
-}
+import { FakeWindow } from "../helpers/input/window.ts";
+import {
+  createPointerController,
+  makeCenteredViewport
+} from "../helpers/input/pointer.ts";
 
 describe("PointerController lifecycle", () => {
   let viewport: Viewport;
@@ -51,17 +22,12 @@ describe("PointerController lifecycle", () => {
 
   beforeEach(() => {
     canvas = makeCanvas();
-    viewport = new Viewport({
-      textureSize: { x: 16, y: 16 },
-      zoom: 4
-    });
-    viewport.updateCanvasSize(200, 200);
-    viewport.centerTexture();
+    viewport = makeCenteredViewport();
   });
 
   test("primary dragging continues while another mouse button is held", () => {
     const { actions, calls } = makeActions();
-    const controller = new PointerController({
+    const controller = createPointerController({
       canvas,
       viewport,
       actions
@@ -85,7 +51,7 @@ describe("PointerController lifecycle", () => {
 
   test("window blur ends active drags and clears their tracking state", () => {
     const { actions, calls } = makeActions();
-    const controller = new PointerController({
+    const controller = createPointerController({
       canvas,
       viewport,
       actions
@@ -113,7 +79,7 @@ describe("PointerController lifecycle", () => {
   test("does not report a bubbling canvas mouseup twice", () => {
     const { actions, calls } = makeActions();
     const fakeWindow = new FakeWindow();
-    const controller = new PointerController({
+    const controller = createPointerController({
       canvas,
       viewport,
       actions,

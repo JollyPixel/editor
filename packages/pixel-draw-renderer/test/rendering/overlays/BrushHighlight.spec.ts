@@ -14,28 +14,44 @@ import {
 } from "../../helpers/overlay.ts";
 
 describe("BrushHighlightView", () => {
-  test("update() shows the highlight group at the grid-snapped position", () => {
-    const svg = makeSvg();
-    const overlay = new BrushHighlightView(
-      svg,
-      makeViewport(),
-      makeBrush(1)
-    );
+  for (const { brushSize, transform } of [
+    {
+      brushSize: 1,
+      transform: "translate(10, 18) scale(4)"
+    },
+    {
+      brushSize: 2,
+      transform: "translate(6, 14) scale(8)"
+    }
+  ]) {
+    test(`update() snaps a size ${brushSize} highlight to the pixel grid of a panned camera`, () => {
+      const svg = makeSvg();
+      const viewport = makeViewport();
+      viewport.camera = {
+        x: 6,
+        y: 10
+      };
+      const overlay = new BrushHighlightView(
+        svg,
+        viewport,
+        makeBrush(brushSize)
+      );
 
-    overlay.update(10, 10);
-    const group = svg.querySelector("g");
+      overlay.update(13, 21);
+      const group = svg.querySelector("g");
 
-    assert.ok(group, "highlight group should exist");
-    assert.strictEqual(
-      group!.getAttribute("visibility"),
-      "visible",
-      "highlight group should be visible"
-    );
-    assert.ok(
-      group!.getAttribute("transform")?.includes("scale(4)"),
-      "odd brush size scales by zoom"
-    );
-  });
+      assert.ok(group, "highlight group should exist");
+      assert.strictEqual(
+        group!.getAttribute("visibility"),
+        "visible",
+        "highlight group should be visible"
+      );
+      assert.strictEqual(
+        group!.getAttribute("transform"),
+        transform
+      );
+    });
+  }
 
   test("update(null, null) hides the highlight", () => {
     const svg = makeSvg();

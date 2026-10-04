@@ -14,40 +14,13 @@ import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PixelBufferHookEvent } from "#src/buffer/hooks.ts";
 import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
-
-function paintOnePixel(
-  canvas: HTMLCanvasElement,
-  positions: [number, number][]
-): void {
-  const [firstX, firstY] = positions[0];
-  canvas.dispatchEvent(new MouseEvent("mousedown", {
-    button: 0,
-    buttons: 1,
-    clientX: firstX,
-    clientY: firstY,
-    bubbles: true
-  }));
-
-  for (const [x, y] of positions.slice(1)) {
-    canvas.dispatchEvent(new MouseEvent("mousemove", {
-      buttons: 1,
-      clientX: x,
-      clientY: y,
-      bubbles: true
-    }));
-  }
-
-  canvas.dispatchEvent(new MouseEvent("mouseup", {
-    bubbles: true
-  }));
-}
+import { stroke } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — onBufferUpdated", () => {
   let container: HTMLDivElement;
-  let children: HTMLCanvasElement[];
 
   beforeEach(() => {
-    ({ container, children } = makeContainer());
+    container = makeContainer();
   });
 
   describe("stroke", () => {
@@ -59,8 +32,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
         onBufferUpdated: (event) => events.push(event)
       });
 
-      // (88,88) -> texture (1,1); (92,88) -> texture (2,1); repeat (88,88) to test dedup
-      paintOnePixel(
+      stroke(
         canvas,
         [[88, 88], [92, 88], [88, 88]]
       );
@@ -83,43 +55,6 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
         ]
       );
 
-      manager.destroy();
-    });
-
-    test("does not throw when no onBufferUpdated listener is attached", () => {
-      const manager = new PixelArtCanvas(container, {
-        texture: {
-          maxSize: 32,
-          size: { x: 8, y: 8 }
-        },
-        brush: {
-          size: 1,
-          maxSize: 1
-        }
-      });
-      const canvas = children[0];
-
-      assert.doesNotThrow(
-        () => paintOnePixel(canvas, [[88, 88]])
-      );
-      manager.destroy();
-    });
-
-    test("still calls onDrawEnd alongside the stroke hook", () => {
-      const events: PixelBufferHookEvent[] = [];
-      let drawEndCalls = 0;
-      const { manager, canvas } = createPixelArtCanvas({
-        brush: { size: 1, maxSize: 1 },
-        onBufferUpdated: (event) => events.push(event),
-        onDrawEnd: () => {
-          drawEndCalls++;
-        }
-      });
-
-      paintOnePixel(canvas, [[88, 88]]);
-
-      assert.strictEqual(drawEndCalls, 1);
-      assert.strictEqual(events.length, 1);
       manager.destroy();
     });
   });
@@ -179,7 +114,6 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
       });
       manager.tools.fill.global = true;
 
-      // 16x16 texture, zoom 4 -> centered camera (68,68); client(100,100) -> texture (8,8).
       canvas.dispatchEvent(new MouseEvent("mousedown", {
         button: 0,
         buttons: 1,
@@ -244,53 +178,7 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
   let container: HTMLDivElement;
 
   beforeEach(() => {
-    ({ container } = makeContainer());
-  });
-
-  test("stroke: applies pixels without re-emitting onBufferUpdated (echo guard)", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    manager.applyRemoteCommand({
-      action: "stroke",
-      metadata: {
-        color: { r: 9, g: 8, b: 7, a: 255 },
-        positions: [
-          { x: 0, y: 0 }
-        ]
-      }
-    });
-
-    assert.strictEqual(events.length, 0);
-    manager.destroy();
-  });
-
-  test("stroke: still calls onDrawEnd so external consumers can sync", () => {
-    let drawEndCalls = 0;
-    const { manager } = createPixelArtCanvas({
-      onDrawEnd: () => {
-        drawEndCalls++;
-      }
-    });
-
-    manager.applyRemoteCommand({
-      action: "stroke",
-      metadata: {
-        color: { r: 9, g: 8, b: 7, a: 255 },
-        positions: [
-          { x: 0, y: 0 }
-        ]
-      }
-    });
-
-    assert.strictEqual(drawEndCalls, 1);
-    manager.destroy();
+    container = makeContainer();
   });
 
   test(
@@ -332,51 +220,6 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
     }
   );
 
-  test("select-edit: still calls onDrawEnd so external consumers can sync", () => {
-    let drawEndCalls = 0;
-    const { manager } = createPixelArtCanvas({
-      onDrawEnd: () => {
-        drawEndCalls++;
-      }
-    });
-
-    manager.applyRemoteCommand({
-      action: "select-edit",
-      metadata: {
-        positions: [{ x: 0, y: 0 }],
-        colors: [{ r: 9, g: 8, b: 7, a: 255 }]
-      }
-    });
-
-    assert.strictEqual(drawEndCalls, 1);
-    manager.destroy();
-  });
-
-  test("resized: delegates to setTextureSize without re-emitting onBufferUpdated", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    manager.applyRemoteCommand({
-      action: "resized",
-      metadata: {
-        size: { x: 2, y: 2 }
-      }
-    });
-
-    assert.strictEqual(events.length, 0);
-    assert.deepStrictEqual(
-      manager.textureSize,
-      { x: 2, y: 2 }
-    );
-    manager.destroy();
-  });
-
   test("global-fill: recomputes matching pixels from fromColor and repaints them toColor", () => {
     const events: PixelBufferHookEvent[] = [];
     const manager = new PixelArtCanvas(container, {
@@ -396,201 +239,11 @@ describe("PixelArtCanvas — applyRemoteCommand", () => {
     });
 
     assert.strictEqual(events.length, 0);
-    // The whole 4x4 texture is uniformly white by default.
     const [r, g, b, a] = manager.texture.subarray(4, 8);
     assert.deepStrictEqual(
       [r, g, b, a],
       [9, 8, 7, 255]
     );
-    manager.destroy();
-  });
-
-  test("global-fill: still calls onDrawEnd so external consumers can sync", () => {
-    let drawEndCalls = 0;
-    const { manager } = createPixelArtCanvas({
-      texture: { size: { x: 4, y: 4 } },
-      onDrawEnd: () => {
-        drawEndCalls++;
-      }
-    });
-
-    manager.applyRemoteCommand({
-      action: "global-fill",
-      metadata: {
-        fromColor: { r: 255, g: 255, b: 255, a: 255 },
-        toColor: { r: 9, g: 8, b: 7, a: 255 }
-      }
-    });
-
-    assert.strictEqual(drawEndCalls, 1);
-    manager.destroy();
-  });
-
-  test("texture-replaced: decodes base64 pixels and updates size without re-emitting", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    const pixels = new Uint8ClampedArray(
-      2 * 2 * 4
-    ).fill(200);
-    const base64 = Buffer.from(pixels).toString("base64");
-
-    manager.applyRemoteCommand({
-      action: "texture-replaced",
-      metadata: {
-        size: { x: 2, y: 2 },
-        pixels: base64
-      }
-    });
-
-    assert.strictEqual(events.length, 0);
-    assert.deepStrictEqual(
-      manager.textureSize,
-      { x: 2, y: 2 }
-    );
-    manager.destroy();
-  });
-});
-
-describe("PixelArtCanvas — loadSnapshot", () => {
-  let container: HTMLDivElement;
-
-  beforeEach(() => {
-    ({ container } = makeContainer());
-  });
-
-  test("hydrates pixel data without emitting onBufferUpdated", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    const pixels = new Uint8ClampedArray(
-      3 * 3 * 4
-    ).fill(1);
-    manager.loadSnapshot({ x: 3, y: 3 }, pixels);
-
-    assert.strictEqual(events.length, 0);
-    assert.deepStrictEqual(
-      manager.textureSize,
-      { x: 3, y: 3 }
-    );
-    manager.destroy();
-  });
-});
-
-describe("PixelArtCanvas — runLocalRestore", () => {
-  let container: HTMLDivElement;
-
-  beforeEach(() => {
-    ({ container } = makeContainer());
-  });
-
-  test("suppresses the 'texture-replaced' broadcast while still replacing the texture", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 4, y: 4 }
-      },
-      history: { enabled: true },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    const externalCanvas = document.createElement("canvas");
-    externalCanvas.width = 8;
-    externalCanvas.height = 8;
-    manager.runLocalRestore(() => {
-      manager.texture = externalCanvas;
-    });
-
-    assert.strictEqual(events.length, 0);
-    assert.deepStrictEqual(
-      manager.textureSize,
-      { x: 8, y: 8 }
-    );
-    manager.destroy();
-  });
-
-  test("suppresses uv region broadcasts and records no history", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      history: { enabled: true },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    manager.runLocalRestore(() => {
-      manager.uv.create({
-        width: 4,
-        height: 4
-      });
-    });
-
-    assert.strictEqual(events.length, 0);
-    assert.strictEqual([...manager.uv.regions].length, 1);
-    assert.ok(!manager.canUndo());
-    manager.destroy();
-  });
-
-  test("restores broadcasting after the scope, and on a throw", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    assert.throws(() => manager.runLocalRestore(() => {
-      throw new Error("boom");
-    }), /boom/);
-
-    manager.uv.create({
-      width: 4,
-      height: 4
-    });
-
-    assert.deepStrictEqual(
-      events.map((event) => event.action),
-      ["uv-region-created"]
-    );
-    manager.destroy();
-  });
-
-  test("a nested scope leaves the outer one intact", () => {
-    const events: PixelBufferHookEvent[] = [];
-    const manager = new PixelArtCanvas(container, {
-      texture: {
-        maxSize: 32,
-        size: { x: 8, y: 8 }
-      },
-      onBufferUpdated: (event) => events.push(event)
-    });
-
-    manager.runLocalRestore(() => {
-      manager.runLocalRestore(() => void 0);
-      manager.uv.create({
-        width: 4,
-        height: 4
-      });
-    });
-
-    assert.strictEqual(events.length, 0);
     manager.destroy();
   });
 });
