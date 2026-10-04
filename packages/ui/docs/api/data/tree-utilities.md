@@ -15,7 +15,9 @@ whatever `expanded` holds.
 `TreeSnapshot` builds node, parent, depth, ancestor, stable order, and visible
 row indexes in one traversal. Create one snapshot when several operations need
 to inspect the same tree structure. `hasBranches` is `true` when at least one
-node, collapsed or not, has children.
+node, collapsed or not, has children. `placement(id)` returns a
+`TreePlacement` `{ position, size }`: the node's 1-based position among its
+siblings and their count, or `undefined` for an unknown ID.
 
 The root entry point exports these pure helpers:
 

@@ -34,6 +34,16 @@ test("filters the asset tree by kind", async({ page }) => {
   await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
 });
 
+test("starts collapsed and remembers the expanded folders after a reload", async({ page }) => {
+  await openShell(page, { collapsed: true });
+  await treeRow(page, "maps").getByRole("button", { name: "Expand" }).click();
+  await expect(treeRow(page, MAP)).toBeVisible();
+
+  await page.reload();
+  await expect(treeRow(page, MAP)).toBeVisible();
+  await expect(treeRow(page, MODEL)).toHaveCount(0);
+});
+
 test("moves several selected rows into a new folder", async({ page }) => {
   await openShell(page);
   await assetAction(page, "New folder").click();

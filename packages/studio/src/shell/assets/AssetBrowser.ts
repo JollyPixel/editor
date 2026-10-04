@@ -25,6 +25,7 @@ import {
   type AssetKindEntry
 } from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
+import { CatalogLayout } from "../../catalog/CatalogLayout.ts";
 import {
   AssetSelection,
   isAssetAction,
@@ -35,7 +36,8 @@ import {
   AssetTreeModel,
   assetNodeId,
   folderNodeId,
-  type AssetRelocation
+  type AssetRelocation,
+  type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
 import {
   AssetCommands,
@@ -50,6 +52,7 @@ import "./AssetDeleteDialog.ts";
 
 // CONSTANTS
 const kKindStorageKey = "studio:asset-kind";
+const kExpandedStorageKey = "studio:asset-expanded";
 const kNewFolderName = "New folder";
 const kAllKinds: JollyOption<string> = {
   value: "",
@@ -79,7 +82,7 @@ export class AssetBrowser extends LitElement {
   declare _model: AssetTreeModel;
 
   @state()
-  declare _expanded: ReadonlySet<string> | null;
+  declare _expanded: ReadonlySet<string>;
 
   @state()
   declare _selected: readonly string[];
@@ -107,12 +110,19 @@ export class AssetBrowser extends LitElement {
   #storage = new LocalStorageAdapter();
   #menuTarget: AssetSelection | null = null;
   #created: string | null = null;
+  #layout = CatalogLayout.EMPTY;
+  #catalogChanged = false;
+  #modelStale = true;
+  #kindOptions: JollyOption<string>[] = [kAllKinds];
+  #nodes: AssetTreeNode[] = AssetTreeModel.EMPTY.nodes;
 
   constructor() {
     super();
     this.options = null;
     this._model = AssetTreeModel.EMPTY;
-    this._expanded = null;
+    this._expanded = new Set(
+      nodeIdsOf(this.#storage.get(kExpandedStorageKey))
+    );
     this._selected = [];
     this._pendingLabels = new Map();
     this._kind = this.#storage.get(kKindStorageKey) ?? "";
@@ -137,12 +147,30 @@ export class AssetBrowser extends LitElement {
   protected override willUpdate(
     changed: PropertyValues<this>
   ): void {
+    if (changed.has("_expanded")) {
+      this.#storage.set(
+        kExpandedStorageKey,
+        JSON.stringify([...this._expanded])
+      );
+    }
     if (changed.has("options")) {
       this.#listen();
+      this.#kindOptions = [kAllKinds, ...this.#kinds.toOptions()];
     }
-    else if (changed.has("_kind")) {
+    if (
+      changed.has("options") ||
+      changed.has("_kind") ||
+      this.#layoutChanged()
+    ) {
+      this.#modelStale = true;
+    }
+    if (this.#modelStale) {
       this.#rebuild();
     }
+    if (changed.has("_model") || changed.has("_pendingLabels")) {
+      this.#nodes = this._model.withLabels(this._pendingLabels);
+    }
+    this.#revealCreated();
   }
 
   override render(): TemplateResult {
@@ -153,7 +181,7 @@ export class AssetBrowser extends LitElement {
         class="kinds"
         icon-only
         aria-label="Asset kind"
-        .options=${[kAllKinds, ...this.#kinds.toOptions()]}
+        .options=${this.#kindOptions}
         .value=${this._kind}
         @jolly-change=${this.#onKindChange}
       ></jolly-button-group>
@@ -201,14 +229,15 @@ export class AssetBrowser extends LitElement {
         ></jolly-button>
       </jolly-toolbar>
       <jolly-tree
+        virtual
         multiple
         renamable
         reorderable
         row-drag
         activate-on-double-click
         indent-guides
-        .nodes=${this._model.withLabels(this._pendingLabels)}
-        .expanded=${[...this._expanded ?? []]}
+        .nodes=${this.#nodes}
+        .expanded=${[...this._expanded]}
         .selected=${this._selected}
         .acceptDrop=${this.#acceptDrop}
         @jolly-select=${this.#onSelect}
@@ -243,12 +272,27 @@ export class AssetBrowser extends LitElement {
       catalog,
       onError: (message) => this.#error(message)
     });
-    this.#catalog?.on("change", this.#rebuild);
-    this.#rebuild();
+    this.#catalog?.on("change", this.#onCatalogChange);
+    this.#catalog?.on("dependencies", this.#onDependenciesChange);
+    this.#modelStale = true;
+    this.requestUpdate();
   }
 
   #unlisten(): void {
-    this.#catalog?.off("change", this.#rebuild);
+    this.#catalog?.off("change", this.#onCatalogChange);
+    this.#catalog?.off("dependencies", this.#onDependenciesChange);
+  }
+
+  #layoutChanged(): boolean {
+    if (!this.#catalogChanged) {
+      return false;
+    }
+    this.#catalogChanged = false;
+
+    return !this.#layout.matches(
+      this.#catalog?.records() ?? [],
+      this.#catalog?.folders() ?? []
+    );
   }
 
   #toggle(
@@ -403,7 +447,7 @@ export class AssetBrowser extends LitElement {
       this.#toggle(folderNodeId(folder), true);
     }
     this.#created = assetId;
-    this.#revealCreated();
+    this.requestUpdate();
   }
 
   #revealCreated(): void {
@@ -448,12 +492,10 @@ export class AssetBrowser extends LitElement {
         folderNodeId(folder.path.rebase(relocation.from, relocation.to)) :
         nodeId;
     };
-    if (this._expanded !== null) {
-      this._expanded = new Set([
-        ...this._expanded,
-        ...[...this._expanded].map(rebase)
-      ]);
-    }
+    this._expanded = new Set([
+      ...this._expanded,
+      ...[...this._expanded].map(rebase)
+    ]);
     this._selected = this._selected.map(rebase);
   }
 
@@ -479,11 +521,12 @@ export class AssetBrowser extends LitElement {
     }));
   }
 
-  readonly #rebuild = (): void => {
+  #rebuild(): void {
     const records = [...this.#catalog?.records() ?? []];
-    const folders = [...this.#catalog?.folders() ?? []].map(
-      (folder) => AssetPath.parse(folder)
-    );
+    const folderNames = [...this.#catalog?.folders() ?? []];
+    const folders = folderNames.map((folder) => AssetPath.parse(folder));
+    this.#layout = new CatalogLayout(records, folderNames);
+    this.#modelStale = false;
 
     const kinds = this.#kinds;
     const model = new AssetTreeModel(records, {
@@ -493,9 +536,6 @@ export class AssetBrowser extends LitElement {
       folders
     });
     this._model = model;
-    this._expanded ??= this.#catalog === null ?
-      null :
-      new Set(model.folderIds());
     this._selected = this._selected.filter((nodeId) => model.has(nodeId));
 
     const labels = new Map(this._pendingLabels);
@@ -506,7 +546,16 @@ export class AssetBrowser extends LitElement {
       }
     }
     this._pendingLabels = labels;
-    this.#revealCreated();
+  }
+
+  readonly #onCatalogChange = (): void => {
+    this.#catalogChanged = true;
+    this.requestUpdate();
+  };
+
+  readonly #onDependenciesChange = (): void => {
+    this.#modelStale = true;
+    this.requestUpdate();
   };
 
   readonly #onKindChange = (
@@ -546,7 +595,7 @@ export class AssetBrowser extends LitElement {
     const nodeId = event.detail.id;
     const data = this._model.node(nodeId)?.data;
     if (data?.type === "folder") {
-      this.#toggle(nodeId, !this._expanded?.has(nodeId));
+      this.#toggle(nodeId, !this._expanded.has(nodeId));
     }
     else if (data?.type === "asset") {
       this.#open(data.id);
@@ -625,6 +674,21 @@ export class AssetBrowser extends LitElement {
   readonly #deleteSelected = (): void => {
     this.#run("delete", this.#selection());
   };
+}
+
+function nodeIdsOf(
+  stored: string | null
+): string[] {
+  try {
+    const nodeIds: unknown = JSON.parse(stored ?? "[]");
+
+    return Array.isArray(nodeIds) ?
+      nodeIds.filter((nodeId) => typeof nodeId === "string") :
+      [];
+  }
+  catch {
+    return [];
+  }
 }
 
 declare global {

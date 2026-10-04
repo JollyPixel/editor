@@ -103,13 +103,11 @@ export class ProjectOverview extends LitElement {
 
   #listen(): void {
     const catalog = this.isConnected ? this.options?.catalog ?? null : null;
-    if (catalog === this.#catalog) {
-      return;
+    if (catalog !== this.#catalog) {
+      this.#unlisten();
+      this.#catalog = catalog;
+      this.#catalog?.on("change", this.#count);
     }
-
-    this.#unlisten();
-    this.#catalog = catalog;
-    this.#catalog?.on("change", this.#count);
     this.#count();
   }
 
@@ -127,9 +125,12 @@ export class ProjectOverview extends LitElement {
   }
 
   readonly #count = (): void => {
-    this._tally = this.#catalog === null || this.options === null
+    const tally = this.#catalog === null || this.options === null
       ? AssetTally.EMPTY
       : AssetTally.count(this.#catalog.records(), this.options.kinds);
+    if (!tally.equals(this._tally)) {
+      this._tally = tally;
+    }
   };
 }
 

@@ -29,11 +29,17 @@ tree.expanded = ["scene"];
 | `indentGuides` | `boolean` | `false` |
 | `swatchPosition` | `TreeSwatchPosition` | `"end"` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
+| `virtual` | `boolean` | `false` |
 
 The component does not mutate these arrays after user input. Consumers write
 event details back to the relevant property. `selected` and `expanded` compare
 by content: assigning a new array with the same IDs in the same order does not
 re-render, so replace the array instead of mutating it in place.
+
+`nodes` can be rebuilt on every change: rows are keyed by ID, and a row
+re-renders only when something it displays changes (label, icon, detail,
+toggles, swatch, badges, depth, or its selection, expansion and drag state).
+Fields a row does not display, such as `data`, never re-render it.
 
 Clicking the empty area below the rows emits `jolly-select` with an empty
 list. `requireSelection` (attribute `require-selection`) disables that, and
@@ -52,7 +58,8 @@ input: an empty `selected` set by the consumer is still rendered as is.
 | `jolly-rename` | `{ id, name }` |
 | `jolly-reparent` | `{ movedIds, targetId, where }` |
 
-Arrow keys navigate visible rows. Enter activates a row. When reordering is
+Arrow keys navigate visible rows and move focus to the newly selected row.
+Enter activates a row. When reordering is
 enabled, Space enters keyboard move mode, Enter commits, and Escape cancels.
 Rename, pointer move, and keyboard move are mutually exclusive interaction
 modes. Starting or settling one always returns the component to an idle mode.
@@ -209,6 +216,29 @@ multi-selection keeps it, and focuses the row so the menu returns focus there.
 A menu action can call `beginRename(id)` directly. While a row is being
 renamed or moved, a right-click does nothing, and the text field keeps the
 browser menu.
+
+## Virtualizing long trees
+
+`virtual` renders only the rows in and near the viewport, through
+[`@lit-labs/virtualizer`](https://github.com/lit/lit/tree/main/packages/labs/virtualizer).
+The rows then scroll inside the tree, so give it a bounded height, for
+example `flex: 1 1 0; min-height: 0` in a flex column; without one, the rows
+keep a 150px minimum. Rows are positioned absolutely and take the full width
+of the tree.
+
+It pays off on long trees, where the first render and expanding or collapsing
+get several times cheaper. Each scroll step costs more, since the rows around
+the viewport are positioned again, so leave it off for short trees.
+
+Keyboard navigation, `beginRename` and a keyboard move scroll an unrendered
+row into view first. While the active row is not rendered, the rows container
+holds the tab stop and hands keyboard focus over to that row. Every row
+carries `aria-level`, `aria-posinset` and `aria-setsize`, so assistive
+technology reads the size of the whole tree.
+
+Rows update once the virtualizer lays them out, shortly after
+`updateComplete`. Set `virtual` before the first render: toggling it rebuilds
+the rows container.
 
 ## Showing parent/child indent guides
 

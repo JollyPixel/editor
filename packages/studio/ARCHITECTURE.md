@@ -172,6 +172,9 @@ flowchart TB
 | Export | toolbar, menu | `<stem>.zip` with dependencies, not on folders |
 
 - Context menu: right-click, Shift+F10 or the menu key.
+- Folders start collapsed; the expanded ones are kept in `localStorage`
+  (`studio:asset-expanded`), like the kind filter.
+- The tree is `virtual` and scrolls inside the pane, under the toolbar.
 - `AssetSelection` decides which actions apply, and re-checks before running.
 - Errors go to the `jolly-log`.
 
@@ -179,7 +182,9 @@ flowchart TB
 
 - Asset deleted: its tab closes.
 - Asset renamed: its tab label and tooltip update.
-- The tree rebuilds but keeps expanded folders, selection and filter.
+- The tree rebuilds but keeps expanded folders, selection and filter. It
+  rebuilds only when an asset's kind, path or dependencies change, or a folder
+  comes or goes (`CatalogLayout`): saving content changes only the revision.
 - Folders live in the asset source: renaming one sends one command per asset
   inside, plus one per companion, then one `catalog:move-folder` that carries
   its empty folders over and deletes the old one.

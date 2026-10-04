@@ -31,6 +31,14 @@ export const treeStyles = css`
     cursor: default;
   }
 
+  :host([virtual]) {
+    min-height: 0;
+  }
+
+  :host([virtual]) .row {
+    width: 100%;
+  }
+
   .row:focus-visible {
     outline: none;
     box-shadow: inset 0 0 0 1px var(--jolly-focus-ring, ${kFallback.focusRing});

@@ -347,4 +347,8 @@ export const exampleStyles = css`
     border-radius: var(--jolly-radius-md);
     background: var(--jolly-surface-sunken);
   }
+
+  .virtual-tree-demo {
+    height: 260px;
+  }
 `;

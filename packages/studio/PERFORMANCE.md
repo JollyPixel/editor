@@ -44,13 +44,6 @@ setup start only after the network round trip and decode, although
 
 Fix: expose `session.ready` and await it alongside the mount.
 
-### 4. Asset tree rendering
-
-`AssetBrowser` passes `.expanded=${[...this._expanded]}`, a new array per
-render, so every selection click rebuilds the `TreeSnapshot` and re-binds
-every visible row: memoize it. Rows are not virtualized and all folders start
-expanded (`ui/src/data/tree/Tree.ts`), which a large project will feel.
-
 ### 5. Offline owner heartbeat under timer throttling
 
 `RemoteWorkspace` reloads once the owner misses heartbeats for 12 s
@@ -151,6 +144,9 @@ help loads and edits of large maps, not steady-state rendering.
   message after the state is applied, and each relayed delta is its own
   message task, so a microtask flag would merge nothing; bursts across
   deltas belong to item 2.
+- **Memoizing the tree's `expanded` array.** `jolly-tree` compares `expanded`
+  and `selected` by content (`idListChanged`), so a new array with the same
+  ids does not rebuild the `TreeSnapshot`.
 - **OffscreenCanvas runtime.** The Lit UI mutates the same `VoxelWorld`
   synchronously (`BlockLibrary`, `VoxelLayerPanel`, `TemplatePanel`, the
   inspector panel), input reads layout and pointer lock, `GlobalAudio` needs an

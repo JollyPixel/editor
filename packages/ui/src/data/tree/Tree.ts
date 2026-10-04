@@ -10,15 +10,24 @@ import {
   property,
   state
 } from "lit/decorators.js";
+import { guard } from "lit/directives/guard.js";
+import { keyed } from "lit/directives/keyed.js";
+import { repeat } from "lit/directives/repeat.js";
+import { styleMap } from "lit/directives/style-map.js";
+import { flow } from "@lit-labs/virtualizer/layouts/flow.js";
+import { virtualize } from "@lit-labs/virtualizer/virtualize.js";
 
 // Import Internal Dependencies
 import {
   TreeSnapshot,
   idListChanged,
-  isExpandable,
   resolveRename,
   type FlatTreeRow
 } from "./model.ts";
+import {
+  TreeRowView,
+  TreeRowViewList
+} from "./TreeRowView.ts";
 import {
   idleTreeInteraction,
   resolveTreeKey,
@@ -26,6 +35,7 @@ import {
 } from "./interaction.ts";
 import { treeStyles } from "./Tree.styles.ts";
 import { TreeDragController } from "./TreeDragController.ts";
+import { TreeFocusController } from "./TreeFocusController.ts";
 import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
@@ -38,6 +48,9 @@ import {
 import "../../icon/Icon.ts";
 import { originatesInButton } from "../../dom.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
+
+// CONSTANTS
+const kFlowLayout = flow();
 
 @customElement("jolly-tree")
 export class Tree<TData = unknown> extends LitElement {
@@ -104,6 +117,9 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ attribute: false })
   declare acceptDrop: TreeDropAccept | null;
 
+  @property({ type: Boolean, reflect: true })
+  declare virtual: boolean;
+
   @state()
   private declare _interaction: TreeInteraction;
 
@@ -112,6 +128,9 @@ export class Tree<TData = unknown> extends LitElement {
   #selectedIds: ReadonlySet<string>;
   #drag: TreeDragController<TData>;
   #selection: TreeSelectionController<TData>;
+  #rowViewList = new TreeRowViewList();
+  #activeRowId: string | null = null;
+  #focus: TreeFocusController;
 
   constructor() {
     super();
@@ -128,6 +147,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.indentGuides = false;
     this.swatchPosition = "end";
     this.acceptDrop = null;
+    this.virtual = false;
     this._interaction = idleTreeInteraction();
     this.#expandedIds = new Set();
     this.#selectedIds = new Set();
@@ -149,6 +169,14 @@ export class Tree<TData = unknown> extends LitElement {
       indentUnit: () => parseFloat(
         getComputedStyle(this).getPropertyValue("--jolly-tree-indent")
       )
+    });
+    this.#focus = new TreeFocusController(this, {
+      virtual: () => this.virtual,
+      rowsElement: () => this.renderRoot.querySelector<HTMLElement>(".rows"),
+      rowElement: (id) => this.#rowElement(id),
+      rowIndex: (id) => this.#rowViewList.indexOf(id),
+      activeId: () => this.#activeRowId,
+      renaming: () => this._interaction.kind === "renaming"
     });
     this.#selection = new TreeSelectionController(this, {
       visibleRows: () => this.#visibleRows(),
@@ -176,10 +204,9 @@ export class Tree<TData = unknown> extends LitElement {
   }
 
   override render(): TemplateResult {
-    const rows = this.#visibleRows();
-    const activeId = this.#activeId(rows);
+    const views = this.#rowViews();
 
-    return html`
+    return html`${keyed(this.virtual, html`
       <div
         class="rows"
         role="tree"
@@ -187,97 +214,152 @@ export class Tree<TData = unknown> extends LitElement {
         @keydown=${this.#onKeyDown}
         @click=${(event: MouseEvent) => this.#selection.onRowsClick(event)}
         @contextmenu=${this.#onRowsContextMenu}
-      >${rows.map((row) => this.#renderRow(row, row.node.id === activeId))}</div>
-    `;
+        @focus=${this.#focus.onRowsFocus}
+        @rangeChanged=${this.#focus.onRangeChanged}
+      >${this.#renderRows(views)}</div>
+    `)}`;
+  }
+
+  #renderRows(
+    views: TreeRowView[]
+  ): unknown {
+    return this.virtual ?
+      virtualize({
+        items: views,
+        keyFunction: (view) => view.id,
+        renderItem: (view) => html`${this.#guardedRow(view)}`,
+        layout: kFlowLayout,
+        scroller: true
+      }) :
+      repeat(
+        views,
+        (view) => view.id,
+        (view) => this.#guardedRow(view)
+      );
+  }
+
+  #guardedRow(
+    view: TreeRowView
+  ): unknown {
+    return guard([view], () => this.#renderRow(view));
+  }
+
+  #rowViews(): TreeRowView[] {
+    const rows = this.#visibleRows();
+    const activeId = this.#activeId(rows);
+    const renamingId = this._interaction.kind === "renaming" ?
+      this._interaction.id :
+      null;
+    this.#activeRowId = activeId;
+
+    return this.#rowViewList.update(rows, (row) => {
+      const { id } = row.node;
+      const placement = this.#snapshot.placement(id);
+      const { drop, dropIndent } = this.#drag.dropStyleFor(
+        id,
+        TreeRowView.indentOf(row.depth)
+      );
+
+      return {
+        position: placement?.position ?? 1,
+        setSize: placement?.size ?? 1,
+        expanded: this.#expandedIds.has(id),
+        selected: this.#selectedIds.has(id),
+        active: id === activeId,
+        drop,
+        dropIndent,
+        dragSource: this.#drag.isDragSource(id),
+        moveCursor: this.#drag.isMoveCursor(id),
+        renaming: id === renamingId,
+        hasBranches: this.#snapshot.hasBranches,
+        swatchPosition: this.swatchPosition,
+        reorderable: this.reorderable
+      };
+    });
   }
 
   #renderRow(
-    row: FlatTreeRow<TData>,
-    active: boolean
+    view: TreeRowView
   ): TemplateResult {
-    const { node, depth } = row;
-    const isBranch = isExpandable(node);
-    const isExpanded = this.#expandedIds.has(node.id);
-    const isSelected = this.#selectedIds.has(node.id);
-    const isDragSource = this.#drag.isDragSource(node.id);
-    const isMoveCursor = this.#drag.isMoveCursor(node.id);
-    const expandedState = isBranch ? String(isExpanded) : nothing;
-    const isHidden = node.visible === false;
-    const rowIndent = `calc(${depth} * var(--jolly-tree-indent, 16px))`;
-    const { drop, dropIndent } = this.#drag.dropStyleFor(node.id, rowIndent);
-    const rowStyle = `--jolly-tree-row-indent: ${rowIndent}; ` +
-      `--jolly-tree-drop-indent: ${dropIndent}; ` +
-      "padding-inline-start: var(--jolly-tree-row-indent)";
+    const { id } = view;
+    const rowStyle = {
+      "--jolly-tree-row-indent": view.indent,
+      "--jolly-tree-drop-indent": view.dropIndent,
+      "padding-inline-start": "var(--jolly-tree-row-indent)"
+    };
 
     return html`
       <div
         class="row"
         role="treeitem"
-        data-id=${node.id}
-        tabindex=${active ? "0" : "-1"}
-        aria-selected=${isSelected ? "true" : "false"}
-        aria-expanded=${expandedState}
-        data-dragging=${isDragSource ? "true" : nothing}
-        data-drop=${drop ?? nothing}
-        data-move-cursor=${isMoveCursor ? "true" : nothing}
-        data-hidden=${isHidden ? "true" : nothing}
-        style=${rowStyle}
-        @click=${(event: MouseEvent) => this.#selection.onRowClick(event, node.id)}
-        @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, node.id)}
-        @contextmenu=${(event: MouseEvent) => this.#onRowContextMenu(event, node.id)}
-        @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, node.id)}
+        data-id=${id}
+        tabindex=${view.active ? "0" : "-1"}
+        aria-level=${view.depth + 1}
+        aria-posinset=${view.position}
+        aria-setsize=${view.setSize}
+        aria-selected=${view.selected ? "true" : "false"}
+        aria-expanded=${view.branch ? String(view.expanded) : nothing}
+        data-dragging=${view.dragSource ? "true" : nothing}
+        data-drop=${view.drop ?? nothing}
+        data-move-cursor=${view.moveCursor ? "true" : nothing}
+        data-hidden=${view.visible === false ? "true" : nothing}
+        style=${styleMap(rowStyle)}
+        @click=${(event: MouseEvent) => this.#selection.onRowClick(event, id)}
+        @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, id)}
+        @contextmenu=${(event: MouseEvent) => this.#onRowContextMenu(event, id)}
+        @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, id)}
       >
-        ${isBranch ? html`
+        ${view.branch ? html`
           <button
             class="toggle"
             type="button"
             tabindex="-1"
-            aria-label=${isExpanded ? "Collapse" : "Expand"}
-            @click=${(event: Event) => this.#onToggleExpand(event, node.id)}
+            aria-label=${view.expanded ? "Collapse" : "Expand"}
+            @click=${(event: Event) => this.#onToggleExpand(event, id)}
           ><jolly-icon name="chevron" aria-hidden="true"></jolly-icon></button>
         ` : nothing}
         <span class="content">
-          ${!isBranch && this.#snapshot.hasBranches ? html`
+          ${!view.branch && view.hasBranches ? html`
             <span class="toggle-spacer"></span>
           ` : nothing}
-          ${node.icon === undefined ? nothing : html`
-            <jolly-icon class="node-icon" name=${node.icon} aria-hidden="true"></jolly-icon>
+          ${view.icon === undefined ? nothing : html`
+            <jolly-icon class="node-icon" name=${view.icon} aria-hidden="true"></jolly-icon>
           `}
-          ${this.swatchPosition === "start" ? this.#renderSwatch(node) : nothing}
-          ${this.#renderLabel(node)}
-          ${node.detail ? html`<span class="detail">${node.detail}</span>` : nothing}
-          ${this.swatchPosition === "end" ? this.#renderSwatch(node) : nothing}
-          ${this.#renderBadges(node)}
-          ${node.visible === undefined ? nothing : html`
+          ${view.swatchPosition === "start" ? this.#renderSwatch(view) : nothing}
+          ${this.#renderLabel(view)}
+          ${view.detail ? html`<span class="detail">${view.detail}</span>` : nothing}
+          ${view.swatchPosition === "end" ? this.#renderSwatch(view) : nothing}
+          ${this.#renderBadges(view)}
+          ${view.visible === undefined ? nothing : html`
             <button
               class="visible-toggle"
               type="button"
               tabindex="-1"
-              data-active=${node.visible ? "true" : "false"}
-              aria-label=${node.visible ? "Hide" : "Show"}
-              aria-pressed=${node.visible ? "true" : "false"}
-              @click=${(event: Event) => this.#onToggleVisible(event, node.id)}
+              data-active=${view.visible ? "true" : "false"}
+              aria-label=${view.visible ? "Hide" : "Show"}
+              aria-pressed=${view.visible ? "true" : "false"}
+              @click=${(event: Event) => this.#onToggleVisible(event, id)}
             ><jolly-icon name="eye" aria-hidden="true"></jolly-icon></button>
           `}
-          ${node.locked === undefined ? nothing : html`
+          ${view.locked === undefined ? nothing : html`
             <button
               class="lock-toggle"
               type="button"
               tabindex="-1"
-              data-active=${node.locked ? "true" : "false"}
-              aria-label=${node.locked ? "Unlock" : "Lock"}
-              aria-pressed=${node.locked ? "true" : "false"}
-              @click=${(event: Event) => this.#onToggleLock(event, node.id)}
+              data-active=${view.locked ? "true" : "false"}
+              aria-label=${view.locked ? "Unlock" : "Lock"}
+              aria-pressed=${view.locked ? "true" : "false"}
+              @click=${(event: Event) => this.#onToggleLock(event, id)}
             ><jolly-icon name="lock" aria-hidden="true"></jolly-icon></button>
           `}
-          ${this.reorderable ? html`
+          ${view.reorderable ? html`
             <button
               class="grip"
               part="grip"
               type="button"
               tabindex="-1"
               aria-hidden="true"
-              @pointerdown=${(event: PointerEvent) => this.#drag.onGripPointerDown(event, node.id)}
+              @pointerdown=${(event: PointerEvent) => this.#drag.onGripPointerDown(event, id)}
             ><jolly-icon name="drag" aria-hidden="true"></jolly-icon></button>
           ` : nothing}
         </span>
@@ -311,15 +393,23 @@ export class Tree<TData = unknown> extends LitElement {
       changed.has("_interaction") &&
       this._interaction.kind === "renaming"
     ) {
-      this.renderRoot.querySelector<HTMLInputElement>(".rename")?.focus();
+      this.#focus.focusRenameField();
     }
   }
 
+  #rowElement(
+    id: string
+  ): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>(
+      `.row[data-id="${CSS.escape(id)}"]`
+    );
+  }
+
   #renderBadges(
-    node: TreeNode<TData>
+    view: TreeRowView
   ): TemplateResult | typeof nothing {
-    const badges = node.badges;
-    if (badges === undefined || badges.length === 0) {
+    const badges = view.badges;
+    if (badges.length === 0) {
       return nothing;
     }
 
@@ -337,9 +427,9 @@ export class Tree<TData = unknown> extends LitElement {
   }
 
   #renderSwatch(
-    node: TreeNode<TData>
+    view: TreeRowView
   ): TemplateResult | typeof nothing {
-    const swatch = node.swatch;
+    const swatch = view.swatch;
     if (swatch === undefined) {
       return nothing;
     }
@@ -359,7 +449,7 @@ export class Tree<TData = unknown> extends LitElement {
         title=${swatch.title}
         data-empty=${empty ? "true" : nothing}
         style=${face}
-        @click=${(event: Event) => this.#onActivateSwatch(event, node.id)}
+        @click=${(event: Event) => this.#onActivateSwatch(event, view.id)}
       ></button>
     `;
   }
@@ -373,29 +463,26 @@ export class Tree<TData = unknown> extends LitElement {
   }
 
   #renderLabel(
-    node: TreeNode<TData>
+    view: TreeRowView
   ): TemplateResult {
-    if (
-      this._interaction.kind !== "renaming" ||
-      this._interaction.id !== node.id
-    ) {
+    if (!view.renaming) {
       return html`<span
         class="label"
         @pointerenter=${revealOverflowTitle}
-      >${node.label}</span>`;
+      >${view.label}</span>`;
     }
 
     return html`
       <input
         class="label rename"
         type="text"
-        .value=${node.label}
+        .value=${view.label}
         aria-label="Rename"
         @pointerdown=${stopPropagation}
         @click=${stopPropagation}
         @dblclick=${stopPropagation}
         @keydown=${this.#onRenameKeyDown}
-        @blur=${(event: FocusEvent) => this.#commitRename(event.target, node)}
+        @blur=${(event: FocusEvent) => this.#commitRename(event.target, view)}
         @focus=${this.#onRenameFocus}
       >
     `;
@@ -428,6 +515,7 @@ export class Tree<TData = unknown> extends LitElement {
         kind: "renaming",
         id
       };
+      this.#focus.reveal(id);
     }
   }
 
@@ -463,41 +551,30 @@ export class Tree<TData = unknown> extends LitElement {
       null;
     this._interaction = idleTreeInteraction();
     if (id !== null) {
-      this.#focusRow(id);
+      this.#focus.focusRow(id);
     }
   }
 
   #commitRename(
     target: EventTarget | null,
-    node: TreeNode<TData>
+    view: TreeRowView
   ): void {
     if (
       this._interaction.kind !== "renaming" ||
-      this._interaction.id !== node.id
+      this._interaction.id !== view.id
     ) {
       return;
     }
 
     this._interaction = idleTreeInteraction();
     const name = resolveRename(
-      node.label,
+      view.label,
       target instanceof HTMLInputElement ? target.value : ""
     );
     if (name !== null) {
-      emitDataEvent(this, "jolly-rename", { id: node.id, name });
+      emitDataEvent(this, "jolly-rename", { id: view.id, name });
     }
-    this.#focusRow(node.id);
-  }
-
-  #focusRow(
-    id: string
-  ): void {
-    this.updateComplete.then(() => {
-      const row = this.renderRoot.querySelector<HTMLElement>(
-        `.row[data-id="${CSS.escape(id)}"]`
-      );
-      row?.focus();
-    });
+    this.#focus.focusRow(view.id);
   }
 
   #onRowContextMenu(
@@ -623,6 +700,7 @@ export class Tree<TData = unknown> extends LitElement {
     switch (action.kind) {
       case "select":
         this.#selection.selectSingle(action.id);
+        this.#focus.focusRow(action.id);
         break;
       case "toggle-expand":
         emitDataEvent(this, "jolly-toggle-expand", action);
@@ -635,6 +713,9 @@ export class Tree<TData = unknown> extends LitElement {
         break;
       case "interaction":
         this._interaction = action.interaction;
+        if (action.interaction.kind === "keyboard-move") {
+          this.#focus.reveal(action.interaction.cursorId);
+        }
         break;
       case "commit-move":
         this.#drag.commitKeyboardMove();

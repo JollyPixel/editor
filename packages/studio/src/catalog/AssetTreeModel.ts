@@ -167,10 +167,6 @@ export class AssetTreeModel {
     return this.#index.has(nodeId);
   }
 
-  folderIds(): string[] {
-    return folderIdsOf(this.nodes);
-  }
-
   vacantFolder(
     parent: AssetPath,
     name: string
@@ -506,22 +502,6 @@ function relabel(
         children: relabel(node.children, labels)
       };
   });
-}
-
-function folderIdsOf(
-  nodes: Iterable<AssetTreeNode>
-): string[] {
-  const ids: string[] = [];
-  for (const node of nodes) {
-    if (node.data?.type === "folder") {
-      ids.push(
-        node.id,
-        ...folderIdsOf(node.children ?? [])
-      );
-    }
-  }
-
-  return ids;
 }
 
 function sortNodes(

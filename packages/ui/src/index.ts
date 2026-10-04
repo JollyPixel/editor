@@ -216,7 +216,8 @@ export {
   type ReparentMove,
   type ResolvedSelection,
   type ResolveDepthDropOptions,
-  type ResolveReparentOptions
+  type ResolveReparentOptions,
+  type TreePlacement
 } from "./data/tree/model.ts";
 export * from "./data/tree/contract.ts";
 
