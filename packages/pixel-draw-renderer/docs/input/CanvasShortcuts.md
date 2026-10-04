@@ -53,7 +53,11 @@ get lineHeld(): boolean
 set lineHeld(value: boolean)
 ```
 
-While `true` in `"paint"` or `"erase"` mode, the next click draws a straight line from the cursor position where it was set, and each later click chains a new segment. Setting it during a stroke of either button commits the stroke and draws the line in the stroke's color on release. Setting it back to `false` cancels a line not yet drawn. In `"uv"` mode it resizes a net face together with its aligned row or column, as [`UVTool`](../tools/UVTool.md#resizable) describes. Bind it to a held key, usually `Shift`.
+While `true` in `"paint"` or `"erase"` mode, the next click draws a straight line from the last clicked pixel position to the clicked endpoint. Paint and erase share this saved position. Each later click saves a new endpoint and chains another segment. Before any click, the first available cursor position while held becomes the starting position.
+
+Setting it during a stroke of either button commits the stroke and draws a line from the mouse-down position in the stroke's color on release. Moving or releasing the mouse does not change the saved position. Setting it back to `false` cancels the preview and keeps the saved position for the next line. Mode changes and window blur also keep it. Picking, panning, selection, UV interaction, and clicks outside the texture do not change it. Replacing or resizing the texture clears it.
+
+In `"uv"` mode it resizes a net face together with its aligned row or column, as [`UVTool`](../tools/UVTool.md#resizable) describes. Bind it to a held key, usually `Shift`.
 
 Both setters ignore a value equal to the current one, so auto-repeated keydowns are harmless. A window blur sets both back to `false`, so a key released outside the page does not stay held.
 

@@ -52,6 +52,10 @@ The brush writing its erase color, transparent by default. Erasing is a stroke l
 
 One completed paint or line operation that applies a brush color to a set of pixel positions. The color is read once, when the stroke starts.
 
+### Line Anchor
+
+The saved pixel position from the last paint or erase mouse-down. A straight line starts here when the line modifier is held. Before any click, the first available cursor position while the modifier is held supplies the anchor. Hover, mouse-up, and preview cancellation keep it; replacing or resizing the texture clears it.
+
 ### Selection
 
 A completed rectangular or shape-masked region of the texture that can be moved, transformed, copied, or deleted. A shape selection can have holes inside its rectangular bounds.

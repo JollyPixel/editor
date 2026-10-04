@@ -123,7 +123,10 @@ export class PixelArtCanvas {
   #clipboard: ClipboardController;
   #onDocumentDrawEnd = () => this.#onDrawEnd?.();
   #onDocumentHistoryChanged = (state: HistoryState) => this.#onHistoryChange?.(state);
-  #onTextureReplaced = () => this.#tools.select.discard();
+  #onTextureReplaced = () => {
+    this.#tools.select.discard();
+    this.#tools.line.reset();
+  };
   #onViewportChanged = () => {
     this.#view.refresh();
     this.#tools.line.refreshPreview();

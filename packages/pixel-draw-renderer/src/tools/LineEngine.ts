@@ -35,6 +35,8 @@ export class LineEngine {
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
   #cursor: Vec2 | null = null;
+  #anchor: Vec2 | null = null;
+  #armed: Pick<PendingLine, "trigger" | "source"> | null = null;
   #pending: PendingLine | null = null;
 
   constructor(
@@ -55,19 +57,37 @@ export class LineEngine {
   updateCursor(
     position: Vec2 | null
   ): void {
-    this.#cursor = position;
+    this.#cursor = position ? { ...position } : null;
     if (this.#pending && position) {
-      this.#pending.end = position;
+      this.#pending.end = { ...position };
       this.refreshPreview();
     }
+    else if (!this.#pending && position && this.#armed) {
+      this.arm(this.#armed.trigger, this.#armed.source);
+    }
+  }
+
+  rememberClick(
+    position: Vec2
+  ): void {
+    this.#anchor = { ...position };
+  }
+
+  reset(): void {
+    this.cancel();
+    this.#anchor = null;
+    this.#cursor = null;
   }
 
   arm(
     trigger: LineCommitTrigger,
     source: BrushPaintSource
   ): void {
-    if (this.#cursor) {
-      this.#armAt(this.#cursor, trigger, source);
+    this.#armed = { trigger, source };
+    const start = this.#anchor ?? this.#cursor;
+    if (start) {
+      this.#anchor ??= { ...start };
+      this.#armAt(start, trigger, source, this.#cursor ?? start);
     }
   }
 
@@ -80,16 +100,20 @@ export class LineEngine {
     }
 
     const lineSource = source ?? pending.source;
+    if (pending.trigger === "mousedown") {
+      this.rememberClick(pending.end);
+    }
     this.#linePreview.clear();
     this.#document.paintPixels(
       this.#stamp(pending),
       this.#brush.colorFor(lineSource)
     );
     this.#onProgress?.([]);
-    this.#armAt(pending.end, "mousedown", lineSource);
+    this.arm("mousedown", lineSource);
   }
 
   cancel(): void {
+    this.#armed = null;
     if (this.#pending === null) {
       return;
     }
@@ -118,11 +142,12 @@ export class LineEngine {
   #armAt(
     start: Vec2,
     trigger: LineCommitTrigger,
-    source: BrushPaintSource
+    source: BrushPaintSource,
+    end: Vec2
   ): void {
     this.#pending = {
-      start,
-      end: start,
+      start: { ...start },
+      end: { ...end },
       trigger,
       source
     };
