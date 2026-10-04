@@ -36,7 +36,8 @@ menu.addEventListener("jolly-context-action", (event) => {
 | `label` | `label` | `string` | `""` |
 
 `ContextMenuEntry` is a `ContextMenuItem` or the string `"separator"`. An item
-has an `id`, a `label`, and optional `icon`, `disabled` and `intent`. An item
+has an `id`, a `label`, and optional `icon`, `disabled`, `intent` and `items`
+(see [Submenus](#submenus)). An item
 with `intent: "danger"` is drawn in the danger color, for destructive actions
 such as Delete. When one item has an icon, every item keeps an icon column so
 the labels line up. `label` names the menu for assistive technology.
@@ -56,6 +57,40 @@ holds an [input layer](../interaction/README.md#input-layers) while open.
 Opening focuses the first enabled item. Up and Down move between enabled items
 and wrap, Home and End jump to the ends, Enter or Space chooses, and Tab
 closes. Moving the pointer over an item focuses it.
+
+## Submenus
+
+An item with `items` opens a submenu instead of being chosen, and shows a
+chevron. Submenus nest to any depth.
+
+```ts
+menu.items = [
+  {
+    id: "new",
+    label: "New asset",
+    items: [
+      { id: "new:map", label: "Voxel map" },
+      { id: "new:texture", label: "Pixel art" }
+    ]
+  },
+  "separator",
+  { id: "delete", label: "Delete", intent: "danger" }
+];
+```
+
+A submenu opens beside its item, on the right, and on the left when the
+right side has no room. Deeper levels keep the side their parent opened on.
+Its first item lines up with the item that opened it.
+
+Resting the pointer on the item opens the submenu after 150 ms. Resting on
+another item of the same menu closes it after 300 ms, so the pointer can cross
+a neighbour on the way into it. A click opens it at once. Right Arrow, Enter
+or Space opens it and focuses its first enabled item. Left Arrow or Escape
+closes it and focuses its item again. A click outside every level closes the
+whole menu.
+
+The submenu item's `id` is never emitted. An item whose `items` holds no item,
+or that is `disabled`, does not open.
 
 ## Events
 

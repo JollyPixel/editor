@@ -41,6 +41,7 @@ export function newAssetKindOf(
 export class AssetSelection {
   readonly nodeIds: readonly string[];
   readonly asset: AssetLeafData | null;
+  readonly isFolder: boolean;
   readonly folder: AssetPath;
 
   constructor(
@@ -55,6 +56,7 @@ export class AssetSelection {
     this.asset = this.nodeIds.length === 1 && data?.type === "asset" ?
       data :
       null;
+    this.isFolder = this.nodeIds.length === 1 && data?.type === "folder";
     if (data === undefined) {
       this.folder = AssetPath.ROOT;
     }

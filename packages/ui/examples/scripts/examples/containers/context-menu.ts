@@ -22,6 +22,35 @@ function entriesFor(
       label: "Duplicate",
       icon: "plus"
     },
+    {
+      id: "add",
+      label: "Add",
+      disabled: locked,
+      items: [
+        {
+          id: "add-bone",
+          label: "Bone"
+        },
+        {
+          id: "add-light",
+          label: "Light"
+        },
+        {
+          id: "add-shape",
+          label: "Shape",
+          items: [
+            {
+              id: "add-cube",
+              label: "Cube"
+            },
+            {
+              id: "add-sphere",
+              label: "Sphere"
+            }
+          ]
+        }
+      ]
+    },
     "separator",
     {
       id: "delete",

@@ -40,17 +40,24 @@ const kKinds = new AssetKindSet({
   ],
   editable: []
 });
-const kCreation = ["new-folder", "new-asset:voxelmap", "new-asset:pixelart"];
+const kCreation: Outline = [
+  "new-folder",
+  ["new-asset", ["new-asset:voxelmap", "new-asset:pixelart"]]
+];
+
+type Outline = Array<string | [string, Outline]>;
 
 function outline(
   entries: readonly ContextMenuEntry[]
-): string[] {
-  return entries.map((entry) => {
+): Outline {
+  return entries.map((entry): Outline[number] => {
     if (entry === "separator") {
       return "-";
     }
 
-    return entry.disabled === true ? `(${entry.id})` : entry.id;
+    return entry.items === undefined ?
+      entry.id :
+      [entry.id, outline(entry.items)];
   });
 }
 
@@ -65,33 +72,43 @@ describe("assetMenu", () => {
     assert.deepEqual(outline(menuOf([])), kCreation);
   });
 
-  test("an asset opens first and deletes last", () => {
+  test("an asset opens first, deletes last and creates nothing", () => {
     assert.deepEqual(
       outline(menuOf([assetNodeId("model-hero")])),
-      ["open", "-", ...kCreation, "-", "rename", "export", "-", "delete"]
+      ["open", "-", "rename", "export", "-", "delete"]
     );
   });
 
-  test("a folder keeps the export item disabled", () => {
+  test("a folder creates inside itself and has no export", () => {
     assert.deepEqual(
       outline(menuOf([folderNodeId(AssetPath.parse("models"))])),
-      [...kCreation, "-", "rename", "(export)", "-", "delete"]
+      [...kCreation, "-", "rename", "-", "delete"]
     );
   });
 
-  test("offers one new asset per kind, named and iconed after it", () => {
-    const [, map, texture] = menuOf([]);
+  test("several rows are only deleted together", () => {
+    assert.deepEqual(
+      outline(menuOf([assetNodeId("model-hero"), assetNodeId("map-cave")])),
+      ["delete"]
+    );
+  });
 
-    assert.deepEqual(map, {
-      id: "new-asset:voxelmap",
-      label: "New voxel map",
-      icon: "kind:voxelmap"
-    });
-    assert.deepEqual(texture, {
-      id: "new-asset:pixelart",
-      label: "New pixel art",
-      icon: "file"
-    });
+  test("offers one new asset per kind in a submenu, named and iconed after it", () => {
+    const [, newAsset] = menuOf([]);
+    assert.ok(newAsset !== "separator");
+
+    assert.deepEqual(newAsset.items, [
+      {
+        id: "new-asset:voxelmap",
+        label: "Voxel map",
+        icon: "kind:voxelmap"
+      },
+      {
+        id: "new-asset:pixelart",
+        label: "Pixel art",
+        icon: "file"
+      }
+    ]);
   });
 
   test("a new asset item names its kind", () => {
@@ -104,8 +121,7 @@ describe("assetMenu", () => {
       id: "delete",
       label: "Delete",
       icon: "trash",
-      intent: "danger",
-      disabled: false
+      intent: "danger"
     });
   });
 });

@@ -36,6 +36,7 @@ describe("AssetSelection", () => {
     const selection = new AssetSelection(kModel, []);
 
     assert.equal(selection.isEmpty, true);
+    assert.equal(selection.isFolder, false);
     assert.equal(selection.asset, null);
     assert.equal(selection.folder.isRoot, true);
     assert.deepEqual(allowed(selection), ["new-folder"]);
@@ -45,6 +46,7 @@ describe("AssetSelection", () => {
     const selection = new AssetSelection(kModel, [kHero]);
 
     assert.equal(selection.asset?.id, "model-hero");
+    assert.equal(selection.isFolder, false);
     assert.equal(selection.folder.toString(), "models");
     assert.deepEqual(allowed(selection), [...ASSET_ACTIONS]);
   });
@@ -52,6 +54,7 @@ describe("AssetSelection", () => {
   test("a folder is renamed or deleted but neither opened nor exported", () => {
     const selection = new AssetSelection(kModel, [kModels]);
 
+    assert.equal(selection.isFolder, true);
     assert.equal(selection.asset, null);
     assert.equal(selection.folder.toString(), "models");
     assert.deepEqual(allowed(selection), ["new-folder", "rename", "delete"]);

@@ -5,15 +5,42 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  newAssetName,
-  type AssetKindSet
-} from "../../catalog/AssetKindSet.ts";
+import type { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import {
   newAssetAction,
   type AssetAction,
   type AssetSelection
 } from "../../catalog/AssetSelection.ts";
+
+// CONSTANTS
+const kItems = {
+  open: {
+    id: "open",
+    label: "Open",
+    icon: "file"
+  },
+  "new-folder": {
+    id: "new-folder",
+    label: "New folder",
+    icon: "new-folder"
+  },
+  rename: {
+    id: "rename",
+    label: "Rename",
+    icon: "pencil"
+  },
+  export: {
+    id: "export",
+    label: "Export as ZIP",
+    icon: "export"
+  },
+  delete: {
+    id: "delete",
+    label: "Delete",
+    icon: "trash",
+    intent: "danger"
+  }
+} satisfies Record<AssetAction, AssetMenuItem>;
 
 interface AssetMenuItem extends ContextMenuItem {
   id: AssetAction;
@@ -23,51 +50,40 @@ export function assetMenu(
   selection: AssetSelection,
   kinds: AssetKindSet
 ): ContextMenuEntry[] {
-  const creation = [
-    menuItem(selection, {
-      id: "new-folder",
-      label: "New folder",
-      icon: "new-folder"
-    }),
-    ...newAssetMenu(kinds)
+  if (selection.asset !== null) {
+    return [
+      kItems.open,
+      "separator",
+      kItems.rename,
+      kItems.export,
+      "separator",
+      kItems.delete
+    ];
+  }
+
+  const creation: ContextMenuEntry[] = [
+    kItems["new-folder"],
+    {
+      id: "new-asset",
+      label: "New asset",
+      icon: "plus",
+      items: newAssetMenu(kinds)
+    }
   ];
   if (selection.isEmpty) {
     return creation;
   }
-
-  const opening: ContextMenuEntry[] = selection.asset === null ?
-    [] :
-    [
-      menuItem(selection, {
-        id: "open",
-        label: "Open",
-        icon: "file"
-      }),
-      "separator"
+  if (selection.isFolder) {
+    return [
+      ...creation,
+      "separator",
+      kItems.rename,
+      "separator",
+      kItems.delete
     ];
+  }
 
-  return [
-    ...opening,
-    ...creation,
-    "separator",
-    menuItem(selection, {
-      id: "rename",
-      label: "Rename",
-      icon: "pencil"
-    }),
-    menuItem(selection, {
-      id: "export",
-      label: "Export as ZIP",
-      icon: "export"
-    }),
-    "separator",
-    menuItem(selection, {
-      id: "delete",
-      label: "Delete",
-      icon: "trash",
-      intent: "danger"
-    })
-  ];
+  return [kItems.delete];
 }
 
 export function newAssetMenu(
@@ -76,18 +92,8 @@ export function newAssetMenu(
   return kinds.entries.map((entry) => {
     return {
       id: newAssetAction(entry.kind),
-      label: newAssetName(entry),
+      label: entry.label,
       icon: kinds.iconFor(entry.kind)
     };
   });
-}
-
-function menuItem(
-  selection: AssetSelection,
-  item: AssetMenuItem
-): AssetMenuItem {
-  return {
-    ...item,
-    disabled: !selection.allows(item.id)
-  };
 }

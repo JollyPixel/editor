@@ -6,11 +6,11 @@ import type {
 
 // Import Internal Dependencies
 import {
-  anchorOrigin,
   anchoredPosition,
   type AnchorRect
 } from "../geometry/anchoredPosition.ts";
 import { inputLayers } from "../interaction/input/InputLayers.ts";
+import { placePopover } from "./placePopover.ts";
 
 // CONSTANTS
 const kDefaultGap = 4;
@@ -39,6 +39,11 @@ export interface PopoverControllerOptions {
   align?: "center" | "start";
   onOpen?: () => void;
   onClose?: () => void;
+  /**
+   * Called after each placement of the open popover, including those on
+   * scroll and resize.
+   */
+  onReposition?: () => void;
   /**
    * Called on Escape before the popover closes.
    */
@@ -140,34 +145,16 @@ export class PopoverController implements ReactiveController {
       left: anchorRect.left,
       right: anchorRect.right
     };
-    const panel = {
-      width: popover.offsetWidth,
-      height: popover.offsetHeight
-    };
 
-    const placed = anchoredPosition({
+    placePopover(popover, anchorBox, (panel, viewport) => anchoredPosition({
       anchor: anchorBox,
       panel,
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight
-      },
+      viewport,
       gap: this.#options.gap ?? kDefaultGap,
       side: this.#options.side,
       align: this.#options.align
-    });
-    const origin = anchorOrigin({
-      anchor: anchorBox,
-      panel,
-      position: placed
-    });
-
-    popover.style.left = `${placed.x}px`;
-    popover.style.top = `${placed.y}px`;
-    popover.style.setProperty(
-      "--jolly-overlay-origin",
-      `${origin.x}px ${origin.y}px`
-    );
+    }));
+    this.#options.onReposition?.();
   }
 
   hostDisconnected(): void {
