@@ -120,8 +120,8 @@ describe("PixelArtCanvas — select mode external paste", () => {
       "pinned to x=0 regardless of where the cursor was"
     );
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 84, 84));
-    canvas.dispatchEvent(mouseEvent("mousemove", 76, 84));
+    canvas.dispatchEvent(mouseEvent("mousedown", 86, 86));
+    canvas.dispatchEvent(mouseEvent("mousemove", 78, 86));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     assert.deepStrictEqual(

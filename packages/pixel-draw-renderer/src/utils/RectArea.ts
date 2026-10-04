@@ -4,6 +4,9 @@ import type {
   Vec2
 } from "../types.ts";
 
+export type ResizeCorner = "nw" | "ne" | "sw" | "se";
+export type ResizeHandle = ResizeCorner | "n" | "s" | "e" | "w";
+
 export interface RectRow {
   readonly x: number;
   readonly y: number;
@@ -95,6 +98,37 @@ export class RectArea {
       y: 0,
       width: bounds.x,
       height: bounds.y
+    });
+  }
+
+  resized(
+    handle: ResizeHandle,
+    delta: Vec2
+  ): RectArea {
+    const base = this.#rect;
+    let left = base.x;
+    let top = base.y;
+    let right = base.x + base.width;
+    let bottom = base.y + base.height;
+
+    if (handle.includes("w")) {
+      left = Math.min(left + delta.x, right - 1);
+    }
+    else if (handle.includes("e")) {
+      right = Math.max(right + delta.x, left + 1);
+    }
+    if (handle.startsWith("n")) {
+      top = Math.min(top + delta.y, bottom - 1);
+    }
+    else if (handle.startsWith("s")) {
+      bottom = Math.max(bottom + delta.y, top + 1);
+    }
+
+    return new RectArea({
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top
     });
   }
 

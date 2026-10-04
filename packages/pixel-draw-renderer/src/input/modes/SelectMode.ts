@@ -5,7 +5,8 @@ import type { BrushColorSlot } from "../../tools/Brush.ts";
 import type { SelectEngine } from "../../tools/SelectEngine.ts";
 import type {
   Mode,
-  RotationDirection
+  RotationDirection,
+  Vec2
 } from "../../types.ts";
 
 export interface SelectModeOptions {
@@ -29,11 +30,13 @@ export class SelectMode extends InteractionMode {
   }
 
   cursor(): string {
-    if (this.#select.isDragging) {
-      return "grabbing";
-    }
+    return this.#select.cursor;
+  }
 
-    return this.#select.editable ? "grab" : "";
+  onHover(
+    position: Vec2 | null
+  ): void {
+    this.#select.hover(position);
   }
 
   onPointerDown(
@@ -44,7 +47,7 @@ export class SelectMode extends InteractionMode {
       return false;
     }
 
-    this.#select.handleStart(position.texture);
+    this.#select.handleStart(position.texture, position.canvas);
 
     return true;
   }
@@ -54,7 +57,7 @@ export class SelectMode extends InteractionMode {
     position: PointerPosition
   ): void {
     if (slot === "primary") {
-      this.#select.handleMove(position.texture);
+      this.#select.handleMove(position.texture, position.canvas);
     }
   }
 

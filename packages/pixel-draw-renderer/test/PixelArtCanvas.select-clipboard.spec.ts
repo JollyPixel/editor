@@ -62,10 +62,10 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     );
 
     canvas.dispatchEvent(
-      mouseEvent("mousedown", 100, 100)
+      mouseEvent("mousedown", 103, 103)
     );
     canvas.dispatchEvent(
-      mouseEvent("mousemove", 108, 108)
+      mouseEvent("mousemove", 111, 111)
     );
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })

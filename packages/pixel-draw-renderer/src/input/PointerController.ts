@@ -109,8 +109,8 @@ export class PointerController {
 
     return {
       canvas: {
-        x: Math.floor(clientX - bounds.left),
-        y: Math.floor(clientY - bounds.top)
+        x: clientX - bounds.left,
+        y: clientY - bounds.top
       },
       texture,
       boundedTexture: this.#viewport.texture.contains(texture) ?
@@ -268,6 +268,17 @@ export class PointerController {
     event: MouseEvent
   ): void => {
     if (this.#panAnchor === null) {
+      if (
+        event.target !== this.#canvas &&
+        this.#dragging !== null &&
+        this.#isHeld(this.#dragging, event)
+      ) {
+        this.#actions.onPointerMove(
+          this.#dragging,
+          this.#positionOf(event)
+        );
+      }
+
       return;
     }
 

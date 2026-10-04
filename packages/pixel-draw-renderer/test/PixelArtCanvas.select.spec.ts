@@ -71,8 +71,8 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+    canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+    canvas.dispatchEvent(mouseEvent("mousemove", 103, 103));
 
     const midDragPixels = canvasPixels(canvas);
     assert.deepStrictEqual(
@@ -159,7 +159,7 @@ describe("PixelArtCanvas — select mode", () => {
       );
       assert.strictEqual(canvas.style.cursor, "grab");
 
-      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
       assert.strictEqual(canvas.style.cursor, "grabbing");
 
       canvas.dispatchEvent(
@@ -237,8 +237,8 @@ describe("PixelArtCanvas — select mode", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
-    canvas.dispatchEvent(mouseEvent("mousemove", 0, 0));
+    canvas.dispatchEvent(mouseEvent("mousedown", 91, 91));
+    canvas.dispatchEvent(mouseEvent("mousemove", 3, 3));
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })
     );

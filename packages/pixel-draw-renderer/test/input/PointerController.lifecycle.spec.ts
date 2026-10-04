@@ -96,4 +96,48 @@ describe("PointerController lifecycle", () => {
     assert.strictEqual(calls.onPanEnd, 1);
     controller.destroy();
   });
+
+  test("tracks outside moves without replaying a bubbling canvas move", () => {
+    const { actions, calls } = makeActions();
+    const fakeWindow = new FakeWindow();
+    const controller = new PointerController({
+      canvas,
+      viewport,
+      actions,
+      window: fakeWindow
+    });
+    canvas.dispatchEvent(new MouseEvent("mousedown", {
+      button: 0,
+      buttons: 1,
+      clientX: 100,
+      clientY: 100
+    }));
+    canvas.dispatchEvent(new MouseEvent("mousemove", {
+      buttons: 1,
+      clientX: 104,
+      clientY: 100
+    }));
+    fakeWindow.dispatch("mousemove", {
+      target: canvas,
+      buttons: 1,
+      clientX: 104,
+      clientY: 100
+    });
+    assert.equal(calls.onPointerMove.length, 1);
+    fakeWindow.dispatch("mousemove", {
+      buttons: 1,
+      clientX: 220,
+      clientY: 100
+    });
+    assert.equal(calls.onPointerMove.length, 2);
+    fakeWindow.dispatch("mouseup", { button: 0 });
+    fakeWindow.dispatch("mousemove", {
+      buttons: 1,
+      clientX: 230,
+      clientY: 100
+    });
+    assert.equal(calls.onPointerMove.length, 2);
+    assert.deepEqual(calls.onPointerUp, ["primary"]);
+    controller.destroy();
+  });
 });

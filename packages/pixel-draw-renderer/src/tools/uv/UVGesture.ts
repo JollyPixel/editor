@@ -1,10 +1,8 @@
 // Import Internal Dependencies
 import { clampRectPosition } from "../../utils/math.ts";
 import { sameRect } from "../../uv/geometry/geometry.ts";
-import {
-  UV_RESIZE_CURSORS,
-  resizedRect
-} from "./resizeHandles.ts";
+import { UV_RESIZE_CURSORS } from "./resizeHandles.ts";
+import { RectArea } from "../../utils/RectArea.ts";
 import type { UVResizeHandle } from "../../uv/region/layout/UVResizeTarget.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
@@ -71,10 +69,10 @@ export class UVGesture {
 
     return new UVGesture(target, {
       cursor: UV_RESIZE_CURSORS[handle],
-      rectAt: (pointer) => resizedRect(rect, handle, {
+      rectAt: (pointer) => RectArea.from(rect).resized(handle, {
         x: Math.round(pointer.x - origin.x),
         y: Math.round(pointer.y - origin.y)
-      }),
+      }).bounds,
       preview: (live, options) => uvMap.previewResize(id, live, slot, options),
       commit: (live, options) => uvMap.resize(id, live, slot, options)
     });

@@ -4,10 +4,7 @@ import type {
   UVResizeTarget
 } from "../../uv/region/layout/UVResizeTarget.ts";
 import type { ScreenProjection } from "../../rendering/Viewport.ts";
-import type {
-  SelectionRect,
-  Vec2
-} from "../../types.ts";
+import type { Vec2 } from "../../types.ts";
 
 export interface UVResizeHit extends UVResizeTarget {
   handle: UVResizeHandle;
@@ -29,16 +26,9 @@ const kHandleGrid = {
   Record<string, UVResizeHandle | null>
 >;
 
-export const UV_RESIZE_CURSORS: Readonly<Record<UVResizeHandle, string>> = {
-  n: "ns-resize",
-  s: "ns-resize",
-  e: "ew-resize",
-  w: "ew-resize",
-  ne: "nesw-resize",
-  sw: "nesw-resize",
-  nw: "nwse-resize",
-  se: "nwse-resize"
-};
+export {
+  RESIZE_CURSORS as UV_RESIZE_CURSORS
+} from "../../input/resizeHandles.ts";
 
 export function resizeHandleAt(
   targets: readonly UVResizeTarget[],
@@ -106,37 +96,6 @@ export function resizeHandleAt(
   }
 
   return best?.hit ?? null;
-}
-
-export function resizedRect(
-  base: SelectionRect,
-  handle: UVResizeHandle,
-  delta: Vec2
-): SelectionRect {
-  let left = base.x;
-  let top = base.y;
-  let right = base.x + base.width;
-  let bottom = base.y + base.height;
-
-  if (handle.includes("w")) {
-    left = Math.min(left + delta.x, right - 1);
-  }
-  else if (handle.includes("e")) {
-    right = Math.max(right + delta.x, left + 1);
-  }
-  if (handle.startsWith("n")) {
-    top = Math.min(top + delta.y, bottom - 1);
-  }
-  else if (handle.startsWith("s")) {
-    bottom = Math.max(bottom + delta.y, top + 1);
-  }
-
-  return {
-    x: left,
-    y: top,
-    width: right - left,
-    height: bottom - top
-  };
 }
 
 function within(
