@@ -18,6 +18,7 @@ import { EDITOR_PAGE_SETTLE_MS } from "../../server/EditorPagesWatcher.ts";
 import {
   BUNDLE,
   createDist,
+  HASHED_BUNDLE,
   INDEX_HTML,
   listen,
   PASS_THROUGH_STATUS,
@@ -74,6 +75,33 @@ describe("EditorPages", () => {
       "text/javascript; charset=utf-8"
     );
     assert.strictEqual(await response.text(), BUNDLE);
+  });
+
+  test("caches hashed bundles for good", async() => {
+    const response = await server.fetch(`/editors/voxel-map/${HASHED_BUNDLE}`);
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(
+      response.headers.get("cache-control"),
+      "public, max-age=31536000, immutable"
+    );
+  });
+
+  test("revalidates every file without a content hash", async() => {
+    for (const pathname of [
+      "/editors/voxel-map/?target=map-1",
+      "/editors/voxel-map/main.css",
+      "/editors/voxel-map/assets/index.js"
+    ]) {
+      const response = await server.fetch(pathname);
+
+      assert.strictEqual(response.status, 200, pathname);
+      assert.strictEqual(
+        response.headers.get("cache-control"),
+        "no-cache",
+        pathname
+      );
+    }
   });
 
   test("never serves a file outside the dist folder", async() => {

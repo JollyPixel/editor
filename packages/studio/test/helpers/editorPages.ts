@@ -18,6 +18,7 @@ import { createTempDir } from "./tempDir.ts";
 export const PASS_THROUGH_STATUS = 418;
 export const INDEX_HTML = "<!DOCTYPE html><title>Voxel Map Editor</title>";
 export const BUNDLE = "export const editor = true;";
+export const HASHED_BUNDLE = "assets/index-B-y7Yx-y.js";
 
 export interface PagesServer extends AsyncDisposable {
   fetch(pathname: string, init?: RequestInit): Promise<Response>;
@@ -29,6 +30,8 @@ export async function createDist(): Promise<string> {
   await fs.mkdir(path.join(dist, "assets"), { recursive: true });
   await fs.writeFile(path.join(dist, "index.html"), INDEX_HTML);
   await fs.writeFile(path.join(dist, "assets", "index.js"), BUNDLE);
+  await fs.writeFile(path.join(dist, HASHED_BUNDLE), BUNDLE);
+  await fs.writeFile(path.join(dist, "main.css"), "");
   await fs.writeFile(path.join(parent, "outside.txt"), "secret");
   await fs.writeFile(path.join(dist, ".env"), "secret");
   await fs.symlink(

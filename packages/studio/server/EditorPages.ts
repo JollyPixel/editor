@@ -25,6 +25,10 @@ import {
   type EditorPagesServer
 } from "./EditorPagesWatcher.ts";
 
+// CONSTANTS
+const kHashedAsset = /^assets\/.+-[\w-]{8}\.\w+$/;
+const kImmutableCacheControl = "public, max-age=31536000, immutable";
+
 export class EditorPages {
   readonly editors: readonly EditorPackage[];
   readonly middleware: Connect.NextHandleFunction;
@@ -36,7 +40,8 @@ export class EditorPages {
     this.middleware = compose(
       ...this.editors.map((editor) => servo(editor.dist, {
         prefix: `${EDITOR_PAGES_PREFIX}${editor.name}`,
-        dev: true
+        dev: true,
+        setHeaders: cacheHashedAssets
       })),
       unknownEditorPage
     );
@@ -61,6 +66,15 @@ export class EditorPages {
         { recursive: true }
       ))
     );
+  }
+}
+
+function cacheHashedAssets(
+  response: ServerResponse,
+  filePath: string
+): void {
+  if (kHashedAsset.test(filePath)) {
+    response.setHeader("Cache-Control", kImmutableCacheControl);
   }
 }
 

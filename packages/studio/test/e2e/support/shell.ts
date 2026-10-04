@@ -14,7 +14,13 @@ export const TEXTURE = "model.pixelart";
 export const MAP_TAB = "overworld";
 export const MODEL_TAB = "model";
 export const SEED_ROW_COUNT = 6;
+export const SEED_FOLDERS = ["maps", "models"];
+export const EXPANDED_STORAGE_KEY = "studio:asset-expanded";
 const kEditorBootTimeout = 30_000;
+
+export interface OpenShellOptions {
+  collapsed?: boolean;
+}
 
 export function assetRows(
   page: Page
@@ -22,11 +28,31 @@ export function assetRows(
   return page.locator("asset-browser jolly-tree").getByRole("treeitem");
 }
 
-export async function openShell(
+export async function expandSeedFolders(
   page: Page
 ): Promise<void> {
+  await page.addInitScript(({ key, nodeIds }) => {
+    if (localStorage.getItem(key) === null) {
+      localStorage.setItem(key, JSON.stringify(nodeIds));
+    }
+  }, {
+    key: EXPANDED_STORAGE_KEY,
+    nodeIds: SEED_FOLDERS.map((folder) => `folder:${folder}`)
+  });
+}
+
+export async function openShell(
+  page: Page,
+  options: OpenShellOptions = {}
+): Promise<void> {
+  const { collapsed = false } = options;
+  if (!collapsed) {
+    await expandSeedFolders(page);
+  }
   await page.goto("/?offline&username=Guest");
-  await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
+  await expect(assetRows(page)).toHaveCount(
+    collapsed ? SEED_FOLDERS.length : SEED_ROW_COUNT
+  );
 }
 
 export function editorTab(

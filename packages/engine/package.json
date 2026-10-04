@@ -3,6 +3,7 @@
   "description": "Minimal and opiniated ECS framework on top of three.js.",
   "version": "7.0.0",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

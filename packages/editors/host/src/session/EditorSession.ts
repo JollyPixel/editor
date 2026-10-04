@@ -243,7 +243,6 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     }
 
     this.catalog.on("change", this.#onCatalogChange);
-    this.catalog.on("dependencies", this.#onCatalogChange);
   }
 
   targetLease<TDocument, TCommand, TMessage>(
@@ -287,7 +286,6 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     this.#disposed = true;
 
     this.catalog.off("change", this.#onCatalogChange);
-    this.catalog.off("dependencies", this.#onCatalogChange);
     this.#dependencies.clear();
     this.assets.dispose();
     this.catalog.dispose();

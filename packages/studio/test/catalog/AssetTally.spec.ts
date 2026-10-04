@@ -78,4 +78,25 @@ describe("AssetTally", () => {
     assert.equal(tally.total, 0);
     assert.equal(AssetTally.EMPTY.total, 0);
   });
+
+  test("equals compares the count of every kind", () => {
+    const tally = AssetTally.count(
+      [{ kind: "voxelmap" }, { kind: "texture" }],
+      kKinds
+    );
+
+    assert.ok(tally.equals(AssetTally.count(
+      [{ kind: "texture" }, { kind: "voxelmap" }],
+      kKinds
+    )));
+    assert.ok(!tally.equals(AssetTally.count(
+      [{ kind: "voxelmap" }, { kind: "voxelmap" }],
+      kKinds
+    )));
+    assert.ok(!tally.equals(AssetTally.count(
+      [{ kind: "voxelmap" }, { kind: "texture" }, { kind: "zone" }],
+      kKinds
+    )));
+    assert.ok(!tally.equals(AssetTally.EMPTY));
+  });
 });

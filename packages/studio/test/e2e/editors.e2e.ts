@@ -9,6 +9,7 @@ import {
   assetMenu,
   assetRows,
   editorFrames,
+  expandSeedFolders,
   expectEditorReady,
   homeTab,
   MAP,
@@ -44,6 +45,7 @@ test("editor frames read the catalog through the shell", async({ page }) => {
       }
     });
   });
+  await expandSeedFolders(page);
   await page.goto("/?username=Guest");
   await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
 

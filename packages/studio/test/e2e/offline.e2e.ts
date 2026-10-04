@@ -6,6 +6,7 @@ import { treeRow } from "@jolly-pixel/e2e";
 import {
   assetRows,
   editorFrames,
+  expandSeedFolders,
   MAP,
   SEED_ROW_COUNT
 } from "./support/shell.ts";
@@ -14,6 +15,7 @@ test("offers a shared offline catalog when the socket closes", async({ page }) =
   await page.routeWebSocket("**/ws-sync", (socket) => {
     socket.close();
   });
+  await expandSeedFolders(page);
   await page.goto("/?username=Guest");
   await page.getByRole("button", {
     name: "Open offline workspace"

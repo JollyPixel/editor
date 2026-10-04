@@ -64,4 +64,22 @@ export class AssetTally {
       0
     );
   }
+
+  equals(
+    other: AssetTally
+  ): boolean {
+    return this.rows.length === other.rows.length && this.rows.every(
+      (row, index) => sameRow(row, other.rows[index])
+    );
+  }
+}
+
+function sameRow(
+  left: AssetTallyRow,
+  right: AssetTallyRow
+): boolean {
+  return left.kind === right.kind &&
+    left.label === right.label &&
+    left.icon === right.icon &&
+    left.count === right.count;
 }

@@ -71,7 +71,8 @@
   },
   "dependencies": {
     "@jolly-pixel/color": "workspace:*",
-    "@jolly-pixel/resize-handle": "workspace:*"
+    "@jolly-pixel/resize-handle": "workspace:*",
+    "@lit-labs/virtualizer": "2.1.1"
   },
   "devDependencies": {
     "@jolly-pixel/bench": "workspace:*",

@@ -57,12 +57,19 @@ export interface DepthDropTarget {
   where: TreeDropWhere;
 }
 
+export interface TreePlacement {
+  position: number;
+  size: number;
+}
+
 interface IndexedNode<TData> {
   node: TreeNode<TData>;
   parent: IndexedNode<TData> | null;
   parentId: string | null;
   depth: number;
   order: number;
+  position: number;
+  size: number;
 }
 
 /**
@@ -89,13 +96,17 @@ export class TreeSnapshot<
       visible: boolean
     ): void => {
       const parentId = parent === null ? null : parent.node.id;
+      let position = 0;
       for (const node of list) {
+        position += 1;
         const indexed: IndexedNode<TData> = {
           node,
           parent,
           parentId,
           depth,
-          order
+          order,
+          position,
+          size: list.length
         };
         this.#nodes.set(node.id, indexed);
 
@@ -159,6 +170,19 @@ export class TreeSnapshot<
     id: string
   ): string | null | undefined {
     return this.#nodes.get(id)?.parentId;
+  }
+
+  placement(
+    id: string
+  ): TreePlacement | undefined {
+    const indexed = this.#nodes.get(id);
+
+    return indexed === undefined ?
+      undefined :
+      {
+        position: indexed.position,
+        size: indexed.size
+      };
   }
 
   ancestorChain(

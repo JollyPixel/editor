@@ -120,7 +120,8 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   #resizeObserver: ResizeObserver | null = null;
   #width = 0;
   #height = 0;
-  #resizeDirty = true;
+  #appliedWidth = 0;
+  #appliedHeight = 0;
 
   constructor(
     webGPURenderer: THREE.WebGPURenderer
@@ -223,7 +224,6 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
       this.#width = Math.round(width);
       this.#height = Math.round(Math.min(height, width / this.ratio));
     }
-    this.#resizeDirty = true;
   }
 
   unobserveResize() {
@@ -232,10 +232,15 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   }
 
   resize() {
-    if (!this.#resizeDirty || this.#width === 0 || this.#height === 0) {
+    if (
+      this.#width === 0 ||
+      this.#height === 0 ||
+      (this.#width === this.#appliedWidth && this.#height === this.#appliedHeight)
+    ) {
       return;
     }
-    this.#resizeDirty = false;
+    this.#appliedWidth = this.#width;
+    this.#appliedHeight = this.#height;
 
     this.renderStrategy.resize(this.#width, this.#height);
     this.emit("resize", { width: this.#width, height: this.#height });

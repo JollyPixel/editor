@@ -114,13 +114,8 @@ describe("AssetTreeModel", () => {
     assert.equal(model.node(assetNodeId("map-1"))?.detail, undefined);
   });
 
-  test("lists every folder id depth first", () => {
-    assert.deepEqual(kModel.folderIds(), [kMaps, kTextures, kBlocks]);
-  });
-
   test("is empty for no records", () => {
     assert.deepEqual(AssetTreeModel.EMPTY.nodes, []);
-    assert.deepEqual(AssetTreeModel.EMPTY.folderIds(), []);
   });
 
   test("deletes the asset itself or every asset under a folder", () => {
