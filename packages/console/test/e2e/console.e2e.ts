@@ -37,6 +37,21 @@ test.describe("jolly-console", () => {
     await expect(consoleDialog(page)).not.toHaveAttribute("open");
   });
 
+  test("rebinds console events after the element reconnects", async({ page }) => {
+    await page.evaluate(() => {
+      const element = document.querySelector("jolly-console");
+      if (element === null) {
+        return;
+      }
+      element.remove();
+      document.body.append(element);
+      element.console?.open();
+    });
+
+    await expect(consoleDialog(page)).toHaveAttribute("open");
+    await expect(prompt(page)).toBeFocused();
+  });
+
   test("reopening starts from an empty prompt", async({ page }) => {
     await page.keyboard.press("Control+k");
     await prompt(page).fill("brush.si");

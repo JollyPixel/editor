@@ -250,7 +250,7 @@ export class ConsoleMirror {
     options: RequestOptions = {}
   ): Promise<Extract<SettledReply, { type: TType; }>> {
     const cancelled = new RemoteCancelledError(options.label ?? body.address);
-    if (this.#listening.signal.aborted) {
+    if (this.#listening.signal.aborted || options.signal?.aborted) {
       return Promise.reject(cancelled);
     }
 
