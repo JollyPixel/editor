@@ -81,6 +81,8 @@ const kLevelOptions: JollyOption<number>[] = [0, 3, 5, 7, 9, 11, 15].map(
     };
   }
 );
+const kLevelsDescription = "Snaps surface directions to this many steps " +
+  "per axis, for banded shading. Off keeps them smooth.";
 
 type SettingKey = keyof NormalMapSettings;
 
@@ -246,6 +248,7 @@ export class NormalMapDock extends LitElement {
         ${this.#renderSetting(target, "height", html`
           <jolly-select
             align="end"
+            label-position="auto"
             label="Height"
             .options=${kHeightOptions}
             .value=${this.#height.value}
@@ -256,6 +259,7 @@ export class NormalMapDock extends LitElement {
         ${this.#renderSetting(target, "invert", html`
           <jolly-checkbox
             align="end"
+            label-position="auto"
             label="Invert"
             .value=${this.#invert.value}
             .default=${defaults?.invert}
@@ -264,6 +268,7 @@ export class NormalMapDock extends LitElement {
         `)}
         ${this.#renderSetting(target, "strength", html`
           <jolly-slider
+            label-position="auto"
             label="Strength"
             min="0"
             max="10"
@@ -277,6 +282,7 @@ export class NormalMapDock extends LitElement {
         ${this.#renderSetting(target, "border", html`
           <jolly-select
             align="end"
+            label-position="auto"
             label="Border"
             .options=${kBorderOptions}
             .value=${this.#border.value}
@@ -285,27 +291,32 @@ export class NormalMapDock extends LitElement {
           ></jolly-select>
         `)}
         ${bevelUsed ? this.#renderSetting(target, "bevel", html`
-          <jolly-slider
-            label="Bevel width"
-            min="1"
-            max="16"
-            step="1"
-            .value=${this.#bevelWidth.value}
-            .default=${defaults?.bevel.width}
-            @jolly-input=${this.#bevelWidth.input}
-            @jolly-change=${this.#bevelWidth.commit}
-          ></jolly-slider>
-          <jolly-select
-            align="end"
-            label="Bevel profile"
-            .options=${kProfileOptions}
-            .value=${this.#bevelProfile.value}
-            .default=${defaults?.bevel.profile}
-            @jolly-change=${this.#bevelProfile.commit}
-          ></jolly-select>
+          <div class="group">
+            <jolly-slider
+              label-position="auto"
+              label="Bevel width"
+              min="1"
+              max="16"
+              step="1"
+              .value=${this.#bevelWidth.value}
+              .default=${defaults?.bevel.width}
+              @jolly-input=${this.#bevelWidth.input}
+              @jolly-change=${this.#bevelWidth.commit}
+            ></jolly-slider>
+            <jolly-select
+              align="end"
+              label-position="auto"
+              label="Bevel profile"
+              .options=${kProfileOptions}
+              .value=${this.#bevelProfile.value}
+              .default=${defaults?.bevel.profile}
+              @jolly-change=${this.#bevelProfile.commit}
+            ></jolly-select>
+          </div>
         `) : nothing}
         ${this.#renderSetting(target, "edgeIntensity", html`
           <jolly-slider
+            label-position="auto"
             label="Edge intensity"
             min="0"
             max="4"
@@ -319,7 +330,10 @@ export class NormalMapDock extends LitElement {
         ${this.#renderSetting(target, "levels", html`
           <jolly-select
             align="end"
+            label-position="auto"
             label="Levels"
+            description=${kLevelsDescription}
+            description-display="tooltip"
             .options=${kLevelOptions}
             .value=${this.#levels.value}
             .default=${defaults?.levels}

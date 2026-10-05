@@ -3,6 +3,20 @@ import { css } from "lit";
 
 export const normalMapDockStyles = css`
   :host {
+    --jolly-field-inset-start: 0;
+    --jolly-field-inset-end: 0;
+    --jolly-control-bg: color-mix(in oklab, var(--color-text) 8%, transparent);
+    --jolly-control-bg-hover: color-mix(
+      in oklab,
+      var(--color-text) 12%,
+      transparent
+    );
+    --jolly-control-bg-focus: color-mix(
+      in oklab,
+      var(--color-text) 20%,
+      transparent
+    );
+
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -159,25 +173,22 @@ export const normalMapDockStyles = css`
     --jolly-label-width: auto;
   }
 
-  .fields {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-    gap: 2px 16px;
+  .fields,
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .setting {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     min-width: 0;
     gap: 2px;
   }
 
-  .setting[data-setting="bevel"] {
-    flex-wrap: wrap;
-  }
-
   .setting > :not(.reset) {
-    flex: 1 1 160px;
+    flex: 1 1 auto;
     min-width: 0;
   }
 
