@@ -182,7 +182,7 @@ export const sliderStyles = css`
     padding: var(--jolly-space-1, 4px) 0;
   }
 
-  :host([orientation="vertical"][unlabeled]) .leading:not(:has(.hint, .revert)) {
+  :host([orientation="vertical"][unlabeled]) .leading:not(:has(.hint, .peers, .revert)) {
     display: none;
   }
 

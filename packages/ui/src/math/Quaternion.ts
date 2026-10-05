@@ -14,7 +14,10 @@ import {
   isMixed,
   type FieldValue
 } from "../field/mixed.ts";
-import type { QuatLike } from "./types.ts";
+import type {
+  AxisStyle,
+  QuatLike
+} from "./types.ts";
 import {
   eulerRoundTrips,
   eulerToQuaternion,
@@ -36,6 +39,7 @@ export interface QuaternionDefaults {
    * Degrees per scrub step or arrow key press.
    */
   step: number;
+  axisStyle: AxisStyle;
 }
 
 // CONSTANTS
@@ -56,7 +60,8 @@ const kIdentity: QuatLike = {
 @customElement("jolly-quaternion")
 export class Quaternion extends JollyField<QuatLike> {
   static readonly Defaults: QuaternionDefaults = {
-    step: 1
+    step: 1,
+    axisStyle: "corner"
   };
 
   static override styles = [
@@ -80,6 +85,13 @@ export class Quaternion extends JollyField<QuatLike> {
   @property({ type: Number })
   declare step: number;
 
+  @property({
+    type: String,
+    attribute: "axis-style",
+    reflect: true
+  })
+  declare axisStyle: AxisStyle;
+
   @property({ attribute: false })
   declare axisLabels: Partial<Record<QuaternionAxis, string>>;
 
@@ -90,6 +102,7 @@ export class Quaternion extends JollyField<QuatLike> {
     super();
 
     this.step = Quaternion.Defaults.step;
+    this.axisStyle = Quaternion.Defaults.axisStyle;
     this.axisLabels = {};
     this.value = kIdentity;
   }
@@ -133,6 +146,8 @@ export class Quaternion extends JollyField<QuatLike> {
         label: axis.toUpperCase(),
         ariaLabel: () => this.axisLabels[axis] ?? axis.toUpperCase(),
         colorVar: `--jolly-axis-${axis}`,
+        textColorVar: `--jolly-axis-${axis}-text`,
+        axisStyle: () => this.axisStyle,
         step: () => this.step,
         min: () => Number.NEGATIVE_INFINITY,
         max: () => Number.POSITIVE_INFINITY,

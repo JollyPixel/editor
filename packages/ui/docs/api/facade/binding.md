@@ -118,6 +118,7 @@ directly.
 | `step` | `jolly-quaternion` | Degrees per scrub step or arrow key press. |
 | `alpha` | `jolly-color` | Adds an alpha channel and switches output to `#rrggbbaa`. Defaults to on when the bound value is already eight digits. |
 | `axisLabels` | vectors, `jolly-quaternion` | Per-axis accessible names, e.g. `{ x: "pitch" }`. |
+| `axisStyle` | vectors, `jolly-quaternion` | `"corner"`, `"chip"` or `"letter"`, see [axis markers](../math/README.md#axis-markers). Defaults to the element class's `Defaults.axisStyle`. |
 | `axes` | `jolly-vector2` | Which plane the field edits. Defaults to the pair the bound value carries. |
 | `layout` | `jolly-button-group` | `"segmented"` in a row, or `"grid"`. Defaults to the element's `"segmented"`. |
 | `columns` | `jolly-button-group` | Columns of a `"grid"` layout. Zero lets the grid size itself. |

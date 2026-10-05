@@ -82,7 +82,9 @@ so rows, separators and descriptions share one left edge.
 A lock only paints: the row takes the holder's colour as a left bar and a tint,
 and hovering it shows "Held by" and the holder's name. The label, the value and
 the row height stay where they were, per [ADR-0018](../../adr/0018-locks-are-advisory.md).
-Peer chips sit on the row's top corner, above the value, and are left out while
+Peer chips sit at the end of the label cell, before the revert button, so they
+never cover the value; a long label truncates to make room. On a stacked row,
+chips and revert align to the right of the label line. Chips are left out while
 the field is locked, since the tint already names the holder.
 
 ## Events

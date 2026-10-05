@@ -2,15 +2,22 @@
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Quaternion } from "../../../../src/index.ts";
+import {
+  AXIS_STYLE_OPTIONS,
+  axisStyleOf,
+  type AxisStyleOptionKey
+} from "./axisStyle.ts";
 
-export const QUATERNION_EXAMPLE: GalleryExample = {
+export const QUATERNION_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
   id: "math/quaternion",
   title: "Quaternion",
-  render(host) {
+  options: AXIS_STYLE_OPTIONS,
+  render(host, options) {
     return renderStateMatrix<Quaternion>(host, {
       liveInput: true,
       create() {
         const field = document.createElement("jolly-quaternion");
+        field.axisStyle = axisStyleOf(options);
         field.label = "Rotation";
         field.description = "Edited as Euler angles, in degrees";
         field.value = {

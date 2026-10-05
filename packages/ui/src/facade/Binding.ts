@@ -184,6 +184,9 @@ function buildElement<TValue>(
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
       }
+      if (options.axisStyle !== undefined) {
+        element.axisStyle = options.axisStyle;
+      }
 
       return element;
     }
@@ -193,6 +196,9 @@ function buildElement<TValue>(
       applyBounds(element, options);
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
+      }
+      if (options.axisStyle !== undefined) {
+        element.axisStyle = options.axisStyle;
       }
 
       return element;
@@ -204,6 +210,9 @@ function buildElement<TValue>(
       }
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
+      }
+      if (options.axisStyle !== undefined) {
+        element.axisStyle = options.axisStyle;
       }
 
       return element;

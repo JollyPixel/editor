@@ -164,6 +164,10 @@ const semanticTokens = css`
   --jolly-shadow-overlay: 0 2px 8px light-dark(rgb(0 0 0 / 16%), rgb(0 0 0 / 44%));
   --jolly-shadow-floating: 0 4px 16px light-dark(rgb(0 0 0 / 18%), rgb(0 0 0 / 50%));
   --jolly-shadow-modal: 0 12px 40px light-dark(rgb(0 0 0 / 24%), rgb(0 0 0 / 60%));
+  --jolly-axis-x-text: light-dark(var(--jolly-axis-x-700), var(--jolly-axis-x-300));
+  --jolly-axis-y-text: light-dark(var(--jolly-axis-y-700), var(--jolly-axis-y-300));
+  --jolly-axis-z-text: light-dark(var(--jolly-axis-z-700), var(--jolly-axis-z-300));
+  --jolly-axis-w-text: light-dark(var(--jolly-axis-w-700), var(--jolly-axis-w-300));
 `;
 
 const toneTokens = css`

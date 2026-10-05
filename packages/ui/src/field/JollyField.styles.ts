@@ -74,7 +74,7 @@ export const fieldStyles = css`
     );
   }
 
-  :host([unlabeled][stacked]) .leading:not(:has(.hint, .revert)) {
+  :host([unlabeled][stacked]) .leading:not(:has(.hint, .peers, .revert)) {
     display: none;
   }
 
@@ -122,10 +122,10 @@ export const fieldStyles = css`
   }
 
   :host([stacked]) .label-cell {
-    flex-shrink: 1;
+    flex: 1 1 auto;
   }
 
-  :host([unlabeled]) .label-cell:not(:has(.hint, .revert)) {
+  :host([unlabeled]) .label-cell:not(:has(.hint, .peers, .revert)) {
     display: none;
   }
 
@@ -265,12 +265,19 @@ export const fieldStyles = css`
   }
 
   .peers {
-    position: absolute;
-    top: -4px;
-    inset-inline-end: 2px;
-    z-index: 1;
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    padding-inline-start: var(--jolly-space-1, 4px);
+  }
+
+  :host(:not([stacked])) .peers:last-child {
+    padding-inline-end: var(--jolly-space-1, 4px);
+  }
+
+  .peers + .revert {
+    margin-inline-start: var(--jolly-space-1, 4px);
   }
 
   .chip {

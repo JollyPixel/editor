@@ -177,7 +177,7 @@ describe("PointerController navigation", () => {
       ctrl.destroy();
     });
 
-    test("a ctrl+wheel without a held Control key is a pinch that scales the zoom by exp(-deltaY / 100)", (t) => {
+    test("ctrl+wheel without a held Control key is a pinch scaling the zoom by exp(-deltaY / 100)", (t) => {
       const applyZoom = t.mock.method(viewport, "applyZoom");
       const applyScale = t.mock.method(viewport, "applyScale");
       const { actions, calls } = makeActions({ handlesCtrlWheel: true });

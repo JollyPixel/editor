@@ -37,6 +37,10 @@ Components consume semantic properties such as `--jolly-surface`,
 `--jolly-field-inset-end`,
 `--jolly-folder-indent`, `--jolly-gutter-width`, and `--jolly-dock-size`.
 
+Axis colours are `--jolly-axis-<axis>` for `x`, `y`, `z` and `w`, a fill under
+white text, and `--jolly-axis-<axis>-text` for the axis letter as ink on a
+surface.
+
 Seven tones add hue: `coral`, `amber`, `lime`, `teal`, `sky`, `violet` and
 `pink`. Each has `--jolly-tone-<name>` for ink on a surface,
 `--jolly-tone-<name>-on-fill` for ink over an accent fill, and

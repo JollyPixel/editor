@@ -12,7 +12,10 @@ import {
   isMixed,
   type FieldValue
 } from "../field/mixed.ts";
-import type { VectorValue } from "./types.ts";
+import type {
+  AxisStyle,
+  VectorValue
+} from "./types.ts";
 import { vectorFieldStyles } from "./VectorField.styles.ts";
 import {
   vectorValueEquals,
@@ -28,6 +31,7 @@ export interface VectorFieldDefaults {
   step: number;
   min: number;
   max: number;
+  axisStyle: AxisStyle;
 }
 
 /**
@@ -40,7 +44,8 @@ export abstract class VectorField<
   static readonly Defaults: VectorFieldDefaults = {
     step: 0.1,
     min: Number.NEGATIVE_INFINITY,
-    max: Number.POSITIVE_INFINITY
+    max: Number.POSITIVE_INFINITY,
+    axisStyle: "corner"
   };
 
   static override styles = [
@@ -69,6 +74,13 @@ export abstract class VectorField<
   @property({ type: Number })
   declare max: number;
 
+  @property({
+    type: String,
+    attribute: "axis-style",
+    reflect: true
+  })
+  declare axisStyle: AxisStyle;
+
   @property({ attribute: false })
   declare axisLabels: Partial<Record<TAxis, string>>;
 
@@ -81,6 +93,7 @@ export abstract class VectorField<
     this.step = VectorField.Defaults.step;
     this.min = VectorField.Defaults.min;
     this.max = VectorField.Defaults.max;
+    this.axisStyle = VectorField.Defaults.axisStyle;
     this.axisLabels = {};
     this.value = Object.fromEntries(
       this.getAxisKeys().map((axis) => [axis, 0])
@@ -151,6 +164,8 @@ export abstract class VectorField<
         label: axis.toUpperCase(),
         ariaLabel: () => this.axisLabels[axis] ?? axis.toUpperCase(),
         colorVar: `--jolly-axis-${axis}`,
+        textColorVar: `--jolly-axis-${axis}-text`,
+        axisStyle: () => this.axisStyle,
         step: () => this.step,
         min: () => this.min,
         max: () => this.max,

@@ -2,15 +2,22 @@
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Vector4 } from "../../../../src/index.ts";
+import {
+  AXIS_STYLE_OPTIONS,
+  axisStyleOf,
+  type AxisStyleOptionKey
+} from "./axisStyle.ts";
 
-export const VECTOR4_EXAMPLE: GalleryExample = {
+export const VECTOR4_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
   id: "math/vector4",
   title: "Vector4",
-  render(host) {
+  options: AXIS_STYLE_OPTIONS,
+  render(host, options) {
     return renderStateMatrix<Vector4>(host, {
       liveInput: true,
       create() {
         const field = document.createElement("jolly-vector4");
+        field.axisStyle = axisStyleOf(options);
         field.label = "Bounds";
         field.step = 1;
         field.value = {

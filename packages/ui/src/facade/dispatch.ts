@@ -12,7 +12,10 @@ import {
   isVec4Like,
   vec2PairOf
 } from "../math/guards.ts";
-import type { Vector2Pair } from "../math/types.ts";
+import type {
+  AxisStyle,
+  Vector2Pair
+} from "../math/types.ts";
 
 // CONSTANTS
 const kHexColor = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i;
@@ -68,6 +71,11 @@ export interface DispatchOptions<TValue> {
    * itself carries.
    */
   axes?: Vector2Pair;
+  /*
+   * How a vector or quaternion field marks its axes. Defaults to the element
+   * class's `Defaults.axisStyle`.
+   */
+  axisStyle?: AxisStyle;
   /*
    * How a `view: "buttons"` group arranges its options.
    */

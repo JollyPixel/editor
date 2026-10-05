@@ -6,10 +6,16 @@ import {
   type JollyChangeDetail,
   type Transform
 } from "../../../../src/index.ts";
+import {
+  AXIS_STYLE_OPTIONS,
+  axisStyleOf,
+  type AxisStyleOptionKey
+} from "./axisStyle.ts";
 
 type TransformOptionKey =
   | "stacked"
-  | "lockedRotation";
+  | "lockedRotation"
+  | AxisStyleOptionKey;
 
 export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
   id: "math/transform",
@@ -23,10 +29,12 @@ export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
       key: "lockedRotation",
       label: "Locked rotation",
       initial: true
-    }
+    },
+    ...AXIS_STYLE_OPTIONS
   ],
   render(host, options) {
     const transform = document.createElement("jolly-transform");
+    transform.axisStyle = axisStyleOf(options);
     if (options.stacked) {
       transform.labelPosition = "top";
     }

@@ -345,11 +345,12 @@ export abstract class JollyField<TValue> extends LitElement {
       >
         <div class="leading">
           <span class="gutter"></span>
-          <div class="label-cell">${this.#renderHint()}${this.#renderLabel()}${this.#renderRevert()}</div>
+          <div class="label-cell">${this.#renderHint()}${this.#renderLabel()}${
+            holder === null ? this.#renderPeers() : nothing
+          }${this.#renderRevert()}</div>
         </div>
         <div class="content">
           <div class="value">${this.renderValue()}</div>
-          ${holder === null ? this.#renderPeers() : nothing}
         </div>
       </div>
       ${this.#hintsDescription ? nothing : this.#renderDescription()}

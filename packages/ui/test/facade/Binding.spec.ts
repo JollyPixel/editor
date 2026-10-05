@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { FacadeBinding } from "../../src/facade/Binding.ts";
+import type { AxisStyle } from "../../src/math/types.ts";
 
 function commit(
   element: HTMLElement,
@@ -104,6 +105,29 @@ describe("facade.Binding math values", () => {
     assert.equal(field.max, 24);
     assert.equal(field.step, 1);
     assert.deepEqual(field.axisLabels, { x: "width" });
+  });
+
+  test("forwards the axis style to vector and quaternion fields", () => {
+    const object = {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 }
+    };
+    const position = new FacadeBinding(object, "position", {
+      axisStyle: "letter"
+    });
+    const rotation = new FacadeBinding(object, "rotation", {
+      view: "quaternion",
+      axisStyle: "chip"
+    });
+
+    assert.equal(
+      (position.element as unknown as { axisStyle: AxisStyle; }).axisStyle,
+      "letter"
+    );
+    assert.equal(
+      (rotation.element as unknown as { axisStyle: AxisStyle; }).axisStyle,
+      "chip"
+    );
   });
 });
 

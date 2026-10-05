@@ -14,6 +14,7 @@ field.value = { x: 0, y: 0, z: 0, w: 1 };
 | `min` | `number` | `-Infinity` |
 | `max` | `number` | `Infinity` |
 | `axisLabels` | `Partial<Record<"x" \| "y" \| "z" \| "w", string>>` | `{}` |
+| `axisStyle` | `"corner" \| "chip" \| "letter"` | `"corner"`, see [axis markers](./README.md#axis-markers) |
 
 The component implements the [shared field API](../field/shared-field-api.md).
 Each axis can hold `Mixed` independently.

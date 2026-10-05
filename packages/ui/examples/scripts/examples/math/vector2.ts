@@ -2,6 +2,11 @@
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Vector2 } from "../../../../src/index.ts";
+import {
+  AXIS_STYLE_OPTIONS,
+  axisStyleOf,
+  type AxisStyleOptionKey
+} from "./axisStyle.ts";
 
 // CONSTANTS
 const kPlanes = {
@@ -17,14 +22,15 @@ const kPlanes = {
   }
 };
 
-export const VECTOR2_EXAMPLE: GalleryExample<"xz"> = {
+export const VECTOR2_EXAMPLE: GalleryExample<"xz" | AxisStyleOptionKey> = {
   id: "math/vector2",
   title: "Vector2",
   options: [
     {
       key: "xz",
       label: "XZ plane"
-    }
+    },
+    ...AXIS_STYLE_OPTIONS
   ],
   render(host, options) {
     const plane = options.xz ? kPlanes.xz : kPlanes.xy;
@@ -40,6 +46,7 @@ export const VECTOR2_EXAMPLE: GalleryExample<"xz"> = {
         holder.innerHTML = plane.markup;
 
         const field = holder.querySelector("jolly-vector2")!;
+        field.axisStyle = axisStyleOf(options);
         field.value = { ...plane.initial };
         field.default = { ...plane.initial };
 

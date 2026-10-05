@@ -92,6 +92,77 @@ test("editing one axis of a multi-selection leaves a disagreeing axis mixed", as
   await expect(readout.nth(1)).toHaveText("Crate B: 2, 3, 8");
 });
 
+test.describe("axis markers", () => {
+  function inputWidth(page: Page): Promise<number> {
+    return row(page, "jolly-vector3", "default")
+      .locator('.axis-box[data-axis="x"] input')
+      .evaluate((input) => input.getBoundingClientRect().width);
+  }
+
+  test("a letter replaces the corner tag without changing the input width", async({ page }) => {
+    await openExample(page, "math/vector3");
+    const cornerWidth = await inputWidth(page);
+
+    await openExample(page, "math/vector3", {
+      options: { letterOnly: true }
+    });
+    await recordChanges(page);
+
+    const box = row(page, "jolly-vector3", "default")
+      .locator('.axis-box[data-axis="x"]');
+    await expect(box.locator(".axis-tag")).toHaveCount(0);
+    await expect(box.locator(".scrub-handle")).toHaveText("X");
+    expect(await inputWidth(page)).toBe(cornerWidth);
+
+    await scrubBy(page, box.locator(".scrub-handle"), 40);
+    expect(await changes(page)).toEqual([{ x: 1, y: 1, z: 0 }]);
+  });
+
+  test("a chip is as wide as the control is tall", async({ page }) => {
+    await openExample(page, "math/vector3", {
+      options: { axisLetters: true }
+    });
+
+    const chip = await boxOf(
+      row(page, "jolly-vector3", "default")
+        .locator('.axis-box[data-axis="y"] .scrub-handle')
+    );
+    expect(chip.width).toBe(chip.height);
+  });
+
+  test("a transform passes its axis style to every row", async({ page }) => {
+    await openExample(page, "math/transform", {
+      options: { axisLetters: true }
+    });
+
+    const rows = page.locator("jolly-transform")
+      .locator("jolly-vector3, jolly-quaternion");
+    await expect(rows).toHaveCount(3);
+    for (const field of await rows.all()) {
+      await expect(field).toHaveAttribute("axis-style", "chip");
+    }
+  });
+
+  test("new fields read the class default", async({ page }) => {
+    await openExample(page, "math/vector3");
+
+    const style = await page.evaluate(async() => {
+      const Vector3 = customElements.get("jolly-vector3") as unknown as {
+        Defaults: { axisStyle: string; };
+      };
+      Vector3.Defaults.axisStyle = "letter";
+      const field = document.createElement("jolly-vector3");
+      Vector3.Defaults.axisStyle = "corner";
+      document.body.append(field);
+      await field.updateComplete;
+      field.remove();
+
+      return field.getAttribute("axis-style");
+    });
+    expect(style).toBe("letter");
+  });
+});
+
 test.describe("quaternion", () => {
   test.beforeEach(async({ page }) => {
     await openExample(page, "math/quaternion");

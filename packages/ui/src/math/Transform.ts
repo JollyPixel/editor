@@ -15,17 +15,19 @@ import type { FieldValue } from "../field/mixed.ts";
 import { emitFieldEvent } from "../field/events.ts";
 import { detailOf } from "../dom.ts";
 import type { CollaboratorPresence } from "../peer/types.ts";
-import type { QuatLike, VectorValue } from "./types.ts";
+import type {
+  AxisStyle,
+  QuatLike,
+  VectorValue
+} from "./types.ts";
 import { transformStyles } from "./Transform.styles.ts";
 import {
   DEFAULT_STACK_BELOW,
   LabelStackController,
   type FieldLabelPosition
 } from "../field/LabelStackController.ts";
-
-// Registers the sub-rows.
-import "./Vector3.ts";
-import "./Quaternion.ts";
+import { Vector3 } from "./Vector3.ts";
+import { Quaternion } from "./Quaternion.ts";
 
 type TransformAxis3 = "x" | "y" | "z";
 type TransformSubKey = "position" | "rotation" | "scale";
@@ -111,6 +113,12 @@ export class Transform extends LitElement {
   })
   declare stackBelow: number;
 
+  @property({
+    type: String,
+    attribute: "axis-style"
+  })
+  declare axisStyle: AxisStyle | undefined;
+
   #stack = new LabelStackController(this);
 
   constructor() {
@@ -141,6 +149,7 @@ export class Transform extends LitElement {
     this.scaleLabel = "Scale";
     this.labelPosition = "inline";
     this.stackBelow = DEFAULT_STACK_BELOW;
+    this.axisStyle = undefined;
   }
 
   protected override willUpdate(
@@ -172,11 +181,15 @@ export class Transform extends LitElement {
     const position = this.state.position ?? kEmptySubState;
     const rotation = this.state.rotation ?? kEmptySubState;
     const scale = this.state.scale ?? kEmptySubState;
+    const vectorAxisStyle = this.axisStyle ?? Vector3.Defaults.axisStyle;
+    const rotationAxisStyle = this.axisStyle ??
+      Quaternion.Defaults.axisStyle;
 
     return html`
       <jolly-vector3
         label=${this.positionLabel}
         label-position=${labelPosition}
+        axis-style=${vectorAxisStyle}
         .value=${this.value.position}
         .default=${this.default?.position}
         .lockedBy=${position.lockedBy ?? null}
@@ -190,6 +203,7 @@ export class Transform extends LitElement {
       <jolly-quaternion
         label=${this.rotationLabel}
         label-position=${labelPosition}
+        axis-style=${rotationAxisStyle}
         .value=${this.value.rotation}
         .default=${this.default?.rotation}
         .lockedBy=${rotation.lockedBy ?? null}
@@ -203,6 +217,7 @@ export class Transform extends LitElement {
       <jolly-vector3
         label=${this.scaleLabel}
         label-position=${labelPosition}
+        axis-style=${vectorAxisStyle}
         .value=${this.value.scale}
         .default=${this.default?.scale}
         .lockedBy=${scale.lockedBy ?? null}
