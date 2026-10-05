@@ -147,6 +147,9 @@ export class BlockLibraryViewport extends LitElement {
     if (!this.#shown) {
       return;
     }
+    if (this.#renderer !== null) {
+      this.#renderer.selectedId = this.selectedId;
+    }
     if (changed.has("sources") || this.#renderer === null) {
       this.#build();
     }
@@ -192,6 +195,7 @@ export class BlockLibraryViewport extends LitElement {
       @pointermove=${this.#onPointerMove}
       @pointerup=${this.#onPointerUp}
       @pointercancel=${this.#onPointerCancel}
+      @pointerleave=${this.#onPointerLeave}
     >
       <div class="layer highlights">
         ${cells.map((cell) => this.#renderHighlight(cell))}
@@ -424,6 +428,7 @@ export class BlockLibraryViewport extends LitElement {
   #build(): void {
     this.#renderer?.dispose();
     this.#renderer = new BlockLibraryRenderer(this._scroller, this.sources);
+    this.#renderer.selectedId = this.selectedId;
     this.#renderer.setBlocks(this.blocks);
     this.#renderer.onLayoutChange = () => this.#syncGrid();
     this.#renderer.onContextLost = () => {
@@ -472,6 +477,9 @@ export class BlockLibraryViewport extends LitElement {
     event: PointerEvent
   ): void {
     const drag = this.#drag;
+    if (this.#renderer !== null && drag?.dragging !== true) {
+      this.#renderer.hoveredId = this.#blockIdAt(event);
+    }
     if (drag === null || drag.pointerId !== event.pointerId) {
       return;
     }
@@ -526,6 +534,12 @@ export class BlockLibraryViewport extends LitElement {
       bubbles: false,
       composed: false
     }));
+  }
+
+  #onPointerLeave(): void {
+    if (this.#renderer !== null) {
+      this.#renderer.hoveredId = null;
+    }
   }
 
   #onPointerCancel(

@@ -14,8 +14,12 @@ import { BlockPreviewMeshes } from "./BlockPreviewMeshes.ts";
 import { WebGLContextLease } from "./WebGLContextLease.ts";
 
 // CONSTANTS
-const kSuperSampling = 2;
+const kMinPixelRatio = 2;
 const kMaxPixelRatio = 3;
+
+export interface BlockTurntableOptions {
+  preserveDrawingBuffer?: boolean;
+}
 
 export class BlockTurntable {
   readonly canvas: HTMLCanvasElement;
@@ -36,15 +40,17 @@ export class BlockTurntable {
 
   constructor(
     container: HTMLElement,
-    sources: BlockRenderSources
+    sources: BlockRenderSources,
+    options: BlockTurntableOptions = {}
   ) {
     this.container = container;
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true
+      alpha: true,
+      preserveDrawingBuffer: options.preserveDrawingBuffer ?? false
     });
     this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio * kSuperSampling, kMaxPixelRatio)
+      Math.min(Math.max(window.devicePixelRatio, kMinPixelRatio), kMaxPixelRatio)
     );
     this.renderer.setClearColor(0x000000, 0);
     this.#contextLease = new WebGLContextLease(this.renderer);
@@ -83,14 +89,15 @@ export class BlockTurntable {
   }
 
   protected renderMesh(
-    mesh: THREE.Mesh
+    mesh: THREE.Mesh,
+    rotation = this.#rotation
   ): void {
     if (!this.#lit && needsEnvironment(mesh)) {
       lightWithEnvironment(this.#scene, this.renderer);
       this.#lit = true;
     }
     mesh.visible = true;
-    mesh.rotation.set(PREVIEW_TILT, this.#rotation, 0);
+    mesh.rotation.set(PREVIEW_TILT, rotation, 0);
     this.renderer.render(this.#scene, this.#camera);
     mesh.visible = false;
   }

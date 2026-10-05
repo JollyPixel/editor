@@ -101,7 +101,8 @@ export class VoxelMeshBuilder {
       atlases: options.atlases,
       blendGroups: options.blendGroups,
       alphaTest: options.alphaTest,
-      logger: options.logger
+      logger: options.logger,
+      regions: this.faceTemplates.regions
     });
     this.#mesher = new ChunkMesher(this.#variants);
   }
@@ -138,6 +139,12 @@ export class VoxelMeshBuilder {
     this.stats.buildTimeMs = performance.now() - startedAt;
 
     return result;
+  }
+
+  writeRegions(
+    blockId: number
+  ): boolean {
+    return this.#variants.writeRegions(blockId);
   }
 
   createGeometry(

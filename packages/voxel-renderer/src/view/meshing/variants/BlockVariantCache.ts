@@ -21,14 +21,16 @@ import {
 } from "../../../document/blocks/BlockDefinition.ts";
 import {
   shapeSlots,
-  unknownTextureSlots
+  unknownTextureSlots,
+  type ShapeSlot
 } from "../../../document/blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
   BlockVariantFace,
   MergedVariant,
   MergedVariantPart,
-  TilesetResolver
+  TilesetResolver,
+  TilesetUvSource
 } from "./types.ts";
 import { BlockComplements } from "../../../document/blocks/BlockComplements.ts";
 import {
@@ -41,7 +43,11 @@ import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
 import { FACES, FACE_OPPOSITE } from "../../../document/geometry/faceDirection.ts";
 import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
 import { isFullQuad } from "./fullQuad.ts";
-import { tileUvOf } from "./tileUv.ts";
+import {
+  tileUvOf,
+  type TileUv
+} from "./tileUv.ts";
+import { FaceRegionTable } from "../pulling/FaceRegionTable.ts";
 import {
   transformFace,
   rotateVertex,
@@ -78,6 +84,7 @@ const kSelfOcclusionShift = 6;
 interface CompileFaceOptions {
   faceDef: FaceDefinition;
   uvRegion: TilesetUVRegion;
+  regionId: number;
   tileRotation?: TileRotation;
   tilesetId: string;
   surface: BlockSurface;
@@ -95,6 +102,19 @@ export interface BlockVariantCacheOptions {
    * shape can use.
    */
   logger?: VoxelLogger;
+  regions?: FaceRegionTable;
+}
+
+interface SlotTile {
+  textureSlot: ShapeSlot;
+  atlas: TilesetUvSource;
+  tile: TileUv;
+  regionId: number;
+}
+
+interface ResolvedTiles {
+  tiles: SlotTile[];
+  pending: boolean;
 }
 
 /**
@@ -104,6 +124,7 @@ export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
   #atlases: TilesetResolver;
+  #regions: FaceRegionTable;
   #blendGroups: BlendGroupList | undefined;
   #alphaTest: number;
   #logger: VoxelLogger;
@@ -143,6 +164,7 @@ export class BlockVariantCache {
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
     this.#atlases = options.atlases;
+    this.#regions = options.regions ?? new FaceRegionTable();
     this.#blendGroups = options.blendGroups;
     this.#alphaTest = options.alphaTest ?? 0.1;
     this.#logger = options.logger ?? NOOP_LOGGER;
@@ -528,6 +550,58 @@ export class BlockVariantCache {
     );
   }
 
+  writeRegions(
+    blockId: number
+  ): boolean {
+    const blockDef = this.#blockRegistry.get(blockId);
+    const shape = blockDef && this.#shapeRegistry.get(blockDef.shapeId);
+    if (!blockDef || !shape) {
+      return false;
+    }
+
+    return !this.#resolveTiles(blockDef, shape).pending;
+  }
+
+  #resolveTiles(
+    blockDef: ResolvedBlockDefinition,
+    shape: BlockShape
+  ): ResolvedTiles {
+    const textures = BlockTextures.of(blockDef);
+    const tiles: SlotTile[] = [];
+    let pending = false;
+    for (const textureSlot of shapeSlots(shape)) {
+      const tileRef = textures.forSlot(textureSlot.id);
+      if (!tileRef) {
+        continue;
+      }
+
+      const atlas = this.#atlases.resolve(tileRef.tilesetId);
+      if (!atlas) {
+        pending = true;
+        continue;
+      }
+
+      const tile = tileUvOf(
+        atlas,
+        tileRef,
+        textures.spanFor(textureSlot.id, textureSlot.span)
+      );
+      const regionId = this.#regions.idOf(blockDef.id, textureSlot.id);
+      this.#regions.write(regionId, tile.region);
+      tiles.push({
+        textureSlot,
+        atlas,
+        tile,
+        regionId
+      });
+    }
+
+    return {
+      tiles,
+      pending
+    };
+  }
+
   #compile(
     blockId: number,
     transform: number
@@ -549,36 +623,16 @@ export class BlockVariantCache {
     });
     const voxelTransform = VoxelTransform.fromPacked(transform);
 
-    const textures = BlockTextures.of(blockDef);
     const faces: BlockVariantFace[] = [];
-    let pending = false;
-    for (const textureSlot of shapeSlots(shape)) {
-      const tileRef = textures.forSlot(textureSlot.id);
-      if (!tileRef) {
-        continue;
-      }
-
-      const atlas = this.#atlases.resolve(tileRef.tilesetId);
-      if (!atlas) {
-        pending = true;
-        continue;
-      }
-
-      const {
-        region: uvRegion,
-        rotation: tileRotation
-      } = tileUvOf(
-        atlas,
-        tileRef,
-        textures.spanFor(textureSlot.id, textureSlot.span)
-      );
-
+    const { tiles, pending } = this.#resolveTiles(blockDef, shape);
+    for (const { textureSlot, atlas, tile, regionId } of tiles) {
       for (const faceDef of textureSlot.definitions) {
         faces.push(
           this.#compileFace({
             faceDef,
-            uvRegion,
-            tileRotation,
+            uvRegion: tile.region,
+            regionId,
+            tileRotation: tile.rotation,
             tilesetId: atlas.def.id,
             surface,
             voxelTransform
@@ -610,6 +664,7 @@ export class BlockVariantCache {
     const {
       faceDef,
       uvRegion,
+      regionId,
       tileRotation,
       tilesetId,
       surface,
@@ -648,16 +703,8 @@ export class BlockVariantCache {
       );
       tileUvs[i * 2] = tileUV[0];
       tileUvs[(i * 2) + 1] = tileUV[1];
-      /*
-       * `fround` reproduces the float32 staging buffer these used to pass
-       * through, so the quantised result is unchanged.
-       */
-      uvs[i * 2] = toUnorm16(
-        Math.fround(uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]))
-      );
-      uvs[(i * 2) + 1] = toUnorm16(
-        Math.fround(uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]))
-      );
+      uvs[i * 2] = toUnorm16(tileUV[0]);
+      uvs[(i * 2) + 1] = toUnorm16(tileUV[1]);
     }
 
     const normal = rotateNormal(
@@ -678,6 +725,7 @@ export class BlockVariantCache {
         toUnorm16(Math.fround(uvRegion.scaleU)),
         toUnorm16(Math.fround(uvRegion.scaleV))
       ]),
+      regionId,
       full: isFullQuad(cull, positions, tileUvs),
       splittable: cull >= 0 && surface.side !== "front",
       normalX: toSnorm8(normal[0]),

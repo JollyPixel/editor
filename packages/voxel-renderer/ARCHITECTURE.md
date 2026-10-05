@@ -78,10 +78,19 @@ sequenceDiagram
 ```
 
 Voxel writes dirty the affected chunk and boundary neighbours across layers,
-because an edit can expose or cover their faces. Block definition or tileset
+because an edit can expose or cover their faces. A block definition dirties the
+chunks holding the block, and their neighbours when culling can change. Tileset
 changes invalidate all chunks. `flush()` drains the queue at once; `init()` and
 a document load mark the whole world dirty and flush it unless mesh workers are
 running.
+
+Face templates hold tile-local UVs and the id of a row in `FaceRegionTable`,
+one row per block texture slot; the vertex shader reads the slot's atlas rect
+from that row. A definition that only moves tiles (same shape, tilesets,
+rotations and surface, no blend group) dirties nothing: `BlockReach` reports
+it as `"tiles"` and the view rewrites the block's rows. Blend palettes still
+bake neighbour rects, so grouped blocks remesh. Mesh workers receive the row
+assignment with their definitions so their templates name the same rows.
 
 A merged cell keeps its first shape in the chunk store with transform bit 7
 set and its second shape in the chunk's `partners` store, created on the

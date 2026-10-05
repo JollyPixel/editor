@@ -34,7 +34,7 @@ function recordingRuntime(
 describe("EditorRuntime", () => {
   const scene = {} as Systems.Scene;
 
-  test("renders on demand unless the editor or the render param opts out", async(t) => {
+  test("renders on demand only in a frame or when the render param asks for it", async(t) => {
     const created: Array<RuntimeOptions | undefined> = [];
     const runtime = {
       world: {
@@ -52,19 +52,30 @@ describe("EditorRuntime", () => {
     });
 
     await EditorRuntime.create("canvas", {
-      params: HOST_PARAMS.read("")
+      params: HOST_PARAMS.read(""),
+      framed: true
     });
     await EditorRuntime.create("canvas", {
-      params: HOST_PARAMS.read("?render=continuous")
+      params: HOST_PARAMS.read("?render=continuous"),
+      framed: true
     });
     await EditorRuntime.create("canvas", {
       params: HOST_PARAMS.read(""),
+      framed: true,
       renderOnDemand: false
+    });
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read(""),
+      framed: false
+    });
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read("?render=on-demand"),
+      framed: false
     });
 
     assert.deepEqual(
       created.map((options) => options?.renderOnDemand),
-      [true, false, false]
+      [true, false, false, false, true]
     );
   });
 

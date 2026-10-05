@@ -5,6 +5,7 @@ export const OFFLINE_EDITOR: OpenEditorOptions = {
   maxFps: 10,
   query: {
     offline: "",
-    samples: "0"
+    samples: "0",
+    render: "on-demand"
   }
 };

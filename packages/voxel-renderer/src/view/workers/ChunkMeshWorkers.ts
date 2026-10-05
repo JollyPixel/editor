@@ -262,16 +262,22 @@ export class ChunkMeshWorkers {
   }
 
   #syncDefinitions(): string {
-    const { definitions } = this.#options;
+    const { definitions, meshBuilder } = this.#options;
     const version = meshDefinitionsVersion(definitions);
     if (version === this.#definitionsVersion) {
       return version;
     }
 
     this.#definitionsVersion = version;
+    for (const block of definitions.blockRegistry) {
+      meshBuilder.writeRegions(block.id);
+    }
     const request = {
       type: "definitions" as const,
-      definitions: captureMeshDefinitions(definitions)
+      definitions: captureMeshDefinitions(
+        definitions,
+        meshBuilder.faceTemplates.regions.assignments()
+      )
     };
     for (const slot of this.#slots) {
       slot.templateIds = [];

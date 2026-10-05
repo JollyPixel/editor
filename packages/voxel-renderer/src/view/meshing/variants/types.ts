@@ -38,13 +38,18 @@ export interface BlockVariantFace {
   /** `vertexCount × 3` block-local positions in 0-1 space. */
   positions: Float32Array;
   /**
-   * Unsigned-normalized atlas UVs.
+   * Unsigned-normalized UVs inside the tile; `region` maps them to the atlas.
    */
   uvs: Uint16Array;
   /**
    * Unsigned-normalized `[offsetU, offsetV, scaleU, scaleV]` atlas rect.
    */
   region: Uint16Array;
+  /**
+   * Row of the block texture slot in the face region table, which holds
+   * `region` for the shader so a tile move needs no remesh.
+   */
+  regionId: number;
   full: boolean;
   /**
    * True when a neighbour's footprint may split this boundary face.

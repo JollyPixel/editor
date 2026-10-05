@@ -43,13 +43,15 @@ function pulledFaces(
 ): PulledFace[] {
   const words = geometry.faces.image.data as Uint32Array;
   const templates = geometry.templates.texture.image.data as Float32Array;
+  const regions = geometry.templates.regions.texture.image.data as Float32Array;
   const faces: PulledFace[] = [];
 
   for (let face = 0; face < geometry.faceCount; face++) {
     const cell = words[face * geometry.faceWords];
     const packed = words[(face * geometry.faceWords) + 1];
     const template = packed & kTemplateMask;
-    const regionOffset = (template * kTemplateFloats) + (kRegionTexel * 4);
+    const regionId = templates[(template * kTemplateFloats) + (kRegionTexel * 4)];
+    const regionOffset = regionId * 4;
 
     faces.push({
       cell: [
@@ -61,7 +63,7 @@ function pulledFaces(
       ao: (packed >>> PULLED_TEMPLATE_BITS) & kAoMask,
       flip: packed >>> kFlipShift,
       region: [0, 1, 2, 3].map(
-        (i) => Math.round(templates[regionOffset + i] * kUnorm16)
+        (i) => Math.round(regions[regionOffset + i] * kUnorm16)
       ) as PulledFace["region"]
     });
   }
@@ -81,7 +83,8 @@ export function expandPulled(
   const faceShades = new Float32Array(faces.length * 4);
   const indices = new Uint32Array(faces.length * 6);
 
-  faces.forEach(({ cell, template, ao, flip }, face) => {
+  faces.forEach(({ cell, template, ao, flip, region }, face) => {
+    const [offsetU, offsetV, scaleU, scaleV] = region;
     const offset = template * kTemplateFloats;
     const normalOffset = offset + (kNormalTexel * 4);
     const axes = templates[normalOffset + 3];
@@ -103,9 +106,11 @@ export function expandPulled(
       normals[(vertex * 4) + 3] = ao === AO_UNOCCLUDED ?
         kSnorm8 :
         aoVertexByte(ao, local[uAxis], local[vAxis]);
-      uvs[vertex * 2] = Math.round(templates[texel + 3] * kUnorm16);
+      uvs[vertex * 2] = Math.round(
+        offsetU + (scaleU * templates[texel + 3])
+      );
       uvs[(vertex * 2) + 1] = Math.round(
-        templates[offset + (kUvTexel * 4) + source] * kUnorm16
+        offsetV + (scaleV * templates[offset + (kUvTexel * 4) + source])
       );
     }
     faceShades.fill(faceShade(ao), face * 4, (face * 4) + 4);

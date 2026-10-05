@@ -63,7 +63,7 @@ export function makeFakeVoxelEngine(): {
 
       for (const def of resolved) {
         registry.register(def);
-        bridgeOptions.mapDocument.emit("blockRegistryChanged");
+        bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
       }
       dirtyReasons.push("block-defined");
     }

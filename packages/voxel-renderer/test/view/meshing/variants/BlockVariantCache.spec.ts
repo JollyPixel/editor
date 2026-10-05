@@ -360,13 +360,8 @@ describe("BlockVariantCache - unknown faceTextures keys", () => {
 function tileUvsOf(
   face: BlockVariantFace
 ): number[] {
-  const [offsetU, offsetV, scaleU, scaleV] = face.region;
-
-  return Array.from(face.uvs, (uv, i) => {
-    const tile = i % 2 === 0 ?
-      (uv - offsetU) / scaleU :
-      (uv - offsetV) / scaleV;
-
-    return Math.round(tile * 1000) / 1000;
-  });
+  return Array.from(
+    face.uvs,
+    (uv) => Math.round(uv / 65535 * 1000) / 1000
+  );
 }

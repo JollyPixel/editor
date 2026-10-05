@@ -19,7 +19,10 @@ const stop = editorRuntime.suspendKeyboardOnHover(
 ```ts
 static create(
   canvas: RuntimeCanvasTarget,
-  options?: RuntimeOptions & { params?: HostParams; }
+  options?: RuntimeOptions & {
+    params?: HostParams;
+    framed?: boolean;
+  }
 ): Promise<EditorRuntime>;
 ```
 
@@ -29,15 +32,20 @@ keys: the runtime keyboard ignores them until the layer closes.
 `suspendWhenHidden` defaults to `true`, so an editor in a hidden studio tab
 stops rendering until its canvas shows again.
 
-`renderOnDemand` defaults to `true`: the view renders after input,
-`world.invalidate()` and while a `world.keepAlive()` predicate holds, then
-idles. See
+In a frame, such as a studio tab, the view renders on demand: it renders after
+input, `world.invalidate()` and while a `world.keepAlive()` predicate holds,
+then idles. See
 [rendering on demand](../../../runtime/docs/api/Runtime.md#rendering-on-demand).
 Components that change the scene from room traffic, such as
 [`PeerFrustums`](./PeerFrustums.md), invalidate the world themselves. An
-editor whose scene changes without telling the world passes `false`. The
-`render=continuous` [query parameter](./QueryParams.md#host-parameters) turns
-it off for any editor, to rule out a missed wake-up.
+editor whose scene changes without telling the world passes
+`renderOnDemand: false`.
+
+A standalone page renders continuously, so the performance overlay reports a
+real frame rate. `framed` defaults to `window.parent !== window`. The `render`
+[query parameter](./QueryParams.md#host-parameters) overrides it for any
+editor: `render=continuous` rules out a missed wake-up in the studio, and
+`render=on-demand` brings idling back to a standalone page.
 
 An editor booted by [`mountStandalone`](./mountStandalone.md#editor-definition)
 creates it in its static `createRuntime(logger)`, which the host calls before

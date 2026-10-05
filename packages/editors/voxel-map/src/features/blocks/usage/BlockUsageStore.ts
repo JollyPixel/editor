@@ -42,7 +42,11 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
     const invalidate = () => this.invalidate();
     this.#subscriptions = [
       mapDocument.subscribe("layerUpdated", invalidate),
-      mapDocument.subscribe("blockRegistryChanged", invalidate),
+      mapDocument.subscribe("blockRegistryChanged", (change) => {
+        if (change !== "redefined" && change !== "retiled") {
+          this.invalidate();
+        }
+      }),
       mapDocument.subscribe("reset", invalidate)
     ];
   }

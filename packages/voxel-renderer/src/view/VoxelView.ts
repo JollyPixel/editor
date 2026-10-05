@@ -142,6 +142,7 @@ export class VoxelView {
 
   #chunkGroup = new THREE.Group();
   #faceTemplates = new FaceTemplateTable();
+  #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #pipeline: ChunkPipeline;
   #collider: VoxelCollider | null;
@@ -166,11 +167,17 @@ export class VoxelView {
       }
     }
     else if (command.action === "block-defined") {
-      markBlockDirty(
-        this.document.world.getLayers(),
-        command.block.id,
-        this.#blockReach.redefine(command.block)
-      );
+      const redefinition = this.#blockReach.redefine(command.block);
+      if (
+        redefinition !== "tiles" ||
+        !this.#meshBuilder.writeRegions(command.block.id)
+      ) {
+        markBlockDirty(
+          this.document.world.getLayers(),
+          command.block.id,
+          redefinition === "neighbours"
+        );
+      }
     }
     else if (command.action === "block-removed") {
       this.#blockReach.forget(command.blockId);
@@ -278,6 +285,7 @@ export class VoxelView {
       logger: this.#logger,
       visibility: this.layerVisibility
     });
+    this.#meshBuilder = meshBuilder;
     this.#collider = collider?.({
       blockRegistry: blocks,
       shapeRegistry: this.shapes

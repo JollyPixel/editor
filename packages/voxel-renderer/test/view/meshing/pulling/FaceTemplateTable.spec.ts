@@ -15,7 +15,9 @@ import type { BlockVariantFace } from "../../../../src/view/meshing/variants/typ
 
 function makeFace(
   x: number,
-  vertexCount = 4
+  vertexCount = 4,
+  regionId = 0,
+  region = [0, 0, 65535, 65535]
 ): BlockVariantFace {
   const corners = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]].slice(0, vertexCount);
 
@@ -26,7 +28,8 @@ function makeFace(
     indexCount: vertexCount === 4 ? 6 : 3,
     positions: new Float32Array(corners.flatMap(([px, py, pz]) => [px + x, py, pz])),
     uvs: new Uint16Array(corners.flatMap(([px, py]) => [px * 65535, py * 65535])),
-    region: new Uint16Array([0, 0, 65535, 65535]),
+    region: new Uint16Array(region),
+    regionId,
     full: vertexCount === 4,
     splittable: false,
     normalX: 0,
@@ -58,15 +61,26 @@ describe("FaceTemplateTable", () => {
     assert.equal(table.count, 2);
   });
 
-  it("writes corners, atlas coordinates, region and normal as floats", () => {
+  it("keys templates by region id, not by the atlas rect behind it", () => {
     const table = new FaceTemplateTable();
-    const id = table.idOf(makeFace(2));
+
+    const moved = table.idOf(makeFace(0, 4, 3, [0, 0, 65535, 65535]));
+    const sameId = table.idOf(makeFace(0, 4, 3, [100, 200, 4096, 4096]));
+    const otherId = table.idOf(makeFace(0, 4, 4, [0, 0, 65535, 65535]));
+
+    assert.equal(moved, sameId);
+    assert.notEqual(moved, otherId);
+  });
+
+  it("writes corners, tile coordinates, region id and normal as floats", () => {
+    const table = new FaceTemplateTable();
+    const id = table.idOf(makeFace(2, 4, 7));
     const texels = templateTexels(table, id);
 
     assert.deepEqual(Array.from(texels.subarray(0, 4)), [2, 0, 0, 0]);
     assert.deepEqual(Array.from(texels.subarray(8, 12)), [3, 1, 0, 1]);
     assert.deepEqual(Array.from(texels.subarray(16, 20)), [0, 0, 1, 1]);
-    assert.deepEqual(Array.from(texels.subarray(20, 24)), [0, 0, 1, 1]);
+    assert.deepEqual(Array.from(texels.subarray(20, 24)), [7, 0, 0, 0]);
     assert.deepEqual(Array.from(texels.subarray(24, 27)), [0, 0, 1]);
     assert.equal(texels[27], 0 + (1 * 4));
   });

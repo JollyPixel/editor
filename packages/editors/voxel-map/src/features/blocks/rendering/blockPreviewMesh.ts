@@ -30,6 +30,7 @@ export const PREVIEW_FIT_RADIUS = Math.tan((kCameraFov * Math.PI) / 360) *
   kCameraZ * kFitFactor;
 export const PREVIEW_TILT = 0.4;
 export const PREVIEW_ROTATION_STEP = 0.005;
+export const PREVIEW_STILL_ROTATION = Math.PI / 4;
 
 let checkerTexture: THREE.DataTexture | null = null;
 

@@ -1,3 +1,4 @@
+export * from "./FaceRegionTable.ts";
 export * from "./FaceTemplateTable.ts";
 export * from "./PulledChunkGeometry.ts";
 export * from "./PulledChunkMesh.ts";

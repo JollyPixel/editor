@@ -1,17 +1,29 @@
 // Import Third-party Dependencies
+import type * as THREE from "three";
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
 import { BlockGrid } from "./BlockGrid.ts";
+import { CellRepaints } from "./CellRepaints.ts";
+import { TurntableAngles } from "./TurntableAngles.ts";
 import { BlockTurntable } from "../rendering/BlockTurntable.ts";
+import {
+  PREVIEW_ROTATION_STEP,
+  PREVIEW_STILL_ROTATION
+} from "../rendering/blockPreviewMesh.ts";
 
 // CONSTANTS
 const kSettleFrames = 6;
 
 export class BlockLibraryRenderer extends BlockTurntable {
   onLayoutChange: (() => void) | null = null;
+  selectedId: number | null = null;
+  hoveredId: number | null = null;
 
+  #repaints = new CellRepaints<THREE.Mesh>();
+  #angles = new TurntableAngles(PREVIEW_STILL_ROTATION, PREVIEW_ROTATION_STEP);
+  #clearPending = true;
   #grid = new BlockGrid(1, 1);
   #canvasWidth = 0;
   #canvasHeight = 0;
@@ -26,7 +38,9 @@ export class BlockLibraryRenderer extends BlockTurntable {
     container: HTMLElement,
     sources: BlockRenderSources
   ) {
-    super(container, sources);
+    super(container, sources, {
+      preserveDrawingBuffer: true
+    });
     this.renderer.autoClear = false;
   }
 
@@ -38,6 +52,7 @@ export class BlockLibraryRenderer extends BlockTurntable {
     blocks: ResolvedBlockDefinition[]
   ): void {
     this.meshes.sync(blocks);
+    this.#angles.keep(blocks.map((block) => block.id));
     this.#relayout();
   }
 
@@ -65,32 +80,52 @@ export class BlockLibraryRenderer extends BlockTurntable {
       return;
     }
 
-    this.renderer.clear();
+    if (this.#clearPending) {
+      this.#clearPending = false;
+      this.renderer.setScissorTest(false);
+      this.renderer.clear();
+    }
 
     const { cols, cellSize } = this.#grid;
     const drawnCellSize = this.#drawnCellSize;
     const scrollTop = this.container.scrollTop;
     const containerHeight = this.container.clientHeight;
+    const { entries } = this.meshes;
+    const paints = this.#repaints.due(
+      entries,
+      {
+        first: Math.floor(scrollTop / cellSize) * cols,
+        last: (Math.ceil((scrollTop + containerHeight) / cellSize) * cols) - 1
+      },
+      this.#spins
+    );
 
-    this.meshes.entries.forEach((entry, index) => {
+    for (const { index, mode } of paints) {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      const cellTop = row * cellSize;
-      if (cellTop + cellSize <= scrollTop || cellTop >= scrollTop + containerHeight) {
-        return;
-      }
-
       const x = col * drawnCellSize;
       const y = (this.#drawnRows - 1 - row) * drawnCellSize;
       this.renderer.setViewport(x, y, drawnCellSize, drawnCellSize);
       this.renderer.setScissor(x, y, drawnCellSize, drawnCellSize);
       this.renderer.setScissorTest(true);
-      this.renderer.clearDepth();
-      this.renderMesh(entry.mesh);
-    });
+      this.renderer.clear();
+      if (mode !== "erase") {
+        const { block, mesh } = entries[index];
+        this.renderMesh(
+          mesh,
+          mode === "spinning" ?
+            this.#angles.advance(block.id) :
+            this.#angles.of(block.id)
+        );
+      }
+    }
 
     this.renderer.setScissorTest(false);
   }
+
+  readonly #spins = (
+    blockId: number
+  ): boolean => blockId === this.selectedId || blockId === this.hoveredId;
 
   #relayout(): void {
     this.#layoutDirty = false;
@@ -144,5 +179,7 @@ export class BlockLibraryRenderer extends BlockTurntable {
     this.#drawnCellSize = cellSize;
     this.#stableFrames = 0;
     this.renderer.setSize(width, height, false);
+    this.#repaints.invalidate();
+    this.#clearPending = true;
   }
 }

@@ -282,7 +282,9 @@ The view reacts to the document on its own:
 
 - Voxel and layer commands remesh the affected chunks.
 - Block definitions and removals remesh the chunks holding the block, and their
-  neighbours when culling can change.
+  neighbours when culling can change. A definition that only moves its tiles
+  (same tilesets and rotations, no blend group) or renames the block remeshes
+  nothing: the chunks read the new tile rects on the next frame.
 - Tileset commands update the atlases before other listeners run, then remesh
   every chunk.
 - Material group changes update their materials; replacing a group remeshes
