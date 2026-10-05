@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import { selectionOutlinePath } from "./selectionContour.ts";
-import { SelectionSizeLabel } from "./SelectionSizeLabel.ts";
+import { SizeLabel } from "./SizeLabel.ts";
 import { SelectionResizeHandles } from "./SelectionResizeHandles.ts";
 import type {
   DefaultViewport
@@ -10,6 +10,9 @@ import type {
   BrushHighlight,
   SelectionRect
 } from "../../types.ts";
+
+// CONSTANTS
+const kMinLabelledSize = 2;
 
 export interface SelectionOutlineOptions {
   /**
@@ -22,7 +25,7 @@ export interface SelectionOutlineOptions {
 export class SelectionOutline {
   #viewport: DefaultViewport;
   #paths: [outline: SVGPathElement, inline: SVGPathElement];
-  #sizeLabel: SelectionSizeLabel | null;
+  #sizeLabel: SizeLabel | null;
   #resizeHandles: SelectionResizeHandles;
 
   constructor(
@@ -38,7 +41,12 @@ export class SelectionOutline {
     ];
     this.#sizeLabel = options.sizeLabel === false
       ? null
-      : new SelectionSizeLabel(svg, viewport, brush);
+      : new SizeLabel(viewport, {
+        overlay: "selection-size",
+        fill: brush.colorOutline,
+        stroke: brush.colorInline
+      });
+    this.#sizeLabel?.appendTo(svg);
     this.#resizeHandles = new SelectionResizeHandles(svg, brush);
   }
 
@@ -53,7 +61,11 @@ export class SelectionOutline {
       path.setAttribute("visibility", "visible");
     }
 
-    this.#sizeLabel?.draw(rect);
+    this.#sizeLabel?.show(
+      rect.width < kMinLabelledSize || rect.height < kMinLabelledSize
+        ? null
+        : this.#sizeLabel.outside(rect)
+    );
     if (resizable) {
       this.#resizeHandles.draw(
         this.#viewport.toScreenRect(rect)

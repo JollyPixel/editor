@@ -22,7 +22,8 @@ const kUvRefreshEvents = [
   "region-created",
   "region-deleted",
   "visibility-changed",
-  "label-visibility-changed"
+  "label-visibility-changed",
+  "size-label-visibility-changed"
 ] as const;
 
 export interface TextureEntry {

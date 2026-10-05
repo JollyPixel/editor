@@ -85,6 +85,7 @@ export class PixelArtEditor {
     const panel = document.querySelector("pixel-draw-panel")!;
     panel.colorDocked = kStorage.get(kColorDockedStorageKey) === "true";
     panel.allowUvCreateDelete = features.uvCreateDelete;
+    panel.uvResize = features.uvResize;
     panel.textureImportPolicy = features.importPolicy;
 
     const previewType = loadPreview === null

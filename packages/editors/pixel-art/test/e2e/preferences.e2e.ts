@@ -47,6 +47,8 @@ test("invalid stored preferences fall back without losing valid fields", async({
       .not.toBeChecked();
     await expect(panel.getByRole("checkbox", { name: "Show region labels" }))
       .not.toBeChecked();
+    await expect(panel.getByRole("checkbox", { name: "Show UV size" }))
+      .not.toBeChecked();
   }
 });
 
@@ -55,22 +57,25 @@ test("UV visibility preferences survive refresh independently", async({ panel, p
   const trigger = panel.getByRole("button", { name: "Region visibility" });
   const labels = panel.getByRole("checkbox", { name: "Show region labels" });
   const showAll = panel.getByRole("checkbox", { name: "Show all regions" });
+  const size = panel.getByRole("checkbox", { name: "Show UV size" });
 
   for (const state of [
-    { all: true, labels: true },
-    { all: false, labels: true },
-    { all: true, labels: false },
-    { all: false, labels: false }
+    { all: true, labels: true, size: false },
+    { all: false, labels: true, size: true },
+    { all: true, labels: false, size: true },
+    { all: false, labels: false, size: false }
   ]) {
     await trigger.click();
     await showAll.setChecked(state.all);
     await labels.setChecked(state.labels);
+    await size.setChecked(state.size);
     await page.reload();
     await waitForEditor(page);
     await setMode(panel, "uv");
     await trigger.click();
     await expect(showAll).toBeChecked({ checked: state.all });
     await expect(labels).toBeChecked({ checked: state.labels });
+    await expect(size).toBeChecked({ checked: state.size });
     await labels.press("Escape");
   }
 });

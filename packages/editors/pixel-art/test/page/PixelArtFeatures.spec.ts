@@ -22,6 +22,11 @@ describe("PixelArtFeatures", () => {
     assert.equal(features.preview, false);
   });
 
+  test("UV resize stays a playground-only feature through the query", () => {
+    assert.equal(PixelArtFeatures.playground.withQuery("?empty").uvResize, true);
+    assert.equal(PixelArtFeatures.editor.withQuery("?empty").uvResize, false);
+  });
+
   test("import-policy overrides the profile only with a known policy", () => {
     const { playground } = PixelArtFeatures;
 

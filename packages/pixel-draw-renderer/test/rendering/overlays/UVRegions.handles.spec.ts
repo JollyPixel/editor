@@ -48,7 +48,10 @@ describe("UVRegionLayer — resize handles", () => {
     map.select(region.id);
     layer.resizeHandles = true;
 
-    layer.setLivePreview(region.resized({ ...region.bounds, width: 10 }));
+    layer.setLivePreview({
+      region: region.resized({ ...region.bounds, width: 10 }),
+      slot: null
+    });
     assert.equal(handles(svg), 0);
     layer.setLivePreview(null);
     assert.equal(handles(svg), 4);

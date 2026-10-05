@@ -189,6 +189,28 @@ describe("UVMap — select / visibility", () => {
     ]);
   });
 
+  test("size labels are hidden by default", () => {
+    assert.strictEqual(makeUvMap().showSizeLabels, false);
+  });
+
+  test("emits size-label-visibility-changed only when the preference changes", () => {
+    const map = makeUvMap();
+    const events: EventPayload<"size-label-visibility-changed">[] = [];
+    let changes = 0;
+    map.on("size-label-visibility-changed", (e) => events.push(e));
+    map.on("changed", () => changes++);
+
+    map.showSizeLabels = true;
+    map.showSizeLabels = true;
+    map.showSizeLabels = false;
+
+    assert.deepStrictEqual(events, [
+      { showSizeLabels: true },
+      { showSizeLabels: false }
+    ]);
+    assert.strictEqual(changes, 2);
+  });
+
   test("labels every visible region by default", () => {
     assert.strictEqual(makeUvMap().labelScope, "all");
   });

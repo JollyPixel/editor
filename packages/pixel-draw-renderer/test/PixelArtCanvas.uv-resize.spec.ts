@@ -178,6 +178,38 @@ describe("PixelArtCanvas — uv resize", () => {
     manager.destroy();
   });
 
+  test("shows the size of a net face too small to label while it is resized", () => {
+    const { manager, overlay } = createPixelArtCanvas({
+      zoom: { default: 4 },
+      uv: { resizable: true }
+    });
+    manager.mode = "uv";
+    const region = manager.uv.create({ width: 2, height: 2 });
+    manager.uv.setState(region.id, "unfolded");
+    manager.uv.select(region.id);
+    manager.uv.showSizeLabels = true;
+    const front = manager.uv.get(region.id)!.geometryFor("front");
+    assert.ok(!("shape" in front));
+    const edge = 84 + (front.x + front.width) * 4;
+    const middle = 84 + (front.y + 1) * 4;
+    const canvas = manager.canvas();
+    function visibleSizes(): (string | null)[] {
+      return [...overlay.querySelectorAll("[data-overlay='uv-size']")]
+        .filter((label) => label.getAttribute("visibility") === "visible")
+        .map((label) => label.textContent);
+    }
+    assert.deepEqual(visibleSizes(), []);
+
+    canvas.dispatchEvent(mouseEvent("mousemove", edge - 1, middle));
+    canvas.dispatchEvent(mouseEvent("mousedown", edge - 1, middle));
+    canvas.dispatchEvent(mouseEvent("mousemove", edge + 3, middle));
+    assert.deepEqual(visibleSizes(), ["3×2"]);
+
+    canvas.dispatchEvent(mouseEvent("mouseup", edge + 3, middle));
+    assert.deepEqual(visibleSizes(), []);
+    manager.destroy();
+  });
+
   test("holding the line modifier mid-drag resizes the aligned row of a net", () => {
     const manager = makeManager({ uv: { resizable: true } });
     const region = manager.uv.create({ width: 2, height: 2 });

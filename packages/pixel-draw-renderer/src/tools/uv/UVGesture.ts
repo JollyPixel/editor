@@ -6,6 +6,9 @@ import { RectArea } from "../../utils/RectArea.ts";
 import type { UVResizeHandle } from "../../uv/region/layout/UVResizeTarget.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
+  UVLivePreview
+} from "../../rendering/overlays/UVRegions.ts";
+import type {
   UVRegion,
   UVResizeOptions,
   UVSlot
@@ -31,6 +34,7 @@ interface UVRectEdit {
 
 export class UVGesture {
   readonly id: string;
+  readonly #slot: UVSlot | null;
   readonly #edit: UVRectEdit;
   readonly #baseRect: SelectionRect;
   #liveRect: SelectionRect;
@@ -83,6 +87,7 @@ export class UVGesture {
     edit: UVRectEdit
   ) {
     this.id = target.id;
+    this.#slot = target.slot;
     this.#edit = edit;
     this.#baseRect = { ...target.rect };
     this.#liveRect = { ...target.rect };
@@ -111,8 +116,10 @@ export class UVGesture {
 
   preview(
     options: UVResizeOptions
-  ): UVRegion | null {
-    return this.#edit.preview(this.#liveRect, options);
+  ): UVLivePreview | null {
+    const region = this.#edit.preview(this.#liveRect, options);
+
+    return region === null ? null : { region, slot: this.#slot };
   }
 
   commit(

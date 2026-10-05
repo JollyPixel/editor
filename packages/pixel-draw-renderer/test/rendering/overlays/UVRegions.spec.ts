@@ -12,6 +12,7 @@ import {
   makeViewport
 } from "../../helpers/overlay.ts";
 import { makeUvMap } from "../../helpers/uv/map.ts";
+import { livePreview } from "../../helpers/uv/overlay.ts";
 import {
   uvBorderRects,
   uvCasingRects
@@ -219,9 +220,9 @@ describe("UVRegionLayer — setLivePreview", () => {
     map.showAll = true;
 
     overlay.setLivePreview(
-      map.previewMove(region.id, {
+      livePreview(map.previewMove(region.id, {
         x: 9, y: 9, width: 2, height: 2
-      })
+      }))
     );
 
     const [rect] = uvBorderRects(svg);

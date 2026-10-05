@@ -52,6 +52,13 @@ export type UvToolbarHost = ReactiveControllerHost & {
 
 type UVMap = PixelArtCanvas["uv"];
 
+interface UVViewToggle {
+  key: "showAll" | "showRegionLabels" | "showSizeLabels";
+  part: string;
+  icon: IconName;
+  label: string;
+}
+
 function renderBadgedIcon(
   badge: IconName
 ) {
@@ -291,7 +298,8 @@ export class UvToolbarController {
         aria-expanded=${this.#visibilityPopup.open}
         aria-label="Region visibility"
         aria-description="${uv?.showAll ? "All regions" : "Selected region"};
-          labels ${uv?.showRegionLabels ? "on" : "off"}"
+          labels ${uv?.showRegionLabels ? "on" : "off"};
+          size ${uv?.showSizeLabels ? "on" : "off"}"
         ?disabled=${!uv}
         @pointerenter=${this.#visibilityPopup.onPointerEnter}
         @pointerleave=${this.#visibilityPopup.onPointerLeave}
@@ -311,36 +319,48 @@ export class UvToolbarController {
         @beforetoggle=${this.#visibilityPopup.onBeforeToggle}
         @toggle=${this.#visibilityPopup.onToggle}
       >
-        <label class="uv-state-option">
-          <input
-            type="checkbox"
-            part="uv-show-all-checkbox"
-            .checked=${uv?.showAll ?? false}
-            @change=${() => {
-              if (uv) {
-                uv.showAll = !uv.showAll;
-                this.#host.requestUpdate();
-              }
-            }}
-          >
-          ${renderIcon(showAllIcon)}
-          <span>Show all regions</span>
-        </label>
-        <label class="uv-state-option">
-          <input
-            type="checkbox"
-            part="uv-show-region-labels-checkbox"
-            .checked=${uv?.showRegionLabels ?? false}
-            @change=${() => {
-              if (uv) {
-                uv.showRegionLabels = !uv.showRegionLabels;
-              }
-            }}
-          >
-          ${renderIcon("label")}
-          <span>Show region labels</span>
-        </label>
+        ${this.#renderViewToggle(uv, {
+          key: "showAll",
+          part: "uv-show-all-checkbox",
+          icon: showAllIcon,
+          label: "Show all regions"
+        })}
+        ${this.#renderViewToggle(uv, {
+          key: "showRegionLabels",
+          part: "uv-show-region-labels-checkbox",
+          icon: "label",
+          label: "Show region labels"
+        })}
+        ${this.#renderViewToggle(uv, {
+          key: "showSizeLabels",
+          part: "uv-show-size-labels-checkbox",
+          icon: "ruler",
+          label: "Show UV size"
+        })}
       </div>
+    `;
+  }
+
+  #renderViewToggle(
+    uv: UVMap | undefined,
+    toggle: UVViewToggle
+  ) {
+    return html`
+      <label class="uv-state-option">
+        <input
+          type="checkbox"
+          part=${toggle.part}
+          .checked=${uv?.[toggle.key] ?? false}
+          @change=${() => {
+            if (uv) {
+              uv[toggle.key] = !uv[toggle.key];
+              this.#host.requestUpdate();
+            }
+          }}
+        >
+        ${renderIcon(toggle.icon)}
+        <span>${toggle.label}</span>
+      </label>
     `;
   }
 

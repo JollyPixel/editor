@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { uvTargetKey } from "../../uv/region/UVTarget.ts";
+import { geometryKey } from "../../uv/geometry/geometry.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
   UVGeometry,
@@ -9,6 +10,7 @@ import type {
 
 export interface UVOverlayEntry {
   key: string;
+  shapeKey: string;
   region: UVRegion;
   slot: UVSlot | null;
   geometry: UVGeometry;
@@ -73,6 +75,7 @@ export function projectUVOverlay(
 
       entries.push({
         key,
+        shapeKey: `${region.id}|${geometryKey(geometry)}`,
         region,
         slot,
         geometry,

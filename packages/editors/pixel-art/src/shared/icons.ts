@@ -49,6 +49,7 @@ export type IconName =
   | "unfold"
   | "chevronDown"
   | "label"
+  | "ruler"
   | "eyeOpen"
   | "eyeOff"
   | "dockPicker"
@@ -616,6 +617,27 @@ registerIcon("label", svg`
       stroke-linecap="round"
     />
   `, { tone: "violet" });
+
+registerIcon("ruler", svg`
+    <rect
+      x="2.5"
+      y="7.5"
+      width="19"
+      height="9"
+      rx="1.5"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+    />
+    <path
+      class="tone-ink"
+      d="M7 7.5v4M12 7.5v3M17 7.5v4"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+    />
+  `, { tone: "teal" });
 
 registerIcon("unfold", svg`
     <path

@@ -3,6 +3,7 @@ import { SVG_NS } from "../constants.ts";
 import { uvTargetKey } from "../../uv/region/UVTarget.ts";
 import { UVRegionBorder } from "./UVRegionBorder.ts";
 import { UVRegionLabels } from "./UVRegionLabels.ts";
+import { UVSizeLabels } from "./UVSizeLabels.ts";
 import { UVResizeHandles } from "./UVResizeHandles.ts";
 import {
   projectUVOverlay,
@@ -20,6 +21,11 @@ import type {
 // CONSTANTS
 const kStrokeWidth = 2;
 const kSelectedStrokeWidth = 3;
+
+export interface UVLivePreview {
+  region: UVRegion;
+  slot: UVSlot | null;
+}
 
 export interface UVPeerPreview {
   region: UVRegion;
@@ -39,7 +45,8 @@ export class UVRegionLayer {
   #group: SVGGElement;
   #borders = new Map<string, UVRegionBorder>();
   #labels: UVRegionLabels;
-  #livePreview: UVRegion | null = null;
+  #sizeLabels: UVSizeLabels;
+  #livePreview: UVLivePreview | null = null;
   #resizeHandles = false;
   #handles: UVResizeHandles;
   #peerPreviews: ReadonlyMap<string, UVPeerPreview> = new Map();
@@ -58,15 +65,16 @@ export class UVRegionLayer {
     this.#viewport = viewport;
     this.#uvMap = uvMap;
     this.#labels = new UVRegionLabels(this.#group, viewport, uvMap);
+    this.#sizeLabels = new UVSizeLabels(this.#group, viewport, uvMap);
     this.#handles = new UVResizeHandles(this.#group);
 
     this.#uvMap.on("changed", this.#onChanged);
   }
 
   setLivePreview(
-    region: UVRegion | null
+    preview: UVLivePreview | null
   ): void {
-    this.#livePreview = region;
+    this.#livePreview = preview;
     this.#render();
   }
 
@@ -115,6 +123,7 @@ export class UVRegionLayer {
     }
     this.#borders.clear();
     this.#labels.destroy();
+    this.#sizeLabels.destroy();
     this.#handles.destroy();
     this.#group.remove();
   }
@@ -126,7 +135,7 @@ export class UVRegionLayer {
           ({ region, face }) => uvTargetKey({ regionId: region.id, slot: face })
         )
       ),
-      preview: this.#livePreview,
+      preview: this.#livePreview?.region ?? null,
       peerSelections: this.#peerSelections
     });
     const painted = uvOverlayPaintOrder(entries);
@@ -154,6 +163,7 @@ export class UVRegionLayer {
     }
 
     this.#labels.render(entries);
+    this.#sizeLabels.render(entries, this.#livePreview?.slot ?? null);
     this.#handles.render(
       this.#handleRegion(entries),
       this.#uvMap.selectedSlot,
