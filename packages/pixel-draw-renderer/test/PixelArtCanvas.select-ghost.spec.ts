@@ -118,8 +118,8 @@ describe("PixelArtCanvas — select ghost events", () => {
       const events = recordEvents(manager);
       const canvas = manager.canvas();
 
-      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-      canvas.dispatchEvent(mouseEvent("mousemove", 92, 100));
+      canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+      canvas.dispatchEvent(mouseEvent("mousemove", 95, 103));
 
       const moving = events.progress.filter((event) => event.phase === "moving");
       assert.ok(moving.length >= 1);
@@ -136,8 +136,8 @@ describe("PixelArtCanvas — select ghost events", () => {
       const events = recordEvents(manager);
       const canvas = manager.canvas();
 
-      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-      canvas.dispatchEvent(mouseEvent("mousemove", 92, 100));
+      canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+      canvas.dispatchEvent(mouseEvent("mousemove", 95, 103));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       assert.strictEqual(events.counts.committed, 1);
@@ -150,7 +150,7 @@ describe("PixelArtCanvas — select ghost events", () => {
       const events = recordEvents(manager);
       const canvas = manager.canvas();
 
-      canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
       canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
       assert.strictEqual(events.counts.committed, 0);

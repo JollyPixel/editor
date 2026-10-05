@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import type { SelectionPresence } from "../selection/SelectionPresence.ts";
 import type { SelectionRect } from "../types.ts";
 
 export type SelectionProgressEvent =
@@ -15,6 +16,9 @@ export type SelectionProgressEvent =
   };
 
 export type SelectEngineEvent = {
+  "selection-presence-changed": (
+    state: SelectionPresence | null
+  ) => void;
   "selection-state-changed": (
     event: {
       hasSelection: boolean;

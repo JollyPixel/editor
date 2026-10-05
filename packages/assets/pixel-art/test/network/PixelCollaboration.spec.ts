@@ -42,7 +42,7 @@ describe("PixelCollaboration", () => {
 
     assert.deepStrictEqual(
       room.presenceUpdates.flatMap((patch) => Object.keys(patch)),
-      ["cursor", "strokeGhost"]
+      ["selectionGhost", "cursor", "strokeGhost"]
     );
     assert.deepStrictEqual(room.sent, []);
     collaboration.destroy();

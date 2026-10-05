@@ -103,3 +103,41 @@ describe("RectArea.intersection", () => {
     );
   });
 });
+
+describe("RectArea.resized", () => {
+  const kRect = {
+    x: 0,
+    y: 0,
+    width: 8,
+    height: 8
+  };
+
+  test("moves the dragged corner and keeps the opposite one", () => {
+    assert.deepEqual(
+      RectArea.from(kRect).resized("se", { x: 2, y: -3 }).bounds,
+      { x: 0, y: 0, width: 10, height: 5 }
+    );
+    assert.deepEqual(
+      RectArea.from(kRect).resized("nw", { x: 2, y: -3 }).bounds,
+      { x: 2, y: -3, width: 6, height: 11 }
+    );
+  });
+
+  test("an edge handle ignores the other axis", () => {
+    assert.deepEqual(
+      RectArea.from(kRect).resized("n", { x: 5, y: 2 }).bounds,
+      { x: 0, y: 2, width: 8, height: 6 }
+    );
+  });
+
+  test("stops at 1px against the anchored edge", () => {
+    assert.deepEqual(
+      RectArea.from(kRect).resized("e", { x: -20, y: 0 }).bounds,
+      { x: 0, y: 0, width: 1, height: 8 }
+    );
+    assert.deepEqual(
+      RectArea.from(kRect).resized("w", { x: 20, y: 0 }).bounds,
+      { x: 7, y: 0, width: 1, height: 8 }
+    );
+  });
+});

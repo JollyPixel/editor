@@ -12,6 +12,10 @@ export type {
   SelectionProgressEvent,
   SelectTool
 } from "./tools/SelectEngine.ts";
+export {
+  SelectionPresence,
+  type SelectionPresenceData
+} from "./selection/SelectionPresence.ts";
 export type { Toolset } from "./tools/Tools.ts";
 export type { UVTool } from "./tools/uv/UVController.ts";
 export {

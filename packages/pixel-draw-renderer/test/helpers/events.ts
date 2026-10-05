@@ -17,8 +17,10 @@ export function wheel(
     bubbles: true,
     cancelable: true
   });
-  Object.defineProperty(event, "ctrlKey", {
-    value: options.ctrlKey ?? false
+  Object.defineProperties(event, {
+    ctrlKey: { value: options.ctrlKey ?? false },
+    clientX: { value: options.clientX ?? 0 },
+    clientY: { value: options.clientY ?? 0 }
   });
 
   return event;

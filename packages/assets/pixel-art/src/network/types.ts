@@ -74,13 +74,20 @@ export interface UVGhostPayload {
 
 export type SelectionGhostPayload =
   | {
-    phase: "creating";
+    phase: "creating" | "resizing";
     rect: SelectionRect;
   }
   | {
-    phase: "moving";
+    phase: "selected";
+    rect: SelectionRect;
+    mask: string;
+  }
+  | {
+    phase: "moving" | "floating";
     sourceRect: SelectionRect;
     liveRect: SelectionRect;
-    mask: readonly boolean[];
+    pixels: string;
+    mask: string;
+    eraseColor: RGBA8;
     blankSource: boolean;
   };

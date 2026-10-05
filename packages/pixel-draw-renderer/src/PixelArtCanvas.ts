@@ -12,6 +12,7 @@ import {
   type Toolset
 } from "./tools/Tools.ts";
 import type { SelectEngineEvent } from "./tools/SelectEngine.events.ts";
+import type { SelectionPresence } from "./selection/SelectionPresence.ts";
 import type { HistoryState } from "./history/History.ts";
 import type { SelectionFootprint } from "./history/HistoryEntry.ts";
 import {
@@ -141,6 +142,10 @@ export class PixelArtCanvas {
   readonly shortcuts: CanvasShortcuts;
   readonly peerPresence: PeerPresence;
   readonly selectionEvents: Pick<Emitter<SelectEngineEvent>, "on" | "off">;
+
+  get selectionPresence(): SelectionPresence | null {
+    return this.#tools.select.presence;
+  }
 
   constructor(
     parentHtmlElement: HTMLDivElement,

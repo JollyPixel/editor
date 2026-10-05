@@ -30,8 +30,8 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+    canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+    canvas.dispatchEvent(mouseEvent("mousemove", 103, 103));
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })
     );
@@ -89,8 +89,8 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
       new MouseEvent("mouseup", { bubbles: true })
     );
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+    canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+    canvas.dispatchEvent(mouseEvent("mousemove", 103, 103));
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })
     );
@@ -184,8 +184,8 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
 
     await manager.copySelection();
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+    canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+    canvas.dispatchEvent(mouseEvent("mousemove", 103, 103));
     canvas.dispatchEvent(
       new MouseEvent("mouseup", { bubbles: true })
     );
@@ -262,8 +262,8 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 96, 96));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 92, 92));
-    canvas.dispatchEvent(mouseEvent("mousemove", 112, 92));
+    canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
+    canvas.dispatchEvent(mouseEvent("mousemove", 115, 95));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
     assert.deepStrictEqual(

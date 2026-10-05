@@ -6,10 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  resizedRect,
-  resizeHandleAt
-} from "#src/tools/uv/resizeHandles.ts";
+import { resizeHandleAt } from "#src/tools/uv/resizeHandles.ts";
 import type {
   UVResizeHandle,
   UVResizeTarget
@@ -50,37 +47,6 @@ function stacked(): UVRegion {
     rect: kRect
   });
 }
-
-describe("resizedRect", () => {
-  test("moves the dragged corner and keeps the opposite one", () => {
-    assert.deepEqual(
-      resizedRect(kRect, "se", { x: 2, y: -3 }),
-      { x: 0, y: 0, width: 10, height: 5 }
-    );
-    assert.deepEqual(
-      resizedRect(kRect, "nw", { x: 2, y: -3 }),
-      { x: 2, y: -3, width: 6, height: 11 }
-    );
-  });
-
-  test("an edge handle ignores the other axis", () => {
-    assert.deepEqual(
-      resizedRect(kRect, "n", { x: 5, y: 2 }),
-      { x: 0, y: 2, width: 8, height: 6 }
-    );
-  });
-
-  test("stops at 1px against the anchored edge", () => {
-    assert.deepEqual(
-      resizedRect(kRect, "e", { x: -20, y: 0 }),
-      { x: 0, y: 0, width: 1, height: 8 }
-    );
-    assert.deepEqual(
-      resizedRect(kRect, "w", { x: 20, y: 0 }),
-      { x: 7, y: 0, width: 1, height: 8 }
-    );
-  });
-});
 
 describe("resizeHandleAt", () => {
   const targets = [target(kRect)];

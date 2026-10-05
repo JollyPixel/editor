@@ -103,11 +103,11 @@ describe("UVController — drag to move", () => {
 
       controller.handleStart({ x: 2, y: 2 });
       controller.alignEdges(true);
-      assert.strictEqual(events.length, 0);
+      assert.strictEqual(events.length, 1);
 
       controller.handleMove({ x: 6, y: 6 });
       controller.alignEdges(false);
-      assert.strictEqual(events.length, 2);
+      assert.strictEqual(events.length, 3);
     });
 
     test("handleMove emits a live preview via UVMap on every move, without committing", () => {
@@ -122,6 +122,7 @@ describe("UVController — drag to move", () => {
       controller.handleMove({ x: 7, y: 7 });
 
       assert.deepStrictEqual(events.map((e) => e.region.bounds), [
+        { x: 0, y: 0, width: 8, height: 8 },
         { x: 4, y: 4, width: 8, height: 8 },
         { x: 5, y: 5, width: 8, height: 8 }
       ]);

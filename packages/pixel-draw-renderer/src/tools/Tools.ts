@@ -86,7 +86,8 @@ export class Tools {
       document,
       floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
-      eraseColor: options.eraseColor
+      eraseColor: options.eraseColor,
+      viewport: options.viewport
     });
 
     this.uv = new UVController({

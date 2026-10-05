@@ -4,10 +4,20 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import { ShapeSelect } from "./ShapeSelect.ts";
 import type { SelectEngineEvent } from "./SelectEngine.events.ts";
+import { SelectionPresence } from "../selection/SelectionPresence.ts";
+import type { SelectState } from "./SelectState.ts";
 import type { SelectionSnapshot } from "../clipboard/types.ts";
 import { SelectionContent } from "../selection/SelectionContent.ts";
 import type { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
-import { RectArea } from "../utils/RectArea.ts";
+import {
+  RectArea,
+  type ResizeCorner
+} from "../utils/RectArea.ts";
+import {
+  RESIZE_CURSORS,
+  resizeCornerAt
+} from "../input/resizeHandles.ts";
+import type { ScreenProjection } from "../rendering/Viewport.ts";
 import { positionKey } from "../utils/math.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type {
@@ -35,6 +45,7 @@ export interface SelectEngineOptions {
   floatingSelection: FloatingSelection;
   selectionOverlay: SelectionOutline;
   eraseColor: SelectionEraseColor;
+  viewport: ScreenProjection;
 }
 
 export interface SelectTool {
@@ -59,32 +70,11 @@ export interface SelectTool {
   delete(): boolean;
 }
 
-type SelectState =
-  | {
-    kind: "idle";
-  }
-  | {
-    kind: "creating";
-    start: Vec2;
-    rect: SelectionRect;
-  }
-  | {
-    kind: "selected";
-    content: SelectionContent;
-    floating: boolean;
-  }
-  | {
-    kind: "moving";
-    content: SelectionContent;
-    floating: boolean;
-    origin: Vec2;
-    live: SelectionContent;
-  };
-
 type SelectedState = Extract<SelectState, { kind: "selected"; }>;
 
 export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTool {
   #state: SelectState = { kind: "idle" };
+  #publishedPresenceState: SelectState = this.#state;
   #canvasBuffer: CanvasBuffer;
   #floatingSelection: FloatingSelection;
   #selectionOverlay: SelectionOutline;
@@ -94,6 +84,8 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   #publishedHasSelection = false;
   #publishedIsFloating = false;
   #readOnly = false;
+  #viewport: ScreenProjection;
+  #hoverPoint: Vec2 | null = null;
 
   constructor(
     options: SelectEngineOptions
@@ -104,6 +96,20 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.#selectionOverlay = options.selectionOverlay;
     this.#eraseColor = options.eraseColor;
     this.#document = options.document;
+    this.#viewport = options.viewport;
+  }
+
+  get presence(): SelectionPresence | null {
+    const state = this.#state;
+    let eraseColor: RGBA8 | undefined;
+    if (state.kind === "moving") {
+      eraseColor = state.eraseColor;
+    }
+    else if (state.kind === "selected" && state.floating) {
+      eraseColor = this.#eraseColor.resolve(this.#canvasBuffer, state.content.rect);
+    }
+
+    return SelectionPresence.capture(state, eraseColor);
   }
 
   get isDragging(): boolean {
@@ -111,7 +117,9 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   }
 
   get hasSelection(): boolean {
-    return this.#state.kind === "selected" || this.#state.kind === "moving";
+    return this.#state.kind === "selected" ||
+      this.#state.kind === "moving" ||
+      this.#state.kind === "resizing";
   }
 
   get isFloating(): boolean {
@@ -152,10 +160,48 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     return !this.#readOnly && this.#state.kind === "selected";
   }
 
+  get cursor(): string {
+    if (this.#state.kind === "resizing") {
+      return RESIZE_CURSORS[this.#state.corner];
+    }
+    if (this.isDragging) {
+      return "grabbing";
+    }
+    const corner = this.#hoverPoint === null ?
+      null : this.#resizeHit(this.#hoverPoint);
+
+    if (corner !== null) {
+      return RESIZE_CURSORS[corner];
+    }
+
+    return this.editable ? "grab" : "";
+  }
+
+  hover(
+    point: Vec2 | null
+  ): void {
+    this.#hoverPoint = point === null ? null : { ...point };
+  }
+
   handleStart(
-    pos: Vec2
+    pos: Vec2,
+    point: Vec2
   ): void {
     const state = this.#state;
+    this.hover(point);
+    const corner = this.#resizeHit(point);
+    if (corner !== null && state.kind === "selected") {
+      this.#state = {
+        kind: "resizing",
+        content: state.content,
+        corner,
+        origin: this.#viewport.toTexture(point),
+        rect: state.content.rect
+      };
+      this.refreshOverlay();
+
+      return;
+    }
     if (
       !this.#readOnly &&
       state.kind === "selected" &&
@@ -174,12 +220,13 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     else {
       const rect = SelectEngine.#spanning(pos, pos);
       this.#state = { kind: "creating", start: pos, rect };
-      this.#selectionOverlay.draw(rect);
+      this.refreshOverlay();
     }
   }
 
   handleMove(
-    pos: Vec2
+    pos: Vec2,
+    point: Vec2
   ): void {
     const state = this.#state;
 
@@ -191,6 +238,16 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
         "selection-progress",
         { phase: "creating", rect }
       );
+    }
+    else if (state.kind === "resizing") {
+      const pointer = this.#viewport.toTexture(point);
+      const rect = RectArea.from(state.content.rect).resized(state.corner, {
+        x: Math.round(pointer.x - state.origin.x),
+        y: Math.round(pointer.y - state.origin.y)
+      }).bounds;
+      this.#state = { ...state, rect };
+      this.refreshOverlay();
+      this.emit("selection-progress", { phase: "creating", rect });
     }
     else if (state.kind === "moving") {
       const live = state.content.movedTo({
@@ -211,6 +268,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
         }
       );
     }
+    this.#publishPresence();
   }
 
   handleEnd(): void {
@@ -221,6 +279,9 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     }
     else if (state.kind === "moving") {
       this.#finishMove(state);
+    }
+    else if (state.kind === "resizing") {
+      this.#finishResize(state);
     }
   }
 
@@ -239,7 +300,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.clear();
     this.#state = { kind: "selected", content, floating: true };
     this.#showFloatingSelection(content);
-    this.#selectionOverlay.draw(content.rect, content.mask);
+    this.refreshOverlay();
     this.#publishSelectionState();
 
     return true;
@@ -262,6 +323,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     );
     this.#commit(state.content, erased, false);
     this.#state = { ...state, content: erased };
+    this.#publishPresence();
 
     return true;
   }
@@ -286,11 +348,13 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
   }
 
   discard(): void {
-    const interruptedGesture = this.#state.kind === "creating" || this.#state.kind === "moving";
+    const interruptedGesture = this.#state.kind === "creating" ||
+      this.#state.kind === "moving" || this.#state.kind === "resizing";
 
     this.#state = { kind: "idle" };
     this.#selectionOverlay.clear();
     this.#floatingSelection.clear();
+    this.#publishPresence();
 
     // An interrupted gesture has no command, so clear its peer ghost explicitly.
     if (interruptedGesture) {
@@ -307,7 +371,14 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
         this.#selectionOverlay.draw(state.rect);
         break;
       case "selected":
-        this.#selectionOverlay.draw(state.content.rect, state.content.mask);
+        this.#selectionOverlay.draw(
+          state.content.rect,
+          state.content.mask,
+          this.#resizableContent() !== null
+        );
+        break;
+      case "resizing":
+        this.#selectionOverlay.draw(state.rect, null, true);
         break;
       case "moving":
         this.#selectionOverlay.draw(state.live.rect, state.live.mask);
@@ -317,6 +388,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       default:
         state satisfies never;
     }
+    this.#publishPresence();
   }
 
   syncSelectionAfterHistory(
@@ -328,7 +400,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       [...footprint.mask]
     );
     this.#state = { kind: "selected", content, floating: false };
-    this.#selectionOverlay.draw(content.rect, content.mask);
+    this.refreshOverlay();
     this.#publishSelectionState();
   }
 
@@ -337,19 +409,22 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     pos: Vec2
   ): void {
     const { content, floating } = state;
+    const eraseColor = this.#eraseColor.resolve(this.#canvasBuffer, content.rect);
 
     this.#state = {
       kind: "moving",
       content,
       floating,
       origin: pos,
-      live: content
+      live: content,
+      eraseColor
     };
+    this.refreshOverlay();
     this.#floatingSelection.create({
       sourceRect: content.rect,
       pixels: content.pixels,
       mask: content.mask,
-      eraseColor: this.#eraseColor.resolve(this.#canvasBuffer, content.rect),
+      eraseColor,
       blankSource: !floating
     });
   }
@@ -371,9 +446,8 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       shape.mask
     );
     this.#state = { kind: "selected", content, floating: false };
-    this.#selectionOverlay.draw(content.rect, content.mask);
+    this.refreshOverlay();
     this.#publishSelectionState();
-    // Shape selection has no command, so clear its peer ghost explicitly.
     this.emit("selection-idle");
   }
 
@@ -395,7 +469,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       content: SelectionContent.capture(this.#canvasBuffer, finalRect),
       floating: false
     };
-    this.#selectionOverlay.draw(finalRect);
+    this.refreshOverlay();
     this.#publishSelectionState();
     this.emit("selection-idle");
   }
@@ -417,8 +491,29 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       this.emit("selection-idle");
     }
 
-    this.#selectionOverlay.draw(live.rect, live.mask);
+    this.refreshOverlay();
     this.#publishSelectionState();
+  }
+
+  #finishResize(
+    state: Extract<SelectState, { kind: "resizing"; }>
+  ): void {
+    const rect = RectArea.from(state.rect).intersection(
+      this.#canvasBuffer.size()
+    );
+    const before = state.content.rect;
+    const unchanged = rect === null || [state.rect, rect].some(
+      (candidate) => candidate.x === before.x && candidate.y === before.y &&
+        candidate.width === before.width && candidate.height === before.height
+    );
+    this.#state = {
+      kind: "selected",
+      content: unchanged ? state.content :
+        SelectionContent.capture(this.#canvasBuffer, rect),
+      floating: false
+    };
+    this.refreshOverlay();
+    this.emit("selection-idle");
   }
 
   #transform(
@@ -437,7 +532,7 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
       this.#commit(state.content, content, true);
     }
     this.#state = { ...state, content };
-    this.#selectionOverlay.draw(content.rect, content.mask);
+    this.refreshOverlay();
 
     return true;
   }
@@ -543,6 +638,37 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
         hasSelection,
         isFloating
       }
+    );
+  }
+
+  #publishPresence(): void {
+    if (this.#publishedPresenceState === this.#state) {
+      return;
+    }
+    this.#publishedPresenceState = this.#state;
+    this.emit("selection-presence-changed", this.presence);
+  }
+
+  #resizableContent(): SelectionContent | null {
+    const state = this.#state;
+    if (
+      state.kind !== "selected" || state.floating || this.#shapeMode ||
+      !state.content.mask.every(Boolean)
+    ) {
+      return null;
+    }
+
+    return state.content;
+  }
+
+  #resizeHit(
+    point: Vec2
+  ): ResizeCorner | null {
+    const content = this.#resizableContent();
+
+    return content === null ? null : resizeCornerAt(
+      this.#viewport.toScreenRect(content.rect),
+      point
     );
   }
 
