@@ -17,7 +17,8 @@ export const FACADE_EXAMPLE: GalleryExample<"hidden"> = {
   render(host, options) {
     const hint = document.createElement("p");
     hint.className = "scenario-hint";
-    hint.textContent = "Built through the Pane facade. Look for it floating near the top left.";
+    hint.textContent = "Built through the Pane facade. Look for it floating near the top left; "
+      + "narrow it and its labels stack above their values.";
 
     const state = {
       enabled: true,
@@ -29,7 +30,8 @@ export const FACADE_EXAMPLE: GalleryExample<"hidden"> = {
     const pane = new Pane({
       title: "facade",
       storageKey: kStorageKey,
-      hidden: options.hidden
+      hidden: options.hidden,
+      labelPosition: "auto"
     });
     const scene = pane.addFolder({ title: "Scene" });
     scene.addNote({

@@ -3,14 +3,18 @@ import "../controls/PropertyRow.ts";
 import { FacadeItem } from "./FacadeItem.ts";
 import type {
   FieldAlign,
-  FieldLabelPosition
+  FieldDescriptionDisplay
 } from "../field/JollyField.ts";
+import {
+  applyFieldLayout,
+  type FieldLayoutOptions
+} from "./fieldLayout.ts";
 
-export interface NoteOptions {
+export interface NoteOptions extends FieldLayoutOptions {
   label?: string;
   description?: string;
+  descriptionDisplay?: FieldDescriptionDisplay;
   align?: FieldAlign;
-  labelPosition?: FieldLabelPosition;
 }
 
 export class FacadeNote extends FacadeItem<
@@ -22,15 +26,17 @@ export class FacadeNote extends FacadeItem<
     options: NoteOptions = {}
   ) {
     super();
+
     this.element = document.createElement("jolly-property-row");
     this.element.label = options.label ?? "";
     this.element.description = options.description ?? "";
     if (options.align !== undefined) {
       this.element.align = options.align;
     }
-    if (options.labelPosition !== undefined) {
-      this.element.labelPosition = options.labelPosition;
+    if (options.descriptionDisplay !== undefined) {
+      this.element.descriptionDisplay = options.descriptionDisplay;
     }
+    applyFieldLayout(this.element, options);
   }
 
   get label(): string {

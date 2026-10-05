@@ -41,6 +41,8 @@ show/hide, native toggles and host disconnection cancel pending hover work.
 Pending opens also check that the same anchor and popover are still connected.
 After a host update replaces an open popover or its element anchor, the
 controller closes it and releases its input layer.
+`claimsInput: false` skips that input layer, for a hint that only describes
+and should leave shortcuts working while it shows.
 
 `closeOnHoverLeave: { delay: 200 }` enables closing when the pointer leaves
 the trigger and popover. Bind both pointer handlers to both elements. Its

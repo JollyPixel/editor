@@ -31,6 +31,10 @@ import {
   type NoteOptions
 } from "./Note.ts";
 import {
+  inheritFieldLayout,
+  type FieldLayoutOptions
+} from "./fieldLayout.ts";
+import {
   Presence,
   type PresenceOptions
 } from "./Presence.ts";
@@ -57,12 +61,19 @@ export abstract class FacadeContainer extends FacadeItem {
   abstract override readonly element: HTMLElement;
 
   #children: FacadeItem[] = [];
+  #fieldLayout: FieldLayoutOptions = {};
   #refreshable: RefreshableItem[] = [];
   #owner: FacadeOwner = {
     release: (child) => this.#release(child)
   };
 
   protected abstract get contentHost(): HTMLElement;
+
+  protected set fieldLayout(
+    layout: FieldLayoutOptions
+  ) {
+    this.#fieldLayout = layout;
+  }
 
   protected abstract createFolder(
     options: FolderOptions
@@ -71,9 +82,10 @@ export abstract class FacadeContainer extends FacadeItem {
   addFolder(
     options: FolderOptions = {}
   ): FacadeFolder {
-    return this.#adoptRefreshable(
-      this.createFolder(options)
-    );
+    const folder = this.createFolder(options);
+    folder.#fieldLayout = this.#fieldLayout;
+
+    return this.#adoptRefreshable(folder);
   }
 
   addBinding<TObject extends object, TKey extends keyof TObject>(
@@ -82,7 +94,14 @@ export abstract class FacadeContainer extends FacadeItem {
     options?: BindingOptions<TObject[TKey]>
   ): FacadeBinding<TObject, TKey> {
     return this.#adoptRefreshable(
-      new FacadeBinding(object, key, options)
+      new FacadeBinding(
+        object,
+        key,
+        inheritFieldLayout(
+          options ?? {},
+          this.#fieldLayout
+        )
+      )
     );
   }
 
@@ -92,7 +111,11 @@ export abstract class FacadeContainer extends FacadeItem {
     options?: MonitorOptions<TObject[TKey]>
   ): FacadeMonitor<TObject, TKey> {
     return this.#adoptRefreshable(
-      new FacadeMonitor(object, key, options)
+      new FacadeMonitor(
+        object,
+        key,
+        options
+      )
     );
   }
 
@@ -101,42 +124,63 @@ export abstract class FacadeContainer extends FacadeItem {
     fields: MonitorFields<TObject>
   ): void {
     for (const [key, options] of monitorFieldEntries(fields)) {
-      this.addMonitor(object, key, options);
+      this.addMonitor(
+        object,
+        key,
+        options
+      );
     }
   }
 
   addButton(
     options?: ButtonOptions
   ): FacadeButton {
-    return this.#adopt(new FacadeButton(options));
+    return this.#adopt(
+      new FacadeButton(options)
+    );
   }
 
   addSeparator(): FacadeSeparator {
-    return this.#adopt(new FacadeSeparator());
+    return this.#adopt(
+      new FacadeSeparator()
+    );
   }
 
   addNote(
     options: NoteOptions = {}
   ): FacadeNote {
-    return this.#adopt(new FacadeNote(options));
+    return this.#adopt(
+      new FacadeNote(
+        inheritFieldLayout(
+          options,
+          this.#fieldLayout
+        )
+      )
+    );
   }
 
   addThemePreferences(
     options: ThemePreferencesOptions = {}
   ): FacadeThemePreferences {
-    return this.#adopt(createThemePreferences(options));
+    return this.#adopt(
+      createThemePreferences(options)
+    );
   }
 
   addElement<TElement extends HTMLElement>(
     element: TElement
   ): FacadeElement<TElement> {
-    return this.#adopt(new FacadeElement(element));
+    return this.#adopt(
+      new FacadeElement(element)
+    );
   }
 
   addPresence(
     options: PresenceOptions = {}
   ): Presence {
-    return this.#adopt(new Presence(options));
+    return this.#adopt(
+      new Presence(options)
+    );
   }
 
   disposeAll(): void {

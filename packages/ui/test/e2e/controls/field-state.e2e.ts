@@ -49,7 +49,7 @@ async function expectLabelColumn(
   const field = page.locator(tag).first();
 
   await expect(field).toHaveCSS("--jolly-label-width", "14ch");
-  expect(await widthOf(field.locator(".label").first()))
+  expect(await widthOf(field.locator(".label-cell").first()))
     .toBeGreaterThanOrEqual(80);
 }
 

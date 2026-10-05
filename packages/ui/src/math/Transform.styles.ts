@@ -10,7 +10,7 @@ export const transformStyles = css`
     gap: var(--jolly-row-gap, 0);
   }
 
-  :host([label-position="top"]) {
+  :host([stacked]) {
     gap: var(--jolly-space-2, 8px);
   }
 `;

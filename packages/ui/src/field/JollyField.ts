@@ -10,6 +10,16 @@ import { property } from "lit/decorators.js";
 
 // Import Internal Dependencies
 import { fieldStyles } from "./JollyField.styles.ts";
+import { descriptionHintStyles } from "./DescriptionHint.styles.ts";
+import {
+  DescriptionHint,
+  type FieldDescriptionDisplay
+} from "./DescriptionHint.ts";
+import {
+  DEFAULT_STACK_BELOW,
+  LabelStackController,
+  type FieldLabelPosition
+} from "./LabelStackController.ts";
 import {
   DraftController,
   type DraftResult
@@ -38,7 +48,9 @@ const kMaxChips = 3;
 const kWarned = new Set<string>();
 
 export type FieldAlign = "start" | "end";
-export type FieldLabelPosition = "inline" | "top";
+
+export type { FieldLabelPosition } from "./LabelStackController.ts";
+export type { FieldDescriptionDisplay } from "./DescriptionHint.ts";
 
 export type { DraftResult } from "./DraftController.ts";
 
@@ -48,6 +60,7 @@ export type { DraftResult } from "./DraftController.ts";
 export abstract class JollyField<TValue> extends LitElement {
   static override styles = [
     fieldStyles,
+    descriptionHintStyles,
     hiddenStyles
   ];
 
@@ -94,8 +107,22 @@ export abstract class JollyField<TValue> extends LitElement {
   })
   declare labelPosition: FieldLabelPosition;
 
+  @property({
+    type: Number,
+    attribute: "stack-below"
+  })
+  declare stackBelow: number;
+
+  @property({
+    type: String,
+    attribute: "description-display",
+    reflect: true
+  })
+  declare descriptionDisplay: FieldDescriptionDisplay;
+
   #draft = new DraftController<TValue>(this);
   #lock = new LockController(this);
+  #hint = new DescriptionHint(this);
 
   constructor() {
     super();
@@ -112,6 +139,9 @@ export abstract class JollyField<TValue> extends LitElement {
     this.colored = false;
     this.align = "start";
     this.labelPosition = "inline";
+    this.stackBelow = DEFAULT_STACK_BELOW;
+    this.descriptionDisplay = "block";
+    new LabelStackController(this);
   }
 
   protected abstract renderValue(): TemplateResult;
@@ -315,22 +345,33 @@ export abstract class JollyField<TValue> extends LitElement {
       >
         <div class="leading">
           <span class="gutter"></span>
-          ${this.label === "" ? nothing : html`<span
-            class="label"
-            @pointerenter=${revealOverflowTitle}
-          >${this.label}</span>`}
+          <div class="label-cell">${this.#renderHint()}${this.#renderLabel()}${this.#renderRevert()}</div>
         </div>
         <div class="content">
           <div class="value">${this.renderValue()}</div>
-          <div class="trailing">
-            ${this.#renderRevert()}
-            ${holder === null ? this.#renderPeers() : nothing}
-          </div>
+          ${holder === null ? this.#renderPeers() : nothing}
         </div>
       </div>
-      ${this.#renderDescription()}
+      ${this.#hintsDescription ? nothing : this.#renderDescription()}
       ${this.#renderError()}
     `;
+  }
+
+  get #hintsDescription(): boolean {
+    return this.descriptionDisplay === "tooltip" && this.description !== "";
+  }
+
+  #renderLabel(): TemplateResult | typeof nothing {
+    return this.label === "" ? nothing : html`<span
+      class="label"
+      @pointerenter=${revealOverflowTitle}
+    >${this.label}</span>`;
+  }
+
+  #renderHint(): TemplateResult | typeof nothing {
+    return this.#hintsDescription ?
+      this.#hint.render(this.label, this.description) :
+      nothing;
   }
 
   #renderRevert(): TemplateResult | typeof nothing {

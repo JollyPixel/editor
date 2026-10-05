@@ -141,7 +141,6 @@ export const exampleStyles = css`
 
   .state-matrix {
     --jolly-label-width: 14ch;
-    --jolly-field-trailing-width: 48px;
     --jolly-gutter-width: 14px;
 
     display: grid;
@@ -179,6 +178,37 @@ export const exampleStyles = css`
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--jolly-space-1);
+  }
+
+  .field-layout-column {
+    --jolly-label-width: 12ch;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--jolly-row-gap);
+    align-content: start;
+  }
+
+  .field-layout-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--jolly-space-3);
+  }
+
+  .field-layout-resizable {
+    --jolly-label-width: 12ch;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--jolly-row-gap);
+    box-sizing: border-box;
+    width: 420px;
+    min-width: 140px;
+    max-width: 100%;
+    padding: var(--jolly-space-1) 0;
+    overflow: hidden;
+    resize: horizontal;
+    border: 1px dashed var(--jolly-border);
   }
 
   .placement-stage,

@@ -18,11 +18,15 @@ interface BindingOptions<TValue> {
   axisLabels?: Record<string, string>;
   axes?: "xy" | "xz" | "yz";
   path?: string;
+  labelPosition?: "inline" | "top" | "auto";
+  stackBelow?: number;
 }
 ```
 
 `label` defaults to the property key. `align` defaults to `"end"` for a
-checkbox and `"start"` for every other field.
+checkbox and `"start"` for every other field. `labelPosition` and `stackBelow`
+default to the pane's [field layout](./pane.md#field-layout), then to the
+field's own defaults.
 
 `path` is the lock path forwarded to the field's `path` property. It is the
 consumer's own identifier for the bound value, opaque to the package, and it

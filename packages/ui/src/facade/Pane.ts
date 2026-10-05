@@ -13,11 +13,16 @@ import {
   FacadeFolder,
   type FolderOptions
 } from "./Folder.ts";
+import type { FieldLayoutOptions } from "./fieldLayout.ts";
 
 // CONSTANTS
 const kDefaultLabelWidth = "16ch";
 
-export interface PaneOptions {
+/**
+ * `labelPosition` and `stackBelow` become the default of every binding and
+ * note added to the pane, its folders included.
+ */
+export interface PaneOptions extends FieldLayoutOptions {
   title?: string;
   /**
    * Identity the pane persists and reorders under, and what a
@@ -98,6 +103,10 @@ export class Pane extends FacadeContainer {
     this.#pane.storageKey = options.storageKey ?? "";
     this.#pane.floatWidth = options.floatWidth;
     this.#pane.floatHeight = options.floatHeight;
+    this.fieldLayout = {
+      labelPosition: options.labelPosition,
+      stackBelow: options.stackBelow
+    };
     this.#floating = options.container === undefined ||
       options.floating === true;
 
@@ -159,7 +168,9 @@ export class Pane extends FacadeContainer {
   #host(): HTMLElement {
     const parent = this.#pane.parentElement;
 
-    return this.#floating && parent instanceof Floating ? parent : this.#pane;
+    return this.#floating && parent instanceof Floating
+      ? parent
+      : this.#pane;
   }
 
   #mountInto(

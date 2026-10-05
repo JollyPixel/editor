@@ -23,7 +23,7 @@ test.describe("controls: field painting", () => {
     await expect(fields).toHaveCount(8);
     await expect(fields.first()).toHaveCSS("--jolly-label-width", "10ch");
 
-    const widths = await fields.locator(".label").evaluateAll(
+    const widths = await fields.locator(".label-cell").evaluateAll(
       (labels) => labels.map((label) => label.getBoundingClientRect().width)
     );
     expect(new Set(widths).size).toBe(1);
@@ -81,12 +81,14 @@ test.describe("controls: field painting", () => {
     const boxes = await Promise.all(states.map(
       (state) => boxOf(row(page, "jolly-slider", state).locator(".value"))
     ));
-    const edges = boxes.map((box) => box.x + box.width);
+    const starts = boxes.map((box) => box.x);
+    const ends = boxes.map((box) => box.x + box.width);
 
-    expect(new Set(edges).size).toBe(1);
+    expect(new Set(starts).size).toBe(1);
+    expect(new Set(ends).size).toBe(1);
   });
 
-  test("revert sits flush with its field and hovers to the same fill", async({ page }) => {
+  test("revert sits flush before its field and hovers to the same fill", async({ page }) => {
     await openExample(page, "controls/number");
 
     const field = row(page, "jolly-number", "modified");
@@ -98,7 +100,7 @@ test.describe("controls: field painting", () => {
     ]);
 
     expect(revertBox.height).toBe(inputBox.height);
-    expect(revertBox.x).toBe(inputBox.x + inputBox.width);
+    expect(revertBox.x + revertBox.width).toBe(inputBox.x);
 
     const fill = await styleOf(input, "background-color");
     await revert.hover();

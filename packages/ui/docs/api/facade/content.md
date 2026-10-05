@@ -9,8 +9,10 @@ explains the rows around it without binding a value.
 interface NoteOptions {
   label?: string;
   description?: string;
+  descriptionDisplay?: "block" | "tooltip";
   align?: "start" | "end";
-  labelPosition?: "inline" | "top";
+  labelPosition?: "inline" | "top" | "auto";
+  stackBelow?: number;
 }
 
 const note = folder.addNote({
@@ -21,8 +23,10 @@ note.description = "Updated copy.";
 ```
 
 `label` and `description` both default to `""` and stay mutable on the
-builder. `align` and `labelPosition` are left to the element's own defaults
-when unset, so a note lines up with the fields around it. Markup richer than
+builder. `align`, `descriptionDisplay`, `labelPosition` and `stackBelow` are
+left to the element's own defaults when unset, so a note lines up with the
+fields around it; `labelPosition` and `stackBelow` fall back to the pane's
+[field layout](./pane.md#field-layout) first. Markup richer than
 two strings belongs in the element itself, reached through `note.element` or
 added with `addElement()`.
 

@@ -36,6 +36,8 @@ interface PaneOptions {
 | `locked` | `false` | Keeps the pane at its authored position inside a `jolly-dock-layout`. |
 | `storageKey` | derived | Namespace the pane and its floating window persist under. Derived from the page path and the title when unset, so renaming the pane drops what it remembered. |
 | `labelWidth` | `16ch` floating, none mounted | Width of the label column, as `--jolly-label-width`. |
+| `labelPosition` | none | Default `labelPosition` of every binding and note in the pane, folders included. |
+| `stackBelow` | none | Default `stackBelow` of the same rows. |
 | `hidden` | `false` | Starts the pane hidden. A floating pane persists its visibility, so a stored value wins over this default. |
 | `floatWidth` | none | Sets `floatWidth` on the `jolly-pane`. |
 | `floatHeight` | none | Sets `floatHeight` on the `jolly-pane`. |
@@ -75,6 +77,24 @@ const pane = new Pane({
   grow: false
 });
 ```
+
+## Field layout
+
+`labelPosition` and `stackBelow` set the layout of every row the pane builds,
+so one option makes a whole pane responsive:
+
+```ts
+const pane = new Pane({
+  title: "Inspector",
+  labelPosition: "auto",
+  stackBelow: 220
+});
+```
+
+Folders pass the defaults on to their own rows, and an option given to
+`addBinding()` or `addNote()` wins over them. Elements appended with
+`addElement()` are left alone. The type of these two options is exported as
+`FieldLayoutOptions`; see the [shared field API](../field/shared-field-api.md#label-column).
 
 ## Floating inside a dock layout
 
