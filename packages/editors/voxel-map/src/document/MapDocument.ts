@@ -5,6 +5,7 @@ import {
   isVoxelMaterialGroupCommand,
   isVoxelTemplateCommand,
   isVoxelTilesetCommand,
+  type ResolvedBlockDefinition,
   type VoxelCommand,
   type VoxelCommandListener,
   type VoxelLayerCommand,
@@ -14,12 +15,18 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { WorldSource } from "./WorldSource.ts";
+import {
+  KnownBlocks,
+  type BlockRegistryChange
+} from "./KnownBlocks.ts";
 
 export type MapDocumentEvents = {
   layerUpdated: (
     command: VoxelLayerCommand
   ) => void;
-  blockRegistryChanged: () => void;
+  blockRegistryChanged: (
+    change: BlockRegistryChange
+  ) => void;
   tilesetsChanged: () => void;
   materialGroupsChanged: () => void;
   templatesChanged: () => void;
@@ -32,6 +39,7 @@ export type MapDocumentSignals = Pick<
 >;
 
 export interface MapCommandSource {
+  readonly blocks: Iterable<ResolvedBlockDefinition>;
   on(event: "command", listener: VoxelCommandListener): unknown;
   off(event: "command", listener: VoxelCommandListener): unknown;
 }
@@ -44,6 +52,7 @@ export interface MapDocumentOptions {
 export class MapDocument extends Emitter<MapDocumentEvents> {
   #commands: MapCommandSource;
   #source: WorldSource;
+  #blocks = new KnownBlocks();
 
   #onCommand = (
     command: VoxelCommand
@@ -52,7 +61,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
       this.emit("layerUpdated", command);
     }
     else if (isVoxelBlockCommand(command)) {
-      this.emit("blockRegistryChanged");
+      this.emit("blockRegistryChanged", this.#blocks.record(command));
     }
     else if (isVoxelMaterialGroupCommand(command)) {
       this.emit("materialGroupsChanged");
@@ -66,8 +75,9 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   };
 
   #onSourceReset = (): void => {
+    this.#blocks.reset(this.#commands.blocks);
     this.emit("tilesetsChanged");
-    this.emit("blockRegistryChanged");
+    this.emit("blockRegistryChanged", "reset");
     this.emit("materialGroupsChanged");
     this.emit("templatesChanged");
     this.emit("reset");
@@ -83,6 +93,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
     super();
     this.#commands = options.commands;
     this.#source = options.source;
+    this.#blocks.reset(this.#commands.blocks);
 
     this.#commands.on("command", this.#onCommand);
     this.#source.on("reset", this.#onSourceReset);

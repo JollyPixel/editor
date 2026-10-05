@@ -1,14 +1,15 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
 import {
+  assertVoxelPatch,
   deserializeVoxelWorld,
   isVoxelLayerCommand,
   isVoxelObjectLayerCommand,
   parseVoxelTemplate,
   parseVoxelWorld,
   TilesetList,
-  VOXEL_PATCH_STRIDE,
   VoxelWorld,
+  type VoxelPatch,
   type VoxelWorldCommandTarget,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
@@ -63,7 +64,7 @@ export class VoxelCommandArbiter {
     }
     if (
       command.action === "voxels-patched" &&
-      command.metadata.cells.length % VOXEL_PATCH_STRIDE !== 0
+      !isWellFormedPatch(command.metadata)
     ) {
       return null;
     }
@@ -167,6 +168,19 @@ function parses(
 ): boolean {
   try {
     parseVoxelTemplate(command.template);
+
+    return true;
+  }
+  catch {
+    return false;
+  }
+}
+
+function isWellFormedPatch(
+  patch: VoxelPatch
+): boolean {
+  try {
+    assertVoxelPatch(patch);
 
     return true;
   }

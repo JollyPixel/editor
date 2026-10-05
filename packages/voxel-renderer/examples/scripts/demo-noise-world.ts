@@ -58,8 +58,7 @@ const kSeedBounds = {
 };
 const kMaxWorkers = 32;
 const kWorkersBySize: ReadonlyArray<readonly [maxSize: number, workers: number]> = [
-  [512, 1],
-  [1024, 2],
+  [512, 2],
   [Infinity, 4]
 ];
 const kMaxViewDistance = 24;
@@ -132,8 +131,7 @@ const voxelMap = world.createActor("map")
     document: {
       chunkSize: settings.chunkSize,
       layers: [kTerrainLayer],
-      blocks: tileset.blocks,
-      blendGroups: TERRAIN_BLEND_GROUPS
+      blocks: tileset.blocks
     },
     tilesets,
     rendering: {
@@ -196,7 +194,7 @@ const controls = {
   ambientOcclusion: true,
   shadows: daylight.shadows,
   alphaToCoverage: voxels.rendering.alphaToCoverage,
-  blending: true,
+  blending: false,
   blendSpread: 1,
   traa: true
 };
@@ -499,13 +497,14 @@ function buildWorld(
   { seed, size }: WorldSettings
 ): BuildReport {
   const generateStart = performance.now();
+  const cells: number[] = [];
   const terrain = generateTerrain(
-    (position, blockId) => voxels.document.world.setVoxel(
-      kTerrainLayer,
-      { position, blockId }
-    ),
+    (position, blockId) => {
+      cells.push(position.x, position.y, position.z, blockId, 0);
+    },
     { seed, size }
   );
+  voxels.document.world.patchVoxels(kTerrainLayer, cells);
   const generateMs = performance.now() - generateStart;
 
   const built: BuildReport = {

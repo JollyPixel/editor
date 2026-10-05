@@ -1,6 +1,7 @@
 export * from "./types.ts";
 export * from "./storage/packedVoxel.ts";
 export * from "./editing/voxelPatch.ts";
+export * from "./editing/VoxelPatchBuilder.ts";
 export * from "./storage/VoxelChunk.ts";
 export * from "./VoxelLayer.ts";
 export { rankBetween } from "./layerRank.ts";

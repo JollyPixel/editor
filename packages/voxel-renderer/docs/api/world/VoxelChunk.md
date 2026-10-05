@@ -9,10 +9,10 @@ A cube of `size³` voxel cells inside a [`VoxelLayer`](./VoxelLayer.md). Custom
 const collider: VoxelCollider = {
   rebuildChunk(key, { origin, chunks }) {
     for (const chunk of chunks) {
-      for (const [index, packed] of chunk.packedEntries()) {
+      for (const [index, packed, partner] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(index);
         const blockId = voxelBlockId(packed);
-        // cell at origin + (lx, ly, lz)
+        // cell at origin + (lx, ly, lz); partner is VOXEL_ABSENT unless merged
       }
     }
   },
@@ -33,7 +33,7 @@ space. Methods take local coordinates `lx`, `ly`, `lz` in `0..size - 1`.
 | --- | --- | --- |
 | `cx`, `cy`, `cz` | `number` | Chunk coordinates. |
 | `size` | `number` | Side length in voxels, a power of two. Default `DEFAULT_CHUNK_SIZE` (16). |
-| `voxelCount` | `number` | Stored voxels. |
+| `voxelCount` | `number` | Stored cells; a merged cell counts once. |
 
 ## Methods
 
@@ -44,13 +44,26 @@ object, so compare entries by value.
 
 #### `getPackedAt(lx: number, ly: number, lz: number): PackedVoxel`
 
-Same lookup without allocating. Returns `VOXEL_ABSENT` for air.
+#### `getPartnerAt(lx: number, ly: number, lz: number): PackedVoxel`
+
+Same lookup without allocating, for the first and the second shape of a
+[merged cell](./VoxelWorld.md#merged-cells). Return `VOXEL_ABSENT` for air,
+and `getPartnerAt()` also for a cell that is not merged. Both return values
+as `packVoxel()` builds them.
+
+#### `storedAt(lx: number, ly: number, lz: number): PackedVoxel`
+
+The raw stored value, as `store.values` holds it. On a merged cell it carries a
+flag bit, so it differs from `packVoxel()` of the same block and transform;
+decode it with `voxelBlockId()` and `voxelTransform()`. Meant for meshing hot
+paths; prefer `getPackedAt()` elsewhere.
 
 #### `entries(): IterableIterator<[number, VoxelEntry]>`
 
-#### `packedEntries(): IterableIterator<[number, PackedVoxel]>`
+#### `packedEntries(): IterableIterator<[number, PackedVoxel, PackedVoxel]>`
 
-Every stored voxel with its linear index.
+Every stored cell with its linear index. `packedEntries()` yields the first
+shape as `packVoxel()` builds it, then the second shape or `VOXEL_ABSENT`.
 
 #### `fromLinearIndex(index: number): { lx: number; ly: number; lz: number }`
 
@@ -60,14 +73,14 @@ Convert between local coordinates and the linear index the iterators yield.
 
 #### `countBlocks(): ReadonlyMap<number, number>`
 
-Voxel count per block id. Do not mutate the returned map.
+Voxel count per block id, counting both shapes of a merged cell. Do not
+mutate the returned map.
 
 #### `isEmpty(): boolean`
 
 ## Packed voxels
 
-Packed reads return a block id and a transform byte in one non-negative
-integer.
+Packed reads return a block id and a transform in one non-negative integer.
 
 ```ts
 type PackedVoxel = number;
@@ -80,8 +93,11 @@ function packVoxel(blockId: number, transform: number): PackedVoxel;
 function unpackVoxel(packed: PackedVoxel): VoxelEntry;
 function voxelBlockId(packed: PackedVoxel): number;
 function voxelTransform(packed: PackedVoxel): number;
+function turnVoxel(packed: PackedVoxel, transform: VoxelTransform): PackedVoxel;
 ```
 
 `packVoxel()` throws a `RangeError` for air (`0`), a negative id, or an id
-above `MAX_BLOCK_ID`. Any packed value below zero means no voxel. Decode the
-transform byte with [`VoxelTransform`](./VoxelTransform.md).
+above `MAX_BLOCK_ID`, and keeps only the bits of a packed
+[`VoxelTransform`](./VoxelTransform.md). Any packed value below zero means no
+voxel. `turnVoxel()` applies `transform` after the voxel's own, and returns
+`VOXEL_ABSENT` unchanged.

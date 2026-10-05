@@ -5,7 +5,11 @@ import {
   Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
-import type { VoxelCoord, VoxelView } from "@jolly-pixel/voxel.renderer";
+import type {
+  VoxelCoord,
+  VoxelPart,
+  VoxelView
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type {
@@ -18,13 +22,16 @@ import {
   type BrushShape
 } from "./model/BrushFootprint.ts";
 import { brushOrientationOf } from "./model/brushOrientation.ts";
+import { AimedHalf } from "./model/AimedHalf.ts";
 import {
   BrushStroke,
+  canMergePaint,
   type StrokeMode,
   type VoxelPaint
 } from "./model/BrushStroke.ts";
 import {
   ghostTargetOf,
+  partGhostOf,
   type GhostTarget
 } from "./model/ghostTarget.ts";
 import {
@@ -302,17 +309,17 @@ export class LocalBrush extends ActorComponent {
   }
 
   #pickBlock(): void {
-    const center = this.#resolveAim()?.remove;
-    if (center === undefined) {
+    const aim = this.#resolveAim();
+    if (aim === null) {
       return;
     }
 
-    const blockId = pickBlockAt(
+    const blockId = this.#pickedPart(aim)?.blockId ?? pickBlockAt(
       this.view,
       new BrushFootprint({
         ...this.#shape(),
-        position: center,
-        anchor: this.#resolveAim()?.anchors.remove
+        position: aim.remove,
+        anchor: aim.anchors.remove
       })
     );
     if (blockId !== null) {
@@ -343,7 +350,8 @@ export class LocalBrush extends ActorComponent {
       axis,
       pattern,
       origin: aim[side],
-      anchor: aim.anchors[side]
+      anchor: aim.anchors[side],
+      aimedPart: mode === "place" ? null : this.#aimedHalf(aim)?.aimed
     });
 
     this.#stroke = stroke;
@@ -410,11 +418,96 @@ export class LocalBrush extends ActorComponent {
     }
 
     const { input } = this.actor.world;
-    this.#frameAim = this.#aimer.resolve(
+    const aim = this.#aimer.resolve(
       input.mouse.viewportPositionTo(this.#pointer)
     );
+    this.#frameAim = aim !== null && this.#mergesAt(aim.remove) ?
+      {
+        ...aim,
+        place: aim.remove,
+        anchors: {
+          ...aim.anchors,
+          place: aim.anchors.remove
+        }
+      } :
+      aim;
 
     return this.#frameAim;
+  }
+
+  #pickedPart(
+    aim: BrushAim
+  ): VoxelPart | null {
+    const owner = this.view.document.world.getVoxelWithLayerAt(aim.remove);
+    if (owner === undefined || aim.probe === null) {
+      return null;
+    }
+
+    return this.view.partAt(owner.layer.name, aim.remove, aim.probe);
+  }
+
+  #aimedHalf(
+    aim: BrushAim | null
+  ): AimedHalf | null {
+    const layerName = this.#selection.voxelLayer;
+    if (
+      aim === null ||
+      aim.probe === null ||
+      layerName === null ||
+      this.#brush.size !== 1
+    ) {
+      return null;
+    }
+
+    const entry = this.view.document.world
+      .getLayer(layerName)
+      ?.getVoxelAt(aim.remove);
+    const part = entry?.partner === undefined ?
+      null :
+      this.view.partAt(layerName, aim.remove, aim.probe);
+
+    return entry === undefined || part === null ?
+      null :
+      AimedHalf.of(entry, part);
+  }
+
+  #removalTarget(): GhostTarget | null {
+    if (this.#stroke !== null || this.#brush.mode === "replace") {
+      return null;
+    }
+
+    const aim = this.#resolveAim();
+    const half = this.#aimedHalf(aim);
+
+    return aim === null || half === null ?
+      null :
+      partGhostOf(aim.remove, half.aimed);
+  }
+
+  #replacementGhost(): GhostTarget | null {
+    if (this.#stroke !== null || this.#brush.mode !== "replace") {
+      return null;
+    }
+
+    const aim = this.#resolveAim();
+    const replacement = this.#aimedHalf(aim)?.replacementFor(
+      this.#paint(),
+      this.view.complements
+    );
+
+    return aim === null || !replacement ?
+      null :
+      partGhostOf(aim.remove, replacement);
+  }
+
+  #mergesAt(
+    position: VoxelCoord
+  ): boolean {
+    const layerName = this.#selection.voxelLayer;
+
+    return layerName !== null &&
+      this.#brush.mode !== "replace" &&
+      canMergePaint(this.view, layerName, position, this.#paint());
   }
 
   #aimAtPlane(
@@ -462,7 +555,8 @@ export class LocalBrush extends ActorComponent {
       this.actor.world.input.mouse.isMoving(),
       this.#shape(),
       () => this.#previewTarget(),
-      () => this.#ghostTarget()
+      () => this.#ghostTarget(),
+      () => this.#removalTarget()
     );
   }
 
@@ -470,6 +564,11 @@ export class LocalBrush extends ActorComponent {
     const layerName = this.#selection.voxelLayer;
     if (layerName === null || !this.#brush.ghost) {
       return null;
+    }
+
+    const replacement = this.#replacementGhost();
+    if (replacement !== null) {
+      return replacement;
     }
 
     const stroke = this.#stroke;
@@ -484,7 +583,8 @@ export class LocalBrush extends ActorComponent {
         center: this.#previewCenter()
       },
       paint: this.#paint(),
-      occupied: (position) => layer?.getVoxelAt(position) !== undefined
+      occupied: (position) => layer?.getVoxelAt(position) !== undefined &&
+        !this.#mergesAt(position)
     });
   }
 

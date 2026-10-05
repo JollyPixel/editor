@@ -3,16 +3,20 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  VoxelCommand,
-  VoxelDocumentEvents,
-  VoxelWorldJSON
+import {
+  resolveBlockDefinition,
+  type BlockDefinition,
+  type ResolvedBlockDefinition,
+  type VoxelCommand,
+  type VoxelDocumentEvents,
+  type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
   MapDocument,
+  type BlockRegistryChange,
   type MapDocumentEvents,
   type WorldSource,
   type WorldSourceEvents
@@ -46,16 +50,22 @@ class FakeWorldSource
   }
 }
 
+class FakeCommands extends Emitter<VoxelDocumentEvents> {
+  blocks: ResolvedBlockDefinition[] = [];
+}
+
 function setup() {
-  const view = new Emitter<VoxelDocumentEvents>();
+  const view = new FakeCommands();
   const source = new FakeWorldSource();
   const mapDocument = new MapDocument({ commands: view, source });
   const seen: string[] = [];
   for (const event of kEvents) {
     mapDocument.on(event, () => seen.push(event));
   }
+  const changes: BlockRegistryChange[] = [];
+  mapDocument.on("blockRegistryChanged", (change) => changes.push(change));
 
-  return { view, source, mapDocument, seen };
+  return { view, source, mapDocument, seen, changes };
 }
 
 function command(
@@ -64,12 +74,33 @@ function command(
   return { action } as VoxelCommand;
 }
 
+function block(
+  overrides: Partial<BlockDefinition> = {}
+): ResolvedBlockDefinition {
+  return resolveBlockDefinition({
+    id: 1,
+    name: "Stone",
+    shapeId: "cube",
+    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
+    ...overrides
+  });
+}
+
+function defined(
+  definition: ResolvedBlockDefinition
+): VoxelCommand {
+  return {
+    action: "block-defined",
+    block: definition
+  };
+}
+
 describe("MapDocument", () => {
   it("routes each document command family to its own signal", () => {
     const { view, seen } = setup();
 
     view.emit("command", command("added"), { origin: "local" });
-    view.emit("command", command("block-defined"), { origin: "remote" });
+    view.emit("command", defined(block()), { origin: "remote" });
     view.emit("command", command("tileset-added"), { origin: "local" });
     view.emit("command", command("material-group-removed"), {
       origin: "remote"
@@ -98,6 +129,51 @@ describe("MapDocument", () => {
       "templatesChanged",
       "reset"
     ]);
+  });
+
+  it("tells a block that only moved its tiles from other block changes", () => {
+    const { view, changes } = setup();
+
+    view.emit("command", defined(block()), { origin: "local" });
+    view.emit("command", defined(block({
+      defaultTexture: { col: 3, row: 1, size: 32, tilesetId: "atlas" }
+    })), { origin: "remote" });
+    view.emit("command", defined(block({
+      name: "Granite"
+    })), { origin: "local" });
+    view.emit("command", defined(block({
+      defaultTexture: { col: 3, row: 1, rotation: 1, tilesetId: "atlas" }
+    })), { origin: "local" });
+    view.emit("command", {
+      action: "block-moved",
+      blockId: 1,
+      toIndex: 0
+    }, { origin: "local" });
+    view.emit("command", {
+      action: "block-removed",
+      blockId: 1
+    }, { origin: "local" });
+
+    assert.deepEqual(changes, [
+      "added",
+      "retiled",
+      "redefined",
+      "redefined",
+      "moved",
+      "removed"
+    ]);
+  });
+
+  it("knows the blocks of its command source after a reset", () => {
+    const { view, source, changes } = setup();
+    view.blocks = [block()];
+
+    source.emit("reset");
+    view.emit("command", defined(block({
+      defaultTexture: { col: 2, row: 0, tilesetId: "atlas" }
+    })), { origin: "remote" });
+
+    assert.deepEqual(changes, ["reset", "retiled"]);
   });
 
   it("mirrors the readiness of its source", () => {

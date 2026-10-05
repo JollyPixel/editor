@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   VoxelTransform,
-  type VoxelCoord
+  type VoxelCoord,
+  type VoxelPart
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -82,5 +83,17 @@ function targetOf(
       flipY: paint.flipY
     }),
     overlay
+  };
+}
+
+export function partGhostOf(
+  position: VoxelCoord,
+  part: VoxelPart
+): GhostTarget {
+  return {
+    position,
+    blockId: part.blockId,
+    transform: VoxelTransform.fromPacked(part.transform),
+    overlay: true
   };
 }

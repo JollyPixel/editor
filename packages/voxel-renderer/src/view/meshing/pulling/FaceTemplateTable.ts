@@ -6,10 +6,13 @@ import { texture } from "three/tsl";
 // Import Internal Dependencies
 import type { BlockVariantFace } from "../variants/types.ts";
 import {
+  AO_UNOCCLUDED,
   aoUAxis,
-  aoVAxis
+  aoVAxis,
+  shadeFace
 } from "../ambientOcclusion.ts";
 import { FACE_AXIS } from "../../../document/geometry/faceDirection.ts";
+import { FaceRegionTable } from "./FaceRegionTable.ts";
 
 // CONSTANTS
 export const FACE_TEMPLATE_TEXELS = 8;
@@ -22,6 +25,8 @@ const kRegionTexel = 5;
 const kNormalTexel = 6;
 const kUnorm16 = 65535;
 const kSnorm8 = 127;
+const kAoStates = 256;
+const kFlipUnknown = -1;
 
 export type FaceTemplate = Pick<
   BlockVariantFace,
@@ -29,7 +34,7 @@ export type FaceTemplate = Pick<
   | "vertexCount"
   | "positions"
   | "uvs"
-  | "region"
+  | "regionId"
   | "normalX"
   | "normalY"
   | "normalZ"
@@ -37,6 +42,7 @@ export type FaceTemplate = Pick<
 
 export class FaceTemplateTable {
   readonly node: TextureNode;
+  readonly regions: FaceRegionTable;
 
   #ids = new WeakMap<FaceTemplate, number>();
   #faces: FaceTemplate[] = [];
@@ -44,8 +50,13 @@ export class FaceTemplateTable {
   #data: Float32Array<ArrayBuffer>;
   #texture: THREE.DataTexture;
   #count = 0;
+  #flips = new Int8Array(0);
+  #shade = new Int8Array(4);
 
-  constructor() {
+  constructor(
+    regions = new FaceRegionTable()
+  ) {
+    this.regions = regions;
     this.#data = new Float32Array(kRowTexels * 4);
     this.#texture = createTexture(this.#data, 1);
     this.node = texture(this.#texture);
@@ -78,6 +89,35 @@ export class FaceTemplateTable {
     return id;
   }
 
+  diagonalFlipOf(
+    id: number,
+    ao: number
+  ): number {
+    if (ao === AO_UNOCCLUDED) {
+      return 0;
+    }
+
+    const key = (id * kAoStates) + ao;
+    if (key < this.#flips.length) {
+      const known = this.#flips[key];
+      if (known !== kFlipUnknown) {
+        return known;
+      }
+    }
+    else {
+      const grown = new Int8Array(
+        Math.max(key + 1, this.#flips.length * 2)
+      ).fill(kFlipUnknown);
+      grown.set(this.#flips);
+      this.#flips = grown;
+    }
+
+    const flip = shadeFace(this.#faces[id], ao, this.#shade);
+    this.#flips[key] = flip;
+
+    return flip;
+  }
+
   templatesSince(
     id: number
   ): FaceTemplate[] {
@@ -87,7 +127,7 @@ export class FaceTemplateTable {
         vertexCount: face.vertexCount,
         positions: face.positions,
         uvs: face.uvs,
-        region: face.region,
+        regionId: face.regionId,
         normalX: face.normalX,
         normalY: face.normalY,
         normalZ: face.normalZ
@@ -124,6 +164,7 @@ export class FaceTemplateTable {
 
   dispose(): void {
     this.#texture.dispose();
+    this.regions.dispose();
   }
 
   #append(
@@ -188,7 +229,7 @@ function writeTemplate(
   offset: number,
   face: FaceTemplate
 ): void {
-  const { positions, uvs, region } = face;
+  const { positions, uvs } = face;
   const last = face.vertexCount - 1;
 
   for (let corner = 0; corner < 4; corner++) {
@@ -201,10 +242,7 @@ function writeTemplate(
     data[offset + (kUvTexel * 4) + corner] = uvs[(source * 2) + 1] / kUnorm16;
   }
 
-  const regionOffset = offset + (kRegionTexel * 4);
-  for (let i = 0; i < 4; i++) {
-    data[regionOffset + i] = region[i] / kUnorm16;
-  }
+  data[offset + (kRegionTexel * 4)] = face.regionId;
 
   const axis = face.cull < 0 ? 1 : FACE_AXIS[face.cull];
   const normalOffset = offset + (kNormalTexel * 4);
@@ -225,7 +263,7 @@ function contentKey(
     parts.push(face.uvs[i]);
   }
   parts.push(
-    ...face.region,
+    face.regionId,
     face.normalX,
     face.normalY,
     face.normalZ

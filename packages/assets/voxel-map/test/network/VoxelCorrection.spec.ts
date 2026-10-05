@@ -73,6 +73,26 @@ describe("correctVoxelCommand", () => {
     );
   });
 
+  test("patches the second shape of a merged cell back too", () => {
+    const merged = state();
+    merged.world.setVoxel("Ground", {
+      position: { x: 1, y: 0, z: 0 },
+      blockId: 4,
+      flipY: true,
+      merge: true
+    });
+
+    const correction = correctVoxelCommand(merged, removal([1]), null);
+
+    assert.deepStrictEqual(
+      correction?.action === "voxels-patched" && correction.metadata,
+      {
+        cells: [1, 0, 0, 3, 0],
+        partners: [0, 4, 16]
+      }
+    );
+  });
+
   test("returns null for a write to a missing layer or a structural command", () => {
     assert.strictEqual(correctVoxelCommand(state(), removal([0], "missing"), null), null);
     assert.strictEqual(correctVoxelCommand(state(), {

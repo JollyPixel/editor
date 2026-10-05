@@ -17,6 +17,7 @@ import { chunkMeshes } from "./view.ts";
 
 // CONSTANTS
 const kTemplateFloats = FACE_TEMPLATE_TEXELS * 4;
+const kRegionFloat = 5 * 4;
 
 export interface InProcessWorkers {
   createWorker: () => MeshWorkerPort;
@@ -128,15 +129,19 @@ function pulledFaces(
 ): number[][] {
   const words = geometry.faces.image.data as Uint32Array;
   const templates = geometry.templates.texture.image.data as Float32Array;
+  const regions = geometry.templates.regions.texture.image.data as Float32Array;
   const templateMask = (1 << PULLED_TEMPLATE_BITS) - 1;
   const faces: number[][] = [];
   for (let face = 0; face < geometry.faceCount; face++) {
     const packed = words[(face * geometry.faceWords) + 1];
     const template = (packed & templateMask) * kTemplateFloats;
+    const region = templates[template + kRegionFloat] * 4;
     faces.push([
       words[face * geometry.faceWords],
       packed >>> PULLED_TEMPLATE_BITS,
-      ...templates.subarray(template, template + kTemplateFloats),
+      ...templates.subarray(template, template + kRegionFloat),
+      ...regions.subarray(region, region + 4),
+      ...templates.subarray(template + kRegionFloat + 4, template + kTemplateFloats),
       ...words.subarray(
         (face * geometry.faceWords) + 2,
         (face + 1) * geometry.faceWords

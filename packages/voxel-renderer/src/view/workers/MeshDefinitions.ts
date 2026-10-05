@@ -13,6 +13,7 @@ import type { ResolvedTilesetDefinition } from "../../document/tilesets/types.ts
 import type { BlendGroupJSON } from "../../document/materials/BlendGroup.ts";
 import type { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
 import { FACES } from "../../document/geometry/faceDirection.ts";
+import type { FaceRegionAssignment } from "../meshing/pulling/FaceRegionTable.ts";
 
 export interface MeshShapeDefinition {
   id: BlockShapeID;
@@ -33,6 +34,7 @@ export interface MeshDefinitions {
   tilesets: MeshTilesetDefinitions;
   blendGroups: BlendGroupJSON[];
   alphaTest: number;
+  regions: FaceRegionAssignment[];
 }
 
 export interface MeshDefinitionSources {
@@ -58,7 +60,8 @@ export function meshDefinitionsVersion(
 }
 
 export function captureMeshDefinitions(
-  sources: MeshDefinitionSources
+  sources: MeshDefinitionSources,
+  regions: Iterable<FaceRegionAssignment> = []
 ): MeshDefinitions {
   const {
     blockRegistry,
@@ -85,7 +88,8 @@ export function captureMeshDefinitions(
       loaded
     },
     blendGroups: blendGroups?.toJSON() ?? [],
-    alphaTest
+    alphaTest,
+    regions: [...regions]
   };
 }
 

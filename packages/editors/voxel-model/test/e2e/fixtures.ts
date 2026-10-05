@@ -24,7 +24,10 @@ export interface E2EModel {
 
 export const test = editorFixture<E2EModel>({
   editor: {
-    maxFps: 5
+    maxFps: 5,
+    query: {
+      render: "on-demand"
+    }
   },
   async create(catalog) {
     const folder = e2eFolder();

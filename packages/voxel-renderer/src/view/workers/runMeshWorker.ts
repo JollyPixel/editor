@@ -4,6 +4,8 @@ import { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeRegist
 import { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
 import type { VoxelLogger } from "../../VoxelLogger.ts";
 import { VoxelMeshBuilder } from "../meshing/VoxelMeshBuilder.ts";
+import { FaceTemplateTable } from "../meshing/pulling/FaceTemplateTable.ts";
+import { FaceRegionTable } from "../meshing/pulling/FaceRegionTable.ts";
 import { DefinedShape } from "./DefinedShape.ts";
 import { DefinedTilesets } from "./DefinedTilesets.ts";
 import type { MeshDefinitions } from "./MeshDefinitions.ts";
@@ -101,6 +103,9 @@ function createBuilder(
     atlases: new DefinedTilesets(definitions.tilesets),
     blendGroups: new BlendGroupList(definitions.blendGroups),
     alphaTest: definitions.alphaTest,
+    faceTemplates: new FaceTemplateTable(
+      new FaceRegionTable(definitions.regions)
+    ),
     logger
   });
 }

@@ -9,6 +9,7 @@ import {
   voxelBlockId,
   voxelTransform
 } from "../../document/world/storage/packedVoxel.ts";
+import { isMergedVoxel } from "../../document/world/storage/mergedVoxel.ts";
 
 export interface ChunkMeshPass {
   chunk: MeshableChunk;
@@ -63,6 +64,23 @@ export class ChunkMesher {
       }
 
       const packed = values[slot];
+      if (isMergedVoxel(packed)) {
+        const merged = this.#variants.mergedOf(
+          packed,
+          chunk.getPartnerAt(
+            linearIdx & mask,
+            (linearIdx >> shift) & mask,
+            linearIdx >> shiftZ
+          )
+        );
+        for (const part of merged?.parts ?? []) {
+          for (const face of part.faces) {
+            faces.emitVisible(part.variant, face, wx, wy, wz);
+          }
+        }
+        continue;
+      }
+
       const variant = this.#variants.get(
         voxelBlockId(packed),
         voxelTransform(packed)

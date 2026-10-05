@@ -3,17 +3,12 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { VoxelWorld } from "./world/VoxelWorld.ts";
-import {
-  VOXEL_ABSENT,
-  voxelBlockId,
-  voxelTransform
-} from "./world/storage/packedVoxel.ts";
+import { sameCell } from "./world/storage/mergedVoxel.ts";
 import type {
   VoxelCellChange,
   VoxelEditRecorder
 } from "./world/types.ts";
-import type { VoxelPatchCells } from "./world/editing/voxelPatch.ts";
-import { AIR_BLOCK_ID } from "./blocks/BlockId.ts";
+import { VoxelPatchBuilder } from "./world/editing/VoxelPatchBuilder.ts";
 
 // CONSTANTS
 const kDefaultLimit = 10;
@@ -112,7 +107,12 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
 
     this.#group = null;
     this.#push(
-      [...group.values()].filter((change) => change.before !== change.after)
+      [...group.values()].filter((change) => !sameCell(
+        change.before,
+        change.beforePartner,
+        change.after,
+        change.afterPartner
+      ))
     );
   }
 
@@ -161,7 +161,13 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
 
       this.#group.set(
         key,
-        previous === undefined ? change : { ...previous, after: change.after }
+        previous === undefined ?
+          change :
+          {
+            ...previous,
+            after: change.after,
+            afterPartner: change.afterPartner
+          }
       );
     }
   }
@@ -207,35 +213,36 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
     direction: ReplayDirection
   ): void {
     const world = this.#world;
-    const patches = new Map<string, VoxelPatchCells>();
+    const patches = new Map<string, VoxelPatchBuilder>();
 
     for (const change of entry.changes) {
-      const [expected, target] = direction === "undo" ?
-        [change.after, change.before] :
-        [change.before, change.after];
+      const undo = direction === "undo";
+      const expected = undo ? change.after : change.before;
+      const expectedPartner = undo ? change.afterPartner : change.beforePartner;
+      const target = undo ? change.before : change.after;
+      const targetPartner = undo ? change.beforePartner : change.afterPartner;
 
       const { layerId, position } = change;
-      if (world.getLayerById(layerId)?.getPackedVoxelAt(position) !== expected) {
+      const layer = world.getLayerById(layerId);
+      if (
+        layer?.getPackedVoxelAt(position) !== expected ||
+        layer.getPartnerVoxelAt(position) !== expectedPartner
+      ) {
         continue;
       }
 
-      let cells = patches.get(layerId);
-      if (cells === undefined) {
-        cells = [];
-        patches.set(layerId, cells);
+      let patch = patches.get(layerId);
+      if (patch === undefined) {
+        patch = new VoxelPatchBuilder();
+        patches.set(layerId, patch);
       }
-      cells.push(
-        position.x,
-        position.y,
-        position.z,
-        target === VOXEL_ABSENT ? AIR_BLOCK_ID : voxelBlockId(target),
-        target === VOXEL_ABSENT ? 0 : voxelTransform(target)
-      );
+      patch.push(position, target, targetPartner);
     }
 
     world.unrecorded(() => world.transaction(() => {
-      for (const [layerId, cells] of patches) {
-        world.patchVoxels(world.getLayerById(layerId)!.name, cells);
+      for (const [layerId, patch] of patches) {
+        const { cells, partners } = patch.toPatch();
+        world.patchVoxels(world.getLayerById(layerId)!.name, cells, partners);
       }
     }));
   }

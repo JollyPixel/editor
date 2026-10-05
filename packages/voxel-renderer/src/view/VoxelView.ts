@@ -4,6 +4,14 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { BlockShape } from "../document/blocks/shape/BlockShape.ts";
 import { BlockShapeRegistry } from "../document/blocks/shape/BlockShapeRegistry.ts";
+import { BlockComplements } from "../document/blocks/BlockComplements.ts";
+import type { VoxelPart } from "../document/world/types.ts";
+import {
+  packVoxel,
+  unpackVoxel,
+  VOXEL_ABSENT
+} from "../document/world/storage/packedVoxel.ts";
+import type { Vec3 } from "../document/geometry/faceDirection.ts";
 import type {
   VoxelCollider,
   VoxelColliderFactory
@@ -122,6 +130,7 @@ export class VoxelView {
 
   readonly document: VoxelDocument;
   readonly shapes: BlockShapeRegistry;
+  readonly complements: BlockComplements;
   readonly atlases: TilesetAtlases;
   readonly inspector: VoxelInspector;
   readonly range: VoxelRange;
@@ -133,6 +142,7 @@ export class VoxelView {
 
   #chunkGroup = new THREE.Group();
   #faceTemplates = new FaceTemplateTable();
+  #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #pipeline: ChunkPipeline;
   #collider: VoxelCollider | null;
@@ -157,11 +167,17 @@ export class VoxelView {
       }
     }
     else if (command.action === "block-defined") {
-      markBlockDirty(
-        this.document.world.getLayers(),
-        command.block.id,
-        this.#blockReach.redefine(command.block)
-      );
+      const redefinition = this.#blockReach.redefine(command.block);
+      if (
+        redefinition !== "tiles" ||
+        !this.#meshBuilder.writeRegions(command.block.id)
+      ) {
+        markBlockDirty(
+          this.document.world.getLayers(),
+          command.block.id,
+          redefinition === "neighbours"
+        );
+      }
     }
     else if (command.action === "block-removed") {
       this.#blockReach.forget(command.blockId);
@@ -247,6 +263,10 @@ export class VoxelView {
     shapes.forEach(
       (shape) => this.shapes.register(shape)
     );
+    this.complements = new BlockComplements({
+      blocks,
+      shapes: this.shapes
+    });
     this.atlases = new TilesetAtlases({
       tilesets: document.tilesets
     });
@@ -265,6 +285,7 @@ export class VoxelView {
       logger: this.#logger,
       visibility: this.layerVisibility
     });
+    this.#meshBuilder = meshBuilder;
     this.#collider = collider?.({
       blockRegistry: blocks,
       shapeRegistry: this.shapes
@@ -396,6 +417,58 @@ export class VoxelView {
       mergeLayers,
       tilesets: declared
     });
+  }
+
+  canMergeAt(
+    layerName: string,
+    position: THREE.Vector3Like,
+    part: VoxelPart
+  ): boolean {
+    const layer = this.document.world.getLayer(layerName);
+    if (
+      layer === undefined ||
+      layer.getPartnerVoxelAt(position) !== VOXEL_ABSENT
+    ) {
+      return false;
+    }
+
+    const packed = layer.getPackedVoxelAt(position);
+
+    return packed !== VOXEL_ABSENT && this.complements.complements(
+      packed,
+      packVoxel(part.blockId, part.transform)
+    );
+  }
+
+  partAt(
+    layerName: string,
+    position: THREE.Vector3Like,
+    point: THREE.Vector3Like
+  ): VoxelPart | null {
+    const layer = this.document.world.getLayer(layerName);
+    if (layer === undefined) {
+      return null;
+    }
+
+    const packed = layer.getPackedVoxelAt(position);
+    const partner = layer.getPartnerVoxelAt(position);
+    if (packed === VOXEL_ABSENT) {
+      return null;
+    }
+    if (partner === VOXEL_ABSENT) {
+      return unpackVoxel(packed);
+    }
+
+    const occupancy = this.complements.occupancyOf(packed);
+    const local: Vec3 = [
+      point.x - position.x,
+      point.y - position.y,
+      point.z - position.z
+    ];
+
+    return unpackVoxel(
+      occupancy === null || occupancy.contains(local) ? packed : partner
+    );
   }
 
   markAllChunksDirty(

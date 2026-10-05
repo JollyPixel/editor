@@ -7,9 +7,13 @@ import {
 
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { voxelCellOf } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { BrushAimResolver } from "../../../../src/features/painting/interaction/BrushAimResolver.ts";
+import {
+  BrushAimResolver,
+  type BrushAim
+} from "../../../../src/features/painting/interaction/BrushAimResolver.ts";
 import type { BrushPlane } from "../../../../src/features/painting/model/BrushFootprint.ts";
 import { CellFace } from "../../../../src/features/painting/model/CellFace.ts";
 
@@ -73,6 +77,18 @@ function aimingDownAtFace(
 ): void {
   camera.position.set(0.5, 2.2, -3);
   camera.lookAt(0.5, 0.85, 0);
+}
+
+function probedAim(
+  resolver: BrushAimResolver
+): BrushAim {
+  const aim = resolver.resolve(kPointer);
+  assert.ok(aim !== null && aim.probe !== null);
+
+  return {
+    ...aim,
+    probe: voxelCellOf(aim.probe)
+  };
 }
 
 function heightOf(
@@ -162,10 +178,11 @@ describe("BrushAimResolver.resolve", () => {
       camera.lookAt(0.5, 0.5, 0);
     });
 
-    assert.deepStrictEqual(resolver.resolve(kPointer), {
+    assert.deepStrictEqual(probedAim(resolver), {
       place: { x: 0, y: 0, z: -1 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.NegZ,
+      probe: { x: 0, y: 0, z: 0 },
       anchors: {
         place: "center",
         remove: "center"
@@ -179,10 +196,11 @@ describe("BrushAimResolver.resolve", () => {
       camera.lookAt(0.5, 0.15, 0.15);
     }, [{ x: 0, y: 0, z: 0 }]);
 
-    assert.deepStrictEqual(resolver.resolve(kPointer), {
+    assert.deepStrictEqual(probedAim(resolver), {
       place: { x: 0, y: 0, z: -1 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.NegZ,
+      probe: { x: 0, y: 0, z: 0 },
       anchors: {
         place: "center",
         remove: "center"
@@ -196,10 +214,11 @@ describe("BrushAimResolver.resolve", () => {
       camera.lookAt(0.5, 0.55, 0.55);
     }, [{ x: 0, y: 0, z: 0 }]);
 
-    assert.deepStrictEqual(resolver.resolve(kPointer), {
+    assert.deepStrictEqual(probedAim(resolver), {
       place: { x: 0, y: 1, z: 0 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.PosY,
+      probe: { x: 0, y: 0, z: 0 },
       anchors: {
         place: "bottom",
         remove: "top"
@@ -217,6 +236,7 @@ describe("BrushAimResolver.resolve", () => {
       place: { x: 2, y: 0, z: 2 },
       remove: { x: 2, y: 0, z: 2 },
       face: CellFace.NegY,
+      probe: null,
       anchors: {
         place: "bottom",
         remove: "bottom"
@@ -323,6 +343,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 14, z: 0 },
       remove: { x: 0, y: 14, z: 0 },
       face: null,
+      probe: null,
       anchors: {
         place: "center",
         remove: "center"
@@ -346,6 +367,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 0, z: 0 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.NegY,
+      probe: null,
       anchors: {
         place: "bottom",
         remove: "bottom"
@@ -363,6 +385,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 30, z: 0 },
       remove: { x: 0, y: 30, z: 0 },
       face: null,
+      probe: null,
       anchors: {
         place: "center",
         remove: "center"
@@ -377,6 +400,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 36, z: 0 },
       remove: { x: 0, y: 36, z: 0 },
       face: null,
+      probe: null,
       anchors: {
         place: "center",
         remove: "center"

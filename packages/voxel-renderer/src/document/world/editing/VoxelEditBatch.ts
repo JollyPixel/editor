@@ -9,10 +9,13 @@ import {
   voxelTransform,
   type PackedVoxel
 } from "../storage/packedVoxel.ts";
+import { sameCell } from "../storage/mergedVoxel.ts";
 import type { VoxelCellChange } from "../types.ts";
+import { TrackedCells } from "./TrackedCells.ts";
 import {
   VOXEL_PATCH_STRIDE,
-  type VoxelPatchCells
+  type VoxelPatchCells,
+  type VoxelPatchPartners
 } from "./voxelPatch.ts";
 
 // CONSTANTS
@@ -24,22 +27,6 @@ const kFaceMinZ = 16;
 const kFaceMaxZ = 32;
 const kChunkBias = 1 << 16;
 const kChunkSpan = kChunkBias * 2;
-const kUntouched = -2;
-
-/**
- * Changed cells of one chunk, indexed by local cell index. `order` keeps the
- * first-write order; `origin` is the chunk's world-space corner when its
- * first pending cell was written.
- */
-interface TrackedCells {
-  before: Int32Array;
-  after: Int32Array;
-  recorded: Uint8Array;
-  order: number[];
-  originX: number;
-  originY: number;
-  originZ: number;
-}
 
 interface TouchedChunk {
   cx: number;
@@ -52,6 +39,7 @@ interface TouchedChunk {
 export interface VoxelEditBatchFlush {
   layer: VoxelLayer;
   cells: VoxelPatchCells;
+  partners: VoxelPatchPartners;
   changes: VoxelCellChange[];
   observed: VoxelCellChange[];
 }
@@ -107,6 +95,7 @@ export class VoxelEditBatch {
     layer: VoxelLayer,
     position: Vector3Like,
     packed: PackedVoxel,
+    partner: PackedVoxel,
     options: VoxelEditWriteOptions
   ): void {
     const x = position.x - layer.position.x;
@@ -114,7 +103,7 @@ export class VoxelEditBatch {
     const z = position.z - layer.position.z;
     const touched = this.#touch(layer, x, y, z);
     if (!options.track) {
-      layer.setPackedVoxelAt(position, packed);
+      layer.setPackedVoxelAt(position, packed, partner);
 
       return;
     }
@@ -125,17 +114,19 @@ export class VoxelEditBatch {
     const lz = z & this.#mask;
     const cells = this.#trackedCells(layer, touched);
     const index = lx + (size * (ly + (size * lz)));
-    if (cells.before[index] === kUntouched) {
+    let entry = cells.entryOf(index);
+    if (entry < 0) {
       const chunk = layer.getChunk(touched.cx, touched.cy, touched.cz);
-      cells.before[index] = chunk === undefined ?
-        VOXEL_ABSENT :
-        chunk.getPackedAt(lx, ly, lz);
-      cells.recorded[index] = options.reach;
-      cells.order.push(index);
+      entry = cells.track(
+        index,
+        chunk === undefined ? VOXEL_ABSENT : chunk.getPackedAt(lx, ly, lz),
+        chunk === undefined ? VOXEL_ABSENT : chunk.getPartnerAt(lx, ly, lz),
+        options.reach
+      );
       this.#pendingCells++;
     }
-    cells.after[index] = packed;
-    layer.setPackedVoxelAt(position, packed);
+    cells.write(entry, packed, partner);
+    layer.setPackedVoxelAt(position, packed, partner);
   }
 
   touch(
@@ -198,7 +189,7 @@ export class VoxelEditBatch {
     for (const [layer, chunks] of this.#layers) {
       let pending = 0;
       for (const touched of chunks.values()) {
-        pending += touched.cells?.order.length ?? 0;
+        pending += touched.cells?.size ?? 0;
       }
       if (pending === 0) {
         continue;
@@ -207,6 +198,7 @@ export class VoxelEditBatch {
       const flush: VoxelEditBatchFlush = {
         layer,
         cells: new Array(pending * VOXEL_PATCH_STRIDE),
+        partners: [],
         changes: [],
         observed: []
       };
@@ -248,35 +240,41 @@ export class VoxelEditBatch {
   ): number {
     const shift = this.#shift;
     const mask = this.#mask;
-    const { before, after, recorded, order } = tracked;
-    const { cells } = flush;
+    const { originX, originY, originZ } = tracked;
+    const { cells, partners } = flush;
     let written = offset;
 
-    for (const index of order) {
-      const from = before[index];
-      const to = after[index];
-      before[index] = kUntouched;
-      if (from === to) {
-        continue;
+    // eslint-disable-next-line max-params
+    tracked.drain((index, from, to, fromPartner, toPartner, reach) => {
+      if (sameCell(from, fromPartner, to, toPartner)) {
+        return;
       }
 
-      const x = tracked.originX + (index & mask);
-      const y = tracked.originY + ((index >> shift) & mask);
-      const z = tracked.originZ + (index >> (shift * 2));
+      const x = originX + (index & mask);
+      const y = originY + ((index >> shift) & mask);
+      const z = originZ + (index >> (shift * 2));
       const absent = to === VOXEL_ABSENT;
       cells[written] = x;
       cells[written + 1] = y;
       cells[written + 2] = z;
       cells[written + 3] = absent ? 0 : voxelBlockId(to);
       cells[written + 4] = absent ? 0 : voxelTransform(to);
+      if (toPartner !== VOXEL_ABSENT) {
+        partners.push(
+          written / VOXEL_PATCH_STRIDE,
+          voxelBlockId(toPartner),
+          voxelTransform(toPartner)
+        );
+      }
       written += VOXEL_PATCH_STRIDE;
-      const reach = recorded[index];
       if (reach !== 0) {
         const change: VoxelCellChange = {
           layerId: flush.layer.id,
           position: { x, y, z },
           before: from,
-          after: to
+          after: to,
+          beforePartner: fromPartner,
+          afterPartner: toPartner
         };
         if ((reach & VOXEL_REACH_RECORDERS) !== 0) {
           flush.changes.push(change);
@@ -285,8 +283,7 @@ export class VoxelEditBatch {
           flush.observed.push(change);
         }
       }
-    }
-    order.length = 0;
+    });
 
     return written;
   }
@@ -295,19 +292,10 @@ export class VoxelEditBatch {
     layer: VoxelLayer,
     touched: TouchedChunk
   ): TrackedCells {
-    const volume = this.#size ** 3;
-    touched.cells ??= {
-      before: new Int32Array(volume).fill(kUntouched),
-      after: new Int32Array(volume),
-      recorded: new Uint8Array(volume),
-      order: [],
-      originX: 0,
-      originY: 0,
-      originZ: 0
-    };
+    touched.cells ??= new TrackedCells();
 
     const { cells } = touched;
-    if (cells.order.length === 0) {
+    if (cells.size === 0) {
       cells.originX = layer.position.x + (touched.cx * this.#size);
       cells.originY = layer.position.y + (touched.cy * this.#size);
       cells.originZ = layer.position.z + (touched.cz * this.#size);

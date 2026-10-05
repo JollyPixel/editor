@@ -62,6 +62,7 @@ can change at runtime through the settings objects below.
 readonly root: THREE.Group;
 readonly document: VoxelDocument;
 readonly shapes: BlockShapeRegistry;
+readonly complements: BlockComplements;
 readonly atlases: TilesetAtlases;
 readonly inspector: VoxelInspector;
 readonly rendering: VoxelRendering;
@@ -73,6 +74,8 @@ focus: THREE.Vector3Like | null;
 ```
 
 - `shapes` is the [shape registry](../blocks/BlockShape.md) used by this view.
+- `complements` tells whether two shapes fill a cell together, see
+  [merging shapes](#merging-shapes).
 - `atlases` holds the [textures](../tilesets/TilesetAtlases.md) of the
   document's tilesets.
 - `pendingRebuilds` counts chunks queued or being meshed in a worker.
@@ -234,13 +237,54 @@ A tileset the snapshot declares without an atlas logs a warning.
 
 `markAllChunksDirty()` queues every chunk for a rebuild.
 
+### Merging shapes
+
+```ts
+canMergeAt(layerName: string, position: THREE.Vector3Like, part: VoxelPart): boolean;
+```
+
+`true` when the layer holds a single voxel at `position` and `part` fills the
+rest of its cell, so a `merge` write would form a
+[merged cell](../world/VoxelWorld.md#merged-cells). Blocks are resolved
+through `document.blocks`, shapes through `shapes`.
+
+```ts
+const part = { blockId: kSlabTop, transform: 0 };
+if (view.canMergeAt("Ground", position, part)) {
+  view.document.world.setVoxel("Ground", { position, blockId: kSlabTop, merge: true });
+}
+```
+
+A merged cell is drawn without the faces its two shapes share, unless the
+shape in front is not opaque. A neighbour sees it as a full cube when both
+shapes are opaque.
+
+```ts
+partAt(layerName: string, position: THREE.Vector3Like, point: THREE.Vector3Like): VoxelPart | null;
+```
+
+The shape of the cell at `position` that contains `point`, given in world
+space. A cell that is not merged returns its only shape wherever `point` is;
+an empty cell or an unknown layer returns `null`.
+
+A point on the surface between two shapes belongs to either. To find the shape
+a raycast hit, step the hit point a little against the hit normal first, so it
+lands inside the shape that owns the hit face:
+
+```ts
+const point = hit.point.clone().addScaledVector(hit.normal, -1e-4);
+const part = view.partAt("Ground", cell, point);
+```
+
 ## Document changes
 
 The view reacts to the document on its own:
 
 - Voxel and layer commands remesh the affected chunks.
 - Block definitions and removals remesh the chunks holding the block, and their
-  neighbours when culling can change.
+  neighbours when culling can change. A definition that only moves its tiles
+  (same tilesets and rotations, no blend group) or renames the block remeshes
+  nothing: the chunks read the new tile rects on the next frame.
 - Tileset commands update the atlases before other listeners run, then remesh
   every chunk.
 - Material group changes update their materials; replacing a group remeshes

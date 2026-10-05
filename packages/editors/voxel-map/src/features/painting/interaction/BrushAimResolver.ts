@@ -26,11 +26,13 @@ const kAxisIndex = {
 } as const;
 const kSphere = new THREE.Sphere();
 const kSpherePoint = new THREE.Vector3();
+const kProbeStep = 1e-4;
 
 export interface BrushAim {
   place: VoxelCoord;
   remove: VoxelCoord;
   face: CellFace | null;
+  probe: VoxelCoord | null;
   anchors: FaceAnchors;
 }
 
@@ -125,6 +127,7 @@ export class BrushAimResolver {
         place: ground,
         remove: ground,
         face: CellFace.NegY,
+        probe: null,
         anchors: {
           place: "bottom",
           remove: "bottom"
@@ -150,6 +153,7 @@ export class BrushAimResolver {
       ),
       remove: cell,
       face,
+      probe: probeOf(hit.point, hit.normal),
       anchors: face.anchors
     };
   }
@@ -175,6 +179,7 @@ export class BrushAimResolver {
       place: cell,
       remove: cell,
       face: null,
+      probe: null,
       anchors: CellFace.FREE_ANCHORS
     };
   }
@@ -237,4 +242,15 @@ export class BrushAimResolver {
       z: cell.z + step.z
     };
   }
+}
+
+function probeOf(
+  point: THREE.Vector3,
+  normal: THREE.Vector3
+): VoxelCoord {
+  return {
+    x: point.x - (normal.x * kProbeStep),
+    y: point.y - (normal.y * kProbeStep),
+    z: point.z - (normal.z * kProbeStep)
+  };
 }

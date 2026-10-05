@@ -30,6 +30,7 @@ import {
   FACE_TEMPLATES_PER_ROW,
   type FaceTemplateTable
 } from "./FaceTemplateTable.ts";
+import { FACE_REGIONS_PER_ROW } from "./FaceRegionTable.ts";
 import {
   PULLED_AO_BITS,
   PULLED_BLEND_TEXELS,
@@ -163,12 +164,21 @@ export function pulledFaceNodes(
     float(cell.shiftRight(uint(PULLED_CELL_BITS * 2)).bitAnd(uint(kCellMask)))
   );
   const worldCell = cellPosition.add(round(modelPosition));
+  const regionId = int(texel(int(kRegionTexel)).x);
+  const region = textureLoad(
+    templates.regions.node,
+    ivec2(
+      regionId.mod(int(FACE_REGIONS_PER_ROW)),
+      regionId.div(int(FACE_REGIONS_PER_ROW))
+    )
+  );
+  const tileUv = vec2(vertex.w, vs.dot(cornerMask));
 
   return {
     position: cellPosition.add(local),
     normal: normal.xyz,
-    uv: vec2(vertex.w, vs.dot(cornerMask)),
-    region: texel(int(kRegionTexel)),
+    uv: region.xy.add(region.zw.mul(tileUv)),
+    region,
     brightness: shade(ao, plane),
     faceBrightness: faceShade(ao),
     plane,

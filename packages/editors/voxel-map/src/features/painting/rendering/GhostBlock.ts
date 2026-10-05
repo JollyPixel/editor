@@ -14,10 +14,12 @@ import type { GhostTarget } from "../model/ghostTarget.ts";
 // CONSTANTS
 const kOpacity = 0.55;
 const kOverlayScale = 1.02;
+const kNeutralTint = 0xffffff;
 
 export interface GhostBlockOptions {
   sources: BlockRenderSources;
   blockRegistry: BlockRegistry;
+  tint?: THREE.ColorRepresentation;
 }
 
 export class GhostBlock extends THREE.Group {
@@ -40,6 +42,7 @@ export class GhostBlock extends THREE.Group {
     this.#pieces = options.sources.createPieces();
     this.#material = new THREE.MeshLambertMaterial({
       transparent: true,
+      color: options.tint ?? kNeutralTint,
       opacity: kOpacity,
       depthWrite: false
     });

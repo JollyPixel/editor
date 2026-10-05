@@ -1,56 +1,16 @@
 // Import Internal Dependencies
 import { FACE } from "../../../geometry/faceDirection.ts";
-import {
-  defineFace,
-  type FaceDefinition
-} from "../../face/index.ts";
-import { BlockShapeBase } from "../BlockShapeBase.ts";
-import type {
-  BlockCollisionHint,
-  BlockShapeID
-} from "../BlockShape.ts";
+import type { BlockShapeID } from "../BlockShape.ts";
+import { JunctionShape } from "./JunctionShape.ts";
 
-// CONSTANTS
-const kW = 3 / 8;
-const kH = 5 / 8;
-
-/**
- * Quarter-width vertical post centered in the voxel.
- */
-export class PoleY extends BlockShapeBase {
-  readonly id: BlockShapeID = "poleY";
-  readonly collisionHint: BlockCollisionHint = "trimesh";
-
-  readonly faces: readonly FaceDefinition[] = [
-    defineFace({
-      face: FACE.PosY,
-      normal: [0, 1, 0],
-      vertices: [[kW, 1, kW], [kW, 1, kH], [kH, 1, kH], [kH, 1, kW]]
-    }),
-    defineFace({
-      face: FACE.NegY,
-      normal: [0, -1, 0],
-      vertices: [[kW, 0, kH], [kW, 0, kW], [kH, 0, kW], [kH, 0, kH]]
-    }),
-    defineFace({
-      face: FACE.PosX,
-      normal: [1, 0, 0],
-      vertices: [[kH, 0, kW], [kH, 1, kW], [kH, 1, kH], [kH, 0, kH]]
-    }),
-    defineFace({
-      face: FACE.NegX,
-      normal: [-1, 0, 0],
-      vertices: [[kW, 0, kH], [kW, 1, kH], [kW, 1, kW], [kW, 0, kW]]
-    }),
-    defineFace({
-      face: FACE.PosZ,
-      normal: [0, 0, 1],
-      vertices: [[kW, 0, kH], [kH, 0, kH], [kH, 1, kH], [kW, 1, kH]]
-    }),
-    defineFace({
-      face: FACE.NegZ,
-      normal: [0, 0, -1],
-      vertices: [[kH, 0, kW], [kW, 0, kW], [kW, 1, kW], [kH, 1, kW]]
-    })
-  ];
+export class PoleY extends JunctionShape {
+  constructor(
+    id: BlockShapeID = "poleY"
+  ) {
+    super(id, {
+      min: [3 / 8, 3 / 8, 3 / 8],
+      max: [5 / 8, 5 / 8, 5 / 8],
+      arms: [FACE.NegY, FACE.PosY]
+    });
+  }
 }

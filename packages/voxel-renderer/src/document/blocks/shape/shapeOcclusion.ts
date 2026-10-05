@@ -6,27 +6,36 @@ import {
 } from "../../geometry/faceDirection.ts";
 import {
   isBoundaryFace,
-  type FaceDefinition
+  type FaceDefinition,
+  type FacePlacement
 } from "../face/index.ts";
 
 // CONSTANTS
 const kCoverageEpsilon = 1e-9;
 
-export function occlusionMaskOf(
-  faces: readonly FaceDefinition[]
-): number {
+export function sideCoverageOf(
+  faces: Iterable<FacePlacement>
+): Float64Array {
   const coverage = new Float64Array(FACES.length);
 
-  for (const definition of faces) {
-    if (!isBoundaryFace(definition)) {
+  for (const placement of faces) {
+    if (!isBoundaryFace(placement)) {
       continue;
     }
 
-    coverage[definition.face] += planarArea(
-      definition.vertices,
-      FACE_AXIS[definition.face]
+    coverage[placement.face] += planarArea(
+      placement.vertices,
+      FACE_AXIS[placement.face]
     );
   }
+
+  return coverage;
+}
+
+export function occlusionMaskOf(
+  faces: readonly FaceDefinition[]
+): number {
+  const coverage = sideCoverageOf(faces);
 
   let mask = 0;
   for (const face of FACES) {

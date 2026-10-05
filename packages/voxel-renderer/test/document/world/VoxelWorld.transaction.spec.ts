@@ -147,6 +147,35 @@ describe("VoxelWorld.transaction", () => {
     ]);
   });
 
+  it("keeps first-write order and last values for every cell of a chunk", () => {
+    const { world, commands } = makeWorld();
+    const cells: VoxelCoord[] = [];
+    for (let z = 0; z < 4; z++) {
+      for (let y = 0; y < 4; y++) {
+        for (let x = 0; x < 4; x++) {
+          cells.push({ x: 3 - x, y, z });
+        }
+      }
+    }
+
+    world.transaction(() => {
+      for (const position of cells) {
+        world.setVoxel(kLayer, { position, blockId: 2 });
+      }
+      for (const position of cells.toReversed()) {
+        world.setVoxel(kLayer, { position, blockId: 3 });
+      }
+    });
+
+    assert.equal(commands.length, 1);
+    assert.deepEqual(
+      patchOf(commands[0]),
+      cells.map((position) => {
+        return { ...position, blockId: 3, transform: 0 };
+      })
+    );
+  });
+
   it("encodes a removal as block 0 and drops cells that end unchanged", () => {
     const { world, commands } = makeWorld();
     writeVoxel(world, kLayer, kOrigin, { blockId: 2, transform: 0 });

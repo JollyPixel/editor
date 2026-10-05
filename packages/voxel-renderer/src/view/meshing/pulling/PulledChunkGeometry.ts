@@ -20,6 +20,20 @@ const kFlipShift = PULLED_TEMPLATE_BITS + PULLED_AO_BITS;
 const kQuadCorners = [0, 1, 2, 0, 2, 3];
 const kCornerCount = 4;
 const kQuadTriangles = [[0, 1, 2], [0, 2, 3]];
+const kCornerPositions = new THREE.BufferAttribute(
+  new Float32Array(kCornerCount * 3).map(
+    (_, index) => (index % 3 === 0 ? index / 3 : 0)
+  ),
+  3
+);
+const kCornerNormals = new THREE.BufferAttribute(
+  new Float32Array(kCornerCount * 3),
+  3
+);
+const kQuadIndex = new THREE.BufferAttribute(
+  new Uint16Array(kQuadCorners),
+  1
+);
 
 const kA = new THREE.Vector3();
 const kB = new THREE.Vector3();
@@ -144,22 +158,9 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
         )
       );
 
-    this.setAttribute(
-      "position",
-      new THREE.BufferAttribute(
-        new Float32Array(kCornerCount * 3).map(
-          (_, index) => (index % 3 === 0 ? index / 3 : 0)
-        ),
-        3
-      )
-    );
-    this.setAttribute(
-      "normal",
-      new THREE.BufferAttribute(new Float32Array(kCornerCount * 3), 3)
-    );
-    this.setIndex(
-      new THREE.BufferAttribute(new Uint16Array(kQuadCorners), 1)
-    );
+    this.setAttribute("position", kCornerPositions);
+    this.setAttribute("normal", kCornerNormals);
+    this.setIndex(kQuadIndex);
     this.instanceCount = faceCount;
     this.boundingBox = bounds.clone();
     this.boundingSphere = bounds.getBoundingSphere(new THREE.Sphere());
@@ -252,6 +253,9 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
   override dispose(): void {
     this.faces.dispose();
     this.blends?.dispose();
+    this.deleteAttribute("position");
+    this.deleteAttribute("normal");
+    this.setIndex(null);
     super.dispose();
   }
 
@@ -309,9 +313,9 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
 function textureSize(
   faceCount: number
 ): [width: number, height: number] {
-  const width = Math.max(1, Math.min(faceCount, PULLED_FACE_ROW));
+  const height = Math.max(1, Math.ceil(faceCount / PULLED_FACE_ROW));
 
-  return [width, Math.max(1, Math.ceil(faceCount / width))];
+  return [Math.max(1, Math.ceil(faceCount / height)), height];
 }
 
 function dataTexture(

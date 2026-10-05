@@ -20,6 +20,7 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
+import type { BlockRegistryChange } from "../../document/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import type { AddTilesetDialog } from "../tilesets/dialogs/AddTilesetDialog.ts";
@@ -274,7 +275,13 @@ export class TextureEditor extends WorkspaceElement {
     this.#followSelectedBlock(true);
   };
 
-  readonly #onBlockRegistryChanged = (): void => {
+  readonly #onBlockRegistryChanged = (
+    change: BlockRegistryChange
+  ): void => {
+    if (change === "retiled") {
+      return;
+    }
+
     this.#followSelectedBlock(false);
     this.requestUpdate();
   };

@@ -78,10 +78,31 @@ sequenceDiagram
 ```
 
 Voxel writes dirty the affected chunk and boundary neighbours across layers,
-because an edit can expose or cover their faces. Block definition or tileset
+because an edit can expose or cover their faces. A block definition dirties the
+chunks holding the block, and their neighbours when culling can change. Tileset
 changes invalidate all chunks. `flush()` drains the queue at once; `init()` and
 a document load mark the whole world dirty and flush it unless mesh workers are
 running.
+
+Face templates hold tile-local UVs and the id of a row in `FaceRegionTable`,
+one row per block texture slot; the vertex shader reads the slot's atlas rect
+from that row. A definition that only moves tiles (same shape, tilesets,
+rotations and surface, no blend group) dirties nothing: `BlockReach` reports
+it as `"tiles"` and the view rewrites the block's rows. Blend palettes still
+bake neighbour rects, so grouped blocks remesh. Mesh workers receive the row
+assignment with their definitions so their templates name the same rows.
+
+A merged cell keeps its first shape in the chunk store with transform bit 7
+set and its second shape in the chunk's `partners` store, created on the
+first merge and shared with mesh workers like the main store. The bit stays
+inside storage and meshing: `getPackedAt()`, `packedEntries()` and every layer
+or world read return clean values, while `storedAt()` and `store.values`
+expose it to the mesher, the neighbourhood queries and the Rapier collider,
+which check it and resolve the pair. The chunk orders the pair by packed
+value, smaller first, so a merged cell has one stored form whichever shape
+was written first; the writer applies the same order before recording a
+change, so history and patches compare cells by value. `BlockVariantCache.mergedOf()` drops the faces one shape hides of
+the other and builds an occluder variant that stands for the whole cell.
 
 `ChunkMeshLayout` maps each dirty layer chunk to a mesh target: a `"cell"`
 target shared by the aligned opaque layers of one chunk cell, or a `"layer"`

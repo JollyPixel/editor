@@ -24,6 +24,12 @@ interface VoxelCoord {
 interface VoxelEntry {
   blockId: number;
   transform: number;
+  partner?: VoxelPart; // the second shape of a merged cell
+}
+
+interface VoxelPart {
+  blockId: number;
+  transform: number;
 }
 ```
 
@@ -32,6 +38,19 @@ Any `THREE.Vector3Like` works where a `VoxelCoord` is expected. `blockId` is a
 stored. `transform` is a packed [`VoxelTransform`](./VoxelTransform.md). Reads
 build a new entry each time, so compare entries by value. Allocation-free reads
 return [packed voxels](./VoxelChunk.md#packed-voxels).
+
+### Merged cells
+
+A merged cell holds two shapes, each with its own block and transform, for
+example a stone `slabBottom` under a wood `slabTop`. The second shape is the
+entry's `partner`. A merged cell counts as one voxel; removing it removes both
+shapes. Which shape is `partner` does not depend on the order they were
+placed in.
+
+The world stores any pair it is given. Whether two shapes complement each
+other, filling the cell exactly once, is checked by
+[`VoxelView.canMergeAt()`](../core/VoxelView.md#merging-shapes)
+before writing.
 
 #### `voxelCellOf(point: VoxelCoord): VoxelCoord`
 
@@ -169,7 +188,7 @@ Rendering composites layers by other rules, described in
 
 #### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
 
-`VOXEL_ABSENT` for air.
+`VOXEL_ABSENT` for air. The first shape only on a merged cell.
 
 #### `getVoxelWithLayerAt(position: Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
 
@@ -200,15 +219,24 @@ Places a voxel and emits `"voxel-set"`.
 interface VoxelSetOptions extends VoxelTransformOptions {
   position: Vector3Like;
   blockId: number;
+  merge?: boolean; // default: false
 }
 ```
 
 `rotation`, `flipX`, `flipZ` and `flipY` are the
-[`VoxelTransform` options](./VoxelTransform.md#options).
+[`VoxelTransform` options](./VoxelTransform.md#options). A voxel replaces
+both shapes of a merged cell. With `merge`, a voxel set on an occupied cell
+that is not merged yet becomes its second shape instead; on any other cell it
+is written as usual.
+
+```ts
+world.setVoxel("Ground", { position, blockId: kSlabBottom });
+world.setVoxel("Ground", { position, blockId: kSlabTop, merge: true });
+```
 
 #### `removeVoxel(layerName: string, options: { position: Vector3Like }): void`
 
-Emits `"voxel-removed"`.
+Emits `"voxel-removed"`. Removes both shapes of a merged cell.
 
 #### `setVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
 
@@ -226,7 +254,8 @@ world.setVoxelBulk("Ground", [
 #### `removeBlocks(blockIds: Iterable<number>): number`
 
 Removes every voxel of the given blocks from every layer, for example after
-deleting a block. Returns how many voxels it removed.
+deleting a block. A merged cell that keeps one shape of another block keeps
+that shape. Returns how many cells it changed.
 
 #### `transaction<T>(fn: () => T): T`
 
@@ -244,19 +273,29 @@ world.transaction(() => {
 });
 ```
 
-#### `patchVoxels(layerName: string, cells: readonly number[]): void`
+#### `patchVoxels(layerName: string, cells: readonly number[], partners?: readonly number[]): void`
 
 Writes `VOXEL_PATCH_STRIDE` (5) numbers per cell, `x, y, z, blockId,
 transform`, and emits them as one `"voxels-patched"`. A `blockId` of `0`
-removes the voxel. The fastest way to write generated terrain. Throws a
-`RangeError` when the length is not a multiple of 5, or for an invalid block
-id, after writing the cells before it.
+removes the voxel. `partners` gives the second shape of merged cells,
+`VOXEL_PATCH_PARTNER_STRIDE` (3) numbers each: `cell, blockId, transform`,
+where `cell` is the index of a non-air cell of `cells`; a cell without one is
+not merged. The fastest way to write generated terrain. Throws a `RangeError`
+when a length is not a multiple of its stride or a partner targets no voxel,
+before writing anything, or for an invalid block id, after writing the cells
+before it.
 
 ```ts
 world.patchVoxels("Ground", [
   0, 0, 0, 1, 0,
   1, 0, 0, 0, 0
 ]);
+
+// cell 1 holds block 1 merged with block 2
+world.patchVoxels("Ground", [
+  0, 0, 0, 1, 0,
+  1, 0, 0, 1, 0
+], [1, 2, 0]);
 ```
 
 `voxelPatchCells(cells)` iterates a patch as `{ x, y, z, blockId, transform }`
@@ -299,6 +338,8 @@ interface VoxelCellChange {
   position: VoxelCoord;
   before: PackedVoxel; // VOXEL_ABSENT when the cell was empty
   after: PackedVoxel; // VOXEL_ABSENT when the cell was cleared
+  beforePartner: PackedVoxel; // VOXEL_ABSENT unless merged before
+  afterPartner: PackedVoxel; // VOXEL_ABSENT unless merged after
 }
 ```
 

@@ -10,6 +10,12 @@ appearance, and meshing.
 One occupied unit cell in a voxel layer. A voxel records a block ID and a
 transform; its layer and world position determine where it appears.
 
+### Merged Cell
+
+A cell holding two shapes that fill it together, such as a `slabBottom` and a
+`slabTop`. Each shape keeps its own block and transform; the second one is
+the cell's partner. The cell counts as one voxel.
+
 ### Air
 
 An empty voxel cell. Air uses the reserved block ID `0` and is never stored in

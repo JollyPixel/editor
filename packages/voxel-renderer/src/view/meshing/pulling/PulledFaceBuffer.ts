@@ -1,10 +1,7 @@
 // Import Internal Dependencies
 import type { PulledMeshData } from "../types.ts";
 import type { BlockVariantFace } from "../variants/types.ts";
-import {
-  AO_UNOCCLUDED,
-  shadeFace
-} from "../ambientOcclusion.ts";
+import { AO_UNOCCLUDED } from "../ambientOcclusion.ts";
 import {
   BLEND_PATTERN_CODES,
   type FaceBlendNeighbour,
@@ -41,9 +38,9 @@ export class PulledFaceBuffer {
   #faceWords: number;
   #words: Uint32Array<ArrayBuffer>;
   #faceCount = 0;
-  #shade = new Int8Array(4);
   #palette = new Float32Array(kEntryFloats * 16);
   #paletteIds = new Map<string, number>();
+  #paletteEntries = new Map<FaceBlendNeighbour, number>();
   #paletteCount = 1;
   #originX = 0;
   #originY = 0;
@@ -81,6 +78,7 @@ export class PulledFaceBuffer {
     this.triangleCount = 0;
     this.#faceCount = 0;
     this.#paletteIds.clear();
+    this.#paletteEntries.clear();
     this.#paletteCount = 1;
     this.#originX = originX;
     this.#originY = originY;
@@ -110,8 +108,8 @@ export class PulledFaceBuffer {
     const y = wy - this.#originY;
     const z = wz - this.#originZ;
     const shaded = face.cull < 0 ? AO_UNOCCLUDED : ao;
-    const flip = shadeFace(face, shaded, this.#shade);
     const template = this.#templates.idOf(face);
+    const flip = this.#templates.diagonalFlipOf(template, shaded);
 
     const offset = this.#reserve();
     this.#words[offset] = x |
@@ -180,6 +178,18 @@ export class PulledFaceBuffer {
   }
 
   #entryOf(
+    neighbour: FaceBlendNeighbour
+  ): number {
+    let entry = this.#paletteEntries.get(neighbour);
+    if (entry === undefined) {
+      entry = this.#entryByContent(neighbour);
+      this.#paletteEntries.set(neighbour, entry);
+    }
+
+    return entry;
+  }
+
+  #entryByContent(
     neighbour: FaceBlendNeighbour
   ): number {
     const {

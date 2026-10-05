@@ -9,10 +9,16 @@ export interface VoxelEntryJSON {
   transform: number;
 }
 
+export interface VoxelChunkPartnersJSON {
+  cells?: number[];
+  runs: number[];
+}
+
 export interface VoxelChunkJSON {
   at: [number, number, number];
   cells?: number[];
   runs: number[];
+  partners?: VoxelChunkPartnersJSON;
 }
 
 export interface VoxelLayerMetadataJSON {

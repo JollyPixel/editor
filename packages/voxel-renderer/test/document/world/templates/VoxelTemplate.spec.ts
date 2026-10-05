@@ -8,6 +8,7 @@ import {
 // Import Internal Dependencies
 import {
   packVoxel,
+  VOXEL_ABSENT,
   VoxelLayer,
   VoxelTemplate,
   type VoxelCoord,
@@ -150,9 +151,9 @@ describe("VoxelTemplate.fromLayer", () => {
     assert.deepEqual(
       [...template.placedVoxels(pivot)].sort((a, b) => a[0] - b[0]),
       [
-        [10, 0, -3, packVoxel(1, 0)],
-        [11, 0, -3, packVoxel(2, 1)],
-        [15, 2, -3, packVoxel(3, 0)]
+        [10, 0, -3, packVoxel(1, 0), VOXEL_ABSENT],
+        [11, 0, -3, packVoxel(2, 1), VOXEL_ABSENT],
+        [15, 2, -3, packVoxel(3, 0), VOXEL_ABSENT]
       ]
     );
   });

@@ -66,16 +66,19 @@ export function populateTerrain(
   view: VoxelView,
   options: TerrainOptions
 ): TerrainStats {
-  return generateTerrain(
-    (position, blockId) => view.document.world.setVoxel(
-      blockId === TerrainBlock.Water ? WATER_LAYER : TERRAIN_LAYER,
-      {
-        position,
-        blockId
-      }
-    ),
+  const terrain: number[] = [];
+  const water: number[] = [];
+  const stats = generateTerrain(
+    (position, blockId) => {
+      (blockId === TerrainBlock.Water ? water : terrain)
+        .push(position.x, position.y, position.z, blockId, 0);
+    },
     options
   );
+  view.document.world.patchVoxels(TERRAIN_LAYER, terrain);
+  view.document.world.patchVoxels(WATER_LAYER, water);
+
+  return stats;
 }
 
 function terrainBlocks(): BlockDefinition[] {

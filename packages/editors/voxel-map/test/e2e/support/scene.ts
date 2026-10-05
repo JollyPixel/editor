@@ -46,9 +46,20 @@ export async function pinCamera(
   await nextFrames(page);
 }
 
-export async function cellTopPoint(
+export function cellTopPoint(
   page: Page,
   cell: Cell
+): Promise<ScreenPoint> {
+  return pointAt(page, {
+    x: cell.x + 0.5,
+    y: cell.y,
+    z: cell.z + 0.5
+  });
+}
+
+export async function pointAt(
+  page: Page,
+  point: Cell
 ): Promise<ScreenPoint> {
   const view = await page.evaluate((): ViewSnapshot => {
     const { scene } = window.voxelMapEditor!;
@@ -68,11 +79,7 @@ export async function cellTopPoint(
     };
   });
 
-  return clientPointOf(view, {
-    x: cell.x + 0.5,
-    y: cell.y,
-    z: cell.z + 0.5
-  });
+  return clientPointOf(view, point);
 }
 
 export async function clickCell(

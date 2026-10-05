@@ -262,16 +262,22 @@ export class ChunkMeshWorkers {
   }
 
   #syncDefinitions(): string {
-    const { definitions } = this.#options;
+    const { definitions, meshBuilder } = this.#options;
     const version = meshDefinitionsVersion(definitions);
     if (version === this.#definitionsVersion) {
       return version;
     }
 
     this.#definitionsVersion = version;
+    for (const block of definitions.blockRegistry) {
+      meshBuilder.writeRegions(block.id);
+    }
     const request = {
       type: "definitions" as const,
-      definitions: captureMeshDefinitions(definitions)
+      definitions: captureMeshDefinitions(
+        definitions,
+        meshBuilder.faceTemplates.regions.assignments()
+      )
     };
     for (const slot of this.#slots) {
       slot.templateIds = [];
@@ -362,12 +368,12 @@ export class ChunkMeshWorkers {
     job: MeshJob,
     chunk: VoxelChunk
   ): MeshWorkerChunk {
-    const { store } = chunk;
-    store.share();
+    chunk.share();
     job.chunks.push(chunk);
     job.revisions.push(chunk.revision);
 
-    return {
+    const { store, partners } = chunk;
+    const shared: MeshWorkerChunk = {
       cx: chunk.cx,
       cy: chunk.cy,
       cz: chunk.cz,
@@ -375,6 +381,15 @@ export class ChunkMeshWorkers {
       values: store.values,
       count: store.size
     };
+    if (partners !== null && partners.size > 0) {
+      shared.partners = {
+        keys: partners.keys,
+        values: partners.values,
+        count: partners.size
+      };
+    }
+
+    return shared;
   }
 
   #receive(

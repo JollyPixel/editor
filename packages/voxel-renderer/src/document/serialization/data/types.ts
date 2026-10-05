@@ -6,12 +6,16 @@ import type {
   VoxelTemplateJSON
 } from "../types.ts";
 
-export interface VoxelChunkData {
+export interface VoxelCellData {
+  cells: Uint32Array;
+  voxels: Uint32Array;
+}
+
+export interface VoxelChunkData extends VoxelCellData {
   cx: number;
   cy: number;
   cz: number;
-  cells: Uint32Array;
-  voxels: Uint32Array;
+  partners?: VoxelCellData;
 }
 
 export interface VoxelLayerData extends VoxelLayerMetadataJSON {

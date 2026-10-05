@@ -71,6 +71,17 @@ describe("VoxelReconciler", () => {
     assert.strictEqual(document.world.getVoxelAt(kOrigin), undefined);
   });
 
+  test("reverts a pending removal of a merged cell to both of its shapes", () => {
+    const { document, reconciler, pending } = setup();
+
+    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.setVoxel("L1", { position: kOrigin, blockId: 3, merge: true });
+    document.world.removeVoxel("L1", { position: kOrigin });
+
+    assert.strictEqual(reconciler.revert([pending[2]]), true);
+    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.partner?.blockId, 3);
+  });
+
   test("reverts layer moves to the order before them", () => {
     const { document, reconciler, pending } = setup();
     const before = names(document);

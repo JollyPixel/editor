@@ -13,24 +13,41 @@ import type { FaceDefinition } from "../../../document/blocks/face/index.ts";
 import { BlockTextures } from "../../../document/blocks/BlockTextures.ts";
 import { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
 import type { BlendGroupList } from "../../../document/materials/BlendGroupList.ts";
+import type { BlendGroup } from "../../../document/materials/BlendGroup.ts";
+import type { FaceBlendMatch } from "../faceBlend.ts";
 import {
   cullsCoveredFaces,
   type ResolvedBlockDefinition
 } from "../../../document/blocks/BlockDefinition.ts";
 import {
   shapeSlots,
-  unknownTextureSlots
+  unknownTextureSlots,
+  type ShapeSlot
 } from "../../../document/blocks/shape/shapeSlots.ts";
 import type {
   BlockVariant,
   BlockVariantFace,
-  TilesetResolver
+  MergedVariant,
+  MergedVariantPart,
+  TilesetResolver,
+  TilesetUvSource
 } from "./types.ts";
+import { BlockComplements } from "../../../document/blocks/BlockComplements.ts";
+import {
+  voxelBlockId,
+  voxelTransform,
+  type PackedVoxel
+} from "../../../document/world/storage/packedVoxel.ts";
+import { unmarkMerged } from "../../../document/world/storage/mergedVoxel.ts";
 import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
 import { FACES, FACE_OPPOSITE } from "../../../document/geometry/faceDirection.ts";
 import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
 import { isFullQuad } from "./fullQuad.ts";
-import { tileUvOf } from "./tileUv.ts";
+import {
+  tileUvOf,
+  type TileUv
+} from "./tileUv.ts";
+import { FaceRegionTable } from "../pulling/FaceRegionTable.ts";
 import {
   transformFace,
   rotateVertex,
@@ -61,11 +78,13 @@ const kOcclusionUnknown = -1;
  */
 const kOcclusionMaxSlots = 1 << 16;
 const kOcclusionFaceMask = 0b111111;
+const kNoBlock = -1;
 const kSelfOcclusionShift = 6;
 
 interface CompileFaceOptions {
   faceDef: FaceDefinition;
   uvRegion: TilesetUVRegion;
+  regionId: number;
   tileRotation?: TileRotation;
   tilesetId: string;
   surface: BlockSurface;
@@ -83,6 +102,19 @@ export interface BlockVariantCacheOptions {
    * shape can use.
    */
   logger?: VoxelLogger;
+  regions?: FaceRegionTable;
+}
+
+interface SlotTile {
+  textureSlot: ShapeSlot;
+  atlas: TilesetUvSource;
+  tile: TileUv;
+  regionId: number;
+}
+
+interface ResolvedTiles {
+  tiles: SlotTile[];
+  pending: boolean;
 }
 
 /**
@@ -92,14 +124,24 @@ export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
   #atlases: TilesetResolver;
+  #regions: FaceRegionTable;
   #blendGroups: BlendGroupList | undefined;
   #alphaTest: number;
   #logger: VoxelLogger;
   #checkedSlots = new WeakMap<ResolvedBlockDefinition, BlockShape>();
+  #complements: BlockComplements;
 
   #variants = new Map<number, BlockVariant | null>();
+  #merged = new Map<PackedVoxel, Map<PackedVoxel, MergedVariant | null>>();
   #slots = new Map<string, number>();
   #geometryKeys: ChunkGeometryKey[] = [];
+  #frontSlots: number[] = [];
+  #blendedSlots: number[] = [];
+  #variantTable: (BlockVariant | null | undefined)[] = [];
+  #blendMatches = new WeakMap<
+    BlockVariantFace,
+    Map<BlockVariant, FaceBlendMatch | null>
+  >();
   #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
   #faceCoverage = new WeakMap<
     BlockVariantFace,
@@ -122,9 +164,14 @@ export class BlockVariantCache {
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
     this.#atlases = options.atlases;
+    this.#regions = options.regions ?? new FaceRegionTable();
     this.#blendGroups = options.blendGroups;
     this.#alphaTest = options.alphaTest ?? 0.1;
     this.#logger = options.logger ?? NOOP_LOGGER;
+    this.#complements = new BlockComplements({
+      blocks: this.#blockRegistry,
+      shapes: this.#shapeRegistry
+    });
   }
 
   refresh(): void {
@@ -147,11 +194,16 @@ export class BlockVariantCache {
     this.#tilesetVersion = tilesetVersion;
     this.#blendVersion = blendVersion;
     this.#variants.clear();
+    this.#merged.clear();
     this.#slots.clear();
     this.#geometryKeys.length = 0;
+    this.#frontSlots.length = 0;
+    this.#blendedSlots.length = 0;
     this.#frontFaces = new WeakMap();
     this.#faceCoverage = new WeakMap();
+    this.#blendMatches = new WeakMap();
     this.#occlusion.fill(kOcclusionUnknown);
+    this.#variantTable.fill(undefined);
   }
 
   /**
@@ -162,14 +214,165 @@ export class BlockVariantCache {
     transform: number
   ): BlockVariant | null {
     const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
+    if (key >>> 0 < this.#variantTable.length) {
+      const cached = this.#variantTable[key];
+      if (cached !== undefined) {
+        return cached;
+      }
+    }
 
     let variant = this.#variants.get(key);
     if (variant === undefined) {
       variant = this.#compile(blockId, transform & VOXEL_TRANSFORM_MASK);
       this.#variants.set(key, variant);
     }
+    if (key >= 0 && key < kOcclusionMaxSlots) {
+      this.#growVariantTable(key);
+      this.#variantTable[key] = variant;
+    }
 
     return variant;
+  }
+
+  #growVariantTable(
+    key: number
+  ): void {
+    if (key < this.#variantTable.length) {
+      return;
+    }
+
+    const grown: (BlockVariant | null | undefined)[] = new Array(
+      Math.min(kOcclusionMaxSlots, nextPowerOfTwo(key + 1))
+    ).fill(undefined);
+    for (let i = 0; i < this.#variantTable.length; i++) {
+      grown[i] = this.#variantTable[i];
+    }
+    this.#variantTable = grown;
+  }
+
+  blendMatchOf(
+    face: BlockVariantFace,
+    group: BlendGroup,
+    neighbour: BlockVariant
+  ): FaceBlendMatch | null {
+    let matches = this.#blendMatches.get(face);
+    if (matches === undefined) {
+      matches = new Map();
+      this.#blendMatches.set(face, matches);
+    }
+
+    let match = matches.get(neighbour);
+    if (match === undefined) {
+      match = this.#compileBlendMatch(face, group, neighbour);
+      matches.set(neighbour, match);
+    }
+
+    return match;
+  }
+
+  #compileBlendMatch(
+    face: BlockVariantFace,
+    group: BlendGroup,
+    neighbour: BlockVariant
+  ): FaceBlendMatch | null {
+    const neighbourGroup = neighbour.blend;
+    if (neighbourGroup === null) {
+      return null;
+    }
+
+    const strength = neighbourGroup.bleedOnto(group);
+    if (strength === 0) {
+      return null;
+    }
+
+    const { tilesetId } = this.#geometryKeys[face.slot];
+    const matching = neighbour.faces.find((candidate) => (
+      candidate.cull === face.cull &&
+      this.#geometryKeys[candidate.slot].tilesetId === tilesetId
+    ));
+    if (matching === undefined) {
+      return null;
+    }
+
+    return {
+      face: matching,
+      neighbour: {
+        region: matching.region,
+        group: neighbourGroup,
+        strength,
+        inverted: strength < 1 && neighbourGroup.id > group.id
+      }
+    };
+  }
+
+  mergedOf(
+    packed: PackedVoxel,
+    partner: PackedVoxel
+  ): MergedVariant | null {
+    const primary = unmarkMerged(packed);
+    let byPartner = this.#merged.get(primary);
+    if (byPartner === undefined) {
+      byPartner = new Map();
+      this.#merged.set(primary, byPartner);
+    }
+
+    let merged = byPartner.get(partner);
+    if (merged === undefined) {
+      merged = this.#compileMerged(primary, partner);
+      byPartner.set(partner, merged);
+    }
+
+    return merged;
+  }
+
+  #compileMerged(
+    packed: PackedVoxel,
+    partner: PackedVoxel
+  ): MergedVariant | null {
+    const variants = [packed, partner]
+      .map((part) => this.get(voxelBlockId(part), voxelTransform(part)))
+      .filter((variant) => variant !== null);
+    if (variants.length < 2) {
+      return variants.length === 0 ?
+        null :
+        {
+          parts: [{ variant: variants[0], faces: variants[0].faces }],
+          occluder: variants[0]
+        };
+    }
+
+    const [a, b] = variants;
+    const complements = this.#complements.complements(packed, partner);
+    const parts: MergedVariantPart[] = [
+      {
+        variant: a,
+        faces: complements ? visibleFaces(a, b) : a.faces
+      },
+      {
+        variant: b,
+        faces: complements ? visibleFaces(b, a) : b.faces
+      }
+    ];
+    const opaque = a.surface.occludes && b.surface.occludes;
+
+    return {
+      parts,
+      occluder: {
+        surface: a.surface.occludes ? b.surface : a.surface,
+        blockId: a.blockId === b.blockId ? a.blockId : kNoBlock,
+        faces: parts.flatMap(
+          (part) => part.faces.filter((face) => face.cull >= 0)
+        ),
+        occlusionMask: complements && opaque ?
+          kOcclusionFaceMask :
+          a.occlusionMask | b.occlusionMask,
+        selfOcclusionMask: complements ?
+          kOcclusionFaceMask :
+          a.selfOcclusionMask | b.selfOcclusionMask,
+        keepsCoveredFaces: a.keepsCoveredFaces || b.keepsCoveredFaces,
+        blend: a.blend === b.blend ? a.blend : null
+      }
+    };
   }
 
   occlusionMaskOf(
@@ -240,20 +443,30 @@ export class BlockVariantCache {
   frontSlotOf(
     slot: number
   ): number {
-    const key = this.#geometryKeys[slot];
+    let front = this.#frontSlots[slot];
+    if (front === undefined) {
+      const key = this.#geometryKeys[slot];
+      front = this.#slotFor(key.tilesetId, new BlockSurface({
+        ...key.surface,
+        side: "front"
+      }));
+      this.#frontSlots[slot] = front;
+    }
 
-    return this.#slotFor(key.tilesetId, new BlockSurface({
-      ...key.surface,
-      side: "front"
-    }));
+    return front;
   }
 
   blendedSlotOf(
     slot: number
   ): number {
-    const key = this.#geometryKeys[slot];
+    let blended = this.#blendedSlots[slot];
+    if (blended === undefined) {
+      const key = this.#geometryKeys[slot];
+      blended = this.#slotFor(key.tilesetId, key.surface, true);
+      this.#blendedSlots[slot] = blended;
+    }
 
-    return this.#slotFor(key.tilesetId, key.surface, true);
+    return blended;
   }
 
   frontFaceOf(
@@ -337,6 +550,58 @@ export class BlockVariantCache {
     );
   }
 
+  writeRegions(
+    blockId: number
+  ): boolean {
+    const blockDef = this.#blockRegistry.get(blockId);
+    const shape = blockDef && this.#shapeRegistry.get(blockDef.shapeId);
+    if (!blockDef || !shape) {
+      return false;
+    }
+
+    return !this.#resolveTiles(blockDef, shape).pending;
+  }
+
+  #resolveTiles(
+    blockDef: ResolvedBlockDefinition,
+    shape: BlockShape
+  ): ResolvedTiles {
+    const textures = BlockTextures.of(blockDef);
+    const tiles: SlotTile[] = [];
+    let pending = false;
+    for (const textureSlot of shapeSlots(shape)) {
+      const tileRef = textures.forSlot(textureSlot.id);
+      if (!tileRef) {
+        continue;
+      }
+
+      const atlas = this.#atlases.resolve(tileRef.tilesetId);
+      if (!atlas) {
+        pending = true;
+        continue;
+      }
+
+      const tile = tileUvOf(
+        atlas,
+        tileRef,
+        textures.spanFor(textureSlot.id, textureSlot.span)
+      );
+      const regionId = this.#regions.idOf(blockDef.id, textureSlot.id);
+      this.#regions.write(regionId, tile.region);
+      tiles.push({
+        textureSlot,
+        atlas,
+        tile,
+        regionId
+      });
+    }
+
+    return {
+      tiles,
+      pending
+    };
+  }
+
   #compile(
     blockId: number,
     transform: number
@@ -358,36 +623,16 @@ export class BlockVariantCache {
     });
     const voxelTransform = VoxelTransform.fromPacked(transform);
 
-    const textures = BlockTextures.of(blockDef);
     const faces: BlockVariantFace[] = [];
-    let pending = false;
-    for (const textureSlot of shapeSlots(shape)) {
-      const tileRef = textures.forSlot(textureSlot.id);
-      if (!tileRef) {
-        continue;
-      }
-
-      const atlas = this.#atlases.resolve(tileRef.tilesetId);
-      if (!atlas) {
-        pending = true;
-        continue;
-      }
-
-      const {
-        region: uvRegion,
-        rotation: tileRotation
-      } = tileUvOf(
-        atlas,
-        tileRef,
-        textures.spanFor(textureSlot.id, textureSlot.span)
-      );
-
+    const { tiles, pending } = this.#resolveTiles(blockDef, shape);
+    for (const { textureSlot, atlas, tile, regionId } of tiles) {
       for (const faceDef of textureSlot.definitions) {
         faces.push(
           this.#compileFace({
             faceDef,
-            uvRegion,
-            tileRotation,
+            uvRegion: tile.region,
+            regionId,
+            tileRotation: tile.rotation,
             tilesetId: atlas.def.id,
             surface,
             voxelTransform
@@ -419,6 +664,7 @@ export class BlockVariantCache {
     const {
       faceDef,
       uvRegion,
+      regionId,
       tileRotation,
       tilesetId,
       surface,
@@ -457,16 +703,8 @@ export class BlockVariantCache {
       );
       tileUvs[i * 2] = tileUV[0];
       tileUvs[(i * 2) + 1] = tileUV[1];
-      /*
-       * `fround` reproduces the float32 staging buffer these used to pass
-       * through, so the quantised result is unchanged.
-       */
-      uvs[i * 2] = toUnorm16(
-        Math.fround(uvRegion.offsetU + (uvRegion.scaleU * tileUV[0]))
-      );
-      uvs[(i * 2) + 1] = toUnorm16(
-        Math.fround(uvRegion.offsetV + (uvRegion.scaleV * tileUV[1]))
-      );
+      uvs[i * 2] = toUnorm16(tileUV[0]);
+      uvs[(i * 2) + 1] = toUnorm16(tileUV[1]);
     }
 
     const normal = rotateNormal(
@@ -487,6 +725,7 @@ export class BlockVariantCache {
         toUnorm16(Math.fround(uvRegion.scaleU)),
         toUnorm16(Math.fround(uvRegion.scaleV))
       ]),
+      regionId,
       full: isFullQuad(cull, positions, tileUvs),
       splittable: cull >= 0 && surface.side !== "front",
       normalX: toSnorm8(normal[0]),
@@ -540,4 +779,15 @@ function nextPowerOfTwo(
   value: number
 ): number {
   return 2 ** Math.ceil(Math.log2(value));
+}
+
+function visibleFaces(
+  variant: BlockVariant,
+  other: BlockVariant
+): readonly BlockVariantFace[] {
+  const hidden = other.surface.occludes || other.blockId === variant.blockId;
+
+  return hidden ?
+    variant.faces.filter((face) => face.cull >= 0) :
+    variant.faces;
 }

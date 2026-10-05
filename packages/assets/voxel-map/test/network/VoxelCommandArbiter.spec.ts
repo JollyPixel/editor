@@ -380,6 +380,32 @@ describe("VoxelCommandArbiter — patch commands", () => {
     );
   });
 
+  test("renumbers the partners of the cells a narrowed patch keeps", () => {
+    const arbiter = new VoxelCommandArbiter();
+    commit(arbiter, voxelSetCmd({
+      clientId: "late",
+      timestamp: 2000,
+      x: 0
+    }));
+    const command = voxelsPatchedCmd([0, 1], {
+      clientId: "early",
+      timestamp: 1000
+    });
+    if (command.action === "voxels-patched") {
+      command.metadata.partners = [0, 9, 16, 1, 9, 17];
+    }
+
+    const narrowed = admitted(arbiter, command);
+
+    assert.deepStrictEqual(
+      narrowed?.action === "voxels-patched" && narrowed.metadata,
+      {
+        cells: [1, 0, 0, 2, 0],
+        partners: [0, 9, 17]
+      }
+    );
+  });
+
   test("records every cell of a patch", () => {
     const arbiter = new VoxelCommandArbiter();
     commit(arbiter, voxelsPatchedCmd([0, 1], { timestamp: 2000 }));
@@ -406,6 +432,16 @@ describe("VoxelCommandArbiter — patch commands", () => {
     const command = voxelsPatchedCmd([0]);
     if (command.action === "voxels-patched") {
       command.metadata.cells.pop();
+    }
+
+    assert.strictEqual(admitted(arbiter, command), null);
+  });
+
+  test("rejects a patch whose partner targets no cell of the patch", () => {
+    const arbiter = new VoxelCommandArbiter();
+    const command = voxelsPatchedCmd([0]);
+    if (command.action === "voxels-patched") {
+      command.metadata.partners = [1, 9, 16];
     }
 
     assert.strictEqual(admitted(arbiter, command), null);

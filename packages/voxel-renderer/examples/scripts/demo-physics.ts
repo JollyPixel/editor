@@ -72,7 +72,7 @@ scene.add(
 /*
  * Every block shares the dirt textures; only the shape changes, so the course
  * exercises each collider strategy: merged cuboids for cubes, sized cuboids
- * for slabs, and a shape-face trimesh for ramps, stairs and poles.
+ * for slabs and poles, and a shape-face trimesh for ramps and stairs.
  */
 const voxelBlocks: BlockDefinition[] = [
   dirtBlock(kDirtId, "Dirt", "cube"),

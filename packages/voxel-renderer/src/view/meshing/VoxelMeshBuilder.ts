@@ -86,6 +86,7 @@ export class VoxelMeshBuilder {
 
     return window;
   };
+  #occluders = new Int8Array(0);
 
   constructor(
     options: VoxelMeshBuilderOptions
@@ -100,7 +101,8 @@ export class VoxelMeshBuilder {
       atlases: options.atlases,
       blendGroups: options.blendGroups,
       alphaTest: options.alphaTest,
-      logger: options.logger
+      logger: options.logger,
+      regions: this.faceTemplates.regions
     });
     this.#mesher = new ChunkMesher(this.#variants);
   }
@@ -139,6 +141,12 @@ export class VoxelMeshBuilder {
     return result;
   }
 
+  writeRegions(
+    blockId: number
+  ): boolean {
+    return this.#variants.writeRegions(blockId);
+  }
+
   createGeometry(
     data: PulledMeshData
   ): PulledChunkGeometry {
@@ -170,6 +178,7 @@ export class VoxelMeshBuilder {
       minWy: worldOriginY - 1,
       minWz: worldOriginZ - 1,
       windowFor: this.#windowFor,
+      occluders: this.ambientOcclusion ? this.#occludersFor(chunkSize) : null,
       visibility: this.#visibility
     });
 
@@ -193,6 +202,21 @@ export class VoxelMeshBuilder {
     }
 
     return true;
+  }
+
+  #occludersFor(
+    chunkSize: number
+  ): Int8Array | null {
+    if (chunkSize > kMaxWindowChunkSize) {
+      return null;
+    }
+
+    const span = chunkSize + 4;
+    if (this.#occluders.length !== span * span * span) {
+      this.#occluders = new Int8Array(span * span * span);
+    }
+
+    return this.#occluders;
   }
 
   #count(

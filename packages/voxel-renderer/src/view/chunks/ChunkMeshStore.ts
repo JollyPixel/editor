@@ -2,7 +2,10 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { VoxelCollider } from "../collision/VoxelCollider.ts";
+import type {
+  VoxelChunkCollision,
+  VoxelCollider
+} from "../collision/VoxelCollider.ts";
 import type { VoxelInspector } from "../inspector/index.ts";
 import {
   PulledChunkMesh,
@@ -240,11 +243,11 @@ export class ChunkMeshStore {
         { origin }
       );
 
-      this.#collider.rebuildChunk(key, {
+      this.#collider.rebuildChunk(key, chunkCollision(
         origin,
-        chunks: members.map(({ chunk }) => chunk),
-        geometries: collisionGeometries(geometries)
-      });
+        members.map(({ chunk }) => chunk),
+        geometries
+      ));
     }
   }
 
@@ -369,6 +372,24 @@ export class ChunkMeshStore {
       }
     }
   }
+}
+
+function chunkCollision(
+  origin: VoxelCoord,
+  chunks: readonly VoxelChunk[],
+  geometries: Map<ChunkGeometryKey, PulledChunkGeometry>
+): VoxelChunkCollision {
+  let indexed: Map<ChunkGeometryKey, THREE.BufferGeometry> | null = null;
+
+  return {
+    origin,
+    chunks,
+    get geometries() {
+      indexed ??= collisionGeometries(geometries);
+
+      return indexed;
+    }
+  };
 }
 
 function collisionGeometries(

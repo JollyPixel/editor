@@ -6,17 +6,21 @@ import type {
   VoxelEditCommand,
   VoxelLayerCommand
 } from "../../commands/types.ts";
-import { isAir } from "../../blocks/BlockId.ts";
 import { VoxelTransform } from "../../geometry/VoxelTransform.ts";
 import type { VoxelLayer } from "../VoxelLayer.ts";
 import type { VoxelLayerStack } from "../VoxelLayerStack.ts";
 import {
   packVoxel,
+  turnVoxel,
   VOXEL_ABSENT,
-  voxelBlockId,
-  voxelTransform,
   type PackedVoxel
 } from "../storage/packedVoxel.ts";
+import { isAir } from "../../blocks/BlockId.ts";
+import {
+  cellPartner,
+  cellPrimary,
+  sameCell
+} from "../storage/mergedVoxel.ts";
 import type {
   VoxelCellChange,
   VoxelCoord,
@@ -30,9 +34,12 @@ import {
   type VoxelEditWriteOptions
 } from "./VoxelEditBatch.ts";
 import {
-  assertVoxelPatchCells,
+  assertVoxelPatch,
+  voxelPatch,
+  VOXEL_PATCH_PARTNER_STRIDE,
   VOXEL_PATCH_STRIDE,
-  type VoxelPatchCells
+  type VoxelPatch,
+  type VoxelPatchPartners
 } from "./voxelPatch.ts";
 
 // CONSTANTS
@@ -55,9 +62,11 @@ export interface VoxelWriterOptions {
 interface VoxelWrite {
   position: Vector3Like;
   packed: PackedVoxel;
+  partner: PackedVoxel;
+  merge: boolean;
 }
 
-type LayerCell = [number, number, number, PackedVoxel];
+type LayerCell = [number, number, number, PackedVoxel, PackedVoxel];
 
 export class VoxelWriter {
   #recorders = new Set<VoxelEditRecorder>();
@@ -143,7 +152,7 @@ export class VoxelWriter {
       reach === 0 &&
       mode !== "replay"
     ) {
-      return this.#patchDirect(layer, command.metadata.cells);
+      return this.#patchDirect(layer, command.metadata);
     }
 
     const writes = writesOf(command, layer);
@@ -162,17 +171,20 @@ export class VoxelWriter {
         track: mode !== "silent",
         reach
       };
-      for (const { position, packed } of writes) {
-        batch.write(layer, position, packed, options);
+      for (const write of writes) {
+        const { position, packed, partner } = resolvedWrite(layer, write);
+        batch.write(layer, position, packed, partner, options);
       }
 
       return null;
     }
 
     if (command.action === "voxels-patched") {
-      const cells = this.#patchTracked(layer, writes, reach);
+      const flushed = this.#patchTracked(layer, writes, reach);
 
-      return cells === null ? null : patched(layer, cells);
+      return flushed === null ?
+        null :
+        patched(layer.id, voxelPatch(flushed.cells, flushed.partners));
     }
     if (command.action === "layer-transformed") {
       return this.#patchTracked(layer, writes, reach) === null ?
@@ -191,16 +203,20 @@ export class VoxelWriter {
     reach: number
   ): void {
     const changes: VoxelCellChange[] = [];
-    for (const { position, packed } of writes) {
+    for (const write of writes) {
+      const { position, packed, partner } = resolvedWrite(layer, write);
       const before = reach === 0 ?
         packed :
         layer.getPackedVoxelAt(position);
-      layer.setPackedVoxelAt(position, packed);
+      const beforePartner = reach === 0 ?
+        partner :
+        layer.getPartnerVoxelAt(position);
+      layer.setPackedVoxelAt(position, packed, partner);
       for (const candidate of this.#layers) {
         candidate.markCellDirty(position);
       }
 
-      if (before !== packed) {
+      if (!sameCell(before, beforePartner, packed, partner)) {
         changes.push({
           layerId: layer.id,
           position: {
@@ -209,7 +225,9 @@ export class VoxelWriter {
             z: position.z
           },
           before,
-          after: packed
+          after: packed,
+          beforePartner,
+          afterPartner: partner
         });
       }
     }
@@ -223,14 +241,15 @@ export class VoxelWriter {
     layer: VoxelLayer,
     writes: readonly VoxelWrite[],
     reach: number
-  ): VoxelPatchCells | null {
+  ): VoxelEditBatchFlush | null {
     const batch = new VoxelEditBatch(this.#chunkSize);
     const options = {
       track: true,
       reach
     };
-    for (const { position, packed } of writes) {
-      batch.write(layer, position, packed, options);
+    for (const write of writes) {
+      const { position, packed, partner } = resolvedWrite(layer, write);
+      batch.write(layer, position, packed, partner, options);
     }
     batch.markDirty(this.#layers.toArray());
 
@@ -240,15 +259,17 @@ export class VoxelWriter {
     }
     this.#deliver(flushed);
 
-    return flushed.cells;
+    return flushed;
   }
 
   #patchDirect(
     layer: VoxelLayer,
-    cells: VoxelPatchCells
+    patch: VoxelPatch
   ): VoxelEditCommand | null {
-    assertVoxelPatchCells(cells);
+    assertVoxelPatch(patch);
 
+    const { cells } = patch;
+    const partners = patchPartnersByCell(patch);
     const batch = new VoxelEditBatch(this.#chunkSize);
     const position = { x: 0, y: 0, z: 0 };
     let written = 0;
@@ -261,13 +282,19 @@ export class VoxelWriter {
           layer,
           position,
           packPatchCell(cells, written),
+          partners === null ?
+            VOXEL_ABSENT :
+            partners[written / VOXEL_PATCH_STRIDE],
           kUntrackedWrite
         );
       }
     }
     catch (error) {
       if (written > 0) {
-        this.#publish(patched(layer, cells.slice(0, written)));
+        this.#publish(patched(
+          layer.id,
+          truncateVoxelPatch(patch, written / VOXEL_PATCH_STRIDE)
+        ));
       }
 
       throw error;
@@ -276,7 +303,12 @@ export class VoxelWriter {
       batch.markDirty(this.#layers.toArray());
     }
 
-    return written > 0 ? patched(layer, cells.slice(0, written)) : null;
+    return written > 0 ?
+      patched(
+        layer.id,
+        truncateVoxelPatch(patch, written / VOXEL_PATCH_STRIDE)
+      ) :
+      null;
   }
 
   #flush(
@@ -284,7 +316,10 @@ export class VoxelWriter {
   ): void {
     for (const flushed of batch.drain()) {
       this.#deliver(flushed);
-      this.#publish(patched(flushed.layer, flushed.cells));
+      this.#publish(patched(
+        flushed.layer.id,
+        voxelPatch(flushed.cells, flushed.partners)
+      ));
     }
   }
 
@@ -319,17 +354,6 @@ export class VoxelWriter {
   }
 }
 
-function patched(
-  layer: VoxelLayer,
-  cells: VoxelPatchCells
-): VoxelEditCommand {
-  return {
-    action: "voxels-patched",
-    layerId: layer.id,
-    metadata: { cells }
-  };
-}
-
 function writesOf(
   command: VoxelEditCommand,
   layer: VoxelLayer | undefined
@@ -342,32 +366,40 @@ function writesOf(
           packed: packVoxel(
             command.metadata.blockId,
             VoxelTransform.pack(command.metadata)
-          )
+          ),
+          partner: VOXEL_ABSENT,
+          merge: command.metadata.merge === true
         }
       ];
     case "voxel-removed":
       return [
         {
           position: command.metadata.position,
-          packed: VOXEL_ABSENT
+          packed: VOXEL_ABSENT,
+          partner: VOXEL_ABSENT,
+          merge: false
         }
       ];
     case "voxels-set":
       return command.metadata.entries.map((entry) => {
         return {
           position: entry.position,
-          packed: packVoxel(entry.blockId, VoxelTransform.pack(entry))
+          packed: packVoxel(entry.blockId, VoxelTransform.pack(entry)),
+          partner: VOXEL_ABSENT,
+          merge: entry.merge === true
         };
       });
     case "voxels-removed":
       return command.metadata.entries.map(({ position }) => {
         return {
           position,
-          packed: VOXEL_ABSENT
+          packed: VOXEL_ABSENT,
+          partner: VOXEL_ABSENT,
+          merge: false
         };
       });
     case "voxels-patched":
-      return patchWrites(command.metadata.cells);
+      return patchWrites(command.metadata);
     case "layer-transformed":
       return layer === undefined ?
         [] :
@@ -384,11 +416,49 @@ function writesOf(
   }
 }
 
-function patchWrites(
-  cells: VoxelPatchCells
-): VoxelWrite[] {
-  assertVoxelPatchCells(cells);
+function resolvedWrite(
+  layer: VoxelLayer,
+  write: VoxelWrite
+): VoxelWrite {
+  const resolved = write.merge ? mergedWrite(layer, write) : write;
+  const { packed, partner } = resolved;
 
+  return partner === VOXEL_ABSENT ?
+    resolved :
+    {
+      ...resolved,
+      packed: cellPrimary(packed, partner),
+      partner: cellPartner(packed, partner)
+    };
+}
+
+function mergedWrite(
+  layer: VoxelLayer,
+  write: VoxelWrite
+): VoxelWrite {
+  const { position, packed } = write;
+  const existing = layer.getPackedVoxelAt(position);
+  const mergeable = packed !== VOXEL_ABSENT &&
+    existing !== VOXEL_ABSENT &&
+    existing !== packed &&
+    layer.getPartnerVoxelAt(position) === VOXEL_ABSENT;
+
+  return mergeable ?
+    {
+      ...write,
+      packed: existing,
+      partner: packed
+    } :
+    write;
+}
+
+function patchWrites(
+  patch: VoxelPatch
+): VoxelWrite[] {
+  assertVoxelPatch(patch);
+
+  const { cells } = patch;
+  const partners = patchPartnersByCell(patch);
   const writes: VoxelWrite[] = [];
   for (let index = 0; index < cells.length; index += VOXEL_PATCH_STRIDE) {
     writes.push({
@@ -397,11 +467,80 @@ function patchWrites(
         y: cells[index + 1],
         z: cells[index + 2]
       },
-      packed: packPatchCell(cells, index)
+      packed: packPatchCell(cells, index),
+      partner: partners === null ?
+        VOXEL_ABSENT :
+        partners[index / VOXEL_PATCH_STRIDE],
+      merge: false
     });
   }
 
   return writes;
+}
+
+function packPatchCell(
+  cells: readonly number[],
+  offset: number
+): PackedVoxel {
+  const blockId = cells[offset + 3];
+
+  return isAir(blockId) ?
+    VOXEL_ABSENT :
+    packVoxel(blockId, cells[offset + 4]);
+}
+
+function patchPartnersByCell(
+  patch: VoxelPatch
+): Int32Array | null {
+  const { cells, partners = [] } = patch;
+  if (partners.length === 0) {
+    return null;
+  }
+
+  const byCell = new Int32Array(cells.length / VOXEL_PATCH_STRIDE)
+    .fill(VOXEL_ABSENT);
+  for (
+    let index = 0;
+    index < partners.length;
+    index += VOXEL_PATCH_PARTNER_STRIDE
+  ) {
+    byCell[partners[index]] = packVoxel(
+      partners[index + 1],
+      partners[index + 2]
+    );
+  }
+
+  return byCell;
+}
+
+function truncateVoxelPatch(
+  patch: VoxelPatch,
+  cellCount: number
+): VoxelPatch {
+  const { cells, partners = [] } = patch;
+  const kept: VoxelPatchPartners = [];
+  for (
+    let index = 0;
+    index < partners.length;
+    index += VOXEL_PATCH_PARTNER_STRIDE
+  ) {
+    if (partners[index] < cellCount) {
+      kept.push(...partners.slice(index, index + VOXEL_PATCH_PARTNER_STRIDE));
+    }
+  }
+
+  return voxelPatch(cells.slice(0, cellCount * VOXEL_PATCH_STRIDE), kept);
+}
+
+function patched(
+  layerId: string,
+  patch: VoxelPatch
+): VoxelEditCommand {
+  return {
+    action: "voxels-patched",
+    layerId,
+    metadata: patch
+  };
 }
 
 function transformWrites(
@@ -415,7 +554,13 @@ function transformWrites(
   const { x: ox, y: oy, z: oz } = layer.position;
   const cells = Array.from(
     layer.localVoxels(),
-    ([x, y, z, packed]): LayerCell => [x + ox, y + oy, z + oz, packed]
+    ([x, y, z, packed, partner]): LayerCell => [
+      x + ox,
+      y + oy,
+      z + oz,
+      packed,
+      partner
+    ]
   );
   if (cells.length === 0) {
     return [];
@@ -424,15 +569,12 @@ function transformWrites(
   const pivot = transformPivot(cells);
   const targets = new Set<string>();
   const writes: VoxelWrite[] = [];
-  for (const [x, y, z, packed] of cells) {
+  for (const [x, y, z, packed, partner] of cells) {
     const offset = transform.transformOffset({
       x: (2 * x) + 1 - pivot.x,
       y: (2 * y) + 1 - pivot.y,
       z: (2 * z) + 1 - pivot.z
     });
-    const turned = VoxelTransform
-      .fromPacked(voxelTransform(packed))
-      .followedBy(transform);
     const position = {
       x: (pivot.x + offset.x - 1) / 2,
       y: (pivot.y + offset.y - 1) / 2,
@@ -442,14 +584,18 @@ function transformWrites(
     targets.add(`${position.x},${position.y},${position.z}`);
     writes.push({
       position,
-      packed: packVoxel(voxelBlockId(packed), turned.packed)
+      packed: turnVoxel(packed, transform),
+      partner: turnVoxel(partner, transform),
+      merge: false
     });
   }
   for (const [x, y, z] of cells) {
     if (!targets.has(`${x},${y},${z}`)) {
       writes.push({
         position: { x, y, z },
-        packed: VOXEL_ABSENT
+        packed: VOXEL_ABSENT,
+        partner: VOXEL_ABSENT,
+        merge: false
       });
     }
   }
@@ -481,15 +627,4 @@ function transformPivot(
   return ((x + z) & 3) === ((x - z) & 3) ?
     { x: x + step, y, z } :
     { x, y, z: z + step };
-}
-
-function packPatchCell(
-  cells: readonly number[],
-  index: number
-): PackedVoxel {
-  const blockId = cells[index + 3];
-
-  return isAir(blockId) ?
-    VOXEL_ABSENT :
-    packVoxel(blockId, cells[index + 4]);
 }

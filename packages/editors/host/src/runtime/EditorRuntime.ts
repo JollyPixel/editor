@@ -16,6 +16,11 @@ import {
 
 export interface EditorRuntimeCreateOptions extends RuntimeOptions {
   params?: HostParams;
+  /**
+   * Whether the page runs inside a frame such as a studio tab.
+   * @default window.parent !== window
+   */
+  framed?: boolean;
 }
 
 export interface EditorRuntimeLoadOptions {
@@ -30,14 +35,16 @@ export class EditorRuntime {
     const {
       params = HOST_PARAMS.read(),
       renderOnDemand = true,
+      framed = window.parent !== window,
       ...runtimeOptions
     } = options;
+    const render = params.render ?? (framed ? "on-demand" : "continuous");
     const runtime = await Runtime.create(
       canvas,
       {
         suspendWhenHidden: true,
         ...runtimeOptions,
-        renderOnDemand: renderOnDemand && !params.continuousRendering
+        renderOnDemand: renderOnDemand && render === "on-demand"
       }
     );
     runtime.world.input.keyboard.addGuard(

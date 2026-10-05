@@ -325,3 +325,38 @@ describe("VoxelChunk copyFrom()", () => {
     assert.throws(() => target.copyFrom(source), RangeError);
   });
 });
+
+describe("VoxelChunk merged cells", () => {
+  it("keeps the second shapes when copied or cloned", () => {
+    const source = new VoxelChunk([0, 0, 0], 4);
+    source.set([0, 0, 0], {
+      ...makeVoxelEntry(1),
+      partner: makeVoxelEntry(2)
+    });
+    const target = new VoxelChunk([0, 0, 0], 4);
+    target.set([1, 0, 0], {
+      ...makeVoxelEntry(3),
+      partner: makeVoxelEntry(4)
+    });
+
+    target.copyFrom(source);
+
+    assert.deepEqual(target.get([0, 0, 0])?.partner, makeVoxelEntry(2));
+    assert.equal(target.get([1, 0, 0]), undefined);
+    assert.equal(source.clone().get([0, 0, 0])?.partner?.blockId, 2);
+  });
+
+  it("orders the two shapes the same way whichever was written first", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], {
+      ...makeVoxelEntry(2),
+      partner: makeVoxelEntry(1)
+    });
+    chunk.set([1, 0, 0], {
+      ...makeVoxelEntry(1),
+      partner: makeVoxelEntry(2)
+    });
+
+    assert.deepEqual(chunk.get([0, 0, 0]), chunk.get([1, 0, 0]));
+  });
+});

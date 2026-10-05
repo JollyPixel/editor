@@ -8,6 +8,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { VoxelView } from "../../src/view/VoxelView.ts";
 import type { VoxelColliderContext } from "../../src/view/collision/index.ts";
+import { PulledChunkGeometry } from "../../src/view/meshing/index.ts";
 import {
   makeFakeCollider,
   type FakeCollider
@@ -109,6 +110,19 @@ describe("VoxelView - collider wiring", () => {
     assert.equal(geometry.getIndex()!.count, 6 * 6);
     assert.equal(bounds.min.x, 1);
     assert.equal(bounds.max.x, 2);
+  });
+
+  it("expands collision geometries only when a collider reads them, once", (t) => {
+    const expand = t.mock.method(PulledChunkGeometry.prototype, "toIndexedGeometry");
+    const { view, fake } = makeCollidingView();
+    placeCube(view, "Ground", { x: 0, y: 0, z: 0 });
+
+    view.flush();
+
+    assert.equal(expand.mock.callCount(), 0);
+    const [[, collision]] = fake.rebuilt;
+    assert.equal(collision.geometries, collision.geometries);
+    assert.equal(expand.mock.callCount(), collision.geometries.size);
   });
 
   it("removes collision when a layer is hidden, without rebuilding it", () => {

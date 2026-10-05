@@ -24,7 +24,7 @@ interface VoxelCollider {
 interface VoxelChunkCollision {
   origin: VoxelCoord;
   chunks: readonly VoxelChunk[];
-  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
+  readonly geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
 }
 ```
 
@@ -42,7 +42,8 @@ The view calls the factory once, with `document.blocks` and `view.shapes`.
   layer first. Voxels covered by a higher layer are still in them.
 - `geometries` holds the rendered geometry per draw group, with positions
   relative to `origin`. It is empty when the cell draws nothing. Read indices
-  within each geometry's draw range.
+  within each geometry's draw range. It is built on first read, so a
+  collider that works from `chunks` alone should not touch it.
 
 Hiding a layer removes its colliders. Blocks with `collidable: false` should be
 skipped; each [block shape](../blocks/BlockShape.md) also declares a

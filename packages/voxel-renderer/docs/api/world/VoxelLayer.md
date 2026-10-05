@@ -57,21 +57,27 @@ A layer has no `toJSON()`; use
 #### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
 
 The voxel at a world position, or `undefined` for air. Each call returns a new
-object, so compare entries by value.
+object, so compare entries by value. A
+[merged cell](./VoxelWorld.md#merged-cells) carries its second shape in
+`partner`.
 
 #### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
 
-Same lookup without allocating. Returns `VOXEL_ABSENT` for air; see
-[packed voxels](./VoxelChunk.md#packed-voxels).
+#### `getPartnerVoxelAt(position: Vector3Like): PackedVoxel`
+
+Same lookup without allocating, for the first and the second shape. Return
+`VOXEL_ABSENT` for air, and `getPartnerVoxelAt()` also for a cell that is not
+merged; see [packed voxels](./VoxelChunk.md#packed-voxels).
 
 #### `positionsOf(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
 
 World positions of the voxels whose block is in `blockIds`, whatever their
-transform.
+transform. A merged cell matches when either shape does.
 
 #### `countBlocks(): Map<number, number>`
 
-Voxel count per block id. Returns a new map.
+Voxel count per block id, counting both shapes of a merged cell. Returns a
+new map.
 
 #### `countBlock(blockId: number): number`
 
@@ -98,11 +104,20 @@ Center of `worldBounds()`. An empty layer returns its position.
 
 #### `setVoxelAt(position: Vector3Like, entry: VoxelEntry): void`
 
-#### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel): void`
+#### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel, partner?: PackedVoxel): void`
 
-Write a voxel at a world position. `VOXEL_ABSENT` removes it.
+Write a cell at a world position, replacing both shapes of a merged cell.
+`entry.partner` or `partner` makes it a merged cell. `VOXEL_ABSENT` removes
+the cell.
 
 #### `removeVoxelAt(position: Vector3Like): void`
+
+Removes the cell, both shapes included.
+
+#### `localVoxels(): IterableIterator<[x: number, y: number, z: number, packed: PackedVoxel, partner: PackedVoxel]>`
+
+Every cell in layer-local space. `partner` is `VOXEL_ABSENT` for a cell that
+is not merged.
 
 #### `rebase(position: Vector3Like): void`
 

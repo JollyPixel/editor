@@ -36,6 +36,8 @@ import {
 const kGround = "Ground";
 const kWater = "Water";
 const kSandId = 5;
+const kSlabBottomId = 6;
+const kSlabTopId = 7;
 const kViews = new Set<VoxelView>();
 
 function worldBlocks(
@@ -49,7 +51,9 @@ function worldBlocks(
     makeBlockDef(kSandId, "cube", {
       defaultTexture: { col: 1, row: 0 },
       blendGroup: blendGroups[kSandId]
-    })
+    }),
+    makeBlockDef(kSlabBottomId, "slabBottom"),
+    makeBlockDef(kSlabTopId, "slabTop", { alphaMode: "mask" })
   ];
 }
 
@@ -82,6 +86,15 @@ function makeWorld(
   }
   for (let x = 0; x < 6; x++) {
     placeCube(view, kWater, { x, y: 1, z: 5 });
+  }
+  for (let x = 2; x < 5; x++) {
+    const position = { x, y: 4, z: 1 };
+    placeCube(view, kGround, position, kSlabBottomId);
+    view.document.world.setVoxel(kGround, {
+      position,
+      blockId: kSlabTopId,
+      merge: true
+    });
   }
   view.document.world.setLayerPosition(kWater, { x: 0, y: 1, z: 0 });
   kViews.add(view);

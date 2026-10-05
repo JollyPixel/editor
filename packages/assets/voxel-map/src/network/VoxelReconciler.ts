@@ -1,10 +1,8 @@
 // Import Third-party Dependencies
 import type { CommandReconciler } from "@jolly-pixel/network/client";
 import {
-  AIR_BLOCK_ID,
   VOXEL_ABSENT,
-  voxelBlockId,
-  voxelTransform,
+  VoxelPatchBuilder,
   type PackedVoxel,
   type VoxelCoord,
   type VoxelDocument,
@@ -27,6 +25,7 @@ interface CellImage {
   readonly layerId: string;
   readonly position: VoxelCoord;
   readonly before: PackedVoxel;
+  readonly beforePartner: PackedVoxel;
 }
 
 interface LayerImage {
@@ -63,11 +62,12 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
   #images: ReadonlyMap<string, LayerImage>;
   #recorder: VoxelEditRecorder = {
     record: (changes) => {
-      for (const { layerId, position, before } of changes) {
+      for (const { layerId, position, before, beforePartner } of changes) {
         this.#recorded.push({
           layerId,
           position,
-          before
+          before,
+          beforePartner
         });
       }
     }
@@ -173,7 +173,8 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
       return {
         layerId: command.layerId,
         position,
-        before: layer?.getPackedVoxelAt(position) ?? VOXEL_ABSENT
+        before: layer?.getPackedVoxelAt(position) ?? VOXEL_ABSENT,
+        beforePartner: layer?.getPartnerVoxelAt(position) ?? VOXEL_ABSENT
       };
     });
   }
@@ -222,28 +223,22 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
   #restoreCells(
     images: readonly CellImage[]
   ): void {
-    const patches = new Map<string, number[]>();
+    const patches = new Map<string, VoxelPatchBuilder>();
     for (let index = images.length - 1; index >= 0; index--) {
-      const { layerId, position, before } = images[index];
-      let cells = patches.get(layerId);
-      if (cells === undefined) {
-        cells = [];
-        patches.set(layerId, cells);
+      const { layerId, position, before, beforePartner } = images[index];
+      let patch = patches.get(layerId);
+      if (patch === undefined) {
+        patch = new VoxelPatchBuilder();
+        patches.set(layerId, patch);
       }
-      cells.push(
-        position.x,
-        position.y,
-        position.z,
-        before === VOXEL_ABSENT ? AIR_BLOCK_ID : voxelBlockId(before),
-        before === VOXEL_ABSENT ? 0 : voxelTransform(before)
-      );
+      patch.push(position, before, beforePartner);
     }
 
-    for (const [layerId, cells] of patches) {
+    for (const [layerId, patch] of patches) {
       this.#document.apply({
         action: "voxels-patched",
         layerId,
-        metadata: { cells }
+        metadata: patch.toPatch()
       }, { origin: "remote" });
     }
   }

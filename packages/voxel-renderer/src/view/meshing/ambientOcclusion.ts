@@ -7,6 +7,8 @@ const kLevelBits = 2;
 const kLevelMask = 0b11;
 const kMaxLevel = 3;
 const kNormalMax = 127;
+const kAoSampleMask = 0xFF;
+const kAoCornersBySamples = aoCornersBySamples();
 
 export const AO_UNOCCLUDED = 0xFF;
 
@@ -46,6 +48,30 @@ export function packAoCorners(
     (u1v1 << (kLevelBits * 3));
 }
 
+export function aoCornersOf(
+  samples: number
+): number {
+  return kAoCornersBySamples[samples & kAoSampleMask];
+}
+
+function aoCornersBySamples(): Uint8Array {
+  const table = new Uint8Array(kAoSampleMask + 1);
+  for (let samples = 0; samples <= kAoSampleMask; samples++) {
+    const [uMin, uMax, vMin, vMax, u0v0, u1v0, u0v1, u1v1] = Array.from(
+      { length: 8 },
+      (_, bit) => ((samples >> bit) & 1) === 1
+    );
+    table[samples] = packAoCorners(
+      aoCornerLevel(uMin, vMin, u0v0),
+      aoCornerLevel(uMax, vMin, u1v0),
+      aoCornerLevel(uMin, vMax, u0v1),
+      aoCornerLevel(uMax, vMax, u1v1)
+    );
+  }
+
+  return table;
+}
+
 export function aoVertexByte(
   corners: number,
   u: number,
@@ -64,7 +90,7 @@ export function aoVertexByte(
 }
 
 export function shadeFace(
-  face: BlockVariantFace,
+  face: Pick<BlockVariantFace, "cull" | "positions" | "vertexCount">,
   ao: number,
   shade: Int8Array
 ): number {

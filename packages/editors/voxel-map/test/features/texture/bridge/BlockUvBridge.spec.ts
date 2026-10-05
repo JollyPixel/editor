@@ -189,7 +189,7 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
       assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 0, y: 0, width: 16, height: 16 });
 
       view.document.blocks.register(makeBlock(1, { col: 3, row: 2, tilesetId: "atlas" }));
-      bridgeOptions.mapDocument.emit("blockRegistryChanged");
+      bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
 
       assert.deepEqual(uv.get("block-1")?.rectFor("front"), { x: 48, y: 32, width: 16, height: 16 });
     }
@@ -212,7 +212,7 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
         ...makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" }),
         name: "Grass"
       });
-      bridgeOptions.mapDocument.emit("blockRegistryChanged");
+      bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
 
       assert.equal(uv.get("block-1")?.name, "Grass");
     }
@@ -359,7 +359,7 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
       uv.setState("block-1", "free");
       uv.move("block-1", { x: 48, y: 32, width: 16, height: 16 }, "top");
 
-      bridgeOptions.mapDocument.emit("blockRegistryChanged");
+      bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
 
       const region = uv.get("block-1")!;
       assert.equal(region.state, "free");

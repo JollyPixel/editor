@@ -43,7 +43,8 @@ export const test = editorFixture<E2EWorld>({
   editor: {
     maxFps: 10,
     query: {
-      samples: "0"
+      samples: "0",
+      render: "on-demand"
     }
   },
   async create(catalog) {

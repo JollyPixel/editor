@@ -73,13 +73,25 @@ describe("BlockUsageStore", () => {
     usage.on("change", (next) => changes.push(next.voxels));
 
     Object.assign(source, { stats: stats(5) });
-    mapDocument.emit("blockRegistryChanged");
+    mapDocument.emit("blockRegistryChanged", "added");
     mapDocument.emit("reset");
     assert.deepEqual(changes, []);
 
     await flushMicrotasks();
     assert.deepEqual(changes, [5]);
     assert.equal(usage.stats.voxels, 5);
+  });
+
+  it("ignores redefinitions, which never change what voxels use", async() => {
+    const { mapDocument, usage } = setup();
+    const changes: number[] = [];
+    usage.on("change", (next) => changes.push(next.voxels));
+
+    mapDocument.emit("blockRegistryChanged", "redefined");
+    mapDocument.emit("blockRegistryChanged", "retiled");
+
+    await flushMicrotasks();
+    assert.deepEqual(changes, []);
   });
 
   it("forwards per-block and per-tileset usage to its source", () => {

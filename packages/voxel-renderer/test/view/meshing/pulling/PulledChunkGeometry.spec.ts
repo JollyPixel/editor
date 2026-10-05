@@ -105,11 +105,29 @@ describe("PulledChunkGeometry - layout", () => {
     const [geometry] = buildGeometries(fixture).values();
 
     assert.equal(geometry.faceCount, 16 * 3 * 16 * 6);
-    assert.equal(geometry.faces.image.width, 2048);
+    assert.equal(geometry.faces.image.width, 1536);
     assert.equal(geometry.faces.image.height, 3);
     assert.equal(geometry.faces.format, THREE.RGIntegerFormat);
     assert.equal(geometry.faces.type, THREE.UnsignedIntType);
-    assert.equal(geometry.faces.image.data!.length, 2048 * 3 * 2);
+    assert.equal(geometry.faces.image.data!.length, 1536 * 3 * 2);
+  });
+
+  it("spreads faces evenly across rows instead of filling full rows", () => {
+    const fixture = makeMeshFixture({ chunkSize: 32 });
+    for (let x = 0; x < 32; x += 2) {
+      for (let y = 0; y < 4; y += 2) {
+        for (let z = 0; z < 32; z += 2) {
+          place(fixture, [x, y, z]);
+        }
+      }
+    }
+    place(fixture, [31, 4, 31]);
+    const [geometry] = buildGeometries(fixture).values();
+
+    assert.equal(geometry.faceCount, 3078);
+    assert.equal(geometry.faces.image.width, 1539);
+    assert.equal(geometry.faces.image.height, 2);
+    assert.equal(geometry.faces.image.data!.length, 3078 * 2);
   });
 
   it("sizes the texture to the face count below one row", () => {
@@ -144,6 +162,25 @@ describe("PulledChunkGeometry - layout", () => {
     geometry.dispose();
 
     assert.equal(disposed, true);
+  });
+
+  it("shares its corner attributes without exposing them to dispose listeners", () => {
+    const fixture = makeMeshFixture();
+    place(fixture, [0, 0, 0]);
+    const [first] = buildGeometries(fixture).values();
+    const [second] = buildGeometries(fixture).values();
+    const released: unknown[] = [];
+    first.addEventListener("dispose", () => {
+      released.push(...Object.values(first.attributes), first.index);
+    });
+
+    assert.equal(first.getAttribute("position"), second.getAttribute("position"));
+    assert.equal(first.getIndex(), second.getIndex());
+
+    first.dispose();
+
+    assert.deepEqual(released, [null]);
+    assert.equal(second.getAttribute("position").count, 4);
   });
 
   it("rejects a word array that does not fill the texture", () => {

@@ -12,7 +12,7 @@ import type {
   VoxelRemoveOptions
 } from "../world/VoxelWorld.ts";
 import type { VoxelCoord } from "../world/types.ts";
-import type { VoxelPatchCells } from "../world/editing/voxelPatch.ts";
+import type { VoxelPatch } from "../world/editing/voxelPatch.ts";
 import type {
   ResolvedBlockDefinition
 } from "../blocks/BlockDefinition.ts";
@@ -93,6 +93,7 @@ export type VoxelEditCommand =
       flipX: boolean;
       flipZ: boolean;
       flipY: boolean;
+      merge?: boolean;
     };
   }
   | {
@@ -119,9 +120,7 @@ export type VoxelEditCommand =
   | {
     action: "voxels-patched";
     layerId: string;
-    metadata: {
-      cells: VoxelPatchCells;
-    };
+    metadata: VoxelPatch;
   }
   | {
     action: "layer-transformed";

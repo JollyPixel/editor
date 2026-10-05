@@ -5,5 +5,6 @@ export * from "./BlockSurface.ts";
 export * from "./blocksFromTileset.ts";
 export * from "./BlockId.ts";
 export * from "./BlockRegistry.ts";
+export * from "./BlockComplements.ts";
 export * from "./face/index.ts";
 export * from "./shape/index.ts";

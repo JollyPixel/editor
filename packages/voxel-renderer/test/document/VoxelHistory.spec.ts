@@ -29,6 +29,21 @@ function makeHistory(
   return { world, history };
 }
 
+function cellChange(
+  world: VoxelWorld,
+  before: number,
+  after: number
+): VoxelCellChange {
+  return {
+    layerId: world.getLayer(kLayer)!.id,
+    position: kOrigin,
+    before,
+    after,
+    beforePartner: -1,
+    afterPartner: -1
+  };
+}
+
 function blockAt(
   world: VoxelWorld,
   position = kOrigin
@@ -108,6 +123,43 @@ describe("VoxelHistory", () => {
 
     assert.equal(blockAt(world, kOrigin), 1);
     assert.equal(blockAt(world, kNext), 2);
+  });
+
+  it("undoes and redoes a merge made inside a group", () => {
+    const { world, history } = makeHistory();
+    world.silently(() => world.setVoxel(kLayer, { position: kOrigin, blockId: 1 }));
+
+    history.begin();
+    world.setVoxel(kLayer, { position: kOrigin, blockId: 2, merge: true });
+    history.commit();
+    history.undo();
+
+    assert.deepEqual(
+      world.getLayer(kLayer)?.getVoxelAt(kOrigin),
+      { blockId: 1, transform: 0 }
+    );
+
+    history.redo();
+    assert.equal(
+      world.getLayer(kLayer)?.getVoxelAt(kOrigin)?.partner?.blockId,
+      2
+    );
+  });
+
+  it("brings both shapes of a removed merged cell back on undo", () => {
+    const { world, history } = makeHistory();
+    world.silently(() => {
+      world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+      world.setVoxel(kLayer, { position: kOrigin, blockId: 2, merge: true });
+    });
+
+    world.removeVoxel(kLayer, { position: kOrigin });
+    history.undo();
+
+    assert.equal(
+      world.getLayer(kLayer)?.getVoxelAt(kOrigin)?.partner?.blockId,
+      2
+    );
   });
 
   it("ignores writes that change nothing", () => {
@@ -297,8 +349,8 @@ describe("VoxelWorld recorder", () => {
     world.removeVoxel(kLayer, { position: kOrigin });
 
     assert.deepEqual(recorded, [
-      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: -1, after: 256 }],
-      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: 256, after: -1 }]
+      [cellChange(world, -1, 256)],
+      [cellChange(world, 256, -1)]
     ]);
   });
   it("hands every change to each added recorder until it is removed", () => {
@@ -333,8 +385,8 @@ describe("VoxelWorld recorder", () => {
     world.transaction(() => history.undo());
 
     assert.deepEqual(recorded, [
-      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: -1, after: 256 }],
-      [{ layerId: world.getLayer(kLayer)!.id, position: kOrigin, before: 256, after: -1 }]
+      [cellChange(world, -1, 256)],
+      [cellChange(world, 256, -1)]
     ]);
     assert.strictEqual(history.canUndo, false);
     assert.strictEqual(history.canRedo, true);

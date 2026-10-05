@@ -130,11 +130,11 @@ local commands.
 | `"position-updated"` | `{ position }` or `{ delta }` | |
 | `"position-rebased"` | `{ position }` | |
 | `"layer-moved"` | `{ rank }` | The layer's new rank. |
-| `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY }` | |
+| `"voxel-set"` | `{ position, blockId, rotation, flipX, flipZ, flipY, merge? }` | `merge` only when set, see [merged cells](../world/VoxelWorld.md#merged-cells). |
 | `"voxel-removed"` | `{ position }` | |
 | `"voxels-set"` | `{ entries: VoxelSetOptions[] }` | |
 | `"voxels-removed"` | `{ entries: VoxelRemoveOptions[] }` | |
-| `"voxels-patched"` | `{ cells: VoxelPatchCells }` | From `transaction()`, `patchVoxels()`, undo/redo and template placement. Five numbers per cell: `x, y, z, blockId, transform`; block `0` removes. |
+| `"voxels-patched"` | `VoxelPatch` (`{ cells, partners? }`) | From `transaction()`, `patchVoxels()`, undo/redo and template placement. Five numbers per cell: `x, y, z, blockId, transform`; block `0` removes. `partners` gives the second shape of merged cells, three numbers each: `cell, blockId, transform`, where `cell` is the index of a non-air cell of `cells`; left out when there are none. |
 | `"layer-transformed"` | `{ rotation, flipX, flipZ, flipY }` | From `transformLayer()`. |
 | `"object-layer-added"` | `{}` | |
 | `"object-layer-removed"` | `{}` | |
@@ -145,7 +145,18 @@ local commands.
 | `"object-updated"` | `{ objectId, patch }` | |
 
 `voxelPatchCells(cells)` iterates a `"voxels-patched"` payload as
-`{ x, y, z, blockId, transform }` objects.
+`{ x, y, z, blockId, transform }` objects. `VoxelPatchBuilder` builds a patch
+one cell at a time, `pickVoxelPatch(patch, cellIndices)` keeps some cells with
+their partners renumbered, and `assertVoxelPatch(patch)` throws a `RangeError`
+for a malformed payload:
+
+```ts
+const patch = new VoxelPatchBuilder()
+  .push({ x: 0, y: 0, z: 0 }, packVoxel(1, 0))
+  .push({ x: 1, y: 0, z: 0 }, packVoxel(1, 0), packVoxel(2, 16))
+  .toPatch();
+// { cells: [0, 0, 0, 1, 0, 1, 0, 0, 1, 0], partners: [1, 2, 16] }
+```
 
 ## Template commands
 
