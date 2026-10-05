@@ -58,6 +58,19 @@ The selection is discarded, without depositing a floating paste, whenever the do
 
 A move, transform, delete or deposit is one `select-edit` command listing only the pixels inside the texture.
 
+## Selecting all
+
+[`canvas.shortcuts.selectAll()`](../input/CanvasShortcuts.md) replaces the
+selection with the full texture rectangle, including transparent pixels and
+1×1 textures. It uses the current texture dimensions regardless of zoom,
+pan, UV regions or shape mode. The shape setting stays unchanged.
+
+A floating selection is deposited before capturing the full texture.
+Otherwise selecting all changes no pixels and creates no history entry.
+It is available in the normal view, where pixel edits remain disabled.
+During creation, movement or resizing, the shortcut returns `false` and
+keeps the gesture intact.
+
 ## Grabbing a selection
 
 A drag starts a move only when it begins on a selected pixel outside a resize handle. Masked-out cells inside the bounding rectangle are holes: clicking one starts a new selection instead. Dragging the interior of a rectangular selection moves it.

@@ -11,9 +11,9 @@ import { live } from "lit/directives/live.js";
 
 // Import Internal Dependencies
 import {
-  ColorSwatch,
   type ColorChangeDetail
 } from "./ColorSwatch.ts";
+import "./ColorSwatch.ts";
 import { renderIcon } from "../shared/icons.ts";
 import { iconStyles } from "../shared/icon.styles.ts";
 import { colorPickerRailStyles } from "./ColorPickerRail.styles.ts";
@@ -89,19 +89,6 @@ export class ColorPickerRail extends LitElement {
     this.dispatchEvent(customEvent);
   }
 
-  #onSwatchOpened(
-    event: Event
-  ): void {
-    const opened = event.composedPath()[0];
-
-    const colorSwatchElements = this.renderRoot.querySelectorAll<ColorSwatch>(
-      "color-swatch"
-    );
-    for (const swatch of colorSwatchElements) {
-      swatch !== opened && swatch.close();
-    }
-  }
-
   override render() {
     return html`
       <div class="swatches">
@@ -112,7 +99,6 @@ export class ColorPickerRail extends LitElement {
           .opacity=${live(this.foreground.opacity)}
           ?disabled=${this.docked}
           @color-change=${this.#onForegroundChange}
-          @opened=${this.#onSwatchOpened}
         ></color-swatch>
         <color-swatch
           class="swatch bg"
@@ -121,7 +107,6 @@ export class ColorPickerRail extends LitElement {
           .opacity=${live(this.background.opacity)}
           ?disabled=${this.docked}
           @color-change=${this.#onBackgroundChange}
-          @opened=${this.#onSwatchOpened}
         ></color-swatch>
         <button
           class="swap-btn"

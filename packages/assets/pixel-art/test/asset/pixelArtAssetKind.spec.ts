@@ -307,6 +307,7 @@ describe("pixelArtAssetKind", () => {
       "uv-region-state-changed",
       "uv-region-rotated",
       "normal-map-toggled",
+      "palette-color-changed",
       "normal-map-defaults-patched",
       "normal-map-zone-set",
       "normal-map-zone-deleted"

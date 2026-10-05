@@ -24,6 +24,15 @@ get canUndo(): boolean
 get canRedo(): boolean
 ```
 
+### `undoDepth` / `redoDepth`
+
+```ts
+get undoDepth(): number
+get redoDepth(): number
+```
+
+The number of entries on each stack. `undoDepth` never exceeds `limit`.
+
 ### `push(entry)`
 
 ```ts

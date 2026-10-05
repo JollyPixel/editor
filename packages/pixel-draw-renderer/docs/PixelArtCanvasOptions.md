@@ -71,6 +71,8 @@ interface HistoryOptions {
 interface HistoryState {
   canUndo: boolean;
   canRedo: boolean;
+  undoDepth: number;
+  redoDepth: number;
 }
 
 type ColorInput = string | Color;
@@ -190,7 +192,7 @@ History is disabled by default. Set `enabled` to `true` to record local edits. `
 
 ### `onHistoryChange`
 
-Called after the history stack is pushed, undone, redone or cleared. The callback receives `canUndo` and `canRedo`.
+Called after the history stack is pushed, undone, redone or cleared. The callback receives `canUndo`, `canRedo` and the `undoDepth` and `redoDepth` step counts.
 
 ## Edit callbacks
 

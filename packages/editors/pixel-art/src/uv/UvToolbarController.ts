@@ -228,6 +228,7 @@ export class UvToolbarController {
         label: `Rotate ${target} counter-clockwise`,
         tooltip: `Rotate ${target} 90° counter-clockwise`,
         icon: "rotateCounterClockwise",
+        text: "90°",
         onClick: () => uv.rotate(regionId, "ccw", slot)
       })}
       ${renderRailButton({
@@ -235,6 +236,7 @@ export class UvToolbarController {
         label: `Rotate ${target} clockwise`,
         tooltip: `Rotate ${target} 90° clockwise`,
         icon: "rotateClockwise",
+        text: "90°",
         onClick: () => uv.rotate(regionId, "cw", slot)
       })}
     `;
@@ -278,6 +280,7 @@ export class UvToolbarController {
 
   renderVisibilityToggles() {
     const uv = this.#canvas()?.uv;
+    const showAllIcon = uv?.showAll ? "eyeOpen" : "eyeOff";
 
     return html`
       <button
@@ -293,7 +296,7 @@ export class UvToolbarController {
         @pointerenter=${this.#visibilityPopup.onPointerEnter}
         @pointerleave=${this.#visibilityPopup.onPointerLeave}
       >
-        ${renderIcon("eye")}
+        ${renderIcon(showAllIcon)}
         ${renderIcon("chevronDown")}
       </button>
       <div
@@ -316,10 +319,11 @@ export class UvToolbarController {
             @change=${() => {
               if (uv) {
                 uv.showAll = !uv.showAll;
+                this.#host.requestUpdate();
               }
             }}
           >
-          ${renderIcon("eye")}
+          ${renderIcon(showAllIcon)}
           <span>Show all regions</span>
         </label>
         <label class="uv-state-option">

@@ -9,8 +9,10 @@ import assert from "node:assert/strict";
 import {
   applyPickerChange,
   colorChangeOf,
+  colorDetailOf,
   colorWithOpacity,
   pickerSource,
+  rgba8Of,
   type ColorValueElement
 } from "../../src/color/pickerChange.ts";
 import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
@@ -100,6 +102,21 @@ describe("pickerSource", () => {
     assert.deepEqual(element.changes, []);
   });
 
+  test("an input write raises color-preview instead of color-change", () => {
+    const element = listening(swatch());
+    const previews: ColorChangeDetail[] = [];
+    element.addEventListener("color-preview", (event) => {
+      if (event instanceof CustomEvent) {
+        previews.push(event.detail);
+      }
+    });
+
+    pickerSource(element).write("#ff000080", false);
+
+    assert.deepEqual(previews, [{ hex: "#ff0000", opacity: 128 / 255 }]);
+    assert.deepEqual(element.changes, []);
+  });
+
   test("read reflects what a write just applied", () => {
     const element = swatch();
     const source = pickerSource(element);
@@ -124,5 +141,14 @@ describe("applyPickerChange", () => {
 
     assert.equal(composed, true);
     assert.equal(bubbles, true);
+  });
+});
+
+describe("colorDetailOf and rgba8Of", () => {
+  test("convert between byte colors and picker details", () => {
+    const detail = colorDetailOf({ r: 18, g: 52, b: 86, a: 128 });
+
+    assert.deepEqual(detail, { hex: "#123456", opacity: 128 / 255 });
+    assert.deepEqual(rgba8Of(detail), { r: 18, g: 52, b: 86, a: 128 });
   });
 });

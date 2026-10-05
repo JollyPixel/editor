@@ -16,6 +16,7 @@ state.apply(toDocumentCommand(command));
 interface PixelDocumentStateOptions<TBuffer extends DefaultPixelBuffer> {
   buffer: TBuffer;
   onNormalMapChanged?: (regionIds: string[] | null) => void;
+  onPaletteChanged?: (index: number | null) => void;
 }
 ```
 
@@ -27,6 +28,7 @@ interface PixelDocumentStateOptions<TBuffer extends DefaultPixelBuffer> {
 readonly buffer: TBuffer;
 readonly uv: UVMap;
 readonly normalMap: NormalMapConfig | null;
+readonly palette: ColorPalette;
 ```
 
 `uv` is a [`UVMap`](./uv/UVMap.md) sized by `buffer`.
@@ -43,9 +45,15 @@ interface PixelDocumentSnapshot {
   pixels: Uint8ClampedArray;
   uvRegions?: Iterable<UVRegion | UVRegionData>;
   normalMap?: NormalMapData | null;
+  palette?: readonly RGBA8[];
 }
 ```
 
 `apply` mutates the state as described in [`PixelCommand`](./PixelCommand.md#applying). `load` replaces the pixels, the regions `owns` accepts (every region by default) and the normal map settings; a snapshot without `normalMap` turns the feature off. `removeNormalMapZoneOf` drops a region's zone and returns it with its index, or `null`.
 
 [Serialization](./serialization/index.md) reads and writes a state.
+
+`palette` is an immutable [ColorPalette](./ColorPalette.md). A slot command
+calls `onPaletteChanged` with its index when its color changes. Loading a
+snapshot replaces the palette and calls the listener with `null`. A missing
+palette loads the defaults, including when replacing an already edited state.

@@ -13,7 +13,7 @@ import {
   foldAssetEvent,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
-import { pixelArtSnapshot } from "@jolly-pixel/pixel-draw.renderer";
+import { pixelArtSnapshot, PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -22,7 +22,7 @@ import {
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
-import type { PixelWireCommand } from "#src/network/types.ts";
+import type { PixelWireCommand, PixelServerMessage } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
@@ -47,7 +47,7 @@ function isCorrection(
 
 function isSnapshot(
   message: unknown
-): boolean {
+): message is Extract<PixelServerMessage, { type: "snapshot"; }> {
   return typeof message === "object" &&
     message !== null &&
     "type" in message &&
@@ -102,6 +102,7 @@ function setup() {
   }
 
   return {
+    state,
     buffer,
     broadcasts,
     receive,
@@ -184,6 +185,43 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kBlue);
     assert.ok(broadcasts.every((message) => !isSnapshot(message)));
+    manager.destroy();
+  });
+
+  test("a rejected palette undo restores the peer's newer color from the room snapshot", (t) => {
+    t.mock.timers.enable({ apis: ["Date"] });
+    const { state, broadcasts, receive, room, manager } = setup();
+    const peer = new PixelDocument({ size: { x: 8, y: 8 } });
+    const peerRoom = new MockRoom({
+      clientId: "B",
+      onSend: (sent) => receive("B", sent)
+    });
+    const peerSync = new PixelSyncClient({ room: peerRoom, document: peer });
+    peerRoom.deliverSnapshot(pixelArtSnapshot(state.document));
+
+    t.mock.timers.tick(1000);
+    manager.document.changePaletteColor(3, { r: 255, g: 0, b: 0, a: 128 });
+    const first = room.sent.at(-1)!;
+    room.deliverCommand(first);
+    peerRoom.deliverCommand(first);
+    assert.deepEqual(peer.palette.colorAt(3), { r: 255, g: 0, b: 0, a: 128 });
+
+    t.mock.timers.tick(1000);
+    peer.changePaletteColor(3, { r: 0, g: 0, b: 255, a: 255 });
+    const newer = peerRoom.sent.at(-1)!;
+    peerRoom.deliverCommand(newer);
+    room.deliverCommand(newer);
+    t.mock.timers.tick(1000);
+    manager.document.undo();
+    assert.notDeepEqual(manager.document.palette.colorAt(3), peer.palette.colorAt(3));
+    const snapshot = broadcasts.at(-1);
+    assert.ok(isSnapshot(snapshot));
+    room.emit("message", snapshot);
+
+    assert.deepEqual(manager.document.palette.colorAt(3), { r: 0, g: 0, b: 255, a: 255 });
+    assert.deepEqual(manager.document.palette.toJSON(), peer.palette.toJSON());
+    assert.deepEqual(state.document.palette.toJSON(), peer.palette.toJSON());
+    peerSync.destroy();
     manager.destroy();
   });
 

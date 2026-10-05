@@ -4,6 +4,7 @@ import type { RotationDirection } from "../types.ts";
 export interface CanvasShortcuts {
   panHeld: boolean;
   lineHeld: boolean;
+  selectAll(): boolean;
   copy(): boolean;
   paste(): boolean;
   delete(): boolean;

@@ -40,6 +40,13 @@ A keyboard-driven intent of the canvas, such as undo, delete, or rotate, reached
 
 A component that performs or configures an editing behavior. Brush, fill, selection, line, and UV manipulation are tools.
 
+### Color Palette
+
+The ten saved RGBA8 colors of a Pixel Document, addressed by fixed slot
+indices from zero to nine. A palette slot change is a Pixel Command and a
+History Entry when history is enabled. Palette selection and color picker
+drafts are local view state. Changing a slot leaves texture pixels unchanged.
+
 ### Brush
 
 The paint configuration: primary and secondary colors, opacity, size, and cursor appearance.

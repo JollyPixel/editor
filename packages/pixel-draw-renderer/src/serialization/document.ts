@@ -10,6 +10,7 @@ import { encodePixelBytes } from "./pixelBytes.ts";
 import { TextureBounds } from "../buffer/TextureBounds.ts";
 import { isUVRegionData } from "../uv/region/validation.ts";
 import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
+import { ColorPalette } from "../palette/ColorPalette.ts";
 import type { Vec2 } from "../types.ts";
 
 export function createPixelArtDocument(
@@ -34,7 +35,8 @@ export function createPixelArtDocument(
       y: size.y
     },
     pixels: encodePixelBytes(pixels),
-    uvRegions: []
+    uvRegions: [],
+    palette: ColorPalette.create().toJSON()
   };
 }
 
@@ -76,6 +78,13 @@ export function parsePixelArtDocument(
       throw new InvalidPixelArtDocumentError("normalMap contains invalid data");
     }
     parsed.normalMap = normalMap.toJSON();
+  }
+  if (document.palette !== undefined) {
+    const palette = ColorPalette.parse(document.palette);
+    if (palette === null) {
+      throw new InvalidPixelArtDocumentError("palette contains invalid data");
+    }
+    parsed.palette = palette.toJSON();
   }
 
   return parsed;

@@ -42,6 +42,7 @@ import type { UVGeometry } from "./uv/geometry/types.ts";
 import { RectArea } from "./utils/RectArea.ts";
 import { NormalMap } from "./normal/NormalMap.ts";
 import { NormalMapConfig } from "./normal/NormalMapConfig.ts";
+import { ColorPalette } from "./palette/ColorPalette.ts";
 import { IslandMap } from "./normal/IslandMap.ts";
 import type {
   IslandFace,
@@ -84,6 +85,7 @@ export type PixelDocumentEvent = CanvasBufferEvent & {
   "draw-end": () => void;
   "history-changed": (state: HistoryState) => void;
   "islands-changed": () => void;
+  "palette-changed": (index: number | null) => void;
   "normal-map-changed": (event: {
     config: NormalMapConfig | null;
     regionIds: string[] | null;
@@ -122,6 +124,7 @@ export class PixelDocument extends Emitter<
 
     this.#state = new PixelDocumentState({
       buffer: this.buffer,
+      onPaletteChanged: (index) => this.emit("palette-changed", index),
       onNormalMapChanged: (regionIds) => this.emit("normal-map-changed", {
         config: this.normalMap,
         regionIds
@@ -166,6 +169,31 @@ export class PixelDocument extends Emitter<
 
   get normalMap(): NormalMapConfig | null {
     return this.#state.normalMap;
+  }
+
+  get palette(): ColorPalette {
+    return this.#state.palette;
+  }
+
+  changePaletteColor(
+    index: number,
+    color: RGBA8
+  ): void {
+    const palette = this.palette.withColor(index, color);
+    if (palette === this.palette) {
+      return;
+    }
+
+    const undo: DocumentCommand = {
+      action: "palette-color-changed",
+      metadata: { index, color: this.palette.colorAt(index) }
+    };
+    const redo: DocumentCommand = {
+      action: "palette-color-changed",
+      metadata: { index, color: palette.colorAt(index) }
+    };
+    this.#state.apply(redo);
+    this.#recorder.record([redo], { redo: [redo], undo: [undo] });
   }
 
   get islands(): IslandMap {
@@ -389,13 +417,15 @@ export class PixelDocument extends Emitter<
     size: Vec2,
     pixels: Uint8ClampedArray,
     uvRegions: (UVRegion | UVRegionData)[] = [],
-    normalMap: NormalMapData | null = null
+    normalMap: NormalMapData | null = null,
+    palette?: readonly RGBA8[]
   ): void {
     this.#recorder.load({
       size,
       pixels,
       uvRegions,
-      normalMap
+      normalMap,
+      palette
     });
   }
 

@@ -44,6 +44,8 @@ describe("History", () => {
       assert.strictEqual(history.undo((entry) => replayed.push(entry)), null);
       assert.ok(!history.canRedo);
       assert.strictEqual(history.redo((entry) => replayed.push(entry)), null);
+      assert.strictEqual(history.undoDepth, 0);
+      assert.strictEqual(history.redoDepth, 0);
 
       history.clear();
       assert.strictEqual(states.length, 0);
@@ -76,25 +78,25 @@ describe("History", () => {
       history.push(kEdit);
       assert.deepStrictEqual(
         states.at(-1),
-        { canUndo: true, canRedo: false }
+        { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0 }
       );
 
       history.undo(() => undefined);
       assert.deepStrictEqual(
         states.at(-1),
-        { canUndo: false, canRedo: true }
+        { canUndo: false, canRedo: true, undoDepth: 0, redoDepth: 1 }
       );
 
       history.redo(() => undefined);
       assert.deepStrictEqual(
         states.at(-1),
-        { canUndo: true, canRedo: false }
+        { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0 }
       );
 
       history.clear();
       assert.deepStrictEqual(
         states.at(-1),
-        { canUndo: false, canRedo: false }
+        { canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0 }
       );
 
       assert.strictEqual(states.length, 4);

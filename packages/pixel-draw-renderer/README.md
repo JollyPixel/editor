@@ -160,6 +160,7 @@ manager.redo();
   - [`CanvasShortcuts`](./docs/input/CanvasShortcuts.md)
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
 - [`PixelDocumentState`](./docs/PixelDocumentState.md)
+- [`ColorPalette`](./docs/ColorPalette.md)
 - [`PixelCommand`](./docs/PixelCommand.md)
 - Normal map
   - [`NormalMap`](./docs/normal/NormalMap.md)

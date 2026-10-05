@@ -41,11 +41,11 @@ function lastLine(
 }
 
 describe("keybind console", () => {
-  test("registers one variable per action and a reset command", () => {
+  test("exposes the Select All binding and a reset command", async() => {
     const { commands } = boot(new MemoryStorageAdapter());
-    const namespace = commands.registry.namespace("keybind");
+    await commands.submit("keybind.selectAll");
 
-    assert.equal([...namespace!.variables()].length, 9);
+    assert.equal(lastLine(commands), "info: Mod+a");
     assert.notEqual(commands.registry.resolveCommand("keybind.reset"), undefined);
   });
 

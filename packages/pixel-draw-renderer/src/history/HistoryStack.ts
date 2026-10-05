@@ -27,6 +27,14 @@ export class HistoryStack<TEntry> {
     return this.#redoStack.length > 0;
   }
 
+  get undoDepth(): number {
+    return this.#undoStack.length;
+  }
+
+  get redoDepth(): number {
+    return this.#redoStack.length;
+  }
+
   push(
     entry: TEntry
   ): void {

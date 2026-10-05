@@ -34,7 +34,16 @@ interface PixelDocumentOptions {
 readonly buffer: CanvasBuffer;
 readonly uv: UVMap;
 readonly history: History;
+readonly palette: ColorPalette;
 ```
+
+## Palette
+
+`palette` holds the document's ten [saved colors](./ColorPalette.md).
+`changePaletteColor(index: number, color: RGBA8): void` changes one slot,
+records undo/redo when history is enabled, and emits a document command.
+Unchanged colors are ignored. Invalid indices or channels throw before any
+state, command or history change.
 
 ## UV ownership
 
@@ -52,6 +61,7 @@ The document owns every UV region until `disownUvRegions` hands the ones `filter
 | Event | Payload | When |
 |---|---|---|
 | `command` | [`PixelCommand`](./PixelCommand.md) | a local edit, undo or redo produced a command; remote commands and snapshots never emit it |
+| `palette-changed` | `number \| null` | one palette slot changed, or a snapshot replaced the whole palette (`null`); includes remote changes and undo/redo |
 | `changed` | `{ bounds }` | pixels were written |
 | `resized` | `{ size }` | the texture was resized |
 | `replaced` | `{ size }` | all pixels were replaced (texture load, remote replace, snapshot, history) |
@@ -139,7 +149,8 @@ loadSnapshot(
   size: Vec2,
   pixels: Uint8ClampedArray,
   uvRegions?: (UVRegion | UVRegionData)[],
-  normalMap?: NormalMapData | null
+  normalMap?: NormalMapData | null,
+  palette?: readonly RGBA8[]
 ): void;
 runLocalRestore<T>(fn: () => T): T;
 ```

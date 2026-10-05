@@ -46,6 +46,10 @@ export class Shortcuts implements CanvasShortcuts {
     this.#router.lineHeld = held;
   }
 
+  selectAll(): boolean {
+    return this.#router.selectAll();
+  }
+
   copy(): boolean {
     return this.#clipboard.startCopy();
   }

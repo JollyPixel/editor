@@ -29,6 +29,10 @@ const features = registerConsoleFeatures(
 
 Keybinds are per browser. They are not part of the asset and are not sent to peers.
 
+The default `selectAll` action is `Mod+a` (Ctrl+A on Windows/Linux and Cmd+A on macOS).
+While hovering the canvas in Select mode, it selects the full texture. Editable fields
+keep their native Select All behavior. Rebind it with `keybind.selectAll`.
+
 ## Settings
 
 ```ts

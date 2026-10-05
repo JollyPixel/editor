@@ -23,10 +23,17 @@ interface PixelArtDocumentData {
   readonly pixels: string;
   readonly uvRegions: UVRegionData[];
   readonly normalMap?: NormalMapData;
+  readonly palette?: RGBA8[];
 }
 ```
 
 `normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A document without it loads with the feature off, so `version` stays `1`. `PixelDocumentState.normalMap` carries it through `serializePixelDocument`, `deserializePixelDocument` and `pixelArtSnapshot`.
+
+`palette` holds exactly ten [RGBA8 colors](../ColorPalette.md), including
+alpha. New documents and snapshots include it. Older version `1` documents
+without it load the default palette. Invalid lengths or channel values are
+rejected. Palette data travels through `serializePixelDocument`,
+`deserializePixelDocument` and `pixelArtSnapshot`.
 
 Deliberately not a PNG. The document carries UV regions, which an image
 format cannot, and encoding one needs no image codec on the server, where

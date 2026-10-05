@@ -4,13 +4,23 @@ import {
   type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
+import {
+  createRef,
+  ref
+} from "lit/directives/ref.js";
 import type {
   BrushColorSlot,
   PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import type {
+  ColorPickerPopover,
+  ColorPickerRequest
+} from "./ColorPickerPopover.ts";
+import type { PaletteEditDetail } from "./ColorPaletteGrid.ts";
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
+import { PaletteController } from "./PaletteController.ts";
 import {
   readBrushColor,
   writeBrushColor
@@ -30,18 +40,54 @@ export interface ColorPickedDetail extends ColorChangeDetail {
   slot?: BrushColorSlot;
 }
 
+interface ColorDraft {
+  color: ColorChangeDetail;
+  canvas: PixelArtCanvas | null;
+}
+
 export class ColorController {
-  readonly #host: ReactiveControllerHost;
+  readonly #host: ReactiveControllerHost & HTMLElement;
   readonly #canvas: () => PixelArtCanvas | null;
+  readonly #palette: PaletteController;
+  readonly #picker = createRef<ColorPickerPopover>();
   #docked = false;
   #undockedBackground: ColorChangeDetail | null = null;
+  #draft: ColorDraft | null = null;
+  #editing: number | null = null;
 
   constructor(
-    host: ReactiveControllerHost,
+    host: ReactiveControllerHost & HTMLElement,
     canvas: () => PixelArtCanvas | null
   ) {
     this.#host = host;
     this.#canvas = canvas;
+    host.addController(this);
+    this.#palette = new PaletteController(host, {
+      canvas,
+      onDocumentChange: () => this.#onDocumentChange(),
+      onSelectedColorChange: (color) => {
+        if (this.#docked && this.#draft === null) {
+          this.#applyActive(color);
+        }
+      },
+      onDismiss: () => this.deselectPaletteColor()
+    });
+  }
+
+  hostConnected(): void {
+    this.#host.addEventListener("color-picker-open", this.#onPickerOpen);
+    this.#host.addEventListener("color-picker-close", this.#onPickerClose);
+  }
+
+  hostUpdated(): void {
+    this.#picker.value?.refresh();
+  }
+
+  hostDisconnected(): void {
+    this.#host.removeEventListener("color-picker-open", this.#onPickerOpen);
+    this.#host.removeEventListener("color-picker-close", this.#onPickerClose);
+    this.#picker.value?.close();
+    this.cancelDraft();
   }
 
   get foreground(): ColorChangeDetail {
@@ -67,6 +113,8 @@ export class ColorController {
       return;
     }
 
+    this.#picker.value?.close();
+    this.cancelDraft();
     this.#docked = value;
     if (value) {
       this.#dock();
@@ -83,6 +131,28 @@ export class ColorController {
     if (this.#docked) {
       this.#dock();
     }
+  }
+
+  selectPaletteColor(
+    index: number
+  ): void {
+    this.#picker.value?.close();
+    this.cancelDraft();
+    const color = this.#palette.select(index);
+    if (color !== null) {
+      this.#applyActive(color);
+      this.#host.requestUpdate();
+    }
+  }
+
+  deselectPaletteColor(): void {
+    if (this.#palette.selected === null) {
+      return;
+    }
+    this.#picker.value?.close();
+    this.cancelDraft();
+    this.#palette.deselect();
+    this.#host.requestUpdate();
   }
 
   changeForeground(
@@ -109,29 +179,40 @@ export class ColorController {
     this.#host.requestUpdate();
   }
 
-  changeActive(
+  previewActive(
     color: ColorChangeDetail
   ): void {
+    this.#draft ??= {
+      color: this.foreground,
+      canvas: this.#canvas()
+    };
     this.#applyActive(color);
     this.#host.requestUpdate();
   }
 
-  renderDock(): TemplateResult {
-    const { hex, opacity } = this.foreground;
+  changeActive(
+    color: ColorChangeDetail
+  ): void {
+    this.#draft = null;
+    this.#applyActive(color);
+    this.#palette.commit(color);
+    this.#host.requestUpdate();
+  }
 
-    return html`
-      <color-dock
-        class="color-dock"
-        part="color-dock"
-        ?open=${this.#docked}
-        ?inert=${!this.#docked}
-        .color=${hex}
-        .opacity=${opacity}
-        @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
-          this.changeActive(event.detail);
-        }}
-      ></color-dock>
-    `;
+  cancelDraft(): void {
+    const draft = this.#draft;
+    if (draft === null) {
+      return;
+    }
+
+    this.#draft = null;
+    if (draft.canvas !== null) {
+      const { document: doc, brush } = draft.canvas;
+      const color = this.#palette.selectedColor(doc) ?? draft.color;
+      writeBrushColor(brush.primary, color);
+      writeBrushColor(brush.secondary, color);
+    }
+    this.#host.requestUpdate();
   }
 
   swap(): void {
@@ -147,12 +228,111 @@ export class ColorController {
     detail: ColorPickedDetail
   ): void {
     if (this.#docked) {
-      this.#applyActive({
+      this.changeActive({
         hex: detail.hex,
         opacity: detail.opacity
       });
     }
     this.#host.requestUpdate();
+  }
+
+  renderPopover(): TemplateResult {
+    return html`
+      <color-picker-popover
+        part="color-picker-popover"
+        ${ref(this.#picker)}
+      ></color-picker-popover>
+    `;
+  }
+
+  renderDock(): TemplateResult {
+    const { hex, opacity } = this.foreground;
+
+    return html`
+      <color-dock
+        class="color-dock"
+        part="color-dock"
+        ?open=${this.#docked}
+        ?inert=${!this.#docked}
+        .color=${hex}
+        .opacity=${opacity}
+        .palette=${this.#palette.palette}
+        .selected=${this.#palette.selected}
+        .editing=${this.#editing}
+        @palette-select=${(event: CustomEvent<number>) => {
+          this.selectPaletteColor(event.detail);
+        }}
+        @palette-edit=${(event: CustomEvent<PaletteEditDetail>) => {
+          this.#editPaletteColor(event.detail);
+        }}
+        @color-preview=${(event: CustomEvent<ColorChangeDetail>) => {
+          if (this.#docked) {
+            this.previewActive(event.detail);
+          }
+        }}
+        @color-change=${(event: CustomEvent<ColorChangeDetail>) => {
+          if (this.#docked) {
+            this.changeActive(event.detail);
+          }
+        }}
+      ></color-dock>
+    `;
+  }
+
+  readonly #onPickerOpen = (
+    event: CustomEvent<ColorPickerRequest>
+  ): void => {
+    this.#picker.value?.open(event.detail);
+  };
+
+  readonly #onPickerClose = (
+    event: CustomEvent<HTMLButtonElement>
+  ): void => {
+    this.#picker.value?.close(event.detail);
+  };
+
+  #editPaletteColor(
+    detail: PaletteEditDetail
+  ): void {
+    const { index, anchor } = detail;
+    this.selectPaletteColor(index);
+    this.#editing = index;
+    this.#picker.value?.open({
+      anchor,
+      label: "Edit palette color",
+      side: "above",
+      color: () => this.#palette.colorAt(index),
+      change: (color, last) => {
+        if (last) {
+          this.changeActive(color);
+        }
+        else {
+          this.previewActive(color);
+        }
+      },
+      close: () => {
+        this.#editing = null;
+        this.cancelDraft();
+      }
+    });
+    this.#host.requestUpdate();
+  }
+
+  #onDocumentChange(): void {
+    const draftCanvas = this.#draft?.canvas ?? null;
+    this.#picker.value?.close();
+    this.cancelDraft();
+    if (!this.#docked) {
+      return;
+    }
+
+    if (draftCanvas !== null) {
+      this.#applyActive(readBrushColor(draftCanvas.brush.primary));
+    }
+    const selected = this.#palette.selectedColor();
+    if (selected !== null) {
+      this.#applyActive(selected);
+    }
   }
 
   #dock(): void {

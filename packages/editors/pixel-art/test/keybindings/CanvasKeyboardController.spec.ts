@@ -45,6 +45,10 @@ class FakeShortcuts implements CanvasShortcuts {
     return this.handles;
   }
 
+  selectAll() {
+    return this.#record("selectAll");
+  }
+
   copy() {
     return this.#record("copy");
   }

@@ -26,10 +26,13 @@ test.describe("undo and redo", () => {
 
     await clickTexturePixel(panel, { x: 65, y: 2 });
     await expect.poll(pixel).toEqual([BLACK]);
+    await expect(undo.locator(".rail-count")).toHaveText("1");
 
     await undo.click();
     await expect.poll(pixel).toEqual([CLEAR]);
     await expect(undo).toBeDisabled();
+    await expect(undo.locator(".rail-count")).toHaveCount(0);
+    await expect(redo.locator(".rail-count")).toHaveText("1");
 
     await redo.click();
     await expect.poll(pixel).toEqual([BLACK]);

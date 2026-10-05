@@ -143,7 +143,9 @@ export class SelectToolbarController implements ReactiveController {
           ${renderRailButton({
             part: "select-rotate-button",
             label: "Rotate clockwise",
+            tooltip: "Rotate 90° clockwise",
             icon: "rotateClockwise",
+            text: "90°",
             disabled: selectionDisabled,
             onClick: () => select?.rotate()
           })}

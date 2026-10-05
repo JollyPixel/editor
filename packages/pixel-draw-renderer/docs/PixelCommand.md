@@ -9,6 +9,7 @@ type PixelCommand = (
   | { action: "texture-replaced"; metadata: { size: Vec2; pixels: string } }
   | { action: "global-fill"; metadata: { fromColor: RGBA8; toColor: RGBA8 } }
   | { action: "select-edit"; metadata: { positions: Vec2[]; colors: RGBA8[] } }
+  | { action: "palette-color-changed"; metadata: { index: number; color: RGBA8 } }
   | { action: "uv-region-created"; metadata: { region: UVRegionData } }
   | { action: "uv-region-deleted"; metadata: { id: string } }
   | { action: "uv-region-moved"; metadata: { id: string; face: UVSlot | null; rect: SelectionRect } }
@@ -42,6 +43,7 @@ function toDocumentCommand(command: PixelCommand): DocumentCommand;
 | `texture-replaced` | replaces the size and every pixel |
 | `global-fill` | repaints every pixel of `fromColor` with `toColor` |
 | `select-edit` | paints each position with its own color |
+| `palette-color-changed` | replaces one saved palette color; index must be `0–9` and all RGBA channels must be integer bytes |
 | `uv-region-created` | adds the region, or replaces it when its id exists |
 | `uv-region-deleted` | removes the region and its normal map zone |
 | `uv-region-moved` | moves the region, or the slot of a free region, kept inside the texture; an unknown slot is ignored |

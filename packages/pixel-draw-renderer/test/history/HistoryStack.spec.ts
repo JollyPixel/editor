@@ -24,6 +24,28 @@ describe("HistoryStack", () => {
     });
   });
 
+  describe("undoDepth / redoDepth", () => {
+    test("count the entries each stack holds, capped by the limit", () => {
+      const stack = new HistoryStack<number>({ limit: 3 });
+      assert.strictEqual(stack.undoDepth, 0);
+      assert.strictEqual(stack.redoDepth, 0);
+
+      for (let i = 0; i < 4; i++) {
+        stack.push(i);
+      }
+      assert.strictEqual(stack.undoDepth, 3);
+
+      stack.undo();
+      stack.undo();
+      assert.strictEqual(stack.undoDepth, 1);
+      assert.strictEqual(stack.redoDepth, 2);
+
+      stack.push(9);
+      assert.strictEqual(stack.undoDepth, 2);
+      assert.strictEqual(stack.redoDepth, 0);
+    });
+  });
+
   describe("undo / redo", () => {
     test("move entries between the stacks and return them", () => {
       const stack = new HistoryStack<string>();

@@ -119,6 +119,7 @@ export class CanvasKeyboardController implements ReactiveController {
   #bind(): void {
     this.#releaseBindings?.();
     this.#releaseBindings = this.#keyBindings.bind(this.#keyboard, {
+      selectAll: () => this.#shortcuts()?.selectAll() ?? false,
       copy: () => this.#shortcuts()?.copy() ?? false,
       paste: () => this.#shortcuts()?.paste() ?? false,
       undo: () => this.#shortcuts()?.undo() ?? false,

@@ -215,6 +215,15 @@ export class InteractionRouter implements InputActions {
     this.#syncCursor();
   }
 
+  selectAll(): boolean {
+    const handled = this.#active.onSelectAll();
+    if (handled) {
+      this.#syncCursor();
+    }
+
+    return handled;
+  }
+
   delete(): boolean {
     return this.#active.onDelete();
   }

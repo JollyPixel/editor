@@ -8,6 +8,8 @@ import type {
 export interface HistoryState {
   canUndo: boolean;
   canRedo: boolean;
+  undoDepth: number;
+  redoDepth: number;
 }
 
 export interface HistoryOptions {
@@ -49,6 +51,14 @@ export class History {
 
   get canRedo(): boolean {
     return this.#stack?.canRedo ?? false;
+  }
+
+  get undoDepth(): number {
+    return this.#stack?.undoDepth ?? 0;
+  }
+
+  get redoDepth(): number {
+    return this.#stack?.redoDepth ?? 0;
   }
 
   push(
@@ -107,7 +117,9 @@ export class History {
   #notify(): void {
     this.#onChange?.({
       canUndo: this.canUndo,
-      canRedo: this.canRedo
+      canRedo: this.canRedo,
+      undoDepth: this.undoDepth,
+      redoDepth: this.redoDepth
     });
   }
 }

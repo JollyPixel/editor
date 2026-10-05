@@ -449,6 +449,14 @@ export class PixelArtCanvas {
     return this.document.history.canRedo;
   }
 
+  undoDepth(): number {
+    return this.document.history.undoDepth;
+  }
+
+  redoDepth(): number {
+    return this.document.history.redoDepth;
+  }
+
   get onCursorMove(): ExternalCursorMoveListener | undefined {
     return this.#router.onExternalCursorMove;
   }

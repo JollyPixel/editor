@@ -8,6 +8,7 @@ import type {
   UVRegionData
 } from "../uv/region/UVRegion.ts";
 import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
+import { ColorPalette } from "../palette/ColorPalette.ts";
 import type {
   IndexedNormalMapZone,
   NormalMapData
@@ -34,6 +35,7 @@ export interface PixelDocumentSnapshot {
   pixels: Uint8ClampedArray;
   uvRegions?: Iterable<UVRegion | UVRegionData>;
   normalMap?: NormalMapData | null;
+  palette?: readonly RGBA8[];
 }
 
 export interface PixelDocumentStateOptions<
@@ -41,6 +43,7 @@ export interface PixelDocumentStateOptions<
 > {
   buffer: TBuffer;
   onNormalMapChanged?: NormalMapChangedListener;
+  onPaletteChanged?: (index: number | null) => void;
 }
 
 export class PixelDocumentState<
@@ -50,6 +53,8 @@ export class PixelDocumentState<
   readonly uv: UVMap;
 
   #normalMap: NormalMapConfig | null = null;
+  #palette = ColorPalette.create();
+  #onPaletteChanged?: (index: number | null) => void;
   #onNormalMapChanged?: NormalMapChangedListener;
 
   constructor(
@@ -60,16 +65,30 @@ export class PixelDocumentState<
       getCanvasSize: () => this.buffer.size()
     });
     this.#onNormalMapChanged = options.onNormalMapChanged;
+    this.#onPaletteChanged = options.onPaletteChanged;
   }
 
   get normalMap(): NormalMapConfig | null {
     return this.#normalMap;
   }
 
+  get palette(): ColorPalette {
+    return this.#palette;
+  }
+
   apply(
     command: DocumentCommand
   ): void {
     switch (command.action) {
+      case "palette-color-changed": {
+        const { index, color } = command.metadata;
+        const palette = this.#palette.withColor(index, color);
+        if (palette !== this.#palette) {
+          this.#palette = palette;
+          this.#onPaletteChanged?.(index);
+        }
+        break;
+      }
       case "stroke":
         this.#paint(command.metadata.positions, command.metadata.color);
         break;
@@ -121,10 +140,14 @@ export class PixelDocumentState<
     snapshot: PixelDocumentSnapshot,
     owns: (regionId: string) => boolean = () => true
   ): void {
+    const palette = snapshot.palette === undefined ?
+      ColorPalette.create() : ColorPalette.from(snapshot.palette);
     this.#replaceNormalMap(
       snapshot.normalMap ? NormalMapConfig.from(snapshot.normalMap) : null,
       null
     );
+    this.#palette = palette;
+    this.#onPaletteChanged?.(null);
     this.buffer.replacePixels(snapshot.pixels, snapshot.size);
     this.uv.clear((region) => owns(region.id));
     for (const region of snapshot.uvRegions ?? []) {

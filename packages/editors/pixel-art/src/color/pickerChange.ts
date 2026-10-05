@@ -1,8 +1,11 @@
 // Import Third-party Dependencies
 import {
   formatHex,
+  fromRGBA8,
   parseColor,
-  type RGBA
+  toRGBA8,
+  type RGBA,
+  type RGBA8
 } from "@jolly-pixel/color";
 import type { FieldSource } from "@jolly-pixel/ui";
 
@@ -32,6 +35,23 @@ export function colorWithOpacity(
   };
 }
 
+export function colorDetailOf(
+  color: RGBA8
+): ColorChangeDetail {
+  const rgba = fromRGBA8(color);
+
+  return {
+    hex: formatHex(rgba),
+    opacity: rgba.a
+  };
+}
+
+export function rgba8Of(
+  color: ColorChangeDetail
+): RGBA8 {
+  return toRGBA8(colorWithOpacity(color.hex, color.opacity));
+}
+
 export function pickerSource(
   element: ColorValueElement
 ): FieldSource<string> {
@@ -40,13 +60,14 @@ export function pickerSource(
       colorWithOpacity(element.color, element.opacity),
       true
     ),
-    write: (value) => applyPickerChange(element, value)
+    write: (value, last) => applyPickerChange(element, value, last)
   };
 }
 
 export function applyPickerChange(
   element: ColorValueElement,
-  value: string
+  value: string,
+  last = true
 ): void {
   const detail = colorChangeOf(value);
   if (detail === null) {
@@ -55,11 +76,14 @@ export function applyPickerChange(
 
   element.color = detail.hex;
   element.opacity = detail.opacity;
-  element.dispatchEvent(new CustomEvent<ColorChangeDetail>("color-change", {
-    bubbles: true,
-    composed: true,
-    detail
-  }));
+  element.dispatchEvent(new CustomEvent<ColorChangeDetail>(
+    last ? "color-change" : "color-preview",
+    {
+      bubbles: true,
+      composed: true,
+      detail
+    }
+  ));
 }
 
 export function colorChangeOf(
