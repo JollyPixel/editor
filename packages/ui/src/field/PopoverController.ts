@@ -14,38 +14,64 @@ import { placePopover } from "./placePopover.ts";
 
 // CONSTANTS
 const kDefaultGap = 4;
+const kDefaultHoverDelay = 200;
+const kDefaultHoverCloseDelay = 200;
+
+export type PopoverSide = "above" | "below" | "left" | "right";
 
 export interface PopoverControllerOptions {
   /**
-   * Anchor used for placement.
+   * Element or viewport rectangle used for placement.
    */
   anchor: () => HTMLElement | AnchorRect | null;
   /**
-   * Popover element rendered by the host.
+   * Native popover element rendered by the host.
    */
   popover: () => HTMLElement | null;
   /**
-   * Distance between the anchor edge and popover, in pixels.
+   * Gap from the anchor in pixels; defaults to 4.
    */
   gap?: number;
   /**
-   * Preferred side of the anchor.
+   * Preferred side; callbacks run on each placement.
    */
-  side?: "above" | "below" | "left" | "right";
+  side?: PopoverSide | (() => PopoverSide);
   /**
-   * Alignment on the axis perpendicular to `side`: horizontal for
-   * "above"/"below", vertical for "left"/"right".
+   * Alignment perpendicular to the side; defaults to start.
    */
   align?: "center" | "start";
+  /**
+   * Enable hover opening; bind both pointer handlers to the trigger.
+   */
+  openOnHover?: {
+    /**
+     * Delay in milliseconds; defaults to 200. Zero opens immediately.
+     */
+    delay?: number;
+  };
+  /**
+   * Enable hover closing; bind both pointer handlers to trigger and popover.
+   */
+  closeOnHoverLeave?: {
+    /**
+     * Delay in milliseconds; defaults to 200. Zero closes immediately.
+     */
+    delay?: number;
+  };
+  /**
+   * Called when the popover opens.
+   */
   onOpen?: () => void;
+  /**
+   * Called when the popover closes or its element anchor is replaced.
+   */
   onClose?: () => void;
   /**
-   * Called after each placement of the open popover, including those on
-   * scroll and resize.
+   * Called after placement, including on scroll and resize.
    */
   onReposition?: () => void;
   /**
-   * Called on Escape before the popover closes.
+   * Called on Escape before closing.
    */
   onCancel?: (event: KeyboardEvent) => void;
 }
@@ -57,7 +83,12 @@ export class PopoverController implements ReactiveController {
   #host: ReactiveControllerHost;
   #options: PopoverControllerOptions;
   #open = false;
+  #activePopover: HTMLElement | null = null;
+  #activeAnchor: HTMLElement | null = null;
+  #hoverTimer: ReturnType<typeof setTimeout> | null = null;
+  #hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
   #restoreFocus = false;
+  #pointerInteraction = false;
   #releaseInputLayer: (() => void) | null = null;
 
   constructor(
@@ -73,10 +104,97 @@ export class PopoverController implements ReactiveController {
     return this.#open;
   }
 
+  onPointerEnter = (
+    event: PointerEvent
+  ): void => {
+    this.#cancelHover();
+    this.#cancelHoverClose();
+    if (
+      !this.#options.openOnHover ||
+      event.pointerType === "touch"
+    ) {
+      return;
+    }
+
+    const anchor = this.#options.anchor();
+    const popover = this.#options.popover();
+    if (
+      !(anchor instanceof HTMLElement) ||
+      !popover ||
+      anchor.matches(":disabled") ||
+      popover.matches(":popover-open")
+    ) {
+      return;
+    }
+
+    const open = (): void => {
+      this.#hoverTimer = null;
+      if (anchor.isConnected && popover.isConnected &&
+        this.#options.anchor() === anchor &&
+        this.#options.popover() === popover &&
+        !anchor.matches(":disabled")) {
+        this.show();
+      }
+    };
+    const delay = this.#options.openOnHover?.delay ?? kDefaultHoverDelay;
+    if (delay <= 0) {
+      open();
+    }
+    else {
+      this.#hoverTimer = setTimeout(open, delay);
+    }
+  };
+
+  onPointerLeave = (
+    event: PointerEvent
+  ): void => {
+    this.#cancelHover();
+    this.#cancelHoverClose();
+    if (
+      !this.#options.closeOnHoverLeave ||
+      event.pointerType === "touch"
+    ) {
+      return;
+    }
+
+    const anchor = this.#options.anchor();
+    const popover = this.#options.popover();
+    const target = event.relatedTarget;
+    if (!popover?.matches(":popover-open") ||
+      (target instanceof Element && (
+        popover.contains(target) ||
+        (anchor instanceof HTMLElement && anchor.contains(target))
+      ))) {
+      return;
+    }
+
+    const close = (): void => {
+      this.#hoverCloseTimer = null;
+      if (this.#options.popover() === popover && popover.isConnected &&
+        popover.matches(":popover-open") &&
+        (!popover.matches(":focus-within") || this.#pointerInteraction)) {
+        this.hide();
+      }
+    };
+    const delay = this.#options.closeOnHoverLeave?.delay ??
+      kDefaultHoverCloseDelay;
+    if (delay <= 0) {
+      close();
+    }
+    else {
+      this.#hoverCloseTimer = setTimeout(close, delay);
+    }
+  };
+
   onBeforeToggle = (
     event: ToggleEvent
   ): void => {
+    this.#cancelHover();
+    this.#cancelHoverClose();
     if (event.newState === "open") {
+      this.#activePopover = this.#options.popover();
+      const anchor = this.#options.anchor();
+      this.#activeAnchor = anchor instanceof HTMLElement ? anchor : null;
       this.#claimInput();
       setTimeout(() => {
         if (!this.#options.popover()?.matches(":popover-open")) {
@@ -96,7 +214,12 @@ export class PopoverController implements ReactiveController {
   onToggle = (
     event: ToggleEvent
   ): void => {
+    if (event.currentTarget instanceof HTMLElement &&
+      event.currentTarget !== this.#options.popover()) {
+      return;
+    }
     this.#open = event.newState === "open";
+    this.#pointerInteraction = false;
 
     if (this.#open) {
       this.reposition();
@@ -104,6 +227,8 @@ export class PopoverController implements ReactiveController {
       this.#options.onOpen?.();
     }
     else {
+      this.#activePopover = null;
+      this.#activeAnchor = null;
       this.#unlisten();
       this.#options.onClose?.();
 
@@ -117,11 +242,15 @@ export class PopoverController implements ReactiveController {
   };
 
   show(): void {
+    this.#cancelHover();
+    this.#cancelHoverClose();
     this.#options.popover()?.showPopover();
     this.reposition();
   }
 
   hide(): void {
+    this.#cancelHover();
+    this.#cancelHoverClose();
     this.#options.popover()?.hidePopover();
   }
 
@@ -151,24 +280,79 @@ export class PopoverController implements ReactiveController {
       panel,
       viewport,
       gap: this.#options.gap ?? kDefaultGap,
-      side: this.#options.side,
+      side: typeof this.#options.side === "function" ?
+        this.#options.side() : this.#options.side,
       align: this.#options.align
     }));
     this.#options.onReposition?.();
   }
 
-  hostDisconnected(): void {
+  hostUpdated(): void {
+    const popover = this.#activePopover;
+    if (!popover || (
+      popover === this.#options.popover() &&
+      popover.matches(":popover-open") &&
+      (!this.#activeAnchor || this.#activeAnchor === this.#options.anchor())
+    )) {
+      return;
+    }
+
+    this.#cancelHover();
+    this.#cancelHoverClose();
     this.#unlisten();
+    this.#activePopover = null;
+    this.#activeAnchor = null;
+    const wasOpen = this.#open;
     this.#open = false;
+
+    if (
+      popover.isConnected &&
+      popover.matches(":popover-open")
+    ) {
+      popover.hidePopover();
+    }
+
+    if (wasOpen) {
+      this.#options.onClose?.();
+      this.#host.requestUpdate();
+    }
+  }
+
+  hostDisconnected(): void {
+    this.#cancelHover();
+    this.#cancelHoverClose();
+    this.#unlisten();
+    this.#activePopover = null;
+    this.#activeAnchor = null;
+    this.#open = false;
+  }
+
+  #cancelHover(): void {
+    if (this.#hoverTimer !== null) {
+      clearTimeout(this.#hoverTimer);
+      this.#hoverTimer = null;
+    }
+  }
+
+  #cancelHoverClose(): void {
+    if (this.#hoverCloseTimer !== null) {
+      clearTimeout(this.#hoverCloseTimer);
+      this.#hoverCloseTimer = null;
+    }
   }
 
   readonly #onReposition = (): void => {
     this.reposition();
   };
 
+  readonly #onPointerDown = (): void => {
+    this.#pointerInteraction = true;
+  };
+
   readonly #onKeyDown = (
     event: KeyboardEvent
   ): void => {
+    this.#pointerInteraction = false;
     if (event.key === "Escape" && this.#open) {
       this.#options.onCancel?.(event);
     }
@@ -190,6 +374,11 @@ export class PopoverController implements ReactiveController {
   }
 
   #listen(): void {
+    document.addEventListener(
+      "pointerdown",
+      this.#onPointerDown,
+      true
+    );
     window.addEventListener(
       "scroll",
       this.#onReposition,
@@ -207,6 +396,11 @@ export class PopoverController implements ReactiveController {
   }
 
   #unlisten(): void {
+    document.removeEventListener(
+      "pointerdown",
+      this.#onPointerDown,
+      true
+    );
     this.#releaseInput();
     window.removeEventListener(
       "scroll",

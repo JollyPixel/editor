@@ -80,6 +80,8 @@ export const panelStyles = css`
     min-width: 0;
     min-height: 0;
     overflow: hidden;
+    container-type: inline-size;
+    container-name: pixel-stage;
   }
 
   .dock-slot {
@@ -289,6 +291,30 @@ export const panelStyles = css`
 
   .overlay-toolbar.bottom {
     bottom: 8px;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: calc(100% - 16px);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .overlay-toolbar.bottom > * + * {
+    margin-left: 0;
+  }
+
+  .toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .toolbar-group + .toolbar-group {
+    padding-left: 4px;
+    border-left: 1px solid var(--color-divider);
   }
 
   .overlay-toolbar > * + * {
@@ -366,6 +392,35 @@ export const panelStyles = css`
     color: inherit;
     inset: auto;
     overflow: visible;
+    opacity: 0;
+    transform: scale(0.96);
+    transform-origin: var(--jolly-overlay-origin, center);
+    pointer-events: none;
+    transition:
+      opacity 90ms var(--jolly-easing-overlay, ease-out),
+      transform 90ms var(--jolly-easing-overlay, ease-out),
+      overlay 90ms allow-discrete,
+      display 90ms allow-discrete;
+  }
+
+  .uv-state-menu:popover-open {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    transition-duration: 120ms;
+  }
+
+  @starting-style {
+    .uv-state-menu:popover-open {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .uv-state-menu {
+      transition: none;
+    }
   }
 
   .uv-state-option {
@@ -390,7 +445,26 @@ export const panelStyles = css`
 
   .uv-state-option:hover,
   .uv-state-option:focus-visible {
-    background: var(--color-bg-hover);
+    background: var(--color-divider);
+    color: var(--color-text-emphasis);
+  }
+
+  .uv-state-option:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  .uv-visibility-menu .uv-state-option {
+    box-sizing: border-box;
+  }
+
+  .uv-visibility-menu input {
+    margin: 0;
+    accent-color: var(--color-accent);
+  }
+
+  .uv-visibility-menu .uv-state-option:focus-within {
+    background: var(--color-divider);
   }
 
   .view-switch {
@@ -399,6 +473,7 @@ export const panelStyles = css`
     border-radius: 5px;
     background: var(--color-divider);
     gap: 2px;
+    flex-shrink: 0;
   }
 
   .view-option {
@@ -432,6 +507,18 @@ export const panelStyles = css`
   .view-option:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 1px;
+  }
+
+  @container pixel-stage (max-width: 420px) {
+    .view-option > span {
+      display: none;
+    }
+
+    .view-option {
+      width: 26px;
+      padding: 0;
+      justify-content: center;
+    }
   }
 
   .overlay-toolbar-divider {

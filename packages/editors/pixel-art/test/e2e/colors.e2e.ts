@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
+import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
@@ -22,6 +23,28 @@ async function toggleDock(
     await Promise.all(element.getAnimations().map((animation) => animation.finished));
   });
 }
+
+test("the color picker docking preference survives reloads", async({
+  page,
+  panel
+}) => {
+  const toggle = panel.getByRole("button", { name: "Docked color picker" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+  for (const docked of [true, false]) {
+    await toggleDock(panel);
+    await page.reload();
+    await waitForEditor(page);
+
+    await expect(toggle).toHaveAttribute("aria-pressed", String(docked));
+    if (docked) {
+      await expect(panel.locator("color-dock")).toBeVisible();
+    }
+    else {
+      await expect(panel.locator("color-dock")).toBeHidden();
+    }
+  }
+});
 
 test("picking a foreground color in the swatch paints with it", async({ panel }) => {
   await setMode(panel, "paint");

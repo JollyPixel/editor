@@ -42,6 +42,7 @@ export const colorPickerStyles = css`
   :host([layout="wide"]) .panel {
     flex-direction: row;
     align-items: stretch;
+    justify-content: center;
     gap: var(--jolly-space-2, 8px);
     height: 100%;
   }

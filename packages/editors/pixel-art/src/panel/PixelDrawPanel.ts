@@ -740,7 +740,9 @@ export class PixelDrawPanel extends LitElement {
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,
             importer: this.#importer,
-            exportExtra: normalMaps?.renderExportButton() ?? nothing,
+            exportMenu: (exportAlbedo) => (
+              normalMaps?.renderExportButton(exportAlbedo) ?? nothing
+            ),
             trailing: [
               normalMaps?.renderViewSwitch() ?? nothing,
               policy.visibilityInBottomBar ?

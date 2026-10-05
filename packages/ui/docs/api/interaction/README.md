@@ -27,6 +27,52 @@ nearest the anchor's center, which the overlay motion scales from, then calls
 `onReposition`. That includes the placements on scroll and resize, so content
 anchored inside the popover can follow it.
 
+Omitting either hover option disables it; an empty object enables its default
+delay. Hover opening is opt-in: set `openOnHover: { delay: 200 }` and bind
+`onPointerEnter` and `onPointerLeave` to the trigger's `pointerenter` and
+`pointerleave` events. `openOnHover.delay` is in milliseconds and defaults to 200;
+zero or a negative value opens immediately. Touch pointers and disabled
+triggers do not open on hover. Point anchors do not support hover opening.
+
+Leaving the trigger cancels a pending open. By default, leaving an open
+popover does not close it. Hover does not move focus; click and keyboard activation remain the trigger's responsibility.
+Bind `onBeforeToggle` and `onToggle` on the popover as usual. Explicit
+show/hide, native toggles and host disconnection cancel pending hover work.
+Pending opens also check that the same anchor and popover are still connected.
+After a host update replaces an open popover or its element anchor, the
+controller closes it and releases its input layer.
+
+`closeOnHoverLeave: { delay: 200 }` enables closing when the pointer leaves
+the trigger and popover. Bind both pointer handlers to both elements. Its
+`delay` is in milliseconds, defaults to 200, and zero or negative values close
+immediately. Entering either element cancels a pending close, including while
+crossing the gap. Touch pointers do not schedule closing, and keyboard focus
+inside the popover keeps it open. Clicking a checkbox or another control with the
+pointer allows hover closing even if the control receives focus. Explicit
+show/hide, native toggles and host disconnection cancel close timers too.
+
+`side` accepts either a side string or a callback returning one, evaluated
+on each placement. Use a callback for a trigger that moves between toolbars.
+
+```ts
+const popup = new PopoverController(this, {
+  anchor: () => this._button,
+  popover: () => this._panel,
+  openOnHover: { delay: 200 },
+  closeOnHoverLeave: { delay: 200 },
+  side: () => this.bottomToolbar ? "above" : "below"
+});
+
+html`<button popovertarget="options"
+  @pointerenter=${popup.onPointerEnter}
+  @pointerleave=${popup.onPointerLeave}>Options</button>
+<div id="options" popover
+  @pointerenter=${popup.onPointerEnter}
+  @pointerleave=${popup.onPointerLeave}
+  @beforetoggle=${popup.onBeforeToggle}
+  @toggle=${popup.onToggle}>...</div>`;
+```
+
 ## Overflow titles
 
 A label cut off with an ellipsis shows its full text as a native tooltip while
