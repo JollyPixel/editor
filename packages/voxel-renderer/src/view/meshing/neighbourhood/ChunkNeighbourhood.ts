@@ -14,10 +14,9 @@ import {
 } from "../../../document/geometry/faceDirection.ts";
 import {
   AO_UNOCCLUDED,
-  aoCornerLevel,
+  aoCornersOf,
   aoUAxis,
-  aoVAxis,
-  packAoCorners
+  aoVAxis
 } from "../ambientOcclusion.ts";
 import type {
   BlockVariant,
@@ -39,6 +38,9 @@ import {
 } from "../../../document/world/storage/packedVoxel.ts";
 import { isMergedVoxel } from "../../../document/world/storage/mergedVoxel.ts";
 
+// CONSTANTS
+const kOccluderUnknown = -1;
+
 export interface ChunkNeighbourhoodOptions {
   world: MeshableWorld;
   variants: BlockVariantCache;
@@ -50,6 +52,12 @@ export interface ChunkNeighbourhoodOptions {
    * to query chunk storage directly.
    */
   windowFor?: (index: number) => Int32Array | null;
+  /**
+   * Reusable `(chunkSize + 4)³` scratch memoizing ambient occlusion
+   * samples, or null to resolve each sample again. Its previous content is
+   * discarded.
+   */
+  occluders?: Int8Array | null;
   visibility?: MeshableLayerVisibility;
 }
 
@@ -65,6 +73,11 @@ export class ChunkNeighbourhood {
   #selfIndex = -1;
   #self: LayerChunkCache | null = null;
   #blendCell: [number, number, number] = [0, 0, 0];
+  #occluders: Int8Array | null = null;
+  #occluderSpan = 0;
+  #occluderMinX = 0;
+  #occluderMinY = 0;
+  #occluderMinZ = 0;
 
   constructor(
     options: ChunkNeighbourhoodOptions
@@ -102,6 +115,17 @@ export class ChunkNeighbourhood {
     this.layers = layers;
     this.#variants = variants;
     this.#layerCount = layers.length;
+
+    const { occluders = null } = options;
+    const span = chunkSize + 4;
+    if (occluders !== null && occluders.length >= span * span * span) {
+      occluders.fill(kOccluderUnknown, 0, span * span * span);
+      this.#occluders = occluders;
+      this.#occluderSpan = span;
+      this.#occluderMinX = minWx - 1;
+      this.#occluderMinY = minWy - 1;
+      this.#occluderMinZ = minWz - 1;
+    }
   }
 
   get self(): MeshableLayer | null {
@@ -210,32 +234,61 @@ export class ChunkNeighbourhood {
     const vy = vAxis === 1 ? 1 : 0;
     const vz = vAxis === 2 ? 1 : 0;
 
-    const uMin = this.#occluderAt(x - ux, y - uy, z);
-    const uMax = this.#occluderAt(x + ux, y + uy, z);
-    const vMin = this.#occluderAt(x, y - vy, z - vz);
-    const vMax = this.#occluderAt(x, y + vy, z + vz);
+    const occluders = this.#occluders;
+    const span = this.#occluderSpan;
+    const cx = x - this.#occluderMinX;
+    const cy = y - this.#occluderMinY;
+    const cz = z - this.#occluderMinZ;
+    if (
+      occluders === null ||
+      cx < 1 || cy < 1 || cz < 1 ||
+      cx >= span - 1 || cy >= span - 1 || cz >= span - 1
+    ) {
+      return aoCornersOf(
+        this.#occluderAt(x - ux, y - uy, z) |
+        (this.#occluderAt(x + ux, y + uy, z) << 1) |
+        (this.#occluderAt(x, y - vy, z - vz) << 2) |
+        (this.#occluderAt(x, y + vy, z + vz) << 3) |
+        (this.#occluderAt(x - ux, y - uy - vy, z - vz) << 4) |
+        (this.#occluderAt(x + ux, y + uy - vy, z - vz) << 5) |
+        (this.#occluderAt(x - ux, y - uy + vy, z + vz) << 6) |
+        (this.#occluderAt(x + ux, y + uy + vy, z + vz) << 7)
+      );
+    }
 
-    return packAoCorners(
-      aoCornerLevel(
-        uMin,
-        vMin,
-        this.#occluderAt(x - ux, y - uy - vy, z - vz)
-      ),
-      aoCornerLevel(
-        uMax,
-        vMin,
-        this.#occluderAt(x + ux, y + uy - vy, z - vz)
-      ),
-      aoCornerLevel(
-        uMin,
-        vMax,
-        this.#occluderAt(x - ux, y - uy + vy, z + vz)
-      ),
-      aoCornerLevel(
-        uMax,
-        vMax,
-        this.#occluderAt(x + ux, y + uy + vy, z + vz)
-      )
+    const centre = cx + (span * (cy + (span * cz)));
+    const du = ux + (uy * span);
+    const dv = (vy + (vz * span)) * span;
+
+    return aoCornersOf(
+      this.#memoizedOccluderAt(centre - du, x - ux, y - uy, z) |
+      (this.#memoizedOccluderAt(centre + du, x + ux, y + uy, z) << 1) |
+      (this.#memoizedOccluderAt(centre - dv, x, y - vy, z - vz) << 2) |
+      (this.#memoizedOccluderAt(centre + dv, x, y + vy, z + vz) << 3) |
+      (this.#memoizedOccluderAt(
+        centre - du - dv,
+        x - ux,
+        y - uy - vy,
+        z - vz
+      ) << 4) |
+      (this.#memoizedOccluderAt(
+        centre + du - dv,
+        x + ux,
+        y + uy - vy,
+        z - vz
+      ) << 5) |
+      (this.#memoizedOccluderAt(
+        centre - du + dv,
+        x - ux,
+        y - uy + vy,
+        z + vz
+      ) << 6) |
+      (this.#memoizedOccluderAt(
+        centre + du + dv,
+        x + ux,
+        y + uy + vy,
+        z + vz
+      ) << 7)
     );
   }
 
@@ -269,7 +322,7 @@ export class ChunkNeighbourhood {
       cell[uAxis] += du;
       cell[vAxis] += dv;
 
-      const neighbour = this.#blendNeighbourAt(cell, face, group);
+      const neighbour = this.#blendNeighbourAt(cell, face, variant.blockId, group);
       out[i] = neighbour;
       found ||= neighbour !== null;
     }
@@ -277,27 +330,24 @@ export class ChunkNeighbourhood {
     return found;
   }
 
+  // eslint-disable-next-line max-params
   #blendNeighbourAt(
     cell: readonly [number, number, number],
     face: BlockVariantFace,
+    blockId: number,
     group: BlendGroup
   ): FaceBlendNeighbour | null {
-    const neighbour = this.#visibleVariantAt(cell[0], cell[1], cell[2]);
-    if (neighbour === null || neighbour.blend === null) {
+    const neighbour = this.#foreignVariantAt(cell[0], cell[1], cell[2], blockId);
+    if (
+      neighbour === null ||
+      neighbour.blend === null ||
+      neighbour.blend === group
+    ) {
       return null;
     }
 
-    const strength = neighbour.blend.bleedOnto(group);
-    if (strength === 0) {
-      return null;
-    }
-
-    const { tilesetId } = this.#variants.geometryKeyAt(face.slot);
-    const matching = neighbour.faces.find((candidate) => (
-      candidate.cull === face.cull &&
-      this.#variants.geometryKeyAt(candidate.slot).tilesetId === tilesetId
-    ));
-    if (matching === undefined) {
+    const match = this.#variants.blendMatchOf(face, group, neighbour);
+    if (match === null) {
       return null;
     }
 
@@ -307,27 +357,29 @@ export class ChunkNeighbourhood {
       cell[1] + offset[1],
       cell[2] + offset[2],
       neighbour,
-      matching
+      match.face
     );
 
-    return covered ? null : {
-      region: matching.region,
-      group: neighbour.blend,
-      strength,
-      inverted: strength < 1 && neighbour.blend.id > group.id
-    };
+    return covered ? null : match.neighbour;
   }
 
-  #visibleVariantAt(
+  // eslint-disable-next-line max-params
+  #foreignVariantAt(
     wx: number,
     wy: number,
-    wz: number
+    wz: number,
+    ownBlockId: number
   ): BlockVariant | null {
     const layers = this.layers;
     for (let i = 0; i < this.#layerCount; i++) {
-      if (layers[i].packedAt(wx, wy, wz) !== VOXEL_ABSENT) {
-        return this.#variantAt(layers[i], wx, wy, wz);
+      const packed = layers[i].packedAt(wx, wy, wz);
+      if (packed === VOXEL_ABSENT) {
+        continue;
       }
+
+      return !isMergedVoxel(packed) && voxelBlockId(packed) === ownBlockId ?
+        null :
+        this.#variantOf(layers[i], packed, wx, wy, wz);
     }
 
     return null;
@@ -340,10 +392,20 @@ export class ChunkNeighbourhood {
     wz: number
   ): BlockVariant | null {
     const packed = cache.packedAt(wx, wy, wz);
-    if (packed === VOXEL_ABSENT) {
-      return null;
-    }
 
+    return packed === VOXEL_ABSENT ?
+      null :
+      this.#variantOf(cache, packed, wx, wy, wz);
+  }
+
+  // eslint-disable-next-line max-params
+  #variantOf(
+    cache: LayerChunkCache,
+    packed: PackedVoxel,
+    wx: number,
+    wy: number,
+    wz: number
+  ): BlockVariant | null {
     if (!isMergedVoxel(packed)) {
       return this.#variants.get(voxelBlockId(packed), voxelTransform(packed));
     }
@@ -360,14 +422,62 @@ export class ChunkNeighbourhood {
     wx: number,
     wy: number,
     wz: number
+  ): number {
+    const span = this.#occluderSpan;
+    const x = wx - this.#occluderMinX;
+    const y = wy - this.#occluderMinY;
+    const z = wz - this.#occluderMinZ;
+    if (
+      this.#occluders === null ||
+      (x | y | z) < 0 || x >= span || y >= span || z >= span
+    ) {
+      return Number(this.#resolveOccluderAt(wx, wy, wz));
+    }
+
+    return this.#memoizedOccluderAt(
+      x + (span * (y + (span * z))),
+      wx,
+      wy,
+      wz
+    );
+  }
+
+  // eslint-disable-next-line max-params
+  #memoizedOccluderAt(
+    index: number,
+    wx: number,
+    wy: number,
+    wz: number
+  ): number {
+    const occluders = this.#occluders;
+    if (occluders === null) {
+      return Number(this.#resolveOccluderAt(wx, wy, wz));
+    }
+
+    const known = occluders[index];
+    if (known !== kOccluderUnknown) {
+      return known;
+    }
+
+    const occluder = Number(this.#resolveOccluderAt(wx, wy, wz));
+    occluders[index] = occluder;
+
+    return occluder;
+  }
+
+  #resolveOccluderAt(
+    wx: number,
+    wy: number,
+    wz: number
   ): boolean {
     const layers = this.layers;
     for (let i = 0; i < this.#layerCount; i++) {
       const cache = layers[i];
-      if (cache.packedAt(wx, wy, wz) === VOXEL_ABSENT) {
+      const packed = cache.packedAt(wx, wy, wz);
+      if (packed === VOXEL_ABSENT) {
         continue;
       }
-      if (this.#occlusionMaskAt(cache, wx, wy, wz) !== 0) {
+      if (this.#occlusionMaskOf(cache, packed, wx, wy, wz) !== 0) {
         return true;
       }
       if (cache.layer.compositing === "replace") {
@@ -385,12 +495,22 @@ export class ChunkNeighbourhood {
     wz: number
   ): number {
     const packed = cache.packedAt(wx, wy, wz);
-    if (packed === VOXEL_ABSENT) {
-      return 0;
-    }
 
+    return packed === VOXEL_ABSENT ?
+      0 :
+      this.#occlusionMaskOf(cache, packed, wx, wy, wz);
+  }
+
+  // eslint-disable-next-line max-params
+  #occlusionMaskOf(
+    cache: LayerChunkCache,
+    packed: PackedVoxel,
+    wx: number,
+    wy: number,
+    wz: number
+  ): number {
     return isMergedVoxel(packed) ?
-      this.#variantAt(cache, wx, wy, wz)?.occlusionMask ?? 0 :
+      this.#variantOf(cache, packed, wx, wy, wz)?.occlusionMask ?? 0 :
       this.#variants.occlusionMaskOf(
         voxelBlockId(packed),
         voxelTransform(packed)

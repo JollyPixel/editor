@@ -51,3 +51,8 @@ export function blendsFace(
 ): boolean {
   return face.cull === FACE.PosY || face.cull === FACE.NegY;
 }
+
+export interface FaceBlendMatch {
+  face: BlockVariantFace;
+  neighbour: FaceBlendNeighbour;
+}

@@ -53,7 +53,6 @@ export class LayerChunkCache {
 
   #window: Int32Array | null = null;
   #pendingWindow: Int32Array | null = null;
-  #centreSwept = false;
   #windowSpan: number;
   #minWx: number;
   #minWy: number;
@@ -138,15 +137,6 @@ export class LayerChunkCache {
     const index = x + (span * (y + (span * z)));
     let packed = window[index];
     if (packed === kUnresolved) {
-      const size = this.#size;
-      if (
-        this.#centreSwept &&
-        x > 0 && y > 0 && z > 0 &&
-        x <= size && y <= size && z <= size
-      ) {
-        return VOXEL_ABSENT;
-      }
-
       packed = this.#lookup(wx, wy, wz);
       window[index] = packed;
     }
@@ -164,7 +154,6 @@ export class LayerChunkCache {
       );
     }
 
-    window.fill(kUnresolved);
     this.#window = window;
     this.#pendingWindow = null;
 
@@ -175,10 +164,12 @@ export class LayerChunkCache {
       this.#centreWy !== this.#minWy + 1 ||
       this.#centreWz !== this.#minWz + 1
     ) {
+      window.fill(kUnresolved);
+
       return window;
     }
 
-    this.#centreSwept = true;
+    fillUnresolvedShell(window, span);
     const { shift, mask } = chunk;
     const shiftZ = shift * 2;
     const { keys, values, capacity } = chunk.store;
@@ -274,5 +265,27 @@ export class LayerChunkCache {
     return (dx | dy | dz) >= 0 && dx < kSpan && dy < kSpan && dz < kSpan ?
       this.#chunks[(dx * kSpan * kSpan) + (dy * kSpan) + dz] :
       this.layer.getChunk(cx, cy, cz) ?? null;
+  }
+}
+
+function fillUnresolvedShell(
+  window: Int32Array,
+  span: number
+): void {
+  const last = span - 1;
+  const plane = span * span;
+
+  window.fill(VOXEL_ABSENT);
+  window.fill(kUnresolved, 0, plane);
+  window.fill(kUnresolved, last * plane, plane * span);
+  for (let z = 1; z < last; z++) {
+    const base = z * plane;
+    window.fill(kUnresolved, base, base + span);
+    window.fill(kUnresolved, base + (last * span), base + plane);
+    for (let y = 1; y < last; y++) {
+      const row = base + (y * span);
+      window[row] = kUnresolved;
+      window[row + last] = kUnresolved;
+    }
   }
 }

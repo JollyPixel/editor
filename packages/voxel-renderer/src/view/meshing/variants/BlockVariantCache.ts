@@ -13,6 +13,8 @@ import type { FaceDefinition } from "../../../document/blocks/face/index.ts";
 import { BlockTextures } from "../../../document/blocks/BlockTextures.ts";
 import { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
 import type { BlendGroupList } from "../../../document/materials/BlendGroupList.ts";
+import type { BlendGroup } from "../../../document/materials/BlendGroup.ts";
+import type { FaceBlendMatch } from "../faceBlend.ts";
 import {
   cullsCoveredFaces,
   type ResolvedBlockDefinition
@@ -112,6 +114,13 @@ export class BlockVariantCache {
   #merged = new Map<PackedVoxel, Map<PackedVoxel, MergedVariant | null>>();
   #slots = new Map<string, number>();
   #geometryKeys: ChunkGeometryKey[] = [];
+  #frontSlots: number[] = [];
+  #blendedSlots: number[] = [];
+  #variantTable: (BlockVariant | null | undefined)[] = [];
+  #blendMatches = new WeakMap<
+    BlockVariantFace,
+    Map<BlockVariant, FaceBlendMatch | null>
+  >();
   #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
   #faceCoverage = new WeakMap<
     BlockVariantFace,
@@ -166,9 +175,13 @@ export class BlockVariantCache {
     this.#merged.clear();
     this.#slots.clear();
     this.#geometryKeys.length = 0;
+    this.#frontSlots.length = 0;
+    this.#blendedSlots.length = 0;
     this.#frontFaces = new WeakMap();
     this.#faceCoverage = new WeakMap();
+    this.#blendMatches = new WeakMap();
     this.#occlusion.fill(kOcclusionUnknown);
+    this.#variantTable.fill(undefined);
   }
 
   /**
@@ -179,14 +192,95 @@ export class BlockVariantCache {
     transform: number
   ): BlockVariant | null {
     const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
+    if (key >>> 0 < this.#variantTable.length) {
+      const cached = this.#variantTable[key];
+      if (cached !== undefined) {
+        return cached;
+      }
+    }
 
     let variant = this.#variants.get(key);
     if (variant === undefined) {
       variant = this.#compile(blockId, transform & VOXEL_TRANSFORM_MASK);
       this.#variants.set(key, variant);
     }
+    if (key >= 0 && key < kOcclusionMaxSlots) {
+      this.#growVariantTable(key);
+      this.#variantTable[key] = variant;
+    }
 
     return variant;
+  }
+
+  #growVariantTable(
+    key: number
+  ): void {
+    if (key < this.#variantTable.length) {
+      return;
+    }
+
+    const grown: (BlockVariant | null | undefined)[] = new Array(
+      Math.min(kOcclusionMaxSlots, nextPowerOfTwo(key + 1))
+    ).fill(undefined);
+    for (let i = 0; i < this.#variantTable.length; i++) {
+      grown[i] = this.#variantTable[i];
+    }
+    this.#variantTable = grown;
+  }
+
+  blendMatchOf(
+    face: BlockVariantFace,
+    group: BlendGroup,
+    neighbour: BlockVariant
+  ): FaceBlendMatch | null {
+    let matches = this.#blendMatches.get(face);
+    if (matches === undefined) {
+      matches = new Map();
+      this.#blendMatches.set(face, matches);
+    }
+
+    let match = matches.get(neighbour);
+    if (match === undefined) {
+      match = this.#compileBlendMatch(face, group, neighbour);
+      matches.set(neighbour, match);
+    }
+
+    return match;
+  }
+
+  #compileBlendMatch(
+    face: BlockVariantFace,
+    group: BlendGroup,
+    neighbour: BlockVariant
+  ): FaceBlendMatch | null {
+    const neighbourGroup = neighbour.blend;
+    if (neighbourGroup === null) {
+      return null;
+    }
+
+    const strength = neighbourGroup.bleedOnto(group);
+    if (strength === 0) {
+      return null;
+    }
+
+    const { tilesetId } = this.#geometryKeys[face.slot];
+    const matching = neighbour.faces.find((candidate) => (
+      candidate.cull === face.cull &&
+      this.#geometryKeys[candidate.slot].tilesetId === tilesetId
+    ));
+    if (matching === undefined) {
+      return null;
+    }
+
+    return {
+      face: matching,
+      neighbour: {
+        region: matching.region,
+        group: neighbourGroup,
+        strength,
+        inverted: strength < 1 && neighbourGroup.id > group.id
+      }
+    };
   }
 
   mergedOf(
@@ -327,20 +421,30 @@ export class BlockVariantCache {
   frontSlotOf(
     slot: number
   ): number {
-    const key = this.#geometryKeys[slot];
+    let front = this.#frontSlots[slot];
+    if (front === undefined) {
+      const key = this.#geometryKeys[slot];
+      front = this.#slotFor(key.tilesetId, new BlockSurface({
+        ...key.surface,
+        side: "front"
+      }));
+      this.#frontSlots[slot] = front;
+    }
 
-    return this.#slotFor(key.tilesetId, new BlockSurface({
-      ...key.surface,
-      side: "front"
-    }));
+    return front;
   }
 
   blendedSlotOf(
     slot: number
   ): number {
-    const key = this.#geometryKeys[slot];
+    let blended = this.#blendedSlots[slot];
+    if (blended === undefined) {
+      const key = this.#geometryKeys[slot];
+      blended = this.#slotFor(key.tilesetId, key.surface, true);
+      this.#blendedSlots[slot] = blended;
+    }
 
-    return this.#slotFor(key.tilesetId, key.surface, true);
+    return blended;
   }
 
   frontFaceOf(

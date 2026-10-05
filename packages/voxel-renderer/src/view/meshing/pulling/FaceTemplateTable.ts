@@ -6,8 +6,10 @@ import { texture } from "three/tsl";
 // Import Internal Dependencies
 import type { BlockVariantFace } from "../variants/types.ts";
 import {
+  AO_UNOCCLUDED,
   aoUAxis,
-  aoVAxis
+  aoVAxis,
+  shadeFace
 } from "../ambientOcclusion.ts";
 import { FACE_AXIS } from "../../../document/geometry/faceDirection.ts";
 
@@ -22,6 +24,8 @@ const kRegionTexel = 5;
 const kNormalTexel = 6;
 const kUnorm16 = 65535;
 const kSnorm8 = 127;
+const kAoStates = 256;
+const kFlipUnknown = -1;
 
 export type FaceTemplate = Pick<
   BlockVariantFace,
@@ -44,6 +48,8 @@ export class FaceTemplateTable {
   #data: Float32Array<ArrayBuffer>;
   #texture: THREE.DataTexture;
   #count = 0;
+  #flips = new Int8Array(0);
+  #shade = new Int8Array(4);
 
   constructor() {
     this.#data = new Float32Array(kRowTexels * 4);
@@ -76,6 +82,35 @@ export class FaceTemplateTable {
     this.#ids.set(face, id);
 
     return id;
+  }
+
+  diagonalFlipOf(
+    id: number,
+    ao: number
+  ): number {
+    if (ao === AO_UNOCCLUDED) {
+      return 0;
+    }
+
+    const key = (id * kAoStates) + ao;
+    if (key < this.#flips.length) {
+      const known = this.#flips[key];
+      if (known !== kFlipUnknown) {
+        return known;
+      }
+    }
+    else {
+      const grown = new Int8Array(
+        Math.max(key + 1, this.#flips.length * 2)
+      ).fill(kFlipUnknown);
+      grown.set(this.#flips);
+      this.#flips = grown;
+    }
+
+    const flip = shadeFace(this.#faces[id], ao, this.#shade);
+    this.#flips[key] = flip;
+
+    return flip;
   }
 
   templatesSince(

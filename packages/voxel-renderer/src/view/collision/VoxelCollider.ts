@@ -18,11 +18,11 @@ export interface VoxelChunkCollision {
    */
   chunks: readonly VoxelChunk[];
   /**
-   * Per draw group geometry that collision adapters may merge or ignore;
-   * empty when the chunks draw no face. Vertex positions are relative to
-   * `origin`.
+   * Per draw group geometry, built on first read so adapters that ignore it
+   * pay nothing; empty when the chunks draw no face. Vertex positions are
+   * relative to `origin`.
    */
-  geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
+  readonly geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
 }
 
 /**

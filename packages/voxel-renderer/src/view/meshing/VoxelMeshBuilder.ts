@@ -86,6 +86,7 @@ export class VoxelMeshBuilder {
 
     return window;
   };
+  #occluders = new Int8Array(0);
 
   constructor(
     options: VoxelMeshBuilderOptions
@@ -170,6 +171,7 @@ export class VoxelMeshBuilder {
       minWy: worldOriginY - 1,
       minWz: worldOriginZ - 1,
       windowFor: this.#windowFor,
+      occluders: this.ambientOcclusion ? this.#occludersFor(chunkSize) : null,
       visibility: this.#visibility
     });
 
@@ -193,6 +195,21 @@ export class VoxelMeshBuilder {
     }
 
     return true;
+  }
+
+  #occludersFor(
+    chunkSize: number
+  ): Int8Array | null {
+    if (chunkSize > kMaxWindowChunkSize) {
+      return null;
+    }
+
+    const span = chunkSize + 4;
+    if (this.#occluders.length !== span * span * span) {
+      this.#occluders = new Int8Array(span * span * span);
+    }
+
+    return this.#occluders;
   }
 
   #count(

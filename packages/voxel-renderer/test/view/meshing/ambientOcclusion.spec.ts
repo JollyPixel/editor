@@ -13,6 +13,7 @@ import {
   AO_UNOCCLUDED
 } from "../../../src/view/meshing/ambientOcclusion.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
+import { CHUNK_SIZE } from "../../helpers/ids.ts";
 import { expandPulled } from "../../helpers/pulledFaces.ts";
 import {
   buildChunk,
@@ -29,14 +30,20 @@ const kLit = 127;
 const kOneSide = 85;
 const kUp: Vec3Tuple = [0, 127, 0];
 const kPosX: Vec3Tuple = [127, 0, 0];
+const kUnwindowedChunkSize = 128;
 
 interface ShadedVertex {
   position: Vec3Tuple;
   shade: number;
 }
 
-function makeFixture(): MeshFixture {
-  const fixture = makeMeshFixture({ ambientOcclusion: true });
+function makeFixture(
+  chunkSize?: number
+): MeshFixture {
+  const fixture = makeMeshFixture({
+    ambientOcclusion: true,
+    chunkSize
+  });
   fixture.blockRegistry.register(
     makeBlockDef(kCutoutId, "cube", {
       alphaMode: "mask",
@@ -133,19 +140,21 @@ describe("ambient occlusion baking", () => {
     assert.deepEqual(shadesAt(top, [1, 1, 2]), [kLit]);
   });
 
-  it("turns a corner black between two occluding sides", () => {
-    const fixture = makeFixture();
-    place(fixture, [1, 0, 1]);
-    place(fixture, [2, 1, 1]);
-    place(fixture, [1, 1, 2]);
+  for (const chunkSize of [CHUNK_SIZE, kUnwindowedChunkSize]) {
+    it(`turns a corner black between two occluding sides (chunk size ${chunkSize})`, () => {
+      const fixture = makeFixture(chunkSize);
+      place(fixture, [1, 0, 1]);
+      place(fixture, [2, 1, 1]);
+      place(fixture, [1, 1, 2]);
 
-    const top = shadedVertices(geometriesOf(fixture), kUp);
+      const top = shadedVertices(geometriesOf(fixture), kUp);
 
-    assert.deepEqual(shadesAt(top, [2, 1, 2]), [0]);
-    assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
-    assert.deepEqual(shadesAt(top, [1, 1, 2]), [kOneSide]);
-    assert.deepEqual(shadesAt(top, [1, 1, 1]), [kLit]);
-  });
+      assert.deepEqual(shadesAt(top, [2, 1, 2]), [0]);
+      assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
+      assert.deepEqual(shadesAt(top, [1, 1, 2]), [kOneSide]);
+      assert.deepEqual(shadesAt(top, [1, 1, 1]), [kLit]);
+    });
+  }
 
   it("casts nothing from a cutout block", () => {
     const fixture = makeFixture();
