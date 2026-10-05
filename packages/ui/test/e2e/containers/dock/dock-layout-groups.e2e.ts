@@ -108,8 +108,9 @@ test.describe("DockLayout groups", () => {
     await page.mouse.up();
   });
 
-  test("stretched tabs share the strip and keep their icons when narrow", async({ page }) => {
+  test("stretched tabs restore their labels after widening the dock", async({ page }) => {
     const group = page.locator("jolly-pane-group");
+    const dock = page.locator("jolly-dock[key='left']");
     await group.evaluate((element) => {
       const style = document.createElement("style");
       style.textContent = "jolly-pane-group::part(tab) { flex: 1 1 0; }";
@@ -127,14 +128,23 @@ test.describe("DockLayout groups", () => {
       expect(width).toBeCloseTo(widths[0], 0);
     }
 
-    await group.evaluate((element: HTMLElement) => {
-      element.style.width = "150px";
+    await dock.evaluate((element) => {
+      element.setAttribute("size", "150");
     });
     const general = group.locator(".tab", { hasText: "General" });
     await expect.poll(() => widthOf(general)).toBeLessThan(60);
     expect(await widthOf(general.locator("jolly-icon"))).toBeCloseTo(14, 0);
     expect(await general.locator(".label").evaluate(
       (label) => label.scrollWidth > label.clientWidth
+    )).toBe(true);
+
+    await dock.evaluate((element) => {
+      element.setAttribute("size", "400");
+    });
+    await expect(general).not.toHaveAttribute("data-icon-only");
+    await expect(general.locator(".label")).toHaveCSS("position", "static");
+    await expect.poll(() => general.locator(".label").evaluate(
+      (label) => label.clientWidth >= label.scrollWidth
     )).toBe(true);
   });
 

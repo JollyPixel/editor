@@ -254,10 +254,25 @@ export class PaneGroup extends LitElement {
       return;
     }
 
-    const naturalWidth = naturalTabsWidth(
-      this.#tabButtons().map(tabExtentOf),
-      columnGapOf(tabs)
+    const buttons = this.#tabButtons();
+    const compactButtons = buttons.filter(
+      (button) => button.hasAttribute("data-icon-only")
     );
+    for (const button of compactButtons) {
+      button.removeAttribute("data-icon-only");
+    }
+    let naturalWidth: number;
+    try {
+      naturalWidth = naturalTabsWidth(
+        buttons.map(tabExtentOf),
+        columnGapOf(tabs)
+      );
+    }
+    finally {
+      for (const button of compactButtons) {
+        button.setAttribute("data-icon-only", "");
+      }
+    }
     this._compact = !tabLabelsFit(naturalWidth, tabs.clientWidth);
   }
 
