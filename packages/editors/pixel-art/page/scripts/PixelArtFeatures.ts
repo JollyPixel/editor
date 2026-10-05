@@ -22,6 +22,7 @@ export interface PixelArtFeaturesOptions {
   preview: boolean;
   starterRegion: boolean;
   uvCreateDelete: boolean;
+  uvResize: boolean;
   importPolicy: TextureImportPolicy;
   appearance: Appearance | null;
   addDelay: number;
@@ -32,6 +33,7 @@ export class PixelArtFeatures {
     preview: false,
     starterRegion: false,
     uvCreateDelete: false,
+    uvResize: false,
     importPolicy: "replace",
     appearance: {
       theme: "dark",
@@ -44,6 +46,7 @@ export class PixelArtFeatures {
     preview: true,
     starterRegion: true,
     uvCreateDelete: true,
+    uvResize: true,
     importPolicy: "ask",
     appearance: null,
     addDelay: 0
@@ -52,6 +55,7 @@ export class PixelArtFeatures {
   readonly preview: boolean;
   readonly starterRegion: boolean;
   readonly uvCreateDelete: boolean;
+  readonly uvResize: boolean;
   readonly importPolicy: TextureImportPolicy;
   readonly appearance: Appearance | null;
   readonly addDelay: number;
@@ -62,6 +66,7 @@ export class PixelArtFeatures {
     this.preview = options.preview;
     this.starterRegion = options.starterRegion;
     this.uvCreateDelete = options.uvCreateDelete;
+    this.uvResize = options.uvResize;
     this.importPolicy = options.importPolicy;
     this.appearance = options.appearance;
     this.addDelay = options.addDelay;
@@ -76,6 +81,7 @@ export class PixelArtFeatures {
       preview: this.preview && !params.runtimeOff,
       starterRegion: this.starterRegion && !params.empty,
       uvCreateDelete: this.uvCreateDelete,
+      uvResize: this.uvResize,
       importPolicy: params.importPolicy ?? this.importPolicy,
       appearance: this.appearance,
       addDelay: params.addDelay ?? this.addDelay

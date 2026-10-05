@@ -4,7 +4,6 @@ import { contrastingColor } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import {
-  geometryKey,
   rectOf,
   triangleCornerOf
 } from "../../uv/geometry/geometry.ts";
@@ -89,9 +88,7 @@ export class UVRegionLabels {
         continue;
       }
 
-      const key = entry.slot === null ?
-        entry.key :
-        `${entry.region.id}|${geometryKey(entry.geometry)}`;
+      const key = entry.slot === null ? entry.key : entry.shapeKey;
       groups.set(key, [...(groups.get(key) ?? []), entry]);
     }
 

@@ -88,4 +88,24 @@ describe("SelectionOutline", () => {
     assert.strictEqual(label?.getAttribute("visibility"), "visible");
     assert.strictEqual(label?.textContent, "2×2");
   });
+
+  test("the size label hides a selection narrower than 2 on either axis", () => {
+    const { svg, overlay } = makeOutline();
+
+    for (const rect of [
+      { width: 1, height: 1 },
+      { width: 1, height: 8 },
+      { width: 8, height: 1 }
+    ]) {
+      overlay.draw({ x: 0, y: 0, width: 8, height: 8 });
+      overlay.draw({ x: 0, y: 0, ...rect });
+
+      assert.strictEqual(
+        svg.querySelector("[data-overlay='selection-size']")
+          ?.getAttribute("visibility"),
+        "hidden",
+        `${rect.width}x${rect.height} is too small to label`
+      );
+    }
+  });
 });

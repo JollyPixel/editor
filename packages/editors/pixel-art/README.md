@@ -67,6 +67,7 @@ presence, the stored key bindings and texture tabs.
 | 3D preview of the UV regions | off | on, `?runtime=off` hides it |
 | Starter UV region | off | on, `?empty` skips it |
 | UV create and delete | off | on |
+| UV resize handles | off | on |
 | Import policy | `replace` | `ask`, `?import-policy=` overrides |
 | Scope appearance | dark, comfortable | from the OS |
 

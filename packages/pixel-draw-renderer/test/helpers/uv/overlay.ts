@@ -1,8 +1,12 @@
 // Import Internal Dependencies
-import type { UVRegion } from "#src/uv/region/UVRegion.ts";
+import type { UVLivePreview } from "#src/rendering/overlays/UVRegions.ts";
+import type {
+  UVRegion,
+  UVSlot
+} from "#src/uv/region/UVRegion.ts";
 
 export class FakeOverlay {
-  previews: (UVRegion | null)[] = [];
+  previews: (UVLivePreview | null)[] = [];
   resizeHandles = false;
 
   isPeerDragging(): boolean {
@@ -10,8 +14,15 @@ export class FakeOverlay {
   }
 
   setLivePreview(
-    region: UVRegion | null
+    preview: UVLivePreview | null
   ): void {
-    this.previews.push(region);
+    this.previews.push(preview);
   }
+}
+
+export function livePreview(
+  region: UVRegion | null,
+  slot: UVSlot | null = null
+): UVLivePreview | null {
+  return region === null ? null : { region, slot };
 }

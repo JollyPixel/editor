@@ -70,6 +70,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"selection-changed"` | `selectedRegionId`, `selectedSlot` |
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
+| `"size-label-visibility-changed"` | `showSizeLabels` |
 | `"label-scope-changed"` | `labelScope` |
 
 `face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. Canvas gestures emit it on pointer-down with the initial geometry, then whenever the preview changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
@@ -110,6 +111,15 @@ set showRegionLabels(value: boolean)
 ```
 
 Shows each visible region's name, falling back to its id. The default is `false`. It is independent of `showAll`, which shows every region without labelling it.
+
+### `showSizeLabels`
+
+```ts
+get showSizeLabels(): boolean
+set showSizeLabels(value: boolean)
+```
+
+Shows the size of the selected UV target in texture pixels, as `16×16`, using the bounding box of triangle and compound faces. The default is `false`. A stacked region or free slot shows it below its bottom-right corner, like the selection size, and moves it inside when it would cover another visible UV. Unfolded net faces show it inside, at the right angle of a triangle face, and hide it when it does not fit; a face being resized follows the outside rule until the drag ends. It is view state and is not synchronized.
 
 ### `labelScope`
 

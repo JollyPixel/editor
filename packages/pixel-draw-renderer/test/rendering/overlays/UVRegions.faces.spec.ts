@@ -13,6 +13,7 @@ import {
   makeViewport
 } from "../../helpers/overlay.ts";
 import { makeUvMap } from "../../helpers/uv/map.ts";
+import { livePreview } from "../../helpers/uv/overlay.ts";
 import {
   uvBorderRects,
   uvEntryGroups
@@ -93,9 +94,12 @@ describe("UVRegionLayer — free regions", () => {
     map.select("r1");
 
     overlay.setLivePreview(
-      map.previewMove(
-        "r1",
-        { x: 9, y: 9, width: 4, height: 4 },
+      livePreview(
+        map.previewMove(
+          "r1",
+          { x: 9, y: 9, width: 4, height: 4 },
+          "top"
+        ),
         "top"
       )
     );
@@ -191,7 +195,7 @@ describe("UVRegionLayer — unfolded regions", () => {
     const { svg, map, overlay } = makeUnfolded();
 
     overlay.setLivePreview(
-      map.previewMove("r1", { x: 2, y: 3, width: 8, height: 12 })
+      livePreview(map.previewMove("r1", { x: 2, y: 3, width: 8, height: 12 }))
     );
 
     assert.deepStrictEqual(

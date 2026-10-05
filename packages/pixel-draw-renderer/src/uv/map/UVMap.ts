@@ -53,6 +53,7 @@ export class UVMap extends Emitter<
   #selectedSlot: UVSlot | null = null;
   #showAll = false;
   #showRegionLabels = false;
+  #showSizeLabels = false;
   #labelScope: UVLabelScope = "all";
 
   constructor(
@@ -108,6 +109,22 @@ export class UVMap extends Emitter<
 
     this.#showRegionLabels = value;
     this.emit("label-visibility-changed", { showRegionLabels: value });
+    this.emit("changed");
+  }
+
+  get showSizeLabels(): boolean {
+    return this.#showSizeLabels;
+  }
+
+  set showSizeLabels(
+    value: boolean
+  ) {
+    if (this.#showSizeLabels === value) {
+      return;
+    }
+
+    this.#showSizeLabels = value;
+    this.emit("size-label-visibility-changed", { showSizeLabels: value });
     this.emit("changed");
   }
 

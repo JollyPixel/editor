@@ -1,6 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
@@ -177,4 +177,94 @@ test("re-entering the popover cancels a pending close", (t) => {
   }));
   t.mock.timers.tick(1000);
   assert.equal(close.mock.callCount(), 0);
+});
+
+function hoverOpen(
+  t: TestContext,
+  f: ReturnType<typeof fixture>
+) {
+  let open = false;
+  const matches = f.popover.matches.bind(f.popover);
+  t.mock.method(
+    f.popover,
+    "matches",
+    (selector: string) => (selector === ":popover-open" ?
+      open :
+      matches(selector))
+  );
+  t.mock.method(f.popover, "showPopover", () => {
+    open = true;
+  });
+  const close = t.mock.method(f.popover, "hidePopover", () => {
+    open = false;
+  });
+  f.controller.onPointerEnter(new PointerEvent("pointerenter", {
+    pointerType: "mouse"
+  }));
+  t.mock.timers.tick(200);
+
+  return close;
+}
+
+function clickTrigger(
+  f: ReturnType<typeof fixture>
+): boolean {
+  return f.anchor.dispatchEvent(new PointerEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    composed: true
+  }));
+}
+
+test("a click on the trigger keeps a hover-opened popover open", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = fixture({
+    openOnHover: {},
+    closeOnHoverLeave: {}
+  });
+  t.after(() => f.cleanup());
+  const close = hoverOpen(t, f);
+
+  assert.equal(clickTrigger(f), false);
+  f.controller.onPointerLeave(new PointerEvent("pointerleave", {
+    pointerType: "mouse"
+  }));
+  t.mock.timers.tick(1000);
+  assert.equal(close.mock.callCount(), 0);
+  assert.equal(clickTrigger(f), true);
+});
+
+test("clicks pass through when hover did not open the popover", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  for (const scenario of ["explicit show", "disconnected host"]) {
+    const f = fixture({ openOnHover: {} });
+    t.after(() => f.cleanup());
+    if (scenario === "explicit show") {
+      t.mock.method(
+        f.popover,
+        "matches",
+        (selector: string) => selector === ":popover-open"
+      );
+      f.controller.show();
+    }
+    else {
+      hoverOpen(t, f);
+      f.controller.hostDisconnected();
+    }
+
+    assert.equal(clickTrigger(f), true, scenario);
+  }
+});
+
+test("clicks outside the trigger leave a hover-opened popover alone", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = fixture({ openOnHover: {} });
+  t.after(() => f.cleanup());
+  hoverOpen(t, f);
+
+  assert.equal(f.popover.dispatchEvent(new PointerEvent("click", {
+    bubbles: true,
+    cancelable: true
+  })), true);
+  assert.equal(clickTrigger(f), false);
 });

@@ -39,6 +39,7 @@ export type UVMapEvent = {
   }) => void;
   "visibility-changed": (event: { showAll: boolean; }) => void;
   "label-visibility-changed": (event: { showRegionLabels: boolean; }) => void;
+  "size-label-visibility-changed": (event: { showSizeLabels: boolean; }) => void;
   "label-scope-changed": (event: { labelScope: UVLabelScope; }) => void;
 };
 

@@ -20,8 +20,14 @@ const kPreferences = z.object({
     ])
     .catch("paint"),
   showAll: z.boolean().catch(false),
-  showRegionLabels: z.boolean().catch(false)
+  showRegionLabels: z.boolean().catch(false),
+  showSizeLabels: z.boolean().catch(false)
 });
+const kVisibilityEvents = [
+  "visibility-changed",
+  "label-visibility-changed",
+  "size-label-visibility-changed"
+] as const;
 
 export class EditorPreferences {
   readonly #storage: StorageAdapter;
@@ -66,25 +72,16 @@ export class EditorPreferences {
     this.#canvas = canvas;
     canvas.uv.showAll = this.#state.showAll;
     canvas.uv.showRegionLabels = this.#state.showRegionLabels;
-    canvas.uv.on(
-      "visibility-changed",
-      this.#saveVisibility
-    );
-    canvas.uv.on(
-      "label-visibility-changed",
-      this.#saveVisibility
-    );
+    canvas.uv.showSizeLabels = this.#state.showSizeLabels;
+    for (const type of kVisibilityEvents) {
+      canvas.uv.on(type, this.#saveVisibility);
+    }
   }
 
   dispose(): void {
-    this.#canvas?.uv.off(
-      "visibility-changed",
-      this.#saveVisibility
-    );
-    this.#canvas?.uv.off(
-      "label-visibility-changed",
-      this.#saveVisibility
-    );
+    for (const type of kVisibilityEvents) {
+      this.#canvas?.uv.off(type, this.#saveVisibility);
+    }
     this.#canvas = null;
   }
 
@@ -93,6 +90,7 @@ export class EditorPreferences {
     if (uv) {
       this.#state.showAll = uv.showAll;
       this.#state.showRegionLabels = uv.showRegionLabels;
+      this.#state.showSizeLabels = uv.showSizeLabels;
       this.#save();
     }
   };

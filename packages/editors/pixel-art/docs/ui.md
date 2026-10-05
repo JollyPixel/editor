@@ -52,10 +52,12 @@ the host owns UV selection and `none` when the texture has no UV layout.
 
 Region visibility uses one eye-and-chevron button in the UV toolbar (`edit`)
 or bottom toolbar (`view`). Click it or hover for 200ms to open independent
-Show all regions and Show region labels checkboxes. The popover stays open
-while changing either option. Leaving both the button and popover for 200ms
-closes it unless keyboard focus is inside. Mouse clicks on checkboxes still
-allow hover closing; Escape or clicking outside also closes it.
+Show all regions, Show region labels and Show UV size checkboxes. Show UV
+size draws the selected region or slot size in texture pixels, like the
+selection size. The popover stays open while changing any option. Leaving
+both the button and popover for 200ms closes it unless keyboard focus is
+inside. Mouse clicks on checkboxes still allow hover closing; Escape or
+clicking outside also closes it.
 It opens below the UV toolbar and above the bottom toolbar, adjusting at
 viewport edges.
 The button's accessible description summarizes the settings. It has no tooltip

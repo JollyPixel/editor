@@ -59,7 +59,7 @@ describe("UVController — drag to move", () => {
     controller.handleMove({ x: 100, y: 100 });
 
     assert.deepStrictEqual(
-      overlay.previews.at(-1)?.bounds,
+      overlay.previews.at(-1)?.region.bounds,
       { x: 8, y: 8, width: 8, height: 8 }
     );
   });

@@ -35,7 +35,9 @@ zero or a negative value opens immediately. Touch pointers and disabled
 triggers do not open on hover. Point anchors do not support hover opening.
 
 Leaving the trigger cancels a pending open. By default, leaving an open
-popover does not close it. Hover does not move focus; click and keyboard activation remain the trigger's responsibility.
+popover does not close it. The first click on the trigger of a hover-opened
+popover keeps it open instead of toggling it closed, and hover closing stops
+until it closes; later clicks toggle as usual. Hover does not move focus; click and keyboard activation remain the trigger's responsibility.
 Bind `onBeforeToggle` and `onToggle` on the popover as usual. Explicit
 show/hide, native toggles and host disconnection cancel pending hover work.
 Pending opens also check that the same anchor and popover are still connected.
