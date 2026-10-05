@@ -5,6 +5,7 @@ Keyboard-driven intents of a `PixelArtCanvas`, exposed as `canvas.shortcuts`. Th
 ```ts
 keyboard.bind("Mod+z", () => canvas.shortcuts.undo());
 keyboard.bind("Delete", () => canvas.shortcuts.delete());
+keyboard.bind("Mod+a", () => canvas.shortcuts.selectAll());
 
 keyboard.on("down", (event) => {
   if (event.code === "Space") {
@@ -24,6 +25,7 @@ keyboard.on("up", (event) => {
 interface CanvasShortcuts {
   panHeld: boolean;
   lineHeld: boolean;
+  selectAll(): boolean;
   copy(): boolean;
   paste(): boolean;
   delete(): boolean;
@@ -67,6 +69,7 @@ Each method returns `true` when it handled the intent. The host should then prev
 
 | Method | Effect | Returns `false` when |
 |---|---|---|
+| `selectAll()` | In `"select"` mode, selects the entire current texture, including transparent pixels and 1×1 textures. | Another mode is active, or a selection is being created, moved or resized. |
 | `copy()` | Copies the selection to the clipboard. | There is no selection. |
 | `paste()` | Pastes the clipboard as a floating selection. | Never. |
 | `delete()` | In `"select"` mode, runs [`tools.select.delete()`](../tools/SelectTool.md). In `"uv"` mode, removes the selected UV region. | The mode has nothing to delete. |

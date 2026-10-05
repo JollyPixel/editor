@@ -67,7 +67,7 @@ Runtime controls for color picking, fill behavior and selection transforms. See 
 
 ### `shortcuts`
 
-Keyboard-driven intents (copy, paste, delete, undo, redo, rotate, flip) and the held pan and line modifiers. The canvas never listens to the keyboard; the host binds keys to these members. See [`CanvasShortcuts`](./input/CanvasShortcuts.md).
+Keyboard-driven intents (select all, copy, paste, delete, undo, redo, rotate, flip) and the held pan and line modifiers. The canvas never listens to the keyboard; the host binds keys to these members. See [`CanvasShortcuts`](./input/CanvasShortcuts.md).
 
 ### `uv`
 

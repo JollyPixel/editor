@@ -43,6 +43,10 @@ export abstract class InteractionMode {
     return false;
   }
 
+  onSelectAll(): boolean {
+    return false;
+  }
+
   onDelete(): boolean {
     return false;
   }

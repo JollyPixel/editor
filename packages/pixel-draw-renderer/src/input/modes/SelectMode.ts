@@ -69,6 +69,10 @@ export class SelectMode extends InteractionMode {
     }
   }
 
+  onSelectAll(): boolean {
+    return this.#select.selectAll();
+  }
+
   onDelete(): boolean {
     return this.#select.delete();
   }

@@ -6,6 +6,7 @@ import type {
 
 // CONSTANTS
 export const PIXEL_ART_KEY_BINDINGS = Object.freeze({
+  selectAll: "Mod+a",
   copy: "Mod+c",
   paste: "Mod+v",
   undo: "Mod+z",

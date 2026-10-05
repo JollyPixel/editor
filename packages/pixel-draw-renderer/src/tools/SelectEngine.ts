@@ -285,6 +285,31 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     }
   }
 
+  selectAll(): boolean {
+    if (this.#state.kind !== "idle" && this.#state.kind !== "selected") {
+      return false;
+    }
+
+    this.#depositFloating();
+    this.#floatingSelection.clear();
+    const size = this.#canvasBuffer.size();
+    this.#state = {
+      kind: "selected",
+      content: SelectionContent.capture(this.#canvasBuffer, {
+        x: 0,
+        y: 0,
+        width: size.x,
+        height: size.y
+      }),
+      floating: false
+    };
+    this.refreshOverlay();
+    this.#publishSelectionState();
+    this.emit("selection-idle");
+
+    return true;
+  }
+
   exportSelection(): SelectionSnapshot | null {
     return this.#state.kind === "selected" ? this.#state.content.toJSON() : null;
   }
