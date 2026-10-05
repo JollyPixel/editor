@@ -10,12 +10,17 @@ import {
   Ramp,
   RampCornerInner,
   RampCornerOuter,
+  RampTip,
+  RampValley,
   Slab,
   Stair,
   StairCornerInner,
-  StairCornerOuter
+  StairCornerOuter,
+  StairCornerPeak,
+  Wall
 } from "../../../../../src/document/blocks/shape/library/index.ts";
 import { FACE, FACES } from "../../../../../src/document/geometry/faceDirection.ts";
+import type { FaceDefinition } from "../../../../../src/document/blocks/face/index.ts";
 import {
   type BlockCollisionHint,
   type BlockShape,
@@ -29,6 +34,7 @@ interface ShapeCase {
   faces: number;
   cullable: number;
   occludes: readonly FACE[];
+  volume: number;
 }
 
 // CONSTANTS
@@ -39,7 +45,8 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "box",
     faces: 6,
     cullable: 6,
-    occludes: FACES
+    occludes: FACES,
+    volume: 1
   },
   {
     shape: new Slab("bottom"),
@@ -47,7 +54,8 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "box",
     faces: 6,
     cullable: 5,
-    occludes: [FACE.NegY]
+    occludes: [FACE.NegY],
+    volume: 1 / 2
   },
   {
     shape: new Slab("top"),
@@ -55,23 +63,206 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "box",
     faces: 6,
     cullable: 5,
-    occludes: [FACE.PosY]
+    occludes: [FACE.PosY],
+    volume: 1 / 2
+  },
+  {
+    shape: new Slab("beam"),
+    id: "slabBeam",
+    collisionHint: "box",
+    faces: 6,
+    cullable: 4,
+    occludes: [],
+    volume: 1 / 4
+  },
+  {
+    shape: new Slab("corner"),
+    id: "slabCorner",
+    collisionHint: "box",
+    faces: 6,
+    cullable: 3,
+    occludes: [],
+    volume: 1 / 8
+  },
+  {
+    shape: new Slab("notch"),
+    id: "slabNotch",
+    collisionHint: "trimesh",
+    faces: 10,
+    cullable: 6,
+    occludes: [],
+    volume: 3 / 8
+  },
+  {
+    shape: new Wall("straight"),
+    id: "wall",
+    collisionHint: "box",
+    faces: 6,
+    cullable: 4,
+    occludes: [],
+    volume: 1 / 4
+  },
+  {
+    shape: new Wall("corner"),
+    id: "wallCorner",
+    collisionHint: "trimesh",
+    faces: 10,
+    cullable: 6,
+    occludes: [],
+    volume: 1 / 4
+  },
+  {
+    shape: new Wall("tee"),
+    id: "wallTee",
+    collisionHint: "trimesh",
+    faces: 12,
+    cullable: 7,
+    occludes: [],
+    volume: 11 / 32
+  },
+  {
+    shape: new Wall("cross"),
+    id: "wallCross",
+    collisionHint: "trimesh",
+    faces: 18,
+    cullable: 10,
+    occludes: [],
+    volume: 7 / 16
   },
   {
     shape: new PoleY(),
     id: "poleY",
-    collisionHint: "trimesh",
+    collisionHint: "box",
     faces: 6,
     cullable: 2,
-    occludes: []
+    occludes: [],
+    volume: 1 / 16
   },
   {
-    shape: new Pole(),
+    shape: new Pole("straight"),
     id: "pole",
-    collisionHint: "trimesh",
+    collisionHint: "box",
     faces: 6,
     cullable: 2,
-    occludes: []
+    occludes: [],
+    volume: 1 / 16
+  },
+  {
+    shape: new Pole("corner"),
+    id: "poleCorner",
+    collisionHint: "trimesh",
+    faces: 10,
+    cullable: 2,
+    occludes: [],
+    volume: 1 / 16
+  },
+  {
+    shape: new Pole("tee"),
+    id: "poleTee",
+    collisionHint: "trimesh",
+    faces: 12,
+    cullable: 3,
+    occludes: [],
+    volume: 11 / 128
+  },
+  {
+    shape: new Pole("cross"),
+    id: "poleCross",
+    collisionHint: "trimesh",
+    faces: 18,
+    cullable: 4,
+    occludes: [],
+    volume: 7 / 64
+  },
+  {
+    shape: new Pole("end", "up"),
+    id: "poleEndUp",
+    collisionHint: "trimesh",
+    faces: 10,
+    cullable: 2,
+    occludes: [],
+    volume: 1 / 16
+  },
+  {
+    shape: new Pole("straight", "up"),
+    id: "poleUp",
+    collisionHint: "trimesh",
+    faces: 12,
+    cullable: 3,
+    occludes: [],
+    volume: 11 / 128
+  },
+  {
+    shape: new Pole("corner", "up"),
+    id: "poleCornerUp",
+    collisionHint: "trimesh",
+    faces: 15,
+    cullable: 3,
+    occludes: [],
+    volume: 11 / 128
+  },
+  {
+    shape: new Pole("tee", "up"),
+    id: "poleTeeUp",
+    collisionHint: "trimesh",
+    faces: 18,
+    cullable: 4,
+    occludes: [],
+    volume: 7 / 64
+  },
+  {
+    shape: new Pole("cross", "up"),
+    id: "poleCrossUp",
+    collisionHint: "trimesh",
+    faces: 24,
+    cullable: 5,
+    occludes: [],
+    volume: 17 / 128
+  },
+  {
+    shape: new Pole("end", "through"),
+    id: "poleEndThrough",
+    collisionHint: "trimesh",
+    faces: 14,
+    cullable: 3,
+    occludes: [],
+    volume: 11 / 128
+  },
+  {
+    shape: new Pole("straight", "through"),
+    id: "poleThrough",
+    collisionHint: "trimesh",
+    faces: 18,
+    cullable: 4,
+    occludes: [],
+    volume: 7 / 64
+  },
+  {
+    shape: new Pole("corner", "through"),
+    id: "poleCornerThrough",
+    collisionHint: "trimesh",
+    faces: 20,
+    cullable: 4,
+    occludes: [],
+    volume: 7 / 64
+  },
+  {
+    shape: new Pole("tee", "through"),
+    id: "poleTeeThrough",
+    collisionHint: "trimesh",
+    faces: 24,
+    cullable: 5,
+    occludes: [],
+    volume: 17 / 128
+  },
+  {
+    shape: new Pole("cross", "through"),
+    id: "poleCrossThrough",
+    collisionHint: "trimesh",
+    faces: 30,
+    cullable: 6,
+    occludes: [],
+    volume: 5 / 32
   },
   {
     shape: new Ramp(),
@@ -79,7 +270,8 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "trimesh",
     faces: 5,
     cullable: 4,
-    occludes: [FACE.NegY, FACE.PosZ]
+    occludes: [FACE.NegY, FACE.PosZ],
+    volume: 1 / 2
   },
   {
     shape: new RampCornerInner(),
@@ -87,7 +279,8 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "trimesh",
     faces: 7,
     cullable: 6,
-    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ]
+    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ],
+    volume: 5 / 6
   },
   {
     shape: new RampCornerOuter(),
@@ -95,7 +288,26 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "trimesh",
     faces: 5,
     cullable: 3,
-    occludes: [FACE.NegY]
+    occludes: [FACE.NegY],
+    volume: 1 / 3
+  },
+  {
+    shape: new RampTip(),
+    id: "rampTip",
+    collisionHint: "trimesh",
+    faces: 4,
+    cullable: 3,
+    occludes: [],
+    volume: 1 / 6
+  },
+  {
+    shape: new RampValley(),
+    id: "rampValley",
+    collisionHint: "trimesh",
+    faces: 7,
+    cullable: 5,
+    occludes: [FACE.PosX, FACE.PosY, FACE.NegZ],
+    volume: 2 / 3
   },
   {
     shape: new Stair(),
@@ -103,7 +315,8 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "trimesh",
     faces: 10,
     cullable: 8,
-    occludes: [FACE.NegY, FACE.PosZ]
+    occludes: [FACE.NegY, FACE.PosZ],
+    volume: 3 / 4
   },
   {
     shape: new StairCornerInner(),
@@ -111,7 +324,8 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "trimesh",
     faces: 12,
     cullable: 9,
-    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ]
+    occludes: [FACE.PosX, FACE.NegY, FACE.PosZ],
+    volume: 7 / 8
   },
   {
     shape: new StairCornerOuter(),
@@ -119,7 +333,17 @@ const kShapes: readonly ShapeCase[] = [
     collisionHint: "trimesh",
     faces: 13,
     cullable: 8,
-    occludes: [FACE.NegY]
+    occludes: [FACE.NegY],
+    volume: 5 / 8
+  },
+  {
+    shape: new StairCornerPeak(),
+    id: "stairCornerPeak",
+    collisionHint: "trimesh",
+    faces: 15,
+    cullable: 9,
+    occludes: [],
+    volume: 1 / 2
   }
 ];
 
@@ -173,6 +397,16 @@ describe("Built-in shapes - geometry invariants", () => {
     }
   });
 
+  it("encloses the volume the shape is meant to fill", () => {
+    for (const { shape, volume } of kShapes) {
+      const enclosed = enclosedVolume(shape);
+      assert.ok(
+        Math.abs(enclosed - volume) < 1e-9,
+        `${shape.id} encloses ${enclosed} instead of ${volume}`
+      );
+    }
+  });
+
   it("gives every face a unit normal", () => {
     for (const { shape } of kShapes) {
       for (const [index, { normal }] of shape.faces.entries()) {
@@ -214,3 +448,70 @@ describe("Built-in shapes - construction", () => {
     assert.ok(!top.occludes(FACE.NegY));
   });
 });
+
+describe("Built-in shapes - joints", () => {
+  it("keeps a joint's geometry tied to its type, not its id", () => {
+    assert.equal(new Pole("cross", "none", "myCross").faces.length, 18);
+    assert.equal(new Pole("cross", "through", "myHub").faces.length, 30);
+    assert.equal(new Wall("corner", "myCorner").faces.length, 10);
+  });
+
+  it("ends every joint arm on the same section as the straight piece", () => {
+    const poles = kShapes
+      .map(({ shape }) => shape)
+      .filter((shape) => shape instanceof Pole);
+    const families = [
+      {
+        straight: new Pole(),
+        face: FACE.PosZ,
+        joints: poles
+      },
+      {
+        straight: new PoleY(),
+        face: FACE.PosY,
+        joints: poles.filter(({ id }) => /(?:Up|Through)$/u.test(id))
+      },
+      {
+        straight: new Wall(),
+        face: FACE.PosZ,
+        joints: kShapes
+          .map(({ shape }) => shape)
+          .filter((shape) => shape instanceof Wall)
+      }
+    ];
+
+    for (const { straight, face, joints } of families) {
+      const [end] = capsOf(straight, face);
+      for (const joint of joints) {
+        assert.deepEqual(capsOf(joint, face), [end], joint.id);
+      }
+    }
+  });
+});
+
+function capsOf(
+  shape: BlockShape,
+  face: FACE
+): FaceDefinition[] {
+  return shape.faces.filter(
+    (definition) => definition.face === face && definition.cull === face
+  );
+}
+
+function enclosedVolume(
+  shape: BlockShape
+): number {
+  let sixTimesVolume = 0;
+  for (const { vertices } of shape.faces) {
+    const [a] = vertices;
+    for (let corner = 1; corner < vertices.length - 1; corner++) {
+      const b = vertices[corner];
+      const c = vertices[corner + 1];
+      sixTimesVolume += (a[0] * ((b[1] * c[2]) - (b[2] * c[1]))) -
+        (a[1] * ((b[0] * c[2]) - (b[2] * c[0]))) +
+        (a[2] * ((b[0] * c[1]) - (b[1] * c[0])));
+    }
+  }
+
+  return sixTimesVolume / 6;
+}

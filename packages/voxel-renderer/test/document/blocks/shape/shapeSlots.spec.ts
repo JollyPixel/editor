@@ -18,10 +18,13 @@ import {
   Ramp,
   RampCornerInner,
   RampCornerOuter,
+  RampValley,
   Slab,
   Stair,
   StairCornerInner,
-  StairCornerOuter
+  StairCornerOuter,
+  StairCornerPeak,
+  Wall
 } from "../../../../src/document/blocks/shape/library/index.ts";
 import type { BlockShape } from "../../../../src/document/blocks/shape/BlockShape.ts";
 import { FACE } from "../../../../src/document/geometry/faceDirection.ts";
@@ -178,6 +181,66 @@ describe("shapeSlots — stairs", () => {
   it("derives nine slots for either stair corner", () => {
     assert.equal(idsOf(new StairCornerInner()).length, 9);
     assert.equal(idsOf(new StairCornerOuter()).length, 9);
+  });
+
+  it("gives a notched slab one inner slot on each side facing the notch", () => {
+    assert.deepEqual(idsOf(new Slab("notch")), [
+      "right",
+      "left",
+      "left.1",
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "back.1"
+    ]);
+  });
+
+  it("puts each valley slope on the side opposite its outer-corner slope", () => {
+    const slopes = shapeSlots(new RampValley())
+      .filter((slot) => slot.id.endsWith(".1"))
+      .map((slot) => slot.id);
+
+    assert.deepEqual(slopes, ["left.1", "front.1"]);
+  });
+
+  it("derives nine slots for the peak stair corner", () => {
+    assert.deepEqual(idsOf(new StairCornerPeak()), [
+      "right",
+      "right.1",
+      "left",
+      "top",
+      "top.1",
+      "bottom",
+      "front",
+      "front.1",
+      "back"
+    ]);
+  });
+
+  it("gives a cross joint one end slot and one inner slot per side", () => {
+    const expected = [
+      "right",
+      "right.1",
+      "left",
+      "left.1",
+      "top",
+      "bottom",
+      "front",
+      "front.1",
+      "back",
+      "back.1"
+    ];
+
+    assert.deepEqual(idsOf(new Pole("cross")), expected);
+    assert.deepEqual(idsOf(new Wall("cross")), expected);
+  });
+
+  it("groups the two inner sides a tee joint shows on its arm side", () => {
+    const right = shapeSlots(new Wall("tee"))
+      .find((slot) => slot.id === "right.1")!;
+
+    assert.equal(right.definitions.length, 2);
   });
 
   it("groups a corner's non-adjacent coplanar quads into one slot", () => {

@@ -139,8 +139,9 @@ export function createOrbitCamera(
 /**
  * Brings the WebGPU backend up, then starts the render loop. Each frame it:
  * updates OrbitControls, calls the optional onFrame callback, projects labels,
- * and renders the scene. Also registers the window resize handler so the caller
- * doesn't have to.
+ * and renders the scene, through `render` when given (for example a
+ * post-processing pipeline). Also registers the window resize handler so the
+ * caller doesn't have to.
  */
 export async function startLoop(
   options: {
@@ -149,6 +150,7 @@ export async function startLoop(
     camera: THREE.PerspectiveCamera;
     controls: OrbitControls;
     labelEntries?: LabelEntry[];
+    render?: () => void;
     onFrame?: () => void;
   }
 ): Promise<void> {
@@ -158,6 +160,7 @@ export async function startLoop(
     camera,
     controls,
     labelEntries = [],
+    render = () => renderer.render(scene, camera),
     onFrame
   } = options;
 
@@ -169,7 +172,7 @@ export async function startLoop(
     renderer.clear();
     controls.update();
     updateLabels(labelEntries, camera);
-    renderer.render(scene, camera);
+    render();
     onFrame?.();
   }
 

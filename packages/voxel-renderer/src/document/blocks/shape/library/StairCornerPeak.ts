@@ -3,14 +3,14 @@ import { FACE } from "../../../geometry/faceDirection.ts";
 import type { BlockShapeID } from "../BlockShape.ts";
 import { JunctionShape } from "./JunctionShape.ts";
 
-export class PoleY extends JunctionShape {
+export class StairCornerPeak extends JunctionShape {
   constructor(
-    id: BlockShapeID = "poleY"
+    id: BlockShapeID = "stairCornerPeak"
   ) {
     super(id, {
-      min: [3 / 8, 3 / 8, 3 / 8],
-      max: [5 / 8, 5 / 8, 5 / 8],
-      arms: [FACE.NegY, FACE.PosY]
+      min: [0, 0, 0],
+      max: [0.5, 0.5, 0.5],
+      arms: [FACE.PosX, FACE.PosY, FACE.PosZ]
     });
   }
 }
