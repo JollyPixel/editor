@@ -10,6 +10,7 @@ import {
 import { DraftController } from "../field/DraftController.ts";
 import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
 import { NumericInputController } from "../field/NumericInputController.ts";
+import type { AxisStyle } from "./types.ts";
 
 export interface AxisControllerOptions {
   /**
@@ -18,7 +19,7 @@ export interface AxisControllerOptions {
    */
   key: string;
   /**
-   * Short glyph shown in the corner chip, e.g. "X".
+   * Short glyph shown in the corner chip or the leading letter, e.g. "X".
    */
   label: string;
   ariaLabel(): string;
@@ -26,6 +27,11 @@ export interface AxisControllerOptions {
    * CSS custom property name for the corner chip color, e.g. "--jolly-axis-x".
    */
   colorVar?: string;
+  /**
+   * CSS custom property name for the leading letter, e.g. "--jolly-axis-x-text".
+   */
+  textColorVar?: string;
+  axisStyle(): AxisStyle;
   step(): number;
   min(): number;
   max(): number;
@@ -48,12 +54,14 @@ export class AxisController {
   #options: AxisControllerOptions;
   #draft: DraftController<number>;
   #input: NumericInputController;
+  #colorStyle: string | null;
 
   constructor(
     host: LitElement,
     options: AxisControllerOptions
   ) {
     this.#options = options;
+    this.#colorStyle = colorStyleOf(options);
     this.#draft = new DraftController<number>(host);
     this.#input = new NumericInputController(host, {
       draft: this.#draft,
@@ -79,7 +87,8 @@ export class AxisController {
   }
 
   render(): TemplateResult {
-    const { key, label, colorVar } = this.#options;
+    const { key, label } = this.#options;
+    const corner = this.#options.axisStyle() === "corner";
     const showMixed = this.#draft.draft === null &&
       this.#options.value() === undefined;
 
@@ -87,10 +96,14 @@ export class AxisController {
       <span
         class="axis-box"
         data-axis=${key}
-        style=${colorVar ? `--jolly-axis-color: var(${colorVar})` : nothing}
+        style=${this.#colorStyle ?? nothing}
       >
-        <span class="axis-tag" aria-hidden="true">${label}</span>
-        <span class="scrub-handle" aria-hidden="true"></span>
+        ${corner
+          ? html`<span class="axis-tag" aria-hidden="true">${label}</span>`
+          : nothing}
+        <span class="scrub-handle" aria-hidden="true">${
+          corner ? nothing : label
+        }</span>
         <input
           type="text"
           inputmode="decimal"
@@ -109,4 +122,19 @@ export class AxisController {
       </span>
     `;
   }
+}
+
+function colorStyleOf(
+  options: AxisControllerOptions
+): string | null {
+  const { colorVar, textColorVar } = options;
+  const declarations: string[] = [];
+  if (colorVar) {
+    declarations.push(`--jolly-axis-color: var(${colorVar})`);
+  }
+  if (textColorVar) {
+    declarations.push(`--jolly-axis-text-color: var(${textColorVar})`);
+  }
+
+  return declarations.length === 0 ? null : declarations.join("; ");
 }

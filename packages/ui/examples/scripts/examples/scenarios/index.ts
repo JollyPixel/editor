@@ -16,6 +16,7 @@ import { FACADE_EXAMPLE } from "./facade.ts";
 import { STATS_CYCLE_EXAMPLE } from "./statsCycle.ts";
 import { MIXED_PER_AXIS_EXAMPLE } from "./mixedPerAxis.ts";
 import { UNLABELED_FIELDS_EXAMPLE } from "./unlabeledFields.ts";
+import { FIELD_LAYOUT_EXAMPLE } from "./fieldLayout.ts";
 
 export const SCENARIOS_EXAMPLES = [
   SCOPED_HOSTS_EXAMPLE,
@@ -34,5 +35,6 @@ export const SCENARIOS_EXAMPLES = [
   FACADE_EXAMPLE,
   STATS_CYCLE_EXAMPLE,
   MIXED_PER_AXIS_EXAMPLE,
-  UNLABELED_FIELDS_EXAMPLE
+  UNLABELED_FIELDS_EXAMPLE,
+  FIELD_LAYOUT_EXAMPLE
 ];

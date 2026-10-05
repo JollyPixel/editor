@@ -14,6 +14,7 @@ field.value = { x: 0, y: 1 };
 | `min` | `number` | `-Infinity` |
 | `max` | `number` | `Infinity` |
 | `axisLabels` | `Partial<Record<"x" \| "y" \| "z", string>>` | `{}` |
+| `axisStyle` | `"corner" \| "chip" \| "letter"` | `"corner"`, see [axis markers](./README.md#axis-markers) |
 
 The component implements the [shared field API](../field/shared-field-api.md).
 Each axis can hold `Mixed` independently. Axis edits emit the complete vector
@@ -22,7 +23,7 @@ through `jolly-input` and `jolly-change`.
 ## Choosing a plane
 
 `axes` names the plane the field edits, and the axis key is the identity: it is
-the key `value` carries, the glyph in the corner chip, and the axis colour. A
+the key `value` carries, the axis glyph, and the axis colour. A
 field sizing a box across the ground plane reads as X and Z, in red and blue,
 and hands back the keys the bound object already uses.
 

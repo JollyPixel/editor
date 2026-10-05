@@ -33,6 +33,7 @@ export class InteractionRouter implements InputActions {
   #setCursor: (cursor: string) => void;
   #onModeChange?: (mode: Mode, previousMode: Mode) => void;
   #textureCursor: Vec2 | null = null;
+  #hoverPosition: Vec2 | null = null;
   #panHeld = false;
   #lineHeld = false;
   #isPanning = false;
@@ -128,7 +129,9 @@ export class InteractionRouter implements InputActions {
       return;
     }
 
-    this.#panHeld = held;
+    this.#navigate(() => {
+      this.#panHeld = held;
+    });
     this.#syncCursor();
   }
 
@@ -179,23 +182,34 @@ export class InteractionRouter implements InputActions {
   onCtrlWheel(
     delta: number
   ): boolean {
+    if (this.#panHeld) {
+      return false;
+    }
+
     return this.#active.onCtrlWheel(delta);
   }
 
   onPanStart(): void {
-    this.#isPanning = true;
+    this.#navigate(() => {
+      this.#isPanning = true;
+    });
     this.#syncCursor();
   }
 
   onPanEnd(): void {
-    this.#isPanning = false;
+    this.#navigate(() => {
+      this.#isPanning = false;
+    });
     this.#syncCursor();
   }
 
   onHover(
     position: PointerPosition | null
   ): void {
-    this.#active.onHover(position?.canvas ?? null);
+    this.#hoverPosition = position ? { ...position.canvas } : null;
+    if (!this.#isNavigating()) {
+      this.#active.onHover(this.#hoverPosition);
+    }
     this.#syncCursor();
 
     const textureCursor = position?.boundedTexture ?? null;
@@ -209,7 +223,9 @@ export class InteractionRouter implements InputActions {
   }
 
   onBlur(): void {
-    this.#panHeld = false;
+    this.#navigate(() => {
+      this.#panHeld = false;
+    });
     this.#lineHeld = false;
     this.#active.onBlur();
     this.#syncCursor();
@@ -261,6 +277,27 @@ export class InteractionRouter implements InputActions {
     this.#active = mode;
     this.#syncCursor();
     this.#onModeChange?.(mode.id, previous.id);
+  }
+
+  #isNavigating(): boolean {
+    return this.#panHeld || this.#isPanning;
+  }
+
+  #navigate(
+    change: () => void
+  ): void {
+    const wasNavigating = this.#isNavigating();
+    change();
+
+    const navigating = this.#isNavigating();
+    if (
+      navigating === wasNavigating ||
+      this.#hoverPosition === null
+    ) {
+      return;
+    }
+
+    this.#active.onHover(navigating ? null : this.#hoverPosition);
   }
 
   #cursor(): string {

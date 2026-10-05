@@ -17,6 +17,7 @@ export interface FieldLike {
   colored: boolean;
   lockedBy: CollaboratorPresence | null;
   peers: CollaboratorPresence[];
+  labelPosition: "inline" | "top" | "auto";
 }
 
 export interface StateMatrixOptions<
@@ -62,7 +63,7 @@ const kHolder: CollaboratorPresence = {
 };
 
 /**
- * Nine rows, fixed, no opt out: the point of a shared matrix is that every control renders the
+ * Ten rows, fixed, no opt out: the point of a shared matrix is that every control renders the
  * same states, and a per control row list is how they drift apart.
  */
 const kRows = [
@@ -74,7 +75,8 @@ const kRows = [
   "readonly",
   "locked",
   "peers",
-  "mixed+modified"
+  "mixed+modified",
+  "stacked+modified+peers"
 ] as const;
 
 const kColoredRows = [
@@ -227,6 +229,11 @@ function applyState<
       break;
     case "mixed+modified":
       setMixed(field);
+      break;
+    case "stacked+modified+peers":
+      field.labelPosition = "top";
+      field.peers = kCrowd;
+      setModified?.(field);
       break;
     default:
       break;

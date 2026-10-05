@@ -11,6 +11,10 @@ export interface WindowLike {
     listener: (event: MouseEvent) => void
   ): void;
   addEventListener(
+    type: "keydown" | "keyup",
+    listener: (event: KeyboardEvent) => void
+  ): void;
+  addEventListener(
     type: "blur",
     listener: () => void
   ): void;
@@ -21,6 +25,10 @@ export interface WindowLike {
   removeEventListener(
     type: "mouseup",
     listener: (event: MouseEvent) => void
+  ): void;
+  removeEventListener(
+    type: "keydown" | "keyup",
+    listener: (event: KeyboardEvent) => void
   ): void;
   removeEventListener(
     type: "blur",

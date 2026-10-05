@@ -94,7 +94,7 @@ Initial interaction mode. It accepts `"paint"`, `"move"`, `"fill"`, `"select"` o
 
 ### `window`
 
-Event target used for drag continuation and blur handling. It defaults to the global `window` and accepts an object with compatible `addEventListener()` and `removeEventListener()` methods.
+Event target used for drag continuation, held `Ctrl` key tracking (`keydown` and `keyup`), and blur handling. It defaults to the global `window` and accepts an object with compatible `addEventListener()` and `removeEventListener()` methods.
 
 `WindowLike` is exported for typed browser adapters and test doubles.
 

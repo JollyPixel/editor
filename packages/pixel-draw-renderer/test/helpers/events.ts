@@ -85,3 +85,17 @@ export function stroke(
     })
   );
 }
+
+export function pressControl(): void {
+  window.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "Control",
+    ctrlKey: true
+  }));
+}
+
+export function releaseControl(): void {
+  window.dispatchEvent(new KeyboardEvent("keyup", {
+    key: "Control",
+    ctrlKey: false
+  }));
+}

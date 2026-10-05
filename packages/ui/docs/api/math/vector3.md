@@ -13,6 +13,7 @@ field.value = mesh.position;
 | `min` | `number` | `-Infinity` |
 | `max` | `number` | `Infinity` |
 | `axisLabels` | `Partial<Record<"x" \| "y" \| "z", string>>` | `{}` |
+| `axisStyle` | `"corner" \| "chip" \| "letter"` | `"corner"`, see [axis markers](./README.md#axis-markers) |
 
 The component implements the [shared field API](../field/shared-field-api.md).
 Structural values such as `THREE.Vector3` can be assigned directly. Axis edits

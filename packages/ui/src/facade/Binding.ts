@@ -13,6 +13,11 @@ import type {
   JollyChangeDetail
 } from "../field/events.ts";
 import type { FieldAlign } from "../field/JollyField.ts";
+import type { FieldLabelPosition } from "../field/LabelStackController.ts";
+import {
+  applyFieldLayout,
+  type FieldLayoutOptions
+} from "./fieldLayout.ts";
 import {
   copyComponents,
   snapshotComponents
@@ -37,9 +42,12 @@ interface BindableElement extends HTMLElement {
   disabled: boolean;
   align: FieldAlign;
   path: string | null;
+  labelPosition: FieldLabelPosition;
+  stackBelow: number;
 }
 
-export interface BindingOptions<TValue> extends DispatchOptions<TValue> {
+export interface BindingOptions<TValue>
+  extends DispatchOptions<TValue>, FieldLayoutOptions {
   label?: string;
   align?: FieldAlign;
   path?: string;
@@ -82,6 +90,7 @@ export class FacadeBinding<
     this.#bindable.label = options.label ?? String(key);
     this.#bindable.align = options.align ?? (tag === "jolly-checkbox" ? "end" : "start");
     this.#bindable.path = options.path ?? null;
+    applyFieldLayout(this.#bindable, options);
     this.element = this.#bindable;
     this.refresh();
 
@@ -175,6 +184,9 @@ function buildElement<TValue>(
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
       }
+      if (options.axisStyle !== undefined) {
+        element.axisStyle = options.axisStyle;
+      }
 
       return element;
     }
@@ -184,6 +196,9 @@ function buildElement<TValue>(
       applyBounds(element, options);
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
+      }
+      if (options.axisStyle !== undefined) {
+        element.axisStyle = options.axisStyle;
       }
 
       return element;
@@ -195,6 +210,9 @@ function buildElement<TValue>(
       }
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
+      }
+      if (options.axisStyle !== undefined) {
+        element.axisStyle = options.axisStyle;
       }
 
       return element;

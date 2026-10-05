@@ -182,9 +182,18 @@ export const sliderStyles = css`
     padding: var(--jolly-space-1, 4px) 0;
   }
 
-  :host([orientation="vertical"][unlabeled]) .leading,
-  :host([orientation="vertical"]) .trailing:not(:has(.revert, .peers)) {
+  :host([orientation="vertical"][unlabeled]) .leading:not(:has(.hint, .peers, .revert)) {
     display: none;
+  }
+
+  :host([orientation="vertical"]) .label-cell {
+    width: auto;
+    max-width: none;
+  }
+
+  :host([orientation="vertical"]) .revert {
+    margin-inline: 0;
+    border-radius: var(--jolly-radius-sm, 2px);
   }
 
   :host([orientation="vertical"]) .value {

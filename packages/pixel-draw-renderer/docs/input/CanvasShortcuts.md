@@ -46,7 +46,7 @@ get panHeld(): boolean
 set panHeld(value: boolean)
 ```
 
-While `true`, a left-drag pans the view in every mode and the cursor shows a grab hand. Bind it to a held key, usually `Space`.
+While `true`, a left-drag pans the view in every mode, `Ctrl`+wheel input zooms, and the cursor shows a grab hand. The mode's hover overlay, such as the brush highlight, hides while it is held or a pan is running, and returns at the last pointer position afterwards. Bind it to a held key, usually `Space`.
 
 ### `lineHeld`
 

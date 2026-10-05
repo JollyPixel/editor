@@ -15,6 +15,7 @@ Object.assign(globalThis, {
   document: kEmulatedBrowserWindow.document,
   MouseEvent: kEmulatedBrowserWindow.MouseEvent,
   WheelEvent: kEmulatedBrowserWindow.WheelEvent,
+  KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent,
   CustomEvent: kEmulatedBrowserWindow.CustomEvent,
   HTMLElement: kEmulatedBrowserWindow.HTMLElement,
   HTMLCanvasElement: kEmulatedBrowserWindow.HTMLCanvasElement,

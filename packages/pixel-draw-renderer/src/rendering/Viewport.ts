@@ -293,12 +293,28 @@ export class Viewport extends Emitter<
     mx: number,
     my: number
   ): void {
+    this.#zoomAround(mx, my, () => this.zoom.applyDelta(delta));
+  }
+
+  applyScale(
+    scale: number,
+    mx: number,
+    my: number
+  ): void {
+    this.#zoomAround(mx, my, () => this.zoom.applyScale(scale));
+  }
+
+  #zoomAround(
+    mx: number,
+    my: number,
+    change: () => void
+  ): void {
     const wasAnimating = this.zoom.isAnimating;
     this.#anchor = this.#anchorAt({
       x: mx,
       y: my
     });
-    this.zoom.applyDelta(delta);
+    change();
 
     if (this.zoom.isAnimating) {
       if (!wasAnimating) {

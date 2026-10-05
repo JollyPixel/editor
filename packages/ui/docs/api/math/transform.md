@@ -19,7 +19,17 @@ transform.value = {
 | `positionLabel` | `position-label` | `string` | `"Position"` |
 | `rotationLabel` | `rotation-label` | `string` | `"Rotation"` |
 | `scaleLabel` | `scale-label` | `string` | `"Scale"` |
-| `labelPosition` | `label-position` | `"inline" \| "top"` | `"inline"` |
+| `labelPosition` | `label-position` | `"inline" \| "top" \| "auto"` | `"inline"` |
+| `stackBelow` | `stack-below` | `number` | `200` |
+| `axisStyle` | `axis-style` | `AxisStyle \| undefined` | `undefined` |
+
+With `labelPosition="auto"` the transform measures its own width against
+`stackBelow` and stacks its three rows together, rather than letting each row
+decide alone. It reflects `stacked` while they are.
+
+`axisStyle` is passed to all three rows. Left `undefined`, each row keeps its
+own class default, `Vector3.Defaults.axisStyle` or
+`Quaternion.Defaults.axisStyle`. See [axis markers](./README.md#axis-markers).
 
 `state` applies `lockedBy`, `peers`, `disabled`, `readonly`, and `error` to
 each sub-field independently. Sub-field edits emit `jolly-input` or

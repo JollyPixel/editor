@@ -63,7 +63,6 @@ const kLayers = [
 ];
 
 const kLabelWidth = "10ch";
-const kFieldTrailingWidth = "48px";
 const kGutterWidth = "14px";
 const kLayoutStorageKey = "gallery-example:editor:layout";
 
@@ -253,10 +252,6 @@ function buildInspector(): HTMLElementTagNameMap["jolly-dock"] {
   dock.key = "inspector";
   dock.align = "start";
   dock.collapsible = true;
-  dock.style.setProperty(
-    "--jolly-field-trailing-width",
-    kFieldTrailingWidth
-  );
   dock.style.setProperty("--jolly-gutter-width", kGutterWidth);
 
   const pane = labelledPane("inspector", "Inspector");
@@ -431,10 +426,6 @@ function buildPalette(): HTMLElementTagNameMap["jolly-floating"] {
   floating.height = 232;
 
   const pane = labelledPane("brush", "Brush");
-  pane.style.setProperty(
-    "--jolly-field-trailing-width",
-    kFieldTrailingWidth
-  );
 
   const size = bind(document.createElement("jolly-slider"));
   size.label = "Size";

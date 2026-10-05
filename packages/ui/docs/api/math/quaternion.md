@@ -12,6 +12,7 @@ field.value = mesh.quaternion;
 |---|---|---|
 | `step` | `number` | `1` degree |
 | `axisLabels` | `Partial<Record<"x" \| "y" \| "z", string>>` | `{}` |
+| `axisStyle` | `"corner" \| "chip" \| "letter"` | `"corner"`, see [axis markers](./README.md#axis-markers) |
 | `value` | `QuatLike \| typeof Mixed` | `{ x: 0, y: 0, z: 0, w: 1 }` |
 | `default` | `QuatLike \| undefined` | `undefined` |
 

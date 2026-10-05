@@ -96,7 +96,7 @@ manager.texture = img;
 - `"select"`: select, move, copy, and delete a rectangular or shape-selected region; set `manager.tools.select.shape = true` for connected-region selection
 - `"uv"`: select and drag UV regions; regions are created programmatically via `manager.uv.create(...)`, not by clicking
 
-Wheel input zooms from any mode unless it arrives with `Ctrl` in `"paint"` or `"erase"` mode. Middle-drag, or left-drag while `shortcuts.panHeld` is set, pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` and `"erase"` modes, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size. Any trackpad gesture reported as `Ctrl`+wheel input follows the same rule.
+Wheel input zooms from any mode unless it arrives with a held `Ctrl` key in `"paint"` or `"erase"` mode. Middle-drag, or left-drag while `shortcuts.panHeld` is set, pans from any mode; a plain left-drag pans only in `"move"` mode. In `"paint"` and `"erase"` modes, `Ctrl`+wheel input increases (scroll up) or decreases (scroll down) the brush size, except while `shortcuts.panHeld` is set. A touchpad pinch, which browsers report as `Ctrl`+wheel input without a held `Ctrl` key, always zooms.
 
 > [!TIP]
 > Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#mode) for the full behavior, and the [Keyboard shortcuts](#keyboard-shortcuts) section below.

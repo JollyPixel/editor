@@ -29,18 +29,24 @@ export const propertyRowStyles = css`
       var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
   }
 
+  .row:has(.label-cell > *) {
+    padding-inline-start: calc(
+      var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
+    );
+  }
+
   .leading {
     display: contents;
   }
 
-  :host([label-position="top"]) .row {
+  :host([stacked]) .row {
     flex-direction: column;
     align-items: stretch;
     min-height: auto;
     gap: calc(var(--jolly-space-1, 4px) / 2);
   }
 
-  :host([label-position="top"]) .leading {
+  :host([stacked]) .leading {
     display: flex;
     align-items: center;
   }
@@ -48,20 +54,34 @@ export const propertyRowStyles = css`
   /*
    * Use the shared label column when an ancestor sets it.
    */
-  .label {
+  .label-cell {
+    display: flex;
+    align-items: center;
     flex: 0 0 auto;
+    gap: calc(var(--jolly-space-1, 4px) / 2);
     width: var(--jolly-label-width, auto);
+    min-width: 0;
     max-width: var(--jolly-label-max-width, 45%);
+  }
+
+  .label-cell:not(:has(*)) {
+    display: none;
+  }
+
+  :host([stacked]) .label-cell {
+    flex-shrink: 1;
+    width: auto;
+    max-width: none;
+  }
+
+  .label {
+    flex: 0 1 auto;
+    min-width: 0;
     color: var(--jolly-text-muted);
     text-align: start;
 
     ${truncate}
     user-select: none;
-  }
-
-  :host([label-position="top"]) .label {
-    width: auto;
-    max-width: none;
   }
 
   .value {

@@ -65,3 +65,122 @@ test("label-less fields inset their value symmetrically", async({ page }) => {
       .toBe((await insets(field)).start);
   });
 });
+
+test.describe("field layout", () => {
+  test.beforeEach(async({ page }) => {
+    await openExample(page, "scenarios/field-layout");
+  });
+
+  test("a modified row keeps the value column of its neighbours", async({ page }) => {
+    const section = page.locator("[data-state=\"revert\"]");
+    const modified = section.locator("jolly-number[data-role=\"modified\"]");
+    const plain = section.locator("jolly-number[data-role=\"default\"]");
+    await expect(modified.locator(".revert")).toBeVisible();
+    await expect(plain.locator(".revert")).toHaveCount(0);
+
+    const [modifiedValue, plainValue] = await Promise.all([
+      boxOf(modified.locator(".value")),
+      boxOf(plain.locator(".value"))
+    ]);
+    expect(modifiedValue.x).toBe(plainValue.x);
+    expect(modifiedValue.width).toBe(plainValue.width);
+  });
+
+  test("a tooltip description keeps its row one row tall", async({ page }) => {
+    const block = page.locator("[data-display=\"block\"] jolly-number");
+    const field = page.locator("[data-display=\"tooltip\"] jolly-number");
+    const hint = field.locator(".hint");
+    const tooltip = field.getByRole("tooltip", { includeHidden: true });
+
+    await expect(field.locator(".description")).toHaveCount(0);
+    expect((await boxOf(field)).height)
+      .toBeLessThan((await boxOf(block)).height);
+    await expect(hint).toHaveAccessibleName("More information about Speed");
+
+    await test.step("hover shows the description", async() => {
+      await hint.hover();
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toHaveText(
+        "Units per second, before the sprint multiplier"
+      );
+      await page.mouse.move(0, 0);
+      await expect(tooltip).toBeHidden();
+    });
+
+    await test.step("keyboard focus shows it and Escape hides it", async() => {
+      await field.locator("input").focus();
+      await page.keyboard.press("Shift+Tab");
+      await expect(hint).toBeFocused();
+      await expect(tooltip).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(tooltip).toBeHidden();
+    });
+  });
+
+  test("auto labels stack while the row is narrower than stack-below", async({ page }) => {
+    const box = page.locator("[data-role=\"auto-stack\"]");
+    const rows = box.locator(
+      ":scope > :is(jolly-text, jolly-vector3, jolly-property-row)"
+    );
+    const text = box.locator("jolly-text");
+
+    async function labelAboveValue(): Promise<boolean> {
+      const [label, value] = await Promise.all([
+        boxOf(text.locator(".label")),
+        boxOf(text.locator("input"))
+      ]);
+
+      return label.y + label.height <= value.y;
+    }
+
+    await expect(rows).toHaveCount(3);
+    for (const row of await rows.all()) {
+      await expect(row).not.toHaveAttribute("stacked");
+    }
+    expect(await labelAboveValue()).toBe(false);
+
+    await box.evaluate((element) => {
+      element.style.width = "220px";
+    });
+    for (const row of await rows.all()) {
+      await expect(row).toHaveAttribute("stacked", "");
+    }
+    expect(await labelAboveValue()).toBe(true);
+
+    await box.evaluate((element) => {
+      element.style.width = "420px";
+    });
+    await expect(text).not.toHaveAttribute("stacked");
+  });
+
+  test("a transform stacks its three rows together", async({ page }) => {
+    const box = page.locator("[data-role=\"auto-stack-transform\"]");
+    const transform = box.locator("jolly-transform");
+    const rows = transform.locator(":is(jolly-vector3, jolly-quaternion)");
+    await expect(rows).toHaveCount(3);
+    await expect(transform).not.toHaveAttribute("stacked");
+
+    await box.evaluate((element) => {
+      element.style.width = "220px";
+    });
+    await expect(transform).toHaveAttribute("stacked", "");
+    for (const row of await rows.all()) {
+      await expect(row).toHaveAttribute("label-position", "top");
+    }
+  });
+
+  test("a property row shares the label and value columns of fields", async({ page }) => {
+    const column = page.locator("[data-display=\"block\"]");
+    const field = column.locator("jolly-number");
+    const row = column.locator("jolly-property-row");
+    const [fieldLabel, rowLabel, fieldValue, rowValue] = await Promise.all([
+      boxOf(field.locator(".label")),
+      boxOf(row.locator(".label")),
+      boxOf(field.locator(".value")),
+      boxOf(row.locator(".value"))
+    ]);
+
+    expect(rowLabel.x).toBe(fieldLabel.x);
+    expect(rowValue.x).toBe(fieldValue.x);
+  });
+});

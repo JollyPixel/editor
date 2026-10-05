@@ -53,32 +53,32 @@ export const fieldStyles = css`
     display: contents;
   }
 
-  :host([label-position="top"]) .row {
+  :host([stacked]) .row {
     flex-direction: column;
     align-items: stretch;
     min-height: auto;
     gap: calc(var(--jolly-space-1, 4px) / 2);
   }
 
-  :host([label-position="top"]) .leading,
-  :host([label-position="top"]) .content {
+  :host([stacked]) .leading,
+  :host([stacked]) .content {
     display: flex;
     align-items: center;
     gap: var(--jolly-space-1, 4px);
   }
 
-  :host([label-position="top"]) .content {
+  :host([stacked]) .content {
     padding-inline-start: calc(
       var(--jolly-gutter-width, 0px) +
         var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
     );
   }
 
-  :host([unlabeled][label-position="top"]) .leading {
+  :host([unlabeled][stacked]) .leading:not(:has(.hint, .peers, .revert)) {
     display: none;
   }
 
-  :host([unlabeled][label-position="top"]) .content {
+  :host([unlabeled][stacked]) .content {
     padding-inline-start: 0;
   }
 
@@ -105,21 +105,38 @@ export const fieldStyles = css`
     padding-inline-start: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
   }
 
-  .label {
+  .label-cell {
+    display: flex;
+    align-items: center;
     flex: 0 0 auto;
+    gap: calc(var(--jolly-space-1, 4px) / 2);
     width: var(--jolly-label-width, auto);
     min-width: 0;
     max-width: var(--jolly-label-max-width, 45%);
+  }
+
+  :host([unlabeled]) .label-cell,
+  :host([stacked]) .label-cell {
+    width: auto;
+    max-width: none;
+  }
+
+  :host([stacked]) .label-cell {
+    flex: 1 1 auto;
+  }
+
+  :host([unlabeled]) .label-cell:not(:has(.hint, .peers, .revert)) {
+    display: none;
+  }
+
+  .label {
+    flex: 0 1 auto;
+    min-width: 0;
     color: var(--jolly-text-muted);
     text-align: start;
 
     ${truncate}
     user-select: none;
-  }
-
-  :host([label-position="top"]) .label {
-    width: auto;
-    max-width: none;
   }
 
   .value {
@@ -198,21 +215,6 @@ export const fieldStyles = css`
     );
   }
 
-  .trailing {
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-    flex: 0 0 auto;
-    gap: var(--jolly-space-1, 4px);
-    width: var(--jolly-field-trailing-width, auto);
-    margin-inline-start: calc(var(--jolly-space-1, 4px) * -1);
-    padding-inline-start: var(--jolly-space-1, 4px);
-  }
-
-  .trailing:not(:has(.revert)) {
-    padding-inline-start: 0;
-  }
-
   .revert {
     display: flex;
     align-items: center;
@@ -220,14 +222,13 @@ export const fieldStyles = css`
     flex: 0 0 auto;
     width: var(--jolly-control-height, 20px);
     height: var(--jolly-control-height, 20px);
-    margin-inline-start: calc(var(--jolly-space-1, 4px) * -1);
+    margin-inline: auto calc(var(--jolly-space-1, 4px) * -1);
     padding: 0;
     border: 0;
-    border-radius:
-      0
-      var(--jolly-radius-sm, 2px)
-      var(--jolly-radius-sm, 2px)
-      0;
+    border-start-start-radius: var(--jolly-radius-sm, 2px);
+    border-start-end-radius: 0;
+    border-end-start-radius: var(--jolly-radius-sm, 2px);
+    border-end-end-radius: 0;
     background: none;
     color: var(--jolly-text-muted);
     cursor: pointer;
@@ -240,10 +241,18 @@ export const fieldStyles = css`
     height: 14px;
   }
 
-  .value:has(+ .trailing > .revert) input[type="text"]:last-child,
-  .value:has(+ .trailing > .revert) select {
-    border-start-end-radius: 0;
-    border-end-end-radius: 0;
+  :host([stacked]) .revert {
+    width: 14px;
+    height: 14px;
+    margin-inline-end: 0;
+    border-radius: var(--jolly-radius-sm, 2px);
+  }
+
+  :host(:not([stacked])) .row:has(.revert) .value > input[type="text"]:first-child,
+  :host(:not([stacked])) .row:has(.revert) .value > .wrap:first-child > input,
+  :host(:not([stacked])) .row:has(.revert) .value select {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
   }
 
   .revert:hover {
@@ -256,12 +265,19 @@ export const fieldStyles = css`
   }
 
   .peers {
-    position: absolute;
-    top: -4px;
-    inset-inline-end: 2px;
-    z-index: 1;
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    padding-inline-start: var(--jolly-space-1, 4px);
+  }
+
+  :host(:not([stacked])) .peers:last-child {
+    padding-inline-end: var(--jolly-space-1, 4px);
+  }
+
+  .peers + .revert {
+    margin-inline-start: var(--jolly-space-1, 4px);
   }
 
   .chip {

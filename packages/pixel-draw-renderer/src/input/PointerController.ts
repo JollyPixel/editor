@@ -30,6 +30,7 @@ const kWheelDeltaMode = {
 // Approximate CSS-pixel equivalents for line and page wheel deltas.
 const kWheelLineDeltaPixels = 16;
 const kWheelPageDeltaPixels = 100;
+const kPinchDeltaPerScaleLog = 100;
 
 export interface PointerControllerOptions {
   canvas: HTMLCanvasElement;
@@ -49,6 +50,7 @@ export class PointerController {
   #inputWindow: WindowLike;
   #panAnchor: Vec2 | null = null;
   #dragging: BrushColorSlot | null = null;
+  #controlHeld = false;
 
   constructor(
     options: PointerControllerOptions
@@ -81,6 +83,8 @@ export class PointerController {
     this.#canvas.addEventListener("contextmenu", this.#handleContextMenu);
     this.#inputWindow.addEventListener("mousemove", this.#handleWindowMouseMove);
     this.#inputWindow.addEventListener("mouseup", this.#handleWindowMouseUp);
+    this.#inputWindow.addEventListener("keydown", this.#handleWindowKey);
+    this.#inputWindow.addEventListener("keyup", this.#handleWindowKey);
     this.#inputWindow.addEventListener("blur", this.#handleWindowBlur);
   }
 
@@ -93,6 +97,8 @@ export class PointerController {
     this.#canvas.removeEventListener("contextmenu", this.#handleContextMenu);
     this.#inputWindow.removeEventListener("mousemove", this.#handleWindowMouseMove);
     this.#inputWindow.removeEventListener("mouseup", this.#handleWindowMouseUp);
+    this.#inputWindow.removeEventListener("keydown", this.#handleWindowKey);
+    this.#inputWindow.removeEventListener("keyup", this.#handleWindowKey);
     this.#inputWindow.removeEventListener("blur", this.#handleWindowBlur);
   }
 
@@ -170,6 +176,7 @@ export class PointerController {
   #handleMouseDown = (
     event: MouseEvent
   ): void => {
+    this.#controlHeld = event.ctrlKey;
     if (event.button === kAuxiliaryButton) {
       this.#beginPan(event);
 
@@ -201,6 +208,7 @@ export class PointerController {
     event: MouseEvent
   ): void => {
     event.preventDefault();
+    this.#controlHeld = event.ctrlKey;
 
     const position = this.#positionOf(event);
     this.#actions.onHover(position);
@@ -245,16 +253,30 @@ export class PointerController {
     const delta = this.#normalizeWheelDelta(
       event
     );
-    if (event.ctrlKey && this.#actions.onCtrlWheel(delta)) {
+    const pinch = event.ctrlKey && !this.#controlHeld;
+    if (
+      event.ctrlKey &&
+      !pinch &&
+      this.#actions.onCtrlWheel(delta)
+    ) {
       return;
     }
 
     const position = this.#positionOf(event);
-    this.#viewport.applyZoom(
-      delta,
-      position.canvas.x,
-      position.canvas.y
-    );
+    if (pinch) {
+      this.#viewport.applyScale(
+        Math.exp(-delta / kPinchDeltaPerScaleLog),
+        position.canvas.x,
+        position.canvas.y
+      );
+    }
+    else {
+      this.#viewport.applyZoom(
+        delta,
+        position.canvas.x,
+        position.canvas.y
+      );
+    }
     this.#actions.onHover(position);
   };
 
@@ -303,7 +325,14 @@ export class PointerController {
     this.#release(event);
   };
 
+  #handleWindowKey = (
+    event: KeyboardEvent
+  ): void => {
+    this.#controlHeld = event.ctrlKey;
+  };
+
   #handleWindowBlur = (): void => {
+    this.#controlHeld = false;
     this.#endPan();
     this.#endDrag();
     this.#actions.onBlur();

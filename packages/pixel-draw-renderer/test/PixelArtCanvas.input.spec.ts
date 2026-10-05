@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   moveTo,
+  pressControl,
   wheel
 } from "./helpers/events.ts";
 
@@ -82,6 +83,7 @@ describe("PixelArtCanvas — Ctrl+wheel brush size", () => {
         defaultMode: mode
       });
 
+      pressControl();
       canvas.dispatchEvent(wheel({ deltaY: -100, ctrlKey: true }));
       assert.strictEqual(manager.brush.size, 5);
 
@@ -99,10 +101,29 @@ describe("PixelArtCanvas — Ctrl+wheel brush size", () => {
     manager.mode = "fill";
     const zoomBefore = manager.zoom.value;
 
+    pressControl();
     canvas.dispatchEvent(wheel({ deltaY: 100, ctrlKey: true }));
 
     assert.strictEqual(manager.brush.size, 4);
     assert.ok(manager.zoom.target < zoomBefore);
+    manager.destroy();
+  });
+
+  test("zooms on a touchpad pinch or while panHeld is set in paint mode", () => {
+    const { manager, canvas } = createPixelArtCanvas({
+      brush: { size: 4, maxSize: 8 },
+      zoom: { default: 4 }
+    });
+
+    canvas.dispatchEvent(wheel({ deltaY: 100, ctrlKey: true }));
+    const pinchedZoom = manager.zoom.target;
+    pressControl();
+    manager.shortcuts.panHeld = true;
+    canvas.dispatchEvent(wheel({ deltaY: 100, ctrlKey: true }));
+
+    assert.strictEqual(manager.brush.size, 4);
+    assert.ok(pinchedZoom < 4);
+    assert.ok(manager.zoom.target < pinchedZoom);
     manager.destroy();
   });
 
@@ -112,6 +133,7 @@ describe("PixelArtCanvas — Ctrl+wheel brush size", () => {
     });
     moveTo(canvas, 100, 100);
 
+    pressControl();
     canvas.dispatchEvent(wheel({ deltaY: -100, ctrlKey: true }));
 
     const highlight = overlay.querySelector('g[data-overlay="brush-highlight"]');

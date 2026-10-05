@@ -2,15 +2,22 @@
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Vector3 } from "../../../../src/index.ts";
+import {
+  AXIS_STYLE_OPTIONS,
+  axisStyleOf,
+  type AxisStyleOptionKey
+} from "./axisStyle.ts";
 
-export const VECTOR3_EXAMPLE: GalleryExample = {
+export const VECTOR3_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
   id: "math/vector3",
   title: "Vector3",
-  render(host) {
+  options: AXIS_STYLE_OPTIONS,
+  render(host, options) {
     return renderStateMatrix<Vector3>(host, {
       liveInput: true,
       create() {
         const field = document.createElement("jolly-vector3");
+        field.axisStyle = axisStyleOf(options);
         field.label = "Position";
         field.description = "Drag an axis's edge handle, or type 10*2";
         field.step = 0.1;

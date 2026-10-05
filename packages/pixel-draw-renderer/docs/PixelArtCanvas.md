@@ -132,7 +132,7 @@ Erase mode is paint mode writing `brush.erase` (transparent unless [`brush.erase
 
 A stroke keeps the color it started with: changing a brush color mid-drag affects the next stroke. A drag belongs to the button that started it. Pressing the other button during the drag does nothing, and releasing the other button does not end it.
 
-Wheel input zooms in every mode. Middle-drag, or left-drag while [`shortcuts.panHeld`](./input/CanvasShortcuts.md#panheld) is set, pans the view. In paint and erase modes, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction.
+Wheel input zooms in every mode. Middle-drag, or left-drag while [`shortcuts.panHeld`](./input/CanvasShortcuts.md#panheld) is set, pans the view. In paint and erase modes, `Ctrl`+wheel changes `brush.size` by one pixel per scroll direction; it zooms instead while `shortcuts.panHeld` is set. A touchpad pinch arrives as `Ctrl`+wheel input without a held `Ctrl` key and always zooms. The canvas reads the held `Ctrl` key from the keyboard and mouse events reaching its [`window`](./PixelArtCanvasOptions.md#window) and canvas element.
 
 Leaving paint or erase mode cancels an armed line, and leaving paint mode also cancels the color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
 

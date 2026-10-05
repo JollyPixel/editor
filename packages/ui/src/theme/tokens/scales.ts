@@ -23,9 +23,6 @@ export const scaleTokens = css`
     /* Lock affordance space; collaborative containers opt their subtree in. */
     --jolly-gutter-width: 0px;
 
-    /* Shared column for trailing revert and presence chrome. */
-    --jolly-field-trailing-width: auto;
-
     /* Set to 0 beside folder headers, whose bar paints past the value. */
     --jolly-field-inset-end: var(--jolly-space-1);
     --jolly-duration-fast: 100ms;

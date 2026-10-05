@@ -59,6 +59,11 @@ export interface PopoverControllerOptions {
     delay?: number;
   };
   /**
+   * Pushes an input layer while open, so keys stop reaching shortcuts;
+   * defaults to true. Turn it off for a hint that only describes.
+   */
+  claimsInput?: boolean;
+  /**
    * Called when the popover opens.
    */
   onOpen?: () => void;
@@ -195,7 +200,9 @@ export class PopoverController implements ReactiveController {
       this.#activePopover = this.#options.popover();
       const anchor = this.#options.anchor();
       this.#activeAnchor = anchor instanceof HTMLElement ? anchor : null;
-      this.#claimInput();
+      if (this.#options.claimsInput !== false) {
+        this.#claimInput();
+      }
       setTimeout(() => {
         if (!this.#options.popover()?.matches(":popover-open")) {
           this.#releaseInput();

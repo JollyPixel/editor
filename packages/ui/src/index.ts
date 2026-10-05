@@ -32,6 +32,7 @@ export {
 } from "./field/mixed.ts";
 export type {
   FieldAlign,
+  FieldDescriptionDisplay,
   FieldLabelPosition
 } from "./field/JollyField.ts";
 export {
@@ -241,6 +242,9 @@ export type {
   FacadeContainer,
   MonitorFields
 } from "./facade/Container.ts";
+export type {
+  FieldLayoutOptions
+} from "./facade/fieldLayout.ts";
 export type {
   FacadeItem
 } from "./facade/FacadeItem.ts";

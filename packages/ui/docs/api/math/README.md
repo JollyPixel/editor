@@ -17,6 +17,35 @@ Every one of them except `jolly-transform` is reachable from the facade:
 `addBinding` picks one from the bound value's own axes. See
 [Binding facade](../facade/binding.md).
 
+## Axis markers
+
+`axisStyle` (attribute `axis-style`, type `AxisStyle`) sets how
+`jolly-vector2`, `jolly-vector3`, `jolly-vector4` and `jolly-quaternion` mark
+each axis:
+
+- `"corner"`, the default: a small triangle in the axis colour on the input's
+  top corner.
+- `"chip"`: the axis letter in white on a square of the axis colour, at the
+  input's leading edge.
+- `"letter"`: the axis letter alone, in the axis colour, at the input's leading
+  edge.
+
+With `"chip"` and `"letter"`, the letter replaces the scrub groove: dragging it
+scrubs the axis. The letter is as wide as the control is tall, so each input
+gives up that width. Override `--jolly-axis-letter-width` on the element to
+change it.
+
+New elements read their style from their class `Defaults`, so an editor can
+switch every field at once before creating any:
+
+```ts
+Vector3.Defaults.axisStyle = "letter";
+Quaternion.Defaults.axisStyle = "letter";
+```
+
+`Vector2`, `Vector3` and `Vector4` share one `Defaults` object; `Quaternion`
+has its own.
+
 ## Value helpers
 
 The root entry point exports the structural guards these components dispatch

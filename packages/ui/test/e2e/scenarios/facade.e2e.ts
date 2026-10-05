@@ -47,3 +47,17 @@ test("notes, appended elements and theme preferences mount inside the pane", asy
     page.locator("jolly-floating jolly-theme-preferences")
   ).toHaveCount(1);
 });
+
+test("pane field layout reaches the bindings of its folders", async({ page }) => {
+  await openExample(page, "scenarios/facade");
+
+  const frame = page.locator("jolly-floating");
+  const speed = frame.locator("jolly-folder jolly-slider");
+  await expect(speed).toHaveAttribute("label-position", "auto");
+  await expect(speed).not.toHaveAttribute("stacked");
+
+  await frame.evaluate((element: HTMLElementTagNameMap["jolly-floating"]) => {
+    element.width = 160;
+  });
+  await expect(speed).toHaveAttribute("stacked", "");
+});

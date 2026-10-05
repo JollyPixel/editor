@@ -49,7 +49,7 @@ async function expectLabelColumn(
   const field = page.locator(tag).first();
 
   await expect(field).toHaveCSS("--jolly-label-width", "14ch");
-  expect(await widthOf(field.locator(".label").first()))
+  expect(await widthOf(field.locator(".label-cell").first()))
     .toBeGreaterThanOrEqual(80);
 }
 
@@ -75,6 +75,25 @@ async function expectStableLockedLayout(
   expect(lockedRow.height).toBe(plainRow.height);
 }
 
+async function expectStackedChrome(
+  page: Page,
+  tag: string
+): Promise<void> {
+  const field = row(page, tag, "stacked+modified+peers");
+  const [label, peers, revert, value] = await Promise.all([
+    boxOf(field.locator(".label")),
+    boxOf(field.locator(".peers")),
+    boxOf(field.locator(".revert")),
+    boxOf(field.locator(".value"))
+  ]);
+
+  expect(peers.y + peers.height).toBeLessThanOrEqual(value.y);
+  expect(revert.y + revert.height).toBeLessThanOrEqual(value.y);
+  expect(peers.x).toBeGreaterThan(label.x + label.width);
+  expect(revert.x).toBeGreaterThan(peers.x);
+  expect(revert.x + revert.width).toBeGreaterThan(value.x + value.width - 8);
+}
+
 async function expectPeerChips(
   page: Page,
   tag: string
@@ -91,7 +110,7 @@ test.describe("controls: state matrix", () => {
       await openExample(page, id);
 
       await test.step("rows and label column", async() => {
-        await expect(page.locator(tag)).toHaveCount(colored ? 11 : 9);
+        await expect(page.locator(tag)).toHaveCount(colored ? 12 : 10);
         await expectLabelColumn(page, tag);
         await expectStableLockedLayout(page, tag);
       });
@@ -136,6 +155,10 @@ test.describe("controls: state matrix", () => {
 
       await test.step("peer chips overflow past three", async() => {
         await expectPeerChips(page, tag);
+      });
+
+      await test.step("a stacked row puts chips and revert above the value's end", async() => {
+        await expectStackedChrome(page, tag);
       });
 
       if (colored) {
@@ -216,7 +239,7 @@ test.describe("controls: state matrix", () => {
     test(`${tag} renders every matrix state`, async({ page }) => {
       await openExample(page, id);
 
-      await expect(page.locator(tag)).toHaveCount(9);
+      await expect(page.locator(tag)).toHaveCount(10);
       await expectLabelColumn(page, tag);
       await expectStableLockedLayout(page, tag);
       await expect(row(page, tag, "mixed")).toHaveAttribute("mixed", "");

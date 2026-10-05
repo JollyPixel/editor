@@ -77,6 +77,26 @@ describe("Zoom", () => {
     });
   });
 
+  describe("applyScale", () => {
+    test("multiplies the zoom by the scale, clamped, and ignores non-positive scales", () => {
+      const zoom = new Zoom({
+        default: 4,
+        max: 10,
+        smoothing: 0
+      });
+
+      zoom.applyScale(1.5);
+      assert.strictEqual(zoom.value, 6);
+
+      zoom.applyScale(0);
+      zoom.applyScale(-2);
+      assert.strictEqual(zoom.value, 6);
+
+      zoom.applyScale(4);
+      assert.strictEqual(zoom.value, 10);
+    });
+  });
+
   describe("applyDelta", () => {
     test("negative delta increases the target", () => {
       const zoom = new Zoom({

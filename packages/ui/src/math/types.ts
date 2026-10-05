@@ -44,6 +44,8 @@ export type Vector2Pair = "xy" | "xz" | "yz";
 
 export type Vector2Axis = "x" | "y" | "z";
 
+export type AxisStyle = "corner" | "chip" | "letter";
+
 export type Vector2Value =
   | VectorValue<"x" | "y">
   | VectorValue<"x" | "z">
