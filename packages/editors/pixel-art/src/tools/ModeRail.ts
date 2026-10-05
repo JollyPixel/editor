@@ -16,7 +16,7 @@ import "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   renderIcon,
-  type IconName
+  type GlyphName
 } from "../shared/icons.ts";
 import { iconStyles } from "../shared/icon.styles.ts";
 import { railButtonStyles } from "../shared/railButton.styles.ts";
@@ -34,28 +34,28 @@ import {
 
 interface ModeVariant {
   option: ToolOptionName;
-  icon: IconName;
+  icon: GlyphName;
   label: string;
   offLabel: string;
 }
 
 interface ModeToggle {
   option: ToolOptionName;
-  icon: IconName;
+  icon: GlyphName;
   label: string;
   badge: string;
 }
 
 interface ModeItem {
   mode: Mode;
-  icon: IconName;
+  icon: GlyphName;
   label: string;
   variant?: ModeVariant;
   uvToggle?: ModeToggle;
 }
 
 interface FlyoutButton {
-  icon: IconName;
+  icon: GlyphName;
   label: string;
   pressed?: boolean;
   option: ToolOption;

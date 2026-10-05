@@ -18,21 +18,19 @@ registerIcon("normalMap", svg`
     />
     <path
       class="tone-ink"
-      d="M8.5 10.5a4 4 0 0 1 3-3"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linecap="round"
+      d="M12 4a8 8 0 0 1 0 16 4.5 8 0 0 0 0-16Z"
+      fill="currentColor"
+      fill-opacity="0.4"
     />
     <path
-      d="M14 18.5a7 7 0 0 0 4.5-4.5"
+      class="tone-ink"
+      d="M8 10a4 4 0 0 1 2.8-2.8"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
       stroke-linecap="round"
-      opacity="0.45"
     />
-  `);
+  `, { tone: "violet" });
 
 registerIcon("albedo", svg`
     <rect

@@ -45,7 +45,7 @@ describe("renderRailButton", () => {
       part: "uv-show-all-button",
       label: "Show all",
       tooltip: "Show all regions",
-      icon: "eye",
+      icon: "eyeOpen",
       pressed: true,
       onClick: () => undefined
     });
@@ -77,5 +77,48 @@ describe("renderRailButton", () => {
     assert.ok(enabled.querySelector(".custom-icon"));
     assert.equal(disabled.disabled, true);
     assert.equal(clicks, 1);
+  });
+
+  test("shows a step count only when it is above zero", () => {
+    const counted = renderButton({
+      part: "undo-button",
+      label: "Undo",
+      icon: "undo",
+      count: 3,
+      onClick: () => undefined
+    });
+    const empty = renderButton({
+      part: "redo-button",
+      label: "Redo",
+      icon: "redo",
+      count: 0,
+      onClick: () => undefined
+    });
+
+    assert.equal(counted.querySelector(".rail-count")?.textContent, "3");
+    assert.equal(counted.getAttribute("aria-label"), "Undo");
+    assert.equal(empty.querySelector(".rail-count"), null);
+  });
+
+  test("renders a text label beside the icon without changing the accessible name", () => {
+    const labelled = renderButton({
+      part: "select-rotate-button",
+      label: "Rotate clockwise",
+      icon: "rotateClockwise",
+      text: "90°",
+      onClick: () => undefined
+    });
+    const plain = renderButton({
+      part: "copy-button",
+      label: "Copy",
+      icon: "copy",
+      onClick: () => undefined
+    });
+
+    assert.ok(labelled.classList.contains("has-text"));
+    assert.equal(labelled.querySelector(".rail-text")?.textContent, "90°");
+    assert.equal(labelled.getAttribute("aria-label"), "Rotate clockwise");
+    assert.ok(!plain.classList.contains("has-text"));
+    assert.equal(plain.querySelector(".rail-text"), null);
   });
 });

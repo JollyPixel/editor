@@ -112,6 +112,7 @@ export function renderHistoryFileToolbar(
         label: "Undo",
         icon: "undo",
         disabled: !canvas?.canUndo(),
+        count: canvas?.undoDepth(),
         onClick: () => canvas?.undo()
       })}
       ${renderRailButton({
@@ -119,6 +120,7 @@ export function renderHistoryFileToolbar(
         label: "Redo",
         icon: "redo",
         disabled: !canvas?.canRedo(),
+        count: canvas?.redoDepth(),
         onClick: () => canvas?.redo()
       })}
       </div>

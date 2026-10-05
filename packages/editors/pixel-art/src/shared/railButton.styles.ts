@@ -42,8 +42,42 @@ export const railButtonStyles = css`
   .rail-btn:disabled {
     --jolly-icon-tone-strength: 0%;
 
-    color: var(--color-border);
+    color: var(--color-text-muted);
+    opacity: 0.3;
     cursor: default;
+  }
+
+  .rail-btn.has-text {
+    width: auto;
+    gap: 2px;
+    padding: 0 5px 0 3px;
+  }
+
+  .rail-text {
+    font-size: 9px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .rail-count {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    box-sizing: border-box;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: var(--rail-count-bg, var(--color-accent));
+    color: var(--color-bg-surface);
+    font-size: 9.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: none;
   }
 
   .rail-btn.active:disabled {
@@ -100,6 +134,10 @@ export const railButtonStyles = css`
   .rail-flyout .rail-btn {
     width: 30px;
     height: 30px;
+  }
+
+  .rail-flyout .text-glyph {
+    font-size: 11px;
   }
 
   .rail-flyout .icon {

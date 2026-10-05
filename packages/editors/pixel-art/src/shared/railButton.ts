@@ -9,27 +9,43 @@ import { classMap } from "lit/directives/class-map.js";
 // Import Internal Dependencies
 import {
   renderIcon,
-  type IconName
+  type GlyphName
 } from "./icons.ts";
 
 export interface RailButtonOptions {
   part: string;
   label: string;
   tooltip?: string;
-  icon: IconName | TemplateResult;
+  icon: GlyphName | TemplateResult;
   disabled?: boolean;
   pressed?: boolean;
+  count?: number;
+  text?: string;
   onClick: (event: MouseEvent) => void;
 }
 
 export function renderRailButton(
   options: RailButtonOptions
 ): TemplateResult {
-  const { part, label, tooltip = label, icon, disabled = false, pressed, onClick } = options;
+  const {
+    part,
+    label,
+    tooltip = label,
+    icon,
+    disabled = false,
+    pressed,
+    count = 0,
+    text,
+    onClick
+  } = options;
 
   return html`
     <button
-      class=${classMap({ "rail-btn": true, active: pressed === true })}
+      class=${classMap({
+        "rail-btn": true,
+        active: pressed === true,
+        "has-text": text !== undefined
+      })}
       part=${part}
       aria-label=${label}
       aria-pressed=${pressed ?? nothing}
@@ -37,6 +53,12 @@ export function renderRailButton(
       @click=${onClick}
     >
       ${typeof icon === "string" ? renderIcon(icon) : icon}
+      ${text === undefined ?
+        nothing :
+        html`<span class="rail-text" aria-hidden="true">${text}</span>`}
+      ${count > 0 ?
+        html`<span class="rail-count" aria-hidden="true">${count}</span>` :
+        nothing}
       <span class="tooltip">${tooltip}</span>
     </button>
   `;

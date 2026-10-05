@@ -281,6 +281,15 @@ canRedo(): boolean
 
 History must be enabled through [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history). Each method returns whether the requested operation is available or succeeded.
 
+### `undoDepth()` / `redoDepth()`
+
+```ts
+undoDepth(): number
+redoDepth(): number
+```
+
+The number of edits that can be undone or redone, from `0` up to the history `limit`. Both are `0` when history is disabled.
+
 A remote resize, remote texture replacement or snapshot load clears local history. See [history entries](./history/HistoryStack.md#entries) for what each edit records and how it replays.
 
 ## View and canvas elements

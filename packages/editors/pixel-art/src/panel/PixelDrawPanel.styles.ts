@@ -331,6 +331,42 @@ export const panelStyles = css`
     height: 16px;
   }
 
+  .overlay-toolbar .rail-btn.has-text {
+    width: auto;
+    padding: 0 4px 0 3px;
+    gap: 1px;
+  }
+
+  .overlay-toolbar .rail-text {
+    font-size: 8.5px;
+    letter-spacing: -0.02em;
+  }
+
+  .overlay-toolbar .rail-count {
+    right: -3px;
+    bottom: -3px;
+    min-width: 12px;
+    height: 12px;
+    padding: 0 2px;
+    border-radius: 6px;
+    font-size: 8px;
+    line-height: 12px;
+  }
+
+  .overlay-toolbar :is([part="undo-button"], [part="redo-button"]) {
+    --rail-count-bg: var(--jolly-tone-teal, var(--color-accent));
+  }
+
+  .overlay-toolbar :is([part="undo-button"], [part="redo-button"]):not(:disabled) {
+    --jolly-icon-tone-strength: 100%;
+
+    background: color-mix(
+      in oklab,
+      var(--jolly-tone-teal, var(--color-accent)) 12%,
+      transparent
+    );
+  }
+
   .icon-with-badge {
     position: relative;
     display: flex;
