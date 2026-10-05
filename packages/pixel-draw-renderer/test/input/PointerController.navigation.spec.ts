@@ -12,7 +12,11 @@ import type { Viewport } from "#src/rendering/Viewport.ts";
 import { makeActions } from "../helpers/input-actions.ts";
 import { makeCanvas } from "../helpers/dom.ts";
 import { makeCenteredViewport } from "../helpers/input/pointer.ts";
-import { wheel } from "../helpers/events.ts";
+import {
+  pressControl,
+  releaseControl,
+  wheel
+} from "../helpers/events.ts";
 
 describe("PointerController navigation", () => {
   let viewport: Viewport;
@@ -144,6 +148,7 @@ describe("PointerController navigation", () => {
         actions
       });
 
+      pressControl();
       const event = wheel({ deltaY: -8, ctrlKey: true });
       canvas.dispatchEvent(event);
 
@@ -163,11 +168,56 @@ describe("PointerController navigation", () => {
         actions
       });
 
+      pressControl();
       const event = wheel({ deltaY: -8, ctrlKey: true });
       canvas.dispatchEvent(event);
 
       assert.strictEqual(applyZoom.mock.callCount(), 0);
       assert.ok(event.defaultPrevented);
+      ctrl.destroy();
+    });
+
+    test("a ctrl+wheel without a held Control key is a pinch that scales the zoom by exp(-deltaY / 100)", (t) => {
+      const applyZoom = t.mock.method(viewport, "applyZoom");
+      const applyScale = t.mock.method(viewport, "applyScale");
+      const { actions, calls } = makeActions({ handlesCtrlWheel: true });
+      const ctrl = new PointerController({
+        canvas,
+        viewport,
+        actions
+      });
+
+      canvas.dispatchEvent(wheel({ deltaY: -3, ctrlKey: true }));
+      pressControl();
+      releaseControl();
+      canvas.dispatchEvent(wheel({ deltaY: 5, ctrlKey: true }));
+
+      assert.deepStrictEqual(calls.onCtrlWheel, []);
+      assert.strictEqual(applyZoom.mock.callCount(), 0);
+      assert.deepStrictEqual(
+        applyScale.mock.calls.map((call) => call.arguments[0]),
+        [Math.exp(0.03), Math.exp(-0.05)]
+      );
+      ctrl.destroy();
+    });
+
+    test("a Control key seen on a canvas pointer event routes ctrl+wheel to the actions", () => {
+      const { actions, calls } = makeActions({ handlesCtrlWheel: true });
+      const ctrl = new PointerController({
+        canvas,
+        viewport,
+        actions
+      });
+
+      canvas.dispatchEvent(new MouseEvent("mousemove", {
+        ctrlKey: true,
+        bubbles: true
+      }));
+      canvas.dispatchEvent(wheel({ deltaY: -8, ctrlKey: true }));
+      window.dispatchEvent(new Event("blur"));
+      canvas.dispatchEvent(wheel({ deltaY: -8, ctrlKey: true }));
+
+      assert.deepStrictEqual(calls.onCtrlWheel, [-8]);
       ctrl.destroy();
     });
   });

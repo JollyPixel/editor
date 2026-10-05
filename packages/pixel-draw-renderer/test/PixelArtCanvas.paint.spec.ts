@@ -13,6 +13,10 @@ import {
   overlayOf
 } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
+import {
+  mouseEvent,
+  moveTo
+} from "./helpers/events.ts";
 import { readPixel } from "./fixtures/canvas.ts";
 
 describe("PixelArtCanvas — paint mode", () => {
@@ -76,6 +80,27 @@ describe("PixelArtCanvas — paint mode", () => {
         "armed pick: size forced to 1, ignoring brush.size=5 -> 1 * zoom 4"
       );
 
+      manager.destroy();
+    });
+
+    test("stays hidden while panHeld is set, through a pan, and returns on release", () => {
+      const { manager, canvas, overlay } = createPixelArtCanvas({
+        zoom: { default: 4 }
+      });
+      const group = overlay.querySelector('g[data-overlay="brush-highlight"]');
+      moveTo(canvas, 100, 100);
+
+      manager.shortcuts.panHeld = true;
+      assert.strictEqual(group?.getAttribute("visibility"), "hidden");
+
+      canvas.dispatchEvent(mouseEvent("mousedown", 100, 100));
+      window.dispatchEvent(mouseEvent("mousemove", 120, 110));
+      moveTo(canvas, 120, 110);
+      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      assert.strictEqual(group?.getAttribute("visibility"), "hidden");
+
+      manager.shortcuts.panHeld = false;
+      assert.strictEqual(group?.getAttribute("visibility"), "visible");
       manager.destroy();
     });
   });

@@ -129,8 +129,19 @@ export class Zoom {
     }
 
     const factor = 1 + this.#stepAt(this.#desired);
+
+    return this.applyScale(factor ** (-delta / kReferenceNotch));
+  }
+
+  applyScale(
+    scale: number
+  ): number {
+    if (!(scale > 0) || scale === 1) {
+      return this.#target;
+    }
+
     this.#desired = clamp(
-      this.#desired * (factor ** (-delta / kReferenceNotch)),
+      this.#desired * scale,
       this.#min,
       this.#max
     );
