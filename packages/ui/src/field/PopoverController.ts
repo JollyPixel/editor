@@ -94,6 +94,7 @@ export class PopoverController implements ReactiveController {
   #hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
   #restoreFocus = false;
   #pointerInteraction = false;
+  #pinned = false;
   #releaseInputLayer: (() => void) | null = null;
 
   constructor(
@@ -139,6 +140,9 @@ export class PopoverController implements ReactiveController {
         this.#options.popover() === popover &&
         !anchor.matches(":disabled")) {
         this.show();
+        if (popover.matches(":popover-open")) {
+          document.addEventListener("click", this.#onTriggerClick, true);
+        }
       }
     };
     const delay = this.#options.openOnHover?.delay ?? kDefaultHoverDelay;
@@ -157,7 +161,8 @@ export class PopoverController implements ReactiveController {
     this.#cancelHoverClose();
     if (
       !this.#options.closeOnHoverLeave ||
-      event.pointerType === "touch"
+      event.pointerType === "touch" ||
+      this.#pinned
     ) {
       return;
     }
@@ -237,6 +242,7 @@ export class PopoverController implements ReactiveController {
       this.#activePopover = null;
       this.#activeAnchor = null;
       this.#unlisten();
+      this.#endHoverOpen();
       this.#options.onClose?.();
 
       const anchor = this.#options.anchor();
@@ -307,6 +313,7 @@ export class PopoverController implements ReactiveController {
     this.#cancelHover();
     this.#cancelHoverClose();
     this.#unlisten();
+    this.#endHoverOpen();
     this.#activePopover = null;
     this.#activeAnchor = null;
     const wasOpen = this.#open;
@@ -329,6 +336,7 @@ export class PopoverController implements ReactiveController {
     this.#cancelHover();
     this.#cancelHoverClose();
     this.#unlisten();
+    this.#endHoverOpen();
     this.#activePopover = null;
     this.#activeAnchor = null;
     this.#open = false;
@@ -347,6 +355,29 @@ export class PopoverController implements ReactiveController {
       this.#hoverCloseTimer = null;
     }
   }
+
+  #endHoverOpen(): void {
+    document.removeEventListener("click", this.#onTriggerClick, true);
+    this.#pinned = false;
+  }
+
+  readonly #onTriggerClick = (
+    event: MouseEvent
+  ): void => {
+    const anchor = this.#options.anchor();
+    if (
+      !(anchor instanceof HTMLElement) ||
+      !event.composedPath().includes(anchor) ||
+      !this.#options.popover()?.matches(":popover-open")
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    this.#cancelHoverClose();
+    document.removeEventListener("click", this.#onTriggerClick, true);
+    this.#pinned = true;
+  };
 
   readonly #onReposition = (): void => {
     this.reposition();
