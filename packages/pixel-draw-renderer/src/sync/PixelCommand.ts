@@ -58,6 +58,13 @@ export type NormalMapCommand =
 
 type CommandOf<TPixels> =
   | {
+    action: "palette-color-changed";
+    metadata: {
+      index: number;
+      color: RGBA8;
+    };
+  }
+  | {
     action: "stroke";
     metadata: {
       color: RGBA8;

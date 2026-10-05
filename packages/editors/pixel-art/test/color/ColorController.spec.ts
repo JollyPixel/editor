@@ -10,26 +10,71 @@ import type {
   ReactiveController,
   ReactiveControllerHost
 } from "lit";
-import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  ColorPalette,
+  type PixelArtCanvas,
+  type RGBA8
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { ColorController } from "../../src/color/ColorController.ts";
 import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
 
-class TestHost implements ReactiveControllerHost {
-  readonly updateComplete = Promise.resolve(true);
-  updateCount = 0;
+type TestHost = HTMLElement & ReactiveControllerHost & {
+  updateCount: number;
+  connect(): void;
+  update(): void;
+};
 
-  addController(_controller: ReactiveController): void {
-    void _controller;
+function createHost(): TestHost {
+  const controllers: ReactiveController[] = [];
+
+  return Object.assign(document.createElement("div"), {
+    updateComplete: Promise.resolve(true),
+    updateCount: 0,
+    addController(controller: ReactiveController): void {
+      controllers.push(controller);
+    },
+    removeController(_controller: ReactiveController): void {
+      void _controller;
+    },
+    requestUpdate(): void {
+      this.updateCount++;
+    },
+    connect(): void {
+      for (const controller of controllers) {
+        controller.hostConnected?.();
+      }
+    },
+    update(): void {
+      for (const controller of controllers) {
+        controller.hostUpdate?.();
+      }
+    }
+  });
+}
+
+class FakeDocument {
+  palette = ColorPalette.create();
+  readonly #listeners = new Set<(index: number | null) => void>();
+
+  subscribe(
+    _event: "palette-changed",
+    listener: (index: number | null) => void
+  ): () => void {
+    this.#listeners.add(listener);
+
+    return () => this.#listeners.delete(listener);
   }
 
-  removeController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  requestUpdate(): void {
-    this.updateCount++;
+  changePaletteColor(
+    index: number,
+    color: RGBA8
+  ): void {
+    this.palette = this.palette.withColor(index, color);
+    for (const listener of this.#listeners) {
+      listener(index);
+    }
   }
 }
 
@@ -64,7 +109,11 @@ interface FakeBrush {
   swapColors(): void;
 }
 
-function makeCanvas(): { canvas: PixelArtCanvas; brush: FakeBrush; } {
+function makeCanvas(): {
+  canvas: PixelArtCanvas;
+  brush: FakeBrush;
+  doc: FakeDocument;
+} {
   const brush: FakeBrush = {
     primary: new FakeBrushColor("#111111"),
     secondary: new FakeBrushColor("#eeeeee", 0.5),
@@ -72,11 +121,18 @@ function makeCanvas(): { canvas: PixelArtCanvas; brush: FakeBrush; } {
       [brush.primary, brush.secondary] = [brush.secondary, brush.primary];
     }
   };
-  const canvas = { brush } as unknown as PixelArtCanvas;
+  const doc = new FakeDocument();
+  const element = document.createElement("canvas");
+  const canvas = {
+    brush,
+    document: doc,
+    canvas: () => element
+  } as unknown as PixelArtCanvas;
 
   return {
     canvas,
-    brush
+    brush,
+    doc
   };
 }
 
@@ -91,14 +147,15 @@ function color(
 }
 
 function setup() {
-  const host = new TestHost();
-  const { canvas, brush } = makeCanvas();
+  const host = createHost();
+  const { canvas, brush, doc } = makeCanvas();
   const controller = new ColorController(host, () => canvas);
 
   return {
     host,
     controller,
-    brush
+    brush,
+    doc
   };
 }
 
@@ -113,7 +170,7 @@ describe("UI.ColorController", () => {
   });
 
   test("reads default colors without a canvas", () => {
-    const controller = new ColorController(new TestHost(), () => null);
+    const controller = new ColorController(createHost(), () => null);
 
     assert.deepEqual(controller.foreground, color("#000000"));
     assert.deepEqual(controller.background, color("#ffffff"));
@@ -167,7 +224,7 @@ describe("UI.ColorController", () => {
   test("docking before a canvas exists applies once the canvas is adopted", () => {
     const { canvas, brush } = makeCanvas();
     let current: PixelArtCanvas | null = null;
-    const controller = new ColorController(new TestHost(), () => current);
+    const controller = new ColorController(createHost(), () => current);
 
     controller.docked = true;
     current = canvas;
@@ -258,5 +315,79 @@ describe("UI.ColorController", () => {
     controller.docked = false;
 
     assert.equal(host.updateCount, 0);
+  });
+});
+
+describe("UI.ColorController palette", () => {
+  test("selecting a slot writes its color into both brush slots", () => {
+    const { controller, brush } = setup();
+    controller.docked = true;
+
+    controller.selectPaletteColor(3);
+
+    assert.deepEqual(controller.foreground, color("#e63946"));
+    assert.equal(brush.secondary.hex, "#e63946");
+  });
+
+  test("a committed change writes the selected slot, a deselected one does not", () => {
+    const { controller, doc } = setup();
+    controller.docked = true;
+    controller.selectPaletteColor(3);
+
+    controller.changeActive(color("#112233", 128 / 255));
+    assert.deepEqual(doc.palette.colorAt(3), { r: 17, g: 34, b: 51, a: 128 });
+
+    controller.deselectPaletteColor();
+    controller.changeActive(color("#445566"));
+    assert.deepEqual(doc.palette.colorAt(3), { r: 17, g: 34, b: 51, a: 128 });
+    assert.deepEqual(controller.foreground, color("#445566"));
+  });
+
+  test("cancelling a preview restores the slot color saved meanwhile", () => {
+    const { host, controller, brush, doc } = setup();
+    host.connect();
+    controller.docked = true;
+    controller.selectPaletteColor(3);
+
+    controller.previewActive(color("#abcdef"));
+    doc.changePaletteColor(3, { r: 0, g: 0, b: 255, a: 255 });
+    assert.equal(brush.primary.hex, "#abcdef");
+
+    controller.cancelDraft();
+    assert.deepEqual(controller.foreground, color("#0000ff"));
+    assert.equal(brush.secondary.hex, "#0000ff");
+  });
+
+  test("a peer change to the selected slot reaches the docked brush", () => {
+    const { host, controller, doc } = setup();
+    host.connect();
+    controller.docked = true;
+    controller.selectPaletteColor(3);
+
+    doc.changePaletteColor(4, { r: 0, g: 255, b: 0, a: 255 });
+    assert.deepEqual(controller.foreground, color("#e63946"));
+
+    doc.changePaletteColor(3, { r: 0, g: 0, b: 255, a: 255 });
+    assert.deepEqual(controller.foreground, color("#0000ff"));
+  });
+
+  test("each document keeps its own selected slot", () => {
+    const host = createHost();
+    const first = makeCanvas();
+    const second = makeCanvas();
+    let current = first.canvas;
+    const controller = new ColorController(host, () => current);
+    host.connect();
+    controller.docked = true;
+    controller.selectPaletteColor(3);
+
+    current = second.canvas;
+    host.update();
+    controller.changeActive(color("#445566"));
+    assert.deepEqual(second.doc.palette.toJSON(), ColorPalette.create().toJSON());
+
+    current = first.canvas;
+    host.update();
+    assert.deepEqual(controller.foreground, color("#e63946"));
   });
 });

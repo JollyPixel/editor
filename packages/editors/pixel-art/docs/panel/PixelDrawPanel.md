@@ -58,6 +58,25 @@ control tab actions with `textures-addable`, `textures-editable` and
 `textures-closable`. `texture-import-policy` is `replace` (default), `add` or
 `ask`.
 
+## Color palette
+
+The color dock shows ten saved colors in five rows and two columns, centered
+with the picker, immediately to its left. Click a slot to use its color for
+both mouse buttons. Double click or press F2 to edit it. Enter or Space selects
+a focused slot. Selection stays local to each texture view. Clicking outside
+the canvas, the color controls and the Pick color toggle clears the selection
+and keeps the brush color.
+
+While a slot is selected in the dock, Pick color replaces that slot with the
+sampled color. Docked picker changes also update it. Picker input previews
+locally; each completed adjustment commits one undoable, synchronized edit.
+Dismissal discards unfinished palette drafts and restores the saved color.
+Peer edits refresh the selected brush unless a local draft is active.
+
+Palette data belongs to the Pixel Document and survives saving, reload and
+peer snapshots. Existing texture pixels keep their colors when a slot changes.
+See the renderer's [ColorPalette API](../../../../pixel-draw-renderer/docs/ColorPalette.md).
+
 ## API
 
 ```ts
@@ -104,6 +123,6 @@ or its left neighbor when it was last.
 ## Exported subcomponents
 
 The package root exports `ModeRail`, `ColorPickerRail`, `ColorDock`,
-`ColorSwatch` and `NormalMapDock` for custom layouts. They receive state through
+`ColorSwatch`, `ColorPaletteGrid`, `ColorPickerPopover` and `NormalMapDock` for custom layouts. They receive state through
 properties and report user changes through events. See their source files under
 [`src/`](../../src/) for property and event contracts.

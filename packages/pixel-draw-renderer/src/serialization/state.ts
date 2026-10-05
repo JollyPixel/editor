@@ -26,6 +26,7 @@ export function pixelArtSnapshot(
     uvRegions: [
       ...state.uv
     ].map((region) => region.toJSON()),
+    palette: state.palette.toJSON(),
     ...(normalMap && { normalMap: normalMap.toJSON() })
   };
 }
@@ -61,6 +62,7 @@ export function deserializePixelDocument(
     size: document.size,
     pixels,
     uvRegions: document.uvRegions,
-    normalMap: document.normalMap
+    normalMap: document.normalMap,
+    palette: document.palette
   });
 }

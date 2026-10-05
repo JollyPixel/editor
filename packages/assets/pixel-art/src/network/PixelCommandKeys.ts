@@ -48,6 +48,12 @@ export function pixelKey(
   return `${position.x},${position.y}`;
 }
 
+export function paletteKey(
+  index: number
+): string {
+  return `palette:${index}`;
+}
+
 export function paintedPositions(
   command: PixelWireCommand
 ): Vec2[] | null {
@@ -105,6 +111,8 @@ export function pixelCommandKeys(
     case "uv-region-rotated":
     case "uv-region-state-changed":
       return uvWriteKeys(command);
+    case "palette-color-changed":
+      return [paletteKey(command.metadata.index)];
     case "normal-map-defaults-patched":
     case "normal-map-zone-set":
     case "normal-map-zone-deleted":

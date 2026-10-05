@@ -242,6 +242,7 @@ export class ModeRail extends LitElement {
           <button
             class=${classMap({ "rail-btn": true, active: pressed === true })}
             part="rail-flyout-button"
+            data-option=${option.name}
             title=${label}
             aria-label=${label}
             aria-pressed=${pressed ?? nothing}

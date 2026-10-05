@@ -7,19 +7,16 @@ import {
 } from "lit";
 import {
   customElement,
-  property
+  property,
+  state
 } from "lit/decorators.js";
 import {
-  ensureFontFace,
-  FieldBinding,
-  PopoverController
+  ensureFontFace
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  colorWithOpacity,
-  pickerSource
-} from "./pickerChange.ts";
+import { colorWithOpacity } from "./pickerChange.ts";
+import type { ColorPickerRequest } from "./ColorPickerPopover.ts";
 import { colorSwatchStyles } from "./ColorSwatch.styles.ts";
 
 export interface ColorChangeDetail {
@@ -42,22 +39,10 @@ export class ColorSwatch extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
 
-  #swatchElement: HTMLButtonElement | null = null;
-  #popoverElement: HTMLElement | null = null;
-  #picker = new FieldBinding(this, pickerSource(this));
+  @state()
+  declare _expanded: boolean;
 
-  #popup = new PopoverController(this, {
-    anchor: () => this.#swatchElement,
-    popover: () => this.#popoverElement,
-    side: "right",
-    onOpen: () => {
-      const event = new CustomEvent("opened", {
-        bubbles: true,
-        composed: true
-      });
-      this.dispatchEvent(event);
-    }
-  });
+  #swatchElement: HTMLButtonElement | null = null;
 
   constructor() {
     super();
@@ -65,6 +50,7 @@ export class ColorSwatch extends LitElement {
     this.color = "#000000";
     this.opacity = 1;
     this.disabled = false;
+    this._expanded = false;
   }
 
   override firstUpdated(): void {
@@ -73,13 +59,7 @@ export class ColorSwatch extends LitElement {
       throw new Error("ColorSwatch: button element not found");
     }
 
-    const popover = this.renderRoot.querySelector<HTMLElement>(".popover");
-    if (popover === null) {
-      throw new Error("ColorSwatch: popover element not found");
-    }
-
     this.#swatchElement = swatch;
-    this.#popoverElement = popover;
   }
 
   override updated(
@@ -99,7 +79,53 @@ export class ColorSwatch extends LitElement {
   }
 
   close(): void {
-    this.#popup.hide();
+    this._expanded = false;
+    if (this.#swatchElement === null) {
+      return;
+    }
+    this.dispatchEvent(new CustomEvent("color-picker-close", {
+      bubbles: true,
+      composed: true,
+      detail: this.#swatchElement
+    }));
+  }
+
+  #open(): void {
+    if (this._expanded) {
+      this.close();
+
+      return;
+    }
+    const anchor = this.#swatchElement;
+    if (anchor === null) {
+      return;
+    }
+    this._expanded = true;
+    const request: ColorPickerRequest = {
+      anchor,
+      color: () => {
+        return { hex: this.color, opacity: this.opacity };
+      },
+      label: "Edit brush color",
+      side: "right",
+      change: (color) => {
+        this.color = color.hex;
+        this.opacity = color.opacity;
+        this.dispatchEvent(new CustomEvent("color-change", {
+          bubbles: true,
+          composed: true,
+          detail: color
+        }));
+      },
+      close: () => {
+        this._expanded = false;
+      }
+    };
+    this.dispatchEvent(new CustomEvent("color-picker-open", {
+      bubbles: true,
+      composed: true,
+      detail: request
+    }));
   }
 
   override render() {
@@ -108,27 +134,14 @@ export class ColorSwatch extends LitElement {
     return html`
       <button
         part="swatch"
-        popovertarget="picker"
+        type="button"
+        @click=${this.#open}
         title="Color"
         aria-haspopup="dialog"
-        aria-expanded=${this.#popup.open}
+        aria-expanded=${String(this._expanded)}
         ?disabled=${this.disabled}
         style="background:${formatRgba(color)}"
       ></button>
-      <div
-        class="popover"
-        id="picker"
-        popover
-        @beforetoggle=${this.#popup.onBeforeToggle}
-        @toggle=${this.#popup.onToggle}
-      >
-        <jolly-color-picker
-          alpha
-          .value=${this.#picker.value}
-          @jolly-input=${this.#picker.input}
-          @jolly-change=${this.#picker.commit}
-        ></jolly-color-picker>
-      </div>
     `;
   }
 }

@@ -3,7 +3,11 @@ import { css } from "lit";
 
 export const colorDockStyles = css`
   :host {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-width: 0;
     box-sizing: border-box;
     padding: 14px 16px;
     border-top: 1px solid var(--color-divider);
@@ -15,5 +19,7 @@ export const colorDockStyles = css`
 
   jolly-color-picker {
     height: 100%;
+    flex: 0 1 440px;
+    min-width: 0;
   }
 `;

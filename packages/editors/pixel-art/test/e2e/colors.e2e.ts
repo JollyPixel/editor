@@ -121,7 +121,7 @@ test("docking shrinks the stage, folds the swatches and shares one color", async
 test("the docked picker color paints with the right mouse button", async({ panel }) => {
   await setMode(panel, "paint");
   await toggleDock(panel);
-  const hex = panel.locator("color-dock jolly-color-picker input.hex");
+  const hex = panel.locator("color-dock jolly-color-picker input.hex").visible();
   await hex.fill("#ff00ff");
   await hex.press("Enter");
 

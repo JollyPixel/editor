@@ -1,6 +1,6 @@
 # Pixel-art architecture
 
-`PixelArtState` holds the authoritative `PixelDocumentState`: pixels, UV regions and normal map settings. The server opens one room per asset; the browser keeps a `PixelDocument` in sync with it. The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
+`PixelArtState` holds the authoritative `PixelDocumentState`: pixels, UV regions, color palette and normal map settings. The server opens one room per asset; the browser keeps a `PixelDocument` in sync with it. The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
 
 ```mermaid
 flowchart TB

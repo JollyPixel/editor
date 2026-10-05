@@ -14,6 +14,7 @@ import {
   narrowPixelCommand,
   normalMapKeys,
   paintedPositions,
+  paletteKey,
   pixelKey,
   uvRegionKeys,
   uvWriteKeys,
@@ -55,6 +56,7 @@ export class PixelCommandArbiter {
   #pixelTracker: network.ConflictTracker;
   #regionTracker: network.ConflictTracker;
   #normalMapTracker: network.ConflictTracker;
+  #paletteTracker: network.ConflictTracker;
 
   constructor(
     options: PixelCommandArbiterOptions = {}
@@ -64,6 +66,7 @@ export class PixelCommandArbiter {
     this.#pixelTracker = new network.ConflictTracker(resolver);
     this.#regionTracker = new network.ConflictTracker(resolver);
     this.#normalMapTracker = new network.ConflictTracker(resolver);
+    this.#paletteTracker = new network.ConflictTracker(resolver);
   }
 
   admit(
@@ -105,6 +108,11 @@ export class PixelCommandArbiter {
           command,
           state.buffer.positionsOf(command.metadata.fromColor).map(pixelKey)
         );
+      case "palette-color-changed":
+        return this.#paletteTracker.admit(
+          command,
+          [paletteKey(command.metadata.index)]
+        );
       case "normal-map-toggled":
         return isValidNormalMap(command) ?
           {
@@ -145,6 +153,13 @@ export class PixelCommandArbiter {
         this.#regionTracker.record(
           command,
           uvRegionKeys(command.metadata.id),
+          version
+        );
+        break;
+      case "palette-color-changed":
+        this.#paletteTracker.record(
+          command,
+          [paletteKey(command.metadata.index)],
           version
         );
         break;

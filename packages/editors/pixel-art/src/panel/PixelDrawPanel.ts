@@ -75,6 +75,7 @@ import {
 } from "../textures/textures.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
+import "../color/ColorPickerPopover.ts";
 import "../normal/NormalMapDock.ts";
 
 // CONSTANTS
@@ -755,6 +756,7 @@ export class PixelDrawPanel extends LitElement {
           ${this.#colors.renderDock()}${normalMaps?.renderDock() ?? nothing}
         </div>
       </div>
+      ${this.#colors.renderPopover()}
     `;
   }
 }

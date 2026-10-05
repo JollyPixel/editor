@@ -232,3 +232,7 @@ export type {
 export type {
   PeerUVSelectionState
 } from "./rendering/presence/PeerUVSelections.ts";
+export {
+  ColorPalette,
+  COLOR_PALETTE_SIZE
+} from "./palette/ColorPalette.ts";

@@ -6,6 +6,7 @@ import {
   withCommandHeader,
   type JSONSchema
 } from "@jolly-pixel/network";
+import { COLOR_PALETTE_SIZE } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { PixelCommandAction } from "./pixelCommandActions.ts";
@@ -60,6 +61,18 @@ const kRgba8Schema = defineSchema({
     "b",
     "a"
   ]
+});
+
+const kPaletteColorSchema = defineSchema({
+  type: "object",
+  properties: {
+    r: { type: "integer", minimum: 0, maximum: 255 },
+    g: { type: "integer", minimum: 0, maximum: 255 },
+    b: { type: "integer", minimum: 0, maximum: 255 },
+    a: { type: "integer", minimum: 0, maximum: 255 }
+  },
+  required: ["r", "g", "b", "a"],
+  additionalProperties: false
 });
 
 const kFlatIntegers = defineSchema({
@@ -136,6 +149,14 @@ const kPixelCommandMetadata: Record<
   "normal-map-toggled": [{
     config: { oneOf: [{ type: "null" }, normalMapDataSchema] }
   }],
+  "palette-color-changed": [{
+    index: {
+      type: "integer",
+      minimum: 0,
+      maximum: COLOR_PALETTE_SIZE - 1
+    },
+    color: kPaletteColorSchema
+  }],
   "normal-map-defaults-patched": [{
     patch: normalMapSettingsPatchSchema
   }],
@@ -201,6 +222,12 @@ export const pixelSnapshotSchema: JSONSchema = {
     uvRegions: {
       type: "array",
       items: uvRegionSchema
+    },
+    palette: {
+      type: "array",
+      minItems: COLOR_PALETTE_SIZE,
+      maxItems: COLOR_PALETTE_SIZE,
+      items: kPaletteColorSchema
     },
     normalMap: normalMapDataSchema
   },

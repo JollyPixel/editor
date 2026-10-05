@@ -19,6 +19,7 @@ import { PixelDocumentState } from "#src/sync/PixelDocumentState.ts";
 import type { Vec2 } from "#src/types.ts";
 import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
 import { encodePixelBytes } from "#src/serialization/pixelBytes.ts";
+import { ColorPalette } from "#src/palette/ColorPalette.ts";
 
 function stateOf(
   size: Vec2,
@@ -46,6 +47,44 @@ function bytes(
 }
 
 describe("PixelArtDocument", () => {
+  test("round-trips the palette including alpha and resets missing palettes", () => {
+    const source = stateOf({ x: 1, y: 1 });
+    const color = { r: 12, g: 34, b: 56, a: 128 };
+    source.apply({
+      action: "palette-color-changed",
+      metadata: { index: 9, color }
+    });
+    const target = stateOf({ x: 1, y: 1 });
+    const document = decodePixelArtDocument(
+      encodePixelArtDocument(serializePixelDocument(source))
+    );
+    deserializePixelDocument(document, target);
+    assert.deepEqual(target.palette.colorAt(9), color);
+    delete document.palette;
+    deserializePixelDocument(document, target);
+    assert.deepEqual(target.palette.toJSON(), ColorPalette.create().toJSON());
+  });
+
+  test("rejects malformed saved palettes", () => {
+    for (const palette of [
+      null,
+      [],
+      ColorPalette.create().toJSON().slice(1),
+      [...ColorPalette.create().toJSON(), { r: 0, g: 0, b: 0, a: 255 }],
+      ColorPalette.create().toJSON().map((color) => {
+        return { ...color, a: 256 };
+      }),
+      ColorPalette.create().toJSON().map((color) => {
+        return { ...color, r: 0.5 };
+      })
+    ]) {
+      assert.throws(() => decodePixelArtDocument(bytes({
+        ...createPixelArtDocument({ x: 1, y: 1 }),
+        palette
+      })), InvalidPixelArtDocumentError);
+    }
+  });
+
   test("round-trips pixels and size", () => {
     const source = stateOf({ x: 3, y: 2 });
     source.buffer.drawPixels(
