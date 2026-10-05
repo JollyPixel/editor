@@ -19,10 +19,12 @@ test("the rail, toolbars and dialogs keep working after a DOM move", async({ pan
   await setMode(panel, "uv");
   await expect.poll(() => activeMode(panel)).toBe("uv");
 
-  const showAll = panel.getByRole("button", { name: "Show all" });
-  const shown = await showAll.getAttribute("aria-pressed");
-  await showAll.click();
-  await expect(showAll).not.toHaveAttribute("aria-pressed", shown!);
+  await panel.getByRole("button", { name: "Region visibility" }).click();
+  const showAll = panel.getByRole("checkbox", { name: "Show all regions" });
+  const shown = await showAll.isChecked();
+  await showAll.setChecked(!shown);
+  await expect(showAll).toBeChecked({ checked: !shown });
+  await showAll.press("Escape");
 
   await panel.getByRole("button", { name: "Clear texture" }).click();
   await expect(

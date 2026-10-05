@@ -25,6 +25,7 @@ import {
 } from "../../src/textures/textureDocumentKind.ts";
 import { suggestTextureName } from "../../src/textures/textures.ts";
 import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
+import { EditorPreferences } from "./EditorPreferences.ts";
 import {
   TextureTabs,
   type TextureLease
@@ -32,6 +33,8 @@ import {
 import type { PreviewPane } from "./preview/PreviewPane.ts";
 
 // CONSTANTS
+const kStorage = new LocalStorageAdapter();
+const kColorDockedStorageKey = "pixel-art:color-docked";
 const kZoom = {
   min: 1,
   max: 32
@@ -55,6 +58,7 @@ export interface PixelArtEditorParts {
   tabs: TextureTabs;
   keybindings: () => void;
   consoleFeatures: RegistrationHandle;
+  preferences: EditorPreferences;
 }
 
 export class PixelArtEditor {
@@ -77,10 +81,15 @@ export class PixelArtEditor {
   ): Promise<PixelArtEditor> {
     const { features, loadPreview } = options;
     const { session, commands } = context;
+
     const panel = document.querySelector("pixel-draw-panel")!;
+    panel.colorDocked = kStorage.get(kColorDockedStorageKey) === "true";
     panel.allowUvCreateDelete = features.uvCreateDelete;
     panel.textureImportPolicy = features.importPolicy;
-    const previewType = loadPreview === null ? null : await loadPreview();
+
+    const previewType = loadPreview === null
+      ? null
+      : await loadPreview();
     previewType?.layout(panel);
     const scope = new PanelScope(
       panel,
@@ -96,12 +105,16 @@ export class PixelArtEditor {
 
     const target = session.targetLease(TEXTURE_DOCUMENT_KIND);
     const { record } = target;
+    const preferences = new EditorPreferences(kStorage);
     const canvas = await panel.initialize({
       id: record.id,
       name: suggestTextureName(record.source),
       tooltip: record.source,
       document: target.document,
-      defaultMode: "paint",
+      defaultMode: preferences.mode,
+      onModeChange: (mode) => {
+        preferences.mode = mode;
+      },
       zoom: kZoom,
       brush: {
         size: 1
@@ -132,9 +145,13 @@ export class PixelArtEditor {
       session,
       target,
       tabs,
-      keybindings: keyBindingSettings.subscribe("change", (keyBindings) => {
-        panel.keyBindings = keyBindings;
-      }),
+      preferences,
+      keybindings: keyBindingSettings.subscribe(
+        "change",
+        (keyBindings) => {
+          panel.keyBindings = keyBindings;
+        }
+      ),
       consoleFeatures: registerConsoleFeatures(
         commands,
         [keybindConsole],
@@ -146,6 +163,7 @@ export class PixelArtEditor {
   readonly #scope: PanelScope;
   readonly #keybindings: () => void;
   readonly #consoleFeatures: RegistrationHandle;
+  readonly #preferences: EditorPreferences;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime | null;
@@ -164,11 +182,24 @@ export class PixelArtEditor {
     this.#scope = parts.scope;
     this.#keybindings = parts.keybindings;
     this.#consoleFeatures = parts.consoleFeatures;
+    this.#preferences = parts.preferences;
+    this.#activatePreferences();
+    this.panel.addEventListener("texture-change", this.#activatePreferences);
+    this.panel.addEventListener(
+      "color-docked-change",
+      this.#saveColorDocked
+    );
     this.runtime = parts.preview?.editorRuntime.runtime ?? null;
     this.ready = parts.target.ready;
   }
 
   dispose(): void {
+    this.panel.removeEventListener("texture-change", this.#activatePreferences);
+    this.#preferences.dispose();
+    this.panel.removeEventListener(
+      "color-docked-change",
+      this.#saveColorDocked
+    );
     this.#consoleFeatures.unregister();
     this.#keybindings();
     this.preview?.dispose();
@@ -176,12 +207,27 @@ export class PixelArtEditor {
     this.tabs.dispose();
     this.session.dispose();
   }
+
+  readonly #saveColorDocked = (event: CustomEvent<boolean>): void => {
+    kStorage.set(
+      kColorDockedStorageKey,
+      String(event.detail)
+    );
+  };
+
+  readonly #activatePreferences = (): void => {
+    const canvas = this.panel.canvasManager;
+    if (canvas) {
+      this.#preferences.activate(canvas);
+    }
+  };
 }
 
 function selectStarterRegion(
   canvas: PixelArtCanvas
 ): void {
   const [existingRegion] = canvas.uv.regions;
+
   const region = existingRegion ?? canvas.uv.create({
     id: kStarterRegionId,
     name: "cube 0",

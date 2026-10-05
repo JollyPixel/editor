@@ -78,7 +78,10 @@ function sixFaces<TValue>(
 
 test.beforeEach(async({ panel }) => {
   await setMode(panel, "uv");
-  await panel.getByRole("button", { name: "Show all" }).click();
+  await panel.getByRole("button", { name: "Region visibility" }).click();
+  const showAll = panel.getByRole("checkbox", { name: "Show all regions" });
+  await showAll.check();
+  await showAll.press("Escape");
   await panel.getByRole("button", { name: "Create cube", exact: true }).click();
 });
 
@@ -94,8 +97,11 @@ test("the state menu follows the selection and lists the other two states", asyn
     faces: { "*": kOrigin }
   });
 
-  await trigger.click();
+  await trigger.hover();
   await expect(panel.getByRole("menuitem")).toHaveText(["Unfolded", "Free"]);
+  await panel.page().mouse.move(0, 0);
+  await expect(panel.getByRole("menuitem")).toHaveCount(0);
+  await trigger.hover();
   await panel.getByRole("menuitem", { name: "Free" }).click();
   await expect(trigger).toHaveAccessibleName("Region state: Free");
   await trigger.click();
@@ -249,19 +255,35 @@ test("Create ramp adds a region with triangular sides and a true-length slope", 
 });
 
 test("Show all and region labels toggle independently", async({ panel }) => {
-  const labels = panel.getByRole("button", { name: "Show region labels" });
-  const showAll = panel.getByRole("button", { name: "Show all" });
-  await expect(showAll).toHaveAttribute("aria-pressed", "true");
-  await expect(labels).toHaveAttribute("aria-pressed", "false");
+  const trigger = panel.getByRole("button", { name: "Region visibility" });
+  await trigger.focus();
+  await trigger.press("Enter");
+  const menu = panel.getByRole("dialog", { name: "Region visibility" });
+  const labels = menu.getByRole("checkbox", { name: "Show region labels" });
+  const showAll = menu.getByRole("checkbox", { name: "Show all regions" });
+  await expect(showAll).toBeChecked();
+  await expect(labels).not.toBeChecked();
 
-  await labels.click();
-  await expect(labels).toHaveAttribute("aria-pressed", "true");
-  await expect(showAll).toHaveAttribute("aria-pressed", "true");
+  await labels.check();
+  await expect(labels).toBeChecked();
+  await expect(showAll).toBeChecked();
 
-  await showAll.click();
-  await expect(showAll).toHaveAttribute("aria-pressed", "false");
-  await expect(labels).toBeEnabled();
-  await expect(labels).toHaveAttribute("aria-pressed", "true");
+  await showAll.uncheck();
+  await expect(showAll).not.toBeChecked();
+  await expect(labels).toBeChecked();
+  await expect(menu).toBeVisible();
+  await showAll.press("Escape");
+  await expect(menu).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await trigger.press("Enter");
+  await expect(labels).toBeChecked();
+  await expect(showAll).not.toBeChecked();
+  expect(await panel.evaluate((element: PixelDrawPanel) => {
+    return {
+      all: element.canvasManager!.uv.showAll,
+      labels: element.canvasManager!.uv.showRegionLabels
+    };
+  })).toEqual({ all: false, labels: true });
 });
 
 test.describe("3D preview", () => {

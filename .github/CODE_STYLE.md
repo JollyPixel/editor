@@ -33,13 +33,30 @@ export on its own line when the list has more than two members.
   method after what it does (`copySizeTo`, `toBox3`, `resize`, `emphasize`,
   `hover`). Reserve the prefixes for accessors mandated by an external API.
 
+## Comments
+
+Write no comments in `src/`, `test/`, `bench/`, or e2e suites: no JSDoc on
+classes, methods, or types, and no notes on invariants or expectations. Names,
+signatures, and `it()` titles carry the meaning. Prose goes to `docs/*.md`
+(public API), `ARCHITECTURE.md` (internals), or the package README (bench and
+test-harness rationale).
+
+- Allowed: `// Import <Kind> Dependencies` and `// CONSTANTS` headers, bare
+  `eslint-disable*` and `@ts-expect-error` directives, license headers of
+  ported code, generated files, and JSDoc on properties of user-facing
+  interfaces.
+- Never restore a removed comment, and patch files instead of rewriting them
+  whole (that brings trimmed comments back). Leave existing comments outside
+  your change unless asked. Run lint after removing comments to catch empty
+  blocks.
+- Format: own preceding line, compact and factual, multi-line on three lines,
+  no em dash (in docs too), and no unescaped backtick in Lit `css`/`html`
+  templates (quote identifiers instead).
+
 ## Style
 
-- Multi-line comments should not be inlined (prefer them on three lines)
 - Use double quotes, semicolons, strict equality (`===`/`!==`), `const` by
   default, and `let` only when reassigned; never use `var`.
-- Put comments on their own preceding line, keep them compact and factual, and
-  never use an em dash in comments or documentation.
 - Leave a blank line before `return`; keep code under 80 characters where
   practical.
 - Put each function, method, and constructor parameter on its own line when
@@ -54,8 +71,6 @@ export on its own line when the list has more than two members.
 - Avoid unnecessary type casts (use `/typescript-magician` when needed) and
   inline object definitions; expand objects across lines.
 - Expand non-trivial object literals across lines, with one property per line.
-- In Lit `css`/`html` template comments, never use an unescaped backtick;
-  mention identifiers as plain text or in quotes instead.
 - Use the narrowest useful collection type: prefer `Iterable<T>` when a caller
   only needs traversal, and `Array<T>` when it needs length, indexing, or
   mutation. Return `IterableIterator<T>` for lazy iteration.

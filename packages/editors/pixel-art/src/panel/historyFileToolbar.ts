@@ -8,10 +8,7 @@ import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
-import {
-  RAIL_DIVIDER,
-  renderRailButton
-} from "../shared/railButton.ts";
+import { renderRailButton } from "../shared/railButton.ts";
 import { showClearTextureDialog } from "../textures/clearTextureDialog.ts";
 import { isInputElement } from "../shared/dom.ts";
 import { PngFile } from "../shared/PngFile.ts";
@@ -20,7 +17,7 @@ import type { TextureImporter } from "../textures/import/TextureImporter.ts";
 export interface HistoryFileToolbarOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
-  exportExtra: TemplateResult | typeof nothing;
+  exportMenu: (exportAlbedo: () => void) => TemplateResult | typeof nothing;
   trailing: readonly (TemplateResult | typeof nothing)[];
 }
 
@@ -70,8 +67,10 @@ function openFilePicker(
 ): void {
   const button = event.currentTarget;
   const input = button instanceof Element ?
-    button.parentElement?.querySelector(".file-input") ?? null :
+    button.closest("[part=history-file-toolbar]")
+      ?.querySelector(".file-input") ?? null :
     null;
+
   if (isInputElement(input)) {
     input.value = "";
     input.click();
@@ -81,10 +80,17 @@ function openFilePicker(
 export function renderHistoryFileToolbar(
   options: HistoryFileToolbarOptions
 ) {
-  const { importer, exportExtra, trailing } = options;
+  const { importer, exportMenu, trailing } = options;
+
   const canvas = options.canvas();
   const readOnly = canvas?.pixelsReadOnly ?? false;
   const importing = importer.busy.state?.origin === "import";
+  function exportAlbedo(): void {
+    if (canvas) {
+      void exportPng(canvas);
+    }
+  }
+  const menu = exportMenu(exportAlbedo);
 
   function onFileSelected(
     event: Event
@@ -100,6 +106,7 @@ export function renderHistoryFileToolbar(
 
   return html`
     <div class="overlay-toolbar bottom" part="history-file-toolbar">
+      <div class="toolbar-group">
       ${renderRailButton({
         part: "undo-button",
         label: "Undo",
@@ -114,7 +121,8 @@ export function renderHistoryFileToolbar(
         disabled: !canvas?.canRedo(),
         onClick: () => canvas?.redo()
       })}
-      ${RAIL_DIVIDER}
+      </div>
+      <div class="toolbar-group">
       ${renderRailButton({
         part: "import-button",
         label: "Import texture",
@@ -123,19 +131,13 @@ export function renderHistoryFileToolbar(
         disabled: importing || readOnly,
         onClick: openFilePicker
       })}
-      ${renderRailButton({
+      ${menu === nothing ? renderRailButton({
         part: "export-button",
         label: "Export texture",
         tooltip: "Export",
         icon: "export",
-        onClick: () => {
-          if (canvas) {
-            void exportPng(canvas);
-          }
-        }
-      })}
-      ${exportExtra}
-      ${RAIL_DIVIDER}
+        onClick: exportAlbedo
+      }) : menu}
       ${renderRailButton({
         part: "clear-texture-button",
         label: "Clear texture",
@@ -143,7 +145,10 @@ export function renderHistoryFileToolbar(
         disabled: readOnly,
         onClick: (event) => void clearTexture(event, options.canvas)
       })}
-      ${trailing.map((group) => (group === nothing ? nothing : html`${RAIL_DIVIDER}${group}`))}
+      </div>
+      ${trailing.map((group) => (group === nothing ? nothing : html`
+        <div class="toolbar-group">${group}</div>
+      `))}
       <input
         class="file-input" part="file-input"
         type="file" accept="image/png,image/*"

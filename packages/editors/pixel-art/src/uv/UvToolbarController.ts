@@ -67,6 +67,7 @@ export class UvToolbarController {
   readonly #host: UvToolbarHost;
   readonly #canvas: () => PixelArtCanvas | null;
   readonly #statePopup: PopoverController;
+  readonly #visibilityPopup: PopoverController;
   #uvNextId = 0;
 
   constructor(
@@ -79,7 +80,29 @@ export class UvToolbarController {
       anchor: () => this.#stateElement("[part=\"uv-state-button\"]"),
       popover: () => this.#stateElement("[part=\"uv-state-menu\"]"),
       side: "below",
-      align: "start"
+      align: "start",
+      openOnHover: {
+        delay: 200
+      },
+      closeOnHoverLeave: {
+        delay: 200
+      }
+    });
+    this.#visibilityPopup = new PopoverController(host, {
+      anchor: () => this.#stateElement("[part=\"uv-visibility-button\"]"),
+      popover: () => this.#stateElement("[part=\"uv-visibility-menu\"]"),
+      side: () => {
+        const trigger = this.#stateElement("[part=\"uv-visibility-button\"]");
+
+        return trigger?.closest(".bottom") ? "above" : "below";
+      },
+      align: "start",
+      openOnHover: {
+        delay: 200
+      },
+      closeOnHoverLeave: {
+        delay: 200
+      }
     });
   }
 
@@ -153,10 +176,11 @@ export class UvToolbarController {
         aria-haspopup="menu"
         aria-expanded=${this.#statePopup.open}
         aria-label="Region state: ${kStateLabels[current]}"
+        @pointerenter=${this.#statePopup.onPointerEnter}
+        @pointerleave=${this.#statePopup.onPointerLeave}
       >
         ${renderIcon(kStateIcons[current])}
         ${renderIcon("chevronDown")}
-        <span class="tooltip">Region state: ${kStateLabels[current]}</span>
       </button>
       <div
         class="uv-state-menu"
@@ -164,6 +188,8 @@ export class UvToolbarController {
         id="uv-state-menu"
         role="menu"
         popover
+        @pointerenter=${this.#statePopup.onPointerEnter}
+        @pointerleave=${this.#statePopup.onPointerLeave}
         @beforetoggle=${this.#statePopup.onBeforeToggle}
         @toggle=${this.#statePopup.onToggle}
       >
@@ -254,29 +280,63 @@ export class UvToolbarController {
     const uv = this.#canvas()?.uv;
 
     return html`
-      ${renderRailButton({
-        part: "uv-show-region-labels-button",
-        label: "Show region labels",
-        icon: "label",
-        pressed: uv?.showRegionLabels ?? false,
-        onClick: () => {
-          if (uv) {
-            uv.showRegionLabels = !uv.showRegionLabels;
-          }
-        }
-      })}
-      ${renderRailButton({
-        part: "uv-show-all-button",
-        label: "Show all",
-        tooltip: "Show all regions",
-        icon: "eye",
-        pressed: uv?.showAll ?? false,
-        onClick: () => {
-          if (uv) {
-            uv.showAll = !uv.showAll;
-          }
-        }
-      })}
+      <button
+        class="rail-btn uv-state-trigger"
+        part="uv-visibility-button"
+        popovertarget="uv-visibility-menu"
+        aria-haspopup="dialog"
+        aria-expanded=${this.#visibilityPopup.open}
+        aria-label="Region visibility"
+        aria-description="${uv?.showAll ? "All regions" : "Selected region"};
+          labels ${uv?.showRegionLabels ? "on" : "off"}"
+        ?disabled=${!uv}
+        @pointerenter=${this.#visibilityPopup.onPointerEnter}
+        @pointerleave=${this.#visibilityPopup.onPointerLeave}
+      >
+        ${renderIcon("eye")}
+        ${renderIcon("chevronDown")}
+      </button>
+      <div
+        class="uv-state-menu uv-visibility-menu"
+        part="uv-visibility-menu"
+        id="uv-visibility-menu"
+        role="dialog"
+        aria-label="Region visibility"
+        popover
+        @pointerenter=${this.#visibilityPopup.onPointerEnter}
+        @pointerleave=${this.#visibilityPopup.onPointerLeave}
+        @beforetoggle=${this.#visibilityPopup.onBeforeToggle}
+        @toggle=${this.#visibilityPopup.onToggle}
+      >
+        <label class="uv-state-option">
+          <input
+            type="checkbox"
+            part="uv-show-all-checkbox"
+            .checked=${uv?.showAll ?? false}
+            @change=${() => {
+              if (uv) {
+                uv.showAll = !uv.showAll;
+              }
+            }}
+          >
+          ${renderIcon("eye")}
+          <span>Show all regions</span>
+        </label>
+        <label class="uv-state-option">
+          <input
+            type="checkbox"
+            part="uv-show-region-labels-checkbox"
+            .checked=${uv?.showRegionLabels ?? false}
+            @change=${() => {
+              if (uv) {
+                uv.showRegionLabels = !uv.showRegionLabels;
+              }
+            }}
+          >
+          ${renderIcon("label")}
+          <span>Show region labels</span>
+        </label>
+      </div>
     `;
   }
 

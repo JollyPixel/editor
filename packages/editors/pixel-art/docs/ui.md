@@ -50,7 +50,44 @@ payloads.
 Region overlays still follow `UVMap.isVisible()` in every mode. Use `view` when
 the host owns UV selection and `none` when the texture has no UV layout.
 
+Region visibility uses one eye-and-chevron button in the UV toolbar (`edit`)
+or bottom toolbar (`view`). Click it or hover for 200ms to open independent
+Show all regions and Show region labels checkboxes. The popover stays open
+while changing either option. Leaving both the button and popover for 200ms
+closes it unless keyboard focus is inside. Mouse clicks on checkboxes still
+allow hover closing; Escape or clicking outside also closes it.
+It opens below the UV toolbar and above the bottom toolbar, adjusting at
+viewport edges.
+The button's accessible description summarizes the settings. It has no tooltip
+because hovering opens the popover.
+
+Region State uses the same hover delays and supports click and keyboard
+opening. Region State, visibility and export popovers fade and scale from their
+anchor over 120ms when opening and 90ms when closing. Reduced motion disables
+the transitions.
+
+The page editor saves the active drawing mode and both visibility settings in
+local storage under `pixel-art:preferences`. They survive refresh and apply
+when switching textures. Missing or invalid values use Paint with both
+visibility settings off. The reusable panel leaves persistence to its host.
+
+CSS parts: `uv-visibility-button`, `uv-visibility-menu`, `uv-show-all-checkbox`
+and `uv-show-region-labels-checkbox`. The checkboxes replace the previous
+`uv-show-all-button` and `uv-show-region-labels-button` parts.
+
 ## Layout composition
+
+The bottom toolbar wraps control groups when the canvas area is too narrow
+for one row. The Albedo/Normal switch appears only when the active texture has
+normal maps enabled. Normal map settings remains available to enable them.
+Disabling normal maps while viewing Normal restores Albedo and painting tools.
+At canvas widths of 420px or less, the view buttons show icons with tooltips;
+their accessible names remain available.
+
+When the active texture has normal maps enabled, Export opens a menu with
+Albedo texture, Normal map OpenGL (Y+), and Normal map DirectX (Y-) choices.
+Albedo export downloads the painted pixels regardless of the displayed view.
+Without normal maps enabled, Export downloads the albedo texture directly.
 
 The root exports `ModeRail`, `ColorPickerRail`, `ColorDock`, `ColorSwatch` and
 `NormalMapDock` for custom layouts. They are controlled components: set their

@@ -78,9 +78,10 @@ export class NormalMapController {
   ) {
     this.#host = host;
     this.#options = options;
+    host.addController(this);
     this.#exportPopup = new PopoverController(host, {
-      anchor: () => this.#element("[part=\"export-normal-button\"]"),
-      popover: () => this.#element("[part=\"export-normal-menu\"]"),
+      anchor: () => this.#element("[part=\"export-button\"]"),
+      popover: () => this.#element("[part=\"export-menu\"]"),
       side: "above",
       align: "start"
     });
@@ -103,6 +104,14 @@ export class NormalMapController {
       this.#options.docks.show("normal-map");
     }
     this.#host.requestUpdate();
+  }
+
+  hostUpdate(): void {
+    const canvas = this.#canvas();
+    if (canvas?.document.normalMap === null &&
+      canvas.textureView === "normal") {
+      canvas.textureView = "albedo";
+    }
   }
 
   disable(): void {
@@ -169,9 +178,10 @@ export class NormalMapController {
 
   renderViewSwitch(): TemplateResult {
     const current = this.view;
-    const disabled = this.#canvas() === null;
+    const enabled = (this.#canvas()?.document.normalMap ?? null) !== null;
 
     return html`
+      ${enabled ? html`
       <div
         class="view-switch"
         part="texture-view-switch"
@@ -184,14 +194,15 @@ export class NormalMapController {
             part="texture-view-${view}"
             role="radio"
             title=${tooltip}
+            aria-label=${label}
             aria-checked=${view === current}
-            ?disabled=${disabled}
             @click=${() => {
               this.view = view;
             }}
           >${renderIcon(icon)}<span>${label}</span></button>
         `)}
       </div>
+      ` : nothing}
       ${renderRailButton({
         part: "normal-map-dock-button",
         label: "Normal map settings",
@@ -202,34 +213,46 @@ export class NormalMapController {
     `;
   }
 
-  renderExportButton(): TemplateResult {
-    const enabled = (this.#canvas()?.document.normalMap ?? null) !== null;
+  renderExportButton(
+    exportAlbedo: () => void
+  ): TemplateResult | typeof nothing {
+    if ((this.#canvas()?.document.normalMap ?? null) === null) {
+      return nothing;
+    }
 
     return html`
       <button
-        class="rail-btn"
-        part="export-normal-button"
-        popovertarget="export-normal-menu"
+        class="rail-btn uv-state-trigger"
+        part="export-button"
+        popovertarget="export-menu"
         aria-haspopup="menu"
         aria-expanded=${this.#exportPopup.open}
-        aria-label="Export normal map"
-        ?disabled=${!enabled}
+        aria-label="Export textures"
       >
-        <span class="icon-with-badge">
-          ${renderIcon("export")}
-          <span class="icon-badge">${renderIcon("normalMap")}</span>
-        </span>
-        <span class="tooltip">Export normal map</span>
+        ${renderIcon("export")}
+        ${renderIcon("chevronDown")}
+        <span class="tooltip">Export textures</span>
       </button>
       <div
         class="uv-state-menu"
-        part="export-normal-menu"
-        id="export-normal-menu"
+        part="export-menu"
+        id="export-menu"
         role="menu"
         popover
         @beforetoggle=${this.#exportPopup.onBeforeToggle}
         @toggle=${this.#exportPopup.onToggle}
       >
+        <button
+          class="uv-state-option"
+          part="export-albedo-button"
+          role="menuitem"
+          @click=${() => {
+            this.#exportPopup.hide();
+            exportAlbedo();
+          }}
+        >
+          <span>Albedo texture</span>
+        </button>
         ${kConventions.map(({ convention, label }) => html`
           <button
             class="uv-state-option"
@@ -237,7 +260,7 @@ export class NormalMapController {
             role="menuitem"
             @click=${() => void this.export(convention)}
           >
-            <span>${label}</span>
+            <span>Normal map — ${label}</span>
           </button>
         `)}
       </div>
@@ -246,21 +269,18 @@ export class NormalMapController {
 
   renderOverrideButton(): TemplateResult | typeof nothing {
     const doc = this.#canvas()?.document;
-    if (!doc) {
+    if (!doc || doc.normalMap === null) {
       return nothing;
     }
 
     const regionId = doc.uv.selectedRegionId;
-    const config = doc.normalMap;
 
     return renderRailButton({
       part: "uv-override-normal-button",
       label: "Override normal map",
-      tooltip: config === null ?
-        "Enable the normal map to override it per region" :
-        "Override normal map for this region",
+      tooltip: "Override normal map for this region",
       icon: "normalMap",
-      disabled: config === null || regionId === null,
+      disabled: regionId === null,
       onClick: () => this.overrideSelectedRegion()
     });
   }

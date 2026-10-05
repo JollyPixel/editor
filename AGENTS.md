@@ -20,6 +20,8 @@
 - Use `tstyche` for testing types.
 - Build e2e suites on `@jolly-pixel/e2e` (`packages/e2e/README.md`); keep only
   domain helpers in the suite.
+- After changing a workspace, rebuild it with `pnpm run build` before
+  validating consuming workspaces so they load the updated `dist/` output.
 - Run the relevant package tests, `pnpm run typecheck`, and `pnpm run lint`.
 
 ## Package routing
