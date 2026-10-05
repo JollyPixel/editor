@@ -64,6 +64,18 @@ function ground(
   writeVoxel(world, "Ground", { x: 1, y: 0, z: 0 }, makeVoxelEntry(2));
 }
 
+function mergedGround(
+  world: VoxelWorld
+): void {
+  ground(world);
+  world.setVoxel("Ground", {
+    position: { x: 0, y: 0, z: 0 },
+    blockId: 3,
+    flipY: true,
+    merge: true
+  });
+}
+
 function stack(
   world: VoxelWorld
 ): void {
@@ -310,6 +322,43 @@ const kCases: RoundTripCase[] = [
     act: (world) => world.templates.transform("steps", { rotation: 1 }),
     actions: ["template-defined"],
     check: (remote) => assert.deepEqual(remote.templates.get("steps")?.size, { x: 1, y: 1, z: 2 })
+  },
+  {
+    name: "merges a voxel into an occupied cell",
+    seed: ground,
+    act: (world) => world.setVoxel("Ground", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: 3,
+      flipY: true,
+      merge: true
+    }),
+    actions: ["voxel-set"],
+    check: (remote) => assert.equal(
+      remote.getVoxelAt({ x: 0, y: 0, z: 0 })?.partner?.blockId,
+      3
+    )
+  },
+  {
+    name: "patches merged cells with their second shape",
+    seed: ground,
+    act: (world) => world.transaction(() => world.setVoxelBulk("Ground", [
+      {
+        position: { x: 1, y: 0, z: 0 },
+        blockId: 3,
+        merge: true
+      }
+    ])),
+    actions: ["voxels-patched"],
+    check: (remote) => assert.equal(
+      remote.getVoxelAt({ x: 1, y: 0, z: 0 })?.partner?.blockId,
+      3
+    )
+  },
+  {
+    name: "turns both shapes of a merged cell with its layer",
+    seed: mergedGround,
+    act: (world) => world.transformLayer("Ground", { rotation: 1 }),
+    actions: ["layer-transformed"]
   },
   {
     name: "places a turned template as a voxel patch",

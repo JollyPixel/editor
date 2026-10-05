@@ -83,6 +83,18 @@ changes invalidate all chunks. `flush()` drains the queue at once; `init()` and
 a document load mark the whole world dirty and flush it unless mesh workers are
 running.
 
+A merged cell keeps its first shape in the chunk store with transform bit 7
+set and its second shape in the chunk's `partners` store, created on the
+first merge and shared with mesh workers like the main store. The bit stays
+inside storage and meshing: `getPackedAt()`, `packedEntries()` and every layer
+or world read return clean values, while `storedAt()` and `store.values`
+expose it to the mesher, the neighbourhood queries and the Rapier collider,
+which check it and resolve the pair. The chunk orders the pair by packed
+value, smaller first, so a merged cell has one stored form whichever shape
+was written first; the writer applies the same order before recording a
+change, so history and patches compare cells by value. `BlockVariantCache.mergedOf()` drops the faces one shape hides of
+the other and builds an occluder variant that stands for the whole cell.
+
 `ChunkMeshLayout` maps each dirty layer chunk to a mesh target: a `"cell"`
 target shared by the aligned opaque layers of one chunk cell, or a `"layer"`
 target for an off-grid layer chunk. When a chunk moves to another

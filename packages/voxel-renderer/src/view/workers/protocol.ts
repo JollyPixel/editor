@@ -6,13 +6,17 @@ import type { PulledMeshData } from "../meshing/types.ts";
 import type { FaceTemplate } from "../meshing/pulling/FaceTemplateTable.ts";
 import type { MeshDefinitions } from "./MeshDefinitions.ts";
 
-export interface MeshWorkerChunk {
-  cx: number;
-  cy: number;
-  cz: number;
+export interface MeshWorkerStore {
   keys: Int32Array;
   values: Uint32Array;
   count: number;
+}
+
+export interface MeshWorkerChunk extends MeshWorkerStore {
+  cx: number;
+  cy: number;
+  cz: number;
+  partners?: MeshWorkerStore;
 }
 
 export interface MeshWorkerLayer {

@@ -12,12 +12,14 @@ import {
 import {
   VOXEL_WORLD_VERSION,
   type VoxelChunkJSON,
+  type VoxelChunkPartnersJSON,
   type VoxelEntryJSON,
   type VoxelLayerJSON,
   type VoxelTemplateJSON,
   type VoxelWorldJSON
 } from "../types.ts";
 import type {
+  VoxelCellData,
   VoxelChunkData,
   VoxelLayerData,
   VoxelTemplateData,
@@ -72,7 +74,11 @@ function writeVoxelGrid(
   chunkSize: number
 ): VoxelGridJSON {
   const cellCount = chunkSize ** 3;
-  const palette = buildPalette(chunks.map((chunk) => chunk.voxels));
+  const palette = buildPalette(chunks.flatMap(
+    (chunk) => (chunk.partners === undefined ?
+      [chunk.voxels] :
+      [chunk.voxels, chunk.partners.voxels])
+  ));
 
   return {
     palette: palette.entries.map((packed) => {
@@ -93,15 +99,34 @@ function writeVoxelChunk(
   cellCount: number
 ): VoxelChunkJSON {
   const at: [number, number, number] = [chunk.cx, chunk.cy, chunk.cz];
+  const json: VoxelChunkJSON = {
+    at,
+    ...writeVoxelCells(chunk, palette, cellCount)
+  };
+  if (chunk.partners !== undefined && chunk.partners.cells.length > 0) {
+    json.partners = writeVoxelCells(chunk.partners, palette, cellCount);
+  }
+
+  return json;
+}
+
+function writeVoxelCells(
+  data: VoxelCellData,
+  palette: VoxelPalette,
+  cellCount: number
+): VoxelChunkPartnersJSON {
   const { gaps, runs } = encodeChunk(
     {
-      cells: chunk.cells,
-      values: toPaletteValues(chunk.voxels, palette)
+      cells: data.cells,
+      values: toPaletteValues(data.voxels, palette)
     },
     cellCount
   );
 
   return gaps === null ?
-    { at, runs } :
-    { at, cells: gaps, runs };
+    { runs } :
+    {
+      cells: gaps,
+      runs
+    };
 }

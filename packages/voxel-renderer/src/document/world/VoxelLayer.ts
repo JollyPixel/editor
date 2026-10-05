@@ -16,7 +16,6 @@ import {
 } from "./storage/chunkKey.ts";
 import {
   packVoxel,
-  unpackVoxel,
   voxelBlockId,
   VOXEL_ABSENT,
   type PackedVoxel
@@ -113,10 +112,6 @@ export class VoxelLayer {
     }
   };
 
-  /**
-   * Last chunk resolved by key. Terrain generation and brush strokes stay
-   * inside one chunk for long runs, so this absorbs most of the map lookups.
-   */
   #lastChunkKey = 0;
   #lastChunk: VoxelChunk | null = null;
 
@@ -233,10 +228,6 @@ export class VoxelLayer {
     cy: number,
     cz: number
   ): VoxelChunk | undefined {
-    /*
-     * No chunk can exist outside the packable range, so this answers rather
-     * than throwing — `markChunkDirty` walks past the edge of the world.
-     */
     if (!inChunkRange(cx, cy, cz)) {
       return undefined;
     }
@@ -258,20 +249,20 @@ export class VoxelLayer {
   getVoxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
-    const packed = this.getPackedVoxelAt(position);
+    const { x, y, z } = this.#toLocal(position);
 
-    return packed === VOXEL_ABSENT ? undefined : unpackVoxel(packed);
+    return this.#chunkAtLocal(x, y, z)?.getAt(
+      this.#worldToLocal(x),
+      this.#worldToLocal(y),
+      this.#worldToLocal(z)
+    );
   }
 
   getPackedVoxelAt(
     position: Vector3Like
   ): PackedVoxel {
     const { x, y, z } = this.#toLocal(position);
-    const chunk = this.getChunk(
-      this.#worldToChunk(x),
-      this.#worldToChunk(y),
-      this.#worldToChunk(z)
-    );
+    const chunk = this.#chunkAtLocal(x, y, z);
     if (!chunk) {
       return VOXEL_ABSENT;
     }
@@ -283,31 +274,66 @@ export class VoxelLayer {
     );
   }
 
+  getPartnerVoxelAt(
+    position: Vector3Like
+  ): PackedVoxel {
+    const { x, y, z } = this.#toLocal(position);
+    const chunk = this.#chunkAtLocal(x, y, z);
+    if (!chunk) {
+      return VOXEL_ABSENT;
+    }
+
+    return chunk.getPartnerAt(
+      this.#worldToLocal(x),
+      this.#worldToLocal(y),
+      this.#worldToLocal(z)
+    );
+  }
+
+  #chunkAtLocal(
+    x: number,
+    y: number,
+    z: number
+  ): VoxelChunk | undefined {
+    return this.getChunk(
+      this.#worldToChunk(x),
+      this.#worldToChunk(y),
+      this.#worldToChunk(z)
+    );
+  }
+
   setVoxelAt(
     position: Vector3Like,
     entry: VoxelEntry
   ): void {
+    const { partner } = entry;
+
     this.setPackedVoxelAt(
       position,
-      packVoxel(entry.blockId, entry.transform)
+      packVoxel(entry.blockId, entry.transform),
+      partner === undefined ?
+        VOXEL_ABSENT :
+        packVoxel(partner.blockId, partner.transform)
     );
   }
 
   setPackedVoxelAt(
     position: Vector3Like,
-    packed: PackedVoxel
+    packed: PackedVoxel,
+    partner: PackedVoxel = VOXEL_ABSENT
   ): void {
     if (packed === VOXEL_ABSENT) {
       this.removeVoxelAt(position);
     }
     else {
-      this.#setPackedLocal(this.#toLocal(position), packed);
+      this.#setPackedLocal(this.#toLocal(position), packed, partner);
     }
   }
 
   #setPackedLocal(
     position: Vector3Like,
-    packed: PackedVoxel
+    packed: PackedVoxel,
+    partner: PackedVoxel = VOXEL_ABSENT
   ): void {
     const { x, y, z } = position;
 
@@ -320,17 +346,15 @@ export class VoxelLayer {
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z),
-      packed
+      packed,
+      partner
     );
   }
 
-  /**
-   * Writes layer-local `positions` (x, y, z triples) with their `packed`
-   * voxels, sizing each chunk's storage once instead of growing per write.
-   */
   loadPackedVoxels(
     positions: Int32Array,
-    packed: ArrayLike<PackedVoxel>
+    packed: ArrayLike<PackedVoxel>,
+    partners?: ArrayLike<PackedVoxel>
   ): void {
     const shift = this.#chunkShift;
     const mask = this.#chunkMask;
@@ -371,23 +395,27 @@ export class VoxelLayer {
         x & mask,
         y & mask,
         z & mask,
-        packed[i]
+        packed[i],
+        partners === undefined ? VOXEL_ABSENT : partners[i]
       );
     }
   }
 
   loadPackedChunk(
-    cx: number,
-    cy: number,
-    cz: number,
+    [cx, cy, cz]: [number, number, number],
     cells: ArrayLike<number>,
-    voxels: ArrayLike<PackedVoxel>
+    voxels: ArrayLike<PackedVoxel>,
+    partners?: ArrayLike<PackedVoxel>
   ): void {
     if (cells.length === 0) {
       return;
     }
 
-    this.getOrCreateChunk(cx, cy, cz).loadPackedEntries(cells, voxels);
+    this.getOrCreateChunk(cx, cy, cz).loadPackedEntries(
+      cells,
+      voxels,
+      partners
+    );
   }
 
   removeVoxelAt(
@@ -409,9 +437,7 @@ export class VoxelLayer {
       this.#worldToLocal(z)
     ]);
 
-    // Remove the chunk entirely if it is now empty to keep memory usage low.
     if (chunk.isEmpty()) {
-      // `getChunk` returned it, so the coordinates are known to be in range.
       this.#chunks.delete(packChunkKey(cx, cy, cz));
       this.#lastChunk = null;
       this.#release(chunk);
@@ -479,13 +505,14 @@ export class VoxelLayer {
     const chunks = new Map(this.#chunks);
     const entries = Array.from(
       this.localVoxels(),
-      ([x, y, z, packed]): [VoxelCoord, PackedVoxel] => [
+      ([x, y, z, packed, partner]): [VoxelCoord, PackedVoxel, PackedVoxel] => [
         {
           x: x + dx,
           y: y + dy,
           z: z + dz
         },
-        packed
+        packed,
+        partner
       ]
     );
 
@@ -496,8 +523,8 @@ export class VoxelLayer {
       y: position.y,
       z: position.z
     };
-    for (const [local, packed] of entries) {
-      this.#setPackedLocal(local, packed);
+    for (const [local, packed, partner] of entries) {
+      this.#setPackedLocal(local, packed, partner);
     }
 
     for (const [key, chunk] of this.#chunks) {
@@ -663,13 +690,13 @@ export class VoxelLayer {
   ): void {
     const { overwrite = true } = options;
 
-    for (const [x, y, z, packed] of source.localVoxels()) {
+    for (const [x, y, z, packed, partner] of source.localVoxels()) {
       const position = source.localToWorld({ x, y, z });
       if (
         overwrite ||
         this.getPackedVoxelAt(position) === VOXEL_ABSENT
       ) {
-        this.setPackedVoxelAt(position, packed);
+        this.setPackedVoxelAt(position, packed, partner);
       }
     }
   }
@@ -685,8 +712,11 @@ export class VoxelLayer {
         continue;
       }
 
-      for (const [index, packed] of chunk.packedEntries()) {
-        if (!blockIds.has(voxelBlockId(packed))) {
+      for (const [index, packed, partner] of chunk.packedEntries()) {
+        if (
+          !blockIds.has(voxelBlockId(packed)) &&
+          (partner === VOXEL_ABSENT || !blockIds.has(voxelBlockId(partner)))
+        ) {
           continue;
         }
 
@@ -700,18 +730,21 @@ export class VoxelLayer {
     }
   }
 
-  * localVoxels(): IterableIterator<[number, number, number, PackedVoxel]> {
+  * localVoxels(): IterableIterator<
+    [number, number, number, PackedVoxel, PackedVoxel]
+  > {
     const size = this.#chunkSize;
 
     for (const chunk of this.#chunks.values()) {
-      for (const [index, packed] of chunk.packedEntries()) {
+      for (const [index, packed, partner] of chunk.packedEntries()) {
         const { lx, ly, lz } = chunk.fromLinearIndex(index);
 
         yield [
           (chunk.cx * size) + lx,
           (chunk.cy * size) + ly,
           (chunk.cz * size) + lz,
-          packed
+          packed,
+          partner
         ];
       }
     }

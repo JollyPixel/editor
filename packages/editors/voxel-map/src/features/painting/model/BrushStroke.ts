@@ -1,10 +1,15 @@
 // Import Third-party Dependencies
-import type {
-  VoxelCoord,
-  VoxelRotationStep
+import {
+  VoxelTransform,
+  type VoxelCoord,
+  type VoxelEntry,
+  type VoxelPart,
+  type VoxelRotationStep,
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { AimedHalf } from "./AimedHalf.ts";
 import {
   BrushFootprint,
   type BrushPlane
@@ -20,6 +25,18 @@ export interface VoxelPaint {
   flipY: boolean;
 }
 
+export function canMergePaint(
+  view: VoxelView,
+  layerName: string,
+  position: VoxelCoord,
+  paint: VoxelPaint
+): boolean {
+  return view.canMergeAt(layerName, position, {
+    blockId: paint.blockId,
+    transform: new VoxelTransform(paint).packed
+  });
+}
+
 export interface BrushStrokeOptions {
   mode: StrokeMode;
   origin: VoxelCoord;
@@ -28,6 +45,7 @@ export interface BrushStrokeOptions {
   anchor?: BrushAnchor;
   layerName: string;
   paint?: VoxelPaint;
+  aimedPart?: VoxelPart | null;
 }
 
 export class BrushStroke {
@@ -39,6 +57,7 @@ export class BrushStroke {
   readonly anchor: BrushAnchor;
   readonly layerName: string;
   readonly paint: VoxelPaint | undefined;
+  readonly aimedPart: VoxelPart | null;
 
   #stamped = new Set<string>();
   #last: VoxelCoord | null = null;
@@ -55,6 +74,7 @@ export class BrushStroke {
     this.anchor = options.anchor ?? "bottom";
     this.layerName = options.layerName;
     this.paint = options.paint;
+    this.aimedPart = options.aimedPart ?? null;
   }
 
   footprintAt(
@@ -138,6 +158,17 @@ export class BrushStroke {
     }
 
     return result;
+  }
+
+  aimedHalfAt(
+    position: VoxelCoord,
+    entry: VoxelEntry
+  ): AimedHalf | null {
+    const aimed = this.aimedPart;
+
+    return aimed === null || !sameCell(this.origin, position) ?
+      null :
+      AimedHalf.of(entry, aimed);
   }
 }
 

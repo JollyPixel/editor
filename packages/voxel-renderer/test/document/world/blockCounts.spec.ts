@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import {
   VoxelChunk,
   VoxelWorld,
-  packVoxel
+  packVoxel,
+  VOXEL_PATCH_STRIDE
 } from "../../../src/document/world/index.ts";
 
 describe("VoxelChunk.countBlocks", () => {
@@ -147,8 +148,8 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     world.setLayerPosition("Top", { x: 10, y: 2, z: 0 });
     const removed: number[] = [];
     world.on("command", (command) => {
-      if (command.action === "voxels-removed") {
-        removed.push(command.metadata.entries.length);
+      if (command.action === "voxels-patched") {
+        removed.push(command.metadata.cells.length / VOXEL_PATCH_STRIDE);
       }
     });
 

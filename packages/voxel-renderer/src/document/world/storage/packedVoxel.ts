@@ -4,10 +4,13 @@ import {
   isAir
 } from "../../blocks/BlockId.ts";
 import type { VoxelEntry } from "../types.ts";
+import {
+  VoxelTransform,
+  VOXEL_TRANSFORM_MASK
+} from "../../geometry/VoxelTransform.ts";
 
 // CONSTANTS
 const kTransformBits = 8;
-const kTransformMask = 0xFF;
 
 /**
  * Highest storable block id. The transform takes a byte, leaving 23 bits.
@@ -39,7 +42,7 @@ export function packVoxel(
     );
   }
 
-  return (blockId << kTransformBits) | (transform & kTransformMask);
+  return (blockId << kTransformBits) | (transform & VOXEL_TRANSFORM_MASK);
 }
 
 export function voxelBlockId(
@@ -51,13 +54,24 @@ export function voxelBlockId(
 export function voxelTransform(
   packed: PackedVoxel
 ): number {
-  return packed & kTransformMask;
+  return packed & VOXEL_TRANSFORM_MASK;
 }
 
-/**
- * Builds the object form. Prefer `voxelBlockId()` and `voxelTransform()` on
- * hot paths; this allocates.
- */
+export function turnVoxel(
+  packed: PackedVoxel,
+  transform: VoxelTransform
+): PackedVoxel {
+  if (packed === VOXEL_ABSENT) {
+    return VOXEL_ABSENT;
+  }
+
+  const turned = VoxelTransform
+    .fromPacked(voxelTransform(packed))
+    .followedBy(transform);
+
+  return packVoxel(voxelBlockId(packed), turned.packed);
+}
+
 export function unpackVoxel(
   packed: PackedVoxel
 ): VoxelEntry {

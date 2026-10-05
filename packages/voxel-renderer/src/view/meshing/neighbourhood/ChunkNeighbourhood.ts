@@ -37,6 +37,7 @@ import {
   VOXEL_ABSENT,
   type PackedVoxel
 } from "../../../document/world/storage/packedVoxel.ts";
+import { isMergedVoxel } from "../../../document/world/storage/mergedVoxel.ts";
 
 export interface ChunkNeighbourhoodOptions {
   world: MeshableWorld;
@@ -133,8 +134,7 @@ export class ChunkNeighbourhood {
       const packed = layers[i].packedAt(wx, wy, wz);
       if (packed !== VOXEL_ABSENT && (
         layers[i].layer.compositing === "replace" ||
-        this.#variants.get(voxelBlockId(packed), voxelTransform(packed))
-          ?.occlusionMask === 0b111111
+        this.#occlusionMaskAt(layers[i], wx, wy, wz) === 0b111111
       )) {
         return false;
       }
@@ -156,7 +156,10 @@ export class ChunkNeighbourhood {
       const cache = layers[i];
       const neighbour = cache.packedAt(nx, ny, nz);
       if (neighbour !== VOXEL_ABSENT) {
-        if (this.#occludes(neighbour, variant, face)) {
+        const hidden = isMergedVoxel(neighbour) ?
+          this.#occludedBy(this.#variantAt(cache, nx, ny, nz), variant, face) :
+          this.#occludes(neighbour, variant, face);
+        if (hidden) {
           return true;
         }
 
@@ -279,15 +282,7 @@ export class ChunkNeighbourhood {
     face: BlockVariantFace,
     group: BlendGroup
   ): FaceBlendNeighbour | null {
-    const packed = this.#visibleAt(cell[0], cell[1], cell[2]);
-    if (packed === VOXEL_ABSENT) {
-      return null;
-    }
-
-    const neighbour = this.#variants.get(
-      voxelBlockId(packed),
-      voxelTransform(packed)
-    );
+    const neighbour = this.#visibleVariantAt(cell[0], cell[1], cell[2]);
     if (neighbour === null || neighbour.blend === null) {
       return null;
     }
@@ -323,20 +318,42 @@ export class ChunkNeighbourhood {
     };
   }
 
-  #visibleAt(
+  #visibleVariantAt(
     wx: number,
     wy: number,
     wz: number
-  ): PackedVoxel {
+  ): BlockVariant | null {
     const layers = this.layers;
     for (let i = 0; i < this.#layerCount; i++) {
-      const packed = layers[i].packedAt(wx, wy, wz);
-      if (packed !== VOXEL_ABSENT) {
-        return packed;
+      if (layers[i].packedAt(wx, wy, wz) !== VOXEL_ABSENT) {
+        return this.#variantAt(layers[i], wx, wy, wz);
       }
     }
 
-    return VOXEL_ABSENT;
+    return null;
+  }
+
+  #variantAt(
+    cache: LayerChunkCache,
+    wx: number,
+    wy: number,
+    wz: number
+  ): BlockVariant | null {
+    const packed = cache.packedAt(wx, wy, wz);
+    if (packed === VOXEL_ABSENT) {
+      return null;
+    }
+
+    if (!isMergedVoxel(packed)) {
+      return this.#variants.get(voxelBlockId(packed), voxelTransform(packed));
+    }
+
+    const merged = this.#variants.mergedOf(
+      packed,
+      cache.partnerAt(wx, wy, wz)
+    );
+
+    return merged?.occluder ?? null;
   }
 
   #occluderAt(
@@ -347,11 +364,10 @@ export class ChunkNeighbourhood {
     const layers = this.layers;
     for (let i = 0; i < this.#layerCount; i++) {
       const cache = layers[i];
-      const packed = cache.packedAt(wx, wy, wz);
-      if (packed === VOXEL_ABSENT) {
+      if (cache.packedAt(wx, wy, wz) === VOXEL_ABSENT) {
         continue;
       }
-      if (this.#castsOcclusion(packed)) {
+      if (this.#occlusionMaskAt(cache, wx, wy, wz) !== 0) {
         return true;
       }
       if (cache.layer.compositing === "replace") {
@@ -362,14 +378,23 @@ export class ChunkNeighbourhood {
     return false;
   }
 
-  #castsOcclusion(
-    packed: PackedVoxel
-  ): boolean {
-    return packed !== VOXEL_ABSENT &&
+  #occlusionMaskAt(
+    cache: LayerChunkCache,
+    wx: number,
+    wy: number,
+    wz: number
+  ): number {
+    const packed = cache.packedAt(wx, wy, wz);
+    if (packed === VOXEL_ABSENT) {
+      return 0;
+    }
+
+    return isMergedVoxel(packed) ?
+      this.#variantAt(cache, wx, wy, wz)?.occlusionMask ?? 0 :
       this.#variants.occlusionMaskOf(
         voxelBlockId(packed),
         voxelTransform(packed)
-      ) !== 0;
+      );
   }
 
   #occludes(
@@ -377,36 +402,62 @@ export class ChunkNeighbourhood {
     variant: BlockVariant,
     face: BlockVariantFace
   ): boolean {
-    if (neighbour === VOXEL_ABSENT) {
+    const blockId = voxelBlockId(neighbour);
+    const transform = voxelTransform(neighbour);
+    const sameBlock = blockId === variant.blockId;
+    const mask = sameBlock ?
+      this.#variants.selfOcclusionMaskOf(blockId, transform) :
+      this.#variants.occlusionMaskOf(blockId, transform);
+
+    return this.#hiddenByMask(mask, sameBlock, variant, face) ??
+      this.#coveredBy(this.#variants.get(blockId, transform), sameBlock, face);
+  }
+
+  #occludedBy(
+    neighbour: BlockVariant | null,
+    variant: BlockVariant,
+    face: BlockVariantFace
+  ): boolean {
+    if (neighbour === null) {
       return false;
     }
 
-    const neighbourBlockId = voxelBlockId(neighbour);
-    const transform = voxelTransform(neighbour);
+    const sameBlock = neighbour.blockId === variant.blockId;
+    const mask = sameBlock ?
+      neighbour.selfOcclusionMask :
+      neighbour.occlusionMask;
 
-    const sameBlock = neighbourBlockId === variant.blockId;
+    return this.#hiddenByMask(mask, sameBlock, variant, face) ??
+      this.#coveredBy(neighbour, sameBlock, face);
+  }
+
+  #hiddenByMask(
+    mask: number,
+    sameBlock: boolean,
+    variant: BlockVariant,
+    face: BlockVariantFace
+  ): boolean | null {
     if (
       variant.keepsCoveredFaces &&
       (sameBlock || variant.surface.side === "double")
     ) {
       return false;
     }
-
-    const mask = sameBlock ?
-      this.#variants.selfOcclusionMaskOf(neighbourBlockId, transform) :
-      this.#variants.occlusionMaskOf(neighbourBlockId, transform);
     if ((mask & (1 << FACE_OPPOSITE[face.cull])) !== 0) {
       return true;
     }
-    if (face.full || face.splittable) {
-      return false;
-    }
 
-    const neighbourVariant = this.#variants.get(neighbourBlockId, transform);
+    return face.full || face.splittable ? false : null;
+  }
 
-    return neighbourVariant !== null &&
-      (sameBlock || neighbourVariant.surface.occludes) &&
-      this.#variants.isFaceCoveredBy(face, neighbourVariant);
+  #coveredBy(
+    neighbour: BlockVariant | null,
+    sameBlock: boolean,
+    face: BlockVariantFace
+  ): boolean {
+    return neighbour !== null &&
+      (sameBlock || neighbour.surface.occludes) &&
+      this.#variants.isFaceCoveredBy(face, neighbour);
   }
 
   boundaryFaces(
@@ -423,16 +474,11 @@ export class ChunkNeighbourhood {
     const opposite = FACE_OPPOSITE[face.cull];
     let faces: readonly BlockVariantFace[] = [face];
     for (const cache of this.layers) {
-      const packed = cache.packedAt(
+      const neighbour = this.#variantAt(
+        cache,
         wx + offset[0],
         wy + offset[1],
         wz + offset[2]
-      );
-      if (packed === VOXEL_ABSENT) {
-        continue;
-      }
-      const neighbour = this.#variants.get(
-        voxelBlockId(packed), voxelTransform(packed)
       );
       if (neighbour) {
         for (const boundary of neighbour.faces) {

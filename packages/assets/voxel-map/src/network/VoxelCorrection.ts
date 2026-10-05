@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import {
-  AIR_BLOCK_ID,
-  VOXEL_ABSENT,
-  voxelBlockId,
-  voxelTransform,
+  VoxelPatchBuilder,
   type VoxelWorldCommandTarget
 } from "@jolly-pixel/voxel.renderer";
 
@@ -35,20 +32,16 @@ export function correctVoxelCommand(
       voxelCellKeys(admitted) :
       []
   );
-  const cells: number[] = [];
+  const patch = new VoxelPatchBuilder();
   for (const position of voxelCellPositions(command)) {
     if (kept.has(voxelKey(command.layerId, position))) {
       continue;
     }
 
-    const packed = layer.getPackedVoxelAt(position);
-    const absent = packed === VOXEL_ABSENT;
-    cells.push(
-      position.x,
-      position.y,
-      position.z,
-      absent ? AIR_BLOCK_ID : voxelBlockId(packed),
-      absent ? 0 : voxelTransform(packed)
+    patch.push(
+      position,
+      layer.getPackedVoxelAt(position),
+      layer.getPartnerVoxelAt(position)
     );
   }
 
@@ -58,6 +51,6 @@ export function correctVoxelCommand(
     timestamp: command.timestamp,
     action: "voxels-patched",
     layerId: command.layerId,
-    metadata: { cells }
+    metadata: patch.toPatch()
   };
 }

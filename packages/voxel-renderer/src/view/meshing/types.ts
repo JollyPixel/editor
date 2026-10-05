@@ -40,7 +40,12 @@ export interface MeshableChunk {
   readonly mask: number;
   readonly store: MeshableStore;
   readonly voxelCount: number;
-  getPackedAt(
+  storedAt(
+    lx: number,
+    ly: number,
+    lz: number
+  ): PackedVoxel;
+  getPartnerAt(
     lx: number,
     ly: number,
     lz: number

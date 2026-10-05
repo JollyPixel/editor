@@ -182,6 +182,26 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(layerCommand("voxels-patched", {})), false);
   });
 
+  test("accepts the merge flag and the partners of a patch", () => {
+    assert.strictEqual(accepts(layerCommand("voxel-set", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: 1,
+      rotation: 0,
+      flipX: false,
+      flipY: true,
+      flipZ: false,
+      merge: true
+    })), true);
+    assert.strictEqual(accepts(layerCommand("voxels-patched", {
+      cells: [0, 0, 0, 1, 0],
+      partners: [0, 2, 16]
+    })), true);
+    assert.strictEqual(accepts(layerCommand("voxels-patched", {
+      cells: [0, 0, 0, 1, 0],
+      partners: [0.5, 2, 16]
+    })), false);
+  });
+
   test("accepts a layer transform carrying every transform field", () => {
     const transform = { rotation: 1, flipX: false, flipZ: false, flipY: true };
 

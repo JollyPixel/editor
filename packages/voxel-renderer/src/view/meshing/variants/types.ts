@@ -80,3 +80,22 @@ export interface BlockVariant {
    */
   blend: BlendGroup | null;
 }
+
+export interface MergedVariantPart {
+  variant: BlockVariant;
+  /**
+   * The part's faces minus the inner ones the other part hides.
+   */
+  faces: readonly BlockVariantFace[];
+}
+
+/**
+ * The two shapes of a merged cell.
+ */
+export interface MergedVariant {
+  parts: readonly MergedVariantPart[];
+  /**
+   * Stands for the whole cell in neighbour, occlusion and coverage queries.
+   */
+  occluder: BlockVariant;
+}

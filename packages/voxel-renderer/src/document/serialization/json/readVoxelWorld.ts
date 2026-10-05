@@ -4,12 +4,14 @@ import { resolvePaletteValues } from "../chunks/palette.ts";
 import { packVoxel } from "../../world/storage/packedVoxel.ts";
 import type {
   VoxelChunkJSON,
+  VoxelChunkPartnersJSON,
   VoxelEntryJSON,
   VoxelLayerJSON,
   VoxelTemplateJSON,
   VoxelWorldJSON
 } from "../types.ts";
 import type {
+  VoxelCellData,
   VoxelChunkData,
   VoxelLayerData,
   VoxelTemplateData,
@@ -71,16 +73,30 @@ function readVoxelChunk(
   chunk: VoxelChunkJSON,
   palette: readonly number[]
 ): VoxelChunkData {
-  const { cells, values } = decodeChunk({
-    gaps: chunk.cells ?? null,
-    runs: chunk.runs
-  });
   const [cx, cy, cz] = chunk.at;
-
-  return {
+  const data: VoxelChunkData = {
     cx,
     cy,
     cz,
+    ...readVoxelCells(chunk, palette)
+  };
+  if (chunk.partners !== undefined) {
+    data.partners = readVoxelCells(chunk.partners, palette);
+  }
+
+  return data;
+}
+
+function readVoxelCells(
+  encoded: VoxelChunkPartnersJSON,
+  palette: readonly number[]
+): VoxelCellData {
+  const { cells, values } = decodeChunk({
+    gaps: encoded.cells ?? null,
+    runs: encoded.runs
+  });
+
+  return {
     cells,
     voxels: resolvePaletteValues(values, palette)
   };

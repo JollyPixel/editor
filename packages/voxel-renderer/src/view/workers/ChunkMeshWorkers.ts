@@ -362,12 +362,12 @@ export class ChunkMeshWorkers {
     job: MeshJob,
     chunk: VoxelChunk
   ): MeshWorkerChunk {
-    const { store } = chunk;
-    store.share();
+    chunk.share();
     job.chunks.push(chunk);
     job.revisions.push(chunk.revision);
 
-    return {
+    const { store, partners } = chunk;
+    const shared: MeshWorkerChunk = {
       cx: chunk.cx,
       cy: chunk.cy,
       cz: chunk.cz,
@@ -375,6 +375,15 @@ export class ChunkMeshWorkers {
       values: store.values,
       count: store.size
     };
+    if (partners !== null && partners.size > 0) {
+      shared.partners = {
+        keys: partners.keys,
+        values: partners.values,
+        count: partners.size
+      };
+    }
+
+    return shared;
   }
 
   #receive(

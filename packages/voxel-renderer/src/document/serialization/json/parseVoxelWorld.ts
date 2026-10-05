@@ -1,7 +1,10 @@
 // Import Internal Dependencies
 import { InvalidVoxelWorldError } from "../errors/InvalidVoxelWorldError.ts";
 import { isLayerRank } from "../../world/layerRank.ts";
-import { validateChunk } from "../chunks/chunkEncoding.ts";
+import {
+  decodeChunk,
+  validateChunk
+} from "../chunks/chunkEncoding.ts";
 import { packPaletteEntry } from "../chunks/palette.ts";
 import {
   inChunkRange,
@@ -227,6 +230,45 @@ function assertVoxelGrid(
     }
     catch (error) {
       failOnRange(error, chunkWhere);
+    }
+
+    const partners = readField(chunk, "partners");
+    if (partners === undefined) {
+      continue;
+    }
+    if (typeof partners !== "object" || partners === null) {
+      fail(`${chunkWhere}: partners is not an object`);
+    }
+    const partnerRuns = readField(partners, "runs");
+    const partnerCells = readField(partners, "cells");
+    if (!isIndexArray(partnerRuns)) {
+      fail(`${chunkWhere}: partners.runs is not an array of indices`);
+    }
+    if (partnerCells !== undefined && !isIndexArray(partnerCells)) {
+      fail(`${chunkWhere}: partners.cells is not an array of indices`);
+    }
+    try {
+      validateChunk(
+        { gaps: partnerCells ?? null, runs: partnerRuns },
+        cellCount,
+        palette.length
+      );
+    }
+    catch (error) {
+      failOnRange(error, `${chunkWhere} partners`);
+    }
+
+    const occupied = new Set(
+      decodeChunk({ gaps: cells ?? null, runs }).cells
+    );
+    const merged = decodeChunk({
+      gaps: partnerCells ?? null,
+      runs: partnerRuns
+    }).cells;
+    for (const cell of merged) {
+      if (!occupied.has(cell)) {
+        fail(`${chunkWhere}: cell ${cell} has a partner but no voxel`);
+      }
     }
   }
 }

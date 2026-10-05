@@ -10,7 +10,7 @@ import {
   VoxelHistory,
   VoxelTransform,
   VoxelWorld,
-  type PackedVoxel,
+  type VoxelTemplateVoxel,
   type VoxelLayer
 } from "@jolly-pixel/voxel.renderer";
 
@@ -69,15 +69,16 @@ function setup() {
 
 function cellsOf(
   layer: VoxelLayer
-): Array<[number, number, number, PackedVoxel]> {
+): VoxelTemplateVoxel[] {
   const { x: ox, y: oy, z: oz } = layer.position;
 
   return [...layer.localVoxels()]
-    .map(([x, y, z, packed]): [number, number, number, PackedVoxel] => [
+    .map(([x, y, z, packed, partner]): VoxelTemplateVoxel => [
       x + ox,
       y + oy,
       z + oz,
-      packed
+      packed,
+      partner
     ])
     .sort(compareCells);
 }

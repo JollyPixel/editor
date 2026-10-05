@@ -212,10 +212,26 @@ export class LayerChunkCache {
 
       return chunk === null || !chunk.mayContain(lx, ly, lz) ?
         VOXEL_ABSENT :
-        chunk.getPackedAt(lx, ly, lz);
+        chunk.storedAt(lx, ly, lz);
     }
 
     return this.#packedOutsideCentre(wx, wy, wz);
+  }
+
+  partnerAt(
+    wx: number,
+    wy: number,
+    wz: number
+  ): PackedVoxel {
+    const x = wx - this.#offsetX;
+    const y = wy - this.#offsetY;
+    const z = wz - this.#offsetZ;
+    const chunk = this.#chunkOf(x, y, z);
+    const mask = this.#mask;
+
+    return chunk === null ?
+      VOXEL_ABSENT :
+      chunk.getPartnerAt(x & mask, y & mask, z & mask);
   }
 
   #packedOutsideCentre(
@@ -223,24 +239,11 @@ export class LayerChunkCache {
     wy: number,
     wz: number
   ): PackedVoxel {
-    const shift = this.#shift;
     const mask = this.#mask;
     const x = wx - this.#offsetX;
     const y = wy - this.#offsetY;
     const z = wz - this.#offsetZ;
-
-    const cx = x >> shift;
-    const cy = y >> shift;
-    const cz = z >> shift;
-
-    const dx = cx - this.#baseCx;
-    const dy = cy - this.#baseCy;
-    const dz = cz - this.#baseCz;
-
-    const chunk = (dx | dy | dz) >= 0 && dx < kSpan && dy < kSpan && dz < kSpan ?
-      this.#chunks[(dx * kSpan * kSpan) + (dy * kSpan) + dz] :
-      this.layer.getChunk(cx, cy, cz) ?? null;
-
+    const chunk = this.#chunkOf(x, y, z);
     if (chunk === null) {
       return VOXEL_ABSENT;
     }
@@ -250,7 +253,26 @@ export class LayerChunkCache {
     const lz = z & mask;
 
     return chunk.mayContain(lx, ly, lz) ?
-      chunk.getPackedAt(lx, ly, lz) :
+      chunk.storedAt(lx, ly, lz) :
       VOXEL_ABSENT;
+  }
+
+  #chunkOf(
+    x: number,
+    y: number,
+    z: number
+  ): MeshableChunk | null {
+    const shift = this.#shift;
+    const cx = x >> shift;
+    const cy = y >> shift;
+    const cz = z >> shift;
+
+    const dx = cx - this.#baseCx;
+    const dy = cy - this.#baseCy;
+    const dz = cz - this.#baseCz;
+
+    return (dx | dy | dz) >= 0 && dx < kSpan && dy < kSpan && dz < kSpan ?
+      this.#chunks[(dx * kSpan * kSpan) + (dy * kSpan) + dz] :
+      this.layer.getChunk(cx, cy, cz) ?? null;
   }
 }

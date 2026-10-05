@@ -3,8 +3,11 @@ import { VoxelLayer } from "../../world/VoxelLayer.ts";
 import type { VoxelTemplate } from "../../world/templates/VoxelTemplate.ts";
 import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import type { VoxelChunk } from "../../world/storage/VoxelChunk.ts";
+import type { VoxelStore } from "../../world/storage/VoxelStore.ts";
+import { unmarkMerged } from "../../world/storage/mergedVoxel.ts";
 import type { TilesetDefinition } from "../../tilesets/types.ts";
 import type {
+  VoxelCellData,
   VoxelChunkData,
   VoxelLayerData,
   VoxelTemplateData,
@@ -51,9 +54,11 @@ export function captureVoxelTemplate(
 ): VoxelTemplateData {
   const positions = new Int32Array(template.voxelCount * 3);
   const voxels = new Uint32Array(template.voxelCount);
+  const partners = new Int32Array(template.voxelCount);
   let index = 0;
-  for (const [x, y, z, packed] of template.localVoxels()) {
+  for (const [x, y, z, packed, partner] of template.localVoxels()) {
     positions.set([x, y, z], index * 3);
+    partners[index] = partner;
     voxels[index++] = packed;
   }
 
@@ -63,7 +68,7 @@ export function captureVoxelTemplate(
     order: 0,
     chunkSize
   });
-  layer.loadPackedVoxels(positions, voxels);
+  layer.loadPackedVoxels(positions, voxels, partners);
 
   return {
     id: template.id,
@@ -101,7 +106,22 @@ export function captureVoxelLayer(
 function captureVoxelChunk(
   chunk: VoxelChunk
 ): VoxelChunkData {
-  const { store } = chunk;
+  const data: VoxelChunkData = {
+    cx: chunk.cx,
+    cy: chunk.cy,
+    cz: chunk.cz,
+    ...captureCells(chunk.store)
+  };
+  if (chunk.partners !== null && chunk.partners.size > 0) {
+    data.partners = captureCells(chunk.partners);
+  }
+
+  return data;
+}
+
+function captureCells(
+  store: VoxelStore
+): VoxelCellData {
   const { keys, capacity } = store;
   const cells = new Uint32Array(store.size);
 
@@ -115,13 +135,10 @@ function captureVoxelChunk(
 
   const voxels = new Uint32Array(cells.length);
   for (let i = 0; i < cells.length; i++) {
-    voxels[i] = store.get(cells[i]);
+    voxels[i] = unmarkMerged(store.get(cells[i]));
   }
 
   return {
-    cx: chunk.cx,
-    cy: chunk.cy,
-    cz: chunk.cz,
     cells,
     voxels
   };

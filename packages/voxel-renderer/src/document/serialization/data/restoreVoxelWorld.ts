@@ -2,6 +2,7 @@
 import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import { VoxelTemplate } from "../../world/templates/VoxelTemplate.ts";
 import { inChunkRange } from "../../world/storage/chunkKey.ts";
+import { VOXEL_ABSENT } from "../../world/storage/packedVoxel.ts";
 import type { TilesetList } from "../../tilesets/TilesetList.ts";
 import { InvalidVoxelWorldError } from "../errors/InvalidVoxelWorldError.ts";
 import type {
@@ -13,6 +14,7 @@ import type {
 interface FlatVoxels {
   positions: Int32Array;
   voxels: Uint32Array;
+  partners?: Int32Array;
 }
 
 export function restoreVoxelWorld(
@@ -37,16 +39,21 @@ export function restoreVoxelWorld(
     });
 
     if (data.chunkSize === world.chunkSize) {
-      for (const { cx, cy, cz, cells, voxels } of layerData.chunks) {
-        layer.loadPackedChunk(cx, cy, cz, cells, voxels);
+      for (const chunk of layerData.chunks) {
+        layer.loadPackedChunk(
+          [chunk.cx, chunk.cy, chunk.cz],
+          chunk.cells,
+          chunk.voxels,
+          alignedPartners(chunk)
+        );
       }
     }
     else {
-      const { positions, voxels } = flattenChunks(
+      const { positions, voxels, partners } = flattenChunks(
         layerData.chunks,
         data.chunkSize
       );
-      layer.loadPackedVoxels(positions, voxels);
+      layer.loadPackedVoxels(positions, voxels, partners);
     }
   }
 
@@ -57,7 +64,10 @@ export function restoreVoxelWorld(
 export function restoreVoxelTemplate(
   data: VoxelTemplateData
 ): VoxelTemplate {
-  const { positions, voxels } = flattenChunks(data.chunks, data.chunkSize);
+  const { positions, voxels, partners } = flattenChunks(
+    data.chunks,
+    data.chunkSize
+  );
 
   return new VoxelTemplate({
     id: data.id,
@@ -65,7 +75,8 @@ export function restoreVoxelTemplate(
     pivot: data.pivot,
     properties: data.properties,
     positions,
-    voxels
+    voxels,
+    partners
   });
 }
 
@@ -81,10 +92,20 @@ function flattenChunks(
     total += chunk.cells.length;
   }
 
-  const positions = new Int32Array(total * 3);
-  const voxels = new Uint32Array(total);
+  const flat: FlatVoxels = {
+    positions: new Int32Array(total * 3),
+    voxels: new Uint32Array(total)
+  };
+  const { positions, voxels } = flat;
   let offset = 0;
-  for (const { cx, cy, cz, cells, voxels: packed } of chunks) {
+  for (const chunk of chunks) {
+    const { cx, cy, cz, cells, voxels: packed } = chunk;
+    const partners = alignedPartners(chunk);
+    if (partners !== undefined) {
+      flat.partners ??= new Int32Array(total).fill(VOXEL_ABSENT);
+      flat.partners.set(partners, offset);
+    }
+
     const originX = cx * chunkSize;
     const originY = cy * chunkSize;
     const originZ = cz * chunkSize;
@@ -98,7 +119,36 @@ function flattenChunks(
     }
   }
 
-  return { positions, voxels };
+  return flat;
+}
+
+function alignedPartners(
+  chunk: VoxelChunkData
+): Int32Array | undefined {
+  const { partners } = chunk;
+  if (partners === undefined || partners.cells.length === 0) {
+    return undefined;
+  }
+
+  const byCell = new Map<number, number>();
+  for (let i = 0; i < partners.cells.length; i++) {
+    byCell.set(partners.cells[i], partners.voxels[i]);
+  }
+
+  const aligned = new Int32Array(chunk.cells.length);
+  let matched = 0;
+  for (let i = 0; i < chunk.cells.length; i++) {
+    const partner = byCell.get(chunk.cells[i]);
+    aligned[i] = partner ?? VOXEL_ABSENT;
+    matched += partner === undefined ? 0 : 1;
+  }
+  if (matched !== byCell.size) {
+    throw new InvalidVoxelWorldError(
+      `chunk [${chunk.cx},${chunk.cy},${chunk.cz}] has a partner without a voxel`
+    );
+  }
+
+  return aligned;
 }
 
 function assertChunksFit(

@@ -3,9 +3,9 @@ import type { Vector3Like } from "three";
 
 // Import Internal Dependencies
 import {
-  packVoxel,
+  turnVoxel,
   voxelBlockId,
-  voxelTransform,
+  VOXEL_ABSENT,
   type PackedVoxel
 } from "../storage/packedVoxel.ts";
 import { VoxelTransform } from "../../geometry/VoxelTransform.ts";
@@ -32,9 +32,20 @@ export interface VoxelTemplateOptions {
    */
   positions: ArrayLike<number>;
   voxels: ArrayLike<PackedVoxel>;
+  /**
+   * Second shape of each voxel, `VOXEL_ABSENT` for an unmerged one.
+   * @default no merged voxels
+   */
+  partners?: ArrayLike<PackedVoxel>;
 }
 
-export type VoxelTemplateVoxel = [number, number, number, PackedVoxel];
+export type VoxelTemplateVoxel = [
+  number,
+  number,
+  number,
+  PackedVoxel,
+  PackedVoxel
+];
 
 export interface VoxelTemplateBounds {
   min: VoxelCoord;
@@ -59,7 +70,8 @@ export class VoxelTemplate {
     const { x: ox, y: oy, z: oz } = layer.position;
     const positions: number[] = [];
     const voxels: PackedVoxel[] = [];
-    for (const [lx, ly, lz, packed] of layer.localVoxels()) {
+    const partners: PackedVoxel[] = [];
+    for (const [lx, ly, lz, packed, partner] of layer.localVoxels()) {
       const x = lx + ox;
       const y = ly + oy;
       const z = lz + oz;
@@ -70,6 +82,7 @@ export class VoxelTemplate {
       )) {
         positions.push(x, y, z);
         voxels.push(packed);
+        partners.push(partner);
       }
     }
 
@@ -79,7 +92,8 @@ export class VoxelTemplate {
       pivot: options.pivot,
       properties: options.properties,
       positions,
-      voxels
+      voxels,
+      partners
     });
   }
 
@@ -91,6 +105,7 @@ export class VoxelTemplate {
 
   #positions: Int32Array;
   #voxels: Uint32Array;
+  #partners: Int32Array | null;
 
   constructor(
     options: VoxelTemplateOptions
@@ -101,11 +116,18 @@ export class VoxelTemplate {
       pivot,
       properties = {},
       positions,
-      voxels
+      voxels,
+      partners
     } = options;
     if (positions.length !== voxels.length * 3) {
       throw new RangeError(
         `VoxelTemplate: ${positions.length} coordinates for ` +
+        `${voxels.length} voxels.`
+      );
+    }
+    if (partners !== undefined && partners.length !== voxels.length) {
+      throw new RangeError(
+        `VoxelTemplate: ${partners.length} partners for ` +
         `${voxels.length} voxels.`
       );
     }
@@ -127,6 +149,10 @@ export class VoxelTemplate {
       (value, i) => value - min[i % 3]
     );
     this.#voxels = Uint32Array.from(voxels);
+    this.#partners = partners !== undefined &&
+      Array.from(partners).some((partner) => partner !== VOXEL_ABSENT) ?
+      Int32Array.from(partners) :
+      null;
 
     this.id = id;
     this.name = name;
@@ -156,13 +182,15 @@ export class VoxelTemplate {
 
   * localVoxels(): IterableIterator<VoxelTemplateVoxel> {
     const positions = this.#positions;
+    const partners = this.#partners;
 
     for (let i = 0; i < this.#voxels.length; i++) {
       yield [
         positions[i * 3],
         positions[(i * 3) + 1],
         positions[(i * 3) + 2],
-        this.#voxels[i]
+        this.#voxels[i],
+        partners === null ? VOXEL_ABSENT : partners[i]
       ];
     }
   }
@@ -173,21 +201,19 @@ export class VoxelTemplate {
   ): IterableIterator<VoxelTemplateVoxel> {
     const { pivot } = this;
 
-    for (const [x, y, z, packed] of this.localVoxels()) {
+    for (const [x, y, z, packed, partner] of this.localVoxels()) {
       const offset = transform.transformOffset({
         x: x - pivot.x,
         y: y - pivot.y,
         z: z - pivot.z
       });
-      const turned = VoxelTransform
-        .fromPacked(voxelTransform(packed))
-        .followedBy(transform);
 
       yield [
         position.x + offset.x,
         position.y + offset.y,
         position.z + offset.z,
-        packVoxel(voxelBlockId(packed), turned.packed)
+        turnVoxel(packed, transform),
+        turnVoxel(partner, transform)
       ];
     }
   }
@@ -230,9 +256,12 @@ export class VoxelTemplate {
   ): VoxelTemplate {
     const positions: number[] = [];
     const voxels: PackedVoxel[] = [];
-    for (const [x, y, z, packed] of this.placedVoxels(this.pivot, transform)) {
+    const partners: PackedVoxel[] = [];
+    const placed = this.placedVoxels(this.pivot, transform);
+    for (const [x, y, z, packed, partner] of placed) {
       positions.push(x, y, z);
       voxels.push(packed);
+      partners.push(partner);
     }
 
     return new VoxelTemplate({
@@ -241,7 +270,8 @@ export class VoxelTemplate {
       pivot: this.pivot,
       properties: this.properties,
       positions,
-      voxels
+      voxels,
+      partners
     });
   }
 
@@ -250,6 +280,12 @@ export class VoxelTemplate {
     for (const packed of this.#voxels) {
       const blockId = voxelBlockId(packed);
       counts.set(blockId, (counts.get(blockId) ?? 0) + 1);
+    }
+    for (const partner of this.#partners ?? []) {
+      if (partner !== VOXEL_ABSENT) {
+        const blockId = voxelBlockId(partner);
+        counts.set(blockId, (counts.get(blockId) ?? 0) + 1);
+      }
     }
 
     return counts;
@@ -264,7 +300,8 @@ export class VoxelTemplate {
       pivot: patch.pivot ?? this.pivot,
       properties: patch.properties ?? this.properties,
       positions: this.#positions,
-      voxels: this.#voxels
+      voxels: this.#voxels,
+      partners: this.#partners ?? undefined
     });
   }
 

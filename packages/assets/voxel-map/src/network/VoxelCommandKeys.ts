@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  pickVoxelPatch,
   VOXEL_PATCH_STRIDE,
   type VoxelCoord,
   type VoxelLayerCommand
@@ -137,20 +138,11 @@ export function narrowVoxelCellCommand<TCommand extends VoxelCellCommand>(
         }
       };
     }
-    case "voxels-patched": {
-      const { cells } = command.metadata;
-
+    case "voxels-patched":
       return {
         ...command,
-        metadata: {
-          cells: keep.flatMap((index) => {
-            const offset = index * VOXEL_PATCH_STRIDE;
-
-            return cells.slice(offset, offset + VOXEL_PATCH_STRIDE);
-          })
-        }
+        metadata: pickVoxelPatch(command.metadata, keep)
       };
-    }
     default:
       return keep.length === 1 ? command : null;
   }

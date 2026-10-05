@@ -6,12 +6,9 @@ import { VoxelTemplate } from "./VoxelTemplate.ts";
 import type { VoxelTemplatePatch } from "./types.ts";
 import type { VoxelLayer } from "../VoxelLayer.ts";
 import type { VoxelCoord } from "../types.ts";
-import type { VoxelPatchCells } from "../editing/voxelPatch.ts";
-import {
-  VOXEL_ABSENT,
-  voxelBlockId,
-  voxelTransform
-} from "../storage/packedVoxel.ts";
+import type { VoxelPatch } from "../editing/voxelPatch.ts";
+import { VoxelPatchBuilder } from "../editing/VoxelPatchBuilder.ts";
+import { VOXEL_ABSENT } from "../storage/packedVoxel.ts";
 import {
   VoxelTransform,
   type VoxelTransformOptions
@@ -27,7 +24,7 @@ export interface VoxelTemplatesOptions {
   chunkSize: number;
   layer: (name: string) => VoxelLayer | undefined;
   dispatch: (command: VoxelTemplateCommand) => boolean;
-  patch: (layerName: string, cells: VoxelPatchCells) => void;
+  patch: (layerName: string, patch: VoxelPatch) => void;
 }
 
 export interface VoxelTemplateCaptureOptions {
@@ -80,7 +77,7 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
   #chunkSize: number;
   #layer: (name: string) => VoxelLayer | undefined;
   #dispatch: (command: VoxelTemplateCommand) => boolean;
-  #patch: (layerName: string, cells: VoxelPatchCells) => void;
+  #patch: (layerName: string, patch: VoxelPatch) => void;
   #idCounter = 0;
 
   constructor(
@@ -192,23 +189,23 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
       return false;
     }
 
-    const cells: VoxelPatchCells = [];
+    const patch = new VoxelPatchBuilder();
     const placed = template.placedVoxels(
       position,
       VoxelTransform.fromPacked(VoxelTransform.pack(transform))
     );
-    for (const [x, y, z, packed] of placed) {
+    for (const [x, y, z, packed, partner] of placed) {
       if (
         overwrite ||
         layer.getPackedVoxelAt({ x, y, z }) === VOXEL_ABSENT
       ) {
-        cells.push(x, y, z, voxelBlockId(packed), voxelTransform(packed));
+        patch.push({ x, y, z }, packed, partner);
       }
     }
-    if (cells.length === 0) {
+    if (patch.cellCount === 0) {
       return false;
     }
-    this.#patch(layerName, cells);
+    this.#patch(layerName, patch.toPatch());
 
     return true;
   }

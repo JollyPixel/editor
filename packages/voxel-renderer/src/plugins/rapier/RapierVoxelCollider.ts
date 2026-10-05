@@ -9,8 +9,14 @@ import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeR
 import type { VoxelChunk } from "../../document/world/storage/VoxelChunk.ts";
 import {
   voxelBlockId,
-  voxelTransform
+  voxelTransform,
+  type PackedVoxel
 } from "../../document/world/storage/packedVoxel.ts";
+import {
+  isMergedVoxel,
+  unmarkMerged
+} from "../../document/world/storage/mergedVoxel.ts";
+import { BlockComplements } from "../../document/blocks/BlockComplements.ts";
 import { VoxelTransform } from "../../document/geometry/VoxelTransform.ts";
 import {
   mirrorsWinding,
@@ -112,6 +118,7 @@ export class RapierVoxelCollider implements VoxelCollider {
   #world: RapierWorld;
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
+  #complements: BlockComplements;
 
   #bodies = new Map<string, RapierRigidBody>();
   #bounds = new Map<string, ShapeBounds>();
@@ -125,6 +132,10 @@ export class RapierVoxelCollider implements VoxelCollider {
     this.#world = options.world;
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
+    this.#complements = new BlockComplements({
+      blocks: this.#blockRegistry,
+      shapes: this.#shapeRegistry
+    });
   }
 
   rebuildChunk(
@@ -212,7 +223,6 @@ export class RapierVoxelCollider implements VoxelCollider {
     chunk: VoxelChunk,
     solids: ChunkSolids
   ): void {
-    const { shift, mask } = chunk;
     const { keys, values, capacity } = chunk.store;
 
     for (let slot = 0; slot < capacity; slot++) {
@@ -222,34 +232,74 @@ export class RapierVoxelCollider implements VoxelCollider {
       }
 
       const packed = values[slot];
-      const blockDef = this.#blockRegistry.get(voxelBlockId(packed));
-      if (!blockDef?.collidable) {
-        continue;
-      }
-
-      const shape = this.#shapeRegistry.get(blockDef.shapeId);
-      if (!shape || shape.collisionHint === "none") {
-        continue;
-      }
-
-      const lx = linearIdx & mask;
-      const ly = (linearIdx >> shift) & mask;
-      const lz = linearIdx >> (shift * 2);
-      const transform = VoxelTransform.fromPacked(voxelTransform(packed));
-
-      if (shape.collisionHint === "trimesh") {
-        appendShapeTriangles(solids, shape, transform, [lx, ly, lz]);
+      if (!isMergedVoxel(packed)) {
+        this.#collectPart(chunk, solids, linearIdx, packed);
 
         continue;
       }
 
-      const bounds = this.#boundsOf(shape, transform);
-      if (bounds.full) {
+      const { lx, ly, lz } = chunk.fromLinearIndex(linearIdx);
+      const primary = unmarkMerged(packed);
+      const partner = chunk.getPartnerAt(lx, ly, lz);
+      if (this.#fillsCell(primary, partner)) {
         solids.cubes.push(linearIdx);
+
+        continue;
       }
-      else {
-        solids.boxes.push({ origin: [lx, ly, lz], bounds });
-      }
+      this.#collectPart(chunk, solids, linearIdx, primary);
+      this.#collectPart(chunk, solids, linearIdx, partner);
+    }
+  }
+
+  #fillsCell(
+    packed: PackedVoxel,
+    partner: PackedVoxel
+  ): boolean {
+    return this.#isCollidable(packed) &&
+      this.#isCollidable(partner) &&
+      this.#complements.complements(packed, partner);
+  }
+
+  #isCollidable(
+    packed: PackedVoxel
+  ): boolean {
+    return this.#blockRegistry.get(voxelBlockId(packed))?.collidable === true;
+  }
+
+  #collectPart(
+    chunk: VoxelChunk,
+    solids: ChunkSolids,
+    linearIdx: number,
+    packed: PackedVoxel
+  ): void {
+    const blockDef = this.#blockRegistry.get(voxelBlockId(packed));
+    if (!blockDef?.collidable) {
+      return;
+    }
+
+    const shape = this.#shapeRegistry.get(blockDef.shapeId);
+    if (!shape || shape.collisionHint === "none") {
+      return;
+    }
+
+    const { shift, mask } = chunk;
+    const lx = linearIdx & mask;
+    const ly = (linearIdx >> shift) & mask;
+    const lz = linearIdx >> (shift * 2);
+    const transform = VoxelTransform.fromPacked(voxelTransform(packed));
+
+    if (shape.collisionHint === "trimesh") {
+      appendShapeTriangles(solids, shape, transform, [lx, ly, lz]);
+
+      return;
+    }
+
+    const bounds = this.#boundsOf(shape, transform);
+    if (bounds.full) {
+      solids.cubes.push(linearIdx);
+    }
+    else {
+      solids.boxes.push({ origin: [lx, ly, lz], bounds });
     }
   }
 

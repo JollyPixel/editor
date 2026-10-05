@@ -24,8 +24,17 @@ import {
 import type {
   BlockVariant,
   BlockVariantFace,
+  MergedVariant,
+  MergedVariantPart,
   TilesetResolver
 } from "./types.ts";
+import { BlockComplements } from "../../../document/blocks/BlockComplements.ts";
+import {
+  voxelBlockId,
+  voxelTransform,
+  type PackedVoxel
+} from "../../../document/world/storage/packedVoxel.ts";
+import { unmarkMerged } from "../../../document/world/storage/mergedVoxel.ts";
 import { ChunkGeometryKey } from "../ChunkGeometryKey.ts";
 import { FACES, FACE_OPPOSITE } from "../../../document/geometry/faceDirection.ts";
 import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
@@ -61,6 +70,7 @@ const kOcclusionUnknown = -1;
  */
 const kOcclusionMaxSlots = 1 << 16;
 const kOcclusionFaceMask = 0b111111;
+const kNoBlock = -1;
 const kSelfOcclusionShift = 6;
 
 interface CompileFaceOptions {
@@ -96,8 +106,10 @@ export class BlockVariantCache {
   #alphaTest: number;
   #logger: VoxelLogger;
   #checkedSlots = new WeakMap<ResolvedBlockDefinition, BlockShape>();
+  #complements: BlockComplements;
 
   #variants = new Map<number, BlockVariant | null>();
+  #merged = new Map<PackedVoxel, Map<PackedVoxel, MergedVariant | null>>();
   #slots = new Map<string, number>();
   #geometryKeys: ChunkGeometryKey[] = [];
   #frontFaces = new WeakMap<BlockVariantFace, BlockVariantFace>();
@@ -125,6 +137,10 @@ export class BlockVariantCache {
     this.#blendGroups = options.blendGroups;
     this.#alphaTest = options.alphaTest ?? 0.1;
     this.#logger = options.logger ?? NOOP_LOGGER;
+    this.#complements = new BlockComplements({
+      blocks: this.#blockRegistry,
+      shapes: this.#shapeRegistry
+    });
   }
 
   refresh(): void {
@@ -147,6 +163,7 @@ export class BlockVariantCache {
     this.#tilesetVersion = tilesetVersion;
     this.#blendVersion = blendVersion;
     this.#variants.clear();
+    this.#merged.clear();
     this.#slots.clear();
     this.#geometryKeys.length = 0;
     this.#frontFaces = new WeakMap();
@@ -170,6 +187,76 @@ export class BlockVariantCache {
     }
 
     return variant;
+  }
+
+  mergedOf(
+    packed: PackedVoxel,
+    partner: PackedVoxel
+  ): MergedVariant | null {
+    const primary = unmarkMerged(packed);
+    let byPartner = this.#merged.get(primary);
+    if (byPartner === undefined) {
+      byPartner = new Map();
+      this.#merged.set(primary, byPartner);
+    }
+
+    let merged = byPartner.get(partner);
+    if (merged === undefined) {
+      merged = this.#compileMerged(primary, partner);
+      byPartner.set(partner, merged);
+    }
+
+    return merged;
+  }
+
+  #compileMerged(
+    packed: PackedVoxel,
+    partner: PackedVoxel
+  ): MergedVariant | null {
+    const variants = [packed, partner]
+      .map((part) => this.get(voxelBlockId(part), voxelTransform(part)))
+      .filter((variant) => variant !== null);
+    if (variants.length < 2) {
+      return variants.length === 0 ?
+        null :
+        {
+          parts: [{ variant: variants[0], faces: variants[0].faces }],
+          occluder: variants[0]
+        };
+    }
+
+    const [a, b] = variants;
+    const complements = this.#complements.complements(packed, partner);
+    const parts: MergedVariantPart[] = [
+      {
+        variant: a,
+        faces: complements ? visibleFaces(a, b) : a.faces
+      },
+      {
+        variant: b,
+        faces: complements ? visibleFaces(b, a) : b.faces
+      }
+    ];
+    const opaque = a.surface.occludes && b.surface.occludes;
+
+    return {
+      parts,
+      occluder: {
+        surface: a.surface.occludes ? b.surface : a.surface,
+        blockId: a.blockId === b.blockId ? a.blockId : kNoBlock,
+        faces: parts.flatMap(
+          (part) => part.faces.filter((face) => face.cull >= 0)
+        ),
+        occlusionMask: complements && opaque ?
+          kOcclusionFaceMask :
+          a.occlusionMask | b.occlusionMask,
+        selfOcclusionMask: complements ?
+          kOcclusionFaceMask :
+          a.selfOcclusionMask | b.selfOcclusionMask,
+        keepsCoveredFaces: a.keepsCoveredFaces || b.keepsCoveredFaces,
+        blend: a.blend === b.blend ? a.blend : null
+      }
+    };
   }
 
   occlusionMaskOf(
@@ -540,4 +627,15 @@ function nextPowerOfTwo(
   value: number
 ): number {
   return 2 ** Math.ceil(Math.log2(value));
+}
+
+function visibleFaces(
+  variant: BlockVariant,
+  other: BlockVariant
+): readonly BlockVariantFace[] {
+  const hidden = other.surface.occludes || other.blockId === variant.blockId;
+
+  return hidden ?
+    variant.faces.filter((face) => face.cull >= 0) :
+    variant.faces;
 }

@@ -9,10 +9,12 @@ import {
   voxelTransform,
   type PackedVoxel
 } from "../storage/packedVoxel.ts";
+import { sameCell } from "../storage/mergedVoxel.ts";
 import type { VoxelCellChange } from "../types.ts";
 import {
   VOXEL_PATCH_STRIDE,
-  type VoxelPatchCells
+  type VoxelPatchCells,
+  type VoxelPatchPartners
 } from "./voxelPatch.ts";
 
 // CONSTANTS
@@ -34,6 +36,8 @@ const kUntouched = -2;
 interface TrackedCells {
   before: Int32Array;
   after: Int32Array;
+  beforePartner: Int32Array;
+  afterPartner: Int32Array;
   recorded: Uint8Array;
   order: number[];
   originX: number;
@@ -52,6 +56,7 @@ interface TouchedChunk {
 export interface VoxelEditBatchFlush {
   layer: VoxelLayer;
   cells: VoxelPatchCells;
+  partners: VoxelPatchPartners;
   changes: VoxelCellChange[];
   observed: VoxelCellChange[];
 }
@@ -107,6 +112,7 @@ export class VoxelEditBatch {
     layer: VoxelLayer,
     position: Vector3Like,
     packed: PackedVoxel,
+    partner: PackedVoxel,
     options: VoxelEditWriteOptions
   ): void {
     const x = position.x - layer.position.x;
@@ -114,7 +120,7 @@ export class VoxelEditBatch {
     const z = position.z - layer.position.z;
     const touched = this.#touch(layer, x, y, z);
     if (!options.track) {
-      layer.setPackedVoxelAt(position, packed);
+      layer.setPackedVoxelAt(position, packed, partner);
 
       return;
     }
@@ -130,12 +136,16 @@ export class VoxelEditBatch {
       cells.before[index] = chunk === undefined ?
         VOXEL_ABSENT :
         chunk.getPackedAt(lx, ly, lz);
+      cells.beforePartner[index] = chunk === undefined ?
+        VOXEL_ABSENT :
+        chunk.getPartnerAt(lx, ly, lz);
       cells.recorded[index] = options.reach;
       cells.order.push(index);
       this.#pendingCells++;
     }
     cells.after[index] = packed;
-    layer.setPackedVoxelAt(position, packed);
+    cells.afterPartner[index] = partner;
+    layer.setPackedVoxelAt(position, packed, partner);
   }
 
   touch(
@@ -207,6 +217,7 @@ export class VoxelEditBatch {
       const flush: VoxelEditBatchFlush = {
         layer,
         cells: new Array(pending * VOXEL_PATCH_STRIDE),
+        partners: [],
         changes: [],
         observed: []
       };
@@ -248,15 +259,24 @@ export class VoxelEditBatch {
   ): number {
     const shift = this.#shift;
     const mask = this.#mask;
-    const { before, after, recorded, order } = tracked;
-    const { cells } = flush;
+    const {
+      before,
+      after,
+      beforePartner,
+      afterPartner,
+      recorded,
+      order
+    } = tracked;
+    const { cells, partners } = flush;
     let written = offset;
 
     for (const index of order) {
       const from = before[index];
       const to = after[index];
+      const fromPartner = beforePartner[index];
+      const toPartner = afterPartner[index];
       before[index] = kUntouched;
-      if (from === to) {
+      if (sameCell(from, fromPartner, to, toPartner)) {
         continue;
       }
 
@@ -269,6 +289,13 @@ export class VoxelEditBatch {
       cells[written + 2] = z;
       cells[written + 3] = absent ? 0 : voxelBlockId(to);
       cells[written + 4] = absent ? 0 : voxelTransform(to);
+      if (toPartner !== VOXEL_ABSENT) {
+        partners.push(
+          written / VOXEL_PATCH_STRIDE,
+          voxelBlockId(toPartner),
+          voxelTransform(toPartner)
+        );
+      }
       written += VOXEL_PATCH_STRIDE;
       const reach = recorded[index];
       if (reach !== 0) {
@@ -276,7 +303,9 @@ export class VoxelEditBatch {
           layerId: flush.layer.id,
           position: { x, y, z },
           before: from,
-          after: to
+          after: to,
+          beforePartner: fromPartner,
+          afterPartner: toPartner
         };
         if ((reach & VOXEL_REACH_RECORDERS) !== 0) {
           flush.changes.push(change);
@@ -299,6 +328,8 @@ export class VoxelEditBatch {
     touched.cells ??= {
       before: new Int32Array(volume).fill(kUntouched),
       after: new Int32Array(volume),
+      beforePartner: new Int32Array(volume),
+      afterPartner: new Int32Array(volume),
       recorded: new Uint8Array(volume),
       order: [],
       originX: 0,

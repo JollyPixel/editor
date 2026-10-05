@@ -26,6 +26,16 @@ const kAtlas: TilesetDefinition = {
   rows: 4
 };
 
+const kMergedCell = {
+  x: 33,
+  y: 0,
+  z: 0
+};
+const kMergedEntry = {
+  ...makeVoxelEntry(1, 0),
+  partner: makeVoxelEntry(5, 16)
+};
+
 function untrusted(
   document: object
 ): VoxelWorldJSON {
@@ -53,6 +63,7 @@ function makeRichWorld(): VoxelWorld {
   ground.setVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1, 0));
   ground.setVoxelAt({ x: 37, y: 3, z: 2 }, makeVoxelEntry(2, 1));
   ground.setVoxelAt({ x: 31, y: 0, z: -17 }, makeVoxelEntry(3, 2));
+  ground.setVoxelAt(kMergedCell, kMergedEntry);
   const glass = world.addLayer("Glass", { compositing: "replace" });
   glass.visible = false;
   glass.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
@@ -76,6 +87,11 @@ describe("voxel world round-trip", () => {
 
     assert.deepEqual(serializeVoxelWorld(restored), json);
     assert.deepEqual(restored.getVoxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
+    assert.deepEqual(restored.getVoxelAt(kMergedCell), kMergedEntry);
+    assert.ok(
+      [...restored.templates.get("house")!.localVoxels()]
+        .some(([, , , , partner]) => partner !== -1)
+    );
     assert.equal(restored.getLayer("Glass")?.compositing, "replace");
     assert.deepEqual(restored.templates.get("house")?.properties, { tag: "home" });
   });
@@ -165,6 +181,30 @@ describe("serializeVoxelWorld", () => {
 
     assert.deepEqual(palette, [{ block: 5, transform: 3 }]);
     assert.deepEqual(chunks, [{ at: [0, 0, 0], cells: [291], runs: [1, 1] }]);
+  });
+
+  it("writes the second shape of a merged cell as partner runs over the layer palette", () => {
+    const world = new VoxelWorld(16);
+    const layer = world.addLayer("Ground");
+    layer.setVoxelAt({ x: 3, y: 2, z: 1 }, {
+      ...makeVoxelEntry(5, 3),
+      partner: makeVoxelEntry(6, 0)
+    });
+
+    const { palette, chunks } = serializeVoxelWorld(world).layers[0];
+
+    assert.deepEqual(palette, [
+      { block: 5, transform: 3 },
+      { block: 6, transform: 0 }
+    ]);
+    assert.deepEqual(chunks, [
+      {
+        at: [0, 0, 0],
+        cells: [291],
+        runs: [1, 1],
+        partners: { cells: [291], runs: [1, 2] }
+      }
+    ]);
   });
 
   it("lists the most frequent voxel first in the palette", () => {
@@ -367,6 +407,59 @@ describe("deserializeVoxelWorld", () => {
       ]
     );
     assert.equal(serializeVoxelWorld(world).chunkSize, 16);
+  });
+
+  it("re-partitions merged cells saved with another chunk size", () => {
+    const world = new VoxelWorld(16);
+
+    deserializeVoxelWorld(
+      untrusted(emptyDocument({
+        chunkSize: 8,
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          rank: "V",
+          palette: [1, 2].map((block) => {
+            return { block, transform: 0 };
+          }),
+          chunks: [
+            {
+              at: [1, 0, 0],
+              cells: [3],
+              runs: [1, 1],
+              partners: { cells: [3], runs: [1, 2] }
+            }
+          ]
+        }]
+      })),
+      world
+    );
+
+    assert.equal(world.getVoxelAt({ x: 11, y: 0, z: 0 })?.partner?.blockId, 2);
+  });
+
+  it("rejects a partner on a cell that holds no voxel", () => {
+    assert.throws(
+      () => deserializeVoxelWorld(untrusted(emptyDocument({
+        layers: [{
+          id: "l1",
+          name: "Ground",
+          visible: true,
+          rank: "V",
+          palette: [{ block: 1, transform: 0 }],
+          chunks: [
+            {
+              at: [0, 0, 0],
+              cells: [0],
+              runs: [1, 1],
+              partners: { cells: [1], runs: [1, 1] }
+            }
+          ]
+        }]
+      })), new VoxelWorld(16)),
+      /chunk \[0,0,0\]: cell 1 has a partner but no voxel/
+    );
   });
 
   it("leaves the world and tilesets untouched when the document is invalid", () => {

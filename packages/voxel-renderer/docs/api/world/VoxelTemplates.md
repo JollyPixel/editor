@@ -94,12 +94,13 @@ An immutable template. Its voxel positions start at `0, 0, 0`.
 
 #### `localVoxels(): IterableIterator<VoxelTemplateVoxel>`
 
-Template-local cells as `[x, y, z, packed]`.
+Template-local cells as `[x, y, z, packed, partner]`; `partner` is
+`VOXEL_ABSENT` unless the cell is [merged](./VoxelWorld.md#merged-cells).
 
 #### `placedVoxels(position: Vector3Like, transform?: VoxelTransform): IterableIterator<VoxelTemplateVoxel>`
 
-World cells and voxels once the pivot sits on `position`. Voxel orientations
-turn with the placement.
+World cells and voxels once the pivot sits on `position`. Voxel orientations,
+second shapes included, turn with the placement.
 
 #### `placedBounds(position: Vector3Like, transform?: VoxelTransform): VoxelTemplateBounds`
 

@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import {
   BLOCK_PIECE_TEXTURED_GROUP,
+  VOXEL_ABSENT,
   VoxelTransform,
   voxelBlockId,
   voxelTransform,
@@ -9,6 +10,8 @@ import {
   type BlockPieces,
   type BlockRegistry,
   type BlockSurface,
+  type PackedVoxel,
+  type VoxelCoord,
   type VoxelTemplate
 } from "@jolly-pixel/voxel.renderer";
 
@@ -120,33 +123,48 @@ export class TemplateGhost extends THREE.Group {
     transform: VoxelTransform
   ): IterableIterator<Batch> {
     const batches = new Map<string, Batch>();
-    for (const [x, y, z, packed] of template.placedVoxels(kOrigin, transform)) {
-      const block = this.#blockRegistry.get(voxelBlockId(packed));
-      const piece = block === undefined ?
-        null :
-        this.#pieces.pieceOf(block, VoxelTransform.fromPacked(voxelTransform(packed)));
-      if (piece === null) {
-        continue;
-      }
-
-      const key = batchKeyOf(piece);
-      let batch = batches.get(key);
-      if (batch === undefined) {
-        batch = {
-          key,
-          texture: piece.texture,
-          surface: piece.surface,
-          positions: [],
-          normals: [],
-          uvs: [],
-          indices: []
-        };
-        batches.set(key, batch);
-      }
-      appendPiece(batch, piece.geometry, x, y, z);
+    const placed = template.placedVoxels(kOrigin, transform);
+    for (const [x, y, z, packed, partner] of placed) {
+      const cell = { x, y, z };
+      this.#appendShape(batches, packed, cell);
+      this.#appendShape(batches, partner, cell);
     }
 
     return batches.values();
+  }
+
+  #appendShape(
+    batches: Map<string, Batch>,
+    packed: PackedVoxel,
+    cell: VoxelCoord
+  ): void {
+    if (packed === VOXEL_ABSENT) {
+      return;
+    }
+
+    const block = this.#blockRegistry.get(voxelBlockId(packed));
+    const piece = block === undefined ?
+      null :
+      this.#pieces.pieceOf(block, VoxelTransform.fromPacked(voxelTransform(packed)));
+    if (piece === null) {
+      return;
+    }
+
+    const key = batchKeyOf(piece);
+    let batch = batches.get(key);
+    if (batch === undefined) {
+      batch = {
+        key,
+        texture: piece.texture,
+        surface: piece.surface,
+        positions: [],
+        normals: [],
+        uvs: [],
+        indices: []
+      };
+      batches.set(key, batch);
+    }
+    appendPiece(batch, piece.geometry, cell.x, cell.y, cell.z);
   }
 
   #materialsOf(

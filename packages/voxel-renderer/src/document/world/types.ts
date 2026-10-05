@@ -10,6 +10,15 @@ export interface VoxelCoord {
 export interface VoxelEntry {
   blockId: number;
   transform: number;
+  /**
+   * Second shape sharing the cell, present only on a merged cell.
+   */
+  partner?: VoxelPart;
+}
+
+export interface VoxelPart {
+  blockId: number;
+  transform: number;
 }
 
 export interface VoxelCellChange {
@@ -23,6 +32,14 @@ export interface VoxelCellChange {
    * `VOXEL_ABSENT` when the cell was cleared.
    */
   after: PackedVoxel;
+  /**
+   * `VOXEL_ABSENT` unless the cell was merged before the change.
+   */
+  beforePartner: PackedVoxel;
+  /**
+   * `VOXEL_ABSENT` unless the cell is merged after the change.
+   */
+  afterPartner: PackedVoxel;
 }
 
 export interface VoxelEditRecorder {

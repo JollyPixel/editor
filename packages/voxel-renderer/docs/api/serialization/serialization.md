@@ -28,7 +28,11 @@ ids, so a world file only makes sense alongside the tilesets it links.
 Each `VoxelLayerJSON` holds the layer's `id`, `name`, `visible`, `rank` and
 optional `position`, `compositing` and `properties`, plus its voxel data. A
 missing `position` loads as `{ x: 0, y: 0, z: 0 }` and a missing `compositing`
-as `"composite"`. Object layers are described on
+as `"composite"`. The second shapes of
+[merged cells](../world/VoxelWorld.md#merged-cells) go in an optional
+`partners` field of each chunk, encoded like the chunk over the same palette.
+Loading rejects a partner on a cell that holds no voxel. Readers older than
+this field ignore it and keep only the first shape. Object layers are described on
 [`VoxelWorld`](../world/VoxelWorld.md#voxel-objects).
 
 ## World functions

@@ -52,7 +52,11 @@ import {
   isVoxelObjectLayerCommand,
   isVoxelTemplateCommand
 } from "../commands/categories.ts";
-import type { VoxelPatchCells } from "./editing/voxelPatch.ts";
+import {
+  voxelPatch,
+  type VoxelPatchCells,
+  type VoxelPatchPartners
+} from "./editing/voxelPatch.ts";
 import { removeBlockVoxels } from "./editing/removeBlockVoxels.ts";
 import { assertPowerOfTwoChunkSize } from "./storage/chunkSize.ts";
 import type { VoxelLogger } from "../../VoxelLogger.ts";
@@ -69,6 +73,13 @@ export type IterableLayerChunk = {
 export interface VoxelSetOptions extends VoxelTransformOptions {
   position: Vector3Like;
   blockId: number;
+  /**
+   * Adds the voxel as the second shape of an occupied, unmerged cell instead
+   * of replacing it. Other cells are written normally. The world does not
+   * check that the two shapes complement each other.
+   * @default false
+   */
+  merge?: boolean;
 }
 
 export interface VoxelRemoveOptions {
@@ -117,7 +128,11 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       chunkSize,
       layer: (name) => this.getLayer(name),
       dispatch: (command) => this.#dispatch(command) !== null,
-      patch: (layerName, cells) => this.patchVoxels(layerName, cells)
+      patch: (layerName, { cells, partners }) => this.patchVoxels(
+        layerName,
+        cells,
+        partners
+      )
     });
   }
 
@@ -451,12 +466,13 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
 
   patchVoxels(
     layerName: string,
-    cells: VoxelPatchCells
+    cells: VoxelPatchCells,
+    partners: VoxelPatchPartners = []
   ): void {
     this.#dispatch({
       action: "voxels-patched",
       layerId: this.#idOf(layerName),
-      metadata: { cells }
+      metadata: voxelPatch(cells, partners)
     });
   }
 
@@ -597,7 +613,7 @@ function voxelSetCommand(
   layerId: string,
   options: VoxelSetOptions
 ): VoxelEditCommand {
-  const { position, blockId } = options;
+  const { position, blockId, merge } = options;
 
   return {
     action: "voxel-set",
@@ -605,7 +621,8 @@ function voxelSetCommand(
     metadata: {
       position,
       blockId,
-      ...transformFields(options)
+      ...transformFields(options),
+      ...(merge === true ? { merge } : {})
     }
   };
 }

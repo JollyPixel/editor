@@ -40,6 +40,18 @@ const kVoxelTransformProperties = {
   flipZ: { type: "boolean" }
 } as const;
 
+const kVoxelSetProperties = {
+  position: kVector3Schema,
+  blockId: { type: "number" },
+  ...kVoxelTransformProperties,
+  merge: { type: "boolean" }
+} as const;
+
+const kPatchCellsSchema: JSONSchema = {
+  type: "array",
+  items: { type: "integer" }
+};
+
 const kVoxelObjectProperties: Record<string, JSONSchema> = {
   id: { type: "string" },
   name: { type: "string" },
@@ -102,22 +114,18 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
   "position-rebased": objectSchema({
     position: kVector3Schema
   }),
-  "voxel-set": objectSchema({
-    position: kVector3Schema,
-    blockId: { type: "number" },
-    ...kVoxelTransformProperties
-  }),
+  "voxel-set": objectSchema(kVoxelSetProperties, [
+    "position",
+    "blockId",
+    ...Object.keys(kVoxelTransformProperties)
+  ]),
   "voxel-removed": objectSchema({
     position: kVector3Schema
   }),
   "voxels-set": objectSchema({
     entries: {
       type: "array",
-      items: objectSchema({
-        position: kVector3Schema,
-        blockId: { type: "number" },
-        ...kVoxelTransformProperties
-      }, ["position", "blockId"])
+      items: objectSchema(kVoxelSetProperties, ["position", "blockId"])
     }
   }),
   "voxels-removed": objectSchema({
@@ -127,11 +135,9 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
     }
   }),
   "voxels-patched": objectSchema({
-    cells: {
-      type: "array",
-      items: { type: "integer" }
-    }
-  }),
+    cells: kPatchCellsSchema,
+    partners: kPatchCellsSchema
+  }, ["cells"]),
   "layer-transformed": objectSchema(kVoxelTransformProperties),
   "layer-moved": objectSchema({
     rank: kRankSchema
