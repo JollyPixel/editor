@@ -5,6 +5,10 @@ export class FakeOverlay {
   previews: (UVRegion | null)[] = [];
   resizeHandles = false;
 
+  isPeerDragging(): boolean {
+    return false;
+  }
+
   setLivePreview(
     region: UVRegion | null
   ): void {

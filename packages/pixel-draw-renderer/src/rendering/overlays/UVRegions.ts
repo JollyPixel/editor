@@ -88,6 +88,18 @@ export class UVRegionLayer {
     this.#render();
   }
 
+  isPeerDragging(
+    id: string
+  ): boolean {
+    for (const { region } of this.#peerPreviews.values()) {
+      if (region.id === id) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   setPeerSelections(
     colorByRegion: ReadonlyMap<string, string>
   ): void {
@@ -199,7 +211,12 @@ export class UVRegionLayer {
     entries: UVOverlayEntry[]
   ): UVRegion | null {
     const id = this.#uvMap.selectedRegionId;
-    if (!this.#resizeHandles || this.#livePreview !== null || id === null) {
+    if (
+      !this.#resizeHandles ||
+      this.#livePreview !== null ||
+      id === null ||
+      this.isPeerDragging(id)
+    ) {
       return null;
     }
 

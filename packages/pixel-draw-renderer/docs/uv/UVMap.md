@@ -72,7 +72,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"label-visibility-changed"` | `showRegionLabels` |
 | `"label-scope-changed"` | `labelScope` |
 
-`face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
+`face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. Canvas gestures emit it on pointer-down with the initial geometry, then whenever the preview changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
 ## Properties
 

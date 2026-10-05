@@ -39,6 +39,71 @@ function drag(
 }
 
 describe("PixelArtCanvas — uv resize", () => {
+  for (const state of ["stacked", "free"] as const) {
+    test(`peer drags block ${state} handles and movement until cleared`, () => {
+      const { manager, canvas, overlay } = createPixelArtCanvas({
+        zoom: { default: 4 },
+        uv: { resizable: true }
+      });
+      manager.mode = "uv";
+      const region = manager.uv.create({ width: 4, height: 4 });
+      manager.uv.setState(region.id, state);
+      manager.uv.select(region.id, "front");
+      const before = manager.uv.get(region.id)!;
+      const preview = {
+        region: before.resized({ ...before.bounds, width: 6 }, "front"),
+        face: state === "free" ? "front" : null,
+        color: "#ff0000"
+      };
+      function handles(): NodeListOf<SVGRectElement> {
+        return overlay.querySelectorAll("[part='uv-resize-handle']");
+      }
+      assert.equal(handles().length, 4);
+
+      manager.peerPresence.uv.set("peer-A", preview);
+      manager.peerPresence.uv.set("peer-B", preview);
+      assert.equal(handles().length, 0);
+      canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+      assert.equal(canvas.style.cursor, "grab");
+      drag(manager, { x: 100, y: 100 }, { x: 108, y: 104 });
+      drag(manager, { x: 90, y: 90 }, { x: 94, y: 94 });
+      assert.deepEqual(manager.uv.get(region.id)!.toJSON(), before.toJSON());
+
+      const other = manager.uv.create({ width: 2, height: 2 });
+      manager.uv.select(other.id);
+      assert.equal(handles().length, 4);
+      manager.uv.select(region.id, "front");
+      manager.peerPresence.uv.remove("peer-A");
+      assert.equal(handles().length, 0);
+      manager.peerPresence.uv.clearAll();
+      assert.equal(handles().length, 4);
+      drag(manager, { x: 100, y: 100 }, { x: 108, y: 104 });
+      assert.equal(manager.uv.get(region.id)!.rectFor("front").width, 6);
+      manager.destroy();
+    });
+  }
+
+  test("announces a resize on pointer-down and clears a no-op drag", () => {
+    const manager = makeManager({ uv: { resizable: true } });
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+    const widths: number[] = [];
+    const ended: boolean[] = [];
+    manager.uv.on("region-dragging", ({ region }) => {
+      widths.push(region.bounds.width);
+    });
+    manager.uv.on("region-drag-ended", ({ committed }) => {
+      ended.push(committed);
+    });
+
+    manager.canvas().dispatchEvent(mouseEvent("mousedown", 100, 100));
+    assert.deepEqual(widths, [4]);
+    assert.deepEqual(manager.uv.get(region.id)!.toJSON(), region.toJSON());
+    manager.canvas().dispatchEvent(mouseEvent("mouseup", 100, 100));
+    assert.deepEqual(ended, [false]);
+    manager.destroy();
+  });
+
   test("a hovered corner shows its cursor and resizes in one undo step", () => {
     const manager = makeManager({ uv: { resizable: true } });
     const region = manager.uv.create({ width: 4, height: 4 });
@@ -69,7 +134,7 @@ describe("PixelArtCanvas — uv resize", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 99, 90));
     canvas.dispatchEvent(mouseEvent("mousedown", 99, 90));
     canvas.dispatchEvent(mouseEvent("mousemove", 100, 90));
-    assert.deepEqual(widths, []);
+    assert.deepEqual(widths, [4]);
 
     canvas.dispatchEvent(mouseEvent("mousemove", 106, 90));
     canvas.dispatchEvent(mouseEvent("mouseup", 106, 90));

@@ -50,10 +50,10 @@ describe("UVController — dragging an unfolded region", () => {
     controller.handleStart({ x: 6, y: 10 });
     controller.handleMove({ x: 8, y: 13 });
 
-    assert.deepStrictEqual(faces, [null]);
-    assert.strictEqual(overlay.previews.length, 1);
+    assert.deepStrictEqual(faces, [null, null]);
+    assert.strictEqual(overlay.previews.length, 2);
     assert.deepStrictEqual(
-      overlay.previews[0]?.bounds,
+      overlay.previews.at(-1)?.bounds,
       { x: 2, y: 3, width: 8, height: 12 }
     );
   });

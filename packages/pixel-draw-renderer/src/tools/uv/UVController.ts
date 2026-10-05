@@ -121,6 +121,7 @@ export class UVController implements UVTool {
         { id: handle.id, slot: handle.slot, rect: handle.rect, origin: pointer },
         handle.handle
       );
+      this.#showPreview(this.#gesture);
 
       return;
     }
@@ -139,6 +140,10 @@ export class UVController implements UVTool {
     }
 
     const { region, face, geometry } = pick;
+    if (this.#overlay.isPeerDragging(region.id)) {
+      return;
+    }
+
     const grouped = region.movementScope === "region";
     this.#gesture = UVGesture.move(this.#uvMap, {
       id: region.id,
@@ -146,6 +151,7 @@ export class UVController implements UVTool {
       rect: grouped ? region.bounds : rectOf(geometry),
       origin: position
     });
+    this.#showPreview(this.#gesture);
   }
 
   handleMove(
@@ -219,7 +225,11 @@ export class UVController implements UVTool {
     point: Vec2
   ): UVResizeHit | null {
     const id = this.#uvMap.selectedRegionId;
-    if (!this.#resizable || id === null) {
+    if (
+      !this.#resizable ||
+      id === null ||
+      this.#overlay.isPeerDragging(id)
+    ) {
       return null;
     }
 

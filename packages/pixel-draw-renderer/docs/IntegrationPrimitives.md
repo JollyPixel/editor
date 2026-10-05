@@ -69,6 +69,11 @@ That region's border takes the peer color and paints above plain borders but
 below the local selection. The local selection always keeps its own highlight,
 and the first peer set wins when several peers select one region.
 
+An active preview written with `canvas.peerPresence.uv.set(clientId, state)`
+hides resize handles and blocks new local move and resize gestures for the
+whole UV region. Removing the last preview for that region restores its
+handles. Peer selection alone does not block editing.
+
 `PeerFloatingSelectionState` accepts optional row-major `pixels` and
 `eraseColor`. When supplied, previews use those bytes and that color. Omitting
 them preserves source sampling and erase color resolution from the receiving
