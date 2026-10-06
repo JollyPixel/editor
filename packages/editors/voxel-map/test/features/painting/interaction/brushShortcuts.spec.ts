@@ -9,11 +9,8 @@ import {
 import { KeyBindings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import {
-  BrushStore,
-  SelectionStore,
-  VoxelLayerRef
-} from "../../../../src/state/index.ts";
+import { SelectionStore, VoxelLayerRef } from "../../../../src/state/index.ts";
+import { BrushStore } from "../../../../src/features/painting/BrushStore.ts";
 import { bindBrushShortcuts } from "../../../../src/features/painting/interaction/brushShortcuts.ts";
 
 function setup() {

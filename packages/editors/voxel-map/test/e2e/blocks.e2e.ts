@@ -24,7 +24,7 @@ function brushBlock(
   page: Page
 ): Promise<number> {
   return page.evaluate(
-    () => window.voxelMapEditor!.workspace.state.brush.blockId
+    () => window.voxelMapEditor!.workspace.state.block.id
   );
 }
 

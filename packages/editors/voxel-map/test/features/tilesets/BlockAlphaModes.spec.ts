@@ -16,7 +16,6 @@ import type {
 
 // Import Internal Dependencies
 import {
-  alphaModeFor,
   BlockAlphaModes,
   type TilesetPixels
 } from "../../../src/features/tilesets/BlockAlphaModes.ts";
@@ -71,25 +70,26 @@ function setup(
   return { blocks, alphaModes };
 }
 
-describe("alphaModeFor", () => {
-  it("cuts out transparent textures and keeps opaque ones opaque", () => {
-    assert.equal(alphaModeFor(undefined, true), "mask");
-    assert.equal(alphaModeFor("opaque", true), "mask");
-    assert.equal(alphaModeFor("mask", false), "opaque");
-    assert.equal(alphaModeFor(undefined, false), "opaque");
-  });
-
-  it("never changes a blended block", () => {
-    assert.equal(alphaModeFor("blend", false), "blend");
-    assert.equal(alphaModeFor("blend", true), "blend");
-  });
-});
-
 describe("BlockAlphaModes.resolve", () => {
   it("sets a cutout on a block whose tile shows transparency", () => {
     const { alphaModes } = setup(new Set([1]));
 
     assert.equal(alphaModes.resolve(makeBlock(1, 1)).alphaMode, "mask");
+    assert.equal(
+      alphaModes.resolve(makeBlock(1, 1, { alphaMode: "opaque" })).alphaMode,
+      "mask"
+    );
+  });
+
+  it("never changes a blended block", () => {
+    const { alphaModes } = setup(new Set([1]));
+
+    for (const col of [0, 1]) {
+      assert.equal(
+        alphaModes.resolve(makeBlock(1, col, { alphaMode: "blend" })).alphaMode,
+        "blend"
+      );
+    }
   });
 
   it("returns an opaque block as it is", () => {

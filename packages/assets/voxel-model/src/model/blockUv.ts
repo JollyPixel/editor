@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  RectArea,
   UVRegion,
   type SelectionRect,
   type UVLayoutData,
@@ -65,7 +66,7 @@ export function nextBlockUvOrigin(
   textureSize: Vec2
 ): Vec2 {
   const net = blockUvBounds(createBlockUv());
-  const taken = [...layouts].map(blockUvBounds);
+  const taken = [...layouts].map((layout) => RectArea.from(blockUvBounds(layout)));
   const columns = Math.floor(textureSize.x / net.width);
   const rows = Math.floor(textureSize.y / net.height);
 
@@ -77,7 +78,7 @@ export function nextBlockUvOrigin(
         width: net.width,
         height: net.height
       };
-      if (!taken.some((rect) => overlaps(rect, cell))) {
+      if (!taken.some((area) => area.intersects(cell))) {
         return {
           x: cell.x,
           y: cell.y
@@ -90,14 +91,4 @@ export function nextBlockUvOrigin(
     x: 0,
     y: 0
   };
-}
-
-function overlaps(
-  a: SelectionRect,
-  b: SelectionRect
-): boolean {
-  return a.x < b.x + b.width &&
-    b.x < a.x + a.width &&
-    a.y < b.y + b.height &&
-    b.y < a.y + a.height;
 }

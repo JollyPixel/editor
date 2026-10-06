@@ -24,6 +24,7 @@ import {
   shapeOptions,
   tilesetOptions
 } from "./blockDialog.ts";
+import "../blockIcons.ts";
 
 @customElement("block-create-dialog")
 export class BlockCreateDialog extends WorkspaceElement {
@@ -163,7 +164,7 @@ export class BlockCreateDialog extends WorkspaceElement {
       workspace.tilesets.freeTile(draft.tilesetId, draft.size)
     );
     workspace.tilesets.defineBlock(definition);
-    workspace.state.brush.blockId = definition.id;
+    workspace.state.block.id = definition.id;
     this.#close();
   }
 }

@@ -8,11 +8,12 @@ import type {
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/index.ts";
+import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { MapTemplates } from "./MapTemplates.ts";
+import type { ActivePlacement } from "../placement/ActivePlacement.ts";
 import type { MapPlacement } from "../placement/MapPlacement.ts";
-import type { Placement } from "../placement/Placement.ts";
-import { positionSource } from "../../shared/positionSource.ts";
+import { PositionSource } from "../../shared/PositionSource.ts";
+import "./templateIcons.ts";
 
 @customElement("template-panel")
 export class TemplatePanel extends LitElement {
@@ -41,13 +42,13 @@ export class TemplatePanel extends LitElement {
   private declare _template: VoxelTemplate | null;
 
   @state()
-  private declare _placement: Placement | null;
+  private declare _placement: ActivePlacement | null;
 
   #subscriptions: Array<() => void> = [];
 
-  #position = new FieldBinding(this, positionSource({
-    position: () => this._placement?.position ?? null,
-    move: (position) => this.placement.store.move(position)
+  #position = new FieldBinding(this, new PositionSource({
+    position: () => this._placement?.placement.position ?? null,
+    move: (position) => this.placement.move(position)
   }));
 
   constructor() {
@@ -61,11 +62,11 @@ export class TemplatePanel extends LitElement {
 
     this.#subscriptions.push(
       this.templates.store.subscribe("selectionChange", this.#syncTemplate),
-      this.placement.store.subscribe("change", this.#syncPlacement),
+      this.placement.subscribe("change", this.#syncPlacement),
       this.mapDocument.subscribe("templatesChanged", this.#syncTemplate)
     );
     this.#syncTemplate();
-    this.#syncPlacement(this.placement.store.placement);
+    this.#syncPlacement(this.placement.current);
   }
 
   override disconnectedCallback() {
@@ -84,15 +85,13 @@ export class TemplatePanel extends LitElement {
 
   #renderPlacement() {
     const placement = this._placement;
-    if (placement?.source.kind !== "template") {
+    if (placement?.kind !== "template") {
       return nothing;
     }
 
-    const template = this.world.templates.get(placement.source.templateId);
-
     return html`
       <jolly-separator
-        label=${`Placing ${template?.name ?? ""}`}
+        label=${`Placing ${placement.name}`}
       ></jolly-separator>
 
       <jolly-vector3
@@ -131,7 +130,7 @@ export class TemplatePanel extends LitElement {
   };
 
   readonly #syncPlacement = (
-    placement: Placement | null
+    placement: ActivePlacement | null
   ): void => {
     this._placement = placement;
   };

@@ -8,7 +8,7 @@ export type TemplateDropResult = "commit" | "cancel";
 
 export interface TemplateDropOptions {
   templateId: string;
-  placement: Pick<MapPlacement, "placeTemplate" | "cancel" | "store">;
+  placement: Pick<MapPlacement, "placeTemplate" | "move" | "cancel">;
   pointAt(
     clientX: number,
     clientY: number
@@ -42,7 +42,7 @@ export class TemplateDrop {
       this.#release();
     }
     else if (this.#placing) {
-      this.#placement.store.move(position);
+      this.#placement.move(position);
     }
     else {
       this.#placing = this.#placement.placeTemplate(

@@ -5,3 +5,4 @@ export {
 export * from "./PeerMarkTracker.ts";
 export * from "./PeerRoster.ts";
 export * from "./peerProfile.ts";
+export * from "./peerBadges.ts";

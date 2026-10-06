@@ -16,7 +16,7 @@ export const PLACEMENT_SHORTCUTS = {
 
 export interface PlacementShortcutsOptions {
   keyboard: Pick<Keyboard, "bind">;
-  placement: Pick<MapPlacement, "store" | "commit" | "cancel">;
+  placement: Pick<MapPlacement, "placing" | "turn" | "commit" | "cancel">;
 }
 
 export function bindPlacementShortcuts(
@@ -27,7 +27,7 @@ export function bindPlacementShortcuts(
   function whilePlacing(
     action: (event: KeyboardEvent) => boolean | void
   ): KeyBindingHandler {
-    return (event) => placement.store.placing && action(event) !== false;
+    return (event) => placement.placing && action(event) !== false;
   }
 
   const { commit, cancel } = PLACEMENT_SHORTCUTS;
@@ -35,7 +35,7 @@ export function bindPlacementShortcuts(
     ...PLACEMENT_ROTATIONS.map(({ chords, transform }) => keyboard.bind(
       chords,
       whilePlacing(() => {
-        placement.store.transform(transform);
+        placement.turn(transform);
       })
     )),
     keyboard.bind(commit, whilePlacing((event) => {
@@ -46,7 +46,11 @@ export function bindPlacementShortcuts(
 
       return true;
     })),
-    keyboard.bind(cancel, () => placement.cancel(), { priority: 1 })
+    keyboard.bind(
+      cancel,
+      () => placement.cancel(),
+      { priority: 1 }
+    )
   ];
 
   return () => {

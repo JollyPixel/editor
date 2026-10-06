@@ -15,7 +15,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentEvents } from "../../../../src/document/index.ts";
+import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
 import { PeerPlacements } from "../../../../src/features/placement/collaboration/PeerPlacements.ts";
 import { Placement } from "../../../../src/features/placement/Placement.ts";
 import { PlacementPreview } from "../../../../src/features/placement/PlacementPreview.ts";

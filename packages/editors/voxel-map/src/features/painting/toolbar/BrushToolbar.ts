@@ -20,7 +20,7 @@ import {
   BRUSH_MIN_SIZE,
   type BrushAxis,
   type BrushStore
-} from "../../../state/index.ts";
+} from "../BrushStore.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import { brushToolbarStyles } from "./BrushToolbar.styles.ts";
@@ -29,12 +29,12 @@ import {
   BRUSH_AXIS_OPTIONS,
   BRUSH_MODE_OPTIONS,
   BRUSH_PATTERN_OPTIONS,
-  choiceOf,
   ghostLabel,
   toolLabel,
   type BrushToolOption
 } from "./brushToolOptions.ts";
-import { HISTORY_SHORTCUTS } from "../../../scene/historyShortcuts.ts";
+import { choiceOf } from "./toolChoice.ts";
+import { HISTORY_SHORTCUTS } from "../../../shared/historyShortcuts.ts";
 import { BRUSH_SHORTCUTS } from "../interaction/brushShortcuts.ts";
 import "./brushIcons.ts";
 
@@ -86,14 +86,15 @@ export class BrushToolbar extends WorkspaceElement {
   }
 
   get #brush(): BrushStore {
-    return this.attached.state.brush;
+    return this.attached.brush;
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { brush, selection, keyboardLayout } = workspace.state;
-    const { history } = workspace.view.document;
+    const { brush } = workspace;
+    const { selection, keyboardLayout } = workspace.state;
+    const { history } = workspace.mapDocument;
     const refreshAvailability = (): void => {
       this._availability = PaintAvailability.of(selection, brush.suspended);
       this.disabled = this._availability.blocked;
@@ -121,7 +122,8 @@ export class BrushToolbar extends WorkspaceElement {
       return nothing;
     }
 
-    const { brush, keyboardLayout } = workspace.state;
+    const { brush } = workspace;
+    const { keyboardLayout } = workspace.state;
     function shortcut(
       chords: readonly KeyChordString[]
     ): string {
@@ -296,11 +298,11 @@ export class BrushToolbar extends WorkspaceElement {
   }
 
   #onUndo(): void {
-    this.workspace?.view.document.history.undo();
+    this.workspace?.mapDocument.history.undo();
   }
 
   #onRedo(): void {
-    this.workspace?.view.document.history.redo();
+    this.workspace?.mapDocument.history.redo();
   }
 
   #onGhostToggle(): void {

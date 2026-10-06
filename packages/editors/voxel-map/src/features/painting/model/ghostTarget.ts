@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { BrushMode } from "../../../state/index.ts";
+import type { BrushMode } from "../BrushStore.ts";
 import type { VoxelPaint } from "./BrushStroke.ts";
 
 export interface GhostAim {

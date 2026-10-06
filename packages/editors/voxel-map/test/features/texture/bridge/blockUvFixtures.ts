@@ -10,11 +10,11 @@ import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { BrushStore } from "../../../../src/state/index.ts";
-import type { MapDocumentEvents } from "../../../../src/document/index.ts";
+import { BlockSelection } from "../../../../src/state/index.ts";
+import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
 
 export interface FakeBridgeOptions {
-  brush: BrushStore;
+  block: BlockSelection;
   mapDocument: Emitter<MapDocumentEvents>;
 }
 
@@ -46,7 +46,7 @@ export function makeFakeVoxelEngine(): {
 } {
   const dirtyReasons: string[] = [];
   const bridgeOptions: FakeBridgeOptions = {
-    brush: new BrushStore(),
+    block: new BlockSelection(),
     mapDocument: new Emitter<MapDocumentEvents>()
   };
   const registry = new BlockRegistry();

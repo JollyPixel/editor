@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import type {
-  TreeBadge,
-  TreeNode
+import {
+  formatCount,
+  type TreeNode
 } from "@jolly-pixel/ui";
+import {
+  peerBadges,
+  type PeerMarkMap
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -13,11 +17,6 @@ import {
   type LayerRef
 } from "../../state/index.ts";
 import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
-import type { PeerMarks } from "../../shared/PeerMarks.ts";
-import { formatCount } from "../../shared/format.ts";
-
-// CONSTANTS
-const kMaxBadges = 3;
 
 export function layerSelectionsOf(
   world: VoxelWorld
@@ -80,10 +79,12 @@ export function layerTreeNodes(
 
 export function withLayerBadges(
   nodes: readonly TreeNode<LayerRef>[],
-  marks: PeerMarks<string>
+  marks: PeerMarkMap<string>
 ): TreeNode<LayerRef>[] {
   return nodes.map((node) => {
-    const badges = badgesOf(node, marks);
+    const badges = node.data === undefined ?
+      [] :
+      peerBadges(node.data.key, marks);
     const children = node.children === undefined
       ? undefined
       : withLayerBadges(node.children, marks);
@@ -92,24 +93,6 @@ export function withLayerBadges(
       ...node,
       ...badges.length > 0 ? { badges } : {},
       ...children === undefined ? {} : { children }
-    };
-  });
-}
-
-function badgesOf(
-  node: TreeNode<LayerRef>,
-  marks: PeerMarks<string>
-): TreeBadge[] {
-  if (node.data === undefined) {
-    return [];
-  }
-
-  const peers = marks.marksOf(node.data.key);
-
-  return peers.slice(0, kMaxBadges).map((peer) => {
-    return {
-      color: peer.color,
-      title: peer.displayName
     };
   });
 }

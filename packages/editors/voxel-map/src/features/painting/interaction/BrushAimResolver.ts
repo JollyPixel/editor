@@ -7,7 +7,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { castViewRay } from "../../../shared/viewRay.ts";
+import { ViewRay } from "../../../scene/camera/ViewRay.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
 import type { BrushPlane } from "../model/BrushFootprint.ts";
 import {
@@ -47,10 +47,9 @@ export interface BrushAimResolverOptions {
 export class BrushAimResolver {
   #camera: THREE.PerspectiveCamera;
   #solid: THREE.Object3D;
-  #groundPlaneSize: number;
+  #viewRay: ViewRay;
   #maxDistance: number;
   #skyRadius: number;
-  #raycaster = new THREE.Raycaster();
   #aim: BrushAim | null = null;
   #aimPointer = new THREE.Vector2(NaN, NaN);
   #aimView = new THREE.Matrix4();
@@ -60,7 +59,10 @@ export class BrushAimResolver {
   ) {
     this.#camera = options.camera;
     this.#solid = options.solid;
-    this.#groundPlaneSize = options.groundPlaneSize;
+    this.#viewRay = new ViewRay({
+      camera: options.camera,
+      groundPlaneSize: options.groundPlaneSize
+    });
     this.#maxDistance = options.maxDistance;
     this.#skyRadius = Math.max(0, options.skyRadius ?? 0);
   }
@@ -104,11 +106,7 @@ export class BrushAimResolver {
   #castAim(
     pointer: THREE.Vector2
   ): BrushAim | null {
-    const hit = castViewRay(this.#camera, this.#solid, {
-      pointer,
-      groundPlaneSize: this.#groundPlaneSize,
-      raycaster: this.#raycaster
-    });
+    const hit = this.#viewRay.cast(this.#solid, pointer);
     if (
       hit === null ||
       hit.distance > this.#maxDistance
@@ -142,7 +140,7 @@ export class BrushAimResolver {
     );
 
     const face = CellFace.of(
-      cellFaceStep(this.#raycaster.ray, cell) ?? hit.normal
+      cellFaceStep(this.#viewRay.ray, cell) ?? hit.normal
     );
 
     return {
@@ -165,7 +163,7 @@ export class BrushAimResolver {
     }
 
     kSphere.set(this.#camera.position, radius);
-    const point = this.#raycaster.ray.intersectSphere(
+    const point = this.#viewRay.ray.intersectSphere(
       kSphere,
       kSpherePoint
     );
@@ -188,17 +186,14 @@ export class BrushAimResolver {
     pointer: THREE.Vector2,
     plane: BrushPlane
   ): VoxelCoord | null {
-    this.#raycaster.setFromCamera(
-      pointer,
-      this.#camera
-    );
+    const ray = this.#viewRay.aim(pointer);
     kPlaneNormal.set(0, 0, 0).setComponent(
       kAxisIndex[plane.axis],
       1
     );
     kPlane.set(kPlaneNormal, -(plane.value + 0.5));
 
-    const point = this.#raycaster.ray.intersectPlane(
+    const point = ray.intersectPlane(
       kPlane,
       kPlanePoint
     );
@@ -207,7 +202,7 @@ export class BrushAimResolver {
     }
 
     const distance = point.distanceTo(
-      this.#raycaster.ray.origin
+      ray.origin
     );
     if (distance > this.#maxDistance) {
       return null;
@@ -225,7 +220,7 @@ export class BrushAimResolver {
     normal: THREE.Vector3
   ): VoxelCoord {
     const step = cellFaceStep(
-      this.#raycaster.ray,
+      this.#viewRay.ray,
       cell
     );
     if (step === null) {

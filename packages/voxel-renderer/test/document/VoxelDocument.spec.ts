@@ -8,6 +8,7 @@ import type {
   VoxelCommand,
   VoxelCommandOrigin
 } from "../../src/document/commands/index.ts";
+import type { BlockRedefinition } from "../../src/document/blocks/index.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import { makeAtlasDef } from "../helpers/atlas.ts";
 import {
@@ -290,6 +291,39 @@ describe("VoxelDocument - command origin", () => {
       { event: "command", action: "added", origin: "remote" },
       { event: "command", action: "voxel-set", origin: "local" }
     ]);
+  });
+});
+
+describe("VoxelDocument - block redefinition", () => {
+  it("tells what each block definition changed from the one it replaced", () => {
+    const document = makeDocument();
+    const redefinitions: Array<BlockRedefinition | undefined> = [];
+    document.on("command", (_command, { redefinition }) => {
+      redefinitions.push(redefinition);
+    });
+
+    document.defineBlock(makeBlockDef(LEAVES_ID, "cube"));
+    document.defineBlock(makeBlockDef(LEAVES_ID, "cube", { name: "Leaves" }));
+    document.defineBlock(makeBlockDef(LEAVES_ID, "cube", {
+      name: "Leaves",
+      defaultTexture: { col: 2, row: 0 }
+    }));
+    document.apply(blockDefinedCmd({ id: LEAVES_ID }), { origin: "remote" });
+
+    assert.deepEqual(redefinitions, ["added", "metadata", "tiles", "tiles"]);
+  });
+
+  it("leaves the redefinition out of other commands", () => {
+    const document = makeDocument();
+    const redefinitions: Array<BlockRedefinition | undefined> = [];
+    document.on("command", (_command, { redefinition }) => {
+      redefinitions.push(redefinition);
+    });
+
+    document.moveBlock(CUBE_ID, 0);
+    document.addTileset(makeAtlasDef({ id: "stone" }));
+
+    assert.deepEqual(redefinitions, [undefined]);
   });
 });
 

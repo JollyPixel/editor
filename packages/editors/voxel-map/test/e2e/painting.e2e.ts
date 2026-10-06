@@ -34,18 +34,6 @@ test("a click places the brush block and a right click removes it", async({ page
   await expect.poll(() => blocksAt(page, [cell])).toEqual([null]);
 });
 
-test("a drag paints every cell it crosses on the ground plane", async({ page }) => {
-  await setBrush(page, { blockId: 2 });
-  const row = [0, 1, 2, 3].map((x) => {
-    return { x, y: 0, z: 0 };
-  });
-
-  await strokeCells(page, [row[0], row[3]]);
-
-  await expect.poll(() => blocksAt(page, row)).toEqual([2, 2, 2, 2]);
-  expect(await voxelCount(page)).toBe(4);
-});
-
 test("a stroke stays on the height it started on", async({ page }) => {
   await seedVoxels(page, [{ x: 2, y: 0, z: 0, blockId: 1 }]);
   await setBrush(page, { blockId: 2 });
@@ -256,7 +244,7 @@ test("nothing is painted and a warning is logged without a voxel layer", async({
   expect((await brushState(page)).size).toBe(1);
 });
 
-test("undo and redo replay a whole stroke from the toolbar and the keyboard", async({ page }) => {
+test("a drag paints every cell it crosses, and undo and redo replay it whole", async({ page }) => {
   const toolbar = page.locator("voxel-brush-toolbar");
   const undo = toolbar.getByRole("button", { name: /^Undo/ });
   const redo = toolbar.getByRole("button", { name: /^Redo/ });
@@ -269,7 +257,8 @@ test("undo and redo replay a whole stroke from the toolbar and the keyboard", as
 
   await setBrush(page, { blockId: 2 });
   await strokeCells(page, [row[0], row[3]]);
-  await expect.poll(() => voxelCount(page)).toBe(4);
+  await expect.poll(() => blocksAt(page, row)).toEqual([2, 2, 2, 2]);
+  expect(await voxelCount(page)).toBe(4);
   await expect(undo).toBeEnabled();
 
   await test.step("the toolbar undoes the stroke in one step", async() => {

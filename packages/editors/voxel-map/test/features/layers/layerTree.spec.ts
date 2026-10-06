@@ -7,17 +7,16 @@ import {
 
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import type { TreeNode } from "@jolly-pixel/ui";
+import type {
+  PresencePeer,
+  TreeNode
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   layerTreeNodes,
   withLayerBadges
 } from "../../../src/features/layers/layerTree.ts";
-import {
-  PeerMarks,
-  type PeerMark
-} from "../../../src/shared/PeerMarks.ts";
 import {
   ObjectLayerRef,
   ObjectRef,
@@ -139,7 +138,7 @@ describe("withLayerBadges", () => {
   function mark(
     clientId: string,
     color: string
-  ): PeerMark {
+  ): PresencePeer {
     return {
       clientId,
       displayName: clientId,
@@ -148,16 +147,16 @@ describe("withLayerBadges", () => {
   }
 
   test("leaves every row untouched when no peer selects anything", () => {
-    const badged = withLayerBadges(nodes, new PeerMarks(new Map()));
+    const badged = withLayerBadges(nodes, new Map());
 
     assert.strictEqual(badged[0].badges, undefined);
     assert.strictEqual(badged[1].children?.[0].badges, undefined);
   });
 
   test("badges a voxel layer with the color and name of its peers", () => {
-    const badged = withLayerBadges(nodes, new PeerMarks(new Map([
+    const badged = withLayerBadges(nodes, new Map([
       ["voxel:Ground", [mark("bob", "#ff0000")]]
-    ])));
+    ]));
 
     assert.deepStrictEqual(badged[0].badges, [
       {
@@ -168,9 +167,9 @@ describe("withLayerBadges", () => {
   });
 
   test("badges a nested object row", () => {
-    const badged = withLayerBadges(nodes, new PeerMarks(new Map([
+    const badged = withLayerBadges(nodes, new Map([
       ["obj:Triggers/spawn", [mark("bob", "#ff0000")]]
-    ])));
+    ]));
 
     assert.strictEqual(badged[1].badges, undefined);
     assert.deepStrictEqual(
@@ -179,20 +178,8 @@ describe("withLayerBadges", () => {
     );
   });
 
-  test("caps a row at three badges", () => {
-    const badged = withLayerBadges(nodes, new PeerMarks(new Map([[
-      "voxel:Ground",
-      ["a", "b", "c", "d"].map((clientId) => mark(clientId, "#fff"))
-    ]])));
-
-    assert.deepStrictEqual(
-      badged[0].badges?.map((badge) => badge.title),
-      ["a", "b", "c"]
-    );
-  });
-
   test("does not mutate the source nodes", () => {
-    withLayerBadges(nodes, new PeerMarks(new Map([["voxel:Ground", [mark("bob", "#ff0000")]]])));
+    withLayerBadges(nodes, new Map([["voxel:Ground", [mark("bob", "#ff0000")]]]));
 
     assert.strictEqual(nodes[0].badges, undefined);
   });

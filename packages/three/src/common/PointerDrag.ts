@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 
+// Import Internal Dependencies
+import { clientToNdc } from "./clientToNdc.ts";
+
 export interface PointerDragHandlers {
   /**
    * Any pointer press on the element; call `begin` to claim it as a drag.
@@ -94,21 +97,9 @@ export class PointerDrag {
     target: THREE.Vector2
   ): boolean {
     const element = this.#element;
-    if (element === null) {
-      return false;
-    }
 
-    const rect = element.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      return false;
-    }
-
-    target.set(
-      (((event.clientX - rect.left) / rect.width) * 2) - 1,
-      (-((event.clientY - rect.top) / rect.height) * 2) + 1
-    );
-
-    return true;
+    return element !== null &&
+      clientToNdc(element, event.clientX, event.clientY, target) !== null;
   }
 
   readonly #onPointerDown = (

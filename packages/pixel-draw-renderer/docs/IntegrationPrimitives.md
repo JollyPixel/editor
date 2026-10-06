@@ -28,6 +28,27 @@ trackers.
 `isVec2()` validates an `{ x, y }` value. `vec2Equal()` compares two positions
 or two `null` values.
 
+## Rectangles
+
+`RectArea` is an immutable value object over a `SelectionRect` in texture
+pixels. Build one with `RectArea.from(rect)`, or with
+`RectArea.bounding(positions, size?)` for the smallest area around a set of
+positions (positions outside `size` are skipped; `null` when none remain).
+
+| Member | Returns |
+| --- | --- |
+| `bounds` | a copy of the rectangle |
+| `isEmpty` | `true` when the width or height is not positive |
+| `intersects(rect)` | `true` when both share at least one pixel; touching edges do not count |
+| `clippedTo(rect)` | the overlapping area, or `null` |
+| `intersection(size)` | the part inside a `{ x: width, y: height }` texture, or `null` |
+| `fitsWithin(size)` | `true` when the whole area is inside the texture |
+| `union(rect)` | the smallest area containing both |
+| `grown(amount)` | the area expanded by `amount` pixels on every side |
+| `resized(handle, delta)` | the area with one `ResizeHandle` moved, never below 1px |
+| `touchesEdgeOf(rect)` | `true` when any side lies on the same side of `rect` |
+| `rowsWithin(size)` | the in-texture rows as `RectRow` records with source and texture indices |
+
 ## Selection presence
 
 `SelectionPresence` is the immutable selection snapshot value object.

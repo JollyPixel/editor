@@ -16,10 +16,11 @@ import {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import { treeHostStyles } from "../../shared/treeHost.styles.ts";
+import { treeHostStyles } from "../../shared/styles/treeHost.styles.ts";
 import { templateTreeNodes } from "./templateTree.ts";
 import { TemplateDrop } from "./TemplateDrop.ts";
 import "./TemplatePanel.ts";
+import "./templateIcons.ts";
 
 // CONSTANTS
 const kDragThreshold = 4;
@@ -64,7 +65,7 @@ export class TemplateManager extends WorkspaceElement {
     const { templates, mapDocument } = workspace;
     const { selection } = workspace.state;
     const refresh = (): void => {
-      this._nodes = templateTreeNodes(workspace.view.document.world.templates);
+      this._nodes = templateTreeNodes(workspace.mapDocument.world.templates);
     };
     this._selected = templates.store.selected;
     this._canSave = selection.voxelLayer !== null;
@@ -126,7 +127,7 @@ export class TemplateManager extends WorkspaceElement {
 
         <div class="tree-host">${this.#renderTree()}</div>
         <template-panel
-          .world=${workspace.view.document.world}
+          .world=${workspace.mapDocument.world}
           .templates=${workspace.templates}
           .placement=${workspace.placement}
           .mapDocument=${workspace.mapDocument}
@@ -203,7 +204,7 @@ export class TemplateManager extends WorkspaceElement {
     }
 
     workspace.templates.rename(event.detail.id, event.detail.name);
-    this._nodes = templateTreeNodes(workspace.view.document.world.templates);
+    this._nodes = templateTreeNodes(workspace.mapDocument.world.templates);
   }
 
   #onActivate(

@@ -26,7 +26,9 @@ export class KeyboardLayoutStore extends Emitter<KeyboardLayoutStoreEvents> {
   format(
     chord: KeyChordString
   ): string {
-    return KeyChord.parse(chord).format({ layout: this.#layout });
+    return KeyChord.parse(
+      chord
+    ).format({ layout: this.#layout });
   }
 
   async refresh(): Promise<void> {

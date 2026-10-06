@@ -26,8 +26,11 @@ export class ViewStore extends Emitter<ViewStoreEvents> {
     storage: StorageAdapter = new MemoryStorageAdapter()
   ) {
     super();
+
     this.#storage = storage;
-    this.#settings = ViewSettings.parse(storage.get(kStorageKey));
+    this.#settings = ViewSettings.parse(
+      storage.get(kStorageKey)
+    );
   }
 
   get settings(): ViewSettings {
@@ -43,7 +46,10 @@ export class ViewStore extends Emitter<ViewStoreEvents> {
     }
 
     this.#settings = next;
-    this.#storage.set(kStorageKey, JSON.stringify(next));
+    this.#storage.set(
+      kStorageKey,
+      JSON.stringify(next)
+    );
     this.emit("change", next);
   }
 }

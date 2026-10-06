@@ -1,8 +1,12 @@
 // Import Third-party Dependencies
 import type { KeyChordString } from "@jolly-pixel/controls";
+import type {
+  Axis,
+  AxisSign
+} from "@jolly-pixel/three";
 import type { VoxelTransformOptions } from "@jolly-pixel/voxel.renderer";
 
-export type PlacementAxis = "x" | "y" | "z";
+export type PlacementAxis = Axis;
 
 export interface PlacementTransform {
   icon: string;
@@ -11,6 +15,7 @@ export interface PlacementTransform {
 }
 
 export interface PlacementRotation extends PlacementTransform {
+  turns: AxisSign;
   chords: readonly KeyChordString[];
 }
 
@@ -22,12 +27,14 @@ export const PLACEMENT_ROTATIONS: readonly PlacementRotation[] = [
   {
     icon: "rotateCounterClockwise",
     title: "Rotate 90° counter-clockwise",
+    turns: 1,
     chords: ["KeyQ"],
     transform: { rotation: 1 }
   },
   {
     icon: "rotateClockwise",
     title: "Rotate 90° clockwise",
+    turns: -1,
     chords: ["KeyE"],
     transform: { rotation: 3 }
   }

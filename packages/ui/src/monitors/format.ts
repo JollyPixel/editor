@@ -12,13 +12,20 @@ const kDefaultPrecision = 2;
 const kDefaultDecimals = 1;
 const kByteStep = 1024;
 const kByteUnits: readonly string[] = ["B", "KiB", "MiB", "GiB", "TiB"];
+const kCountFormat = new Intl.NumberFormat("en-US");
 
 export function formatCount(
-  value: number
+  value: number,
+  singular?: string,
+  plural = `${singular}s`
 ): string {
-  return Math.round(
-    value
-  ).toLocaleString("en-US");
+  const count = Math.round(value);
+  const text = kCountFormat.format(count);
+  if (singular === undefined) {
+    return text;
+  }
+
+  return `${text} ${count === 1 ? singular : plural}`;
 }
 
 export function formatInteger(

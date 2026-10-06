@@ -13,16 +13,16 @@ import type {
 import { BlockProjection } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/index.ts";
+import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
 import { BlockUv } from "../uv/BlockUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import { SlotRegionIds } from "./SlotRegionIds.ts";
-import type { BrushStore } from "../../../state/index.ts";
+import type { BlockSelection } from "../../../state/index.ts";
 import type { BlockWriter } from "../../tilesets/TilesetBinding.ts";
 
 export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
-  brush: BrushStore;
+  block: BlockSelection;
   mapDocument: MapDocumentSignals;
   blocks?: Pick<BlockWriter, "defineBlock">;
 }
@@ -51,7 +51,7 @@ export class BlockUvBridge {
     this.#blocks = options.blocks ?? view.document;
     this.#selection = new BlockUvSelectionSync(
       uv,
-      options.brush,
+      options.block,
       () => this.#regions
     );
     this.#runLocalRestore = options.runLocalRestore ?? ((fn) => fn());

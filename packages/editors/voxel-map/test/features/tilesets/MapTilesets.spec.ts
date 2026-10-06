@@ -25,7 +25,7 @@ import { Emitter } from "@openally/emitt";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../src/document/index.ts";
+import type { MapDocument } from "../../../src/document/MapDocument.ts";
 import {
   MapTilesets,
   type TilesetCatalog

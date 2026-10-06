@@ -20,7 +20,7 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
-import type { BlockRegistryChange } from "../../document/index.ts";
+import type { BlockRegistryChange } from "../../document/MapDocument.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import type { AddTilesetDialog } from "../tilesets/dialogs/AddTilesetDialog.ts";
@@ -113,7 +113,7 @@ export class TextureEditor extends WorkspaceElement {
     return [
       tilesets.subscribe("change", this.#requestSync),
       tilesets.subscribe("activeChange", this.#reconcile),
-      workspace.state.brush.subscribe("blockChange", this.#onBlockChange),
+      workspace.state.block.subscribe("change", this.#onBlockChange),
       mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
     ];
   }
@@ -160,7 +160,7 @@ export class TextureEditor extends WorkspaceElement {
 
     const { view, tilesets } = workspace;
     const { entries } = tilesets;
-    const counts = blockCountsByTileset(view.document.blocks.getAll());
+    const counts = blockCountsByTileset(workspace.mapDocument.blocks.getAll());
     for (const entry of entries) {
       const tilesetId = entry.id;
       const labels = tilesetTabLabels(entry, counts.get(tilesetId) ?? 0);
@@ -192,7 +192,7 @@ export class TextureEditor extends WorkspaceElement {
         view,
         binding,
         blocks: tilesets,
-        brush: workspace.state.brush,
+        block: workspace.state.block,
         mapDocument: workspace.mapDocument
       }));
     }
@@ -294,8 +294,8 @@ export class TextureEditor extends WorkspaceElement {
       return;
     }
 
-    const block = workspace.view.document.blocks.get(
-      workspace.state.brush.blockId
+    const block = workspace.mapDocument.blocks.get(
+      workspace.state.block.id
     );
     if (block === undefined) {
       return;

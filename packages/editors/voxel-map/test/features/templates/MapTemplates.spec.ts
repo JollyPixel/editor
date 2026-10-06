@@ -10,11 +10,13 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
+import { mapDocumentOf } from "../../helpers/mapDocument.ts";
 
 function setup() {
   const world = new VoxelWorld();
   const templates = new MapTemplates({
     world,
+    mapDocument: mapDocumentOf(world),
     confirm: () => Promise.resolve(true)
   });
   world.addLayer("Draft");
@@ -73,6 +75,7 @@ describe("MapTemplates.remove", () => {
     const prompts: string[] = [];
     const templates = new MapTemplates({
       world,
+      mapDocument: mapDocumentOf(world),
       confirm: (options) => {
         prompts.push(options.message);
 
@@ -85,5 +88,32 @@ describe("MapTemplates.remove", () => {
     assert.equal(await templates.remove(id), true);
     assert.equal(world.templates.size, 0);
     assert.equal(prompts.length, 1);
+  });
+});
+
+describe("MapTemplates reconcile", () => {
+  test("drops the selection of a template removed from the world", () => {
+    const { world, templates } = setup();
+    const kept = templates.saveLayer("Draft")!;
+    const removed = templates.saveLayer("Draft")!;
+    const changes: Array<string | null> = [];
+    templates.store.subscribe("selectionChange", (id) => changes.push(id));
+
+    world.templates.remove(kept);
+    assert.equal(templates.store.selected, removed);
+
+    world.templates.remove(removed);
+    assert.equal(templates.store.selected, null);
+    assert.deepEqual(changes, [null]);
+  });
+
+  test("stops reconciling once disposed", () => {
+    const { world, templates } = setup();
+    const id = templates.saveLayer("Draft")!;
+
+    templates.dispose();
+    world.templates.remove(id);
+
+    assert.equal(templates.store.selected, id);
   });
 });

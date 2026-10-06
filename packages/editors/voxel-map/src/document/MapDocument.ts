@@ -1,24 +1,39 @@
 // Import Third-party Dependencies
 import {
-  isVoxelBlockCommand,
   isVoxelLayerCommand,
   isVoxelMaterialGroupCommand,
   isVoxelTemplateCommand,
   isVoxelTilesetCommand,
-  type ResolvedBlockDefinition,
+  type BlockRedefinition,
   type VoxelCommand,
-  type VoxelCommandListener,
+  type VoxelCommandContext,
+  type VoxelHistory,
   type VoxelLayerCommand,
+  type VoxelWorld,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
+import type {
+  SyncedVoxelMap
+} from "@jolly-pixel/asset.voxel-map/client";
 import { Emitter } from "@openally/emitt";
 
-// Import Internal Dependencies
-import type { WorldSource } from "./WorldSource.ts";
-import {
-  KnownBlocks,
-  type BlockRegistryChange
-} from "./KnownBlocks.ts";
+export type BlockRegistryChange =
+  | "added"
+  | "redefined"
+  | "retiled"
+  | "removed"
+  | "moved"
+  | "reset";
+
+// CONSTANTS
+const kMaxListenersPerEvent = 32;
+const kRedefinitionChanges = {
+  added: "added",
+  metadata: "redefined",
+  tiles: "retiled",
+  mesh: "redefined",
+  occlusion: "redefined"
+} as const satisfies Record<BlockRedefinition, BlockRegistryChange>;
 
 export type MapDocumentEvents = {
   layerUpdated: (
@@ -38,30 +53,38 @@ export type MapDocumentSignals = Pick<
   "subscribe"
 >;
 
-export interface MapCommandSource {
-  readonly blocks: Iterable<ResolvedBlockDefinition>;
-  on(event: "command", listener: VoxelCommandListener): unknown;
-  off(event: "command", listener: VoxelCommandListener): unknown;
-}
+export type SyncedMap = Pick<
+  SyncedVoxelMap,
+  "voxels" | "loaded" | "replaceWorld"
+>;
 
 export interface MapDocumentOptions {
-  commands: MapCommandSource;
-  source: WorldSource;
+  map: SyncedMap;
+  defaultLayerName: string;
 }
 
 export class MapDocument extends Emitter<MapDocumentEvents> {
-  #commands: MapCommandSource;
-  #source: WorldSource;
-  #blocks = new KnownBlocks();
+  #map: SyncedMap;
+  #defaultLayerName: string;
 
   #onCommand = (
-    command: VoxelCommand
+    command: VoxelCommand,
+    context: VoxelCommandContext
   ): void => {
     if (isVoxelLayerCommand(command)) {
       this.emit("layerUpdated", command);
     }
-    else if (isVoxelBlockCommand(command)) {
-      this.emit("blockRegistryChanged", this.#blocks.record(command));
+    else if (command.action === "block-defined") {
+      this.emit(
+        "blockRegistryChanged",
+        kRedefinitionChanges[context.redefinition ?? "added"]
+      );
+    }
+    else if (command.action === "block-removed") {
+      this.emit("blockRegistryChanged", "removed");
+    }
+    else if (command.action === "block-moved") {
+      this.emit("blockRegistryChanged", "moved");
     }
     else if (isVoxelMaterialGroupCommand(command)) {
       this.emit("materialGroupsChanged");
@@ -74,8 +97,8 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
     }
   };
 
-  #onSourceReset = (): void => {
-    this.#blocks.reset(this.#commands.blocks);
+  #onLoaded = (): void => {
+    this.#seedDefaultLayer();
     this.emit("tilesetsChanged");
     this.emit("blockRegistryChanged", "reset");
     this.emit("materialGroupsChanged");
@@ -84,30 +107,54 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   };
 
   get ready(): boolean {
-    return this.#source.ready;
+    return this.#map.loaded;
+  }
+
+  get world(): VoxelWorld {
+    return this.#map.voxels.world;
+  }
+
+  get blocks(): SyncedMap["voxels"]["blocks"] {
+    return this.#map.voxels.blocks;
+  }
+
+  get materialGroups(): SyncedMap["voxels"]["materialGroups"] {
+    return this.#map.voxels.materialGroups;
+  }
+
+  get history(): VoxelHistory {
+    return this.#map.voxels.history;
   }
 
   constructor(
     options: MapDocumentOptions
   ) {
     super();
-    this.#commands = options.commands;
-    this.#source = options.source;
-    this.#blocks.reset(this.#commands.blocks);
+    this.setMaxListeners(kMaxListenersPerEvent);
+    this.#map = options.map;
+    this.#defaultLayerName = options.defaultLayerName;
 
-    this.#commands.on("command", this.#onCommand);
-    this.#source.on("reset", this.#onSourceReset);
+    this.#map.voxels.on("command", this.#onCommand);
+    this.#map.voxels.on("loaded", this.#onLoaded);
+    if (this.ready) {
+      this.#seedDefaultLayer();
+    }
   }
 
   load(
     data: VoxelWorldJSON
   ): void {
-    this.#source.load(data);
+    this.#map.replaceWorld(data);
   }
 
   dispose(): void {
-    this.#commands.off("command", this.#onCommand);
-    this.#source.off("reset", this.#onSourceReset);
-    this.#source.dispose();
+    this.#map.voxels.off("command", this.#onCommand);
+    this.#map.voxels.off("loaded", this.#onLoaded);
+  }
+
+  #seedDefaultLayer(): void {
+    if (this.world.getLayers().length === 0) {
+      this.world.addLayer(this.#defaultLayerName);
+    }
   }
 }

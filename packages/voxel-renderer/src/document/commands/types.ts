@@ -16,6 +16,7 @@ import type { VoxelPatch } from "../world/editing/voxelPatch.ts";
 import type {
   ResolvedBlockDefinition
 } from "../blocks/BlockDefinition.ts";
+import type { BlockRedefinition } from "../blocks/BlockRedefinition.ts";
 import type { TilesetDefinition } from "../tilesets/types.ts";
 import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
@@ -313,6 +314,11 @@ export interface VoxelCommandContext {
    * replayed with `apply()` on behalf of another peer.
    */
   origin: VoxelCommandOrigin;
+  /**
+   * What a `"block-defined"` command changed compared with the definition it
+   * replaced. Set by `apply()` and absent on every other command.
+   */
+  redefinition?: BlockRedefinition;
 }
 
 export type VoxelCommandListener = (

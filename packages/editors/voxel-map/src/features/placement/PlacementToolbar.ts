@@ -10,8 +10,8 @@ import type { KeyChordString } from "@jolly-pixel/controls";
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { ActivePlacement } from "./ActivePlacement.ts";
 import { placementToolbarStyles } from "./PlacementToolbar.styles.ts";
-import { PlacementSummary } from "./PlacementSummary.ts";
 import { PLACEMENT_SHORTCUTS } from "./placementShortcuts.ts";
 import {
   PLACEMENT_MIRRORS,
@@ -19,47 +19,43 @@ import {
   type PlacementAxis,
   type PlacementTransform
 } from "./placementTransforms.ts";
+import "./placementIcons.ts";
 
 @customElement("voxel-placement-toolbar")
 export class PlacementToolbar extends WorkspaceElement {
   static override styles = placementToolbarStyles;
 
   @state()
-  declare _summary: PlacementSummary | null;
+  declare _current: ActivePlacement | null;
 
   constructor() {
     super();
-    this._summary = null;
+    this._current = null;
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { placement, mapDocument } = workspace;
-    const { selection, keyboardLayout } = workspace.state;
-    const { world } = workspace.view.document;
-    const refresh = (): void => {
-      const current = placement.store.placement;
-      this._summary = current === null ?
-        null :
-        PlacementSummary.of(current, world, placement.target);
+    const { placement } = workspace;
+    const refresh = (current: ActivePlacement | null): void => {
+      this._current = current;
       this.hidden = current === null;
     };
 
-    refresh();
+    refresh(placement.current);
 
     return [
-      placement.store.subscribe("change", refresh),
-      selection.subscribe("change", refresh),
-      mapDocument.subscribe("templatesChanged", refresh),
-      mapDocument.subscribe("layerUpdated", refresh),
-      keyboardLayout.subscribe("change", () => this.requestUpdate())
+      placement.subscribe("change", refresh),
+      workspace.state.keyboardLayout.subscribe(
+        "change",
+        () => this.requestUpdate()
+      )
     ];
   }
 
   override render(): TemplateResult | typeof nothing {
-    const summary = this._summary;
-    if (summary === null) {
+    const current = this._current;
+    if (current === null) {
       return nothing;
     }
 
@@ -89,8 +85,8 @@ export class PlacementToolbar extends WorkspaceElement {
           <jolly-tool-button
             data-tool="commit"
             icon="check"
-            label=${summary.commitLabel(this.#shortcut(PLACEMENT_SHORTCUTS.commit))}
-            ?disabled=${!summary.committable}
+            label=${current.commitLabel(this.#shortcut(PLACEMENT_SHORTCUTS.commit))}
+            ?disabled=${!current.committable}
             @click=${this.#onCommit}
           ></jolly-tool-button>
           <jolly-tool-button
@@ -106,8 +102,8 @@ export class PlacementToolbar extends WorkspaceElement {
           role="status"
           title="Drag to move, Shift + drag to lift"
         >
-          <jolly-icon name=${summary.icon}></jolly-icon>
-          <span>${summary.caption}</span>
+          <jolly-icon name=${current.icon}></jolly-icon>
+          <span>${current.caption}</span>
         </span>
       </jolly-rail>
     `;
@@ -122,7 +118,7 @@ export class PlacementToolbar extends WorkspaceElement {
       <jolly-tool-button
         icon=${placementTransform.icon}
         label=${label}
-        @click=${() => this.attached.placement.store.transform(
+        @click=${() => this.attached.placement.turn(
           placementTransform.transform
         )}
       >${badge}</jolly-tool-button>
@@ -132,7 +128,9 @@ export class PlacementToolbar extends WorkspaceElement {
   #shortcut(
     chords: readonly KeyChordString[]
   ): string {
-    return this.attached.state.keyboardLayout.format(chords[0]);
+    return this.attached.state.keyboardLayout.format(
+      chords[0]
+    );
   }
 
   #onCommit(): void {
@@ -148,7 +146,9 @@ function axisBadge(
   axis: PlacementAxis
 ): TemplateResult {
   return html`
-    <span class="axis" aria-hidden="true"><span class=${axis}>${axis.toUpperCase()}</span></span>
+    <span class="axis" aria-hidden="true">
+      <span class=${axis}>${axis.toUpperCase()}</span>
+    </span>
   `;
 }
 

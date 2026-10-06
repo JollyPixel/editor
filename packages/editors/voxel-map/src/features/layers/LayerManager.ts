@@ -5,13 +5,14 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  JollyRenameDetail,
-  JollyReparentDetail,
-  JollySelectDetail,
-  JollyToggleLockDetail,
-  JollyToggleVisibleDetail,
-  TreeNode
+import {
+  formatCount,
+  type JollyRenameDetail,
+  type JollyReparentDetail,
+  type JollySelectDetail,
+  type JollyToggleLockDetail,
+  type JollyToggleVisibleDetail,
+  type TreeNode
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -21,18 +22,17 @@ import {
 } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import { formatCount } from "../../shared/format.ts";
 import { AddLayerDialog } from "./dialogs/AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
 import { MergeLayerDialog } from "./dialogs/MergeLayerDialog.ts";
 import { MapLayers } from "./MapLayers.ts";
-import { PeerMarks } from "../../shared/PeerMarks.ts";
 import {
   layerTreeNodes,
   withLayerBadges
 } from "./layerTree.ts";
 import "./objects/ObjectPanel.ts";
 import "./voxel/VoxelLayerPanel.ts";
+import "./layerIcons.ts";
 
 @customElement("layer-manager")
 export class LayerManager extends WorkspaceElement {
@@ -90,7 +90,7 @@ export class LayerManager extends WorkspaceElement {
       return nothing;
     }
 
-    const world = workspace.view.document.world;
+    const world = workspace.mapDocument.world;
     const voxelLayerSelected = this._selection?.kind === "voxel-layer";
 
     return html`
@@ -170,7 +170,7 @@ export class LayerManager extends WorkspaceElement {
   #renderInspector(
     workspace: VoxelMapWorkspace
   ) {
-    const { world } = workspace.view.document;
+    const { world } = workspace.mapDocument;
     const selection = this._selection;
     if (selection === null) {
       return nothing;
@@ -203,8 +203,8 @@ export class LayerManager extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): void {
     this._nodes = withLayerBadges(
-      layerTreeNodes(workspace.view.document.world, workspace.layerVisibility),
-      new PeerMarks(workspace.state.presence.layerSelections)
+      layerTreeNodes(workspace.mapDocument.world, workspace.layerVisibility),
+      workspace.state.presence.layerSelections
     );
   }
 

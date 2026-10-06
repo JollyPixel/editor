@@ -5,6 +5,7 @@ import type {
   ModelChange,
   ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
+import { SubscriptionController } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
@@ -19,7 +20,6 @@ import type {
   TransformMode
 } from "./index.ts";
 import { TRANSFORM_MODES } from "./transformModes.ts";
-import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 
 // CONSTANTS
 const kDisplayDecimals = 2;
@@ -34,7 +34,7 @@ export interface TransformWorkspace {
 
 export class TransformPanelController {
   #host: ReactiveControllerHost;
-  #connection: WorkspaceController<TransformWorkspace>;
+  #connection: SubscriptionController<TransformWorkspace>;
   #selected: ModelBlock | null = null;
   #mode: TransformMode = "pos";
   #space: GizmoSpace = "local";
@@ -78,7 +78,7 @@ export class TransformPanelController {
     host: ReactiveControllerHost
   ) {
     this.#host = host;
-    this.#connection = new WorkspaceController(
+    this.#connection = new SubscriptionController(
       host,
       (workspace) => this.#subscribeTo(workspace)
     );

@@ -6,7 +6,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/index.ts";
+import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import {
   ObjectRef,
   parseLayerRef,

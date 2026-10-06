@@ -5,10 +5,10 @@ export function brushState(
   page: Page
 ) {
   return page.evaluate(() => {
-    const { brush } = window.voxelMapEditor!.workspace.state;
+    const { brush, state } = window.voxelMapEditor!.workspace;
 
     return {
-      blockId: brush.blockId,
+      blockId: state.block.id,
       size: brush.size,
       mode: brush.mode,
       axis: brush.axis,
@@ -36,9 +36,9 @@ export async function setBrush(
   patch: { blockId?: number; size?: number; }
 ): Promise<void> {
   await page.evaluate((values) => {
-    const { brush } = window.voxelMapEditor!.workspace.state;
+    const { brush, state } = window.voxelMapEditor!.workspace;
     if (values.blockId !== undefined) {
-      brush.blockId = values.blockId;
+      state.block.id = values.blockId;
     }
     if (values.size !== undefined) {
       brush.size = values.size;

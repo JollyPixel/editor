@@ -15,7 +15,7 @@ Eager (the `modulepreload` set): 2.96 MB voxel-map, 2.39 MB voxel-model,
 1.00 MB pixel-art; total `assets/`: 3.43, 2.85 and 1.44 MB. The workspace
 resolves one `three@0.186.1` and one `lit@3.3.3`. The studio server caches
 hashed `assets/` files as immutable, so warm opens only revalidate
-`index.html`, `main.css` and `textures/`.
+`index.html` and `main.css`.
 
 ### 1. Shared dependencies: decide for external editors
 
@@ -36,13 +36,10 @@ to solve:
 
 - `createProjectKindsPlugin` serves `virtual:jolly-pixel/handlers` with a
   different kinds list per editor: one module id cannot serve three lists;
-- separate `public/` folders: each `main.css`, and voxel-map's
-  `textures/tileset.png` fetched by relative URL (`src/boot/worldProject.ts`);
+- separate `public/` folders: each `main.css`;
 - pixel-art builds `page/index.html` (`vite.config.ts`, `root: "page"`)
   and imports `../../src/index.ts`, while voxel-map and voxel-model import
   their package `dist`;
-- voxel-model sets the deprecated `esbuild.target: "es2024"` and runs
-  `vite-plugin-checker`;
 - `jollypixel.editor.dist`, `server/EditorPages.ts` and
   `server/EditorPagesWatcher.ts` assume one dist per editor.
 
@@ -65,7 +62,7 @@ fallback for static hosts without headers. Blocks item 4.
 
 Add a worker file calling `runMeshWorker(self)` and pass `meshing: { workers:
 { createWorker, count } }` where `VoxelRenderer` is added in
-`editors/voxel-map/src/scene/EditorScene.ts` (reference:
+`editors/voxel-map/src/boot/EditorScene.ts` (reference:
 `voxel-renderer/examples/scripts/demo-noise-world.ts`), with `worker.format:
 "es"`. Give `prebundleWorkspace` a way to leave the worker package out if e2e
 mode breaks its `import.meta.url` worker, and add an e2e check of the

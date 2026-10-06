@@ -162,14 +162,14 @@ describe("BlockUvBridge / tileset slot", () => {
     try {
       bridge.setActiveTileset(tilesetSlot("atlas", 2), 16);
 
-      bridgeOptions.brush.blockId = blockId;
+      bridgeOptions.block.id = blockId;
       assert.equal(uv.selectedRegionId, "block-1");
 
-      bridgeOptions.brush.blockId = 1;
+      bridgeOptions.block.id = 1;
       assert.equal(uv.selectedRegionId, null);
 
       uv.select("block-1");
-      assert.equal(bridgeOptions.brush.blockId, blockId);
+      assert.equal(bridgeOptions.block.id, blockId);
     }
     finally {
       bridge.dispose();

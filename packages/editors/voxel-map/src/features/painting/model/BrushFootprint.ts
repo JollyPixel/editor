@@ -7,7 +7,7 @@ import {
   BRUSH_PATTERNS,
   type BrushAxis,
   type BrushPattern
-} from "../../../state/index.ts";
+} from "../BrushStore.ts";
 import {
   CellFace,
   type BrushAnchor,

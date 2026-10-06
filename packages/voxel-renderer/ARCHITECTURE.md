@@ -87,8 +87,9 @@ running.
 Face templates hold tile-local UVs and the id of a row in `FaceRegionTable`,
 one row per block texture slot; the vertex shader reads the slot's atlas rect
 from that row. A definition that only moves tiles (same shape, tilesets,
-rotations and surface, no blend group) dirties nothing: `BlockReach` reports
-it as `"tiles"` and the view rewrites the block's rows. Blend palettes still
+rotations and surface, no blend group) dirties nothing: `apply()` reports it
+as `"tiles"` in the command context's `redefinition` and the view rewrites the
+block's rows. A `"metadata"` redefinition dirties nothing. Blend palettes still
 bake neighbour rects, so grouped blocks remesh. Mesh workers receive the row
 assignment with their definitions so their templates name the same rows.
 

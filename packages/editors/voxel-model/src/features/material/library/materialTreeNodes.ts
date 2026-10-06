@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import type { TreeNode } from "@jolly-pixel/ui";
-import type { PeerMarkMap } from "@jolly-pixel/ui/network";
+import {
+  peerBadges,
+  type PeerMarkMap
+} from "@jolly-pixel/ui/network";
 import type { ModelMaterialJSON } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { surfaceSwatch } from "../../../shared/materialSwatch.ts";
-import { peerBadges } from "../../../shared/peerBadges.ts";
 import { usageRowId } from "./usageRows.ts";
 
 export interface MaterialUser {

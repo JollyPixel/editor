@@ -18,7 +18,7 @@ import {
 import type { AssetLeases } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
+import type { MapDocument } from "../../document/MapDocument.ts";
 import type { TilesetEntry } from "./TilesetEntry.ts";
 import { TilesetAtlasBridge } from "./TilesetAtlasBridge.ts";
 

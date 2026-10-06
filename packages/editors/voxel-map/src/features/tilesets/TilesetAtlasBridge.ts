@@ -8,17 +8,18 @@ import type {
   TilesetImage,
   VoxelView
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  PixelDocument,
-  SelectionRect
+import {
+  RectArea,
+  type PixelDocument,
+  type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 import { TilesetIslands } from "@jolly-pixel/asset.voxel-map/client";
 import { NormalMapTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
-import { TilesetEntry } from "./TilesetEntry.ts";
+import type { MapDocument } from "../../document/MapDocument.ts";
 import type { BlockWriter } from "./TilesetBinding.ts";
+import { TilesetEntry } from "./TilesetEntry.ts";
 
 export interface TilesetAtlasBridgeOptions {
   view: VoxelView;
@@ -42,16 +43,15 @@ export class TilesetAtlasBridge {
   #normalTexture: NormalMapTexture | null = null;
   #definition: TilesetDefinition;
   #atlas: TilesetAtlas | null = null;
-  #dirty: SelectionRect | null = null;
-  #pendingTransparency: SelectionRect | null = null;
+  #dirty: RectArea | null = null;
+  #pendingTransparency: RectArea | null = null;
   #needsFullSync = false;
   #running = true;
   #scheduled = false;
 
   readonly #onChanged = (event: { bounds: SelectionRect; }): void => {
-    this.#dirty = this.#dirty === null ?
-      event.bounds :
-      rectsUnion(this.#dirty, event.bounds);
+    this.#dirty = this.#dirty?.union(event.bounds) ??
+      RectArea.from(event.bounds);
     this.#schedule();
   };
 
@@ -210,16 +210,15 @@ export class TilesetAtlasBridge {
 
     this.#atlas.updateImage(this.#pixels.buffer.canvas());
     this.#view.requestFrame();
-    this.#pendingTransparency = this.#pendingTransparency === null ?
-      dirty :
-      rectsUnion(this.#pendingTransparency, dirty);
+    const pending = this.#pendingTransparency;
+    this.#pendingTransparency = pending?.union(dirty.bounds) ?? dirty;
   }
 
   #flushTransparency(): void {
-    const bounds = this.#pendingTransparency;
-    if (bounds !== null) {
+    const pending = this.#pendingTransparency;
+    if (pending !== null) {
       this.#pendingTransparency = null;
-      this.syncAlphaModes(bounds);
+      this.syncAlphaModes(pending.bounds);
     }
   }
 
@@ -274,19 +273,4 @@ export class TilesetAtlasBridge {
     this.#normalTexture?.dispose();
     this.#normalTexture = null;
   }
-}
-
-function rectsUnion(
-  a: SelectionRect,
-  b: SelectionRect
-): SelectionRect {
-  const x = Math.min(a.x, b.x);
-  const y = Math.min(a.y, b.y);
-
-  return {
-    x,
-    y,
-    width: Math.max(a.x + a.width, b.x + b.width) - x,
-    height: Math.max(a.y + a.height, b.y + b.height) - y
-  };
 }

@@ -116,6 +116,32 @@ describe("VoxelView - block redefinition", () => {
     assert.deepEqual(dirtyChunkXs(view), [0, 1]);
   });
 
+  it("leaves the meshes untouched when only the name or properties change", () => {
+    const view = makeRowView();
+    view.document.defineBlock(makeBlockDef(kCubeId, "cube"));
+    view.tick(0);
+
+    view.document.defineBlock(makeBlockDef(kCubeId, "cube", {
+      name: "Renamed",
+      properties: { hardness: 3 }
+    }));
+
+    assert.equal(anyChunkDirty(view), false);
+  });
+
+  it("remeshes the bordering chunks when a blended block only moves a tile", () => {
+    const view = makeRowView();
+    view.document.defineBlock(makeBlockDef(kCubeId, "cube", { blendGroup: "grass" }));
+    view.tick(0);
+
+    view.document.defineBlock(makeBlockDef(kCubeId, "cube", {
+      blendGroup: "grass",
+      defaultTexture: { col: 1, row: 0 }
+    }));
+
+    assert.deepEqual(dirtyChunkXs(view), [0, 1]);
+  });
+
   it("leaves the meshes untouched for a block no voxel uses", () => {
     const view = makeRowView();
 

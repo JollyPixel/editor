@@ -13,10 +13,11 @@ import type {
 
 // Import Internal Dependencies
 import type {
-  BrushStore,
+  BlockSelection,
   PointerCapture,
   SelectionStore
 } from "../../state/index.ts";
+import type { BrushStore } from "./BrushStore.ts";
 import {
   BrushFootprint,
   type BrushShape
@@ -57,6 +58,7 @@ export interface LocalBrushOptions {
   sources: BlockRenderSources;
   camera: THREE.PerspectiveCamera;
   brush: BrushStore;
+  block: BlockSelection;
   selection: SelectionStore;
   pointer: PointerCapture;
   groundPlaneSize?: number;
@@ -73,6 +75,7 @@ export class LocalBrush extends ActorComponent {
 
   #camera: THREE.PerspectiveCamera;
   #brush: BrushStore;
+  #block: BlockSelection;
   #selection: SelectionStore;
   #pointerCapture: PointerCapture;
   #onFocusRequest: (point: THREE.Vector3Like) => void;
@@ -100,6 +103,7 @@ export class LocalBrush extends ActorComponent {
       view,
       camera,
       brush,
+      block,
       selection,
       pointer,
       groundPlaneSize = 4096,
@@ -111,6 +115,7 @@ export class LocalBrush extends ActorComponent {
     this.view = view;
     this.#camera = camera;
     this.#brush = brush;
+    this.#block = block;
     this.#selection = selection;
     this.#pointerCapture = pointer;
     this.#onFocusRequest = options.onFocusRequest;
@@ -144,7 +149,7 @@ export class LocalBrush extends ActorComponent {
       () => view.document.off("command", markAimStale),
       actor.world.keepAlive(() => this.#staleAimFrames > 0),
       brush.subscribe("change", markDirty),
-      brush.subscribe("blockChange", markDirty),
+      block.subscribe("change", markDirty),
       selection.subscribe("change", () => {
         this.#blockedPaintReported = false;
       })
@@ -321,7 +326,7 @@ export class LocalBrush extends ActorComponent {
       })
     );
     if (blockId !== null) {
-      this.#brush.blockId = blockId;
+      this.#block.id = blockId;
     }
   }
 
@@ -364,7 +369,7 @@ export class LocalBrush extends ActorComponent {
 
   #paint(): VoxelPaint {
     return {
-      blockId: this.#brush.blockId,
+      blockId: this.#block.id,
       ...brushOrientationOf(
         this.#camera,
         this.#brush.rotationMode,

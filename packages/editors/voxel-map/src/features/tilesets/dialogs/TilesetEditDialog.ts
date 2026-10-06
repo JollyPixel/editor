@@ -20,6 +20,7 @@ import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts"
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import type { TilesetEntry } from "../TilesetEntry.ts";
 import { tileSizeSegments } from "../tileSizes.ts";
+import "../tilesetIcons.ts";
 
 // CONSTANTS
 const kOffGridWarning = "Some blocks will not line up with the new tile " +
@@ -239,7 +240,7 @@ export class TilesetEditDialog extends WorkspaceElement {
       from,
       to: tileSize
     };
-    const offGrid = [...workspace.view.document.blocks].some(
+    const offGrid = [...workspace.mapDocument.blocks].some(
       (block) => !BlockTextures.of(block).staysOnGrid(rescale)
     );
     if (offGrid) {

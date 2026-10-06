@@ -2,7 +2,7 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { treeHostStyles } from "../../shared/treeHost.styles.ts";
+import { treeHostStyles } from "../../shared/styles/treeHost.styles.ts";
 
 export const layerManagerStyles = [
   treeHostStyles,

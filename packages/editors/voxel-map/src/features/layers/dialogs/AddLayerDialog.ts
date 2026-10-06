@@ -11,6 +11,9 @@ import type {
   JollyOption
 } from "@jolly-pixel/ui";
 
+// Import Internal Dependencies
+import "../layerIcons.ts";
+
 // CONSTANTS
 const kOptions: JollyOption<AddKind>[] = [
   { value: "voxel-layer", label: "Voxel" },

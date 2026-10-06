@@ -7,7 +7,7 @@ import type { VoxelBlockStats } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentEvents } from "../../../../src/document/index.ts";
+import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
 import {
   BlockUsageStore,
   type BlockUsageSource

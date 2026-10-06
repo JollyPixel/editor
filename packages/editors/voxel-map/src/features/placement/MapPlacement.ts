@@ -3,41 +3,52 @@ import {
   VoxelTransform,
   type VoxelCoord,
   type VoxelHistory,
+  type VoxelTransformOptions,
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { SelectionStore } from "../../state/index.ts";
-import type { Placement } from "./Placement.ts";
+import { ActivePlacement } from "./ActivePlacement.ts";
+import { Placement } from "./Placement.ts";
 import {
   LayerSource,
-  TemplateSource
+  TemplateSource,
+  type PlacementSource
 } from "./PlacementSource.ts";
-import { PlacementStore } from "./PlacementStore.ts";
 
 export type LayerConcealer = (layerName: string) => () => void;
+
+export type MapPlacementEvents = {
+  change: (
+    current: ActivePlacement | null
+  ) => void;
+};
 
 export interface MapPlacementOptions {
   world: VoxelWorld;
   history: Pick<VoxelHistory, "begin" | "commit">;
-  selection: Pick<SelectionStore, "lastVoxelLayer">;
-  store?: PlacementStore;
+  selection: Pick<SelectionStore, "lastVoxelLayer" | "subscribe">;
+  mapDocument: MapDocumentSignals;
   conceal?: LayerConcealer;
 }
 
 export class MapPlacement {
-  readonly store: PlacementStore;
-
   readonly #world: VoxelWorld;
   readonly #history: Pick<VoxelHistory, "begin" | "commit">;
   readonly #selection: Pick<SelectionStore, "lastVoxelLayer">;
   readonly #conceal: LayerConcealer | null;
+  readonly #events = new Emitter<MapPlacementEvents>();
+  readonly #subscriptions: Array<() => void>;
+
+  #placement: Placement | null = null;
+  #announced: ActivePlacement | null = null;
   #concealed: {
     layerName: string;
     release: () => void;
   } | null = null;
-
-  #unsubscribe: () => void;
 
   constructor(
     options: MapPlacementOptions
@@ -46,19 +57,42 @@ export class MapPlacement {
     this.#history = options.history;
     this.#selection = options.selection;
     this.#conceal = options.conceal ?? null;
-    this.store = options.store ?? new PlacementStore();
-    this.#unsubscribe = this.store.subscribe("change", this.#syncConcealed);
+
+    const { mapDocument } = options;
+    this.#subscriptions = [
+      mapDocument.subscribe("layerUpdated", this.#refresh),
+      mapDocument.subscribe("templatesChanged", this.#refresh),
+      mapDocument.subscribe("reset", this.#refresh),
+      options.selection.subscribe("change", this.#refresh)
+    ];
   }
 
-  get target(): string | null {
-    const source = this.store.placement?.source;
-    if (source === undefined) {
+  get current(): ActivePlacement | null {
+    const placement = this.#placement;
+    const template = placement?.source.resolve(this.#world);
+    if (
+      placement === null ||
+      template === undefined
+    ) {
       return null;
     }
 
-    return source.kind === "layer" ?
-      source.layerName :
-      this.#selection.lastVoxelLayer;
+    return new ActivePlacement(
+      placement,
+      template,
+      this.#targetOf(placement.source)
+    );
+  }
+
+  get placing(): boolean {
+    return this.current !== null;
+  }
+
+  subscribe(
+    event: "change",
+    listener: MapPlacementEvents["change"]
+  ): () => void {
+    return this.#events.subscribe(event, listener);
   }
 
   placeTemplate(
@@ -68,7 +102,12 @@ export class MapPlacement {
     if (this.#world.templates.get(templateId) === undefined) {
       return false;
     }
-    this.store.begin(new TemplateSource(templateId), position);
+    this.#assign(
+      Placement.at(
+        new TemplateSource(templateId),
+        position
+      )
+    );
 
     return true;
   }
@@ -76,11 +115,20 @@ export class MapPlacement {
   transformLayer(
     layerName: string
   ): boolean {
-    const source = LayerSource.capture(this.#world, layerName);
+    const source = LayerSource.capture(
+      this.#world,
+      layerName
+    );
     if (source === null) {
       return false;
     }
-    this.store.begin(source, source.pivot);
+
+    this.#assign(
+      Placement.at(
+        source,
+        source.pivot
+      )
+    );
 
     return true;
   }
@@ -88,25 +136,61 @@ export class MapPlacement {
   transforming(
     layerName: string
   ): boolean {
-    const source = this.store.placement?.source;
+    const source = this.#placement?.source;
 
     return source?.kind === "layer" && source.layerName === layerName;
   }
 
+  move(
+    position: VoxelCoord
+  ): void {
+    if (this.#placement !== null) {
+      this.#assign(
+        this.#placement.movedTo(position)
+      );
+    }
+  }
+
+  moveBoundsTo(
+    min: VoxelCoord
+  ): void {
+    const current = this.current;
+    if (current !== null) {
+      this.#assign(
+        current.placement.movedTo(
+          current.positionFor(min)
+        )
+      );
+    }
+  }
+
+  turn(
+    transform: VoxelTransformOptions
+  ): void {
+    if (this.#placement !== null) {
+      this.#assign(
+        this.#placement.turnedBy(transform)
+      );
+    }
+  }
+
   commit(): boolean {
-    const { placement } = this.store;
-    const layerName = this.target;
-    if (placement === null || layerName === null) {
+    const current = this.current;
+    if (
+      current === null ||
+      current.target === null
+    ) {
       return false;
     }
 
+    const { placement, target } = current;
     this.#history.begin();
     let committed = false;
     try {
       committed = placement.source.kind === "layer" ?
         this.#moveLayer(placement, placement.source) :
         this.#world.templates.place(placement.source.templateId, {
-          layerName,
+          layerName: target,
           position: placement.position,
           transform: placement.transform
         });
@@ -115,23 +199,68 @@ export class MapPlacement {
       this.#history.commit();
     }
     if (committed) {
-      this.store.end();
+      this.#end();
     }
 
     return committed;
   }
 
   cancel(): boolean {
-    const placing = this.store.placing;
-    this.store.end();
+    const placing = this.#placement !== null;
+    this.#end();
 
     return placing;
   }
 
   dispose(): void {
-    this.#unsubscribe();
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
     this.#release();
   }
+
+  #targetOf(
+    source: PlacementSource
+  ): string | null {
+    return source.kind === "layer" ?
+      source.layerName :
+      this.#selection.lastVoxelLayer;
+  }
+
+  #assign(
+    placement: Placement
+  ): void {
+    if (!placement.equals(this.#placement)) {
+      this.#placement = placement;
+      this.#refresh();
+    }
+  }
+
+  #end(): void {
+    if (this.#placement !== null) {
+      this.#placement = null;
+      this.#refresh();
+    }
+  }
+
+  readonly #refresh = (): void => {
+    const current = this.current;
+    if (current === null) {
+      this.#placement = null;
+    }
+
+    const announced = this.#announced;
+    const unchanged = current === null ?
+      announced === null :
+      current.equals(announced);
+    if (unchanged) {
+      return;
+    }
+
+    this.#announced = current;
+    this.#syncConcealed(current);
+    this.#events.emit("change", current);
+  };
 
   #moveLayer(
     placement: Placement,
@@ -143,7 +272,10 @@ export class MapPlacement {
     }
 
     if (!placement.transform.equals(VoxelTransform.Identity)) {
-      this.#world.transformLayer(layerName, placement.transform);
+      this.#world.transformLayer(
+        layerName,
+        placement.transform
+      );
     }
 
     const bounds = this.#world.getLayer(layerName)?.worldBounds() ?? null;
@@ -164,10 +296,10 @@ export class MapPlacement {
     return true;
   }
 
-  readonly #syncConcealed = (
-    placement: Placement | null
-  ): void => {
-    const source = placement?.source;
+  #syncConcealed(
+    current: ActivePlacement | null
+  ): void {
+    const source = current?.placement.source;
     const layerName = source?.kind === "layer" ? source.layerName : null;
     if (this.#concealed?.layerName === layerName) {
       return;
@@ -180,7 +312,7 @@ export class MapPlacement {
         release: this.#conceal(layerName)
       };
     }
-  };
+  }
 
   #release(): void {
     this.#concealed?.release();

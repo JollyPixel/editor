@@ -15,6 +15,8 @@ import {
 // Import Internal Dependencies
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { TemplateDrop } from "../../../src/features/templates/TemplateDrop.ts";
+import { SelectionStore } from "../../../src/state/index.ts";
+import { mapDocumentOf } from "../../helpers/mapDocument.ts";
 
 // CONSTANTS
 const kViewportEdge = 100;
@@ -32,7 +34,8 @@ function setup() {
   const placement = new MapPlacement({
     world,
     history: new VoxelHistory(world, { enabled: true }),
-    selection: { lastVoxelLayer: "Draft" }
+    selection: new SelectionStore(),
+    mapDocument: mapDocumentOf(world)
   });
   const drop = new TemplateDrop({
     templateId: template.id,
@@ -56,14 +59,14 @@ function setup() {
 
 describe("TemplateDrop", () => {
   test("starts placing the template at the hovered viewport cell", () => {
-    const { world, template, placement, drop } = setup();
+    const { template, placement, drop } = setup();
 
     drop.hover(3, 4);
 
     assert.equal(drop.placing, true);
-    const current = placement.store.placement;
-    assert.equal(current?.source.resolve(world), template);
-    assert.deepEqual(current?.position, { x: 3, y: 0, z: 4 });
+    const current = placement.current;
+    assert.equal(current?.template, template);
+    assert.deepEqual(current?.placement.position, { x: 3, y: 0, z: 4 });
   });
 
   test("moves the placement with the pointer", () => {
@@ -72,7 +75,7 @@ describe("TemplateDrop", () => {
     drop.hover(3, 4);
     drop.hover(7, 1);
 
-    assert.deepEqual(placement.store.placement?.position, { x: 7, y: 0, z: 1 });
+    assert.deepEqual(placement.current?.placement.position, { x: 7, y: 0, z: 1 });
   });
 
   test("cancels the placement when the pointer leaves the viewport", () => {
@@ -82,7 +85,7 @@ describe("TemplateDrop", () => {
     drop.hover(kViewportEdge, 4);
 
     assert.equal(drop.placing, false);
-    assert.equal(placement.store.placement, null);
+    assert.equal(placement.current, null);
   });
 
   test("keeps the placement staged when dropped over the viewport", () => {
@@ -92,7 +95,7 @@ describe("TemplateDrop", () => {
     drop.finish("commit");
 
     assert.equal(drop.placing, false);
-    assert.deepEqual(placement.store.placement?.position, { x: 3, y: 0, z: 4 });
+    assert.deepEqual(placement.current?.placement.position, { x: 3, y: 0, z: 4 });
   });
 
   test("cancels the placement when the drag is cancelled", () => {
@@ -101,7 +104,7 @@ describe("TemplateDrop", () => {
     drop.hover(3, 4);
     drop.finish("cancel");
 
-    assert.equal(placement.store.placement, null);
+    assert.equal(placement.current, null);
   });
 
   test("leaves an unrelated placement alone when cancelled outside the viewport", () => {
@@ -111,6 +114,6 @@ describe("TemplateDrop", () => {
     drop.hover(kViewportEdge, 0);
     drop.finish("cancel");
 
-    assert.deepEqual(placement.store.placement?.position, { x: 9, y: 9, z: 9 });
+    assert.deepEqual(placement.current?.placement.position, { x: 9, y: 9, z: 9 });
   });
 });

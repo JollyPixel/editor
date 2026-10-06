@@ -12,6 +12,7 @@ import {
 } from "lit/decorators.js";
 import {
   FieldBinding,
+  SubscriptionController,
   type JollyOption
 } from "@jolly-pixel/ui";
 import type {
@@ -26,7 +27,6 @@ import {
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import { WorkspaceController } from "../shared/WorkspaceController.ts";
 import "../features/transform/TransformPanel.ts";
 import type { TransformPanel } from "../features/transform/TransformPanel.ts";
 import type { TransformWorkspace } from "../features/transform/TransformPanelController.ts";
@@ -97,7 +97,7 @@ export class BuildTab extends LitElement {
     }
   `;
 
-  #sources = new WorkspaceController<BuildSources>(
+  #sources = new SubscriptionController<BuildSources>(
     this,
     (sources) => this.#subscribeTo(sources)
   );

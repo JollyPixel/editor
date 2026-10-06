@@ -1,5 +1,4 @@
 // Import Node.js Dependencies
-import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Third-party Dependencies
@@ -24,7 +23,7 @@ import {
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { createWorldProject } from "./src/boot/worldProject.ts";
+import { createDefaultSeed } from "./src/boot/defaultSeed.ts";
 
 // CONSTANTS
 const kE2EMode = "e2e";
@@ -36,17 +35,6 @@ const kProjectFile: ProjectFileData = {
     "@jolly-pixel/asset.voxel-map": {}
   }
 };
-const kTilesetFile = path.join(
-  import.meta.dirname,
-  "public",
-  "textures",
-  "tileset.png"
-);
-
-const project = await createWorldProject(
-  await fs.readFile(kTilesetFile),
-  kTilesetAssetId
-);
 
 export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
   const e2e = mode === kE2EMode;
@@ -81,7 +69,7 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
           {}),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
         handlers: kinds.handlers(),
-        ...project
+        ...createDefaultSeed(kTilesetAssetId)
       })
     ]
   };

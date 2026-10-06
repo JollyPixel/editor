@@ -37,20 +37,20 @@ function placement(
 ): Promise<PlacementSnapshot | null> {
   return page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
-    const current = workspace.placement.store.placement;
-    const template = current?.source.resolve(workspace.view.document.world);
-    if (current === null || template === undefined) {
+    const current = workspace.placement.current;
+    if (current === null) {
       return null;
     }
 
-    const cells = [...template.placedVoxels(current.position, current.transform)]
+    const { template, placement: { position, transform } } = current;
+    const cells = [...template.placedVoxels(position, transform)]
       .map(([x, y, z]) => {
         return { x, y, z };
       });
 
     return {
-      position: { ...current.position },
-      rotation: current.transform.rotation,
+      position: { ...position },
+      rotation: transform.rotation,
       cells,
       top: Math.max(...cells.map((cell) => cell.y)) + 1
     };

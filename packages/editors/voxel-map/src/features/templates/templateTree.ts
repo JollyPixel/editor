@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import type { VoxelTemplate } from "@jolly-pixel/voxel.renderer";
-import type { TreeNode } from "@jolly-pixel/ui";
-
-// Import Internal Dependencies
-import { formatCount } from "../../shared/format.ts";
+import {
+  formatCount,
+  type TreeNode
+} from "@jolly-pixel/ui";
 
 export function templateTreeNodes(
   templates: Iterable<VoxelTemplate>

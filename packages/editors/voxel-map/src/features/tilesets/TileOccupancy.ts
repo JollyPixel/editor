@@ -5,6 +5,7 @@ import {
   type ResolvedBlockDefinition,
   type TileRect
 } from "@jolly-pixel/voxel.renderer";
+import { RectArea } from "@jolly-pixel/pixel-draw.renderer";
 
 export interface AtlasExtent {
   width?: number;
@@ -58,13 +59,13 @@ export class TileOccupancy {
 
     for (let y = 0; y <= maxY; y += tileSize) {
       for (let x = 0; x <= maxX; x += tileSize) {
-        const candidate = {
+        const candidate = RectArea.from({
           x,
           y,
           width: size,
           height: size
-        };
-        if (this.rects.every((rect) => !overlaps(candidate, rect))) {
+        });
+        if (!this.rects.some((rect) => candidate.intersects(rect))) {
           return {
             col: x / tileSize,
             row: y / tileSize
@@ -88,14 +89,4 @@ export class TileOccupancy {
       y: Math.ceil(bottom / this.tileSize) * this.tileSize
     };
   }
-}
-
-function overlaps(
-  a: TileRect,
-  b: TileRect
-): boolean {
-  return a.x < b.x + b.width &&
-    b.x < a.x + a.width &&
-    a.y < b.y + b.height &&
-    b.y < a.y + a.height;
 }

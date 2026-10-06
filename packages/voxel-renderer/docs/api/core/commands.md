@@ -20,18 +20,41 @@ const onCommand: VoxelCommandListener = (command, { origin }) => {
 const document = new VoxelDocument({ onCommand });
 ```
 
-## Origin
+## Context
 
 ```ts
 type VoxelCommandListener = (
   command: VoxelCommand,
-  context: { origin: "local" | "remote" }
+  context: VoxelCommandContext
 ) => void;
+
+interface VoxelCommandContext {
+  origin: "local" | "remote";
+  redefinition?: BlockRedefinition;
+}
+
+type BlockRedefinition =
+  | "added"
+  | "metadata"
+  | "tiles"
+  | "mesh"
+  | "occlusion";
 ```
 
 `origin` is `"local"` for a change made on this document and `"remote"` for one
 replayed with `document.apply(command, { origin: "remote" })`. A network
 adapter applies peer commands as `"remote"` and sends only `"local"` ones.
+
+`redefinition` is set on `"block-defined"` commands only. It compares the new
+definition with the one it replaced:
+
+| Value | Change |
+|---|---|
+| `"added"` | No block had this id. |
+| `"metadata"` | Only `name` or `properties` changed, or nothing did. |
+| `"tiles"` | Tile `col`, `row` or `size` moved; `name` and `properties` may have changed too. |
+| `"mesh"` | Another field that shapes the block's faces changed, such as a tile's tileset or rotation. |
+| `"occlusion"` | `shapeId`, `alphaMode`, face culling or `blendGroup` changed, so neighbouring faces may change too. |
 
 ## Categories
 

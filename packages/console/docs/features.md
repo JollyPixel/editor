@@ -30,21 +30,21 @@ import type {
 
 export function brushConsole(
   commands: CommandConsole,
-  { state }: Pick<VoxelMapWorkspace, "state">
+  { brush }: Pick<VoxelMapWorkspace, "brush">
 ): RegistrationHandle {
-  const brush = commands.registerNamespace("brush", {
+  const namespace = commands.registerNamespace("brush", {
     description: "Voxel brush"
   });
-  brush.registerVariable("size", {
+  namespace.registerVariable("size", {
     type: "number",
     description: "Brush size in voxels, from 1 to 16",
-    get: () => state.brush.size,
+    get: () => brush.size,
     set: (size) => {
-      state.brush.size = size;
+      brush.size = size;
     }
   });
 
-  return brush;
+  return namespace;
 }
 ```
 

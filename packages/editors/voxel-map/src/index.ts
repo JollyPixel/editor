@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
+import "@jolly-pixel/editor.pixel-art";
 import { bootStandalone } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import { VoxelMapEditor } from "./boot/VoxelMapEditor.ts";
-import "./app/icons.ts";
 
 declare global {
   interface Window {
@@ -17,13 +17,16 @@ void bootStandalone(VoxelMapEditor, {
   debugHandle: "voxelMapEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const [{ loadWorldProject }, { default: createHandlers }] = await Promise.all([
-      import("./boot/worldProject.ts"),
+    const [
+      { createDefaultSeed },
+      { default: createHandlers }
+    ] = await Promise.all([
+      import("./boot/defaultSeed.ts"),
       import("virtual:jolly-pixel/handlers")
     ]);
 
     return {
-      ...await loadWorldProject(),
+      ...createDefaultSeed(),
       handlers: createHandlers()
     };
   }

@@ -3,9 +3,7 @@ import type {
   VoxelBlockUsage,
   VoxelLayerUsage
 } from "@jolly-pixel/voxel.renderer";
-
-// Import Internal Dependencies
-import { formatCount } from "../../../shared/format.ts";
+import { formatCount } from "@jolly-pixel/ui";
 
 export class BlockUsage {
   static orphanMessage(

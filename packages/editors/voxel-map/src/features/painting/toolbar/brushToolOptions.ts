@@ -3,8 +3,8 @@ import type {
   BrushAxis,
   BrushMode,
   BrushPattern
-} from "../../../state/index.ts";
-import type { ChoiceOption } from "../../../shared/toolChoice.ts";
+} from "../BrushStore.ts";
+import type { ChoiceOption } from "./toolChoice.ts";
 
 // CONSTANTS
 export const BRUSH_MODE_OPTIONS: readonly BrushToolOption<BrushMode>[] = [
@@ -57,8 +57,6 @@ export function ghostLabel(
 ): string {
   return size === 1 ? "Ghost block" : "Ghost block, size 1 only";
 }
-
-export { choiceOf } from "../../../shared/toolChoice.ts";
 
 export interface BrushToolOption<TValue extends string>
   extends ChoiceOption<TValue> {

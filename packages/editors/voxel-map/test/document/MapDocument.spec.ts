@@ -4,23 +4,22 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  VoxelDocument,
   resolveBlockDefinition,
   type BlockDefinition,
+  type BlockRedefinition,
   type ResolvedBlockDefinition,
   type VoxelCommand,
-  type VoxelDocumentEvents,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
-import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
   MapDocument,
   type BlockRegistryChange,
   type MapDocumentEvents,
-  type WorldSource,
-  type WorldSourceEvents
-} from "../../src/document/index.ts";
+  type SyncedMap
+} from "../../src/document/MapDocument.ts";
 
 // CONSTANTS
 const kEvents: Array<keyof MapDocumentEvents> = [
@@ -32,32 +31,28 @@ const kEvents: Array<keyof MapDocumentEvents> = [
   "reset"
 ];
 
-class FakeWorldSource
-  extends Emitter<WorldSourceEvents>
-  implements WorldSource {
-  ready = false;
-  loaded: VoxelWorldJSON[] = [];
-  disposed = false;
+const kDefaultLayerName = "Ground";
 
-  load(
+class FakeMap implements SyncedMap {
+  readonly voxels = new VoxelDocument();
+  loaded = false;
+  replaced: VoxelWorldJSON[] = [];
+
+  replaceWorld(
     data: VoxelWorldJSON
   ): void {
-    this.loaded.push(data);
-  }
-
-  dispose(): void {
-    this.disposed = true;
+    this.replaced.push(data);
   }
 }
 
-class FakeCommands extends Emitter<VoxelDocumentEvents> {
-  blocks: ResolvedBlockDefinition[] = [];
-}
-
-function setup() {
-  const view = new FakeCommands();
-  const source = new FakeWorldSource();
-  const mapDocument = new MapDocument({ commands: view, source });
+function setup(
+  map = new FakeMap()
+) {
+  const view = map.voxels;
+  const mapDocument = new MapDocument({
+    map,
+    defaultLayerName: kDefaultLayerName
+  });
   const seen: string[] = [];
   for (const event of kEvents) {
     mapDocument.on(event, () => seen.push(event));
@@ -65,7 +60,7 @@ function setup() {
   const changes: BlockRegistryChange[] = [];
   mapDocument.on("blockRegistryChanged", (change) => changes.push(change));
 
-  return { view, source, mapDocument, seen, changes };
+  return { map, view, mapDocument, seen, changes };
 }
 
 function command(
@@ -117,12 +112,13 @@ describe("MapDocument", () => {
     ]);
   });
 
-  it("announces tilesets, blocks, material groups and templates before the reset of a source", () => {
-    const { source, seen } = setup();
+  it("announces the default layer and every registry before the reset of a loaded map", () => {
+    const { view, seen } = setup();
 
-    source.emit("reset");
+    view.emit("loaded");
 
     assert.deepEqual(seen, [
+      "layerUpdated",
       "tilesetsChanged",
       "blockRegistryChanged",
       "materialGroupsChanged",
@@ -133,17 +129,20 @@ describe("MapDocument", () => {
 
   it("tells a block that only moved its tiles from other block changes", () => {
     const { view, changes } = setup();
+    const redefinitions: BlockRedefinition[] = [
+      "added",
+      "tiles",
+      "metadata",
+      "mesh",
+      "occlusion"
+    ];
 
-    view.emit("command", defined(block()), { origin: "local" });
-    view.emit("command", defined(block({
-      defaultTexture: { col: 3, row: 1, size: 32, tilesetId: "atlas" }
-    })), { origin: "remote" });
-    view.emit("command", defined(block({
-      name: "Granite"
-    })), { origin: "local" });
-    view.emit("command", defined(block({
-      defaultTexture: { col: 3, row: 1, rotation: 1, tilesetId: "atlas" }
-    })), { origin: "local" });
+    for (const redefinition of redefinitions) {
+      view.emit("command", defined(block()), {
+        origin: "local",
+        redefinition
+      });
+    }
     view.emit("command", {
       action: "block-moved",
       blockId: 1,
@@ -159,48 +158,93 @@ describe("MapDocument", () => {
       "retiled",
       "redefined",
       "redefined",
+      "redefined",
       "moved",
       "removed"
     ]);
   });
 
-  it("knows the blocks of its command source after a reset", () => {
-    const { view, source, changes } = setup();
-    view.blocks = [block()];
+  it("follows the redefinition its map reports for a moved tile", () => {
+    const { view, changes } = setup();
+    view.defineBlock(block());
 
-    source.emit("reset");
-    view.emit("command", defined(block({
-      defaultTexture: { col: 2, row: 0, tilesetId: "atlas" }
-    })), { origin: "remote" });
+    view.defineBlock(block({
+      defaultTexture: { col: 3, row: 1, size: 32, tilesetId: "atlas" }
+    }));
 
-    assert.deepEqual(changes, ["reset", "retiled"]);
+    assert.deepEqual(changes, ["added", "retiled"]);
   });
 
-  it("mirrors the readiness of its source", () => {
-    const { source, mapDocument } = setup();
+  it("reads the world, blocks, material groups and history of its document", () => {
+    const { view, mapDocument } = setup();
+
+    assert.equal(mapDocument.world, view.world);
+    assert.equal(mapDocument.blocks, view.blocks);
+    assert.equal(mapDocument.materialGroups, view.materialGroups);
+    assert.equal(mapDocument.history, view.history);
+  });
+
+  it("mirrors whether its map has loaded", () => {
+    const { map, mapDocument } = setup();
 
     assert.equal(mapDocument.ready, false);
-    source.ready = true;
+    map.loaded = true;
     assert.equal(mapDocument.ready, true);
   });
 
-  it("delegates world loading to its source", () => {
-    const { source, mapDocument } = setup();
+  it("replaces the world of its map when loading", () => {
+    const { map, mapDocument } = setup();
     const data = { layers: [] } as unknown as VoxelWorldJSON;
 
     mapDocument.load(data);
 
-    assert.deepEqual(source.loaded, [data]);
+    assert.deepEqual(map.replaced, [data]);
   });
 
-  it("stops listening and releases its source once disposed", () => {
-    const { view, source, mapDocument, seen } = setup();
+  it("adds the default layer to a map that loads without layers", () => {
+    const { view, mapDocument } = setup();
+    const layersOnReset: string[] = [];
+    mapDocument.on("reset", () => {
+      layersOnReset.push(...view.world.getLayers().map((layer) => layer.name));
+    });
+
+    view.emit("loaded");
+
+    assert.deepEqual(layersOnReset, [kDefaultLayerName]);
+  });
+
+  it("adds the default layer to a map that had already loaded", () => {
+    const map = new FakeMap();
+    map.loaded = true;
+
+    const { view } = setup(map);
+
+    assert.deepEqual(
+      view.world.getLayers().map((layer) => layer.name),
+      [kDefaultLayerName]
+    );
+  });
+
+  it("keeps the layers of a map that loads with layers", () => {
+    const { view } = setup();
+    view.world.addLayer("Sky");
+
+    view.emit("loaded");
+
+    assert.deepEqual(
+      view.world.getLayers().map((layer) => layer.name),
+      ["Sky"]
+    );
+  });
+
+  it("stops listening to its map once disposed", () => {
+    const { view, mapDocument, seen } = setup();
 
     mapDocument.dispose();
     view.emit("command", command("added"), { origin: "local" });
-    source.emit("reset");
+    view.emit("loaded");
 
     assert.deepEqual(seen, []);
-    assert.equal(source.disposed, true);
+    assert.equal(view.world.getLayers().length, 0);
   });
 });

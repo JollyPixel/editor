@@ -15,7 +15,7 @@ import {
   type BrushPlane
 } from "./BrushFootprint.ts";
 import type { BrushAnchor } from "./CellFace.ts";
-import type { BrushAxis, BrushPattern } from "../../../state/index.ts";
+import type { BrushAxis, BrushPattern } from "../BrushStore.ts";
 
 export type StrokeMode = "place" | "replace" | "remove";
 

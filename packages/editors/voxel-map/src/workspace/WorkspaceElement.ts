@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import { LitElement } from "lit";
+import { SubscriptionController } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "./VoxelMapWorkspace.ts";
-import { WorkspaceController } from "./WorkspaceController.ts";
 
 export class WorkspaceElement extends LitElement {
-  readonly #controller = new WorkspaceController(
+  readonly #controller = new SubscriptionController<VoxelMapWorkspace>(
     this,
     (workspace) => this.watchWorkspace(workspace)
   );

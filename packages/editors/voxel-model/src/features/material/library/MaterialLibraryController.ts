@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import {
+  formatCount,
+  SubscriptionController,
   type JollyActivateDetail,
   type JollyActivateSwatchDetail,
   type JollyRenameDetail,
@@ -26,7 +28,6 @@ import type {
   MaterialFocusStore,
   PresenceStore
 } from "../../../state/index.ts";
-import { WorkspaceController } from "../../../shared/WorkspaceController.ts";
 import { ExpandedRows } from "../../../shared/ExpandedRows.ts";
 import {
   EMPTY_MENU,
@@ -54,7 +55,6 @@ import {
   blockOfUsageRow,
   usageRowId
 } from "./usageRows.ts";
-import { blockCount } from "../blockCount.ts";
 
 export interface MaterialWorkspace {
   document: ModelDocument;
@@ -101,7 +101,7 @@ export interface MaterialLibraryState {
 export class MaterialLibraryController {
   #host: ReactiveControllerHost;
   #prompts: MaterialLibraryPrompts;
-  #connection: WorkspaceController<MaterialWorkspace>;
+  #connection: SubscriptionController<MaterialWorkspace>;
   #expanded = new ExpandedRows();
   #state: MaterialLibraryState | null = null;
 
@@ -155,7 +155,7 @@ export class MaterialLibraryController {
   ) {
     this.#host = host;
     this.#prompts = prompts;
-    this.#connection = new WorkspaceController(
+    this.#connection = new SubscriptionController(
       host,
       (workspace) => this.#subscribeTo(workspace)
     );
@@ -371,7 +371,7 @@ export class MaterialLibraryController {
       {
         heading: "Delete Material",
         hasChildren: false,
-        message: `${material.name} is used by ${blockCount(uses)}. ` +
+        message: `${material.name} is used by ${formatCount(uses, "block")}. ` +
           `${uses === 1 ? "It" : "They"} will have no material.`
       };
   }

@@ -22,12 +22,12 @@ import {
 
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";
-import { EditorScene } from "../scene/EditorScene.ts";
+import { EditorScene } from "./EditorScene.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
-import { EditorShell } from "./EditorShell.ts";
+import { EditorShell } from "../shell/EditorShell.ts";
 import { TILESET_DOCUMENT_KIND } from "../features/tilesets/TilesetBinding.ts";
 import { mountInspectorControls } from "./inspectorControls.ts";
-import { CONSOLE_FEATURES } from "./consoleFeatures.ts";
+import { brushConsole } from "../features/painting/brushConsole.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -141,7 +141,7 @@ export class VoxelMapEditor {
       target,
       consoleFeatures: registerConsoleFeatures(
         commands,
-        CONSOLE_FEATURES,
+        [brushConsole],
         workspace
       ),
       metricsPanel

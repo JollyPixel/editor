@@ -2,7 +2,7 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { viewportToolbarStyles } from "../../../shared/viewportToolbar.styles.ts";
+import { viewportToolbarStyles } from "../../../shared/styles/viewportToolbar.styles.ts";
 
 export const brushToolbarStyles = [viewportToolbarStyles, css`
   :host {

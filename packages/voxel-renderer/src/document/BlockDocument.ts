@@ -6,6 +6,7 @@ import {
   resolveBlockDefinition,
   type BlockDefinition
 } from "./blocks/BlockDefinition.ts";
+import { redefinitionOf } from "./blocks/BlockRedefinition.ts";
 import type { BlockRegistry } from "./blocks/BlockRegistry.ts";
 import {
   MaterialGroup,
@@ -68,11 +69,19 @@ export abstract class BlockDocument<
   ): boolean {
     const { origin = "local" } = options;
 
+    const previous = definesBlock(command) ?
+      this.blocks.get(command.block.id) :
+      undefined;
     const applied = this.fold(command);
     if (applied === null) {
       return false;
     }
-    this.emit("command", applied, { origin });
+
+    const context: VoxelCommandContext = { origin };
+    if (definesBlock(applied)) {
+      context.redefinition = redefinitionOf(previous, applied.block);
+    }
+    this.emit("command", applied, context);
 
     return true;
   }
@@ -153,4 +162,10 @@ export abstract class BlockDocument<
   protected abstract fold(
     command: TCommand | BlockCatalogCommand
   ): TCommand | null;
+}
+
+function definesBlock(
+  command: { action: string; }
+): command is Extract<VoxelBlockCommand, { action: "block-defined"; }> {
+  return command.action === "block-defined";
 }
