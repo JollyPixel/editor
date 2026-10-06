@@ -1,8 +1,16 @@
 // Import Internal Dependencies
+import { SearchText } from "./SearchText.ts";
 import {
   loweredPrefixDistance,
   typoTolerance
 } from "./typo.ts";
+
+// CONSTANTS
+const kWalk = {
+  positions: new Int32Array(32),
+  failed: new Uint32Array(1024),
+  generation: 0
+};
 
 export type MatchTier = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -30,82 +38,92 @@ export function score(
   query: string,
   candidate: string
 ): Match | null {
-  const needle = query.toLowerCase();
-  const haystack = candidate.toLowerCase();
-  if (needle === "" || needle.length > haystack.length) {
-    return null;
-  }
-  const scattered = matchSubsequence(needle, haystack);
-  if (scattered === null) {
-    return null;
-  }
-
-  if (haystack === needle) {
-    return match(MATCH_TIERS.exact, 1, [0, needle.length]);
-  }
-  if (haystack.startsWith(needle)) {
-    const coverage = needle.length / haystack.length;
-
-    return match(MATCH_TIERS.prefix, coverage, [0, needle.length]);
-  }
-
-  const starts = wordStarts(candidate);
-  const humps = matchWordBoundaries(needle, haystack, starts);
-  if (humps !== null) {
-    const segments = toRanges(humps);
-
-    return {
-      tier: MATCH_TIERS.wordBoundary,
-      score: 1 / segments.length - haystack.length / 1000,
-      ranges: segments
-    };
-  }
-
-  const index = haystack.indexOf(needle);
-  if (index !== -1) {
-    const boundary = starts[index] ? 1 : 0.5;
-
-    const end = index + needle.length;
-
-    return match(MATCH_TIERS.substring, boundary - index / 1000, [index, end]);
-  }
-
-  const span = scattered[scattered.length - 1] - scattered[0] + 1;
-
-  return {
-    tier: MATCH_TIERS.subsequence,
-    score: needle.length / span,
-    ranges: toRanges(scattered)
-  };
+  return matchText(new SearchText(query), new SearchText(candidate));
 }
 
 export function scoreTypo(
   query: string,
   candidate: string
 ): Match | null {
-  if (typoTolerance(query.length) === 0) {
+  return matchTypo(new SearchText(query), new SearchText(candidate));
+}
+
+export function matchText(
+  query: SearchText,
+  text: SearchText
+): Match | null {
+  const needle = query.lowered;
+  const haystack = text.lowered;
+  if (
+    needle === "" ||
+    needle.length > haystack.length ||
+    text.lacks(query) !== 0 ||
+    !isSubsequence(needle, haystack)
+  ) {
     return null;
   }
 
-  const needle = query.toLowerCase();
-  const haystack = candidate.toLowerCase();
-  let best: number | null = null;
-  for (let index = 0; index < candidate.length; index++) {
-    if (!isWordStart(candidate, index)) {
-      continue;
-    }
-    const found = loweredPrefixDistance(needle, haystack, index);
-    if (found !== null && (best === null || found < best)) {
-      best = found;
+  if (haystack === needle) {
+    return match(MATCH_TIERS.exact, 1, 0, needle.length);
+  }
+  if (haystack.startsWith(needle)) {
+    const coverage = needle.length / haystack.length;
+
+    return match(MATCH_TIERS.prefix, coverage, 0, needle.length);
+  }
+
+  const { starts } = text;
+  const humps = matchWordBoundaries(needle, haystack, starts);
+  if (humps !== null) {
+    return {
+      tier: MATCH_TIERS.wordBoundary,
+      score: 1 / humps.length - haystack.length / 1000,
+      ranges: humps
+    };
+  }
+
+  const index = haystack.indexOf(needle);
+  if (index !== -1) {
+    const boundary = starts[index] === 1 ? 1 : 0.5;
+
+    return match(
+      MATCH_TIERS.substring,
+      boundary - index / 1000,
+      index,
+      index + needle.length
+    );
+  }
+
+  return matchSubsequence(needle, haystack);
+}
+
+export function matchTypo(
+  query: SearchText,
+  text: SearchText
+): Match | null {
+  const needle = query.lowered;
+  const tolerance = typoTolerance(needle.length);
+  if (tolerance === 0 || text.lacks(query) > tolerance) {
+    return null;
+  }
+
+  const { lowered, starts } = text;
+  let best = Infinity;
+  for (let index = 0; index < starts.length; index++) {
+    if (starts[index] === 1) {
+      const found = loweredPrefixDistance(needle, lowered, index);
+      if (found !== null && found < best) {
+        best = found;
+      }
     }
   }
-  if (best === null) {
+  if (best === Infinity) {
     return null;
   }
 
   return {
     tier: MATCH_TIERS.typo,
-    score: 1 - best / query.length,
+    score: 1 - best / needle.length,
     ranges: []
   };
 }
@@ -113,7 +131,8 @@ export function scoreTypo(
 function match(
   tier: MatchTier,
   value: number,
-  [start, end]: [number, number]
+  start: number,
+  end: number
 ): Match {
   return {
     tier,
@@ -122,119 +141,128 @@ function match(
   };
 }
 
-function wordStarts(
-  candidate: string
-): boolean[] {
-  return Array.from(candidate, (_, index) => isWordStart(candidate, index));
-}
-
-function isWordStart(
-  candidate: string,
-  index: number
-): boolean {
-  const char = candidate[index];
-  if (!isWordChar(char)) {
-    return false;
-  }
-  if (index === 0) {
-    return true;
-  }
-  const previous = candidate[index - 1];
-
-  return !isWordChar(previous) || (isUpper(char) && !isUpper(previous));
-}
-
-function matchWordBoundaries(
+function isSubsequence(
   needle: string,
-  haystack: string,
-  starts: boolean[]
-): number[] | null {
-  const positions: number[] = [];
-  const failed = new Set<number>();
-
-  function walk(
-    queryIndex: number,
-    previous: number
-  ): boolean {
-    if (queryIndex === needle.length) {
-      return true;
-    }
-    const key = queryIndex * (haystack.length + 1) + previous + 1;
-    if (failed.has(key)) {
+  haystack: string
+): boolean {
+  let from = 0;
+  for (let index = 0; index < needle.length; index++) {
+    const found = haystack.indexOf(needle[index], from);
+    if (found === -1) {
       return false;
     }
-
-    const next = previous + 1;
-    if (previous >= 0 && haystack[next] === needle[queryIndex]) {
-      positions.push(next);
-      if (walk(queryIndex + 1, next)) {
-        return true;
-      }
-      positions.pop();
-    }
-    const from = previous >= 0 ? next + 1 : 0;
-    for (let index = from; index < haystack.length; index++) {
-      if (starts[index] && haystack[index] === needle[queryIndex]) {
-        positions.push(index);
-        if (walk(queryIndex + 1, index)) {
-          return true;
-        }
-        positions.pop();
-      }
-    }
-    failed.add(key);
-
-    return false;
+    from = found + 1;
   }
 
-  return walk(0, -1) ? positions : null;
+  return true;
 }
 
 function matchSubsequence(
   needle: string,
   haystack: string
-): number[] | null {
-  const positions: number[] = [];
+): Match {
+  const positions = reserve(needle.length);
   let from = 0;
-  for (const char of needle) {
-    const index = haystack.indexOf(char, from);
-    if (index === -1) {
-      return null;
-    }
-    positions.push(index);
-    from = index + 1;
+  for (let index = 0; index < needle.length; index++) {
+    positions[index] = haystack.indexOf(needle[index], from);
+    from = positions[index] + 1;
+  }
+  const span = positions[needle.length - 1] - positions[0] + 1;
+
+  return {
+    tier: MATCH_TIERS.subsequence,
+    score: needle.length / span,
+    ranges: toRanges(positions, needle.length)
+  };
+}
+
+function matchWordBoundaries(
+  needle: string,
+  haystack: string,
+  starts: Uint8Array
+): MatchRange[] | null {
+  const cells = needle.length * (haystack.length + 1);
+  if (kWalk.failed.length < cells) {
+    kWalk.failed = new Uint32Array(cells);
+  }
+  kWalk.generation = (kWalk.generation + 1) >>> 0;
+  if (kWalk.generation === 0) {
+    kWalk.failed.fill(0);
+    kWalk.generation = 1;
+  }
+  const positions = reserve(needle.length);
+
+  return walk(needle, haystack, starts, 0, -1) ?
+    toRanges(positions, needle.length) :
+    null;
+}
+
+function walk(
+  needle: string,
+  haystack: string,
+  starts: Uint8Array,
+  queryIndex: number,
+  previous: number
+): boolean {
+  if (queryIndex === needle.length) {
+    return true;
+  }
+  const key = queryIndex * (haystack.length + 1) + previous + 1;
+  if (kWalk.failed[key] === kWalk.generation) {
+    return false;
   }
 
-  return positions;
+  const char = needle.charCodeAt(queryIndex);
+  const next = previous + 1;
+  if (previous >= 0 && haystack.charCodeAt(next) === char) {
+    kWalk.positions[queryIndex] = next;
+    if (walk(needle, haystack, starts, queryIndex + 1, next)) {
+      return true;
+    }
+  }
+  const from = previous >= 0 ? next + 1 : 0;
+  for (let index = from; index < haystack.length; index++) {
+    if (starts[index] === 1 && haystack.charCodeAt(index) === char) {
+      kWalk.positions[queryIndex] = index;
+      if (walk(needle, haystack, starts, queryIndex + 1, index)) {
+        return true;
+      }
+    }
+  }
+  kWalk.failed[key] = kWalk.generation;
+
+  return false;
+}
+
+function reserve(
+  length: number
+): Int32Array {
+  if (kWalk.positions.length < length) {
+    kWalk.positions = new Int32Array(length);
+  }
+
+  return kWalk.positions;
 }
 
 function toRanges(
-  positions: number[]
+  positions: Int32Array,
+  count: number
 ): MatchRange[] {
   const ranges: MatchRange[] = [];
-  for (const position of positions) {
-    const last = ranges.at(-1);
-    if (last !== undefined && last.end === position) {
+  let last: MatchRange | null = null;
+  for (let index = 0; index < count; index++) {
+    const position = positions[index];
+    if (last !== null && last.end === position) {
       last.end++;
     }
     else {
-      ranges.push({ start: position, end: position + 1 });
+      last = {
+        start: position,
+        end: position + 1
+      };
+      ranges.push(last);
     }
   }
 
   return ranges;
-}
-
-function isWordChar(
-  char: string
-): boolean {
-  return (char >= "a" && char <= "z") ||
-    isUpper(char) ||
-    (char >= "0" && char <= "9");
-}
-
-function isUpper(
-  char: string
-): boolean {
-  return char >= "A" && char <= "Z";
 }

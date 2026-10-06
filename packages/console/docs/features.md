@@ -1,8 +1,7 @@
 # Registering from features
 
-An editor grows its console one feature at a time: the brush, then layers, then templates. Each
-feature declares what it registers as a `ConsoleFeature`, and the editor registers its list in one
-call and tears it down with one handle.
+An editor registers its console entries feature by feature. Each feature is a function that
+registers a namespace and returns it.
 
 ```ts
 type ConsoleFeature<TContext> = (
@@ -18,9 +17,6 @@ function registerConsoleFeatures<TContext>(
 ```
 
 ## Declaring a feature
-
-A feature is a function that registers its namespace and returns it. A `ConsoleNamespace` is a
-`RegistrationHandle`, so the namespace is the handle.
 
 ```ts
 import type {
@@ -48,12 +44,8 @@ export function brushConsole(
 }
 ```
 
-Type the context as the slice the feature reads. `Pick<VoxelMapWorkspace, "state">` lets the
-feature's spec pass `{ state }` alone, while the editor still passes its whole workspace: a
-feature over a narrower context is assignable to a list over a wider one.
-
-Give each feature its own namespace. Registering a namespace name again replaces the namespace
-whole, so a second feature registering `brush` would drop the first one's variables.
+- Type the context as only what the feature uses (`Pick<...>`), so tests can pass just that.
+- Give each feature its own namespace: registering the same name twice replaces the first one.
 
 ## Registering the list
 
@@ -74,8 +66,5 @@ const features = registerConsoleFeatures(
 features.unregister();
 ```
 
-Features register in list order. `unregister()` removes them in reverse order, and a second call
-does nothing. When a feature throws while registering, the ones before it are unregistered and the
-error is rethrown, so a failed boot leaves nothing behind.
-
-A new feature is one module and one line in the list. The editor's boot code does not change.
+Features register in order and unregister in reverse. If one throws, the ones already registered
+are removed and the error is rethrown.

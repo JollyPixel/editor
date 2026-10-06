@@ -13,6 +13,7 @@ export class Scrollback {
   readonly capacity: number;
 
   #entries: ScrollbackEntry[] = [];
+  #snapshot: readonly ScrollbackEntry[] | null = null;
   #nextId = 1;
 
   constructor(
@@ -22,7 +23,9 @@ export class Scrollback {
   }
 
   get entries(): readonly ScrollbackEntry[] {
-    return this.#entries.slice();
+    this.#snapshot ??= Object.freeze(this.#entries.slice());
+
+    return this.#snapshot;
   }
 
   append(
@@ -39,6 +42,7 @@ export class Scrollback {
     if (this.#entries.length > this.capacity) {
       this.#entries.splice(0, this.#entries.length - this.capacity);
     }
+    this.#snapshot = null;
 
     return entry;
   }
@@ -55,11 +59,13 @@ export class Scrollback {
       ...this.#entries[index],
       pending
     };
+    this.#snapshot = null;
 
     return true;
   }
 
   clear(): void {
     this.#entries = [];
+    this.#snapshot = null;
   }
 }

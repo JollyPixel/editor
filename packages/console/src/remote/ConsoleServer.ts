@@ -1,15 +1,22 @@
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
-import { writeVariable } from "../execution/variables.ts";
+import { RevertStack } from "../execution/RevertStack.ts";
+import {
+  peekValue,
+  writeVariable
+} from "../execution/variables.ts";
 import type {
   ArgDef,
+  ConsoleValue,
   RegisteredCommand,
   RegisteredNamespace,
-  RegisteredVariable
+  RegisteredVariable,
+  Revert
 } from "../registry/types.ts";
 import {
   isMirrorMessage,
   type CompleteMessage,
+  type DoneMessage,
   type ExecuteMessage,
   type FailedMessage,
   type MirrorMessage,
@@ -17,15 +24,23 @@ import {
   type RemoteCommand,
   type RemoteNamespaceData,
   type RemoteVariable,
+  type RevertMessage,
   type ServerMessage,
   type ServerReply,
   type WriteMessage
 } from "./protocol.ts";
 
+interface KeptRevert {
+  readonly revert: Revert;
+  readonly signal: AbortSignal;
+}
+
 export class ConsoleServer {
   #commands: CommandConsole;
   #port: MessagePort;
   #running = new Map<number, AbortController>();
+  #reverts = new Map<number, KeptRevert>();
+  #nextRevertId = 0;
   #listening = new AbortController();
   #unsubscribe: () => void;
   #scheduled = false;
@@ -54,6 +69,7 @@ export class ConsoleServer {
       controller.abort();
     }
     this.#running.clear();
+    this.#reverts.clear();
     this.#port.close();
   }
 
@@ -78,11 +94,15 @@ export class ConsoleServer {
       case "write":
         void this.#answer(message.requestId, this.#write(message));
         break;
+      case "revert":
+        void this.#answer(message.requestId, this.#revert(message));
+        break;
       case "cancel":
         this.#running.get(message.requestId)?.abort();
         break;
-      default:
+      case "refresh":
         this.#postSnapshot();
+        break;
     }
   }
 
@@ -113,11 +133,59 @@ export class ConsoleServer {
     const controller = new AbortController();
     this.#running.set(requestId, controller);
     try {
-      await command.def.execute(message.args, {
+      const revert = await command.def.execute(message.args, {
         print: (text) => this.#output(requestId, "info", text),
         error: (text) => this.#output(requestId, "error", text),
         signal: AbortSignal.any([controller.signal, command.signal])
       });
+      const done: DoneMessage = {
+        type: "done",
+        requestId
+      };
+      if (typeof revert === "function") {
+        done.revertId = this.#keepRevert(revert, command.signal);
+      }
+
+      return done;
+    }
+    finally {
+      this.#running.delete(requestId);
+      this.#scheduleSnapshot();
+    }
+  }
+
+  #keepRevert(
+    revert: Revert,
+    signal: AbortSignal
+  ): number {
+    const revertId = this.#nextRevertId++;
+    this.#reverts.set(revertId, {
+      revert,
+      signal
+    });
+    if (this.#reverts.size > RevertStack.DEFAULT_CAPACITY) {
+      const [oldest] = this.#reverts.keys();
+      this.#reverts.delete(oldest);
+    }
+
+    return revertId;
+  }
+
+  async #revert(
+    message: RevertMessage
+  ): Promise<ServerReply> {
+    const { requestId, revertId } = message;
+    const kept = this.#reverts.get(revertId);
+    this.#reverts.delete(revertId);
+    if (kept === undefined || kept.signal.aborted) {
+      return this.#failed(
+        requestId,
+        `/${message.address} can no longer be reverted`
+      );
+    }
+
+    try {
+      await kept.revert();
 
       return {
         type: "done",
@@ -125,7 +193,6 @@ export class ConsoleServer {
       };
     }
     finally {
-      this.#running.delete(requestId);
       this.#scheduleSnapshot();
     }
   }
@@ -209,17 +276,22 @@ export class ConsoleServer {
 
   #postSnapshot(): void {
     const namespaces = [...this.#commands.registry.namespaces()];
+    const values: Record<string, ConsoleValue> = {};
+    for (const namespace of namespaces) {
+      for (const variable of namespace.variables()) {
+        const value = peekValue(variable);
+        if (value !== undefined) {
+          values[variable.address] = value;
+        }
+      }
+    }
 
     this.#post({
       type: "snapshot",
       namespaces: namespaces.map(
         (namespace) => this.#describeNamespace(namespace)
       ),
-      values: Object.fromEntries(namespaces.flatMap(
-        (namespace) => [...namespace.variables()].map(
-          (variable) => [variable.address, variable.def.get()]
-        )
-      ))
+      values
     });
   }
 

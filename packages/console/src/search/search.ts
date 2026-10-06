@@ -1,167 +1,157 @@
 // Import Internal Dependencies
-import { label } from "../registry/format.ts";
+import { compareText } from "../registry/format.ts";
 import type {
   ConsoleRegistry,
   RegisteredEntry
 } from "../registry/types.ts";
 import {
   MATCH_TIERS,
-  score,
-  scoreTypo,
+  matchText,
+  matchTypo,
   type Match,
-  type MatchRange,
   type MatchTier
 } from "./score.ts";
+import { SearchTarget } from "./SearchTarget.ts";
+import { SearchText } from "./SearchText.ts";
+import {
+  entrySuggestion,
+  type Suggestion,
+  type SuggestionMatch
+} from "./suggestion.ts";
+import { TopRanked } from "./TopRanked.ts";
 
-export interface SearchResult {
-  target: RegisteredEntry;
-  label: string;
-  description: string;
-  field: "name" | "description";
+export interface SearchResult extends Suggestion {
+  match: SuggestionMatch;
   tier: MatchTier;
   score: number;
-  ranges: MatchRange[];
 }
 
-export interface SearchSelection {
-  text: string;
-  run: boolean;
+interface RankedTarget {
+  target: SearchTarget;
+  field: SuggestionMatch["field"];
+  found: Match;
+  group: number;
 }
 
 export function search(
   query: string,
-  registry: ConsoleRegistry
+  registry: ConsoleRegistry,
+  limit = Infinity
 ): SearchResult[] {
-  const needle = query.trim();
-  if (needle === "") {
+  const needle = new SearchText(query.trim());
+  if (needle.text === "") {
     return [];
   }
 
-  const results: SearchResult[] = [];
-  for (const target of targets(registry)) {
-    const result = rank(needle, target);
-    if (result !== null) {
-      results.push(result);
+  const ranked = new TopRanked(limit, compare);
+  for (const scope of registry) {
+    if (scope !== registry.root) {
+      rank(needle, scope, ranked);
+    }
+    for (const entry of scope) {
+      rank(needle, entry, ranked);
     }
   }
 
-  return results.sort(compare);
-}
-
-export function select(
-  result: SearchResult
-): SearchSelection {
-  return selectEntry(result.target);
-}
-
-export function selectEntry(
-  target: RegisteredEntry
-): SearchSelection {
-  const text = label(target);
-  switch (target.kind) {
-    case "command":
-      return target.def.args.some((arg) => arg.required) ?
-        { text: `${text} `, run: false } :
-        { text, run: true };
-    case "variable":
-      return { text, run: false };
-    default:
-      return { text: `${text}.`, run: false };
-  }
-}
-
-function* targets(
-  registry: ConsoleRegistry
-): IterableIterator<RegisteredEntry> {
-  yield* registry.root.commands();
-  yield* registry.root.variables();
-  for (const namespace of registry.namespaces()) {
-    yield namespace;
-    yield* namespace.commands();
-    yield* namespace.variables();
-  }
+  return ranked.sorted().map(toResult);
 }
 
 function rank(
-  query: string,
-  target: RegisteredEntry
-): SearchResult | null {
-  const text = label(target);
-  const description = target.kind === "namespace" ?
-    target.description :
-    target.def.description;
-  const offset = target.kind === "command" ? 1 : 0;
-
-  const byName = score(query, text.slice(offset));
+  needle: SearchText,
+  entry: RegisteredEntry,
+  ranked: TopRanked<RankedTarget>
+): void {
+  const target = SearchTarget.of(entry);
+  const byName = matchText(needle, target.address);
   if (byName !== null) {
-    return result(target, text, description, "name", {
-      ...byName,
-      ranges: byName.ranges.map((range) => {
-        return {
-          start: range.start + offset,
-          end: range.end + offset
-        };
-      })
+    ranked.add({
+      target,
+      field: "label",
+      found: byName,
+      group: 0
     });
+
+    return;
   }
 
-  const byDescription = score(query, description);
+  const byDescription = matchText(needle, target.description);
   if (
     byDescription !== null &&
     byDescription.tier !== MATCH_TIERS.subsequence
   ) {
-    return result(target, text, description, "description", byDescription);
+    ranked.add({
+      target,
+      field: "detail",
+      found: byDescription,
+      group: 1
+    });
+
+    return;
   }
 
-  const byTypo = scoreTypo(query, text.slice(offset));
-
-  return byTypo === null ?
-    null :
-    result(target, text, description, "name", byTypo);
+  const byTypo = matchTypo(needle, target.address);
+  if (byTypo !== null) {
+    ranked.add({
+      target,
+      field: "label",
+      found: byTypo,
+      group: 2
+    });
+  }
 }
 
-function result(
-  target: RegisteredEntry,
-  text: string,
-  description: string,
-  field: SearchResult["field"],
-  found: Match
+function toResult(
+  ranked: RankedTarget
 ): SearchResult {
+  const { target, field, found } = ranked;
+  const { entry } = target;
+  const suggestion = entrySuggestion(entry);
+  if (field === "detail") {
+    return {
+      ...suggestion,
+      match: {
+        field,
+        ranges: found.ranges
+      },
+      tier: found.tier,
+      score: found.score
+    };
+  }
+
+  const shift = target.label.length - entry.address.length;
+
   return {
-    target,
-    label: text,
-    description,
-    field,
+    ...suggestion,
+    detail: entry.kind === "variable" ?
+      `variable  ${entry.def.type}` :
+      suggestion.detail,
+    match: {
+      field,
+      ranges: found.ranges.map((range) => {
+        return {
+          start: range.start + shift,
+          end: range.end + shift
+        };
+      })
+    },
     tier: found.tier,
-    score: found.score,
-    ranges: found.ranges
+    score: found.score
   };
 }
 
 function compare(
-  left: SearchResult,
-  right: SearchResult
+  left: RankedTarget,
+  right: RankedTarget
 ): number {
-  const byGroup = group(left) - group(right);
-  if (byGroup !== 0) {
-    return byGroup;
+  if (left.group !== right.group) {
+    return left.group - right.group;
   }
-  if (left.tier !== right.tier) {
-    return left.tier - right.tier;
+  if (left.found.tier !== right.found.tier) {
+    return left.found.tier - right.found.tier;
   }
-  if (left.score !== right.score) {
-    return right.score - left.score;
-  }
-
-  return left.label.localeCompare(right.label);
-}
-
-function group(
-  result: SearchResult
-): number {
-  if (result.field === "description") {
-    return 1;
+  if (left.found.score !== right.found.score) {
+    return right.found.score - left.found.score;
   }
 
-  return result.tier === MATCH_TIERS.typo ? 2 : 0;
+  return compareText(left.target.label, right.target.label);
 }

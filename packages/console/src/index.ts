@@ -15,3 +15,15 @@ export type {
 export * from "./remote/ConsoleServer.ts";
 export * from "./remote/ConsoleMirror.ts";
 export * from "./remote/errors/RemoteCancelledError.ts";
+export * from "./remote/errors/RemoteValueMissingError.ts";
+export * from "./script/VariableScript.ts";
+export * from "./script/ScriptDraft.ts";
+export type {
+  BlankLine,
+  CommentLine,
+  EntryLine,
+  InvalidLine,
+  ScriptLine,
+  ScriptSpan,
+  SectionLine
+} from "./script/scanScript.ts";

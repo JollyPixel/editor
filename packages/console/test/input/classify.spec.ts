@@ -59,8 +59,7 @@ describe("classify", () => {
   test("a leading ? forces search and strips the prefix", () => {
     assert.deepEqual(classify(" ?fps ", registry), {
       mode: "search",
-      query: "fps",
-      forced: true
+      query: "fps"
     });
   });
 

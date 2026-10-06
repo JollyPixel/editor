@@ -28,6 +28,26 @@ describe("Scrollback", () => {
     assert.equal(scrollback.entries[0].pending, true);
     assert.notEqual(scrollback.entries[0].id, scrollback.entries[1].id);
   });
+
+  test("returns the same frozen list until an entry changes", () => {
+    const scrollback = new Scrollback();
+    const { id } = scrollback.append("echo", "a");
+    const before = scrollback.entries;
+
+    assert.equal(scrollback.entries, before);
+    assert.ok(Object.isFrozen(before));
+
+    scrollback.updatePending(id, true);
+    const pending = scrollback.entries;
+    scrollback.append("info", "b");
+    const appended = scrollback.entries;
+    scrollback.clear();
+
+    assert.notEqual(pending, before);
+    assert.notEqual(appended, pending);
+    assert.deepEqual(scrollback.entries, []);
+    assert.deepEqual(before.map((entry) => entry.text), ["a"]);
+  });
 });
 
 describe("InputHistory", () => {
@@ -74,5 +94,30 @@ describe("InputHistory", () => {
     history.push("c");
 
     assert.equal(history.previous(""), "c");
+  });
+
+  test("browses from a recall until a push or stopBrowsing", () => {
+    const history = new InputHistory();
+    history.push("a");
+    assert.equal(history.browsing, false);
+
+    history.previous("");
+    assert.equal(history.browsing, true);
+    history.stopBrowsing();
+    assert.equal(history.browsing, false);
+
+    history.next();
+    assert.equal(history.browsing, true);
+    history.push("b");
+    assert.equal(history.browsing, false);
+    assert.equal(history.size, 2);
+  });
+
+  test("a recall past either end does not start browsing", () => {
+    const history = new InputHistory();
+
+    assert.equal(history.previous("draft"), null);
+    assert.equal(history.next(), null);
+    assert.equal(history.browsing, false);
   });
 });

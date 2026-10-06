@@ -3,18 +3,17 @@ import {
   LitElement,
   html,
   nothing,
-  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
   customElement,
-  property,
   query,
   state
 } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import {
   AmbientThemeController,
+  SubscriptionController,
   deepActiveElement,
   inputLayers,
   themeStyles
@@ -23,15 +22,31 @@ import "@jolly-pixel/ui/icon";
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
+import type { VariableScript } from "../script/VariableScript.ts";
 import { consoleStyles } from "./Console.styles.ts";
 import type { ConsoleLogElement } from "./ConsoleLog.ts";
 import "./ConsoleLog.ts";
+import type { ConsoleScriptElement } from "./ConsoleScript.ts";
+import "./ConsoleScript.ts";
 import {
   KeyboardController,
   type ConsoleKeyAction,
+  type KeyHint,
   type KeyState
 } from "./KeyboardController.ts";
 import { SuggestionController } from "./SuggestionController.ts";
+
+// CONSTANTS
+const kScriptHints: readonly KeyHint[] = [
+  {
+    keys: "Ctrl+S",
+    action: "save"
+  },
+  {
+    keys: "Esc",
+    action: "cancel"
+  }
+];
 
 @customElement("jolly-console")
 export class ConsoleElement extends LitElement {
@@ -40,14 +55,14 @@ export class ConsoleElement extends LitElement {
     consoleStyles
   ];
 
-  @property({ attribute: false })
-  declare console: CommandConsole | null;
-
   @state()
   declare _text: string;
 
   @state()
   declare _caretAtEnd: boolean;
+
+  @state()
+  declare _script: VariableScript | null;
 
   @query("dialog")
   declare _dialog: HTMLDialogElement | null;
@@ -64,6 +79,9 @@ export class ConsoleElement extends LitElement {
   @query("[role=listbox]")
   declare _listbox: HTMLElement | null;
 
+  @query("jolly-console-script")
+  declare _scriptEditor: ConsoleScriptElement | null;
+
   #suggestions = new SuggestionController(this, {
     listbox: () => this._listbox,
     pick: (index) => this.#pick(index)
@@ -73,23 +91,34 @@ export class ConsoleElement extends LitElement {
     act: (action) => this.#act(action),
     toggle: () => this.toggle()
   });
-  #browsingHistory = false;
+  #source = new SubscriptionController<CommandConsole>(
+    this,
+    (commands) => this.#watch(commands)
+  );
   #restoreFocus: HTMLElement | null = null;
   #releaseLayer: (() => void) | null = null;
-  #unsubscribe: (() => void) | null = null;
+  #measuredText: string | null = null;
   #theme = new AmbientThemeController(this);
 
   constructor() {
     super();
 
-    this.console = null;
     this._text = "";
     this._caretAtEnd = true;
+    this._script = null;
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.#bind(this.console);
+  get console(): CommandConsole | null {
+    return this.#source.current;
+  }
+
+  set console(
+    commands: CommandConsole
+  ) {
+    if (commands !== this.#source.current) {
+      this.#suggestions.cancel();
+      this.#source.attach(commands);
+    }
   }
 
   get open(): boolean {
@@ -97,28 +126,26 @@ export class ConsoleElement extends LitElement {
   }
 
   override disconnectedCallback(): void {
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
     this.#release();
 
     super.disconnectedCallback();
   }
 
-  protected override willUpdate(
-    changed: PropertyValues<this>
-  ): void {
-    if (changed.has("console")) {
-      this.#bind(this.console);
-    }
-  }
-
   protected override updated(): void {
     const input = this._input;
     const ghost = this._ghost;
-    if (input !== null && ghost !== null) {
-      const overflowing = input.scrollWidth > input.clientWidth;
-      ghost.style.visibility = overflowing ? "hidden" : "";
+    if (
+      input === null ||
+      ghost === null ||
+      ghost.hidden ||
+      this.#measuredText === this._text
+    ) {
+      return;
     }
+
+    this.#measuredText = this._text;
+    const overflowing = input.scrollWidth > input.clientWidth;
+    ghost.style.visibility = overflowing ? "hidden" : "";
   }
 
   async show(): Promise<void> {
@@ -128,7 +155,7 @@ export class ConsoleElement extends LitElement {
       return;
     }
     if (dialog.open) {
-      this._input?.focus();
+      (this._scriptEditor ?? this._input)?.focus();
 
       return;
     }
@@ -177,14 +204,11 @@ export class ConsoleElement extends LitElement {
 
   override render(): TemplateResult {
     const entries = this.console?.scrollback ?? [];
-    const suggestions = this.#suggestions;
-    const expanded = suggestions.items.length > 0;
-    const ghost = this.#ghostText();
-    const usage = suggestions.usage;
     const classes = [
       "card",
       entries.length > 0 ? "has-log" : ""
     ].join(" ");
+    const hints = this._script === null ? this.#keys.hints : kScriptHints;
 
     return html`
       <dialog
@@ -199,53 +223,16 @@ export class ConsoleElement extends LitElement {
             ?hidden=${entries.length === 0}
           ></jolly-console-log>
           <div class="body">
-            <div class="prompt">
-              <jolly-icon name="search" aria-hidden="true"></jolly-icon>
-              <div class="field">
-                <input
-                  type="text"
-                  role="combobox"
-                  aria-label="Command"
-                  aria-autocomplete="both"
-                  aria-controls="suggestions"
-                  aria-expanded=${expanded ? "true" : "false"}
-                  aria-activedescendant=${suggestions.highlight >= 0 && expanded ?
-                    `option-${suggestions.highlight}` :
-                    nothing}
-                  aria-describedby=${usage === null ? nothing : "usage"}
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="Search, /command or variable"
-                  .value=${live(this._text)}
-                  @input=${this.#onInput}
-                  @keydown=${this.#onKeyDown}
-                  @keyup=${this.#onCaretMove}
-                  @pointerup=${this.#onCaretMove}
-                  @select=${this.#onCaretMove}
-                >
-                <span
-                  class="ghost"
-                  aria-hidden="true"
-                  ?hidden=${ghost === ""}
-                ><span class="typed">${this._text}</span><span
-                  class="suffix"
-                >${ghost}</span></span>
-              </div>
-              <span class="hint">${suggestions.hint ?? ""}</span>
-            </div>
-            <div class=${expanded ? "suggestions expanded" : "suggestions"}>
-              <ul
-                id="suggestions"
-                role="listbox"
-                aria-label="Suggestions"
-                @mousedown=${this.#keepPromptFocus}
-              >${suggestions.renderOptions()}</ul>
-            </div>
-            <div id="usage" class="usage" ?hidden=${usage === null}>
-              <span class="signature">${usage?.usage ?? ""}</span>
-              <span class="description">${usage?.description ?? ""}</span>
-            </div>
-            <div class="keys">${this.#keys.hints.map(({ keys, action }) => html`
+            ${this._script === null ?
+              this.#renderPrompt() :
+              html`
+                <jolly-console-script
+                  .console=${this.console}
+                  .script=${this._script}
+                  @script-close=${this.#onScriptClose}
+                ></jolly-console-script>
+              `}
+            <div class="keys">${hints.map(({ keys, action }) => html`
               <span class="key-hint"><kbd>${keys}</kbd>${action}</span>
             `)}</div>
           </div>
@@ -254,34 +241,100 @@ export class ConsoleElement extends LitElement {
     `;
   }
 
-  #bind(
-    commands: CommandConsole | null
-  ): void {
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
-    this.#suggestions.cancel();
-    if (commands === null) {
+  #renderPrompt(): TemplateResult {
+    const suggestions = this.#suggestions;
+    const expanded = suggestions.items.length > 0;
+    const ghost = this.#ghostText();
+    const usage = suggestions.usage;
+
+    return html`
+      <div class="prompt">
+        <jolly-icon name="search" aria-hidden="true"></jolly-icon>
+        <div class="field">
+          <input
+            type="text"
+            role="combobox"
+            aria-label="Command"
+            aria-autocomplete="both"
+            aria-controls="suggestions"
+            aria-expanded=${expanded ? "true" : "false"}
+            aria-activedescendant=${suggestions.highlight >= 0 && expanded ?
+              `option-${suggestions.highlight}` :
+              nothing}
+            aria-describedby=${usage === null ? nothing : "usage"}
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Search, /command or variable"
+            .value=${live(this._text)}
+            @input=${this.#onInput}
+            @keydown=${this.#onKeyDown}
+            @keyup=${this.#onCaretMove}
+            @pointerup=${this.#onCaretMove}
+            @select=${this.#onCaretMove}
+          >
+          <span
+            class="ghost"
+            aria-hidden="true"
+            ?hidden=${ghost === ""}
+          ><span class="typed">${this._text}</span><span
+            class="suffix"
+          >${ghost}</span></span>
+        </div>
+        <span class="hint">${suggestions.hint ?? ""}</span>
+      </div>
+      <div class=${expanded ? "suggestions expanded" : "suggestions"}>
+        <ul
+          id="suggestions"
+          role="listbox"
+          aria-label="Suggestions"
+          @mousedown=${this.#keepPromptFocus}
+          @scroll=${suggestions.onScroll}
+        >${suggestions.renderOptions()}</ul>
+      </div>
+      <div id="usage" class="usage" ?hidden=${usage === null}>
+        <span class="signature">${usage?.usage ?? ""}</span>
+        <span class="description">${usage?.description ?? ""}</span>
+      </div>
+    `;
+  }
+
+  #watch(
+    commands: CommandConsole
+  ): Array<() => void> {
+    return [
+      commands.subscribe("registry-changed", () => {
+        if (this.open) {
+          this.#refresh();
+        }
+      }),
+      commands.subscribe("scrollback-changed", () => this.requestUpdate()),
+      commands.subscribe("open-requested", () => void this.show()),
+      commands.subscribe("close-requested", () => this.hide()),
+      commands.subscribe("script-requested", (script) => void this.#editScript(script))
+    ];
+  }
+
+  async #editScript(
+    script: VariableScript
+  ): Promise<void> {
+    this._script = script;
+    if (!this.open) {
+      await this.show();
+    }
+    if (!this.open) {
+      this._script = null;
+
       return;
     }
+    await this.updateComplete;
+    this._scriptEditor?.focus();
+  }
 
-    const onRegistryChanged = () => {
-      if (this.open) {
-        this.#refresh();
-      }
-    };
-    const onScrollbackChanged = () => this.requestUpdate();
-    const onOpen = () => void this.show();
-    const onClose = () => this.hide();
-    commands.on("registry-changed", onRegistryChanged);
-    commands.on("scrollback-changed", onScrollbackChanged);
-    commands.on("open-requested", onOpen);
-    commands.on("close-requested", onClose);
-    this.#unsubscribe = () => {
-      commands.off("registry-changed", onRegistryChanged);
-      commands.off("scrollback-changed", onScrollbackChanged);
-      commands.off("open-requested", onOpen);
-      commands.off("close-requested", onClose);
-    };
+  async #leaveScript(): Promise<void> {
+    this._script = null;
+    await this.updateComplete;
+    this._input?.focus();
+    this.#refresh();
   }
 
   #refresh(): void {
@@ -322,18 +375,17 @@ export class ConsoleElement extends LitElement {
     return {
       highlight: suggestions.highlight,
       itemCount: suggestions.items.length,
-      browsingHistory: this.#browsingHistory,
+      browsingHistory: this.console?.history.browsing ?? false,
       inlineCompletion: this.#ghostText() !== "",
       hasText: this._text.trim() !== "",
-      hasHistory: (this.console?.history.entries.length ?? 0) > 0,
-      highlightRuns: suggestions.highlighted?.accept().run ?? false
+      hasHistory: (this.console?.history.size ?? 0) > 0,
+      highlightRuns: suggestions.highlighted?.run ?? false
     };
   }
 
   #submit(
     line: string
   ): void {
-    this.#browsingHistory = false;
     void this.console?.submit(line);
     void this.#replaceText("");
   }
@@ -342,17 +394,16 @@ export class ConsoleElement extends LitElement {
     index: number,
     execute: boolean
   ): void {
-    const acceptance = this.#suggestions.accept(index);
-    if (acceptance === null) {
+    const item = this.#suggestions.items[index];
+    if (item === undefined) {
       return;
     }
 
-    const { text, caret, run } = acceptance;
-    if (run && execute) {
-      this.#submit(text);
+    if (item.run && execute) {
+      this.#submit(item.text);
     }
     else {
-      void this.#replaceText(text, caret);
+      void this.#replaceText(item.text, item.caret);
     }
   }
 
@@ -392,7 +443,6 @@ export class ConsoleElement extends LitElement {
           commands.history.previous(this._text) :
           commands.history.next();
         if (recalled !== null) {
-          this.#browsingHistory = true;
           void this.#replaceText(recalled);
         }
         break;
@@ -400,8 +450,6 @@ export class ConsoleElement extends LitElement {
       case "highlight-previous":
       case "highlight-next":
         this.#suggestions.move(action === "highlight-next" ? 1 : -1);
-        break;
-      default:
         break;
     }
   }
@@ -416,7 +464,7 @@ export class ConsoleElement extends LitElement {
   ): void => {
     if (event.target instanceof HTMLInputElement) {
       this._text = event.target.value;
-      this.#browsingHistory = false;
+      this.console?.history.stopBrowsing();
       this.#syncCaret();
       this.#refresh();
     }
@@ -443,21 +491,31 @@ export class ConsoleElement extends LitElement {
     event: Event
   ): void => {
     event.preventDefault();
-    this.hide();
+    if (this._script === null) {
+      this.hide();
+    }
+    else {
+      void this.#leaveScript();
+    }
   };
 
   readonly #onBackdropClick = (
     event: MouseEvent
   ): void => {
-    if (event.target === this._dialog) {
+    if (event.target === this._dialog && this._script === null) {
       this.hide();
     }
   };
 
+  readonly #onScriptClose = (): void => {
+    void this.#leaveScript();
+  };
+
   readonly #onClose = (): void => {
+    this._script = null;
     this.#theme.stop();
     this.#release();
-    this.#browsingHistory = false;
+    this.console?.history.stopBrowsing();
     this.#suggestions.cancel();
     const restore = this.#restoreFocus;
     this.#restoreFocus = null;

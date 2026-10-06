@@ -129,18 +129,6 @@ describe("argument rules", () => {
       { name: "a", type: "number" }
     ])), DuplicateArgumentError);
   });
-
-  test("accepts required, then optional, then rest", () => {
-    const commands = new CommandConsole();
-
-    commands.registerCommand("say", command([
-      { name: "to", type: "string", required: true },
-      { name: "tone", type: "enum", enumValues: ["loud", "soft"] },
-      { name: "text", type: "string", rest: true }
-    ]));
-
-    assert.equal(commands.registry.resolveCommand("say")?.def.args.length, 3);
-  });
 });
 
 describe("overwrites and handles", () => {

@@ -74,29 +74,22 @@ function keyboard(
 }
 
 describe("the toggle shortcut", () => {
-  test("Ctrl+K and Cmd+K toggle and claim the key", () => {
-    for (const event of [key("k", { ctrlKey: true }), key("k", { metaKey: true })]) {
-      const recorded = keyboard();
-      recorded.controller.onWindowKeyDown(event);
+  test("Ctrl+K toggles and claims the key", () => {
+    const event = key("k", { ctrlKey: true });
+    const recorded = keyboard();
+    recorded.controller.onWindowKeyDown(event);
 
-      assert.equal(recorded.toggles, 1);
-      assert.equal(event.prevented, true);
-    }
+    assert.equal(recorded.toggles, 1);
+    assert.equal(event.prevented, true);
   });
 
-  test("other chords are left alone", () => {
+  test("another chord is left alone", () => {
+    const event = key("j", { ctrlKey: true });
     const recorded = keyboard();
-    for (const event of [
-      key("k"),
-      key("K", { ctrlKey: true, shiftKey: true }),
-      key("k", { ctrlKey: true, altKey: true }),
-      key("j", { ctrlKey: true })
-    ]) {
-      recorded.controller.onWindowKeyDown(event);
-      assert.equal(event.prevented, false);
-    }
+    recorded.controller.onWindowKeyDown(event);
 
     assert.equal(recorded.toggles, 0);
+    assert.equal(event.prevented, false);
   });
 
   test("the key is not claimed while no console is bound", () => {

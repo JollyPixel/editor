@@ -2,6 +2,7 @@
 import type { CommandConsole } from "../CommandConsole.ts";
 import type {
   CommandContext,
+  CommandResult,
   ConsoleValue,
   RegistrationHandle,
   VariableSetResult
@@ -183,8 +184,8 @@ export class ConsoleMirror {
     address: string,
     args: RemoteArgValues,
     ctx: CommandContext
-  ): Promise<void> {
-    await this.#request(
+  ): Promise<CommandResult> {
+    const { revertId } = await this.#request(
       {
         type: "execute",
         address,
@@ -202,6 +203,27 @@ export class ConsoleMirror {
             ctx.print(reply.text);
           }
         }
+      }
+    );
+
+    return revertId === undefined ?
+      undefined :
+      () => this.#revert(address, revertId);
+  }
+
+  async #revert(
+    address: string,
+    revertId: number
+  ): Promise<void> {
+    await this.#request(
+      {
+        type: "revert",
+        address,
+        revertId
+      },
+      "done",
+      {
+        label: `/${address}`
       }
     );
   }

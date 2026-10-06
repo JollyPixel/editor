@@ -27,7 +27,8 @@
     "lint": "oxlint src test examples bench && pnpm run lint:css",
     "lint:css": "stylelint \"src/**/*.ts\" --cache",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json && tsc --noEmit -p examples/tsconfig.json",
-    "bench": "jolly-bench"
+    "bench": "jolly-bench --ignore browser.bench.ts",
+    "bench:browser": "node bench/browser.bench.ts"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

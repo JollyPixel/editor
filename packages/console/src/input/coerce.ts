@@ -1,7 +1,8 @@
 // Import Internal Dependencies
 import type {
   ArgDef,
-  ConsoleValue
+  ConsoleValue,
+  VariableDef
 } from "../registry/types.ts";
 import { InvalidValueError } from "./errors/InvalidValueError.ts";
 
@@ -53,7 +54,7 @@ export function coerceEnum<TValue extends string>(
 
 export function coerce(
   literal: string,
-  arg: ArgDef
+  arg: ArgDef | VariableDef
 ): ConsoleValue {
   switch (arg.type) {
     case "number":

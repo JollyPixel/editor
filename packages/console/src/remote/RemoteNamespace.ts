@@ -3,6 +3,7 @@ import type { CommandConsole } from "../CommandConsole.ts";
 import type {
   ArgDef,
   CommandContext,
+  CommandResult,
   ConsoleValue,
   RegistrationHandle,
   VariableDef,
@@ -14,13 +15,14 @@ import type {
   RemoteNamespaceData,
   RemoteVariable
 } from "./protocol.ts";
+import { RemoteValueMissingError } from "./errors/RemoteValueMissingError.ts";
 
 export interface RemoteCalls {
   execute(
     address: string,
     args: RemoteArgValues,
     ctx: CommandContext
-  ): Promise<void>;
+  ): Promise<CommandResult>;
   complete(
     address: string,
     arg: string
@@ -99,6 +101,14 @@ export class RemoteNamespace {
   ): VariableDef {
     const { name, ...variable } = remote;
     const address = `${this.name}.${name}`;
+    function read(): ConsoleValue {
+      const value = calls.read(address);
+      if (value === undefined) {
+        throw new RemoteValueMissingError(address);
+      }
+
+      return value;
+    }
     function set(
       value: ConsoleValue
     ): Promise<VariableSetResult> {
@@ -109,19 +119,19 @@ export class RemoteNamespace {
       case "number":
         return {
           ...variable,
-          get: () => Number(calls.read(address)),
+          get: () => Number(read()),
           set
         };
       case "boolean":
         return {
           ...variable,
-          get: () => calls.read(address) === true,
+          get: () => read() === true,
           set
         };
       default:
         return {
           ...variable,
-          get: () => String(calls.read(address)),
+          get: () => String(read()),
           set
         };
     }

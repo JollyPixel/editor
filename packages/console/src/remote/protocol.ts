@@ -19,6 +19,7 @@ const kMirrorMessageTypes = new Set([
   "cancel",
   "complete",
   "write",
+  "revert",
   "refresh"
 ]);
 
@@ -67,6 +68,7 @@ export interface OutputMessage {
 export interface DoneMessage {
   type: "done";
   requestId: number;
+  revertId?: number;
 }
 
 export interface FailedMessage {
@@ -128,6 +130,13 @@ export interface WriteMessage {
   literal: string;
 }
 
+export interface RevertMessage {
+  type: "revert";
+  requestId: number;
+  address: string;
+  revertId: number;
+}
+
 export interface RefreshMessage {
   type: "refresh";
 }
@@ -135,7 +144,8 @@ export interface RefreshMessage {
 export type MirrorRequest =
   | ExecuteMessage
   | CompleteMessage
-  | WriteMessage;
+  | WriteMessage
+  | RevertMessage;
 
 export type MirrorRequestBody = DistributiveOmit<MirrorRequest, "requestId">;
 

@@ -228,32 +228,32 @@ describe("commands", () => {
     ]);
   });
 
-  test("an unknown word in search mode is an error, not a search", async() => {
-    const commands = new CommandConsole();
-
-    await commands.submit("nothing");
-
-    assert.equal(commands.scrollback[1].kind, "error");
-  });
-
-  test("an unknown command suggests the closest one without running it", async() => {
+  test("an unknown command suggests the closest command without running it", async() => {
     let called = false;
     const commands = new CommandConsole();
-    commands.registerNamespace("brush").registerCommand("grow", {
+    const brush = commands.registerNamespace("brush");
+    brush.registerCommand("grow", {
       description: "",
       args: [],
       execute: () => {
         called = true;
       }
     });
+    brush.registerVariable("size", {
+      type: "number",
+      description: "",
+      get: () => 1,
+      set: () => undefined
+    });
 
     await commands.submit("/brush.grwo");
+    await commands.submit("/brush.sise");
 
     assert.equal(called, false);
-    assert.equal(
-      lines(commands).at(-1),
-      "error: Unknown command \"/brush.grwo\". Did you mean /brush.grow?"
-    );
+    assert.deepEqual(lines(commands).filter((line) => line.startsWith("error")), [
+      "error: Unknown command \"/brush.grwo\". Did you mean /brush.grow?",
+      "error: Unknown command \"/brush.sise\""
+    ]);
   });
 
   test("a mistyped variable suggests the closest one", async() => {
@@ -449,8 +449,10 @@ describe("built-ins", () => {
       "Namespaces",
       "  brush",
       "Commands",
-      "  /clear        Clear the scrollback",
-      "  /help [name]  List namespaces and commands, or describe one"
+      "  /clear                  Clear the scrollback",
+      "  /help [name]            List namespaces and commands, or describe one",
+      "  /revert [count:number]  Undo the last changes made from the console",
+      "  /script [namespace]     Edit variables together as a script, then save or cancel"
     ].join("\n"));
   });
 

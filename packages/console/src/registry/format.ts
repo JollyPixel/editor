@@ -6,17 +6,27 @@ import type {
   RegisteredVariable
 } from "./types.ts";
 
+// CONSTANTS
+const kCollator = new Intl.Collator();
+
 export function label(
   entry: RegisteredEntry
 ): string {
-  switch (entry.kind) {
-    case "command":
-      return `/${entry.address}`;
-    case "variable":
-      return entry.address;
-    default:
-      return entry.name;
-  }
+  return entry.kind === "command" ? `/${entry.address}` : entry.address;
+}
+
+export function byName(
+  left: { name: string; },
+  right: { name: string; }
+): number {
+  return compareText(left.name, right.name);
+}
+
+export function compareText(
+  left: string,
+  right: string
+): number {
+  return kCollator.compare(left, right);
 }
 
 export function signature(

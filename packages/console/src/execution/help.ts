@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import {
+  byName,
   signature,
   variableSignature
 } from "../registry/format.ts";
@@ -38,7 +39,7 @@ export function helpText(
 
   return variable === undefined ?
     null :
-    table([[variableSignature(variable), variable.def.description]]);
+    table([[variableSignature(variable), variable.description]]);
 }
 
 function overview(
@@ -70,10 +71,10 @@ function namespaceMembers(
 ): string {
   const commands = [...namespace.commands()]
     .sort(byName)
-    .map((command) => [signature(command), command.def.description]);
+    .map((command) => [signature(command), command.description]);
   const variables = [...namespace.variables()]
     .sort(byName)
-    .map((variable) => [variableSignature(variable), variable.def.description]);
+    .map((variable) => [variableSignature(variable), variable.description]);
 
   return [
     section("Commands", commands),
@@ -84,7 +85,7 @@ function namespaceMembers(
 function describeCommand(
   command: RegisteredCommand
 ): string {
-  return table([[signature(command), command.def.description]]);
+  return table([[signature(command), command.description]]);
 }
 
 function section(
@@ -111,11 +112,4 @@ function table(
       return `${indent}${row}`;
     })
     .join("\n");
-}
-
-function byName(
-  left: { name: string; },
-  right: { name: string; }
-): number {
-  return left.name.localeCompare(right.name);
 }

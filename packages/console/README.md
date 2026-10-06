@@ -16,10 +16,6 @@ $ npm i @jolly-pixel/console
 $ yarn add @jolly-pixel/console
 ```
 
-The root entry has no DOM and no dependency on Lit. The `jolly-console`
-element lives in `@jolly-pixel/console/element`, which needs the `lit` and
-`@jolly-pixel/ui` peers.
-
 ## 👀 Usage example
 
 ```ts
@@ -55,33 +51,34 @@ element.console = commands;
 document.body.append(element);
 ```
 
-Ctrl+K (Cmd+K on macOS) opens the console. It accepts three kinds of input:
-
-| Input | Mode | Enter |
-| --- | --- | --- |
-| `/brush.grow 2` | command | runs the command |
-| `brush.size` or `brush.size 3` | variable | reads or writes the variable |
-| anything else, or `?text` | search | acts on the highlighted result |
-
-Name the instance `commands`: a binding named `console` shadows the global.
-Construct one per editor page and pass it down; the package exports no
-instance.
+Ctrl+K (Cmd+K on macOS) opens the console.
 
 ## 📚 API
 
-- [CommandConsole](./docs/CommandConsole.md): namespaces, commands, variables, output and history
+- [CommandConsole](./docs/CommandConsole.md): namespaces, commands, variables, reverting, output and history
 - [Registering from features](./docs/features.md): `ConsoleFeature` and `registerConsoleFeatures`
-- [Input grammar](./docs/grammar.md): the three modes, coercion, search and completion
+- [Input grammar](./docs/grammar.md): the three modes, coercion, search, completion and scripts
 - [jolly-console](./docs/element.md): mounting the element, keys and accessibility
 - [Remote consoles](./docs/remote.md): `ConsoleServer` and `ConsoleMirror`, a console served over a `MessagePort`
 
 ## 🧪 Benchmarks
 
-The suite measures a search, a classification and a completion against 500
-registered entries, the work done on every keystroke.
+The Node suites measure the work done on every keystroke: tokenizing and
+classifying a line, then a search, a browse and a completion against 500
+registered entries, with a second search suite at 5000 entries.
 
 ```bash
 pnpm --filter @jolly-pixel/console bench
+```
+
+The browser suite mounts `jolly-console` in headless Chromium with Lit's
+production build, fills the scrollback to its 500-entry capacity and times
+each keystroke until layout is clean. `KB/op` is the heap growth over 40
+operations after a forced GC, with a young generation large enough that no
+collection runs in between.
+
+```bash
+pnpm --filter @jolly-pixel/console bench:browser
 ```
 
 ## ✨ Contributors guide
@@ -95,10 +92,6 @@ $ pnpm run test
 $ pnpm run test:e2e
 $ pnpm run lint
 ```
-
-`pnpm run dev` serves the example page on port 3006. The Playwright suite runs
-against it. The element imports `@jolly-pixel/ui` from its `dist/`, so rebuild
-`ui` after changing it.
 
 > [!CAUTION]
 > In case you introduce a new feature or fix a bug, make sure to include tests for it as well.

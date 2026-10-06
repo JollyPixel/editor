@@ -1,8 +1,10 @@
 // Import Internal Dependencies
 import { coerce } from "../input/coerce.ts";
 import type { CommandInput } from "../input/classify.ts";
+import type { Token } from "../input/tokenize.ts";
 import { label } from "../registry/format.ts";
 import type {
+  ArgDef,
   ConsoleValue,
   RegisteredCommand
 } from "../registry/types.ts";
@@ -13,50 +15,61 @@ export function bindArguments(
   input: CommandInput,
   line: string
 ): Record<string, ConsoleValue> {
-  const args = command.def.args;
+  const { args } = command.def;
   const tokens = input.tokens.slice(1);
-  const values: Record<string, ConsoleValue> = {};
-
-  const restIndex = args.at(-1)?.rest ? args.length - 1 : -1;
+  const last = args.at(-1);
+  const rest = last?.rest ? last : undefined;
+  const positional = rest === undefined ? args : args.slice(0, -1);
   if (
     input.unterminated &&
-    (restIndex === -1 || tokens.length - 1 < restIndex)
+    (rest === undefined || tokens.length <= positional.length)
   ) {
     throw new ConsoleInputError("Unterminated quote");
   }
 
-  for (const [index, arg] of args.entries()) {
-    if (index === restIndex) {
-      const remaining = tokens.slice(index);
-      if (remaining.length === 1) {
-        values[arg.name] = remaining[0].value;
-      }
-      else if (remaining.length > 1) {
-        const last = remaining[remaining.length - 1];
-        values[arg.name] = line.slice(remaining[0].start, last.end);
-      }
-      else if (arg.required) {
-        throw new ConsoleInputError(`Missing argument <${arg.name}>`);
-      }
-      break;
-    }
-
+  const values: Record<string, ConsoleValue> = {};
+  for (const [index, arg] of positional.entries()) {
     const token = tokens[index];
-    if (token === undefined) {
-      if (arg.required) {
-        throw new ConsoleInputError(`Missing argument <${arg.name}>`);
-      }
-      continue;
+    if (token !== undefined) {
+      values[arg.name] = coerce(token.value, arg);
     }
-    values[arg.name] = coerce(token.value, arg);
+    else if (arg.required) {
+      throw missingArgument(arg);
+    }
   }
 
-  if (restIndex === -1 && tokens.length > args.length) {
-    throw new ConsoleInputError(
-      `${label(command)} takes ${args.length} argument(s), ` +
-      `got ${tokens.length}`
-    );
+  const remaining = tokens.slice(positional.length);
+  if (rest === undefined) {
+    if (remaining.length > 0) {
+      throw new ConsoleInputError(
+        `${label(command)} takes ${args.length} argument(s), ` +
+        `got ${tokens.length}`
+      );
+    }
+  }
+  else if (remaining.length > 0) {
+    values[rest.name] = restValue(line, remaining);
+  }
+  else if (rest.required) {
+    throw missingArgument(rest);
   }
 
   return values;
+}
+
+function restValue(
+  line: string,
+  tokens: Token[]
+): string {
+  if (tokens.length === 1) {
+    return tokens[0].value;
+  }
+
+  return line.slice(tokens[0].start, tokens[tokens.length - 1].end);
+}
+
+function missingArgument(
+  arg: ArgDef
+): ConsoleInputError {
+  return new ConsoleInputError(`Missing argument <${arg.name}>`);
 }

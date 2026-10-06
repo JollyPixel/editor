@@ -4,10 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CommandConsole } from "#src/index.ts";
-import {
-  applyCompletion,
-  complete
-} from "#src/search/complete.ts";
+import { complete } from "#src/search/complete.ts";
 
 function createConsole(): CommandConsole {
   const commands = new CommandConsole();
@@ -41,42 +38,40 @@ function createConsole(): CommandConsole {
   return commands;
 }
 
-async function values(
+async function lines(
   input: string,
   caret = input.length
 ): Promise<string[]> {
   const list = await complete(input, caret, createConsole().registry);
 
-  return list.items.map((item) => item.value);
+  return list.items.map((item) => item.text);
 }
 
 describe("complete", () => {
   test("after / lists root and namespaced commands", async() => {
-    assert.deepEqual(await values("/"), ["/clear", "/git.checkout", "/help", "/say"]);
-    assert.deepEqual(await values("/g"), ["/git.checkout"]);
+    assert.deepEqual(await lines("/"), ["/clear", "/git.checkout", "/help", "/revert", "/say", "/script"]);
+    assert.deepEqual(await lines("/g"), ["/git.checkout"]);
   });
 
   test("after /namespace. lists that namespace's commands only", async() => {
-    assert.deepEqual(await values("/git."), ["/git.checkout"]);
-    assert.deepEqual(await values("/nope."), []);
+    assert.deepEqual(await lines("/git."), ["/git.checkout"]);
+    assert.deepEqual(await lines("/nope."), []);
   });
 
   test("a variable address completes to its declared case", async() => {
     const { registry } = createConsole();
     const list = await complete("git.autofetch", 13, registry);
 
-    assert.deepEqual(list.items.map((item) => item.value), ["git.autoFetch"]);
-    assert.deepEqual(applyCompletion("git.autofetch", list, list.items[0]), {
-      text: "git.autoFetch",
-      caret: 13
-    });
+    assert.deepEqual(list.items.map((item) => [item.text, item.caret, item.run]), [
+      ["git.autoFetch", 13, false]
+    ]);
   });
 
   test("a boolean variable offers true and false with the current value as hint", async() => {
     const { registry } = createConsole();
     const list = await complete("git.autoFetch ", 14, registry);
 
-    assert.deepEqual(list.items.map((item) => item.value), ["true", "false"]);
+    assert.deepEqual(list.items.map((item) => item.label), ["true", "false"]);
     assert.equal(list.hint, "true");
   });
 
@@ -87,23 +82,46 @@ describe("complete", () => {
     assert.equal(list.hint, "origin");
   });
 
+  test("a variable whose getter throws completes without a hint", async() => {
+    const commands = new CommandConsole();
+    commands.registerVariable("broken", {
+      type: "boolean",
+      description: "",
+      get: () => {
+        throw new Error("not ready");
+      },
+      set: () => undefined
+    });
+
+    const list = await complete("broken ", 7, commands.registry);
+
+    assert.deepEqual(list.items.map((item) => item.label), ["true", "false"]);
+    assert.equal(list.hint, null);
+  });
+
   test("argument values come from autocomplete, quoted when needed", async() => {
-    assert.deepEqual(await values("/git.checkout "), ["main", "\"feature one\""]);
-    assert.deepEqual(await values("/git.checkout f"), ["\"feature one\""]);
+    assert.deepEqual(await lines("/git.checkout "), [
+      "/git.checkout main",
+      "/git.checkout \"feature one\""
+    ]);
+    assert.deepEqual(await lines("/git.checkout f"), ["/git.checkout \"feature one\""]);
   });
 
   test("argument values come from enumValues for the argument under the caret", async() => {
-    assert.deepEqual(await values("/git.checkout main "), ["soft", "hard"]);
-    assert.deepEqual(await values("/git.checkout main h"), ["hard"]);
-    assert.deepEqual(await values("/git.checkout main hard x"), []);
+    assert.deepEqual(await lines("/git.checkout main "), [
+      "/git.checkout main soft",
+      "/git.checkout main hard"
+    ]);
+    assert.deepEqual(await lines("/git.checkout main h"), ["/git.checkout main hard"]);
+    assert.deepEqual(await lines("/git.checkout main hard x"), []);
   });
 
   test("the caret picks the token, not the end of the line", async() => {
-    assert.deepEqual(await values("/git.checkout ma soft", 16), ["main"]);
+    assert.deepEqual(await lines("/git.checkout ma soft", 16), ["/git.checkout main soft"]);
   });
 
   test("a rest argument value is inserted unquoted", async() => {
-    assert.deepEqual(await values("/say "), ["hello world"]);
+    assert.deepEqual(await lines("/say "), ["/say hello world"]);
   });
 
   test("the hint of an argument is the command signature", async() => {
@@ -113,31 +131,30 @@ describe("complete", () => {
   });
 
   test("search mode completes nothing", async() => {
-    assert.deepEqual(await values("git"), []);
+    assert.deepEqual(await lines("git"), []);
   });
 
-  test("replacing a token keeps the rest of the line", async() => {
+  test("replacing a token keeps the rest of the line and puts the caret after it", async() => {
     const { registry } = createConsole();
     const list = await complete("/git.checkout ma soft", 16, registry);
 
-    assert.deepEqual(applyCompletion("/git.checkout ma soft", list, list.items[0]), {
-      text: "/git.checkout main soft",
-      caret: 18
-    });
+    assert.deepEqual(list.items.map((item) => [item.text, item.caret]), [
+      ["/git.checkout main soft", 18]
+    ]);
   });
 
   test("a mistyped command falls back to the closest addresses", async() => {
-    assert.deepEqual(await values("/git.chekout"), ["/git.checkout"]);
-    assert.deepEqual(await values("/gti.checkout"), ["/git.checkout"]);
+    assert.deepEqual(await lines("/git.chekout"), ["/git.checkout"]);
+    assert.deepEqual(await lines("/gti.checkout"), ["/git.checkout"]);
   });
 
   test("a mistyped value falls back to the closest values", async() => {
-    assert.deepEqual(await values("/git.checkout main hsrd"), ["hard"]);
-    assert.deepEqual(await values("/git.checkout feture"), ["\"feature one\""]);
+    assert.deepEqual(await lines("/git.checkout main hsrd"), ["/git.checkout main hard"]);
+    assert.deepEqual(await lines("/git.checkout feture"), ["/git.checkout \"feature one\""]);
   });
 
   test("typos are not offered while a prefix matches", async() => {
-    assert.deepEqual(await values("/git.checkout main s"), ["soft"]);
+    assert.deepEqual(await lines("/git.checkout main s"), ["/git.checkout main soft"]);
   });
 
   test("a rejecting autocomplete yields an empty list", async() => {

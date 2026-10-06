@@ -3,6 +3,7 @@ import type {
   ArgDef,
   CommandDef,
   RegisteredCommand,
+  RegisteredMember,
   RegisteredNamespace,
   RegisteredVariable,
   RegistrationHandle,
@@ -28,17 +29,21 @@ export interface NamespaceEntryOptions {
 export class NamespaceEntry implements RegisteredNamespace {
   readonly kind = "namespace";
   readonly name: string;
+  readonly address: string;
   readonly description: string;
 
   #prefix: string;
   #onChange: () => void;
   #commands = new Map<string, CommandSlot>();
   #variables = new Map<string, RegisteredVariable>();
+  #commandList: RegisteredCommand[] | null = null;
+  #memberList: RegisteredMember[] | null = null;
 
   constructor(
     options: NamespaceEntryOptions
   ) {
     this.name = options.name;
+    this.address = options.name;
     this.description = options.description ?? "";
     this.#prefix = options.name === "" ? "" : `${options.name}.`;
     this.#onChange = options.onChange;
@@ -56,14 +61,26 @@ export class NamespaceEntry implements RegisteredNamespace {
     return this.#variables.get(name.toLowerCase());
   }
 
-  * commands(): IterableIterator<RegisteredCommand> {
-    for (const slot of this.#commands.values()) {
-      yield slot.command;
-    }
+  commands(): IterableIterator<RegisteredCommand> {
+    this.#commandList ??= Array.from(
+      this.#commands.values(),
+      (slot) => slot.command
+    );
+
+    return this.#commandList.values();
   }
 
   variables(): IterableIterator<RegisteredVariable> {
     return this.#variables.values();
+  }
+
+  [Symbol.iterator](): IterableIterator<RegisteredMember> {
+    this.#memberList ??= [
+      ...this.commands(),
+      ...this.#variables.values()
+    ];
+
+    return this.#memberList.values();
   }
 
   registerCommand<const TArgs extends readonly ArgDef[]>(
@@ -81,6 +98,7 @@ export class NamespaceEntry implements RegisteredNamespace {
         kind: "command",
         name,
         address,
+        description: def.description,
         namespace: this,
         def,
         signal: lifetime.signal
@@ -89,7 +107,7 @@ export class NamespaceEntry implements RegisteredNamespace {
     };
     this.#commands.get(key)?.lifetime.abort();
     this.#commands.set(key, slot);
-    this.#onChange();
+    this.#changed();
 
     return {
       unregister: () => {
@@ -98,7 +116,7 @@ export class NamespaceEntry implements RegisteredNamespace {
         }
         this.#commands.delete(key);
         lifetime.abort();
-        this.#onChange();
+        this.#changed();
       }
     };
   }
@@ -116,11 +134,12 @@ export class NamespaceEntry implements RegisteredNamespace {
       kind: "variable",
       name,
       address,
+      description: def.description,
       namespace: this,
       def
     };
     this.#variables.set(key, entry);
-    this.#onChange();
+    this.#changed();
 
     return {
       unregister: () => {
@@ -128,7 +147,7 @@ export class NamespaceEntry implements RegisteredNamespace {
           return;
         }
         this.#variables.delete(key);
-        this.#onChange();
+        this.#changed();
       }
     };
   }
@@ -139,5 +158,16 @@ export class NamespaceEntry implements RegisteredNamespace {
     }
     this.#commands.clear();
     this.#variables.clear();
+    this.#forgetLists();
+  }
+
+  #changed(): void {
+    this.#forgetLists();
+    this.#onChange();
+  }
+
+  #forgetLists(): void {
+    this.#commandList = null;
+    this.#memberList = null;
   }
 }

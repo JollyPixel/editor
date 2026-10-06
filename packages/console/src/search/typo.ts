@@ -2,8 +2,7 @@
 import { label } from "../registry/format.ts";
 import type {
   ConsoleRegistry,
-  RegisteredCommand,
-  RegisteredVariable
+  RegisteredMember
 } from "../registry/types.ts";
 import {
   distance,
@@ -77,21 +76,23 @@ export function closestAddress(
   registry: ConsoleRegistry,
   kind: "command" | "variable"
 ): string | null {
-  const labels = new Map<string, string>();
-  for (const entry of addressable(registry, kind)) {
-    labels.set(entry.address, label(entry));
+  const entries = new Map<string, RegisteredMember>();
+  for (const scope of registry) {
+    for (const entry of scope) {
+      if (entry.kind === kind) {
+        entries.set(entry.address, entry);
+      }
+    }
   }
-  const address = closest(typed, labels.keys());
+  const address = closest(typed, entries.keys());
+  const entry = address === null ? undefined : entries.get(address);
 
-  return address === null ? null : labels.get(address) ?? null;
+  return entry === undefined ? null : label(entry);
 }
 
-function* addressable(
-  registry: ConsoleRegistry,
-  kind: "command" | "variable"
-): IterableIterator<RegisteredCommand | RegisteredVariable> {
-  const scopes = [registry.root, ...registry.namespaces()];
-  for (const scope of scopes) {
-    yield* kind === "command" ? scope.commands() : scope.variables();
-  }
+export function didYouMean(
+  message: string,
+  guess: string | null
+): string {
+  return guess === null ? message : `${message}. Did you mean ${guess}?`;
 }
