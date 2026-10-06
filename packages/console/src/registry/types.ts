@@ -67,6 +67,10 @@ export interface CommandContext {
   signal: AbortSignal;
 }
 
+export type Revert = () => void | Promise<void>;
+
+export type CommandResult = void | Revert;
+
 export interface CommandDef<
   TArgs extends readonly ArgDef[] = readonly ArgDef[]
 > {
@@ -75,7 +79,7 @@ export interface CommandDef<
   execute(
     args: ArgValues<TArgs>,
     ctx: CommandContext
-  ): void | Promise<void>;
+  ): CommandResult | Promise<CommandResult>;
   closeOnExecute?: boolean;
 }
 

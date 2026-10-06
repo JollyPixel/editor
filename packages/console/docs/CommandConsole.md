@@ -50,9 +50,15 @@ brush.registerCommand("grow", {
 interface CommandDef<TArgs extends readonly ArgDef[]> {
   description: string;
   args: TArgs;
-  execute(args: ArgValues<TArgs>, ctx: CommandContext): void | Promise<void>;
+  execute(
+    args: ArgValues<TArgs>,
+    ctx: CommandContext
+  ): CommandResult | Promise<CommandResult>;
   closeOnExecute?: boolean;
 }
+
+type CommandResult = void | Revert;
+type Revert = () => void | Promise<void>;
 
 interface CommandContext {
   print(text: string): void;
@@ -67,6 +73,7 @@ invalid.
 - A throw or rejection is printed as an error.
 - `ctx.signal` aborts when the command is unregistered or replaced while it runs.
 - `closeOnExecute` closes the console after a successful run.
+- Returning a function makes the run revertible with `/revert`; see [Reverting](#reverting).
 
 ### Arguments
 
@@ -137,8 +144,45 @@ safely. `commands.unregister()` removes everything, built-ins included.
 |---|---|
 | `/clear` | empties the scrollback |
 | `/help [name]` | lists everything, or describes one namespace, command or variable |
+| `/revert [count]` | undoes the last `count` changes, 1 by default; see [Reverting](#reverting) |
 
-Both can be overwritten.
+All three can be overwritten.
+
+## Reverting
+
+`/revert` undoes changes made from the console, newest first. Two kinds of lines count as a change:
+
+- a variable write that changed the value: reverting sets the previous value back;
+- a command whose `execute` returned a function: reverting calls it.
+
+```ts
+keybind.registerCommand("reset", {
+  description: "Restore the default shortcuts",
+  args: [],
+  execute: () => {
+    const before = settings.snapshot();
+    settings.reset();
+
+    return () => settings.restore(before);
+  }
+});
+```
+
+Variable reads, writes that leave the value unchanged or are rejected, failed commands and
+commands that return nothing are not recorded, so `/revert` steps over them. `/revert` itself is
+not recorded and there is no redo.
+
+| Situation | Result |
+|---|---|
+| fewer changes than `count` | reverts what there is and prints `Reverted 2 of 3` |
+| nothing recorded | prints `Nothing to revert` |
+| `count` is not a positive whole number | error, nothing reverted |
+| the command or variable is no longer registered | the change is skipped with an error and dropped |
+| a revert throws or rejects | its error is printed, it is dropped, and the remaining count is not reverted |
+
+Reverts run one at a time; an async revert is awaited before the next. The console keeps the last
+100 changes, lost on reload. A command replaced under the same address still reverts through the
+function its earlier run returned.
 
 ## Running a line
 

@@ -16,7 +16,8 @@ flowchart TB
         Console --> Registry["Registry<br/>root NamespaceEntry + named namespaces"]
         Console --> History["InputHistory<br/>submitted lines"]
         Console --> Scrollback["Scrollback<br/>echo, info and error entries"]
-        Console --> Builtins["builtins<br/>/help, /clear"]
+        Console --> Reverts["RevertStack<br/>revertible changes"]
+        Console --> Builtins["builtins<br/>/help, /clear, /revert"]
         Console --> Classify["classify<br/>command, variable or search"]
         Classify --> Registry
         Search["search + score<br/>ranked results, typo tier"] --> Registry
@@ -49,7 +50,7 @@ passes it down.
 |---|---|
 | `registry/` | `Registry`, `NamespaceEntry`, definition types and validation, `ConsoleFeature` |
 | `input/` | `tokenize`, `classify`, `coerce` |
-| `execution/` | `bindArguments`, variable access, `InputHistory`, `Scrollback`, builtins and `help` |
+| `execution/` | `bindArguments`, variable access, `InputHistory`, `RevertStack`, `Scrollback`, builtins and `help` |
 | `search/` | the `Suggestion` model, `score` tiers, `search`, `complete`, `browse` sections, `typo` tolerance over the `levenshtein` port |
 | `element/` | `ConsoleElement`, `ConsoleLogElement` and their styles, `KeyboardController`, `SuggestionController` |
 
@@ -116,11 +117,17 @@ sequenceDiagram
     alt variable
         Console->>Handler: coerce the literal, set(value) if given, then get()
         Console->>Console: info entry with the value
+        opt the value changed
+            Console->>Console: push a revert to the previous value
+        end
     else command
         Console->>Console: bindArguments, tokens to typed values
         Console->>Handler: execute(values, ctx)
         Handler-->>Console: ctx.print / ctx.error
         Note over Console,Handler: A returned promise keeps the echo pending until it settles
+        opt execute returned a function
+            Console->>Console: push it as a revert
+        end
         opt closeOnExecute
             Console-->>Element: close-requested
         end
@@ -135,6 +142,20 @@ An error thrown while binding or by the handler becomes an error entry;
 unregistered while it runs. While open, the element re-adopts the ambient theme
 whenever a `theme` attribute changes, so `theme light` restyles the open
 console.
+
+### Reverting
+
+`InputHistory` cannot drive `/revert`: it keeps lines that changed nothing and
+skips a line equal to the previous one. `RevertStack` keeps only applied
+changes, each with its kind, address, line and revert function. `/revert` pops
+them newest first and checks that the address still resolves before calling
+the function, so a disposed editor's changes are skipped
+([ADR-0009](./docs/adr/0009-revert-is-opt-in-per-command.md)). A variable's
+revert resolves the address again and writes the previous value through `set`,
+so it works for mirrored variables without protocol changes. A mirrored
+command's revert function cannot cross the port: `ConsoleServer` keeps it under
+a `revertId` sent in `done`, and the mirror returns a function that sends a
+`revert` message with that id.
 
 ## Registration lifetime
 

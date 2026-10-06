@@ -80,6 +80,10 @@ function frameConsole(
       brush.size += delta;
       ctx.print(`brush size ${brush.size}`);
       ctx.error("clamped");
+
+      return () => {
+        brush.size -= delta;
+      };
     }
   });
   namespace.registerCommand("fail", {
@@ -375,5 +379,51 @@ describe("ConsoleMirror", () => {
     await until(() => shell.registry.namespace("brush") !== undefined);
 
     assert.equal(shell.registry.resolveVariable("brush.size")?.def.get(), 5);
+  });
+
+  test("/revert undoes frame commands and variable writes in the frame", async() => {
+    const { shell, brush } = await bridge();
+    await shell.submit("/brush.grow 3");
+    await shell.submit("brush.size 10");
+
+    await shell.submit("/revert 2");
+
+    assert.equal(brush.size, 1);
+    assert.deepEqual(lines(shell).slice(-2), [
+      "info: Reverted brush.size 10",
+      "info: Reverted /brush.grow 3"
+    ]);
+    await until(() => shell.registry.resolveVariable("brush.size")?.def.get() === 1);
+  });
+
+  test("the frame refuses to revert a command replaced since it ran", async() => {
+    const { frame, shell } = await bridge();
+    const marks: string[] = [];
+    const tools = frame.registerNamespace("tools");
+    function registerMark(): void {
+      tools.registerCommand("mark", {
+        description: "",
+        args: [],
+        execute: () => {
+          marks.push("mark");
+
+          return () => {
+            marks.pop();
+          };
+        }
+      });
+    }
+    registerMark();
+    await until(() => shell.registry.resolveCommand("tools.mark") !== undefined);
+    await shell.submit("/tools.mark");
+
+    registerMark();
+    await shell.submit("/revert");
+
+    assert.deepEqual(marks, ["mark"]);
+    assert.equal(
+      lines(shell).at(-1),
+      "error: Could not revert /tools.mark: /tools.mark can no longer be reverted"
+    );
   });
 });

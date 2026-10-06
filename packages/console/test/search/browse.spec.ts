@@ -68,6 +68,7 @@ describe("browse", () => {
     assert.deepEqual(commands.items.map((item) => [item.label, item.text, item.run]), [
       ["/clear", "/clear", true],
       ["/help", "/help", true],
+      ["/revert", "/revert", true],
       ["/say", "/say ", false]
     ]);
     assert.deepEqual(variables.items.map((item) => item.label), ["theme"]);

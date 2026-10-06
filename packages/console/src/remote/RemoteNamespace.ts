@@ -3,6 +3,7 @@ import type { CommandConsole } from "../CommandConsole.ts";
 import type {
   ArgDef,
   CommandContext,
+  CommandResult,
   ConsoleValue,
   RegistrationHandle,
   VariableDef,
@@ -21,7 +22,7 @@ export interface RemoteCalls {
     address: string,
     args: RemoteArgValues,
     ctx: CommandContext
-  ): Promise<void>;
+  ): Promise<CommandResult>;
   complete(
     address: string,
     arg: string

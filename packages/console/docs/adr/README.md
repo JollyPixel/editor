@@ -13,3 +13,4 @@ API is described in the [docs](../CommandConsole.md).
 | [0006](./0006-features-register-through-a-function.md) | Features register through a function over a context |
 | [0007](./0007-the-suggestion-list-shares-the-prompt-shadow-root.md) | The suggestion list shares the prompt's shadow root |
 | [0008](./0008-mirrored-variables-read-a-cached-value.md) | Mirrored variables read a cached value |
+| [0009](./0009-revert-is-opt-in-per-command.md) | Revert is opt-in per command, and stale changes are skipped |

@@ -6,8 +6,10 @@ import {
   coerceNumber
 } from "../input/coerce.ts";
 import type {
+  ConsoleRegistry,
   ConsoleValue,
   RegisteredVariable,
+  Revert,
   VariableDef,
   VariableSetResult
 } from "../registry/types.ts";
@@ -64,6 +66,24 @@ function readBack(
   }
 
   return String(variable.def.get());
+}
+
+export function restoreVariable(
+  registry: ConsoleRegistry,
+  address: string,
+  previous: ConsoleValue
+): Revert {
+  return async() => {
+    const variable = registry.resolveVariable(address);
+    if (variable === undefined) {
+      throw new ConsoleInputError(`Unknown variable "${address}"`);
+    }
+
+    const result = await writeVariable(variable.def, String(previous));
+    if (result === false) {
+      throw new ConsoleInputError(`${address} rejected "${previous}"`);
+    }
+  };
 }
 
 export function writeVariable(

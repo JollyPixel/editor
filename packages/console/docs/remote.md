@@ -30,7 +30,11 @@ class ConsoleServer {
 ```
 
 Shares the console's namespaces and runs the commands and writes the mirror sends. Root commands
-and variables, `/clear` and `/help` included, are not shared.
+and variables, `/clear`, `/help` and `/revert` included, are not shared.
+
+When a shared command returns a revert function, the server keeps it (the last 100) and the mirror
+records the run as revertible, so `/revert` on the mirror's console reverts it on the server page.
+The server refuses a revert once that command has been unregistered or replaced on its page.
 
 `close()` cancels running commands and closes the port.
 
@@ -67,3 +71,4 @@ forces one.
 | the remote `get` throws | reading the variable throws `RemoteValueMissingError` |
 | the mirror is deactivated during a command | the command is cancelled and prints `/<address> was cancelled` |
 | `close()` with pending commands or writes | they reject with `RemoteCancelledError` |
+| `/revert` reaches a change of an inactive mirror | the change is skipped, its namespace is not registered |

@@ -4,18 +4,24 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import {
   classify,
-  type CommandInput
+  type CommandInput,
+  type VariableInput
 } from "./input/classify.ts";
 import { bindArguments } from "./execution/bindArguments.ts";
 import { registerBuiltins } from "./execution/builtins.ts";
 import { ConsoleInputError } from "./execution/errors/ConsoleInputError.ts";
 import { InputHistory } from "./execution/InputHistory.ts";
+import { RevertStack } from "./execution/RevertStack.ts";
 import {
   Scrollback,
   type ScrollbackEntry,
   type ScrollbackKind
 } from "./execution/Scrollback.ts";
-import { accessVariable } from "./execution/variables.ts";
+import {
+  accessVariable,
+  peekValue,
+  restoreVariable
+} from "./execution/variables.ts";
 import { Registry } from "./registry/Registry.ts";
 import type {
   ArgDef,
@@ -45,11 +51,12 @@ export class CommandConsole extends Emitter<
   #registry = new Registry(
     () => this.emit("registry-changed")
   );
+  #reverts = new RevertStack(this.#registry);
 
   constructor() {
     super();
 
-    registerBuiltins(this);
+    registerBuiltins(this, this.#reverts);
   }
 
   get registry(): ConsoleRegistry {
@@ -124,9 +131,10 @@ export class CommandConsole extends Emitter<
     try {
       switch (input.mode) {
         case "variable":
-          this.#append(
-            "info",
-            await this.#settle(echo, accessVariable(input))
+          await this.#accessVariable(
+            input,
+            line,
+            echo
           );
           break;
         case "command":
@@ -148,6 +156,28 @@ export class CommandConsole extends Emitter<
     catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.#append("error", message);
+    }
+  }
+
+  async #accessVariable(
+    input: VariableInput,
+    line: string,
+    echo: ScrollbackEntry
+  ): Promise<void> {
+    const { variable } = input;
+    const previous = input.tokens.length === 2 ?
+      peekValue(variable) :
+      undefined;
+    const value = await this.#settle(echo, accessVariable(input));
+    this.#append("info", value);
+
+    if (previous !== undefined && String(previous) !== value) {
+      this.#reverts.push({
+        kind: "variable",
+        address: variable.address,
+        line,
+        revert: restoreVariable(this.#registry, variable.address, previous)
+      });
     }
   }
 
@@ -177,11 +207,19 @@ export class CommandConsole extends Emitter<
     }
     command.signal.addEventListener("abort", abort);
     try {
-      await this.#settle(echo, command.def.execute(values, {
+      const revert = await this.#settle(echo, command.def.execute(values, {
         print: (text) => this.#append("info", text),
         error: (text) => this.#append("error", text),
         signal: controller.signal
       }));
+      if (typeof revert === "function") {
+        this.#reverts.push({
+          kind: "command",
+          address: command.address,
+          line,
+          revert
+        });
+      }
     }
     finally {
       command.signal.removeEventListener("abort", abort);

@@ -449,8 +449,9 @@ describe("built-ins", () => {
       "Namespaces",
       "  brush",
       "Commands",
-      "  /clear        Clear the scrollback",
-      "  /help [name]  List namespaces and commands, or describe one"
+      "  /clear                  Clear the scrollback",
+      "  /help [name]            List namespaces and commands, or describe one",
+      "  /revert [count:number]  Undo the last changes made from the console"
     ].join("\n"));
   });
 
