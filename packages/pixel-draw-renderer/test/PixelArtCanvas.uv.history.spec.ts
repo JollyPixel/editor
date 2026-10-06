@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { createUvCanvas } from "./helpers/uv/canvas.ts";
+import { mouseEvent } from "./helpers/events.ts";
 
 describe("PixelArtCanvas — uv mode", () => {
   describe("history", () => {
@@ -77,6 +78,61 @@ describe("PixelArtCanvas — uv mode", () => {
         manager.uv.get(region.id)!.rectFor("front"),
         { x: 3, y: 3, width: 4, height: 4 }
       );
+    });
+
+    test("a drag carrying a nested region undoes in one step and converges on a peer", () => {
+      const commands: PixelCommand[] = [];
+      const manager = createUvCanvas({
+        onCommand: (command) => commands.push(command)
+      });
+      const peer = createUvCanvas();
+      manager.mode = "uv";
+      for (const [id, rect] of [
+        ["outer", { x: 0, y: 0, width: 4, height: 4 }],
+        ["inner", { x: 1, y: 1, width: 2, height: 2 }]
+      ] as const) {
+        manager.uv.create({ id, width: rect.width, height: rect.height });
+        manager.uv.move(id, rect);
+      }
+      manager.uv.showAll = true;
+      manager.uv.select("outer");
+      const depth = manager.undoDepth();
+      function replayOnPeer(): void {
+        for (const command of commands.splice(0)) {
+          peer.document.applyRemoteCommand(command);
+        }
+      }
+      function bounds(canvas: typeof manager): unknown[] {
+        return ["outer", "inner"].map((id) => canvas.uv.get(id)!.bounds);
+      }
+
+      const canvas = manager.canvas();
+      manager.shortcuts.lineHeld = true;
+      canvas.dispatchEvent(mouseEvent("mousedown", 84, 84));
+      canvas.dispatchEvent(mouseEvent("mousemove", 92, 92));
+      canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
+      manager.shortcuts.lineHeld = false;
+      replayOnPeer();
+
+      const moved = [
+        { x: 2, y: 2, width: 4, height: 4 },
+        { x: 3, y: 3, width: 2, height: 2 }
+      ];
+      assert.deepStrictEqual(bounds(manager), moved);
+      assert.deepStrictEqual(bounds(peer), moved);
+      assert.strictEqual(manager.undoDepth(), depth + 1);
+
+      manager.undo();
+      replayOnPeer();
+      const placed = [
+        { x: 0, y: 0, width: 4, height: 4 },
+        { x: 1, y: 1, width: 2, height: 2 }
+      ];
+      assert.deepStrictEqual(bounds(manager), placed);
+      assert.deepStrictEqual(bounds(peer), placed);
+
+      manager.redo();
+      assert.deepStrictEqual(bounds(manager), moved);
     });
 
     test("undo/redo an free", () => {

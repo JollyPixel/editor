@@ -74,6 +74,38 @@ describe("BlockUvBridge / region-dragging", () => {
     }
   });
 
+  it("writes every region dragged in the same frame once", () => {
+    const engine = makeFakeVoxelEngine();
+    engine.view.document.blocks.register(
+      makeBlock(1, { col: 0, row: 0, blocksetId: "atlas" })
+    );
+    engine.view.document.blocks.register(
+      makeBlock(2, { col: 1, row: 0, blocksetId: "atlas" })
+    );
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
+    bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+    engine.dirtyReasons.length = 0;
+    try {
+      uv.previewMoveGroup([
+        { id: "block-1", rect: { x: 0, y: 16, width: 16, height: 16 }, slot: null },
+        { id: "block-2", rect: { x: 16, y: 16, width: 16, height: 16 }, slot: null }
+      ]);
+      assert.deepEqual(engine.dirtyReasons, []);
+
+      runFrame();
+
+      assert.deepEqual(engine.dirtyReasons, ["block-defined", "block-defined"]);
+      assert.deepEqual(
+        [1, 2].map((id) => engine.view.document.blocks.get(id)?.defaultTexture?.row),
+        [1, 1]
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
   it("skips the frame when the drag is back on the block's rect", () => {
     const { dirtyReasons, uv, bridge } = setup();
     try {

@@ -1,24 +1,34 @@
 // Import Third-party Dependencies
+import {
+  goldenAngleColor,
+  hashKey
+} from "@jolly-pixel/color";
 import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 const kNoEmissive = "#000000";
-const kFnvOffset = 0x811c9dc5;
-const kFnvPrime = 0x01000193;
-const kGoldenRatio = 0.618033988749895;
+const kDerivedColor = {
+  saturation: 0.65,
+  lightness: 0.55
+};
 
 export class MaterialSwatch {
+  static derivedColor(
+    materialId: string
+  ): string {
+    return goldenAngleColor(hashKey(materialId), kDerivedColor);
+  }
+
   static of(
     materialId: string,
     finish?: MaterialGroup
   ): MaterialSwatch {
-    const hue = Math.round(((hashOf(materialId) * kGoldenRatio) % 1) * 360);
     const glows = finish !== undefined &&
       finish.emissive !== kNoEmissive &&
       finish.emissiveIntensity > 0;
 
     return new MaterialSwatch(
-      `hsl(${hue} 65% 55%)`,
+      finish?.swatch ?? MaterialSwatch.derivedColor(materialId),
       glows ? finish.emissive : null
     );
   }
@@ -41,16 +51,4 @@ export class MaterialSwatch {
       `background:${this.color}` :
       `background:${this.color};--material-glow:${this.glow}`;
   }
-}
-
-function hashOf(
-  text: string
-): number {
-  let hash = kFnvOffset;
-  for (let index = 0; index < text.length; index++) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, kFnvPrime) >>> 0;
-  }
-
-  return hash;
 }

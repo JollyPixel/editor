@@ -39,3 +39,9 @@ Dragging snaps to whole texture pixels and keeps the opposite edge in place. Han
 While a peer drag preview is active, that region's handles hide and new local move and resize gestures on it are blocked. This applies to the whole region even when the peer edits one slot. Other regions remain editable. Handles return when the last peer preview for the region is removed, using the stored geometry. Presence blocks gestures after it arrives; simultaneous starts still require server arbitration for strict mutual exclusion.
 
 While [`shortcuts.lineHeld`](../input/CanvasShortcuts.md#lineheld) is `true`, usually bound to `Shift`, resizing a net face resizes its aligned row or column with it: every face whose bottom (or right) edge lies on the same line and touches the dragged face along it, directly or through another such face, moves that edge too. Changing it mid-drag updates the preview at once. Stacked and free regions ignore it.
+
+## Carrying nested regions
+
+While [`shortcuts.lineHeld`](../input/CanvasShortcuts.md#lineheld) is `true`, usually bound to `Shift`, a move drag also carries every visible movement unit nested in the dragged one, as [`UVMap.targetsWithin()`](../uv/UVMap.md#targetswithinrect) lists them. A unit is a stacked or unfolded region, or one slot of a free region. The nested units are taken on pointer-down. Units that only overlap the dragged one stay in place, and so do the regions a peer is dragging.
+
+Nested units move by the same delta as the dragged unit, after it is clamped to the canvas. Changing `lineHeld` mid-drag updates the preview at once; releasing it puts the nested units back. The drop commits through [`UVMap.moveGroup()`](../uv/UVMap.md#movegroupmoves), which records one history entry. Resize drags never carry.

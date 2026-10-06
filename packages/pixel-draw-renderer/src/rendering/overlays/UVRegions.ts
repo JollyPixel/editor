@@ -23,7 +23,7 @@ const kStrokeWidth = 2;
 const kSelectedStrokeWidth = 3;
 
 export interface UVLivePreview {
-  region: UVRegion;
+  regions: readonly UVRegion[];
   slot: UVSlot | null;
 }
 
@@ -135,7 +135,9 @@ export class UVRegionLayer {
           ({ region, face }) => uvTargetKey({ regionId: region.id, slot: face })
         )
       ),
-      preview: this.#livePreview?.region ?? null,
+      previews: new Map(
+        this.#livePreview?.regions.map((region) => [region.id, region])
+      ),
       peerSelections: this.#peerSelections
     });
     const painted = uvOverlayPaintOrder(entries);

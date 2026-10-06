@@ -37,7 +37,7 @@ export class BlockUvBridge {
   #tileSize = 1;
   #rebuilding = false;
   #applying = false;
-  #dragged: UVRegion | null = null;
+  #dragged = new Map<string, UVRegion>();
   #dragFrame: number | null = null;
   #unsubscribeRegistry: () => void;
 
@@ -172,9 +172,7 @@ export class BlockUvBridge {
   #applyRegionToBlock(
     region: UVRegion
   ): void {
-    if (this.#dragged?.id === region.id) {
-      this.#cancelDrag();
-    }
+    this.#forgetDrag(region.id);
 
     const blockId = this.#blockIdOf(region.id);
     if (blockId === null) {
@@ -204,9 +202,7 @@ export class BlockUvBridge {
   };
 
   readonly #onRegionMoved: UVMapListener<"region-moved"> = (event) => {
-    if (this.#dragged?.id === event.region.id) {
-      this.#cancelDrag();
-    }
+    this.#forgetDrag(event.region.id);
 
     const block = this.#blockOf(event.region.id);
     if (!block || BlockUv.sameRegion(this.#regionFor(block), event.region)) {
@@ -221,32 +217,37 @@ export class BlockUvBridge {
       return;
     }
 
-    if (this.#dragged !== null && this.#dragged.id !== region.id) {
-      this.#flushDrag();
-    }
-    this.#dragged = region;
+    this.#dragged.set(region.id, region);
     this.#dragFrame ??= requestAnimationFrame(this.#flushDrag);
   };
 
   readonly #flushDrag = (): void => {
-    const dragged = this.#dragged;
+    const dragged = [...this.#dragged.values()];
     this.#cancelDrag();
-    if (dragged === null) {
-      return;
-    }
 
-    const block = this.#blockOf(dragged.id);
-    if (block && !BlockUv.sameRegion(this.#regionFor(block), dragged)) {
-      this.#applyRegionToBlock(dragged);
+    for (const region of dragged) {
+      const block = this.#blockOf(region.id);
+      if (block && !BlockUv.sameRegion(this.#regionFor(block), region)) {
+        this.#applyRegionToBlock(region);
+      }
     }
   };
+
+  #forgetDrag(
+    id: string
+  ): void {
+    this.#dragged.delete(id);
+    if (this.#dragged.size === 0) {
+      this.#cancelDrag();
+    }
+  }
 
   #cancelDrag(): void {
     if (this.#dragFrame !== null) {
       cancelAnimationFrame(this.#dragFrame);
       this.#dragFrame = null;
     }
-    this.#dragged = null;
+    this.#dragged.clear();
   }
 
   readonly #onRegionStateChanged: UVMapListener<

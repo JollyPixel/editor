@@ -2,7 +2,10 @@
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
 import { groupPositionsByColor } from "../buffer/colorGroups.ts";
-import { UVMap } from "../uv/map/UVMap.ts";
+import {
+  UVMap,
+  type UVMapOptions
+} from "../uv/map/UVMap.ts";
 import type {
   UVRegion,
   UVRegionData
@@ -44,6 +47,7 @@ export interface PixelDocumentStateOptions<
   buffer: TBuffer;
   onNormalMapChanged?: NormalMapChangedListener;
   onPaletteChanged?: (index: number | null) => void;
+  uv?: Omit<UVMapOptions, "getCanvasSize">;
 }
 
 export class PixelDocumentState<
@@ -62,6 +66,7 @@ export class PixelDocumentState<
   ) {
     this.buffer = options.buffer;
     this.uv = new UVMap({
+      ...options.uv,
       getCanvasSize: () => this.buffer.size()
     });
     this.#onNormalMapChanged = options.onNormalMapChanged;

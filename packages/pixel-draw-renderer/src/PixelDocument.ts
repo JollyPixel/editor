@@ -125,6 +125,9 @@ export class PixelDocument extends Emitter<
     this.#state = new PixelDocumentState({
       buffer: this.buffer,
       onPaletteChanged: (index) => this.emit("palette-changed", index),
+      uv: {
+        batch: (apply) => this.#recorder.batch(apply)
+      },
       onNormalMapChanged: (regionIds) => this.emit("normal-map-changed", {
         config: this.normalMap,
         regionIds

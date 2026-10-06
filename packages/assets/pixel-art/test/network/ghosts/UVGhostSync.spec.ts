@@ -64,6 +64,10 @@ const kNet = new UVRegion({
   }
 });
 
+class MockUVMap extends MockEmitter<UVEvents> {
+  selectedRegionId: string | null = kStacked.id;
+}
+
 function peerColor(
   clientId: string
 ): string {
@@ -75,7 +79,7 @@ function setup(
 ) {
   const room = new MockRoom();
   const host = {
-    uv: new MockEmitter<UVEvents>(),
+    uv: new MockUVMap(),
     peerPresence: {
       uv: {
         set: mock.fn<(clientId: string, state: PeerUVPreviewState) => void>(),
@@ -104,6 +108,22 @@ describe("UVGhostSync — local drag", () => {
     const { room, events } = setup();
 
     events.emit("region-dragging", kDrag);
+    await nextFrame();
+
+    assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: kPayload }]);
+  });
+
+  test("reports only the selected region when a drag carries nested regions", async() => {
+    const { room, events } = setup();
+    const nested = new UVRegion({
+      id: "region-B",
+      color: "#0f0",
+      state: "stacked",
+      rect: { x: 1, y: 1, width: 2, height: 2 }
+    });
+
+    events.emit("region-dragging", kDrag);
+    events.emit("region-dragging", { region: nested, face: null });
     await nextFrame();
 
     assert.deepStrictEqual(room.presenceUpdates, [{ uvGhost: kPayload }]);

@@ -17,10 +17,11 @@ interface PixelDocumentStateOptions<TBuffer extends DefaultPixelBuffer> {
   buffer: TBuffer;
   onNormalMapChanged?: (regionIds: string[] | null) => void;
   onPaletteChanged?: (index: number | null) => void;
+  uv?: Omit<UVMapOptions, "getCanvasSize">;
 }
 ```
 
-`TBuffer` defaults to [`PixelBuffer`](./buffer/PixelBuffer.md). `onNormalMapChanged` receives the regions whose zone changed, or `null` when the whole configuration changed.
+`TBuffer` defaults to [`PixelBuffer`](./buffer/PixelBuffer.md). `onNormalMapChanged` receives the regions whose zone changed, or `null` when the whole configuration changed. `uv` is passed to the [`UVMap`](./uv/UVMap.md#types) constructor; its canvas size always comes from `buffer`.
 
 ## Properties
 

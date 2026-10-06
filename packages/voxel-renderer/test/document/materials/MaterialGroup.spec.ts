@@ -97,6 +97,28 @@ describe("MaterialGroup", () => {
     assert.deepEqual(material.normalScale.toArray(), [2, 2]);
   });
 
+  it("keeps an optional swatch colour out of the rendered finish", () => {
+    const group = new MaterialGroup({ id: "gold", swatch: "#FFAA00" });
+    const material = new THREE.MeshStandardMaterial();
+    group.applyTo(material);
+
+    assert.equal(new MaterialGroup({ id: "gold" }).swatch, null);
+    assert.equal(group.swatch, "#ffaa00");
+    assert.equal(group.toJSON().swatch, "#ffaa00");
+    assert.equal(material.color.getHexString(), "ffffff");
+    assert.equal("swatch" in new MaterialGroup({ id: "gold" }).toJSON(), false);
+  });
+
+  it("treats the swatch as part of the definition", () => {
+    const group = new MaterialGroup({ id: "gold", swatch: "#ffaa00" });
+    const recoloured = group.with({ swatch: "#00aaff" });
+
+    assert.equal(recoloured.swatch, "#00aaff");
+    assert.equal(recoloured.with({ roughness: 0.5 }).swatch, "#00aaff");
+    assert.ok(!group.equals(recoloured));
+    assert.equal(MaterialGroup.parse({ id: "gold", swatch: "gold" }), null);
+  });
+
   it("treats normal scale as part of the finish", () => {
     const group = new MaterialGroup({ id: "stone" });
     const flat = group.with({ normalScale: 0 });

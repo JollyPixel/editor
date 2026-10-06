@@ -17,6 +17,7 @@ import {
 } from "./support/placement.ts";
 import {
   blocksAt,
+  clickCell,
   pinCamera,
   pivotOnCell,
   pointAt,
@@ -204,7 +205,7 @@ test("Alt+click pivots the camera, then Escape leaves the pivot before the selec
   await expect(toolbar).toHaveAttribute("mode", "paint");
 });
 
-test("Ctrl+C then Ctrl+V puts the selection back and floats a copy under the cursor", async({ page }) => {
+test("Ctrl+C then Ctrl+V floats a copy under the cursor, committed by a click outside", async({ page }) => {
   test.slow();
   await seed(page, [...kRow, kOutside]);
   await useSelectTool(page);
@@ -224,7 +225,7 @@ test("Ctrl+C then Ctrl+V puts the selection back and floats a copy under the cur
   const pasted = await placement(page);
   expect(pasted?.position.z).toBeGreaterThan(0);
 
-  await page.keyboard.press("Enter");
+  await clickCell(page, { x: 5, y: 0, z: 2 });
   await expect.poll(() => placement(page)).toBeNull();
   expect(await blocksAt(page, pasted!.cells)).toEqual([1, 1, 1]);
   expect(await voxelCount(page)).toBe((kRow.length * 2) + 1);

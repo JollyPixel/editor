@@ -40,6 +40,7 @@ import { bindMarqueeShortcuts } from "../features/marquee/marqueeShortcuts.ts";
 import { MapHistory } from "../features/placement/MapHistory.ts";
 import { MapMaterials } from "../features/materials/MapMaterials.ts";
 import { MapPlacement } from "../features/placement/MapPlacement.ts";
+import { PlacementClick } from "../features/placement/PlacementClick.ts";
 import { PlacementGizmo } from "../features/placement/PlacementGizmo.ts";
 import { PeerPlacements } from "../features/placement/collaboration/PeerPlacements.ts";
 import { bindPlacementShortcuts } from "../features/placement/placementShortcuts.ts";
@@ -278,6 +279,10 @@ export class EditorScene extends Systems.Scene {
         pointer: state.pointer,
         mapDocument,
         color: session.identity.color
+      })
+      .addComponent(PlacementClick, {
+        placement,
+        pointer: state.pointer
       });
     world.createActor("object-layer-renderer")
       .addComponent(ObjectLayerRenderer, {

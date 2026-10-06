@@ -19,6 +19,7 @@ import {
   type UVResizeOptions,
   type UVRegionState
 } from "../region/UVRegion.ts";
+import { RectArea } from "../../utils/RectArea.ts";
 import type { UVMapEvent } from "./UVMap.events.ts";
 
 export type {
@@ -34,6 +35,13 @@ export type {
 
 export interface UVMapOptions {
   getCanvasSize: () => Vec2;
+  batch?: (apply: () => void) => void;
+}
+
+export interface UVMove {
+  id: string;
+  rect: SelectionRect;
+  slot: UVSlot | null;
 }
 
 export type UVLabelScope = "all" | "selected";
@@ -43,10 +51,16 @@ type UVRegionChange = (
   previous: UVRegionData
 ) => void;
 
+interface UVMovement {
+  region: UVRegion;
+  target: UVSlot | null;
+}
+
 export class UVMap extends Emitter<
   UVMapEvent
 > implements Iterable<UVRegion> {
   #getCanvasSize: () => Vec2;
+  #batch: (apply: () => void) => void;
   #factory: UVRegionFactory;
   #regions = new Map<string, UVRegion>();
   #selectedRegionId: string | null = null;
@@ -61,6 +75,7 @@ export class UVMap extends Emitter<
   ) {
     super();
     this.#getCanvasSize = options.getCanvasSize;
+    this.#batch = options.batch ?? ((apply) => apply());
     this.#factory = new UVRegionFactory(options.getCanvasSize);
   }
 
@@ -219,12 +234,12 @@ export class UVMap extends Emitter<
     rect: SelectionRect,
     slot: UVSlot | null = null
   ): boolean {
-    const region = this.#regions.get(id);
-    const target = region === undefined ? undefined : this.#movementTarget(region, slot);
-    if (region === undefined || target === undefined) {
+    const movement = this.#movement(this.#regions.get(id), slot);
+    if (movement === null) {
       return false;
     }
 
+    const { region, target } = movement;
     const moved = this.#bounds().move(region, rect, target);
     this.#regions.set(id, moved);
     this.emit("region-moved", {
@@ -242,13 +257,77 @@ export class UVMap extends Emitter<
     rect: SelectionRect,
     slot: UVSlot | null = null
   ): UVRegion | null {
-    const region = this.#regions.get(id);
-    const target = region === undefined ? undefined : this.#movementTarget(region, slot);
-    if (region === undefined || target === undefined) {
-      return null;
+    return this.previewMoveGroup([{ id, rect, slot }])[0] ?? null;
+  }
+
+  targetsWithin(
+    rect: SelectionRect
+  ): UVMove[] {
+    const area = new RectArea(rect);
+    const targets: UVMove[] = [];
+
+    for (const region of this.#regions.values()) {
+      if (!this.isVisible(region.id)) {
+        continue;
+      }
+
+      const slots = region.movementScope === "region" ?
+        [null] :
+        region.activeSlots;
+      for (const slot of slots) {
+        const slotRect = region.rectFor(slot);
+        if (area.contains(slotRect)) {
+          targets.push({
+            id: region.id,
+            rect: slotRect,
+            slot
+          });
+        }
+      }
     }
 
-    return this.#previewed(this.#bounds().move(region, rect, target), target);
+    return targets;
+  }
+
+  moveGroup(
+    moves: readonly UVMove[]
+  ): boolean {
+    let moved = false;
+    this.#batch(() => {
+      for (const { id, rect, slot } of moves) {
+        moved = this.move(id, rect, slot) || moved;
+      }
+    });
+
+    return moved;
+  }
+
+  previewMoveGroup(
+    moves: readonly UVMove[]
+  ): UVRegion[] {
+    const previews = new Map<string, {
+      region: UVRegion;
+      face: UVSlot | null;
+    }>();
+    for (const { id, rect, slot } of moves) {
+      const folded = previews.get(id);
+      const movement = this.#movement(
+        folded?.region ?? this.#regions.get(id),
+        slot
+      );
+      if (movement === null) {
+        continue;
+      }
+
+      previews.set(id, {
+        region: this.#bounds().move(movement.region, rect, movement.target),
+        face: folded === undefined ? movement.target : null
+      });
+    }
+
+    return [...previews.values()].map(
+      ({ region, face }) => this.#previewed(region, face)
+    );
   }
 
   resize(
@@ -321,11 +400,12 @@ export class UVMap extends Emitter<
     direction: RotationDirection,
     slot: UVSlot | null = null
   ): boolean {
-    const region = this.#regions.get(id);
-    const face = region === undefined ? undefined : this.#movementTarget(region, slot);
-    if (face === undefined) {
+    const movement = this.#movement(this.#regions.get(id), slot);
+    if (movement === null) {
       return false;
     }
+
+    const face = movement.target;
 
     return this.#replace(
       id,
@@ -427,15 +507,26 @@ export class UVMap extends Emitter<
     return removed.length;
   }
 
-  #movementTarget(
-    region: UVRegion,
+  #movement(
+    region: UVRegion | undefined,
     slot: UVSlot | null
-  ): UVSlot | null | undefined {
-    if (region.movementScope === "region") {
+  ): UVMovement | null {
+    if (region === undefined) {
       return null;
     }
+    if (region.movementScope === "region") {
+      return {
+        region,
+        target: null
+      };
+    }
 
-    return region.isTarget(slot) ? slot : undefined;
+    return region.isTarget(slot) ?
+      {
+        region,
+        target: slot
+      } :
+      null;
   }
 
   #bounds(): CanvasBounds {

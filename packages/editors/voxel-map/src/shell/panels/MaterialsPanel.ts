@@ -6,7 +6,7 @@ import { customElement } from "lit/decorators.js";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import "../../features/blocks/library/BlockLibrary.ts";
-import "../../features/materials/MaterialEditor.ts";
+import "../../features/materials/MaterialLibrary.ts";
 
 @customElement("materials-panel")
 export class MaterialsPanel extends WorkspaceElement {
@@ -60,7 +60,7 @@ export class MaterialsPanel extends WorkspaceElement {
           layout="compact"
         ></block-library>
       </jolly-folder>
-      <material-editor .workspace=${workspace}></material-editor>
+      <material-library .workspace=${workspace}></material-library>
     `;
   }
 }

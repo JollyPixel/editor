@@ -24,9 +24,9 @@ export interface UVOverlayLayerState {
    */
   ghostSuppressed: ReadonlySet<string>;
   /**
-   * Drawn in place of the stored region with the same id.
+   * Drawn in place of the stored regions with the same ids.
    */
-  preview: UVRegion | null;
+  previews: ReadonlyMap<string, UVRegion>;
   /**
    * Peer color by region id.
    */
@@ -39,7 +39,7 @@ export function projectUVOverlay(
 ): UVOverlayEntry[] {
   const {
     ghostSuppressed,
-    preview,
+    previews,
     peerSelections
   } = layer;
   const selectedRegionId = uvMap.selectedRegionId;
@@ -47,7 +47,7 @@ export function projectUVOverlay(
   const entries: UVOverlayEntry[] = [];
 
   for (const stored of uvMap.regions) {
-    const region = preview?.id === stored.id ? preview : stored;
+    const region = previews.get(stored.id) ?? stored;
     if (!uvMap.isVisible(region.id)) {
       continue;
     }

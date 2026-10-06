@@ -30,8 +30,10 @@ document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 | `emissive` | `"#000000"` | A `#rrggbb` colour, stored in lower case. |
 | `emissiveIntensity` | `1` | `0` or more. |
 | `normalScale` | `1` | `0` or more. Strength of the blockset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns it off. |
+| `swatch` | None (`null`) | A `#rrggbb` colour, stored in lower case. A label colour for editors; it is not rendered. |
 
-`MaterialGroup.defaults` holds the defaults.
+`MaterialGroup.defaults` holds the defaults of the finish fields
+(`MaterialGroupFinish`), which exclude `id` and `swatch`.
 
 ## Rendering
 
@@ -54,9 +56,10 @@ value out of bounds.
 
 Like the constructor, but returns `null` for invalid input.
 
-#### `with(finish: Partial<MaterialGroupFinish>): MaterialGroup`
+#### `with(changes: MaterialGroupChanges): MaterialGroup`
 
-A copy with other finish values.
+A copy with other finish values or another `swatch`. `MaterialGroupChanges` is
+every `MaterialGroupJSON` field but `id`, all optional.
 
 #### `applyTo(material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial): void`
 
@@ -65,7 +68,9 @@ material only receives the emissive fields and `normalScale`.
 
 #### `equals(other: MaterialGroup): boolean`
 
-#### `toJSON(): Required<MaterialGroupJSON>`
+#### `toJSON(): MaterialGroupJSON & MaterialGroupFinish`
+
+Every finish field, plus `swatch` when it is set.
 
 ## Group lists
 

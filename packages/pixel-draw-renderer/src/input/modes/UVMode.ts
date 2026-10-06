@@ -27,7 +27,7 @@ export class UVMode extends InteractionMode {
 
   onExit(): void {
     this.#uv.cancelDrag();
-    this.#uv.alignEdges(false);
+    this.#uv.lineHeld = false;
   }
 
   cursor(): string {
@@ -43,7 +43,7 @@ export class UVMode extends InteractionMode {
   onLineHeldChange(
     held: boolean
   ): void {
-    this.#uv.alignEdges(held);
+    this.#uv.lineHeld = held;
   }
 
   onPointerDown(
@@ -88,6 +88,6 @@ export class UVMode extends InteractionMode {
 
   onBlur(): void {
     this.#uv.cancelDrag();
-    this.#uv.alignEdges(false);
+    this.#uv.lineHeld = false;
   }
 }

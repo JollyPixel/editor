@@ -4,15 +4,14 @@ import { sameRect } from "../../uv/geometry/geometry.ts";
 import { UV_RESIZE_CURSORS } from "./resizeHandles.ts";
 import { RectArea } from "../../utils/RectArea.ts";
 import type { UVResizeHandle } from "../../uv/region/layout/UVResizeTarget.ts";
-import type { UVMap } from "../../uv/map/UVMap.ts";
+import type {
+  UVMap,
+  UVMove
+} from "../../uv/map/UVMap.ts";
 import type {
   UVLivePreview
 } from "../../rendering/overlays/UVRegions.ts";
-import type {
-  UVRegion,
-  UVResizeOptions,
-  UVSlot
-} from "../../uv/region/UVRegion.ts";
+import type { UVSlot } from "../../uv/region/UVRegion.ts";
 import type {
   SelectionRect,
   Vec2
@@ -28,40 +27,22 @@ export interface UVGestureTarget {
 interface UVRectEdit {
   readonly cursor: string;
   rectAt(pointer: Vec2): SelectionRect;
-  preview(rect: SelectionRect, options: UVResizeOptions): UVRegion | null;
-  commit(rect: SelectionRect, options: UVResizeOptions): boolean;
+  preview(rect: SelectionRect, lineHeld: boolean): UVLivePreview | null;
+  commit(rect: SelectionRect, lineHeld: boolean): boolean;
 }
 
 export class UVGesture {
   readonly id: string;
-  readonly #slot: UVSlot | null;
   readonly #edit: UVRectEdit;
   readonly #baseRect: SelectionRect;
   #liveRect: SelectionRect;
 
   static move(
     uvMap: UVMap,
-    target: UVGestureTarget
+    target: UVGestureTarget,
+    nested: readonly UVMove[]
   ): UVGesture {
-    const { id, slot, rect } = target;
-    const origin = {
-      x: Math.floor(target.origin.x),
-      y: Math.floor(target.origin.y)
-    };
-
-    return new UVGesture(target, {
-      cursor: "grabbing",
-      rectAt: (pointer) => clampRectPosition(
-        {
-          ...rect,
-          x: rect.x + Math.floor(pointer.x) - origin.x,
-          y: rect.y + Math.floor(pointer.y) - origin.y
-        },
-        uvMap.canvasSize()
-      ),
-      preview: (live) => uvMap.previewMove(id, live, slot),
-      commit: (live) => uvMap.move(id, live, slot)
-    });
+    return new UVGesture(target, new UVMoveEdit(uvMap, target, nested));
   }
 
   static resize(
@@ -77,8 +58,12 @@ export class UVGesture {
         x: Math.round(pointer.x - origin.x),
         y: Math.round(pointer.y - origin.y)
       }).bounds,
-      preview: (live, options) => uvMap.previewResize(id, live, slot, options),
-      commit: (live, options) => uvMap.resize(id, live, slot, options)
+      preview: (live, lineHeld) => {
+        const region = uvMap.previewResize(id, live, slot, { aligned: lineHeld });
+
+        return region === null ? null : { regions: [region], slot };
+      },
+      commit: (live, lineHeld) => uvMap.resize(id, live, slot, { aligned: lineHeld })
     });
   }
 
@@ -87,7 +72,6 @@ export class UVGesture {
     edit: UVRectEdit
   ) {
     this.id = target.id;
-    this.#slot = target.slot;
     this.#edit = edit;
     this.#baseRect = { ...target.rect };
     this.#liveRect = { ...target.rect };
@@ -115,20 +99,123 @@ export class UVGesture {
   }
 
   preview(
-    options: UVResizeOptions
+    lineHeld: boolean
   ): UVLivePreview | null {
-    const region = this.#edit.preview(this.#liveRect, options);
-
-    return region === null ? null : { region, slot: this.#slot };
+    return this.#edit.preview(this.#liveRect, lineHeld);
   }
 
   commit(
-    options: UVResizeOptions
+    lineHeld: boolean
   ): boolean {
-    return this.moved && this.#edit.commit(this.#liveRect, options);
+    return this.moved && this.#edit.commit(this.#liveRect, lineHeld);
   }
 
   restore(): void {
-    this.#edit.preview(this.#baseRect, {});
+    this.#edit.preview(this.#baseRect, false);
+  }
+}
+
+class UVMoveEdit implements UVRectEdit {
+  readonly cursor = "grabbing";
+  readonly #uvMap: UVMap;
+  readonly #dragged: UVMove;
+  readonly #origin: Vec2;
+  readonly #nested: readonly UVMove[];
+  #nestedDisplaced = false;
+
+  constructor(
+    uvMap: UVMap,
+    target: UVGestureTarget,
+    nested: readonly UVMove[]
+  ) {
+    this.#uvMap = uvMap;
+    this.#dragged = {
+      id: target.id,
+      slot: target.slot,
+      rect: { ...target.rect }
+    };
+    this.#origin = {
+      x: Math.floor(target.origin.x),
+      y: Math.floor(target.origin.y)
+    };
+    this.#nested = nested;
+  }
+
+  rectAt(
+    pointer: Vec2
+  ): SelectionRect {
+    const { rect } = this.#dragged;
+
+    return clampRectPosition(
+      {
+        ...rect,
+        x: rect.x + Math.floor(pointer.x) - this.#origin.x,
+        y: rect.y + Math.floor(pointer.y) - this.#origin.y
+      },
+      this.#uvMap.canvasSize()
+    );
+  }
+
+  preview(
+    rect: SelectionRect,
+    lineHeld: boolean
+  ): UVLivePreview | null {
+    const moves = [this.#draggedTo(rect)];
+    if (lineHeld) {
+      moves.push(...this.#nestedFollowing(rect));
+    }
+    else if (this.#nestedDisplaced) {
+      moves.push(...this.#nested);
+    }
+    this.#nestedDisplaced = lineHeld;
+
+    const regions = this.#uvMap.previewMoveGroup(moves);
+    if (!regions.some((region) => region.id === this.#dragged.id)) {
+      return null;
+    }
+
+    return {
+      regions,
+      slot: this.#dragged.slot
+    };
+  }
+
+  commit(
+    rect: SelectionRect,
+    lineHeld: boolean
+  ): boolean {
+    const moves = [this.#draggedTo(rect)];
+    if (lineHeld) {
+      moves.push(...this.#nestedFollowing(rect));
+    }
+
+    return this.#uvMap.moveGroup(moves);
+  }
+
+  #draggedTo(
+    rect: SelectionRect
+  ): UVMove {
+    return {
+      ...this.#dragged,
+      rect
+    };
+  }
+
+  #nestedFollowing(
+    rect: SelectionRect
+  ): UVMove[] {
+    const dx = rect.x - this.#dragged.rect.x;
+    const dy = rect.y - this.#dragged.rect.y;
+
+    return this.#nested.map((move) => {
+      return {
+        ...move,
+        rect: {
+          ...move.rect,
+          x: move.rect.x + dx,
+          y: move.rect.y + dy
+        }
+      };
+    });
   }
 }

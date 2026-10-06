@@ -15,6 +15,7 @@ import {
 
 // Import Internal Dependencies
 import { MapMaterials } from "../../../src/features/materials/MapMaterials.ts";
+import { MaterialSwatch } from "../../../src/features/materials/MaterialSwatch.ts";
 
 // CONSTANTS
 const kTerrain = new BlocksetSlot({ id: "terrain", slot: 1 });
@@ -110,18 +111,45 @@ describe("MapMaterials", () => {
     assert.deepEqual(materials.availableTo(composeBlockId(9, 1)), []);
   });
 
-  it("creates a fresh finished material on the block", () => {
+  it("lists the materials of one blockset slot", () => {
+    const { materials } = setup(
+      [block(kGrass, "terrain/wet"), block(kStone, "rock/wet")],
+      [new MaterialGroup({ id: "rock/dull" })]
+    );
+
+    assert.deepEqual(materials.inSlot(kRock).map((material) => material.id), ["rock/dull", "rock/wet"]);
+    assert.deepEqual(materials.inSlot(kTerrain).map((material) => material.id), ["terrain/wet"]);
+  });
+
+  it("creates an unused material in a blockset with a stored swatch", () => {
     const { document, materials } = setup([
       block(kGrass, "terrain/Material"),
       block(kDirt)
     ]);
 
-    assert.equal(materials.create(kDirt), true);
+    assert.equal(materials.create(kTerrain), "terrain/Material 2");
 
-    assert.equal(document.blocks.get(kDirt)?.materialGroup, "terrain/Material 2");
-    assert.ok(document.materialGroups.get("terrain/Material 2")?.equals(
-      new MaterialGroup({ id: "terrain/Material 2" })
-    ));
+    const created = document.materialGroups.get("terrain/Material 2");
+    assert.equal(document.blocks.get(kDirt)?.materialGroup, undefined);
+    assert.equal(created?.swatch, MaterialSwatch.derivedColor("terrain/Material 2"));
+    assert.deepEqual(
+      materials.availableTo(kDirt).map((material) => material.name),
+      ["Material", "Material 2"]
+    );
+  });
+
+  it("keeps a stored swatch through a rename and recolours it", () => {
+    const { document, materials } = setup([block(kGrass)]);
+    const groupId = materials.create(kTerrain)!;
+    const swatch = document.materialGroups.get(groupId)?.swatch;
+
+    assert.equal(materials.rename(materials.inSlot(kTerrain)[0], "gold"), "renamed");
+    const gold = materials.inSlot(kTerrain)[0];
+    assert.equal(gold.swatch.color, swatch);
+
+    assert.equal(materials.refinish(gold, { swatch: "#ff0000" }), true);
+    assert.equal(materials.refinish(gold, { swatch: "red" }), false);
+    assert.equal(materials.inSlot(kTerrain)[0].swatch.color, "#ff0000");
   });
 
   it("assigns a material and drops it again, keeping the finish", () => {
@@ -226,5 +254,17 @@ describe("MapMaterials", () => {
     assert.notEqual(swatches.get(kGrass)?.color, swatches.get(kSand)?.color);
     assert.equal(swatches.get(kGrass)?.glow, null);
     assert.equal(swatches.get(kSand)?.glow, "#ff6600");
+  });
+
+  it("paints a stored swatch colour and derives one for a group without", () => {
+    const { materials } = setup(
+      [block(kGrass, "terrain/gold"), block(kDirt, "terrain/wet")],
+      [new MaterialGroup({ id: "terrain/gold", swatch: "#ffcc00" })]
+    );
+
+    const swatches = materials.swatches();
+
+    assert.equal(swatches.get(kGrass)?.color, "#ffcc00");
+    assert.equal(swatches.get(kDirt)?.color, MaterialSwatch.derivedColor("terrain/wet"));
   });
 });

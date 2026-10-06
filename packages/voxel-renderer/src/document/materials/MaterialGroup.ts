@@ -11,9 +11,14 @@ export interface MaterialGroupJSON {
   emissive?: string;
   emissiveIntensity?: number;
   normalScale?: number;
+  swatch?: string;
 }
 
-export type MaterialGroupFinish = Required<Omit<MaterialGroupJSON, "id">>;
+export type MaterialGroupFinish = Required<
+  Omit<MaterialGroupJSON, "id" | "swatch">
+>;
+
+export type MaterialGroupChanges = Partial<Omit<MaterialGroupJSON, "id">>;
 
 export type FinishableMaterial =
   | THREE.MeshLambertMaterial
@@ -34,6 +39,7 @@ export class MaterialGroup {
   readonly emissive: string;
   readonly emissiveIntensity: number;
   readonly normalScale: number;
+  readonly swatch: string | null;
 
   static parse(
     value: unknown
@@ -57,15 +63,16 @@ export class MaterialGroup {
     this.emissiveIntensity = json.emissiveIntensity ??
       defaults.emissiveIntensity;
     this.normalScale = json.normalScale ?? defaults.normalScale;
+    this.swatch = json.swatch?.toLowerCase() ?? null;
     Object.freeze(this);
   }
 
   with(
-    finish: Partial<MaterialGroupFinish>
+    changes: MaterialGroupChanges
   ): MaterialGroup {
     return new MaterialGroup({
       ...this.toJSON(),
-      ...finish,
+      ...changes,
       id: this.id
     });
   }
@@ -90,11 +97,12 @@ export class MaterialGroup {
       this.metalness === other.metalness &&
       this.emissive === other.emissive &&
       this.emissiveIntensity === other.emissiveIntensity &&
-      this.normalScale === other.normalScale;
+      this.normalScale === other.normalScale &&
+      this.swatch === other.swatch;
   }
 
-  toJSON(): Required<MaterialGroupJSON> {
-    return {
+  toJSON(): MaterialGroupJSON & MaterialGroupFinish {
+    const json = {
       id: this.id,
       roughness: this.roughness,
       metalness: this.metalness,
@@ -102,6 +110,13 @@ export class MaterialGroup {
       emissiveIntensity: this.emissiveIntensity,
       normalScale: this.normalScale
     };
+
+    return this.swatch === null ?
+      json :
+      {
+        ...json,
+        swatch: this.swatch
+      };
   }
 }
 
@@ -121,6 +136,7 @@ function problemOf(
   const fields: Map<string, unknown> = new Map(Object.entries(value));
   const id = fields.get("id");
   const emissive = fields.get("emissive");
+  const swatch = fields.get("swatch");
 
   if (typeof id !== "string" || id === "") {
     return "Material group id must be a non-empty string.";
@@ -136,6 +152,12 @@ function problemOf(
     (typeof emissive !== "string" || !kHexColor.test(emissive))
   ) {
     return "Emissive must be a #rrggbb colour.";
+  }
+  if (
+    swatch !== undefined &&
+    (typeof swatch !== "string" || !kHexColor.test(swatch))
+  ) {
+    return "Swatch must be a #rrggbb colour.";
   }
   if (!isNonNegativeOrUndefined(fields.get("emissiveIntensity"))) {
     return "Emissive intensity must be a finite number of 0 or more.";

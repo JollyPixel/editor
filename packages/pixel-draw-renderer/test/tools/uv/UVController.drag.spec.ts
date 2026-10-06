@@ -59,7 +59,7 @@ describe("UVController — drag to move", () => {
     controller.handleMove({ x: 100, y: 100 });
 
     assert.deepStrictEqual(
-      overlay.previews.at(-1)?.region.bounds,
+      overlay.previews.at(-1)?.regions[0].bounds,
       { x: 8, y: 8, width: 8, height: 8 }
     );
   });
@@ -94,7 +94,7 @@ describe("UVController — drag to move", () => {
   });
 
   describe("live drag preview (region-dragging)", () => {
-    test("toggling aligned edges re-previews only a drag that has moved", () => {
+    test("toggling lineHeld re-previews only a drag that has moved", () => {
       const { map, controller } = makeUvControllerSetup();
       map.create({ width: 8, height: 8 });
       map.showAll = true;
@@ -102,11 +102,11 @@ describe("UVController — drag to move", () => {
       map.on("region-dragging", (e) => events.push(e));
 
       controller.handleStart({ x: 2, y: 2 });
-      controller.alignEdges(true);
+      controller.lineHeld = true;
       assert.strictEqual(events.length, 1);
 
       controller.handleMove({ x: 6, y: 6 });
-      controller.alignEdges(false);
+      controller.lineHeld = false;
       assert.strictEqual(events.length, 3);
     });
 

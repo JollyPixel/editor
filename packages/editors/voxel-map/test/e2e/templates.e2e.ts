@@ -24,6 +24,7 @@ import {
 import {
   blocksAt,
   cellTopPoint,
+  clickCell,
   pinCamera,
   pivotOnCell,
   seedVoxels,
@@ -115,6 +116,27 @@ test("Alt+click pivots the camera while a placement is pending", async({ page })
 
   await expect(page.locator("jolly-log")).toContainText("Camera switched to pivot");
   expect(await placement(page)).not.toBeNull();
+});
+
+test("a click outside the placement commits it without painting", async({ page }) => {
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await pinCamera(page);
+
+  await page.getByRole("button", { name: "Save layer as template" }).click();
+  const staged: Cell = { x: 3, y: 0, z: 0 };
+  await pressAt(page, [
+    await centerOf(page.locator("template-manager [role=\"treeitem\"]")),
+    await cellTopPoint(page, staged)
+  ], { settle: nextFrames });
+  await expect.poll(async() => (await placement(page))?.position)
+    .toEqual(staged);
+
+  const outside: Cell = { x: 4, y: 0, z: 4 };
+  await clickCell(page, outside);
+
+  await expect.poll(() => placement(page)).toBeNull();
+  expect(await blocksAt(page, [staged, outside])).toEqual([1, null]);
+  expect(await voxelCount(page)).toBe(2);
 });
 
 test("a peer sees the placement preview until it is cancelled", async({ page, peer }) => {

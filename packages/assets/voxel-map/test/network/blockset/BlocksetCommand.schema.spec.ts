@@ -110,6 +110,19 @@ describe("blocksetCommandProtocol", () => {
     }), false);
   });
 
+  test("accepts a material group swatch colour only as #rrggbb", () => {
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold", swatch: "#FFaa00" }
+    }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-defined",
+      group: { id: "gold", swatch: "gold" }
+    }), false);
+  });
+
   test("rejects a layer command, a bad finish or a bad tile size", () => {
     assert.strictEqual(accepts({
       ...kHeader,

@@ -7,7 +7,10 @@ import {
 } from "./resizeHandles.ts";
 import { UVGesture } from "./UVGesture.ts";
 import { UVPickCycle } from "./UVPickCycle.ts";
-import type { UVMap } from "../../uv/map/UVMap.ts";
+import type {
+  UVMap,
+  UVMove
+} from "../../uv/map/UVMap.ts";
 import type {
   UVRegionLayer
 } from "../../rendering/overlays/UVRegions.ts";
@@ -42,7 +45,7 @@ export class UVController implements UVTool {
   #viewport: ScreenProjection;
   #resizable: boolean;
   #hoverPoint: Vec2 | null = null;
-  #aligned = false;
+  #lineHeld = false;
 
   constructor(
     options: UVControllerOptions
@@ -85,14 +88,18 @@ export class UVController implements UVTool {
     return hit === null ? "grab" : UV_RESIZE_CURSORS[hit.handle];
   }
 
-  alignEdges(
+  get lineHeld(): boolean {
+    return this.#lineHeld;
+  }
+
+  set lineHeld(
     value: boolean
-  ): void {
-    if (this.#aligned === value) {
+  ) {
+    if (this.#lineHeld === value) {
       return;
     }
 
-    this.#aligned = value;
+    this.#lineHeld = value;
     if (this.#gesture?.moved) {
       this.#showPreview(this.#gesture);
     }
@@ -145,12 +152,19 @@ export class UVController implements UVTool {
     }
 
     const grouped = region.movementScope === "region";
-    this.#gesture = UVGesture.move(this.#uvMap, {
+    const dragged: UVMove = {
       id: region.id,
       slot: grouped ? null : face,
-      rect: grouped ? region.bounds : rectOf(geometry),
-      origin: position
-    });
+      rect: grouped ? region.bounds : rectOf(geometry)
+    };
+    this.#gesture = UVGesture.move(
+      this.#uvMap,
+      {
+        ...dragged,
+        origin: position
+      },
+      this.#nestedMoves(dragged)
+    );
     this.#showPreview(this.#gesture);
   }
 
@@ -197,11 +211,7 @@ export class UVController implements UVTool {
   #showPreview(
     gesture: UVGesture
   ): void {
-    this.#overlay.setLivePreview(
-      gesture.preview({
-        aligned: this.#aligned
-      })
-    );
+    this.#overlay.setLivePreview(gesture.preview(this.#lineHeld));
   }
 
   #finish(
@@ -213,12 +223,21 @@ export class UVController implements UVTool {
     }
 
     this.#gesture = null;
-    const committed = commit && gesture.commit({ aligned: this.#aligned });
+    const committed = commit && gesture.commit(this.#lineHeld);
     if (!commit) {
       gesture.restore();
     }
     this.#overlay.setLivePreview(null);
     this.#uvMap.endPreview(gesture.id, committed);
+  }
+
+  #nestedMoves(
+    dragged: UVMove
+  ): UVMove[] {
+    return this.#uvMap.targetsWithin(dragged.rect).filter(
+      ({ id, slot }) => (id !== dragged.id || slot !== dragged.slot) &&
+        !this.#overlay.isPeerDragging(id)
+    );
   }
 
   #resizeHit(
