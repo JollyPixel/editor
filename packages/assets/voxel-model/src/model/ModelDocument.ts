@@ -1,38 +1,38 @@
 // Import Third-party Dependencies
-import { Emitter } from "@openally/emitt";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
+import {
+  CommandDocument,
+  type CommandChange,
+  type CommandState
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
 import { createBlockTransform } from "./blockTransform.ts";
 import { createBlockUv } from "./blockUv.ts";
 import { createMaterialSurface } from "./materialSurface.ts";
+import { inverseOf } from "./modelInverse.ts";
+import {
+  modelImageOf,
+  restoreModelImages,
+  type EntryOrder,
+  type ModelImage,
+  type ModelImages
+} from "./modelImages.ts";
 import type {
   BlockTransformJSON,
-  MaterialEntryJSON,
   MaterialSurfaceJSON,
   MaterialSurfacePatchJSON,
   MirrorAxes,
-  ModelNodeJSON,
   NodeTransformJSON,
   UVLayoutData,
   VoxelModelCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
 
-export type ModelOrigin = "local" | "remote";
+export type { EntryOrder, ModelImage, ModelImages };
 
-export interface ModelChange {
-  command: VoxelModelCommand;
-  origin: ModelOrigin;
-  removed: readonly ModelNodeJSON[];
-  previous: readonly ModelNodeJSON[];
-  previousMaterials: readonly MaterialEntryJSON[];
-}
-
-export type ModelDocumentEvents = {
-  change: (change: ModelChange) => void;
-  reset: () => void;
-};
+export type ModelChange = CommandChange<VoxelModelCommand, ModelImage>;
 
 export interface AddFolderOptions {
   id?: string;
@@ -71,10 +71,18 @@ export interface MoveOptions {
   beforeId?: string;
 }
 
-export class ModelDocument extends Emitter<ModelDocumentEvents> {
-  #tree = new ModelTree();
+export class ModelDocument extends CommandDocument<
+  VoxelModelCommand,
+  VoxelModelSnapshot,
+  ModelImage
+> {
+  readonly tree: ModelTreeReader;
 
-  readonly tree: ModelTreeReader = this.#tree;
+  constructor() {
+    const tree = new ModelTree();
+    super(modelState(tree));
+    this.tree = tree;
+  }
 
   addBlock(
     options: AddBlockOptions
@@ -88,7 +96,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       materialId,
       beforeId
     } = options;
-    const added = this.#commit({
+    const added = this.commit({
       action: "node-added",
       node: {
         kind: "block",
@@ -114,7 +122,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       parentId = null,
       beforeId
     } = options;
-    const added = this.#commit({
+    const added = this.commit({
       action: "node-added",
       node: {
         kind: "folder",
@@ -131,7 +139,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
   remove(
     id: string
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "node-removed",
       id
     });
@@ -141,7 +149,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     id: string,
     name: string
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "node-renamed",
       id,
       name
@@ -158,7 +166,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       beforeId
     } = options;
 
-    return this.#commit({
+    return this.commit({
       action: "node-moved",
       id,
       parentId,
@@ -172,7 +180,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     transform: BlockTransformJSON,
     flipAxes?: MirrorAxes
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "node-transformed",
       id,
       transform,
@@ -184,7 +192,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     id: string,
     uv: UVLayoutData
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "node-uv-changed",
       id,
       uv
@@ -195,7 +203,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     id: string,
     materialId: string | null
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "node-material-changed",
       id,
       materialId
@@ -212,7 +220,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       beforeId,
       surface = createMaterialSurface()
     } = options;
-    const added = this.#commit({
+    const added = this.commit({
       action: "material-added",
       material: {
         kind: "material",
@@ -236,7 +244,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
       parentId = null,
       beforeId
     } = options;
-    const added = this.#commit({
+    const added = this.commit({
       action: "material-folder-added",
       folder: {
         kind: "folder",
@@ -255,7 +263,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     parentId: string | null,
     beforeId?: string
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "material-moved",
       id,
       parentId,
@@ -267,7 +275,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     id: string,
     options: RemoveMaterialOptions = {}
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "material-removed",
       id,
       ...(options.keepContents === true ? { keepContents: true } : {})
@@ -278,7 +286,7 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     id: string,
     name: string
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "material-renamed",
       id,
       name
@@ -289,55 +297,82 @@ export class ModelDocument extends Emitter<ModelDocumentEvents> {
     id: string,
     surface: MaterialSurfacePatchJSON
   ): boolean {
-    return this.#commit({
+    return this.commit({
       action: "material-changed",
       id,
       surface
     });
   }
 
-  apply(
-    command: VoxelModelCommand
+  linkAnimationSet(
+    reference: AssetReferenceData,
+    options: { own?: boolean; } = {}
   ): boolean {
-    if (!this.#tree.accepts(command)) {
-      return false;
-    }
-    this.#apply(command, "remote");
-
-    return true;
-  }
-
-  load(
-    snapshot: VoxelModelSnapshot
-  ): void {
-    this.#tree.load(snapshot);
-    this.emit("reset");
-  }
-
-  #commit(
-    command: VoxelModelCommand
-  ): boolean {
-    if (!this.#tree.accepts(command)) {
-      return false;
-    }
-    this.#apply(command, "local");
-
-    return true;
-  }
-
-  #apply(
-    command: VoxelModelCommand,
-    origin: ModelOrigin
-  ): void {
-    const previous = this.#tree.imagesOf(command);
-    const previousMaterials = this.#tree.materialImagesOf(command);
-    this.#tree.apply(command);
-    this.emit("change", {
-      command,
-      origin,
-      removed: command.action === "node-removed" ? previous : [],
-      previous,
-      previousMaterials
+    return this.commit({
+      action: "animation-set-linked",
+      link: {
+        id: reference.id,
+        kind: reference.kind,
+        bindings: [],
+        ...options.own ? { own: true } : {}
+      }
     });
   }
+
+  shareAnimationSet(
+    id: string
+  ): boolean {
+    return this.commit({
+      action: "animation-set-owned",
+      id,
+      own: false
+    });
+  }
+
+  unlinkAnimationSet(
+    id: string
+  ): boolean {
+    return this.commit({
+      action: "animation-set-unlinked",
+      id
+    });
+  }
+
+  remapAnimationTrack(
+    id: string,
+    path: string,
+    target: string | null
+  ): boolean {
+    return this.commit({
+      action: "animation-binding-changed",
+      id,
+      path,
+      target
+    });
+  }
+
+  clearAnimationTrackRemap(
+    id: string,
+    path: string
+  ): boolean {
+    return this.commit({
+      action: "animation-binding-cleared",
+      id,
+      path
+    });
+  }
+}
+
+function modelState(
+  tree: ModelTree
+): CommandState<VoxelModelCommand, VoxelModelSnapshot, ModelImage> {
+  return {
+    accepts: (command) => tree.accepts(command),
+    placeable: (command) => tree.placeable(command),
+    apply: (command) => tree.apply(command),
+    load: (snapshot) => tree.load(snapshot),
+    imageOf: (command) => modelImageOf(tree, command),
+    inverseOf: (command) => inverseOf(tree, command),
+    restored: (images) => restoreModelImages(tree, images)
+  };
 }

@@ -1,4 +1,4 @@
-export type ModelTreeEntry = "node" | "material";
+export type ModelTreeEntry = "node" | "material" | "animation-set";
 
 export class InvalidModelTreeError extends Error {
   readonly entry: ModelTreeEntry;

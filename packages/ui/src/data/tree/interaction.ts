@@ -22,6 +22,8 @@ export type TreeInteraction =
   | {
     kind: "renaming";
     id: string;
+    /** Why the current draft is refused, or `null`. */
+    error: string | null;
   }
   | {
     kind: "pointer-move";

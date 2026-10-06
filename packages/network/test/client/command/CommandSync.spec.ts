@@ -136,6 +136,26 @@ describe("CommandSync", () => {
     assert.strictEqual(sync.pending, 1);
   });
 
+  test("tells which own command the server refused, only when the snapshot or correction names it", () => {
+    const { harness, sync } = setup();
+    const refused: number[] = [];
+    sync.on("refused", (command) => refused.push(command.value));
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    sync.send({ action: "set", value: 3 });
+    harness.serverMessage({ type: "snapshot", data: { value: 0 }, acks: { self: 1 } });
+    harness.serverMessage({ type: "snapshot", data: { value: 0 }, acks: { self: 2 }, refused: 2 });
+    harness.serverMessage({
+      type: "correction",
+      data: { ...remote("self"), value: 0, seq: 3 },
+      refused: 3
+    });
+
+    assert.deepEqual(refused, [2, 3]);
+    assert.strictEqual(sync.pending, 0);
+  });
+
   test("a snapshot received before admission replays the held commands", () => {
     const { harness, sync } = setup({ admitted: false });
     const values: number[] = [];

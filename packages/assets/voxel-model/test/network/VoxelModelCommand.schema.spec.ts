@@ -92,6 +92,34 @@ const kCommands: readonly VoxelModelCommand[] = [
     action: "material-changed",
     id: "material-1",
     surface: createMaterialSurface()
+  },
+  {
+    action: "animation-set-linked",
+    link: {
+      id: "set-1",
+      kind: "voxelanimation",
+      bindings: [{ path: "body/arm", target: null }]
+    }
+  },
+  {
+    action: "animation-set-unlinked",
+    id: "set-1"
+  },
+  {
+    action: "animation-set-owned",
+    id: "set-1",
+    own: false
+  },
+  {
+    action: "animation-binding-changed",
+    id: "set-1",
+    path: "body/arm",
+    target: "Body/Hand"
+  },
+  {
+    action: "animation-binding-cleared",
+    id: "set-1",
+    path: "body/arm"
   }
 ];
 

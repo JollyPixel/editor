@@ -32,7 +32,8 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
       defaultSize: TEXTURE_SIZE
     },
     "@jolly-pixel/asset.voxel-map": {},
-    "@jolly-pixel/asset.voxel-model": {}
+    "@jolly-pixel/asset.voxel-model": {},
+    "@jolly-pixel/asset.voxel-animation": {}
   }
 };
 const kEditorsSectionSchema = z.object({

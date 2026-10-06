@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import {
+  blockNameTaken,
   createBlockTransform,
   createBlockUv,
+  freeBlockName,
   nextBlockUvOrigin,
   type AddFolderOptions,
   type BlockTransformJSON,
@@ -17,6 +19,7 @@ import {
   buildHierarchyNodes,
   type HierarchyNode
 } from "./hierarchyNodes.ts";
+import { blockNameTakenMessage } from "./nodeNames.ts";
 
 export interface BlockPoses {
   under(
@@ -29,17 +32,27 @@ export interface BlockPoses {
   ): NodeTransformJSON[];
 }
 
+export interface BuildRecorder {
+  record<T>(label: string | null, edit: () => T): T;
+}
+
 export interface ModelHierarchyOptions {
   document: ModelDocument;
+  edits: BuildRecorder;
   textureSize(): Vec2;
   poses: BlockPoses;
 }
 
 export interface DuplicateOptions {
-  /** Falls back to `duplicateNameOf` the source name when empty. */
-  name?: string;
+  name: string;
   includeChildren: boolean;
   mirrorAxes: MirrorAxes;
+}
+
+export interface NodeMove {
+  id: string;
+  parentId: string | null;
+  beforeId?: string;
 }
 
 export interface RemoveOptions {
@@ -48,6 +61,7 @@ export interface RemoveOptions {
 
 export class ModelHierarchy {
   #document: ModelDocument;
+  #edits: BuildRecorder;
   #textureSize: () => Vec2;
   #poses: BlockPoses;
 
@@ -55,6 +69,7 @@ export class ModelHierarchy {
     options: ModelHierarchyOptions
   ) {
     this.#document = options.document;
+    this.#edits = options.edits;
     this.#textureSize = options.textureSize;
     this.#poses = options.poses;
   }
@@ -67,6 +82,29 @@ export class ModelHierarchy {
     id: string
   ): boolean {
     return this.#document.tree.get(id)?.kind === "folder";
+  }
+
+  blockNameError(
+    name: string,
+    parentId: string | null,
+    exceptId?: string
+  ): string | null {
+    const { tree } = this.#document;
+
+    return blockNameTaken(tree, name, parentId, exceptId) ?
+      blockNameTakenMessage(tree, parentId, name.trim()) :
+      null;
+  }
+
+  renameError(
+    id: string,
+    name: string
+  ): string | null {
+    const node = this.#document.tree.get(id);
+
+    return node?.kind === "block" ?
+      this.blockNameError(name, node.parentId, id) :
+      null;
   }
 
   createBlock(
@@ -97,7 +135,7 @@ export class ModelHierarchy {
     id: string,
     name: string
   ): void {
-    this.#document.rename(id, name);
+    this.#edits.record(null, () => this.#document.rename(id, name));
   }
 
   move(
@@ -116,9 +154,20 @@ export class ModelHierarchy {
         };
       });
 
-    this.#document.move(id, parentId, {
+    this.#edits.record(null, () => this.#document.move(id, parentId, {
       transforms,
       beforeId
+    }));
+  }
+
+  moveAll(
+    moves: readonly NodeMove[]
+  ): void {
+    const label = moves.length > 1 ? `Move ${moves.length} nodes` : null;
+    this.#edits.record(label, () => {
+      for (const { id, parentId, beforeId } of moves) {
+        this.move(id, parentId, beforeId);
+      }
     });
   }
 
@@ -131,33 +180,35 @@ export class ModelHierarchy {
       return null;
     }
 
-    const { mirrorAxes } = options;
-    const duplicatedUuids: string[] = [];
-    const duplicateId = this.#duplicateNode(
-      source,
-      {
-        name: options.name || duplicateNameOf(source.name),
-        parentId: source.parentId,
-        beforeId: this.#document.tree.nextSiblingOf(source.id)
-      },
-      options.includeChildren,
-      duplicatedUuids
-    );
-
-    if (
-      duplicateId !== null &&
-      (mirrorAxes.x || mirrorAxes.y || mirrorAxes.z)
-    ) {
-      const mirrored = this.#poses.mirror(
-        duplicatedUuids,
-        mirrorAxes
+    return this.#edits.record(`Duplicate ${source.name}`, () => {
+      const { mirrorAxes } = options;
+      const duplicatedUuids: string[] = [];
+      const duplicateId = this.#duplicateNode(
+        source,
+        {
+          name: options.name,
+          parentId: source.parentId,
+          beforeId: this.#document.tree.nextSiblingOf(source.id)
+        },
+        options.includeChildren,
+        duplicatedUuids
       );
-      for (const { id, transform } of mirrored) {
-        this.#document.transform(id, transform, mirrorAxes);
-      }
-    }
 
-    return duplicateId;
+      if (
+        duplicateId !== null &&
+        (mirrorAxes.x || mirrorAxes.y || mirrorAxes.z)
+      ) {
+        const mirrored = this.#poses.mirror(
+          duplicatedUuids,
+          mirrorAxes
+        );
+        for (const { id, transform } of mirrored) {
+          this.#document.transform(id, transform, mirrorAxes);
+        }
+      }
+
+      return duplicateId;
+    });
   }
 
   remove(
@@ -170,12 +221,14 @@ export class ModelHierarchy {
       return;
     }
 
-    if (!options.withChildren) {
-      for (const child of tree.childrenOf(id)) {
-        this.move(child.id, node.parentId, id);
+    this.#edits.record(`Delete ${node.name}`, () => {
+      if (!options.withChildren) {
+        for (const child of tree.childrenOf(id)) {
+          this.move(child.id, node.parentId, id);
+        }
       }
-    }
-    this.#document.remove(id);
+      this.#document.remove(id);
+    });
   }
 
   #blocksCarriedBy(
@@ -208,6 +261,7 @@ export class ModelHierarchy {
       this.#document.addFolder(copy) :
       this.#document.addBlock({
         ...copy,
+        name: freeBlockName(this.#document.tree, copy.name, copy.parentId ?? null),
         transform: node.transform,
         uv: node.uv,
         materialId: node.materialId
@@ -233,10 +287,4 @@ export class ModelHierarchy {
 
     return duplicateId;
   }
-}
-
-export function duplicateNameOf(
-  name: string
-): string {
-  return `${name} Copy`;
 }

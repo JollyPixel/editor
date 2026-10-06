@@ -58,6 +58,8 @@ export type CommandSyncEventMap<
   settled: () => void;
   overflow: () => void;
   acknowledged: (command: TCommand, version: number | undefined) => void;
+  /** Its local effect is already rolled back. */
+  refused: (command: TCommand) => void;
 };
 
 export class CommandSync<
@@ -105,10 +107,10 @@ export class CommandSync<
 
     switch (message.type) {
       case "snapshot":
-        this.#receiveSnapshot(message.data, message.version, message.acks);
+        this.#receiveSnapshot(message.data, message.version, message.acks, message.refused);
         break;
       case "correction":
-        this.#handleCorrection(message.data, message.acks);
+        this.#handleCorrection(message.data, message.acks, message.refused);
         break;
       case "catch-up":
         this.#handleCatchUp(message.data, message.version, message.acks);
@@ -270,13 +272,16 @@ export class CommandSync<
 
   #acknowledgeFrom(
     acks: NetworkAcks | undefined
-  ): void {
+  ): LedgerEntry<TCommand>[] {
+    const acknowledged: LedgerEntry<TCommand>[] = [];
     for (const clientId of [this.#resumingFrom, this.room.clientId]) {
       const seq = clientId === null ? undefined : acks?.[clientId];
       if (seq !== undefined) {
-        this.#acknowledge(clientId, seq);
+        acknowledged.push(...this.#acknowledge(clientId, seq));
       }
     }
+
+    return acknowledged;
   }
 
   #isOwn(
@@ -325,17 +330,29 @@ export class CommandSync<
 
   #handleCorrection(
     correction: TCommand,
-    acks: NetworkAcks | undefined
+    acks: NetworkAcks | undefined,
+    refused: number | undefined
   ): void {
-    this.#acknowledgeFrom(acks);
+    const acknowledged = this.#acknowledgeFrom(acks);
     if (this.#isOwn(correction)) {
-      this.#acknowledge(correction.clientId, correction.seq);
+      acknowledged.push(...this.#acknowledge(correction.clientId, correction.seq));
     }
-    if (this.#resyncing || this.#resumingFrom !== null) {
-      return;
+    if (!this.#resyncing && this.#resumingFrom === null) {
+      this.#integrator.integrateCorrection(correction);
     }
+    this.#emitRefused(acknowledged, refused);
+  }
 
-    this.#integrator.integrateCorrection(correction);
+  #emitRefused(
+    acknowledged: readonly LedgerEntry<TCommand>[],
+    refused: number | undefined
+  ): void {
+    const entry = refused === undefined ?
+      undefined :
+      acknowledged.find(({ command }) => command.seq === refused);
+    if (entry !== undefined) {
+      this.emit("refused", entry.command);
+    }
   }
 
   #handleCatchUp(
@@ -361,11 +378,12 @@ export class CommandSync<
   #receiveSnapshot(
     snapshot: TSnapshot,
     version: number | undefined,
-    acks: NetworkAcks | undefined
+    acks: NetworkAcks | undefined,
+    refused: number | undefined
   ): void {
     const applied = this.#applySnapshot?.(snapshot);
     if (applied === undefined) {
-      this.#handleSnapshot(snapshot, version, acks);
+      this.#handleSnapshot(snapshot, version, acks, refused);
 
       return;
     }
@@ -373,7 +391,7 @@ export class CommandSync<
     this.#deferred = [];
     applied.then(
       () => this.#releaseDeferred(
-        () => this.#handleSnapshot(snapshot, version, acks)
+        () => this.#handleSnapshot(snapshot, version, acks, refused)
       ),
       (error: unknown) => this.#releaseDeferred(
         () => this.emit("snapshot-failed", error)
@@ -399,9 +417,10 @@ export class CommandSync<
   #handleSnapshot(
     snapshot: TSnapshot,
     version: number | undefined,
-    acks: NetworkAcks | undefined
+    acks: NetworkAcks | undefined,
+    refused: number | undefined
   ): void {
-    this.#acknowledgeFrom(acks);
+    const acknowledged = this.#acknowledgeFrom(acks);
     this.#resyncing = false;
     if (version !== undefined) {
       this.#version = version;
@@ -411,6 +430,7 @@ export class CommandSync<
     if (this.#resumingFrom !== null) {
       this.#finishResume();
     }
+    this.#emitRefused(acknowledged, refused);
 
     if (!this.#ready) {
       this.#ready = true;

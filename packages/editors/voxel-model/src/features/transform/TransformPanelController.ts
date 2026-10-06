@@ -1,10 +1,6 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import * as THREE from "three";
-import type {
-  ModelChange,
-  ModelDocument
-} from "@jolly-pixel/asset.voxel-model/client";
 import { SubscriptionController } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -19,25 +15,24 @@ import type {
   TransformLock,
   TransformMode
 } from "./index.ts";
+import type { TransformTool } from "./TransformTool.ts";
 import { TRANSFORM_MODES } from "./transformModes.ts";
 
 // CONSTANTS
 const kDisplayDecimals = 2;
 
 export interface TransformWorkspace {
-  document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
   gizmo: TransformGizmo;
   lock: TransformLock;
+  tool: TransformTool;
 }
 
 export class TransformPanelController {
   #host: ReactiveControllerHost;
   #connection: SubscriptionController<TransformWorkspace>;
   #selected: ModelBlock | null = null;
-  #mode: TransformMode = "pos";
-  #space: GizmoSpace = "local";
   #axisValues: THREE.Vector3Like = {
     x: 0,
     y: 0,
@@ -48,29 +43,27 @@ export class TransformPanelController {
     uuid: string | null
   ): void => {
     this.#selected = uuid === null ? null : this.#workspace?.blocks.get(uuid) ?? null;
-    this.#syncAxisValues();
-    this.#host.requestUpdate();
+    this.#refresh();
   };
 
-  #onChange = (
-    change: ModelChange
+  #onTransformApplied = (
+    uuid: string
   ): void => {
-    const selected = this.#selected;
-    if (selected !== null && rewritesTransformOf(change, selected.uuid)) {
-      this.#refresh(selected);
+    if (uuid === this.#selected?.uuid) {
+      this.#refresh();
     }
   };
 
-  #refresh = (
+  #onGizmoChange = (
     block: ModelBlock
   ): void => {
     if (block === this.#selected) {
-      this.#syncAxisValues();
-      this.#host.requestUpdate();
+      this.#refresh();
     }
   };
 
-  #onLockChange = (): void => {
+  #refresh = (): void => {
+    this.#syncAxisValues();
     this.#host.requestUpdate();
   };
 
@@ -88,30 +81,32 @@ export class TransformPanelController {
     return this.#connection.current;
   }
 
+  get modes(): readonly TransformMode[] {
+    return this.#workspace?.tool.target.modes ?? [];
+  }
+
   get mode(): TransformMode {
-    return this.#mode;
+    return this.#workspace?.tool.mode ?? "pos";
   }
 
   set mode(
     mode: TransformMode
   ) {
-    this.#mode = mode;
-    this.#syncAxisValues();
-    this.#syncGizmo();
-    this.#host.requestUpdate();
+    if (this.#workspace !== null) {
+      this.#workspace.tool.mode = mode;
+    }
   }
 
   get space(): GizmoSpace {
-    return this.#space;
+    return this.#workspace?.tool.space ?? "local";
   }
 
   set space(
     space: GizmoSpace
   ) {
-    this.#space = space;
-    this.#syncAxisValues();
-    this.#syncGizmo();
-    this.#host.requestUpdate();
+    if (this.#workspace !== null) {
+      this.#workspace.tool.space = space;
+    }
   }
 
   get axisValues(): THREE.Vector3Like {
@@ -136,38 +131,32 @@ export class TransformPanelController {
   ): void {
     this.#connection.attach(workspace);
     this.#onSelect(workspace.selection.selected);
-    this.#syncGizmo();
   }
 
   #subscribeTo(
     workspace: TransformWorkspace
   ): Array<() => void> {
     const {
-      document,
+      blocks,
       selection,
       gizmo,
-      lock
+      lock,
+      tool
     } = workspace;
-    selection.on("select", this.#onSelect);
-    document.on("change", this.#onChange);
-    gizmo.on("change", this.#refresh);
 
     return [
-      () => selection.off("select", this.#onSelect),
-      () => document.off("change", this.#onChange),
-      () => gizmo.off("change", this.#refresh),
-      lock.subscribe("change", this.#onLockChange)
+      selection.subscribe("select", this.#onSelect),
+      blocks.subscribe("transformApplied", this.#onTransformApplied),
+      gizmo.subscribe("change", this.#onGizmoChange),
+      tool.subscribe("change", this.#refresh),
+      lock.subscribe("change", this.#refresh)
     ];
-  }
-
-  #syncGizmo(): void {
-    this.#workspace?.gizmo.configure(this.#mode, this.#space);
   }
 
   #syncAxisValues(): void {
     if (this.#selected !== null) {
       this.#axisValues = roundVector3(
-        TRANSFORM_MODES[this.#mode].read(this.#selected, this.#space === "world")
+        TRANSFORM_MODES[this.mode].read(this.#selected, this.space === "world")
       );
     }
   }
@@ -184,28 +173,13 @@ export class TransformPanelController {
     }
 
     const { x, y, z } = this.#axisValues;
-    TRANSFORM_MODES[this.#mode].write(
+    TRANSFORM_MODES[this.mode].write(
       block,
       new THREE.Vector3(x, y, z),
-      this.#space === "world"
+      this.space === "world"
     );
 
-    workspace.blocks.commitTransform(block.uuid);
-  }
-}
-
-function rewritesTransformOf(
-  change: ModelChange,
-  uuid: string
-): boolean {
-  const { command } = change;
-  switch (command.action) {
-    case "node-transformed":
-      return command.id === uuid;
-    case "node-moved":
-      return command.transforms.some(({ id }) => id === uuid);
-    default:
-      return false;
+    workspace.tool.target.commit(block);
   }
 }
 

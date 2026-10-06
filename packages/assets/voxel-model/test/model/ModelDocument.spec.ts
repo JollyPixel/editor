@@ -117,7 +117,7 @@ describe("ModelDocument", () => {
     document.remove(folderId!);
 
     assert.deepEqual(
-      changes[0].removed.map((node) => node.id),
+      changes[0].image.before.nodes.map((node) => node.id),
       [folderId, blockId]
     );
     assert.equal(document.tree.size, 0);
@@ -131,8 +131,7 @@ describe("ModelDocument", () => {
 
     document.rename(blockId!, "Leg");
 
-    assert.deepEqual(changes[0].previous, [before]);
-    assert.deepEqual(changes[0].removed, []);
+    assert.deepEqual(changes[0].image.before.nodes, [before]);
   });
 
   test("loads a snapshot as one reset, with no change events", () => {
@@ -151,7 +150,8 @@ describe("ModelDocument", () => {
           name: "Limbs"
         }
       ],
-      materials: []
+      materials: [],
+      animationSets: []
     });
 
     assert.equal(resets, 1);

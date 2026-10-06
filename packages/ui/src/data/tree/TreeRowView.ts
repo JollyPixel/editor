@@ -25,6 +25,7 @@ export interface TreeRowState {
   dragSource: boolean;
   moveCursor: boolean;
   renaming: boolean;
+  renameError: string | null;
   hasBranches: boolean;
   swatchPosition: TreeSwatchPosition;
   reorderable: boolean;
@@ -35,6 +36,7 @@ export class TreeRowView {
   readonly label: string;
   readonly icon: IconName | undefined;
   readonly detail: string | undefined;
+  readonly warning: string | undefined;
   readonly visible: boolean | undefined;
   readonly locked: boolean | undefined;
   readonly swatch: Readonly<TreeSwatch> | undefined;
@@ -52,6 +54,7 @@ export class TreeRowView {
   readonly dragSource: boolean;
   readonly moveCursor: boolean;
   readonly renaming: boolean;
+  readonly renameError: string | null;
   readonly hasBranches: boolean;
   readonly swatchPosition: TreeSwatchPosition;
   readonly reorderable: boolean;
@@ -71,6 +74,7 @@ export class TreeRowView {
     this.label = node.label;
     this.icon = node.icon;
     this.detail = node.detail;
+    this.warning = node.warning;
     this.visible = node.visible;
     this.locked = node.locked;
     this.swatch = node.swatch === undefined ?
@@ -92,6 +96,7 @@ export class TreeRowView {
     this.dragSource = state.dragSource;
     this.moveCursor = state.moveCursor;
     this.renaming = state.renaming;
+    this.renameError = state.renameError;
     this.hasBranches = state.hasBranches;
     this.swatchPosition = state.swatchPosition;
     this.reorderable = state.reorderable;
@@ -105,6 +110,7 @@ export class TreeRowView {
       this.label === other.label &&
       this.icon === other.icon &&
       this.detail === other.detail &&
+      this.warning === other.warning &&
       this.visible === other.visible &&
       this.locked === other.locked &&
       this.branch === other.branch &&
@@ -119,6 +125,7 @@ export class TreeRowView {
       this.dragSource === other.dragSource &&
       this.moveCursor === other.moveCursor &&
       this.renaming === other.renaming &&
+      this.renameError === other.renameError &&
       this.hasBranches === other.hasBranches &&
       this.swatchPosition === other.swatchPosition &&
       this.reorderable === other.reorderable &&

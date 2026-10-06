@@ -5,6 +5,8 @@ import type { UVLayoutData } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type {
+  animationBindingSchema,
+  animationSetLinkSchema,
   blockNodeSchema,
   blockTransformSchema,
   folderNodeSchema,
@@ -36,6 +38,9 @@ export type FolderNodeJSON = network.Infer<typeof folderNodeSchema>;
 export type BlockNodeJSON = network.Infer<typeof blockNodeSchema>;
 export type ModelNodeJSON = FolderNodeJSON | BlockNodeJSON;
 export type ModelNodeKind = ModelNodeJSON["kind"];
+
+export type AnimationBindingJSON = network.Infer<typeof animationBindingSchema>;
+export type AnimationSetLinkJSON = network.Infer<typeof animationSetLinkSchema>;
 
 export type VoxelModelCommand = network.Infer<typeof voxelModelCommandSchema>;
 export type VoxelModelCommandAction = VoxelModelCommand["action"];

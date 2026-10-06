@@ -12,6 +12,7 @@ import {
   voxelModelDocumentKind,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
+import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   EditorRuntime,
   type AssetLease,
@@ -31,11 +32,17 @@ import {
   ViewSettingsStore
 } from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
+import { sessionAnimationSets } from "./animationSetSource.ts";
 
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
 const kModelKind = voxelModelDocumentKind();
-const kTextureKind = pixelArtDocumentKind();
+const kTextureKind = pixelArtDocumentKind({
+  history: {
+    enabled: true
+  }
+});
+const kAnimationKind = voxelAnimationDocumentKind();
 
 export type ModelTextureLease = AssetLease<
   PixelDocument,
@@ -94,6 +101,7 @@ export class VoxelModelEditor {
       identity: session.identity,
       presence: new PresenceStore(),
       pixels: texture.document,
+      animationSets: sessionAnimationSets(session, kAnimationKind),
       view: new ViewSettingsStore({
         storage: new LocalStorageAdapter()
       }),

@@ -32,6 +32,7 @@ export const voxelModelDocumentSchema = defineSchema({
     version: { const: VOXEL_MODEL_DOCUMENT_VERSION },
     nodes: voxelModelSnapshotSchema.properties.nodes,
     materials: voxelModelSnapshotSchema.properties.materials,
+    animationSets: voxelModelSnapshotSchema.properties.animationSets,
     texture: {
       type: "object",
       properties: {
@@ -41,7 +42,7 @@ export const voxelModelDocumentSchema = defineSchema({
       required: ["id", "kind"]
     }
   },
-  required: ["version", "nodes", "materials", "texture"]
+  required: ["version", "nodes", "materials", "animationSets", "texture"]
 });
 
 export type VoxelModelDocument = Infer<typeof voxelModelDocumentSchema>;
@@ -72,6 +73,7 @@ export function createVoxelModelDocument(
       };
     }),
     materials: [],
+    animationSets: [],
     texture: {
       id: texture.id,
       kind: texture.kind

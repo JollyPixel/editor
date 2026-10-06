@@ -14,6 +14,8 @@ import {
   BlockSelectionStore,
   MaterialPreviews
 } from "#src/state/index.ts";
+import type { BuildRecorder } from "#src/model/index.ts";
+import type { EditorHistory } from "#src/features/history/index.ts";
 
 export interface ModelFixture {
   document: ModelDocument;
@@ -54,5 +56,13 @@ export function createModelFixture(): ModelFixture {
 
       return block;
     }
+  };
+}
+
+export function buildEditsOf(
+  history: Pick<EditorHistory, "record">
+): BuildRecorder {
+  return {
+    record: (label, edit) => history.record("build", label, edit)
   };
 }

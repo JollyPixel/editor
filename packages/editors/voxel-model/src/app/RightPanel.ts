@@ -123,3 +123,9 @@ export class RightPanel extends LitElement {
 }
 
 customElements.define("jolly-model-editor-right-panel", RightPanel);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "jolly-model-editor-right-panel": RightPanel;
+  }
+}

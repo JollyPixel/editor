@@ -194,6 +194,38 @@ export const treeStyles = css`
     font: inherit;
   }
 
+  .rename[aria-invalid="true"] {
+    outline-color: var(--jolly-danger-border, ${kFallback.inkDanger});
+  }
+
+  .rename-error {
+    position: absolute;
+    z-index: 1;
+    top: 100%;
+    inset-inline-start: var(--jolly-tree-row-indent, 0);
+    max-width: calc(100% - var(--jolly-tree-row-indent, 0px));
+    padding: 2px var(--jolly-space-1, 4px);
+    border: 1px solid var(--jolly-danger-border, ${kFallback.inkDanger});
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-surface-raised, ${kFallback.controlBg});
+    box-shadow: var(--jolly-shadow-overlay, none);
+    color: var(--jolly-danger, ${kFallback.inkDanger});
+    font-size: 0.9em;
+    white-space: normal;
+    pointer-events: none;
+  }
+
+  .row[data-warning="true"] .label {
+    color: var(--jolly-danger, ${kFallback.inkDanger});
+  }
+
+  .warning {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--jolly-danger, ${kFallback.inkDanger});
+  }
+
   .row[data-hidden="true"] .label,
   .row[data-hidden="true"] .node-icon {
     opacity: 0.5;

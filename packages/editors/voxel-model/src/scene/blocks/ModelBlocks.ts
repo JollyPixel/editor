@@ -30,6 +30,7 @@ export type ModelBlocksEvents = {
   blockAdded: (block: ModelBlock) => void;
   blockRemoved: (uuid: string) => void;
   blockVisibilityChanged: (uuids: readonly string[], visible: boolean) => void;
+  transformApplied: (uuid: string) => void;
 };
 
 export interface ModelBlocksOptions {
@@ -68,7 +69,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
         break;
 
       case "node-removed":
-        for (const node of change.removed) {
+        for (const node of change.image.before.nodes) {
           this.#discard(node.id);
         }
         break;
@@ -216,6 +217,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     const block = this.#blocks.get(uuid);
     if (block) {
       block.transform = transform;
+      this.emit("transformApplied", uuid);
     }
   }
 

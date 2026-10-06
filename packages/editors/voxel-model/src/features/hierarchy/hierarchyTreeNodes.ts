@@ -34,6 +34,7 @@ export function toTreeNodes(
           swatch: materialSwatch(node.material),
           visible: isVisible(node.id)
         },
+      ...node.nameClash === undefined ? {} : { warning: node.nameClash },
       ...badges.length > 0 ? { badges } : {},
       ...children.length > 0 ? { children } : {}
     };

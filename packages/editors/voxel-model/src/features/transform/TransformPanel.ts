@@ -24,11 +24,6 @@ import {
 import { TRANSFORM_MODES } from "./transformModes.ts";
 
 // CONSTANTS
-const kTransformModes: JollyOption<TransformMode>[] = Object.entries(TRANSFORM_MODES)
-  .map(([value, { label, icon }]) => {
-    return { value: value as TransformMode, label, icon };
-  });
-
 const kSpaceOptions: JollyOption<GizmoSpace>[] = [
   {
     value: "local",
@@ -93,7 +88,7 @@ export class TransformPanel extends LitElement {
       <jolly-button-group
         icon-only
         aria-label="Transform mode"
-        .options=${kTransformModes}
+        .options=${this.#transform.modes.map(modeOption)}
         .value=${this.#mode.value}
         @jolly-change=${this.#mode.commit}
       ></jolly-button-group>
@@ -114,6 +109,18 @@ export class TransformPanel extends LitElement {
       ></jolly-vector3>
     `;
   }
+}
+
+function modeOption(
+  mode: TransformMode
+): JollyOption<TransformMode> {
+  const { label, icon } = TRANSFORM_MODES[mode];
+
+  return {
+    value: mode,
+    label,
+    icon
+  };
 }
 
 customElements.define("jolly-model-editor-transform", TransformPanel);

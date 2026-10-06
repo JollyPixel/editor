@@ -14,14 +14,17 @@ import {
   EditorDialog,
   type EditorDialogFrame
 } from "../../../shared/EditorDialog.ts";
+import {
+  NameDraft,
+  type NameFieldOptions
+} from "../../../shared/NameDraft.ts";
 
 // CONSTANTS
 const kAxes = ["x", "y", "z"] as const;
 
 type MirrorAxis = typeof kAxes[number];
 
-export interface HierarchyDuplicateContext {
-  defaultName: string;
+export interface HierarchyDuplicateContext extends NameFieldOptions {
   hasChildren: boolean;
 }
 
@@ -48,7 +51,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
   `;
 
   @state()
-  declare private name: string;
+  declare private draft: NameDraft;
 
   @state()
   declare private hasChildren: boolean;
@@ -61,7 +64,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
 
   constructor() {
     super();
-    this.name = "";
+    this.draft = new NameDraft("");
     this.hasChildren = false;
     this.includeChildren = true;
     this.mirrorAxes = {
@@ -76,14 +79,15 @@ export class HierarchyDuplicateDialog extends EditorDialog<
       heading: "Duplicate",
       icon: "action-duplicate",
       confirmLabel: "Duplicate",
-      confirmVariant: "accent"
+      confirmVariant: "accent",
+      confirmDisabled: this.draft.error !== null
     };
   }
 
   protected reset(
     context: HierarchyDuplicateContext
   ): void {
-    this.name = context.defaultName;
+    this.draft = NameDraft.from(context);
     this.hasChildren = context.hasChildren;
     this.includeChildren = true;
     this.mirrorAxes = {
@@ -95,7 +99,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
 
   protected result(): HierarchyDuplicateResult {
     return {
-      name: this.name.trim(),
+      name: this.draft.name,
       includeChildren: this.hasChildren && this.includeChildren,
       mirrorAxes: { ...this.mirrorAxes }
     };
@@ -109,7 +113,8 @@ export class HierarchyDuplicateDialog extends EditorDialog<
     return html`
       <jolly-text
         label="Name"
-        .value=${this.name}
+        .value=${this.draft.text}
+        .error=${this.draft.error}
         @jolly-input=${this.#onName}
         @jolly-change=${this.#onName}
       ></jolly-text>
@@ -138,7 +143,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
   #onName(
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    this.name = event.detail.value;
+    this.draft = this.draft.edit(event.detail.value);
   }
 
   #onIncludeChildren(

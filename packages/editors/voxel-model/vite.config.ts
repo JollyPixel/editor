@@ -36,6 +36,7 @@ const kProjectFile: ProjectFileData = {
   version: 1,
   kinds: {
     "@jolly-pixel/asset.voxel-model": {},
+    "@jolly-pixel/asset.voxel-animation": {},
     "@jolly-pixel/asset.pixel-art": {
       defaultSize: TEXTURE_SIZE
     }

@@ -1,32 +1,34 @@
+// Import Third-party Dependencies
+import { SyncedCommandDocument } from "@jolly-pixel/network/client";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
+
 // Import Internal Dependencies
 import { VOXEL_MODEL_KIND } from "../asset/voxelModel.ts";
-import { ModelDocument } from "../model/ModelDocument.ts";
-import { ModelSyncClient } from "./ModelSyncClient.ts";
-import type { VoxelModelRoom } from "./types.ts";
+import {
+  ModelDocument,
+  type ModelImage
+} from "../model/ModelDocument.ts";
+import { voxelModelWriteKeys } from "./VoxelModelCommandKeys.ts";
+import type {
+  VoxelModelNetworkCommand,
+  VoxelModelRoom,
+  VoxelModelSnapshot
+} from "./types.ts";
 
-export class SyncedModelDocument {
-  readonly document: ModelDocument;
-  readonly ready: Promise<void>;
-
-  #sync: ModelSyncClient;
-
-  get loaded(): boolean {
-    return this.#sync.ready;
-  }
-
+export class SyncedModelDocument extends SyncedCommandDocument<
+  ModelDocument,
+  VoxelModelNetworkCommand,
+  VoxelModelSnapshot,
+  AssetRoomNotice,
+  ModelImage
+> {
   constructor(
     room: VoxelModelRoom
   ) {
-    this.document = new ModelDocument();
-    this.#sync = new ModelSyncClient({
-      room,
-      document: this.document
+    super(room, {
+      document: new ModelDocument(),
+      keys: voxelModelWriteKeys
     });
-    this.ready = this.#sync.whenReady();
-  }
-
-  dispose(): void {
-    this.#sync.destroy();
   }
 }
 

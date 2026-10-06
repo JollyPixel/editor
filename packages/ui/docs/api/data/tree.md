@@ -30,6 +30,7 @@ tree.expanded = ["scene"];
 | `swatchPosition` | `TreeSwatchPosition` | `"end"` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 | `virtual` | `boolean` | `false` |
+| `validateRename` | `TreeRenameValidator \| null` | `null` |
 
 The component does not mutate these arrays after user input. Consumers write
 event details back to the relevant property. `selected` and `expanded` compare
@@ -95,6 +96,21 @@ paints no drop indicator and never reaches `jolly-reparent`. A predicate that
 runs on every pointer move should stay cheap. The structural rule runs first,
 so `acceptDrop` is never asked about a move that is already impossible.
 
+## Refusing a rename
+
+`validateRename` is a `(detail: JollyRenameDetail) => string | null` asked about
+each draft that differs from the label: a string refuses the name and is shown
+under the field, `null` accepts it.
+
+```ts
+tree.validateRename = ({ id, name }) =>
+  siblingNamed(id, name) ? `"${name}" already exists here` : null;
+```
+
+It runs as the user types. Enter on a refused name keeps the field open and
+marks it invalid; Escape or leaving the field cancels without emitting
+`jolly-rename`.
+
 ## Promoting a nested row back out while dragging
 
 Dropping below the last visible row is not restricted to that row's own
@@ -145,6 +161,18 @@ selected row. Clicking a swatch emits `jolly-activate-swatch` and neither
 selects nor renames the row, so a consumer opens the property's editor there.
 Unlike a badge, a swatch is a click target. It is not a tab stop: the keyboard
 reaches the same editor through the row. A row has at most one swatch.
+
+## Flagging a row with a warning
+
+`TreeNode.warning` marks a row as a problem the user should fix: the label
+turns to the danger colour and a warning icon, sitting after the swatch and
+before the badges, carries the text as its tooltip and accessible label.
+
+```ts
+node.warning = clashes.has(node.id) ?
+  `Another block here is named ${node.label}` :
+  undefined;
+```
 
 ## Long labels
 

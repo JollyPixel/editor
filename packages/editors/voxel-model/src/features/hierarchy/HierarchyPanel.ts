@@ -3,6 +3,7 @@ import {
   LitElement,
   css,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import { query } from "lit/decorators.js";
@@ -13,20 +14,21 @@ import type {
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
-import "./dialogs/HierarchyNameDialog.ts";
+import "../../shared/NameDialog.ts";
 import "./dialogs/HierarchyDuplicateDialog.ts";
 import "../../shared/DeleteDialog.ts";
 import {
   HierarchyController,
   type HierarchyWorkspace
 } from "./HierarchyController.ts";
-import type { HierarchyNameDialog } from "./dialogs/HierarchyNameDialog.ts";
+import type { NameDialog } from "../../shared/NameDialog.ts";
 import type { HierarchyDuplicateDialog } from "./dialogs/HierarchyDuplicateDialog.ts";
 import type { DeleteDialog } from "../../shared/DeleteDialog.ts";
 import { ContextMenuController } from "../../shared/ContextMenuController.ts";
 
 // CONSTANTS
 export const SHOW_MATERIAL_EVENT = "show-material";
+export const SHOW_BUILD_EVENT = "show-build";
 
 export class HierarchyPanel extends LitElement {
   #tree = new HierarchyController(this, {
@@ -54,7 +56,7 @@ export class HierarchyPanel extends LitElement {
   declare private rowMenu: ContextMenu;
 
   @query("jolly-model-editor-name-dialog")
-  declare private nameDialog: HierarchyNameDialog;
+  declare private nameDialog: NameDialog;
 
   @query("jolly-model-editor-duplicate-dialog")
   declare private duplicateDialog: HierarchyDuplicateDialog;
@@ -96,7 +98,16 @@ export class HierarchyPanel extends LitElement {
     this.#tree.attach(workspace);
   }
 
+  readonly #showBuild = (): void => {
+    this.dispatchEvent(new CustomEvent(SHOW_BUILD_EVENT, {
+      bubbles: true,
+      composed: true
+    }));
+  };
+
   override render(): TemplateResult {
+    const { editable } = this.#tree;
+
     return html`
       <jolly-folder
         key="hierarchy"
@@ -104,50 +115,18 @@ export class HierarchyPanel extends LitElement {
         .collapsible=${false}
         flush
       >
-        <jolly-button
-          slot="actions"
-          icon="plus"
-          icon-only
-          label="Add Block"
-          title="Add Block"
-          @click=${this.#tree.addBlock}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="folder-add"
-          icon-only
-          label="Add Folder"
-          title="Add Folder"
-          @click=${this.#tree.addFolder}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="action-duplicate"
-          icon-only
-          label="Duplicate"
-          title="Duplicate"
-          ?disabled=${!this.#tree.hasSelection}
-          @click=${this.#tree.duplicateSelected}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="action-delete"
-          icon-only
-          label="Delete"
-          title="Delete"
-          ?disabled=${!this.#tree.hasSelection}
-          @click=${this.#tree.deleteSelected}
-        ></jolly-button>
+        ${editable ? this.#renderActions() : this.#renderLock()}
         <jolly-tree
           .nodes=${this.#tree.nodes}
           .selected=${this.#tree.selected}
           .expanded=${this.#tree.expanded}
-          reorderable
-          row-drag
-          renamable
+          .validateRename=${this.#tree.validateRename}
+          ?reorderable=${editable}
+          ?row-drag=${editable}
+          ?renamable=${editable}
           @jolly-activate=${this.#tree.handleActivate}
           @jolly-activate-swatch=${this.#tree.handleActivateSwatch}
-          @jolly-context-request=${this.#menu.onContextRequest}
+          @jolly-context-request=${editable ? this.#menu.onContextRequest : nothing}
           @jolly-select=${this.#tree.handleSelect}
           @jolly-toggle-expand=${this.#tree.handleToggleExpand}
           @jolly-toggle-visible=${this.#tree.handleToggleVisible}
@@ -162,6 +141,58 @@ export class HierarchyPanel extends LitElement {
         label="Hierarchy actions"
         @jolly-context-action=${this.#menu.onContextAction}
       ></jolly-context-menu>
+    `;
+  }
+
+  #renderLock(): TemplateResult {
+    return html`
+      <jolly-button
+        slot="actions"
+        icon="lock"
+        icon-only
+        label="Edit in Build"
+        title="Edit the hierarchy in the Build tab"
+        @click=${this.#showBuild}
+      ></jolly-button>
+    `;
+  }
+
+  #renderActions(): TemplateResult {
+    return html`
+      <jolly-button
+        slot="actions"
+        icon="plus"
+        icon-only
+        label="Add Block"
+        title="Add Block"
+        @click=${this.#tree.addBlock}
+      ></jolly-button>
+      <jolly-button
+        slot="actions"
+        icon="folder-add"
+        icon-only
+        label="Add Folder"
+        title="Add Folder"
+        @click=${this.#tree.addFolder}
+      ></jolly-button>
+      <jolly-button
+        slot="actions"
+        icon="action-duplicate"
+        icon-only
+        label="Duplicate"
+        title="Duplicate"
+        ?disabled=${!this.#tree.hasSelection}
+        @click=${this.#tree.duplicateSelected}
+      ></jolly-button>
+      <jolly-button
+        slot="actions"
+        icon="action-delete"
+        icon-only
+        label="Delete"
+        title="Delete"
+        ?disabled=${!this.#tree.hasSelection}
+        @click=${this.#tree.deleteSelected}
+      ></jolly-button>
     `;
   }
 }

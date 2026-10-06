@@ -152,7 +152,7 @@ test("clicking the viewport selects a block, and empty space clears it", async({
     await pressAt(page, [
       {
         x: canvas.x + 8,
-        y: canvas.y + 8
+        y: canvas.y + (canvas.height / 2)
       }
     ], { settle: nextFrames });
 

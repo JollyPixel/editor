@@ -10,21 +10,24 @@ import type { JollyChangeDetail } from "@jolly-pixel/ui";
 import {
   EditorDialog,
   type EditorDialogFrame
-} from "../../../shared/EditorDialog.ts";
+} from "./EditorDialog.ts";
+import {
+  NameDraft,
+  type NameFieldOptions
+} from "./NameDraft.ts";
 
-export interface HierarchyNameContext {
+export interface NameDialogContext extends NameFieldOptions {
   heading: string;
   fieldLabel: string;
-  defaultName: string;
 }
 
-export interface HierarchyNameResult {
+export interface NameDialogResult {
   name: string;
 }
 
-export class HierarchyNameDialog extends EditorDialog<
-  HierarchyNameContext,
-  HierarchyNameResult
+export class NameDialog extends EditorDialog<
+  NameDialogContext,
+  NameDialogResult
 > {
   @state()
   declare private heading: string;
@@ -33,34 +36,35 @@ export class HierarchyNameDialog extends EditorDialog<
   declare private fieldLabel: string;
 
   @state()
-  declare private name: string;
+  declare private draft: NameDraft;
 
   constructor() {
     super();
     this.heading = "";
     this.fieldLabel = "";
-    this.name = "";
+    this.draft = new NameDraft("");
   }
 
   protected get frame(): EditorDialogFrame {
     return {
       heading: this.heading,
       confirmLabel: "OK",
-      confirmVariant: "accent"
+      confirmVariant: "accent",
+      confirmDisabled: this.draft.error !== null
     };
   }
 
   protected reset(
-    context: HierarchyNameContext
+    context: NameDialogContext
   ): void {
     this.heading = context.heading;
     this.fieldLabel = context.fieldLabel;
-    this.name = context.defaultName;
+    this.draft = NameDraft.from(context);
   }
 
-  protected result(): HierarchyNameResult {
+  protected result(): NameDialogResult {
     return {
-      name: this.name.trim()
+      name: this.draft.name
     };
   }
 
@@ -72,7 +76,8 @@ export class HierarchyNameDialog extends EditorDialog<
     return html`
       <jolly-text
         label=${this.fieldLabel}
-        .value=${this.name}
+        .value=${this.draft.text}
+        .error=${this.draft.error}
         @jolly-input=${this.#onName}
         @jolly-change=${this.#onName}
       ></jolly-text>
@@ -82,14 +87,14 @@ export class HierarchyNameDialog extends EditorDialog<
   #onName(
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    this.name = event.detail.value;
+    this.draft = this.draft.edit(event.detail.value);
   }
 }
 
-customElements.define("jolly-model-editor-name-dialog", HierarchyNameDialog);
+customElements.define("jolly-model-editor-name-dialog", NameDialog);
 
 declare global {
   interface HTMLElementTagNameMap {
-    "jolly-model-editor-name-dialog": HierarchyNameDialog;
+    "jolly-model-editor-name-dialog": NameDialog;
   }
 }

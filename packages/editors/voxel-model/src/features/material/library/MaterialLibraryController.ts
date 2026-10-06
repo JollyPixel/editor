@@ -28,6 +28,7 @@ import type {
   MaterialFocusStore,
   PresenceStore
 } from "../../../state/index.ts";
+import type { TabRecorder } from "../../history/index.ts";
 import { ExpandedRows } from "../../../shared/ExpandedRows.ts";
 import {
   EMPTY_MENU,
@@ -58,6 +59,7 @@ import {
 
 export interface MaterialWorkspace {
   document: ModelDocument;
+  history: TabRecorder<"material">;
   selection: BlockSelectionStore;
   materialFocus: MaterialFocusStore;
   presence: PresenceStore;
@@ -205,22 +207,21 @@ export class MaterialLibraryController {
   create(
     preset: MaterialPreset
   ): void {
-    this.#adopt(this.#workspace?.document.addMaterial({
+    this.#addAndAdopt(null, (document) => document.addMaterial({
       name: preset.label,
       surface: preset.surface
-    }) ?? null);
+    }));
   }
 
   duplicate(
     materialId: string
   ): void {
-    const document = this.#workspace?.document;
     const source = this.#material(materialId);
-    if (document === undefined || source === undefined) {
+    if (source === undefined) {
       return;
     }
 
-    this.#adopt(document.addMaterial({
+    this.#addAndAdopt(null, (document) => document.addMaterial({
       name: `${source.name} Copy`,
       surface: source.surface,
       parentId: source.parentId,
@@ -266,16 +267,20 @@ export class MaterialLibraryController {
   paste(
     text: string
   ): boolean {
-    const document = this.#workspace?.document;
+    const workspace = this.#workspace;
     const materials = decodeMaterialTransfer(text);
-    if (document === undefined || materials === null || materials.length === 0) {
+    if (workspace === null || materials === null || materials.length === 0) {
       return false;
     }
 
-    const [first = null] = materials.map(
-      ({ name, surface }) => document.addMaterial({ name, surface })
-    );
-    this.#adopt(first);
+    const label = materials.length === 1 ?
+      `Paste ${materials[0].name}` :
+      `Paste ${materials.length} materials`;
+    this.#addAndAdopt(label, (document) => {
+      const [first = null] = materials.map(({ name, surface }) => document.addMaterial({ name, surface }));
+
+      return first;
+    });
 
     return true;
   }
@@ -399,17 +404,22 @@ export class MaterialLibraryController {
     return selected === null ? undefined : workspace?.document.tree.block(selected);
   }
 
-  #adopt(
-    materialId: string | null
+  #addAndAdopt(
+    label: string | null,
+    add: (document: ModelDocument) => string | null
   ): void {
-    if (materialId === null) {
-      return;
-    }
+    const workspace = this.#workspace;
+    workspace?.history.record("material", label, () => {
+      const materialId = add(workspace.document);
+      if (materialId === null) {
+        return;
+      }
 
-    this.select(materialId);
-    if (this.#selectedBlock()?.materialId === undefined) {
-      this.assign(materialId);
-    }
+      this.select(materialId);
+      if (this.#selectedBlock()?.materialId === undefined) {
+        this.assign(materialId);
+      }
+    });
   }
 
   #followBlock(): void {

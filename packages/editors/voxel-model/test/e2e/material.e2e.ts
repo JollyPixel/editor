@@ -63,9 +63,9 @@ test("a slider drag previews on the block and is stored on release", async({ pag
 });
 
 test("the footer applies the material to the selected block and removes it", async({ page }) => {
+  await addNode(page, "Block", "Arm");
   await openMaterial(page, "Block");
   await newMaterial(page, "Metal");
-  await addNode(page, "Block", "Arm");
   await treeRow(page, "Arm").click();
   const footer = materialFooter(page);
 
@@ -80,9 +80,9 @@ test("the footer applies the material to the selected block and removes it", asy
 });
 
 test("a material lists the blocks using it, which follow the selection both ways", async({ page }) => {
+  await addNode(page, "Block", "Arm");
   await openMaterial(page, "Block");
   await newMaterial(page, "Metal");
-  await addNode(page, "Block", "Arm");
   await treeRow(page, "Arm").click();
   await materialFooter(page).getByRole("button", { name: "Apply to Arm" }).click();
 

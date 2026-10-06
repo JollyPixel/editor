@@ -103,7 +103,7 @@ export class OrderedTree<T extends OrderedTreeEntry> {
   ): boolean {
     return !this.#entries.has(entry.id) &&
       this.#isParent(entry.parentId) &&
-      this.#isSiblingSlot(beforeId, entry.parentId, entry.id);
+      this.isSiblingSlot(beforeId, entry.parentId, entry.id);
   }
 
   canMove(
@@ -114,7 +114,18 @@ export class OrderedTree<T extends OrderedTreeEntry> {
     return this.#entries.has(id) &&
       this.#isParent(parentId) &&
       !this.#isWithin(parentId, id) &&
-      this.#isSiblingSlot(beforeId, parentId, id);
+      this.isSiblingSlot(beforeId, parentId, id);
+  }
+
+  isSiblingSlot(
+    beforeId: string | undefined,
+    parentId: string | null,
+    id: string
+  ): boolean {
+    return beforeId === undefined || (
+      beforeId !== id &&
+      this.#entries.get(beforeId)?.parentId === parentId
+    );
   }
 
   add(
@@ -203,17 +214,6 @@ export class OrderedTree<T extends OrderedTreeEntry> {
     const parent = this.#entries.get(id);
 
     return parent !== undefined && this.#canContain(parent);
-  }
-
-  #isSiblingSlot(
-    beforeId: string | undefined,
-    parentId: string | null,
-    id: string
-  ): boolean {
-    return beforeId === undefined || (
-      beforeId !== id &&
-      this.#entries.get(beforeId)?.parentId === parentId
-    );
   }
 
   #isWithin(

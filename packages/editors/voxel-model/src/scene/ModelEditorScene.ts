@@ -19,6 +19,8 @@ import {
   BlockSelectionStore,
   MaterialFocusStore,
   MaterialPreviews,
+  TabStore,
+  type AnimationFocusStore,
   type PresenceStore,
   type ViewSettingsStore
 } from "../state/index.ts";
@@ -34,8 +36,24 @@ import {
 import { BlockTextures } from "../features/texture/index.ts";
 import {
   TransformGizmo,
+  TransformTool,
+  restTarget,
   type TransformLock
 } from "../features/transform/index.ts";
+import {
+  bindHistoryShortcuts,
+  createEditorHistory,
+  type EditorHistory
+} from "../features/history/index.ts";
+import type {
+  AnimationLibrary,
+  AnimationSetSource
+} from "../features/animation/AnimationLibrary.ts";
+import type { AnimationKeyer } from "../features/animation/AnimationKeyer.ts";
+import type { KeyEditor } from "../features/animation/KeyEditor.ts";
+import type { AnimationSession } from "../features/animation/AnimationSession.ts";
+import { createAnimation } from "../features/animation/createAnimation.ts";
+import { bindAnimationShortcuts } from "../features/animation/animationShortcuts.ts";
 import { createModelGrid } from "./modelGrid.ts";
 import { SceneWaker } from "./SceneWaker.ts";
 
@@ -45,6 +63,7 @@ export interface ModelEditorSceneOptions {
   identity: PeerIdentity;
   presence: PresenceStore;
   pixels: PixelDocument;
+  animationSets: AnimationSetSource;
   archives: EditorArchives;
   view: ViewSettingsStore;
 }
@@ -52,12 +71,20 @@ export interface ModelEditorSceneOptions {
 export interface ModelWorkspace {
   archives: EditorArchives;
   document: ModelDocument;
+  history: EditorHistory;
+  tab: TabStore;
+  animations: AnimationLibrary;
+  animationFocus: AnimationFocusStore;
+  animationSession: AnimationSession;
+  keyEditor: KeyEditor;
+  keyer: AnimationKeyer;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
   materialFocus: MaterialFocusStore;
   hierarchy: ModelHierarchy;
   textures: BlockTextures;
   gizmo: TransformGizmo;
+  tool: TransformTool;
   lock: TransformLock;
   presence: PresenceStore;
   fields: PresenceSource;
@@ -113,6 +140,8 @@ export class ModelEditorScene extends Systems.Scene {
         initialTrailDistance: 12
       });
 
+    const history = createEditorHistory({ document });
+    const tab = new TabStore();
     const selection = new BlockSelectionStore();
     const materialFocus = new MaterialFocusStore();
     const previews = new MaterialPreviews();
@@ -122,6 +151,15 @@ export class ModelEditorScene extends Systems.Scene {
       selection,
       previews
     });
+    const animation = createAnimation({
+      document,
+      history,
+      tab,
+      source: this.#options.animationSets,
+      blocks,
+      requestFrame: () => this.world.invalidate()
+    });
+    const { animations, animationFocus, animationSession, keyEditor, keyer } = animation;
 
     const lighting = new ViewLighting({
       scene,
@@ -148,6 +186,7 @@ export class ModelEditorScene extends Systems.Scene {
     });
     const hierarchy = new ModelHierarchy({
       document,
+      edits: animation.buildEdits,
       textureSize: () => pixels.size(),
       poses: blocks
     });
@@ -163,6 +202,12 @@ export class ModelEditorScene extends Systems.Scene {
       world: this.world,
       camera: camera.camera
     });
+    const rest = restTarget({
+      blocks,
+      lock: collaboration.lock,
+      live: collaboration.live
+    });
+    const tool = new TransformTool(rest);
     const gizmo = new TransformGizmo({
       camera,
       canvas: this.world.renderer.canvas,
@@ -170,7 +215,7 @@ export class ModelEditorScene extends Systems.Scene {
       blocks,
       selection,
       lock: collaboration.lock,
-      live: collaboration.live
+      tool
     });
     this.world
       .createActor("block-picker")
@@ -205,8 +250,16 @@ export class ModelEditorScene extends Systems.Scene {
       view,
       requestFrame: () => this.world.invalidate()
     });
-
     this.#disposables.push(
+      animationSession.subscribe("active", (active) => {
+        tool.use(active ? keyer : rest);
+      }),
+      bindAnimationShortcuts({
+        keyboard: this.world.input.keyboard,
+        keyer,
+        selection
+      }),
+      () => animation.dispose(),
       () => waker.dispose(),
       () => this.world.renderer.removeRenderComponent(viewport),
       () => glow.dispose(),
@@ -216,18 +269,32 @@ export class ModelEditorScene extends Systems.Scene {
       () => textures.dispose(),
       () => lighting.dispose(),
       unfollowShading,
-      () => blocks.dispose()
+      () => blocks.dispose(),
+      bindHistoryShortcuts({
+        keyboard: this.world.input.keyboard,
+        history,
+        tab
+      }),
+      () => history.dispose()
     );
 
     this.#workspace.resolve({
       archives: this.#options.archives,
       document,
+      history,
+      tab,
+      animations,
+      animationFocus,
+      animationSession,
+      keyEditor,
+      keyer,
       blocks,
       selection,
       materialFocus,
       hierarchy,
       textures,
       gizmo,
+      tool,
       lock: collaboration.lock,
       presence,
       fields: collaboration.fields,

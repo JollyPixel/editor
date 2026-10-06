@@ -12,10 +12,11 @@ import {
   type JollyToggleVisibleDetail,
   type TreeNode
 } from "@jolly-pixel/ui";
-import type {
-  ModelChange,
-  ModelDocument,
-  VoxelModelCommand
+import {
+  freeBlockName,
+  type ModelChange,
+  type ModelDocument,
+  type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -23,13 +24,16 @@ import {
   blockIdsUnder,
   duplicateNameOf,
   findHierarchyNode,
+  kindLabel,
   type HierarchyNode,
+  type HierarchyNodeKind,
   type ModelHierarchy
 } from "../../model/index.ts";
 import type { ModelBlocks } from "../../scene/index.ts";
 import type {
   BlockSelectionStore,
-  PresenceStore
+  PresenceStore,
+  TabStore
 } from "../../state/index.ts";
 import {
   collectExpandableIds,
@@ -43,9 +47,9 @@ import {
   type RootAction
 } from "./hierarchyMenu.ts";
 import type {
-  HierarchyNameContext,
-  HierarchyNameResult
-} from "./dialogs/HierarchyNameDialog.ts";
+  NameDialogContext,
+  NameDialogResult
+} from "../../shared/NameDialog.ts";
 import type {
   HierarchyDuplicateContext,
   HierarchyDuplicateResult
@@ -55,6 +59,7 @@ import type {
   DeleteResult
 } from "../../shared/DeleteDialog.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
+import type { NameFieldOptions } from "../../shared/NameDraft.ts";
 import {
   EMPTY_MENU,
   menuSession,
@@ -68,12 +73,13 @@ export interface HierarchyWorkspace {
   selection: BlockSelectionStore;
   hierarchy: ModelHierarchy;
   presence: PresenceStore;
+  tab: TabStore;
 }
 
 export interface HierarchyView {
   promptName(
-    context: HierarchyNameContext
-  ): Promise<HierarchyNameResult | null>;
+    context: NameDialogContext
+  ): Promise<NameDialogResult | null>;
   promptDuplicate(
     context: HierarchyDuplicateContext
   ): Promise<HierarchyDuplicateResult | null>;
@@ -163,6 +169,10 @@ export class HierarchyController {
     return this.#selected.length > 0;
   }
 
+  get editable(): boolean {
+    return (this.#workspace?.tab.active ?? "build") === "build";
+  }
+
   attach(
     workspace: HierarchyWorkspace
   ): void {
@@ -211,6 +221,13 @@ export class HierarchyController {
     );
   };
 
+  readonly validateRename = (
+    detail: JollyRenameDetail
+  ): string | null => this.#workspace?.hierarchy.renameError(
+    detail.id,
+    detail.name
+  ) ?? null;
+
   readonly handleToggleVisible = (
     event: CustomEvent<JollyToggleVisibleDetail>
   ): void => {
@@ -233,9 +250,7 @@ export class HierarchyController {
       nodes: this.#nodes,
       ...event.detail
     });
-    for (const { id, parentId, beforeId } of moves) {
-      this.#workspace?.hierarchy.move(id, parentId, beforeId);
-    }
+    this.#workspace?.hierarchy.moveAll(moves);
   };
 
   readonly addBlock = (): Promise<void> => this.#addBlock(
@@ -282,7 +297,7 @@ export class HierarchyController {
   async #addBlock(
     parentId: string | null
   ): Promise<void> {
-    const name = await this.#promptNewName("Block");
+    const name = await this.#promptNewName("block", parentId);
     const uuid = name === null ?
       null :
       this.#workspace?.hierarchy.createBlock(name, parentId) ?? null;
@@ -294,22 +309,40 @@ export class HierarchyController {
   async #addFolder(
     parentId: string | null
   ): Promise<void> {
-    const name = await this.#promptNewName("Folder");
+    const name = await this.#promptNewName("folder", parentId);
     if (name !== null) {
       this.#workspace?.hierarchy.createFolder(name, parentId);
     }
   }
 
   async #promptNewName(
-    defaultName: string
+    kind: HierarchyNodeKind,
+    parentId: string | null
   ): Promise<string | null> {
+    const label = kindLabel(kind);
     const result = await this.#view.promptName({
-      heading: `New ${defaultName}`,
-      fieldLabel: `${defaultName} name`,
-      defaultName
+      heading: `New ${label}`,
+      fieldLabel: `${label} name`,
+      ...this.#naming(kind, label, parentId)
     });
 
-    return result === null ? null : result.name || defaultName;
+    return result?.name ?? null;
+  }
+
+  #naming(
+    kind: HierarchyNodeKind,
+    name: string,
+    parentId: string | null
+  ): NameFieldOptions {
+    const workspace = this.#workspace;
+    if (kind === "folder" || workspace === null) {
+      return { defaultName: name };
+    }
+
+    return {
+      defaultName: freeBlockName(workspace.document.tree, name, parentId),
+      validate: (candidate) => workspace.hierarchy.blockNameError(candidate, parentId)
+    };
   }
 
   async #duplicate(
@@ -321,9 +354,10 @@ export class HierarchyController {
     }
 
     const hasChildren = source.children.length > 0;
+    const parentId = this.#workspace?.document.tree.get(id)?.parentId ?? null;
     const result = await this.#view.promptDuplicate({
-      defaultName: duplicateNameOf(source.name),
-      hasChildren
+      hasChildren,
+      ...this.#naming(source.kind, duplicateNameOf(source.name), parentId)
     });
     const workspace = this.#workspace;
     if (result === null || workspace === null) {
@@ -403,7 +437,8 @@ export class HierarchyController {
       document,
       blocks,
       selection,
-      presence
+      presence,
+      tab
     } = workspace;
 
     return [
@@ -411,7 +446,8 @@ export class HierarchyController {
       document.subscribe("reset", this.#onReset),
       blocks.subscribe("blockVisibilityChanged", this.#rebuild),
       selection.subscribe("select", this.#onSelect),
-      presence.subscribe("blockSelectionsChange", this.#rebuild)
+      presence.subscribe("blockSelectionsChange", this.#rebuild),
+      tab.subscribe("change", () => this.#host.requestUpdate())
     ];
   }
 

@@ -26,10 +26,16 @@
           <jolly-pane key="material" heading="Material" icon="material" locked>
             <jolly-model-editor-material-library></jolly-model-editor-material-library>
           </jolly-pane>
-          <jolly-pane key="animate" heading="Animate" icon="model-animate" locked disabled></jolly-pane>
+          <jolly-pane key="animate" heading="Animate" icon="model-animate" locked>
+            <jolly-model-editor-animate-panel></jolly-model-editor-animate-panel>
+          </jolly-pane>
         </jolly-pane-group>
       </jolly-dock>
-      <section id="three-renderer"><canvas tabindex="-1"></canvas></section>
+      <section id="three-renderer">
+        <canvas tabindex="-1"></canvas>
+        <jolly-model-editor-animating-frame></jolly-model-editor-animating-frame>
+        <jolly-model-editor-history></jolly-model-editor-history>
+      </section>
       <jolly-dock
         key="right"
         side="right"
@@ -39,6 +45,20 @@
       >
         <jolly-pane key="model" heading="Model" icon="model-hierarchy" locked>
           <jolly-model-editor-right-panel></jolly-model-editor-right-panel>
+        </jolly-pane>
+      </jolly-dock>
+      <jolly-dock
+        key="timeline"
+        side="bottom"
+        collapsible
+        size="180"
+        min-size="96"
+        max-size="480"
+        hidden
+      >
+        <jolly-pane key="timeline" heading="Timeline" icon="model-animate" locked>
+          <jolly-model-editor-timeline-transport slot="actions"></jolly-model-editor-timeline-transport>
+          <jolly-model-editor-timeline></jolly-model-editor-timeline>
         </jolly-pane>
       </jolly-dock>
     </jolly-dock-layout>

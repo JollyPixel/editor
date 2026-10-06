@@ -17,7 +17,9 @@ import {
   ModelHierarchy,
   type HierarchyNode
 } from "#src/model/index.ts";
+import { createEditorHistory } from "#src/features/history/index.ts";
 import {
+  buildEditsOf,
   createModelFixture,
   type ModelFixture
 } from "../fixtures/model.ts";
@@ -49,6 +51,7 @@ function createHarness(): Harness {
     ...fixture,
     hierarchy: new ModelHierarchy({
       document: fixture.document,
+      edits: buildEditsOf(createEditorHistory({ document: fixture.document })),
       textureSize: () => kTextureSize,
       poses: fixture.blocks
     }),
@@ -295,6 +298,50 @@ describe("ModelHierarchy.rename", () => {
   });
 });
 
+describe("ModelHierarchy block names", () => {
+  test("refuses a block rename that clashes, naming the block parent", () => {
+    const { addBlock, hierarchy } = createHarness();
+    const body = addBlock({ name: "Body" });
+    const arm = addBlock({ name: "Arm", parentId: body.uuid });
+    addBlock({ name: "Leg", parentId: body.uuid });
+    const folderId = hierarchy.createFolder("Leg", body.uuid);
+
+    assert.equal(
+      hierarchy.renameError(arm.uuid, "leg"),
+      "\"Body\" already has a block named \"leg\""
+    );
+    assert.equal(hierarchy.renameError(arm.uuid, "ARM"), null);
+    assert.equal(hierarchy.renameError(folderId!, "Arm"), null);
+    assert.equal(
+      hierarchy.blockNameError("Body", null),
+      "A root block is already named \"Body\""
+    );
+  });
+
+  test("flags every block sharing a name with a sibling block", () => {
+    const { addBlock, hierarchy } = createHarness();
+    const body = addBlock({ name: "Body" });
+    const first = addBlock({ name: "Arm", parentId: body.uuid });
+    const folderId = hierarchy.createFolder("Limbs", body.uuid);
+    const second = addBlock({ name: "arm", parentId: folderId });
+    addBlock({ name: "Arm" });
+
+    const clashes = new Map(
+      hierarchy.nodes()
+        .flatMap(function flatten(node): HierarchyNode[] {
+          return [node, ...node.children.flatMap(flatten)];
+        })
+        .filter((node) => node.nameClash !== undefined)
+        .map((node) => [node.id, node.nameClash])
+    );
+
+    assert.deepEqual(clashes, new Map([
+      [first.uuid, "Another block in \"Body\" is named \"Arm\""],
+      [second.uuid, "Another block in \"Body\" is named \"arm\""]
+    ]));
+  });
+});
+
 describe("ModelHierarchy.duplicate", () => {
   test("copies a block under the given name with its UV layout", () => {
     const { document, blocks, addBlock, hierarchy } = createHarness();
@@ -322,6 +369,7 @@ describe("ModelHierarchy.duplicate", () => {
     const source = addBlock({ materialId: metalId });
 
     const duplicateId = hierarchy.duplicate(source.uuid, {
+      name: "Copy",
       includeChildren: false,
       mirrorAxes: kNoMirror
     });
@@ -330,34 +378,37 @@ describe("ModelHierarchy.duplicate", () => {
     assert.equal(document.tree.materials.size, 1);
   });
 
-  test("names the copy after its source when no name is given", () => {
-    const { blocks, addBlock, hierarchy } = createHarness();
-    const source = addBlock({ name: "Arm" });
-
-    const duplicateId = hierarchy.duplicate(source.uuid, {
-      name: "",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.equal(blocks.get(duplicateId!)?.name, "Arm Copy");
-  });
-
-  test("copies a folder subtree, keeping child names", () => {
+  test("copies a folder subtree, renaming the blocks that keep their block parent", () => {
     const { addBlock, hierarchy } = createHarness();
     const folderId = hierarchy.createFolder("Limbs", null);
-    addBlock({ name: "Arm", parentId: folderId });
+    const arm = addBlock({ name: "Arm", parentId: folderId });
+    addBlock({ name: "Hand", parentId: arm.uuid });
 
     const duplicateId = hierarchy.duplicate(folderId!, {
+      name: "Limbs Copy",
       includeChildren: true,
       mirrorAxes: kNoMirror
     });
 
     assert.deepEqual(shapeOf(hierarchy.nodes()), [
-      ["Limbs", ["Arm"]],
-      ["Limbs Copy", ["Arm"]]
+      ["Limbs", [["Arm", ["Hand"]]]],
+      ["Limbs Copy", [["Arm 2", ["Hand"]]]]
     ]);
     assert.ok(duplicateId && hierarchy.isFolder(duplicateId));
+  });
+
+  test("never gives the copied block a sibling's name", () => {
+    const { addBlock, hierarchy } = createHarness();
+    const source = addBlock({ name: "Arm" });
+    addBlock({ name: "Arm Copy" });
+
+    const duplicateId = hierarchy.duplicate(source.uuid, {
+      name: "Arm Copy",
+      includeChildren: false,
+      mirrorAxes: kNoMirror
+    });
+
+    assert.equal(hierarchy.nodes().find(({ id }) => id === duplicateId)?.name, "Arm Copy 2");
   });
 
   test("leaves the children behind unless asked for them", () => {
@@ -366,6 +417,7 @@ describe("ModelHierarchy.duplicate", () => {
     addBlock({ name: "Head", parentId: body.uuid });
 
     hierarchy.duplicate(body.uuid, {
+      name: "Body Copy",
       includeChildren: false,
       mirrorAxes: kNoMirror
     });
@@ -385,10 +437,12 @@ describe("ModelHierarchy.duplicate", () => {
     addBlock({ name: "Head" });
 
     hierarchy.duplicate(arm.uuid, {
+      name: "Arm Copy",
       includeChildren: false,
       mirrorAxes: kNoMirror
     });
     hierarchy.duplicate(torso.uuid, {
+      name: "Torso Copy",
       includeChildren: false,
       mirrorAxes: kNoMirror
     });
@@ -409,6 +463,7 @@ describe("ModelHierarchy.duplicate", () => {
     document.on("change", (change) => actions.push(change.command.action));
 
     hierarchy.duplicate(arm.uuid, {
+      name: "Arm Copy",
       includeChildren: false,
       mirrorAxes: kNoMirror
     });
@@ -422,6 +477,7 @@ describe("ModelHierarchy.duplicate", () => {
     const mirrorAxes = { x: true, y: false, z: false };
 
     const duplicateId = hierarchy.duplicate(source.uuid, {
+      name: "Mirror",
       includeChildren: false,
       mirrorAxes
     });
@@ -441,7 +497,10 @@ describe("ModelHierarchy.duplicate", () => {
   test("returns null for an unknown source", () => {
     const { hierarchy } = createHarness();
 
-    assert.equal(hierarchy.duplicate("missing", { includeChildren: true, mirrorAxes: kNoMirror }), null);
+    assert.equal(
+      hierarchy.duplicate("missing", { name: "Copy", includeChildren: true, mirrorAxes: kNoMirror }),
+      null
+    );
   });
 });
 

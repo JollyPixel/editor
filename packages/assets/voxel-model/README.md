@@ -74,12 +74,12 @@ const blockId = synced.document.addBlock({ name: "Body" });
 // On teardown: synced.dispose(); room.leave(); client.destroy();
 ```
 
-`ModelDocument` exposes `addBlock`, `addFolder`, `remove`, `rename`, `move`, `transform`, and `setUv`. Each block stores its own UV layout; the pixel-art texture only stores pixels. Local changes are sent to the room by `ModelSyncClient`; snapshots replace the local tree. A rejected edit returns `null` from `addBlock` or `addFolder`, or `false` from the other edit methods.
+`ModelDocument` exposes `addBlock`, `addFolder`, `remove`, `rename`, `move`, `transform`, and `setUv`. Each block stores its own UV layout; the pixel-art texture only stores pixels. Local changes are sent to the room by a `DocumentSyncClient` from `@jolly-pixel/network/client`, with `voxelModelWriteKeys`; snapshots replace the local tree. A rejected edit returns `null` from `addBlock` or `addFolder`, or `false` from the other edit methods.
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, the document codec and `voxelModelDocumentSchema`, `VoxelModelState`, `ModelTree`, `ModelDocument`, the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ snapshot? }` options), and the kind and event constants.
-- `@jolly-pixel/asset.voxel-model/client` exports `ModelSyncClient`, `SyncedModelDocument`, `voxelModelDocumentKind`, and model types.
+- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, the document codec and `voxelModelDocumentSchema`, `VoxelModelState`, `ModelTree`, `ModelDocument` and `modelHistoryKeys` (for a `CommandHistory` from `@jolly-pixel/network/client`), the animation binding helpers (`bindTracks`, `blockPathOf`, `poseBlock`, `poseDelta`, `trackPathOf`), the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ snapshot? }` options), and the kind and event constants.
+- `@jolly-pixel/asset.voxel-model/client` exports `SyncedModelDocument`, `voxelModelWriteKeys`, `voxelModelDocumentKind`, and model types.
 - `@jolly-pixel/asset.voxel-model/server` exports `VoxelModelCommandArbiter` and the command and snapshot schemas.
 
 The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command shapes and sync behavior, and [architecture](./ARCHITECTURE.md) for tree and arbitration rules.
