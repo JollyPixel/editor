@@ -270,8 +270,11 @@ export class EditorScene extends Systems.Scene {
         camera.enabled = !captured;
       }),
       placement.store.subscribe("change", (current) => {
-        localBrush.suspended = current !== null;
+        state.brush.suspended = current !== null;
       }),
+      () => {
+        state.brush.suspended = false;
+      },
       mapDocument.subscribe("layerUpdated", () => {
         this.#reconcileSelection(view);
         placement.store.reconcile(view.document.world);

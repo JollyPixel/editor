@@ -7,8 +7,6 @@ import type {
 import type { ChoiceOption } from "../../../shared/toolChoice.ts";
 
 // CONSTANTS
-export const BRUSH_DISABLED_LABEL = "Select a voxel layer to paint";
-
 export const BRUSH_MODE_OPTIONS: readonly BrushToolOption<BrushMode>[] = [
   {
     value: "build",
@@ -70,7 +68,7 @@ export interface BrushToolOption<TValue extends string>
 export function toolLabel(
   label: string,
   shortcut: string,
-  disabled: boolean
+  blockedReason: string | null
 ): string {
-  return disabled ? BRUSH_DISABLED_LABEL : `${label} (${shortcut})`;
+  return blockedReason ?? `${label} (${shortcut})`;
 }

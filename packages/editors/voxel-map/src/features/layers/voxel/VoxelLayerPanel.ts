@@ -11,10 +11,7 @@ import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/index.ts";
-import type {
-  KeyboardLayoutStore,
-  SelectionStore
-} from "../../../state/index.ts";
+import type { SelectionStore } from "../../../state/index.ts";
 import type { MapPlacement } from "../../placement/MapPlacement.ts";
 import {
   propertiesOf,
@@ -28,7 +25,6 @@ import {
   samePosition
 } from "../../../shared/positionSource.ts";
 import "../../../shared/CustomPropertiesEditor.ts";
-import "../../placement/PlacementActions.ts";
 
 @customElement("layer-panel")
 export class VoxelLayerPanel extends LitElement {
@@ -52,9 +48,6 @@ export class VoxelLayerPanel extends LitElement {
 
   @property({ attribute: false })
   declare placement: MapPlacement;
-
-  @property({ attribute: false })
-  declare keyboardLayout: KeyboardLayoutStore;
 
   @property({ attribute: false })
   declare mapDocument: MapDocument;
@@ -192,20 +185,11 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #renderPosition() {
-    if (this.#transforming()) {
-      return html`
-        <placement-actions
-          .placement=${this.placement}
-          .keyboardLayout=${this.keyboardLayout}
-          .target=${this.layerName}
-        ></placement-actions>
-      `;
-    }
-
     return html`
       <jolly-vector3
         label="Position"
         step="1"
+        ?disabled=${this.#transforming()}
         .value=${this.#position.value}
         @jolly-input=${this.#position.input}
         @jolly-change=${this.#position.commit}

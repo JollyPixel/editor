@@ -206,6 +206,31 @@ test("a layer is turned with its marquee and committed with Enter", async({ page
   expect(await blocksAt(page, turned!.cells)).toEqual([1, 1, 1]);
 });
 
+test("the placement toolbar turns the placement and locks the brush until cancelled", async({ page }) => {
+  await seedVoxels(page, [
+    { x: 0, y: 0, z: 0, blockId: 1 },
+    { x: 1, y: 0, z: 0, blockId: 1 }
+  ]);
+
+  const toolbar = page.locator("voxel-placement-toolbar");
+  const brush = page.locator("voxel-brush-toolbar").getByRole("group", { name: "Brush" });
+  await expect(toolbar).toBeHidden();
+  await expect(brush).toHaveAttribute("aria-disabled", "false");
+
+  await page.locator("layer-panel").getByRole("button", { name: "Transform" }).click();
+  await expect(toolbar).toBeVisible();
+  await expect(toolbar.getByRole("status")).toHaveText("Ground");
+  await expect(brush).toHaveAttribute("aria-disabled", "true");
+
+  await toolbar.getByRole("button", { name: /^Rotate 90° counter-clockwise/ }).click();
+  await expect.poll(async() => (await placement(page))?.rotation).toBe(1);
+
+  await toolbar.getByRole("button", { name: /^Cancel/ }).click();
+  await expect.poll(() => placement(page)).toBeNull();
+  await expect(toolbar).toBeHidden();
+  await expect(brush).toHaveAttribute("aria-disabled", "false");
+});
+
 test("double-clicking a template row renames it", async({ page }) => {
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
 

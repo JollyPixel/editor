@@ -170,9 +170,9 @@ test("the layer header rebases the layer and locks while transforming", async({ 
   expect(await blocksAt(page, [{ x: 3, y: 1, z: 2 }])).toEqual([1]);
 
   await transform.click();
-  await expect(panel.locator("placement-actions")).toBeVisible();
+  await expect(page.locator("voxel-placement-toolbar")).toBeVisible();
   await expect(transform).toBeDisabled();
-  await expect(panel.locator("jolly-vector3")).toHaveCount(0);
+  await expect(panel.locator("jolly-vector3")).toHaveAttribute("disabled", "");
 });
 
 test("cloning copies the voxels and removing asks first", async({ page }) => {

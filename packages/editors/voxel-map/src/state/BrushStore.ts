@@ -45,10 +45,12 @@ export interface BrushOptions {
 export type BrushStoreEvents = {
   blockChange: (id: number) => void;
   change: (options: Readonly<BrushOptions>) => void;
+  suspendedChange: (suspended: boolean) => void;
 };
 
 export class BrushStore extends Emitter<BrushStoreEvents> {
   #blockId = 1;
+  #suspended = false;
   #options: Readonly<BrushOptions> = Object.freeze({
     size: 1,
     rotationMode: "auto",
@@ -72,6 +74,21 @@ export class BrushStore extends Emitter<BrushStoreEvents> {
 
     this.#blockId = id;
     this.emit("blockChange", id);
+  }
+
+  get suspended(): boolean {
+    return this.#suspended;
+  }
+
+  set suspended(
+    suspended: boolean
+  ) {
+    if (this.#suspended === suspended) {
+      return;
+    }
+
+    this.#suspended = suspended;
+    this.emit("suspendedChange", suspended);
   }
 
   get size(): number {

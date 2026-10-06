@@ -69,8 +69,6 @@ export interface LocalBrushOptions {
 }
 
 export class LocalBrush extends ActorComponent {
-  suspended = false;
-
   readonly view: VoxelView;
 
   #camera: THREE.PerspectiveCamera;
@@ -188,7 +186,7 @@ export class LocalBrush extends ActorComponent {
     const isAlt = InputCombination.Alt.evaluate(input);
 
     if (
-      this.suspended ||
+      this.#brush.suspended ||
       !input.mouse.hovering ||
       this.#selection.isObjectContext ||
       input.mouse.isDown("middle")

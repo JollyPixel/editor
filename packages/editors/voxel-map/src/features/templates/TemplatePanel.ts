@@ -9,15 +9,10 @@ import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/index.ts";
-import type {
-  KeyboardLayoutStore,
-  SelectionStore
-} from "../../state/index.ts";
 import type { MapTemplates } from "./MapTemplates.ts";
 import type { MapPlacement } from "../placement/MapPlacement.ts";
 import type { Placement } from "../placement/Placement.ts";
 import { positionSource } from "../../shared/positionSource.ts";
-import "../placement/PlacementActions.ts";
 
 @customElement("template-panel")
 export class TemplatePanel extends LitElement {
@@ -38,12 +33,6 @@ export class TemplatePanel extends LitElement {
 
   @property({ attribute: false })
   declare placement: MapPlacement;
-
-  @property({ attribute: false })
-  declare keyboardLayout: KeyboardLayoutStore;
-
-  @property({ attribute: false })
-  declare selection: SelectionStore;
 
   @property({ attribute: false })
   declare mapDocument: MapDocumentSignals;
@@ -73,8 +62,7 @@ export class TemplatePanel extends LitElement {
     this.#subscriptions.push(
       this.templates.store.subscribe("selectionChange", this.#syncTemplate),
       this.placement.store.subscribe("change", this.#syncPlacement),
-      this.mapDocument.subscribe("templatesChanged", this.#syncTemplate),
-      this.selection.subscribe("change", () => this.requestUpdate())
+      this.mapDocument.subscribe("templatesChanged", this.#syncTemplate)
     );
     this.#syncTemplate();
     this.#syncPlacement(this.placement.store.placement);
@@ -114,12 +102,6 @@ export class TemplatePanel extends LitElement {
         @jolly-input=${this.#position.input}
         @jolly-change=${this.#position.commit}
       ></jolly-vector3>
-
-      <placement-actions
-        .placement=${this.placement}
-        .keyboardLayout=${this.keyboardLayout}
-        .target=${this.placement.target}
-      ></placement-actions>
     `;
   }
 

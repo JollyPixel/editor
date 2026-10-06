@@ -61,3 +61,21 @@ describe("BrushStore.ghost", () => {
     assert.deepStrictEqual(changes, [true, false]);
   });
 });
+
+describe("BrushStore.suspended", () => {
+  test("starts painting-ready", () => {
+    assert.strictEqual(new BrushStore().suspended, false);
+  });
+
+  test("emits once per actual change", () => {
+    const brush = new BrushStore();
+    const changes: boolean[] = [];
+    brush.subscribe("suspendedChange", (suspended) => changes.push(suspended));
+
+    brush.suspended = true;
+    brush.suspended = true;
+    brush.suspended = false;
+
+    assert.deepStrictEqual(changes, [true, false]);
+  });
+});

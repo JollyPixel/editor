@@ -7,10 +7,9 @@ import type {
 
 // Import Internal Dependencies
 import type { MapPlacement } from "./MapPlacement.ts";
+import { PLACEMENT_ROTATIONS } from "./placementTransforms.ts";
 
 export const PLACEMENT_SHORTCUTS = {
-  rotateCounterClockwise: ["KeyQ"],
-  rotateClockwise: ["KeyE"],
   commit: ["Enter", "NumpadEnter"],
   cancel: ["Escape"]
 } as const satisfies Record<string, readonly KeyChordString[]>;
@@ -31,19 +30,14 @@ export function bindPlacementShortcuts(
     return (event) => placement.store.placing && action(event) !== false;
   }
 
-  const {
-    rotateCounterClockwise,
-    rotateClockwise,
-    commit,
-    cancel
-  } = PLACEMENT_SHORTCUTS;
+  const { commit, cancel } = PLACEMENT_SHORTCUTS;
   const releases = [
-    keyboard.bind(rotateCounterClockwise, whilePlacing(() => {
-      placement.store.transform({ rotation: 1 });
-    })),
-    keyboard.bind(rotateClockwise, whilePlacing(() => {
-      placement.store.transform({ rotation: 3 });
-    })),
+    ...PLACEMENT_ROTATIONS.map(({ chords, transform }) => keyboard.bind(
+      chords,
+      whilePlacing(() => {
+        placement.store.transform(transform);
+      })
+    )),
     keyboard.bind(commit, whilePlacing((event) => {
       if (pressesButton(event)) {
         return false;
