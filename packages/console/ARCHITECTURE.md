@@ -1,209 +1,113 @@
 # Console architecture
 
-The package has two entries. The root entry is the headless `CommandConsole`:
-the registry, the input grammar, search and execution, with no DOM.
-`@jolly-pixel/console/element` is the Lit `jolly-console` dialog. It keeps the
-prompt, renders the scrollback through `jolly-console-log` and the suggestion
-list through a controller, listens to four `CommandConsole` events and hands
-each submitted line back to `submit()`.
+Two entries:
 
-## Workspace map
+- `@jolly-pixel/console`: the headless `CommandConsole`. No DOM, no Lit.
+- `@jolly-pixel/console/element`: the Lit `jolly-console` dialog.
+
+The element imports the root, never the reverse. No instance is exported: each
+editor page creates one and passes it down.
+
+## Map
 
 ```mermaid
 flowchart TB
-    subgraph Root["@jolly-pixel/console, no DOM"]
-        Console["CommandConsole<br/>register, submit, open, close"]
-        Console --> Registry["Registry<br/>root NamespaceEntry + named namespaces"]
-        Console --> History["InputHistory<br/>submitted lines"]
-        Console --> Scrollback["Scrollback<br/>echo, info and error entries"]
-        Console --> Reverts["RevertStack<br/>revertible changes"]
-        Console --> Builtins["builtins<br/>/help, /clear, /revert"]
-        Console --> Classify["classify<br/>command, variable or search"]
-        Classify --> Registry
-        Search["search + score<br/>ranked results, typo tier"] --> Registry
-        Search --> Typo["typo<br/>Levenshtein tolerance"]
-        Browse["browse<br/>empty-prompt sections"] --> Registry
-        Complete["complete<br/>token under the caret"] --> Classify
-        Complete --> Typo
-    end
-
-    subgraph Element["@jolly-pixel/console/element"]
-        Dialog["ConsoleElement<br/>jolly-console dialog and prompt"]
-        Dialog --> Log["ConsoleLogElement<br/>jolly-console-log scrollback"]
-        Dialog --> Keyboard["KeyboardController<br/>Ctrl+K, key to action, hints"]
-        Dialog --> Suggestions["SuggestionController<br/>list, highlight, gray suffix, usage"]
-    end
-
-    Suggestions --> Classify
-    Suggestions --> Search
-    Suggestions --> Complete
-    Suggestions --> Browse
-    Dialog -->|"submit(line)"| Console
-    Console -. "registry-changed, scrollback-changed,<br/>open-requested, close-requested" .-> Dialog
+    Element["jolly-console"] -->|"submit(line)"| Console["CommandConsole"]
+    Script["jolly-console-script"] -->|"applyScript(draft)"| Console
+    Console --> Registry
+    Console --> Reverts["RevertStack"]
+    Console -. "events" .-> Element
 ```
-
-The element imports root modules; nothing in the root imports the element or
-Lit. The package exports no instance: each editor page constructs one and
-passes it down.
 
 | Folder | Holds |
 |---|---|
-| `registry/` | `Registry`, `NamespaceEntry`, definition types and validation, `ConsoleFeature` |
+| `registry/` | `Registry`, `NamespaceEntry`, definitions, validation, `ConsoleFeature` |
 | `input/` | `tokenize`, `classify`, `coerce` |
-| `execution/` | `bindArguments`, variable access, `InputHistory`, `RevertStack`, `Scrollback`, builtins and `help` |
-| `search/` | the `Suggestion` model, `score` tiers, `search`, `complete`, `browse` sections, `typo` tolerance over the `levenshtein` port |
-| `element/` | `ConsoleElement`, `ConsoleLogElement` and their styles, `KeyboardController`, `SuggestionController` |
+| `execution/` | `bindArguments`, variables, `InputHistory`, `RevertStack`, `Scrollback`, built-ins |
+| `search/` | `Suggestion`, `score`, `search`, `complete`, `browse`, `typo` |
+| `script/` | `scanScript`, `VariableScript`, `ScriptDraft`, `highlightLine` |
+| `element/` | the three elements, `KeyboardController`, `SuggestionController` |
 
 ## One keystroke
 
 ```mermaid
 flowchart TB
-    Text["Prompt text changes"] --> Classify["classify(text, registry)"]
-    Classify --> Mode{"Mode?"}
-    Mode -->|"search"| Empty{"Query empty?"}
-    Empty -->|"yes"| Browse["browse(registry, history)<br/>sections"]
-    Browse --> Plain
-    Empty -->|"no"| Search["search(query)<br/>rank by tier, then score"]
-    Search --> Preselect["List with the first result highlighted"]
-    Mode -->|"command or variable"| Complete["complete(text, caret)<br/>may await autocomplete()"]
-    Complete --> Latest{"Latest request?"}
-    Latest -->|"no"| Drop["Discard the result"]
-    Latest -->|"yes"| Plain["List with nothing highlighted"]
-    Preselect --> Show["Render suggestions"]
-    Plain --> Show
+    Text["Prompt text"] --> Mode{"classify"}
+    Mode -->|"search, empty"| Browse["browse"]
+    Mode -->|"search"| Search["search"]
+    Mode -->|"command or variable"| Complete["complete"]
 ```
 
-Search and browse are synchronous. Completion can wait on an `autocomplete()`
-promise, so `SuggestionController` numbers each request and drops a result that arrives after a newer
-one; the previous completion list stays on screen meanwhile. The list renders
-in the prompt shadow root so the combobox IDREFs resolve
-([ADR-0007](./docs/adr/0007-the-suggestion-list-shares-the-prompt-shadow-root.md)). An exact variable
-match puts the prompt in variable mode before search is tried.
-
-`browse`, `search` and `complete` all return `Suggestion`s that already hold the line and caret
-that picking them leaves, and whether picking runs the line. `SuggestionController` only tracks
-which kind of list is showing (`browse`, `search` or `completion`) and the highlight.
-
-### Keystroke cost
-
-Registered entries never change in place: re-registering builds a new entry. `SearchTarget.of`
-therefore caches, per entry in a `WeakMap`, the label and a `SearchText` for the address and the
-description: the lowered text, its word starts, and a 32-bit set of the letters it holds. A query
-that holds a letter the text lacks is rejected with one AND before any string scan. The count of
-missing letters is also a lower bound on the edit distance, so the typo tier skips Levenshtein
-when that count exceeds the tolerance. `search` keeps only the best `limit` results in a
-`TopRanked` heap and builds `Suggestion`s for those alone; the element asks for 50.
-`NamespaceEntry` iterates arrays it rebuilds after a registration change instead of generators.
-
-On the element side, a keystroke must not touch the log: `scrollback` keeps its identity until
-it changes, so `jolly-console-log` skips the update, and each entry sits behind `guard()` for the
-updates that do run. Log entries and list rows use `content-visibility: auto`, so only the
-visible ones pay for style, layout and text shaping. Writing `scrollTop` forces a synchronous
-layout, so `SuggestionController` resets the list only when it knows the list is scrolled, and
-`jolly-console` measures prompt overflow only when the text changes while the gray suffix shows.
+- An exact variable name wins over search.
+- `complete` may await `autocomplete()`. Each request is numbered; a late one is dropped.
+- Every result is a `Suggestion` that already holds the line and caret it leaves.
+- The list lives in the prompt shadow root so ARIA IDREFs resolve
+  ([ADR-0007](./docs/adr/0007-the-suggestion-list-shares-the-prompt-shadow-root.md)).
 
 ## Submitting a line
 
 ```mermaid
-sequenceDiagram
-    participant Element as jolly-console
-    participant Console as CommandConsole
-    participant Registry
-    participant Handler as Command or variable
-
-    Element->>Console: submit(line)
-    Console->>Console: push to history, echo to scrollback
-    Console->>Registry: classify(line)
-    alt variable
-        Console->>Handler: coerce the literal, set(value) if given, then get()
-        Console->>Console: info entry with the value
-        opt the value changed
-            Console->>Console: push a revert to the previous value
-        end
-    else command
-        Console->>Console: bindArguments, tokens to typed values
-        Console->>Handler: execute(values, ctx)
-        Handler-->>Console: ctx.print / ctx.error
-        Note over Console,Handler: A returned promise keeps the echo pending until it settles
-        opt execute returned a function
-            Console->>Console: push it as a revert
-        end
-        opt closeOnExecute
-            Console-->>Element: close-requested
-        end
-    else search text
-        Console->>Console: error entry, not a variable
-    end
-    Console-->>Element: scrollback-changed
+flowchart TB
+    Line["submit(line)"] --> Echo["history + echo"]
+    Echo --> Kind{"classify"}
+    Kind -->|"variable"| Variable["set, then get"]
+    Kind -->|"command"| Command["bind args, execute"]
+    Kind -->|"search text"| Error["error entry"]
 ```
 
-An error thrown while binding or by the handler becomes an error entry;
-`submit()` never rethrows. `ctx.signal` aborts when the command is replaced or
-unregistered while it runs. While open, the element re-adopts the ambient theme
-whenever a `theme` attribute changes, so `theme light` restyles the open
-console.
+- `submit()` never throws. Errors become error entries.
+- A returned promise keeps the echo pending until it settles.
+- `ctx.signal` aborts when the command is replaced or unregistered.
 
-### Reverting
+## Reverting
 
-`InputHistory` cannot drive `/revert`: it keeps lines that changed nothing and
-skips a line equal to the previous one. `RevertStack` keeps only applied
-changes, each with its kind, address, line and revert function. `/revert` pops
-them newest first and checks that the address still resolves before calling
-the function, so a disposed editor's changes are skipped
-([ADR-0009](./docs/adr/0009-revert-is-opt-in-per-command.md)). A variable's
-revert resolves the address again and writes the previous value through `set`,
-so it works for mirrored variables without protocol changes. A mirrored
-command's revert function cannot cross the port: `ConsoleServer` keeps it under
-a `revertId` sent in `done`, and the mirror returns a function that sends a
-`revert` message with that id.
+- `RevertStack` keeps applied changes only. `InputHistory` cannot: it keeps no-op lines.
+- `/revert` pops newest first and skips a change whose address no longer resolves
+  ([ADR-0009](./docs/adr/0009-revert-is-opt-in-per-command.md)).
+- A variable revert writes the previous value through `set`, so mirrors need nothing more.
+- A mirrored command's revert stays in `ConsoleServer` under a `revertId`.
 
-## Registration lifetime
-
-```mermaid
-stateDiagram-v2
-    [*] --> Registered: registerCommand(name, def)
-    Registered --> Replaced: same address registered again
-    Replaced --> [*]: signal aborts, old handle becomes a no-op
-    Registered --> Unregistered: handle.unregister()
-    Unregistered --> [*]: signal aborts, registry-changed
-```
-
-The last registration wins for commands, variables and whole namespaces, and a
-handle only removes the entry it created. Variables follow the same rules
-without a signal. Every change emits `registry-changed`, which refreshes the
-list of an open element.
+## Scripts
 
 ```mermaid
 flowchart TB
-    List["Editor feature list"] --> Register["registerConsoleFeatures(commands, features, context)"]
-    Register --> Feature["feature(commands, context)<br/>registers one namespace"]
-    Feature --> Threw{"Threw?"}
-    Threw -->|"no"| Collect["Collect its handle"]
-    Threw -->|"yes"| Unwind["Unregister collected handles<br/>in reverse, rethrow"]
-    Collect --> Combined["One RegistrationHandle<br/>unregisters all in reverse"]
+    Edit["/script"] --> Snapshot["VariableScript<br/>get() every variable once"]
+    Snapshot --> Parse["parse(text) on every input"]
+    Parse --> Save{"applyScript"}
+    Save -->|"a set rejects"| Rollback["set back, keep the text"]
+    Save -->|"all set"| Done["echo lines, one revert"]
 ```
+
+- `parse` diffs against the snapshot, so only edited lines are written.
+- Rollback and `/revert` restore what `get()` returned just before each write.
+- `scanScript` feeds both the parser and `highlightLine`.
+- The editor is a transparent `textarea` over a colored `pre`, in one grid cell
+  and one scroller. Nothing to sync, and native undo still works.
+
+See [ADR-0010](./docs/adr/0010-scripts-edit-variables-as-ini-all-or-nothing.md).
+
+## Registration
+
+- The last registration wins, for commands, variables and namespaces
+  ([ADR-0003](./docs/adr/0003-last-registration-wins.md)).
+- A handle only removes the entry it created.
+- Replacing or unregistering a command aborts its signal.
+- Every change emits `registry-changed`.
+- `registerConsoleFeatures` unregisters what it registered if a feature throws.
 
 ## In an editor
 
 ```mermaid
 flowchart TB
-    Standalone["mountStandalone(definition)"] --> Mount["mountConsole()<br/>CommandConsole, stored theme and density,<br/>jolly-console on body"]
-    Mount --> Boot["launch, session, definition.mount()"]
-    Boot --> Context["EditorContext.commands"]
-    Boot -->|"boot fails"| Dispose["dispose()<br/>element removed, registry cleared"]
-    Context --> VoxelMap["voxel-map<br/>CONSOLE_FEATURES over the workspace"]
-    Context --> PixelArt["pixel-art demo<br/>keybindConsole over keybinding settings"]
-    VoxelMap --> Brush["brush namespace"]
-    PixelArt --> Keybind["keybind namespace"]
-    VoxelMap -. "editor dispose()" .-> Release["feature handle unregisters"]
-    PixelArt -. "editor dispose()" .-> Release
+    Host["mountStandalone"] --> Mount["mountConsole"]
+    Mount --> Context["context.commands"]
+    Context --> Features["editor features register namespaces"]
+    Features -. "dispose" .-> Release["handles unregister"]
 ```
 
-The host owns the instance. An editor registers its features during `mount()`
-and unregisters them on dispose. A new command goes in a feature module plus one
-line in the editor's feature list.
+The host owns the instance. A new command is a feature module plus one line in
+the editor's feature list.
 
-For API details, see [CommandConsole](./docs/CommandConsole.md),
-[features](./docs/features.md), the [input grammar](./docs/grammar.md),
-[jolly-console](./docs/element.md) and the
-[architecture decisions](./docs/adr/README.md).
+API: [CommandConsole](./docs/CommandConsole.md), [features](./docs/features.md),
+[grammar](./docs/grammar.md), [jolly-console](./docs/element.md),
+[ADRs](./docs/adr/README.md).

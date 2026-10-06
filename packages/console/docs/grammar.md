@@ -53,6 +53,33 @@ Tab completes the word under the caret and never runs anything:
 - after `namespace.`, that namespace's commands and variables;
 - in a command's arguments, the `autocomplete` or `enumValues` of that argument.
 
+## Scripts
+
+`/script` opens every variable as INI text; `/script brush` opens the `brush` namespace only.
+
+```ini
+; Page theme <light|dark|auto>
+theme = dark
+
+; Voxel brush
+[brush]
+; Brush size in voxels, from 1 to 16 <number>
+size = 3
+```
+
+- Root variables come first, then one `[namespace]` section each. Section and key names are
+  case-insensitive, and a root key may also be a full address (`brush.size = 3`).
+- A line starting with `;` or `#` is a comment. There are no comments after a value, so
+  `keybind.undo = mod+;` keeps its `;`.
+- A value is everything after the first `=`, trimmed, and is coerced as in the prompt. Quote it
+  to keep leading or trailing spaces or to write an empty string: `label = "  padded"`, with `\"`
+  and `\\` escapes.
+- The comments are written again each time the script opens; comments you add are not kept.
+
+Ctrl+S saves only the lines whose value changed, all or nothing; Escape discards the text.
+Saving is refused while a line has an error: an unknown namespace or variable, a key set twice,
+a value its type rejects, an unterminated quote or a line without `=`.
+
 ## Typos
 
 | Word length | Typos tolerated |

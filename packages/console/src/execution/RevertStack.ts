@@ -6,12 +6,21 @@ import type {
 } from "../registry/types.ts";
 import { ConsoleInputError } from "./errors/ConsoleInputError.ts";
 
-export interface RevertEntry {
+export interface MemberRevertEntry {
   readonly kind: "command" | "variable";
   readonly address: string;
   readonly line: string;
   readonly revert: Revert;
 }
+
+export interface ScriptRevertEntry {
+  readonly kind: "script";
+  readonly addresses: readonly string[];
+  readonly line: string;
+  readonly revert: Revert;
+}
+
+export type RevertEntry = MemberRevertEntry | ScriptRevertEntry;
 
 export class RevertStack {
   static readonly DEFAULT_CAPACITY = 100;
@@ -60,7 +69,7 @@ export class RevertStack {
       }
       if (!this.#isRegistered(entry)) {
         ctx.error(
-          `Skipped ${entry.line}: ${target(entry)} is no longer registered`
+          `Skipped ${entry.line}: ${target(entry)} no longer registered`
         );
         continue;
       }
@@ -89,16 +98,28 @@ export class RevertStack {
   #isRegistered(
     entry: RevertEntry
   ): boolean {
-    const registered = entry.kind === "command" ?
-      this.#registry.resolveCommand(entry.address) :
-      this.#registry.resolveVariable(entry.address);
-
-    return registered !== undefined;
+    switch (entry.kind) {
+      case "command":
+        return this.#registry.resolveCommand(entry.address) !== undefined;
+      case "variable":
+        return this.#registry.resolveVariable(entry.address) !== undefined;
+      default:
+        return entry.addresses.some(
+          (address) => this.#registry.resolveVariable(address) !== undefined
+        );
+    }
   }
 }
 
 function target(
   entry: RevertEntry
 ): string {
-  return entry.kind === "command" ? `/${entry.address}` : entry.address;
+  switch (entry.kind) {
+    case "command":
+      return `/${entry.address} is`;
+    case "variable":
+      return `${entry.address} is`;
+    default:
+      return "its variables are";
+  }
 }

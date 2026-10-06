@@ -112,3 +112,21 @@ export function writeVariable(
       );
   }
 }
+
+export interface VariableRestore {
+  readonly address: string;
+  readonly previous: ConsoleValue;
+}
+
+export function restoreVariables(
+  registry: ConsoleRegistry,
+  restores: readonly VariableRestore[]
+): Revert {
+  return async() => {
+    for (const { address, previous } of restores.toReversed()) {
+      if (registry.resolveVariable(address) !== undefined) {
+        await restoreVariable(registry, address, previous)();
+      }
+    }
+  };
+}

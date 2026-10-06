@@ -1,6 +1,9 @@
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
-import { label } from "../registry/format.ts";
+import {
+  compareText,
+  label
+} from "../registry/format.ts";
 import type { ConsoleRegistry } from "../registry/types.ts";
 import { helpText } from "./help.ts";
 import type { RevertStack } from "./RevertStack.ts";
@@ -43,6 +46,28 @@ export function registerBuiltins(
     ],
     execute: ({ count = 1 }, ctx) => reverts.revert(count, ctx)
   });
+  commands.registerCommand("script", {
+    description: "Edit variables together as a script, then save or cancel",
+    args: [
+      {
+        name: "namespace",
+        type: "string",
+        autocomplete: () => scriptScopes(commands.registry)
+      }
+    ],
+    execute: ({ namespace }) => {
+      commands.editScript(namespace);
+    }
+  });
+}
+
+function scriptScopes(
+  registry: ConsoleRegistry
+): string[] {
+  return Array.from(registry.namespaces())
+    .filter((namespace) => !namespace.variables().next().done)
+    .map((namespace) => namespace.name)
+    .sort(compareText);
 }
 
 function helpTopics(

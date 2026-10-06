@@ -57,7 +57,7 @@ Ctrl+K (Cmd+K on macOS) opens the console.
 
 - [CommandConsole](./docs/CommandConsole.md): namespaces, commands, variables, reverting, output and history
 - [Registering from features](./docs/features.md): `ConsoleFeature` and `registerConsoleFeatures`
-- [Input grammar](./docs/grammar.md): the three modes, coercion, search and completion
+- [Input grammar](./docs/grammar.md): the three modes, coercion, search, completion and scripts
 - [jolly-console](./docs/element.md): mounting the element, keys and accessibility
 - [Remote consoles](./docs/remote.md): `ConsoleServer` and `ConsoleMirror`, a console served over a `MessagePort`
 

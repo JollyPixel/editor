@@ -49,7 +49,7 @@ async function lines(
 
 describe("complete", () => {
   test("after / lists root and namespaced commands", async() => {
-    assert.deepEqual(await lines("/"), ["/clear", "/git.checkout", "/help", "/revert", "/say"]);
+    assert.deepEqual(await lines("/"), ["/clear", "/git.checkout", "/help", "/revert", "/say", "/script"]);
     assert.deepEqual(await lines("/g"), ["/git.checkout"]);
   });
 

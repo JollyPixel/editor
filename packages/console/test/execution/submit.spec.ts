@@ -451,7 +451,8 @@ describe("built-ins", () => {
       "Commands",
       "  /clear                  Clear the scrollback",
       "  /help [name]            List namespaces and commands, or describe one",
-      "  /revert [count:number]  Undo the last changes made from the console"
+      "  /revert [count:number]  Undo the last changes made from the console",
+      "  /script [namespace]     Edit variables together as a script, then save or cancel"
     ].join("\n"));
   });
 

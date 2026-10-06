@@ -145,8 +145,9 @@ safely. `commands.unregister()` removes everything, built-ins included.
 | `/clear` | empties the scrollback |
 | `/help [name]` | lists everything, or describes one namespace, command or variable |
 | `/revert [count]` | undoes the last `count` changes, 1 by default; see [Reverting](#reverting) |
+| `/script [namespace]` | edits every variable, or one namespace's, as a script; see [Scripts](#scripts) |
 
-All three can be overwritten.
+All four can be overwritten.
 
 ## Reverting
 
@@ -154,6 +155,7 @@ All three can be overwritten.
 
 - a variable write that changed the value: reverting sets the previous value back;
 - a command whose `execute` returned a function: reverting calls it.
+- a saved [script](#scripts): reverting sets back every variable it wrote, in one step.
 
 ```ts
 keybind.registerCommand("reset", {
@@ -178,11 +180,71 @@ not recorded and there is no redo.
 | nothing recorded | prints `Nothing to revert` |
 | `count` is not a positive whole number | error, nothing reverted |
 | the command or variable is no longer registered | the change is skipped with an error and dropped |
+| some variables of a script are no longer registered | the others are set back; skipped only when none is left |
 | a revert throws or rejects | its error is printed, it is dropped, and the remaining count is not reverted |
 
 Reverts run one at a time; an async revert is awaited before the next. The console keeps the last
 100 changes, lost on reload. A command replaced under the same address still reverts through the
 function its earlier run returned.
+
+## Scripts
+
+A script is every variable, or one namespace's, written as INI text to edit and save together.
+The format is described in [Input grammar](./grammar.md#scripts).
+
+```ts
+editScript(namespace?: string): VariableScript;
+applyScript(draft: ScriptDraft): Promise<ScriptResult>;
+
+class VariableScript {
+  readonly scope: string | null;
+  readonly text: string;
+  readonly empty: boolean;
+  parse(text: string): ScriptDraft;
+}
+
+class ScriptDraft {
+  readonly lines: readonly ScriptLine[];
+  readonly changes: readonly ScriptChange[];
+  readonly diagnostics: readonly ScriptDiagnostic[];
+  readonly ok: boolean;
+  valueType(line: number): ConsoleValueType | undefined;
+}
+
+interface ScriptChange {
+  readonly line: number;
+  readonly address: string;
+  readonly value: ConsoleValue;
+}
+
+interface ScriptDiagnostic {
+  readonly line: number;
+  readonly start: number;
+  readonly end: number;
+  readonly message: string;
+}
+
+type ScriptResult =
+  | { ok: true; applied: number; }
+  | { ok: false; error: string; };
+```
+
+`editScript()` reads every variable once, writes the text and emits `script-requested`; the
+mounted [`jolly-console`](./element.md#scripts) opens its editor on it. It throws on an unknown
+namespace or when there is no variable to edit. `/script [namespace]` calls it.
+
+`parse()` never throws. `changes` holds only the keys whose value differs from the one read when
+the script was written, so a value changed elsewhere meanwhile is not overwritten unless its line
+was edited. A removed line leaves its variable as it is. Line numbers start at 1; `start` and
+`end` are column offsets from 0.
+
+`applyScript()` writes the changes in document order and awaits each `set`:
+
+- a draft with diagnostics is refused before any write;
+- a rejected or throwing `set` sets back the values already written, prints the error and
+  resolves `{ ok: false }`, naming any variable it could not set back;
+- on success each change is echoed as the equivalent prompt line (`brush.size 4`), and the whole
+  save is one `/revert` step.
 
 ## Running a line
 
@@ -246,6 +308,7 @@ It also has `namespace(name)`, `namespaces()`, `resolveCommand(address)`,
 | `open-requested` | `open()` was called |
 | `close-requested` | `close()` was called, or a `closeOnExecute` command finished |
 | `opened` | the element showed its dialog |
+| `script-requested` | `editScript()` built a script, handed to the element as the argument |
 
 ```ts
 const stop = commands.subscribe("scrollback-changed", render);

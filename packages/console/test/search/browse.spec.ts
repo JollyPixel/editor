@@ -69,7 +69,8 @@ describe("browse", () => {
       ["/clear", "/clear", true],
       ["/help", "/help", true],
       ["/revert", "/revert", true],
-      ["/say", "/say ", false]
+      ["/say", "/say ", false],
+      ["/script", "/script", true]
     ]);
     assert.deepEqual(variables.items.map((item) => item.label), ["theme"]);
   });

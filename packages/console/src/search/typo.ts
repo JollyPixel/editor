@@ -89,3 +89,10 @@ export function closestAddress(
 
   return entry === undefined ? null : label(entry);
 }
+
+export function didYouMean(
+  message: string,
+  guess: string | null
+): string {
+  return guess === null ? message : `${message}. Did you mean ${guess}?`;
+}

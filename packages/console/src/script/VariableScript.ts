@@ -1,0 +1,286 @@
+// Import Internal Dependencies
+import { peekValue } from "../execution/variables.ts";
+import { coerce } from "../input/coerce.ts";
+import type {
+  ConsoleRegistry,
+  ConsoleValue,
+  ConsoleValueType,
+  RegisteredNamespace,
+  RegisteredVariable
+} from "../registry/types.ts";
+import {
+  closest,
+  closestAddress,
+  didYouMean
+} from "../search/typo.ts";
+import {
+  formatScriptValue,
+  scanScript,
+  type EntryLine,
+  type ScriptSpan
+} from "./scanScript.ts";
+import {
+  ScriptDraft,
+  type ScriptChange,
+  type ScriptDiagnostic
+} from "./ScriptDraft.ts";
+
+interface ParseState {
+  section: string | null;
+  seen: Map<string, number>;
+  changes: ScriptChange[];
+  diagnostics: ScriptDiagnostic[];
+  valueTypes: Map<number, ConsoleValueType>;
+}
+
+export class VariableScript {
+  readonly scope: string | null;
+  readonly text: string;
+
+  #registry: ConsoleRegistry;
+  #snapshot = new Map<string, ConsoleValue>();
+
+  constructor(
+    registry: ConsoleRegistry,
+    scope: string | null = null
+  ) {
+    this.#registry = registry;
+    this.scope = scope;
+    this.text = this.#write(
+      scope === null ? [...registry] : [registry.namespace(scope)]
+    );
+  }
+
+  get empty(): boolean {
+    return this.#snapshot.size === 0;
+  }
+
+  parse(
+    text: string
+  ): ScriptDraft {
+    const lines = scanScript(text);
+    const state: ParseState = {
+      section: "",
+      seen: new Map(),
+      changes: [],
+      diagnostics: [],
+      valueTypes: new Map()
+    };
+
+    lines.forEach((line, index) => {
+      const number = index + 1;
+      switch (line.kind) {
+        case "section":
+          state.section = this.#enterSection(
+            line.name,
+            line.closed,
+            number,
+            state
+          );
+          break;
+        case "entry":
+          if (state.section !== null) {
+            this.#readEntry(line, number, state);
+          }
+          break;
+        case "invalid":
+          report(state, number, wholeLine(line.text), "Expected name = value");
+          break;
+        default:
+          break;
+      }
+    });
+
+    return new ScriptDraft({
+      lines,
+      changes: state.changes,
+      diagnostics: state.diagnostics,
+      valueTypes: state.valueTypes
+    });
+  }
+
+  #write(
+    namespaces: Array<RegisteredNamespace | undefined>
+  ): string {
+    const blocks: string[][] = [];
+    for (const namespace of namespaces) {
+      if (namespace === undefined) {
+        continue;
+      }
+
+      const block: string[] = [];
+      for (const variable of namespace.variables()) {
+        const value = peekValue(variable);
+        if (value === undefined) {
+          continue;
+        }
+        this.#snapshot.set(variable.address.toLowerCase(), value);
+        block.push(
+          `; ${describe(variable)}`,
+          `${variable.name} = ${formatScriptValue(String(value))}`
+        );
+      }
+      if (block.length === 0) {
+        continue;
+      }
+
+      if (namespace.name !== "") {
+        block.unshift(`[${namespace.name}]`);
+        if (namespace.description !== "") {
+          block.unshift(`; ${namespace.description}`);
+        }
+      }
+      blocks.push(block);
+    }
+
+    return blocks.map((block) => block.join("\n")).join("\n\n");
+  }
+
+  #enterSection(
+    name: ScriptSpan,
+    closed: boolean,
+    number: number,
+    state: ParseState
+  ): string | null {
+    if (!closed) {
+      report(state, number, name, "Expected \"]\" at the end of the section");
+    }
+    if (name.text === "") {
+      report(state, number, name, "Expected a namespace name");
+
+      return null;
+    }
+
+    const namespace = this.#registry.namespace(name.text);
+    if (namespace === undefined) {
+      const names = Array.from(this.#registry.namespaces(), (entry) => entry.name);
+      report(
+        state,
+        number,
+        name,
+        didYouMean(`Unknown namespace "${name.text}"`, closest(name.text, names))
+      );
+
+      return null;
+    }
+
+    return namespace.name;
+  }
+
+  #readEntry(
+    line: EntryLine,
+    number: number,
+    state: ParseState
+  ): void {
+    const { key, value } = line;
+    if (key.text === "") {
+      report(state, number, operatorSpan(line), "Expected a name before =");
+
+      return;
+    }
+
+    const address = state.section === "" ? key.text : `${state.section}.${key.text}`;
+    const variable = this.#registry.resolveVariable(address);
+    if (variable === undefined) {
+      report(
+        state,
+        number,
+        key,
+        didYouMean(
+          `Unknown variable "${address}"`,
+          closestAddress(address, this.#registry, "variable")
+        )
+      );
+
+      return;
+    }
+
+    state.valueTypes.set(number, variable.def.type);
+    const id = variable.address.toLowerCase();
+    const first = state.seen.get(id);
+    if (first !== undefined) {
+      report(state, number, key, `${variable.address} is already set on line ${first}`);
+
+      return;
+    }
+    state.seen.set(id, number);
+
+    const valueSpan = value.text === "" ? operatorSpan(line) : value;
+    if (line.quote === "unterminated") {
+      report(state, number, valueSpan, "Unterminated quote");
+
+      return;
+    }
+    if (line.quote === "trailing") {
+      report(state, number, valueSpan, "Unexpected text after the closing quote");
+
+      return;
+    }
+
+    let parsed: ConsoleValue;
+    try {
+      parsed = coerce(line.literal, variable.def);
+    }
+    catch (error) {
+      report(state, number, valueSpan, error instanceof Error ? error.message : String(error));
+
+      return;
+    }
+
+    const previous = this.#snapshot.has(id) ?
+      this.#snapshot.get(id) :
+      peekValue(variable);
+    if (parsed !== previous) {
+      state.changes.push({
+        line: number,
+        address: variable.address,
+        value: parsed
+      });
+    }
+  }
+}
+
+function describe(
+  variable: RegisteredVariable
+): string {
+  const { def } = variable;
+  const type = def.type === "enum" ? def.enumValues.join("|") : def.type;
+
+  return variable.description === "" ?
+    `<${type}>` :
+    `${variable.description} <${type}>`;
+}
+
+function report(
+  state: ParseState,
+  line: number,
+  span: Pick<ScriptSpan, "start" | "end">,
+  message: string
+): void {
+  state.diagnostics.push({
+    line,
+    start: span.start,
+    end: span.end,
+    message
+  });
+}
+
+function operatorSpan(
+  line: EntryLine
+): Pick<ScriptSpan, "start" | "end"> {
+  return {
+    start: line.operator,
+    end: line.operator + 1
+  };
+}
+
+function wholeLine(
+  text: string
+): Pick<ScriptSpan, "start" | "end"> {
+  const start = text.length - text.trimStart().length;
+
+  return {
+    start,
+    end: text.trimEnd().length
+  };
+}

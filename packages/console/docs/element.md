@@ -41,6 +41,21 @@ that cannot be dismissed keeps the console closed.
 | Up, Down | move through suggestions, or through history |
 | Escape | closes the console |
 
+## Scripts
+
+`/script [namespace]`, or `commands.editScript()`, replaces the prompt with a text editor over
+the variables ([format](./grammar.md#scripts)). Values are colored by their variable's type and
+errors are underlined as you type; the status line shows the first error or the number of
+changes.
+
+| Key | Effect |
+|---|---|
+| Ctrl+S, Ctrl+Enter (Cmd on macOS) | saves; on an error, selects it instead |
+| Escape | discards the text and returns to the prompt |
+
+A failed save keeps the text and shows the error. A click on the backdrop does not close the
+console while a script is open; Ctrl+K does, and discards the text.
+
 ## Empty prompt
 
 An empty prompt lists what is available:
