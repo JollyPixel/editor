@@ -32,10 +32,7 @@ export interface MarqueeToolOptions {
   camera: THREE.PerspectiveCamera;
   tool: ToolStore;
   selection: Pick<SelectionStore, "voxelLayer">;
-  placement: Pick<
-    MapPlacement,
-    "current" | "lifted" | "commit" | "liftRegion"
-  >;
+  placement: Pick<MapPlacement, "current" | "liftRegion">;
   pointer: PointerCapture;
   color: THREE.ColorRepresentation;
   onChange: () => void;
@@ -164,8 +161,7 @@ export class MarqueeTool extends ActorComponent {
   }
 
   #available(): boolean {
-    return this.#placement.lifted !== null ||
-      this.#placement.current === null;
+    return this.#placement.current === null;
   }
 
   #pointerFree(): boolean {
@@ -178,7 +174,6 @@ export class MarqueeTool extends ActorComponent {
 
   #hoverable(): boolean {
     return this.#pointerFree() &&
-      this.#placement.current === null &&
       !this.actor.world.input.mouse.isDown("middle");
   }
 
@@ -199,7 +194,6 @@ export class MarqueeTool extends ActorComponent {
   #begin(
     layerName: string
   ): void {
-    this.#placement.commit();
     this.#aimer.invalidate();
     const aim = this.#aim();
     if (aim === null) {
