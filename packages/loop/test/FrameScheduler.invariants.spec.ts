@@ -13,6 +13,7 @@ import { Xorshift32, generateTape } from "./helpers/prng.ts";
 const kSeeds = 64;
 const kFramesPerTape = 200;
 const kEpsilon = 1e-9;
+const kRenderEpsilon = 1e-6;
 
 const kOptionGrid: FrameSchedulerOptions[] = [
   {},
@@ -50,6 +51,7 @@ describe("Loop.FrameScheduler invariants", () => {
 
         let now = 0;
         let previousTime = 0;
+        let renderedTime = 0;
         scheduler.advance(now);
 
         for (const [index, delta] of deltas.entries()) {
@@ -90,6 +92,16 @@ describe("Loop.FrameScheduler invariants", () => {
             `${where}: simulation time went backwards`
           );
           previousTime = scheduler.time;
+
+          const delivered = renderedTime + schedule.renderDelta;
+          assert.ok(
+            Math.abs(scheduler.elapsed - delivered) <= kRenderEpsilon,
+            `${where}: ${scheduler.elapsed}ms elapsed, ${delivered}ms ` +
+            "delivered to renders"
+          );
+          if (schedule.render) {
+            renderedTime = delivered;
+          }
 
           const accounted = scheduler.time +
             scheduler.accumulator +

@@ -88,6 +88,8 @@ Throws `RangeError` unless `count` is an integer `>= 1`.
 | `rawDelta` | Time since the previous frame, before clamping and `timeScale`. |
 | `unscaledDelta` | Same delta after clamping, before `timeScale`. Keeps flowing while paused. |
 | `frameDelta` | Same delta after clamping and `timeScale`. |
+| `renderDelta` | `frameDelta` summed since the previous rendered frame, this one included. What `update` should advance by. |
+| `unscaledRenderDelta` | `unscaledDelta` summed the same way. |
 | `fixedDelta` | `1000 / fixedFps`. |
 | `steps` | Fixed steps to run now. |
 | `alpha` | Leftover time as a fraction of a step, in `[0, 1)`. Pass it to [`Interpolated.at()`](./interpolated.md). |
@@ -104,6 +106,8 @@ The five options are readable and writable properties.
 
 - Setting `fixedFps` keeps the accumulator.
 - Setting `maxFps` restarts render pacing.
+- Renders land on the frame nearest to each `1000 / maxFps` tick, so a cap
+  equal to the display rate draws every frame despite timestamp jitter.
 
 Read-only counters, all reset by `reset()`:
 

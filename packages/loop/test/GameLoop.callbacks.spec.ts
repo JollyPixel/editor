@@ -59,6 +59,17 @@ describe("Loop.GameLoop callbacks", () => {
     assert.strictEqual(recorder.update.length, 1);
   });
 
+  test("update receives the time since the previous update under a render cap", () => {
+    const { recorder, callbacks } = record();
+    loop.scheduler.maxFps = 30;
+    loop.start(callbacks);
+    source.step(20);
+    source.step(20);
+
+    assert.strictEqual(recorder.update.length, 2);
+    assert.strictEqual(recorder.update[1][0], 40);
+  });
+
   test("frame carries the source timestamp", () => {
     const { recorder, callbacks } = record();
     loop.start(callbacks);

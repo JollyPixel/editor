@@ -314,6 +314,20 @@ describe("Systems.World", () => {
       assert.strictEqual(world.time.unscaledDelta, 0.25);
     });
 
+    test("should carry frames skipped by the render cap into the next delta", () => {
+      scheduler.maxFps = 30;
+      world.start();
+      tick();
+
+      tick(20);
+      tick(20);
+
+      assert.strictEqual(world.time.delta, 0.04);
+      assert.strictEqual(world.time.unscaledDelta, 0.04);
+      assert.strictEqual(world.time.elapsed, 0.04);
+      assert.strictEqual(world.time.unscaledElapsed, 0.04);
+    });
+
     test("should expose the delta read by update()", () => {
       const deltas: number[] = [];
       sceneManager.update.mock.mockImplementation(() => {

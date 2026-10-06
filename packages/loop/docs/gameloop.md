@@ -22,7 +22,7 @@ loop.start({
   fixedUpdate: (fixedDeltaMs) => {
     return world.step(fixedDeltaMs / 1000);
   },
-  update: (frameDeltaMs, alpha) => {
+  update: (renderDeltaMs, alpha) => {
     return renderer.draw(alpha);
   }
 });
@@ -50,7 +50,7 @@ Passed to `start()`. All optional. Deltas are **milliseconds**.
 | --- | --- |
 | `frame(schedule, now)` | Every frame, first. Gets the full [`FrameSchedule`](./framescheduler.md#frameschedule). |
 | `fixedUpdate(fixedDeltaMs, stepIndex)` | `schedule.steps` times. `stepIndex` restarts at `0` each frame. |
-| `update(frameDeltaMs, alpha)` | Last, only when `schedule.render` is `true`. |
+| `update(renderDeltaMs, alpha)` | Last, only when `schedule.render` is `true`. Gets `schedule.renderDelta`: the time since the previous `update`, capped frames included. |
 
 ## Methods
 

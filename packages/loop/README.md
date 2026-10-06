@@ -37,7 +37,7 @@ loop.start({
       stepIndex
     );
   },
-  update: (frameDeltaMs, alpha) => {
+  update: (renderDeltaMs, alpha) => {
     renderer.draw(alpha);
   }
 });

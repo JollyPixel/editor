@@ -4,6 +4,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 // Import Internal Dependencies
 import { SkyBackground } from "./SkyBackground.ts";
+import { ShadowTexelSnap } from "./ShadowTexelSnap.ts";
 import type { SceneLighting } from "./SceneLighting.ts";
 import type { ViewSettings } from "../../state/ViewSettings.ts";
 
@@ -14,7 +15,6 @@ const kEnvironmentBlur = 0.04;
 const kEnvironmentIntensity = 0.6;
 const kShadowRadius = 48;
 const kShadowMapSize = 2048;
-const kShadowSnap = 2;
 
 export interface ChunkRendering {
   ambientOcclusion: number;
@@ -38,6 +38,8 @@ export class SceneEnvironment {
   #shadows = false;
   #focus = new THREE.Vector3();
   #forward = new THREE.Vector3();
+  #sunDirection = new THREE.Vector3();
+  #shadowSnap = new ShadowTexelSnap(kShadowRadius * 2, kShadowMapSize);
 
   constructor(
     options: SceneEnvironmentOptions
@@ -97,10 +99,9 @@ export class SceneEnvironment {
     this.#focus
       .copy(camera.position)
       .addScaledVector(this.#forward, kShadowRadius * 0.5);
-    this.#focus.set(
-      SceneEnvironment.#snap(this.#focus.x),
-      SceneEnvironment.#snap(this.#focus.y),
-      SceneEnvironment.#snap(this.#focus.z)
+    this.#shadowSnap.apply(
+      this.#focus,
+      this.#lighting.copySunDirectionTo(this.#sunDirection)
     );
     this.#lighting.aim(this.#focus, kShadowRadius * 2);
   }
@@ -130,11 +131,5 @@ export class SceneEnvironment {
     }
 
     return this.#environment.texture;
-  }
-
-  static #snap(
-    value: number
-  ): number {
-    return Math.round(value / kShadowSnap) * kShadowSnap;
   }
 }
