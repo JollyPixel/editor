@@ -86,6 +86,12 @@ export class SceneLighting {
     return kRigs[this.#mode].sunDirection.clone();
   }
 
+  copySunDirectionTo(
+    target: THREE.Vector3
+  ): THREE.Vector3 {
+    return target.copy(kRigs[this.#mode].sunDirection);
+  }
+
   get mode(): LightingMode {
     return this.#mode;
   }

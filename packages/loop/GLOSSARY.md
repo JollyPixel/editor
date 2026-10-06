@@ -121,7 +121,7 @@ the difference from one frame to the next.
 Drawing the game once on screen. It happens at most once per frame, after that
 frame's steps.
 
-*In code:* `update(frameDeltaMs, alpha)`, called when `schedule.render` is
+*In code:* `update(renderDeltaMs, alpha)`, called when `schedule.render` is
 `true`.
 
 ### Render cap
@@ -130,7 +130,8 @@ An upper limit on renders per second, to save power. Frames above the cap
 still arrive and still run steps; only the drawing is skipped. The cap follows
 real time, so a paused game keeps drawing at the capped rate.
 
-*In code:* `maxFps`. A capped frame has `render: false`.
+*In code:* `maxFps`. A capped frame has `render: false`; its time reaches the
+next render through `renderDelta`.
 
 ### Alpha
 

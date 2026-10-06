@@ -40,7 +40,7 @@ export interface GameLoopCallbacks {
    * Runs after fixed steps on rendered frames.
    */
   update?: (
-    frameDeltaMs: number,
+    renderDeltaMs: number,
     alpha: number
   ) => void;
   /**
@@ -293,7 +293,7 @@ export class GameLoop extends Emitter<GameLoopEvents> {
 
     if (schedule.render) {
       update?.(
-        schedule.frameDelta,
+        schedule.renderDelta,
         schedule.alpha
       );
     }

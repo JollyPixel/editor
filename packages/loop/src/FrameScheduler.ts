@@ -65,6 +65,8 @@ export class FrameScheduler {
   #lastNow: number | null = null;
   #accumulator = 0;
   #renderAccumulator = 0;
+  #pendingRenderDelta = 0;
+  #pendingUnscaledRenderDelta = 0;
   #time = 0;
   #elapsed = 0;
   #droppedTime = 0;
@@ -178,6 +180,8 @@ export class FrameScheduler {
     this.#lastNow = null;
     this.#accumulator = 0;
     this.#renderAccumulator = 0;
+    this.#pendingRenderDelta = 0;
+    this.#pendingUnscaledRenderDelta = 0;
     this.#time = 0;
     this.#elapsed = 0;
     this.#droppedTime = 0;
@@ -244,10 +248,22 @@ export class FrameScheduler {
       wallDelta
     ) || queuedSteps > 0;
 
+    if (firstFrame) {
+      this.#pendingRenderDelta = 0;
+      this.#pendingUnscaledRenderDelta = 0;
+    }
+    const frameDelta = scaledDelta + queuedDelta;
+    const renderDelta = this.#pendingRenderDelta + frameDelta;
+    const unscaledRenderDelta = this.#pendingUnscaledRenderDelta + wallDelta;
+    this.#pendingRenderDelta = render ? 0 : renderDelta;
+    this.#pendingUnscaledRenderDelta = render ? 0 : unscaledRenderDelta;
+
     return {
       rawDelta,
       unscaledDelta: wallDelta,
-      frameDelta: scaledDelta + queuedDelta,
+      frameDelta,
+      renderDelta,
+      unscaledRenderDelta,
       fixedDelta: this.#fixedDelta,
       steps: steps + queuedSteps,
       alpha: this.#accumulator / this.#fixedDelta,
@@ -272,10 +288,13 @@ export class FrameScheduler {
     }
 
     this.#renderAccumulator += wallDelta;
-    if (this.#renderAccumulator < this.#renderInterval) {
+    if (this.#renderAccumulator < this.#renderInterval - (wallDelta / 2)) {
       return false;
     }
-    this.#renderAccumulator %= this.#renderInterval;
+    this.#renderAccumulator = Math.min(
+      this.#renderAccumulator - this.#renderInterval,
+      this.#renderInterval / 2
+    );
 
     return true;
   }

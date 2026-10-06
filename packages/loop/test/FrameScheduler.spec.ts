@@ -37,6 +37,8 @@ describe("Loop.FrameScheduler", () => {
         rawDelta: 0,
         unscaledDelta: 0,
         frameDelta: 0,
+        renderDelta: 0,
+        unscaledRenderDelta: 0,
         fixedDelta: kFixedDelta60,
         steps: 0,
         alpha: 0,
@@ -177,8 +179,56 @@ describe("Loop.FrameScheduler", () => {
 
       assert.deepStrictEqual(
         schedules.map(({ render }) => render).map(Number),
-        [0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0]
+        [0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
       );
+    });
+
+    test("a cap at the display rate renders every jittery frame", () => {
+      const deltas = Array.from(
+        { length: 600 },
+        (_, index) => (index % 2 === 0 ? 16.6 : 16.733)
+      );
+      const { schedules } = replay(deltas, { maxFps: 60 });
+
+      assert.ok(schedules.every(({ render }) => render));
+    });
+
+    test("renderDelta carries the time of skipped frames", () => {
+      const deltas = Array.from({ length: 11 }, () => 1000 / 144);
+      const { schedules } = replay(deltas, { maxFps: 60 });
+
+      const rendered = schedules
+        .map(({ render, renderDelta }) => (render ? renderDelta : null))
+        .filter((delta) => delta !== null);
+      assert.ok(closeTo(rendered[0], 2000 / 144));
+      assert.ok(closeTo(rendered[1], 3000 / 144));
+      assert.ok(closeTo(schedules[0].renderDelta, 1000 / 144));
+    });
+
+    test("unscaledRenderDelta ignores timeScale", () => {
+      const { schedules } = replay(
+        [20, 20],
+        {
+          maxFps: 30,
+          timeScale: 0.5
+        }
+      );
+
+      assert.strictEqual(schedules[1].renderDelta, 20);
+      assert.strictEqual(schedules[1].unscaledRenderDelta, 40);
+    });
+
+    test("a frame after skipGap() does not deliver time owed before it", () => {
+      const scheduler = new FrameScheduler({ maxFps: 30 });
+      scheduler.advance(0);
+      scheduler.advance(20);
+
+      scheduler.skipGap();
+      const schedule = scheduler.advance(5000);
+
+      assert.strictEqual(schedule.render, true);
+      assert.strictEqual(schedule.renderDelta, 0);
+      assert.strictEqual(schedule.unscaledRenderDelta, 0);
     });
   });
 

@@ -12,6 +12,14 @@ export interface FrameSchedule {
    */
   frameDelta: number;
   /**
+   * Game time since the previous rendered frame, this frame included, in ms.
+   */
+  renderDelta: number;
+  /**
+   * `renderDelta` before `timeScale`.
+   */
+  unscaledRenderDelta: number;
+  /**
    * Milliseconds per fixed step: `1000 / fixedFps`.
    */
   fixedDelta: number;

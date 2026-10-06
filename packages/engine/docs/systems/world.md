@@ -207,10 +207,10 @@ accumulates time and still runs its fixed steps.
 
 | Property | Meaning |
 | --- | --- |
-| `delta` | Game time this frame brought in. Follows `timeScale`, `0` while paused. Same value as the `update` delta. |
-| `unscaledDelta` | Wall-clock time this frame brought in, clamped like game time. Ignores `timeScale` and pause. |
-| `elapsed` | Sum of `delta`. |
-| `unscaledElapsed` | Sum of `unscaledDelta`. |
+| `delta` | Game time since the previous `update`, frames skipped by `maxFps` included. Follows `timeScale`, `0` while paused. Same value as the `update` delta. |
+| `unscaledDelta` | Wall-clock time since the previous `update`, clamped like game time. Ignores `timeScale` and pause. |
+| `elapsed` | Game time received so far. |
+| `unscaledElapsed` | Wall-clock time received so far, clamped. |
 | `fixedElapsed` | Game time consumed by completed fixed steps. Inside `fixedUpdate` it is the start time of the running step. |
 
 Code that must keep running at normal speed while the game slows down or

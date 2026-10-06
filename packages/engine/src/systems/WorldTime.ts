@@ -31,10 +31,10 @@ export class WorldTime {
   advanceFrame(
     schedule: FrameSchedule
   ): void {
-    this.#delta = schedule.frameDelta / 1000;
-    this.#unscaledDelta = schedule.unscaledDelta / 1000;
-    this.#elapsed += this.#delta;
-    this.#unscaledElapsed += this.#unscaledDelta;
+    this.#delta = schedule.renderDelta / 1000;
+    this.#unscaledDelta = schedule.unscaledRenderDelta / 1000;
+    this.#elapsed += schedule.frameDelta / 1000;
+    this.#unscaledElapsed += schedule.unscaledDelta / 1000;
   }
 
   advanceStep(
