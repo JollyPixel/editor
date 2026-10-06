@@ -319,11 +319,23 @@ describe("VoxelHistory", () => {
     history.clear();
 
     assert.deepEqual(states, [
-      { canUndo: true, canRedo: false },
-      { canUndo: false, canRedo: true },
-      { canUndo: true, canRedo: false },
-      { canUndo: false, canRedo: false }
+      { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0 },
+      { canUndo: false, canRedo: true, undoDepth: 0, redoDepth: 1 },
+      { canUndo: true, canRedo: false, undoDepth: 1, redoDepth: 0 },
+      { canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0 }
     ]);
+  });
+
+  it("counts undo and redo steps up to the limit", () => {
+    const { world, history } = makeHistory(2);
+
+    for (const blockId of [1, 2, 3]) {
+      world.setVoxel(kLayer, { position: kOrigin, blockId });
+    }
+    history.undo();
+
+    assert.equal(history.undoDepth, 1);
+    assert.equal(history.redoDepth, 1);
   });
 
   it("detaches from the world on dispose", () => {

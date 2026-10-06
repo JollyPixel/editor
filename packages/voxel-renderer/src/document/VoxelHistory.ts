@@ -32,6 +32,8 @@ export interface VoxelHistoryEntry {
 export interface VoxelHistoryState {
   canUndo: boolean;
   canRedo: boolean;
+  undoDepth: number;
+  redoDepth: number;
 }
 
 export type VoxelHistoryEvents = {
@@ -83,6 +85,14 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
 
   get canRedo(): boolean {
     return this.#redoStack.length > 0;
+  }
+
+  get undoDepth(): number {
+    return this.#undoStack.length;
+  }
+
+  get redoDepth(): number {
+    return this.#redoStack.length;
   }
 
   begin(): void {
@@ -250,7 +260,9 @@ export class VoxelHistory extends Emitter<VoxelHistoryEvents> {
   #notify(): void {
     this.emit("change", {
       canUndo: this.canUndo,
-      canRedo: this.canRedo
+      canRedo: this.canRedo,
+      undoDepth: this.undoDepth,
+      redoDepth: this.redoDepth
     });
   }
 }

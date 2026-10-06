@@ -58,10 +58,10 @@ export class BrushToolbar extends WorkspaceElement {
   declare disabled: boolean;
 
   @state()
-  declare _canUndo: boolean;
+  declare _undoDepth: number;
 
   @state()
-  declare _canRedo: boolean;
+  declare _redoDepth: number;
 
   @state({ hasChanged: noticeChanged })
   declare _notice: PaintingNotice | null;
@@ -76,13 +76,15 @@ export class BrushToolbar extends WorkspaceElement {
   #onHistoryChange = (
     state: VoxelHistoryState
   ): void => {
-    this._canUndo = state.canUndo;
-    this._canRedo = state.canRedo;
+    this._undoDepth = state.undoDepth;
+    this._redoDepth = state.redoDepth;
   };
 
   constructor() {
     super();
     this.disabled = true;
+    this._undoDepth = 0;
+    this._redoDepth = 0;
     this._notice = null;
   }
 
@@ -100,8 +102,8 @@ export class BrushToolbar extends WorkspaceElement {
       this._notice = paintingNoticeOf(selection);
     };
 
-    this._canUndo = history.canUndo;
-    this._canRedo = history.canRedo;
+    this._undoDepth = history.undoDepth;
+    this._redoDepth = history.redoDepth;
     refreshSelection();
 
     history.on("change", this.#onHistoryChange);
@@ -143,18 +145,18 @@ export class BrushToolbar extends WorkspaceElement {
         <div class="group" role="group" aria-label="History">
           <jolly-tool-button
             data-tool="undo"
-            icon="history-undo"
+            icon="undo"
             label=${`Undo (${shortcut(HISTORY_SHORTCUTS.undo)})`}
-            ?disabled=${!this._canUndo}
+            ?disabled=${this._undoDepth === 0}
             @click=${this.#onUndo}
-          ></jolly-tool-button>
+          >${renderStepCount(this._undoDepth)}</jolly-tool-button>
           <jolly-tool-button
             data-tool="redo"
-            icon="history-redo"
+            icon="redo"
             label=${`Redo (${shortcut(HISTORY_SHORTCUTS.redo)})`}
-            ?disabled=${!this._canRedo}
+            ?disabled=${this._redoDepth === 0}
             @click=${this.#onRedo}
-          ></jolly-tool-button>
+          >${renderStepCount(this._redoDepth)}</jolly-tool-button>
         </div>
         <span class="separator" aria-hidden="true"></span>
         <div
@@ -324,6 +326,14 @@ function axisLetters(
   );
 
   return html`<span class="axis">${letters}</span>`;
+}
+
+function renderStepCount(
+  depth: number
+): TemplateResult | typeof nothing {
+  return depth === 0 ?
+    nothing :
+    html`<span class="step-count" aria-hidden="true"><span>${depth}</span></span>`;
 }
 
 declare global {
