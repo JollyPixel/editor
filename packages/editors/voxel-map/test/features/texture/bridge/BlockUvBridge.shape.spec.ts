@@ -374,6 +374,36 @@ describe("BlockUvBridge / shape footprint", () => {
       bridge.dispose();
     }
   });
+
+  it("gives an unfolded ramp slope its true length", () => {
+    const { view, bridgeOptions } = makeFakeVoxelEngine();
+    view.document.blocks.register(shapedBlock("ramp"));
+
+    const uv = makeUv();
+    const bridge = new BlockUvBridge(uv, view, bridgeOptions);
+    try {
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+      uv.setState("block-1", "unfolded");
+
+      const region = uv.get("block-1")!;
+      assert.equal(region.state, "unfolded");
+      assert.deepEqual(region.geometryFor("top"), {
+        x: 32,
+        y: 16,
+        width: 16,
+        height: 23
+      });
+
+      const block = view.document.blocks.get(1)!;
+      assert.deepEqual(
+        block.faceTextures.top,
+        { col: 2, row: 1, blocksetId: "atlas" }
+      );
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
 });
 
 function boundsOf(

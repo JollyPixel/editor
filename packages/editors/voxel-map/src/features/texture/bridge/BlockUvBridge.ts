@@ -256,7 +256,7 @@ export class BlockUvBridge {
       return;
     }
     const block = this.#blockOf(event.region.id);
-    if (!block || this.#rederivedOnFree(block, event)) {
+    if (!block || this.#rederivedFromStacked(block, event)) {
       return;
     }
 
@@ -275,12 +275,12 @@ export class BlockUvBridge {
     this.#applyRegionToBlock(event.region);
   };
 
-  #rederivedOnFree(
+  #rederivedFromStacked(
     block: ResolvedBlockDefinition,
     event: { region: UVRegion; previous: UVRegionData; }
   ): boolean {
-    const wasStacked = event.previous.state === "stacked";
-    if (event.region.state !== "free" || !wasStacked) {
+    const { state, id } = event.region;
+    if (state === "stacked" || event.previous.state !== "stacked") {
       return false;
     }
 
@@ -289,15 +289,21 @@ export class BlockUvBridge {
       return false;
     }
 
-    const derived = uv.freeRegion();
     this.#rebuilding = true;
     try {
-      this.#runLocalRestore(() => this.#uv.restore(derived));
+      this.#runLocalRestore(() => {
+        this.#uv.restore(uv.freeRegion());
+        this.#uv.setState(id, state);
+      });
     }
     finally {
       this.#rebuilding = false;
     }
-    this.#applyRegionToBlock(derived);
+
+    const derived = this.#uv.get(id);
+    if (derived) {
+      this.#applyRegionToBlock(derived);
+    }
 
     return true;
   }
