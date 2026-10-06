@@ -165,7 +165,8 @@ interface ScrollbackEntry {
 ```
 
 The scrollback keeps the last 500 entries and the history the last 100 lines. Both are lost on
-reload. `history.previous(current)` and `history.next()` walk the history and return `null` at
+reload. `scrollback` returns the same frozen array until an entry is added, updated or cleared, so
+a renderer can compare it by identity. `history.previous(current)` and `history.next()` walk the history and return `null` at
 either end.
 
 ## Opening and events

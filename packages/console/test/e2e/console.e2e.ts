@@ -187,6 +187,33 @@ test.describe("jolly-console", () => {
     await expect(prompt(page)).toHaveValue("/brush.grow");
   });
 
+  test("the highlight stays in view and a new query scrolls back to the top", async({ page }) => {
+    await page.keyboard.press("Control+k");
+    await page.evaluate(() => {
+      const bulk = document.querySelector("jolly-console")?.console
+        ?.registerNamespace("bulk");
+      for (let index = 0; index < 40; index++) {
+        bulk?.registerVariable(`item${index}`, {
+          type: "number",
+          description: "Bulk item",
+          get: () => index,
+          set: () => undefined
+        });
+      }
+    });
+    const options = page.getByRole("option");
+    await prompt(page).fill("bulk.ite");
+    await page.keyboard.press("ArrowUp");
+
+    await expect(options.last()).toHaveAttribute("aria-selected", "true");
+    await expect(options.last()).toBeInViewport();
+
+    await page.keyboard.type("m");
+
+    await expect(options.first()).toHaveAttribute("aria-selected", "true");
+    await expect(options.first()).toBeInViewport();
+  });
+
   test("search results follow a registry change while open", async({ page }) => {
     await page.keyboard.press("Control+k");
     await prompt(page).fill("brush.si");

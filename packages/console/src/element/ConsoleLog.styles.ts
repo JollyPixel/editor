@@ -43,6 +43,8 @@ export const consoleLogStyles = css`
     min-height: var(--jolly-console-row);
     padding: 2px var(--jolly-space-3, 12px);
     box-sizing: border-box;
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto var(--jolly-console-row);
     transition:
       opacity var(--jolly-duration-base, 160ms) var(--jolly-easing, ease),
       transform var(--jolly-duration-base, 160ms) var(--jolly-easing, ease);

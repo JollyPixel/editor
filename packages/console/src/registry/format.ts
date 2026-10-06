@@ -6,6 +6,9 @@ import type {
   RegisteredVariable
 } from "./types.ts";
 
+// CONSTANTS
+const kCollator = new Intl.Collator();
+
 export function label(
   entry: RegisteredEntry
 ): string {
@@ -16,7 +19,14 @@ export function byName(
   left: { name: string; },
   right: { name: string; }
 ): number {
-  return left.name.localeCompare(right.name);
+  return compareText(left.name, right.name);
+}
+
+export function compareText(
+  left: string,
+  right: string
+): number {
+  return kCollator.compare(left, right);
 }
 
 export function signature(

@@ -34,7 +34,8 @@ describe("score tiers", () => {
     ]],
     ["prefix", [
       ["brush.s", "brush.size", "[brush.s]ize"],
-      ["he", "help", "[he]lp"]
+      ["he", "help", "[he]lp"],
+      ["café", "café.menu", "[café].menu"]
     ]],
     ["wordBoundary", [
       ["bs", "brush.size", "[b]rush.[s]ize"],
@@ -50,7 +51,8 @@ describe("score tiers", () => {
     ]],
     ["subsequence", [
       ["bze", "brush.size", "[b]rush.si[ze]"],
-      ["hsz", "brush.size", "brus[h].[s]i[z]e"]
+      ["hsz", "brush.size", "brus[h].[s]i[z]e"],
+      ["l2", "layer2", "[l]ayer[2]"]
     ]]
   ];
 
@@ -96,6 +98,7 @@ describe("scoreTypo", () => {
       ranges: []
     });
     assert.equal(scoreTypo("sise", "brush.size")?.tier, MATCH_TIERS.typo);
+    assert.equal(scoreTypo("sixe", "brush.size")?.tier, MATCH_TIERS.typo);
   });
 
   test("score never tolerates typos on its own", () => {

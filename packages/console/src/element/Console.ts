@@ -75,6 +75,7 @@ export class ConsoleElement extends LitElement {
   );
   #restoreFocus: HTMLElement | null = null;
   #releaseLayer: (() => void) | null = null;
+  #measuredText: string | null = null;
   #theme = new AmbientThemeController(this);
 
   constructor() {
@@ -110,10 +111,18 @@ export class ConsoleElement extends LitElement {
   protected override updated(): void {
     const input = this._input;
     const ghost = this._ghost;
-    if (input !== null && ghost !== null) {
-      const overflowing = input.scrollWidth > input.clientWidth;
-      ghost.style.visibility = overflowing ? "hidden" : "";
+    if (
+      input === null ||
+      ghost === null ||
+      ghost.hidden ||
+      this.#measuredText === this._text
+    ) {
+      return;
     }
+
+    this.#measuredText = this._text;
+    const overflowing = input.scrollWidth > input.clientWidth;
+    ghost.style.visibility = overflowing ? "hidden" : "";
   }
 
   async show(): Promise<void> {
@@ -234,6 +243,7 @@ export class ConsoleElement extends LitElement {
                 role="listbox"
                 aria-label="Suggestions"
                 @mousedown=${this.#keepPromptFocus}
+                @scroll=${suggestions.onScroll}
               >${suggestions.renderOptions()}</ul>
             </div>
             <div id="usage" class="usage" ?hidden=${usage === null}>

@@ -216,6 +216,12 @@ export const consoleStyles = css`
       color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
   }
 
+  [role="listbox"] > [role="option"],
+  .rows > [role="option"] {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto var(--jolly-console-row);
+  }
+
   [role="option"][aria-selected="true"] {
     background: var(--jolly-accent-fill, #3b82f6);
     color: var(--jolly-text-on-fill, white);

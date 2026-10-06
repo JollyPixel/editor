@@ -11,6 +11,7 @@ import {
   property,
   query
 } from "lit/decorators.js";
+import { guard } from "lit/directives/guard.js";
 import { repeat } from "lit/directives/repeat.js";
 import "@jolly-pixel/ui/icon";
 
@@ -74,10 +75,12 @@ export class ConsoleLogElement extends LitElement {
       scrollback.scrollTop = scrollback.scrollHeight;
       this.#follow = false;
     }
-    scrollback
-      .querySelector(`[data-entry="${this.#reveal}"]`)
-      ?.scrollIntoView({ block: "nearest" });
-    this.#reveal = null;
+    if (this.#reveal !== null) {
+      scrollback
+        .querySelector(`[data-entry="${this.#reveal}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+      this.#reveal = null;
+    }
   }
 
   override render(): TemplateResult {
@@ -90,13 +93,21 @@ export class ConsoleLogElement extends LitElement {
       >${repeat(
         this.entries,
         (entry) => entry.id,
-        (entry) => this.#renderEntry(entry)
+        (entry) => {
+          const unfolded = this.#unfolded.has(entry.id);
+
+          return guard(
+            [entry, unfolded],
+            () => this.#renderEntry(entry, unfolded)
+          );
+        }
       )}</div>
     `;
   }
 
   #renderEntry(
-    entry: ScrollbackEntry
+    entry: ScrollbackEntry,
+    unfolded: boolean
   ): TemplateResult {
     const classes = [
       "entry",
@@ -108,7 +119,6 @@ export class ConsoleLogElement extends LitElement {
     const hiddenLines = lines.length > kFoldedLines + 1 ?
       lines.length - kFoldedLines :
       0;
-    const unfolded = this.#unfolded.has(entry.id);
     const text = hiddenLines > 0 && !unfolded ?
       lines.slice(0, kFoldedLines).join("\n") :
       entry.text;

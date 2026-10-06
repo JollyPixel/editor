@@ -10,6 +10,7 @@ import {
   type Token
 } from "../input/tokenize.ts";
 import {
+  compareText,
   label,
   signature
 } from "../registry/format.ts";
@@ -339,7 +340,7 @@ function byValue(
   left: Candidate,
   right: Candidate
 ): number {
-  return left.value.localeCompare(right.value);
+  return compareText(left.value, right.value);
 }
 
 function suggestion(

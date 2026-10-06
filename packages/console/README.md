@@ -63,11 +63,22 @@ Ctrl+K (Cmd+K on macOS) opens the console.
 
 ## 🧪 Benchmarks
 
-The suite measures a search, a classification and a completion against 500
-registered entries, the work done on every keystroke.
+The Node suites measure the work done on every keystroke: tokenizing and
+classifying a line, then a search, a browse and a completion against 500
+registered entries, with a second search suite at 5000 entries.
 
 ```bash
 pnpm --filter @jolly-pixel/console bench
+```
+
+The browser suite mounts `jolly-console` in headless Chromium with Lit's
+production build, fills the scrollback to its 500-entry capacity and times
+each keystroke until layout is clean. `KB/op` is the heap growth over 40
+operations after a forced GC, with a young generation large enough that no
+collection runs in between.
+
+```bash
+pnpm --filter @jolly-pixel/console bench:browser
 ```
 
 ## ✨ Contributors guide

@@ -1,6 +1,9 @@
 // Import Internal Dependencies
 import { peekValue } from "../execution/variables.ts";
-import { byName } from "../registry/format.ts";
+import {
+  byName,
+  compareText
+} from "../registry/format.ts";
 import type { ConsoleRegistry } from "../registry/types.ts";
 import {
   entrySuggestion,
@@ -78,7 +81,7 @@ function toggleItems(
   const variables = [...registry]
     .flatMap((scope) => [...scope.variables()])
     .filter((variable) => variable.def.type === "boolean")
-    .sort((left, right) => left.address.localeCompare(right.address));
+    .sort((left, right) => compareText(left.address, right.address));
   for (const variable of variables) {
     const checked = peekValue(variable);
     if (typeof checked === "boolean") {

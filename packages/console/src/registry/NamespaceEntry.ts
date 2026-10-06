@@ -36,6 +36,8 @@ export class NamespaceEntry implements RegisteredNamespace {
   #onChange: () => void;
   #commands = new Map<string, CommandSlot>();
   #variables = new Map<string, RegisteredVariable>();
+  #commandList: RegisteredCommand[] | null = null;
+  #memberList: RegisteredMember[] | null = null;
 
   constructor(
     options: NamespaceEntryOptions
@@ -59,19 +61,26 @@ export class NamespaceEntry implements RegisteredNamespace {
     return this.#variables.get(name.toLowerCase());
   }
 
-  * commands(): IterableIterator<RegisteredCommand> {
-    for (const slot of this.#commands.values()) {
-      yield slot.command;
-    }
+  commands(): IterableIterator<RegisteredCommand> {
+    this.#commandList ??= Array.from(
+      this.#commands.values(),
+      (slot) => slot.command
+    );
+
+    return this.#commandList.values();
   }
 
   variables(): IterableIterator<RegisteredVariable> {
     return this.#variables.values();
   }
 
-  * [Symbol.iterator](): IterableIterator<RegisteredMember> {
-    yield* this.commands();
-    yield* this.variables();
+  [Symbol.iterator](): IterableIterator<RegisteredMember> {
+    this.#memberList ??= [
+      ...this.commands(),
+      ...this.#variables.values()
+    ];
+
+    return this.#memberList.values();
   }
 
   registerCommand<const TArgs extends readonly ArgDef[]>(
@@ -98,7 +107,7 @@ export class NamespaceEntry implements RegisteredNamespace {
     };
     this.#commands.get(key)?.lifetime.abort();
     this.#commands.set(key, slot);
-    this.#onChange();
+    this.#changed();
 
     return {
       unregister: () => {
@@ -107,7 +116,7 @@ export class NamespaceEntry implements RegisteredNamespace {
         }
         this.#commands.delete(key);
         lifetime.abort();
-        this.#onChange();
+        this.#changed();
       }
     };
   }
@@ -130,7 +139,7 @@ export class NamespaceEntry implements RegisteredNamespace {
       def
     };
     this.#variables.set(key, entry);
-    this.#onChange();
+    this.#changed();
 
     return {
       unregister: () => {
@@ -138,7 +147,7 @@ export class NamespaceEntry implements RegisteredNamespace {
           return;
         }
         this.#variables.delete(key);
-        this.#onChange();
+        this.#changed();
       }
     };
   }
@@ -149,5 +158,16 @@ export class NamespaceEntry implements RegisteredNamespace {
     }
     this.#commands.clear();
     this.#variables.clear();
+    this.#forgetLists();
+  }
+
+  #changed(): void {
+    this.#forgetLists();
+    this.#onChange();
+  }
+
+  #forgetLists(): void {
+    this.#commandList = null;
+    this.#memberList = null;
   }
 }

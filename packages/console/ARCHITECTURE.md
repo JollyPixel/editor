@@ -83,6 +83,24 @@ match puts the prompt in variable mode before search is tried.
 that picking them leaves, and whether picking runs the line. `SuggestionController` only tracks
 which kind of list is showing (`browse`, `search` or `completion`) and the highlight.
 
+### Keystroke cost
+
+Registered entries never change in place: re-registering builds a new entry. `SearchTarget.of`
+therefore caches, per entry in a `WeakMap`, the label and a `SearchText` for the address and the
+description: the lowered text, its word starts, and a 32-bit set of the letters it holds. A query
+that holds a letter the text lacks is rejected with one AND before any string scan. The count of
+missing letters is also a lower bound on the edit distance, so the typo tier skips Levenshtein
+when that count exceeds the tolerance. `search` keeps only the best `limit` results in a
+`TopRanked` heap and builds `Suggestion`s for those alone; the element asks for 50.
+`NamespaceEntry` iterates arrays it rebuilds after a registration change instead of generators.
+
+On the element side, a keystroke must not touch the log: `scrollback` keeps its identity until
+it changes, so `jolly-console-log` skips the update, and each entry sits behind `guard()` for the
+updates that do run. Log entries and list rows use `content-visibility: auto`, so only the
+visible ones pay for style, layout and text shaping. Writing `scrollTop` forces a synchronous
+layout, so `SuggestionController` resets the list only when it knows the list is scrolled, and
+`jolly-console` measures prompt overflow only when the text changes while the gray suffix shows.
+
 ## Submitting a line
 
 ```mermaid

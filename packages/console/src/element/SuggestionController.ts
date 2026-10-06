@@ -35,6 +35,8 @@ import type { Suggestion } from "../search/suggestion.ts";
 
 // CONSTANTS
 const kMaxResults = 50;
+const kOptionIdPrefix = "option-";
+const kNoRanges: readonly MatchRange[] = [];
 const kGroupTitles: Record<BrowseSectionKind, string> = {
   recent: "Recent",
   toggles: "Toggles",
@@ -78,13 +80,16 @@ type SuggestionList =
   | SearchSuggestions
   | CompletionSuggestions;
 
+type ListScroll = "none" | "top" | "reveal";
+
 export class SuggestionController implements ReactiveController {
   #host: ReactiveControllerHost;
   #options: SuggestionControllerOptions;
   #list = kNoSuggestions;
   #highlight = -1;
   #request = 0;
-  #listChanged = false;
+  #scroll: ListScroll = "none";
+  #scrolled = false;
 
   constructor(
     host: ReactiveControllerHost,
@@ -121,12 +126,15 @@ export class SuggestionController implements ReactiveController {
 
   hostUpdated(): void {
     const listbox = this.#options.listbox();
-    if (listbox === null) {
+    if (listbox === null || this.#scroll === "none") {
       return;
     }
 
-    if (this.#listChanged || this.#highlight === 0) {
-      listbox.scrollTop = 0;
+    if (this.#scroll === "top") {
+      if (this.#scrolled) {
+        listbox.scrollTop = 0;
+        this.#scrolled = false;
+      }
     }
     else {
       const option = listbox.querySelector<HTMLElement>(
@@ -136,10 +144,15 @@ export class SuggestionController implements ReactiveController {
       const leads = group?.querySelector("[role=option]") === option;
       if (option) {
         revealWithin(listbox, leads && group ? group : option, option);
+        this.#scrolled = listbox.scrollTop > 0;
       }
     }
-    this.#listChanged = false;
+    this.#scroll = "none";
   }
+
+  readonly onScroll = (): void => {
+    this.#scrolled = (this.#options.listbox()?.scrollTop ?? 0) > 0;
+  };
 
   clear(): void {
     this.#request++;
@@ -166,7 +179,12 @@ export class SuggestionController implements ReactiveController {
       return;
     }
 
-    this.#show(this.#list.kind === "completion" ? this.#list : kNoSuggestions);
+    const pending = this.#list.kind === "completion" ?
+      this.#list :
+      kNoSuggestions;
+    if (pending !== this.#list || this.#highlight !== -1) {
+      this.#show(pending);
+    }
     const list = await complete(text, caret, registry);
     if (request === this.#request) {
       this.#show({
@@ -190,6 +208,7 @@ export class SuggestionController implements ReactiveController {
     else {
       this.#highlight = Math.min(Math.max(this.#highlight + delta, -1), count - 1);
     }
+    this.#scroll = this.#highlight === 0 ? "top" : "reveal";
     this.#host.requestUpdate();
   }
 
@@ -239,7 +258,7 @@ export class SuggestionController implements ReactiveController {
     list: SuggestionList
   ): void {
     this.#list = list;
-    this.#listChanged = true;
+    this.#scroll = "top";
     this.#highlight = list.kind === "search" && list.items.length > 0 ? 0 : -1;
     this.#host.requestUpdate();
   }
@@ -252,17 +271,19 @@ export class SuggestionController implements ReactiveController {
 
     return html`
       <li
-        id=${`option-${index}`}
+        id=${kOptionIdPrefix + index}
         role="option"
         aria-selected=${index === this.#highlight ? "true" : "false"}
-        @click=${() => this.#options.pick(index)}
+        @click=${this.#onOptionClick}
       >
-        <span class="label">${match?.field === "label" ?
-          marked(item.label, match.ranges) :
-          item.label}</span>
-        <span class="detail">${match?.field === "detail" ?
-          marked(item.detail, match.ranges) :
-          item.detail}</span>
+        <span class="label">${marked(
+          item.label,
+          match?.field === "label" ? match.ranges : kNoRanges
+        )}</span>
+        <span class="detail">${marked(
+          item.detail,
+          match?.field === "detail" ? match.ranges : kNoRanges
+        )}</span>
       </li>
     `;
   }
@@ -273,12 +294,12 @@ export class SuggestionController implements ReactiveController {
   ): TemplateResult {
     return html`
       <li
-        id=${`option-${index}`}
+        id=${kOptionIdPrefix + index}
         role="option"
         title=${item.detail}
         aria-selected=${index === this.#highlight ? "true" : "false"}
         aria-checked=${item.checked ? "true" : "false"}
-        @click=${() => this.#options.pick(index)}
+        @click=${this.#onOptionClick}
       >
         <span class="box" aria-hidden="true">${item.checked ?
           html`<jolly-icon name="check"></jolly-icon>` :
@@ -287,6 +308,15 @@ export class SuggestionController implements ReactiveController {
       </li>
     `;
   }
+
+  readonly #onOptionClick = (
+    event: MouseEvent
+  ): void => {
+    if (event.currentTarget instanceof HTMLElement) {
+      const { id } = event.currentTarget;
+      this.#options.pick(Number(id.slice(kOptionIdPrefix.length)));
+    }
+  };
 }
 
 function browseList(
@@ -308,7 +338,7 @@ function searchList(
 ): SearchSuggestions {
   return {
     kind: "search",
-    items: search(query, registry).slice(0, kMaxResults)
+    items: search(query, registry, kMaxResults)
   };
 }
 
@@ -376,8 +406,8 @@ function revealWithin(
 
 function marked(
   text: string,
-  ranges: MatchRange[]
-): TemplateResult {
+  ranges: readonly MatchRange[]
+): (TemplateResult | string)[] {
   const parts: (TemplateResult | string)[] = [];
   let cursor = 0;
   for (const { start, end } of ranges) {
@@ -387,5 +417,5 @@ function marked(
   }
   parts.push(text.slice(cursor));
 
-  return html`${parts}`;
+  return parts;
 }

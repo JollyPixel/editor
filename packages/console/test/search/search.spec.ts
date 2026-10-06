@@ -46,6 +46,29 @@ function createConsole(): CommandConsole {
 describe("search", () => {
   const { registry } = createConsole();
 
+  test("a limit keeps the leading results of the full ranking", () => {
+    const commands = createConsole();
+    const bulk = commands.registerNamespace("bulk", { description: "Bulk brush items" });
+    for (let index = 0; index < 30; index++) {
+      bulk.registerVariable(`item${(index * 7) % 30}`, {
+        type: "number",
+        description: index % 2 === 0 ? "Brush item" : "Other",
+        get: () => index,
+        set: () => undefined
+      });
+    }
+
+    for (const query of ["b", "item", "bulk.itme"]) {
+      const full = search(query, commands.registry).map((result) => result.label);
+      assert.ok(full.length > 12, query);
+      for (const limit of [0, 1, 5, 12]) {
+        const limited = search(query, commands.registry, limit);
+
+        assert.deepEqual(limited.map((result) => result.label), full.slice(0, limit));
+      }
+    }
+  });
+
   test("an empty query returns nothing", () => {
     assert.deepEqual(search("  ", registry), []);
   });

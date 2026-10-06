@@ -28,6 +28,26 @@ describe("Scrollback", () => {
     assert.equal(scrollback.entries[0].pending, true);
     assert.notEqual(scrollback.entries[0].id, scrollback.entries[1].id);
   });
+
+  test("returns the same frozen list until an entry changes", () => {
+    const scrollback = new Scrollback();
+    const { id } = scrollback.append("echo", "a");
+    const before = scrollback.entries;
+
+    assert.equal(scrollback.entries, before);
+    assert.ok(Object.isFrozen(before));
+
+    scrollback.updatePending(id, true);
+    const pending = scrollback.entries;
+    scrollback.append("info", "b");
+    const appended = scrollback.entries;
+    scrollback.clear();
+
+    assert.notEqual(pending, before);
+    assert.notEqual(appended, pending);
+    assert.deepEqual(scrollback.entries, []);
+    assert.deepEqual(before.map((entry) => entry.text), ["a"]);
+  });
 });
 
 describe("InputHistory", () => {

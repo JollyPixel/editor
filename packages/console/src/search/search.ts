@@ -1,20 +1,24 @@
 // Import Internal Dependencies
+import { compareText } from "../registry/format.ts";
 import type {
   ConsoleRegistry,
   RegisteredEntry
 } from "../registry/types.ts";
 import {
   MATCH_TIERS,
-  score,
-  scoreTypo,
+  matchText,
+  matchTypo,
   type Match,
   type MatchTier
 } from "./score.ts";
+import { SearchTarget } from "./SearchTarget.ts";
+import { SearchText } from "./SearchText.ts";
 import {
   entrySuggestion,
   type Suggestion,
   type SuggestionMatch
 } from "./suggestion.ts";
+import { TopRanked } from "./TopRanked.ts";
 
 export interface SearchResult extends Suggestion {
   match: SuggestionMatch;
@@ -22,81 +26,107 @@ export interface SearchResult extends Suggestion {
   score: number;
 }
 
+interface RankedTarget {
+  target: SearchTarget;
+  field: SuggestionMatch["field"];
+  found: Match;
+  group: number;
+}
+
 export function search(
   query: string,
-  registry: ConsoleRegistry
+  registry: ConsoleRegistry,
+  limit = Infinity
 ): SearchResult[] {
-  const needle = query.trim();
-  if (needle === "") {
+  const needle = new SearchText(query.trim());
+  if (needle.text === "") {
     return [];
   }
 
-  const results: SearchResult[] = [];
-  for (const target of targets(registry)) {
-    const result = rank(needle, target);
-    if (result !== null) {
-      results.push(result);
-    }
-  }
-
-  return results.sort(compare);
-}
-
-function* targets(
-  registry: ConsoleRegistry
-): IterableIterator<RegisteredEntry> {
+  const ranked = new TopRanked(limit, compare);
   for (const scope of registry) {
     if (scope !== registry.root) {
-      yield scope;
+      rank(needle, scope, ranked);
     }
-    yield* scope;
+    for (const entry of scope) {
+      rank(needle, entry, ranked);
+    }
   }
+
+  return ranked.sorted().map(toResult);
 }
 
 function rank(
-  query: string,
-  target: RegisteredEntry
-): SearchResult | null {
-  const byName = score(query, target.address);
+  needle: SearchText,
+  entry: RegisteredEntry,
+  ranked: TopRanked<RankedTarget>
+): void {
+  const target = SearchTarget.of(entry);
+  const byName = matchText(needle, target.address);
   if (byName !== null) {
-    return nameResult(target, byName);
+    ranked.add({
+      target,
+      field: "label",
+      found: byName,
+      group: 0
+    });
+
+    return;
   }
 
-  const byDescription = score(query, target.description);
+  const byDescription = matchText(needle, target.description);
   if (
     byDescription !== null &&
     byDescription.tier !== MATCH_TIERS.subsequence
   ) {
+    ranked.add({
+      target,
+      field: "detail",
+      found: byDescription,
+      group: 1
+    });
+
+    return;
+  }
+
+  const byTypo = matchTypo(needle, target.address);
+  if (byTypo !== null) {
+    ranked.add({
+      target,
+      field: "label",
+      found: byTypo,
+      group: 2
+    });
+  }
+}
+
+function toResult(
+  ranked: RankedTarget
+): SearchResult {
+  const { target, field, found } = ranked;
+  const { entry } = target;
+  const suggestion = entrySuggestion(entry);
+  if (field === "detail") {
     return {
-      ...entrySuggestion(target),
+      ...suggestion,
       match: {
-        field: "detail",
-        ranges: byDescription.ranges
+        field,
+        ranges: found.ranges
       },
-      tier: byDescription.tier,
-      score: byDescription.score
+      tier: found.tier,
+      score: found.score
     };
   }
 
-  const byTypo = scoreTypo(query, target.address);
-
-  return byTypo === null ? null : nameResult(target, byTypo);
-}
-
-function nameResult(
-  target: RegisteredEntry,
-  found: Match
-): SearchResult {
-  const suggestion = entrySuggestion(target);
-  const shift = suggestion.label.length - target.address.length;
+  const shift = target.label.length - entry.address.length;
 
   return {
     ...suggestion,
-    detail: target.kind === "variable" ?
-      `variable  ${target.def.type}` :
+    detail: entry.kind === "variable" ?
+      `variable  ${entry.def.type}` :
       suggestion.detail,
     match: {
-      field: "label",
+      field,
       ranges: found.ranges.map((range) => {
         return {
           start: range.start + shift,
@@ -110,29 +140,18 @@ function nameResult(
 }
 
 function compare(
-  left: SearchResult,
-  right: SearchResult
+  left: RankedTarget,
+  right: RankedTarget
 ): number {
-  const byGroup = group(left) - group(right);
-  if (byGroup !== 0) {
-    return byGroup;
+  if (left.group !== right.group) {
+    return left.group - right.group;
   }
-  if (left.tier !== right.tier) {
-    return left.tier - right.tier;
+  if (left.found.tier !== right.found.tier) {
+    return left.found.tier - right.found.tier;
   }
-  if (left.score !== right.score) {
-    return right.score - left.score;
-  }
-
-  return left.label.localeCompare(right.label);
-}
-
-function group(
-  result: SearchResult
-): number {
-  if (result.match.field === "detail") {
-    return 1;
+  if (left.found.score !== right.found.score) {
+    return right.found.score - left.found.score;
   }
 
-  return result.tier === MATCH_TIERS.typo ? 2 : 0;
+  return compareText(left.target.label, right.target.label);
 }

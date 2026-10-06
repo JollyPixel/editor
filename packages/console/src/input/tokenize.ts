@@ -1,3 +1,9 @@
+// CONSTANTS
+const kQuote = 0x22;
+const kBackslash = 0x5C;
+const kTab = 0x09;
+const kWhitespaceBits = 0x800013;
+
 export interface Token {
   value: string;
   start: number;
@@ -18,32 +24,35 @@ export function tokenize(
   let index = 0;
 
   while (index < line.length) {
-    if (isWhitespace(line[index])) {
+    const code = line.charCodeAt(index);
+    if (isWhitespace(code)) {
       index++;
       continue;
     }
 
     const start = index;
-    if (line[index] === "\"") {
+    if (code === kQuote) {
       let value = "";
-      index++;
+      let chunk = ++index;
       let closed = false;
       while (index < line.length) {
-        const char = line[index];
-        if (
-          char === "\\" &&
-          (line[index + 1] === "\"" || line[index + 1] === "\\")
-        ) {
-          value += line[index + 1];
+        const char = line.charCodeAt(index);
+        if (char === kQuote) {
+          closed = true;
+          break;
+        }
+        const next = line.charCodeAt(index + 1);
+        if (char === kBackslash && (next === kQuote || next === kBackslash)) {
+          value += line.slice(chunk, index);
+          chunk = index + 1;
           index += 2;
           continue;
         }
         index++;
-        if (char === "\"") {
-          closed = true;
-          break;
-        }
-        value += char;
+      }
+      value += line.slice(chunk, index);
+      if (closed) {
+        index++;
       }
       unterminated ||= !closed;
       tokens.push({
@@ -55,7 +64,7 @@ export function tokenize(
       continue;
     }
 
-    while (index < line.length && !isWhitespace(line[index])) {
+    while (index < line.length && !isWhitespace(line.charCodeAt(index))) {
       index++;
     }
     tokens.push({
@@ -83,7 +92,9 @@ export function quote(
 }
 
 function isWhitespace(
-  char: string
+  code: number
 ): boolean {
-  return char === " " || char === "\t" || char === "\n" || char === "\r";
+  const offset = code - kTab;
+
+  return offset >= 0 && offset < 24 && ((kWhitespaceBits >>> offset) & 1) === 1;
 }
