@@ -170,7 +170,8 @@ test("the layer header rebases the layer and locks while transforming", async({ 
   expect(await blocksAt(page, [{ x: 3, y: 1, z: 2 }])).toEqual([1]);
 
   await transform.click();
-  await expect(page.locator("voxel-placement-toolbar")).toBeVisible();
+  await expect(page.locator("voxel-edit-toolbar").getByRole("group", { name: "Rotate" }))
+    .toBeVisible();
   await expect(transform).toBeDisabled();
   await expect(panel.locator("jolly-vector3")).toHaveAttribute("disabled", "");
 });

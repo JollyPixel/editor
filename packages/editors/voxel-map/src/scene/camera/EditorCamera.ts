@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
   OrbitFlyCamera,
   type CameraPose,
@@ -17,6 +17,10 @@ import {
 } from "./SpawnPose.ts";
 import { ViewRay } from "./ViewRay.ts";
 
+// CONSTANTS
+const kPivotMaxDistance = 32;
+const kPivotFallbackDistance = 24;
+
 export interface EditorCameraOptions {
   world: Systems.World;
   pointer: Pick<PointerCapture, "subscribe">;
@@ -30,6 +34,7 @@ export class EditorCamera {
   #controls: OrbitFlyCamera;
   #viewRay: ViewRay;
   #disposables: Array<() => void>;
+  #pointer = new THREE.Vector2();
   #orbiting = false;
   #spawnPending = true;
 
@@ -58,7 +63,12 @@ export class EditorCamera {
 
     this.#disposables = [
       world.input.keyboard.bind("Escape", () => {
+        if (!controls.isOrbiting) {
+          return false;
+        }
         this.exitFocus();
+
+        return true;
       }),
       pointer.subscribe("change", (captured) => {
         controls.enabled = !captured;
@@ -75,6 +85,19 @@ export class EditorCamera {
   ): void {
     this.#controls.enterOrbitFocus(point);
     this.#announceMode();
+  }
+
+  pivotAt(
+    solid: THREE.Object3D | null,
+    pointer: THREE.Vector2
+  ): void {
+    this.focus(
+      this.#viewRay.pivotPoint(solid, {
+        pointer,
+        maxDistance: kPivotMaxDistance,
+        fallbackDistance: kPivotFallbackDistance
+      })
+    );
   }
 
   exitFocus(): void {
@@ -113,6 +136,18 @@ export class EditorCamera {
     solid: THREE.Object3D | null
   ): THREE.Vector3Like {
     return this.#viewRay.focusPoint(solid);
+  }
+
+  aimPoint(
+    solid: THREE.Object3D | null
+  ): THREE.Vector3Like {
+    const { mouse } = this.#world.input;
+
+    return mouse.hovering ?
+      this.#viewRay.focusPoint(solid, {
+        pointer: mouse.viewportPositionTo(this.#pointer)
+      }) :
+      this.#viewRay.focusPoint(solid);
   }
 
   pointAt(

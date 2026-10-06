@@ -5,10 +5,8 @@ import { CANVAS_HOVER_CHANGE_EVENT } from "@jolly-pixel/editor.pixel-art";
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
-import type { WorkspaceElement } from "../workspace/WorkspaceElement.ts";
 import { EditorPanels } from "./EditorPanels.ts";
-import "../features/painting/toolbar/BrushToolbar.ts";
-import "../features/placement/PlacementToolbar.ts";
+import "./toolbar/EditToolbar.ts";
 import "./paneIcons.ts";
 
 export interface EditorShellOptions {
@@ -18,7 +16,7 @@ export interface EditorShellOptions {
 
 export class EditorShell {
   #panels: EditorPanels | null;
-  #toolbars: Array<WorkspaceElement>;
+  #toolbar: HTMLElementTagNameMap["voxel-edit-toolbar"] | null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -36,10 +34,7 @@ export class EditorShell {
       );
     }
 
-    this.#toolbars = [
-      document.querySelector("voxel-brush-toolbar"),
-      document.querySelector("voxel-placement-toolbar")
-    ].filter((toolbar) => toolbar !== null);
+    this.#toolbar = document.querySelector("voxel-edit-toolbar");
 
     const panels = EditorPanels.mount(document);
     this.#panels = panels;
@@ -59,8 +54,8 @@ export class EditorShell {
     workspace: VoxelMapWorkspace
   ): void {
     this.#panels?.attach(workspace);
-    for (const toolbar of this.#toolbars) {
-      toolbar.workspace = workspace;
+    if (this.#toolbar !== null) {
+      this.#toolbar.workspace = workspace;
     }
   }
 

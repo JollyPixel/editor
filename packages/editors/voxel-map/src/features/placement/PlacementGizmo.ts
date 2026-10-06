@@ -73,6 +73,7 @@ export class PlacementGizmo extends ActorComponent {
       this.actor.world.renderer.canvas,
       {
         snap: 1,
+        snapBypass: false,
         moveAxes: "xyz",
         resizeAxes: "none",
         rotateAxes: "y",

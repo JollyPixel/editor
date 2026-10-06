@@ -5,6 +5,11 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import {
+  CellRegion,
+  isCellCoord,
+  sameCellCoord
+} from "../CellRegion.ts";
 import type { Placement } from "../Placement.ts";
 import type { PlacementSourceRef } from "../PlacementSource.ts";
 
@@ -75,9 +80,7 @@ export class PlacementPresence {
   ): boolean {
     return other !== null &&
       sameSource(this.source, other.source) &&
-      other.position.x === this.position.x &&
-      other.position.y === this.position.y &&
-      other.position.z === this.position.z &&
+      sameCellCoord(other.position, this.position) &&
       other.transform.equals(this.transform);
   }
 
@@ -108,15 +111,36 @@ function parseSourceRef(
       } :
       null;
   }
-  if (kind === "layer") {
-    const layerName = Reflect.get(value, "layerName");
+  if (kind === "copy") {
+    const copyId = Reflect.get(value, "copyId");
 
-    return isName(layerName) ?
+    return isName(copyId) ?
       {
         kind,
-        layerName
+        copyId
       } :
       null;
+  }
+  const layerName = Reflect.get(value, "layerName");
+  if (!isName(layerName)) {
+    return null;
+  }
+  if (kind === "layer") {
+    return {
+      kind,
+      layerName
+    };
+  }
+  if (kind === "region") {
+    const region = CellRegion.parse(Reflect.get(value, "region"));
+
+    return region === null ?
+      null :
+      {
+        kind,
+        layerName,
+        region: region.toJSON()
+      };
   }
 
   return null;
@@ -126,26 +150,26 @@ function sameSource(
   left: PlacementSourceRef,
   right: PlacementSourceRef
 ): boolean {
-  if (left.kind === "template") {
-    return right.kind === "template" && right.templateId === left.templateId;
+  switch (left.kind) {
+    case "template":
+      return right.kind === "template" &&
+        right.templateId === left.templateId;
+    case "layer":
+      return right.kind === "layer" && right.layerName === left.layerName;
+    case "region":
+      return right.kind === "region" &&
+        right.layerName === left.layerName &&
+        sameCellCoord(right.region.min, left.region.min) &&
+        sameCellCoord(right.region.max, left.region.max);
+    case "copy":
+      return right.kind === "copy" && right.copyId === left.copyId;
   }
-
-  return right.kind === "layer" && right.layerName === left.layerName;
 }
 
 function isName(
   value: unknown
 ): value is string {
   return typeof value === "string" && value.length > 0;
-}
-
-function isCellCoord(
-  value: unknown
-): value is VoxelCoord {
-  return typeof value === "object" && value !== null &&
-    Number.isInteger(Reflect.get(value, "x")) &&
-    Number.isInteger(Reflect.get(value, "y")) &&
-    Number.isInteger(Reflect.get(value, "z"));
 }
 
 function isPackedTransform(

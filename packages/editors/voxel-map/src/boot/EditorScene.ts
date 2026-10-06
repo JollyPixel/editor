@@ -20,6 +20,7 @@ import type {
 // Import Internal Dependencies
 import { MapDocument } from "../document/MapDocument.ts";
 import { bindHistoryShortcuts } from "../shared/historyShortcuts.ts";
+import { bindToolShortcuts } from "../shared/toolShortcuts.ts";
 import type { EditorState } from "../state/index.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
@@ -34,10 +35,14 @@ import { BrushStore } from "../features/painting/BrushStore.ts";
 import { LocalBrush } from "../features/painting/LocalBrush.ts";
 import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
 import { bindBrushShortcuts } from "../features/painting/interaction/brushShortcuts.ts";
+import { MarqueeTool } from "../features/marquee/MarqueeTool.ts";
+import { bindMarqueeShortcuts } from "../features/marquee/marqueeShortcuts.ts";
+import { MapHistory } from "../features/placement/MapHistory.ts";
 import { MapPlacement } from "../features/placement/MapPlacement.ts";
 import { PlacementGizmo } from "../features/placement/PlacementGizmo.ts";
 import { PeerPlacements } from "../features/placement/collaboration/PeerPlacements.ts";
 import { bindPlacementShortcuts } from "../features/placement/placementShortcuts.ts";
+import { bindClipboardShortcuts } from "../features/placement/clipboardShortcuts.ts";
 import { MapTemplates } from "../features/templates/MapTemplates.ts";
 import {
   MapBlocksets,
@@ -47,6 +52,7 @@ import { openBlockset } from "../features/blocksets/BlocksetBinding.ts";
 import { SceneLighting } from "../scene/environment/SceneLighting.ts";
 import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
+import { PivotClick } from "../scene/camera/PivotClick.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
@@ -177,6 +183,10 @@ export class EditorScene extends Systems.Scene {
       mapDocument,
       conceal: (layerName) => localVisibility.conceal(layerName)
     });
+    const history = new MapHistory({
+      history: view.document.history,
+      placement
+    });
     const usage = new BlockUsageStore({
       mapDocument,
       source: view.inspector.blocks
@@ -243,10 +253,15 @@ export class EditorScene extends Systems.Scene {
         pointer: state.pointer,
         color: session.identity.color,
         onCursorChange: (cursor) => peerBrushes.publishLocalCursor(cursor),
-        onFocusRequest: (point) => camera.focus(point),
         onPaintBlocked: () => {
           state.log.push("No voxel layer to paint on: add one in the Layers panel");
         }
+      });
+    world.createActor("pivot-click")
+      .addComponent(PivotClick, {
+        camera,
+        solid: view.root,
+        pointer: state.pointer
       });
 
     world.createActor("placement")
@@ -268,10 +283,30 @@ export class EditorScene extends Systems.Scene {
         mapDocument,
         visibility: layerVisibility
       });
+    function publishPlacement(): void {
+      peerPlacements.publishLocal(
+        placement.current?.placement ?? marquee.presence
+      );
+    }
+    function suspendBrush(): void {
+      brush.suspended = placement.placing || state.tool.selecting;
+    }
+
+    const marquee = world.createActor("marquee")
+      .addComponentAndGet(MarqueeTool, {
+        view,
+        camera: camera.camera,
+        tool: state.tool,
+        selection: state.selection,
+        placement,
+        pointer: state.pointer,
+        color: session.identity.color,
+        onChange: publishPlacement
+      });
+    suspendBrush();
     this.#disposables.push(
-      placement.subscribe("change", (current) => {
-        brush.suspended = current !== null;
-      }),
+      placement.subscribe("change", suspendBrush),
+      state.tool.subscribe("change", suspendBrush),
       () => {
         brush.suspended = false;
       },
@@ -289,10 +324,26 @@ export class EditorScene extends Systems.Scene {
       }),
       bindHistoryShortcuts({
         keyboard,
-        history: view.document.history
+        history
       }),
       bindPlacementShortcuts({
         keyboard,
+        placement
+      }),
+      bindClipboardShortcuts({
+        keyboard,
+        placement,
+        aimPoint: () => camera.aimPoint(view.root)
+      }),
+      bindToolShortcuts({
+        keyboard,
+        tool: state.tool
+      }),
+      bindMarqueeShortcuts({
+        keyboard,
+        world: view.document.world,
+        tool: state.tool,
+        selection: state.selection,
         placement
       }),
       state.keyboardLayout.watch(window),
@@ -303,7 +354,7 @@ export class EditorScene extends Systems.Scene {
       () => roster.dispose(),
       placement.subscribe(
         "change",
-        (current) => peerPlacements.publishLocal(current?.placement ?? null)
+        publishPlacement
       ),
       () => blocksets.dispose(),
       () => usage.dispose(),
@@ -326,6 +377,7 @@ export class EditorScene extends Systems.Scene {
       blockSources,
       templates,
       placement,
+      history,
       layerVisibility,
       layers,
       view,

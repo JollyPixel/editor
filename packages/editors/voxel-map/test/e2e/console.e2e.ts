@@ -13,7 +13,7 @@ test("a brush.size write from the console reaches the toolbar", async({ page }) 
 
   await page.keyboard.press("Escape");
   await expect(
-    page.locator("voxel-brush-toolbar").getByRole("button", { name: /^Size 5/ })
+    page.locator("voxel-edit-toolbar").getByRole("button", { name: /^Size 5/ })
   ).toBeVisible();
 });
 

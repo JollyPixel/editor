@@ -11,6 +11,7 @@ import { KeyboardLayoutStore } from "./KeyboardLayoutStore.ts";
 import { PointerCapture } from "./PointerCapture.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
+import { ToolStore } from "./ToolStore.ts";
 import { ViewStore } from "./ViewStore.ts";
 
 export interface EditorStateOptions {
@@ -20,6 +21,7 @@ export interface EditorStateOptions {
 export class EditorState {
   readonly selection = new SelectionStore();
   readonly block = new BlockSelection();
+  readonly tool = new ToolStore();
   readonly presence = new PresenceStore();
   readonly pointer = new PointerCapture();
   readonly log = new LogQueue();

@@ -185,21 +185,23 @@ describe("flip chips", () => {
     assert.equal(harness.ends.length, 1);
   });
 
-  test("hovering a chip shows the mirror plane through the pivot", () => {
-    const harness = createHarness({
-      flipAxes: "xz",
-      pivot: new THREE.Vector3(2, 0, 3)
-    });
+  for (const axis of ["x", "z"] as const) {
+    test(`hovering the ${axis} chip shows the mirror plane through the box center, not the pivot`, () => {
+      const harness = createHarness({
+        flipAxes: "xz",
+        pivot: new THREE.Vector3(2, 0, 3)
+      });
 
-    harness.send({
-      type: "pointermove",
-      target: handlePoint(harness, "box-handle-flip-x")
-    });
-    const plane = handlePoint(harness, "box-mirror-plane");
+      harness.send({
+        type: "pointermove",
+        target: handlePoint(harness, `box-handle-flip-${axis}`)
+      });
+      const plane = handlePoint(harness, "box-mirror-plane");
 
-    assert.equal(objectNamed(harness.box, "box-mirror-plane").visible, true);
-    assert.ok(Math.abs(plane.x - 2) < 1e-6);
-  });
+      assert.equal(objectNamed(harness.box, "box-mirror-plane").visible, true);
+      assert.ok(Math.abs(plane[axis] - 4) < 1e-6);
+    });
+  }
 
   test("shows and picks only the chips of the policy", () => {
     const harness = createHarness({ flipAxes: "xyz" });

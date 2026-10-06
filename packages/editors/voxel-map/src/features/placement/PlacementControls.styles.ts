@@ -4,13 +4,10 @@ import { css } from "lit";
 // Import Internal Dependencies
 import { viewportToolbarStyles } from "../../shared/styles/viewportToolbar.styles.ts";
 
-export const placementToolbarStyles = [viewportToolbarStyles, css`
+export const placementControlsStyles = [viewportToolbarStyles, css`
   :host {
     display: inline-flex;
-  }
-
-  :host([hidden]) {
-    display: none;
+    align-items: center;
   }
 
   .axis {
@@ -39,8 +36,12 @@ export const placementToolbarStyles = [viewportToolbarStyles, css`
     align-items: center;
     gap: 6px;
     max-width: 24ch;
-    padding-inline: 2px 6px;
-    color: var(--jolly-text-muted);
+    height: 22px;
+    margin-inline-start: 2px;
+    padding-inline: 6px 8px;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-surface-sunken);
+    color: var(--jolly-text);
     font-size: 11px;
     white-space: nowrap;
     cursor: default;

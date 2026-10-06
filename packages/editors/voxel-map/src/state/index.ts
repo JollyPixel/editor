@@ -8,5 +8,6 @@ export * from "./KeyboardLayoutStore.ts";
 export * from "./PointerCapture.ts";
 export * from "./PresenceStore.ts";
 export * from "./SelectionStore.ts";
+export * from "./ToolStore.ts";
 export * from "./ViewStore.ts";
 export * from "./ViewSettings.ts";

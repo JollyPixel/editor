@@ -16,6 +16,9 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
+import { CellRegion } from "../../../../src/features/placement/CellRegion.ts";
+import { CopySource } from "../../../../src/features/placement/CopySource.ts";
+import { MarqueePresence } from "../../../../src/features/placement/collaboration/MarqueePresence.ts";
 import { PeerPlacements } from "../../../../src/features/placement/collaboration/PeerPlacements.ts";
 import { Placement } from "../../../../src/features/placement/Placement.ts";
 import { PlacementPreview } from "../../../../src/features/placement/PlacementPreview.ts";
@@ -23,6 +26,7 @@ import {
   LayerSource,
   TemplateSource
 } from "../../../../src/features/placement/PlacementSource.ts";
+import { RegionSource } from "../../../../src/features/placement/RegionSource.ts";
 import { sceneActor } from "../../../helpers/actors.ts";
 import { sourcesOf } from "../../../helpers/blockSources.ts";
 import { FakeRoom } from "../../../helpers/rooms.ts";
@@ -87,9 +91,11 @@ function relay(
   from: Replica,
   to: Replica
 ): void {
-  const patch = from.room.presence.at(-1);
-  assert.ok(patch);
-  to.room.receivePresence(kPlacer, JSON.parse(JSON.stringify(patch)));
+  const patches = from.room.presence.splice(0);
+  assert.ok(patches.length > 0);
+  for (const patch of patches) {
+    to.room.receivePresence(kPlacer, JSON.parse(JSON.stringify(patch)));
+  }
 }
 
 function previewOf(
@@ -167,5 +173,97 @@ describe("PeerPlacements", () => {
     assert.ok(preview?.visible);
     assert.deepEqual(preview.marquee.position.toArray(), [0, 0, 5]);
     assert.deepEqual(preview.marquee.copySizeTo().toArray(), [3, 1, 1]);
+  });
+
+  test("draws a peer's lifted region from the voxels it sent once, not its own cut copy", () => {
+    const [placer, observer] = connected();
+    const region = CellRegion.spanning(
+      { x: 1, y: 0, z: -2 },
+      { x: 4, y: 3, z: 2 }
+    );
+    const source = RegionSource.capture(placer.world, "Draft", region);
+    assert.ok(source);
+    const { cells } = source.erasePatch();
+    observer.world.patchVoxels("Draft", cells);
+    const lifted = Placement.at(source, source.pivot);
+
+    placer.placements.publishLocal(lifted);
+    relay(placer, observer);
+    placer.placements.publishLocal(lifted.movedTo({
+      x: source.pivot.x,
+      y: source.pivot.y,
+      z: source.pivot.z + 5
+    }));
+    assert.deepEqual(
+      placer.room.presence.map((patch) => Object.keys(patch)),
+      [["placement"]]
+    );
+    relay(placer, observer);
+
+    const preview = previewOf(observer);
+    assert.ok(preview?.visible);
+    assert.deepEqual(preview.marquee.position.toArray(), [1, 0, 5]);
+    assert.deepEqual(preview.marquee.copySizeTo().toArray(), [2, 1, 1]);
+  });
+
+  test("hides a peer's region placement until its voxels arrive", () => {
+    const [placer, observer] = connected();
+    const source = RegionSource.capture(
+      placer.world,
+      "Draft",
+      CellRegion.spanning({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 })
+    );
+    assert.ok(source);
+
+    placer.placements.publishLocal(Placement.at(source, source.pivot));
+    const [regionPatch, placementPatch] = placer.room.presence.splice(0);
+    observer.room.receivePresence(kPlacer, JSON.parse(JSON.stringify(placementPatch)));
+    assert.notEqual(previewOf(observer)?.visible, true);
+
+    observer.room.receivePresence(kPlacer, JSON.parse(JSON.stringify(regionPatch)));
+    assert.equal(previewOf(observer)?.visible, true);
+  });
+
+  test("draws a peer's pasted copy from the voxels it sent once, then swaps them for the next copy", () => {
+    const [placer, observer] = connected();
+    const wall = placer.world.templates.get("wall")!;
+    const first = Placement.at(CopySource.of(wall), { x: 5, y: 0, z: 5 });
+
+    placer.placements.publishLocal(first);
+    relay(placer, observer);
+    placer.placements.publishLocal(first.movedTo({ x: 5, y: 2, z: 5 }));
+    assert.deepEqual(
+      placer.room.presence.map((patch) => Object.keys(patch)),
+      [["placement"]]
+    );
+    relay(placer, observer);
+
+    const preview = previewOf(observer);
+    assert.ok(preview?.visible);
+    assert.deepEqual(preview.marquee.position.toArray(), [4, 2, 5]);
+    assert.deepEqual(preview.marquee.copySizeTo().toArray(), [3, 1, 1]);
+
+    const turned = CopySource.of(
+      wall.transformed(first.turnedBy({ rotation: 1 }).transform)
+    );
+    placer.placements.publishLocal(Placement.at(turned, { x: 0, y: 0, z: 0 }));
+    relay(placer, observer);
+
+    assert.deepEqual(preview.marquee.copySizeTo().toArray(), [1, 1, 3]);
+  });
+
+  test("outlines a peer's marquee while it is being drawn", () => {
+    const [placer, observer] = connected();
+
+    placer.placements.publishLocal(new MarqueePresence(
+      "Draft",
+      CellRegion.spanning({ x: -1, y: 0, z: 2 }, { x: 3, y: 1, z: 0 })
+    ));
+    relay(placer, observer);
+
+    const preview = previewOf(observer);
+    assert.ok(preview?.visible);
+    assert.deepEqual(preview.marquee.position.toArray(), [-1, 0, 0]);
+    assert.deepEqual(preview.marquee.copySizeTo().toArray(), [5, 2, 3]);
   });
 });

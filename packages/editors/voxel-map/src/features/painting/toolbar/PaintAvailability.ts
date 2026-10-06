@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { SelectionStore } from "../../../state/index.ts";
+import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 
 // CONSTANTS
 export const BRUSH_NO_LAYER_REASON = "Select a voxel layer to paint";
@@ -17,6 +18,25 @@ export interface PaintingNotice {
 
 export class PaintAvailability {
   static readonly Ready = new PaintAvailability(null, null);
+
+  static watch(
+    workspace: VoxelMapWorkspace,
+    listener: (availability: PaintAvailability) => void
+  ): Iterable<() => void> {
+    const { brush, mapDocument } = workspace;
+    const { selection } = workspace.state;
+    function refresh(): void {
+      listener(PaintAvailability.of(selection, brush.suspended));
+    }
+
+    refresh();
+
+    return [
+      brush.subscribe("suspendedChange", refresh),
+      selection.subscribe("change", refresh),
+      mapDocument.subscribe("layerUpdated", refresh)
+    ];
+  }
 
   static of(
     selection: PaintingSelection,

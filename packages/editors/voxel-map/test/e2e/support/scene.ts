@@ -93,6 +93,19 @@ export async function clickCell(
   });
 }
 
+export async function pivotOnCell(
+  page: Page,
+  cell: Cell
+): Promise<void> {
+  await page.keyboard.down("Alt");
+  try {
+    await clickCell(page, cell);
+  }
+  finally {
+    await page.keyboard.up("Alt");
+  }
+}
+
 export async function strokeCells(
   page: Page,
   cells: Cell[],

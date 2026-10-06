@@ -16,6 +16,7 @@ import type { LayerVisibilityStore } from "../features/layers/LayerVisibilitySto
 import type { MapLayers } from "../features/layers/MapLayers.ts";
 import type { BrushStore } from "../features/painting/BrushStore.ts";
 import type { LocalBrush } from "../features/painting/LocalBrush.ts";
+import type { MapHistory } from "../features/placement/MapHistory.ts";
 import type { MapPlacement } from "../features/placement/MapPlacement.ts";
 import type { MapTemplates } from "../features/templates/MapTemplates.ts";
 import type { MapBlocksets } from "../features/blocksets/MapBlocksets.ts";
@@ -28,6 +29,7 @@ export interface VoxelMapWorkspace {
   blockSources: BlockRenderSources;
   templates: MapTemplates;
   placement: MapPlacement;
+  history: MapHistory;
   layerVisibility: LayerVisibilityStore;
   layers: MapLayers;
   view: VoxelView;
