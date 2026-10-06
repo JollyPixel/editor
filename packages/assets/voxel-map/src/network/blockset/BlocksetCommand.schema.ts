@@ -10,6 +10,7 @@ import {
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
   MAX_LOCAL_BLOCK_ID,
+  type BlocksetMaterialGroupRenameCommand,
   type BlocksetTileSizeCommand,
   type VoxelBlendGroupCommandAction,
   type VoxelBlockCommandAction,
@@ -107,6 +108,8 @@ const kBlendGroupCommandProperties: Record<
 };
 
 const kTileSizeAction: BlocksetTileSizeCommand["action"] = "tile-size-updated";
+const kMaterialGroupRenameAction: BlocksetMaterialGroupRenameCommand["action"] =
+  "material-group-renamed";
 
 export const blocksetSnapshotSchema: JSONSchema = {
   type: "object",
@@ -145,6 +148,10 @@ export const blocksetCommandProtocol: MessageProtocol = new MessageProtocol({
     ),
     networkCommand(kTileSizeAction, {
       tileSize: tileSizeSchema
+    }),
+    networkCommand(kMaterialGroupRenameAction, {
+      groupId: { type: "string", minLength: 1 },
+      to: { type: "string", minLength: 1 }
     })
   ]
 });

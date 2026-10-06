@@ -75,6 +75,44 @@ describe("BlocksetDocument", () => {
     assert.equal(document.materialGroups.size, 0);
   });
 
+  it("renames a material group with its finish and every block naming it", () => {
+    const document = new BlocksetDocument({
+      blocks: [
+        makeBlockDef(1, "cube", { materialGroup: "wet" }),
+        makeBlockDef(2, "cube", { materialGroup: "wet" }),
+        makeBlockDef(3, "cube", { materialGroup: "dry" })
+      ],
+      materialGroups: [{ id: "wet", roughness: 0.2 }]
+    });
+    const emissions = recordEmissions(document);
+
+    assert.equal(document.renameMaterialGroup("wet", "dry"), false);
+    assert.equal(document.renameMaterialGroup("wet", ""), false);
+    assert.equal(document.renameMaterialGroup("missing", "soaked"), false);
+    assert.equal(document.renameMaterialGroup("wet", "soaked"), true);
+
+    assert.deepEqual(
+      [...document.blocks].map((block) => block.materialGroup),
+      ["soaked", "soaked", "dry"]
+    );
+    assert.equal(document.materialGroups.has("wet"), false);
+    assert.equal(document.materialGroups.get("soaked")?.roughness, 0.2);
+    assert.deepEqual(emissions, [
+      { action: "material-group-renamed", origin: "local" }
+    ]);
+  });
+
+  it("renames a material group named only by its blocks", () => {
+    const document = new BlocksetDocument({
+      blocks: [makeBlockDef(1, "cube", { materialGroup: "wet" })]
+    });
+
+    assert.equal(document.renameMaterialGroup("wet", "soaked"), true);
+
+    assert.equal(document.blocks.get(1)?.materialGroup, "soaked");
+    assert.equal(document.materialGroups.size, 0);
+  });
+
   it("defines and removes blend groups", () => {
     const document = new BlocksetDocument();
     const emissions = recordEmissions(document);

@@ -8,6 +8,7 @@ import "../features/texture/TextureEditor.ts";
 import { BlocksPanel } from "./panels/BlocksPanel.ts";
 import { GeneralPanel } from "./panels/GeneralPanel.ts";
 import { LayersPanel } from "./panels/LayersPanel.ts";
+import { MaterialsPanel } from "./panels/MaterialsPanel.ts";
 import { PaintPanel } from "./panels/PaintPanel.ts";
 import { TextureHost } from "./TextureHost.ts";
 
@@ -17,6 +18,7 @@ export interface EditorPanelElements {
   blocks: BlocksPanel;
   paint: PaintPanel;
   layers: LayersPanel;
+  materials: MaterialsPanel;
 }
 
 export class EditorPanels {
@@ -32,12 +34,14 @@ export class EditorPanels {
     const blocks = root.querySelector("blocks-panel");
     const paint = root.querySelector("paint-panel");
     const layers = root.querySelector("layers-panel");
+    const materials = root.querySelector("materials-panel");
     if (
       layout === null ||
       !(general instanceof GeneralPanel) ||
       !(blocks instanceof BlocksPanel) ||
       !(paint instanceof PaintPanel) ||
-      !(layers instanceof LayersPanel)
+      !(layers instanceof LayersPanel) ||
+      !(materials instanceof MaterialsPanel)
     ) {
       return null;
     }
@@ -47,7 +51,8 @@ export class EditorPanels {
       general,
       blocks,
       paint,
-      layers
+      layers,
+      materials
     });
   }
 
@@ -64,11 +69,18 @@ export class EditorPanels {
   attach(
     workspace: VoxelMapWorkspace
   ): void {
-    const { layout, general, blocks, layers } = this.#elements;
+    const {
+      layout,
+      general,
+      blocks,
+      layers,
+      materials
+    } = this.#elements;
 
     general.workspace = workspace;
     blocks.workspace = workspace;
     layers.workspace = workspace;
+    materials.workspace = workspace;
 
     const textureEditor = document.createElement("texture-editor");
     textureEditor.workspace = workspace;

@@ -25,6 +25,7 @@ import {
   type PeerMarkView
 } from "./PeerMarks.ts";
 import type { BlockLibraryLayout } from "./BlockLibrary.ts";
+import type { MaterialSwatch } from "../../materials/MaterialSwatch.ts";
 
 // CONSTANTS
 const kBlockSelectEvent = "block-select";
@@ -59,6 +60,12 @@ export class BlockLibraryViewport extends LitElement {
 
   @property({ attribute: false })
   declare unused: ReadonlySet<number>;
+
+  @property({ attribute: false })
+  declare swatches: ReadonlyMap<number, MaterialSwatch>;
+
+  @property({ type: Boolean })
+  declare editable: boolean;
 
   @property({ type: Boolean })
   declare reorderable: boolean;
@@ -105,6 +112,8 @@ export class BlockLibraryViewport extends LitElement {
     this.marks = new PeerMarks();
     this.selectedId = null;
     this.unused = new Set();
+    this.swatches = new Map();
+    this.editable = true;
     this.reorderable = true;
     this.layout = "compact";
     this.storage = new LocalStorageAdapter();
@@ -196,6 +205,7 @@ export class BlockLibraryViewport extends LitElement {
       </div>
       <div class="layer marks">
         ${this.#renderUnused()}
+        ${this.#renderSwatches()}
         ${cells.map((cell) => this.#renderMarker(cell))}
       </div>
       <div class="layer drop">
@@ -277,7 +287,7 @@ export class BlockLibraryViewport extends LitElement {
 
   #renderAddCell() {
     const grid = this._grid;
-    if (grid === null || this.#reorder.dragging) {
+    if (grid === null || !this.editable || this.#reorder.dragging) {
       return nothing;
     }
 
@@ -327,6 +337,29 @@ export class BlockLibraryViewport extends LitElement {
         data-block-id=${block.id}
         style=${grid.cellAt(index, kCellInset).style}
       ></div>`;
+    });
+  }
+
+  #renderSwatches() {
+    const grid = this._grid;
+    if (grid === null || this.swatches.size === 0) {
+      return nothing;
+    }
+
+    return this.blocks.map((block, index) => {
+      const swatch = this.swatches.get(block.id);
+      if (swatch === undefined) {
+        return nothing;
+      }
+
+      return html`<div
+        class="material"
+        data-block-id=${block.id}
+        style=${grid.cellAt(index, kCellInset).style}
+      ><span
+        class=${swatch.glow === null ? "swatch" : "swatch glows"}
+        style=${swatch.style}
+      ></span></div>`;
     });
   }
 
@@ -512,6 +545,10 @@ export class BlockLibraryViewport extends LitElement {
   #onDoubleClick(
     event: MouseEvent
   ): void {
+    if (!this.editable) {
+      return;
+    }
+
     this.#emitForPointer(
       kBlockEditEvent,
       event

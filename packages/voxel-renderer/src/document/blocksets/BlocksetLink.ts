@@ -112,6 +112,18 @@ export class BlocksetLink {
     return localId !== null && this.blockset.removeMaterialGroup(localId);
   }
 
+  renameMaterialGroup(
+    groupId: string,
+    to: string
+  ): boolean {
+    const localId = this.slot.localGroupId(groupId);
+    const localTo = this.slot.localGroupId(to);
+
+    return localId !== null &&
+      localTo !== null &&
+      this.blockset.renameMaterialGroup(localId, localTo);
+  }
+
   dispose(): void {
     this.blockset.off("loaded", this.#onLoaded);
     this.blockset.off("command", this.#onCommand);
@@ -207,6 +219,9 @@ export class BlocksetLink {
       case "tile-size-updated":
         document.defineBlocks(this.slot.projectAll(this.blockset.blocks));
         break;
+      case "material-group-renamed":
+        this.#renameMaterialGroup(command.groupId, command.to);
+        break;
       default: {
         const unhandled: never = command;
         throw new Error(
@@ -214,6 +229,25 @@ export class BlocksetLink {
         );
       }
     }
+  }
+
+  #renameMaterialGroup(
+    groupId: string,
+    to: string
+  ): void {
+    const document = this.#document;
+    const { blocks, materialGroups } = this.blockset;
+
+    const group = materialGroups.get(to);
+    if (group !== undefined) {
+      document.defineMaterialGroup(
+        this.slot.projectMaterialGroup(group.toJSON())
+      );
+    }
+    document.defineBlocks(this.slot.projectAll(
+      [...blocks].filter((block) => block.materialGroup === to)
+    ));
+    document.removeMaterialGroup(this.slot.groupId(groupId));
   }
 
   #documentIndexOf(

@@ -231,6 +231,14 @@ export class MapBlocksets
       .removeMaterialGroup(groupId) ?? false;
   }
 
+  renameMaterialGroup(
+    groupId: string,
+    to: string
+  ): boolean {
+    return this.#materialGroupOwnerOf(groupId)?.link
+      .renameMaterialGroup(groupId, to) ?? false;
+  }
+
   resizeTiles(
     blocksetId: string,
     tileSize: number

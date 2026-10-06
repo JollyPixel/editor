@@ -158,4 +158,26 @@ export const blockLibraryViewportStyles = css`
     border-radius: 50%;
     box-shadow: 0 0 0 1px var(--jolly-surface, #0e1316);
   }
+
+  .material {
+    position: absolute;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+
+  .swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--jolly-surface, #0e1316);
+  }
+
+  .swatch.glows {
+    box-shadow:
+      0 0 0 1px var(--jolly-surface, #0e1316),
+      0 0 4px 1px var(--material-glow);
+  }
 `;

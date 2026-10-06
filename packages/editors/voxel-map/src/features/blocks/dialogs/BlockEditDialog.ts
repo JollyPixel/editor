@@ -24,7 +24,6 @@ import {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
-import { materialGroupNameOf } from "./materialGroupSources.ts";
 import {
   blockDialogStyles,
   MISSING_BLOCKSET,
@@ -32,7 +31,6 @@ import {
   shapeOptions,
   blocksetOptions
 } from "./blockDialog.ts";
-import "./BlockMaterialFinish.ts";
 import "../blockIcons.ts";
 
 // CONSTANTS
@@ -133,7 +131,6 @@ export class BlockEditDialog extends WorkspaceElement {
               @jolly-change=${this.#onShapeChange}
             ></jolly-select>
             ${this.#renderTransparency(block)}
-            ${this.#renderMaterial(workspace, block)}
             ${this.#renderUsage(workspace, block)}
           </div>
           ${renderShapeColumn({
@@ -223,39 +220,6 @@ export class BlockEditDialog extends WorkspaceElement {
     `;
   }
 
-  #renderMaterial(
-    workspace: VoxelMapWorkspace,
-    block: ResolvedBlockDefinition
-  ) {
-    return html`
-      <jolly-separator label="Material"></jolly-separator>
-      <jolly-text
-        label="Group"
-        placeholder="None"
-        description="Blocks of the blockset naming the same group share one finish"
-        .value=${this.#localGroupOf(block) ?? ""}
-        @jolly-change=${this.#onMaterialGroupChange}
-      ></jolly-text>
-      ${block.materialGroup === undefined ? nothing : html`
-        <block-material-finish
-          .blocksets=${workspace.blocksets}
-          .mapDocument=${workspace.mapDocument}
-          .groupId=${block.materialGroup}
-        ></block-material-finish>
-      `}
-    `;
-  }
-
-  #localGroupOf(
-    block: ResolvedBlockDefinition
-  ): string | undefined {
-    const owner = this.workspace?.blocksets.ownerOf(block.id);
-
-    return block.materialGroup === undefined || owner === undefined ?
-      block.materialGroup :
-      owner.slot.localGroupId(block.materialGroup) ?? block.materialGroup;
-  }
-
   #onNameChange(
     event: CustomEvent<JollyHeadingChangeDetail>
   ): void {
@@ -266,16 +230,6 @@ export class BlockEditDialog extends WorkspaceElement {
     event: CustomEvent<JollyChangeDetail<BlockShapeID>>
   ): void {
     this.#applyEdit({ shapeId: event.detail.value });
-  }
-
-  #onMaterialGroupChange(
-    event: CustomEvent<JollyChangeDetail<string>>
-  ): void {
-    const block = this.#block;
-    const materialGroup = materialGroupNameOf(event.detail.value);
-    if (block !== undefined && materialGroup !== this.#localGroupOf(block)) {
-      this.#applyEdit({ materialGroup });
-    }
   }
 
   #onAlphaModeChange(

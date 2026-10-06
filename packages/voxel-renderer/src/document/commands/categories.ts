@@ -62,7 +62,11 @@ const kActionCategories: {
 const kCategoryByAction = new Map<string, CommandCategory>(
   Object.entries(kActionCategories)
 );
-const kTileSizeAction: BlocksetDocumentCommandAction = "tile-size-updated";
+const kBlocksetOnlyActions = [
+  "tile-size-updated",
+  "material-group-renamed"
+] as const satisfies readonly BlocksetDocumentCommandAction[];
+const kBlocksetOnlyActionSet = new Set<string>(kBlocksetOnlyActions);
 const kEditActions = new Set<string>([
   "voxel-set",
   "voxel-removed",
@@ -135,7 +139,7 @@ readonly BlocksetDocumentCommandAction[] = [
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
   ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
   ...VOXEL_BLEND_GROUP_COMMAND_ACTIONS,
-  kTileSizeAction
+  ...kBlocksetOnlyActions
 ];
 
 export function isVoxelLayerCommand(
@@ -207,7 +211,7 @@ export function isBlocksetDocumentCommand(
   return isVoxelBlockCommand(command) ||
     isVoxelMaterialGroupCommand(command) ||
     isVoxelBlendGroupCommand(command) ||
-    command.action === kTileSizeAction;
+    kBlocksetOnlyActionSet.has(command.action);
 }
 
 function actionsOf<TCategory extends CommandCategory>(

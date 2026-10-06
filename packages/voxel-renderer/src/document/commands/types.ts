@@ -294,6 +294,12 @@ export type BlocksetTileSizeCommand = {
   tileSize: number;
 };
 
+export type BlocksetMaterialGroupRenameCommand = {
+  action: "material-group-renamed";
+  groupId: string;
+  to: string;
+};
+
 /**
  * Commands a blockset document applies to its own blocks, material groups,
  * blend groups and tile size.
@@ -302,7 +308,8 @@ export type BlocksetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
   | VoxelBlendGroupCommand
-  | BlocksetTileSizeCommand;
+  | BlocksetTileSizeCommand
+  | BlocksetMaterialGroupRenameCommand;
 
 export type BlocksetDocumentCommandAction = BlocksetDocumentCommand["action"];
 

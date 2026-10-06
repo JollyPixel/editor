@@ -20,6 +20,7 @@ import type { MapHistory } from "../features/placement/MapHistory.ts";
 import type { MapPlacement } from "../features/placement/MapPlacement.ts";
 import type { MapTemplates } from "../features/templates/MapTemplates.ts";
 import type { MapBlocksets } from "../features/blocksets/MapBlocksets.ts";
+import type { MapMaterials } from "../features/materials/MapMaterials.ts";
 
 export interface VoxelMapWorkspace {
   state: EditorState;
@@ -36,6 +37,7 @@ export interface VoxelMapWorkspace {
   grid: Grid;
   localBrush: LocalBrush;
   blocksets: MapBlocksets;
+  materials: MapMaterials;
   archives: EditorArchives;
   focusPoint(): Vector3Like;
   pointAt(

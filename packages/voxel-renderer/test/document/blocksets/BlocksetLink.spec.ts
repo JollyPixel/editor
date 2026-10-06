@@ -167,6 +167,19 @@ describe("BlocksetLink", () => {
     assert.equal(terrain.removeMaterialGroup("other/wet"), false);
   });
 
+  it("renames a world material group and re-projects its blocks", () => {
+    const { document, blockset, link: terrain } = link(2);
+    const grass = composeBlockId(2, 1);
+
+    assert.equal(terrain.renameMaterialGroup("terrain/soft", "other/hard"), false);
+    assert.equal(terrain.renameMaterialGroup("terrain/soft", "terrain/hard"), true);
+
+    assert.equal(blockset.blocks.get(1)?.materialGroup, "hard");
+    assert.equal(document.blocks.get(grass)?.materialGroup, "terrain/hard");
+    assert.equal(document.materialGroups.get("terrain/hard")?.roughness, 0.5);
+    assert.equal(document.materialGroups.has("terrain/soft"), false);
+  });
+
   it("maps a world position onto the blockset order when moving a block", () => {
     const document = new VoxelDocument();
     const { blockset, link: rock } = link(2, document);

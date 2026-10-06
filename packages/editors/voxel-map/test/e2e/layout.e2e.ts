@@ -175,7 +175,7 @@ test("the performance readout merges into the pane group it is dropped on", asyn
   await dragPaneToTab(page, readout, "General");
 
   await expect.poll(() => leftGroups(page)).toEqual([
-    ["general", kPerformancePane, "blocks", "paint", "layers"]
+    ["general", kPerformancePane, "blocks", "materials", "paint", "layers"]
   ]);
 });
 
