@@ -13,7 +13,7 @@ canvas.mode = "uv";
 canvas.uv.select(region.id);
 ```
 
-In UV mode, click a visible region to select it, drag it to move it, drag its handles to resize it when [`canvas.tools.uv.resizable`](../tools/UVTool.md) is on, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
+In UV mode, click a visible region to select it, drag it to move it ([carrying the regions nested inside it](../tools/UVTool.md#carrying-nested-regions) while `Shift` is held), drag its handles to resize it when [`canvas.tools.uv.resizable`](../tools/UVTool.md) is on, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
 
 See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
 
@@ -24,6 +24,13 @@ new UVMap(options: UVMapOptions)
 
 interface UVMapOptions {
   getCanvasSize: () => Vec2;
+  batch?: (apply: () => void) => void;
+}
+
+interface UVMove {
+  id: string;
+  rect: SelectionRect;
+  slot: UVSlot | null;
 }
 
 interface UVSlotSize {
@@ -52,6 +59,8 @@ interface UVRegionCreateOptions {
 ```
 
 `width` and `height` are clamped to the canvas. A slot template's own `width` or `height` replaces the region's for that slot, clamped the same way; a stacked region keeps the region size for its shared rect. The default `id` comes from `crypto.randomUUID()` and the default color comes from the built-in palette.
+
+`batch` runs an edit that changes several regions, such as [`moveGroup()`](#movegroupmoves), so the owner can record it as one history entry. It defaults to calling `apply` directly. A [`PixelDocument`](../PixelDocument.md) passes its own.
 
 A region with `activeSlots` or `slotGeometries` starts free. Other regions start stacked. Pass `state` to override that default; `"unfolded"` packs the net at creation and clamps it into the canvas.
 
@@ -181,6 +190,30 @@ previewMove(id: string, rect: SelectionRect, slot?: UVSlot | null): UVRegion | n
 ```
 
 Emits `"region-dragging"` with the region `move()` would commit for the same arguments, and returns it. The stored region, history and network state remain unchanged. Returns `null` for an unknown id or a free region without an active `slot`.
+
+### `targetsWithin(rect)`
+
+```ts
+targetsWithin(rect: SelectionRect): UVMove[]
+```
+
+Returns the visible movement units whose rectangle lies inside `rect`, edges included, each with its current `rect`: a stacked or unfolded region as a whole (`slot: null`), and each active slot of a free region. A unit that only overlaps `rect` is left out. A unit whose rectangle is `rect` itself is included.
+
+### `moveGroup(moves)`
+
+```ts
+moveGroup(moves: readonly UVMove[]): boolean
+```
+
+Applies each move as [`move()`](#moveid-rect-slot) does, inside the `batch` option, so a document records them as one history entry. Each move emits its own `"region-moved"` and syncs as its own `uv-region-moved`. Returns `true` when at least one move applied.
+
+### `previewMoveGroup(moves)`
+
+```ts
+previewMoveGroup(moves: readonly UVMove[]): UVRegion[]
+```
+
+Previews `moveGroup()` without storing it. Moves that target the same region are folded into one preview. Emits `"region-dragging"` once per region, in move order, and returns the previewed regions in the same order. Moves that `previewMove()` would reject are skipped.
 
 ### `resize(id, rect, slot?, options?)`
 

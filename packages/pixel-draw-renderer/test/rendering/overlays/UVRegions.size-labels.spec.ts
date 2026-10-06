@@ -187,7 +187,7 @@ describe("UVRegionLayer — size labels", () => {
       { ...front, width: front.width + 1 },
       "front"
     )!;
-    layer.setLivePreview({ region: preview, slot: "front" });
+    layer.setLivePreview({ regions: [preview], slot: "front" });
 
     const resized = rectOf(preview.geometryFor("front"));
     const visible = sizeLabels(svg).filter(
@@ -216,7 +216,7 @@ describe("UVRegionLayer — size labels", () => {
       { ...front, width: front.width + 1 },
       "front"
     )!;
-    layer.setLivePreview({ region: preview, slot: "front" });
+    layer.setLivePreview({ regions: [preview], slot: "front" });
 
     const resized = rectOf(preview.geometryFor("front"));
     const label = sizeLabels(svg).find(

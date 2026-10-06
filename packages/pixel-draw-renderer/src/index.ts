@@ -165,6 +165,7 @@ export {
   type UVMapEventType,
   type UVMapListener,
   type UVMapOptions,
+  type UVMove,
   type UVLabelScope,
   type UVSlotGeometryTemplate,
   type UVSlotSize,

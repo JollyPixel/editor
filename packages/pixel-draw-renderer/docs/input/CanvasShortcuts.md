@@ -59,7 +59,7 @@ While `true` in `"paint"` or `"erase"` mode, the next click draws a straight lin
 
 Setting it during a stroke of either button commits the stroke and draws a line from the mouse-down position in the stroke's color on release. Moving or releasing the mouse does not change the saved position. Setting it back to `false` cancels the preview and keeps the saved position for the next line. Mode changes and window blur also keep it. Picking, panning, selection, UV interaction, and clicks outside the texture do not change it. Replacing or resizing the texture clears it.
 
-In `"uv"` mode it resizes a net face together with its aligned row or column, as [`UVTool`](../tools/UVTool.md#resizable) describes. Bind it to a held key, usually `Shift`.
+In `"uv"` mode it resizes a net face together with its aligned row or column, as [`UVTool`](../tools/UVTool.md#resizable) describes, and a move drag carries the regions nested in the dragged one, as [Carrying nested regions](../tools/UVTool.md#carrying-nested-regions) describes. Bind it to a held key, usually `Shift`.
 
 Both setters ignore a value equal to the current one, so auto-repeated keydowns are harmless. A window blur sets both back to `false`, so a key released outside the page does not stay held.
 

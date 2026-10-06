@@ -55,6 +55,10 @@ export class UVGhostSync {
   #onRegionDragging = (
     event: { region: UVRegion; face: UVSlot | null; }
   ): void => {
+    if (event.region.id !== this.#canvas.uv.selectedRegionId) {
+      return;
+    }
+
     this.#stream.report({
       id: event.region.id,
       face: event.face,

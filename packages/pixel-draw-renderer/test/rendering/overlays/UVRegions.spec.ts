@@ -232,6 +232,33 @@ describe("UVRegionLayer — setLivePreview", () => {
     overlay.setLivePreview(null);
     assert.strictEqual(rect.getAttribute("x"), "0");
   });
+
+  test("renders every previewed region instead of its stored rect", () => {
+    const svg = makeSvg();
+    const map = makeUvMap({ x: 64, y: 64 });
+    const overlay = new UVRegionLayer(
+      svg,
+      makeViewport(),
+      map
+    );
+    map.create({ id: "outer", width: 8, height: 8 });
+    map.create({ id: "inner", width: 2, height: 2 });
+    map.move("inner", { x: 2, y: 2, width: 2, height: 2 });
+    map.showAll = true;
+
+    overlay.setLivePreview({
+      regions: map.previewMoveGroup([
+        { id: "outer", rect: { x: 10, y: 0, width: 8, height: 8 }, slot: null },
+        { id: "inner", rect: { x: 12, y: 2, width: 2, height: 2 }, slot: null }
+      ]),
+      slot: null
+    });
+
+    assert.deepStrictEqual(
+      uvBorderRects(svg).map((rect) => rect.getAttribute("x")).sort(),
+      ["40", "48"]
+    );
+  });
 });
 
 describe("UVRegionLayer — destroy", () => {

@@ -36,6 +36,7 @@ export class EditRecorder {
   #ownership: Pick<UVOwnership, "admits" | "owns">;
   #listeners: EditRecorderListeners;
   #silenced = 0;
+  #batch: HistoryEdit | null = null;
 
   constructor(
     options: EditRecorderOptions
@@ -58,8 +59,39 @@ export class EditRecorder {
       return;
     }
 
-    this.#history.push(edit);
+    if (this.#batch === null) {
+      this.#history.push(edit);
+    }
+    else {
+      this.#batch.redo.push(...edit.redo);
+      this.#batch.undo.unshift(...edit.undo);
+    }
     this.#broadcast(emitted);
+  }
+
+  batch(
+    fn: () => void
+  ): void {
+    if (this.#batch !== null) {
+      fn();
+
+      return;
+    }
+
+    const batch: HistoryEdit = {
+      redo: [],
+      undo: []
+    };
+    this.#batch = batch;
+    try {
+      fn();
+    }
+    finally {
+      this.#batch = null;
+      if (batch.redo.length > 0) {
+        this.#history.push(batch);
+      }
+    }
   }
 
   undo(): HistoryEntry | null {

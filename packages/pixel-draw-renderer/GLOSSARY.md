@@ -112,6 +112,10 @@ A UV region's geometry without its identity (`id`, `name`, `color`). The owner o
 
 Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.
 
+### Nested UV
+
+What a drag moves, following the UV movement scope (a whole region, or one slot of a free region), when its rectangle lies inside another one's, edges included. A move drag with the line modifier held carries the nested UVs of the dragged unit by the same delta, and the drop is one history entry. A unit that only overlaps is not nested.
+
 ### UV Rotation
 
 The quarter turns a UV slot's mapping has taken, clockwise in texture space. It follows the UV movement scope: stacked and unfolded regions turn whole, a free region turns one slot. The slot geometry is stored as it looks after the turn, and the rotation tells a mesh which way its UVs face inside it.

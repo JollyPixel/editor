@@ -24,5 +24,5 @@ export function livePreview(
   region: UVRegion | null,
   slot: UVSlot | null = null
 ): UVLivePreview | null {
-  return region === null ? null : { region, slot };
+  return region === null ? null : { regions: [region], slot };
 }

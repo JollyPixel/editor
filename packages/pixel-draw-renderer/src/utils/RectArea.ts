@@ -90,6 +90,14 @@ export class RectArea {
       this.#rect.y + this.#rect.height <= bounds.y;
   }
 
+  contains(
+    rect: SelectionRect
+  ): boolean {
+    return rect.x >= this.#rect.x && rect.y >= this.#rect.y &&
+      rect.x + rect.width <= this.#rect.x + this.#rect.width &&
+      rect.y + rect.height <= this.#rect.y + this.#rect.height;
+  }
+
   intersection(
     bounds: Vec2
   ): SelectionRect | null {
