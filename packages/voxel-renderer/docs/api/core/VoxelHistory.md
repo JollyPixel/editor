@@ -44,7 +44,12 @@ readonly enabled: boolean;
 readonly limit: number;
 readonly canUndo: boolean;
 readonly canRedo: boolean;
+readonly undoDepth: number;
+readonly redoDepth: number;
 ```
+
+`undoDepth` and `redoDepth` count the entries on each stack. `undoDepth` never
+exceeds `limit`.
 
 ## Methods
 
@@ -71,7 +76,7 @@ it.
 
 | Event | Arguments | When |
 | --- | --- | --- |
-| `change` | `{ canUndo, canRedo }` | After every push, undo, redo and non-empty `clear()`. |
+| `change` | `{ canUndo, canRedo, undoDepth, redoDepth }` | After every push, undo, redo and non-empty `clear()`. |
 
 ```ts
 document.history.on("change", ({ canUndo, canRedo }) => {

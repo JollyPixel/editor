@@ -126,7 +126,7 @@ export class AddTilesetDialog extends LitElement {
     return html`
       <jolly-dialog
         heading="Add tileset"
-        icon="plus"
+        icon="tileset"
         @jolly-cancel=${this.#onCancel}
       >
         <div class="fields">

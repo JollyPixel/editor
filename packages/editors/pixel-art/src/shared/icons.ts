@@ -203,12 +203,12 @@ registerIcon("wand", svg`
 registerIcon("undo", svg`
     <path
       class="tone-ink"
-      d="M8.5 5 3 10l5.5 5Z"
+      d="M8.5 4 3 9l5.5 5Z"
       fill="currentColor"
     />
     <path
       class="tone-ink"
-      d="M7 10h7.5a5 5 0 0 1 0 10H10"
+      d="M7 9h7.5a5 5 0 0 1 0 10H10"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"
@@ -220,12 +220,12 @@ registerIcon("undo", svg`
 registerIcon("redo", svg`
     <path
       class="tone-ink"
-      d="M15.5 5 21 10l-5.5 5Z"
+      d="M15.5 4 21 9l-5.5 5Z"
       fill="currentColor"
     />
     <path
       class="tone-ink"
-      d="M17 10H9.5a5 5 0 0 0 0 10H14"
+      d="M17 9H9.5a5 5 0 0 0 0 10H14"
       fill="none"
       stroke="currentColor"
       stroke-width="2.2"

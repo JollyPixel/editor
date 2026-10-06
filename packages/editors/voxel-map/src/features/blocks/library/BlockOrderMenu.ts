@@ -19,6 +19,8 @@ export class BlockOrderMenu extends LitElement {
 
     .trigger {
       --jolly-icon-button-size: calc(var(--jolly-control-height, 20px) + 12px);
+      --jolly-icon-tone-rest: 0%;
+      --jolly-icon-tone-engaged: 0%;
       --jolly-text: var(--jolly-folder-action-fg, var(--jolly-text));
       --jolly-control-bg: var(--jolly-folder-action-bg, var(--jolly-control-bg));
       --jolly-control-bg-hover: var(--jolly-folder-action-bg-hover);
@@ -102,17 +104,27 @@ export class BlockOrderMenu extends LitElement {
   @query(".menu")
   declare private _menu: HTMLElement | null;
 
-  #openOnPress = false;
+  #openedByPress = false;
+  #pressedWhileOpen = false;
 
   #popup = new PopoverController(this, {
     anchor: () => this._trigger,
     popover: () => this._menu,
     side: "below",
     align: "start",
+    openOnHover: {
+      delay: 200
+    },
+    closeOnHoverLeave: {
+      delay: 200
+    },
     onOpen: () => {
-      this._menu
-        ?.querySelector<HTMLButtonElement>("[aria-checked='true']")
-        ?.focus();
+      if (this.#openedByPress) {
+        this.#focusActiveItem();
+      }
+    },
+    onClose: () => {
+      this.#openedByPress = false;
     }
   });
 
@@ -126,7 +138,7 @@ export class BlockOrderMenu extends LitElement {
   }
 
   show(): void {
-    this._menu?.showPopover();
+    this.#popup.show();
   }
 
   hide(): void {
@@ -145,6 +157,8 @@ export class BlockOrderMenu extends LitElement {
         title=${`Order: ${active.label}`}
         aria-haspopup="menu"
         aria-expanded=${String(this.#popup.open)}
+        @pointerenter=${this.#popup.onPointerEnter}
+        @pointerleave=${this.#popup.onPointerLeave}
         @pointerdown=${this.#onTriggerPointerDown}
         @click=${this.#onTriggerClick}
       >
@@ -155,6 +169,8 @@ export class BlockOrderMenu extends LitElement {
         popover="auto"
         role="menu"
         aria-label="Block order"
+        @pointerenter=${this.#popup.onPointerEnter}
+        @pointerleave=${this.#popup.onPointerLeave}
         @beforetoggle=${this.#popup.onBeforeToggle}
         @toggle=${this.#popup.onToggle}
         @keydown=${this.#onMenuKeyDown}
@@ -178,17 +194,30 @@ export class BlockOrderMenu extends LitElement {
   }
 
   #onTriggerPointerDown(): void {
-    this.#openOnPress = this.#popup.open;
+    this.#pressedWhileOpen = this.#popup.open && this.#openedByPress;
   }
 
   #onTriggerClick(): void {
-    if (this.#openOnPress) {
-      this.#openOnPress = false;
+    if (this.#pressedWhileOpen) {
+      this.#pressedWhileOpen = false;
+
+      return;
+    }
+
+    this.#openedByPress = true;
+    if (this._menu?.matches(":popover-open")) {
+      this.#focusActiveItem();
 
       return;
     }
 
     this.show();
+  }
+
+  #focusActiveItem(): void {
+    this._menu
+      ?.querySelector<HTMLButtonElement>("[aria-checked='true']")
+      ?.focus();
   }
 
   #onMenuKeyDown(

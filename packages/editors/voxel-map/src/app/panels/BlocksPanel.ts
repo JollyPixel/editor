@@ -123,7 +123,7 @@ export class BlocksPanel extends WorkspaceElement {
         ></block-order-menu>
         <jolly-button
           slot="actions"
-          icon="pencil"
+          icon="block-edit"
           icon-only
           label="Edit block"
           title="Edit block"

@@ -106,7 +106,7 @@ export class TemplateManager extends WorkspaceElement {
         ></jolly-button>
         <jolly-button
           slot="actions"
-          icon="stamp"
+          icon="template-place"
           icon-only
           label="Place template"
           title="Place the selected template in the world"

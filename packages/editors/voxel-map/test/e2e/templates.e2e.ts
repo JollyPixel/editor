@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import type { Object3D } from "three";
 import {
   centerOf,
   pressAt
@@ -53,6 +54,26 @@ function placement(
       cells,
       top: Math.max(...cells.map((cell) => cell.y)) + 1
     };
+  });
+}
+
+function peerPlacementCount(
+  page: Page
+): Promise<number> {
+  return page.evaluate(() => {
+    let root: Object3D = window.voxelMapEditor!.workspace.view.root;
+    while (root.parent !== null) {
+      root = root.parent;
+    }
+
+    let count = 0;
+    root.traverseVisible((object) => {
+      if (object.name.startsWith("peer-placement:")) {
+        count++;
+      }
+    });
+
+    return count;
   });
 }
 
@@ -145,6 +166,21 @@ test("Escape cancels a placement and leaves the world untouched", async({ page }
 
   await expect.poll(() => placement(page)).toBeNull();
   expect(await voxelCount(page)).toBe(1);
+});
+
+test("a peer sees the placement preview until it is cancelled", async({ page, peer }) => {
+  test.slow();
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await pinCamera(page);
+
+  await page.getByRole("button", { name: "Save layer as template" }).click();
+  await page.getByRole("button", { name: "Place template" }).click();
+  await expect.poll(() => peerPlacementCount(peer)).toBe(1);
+
+  await hoverCell(page, { x: 0, y: 0, z: 0 });
+  await page.keyboard.press("Escape");
+
+  await expect.poll(() => peerPlacementCount(peer)).toBe(0);
 });
 
 test("a layer is turned with its marquee and committed with Enter", async({ page }) => {

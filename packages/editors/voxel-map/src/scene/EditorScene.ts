@@ -209,7 +209,11 @@ export class EditorScene extends Systems.Scene {
       identity: session.identity,
       state,
       world,
-      camera: camera.camera
+      camera: camera.camera,
+      view,
+      sources: blockSources,
+      mapDocument,
+      placements: placement.store
     });
     const localBrush = world
       .createActor("brush")

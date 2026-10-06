@@ -10,11 +10,16 @@ import {
 import type {
   VoxelMapRoom
 } from "@jolly-pixel/asset.voxel-map/client";
+import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import type { MapDocumentSignals } from "../document/index.ts";
 import type { EditorState } from "../state/index.ts";
+import type { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
 import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
 import type { BrushFootprint } from "../features/painting/model/BrushFootprint.ts";
+import { PeerPlacements } from "../features/placement/collaboration/PeerPlacements.ts";
+import type { PlacementStore } from "../features/placement/PlacementStore.ts";
 
 // CONSTANTS
 const kBlockPresenceKey = "block";
@@ -26,6 +31,10 @@ export interface MapCollaborationOptions {
   state: EditorState;
   world: Systems.World;
   camera: THREE.PerspectiveCamera;
+  view: VoxelView;
+  sources: BlockRenderSources;
+  mapDocument: MapDocumentSignals;
+  placements: PlacementStore;
 }
 
 export class MapCollaboration {
@@ -37,7 +46,7 @@ export class MapCollaboration {
   constructor(
     options: MapCollaborationOptions
   ) {
-    const { room, state, world } = options;
+    const { room, state, world, placements } = options;
     const { brush, selection, presence } = state;
 
     const roster = new PeerRoster({
@@ -79,6 +88,22 @@ export class MapCollaboration {
       .addComponentAndGet(PeerBrushes, {
         room
       });
+
+    const peerPlacements = world
+      .createActor("peer-placements")
+      .addComponentAndGet(PeerPlacements, {
+        room,
+        world: options.view.document.world,
+        blockRegistry: options.view.document.blocks,
+        sources: options.sources,
+        mapDocument: options.mapDocument
+      });
+    this.#disposables.push(
+      placements.subscribe(
+        "change",
+        (placement) => peerPlacements.publishLocal(placement)
+      )
+    );
 
     this.frustums = world
       .createActor("peer-frustums")

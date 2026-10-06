@@ -30,6 +30,7 @@ const kOrigin = {
 export interface TemplateGhostOptions {
   sources: BlockRenderSources;
   blockRegistry: BlockRegistry;
+  opacity?: number;
 }
 
 interface BatchMaterials {
@@ -50,6 +51,7 @@ interface Batch {
 export class TemplateGhost extends THREE.Group {
   #sources: BlockRenderSources;
   #blockRegistry: BlockRegistry;
+  #opacity: number;
   #pieces: BlockPieces;
   #materials = new Map<string, BatchMaterials>();
   #atlasVersion = -1;
@@ -66,6 +68,7 @@ export class TemplateGhost extends THREE.Group {
     this.name = "template-ghost";
     this.#sources = options.sources;
     this.#blockRegistry = options.blockRegistry;
+    this.#opacity = options.opacity ?? kOpacity;
     this.#pieces = options.sources.createPieces();
     this.visible = false;
   }
@@ -184,7 +187,7 @@ export class TemplateGhost extends THREE.Group {
         alphaTest: batch.surface.alphaCutoff,
         side,
         transparent: true,
-        opacity: kOpacity,
+        opacity: this.#opacity,
         depthWrite: false
       }),
       depth: new THREE.MeshBasicMaterial({

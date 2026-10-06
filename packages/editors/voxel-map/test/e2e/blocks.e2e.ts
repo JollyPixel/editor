@@ -90,6 +90,27 @@ test("clicking a block selects it for the brush", async({ page }) => {
   expect(await brushBlock(page)).toBe(2);
 });
 
+test("the order menu opens on hover and stays open once clicked", async({ page }) => {
+  const trigger = page.getByRole("button", { name: /^Order:/ });
+  const menu = page.getByRole("menu", { name: "Block order" });
+
+  await trigger.hover();
+  await expect(menu).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(menu).toBeHidden();
+
+  await trigger.hover();
+  await expect(menu).toBeVisible();
+  await trigger.click();
+  await page.mouse.move(0, 0);
+  await expect(menu.getByRole("menuitemradio", { name: "Most used first" }))
+    .toBeVisible();
+
+  await menu.getByRole("menuitemradio", { name: "Most used first" }).click();
+  await expect(menu).toBeHidden();
+  await expect(trigger).toHaveAccessibleName("Order: Most used first");
+});
+
 test("the library redraws after the browser drops its WebGL context", async({ page }) => {
   const canvas = page.locator("block-library-viewport canvas");
   await expect(canvas).toHaveCount(1);

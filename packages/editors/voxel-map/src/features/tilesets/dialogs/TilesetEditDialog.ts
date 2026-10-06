@@ -123,7 +123,7 @@ export class TilesetEditDialog extends WorkspaceElement {
     return html`
       <jolly-dialog
         heading=${entry === undefined ? "Tileset" : `Tileset "${entry.label}"`}
-        icon="sliders"
+        icon="tileset"
         @jolly-close=${this.#onClose}
       >
         ${entry === undefined ? nothing : this.#renderContent(workspace, entry)}

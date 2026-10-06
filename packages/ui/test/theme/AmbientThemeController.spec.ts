@@ -1,7 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 import test from "node:test";
-import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
@@ -9,15 +8,19 @@ import type { ReactiveControllerHost } from "lit";
 // Import Internal Dependencies
 import { AmbientThemeController } from "../../src/theme/AmbientThemeController.ts";
 
-// CONSTANTS
-const kFrameDuration = 16;
-
 function controllerHost(): ReactiveControllerHost & HTMLElement {
   const element = document.createElement("div");
 
   return Object.assign(element, {
     addController: () => undefined
   }) as unknown as ReactiveControllerHost & HTMLElement;
+}
+
+async function nextFrame(): Promise<void> {
+  await Promise.resolve();
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
 }
 
 function pickTheme(
@@ -39,12 +42,12 @@ test("AmbientThemeController follows the page theme until stopped", async() => {
   assert.equal(host.getAttribute("theme"), "dark");
 
   pickTheme(scope, "light");
-  await setTimeout(kFrameDuration);
+  await nextFrame();
   assert.equal(host.getAttribute("theme"), "light");
 
   controller.stop();
   pickTheme(scope, "dark");
-  await setTimeout(kFrameDuration);
+  await nextFrame();
   assert.equal(host.getAttribute("theme"), "light");
 
   scope.remove();

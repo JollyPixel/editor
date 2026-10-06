@@ -6,10 +6,10 @@ import {
 } from "@jolly-pixel/engine";
 import {
   BoxControls,
-  MarqueeBox,
   type BoxDragEvent,
   type BoxFlipEvent,
-  type BoxRotateEvent
+  type BoxRotateEvent,
+  type MarqueeBox
 } from "@jolly-pixel/three";
 import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 
@@ -18,15 +18,12 @@ import type { MapDocumentSignals } from "../../document/index.ts";
 import type { PointerCapture } from "../../state/index.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 import type { Placement } from "./Placement.ts";
+import { PlacementPreview } from "./PlacementPreview.ts";
 import type { PlacementStore } from "./PlacementStore.ts";
 import {
   mirrorOf,
   quarterTurnOf
 } from "./gizmoTransforms.ts";
-import { TemplateGhost } from "./TemplateGhost.ts";
-
-// CONSTANTS
-const kMarqueeShade = "#1a1a1a";
 
 export interface PlacementGizmoOptions {
   view: VoxelView;
@@ -44,8 +41,7 @@ export class PlacementGizmo extends ActorComponent {
   #placements: PlacementStore;
   #pointerCapture: PointerCapture;
   #mapDocument: MapDocumentSignals;
-  #marquee: MarqueeBox;
-  #ghost: TemplateGhost;
+  #preview: PlacementPreview;
   #pivot = new THREE.Vector3();
   #controls: BoxControls<MarqueeBox> | null = null;
   #subscriptions: Array<() => void> = [];
@@ -63,15 +59,11 @@ export class PlacementGizmo extends ActorComponent {
     this.#placements = options.placements;
     this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
-    this.#ghost = new TemplateGhost({
+    this.#preview = new PlacementPreview({
       blockRegistry: options.view.document.blocks,
-      sources: options.sources
+      sources: options.sources,
+      color: options.color
     });
-    this.#marquee = new MarqueeBox({
-      colors: [options.color, kMarqueeShade],
-      xray: true
-    });
-    this.#marquee.visible = false;
   }
 
   awake(): void {
@@ -94,7 +86,7 @@ export class PlacementGizmo extends ActorComponent {
     controls.addEventListener("end", this.#onDragEnd);
     this.#controls = controls;
 
-    this.actor.addChildren(this.#marquee, this.#ghost);
+    this.actor.addChildren(this.#preview);
     this.#subscriptions.push(
       this.#placements.subscribe("change", this.#sync),
       this.#mapDocument.subscribe("templatesChanged", this.#resync),
@@ -120,8 +112,7 @@ export class PlacementGizmo extends ActorComponent {
       this.#controls = null;
     }
     this.#pointerCapture.release(this);
-    this.#ghost.dispose();
-    this.#marquee.dispose();
+    this.#preview.dispose();
 
     super.destroy();
   }
@@ -137,8 +128,7 @@ export class PlacementGizmo extends ActorComponent {
     ) {
       this.#pointerCapture.release(this);
       this.#controls?.detach();
-      this.#marquee.visible = false;
-      this.#ghost.hide();
+      this.#preview.hide();
       if (placement !== null) {
         this.#placements.end();
       }
@@ -146,30 +136,18 @@ export class PlacementGizmo extends ActorComponent {
       return;
     }
 
-    const { position, transform } = placement;
-    const bounds = placement.boundsIn(template);
-    this.#marquee.position.set(
-      bounds.min.x,
-      bounds.min.y,
-      bounds.min.z
-    );
-    this.#marquee.size = bounds.size;
-    this.#marquee.visible = true;
+    const { position } = placement;
     this.#pivot.set(
       position.x + 0.5,
       position.y + 0.5,
       position.z + 0.5
     );
-    this.#ghost.position.set(
-      position.x,
-      position.y,
-      position.z
-    );
-    this.#ghost.draw(template, transform);
+    this.#preview.draw(placement, template);
 
+    const { marquee } = this.#preview;
     const controls = this.#controls;
-    if (controls !== null && controls.box !== this.#marquee) {
-      controls.attach(this.#marquee);
+    if (controls !== null && controls.box !== marquee) {
+      controls.attach(marquee);
     }
   };
 
@@ -178,7 +156,7 @@ export class PlacementGizmo extends ActorComponent {
   };
 
   readonly #rebuild = (): void => {
-    this.#ghost.invalidate();
+    this.#preview.invalidate();
     this.#resync();
   };
 

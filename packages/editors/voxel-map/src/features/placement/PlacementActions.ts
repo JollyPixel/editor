@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import {
+  LitElement,
+  html,
+  css,
+  nothing
+} from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 // Import Internal Dependencies
@@ -23,6 +28,23 @@ export class PlacementActions extends LitElement {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
       gap: var(--jolly-row-gap, 4px);
+    }
+
+    .axis {
+      font-weight: 600;
+      letter-spacing: 0.1em;
+    }
+
+    .axis.x {
+      color: var(--jolly-tone-coral);
+    }
+
+    .axis.y {
+      color: var(--jolly-tone-lime);
+    }
+
+    .axis.z {
+      color: var(--jolly-tone-sky);
     }
 
     .actions {
@@ -80,6 +102,7 @@ export class PlacementActions extends LitElement {
       <div class="transforms" @mousedown=${keepFocus}>
         ${PLACEMENT_TRANSFORMS.map((placementTransform) => {
           const label = this.#labelOf(placementTransform);
+          const { axis } = placementTransform;
 
           return html`
             <jolly-button
@@ -89,7 +112,9 @@ export class PlacementActions extends LitElement {
               @click=${() => this.placement.store.transform(
                 placementTransform.transform
               )}
-            ></jolly-button>
+            >${axis === null ?
+              nothing :
+              html`<span class="axis ${axis}" aria-hidden="true">${axis.toUpperCase()}</span>`}</jolly-button>
           `;
         })}
       </div>
