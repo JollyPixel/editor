@@ -105,10 +105,19 @@ html.template-dragging * {
   inset-inline-start: 16px;
 }
 
-#game-container voxel-brush-toolbar {
+#game-container .viewport-toolbars {
   position: absolute;
   inset-block-end: 16px;
   inset-inline-start: 50%;
   z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   transform: translateX(-50%);
+  pointer-events: none;
+}
+
+#game-container .viewport-toolbars > * {
+  pointer-events: auto;
 }

@@ -17,7 +17,10 @@ export function parseLayerRef(
     const rest = key.slice(ObjectRef.PREFIX.length);
     const separator = rest.lastIndexOf("/");
 
-    return new ObjectRef(rest.slice(0, separator), rest.slice(separator + 1));
+    return new ObjectRef(
+      rest.slice(0, separator),
+      rest.slice(separator + 1)
+    );
   }
 
   return key.startsWith(ObjectLayerRef.PREFIX) ?

@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { SceneLighting } from "../../../shared/SceneLighting.ts";
+import { SceneLighting } from "../../../scene/environment/SceneLighting.ts";
 
 // CONSTANTS
 const kCameraFov = 45;
@@ -76,7 +76,7 @@ export function needsEnvironment(
   );
 }
 
-export function fitGeometry(
+function fitGeometry(
   geometry: THREE.BufferGeometry
 ): void {
   geometry.computeBoundingSphere();

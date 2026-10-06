@@ -7,12 +7,14 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import {
   ObjectRef,
   parseLayerRef,
   type LayerRef,
   type SelectionStore
 } from "../../state/index.ts";
+import { layerSelectionsOf } from "./layerTree.ts";
 import { MapObject } from "./objects/MapObject.ts";
 import type {
   AddKind,
@@ -26,6 +28,7 @@ export type ConfirmPrompt = typeof showConfirm;
 export interface MapLayersOptions {
   world: VoxelWorld;
   selection: SelectionStore;
+  mapDocument: MapDocumentSignals;
   confirm?: ConfirmPrompt;
 }
 
@@ -43,6 +46,7 @@ export class MapLayers {
   readonly #world: VoxelWorld;
   readonly #selection: SelectionStore;
   readonly #confirm: ConfirmPrompt;
+  readonly #subscriptions: Array<() => void>;
 
   constructor(
     options: MapLayersOptions
@@ -50,6 +54,19 @@ export class MapLayers {
     this.#world = options.world;
     this.#selection = options.selection;
     this.#confirm = options.confirm ?? showConfirm;
+
+    const { mapDocument } = options;
+    this.#subscriptions = [
+      mapDocument.subscribe("layerUpdated", this.#reconcileSelection),
+      mapDocument.subscribe("reset", this.#reconcileSelection)
+    ];
+    this.#reconcileSelection();
+  }
+
+  dispose(): void {
+    for (const unsubscribe of this.#subscriptions.splice(0)) {
+      unsubscribe();
+    }
   }
 
   defaultNames(): Record<AddKind, string> {
@@ -189,4 +206,8 @@ export class MapLayers {
     this.#world.objectLayers.addObject(layerName, object);
     this.#selection.selectObject(new ObjectRef(layerName, object.id));
   }
+
+  readonly #reconcileSelection = (): void => {
+    this.#selection.reconcile(layerSelectionsOf(this.#world));
+  };
 }

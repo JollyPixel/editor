@@ -20,24 +20,21 @@ import {
   BRUSH_MIN_SIZE,
   type BrushAxis,
   type BrushStore
-} from "../../../state/index.ts";
+} from "../BrushStore.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import { brushToolbarStyles } from "./BrushToolbar.styles.ts";
-import {
-  paintingNoticeOf,
-  type PaintingNotice
-} from "./paintingNotice.ts";
+import { PaintAvailability } from "./PaintAvailability.ts";
 import {
   BRUSH_AXIS_OPTIONS,
   BRUSH_MODE_OPTIONS,
   BRUSH_PATTERN_OPTIONS,
-  choiceOf,
   ghostLabel,
   toolLabel,
   type BrushToolOption
 } from "./brushToolOptions.ts";
-import { HISTORY_SHORTCUTS } from "../../../scene/historyShortcuts.ts";
+import { choiceOf } from "./toolChoice.ts";
+import { HISTORY_SHORTCUTS } from "../../../shared/historyShortcuts.ts";
 import { BRUSH_SHORTCUTS } from "../interaction/brushShortcuts.ts";
 import "./brushIcons.ts";
 
@@ -63,8 +60,8 @@ export class BrushToolbar extends WorkspaceElement {
   @state()
   declare _redoDepth: number;
 
-  @state({ hasChanged: noticeChanged })
-  declare _notice: PaintingNotice | null;
+  @state({ hasChanged: availabilityChanged })
+  declare _availability: PaintAvailability;
 
   #size = new FieldBinding<number>(this, {
     read: () => this.#brush.size,
@@ -85,34 +82,36 @@ export class BrushToolbar extends WorkspaceElement {
     this.disabled = true;
     this._undoDepth = 0;
     this._redoDepth = 0;
-    this._notice = null;
+    this._availability = PaintAvailability.Ready;
   }
 
   get #brush(): BrushStore {
-    return this.attached.state.brush;
+    return this.attached.brush;
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { brush, selection, keyboardLayout } = workspace.state;
-    const { history } = workspace.view.document;
-    const refreshSelection = (): void => {
-      this.disabled = selection.voxelLayer === null;
-      this._notice = paintingNoticeOf(selection);
+    const { brush } = workspace;
+    const { selection, keyboardLayout } = workspace.state;
+    const { history } = workspace.mapDocument;
+    const refreshAvailability = (): void => {
+      this._availability = PaintAvailability.of(selection, brush.suspended);
+      this.disabled = this._availability.blocked;
     };
 
     this._undoDepth = history.undoDepth;
     this._redoDepth = history.redoDepth;
-    refreshSelection();
+    refreshAvailability();
 
     history.on("change", this.#onHistoryChange);
 
     return [
       brush.subscribe("change", () => this.requestUpdate()),
       keyboardLayout.subscribe("change", () => this.requestUpdate()),
-      selection.subscribe("change", refreshSelection),
-      workspace.mapDocument.subscribe("layerUpdated", refreshSelection),
+      brush.subscribe("suspendedChange", refreshAvailability),
+      selection.subscribe("change", refreshAvailability),
+      workspace.mapDocument.subscribe("layerUpdated", refreshAvailability),
       () => history.off("change", this.#onHistoryChange)
     ];
   }
@@ -123,7 +122,8 @@ export class BrushToolbar extends WorkspaceElement {
       return nothing;
     }
 
-    const { brush, keyboardLayout } = workspace.state;
+    const { brush } = workspace;
+    const { keyboardLayout } = workspace.state;
     function shortcut(
       chords: readonly KeyChordString[]
     ): string {
@@ -190,7 +190,7 @@ export class BrushToolbar extends WorkspaceElement {
             label=${toolLabel(
               `Size ${this.#size.value}`,
               sizeShortcut,
-              this.disabled
+              this._availability.reason
             )}
             ?disabled=${this.disabled}
           >
@@ -221,7 +221,7 @@ export class BrushToolbar extends WorkspaceElement {
             label=${toolLabel(
               ghostLabel(this.#size.value),
               shortcut(BRUSH_SHORTCUTS.ghost),
-              this.disabled
+              this._availability.reason
             )}
             ?active=${brush.ghost}
             ?disabled=${this.disabled}
@@ -233,7 +233,7 @@ export class BrushToolbar extends WorkspaceElement {
   }
 
   #renderNotice(): TemplateResult | typeof nothing {
-    const notice = this._notice;
+    const { notice } = this._availability;
     if (notice === null) {
       return nothing;
     }
@@ -279,7 +279,7 @@ export class BrushToolbar extends WorkspaceElement {
         data-value=${active.value}
         flyout-side="above"
         icon=${ifDefined(active.icon)}
-        label=${toolLabel(active.label, shortcut, this.disabled)}
+        label=${toolLabel(active.label, shortcut, this._availability.reason)}
         ?disabled=${this.disabled}
       >
         ${content(active.value)}
@@ -298,11 +298,11 @@ export class BrushToolbar extends WorkspaceElement {
   }
 
   #onUndo(): void {
-    this.workspace?.view.document.history.undo();
+    this.workspace?.mapDocument.history.undo();
   }
 
   #onRedo(): void {
-    this.workspace?.view.document.history.redo();
+    this.workspace?.mapDocument.history.redo();
   }
 
   #onGhostToggle(): void {
@@ -310,12 +310,11 @@ export class BrushToolbar extends WorkspaceElement {
   }
 }
 
-function noticeChanged(
-  next: PaintingNotice | null,
-  previous: PaintingNotice | null
+function availabilityChanged(
+  next: PaintAvailability,
+  previous: PaintAvailability | undefined
 ): boolean {
-  return next?.message !== previous?.message ||
-    next?.resumeLayer !== previous?.resumeLayer;
+  return previous === undefined || !next.equals(previous);
 }
 
 function axisLetters(

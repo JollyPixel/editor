@@ -9,7 +9,6 @@ import type { VoxelObjectJSON } from "@jolly-pixel/voxel.renderer";
 import { MapObject } from "../../../../src/features/layers/objects/MapObject.ts";
 import {
   objectColorSource,
-  objectPositionSource,
   objectSizeSource,
   type ObjectPort
 } from "../../../../src/features/layers/objects/objectSources.ts";
@@ -89,45 +88,6 @@ describe("objectColorSource", () => {
     const port = objectPort(anObject({ color: "#00ff00" }));
 
     objectColorSource(port).write("#00ff00", true);
-
-    assert.deepEqual(port.patches, []);
-  });
-});
-
-describe("objectPositionSource", () => {
-  test("reads the object's cell as a fresh snapshot", () => {
-    const source = objectPositionSource(objectPort(anObject()));
-
-    assert.deepEqual(source.read(), { x: 2, y: 0, z: 3 });
-    assert.notEqual(source.read(), source.read());
-  });
-
-  test("reads the origin with no object", () => {
-    const source = objectPositionSource(objectPort(null));
-
-    assert.deepEqual(source.read(), { x: 0, y: 0, z: 0 });
-  });
-
-  test("rounds the committed value", () => {
-    const port = objectPort(anObject());
-
-    objectPositionSource(port).write({ x: 4.6, y: 1.2, z: 3.4 }, true);
-
-    assert.deepEqual(port.patches, [{ x: 5, y: 1, z: 3 }]);
-  });
-
-  test("skips a move that rounds back onto the object", () => {
-    const port = objectPort(anObject());
-
-    objectPositionSource(port).write({ x: 2.1, y: -0.2, z: 3 }, true);
-
-    assert.deepEqual(port.patches, []);
-  });
-
-  test("writes nothing with no object", () => {
-    const port = objectPort(null);
-
-    objectPositionSource(port).write({ x: 1, y: 1, z: 1 }, true);
 
     assert.deepEqual(port.patches, []);
   });

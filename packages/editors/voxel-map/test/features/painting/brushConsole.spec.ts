@@ -7,25 +7,22 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { brushConsole } from "../../../src/features/painting/brushConsole.ts";
 import {
   BRUSH_MAX_SIZE,
-  EditorState
-} from "../../../src/state/index.ts";
+  BrushStore
+} from "../../../src/features/painting/BrushStore.ts";
 
 function registerBrush() {
   const commands = new CommandConsole();
-  const state = new EditorState({
-    storage: new MemoryStorageAdapter()
-  });
-  const handle = brushConsole(commands, { state });
+  const brush = new BrushStore();
+  const handle = brushConsole(commands, { brush });
 
   return {
     commands,
-    brush: state.brush,
+    brush,
     handle
   };
 }

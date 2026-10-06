@@ -230,9 +230,9 @@ void bootStandalone(VoxelMapEditor, {
   debugHandle: "voxelMapEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const { loadWorldProject } = await import("./boot/worldProject.ts");
+    const { createDefaultSeed } = await import("./boot/defaultSeed.ts");
 
-    return loadWorldProject();
+    return createDefaultSeed();
   }
 });
 ```

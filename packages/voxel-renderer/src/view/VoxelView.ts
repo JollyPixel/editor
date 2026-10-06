@@ -21,7 +21,10 @@ import {
   isVoxelMaterialGroupCommand,
   isVoxelTilesetCommand
 } from "../document/commands/categories.ts";
-import type { VoxelCommand } from "../document/commands/types.ts";
+import type {
+  VoxelCommand,
+  VoxelCommandContext
+} from "../document/commands/types.ts";
 import { markBlockDirty } from "../document/world/editing/markBlockDirty.ts";
 import type {
   VoxelDocument,
@@ -40,7 +43,6 @@ import { ChunkMeshLayout } from "./chunks/ChunkMeshLayout.ts";
 import { ChunkMeshStore } from "./chunks/ChunkMeshStore.ts";
 import { ChunkPipeline } from "./chunks/ChunkPipeline.ts";
 import { ChunkViewport } from "./chunks/ChunkViewport.ts";
-import { BlockReach } from "./chunks/BlockReach.ts";
 import { ChunkMeshWorkers } from "./workers/ChunkMeshWorkers.ts";
 import {
   VoxelLighting,
@@ -147,11 +149,11 @@ export class VoxelView {
   #pipeline: ChunkPipeline;
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
-  #blockReach = new BlockReach();
   #requestFrame: () => void;
 
   #onCommand = (
-    command: VoxelCommand
+    command: VoxelCommand,
+    context: VoxelCommandContext
   ): void => {
     this.requestFrame();
     if (isVoxelTilesetCommand(command)) {
@@ -167,20 +169,22 @@ export class VoxelView {
       }
     }
     else if (command.action === "block-defined") {
-      const redefinition = this.#blockReach.redefine(command.block);
+      const { redefinition = "added" } = context;
+      const blended = command.block.blendGroup !== undefined;
       if (
-        redefinition !== "tiles" ||
-        !this.#meshBuilder.writeRegions(command.block.id)
+        redefinition === "metadata" ||
+        (redefinition === "tiles" && !blended && this.#meshBuilder.writeRegions(command.block.id))
       ) {
-        markBlockDirty(
-          this.document.world.getLayers(),
-          command.block.id,
-          redefinition === "neighbours"
-        );
+        return;
       }
+
+      markBlockDirty(
+        this.document.world.getLayers(),
+        command.block.id,
+        blended || redefinition === "added" || redefinition === "occlusion"
+      );
     }
     else if (command.action === "block-removed") {
-      this.#blockReach.forget(command.blockId);
       markBlockDirty(
         this.document.world.getLayers(),
         command.blockId,
@@ -205,7 +209,6 @@ export class VoxelView {
       }
     }
     this.#materials.invalidate();
-    this.#blockReach.reset(this.document.blocks.getAll());
     this.#rebuildAllChunks("load");
     this.requestFrame();
   };
@@ -356,7 +359,6 @@ export class VoxelView {
       }
     }
 
-    this.#blockReach.reset(blocks.getAll());
     document.on("command", this.#onCommand);
     document.on("loaded", this.#onLoaded);
   }

@@ -20,6 +20,7 @@ import {
   SelectionStore,
   VoxelLayerRef
 } from "../../../src/state/index.ts";
+import { mapDocumentOf } from "../../helpers/mapDocument.ts";
 
 // CONSTANTS
 const kGround = new VoxelLayerRef("Ground").key;
@@ -297,7 +298,11 @@ describe("MapLayers entries", () => {
   test("adds a voxel layer, an object layer and an object at the focus", () => {
     const world = makeWorld();
     const selection = new SelectionStore();
-    const layers = new MapLayers({ world, selection });
+    const layers = new MapLayers({
+      world,
+      selection,
+      mapDocument: mapDocumentOf(world)
+    });
     const focus = { x: 3.4, y: 1, z: -2.6 };
 
     layers.create(focus, { kind: "voxel-layer", name: "Top" });
@@ -354,7 +359,11 @@ describe("MapLayers entries", () => {
   test("selects the clone of a voxel layer", () => {
     const world = makeWorld();
     const selection = new SelectionStore();
-    new MapLayers({ world, selection }).clone(new VoxelLayerRef("A"));
+    new MapLayers({
+      world,
+      selection,
+      mapDocument: mapDocumentOf(world)
+    }).clone(new VoxelLayerRef("A"));
 
     assert.equal(selection.voxelLayer, "A (1)");
     assert.equal(world.getLayers().length, 4);
@@ -363,7 +372,11 @@ describe("MapLayers entries", () => {
   test("merges into the picked target and selects it", async() => {
     const world = makeWorld();
     const selection = new SelectionStore();
-    const layers = new MapLayers({ world, selection });
+    const layers = new MapLayers({
+      world,
+      selection,
+      mapDocument: mapDocumentOf(world)
+    });
 
     await layers.merge(new VoxelLayerRef("C"), (context) => {
       assert.equal(context.defaultTarget, "B");
@@ -383,6 +396,43 @@ function layersOf(
   return new MapLayers({
     world,
     selection: new SelectionStore(),
+    mapDocument: mapDocumentOf(world),
     confirm
   });
 }
+
+describe("MapLayers selection", () => {
+  test("selects an entry on creation and moves off a removed layer", () => {
+    const world = makeWorld();
+    const selection = new SelectionStore();
+    new MapLayers({
+      world,
+      selection,
+      mapDocument: mapDocumentOf(world)
+    });
+
+    assert.notEqual(selection.current, null);
+
+    selection.selectVoxelLayer("B");
+    world.removeLayer("B");
+
+    assert.notEqual(selection.current, null);
+    assert.notEqual(selection.voxelLayer, "B");
+  });
+
+  test("stops reconciling once disposed", () => {
+    const world = makeWorld();
+    const selection = new SelectionStore();
+    const layers = new MapLayers({
+      world,
+      selection,
+      mapDocument: mapDocumentOf(world)
+    });
+    selection.selectVoxelLayer("C");
+
+    layers.dispose();
+    world.removeLayer("C");
+
+    assert.equal(selection.voxelLayer, "C");
+  });
+});

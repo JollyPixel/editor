@@ -12,14 +12,18 @@ import {
 import { blockLibraryViewportStyles } from "./BlockLibraryViewport.styles.ts";
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
-import {
+import type {
   BlockGrid,
-  type BlockCell
+  BlockCell
 } from "./BlockGrid.ts";
+import {
+  BlockReorderController,
+  type BlockMoveDetail
+} from "./BlockReorderController.ts";
 import {
   PeerMarks,
   type PeerMarkView
-} from "../../../shared/PeerMarks.ts";
+} from "./PeerMarks.ts";
 import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 
 // CONSTANTS
@@ -28,9 +32,6 @@ const kBlockEditEvent = "block-edit";
 const kBlockMoveEvent = "block-move";
 const kBlockCreateEvent = "block-create";
 const kCellInset = 3;
-const kDragThreshold = 4;
-const kAutoScrollMargin = 24;
-const kAutoScrollStep = 10;
 const kMinHeight = 60;
 const kMaxHeight = 1200;
 const kHeightStorageKey = "voxel-map:block-library:height";
@@ -38,20 +39,6 @@ const kHeightStorageKey = "voxel-map:block-library:height";
 interface MarkedCell {
   cell: BlockCell;
   view: PeerMarkView;
-}
-
-export interface BlockMoveDetail {
-  id: number;
-  toIndex: number;
-}
-
-interface DragSession {
-  pointerId: number;
-  blockId: number;
-  fromIndex: number;
-  originX: number;
-  originY: number;
-  dragging: boolean;
 }
 
 @customElement("block-library-viewport")
@@ -88,9 +75,6 @@ export class BlockLibraryViewport extends LitElement {
   @state()
   private declare _grid: BlockGrid | null;
 
-  @state()
-  private declare _insertAt: number | null;
-
   @query(".scroller")
   declare private _scroller: HTMLDivElement;
 
@@ -100,9 +84,20 @@ export class BlockLibraryViewport extends LitElement {
   #renderer: BlockLibraryRenderer | null = null;
   #shown = false;
   #visibilityObserver: IntersectionObserver | null = null;
-  #drag: DragSession | null = null;
-  #suppressClick = false;
   #resizeHandle: ResizeHandle | null = null;
+  #reorder = new BlockReorderController(this, {
+    scroller: () => this._scroller,
+    blockAt: (clientX, clientY) => this.#blockIdAt(clientX, clientY),
+    insertIndexAt: (clientX, clientY) => this.#insertIndexAt(clientX, clientY),
+    blockIds: () => this.blocks.map((block) => block.id),
+    onMove: (detail) => {
+      this.dispatchEvent(new CustomEvent<BlockMoveDetail>(kBlockMoveEvent, {
+        detail,
+        bubbles: false,
+        composed: false
+      }));
+    }
+  });
 
   constructor() {
     super();
@@ -115,7 +110,6 @@ export class BlockLibraryViewport extends LitElement {
     this.storage = new LocalStorageAdapter();
     this.sized = false;
     this._grid = null;
-    this._insertAt = null;
   }
 
   override connectedCallback() {
@@ -131,7 +125,6 @@ export class BlockLibraryViewport extends LitElement {
     super.disconnectedCallback();
     this.#stopWatchingVisibility();
     this.#shown = false;
-    this.#endDrag();
     this.#renderer?.dispose();
     this.#renderer = null;
     this.#disconnectResizeHandle();
@@ -186,15 +179,13 @@ export class BlockLibraryViewport extends LitElement {
     const cells = this.#markedCells();
 
     return html`<div
-      class=${this.#dragging ? "scroller dragging" : "scroller"}
+      class=${this.#reorder.dragging ? "scroller dragging" : "scroller"}
       role="listbox"
       aria-label="Blocks"
       @click=${this.#onClick}
       @dblclick=${this.#onDoubleClick}
       @pointerdown=${this.#onPointerDown}
       @pointermove=${this.#onPointerMove}
-      @pointerup=${this.#onPointerUp}
-      @pointercancel=${this.#onPointerCancel}
       @pointerleave=${this.#onPointerLeave}
     >
       <div class="layer highlights">
@@ -286,7 +277,7 @@ export class BlockLibraryViewport extends LitElement {
 
   #renderAddCell() {
     const grid = this._grid;
-    if (grid === null || this.#dragging) {
+    if (grid === null || this.#reorder.dragging) {
       return nothing;
     }
 
@@ -341,11 +332,12 @@ export class BlockLibraryViewport extends LitElement {
 
   #renderInsertion() {
     const grid = this._grid;
-    if (grid === null || this._insertAt === null) {
+    const insertAt = this.#reorder.insertAt;
+    if (grid === null || insertAt === null) {
       return nothing;
     }
 
-    const marker = grid.insertMarker(this._insertAt);
+    const marker = grid.insertMarker(insertAt);
 
     return html`<div
       class="insertion"
@@ -446,94 +438,20 @@ export class BlockLibraryViewport extends LitElement {
     this._grid = grid;
   }
 
-  get #dragging(): boolean {
-    return this.#drag?.dragging === true;
-  }
-
   #onPointerDown(
     event: PointerEvent
   ): void {
-    if (!this.reorderable || event.button !== 0 || this.#drag !== null) {
-      return;
+    if (this.reorderable) {
+      this.#reorder.begin(event);
     }
-
-    const blockId = this.#blockIdAt(event);
-    if (blockId === null) {
-      return;
-    }
-
-    this.#drag = {
-      pointerId: event.pointerId,
-      blockId,
-      fromIndex: this.blocks.findIndex((block) => block.id === blockId),
-      originX: event.clientX,
-      originY: event.clientY,
-      dragging: false
-    };
-    this._scroller.setPointerCapture(event.pointerId);
   }
 
   #onPointerMove(
     event: PointerEvent
   ): void {
-    const drag = this.#drag;
-    if (this.#renderer !== null && drag?.dragging !== true) {
-      this.#renderer.hoveredId = this.#blockIdAt(event);
+    if (this.#renderer !== null && !this.#reorder.dragging) {
+      this.#renderer.hoveredId = this.#blockIdAt(event.clientX, event.clientY);
     }
-    if (drag === null || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    if (!drag.dragging) {
-      const travelled = Math.hypot(
-        event.clientX - drag.originX,
-        event.clientY - drag.originY
-      );
-      if (travelled < kDragThreshold) {
-        return;
-      }
-
-      this.#startDrag(drag);
-    }
-
-    event.preventDefault();
-    this.#autoScroll(event);
-    this._insertAt = this.#insertIndexAt(event);
-  }
-
-  #onPointerUp(
-    event: PointerEvent
-  ): void {
-    const drag = this.#drag;
-    if (drag === null || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    const insertAt = drag.dragging ? this._insertAt : null;
-    this.#suppressClick = drag.dragging;
-    this.#endDrag();
-
-    if (insertAt === null) {
-      return;
-    }
-
-    const toIndex = BlockGrid.moveTarget(
-      drag.fromIndex,
-      insertAt,
-      this.blocks.length
-    );
-    if (toIndex === -1) {
-      return;
-    }
-
-    this.dispatchEvent(new CustomEvent<BlockMoveDetail>(kBlockMoveEvent, {
-      detail: {
-        id: drag.blockId,
-        toIndex
-      },
-      bubbles: false,
-      composed: false
-    }));
   }
 
   #onPointerLeave(): void {
@@ -542,60 +460,9 @@ export class BlockLibraryViewport extends LitElement {
     }
   }
 
-  #onPointerCancel(
-    event: PointerEvent
-  ): void {
-    if (this.#drag?.pointerId === event.pointerId) {
-      this.#endDrag();
-    }
-  }
-
-  readonly #onKeyDown = (
-    event: KeyboardEvent
-  ): void => {
-    if (event.key === "Escape") {
-      this.#endDrag();
-    }
-  };
-
-  #startDrag(
-    drag: DragSession
-  ): void {
-    drag.dragging = true;
-    window.addEventListener("keydown", this.#onKeyDown);
-    this.requestUpdate();
-  }
-
-  #endDrag(): void {
-    const drag = this.#drag;
-    this.#drag = null;
-    this._insertAt = null;
-    if (drag === null) {
-      return;
-    }
-
-    window.removeEventListener("keydown", this.#onKeyDown);
-    if (this._scroller?.hasPointerCapture(drag.pointerId)) {
-      this._scroller.releasePointerCapture(drag.pointerId);
-    }
-    this.requestUpdate();
-  }
-
-  #autoScroll(
-    event: PointerEvent
-  ): void {
-    const scroller = this._scroller;
-    const bounds = scroller.getBoundingClientRect();
-    if (event.clientY < bounds.top + kAutoScrollMargin) {
-      scroller.scrollTop -= kAutoScrollStep;
-    }
-    else if (event.clientY > bounds.bottom - kAutoScrollMargin) {
-      scroller.scrollTop += kAutoScrollStep;
-    }
-  }
-
   #insertIndexAt(
-    event: PointerEvent
+    clientX: number,
+    clientY: number
   ): number | null {
     const grid = this._grid;
     const canvas = this.#renderer?.canvas;
@@ -606,14 +473,15 @@ export class BlockLibraryViewport extends LitElement {
     const bounds = canvas.getBoundingClientRect();
 
     return grid.insertIndex(
-      event.clientX - bounds.left,
-      event.clientY - bounds.top,
+      clientX - bounds.left,
+      clientY - bounds.top,
       this.blocks.length
     );
   }
 
   #blockIdAt(
-    event: MouseEvent
+    clientX: number,
+    clientY: number
   ): number | null {
     const renderer = this.#renderer;
     if (!renderer) {
@@ -623,17 +491,15 @@ export class BlockLibraryViewport extends LitElement {
     const bounds = renderer.canvas.getBoundingClientRect();
 
     return renderer.blockAt(
-      event.clientX - bounds.left,
-      event.clientY - bounds.top
+      clientX - bounds.left,
+      clientY - bounds.top
     );
   }
 
   #onClick(
     event: MouseEvent
   ): void {
-    if (this.#suppressClick) {
-      this.#suppressClick = false;
-
+    if (this.#reorder.consumeClick()) {
       return;
     }
 
@@ -656,7 +522,7 @@ export class BlockLibraryViewport extends LitElement {
     name: string,
     event: MouseEvent
   ): void {
-    const blockId = this.#blockIdAt(event);
+    const blockId = this.#blockIdAt(event.clientX, event.clientY);
     if (blockId === null) {
       return;
     }

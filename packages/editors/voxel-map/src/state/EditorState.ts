@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { BrushStore } from "./BrushStore.ts";
+import { BlockSelection } from "./BlockSelection.ts";
 import { KeyboardLayoutStore } from "./KeyboardLayoutStore.ts";
 import { PointerCapture } from "./PointerCapture.ts";
 import { PresenceStore } from "./PresenceStore.ts";
@@ -19,7 +19,7 @@ export interface EditorStateOptions {
 
 export class EditorState {
   readonly selection = new SelectionStore();
-  readonly brush = new BrushStore();
+  readonly block = new BlockSelection();
   readonly presence = new PresenceStore();
   readonly pointer = new PointerCapture();
   readonly log = new LogQueue();
@@ -29,7 +29,10 @@ export class EditorState {
   constructor(
     options: EditorStateOptions = {}
   ) {
-    const { storage = new LocalStorageAdapter() } = options;
+    const {
+      storage = new LocalStorageAdapter()
+    } = options;
+
     this.view = new ViewStore(storage);
   }
 }

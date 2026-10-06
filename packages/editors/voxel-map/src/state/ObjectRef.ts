@@ -59,7 +59,10 @@ export class ObjectRef {
   objectIn(
     world: VoxelWorld
   ): VoxelObjectJSON | undefined {
-    return world.objectLayers.getObject(this.layerName, this.objectId);
+    return world.objectLayers.getObject(
+      this.layerName,
+      this.objectId
+    );
   }
 
   update(
@@ -87,8 +90,15 @@ export class ObjectRef {
     target: LayerRef,
     where: LayerDropPosition
   ): void {
-    if (this.canMoveOnto(target, where) && target.kind === "object-layer") {
-      world.objectLayers.moveObject(this.layerName, this.objectId, target.name);
+    if (
+      this.canMoveOnto(target, where) &&
+      target.kind === "object-layer"
+    ) {
+      world.objectLayers.moveObject(
+        this.layerName,
+        this.objectId,
+        target.name
+      );
     }
   }
 
@@ -101,6 +111,9 @@ export class ObjectRef {
   removeFrom(
     world: VoxelWorld
   ): void {
-    world.objectLayers.removeObject(this.layerName, this.objectId);
+    world.objectLayers.removeObject(
+      this.layerName,
+      this.objectId
+    );
   }
 }

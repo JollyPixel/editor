@@ -5,3 +5,4 @@ export * from "./mesh-highlight/index.ts";
 export * from "./transform-controls/index.ts";
 export * from "./common/Canvas2D.ts";
 export * from "./common/projectToClient.ts";
+export * from "./common/clientToNdc.ts";

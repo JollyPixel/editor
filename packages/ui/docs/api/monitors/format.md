@@ -5,7 +5,7 @@ The root package exports these formatters:
 | Function | Output |
 |---|---|
 | `formatInteger(value)` | Rounded integer, no grouping |
-| `formatCount(value)` | Rounded count with `en-US` grouping |
+| `formatCount(value, singular?, plural?)` | Rounded count with `en-US` grouping; with `singular`, followed by the unit (`"1 voxel"`, `"12,345 voxels"`), `plural` defaulting to `singular` plus `s` |
 | `formatDecimal(value, decimals?)` | Fixed-point number, one decimal by default |
 | `formatMilliseconds(value)` | Millisecond text |
 | `formatPercent(value)` | Percentage text |

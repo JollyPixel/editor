@@ -57,7 +57,10 @@ export class VoxelLayerRef {
     target: LayerRef,
     where: LayerDropPosition
   ): void {
-    if (target.kind !== "voxel-layer" || where === "inside") {
+    if (
+      target.kind !== "voxel-layer" ||
+      where === "inside"
+    ) {
       return;
     }
 

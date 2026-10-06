@@ -19,49 +19,51 @@ import {
   type VoxelPaint
 } from "../../../../src/features/painting/model/BrushStroke.ts";
 
-interface FakeEngine {
-  view: VoxelView;
-  removed: string[];
-}
-
-function cellKey(
-  cell: VoxelCoord
-): string {
-  return `${cell.x},${cell.y},${cell.z}`;
-}
-
-function createColumnEngine(
+function createWallView(
   height: number
-): FakeEngine {
-  const removed: string[] = [];
-  const layer = {
-    getVoxelAt(position: VoxelCoord) {
-      const solid = position.y >= 0 && position.y < height;
-
-      return solid ? { blockId: 1, transform: 0 } : undefined;
-    }
-  };
-  const view = {
-    document: {
-      world: {
-        getLayer: () => layer,
-        removeVoxelBulk(
-          _layerName: string,
-          entries: { position: VoxelCoord; }[]
-        ) {
-          removed.push(...entries.map((entry) => cellKey(entry.position)));
-        }
+): VoxelView {
+  const view = new VoxelView(new VoxelDocument({
+    chunkSize: 4,
+    layers: ["Ground"],
+    blocks: [
+      {
+        id: 1,
+        name: "cube",
+        shapeId: "cube",
+        faceTextures: {},
+        collidable: true,
+        properties: {}
       }
-    },
-    flush() {
-      return undefined;
-    }
-  };
+    ]
+  }));
+  const cells = Array.from({ length: height }, (_, y) => [-1, 0, 1].map((z) => {
+    return {
+      position: { x: 0, y, z },
+      blockId: 1
+    };
+  })).flat();
+  view.document.world.setVoxelBulk("Ground", cells);
 
-  return {
-    view: view as unknown as VoxelView,
-    removed
-  };
+  return view;
+}
+
+function wallRows(
+  view: VoxelView
+): number[] {
+  const rows: number[] = [];
+  for (let y = 0; y < 8; y++) {
+    const filled = [-1, 0, 1].filter(
+      (z) => view.document.world.getVoxelAt({ x: 0, y, z }) !== undefined
+    );
+    if (filled.length === 3) {
+      rows.push(y);
+    }
+    else {
+      assert.strictEqual(filled.length, 0, `row ${y} is partly dug`);
+    }
+  }
+
+  return rows;
 }
 
 function createSlabView(): VoxelView {
@@ -257,7 +259,7 @@ describe("applyBrushStroke", () => {
   });
 
   test("digs a wall down from the top face it was aimed at", () => {
-    const { view, removed } = createColumnEngine(6);
+    const view = createWallView(6);
     const origin = { x: 0, y: 5, z: 0 };
     const stroke = new BrushStroke({
       mode: "remove",
@@ -268,15 +270,12 @@ describe("applyBrushStroke", () => {
     });
 
     assert.ok(applyBrushStroke(view, stroke, [origin], 3));
-    assert.deepStrictEqual(
-      [...new Set(removed.map((key) => key.split(",")[1]))].sort(),
-      ["3", "4", "5"]
-    );
-    assert.strictEqual(removed.length, 9);
+    assert.deepStrictEqual(wallRows(view), [0, 1, 2]);
+    view.dispose();
   });
 
   test("only reaches the aimed row when the wall rises into the air", () => {
-    const { view, removed } = createColumnEngine(6);
+    const view = createWallView(6);
     const origin = { x: 0, y: 5, z: 0 };
     const stroke = new BrushStroke({
       mode: "remove",
@@ -285,11 +284,8 @@ describe("applyBrushStroke", () => {
       origin
     });
 
-    applyBrushStroke(view, stroke, [origin], 3);
-
-    assert.deepStrictEqual(
-      removed.sort(),
-      ["0,5,-1", "0,5,0", "0,5,1"]
-    );
+    assert.ok(applyBrushStroke(view, stroke, [origin], 3));
+    assert.deepStrictEqual(wallRows(view), [0, 1, 2, 3, 4]);
+    view.dispose();
   });
 });

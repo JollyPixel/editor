@@ -6,8 +6,8 @@ import {
 import {
   VoxelShell,
   type ShellPoint
-} from "../model/VoxelShell.ts";
-import { VoxelSolid } from "../model/VoxelSolid.ts";
+} from "./VoxelShell.ts";
+import { VoxelSolid } from "./VoxelSolid.ts";
 
 // CONSTANTS
 export const BRUSH_SHELL_INFLATE = 0.01;

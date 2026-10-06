@@ -9,11 +9,8 @@ import {
 import { KeyBindings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import {
-  BrushStore,
-  SelectionStore,
-  VoxelLayerRef
-} from "../../../../src/state/index.ts";
+import { SelectionStore, VoxelLayerRef } from "../../../../src/state/index.ts";
+import { BrushStore } from "../../../../src/features/painting/BrushStore.ts";
 import { bindBrushShortcuts } from "../../../../src/features/painting/interaction/brushShortcuts.ts";
 
 function setup() {
@@ -79,5 +76,27 @@ describe("BrushShortcuts ghost block", () => {
     press();
 
     assert.strictEqual(brush.ghost, false);
+  });
+});
+
+describe("BrushShortcuts while suspended", () => {
+  test("G leaves the brush untouched", () => {
+    const { brush, press } = setup();
+    brush.suspended = true;
+
+    press();
+
+    assert.strictEqual(brush.ghost, false);
+  });
+
+  test("G works again once the brush resumes", () => {
+    const { brush, press } = setup();
+    brush.suspended = true;
+    press();
+
+    brush.suspended = false;
+    press();
+
+    assert.strictEqual(brush.ghost, true);
   });
 });

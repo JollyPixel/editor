@@ -27,7 +27,7 @@ interface ProbeCache {
   empty: Map<string, boolean>;
 }
 
-export function hasVisiblePixel(
+function hasVisiblePixel(
   buffer: PixelBuffer,
   rect: TexelSquare,
   alphaCutoff: number

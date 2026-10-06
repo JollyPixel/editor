@@ -1,0 +1,152 @@
+// Import Node.js Dependencies
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+
+// Import Third-party Dependencies
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import { ViewRay } from "../../../src/scene/camera/ViewRay.ts";
+
+function createCamera(
+  position: THREE.Vector3Like,
+  target: THREE.Vector3Like
+): THREE.PerspectiveCamera {
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+  camera.position.set(position.x, position.y, position.z);
+  camera.lookAt(target.x, target.y, target.z);
+  camera.updateMatrixWorld(true);
+
+  return camera;
+}
+
+function createBlock(
+  position: THREE.Vector3Like
+): THREE.Object3D {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  mesh.position.set(
+    position.x + 0.5,
+    position.y + 0.5,
+    position.z + 0.5
+  );
+
+  const root = new THREE.Group();
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+
+  return root;
+}
+
+describe("ViewRay.cast", () => {
+  test("reports the solid met under the screen center", () => {
+    const camera = createCamera(
+      { x: 0.5, y: 10, z: 0.5 },
+      { x: 0.5, y: 0, z: 0.5 }
+    );
+
+    const hit = new ViewRay({ camera }).cast(createBlock({ x: 0, y: 0, z: 0 }));
+
+    assert.ok(hit);
+    assert.equal(hit.ground, false);
+    assert.ok(Math.abs(hit.point.y - 1) < 1e-6);
+    assert.ok(Math.abs(hit.distance - 9) < 1e-6);
+  });
+
+  test("falls back to the ground plane when no solid is met", () => {
+    const camera = createCamera(
+      { x: 0.5, y: 10, z: 0.5 },
+      { x: 0.5, y: 0, z: 0.5 }
+    );
+
+    const hit = new ViewRay({ camera }).cast(new THREE.Group());
+
+    assert.ok(hit);
+    assert.equal(hit.ground, true);
+    assert.equal(hit.point.y, 0);
+    assert.deepEqual(hit.normal.toArray(), [0, 1, 0]);
+  });
+
+  test("returns null past the bounds of the ground plane", () => {
+    const camera = createCamera(
+      { x: 0, y: 10, z: 0 },
+      { x: 40, y: 0, z: 0 }
+    );
+
+    const viewRay = new ViewRay({
+      camera,
+      groundPlaneSize: 10
+    });
+
+    assert.equal(viewRay.cast(null), null);
+  });
+
+  test("returns null when the ray leaves the world", () => {
+    const camera = createCamera(
+      { x: 0, y: 10, z: 0 },
+      { x: 0, y: 20, z: 0 }
+    );
+
+    assert.equal(new ViewRay({ camera }).cast(null), null);
+  });
+});
+
+describe("ViewRay.focusPoint", () => {
+  test("lands on top of the solid the camera is aimed at", () => {
+    const camera = createCamera(
+      { x: 3.5, y: 10, z: 4.5 },
+      { x: 3.5, y: 0, z: 4.5 }
+    );
+
+    const focus = new ViewRay({ camera }).focusPoint(
+      createBlock({ x: 3, y: 0, z: 4 })
+    );
+
+    assert.deepEqual(focus, { x: 3, y: 1, z: 4 });
+  });
+
+  test("lands on the ground cell the camera is aimed at", () => {
+    const camera = createCamera(
+      { x: 6.5, y: 10, z: 2.5 },
+      { x: 6.5, y: 0, z: 2.5 }
+    );
+
+    const focus = new ViewRay({ camera }).focusPoint(new THREE.Group());
+
+    assert.deepEqual(focus, { x: 6, y: 0, z: 2 });
+  });
+
+  test("pulls a hit beyond maxDistance back along the ray", () => {
+    const camera = createCamera(
+      { x: 0.5, y: 200, z: 0.5 },
+      { x: 0.5, y: 0, z: 0.5 }
+    );
+
+    const focus = new ViewRay({ camera }).focusPoint(null, { maxDistance: 64 });
+
+    assert.deepEqual(focus, { x: 0, y: 136, z: 0 });
+  });
+
+  test("stays ahead of the camera when the ray hits nothing", () => {
+    const camera = createCamera(
+      { x: 0.5, y: 4, z: 0.5 },
+      { x: 0.5, y: 4, z: -10 }
+    );
+
+    const focus = new ViewRay({ camera }).focusPoint(null, {
+      fallbackDistance: 12
+    });
+
+    assert.deepEqual(focus, { x: 0, y: 4, z: -12 });
+  });
+
+  test("never resolves to the origin while the camera is elsewhere", () => {
+    const camera = createCamera(
+      { x: 64.5, y: 18, z: -32.5 },
+      { x: 64.5, y: 0, z: -32.5 }
+    );
+
+    const focus = new ViewRay({ camera }).focusPoint(new THREE.Group());
+
+    assert.deepEqual(focus, { x: 64, y: 0, z: -33 });
+  });
+});

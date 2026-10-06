@@ -6,7 +6,6 @@ import {
   defineConfig,
   type UserConfig
 } from "vite";
-import checker from "vite-plugin-checker";
 import {
   createAssetWorkspacePlugin,
   createProjectFileWatchPlugin,
@@ -62,9 +61,6 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
       undefined,
     plugins: [
       prebundleWorkspace(),
-      checker({
-        typescript: false
-      }),
       createProjectKindsPlugin(kinds),
       inMemory ? null : createProjectFileWatchPlugin(projectFile),
       ...staticHosting ? [] : [createAssetWorkspacePlugin({
@@ -79,9 +75,6 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
         handlers: kinds.handlers(),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value
       })]
-    ],
-    esbuild: {
-      target: "es2024"
-    }
+    ]
   };
 });

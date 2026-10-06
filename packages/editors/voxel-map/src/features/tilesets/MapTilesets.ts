@@ -20,7 +20,7 @@ import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
+import type { MapDocument } from "../../document/MapDocument.ts";
 import {
   BlockAlphaModes,
   type TilesetPixels

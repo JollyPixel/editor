@@ -26,7 +26,9 @@ export class ViewSettings implements ViewSettingsJSON {
     }
 
     try {
-      return ViewSettings.DEFAULT.#merged(JSON.parse(raw));
+      return ViewSettings.DEFAULT.#merged(
+        JSON.parse(raw)
+      );
     }
     catch {
       return ViewSettings.DEFAULT;

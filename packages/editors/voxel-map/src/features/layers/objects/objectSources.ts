@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  FieldSource,
-  Vec3Like
-} from "@jolly-pixel/ui";
+import type { FieldSource } from "@jolly-pixel/ui";
 import {
   VoxelFootprint,
   type VoxelObjectJSON
@@ -36,34 +33,6 @@ export function objectColorSource(
       const derived = new MapObject(object).derivedColor;
       applyPatch(port, object, {
         color: sameColor(value, derived) ? undefined : value
-      });
-    }
-  };
-}
-
-export function objectPositionSource(
-  port: ObjectPort
-): FieldSource<Vec3Like> {
-  return {
-    read: () => {
-      const object = port.object();
-
-      return {
-        x: object?.x ?? 0,
-        y: object?.y ?? 0,
-        z: object?.z ?? 0
-      };
-    },
-    write: (value) => {
-      const object = port.object();
-      if (object === null) {
-        return;
-      }
-
-      applyPatch(port, object, {
-        x: Math.round(value.x),
-        y: Math.round(value.y),
-        z: Math.round(value.z)
       });
     }
   };

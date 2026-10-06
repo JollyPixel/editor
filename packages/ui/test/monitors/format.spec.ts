@@ -29,6 +29,19 @@ describe("monitors.formatCount", () => {
       "1,235"
     );
   });
+
+  test("appends the singular unit for exactly one", () => {
+    assert.equal(formatCount(1, "voxel"), "1 voxel");
+  });
+
+  test("appends the plural unit otherwise", () => {
+    assert.equal(formatCount(0, "voxel"), "0 voxels");
+    assert.equal(formatCount(12345, "voxel"), "12,345 voxels");
+  });
+
+  test("honors an irregular plural", () => {
+    assert.equal(formatCount(2, "person", "people"), "2 people");
+  });
 });
 
 describe("monitors.formatDecimal", () => {

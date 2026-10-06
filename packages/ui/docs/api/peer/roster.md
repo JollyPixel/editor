@@ -48,3 +48,16 @@ peer marks nothing.
 Call `publishLocal()` after the local key changes; an unchanged key is not
 sent again. The local peer never appears in the marks, since `room.peers`
 excludes it. `dispose()` unsubscribes and publishes an empty map.
+
+## `peerBadges`
+
+```ts
+const node = {
+  ...layerNode,
+  badges: peerBadges(layerNode.id, marks)
+};
+```
+
+Turns the peers marking `key` in a `PeerMarkMap<TKey>` into `jolly-tree`
+badges (`color` and `title` from each peer's color and display name), at most
+three, in bucket order. An unmarked key returns an empty array.

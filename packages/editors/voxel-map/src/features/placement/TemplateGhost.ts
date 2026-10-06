@@ -167,7 +167,13 @@ export class TemplateGhost extends THREE.Group {
       };
       batches.set(key, batch);
     }
-    appendPiece(batch, piece.geometry, cell.x, cell.y, cell.z);
+    appendPiece(
+      batch,
+      piece.geometry,
+      cell.x,
+      cell.y,
+      cell.z
+    );
   }
 
   #materialsOf(

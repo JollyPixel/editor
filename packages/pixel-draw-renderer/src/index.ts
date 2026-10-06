@@ -200,6 +200,12 @@ export {
   vec2Equal
 } from "./utils/math.ts";
 export {
+  RectArea,
+  type RectRow,
+  type ResizeCorner,
+  type ResizeHandle
+} from "./utils/RectArea.ts";
+export {
   rectOf,
   rotateCorner,
   rotateGeometry,

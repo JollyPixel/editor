@@ -5,6 +5,18 @@ import {
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
+export interface TemplateSourceRef {
+  kind: "template";
+  templateId: string;
+}
+
+export interface LayerSourceRef {
+  kind: "layer";
+  layerName: string;
+}
+
+export type PlacementSourceRef = TemplateSourceRef | LayerSourceRef;
+
 export class TemplateSource {
   readonly kind = "template";
   readonly templateId: string;
@@ -21,6 +33,13 @@ export class TemplateSource {
     world: VoxelWorld
   ): VoxelTemplate | undefined {
     return world.templates.get(this.templateId);
+  }
+
+  toRef(): TemplateSourceRef {
+    return {
+      kind: this.kind,
+      templateId: this.templateId
+    };
   }
 }
 
@@ -59,7 +78,9 @@ export class LayerSource {
   ) {
     this.layerName = layerName;
     this.snapshot = snapshot;
-    this.pivot = Object.freeze({ ...pivot });
+    this.pivot = Object.freeze({
+      ...pivot
+    });
 
     Object.freeze(this);
   }
@@ -70,6 +91,13 @@ export class LayerSource {
     return world.getLayer(this.layerName) === undefined ?
       undefined :
       this.snapshot;
+  }
+
+  toRef(): LayerSourceRef {
+    return {
+      kind: this.kind,
+      layerName: this.layerName
+    };
   }
 }
 

@@ -10,44 +10,28 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import {
-  type ResolvedBlockDefinition,
-  VoxelRotation
-} from "@jolly-pixel/voxel.renderer";
-import {
-  FieldBinding,
-  showConfirm,
-  type JollyOption
+  formatCount,
+  showConfirm
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { RotationMode } from "../../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import type { BlockCreateDialog } from "../dialogs/BlockCreateDialog.ts";
 import type { BlockEditDialog } from "../dialogs/BlockEditDialog.ts";
 import { BlockUsage } from "../usage/BlockUsage.ts";
-import { formatCount } from "../../../shared/format.ts";
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
-import { PeerMarks } from "../../../shared/PeerMarks.ts";
-import type {
-  BlockLibraryViewport,
-  BlockMoveDetail
-} from "./BlockLibraryViewport.ts";
+import { PeerMarks } from "./PeerMarks.ts";
+import type { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
+import type { BlockMoveDetail } from "./BlockReorderController.ts";
 import "./BlockLibraryViewport.ts";
 import "../dialogs/BlockCreateDialog.ts";
 import "../dialogs/BlockEditDialog.ts";
+import "../blockIcons.ts";
 
 export type BlockLibraryLayout = "compact" | "fill";
-
-// CONSTANTS
-const kRotationOptions: JollyOption<RotationMode>[] = [
-  { label: "Auto", value: "auto" },
-  { label: "0°", value: VoxelRotation.None },
-  { label: "CCW 90°", value: VoxelRotation.CCW90 },
-  { label: "180°", value: VoxelRotation.Deg180 },
-  { label: "CW 90°", value: VoxelRotation.CW90 }
-];
 
 @customElement("block-library")
 export class BlockLibrary extends WorkspaceElement {
@@ -88,25 +72,6 @@ export class BlockLibrary extends WorkspaceElement {
     .problems:hover {
       background: color-mix(in srgb, var(--jolly-danger) 22%, transparent);
     }
-
-    .brush-row {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-1, 4px);
-    }
-
-    .brush-row jolly-button-group {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    .brush-row jolly-checkbox {
-      --jolly-label-width: auto;
-      --jolly-label-max-width: none;
-
-      flex: 0 0 auto;
-      margin-inline-start: auto;
-    }
   `;
 
   @property({ attribute: false })
@@ -139,20 +104,6 @@ export class BlockLibrary extends WorkspaceElement {
   @query("block-library-viewport")
   declare private _viewport: BlockLibraryViewport | null;
 
-  #rotation = new FieldBinding<RotationMode>(this, {
-    read: () => this.attached.state.brush.rotationMode,
-    write: (value) => {
-      this.attached.state.brush.rotationMode = value;
-    }
-  });
-
-  #flipY = new FieldBinding<boolean>(this, {
-    read: () => this.attached.state.brush.flipY,
-    write: (value) => {
-      this.attached.state.brush.flipY = value;
-    }
-  });
-
   constructor() {
     super();
 
@@ -168,18 +119,17 @@ export class BlockLibrary extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { brush, presence } = workspace.state;
+    const { block, presence } = workspace.state;
     const refreshMarks = (): void => this.#refreshMarks(workspace);
     this.#resolveSelection(workspace);
     this.#refreshBlocks(workspace);
     this.#refreshUsage(workspace);
 
     return [
-      brush.subscribe("blockChange", () => {
+      block.subscribe("change", () => {
         this.#resolveSelection(workspace);
         void this.#revealSelection();
       }),
-      brush.subscribe("change", () => this.requestUpdate()),
       workspace.mapDocument.subscribe("blockRegistryChanged", () => {
         this.#resolveSelection(workspace);
         this.#refreshBlocks(workspace);
@@ -222,20 +172,7 @@ export class BlockLibrary extends WorkspaceElement {
         @block-create=${this.#onBlockCreate}
       ></block-library-viewport>
 
-      <div class="brush-row">
-        <jolly-button-group
-          aria-label="Rotation"
-          .options=${kRotationOptions}
-          .value=${this.#rotation.value}
-          @jolly-change=${this.#rotation.commit}
-        ></jolly-button-group>
-        <jolly-checkbox
-          align="end"
-          label="Flip Y"
-          .value=${this.#flipY.value}
-          @jolly-change=${this.#flipY.commit}
-        ></jolly-checkbox>
-      </div>
+      <slot></slot>
 
       <block-create-dialog .workspace=${workspace}></block-create-dialog>
       <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
@@ -279,20 +216,20 @@ export class BlockLibrary extends WorkspaceElement {
       danger: true
     });
     if (confirmed) {
-      workspace.view.document.world.removeBlocks(orphanBlocks);
+      workspace.mapDocument.world.removeBlocks(orphanBlocks);
     }
   }
 
   #onBlockSelect(
     event: CustomEvent<{ id: number; }>
   ): void {
-    this.attached.state.brush.blockId = event.detail.id;
+    this.attached.state.block.id = event.detail.id;
   }
 
   #onBlockEdit(
     event: CustomEvent<{ id: number; }>
   ): void {
-    this.attached.state.brush.blockId = event.detail.id;
+    this.attached.state.block.id = event.detail.id;
     void this.editBlock();
   }
 
@@ -339,14 +276,14 @@ export class BlockLibrary extends WorkspaceElement {
   #resolveSelection(
     workspace: VoxelMapWorkspace
   ): void {
-    this._selectedId = workspace.state.brush.blockId;
+    this._selectedId = workspace.state.block.id;
     this.#refreshMarks(workspace);
   }
 
   #refreshBlocks(
     workspace: VoxelMapWorkspace
   ): void {
-    this._blocks = [...workspace.view.document.blocks.getAll()];
+    this._blocks = [...workspace.mapDocument.blocks.getAll()];
     this.#refreshShownBlocks(workspace);
   }
 

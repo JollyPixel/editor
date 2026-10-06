@@ -10,35 +10,57 @@ import {
   KeyBindings,
   type KeyCode
 } from "@jolly-pixel/controls";
-import { VoxelTransform } from "@jolly-pixel/voxel.renderer";
+import {
+  VoxelHistory,
+  VoxelTransform,
+  VoxelWorld
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { PlacementStore } from "../../../src/features/placement/PlacementStore.ts";
-import { TemplateSource } from "../../../src/features/placement/PlacementSource.ts";
+import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
+import { SelectionStore } from "../../../src/state/index.ts";
+import { mapDocumentOf } from "../../helpers/mapDocument.ts";
 
 function setup() {
   const keyboard = new KeyBindings();
-  const store = new PlacementStore();
+  const world = new VoxelWorld();
+  world.addLayer("Draft");
+  world.setVoxelBulk("Draft", [
+    {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: 1
+    }
+  ]);
+  const templateId = world.templates.createFromLayer("Draft", {
+    name: "House"
+  })!.id;
+  const store = new MapPlacement({
+    world,
+    history: new VoxelHistory(world, { enabled: true }),
+    selection: new SelectionStore(),
+    mapDocument: mapDocumentOf(world)
+  });
   let commits = 0;
   const release = bindPlacementShortcuts({
     keyboard,
     placement: {
-      store,
+      get placing() {
+        return store.placing;
+      },
+      turn: (transform) => store.turn(transform),
       commit: () => {
         commits++;
-        store.end();
 
-        return true;
+        return store.cancel();
       },
-      cancel: () => {
-        const placing = store.placing;
-        store.end();
-
-        return placing;
-      }
+      cancel: () => store.cancel()
     }
   });
+
+  function begin(): void {
+    store.placeTemplate(templateId, { x: 0, y: 0, z: 0 });
+  }
 
   function press(
     code: KeyCode,
@@ -53,28 +75,23 @@ function setup() {
   return {
     keyboard,
     store,
+    begin,
     release,
     press,
     commits: () => commits
   };
 }
 
-function begin(
-  store: PlacementStore
-): void {
-  store.begin(new TemplateSource("house"), { x: 0, y: 0, z: 0 });
-}
-
 function rotation(
-  store: PlacementStore
+  store: MapPlacement
 ): number | undefined {
-  return store.placement?.transform.rotation;
+  return store.current?.placement.transform.rotation;
 }
 
 describe("PlacementShortcuts", () => {
   test("Q and E turn the pending placement in opposite directions", () => {
-    const { store, press } = setup();
-    begin(store);
+    const { store, begin, press } = setup();
+    begin();
 
     press("KeyQ");
     assert.equal(rotation(store), 1);
@@ -85,19 +102,19 @@ describe("PlacementShortcuts", () => {
   });
 
   test("Enter and NumpadEnter commit the pending placement", () => {
-    const { store, press, commits } = setup();
-    begin(store);
+    const { store, begin, press, commits } = setup();
+    begin();
     press("Enter");
-    begin(store);
+    begin();
     press("NumpadEnter");
 
     assert.equal(commits(), 2);
-    assert.equal(store.placement, null);
+    assert.equal(store.current, null);
   });
 
   test("leaves Enter to a focused button", () => {
-    const { keyboard, store, commits } = setup();
-    begin(store);
+    const { keyboard, store, begin, commits } = setup();
+    begin();
     const button = document.createElement("button");
     document.body.append(button);
     button.addEventListener("keydown", (event) => keyboard.dispatch(event));
@@ -110,7 +127,7 @@ describe("PlacementShortcuts", () => {
     button.remove();
 
     assert.equal(commits(), 0);
-    assert.notEqual(store.placement, null);
+    assert.notEqual(store.current, null);
   });
 
   test("does nothing without a pending placement", () => {
@@ -119,13 +136,13 @@ describe("PlacementShortcuts", () => {
     press("KeyQ");
     press("Enter");
 
-    assert.equal(store.placement, null);
+    assert.equal(store.current, null);
     assert.equal(commits(), 0);
   });
 
   test("ignores held keys and modifiers", () => {
-    const { store, press, commits } = setup();
-    begin(store);
+    const { store, begin, press, commits } = setup();
+    begin();
 
     press("KeyQ", { repeat: true });
     press("KeyQ", { ctrlKey: true });
@@ -133,20 +150,20 @@ describe("PlacementShortcuts", () => {
     press("Enter", { repeat: true });
     press("Enter", { ctrlKey: true });
 
-    assert.equal(store.placement?.transform, VoxelTransform.Identity);
+    assert.equal(store.current?.placement.transform, VoxelTransform.Identity);
     assert.equal(commits(), 0);
   });
 
   test("Escape cancels the pending placement before lower-priority bindings", () => {
-    const { keyboard, store, press } = setup();
+    const { keyboard, store, begin, press } = setup();
     const fallbacks: string[] = [];
     keyboard.bind("Escape", () => {
       fallbacks.push("camera");
     });
-    begin(store);
+    begin();
 
     press("Escape");
-    assert.equal(store.placement, null);
+    assert.equal(store.current, null);
     assert.deepEqual(fallbacks, []);
 
     press("Escape");
@@ -154,8 +171,8 @@ describe("PlacementShortcuts", () => {
   });
 
   test("stops listening once disposed", () => {
-    const { store, release, press } = setup();
-    begin(store);
+    const { store, begin, release, press } = setup();
+    begin();
 
     release();
     press("KeyQ");

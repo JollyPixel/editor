@@ -23,6 +23,7 @@ import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { tileSizeSegments } from "../tileSizes.ts";
+import "../tilesetIcons.ts";
 
 // CONSTANTS
 const kDefaultName = "tileset";

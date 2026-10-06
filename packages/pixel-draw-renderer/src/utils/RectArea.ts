@@ -176,6 +176,12 @@ export class RectArea {
       : new RectArea(clipped);
   }
 
+  intersects(
+    rect: SelectionRect
+  ): boolean {
+    return RectArea.#intersect(this.#rect, rect) !== null;
+  }
+
   touchesEdgeOf(
     rect: SelectionRect
   ): boolean {

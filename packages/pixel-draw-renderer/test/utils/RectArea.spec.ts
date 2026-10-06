@@ -104,6 +104,44 @@ describe("RectArea.intersection", () => {
   });
 });
 
+describe("RectArea.intersects", () => {
+  const kRect = {
+    x: 2,
+    y: 2,
+    width: 4,
+    height: 4
+  };
+
+  test("is true when the rectangles share at least one pixel", () => {
+    assert.strictEqual(
+      RectArea.from(kRect).intersects({ x: 5, y: 5, width: 3, height: 3 }),
+      true
+    );
+    assert.strictEqual(
+      RectArea.from(kRect).intersects({ x: 0, y: 0, width: 10, height: 10 }),
+      true
+    );
+  });
+
+  test("is false when the rectangles only touch along an edge", () => {
+    assert.strictEqual(
+      RectArea.from(kRect).intersects({ x: 6, y: 2, width: 2, height: 4 }),
+      false
+    );
+    assert.strictEqual(
+      RectArea.from(kRect).intersects({ x: 2, y: 0, width: 4, height: 2 }),
+      false
+    );
+  });
+
+  test("is false when the rectangles are disjoint", () => {
+    assert.strictEqual(
+      RectArea.from(kRect).intersects({ x: 10, y: 10, width: 2, height: 2 }),
+      false
+    );
+  });
+});
+
 describe("RectArea.resized", () => {
   const kRect = {
     x: 0,

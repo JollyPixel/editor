@@ -13,7 +13,6 @@ import {
 // Import Internal Dependencies
 import {
   buildBlockPreviewMesh,
-  fitGeometry,
   needsEnvironment,
   PREVIEW_FIT_RADIUS
 } from "../../../../src/features/blocks/rendering/blockPreviewMesh.ts";
@@ -35,16 +34,6 @@ function assertFitted(
   assert.ok(Math.abs(sphere.radius - PREVIEW_FIT_RADIUS) < 1e-6);
   assert.ok(sphere.center.length() < 1e-6);
 }
-
-describe("fitGeometry", () => {
-  it("centers and scales a geometry to the preview radius", () => {
-    const geometry = new THREE.BoxGeometry(4, 2, 6);
-    geometry.translate(10, -3, 5);
-    fitGeometry(geometry);
-
-    assertFitted(geometry);
-  });
-});
 
 describe("needsEnvironment", () => {
   it("is true only for a block drawn with a material group finish", () => {

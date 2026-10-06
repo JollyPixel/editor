@@ -6,7 +6,10 @@ import {
   type ModelDocument,
   type ModelMaterialJSON
 } from "@jolly-pixel/asset.voxel-model/client";
-import type { PresencePeer } from "@jolly-pixel/ui";
+import {
+  SubscriptionController,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
@@ -15,7 +18,6 @@ import type {
   PresenceStore,
   ViewSettingsStore
 } from "../../../state/index.ts";
-import { WorkspaceController } from "../../../shared/WorkspaceController.ts";
 
 export interface MaterialSurfaceWorkspace {
   document: ModelDocument;
@@ -27,7 +29,7 @@ export interface MaterialSurfaceWorkspace {
 
 export class MaterialSurfaceController {
   #host: ReactiveControllerHost;
-  #connection: WorkspaceController<MaterialSurfaceWorkspace>;
+  #connection: SubscriptionController<MaterialSurfaceWorkspace>;
   #materialId: string | null = null;
 
   #onEdit = (
@@ -46,7 +48,7 @@ export class MaterialSurfaceController {
     host: ReactiveControllerHost
   ) {
     this.#host = host;
-    this.#connection = new WorkspaceController(
+    this.#connection = new SubscriptionController(
       host,
       (workspace) => this.#subscribeTo(workspace)
     );

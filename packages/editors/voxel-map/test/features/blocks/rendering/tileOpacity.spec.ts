@@ -12,7 +12,6 @@ import {
 
 // Import Internal Dependencies
 import {
-  hasVisiblePixel,
   readImagePixels,
   TileOpacityProbe,
   type PixelBuffer
@@ -80,27 +79,6 @@ function setup(
   };
 }
 
-describe("hasVisiblePixel", () => {
-  const buffer = bufferOf(4, 2, (x) => (x === 3 ? 128 : 0));
-
-  it("finds a pixel at or above the cutoff inside the rect", () => {
-    assert.equal(hasVisiblePixel(buffer, { x: 2, y: 0, size: 2 }, 0.5), true);
-  });
-
-  it("ignores pixels below the cutoff", () => {
-    assert.equal(hasVisiblePixel(buffer, { x: 2, y: 0, size: 2 }, 0.6), false);
-  });
-
-  it("never treats a zero alpha as visible", () => {
-    assert.equal(hasVisiblePixel(buffer, { x: 0, y: 0, size: 2 }, 0), false);
-  });
-
-  it("clips a rect past the image bounds", () => {
-    assert.equal(hasVisiblePixel(buffer, { x: 4, y: 0, size: 2 }, 0), false);
-    assert.equal(hasVisiblePixel(buffer, { x: 3, y: -1, size: 2 }, 0), true);
-  });
-});
-
 describe("readImagePixels", () => {
   it("returns null for an empty image", () => {
     assert.equal(readImagePixels(canvasOf(0, 0)), null);
@@ -131,6 +109,25 @@ describe("TileOpacityProbe", () => {
 
     assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 0, row: 0 }, 0), false);
     assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0 }, 0), true);
+  });
+
+  it("only sees the pixels at or above the alpha cutoff", () => {
+    const { probe } = setup(bufferOf(4, 2, (x) => (x === 3 ? 128 : 0)));
+    const tile = { tilesetId: "atlas", col: 1, row: 0 };
+
+    assert.equal(probe.isEmpty(tile, 0.5), false);
+    assert.equal(probe.isEmpty(tile, 0.6), true);
+    assert.equal(probe.isEmpty({ ...tile, col: 0 }, 0), true);
+  });
+
+  it("clips a tile that runs past the image edge", () => {
+    const { probe } = setup(bufferOf(4, 2, (x) => (x % 3 === 0 ? 255 : 0)));
+
+    assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 2, row: 0 }, 0), true);
+    assert.equal(
+      probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0, size: 4 }, 0),
+      false
+    );
   });
 
   it("falls back to the default tileset without a tileset id", () => {

@@ -63,7 +63,9 @@ export class ObjectLayerRef {
   removalMessage(
     world: VoxelWorld
   ): string {
-    const count = world.objectLayers.get(this.name)?.objects.length ?? 0;
+    const count = world.objectLayers.get(
+      this.name
+    )?.objects.length ?? 0;
 
     return count === 0 ?
       `Delete the object layer "${this.name}"?` :

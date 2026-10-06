@@ -5,7 +5,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { BrushStore } from "../../../state/index.ts";
+import type { BlockSelection } from "../../../state/index.ts";
 import type { SlotRegionIds } from "./SlotRegionIds.ts";
 
 /**
@@ -13,27 +13,27 @@ import type { SlotRegionIds } from "./SlotRegionIds.ts";
  */
 export class BlockUvSelectionSync {
   #uv: UVMap;
-  #brush: BrushStore;
+  #block: BlockSelection;
   #regions: () => SlotRegionIds | null;
   #unsubscribe: () => void;
 
   constructor(
     uv: UVMap,
-    brush: BrushStore,
+    block: BlockSelection,
     regions: () => SlotRegionIds | null
   ) {
     this.#uv = uv;
-    this.#brush = brush;
+    this.#block = block;
     this.#regions = regions;
     this.#uv.on("selection-changed", this.#onSelectionChanged);
-    this.#unsubscribe = this.#brush.subscribe(
-      "blockChange",
+    this.#unsubscribe = this.#block.subscribe(
+      "change",
       this.#onSelectedBlockChange
     );
   }
 
   refresh(): void {
-    this.#onSelectedBlockChange(this.#brush.blockId);
+    this.#onSelectedBlockChange(this.#block.id);
   }
 
   dispose(): void {
@@ -50,7 +50,7 @@ export class BlockUvSelectionSync {
 
     const blockId = this.#regions()?.blockIdOf(event.selectedRegionId) ?? null;
     if (blockId !== null) {
-      this.#brush.blockId = blockId;
+      this.#block.id = blockId;
     }
   };
 

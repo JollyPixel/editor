@@ -14,31 +14,33 @@ import {
 import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/index.ts";
+import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { PointerCapture } from "../../state/index.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
-import type { Placement } from "./Placement.ts";
+import type { ActivePlacement } from "./ActivePlacement.ts";
+import type { MapPlacement } from "./MapPlacement.ts";
 import { PlacementPreview } from "./PlacementPreview.ts";
-import type { PlacementStore } from "./PlacementStore.ts";
 import {
-  mirrorOf,
-  quarterTurnOf
-} from "./gizmoTransforms.ts";
+  PLACEMENT_MIRRORS,
+  PLACEMENT_ROTATIONS
+} from "./placementTransforms.ts";
 
 export interface PlacementGizmoOptions {
   view: VoxelView;
   sources: BlockRenderSources;
   camera: THREE.PerspectiveCamera;
-  placements: PlacementStore;
+  placement: Pick<
+    MapPlacement,
+    "current" | "subscribe" | "moveBoundsTo" | "turn"
+  >;
   pointer: PointerCapture;
   mapDocument: MapDocumentSignals;
   color: THREE.ColorRepresentation;
 }
 
 export class PlacementGizmo extends ActorComponent {
-  #view: VoxelView;
   #camera: THREE.PerspectiveCamera;
-  #placements: PlacementStore;
+  #placement: PlacementGizmoOptions["placement"];
   #pointerCapture: PointerCapture;
   #mapDocument: MapDocumentSignals;
   #preview: PlacementPreview;
@@ -54,9 +56,8 @@ export class PlacementGizmo extends ActorComponent {
       actor,
       typeName: "PlacementGizmo"
     });
-    this.#view = options.view;
     this.#camera = options.camera;
-    this.#placements = options.placements;
+    this.#placement = options.placement;
     this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
     this.#preview = new PlacementPreview({
@@ -88,12 +89,11 @@ export class PlacementGizmo extends ActorComponent {
 
     this.actor.addChildren(this.#preview);
     this.#subscriptions.push(
-      this.#placements.subscribe("change", this.#sync),
-      this.#mapDocument.subscribe("templatesChanged", this.#resync),
+      this.#placement.subscribe("change", this.#sync),
       this.#mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
       this.#mapDocument.subscribe("tilesetsChanged", this.#rebuild)
     );
-    this.#sync(this.#placements.placement);
+    this.#sync(this.#placement.current);
   }
 
   override destroy(): void {
@@ -118,31 +118,27 @@ export class PlacementGizmo extends ActorComponent {
   }
 
   readonly #sync = (
-    placement: Placement | null
+    current: ActivePlacement | null
   ): void => {
     this.actor.world.invalidate();
-    const template = placement?.source.resolve(this.#view.document.world);
-    if (
-      placement === null ||
-      template === undefined
-    ) {
+    if (current === null) {
       this.#pointerCapture.release(this);
       this.#controls?.detach();
       this.#preview.hide();
-      if (placement !== null) {
-        this.#placements.end();
-      }
 
       return;
     }
 
-    const { position } = placement;
+    const { position } = current.placement;
     this.#pivot.set(
       position.x + 0.5,
       position.y + 0.5,
       position.z + 0.5
     );
-    this.#preview.draw(placement, template);
+    this.#preview.draw(
+      current.placement,
+      current.template
+    );
 
     const { marquee } = this.#preview;
     const controls = this.#controls;
@@ -151,13 +147,9 @@ export class PlacementGizmo extends ActorComponent {
     }
   };
 
-  readonly #resync = (): void => {
-    this.#sync(this.#placements.placement);
-  };
-
   readonly #rebuild = (): void => {
     this.#preview.invalidate();
-    this.#resync();
+    this.#sync(this.#placement.current);
   };
 
   readonly #onDragStart = (): void => {
@@ -167,25 +159,29 @@ export class PlacementGizmo extends ActorComponent {
   readonly #onDragChange = (
     event: BoxDragEvent
   ): void => {
-    const placement = this.#placements.placement;
-    const template = placement?.source.resolve(this.#view.document.world);
-    if (placement === null || template === undefined) {
-      return;
-    }
-
-    this.#placements.move(placement.positionFor(template, event.min));
+    this.#placement.moveBoundsTo(event.min);
   };
 
   readonly #onRotate = (
     event: BoxRotateEvent
   ): void => {
-    this.#placements.transform(quarterTurnOf(event.turns));
+    const rotation = PLACEMENT_ROTATIONS.find(
+      (candidate) => candidate.turns === event.turns
+    );
+    if (rotation !== undefined) {
+      this.#placement.turn(rotation.transform);
+    }
   };
 
   readonly #onFlip = (
     event: BoxFlipEvent
   ): void => {
-    this.#placements.transform(mirrorOf(event.axis));
+    const mirror = PLACEMENT_MIRRORS.find(
+      (candidate) => candidate.axis === event.axis
+    );
+    if (mirror !== undefined) {
+      this.#placement.turn(mirror.transform);
+    }
   };
 
   readonly #onDragEnd = (): void => {

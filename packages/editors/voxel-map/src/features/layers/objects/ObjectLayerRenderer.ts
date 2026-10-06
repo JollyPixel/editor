@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/engine";
 import {
   BoxControls,
+  clientToNdc,
   type AreaBox,
   type BoxDragEvent
 } from "@jolly-pixel/three";
@@ -15,7 +16,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../document/index.ts";
+import type { MapDocument } from "../../../document/MapDocument.ts";
 import type {
   PointerCapture,
   SelectionStore
@@ -202,19 +203,13 @@ export class ObjectLayerRenderer extends ActorComponent {
     event: PointerEvent
   ): [string, AreaBox] | null {
     const canvas = this.#canvas;
-    if (canvas === null) {
+    if (
+      canvas === null ||
+      clientToNdc(canvas, event.clientX, event.clientY, this.#pointer) === null
+    ) {
       return null;
     }
 
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      return null;
-    }
-
-    this.#pointer.set(
-      (((event.clientX - rect.left) / rect.width) * 2) - 1,
-      (-((event.clientY - rect.top) / rect.height) * 2) + 1
-    );
     this.#raycaster.setFromCamera(
       this.#pointer,
       this.#camera

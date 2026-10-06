@@ -9,11 +9,10 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/index.ts";
+import type { MapDocument } from "../../../document/MapDocument.ts";
 import type { MapTilesets } from "../../tilesets/MapTilesets.ts";
 import {
   customFinishSource,
@@ -40,13 +39,10 @@ export class BlockMaterialFinish extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare view: VoxelView;
-
-  @property({ attribute: false })
   declare tilesets: MaterialGroupWriter;
 
   @property({ attribute: false })
-  declare mapDocument: MapDocumentSignals;
+  declare mapDocument: Pick<MapDocument, "materialGroups" | "subscribe">;
 
   @property({ attribute: false })
   declare groupId: string | undefined;
@@ -58,7 +54,7 @@ export class BlockMaterialFinish extends LitElement {
     group: () => (
       this.groupId === undefined ?
         undefined :
-        this.view.document.materialGroups.get(this.groupId)
+        this.mapDocument.materialGroups.get(this.groupId)
     ),
     define: (group) => {
       this.tilesets.defineMaterialGroup(group);
@@ -114,7 +110,7 @@ export class BlockMaterialFinish extends LitElement {
   }
 
   override render() {
-    if (!this.view || this.groupId === undefined) {
+    if (!this.mapDocument || this.groupId === undefined) {
       return nothing;
     }
 

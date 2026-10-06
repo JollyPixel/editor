@@ -13,17 +13,17 @@ import {
   type BlockSide,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  Dialog,
-  JollyChangeDetail,
-  JollyHeadingChangeDetail,
-  JollyOption
+import {
+  formatCount,
+  type Dialog,
+  type JollyChangeDetail,
+  type JollyHeadingChangeDetail,
+  type JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
-import { formatCount } from "../../../shared/format.ts";
 import { materialGroupNameOf } from "./materialGroupSources.ts";
 import {
   blockDialogStyles,
@@ -33,6 +33,7 @@ import {
   tilesetOptions
 } from "./blockDialog.ts";
 import "./BlockMaterialFinish.ts";
+import "../blockIcons.ts";
 
 // CONSTANTS
 const kAlphaModeOptions: JollyOption<BlockAlphaMode>[] = [
@@ -81,7 +82,7 @@ export class BlockEditDialog extends WorkspaceElement {
   async open(
     blockId: number
   ): Promise<void> {
-    if (this.workspace?.view.document.blocks.get(blockId) === undefined) {
+    if (this.workspace?.mapDocument.blocks.get(blockId) === undefined) {
       return;
     }
 
@@ -94,7 +95,7 @@ export class BlockEditDialog extends WorkspaceElement {
   get #block(): ResolvedBlockDefinition | undefined {
     return this._blockId === null ?
       undefined :
-      this.workspace?.view.document.blocks.get(this._blockId);
+      this.workspace?.mapDocument.blocks.get(this._blockId);
   }
 
   override render() {
@@ -237,7 +238,6 @@ export class BlockEditDialog extends WorkspaceElement {
       ></jolly-text>
       ${block.materialGroup === undefined ? nothing : html`
         <block-material-finish
-          .view=${workspace.view}
           .tilesets=${workspace.tilesets}
           .mapDocument=${workspace.mapDocument}
           .groupId=${block.materialGroup}
@@ -338,9 +338,9 @@ export class BlockEditDialog extends WorkspaceElement {
     }
 
     this.#close();
-    const [next] = workspace.view.document.blocks.getAll();
+    const [next] = workspace.mapDocument.blocks.getAll();
     if (next !== undefined) {
-      workspace.state.brush.blockId = next.id;
+      workspace.state.block.id = next.id;
     }
   }
 

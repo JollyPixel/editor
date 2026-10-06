@@ -11,6 +11,9 @@ import type {
   JollyOption
 } from "@jolly-pixel/ui";
 
+// Import Internal Dependencies
+import "../layerIcons.ts";
+
 export interface MergeLayerContext {
   sourceName: string;
   options: JollyOption<string>[];

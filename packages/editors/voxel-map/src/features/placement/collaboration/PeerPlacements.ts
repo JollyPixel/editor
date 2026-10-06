@@ -15,18 +15,16 @@ import type {
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/index.ts";
+import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
 import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
 import { Placement } from "../Placement.ts";
-import {
-  PlacementPresence,
-  type PlacementSourceRef
-} from "../PlacementPresence.ts";
+import { PlacementPresence } from "./PlacementPresence.ts";
 import { PlacementPreview } from "../PlacementPreview.ts";
 import {
   LayerSource,
   TemplateSource,
-  type PlacementSource
+  type PlacementSource,
+  type PlacementSourceRef
 } from "../PlacementSource.ts";
 
 // CONSTANTS

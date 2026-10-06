@@ -5,6 +5,7 @@ import { PopoverController } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
+import "../blockIcons.ts";
 
 export interface BlockOrderChangeDetail {
   order: BlockLibraryOrder;

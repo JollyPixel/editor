@@ -81,7 +81,11 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
     this.#entries = [...entries];
 
     this.#assign(
-      fallbackSelection(this.#current, previous, this.#entries)
+      fallbackSelection(
+        this.#current,
+        previous,
+        this.#entries
+      )
     );
   }
 
@@ -124,12 +128,22 @@ function fallbackSelection(
       return moved;
     }
 
-    return fallbackSelection(current.layer, previous, next);
+    return fallbackSelection(
+      current.layer,
+      previous,
+      next
+    );
   }
 
-  const before = previous.filter((entry) => entry.kind === current.kind);
-  const after = next.filter((entry) => entry.kind === current.kind);
-  const index = before.findIndex((entry) => current.equals(entry));
+  const before = previous.filter(
+    (entry) => entry.kind === current.kind
+  );
+  const after = next.filter(
+    (entry) => entry.kind === current.kind
+  );
+  const index = before.findIndex(
+    (entry) => current.equals(entry)
+  );
   if (index !== -1 && after.length > 0) {
     return after[Math.min(index, after.length - 1)];
   }

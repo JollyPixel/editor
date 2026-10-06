@@ -1,42 +1,57 @@
-// Import Node.js Dependencies
-import fs from "node:fs/promises";
-import path from "node:path";
-
 // Import Third-party Dependencies
 import {
   e2eFolder,
   editorFixture
 } from "@jolly-pixel/e2e/editor";
 import {
+  createTilesetDocument,
   createVoxelMapDocument,
   encodeTilesetDocument,
   TILESET_KIND,
   VOXEL_MAP_KIND,
-  tilesetAsset
+  tilesetAsset,
+  type TilesetAssetDocument
 } from "@jolly-pixel/asset.voxel-map";
-import { DEFAULT_CHUNK_SIZE } from "@jolly-pixel/voxel.renderer";
+import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  blocksFromTileset,
+  DEFAULT_CHUNK_SIZE,
+  DEFAULT_TILE_SIZE
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  createDefaultTileset,
-  DEFAULT_TILESET_ID
-} from "../../src/boot/worldProject.ts";
+  DEFAULT_TILESET_ID,
+  DEFAULT_TILESET_SIZE
+} from "../../src/boot/defaultSeed.ts";
 
 // CONSTANTS
-const kTilesetFile = path.join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "public",
-  "textures",
-  "tileset.png"
-);
+const kBlockCount = 32;
 
 export { expect } from "@playwright/test";
 
 export interface E2EWorld {
   id: string;
   tilesetId: string;
+}
+
+function createOpaqueTileset(): TilesetAssetDocument {
+  const { x, y } = DEFAULT_TILESET_SIZE;
+
+  return createTilesetDocument({
+    tileSize: DEFAULT_TILE_SIZE,
+    pixels: createPixelArtDocument(
+      DEFAULT_TILESET_SIZE,
+      new Uint8Array(x * y * 4).fill(255)
+    ),
+    blocks: blocksFromTileset(
+      {
+        cols: x / DEFAULT_TILE_SIZE,
+        rows: y / DEFAULT_TILE_SIZE
+      },
+      { limit: kBlockCount }
+    )
+  });
 }
 
 export const test = editorFixture<E2EWorld>({
@@ -49,12 +64,9 @@ export const test = editorFixture<E2EWorld>({
   },
   async create(catalog) {
     const folder = e2eFolder();
-    const tileset = await createDefaultTileset(
-      await fs.readFile(kTilesetFile)
-    );
     const tilesetId = await catalog.create(
       `${folder}/tileset.tileset.json`,
-      encodeTilesetDocument(tileset),
+      encodeTilesetDocument(createOpaqueTileset()),
       { kind: TILESET_KIND }
     );
     const id = await catalog.create(

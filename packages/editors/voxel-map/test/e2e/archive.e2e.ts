@@ -77,7 +77,7 @@ test("exports the map, resets the workspace and imports it back", async({ page }
   });
   expect(state).toEqual({
     layers: ["Ground"],
-    blocks: 32
+    blocks: 0
   });
   expect(errors).toEqual([]);
 });

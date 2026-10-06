@@ -6,12 +6,12 @@ import type {
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
+import type { SelectionStore } from "../../../state/index.ts";
 import {
   BRUSH_AXES,
   type BrushAxis,
-  type BrushStore,
-  type SelectionStore
-} from "../../../state/index.ts";
+  type BrushStore
+} from "../BrushStore.ts";
 
 export const BRUSH_SHORTCUTS = {
   mode: ["r"],
@@ -33,11 +33,11 @@ export function bindBrushShortcuts(
 ): () => void {
   const { keyboard, brush, selection } = options;
 
-  function onVoxelLayer(
+  function whilePaintable(
     action: () => void
   ): KeyBindingHandler {
     return () => {
-      if (selection.voxelLayer === null) {
+      if (selection.voxelLayer === null || brush.suspended) {
         return false;
       }
       action();
@@ -47,22 +47,22 @@ export function bindBrushShortcuts(
   }
 
   const releases = [
-    keyboard.bind(BRUSH_SHORTCUTS.mode, onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.mode, whilePaintable(() => {
       brush.mode = brush.mode === "build" ? "replace" : "build";
     })),
-    keyboard.bind(BRUSH_SHORTCUTS.axis, onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.axis, whilePaintable(() => {
       brush.axis = nextAxis(brush.axis);
     })),
-    keyboard.bind(BRUSH_SHORTCUTS.pattern, onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.pattern, whilePaintable(() => {
       brush.pattern = brush.pattern === "square" ? "circle" : "square";
     })),
-    keyboard.bind(BRUSH_SHORTCUTS.ghost, onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.ghost, whilePaintable(() => {
       brush.ghost = !brush.ghost;
     })),
-    keyboard.bind(BRUSH_SHORTCUTS.shrink, onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.shrink, whilePaintable(() => {
       brush.resize(-1);
     }), { repeat: true }),
-    keyboard.bind(BRUSH_SHORTCUTS.grow, onVoxelLayer(() => {
+    keyboard.bind(BRUSH_SHORTCUTS.grow, whilePaintable(() => {
       brush.resize(1);
     }), { repeat: true })
   ];

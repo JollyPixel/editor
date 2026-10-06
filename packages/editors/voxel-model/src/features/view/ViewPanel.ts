@@ -6,9 +6,10 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import type {
-  JollyChangeDetail,
-  JollyOption
+import {
+  SubscriptionController,
+  type JollyChangeDetail,
+  type JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -22,7 +23,6 @@ import {
   type ViewSettings,
   type ViewSettingsStore
 } from "../../state/index.ts";
-import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 
 // CONSTANTS
 const kShadingOptions: JollyOption<ShadingMode>[] = [
@@ -78,7 +78,7 @@ export class ViewPanel extends LitElement {
     }
   `;
 
-  #workspace = new WorkspaceController<ViewWorkspace>(this, ({ view }) => [
+  #workspace = new SubscriptionController<ViewWorkspace>(this, ({ view }) => [
     view.subscribe("change", () => this.requestUpdate())
   ]);
 

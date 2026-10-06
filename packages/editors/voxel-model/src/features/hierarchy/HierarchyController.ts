@@ -2,6 +2,7 @@
 import type { ReactiveControllerHost } from "lit";
 import {
   resolveReparentMoves,
+  SubscriptionController,
   type JollyActivateDetail,
   type JollyActivateSwatchDetail,
   type JollyRenameDetail,
@@ -53,7 +54,6 @@ import type {
   DeleteContext,
   DeleteResult
 } from "../../shared/DeleteDialog.ts";
-import { WorkspaceController } from "../../shared/WorkspaceController.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import {
   EMPTY_MENU,
@@ -89,7 +89,7 @@ export interface HierarchyView {
 export class HierarchyController {
   #host: ReactiveControllerHost;
   #view: HierarchyView;
-  #connection: WorkspaceController<HierarchyWorkspace>;
+  #connection: SubscriptionController<HierarchyWorkspace>;
   #nodes: TreeNode[] = [];
   #selected: string[] = [];
   #expanded = new ExpandedRows();
@@ -137,7 +137,7 @@ export class HierarchyController {
   ) {
     this.#host = host;
     this.#view = view;
-    this.#connection = new WorkspaceController(
+    this.#connection = new SubscriptionController(
       host,
       (workspace) => this.#subscribeTo(workspace)
     );

@@ -1,34 +1,29 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import * as THREE from "three";
 import {
   isVoxelLayerGeometryCommand,
   type VoxelLayer,
   type VoxelLayerCommand,
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
-import { FieldBinding, type Vec3Like } from "@jolly-pixel/ui";
+import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../document/index.ts";
-import type {
-  KeyboardLayoutStore,
-  SelectionStore
-} from "../../../state/index.ts";
+import type { MapDocument } from "../../../document/MapDocument.ts";
+import type { SelectionStore } from "../../../state/index.ts";
 import type { MapPlacement } from "../../placement/MapPlacement.ts";
 import {
   propertiesOf,
   propertyRowsOf,
   type PropertyRow,
   type PropertyRowsChangeDetail
-} from "../../../shared/propertyDraft.ts";
-import {
-  positionSource,
-  roundPosition,
-  samePosition
-} from "../../../shared/positionSource.ts";
-import "../../../shared/CustomPropertiesEditor.ts";
-import "../../placement/PlacementActions.ts";
+} from "../properties/propertyDraft.ts";
+import { PositionSource } from "../../../shared/PositionSource.ts";
+import "../properties/CustomPropertiesEditor.ts";
+import "../layerIcons.ts";
+import "../../placement/placementIcons.ts";
 
 @customElement("layer-panel")
 export class VoxelLayerPanel extends LitElement {
@@ -54,22 +49,19 @@ export class VoxelLayerPanel extends LitElement {
   declare placement: MapPlacement;
 
   @property({ attribute: false })
-  declare keyboardLayout: KeyboardLayoutStore;
-
-  @property({ attribute: false })
   declare mapDocument: MapDocument;
 
   @state()
   private declare _layer: VoxelLayer | null;
 
   @state()
-  private declare _contentOrigin: Vec3Like;
+  private declare _contentOrigin: THREE.Vector3;
 
   @state()
   private declare _props: PropertyRow[];
   #subscriptions: Array<() => void> = [];
 
-  #position = new FieldBinding(this, positionSource({
+  #position = new FieldBinding(this, new PositionSource({
     position: () => this._layer?.position ?? null,
     move: (position) => {
       if (this.layerName !== null) {
@@ -82,7 +74,7 @@ export class VoxelLayerPanel extends LitElement {
     super();
     this.layerName = null;
     this._layer = null;
-    this._contentOrigin = { x: 0, y: 0, z: 0 };
+    this._contentOrigin = new THREE.Vector3();
     this._props = [];
   }
 
@@ -104,7 +96,7 @@ export class VoxelLayerPanel extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.placement.store.subscribe("change", this.#onPlacementChange)
+      this.placement.subscribe("change", this.#onPlacementChange)
     );
   }
 
@@ -134,7 +126,9 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = layer;
     if (layer) {
       const bounds = layer.worldBounds();
-      this._contentOrigin = { ...(bounds?.min ?? layer.position) };
+      this._contentOrigin = new THREE.Vector3()
+        .copy(bounds?.min ?? layer.position)
+        .round();
     }
 
     this.requestUpdate();
@@ -166,8 +160,7 @@ export class VoxelLayerPanel extends LitElement {
     const transformTitle = empty ?
       "The layer has no voxels to transform" :
       "Move, turn or mirror the layer with a marquee";
-    const origin = roundPosition(this._contentOrigin);
-    const rebased = samePosition(origin, this.#position.value);
+    const rebased = this._contentOrigin.equals(this.#position.value);
 
     return html`
       <jolly-button
@@ -184,7 +177,7 @@ export class VoxelLayerPanel extends LitElement {
         icon="rebase"
         icon-only
         label="Rebase to content origin"
-        title=${`Rebase to content origin (${origin.x}, ${origin.y}, ${origin.z})`}
+        title=${`Rebase to content origin (${this._contentOrigin.toArray().join(", ")})`}
         ?disabled=${rebased || transforming}
         @click=${this.#onRebase}
       ></jolly-button>
@@ -192,20 +185,11 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #renderPosition() {
-    if (this.#transforming()) {
-      return html`
-        <placement-actions
-          .placement=${this.placement}
-          .keyboardLayout=${this.keyboardLayout}
-          .target=${this.layerName}
-        ></placement-actions>
-      `;
-    }
-
     return html`
       <jolly-vector3
         label="Position"
         step="1"
+        ?disabled=${this.#transforming()}
         .value=${this.#position.value}
         @jolly-input=${this.#position.input}
         @jolly-change=${this.#position.commit}
@@ -230,7 +214,7 @@ export class VoxelLayerPanel extends LitElement {
       return;
     }
 
-    world.rebaseLayer(layerName, roundPosition(this._contentOrigin));
+    world.rebaseLayer(layerName, this._contentOrigin);
   }
 
   #onPropertyRowsChange(

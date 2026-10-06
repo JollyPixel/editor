@@ -3,7 +3,11 @@ import {
   expect,
   test
 } from "@playwright/test";
-import { dialog, recordSockets } from "@jolly-pixel/e2e";
+import {
+  dialog,
+  recordSockets,
+  titledDialog
+} from "@jolly-pixel/e2e";
 import {
   openEditor,
   waitForEditor
@@ -17,7 +21,6 @@ import {
   seedVoxels
 } from "./support/scene.ts";
 import {
-  blockTileCenter,
   clickTexel,
   pixelAlpha,
   setTextureMode,
@@ -49,8 +52,8 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
     persistent: true,
     username: "Guest",
     layers: ["Ground"],
-    blocks: 32,
-    tilesets: ["tilesets/block.tileset.json"]
+    blocks: 0,
+    tilesets: ["maps/overworld.tileset.json"]
   });
   expect(sockets).toEqual([]);
 });
@@ -109,6 +112,12 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await openEditor(page, OFFLINE_EDITOR);
+  await openPane(page, "Blocks");
+  await page.getByRole("button", { name: "Add block" }).click();
+  await titledDialog(page, "New Block")
+    .getByRole("button", { name: "Create" })
+    .click();
+
   const before = await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
     const mapId = session.target.record.id;
@@ -123,7 +132,7 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
     };
   });
 
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 2 }]);
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
   await expect.poll(() => page.evaluate(
     (mapId) => window.voxelMapEditor!.session.catalog.record(mapId)!.revision,
     before.mapId
@@ -131,11 +140,11 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
 
   await openPane(page, "Paint");
   const panel = texturePanel(page);
-  const texel = await blockTileCenter(page, 1);
-  await expect.poll(() => pixelAlpha(panel, texel)).toBe(255);
-  await setTextureMode(panel, "Erase");
-  await clickTexel(panel, texel);
+  const texel = { x: 16, y: 16 };
   await expect.poll(() => pixelAlpha(panel, texel)).toBe(0);
+  await setTextureMode(panel, "Paint");
+  await clickTexel(panel, texel);
+  await expect.poll(() => pixelAlpha(panel, texel)).toBe(255);
   await expect.poll(() => page.evaluate(
     (textureId) => window.voxelMapEditor!.session.catalog
       .record(textureId)!.revision,
@@ -155,9 +164,9 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
     mapId: before.mapId,
     textureId: before.textureId
   });
-  expect(await blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([2]);
+  expect(await blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
   await openPane(page, "Paint");
-  await expect.poll(() => pixelAlpha(texturePanel(page), texel)).toBe(0);
+  await expect.poll(() => pixelAlpha(texturePanel(page), texel)).toBe(255);
 
   await page.evaluate(() => window.voxelMapEditor!.dispose());
   expect(errors).toEqual([]);

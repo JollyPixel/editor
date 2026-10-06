@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { TreeNode } from "@jolly-pixel/ui";
-import type { PeerMarkMap } from "@jolly-pixel/ui/network";
+import {
+  peerBadges,
+  type PeerMarkMap
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -8,7 +11,6 @@ import {
   type HierarchyNode
 } from "../../model/index.ts";
 import { materialSwatch } from "../../shared/materialSwatch.ts";
-import { peerBadges } from "../../shared/peerBadges.ts";
 
 export function toTreeNodes(
   nodes: readonly HierarchyNode[],

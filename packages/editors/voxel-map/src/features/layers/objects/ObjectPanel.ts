@@ -10,21 +10,21 @@ import {
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../document/index.ts";
+import type { MapDocument } from "../../../document/MapDocument.ts";
 import {
   objectColorSource,
-  objectPositionSource,
   objectSizeSource,
   type ObjectPort
 } from "./objectSources.ts";
+import { PositionSource } from "../../../shared/PositionSource.ts";
 import { MapObject } from "./MapObject.ts";
 import {
   propertiesOf,
   propertyRowsOf,
   type PropertyRow,
   type PropertyRowsChangeDetail
-} from "../../../shared/propertyDraft.ts";
-import "../../../shared/CustomPropertiesEditor.ts";
+} from "../properties/propertyDraft.ts";
+import "../properties/CustomPropertiesEditor.ts";
 
 @customElement("object-panel")
 export class ObjectPanel extends LitElement {
@@ -61,7 +61,10 @@ export class ObjectPanel extends LitElement {
   };
 
   #color = new FieldBinding(this, objectColorSource(this.#port));
-  #position = new FieldBinding(this, objectPositionSource(this.#port));
+  #position = new FieldBinding(this, new PositionSource({
+    position: () => this._object,
+    move: ({ x, y, z }) => this.#patch({ x, y, z })
+  }));
   #size = new FieldBinding(this, objectSizeSource(this.#port));
 
   constructor() {

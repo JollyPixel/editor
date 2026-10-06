@@ -1,12 +1,9 @@
 // Import Third-party Dependencies
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
-// Import Internal Dependencies
-import type { ToolOption } from "../../../shared/toolChoice.ts";
-
 export type BlockLibraryOrderKind = "registry" | "usage";
 
-export class BlockLibraryOrder implements ToolOption<BlockLibraryOrderKind> {
+export class BlockLibraryOrder {
   static readonly Registry = new BlockLibraryOrder(
     "registry",
     "order-registry",

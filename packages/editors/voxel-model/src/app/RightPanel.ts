@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import { LitElement, css, html, nothing, type TemplateResult } from "lit";
 import { query, state } from "lit/decorators.js";
-import type {
-  JollyPeerSelectDetail,
-  PresencePeer
+import {
+  SubscriptionController,
+  type JollyPeerSelectDetail,
+  type PresencePeer
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/editor.host/ui";
 
@@ -13,10 +14,9 @@ import type { HierarchyPanel } from "../features/hierarchy/HierarchyPanel.ts";
 import "../features/hierarchy/HierarchyPanel.ts";
 import type { ViewPanel } from "../features/view/ViewPanel.ts";
 import "../features/view/ViewPanel.ts";
-import { WorkspaceController } from "../shared/WorkspaceController.ts";
 
 export class RightPanel extends LitElement {
-  #workspace = new WorkspaceController<ModelWorkspace>(this, ({ presence }) => {
+  #workspace = new SubscriptionController<ModelWorkspace>(this, ({ presence }) => {
     this._peers = presence.peers;
 
     return [

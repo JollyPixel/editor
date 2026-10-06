@@ -3,12 +3,14 @@ import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import { TemplateStore } from "./TemplateStore.ts";
 
 export type TemplateWorld = Pick<VoxelWorld, "templates">;
 
 export interface MapTemplatesOptions {
   world: TemplateWorld;
+  mapDocument: MapDocumentSignals;
   store?: TemplateStore;
   confirm?: typeof showConfirm;
 }
@@ -18,6 +20,7 @@ export class MapTemplates {
 
   readonly #world: TemplateWorld;
   readonly #confirm: typeof showConfirm;
+  readonly #unsubscribe: () => void;
 
   constructor(
     options: MapTemplatesOptions
@@ -25,6 +28,14 @@ export class MapTemplates {
     this.#world = options.world;
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
+    this.#unsubscribe = options.mapDocument.subscribe(
+      "templatesChanged",
+      this.#reconcile
+    );
+  }
+
+  dispose(): void {
+    this.#unsubscribe();
   }
 
   saveLayer(
@@ -69,4 +80,10 @@ export class MapTemplates {
 
     return confirmed && this.#world.templates.remove(templateId);
   }
+
+  readonly #reconcile = (): void => {
+    this.store.reconcile(
+      Array.from(this.#world.templates, (template) => template.id)
+    );
+  };
 }

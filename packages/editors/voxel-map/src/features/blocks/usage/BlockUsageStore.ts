@@ -6,7 +6,7 @@ import type {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/index.ts";
+import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
 import { TilesetUsage } from "../../tilesets/TilesetUsage.ts";
 import { BlockUsage } from "./BlockUsage.ts";
 

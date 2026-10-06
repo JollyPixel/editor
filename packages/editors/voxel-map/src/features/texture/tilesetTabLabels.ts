@@ -3,10 +3,10 @@ import {
   BlockTextures,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
+import { formatCount } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { TilesetEntry } from "../tilesets/TilesetEntry.ts";
-import { formatCount } from "../../shared/format.ts";
 
 export interface TilesetTabLabels {
   name: string;

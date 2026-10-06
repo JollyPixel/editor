@@ -11,8 +11,8 @@ import {
 } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/index.ts";
-import type { BrushStore } from "../../state/index.ts";
+import type { MapDocument } from "../../document/MapDocument.ts";
+import type { BlockSelection } from "../../state/index.ts";
 import type {
   BlockWriter,
   TilesetBinding
@@ -24,7 +24,7 @@ export interface TilesetTabOptions {
   view: VoxelView;
   binding: TilesetBinding;
   blocks: BlockWriter;
-  brush: BrushStore;
+  block: BlockSelection;
   mapDocument: MapDocument;
 }
 
@@ -57,7 +57,7 @@ export class TilesetTab {
     });
     this.#uvBridge = new BlockUvBridge(canvas.uv, view, {
       runLocalRestore: (fn) => canvas.document.runLocalRestore(fn),
-      brush: options.brush,
+      block: options.block,
       mapDocument: options.mapDocument,
       blocks: options.blocks
     });

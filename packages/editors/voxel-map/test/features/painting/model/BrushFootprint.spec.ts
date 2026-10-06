@@ -11,7 +11,7 @@ import {
   type BrushBounds,
   type BrushFootprintOptions
 } from "../../../../src/features/painting/model/BrushFootprint.ts";
-import type { BrushAxis } from "../../../../src/state/index.ts";
+import type { BrushAxis } from "../../../../src/features/painting/BrushStore.ts";
 
 // CONSTANTS
 const kOrigin = {

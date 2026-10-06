@@ -8,9 +8,10 @@ import {
   type ResolvedBlockDefinition,
   type VoxelView
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  PixelDocument,
-  SelectionRect
+import {
+  RectArea,
+  type PixelDocument,
+  type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -23,10 +24,12 @@ export interface TilesetPixels {
 
 export interface BlockAlphaModesOptions {
   view: VoxelView;
-  pixelsOf: (tilesetId: string) => TilesetPixels | undefined;
+  pixelsOf: (
+    tilesetId: string
+  ) => TilesetPixels | undefined;
 }
 
-export function alphaModeFor(
+function alphaModeFor(
   current: BlockAlphaMode | undefined,
   transparent: boolean
 ): BlockAlphaMode {
@@ -39,7 +42,9 @@ export function alphaModeFor(
 
 export class BlockAlphaModes {
   readonly #view: VoxelView;
-  readonly #pixelsOf: (tilesetId: string) => TilesetPixels | undefined;
+  readonly #pixelsOf: (
+    tilesetId: string
+  ) => TilesetPixels | undefined;
 
   constructor(
     options: BlockAlphaModesOptions
@@ -62,7 +67,10 @@ export class BlockAlphaModes {
       return resolved;
     }
 
-    const alphaMode = alphaModeFor(resolved.alphaMode, transparent);
+    const alphaMode = alphaModeFor(
+      resolved.alphaMode,
+      transparent
+    );
 
     return alphaMode === (resolved.alphaMode ?? "opaque") ?
       resolved :
@@ -89,8 +97,10 @@ export class BlockAlphaModes {
       source.tileSize
     );
 
+    const area = bounds === undefined ? null : RectArea.from(bounds);
+
     return affected.flatMap(({ block, rects }) => {
-      if (bounds && !rects.some((rect) => rectsIntersect(rect, bounds))) {
+      if (area && !rects.some((rect) => area.intersects(rect))) {
         return [];
       }
       const resolved = this.resolve(block);
@@ -126,21 +136,15 @@ export class BlockAlphaModes {
         tilesetId,
         source.tileSize
       );
-      if (entry?.geometries.some((geometry) => source.pixels.hasTransparency(geometry))) {
+
+      const hasSomeTransparency = entry?.geometries.some(
+        (geometry) => source.pixels.hasTransparency(geometry)
+      );
+      if (hasSomeTransparency) {
         return true;
       }
     }
 
     return known ? false : null;
   }
-}
-
-function rectsIntersect(
-  a: SelectionRect,
-  b: SelectionRect
-): boolean {
-  return a.x < b.x + b.width &&
-    b.x < a.x + a.width &&
-    a.y < b.y + b.height &&
-    b.y < a.y + a.height;
 }

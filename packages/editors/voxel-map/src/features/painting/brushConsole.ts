@@ -13,7 +13,7 @@ import {
   BRUSH_PATTERNS,
   ROTATION_MODES,
   type RotationMode
-} from "../../state/index.ts";
+} from "./BrushStore.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 
 // CONSTANTS
@@ -21,9 +21,8 @@ const kRotationValues = ROTATION_MODES.map(rotationValue);
 
 export function brushConsole(
   commands: CommandConsole,
-  { state }: Pick<VoxelMapWorkspace, "state">
+  { brush }: Pick<VoxelMapWorkspace, "brush">
 ): RegistrationHandle {
-  const { brush } = state;
   const namespace = commands.registerNamespace("brush", {
     description: "Voxel brush"
   });

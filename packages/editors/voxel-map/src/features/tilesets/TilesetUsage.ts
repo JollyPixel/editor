@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import type { VoxelTilesetUsage } from "@jolly-pixel/voxel.renderer";
-
-// Import Internal Dependencies
-import { formatCount } from "../../shared/format.ts";
+import { formatCount } from "@jolly-pixel/ui";
 
 export class TilesetUsage {
   readonly tilesetId: string;
