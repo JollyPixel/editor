@@ -98,7 +98,8 @@ type BlocksetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
   | VoxelBlendGroupCommand
-  | { action: "tile-size-updated"; tileSize: number; };
+  | { action: "tile-size-updated"; tileSize: number; }
+  | { action: "material-group-renamed"; groupId: string; to: string; };
 ```
 
 `isVoxelWorldCommand()` and `isBlocksetDocumentCommand()` narrow to either side;

@@ -22,6 +22,7 @@ export function blocksetCommandKey(
     case "material-group-defined":
       return `material-group:${command.group.id}`;
     case "material-group-removed":
+    case "material-group-renamed":
       return `material-group:${command.groupId}`;
     case "blend-group-defined":
       return `blend-group:${command.group.id}`;

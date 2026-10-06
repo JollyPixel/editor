@@ -38,6 +38,7 @@ import { bindBrushShortcuts } from "../features/painting/interaction/brushShortc
 import { MarqueeTool } from "../features/marquee/MarqueeTool.ts";
 import { bindMarqueeShortcuts } from "../features/marquee/marqueeShortcuts.ts";
 import { MapHistory } from "../features/placement/MapHistory.ts";
+import { MapMaterials } from "../features/materials/MapMaterials.ts";
 import { MapPlacement } from "../features/placement/MapPlacement.ts";
 import { PlacementGizmo } from "../features/placement/PlacementGizmo.ts";
 import { PeerPlacements } from "../features/placement/collaboration/PeerPlacements.ts";
@@ -196,6 +197,10 @@ export class EditorScene extends Systems.Scene {
       catalog: session.catalog,
       mapDocument,
       open: (assetId) => openBlockset(session.assets, assetId)
+    });
+    const materials = new MapMaterials({
+      document: mapDocument,
+      blocksets
     });
 
     const grid = new Grid(kGrid);
@@ -384,6 +389,7 @@ export class EditorScene extends Systems.Scene {
       grid,
       localBrush,
       blocksets,
+      materials,
       archives: session.archives,
       focusPoint: () => camera.focusPoint(view.root),
       pointAt: (clientX, clientY) => camera.pointAt(

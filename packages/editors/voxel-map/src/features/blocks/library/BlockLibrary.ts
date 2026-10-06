@@ -24,6 +24,7 @@ import type { BlockEditDialog } from "../dialogs/BlockEditDialog.ts";
 import { BlockUsage } from "../usage/BlockUsage.ts";
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
 import { PeerMarks } from "./PeerMarks.ts";
+import type { MaterialSwatch } from "../../materials/MaterialSwatch.ts";
 import type { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
 import type { BlockMoveDetail } from "./BlockReorderController.ts";
 import "./BlockLibraryViewport.ts";
@@ -77,6 +78,9 @@ export class BlockLibrary extends WorkspaceElement {
   @property({ attribute: false })
   declare order: BlockLibraryOrder;
 
+  @property({ type: Boolean })
+  declare editable: boolean;
+
   @property({ type: String, reflect: true })
   declare layout: BlockLibraryLayout;
 
@@ -95,6 +99,9 @@ export class BlockLibrary extends WorkspaceElement {
   @state()
   private declare _unused: ReadonlySet<number>;
 
+  @state()
+  private declare _swatches: ReadonlyMap<number, MaterialSwatch>;
+
   @query("block-create-dialog")
   declare private _createDialog: BlockCreateDialog;
 
@@ -109,11 +116,13 @@ export class BlockLibrary extends WorkspaceElement {
 
     this.order = BlockLibraryOrder.Registry;
     this.layout = "compact";
+    this.editable = true;
     this._selectedId = null;
     this._blocks = [];
     this._shownBlocks = [];
     this._marks = new PeerMarks();
     this._unused = new Set();
+    this._swatches = new Map();
   }
 
   protected override watchWorkspace(
@@ -121,9 +130,11 @@ export class BlockLibrary extends WorkspaceElement {
   ): Iterable<() => void> {
     const { block, presence } = workspace.state;
     const refreshMarks = (): void => this.#refreshMarks(workspace);
+    const refreshSwatches = (): void => this.#refreshSwatches(workspace);
     this.#resolveSelection(workspace);
     this.#refreshBlocks(workspace);
     this.#refreshUsage(workspace);
+    this.#refreshSwatches(workspace);
 
     return [
       block.subscribe("change", () => {
@@ -133,7 +144,9 @@ export class BlockLibrary extends WorkspaceElement {
       workspace.mapDocument.subscribe("blockRegistryChanged", () => {
         this.#resolveSelection(workspace);
         this.#refreshBlocks(workspace);
+        refreshSwatches();
       }),
+      workspace.mapDocument.subscribe("materialGroupsChanged", refreshSwatches),
       presence.subscribe("blockSelectionsChange", refreshMarks),
       presence.subscribe("peersChange", refreshMarks),
       workspace.usage.subscribe("change", () => this.#refreshUsage(workspace))
@@ -157,14 +170,16 @@ export class BlockLibrary extends WorkspaceElement {
     }
 
     return html`
-      ${this.#renderOrphans(workspace)}
+      ${this.editable ? this.#renderOrphans(workspace) : nothing}
       <block-library-viewport
         .sources=${workspace.blockSources}
         .blocks=${this._shownBlocks}
         .marks=${this._marks}
         .selectedId=${this._selectedId}
         .unused=${this._unused}
-        .reorderable=${this.order.reorderable}
+        .swatches=${this._swatches}
+        .editable=${this.editable}
+        .reorderable=${this.editable && this.order.reorderable}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
@@ -174,8 +189,10 @@ export class BlockLibrary extends WorkspaceElement {
 
       <slot></slot>
 
-      <block-create-dialog .workspace=${workspace}></block-create-dialog>
-      <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
+      ${this.editable ? html`
+        <block-create-dialog .workspace=${workspace}></block-create-dialog>
+        <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
+      ` : nothing}
     `;
   }
 
@@ -299,6 +316,12 @@ export class BlockLibrary extends WorkspaceElement {
     }
     this.#refreshShownBlocks(workspace);
     this.requestUpdate();
+  }
+
+  #refreshSwatches(
+    workspace: VoxelMapWorkspace
+  ): void {
+    this._swatches = workspace.materials.swatches();
   }
 
   #refreshShownBlocks(

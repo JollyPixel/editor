@@ -52,6 +52,13 @@ received from a peer, has the blockset id stripped from its tile references.
 Changes the tile grid and rescales every block's tile references so they cover
 the same pixels. Emits `"tile-size-updated"`.
 
+#### `renameMaterialGroup(groupId: string, to: string): boolean`
+
+Moves the group's finish, when it has one, to `to` and points every block
+naming `groupId` at `to`, as one `"material-group-renamed"` command. Returns
+`false` when `to` is empty, already defined or named by a block, or when
+nothing names `groupId`.
+
 #### `toJSON(): BlocksetDocumentJSON`
 
 ```ts

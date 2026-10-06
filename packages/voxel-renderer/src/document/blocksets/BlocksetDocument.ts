@@ -14,7 +14,10 @@ import type {
   BlocksetDocumentCommand,
   VoxelCommandContext
 } from "../commands/types.ts";
-import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
+import {
+  MaterialGroup,
+  type MaterialGroupJSON
+} from "../materials/MaterialGroup.ts";
 import { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
 import { BlendGroupList } from "../materials/BlendGroupList.ts";
@@ -112,6 +115,17 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
     });
   }
 
+  renameMaterialGroup(
+    groupId: string,
+    to: string
+  ): boolean {
+    return this.apply({
+      action: "material-group-renamed",
+      groupId,
+      to
+    });
+  }
+
   toJSON(): BlocksetDocumentJSON {
     return {
       tileSize: this.#tileSize,
@@ -171,6 +185,10 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
         return this.blendGroups.apply(command);
       case "tile-size-updated":
         return this.#resizeTiles(command.tileSize) ? command : null;
+      case "material-group-renamed":
+        return this.#renameMaterialGroup(command.groupId, command.to) ?
+          command :
+          null;
       default: {
         const unhandled: never = command;
         throw new Error(
@@ -206,5 +224,45 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
     this.blocks.registerMany(rescaled);
 
     return true;
+  }
+
+  #renameMaterialGroup(
+    groupId: string,
+    to: string
+  ): boolean {
+    if (to === "" || this.#namesMaterialGroup(to)) {
+      return false;
+    }
+
+    const group = this.materialGroups.get(groupId);
+    const users = [...this.blocks].filter(
+      (block) => block.materialGroup === groupId
+    );
+    if (group === undefined && users.length === 0) {
+      return false;
+    }
+
+    if (group !== undefined) {
+      this.materialGroups.remove(groupId);
+      this.materialGroups.define(new MaterialGroup({
+        ...group.toJSON(),
+        id: to
+      }));
+    }
+    this.blocks.registerMany(users.map((block) => {
+      return {
+        ...block,
+        materialGroup: to
+      };
+    }));
+
+    return true;
+  }
+
+  #namesMaterialGroup(
+    groupId: string
+  ): boolean {
+    return this.materialGroups.has(groupId) ||
+      [...this.blocks].some((block) => block.materialGroup === groupId);
   }
 }

@@ -94,6 +94,15 @@ describe("BlocksetCommandArbiter", () => {
     assert.strictEqual(
       blocksetCommandKey({
         ...kHeader,
+        action: "material-group-renamed",
+        groupId: "gold",
+        to: "brass"
+      }),
+      "material-group:gold"
+    );
+    assert.strictEqual(
+      blocksetCommandKey({
+        ...kHeader,
         action: "tile-size-updated",
         tileSize: 16
       }),

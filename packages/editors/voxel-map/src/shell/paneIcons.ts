@@ -33,3 +33,27 @@ registerIcon("pencil", svg`
     mask="url(#pencil-ferrule-cut)"
   />
 `, { tone: "pink" });
+
+registerIcon("material", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="12"
+    r="9"
+  />
+  <circle
+    cx="12"
+    cy="12"
+    r="9"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <path
+    d="M7.5 10a5 5 0 0 1 4-4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+`, { tone: "violet" });

@@ -74,6 +74,12 @@ describe("blocksetCommandProtocol", () => {
       action: "tile-size-updated",
       tileSize: 16
     }), true);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-renamed",
+      groupId: "wet",
+      to: "soaked"
+    }), true);
   });
 
   test("accepts normal map commands and a material group normal scale", () => {
@@ -140,6 +146,12 @@ describe("blocksetCommandProtocol", () => {
       ...kHeader,
       action: "tile-size-updated",
       tileSize: 8192
+    }), false);
+    assert.strictEqual(accepts({
+      ...kHeader,
+      action: "material-group-renamed",
+      groupId: "wet",
+      to: ""
     }), false);
   });
 });

@@ -104,11 +104,17 @@ describe("command guards", () => {
         action
       );
     }
-    assert.equal(isBlocksetDocumentCommand({ action: "tile-size-updated" }), true);
-    assert.equal(isVoxelWorldCommand({ action: "tile-size-updated" }), false);
+    for (const action of ["tile-size-updated", "material-group-renamed"]) {
+      assert.equal(isBlocksetDocumentCommand({ action }), true, action);
+      assert.equal(isVoxelWorldCommand({ action }), false, action);
+    }
     assert.deepEqual(
       [...VOXEL_WORLD_COMMAND_ACTIONS, ...BLOCKSET_DOCUMENT_COMMAND_ACTIONS].sort(),
-      [...VOXEL_COMMAND_ACTIONS, "tile-size-updated"].sort()
+      [
+        ...VOXEL_COMMAND_ACTIONS,
+        "tile-size-updated",
+        "material-group-renamed"
+      ].sort()
     );
   });
 

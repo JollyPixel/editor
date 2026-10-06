@@ -67,10 +67,12 @@ The world id the blockset gives its next block.
 
 #### `removeMaterialGroup(groupId: string): boolean`
 
+#### `renameMaterialGroup(groupId: string, to: string): boolean`
+
 Edit the blockset with world ids; the change reaches the document through the
 link. `moveBlock()` reads `toIndex` as a position among the document's blocks
-without the moved one. `removeMaterialGroup()` returns `false` for a group of
-another blockset.
+without the moved one. `removeMaterialGroup()` and `renameMaterialGroup()`
+return `false` for a group of another blockset.
 
 #### `dispose(): void`
 
