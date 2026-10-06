@@ -6,6 +6,7 @@ export class InputHistory {
   #entries: string[] = [];
   #cursor = 0;
   #draft = "";
+  #browsing = false;
 
   constructor(
     capacity = InputHistory.DEFAULT_CAPACITY
@@ -15,6 +16,14 @@ export class InputHistory {
 
   get entries(): readonly string[] {
     return this.#entries.slice();
+  }
+
+  get size(): number {
+    return this.#entries.length;
+  }
+
+  get browsing(): boolean {
+    return this.#browsing;
   }
 
   push(
@@ -28,6 +37,7 @@ export class InputHistory {
     }
     this.#cursor = this.#entries.length;
     this.#draft = "";
+    this.#browsing = false;
   }
 
   previous(
@@ -40,6 +50,7 @@ export class InputHistory {
       this.#draft = current;
     }
     this.#cursor--;
+    this.#browsing = true;
 
     return this.#entries[this.#cursor];
   }
@@ -49,9 +60,14 @@ export class InputHistory {
       return null;
     }
     this.#cursor++;
+    this.#browsing = true;
 
     return this.#cursor === this.#entries.length ?
       this.#draft :
       this.#entries[this.#cursor];
+  }
+
+  stopBrowsing(): void {
+    this.#browsing = false;
   }
 }

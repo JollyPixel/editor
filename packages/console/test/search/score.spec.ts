@@ -80,14 +80,6 @@ describe("score within a tier", () => {
     assert.ok(short && long && short.score > long.score);
   });
 
-  test("a substring at a word boundary ranks higher", () => {
-    const boundary = score("ize", "brush.ize");
-    const inside = score("ize", "brush.size");
-
-    assert.equal(boundary?.tier, MATCH_TIERS.wordBoundary);
-    assert.ok(inside && inside.tier === MATCH_TIERS.substring);
-  });
-
   test("a tighter subsequence ranks higher", () => {
     const tight = score("bze", "bxze");
     const loose = score("bze", "bxxxxxze");

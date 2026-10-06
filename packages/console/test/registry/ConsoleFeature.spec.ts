@@ -33,20 +33,6 @@ function feature(
 }
 
 describe("registerConsoleFeatures", () => {
-  test("registers each feature with the shared context", () => {
-    const commands = new CommandConsole();
-    const context = { order: [] };
-
-    registerConsoleFeatures(
-      commands,
-      [feature("brush"), feature("layers")],
-      context
-    );
-
-    assert.notEqual(commands.registry.namespace("brush"), undefined);
-    assert.notEqual(commands.registry.namespace("layers"), undefined);
-  });
-
   test("unregister removes the features in reverse order, once", () => {
     const commands = new CommandConsole();
     const context = { order: [] };

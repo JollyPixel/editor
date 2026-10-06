@@ -3,6 +3,7 @@ import type {
   ArgDef,
   CommandDef,
   RegisteredCommand,
+  RegisteredMember,
   RegisteredNamespace,
   RegisteredVariable,
   RegistrationHandle,
@@ -28,6 +29,7 @@ export interface NamespaceEntryOptions {
 export class NamespaceEntry implements RegisteredNamespace {
   readonly kind = "namespace";
   readonly name: string;
+  readonly address: string;
   readonly description: string;
 
   #prefix: string;
@@ -39,6 +41,7 @@ export class NamespaceEntry implements RegisteredNamespace {
     options: NamespaceEntryOptions
   ) {
     this.name = options.name;
+    this.address = options.name;
     this.description = options.description ?? "";
     this.#prefix = options.name === "" ? "" : `${options.name}.`;
     this.#onChange = options.onChange;
@@ -66,6 +69,11 @@ export class NamespaceEntry implements RegisteredNamespace {
     return this.#variables.values();
   }
 
+  * [Symbol.iterator](): IterableIterator<RegisteredMember> {
+    yield* this.commands();
+    yield* this.variables();
+  }
+
   registerCommand<const TArgs extends readonly ArgDef[]>(
     name: string,
     def: CommandDef<TArgs>
@@ -81,6 +89,7 @@ export class NamespaceEntry implements RegisteredNamespace {
         kind: "command",
         name,
         address,
+        description: def.description,
         namespace: this,
         def,
         signal: lifetime.signal
@@ -116,6 +125,7 @@ export class NamespaceEntry implements RegisteredNamespace {
       kind: "variable",
       name,
       address,
+      description: def.description,
       namespace: this,
       def
     };

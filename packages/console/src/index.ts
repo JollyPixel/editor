@@ -15,3 +15,4 @@ export type {
 export * from "./remote/ConsoleServer.ts";
 export * from "./remote/ConsoleMirror.ts";
 export * from "./remote/errors/RemoteCancelledError.ts";
+export * from "./remote/errors/RemoteValueMissingError.ts";

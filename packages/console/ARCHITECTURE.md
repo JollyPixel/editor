@@ -50,8 +50,8 @@ passes it down.
 | `registry/` | `Registry`, `NamespaceEntry`, definition types and validation, `ConsoleFeature` |
 | `input/` | `tokenize`, `classify`, `coerce` |
 | `execution/` | `bindArguments`, variable access, `InputHistory`, `Scrollback`, builtins and `help` |
-| `search/` | `score` tiers, `search`, `complete`, `browse` sections, `typo` tolerance over the `levenshtein` port |
-| `element/` | `ConsoleElement` and its styles, `ConsoleLogElement`, `KeyboardController`, `SuggestionController` |
+| `search/` | the `Suggestion` model, `score` tiers, `search`, `complete`, `browse` sections, `typo` tolerance over the `levenshtein` port |
+| `element/` | `ConsoleElement`, `ConsoleLogElement` and their styles, `KeyboardController`, `SuggestionController` |
 
 ## One keystroke
 
@@ -78,6 +78,10 @@ one; the previous completion list stays on screen meanwhile. The list renders
 in the prompt shadow root so the combobox IDREFs resolve
 ([ADR-0007](./docs/adr/0007-the-suggestion-list-shares-the-prompt-shadow-root.md)). An exact variable
 match puts the prompt in variable mode before search is tried.
+
+`browse`, `search` and `complete` all return `Suggestion`s that already hold the line and caret
+that picking them leaves, and whether picking runs the line. `SuggestionController` only tracks
+which kind of list is showing (`browse`, `search` or `completion`) and the highlight.
 
 ## Submitting a line
 

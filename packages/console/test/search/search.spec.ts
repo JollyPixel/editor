@@ -4,10 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CommandConsole } from "#src/index.ts";
-import {
-  search,
-  select
-} from "#src/search/search.ts";
+import { search } from "#src/search/search.ts";
 
 function createConsole(): CommandConsole {
   const commands = new CommandConsole();
@@ -72,7 +69,7 @@ describe("search", () => {
     const labels = search("size", registry).map((result) => result.label);
 
     assert.deepEqual(labels, ["brush.size", "/brush.reset"]);
-    assert.equal(search("size", registry)[1].field, "description");
+    assert.equal(search("size", registry)[1].match.field, "detail");
   });
 
   test("description matches never use scattered subsequences", () => {
@@ -85,7 +82,7 @@ describe("search", () => {
 
     assert.equal(result.label, "brush.size");
     assert.equal(result.tier, 6);
-    assert.deepEqual(result.ranges, []);
+    assert.deepEqual(result.match.ranges, []);
   });
 
   test("typo matches rank after description matches", () => {
@@ -101,17 +98,17 @@ describe("search", () => {
     const results = search("voxel", commands.registry);
 
     assert.deepEqual(results.map((result) => result.label), ["brush", "boxel"]);
-    assert.equal(results[0].field, "description");
+    assert.equal(results[0].match.field, "detail");
   });
 
   test("command ranges point into the label past the slash", () => {
     const result = search("grow", registry).find((item) => item.label === "/brush.grow");
 
-    assert.deepEqual(result?.ranges, [{ start: 7, end: 11 }]);
+    assert.deepEqual(result?.match.ranges, [{ start: 7, end: 11 }]);
   });
 });
 
-describe("select", () => {
+describe("search result selection", () => {
   const { registry } = createConsole();
 
   function pick(label: string) {
@@ -120,7 +117,7 @@ describe("select", () => {
       .find((item) => item.label === label);
     assert.ok(result);
 
-    return select(result);
+    return { text: result.text, run: result.run };
   }
 
   test("a command without required arguments runs", () => {

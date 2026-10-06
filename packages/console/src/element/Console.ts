@@ -3,18 +3,17 @@ import {
   LitElement,
   html,
   nothing,
-  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
   customElement,
-  property,
   query,
   state
 } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import {
   AmbientThemeController,
+  SubscriptionController,
   deepActiveElement,
   inputLayers,
   themeStyles
@@ -39,9 +38,6 @@ export class ConsoleElement extends LitElement {
     themeStyles,
     consoleStyles
   ];
-
-  @property({ attribute: false })
-  declare console: CommandConsole | null;
 
   @state()
   declare _text: string;
@@ -73,23 +69,32 @@ export class ConsoleElement extends LitElement {
     act: (action) => this.#act(action),
     toggle: () => this.toggle()
   });
-  #browsingHistory = false;
+  #source = new SubscriptionController<CommandConsole>(
+    this,
+    (commands) => this.#watch(commands)
+  );
   #restoreFocus: HTMLElement | null = null;
   #releaseLayer: (() => void) | null = null;
-  #unsubscribe: (() => void) | null = null;
   #theme = new AmbientThemeController(this);
 
   constructor() {
     super();
 
-    this.console = null;
     this._text = "";
     this._caretAtEnd = true;
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.#bind(this.console);
+  get console(): CommandConsole | null {
+    return this.#source.current;
+  }
+
+  set console(
+    commands: CommandConsole
+  ) {
+    if (commands !== this.#source.current) {
+      this.#suggestions.cancel();
+      this.#source.attach(commands);
+    }
   }
 
   get open(): boolean {
@@ -97,19 +102,9 @@ export class ConsoleElement extends LitElement {
   }
 
   override disconnectedCallback(): void {
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
     this.#release();
 
     super.disconnectedCallback();
-  }
-
-  protected override willUpdate(
-    changed: PropertyValues<this>
-  ): void {
-    if (changed.has("console")) {
-      this.#bind(this.console);
-    }
   }
 
   protected override updated(): void {
@@ -254,34 +249,19 @@ export class ConsoleElement extends LitElement {
     `;
   }
 
-  #bind(
-    commands: CommandConsole | null
-  ): void {
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
-    this.#suggestions.cancel();
-    if (commands === null) {
-      return;
-    }
-
-    const onRegistryChanged = () => {
-      if (this.open) {
-        this.#refresh();
-      }
-    };
-    const onScrollbackChanged = () => this.requestUpdate();
-    const onOpen = () => void this.show();
-    const onClose = () => this.hide();
-    commands.on("registry-changed", onRegistryChanged);
-    commands.on("scrollback-changed", onScrollbackChanged);
-    commands.on("open-requested", onOpen);
-    commands.on("close-requested", onClose);
-    this.#unsubscribe = () => {
-      commands.off("registry-changed", onRegistryChanged);
-      commands.off("scrollback-changed", onScrollbackChanged);
-      commands.off("open-requested", onOpen);
-      commands.off("close-requested", onClose);
-    };
+  #watch(
+    commands: CommandConsole
+  ): Array<() => void> {
+    return [
+      commands.subscribe("registry-changed", () => {
+        if (this.open) {
+          this.#refresh();
+        }
+      }),
+      commands.subscribe("scrollback-changed", () => this.requestUpdate()),
+      commands.subscribe("open-requested", () => void this.show()),
+      commands.subscribe("close-requested", () => this.hide())
+    ];
   }
 
   #refresh(): void {
@@ -322,18 +302,17 @@ export class ConsoleElement extends LitElement {
     return {
       highlight: suggestions.highlight,
       itemCount: suggestions.items.length,
-      browsingHistory: this.#browsingHistory,
+      browsingHistory: this.console?.history.browsing ?? false,
       inlineCompletion: this.#ghostText() !== "",
       hasText: this._text.trim() !== "",
-      hasHistory: (this.console?.history.entries.length ?? 0) > 0,
-      highlightRuns: suggestions.highlighted?.accept().run ?? false
+      hasHistory: (this.console?.history.size ?? 0) > 0,
+      highlightRuns: suggestions.highlighted?.run ?? false
     };
   }
 
   #submit(
     line: string
   ): void {
-    this.#browsingHistory = false;
     void this.console?.submit(line);
     void this.#replaceText("");
   }
@@ -342,17 +321,16 @@ export class ConsoleElement extends LitElement {
     index: number,
     execute: boolean
   ): void {
-    const acceptance = this.#suggestions.accept(index);
-    if (acceptance === null) {
+    const item = this.#suggestions.items[index];
+    if (item === undefined) {
       return;
     }
 
-    const { text, caret, run } = acceptance;
-    if (run && execute) {
-      this.#submit(text);
+    if (item.run && execute) {
+      this.#submit(item.text);
     }
     else {
-      void this.#replaceText(text, caret);
+      void this.#replaceText(item.text, item.caret);
     }
   }
 
@@ -392,7 +370,6 @@ export class ConsoleElement extends LitElement {
           commands.history.previous(this._text) :
           commands.history.next();
         if (recalled !== null) {
-          this.#browsingHistory = true;
           void this.#replaceText(recalled);
         }
         break;
@@ -400,8 +377,6 @@ export class ConsoleElement extends LitElement {
       case "highlight-previous":
       case "highlight-next":
         this.#suggestions.move(action === "highlight-next" ? 1 : -1);
-        break;
-      default:
         break;
     }
   }
@@ -416,7 +391,7 @@ export class ConsoleElement extends LitElement {
   ): void => {
     if (event.target instanceof HTMLInputElement) {
       this._text = event.target.value;
-      this.#browsingHistory = false;
+      this.console?.history.stopBrowsing();
       this.#syncCaret();
       this.#refresh();
     }
@@ -457,7 +432,7 @@ export class ConsoleElement extends LitElement {
   readonly #onClose = (): void => {
     this.#theme.stop();
     this.#release();
-    this.#browsingHistory = false;
+    this.console?.history.stopBrowsing();
     this.#suggestions.cancel();
     const restore = this.#restoreFocus;
     this.#restoreFocus = null;

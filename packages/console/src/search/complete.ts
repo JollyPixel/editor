@@ -1,5 +1,10 @@
 // Import Internal Dependencies
-import { classify } from "../input/classify.ts";
+import { peekValue } from "../execution/variables.ts";
+import {
+  classify,
+  type CommandInput,
+  type VariableInput
+} from "../input/classify.ts";
 import {
   quote,
   type Token
@@ -13,32 +18,26 @@ import type {
   ConsoleRegistry,
   RegisteredCommand,
   RegisteredEntry,
+  RegisteredMember,
   RegisteredNamespace,
   RegisteredVariable,
   VariableDef
 } from "../registry/types.ts";
+import type { Suggestion } from "./suggestion.ts";
 import { prefixTypoDistance } from "./typo.ts";
 
 // CONSTANTS
 const kBooleanValues = ["true", "false"];
+const kNoCandidates: Candidates = {
+  candidates: [],
+  hint: null
+};
 
-export interface Completion {
-  value: string;
-  label: string;
-  detail: string;
-  entry: RegisteredEntry | null;
-}
+type AddressMode = "command" | "variable";
 
 export interface CompletionList {
-  start: number;
-  end: number;
-  items: Completion[];
+  items: Suggestion[];
   hint: string | null;
-}
-
-export interface AppliedCompletion {
-  text: string;
-  caret: number;
 }
 
 interface CaretToken {
@@ -48,6 +47,19 @@ interface CaretToken {
   typed: string;
 }
 
+interface Candidate {
+  key: string;
+  value: string;
+  label: string;
+  detail: string;
+  entry: RegisteredEntry | null;
+}
+
+interface Candidates {
+  candidates: Candidate[];
+  hint: string | null;
+}
+
 export async function complete(
   input: string,
   caret: number,
@@ -55,62 +67,86 @@ export async function complete(
 ): Promise<CompletionList> {
   const classified = classify(input, registry);
   if (classified.mode === "search") {
-    return empty(caret);
+    return {
+      items: [],
+      hint: null
+    };
   }
 
   const current = tokenAt(input, caret, classified.tokens);
+  const { candidates, hint } = await candidatesAt(
+    classified,
+    current,
+    registry
+  );
+
+  return {
+    items: candidates.map(
+      (candidate) => suggestion(input, current, candidate)
+    ),
+    hint
+  };
+}
+
+async function candidatesAt(
+  classified: CommandInput | VariableInput,
+  current: CaretToken,
+  registry: ConsoleRegistry
+): Promise<Candidates> {
   if (classified.mode === "variable") {
-    const { variable } = classified;
-    if (current.index === 0) {
-      const items = addressCompletions(registry, current.typed, "variable");
-
-      return list(current, items, null);
-    }
-    if (current.index === 1) {
-      const items = valueCompletions(staticValues(variable.def), current.typed);
-
-      return list(current, items, String(variable.def.get()));
-    }
-
-    return empty(caret);
+    return variableCandidates(classified.variable, current, registry);
   }
 
   if (current.index === 0) {
-    const typed = current.typed.slice(1);
-
-    return list(current, addressCompletions(registry, typed, "command"), null);
+    return {
+      candidates: addressCandidates(
+        registry,
+        current.typed.slice(1),
+        "command"
+      ),
+      hint: null
+    };
   }
 
   const { command } = classified;
   if (command === undefined) {
-    return empty(caret);
+    return kNoCandidates;
   }
-  const args = command.def.args;
-  const last = args.at(-1);
-  const arg = args[current.index - 1] ?? (last?.rest ? last : undefined);
-  const hint = signature(command);
-  if (arg === undefined) {
-    return list(current, [], hint);
-  }
-
-  const values = await argValues(arg);
-
-  return list(current, valueCompletions(values, current.typed, arg), hint);
-}
-
-export function applyCompletion(
-  input: string,
-  list: CompletionList,
-  completion: Completion
-): AppliedCompletion {
-  const text = input.slice(0, list.start) +
-    completion.value +
-    input.slice(list.end);
+  const arg = argumentAt(command, current.index);
 
   return {
-    text,
-    caret: list.start + completion.value.length
+    candidates: arg === undefined ?
+      [] :
+      valueCandidates(await argValues(arg), current.typed, arg),
+    hint: signature(command)
   };
+}
+
+function variableCandidates(
+  variable: RegisteredVariable,
+  current: CaretToken,
+  registry: ConsoleRegistry
+): Candidates {
+  switch (current.index) {
+    case 0:
+      return {
+        candidates: addressCandidates(registry, current.typed, "variable"),
+        hint: null
+      };
+    case 1: {
+      const value = peekValue(variable);
+
+      return {
+        candidates: valueCandidates(
+          staticValues(variable.def),
+          current.typed
+        ),
+        hint: value === undefined ? null : String(value)
+      };
+    }
+    default:
+      return kNoCandidates;
+  }
 }
 
 function tokenAt(
@@ -139,30 +175,37 @@ function tokenAt(
   };
 }
 
-function addressCompletions(
+function argumentAt(
+  command: RegisteredCommand,
+  index: number
+): ArgDef | undefined {
+  const { args } = command.def;
+  const last = args.at(-1);
+
+  return args[index - 1] ?? (last?.rest ? last : undefined);
+}
+
+function addressCandidates(
   registry: ConsoleRegistry,
   typed: string,
-  mode: "command" | "variable"
-): Completion[] {
-  const lowered = typed.toLowerCase();
-  const prefix = mode === "command" ? `/${lowered}` : lowered;
-  const matches = scopedAddresses(registry, typed, mode)
-    .filter((completion) => completion.value.toLowerCase().startsWith(prefix));
+  mode: AddressMode
+): Candidate[] {
+  const matches = prefixed(scopedCandidates(registry, typed, mode), typed);
   if (matches.length > 0) {
     return matches.sort(byValue);
   }
 
-  const everyAddress = [registry.root, ...registry.namespaces()]
-    .flatMap((namespace) => members(namespace, mode));
+  const everyAddress = [...registry]
+    .flatMap((scope) => members(scope, mode));
 
-  return corrections(everyAddress, typed, mode === "command" ? 1 : 0);
+  return corrections(everyAddress, typed);
 }
 
-function scopedAddresses(
+function scopedCandidates(
   registry: ConsoleRegistry,
   typed: string,
-  mode: "command" | "variable"
-): Completion[] {
+  mode: AddressMode
+): Candidate[] {
   const dot = typed.indexOf(".");
   if (dot !== -1) {
     const namespace = registry.namespace(typed.slice(0, dot));
@@ -170,48 +213,46 @@ function scopedAddresses(
     return namespace === undefined ? [] : members(namespace, mode);
   }
 
-  const completions = members(registry.root, mode);
+  const candidates = members(registry.root, mode);
   for (const namespace of registry.namespaces()) {
     if (mode === "command") {
-      completions.push(...members(namespace, mode));
+      candidates.push(...members(namespace, mode));
     }
     else {
-      completions.push({
-        value: `${namespace.name}.`,
-        label: `${namespace.name}.`,
+      const prefix = `${namespace.name}.`;
+      candidates.push({
+        key: prefix,
+        value: prefix,
+        label: prefix,
         detail: namespace.description,
         entry: namespace
       });
     }
   }
 
-  return completions;
+  return candidates;
 }
 
 function members(
   namespace: RegisteredNamespace,
-  mode: "command" | "variable"
-): Completion[] {
-  const commands = [...namespace.commands()].map(entryCompletion);
-  if (mode === "command") {
-    return commands;
-  }
+  mode: AddressMode
+): Candidate[] {
+  const entries = mode === "command" ? namespace.commands() : namespace;
 
-  return [
-    ...[...namespace.variables()].map(entryCompletion),
-    ...commands
-  ];
+  return Array.from(entries, (entry) => entryCandidate(entry, mode));
 }
 
-function entryCompletion(
-  entry: RegisteredCommand | RegisteredVariable
-): Completion {
+function entryCandidate(
+  entry: RegisteredMember,
+  mode: AddressMode
+): Candidate {
   const text = label(entry);
 
   return {
+    key: mode === "command" ? entry.address : text,
     value: text,
     label: text,
-    detail: entry.def.description,
+    detail: entry.description,
     entry
   };
 }
@@ -244,37 +285,45 @@ async function argValues(
   }
 }
 
-function valueCompletions(
+function valueCandidates(
   values: readonly string[],
   typed: string,
   arg?: ArgDef
-): Completion[] {
-  const lowered = typed.toLowerCase();
-  const completions = values.map((value) => {
+): Candidate[] {
+  const candidates = values.map((value) => {
     return {
+      key: value,
       value: arg?.rest ? value : quote(value),
       label: value,
       detail: arg?.name ?? "",
       entry: null
     };
   });
-  const matches = completions
-    .filter((completion) => completion.label.toLowerCase().startsWith(lowered));
+  const matches = prefixed(candidates, typed);
 
-  return matches.length > 0 ? matches : corrections(completions, typed, 0);
+  return matches.length > 0 ? matches : corrections(candidates, typed);
+}
+
+function prefixed(
+  candidates: Candidate[],
+  typed: string
+): Candidate[] {
+  const lowered = typed.toLowerCase();
+
+  return candidates
+    .filter((candidate) => candidate.key.toLowerCase().startsWith(lowered));
 }
 
 function corrections(
-  completions: Completion[],
-  typed: string,
-  offset: number
-): Completion[] {
-  const ranked: { completion: Completion; distance: number; }[] = [];
-  for (const completion of completions) {
-    const found = prefixTypoDistance(typed, completion.label.slice(offset));
+  candidates: Candidate[],
+  typed: string
+): Candidate[] {
+  const ranked: { candidate: Candidate; distance: number; }[] = [];
+  for (const candidate of candidates) {
+    const found = prefixTypoDistance(typed, candidate.key);
     if (found !== null) {
       ranked.push({
-        completion,
+        candidate,
         distance: found
       });
     }
@@ -282,37 +331,34 @@ function corrections(
 
   return ranked
     .sort((left, right) => left.distance - right.distance ||
-      byValue(left.completion, right.completion))
-    .map(({ completion }) => completion);
+      byValue(left.candidate, right.candidate))
+    .map(({ candidate }) => candidate);
 }
 
 function byValue(
-  left: Completion,
-  right: Completion
+  left: Candidate,
+  right: Candidate
 ): number {
   return left.value.localeCompare(right.value);
 }
 
-function list(
+function suggestion(
+  input: string,
   current: CaretToken,
-  items: Completion[],
-  hint: string | null
-): CompletionList {
-  return {
-    start: current.start,
-    end: current.end,
-    items,
-    hint
-  };
-}
+  candidate: Candidate
+): Suggestion {
+  const text = input.slice(0, current.start) +
+    candidate.value +
+    input.slice(current.end);
 
-function empty(
-  caret: number
-): CompletionList {
   return {
-    start: caret,
-    end: caret,
-    items: [],
-    hint: null
+    label: candidate.label,
+    detail: candidate.detail,
+    entry: candidate.entry,
+    match: null,
+    checked: null,
+    text,
+    caret: current.start + candidate.value.length,
+    run: false
   };
 }

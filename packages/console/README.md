@@ -16,10 +16,6 @@ $ npm i @jolly-pixel/console
 $ yarn add @jolly-pixel/console
 ```
 
-The root entry has no DOM and no dependency on Lit. The `jolly-console`
-element lives in `@jolly-pixel/console/element`, which needs the `lit` and
-`@jolly-pixel/ui` peers.
-
 ## 👀 Usage example
 
 ```ts
@@ -55,17 +51,7 @@ element.console = commands;
 document.body.append(element);
 ```
 
-Ctrl+K (Cmd+K on macOS) opens the console. It accepts three kinds of input:
-
-| Input | Mode | Enter |
-| --- | --- | --- |
-| `/brush.grow 2` | command | runs the command |
-| `brush.size` or `brush.size 3` | variable | reads or writes the variable |
-| anything else, or `?text` | search | acts on the highlighted result |
-
-Name the instance `commands`: a binding named `console` shadows the global.
-Construct one per editor page and pass it down; the package exports no
-instance.
+Ctrl+K (Cmd+K on macOS) opens the console.
 
 ## 📚 API
 
@@ -95,10 +81,6 @@ $ pnpm run test
 $ pnpm run test:e2e
 $ pnpm run lint
 ```
-
-`pnpm run dev` serves the example page on port 3006. The Playwright suite runs
-against it. The element imports `@jolly-pixel/ui` from its `dist/`, so rebuild
-`ui` after changing it.
 
 > [!CAUTION]
 > In case you introduce a new feature or fix a bug, make sure to include tests for it as well.

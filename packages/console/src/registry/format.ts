@@ -9,14 +9,14 @@ import type {
 export function label(
   entry: RegisteredEntry
 ): string {
-  switch (entry.kind) {
-    case "command":
-      return `/${entry.address}`;
-    case "variable":
-      return entry.address;
-    default:
-      return entry.name;
-  }
+  return entry.kind === "command" ? `/${entry.address}` : entry.address;
+}
+
+export function byName(
+  left: { name: string; },
+  right: { name: string; }
+): number {
+  return left.name.localeCompare(right.name);
 }
 
 export function signature(

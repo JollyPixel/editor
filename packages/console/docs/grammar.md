@@ -1,96 +1,65 @@
 # Input grammar
 
-The prompt accepts three kinds of input. The first character and the registry decide which one a
-line is, on every keystroke.
+The prompt accepts three kinds of input:
 
-```
-command     := "/" (namespace ".")? identifier (" " literal)*
-var-access  := (namespace ".")? identifier (" " literal)?
-forced      := "?" text
-literal     := bare-token | quoted
-quoted      := '"' (any character, with \" and \\ as escapes) '"'
-```
+| Input | Mode | Enter |
+|---|---|---|
+| `/brush.grow 2` | command | runs the command |
+| `brush.size` | variable | prints the value |
+| `brush.size 3` | variable | sets the value |
+| anything else, or `?text` | search | acts on the highlighted result |
 
-A literal containing a space needs quotes, as in `keybind.redo "mod+y, mod+shift+z"`, unless it
-fills a `rest` argument. v1 has no `--flag` and no `key=value` syntax.
+Arguments are separated by spaces. Quote a value that contains spaces:
+`keybind.redo "mod+y, mod+shift+z"`. Inside quotes, `\"` and `\\` are escapes. There are no
+`--flag` or `key=value` forms.
 
-## Coercion
+## Values
 
-| Declared type | Accepts |
+| Type | Accepts |
 |---|---|
-| `string` | any literal |
-| `number` | a literal that parses to a finite number |
-| `boolean` | `true`, `false`, `yes`, `no`, `y`, `n`, `on`, `off`, `1`, `0`, case-insensitive |
-| `enum` | one of `enumValues`, matched case-insensitively and passed in its declared case |
+| `string` | anything |
+| `number` | a finite number |
+| `boolean` | `true`/`false`, `yes`/`no`, `y`/`n`, `on`/`off`, `1`/`0` (any case) |
+| `enum` | one of `enumValues` (any case) |
 
-A literal the type refuses prints an error and the handler or setter is not called.
+An invalid value prints an error and nothing runs.
 
-## Modes
+## Variables before search
 
-| Mode | Input | Suggestions | Enter |
-|---|---|---|---|
-| command | starts with `/` | completions for the token under the caret, none highlighted | runs the line |
-| variable | the first token resolves exactly to a variable | `enum` and `boolean` values, otherwise the current value as a hint | reads or writes the variable |
-| search | anything else, or a leading `?` | fuzzy results, the first one highlighted; an empty query lists the registry by section | acts on the highlighted result |
-
-An exact variable match beats search. `brush.si` is a search; Enter on the top hit inserts
-`brush.size`, which puts the prompt in variable mode, and a second Enter reads the value. The cost
-is that a root variable named `fps` makes the word `fps` unsearchable. A leading `?` forces search
-(`?fps`), and registrants should keep root variables few and namespace the rest.
-
-An unknown command prints `Unknown command "/name"` and never falls back to search. Submitting
-search text with nothing highlighted prints that it is not a variable. When a command or variable
-is within the [typo tolerance](#typos), the error ends with `Did you mean /brush.grow?`; the guess
-is never run.
+When the input is exactly a variable name, it is treated as that variable, not as a search. A root
+variable named `fps` therefore hides the word `fps` from search; type `?fps` to search instead.
+Prefer namespaced variables over root ones.
 
 ## Search
 
-The corpus is every namespace, command and variable, by name and by description. The scorer ranks
-by tier, then by score inside a tier:
-
-1. exact match
-2. prefix
-3. word boundaries and camelCase humps, so `bs` finds `brush.size`
-4. contiguous substring
-5. scattered subsequence
-6. typo: a word start of the name within the typo tolerance, so `brush.sise` finds `brush.size`
-
-A name match ranks above any description match, whatever the tier, except a typo match, which
-ranks below them. Descriptions never match by scattered subsequence or typo. The matched ranges are returned so the element can mark them. An empty
-query returns nothing, which leaves Up free to recall history.
+Search looks at the names and descriptions of every namespace, command and variable. Exact and
+prefix matches rank first. Initials work (`bs` finds `brush.size`) and small typos are tolerated
+(`brush.sise` finds `brush.size`).
 
 Picking a result:
 
 | Result | Effect |
 |---|---|
-| command with no required argument | runs it |
-| command with a required argument | inserts `/namespace.command ` to complete |
-| variable | inserts its address, which switches to variable mode |
+| command without required arguments | runs it |
+| command with required arguments | inserts it so you can type them |
+| variable | inserts its name |
 | namespace | inserts `namespace.` |
 
 ## Completion
 
-- After `/`, command names in root and `namespace.` forms.
-- After `namespace.`, that namespace's commands and variables only.
-- After `/command `, the values of `autocomplete` or `enumValues` for the argument under the caret.
+Tab completes the word under the caret and never runs anything:
 
-When nothing starts with the typed token, the list falls back to the entries or values within the
-typo tolerance, closest first. `/brush.grwo` lists `/brush.grow`, and Tab replaces the token.
-
-Tab completes the current token and never runs anything. When `autocomplete` returns a promise, the
-latest request wins: an older result is discarded, and the previous list stays on screen while the
-new one loads.
+- after `/`, command names;
+- after `namespace.`, that namespace's commands and variables;
+- in a command's arguments, the `autocomplete` or `enumValues` of that argument.
 
 ## Typos
 
-A typo is measured with the Levenshtein distance: one insertion, deletion or substitution per edit,
-so a swap of two letters costs two. The typed text is compared with the start of the candidate, at
-the typed length plus or minus the tolerance, ignoring case.
-
-| Typed length | Edits tolerated |
+| Word length | Typos tolerated |
 |---|---|
 | 1 to 3 | none |
 | 4 to 7 | 1 |
 | 8 and more | 2 |
 
-A `Did you mean` guess compares the whole address instead of its start.
+An unknown command or variable prints an error, followed by a suggestion when one is close
+enough: `Did you mean /brush.grow?`. The suggestion is never run.

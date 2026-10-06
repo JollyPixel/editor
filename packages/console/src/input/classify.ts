@@ -9,8 +9,6 @@ import {
   type Token
 } from "./tokenize.ts";
 
-export type InputMode = "command" | "variable" | "search";
-
 export interface CommandInput {
   mode: "command";
   address: string;
@@ -29,7 +27,6 @@ export interface VariableInput {
 export interface SearchInput {
   mode: "search";
   query: string;
-  forced: boolean;
 }
 
 export type ClassifiedInput = CommandInput | VariableInput | SearchInput;
@@ -42,8 +39,7 @@ export function classify(
   if (trimmed.startsWith("?")) {
     return {
       mode: "search",
-      query: trimmed.slice(1).trim(),
-      forced: true
+      query: trimmed.slice(1).trim()
     };
   }
 
@@ -79,7 +75,6 @@ export function classify(
 
   return {
     mode: "search",
-    query: input.trim(),
-    forced: false
+    query: input.trim()
   };
 }

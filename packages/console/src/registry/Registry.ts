@@ -35,6 +35,11 @@ export class Registry implements ConsoleRegistry {
     return this.#namespaces.values();
   }
 
+  * [Symbol.iterator](): IterableIterator<NamespaceEntry> {
+    yield this.root;
+    yield* this.#namespaces.values();
+  }
+
   resolveCommand(
     address: string
   ): RegisteredCommand | undefined {

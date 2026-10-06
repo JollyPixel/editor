@@ -9,6 +9,7 @@ import {
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
+import { peekValue } from "../execution/variables.ts";
 import { classify } from "../input/classify.ts";
 import {
   signature,
@@ -21,19 +22,16 @@ import type {
 } from "../registry/types.ts";
 import {
   browse,
-  type BrowseItem,
-  type BrowseSectionKind
+  type BrowseSectionKind,
+  type SuggestionGroup
 } from "../search/browse.ts";
 import {
-  applyCompletion,
-  complete
+  complete,
+  type CompletionList
 } from "../search/complete.ts";
 import type { MatchRange } from "../search/score.ts";
-import {
-  search,
-  select,
-  type SearchResult
-} from "../search/search.ts";
+import { search } from "../search/search.ts";
+import type { Suggestion } from "../search/suggestion.ts";
 
 // CONSTANTS
 const kMaxResults = 50;
@@ -45,26 +43,10 @@ const kGroupTitles: Record<BrowseSectionKind, string> = {
   variables: "Variables"
 };
 const kNoSuggestions: SuggestionList = {
+  kind: "completion",
   items: [],
-  groups: null,
-  preselect: false,
   hint: null
 };
-
-export interface Acceptance {
-  text: string;
-  caret: number;
-  run: boolean;
-}
-
-export interface Suggestion {
-  label: string;
-  detail: string;
-  match: SuggestionMatch | null;
-  entry: RegisteredEntry | null;
-  checked: boolean | null;
-  accept(): Acceptance;
-}
 
 export interface EntryUsage {
   usage: string;
@@ -76,22 +58,25 @@ export interface SuggestionControllerOptions {
   pick: (index: number) => void;
 }
 
-interface SuggestionMatch {
-  field: "label" | "detail";
-  ranges: MatchRange[];
+interface BrowseSuggestions {
+  kind: "browse";
+  items: Suggestion[];
+  groups: SuggestionGroup[];
 }
 
-interface SuggestionGroup {
-  kind: BrowseSectionKind;
+interface SearchSuggestions {
+  kind: "search";
   items: Suggestion[];
 }
 
-interface SuggestionList {
-  items: Suggestion[];
-  groups: SuggestionGroup[] | null;
-  preselect: boolean;
-  hint: string | null;
+interface CompletionSuggestions extends CompletionList {
+  kind: "completion";
 }
+
+type SuggestionList =
+  | BrowseSuggestions
+  | SearchSuggestions
+  | CompletionSuggestions;
 
 export class SuggestionController implements ReactiveController {
   #host: ReactiveControllerHost;
@@ -115,7 +100,7 @@ export class SuggestionController implements ReactiveController {
   }
 
   get hint(): string | null {
-    return this.#list.hint;
+    return this.#list.kind === "completion" ? this.#list.hint : null;
   }
 
   get highlight(): number {
@@ -181,11 +166,13 @@ export class SuggestionController implements ReactiveController {
       return;
     }
 
-    const stale = this.#list.preselect || this.#list.groups !== null;
-    this.#show(stale ? kNoSuggestions : this.#list);
-    const list = await completionList(text, caret, registry);
+    this.#show(this.#list.kind === "completion" ? this.#list : kNoSuggestions);
+    const list = await complete(text, caret, registry);
     if (request === this.#request) {
-      this.#show(list);
+      this.#show({
+        kind: "completion",
+        ...list
+      });
     }
   }
 
@@ -196,7 +183,7 @@ export class SuggestionController implements ReactiveController {
     if (count === 0) {
       this.#highlight = -1;
     }
-    else if (this.#list.preselect) {
+    else if (this.#list.kind === "search") {
       const from = this.#highlight < 0 && delta === -1 ? 0 : this.#highlight;
       this.#highlight = (from + delta + count) % count;
     }
@@ -206,23 +193,15 @@ export class SuggestionController implements ReactiveController {
     this.#host.requestUpdate();
   }
 
-  accept(
-    index: number
-  ): Acceptance | null {
-    const item = this.#list.items[index];
-
-    return item === undefined ? null : item.accept();
-  }
-
   inlineCompletion(
     input: string
   ): string {
     const item = this.#list.items[Math.max(this.#highlight, 0)];
-    if (item === undefined || this.#list.groups !== null) {
+    if (item === undefined || this.#list.kind === "browse") {
       return "";
     }
 
-    const { text } = item.accept();
+    const { text } = item;
     const continues = text.length > input.length &&
       text.toLowerCase().startsWith(input.toLowerCase());
 
@@ -230,14 +209,14 @@ export class SuggestionController implements ReactiveController {
   }
 
   renderOptions(): TemplateResult[] {
-    const { items, groups } = this.#list;
-    if (groups === null) {
-      return items.map((item, index) => this.#renderOption(item, index));
+    const list = this.#list;
+    if (list.kind !== "browse") {
+      return list.items.map((item, index) => this.#renderOption(item, index));
     }
 
     let offset = 0;
 
-    return groups.map((group) => {
+    return list.groups.map((group) => {
       const start = offset;
       offset += group.items.length;
       const id = `group-${group.kind}`;
@@ -261,7 +240,7 @@ export class SuggestionController implements ReactiveController {
   ): void {
     this.#list = list;
     this.#listChanged = true;
-    this.#highlight = list.preselect && list.items.length > 0 ? 0 : -1;
+    this.#highlight = list.kind === "search" && list.items.length > 0 ? 0 : -1;
     this.#host.requestUpdate();
   }
 
@@ -313,109 +292,23 @@ export class SuggestionController implements ReactiveController {
 function browseList(
   registry: ConsoleRegistry,
   history: readonly string[]
-): SuggestionList {
-  const groups = browse(registry, history).map((section) => {
-    return {
-      kind: section.kind,
-      items: section.items.map(browseSuggestion)
-    };
-  });
+): BrowseSuggestions {
+  const groups = browse(registry, history);
 
   return {
+    kind: "browse",
     items: groups.flatMap((group) => group.items),
-    groups,
-    preselect: false,
-    hint: null
+    groups
   };
 }
 
 function searchList(
   query: string,
   registry: ConsoleRegistry
-): SuggestionList {
+): SearchSuggestions {
   return {
-    items: search(query, registry)
-      .slice(0, kMaxResults)
-      .map(resultSuggestion),
-    groups: null,
-    preselect: true,
-    hint: null
-  };
-}
-
-async function completionList(
-  input: string,
-  caret: number,
-  registry: ConsoleRegistry
-): Promise<SuggestionList> {
-  const list = await complete(input, caret, registry);
-
-  return {
-    items: list.items.map((item) => {
-      return {
-        label: item.label,
-        detail: item.detail,
-        match: null,
-        entry: item.entry,
-        checked: null,
-        accept: () => {
-          return {
-            ...applyCompletion(input, list, item),
-            run: false
-          };
-        }
-      };
-    }),
-    groups: null,
-    preselect: false,
-    hint: list.hint
-  };
-}
-
-function browseSuggestion(
-  item: BrowseItem
-): Suggestion {
-  return {
-    label: item.label,
-    detail: item.detail,
-    match: null,
-    entry: item.entry,
-    checked: item.checked,
-    accept: () => {
-      return {
-        text: item.text,
-        caret: item.text.length,
-        run: item.run
-      };
-    }
-  };
-}
-
-function resultSuggestion(
-  result: SearchResult
-): Suggestion {
-  const { target } = result;
-  const detail = result.field === "name" && target.kind === "variable" ?
-    `variable  ${target.def.type}` :
-    result.description;
-
-  return {
-    label: result.label,
-    detail,
-    match: {
-      field: result.field === "name" ? "label" : "detail",
-      ranges: result.ranges
-    },
-    entry: target,
-    checked: null,
-    accept: () => {
-      const selection = select(result);
-
-      return {
-        ...selection,
-        caret: selection.text.length
-      };
-    }
+    kind: "search",
+    items: search(query, registry).slice(0, kMaxResults)
   };
 }
 
@@ -426,12 +319,12 @@ function entryUsage(
     case "command":
       return {
         usage: signature(entry),
-        description: entry.def.description
+        description: entry.description
       };
     case "variable":
       return {
         usage: variableUsage(entry),
-        description: entry.def.description
+        description: entry.description
       };
     default: {
       const counts = [
@@ -453,12 +346,9 @@ function variableUsage(
   variable: RegisteredVariable
 ): string {
   const text = variableSignature(variable);
-  try {
-    return `${text} = ${String(variable.def.get())}`;
-  }
-  catch {
-    return text;
-  }
+  const value = peekValue(variable);
+
+  return value === undefined ? text : `${text} = ${String(value)}`;
 }
 
 function count(

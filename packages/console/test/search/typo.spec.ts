@@ -3,10 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CommandConsole } from "#src/index.ts";
 import {
   closest,
-  closestAddress,
   prefixTypoDistance,
   typoTolerance
 } from "#src/search/typo.ts";
@@ -40,27 +38,5 @@ describe("closest", () => {
 
   test("breaks ties alphabetically", () => {
     assert.equal(closest("brush.sizz", ["brush.sizy", "brush.sizx"]), "brush.sizx");
-  });
-});
-
-describe("closestAddress", () => {
-  const commands = new CommandConsole();
-  const brush = commands.registerNamespace("brush");
-  brush.registerCommand("grow", {
-    description: "",
-    args: [],
-    execute: () => undefined
-  });
-  brush.registerVariable("size", {
-    type: "number",
-    description: "",
-    get: () => 1,
-    set: () => undefined
-  });
-
-  test("returns the label of the closest entry of the given kind", () => {
-    assert.equal(closestAddress("brush.grwo", commands.registry, "command"), "/brush.grow");
-    assert.equal(closestAddress("brush.sise", commands.registry, "variable"), "brush.size");
-    assert.equal(closestAddress("brush.sise", commands.registry, "command"), null);
   });
 });

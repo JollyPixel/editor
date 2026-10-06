@@ -11,7 +11,8 @@ import { setImmediate } from "node:timers/promises";
 import {
   CommandConsole,
   ConsoleMirror,
-  ConsoleServer
+  ConsoleServer,
+  RemoteValueMissingError
 } from "#src/index.ts";
 import { complete } from "#src/search/complete.ts";
 
@@ -261,7 +262,7 @@ describe("ConsoleMirror", () => {
 
     const list = await complete("/brush.pick ", 12, shell.registry);
 
-    assert.deepEqual(list.items.map((item) => item.value), ["grass", "stone"]);
+    assert.deepEqual(list.items.map((item) => item.label), ["grass", "stone"]);
   });
 
   test("follows namespaces the frame registers and removes later", async() => {
@@ -278,6 +279,25 @@ describe("ConsoleMirror", () => {
     await until(() => shell.registry.namespace("layers") === undefined);
 
     assert.ok(shell.registry.namespace("brush"));
+  });
+
+  test("a frame getter that throws leaves its mirrored variable without a value", async() => {
+    const { frame, shell } = await bridge();
+
+    const probe = frame.registerNamespace("probe");
+    probe.registerVariable("ready", {
+      type: "boolean",
+      description: "",
+      get: () => {
+        throw new Error("not ready");
+      },
+      set: () => undefined
+    });
+    await until(() => shell.registry.resolveVariable("probe.ready") !== undefined);
+    const ready = shell.registry.resolveVariable("probe.ready");
+
+    assert.throws(() => ready?.def.get(), RemoteValueMissingError);
+    assert.equal(shell.registry.resolveVariable("brush.size")?.def.get(), 1);
   });
 
   test("deactivating removes the namespaces and cancels a running command", async() => {

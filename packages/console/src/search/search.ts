@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import { label } from "../registry/format.ts";
 import type {
   ConsoleRegistry,
   RegisteredEntry
@@ -9,23 +8,18 @@ import {
   score,
   scoreTypo,
   type Match,
-  type MatchRange,
   type MatchTier
 } from "./score.ts";
+import {
+  entrySuggestion,
+  type Suggestion,
+  type SuggestionMatch
+} from "./suggestion.ts";
 
-export interface SearchResult {
-  target: RegisteredEntry;
-  label: string;
-  description: string;
-  field: "name" | "description";
+export interface SearchResult extends Suggestion {
+  match: SuggestionMatch;
   tier: MatchTier;
   score: number;
-  ranges: MatchRange[];
-}
-
-export interface SearchSelection {
-  text: string;
-  run: boolean;
 }
 
 export function search(
@@ -48,37 +42,14 @@ export function search(
   return results.sort(compare);
 }
 
-export function select(
-  result: SearchResult
-): SearchSelection {
-  return selectEntry(result.target);
-}
-
-export function selectEntry(
-  target: RegisteredEntry
-): SearchSelection {
-  const text = label(target);
-  switch (target.kind) {
-    case "command":
-      return target.def.args.some((arg) => arg.required) ?
-        { text: `${text} `, run: false } :
-        { text, run: true };
-    case "variable":
-      return { text, run: false };
-    default:
-      return { text: `${text}.`, run: false };
-  }
-}
-
 function* targets(
   registry: ConsoleRegistry
 ): IterableIterator<RegisteredEntry> {
-  yield* registry.root.commands();
-  yield* registry.root.variables();
-  for (const namespace of registry.namespaces()) {
-    yield namespace;
-    yield* namespace.commands();
-    yield* namespace.variables();
+  for (const scope of registry) {
+    if (scope !== registry.root) {
+      yield scope;
+    }
+    yield* scope;
   }
 }
 
@@ -86,55 +57,55 @@ function rank(
   query: string,
   target: RegisteredEntry
 ): SearchResult | null {
-  const text = label(target);
-  const description = target.kind === "namespace" ?
-    target.description :
-    target.def.description;
-  const offset = target.kind === "command" ? 1 : 0;
-
-  const byName = score(query, text.slice(offset));
+  const byName = score(query, target.address);
   if (byName !== null) {
-    return result(target, text, description, "name", {
-      ...byName,
-      ranges: byName.ranges.map((range) => {
-        return {
-          start: range.start + offset,
-          end: range.end + offset
-        };
-      })
-    });
+    return nameResult(target, byName);
   }
 
-  const byDescription = score(query, description);
+  const byDescription = score(query, target.description);
   if (
     byDescription !== null &&
     byDescription.tier !== MATCH_TIERS.subsequence
   ) {
-    return result(target, text, description, "description", byDescription);
+    return {
+      ...entrySuggestion(target),
+      match: {
+        field: "detail",
+        ranges: byDescription.ranges
+      },
+      tier: byDescription.tier,
+      score: byDescription.score
+    };
   }
 
-  const byTypo = scoreTypo(query, text.slice(offset));
+  const byTypo = scoreTypo(query, target.address);
 
-  return byTypo === null ?
-    null :
-    result(target, text, description, "name", byTypo);
+  return byTypo === null ? null : nameResult(target, byTypo);
 }
 
-function result(
+function nameResult(
   target: RegisteredEntry,
-  text: string,
-  description: string,
-  field: SearchResult["field"],
   found: Match
 ): SearchResult {
+  const suggestion = entrySuggestion(target);
+  const shift = suggestion.label.length - target.address.length;
+
   return {
-    target,
-    label: text,
-    description,
-    field,
+    ...suggestion,
+    detail: target.kind === "variable" ?
+      `variable  ${target.def.type}` :
+      suggestion.detail,
+    match: {
+      field: "label",
+      ranges: found.ranges.map((range) => {
+        return {
+          start: range.start + shift,
+          end: range.end + shift
+        };
+      })
+    },
     tier: found.tier,
-    score: found.score,
-    ranges: found.ranges
+    score: found.score
   };
 }
 
@@ -159,7 +130,7 @@ function compare(
 function group(
   result: SearchResult
 ): number {
-  if (result.field === "description") {
+  if (result.match.field === "detail") {
     return 1;
   }
 

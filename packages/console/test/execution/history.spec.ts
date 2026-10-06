@@ -75,4 +75,29 @@ describe("InputHistory", () => {
 
     assert.equal(history.previous(""), "c");
   });
+
+  test("browses from a recall until a push or stopBrowsing", () => {
+    const history = new InputHistory();
+    history.push("a");
+    assert.equal(history.browsing, false);
+
+    history.previous("");
+    assert.equal(history.browsing, true);
+    history.stopBrowsing();
+    assert.equal(history.browsing, false);
+
+    history.next();
+    assert.equal(history.browsing, true);
+    history.push("b");
+    assert.equal(history.browsing, false);
+    assert.equal(history.size, 2);
+  });
+
+  test("a recall past either end does not start browsing", () => {
+    const history = new InputHistory();
+
+    assert.equal(history.previous("draft"), null);
+    assert.equal(history.next(), null);
+    assert.equal(history.browsing, false);
+  });
 });

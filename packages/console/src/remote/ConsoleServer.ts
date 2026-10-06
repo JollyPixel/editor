@@ -1,8 +1,12 @@
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
-import { writeVariable } from "../execution/variables.ts";
+import {
+  peekValue,
+  writeVariable
+} from "../execution/variables.ts";
 import type {
   ArgDef,
+  ConsoleValue,
   RegisteredCommand,
   RegisteredNamespace,
   RegisteredVariable
@@ -81,8 +85,9 @@ export class ConsoleServer {
       case "cancel":
         this.#running.get(message.requestId)?.abort();
         break;
-      default:
+      case "refresh":
         this.#postSnapshot();
+        break;
     }
   }
 
@@ -209,17 +214,22 @@ export class ConsoleServer {
 
   #postSnapshot(): void {
     const namespaces = [...this.#commands.registry.namespaces()];
+    const values: Record<string, ConsoleValue> = {};
+    for (const namespace of namespaces) {
+      for (const variable of namespace.variables()) {
+        const value = peekValue(variable);
+        if (value !== undefined) {
+          values[variable.address] = value;
+        }
+      }
+    }
 
     this.#post({
       type: "snapshot",
       namespaces: namespaces.map(
         (namespace) => this.#describeNamespace(namespace)
       ),
-      values: Object.fromEntries(namespaces.flatMap(
-        (namespace) => [...namespace.variables()].map(
-          (variable) => [variable.address, variable.def.get()]
-        )
-      ))
+      values
     });
   }
 

@@ -6,11 +6,23 @@ import {
   coerceNumber
 } from "../input/coerce.ts";
 import type {
+  ConsoleValue,
   RegisteredVariable,
   VariableDef,
   VariableSetResult
 } from "../registry/types.ts";
 import { ConsoleInputError } from "./errors/ConsoleInputError.ts";
+
+export function peekValue(
+  variable: RegisteredVariable
+): ConsoleValue | undefined {
+  try {
+    return variable.def.get();
+  }
+  catch {
+    return undefined;
+  }
+}
 
 export function accessVariable(
   input: VariableInput

@@ -152,6 +152,7 @@ export interface RegisteredCommand {
   readonly kind: "command";
   readonly name: string;
   readonly address: string;
+  readonly description: string;
   readonly namespace: RegisteredNamespace;
   readonly def: CommandDef;
   readonly signal: AbortSignal;
@@ -161,6 +162,7 @@ export interface RegisteredVariable {
   readonly kind: "variable";
   readonly name: string;
   readonly address: string;
+  readonly description: string;
   readonly namespace: RegisteredNamespace;
   readonly def: VariableDef;
 }
@@ -168,6 +170,7 @@ export interface RegisteredVariable {
 export interface RegisteredNamespace {
   readonly kind: "namespace";
   readonly name: string;
+  readonly address: string;
   readonly description: string;
   command(
     name: string
@@ -177,7 +180,12 @@ export interface RegisteredNamespace {
   ): RegisteredVariable | undefined;
   commands(): IterableIterator<RegisteredCommand>;
   variables(): IterableIterator<RegisteredVariable>;
+  [Symbol.iterator](): IterableIterator<RegisteredMember>;
 }
+
+export type RegisteredMember =
+  | RegisteredCommand
+  | RegisteredVariable;
 
 export type RegisteredEntry =
   | RegisteredCommand
@@ -190,6 +198,7 @@ export interface ConsoleRegistry {
     name: string
   ): RegisteredNamespace | undefined;
   namespaces(): IterableIterator<RegisteredNamespace>;
+  [Symbol.iterator](): IterableIterator<RegisteredNamespace>;
   resolveCommand(
     address: string
   ): RegisteredCommand | undefined;
