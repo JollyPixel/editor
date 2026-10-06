@@ -4,6 +4,9 @@ import type {
   MaterialGroup
 } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import { MaterialSwatch } from "./MaterialSwatch.ts";
+
 export interface MapMaterialOptions {
   slot: BlocksetSlot;
   finish: MaterialGroup;
@@ -31,6 +34,10 @@ export class MapMaterial {
 
   get name(): string {
     return this.slot.localGroupId(this.id) ?? this.id;
+  }
+
+  get swatch(): MaterialSwatch {
+    return MaterialSwatch.of(this.id, this.finish);
   }
 
   usedBy(

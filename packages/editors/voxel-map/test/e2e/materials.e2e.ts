@@ -3,10 +3,6 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
-import {
-  selectField,
-  textField
-} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -22,6 +18,12 @@ function materialsPane(
   return page.locator("materials-panel");
 }
 
+function selectedMaterial(
+  pane: Locator
+): Locator {
+  return pane.getByRole("treeitem", { selected: true }).locator(".label");
+}
+
 function materialSquare(
   scope: Locator,
   blockId: number
@@ -32,12 +34,27 @@ function materialSquare(
 function finishOf(
   page: Page,
   groupId: string
-): Promise<{ roughness: number; } | null> {
+): Promise<{ roughness: number; swatch: string | null; } | null> {
   return page.evaluate((id) => {
     const group = window.voxelMapEditor!.workspace.mapDocument.materialGroups.get(id);
 
-    return group === undefined ? null : { roughness: group.roughness };
+    return group === undefined ?
+      null :
+      {
+        roughness: group.roughness,
+        swatch: group.swatch
+      };
   }, groupId);
+}
+
+function blocksOf(
+  page: Page
+): Promise<{ id: number; name: string; }[]> {
+  return page.evaluate(() => [
+    ...window.voxelMapEditor!.workspace.mapDocument.blocks.getAll()
+  ].slice(0, 2).map((block) => {
+    return { id: block.id, name: block.name };
+  }));
 }
 
 function materialOf(
@@ -50,34 +67,39 @@ function materialOf(
   );
 }
 
-test("a material made in the Materials pane is shared, marked and edited live", async({ page }) => {
+test("a material made in the Materials pane is renamed, applied, recoloured and edited", async({ page }) => {
   await openPane(page, "Materials");
   const pane = materialsPane(page);
   const library = pane.getByRole("listbox", { name: "Blocks" });
-  const [first, second] = await page.evaluate(() => [
-    ...window.voxelMapEditor!.workspace.mapDocument.blocks.getAll()
-  ].slice(0, 2).map((block) => {
-    return { id: block.id, name: block.name };
-  }));
+  const [first, second] = await blocksOf(page);
 
   await library.getByRole("option", { name: first.name, exact: true }).click();
   await pane.getByRole("button", { name: "New material" }).click();
-  const groupId = `${DEFAULT_BLOCKSET_ID}/Material`;
-  await expect.poll(() => materialOf(page, first.id)).toBe(groupId);
-
-  await textField(pane, "Name").fill("Gold");
-  await textField(pane, "Name").press("Enter");
+  const rename = pane.getByRole("tree").getByRole("textbox");
+  await rename.fill("Gold");
+  await rename.press("Enter");
   const goldId = `${DEFAULT_BLOCKSET_ID}/Gold`;
+  await expect.poll(() => finishOf(page, goldId)).not.toBeNull();
+  expect(await materialOf(page, first.id)).toBeUndefined();
+
+  await pane.getByRole("button", { name: "Apply to selected block" }).click();
   await expect.poll(() => materialOf(page, first.id)).toBe(goldId);
 
   await library.getByRole("option", { name: second.name, exact: true }).click();
-  await selectField(pane, "Material").selectOption({ label: "Gold" });
+  await expect(selectedMaterial(pane)).toHaveText("Gold");
+  await pane.getByRole("button", { name: "Apply to selected block" }).click();
   await expect.poll(() => materialOf(page, second.id)).toBe(goldId);
 
   const firstSquare = materialSquare(pane, first.id);
   await expect(firstSquare).toBeVisible();
   await expect(materialSquare(pane, second.id))
     .toHaveAttribute("style", (await firstSquare.getAttribute("style"))!);
+
+  const color = pane.locator("jolly-color").filter({ hasText: "Color" }).locator("input.hex");
+  await color.fill("#ff0000");
+  await color.press("Enter");
+  await expect.poll(async() => (await finishOf(page, goldId))?.swatch).toBe("#ff0000");
+  await expect(firstSquare).toHaveAttribute("style", /background:#ff0000/);
 
   const roughness = pane.getByRole("textbox", { name: "Roughness value" });
   await roughness.fill("0");
@@ -86,6 +108,27 @@ test("a material made in the Materials pane is shared, marked and edited live", 
 
   await openPane(page, "Blocks");
   await expect(materialSquare(page.locator("blocks-panel"), first.id)).toBeVisible();
+});
+
+test("the material fields follow the block picked in the library", async({ page }) => {
+  await openPane(page, "Materials");
+  const pane = materialsPane(page);
+  const library = pane.getByRole("listbox", { name: "Blocks" });
+  const [first, second] = await blocksOf(page);
+  await page.evaluate(([firstId, secondId]) => {
+    const { blocksets, mapDocument } = window.voxelMapEditor!.workspace;
+    for (const [blockId, name] of [[firstId, "Gold"], [secondId, "Silver"]] as const) {
+      const block = mapDocument.blocks.get(blockId)!;
+      const groupId = blocksets.ownerOf(blockId)!.slot.groupId(name);
+      blocksets.defineBlock({ ...block, materialGroup: groupId });
+    }
+  }, [first.id, second.id]);
+
+  await library.getByRole("option", { name: first.name, exact: true }).click();
+  await expect(selectedMaterial(pane)).toHaveText("Gold");
+  await library.getByRole("option", { name: second.name, exact: true }).click();
+  await expect(selectedMaterial(pane)).toHaveText("Silver");
+  await expect(pane.getByRole("button", { name: "Remove from selected block" })).toBeVisible();
 });
 
 test("the Materials tab is disabled while the map has no blocks", async({ page }) => {

@@ -3,7 +3,7 @@ import {
   MaterialGroup,
   type BlockDefinition,
   type BlocksetSlot,
-  type MaterialGroupFinish,
+  type MaterialGroupChanges,
   type MaterialGroupList,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -61,10 +61,13 @@ export class MapMaterials {
     blockId: number
   ): MapMaterial[] {
     const slot = this.#blocksets.ownerOf(blockId)?.slot;
-    if (slot === undefined) {
-      return [];
-    }
 
+    return slot === undefined ? [] : this.inSlot(slot);
+  }
+
+  inSlot(
+    slot: BlocksetSlot
+  ): MapMaterial[] {
     const { blocks, materialGroups } = this.#document;
     const users = new Map<string, number[]>();
     for (const group of materialGroups) {
@@ -127,30 +130,28 @@ export class MapMaterials {
   }
 
   create(
-    blockId: number
-  ): boolean {
-    const block = this.#document.blocks.get(blockId);
-    const slot = this.#blocksets.ownerOf(blockId)?.slot;
-    if (block === undefined || slot === undefined) {
-      return false;
-    }
-
+    slot: BlocksetSlot
+  ): string | null {
     const groupId = slot.groupId(this.#freeName(slot));
+    const defined = this.#blocksets.defineMaterialGroup(
+      new MaterialGroup({
+        id: groupId,
+        swatch: MaterialSwatch.derivedColor(groupId)
+      })
+    );
 
-    return this.#blocksets.defineMaterialGroup(
-      new MaterialGroup({ id: groupId })
-    ) && this.#blocksets.defineBlock(withMaterialGroup(block, groupId));
+    return defined ? groupId : null;
   }
 
   refinish(
     material: MapMaterial,
-    finish: Partial<MaterialGroupFinish>
+    changes: MaterialGroupChanges
   ): boolean {
     const current = this.#document.materialGroups.get(material.id) ??
       material.finish;
     const next = MaterialGroup.parse({
       ...current.toJSON(),
-      ...finish
+      ...changes
     });
     if (next === null || next.equals(current)) {
       return false;
