@@ -57,18 +57,52 @@ describe("move", () => {
     harness.send({
       type: "pointerdown",
       target: harness.at(4, 1, 4),
-      shiftKey: true
+      ctrlKey: true
     });
     harness.send({
       type: "pointermove",
       target: harness.at(4, 4, 4),
-      shiftKey: true
+      ctrlKey: true
     });
 
     assert.equal(harness.box.position.y, 0);
   });
 
-  test("moves vertically with Shift when the policy allows it", () => {
+  test("moves vertically with Ctrl when the policy allows it", () => {
+    const harness = createHarness({ moveAxes: "xyz" });
+
+    harness.send({
+      type: "pointerdown",
+      target: harness.at(4, 1, 4),
+      ctrlKey: true
+    });
+    harness.send({
+      type: "pointermove",
+      target: harness.at(4, 4, 4),
+      ctrlKey: true
+    });
+
+    assert.deepEqual(harness.box.position.toArray(), [0, 3, 0]);
+  });
+
+  test("moves vertically with Cmd for macOS users", () => {
+    const harness = createHarness({ moveAxes: "xyz" });
+
+    harness.send({
+      type: "pointerdown",
+      target: harness.at(4, 1, 4),
+      metaKey: true
+    });
+    harness.send({
+      type: "pointermove",
+      target: harness.at(4, 4, 4),
+      metaKey: true
+    });
+
+    assert.deepEqual(harness.box.position.toArray(), [0, 3, 0]);
+  });
+
+  test("keeps Shift-drags on the ground plane", () => {
     const harness = createHarness({ moveAxes: "xyz" });
 
     harness.send({
@@ -78,11 +112,11 @@ describe("move", () => {
     });
     harness.send({
       type: "pointermove",
-      target: harness.at(4, 4, 4),
+      target: harness.at(7, 4, 4),
       shiftKey: true
     });
 
-    assert.deepEqual(harness.box.position.toArray(), [0, 3, 0]);
+    assert.equal(harness.box.position.y, 0);
   });
 
   test("suspends snapping while Alt is held", () => {
@@ -96,6 +130,19 @@ describe("move", () => {
     });
 
     assert.ok(Math.abs(harness.box.position.x - 3.4) < 1e-6);
+  });
+
+  test("keeps snapping under Alt when snapBypass is off", () => {
+    const harness = createHarness({ snapBypass: false });
+
+    harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
+    harness.send({
+      type: "pointermove",
+      target: harness.at(7.4, 1, 4),
+      altKey: true
+    });
+
+    assert.equal(harness.box.position.x, 3);
   });
 
   test("stays inside the bounds", () => {
@@ -338,14 +385,14 @@ describe("disconnect", () => {
 });
 
 describe("vertical modifier", () => {
-  test("honours Shift pressed after the drag started", () => {
+  test("honours Ctrl pressed after the drag started", () => {
     const harness = createHarness({ moveAxes: "xyz" });
 
     harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
     harness.send({
       type: "pointermove",
       target: harness.at(4, 4, 4),
-      shiftKey: true
+      ctrlKey: true
     });
 
     assert.deepEqual(harness.box.position.toArray(), [0, 3, 0]);
@@ -359,7 +406,7 @@ describe("vertical modifier", () => {
     harness.send({
       type: "pointermove",
       target: harness.at(10, 1, 4),
-      shiftKey: true
+      ctrlKey: true
     });
 
     assert.equal(harness.box.position.y, 0);

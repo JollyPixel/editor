@@ -10,12 +10,15 @@ import {
   VoxelHistory,
   VoxelTransform,
   VoxelWorld,
+  VOXEL_ABSENT,
+  voxelBlockId,
   type VoxelTemplateVoxel,
   type VoxelLayer
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { MapLayers } from "../../../src/features/layers/MapLayers.ts";
+import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import type { ActivePlacement } from "../../../src/features/placement/ActivePlacement.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
@@ -147,6 +150,23 @@ describe("MapPlacement session", () => {
       VoxelTransform.pack({ rotation: 2, flipY: true })
     );
     assert.ok(placement.current?.placement.transform.equals(expected));
+  });
+
+  test("mirrors in place and keeps turning around the pivot", () => {
+    const { world, placement } = setup();
+    placement.placeTemplate(templateOf(world), { x: 0, y: 0, z: 0 });
+    const before = placement.current!.bounds;
+
+    for (const transform of [{ flipX: true }, { flipY: true }, { flipZ: true }]) {
+      placement.turn(transform);
+
+      assert.deepEqual(placement.current!.bounds, before);
+    }
+
+    const pivot = placement.current!.placement.position;
+    placement.turn({ rotation: 1 });
+
+    assert.deepEqual(placement.current!.placement.position, pivot);
   });
 
   test("ignores identity turns and edits without a session", () => {
@@ -377,5 +397,184 @@ describe("MapPlacement layers", () => {
 
     assert.deepEqual(concealed, []);
     assert.deepEqual(changes, []);
+  });
+});
+
+describe("MapPlacement regions", () => {
+  function blocksOf(
+    layer: VoxelLayer
+  ): Array<[number, number, number, number]> {
+    return cellsOf(layer).map(([x, y, z, packed]) => [
+      x,
+      y,
+      z,
+      voxelBlockId(packed)
+    ]);
+  }
+
+  const kLowerCorner = CellRegion.spanning(
+    { x: 0, y: 0, z: 0 },
+    { x: 1, y: 4, z: 4 }
+  );
+
+  test("lifts the voxels inside the region out of the layer, framed by their content", () => {
+    const { world, placement, concealed } = setup();
+
+    assert.equal(placement.liftRegion("Draft", kLowerCorner), true);
+
+    assert.deepEqual(blocksOf(world.getLayer("Draft")!), [[2, 0, 0, 1]]);
+    const current = placement.current!;
+    assert.equal(current.kind, "region");
+    assert.equal(current.target, "Draft");
+    assert.equal(current.deletable, true);
+    assert.equal(current.caption, "Selection → Draft");
+    assert.equal(current.template.voxelCount, 3);
+    assert.deepEqual(current.bounds, {
+      min: { x: 0, y: 0, z: 0 },
+      size: { x: 2, y: 2, z: 2 }
+    });
+    assert.deepEqual(concealed, []);
+  });
+
+  test("refuses a region without voxels or without its layer", () => {
+    const { placement } = setup();
+    const empty = CellRegion.spanning(
+      { x: 5, y: 0, z: 5 },
+      { x: 6, y: 0, z: 6 }
+    );
+
+    assert.equal(placement.liftRegion("Draft", empty), false);
+    assert.equal(placement.liftRegion("Missing", kLowerCorner), false);
+    assert.equal(placement.placing, false);
+  });
+
+  test("moves the lifted voxels and clears the cells they left, as one undo step", () => {
+    const { world, history, placement } = setup();
+    const draft = world.getLayer("Draft")!;
+    const before = cellsOf(draft);
+    placement.liftRegion("Draft", kLowerCorner);
+
+    placement.moveBoundsTo({ x: 1, y: 0, z: 0 });
+
+    assert.equal(placement.commit(), true);
+    assert.equal(placement.current, null);
+    assert.deepEqual(blocksOf(draft), [
+      [1, 0, 0, 1],
+      [1, 1, 1, 3],
+      [2, 0, 0, 2]
+    ]);
+
+    history.undo();
+    assert.deepEqual(cellsOf(draft), before);
+  });
+
+  test("turns the lifted voxels around their pivot and leaves voxels outside the region", () => {
+    const { world, placement } = setup();
+    placement.liftRegion("Draft", kLowerCorner);
+    placement.turn({ rotation: 1 });
+    const current = placement.current!;
+    const expected = [
+      ...current.template.placedVoxels(
+        current.placement.position,
+        current.placement.transform
+      ),
+      [
+        2,
+        0,
+        0,
+        world.getLayer("Draft")!.getPackedVoxelAt({ x: 2, y: 0, z: 0 }),
+        VOXEL_ABSENT
+      ]
+    ].sort(compareCells);
+
+    placement.commit();
+
+    assert.deepEqual(cellsOf(world.getLayer("Draft")!), expected);
+  });
+
+  test("an unmoved commit ends the session without writing history", () => {
+    const { history, placement } = setup();
+    const depth = history.undoDepth;
+    placement.liftRegion("Draft", kLowerCorner);
+
+    assert.equal(placement.commit(), true);
+    assert.equal(placement.placing, false);
+    assert.equal(history.undoDepth, depth);
+  });
+
+  test("deleting removes only the lifted voxels, as one undo step", () => {
+    const { world, history, placement } = setup();
+    const draft = world.getLayer("Draft")!;
+    const before = cellsOf(draft);
+    placement.liftRegion("Draft", kLowerCorner);
+    placement.moveBoundsTo({ x: 8, y: 0, z: 8 });
+
+    assert.equal(placement.deleteRegion(), true);
+    assert.equal(placement.placing, false);
+    assert.deepEqual(blocksOf(draft), [[2, 0, 0, 1]]);
+
+    history.undo();
+    assert.deepEqual(cellsOf(draft), before);
+  });
+
+  test("refuses to delete outside a region session", () => {
+    const { world, placement } = setup();
+    placement.placeTemplate(templateOf(world), { x: 0, y: 0, z: 0 });
+
+    assert.equal(placement.deleteRegion(), false);
+    assert.equal(placement.placing, true);
+  });
+
+  test("cancelling puts the lifted voxels back without writing history", () => {
+    const { world, history, placement } = setup();
+    const draft = world.getLayer("Draft")!;
+    const before = cellsOf(draft);
+    const depth = history.undoDepth;
+    placement.liftRegion("Draft", kLowerCorner);
+    placement.moveBoundsTo({ x: 8, y: 0, z: 8 });
+
+    assert.equal(placement.cancel(), true);
+
+    assert.deepEqual(cellsOf(draft), before);
+    assert.equal(history.undoDepth, depth);
+  });
+
+  test("cancelLift puts a lifted region back, once", () => {
+    const { world, history, placement } = setup();
+    const draft = world.getLayer("Draft")!;
+    const before = cellsOf(draft);
+    const depth = history.undoDepth;
+    placement.liftRegion("Draft", kLowerCorner);
+
+    assert.equal(placement.lifted?.layerName, "Draft");
+    assert.equal(history.undoDepth, depth);
+    assert.equal(placement.cancelLift(), true);
+    assert.equal(placement.cancelLift(), false);
+    assert.deepEqual(cellsOf(draft), before);
+    assert.equal(history.undoDepth, depth);
+  });
+
+  test("puts the lifted voxels back when another placement starts or when disposed", () => {
+    const { world, placement } = setup();
+    const draft = world.getLayer("Draft")!;
+    const before = cellsOf(draft);
+    const templateId = templateOf(world);
+
+    placement.liftRegion("Draft", kLowerCorner);
+    placement.placeTemplate(templateId, { x: 9, y: 0, z: 9 });
+    assert.deepEqual(cellsOf(draft), before);
+
+    placement.liftRegion("Draft", kLowerCorner);
+    placement.dispose();
+    assert.deepEqual(cellsOf(draft), before);
+  });
+
+  test("keeps targeting its own layer when another voxel layer is selected", () => {
+    const { selection, placement } = setup();
+    placement.liftRegion("Draft", kLowerCorner);
+
+    selection.selectVoxelLayer("Ground");
+
+    assert.equal(placement.current?.target, "Draft");
   });
 });

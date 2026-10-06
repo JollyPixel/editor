@@ -146,7 +146,7 @@ test("Ctrl+click picks the block under the cursor", async({ page }) => {
 });
 
 test("the toolbar and the shortcuts drive the same brush", async({ page }) => {
-  const toolbar = page.locator("voxel-brush-toolbar");
+  const toolbar = page.locator("voxel-edit-toolbar");
 
   await test.step("brackets resize the brush", async() => {
     await page.keyboard.press("BracketRight");
@@ -170,7 +170,7 @@ test("the toolbar and the shortcuts drive the same brush", async({ page }) => {
 });
 
 test("the ghost block previews the placement at size one", async({ page }) => {
-  const toolbar = page.locator("voxel-brush-toolbar");
+  const toolbar = page.locator("voxel-edit-toolbar");
   const ghostButton = toolbar.getByRole("button", { name: /^Ghost block/ });
   const cell = { x: 0, y: 0, z: 0 };
 
@@ -213,7 +213,7 @@ test("an object layer pauses painting until the voxel layer is resumed", async({
     view.document.world.objectLayers.add("Props");
     state.selection.selectObjectLayer("Props");
   });
-  const toolbar = page.locator("voxel-brush-toolbar");
+  const toolbar = page.locator("voxel-edit-toolbar");
   const brushTools = toolbar.getByRole("group", { name: "Brush" });
   const notice = toolbar.getByRole("status");
   await expect(brushTools).toHaveAttribute("aria-disabled", "true");
@@ -229,7 +229,7 @@ test("nothing is painted and a warning is logged without a voxel layer", async({
   await page.evaluate(() => {
     window.voxelMapEditor!.workspace.view.document.world.removeLayer("Ground");
   });
-  const toolbar = page.locator("voxel-brush-toolbar");
+  const toolbar = page.locator("voxel-edit-toolbar");
   const brushTools = toolbar.getByRole("group", { name: "Brush" });
   await expect(brushTools).toHaveAttribute("aria-disabled", "true");
   await expect(toolbar.getByRole("status"))
@@ -245,7 +245,7 @@ test("nothing is painted and a warning is logged without a voxel layer", async({
 });
 
 test("a drag paints every cell it crosses, and undo and redo replay it whole", async({ page }) => {
-  const toolbar = page.locator("voxel-brush-toolbar");
+  const toolbar = page.locator("voxel-edit-toolbar");
   const undo = toolbar.getByRole("button", { name: /^Undo/ });
   const redo = toolbar.getByRole("button", { name: /^Redo/ });
   const row = [0, 1, 2, 3].map((x) => {

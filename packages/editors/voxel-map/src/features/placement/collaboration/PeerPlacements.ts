@@ -18,7 +18,10 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
 import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
 import { Placement } from "../Placement.ts";
+import { MarqueePresence } from "./MarqueePresence.ts";
 import { PlacementPresence } from "./PlacementPresence.ts";
+import { CopyPresence } from "./CopyPresence.ts";
+import { RegionPresence } from "./RegionPresence.ts";
 import { PlacementPreview } from "../PlacementPreview.ts";
 import {
   LayerSource,
@@ -26,10 +29,17 @@ import {
   type PlacementSource,
   type PlacementSourceRef
 } from "../PlacementSource.ts";
+import type { CopySourceRef } from "../CopySource.ts";
+import type { RegionSourceRef } from "../RegionSource.ts";
 
 // CONSTANTS
 const kPresencePlacementKey = "placement";
+const kPresenceFloatingKey = "floating";
 const kPeerGhostOpacity = 0.3;
+
+export type PeerPlacementPresence = PlacementPresence | MarqueePresence;
+type FloatingPresence = RegionPresence | CopyPresence;
+type FloatingSource = FloatingPresence["source"];
 
 export interface PeerPlacementsOptions {
   room: VoxelMapRoom;
@@ -44,13 +54,15 @@ export class PeerPlacements extends ActorComponent {
   #world: VoxelWorld;
   #blockRegistry: BlockRegistry;
   #sources: BlockRenderSources;
-  #channel: PresenceChannel<PlacementPresence | null>;
+  #channel: PresenceChannel<PeerPlacementPresence | null>;
+  #floating: PresenceChannel<FloatingPresence | null>;
   #previews = new Map<string, PlacementPreview>();
   #layerSources = new Map<string, LayerSource | null>();
+  #localFloating: FloatingSource | null = null;
   #subscriptions: Array<() => void>;
 
   #onPeerChange = (
-    change: PresenceChange<PlacementPresence | null>
+    change: PresenceChange<PeerPlacementPresence | null>
   ): void => {
     if (change.value === undefined) {
       this.#removePreview(change.clientId);
@@ -58,6 +70,13 @@ export class PeerPlacements extends ActorComponent {
     else {
       this.#render(change.clientId);
     }
+    this.actor.world.invalidate();
+  };
+
+  #onPeerFloatingChange = (
+    change: PresenceChange<FloatingPresence | null>
+  ): void => {
+    this.#render(change.clientId);
     this.actor.world.invalidate();
   };
 
@@ -76,8 +95,15 @@ export class PeerPlacements extends ActorComponent {
     this.#sources = options.sources;
     this.#channel = new PresenceChannel(options.room, {
       key: kPresencePlacementKey,
-      decode: PlacementPresence.parse,
-      equals: (left, right) => left === right || left?.equals(right) === true
+      decode: (value) => PlacementPresence.parse(value) ??
+        MarqueePresence.parse(value),
+      equals: samePresence
+    });
+    this.#floating = new PresenceChannel(options.room, {
+      key: kPresenceFloatingKey,
+      decode: (value) => RegionPresence.parse(value) ??
+        CopyPresence.parse(value),
+      equals: sameFloating
     });
     this.#subscriptions = [
       options.mapDocument.subscribe("templatesChanged", this.#renderAll),
@@ -89,13 +115,21 @@ export class PeerPlacements extends ActorComponent {
 
     this.#renderAll();
     this.#channel.on("change", this.#onPeerChange);
+    this.#floating.on("change", this.#onPeerFloatingChange);
   }
 
   publishLocal(
-    placement: Placement | null
+    value: Placement | MarqueePresence | null
   ): void {
+    const floating = value instanceof Placement ?
+      floatingSourceOf(value.source) :
+      null;
+    if (floating !== this.#localFloating) {
+      this.#localFloating = floating;
+      this.#floating.publish(floatingPresenceOf(floating));
+    }
     this.#channel.publish(
-      placement === null ? null : PlacementPresence.of(placement)
+      value instanceof Placement ? PlacementPresence.of(value) : value
     );
   }
 
@@ -105,6 +139,8 @@ export class PeerPlacements extends ActorComponent {
     }
     this.#channel.off("change", this.#onPeerChange);
     this.#channel.destroy();
+    this.#floating.off("change", this.#onPeerFloatingChange);
+    this.#floating.destroy();
 
     for (const clientId of [...this.#previews.keys()]) {
       this.#removePreview(clientId);
@@ -145,7 +181,16 @@ export class PeerPlacements extends ActorComponent {
     }
 
     const presence = this.#channel.values.get(clientId) ?? null;
-    const placement = presence === null ? null : this.#placementOf(presence);
+    const color = peerProfileColor(clientId, peer.profile);
+    if (presence instanceof MarqueePresence) {
+      this.#previewFor(clientId, color).outline(presence.region);
+
+      return;
+    }
+
+    const placement = presence === null ?
+      null :
+      this.#placementOf(clientId, presence);
     const template = placement?.source.resolve(this.#world);
     if (placement === null || template === undefined) {
       this.#previews.get(clientId)?.hide();
@@ -153,14 +198,14 @@ export class PeerPlacements extends ActorComponent {
       return;
     }
 
-    this.#previewFor(clientId, peerProfileColor(clientId, peer.profile))
-      .draw(placement, template);
+    this.#previewFor(clientId, color).draw(placement, template);
   }
 
   #placementOf(
+    clientId: string,
     presence: PlacementPresence
   ): Placement | null {
-    const source = this.#sourceOf(presence.source);
+    const source = this.#sourceOf(clientId, presence.source);
 
     return source === null ?
       null :
@@ -168,19 +213,46 @@ export class PeerPlacements extends ActorComponent {
   }
 
   #sourceOf(
+    clientId: string,
     ref: PlacementSourceRef
   ): PlacementSource | null {
-    if (ref.kind === "template") {
-      return new TemplateSource(ref.templateId);
+    switch (ref.kind) {
+      case "template":
+        return new TemplateSource(ref.templateId);
+      case "layer":
+        return this.#layerSourceOf(ref.layerName);
+      case "region":
+      case "copy":
+        return this.#floatingSourceOf(clientId, ref);
     }
+  }
 
-    let source = this.#layerSources.get(ref.layerName);
+  #layerSourceOf(
+    layerName: string
+  ): LayerSource | null {
+    let source = this.#layerSources.get(layerName);
     if (source === undefined) {
-      source = LayerSource.capture(this.#world, ref.layerName);
-      this.#layerSources.set(ref.layerName, source);
+      source = LayerSource.capture(this.#world, layerName);
+      this.#layerSources.set(layerName, source);
     }
 
     return source;
+  }
+
+  #floatingSourceOf(
+    clientId: string,
+    ref: RegionSourceRef | CopySourceRef
+  ): FloatingSource | null {
+    const presence = this.#floating.values.get(clientId) ?? null;
+    if (ref.kind === "region") {
+      return presence instanceof RegionPresence && presence.describes(ref) ?
+        presence.source :
+        null;
+    }
+
+    return presence instanceof CopyPresence && presence.describes(ref) ?
+      presence.source :
+      null;
   }
 
   #previewFor(
@@ -217,4 +289,58 @@ export class PeerPlacements extends ActorComponent {
     preview.dispose();
     this.#previews.delete(clientId);
   }
+}
+
+function samePresence(
+  left: PeerPlacementPresence | null,
+  right: PeerPlacementPresence | null
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (left instanceof PlacementPresence) {
+    return right instanceof PlacementPresence && left.equals(right);
+  }
+  if (left instanceof MarqueePresence) {
+    return right instanceof MarqueePresence && left.equals(right);
+  }
+
+  return false;
+}
+
+function sameFloating(
+  left: FloatingPresence | null,
+  right: FloatingPresence | null
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (left instanceof RegionPresence) {
+    return right instanceof RegionPresence && left.equals(right);
+  }
+  if (left instanceof CopyPresence) {
+    return right instanceof CopyPresence && left.equals(right);
+  }
+
+  return false;
+}
+
+function floatingSourceOf(
+  source: PlacementSource
+): FloatingSource | null {
+  return source.kind === "region" || source.kind === "copy" ?
+    source :
+    null;
+}
+
+function floatingPresenceOf(
+  source: FloatingSource | null
+): FloatingPresence | null {
+  if (source === null) {
+    return null;
+  }
+
+  return source.kind === "region" ?
+    new RegionPresence(source) :
+    new CopyPresence(source);
 }

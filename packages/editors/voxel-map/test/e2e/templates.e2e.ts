@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
-import type { Object3D } from "three";
 import {
   centerOf,
   pressAt
@@ -17,65 +16,20 @@ import {
 } from "./fixtures.ts";
 import { openPane } from "./support/panels.ts";
 import {
+  peerPlacementCount,
+  placement,
+  dragPlacement,
+  hoverCell
+} from "./support/placement.ts";
+import {
   blocksAt,
   cellTopPoint,
   pinCamera,
+  pivotOnCell,
   seedVoxels,
   voxelCount,
   type Cell
 } from "./support/scene.ts";
-
-interface PlacementSnapshot {
-  position: Cell;
-  rotation: number;
-  cells: Cell[];
-  top: number;
-}
-
-function placement(
-  page: Page
-): Promise<PlacementSnapshot | null> {
-  return page.evaluate(() => {
-    const { workspace } = window.voxelMapEditor!;
-    const current = workspace.placement.current;
-    if (current === null) {
-      return null;
-    }
-
-    const { template, placement: { position, transform } } = current;
-    const cells = [...template.placedVoxels(position, transform)]
-      .map(([x, y, z]) => {
-        return { x, y, z };
-      });
-
-    return {
-      position: { ...position },
-      rotation: transform.rotation,
-      cells,
-      top: Math.max(...cells.map((cell) => cell.y)) + 1
-    };
-  });
-}
-
-function peerPlacementCount(
-  page: Page
-): Promise<number> {
-  return page.evaluate(() => {
-    let root: Object3D = window.voxelMapEditor!.workspace.view.root;
-    while (root.parent !== null) {
-      root = root.parent;
-    }
-
-    let count = 0;
-    root.traverseVisible((object) => {
-      if (object.name.startsWith("peer-placement:")) {
-        count++;
-      }
-    });
-
-    return count;
-  });
-}
 
 function templateNames(
   page: Page
@@ -83,25 +37,6 @@ function templateNames(
   return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .templates.toArray()
     .map((template) => template.name));
-}
-
-async function dragPlacement(
-  page: Page,
-  from: Cell,
-  to: Cell
-): Promise<void> {
-  await pressAt(page, [
-    await cellTopPoint(page, from),
-    await cellTopPoint(page, to)
-  ], { settle: nextFrames });
-}
-
-async function hoverCell(
-  page: Page,
-  cell: Cell
-): Promise<void> {
-  const point = await cellTopPoint(page, cell);
-  await page.mouse.move(point.x, point.y);
 }
 
 test.beforeEach(async({ page }) => {
@@ -168,6 +103,20 @@ test("Escape cancels a placement and leaves the world untouched", async({ page }
   expect(await voxelCount(page)).toBe(1);
 });
 
+test("Alt+click pivots the camera while a placement is pending", async({ page }) => {
+  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await pinCamera(page);
+
+  await page.getByRole("button", { name: "Save layer as template" }).click();
+  await page.getByRole("button", { name: "Place template" }).click();
+  await expect.poll(() => placement(page)).not.toBeNull();
+
+  await pivotOnCell(page, { x: 4, y: 0, z: 4 });
+
+  await expect(page.locator("jolly-log")).toContainText("Camera switched to pivot");
+  expect(await placement(page)).not.toBeNull();
+});
+
 test("a peer sees the placement preview until it is cancelled", async({ page, peer }) => {
   test.slow();
   await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
@@ -206,28 +155,38 @@ test("a layer is turned with its marquee and committed with Enter", async({ page
   expect(await blocksAt(page, turned!.cells)).toEqual([1, 1, 1]);
 });
 
-test("the placement toolbar turns the placement and locks the brush until cancelled", async({ page }) => {
+test("the toolbar swaps the brush for the placement controls until cancelled", async({ page }) => {
   await seedVoxels(page, [
     { x: 0, y: 0, z: 0, blockId: 1 },
     { x: 1, y: 0, z: 0, blockId: 1 }
   ]);
 
-  const toolbar = page.locator("voxel-placement-toolbar");
-  const brush = page.locator("voxel-brush-toolbar").getByRole("group", { name: "Brush" });
-  await expect(toolbar).toBeHidden();
+  const toolbar = page.locator("voxel-edit-toolbar");
+  const brush = toolbar.getByRole("group", { name: "Brush" });
+  const lockedBrush = toolbar.getByRole("group", {
+    name: "Brush",
+    includeHidden: true
+  });
+  const history = toolbar.getByRole("group", { name: "History" });
+  const rotate = toolbar.getByRole("group", { name: "Rotate" });
+  await expect(rotate).toBeHidden();
   await expect(brush).toHaveAttribute("aria-disabled", "false");
 
   await page.locator("layer-panel").getByRole("button", { name: "Transform" }).click();
-  await expect(toolbar).toBeVisible();
+  await expect(rotate).toBeVisible();
   await expect(toolbar.getByRole("status")).toHaveText("Ground");
-  await expect(brush).toHaveAttribute("aria-disabled", "true");
+  await expect(brush).toBeHidden();
+  await expect(history).toBeHidden();
+  await expect(lockedBrush).toHaveAttribute("aria-disabled", "true");
 
-  await toolbar.getByRole("button", { name: /^Rotate 90° counter-clockwise/ }).click();
+  await rotate.getByRole("button", { name: /^Rotate 90° counter-clockwise/ }).click();
   await expect.poll(async() => (await placement(page))?.rotation).toBe(1);
 
   await toolbar.getByRole("button", { name: /^Cancel/ }).click();
   await expect.poll(() => placement(page)).toBeNull();
-  await expect(toolbar).toBeHidden();
+  await expect(rotate).toBeHidden();
+  await expect(history).toBeVisible();
+  await expect(brush).toBeVisible();
   await expect(brush).toHaveAttribute("aria-disabled", "false");
 });
 

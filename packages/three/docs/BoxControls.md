@@ -22,20 +22,20 @@ controls.addEventListener("change", ({ min, size }) => {
 | Gesture | Effect |
 |---|---|
 | Drag the volume | Moves the area on the ground plane. |
-| <kbd>Shift</kbd> + drag the volume | Moves the area vertically (requires `moveAxes: "xyz"`). |
+| <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on macOS) + drag the volume | Moves the area vertically (requires `moveAxes: "xyz"`). |
 | Drag a face arrow | Moves that face alone; the opposite face stays fixed. |
 | Click one half of the corner arc | Requests a quarter turn in the direction of that half's arrowhead (requires `rotateAxes: "y"`). |
 | Drag the corner arc | Requests one quarter turn each time the pointer sweeps past the next 45° around the pivot. |
-| Click a mirror chip | Requests a mirror through the pivot along the chip's axis (requires `flipAxes`). |
-| <kbd>Alt</kbd> during a gesture | Suspends snapping while held. |
+| Click a mirror chip | Requests a mirror in place along the chip's axis (requires `flipAxes`). |
+| <kbd>Alt</kbd> during a gesture | Suspends snapping while held (unless `snapBypass` is `false`). |
 
-Shift remains live until the first movement, then the drag plane locks to prevent jumps.
+The vertical modifier remains live until the first movement, then the drag plane locks to prevent jumps. Either Ctrl or ⌘ counts, on every platform. Shift stays free for fly cameras that descend with it.
 
 The element's cursor becomes `grab` over the volume or an arrow and `grabbing` during a gesture, then returns to its previous value.
 
 Each of the six constant-screen-size arrows has a thin shaft, cone head and enlarged invisible picker. Pickers may cover small areas, and arrows win hit tests over the volume. Reduce `handleSize` for areas one or two cells wide.
 
-The corner arc sits on the top corner facing the camera. Hovering it shows the pivot as a vertical axis; dragging it replaces it with a dial whose wedge follows the pointer. Mirror chips sit beside the camera-facing face of each allowed axis, beyond the resize arrow when that axis also resizes. Hovering a chip shows the mirror plane through the pivot. A chip mirrors on release only when the pointer is still over it.
+The corner arc sits on the top corner facing the camera. Hovering it shows the pivot as a vertical axis; dragging it replaces it with a dial whose wedge follows the pointer. Mirror chips sit beside the camera-facing face of each allowed axis, beyond the resize arrow when that axis also resizes. Hovering a chip shows the mirror plane through the box center, so the volume keeps its place. A chip mirrors on release only when the pointer is still over it.
 
 ## Constructor
 
@@ -52,6 +52,7 @@ A non-null `domElement` connects immediately, while `null` defers connection unt
 ```ts
 interface BoxControlsOptions {
   snap?: number | THREE.Vector3Like | null;
+  snapBypass?: boolean;
   minSize?: THREE.Vector3Like | null;
   bounds?: THREE.Box3 | null;
   moveAxes?: BoxAxisPolicy;
@@ -66,13 +67,14 @@ interface BoxControlsOptions {
 | Option | Default | Description |
 |---|---:|---|
 | `snap` | `1` | Grid step. `null` disables snapping. |
+| `snapBypass` | `true` | Lets <kbd>Alt</kbd> suspend snapping during a gesture. `false` keeps grid-bound content, such as voxels, on the grid. |
 | `minSize` | one snap step per axis | Smallest extent a resize may reach, per axis. |
 | `bounds` | `null` | Parent-space volume used to clamp moves and dragged faces. |
 | `moveAxes` | `"xz"` | Axes a move may affect. |
 | `resizeAxes` | `"xz"` | Axes a resize may affect; arrows of excluded axes are hidden. `"none"` disables resizing. |
 | `rotateAxes` | `"none"` | `"y"` shows the corner arc for quarter turns around the vertical axis. |
 | `flipAxes` | `"none"` | Axes that get a mirror chip. |
-| `pivot` | `null` | Parent-space point that turns and mirrors go through. `null` uses the box center. |
+| `pivot` | `null` | Parent-space point that quarter turns go through. `null` uses the box center. Mirrors always go through the box center. |
 | `handleSize` | `0.035` | Arrow size as a fraction of the viewport height. |
 
 All options except `handleSize` are live properties. Changing `resizeAxes`, `rotateAxes` or `flipAxes` updates the handles immediately. `pivot` is read on every press and frame, so it can be mutated in place; changing it does not end a gesture.

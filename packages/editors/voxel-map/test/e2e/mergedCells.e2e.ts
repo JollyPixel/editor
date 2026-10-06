@@ -127,7 +127,7 @@ test("a click on a half block merges its complement into the same cell", async({
   const slabTop = { x: 0, y: 0.5, z: 0 };
 
   await test.step("the ghost previews the merge inside the cell", async() => {
-    await page.locator("voxel-brush-toolbar")
+    await page.locator("voxel-edit-toolbar")
       .getByRole("button", { name: /^Ghost block/ })
       .click();
     const point = await cellTopPoint(page, slabTop);

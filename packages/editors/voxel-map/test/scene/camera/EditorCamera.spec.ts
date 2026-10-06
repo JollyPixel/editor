@@ -36,12 +36,14 @@ function setup() {
     schedule: () => () => void 0
   });
   const poses: CameraPose[] = [];
+  const pivots: THREE.Vector3Like[] = [];
   const controls = {
     camera: new THREE.PerspectiveCamera(60, 1, 0.1, 1000),
     enabled: true,
     isOrbiting: false,
     teleport: (pose: CameraPose) => poses.push(pose),
-    enterOrbitFocus: () => {
+    enterOrbitFocus: (point: THREE.Vector3Like) => {
+      pivots.push(point);
       controls.isOrbiting = true;
     },
     exitOrbitFocus: () => {
@@ -82,9 +84,27 @@ function setup() {
     controls,
     pointer,
     messages,
+    pivots,
     poses,
     pressEscape
   };
+}
+
+function createBlock(
+  position: THREE.Vector3Like
+): THREE.Object3D {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  mesh.position.set(
+    position.x + 0.5,
+    position.y + 0.5,
+    position.z + 0.5
+  );
+
+  const root = new THREE.Group();
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+
+  return root;
 }
 
 describe("EditorCamera", () => {
@@ -139,9 +159,36 @@ describe("EditorCamera", () => {
     assert.equal(controls.enabled, true);
   });
 
+  test("passes Escape on while the camera flies freely", () => {
+    const { camera, messages, pressEscape } = setup();
+
+    assert.equal(pressEscape(), false);
+
+    camera.focus({ x: 1, y: 0, z: 1 });
+    assert.equal(pressEscape(), true);
+    assert.equal(pressEscape(), false);
+    assert.equal(messages().at(-1), "Camera switched to free fly");
+  });
+
+  test("pivots around the center of the voxel under the pointer", () => {
+    const { camera, controls, pivots } = setup();
+    controls.camera.position.set(3.5, 10, 4.5);
+    controls.camera.lookAt(3.5, 0, 4.5);
+    controls.camera.updateMatrixWorld(true);
+
+    camera.pivotAt(
+      createBlock({ x: 3, y: 0, z: 4 }),
+      new THREE.Vector2(0, 0)
+    );
+
+    assert.equal(controls.isOrbiting, true);
+    assert.deepEqual(pivots, [{ x: 3.5, y: 0.5, z: 4.5 }]);
+  });
+
   test("dispose releases the Escape binding and the pointer watch", () => {
     const { camera, controls, pointer, pressEscape } = setup();
 
+    camera.focus({ x: 1, y: 0, z: 1 });
     camera.dispose();
     pointer.capture({});
 

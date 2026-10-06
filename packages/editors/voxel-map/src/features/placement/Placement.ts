@@ -60,6 +60,18 @@ export class Placement {
     );
   }
 
+  mirroredIn(
+    template: VoxelTemplate,
+    options: VoxelTransformOptions
+  ): Placement {
+    const { min } = this.boundsIn(template);
+    const mirrored = this.turnedBy(options);
+
+    return mirrored.movedTo(
+      mirrored.positionFor(template, min)
+    );
+  }
+
   boundsIn(
     template: VoxelTemplate
   ): VoxelTemplateBounds {

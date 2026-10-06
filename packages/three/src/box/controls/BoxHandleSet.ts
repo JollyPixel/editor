@@ -70,8 +70,7 @@ export class BoxHandleSet {
     });
     this.#flip = new BoxFlipHandles({
       camera,
-      handleSize,
-      pivot
+      handleSize
     });
     this.rotateAxes = "none";
   }

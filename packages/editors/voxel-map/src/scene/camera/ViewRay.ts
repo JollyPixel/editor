@@ -33,6 +33,8 @@ export interface ViewFocusOptions {
   maxDistance?: number;
 }
 
+export type ViewPivotOptions = Omit<ViewFocusOptions, "minDistance">;
+
 export class ViewRay {
   #camera: THREE.Camera;
   #groundPlaneSize: number;
@@ -133,5 +135,27 @@ export class ViewRay {
     return voxelCellOf(
       this.ray.at(distance, new THREE.Vector3())
     );
+  }
+
+  pivotPoint(
+    solid: THREE.Object3D | null,
+    options: ViewPivotOptions = {}
+  ): Vector3Like {
+    const {
+      pointer,
+      fallbackDistance = kDefaultFallbackDistance,
+      maxDistance = kDefaultMaxDistance
+    } = options;
+
+    const hit = this.cast(solid, pointer);
+    const cell = hit === null || hit.distance > maxDistance ?
+      voxelCellOf(this.ray.at(fallbackDistance, new THREE.Vector3())) :
+      voxelPositionOf(hit.point, hit.normal, hit.ground ? "front" : "back");
+
+    return {
+      x: cell.x + 0.5,
+      y: cell.y + 0.5,
+      z: cell.z + 0.5
+    };
   }
 }

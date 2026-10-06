@@ -9,6 +9,14 @@ import type {
 import type { Placement } from "./Placement.ts";
 import type { PlacementSource } from "./PlacementSource.ts";
 
+// CONSTANTS
+const kIcons: Record<PlacementSource["kind"], string> = {
+  template: "template",
+  layer: "voxel-layer",
+  region: "marquee",
+  copy: "paste"
+};
+
 export class ActivePlacement {
   readonly placement: Placement;
   readonly template: VoxelTemplate;
@@ -46,8 +54,12 @@ export class ActivePlacement {
     return this.target !== null;
   }
 
+  get deletable(): boolean {
+    return this.kind === "region";
+  }
+
   get icon(): string {
-    return this.kind === "layer" ? "voxel-layer" : "template";
+    return kIcons[this.kind];
   }
 
   get caption(): string {

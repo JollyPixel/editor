@@ -21,7 +21,6 @@ import {
   axisPolicyIncludes
 } from "../types.ts";
 import { BoxFlipChip } from "./BoxFlipChip.ts";
-import type { PivotResolver } from "./BoxRotateDial.ts";
 
 // CONSTANTS
 const kChipSize = 1.1;
@@ -40,7 +39,6 @@ const kPlaneRotation: Readonly<Record<Axis, THREE.Euler>> = {
 const kSize = new THREE.Vector3();
 const kCenter = new THREE.Vector3();
 const kEye = new THREE.Vector3();
-const kPivot = new THREE.Vector3();
 const kAnchor = new THREE.Vector3();
 const kTip = new THREE.Vector3();
 const kInverse = new THREE.Matrix4();
@@ -48,13 +46,11 @@ const kInverse = new THREE.Matrix4();
 export interface BoxFlipHandlesOptions {
   camera: THREE.Camera;
   handleSize: number;
-  pivot: PivotResolver;
 }
 
 export class BoxFlipHandles extends THREE.Object3D {
   #camera: THREE.Camera;
   #handleSize: number;
-  #pivot: PivotResolver;
   #chips: BoxFlipChip[];
   #plane: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   #edges: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
@@ -71,7 +67,6 @@ export class BoxFlipHandles extends THREE.Object3D {
     this.name = "box-handle-flip";
     this.#camera = options.camera;
     this.#handleSize = options.handleSize;
-    this.#pivot = options.pivot;
     this.#chips = AXES.map((axis) => new BoxFlipChip(axis));
 
     const geometry = new THREE.PlaneGeometry(1, 1);
@@ -208,7 +203,7 @@ export class BoxFlipHandles extends THREE.Object3D {
     }
 
     if (this.#hovered !== null) {
-      this.#placePlane(box, this.#hovered);
+      this.#placePlane(this.#hovered);
     }
   }
 
@@ -233,12 +228,9 @@ export class BoxFlipHandles extends THREE.Object3D {
   }
 
   #placePlane(
-    box: BoxVolume,
     axis: Axis
   ): void {
-    this.#pivot(box, kPivot).sub(box.position);
     this.#plane.position.copy(kSize).multiplyScalar(0.5);
-    this.#plane.position[axis] = kPivot[axis];
 
     const [width, height] = planeExtent(axis);
     this.#plane.scale.set(

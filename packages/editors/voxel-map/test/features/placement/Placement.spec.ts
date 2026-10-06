@@ -62,4 +62,29 @@ describe("Placement", () => {
       placement.position
     );
   });
+
+  test("mirrors an even-sized template in place", () => {
+    const template = new VoxelTemplate({
+      id: "slab",
+      name: "Slab",
+      positions: [
+        0, 0, 0,
+        3, 1, 0,
+        1, 0, 1
+      ],
+      voxels: [packVoxel(1, 0), packVoxel(2, 0), packVoxel(3, 0)]
+    });
+    const placement = Placement.at(kSource, { x: 10, y: 4, z: -2 });
+    const before = placement.boundsIn(template);
+
+    for (const options of [{ flipX: true }, { flipY: true }, { flipZ: true }]) {
+      const mirrored = placement.mirroredIn(template, options);
+
+      assert.deepEqual(mirrored.boundsIn(template), before);
+      assert.notDeepEqual(
+        [...template.placedVoxels(mirrored.position, mirrored.transform)],
+        [...template.placedVoxels(placement.position, placement.transform)]
+      );
+    }
+  });
 });

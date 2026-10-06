@@ -150,3 +150,43 @@ describe("ViewRay.focusPoint", () => {
     assert.deepEqual(focus, { x: 64, y: 0, z: -33 });
   });
 });
+
+describe("ViewRay.pivotPoint", () => {
+  test("lands inside the solid the pointer is aimed at", () => {
+    const camera = createCamera(
+      { x: 3.5, y: 10, z: 4.5 },
+      { x: 3.5, y: 0, z: 4.5 }
+    );
+
+    const pivot = new ViewRay({ camera }).pivotPoint(
+      createBlock({ x: 3, y: 0, z: 4 })
+    );
+
+    assert.deepEqual(pivot, { x: 3.5, y: 0.5, z: 4.5 });
+  });
+
+  test("lands on the ground cell the pointer is aimed at", () => {
+    const camera = createCamera(
+      { x: 6.5, y: 10, z: 2.5 },
+      { x: 6.5, y: 0, z: 2.5 }
+    );
+
+    const pivot = new ViewRay({ camera }).pivotPoint(new THREE.Group());
+
+    assert.deepEqual(pivot, { x: 6.5, y: 0.5, z: 2.5 });
+  });
+
+  test("falls back along the ray past maxDistance", () => {
+    const camera = createCamera(
+      { x: 0.5, y: 200, z: 0.5 },
+      { x: 0.5, y: 0, z: 0.5 }
+    );
+
+    const pivot = new ViewRay({ camera }).pivotPoint(null, {
+      maxDistance: 32,
+      fallbackDistance: 24
+    });
+
+    assert.deepEqual(pivot, { x: 0.5, y: 176.5, z: 0.5 });
+  });
+});

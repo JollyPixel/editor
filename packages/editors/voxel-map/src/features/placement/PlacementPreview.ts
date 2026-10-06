@@ -8,6 +8,7 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
+import type { CellRegion } from "./CellRegion.ts";
 import type { Placement } from "./Placement.ts";
 import { TemplateGhost } from "./TemplateGhost.ts";
 
@@ -64,6 +65,16 @@ export class PlacementPreview extends THREE.Group {
       position.z
     );
     this.#ghost.draw(template, transform);
+    this.visible = true;
+  }
+
+  outline(
+    region: CellRegion
+  ): void {
+    const { min } = region;
+    this.marquee.position.set(min.x, min.y, min.z);
+    this.marquee.size = region.size;
+    this.#ghost.hide();
     this.visible = true;
   }
 

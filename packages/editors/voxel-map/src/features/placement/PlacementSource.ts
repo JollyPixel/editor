@@ -5,6 +5,16 @@ import {
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import type {
+  CopySource,
+  CopySourceRef
+} from "./CopySource.ts";
+import type {
+  RegionSource,
+  RegionSourceRef
+} from "./RegionSource.ts";
+
 export interface TemplateSourceRef {
   kind: "template";
   templateId: string;
@@ -15,7 +25,11 @@ export interface LayerSourceRef {
   layerName: string;
 }
 
-export type PlacementSourceRef = TemplateSourceRef | LayerSourceRef;
+export type PlacementSourceRef =
+  | TemplateSourceRef
+  | LayerSourceRef
+  | RegionSourceRef
+  | CopySourceRef;
 
 export class TemplateSource {
   readonly kind = "template";
@@ -101,4 +115,8 @@ export class LayerSource {
   }
 }
 
-export type PlacementSource = TemplateSource | LayerSource;
+export type PlacementSource =
+  | TemplateSource
+  | LayerSource
+  | RegionSource
+  | CopySource;

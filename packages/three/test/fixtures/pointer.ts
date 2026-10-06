@@ -33,6 +33,8 @@ export interface PointerAtOptions {
   type: "pointerdown" | "pointermove" | "pointerup";
   pointerId?: number;
   altKey?: boolean;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
   shiftKey?: boolean;
   button?: number;
 }
@@ -47,6 +49,8 @@ export function pointerAt(
     type,
     pointerId = 1,
     altKey = false,
+    ctrlKey = false,
+    metaKey = false,
     shiftKey = false,
     button = 0
   } = options;
@@ -60,6 +64,8 @@ export function pointerAt(
     pointerId,
     button,
     altKey,
+    ctrlKey,
+    metaKey,
     shiftKey,
     bubbles: true
   });

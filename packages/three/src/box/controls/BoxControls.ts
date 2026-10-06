@@ -57,7 +57,7 @@ interface MoveSession {
   axis: null;
   moved: boolean;
   /**
-   * Shift mode, latched after the first effective change.
+   * Ctrl/Cmd mode, latched after the first effective change.
    */
   vertical: boolean;
   grabOffset: THREE.Vector3;
@@ -129,6 +129,10 @@ export interface BoxControlsOptions {
    */
   snap?: SnapStep;
   /**
+   * Lets Alt suspend snapping while held.
+   */
+  snapBypass?: boolean;
+  /**
    * Minimum extent; takes precedence over `bounds`.
    */
   minSize?: THREE.Vector3Like | null;
@@ -154,6 +158,7 @@ export class BoxControls<
   TBox extends BoxVolume = BoxVolume
 > extends THREE.Controls<BoxControlsEventMap, THREE.Camera> {
   snap: SnapStep;
+  snapBypass: boolean;
   minSize: THREE.Vector3Like | null;
   bounds: THREE.Box3 | null;
   moveAxes: BoxAxisPolicy;
@@ -178,6 +183,7 @@ export class BoxControls<
 
     const {
       snap = 1,
+      snapBypass = true,
       minSize = null,
       bounds = null,
       moveAxes = "xz",
@@ -189,6 +195,7 @@ export class BoxControls<
     } = options;
 
     this.snap = snap;
+    this.snapBypass = snapBypass;
     this.minSize = minSize;
     this.bounds = bounds;
     this.moveAxes = moveAxes;
@@ -427,7 +434,7 @@ export class BoxControls<
     box: BoxVolume,
     hit: THREE.Vector3
   ): void {
-    const vertical = event.shiftKey && axisPolicyIncludes(this.moveAxes, "y");
+    const vertical = this.#isVerticalMove(event);
     const plane = new THREE.Plane();
     plane.setFromNormalAndCoplanarPoint(
       vertical ? this.#verticalPlaneNormal() : AXIS_DIRECTION.y,
@@ -647,7 +654,7 @@ export class BoxControls<
     box: BoxVolume,
     event: PointerEvent
   ): void {
-    const free = event.altKey;
+    const free = this.snapBypass && event.altKey;
     this.#retargetPlane(session, event);
     if (this.#parentRay.intersectPlane(session.plane, _point) === null) {
       return;
@@ -682,7 +689,7 @@ export class BoxControls<
       return;
     }
 
-    const free = event.altKey;
+    const free = this.snapBypass && event.altKey;
     const { axis, sign } = session;
     box.copySizeTo(_size);
     const constraints = this.#constraints();
@@ -754,7 +761,7 @@ export class BoxControls<
     session: MoveSession,
     event: PointerEvent
   ): void {
-    const vertical = event.shiftKey && axisPolicyIncludes(this.moveAxes, "y");
+    const vertical = this.#isVerticalMove(event);
     if (
       session.moved ||
       vertical === session.vertical
@@ -767,6 +774,13 @@ export class BoxControls<
       vertical ? this.#verticalPlaneNormal() : AXIS_DIRECTION.y,
       session.grabPoint
     );
+  }
+
+  #isVerticalMove(
+    event: PointerEvent
+  ): boolean {
+    return (event.ctrlKey || event.metaKey) &&
+      axisPolicyIncludes(this.moveAxes, "y");
   }
 
   #verticalPlaneNormal(): THREE.Vector3 {
