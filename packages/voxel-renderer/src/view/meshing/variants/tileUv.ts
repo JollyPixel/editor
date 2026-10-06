@@ -1,24 +1,24 @@
 // Import Internal Dependencies
-import { MISSING_TILESET_ID } from "../../../document/tilesets/missingTileset.ts";
+import { MISSING_BLOCKSET_ID } from "../../../document/blocksets/missingBlockset.ts";
 import type {
   ResolvedTileRef,
   TileRotation,
   TileSpan,
-  TilesetUVRegion
-} from "../../../document/tilesets/types.ts";
-import type { TilesetUvSource } from "./types.ts";
+  AtlasUVRegion
+} from "../../../document/blocksets/types.ts";
+import type { AtlasUvSource } from "./types.ts";
 
 export interface TileUv {
-  region: TilesetUVRegion;
+  region: AtlasUVRegion;
   rotation: TileRotation | undefined;
 }
 
 export function tileUvOf(
-  atlas: TilesetUvSource,
+  atlas: AtlasUvSource,
   tileRef: ResolvedTileRef,
   span: Readonly<TileSpan>
 ): TileUv {
-  if (atlas.def.id === MISSING_TILESET_ID) {
+  if (atlas.def.id === MISSING_BLOCKSET_ID) {
     return {
       region: atlas.uvFor(0, 0),
       rotation: undefined

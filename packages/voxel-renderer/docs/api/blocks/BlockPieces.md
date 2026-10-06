@@ -1,7 +1,7 @@
 # BlockPieces
 
 Textured geometry of a single block, for thumbnails, a block under the cursor
-or a template being placed. Tile rotation and the `$missing` tileset look the
+or a template being placed. Tile rotation and the `$missing` blockset look the
 same as in the world.
 
 ```ts
@@ -25,7 +25,7 @@ type EmptyTileProbe = (
 
 interface BlockPiecesOptions {
   shapes: BlockShapeRegistry;
-  atlases: TilesetAtlases;
+  atlases: BlocksetAtlases;
   emptyTile?: EmptyTileProbe;
 }
 
@@ -61,8 +61,8 @@ result.
 
 `emptySlotsOf()` lists the slots `geometryOf()` puts in the empty group.
 
-`textureOf()` returns the atlas texture of the tileset `defaultTexture` names,
-or the `$missing` texture when that tileset is not declared.
+`textureOf()` returns the atlas texture of the blockset `defaultTexture` names,
+or the `$missing` texture when that blockset is not declared.
 
 `pieceOf()` caches one piece per block object and transform, and owns its
 geometry: do not dispose or transform it. The cache empties when the atlases

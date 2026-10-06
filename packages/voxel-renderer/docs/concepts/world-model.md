@@ -15,7 +15,7 @@ VoxelWorld
 ```
 
 A [`VoxelDocument`](../api/core/VoxelDocument.md) wraps the world with the
-block registry, the tileset declarations and the undo history. It is
+block registry, the blockset declarations and the undo history. It is
 everything a peer synchronizes, and runs without a view on a server or in a
 tool.
 

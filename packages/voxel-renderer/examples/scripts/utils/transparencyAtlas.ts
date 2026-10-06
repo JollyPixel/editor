@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import {
   type BlockDefinition,
-  type TilesetDefinition
+  type BlocksetDefinition
 } from "../../../src/index.ts";
 
 // CONSTANTS
@@ -261,18 +261,18 @@ const kBlockSpecs: BlockSpec[] = [
   { id: TransparencyBlock.GrateSolid, name: "GrateSolid", shapeId: "cube", paint: paintGrate }
 ];
 
-export interface TransparencyTileset {
-  definition: TilesetDefinition;
+export interface TransparencyBlockset {
+  definition: BlocksetDefinition;
   blocks: BlockDefinition[];
 }
 
 /**
- * Builds the diorama's tileset in memory: one painted tile per block, handed
+ * Builds the diorama's blockset in memory: one painted tile per block, handed
  * over as a data URL. The atlas is RGBA, so cutout tiles carry real holes.
  */
-export function createTransparencyTileset(
+export function createTransparencyBlockset(
   id = "transparency"
-): TransparencyTileset {
+): TransparencyBlockset {
   const rows = Math.ceil(kBlockSpecs.length / kCols);
 
   return {

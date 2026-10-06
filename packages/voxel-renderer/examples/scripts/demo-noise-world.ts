@@ -15,7 +15,7 @@ void Control;
 void Controls;
 // Import Internal Dependencies
 import {
-  loadTilesets,
+  loadBlocksets,
   ViewDistance,
   type VoxelInspectorMode,
   type VoxelView
@@ -27,7 +27,7 @@ import {
   type TerrainStats
 } from "./noise-world/terrain.ts";
 import {
-  createTerrainTileset,
+  createTerrainBlockset,
   TERRAIN_BLEND_GROUPS
 } from "./noise-world/terrainAtlas.ts";
 import {
@@ -87,9 +87,9 @@ interface BuildReport {
 }
 
 const settings = readSettings();
-const tileset = createTerrainTileset();
+const blockset = createTerrainBlockset();
 
-const tilesets = await loadTilesets([tileset.definition]);
+const blocksets = await loadBlocksets([blockset.definition]);
 
 const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
@@ -131,9 +131,9 @@ const voxelMap = world.createActor("map")
     document: {
       chunkSize: settings.chunkSize,
       layers: [kTerrainLayer],
-      blocks: tileset.blocks
+      blocks: blockset.blocks
     },
-    tilesets,
+    blocksets,
     rendering: {
       material: "lambert",
       alphaTest: 0.5

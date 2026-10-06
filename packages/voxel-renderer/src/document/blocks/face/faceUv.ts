@@ -5,8 +5,8 @@ import {
   type Vec2,
   type Vec3
 } from "../../geometry/faceDirection.ts";
-import { UNIT_TILE_SPAN } from "../../tilesets/tileRef.ts";
-import type { TileSpan } from "../../tilesets/types.ts";
+import { UNIT_TILE_SPAN } from "../../blocksets/tileRef.ts";
+import type { TileSpan } from "../../blocksets/types.ts";
 
 /*
  * CONSTANTS

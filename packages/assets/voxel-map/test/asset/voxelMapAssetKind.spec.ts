@@ -23,11 +23,11 @@ import {
 // Import Internal Dependencies
 import {
   ASSET_KINDS,
-  TILESET_KIND,
+  BLOCKSET_KIND,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_EXTENSION,
   VOXEL_MAP_KIND,
-  tilesetAsset,
+  blocksetAsset,
   voxelMapAssetKind,
   VoxelMapState
 } from "../../src/index.ts";
@@ -108,20 +108,20 @@ function positionDelta(
 }
 
 describe("voxelMapAssetKind", () => {
-  test("rebinds copied tileset assets without changing tileset keys", () => {
+  test("rebinds copied blockset assets without changing blockset keys", () => {
     const handler = voxelMapAssetKind();
     const state = handler.create("map");
-    state.tilesets.add({
+    state.blocksets.add({
       id: "default",
-      asset: tilesetAsset("original"),
+      asset: blocksetAsset("original"),
       tileSize: 16
     });
 
     handler.rebind?.(state, new Map([["original", "copied"]]));
 
-    assert.strictEqual(state.tilesets.defaultTilesetId, "default");
+    assert.strictEqual(state.blocksets.defaultBlocksetId, "default");
     assert.deepEqual(handler.dependencies?.(state), [
-      tilesetAsset("copied")
+      blocksetAsset("copied")
     ]);
   });
 
@@ -158,9 +158,9 @@ describe("voxelMapAssetKind", () => {
       position: { x: 1, y: 2, z: 3 },
       blockId: 7
     });
-    source.tilesets.add({
+    source.blocksets.add({
       id: "default",
-      src: "textures/tileset.png",
+      src: "textures/blockset.png",
       tileSize: 32
     });
 
@@ -177,19 +177,19 @@ describe("voxelMapAssetKind", () => {
     );
   });
 
-  test("keeps the tileset list a document arrived with", () => {
+  test("keeps the blockset list a document arrived with", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = new VoxelMapState(16);
-    source.tilesets.add({
+    source.blocksets.add({
       id: "default",
-      src: "textures/tileset.png",
+      src: "textures/blockset.png",
       tileSize: 32
     });
 
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, documentEvent(source));
 
-    assert.deepEqual(state.toJSON().tilesets, source.tilesets.definitions());
+    assert.deepEqual(state.toJSON().blocksets, source.blocksets.definitions());
   });
 
   test("a domain command mutates the folded world", () => {
@@ -265,7 +265,7 @@ describe("voxelMapAssetKind", () => {
     }));
 
     assert.deepEqual(state.world.getLayers(), []);
-    assert.strictEqual(state.tilesets.size, 0);
+    assert.strictEqual(state.blocksets.size, 0);
   });
 
   test("a malformed document throws before touching the world", () => {
@@ -288,12 +288,12 @@ describe("voxelMapAssetKind", () => {
     );
   });
 
-  test("a tileset link naming neither a source nor an asset is rejected", () => {
+  test("a blockset link naming neither a source nor an asset is rejected", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const content = new TextEncoder().encode(JSON.stringify({
       version: VOXEL_WORLD_VERSION,
       chunkSize: 16,
-      tilesets: [{ id: "terrain" }],
+      blocksets: [{ id: "terrain" }],
       layers: []
     }));
 
@@ -301,7 +301,7 @@ describe("voxelMapAssetKind", () => {
       () => handler.load(handler.create("asset-1"), content),
       {
         name: "InvalidAssetDocumentError",
-        message: /\/tilesets\/0/
+        message: /\/blocksets\/0/
       }
     );
   });
@@ -481,7 +481,7 @@ describe("voxelMapAssetKind", () => {
     );
   });
 
-  test("a tileset link the server folded at another slot broadcasts a snapshot", () => {
+  test("a blockset link the server folded at another slot broadcasts a snapshot", () => {
     const { protocol, state } = live();
     const header = {
       seq: 1,
@@ -490,14 +490,14 @@ describe("voxelMapAssetKind", () => {
     const first: VoxelMapNetworkCommand = {
       ...header,
       clientId: "alice",
-      action: "tileset-added",
-      tileset: { id: "grass", slot: 0, asset: tilesetAsset("asset-grass") }
+      action: "blockset-added",
+      blockset: { id: "grass", slot: 0, asset: blocksetAsset("asset-grass") }
     };
     const second: VoxelMapNetworkCommand = {
       ...header,
       clientId: "bob",
-      action: "tileset-added",
-      tileset: { id: "stone", slot: 0, asset: tilesetAsset("asset-stone") }
+      action: "blockset-added",
+      blockset: { id: "stone", slot: 0, asset: blocksetAsset("asset-stone") }
     };
     state.applyCommand(first);
     state.applyCommand(second);
@@ -529,33 +529,33 @@ describe("voxelMapAssetKind", () => {
   });
 });
 
-describe("voxelMapAssetKind — tilesets", () => {
+describe("voxelMapAssetKind — blocksets", () => {
   const kHeader = {
     clientId: "client-A",
     seq: 1,
     timestamp: 1000
   };
 
-  test("a linked tileset receives a slot and survives serialization", async() => {
+  test("a linked blockset receives a slot and survives serialization", async() => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const state = handler.create("asset-1");
 
     foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, {
       ...kHeader,
-      action: "tileset-added",
-      tileset: {
+      action: "blockset-added",
+      blockset: {
         id: "stone",
-        asset: tilesetAsset("asset-stone")
+        asset: blocksetAsset("asset-stone")
       }
     }));
 
     const document = decodeVoxelWorld(await handler.serialize(state));
 
-    assert.deepEqual(document.tilesets, [
-      { id: "stone", slot: 0, asset: tilesetAsset("asset-stone") }
+    assert.deepEqual(document.blocksets, [
+      { id: "stone", slot: 0, asset: blocksetAsset("asset-stone") }
     ]);
     assert.deepEqual(handler.dependencies?.(state), [
-      tilesetAsset("asset-stone")
+      blocksetAsset("asset-stone")
     ]);
   });
 
@@ -586,31 +586,31 @@ describe("ASSET_KINDS", () => {
 
     assert.deepEqual(
       handlers.map((handler) => handler.kind),
-      [TILESET_KIND, VOXEL_MAP_KIND]
+      [BLOCKSET_KIND, VOXEL_MAP_KIND]
     );
     assert.deepEqual(
       ASSET_KINDS.descriptors.map((descriptor) => descriptor.kind),
-      [TILESET_KIND, VOXEL_MAP_KIND]
+      [BLOCKSET_KIND, VOXEL_MAP_KIND]
     );
   });
 
   test("passes the options of each kind to its handler", () => {
-    const tileset = {
+    const blockset = {
       delay: 10
     };
     const voxelmap = {
       delay: 20
     };
-    const [tilesetHandler, voxelMapHandler] = ASSET_KINDS.handlers({
-      tileset: {
-        snapshot: tileset
+    const [blocksetHandler, voxelMapHandler] = ASSET_KINDS.handlers({
+      blockset: {
+        snapshot: blockset
       },
       voxelmap: {
         snapshot: voxelmap
       }
     });
 
-    assert.strictEqual(tilesetHandler.snapshot, tileset);
+    assert.strictEqual(blocksetHandler.snapshot, blockset);
     assert.strictEqual(voxelMapHandler.snapshot, voxelmap);
   });
 
@@ -618,7 +618,7 @@ describe("ASSET_KINDS", () => {
     const parser = new SchemaParser(ASSET_KINDS.optionsSchema);
 
     assert.ok(parser.parse({
-      tileset: {
+      blockset: {
         tileSize: 16,
         defaultSize: {
           x: 128,
@@ -636,8 +636,8 @@ describe("ASSET_KINDS", () => {
       }
     }).ok);
     for (const options of [
-      { tileset: { tileSize: 0 } },
-      { tileset: { defaultSize: { x: 128 } } },
+      { blockset: { tileSize: 0 } },
+      { blockset: { defaultSize: { x: 128 } } },
       { voxelmap: { chunkSize: 1.5 } },
       { voxelmap: { layer: "Ground" } },
       { chunkSize: 8 }

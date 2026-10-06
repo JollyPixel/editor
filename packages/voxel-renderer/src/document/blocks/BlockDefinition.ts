@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import { resolveTileRef } from "../tilesets/tileRef.ts";
+import { resolveTileRef } from "../blocksets/tileRef.ts";
 import type {
   ResolvedTileRef,
   TileRef
-} from "../tilesets/types.ts";
+} from "../blocksets/types.ts";
 import {
   slotKeyOf,
   type TextureSlotKey
@@ -47,9 +47,9 @@ export interface BlockDefinition extends BlockSurfaceOptions {
    */
   blendGroup?: string;
   /**
-   * Tileset used by tile references that omit one; dropped once resolved.
+   * Blockset used by tile references that omit one; dropped once resolved.
    */
-  defaultTilesetId?: string;
+  defaultBlocksetId?: string;
   properties?: BlockProperties;
 }
 
@@ -59,7 +59,7 @@ export type ResolvedBlockDefinition =
     | "faceTextures"
     | "defaultTexture"
     | "collidable"
-    | "defaultTilesetId"
+    | "defaultBlocksetId"
     | "properties"
   >
   & {
@@ -113,7 +113,7 @@ export function resolveBlockDefinition(
     faceTextures = {},
     defaultTexture,
     collidable = true,
-    defaultTilesetId,
+    defaultBlocksetId,
     properties,
     ...rest
   } = def;
@@ -130,7 +130,7 @@ export function resolveBlockDefinition(
     if (ref) {
       resolved.faceTextures[slotKeyOf(key)] = resolveTileRef(
         ref,
-        defaultTilesetId
+        defaultBlocksetId
       );
     }
   }
@@ -138,7 +138,7 @@ export function resolveBlockDefinition(
   if (defaultTexture) {
     resolved.defaultTexture = resolveTileRef(
       defaultTexture,
-      defaultTilesetId
+      defaultBlocksetId
     );
   }
 

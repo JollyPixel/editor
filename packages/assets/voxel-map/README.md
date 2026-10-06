@@ -3,12 +3,12 @@
 </h1>
 
 <p align="center">
-  Voxel-map and tileset assets
+  Voxel-map and blockset assets
 </p>
 
 ## 💃 Getting Started
 
-This workspace-private package stores `.voxelmap.json` worlds and the `.tileset.json` tilesets they link. Add `"@jolly-pixel/asset.voxel-map": "workspace:*"` to another workspace's dependencies.
+This workspace-private package stores `.voxelmap.json` worlds and the `.blockset.json` blocksets they link. Add `"@jolly-pixel/asset.voxel-map": "workspace:*"` to another workspace's dependencies.
 
 ## 👀 Usage example
 
@@ -16,7 +16,7 @@ This workspace-private package stores `.voxelmap.json` worlds and the `.tileset.
 
 ```ts
 import {
-  tilesetAssetKind,
+  blocksetAssetKind,
   voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
 import { createAssetBackend } from "@jolly-pixel/asset-server";
@@ -29,13 +29,13 @@ using eventStore = await EventStore.persistence.sqlite(
 await createAssetBackend({
   source: new FilesystemAssetSource("./assets"),
   eventStore,
-  handlers: [tilesetAssetKind(), voxelMapAssetKind()]
+  handlers: [blocksetAssetKind(), voxelMapAssetKind()]
 });
 ```
 
-A tileset owns its pixels and their normal map settings, tile size, block definitions and material groups. A world links tilesets by asset reference and stores only its layers; every linked tileset is a catalog dependency of the world. The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The map handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy on either kind. `tilesetAssetKind({ tileSize, defaultSize })` sets what a tileset created without content holds: 32-pixel tiles on an 8 by 8 tile grid by default. A map created without content comes with a tileset of the same name beside it, created without content and linked as its `default` tileset. A deleted tileset keeps its pixel and tile sizes and loses its pixels, normal map settings, blocks and material groups.
+A blockset owns its pixels and their normal map settings, tile size, block definitions and material groups. A world links blocksets by asset reference and stores only its layers; every linked blockset is a catalog dependency of the world. The default `chunkSize` is 16. A map saved with another chunk size still loads, and is saved back with the handler's. The map handler waits 5 seconds after edits before writing a snapshot, with a 60-second maximum delay while edits continue. Pass `snapshot` to change this policy on either kind. `blocksetAssetKind({ tileSize, defaultSize })` sets what a blockset created without content holds: 32-pixel tiles on an 8 by 8 tile grid by default. A map created without content comes with a blockset of the same name beside it, created without content and linked as its `default` blockset. A deleted blockset keeps its pixel and tile sizes and loses its pixels, normal map settings, blocks and material groups.
 
-### Connect a world and its tilesets
+### Connect a world and its blocksets
 
 Construct the sync clients before joining the rooms. `document` is a `VoxelDocument`; draw it with a `VoxelView` when the editor also needs rendering.
 
@@ -44,8 +44,8 @@ import { assetRoomName } from "@jolly-pixel/asset";
 import { Client } from "@jolly-pixel/network/client";
 import { VoxelDocument } from "@jolly-pixel/voxel.renderer";
 import {
-  SyncedTileset,
-  TILESET_KIND,
+  SyncedBlockset,
+  BLOCKSET_KIND,
   VoxelSyncClient,
   type VoxelMapRoom
 } from "@jolly-pixel/asset.voxel-map/client";
@@ -56,27 +56,27 @@ const room: VoxelMapRoom = client.room(assetRoomName("voxelmap", assetId));
 const sync = new VoxelSyncClient({ room, document });
 room.join();
 
-const tileset = new SyncedTileset(
-  client.room(assetRoomName(TILESET_KIND, tilesetAssetId))
+const blockset = new SyncedBlockset(
+  client.room(assetRoomName(BLOCKSET_KIND, blocksetAssetId))
 );
-tileset.ready.then(() => {
-  // tileset.pixels is a PixelDocument, tileset.tileset a TilesetDocument
+blockset.ready.then(() => {
+  // blockset.pixels is a PixelDocument, blockset.blockset a BlocksetDocument
 });
 
-// On teardown: sync.destroy(); tileset.dispose(); room.leave(); client.destroy();
+// On teardown: sync.destroy(); blockset.dispose(); room.leave(); client.destroy();
 ```
 
-The first snapshot loads each document. Local world commands go to the map room; local pixel edits and block, material group and tile size commands go to the tileset room. Accepted remote commands are applied with a remote origin. `sync.replaceWorld(document.save())` sends a full replacement and produces a new snapshot.
+The first snapshot loads each document. Local world commands go to the map room; local pixel edits and block, material group and tile size commands go to the blockset room. Accepted remote commands are applied with a remote origin. `sync.replaceWorld(document.save())` sends a full replacement and produces a new snapshot.
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `tilesetAssetKind`, `TilesetState`, `tilesetAsset`, the `VOXEL_MAP_ASSET` and `TILESET_ASSET` descriptors, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ tileset?, voxelmap? }` options), and the kind and event constants of both kinds for server registration and persistence.
-- `createTilesetDocument({ tileSize?, size?, pixels?, blocks?, materialGroups? })` builds a `TilesetAssetDocument`; `tilesetDocumentFromPng(png, { tileSize?, blockLimit? })` wraps an image with one cube block per tile, up to `blockLimit` (32). `encodeTilesetDocument`, `decodeTilesetDocument` and `parseTilesetDocument` are its codec; a malformed document throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server`. The decoders are only exported from the package root.
-- `createVoxelMapDocument({ chunkSize, tilesets?, layer? })` encodes a map linking the given tilesets, each in the first free slot, with one `layer` (`"Ground"`). Loading a map checks it against `voxelWorldSchema`, tileset links included, before the renderer parses it; a malformed map throws `InvalidAssetDocumentError`.
-- `@jolly-pixel/asset.voxel-map/client` exports `VoxelSyncClient`, `SyncedVoxelMap`, `voxelMapDocumentKind`, `TilesetSyncClient`, `SyncedTileset`, `tilesetDocumentKind`, `tilesetRoom`, `createTilesetAsset`, the tileset document builders and encoder, wire types, and `tilesetAsset`. It also exports the [block projection](./docs/projection.md): `blockShapeUv`, `uvGeometryForSlot`, `BlockProjection` and `TilesetIslands`, which builds a tileset's normal map islands from its blocks.
-- `@jolly-pixel/asset.voxel-map/server` exports `VoxelCommandArbiter`, `TilesetCommandArbiter`, and the protocol and snapshot schemas of both rooms.
+- `@jolly-pixel/asset.voxel-map` exports `voxelMapAssetKind`, `VoxelMapState`, `blocksetAssetKind`, `BlocksetState`, `blocksetAsset`, the `VOXEL_MAP_ASSET` and `BLOCKSET_ASSET` descriptors, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ blockset?, voxelmap? }` options), and the kind and event constants of both kinds for server registration and persistence.
+- `createBlocksetDocument({ tileSize?, size?, pixels?, blocks?, materialGroups? })` builds a `BlocksetAssetDocument`; `blocksetDocumentFromPng(png, { tileSize?, blockLimit? })` wraps an image with one cube block per tile, up to `blockLimit` (32). `encodeBlocksetDocument`, `decodeBlocksetDocument` and `parseBlocksetDocument` are its codec; a malformed document throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server`. The decoders are only exported from the package root.
+- `createVoxelMapDocument({ chunkSize, blocksets?, layer? })` encodes a map linking the given blocksets, each in the first free slot, with one `layer` (`"Ground"`). Loading a map checks it against `voxelWorldSchema`, blockset links included, before the renderer parses it; a malformed map throws `InvalidAssetDocumentError`.
+- `@jolly-pixel/asset.voxel-map/client` exports `VoxelSyncClient`, `SyncedVoxelMap`, `voxelMapDocumentKind`, `BlocksetSyncClient`, `SyncedBlockset`, `blocksetDocumentKind`, `blocksetRoom`, `createBlocksetAsset`, the blockset document builders and encoder, wire types, and `blocksetAsset`. It also exports the [block projection](./docs/projection.md): `blockShapeUv`, `uvGeometryForSlot`, `BlockProjection` and `BlocksetIslands`, which builds a blockset's normal map islands from its blocks.
+- `@jolly-pixel/asset.voxel-map/server` exports `VoxelCommandArbiter`, `BlocksetCommandArbiter`, and the protocol and snapshot schemas of both rooms.
 
-The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The world and tileset document formats and voxel commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
+The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command and lifecycle details and [architecture](./ARCHITECTURE.md) for state ownership and conflict keys. The world and blockset document formats and voxel commands are documented by [voxel.renderer](../../voxel-renderer/docs/api/core/commands.md).
 
 ## ✨ Contributors guide
 

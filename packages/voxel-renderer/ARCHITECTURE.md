@@ -1,7 +1,7 @@
 # Voxel renderer architecture
 
 The package has two layers. `src/document` is the headless `VoxelDocument`:
-world, blocks, tilesets, materials, history, commands and serialization. It
+world, blocks, blocksets, materials, history, commands and serialization. It
 never imports the view, which a lint rule enforces. `src/view` is the Three.js
 `VoxelView` that observes a document and owns the meshes, materials, atlases,
 workers and optional collision adapter needed to draw it. `plugins/engine`
@@ -16,11 +16,11 @@ flowchart TB
     View -. "observes" .-> Document
 
     Document --> World["VoxelWorld<br/>layers, chunks, packed voxels"]
-    Document --> Definitions["BlockRegistry, MaterialGroupList, TilesetList<br/>block, finish and tileset declarations"]
+    Document --> Definitions["BlockRegistry, MaterialGroupList, BlocksetList<br/>block, finish and blockset declarations"]
     Document --> History["VoxelHistory<br/>optional undo / redo"]
 
     View --> Pipeline["ChunkPipeline<br/>dirty scan, queue, visibility, workers"]
-    View --> Atlases["TilesetAtlases + ChunkMaterialCache<br/>textures and materials"]
+    View --> Atlases["BlocksetAtlases + ChunkMaterialCache<br/>textures and materials"]
     Pipeline --> Builder["VoxelMeshBuilder<br/>vertex-pulled chunk geometry"]
     Pipeline --> Store["ChunkMeshStore<br/>Three.js meshes"]
     Store --> Root["THREE.Group<br/>VoxelView.root"]
@@ -30,7 +30,7 @@ flowchart TB
 | Folder | Holds |
 |---|---|
 | `document/world` | `VoxelWorld`, `VoxelLayer`, chunk `storage/`, the `editing/` write path, object layers, `templates/` |
-| `document/blocks`, `tilesets`, `materials` | Definitions, tileset links and documents, projection between tileset and world ids |
+| `document/blocks`, `blocksets`, `materials` | Definitions, blockset links and documents, projection between blockset and world ids |
 | `document/commands`, `serialization` | Command types and appliers, the `VoxelWorldJSON` codec |
 | `document/geometry` | Face directions, `VoxelTransform`, rotations, voxel picking helpers |
 | `view/chunks` | `ChunkPipeline`, mesh targets, rebuild queue, viewport, visibility, mesh store |
@@ -51,7 +51,7 @@ flowchart TB
 
 Every aggregate applies its own commands and returns them as applied:
 `VoxelWorld` (layers, voxels, object layers, templates), `BlockRegistry`,
-`MaterialGroupList` and `TilesetList`. `VoxelDocument` and `TilesetDocument`
+`MaterialGroupList` and `BlocksetList`. `VoxelDocument` and `BlocksetDocument`
 share `BlockDocument`, which emits an applied command once with its origin.
 A local world edit is emitted as `"local"`; `apply()` replays a peer command
 without the world re-emitting it.
@@ -79,14 +79,14 @@ sequenceDiagram
 
 Voxel writes dirty the affected chunk and boundary neighbours across layers,
 because an edit can expose or cover their faces. A block definition dirties the
-chunks holding the block, and their neighbours when culling can change. Tileset
+chunks holding the block, and their neighbours when culling can change. Blockset
 changes invalidate all chunks. `flush()` drains the queue at once; `init()` and
 a document load mark the whole world dirty and flush it unless mesh workers are
 running.
 
 Face templates hold tile-local UVs and the id of a row in `FaceRegionTable`,
 one row per block texture slot; the vertex shader reads the slot's atlas rect
-from that row. A definition that only moves tiles (same shape, tilesets,
+from that row. A definition that only moves tiles (same shape, blocksets,
 rotations and surface, no blend group) dirties nothing: `apply()` reports it
 as `"tiles"` in the command context's `redefinition` and the view rewrites the
 block's rows. A `"metadata"` redefinition dirties nothing. Blend palettes still
@@ -121,7 +121,7 @@ flowchart TB
     Plugin --> View
 ```
 
-`save()` serializes the world's layers, object layers, templates and tileset
+`save()` serializes the world's layers, object layers, templates and blockset
 links.
 The snapshot stores each layer as a palette plus run-length encoded chunks
 (see [serialization](./docs/api/serialization/serialization.md)). Saving
@@ -129,7 +129,7 @@ captures chunks as sorted cells and packed voxels, and loading writes them back
 chunk by chunk when the chunk sizes match.
 `load()` validates the snapshot, replaces document state, clears history, and
 emits `loaded`; the view then clears old meshes, syncs atlases, and rebuilds.
-`view.load()` registers the textures of the snapshot's tilesets before the
+`view.load()` registers the textures of the snapshot's blocksets before the
 document loads it.
 
 `plugins/engine/VoxelRenderer` attaches `view.root` to an actor, samples an

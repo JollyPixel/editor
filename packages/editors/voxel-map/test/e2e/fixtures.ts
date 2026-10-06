@@ -4,25 +4,25 @@ import {
   editorFixture
 } from "@jolly-pixel/e2e/editor";
 import {
-  createTilesetDocument,
+  createBlocksetDocument,
   createVoxelMapDocument,
-  encodeTilesetDocument,
-  TILESET_KIND,
+  encodeBlocksetDocument,
+  BLOCKSET_KIND,
   VOXEL_MAP_KIND,
-  tilesetAsset,
-  type TilesetAssetDocument
+  blocksetAsset,
+  type BlocksetAssetDocument
 } from "@jolly-pixel/asset.voxel-map";
 import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  blocksFromTileset,
+  blocksFromTileGrid,
   DEFAULT_CHUNK_SIZE,
   DEFAULT_TILE_SIZE
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  DEFAULT_TILESET_ID,
-  DEFAULT_TILESET_SIZE
+  DEFAULT_BLOCKSET_ID,
+  DEFAULT_BLOCKSET_SIZE
 } from "../../src/boot/defaultSeed.ts";
 
 // CONSTANTS
@@ -32,19 +32,19 @@ export { expect } from "@playwright/test";
 
 export interface E2EWorld {
   id: string;
-  tilesetId: string;
+  blocksetId: string;
 }
 
-function createOpaqueTileset(): TilesetAssetDocument {
-  const { x, y } = DEFAULT_TILESET_SIZE;
+function createOpaqueBlockset(): BlocksetAssetDocument {
+  const { x, y } = DEFAULT_BLOCKSET_SIZE;
 
-  return createTilesetDocument({
+  return createBlocksetDocument({
     tileSize: DEFAULT_TILE_SIZE,
     pixels: createPixelArtDocument(
-      DEFAULT_TILESET_SIZE,
+      DEFAULT_BLOCKSET_SIZE,
       new Uint8Array(x * y * 4).fill(255)
     ),
-    blocks: blocksFromTileset(
+    blocks: blocksFromTileGrid(
       {
         cols: x / DEFAULT_TILE_SIZE,
         rows: y / DEFAULT_TILE_SIZE
@@ -64,19 +64,19 @@ export const test = editorFixture<E2EWorld>({
   },
   async create(catalog) {
     const folder = e2eFolder();
-    const tilesetId = await catalog.create(
-      `${folder}/tileset.tileset.json`,
-      encodeTilesetDocument(createOpaqueTileset()),
-      { kind: TILESET_KIND }
+    const blocksetId = await catalog.create(
+      `${folder}/blockset.blockset.json`,
+      encodeBlocksetDocument(createOpaqueBlockset()),
+      { kind: BLOCKSET_KIND }
     );
     const id = await catalog.create(
       `${folder}/world.voxelmap.json`,
       createVoxelMapDocument({
         chunkSize: DEFAULT_CHUNK_SIZE,
-        tilesets: [
+        blocksets: [
           {
-            id: DEFAULT_TILESET_ID,
-            asset: tilesetAsset(tilesetId)
+            id: DEFAULT_BLOCKSET_ID,
+            asset: blocksetAsset(blocksetId)
           }
         ]
       }),
@@ -85,7 +85,7 @@ export const test = editorFixture<E2EWorld>({
 
     return {
       id,
-      tilesetId
+      blocksetId
     };
   }
 });

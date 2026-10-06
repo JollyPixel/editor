@@ -53,7 +53,7 @@ definition with the one it replaced:
 | `"added"` | No block had this id. |
 | `"metadata"` | Only `name` or `properties` changed, or nothing did. |
 | `"tiles"` | Tile `col`, `row` or `size` moved; `name` and `properties` may have changed too. |
-| `"mesh"` | Another field that shapes the block's faces changed, such as a tile's tileset or rotation. |
+| `"mesh"` | Another field that shapes the block's faces changed, such as a tile's blockset or rotation. |
 | `"occlusion"` | `shapeId`, `alphaMode`, face culling or `blendGroup` changed, so neighbouring faces may change too. |
 
 ## Categories
@@ -63,7 +63,7 @@ type VoxelCommand =
   | VoxelLayerCommand
   | VoxelTemplateCommand
   | VoxelBlockCommand
-  | VoxelTilesetCommand
+  | VoxelBlocksetCommand
   | VoxelMaterialGroupCommand
   | VoxelBlendGroupCommand;
 ```
@@ -73,7 +73,7 @@ type VoxelCommand =
 | [Layer](#layer-commands) | `isVoxelLayerCommand()` | `VOXEL_LAYER_COMMAND_ACTIONS` |
 | [Template](#template-commands) | `isVoxelTemplateCommand()` | `VOXEL_TEMPLATE_COMMAND_ACTIONS` |
 | [Block](#block-commands) | `isVoxelBlockCommand()` | `VOXEL_BLOCK_COMMAND_ACTIONS` |
-| [Tileset](#tileset-commands) | `isVoxelTilesetCommand()` | `VOXEL_TILESET_COMMAND_ACTIONS` |
+| [Blockset](#blockset-commands) | `isVoxelBlocksetCommand()` | `VOXEL_BLOCKSET_COMMAND_ACTIONS` |
 | [Material group](#material-group-commands) | `isVoxelMaterialGroupCommand()` | `VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS` |
 | [Blend group](#blend-group-commands) | `isVoxelBlendGroupCommand()` | `VOXEL_BLEND_GROUP_COMMAND_ACTIONS` |
 | All | | `VOXEL_COMMAND_ACTIONS` |
@@ -85,24 +85,24 @@ and `"position-rebased"`, the commands that change a layer's bounds. Each guard
 accepts any `{ action: string }`. `VoxelCommandAction` and the per-category
 `*CommandAction` types are the matching unions.
 
-## World and tileset document commands
+## World and blockset document commands
 
 The same commands also split by owner. A world saves and shares its layers,
-templates and tileset links; blocks and groups belong to a
-[`TilesetDocument`](../tilesets/TilesetDocument.md).
+templates and blockset links; blocks and groups belong to a
+[`BlocksetDocument`](../blocksets/BlocksetDocument.md).
 
 ```ts
 type VoxelWorldContentCommand = VoxelLayerCommand | VoxelTemplateCommand;
-type VoxelWorldCommand = VoxelWorldContentCommand | VoxelTilesetCommand;
-type TilesetDocumentCommand =
+type VoxelWorldCommand = VoxelWorldContentCommand | VoxelBlocksetCommand;
+type BlocksetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
   | VoxelBlendGroupCommand
   | { action: "tile-size-updated"; tileSize: number; };
 ```
 
-`isVoxelWorldCommand()` and `isTilesetDocumentCommand()` narrow to either side;
-`VOXEL_WORLD_COMMAND_ACTIONS` and `TILESET_DOCUMENT_COMMAND_ACTIONS` list them.
+`isVoxelWorldCommand()` and `isBlocksetDocumentCommand()` narrow to either side;
+`VOXEL_WORLD_COMMAND_ACTIONS` and `BLOCKSET_DOCUMENT_COMMAND_ACTIONS` list them.
 A sync adapter sends the world side of a document's stream to the world's room.
 
 ## Applying commands
@@ -122,7 +122,7 @@ function applyVoxelWorldCommand(
 
 interface VoxelWorldCommandTarget {
   readonly world: VoxelWorld;
-  readonly tilesets: TilesetList;
+  readonly blocksets: BlocksetList;
 }
 
 interface VoxelCommandTarget extends VoxelWorldCommandTarget {
@@ -206,22 +206,22 @@ type VoxelBlockCommand =
   | { action: "block-moved"; blockId: number; toIndex: number; };
 ```
 
-- `"block-defined"` carries the resolved definition, default tileset filled in.
+- `"block-defined"` carries the resolved definition, default blockset filled in.
 - `"block-removed"` is emitted only for a registered ID.
 - `"block-moved"` carries the clamped index the block landed on.
 
 Direct `document.blocks` calls emit nothing.
 
-## Tileset commands
+## Blockset commands
 
 ```ts
-type VoxelTilesetCommand =
-  | { action: "tileset-added"; tileset: TilesetDefinition; }
-  | { action: "tileset-removed"; tilesetId: string; };
+type VoxelBlocksetCommand =
+  | { action: "blockset-added"; blockset: BlocksetDefinition; }
+  | { action: "blockset-removed"; blocksetId: string; };
 ```
 
-`"tileset-added"` carries the [slot](../tilesets/tilesets.md) the tileset
-received. `view.load()`, `view.loadTileset()` and direct `document.tilesets`
+`"blockset-added"` carries the [slot](../blocksets/blocksets.md) the blockset
+received. `view.load()`, `view.loadBlockset()` and direct `document.blocksets`
 mutations emit nothing.
 
 ## Material group commands

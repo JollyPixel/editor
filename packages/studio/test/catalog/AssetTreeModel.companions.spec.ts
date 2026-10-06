@@ -39,7 +39,7 @@ describe("AssetTreeModel companions", () => {
     assert.deepEqual(shape(companionModelOf().nodes), [
       ["maps", [
         "cave.voxelmap.json",
-        ["overworld.voxelmap.json", ["overworld.tileset.json"]]
+        ["overworld.voxelmap.json", ["overworld.blockset.json"]]
       ]],
       ["models", [
         "hero.bin",
@@ -69,9 +69,9 @@ describe("AssetTreeModel companions", () => {
         source: "maps/overworld.voxelmap.json"
       },
       {
-        id: "tileset-overworld",
-        kind: "tileset",
-        source: "tilesets/overworld.tileset.json"
+        id: "blockset-overworld",
+        kind: "blockset",
+        source: "blocksets/overworld.blockset.json"
       }
     ]);
 
@@ -89,7 +89,7 @@ describe("AssetTreeModel companions", () => {
     ];
     const model = companionModelOf(records, {
       ...COMPANION_EDGES,
-      "model-overworld": ["tileset-overworld"]
+      "model-overworld": ["blockset-overworld"]
     });
 
     assert.deepEqual(nestedUnder(model, "map-overworld"), []);
@@ -98,22 +98,22 @@ describe("AssetTreeModel companions", () => {
 
   test("nests nothing for assets referencing each other", () => {
     const model = companionModelOf(COMPANION_RECORDS, {
-      "map-overworld": ["tileset-overworld"],
-      "tileset-overworld": ["map-overworld"]
+      "map-overworld": ["blockset-overworld"],
+      "blockset-overworld": ["map-overworld"]
     });
 
     assert.deepEqual(nestedUnder(model, "map-overworld"), []);
-    assert.deepEqual(nestedUnder(model, "tileset-overworld"), []);
+    assert.deepEqual(nestedUnder(model, "blockset-overworld"), []);
   });
 
   test("shows a companion in its folder when the kind filter hides its owner", () => {
     const model = new AssetTreeModel(COMPANION_RECORDS, {
-      kind: "tileset",
+      kind: "blockset",
       dependencies: dependenciesOf(COMPANION_EDGES)
     });
 
     assert.deepEqual(shape(model.nodes), [
-      ["maps", ["overworld.tileset.json"]],
+      ["maps", ["overworld.blockset.json"]],
       ["models", []]
     ]);
   });
@@ -139,8 +139,8 @@ describe("AssetTreeModel companions", () => {
           to: "maps/island.voxelmap.json"
         },
         {
-          assetId: "tileset-overworld",
-          to: "maps/island.tileset.json"
+          assetId: "blockset-overworld",
+          to: "maps/island.blockset.json"
         }
       ]
     );
@@ -183,16 +183,16 @@ describe("AssetTreeModel companions", () => {
     const model = companionModelOf([
       ...COMPANION_RECORDS,
       {
-        id: "tileset-island",
-        kind: "tileset",
-        source: "maps/island.tileset.json"
+        id: "blockset-island",
+        kind: "blockset",
+        source: "maps/island.blockset.json"
       }
     ]);
 
     assert.throws(
       () => model.renameOf(assetNodeId("map-overworld"), "island"),
       (error) => error instanceof AssetPathTakenError &&
-        error.path === "maps/island.tileset.json"
+        error.path === "maps/island.blockset.json"
     );
   });
 });

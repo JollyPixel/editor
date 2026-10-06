@@ -37,7 +37,7 @@ export function writeVoxelWorld(
   return {
     version: VOXEL_WORLD_VERSION,
     chunkSize: data.chunkSize,
-    tilesets: data.tilesets,
+    blocksets: data.blocksets,
     layers: data.layers.map(
       (layer) => writeVoxelLayer(layer, data.chunkSize)
     ),

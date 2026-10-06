@@ -25,7 +25,7 @@ import { EditorState } from "../state/index.ts";
 import { EditorScene } from "./EditorScene.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
-import { TILESET_DOCUMENT_KIND } from "../features/tilesets/TilesetBinding.ts";
+import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
 import { mountInspectorControls } from "./inspectorControls.ts";
 import { brushConsole } from "../features/painting/brushConsole.ts";
 
@@ -56,7 +56,7 @@ export class VoxelMapEditor {
   static readonly identity = {
     title: "Join voxel map"
   };
-  static readonly kinds = [kMapKind, TILESET_DOCUMENT_KIND];
+  static readonly kinds = [kMapKind, BLOCKSET_DOCUMENT_KIND];
 
   static createRuntime(
     logger: HostLogger
@@ -98,7 +98,7 @@ export class VoxelMapEditor {
         assets: session.assets,
         archives: session.archives({
           fallbackName: "map",
-          resetWarning: "Every map and tileset stored in this browser is " +
+          resetWarning: "Every map and blockset stored in this browser is " +
             "deleted. Export what you want to keep first."
         })
       },

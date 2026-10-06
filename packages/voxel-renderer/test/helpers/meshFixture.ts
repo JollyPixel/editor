@@ -16,7 +16,7 @@ import {
   type BlendGroupJSON
 } from "../../src/document/materials/index.ts";
 import { BlockShapeRegistry } from "../../src/document/blocks/shape/index.ts";
-import { TilesetAtlases } from "../../src/view/atlases/index.ts";
+import { BlocksetAtlases } from "../../src/view/atlases/index.ts";
 import {
   VoxelMeshBuilder,
   type ChunkGeometryKey,
@@ -41,7 +41,7 @@ export interface MeshFixture {
   layer: VoxelLayer;
   builder: VoxelMeshBuilder;
   blockRegistry: BlockRegistry;
-  atlases: TilesetAtlases;
+  atlases: BlocksetAtlases;
 }
 
 export interface MeshFixtureOptions {
@@ -71,7 +71,7 @@ export function makeMeshFixture(
     ...blocks
   ]);
 
-  const atlases = new TilesetAtlases();
+  const atlases = new BlocksetAtlases();
   registerAtlas(atlases);
 
   const builder = new VoxelMeshBuilder({

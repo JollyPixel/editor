@@ -28,11 +28,11 @@ import { projectManifestPlugin } from "./vite/projectManifestPlugin.ts";
 import { createStudioSeed } from "./src/seed.ts";
 
 // CONSTANTS
-const kTilesetFile = path.join(
+const kBlocksetFile = path.join(
   import.meta.dirname,
   "public",
   "textures",
-  "tileset.png"
+  "blockset.png"
 );
 const kRoomGraceMs = 5 * 60_000;
 
@@ -47,7 +47,7 @@ async function assetWorkspacePlugin(
       eventStore: EventStore.persistence.memory()
     } : {}),
     handlers: project.kinds.handlers(),
-    seed: await createStudioSeed(await fs.readFile(kTilesetFile)),
+    seed: await createStudioSeed(await fs.readFile(kBlocksetFile)),
     roomGraceMs: kRoomGraceMs
   });
 }

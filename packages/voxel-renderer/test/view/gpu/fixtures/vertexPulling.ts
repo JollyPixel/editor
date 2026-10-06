@@ -156,14 +156,14 @@ export async function renderParityScene(
         name: shapeId,
         shapeId,
         defaultTexture: {
-          tilesetId: "atlas",
+          blocksetId: "atlas",
           col: index % 4,
           row: Math.floor(index / 4)
         }
       };
     })
   });
-  view.loadTileset(
+  view.loadBlockset(
     { id: "atlas", src: "", tileSize: 2 },
     new THREE.Texture(await atlasImage())
   );

@@ -13,10 +13,10 @@ import { decodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  decodeTilesetDocument,
-  TILESET_KIND,
-  tilesetAsset,
-  tilesetAssetKind,
+  decodeBlocksetDocument,
+  BLOCKSET_KIND,
+  blocksetAsset,
+  blocksetAssetKind,
   VOXEL_MAP_KIND,
   voxelMapAssetKind,
   VoxelMapState
@@ -27,13 +27,13 @@ const kActor: EventStore.Actor = {
   type: "user",
   id: "alice"
 };
-const kTilesetSize = {
+const kBlocksetSize = {
   x: 64,
   y: 32
 };
 
 describe("voxel map created without content", () => {
-  test("comes with a same-named tileset it links", async() => {
+  test("comes with a same-named blockset it links", async() => {
     using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
     await using backend = await createAssetBackend({
@@ -41,7 +41,7 @@ describe("voxel map created without content", () => {
       eventStore,
       handlers: [
         voxelMapAssetKind(),
-        tilesetAssetKind({ defaultSize: kTilesetSize })
+        blocksetAssetKind({ defaultSize: kBlocksetSize })
       ],
       watch: false
     });
@@ -53,24 +53,24 @@ describe("voxel map created without content", () => {
     })).unwrap();
     await backend.flush();
 
-    const tileset = backend.catalog.snapshot().assets
-      .find((record) => record.source === "maps/new.tileset.json");
-    assert.strictEqual(tileset?.kind, TILESET_KIND);
+    const blockset = backend.catalog.snapshot().assets
+      .find((record) => record.source === "maps/new.blockset.json");
+    assert.strictEqual(blockset?.kind, BLOCKSET_KIND);
     assert.deepEqual(
       backend.catalog.dependencies.dependenciesOf(map.assetId),
-      [tilesetAsset(tileset.id)]
+      [blocksetAsset(blockset.id)]
     );
 
     const state = new VoxelMapState(16);
     state.load(decodeVoxelWorld(await source.read("maps/new.voxelmap.json")));
     assert.deepEqual(
-      state.tilesets.definitions().map((definition) => definition.asset),
-      [tilesetAsset(tileset.id)]
+      state.blocksets.definitions().map((definition) => definition.asset),
+      [blocksetAsset(blockset.id)]
     );
 
-    const document = decodeTilesetDocument(
-      await source.read("maps/new.tileset.json")
+    const document = decodeBlocksetDocument(
+      await source.read("maps/new.blockset.json")
     );
-    assert.deepEqual(document.pixels.size, kTilesetSize);
+    assert.deepEqual(document.pixels.size, kBlocksetSize);
   });
 });

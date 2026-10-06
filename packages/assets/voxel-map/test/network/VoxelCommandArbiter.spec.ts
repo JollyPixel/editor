@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  TilesetList,
+  BlocksetList,
   VoxelWorld,
   type VoxelWorldCommandTarget
 } from "@jolly-pixel/voxel.renderer";
@@ -36,7 +36,7 @@ function createState(): VoxelWorldCommandTarget {
 
   return {
     world,
-    tilesets: new TilesetList()
+    blocksets: new BlocksetList()
   };
 }
 
@@ -577,18 +577,18 @@ describe("VoxelCommandArbiter — template commands", () => {
   });
 });
 
-describe("VoxelCommandArbiter — tileset commands", () => {
-  test("keys a tileset command by its tileset id", () => {
+describe("VoxelCommandArbiter — blockset commands", () => {
+  test("keys a blockset command by its blockset id", () => {
     assert.strictEqual(voxelCommandKey({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", src: "asset-stone", tileSize: 16 }
-    }), "tileset:stone");
+      action: "blockset-added",
+      blockset: { id: "stone", src: "asset-stone", tileSize: 16 }
+    }), "blockset:stone");
     assert.strictEqual(voxelCommandKey({
       ...kHeader,
-      action: "tileset-removed",
-      tilesetId: "stone"
-    }), "tileset:stone");
+      action: "blockset-removed",
+      blocksetId: "stone"
+    }), "blockset:stone");
   });
 });
 

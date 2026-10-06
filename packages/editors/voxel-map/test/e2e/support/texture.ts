@@ -20,11 +20,11 @@ export function blockTileCenter(
   blockId: number
 ): Promise<TexturePoint> {
   return page.evaluate((id) => {
-    const { view, tilesets } = window.voxelMapEditor!.workspace;
+    const { view, blocksets } = window.voxelMapEditor!.workspace;
     const texture = view.document.blocks.get(id)!.defaultTexture!;
-    const tileSize = tilesets.tileSizeOf(texture.tilesetId ?? "");
+    const tileSize = blocksets.tileSizeOf(texture.blocksetId ?? "");
     if (tileSize === undefined) {
-      throw new Error(`Block ${id} has no loaded tileset.`);
+      throw new Error(`Block ${id} has no loaded blockset.`);
     }
 
     return {
@@ -34,11 +34,11 @@ export function blockTileCenter(
   }, blockId);
 }
 
-export async function createBlankTileset(
+export async function createBlankBlockset(
   page: Page,
   name: string
 ): Promise<void> {
-  const form = dialog(page, "Add tileset");
+  const form = dialog(page, "Add blockset");
   await buttonGroup(form, "Source")
     .getByRole("radio", { name: "New", exact: true })
     .click();

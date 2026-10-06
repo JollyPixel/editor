@@ -3,7 +3,7 @@ import type { FACE } from "../../geometry/faceDirection.ts";
 import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
 import { shapeSlots } from "./shapeSlots.ts";
-import type { TileSpan } from "../../tilesets/types.ts";
+import type { TileSpan } from "../../blocksets/types.ts";
 import { VoxelTransform } from "../../geometry/VoxelTransform.ts";
 import {
   mirrorsWinding,

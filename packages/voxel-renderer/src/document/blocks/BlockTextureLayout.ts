@@ -11,11 +11,11 @@ import {
   tileRectOf,
   UNIT_TILE_SPAN,
   type TileRect
-} from "../tilesets/tileRef.ts";
+} from "../blocksets/tileRef.ts";
 import type {
   ResolvedTileRef,
   TileSpan
-} from "../tilesets/types.ts";
+} from "../blocksets/types.ts";
 
 export class BlockTextureLayout {
   static of(
@@ -41,35 +41,35 @@ export class BlockTextureLayout {
     Object.freeze(this);
   }
 
-  usesTileset(
-    tilesetId: string
+  usesBlockset(
+    blocksetId: string
   ): boolean {
-    return this.slots.some(({ tile }) => tile.tilesetId === tilesetId);
+    return this.slots.some(({ tile }) => tile.blocksetId === blocksetId);
   }
 
   slotsIn(
-    tilesetId: string
+    blocksetId: string
   ): ResolvedBlockTextureSlot[] {
-    return this.slots.filter(({ tile }) => tile.tilesetId === tilesetId);
+    return this.slots.filter(({ tile }) => tile.blocksetId === blocksetId);
   }
 
   drawnRectsIn(
-    tilesetId: string,
+    blocksetId: string,
     tileSize: number
   ): TileRect[] {
-    return uniqueRects(this.slotsIn(tilesetId).map(
+    return uniqueRects(this.slotsIn(blocksetId).map(
       ({ tile, bounds, span }) => tileRectOf(tile, tileSize, bounds, span)
     ));
   }
 
   footprintsIn(
-    tilesetId: string,
+    blocksetId: string,
     tileSize: number
   ): TileRect[] {
     const spans = this.#spansByTile();
     const rects: TileRect[] = [];
     for (const ref of BlockTextures.of(this.block)) {
-      if (ref.tilesetId !== tilesetId) {
+      if (ref.blocksetId !== blocksetId) {
         continue;
       }
 

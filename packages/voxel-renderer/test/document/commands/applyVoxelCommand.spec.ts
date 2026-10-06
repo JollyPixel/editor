@@ -12,7 +12,7 @@ import {
   BlendGroupList,
   MaterialGroupList
 } from "../../../src/document/materials/index.ts";
-import { TilesetList } from "../../../src/document/tilesets/index.ts";
+import { BlocksetList } from "../../../src/document/blocksets/index.ts";
 import { VoxelWorld } from "../../../src/document/world/index.ts";
 import {
   blockDefinedCmd,
@@ -23,7 +23,7 @@ function makeTarget(): VoxelCommandTarget {
   return {
     world: new VoxelWorld(4),
     blocks: new BlockRegistry(),
-    tilesets: new TilesetList(),
+    blocksets: new BlocksetList(),
     materialGroups: new MaterialGroupList(),
     blendGroups: new BlendGroupList()
   };

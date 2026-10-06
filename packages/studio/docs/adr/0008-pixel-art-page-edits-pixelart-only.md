@@ -13,12 +13,12 @@ The page opens one texture, the target, over its synced document with presence a
 bindings. It has no runtime preview, rotation toggle or demo parameters; importing replaces the
 texture, and adding a texture as a new asset stays a dev-server playground feature.
 
-Tilesets are not pixel-art assets: the `tileset` kind holds pixels and blocks, and its pixels are
+Blocksets are not pixel-art assets: the `blockset` kind holds pixels and blocks, and its pixels are
 edited only inside voxel-map. The voxel-map Paint tab has no "open in a tab" action.
 
 ## Considered Options
 
-- **Opening tilesets in the pixel-art page.** The page would need to know blocks, or edit half an
+- **Opening blocksets in the pixel-art page.** The page would need to know blocks, or edit half an
   asset while voxel-map edits the other half.
 - **The page under `src/`.** It would join the library build and its type surface.
 

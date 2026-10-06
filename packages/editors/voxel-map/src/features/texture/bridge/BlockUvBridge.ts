@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type {
   ResolvedBlockDefinition,
-  TilesetSlot,
+  BlocksetSlot,
   VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type {
@@ -18,7 +18,7 @@ import { BlockUv } from "../uv/BlockUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import { SlotRegionIds } from "./SlotRegionIds.ts";
 import type { BlockSelection } from "../../../state/index.ts";
-import type { BlockWriter } from "../../tilesets/TilesetBinding.ts";
+import type { BlockWriter } from "../../blocksets/BlocksetBinding.ts";
 
 export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
@@ -68,8 +68,8 @@ export class BlockUvBridge {
     );
   }
 
-  setActiveTileset(
-    slot: TilesetSlot,
+  setActiveBlockset(
+    slot: BlocksetSlot,
     tileSize: number
   ): void {
     if (
@@ -95,7 +95,7 @@ export class BlockUvBridge {
     this.#selection.dispose();
   }
 
-  #blocksOnActiveTileset(): ResolvedBlockDefinition[] {
+  #blocksOnActiveBlockset(): ResolvedBlockDefinition[] {
     const slot = this.#regions?.slot;
     if (slot === undefined) {
       return [];
@@ -103,7 +103,7 @@ export class BlockUvBridge {
 
     return [...this.#view.document.blocks.getAll()].filter(
       (block) => slot.owns(block.id) &&
-        this.#uvOf(block).layout.usesTileset(slot.id)
+        this.#uvOf(block).layout.usesBlockset(slot.id)
     );
   }
 
@@ -125,7 +125,7 @@ export class BlockUvBridge {
 
   #rebuild(): void {
     const desired = new Map(
-      this.#blocksOnActiveTileset().map((block) => {
+      this.#blocksOnActiveBlockset().map((block) => {
         const region = this.#regionFor(block);
 
         return [region.id, region] as const;

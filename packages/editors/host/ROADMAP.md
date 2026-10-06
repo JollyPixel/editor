@@ -9,7 +9,7 @@ through `context.shell`. Still open:
 ### In-process editors
 
 Revisit the `EditorDefinition` contract so the shell can mount editors
-in-process, including how embedded panels (voxel-map's `TilesetTextures`,
+in-process, including how embedded panels (voxel-map's `TextureEditor`,
 voxel-model's `LeftPanel` texture panel) fit, since today they take an
 `AssetLeases` lease rather than a context.
 

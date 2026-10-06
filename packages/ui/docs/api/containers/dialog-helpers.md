@@ -45,7 +45,7 @@ Every helper takes the header options of
 
 ```ts
 const resize = await showConfirm({
-  title: "Resize tileset?",
+  title: "Resize blockset?",
   message: "Tiles outside the new grid are dropped.",
   intent: "warning"
 });

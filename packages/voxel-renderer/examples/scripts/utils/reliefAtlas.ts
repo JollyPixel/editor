@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type {
   BlockDefinition,
-  TilesetDefinition
+  BlocksetDefinition
 } from "../../../src/index.ts";
 
 // CONSTANTS
@@ -42,8 +42,8 @@ interface ReliefBlockSpec {
   col: number;
 }
 
-export interface ReliefTileset {
-  definition: TilesetDefinition;
+export interface ReliefBlockset {
+  definition: BlocksetDefinition;
   albedoSrc: string;
   normalSrc: string;
   blocks: BlockDefinition[];
@@ -83,9 +83,9 @@ const kBlocks: ReliefBlockSpec[] = [
   { id: ReliefBlock.StudPole, name: "StudPole", shapeId: "poleY", col: 3 }
 ];
 
-export function createReliefTileset(
+export function createReliefBlockset(
   id = "relief"
-): ReliefTileset {
+): ReliefBlockset {
   const width = kTiles.length * kTileSize;
   const height = kRows * kTileSize;
   const albedo = new ImageData(width, height);

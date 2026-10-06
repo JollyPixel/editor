@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 import {
   MaterialGroupList,
-  TilesetAtlases,
+  BlocksetAtlases,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
@@ -22,7 +22,7 @@ import {
 } from "../../../helpers/blockSources.ts";
 
 // CONSTANTS
-const kSources = sourcesOf(new TilesetAtlases());
+const kSources = sourcesOf(new BlocksetAtlases());
 const kPieces = kSources.createPieces();
 
 function assertFitted(

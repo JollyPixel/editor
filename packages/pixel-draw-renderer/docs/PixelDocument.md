@@ -135,7 +135,7 @@ deleteNormalMapZone(regionId: string): void;
 
 `islands` is the [island map](./normal/IslandMap.md) of the UV regions, built on first access and kept until a region is created, deleted, moved, rotated or changes state, or the texture is resized or replaced. Each of these emits `islands-changed`, and the next read rebuilds the map. `normals` reads its islands from here.
 
-`useIslandFaces` builds the islands from the given faces instead of the UV regions, for a host that places its faces itself, such as a voxel tileset. Region changes then leave the islands alone: the host calls `invalidateIslands` when its faces change, and a resize or replace still rebuilds them. The returned function goes back to the UV regions, unless another `useIslandFaces` call replaced these faces since.
+`useIslandFaces` builds the islands from the given faces instead of the UV regions, for a host that places its faces itself, such as a voxel blockset. Region changes then leave the islands alone: the host calls `invalidateIslands` when its faces change, and a resize or replace still rebuilds them. The returned function goes back to the UV regions, unless another `useIslandFaces` call replaced these faces since.
 
 Each edit records one history entry and emits one [command](./normal/NormalMapConfig.md#commands). `enableNormalMap` defaults to `NormalMapConfig.create()`. A defaults patch sends only the patched fields. Patches and zone edits are ignored while the feature is off. An invalid setting throws `InvalidNormalMapSettingsError` and records nothing.
 

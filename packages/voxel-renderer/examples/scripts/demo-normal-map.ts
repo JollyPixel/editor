@@ -19,7 +19,7 @@ import { createExamplePane } from "./utils/example-switcher.ts";
 import {
   RELIEF_GROUP,
   ReliefBlock,
-  createReliefTileset
+  createReliefBlockset
 } from "./utils/reliefAtlas.ts";
 
 // CONSTANTS
@@ -33,11 +33,11 @@ if (!canvas) {
   throw new Error("HTMLCanvasElement not found");
 }
 
-const tileset = createReliefTileset();
+const blockset = createReliefBlockset();
 const loader = new THREE.TextureLoader();
 const [albedo, normal] = await Promise.all([
-  loader.loadAsync(tileset.albedoSrc),
-  loader.loadAsync(tileset.normalSrc)
+  loader.loadAsync(blockset.albedoSrc),
+  loader.loadAsync(blockset.normalSrc)
 ]);
 
 const finish = {
@@ -48,7 +48,7 @@ const finish = {
 const voxelDocument = new VoxelDocument({
   chunkSize: 16,
   layers: [kLayer],
-  blocks: tileset.blocks,
+  blocks: blockset.blocks,
   materialGroups: [
     {
       id: RELIEF_GROUP,
@@ -57,7 +57,7 @@ const voxelDocument = new VoxelDocument({
   ]
 });
 const voxels = new VoxelView(voxelDocument);
-voxels.loadTileset(tileset.definition, albedo, { normal });
+voxels.loadBlockset(blockset.definition, albedo, { normal });
 
 buildDiorama(voxelDocument.world);
 voxels.init();

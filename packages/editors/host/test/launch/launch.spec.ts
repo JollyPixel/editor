@@ -225,7 +225,7 @@ describe("HostMessageLaunchSource", () => {
     const launch = await pending;
     parent.posted.length = 0;
 
-    launch?.shell?.openAsset("tileset-1");
+    launch?.shell?.openAsset("blockset-1");
     launch?.shell?.toggleConsole();
 
     assert.deepEqual(parent.posted, [
@@ -233,7 +233,7 @@ describe("HostMessageLaunchSource", () => {
         message: {
           type: SHELL_MESSAGE_TYPE,
           command: "open-asset",
-          target: "tileset-1"
+          target: "blockset-1"
         },
         origin: kStudioOrigin
       },

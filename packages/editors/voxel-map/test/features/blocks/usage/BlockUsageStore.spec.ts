@@ -43,9 +43,9 @@ function setup() {
         layers: []
       };
     },
-    tilesetUsageOf: (tilesetId) => {
+    blocksetUsageOf: (blocksetId) => {
       return {
-        tilesetId,
+        blocksetId,
         blocks: [],
         voxels: 9
       };
@@ -94,11 +94,11 @@ describe("BlockUsageStore", () => {
     assert.deepEqual(changes, []);
   });
 
-  it("forwards per-block and per-tileset usage to its source", () => {
+  it("forwards per-block and per-blockset usage to its source", () => {
     const { usage } = setup();
 
     assert.equal(usage.usageOf(3).voxels, 7);
-    assert.equal(usage.tilesetUsageOf("atlas").voxels, 9);
+    assert.equal(usage.blocksetUsageOf("atlas").voxels, 9);
   });
 
   it("ignores the document once disposed", async() => {

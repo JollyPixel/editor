@@ -13,7 +13,7 @@ import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../../document/MapDocument.ts";
-import type { MapTilesets } from "../../tilesets/MapTilesets.ts";
+import type { MapBlocksets } from "../../blocksets/MapBlocksets.ts";
 import {
   customFinishSource,
   materialFinishSource,
@@ -24,7 +24,7 @@ import {
 const kMetalHint = "Turn on Reflections in General to see metal";
 
 export type MaterialGroupWriter = Pick<
-  MapTilesets,
+  MapBlocksets,
   "defineMaterialGroup" | "removeMaterialGroup"
 >;
 
@@ -39,7 +39,7 @@ export class BlockMaterialFinish extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare tilesets: MaterialGroupWriter;
+  declare blocksets: MaterialGroupWriter;
 
   @property({ attribute: false })
   declare mapDocument: Pick<MapDocument, "materialGroups" | "subscribe">;
@@ -57,10 +57,10 @@ export class BlockMaterialFinish extends LitElement {
         this.mapDocument.materialGroups.get(this.groupId)
     ),
     define: (group) => {
-      this.tilesets.defineMaterialGroup(group);
+      this.blocksets.defineMaterialGroup(group);
     },
     remove: (groupId) => {
-      this.tilesets.removeMaterialGroup(groupId);
+      this.blocksets.removeMaterialGroup(groupId);
     }
   };
 
@@ -118,7 +118,7 @@ export class BlockMaterialFinish extends LitElement {
       <jolly-checkbox
         align="end"
         label="Finish"
-        description="Saves a finish with the tileset for the whole group"
+        description="Saves a finish with the blockset for the whole group"
         .value=${this.#custom.value}
         @jolly-change=${this.#custom.commit}
       ></jolly-checkbox>
@@ -174,7 +174,7 @@ export class BlockMaterialFinish extends LitElement {
       ></jolly-number>
       <jolly-slider
         label="Normal strength"
-        description="Relief from the tileset normal map, 0 turns it off"
+        description="Relief from the blockset normal map, 0 turns it off"
         min="0"
         max="3"
         step="0.1"

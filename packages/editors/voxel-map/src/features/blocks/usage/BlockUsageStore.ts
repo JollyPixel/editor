@@ -7,7 +7,7 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
-import { TilesetUsage } from "../../tilesets/TilesetUsage.ts";
+import { BlocksetUsage } from "../../blocksets/BlocksetUsage.ts";
 import { BlockUsage } from "./BlockUsage.ts";
 
 export type BlockUsageStoreEvents = {
@@ -16,7 +16,7 @@ export type BlockUsageStoreEvents = {
 
 export type BlockUsageSource = Pick<
   VoxelBlockInspector,
-  "stats" | "usageOf" | "tilesetUsageOf"
+  "stats" | "usageOf" | "blocksetUsageOf"
 >;
 
 export interface BlockUsageStoreOptions {
@@ -63,11 +63,11 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
     );
   }
 
-  tilesetUsageOf(
-    tilesetId: string
-  ): TilesetUsage {
-    return new TilesetUsage(
-      this.#source.tilesetUsageOf(tilesetId)
+  blocksetUsageOf(
+    blocksetId: string
+  ): BlocksetUsage {
+    return new BlocksetUsage(
+      this.#source.blocksetUsageOf(blocksetId)
     );
   }
 

@@ -18,7 +18,7 @@ import type { BrushStore } from "../features/painting/BrushStore.ts";
 import type { LocalBrush } from "../features/painting/LocalBrush.ts";
 import type { MapPlacement } from "../features/placement/MapPlacement.ts";
 import type { MapTemplates } from "../features/templates/MapTemplates.ts";
-import type { MapTilesets } from "../features/tilesets/MapTilesets.ts";
+import type { MapBlocksets } from "../features/blocksets/MapBlocksets.ts";
 
 export interface VoxelMapWorkspace {
   state: EditorState;
@@ -33,7 +33,7 @@ export interface VoxelMapWorkspace {
   view: VoxelView;
   grid: Grid;
   localBrush: LocalBrush;
-  tilesets: MapTilesets;
+  blocksets: MapBlocksets;
   archives: EditorArchives;
   focusPoint(): Vector3Like;
   pointAt(

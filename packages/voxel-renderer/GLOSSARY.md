@@ -30,7 +30,7 @@ more than one layer.
 ### Document
 
 Everything a peer synchronizes about a world: its voxel layers, block registry,
-tileset declarations and undo history. `VoxelDocument` owns them and emits the
+blockset declarations and undo history. `VoxelDocument` owns them and emits the
 command stream, and draws nothing.
 
 ### View
@@ -118,14 +118,16 @@ A block whose texture may contain visible holes, such as leaves or a grate. It
 does not hide a neighboring block face. Faces shared by two voxels of the same
 transparent block are kept unless the block sets `cullCoveredFaces: true`.
 
-### Tileset
+### Blockset
 
-An image arranged as a grid of square tiles for block faces. A tileset has a
-stable ID so block definitions can refer to its tiles.
+A set of block definitions with the image their faces sample, a grid of square
+tiles. A blockset has a stable ID so block definitions can refer to its tiles,
+and a slot that namespaces its block IDs inside a world. It is not a 2D
+tileset: its tiles only texture block faces.
 
 ### Tile
 
-One square image in a tileset, addressed by its column and row. A block
+One square image in a blockset, addressed by its column and row. A block
 definition can choose a default tile and override it for individual faces.
 
 ### Tile Rotation
@@ -136,8 +138,8 @@ the whole placed voxel.
 
 ### Atlas
 
-The loaded texture prepared from a tileset for rendering. The atlas keeps the
-same tile grid as its tileset.
+The loaded texture prepared from a blockset for rendering. The atlas keeps the
+same tile grid as its blockset.
 
 ### Normal Atlas
 
@@ -194,8 +196,9 @@ culling does not change the world or the voxels stored in that chunk.
   coverage between neighboring shapes.
 - Qualify **face culling** and **chunk culling** instead of using *culling* on
   its own.
-- Use **tileset** for the source image grid, **tile** for one image in that
-  grid, and **atlas** for the loaded texture used for rendering.
+- Use **blockset** for blocks and the image grid they sample, **tile** for one
+  image in that grid, and **atlas** for the loaded texture used for rendering.
+  Keep *tileset* for 2D tile maps, such as Tiled imports.
 - Use **transparent block** for texture holes and translucency. Layers are
   either visible or hidden.
 - Use **meshing** for generating chunk surfaces.

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blockset UV Demo — @jolly-pixel/voxel.renderer</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body>
+  <canvas></canvas>
+  <div id="title">BlocksetManager UV Demo — Blockset001.png (9×4 tiles @ 32px)</div>
+  <div id="hint">Left drag: rotate &nbsp;·&nbsp; Right drag: pan &nbsp;·&nbsp; Scroll: zoom</div>
+  <div id="info">
+    Top grid: all 36 tiles with UV-mapped quads<br>
+    Bottom: textured cube (col=2, row=1 on each face)<br>
+    Check console for UV values
+  </div>
+  <jolly-scope>
+    <jolly-dock-layout storage-key="voxel-renderer-examples:layout">
+      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./scripts/demo-blockset.ts"></script>
+</body>
+
+</html>

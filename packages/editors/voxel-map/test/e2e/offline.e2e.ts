@@ -41,8 +41,8 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
       username: session.identity.username,
       layers: view.document.world.getLayers().map((layer) => layer.name),
       blocks: view.document.blocks.size,
-      tilesets: view.document.tilesets.definitions().map(
-        (tileset) => session.catalog.record(tileset.asset?.id ?? "")?.source
+      blocksets: view.document.blocksets.definitions().map(
+        (blockset) => session.catalog.record(blockset.asset?.id ?? "")?.source
       )
     };
   });
@@ -53,7 +53,7 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
     username: "Guest",
     layers: ["Ground"],
     blocks: 0,
-    tilesets: ["maps/overworld.tileset.json"]
+    blocksets: ["maps/overworld.blockset.json"]
   });
   expect(sockets).toEqual([]);
 });
@@ -113,7 +113,7 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
   page.on("pageerror", (error) => errors.push(error.message));
   await openEditor(page, OFFLINE_EDITOR);
   await openPane(page, "Blocks");
-  await page.getByRole("button", { name: "Add block" }).click();
+  await page.getByRole("button", { name: "Add block", exact: true }).click();
   await titledDialog(page, "New Block")
     .getByRole("button", { name: "Create" })
     .click();
@@ -121,8 +121,8 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
   const before = await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
     const mapId = session.target.record.id;
-    const [tileset] = workspace.view.document.tilesets.definitions();
-    const textureId = tileset.asset!.id;
+    const [blockset] = workspace.view.document.blocksets.definitions();
+    const textureId = blockset.asset!.id;
 
     return {
       mapId,
@@ -158,7 +158,7 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
 
     return {
       mapId: session.target.record.id,
-      textureId: workspace.view.document.tilesets.definitions()[0].asset!.id
+      textureId: workspace.view.document.blocksets.definitions()[0].asset!.id
     };
   })).toEqual({
     mapId: before.mapId,

@@ -10,9 +10,9 @@ import {
   pathUtils
 } from "@jolly-pixel/engine";
 import {
-  loadTilesets,
+  loadBlocksets,
   type ResolvedBlockDefinition,
-  type TilesetSource,
+  type AtlasSource,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type * as THREE from "three";
@@ -32,7 +32,7 @@ export type TiledMapAssetLoaderOptions = Omit<
 export interface VoxelTiledMap {
   readonly world: VoxelWorldJSON;
   readonly blocks: ResolvedBlockDefinition[];
-  readonly tilesets: TilesetSource[];
+  readonly blocksets: AtlasSource[];
 }
 
 export const TiledMapAssetType = new AssetType<VoxelTiledMap>("tilemap");
@@ -67,14 +67,14 @@ export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
         ...this.#options
       }
     );
-    const tilesets = await loadTilesets(world.tilesets, {
+    const blocksets = await loadBlocksets(world.blocksets, {
       manager: this.#manager
     });
 
     return {
       world,
       blocks,
-      tilesets
+      blocksets
     };
   }
 }

@@ -37,14 +37,14 @@ describe("BlockRegistry.apply — custom properties", () => {
     assert.deepEqual(registry.propertiesOf(7), { kept: "yes" });
   });
 
-  it("fills the default tileset into texture references naming none", () => {
+  it("fills the default blockset into texture references naming none", () => {
     const registry = new BlockRegistry();
 
     const applied = registry.apply(blockDefinedCmd({ id: 7 }), "stone");
 
     assert.equal(applied?.action, "block-defined");
-    assert.equal(applied.block.defaultTexture?.tilesetId, "stone");
-    assert.equal(registry.get(7)?.defaultTexture?.tilesetId, "stone");
+    assert.equal(applied.block.defaultTexture?.blocksetId, "stone");
+    assert.equal(registry.get(7)?.defaultTexture?.blocksetId, "stone");
   });
 
   it("does not alias the command payload into the registry", () => {

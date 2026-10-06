@@ -1,6 +1,6 @@
 # VoxelDocument
 
-The voxel data of a world: layers, the block registry, tileset links, undo
+The voxel data of a world: layers, the block registry, blockset links, undo
 history and the command stream. It creates no Three.js objects; pair it with a
 [`VoxelView`](./VoxelView.md) to draw it.
 
@@ -34,7 +34,7 @@ Layer, voxel and object edits go through
 | `chunkSize` | `number` | `16` | Chunk edge in voxels. Must be a power of two, otherwise a `RangeError` is thrown. |
 | `layers` | `string[]` | `[]` | Layer names added in order; the last one ends up on top. |
 | `blocks` | `BlockDefinition[]` | `[]` | Registered before any command is applied. |
-| `tilesets` | `Iterable<TilesetDefinition>` | | Tileset links declared up front. |
+| `blocksets` | `Iterable<BlocksetDefinition>` | | Blockset links declared up front. |
 | `materialGroups` | `Iterable<MaterialGroupJSON>` | `[]` | Material groups the blocks can name. Invalid entries are skipped. |
 | `blendGroups` | `Iterable<BlendGroupJSON>` | `[]` | Blend groups the blocks can name. Invalid entries are skipped. |
 | `history` | `VoxelHistoryOptions` | disabled | See [`VoxelHistory`](./VoxelHistory.md). |
@@ -47,7 +47,7 @@ Layer, voxel and object edits go through
 class VoxelDocument {
   readonly world: VoxelWorld;
   readonly blocks: BlockRegistry;
-  readonly tilesets: TilesetList;
+  readonly blocksets: BlocksetList;
   readonly materialGroups: MaterialGroupList;
   readonly blendGroups: BlendGroupList;
   readonly history: VoxelHistory;
@@ -58,12 +58,12 @@ class VoxelDocument {
 - [`blocks`](../blocks/BlockRegistry.md),
   [`materialGroups`](../materials/MaterialGroup.md) and
   [`blendGroups`](../materials/BlendGroup.md) are runtime state. A saved world
-  holds its layers and tileset links only; the host projects blocks and groups
-  from each linked [`TilesetDocument`](../tilesets/TilesetDocument.md), or
+  holds its layers and blockset links only; the host projects blocks and groups
+  from each linked [`BlocksetDocument`](../blocksets/BlocksetDocument.md), or
   defines them in code.
-- [`tilesets`](../tilesets/tilesets.md) holds tileset definitions and their
+- [`blocksets`](../blocksets/blocksets.md) holds blockset definitions and their
   slots, not textures. Atlases belong to the view's
-  [`TilesetAtlases`](../tilesets/TilesetAtlases.md).
+  [`BlocksetAtlases`](../blocksets/BlocksetAtlases.md).
 
 ## Events
 
@@ -72,7 +72,7 @@ class VoxelDocument {
 | `command` | `(command, { origin })` | After every applied [command](./commands.md), local or replayed. |
 | `loaded` | | After `load()` put the new world in place. |
 
-`load()` and direct `blocks` or `tilesets` mutations emit no command.
+`load()` and direct `blocks` or `blocksets` mutations emit no command.
 
 ## Methods
 
@@ -99,12 +99,12 @@ The block and group methods below are shorthands for `apply()`:
 | `removeMaterialGroup(groupId)` | `material-group-removed` | the group is unknown |
 | `defineBlendGroup(group)` | `blend-group-defined` | the settings are invalid or equal to the current ones |
 | `removeBlendGroup(groupId)` | `blend-group-removed` | the group is unknown |
-| `addTileset(tileset)` | `tileset-added` | the list did not change. Without `slot`, the lowest free slot is assigned. |
-| `removeTileset(tilesetId)` | `tileset-removed` | the tileset is unknown |
+| `addBlockset(blockset)` | `blockset-added` | the list did not change. Without `slot`, the lowest free slot is assigned. |
+| `removeBlockset(blocksetId)` | `blockset-removed` | the blockset is unknown |
 
-A tile reference without `tilesetId` gets the first declared tileset. To declare
-a tileset locally without a command, use
-[`VoxelView.loadTileset()`](./VoxelView.md#methods).
+A tile reference without `blocksetId` gets the first declared blockset. To declare
+a blockset locally without a command, use
+[`VoxelView.loadBlockset()`](./VoxelView.md#methods).
 
 ### Queries
 
@@ -127,18 +127,18 @@ dispose(): void;
 
 interface VoxelLoadOptions {
   mergeLayers?: boolean | VoxelMergeAllLayersOptions;
-  tilesets?: Iterable<TilesetDefinition>;
+  blocksets?: Iterable<BlocksetDefinition>;
 }
 ```
 
-`save()` writes the world and its tileset links in the
+`save()` writes the world and its blockset links in the
 [serialized format](../serialization/serialization.md).
 
-`load()` replaces the world and the tileset list, clears the undo history and
+`load()` replaces the world and the blockset list, clears the undo history and
 emits `loaded`. It emits no command and leaves `blocks` and the groups alone.
-The document keeps its own `chunkSize`. `options.tilesets` are declared after
+The document keeps its own `chunkSize`. `options.blocksets` are declared after
 the snapshot. `mergeLayers` collapses the layers as
 [`world.mergeAllLayers()`](../world/VoxelWorld.md) does; an `except`
 name with no matching layer logs a warning.
 
-`dispose()` clears the history, the tileset list and every listener.
+`dispose()` clears the history, the blockset list and every listener.

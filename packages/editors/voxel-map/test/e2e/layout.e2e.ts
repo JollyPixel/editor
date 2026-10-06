@@ -86,7 +86,7 @@ async function dragPaneToTab(
   await dragTo(
     page,
     pane.locator(".header").first(),
-    await centerOf(page.getByRole("tab", { name: tab }))
+    await centerOf(page.getByRole("tab", { name: tab, exact: true }))
   );
 }
 
@@ -109,7 +109,7 @@ async function dragTabToDock(
 ): Promise<void> {
   await dragTo(
     page,
-    page.getByRole("tab", { name: tab }),
+    page.getByRole("tab", { name: tab, exact: true }),
     await centerOf(page.locator(`jolly-dock[key='${dock}']`))
   );
 }

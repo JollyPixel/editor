@@ -3,7 +3,7 @@ import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import { VoxelTemplate } from "../../world/templates/VoxelTemplate.ts";
 import { inChunkRange } from "../../world/storage/chunkKey.ts";
 import { VOXEL_ABSENT } from "../../world/storage/packedVoxel.ts";
-import type { TilesetList } from "../../tilesets/TilesetList.ts";
+import type { BlocksetList } from "../../blocksets/BlocksetList.ts";
 import { InvalidVoxelWorldError } from "../errors/InvalidVoxelWorldError.ts";
 import type {
   VoxelChunkData,
@@ -20,11 +20,11 @@ interface FlatVoxels {
 export function restoreVoxelWorld(
   data: VoxelWorldData,
   world: VoxelWorld,
-  tilesets?: TilesetList
+  blocksets?: BlocksetList
 ): void {
   assertChunksFit(data, world.chunkSize);
 
-  tilesets?.replace(data.tilesets);
+  blocksets?.replace(data.blocksets);
   world.clear();
 
   for (const layerData of data.layers) {

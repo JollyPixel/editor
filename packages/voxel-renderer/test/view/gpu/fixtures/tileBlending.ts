@@ -68,13 +68,13 @@ export async function renderBlendScene(
         id,
         name: options.groups[index],
         shapeId: "cube",
-        defaultTexture: { tilesetId: "atlas", col: index, row: 0 },
+        defaultTexture: { blocksetId: "atlas", col: index, row: 0 },
         blendGroup: options.groups[index]
       };
     }),
     blendGroups: options.blendGroups
   });
-  view.loadTileset(
+  view.loadBlockset(
     { id: "atlas", src: "", tileSize: kTileTexels },
     new THREE.Texture(await atlasImage())
   );

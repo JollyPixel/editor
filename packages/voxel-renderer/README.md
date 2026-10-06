@@ -19,7 +19,7 @@
 - Vertex pulling: 8 bytes per face, vertices rebuilt in the shader - about 17x less chunk geometry memory than per-vertex attributes
 - Many built-in block shapes (cube, slabs, ramp, corners, pole, stairs) and a `BlockShape` interface for custom geometry
 - Per-block transforms via a packed byte - 90° Y rotations and X/Z flips without duplicating definitions
-- Multiple tilesets at different resolutions; tiles referenced by `{ tilesetId, col, row }`
+- Multiple blocksets at different resolutions; tiles referenced by `{ blocksetId, col, row }`
 - Per-face texture overrides on any block definition
 - `"lambert"` (default) or `"standard"` (PBR) material modes
 - Opaque, masked, and blended block surfaces with configurable sides and mask cutoff
@@ -48,14 +48,14 @@ import {
   Face,
   VoxelDocument,
   VoxelView,
-  loadTilesets,
+  loadBlocksets,
   type BlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
-const tilesets = await loadTilesets([
+const blocksets = await loadBlocksets([
   {
     id: "default",
-    src: "tileset/UV_cube.png",
+    src: "blockset/UV_cube.png",
     tileSize: 32
   }
 ]);
@@ -67,13 +67,13 @@ const blocks: BlockDefinition[] = [
     shapeId: "cube",
     collidable: true,
     defaultTexture: {
-      tilesetId: "default",
+      blocksetId: "default",
       col: 2,
       row: 0
     },
     faceTextures: {
       [Face.PosY]: {
-        tilesetId: "default",
+        blocksetId: "default",
         col: 0,
         row: 2
       }
@@ -86,7 +86,7 @@ const document = new VoxelDocument({
   blocks
 });
 const view = new VoxelView(document, {
-  tilesets
+  blocksets
 });
 
 scene.add(view.root);
@@ -147,7 +147,7 @@ the renderer package does not depend on an ECS runtime.
   [`VoxelTransform`](docs/api/world/VoxelTransform.md), and
   [`ViewDistance`](docs/api/world/ViewDistance.md).
 
-### Blocks, tilesets, and rendering API
+### Blocks, blocksets, and rendering API
 
 - [`BlockDefinition`](docs/api/blocks/BlockDefinition.md),
   [`BlockRegistry`](docs/api/blocks/BlockRegistry.md),
@@ -155,11 +155,11 @@ the renderer package does not depend on an ECS runtime.
   [`BlockSurface`](docs/api/blocks/BlockSurface.md),
   [`BlockTextures` and texture slots](docs/api/blocks/BlockTextures.md), and
   [`BlockPieces`](docs/api/blocks/BlockPieces.md).
-- [Tilesets](docs/api/tilesets/tilesets.md),
-  [`TilesetDocument`](docs/api/tilesets/TilesetDocument.md),
-  [`TilesetLink`](docs/api/tilesets/TilesetLink.md),
-  [`TilesetAtlases`](docs/api/tilesets/TilesetAtlases.md),
-  [`TilesetAtlas`](docs/api/tilesets/TilesetAtlas.md),
+- [Blocksets](docs/api/blocksets/blocksets.md),
+  [`BlocksetDocument`](docs/api/blocksets/BlocksetDocument.md),
+  [`BlocksetLink`](docs/api/blocksets/BlocksetLink.md),
+  [`BlocksetAtlases`](docs/api/blocksets/BlocksetAtlases.md),
+  [`BlocksetAtlas`](docs/api/blocksets/BlocksetAtlas.md),
   [`MaterialGroup`](docs/api/materials/MaterialGroup.md), and
   [`BlendGroup`](docs/api/materials/BlendGroup.md).
 - [`VoxelCollider`](docs/api/collision/VoxelCollider.md) and
@@ -184,7 +184,7 @@ Then open one of these URLs in your browser:
 | URL | Script | What it shows |
 |---|---|---|
 | `http://localhost:5173/` | `demo-physics.ts` | A 32×32 voxel terrain with a raised platform and a Rapier3D physics sphere you can roll around with arrow keys |
-| `http://localhost:5173/tileset.html` | `demo-tileset.ts` | Every tile in `Tileset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
+| `http://localhost:5173/blockset.html` | `demo-blockset.ts` | Every tile in `Blockset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
 | `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
 | `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters - the benchmark example |
 | `http://localhost:5173/transparency.html` | `demo-transparency.ts` | A diorama for checking transparency and lighting: blended water and glass, cutout leaves/grates/windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light, material and layer controls |

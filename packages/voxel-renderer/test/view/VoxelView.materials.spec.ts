@@ -90,7 +90,7 @@ describe("VoxelView - material groups", () => {
       ],
       rendering: {
         material: "standard",
-        customizer(material, _tilesetId, surface) {
+        customizer(material, _blocksetId, surface) {
           if (
             material instanceof THREE.MeshStandardMaterial &&
             surface.materialGroup === "gold"
@@ -257,19 +257,19 @@ describe("VoxelView - normal textures", () => {
     view.flush();
     assert.equal(normalNodeOf(materialsOf(view)[0]), null);
 
-    view.loadTileset(makeAtlasDef(), mockTexture(), { normal: mockTexture() });
+    view.loadBlockset(makeAtlasDef(), mockTexture(), { normal: mockTexture() });
     view.flush();
 
     assert.notEqual(normalNodeOf(materialsOf(view)[0]), null);
   });
 
-  it("drops the relief when the tileset is reloaded without one", () => {
+  it("drops the relief when the blockset is reloaded without one", () => {
     const view = meshedGround();
     const texture = mockTexture();
-    view.loadTileset(makeAtlasDef(), texture, { normal: mockTexture() });
+    view.loadBlockset(makeAtlasDef(), texture, { normal: mockTexture() });
     view.flush();
 
-    view.loadTileset(makeAtlasDef(), texture);
+    view.loadBlockset(makeAtlasDef(), texture);
     view.flush();
 
     assert.equal(view.atlases.atlas().normal, null);

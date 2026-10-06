@@ -22,7 +22,7 @@ import {
   blockDialogStyles,
   renderShapeColumn,
   shapeOptions,
-  tilesetOptions
+  blocksetOptions
 } from "./blockDialog.ts";
 import "../blockIcons.ts";
 
@@ -49,7 +49,7 @@ export class BlockCreateDialog extends WorkspaceElement {
 
   async open(): Promise<void> {
     this._draft = BlockDraft.create(
-      this.workspace?.tilesets.activeTilesetId ?? ""
+      this.workspace?.blocksets.activeBlocksetId ?? ""
     );
     this._open = true;
     await this.updateComplete;
@@ -70,7 +70,7 @@ export class BlockCreateDialog extends WorkspaceElement {
       return nothing;
     }
 
-    const { tilesets, view } = workspace;
+    const { blocksets, view } = workspace;
     const draft = this._draft;
 
     return html`
@@ -84,11 +84,11 @@ export class BlockCreateDialog extends WorkspaceElement {
         <div class="layout">
           <div class="fields">
             <jolly-select
-              label="Tileset"
-              .options=${tilesetOptions(tilesets.entries, false)}
-              .value=${draft.tilesetId}
-              ?disabled=${tilesets.entries.length <= 1}
-              @jolly-change=${this.#onTilesetChange}
+              label="Blockset"
+              .options=${blocksetOptions(blocksets.entries, false)}
+              .value=${draft.blocksetId}
+              ?disabled=${blocksets.entries.length <= 1}
+              @jolly-change=${this.#onBlocksetChange}
             ></jolly-select>
             <jolly-select
               label="Shape"
@@ -101,7 +101,7 @@ export class BlockCreateDialog extends WorkspaceElement {
             open: this._open,
             sources: workspace.blockSources,
             block: this.#previewBlock,
-            size: draft.size ?? tilesets.tileSizeOf(draft.tilesetId),
+            size: draft.size ?? blocksets.tileSizeOf(draft.blocksetId),
             onSizeChange: this.#onSizeChange
           })}
         </div>
@@ -125,10 +125,10 @@ export class BlockCreateDialog extends WorkspaceElement {
     this._draft = this._draft.with({ name: event.detail.heading });
   }
 
-  #onTilesetChange(
+  #onBlocksetChange(
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    this._draft = this._draft.with({ tilesetId: event.detail.value });
+    this._draft = this._draft.with({ blocksetId: event.detail.value });
   }
 
   #onShapeChange(
@@ -154,16 +154,16 @@ export class BlockCreateDialog extends WorkspaceElement {
   #create(): void {
     const workspace = this.workspace;
     const draft = this._draft;
-    const id = workspace?.tilesets.nextBlockId(draft.tilesetId);
+    const id = workspace?.blocksets.nextBlockId(draft.blocksetId);
     if (workspace === null || id === undefined) {
       return;
     }
 
     const definition = draft.toDefinition(
       id,
-      workspace.tilesets.freeTile(draft.tilesetId, draft.size)
+      workspace.blocksets.freeTile(draft.blocksetId, draft.size)
     );
-    workspace.tilesets.defineBlock(definition);
+    workspace.blocksets.defineBlock(definition);
     workspace.state.block.id = definition.id;
     this.#close();
   }

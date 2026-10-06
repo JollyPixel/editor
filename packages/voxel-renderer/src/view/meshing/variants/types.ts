@@ -2,28 +2,28 @@
 import type { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
 import type { BlendGroup } from "../../../document/materials/BlendGroup.ts";
 import type {
-  ResolvedTilesetDefinition,
+  ResolvedBlocksetDefinition,
   TileRotation,
   TileSpan,
-  TilesetUVRegion
-} from "../../../document/tilesets/types.ts";
+  AtlasUVRegion
+} from "../../../document/blocksets/types.ts";
 
-export interface TilesetUvSource {
-  readonly def: ResolvedTilesetDefinition;
+export interface AtlasUvSource {
+  readonly def: ResolvedBlocksetDefinition;
   uvFor(
     col: number,
     row: number,
     size?: number,
     span?: Readonly<TileSpan>,
     rotation?: TileRotation
-  ): TilesetUVRegion;
+  ): AtlasUVRegion;
 }
 
-export interface TilesetResolver {
+export interface BlocksetResolver {
   readonly version: number;
   resolve(
-    tilesetId?: string
-  ): TilesetUvSource | undefined;
+    blocksetId?: string
+  ): AtlasUvSource | undefined;
 }
 
 /**

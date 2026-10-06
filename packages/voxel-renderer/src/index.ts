@@ -4,7 +4,7 @@ export * from "./document/commands/index.ts";
 export * from "./document/world/index.ts";
 export * from "./document/geometry/index.ts";
 export * from "./document/blocks/index.ts";
-export * from "./document/tilesets/index.ts";
+export * from "./document/blocksets/index.ts";
 export * from "./document/materials/index.ts";
 export * from "./document/VoxelHistory.ts";
 export * from "./document/serialization/index.ts";

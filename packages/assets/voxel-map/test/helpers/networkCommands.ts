@@ -95,7 +95,7 @@ export function worldReplaceCmd(
     data: {
       version: VOXEL_WORLD_VERSION,
       chunkSize: opts.chunkSize ?? 16,
-      tilesets: [],
+      blocksets: [],
       layers: []
     },
     clientId: opts.clientId ?? "client-A",

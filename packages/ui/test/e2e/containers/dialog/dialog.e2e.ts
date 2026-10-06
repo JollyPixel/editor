@@ -133,7 +133,7 @@ test.describe("Dialog", () => {
     await page.locator("[data-action=inline-confirm]").click();
     await remove.click();
     await expect(confirmation.getByRole("alert"))
-      .toHaveText("3 blocks use this tileset and will lose their texture.");
+      .toHaveText("3 blocks use this blockset and will lose their texture.");
     await expect(host.locator(".body")).toHaveAttribute("inert");
     await expect(remove).toBeHidden();
     await expect(page.locator("body > jolly-dialog")).toHaveCount(0);

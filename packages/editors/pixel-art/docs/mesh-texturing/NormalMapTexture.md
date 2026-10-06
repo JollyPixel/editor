@@ -1,6 +1,6 @@
 # NormalMapTexture
 
-A `THREE.DataTexture` over a [`NormalMap`](../../../../pixel-draw-renderer/docs/normal/NormalMap.md) output. [`PixelCanvasTexture.normalTexture()`](./PixelCanvasTexture.md#normaltexture) uses it for a document's own normal map; build one directly for a normal map with other islands, such as a tileset's.
+A `THREE.DataTexture` over a [`NormalMap`](../../../../pixel-draw-renderer/docs/normal/NormalMap.md) output. [`PixelCanvasTexture.normalTexture()`](./PixelCanvasTexture.md#normaltexture) uses it for a document's own normal map; build one directly for a normal map with other islands, such as a blockset's.
 
 ```ts
 import { NormalMapTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";

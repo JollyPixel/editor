@@ -3,7 +3,7 @@ import {
   cullsCoveredFaces,
   type ResolvedBlockDefinition
 } from "./BlockDefinition.ts";
-import type { ResolvedTileRef } from "../tilesets/types.ts";
+import type { ResolvedTileRef } from "../blocksets/types.ts";
 
 export type BlockRedefinition =
   | "added"
@@ -68,7 +68,7 @@ function tileKeyOf(
   tile: ResolvedTileRef,
   withRegion: boolean
 ): Array<string | number | null> {
-  const frame = [tile.tilesetId ?? null, tile.rotation ?? 0];
+  const frame = [tile.blocksetId ?? null, tile.rotation ?? 0];
 
   return withRegion ?
     [...frame, tile.col, tile.row, tile.size ?? null] :

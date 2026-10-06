@@ -15,9 +15,9 @@ function makeBlock(): ResolvedBlockDefinition {
     name: "block",
     shapeId: "cube",
     faceTextures: {
-      top: { tilesetId: "b", col: 1, row: 0 },
-      "front.1": { tilesetId: "b", col: 2, row: 0 },
-      "top.1": { tilesetId: "b", col: 3, row: 0 }
+      top: { blocksetId: "b", col: 1, row: 0 },
+      "front.1": { blocksetId: "b", col: 2, row: 0 },
+      "top.1": { blocksetId: "b", col: 3, row: 0 }
     },
     defaultTexture: { col: 0, row: 0 }
   });
@@ -26,9 +26,9 @@ function makeBlock(): ResolvedBlockDefinition {
 describe("BlockTextures", () => {
   it("iterates face references then the default texture", () => {
     assert.deepEqual([...BlockTextures.of(makeBlock())], [
-      { tilesetId: "b", col: 1, row: 0 },
-      { tilesetId: "b", col: 2, row: 0 },
-      { tilesetId: "b", col: 3, row: 0 },
+      { blocksetId: "b", col: 1, row: 0 },
+      { blocksetId: "b", col: 2, row: 0 },
+      { blocksetId: "b", col: 3, row: 0 },
       { col: 0, row: 0 }
     ]);
   });
@@ -70,12 +70,12 @@ describe("BlockTextures.spanFor", () => {
   });
 });
 
-describe("BlockTextures.tilesetIds", () => {
-  it("returns the distinct explicit tileset ids in order", () => {
+describe("BlockTextures.blocksetIds", () => {
+  it("returns the distinct explicit blockset ids in order", () => {
     const textures = BlockTextures.of(makeBlock());
 
-    assert.deepEqual(textures.tilesetIds(), ["b"]);
-    assert.deepEqual(textures.withTileset("a").tilesetIds(), ["b", "a"]);
+    assert.deepEqual(textures.blocksetIds(), ["b"]);
+    assert.deepEqual(textures.withBlockset("a").blocksetIds(), ["b", "a"]);
   });
 });
 
@@ -96,18 +96,18 @@ describe("BlockTextures.map", () => {
   });
 });
 
-describe("BlockTextures.withTileset", () => {
-  it("fills only the references without tileset", () => {
-    const textures = BlockTextures.of(makeBlock()).withTileset("a");
+describe("BlockTextures.withBlockset", () => {
+  it("fills only the references without blockset", () => {
+    const textures = BlockTextures.of(makeBlock()).withBlockset("a");
 
-    assert.equal(textures.faceTextures.top.tilesetId, "b");
-    assert.equal(textures.defaultTexture?.tilesetId, "a");
+    assert.equal(textures.faceTextures.top.blocksetId, "b");
+    assert.equal(textures.defaultTexture?.blocksetId, "a");
   });
 
-  it("returns the same instance for a null tileset", () => {
+  it("returns the same instance for a null blockset", () => {
     const textures = BlockTextures.of(makeBlock());
 
-    assert.equal(textures.withTileset(null), textures);
+    assert.equal(textures.withBlockset(null), textures);
   });
 });
 
@@ -120,12 +120,12 @@ describe("BlockTextures.applyTo", () => {
 
   it("writes the textures into a copy of the block", () => {
     const block = makeBlock();
-    const applied = BlockTextures.of(block).withTileset("a").applyTo(block);
+    const applied = BlockTextures.of(block).withBlockset("a").applyTo(block);
 
     assert.notEqual(applied, block);
     assert.equal(applied.name, "block");
-    assert.equal(applied.defaultTexture?.tilesetId, "a");
-    assert.equal(block.defaultTexture?.tilesetId, undefined);
+    assert.equal(applied.defaultTexture?.blocksetId, "a");
+    assert.equal(block.defaultTexture?.blocksetId, undefined);
   });
 
   it("keeps a block without default texture free of the key", () => {
@@ -175,18 +175,18 @@ describe("BlockTextures sizes", () => {
 
   it("tells whether a rescale keeps every reference on the tile grid", () => {
     const rescale = {
-      tilesetId: "b",
+      blocksetId: "b",
       from: 16,
       to: 32
     };
 
     assert.equal(
-      new BlockTextures({ top: { tilesetId: "b", col: 2, row: 4 } })
+      new BlockTextures({ top: { blocksetId: "b", col: 2, row: 4 } })
         .staysOnGrid(rescale),
       true
     );
     assert.equal(
-      new BlockTextures({ top: { tilesetId: "c", col: 1, row: 1 } })
+      new BlockTextures({ top: { blocksetId: "c", col: 1, row: 1 } })
         .staysOnGrid(rescale),
       true
     );

@@ -7,8 +7,8 @@ import {
 } from "../../geometry/faceDirection.ts";
 import type { FaceDefinition } from "../face/index.ts";
 import type { BlockShape } from "./BlockShape.ts";
-import { UNIT_TILE_SPAN } from "../../tilesets/tileRef.ts";
-import type { TileSpan } from "../../tilesets/types.ts";
+import { UNIT_TILE_SPAN } from "../../blocksets/tileRef.ts";
+import type { TileSpan } from "../../blocksets/types.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;

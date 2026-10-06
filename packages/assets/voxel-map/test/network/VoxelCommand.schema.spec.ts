@@ -58,7 +58,7 @@ describe("voxelCommandProtocol", () => {
     assert.strictEqual(accepts(worldReplaceCmd()), true);
   });
 
-  test("rejects block and material group commands, which belong to tilesets", () => {
+  test("rejects block and material group commands, which belong to blocksets", () => {
     assert.strictEqual(accepts({
       ...kHeader,
       action: "block-defined",
@@ -77,76 +77,76 @@ describe("voxelCommandProtocol", () => {
     }), false);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-resized",
-      tilesetId: "stone",
+      action: "blockset-resized",
+      blocksetId: "stone",
       tileSize: 64
     }), false);
   });
 
-  test("accepts tileset links and removals", () => {
+  test("accepts blockset links and removals", () => {
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", src: "asset-stone", tileSize: 32 }
+      action: "blockset-added",
+      blockset: { id: "stone", src: "asset-stone", tileSize: 32 }
     }), true);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", slot: 3, src: "asset-stone", tileSize: 32 }
+      action: "blockset-added",
+      blockset: { id: "stone", slot: 3, src: "asset-stone", tileSize: 32 }
     }), true);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-removed",
-      tilesetId: "stone"
+      action: "blockset-removed",
+      blocksetId: "stone"
     }), true);
   });
 
-  test("rejects an invalid tile size, slot or tileset id", () => {
+  test("rejects an invalid tile size, slot or blockset id", () => {
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", src: "asset-stone", tileSize: 0 }
+      action: "blockset-added",
+      blockset: { id: "stone", src: "asset-stone", tileSize: 0 }
     }), false);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", src: "asset-stone", tileSize: 8192 }
+      action: "blockset-added",
+      blockset: { id: "stone", src: "asset-stone", tileSize: 8192 }
     }), false);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "", src: "asset-stone", tileSize: 16 }
+      action: "blockset-added",
+      blockset: { id: "", src: "asset-stone", tileSize: 16 }
     }), false);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", slot: 128, src: "asset-stone", tileSize: 16 }
+      action: "blockset-added",
+      blockset: { id: "stone", slot: 128, src: "asset-stone", tileSize: 16 }
     }), false);
   });
 
-  test("an asset tileset needs no tile size, a URL tileset does", () => {
+  test("an asset blockset needs no tile size, a URL blockset does", () => {
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: {
+      action: "blockset-added",
+      blockset: {
         id: "stone",
-        asset: { id: "asset-stone", kind: "tileset" }
+        asset: { id: "asset-stone", kind: "blockset" }
       }
     }), true);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", src: "asset-stone" }
+      action: "blockset-added",
+      blockset: { id: "stone", src: "asset-stone" }
     }), false);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: { id: "stone", tileSize: 32 }
+      action: "blockset-added",
+      blockset: { id: "stone", tileSize: 32 }
     }), false);
     assert.strictEqual(accepts({
       ...kHeader,
-      action: "tileset-added",
-      tileset: {
+      action: "blockset-added",
+      blockset: {
         id: "stone",
         asset: { id: "asset-stone" }
       }

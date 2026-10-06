@@ -9,7 +9,7 @@ import {
   makeBlock,
   makeFakeVoxelEngine,
   makeUv,
-  tilesetSlot
+  blocksetSlot
 } from "./blockUvFixtures.ts";
 
 function setupShape(
@@ -24,10 +24,10 @@ function setupShape(
     collidable: true,
     properties: {},
     faceTextures: {},
-    defaultTexture: { col: 2, row: 2, tilesetId: "atlas" }
+    defaultTexture: { col: 2, row: 2, blocksetId: "atlas" }
   });
   const bridge = new BlockUvBridge(uv, view, bridgeOptions);
-  bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+  bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
 
   return { view, uv, bridge };
 }
@@ -35,11 +35,11 @@ function setupShape(
 describe("BlockUvBridge / rotation", () => {
   it("rotating a stacked block writes its default tile rotation in place", () => {
     const { view, bridgeOptions } = makeFakeVoxelEngine();
-    view.document.blocks.register(makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }));
+    view.document.blocks.register(makeBlock(1, { col: 1, row: 2, blocksetId: "atlas" }));
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
 
       uv.rotate("block-1", "cw");
 
@@ -47,7 +47,7 @@ describe("BlockUvBridge / rotation", () => {
       assert.deepEqual(rotated.defaultTexture, {
         col: 1,
         row: 2,
-        tilesetId: "atlas",
+        blocksetId: "atlas",
         rotation: 1
       });
       assert.deepEqual(rotated.faceTextures, {});
@@ -57,7 +57,7 @@ describe("BlockUvBridge / rotation", () => {
       assert.deepEqual(view.document.blocks.get(1)!.defaultTexture, {
         col: 1,
         row: 2,
-        tilesetId: "atlas"
+        blocksetId: "atlas"
       });
     }
     finally {
@@ -68,13 +68,13 @@ describe("BlockUvBridge / rotation", () => {
   it("builds a rotated stacked region from a rotated default tile", () => {
     const { view, bridgeOptions } = makeFakeVoxelEngine();
     view.document.blocks.register({
-      ...makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }),
-      defaultTexture: { col: 1, row: 2, tilesetId: "atlas", rotation: 2 }
+      ...makeBlock(1, { col: 1, row: 2, blocksetId: "atlas" }),
+      defaultTexture: { col: 1, row: 2, blocksetId: "atlas", rotation: 2 }
     });
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
 
       assert.deepEqual(uv.get("block-1")!.geometryFor("top"), {
         x: 16,
@@ -91,11 +91,11 @@ describe("BlockUvBridge / rotation", () => {
 
   it("rotating one free face writes only that face's tile rotation", () => {
     const { view, bridgeOptions } = makeFakeVoxelEngine();
-    view.document.blocks.register(makeBlock(1, { col: 1, row: 2, tilesetId: "atlas" }));
+    view.document.blocks.register(makeBlock(1, { col: 1, row: 2, blocksetId: "atlas" }));
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.setState("block-1", "free");
 
       uv.rotate("block-1", "cw", "top");
@@ -104,7 +104,7 @@ describe("BlockUvBridge / rotation", () => {
       assert.deepEqual(faceTextures.top, {
         col: 1,
         row: 2,
-        tilesetId: "atlas",
+        blocksetId: "atlas",
         rotation: 1
       });
       assert.equal(faceTextures.front.rotation, undefined);

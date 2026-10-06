@@ -9,8 +9,8 @@ import {
   faceUvs,
   faceUvSpan
 } from "./faceUv.ts";
-import { UNIT_TILE_SPAN } from "../../tilesets/tileRef.ts";
-import type { TileSpan } from "../../tilesets/types.ts";
+import { UNIT_TILE_SPAN } from "../../blocksets/tileRef.ts";
+import type { TileSpan } from "../../blocksets/types.ts";
 
 export interface FaceDescriptor {
   face: FACE;

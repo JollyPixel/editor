@@ -2,7 +2,7 @@
 import type { AssetKindIcon } from "@jolly-pixel/asset-server";
 
 // CONSTANTS
-export const TILESET_ICON: AssetKindIcon = {
+export const BLOCKSET_ICON: AssetKindIcon = {
   svg: `
     <rect x="7" y="7" width="50" height="50" rx="6" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
     <rect x="7" y="7" width="50" height="50" rx="6" fill="#2b1d16" />

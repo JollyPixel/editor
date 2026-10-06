@@ -7,7 +7,7 @@ import {
   isVoxelObjectLayerCommand,
   parseVoxelTemplate,
   parseVoxelWorld,
-  TilesetList,
+  BlocksetList,
   VoxelWorld,
   type VoxelPatch,
   type VoxelWorldCommandTarget,
@@ -153,7 +153,7 @@ function loads(
     deserializeVoxelWorld(
       parseVoxelWorld(data),
       new VoxelWorld(chunkSize),
-      { tilesets: new TilesetList() }
+      { blocksets: new BlocksetList() }
     );
 
     return true;

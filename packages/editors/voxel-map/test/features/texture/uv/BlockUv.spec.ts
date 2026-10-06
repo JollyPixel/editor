@@ -30,12 +30,12 @@ function uvOf(
 }
 
 describe("BlockUv", () => {
-  it("names the region after the block's id inside its tileset", () => {
+  it("names the region after the block's id inside its blockset", () => {
     const block = resolveBlockDefinition({
       id: composeBlockId(3, 4),
       name: "Block",
       shapeId: "cube",
-      defaultTexture: { tilesetId: "stone", col: 0, row: 0 }
+      defaultTexture: { blocksetId: "stone", col: 0, row: 0 }
     });
     const uv = new BlockUv(block, kShapes.get("cube"), 16);
 
@@ -43,27 +43,27 @@ describe("BlockUv", () => {
     assert.equal(uv.region().id, "block-4");
   });
 
-  it("knows the tilesets its shape samples", () => {
+  it("knows the blocksets its shape samples", () => {
     const uv = uvOf({
-      defaultTexture: { tilesetId: "stone", col: 0, row: 0 }
+      defaultTexture: { blocksetId: "stone", col: 0, row: 0 }
     });
 
     assert.equal(uv.textured, true);
-    assert.equal(uv.layout.usesTileset("stone"), true);
-    assert.equal(uv.layout.usesTileset("wood"), false);
+    assert.equal(uv.layout.usesBlockset("stone"), true);
+    assert.equal(uv.layout.usesBlockset("wood"), false);
     assert.equal(uvOf({}).textured, false);
   });
 
   it("stacks a box block and moves it back through its region", () => {
     const uv = uvOf({
-      defaultTexture: { tilesetId: "stone", col: 1, row: 0 }
+      defaultTexture: { blocksetId: "stone", col: 1, row: 0 }
     });
     const region = uv.region();
 
     assert.equal(region.state, "stacked");
     assert.equal(region.id, "block-4");
     assert.deepEqual(uv.apply(region).defaultTexture, {
-      tilesetId: "stone",
+      blocksetId: "stone",
       col: 1,
       row: 0
     });

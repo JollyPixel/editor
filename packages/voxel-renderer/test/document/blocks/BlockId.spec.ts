@@ -9,8 +9,8 @@ import {
   isAir,
   localBlockIdOf,
   MAX_LOCAL_BLOCK_ID,
-  MAX_TILESET_SLOT,
-  tilesetSlotOf
+  MAX_BLOCKSET_SLOT,
+  blocksetSlotOf
 } from "../../../src/document/blocks/index.ts";
 import { MAX_BLOCK_ID } from "../../../src/document/world/index.ts";
 
@@ -37,23 +37,23 @@ describe("composeBlockId", () => {
     for (const [slot, localId] of [
       [1, 1],
       [3, 500],
-      [MAX_TILESET_SLOT, MAX_LOCAL_BLOCK_ID]
+      [MAX_BLOCKSET_SLOT, MAX_LOCAL_BLOCK_ID]
     ]) {
       const blockId = composeBlockId(slot, localId);
 
-      assert.equal(tilesetSlotOf(blockId), slot);
+      assert.equal(blocksetSlotOf(blockId), slot);
       assert.equal(localBlockIdOf(blockId), localId);
     }
   });
 
   it("never exceeds the id a voxel can store", () => {
-    assert.ok(composeBlockId(MAX_TILESET_SLOT, MAX_LOCAL_BLOCK_ID) <= MAX_BLOCK_ID);
+    assert.ok(composeBlockId(MAX_BLOCKSET_SLOT, MAX_LOCAL_BLOCK_ID) <= MAX_BLOCK_ID);
   });
 
   it("rejects a slot or local id out of range", () => {
     for (const [slot, localId] of [
       [-1, 1],
-      [MAX_TILESET_SLOT + 1, 1],
+      [MAX_BLOCKSET_SLOT + 1, 1],
       [0.5, 1],
       [0, AIR_BLOCK_ID],
       [0, MAX_LOCAL_BLOCK_ID + 1],

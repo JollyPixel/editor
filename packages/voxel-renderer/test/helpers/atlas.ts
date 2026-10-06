@@ -1,11 +1,11 @@
 // Import Internal Dependencies
-import type { TilesetAtlas, TilesetAtlases } from "../../src/view/atlases/index.ts";
-import type { TilesetDefinition } from "../../src/document/tilesets/index.ts";
+import type { BlocksetAtlas, BlocksetAtlases } from "../../src/view/atlases/index.ts";
+import type { BlocksetDefinition } from "../../src/document/blocksets/index.ts";
 import { mockTexture } from "./mockTexture.ts";
 
 export function makeAtlasDef(
-  overrides: Partial<TilesetDefinition> = {}
-): TilesetDefinition {
+  overrides: Partial<BlocksetDefinition> = {}
+): BlocksetDefinition {
   return {
     id: "atlas",
     src: "/atlas.png",
@@ -17,11 +17,11 @@ export function makeAtlasDef(
 }
 
 export function registerAtlas(
-  manager: TilesetAtlases,
-  def: TilesetDefinition = makeAtlasDef(),
+  manager: BlocksetAtlases,
+  def: BlocksetDefinition = makeAtlasDef(),
   texture = mockTexture()
-): TilesetAtlas {
-  manager.tilesets.add(def);
+): BlocksetAtlas {
+  manager.blocksets.add(def);
 
   return manager.registerTexture(def.id, texture);
 }

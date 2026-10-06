@@ -6,12 +6,12 @@
 export const AIR_BLOCK_ID = 0;
 
 /**
- * A block id is a tileset slot in the high bits and the block's id inside
- * that tileset in the low 16 bits. Slot 0 keeps the local id unchanged.
+ * A block id is a blockset slot in the high bits and the block's id inside
+ * that blockset in the low 16 bits. Slot 0 keeps the local id unchanged.
  */
 export const LOCAL_BLOCK_ID_BITS = 16;
 export const MAX_LOCAL_BLOCK_ID = 0xFFFF;
-export const MAX_TILESET_SLOT = 0x7F;
+export const MAX_BLOCKSET_SLOT = 0x7F;
 
 export function isAir(
   blockId: number
@@ -19,13 +19,13 @@ export function isAir(
   return blockId === AIR_BLOCK_ID;
 }
 
-export function isTilesetSlot(
+export function isBlocksetSlot(
   value: unknown
 ): value is number {
   return typeof value === "number" &&
     Number.isInteger(value) &&
     value >= 0 &&
-    value <= MAX_TILESET_SLOT;
+    value <= MAX_BLOCKSET_SLOT;
 }
 
 export function isLocalBlockId(
@@ -41,9 +41,9 @@ export function composeBlockId(
   slot: number,
   localId: number
 ): number {
-  if (!isTilesetSlot(slot)) {
+  if (!isBlocksetSlot(slot)) {
     throw new RangeError(
-      `Tileset slot ${slot} is out of range (0..${MAX_TILESET_SLOT}).`
+      `Blockset slot ${slot} is out of range (0..${MAX_BLOCKSET_SLOT}).`
     );
   }
   if (!isLocalBlockId(localId)) {
@@ -55,7 +55,7 @@ export function composeBlockId(
   return (slot << LOCAL_BLOCK_ID_BITS) | localId;
 }
 
-export function tilesetSlotOf(
+export function blocksetSlotOf(
   blockId: number
 ): number {
   return blockId >>> LOCAL_BLOCK_ID_BITS;

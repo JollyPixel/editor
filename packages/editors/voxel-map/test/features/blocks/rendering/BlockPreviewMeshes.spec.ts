@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { TilesetImage } from "@jolly-pixel/voxel.renderer";
+import type { AtlasImage } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { BlockPreviewMeshes } from "../../../../src/features/blocks/rendering/BlockPreviewMeshes.ts";
@@ -37,7 +37,7 @@ describe("BlockPreviewMeshes", () => {
 
     sources.atlases.registerTexture(
       "atlas",
-      new THREE.Texture<TilesetImage>(document.createElement("canvas"))
+      new THREE.Texture<AtlasImage>(document.createElement("canvas"))
     );
     meshes.refresh(0);
 

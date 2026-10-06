@@ -3,7 +3,7 @@ import {
   isVoxelLayerCommand,
   isVoxelMaterialGroupCommand,
   isVoxelTemplateCommand,
-  isVoxelTilesetCommand,
+  isVoxelBlocksetCommand,
   type BlockRedefinition,
   type VoxelCommand,
   type VoxelCommandContext,
@@ -42,7 +42,7 @@ export type MapDocumentEvents = {
   blockRegistryChanged: (
     change: BlockRegistryChange
   ) => void;
-  tilesetsChanged: () => void;
+  blocksetsChanged: () => void;
   materialGroupsChanged: () => void;
   templatesChanged: () => void;
   reset: () => void;
@@ -92,14 +92,14 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
     else if (isVoxelTemplateCommand(command)) {
       this.emit("templatesChanged");
     }
-    else if (isVoxelTilesetCommand(command)) {
-      this.emit("tilesetsChanged");
+    else if (isVoxelBlocksetCommand(command)) {
+      this.emit("blocksetsChanged");
     }
   };
 
   #onLoaded = (): void => {
     this.#seedDefaultLayer();
-    this.emit("tilesetsChanged");
+    this.emit("blocksetsChanged");
     this.emit("blockRegistryChanged", "reset");
     this.emit("materialGroupsChanged");
     this.emit("templatesChanged");

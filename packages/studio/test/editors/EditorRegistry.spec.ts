@@ -91,15 +91,15 @@ describe("EditorRegistry", () => {
 
   test("registers an illustrated kind icon on its own grid", () => {
     const registry = new EditorRegistry().registerKind({
-      kind: "tileset",
-      label: "Tileset",
-      extension: ".tileset",
+      kind: "blockset",
+      label: "Blockset",
+      extension: ".blockset",
       icon: {
         svg: "<rect width=\"64\" height=\"64\" fill=\"#ffc93c\" />",
         viewBox: "0 0 64 64"
       }
     });
-    const icon = registry.kindSet().iconFor("tileset");
+    const icon = registry.kindSet().iconFor("blockset");
 
     assert.equal(iconViewBox(icon), "0 0 64 64");
     assert.equal(iconTone(icon), null);

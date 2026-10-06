@@ -9,7 +9,7 @@ import {
 import type { Actor } from "@jolly-pixel/engine";
 import {
   BlockRegistry,
-  TilesetAtlases,
+  BlocksetAtlases,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
@@ -63,7 +63,7 @@ function replica(): Replica {
         shapeId: "cube"
       }
     ]),
-    sources: sourcesOf(new TilesetAtlases()),
+    sources: sourcesOf(new BlocksetAtlases()),
     mapDocument: new Emitter<MapDocumentEvents>()
   });
 

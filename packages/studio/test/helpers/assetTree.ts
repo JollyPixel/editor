@@ -18,9 +18,9 @@ export const COMPANION_RECORDS: AssetRecordData[] = [
     source: "maps/overworld.voxelmap.json"
   },
   {
-    id: "tileset-overworld",
-    kind: "tileset",
-    source: "maps/overworld.tileset.json"
+    id: "blockset-overworld",
+    kind: "blockset",
+    source: "maps/overworld.blockset.json"
   },
   {
     id: "map-cave",
@@ -45,8 +45,8 @@ export const COMPANION_RECORDS: AssetRecordData[] = [
 ];
 
 export const COMPANION_EDGES: Record<string, string[]> = {
-  "map-overworld": ["tileset-overworld"],
-  "map-cave": ["tileset-overworld"],
+  "map-overworld": ["blockset-overworld"],
+  "map-cave": ["blockset-overworld"],
   "model-hero": ["texture-hero"]
 };
 

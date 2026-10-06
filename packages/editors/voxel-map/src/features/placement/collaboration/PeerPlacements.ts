@@ -84,7 +84,7 @@ export class PeerPlacements extends ActorComponent {
       options.mapDocument.subscribe("layerUpdated", this.#recapture),
       options.mapDocument.subscribe("reset", this.#recapture),
       options.mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
-      options.mapDocument.subscribe("tilesetsChanged", this.#rebuild)
+      options.mapDocument.subscribe("blocksetsChanged", this.#rebuild)
     ];
 
     this.#renderAll();

@@ -106,7 +106,7 @@ describe("seedAssetSource", () => {
 
     const written = await seedAssetSource(source, {
       "textures/block.pixelart": {
-        id: "tileset-default",
+        id: "blockset-default",
         kind: "pixelart",
         content: () => bytes("pixels")
       },
@@ -120,7 +120,7 @@ describe("seedAssetSource", () => {
     ]);
     assert.deepStrictEqual([...sidecar], [
       {
-        id: "tileset-default",
+        id: "blockset-default",
         path: "textures/block.pixelart",
         kind: "pixelart"
       }
@@ -134,7 +134,7 @@ describe("seedAssetSource", () => {
 
     await seedAssetSource(source, {
       "textures/block.pixelart": {
-        id: "tileset-default",
+        id: "blockset-default",
         kind: "pixelart",
         content: () => bytes("pixels")
       }

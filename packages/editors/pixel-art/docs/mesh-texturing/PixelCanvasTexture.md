@@ -43,7 +43,7 @@ Applies whatever is pending and returns the union of the dirty rectangles accumu
 function onFrame() {
   const dirty = bridge.consume();
   if (dirty !== null) {
-    tileset.updateSourceRegion(image, dirty);
+    blockset.updateSourceRegion(image, dirty);
   }
 }
 ```

@@ -91,7 +91,7 @@ export class PlacementGizmo extends ActorComponent {
     this.#subscriptions.push(
       this.#placement.subscribe("change", this.#sync),
       this.#mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
-      this.#mapDocument.subscribe("tilesetsChanged", this.#rebuild)
+      this.#mapDocument.subscribe("blocksetsChanged", this.#rebuild)
     );
     this.#sync(this.#placement.current);
   }

@@ -19,7 +19,7 @@ import type {
 import {
   isVoxelBlendGroupCommand,
   isVoxelMaterialGroupCommand,
-  isVoxelTilesetCommand
+  isVoxelBlocksetCommand
 } from "../document/commands/categories.ts";
 import type {
   VoxelCommand,
@@ -53,27 +53,27 @@ import {
   type VoxelRangeOptions,
   type VoxelRenderingOptions
 } from "./options/index.ts";
-import { TilesetAtlases } from "./atlases/TilesetAtlases.ts";
+import { BlocksetAtlases } from "./atlases/BlocksetAtlases.ts";
 import { VoxelLayerVisibility } from "./VoxelLayerVisibility.ts";
-import type { TilesetSource } from "./atlases/loadTilesets.ts";
+import type { AtlasSource } from "./atlases/loadBlocksets.ts";
 import type {
-  TilesetDefinition,
-  TilesetNormalTexture,
-  TilesetTexture
-} from "../document/tilesets/types.ts";
+  BlocksetDefinition,
+  AtlasNormalTexture,
+  AtlasTexture
+} from "../document/blocksets/types.ts";
 import type { VoxelWorldJSON } from "../document/serialization/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../VoxelLogger.ts";
 
 export interface VoxelViewLoadOptions
-  extends Omit<VoxelLoadOptions, "tilesets"> {
+  extends Omit<VoxelLoadOptions, "blocksets"> {
   /**
    * Atlases to register before loading a world that uses them.
    */
-  tilesets?: Iterable<TilesetSource>;
+  blocksets?: Iterable<AtlasSource>;
 }
 
-export interface TilesetLoadOptions {
-  normal?: TilesetNormalTexture;
+export interface BlocksetLoadOptions {
+  normal?: AtlasNormalTexture;
 }
 
 export interface VoxelViewOptions {
@@ -88,10 +88,10 @@ export interface VoxelViewOptions {
   shapes?: BlockShape[];
 
   /**
-   * Preloaded atlases (see `loadTilesets`) registered synchronously during
+   * Preloaded atlases (see `loadBlocksets`) registered synchronously during
    * construction.
    */
-  tilesets?: Iterable<TilesetSource>;
+  blocksets?: Iterable<AtlasSource>;
 
   /**
    * Debug logger; defaults to a no-op implementation.
@@ -133,7 +133,7 @@ export class VoxelView {
   readonly document: VoxelDocument;
   readonly shapes: BlockShapeRegistry;
   readonly complements: BlockComplements;
-  readonly atlases: TilesetAtlases;
+  readonly atlases: BlocksetAtlases;
   readonly inspector: VoxelInspector;
   readonly range: VoxelRange;
   readonly lighting: VoxelLighting;
@@ -156,7 +156,7 @@ export class VoxelView {
     context: VoxelCommandContext
   ): void => {
     this.requestFrame();
-    if (isVoxelTilesetCommand(command)) {
+    if (isVoxelBlocksetCommand(command)) {
       this.#syncAtlases();
       this.markAllChunksDirty(command.action);
     }
@@ -201,10 +201,10 @@ export class VoxelView {
     this.#logger.debug("Cleared existing chunk meshes while loading a world.");
 
     this.atlases.syncAtlases();
-    for (const tilesetDef of this.document.tilesets) {
-      if (!this.atlases.get(tilesetDef.id)) {
+    for (const blocksetDef of this.document.blocksets) {
+      if (!this.atlases.get(blocksetDef.id)) {
         this.#logger.warn(
-          `Tileset '${tilesetDef.id}' is not loaded; its faces are skipped until it is.`
+          `Blockset '${blocksetDef.id}' is not loaded; its faces are skipped until it is.`
         );
       }
     }
@@ -222,7 +222,7 @@ export class VoxelView {
       shapes = [],
       logger = NOOP_LOGGER,
       inspector,
-      tilesets = [],
+      blocksets = [],
       rendering = {},
       lighting,
       range,
@@ -270,8 +270,8 @@ export class VoxelView {
       blocks,
       shapes: this.shapes
     });
-    this.atlases = new TilesetAtlases({
-      tilesets: document.tilesets
+    this.atlases = new BlocksetAtlases({
+      blocksets: document.blocksets
     });
     this.layerVisibility = new VoxelLayerVisibility(
       () => this.markAllChunksDirty("layerVisibility")
@@ -353,9 +353,9 @@ export class VoxelView {
       rendering
     );
 
-    for (const { def, texture, normal } of tilesets) {
+    for (const { def, texture, normal } of blocksets) {
       if (!this.atlases.get(def.id)) {
-        this.loadTileset(def, texture, { normal });
+        this.loadBlockset(def, texture, { normal });
       }
     }
 
@@ -386,38 +386,38 @@ export class VoxelView {
     return this.#pipeline.whenIdle(this.#viewport());
   }
 
-  loadTileset(
-    def: TilesetDefinition,
-    texture: TilesetTexture,
-    options: TilesetLoadOptions = {}
+  loadBlockset(
+    def: BlocksetDefinition,
+    texture: AtlasTexture,
+    options: BlocksetLoadOptions = {}
   ): void {
-    this.document.tilesets.declare(def);
+    this.document.blocksets.declare(def);
     this.atlases.registerTexture(def.id, texture, options.normal);
     this.#logger.debug(
-      `Loaded tileset '${def.id}' from '${def.src ?? def.asset?.id}'`
+      `Loaded blockset '${def.id}' from '${def.src ?? def.asset?.id}'`
     );
 
     this.#materials.invalidate(def.id);
-    this.markAllChunksDirty("loadTileset");
+    this.markAllChunksDirty("loadBlockset");
   }
 
   load(
     data: VoxelWorldJSON,
     options: VoxelViewLoadOptions = {}
   ): void {
-    const { tilesets = [], mergeLayers } = options;
+    const { blocksets = [], mergeLayers } = options;
 
-    const declared: TilesetDefinition[] = [];
-    for (const { def, texture, normal } of tilesets) {
+    const declared: BlocksetDefinition[] = [];
+    for (const { def, texture, normal } of blocksets) {
       if (!this.atlases.get(def.id)) {
-        this.document.tilesets.declare(def);
+        this.document.blocksets.declare(def);
         this.atlases.registerTexture(def.id, texture, normal);
         declared.push(def);
       }
     }
     this.document.load(data, {
       mergeLayers,
-      tilesets: declared
+      blocksets: declared
     });
   }
 
@@ -518,8 +518,8 @@ export class VoxelView {
   }
 
   #syncAtlases(): void {
-    for (const tilesetId of this.atlases.syncAtlases()) {
-      this.#materials.invalidate(tilesetId);
+    for (const blocksetId of this.atlases.syncAtlases()) {
+      this.#materials.invalidate(blocksetId);
     }
   }
 }

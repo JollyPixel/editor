@@ -4,13 +4,13 @@ import type {
   AssetSeedMap
 } from "@jolly-pixel/asset-server";
 import {
-  createTilesetDocument,
+  createBlocksetDocument,
   createVoxelMapDocument,
-  encodeTilesetDocument,
-  tilesetAsset,
-  TILESET_KIND,
+  encodeBlocksetDocument,
+  blocksetAsset,
+  BLOCKSET_KIND,
   VOXEL_MAP_KIND,
-  type TilesetAssetDocument
+  type BlocksetAssetDocument
 } from "@jolly-pixel/asset.voxel-map";
 import {
   DEFAULT_CHUNK_SIZE,
@@ -18,8 +18,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
-export const DEFAULT_TILESET_ID = "default";
-export const DEFAULT_TILESET_SIZE = {
+export const DEFAULT_BLOCKSET_ID = "default";
+export const DEFAULT_BLOCKSET_SIZE = {
   x: 512,
   y: 512
 } as const;
@@ -37,32 +37,32 @@ export interface DefaultSeed {
   backend: AssetBackendTuning;
 }
 
-export function createDefaultTileset(): TilesetAssetDocument {
-  return createTilesetDocument({
+export function createDefaultBlockset(): BlocksetAssetDocument {
+  return createBlocksetDocument({
     tileSize: DEFAULT_TILE_SIZE,
-    size: DEFAULT_TILESET_SIZE
+    size: DEFAULT_BLOCKSET_SIZE
   });
 }
 
 export function createDefaultSeed(
-  tilesetAssetId: string = crypto.randomUUID()
+  blocksetAssetId: string = crypto.randomUUID()
 ): DefaultSeed {
   return {
     seed: {
-      "maps/overworld.tileset.json": {
-        id: tilesetAssetId,
-        kind: TILESET_KIND,
-        content: () => encodeTilesetDocument(createDefaultTileset())
+      "maps/overworld.blockset.json": {
+        id: blocksetAssetId,
+        kind: BLOCKSET_KIND,
+        content: () => encodeBlocksetDocument(createDefaultBlockset())
       },
       "maps/overworld.voxelmap.json": {
         id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({
           chunkSize: DEFAULT_CHUNK_SIZE,
-          tilesets: [
+          blocksets: [
             {
-              id: DEFAULT_TILESET_ID,
-              asset: tilesetAsset(tilesetAssetId)
+              id: DEFAULT_BLOCKSET_ID,
+              asset: blocksetAsset(blocksetAssetId)
             }
           ]
         })

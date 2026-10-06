@@ -17,7 +17,7 @@ before `VoxelView.load()`.
 interface TiledConverterOptions {
   resolveTilesetSrc: (
     tiledSource: string,
-    tilesetId: string
+    blocksetId: string
   ) => string;
   chunkSize?: number;
   layerMode?: "flat" | "stacked";
@@ -43,8 +43,8 @@ every tile layer at y = 0. In `"stacked"` mode, each tile layer uses its flatten
 layer index as y. Generated blocks default to the `"cube"` shape and are
 collidable unless configured otherwise.
 
-`resolveTilesetSrc()` maps a Tiled `.tsx` source and derived tileset ID to the
-image URL stored in `TilesetDefinition.src`. Embedded tilesets pass an empty
+`resolveTilesetSrc()` maps a Tiled `.tsx` source and derived blockset ID to the
+image URL stored in `BlocksetDefinition.src`. Embedded tilesets pass an empty
 source string.
 
 Infinite maps and compressed tile data are not supported. The converter throws

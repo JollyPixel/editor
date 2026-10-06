@@ -46,5 +46,5 @@ test("TiledMapAssetLoader prepares a catalog record", async(context) => {
   );
   assert.strictEqual(asset.world.version, VOXEL_WORLD_VERSION);
   assert.deepStrictEqual(asset.blocks, []);
-  assert.deepStrictEqual(asset.tilesets, []);
+  assert.deepStrictEqual(asset.blocksets, []);
 });

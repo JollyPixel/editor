@@ -6,7 +6,7 @@ import type {
   ResolvedTileRef,
   TileBounds,
   TileSpan
-} from "../../tilesets/types.ts";
+} from "../../blocksets/types.ts";
 import {
   buildShapeGeometry,
   type ShapeGeometry

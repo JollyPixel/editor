@@ -11,7 +11,7 @@ import { BlockUvBridge } from "../../../../src/features/texture/bridge/BlockUvBr
 import {
   makeFakeVoxelEngine,
   makeUv,
-  tilesetSlot
+  blocksetSlot
 } from "./blockUvFixtures.ts";
 
 // CONSTANTS
@@ -38,7 +38,7 @@ function setup(
     shapeId: "stair",
     collidable: true,
     faceTextures,
-    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" }
+    defaultTexture: { col: 0, row: 0, blocksetId: "atlas" }
   } as never);
 
   return { view, uv, bridgeOptions };
@@ -50,7 +50,7 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
@@ -71,7 +71,7 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.setState("block-1", "free");
 
       const geometry = uv.get("block-1")!.geometryFor("right") as UVCompound;
@@ -94,7 +94,7 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.setState("block-1", "free");
 
       const region = uv.get("block-1")!;
@@ -128,7 +128,7 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.setState("block-1", "free");
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
 
@@ -161,7 +161,7 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.setState("block-1", "stacked", "top.1");
 
       const region = uv.get("block-1")!;
@@ -189,7 +189,7 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
       uv.setState("block-1", "stacked");
       uv.move("block-1", { x: 32, y: 16, width: 16, height: 16 });
@@ -214,12 +214,12 @@ describe("BlockUvBridge — stairs", () => {
 
   it("rebuilds a legacy stair, inheriting derived slots from their base", () => {
     const { view, uv, bridgeOptions } = setup({
-      [Face.PosY]: { col: 2, row: 1, tilesetId: "atlas" }
+      [Face.PosY]: { col: 2, row: 1, blocksetId: "atlas" }
     });
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
 
       const region = uv.get("block-1")!;
 

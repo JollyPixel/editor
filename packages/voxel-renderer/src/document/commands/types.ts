@@ -17,7 +17,7 @@ import type {
   ResolvedBlockDefinition
 } from "../blocks/BlockDefinition.ts";
 import type { BlockRedefinition } from "../blocks/BlockRedefinition.ts";
-import type { TilesetDefinition } from "../tilesets/types.ts";
+import type { BlocksetDefinition } from "../blocksets/types.ts";
 import type { MaterialGroupJSON } from "../materials/MaterialGroup.ts";
 import type { BlendGroupJSON } from "../materials/BlendGroup.ts";
 import type {
@@ -225,17 +225,17 @@ export type VoxelBlockCommand =
 
 export type VoxelBlockCommandAction = VoxelBlockCommand["action"];
 
-export type VoxelTilesetCommand =
+export type VoxelBlocksetCommand =
   | {
-    action: "tileset-added";
-    tileset: TilesetDefinition;
+    action: "blockset-added";
+    blockset: BlocksetDefinition;
   }
   | {
-    action: "tileset-removed";
-    tilesetId: string;
+    action: "blockset-removed";
+    blocksetId: string;
   };
 
-export type VoxelTilesetCommandAction = VoxelTilesetCommand["action"];
+export type VoxelBlocksetCommandAction = VoxelBlocksetCommand["action"];
 
 export type VoxelMaterialGroupCommand =
   | {
@@ -266,7 +266,7 @@ export type VoxelCommand =
   | VoxelLayerCommand
   | VoxelTemplateCommand
   | VoxelBlockCommand
-  | VoxelTilesetCommand
+  | VoxelBlocksetCommand
   | VoxelMaterialGroupCommand
   | VoxelBlendGroupCommand;
 
@@ -280,31 +280,31 @@ export type VoxelWorldContentCommand =
   | VoxelTemplateCommand;
 
 /**
- * Commands a world persists and shares: its content and its tileset links.
- * Blocks, material groups and blend groups belong to the tilesets.
+ * Commands a world persists and shares: its content and its blockset links.
+ * Blocks, material groups and blend groups belong to the blocksets.
  */
 export type VoxelWorldCommand =
   | VoxelWorldContentCommand
-  | VoxelTilesetCommand;
+  | VoxelBlocksetCommand;
 
 export type VoxelWorldCommandAction = VoxelWorldCommand["action"];
 
-export type TilesetTileSizeCommand = {
+export type BlocksetTileSizeCommand = {
   action: "tile-size-updated";
   tileSize: number;
 };
 
 /**
- * Commands a tileset document applies to its own blocks, material groups,
+ * Commands a blockset document applies to its own blocks, material groups,
  * blend groups and tile size.
  */
-export type TilesetDocumentCommand =
+export type BlocksetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand
   | VoxelBlendGroupCommand
-  | TilesetTileSizeCommand;
+  | BlocksetTileSizeCommand;
 
-export type TilesetDocumentCommandAction = TilesetDocumentCommand["action"];
+export type BlocksetDocumentCommandAction = BlocksetDocumentCommand["action"];
 
 export type VoxelCommandOrigin = "local" | "remote";
 

@@ -12,7 +12,7 @@ import {
 } from "../helpers/view.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import { mockTexture } from "../helpers/mockTexture.ts";
-import { MISSING_TILESET_ID } from "../../src/document/tilesets/index.ts";
+import { MISSING_BLOCKSET_ID } from "../../src/document/blocksets/index.ts";
 
 describe("VoxelView - construction", () => {
   it("creates the layers passed via options and no mesh until a tick", () => {
@@ -23,69 +23,69 @@ describe("VoxelView - construction", () => {
   });
 });
 
-describe("VoxelView - tilesets", () => {
-  it("declares the tilesets of a loaded document", () => {
+describe("VoxelView - blocksets", () => {
+  it("declares the blocksets of a loaded document", () => {
     const view = makeView();
     const data = view.document.save();
-    data.tilesets = [
+    data.blocksets = [
       { id: "atlas", src: "/atlas.png", tileSize: 16 },
       { id: "later", src: "later-asset", tileSize: 32 }
     ];
 
     view.load(data);
 
-    assert.deepEqual(view.document.tilesets.definitions().map((def) => def.id), ["atlas", "later"]);
+    assert.deepEqual(view.document.blocksets.definitions().map((def) => def.id), ["atlas", "later"]);
     assert.ok(view.atlases.get("atlas"));
     assert.equal(view.atlases.get("later"), undefined);
   });
 
-  it("drops the atlas of a tileset missing from a loaded document", () => {
+  it("drops the atlas of a blockset missing from a loaded document", () => {
     const view = makeView();
     const data = view.document.save();
-    data.tilesets = [];
+    data.blocksets = [];
 
     view.load(data);
 
     assert.equal(view.atlases.get("atlas"), undefined);
   });
 
-  it("rebuilds the atlas of a tileset loaded again with another tile size", () => {
+  it("rebuilds the atlas of a blockset loaded again with another tile size", () => {
     const view = makeView();
-    const slot = view.document.tilesets.get("atlas")?.slot;
+    const slot = view.document.blocksets.get("atlas")?.slot;
 
-    view.loadTileset({ id: "atlas", src: "/atlas.png", tileSize: 32 }, mockTexture());
+    view.loadBlockset({ id: "atlas", src: "/atlas.png", tileSize: 32 }, mockTexture());
 
-    assert.equal(view.document.tilesets.get("atlas")?.slot, slot);
-    assert.equal(view.document.tilesets.get("atlas")?.tileSize, 32);
+    assert.equal(view.document.blocksets.get("atlas")?.slot, slot);
+    assert.equal(view.document.blocksets.get("atlas")?.tileSize, 32);
     assert.equal(view.atlases.atlas("atlas").def.tileSize, 32);
   });
 
-  it("redraws the blocks of a removed tileset with the missing texture", () => {
+  it("redraws the blocks of a removed blockset with the missing texture", () => {
     const view = makeView({ layers: ["Ground"] });
     placeCube(view, "Ground", { x: 0, y: 0, z: 0 });
     view.flush();
     assert.equal(chunkMeshes(view).length, 1);
 
-    assert.equal(view.document.removeTileset("atlas"), true);
+    assert.equal(view.document.removeBlockset("atlas"), true);
     view.flush();
 
     assert.equal(view.atlases.get("atlas"), undefined);
     const meshes = chunkMeshes(view);
     assert.equal(meshes.length, 1);
-    assert.ok(meshes[0].name.includes(MISSING_TILESET_ID));
+    assert.ok(meshes[0].name.includes(MISSING_BLOCKSET_ID));
     assert.equal(faceCountOf(meshes[0]), 6);
   });
 
   it("keeps culling against a block drawn with the missing texture", () => {
     const view = makeView({ layers: ["Ground"] });
-    view.loadTileset({ id: "b", src: "b", tileSize: 16 }, mockTexture());
+    view.loadBlockset({ id: "b", src: "b", tileSize: 16 }, mockTexture());
     view.document.defineBlock(makeBlockDef(7, "cube", {
-      defaultTexture: { col: 0, row: 0, tilesetId: "b" }
+      defaultTexture: { col: 0, row: 0, blocksetId: "b" }
     }));
     placeCube(view, "Ground", { x: 0, y: 0, z: 0 });
     placeCube(view, "Ground", { x: 1, y: 0, z: 0 }, 7);
 
-    view.document.removeTileset("b");
+    view.document.removeBlockset("b");
     view.flush();
 
     assert.deepEqual(
@@ -96,11 +96,11 @@ describe("VoxelView - tilesets", () => {
     );
   });
 
-  it("stops culling against a block whose tileset has no texture yet", () => {
+  it("stops culling against a block whose blockset has no texture yet", () => {
     const view = makeView({ layers: ["Ground"] });
-    view.document.addTileset({ id: "later", src: "later", tileSize: 16 });
+    view.document.addBlockset({ id: "later", src: "later", tileSize: 16 });
     view.document.defineBlock(makeBlockDef(7, "cube", {
-      defaultTexture: { col: 0, row: 0, tilesetId: "later" }
+      defaultTexture: { col: 0, row: 0, blocksetId: "later" }
     }));
     placeCube(view, "Ground", { x: 0, y: 0, z: 0 });
     placeCube(view, "Ground", { x: 1, y: 0, z: 0 }, 7);

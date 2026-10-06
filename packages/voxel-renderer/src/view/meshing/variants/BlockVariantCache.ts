@@ -6,9 +6,9 @@ import type {
 } from "../../../document/blocks/shape/BlockShapeRegistry.ts";
 import type {
   TileRotation,
-  TilesetUVRegion
-} from "../../../document/tilesets/types.ts";
-import { rotateTileUv } from "../../../document/tilesets/tileRef.ts";
+  AtlasUVRegion
+} from "../../../document/blocksets/types.ts";
+import { rotateTileUv } from "../../../document/blocksets/tileRef.ts";
 import type { FaceDefinition } from "../../../document/blocks/face/index.ts";
 import { BlockTextures } from "../../../document/blocks/BlockTextures.ts";
 import { BlockSurface } from "../../../document/blocks/BlockSurface.ts";
@@ -29,8 +29,8 @@ import type {
   BlockVariantFace,
   MergedVariant,
   MergedVariantPart,
-  TilesetResolver,
-  TilesetUvSource
+  BlocksetResolver,
+  AtlasUvSource
 } from "./types.ts";
 import { BlockComplements } from "../../../document/blocks/BlockComplements.ts";
 import {
@@ -83,10 +83,10 @@ const kSelfOcclusionShift = 6;
 
 interface CompileFaceOptions {
   faceDef: FaceDefinition;
-  uvRegion: TilesetUVRegion;
+  uvRegion: AtlasUVRegion;
   regionId: number;
   tileRotation?: TileRotation;
-  tilesetId: string;
+  blocksetId: string;
   surface: BlockSurface;
   voxelTransform: VoxelTransform;
 }
@@ -95,7 +95,7 @@ export interface BlockVariantCacheOptions {
   alphaTest?: number;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
-  atlases: TilesetResolver;
+  atlases: BlocksetResolver;
   blendGroups?: BlendGroupList;
   /**
    * Receives a warning for each `faceTextures` key no slot of the block's
@@ -107,7 +107,7 @@ export interface BlockVariantCacheOptions {
 
 interface SlotTile {
   textureSlot: ShapeSlot;
-  atlas: TilesetUvSource;
+  atlas: AtlasUvSource;
   tile: TileUv;
   regionId: number;
 }
@@ -123,7 +123,7 @@ interface ResolvedTiles {
 export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
-  #atlases: TilesetResolver;
+  #atlases: BlocksetResolver;
   #regions: FaceRegionTable;
   #blendGroups: BlendGroupList | undefined;
   #alphaTest: number;
@@ -155,7 +155,7 @@ export class BlockVariantCache {
 
   #blockVersion = -1;
   #shapeVersion = -1;
-  #tilesetVersion = -1;
+  #blocksetVersion = -1;
   #blendVersion = -1;
 
   constructor(
@@ -177,13 +177,13 @@ export class BlockVariantCache {
   refresh(): void {
     const blockVersion = this.#blockRegistry.version;
     const shapeVersion = this.#shapeRegistry.version;
-    const tilesetVersion = this.#atlases.version;
+    const blocksetVersion = this.#atlases.version;
     const blendVersion = this.#blendGroups?.version ?? 0;
 
     if (
       blockVersion === this.#blockVersion &&
       shapeVersion === this.#shapeVersion &&
-      tilesetVersion === this.#tilesetVersion &&
+      blocksetVersion === this.#blocksetVersion &&
       blendVersion === this.#blendVersion
     ) {
       return;
@@ -191,7 +191,7 @@ export class BlockVariantCache {
 
     this.#blockVersion = blockVersion;
     this.#shapeVersion = shapeVersion;
-    this.#tilesetVersion = tilesetVersion;
+    this.#blocksetVersion = blocksetVersion;
     this.#blendVersion = blendVersion;
     this.#variants.clear();
     this.#merged.clear();
@@ -285,10 +285,10 @@ export class BlockVariantCache {
       return null;
     }
 
-    const { tilesetId } = this.#geometryKeys[face.slot];
+    const { blocksetId } = this.#geometryKeys[face.slot];
     const matching = neighbour.faces.find((candidate) => (
       candidate.cull === face.cull &&
-      this.#geometryKeys[candidate.slot].tilesetId === tilesetId
+      this.#geometryKeys[candidate.slot].blocksetId === blocksetId
     ));
     if (matching === undefined) {
       return null;
@@ -446,7 +446,7 @@ export class BlockVariantCache {
     let front = this.#frontSlots[slot];
     if (front === undefined) {
       const key = this.#geometryKeys[slot];
-      front = this.#slotFor(key.tilesetId, new BlockSurface({
+      front = this.#slotFor(key.blocksetId, new BlockSurface({
         ...key.surface,
         side: "front"
       }));
@@ -462,7 +462,7 @@ export class BlockVariantCache {
     let blended = this.#blendedSlots[slot];
     if (blended === undefined) {
       const key = this.#geometryKeys[slot];
-      blended = this.#slotFor(key.tilesetId, key.surface, true);
+      blended = this.#slotFor(key.blocksetId, key.surface, true);
       this.#blendedSlots[slot] = blended;
     }
 
@@ -504,11 +504,11 @@ export class BlockVariantCache {
   }
 
   #slotFor(
-    tilesetId: string,
+    blocksetId: string,
     surface: BlockSurface,
     blended = false
   ): number {
-    const geometryKey = new ChunkGeometryKey(tilesetId, surface, blended);
+    const geometryKey = new ChunkGeometryKey(blocksetId, surface, blended);
     const key = geometryKey.toString();
 
     let slot = this.#slots.get(key);
@@ -575,7 +575,7 @@ export class BlockVariantCache {
         continue;
       }
 
-      const atlas = this.#atlases.resolve(tileRef.tilesetId);
+      const atlas = this.#atlases.resolve(tileRef.blocksetId);
       if (!atlas) {
         pending = true;
         continue;
@@ -633,7 +633,7 @@ export class BlockVariantCache {
             uvRegion: tile.region,
             regionId,
             tileRotation: tile.rotation,
-            tilesetId: atlas.def.id,
+            blocksetId: atlas.def.id,
             surface,
             voxelTransform
           })
@@ -666,7 +666,7 @@ export class BlockVariantCache {
       uvRegion,
       regionId,
       tileRotation,
-      tilesetId,
+      blocksetId,
       surface,
       voxelTransform
     } = options;
@@ -714,7 +714,7 @@ export class BlockVariantCache {
 
     return {
       cull,
-      slot: this.#slotFor(tilesetId, surface),
+      slot: this.#slotFor(blocksetId, surface),
       vertexCount,
       indexCount: vertexCount === 4 ? 6 : 3,
       positions,

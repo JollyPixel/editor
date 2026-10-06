@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { BlockRegistry } from "../../../src/document/blocks/BlockRegistry.ts";
 import { BlockShapeRegistry } from "../../../src/document/blocks/shape/BlockShapeRegistry.ts";
-import { TilesetAtlases } from "../../../src/view/atlases/TilesetAtlases.ts";
+import { BlocksetAtlases } from "../../../src/view/atlases/BlocksetAtlases.ts";
 import { DefinedShape } from "../../../src/view/workers/DefinedShape.ts";
-import { DefinedTilesets } from "../../../src/view/workers/DefinedTilesets.ts";
+import { DefinedBlocksets } from "../../../src/view/workers/DefinedBlocksets.ts";
 import {
   captureMeshDefinitions
 } from "../../../src/view/workers/MeshDefinitions.ts";
@@ -20,9 +20,9 @@ import { makeBlockDef } from "../../helpers/blocks.ts";
 import { CUBE_ID } from "../../helpers/ids.ts";
 
 function makeSources() {
-  const atlases = new TilesetAtlases();
+  const atlases = new BlocksetAtlases();
   registerAtlas(atlases);
-  atlases.tilesets.add(makeAtlasDef({ id: "pending" }));
+  atlases.blocksets.add(makeAtlasDef({ id: "pending" }));
 
   return {
     blockRegistry: new BlockRegistry([makeBlockDef(CUBE_ID, "cube")]),
@@ -59,11 +59,11 @@ describe("captureMeshDefinitions", () => {
   });
 });
 
-describe("DefinedTilesets", () => {
-  it("resolves tilesets like the TilesetAtlases it was captured from", () => {
+describe("DefinedBlocksets", () => {
+  it("resolves blocksets like the BlocksetAtlases it was captured from", () => {
     const sources = makeSources();
-    const { tilesets } = captureMeshDefinitions(sources);
-    const defined = new DefinedTilesets(structuredClone(tilesets));
+    const { blocksets } = captureMeshDefinitions(sources);
+    const defined = new DefinedBlocksets(structuredClone(blocksets));
 
     for (const id of [undefined, "atlas", "pending", "unknown"]) {
       const expected = sources.atlases.resolve(id);

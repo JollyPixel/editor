@@ -5,7 +5,7 @@ import type { VoxelWorld } from "../../world/VoxelWorld.ts";
 import type { VoxelChunk } from "../../world/storage/VoxelChunk.ts";
 import type { VoxelStore } from "../../world/storage/VoxelStore.ts";
 import { unmarkMerged } from "../../world/storage/mergedVoxel.ts";
-import type { TilesetDefinition } from "../../tilesets/types.ts";
+import type { BlocksetDefinition } from "../../blocksets/types.ts";
 import type {
   VoxelCellData,
   VoxelChunkData,
@@ -14,9 +14,9 @@ import type {
   VoxelWorldData
 } from "./types.ts";
 
-export function serializeTilesetDefinition(
-  definition: TilesetDefinition
-): TilesetDefinition {
+export function serializeBlocksetDefinition(
+  definition: BlocksetDefinition
+): BlocksetDefinition {
   const {
     tileSize: _tileSize,
     cols: _cols,
@@ -35,11 +35,11 @@ export function serializeTilesetDefinition(
 
 export function captureVoxelWorld(
   world: VoxelWorld,
-  tilesets: Iterable<TilesetDefinition> = []
+  blocksets: Iterable<BlocksetDefinition> = []
 ): VoxelWorldData {
   return {
     chunkSize: world.chunkSize,
-    tilesets: Array.from(tilesets, serializeTilesetDefinition),
+    blocksets: Array.from(blocksets, serializeBlocksetDefinition),
     layers: world.getLayers().map(captureVoxelLayer),
     objectLayers: world.objectLayers.toArray(),
     templates: world.templates.toArray().map(

@@ -6,10 +6,10 @@ import {
 } from "@jolly-pixel/asset.pixel-art";
 import {
   createVoxelMapDocument,
-  encodeTilesetDocument,
-  tilesetAsset,
-  tilesetDocumentFromPng,
-  TILESET_KIND,
+  encodeBlocksetDocument,
+  blocksetAsset,
+  blocksetDocumentFromPng,
+  BLOCKSET_KIND,
   VOXEL_MAP_KIND
 } from "@jolly-pixel/asset.voxel-map";
 import {
@@ -27,35 +27,35 @@ export const TEXTURE_SIZE = {
   x: 64,
   y: 64
 };
-const kTilesetUrl = "textures/tileset.png";
-const kTilesetAssetId = "tileset-overworld";
+const kBlocksetUrl = "textures/blockset.png";
+const kBlocksetAssetId = "blockset-overworld";
 const kMapAssetId = "map-overworld";
 const kModelTextureAssetId = "model-texture";
 const kModelAssetId = "model-default";
-const kTilesetId = "default";
+const kBlocksetId = "default";
 
 export async function createStudioSeed(
-  tilesetPng: Uint8Array
+  blocksetPng: Uint8Array
 ): Promise<AssetSeedMap> {
-  const tileset = await tilesetDocumentFromPng(tilesetPng, {
+  const blockset = await blocksetDocumentFromPng(blocksetPng, {
     tileSize: DEFAULT_TILE_SIZE
   });
 
   return {
-    "maps/overworld.tileset.json": {
-      id: kTilesetAssetId,
-      kind: TILESET_KIND,
-      content: () => encodeTilesetDocument(tileset)
+    "maps/overworld.blockset.json": {
+      id: kBlocksetAssetId,
+      kind: BLOCKSET_KIND,
+      content: () => encodeBlocksetDocument(blockset)
     },
     "maps/overworld.voxelmap.json": {
       id: kMapAssetId,
       kind: VOXEL_MAP_KIND,
       content: () => createVoxelMapDocument({
         chunkSize: DEFAULT_CHUNK_SIZE,
-        tilesets: [
+        blocksets: [
           {
-            id: kTilesetId,
-            asset: tilesetAsset(kTilesetAssetId)
+            id: kBlocksetId,
+            asset: blocksetAsset(kBlocksetAssetId)
           }
         ]
       })
@@ -81,9 +81,9 @@ export async function createStudioSeed(
 }
 
 export async function loadStudioSeed(): Promise<AssetSeedMap> {
-  const response = await fetch(kTilesetUrl);
+  const response = await fetch(kBlocksetUrl);
   if (!response.ok) {
-    throw new Error(`Unable to load "${kTilesetUrl}" (${response.status}).`);
+    throw new Error(`Unable to load "${kBlocksetUrl}" (${response.status}).`);
   }
 
   return createStudioSeed(

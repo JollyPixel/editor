@@ -128,7 +128,7 @@ closed dialog it resolves to `false`.
 
 ```ts
 const confirmed = await dialog.confirmInline({
-  message: "3 blocks use this tileset and will lose their texture.",
+  message: "3 blocks use this blockset and will lose their texture.",
   confirmLabel: "Remove",
   danger: true
 });

@@ -10,7 +10,7 @@ import * as THREE from "three";
 import {
   BlockRegistry,
   BlockShapeRegistry,
-  TilesetAtlases,
+  BlocksetAtlases,
   VoxelTransform
 } from "@jolly-pixel/voxel.renderer";
 
@@ -21,7 +21,7 @@ import { BlockRenderSources } from "../../../../src/features/blocks/rendering/Bl
 import type { GhostTarget } from "../../../../src/features/painting/model/ghostTarget.ts";
 
 function ghostOf(): GhostBlock {
-  const atlases = new TilesetAtlases();
+  const atlases = new BlocksetAtlases();
 
   return new GhostBlock({
     blockRegistry: new BlockRegistry([

@@ -9,9 +9,9 @@ import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeR
 import { buildShapeGeometry } from "../../document/blocks/shape/shapeGeometry.ts";
 import { shapeSlots } from "../../document/blocks/shape/shapeSlots.ts";
 import { VoxelTransform } from "../../document/geometry/VoxelTransform.ts";
-import { rotateTileUv } from "../../document/tilesets/tileRef.ts";
-import type { ResolvedTileRef } from "../../document/tilesets/types.ts";
-import type { TilesetAtlases } from "../atlases/TilesetAtlases.ts";
+import { rotateTileUv } from "../../document/blocksets/tileRef.ts";
+import type { ResolvedTileRef } from "../../document/blocksets/types.ts";
+import type { BlocksetAtlases } from "../atlases/BlocksetAtlases.ts";
 import { tileUvOf } from "./variants/tileUv.ts";
 
 // CONSTANTS
@@ -25,7 +25,7 @@ export type EmptyTileProbe = (
 
 export interface BlockPiecesOptions {
   shapes: BlockShapeRegistry;
-  atlases: TilesetAtlases;
+  atlases: BlocksetAtlases;
   emptyTile?: EmptyTileProbe;
 }
 
@@ -37,7 +37,7 @@ export interface BlockPiece {
 
 export class BlockPieces {
   readonly #shapes: BlockShapeRegistry;
-  readonly #atlases: TilesetAtlases;
+  readonly #atlases: BlocksetAtlases;
   readonly #emptyTile: EmptyTileProbe;
   readonly #pieces = new Map<
     ResolvedBlockDefinition,
@@ -124,7 +124,7 @@ export class BlockPieces {
       indexStart += indexCount;
 
       const tileRef = textures.forSlot(range.slot);
-      const atlas = tileRef && this.#atlases.resolve(tileRef.tilesetId);
+      const atlas = tileRef && this.#atlases.resolve(tileRef.blocksetId);
       if (isEmpty || !tileRef || !atlas || !textured) {
         continue;
       }
@@ -157,7 +157,7 @@ export class BlockPieces {
   textureOf(
     block: ResolvedBlockDefinition
   ): THREE.Texture | null {
-    return this.#atlases.resolve(block.defaultTexture?.tilesetId)?.texture ??
+    return this.#atlases.resolve(block.defaultTexture?.blocksetId)?.texture ??
       null;
   }
 

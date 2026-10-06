@@ -464,10 +464,10 @@ export class ChunkMeshWorkers {
     const { meshBuilder } = this.#options;
     const { plan, slot } = job;
     const geometries = new Map<ChunkGeometryKey, PulledChunkGeometry>();
-    for (const { tilesetId, surface, blended, data } of response.geometries) {
+    for (const { blocksetId, surface, blended, data } of response.geometries) {
       remapTemplates(data, slot.templateIds);
       geometries.set(
-        new ChunkGeometryKey(tilesetId, new BlockSurface(surface), blended),
+        new ChunkGeometryKey(blocksetId, new BlockSurface(surface), blended),
         meshBuilder.createGeometry(data)
       );
     }

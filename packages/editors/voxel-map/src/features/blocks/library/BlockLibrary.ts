@@ -236,7 +236,7 @@ export class BlockLibrary extends WorkspaceElement {
   #onBlockMove(
     event: CustomEvent<BlockMoveDetail>
   ): void {
-    this.workspace?.tilesets.moveBlock(event.detail.id, event.detail.toIndex);
+    this.workspace?.blocksets.moveBlock(event.detail.id, event.detail.toIndex);
   }
 
   #onBlockCreate(): void {

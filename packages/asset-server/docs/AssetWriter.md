@@ -57,7 +57,7 @@ Without `data`, the asset holds the serialized `create(assetId)` state of its
 kind. Each of the kind's [companions](./AssetKinds.md#companions) is created
 first, beside it: same folder, same name, the companion kind's first extension.
 Every one of these paths must be free; `"suffix"` renames them together
-(`maps/world-2.voxelmap.json` and `maps/world-2.tileset.json`). When a write
+(`maps/world-2.voxelmap.json` and `maps/world-2.blockset.json`). When a write
 fails part way, the companions already written are deleted. With `data`, no
 companion is created.
 

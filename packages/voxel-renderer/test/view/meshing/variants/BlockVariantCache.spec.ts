@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { type BlockDefinition, BlockRegistry } from "../../../../src/document/blocks/index.ts";
 import { BlockShapeRegistry } from "../../../../src/document/blocks/shape/index.ts";
-import { MISSING_TILESET_ID } from "../../../../src/document/tilesets/index.ts";
-import { TilesetAtlases } from "../../../../src/view/atlases/index.ts";
+import { MISSING_BLOCKSET_ID } from "../../../../src/document/blocksets/index.ts";
+import { BlocksetAtlases } from "../../../../src/view/atlases/index.ts";
 import { BlockVariantCache } from "../../../../src/view/meshing/variants/BlockVariantCache.ts";
 import type { BlockVariantFace } from "../../../../src/view/meshing/variants/types.ts";
 import { VoxelTransform } from "../../../../src/document/geometry/index.ts";
@@ -44,7 +44,7 @@ function makeCache(
     const { shapeId = "cube", ...overrides } = leaves;
     blockRegistry.register(makeBlockDef(kLeavesId, shapeId, overrides));
   }
-  const atlases = new TilesetAtlases();
+  const atlases = new BlocksetAtlases();
   registerAtlas(atlases);
 
   const cache = new BlockVariantCache({
@@ -224,10 +224,10 @@ describe("BlockVariantCache - frontFaceOf", () => {
   });
 });
 
-describe("BlockVariantCache - missing tileset", () => {
-  it("draws a block of an undeclared tileset with the missing texture", () => {
+describe("BlockVariantCache - missing blockset", () => {
+  it("draws a block of an undeclared blockset with the missing texture", () => {
     const { cache } = makeCache({
-      defaultTexture: { col: 3, row: 2, rotation: 1, tilesetId: "gone" }
+      defaultTexture: { col: 3, row: 2, rotation: 1, blocksetId: "gone" }
     });
 
     const variant = cache.get(kLeavesId, 0)!;
@@ -236,20 +236,20 @@ describe("BlockVariantCache - missing tileset", () => {
     assert.equal(variant.faces.length, 6);
     assert.equal(variant.occlusionMask, kAllFaces);
     variant.faces.forEach((face, index) => {
-      assert.equal(cache.geometryKeyAt(face.slot).tilesetId, MISSING_TILESET_ID);
+      assert.equal(cache.geometryKeyAt(face.slot).blocksetId, MISSING_BLOCKSET_ID);
       assert.deepEqual(tileUvsOf(face), tileUvsOf(plain.faces[index]));
     });
   });
 
-  it("neither draws nor occludes while a declared tileset has no texture", () => {
+  it("neither draws nor occludes while a declared blockset has no texture", () => {
     const blockRegistry = new BlockRegistry([
       makeBlockDef(kCubeId, "cube", {
-        defaultTexture: { col: 0, row: 0, tilesetId: "late" }
+        defaultTexture: { col: 0, row: 0, blocksetId: "late" }
       })
     ]);
-    const atlases = new TilesetAtlases();
+    const atlases = new BlocksetAtlases();
     registerAtlas(atlases);
-    atlases.tilesets.add(makeAtlasDef({ id: "late" }));
+    atlases.blocksets.add(makeAtlasDef({ id: "late" }));
     const cache = new BlockVariantCache({
       blockRegistry,
       shapeRegistry: BlockShapeRegistry.createDefault(),
@@ -303,7 +303,7 @@ describe("BlockVariantCache - unknown faceTextures keys", () => {
     const blockRegistry = new BlockRegistry([
       makeBlockDef(kCubeId, "cube", { faceTextures })
     ]);
-    const atlases = new TilesetAtlases();
+    const atlases = new BlocksetAtlases();
     registerAtlas(atlases);
     const cache = new BlockVariantCache({
       blockRegistry,

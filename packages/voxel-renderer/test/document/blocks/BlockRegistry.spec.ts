@@ -17,7 +17,7 @@ function makeDef(
 ): BlockDefinition {
   return makeBlockDef(id, "cube", {
     name,
-    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" }
+    defaultTexture: { col: 0, row: 0, blocksetId: "atlas" }
   });
 }
 
@@ -117,14 +117,14 @@ describe("BlockRegistry — registration resolves the authored definition", () =
     assert.equal(registry.get(1)!.cullCoveredFaces, false);
   });
 
-  it("expands every tile ref tuple against defaultTilesetId", () => {
+  it("expands every tile ref tuple against defaultBlocksetId", () => {
     const registry = new BlockRegistry();
 
     registry.register({
       id: 5,
       name: "A",
       shapeId: "cube",
-      defaultTilesetId: "terrain",
+      defaultBlocksetId: "terrain",
       defaultTexture: [5, 6],
       faceTextures: {
         [FACE.NegY]: [1, 2],
@@ -135,13 +135,13 @@ describe("BlockRegistry — registration resolves the authored definition", () =
     assert.deepEqual(registry.get(5)!.defaultTexture, {
       col: 5,
       row: 6,
-      tilesetId: "terrain"
+      blocksetId: "terrain"
     });
     assert.deepEqual(
       registry.get(5)!.faceTextures,
       {
-        bottom: { col: 1, row: 2, tilesetId: "terrain" },
-        top: { col: 5, row: 6, tilesetId: "terrain" }
+        bottom: { col: 1, row: 2, blocksetId: "terrain" },
+        top: { col: 5, row: 6, blocksetId: "terrain" }
       },
       "a numeric FACE key resolves to that face's default slot"
     );
@@ -155,7 +155,7 @@ describe("BlockRegistry — registration resolves the authored definition", () =
       shapeId: "cube",
       faceTextures: { [FACE.PosY]: [1, 2] },
       defaultTexture: { col: 0, row: 0 },
-      defaultTilesetId: "atlas"
+      defaultBlocksetId: "atlas"
     };
 
     registry.register(authored);

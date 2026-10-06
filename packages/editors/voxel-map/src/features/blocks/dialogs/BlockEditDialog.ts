@@ -27,10 +27,10 @@ import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import { materialGroupNameOf } from "./materialGroupSources.ts";
 import {
   blockDialogStyles,
-  MISSING_TILESET,
+  MISSING_BLOCKSET,
   renderShapeColumn,
   shapeOptions,
-  tilesetOptions
+  blocksetOptions
 } from "./blockDialog.ts";
 import "./BlockMaterialFinish.ts";
 import "../blockIcons.ts";
@@ -105,9 +105,9 @@ export class BlockEditDialog extends WorkspaceElement {
       return nothing;
     }
 
-    const { tilesets, view } = workspace;
-    const owner = tilesets.ownerOf(block.id);
-    const tilesetId = owner?.definition.id ?? "";
+    const { blocksets, view } = workspace;
+    const owner = blocksets.ownerOf(block.id);
+    const blocksetId = owner?.definition.id ?? "";
 
     return html`
       <jolly-dialog
@@ -120,10 +120,10 @@ export class BlockEditDialog extends WorkspaceElement {
         <div class="layout">
           <div class="fields">
             <jolly-select
-              label="Tileset"
-              .options=${tilesetOptions(tilesets.entries, owner === undefined)}
-              .value=${tilesetId}
-              .error=${owner === undefined ? MISSING_TILESET : null}
+              label="Blockset"
+              .options=${blocksetOptions(blocksets.entries, owner === undefined)}
+              .value=${blocksetId}
+              .error=${owner === undefined ? MISSING_BLOCKSET : null}
               disabled
             ></jolly-select>
             <jolly-select
@@ -140,7 +140,7 @@ export class BlockEditDialog extends WorkspaceElement {
             open: this._open,
             sources: workspace.blockSources,
             block,
-            size: BlockTextures.of(block).size ?? tilesets.tileSizeOf(tilesetId),
+            size: BlockTextures.of(block).size ?? blocksets.tileSizeOf(blocksetId),
             onSizeChange: this.#onSizeChange
           })}
         </div>
@@ -232,13 +232,13 @@ export class BlockEditDialog extends WorkspaceElement {
       <jolly-text
         label="Group"
         placeholder="None"
-        description="Blocks of the tileset naming the same group share one finish"
+        description="Blocks of the blockset naming the same group share one finish"
         .value=${this.#localGroupOf(block) ?? ""}
         @jolly-change=${this.#onMaterialGroupChange}
       ></jolly-text>
       ${block.materialGroup === undefined ? nothing : html`
         <block-material-finish
-          .tilesets=${workspace.tilesets}
+          .blocksets=${workspace.blocksets}
           .mapDocument=${workspace.mapDocument}
           .groupId=${block.materialGroup}
         ></block-material-finish>
@@ -249,7 +249,7 @@ export class BlockEditDialog extends WorkspaceElement {
   #localGroupOf(
     block: ResolvedBlockDefinition
   ): string | undefined {
-    const owner = this.workspace?.tilesets.ownerOf(block.id);
+    const owner = this.workspace?.blocksets.ownerOf(block.id);
 
     return block.materialGroup === undefined || owner === undefined ?
       block.materialGroup :
@@ -301,7 +301,7 @@ export class BlockEditDialog extends WorkspaceElement {
   ): void => {
     const block = this.#block;
     if (block !== undefined) {
-      this.workspace?.tilesets.defineBlock(
+      this.workspace?.blocksets.defineBlock(
         BlockTextures.of(block).withSize(event.detail.value).applyTo(block)
       );
     }
@@ -312,7 +312,7 @@ export class BlockEditDialog extends WorkspaceElement {
   ): void {
     const block = this.#block;
     if (block !== undefined) {
-      this.workspace?.tilesets.defineBlock({
+      this.workspace?.blocksets.defineBlock({
         ...block,
         ...patch
       });
@@ -333,7 +333,7 @@ export class BlockEditDialog extends WorkspaceElement {
         confirmLabel: "Delete",
         danger: true
       });
-    if (!confirmed || !workspace.tilesets.removeBlock(block.id)) {
+    if (!confirmed || !workspace.blocksets.removeBlock(block.id)) {
       return;
     }
 

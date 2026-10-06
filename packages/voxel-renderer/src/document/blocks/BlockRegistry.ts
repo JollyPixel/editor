@@ -124,13 +124,13 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
 
   apply(
     command: VoxelBlockCommand,
-    defaultTilesetId: string | null = null
+    defaultBlocksetId: string | null = null
   ): VoxelBlockCommand | null {
     switch (command.action) {
       case "block-defined": {
         const resolved = resolveBlockDefinition(command.block);
         const block = BlockTextures.of(resolved)
-          .withTileset(defaultTilesetId)
+          .withBlockset(defaultBlocksetId)
           .applyTo(resolved);
         this.register(block);
 

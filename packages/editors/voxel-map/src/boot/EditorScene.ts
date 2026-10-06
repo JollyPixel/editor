@@ -40,10 +40,10 @@ import { PeerPlacements } from "../features/placement/collaboration/PeerPlacemen
 import { bindPlacementShortcuts } from "../features/placement/placementShortcuts.ts";
 import { MapTemplates } from "../features/templates/MapTemplates.ts";
 import {
-  MapTilesets,
-  type TilesetCatalog
-} from "../features/tilesets/MapTilesets.ts";
-import { openTileset } from "../features/tilesets/TilesetBinding.ts";
+  MapBlocksets,
+  type BlocksetCatalog
+} from "../features/blocksets/MapBlocksets.ts";
+import { openBlockset } from "../features/blocksets/BlocksetBinding.ts";
 import { SceneLighting } from "../scene/environment/SceneLighting.ts";
 import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
@@ -75,7 +75,7 @@ export interface EditorSceneSession {
   room: VoxelMapRoom;
   map: SyncedVoxelMap;
   identity: PeerIdentity;
-  catalog: TilesetCatalog;
+  catalog: BlocksetCatalog;
   assets: AssetLeases;
   archives: EditorArchives;
 }
@@ -138,7 +138,7 @@ export class EditorScene extends Systems.Scene {
         rendering: {
           material: "lambert"
         },
-        tilesets: []
+        blocksets: []
       });
 
     const environment = new SceneEnvironment({
@@ -181,11 +181,11 @@ export class EditorScene extends Systems.Scene {
       mapDocument,
       source: view.inspector.blocks
     });
-    const tilesets = new MapTilesets({
+    const blocksets = new MapBlocksets({
       view,
       catalog: session.catalog,
       mapDocument,
-      open: (assetId) => openTileset(session.assets, assetId)
+      open: (assetId) => openBlockset(session.assets, assetId)
     });
 
     const grid = new Grid(kGrid);
@@ -305,7 +305,7 @@ export class EditorScene extends Systems.Scene {
         "change",
         (current) => peerPlacements.publishLocal(current?.placement ?? null)
       ),
-      () => tilesets.dispose(),
+      () => blocksets.dispose(),
       () => usage.dispose(),
       () => placement.dispose(),
       () => layers.dispose(),
@@ -331,7 +331,7 @@ export class EditorScene extends Systems.Scene {
       view,
       grid,
       localBrush,
-      tilesets,
+      blocksets,
       archives: session.archives,
       focusPoint: () => camera.focusPoint(view.root),
       pointAt: (clientX, clientY) => camera.pointAt(

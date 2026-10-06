@@ -23,7 +23,7 @@ import { createMockRoom } from "../helpers/room.ts";
 const kSnapshot: VoxelWorldJSON = {
   version: VOXEL_WORLD_VERSION,
   chunkSize: 16,
-  tilesets: [{ id: "stone", src: "asset-stone", tileSize: 32 }],
+  blocksets: [{ id: "stone", src: "asset-stone", tileSize: 32 }],
   layers: []
 };
 
@@ -45,7 +45,7 @@ describe("SyncedVoxelMap", () => {
 
     assert.equal(map.loaded, true);
     assert.deepEqual(
-      map.voxels.tilesets.definitions().map(({ id }) => id),
+      map.voxels.blocksets.definitions().map(({ id }) => id),
       ["stone"]
     );
     map.dispose();
@@ -73,12 +73,12 @@ describe("SyncedVoxelMap", () => {
 
     map.replaceWorld({
       ...kSnapshot,
-      tilesets: []
+      blocksets: []
     });
 
     assert.equal(room.sentCommands.at(-1)?.action, "world-replace");
     assert.deepEqual(
-      map.voxels.tilesets.definitions().map(({ id }) => id),
+      map.voxels.blocksets.definitions().map(({ id }) => id),
       ["stone"]
     );
     map.dispose();

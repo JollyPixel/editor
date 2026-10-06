@@ -21,11 +21,11 @@ import {
 
 // Import Internal Dependencies
 import {
-  createTilesetDocument,
-  encodeTilesetDocument,
-  TILESET_KIND,
-  tilesetAsset,
-  tilesetAssetKind,
+  createBlocksetDocument,
+  encodeBlocksetDocument,
+  BLOCKSET_KIND,
+  blocksetAsset,
+  blocksetAssetKind,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
   voxelMapAssetKind,
@@ -251,7 +251,7 @@ describe("voxel-map asset kind over a real back-end", () => {
     }
   });
 
-  test("a map linking a tileset asset records the dependency edge", async() => {
+  test("a map linking a blockset asset records the dependency edge", async() => {
     const root = await fs.mkdtemp(
       path.join(os.tmpdir(), "jolly-voxel-map-asset-")
     );
@@ -260,26 +260,26 @@ describe("voxel-map asset kind over a real back-end", () => {
       using eventStore = EventStore.persistence.memory();
       await fs.mkdir(path.join(root, "textures"), { recursive: true });
       await fs.writeFile(
-        path.join(root, "textures/stone.tileset.json"),
-        encodeTilesetDocument(createTilesetDocument({ tileSize: 8 }))
+        path.join(root, "textures/stone.blockset.json"),
+        encodeBlocksetDocument(createBlocksetDocument({ tileSize: 8 }))
       );
 
       await using backend = await createAssetBackend({
         source: new FilesystemAssetSource(root),
         eventStore,
         handlers: [
-          tilesetAssetKind(),
+          blocksetAssetKind(),
           voxelMapAssetKind({ chunkSize: kChunkSize })
         ],
         watch: false
       });
-      const tileset = backend.catalog.snapshot().assets
-        .find((entry) => entry.kind === TILESET_KIND)!;
+      const blockset = backend.catalog.snapshot().assets
+        .find((entry) => entry.kind === BLOCKSET_KIND)!;
 
       const linked = new VoxelMapState(kChunkSize);
-      linked.tilesets.add({
+      linked.blocksets.add({
         id: "stone",
-        asset: tilesetAsset(tileset.id)
+        asset: blocksetAsset(blockset.id)
       });
       const mapId = "map-linked";
       (await backend.writer.create({
@@ -295,10 +295,10 @@ describe("voxel-map asset kind over a real back-end", () => {
 
       assert.deepEqual(
         backend.catalog.dependencies.dependenciesOf(mapId),
-        [tilesetAsset(tileset.id)]
+        [blocksetAsset(blockset.id)]
       );
       assert.deepEqual(
-        backend.catalog.dependencies.dependentsOf(tileset.id),
+        backend.catalog.dependencies.dependentsOf(blockset.id),
         [mapId]
       );
     }

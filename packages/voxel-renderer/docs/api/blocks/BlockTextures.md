@@ -114,10 +114,10 @@ class BlockTextures implements Iterable<ResolvedTileRef> {
 
   forSlot(slot: string): ResolvedTileRef | undefined;
   spanFor(slot: string, span: Readonly<TileSpan>): Readonly<TileSpan>;
-  tilesetIds(): string[];
+  blocksetIds(): string[];
   staysOnGrid(rescale: TileRescale): boolean;
   map(mapper: TileRefMapper): BlockTextures;
-  withTileset(tilesetId: string | null): BlockTextures;
+  withBlockset(blocksetId: string | null): BlockTextures;
   withSize(size: number): BlockTextures;
   applyTo(block: ResolvedBlockDefinition): ResolvedBlockDefinition;
 }
@@ -132,16 +132,16 @@ them as read-only. Iteration yields every face reference, then
 | `forSlot()` | The slot's tile: the exact slot, then its base slot, then `defaultTexture`. |
 | `spanFor()` | `span` when the slot or its base slot has its own tile, `{ u: 1, v: 1 }` when it falls back to `defaultTexture`. |
 | `size` | `size` of `defaultTexture`, or of the first face reference. |
-| `tilesetIds()` | Distinct explicit tileset ids. |
-| `staysOnGrid()` | Whether every reference keeps whole `col` and `row` through [`rescaleTileRef()`](../tilesets/tilesets.md). Check it before resizing a tileset's tiles. |
+| `blocksetIds()` | Distinct explicit blockset ids. |
+| `staysOnGrid()` | Whether every reference keeps whole `col` and `row` through [`rescaleTileRef()`](../blocksets/blocksets.md). Check it before resizing a blockset's tiles. |
 | `map()` | Applies `mapper` to every reference; returns the same instance when nothing changed. |
-| `withTileset()` | Sets `tilesetId` on references without one; `null` returns the same instance. |
+| `withBlockset()` | Sets `blocksetId` on references without one; `null` returns the same instance. |
 | `withSize()` | Sets `size` on every reference. |
 | `applyTo()` | `block` with these textures; `block` itself when they are unchanged. |
 
 ```ts
 const assigned = BlockTextures.of(block)
-  .withTileset(document.tilesets.defaultTilesetId)
+  .withBlockset(document.blocksets.defaultBlocksetId)
   .applyTo(block);
 ```
 
@@ -203,14 +203,14 @@ class BlockTextureLayout {
   readonly block: ResolvedBlockDefinition;
   readonly slots: readonly ResolvedBlockTextureSlot[];
 
-  usesTileset(tilesetId: string): boolean;
-  slotsIn(tilesetId: string): ResolvedBlockTextureSlot[];
-  drawnRectsIn(tilesetId: string, tileSize: number): TileRect[];
-  footprintsIn(tilesetId: string, tileSize: number): TileRect[];
+  usesBlockset(blocksetId: string): boolean;
+  slotsIn(blocksetId: string): ResolvedBlockTextureSlot[];
+  drawnRectsIn(blocksetId: string, tileSize: number): TileRect[];
+  footprintsIn(blocksetId: string, tileSize: number): TileRect[];
 }
 ```
 
-The same resolved slots for one block, queried by tileset. Only slots the shape
+The same resolved slots for one block, queried by blockset. Only slots the shape
 draws count, and a block with an unknown shape has none. `drawnRectsIn()`
 returns the distinct texel rectangles the block samples. `footprintsIn()`
 returns the whole tiles it references, stretched by the longest span drawing

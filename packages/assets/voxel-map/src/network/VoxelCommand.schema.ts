@@ -4,11 +4,11 @@ import {
   type JSONSchema
 } from "@jolly-pixel/network";
 import {
-  MAX_TILESET_SLOT,
+  MAX_BLOCKSET_SLOT,
   VOXEL_WORLD_VERSION,
   type VoxelLayerCommandAction,
   type VoxelTemplateCommandAction,
-  type VoxelTilesetCommandAction
+  type VoxelBlocksetCommandAction
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -207,10 +207,10 @@ const kTemplateCommandProperties: Record<
 const kSlotSchema: JSONSchema = {
   type: "integer",
   minimum: 0,
-  maximum: MAX_TILESET_SLOT
+  maximum: MAX_BLOCKSET_SLOT
 };
 
-export const tilesetDefinitionSchema: JSONSchema = {
+export const blocksetDefinitionSchema: JSONSchema = {
   ...objectSchema(
     {
       id: { type: "string", minLength: 1 },
@@ -232,15 +232,15 @@ export const tilesetDefinitionSchema: JSONSchema = {
   ]
 };
 
-const kTilesetCommandProperties: Record<
-  VoxelTilesetCommandAction,
+const kBlocksetCommandProperties: Record<
+  VoxelBlocksetCommandAction,
   Record<string, JSONSchema>
 > = {
-  "tileset-added": {
-    tileset: tilesetDefinitionSchema
+  "blockset-added": {
+    blockset: blocksetDefinitionSchema
   },
-  "tileset-removed": {
-    tilesetId: { type: "string" }
+  "blockset-removed": {
+    blocksetId: { type: "string" }
   }
 };
 
@@ -249,9 +249,9 @@ export const voxelWorldSchema: JSONSchema = {
   properties: {
     version: { const: VOXEL_WORLD_VERSION },
     chunkSize: { type: "integer", minimum: 1 },
-    tilesets: {
+    blocksets: {
       type: "array",
-      items: tilesetDefinitionSchema
+      items: blocksetDefinitionSchema
     },
     layers: {
       type: "array",
@@ -273,7 +273,7 @@ export const voxelWorldSchema: JSONSchema = {
   required: [
     "version",
     "chunkSize",
-    "tilesets",
+    "blocksets",
     "layers"
   ]
 };
@@ -288,7 +288,7 @@ export const voxelCommandProtocol: MessageProtocol = new MessageProtocol({
     ...Object.entries(kTemplateCommandProperties).map(
       ([action, properties]) => networkCommand(action, properties)
     ),
-    ...Object.entries(kTilesetCommandProperties).map(
+    ...Object.entries(kBlocksetCommandProperties).map(
       ([action, properties]) => networkCommand(action, properties)
     ),
     networkCommand("world-replace", {

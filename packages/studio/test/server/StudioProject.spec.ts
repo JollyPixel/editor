@@ -229,7 +229,7 @@ describe("StudioProject", () => {
       );
       assert.deepEqual(
         project.kinds.descriptors().map((descriptor) => descriptor.kind),
-        ["pixelart", "tileset", "voxelmap", "voxelmodel"]
+        ["pixelart", "blockset", "voxelmap", "voxelmodel"]
       );
     });
 

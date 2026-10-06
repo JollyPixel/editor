@@ -30,15 +30,15 @@ import type { VoxelLayer } from "../world/VoxelLayer.ts";
 import type { VoxelTemplate } from "../world/templates/VoxelTemplate.ts";
 import { DEFAULT_CHUNK_SIZE } from "../world/storage/VoxelChunk.ts";
 import type { VoxelWorld } from "../world/VoxelWorld.ts";
-import type { TilesetDefinition } from "../tilesets/types.ts";
-import type { TilesetList } from "../tilesets/TilesetList.ts";
+import type { BlocksetDefinition } from "../blocksets/types.ts";
+import type { BlocksetList } from "../blocksets/BlocksetList.ts";
 
 export interface VoxelSerializeOptions {
-  tilesets?: Iterable<TilesetDefinition>;
+  blocksets?: Iterable<BlocksetDefinition>;
 }
 
 export interface VoxelDeserializeOptions {
-  tilesets?: TilesetList;
+  blocksets?: BlocksetList;
 }
 
 export function serializeVoxelWorld(
@@ -46,7 +46,7 @@ export function serializeVoxelWorld(
   options: VoxelSerializeOptions = {}
 ): VoxelWorldJSON {
   return writeVoxelWorld(
-    captureVoxelWorld(world, options.tilesets)
+    captureVoxelWorld(world, options.blocksets)
   );
 }
 
@@ -84,6 +84,6 @@ export function deserializeVoxelWorld(
   restoreVoxelWorld(
     readVoxelWorld(parseVoxelWorld(data)),
     world,
-    options.tilesets
+    options.blocksets
   );
 }

@@ -17,12 +17,12 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
-import type { TilesetEntry } from "../../tilesets/TilesetEntry.ts";
-import { tileSizeSegments } from "../../tilesets/tileSizes.ts";
+import type { BlocksetEntry } from "../../blocksets/BlocksetEntry.ts";
+import { tileSizeSegments } from "../../blocksets/tileSizes.ts";
 import "../rendering/BlockShapePreview.ts";
 
 // CONSTANTS
-export const MISSING_TILESET = "Missing tileset";
+export const MISSING_BLOCKSET = "Missing blockset";
 const kUvSizeColumns = 3;
 
 export const blockDialogStyles = css`
@@ -76,8 +76,8 @@ export function shapeOptions(
   });
 }
 
-export function tilesetOptions(
-  entries: readonly TilesetEntry[],
+export function blocksetOptions(
+  entries: readonly BlocksetEntry[],
   missing: boolean
 ): JollyOption<string>[] {
   const options: JollyOption<string>[] = entries.map((entry) => {
@@ -88,7 +88,7 @@ export function tilesetOptions(
   });
   if (missing) {
     options.unshift({
-      label: MISSING_TILESET,
+      label: MISSING_BLOCKSET,
       value: "",
       disabled: true
     });
