@@ -11,7 +11,7 @@ const kWords = [
   "rotation",
   "ghost",
   "layer",
-  "tileset",
+  "blockset",
   "camera",
   "snap",
   "grid",

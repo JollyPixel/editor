@@ -12,7 +12,7 @@ import {
   makeBlock,
   makeFakeVoxelEngine,
   makeUv,
-  tilesetSlot
+  blocksetSlot
 } from "./blockUvFixtures.ts";
 
 // CONSTANTS
@@ -40,11 +40,11 @@ function runFrame(): void {
 function setup() {
   const engine = makeFakeVoxelEngine();
   engine.view.document.blocks.register(
-    makeBlock(1, { col: 0, row: 0, tilesetId: "atlas" })
+    makeBlock(1, { col: 0, row: 0, blocksetId: "atlas" })
   );
   const uv = makeUv();
   const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
-  bridge.setActiveTileset(tilesetSlot("atlas"), 16);
+  bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
 
   return { ...engine, uv, bridge };
 }
@@ -66,7 +66,7 @@ describe("BlockUvBridge / region-dragging", () => {
       assert.deepEqual(view.document.blocks.get(1)?.defaultTexture, {
         col: 3,
         row: 1,
-        tilesetId: "atlas"
+        blocksetId: "atlas"
       });
     }
     finally {

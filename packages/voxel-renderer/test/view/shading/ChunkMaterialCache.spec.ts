@@ -13,7 +13,7 @@ import {
   FaceTemplateTable
 } from "../../../src/view/meshing/index.ts";
 import { MaterialGroupList } from "../../../src/document/materials/index.ts";
-import { TilesetAtlases } from "../../../src/view/atlases/index.ts";
+import { BlocksetAtlases } from "../../../src/view/atlases/index.ts";
 import { AtlasAverages } from "../../../src/view/atlases/AtlasAverages.ts";
 import {
   makeAtlasDef,
@@ -28,16 +28,16 @@ import {
 const kBlend = new BlockSurface({ alphaMode: "blend" });
 
 function keyOf(
-  tilesetId: string,
+  blocksetId: string,
   surface = new BlockSurface()
 ): ChunkGeometryKey {
-  return new ChunkGeometryKey(tilesetId, surface);
+  return new ChunkGeometryKey(blocksetId, surface);
 }
 
 function makeCache(
   options: Partial<ConstructorParameters<typeof ChunkMaterialCache>[0]> = {}
 ): ChunkMaterialCache {
-  const atlases = new TilesetAtlases();
+  const atlases = new BlocksetAtlases();
   registerAtlas(atlases);
 
   return new ChunkMaterialCache({
@@ -91,10 +91,10 @@ describe("ChunkMaterialCache — resolve", () => {
     assert.equal(makeCache().resolve(keyOf("atlas")).alphaTest, 0);
   });
 
-  it("hands each new material to the customizer with its tileset id", () => {
+  it("hands each new material to the customizer with its blockset id", () => {
     const seen: string[] = [];
     const cache = makeCache({
-      customizer: (_material, tilesetId) => seen.push(tilesetId)
+      customizer: (_material, blocksetId) => seen.push(blocksetId)
     });
 
     cache.resolve(keyOf("atlas"));
@@ -183,7 +183,7 @@ describe("ChunkMaterialCache — material groups", () => {
 });
 
 describe("ChunkMaterialCache — invalidate", () => {
-  it("rebuilds the materials of one tileset", () => {
+  it("rebuilds the materials of one blockset", () => {
     const cache = makeCache();
     const before = cache.resolve(keyOf("atlas"));
 
@@ -192,8 +192,8 @@ describe("ChunkMaterialCache — invalidate", () => {
     assert.notEqual(cache.resolve(keyOf("atlas")), before);
   });
 
-  it("keeps the materials of other tilesets", () => {
-    const atlases = new TilesetAtlases();
+  it("keeps the materials of other blocksets", () => {
+    const atlases = new BlocksetAtlases();
     registerAtlas(atlases);
     registerAtlas(atlases, makeAtlasDef({ id: "other", src: "/other.png" }));
     const cache = new ChunkMaterialCache({
@@ -207,7 +207,7 @@ describe("ChunkMaterialCache — invalidate", () => {
     assert.equal(cache.resolve(keyOf("other")), kept);
   });
 
-  it("rebuilds every material without a tileset id", () => {
+  it("rebuilds every material without a blockset id", () => {
     const cache = makeCache();
     const before = cache.resolve(keyOf("atlas"));
 
@@ -221,7 +221,7 @@ describe("ChunkMaterialCache — tile averaging", () => {
   function readableAtlasCache(
     tileAveraging?: boolean
   ) {
-    const atlases = new TilesetAtlases();
+    const atlases = new BlocksetAtlases();
     const texture = readableTexture();
     registerAtlas(atlases, makeAtlasDef(), texture);
     const cache = new ChunkMaterialCache({
@@ -266,7 +266,7 @@ describe("ChunkMaterialCache — far materials", () => {
     assert.equal(material.depthWrite, true);
   });
 
-  it("evicts far variants with their tileset", () => {
+  it("evicts far variants with their blockset", () => {
     const cache = makeCache();
     const far = cache.resolve(keyOf("atlas"), true);
 
@@ -311,8 +311,8 @@ describe("ChunkMaterialCache — normal texture", () => {
   function reliefCache(
     materialGroups?: MaterialGroupList
   ): ChunkMaterialCache {
-    const atlases = new TilesetAtlases();
-    atlases.tilesets.add(makeAtlasDef());
+    const atlases = new BlocksetAtlases();
+    atlases.blocksets.add(makeAtlasDef());
     atlases.registerTexture("atlas", readableTexture(), mockTexture());
 
     return new ChunkMaterialCache({
@@ -328,7 +328,7 @@ describe("ChunkMaterialCache — normal texture", () => {
     return (material as { normalNode?: unknown; }).normalNode ?? null;
   }
 
-  it("perturbs the normal of a tileset with a normal texture", () => {
+  it("perturbs the normal of a blockset with a normal texture", () => {
     assert.notEqual(normalNodeOf(reliefCache().resolve(keyOf("atlas"))), null);
   });
 

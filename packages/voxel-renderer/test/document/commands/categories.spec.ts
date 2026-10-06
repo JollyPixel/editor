@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  isTilesetDocumentCommand,
+  isBlocksetDocumentCommand,
   isVoxelBlendGroupCommand,
   isVoxelBlockCommand,
   isVoxelEditCommand,
@@ -13,16 +13,16 @@ import {
   isVoxelObjectLayerCommand,
   isVoxelMaterialGroupCommand,
   isVoxelTemplateCommand,
-  isVoxelTilesetCommand,
+  isVoxelBlocksetCommand,
   isVoxelWorldCommand,
-  TILESET_DOCUMENT_COMMAND_ACTIONS,
+  BLOCKSET_DOCUMENT_COMMAND_ACTIONS,
   VOXEL_BLEND_GROUP_COMMAND_ACTIONS,
   VOXEL_BLOCK_COMMAND_ACTIONS,
   VOXEL_COMMAND_ACTIONS,
   VOXEL_LAYER_COMMAND_ACTIONS,
   VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
   VOXEL_TEMPLATE_COMMAND_ACTIONS,
-  VOXEL_TILESET_COMMAND_ACTIONS,
+  VOXEL_BLOCKSET_COMMAND_ACTIONS,
   VOXEL_WORLD_COMMAND_ACTIONS
 } from "../../../src/document/commands/index.ts";
 
@@ -34,7 +34,7 @@ describe("command guards", () => {
         isVoxelLayerCommand(command),
         isVoxelTemplateCommand(command),
         isVoxelBlockCommand(command),
-        isVoxelTilesetCommand(command),
+        isVoxelBlocksetCommand(command),
         isVoxelMaterialGroupCommand(command),
         isVoxelBlendGroupCommand(command)
       ].filter(Boolean);
@@ -88,26 +88,26 @@ describe("command guards", () => {
       VOXEL_LAYER_COMMAND_ACTIONS.length +
       VOXEL_TEMPLATE_COMMAND_ACTIONS.length +
       VOXEL_BLOCK_COMMAND_ACTIONS.length +
-      VOXEL_TILESET_COMMAND_ACTIONS.length +
+      VOXEL_BLOCKSET_COMMAND_ACTIONS.length +
       VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS.length +
       VOXEL_BLEND_GROUP_COMMAND_ACTIONS.length
     );
   });
 
-  it("splits the vocabulary between world and tileset document commands", () => {
+  it("splits the vocabulary between world and blockset document commands", () => {
     for (const action of VOXEL_COMMAND_ACTIONS) {
       const command = { action };
 
       assert.notEqual(
         isVoxelWorldCommand(command),
-        isTilesetDocumentCommand(command),
+        isBlocksetDocumentCommand(command),
         action
       );
     }
-    assert.equal(isTilesetDocumentCommand({ action: "tile-size-updated" }), true);
+    assert.equal(isBlocksetDocumentCommand({ action: "tile-size-updated" }), true);
     assert.equal(isVoxelWorldCommand({ action: "tile-size-updated" }), false);
     assert.deepEqual(
-      [...VOXEL_WORLD_COMMAND_ACTIONS, ...TILESET_DOCUMENT_COMMAND_ACTIONS].sort(),
+      [...VOXEL_WORLD_COMMAND_ACTIONS, ...BLOCKSET_DOCUMENT_COMMAND_ACTIONS].sort(),
       [...VOXEL_COMMAND_ACTIONS, "tile-size-updated"].sort()
     );
   });
@@ -117,9 +117,9 @@ describe("command guards", () => {
 
     assert.equal(isVoxelLayerCommand(command), false);
     assert.equal(isVoxelBlockCommand(command), false);
-    assert.equal(isVoxelTilesetCommand(command), false);
+    assert.equal(isVoxelBlocksetCommand(command), false);
     assert.equal(isVoxelMaterialGroupCommand(command), false);
     assert.equal(isVoxelWorldCommand(command), false);
-    assert.equal(isTilesetDocumentCommand(command), false);
+    assert.equal(isBlocksetDocumentCommand(command), false);
   });
 });

@@ -45,7 +45,7 @@ export function createBenchView(
       workers
     }
   });
-  view.loadTileset(
+  view.loadBlockset(
     {
       id: "terrain",
       src: "memory://terrain",
@@ -90,7 +90,7 @@ function terrainBlocks(): BlockDefinition[] {
       collidable: true,
       faceTextures: {},
       defaultTexture: {
-        tilesetId: "terrain",
+        blocksetId: "terrain",
         col: index % COLS,
         row: Math.floor(index / COLS)
       }

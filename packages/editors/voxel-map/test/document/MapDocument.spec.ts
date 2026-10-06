@@ -25,7 +25,7 @@ import {
 const kEvents: Array<keyof MapDocumentEvents> = [
   "layerUpdated",
   "blockRegistryChanged",
-  "tilesetsChanged",
+  "blocksetsChanged",
   "materialGroupsChanged",
   "templatesChanged",
   "reset"
@@ -76,7 +76,7 @@ function block(
     id: 1,
     name: "Stone",
     shapeId: "cube",
-    defaultTexture: { col: 0, row: 0, tilesetId: "atlas" },
+    defaultTexture: { col: 0, row: 0, blocksetId: "atlas" },
     ...overrides
   });
 }
@@ -96,7 +96,7 @@ describe("MapDocument", () => {
 
     view.emit("command", command("added"), { origin: "local" });
     view.emit("command", defined(block()), { origin: "remote" });
-    view.emit("command", command("tileset-added"), { origin: "local" });
+    view.emit("command", command("blockset-added"), { origin: "local" });
     view.emit("command", command("material-group-removed"), {
       origin: "remote"
     });
@@ -106,7 +106,7 @@ describe("MapDocument", () => {
     assert.deepEqual(seen, [
       "layerUpdated",
       "blockRegistryChanged",
-      "tilesetsChanged",
+      "blocksetsChanged",
       "materialGroupsChanged",
       "templatesChanged"
     ]);
@@ -119,7 +119,7 @@ describe("MapDocument", () => {
 
     assert.deepEqual(seen, [
       "layerUpdated",
-      "tilesetsChanged",
+      "blocksetsChanged",
       "blockRegistryChanged",
       "materialGroupsChanged",
       "templatesChanged",
@@ -169,7 +169,7 @@ describe("MapDocument", () => {
     view.defineBlock(block());
 
     view.defineBlock(block({
-      defaultTexture: { col: 3, row: 1, size: 32, tilesetId: "atlas" }
+      defaultTexture: { col: 3, row: 1, size: 32, blocksetId: "atlas" }
     }));
 
     assert.deepEqual(changes, ["added", "retiled"]);

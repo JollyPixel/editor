@@ -40,7 +40,7 @@ are never reused: gaps are records that were merged into another one or moved to
 
 `ui` owns anything expressible without knowing what a voxel, a layer or an asset is. Domain-coupled
 composites stay in editors and are built from these parts. Asset and object reference pickers, block
-and tileset libraries, 3D preview tiles, and curve and gradient editors are out of scope.
+and blockset libraries, 3D preview tiles, and curve and gradient editors are out of scope.
 
 `jolly-split` and menubar or dropdown menus are deferred rather than rejected: no consumer in this
 repository names one, so there is nothing to validate a design against. `jolly-context-menu` left

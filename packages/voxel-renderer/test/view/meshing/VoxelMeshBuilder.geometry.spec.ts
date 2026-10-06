@@ -145,12 +145,12 @@ describe("VoxelMeshBuilder - precompiled geometry follows registry changes", () 
     assert.equal(countChunkVertices(fixture), 24);
   });
 
-  it("recomputes UVs when a tileset declares another tile size", () => {
+  it("recomputes UVs when a blockset declares another tile size", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);
     const before = expandedGeometry(fixture).getAttribute("uv").getX(1);
 
-    fixture.atlases.tilesets.declare({
+    fixture.atlases.blocksets.declare({
       id: "atlas",
       src: "/atlas.png",
       tileSize: 8

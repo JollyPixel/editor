@@ -19,16 +19,16 @@ function makeView(): VoxelView {
     layers: ["Ground", "Top", "Empty"],
     blocks: [
       makeBlockDef(kGrass, "cube", {
-        defaultTexture: { col: 0, row: 0, tilesetId: "terrain" }
+        defaultTexture: { col: 0, row: 0, blocksetId: "terrain" }
       }),
       makeBlockDef(kStone, "cube", {
-        defaultTexture: { col: 1, row: 0, tilesetId: "terrain" },
+        defaultTexture: { col: 1, row: 0, blocksetId: "terrain" },
         faceTextures: {
-          top: { col: 0, row: 0, tilesetId: "props" }
+          top: { col: 0, row: 0, blocksetId: "props" }
         }
       }),
       makeBlockDef(kUnused, "cube", {
-        defaultTexture: { col: 2, row: 0, tilesetId: "props" }
+        defaultTexture: { col: 2, row: 0, blocksetId: "props" }
       }),
       makeBlockDef(kDeleted, "cube")
     ]
@@ -111,21 +111,21 @@ describe("VoxelBlockInspector", () => {
     });
   });
 
-  it("reports the blocks and voxels referencing a tileset", () => {
+  it("reports the blocks and voxels referencing a blockset", () => {
     const { blocks } = makeView().inspector;
 
-    assert.deepEqual(blocks.tilesetUsageOf("terrain"), {
-      tilesetId: "terrain",
+    assert.deepEqual(blocks.blocksetUsageOf("terrain"), {
+      blocksetId: "terrain",
       blocks: [kGrass, kStone],
       voxels: 6
     });
-    assert.deepEqual(blocks.tilesetUsageOf("props"), {
-      tilesetId: "props",
+    assert.deepEqual(blocks.blocksetUsageOf("props"), {
+      blocksetId: "props",
       blocks: [kStone, kUnused],
       voxels: 1
     });
-    assert.deepEqual(blocks.tilesetUsageOf("missing"), {
-      tilesetId: "missing",
+    assert.deepEqual(blocks.blocksetUsageOf("missing"), {
+      blocksetId: "missing",
       blocks: [],
       voxels: 0
     });

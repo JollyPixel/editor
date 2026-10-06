@@ -23,7 +23,7 @@ export function readVoxelWorld(
 ): VoxelWorldData {
   return {
     chunkSize: document.chunkSize,
-    tilesets: document.tilesets,
+    blocksets: document.blocksets,
     layers: document.layers.map(readVoxelLayer),
     objectLayers: document.objectLayers ?? [],
     templates: (document.templates ?? []).map(readVoxelTemplate)

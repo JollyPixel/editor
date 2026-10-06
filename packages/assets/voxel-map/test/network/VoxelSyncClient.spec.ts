@@ -46,15 +46,15 @@ function makeEmptySnapshot(): VoxelWorldJSON {
   return {
     version: VOXEL_WORLD_VERSION,
     chunkSize: 16,
-    tilesets: [],
+    blocksets: [],
     layers: []
   };
 }
 
-function snapshotWithTileset(): VoxelWorldJSON {
+function snapshotWithBlockset(): VoxelWorldJSON {
   return {
     ...makeEmptySnapshot(),
-    tilesets: [{ id: "stone", src: "asset-stone", tileSize: 32 }]
+    blocksets: [{ id: "stone", src: "asset-stone", tileSize: 32 }]
   };
 }
 
@@ -252,9 +252,9 @@ describe("VoxelSyncClient — snapshot loading", () => {
     const room = createMockRoom();
     new VoxelSyncClient({ room, document });
 
-    room.simulateSnapshot(snapshotWithTileset());
+    room.simulateSnapshot(snapshotWithBlockset());
 
-    assert.deepEqual(document.tilesets.definitions().map(({ id }) => id), ["stone"]);
+    assert.deepEqual(document.blocksets.definitions().map(({ id }) => id), ["stone"]);
     assert.equal(document.world.getLayer("Ground"), undefined);
     assert.equal(room.sentCommands.length, 0);
   });
@@ -284,9 +284,9 @@ describe("VoxelSyncClient — destroy", () => {
     const client = new VoxelSyncClient({ room, document });
 
     client.destroy();
-    room.simulateSnapshot(snapshotWithTileset());
+    room.simulateSnapshot(snapshotWithBlockset());
 
-    assert.deepEqual(document.tilesets.definitions(), []);
+    assert.deepEqual(document.blocksets.definitions(), []);
     assert.equal(room.left, false);
   });
 
@@ -304,52 +304,52 @@ describe("VoxelSyncClient — destroy", () => {
   });
 });
 
-describe("VoxelSyncClient — tilesets", () => {
+describe("VoxelSyncClient — blocksets", () => {
   function makeClient() {
     const document = makeDocument();
     const room = createMockRoom();
     const client = new VoxelSyncClient({ room, document });
-    room.simulateSnapshot(snapshotWithTileset());
+    room.simulateSnapshot(snapshotWithBlockset());
     const received = record(document);
 
     return { document, received, room, client };
   }
 
-  it("applies a remote tileset command without echoing it", () => {
+  it("applies a remote blockset command without echoing it", () => {
     const { document, received, room } = makeClient();
 
     room.simulateCommand({
       ...kPeerHeader,
-      action: "tileset-added",
-      tileset: { id: "wood", src: "asset-wood", tileSize: 16 }
+      action: "blockset-added",
+      blockset: { id: "wood", src: "asset-wood", tileSize: 16 }
     });
 
-    assert.deepEqual(document.tilesets.definitions().map(({ id }) => id), ["stone", "wood"]);
+    assert.deepEqual(document.blocksets.definitions().map(({ id }) => id), ["stone", "wood"]);
     assert.deepEqual(
       received.map(({ command, origin }) => [command.action, origin]),
-      [["tileset-added", "remote"]]
+      [["blockset-added", "remote"]]
     );
     assert.equal(room.sentCommands.length, 0);
   });
 
-  it("sends a local tileset change", () => {
+  it("sends a local blockset change", () => {
     const { document, received, room } = makeClient();
 
-    assert.equal(document.removeTileset("stone"), true);
+    assert.equal(document.removeBlockset("stone"), true);
 
-    assert.deepEqual(document.tilesets.definitions(), []);
+    assert.deepEqual(document.blocksets.definitions(), []);
     assert.deepEqual(
       received.map(({ command, origin }) => [command.action, origin]),
-      [["tileset-removed", "local"]]
+      [["blockset-removed", "local"]]
     );
     assert.equal(room.sentCommands.length, 1);
-    assert.equal(room.sentCommands[0].action, "tileset-removed");
+    assert.equal(room.sentCommands[0].action, "blockset-removed");
   });
 
   it("sends nothing for a local change that does not apply", () => {
     const { document, room } = makeClient();
 
-    assert.equal(document.removeTileset("missing"), false);
+    assert.equal(document.removeBlockset("missing"), false);
     assert.equal(room.sentCommands.length, 0);
   });
 });

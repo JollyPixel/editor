@@ -27,7 +27,7 @@ test("filters the asset tree by kind", async({ page }) => {
   await kinds.getByRole("radio", { name: "Voxel map" }).click();
   await expect(assetRows(page)).toHaveCount(4);
   await expect(treeRow(page, MAP)).toBeVisible();
-  await expect(treeRow(page, "overworld.tileset.json")).toBeVisible();
+  await expect(treeRow(page, "overworld.blockset.json")).toBeVisible();
   await expect(treeRow(page, "models")).toBeVisible();
 
   await kinds.getByRole("radio", { name: "All kinds" }).click();
@@ -82,7 +82,7 @@ test("deleting an asset can keep its companion", async({ page }) => {
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(treeRow(page, MAP)).toHaveCount(0);
-  await expect(treeRow(page, "overworld.tileset.json")).toBeVisible();
+  await expect(treeRow(page, "overworld.blockset.json")).toBeVisible();
 });
 
 test("exports the selected asset as a ZIP archive", async({ page }) => {
@@ -128,7 +128,7 @@ test("the menu below the rows adds a folder at the root", async({ page }) => {
   await menu.getByRole("menuitem", { name: "New asset" }).hover();
   await expect(page.getByRole("menu", { name: "New asset" }).getByRole("menuitem")).toHaveText([
     "Pixel art",
-    "Tileset",
+    "Blockset",
     "Voxel map",
     "Voxel model"
   ]);

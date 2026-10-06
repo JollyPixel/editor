@@ -17,7 +17,7 @@ import { loadJSON } from "@jolly-pixel/engine";
 import {
   VoxelDocument,
   VoxelView,
-  loadTilesets
+  loadBlocksets
 } from "@jolly-pixel/voxel.renderer";
 import {
   TiledConverter,
@@ -31,7 +31,7 @@ const { world, blocks } = new TiledConverter().convert(map, {
 });
 
 const view = new VoxelView(new VoxelDocument({ blocks }), {
-  tilesets: await loadTilesets(world.tilesets)
+  blocksets: await loadBlocksets(world.blocksets)
 });
 view.load(world);
 ```

@@ -8,7 +8,7 @@ import {
   BLOCK_PIECE_TEXTURED_GROUP,
   BlockPieces
 } from "../../../src/view/meshing/BlockPieces.ts";
-import { TilesetAtlases } from "../../../src/view/atlases/index.ts";
+import { BlocksetAtlases } from "../../../src/view/atlases/index.ts";
 import {
   BlockShapeRegistry,
   buildShapeGeometry,
@@ -18,8 +18,8 @@ import {
 import { VoxelTransform } from "../../../src/document/geometry/index.ts";
 import {
   rotateTileUv,
-  TilesetList
-} from "../../../src/document/tilesets/index.ts";
+  BlocksetList
+} from "../../../src/document/blocksets/index.ts";
 import { makeAtlasDef, registerAtlas } from "../../helpers/atlas.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
 
@@ -37,7 +37,7 @@ function blockOf(
 function setup(
   emptyTile?: ConstructorParameters<typeof BlockPieces>[0]["emptyTile"]
 ) {
-  const atlases = new TilesetAtlases({ tilesets: new TilesetList() });
+  const atlases = new BlocksetAtlases({ blocksets: new BlocksetList() });
   const atlas = registerAtlas(atlases, makeAtlasDef());
   const pieces = new BlockPieces({
     shapes: BlockShapeRegistry.createDefault(),
@@ -89,9 +89,9 @@ describe("BlockPieces", () => {
 
   it("turns the tile inside the face like the chunk mesher", () => {
     const { atlas, pieces } = setup();
-    const flat = blockOf({ defaultTexture: { tilesetId: "atlas", col: 1, row: 1 } });
+    const flat = blockOf({ defaultTexture: { blocksetId: "atlas", col: 1, row: 1 } });
     const turned = blockOf({
-      defaultTexture: { tilesetId: "atlas", col: 1, row: 1, rotation: 1 }
+      defaultTexture: { blocksetId: "atlas", col: 1, row: 1, rotation: 1 }
     });
     const region = atlas.uvFor(1, 1, undefined, undefined, 1);
     const geometry = pieces.geometryOf(turned)!;
@@ -111,9 +111,9 @@ describe("BlockPieces", () => {
     );
   });
 
-  it("draws a block of an undeclared tileset with the missing texture", () => {
+  it("draws a block of an undeclared blockset with the missing texture", () => {
     const { atlases, pieces } = setup();
-    const block = blockOf({ defaultTexture: { tilesetId: "gone", col: 3, row: 3 } });
+    const block = blockOf({ defaultTexture: { blocksetId: "gone", col: 3, row: 3 } });
     const missing = atlases.resolve("gone")!;
 
     assert.equal(pieces.textureOf(block), missing.texture);
@@ -125,9 +125,9 @@ describe("BlockPieces", () => {
       (ref) => ref === undefined || ref.col === 1
     );
     const block = blockOf({
-      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
+      defaultTexture: { blocksetId: "atlas", col: 0, row: 0 },
       faceTextures: {
-        top: { tilesetId: "atlas", col: 1, row: 0 }
+        top: { blocksetId: "atlas", col: 1, row: 0 }
       }
     });
     const groups = pieces.geometryOf(block)!.groups;
@@ -154,7 +154,7 @@ describe("BlockPieces", () => {
 
   it("caches pieces per transform until the atlases change", () => {
     const { atlases, pieces } = setup();
-    const block = blockOf({ defaultTexture: { tilesetId: "atlas", col: 0, row: 0 } });
+    const block = blockOf({ defaultTexture: { blocksetId: "atlas", col: 0, row: 0 } });
 
     const before = pieces.pieceOf(block);
     assert.equal(pieces.pieceOf(block, VoxelTransform.Identity), before);

@@ -14,15 +14,15 @@ everything now. Mesh workers move the rebuilds off the main thread.
 
 ## Chunk meshes
 
-Each chunk cell gets one mesh per tileset and [surface](../api/blocks/BlockSurface.md)
+Each chunk cell gets one mesh per blockset and [surface](../api/blocks/BlockSurface.md)
 (alpha mode, side, cutoff and material group), under `view.root`. Layers whose
 position is a multiple of the chunk size share these meshes, so stacking
 layers adds no draw calls; a layer moved off the chunk grid gets meshes of its
 own. Faces touching a block of another
 [blend group](../api/materials/BlendGroup.md) draw in a separate blended mesh.
 
-Tileset ids must not contain `:surface=`; the view throws `RangeError` when it
-builds meshes for such a tileset.
+Blockset ids must not contain `:surface=`; the view throws `RangeError` when it
+builds meshes for such a blockset.
 
 Opaque and masked surfaces write depth. Blended surfaces do not, and
 overlapping ones need a
@@ -64,7 +64,7 @@ fills in. `"nearest"` turns the filter off.
 The average needs the atlas pixels. When they cannot be read, such as a
 cross-origin image without CORS, those faces fall back to nearest sampling.
 The averages are recomputed on the next `tick()` after the atlas texture's
-`version` changes, for example through `TilesetAtlas.updateImage()`.
+`version` changes, for example through `BlocksetAtlas.updateImage()`.
 
 `rendering.alphaToCoverage` turns mask coverage into MSAA sample coverage for
 softer cutout edges. It needs a multisampled render target and an opaque
@@ -80,10 +80,10 @@ flicker. The default is `Infinity`.
 
 ## Normal maps
 
-A tileset can come with a tangent-space normal atlas:
+A blockset can come with a tangent-space normal atlas:
 
 ```ts
-view.loadTileset(definition, texture, { normal: normalTexture });
+view.loadBlockset(definition, texture, { normal: normalTexture });
 ```
 
 The normal atlas has the same layout and size as the colour atlas and uses the

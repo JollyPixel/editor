@@ -17,7 +17,7 @@ import { MAX_BLOCK_ID } from "../../../src/document/world/index.ts";
 const kEmptyWorld: VoxelWorldJSON = {
   version: VOXEL_WORLD_VERSION,
   chunkSize: 16,
-  tilesets: [],
+  blocksets: [],
   layers: []
 };
 
@@ -99,14 +99,14 @@ describe("parseVoxelWorld", () => {
     assert.deepEqual(parseVoxelWorld(structuredClone(document)), document);
   });
 
-  it("defaults a missing tilesets field to an empty array", () => {
+  it("defaults a missing blocksets field to an empty array", () => {
     const document = parseVoxelWorld({
       version: VOXEL_WORLD_VERSION,
       chunkSize: 16,
       layers: []
     });
 
-    assert.deepEqual(document.tilesets, []);
+    assert.deepEqual(document.blocksets, []);
   });
 
   it("keeps well formed templates", () => {
@@ -136,7 +136,7 @@ describe("parseVoxelWorld", () => {
     assert.deepEqual(Object.keys(document), [
       "version",
       "chunkSize",
-      "tilesets",
+      "blocksets",
       "layers"
     ]);
   });

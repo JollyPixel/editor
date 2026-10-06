@@ -34,7 +34,7 @@ async function defineSlabs(
   await page.evaluate((slabs) => {
     const { workspace } = window.voxelMapEditor!;
     for (const [id, shapeId] of slabs) {
-      workspace.tilesets.defineBlock({
+      workspace.blocksets.defineBlock({
         ...workspace.view.document.blocks.get(id)!,
         shapeId
       });

@@ -7,8 +7,8 @@ same group never blend with each other; they blend with blocks of any other
 group unless one of the two groups excludes the other. Ungrouped blocks never
 blend.
 
-Groups belong to a [tileset document](../tilesets/TilesetDocument.md) and
-reach a world as `"<tilesetId>/<groupId>"`, exclusions included.
+Groups belong to a [blockset document](../blocksets/BlocksetDocument.md) and
+reach a world as `"<blocksetId>/<groupId>"`, exclusions included.
 
 ```ts
 const document = new VoxelDocument({
@@ -47,7 +47,7 @@ document.defineBlendGroup({ id: "snow", width: 16, priority: 1 });
   does not reach back. Equal priorities reach into each other.
 - Where two tiles meet, the higher one gets a darker outline and casts a short
   shadow towards `+x` and `+z`.
-- Only opaque neighbours in the same tileset blend. Distant faces drawn with
+- Only opaque neighbours in the same blockset blend. Distant faces drawn with
   [flat colours](../../concepts/rendering-and-meshing.md#far-distance) do not.
 
 ## BlendGroup

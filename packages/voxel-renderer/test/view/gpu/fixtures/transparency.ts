@@ -84,17 +84,17 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   const view = createView({
     chunkSize: 4,
     rendering: {
-      customizer(material, tilesetId) {
+      customizer(material, blocksetId) {
         if (options.lights) {
           return;
         }
 
         let color = 0xffffff;
-        if (tilesetId === "stone") {
+        if (blocksetId === "stone") {
           color = 0x00ff00;
         }
         else if (options.colored) {
-          color = tilesetId === "atlas" ? 0xff0000 : 0x0000ff;
+          color = blocksetId === "atlas" ? 0xff0000 : 0x0000ff;
         }
         material.emissive.set(color);
         material.color.setRGB(0, 0, 0);
@@ -104,7 +104,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
       id: 1,
       name: "Glass",
       shapeId: "cube",
-      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
+      defaultTexture: { blocksetId: "atlas", col: 0, row: 0 },
       alphaMode: options.mode ?? "blend",
       side: options.side ?? "double",
       cullCoveredFaces: options.cull ?? true
@@ -113,7 +113,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   const image = new Image();
   image.src = canvas.toDataURL();
   await image.decode();
-  view.loadTileset({ id: "atlas", src: "", tileSize: 1 }, new THREE.Texture(image));
+  view.loadBlockset({ id: "atlas", src: "", tileSize: 1 }, new THREE.Texture(image));
   const atlas = view.atlases.atlas("atlas").texture;
   atlas.needsUpdate = true;
   if (options.colored || options.hole) {
@@ -123,14 +123,14 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     }
     otherImage.src = canvas.toDataURL();
     await otherImage.decode();
-    view.loadTileset({ id: "other", src: "", tileSize: 1 }, new THREE.Texture(otherImage));
+    view.loadBlockset({ id: "other", src: "", tileSize: 1 }, new THREE.Texture(otherImage));
     view.atlases.atlas("other").texture.needsUpdate = true;
     if (options.colored) {
       view.document.blocks.register({
         id: 2,
         name: "Blue glass",
         shapeId: "cube",
-        defaultTexture: { tilesetId: "other", col: 0, row: 0 },
+        defaultTexture: { blocksetId: "other", col: 0, row: 0 },
         alphaMode: "blend",
         side: options.side ?? "double",
         cullCoveredFaces: options.cull ?? true
@@ -142,7 +142,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
         ...block,
         faceTextures: {
           [options.reverse ? "back" : "front"]: {
-            tilesetId: "other", col: 0, row: 0
+            blocksetId: "other", col: 0, row: 0
           }
         }
       });
@@ -154,13 +154,13 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     const stoneImage = new Image();
     stoneImage.src = canvas.toDataURL();
     await stoneImage.decode();
-    view.loadTileset({ id: "stone", src: "", tileSize: 1 }, new THREE.Texture(stoneImage));
+    view.loadBlockset({ id: "stone", src: "", tileSize: 1 }, new THREE.Texture(stoneImage));
     view.atlases.atlas("stone").texture.needsUpdate = true;
     view.document.blocks.register({
       id: 3,
       name: "Stone",
       shapeId: "cube",
-      defaultTexture: { tilesetId: "stone", col: 0, row: 0 }
+      defaultTexture: { blocksetId: "stone", col: 0, row: 0 }
     });
   }
   const layer = view.document.world.addLayer("test");

@@ -9,7 +9,7 @@ import {
 import * as THREE from "three";
 import {
   BlockRegistry,
-  TilesetAtlases,
+  BlocksetAtlases,
   VoxelTemplate,
   VoxelTransform,
   packVoxel
@@ -37,7 +37,7 @@ function ghostOf(): TemplateGhost {
         shapeId: "slabTop"
       }
     ]),
-    sources: sourcesOf(new TilesetAtlases())
+    sources: sourcesOf(new BlocksetAtlases())
   });
 }
 

@@ -26,7 +26,7 @@ document.history.redo();
 Local `setVoxel`, `removeVoxel`, `setVoxelBulk`, `removeVoxelBulk`,
 `patchVoxels` and `transformLayer` calls on
 [`VoxelWorld`](../world/VoxelWorld.md). Not recorded: layer, object, block and
-tileset commands, direct `VoxelLayer` writes, `document.load()`, and commands
+blockset commands, direct `VoxelLayer` writes, `document.load()`, and commands
 replayed with `apply()`, including those from peers.
 
 Each call is one entry, unless it runs inside `begin()`/`commit()` or

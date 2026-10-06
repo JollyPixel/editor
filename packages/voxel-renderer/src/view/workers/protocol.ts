@@ -51,7 +51,7 @@ export type MeshWorkerRequest =
   | MeshBuildRequest;
 
 export interface MeshWorkerGeometry {
-  tilesetId: string;
+  blocksetId: string;
   surface: BlockSurfaceOptions;
   blended: boolean;
   data: PulledMeshData;

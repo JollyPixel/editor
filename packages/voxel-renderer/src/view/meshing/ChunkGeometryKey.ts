@@ -10,20 +10,20 @@ const kBlendedSuffix = ":blended";
  * group, and whether its faces carry blend neighbours.
  */
 export class ChunkGeometryKey {
-  readonly tilesetId: string;
+  readonly blocksetId: string;
   readonly surface: BlockSurface;
   readonly blended: boolean;
 
   constructor(
-    tilesetId: string,
+    blocksetId: string,
     surface: BlockSurface,
     blended = false
   ) {
-    if (tilesetId.includes(kSurfaceSeparator)) {
-      throw new RangeError("Tileset id uses a reserved geometry separator.");
+    if (blocksetId.includes(kSurfaceSeparator)) {
+      throw new RangeError("Blockset id uses a reserved geometry separator.");
     }
 
-    this.tilesetId = tilesetId;
+    this.blocksetId = blocksetId;
     this.surface = surface;
     this.blended = blended;
     Object.freeze(this);
@@ -37,10 +37,10 @@ export class ChunkGeometryKey {
       materialGroup === undefined &&
       !this.blended
     ) {
-      return this.tilesetId;
+      return this.blocksetId;
     }
 
-    const key = this.tilesetId + kSurfaceSeparator + JSON.stringify(this.surface);
+    const key = this.blocksetId + kSurfaceSeparator + JSON.stringify(this.surface);
 
     return this.blended ? key + kBlendedSuffix : key;
   }

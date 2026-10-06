@@ -45,14 +45,14 @@ export interface VoxelBlockUsage {
   layers: VoxelLayerUsage[];
 }
 
-export interface VoxelTilesetUsage {
-  tilesetId: string;
+export interface VoxelBlocksetUsage {
+  blocksetId: string;
   /**
-   * Registered block ids with at least one tile in the tileset.
+   * Registered block ids with at least one tile in the blockset.
    */
   blocks: number[];
   /**
-   * Voxels whose block references the tileset.
+   * Voxels whose block references the blockset.
    */
   voxels: number;
 }
@@ -141,12 +141,12 @@ export class VoxelBlockInspector {
     };
   }
 
-  tilesetUsageOf(
-    tilesetId: string
-  ): VoxelTilesetUsage {
+  blocksetUsageOf(
+    blocksetId: string
+  ): VoxelBlocksetUsage {
     const blocks: number[] = [];
     for (const block of this.#blockRegistry) {
-      if (BlockTextures.of(block).tilesetIds().includes(tilesetId)) {
+      if (BlockTextures.of(block).blocksetIds().includes(blocksetId)) {
         blocks.push(block.id);
       }
     }
@@ -160,7 +160,7 @@ export class VoxelBlockInspector {
     }
 
     return {
-      tilesetId,
+      blocksetId,
       blocks,
       voxels
     };

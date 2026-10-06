@@ -37,6 +37,6 @@ and a manifest, never an import, and its bundle carries no project data.
 ## Consequences
 
 - A kind opened by two editors throws at registration.
-- A kind with no editor, such as `texture` or `tileset`, opens nothing and its rows say
+- A kind with no editor, such as `texture` or `blockset`, opens nothing and its rows say
   `no editor`.
 - A kind registered twice throws, and a kind without an icon shows `file`.

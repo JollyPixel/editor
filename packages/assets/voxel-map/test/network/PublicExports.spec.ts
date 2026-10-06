@@ -14,28 +14,28 @@ describe("public entry points", () => {
   test("root exports persistence APIs of both kinds only", () => {
     assert.strictEqual(typeof root.voxelMapAssetKind, "function");
     assert.strictEqual(typeof root.VoxelMapState, "function");
-    assert.strictEqual(typeof root.tilesetAssetKind, "function");
-    assert.strictEqual(typeof root.TilesetState, "function");
-    assert.strictEqual(typeof root.tilesetDocumentFromPng, "function");
-    assert.strictEqual(root.TILESET_ASSET.kind, root.TILESET_KIND);
+    assert.strictEqual(typeof root.blocksetAssetKind, "function");
+    assert.strictEqual(typeof root.BlocksetState, "function");
+    assert.strictEqual(typeof root.blocksetDocumentFromPng, "function");
+    assert.strictEqual(root.BLOCKSET_ASSET.kind, root.BLOCKSET_KIND);
     assert.strictEqual("VoxelSyncClient" in root, false);
-    assert.strictEqual("TilesetSyncClient" in root, false);
+    assert.strictEqual("BlocksetSyncClient" in root, false);
   });
 
-  test("client exports browser synchronization of maps and tilesets", () => {
+  test("client exports browser synchronization of maps and blocksets", () => {
     assert.strictEqual(typeof client.VoxelSyncClient, "function");
     assert.strictEqual(typeof client.voxelMapDocumentKind, "function");
-    assert.strictEqual(typeof client.TilesetSyncClient, "function");
-    assert.strictEqual(typeof client.SyncedTileset, "function");
-    assert.strictEqual(typeof client.tilesetDocumentKind, "function");
-    assert.strictEqual(typeof client.createTilesetAsset, "function");
-    assert.strictEqual(typeof client.tilesetAsset, "function");
-    assert.strictEqual(client.TILESET_KIND, root.TILESET_KIND);
+    assert.strictEqual(typeof client.BlocksetSyncClient, "function");
+    assert.strictEqual(typeof client.SyncedBlockset, "function");
+    assert.strictEqual(typeof client.blocksetDocumentKind, "function");
+    assert.strictEqual(typeof client.createBlocksetAsset, "function");
+    assert.strictEqual(typeof client.blocksetAsset, "function");
+    assert.strictEqual(client.BLOCKSET_KIND, root.BLOCKSET_KIND);
   });
 
   test("server exports authoritative synchronization of both rooms", () => {
     assert.strictEqual(typeof server.VoxelCommandArbiter, "function");
-    assert.strictEqual(typeof server.TilesetCommandArbiter, "function");
-    assert.strictEqual(typeof server.tilesetCommandProtocol, "object");
+    assert.strictEqual(typeof server.BlocksetCommandArbiter, "function");
+    assert.strictEqual(typeof server.blocksetCommandProtocol, "object");
   });
 });

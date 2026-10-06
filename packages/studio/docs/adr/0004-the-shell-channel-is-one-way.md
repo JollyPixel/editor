@@ -33,6 +33,6 @@ the registry and the tab cap.
 ## Consequences
 
 No editor calls the channel yet. The voxel-map Paint tab was the planned first caller until
-tilesets were kept inside voxel-map ([ADR-0008](./0008-pixel-art-page-edits-pixelart-only.md)).
+blocksets were kept inside voxel-map ([ADR-0008](./0008-pixel-art-page-edits-pixelart-only.md)).
 `editor.host` itself posts `toggle-console` on Ctrl+K
 ([ADR-0015](./0015-the-studio-console-takes-precedence.md)).

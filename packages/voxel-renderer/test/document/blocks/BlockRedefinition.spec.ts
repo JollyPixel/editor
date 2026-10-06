@@ -57,7 +57,7 @@ describe("redefinitionOf", () => {
       defaultTexture: { col: 0, row: 0, rotation: 1 }
     });
     const relinked = cube({
-      defaultTexture: { col: 0, row: 0, tilesetId: "stone" }
+      defaultTexture: { col: 0, row: 0, blocksetId: "stone" }
     });
 
     assert.equal(redefinitionOf(cube(), turned), "mesh");

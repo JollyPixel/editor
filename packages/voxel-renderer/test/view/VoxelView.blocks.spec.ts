@@ -63,7 +63,7 @@ function makeRowView(): VoxelView {
 }
 
 describe("VoxelView - block redefinition", () => {
-  it("remeshes only the chunks holding a block whose tiles change tileset", () => {
+  it("remeshes only the chunks holding a block whose tiles change blockset", () => {
     const view = makeRowView();
 
     view.document.defineBlock(makeBlockDef(kCubeId, "cube", {

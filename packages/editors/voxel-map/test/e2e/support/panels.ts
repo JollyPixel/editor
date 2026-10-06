@@ -7,5 +7,5 @@ export async function openPane(
   page: Page,
   name: PaneName
 ): Promise<void> {
-  await page.getByRole("tab", { name }).click();
+  await page.getByRole("tab", { name, exact: true }).click();
 }

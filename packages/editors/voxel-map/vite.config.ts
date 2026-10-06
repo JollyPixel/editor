@@ -27,7 +27,7 @@ import { createDefaultSeed } from "./src/boot/defaultSeed.ts";
 
 // CONSTANTS
 const kE2EMode = "e2e";
-const kTilesetAssetId = "tileset-default";
+const kBlocksetAssetId = "blockset-default";
 const kAssetsRoot = path.join(import.meta.dirname, "assets");
 const kProjectFile: ProjectFileData = {
   version: 1,
@@ -69,7 +69,7 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
           {}),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
         handlers: kinds.handlers(),
-        ...createDefaultSeed(kTilesetAssetId)
+        ...createDefaultSeed(kBlocksetAssetId)
       })
     ]
   };

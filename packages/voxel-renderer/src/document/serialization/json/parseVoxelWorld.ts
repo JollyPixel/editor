@@ -30,7 +30,7 @@ export function parseVoxelWorld(
   const chunkSize = readField(value, "chunkSize");
   const layers = readField(value, "layers");
   const objectLayers = readField(value, "objectLayers");
-  const tilesets = readField(value, "tilesets");
+  const blocksets = readField(value, "blocksets");
   const templates = readField(value, "templates");
 
   if (version !== VOXEL_WORLD_VERSION) {
@@ -58,7 +58,7 @@ export function parseVoxelWorld(
   const document: VoxelWorldJSON = {
     version,
     chunkSize,
-    tilesets: Array.isArray(tilesets) ? tilesets : [],
+    blocksets: Array.isArray(blocksets) ? blocksets : [],
     layers: parsedLayers
   };
   if (Array.isArray(objectLayers)) {

@@ -2,8 +2,8 @@
 
 A surface finish (roughness, metalness, emission) shared by every block whose
 [`BlockSurface`](../blocks/BlockSurface.md) names it in `materialGroup`. Groups
-belong to a [tileset document](../tilesets/TilesetDocument.md) and reach a
-world as `"<tilesetId>/<groupId>"`; a `VoxelDocument` can also define its own.
+belong to a [blockset document](../blocksets/BlocksetDocument.md) and reach a
+world as `"<blocksetId>/<groupId>"`; a `VoxelDocument` can also define its own.
 
 ```ts
 const document = new VoxelDocument({
@@ -29,7 +29,7 @@ document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 | `metalness` | `0` | `0` to `1`. |
 | `emissive` | `"#000000"` | A `#rrggbb` colour, stored in lower case. |
 | `emissiveIntensity` | `1` | `0` or more. |
-| `normalScale` | `1` | `0` or more. Strength of the tileset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns it off. |
+| `normalScale` | `1` | `0` or more. Strength of the blockset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns it off. |
 
 `MaterialGroup.defaults` holds the defaults.
 
@@ -70,7 +70,7 @@ material only receives the emissive fields and `normalScale`.
 ## Group lists
 
 `document.materialGroups` is a `MaterialGroupList` and `document.blendGroups`
-a `BlendGroupList`, on both `VoxelDocument` and `TilesetDocument`. Both lists
+a `BlendGroupList`, on both `VoxelDocument` and `BlocksetDocument`. Both lists
 share these members:
 
 | Member | Description |

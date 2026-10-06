@@ -29,7 +29,7 @@ function makePair(
     blocks: [makeBlockDef(CUBE_ID, "cube", { name: "Cube" })]
   });
   const view = new VoxelView(document, { logger });
-  view.loadTileset(makeAtlasDef(), mockTexture());
+  view.loadBlockset(makeAtlasDef(), mockTexture());
   view.init();
 
   return {
@@ -59,7 +59,7 @@ describe("VoxelView - frame requests", () => {
         counter.frames++;
       }
     });
-    view.loadTileset(makeAtlasDef(), mockTexture());
+    view.loadBlockset(makeAtlasDef(), mockTexture());
     view.init();
     counter.frames = 0;
 
@@ -106,14 +106,14 @@ describe("VoxelView - document subscriptions", () => {
     assert.equal(dirtyChunks(document), 1);
   });
 
-  it("syncs the atlases before a tileset command reaches other listeners", () => {
+  it("syncs the atlases before a blockset command reaches other listeners", () => {
     const { document, view } = makePair();
     const seen: boolean[] = [];
     document.on("command", () => {
       seen.push(view.atlases.get("atlas") !== undefined);
     });
 
-    document.removeTileset("atlas");
+    document.removeBlockset("atlas");
 
     assert.deepEqual(seen, [false]);
   });
@@ -133,13 +133,13 @@ describe("VoxelView - document subscriptions", () => {
     assert.equal(chunkMeshes(view).length, 0);
   });
 
-  it("warns about a tileset the loaded world declares without a texture", () => {
+  it("warns about a blockset the loaded world declares without a texture", () => {
     const warnings: string[] = [];
     const { document } = makePair(makeLogger(warnings));
 
     const source = new VoxelDocument({
       chunkSize: CHUNK_SIZE,
-      tilesets: [makeAtlasDef({ id: "stone" })]
+      blocksets: [makeAtlasDef({ id: "stone" })]
     });
     document.load(source.save());
 
@@ -165,12 +165,12 @@ describe("VoxelView - document subscriptions", () => {
     assert.equal(dirtyChunks(document), 1);
   });
 
-  it("leaves the tileset declarations of the document when disposed", () => {
+  it("leaves the blockset declarations of the document when disposed", () => {
     const { document, view } = makePair();
 
     view.dispose();
 
-    assert.ok(document.tilesets.has("atlas"));
+    assert.ok(document.blocksets.has("atlas"));
   });
 
   it("stops following the document once disposed", () => {
@@ -195,7 +195,7 @@ describe("VoxelView.load", () => {
       chunkSize: CHUNK_SIZE,
       layers: ["Ground"],
       blocks: [makeBlockDef(CUBE_ID, "cube", { name: "Cube" })],
-      tilesets: [makeAtlasDef({ id: "stone" })]
+      blocksets: [makeAtlasDef({ id: "stone" })]
     });
     source.world.setVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
@@ -203,7 +203,7 @@ describe("VoxelView.load", () => {
     });
 
     view.load(source.save(), {
-      tilesets: [{ def: makeAtlasDef({ id: "stone" }), texture: mockTexture() }]
+      blocksets: [{ def: makeAtlasDef({ id: "stone" }), texture: mockTexture() }]
     });
 
     assert.ok(view.atlases.get("stone"));
@@ -215,23 +215,23 @@ describe("VoxelView.load", () => {
     const loaded = view.atlases.get("atlas");
 
     view.load(view.document.save(), {
-      tilesets: [{ def: makeAtlasDef(), texture: mockTexture() }]
+      blocksets: [{ def: makeAtlasDef(), texture: mockTexture() }]
     });
 
     assert.equal(view.atlases.get("atlas")?.texture, loaded?.texture);
   });
 });
 
-describe("VoxelView.loadTileset", () => {
-  it("declares the tileset on the document without emitting a command", () => {
+describe("VoxelView.loadBlockset", () => {
+  it("declares the blockset on the document without emitting a command", () => {
     const { document, view } = makePair();
     const commands: string[] = [];
     document.on("command", (command) => commands.push(command.action));
 
-    view.loadTileset(makeAtlasDef({ id: "stone" }), mockTexture());
+    view.loadBlockset(makeAtlasDef({ id: "stone" }), mockTexture());
 
     assert.deepEqual(commands, []);
-    assert.ok(document.tilesets.get("stone"));
+    assert.ok(document.blocksets.get("stone"));
     assert.ok(view.atlases.get("stone"));
   });
 });

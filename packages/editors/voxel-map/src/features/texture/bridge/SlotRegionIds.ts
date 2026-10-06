@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
-import type { TilesetSlot } from "@jolly-pixel/voxel.renderer";
+import type { BlocksetSlot } from "@jolly-pixel/voxel.renderer";
 import { BlockProjection } from "@jolly-pixel/asset.voxel-map/client";
 
 export class SlotRegionIds {
-  readonly slot: TilesetSlot;
+  readonly slot: BlocksetSlot;
 
   constructor(
-    slot: TilesetSlot
+    slot: BlocksetSlot
   ) {
     this.slot = slot;
   }

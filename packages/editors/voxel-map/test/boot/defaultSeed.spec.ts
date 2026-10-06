@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
 import {
-  TILESET_KIND,
+  BLOCKSET_KIND,
   VOXEL_MAP_KIND
 } from "@jolly-pixel/asset.voxel-map";
 
@@ -14,31 +14,31 @@ import { createDefaultSeed } from "../../src/boot/defaultSeed.ts";
 function seedEntry(
   path: string
 ) {
-  const entry = createDefaultSeed("tileset-id").seed[path];
+  const entry = createDefaultSeed("blockset-id").seed[path];
   assert.ok(typeof entry === "object");
 
   return entry;
 }
 
 describe("createDefaultSeed", () => {
-  it("seeds the overworld map next to its tileset", () => {
-    const { seed } = createDefaultSeed("tileset-id");
+  it("seeds the overworld map next to its blockset", () => {
+    const { seed } = createDefaultSeed("blockset-id");
 
     assert.deepEqual(Object.keys(seed).sort(), [
-      "maps/overworld.tileset.json",
+      "maps/overworld.blockset.json",
       "maps/overworld.voxelmap.json"
     ]);
-    assert.equal(seedEntry("maps/overworld.tileset.json").id, "tileset-id");
-    assert.equal(seedEntry("maps/overworld.tileset.json").kind, TILESET_KIND);
+    assert.equal(seedEntry("maps/overworld.blockset.json").id, "blockset-id");
+    assert.equal(seedEntry("maps/overworld.blockset.json").kind, BLOCKSET_KIND);
     assert.equal(seedEntry("maps/overworld.voxelmap.json").kind, VOXEL_MAP_KIND);
   });
 
-  it("seeds a blank 512x512 tileset with 32px tiles and no blocks", async() => {
-    const content = await seedEntry("maps/overworld.tileset.json").content!();
-    const tileset = JSON.parse(new TextDecoder().decode(content as Uint8Array));
+  it("seeds a blank 512x512 blockset with 32px tiles and no blocks", async() => {
+    const content = await seedEntry("maps/overworld.blockset.json").content!();
+    const blockset = JSON.parse(new TextDecoder().decode(content as Uint8Array));
 
-    assert.deepEqual(tileset.pixels.size, { x: 512, y: 512 });
-    assert.equal(tileset.tileSize, 32);
-    assert.deepEqual(tileset.blocks, []);
+    assert.deepEqual(blockset.pixels.size, { x: 512, y: 512 });
+    assert.equal(blockset.tileSize, 32);
+    assert.deepEqual(blockset.blocks, []);
   });
 });

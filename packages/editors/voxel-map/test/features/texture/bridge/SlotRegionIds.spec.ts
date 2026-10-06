@@ -5,7 +5,7 @@ import { describe, it } from "node:test";
 // Import Third-party Dependencies
 import {
   composeBlockId,
-  TilesetSlot
+  BlocksetSlot
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -14,7 +14,7 @@ import {
 } from "../../../../src/features/texture/bridge/SlotRegionIds.ts";
 
 describe("SlotRegionIds", () => {
-  const regions = new SlotRegionIds(new TilesetSlot({ id: "stone", slot: 2 }));
+  const regions = new SlotRegionIds(new BlocksetSlot({ id: "stone", slot: 2 }));
 
   it("reads a region id as a block of its slot", () => {
     assert.equal(regions.blockIdOf("block-4"), composeBlockId(2, 4));

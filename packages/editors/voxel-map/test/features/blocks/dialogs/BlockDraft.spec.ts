@@ -9,12 +9,12 @@ import {
 } from "../../../../src/features/blocks/dialogs/BlockDraft.ts";
 
 describe("BlockDraft", () => {
-  it("starts as a named cube on the given tileset", () => {
+  it("starts as a named cube on the given blockset", () => {
     const draft = BlockDraft.create("terrain");
 
     assert.equal(draft.name, DEFAULT_BLOCK_NAME);
     assert.equal(draft.shapeId, "cube");
-    assert.equal(draft.tilesetId, "terrain");
+    assert.equal(draft.blocksetId, "terrain");
     assert.equal(draft.size, undefined);
   });
 
@@ -33,7 +33,7 @@ describe("BlockDraft", () => {
       const definition = new BlockDraft({
         name: "  Stone  ",
         shapeId: "ramp",
-        tilesetId: "terrain"
+        blocksetId: "terrain"
       }).toDefinition(7);
 
       assert.deepEqual(definition, {
@@ -41,23 +41,23 @@ describe("BlockDraft", () => {
         name: "Stone",
         shapeId: "ramp",
         defaultTexture: {
-          tilesetId: "terrain",
+          blocksetId: "terrain",
           col: 0,
           row: 0
         }
       });
     });
 
-    it("falls back to the default name and tileset", () => {
+    it("falls back to the default name and blockset", () => {
       const definition = new BlockDraft({
         name: "   ",
         shapeId: "cube",
-        tilesetId: ""
+        blocksetId: ""
       }).toDefinition(1);
 
       assert.equal(definition.name, DEFAULT_BLOCK_NAME);
       assert.deepEqual(definition.defaultTexture, {
-        tilesetId: undefined,
+        blocksetId: undefined,
         col: 0,
         row: 0
       });
@@ -69,7 +69,7 @@ describe("BlockDraft", () => {
         .toDefinition(1);
 
       assert.deepEqual(definition.defaultTexture, {
-        tilesetId: "terrain",
+        blocksetId: "terrain",
         col: 0,
         row: 0,
         size: 64
@@ -81,7 +81,7 @@ describe("BlockDraft", () => {
         .toDefinition(1, { col: 3, row: 2 });
 
       assert.deepEqual(definition.defaultTexture, {
-        tilesetId: "terrain",
+        blocksetId: "terrain",
         col: 3,
         row: 2
       });
@@ -97,7 +97,7 @@ describe("BlockDraft", () => {
     assert.equal(block.collidable, true);
     assert.deepEqual(block.faceTextures, {});
     assert.deepEqual(block.defaultTexture, {
-      tilesetId: "terrain",
+      blocksetId: "terrain",
       col: 0,
       row: 0
     });

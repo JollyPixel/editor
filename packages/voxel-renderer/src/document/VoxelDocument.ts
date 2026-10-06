@@ -31,8 +31,8 @@ import {
   serializeVoxelWorld
 } from "./serialization/world.ts";
 import type { VoxelWorldJSON } from "./serialization/types.ts";
-import { TilesetList } from "./tilesets/TilesetList.ts";
-import type { TilesetDefinition } from "./tilesets/types.ts";
+import { BlocksetList } from "./blocksets/BlocksetList.ts";
+import type { BlocksetDefinition } from "./blocksets/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../VoxelLogger.ts";
 import {
   VoxelWorld,
@@ -48,9 +48,9 @@ export interface VoxelLoadOptions {
   mergeLayers?: boolean | VoxelMergeAllLayersOptions;
 
   /**
-   * Tileset definitions declared before loading a world that uses them.
+   * Blockset definitions declared before loading a world that uses them.
    */
-  tilesets?: Iterable<TilesetDefinition>;
+  blocksets?: Iterable<BlocksetDefinition>;
 }
 
 export type VoxelDocumentEvents = BlockDocumentEvents<VoxelCommand>;
@@ -75,9 +75,9 @@ export interface VoxelDocumentOptions {
   blocks?: BlockDefinition[];
 
   /**
-   * Tileset definitions declared before any texture is registered for them.
+   * Blockset definitions declared before any texture is registered for them.
    */
-  tilesets?: Iterable<TilesetDefinition>;
+  blocksets?: Iterable<BlocksetDefinition>;
 
   /**
    * Material groups the blocks can name through `materialGroup`.
@@ -108,14 +108,14 @@ export interface VoxelDocumentOptions {
 }
 
 /**
- * A world with the blocks, material groups and blend groups its tilesets
- * project into it. Saving and loading cover the world and its tileset links
- * only; blocks and groups are runtime state a host fills from tileset
+ * A world with the blocks, material groups and blend groups its blocksets
+ * project into it. Saving and loading cover the world and its blockset links
+ * only; blocks and groups are runtime state a host fills from blockset
  * documents.
  */
 export class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly world: VoxelWorld;
-  readonly tilesets: TilesetList;
+  readonly blocksets: BlocksetList;
   readonly history: VoxelHistory;
 
   #logger: VoxelLogger;
@@ -127,7 +127,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
       chunkSize = DEFAULT_CHUNK_SIZE,
       layers = [],
       blocks = [],
-      tilesets = [],
+      blocksets = [],
       materialGroups = [],
       blendGroups = [],
       history,
@@ -156,9 +156,9 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     layers.forEach((name) => this.world.addLayer(name));
     this.history = new VoxelHistory(this.world, history);
 
-    this.tilesets = new TilesetList();
-    for (const tileset of tilesets) {
-      this.tilesets.add(tileset);
+    this.blocksets = new BlocksetList();
+    for (const blockset of blocksets) {
+      this.blocksets.add(blockset);
     }
   }
 
@@ -182,21 +182,21 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     return entry && this.blocks.propertiesOf(entry.blockId);
   }
 
-  addTileset(
-    tileset: TilesetDefinition
+  addBlockset(
+    blockset: BlocksetDefinition
   ): boolean {
     return this.apply({
-      action: "tileset-added",
-      tileset
+      action: "blockset-added",
+      blockset
     });
   }
 
-  removeTileset(
-    tilesetId: string
+  removeBlockset(
+    blocksetId: string
   ): boolean {
     return this.apply({
-      action: "tileset-removed",
-      tilesetId
+      action: "blockset-removed",
+      blocksetId
     });
   }
 
@@ -204,7 +204,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     this.#logger.debug("Serializing world to JSON...");
 
     return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesets
+      blocksets: this.blocksets
     });
   }
 
@@ -214,12 +214,12 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   ): void {
     this.world.silently(
       () => deserializeVoxelWorld(data, this.world, {
-        tilesets: this.tilesets
+        blocksets: this.blocksets
       })
     );
 
-    for (const def of options.tilesets ?? []) {
-      this.tilesets.add(def);
+    for (const def of options.blocksets ?? []) {
+      this.blocksets.add(def);
     }
 
     if (options.mergeLayers) {
@@ -235,7 +235,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   dispose(): void {
     this.#logger.debug("Disposing VoxelDocument.");
     this.history.dispose();
-    this.tilesets.clear();
+    this.blocksets.clear();
     this.world.removeAllListeners();
     this.removeAllListeners();
   }

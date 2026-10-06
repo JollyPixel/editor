@@ -3,7 +3,7 @@ import {
   type BlendGroupJSON,
   type BlockDefinition,
   type TileRef,
-  type TilesetDefinition
+  type BlocksetDefinition
 } from "../../../src/index.ts";
 import {
   TerrainBlock,
@@ -120,14 +120,14 @@ export const TERRAIN_BLEND_GROUPS: readonly BlendGroupJSON[] = [
   { id: "snow", width: 12, priority: 3 }
 ];
 
-export interface TerrainTileset {
-  definition: TilesetDefinition;
+export interface TerrainBlockset {
+  definition: BlocksetDefinition;
   blocks: BlockDefinition[];
 }
 
-export function createTerrainTileset(
+export function createTerrainBlockset(
   id = "terrain"
-): TerrainTileset {
+): TerrainBlockset {
   const rows = Math.ceil(kTileNames.length / kCols);
 
   return {

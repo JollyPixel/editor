@@ -22,7 +22,7 @@ import {
 } from "@jolly-pixel/asset-server/node";
 import {
   ASSET_KINDS,
-  TILESET_ASSET,
+  BLOCKSET_ASSET,
   VOXEL_MAP_ASSET
 } from "@jolly-pixel/asset.voxel-map";
 
@@ -51,7 +51,7 @@ const kManifest = {
       kinds: ["voxelmap"]
     }
   ],
-  kinds: [TILESET_ASSET, VOXEL_MAP_ASSET]
+  kinds: [BLOCKSET_ASSET, VOXEL_MAP_ASSET]
 };
 
 function voxelMapProject(

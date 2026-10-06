@@ -62,7 +62,7 @@ test("creates a map, a model and a texture from the tree and opens each", async(
     {
       kind: "Voxel map",
       file: "New voxel map.voxelmap.json",
-      companion: "New voxel map.tileset.json",
+      companion: "New voxel map.blockset.json",
       editor: "voxel-map"
     },
     {

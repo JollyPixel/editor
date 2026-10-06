@@ -55,7 +55,7 @@ function inlineConfirmDialog(
 ): HTMLElement[] {
   const dialog = document.createElement("jolly-dialog");
   dialog.id = "inline-confirm-dialog";
-  dialog.heading = "Tileset \"Terrain\"";
+  dialog.heading = "Blockset \"Terrain\"";
   dialog.icon = "sliders";
   dialog.append(text("Used by 3 blocks, 120 voxels in the map."));
   const remove = button("Remove", "danger");
@@ -63,7 +63,7 @@ function inlineConfirmDialog(
   remove.dataset.action = "inline-remove";
   remove.addEventListener("click", async() => {
     const confirmed = await dialog.confirmInline({
-      message: "3 blocks use this tileset and will lose their texture.",
+      message: "3 blocks use this blockset and will lose their texture.",
       confirmLabel: "Remove",
       danger: true
     });

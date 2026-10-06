@@ -16,7 +16,7 @@ import { openPane } from "./support/panels.ts";
 
 interface OfflineIds {
   mapId: string;
-  tilesetIds: (string | undefined)[];
+  blocksetIds: (string | undefined)[];
 }
 
 function offlineIds(
@@ -27,9 +27,9 @@ function offlineIds(
 
     return {
       mapId: session.target.record.id,
-      tilesetIds: workspace.view.document.tilesets
+      blocksetIds: workspace.view.document.blocksets
         .definitions()
-        .map((tileset) => tileset.asset?.id)
+        .map((blockset) => blockset.asset?.id)
     };
   });
 }
@@ -82,7 +82,7 @@ test("exports the map, resets the workspace and imports it back", async({ page }
   expect(errors).toEqual([]);
 });
 
-test("imports a map and its tileset as a copy", async({ page }) => {
+test("imports a map and its blockset as a copy", async({ page }) => {
   test.setTimeout(90_000);
   await openEditor(page, OFFLINE_EDITOR);
   const original = await offlineIds(page);
@@ -105,7 +105,7 @@ test("imports a map and its tileset as a copy", async({ page }) => {
 
   const copied = await offlineIds(page);
   expect(copied.mapId).not.toBe(original.mapId);
-  expect(copied.tilesetIds[0]).not.toBe(original.tilesetIds[0]);
+  expect(copied.blocksetIds[0]).not.toBe(original.blocksetIds[0]);
   expect(await page.evaluate(
     (id) => window.voxelMapEditor!.session.catalog.record(id)?.kind,
     original.mapId

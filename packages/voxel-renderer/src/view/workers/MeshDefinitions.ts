@@ -8,8 +8,8 @@ import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeR
 import type { BlockRegistry } from "../../document/blocks/BlockRegistry.ts";
 import type { ResolvedBlockDefinition } from "../../document/blocks/BlockDefinition.ts";
 import type { FaceDefinition } from "../../document/blocks/face/index.ts";
-import type { TilesetAtlases } from "../atlases/TilesetAtlases.ts";
-import type { ResolvedTilesetDefinition } from "../../document/tilesets/types.ts";
+import type { BlocksetAtlases } from "../atlases/BlocksetAtlases.ts";
+import type { ResolvedBlocksetDefinition } from "../../document/blocksets/types.ts";
 import type { BlendGroupJSON } from "../../document/materials/BlendGroup.ts";
 import type { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
 import { FACES } from "../../document/geometry/faceDirection.ts";
@@ -22,16 +22,16 @@ export interface MeshShapeDefinition {
   collisionHint: BlockCollisionHint;
 }
 
-export interface MeshTilesetDefinitions {
-  defaultTilesetId: string | null;
+export interface MeshBlocksetDefinitions {
+  defaultBlocksetId: string | null;
   declared: string[];
-  loaded: ResolvedTilesetDefinition[];
+  loaded: ResolvedBlocksetDefinition[];
 }
 
 export interface MeshDefinitions {
   blocks: ResolvedBlockDefinition[];
   shapes: MeshShapeDefinition[];
-  tilesets: MeshTilesetDefinitions;
+  blocksets: MeshBlocksetDefinitions;
   blendGroups: BlendGroupJSON[];
   alphaTest: number;
   regions: FaceRegionAssignment[];
@@ -40,7 +40,7 @@ export interface MeshDefinitions {
 export interface MeshDefinitionSources {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
-  atlases: TilesetAtlases;
+  atlases: BlocksetAtlases;
   blendGroups?: BlendGroupList;
   alphaTest: number;
 }
@@ -70,9 +70,9 @@ export function captureMeshDefinitions(
     blendGroups,
     alphaTest
   } = sources;
-  const { tilesets } = atlases;
-  const loaded: ResolvedTilesetDefinition[] = [];
-  for (const { id } of tilesets) {
+  const { blocksets } = atlases;
+  const loaded: ResolvedBlocksetDefinition[] = [];
+  for (const { id } of blocksets) {
     const atlas = atlases.get(id);
     if (atlas !== undefined) {
       loaded.push(atlas.def);
@@ -82,9 +82,9 @@ export function captureMeshDefinitions(
   return {
     blocks: [...blockRegistry],
     shapes: [...shapeRegistry].map(describeShape),
-    tilesets: {
-      defaultTilesetId: tilesets.defaultTilesetId,
-      declared: [...tilesets.ids()],
+    blocksets: {
+      defaultBlocksetId: blocksets.defaultBlocksetId,
+      declared: [...blocksets.ids()],
       loaded
     },
     blendGroups: blendGroups?.toJSON() ?? [],

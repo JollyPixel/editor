@@ -130,7 +130,7 @@ test("the library redraws after the browser drops its WebGL context", async({ pa
 });
 
 test("the add cell creates a block and selects it", async({ page }) => {
-  await page.getByRole("button", { name: "Add block" }).click();
+  await page.getByRole("button", { name: "Add block", exact: true }).click();
   const editor = titledDialog(page, "New Block");
   const title = dialogTitle(editor);
   await expect(title).not.toBeFocused();
@@ -196,7 +196,7 @@ test("a transparent block edits its alpha mode and its sides", async({ page }) =
     .toEqual({ alphaMode: "blend", side: "double" });
 });
 
-test("a lone tileset leaves the tileset field disabled", async({ page }) => {
+test("a lone blockset leaves the blockset field disabled", async({ page }) => {
   const [first] = await blockNames(page);
   const library = page.getByRole("listbox", { name: "Blocks" });
 

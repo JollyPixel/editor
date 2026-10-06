@@ -8,7 +8,7 @@ import {
   VoxelLayer,
   type BlockShapeID,
   type ResolvedBlockDefinition,
-  type TilesetDefinition,
+  type BlocksetDefinition,
   type VoxelLayerJSON,
   type VoxelObjectJSON,
   type VoxelObjectLayerJSON,
@@ -34,7 +34,7 @@ export interface TiledConverterOptions {
   /**
    * Resolves a Tiled tileset source and derived ID to an asset URL.
    */
-  resolveTilesetSrc: (tiledSource: string, tilesetId: string) => string;
+  resolveTilesetSrc: (tiledSource: string, blocksetId: string) => string;
 
   /**
    * Chunk size written into the VoxelWorldJSON output.
@@ -61,14 +61,14 @@ export interface TiledConverterOptions {
   collidable?: boolean;
 }
 
-interface TilesetBuildContext {
+interface BlocksetBuildContext {
   options: TiledConverterOptions;
-  tilesetIds: Map<number, string>;
+  blocksetIds: Map<number, string>;
 }
 
 interface BlockBuildContext {
   tileSets: TileSet[];
-  tilesetIds: Map<number, string>;
+  blocksetIds: Map<number, string>;
   options: TiledConverterOptions;
 }
 
@@ -85,7 +85,7 @@ interface ObjectLayerContext {
 }
 
 /**
- * A converted map: the world with its tileset links, and the blocks the
+ * A converted map: the world with its blockset links, and the blocks the
  * world's tiles were turned into, one per unique tile.
  */
 export interface TiledConversion {
@@ -110,18 +110,18 @@ export class TiledConverter {
       tileSets.push(new TileSet(ts));
     }
 
-    const tilesetIds = new Map<number, string>();
+    const blocksetIds = new Map<number, string>();
     for (let i = 0; i < map.tilesets.length; i++) {
-      tilesetIds.set(map.tilesets[i].firstgid, deriveTilesetId(map.tilesets[i], i));
+      blocksetIds.set(map.tilesets[i].firstgid, deriveBlocksetId(map.tilesets[i], i));
     }
 
-    const tilesetCtx: TilesetBuildContext = { options, tilesetIds };
-    const tilesets = map.tilesets.map((ts, i) => buildTilesetDefinition(ts, i, tilesetCtx));
+    const blocksetCtx: BlocksetBuildContext = { options, blocksetIds };
+    const blocksets = map.tilesets.map((ts, i) => buildBlocksetDefinition(ts, i, blocksetCtx));
 
     const rawGids = new Set<number>();
     collectGIDs(map.layers, rawGids);
 
-    const blockCtx: BlockBuildContext = { tileSets, tilesetIds, options };
+    const blockCtx: BlockBuildContext = { tileSets, blocksetIds, options };
     const { blocks, gidToBlockId } = buildBlocks(rawGids, blockCtx);
 
     const layers: VoxelLayerJSON[] = [];
@@ -140,7 +140,7 @@ export class TiledConverter {
     const world: VoxelWorldJSON = {
       version: VOXEL_WORLD_VERSION,
       chunkSize: options.chunkSize ?? DEFAULT_CHUNK_SIZE,
-      tilesets,
+      blocksets,
       layers
     };
 
@@ -155,7 +155,7 @@ export class TiledConverter {
   }
 }
 
-function deriveTilesetId(
+function deriveBlocksetId(
   tileset: TiledMapTileset,
   index: number
 ): string {
@@ -172,12 +172,12 @@ function deriveTilesetId(
   return `tileset_${index}`;
 }
 
-function buildTilesetDefinition(
+function buildBlocksetDefinition(
   ts: TiledMapTileset,
   index: number,
-  ctx: TilesetBuildContext
-): TilesetDefinition {
-  const id = ctx.tilesetIds.get(ts.firstgid) ?? deriveTilesetId(ts, index);
+  ctx: BlocksetBuildContext
+): BlocksetDefinition {
+  const id = ctx.blocksetIds.get(ts.firstgid) ?? deriveBlocksetId(ts, index);
   const src = ctx.options.resolveTilesetSrc(ts.source ?? "", id);
 
   return {
@@ -227,7 +227,7 @@ function buildBlocks(
       continue;
     }
 
-    const tilesetId = ctx.tilesetIds.get(tileSet.firstgid) ?? tileSet.name;
+    const blocksetId = ctx.blocksetIds.get(tileSet.firstgid) ?? tileSet.name;
     const localId = tileSet.getTileLocalId(rawGid);
     const blockId = nextId++;
 
@@ -235,14 +235,14 @@ function buildBlocks(
 
     blocks.push({
       id: blockId,
-      name: `${tilesetId}_${localId}`,
+      name: `${blocksetId}_${localId}`,
       shapeId: ctx.options.defaultShapeId ?? "cube",
       properties: {},
       faceTextures: {},
       defaultTexture: {
         col: props.coords.x,
         row: props.coords.y,
-        tilesetId
+        blocksetId
       },
       collidable: ctx.options.collidable ?? true
     });

@@ -16,7 +16,7 @@ export interface VoxelRenderingOptions {
   material?: "lambert" | "standard";
 
   /**
-   * Called once for each new material with its tileset ID and surface;
+   * Called once for each new material with its blockset ID and surface;
    * `surface.materialGroup` tells grouped blocks apart. Chunk vertices are
    * pulled in the vertex shader, so the material's `positionNode` must stay
    * untouched and `map` is null.

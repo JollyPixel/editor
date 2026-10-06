@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type {
-  TilesetDocumentCommand,
-  TilesetDocumentCommandAction,
+  BlocksetDocumentCommand,
+  BlocksetDocumentCommandAction,
   VoxelBlendGroupCommand,
   VoxelBlendGroupCommandAction,
   VoxelBlockCommand,
@@ -15,8 +15,8 @@ import type {
   VoxelObjectLayerCommand,
   VoxelTemplateCommand,
   VoxelTemplateCommandAction,
-  VoxelTilesetCommand,
-  VoxelTilesetCommandAction,
+  VoxelBlocksetCommand,
+  VoxelBlocksetCommandAction,
   VoxelWorldCommand,
   VoxelWorldCommandAction
 } from "./types.ts";
@@ -52,8 +52,8 @@ const kActionCategories: {
   "block-defined": "block",
   "block-removed": "block",
   "block-moved": "block",
-  "tileset-added": "tileset",
-  "tileset-removed": "tileset",
+  "blockset-added": "blockset",
+  "blockset-removed": "blockset",
   "material-group-defined": "material-group",
   "material-group-removed": "material-group",
   "blend-group-defined": "blend-group",
@@ -62,7 +62,7 @@ const kActionCategories: {
 const kCategoryByAction = new Map<string, CommandCategory>(
   Object.entries(kActionCategories)
 );
-const kTileSizeAction: TilesetDocumentCommandAction = "tile-size-updated";
+const kTileSizeAction: BlocksetDocumentCommandAction = "tile-size-updated";
 const kEditActions = new Set<string>([
   "voxel-set",
   "voxel-removed",
@@ -80,7 +80,7 @@ interface CommandCategories {
   layer: VoxelLayerCommand;
   template: VoxelTemplateCommand;
   block: VoxelBlockCommand;
-  tileset: VoxelTilesetCommand;
+  blockset: VoxelBlocksetCommand;
   "material-group": VoxelMaterialGroupCommand;
   "blend-group": VoxelBlendGroupCommand;
 }
@@ -105,8 +105,8 @@ readonly VoxelTemplateCommandAction[] = actionsOf("template");
 export const VOXEL_BLOCK_COMMAND_ACTIONS:
 readonly VoxelBlockCommandAction[] = actionsOf("block");
 
-export const VOXEL_TILESET_COMMAND_ACTIONS:
-readonly VoxelTilesetCommandAction[] = actionsOf("tileset");
+export const VOXEL_BLOCKSET_COMMAND_ACTIONS:
+readonly VoxelBlocksetCommandAction[] = actionsOf("blockset");
 
 export const VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS:
 readonly VoxelMaterialGroupCommandAction[] = actionsOf("material-group");
@@ -118,7 +118,7 @@ export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
   ...VOXEL_TEMPLATE_COMMAND_ACTIONS,
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
-  ...VOXEL_TILESET_COMMAND_ACTIONS,
+  ...VOXEL_BLOCKSET_COMMAND_ACTIONS,
   ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
   ...VOXEL_BLEND_GROUP_COMMAND_ACTIONS
 ];
@@ -127,11 +127,11 @@ export const VOXEL_WORLD_COMMAND_ACTIONS:
 readonly VoxelWorldCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
   ...VOXEL_TEMPLATE_COMMAND_ACTIONS,
-  ...VOXEL_TILESET_COMMAND_ACTIONS
+  ...VOXEL_BLOCKSET_COMMAND_ACTIONS
 ];
 
-export const TILESET_DOCUMENT_COMMAND_ACTIONS:
-readonly TilesetDocumentCommandAction[] = [
+export const BLOCKSET_DOCUMENT_COMMAND_ACTIONS:
+readonly BlocksetDocumentCommandAction[] = [
   ...VOXEL_BLOCK_COMMAND_ACTIONS,
   ...VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS,
   ...VOXEL_BLEND_GROUP_COMMAND_ACTIONS,
@@ -175,10 +175,10 @@ export function isVoxelBlockCommand(
   return kCategoryByAction.get(command.action) === "block";
 }
 
-export function isVoxelTilesetCommand(
+export function isVoxelBlocksetCommand(
   command: { action: string; }
-): command is VoxelTilesetCommand {
-  return kCategoryByAction.get(command.action) === "tileset";
+): command is VoxelBlocksetCommand {
+  return kCategoryByAction.get(command.action) === "blockset";
 }
 
 export function isVoxelMaterialGroupCommand(
@@ -198,12 +198,12 @@ export function isVoxelWorldCommand(
 ): command is VoxelWorldCommand {
   return isVoxelLayerCommand(command) ||
     isVoxelTemplateCommand(command) ||
-    isVoxelTilesetCommand(command);
+    isVoxelBlocksetCommand(command);
 }
 
-export function isTilesetDocumentCommand(
+export function isBlocksetDocumentCommand(
   command: { action: string; }
-): command is TilesetDocumentCommand {
+): command is BlocksetDocumentCommand {
   return isVoxelBlockCommand(command) ||
     isVoxelMaterialGroupCommand(command) ||
     isVoxelBlendGroupCommand(command) ||

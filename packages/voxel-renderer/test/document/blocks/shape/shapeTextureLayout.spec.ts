@@ -13,7 +13,7 @@ import {
   RampCornerInner,
   Stair
 } from "../../../../src/document/blocks/shape/library/index.ts";
-import type { ResolvedTileRef, TileSpan } from "../../../../src/document/tilesets/index.ts";
+import type { ResolvedTileRef, TileSpan } from "../../../../src/document/blocksets/index.ts";
 
 describe("shapeTextureLayout", () => {
   it("recognizes a cube as six full-tile slots", () => {
@@ -68,26 +68,26 @@ describe("shapeTextureLayout", () => {
       shapeId: "cube",
       collidable: true,
       properties: {},
-      defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
+      defaultTexture: { blocksetId: "atlas", col: 0, row: 0 },
       faceTextures: {
-        top: { tilesetId: "atlas", col: 2, row: 1 }
+        top: { blocksetId: "atlas", col: 2, row: 1 }
       }
     }, new Cube());
 
     assert.deepEqual(
       slots.find((entry) => entry.slot === "top")?.tile,
-      { tilesetId: "atlas", col: 2, row: 1 }
+      { blocksetId: "atlas", col: 2, row: 1 }
     );
     assert.deepEqual(
       slots.find((entry) => entry.slot === "front")?.tile,
-      { tilesetId: "atlas", col: 0, row: 0 }
+      { blocksetId: "atlas", col: 0, row: 0 }
     );
   });
 
   it("spans a ramp slope only when it owns its texture", () => {
     const shared = rampSlopeSpan({});
     const owned = rampSlopeSpan({
-      top: { tilesetId: "atlas", col: 1, row: 0 }
+      top: { blocksetId: "atlas", col: 1, row: 0 }
     });
 
     assert.deepEqual(shared, { u: 1, v: 1 });
@@ -104,7 +104,7 @@ function rampSlopeSpan(
     shapeId: "ramp",
     collidable: true,
     properties: {},
-    defaultTexture: { tilesetId: "atlas", col: 0, row: 0 },
+    defaultTexture: { blocksetId: "atlas", col: 0, row: 0 },
     faceTextures
   }, new Ramp());
 

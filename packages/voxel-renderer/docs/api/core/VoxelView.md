@@ -5,11 +5,11 @@ Draws a [`VoxelDocument`](./VoxelDocument.md) as chunk meshes under a
 document, then call `tick()` every frame. Several views can draw one document.
 
 ```ts
-import { VoxelDocument, VoxelView, loadTilesets } from "@jolly-pixel/voxel.renderer";
+import { VoxelDocument, VoxelView, loadBlocksets } from "@jolly-pixel/voxel.renderer";
 
 const document = new VoxelDocument({ layers: ["Ground"] });
 const view = new VoxelView(document, {
-  tilesets: await loadTilesets([{ id: "default", src: "tileset.png", tileSize: 16 }])
+  blocksets: await loadBlocksets([{ id: "default", src: "blockset.png", tileSize: 16 }])
 });
 
 scene.add(view.root);
@@ -26,7 +26,7 @@ drives a view through the actor lifecycle.
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `tilesets` | `Iterable<TilesetSource>` | Preloaded atlases, see [`loadTilesets`](../tilesets/tilesets.md). |
+| `blocksets` | `Iterable<AtlasSource>` | Preloaded atlases, see [`loadBlocksets`](../blocksets/blocksets.md). |
 | `shapes` | `BlockShape[]` | [Custom shapes](../blocks/BlockShape.md) registered after the built-in ones. |
 | `collider` | `VoxelColliderFactory` | [Physics adapter](../collision/VoxelCollider.md); collision is off when omitted. |
 | `inspector` | `VoxelInspectorOptions` | Initial [inspector](./VoxelInspector.md) state. |
@@ -40,7 +40,7 @@ drives a view through the actor lifecycle.
 | Group | Option | Default | Description |
 | --- | --- | --- | --- |
 | `rendering` | `material` | `"lambert"` | `"lambert"` or `"standard"` (PBR). |
-| | `customizer` | | `(material, tilesetId, surface) => void`, called once per new material. See [material customizers](../../concepts/rendering-and-meshing.md#material-customizers). |
+| | `customizer` | | `(material, blocksetId, surface) => void`, called once per new material. See [material customizers](../../concepts/rendering-and-meshing.md#material-customizers). |
 | | `alphaTest` | `0.1` | Alpha-test cutoff; `0` disables discards. Blocks can set their own [`alphaCutoff`](../blocks/BlockSurface.md). |
 | | `alphaToCoverage` | `false` | Mask blocks write MSAA coverage. Needs a multisampled target and an opaque canvas. |
 | | `tileMinification` | `"average"` | `"average"` or `"nearest"`, see [tile minification](../../concepts/rendering-and-meshing.md#tile-minification). |
@@ -63,7 +63,7 @@ readonly root: THREE.Group;
 readonly document: VoxelDocument;
 readonly shapes: BlockShapeRegistry;
 readonly complements: BlockComplements;
-readonly atlases: TilesetAtlases;
+readonly atlases: BlocksetAtlases;
 readonly inspector: VoxelInspector;
 readonly rendering: VoxelRendering;
 readonly lighting: VoxelLighting;
@@ -76,8 +76,8 @@ focus: THREE.Vector3Like | null;
 - `shapes` is the [shape registry](../blocks/BlockShape.md) used by this view.
 - `complements` tells whether two shapes fill a cell together, see
   [merging shapes](#merging-shapes).
-- `atlases` holds the [textures](../tilesets/TilesetAtlases.md) of the
-  document's tilesets.
+- `atlases` holds the [textures](../blocksets/BlocksetAtlases.md) of the
+  document's blocksets.
 - `pendingRebuilds` counts chunks queued or being meshed in a worker.
 - `focus` is a point in `root` local space, read on every tick. Chunks closest
   to it are meshed first, and the view distance is measured from it. Assigning
@@ -208,32 +208,32 @@ colliders.
 ## Methods
 
 ```ts
-loadTileset(def: TilesetDefinition, texture: TilesetTexture, options?: { normal?: TilesetNormalTexture }): void;
+loadBlockset(def: BlocksetDefinition, texture: AtlasTexture, options?: { normal?: AtlasNormalTexture }): void;
 load(data: VoxelWorldJSON, options?: VoxelViewLoadOptions): void;
 markAllChunksDirty(source?: string): void;
 requestFrame(): void;
 ```
 
-`loadTileset()` declares the tileset on the document without a command and
+`loadBlockset()` declares the blockset on the document without a command and
 registers its atlas. A known ID is updated in place and keeps its slot; a
-loaded atlas is replaced. To share a new tileset with peers, use
-[`document.addTileset()`](./VoxelDocument.md#commands). `options.normal` adds a
+loaded atlas is replaced. To share a new blockset with peers, use
+[`document.addBlockset()`](./VoxelDocument.md#commands). `options.normal` adds a
 [normal map](../../concepts/rendering-and-meshing.md#normal-maps) laid out like
 `texture`; loading again without it removes it.
 
-A declared tileset without a texture hides its blocks until `loadTileset()`
-provides one. A tileset removed from the document keeps its voxels, drawn with
-the [missing-tileset texture](../tilesets/TilesetAtlases.md#missing-tileset).
+A declared blockset without a texture hides its blocks until `loadBlockset()`
+provides one. A blockset removed from the document keeps its voxels, drawn with
+the [missing-blockset texture](../blocksets/BlocksetAtlases.md#missing-blockset).
 
 `load()` registers the atlases a snapshot needs, then calls
 [`document.load()`](./VoxelDocument.md#save-and-load) and meshes the world:
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `tilesets` | `Iterable<TilesetSource>` | Atlases to register first. Sources already loaded are ignored. |
+| `blocksets` | `Iterable<AtlasSource>` | Atlases to register first. Sources already loaded are ignored. |
 | `mergeLayers` | `boolean \| VoxelMergeAllLayersOptions` | Passed to `document.load()`. |
 
-A tileset the snapshot declares without an atlas logs a warning.
+A blockset the snapshot declares without an atlas logs a warning.
 
 `markAllChunksDirty()` queues every chunk for a rebuild.
 
@@ -283,9 +283,9 @@ The view reacts to the document on its own:
 - Voxel and layer commands remesh the affected chunks.
 - Block definitions and removals remesh the chunks holding the block, and their
   neighbours when culling can change. A definition that only moves its tiles
-  (same tilesets and rotations, no blend group) or renames the block remeshes
+  (same blocksets and rotations, no blend group) or renames the block remeshes
   nothing: the chunks read the new tile rects on the next frame.
-- Tileset commands update the atlases before other listeners run, then remesh
+- Blockset commands update the atlases before other listeners run, then remesh
   every chunk.
 - Material group changes update their materials; replacing a group remeshes
   every chunk.

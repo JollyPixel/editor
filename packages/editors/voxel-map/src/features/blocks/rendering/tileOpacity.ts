@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import type {
   ResolvedTileRef,
-  TilesetImage,
-  TilesetAtlases,
-  TilesetTexture
+  AtlasImage,
+  BlocksetAtlases,
+  AtlasTexture
 } from "@jolly-pixel/voxel.renderer";
 
 export interface PixelBuffer {
@@ -18,11 +18,11 @@ export interface TexelSquare {
   size: number;
 }
 
-export type ImagePixelReader = (image: TilesetImage) => PixelBuffer | null;
+export type ImagePixelReader = (image: AtlasImage) => PixelBuffer | null;
 
 interface ProbeCache {
   version: number;
-  image: TilesetImage;
+  image: AtlasImage;
   pixels: PixelBuffer | null | undefined;
   empty: Map<string, boolean>;
 }
@@ -50,7 +50,7 @@ function hasVisiblePixel(
 }
 
 export function readImagePixels(
-  image: TilesetImage
+  image: AtlasImage
 ): PixelBuffer | null {
   const isImage = "naturalWidth" in image;
   if (isImage && !image.complete) {
@@ -85,12 +85,12 @@ export function readImagePixels(
 }
 
 export class TileOpacityProbe {
-  #atlases: TilesetAtlases;
+  #atlases: BlocksetAtlases;
   #reader: ImagePixelReader;
-  #caches = new WeakMap<TilesetTexture, ProbeCache>();
+  #caches = new WeakMap<AtlasTexture, ProbeCache>();
 
   constructor(
-    atlases: TilesetAtlases,
+    atlases: BlocksetAtlases,
     reader: ImagePixelReader = readImagePixels
   ) {
     this.#atlases = atlases;
@@ -105,7 +105,7 @@ export class TileOpacityProbe {
       return true;
     }
 
-    const atlas = this.#atlases.get(ref.tilesetId);
+    const atlas = this.#atlases.get(ref.blocksetId);
     if (atlas === undefined) {
       return true;
     }
@@ -141,7 +141,7 @@ export class TileOpacityProbe {
   }
 
   #cacheOf(
-    texture: TilesetTexture
+    texture: AtlasTexture
   ): ProbeCache {
     const cached = this.#caches.get(texture);
     if (

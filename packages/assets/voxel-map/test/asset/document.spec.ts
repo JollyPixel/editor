@@ -11,25 +11,25 @@ import { decodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import {
   createVoxelMapDocument,
-  tilesetAsset
+  blocksetAsset
 } from "#src/index.ts";
 
 describe("createVoxelMapDocument", () => {
-  test("links the tilesets in slot order and opens one layer", () => {
+  test("links the blocksets in slot order and opens one layer", () => {
     const document = decodeVoxelWorld(
       createVoxelMapDocument({
         chunkSize: 16,
-        tilesets: [
-          { id: "ground", asset: tilesetAsset("tileset-ground") },
-          { id: "props", asset: tilesetAsset("tileset-props") }
+        blocksets: [
+          { id: "ground", asset: blocksetAsset("blockset-ground") },
+          { id: "props", asset: blocksetAsset("blockset-props") }
         ]
       })
     );
 
     assert.equal(document.chunkSize, 16);
-    assert.deepEqual(document.tilesets, [
-      { id: "ground", slot: 0, asset: tilesetAsset("tileset-ground") },
-      { id: "props", slot: 1, asset: tilesetAsset("tileset-props") }
+    assert.deepEqual(document.blocksets, [
+      { id: "ground", slot: 0, asset: blocksetAsset("blockset-ground") },
+      { id: "props", slot: 1, asset: blocksetAsset("blockset-props") }
     ]);
     assert.deepEqual(document.layers.map(({ name }) => name), ["Ground"]);
   });
@@ -42,7 +42,7 @@ describe("createVoxelMapDocument", () => {
       })
     );
 
-    assert.deepEqual(document.tilesets, []);
+    assert.deepEqual(document.blocksets, []);
     assert.deepEqual(document.layers.map(({ name }) => name), ["Terrain"]);
   });
 });

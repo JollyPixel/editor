@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  loadTilesets,
+  loadBlocksets,
   VoxelDocument,
   VoxelView,
   type VoxelInspectorMode
@@ -19,7 +19,7 @@ import {
 import {
   createExamplePane
 } from "./utils/example-switcher.ts";
-import { createTransparencyTileset } from "./utils/transparencyAtlas.ts";
+import { createTransparencyBlockset } from "./utils/transparencyAtlas.ts";
 import {
   LAYER_SPECS,
   SCENE_LABELS,
@@ -43,9 +43,9 @@ if (!canvas) {
 
 // ── Engine ────────────────────────────────────────────────────────────────────
 
-const tileset = createTransparencyTileset();
+const blockset = createTransparencyBlockset();
 
-const tilesets = await loadTilesets([tileset.definition]);
+const blocksets = await loadBlocksets([blockset.definition]);
 
 /**
  * Every material the engine mints, kept so the panel can drive `alphaTest` and
@@ -65,10 +65,10 @@ const materialState = {
 
 const voxelDocument = new VoxelDocument({
   chunkSize: 16,
-  blocks: tileset.blocks
+  blocks: blockset.blocks
 });
 const voxels = new VoxelView(voxelDocument, {
-  tilesets,
+  blocksets,
   rendering: {
     material: materialType,
     alphaTest: materialState.alphaTest,

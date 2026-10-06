@@ -234,7 +234,7 @@ describe("EditorFrames", () => {
     postFrom(frame().contentWindow, {
       type: SHELL_MESSAGE_TYPE,
       command: "open-asset",
-      target: "tileset-1"
+      target: "blockset-1"
     });
     postFrom(frame().contentWindow, {
       type: SHELL_MESSAGE_TYPE,
@@ -246,7 +246,7 @@ describe("EditorFrames", () => {
         {
           type: SHELL_MESSAGE_TYPE,
           command: "open-asset",
-          target: "tileset-1"
+          target: "blockset-1"
         },
         "map-1"
       ]

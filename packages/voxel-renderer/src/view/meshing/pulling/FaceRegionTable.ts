@@ -4,7 +4,7 @@ import type { TextureNode } from "three/webgpu";
 import { texture } from "three/tsl";
 
 // Import Internal Dependencies
-import type { TilesetUVRegion } from "../../../document/tilesets/types.ts";
+import type { AtlasUVRegion } from "../../../document/blocksets/types.ts";
 import { toUnorm16 } from "../variants/quantize.ts";
 
 // CONSTANTS
@@ -61,7 +61,7 @@ export class FaceRegionTable {
 
   write(
     id: number,
-    region: TilesetUVRegion
+    region: AtlasUVRegion
   ): void {
     const offset = id * 4;
     const offsetU = quantize(region.offsetU);

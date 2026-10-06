@@ -54,7 +54,7 @@ folder.
 
 An asset nested under another in the tree: same folder, same name before the
 first dot, and referenced by that other asset, its owner
-(`overworld.tileset.json` under `overworld.voxelmap.json`). An owner cannot be
+(`overworld.blockset.json` under `overworld.voxelmap.json`). An owner cannot be
 collapsed, so its companions always show. Renaming or moving the owner takes
 its companions
 along; deleting it offers to delete them too. The pairing is derived from

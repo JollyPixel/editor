@@ -8,22 +8,22 @@ and [`view.load()`](../core/VoxelView.md#methods); see
 ## VoxelWorldJSON
 
 ```ts
-const VOXEL_WORLD_VERSION = 4;
+const VOXEL_WORLD_VERSION = 5;
 
 interface VoxelWorldJSON {
-  version: 4;
+  version: 5;
   chunkSize: number;
-  tilesets: TilesetDefinition[];
+  blocksets: BlocksetDefinition[];
   layers: VoxelLayerJSON[];
   objectLayers?: VoxelObjectLayerJSON[];
   templates?: VoxelTemplateJSON[];
 }
 ```
 
-A world stores its layers, objects, templates and the tilesets it links.
+A world stores its layers, objects, templates and the blocksets it links.
 Blocks and groups are not saved (see
 [`VoxelDocument`](../core/VoxelDocument.md#properties)): voxels store block
-ids, so a world file only makes sense alongside the tilesets it links.
+ids, so a world file only makes sense alongside the blocksets it links.
 
 Each `VoxelLayerJSON` holds the layer's `id`, `name`, `visible`, `rank` and
 optional `position`, `compositing` and `properties`, plus its voxel data. A
@@ -40,22 +40,22 @@ this field ignore it and keep only the first shape. Object layers are described 
 ```ts
 function serializeVoxelWorld(
   world: VoxelWorld,
-  options?: { tilesets?: Iterable<TilesetDefinition> }
+  options?: { blocksets?: Iterable<BlocksetDefinition> }
 ): VoxelWorldJSON;
 
 function deserializeVoxelWorld(
   data: VoxelWorldJSON,
   world: VoxelWorld,
-  options?: { tilesets?: TilesetList }
+  options?: { blocksets?: BlocksetList }
 ): void;
 
 function serializeVoxelLayer(layer: VoxelLayer): VoxelLayerJSON;
-function serializeTilesetDefinition(definition: TilesetDefinition): TilesetDefinition;
+function serializeBlocksetDefinition(definition: BlocksetDefinition): BlocksetDefinition;
 ```
 
-`serializeVoxelWorld()` writes the world with the given tileset list. Each
-tileset goes through `serializeTilesetDefinition()`: an `asset` tileset keeps
-only `id`, `slot` and `asset`, a `src` tileset keeps `tileSize`, `cols` and
+`serializeVoxelWorld()` writes the world with the given blockset list. Each
+blockset goes through `serializeBlocksetDefinition()`: an `asset` blockset keeps
+only `id`, `slot` and `asset`, a `src` blockset keeps `tileSize`, `cols` and
 `rows`. `serializeVoxelLayer()` writes a single layer.
 
 `deserializeVoxelWorld()` validates `data` and replaces the world's layers,
@@ -64,7 +64,7 @@ objects and templates. It emits no command. On invalid data it throws
 
 - The world keeps its own `chunkSize`; data saved with another size is
   re-chunked.
-- `options.tilesets` is replaced with the saved tilesets, slots included.
+- `options.blocksets` is replaced with the saved blocksets, slots included.
 - The block registry is not touched.
 
 ## Templates
@@ -102,5 +102,5 @@ error is available as its `cause`.
 - `version` must equal `VOXEL_WORLD_VERSION`; older versions are rejected.
 - `chunkSize` must be a power of two.
 - Chunk coordinates are limited to ±1024 on X and Z and ±512 on Y.
-- A missing or malformed `tilesets` becomes `[]`; a malformed `objectLayers`
+- A missing or malformed `blocksets` becomes `[]`; a malformed `objectLayers`
   is dropped; unknown keys are ignored.

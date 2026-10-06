@@ -105,7 +105,7 @@ hidden layers and covered voxels. Results are computed on each call.
 ```ts
 readonly stats: VoxelBlockStats;
 usageOf(blockId: number): VoxelBlockUsage;
-tilesetUsageOf(tilesetId: string): VoxelTilesetUsage;
+blocksetUsageOf(blocksetId: string): VoxelBlocksetUsage;
 ```
 
 | `stats` field | Description |
@@ -128,6 +128,6 @@ if (voxels > 0) {
 }
 ```
 
-`tilesetUsageOf()` returns `{ tilesetId, blocks, voxels }`: the registered
-blocks with at least one tile in the tileset, and their voxel count. A block
-using two tilesets counts toward both.
+`blocksetUsageOf()` returns `{ blocksetId, blocks, voxels }`: the registered
+blocks with at least one tile in the blockset, and their voxel count. A block
+using two blocksets counts toward both.

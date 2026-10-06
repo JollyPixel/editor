@@ -88,11 +88,11 @@ describe("TiledConverter.convert — output structure", () => {
     assert.equal(result.world.chunkSize, 8);
   });
 
-  it("tilesets array has one entry with the correct id and src", () => {
+  it("blocksets array has one entry with the correct id and src", () => {
     const result = converter.convert(makeMinimalMap(), { resolveTilesetSrc: simpleSrc });
-    assert.equal(result.world.tilesets.length, 1);
-    assert.equal(result.world.tilesets[0].id, "terrain");
-    assert.equal(result.world.tilesets[0].src, "/assets/terrain.png");
+    assert.equal(result.world.blocksets.length, 1);
+    assert.equal(result.world.blocksets[0].id, "terrain");
+    assert.equal(result.world.blocksets[0].src, "/assets/terrain.png");
   });
 
   it("one VoxelLayerJSON per tile layer", () => {

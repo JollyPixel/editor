@@ -55,7 +55,7 @@ header extends `AssetCommandHeader` and leaves its fields out.
 live editing provides `commands.live`; other kinds have no dynamic editing
 room.
 
-`dependencies` lists the assets a state references, such as the tilesets of
+`dependencies` lists the assets a state references, such as the blocksets of
 a voxel map. The writer records them on every `asset.created` and
 `asset.updated` event, so it runs on every lifecycle write. A kind that
 references nothing omits it. See [dependency edges](./Catalog.md#dependency-edges).
@@ -75,7 +75,7 @@ interface AssetKindCompanion<TState = unknown> {
 ```
 
 `companions` lists the assets an asset of this kind needs from the start, such
-as the tileset of a voxel map. They are only created when the asset itself is
+as the blockset of a voxel map. They are only created when the asset itself is
 [created without content](./AssetWriter.md#create): the writer creates one
 asset of each companion kind, in its default state, beside the new asset, then
 calls `link` on the new asset's fresh state with the companion's reference
@@ -253,14 +253,14 @@ that claim, for example to `["textures/**"]`.
 Handlers for editable formats live with the domain they serialize rather than
 here, because asset-server does not depend on the renderers. Each claims a
 fixed extension, exported next to its kind (`PIXEL_ART_EXTENSION`,
-`TILESET_EXTENSION`, `VOXEL_MAP_EXTENSION`, `VOXEL_MODEL_EXTENSION`), so the
+`BLOCKSET_EXTENSION`, `VOXEL_MAP_EXTENSION`, `VOXEL_MODEL_EXTENSION`), so the
 editors that create
 documents and the server agree on it:
 
 ```ts
 import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
 import {
-  tilesetAssetKind,
+  blocksetAssetKind,
   voxelMapAssetKind
 } from "@jolly-pixel/asset.voxel-map";
 
@@ -269,16 +269,16 @@ await createAssetBackend({
   eventStore,
   handlers: [
     pixelArtAssetKind(),
-    tilesetAssetKind(),
+    blocksetAssetKind(),
     voxelMapAssetKind(),
     textureAssetKind()
   ]
 });
 ```
 
-`asset.voxel-map` ships two kinds: `tileset` holds a texture with its tile
+`asset.voxel-map` ships two kinds: `blockset` holds a texture with its tile
 size, blocks and material groups, and `voxelmap` holds the layers of a world
-and its links to tilesets, which it lists as dependencies. Both packages take
+and its links to blocksets, which it lists as dependencies. Both packages take
 `@jolly-pixel/asset-server` as an optional peer dependency, so a browser-only
 consumer of either renderer never installs it.
 
@@ -307,13 +307,13 @@ describes a `SnapshotPolicy` for packages to nest in their schema.
 import { ASSET_KINDS } from "@jolly-pixel/asset.voxel-map";
 
 const handlers = ASSET_KINDS.handlers({
-  tileset: { tileSize: 16 },
+  blockset: { tileSize: 16 },
   voxelmap: { chunkSize: 16 }
 });
 ```
 
 `asset.pixel-art` takes `{ defaultSize?, snapshot? }` and `asset.voxel-model`
-takes `{ snapshot? }`. `asset.voxel-map` takes `{ tileset?, voxelmap? }`, one
+takes `{ snapshot? }`. `asset.voxel-map` takes `{ blockset?, voxelmap? }`, one
 entry per kind: `{ tileSize?, defaultSize?, snapshot? }` and
 `{ chunkSize?, snapshot? }`.
 

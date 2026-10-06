@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { VoxelObjectLayerJSON } from "../../world/objects/types.ts";
-import type { TilesetDefinition } from "../../tilesets/types.ts";
+import type { BlocksetDefinition } from "../../blocksets/types.ts";
 import type {
   VoxelLayerMetadataJSON,
   VoxelTemplateJSON
@@ -31,7 +31,7 @@ export interface VoxelTemplateData extends Omit<
 
 export interface VoxelWorldData {
   chunkSize: number;
-  tilesets: TilesetDefinition[];
+  blocksets: BlocksetDefinition[];
   layers: VoxelLayerData[];
   objectLayers: VoxelObjectLayerJSON[];
   templates: VoxelTemplateData[];

@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { TilePosition } from "../../tilesets/TileOccupancy.ts";
+import type { TilePosition } from "../../blocksets/TileOccupancy.ts";
 
 // CONSTANTS
 export const DEFAULT_BLOCK_NAME = "New Block";
@@ -21,24 +21,24 @@ const kFirstTile: TilePosition = {
 export interface BlockDraftOptions {
   name: string;
   shapeId: BlockShapeID;
-  tilesetId: string;
+  blocksetId: string;
   size?: number;
 }
 
 export class BlockDraft {
   static create(
-    tilesetId: string
+    blocksetId: string
   ): BlockDraft {
     return new BlockDraft({
       name: DEFAULT_BLOCK_NAME,
       shapeId: "cube",
-      tilesetId
+      blocksetId
     });
   }
 
   readonly name: string;
   readonly shapeId: BlockShapeID;
-  readonly tilesetId: string;
+  readonly blocksetId: string;
   readonly size: number | undefined;
 
   constructor(
@@ -46,7 +46,7 @@ export class BlockDraft {
   ) {
     this.name = options.name;
     this.shapeId = options.shapeId;
-    this.tilesetId = options.tilesetId;
+    this.blocksetId = options.blocksetId;
     this.size = options.size;
 
     Object.freeze(this);
@@ -58,7 +58,7 @@ export class BlockDraft {
     const { size, ...rest } = {
       name: this.name,
       shapeId: this.shapeId,
-      tilesetId: this.tilesetId,
+      blocksetId: this.blocksetId,
       size: this.size,
       ...patch
     };
@@ -71,7 +71,7 @@ export class BlockDraft {
     position: TilePosition = kFirstTile
   ): BlockDefinition {
     const defaultTexture: ResolvedTileRef = {
-      tilesetId: this.tilesetId || undefined,
+      blocksetId: this.blocksetId || undefined,
       col: position.col,
       row: position.row
     };

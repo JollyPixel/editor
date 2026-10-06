@@ -36,7 +36,7 @@ function makeDocument(
     chunkSize: CHUNK_SIZE,
     layers,
     blocks: [makeBlockDef(CUBE_ID, "cube", { name: "Cube" })],
-    tilesets: [makeAtlasDef()]
+    blocksets: [makeAtlasDef()]
   });
 }
 
@@ -84,13 +84,13 @@ describe("VoxelDocument - block definitions", () => {
     assert.deepEqual(events, []);
   });
 
-  it("stamps the default tileset on a definition that names none", () => {
+  it("stamps the default blockset on a definition that names none", () => {
     const document = makeDocument();
 
     document.defineBlock(makeBlockDef(LEAVES_ID, "cube", { name: "Leaves" }));
 
     const stored = document.blocks.get(LEAVES_ID);
-    assert.equal(stored?.defaultTexture?.tilesetId, "atlas");
+    assert.equal(stored?.defaultTexture?.blocksetId, "atlas");
   });
 });
 
@@ -171,14 +171,14 @@ describe("VoxelDocument.apply", () => {
     ]);
   });
 
-  it("emits an applied tileset command", () => {
+  it("emits an applied blockset command", () => {
     const document = makeDocument();
     const events = trace(document);
 
-    document.addTileset(makeAtlasDef({ id: "stone" }));
+    document.addBlockset(makeAtlasDef({ id: "stone" }));
 
     assert.deepEqual(events, [
-      { event: "command", action: "tileset-added", origin: "local" }
+      { event: "command", action: "blockset-added", origin: "local" }
     ]);
   });
 
@@ -186,8 +186,8 @@ describe("VoxelDocument.apply", () => {
     const document = makeDocument();
     const events = trace(document);
 
-    assert.equal(document.addTileset(makeAtlasDef()), false);
-    assert.equal(document.removeTileset("unknown"), false);
+    assert.equal(document.addBlockset(makeAtlasDef()), false);
+    assert.equal(document.removeBlockset("unknown"), false);
     assert.deepEqual(events, []);
   });
 });
@@ -221,12 +221,12 @@ describe("VoxelDocument - command origin", () => {
     const events = trace(document);
 
     document.apply({
-      action: "tileset-added",
-      tileset: { id: "b", src: "b", tileSize: 16 }
+      action: "blockset-added",
+      blockset: { id: "b", src: "b", tileSize: 16 }
     });
 
     assert.deepEqual(events, [
-      { event: "command", action: "tileset-added", origin: "local" }
+      { event: "command", action: "blockset-added", origin: "local" }
     ]);
   });
 
@@ -321,7 +321,7 @@ describe("VoxelDocument - block redefinition", () => {
     });
 
     document.moveBlock(CUBE_ID, 0);
-    document.addTileset(makeAtlasDef({ id: "stone" }));
+    document.addBlockset(makeAtlasDef({ id: "stone" }));
 
     assert.deepEqual(redefinitions, [undefined]);
   });
@@ -381,13 +381,13 @@ describe("VoxelDocument - material groups", () => {
 });
 
 describe("VoxelDocument.save", () => {
-  it("saves declared tilesets", () => {
+  it("saves declared blocksets", () => {
     const document = makeDocument();
-    document.addTileset({ id: "later", src: "later-asset", tileSize: 32 });
+    document.addBlockset({ id: "later", src: "later-asset", tileSize: 32 });
 
     const data = document.save();
 
-    assert.deepEqual(data.tilesets.map((def) => def.id), ["atlas", "later"]);
+    assert.deepEqual(data.blocksets.map((def) => def.id), ["atlas", "later"]);
   });
 });
 
@@ -420,16 +420,16 @@ describe("VoxelDocument.load", () => {
     );
   });
 
-  it("declares the extra tilesets after the snapshot replaced the list", () => {
+  it("declares the extra blocksets after the snapshot replaced the list", () => {
     const source = makeDocument();
     const document = makeDocument([]);
 
     document.load(source.save(), {
-      tilesets: [makeAtlasDef({ id: "stone" })]
+      blocksets: [makeAtlasDef({ id: "stone" })]
     });
 
     assert.deepEqual(
-      [...document.tilesets].map((def) => def.id).sort(),
+      [...document.blocksets].map((def) => def.id).sort(),
       ["atlas", "stone"]
     );
   });

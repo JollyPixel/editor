@@ -52,6 +52,6 @@ sequenceDiagram
     Room->>Source: write serialized snapshot
 ```
 
-The server replays recorded commands to restore live state and writes serialized snapshots after editing. A kind's apply function is the sole writer of its authoritative state; arbitration is committed after the event append succeeds. The author has already applied its command, so a refused, narrowed or unappended command is followed by a message to the author alone: a correction that restores only the refused part when the kind can build one (pixel-art and tileset pixel commands, voxel-map cell writes), otherwise a snapshot.
+The server replays recorded commands to restore live state and writes serialized snapshots after editing. A kind's apply function is the sole writer of its authoritative state; arbitration is committed after the event append succeeds. The author has already applied its command, so a refused, narrowed or unappended command is followed by a message to the author alone: a correction that restores only the refused part when the kind can build one (pixel-art and blockset pixel commands, voxel-map cell writes), otherwise a snapshot.
 
 See [asset kinds](../asset-server/docs/AssetKinds.md) and [asset server architecture](../asset-server/ARCHITECTURE.md) for the server contract. [Asset source architecture](../asset-source/ARCHITECTURE.md) describes the storage boundary. Format-specific rules live in the [pixel-art](./pixel-art/ARCHITECTURE.md), [voxel-map](./voxel-map/ARCHITECTURE.md), and [voxel-model](./voxel-model/ARCHITECTURE.md) architecture pages.

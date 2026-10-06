@@ -1,33 +1,33 @@
 # Saving and loading worlds
 
-## Loading tilesets
+## Loading blocksets
 
-Fetch tileset images before constructing the view, so no asynchronous work
+Fetch blockset images before constructing the view, so no asynchronous work
 runs inside ECS lifecycle methods:
 
 ```ts
 import {
   VoxelDocument,
   VoxelView,
-  loadTilesets
+  loadBlocksets
 } from "@jolly-pixel/voxel.renderer";
 
 const document = new VoxelDocument();
 const view = new VoxelView(document, {
-  tilesets: await loadTilesets([
-    { id: "default", src: "tileset.png", tileSize: 16 }
+  blocksets: await loadBlocksets([
+    { id: "default", src: "blockset.png", tileSize: 16 }
   ])
 });
 ```
 
-Tile references without a `tilesetId` use the first declared tileset.
+Tile references without a `blocksetId` use the first declared blockset.
 
 ## Saving
 
 `VoxelDocument.save()` returns plain JSON with the layers, object layers,
-templates and the declared tilesets. Blocks are not saved with the world:
-save them with the tileset they belong to (see
-[`TilesetDocument`](../api/tilesets/TilesetDocument.md)) or define them in
+templates and the declared blocksets. Blocks are not saved with the world:
+save them with the blockset they belong to (see
+[`BlocksetDocument`](../api/blocksets/BlocksetDocument.md)) or define them in
 code.
 
 ```ts
@@ -45,7 +45,7 @@ const snapshot = parseVoxelWorld(
 
 const document = new VoxelDocument({ chunkSize: snapshot.chunkSize });
 const view = new VoxelView(document, {
-  tilesets: await loadTilesets(snapshot.tilesets)
+  blocksets: await loadBlocksets(snapshot.blocksets)
 });
 
 view.load(snapshot);
@@ -59,17 +59,17 @@ When the view already exists, fetch only the atlases it lacks and pass them to
 `load()`:
 
 ```ts
-const missing = snapshot.tilesets.filter(
+const missing = snapshot.blocksets.filter(
   (definition) => !view.atlases.get(definition.id)
 );
 
 view.load(snapshot, {
-  tilesets: await loadTilesets(missing)
+  blocksets: await loadBlocksets(missing)
 });
 ```
 
-A tileset the snapshot declares without an atlas logs a warning, and its faces
-stay hidden until `view.loadTileset()` registers it.
+A blockset the snapshot declares without an atlas logs a warning, and its faces
+stay hidden until `view.loadBlockset()` registers it.
 
 `load()` leaves the block registry alone. Define or project the blocks the
 voxels use; a voxel whose block is unknown is not drawn until its definition

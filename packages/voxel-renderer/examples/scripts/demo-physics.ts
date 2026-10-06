@@ -11,7 +11,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  loadTilesets,
+  loadBlocksets,
   Face,
   type BlockDefinition
 } from "../../src/index.ts";
@@ -49,11 +49,11 @@ const runtime = await Runtime.create("canvas", {
 
 const tileDef = {
   tileSize: 32,
-  src: "tileset/UV_cube.png",
+  src: "blockset/UV_cube.png",
   id: "default"
 };
 
-const tilesets = await loadTilesets([tileDef]);
+const blocksets = await loadBlocksets([tileDef]);
 
 const { world } = runtime;
 world.logger.setLevel("debug");
@@ -94,33 +94,33 @@ function dirtBlock(
     collidable: true,
     faceTextures: {
       [Face.PosY]: {
-        tilesetId: "default",
+        blocksetId: "default",
         col: 0,
         row: 2
       },
       [Face.NegX]: {
-        tilesetId: "default",
+        blocksetId: "default",
         col: 0,
         row: 1
       },
       [Face.NegZ]: {
-        tilesetId: "default",
+        blocksetId: "default",
         col: 0,
         row: 1
       },
       [Face.PosX]: {
-        tilesetId: "default",
+        blocksetId: "default",
         col: 0,
         row: 1
       },
       [Face.PosZ]: {
-        tilesetId: "default",
+        blocksetId: "default",
         col: 0,
         row: 1
       }
     },
     defaultTexture: {
-      tilesetId: "default",
+      blocksetId: "default",
       col: 2,
       row: 0
     }
@@ -150,7 +150,7 @@ const voxelMap = world.createActor("map")
         world: rapierWorld,
         ...context
       }),
-      tilesets
+      blocksets
     }
   );
 

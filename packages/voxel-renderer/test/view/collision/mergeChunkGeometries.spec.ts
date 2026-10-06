@@ -14,9 +14,9 @@ import { BlockSurface } from "../../../src/document/blocks/index.ts";
 import { ChunkGeometryKey } from "../../../src/view/meshing/index.ts";
 
 function key(
-  tilesetId: string
+  blocksetId: string
 ): ChunkGeometryKey {
-  return new ChunkGeometryKey(tilesetId, new BlockSurface());
+  return new ChunkGeometryKey(blocksetId, new BlockSurface());
 }
 
 function makeGeometry(
@@ -47,7 +47,7 @@ describe("mergeChunkGeometries", () => {
     assert.equal(mergeChunkGeometries(new Map()), null);
   });
 
-  it("returns the input geometry unowned on the single-tileset fast path", () => {
+  it("returns the input geometry unowned on the single-blockset fast path", () => {
     const geometry = makeTriangle();
 
     const merged = mergeChunkGeometries(new Map([[key("atlas"), geometry]]));

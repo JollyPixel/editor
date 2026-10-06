@@ -32,11 +32,11 @@ export class TiledMapBehavior extends ActorComponent {
   awake() {
     const {
       world,
-      tilesets
+      blocksets
     } = this.getAsset(TiledMapBehavior.assets.tiledMap);
 
     const vr = this.actor.addComponentAndGet(VoxelRenderer, {
-      tilesets
+      blocksets
     });
 
     vr.view.load(world, {

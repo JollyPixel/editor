@@ -66,23 +66,23 @@ block without any, and `undefined` for an unknown id.
 ## Ordering
 
 Blocks keep registration order, and iteration, `getAll()` and
-[`TilesetDocument.toJSON()`](../tilesets/TilesetDocument.md) follow it.
+[`BlocksetDocument.toJSON()`](../blocksets/BlocksetDocument.md) follow it.
 
 `moveTo()` moves a block to `toIndex`, clamped to the list. It returns `false`
 for an unknown id or a move that changes nothing. `indexOf()` returns `-1` for
 an unknown id. Order has no effect on rendering.
 
-## Creating blocks from a tileset
+## Creating blocks from a blockset
 
 ```ts
-type TilesetGridSource = {
+type TileGridSource = {
   cols: number;
   rows: number;
   id?: string;
   slot?: number;
 };
 
-interface BlocksFromTilesetOptions {
+interface BlocksFromTileGridOptions {
   limit?: number;
   map?: (blockId: number, col: number, row: number) => BlockOverrides;
 }
@@ -101,21 +101,21 @@ type BlockOverrides = Partial<Pick<
   | "properties"
 >>;
 
-function blocksFromTileset(
-  source: TilesetGridSource,
-  options?: BlocksFromTilesetOptions
+function blocksFromTileGrid(
+  source: TileGridSource,
+  options?: BlocksFromTileGridOptions
 ): IterableIterator<ResolvedBlockDefinition>;
 ```
 
 Yields one cube block per tile, in row-major order, with local ids starting at
 `1`. `limit` is the highest local id generated, `255` by default. With an `id`,
-the tile references name that tileset; with a `slot`, block ids are composed
+the tile references name that blockset; with a `slot`, block ids are composed
 into it. `map` receives the local id and returns overrides. Generated blocks
 are not collidable unless `map` says so.
 
 ```ts
 document.blocks.registerMany(
-  blocksFromTileset({ id: "terrain", cols: 8, rows: 4 }, {
+  blocksFromTileGrid({ id: "terrain", cols: 8, rows: 4 }, {
     limit: 32,
     map: () => ({ collidable: true })
   })

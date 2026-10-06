@@ -2,11 +2,11 @@
 import * as THREE from "three";
 import {
   BlockShapeRegistry,
-  TilesetList,
-  TilesetAtlases,
+  BlocksetList,
+  BlocksetAtlases,
   resolveBlockDefinition,
   type BlockDefinition,
-  type TilesetImage
+  type AtlasImage
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -14,7 +14,7 @@ import { BlockRenderSources } from "../../src/features/blocks/rendering/BlockRen
 import { TileOpacityProbe } from "../../src/features/blocks/rendering/tileOpacity.ts";
 
 export function sourcesOf(
-  atlases: TilesetAtlases
+  atlases: BlocksetAtlases
 ): BlockRenderSources {
   return new BlockRenderSources({
     shapes: BlockShapeRegistry.createDefault(),
@@ -35,8 +35,8 @@ export function sourcesOf(
 }
 
 export function texturedSources(): BlockRenderSources {
-  const atlases = new TilesetAtlases({
-    tilesets: new TilesetList([
+  const atlases = new BlocksetAtlases({
+    blocksets: new BlocksetList([
       {
         id: "atlas",
         src: "atlas.png",
@@ -49,7 +49,7 @@ export function texturedSources(): BlockRenderSources {
   canvas.height = 2;
   atlases.registerTexture(
     "atlas",
-    new THREE.Texture<TilesetImage>(canvas)
+    new THREE.Texture<AtlasImage>(canvas)
   );
 
   return sourcesOf(atlases);

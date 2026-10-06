@@ -34,12 +34,12 @@ describe("AssetTreeModel deletion", () => {
     const deletion = companionModelOf().deletionOf([assetNodeId("map-overworld")]);
 
     assert.deepEqual(idsOf(deletion.assets), ["map-overworld"]);
-    assert.deepEqual(idsOf(deletion.companions), ["tileset-overworld"]);
+    assert.deepEqual(idsOf(deletion.companions), ["blockset-overworld"]);
     assert.deepEqual(deletion.dependents(false), []);
     assert.deepEqual(deletion.dependents(true), ["maps/cave.voxelmap.json"]);
     assert.deepEqual(
       idsOf(deletion.removals(true)),
-      ["map-overworld", "tileset-overworld"]
+      ["map-overworld", "blockset-overworld"]
     );
     assert.deepEqual(idsOf(deletion.removals(false)), ["map-overworld"]);
   });
@@ -52,7 +52,7 @@ describe("AssetTreeModel deletion", () => {
 
     assert.deepEqual(
       idsOf(deletion.assets),
-      ["map-overworld", "tileset-overworld", "map-cave"]
+      ["map-overworld", "blockset-overworld", "map-cave"]
     );
     assert.deepEqual(deletion.companions, []);
     assert.deepEqual(deletion.dependents(true), []);

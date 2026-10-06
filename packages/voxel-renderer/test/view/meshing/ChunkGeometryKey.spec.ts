@@ -16,14 +16,14 @@ function keyOf(
 }
 
 describe("ChunkGeometryKey", () => {
-  it("encodes the default opaque front surface as the bare tileset id", () => {
+  it("encodes the default opaque front surface as the bare blockset id", () => {
     const key = new ChunkGeometryKey("pack:atlas", new BlockSurface());
 
     assert.equal(String(key), "pack:atlas");
     assert.ok(Object.isFrozen(key));
   });
 
-  it("appends any other surface to the tileset id", () => {
+  it("appends any other surface to the blockset id", () => {
     const surface = new BlockSurface({ alphaMode: "blend" });
     const key = new ChunkGeometryKey("atlas", surface);
 
@@ -31,7 +31,7 @@ describe("ChunkGeometryKey", () => {
     assert.equal(key.surface, surface);
   });
 
-  it("rejects a tileset id that would alias a surface key", () => {
+  it("rejects a blockset id that would alias a surface key", () => {
     assert.throws(
       () => new ChunkGeometryKey("atlas:surface={}", new BlockSurface()),
       RangeError

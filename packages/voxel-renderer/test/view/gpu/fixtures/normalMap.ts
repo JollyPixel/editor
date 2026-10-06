@@ -84,7 +84,7 @@ export async function renderNormalScene(
         id: index + 1,
         name: tile,
         shapeId: "cube",
-        defaultTexture: { tilesetId: "atlas", col: index, row: 0 },
+        defaultTexture: { blocksetId: "atlas", col: index, row: 0 },
         materialGroup: options.normalScale === undefined ? undefined : kGroup
       };
     }),
@@ -98,7 +98,7 @@ export async function renderNormalScene(
   const normal = options.normal ?
     new THREE.Texture(await tileImage(encodeNormal)) :
     undefined;
-  view.loadTileset(
+  view.loadBlockset(
     { id: "atlas", src: "", tileSize: kTileTexels },
     new THREE.Texture(await tileImage(() => "#ffffff")),
     { normal }

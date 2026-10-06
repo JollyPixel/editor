@@ -2,7 +2,7 @@
 import {
   BlockRegistry,
   BlockShapeRegistry,
-  TilesetSlot,
+  BlocksetSlot,
   type VoxelView,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -21,7 +21,7 @@ export interface FakeBridgeOptions {
 export interface BlockTexturePlacement {
   col: number;
   row: number;
-  tilesetId: string;
+  blocksetId: string;
 }
 
 export function makeBlock(
@@ -83,11 +83,11 @@ export function makeFakeVoxelEngine(): {
   };
 }
 
-export function tilesetSlot(
+export function blocksetSlot(
   id: string,
   slot = 0
-): TilesetSlot {
-  return new TilesetSlot({
+): BlocksetSlot {
+  return new BlocksetSlot({
     id,
     slot
   });

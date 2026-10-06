@@ -23,7 +23,7 @@ import {
 const kChunkCoords = /-?\d+,-?\d+,-?\d+/;
 
 export type ViewTestOptions =
-  & Omit<VoxelDocumentOptions, "tilesets">
+  & Omit<VoxelDocumentOptions, "blocksets">
   & VoxelViewOptions;
 
 export function createView(
@@ -67,7 +67,7 @@ export function makeView(
       ...options.meshing
     }
   });
-  view.loadTileset(makeAtlasDef(), mockTexture());
+  view.loadBlockset(makeAtlasDef(), mockTexture());
 
   return view;
 }

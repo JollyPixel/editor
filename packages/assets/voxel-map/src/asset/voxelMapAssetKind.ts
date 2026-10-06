@@ -21,10 +21,10 @@ import {
   InvalidVoxelWorldError,
   parseVoxelWorld,
   serializeVoxelWorld,
-  TilesetList,
+  BlocksetList,
   VoxelWorld,
-  type TilesetAssetReference,
-  type TilesetDefinition,
+  type BlocksetAssetReference,
+  type BlocksetDefinition,
   type VoxelWorldCommandTarget,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
@@ -37,14 +37,14 @@ import {
   VOXEL_MAP_KIND
 } from "./voxelMap.ts";
 import {
-  tilesetAsset,
-  TILESET_ASSET,
-  TILESET_KIND
-} from "./tileset.ts";
+  blocksetAsset,
+  BLOCKSET_ASSET,
+  BLOCKSET_KIND
+} from "./blockset.ts";
 import {
-  tilesetAssetKind,
-  type TilesetAssetKindOptions
-} from "./tilesetAssetKind.ts";
+  blocksetAssetKind,
+  type BlocksetAssetKindOptions
+} from "./blocksetAssetKind.ts";
 import {
   objectSchema,
   tileSizeSchema
@@ -59,7 +59,7 @@ import type { VoxelMapNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
-const kCompanionTilesetId = "default";
+const kCompanionBlocksetId = "default";
 const kWorldParser = new SchemaParser(voxelWorldSchema);
 const kPositiveIntegerSchema = defineSchema({
   type: "integer",
@@ -68,7 +68,7 @@ const kPositiveIntegerSchema = defineSchema({
 const kOptionsSchema = defineSchema({
   type: "object",
   properties: {
-    tileset: {
+    blockset: {
       type: "object",
       properties: {
         tileSize: tileSizeSchema,
@@ -98,7 +98,7 @@ const kDefaultSnapshot: SnapshotPolicy = {
 
 export class VoxelMapState implements VoxelWorldCommandTarget {
   readonly world: VoxelWorld;
-  readonly tilesets = new TilesetList();
+  readonly blocksets = new BlocksetList();
 
   constructor(
     chunkSize: number
@@ -108,7 +108,7 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
 
   toJSON(): VoxelWorldJSON {
     return serializeVoxelWorld(this.world, {
-      tilesets: this.tilesets
+      blocksets: this.blocksets
     });
   }
 
@@ -116,7 +116,7 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
     document: VoxelWorldJSON
   ): void {
     deserializeVoxelWorld(document, this.world, {
-      tilesets: this.tilesets
+      blocksets: this.blocksets
     });
   }
 
@@ -134,21 +134,21 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
     }
   }
 
-  dependencies(): TilesetAssetReference[] {
-    return [...this.tilesets].flatMap(
+  dependencies(): BlocksetAssetReference[] {
+    return [...this.blocksets].flatMap(
       ({ asset }) => (asset === undefined ? [] : [{ ...asset }])
     );
   }
 
   clear(): void {
     this.world.clear();
-    this.tilesets.clear();
+    this.blocksets.clear();
   }
 }
 
 export interface VoxelMapDocumentOptions {
   chunkSize: number;
-  tilesets?: Iterable<TilesetDefinition>;
+  blocksets?: Iterable<BlocksetDefinition>;
   layer?: string;
 }
 
@@ -157,13 +157,13 @@ export function createVoxelMapDocument(
 ): Uint8Array {
   const {
     chunkSize,
-    tilesets = [],
+    blocksets = [],
     layer = kDefaultLayerName
   } = options;
 
   const state = new VoxelMapState(chunkSize);
-  for (const tileset of tilesets) {
-    state.tilesets.add(tileset);
+  for (const blockset of blocksets) {
+    state.blocksets.add(blockset);
   }
   state.world.addLayer(layer);
 
@@ -193,11 +193,11 @@ export function voxelMapAssetKind(
     snapshot,
     companions: [
       {
-        kind: TILESET_KIND,
-        link(state, tileset) {
-          state.tilesets.add({
-            id: kCompanionTilesetId,
-            asset: tilesetAsset(tileset.id)
+        kind: BLOCKSET_KIND,
+        link(state, blockset) {
+          state.blocksets.add({
+            id: kCompanionBlocksetId,
+            asset: blocksetAsset(blockset.id)
           });
         }
       }
@@ -240,8 +240,8 @@ export function voxelMapAssetKind(
       state: VoxelMapState,
       idMap: ReadonlyMap<string, string>
     ): void {
-      state.tilesets.replace(
-        state.tilesets.definitions().map((definition) => {
+      state.blocksets.replace(
+        state.blocksets.definitions().map((definition) => {
           const asset = definition.asset;
           if (asset === undefined) {
             return definition;
@@ -338,27 +338,27 @@ function landedAsSent(
   state: VoxelMapState,
   command: VoxelMapNetworkCommand
 ): boolean {
-  if (command.action !== "tileset-added") {
+  if (command.action !== "blockset-added") {
     return true;
   }
-  const { id, slot } = command.tileset;
+  const { id, slot } = command.blockset;
 
-  return state.tilesets.get(id)?.slot === slot;
+  return state.blocksets.get(id)?.slot === slot;
 }
 
 export interface VoxelMapAssetKindsOptions {
-  tileset?: TilesetAssetKindOptions;
+  blockset?: BlocksetAssetKindOptions;
   voxelmap?: VoxelMapAssetKindOptions;
 }
 
 export const ASSET_KINDS: AssetKindPackage<VoxelMapAssetKindsOptions> = {
   descriptors: [
-    TILESET_ASSET,
+    BLOCKSET_ASSET,
     VOXEL_MAP_ASSET
   ],
   optionsSchema: kOptionsSchema,
   handlers: (options = {}) => [
-    tilesetAssetKind(options.tileset),
+    blocksetAssetKind(options.blockset),
     voxelMapAssetKind(options.voxelmap)
   ]
 };

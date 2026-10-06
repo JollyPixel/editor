@@ -7,7 +7,7 @@ import { loadJSON } from "@jolly-pixel/engine";
 import {
   VoxelDocument,
   VoxelView,
-  loadTilesets
+  loadBlocksets
 } from "@jolly-pixel/voxel.renderer";
 import {
   TiledConverter,
@@ -20,9 +20,9 @@ const { world, blocks } = new TiledConverter().convert(map, {
   layerMode: "stacked"
 });
 
-const tilesets = await loadTilesets(world.tilesets);
+const blocksets = await loadBlocksets(world.blocksets);
 const document = new VoxelDocument({ blocks });
-const view = new VoxelView(document, { tilesets });
+const view = new VoxelView(document, { blocksets });
 
 view.load(world);
 ```
@@ -73,9 +73,9 @@ const runtime = await Runtime.create("canvas", {
 Read the prepared asset during the component lifecycle:
 
 ```ts
-const { world, blocks, tilesets } = this.getAsset(VoxelMap.assets.map);
+const { world, blocks, blocksets } = this.getAsset(VoxelMap.assets.map);
 const renderer = this.actor.addComponentAndGet(VoxelRenderer, {
-  tilesets,
+  blocksets,
   document: { blocks }
 });
 

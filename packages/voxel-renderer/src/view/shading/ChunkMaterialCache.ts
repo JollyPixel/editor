@@ -9,7 +9,7 @@ import {
 import { enableTileShading } from "./tileShading.ts";
 import { AtlasAverages } from "../atlases/AtlasAverages.ts";
 import { createAoStrength } from "./ambientOcclusionNodes.ts";
-import type { TilesetAtlases } from "../atlases/TilesetAtlases.ts";
+import type { BlocksetAtlases } from "../atlases/BlocksetAtlases.ts";
 import type { ChunkGeometryKey } from "../meshing/ChunkGeometryKey.ts";
 import type { BlockSurface } from "../../document/blocks/BlockSurface.ts";
 import type { MaterialGroup } from "../../document/materials/MaterialGroup.ts";
@@ -25,21 +25,21 @@ export type ChunkMaterial =
 
 export type MaterialCustomizerFn = (
   material: ChunkMaterial,
-  tilesetId: string,
+  blocksetId: string,
   surface: BlockSurface
 ) => void;
 
 interface ChunkMaterialEntry {
   key: string;
   material: ChunkMaterial;
-  tilesetId: string;
+  blocksetId: string;
   surface: BlockSurface;
   normal: THREE.Texture | null;
   relief: boolean;
 }
 
 export interface ChunkMaterialCacheOptions {
-  atlases: TilesetAtlases;
+  atlases: BlocksetAtlases;
   faceTemplates: FaceTemplateTable;
   materialGroups?: MaterialGroupList;
   /**
@@ -73,7 +73,7 @@ export class ChunkMaterialCache {
   #entries = new Map<THREE.Material, ChunkMaterialEntry>();
   #references = new Map<THREE.Material, number>();
   #idle = new Set<THREE.Material>();
-  #atlases: TilesetAtlases;
+  #atlases: BlocksetAtlases;
   #materialGroups: MaterialGroupList | undefined;
   #type: "lambert" | "standard";
   #customizer?: MaterialCustomizerFn;
@@ -179,11 +179,11 @@ export class ChunkMaterialCache {
     geometryKey: ChunkGeometryKey,
     far: boolean
   ): ChunkMaterialEntry {
-    const { tilesetId, surface } = geometryKey;
-    const atlas = this.#atlases.resolve(tilesetId);
+    const { blocksetId, surface } = geometryKey;
+    const atlas = this.#atlases.resolve(blocksetId);
     if (atlas === undefined) {
       throw new Error(
-        `ChunkMaterialCache: tileset "${tilesetId}" is not loaded.`
+        `ChunkMaterialCache: blockset "${blocksetId}" is not loaded.`
       );
     }
     const { texture } = atlas;
@@ -235,14 +235,14 @@ export class ChunkMaterialCache {
     group?.applyTo(material);
     this.#customizer?.(
       material,
-      tilesetId,
+      blocksetId,
       surface
     );
 
     return {
       key,
       material,
-      tilesetId,
+      blocksetId,
       surface,
       normal,
       relief
@@ -250,16 +250,16 @@ export class ChunkMaterialCache {
   }
 
   invalidate(
-    tilesetId?: string
+    blocksetId?: string
   ): void {
-    if (tilesetId === undefined) {
+    if (blocksetId === undefined) {
       this.dispose();
 
       return;
     }
 
-    for (const { material, tilesetId: id } of this.#entries.values()) {
-      if (id === tilesetId) {
+    for (const { material, blocksetId: id } of this.#entries.values()) {
+      if (id === blocksetId) {
         this.#evict(material);
       }
     }

@@ -2,7 +2,7 @@
 import type { BlockRegistry } from "../../document/blocks/BlockRegistry.ts";
 import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeRegistry.ts";
 import type { BlendGroupList } from "../../document/materials/BlendGroupList.ts";
-import type { TilesetResolver } from "./variants/types.ts";
+import type { BlocksetResolver } from "./variants/types.ts";
 import type {
   MeshableLayerChunk,
   MeshableLayerVisibility,
@@ -27,7 +27,7 @@ export interface VoxelMeshBuilderOptions {
   world: MeshableWorld;
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
-  atlases: TilesetResolver;
+  atlases: BlocksetResolver;
   /**
    * Bakes per-vertex ambient occlusion into each face record.
    * @default false
@@ -40,7 +40,7 @@ export interface VoxelMeshBuilderOptions {
 }
 
 /**
- * Builds visible chunk geometry, split by tileset and cutout mode. Vertex
+ * Builds visible chunk geometry, split by blockset and cutout mode. Vertex
  * positions are relative to the chunk origin in world space.
  */
 export class VoxelMeshBuilder {

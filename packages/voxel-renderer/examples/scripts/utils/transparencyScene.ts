@@ -276,7 +276,7 @@ function buildTree(
 
 /**
  * Creates every layer of the diorama and fills it. The engine must already
- * know the tileset and the block definitions.
+ * know the blockset and the block definitions.
  */
 export function buildScene(
   world: VoxelWorld

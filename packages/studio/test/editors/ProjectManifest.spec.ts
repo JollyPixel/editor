@@ -29,9 +29,9 @@ const kKinds = [
     }
   },
   {
-    kind: "tileset",
-    label: "Tileset",
-    extension: ".tileset.json"
+    kind: "blockset",
+    label: "Blockset",
+    extension: ".blockset.json"
   }
 ];
 

@@ -12,5 +12,5 @@ export {
   type VoxelBlockUsage,
   type VoxelLayerBlockStats,
   type VoxelLayerUsage,
-  type VoxelTilesetUsage
+  type VoxelBlocksetUsage
 } from "./VoxelBlockInspector.ts";

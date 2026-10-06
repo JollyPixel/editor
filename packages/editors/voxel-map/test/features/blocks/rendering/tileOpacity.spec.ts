@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  TilesetList,
-  TilesetAtlases,
-  type TilesetImage
+  BlocksetList,
+  BlocksetAtlases,
+  type AtlasImage
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -53,8 +53,8 @@ function canvasOf(
 function setup(
   pixels: PixelBuffer | null
 ) {
-  const atlases = new TilesetAtlases({
-    tilesets: new TilesetList([
+  const atlases = new BlocksetAtlases({
+    blocksets: new BlocksetList([
       {
         id: "atlas",
         src: "atlas.png",
@@ -62,7 +62,7 @@ function setup(
       }
     ])
   });
-  const texture = new THREE.Texture<TilesetImage>(canvasOf(4, 2));
+  const texture = new THREE.Texture<AtlasImage>(canvasOf(4, 2));
   atlases.registerTexture("atlas", texture);
 
   let reads = 0;
@@ -98,22 +98,22 @@ describe("TileOpacityProbe", () => {
     assert.equal(probe.isEmpty(undefined, 0), true);
   });
 
-  it("treats an unknown tileset as empty", () => {
+  it("treats an unknown blockset as empty", () => {
     const { probe } = setup(pixels);
 
-    assert.equal(probe.isEmpty({ tilesetId: "gone", col: 0, row: 0 }, 0), true);
+    assert.equal(probe.isEmpty({ blocksetId: "gone", col: 0, row: 0 }, 0), true);
   });
 
   it("reports transparent tiles as empty and painted ones as not", () => {
     const { probe } = setup(pixels);
 
-    assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 0, row: 0 }, 0), false);
-    assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0 }, 0), true);
+    assert.equal(probe.isEmpty({ blocksetId: "atlas", col: 0, row: 0 }, 0), false);
+    assert.equal(probe.isEmpty({ blocksetId: "atlas", col: 1, row: 0 }, 0), true);
   });
 
   it("only sees the pixels at or above the alpha cutoff", () => {
     const { probe } = setup(bufferOf(4, 2, (x) => (x === 3 ? 128 : 0)));
-    const tile = { tilesetId: "atlas", col: 1, row: 0 };
+    const tile = { blocksetId: "atlas", col: 1, row: 0 };
 
     assert.equal(probe.isEmpty(tile, 0.5), false);
     assert.equal(probe.isEmpty(tile, 0.6), true);
@@ -123,14 +123,14 @@ describe("TileOpacityProbe", () => {
   it("clips a tile that runs past the image edge", () => {
     const { probe } = setup(bufferOf(4, 2, (x) => (x % 3 === 0 ? 255 : 0)));
 
-    assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 2, row: 0 }, 0), true);
+    assert.equal(probe.isEmpty({ blocksetId: "atlas", col: 2, row: 0 }, 0), true);
     assert.equal(
-      probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0, size: 4 }, 0),
+      probe.isEmpty({ blocksetId: "atlas", col: 1, row: 0, size: 4 }, 0),
       false
     );
   });
 
-  it("falls back to the default tileset without a tileset id", () => {
+  it("falls back to the default blockset without a blockset id", () => {
     const { probe } = setup(pixels);
 
     assert.equal(probe.isEmpty({ col: 1, row: 0 }, 0), true);
@@ -139,19 +139,19 @@ describe("TileOpacityProbe", () => {
   it("reads the image once per texture version", () => {
     const { probe, texture, reads } = setup(pixels);
 
-    probe.isEmpty({ tilesetId: "atlas", col: 0, row: 0 }, 0);
-    probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0 }, 0);
-    probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0 }, 0);
+    probe.isEmpty({ blocksetId: "atlas", col: 0, row: 0 }, 0);
+    probe.isEmpty({ blocksetId: "atlas", col: 1, row: 0 }, 0);
+    probe.isEmpty({ blocksetId: "atlas", col: 1, row: 0 }, 0);
     assert.equal(reads(), 1);
 
     texture.needsUpdate = true;
-    probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0 }, 0);
+    probe.isEmpty({ blocksetId: "atlas", col: 1, row: 0 }, 0);
     assert.equal(reads(), 2);
   });
 
   it("treats an unreadable image as not empty", () => {
     const { probe } = setup(null);
 
-    assert.equal(probe.isEmpty({ tilesetId: "atlas", col: 1, row: 0 }, 0), false);
+    assert.equal(probe.isEmpty({ blocksetId: "atlas", col: 1, row: 0 }, 0), false);
   });
 });

@@ -2,12 +2,12 @@
 import type {
   ResolvedTileRef,
   TileSpan
-} from "../tilesets/types.ts";
+} from "../blocksets/types.ts";
 import {
   rescaleTileRef,
   UNIT_TILE_SPAN,
   type TileRescale
-} from "../tilesets/tileRef.ts";
+} from "../blocksets/tileRef.ts";
 import type { ResolvedBlockDefinition } from "./BlockDefinition.ts";
 import { baseSlotOf } from "./shape/shapeSlots.ts";
 
@@ -65,11 +65,11 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     return ownsTile ? span : UNIT_TILE_SPAN;
   }
 
-  tilesetIds(): string[] {
+  blocksetIds(): string[] {
     const ids = new Set<string>();
     for (const ref of this) {
-      if (ref.tilesetId !== undefined) {
-        ids.add(ref.tilesetId);
+      if (ref.blocksetId !== undefined) {
+        ids.add(ref.blocksetId);
       }
     }
 
@@ -118,18 +118,18 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     });
   }
 
-  withTileset(
-    tilesetId: string | null
+  withBlockset(
+    blocksetId: string | null
   ): BlockTextures {
-    if (tilesetId === null) {
+    if (blocksetId === null) {
       return this;
     }
 
     return this.map((ref) => (
-      ref.tilesetId === undefined ?
+      ref.blocksetId === undefined ?
         {
           ...ref,
-          tilesetId
+          blocksetId
         } :
         ref
     ));

@@ -23,7 +23,7 @@ Done when every in-scope test file has a recorded baseline result.
 
 Split the surface into **lanes** along production owner boundaries, not file
 prefixes. Use the concern folders under `src/` (for voxel-renderer: blocks,
-world, mesh, materials, tileset, serialization, commands, history, render),
+world, mesh, materials, blockset, serialization, commands, history, render),
 plus the facade suites at the package root and the e2e suite as its own lane.
 Include shared support (`test/setup.ts`, `test/helpers/`, `test/fixtures/`) as
 a lane with a single owner.

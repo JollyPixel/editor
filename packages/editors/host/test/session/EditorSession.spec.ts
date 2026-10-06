@@ -46,7 +46,7 @@ const kGrass = record("grass", "pixelart");
 const kStone = record("stone", "pixelart");
 const kSound = record("sound", "audio");
 
-function tileset(
+function blockset(
   id: string
 ): AssetReferenceData {
   return {
@@ -167,7 +167,7 @@ describe("EditorSession.connect", () => {
     const { client, pending } = await startConnect({
       kinds: [kind, audio],
       dependencies: {
-        map: [tileset("grass"), { id: "sound", kind: "audio" }]
+        map: [blockset("grass"), { id: "sound", kind: "audio" }]
       }
     });
 
@@ -203,7 +203,7 @@ describe("EditorSession.connect", () => {
     const { client, session } = await connect({
       kinds: [kind],
       dependencies: {
-        map: [tileset("grass"), tileset("stone"), { id: "sound", kind: "audio" }]
+        map: [blockset("grass"), blockset("stone"), { id: "sound", kind: "audio" }]
       },
       resolveDocuments: kind
     });
@@ -226,7 +226,7 @@ describe("EditorSession.connect", () => {
     const kind = fakeDocumentKind("pixelart");
     const { client, pending } = await startConnect({
       kinds: [kind],
-      dependencies: { map: [tileset("grass")] }
+      dependencies: { map: [blockset("grass")] }
     });
     kind.rejectAll(new Error("sync failed"));
 
@@ -241,9 +241,9 @@ describe("EditorSession.connect", () => {
     const { session } = await connect({
       kinds: [kind],
       dependencies: {
-        map: [tileset("grass")],
-        grass: [tileset("stone")],
-        stone: [tileset("grass")]
+        map: [blockset("grass")],
+        grass: [blockset("stone")],
+        stone: [blockset("grass")]
       },
       resolveDocuments: kind
     });
@@ -261,7 +261,7 @@ describe("EditorSession live closure", () => {
     const added: unknown[] = [];
     session.on("dependency-added", (dependency) => added.push(dependency));
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [tileset("grass")])
+      changedMessage("map", kMap, [blockset("grass")])
     );
     const dependency = session.dependency("grass");
     assert.ok(dependency);
@@ -274,7 +274,7 @@ describe("EditorSession live closure", () => {
     await dependency.ready;
 
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [tileset("grass")])
+      changedMessage("map", kMap, [blockset("grass")])
     );
     assert.equal(session.dependency("grass"), dependency);
     session.dispose();
@@ -286,7 +286,7 @@ describe("EditorSession live closure", () => {
       const { client, session } = await connect({
         kinds: [kind],
         dependencies: {
-          map: event === "dependency-removed" ? [tileset("grass")] : []
+          map: event === "dependency-removed" ? [blockset("grass")] : []
         },
         resolveDocuments: kind
       });
@@ -296,7 +296,7 @@ describe("EditorSession live closure", () => {
         session.dispose();
       });
       const next = event === "dependency-added" ?
-        [tileset("grass"), tileset("stone")] : [tileset("stone")];
+        [blockset("grass"), blockset("stone")] : [blockset("stone")];
       client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, next));
 
       assert.equal(notifications, 1);
@@ -319,7 +319,7 @@ describe("EditorSession live closure", () => {
     };
     const { client, session } = await connect({
       kinds: [kind, audio],
-      dependencies: { map: [tileset("grass")] },
+      dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
     });
     const original = session.dependency("grass");
@@ -329,7 +329,7 @@ describe("EditorSession live closure", () => {
 
     assert.throws(() => {
       client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, [
-        tileset("stone"),
+        blockset("stone"),
         { id: "sound", kind: "audio" }
       ]));
     }, /factory failed/);
@@ -345,7 +345,7 @@ describe("EditorSession live closure", () => {
     const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
-      dependencies: { map: [tileset("grass")] },
+      dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
     });
     const added: string[] = [];
@@ -354,11 +354,11 @@ describe("EditorSession live closure", () => {
     session.on("dependency-removed", (reference) => removed.push(reference));
 
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [tileset("stone")])
+      changedMessage("map", kMap, [blockset("stone")])
     );
 
     assert.deepEqual(added, ["stone"]);
-    assert.deepEqual(removed, [tileset("grass")]);
+    assert.deepEqual(removed, [blockset("grass")]);
     assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("pixelart:grass").leaves, 1);
     session.dispose();
@@ -368,7 +368,7 @@ describe("EditorSession live closure", () => {
     const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
-      dependencies: { map: [tileset("grass")] },
+      dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
     });
     const panel = session.assets.open(kind, "grass");
@@ -386,7 +386,7 @@ describe("EditorSession live closure", () => {
     const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
-      dependencies: { map: [tileset("grass")] },
+      dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
     });
     const removed: string[] = [];
@@ -402,13 +402,13 @@ describe("EditorSession live closure", () => {
     const kind = fakeDocumentKind("pixelart");
     const { client, session } = await connect({
       kinds: [kind],
-      dependencies: { map: [tileset("grass")] },
+      dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
     });
 
     session.dispose();
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [tileset("stone")])
+      changedMessage("map", kMap, [blockset("stone")])
     );
 
     assert.equal(kind.documents.length, 1);

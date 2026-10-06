@@ -7,7 +7,7 @@ import { VoxelMeshBuilder } from "../meshing/VoxelMeshBuilder.ts";
 import { FaceTemplateTable } from "../meshing/pulling/FaceTemplateTable.ts";
 import { FaceRegionTable } from "../meshing/pulling/FaceRegionTable.ts";
 import { DefinedShape } from "./DefinedShape.ts";
-import { DefinedTilesets } from "./DefinedTilesets.ts";
+import { DefinedBlocksets } from "./DefinedBlocksets.ts";
 import type { MeshDefinitions } from "./MeshDefinitions.ts";
 import type {
   MeshBuildRequest,
@@ -61,7 +61,7 @@ function build(
   for (const [key, data] of builder.buildChunkMeshData(members)) {
     const { alphaMode, side, alphaCutoff, materialGroup } = key.surface;
     geometries.push({
-      tilesetId: key.tilesetId,
+      blocksetId: key.blocksetId,
       surface: {
         alphaMode,
         side,
@@ -100,7 +100,7 @@ function createBuilder(
     shapeRegistry: new BlockShapeRegistry().registerMany(
       definitions.shapes.map((shape) => new DefinedShape(shape))
     ),
-    atlases: new DefinedTilesets(definitions.tilesets),
+    atlases: new DefinedBlocksets(definitions.blocksets),
     blendGroups: new BlendGroupList(definitions.blendGroups),
     alphaTest: definitions.alphaTest,
     faceTemplates: new FaceTemplateTable(

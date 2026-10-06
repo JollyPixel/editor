@@ -3,7 +3,7 @@ import {
   BlockPieces,
   type BlockShapeRegistry,
   type MaterialGroupList,
-  type TilesetAtlases,
+  type BlocksetAtlases,
   type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 
@@ -12,7 +12,7 @@ import { TileOpacityProbe } from "./tileOpacity.ts";
 
 export interface BlockRenderSourcesOptions {
   shapes: BlockShapeRegistry;
-  atlases: TilesetAtlases;
+  atlases: BlocksetAtlases;
   materialGroups?: MaterialGroupList;
   tileOpacity?: TileOpacityProbe;
 }
@@ -29,7 +29,7 @@ export class BlockRenderSources {
   }
 
   readonly shapes: BlockShapeRegistry;
-  readonly atlases: TilesetAtlases;
+  readonly atlases: BlocksetAtlases;
   readonly materialGroups: MaterialGroupList | undefined;
   readonly tileOpacity: TileOpacityProbe;
 

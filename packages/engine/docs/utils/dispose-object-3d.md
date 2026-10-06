@@ -37,7 +37,7 @@ is detached from its parent and its children are removed.
 ### textures
 
 Disposing a material has no effect on its textures, because a single
-texture is commonly shared by several materials (a tileset atlas, an
+texture is commonly shared by several materials (a blockset atlas, an
 asset library entry). Texture disposal is therefore opt-in:
 
 ```ts

@@ -101,10 +101,10 @@ export function voxelCommandKey(
     case "template-updated":
     case "template-removed":
       return `template:${command.templateId}`;
-    case "tileset-added":
-      return `tileset:${command.tileset.id}`;
-    case "tileset-removed":
-      return `tileset:${command.tilesetId}`;
+    case "blockset-added":
+      return `blockset:${command.blockset.id}`;
+    case "blockset-removed":
+      return `blockset:${command.blocksetId}`;
     default:
       return null;
   }

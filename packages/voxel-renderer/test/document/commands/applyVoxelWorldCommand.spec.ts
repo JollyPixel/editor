@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TilesetList } from "../../../src/document/tilesets/index.ts";
+import { BlocksetList } from "../../../src/document/blocksets/index.ts";
 import { composeBlockId } from "../../../src/document/blocks/BlockId.ts";
 import { VoxelWorld } from "../../../src/document/world/VoxelWorld.ts";
 import {
@@ -14,46 +14,46 @@ import {
 function makeTarget(): VoxelWorldCommandTarget {
   return {
     world: new VoxelWorld(16),
-    tilesets: new TilesetList([
+    blocksets: new BlocksetList([
       { id: "a", src: "a", tileSize: 16 },
       { id: "b", src: "b", tileSize: 16 }
     ])
   };
 }
 
-describe("applyVoxelWorldCommand - tilesets", () => {
-  it("adds and removes tilesets", () => {
+describe("applyVoxelWorldCommand - blocksets", () => {
+  it("adds and removes blocksets", () => {
     const target = makeTarget();
 
     assert.notEqual(applyVoxelWorldCommand(target, {
-      action: "tileset-added",
-      tileset: { id: "c", src: "c", tileSize: 8 }
+      action: "blockset-added",
+      blockset: { id: "c", src: "c", tileSize: 8 }
     }), null);
     assert.notEqual(applyVoxelWorldCommand(target, {
-      action: "tileset-removed",
-      tilesetId: "a"
+      action: "blockset-removed",
+      blocksetId: "a"
     }), null);
-    assert.deepEqual([...target.tilesets.ids()], ["b", "c"]);
+    assert.deepEqual([...target.blocksets.ids()], ["b", "c"]);
   });
 
-  it("returns the added tileset with the slot it received", () => {
+  it("returns the added blockset with the slot it received", () => {
     const target = makeTarget();
 
     assert.deepEqual(applyVoxelWorldCommand(target, {
-      action: "tileset-added",
-      tileset: { id: "c", asset: { id: "a1", kind: "tileset" } }
+      action: "blockset-added",
+      blockset: { id: "c", asset: { id: "a1", kind: "blockset" } }
     }), {
-      action: "tileset-added",
-      tileset: {
+      action: "blockset-added",
+      blockset: {
         id: "c",
         slot: 2,
-        asset: { id: "a1", kind: "tileset" }
+        asset: { id: "a1", kind: "blockset" }
       }
     });
   });
 
   for (const holder of ["voxels", "a template"] as const) {
-    it(`never gives a new tileset the slot of ${holder} a removed one left`, () => {
+    it(`never gives a new blockset the slot of ${holder} a removed one left`, () => {
       const target = makeTarget();
       const position = { x: 0, y: 0, z: 0 };
       target.world.addLayer("Base");
@@ -66,16 +66,16 @@ describe("applyVoxelWorldCommand - tilesets", () => {
         target.world.removeVoxel("Base", { position });
       }
       applyVoxelWorldCommand(target, {
-        action: "tileset-removed",
-        tilesetId: "a"
+        action: "blockset-removed",
+        blocksetId: "a"
       });
 
       const added = applyVoxelWorldCommand(target, {
-        action: "tileset-added",
-        tileset: { id: "c", asset: { id: "a1", kind: "tileset" } }
+        action: "blockset-added",
+        blockset: { id: "c", asset: { id: "a1", kind: "blockset" } }
       });
 
-      assert.equal(added?.action === "tileset-added" && added.tileset.slot, 2);
+      assert.equal(added?.action === "blockset-added" && added.blockset.slot, 2);
     });
   }
 
@@ -83,13 +83,13 @@ describe("applyVoxelWorldCommand - tilesets", () => {
     const target = makeTarget();
 
     assert.equal(applyVoxelWorldCommand(target, {
-      action: "tileset-added",
-      tileset: { id: "a", src: "dup", tileSize: 8 }
+      action: "blockset-added",
+      blockset: { id: "a", src: "dup", tileSize: 8 }
     }), null);
     assert.equal(applyVoxelWorldCommand(target, {
-      action: "tileset-removed",
-      tilesetId: "missing"
+      action: "blockset-removed",
+      blocksetId: "missing"
     }), null);
-    assert.deepEqual([...target.tilesets.ids()], ["a", "b"]);
+    assert.deepEqual([...target.blocksets.ids()], ["a", "b"]);
   });
 });

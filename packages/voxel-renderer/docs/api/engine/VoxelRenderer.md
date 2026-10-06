@@ -9,7 +9,7 @@ import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 
 const renderer = actor.addComponentAndGet(VoxelRenderer, {
   focus: cameraActor.object3D,
-  tilesets,
+  blocksets,
   document: {
     blocks,
     layers: ["Ground"]

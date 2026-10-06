@@ -42,7 +42,7 @@ serves. Each editor's Vite config loads its kinds from a project file of its own
 
 ## Considered Options
 
-- **A factory per kind** instead of per package. `asset.voxel-map` ships `tileset` and `voxelmap`
+- **A factory per kind** instead of per package. `asset.voxel-map` ships `blockset` and `voxelmap`
   together, and a project picks packages, not kinds.
 - **Descriptors kept in the shell.** A kind added to the file would show the generic `file` icon
   until the shell changed.

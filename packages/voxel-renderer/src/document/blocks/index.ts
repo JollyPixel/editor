@@ -2,7 +2,7 @@ export * from "./BlockDefinition.ts";
 export * from "./BlockTextures.ts";
 export * from "./BlockTextureLayout.ts";
 export * from "./BlockSurface.ts";
-export * from "./blocksFromTileset.ts";
+export * from "./blocksFromTileGrid.ts";
 export * from "./BlockId.ts";
 export * from "./BlockRegistry.ts";
 export * from "./BlockComplements.ts";

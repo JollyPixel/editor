@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   AIR_BLOCK_ID,
-  TilesetList,
+  BlocksetList,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
@@ -32,7 +32,7 @@ function state() {
 
   return {
     world,
-    tilesets: new TilesetList()
+    blocksets: new BlocksetList()
   };
 }
 

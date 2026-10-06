@@ -11,7 +11,7 @@ const kToggleKey = "F3";
 const kExamples: Record<string, string> = {
   Physics: "/",
   "Block Shapes": "/shapes.html",
-  "Tileset UV": "/tileset.html",
+  "Blockset UV": "/blockset.html",
   "Noise World": "/noise-world.html",
   "Transparency & Light": "/transparency.html",
   "Normal Map": "/normal-map.html"

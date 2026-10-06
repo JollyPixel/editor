@@ -77,7 +77,7 @@ no cell would change. To place into a new layer, add it first with
 #### `countBlocks(): Map<number, number>`
 
 Voxel count per block id across every template. A
-[tileset slot](../tilesets/TilesetLink.md) stays reserved while a template
+[blockset slot](../blocksets/BlocksetLink.md) stays reserved while a template
 uses one of its block ids.
 
 ## VoxelTemplate

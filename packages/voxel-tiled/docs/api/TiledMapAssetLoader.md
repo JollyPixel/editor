@@ -14,7 +14,7 @@ type TiledMapAssetLoaderOptions = Omit<
 interface VoxelTiledMap {
   readonly world: VoxelWorldJSON;
   readonly blocks: ResolvedBlockDefinition[];
-  readonly tilesets: TilesetSource[];
+  readonly blocksets: AtlasSource[];
 }
 
 const TiledMapAssetType: AssetType<VoxelTiledMap>;
@@ -37,5 +37,5 @@ Its default layer mode is `"stacked"`; direct `TiledConverter` calls default to
 `"flat"`.
 
 Register `TiledMapAssetType` and the loader with the runtime asset system. The
-returned `blocks` can be passed to `VoxelDocument`, `tilesets` to `VoxelView`,
+returned `blocks` can be passed to `VoxelDocument`, `blocksets` to `VoxelView`,
 and `world` to `VoxelView.load()`.

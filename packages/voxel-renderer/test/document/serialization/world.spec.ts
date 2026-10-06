@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   deserializeVoxelWorld,
-  serializeTilesetDefinition,
+  serializeBlocksetDefinition,
   serializeVoxelWorld,
   VOXEL_WORLD_VERSION,
   type VoxelWorldJSON
@@ -14,11 +14,11 @@ import {
   voxelBlockId,
   VoxelWorld
 } from "../../../src/document/world/index.ts";
-import { TilesetList, type TilesetDefinition } from "../../../src/document/tilesets/index.ts";
+import { BlocksetList, type BlocksetDefinition } from "../../../src/document/blocksets/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
 
 // CONSTANTS
-const kAtlas: TilesetDefinition = {
+const kAtlas: BlocksetDefinition = {
   id: "atlas",
   src: "/atlas.png",
   tileSize: 16,
@@ -48,7 +48,7 @@ function emptyDocument(
   return {
     version: VOXEL_WORLD_VERSION,
     chunkSize: 16,
-    tilesets: [],
+    blocksets: [],
     layers: [],
     ...fields
   };
@@ -107,16 +107,16 @@ describe("voxel world round-trip", () => {
     assert.equal(chunk.mayContain(6, 0, 0), false);
   });
 
-  it("restores the tileset links with their slots", () => {
-    const tilesets = new TilesetList([
-      { id: "ground", slot: 3, asset: { id: "a1", kind: "tileset" } },
+  it("restores the blockset links with their slots", () => {
+    const blocksets = new BlocksetList([
+      { id: "ground", slot: 3, asset: { id: "a1", kind: "blockset" } },
       kAtlas
     ]);
-    const json = serializeVoxelWorld(new VoxelWorld(16), { tilesets });
+    const json = serializeVoxelWorld(new VoxelWorld(16), { blocksets });
 
-    const restored = new TilesetList();
+    const restored = new BlocksetList();
     deserializeVoxelWorld(untrusted(json), new VoxelWorld(16), {
-      tilesets: restored
+      blocksets: restored
     });
 
     assert.deepEqual(
@@ -128,13 +128,13 @@ describe("voxel world round-trip", () => {
   });
 });
 
-describe("serializeTilesetDefinition", () => {
-  it("keeps only the link of an asset tileset", () => {
+describe("serializeBlocksetDefinition", () => {
+  it("keeps only the link of an asset blockset", () => {
     assert.deepEqual(
-      serializeTilesetDefinition({
+      serializeBlocksetDefinition({
         id: "ground",
         slot: 2,
-        asset: { id: "a1", kind: "tileset" },
+        asset: { id: "a1", kind: "blockset" },
         tileSize: 32,
         cols: 8,
         rows: 8
@@ -142,13 +142,13 @@ describe("serializeTilesetDefinition", () => {
       {
         id: "ground",
         slot: 2,
-        asset: { id: "a1", kind: "tileset" }
+        asset: { id: "a1", kind: "blockset" }
       }
     );
   });
 
-  it("keeps the tile size and grid of a URL tileset", () => {
-    assert.deepEqual(serializeTilesetDefinition(kAtlas), kAtlas);
+  it("keeps the tile size and grid of a URL blockset", () => {
+    assert.deepEqual(serializeBlocksetDefinition(kAtlas), kAtlas);
   });
 });
 
@@ -160,7 +160,7 @@ describe("serializeVoxelWorld", () => {
     assert.equal(json.version, VOXEL_WORLD_VERSION);
     assert.equal(json.chunkSize, 16);
     assert.deepEqual(json.layers, []);
-    assert.deepEqual(json.tilesets, []);
+    assert.deepEqual(json.blocksets, []);
   });
 
   it("writes no block or material group table", () => {
@@ -168,7 +168,7 @@ describe("serializeVoxelWorld", () => {
 
     assert.deepEqual(
       Object.keys(json).sort(),
-      ["chunkSize", "layers", "objectLayers", "templates", "tilesets", "version"]
+      ["blocksets", "chunkSize", "layers", "objectLayers", "templates", "version"]
     );
   });
 
@@ -285,20 +285,20 @@ describe("deserializeVoxelWorld", () => {
     assert.equal(world.getLayers().length, 0);
   });
 
-  it("replaces the tileset links, clearing them when none are saved", () => {
-    const tilesets = new TilesetList([kAtlas]);
+  it("replaces the blockset links, clearing them when none are saved", () => {
+    const blocksets = new BlocksetList([kAtlas]);
 
     deserializeVoxelWorld(
       emptyDocument({
-        tilesets: [{ id: "ground", asset: { id: "a1", kind: "tileset" } }]
+        blocksets: [{ id: "ground", asset: { id: "a1", kind: "blockset" } }]
       }),
       new VoxelWorld(16),
-      { tilesets }
+      { blocksets }
     );
-    assert.deepEqual([...tilesets.ids()], ["ground"]);
+    assert.deepEqual([...blocksets.ids()], ["ground"]);
 
-    deserializeVoxelWorld(emptyDocument(), new VoxelWorld(16), { tilesets });
-    assert.equal(tilesets.size, 0);
+    deserializeVoxelWorld(emptyDocument(), new VoxelWorld(16), { blocksets });
+    assert.equal(blocksets.size, 0);
   });
 
   it("defaults compositing and drops a retired opacity in an older save file", () => {
@@ -462,21 +462,21 @@ describe("deserializeVoxelWorld", () => {
     );
   });
 
-  it("leaves the world and tilesets untouched when the document is invalid", () => {
+  it("leaves the world and blocksets untouched when the document is invalid", () => {
     const world = new VoxelWorld(16);
     world.addLayer("Existing");
-    const tilesets = new TilesetList([kAtlas]);
+    const blocksets = new BlocksetList([kAtlas]);
     assert.throws(
-      () => deserializeVoxelWorld(untrusted({ version: 3 }), world, { tilesets })
+      () => deserializeVoxelWorld(untrusted({ version: 3 }), world, { blocksets })
     );
     assert.equal(world.getLayers().length, 1);
-    assert.equal(tilesets.has("atlas"), true);
+    assert.equal(blocksets.has("atlas"), true);
   });
 
   it("leaves the world untouched when a chunk does not fit its chunk size", () => {
     const world = new VoxelWorld(16);
     world.addLayer("Existing");
-    const tilesets = new TilesetList([kAtlas]);
+    const blocksets = new BlocksetList([kAtlas]);
 
     assert.throws(
       () => deserializeVoxelWorld(untrusted(emptyDocument({
@@ -489,11 +489,11 @@ describe("deserializeVoxelWorld", () => {
           palette: [{ block: 1, transform: 0 }],
           chunks: [{ at: [1000, 0, 0], cells: [0], runs: [1, 1] }]
         }]
-      })), world, { tilesets }),
+      })), world, { blocksets }),
       /layer "l1", chunk \[1000,0,0\] does not fit a world with chunkSize 16/
     );
     assert.deepEqual(world.getLayers().map(({ name }) => name), ["Existing"]);
-    assert.equal(tilesets.has("atlas"), true);
+    assert.equal(blocksets.has("atlas"), true);
   });
 
   it("reads a template in the chunk size it was saved with", () => {

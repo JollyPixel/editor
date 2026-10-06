@@ -8,7 +8,7 @@ document.defineBlock({
   id: 2,
   name: "Stained glass",
   shapeId: "cube",
-  defaultTexture: { tilesetId: "default", col: 4, row: 1 },
+  defaultTexture: { blocksetId: "default", col: 4, row: 1 },
   alphaMode: "blend",
   cullCoveredFaces: true
 });
@@ -27,7 +27,7 @@ document.defineBlock({
 | `alphaMode`, `side`, `alphaCutoff`, `materialGroup` | | | Surface settings, see [`BlockSurface`](./BlockSurface.md). |
 | `blendGroup` | `string` | none | [`BlendGroup`](../materials/BlendGroup.md) that fades the top and bottom faces into neighbours. Opaque blocks only. |
 | `cullCoveredFaces` | `boolean` | `true` for opaque, `false` otherwise | See [covered faces](#covered-faces). |
-| `defaultTilesetId` | `string` | none | Tileset of tile references that omit one. Removed once resolved. |
+| `defaultBlocksetId` | `string` | none | Blockset of tile references that omit one. Removed once resolved. |
 | `properties` | `BlockProperties` | `{}` | Game data, see [custom properties](#custom-properties). |
 
 A `faceTextures` key that matches no slot of the shape is ignored, and the view
@@ -84,7 +84,7 @@ function resolveBlockDefinition(
 ```
 
 The form `BlockRegistry` stores: defaults applied, `faceTextures` and
-`properties` always present, `collidable` set, `defaultTilesetId` folded into
+`properties` always present, `collidable` set, `defaultBlocksetId` folded into
 the tile references. It returns a new object and leaves the input untouched.
 
 ## Block ids
@@ -93,21 +93,21 @@ the tile references. It returns a new object and leaves the input untouched.
 const AIR_BLOCK_ID = 0;
 const LOCAL_BLOCK_ID_BITS = 16;
 const MAX_LOCAL_BLOCK_ID = 0xFFFF;
-const MAX_TILESET_SLOT = 0x7F;
+const MAX_BLOCKSET_SLOT = 0x7F;
 
 function isAir(blockId: number): boolean;
 function composeBlockId(slot: number, localId: number): number;
-function tilesetSlotOf(blockId: number): number;
+function blocksetSlotOf(blockId: number): number;
 function localBlockIdOf(blockId: number): number;
-function isTilesetSlot(value: unknown): value is number;
+function isBlocksetSlot(value: unknown): value is number;
 function isLocalBlockId(value: unknown): value is number;
 ```
 
 Id `0` is air and is never stored: registering it throws `Error`, writing it
 throws `RangeError`. Use `removeVoxel()` to clear a cell.
 
-A world block id combines a tileset [slot](../tilesets/tilesets.md) and the
-block's id inside that tileset. Slot `0` leaves a local id unchanged, so blocks
+A world block id combines a blockset [slot](../blocksets/blocksets.md) and the
+block's id inside that blockset. Slot `0` leaves a local id unchanged, so blocks
 defined in code need no slots. `composeBlockId()` throws `RangeError` for a
-slot above `MAX_TILESET_SLOT`, a local id of `0` or above `MAX_LOCAL_BLOCK_ID`,
-or a non-integer. `tilesetSlotOf()` and `localBlockIdOf()` split an id back.
+slot above `MAX_BLOCKSET_SLOT`, a local id of `0` or above `MAX_LOCAL_BLOCK_ID`,
+or a non-integer. `blocksetSlotOf()` and `localBlockIdOf()` split an id back.

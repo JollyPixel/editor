@@ -17,12 +17,12 @@ import {
 // CONSTANTS
 const kCubeSlots = ["right", "left", "top", "bottom", "front", "back"];
 const kPainted = {
-  tilesetId: "atlas",
+  blocksetId: "atlas",
   col: 0,
   row: 0
 };
 const kBlank = {
-  tilesetId: "atlas",
+  blocksetId: "atlas",
   col: 1,
   row: 0
 };

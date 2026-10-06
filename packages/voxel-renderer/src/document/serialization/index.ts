@@ -3,7 +3,7 @@ export * from "./types.ts";
 export * from "./codec.ts";
 export * from "./json/parseVoxelWorld.ts";
 export {
-  serializeTilesetDefinition
+  serializeBlocksetDefinition
 } from "./data/captureVoxelWorld.ts";
 export {
   InvalidVoxelWorldError

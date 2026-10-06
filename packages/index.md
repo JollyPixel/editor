@@ -30,7 +30,7 @@ features:
     details: A unified input manager for mouse, keyboard, gamepad and touchpad, with device auto-detection and action queries.
     link: /controls/README
   - title: Voxel Renderer
-    details: Chunked voxel worlds with layers, tileset atlases, custom block shapes, collisions and server-authoritative sync.
+    details: Chunked voxel worlds with layers, blockset atlases, custom block shapes, collisions and server-authoritative sync.
     link: /voxel-renderer/README
   - title: Pixel Drawing
     details: A pixel-art canvas with brush, fill, line and selection tools, undo/redo history, UV mapping and live collaboration.
