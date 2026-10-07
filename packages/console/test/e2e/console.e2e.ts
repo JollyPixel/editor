@@ -240,4 +240,19 @@ test.describe("jolly-console", () => {
     await page.keyboard.press("Enter");
     await expect(element).toHaveAttribute("theme", "light");
   });
+
+  test("/cd shows the scope in the prompt and resolves names inside it", async({ page }) => {
+    await page.keyboard.press("Control+k");
+    await prompt(page).fill("/cd brush");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("jolly-console .scope")).toHaveText("brush");
+
+    await prompt(page).fill("size 4");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#brush-size")).toHaveText("4");
+
+    await prompt(page).fill("/cd");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("jolly-console .scope")).toBeHidden();
+  });
 });

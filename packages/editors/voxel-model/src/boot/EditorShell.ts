@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { EditorRuntime } from "@jolly-pixel/editor.host";
-import { CANVAS_HOVER_CHANGE_EVENT } from "@jolly-pixel/editor.pixel-art";
+import {
+  CANVAS_HOVER_CHANGE_EVENT,
+  type KeyBindingSettings
+} from "@jolly-pixel/editor.pixel-art";
 import type {
   DockLayout,
   PaneElement,
@@ -48,6 +51,7 @@ type WorkspaceElement = HTMLElementTagNameMap[typeof kAttachedTags[number]];
 export interface EditorShellOptions {
   runtime: EditorRuntime;
   texture: LeftPanelTexture;
+  keyBindingSettings: KeyBindingSettings;
 }
 
 export class EditorShell {
@@ -63,7 +67,11 @@ export class EditorShell {
   constructor(
     options: EditorShellOptions
   ) {
-    const { runtime, texture } = options;
+    const {
+      runtime,
+      texture,
+      keyBindingSettings
+    } = options;
 
     const layout = document.querySelector(kLayoutSelector);
     const leftPanel = document.querySelector<LeftPanel>(kLeftPanelSelector);
@@ -94,6 +102,7 @@ export class EditorShell {
     this.#attached = kAttachedTags.map(queryWorkspaceElement);
 
     this.#leftPanel.setTexture(texture);
+    this.#leftPanel.keyBindingSettings = keyBindingSettings;
     for (const type of kLayoutEvents) {
       layout.addEventListener(type, this.#onLayoutChange);
       this.#disposables.push(

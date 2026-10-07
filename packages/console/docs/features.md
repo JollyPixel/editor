@@ -46,6 +46,9 @@ export function brushConsole(
 
 - Type the context as only what the feature uses (`Pick<...>`), so tests can pass just that.
 - Give each feature its own namespace: registering the same name twice replaces the first one.
+- A package embedded in several editors nests its namespaces under its own name, such as
+  `pixelart.keybinds`, so they never collide with the host editor's. Features can share the
+  parent: `pixelart` exists while any `pixelart.*` namespace is registered.
 
 ## Registering the list
 

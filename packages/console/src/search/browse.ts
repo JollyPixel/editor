@@ -1,10 +1,17 @@
 // Import Internal Dependencies
 import { peekValue } from "../execution/variables.ts";
 import {
+  isWithin,
+  relativeAddress
+} from "../registry/address.ts";
+import {
   byName,
   compareText
 } from "../registry/format.ts";
-import type { ConsoleRegistry } from "../registry/types.ts";
+import type {
+  ConsoleRegistry,
+  RegisteredEntry
+} from "../registry/types.ts";
 import {
   entrySuggestion,
   lineSuggestion,
@@ -30,7 +37,13 @@ export function browse(
   registry: ConsoleRegistry,
   history: readonly string[]
 ): SuggestionGroup[] {
-  const { root } = registry;
+  const { scope } = registry;
+  function scoped(
+    entry: RegisteredEntry
+  ): Suggestion {
+    return entrySuggestion(entry, relativeAddress(entry.address, scope.address));
+  }
+
   const groups: SuggestionGroup[] = [
     {
       kind: "recent",
@@ -42,18 +55,18 @@ export function browse(
     },
     {
       kind: "namespaces",
-      items: [...registry.namespaces()].sort(byName).map(entrySuggestion)
+      items: [...registry.children(scope)].sort(byName).map(scoped)
     },
     {
       kind: "commands",
-      items: [...root.commands()].sort(byName).map(entrySuggestion)
+      items: [...scope.commands()].sort(byName).map(scoped)
     },
     {
       kind: "variables",
-      items: [...root.variables()]
+      items: [...scope.variables()]
         .filter((variable) => variable.def.type !== "boolean")
         .sort(byName)
-        .map(entrySuggestion)
+        .map(scoped)
     }
   ];
 
@@ -78,16 +91,19 @@ function toggleItems(
   registry: ConsoleRegistry
 ): Suggestion[] {
   const items: Suggestion[] = [];
+  const scope = registry.scope.address;
   const variables = [...registry]
-    .flatMap((scope) => [...scope.variables()])
-    .filter((variable) => variable.def.type === "boolean")
+    .flatMap((namespace) => [...namespace.variables()])
+    .filter((variable) => variable.def.type === "boolean" &&
+      isWithin(variable.address, scope))
     .sort((left, right) => compareText(left.address, right.address));
   for (const variable of variables) {
     const checked = peekValue(variable);
     if (typeof checked === "boolean") {
-      const text = `${variable.address} ${!checked}`;
+      const address = relativeAddress(variable.address, scope);
+      const text = `${address} ${!checked}`;
       items.push({
-        ...entrySuggestion(variable),
+        ...entrySuggestion(variable, address),
         checked,
         text,
         caret: text.length,

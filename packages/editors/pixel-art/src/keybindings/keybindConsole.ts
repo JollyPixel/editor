@@ -15,7 +15,7 @@ export function keybindConsole(
   commands: CommandConsole,
   { keyBindingSettings }: KeybindConsoleContext
 ): RegistrationHandle {
-  const namespace = commands.registerNamespace("keybind", {
+  const namespace = commands.registerNamespace("pixelart.keybinds", {
     description: "Pixel-art keyboard shortcuts"
   });
   const { actions } = keyBindingSettings.keyBindings;

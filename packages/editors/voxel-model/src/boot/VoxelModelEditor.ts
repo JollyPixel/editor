@@ -20,6 +20,10 @@ import {
   type HostLogger,
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
+import {
+  KeyBindingSettings,
+  pixelArtConsole
+} from "@jolly-pixel/editor.pixel-art";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -50,6 +54,8 @@ export type ModelTextureLease = AssetLease<
   PixelServerMessage
 >;
 
+type ConsoleFeatures = ReturnType<typeof pixelArtConsole>;
+
 export interface VoxelModelEditorParts {
   runtime: Runtime;
   scene: ModelEditorScene;
@@ -58,6 +64,7 @@ export interface VoxelModelEditorParts {
   shell: EditorShell;
   texture: ModelTextureLease;
   target: AssetLease<ModelDocument>;
+  consoleFeatures: ConsoleFeatures;
 }
 
 export class VoxelModelEditor {
@@ -80,7 +87,11 @@ export class VoxelModelEditor {
   static async mount(
     context: RuntimeEditorContext
   ): Promise<VoxelModelEditor> {
-    const { session, runtime: editorRuntime } = context;
+    const {
+      session,
+      commands,
+      runtime: editorRuntime
+    } = context;
     const reference = session.catalog
       .dependencies.dependenciesOf(session.target.record.id)
       .find((dependency) => dependency.kind === PIXEL_ART_KIND);
@@ -111,9 +122,14 @@ export class VoxelModelEditor {
           "deleted. Export what you want to keep first."
       })
     });
+    const keyBindingSettings = new KeyBindingSettings({
+      storage: new LocalStorageAdapter(),
+      onDropped: (message) => console.warn(message)
+    });
     const shell = new EditorShell({
       runtime: editorRuntime,
-      texture
+      texture,
+      keyBindingSettings
     });
     await editorRuntime.load(scene, {
       maxFps: Infinity
@@ -132,13 +148,15 @@ export class VoxelModelEditor {
       session,
       shell,
       texture,
-      target
+      target,
+      consoleFeatures: pixelArtConsole(commands, { keyBindingSettings })
     });
   }
 
   #shell: EditorShell;
   #texture: ModelTextureLease;
   #target: AssetLease<ModelDocument>;
+  #consoleFeatures: ConsoleFeatures;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
@@ -156,6 +174,7 @@ export class VoxelModelEditor {
     this.#shell = parts.shell;
     this.#texture = parts.texture;
     this.#target = parts.target;
+    this.#consoleFeatures = parts.consoleFeatures;
     this.ready = Promise.all([
       parts.target.ready,
       parts.scene.ready
@@ -163,6 +182,7 @@ export class VoxelModelEditor {
   }
 
   dispose(): void {
+    this.#consoleFeatures.unregister();
     this.#shell.dispose();
     this.#texture.release();
     this.#target.release();

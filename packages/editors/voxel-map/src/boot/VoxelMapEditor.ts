@@ -28,6 +28,7 @@ import { EditorShell } from "../shell/EditorShell.ts";
 import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
 import { mountInspectorControls } from "./inspectorControls.ts";
 import { brushConsole } from "../features/painting/brushConsole.ts";
+import { textureConsole } from "../features/texture/textureConsole.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -141,7 +142,7 @@ export class VoxelMapEditor {
       target,
       consoleFeatures: registerConsoleFeatures(
         commands,
-        [brushConsole],
+        [brushConsole, textureConsole],
         workspace
       ),
       metricsPanel

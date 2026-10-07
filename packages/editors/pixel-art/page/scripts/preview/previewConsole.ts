@@ -15,7 +15,7 @@ export function previewConsole(
   commands: CommandConsole,
   { preview }: PreviewConsoleContext
 ): RegistrationHandle {
-  const namespace = commands.registerNamespace("preview", {
+  const namespace = commands.registerNamespace("pixelart.preview", {
     description: "3D preview of the UV regions"
   });
 

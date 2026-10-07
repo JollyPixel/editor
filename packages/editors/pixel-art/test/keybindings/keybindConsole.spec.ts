@@ -14,17 +14,15 @@ import {
   KEY_BINDINGS_STORAGE_KEY,
   KeyBindingSettings
 } from "../../src/keybindings/KeyBindingSettings.ts";
-import {
-  keybindConsole,
-  parseBindingList
-} from "../../src/keybindings/keybindConsole.ts";
+import { parseBindingList } from "../../src/keybindings/keybindConsole.ts";
+import { pixelArtConsole } from "../../src/console/pixelArtConsole.ts";
 
 function boot(
   storage: MemoryStorageAdapter
 ) {
   const commands = new CommandConsole();
   const keyBindingSettings = new KeyBindingSettings({ storage });
-  keybindConsole(commands, { keyBindingSettings });
+  pixelArtConsole(commands, { keyBindingSettings });
 
   return {
     commands,
@@ -43,16 +41,16 @@ function lastLine(
 describe("keybind console", () => {
   test("exposes the Select All binding and a reset command", async() => {
     const { commands } = boot(new MemoryStorageAdapter());
-    await commands.submit("keybind.selectAll");
+    await commands.submit("pixelart.keybinds.selectAll");
 
     assert.equal(lastLine(commands), "info: Mod+a");
-    assert.notEqual(commands.registry.resolveCommand("keybind.reset"), undefined);
+    assert.notEqual(commands.registry.resolveCommand("pixelart.keybinds.reset"), undefined);
   });
 
   test("a read prints the bindings as a comma-separated list", async() => {
     const { commands } = boot(new MemoryStorageAdapter());
 
-    await commands.submit("keybind.redo");
+    await commands.submit("pixelart.keybinds.redo");
 
     assert.equal(lastLine(commands), "info: Mod+y, Mod+Shift+z");
   });
@@ -61,8 +59,8 @@ describe("keybind console", () => {
     const storage = new MemoryStorageAdapter();
     const first = boot(storage);
 
-    await first.commands.submit("keybind.undo \"Mod+u\"");
-    await first.commands.submit("keybind.redo \"Mod+y, Mod+Shift+u\"");
+    await first.commands.submit("pixelart.keybinds.undo \"Mod+u\"");
+    await first.commands.submit("pixelart.keybinds.redo \"Mod+y, Mod+Shift+u\"");
     assert.equal(lastLine(first.commands), "info: Mod+y, Mod+Shift+u");
 
     const second = boot(storage);
@@ -77,7 +75,7 @@ describe("keybind console", () => {
     const storage = new MemoryStorageAdapter();
     const { commands, keyBindingSettings } = boot(storage);
 
-    await commands.submit("keybind.copy \"Mod+z\"");
+    await commands.submit("pixelart.keybinds.copy \"Mod+z\"");
 
     assert.equal(
       lastLine(commands),
@@ -90,7 +88,7 @@ describe("keybind console", () => {
   test("an empty value unbinds the action", async() => {
     const { commands, keyBindingSettings } = boot(new MemoryStorageAdapter());
 
-    await commands.submit("keybind.delete \"\"");
+    await commands.submit("pixelart.keybinds.delete \"\"");
 
     assert.deepEqual(keyBindingSettings.bindingsOf("delete"), []);
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, { delete: [] });
@@ -99,18 +97,18 @@ describe("keybind console", () => {
   test("a malformed binding prints the InvalidKeyChordError message", async() => {
     const { commands } = boot(new MemoryStorageAdapter());
 
-    await commands.submit("keybind.undo \"mod+z\"");
+    await commands.submit("pixelart.keybinds.undo \"mod+z\"");
 
     assert.equal(lastLine(commands), "error: Invalid key chord: \"mod+z\"");
   });
 
-  test("/keybind.reset restores one action and clears its stored entry", async() => {
+  test("/pixelart.keybinds.reset restores one action and clears its stored entry", async() => {
     const storage = new MemoryStorageAdapter();
     const { commands, keyBindingSettings } = boot(storage);
-    await commands.submit("keybind.undo \"Mod+u\"");
-    await commands.submit("keybind.delete \"Backspace\"");
+    await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
+    await commands.submit("pixelart.keybinds.delete \"Backspace\"");
 
-    await commands.submit("/keybind.reset undo");
+    await commands.submit("/pixelart.keybinds.reset undo");
 
     assert.equal(lastLine(commands), "info: undo restored to Mod+z");
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, { delete: ["Backspace"] });
@@ -120,13 +118,13 @@ describe("keybind console", () => {
     );
   });
 
-  test("/keybind.reset without an action restores every shortcut", async() => {
+  test("/pixelart.keybinds.reset without an action restores every shortcut", async() => {
     const storage = new MemoryStorageAdapter();
     const { commands, keyBindingSettings } = boot(storage);
-    await commands.submit("keybind.undo \"Mod+u\"");
-    await commands.submit("keybind.delete \"Backspace\"");
+    await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
+    await commands.submit("pixelart.keybinds.delete \"Backspace\"");
 
-    await commands.submit("/keybind.reset");
+    await commands.submit("/pixelart.keybinds.reset");
 
     assert.equal(lastLine(commands), "info: Every shortcut restored");
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, {});

@@ -10,8 +10,26 @@ The prompt accepts three kinds of input:
 | anything else, or `?text` | search | acts on the highlighted result |
 
 Arguments are separated by spaces. Quote a value that contains spaces:
-`keybind.redo "mod+y, mod+shift+z"`. Inside quotes, `\"` and `\\` are escapes. There are no
-`--flag` or `key=value` forms.
+`pixelart.keybinds.redo "mod+y, mod+shift+z"`. Inside quotes, `\"` and `\\` are escapes. There
+are no `--flag` or `key=value` forms.
+
+An address splits at its last dot: `pixelart.keybinds.undo` is the variable `undo` of the nested
+namespace `pixelart.keybinds`.
+
+## Scope
+
+`/cd pixelart.keybinds` enters a namespace, and the prompt shows it before the text. Names are
+then looked up in the scope first, then as full addresses:
+
+| In scope `pixelart.keybinds` | Reads as |
+|---|---|
+| `undo mod+u` | `pixelart.keybinds.undo mod+u` |
+| `/reset` | `/pixelart.keybinds.reset` |
+| `/help`, `brush.size 3` | unchanged, nothing in the scope matches |
+
+`/cd keybinds` from `pixelart` enters `pixelart.keybinds`; `/cd ..` goes up one level and `/cd`
+alone returns to the root. With an empty prompt, browsing lists the scope's namespaces, commands,
+variables and toggles; search still covers everything.
 
 ## Values
 
@@ -50,12 +68,17 @@ Picking a result:
 Tab completes the word under the caret and never runs anything:
 
 - after `/`, command names;
-- after `namespace.`, that namespace's commands and variables;
+- after `namespace.`, that namespace's commands, variables and nested namespaces; after
+  `/namespace.`, the commands of that namespace and of every namespace nested in it;
+- in a scope, names relative to it come before full addresses;
 - in a command's arguments, the `autocomplete` or `enumValues` of that argument.
 
 ## Scripts
 
-`/script` opens every variable as INI text; `/script brush` opens the `brush` namespace only.
+`/script` opens every variable as INI text; `/script brush` opens the `brush` namespace only, and
+`/script pixelart` opens `pixelart` and every namespace nested in it. In a scope, `/script` opens
+the scope. A nested namespace is a section of its own, named by its full address
+(`[pixelart.keybinds]`).
 
 ```ini
 ; Page theme <light|dark|auto>
@@ -70,7 +93,7 @@ size = 3
 - Root variables come first, then one `[namespace]` section each. Section and key names are
   case-insensitive, and a root key may also be a full address (`brush.size = 3`).
 - A line starting with `;` or `#` is a comment. There are no comments after a value, so
-  `keybind.undo = mod+;` keeps its `;`.
+  `undo = mod+;` keeps its `;`.
 - A value is everything after the first `=`, trimmed, and is coerced as in the prompt. Quote it
   to keep leading or trailing spaces or to write an empty string: `label = "  padded"`, with `\"`
   and `\\` escapes.

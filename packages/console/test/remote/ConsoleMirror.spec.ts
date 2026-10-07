@@ -285,6 +285,28 @@ describe("ConsoleMirror", () => {
     assert.ok(shell.registry.namespace("brush"));
   });
 
+  test("mirrors a nested namespace under its full address, beside the shell's own", async() => {
+    const local = new CommandConsole();
+    local.registerNamespace("pixelart.local");
+    const { frame, shell, conflicts } = await bridge(local);
+    let undo = "mod+z";
+
+    frame.registerNamespace("pixelart.keybinds").registerVariable("undo", {
+      type: "string",
+      description: "Shortcut for undo",
+      get: () => undo,
+      set: (value) => {
+        undo = value;
+      }
+    });
+    await until(() => shell.registry.resolveVariable("pixelart.keybinds.undo") !== undefined);
+    await shell.submit("pixelart.keybinds.undo mod+u");
+
+    assert.equal(undo, "mod+u");
+    assert.equal(lines(shell).at(-1), "info: mod+u");
+    assert.deepEqual(conflicts, []);
+  });
+
   test("a frame getter that throws leaves its mirrored variable without a value", async() => {
     const { frame, shell } = await bridge();
 

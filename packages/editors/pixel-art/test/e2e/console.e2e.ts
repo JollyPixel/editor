@@ -98,10 +98,10 @@ test.describe("3D preview", () => {
     return page.evaluate(() => window.pixelArtEditor?.preview?.scene.rotating);
   }
 
-  test("preview.rotate stops the spin across a reload", async({ page }) => {
+  test("pixelart.preview.rotate stops the spin across a reload", async({ page }) => {
     expect(await rotating(page)).toBe(true);
 
-    await submit(page, "preview.rotate false");
+    await submit(page, "pixelart.preview.rotate false");
     await expect.poll(() => rotating(page)).toBe(false);
 
     await page.reload();

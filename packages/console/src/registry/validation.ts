@@ -26,6 +26,14 @@ export function assertIdentifier(
   }
 }
 
+export function assertNamespacePath(
+  path: string
+): void {
+  if (!path.split(".").every(isIdentifier)) {
+    throw new InvalidIdentifierError(path);
+  }
+}
+
 export function assertArgs(
   command: string,
   args: readonly ArgDef[]

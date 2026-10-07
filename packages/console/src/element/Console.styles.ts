@@ -129,6 +129,21 @@ export const consoleStyles = css`
     --jolly-icon-size: 14px;
   }
 
+  .scope {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+    padding: 0 6px;
+    overflow: hidden;
+    border: 1px solid var(--jolly-border, rgb(255 255 255 / 12%));
+    border-radius: var(--jolly-radius-sm, 4px);
+    background: var(--jolly-control-bg, rgb(255 255 255 / 4%));
+    color: var(--jolly-text, #e6e6e6);
+    font-size: calc(var(--jolly-font-size, 11px) + 1px);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
   .field {
     display: flex;
     position: relative;

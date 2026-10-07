@@ -16,7 +16,7 @@ it `console`, which shadows the global.
 
 ```ts
 registerNamespace(
-  name: string,
+  address: string,
   meta?: { description?: string; }
 ): ConsoleNamespace;
 
@@ -29,6 +29,11 @@ interface ConsoleNamespace {
 
 A command `grow` in namespace `brush` runs as `/brush.grow`; a variable `size` is `brush.size`.
 Registering an existing namespace name replaces it and everything in it.
+
+A namespace nests under another when its address has dots: `pixelart.keybinds` holds
+`pixelart.keybinds.undo`. A parent exists as long as one of its nested namespaces is registered, with
+no description and no members, so separate features can share it. Registering the parent itself
+gives it a description and members without touching the nested namespaces.
 
 The console object itself is the root namespace. To register from editor features, see
 [Registering from features](./features.md).
@@ -96,7 +101,7 @@ Registration throws:
 | `MissingEnumValuesError` | an `enum` argument has no `enumValues` |
 | `InvalidRestArgumentError` | `rest` is not on the last argument, or not on a `string` |
 | `DuplicateArgumentError` | two arguments share a name |
-| `InvalidIdentifierError` | a name does not match `[A-Za-z_][A-Za-z0-9_-]*` |
+| `InvalidIdentifierError` | a name, or one dot-separated part of a namespace address, does not match `[A-Za-z_][A-Za-z0-9_-]*` |
 
 ## Variables
 
@@ -142,12 +147,37 @@ safely. `commands.unregister()` removes everything, built-ins included.
 
 | Command | Effect |
 |---|---|
+| `/cd [namespace]` | enters a namespace, `..` goes up, no name returns to the root; see [Scope](#scope) |
 | `/clear` | empties the scrollback |
-| `/help [name]` | lists everything, or describes one namespace, command or variable |
+| `/help [name]` | describes the scope, or one namespace, command or variable |
 | `/revert [count]` | undoes the last `count` changes, 1 by default; see [Reverting](#reverting) |
-| `/script [namespace]` | edits every variable, or one namespace's, as a script; see [Scripts](#scripts) |
+| `/script [namespace]` | edits the variables of the scope, or of one namespace, as a script; see [Scripts](#scripts) |
 
-All four can be overwritten.
+All five can be overwritten. At the root, `/help` lists everything and `/script` edits every
+variable.
+
+## Scope
+
+```ts
+readonly scope: RegisteredNamespace;
+readonly scoped: ConsoleRegistry;
+enter(address: string): RegisteredNamespace;
+```
+
+`enter()` sets the namespace that prompt lines are read in and returns it; `/cd` calls it. In
+scope `pixelart.keybinds`, `undo mod+u` sets `pixelart.keybinds.undo` and `/reset` runs
+`/pixelart.keybinds.reset`.
+
+- A name is looked up in the scope first, then as a full address, so root commands and other
+  namespaces stay reachable. A name in the scope hides the same address at the root.
+- `enter("..")` goes up one level and `enter("")` returns to the root. Any other address is
+  read relative to the scope first. An unknown namespace throws and keeps the scope.
+- When the scope's namespace is unregistered, `scope` falls back to the nearest parent still
+  registered, and returns to it if it is registered again.
+- `scoped` is the registry as the prompt reads it: lookups go through the scope first. `registry`
+  always takes full addresses.
+
+The scope lives in memory only and starts at the root.
 
 ## Reverting
 
@@ -230,8 +260,10 @@ type ScriptResult =
 ```
 
 `editScript()` reads every variable once, writes the text and emits `script-requested`; the
-mounted [`jolly-console`](./element.md#scripts) opens its editor on it. It throws on an unknown
-namespace or when there is no variable to edit. `/script [namespace]` calls it.
+mounted [`jolly-console`](./element.md#scripts) opens its editor on it. A namespace covers its
+nested namespaces too; with none, it edits the [scope](#scope), or everything at the root. It
+throws on an unknown namespace or when there is no variable to edit. `/script [namespace]` calls
+it.
 
 `parse()` never throws. `changes` holds only the keys whose value differs from the one read when
 the script was written, so a value changed elsewhere meanwhile is not overwritten unless its line
@@ -296,8 +328,11 @@ for (const scope of commands.registry) {
 }
 ```
 
-It also has `namespace(name)`, `namespaces()`, `resolveCommand(address)`,
-`resolveVariable(address)` and `root`.
+It also has `namespace(address)`, `namespaces()`, `children(namespace)`,
+`resolveCommand(address)`, `resolveVariable(address)`, `root` and `scope`. `namespaces()` lists
+nested namespaces and implicit parents too; `children()` lists only the namespaces one level
+below. A namespace's `name` is the last part of its `address`, and `implicit` is `true` for a parent
+that exists only through its nested namespaces.
 
 `CommandConsole` is an `Emitter` from `@openally/emitt`:
 
@@ -308,6 +343,7 @@ It also has `namespace(name)`, `namespaces()`, `resolveCommand(address)`,
 | `open-requested` | `open()` was called |
 | `close-requested` | `close()` was called, or a `closeOnExecute` command finished |
 | `opened` | the element showed its dialog |
+| `scope-changed` | `enter()` moved to another namespace |
 | `script-requested` | `editScript()` built a script, handed to the element as the argument |
 
 ```ts

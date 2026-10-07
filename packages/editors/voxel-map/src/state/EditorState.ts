@@ -4,6 +4,7 @@ import {
   LogQueue,
   type StorageAdapter
 } from "@jolly-pixel/ui";
+import { KeyBindingSettings } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
@@ -27,6 +28,7 @@ export class EditorState {
   readonly log = new LogQueue();
   readonly keyboardLayout = new KeyboardLayoutStore();
   readonly view: ViewStore;
+  readonly pixelArtKeyBindings: KeyBindingSettings;
 
   constructor(
     options: EditorStateOptions = {}
@@ -36,5 +38,9 @@ export class EditorState {
     } = options;
 
     this.view = new ViewStore(storage);
+    this.pixelArtKeyBindings = new KeyBindingSettings({
+      storage,
+      onDropped: (message) => this.log.push(message)
+    });
   }
 }

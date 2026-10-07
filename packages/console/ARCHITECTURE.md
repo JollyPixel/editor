@@ -90,10 +90,20 @@ See [ADR-0010](./docs/adr/0010-scripts-edit-variables-as-ini-all-or-nothing.md).
 
 - The last registration wins, for commands, variables and namespaces
   ([ADR-0003](./docs/adr/0003-last-registration-wins.md)).
+- Namespaces are flat entries keyed by dotted address; parents with no registration of their
+  own are derived ([ADR-0011](./docs/adr/0011-namespaces-nest-by-address.md)).
 - A handle only removes the entry it created.
 - Replacing or unregistering a command aborts its signal.
 - Every change emits `registry-changed`.
 - `registerConsoleFeatures` unregisters what it registered if a feature throws.
+
+## Scope
+
+- `CommandConsole` keeps the scope as an address; `scope` walks up to the nearest registered
+  namespace.
+- The prompt reads through `scoped`, a `ScopedRegistry` that tries `<scope>.<name>` first.
+  `registry`, the mirror and the server always use full addresses
+  ([ADR-0012](./docs/adr/0012-the-scope-is-a-prompt-view.md)).
 
 ## In an editor
 

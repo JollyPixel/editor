@@ -275,7 +275,8 @@ export class ConsoleServer {
   };
 
   #postSnapshot(): void {
-    const namespaces = [...this.#commands.registry.namespaces()];
+    const namespaces = [...this.#commands.registry.namespaces()]
+      .filter((namespace) => !namespace.implicit);
     const values: Record<string, ConsoleValue> = {};
     for (const namespace of namespaces) {
       for (const variable of namespace.variables()) {
@@ -299,7 +300,7 @@ export class ConsoleServer {
     namespace: RegisteredNamespace
   ): RemoteNamespaceData {
     return {
-      name: namespace.name,
+      name: namespace.address,
       description: namespace.description,
       commands: [...namespace.commands()].map(
         (command) => this.#describeCommand(command)

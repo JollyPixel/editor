@@ -10,8 +10,11 @@ import {
   type Token
 } from "../input/tokenize.ts";
 import {
+  isWithin,
+  relativeAddress
+} from "../registry/address.ts";
+import {
   compareText,
-  label,
   signature
 } from "../registry/format.ts";
 import type {
@@ -196,8 +199,12 @@ function addressCandidates(
     return matches.sort(byValue);
   }
 
-  const everyAddress = [...registry]
-    .flatMap((scope) => members(scope, mode));
+  const everyAddress = [...registry].flatMap(
+    (scope) => Array.from(
+      mode === "command" ? scope.commands() : scope,
+      (entry) => entryCandidate(entry, entry.address, mode)
+    )
+  );
 
   return corrections(everyAddress, typed);
 }
@@ -207,55 +214,92 @@ function scopedCandidates(
   typed: string,
   mode: AddressMode
 ): Candidate[] {
-  const dot = typed.indexOf(".");
+  const dot = typed.lastIndexOf(".");
   if (dot !== -1) {
     const namespace = registry.namespace(typed.slice(0, dot));
 
-    return namespace === undefined ? [] : members(namespace, mode);
+    return namespace === undefined ?
+      [] :
+      listing(registry, namespace, typed.slice(0, dot + 1), mode);
   }
 
-  const candidates = members(registry.root, mode);
-  for (const namespace of registry.namespaces()) {
-    if (mode === "command") {
-      candidates.push(...members(namespace, mode));
-    }
-    else {
-      const prefix = `${namespace.name}.`;
-      candidates.push({
-        key: prefix,
-        value: prefix,
-        label: prefix,
-        detail: namespace.description,
-        entry: namespace
-      });
-    }
+  const { root, scope } = registry;
+  const candidates = listing(registry, scope, "", mode);
+  if (scope !== root) {
+    candidates.push(...listing(registry, root, "", mode));
+  }
+
+  return distinct(candidates);
+}
+
+function listing(
+  registry: ConsoleRegistry,
+  namespace: RegisteredNamespace,
+  prefix: string,
+  mode: AddressMode
+): Candidate[] {
+  if (mode === "command") {
+    return [...registry]
+      .filter((scope) => scope === namespace ||
+        isWithin(scope.address, namespace.address))
+      .flatMap((scope) => Array.from(
+        scope.commands(),
+        (command) => entryCandidate(
+          command,
+          prefix + relativeAddress(command.address, namespace.address),
+          mode
+        )
+      ));
+  }
+
+  const candidates = Array.from(
+    namespace,
+    (entry) => entryCandidate(entry, prefix + entry.name, mode)
+  );
+  for (const child of registry.children(namespace)) {
+    const text = `${prefix}${child.name}.`;
+    candidates.push({
+      key: text,
+      value: text,
+      label: text,
+      detail: child.description,
+      entry: child
+    });
   }
 
   return candidates;
 }
 
-function members(
-  namespace: RegisteredNamespace,
-  mode: AddressMode
-): Candidate[] {
-  const entries = mode === "command" ? namespace.commands() : namespace;
-
-  return Array.from(entries, (entry) => entryCandidate(entry, mode));
-}
-
 function entryCandidate(
   entry: RegisteredMember,
+  address: string,
   mode: AddressMode
 ): Candidate {
-  const text = label(entry);
+  const text = entry.kind === "command" ? `/${address}` : address;
 
   return {
-    key: mode === "command" ? entry.address : text,
+    key: mode === "command" ? address : text,
     value: text,
     label: text,
     detail: entry.description,
     entry
   };
+}
+
+function distinct(
+  candidates: Candidate[]
+): Candidate[] {
+  const seen = new Set<string>();
+
+  return candidates.filter((candidate) => {
+    const key = candidate.value.toLowerCase();
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+
+    return true;
+  });
 }
 
 function staticValues(
