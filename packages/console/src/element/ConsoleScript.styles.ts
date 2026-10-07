@@ -13,6 +13,7 @@ export const consoleScriptStyles = css`
 
     display: block;
     font-size: calc(var(--jolly-font-size, 11px) + 1px);
+    outline: none;
   }
 
   .scroller {
