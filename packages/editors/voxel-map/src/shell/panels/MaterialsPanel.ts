@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
-import { html, css } from "lit";
-import { customElement } from "lit/decorators.js";
+import { html, css, nothing } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
@@ -22,6 +22,18 @@ export class MaterialsPanel extends WorkspaceElement {
       flex: 0 0 auto;
     }
   `;
+
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "shows-block-library"
+  })
+  declare showsBlockLibrary: boolean;
+
+  constructor() {
+    super();
+    this.showsBlockLibrary = true;
+  }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
@@ -48,18 +60,20 @@ export class MaterialsPanel extends WorkspaceElement {
     }
 
     return html`
-      <jolly-folder
-        flush
-        key="material-block-library"
-        label="Block Library"
-        storage-key="voxel-map:folder:material-block-library"
-      >
-        <block-library
-          .workspace=${workspace}
-          .editable=${false}
-          layout="compact"
-        ></block-library>
-      </jolly-folder>
+      ${this.showsBlockLibrary ? html`
+        <jolly-folder
+          flush
+          key="material-block-library"
+          label="Block Library"
+          storage-key="voxel-map:folder:material-block-library"
+        >
+          <block-library
+            .workspace=${workspace}
+            .editable=${false}
+            layout="compact"
+          ></block-library>
+        </jolly-folder>
+      ` : nothing}
       <material-library .workspace=${workspace}></material-library>
     `;
   }

@@ -167,6 +167,20 @@ test("the texture editor stays in Paint once it has its own dock", async({ page 
   await expect(page.getByRole("listbox", { name: "Blocks" })).toBeVisible();
 });
 
+test("the Materials pane shows its block library only while Blocks is not on screen", async({ page }) => {
+  const materialsLibrary = page.locator("materials-panel block-library");
+  await openPane(page, "Materials");
+  await expect(materialsLibrary).toBeVisible();
+
+  await dragTabToDock(page, "Blocks", "right");
+  await openPane(page, "Materials");
+  await expect(materialsLibrary).toHaveCount(0);
+  await expect(page.getByRole("listbox", { name: "Blocks" })).toHaveCount(1);
+
+  await page.locator("jolly-dock[key='right'] .resize-handle").dblclick();
+  await expect(materialsLibrary).toBeVisible();
+});
+
 test("the performance readout merges into the pane group it is dropped on", async({ page }) => {
   const readout = await performanceReadout(page);
   await page.keyboard.press(kPerformanceToggleKey);
