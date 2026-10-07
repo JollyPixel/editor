@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { CommandChange } from "@jolly-pixel/history";
+
 // Import Internal Dependencies
 import { PixelCollaboration } from "#src/network/PixelCollaboration.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
@@ -34,10 +37,11 @@ describe("PixelCollaboration", () => {
 
     canvas.onCursorMove?.({ x: 1, y: 1 });
     canvas.onStrokeProgress?.([{ x: 1, y: 1, color: { r: 0, g: 0, b: 0, a: 255 } }]);
-    canvas.document.emit("command", {
+    const resized = {
       action: "resized",
       metadata: { size: { x: 4, y: 4 } }
-    });
+    } as const;
+    canvas.document.emit("command", resized, CommandChange.local(resized, null));
     await nextFrame();
 
     assert.deepStrictEqual(

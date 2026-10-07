@@ -77,10 +77,10 @@ describe("narrowPixelCommand", () => {
 });
 
 describe("createPixelReconciler", () => {
-  test("replays a command through the remote apply path", () => {
+  test("replays a command through the pending replay path", () => {
     const applied: PixelNetworkCommand[] = [];
     const reconciler = createPixelReconciler({
-      applyRemoteCommand: (event) => applied.push(event as PixelNetworkCommand)
+      replayPendingCommand: (event) => applied.push(event as PixelNetworkCommand)
     });
 
     assert.strictEqual(reconciler.replay(stroke()), true);
@@ -92,7 +92,7 @@ describe("createPixelReconciler", () => {
 
   test("reverts absolute writes in place and refuses buffer-wide commands", () => {
     const reconciler = createPixelReconciler({
-      applyRemoteCommand: () => void 0
+      replayPendingCommand: () => void 0
     });
 
     assert.strictEqual(reconciler.revert([stroke()]), true);

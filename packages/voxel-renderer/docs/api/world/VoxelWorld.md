@@ -166,7 +166,7 @@ position.
 
 Turns and mirrors the layer content around the center of its voxels; the layer
 position does not change. Applying the inverse restores the voxels exactly.
-One [history](../core/VoxelHistory.md) step. Does nothing for the identity
+One [history](../core/VoxelEdits.md) step. Does nothing for the identity
 transform or an empty layer.
 
 The layer methods above that return nothing do nothing for an unknown layer.
@@ -206,9 +206,9 @@ Voxel counts per block id over every layer, visible or not.
 
 ## Writing voxels
 
-Positions are world positions. With [history](../core/VoxelHistory.md)
-enabled, each call is one undo step unless it runs inside a transaction or
-`history.begin()` / `commit()`. Placing a voxel in an unknown layer throws;
+Positions are world positions. With a [history](../core/VoxelEdits.md)
+registered, each call is one undo step unless it runs inside a transaction or
+an open step. Placing a voxel in an unknown layer throws;
 removing from one does nothing.
 
 #### `setVoxel(layerName: string, options: VoxelSetOptions): void`
@@ -326,7 +326,7 @@ have. Nests.
 ## Recorders
 
 A recorder receives the cells changed by each emitted voxel write, read before
-the write. [`VoxelHistory`](../core/VoxelHistory.md) is one.
+the write. [`VoxelEdits`](../core/VoxelEdits.md) adds one while a history listens.
 
 ```ts
 interface VoxelEditRecorder {

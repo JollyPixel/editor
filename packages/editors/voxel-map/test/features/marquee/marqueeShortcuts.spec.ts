@@ -12,11 +12,11 @@ import {
   type KeyCode
 } from "@jolly-pixel/controls";
 import {
-  VoxelHistory,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { mapHistoryOf } from "../../helpers/mapHistory.ts";
 import { bindMarqueeShortcuts } from "../../../src/features/marquee/marqueeShortcuts.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
@@ -59,7 +59,7 @@ function setup() {
   const tool = new ToolStore();
   const placement = new MapPlacement({
     world,
-    history: new VoxelHistory(world, { enabled: true }),
+    history: mapHistoryOf(world),
     selection,
     mapDocument: mapDocumentOf(world)
   });

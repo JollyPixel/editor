@@ -8,7 +8,7 @@ import {
   voxelPatchCells,
   type VoxelCoord
 } from "../../../src/document/world/index.ts";
-import { VoxelHistory } from "../../../src/document/VoxelHistory.ts";
+import { worldHistory } from "../../helpers/history.ts";
 import {
   isVoxelLayerCommand,
   type VoxelWorldContentCommand
@@ -262,7 +262,7 @@ describe("VoxelWorld.transaction", () => {
 
   it("stays quiet inside silently()", () => {
     const { world, commands } = makeWorld();
-    const history = new VoxelHistory(world, { enabled: true });
+    const history = worldHistory(world);
 
     world.silently(() => world.transaction(() => {
       world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
@@ -304,7 +304,7 @@ describe("VoxelWorld.transaction - dirty chunks", () => {
 describe("VoxelWorld.transaction - history", () => {
   it("records the whole transaction as one undo step", () => {
     const { world } = makeWorld();
-    const history = new VoxelHistory(world, { enabled: true });
+    const history = worldHistory(world);
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     world.transaction(() => {
@@ -321,7 +321,7 @@ describe("VoxelWorld.transaction - history", () => {
 
   it("does not record an undo replayed inside a transaction", () => {
     const { world } = makeWorld();
-    const history = new VoxelHistory(world, { enabled: true });
+    const history = worldHistory(world);
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     world.transaction(() => history.undo());
@@ -398,7 +398,7 @@ describe("VoxelWorld.patchVoxels", () => {
 
   it("records one undo step when the history is enabled", () => {
     const { world } = makeWorld();
-    const history = new VoxelHistory(world, { enabled: true });
+    const history = worldHistory(world);
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     world.patchVoxels(kLayer, [

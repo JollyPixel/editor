@@ -18,7 +18,7 @@ import {
 import type {
   HistoryScopeState,
   HistoryStepInfo
-} from "@jolly-pixel/network/client";
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";

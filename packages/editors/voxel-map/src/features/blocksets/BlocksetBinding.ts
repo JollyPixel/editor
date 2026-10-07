@@ -24,10 +24,7 @@ import { BlocksetAtlasBridge } from "./BlocksetAtlasBridge.ts";
 
 // CONSTANTS
 export const BLOCKSET_DOCUMENT_KIND = blocksetDocumentKind({
-  maxSize: 2048,
-  history: {
-    enabled: true
-  }
+  maxSize: 2048
 });
 
 export interface OpenedBlockset {

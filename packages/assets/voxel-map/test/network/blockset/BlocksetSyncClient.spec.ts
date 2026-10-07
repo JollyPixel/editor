@@ -6,10 +6,19 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { PixelSyncTarget } from "@jolly-pixel/asset.pixel-art/client";
+import {
+  ChangeReceipts,
+  CommandChange
+} from "@jolly-pixel/history";
+import type {
+  PixelCommandListener,
+  PixelSyncTarget
+} from "@jolly-pixel/asset.pixel-art/client";
 import {
   encodePixelBytes,
   encodePngPixels,
+  toDocumentCommand,
+  type PixelChange,
   type PixelCommand,
   NormalMapConfig,
   type NormalMapData,
@@ -50,30 +59,47 @@ interface LoadedSnapshot {
 }
 
 class PixelsRecorder implements PixelSyncTarget {
-  readonly listeners = new Set<(command: PixelCommand) => void>();
+  readonly receipts = new ChangeReceipts<PixelChange>();
+  readonly listeners = new Set<PixelCommandListener>();
   readonly remote: PixelCommand[] = [];
+  readonly replayed: PixelCommand[] = [];
   readonly loaded: LoadedSnapshot[] = [];
 
   on(
     _event: "command",
-    listener: (command: PixelCommand) => void
+    listener: PixelCommandListener
   ): void {
     this.listeners.add(listener);
   }
 
   off(
     _event: "command",
-    listener: (command: PixelCommand) => void
+    listener: PixelCommandListener
   ): void {
     this.listeners.delete(listener);
   }
 
   emitLocal(
+    event: PixelCommand,
+    basis?: number
+  ): PixelChange {
+    const change: PixelChange = CommandChange.local(
+      toDocumentCommand(event),
+      null,
+      [],
+      basis
+    );
+    for (const listener of this.listeners) {
+      listener(event, change);
+    }
+
+    return change;
+  }
+
+  replayPendingCommand(
     event: PixelCommand
   ): void {
-    for (const listener of this.listeners) {
-      listener(event);
-    }
+    this.replayed.push(event);
   }
 
   applyRemoteCommand(
@@ -151,9 +177,8 @@ describe("BlocksetSyncClient", () => {
 
     pixels.emitLocal({
       action: "stroke",
-      metadata: { color: kBlack, positions: [{ x: 0, y: 0 }] },
-      originTimestamp: 42
-    });
+      metadata: { color: kBlack, positions: [{ x: 0, y: 0 }] }
+    }, 7);
     blockset.defineBlock(makeBlockDef(3, "cube"));
     blockset.resizeTiles(16);
 
@@ -165,7 +190,8 @@ describe("BlocksetSyncClient", () => {
         ["tile-size-updated", 3, "client-A"]
       ]
     );
-    assert.equal(room.sentCommands[0].timestamp, 42);
+    assert.equal(room.sentCommands[0].basis, 7);
+    assert.equal(pixels.receipts.attached, true);
   });
 
   it("loads PNG pixels before the commands that follow the snapshot", async() => {

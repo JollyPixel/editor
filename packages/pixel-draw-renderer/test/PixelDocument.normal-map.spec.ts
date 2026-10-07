@@ -40,10 +40,10 @@ describe("PixelDocument normal map", () => {
     doc.disableNormalMap();
     assert.equal(doc.normalMap, null);
 
-    assert.equal(doc.undo()?.undo[0].action, "normal-map-toggled");
+    assert.equal(doc.undo(), true);
     assert.notEqual(doc.normalMap, null);
     assert.equal(events.at(-1)?.action, "normal-map-toggled");
-    assert.equal(doc.undo()?.undo[0].action, "normal-map-toggled");
+    assert.equal(doc.undo(), true);
     assert.equal(doc.normalMap, null);
     assert.deepEqual(changes, [null, null, null, null]);
   });
@@ -67,8 +67,7 @@ describe("PixelDocument normal map", () => {
       action: "normal-map-defaults-patched",
       metadata: {
         patch: { strength: 2 }
-      },
-      originTimestamp: events.at(-1)?.originTimestamp
+      }
     });
     doc.redo();
     assert.equal(doc.normalMap?.defaults.strength, 5);
@@ -87,9 +86,9 @@ describe("PixelDocument normal map", () => {
 
     assert.equal(events.length, 0);
     assert.equal(doc.normalMap?.defaults.strength, 2);
-    assert.equal(doc.undo()?.undo[0].action, "normal-map-toggled");
+    assert.equal(doc.undo(), true);
     assert.equal(doc.normalMap, null);
-    assert.equal(doc.history.canUndo, false);
+    assert.equal(doc.canUndo, false);
   });
 
   test("edits are ignored while the feature is off", () => {
@@ -102,7 +101,7 @@ describe("PixelDocument normal map", () => {
     doc.disableNormalMap();
 
     assert.equal(events.length, 0);
-    assert.equal(doc.history.canUndo, false);
+    assert.equal(doc.canUndo, false);
   });
 
   describe("remote commands", () => {
@@ -123,7 +122,7 @@ describe("PixelDocument normal map", () => {
 
       assert.deepEqual(zoneIds(doc), ["a"]);
       assert.equal(events.length, 0);
-      assert.equal(doc.history.canUndo, false);
+      assert.equal(doc.canUndo, false);
     });
 
     test("a remote region deletion removes its zone", () => {
@@ -141,7 +140,7 @@ describe("PixelDocument normal map", () => {
     });
   });
 
-  test("loadSnapshot replaces the config and clears history", () => {
+  test("loadSnapshot replaces the config and refuses the steps it changed", () => {
     const doc = createNormalMapDocument();
     doc.enableNormalMap();
 
@@ -152,7 +151,7 @@ describe("PixelDocument normal map", () => {
       NormalMapConfig.create({ strength: 3 }).toJSON()
     );
     assert.equal(doc.normalMap?.defaults.strength, 3);
-    assert.equal(doc.history.canUndo, false);
+    assert.equal(doc.canUndo, false);
 
     doc.loadSnapshot({ x: 2, y: 2 }, new Uint8ClampedArray(16));
     assert.equal(doc.normalMap, null);

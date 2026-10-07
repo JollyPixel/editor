@@ -21,6 +21,10 @@ import type {
 // Import Internal Dependencies
 import { MapDocument } from "../document/MapDocument.ts";
 import { bindHistoryShortcuts } from "../shared/historyShortcuts.ts";
+import {
+  createMapHistory,
+  skippedMessage
+} from "../shared/mapHistory.ts";
 import { bindToolShortcuts } from "../shared/toolShortcuts.ts";
 import type {
   EditorState,
@@ -196,15 +200,19 @@ export class EditorScene extends Systems.Scene {
       selection: state.selection,
       mapDocument
     });
+    const mapHistory = createMapHistory(view.document);
+    mapHistory.on("skipped", (_scope, step) => {
+      state.log.push(skippedMessage(step));
+    });
     const placement = new MapPlacement({
       world: view.document.world,
-      history: view.document.history,
+      history: mapHistory,
       selection: state.selection,
       mapDocument,
       conceal: (layerName) => localVisibility.conceal(layerName)
     });
     const history = new MapHistory({
-      history: view.document.history,
+      history: mapHistory,
       placement
     });
     const usage = new BlockUsageStore({
@@ -275,6 +283,7 @@ export class EditorScene extends Systems.Scene {
         block: state.block,
         selection: state.selection,
         pointer: state.pointer,
+        history: mapHistory,
         color: session.identity.color,
         onCursorChange: (cursor) => peerBrushes.publishLocalCursor(cursor),
         onPaintBlocked: () => {
@@ -391,6 +400,7 @@ export class EditorScene extends Systems.Scene {
       () => blocksets.dispose(),
       () => usage.dispose(),
       () => placement.dispose(),
+      () => mapHistory.dispose(),
       () => layers.dispose(),
       () => templates.dispose(),
       () => localVisibility.dispose(),

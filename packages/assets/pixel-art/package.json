@@ -55,6 +55,7 @@
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*"
   },

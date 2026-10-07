@@ -21,7 +21,7 @@ UV region tools, undo/redo, and zoom/pan behind one `PixelArtCanvas` API.
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle and shape select**: drag out a rectangle or select a connected region
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
-- **Undo/redo**: optional bounded history over strokes, resizes, texture replaces, and UV region changes;
+- **Undo/redo**: optional history over strokes, resizes, texture replaces, and UV region changes, built on `@jolly-pixel/history`, refusing a step a peer changed since;
 - **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag panning and left-drag panning while a pan modifier is held;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 
@@ -127,7 +127,7 @@ Each method returns `true` when it handled the intent, so the host knows whether
 
 ### Undo/redo
 
-Disabled by default. Enable it and (optionally) track button-enabled state:
+Disabled by default. Enable it and (optionally) track button-enabled state, or pass `{ history, scope }` to record into a `CommandHistory` the host shares with other documents:
 
 ```ts
 const manager = new PixelArtCanvas(container, {
@@ -147,7 +147,7 @@ manager.redo();
 ```
 
 > [!TIP]
-> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#undo--redo--canundo--canredo) and [history/HistoryStack.md](./docs/history/HistoryStack.md).
+> Read [PixelArtCanvas.md](./docs/PixelArtCanvas.md#undo--redo--canundo--canredo) and [history/PixelHistory.md](./docs/history/PixelHistory.md).
 
 ## 📚 API
 
@@ -162,6 +162,7 @@ manager.redo();
 - [`PixelDocumentState`](./docs/PixelDocumentState.md)
 - [`ColorPalette`](./docs/ColorPalette.md)
 - [`PixelCommand`](./docs/PixelCommand.md)
+- [Pixel history](./docs/history/PixelHistory.md)
 - Normal map
   - [`NormalMap`](./docs/normal/NormalMap.md)
   - [`NormalMapConfig`](./docs/normal/NormalMapConfig.md)
@@ -174,7 +175,6 @@ manager.redo();
 - UV
   - [`UVMap`](./docs/uv/UVMap.md)
   - [`UVRegion`](./docs/uv/UVRegion.md)
-- [`HistoryStack`](./docs/history/HistoryStack.md)
 
 ## 🧩 Types
 
@@ -206,7 +206,7 @@ export interface RGBA {
 
 ## 🧪 Benchmarks
 
-The default command measures `PixelBuffer`, editing tools, history, color
+The default command measures `PixelBuffer`, editing tools, undo grouping, color
 conversion, and normal map generation without a DOM. The browser command starts Vite and
 Chromium to measure canvas synchronization and frame rendering.
 

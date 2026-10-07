@@ -41,11 +41,7 @@ import { sessionAnimationSets } from "./animationSetSource.ts";
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
 const kModelKind = voxelModelDocumentKind();
-const kTextureKind = pixelArtDocumentKind({
-  history: {
-    enabled: true
-  }
-});
+const kTextureKind = pixelArtDocumentKind();
 const kAnimationKind = voxelAnimationDocumentKind();
 
 export type ModelTextureLease = AssetLease<

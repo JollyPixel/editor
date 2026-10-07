@@ -313,14 +313,19 @@ export type BlocksetDocumentCommand =
 
 export type BlocksetDocumentCommandAction = BlocksetDocumentCommand["action"];
 
-export type VoxelCommandOrigin = "local" | "remote";
+export type VoxelCommandOrigin = "local" | "remote" | "replay";
 
 export interface VoxelCommandContext {
   /**
    * `"local"` for a change made on this engine, `"remote"` for a command
-   * replayed with `apply()` on behalf of another peer.
+   * replayed with `apply()` on behalf of another peer, `"replay"` for this
+   * client's pending command applied or rolled back around a peer's.
    */
   origin: VoxelCommandOrigin;
+  /**
+   * The peer behind a `"remote"` command, when `apply()` was given one.
+   */
+  clientId?: string | null;
   /**
    * What a `"block-defined"` command changed compared with the definition it
    * replaced. Set by `apply()` and absent on every other command.

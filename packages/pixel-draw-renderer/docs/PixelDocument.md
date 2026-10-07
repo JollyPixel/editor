@@ -1,14 +1,16 @@
 # PixelDocument
 
-The texture buffer, UV map and history of one pixel-art texture, without any view. A network client can keep it in sync with no canvas mounted, and several [`PixelArtCanvas`](./PixelArtCanvas.md) instances can edit the same document through the `document` option.
+The texture buffer, UV map and normal map settings of one pixel-art texture, without any view. A network client can keep it in sync with no canvas mounted, and several [`PixelArtCanvas`](./PixelArtCanvas.md) instances can edit the same document through the `document` option. It is a history source for [pixel history](./history/PixelHistory.md).
 
 ```ts
 const doc = new PixelDocument({
-  size: { x: 64, y: 32 },
-  history: { enabled: true }
+  size: { x: 64, y: 32 }
 });
 
-const canvas = new PixelArtCanvas(parent, { document: doc });
+const canvas = new PixelArtCanvas(parent, {
+  document: doc,
+  history: { enabled: true }
+});
 ```
 
 ## Constructor
@@ -19,10 +21,6 @@ interface PixelDocumentOptions {
   defaultColor?: ByteColorInput;
   maxSize?: number;
   init?: HTMLCanvasElement;
-  history?: {
-    enabled?: boolean;
-    limit?: number;
-  };
 }
 ```
 
@@ -33,7 +31,7 @@ interface PixelDocumentOptions {
 ```ts
 readonly buffer: CanvasBuffer;
 readonly uv: UVMap;
-readonly history: History;
+readonly receipts: ChangeReceipts<PixelChange>;
 readonly palette: ColorPalette;
 ```
 
@@ -41,9 +39,9 @@ readonly palette: ColorPalette;
 
 `palette` holds the document's ten [saved colors](./ColorPalette.md).
 `changePaletteColor(index: number, color: RGBA8): void` changes one slot,
-records undo/redo when history is enabled, and emits a document command.
+emits a change and a document command.
 Unchanged colors are ignored. Invalid indices or channels throw before any
-state, command or history change.
+state, change or command.
 
 ## UV ownership
 
@@ -54,22 +52,22 @@ disownUvRegions(filter: UVRegionFilter): () => void;
 ownsUvRegion(id: string): boolean;
 ```
 
-The document owns every UV region until `disownUvRegions` hands the ones `filter` matches to another document; calling the returned function takes them back. Several filters can be active at once. A disowned region stays editable, but its changes emit no command and record no history, and remote UV commands and snapshot regions with its id are ignored. Snapshots keep it in place. Owned regions and pixel edits are unaffected.
+The document owns every UV region until `disownUvRegions` hands the ones `filter` matches to another document; calling the returned function takes them back. Several filters can be active at once. A disowned region stays editable, but its changes emit no change and no command, and remote UV commands and snapshot regions with its id are ignored. Snapshots keep it in place. Owned regions and pixel edits are unaffected.
 
 ## Events
 
 | Event | Payload | When |
 |---|---|---|
-| `command` | [`PixelCommand`](./PixelCommand.md) | a local edit, undo or redo produced a command; remote commands and snapshots never emit it |
+| `change` | `PixelChange` | a command applied: a local edit, undo or redo (`origin` `local`), a peer's command (`remote`, naming its `clientId`) or this client's pending command replayed (`replay`) |
+| `command` | [`PixelCommand`](./PixelCommand.md), `PixelChange` | a local edit, undo or redo produced a command, after its `change`; remote commands and snapshots never emit it |
 | `palette-changed` | `number \| null` | one palette slot changed, or a snapshot replaced the whole palette (`null`); includes remote changes and undo/redo |
 | `changed` | `{ bounds }` | pixels were written |
 | `resized` | `{ size }` | the texture was resized |
 | `replaced` | `{ size }` | all pixels were replaced (texture load, remote replace, snapshot, history) |
 | `draw-end` | none | a stroke, fill or selection edit landed, local or remote, and after undo or redo |
-| `history-changed` | `HistoryState` | the history stack changed; after an undo or redo, once every command of the entry is applied |
 | `islands-changed` | none | the [`islands`](#normal-map) map is out of date |
 | `normal-map-changed` | `{ config, regionIds }` | the normal map settings changed, locally or remotely; `regionIds` lists the regions whose zone changed, `null` when every island is affected |
-| `reset` | none | a remote resize, texture replacement or snapshot replaced the texture; views drop transient state such as a floating selection |
+| `reset` | `"load"` | a snapshot replaced the document |
 
 ## Queries
 
@@ -90,8 +88,8 @@ paintSelectionEdit(edit: SelectionEdit): void;
 resize(size: Vec2): void;
 replaceTexture(source: HTMLCanvasElement | HTMLImageElement): void;
 clearTexture(keepMask?: Uint8Array): void;
-undo(): HistoryEntry | null;
-redo(): HistoryEntry | null;
+batch<T>(edit: () => T): T;
+groupEditsWith(grouping: EditGrouping): () => void;
 
 interface GlobalFill {
   positions: Vec2[];
@@ -108,11 +106,21 @@ interface SelectionEdit {
 }
 ```
 
-`paint*` methods write the pixels, then record them. `recordStroke` records pixels the brush already wrote to the buffer. `paintSelectionEdit` writes `afterColors` at `positions` and keeps both footprints in the history entry so undo and redo can restore the selection. Each edit records one [history entry](./history/HistoryStack.md#entries) and emits its commands. `paintPixels` ignores an empty list; pass `beforeColor` when every pixel had that color, which skips sampling them. `paintGlobalFill` paints `positions` and emits one `global-fill` command; every receiver recolors the pixels of `fromColor` itself.
+`paint*` methods write the pixels, then record them. `recordStroke` records pixels the brush already wrote to the buffer. `paintSelectionEdit` writes `afterColors` at `positions`; the canvas records the footprints in the same history step. Each edit emits one `change`, carrying the commands that undo it, and one command. `paintPixels` ignores an empty list; pass `beforeColor` when every pixel had that color, which skips sampling them. `paintGlobalFill` paints `positions` and emits one `global-fill` command, every receiver recoloring the pixels of `fromColor` itself; its change carries the equivalent `stroke`.
 
-`resize` emits `resized`. Its history entry holds the texture before and after, so undo and redo restore the exact pixels and emit `texture-replaced`.
+`resize` emits `resized`. Its change holds the texture before it, so undo and redo restore the exact pixels and emit `texture-replaced`.
 
-`undo` and `redo` apply the entry's commands through the same path as remote commands, emit them with `originTimestamp` set to the entry's timestamp, emit `draw-end`, then `history-changed`.
+`batch` runs `edit` as one history step when a grouping is set: `groupEditsWith` sets it, usually to `(edit) => history.record(scope, null, edit)`, and returns a function that removes it. Without one, `batch` just calls `edit`. A canvas sets it for its document.
+
+## History source
+
+```ts
+type PixelChange = CommandChange<DocumentCommand, null>;
+
+applyStep(command: DocumentCommand, basis: number | undefined): PixelChange | null;
+```
+
+`applyStep` applies an undo or redo command as a local edit, carrying `basis`: it emits the change, with the commands undoing it read before it applied, then the command and `draw-end`. It returns `null` and changes nothing when the command no longer applies, such as a move of a deleted UV region. `receipts` carries the server's answers about local changes; a sync client attaches it. See [pixel history](./history/PixelHistory.md).
 
 ## Normal map
 
@@ -137,14 +145,15 @@ deleteNormalMapZone(regionId: string): void;
 
 `useIslandFaces` builds the islands from the given faces instead of the UV regions, for a host that places its faces itself, such as a voxel blockset. Region changes then leave the islands alone: the host calls `invalidateIslands` when its faces change, and a resize or replace still rebuilds them. The returned function goes back to the UV regions, unless another `useIslandFaces` call replaced these faces since.
 
-Each edit records one history entry and emits one [command](./normal/NormalMapConfig.md#commands). `enableNormalMap` defaults to `NormalMapConfig.create()`. A defaults patch sends only the patched fields. Patches and zone edits are ignored while the feature is off. An invalid setting throws `InvalidNormalMapSettingsError` and records nothing.
+Each edit emits one change and one [command](./normal/NormalMapConfig.md#commands). `enableNormalMap` defaults to `NormalMapConfig.create()`. A defaults patch sends only the patched fields. Patches and zone edits are ignored while the feature is off. An invalid setting throws `InvalidNormalMapSettingsError` and records nothing.
 
-Deleting a UV region the document owns removes its zone in the same history entry, and undo restores both. An external region keeps its zone, which the generator ignores while the region is missing.
+Deleting a UV region the document owns removes its zone in the same change, and undo restores both. An external region keeps its zone, which the generator ignores while the region is missing.
 
 ## Remote state
 
 ```ts
-applyRemoteCommand(command: PixelCommand): void;
+applyRemoteCommand(command: PixelCommand, clientId?: string | null): void;
+replayPendingCommand(command: PixelCommand): void;
 loadSnapshot(
   size: Vec2,
   pixels: Uint8ClampedArray,
@@ -155,4 +164,4 @@ loadSnapshot(
 runLocalRestore<T>(fn: () => T): T;
 ```
 
-Remote commands mutate the document without recording history or emitting `command`. They are applied by the document's [state](./PixelDocumentState.md), the same applier a headless server uses. A remote resize or texture replacement clears history, and `loadSnapshot` replaces pixels, UV regions and normal map settings and clears history. A snapshot without `normalMap` turns the feature off. `runLocalRestore` runs `fn` with the same suppression, for restoring state that must not be broadcast: edits made inside it record no history and emit no command, undo and redo included.
+Remote commands mutate the document and emit a `remote` change naming `clientId`, but no `command`. They are applied by the document's [state](./PixelDocumentState.md), the same applier a headless server uses. `replayPendingCommand` applies this client's pending command again after a peer's, as a `replay` change; a sync client's reconciler calls it. `loadSnapshot` replaces pixels, UV regions and normal map settings and emits `reset` with `"load"`. A snapshot without `normalMap` turns the feature off. `runLocalRestore` runs `fn` without recording, for restoring state that must not be broadcast: edits made inside it emit no change and no command.

@@ -1,0 +1,46 @@
+{
+  "name": "@jolly-pixel/history",
+  "description": "Command documents and per-person undo history that survives collaboration",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "prepublishOnly": "tsc -b",
+    "build": "tsc -b",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/history"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@openally/emitt": "1.1.0"
+  }
+}

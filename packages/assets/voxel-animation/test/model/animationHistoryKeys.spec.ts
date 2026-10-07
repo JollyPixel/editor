@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { CommandHistory } from "@jolly-pixel/network/client";
+import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import { AnimationDocument } from "#src/model/AnimationDocument.ts";

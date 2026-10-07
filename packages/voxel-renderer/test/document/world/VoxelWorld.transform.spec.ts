@@ -8,7 +8,7 @@ import {
   voxelBlockId,
   voxelTransform
 } from "../../../src/document/world/index.ts";
-import { VoxelHistory } from "../../../src/document/VoxelHistory.ts";
+import { worldHistory } from "../../helpers/history.ts";
 import {
   VoxelTransform,
   type VoxelTransformOptions
@@ -124,7 +124,7 @@ describe("VoxelWorld.transformLayer", () => {
 
   it("is undone and redone as one history step", () => {
     const world = makeWorld();
-    const history = new VoxelHistory(world, { enabled: true });
+    const history = worldHistory(world);
     const original = cellsOf(world);
 
     world.transformLayer("Ground", { rotation: 3, flipX: true });

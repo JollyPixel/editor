@@ -24,7 +24,7 @@
 - `"lambert"` (default) or `"standard"` (PBR) material modes
 - Opaque, masked, and blended block surfaces with configurable sides and mask cutoff
 - `save()` / `load()` round-trips the full world state as plain JSON
-- Optional undo/redo of voxel edits (`history: { enabled: true }`), grouped per stroke with `begin()` / `commit()`
+- Undo/redo of voxel edits on a `CommandHistory` from `@jolly-pixel/history`, refusing a step a peer changed since
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
 - Inspector (`view.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
@@ -138,7 +138,7 @@ the renderer package does not depend on an ECS runtime.
 - [`VoxelDocument`](docs/api/core/VoxelDocument.md) (voxel data, headless) and
   [`VoxelView`](docs/api/core/VoxelView.md) (the meshes drawn from it).
 - [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md),
-  [`VoxelHistory` undo/redo](docs/api/core/VoxelHistory.md), and
+  [`VoxelEdits` undo source](docs/api/core/VoxelEdits.md), and
   [commands](docs/api/core/commands.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),

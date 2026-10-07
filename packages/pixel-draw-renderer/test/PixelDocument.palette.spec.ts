@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PixelDocument } from "#src/PixelDocument.ts";
+import { HistoryDocument } from "./helpers/document/HistoryDocument.ts";
 import { ColorPalette } from "#src/palette/ColorPalette.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 
@@ -12,11 +13,8 @@ const kColor = { r: 12, g: 34, b: 56, a: 128 };
 
 describe("Pixel Document palette", () => {
   test("slot changes, undo and redo reach another document without echo", () => {
-    const local = new PixelDocument({
-      size: { x: 1, y: 1 },
-      history: { enabled: true }
-    });
-    const peer = new PixelDocument({ size: { x: 1, y: 1 } });
+    const local = new HistoryDocument({ size: { x: 1, y: 1 } });
+    const peer = new HistoryDocument({ size: { x: 1, y: 1 } });
     const echoed: PixelCommand[] = [];
     const before = local.palette.colorAt(3);
     peer.on("command", (command) => echoed.push(command));
@@ -29,14 +27,11 @@ describe("Pixel Document palette", () => {
     local.redo();
     assert.deepEqual(peer.palette.colorAt(3), kColor);
     assert.equal(echoed.length, 0);
-    assert.equal(peer.history.canUndo, false);
+    assert.equal(peer.canUndo, false);
   });
 
   test("unchanged colors and invalid edits create no history or commands", () => {
-    const doc = new PixelDocument({
-      size: { x: 1, y: 1 },
-      history: { enabled: true }
-    });
+    const doc = new HistoryDocument({ size: { x: 1, y: 1 } });
     const commands: PixelCommand[] = [];
     doc.on("command", (command) => commands.push(command));
     doc.changePaletteColor(0, doc.palette.colorAt(0));
@@ -47,19 +42,16 @@ describe("Pixel Document palette", () => {
       assert.throws(() => doc.changePaletteColor(0, { ...kColor, r }), TypeError);
     }
     assert.equal(commands.length, 0);
-    assert.equal(doc.history.canUndo, false);
+    assert.equal(doc.canUndo, false);
   });
 
-  test("snapshot replacement clears history and restores legacy defaults", () => {
-    const doc = new PixelDocument({
-      size: { x: 1, y: 1 },
-      history: { enabled: true }
-    });
+  test("snapshot replacement refuses the steps it changed and restores legacy defaults", () => {
+    const doc = new HistoryDocument({ size: { x: 1, y: 1 } });
     doc.changePaletteColor(0, kColor);
     const colors = ColorPalette.create().withColor(9, kColor).toJSON();
     doc.loadSnapshot({ x: 1, y: 1 }, new Uint8ClampedArray(4), [], null, colors);
     assert.deepEqual(doc.palette.colorAt(9), kColor);
-    assert.equal(doc.history.canUndo, false);
+    assert.equal(doc.canUndo, false);
     doc.loadSnapshot({ x: 1, y: 1 }, new Uint8ClampedArray(4));
     assert.deepEqual(doc.palette.toJSON(), ColorPalette.create().toJSON());
   });

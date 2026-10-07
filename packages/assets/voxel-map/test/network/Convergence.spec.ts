@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import type { HistoryStepInfo } from "@jolly-pixel/history";
 import {
   rankBetween,
   VoxelDocument,
@@ -25,6 +26,10 @@ import type {
 import { makeAddedCommand } from "../helpers/networkCommands.ts";
 import { LiveRoom } from "../helpers/liveRoom.ts";
 import { createMockRoom } from "../helpers/room.ts";
+import {
+  mapHistory,
+  MAP_SCOPE
+} from "../helpers/history.ts";
 
 // CONSTANTS
 const kOrigin = {
@@ -70,9 +75,20 @@ function moveToTop(
   };
 }
 
-function setup(
-  history = false
-) {
+function peerPatch(
+  state: VoxelMapState,
+  layerName: string,
+  blockId: number
+): VoxelMapNetworkCommand {
+  return {
+    action: "voxels-patched",
+    layerId: state.world.getLayer(layerName)!.id,
+    metadata: { cells: [kOrigin.x, kOrigin.y, kOrigin.z, blockId, 0] },
+    ...header("A", 4)
+  };
+}
+
+function setup() {
   const server = new LiveRoom<VoxelMapState, VoxelMapNetworkCommand>(
     voxelMapAssetKind({ chunkSize: 16 })
   );
@@ -82,10 +98,7 @@ function setup(
   }));
 
   const room = createMockRoom("B");
-  const document = new VoxelDocument({
-    chunkSize: 16,
-    history: { enabled: history }
-  });
+  const document = new VoxelDocument({ chunkSize: 16 });
   new VoxelSyncClient({ room, document });
 
   function deliver(): void {
@@ -205,10 +218,11 @@ describe("voxel-map convergence", () => {
   });
 
   test("a pending undo is rebased with the inverse of its own writes", () => {
-    const { server, room, document, deliver, flush } = setup(true);
+    const { server, room, document, deliver, flush } = setup();
+    const history = mapHistory(document);
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    document.history.undo();
+    history.undo(MAP_SCOPE);
     server.receive("A", moveToTop(server.state, "L3"));
     deliver();
     assert.strictEqual(room.resyncs, 0);
@@ -218,6 +232,42 @@ describe("voxel-map convergence", () => {
     deliver();
 
     assert.deepStrictEqual(worldOf(document), worldOf(server.state));
+  });
+
+  test("a peer write landing after the server confirmed an edit refuses its step", () => {
+    const { server, document, deliver, flush } = setup();
+    const history = mapHistory(document);
+    const refused: HistoryStepInfo[] = [];
+    history.on("refused", (_scope, step) => refused.push(step));
+
+    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    flush();
+    deliver();
+    server.receive("A", peerPatch(server.state, "L1", 5));
+    deliver();
+
+    assert.deepStrictEqual(refused, [
+      { label: "Edit voxels", refused: { reason: "peer", clientId: "A" } }
+    ]);
+  });
+
+  test("an undo carries the version of its step, so the server refuses it over a newer peer write", () => {
+    const { server, document, deliver, flush } = setup();
+    const history = mapHistory(document);
+
+    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    flush();
+    deliver();
+    server.receive("A", peerPatch(server.state, "L1", 5));
+    history.undo(MAP_SCOPE);
+    flush();
+    deliver();
+
+    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 5);
+    assert.deepStrictEqual(worldOf(document), worldOf(server.state));
+    assert.deepStrictEqual(history.state(MAP_SCOPE).refused, [
+      { label: "Edit voxels", refused: { reason: "server" } }
+    ]);
   });
 
   test("a pending new layer is rebased under a remote layer move", () => {

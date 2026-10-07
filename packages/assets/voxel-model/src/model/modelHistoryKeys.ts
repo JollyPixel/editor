@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import { sameTrackPath } from "@jolly-pixel/asset.voxel-animation/client";
-import type {
-  HistoryGuard,
-  HistoryKeys
-} from "@jolly-pixel/network/client";
+import {
+  KeyedGuard,
+  type HistoryKeys,
+  type KeyedGuardEntry
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
@@ -38,17 +39,17 @@ export function modelHistoryKeys(
       ...voxelModelConflictKeys(change.command),
       ...containerKeysOf(tree, change)
     ],
-    guards: (commands) => commands.flatMap((command) => [
+    guard: (commands) => new KeyedGuard(commands.flatMap((command) => [
       ...modelConflictRefs(command).map((ref) => guardOf(tree, ref)),
       ...removedSubtreeGuards(tree, command)
-    ])
+    ]))
   };
 }
 
 function guardOf(
   tree: ModelTreeReader,
   ref: ModelValueRef
-): HistoryGuard {
+): KeyedGuardEntry {
   return {
     key: modelValueKey(ref),
     read: () => valueOf(tree, ref)
@@ -88,7 +89,7 @@ function valueOf(
 function removedSubtreeGuards(
   tree: ModelTreeReader,
   command: VoxelModelCommand
-): HistoryGuard[] {
+): KeyedGuardEntry[] {
   const removed = removedEntryOf(command);
   if (removed === undefined) {
     return [];

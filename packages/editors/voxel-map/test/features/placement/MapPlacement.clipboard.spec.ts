@@ -7,13 +7,14 @@ import {
 
 // Import Third-party Dependencies
 import {
-  VoxelHistory,
   VoxelWorld,
   voxelBlockId,
   type VoxelLayer
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { mapHistoryOf } from "../../helpers/mapHistory.ts";
+import { MAP_HISTORY_SCOPE } from "../../../src/shared/mapHistory.ts";
 import { MapLayers } from "../../../src/features/layers/MapLayers.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
@@ -28,7 +29,7 @@ const kLowerCorner = CellRegion.spanning(
 
 function setup() {
   const world = new VoxelWorld();
-  const history = new VoxelHistory(world, { enabled: true });
+  const history = mapHistoryOf(world);
   const mapDocument = mapDocumentOf(world);
   const selection = new SelectionStore();
   const layers = new MapLayers({
@@ -121,9 +122,9 @@ describe("MapPlacement copy and paste", () => {
     assert.equal(placement.lifted, null);
     assert.deepEqual(blocksOf(draft), ["0,0,3:1", "1,0,3:2", "2,0,0:1"]);
 
-    const depth = history.undoDepth;
+    const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     assert.equal(placement.commit(), true);
-    assert.equal(history.undoDepth, depth + 1);
+    assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth + 1);
     assert.deepEqual(blocksOf(draft), [
       "0,0,3:1",
       "1,0,3:2",
@@ -132,7 +133,7 @@ describe("MapPlacement copy and paste", () => {
       "6,0,0:2"
     ]);
 
-    history.undo();
+    history.undo(MAP_HISTORY_SCOPE);
     assert.equal(draft.voxelCount, 3);
   });
 

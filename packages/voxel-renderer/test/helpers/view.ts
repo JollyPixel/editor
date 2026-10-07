@@ -35,7 +35,6 @@ export function createView(
     blocks,
     materialGroups,
     blendGroups,
-    history,
     onCommand,
     ...viewOptions
   } = options;
@@ -45,7 +44,6 @@ export function createView(
     blocks,
     materialGroups,
     blendGroups,
-    history,
     onCommand,
     logger: viewOptions.logger
   });

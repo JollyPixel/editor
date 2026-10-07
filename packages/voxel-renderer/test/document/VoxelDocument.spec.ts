@@ -465,22 +465,4 @@ describe("VoxelDocument.load", () => {
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /'Water'/);
   });
-
-  it("drops the history of the world it replaced", () => {
-    const document = new VoxelDocument({
-      chunkSize: CHUNK_SIZE,
-      layers: ["Ground"],
-      blocks: [makeBlockDef(CUBE_ID, "cube", { name: "Cube" })],
-      history: { enabled: true }
-    });
-    document.world.setVoxel("Ground", {
-      position: { x: 0, y: 0, z: 0 },
-      blockId: CUBE_ID
-    });
-    assert.equal(document.history.canUndo, true);
-
-    document.load(document.save());
-
-    assert.equal(document.history.canUndo, false);
-  });
 });

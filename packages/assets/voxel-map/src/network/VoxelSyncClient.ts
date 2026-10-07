@@ -40,7 +40,8 @@ export class VoxelSyncClient extends CommandSync<
     const reconciler = new VoxelReconciler(options.document);
     super(options.room, {
       reconciler,
-      resolver: options.resolver
+      resolver: options.resolver,
+      receipts: options.document.edits.receipts
     });
     const { document } = options;
 
@@ -48,7 +49,12 @@ export class VoxelSyncClient extends CommandSync<
     this.#reconciler = reconciler;
     this.#onCommand = (command, { origin }) => {
       if (origin === "local" && isVoxelWorldCommand(command)) {
-        reconciler.capture(this.send(command));
+        const change = document.edits.changeOf(command);
+        reconciler.capture(
+          change === undefined
+            ? this.send(command)
+            : this.sendChange(command, change)
+        );
       }
       reconciler.observe();
     };
@@ -82,6 +88,9 @@ export class VoxelSyncClient extends CommandSync<
       return;
     }
 
-    this.#document.apply(command, { origin: "remote" });
+    this.#document.apply(command, {
+      origin: "remote",
+      clientId: command.clientId
+    });
   }
 }

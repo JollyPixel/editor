@@ -7,10 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
-import {
-  createDocument,
-  pixelAt
-} from "./helpers/document/document.ts";
+import { PixelDocument } from "#src/PixelDocument.ts";
+import { pixelAt } from "./helpers/document/document.ts";
 
 // CONSTANTS
 const kRed = {
@@ -22,7 +20,7 @@ const kRed = {
 
 describe("PixelArtCanvas built on an existing PixelDocument", () => {
   test("shares the document instead of creating one", () => {
-    const doc = createDocument();
+    const doc = new PixelDocument({ size: { x: 4, y: 4 } });
     const { manager } = createPixelArtCanvas({ document: doc });
 
     assert.equal(manager.document, doc);
@@ -31,7 +29,7 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
   });
 
   test("follows a remote resize of the shared document", () => {
-    const doc = createDocument();
+    const doc = new PixelDocument({ size: { x: 4, y: 4 } });
     const { manager } = createPixelArtCanvas({ document: doc });
 
     doc.applyRemoteCommand({
@@ -43,11 +41,12 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
   });
 
   test("forwards document draw-end and history changes to its callbacks", () => {
-    const doc = createDocument();
+    const doc = new PixelDocument({ size: { x: 4, y: 4 } });
     let drawEnds = 0;
     let historyChanges = 0;
     const { manager } = createPixelArtCanvas({
       document: doc,
+      history: { enabled: true },
       onDrawEnd: () => drawEnds++,
       onHistoryChange: () => historyChanges++
     });
@@ -61,9 +60,9 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
   });
 
   test("undo on one canvas reverts the edit for every canvas on the document", () => {
-    const doc = createDocument();
-    const first = createPixelArtCanvas({ document: doc });
-    const second = createPixelArtCanvas({ document: doc });
+    const doc = new PixelDocument({ size: { x: 4, y: 4 } });
+    const first = createPixelArtCanvas({ document: doc, history: { enabled: true } });
+    const second = createPixelArtCanvas({ document: doc, history: { enabled: true } });
     const before = pixelAt(doc, 3, 3);
 
     first.manager.commitPixels([{ x: 3, y: 3 }]);
@@ -73,5 +72,18 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
 
     assert.deepEqual(pixelAt(doc, 3, 3), before);
     assert.equal(first.manager.canUndo(), false);
+  });
+
+  test("the history outlives its canvases: a canvas opened later redoes what an earlier one undid", () => {
+    const doc = new PixelDocument({ size: { x: 4, y: 4 } });
+    const first = createPixelArtCanvas({ document: doc, history: { enabled: true } });
+    first.manager.commitPixels([{ x: 3, y: 3 }]);
+    first.manager.undo();
+    first.manager.destroy();
+
+    const second = createPixelArtCanvas({ document: doc, history: { enabled: true } });
+
+    assert.equal(second.manager.redo(), true);
+    assert.equal(second.manager.canUndo(), true);
   });
 });

@@ -11,12 +11,11 @@ import {
   narrowPixelCommand,
   packPixelEvent,
   replayPixelCommand,
-  ReplayBasis,
   revertsInPlace,
   unpackPixelCommand,
+  type PixelCommandListener,
   type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
-import type { PixelCommand } from "@jolly-pixel/pixel-draw.renderer";
 import type {
   BlocksetDocument,
   BlocksetDocumentListener
@@ -77,13 +76,12 @@ export class BlocksetSyncClient extends CommandSync<
 > {
   #pixels: PixelSyncTarget;
   #blockset: BlocksetDocument;
-  #basis = new ReplayBasis();
 
-  #sendPixelCommand = (
-    command: PixelCommand
-  ): void => {
-    const { originTimestamp, ...body } = packPixelEvent(command);
-    this.send(body, originTimestamp, this.#basis.of(originTimestamp));
+  #sendPixelCommand: PixelCommandListener = (command, change) => {
+    this.sendChange(
+      packPixelEvent(command),
+      change
+    );
   };
 
   #sendBlocksetCommand: BlocksetDocumentListener = (command, { origin }) => {
@@ -96,23 +94,23 @@ export class BlocksetSyncClient extends CommandSync<
     options: BlocksetSyncClientOptions
   ) {
     super(options.room, {
-      reconciler: createBlocksetReconciler(options.pixels, options.blockset),
+      reconciler: createBlocksetReconciler(
+        options.pixels,
+        options.blockset
+      ),
       resolver: options.resolver,
       applySnapshot: (snapshot) => loadBlocksetSnapshot(
         options.blockset,
         options.pixels,
         snapshot
-      )
+      ),
+      receipts: options.pixels.receipts
     });
     const { pixels, blockset } = options;
 
     this.#pixels = pixels;
     this.#blockset = blockset;
     pixels.on("command", this.#sendPixelCommand);
-    this.on(
-      "acknowledged",
-      (command, version) => this.#basis.learn(command.timestamp, version)
-    );
     blockset.on("command", this.#sendBlocksetCommand);
     this.on("command", (command) => this.#applyRemote(command));
   }
@@ -127,7 +125,10 @@ export class BlocksetSyncClient extends CommandSync<
     command: BlocksetNetworkCommand
   ): void {
     if (isPixelCommand(command)) {
-      this.#pixels.applyRemoteCommand(unpackPixelCommand(command));
+      this.#pixels.applyRemoteCommand(
+        unpackPixelCommand(command),
+        command.clientId
+      );
 
       return;
     }

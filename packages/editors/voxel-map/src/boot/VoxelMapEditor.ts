@@ -35,11 +35,7 @@ const kCanvas = "#game-container > canvas";
 const kPerformanceStorageKey = "voxel-map:performance-hud";
 const kPerformancePaneKey = "performance";
 const kPerformanceToggleKey = "F3";
-const kMapKind = voxelMapDocumentKind({
-  history: {
-    enabled: true
-  }
-});
+const kMapKind = voxelMapDocumentKind();
 
 export interface VoxelMapEditorParts {
   runtime: Runtime;

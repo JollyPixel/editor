@@ -8,12 +8,21 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  ChangeReceipts,
+  CommandChange
+} from "@jolly-pixel/history";
+import {
   encodePngPixels,
+  toDocumentCommand,
+  type PixelChange,
   type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
+import {
+  PixelSyncClient,
+  type PixelCommandListener
+} from "#src/network/PixelSyncClient.ts";
 import {
   command,
   gray,
@@ -31,10 +40,27 @@ const kResized: PixelCommand = {
 };
 
 class Host extends MockEmitter<{
-  command: (event: PixelCommand) => void;
+  command: PixelCommandListener;
 }> {
+  readonly receipts = new ChangeReceipts<PixelChange>();
   applyRemoteCommand = mock.fn();
+  replayPendingCommand = mock.fn();
   loadSnapshot = mock.fn();
+
+  edit(
+    command: PixelCommand,
+    basis?: number
+  ): PixelChange {
+    const change: PixelChange = CommandChange.local(
+      toDocumentCommand(command),
+      null,
+      [],
+      basis
+    );
+    this.emit("command", command, change);
+
+    return change;
+  }
 }
 
 function createHost() {
@@ -60,7 +86,7 @@ describe("PixelSyncClient — document events", () => {
   test("sends each document command", () => {
     const { room, host } = setup();
 
-    host.emit("command", kResized);
+    host.edit(kResized);
 
     assert.strictEqual(room.sent.length, 1);
   });
@@ -80,13 +106,43 @@ describe("PixelSyncClient — document events", () => {
   });
 });
 
+describe("PixelSyncClient — receipts", () => {
+  test("confirms the change behind an acknowledged command, with its version", () => {
+    const { room, host } = setup();
+    const confirmed: [PixelChange, number | undefined][] = [];
+    host.receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
+    room.deliverSnapshot();
+
+    const change = host.edit(kResized);
+    room.emit("message", { type: "command", data: room.sent[0], version: 5 });
+
+    assert.deepStrictEqual(confirmed, [[change, 5]]);
+  });
+
+  test("sends an undo with the basis of its change", () => {
+    const { room, host } = setup();
+
+    host.edit(kResized, 7);
+
+    assert.strictEqual(room.sent[0].basis, 7);
+  });
+
+  test("attaches the receipts until destroyed", () => {
+    const { host, client } = setup();
+
+    assert.strictEqual(host.receipts.attached, true);
+    client.destroy();
+    assert.strictEqual(host.receipts.attached, false);
+  });
+});
+
 describe("PixelSyncClient — local mutations", () => {
   test("stamps each command with the client id, an incrementing seq and the current time", (t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 1000 });
     const { room, host } = setup();
 
-    host.emit("command", kResized);
-    host.emit("command", kResized);
+    host.edit(kResized);
+    host.edit(kResized);
 
     assert.deepStrictEqual(room.sent, [
       command("resized", kResized.metadata, { clientId: "client-A", seq: 1, timestamp: 1000 }),
@@ -98,11 +154,11 @@ describe("PixelSyncClient — local mutations", () => {
     t.mock.timers.enable({ apis: ["Date"], now: 1000 });
     const { room, host } = setup();
 
-    host.emit("command", {
+    host.edit({
       action: "stroke",
       metadata: { color: gray(1), positions: [{ x: 2, y: 3 }] }
     });
-    host.emit("command", {
+    host.edit({
       action: "select-edit",
       metadata: { positions: [{ x: 4, y: 5 }], colors: [gray(2)] }
     });
@@ -124,7 +180,7 @@ describe("PixelSyncClient — remote messages", () => {
 
     room.deliverCommand(stroke);
 
-    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke]]);
+    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke, "client-B"]]);
   });
 
   test("applies a packed command from another client unpacked", () => {
@@ -136,7 +192,7 @@ describe("PixelSyncClient — remote messages", () => {
 
     room.deliverCommand(packed(stroke));
 
-    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke]]);
+    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke, "client-B"]]);
   });
 
   test("applies a correction of its own command", () => {
@@ -148,7 +204,7 @@ describe("PixelSyncClient — remote messages", () => {
 
     room.deliverCommand(packed(correction), "correction");
 
-    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[correction]]);
+    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[correction, "client-A"]]);
   });
 
   test("ignores its own echoed commands", () => {
@@ -229,7 +285,7 @@ describe("PixelSyncClient — destroy", () => {
 
     client.destroy();
     room.deliverSnapshot();
-    host.emit("command", kResized);
+    host.edit(kResized);
 
     assert.strictEqual(host.loadSnapshot.mock.callCount(), 0);
     assert.strictEqual(room.sent.length, 0);

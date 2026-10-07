@@ -7,12 +7,12 @@ import {
 
 // Import Third-party Dependencies
 import {
-  VoxelHistory,
   VoxelWorld,
   type VoxelCoord
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { mapHistoryOf } from "../../helpers/mapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { TemplateDrop } from "../../../src/features/templates/TemplateDrop.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
@@ -33,7 +33,7 @@ function setup() {
   const template = world.templates.createFromLayer("Draft", { name: "Draft" })!;
   const placement = new MapPlacement({
     world,
-    history: new VoxelHistory(world, { enabled: true }),
+    history: mapHistoryOf(world),
     selection: new SelectionStore(),
     mapDocument: mapDocumentOf(world)
   });

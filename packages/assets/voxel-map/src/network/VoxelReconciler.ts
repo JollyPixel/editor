@@ -78,13 +78,18 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
   ) {
     this.#document = document;
     this.#images = imagesOf(document);
-    document.world.addRecorder(this.#recorder, { includeUnrecorded: true });
+    document.world.addRecorder(
+      this.#recorder,
+      { includeUnrecorded: true }
+    );
   }
 
   keys(
     command: VoxelMapNetworkCommand
   ): readonly string[] | null {
-    return isVoxelCellCommand(command) ? voxelCellKeys(command) : null;
+    return isVoxelCellCommand(command)
+      ? voxelCellKeys(command)
+      : null;
   }
 
   narrow(
@@ -142,7 +147,10 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
 
         return layer === undefined ? undefined : imageOf(layer);
       });
-    const applied = this.#document.apply(command, { origin: "remote" });
+    const applied = this.#document.apply(
+      command,
+      { origin: "replay" }
+    );
     this.#remember(command, applied ? inverse : null);
 
     return applied;
@@ -182,7 +190,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
   #undo(
     inverse: VoxelInverse
   ): void {
-    const origin = { origin: "remote" } as const;
+    const origin = { origin: "replay" } as const;
     switch (inverse.kind) {
       case "cells":
         this.#restoreCells(inverse.cells);
@@ -239,7 +247,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
         action: "voxels-patched",
         layerId,
         metadata: patch.toPatch()
-      }, { origin: "remote" });
+      }, { origin: "replay" });
     }
   }
 }
@@ -252,9 +260,15 @@ function structuralInverse(
     case "world-replace":
       return { kind: "none" };
     case "added":
-      return { kind: "remove", layerId: command.layerId };
+      return {
+        kind: "remove",
+        layerId: command.layerId
+      };
     case "cloned":
-      return { kind: "remove", layerId: command.metadata.cloneId };
+      return {
+        kind: "remove",
+        layerId: command.metadata.cloneId
+      };
     case "layer-moved":
     case "updated":
     case "position-updated": {
@@ -263,7 +277,11 @@ function structuralInverse(
         return null;
       }
       if (command.action === "layer-moved") {
-        return { kind: "rank", layerId: command.layerId, rank: image.rank };
+        return {
+          kind: "rank",
+          layerId: command.layerId,
+          rank: image.rank
+        };
       }
       if (command.action === "position-updated") {
         return {
@@ -276,7 +294,10 @@ function structuralInverse(
       return {
         kind: "options",
         layerId: command.layerId,
-        options: previousOptions(command.metadata.options, image)
+        options: previousOptions(
+          command.metadata.options,
+          image
+        )
       };
     }
     default:
@@ -322,6 +343,8 @@ function imagesOf(
   document: VoxelDocument
 ): Map<string, LayerImage> {
   return new Map(
-    document.world.getLayers().map((layer) => [layer.id, imageOf(layer)])
+    document.world.getLayers().map(
+      (layer) => [layer.id, imageOf(layer)]
+    )
   );
 }

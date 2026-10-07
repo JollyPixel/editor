@@ -7,7 +7,6 @@ import {
 
 // Import Third-party Dependencies
 import {
-  VoxelHistory,
   VoxelTransform,
   VoxelWorld,
   VOXEL_ABSENT,
@@ -17,6 +16,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { mapHistoryOf } from "../../helpers/mapHistory.ts";
+import { MAP_HISTORY_SCOPE } from "../../../src/shared/mapHistory.ts";
 import { MapLayers } from "../../../src/features/layers/MapLayers.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import type { ActivePlacement } from "../../../src/features/placement/ActivePlacement.ts";
@@ -26,7 +27,7 @@ import { mapDocumentOf } from "../../helpers/mapDocument.ts";
 
 function setup() {
   const world = new VoxelWorld();
-  const history = new VoxelHistory(world, { enabled: true });
+  const history = mapHistoryOf(world);
   const mapDocument = mapDocumentOf(world);
   const selection = new SelectionStore();
   const layers = new MapLayers({
@@ -283,7 +284,7 @@ describe("MapPlacement templates", () => {
     assert.equal(placement.current, null);
     assert.deepEqual(cellsOf(ground), [...expected].sort(compareCells));
 
-    history.undo();
+    history.undo(MAP_HISTORY_SCOPE);
     assert.equal(ground.voxelCount, 0);
   });
 
@@ -457,7 +458,7 @@ describe("MapPlacement regions", () => {
       [2, 0, 2, 1]
     ]);
 
-    history.undo();
+    history.undo(MAP_HISTORY_SCOPE);
     assert.deepEqual(cellsOf(draft), before);
   });
 
@@ -497,7 +498,7 @@ describe("MapPlacement regions", () => {
       [2, 0, 0, 2]
     ]);
 
-    history.undo();
+    history.undo(MAP_HISTORY_SCOPE);
     assert.deepEqual(cellsOf(draft), before);
   });
 
@@ -527,12 +528,12 @@ describe("MapPlacement regions", () => {
 
   test("an unmoved commit ends the session without writing history", () => {
     const { history, placement } = setup();
-    const depth = history.undoDepth;
+    const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
 
     assert.equal(placement.commit(), true);
     assert.equal(placement.placing, false);
-    assert.equal(history.undoDepth, depth);
+    assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
   });
 
   test("deleting removes only the lifted voxels, as one undo step", () => {
@@ -546,7 +547,7 @@ describe("MapPlacement regions", () => {
     assert.equal(placement.placing, false);
     assert.deepEqual(blocksOf(draft), [[2, 0, 0, 1]]);
 
-    history.undo();
+    history.undo(MAP_HISTORY_SCOPE);
     assert.deepEqual(cellsOf(draft), before);
   });
 
@@ -562,29 +563,29 @@ describe("MapPlacement regions", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
     const before = cellsOf(draft);
-    const depth = history.undoDepth;
+    const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
     placement.moveBoundsTo({ x: 8, y: 0, z: 8 });
 
     assert.equal(placement.cancel(), true);
 
     assert.deepEqual(cellsOf(draft), before);
-    assert.equal(history.undoDepth, depth);
+    assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
   });
 
   test("cancelLift puts a lifted region back, once", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
     const before = cellsOf(draft);
-    const depth = history.undoDepth;
+    const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
 
     assert.equal(placement.lifted?.layerName, "Draft");
-    assert.equal(history.undoDepth, depth);
+    assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
     assert.equal(placement.cancelLift(), true);
     assert.equal(placement.cancelLift(), false);
     assert.deepEqual(cellsOf(draft), before);
-    assert.equal(history.undoDepth, depth);
+    assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
   });
 
   test("puts the lifted voxels back when another placement starts or when disposed", () => {

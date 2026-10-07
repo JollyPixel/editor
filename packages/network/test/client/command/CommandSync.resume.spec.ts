@@ -131,6 +131,73 @@ describe("CommandSync resume", () => {
     assert.deepEqual(sentCommands(harness), ["A:1:1", "A:2:2", "B:3:2"]);
   });
 
+  test("a command acked without its echo in the catch-up is refused once a snapshot rolls it back", () => {
+    const { harness, sync, applied, reconnect } = setup();
+    const refused: number[] = [];
+    sync.on("refused", (refusedCommand) => refused.push(refusedCommand.value));
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    reconnect();
+    harness.serverMessage({ type: "catch-up", data: [], version: 0, acks: { A: 1 } });
+
+    assert.deepEqual(harness.sent.at(-1), { room: "room", kind: "resync" });
+    assert.deepEqual(refused, []);
+
+    harness.serverMessage({ type: "snapshot", data: { value: 0 }, version: 0 });
+
+    assert.deepEqual(refused, [1]);
+    assert.deepEqual(applied, [2]);
+  });
+
+  test("a discard forgets the commands a catch-up dropped, so the next snapshot refuses none", () => {
+    const { harness, sync, reconnect } = setup();
+    const refused: number[] = [];
+    sync.on("refused", (refusedCommand) => refused.push(refusedCommand.value));
+
+    sync.send({ action: "set", value: 1 });
+    sync.send({ action: "set", value: 2 });
+    reconnect();
+    harness.serverMessage({ type: "catch-up", data: [], version: 0, acks: { A: 1 } });
+    harness.room.suspend();
+    for (let value = 0; value < 600; value++) {
+      sync.send({ action: "set", value });
+    }
+    reconnect("C");
+    harness.serverMessage({ type: "snapshot", data: { value: 0 }, version: 0 });
+
+    assert.deepEqual(refused, []);
+  });
+
+  test("a catch-up acknowledges own echoes at its version", () => {
+    const { harness, sync, reconnect } = setup();
+    const acknowledged: string[] = [];
+    sync.on("acknowledged", (own, version) => acknowledged.push(`${own.value}@${version}`));
+
+    sync.send({ action: "set", value: 1 });
+    reconnect();
+    harness.serverMessage({
+      type: "catch-up",
+      data: [command("peer", 1, 50), command("A", 1)],
+      version: 3
+    });
+
+    assert.deepEqual(acknowledged, ["1@3"]);
+  });
+
+  test("a sync created after the room synced resumes with that client id", () => {
+    const harness = new RoomHarness<TestCommand, TestMessage>();
+    harness.room.join();
+    harness.admit("A");
+    const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room);
+
+    sync.send({ action: "set", value: 1 });
+    harness.room.suspend();
+    harness.room.rejoin();
+
+    assert.deepEqual(joins(harness.sent).at(-1), { clientId: "A", version: 0 });
+  });
+
   test("applies the catch-up and ignores the live commands it covers", () => {
     const { harness, sync, applied, reconnect } = setup();
 
@@ -173,7 +240,9 @@ describe("CommandSync resume", () => {
   test("stops holding past the bound, then drops the ledger and rejoins without resume", () => {
     const { harness, sync, reconnect } = setup();
     let overflows = 0;
+    let discards = 0;
     sync.on("overflow", () => overflows++);
+    sync.on("discarded", () => discards++);
 
     harness.room.suspend();
     for (let value = 0; value < 600; value++) {
@@ -188,6 +257,7 @@ describe("CommandSync resume", () => {
     assert.deepEqual(joins(harness.sent).at(-1), undefined);
     assert.strictEqual(sync.pending, 0);
     assert.strictEqual(sync.overflowed, false);
+    assert.strictEqual(discards, 1);
     assert.deepEqual(sentCommands(harness), []);
   });
 });

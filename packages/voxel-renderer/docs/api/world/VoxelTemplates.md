@@ -20,7 +20,7 @@ world.templates.place(house.id, {
 Every method below emits a
 [template command](../core/commands.md#template-commands) on the world's
 `"command"` event, except `place()`, which emits one `"voxels-patched"` layer
-command and records one [history](../core/VoxelHistory.md) step.
+command and records one [history](../core/VoxelEdits.md) step.
 
 #### `size: number`, `get(id: string)`, `toArray(): VoxelTemplate[]`
 

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   CommandHistory,
   type HistoryStepInfo
-} from "@jolly-pixel/network/client";
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
@@ -38,7 +38,7 @@ function createHistory(
 ): ModelHistory {
   const history = new CommandHistory({
     scopes: [kScope],
-    ...options.limit === undefined ? {} : { limit: options.limit }
+    limit: options.limit
   });
   history.register({
     id: "model",

@@ -35,8 +35,7 @@ describe("PixelDocument normal map", () => {
       assert.deepEqual(zoneIds(doc), []);
       assert.deepEqual(events.at(-1), {
         action: "normal-map-zone-deleted",
-        metadata: { regionId: "a" },
-        originTimestamp: events.at(-1)?.originTimestamp
+        metadata: { regionId: "a" }
       });
       assert.deepEqual(changes, [["a"], ["a"]]);
     });
@@ -102,10 +101,7 @@ describe("PixelDocument normal map", () => {
         metadata: { id: "a" }
       });
 
-      assert.deepEqual(
-        doc.undo()?.undo.map(({ action }) => action),
-        ["uv-region-created", "normal-map-zone-set"]
-      );
+      assert.equal(doc.undo(), true);
       assert.notEqual(doc.uv.get("a"), undefined);
       assert.deepEqual(zoneIds(doc), ["a", "b"]);
       assert.deepEqual(

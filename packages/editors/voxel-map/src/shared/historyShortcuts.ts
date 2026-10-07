@@ -3,7 +3,6 @@ import type {
   Keyboard,
   KeyChordString
 } from "@jolly-pixel/controls";
-import type { VoxelHistory } from "@jolly-pixel/voxel.renderer";
 
 export const HISTORY_SHORTCUTS = {
   undo: ["Mod+z"],
@@ -12,7 +11,10 @@ export const HISTORY_SHORTCUTS = {
 
 export interface HistoryShortcutsOptions {
   keyboard: Pick<Keyboard, "bind">;
-  history: Pick<VoxelHistory, "undo" | "redo">;
+  history: {
+    undo(): boolean;
+    redo(): boolean;
+  };
 }
 
 export function bindHistoryShortcuts(

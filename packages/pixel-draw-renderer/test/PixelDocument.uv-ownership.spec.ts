@@ -71,7 +71,7 @@ describe("PixelDocument", () => {
       doc.uv.delete(region.id);
 
       assert.equal(doc.uv.get(region.id), undefined);
-      assert.equal(doc.history.canUndo, false);
+      assert.equal(doc.canUndo, false);
       assert.deepEqual(events, []);
     });
 

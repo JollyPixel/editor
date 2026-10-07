@@ -20,10 +20,19 @@ import type {
   RGBA8,
   Vec2
 } from "../types.ts";
-import type {
-  DocumentCommand,
-  NormalMapCommand,
-  UVRegionRotation
+import {
+  selectEditOf,
+  strokeOf,
+  strokesOf,
+  textureOf,
+  uvRegionCreated,
+  uvRegionDeleted,
+  uvRegionMoved,
+  uvRegionRotated,
+  uvRegionStateChanged,
+  type DocumentCommand,
+  type NormalMapCommand,
+  type UVRegionRotation
 } from "./PixelCommand.ts";
 import { NormalMapChange } from "./NormalMapChange.ts";
 import {
@@ -141,6 +150,65 @@ export class PixelDocumentState<
     }
   }
 
+  accepts(
+    command: DocumentCommand
+  ): boolean {
+    switch (command.action) {
+      case "uv-region-deleted":
+      case "uv-region-moved":
+      case "uv-region-rotated":
+        return this.uv.get(command.metadata.id) !== undefined;
+      case "uv-region-state-changed":
+        return this.uv.get(command.metadata.region.id) !== undefined;
+      case "normal-map-defaults-patched":
+      case "normal-map-zone-set":
+      case "normal-map-zone-deleted":
+        return NormalMapChange.of(this.#normalMap, command) !== null;
+      default:
+        return true;
+    }
+  }
+
+  inverseOf(
+    command: DocumentCommand
+  ): DocumentCommand[] {
+    switch (command.action) {
+      case "palette-color-changed": {
+        const { index } = command.metadata;
+
+        return [{
+          action: "palette-color-changed",
+          metadata: { index, color: this.#palette.colorAt(index) }
+        }];
+      }
+      case "stroke":
+        return strokesOf(
+          command.metadata.positions,
+          this.buffer.samplePixels(command.metadata.positions)
+        );
+      case "global-fill": {
+        const { fromColor } = command.metadata;
+
+        return [strokeOf(this.buffer.positionsOf(fromColor), fromColor)];
+      }
+      case "select-edit":
+        return [selectEditOf(
+          command.metadata.positions,
+          this.buffer.samplePixels(command.metadata.positions)
+        )];
+      case "resized":
+      case "texture-replaced":
+        return [textureOf(this.buffer.size(), this.buffer.pixels().slice())];
+      case "uv-region-created": {
+        const existing = this.uv.get(command.metadata.region.id);
+
+        return [existing ? uvRegionCreated(existing.toJSON()) : uvRegionDeleted(command.metadata.region.id)];
+      }
+      default:
+        return this.#inverseOfExisting(command);
+    }
+  }
+
   load(
     snapshot: PixelDocumentSnapshot,
     owns: (regionId: string) => boolean = () => true
@@ -172,6 +240,50 @@ export class PixelDocumentState<
     });
 
     return removed;
+  }
+
+  #inverseOfExisting(
+    command: DocumentCommand
+  ): DocumentCommand[] {
+    switch (command.action) {
+      case "uv-region-deleted": {
+        const region = this.uv.get(command.metadata.id);
+        const zone = NormalMapChange.zoneOf(this.#normalMap, command.metadata.id);
+        if (region === undefined) {
+          return [];
+        }
+
+        return zone === null ?
+          [uvRegionCreated(region.toJSON())] :
+          [uvRegionCreated(region.toJSON()), { action: "normal-map-zone-set", metadata: zone }];
+      }
+      case "uv-region-moved": {
+        const { id, face } = command.metadata;
+        const region = this.uv.get(id);
+
+        return region ? [uvRegionMoved(id, face, region.rectFor(face ?? "front"))] : [];
+      }
+      case "uv-region-state-changed": {
+        const region = this.uv.get(command.metadata.region.id);
+
+        return region ? [uvRegionStateChanged(region.toJSON())] : [];
+      }
+      case "uv-region-rotated": {
+        const region = this.uv.get(command.metadata.id);
+
+        return region ? [uvRegionRotated(region, command.metadata.face)] : [];
+      }
+      case "normal-map-toggled":
+      case "normal-map-defaults-patched":
+      case "normal-map-zone-set":
+      case "normal-map-zone-deleted": {
+        const change = NormalMapChange.of(this.#normalMap, command);
+
+        return change === null ? [] : [change.undo];
+      }
+      default:
+        return [];
+    }
   }
 
   #paint(

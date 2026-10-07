@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { CommandHistory } from "@jolly-pixel/network/client";
+import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {

@@ -108,4 +108,4 @@ Normal map commands are [pixel commands](../PixelCommand.md), applied by [`Pixel
 | `normal-map-zone-set` | `{ zone: NormalMapZone, index: number }` |
 | `normal-map-zone-deleted` | `{ regionId: string }` |
 
-`normal-map-zone-set` replaces the region's zone in place, or inserts a new zone at `index`. Commands carry only the change: undo data stays in the [history entry](../history/HistoryStack.md#entries).
+`normal-map-zone-set` replaces the region's zone in place, or inserts a new zone at `index`. Commands carry only the change: undo data stays in the [history step](../history/PixelHistory.md).

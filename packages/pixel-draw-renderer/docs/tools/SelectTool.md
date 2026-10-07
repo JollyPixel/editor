@@ -66,7 +66,7 @@ selection with the full texture rectangle, including transparent pixels and
 pan, UV regions or shape mode. The shape setting stays unchanged.
 
 A floating selection is deposited before capturing the full texture.
-Otherwise selecting all changes no pixels and creates no history entry.
+Otherwise selecting all changes no pixels and creates no history step.
 It is available in the normal view, where pixel edits remain disabled.
 During creation, movement or resizing, the shortcut returns `false` and
 keeps the gesture intact.
@@ -81,7 +81,7 @@ Completed rectangular selections show four corner handles. Hovering a handle sho
 
 The outline and size label update during the drag. The preview may extend beyond the texture; releasing clips the rectangle to the texture. If clipping leaves no pixels, the original selection is retained. Corners stop at a width and height of one pixel; resizing to `1×1` keeps the selection active.
 
-Growing includes existing texture pixels and shrinking excludes them. Resizing changes no texture pixels and creates no history entry or pixel command. Copy, move, delete and transforms use the corrected area after release. A drag that leaves the final rectangle unchanged retains the original selection content.
+Growing includes existing texture pixels and shrinking excludes them. Resizing changes no texture pixels and creates no history step or pixel command. Copy, move, delete and transforms use the corrected area after release. A drag that leaves the final rectangle unchanged retains the original selection content.
 
 Shape mode, shape-masked selections and floating selections have no resize handles. Rectangular selections in the normal view can resize, while pixel edits remain unavailable. Moving a selection hides its handles until release.
 

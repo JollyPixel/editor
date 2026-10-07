@@ -18,10 +18,7 @@ import type {
   VoxelCommand,
   VoxelCommandListener
 } from "./commands/types.ts";
-import {
-  VoxelHistory,
-  type VoxelHistoryOptions
-} from "./VoxelHistory.ts";
+import { VoxelEdits } from "./history/VoxelEdits.ts";
 import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
 import { MaterialGroupList } from "./materials/MaterialGroupList.ts";
 import type { BlendGroupJSON } from "./materials/BlendGroup.ts";
@@ -92,11 +89,6 @@ export interface VoxelDocumentOptions {
   blendGroups?: Iterable<BlendGroupJSON>;
 
   /**
-   * Undo/redo of voxel edits made through `VoxelWorld`; disabled by default.
-   */
-  history?: VoxelHistoryOptions;
-
-  /**
    * Debug logger; defaults to a no-op implementation.
    */
   logger?: VoxelLogger;
@@ -116,7 +108,7 @@ export interface VoxelDocumentOptions {
 export class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly world: VoxelWorld;
   readonly blocksets: BlocksetList;
-  readonly history: VoxelHistory;
+  readonly edits: VoxelEdits;
 
   #logger: VoxelLogger;
 
@@ -130,7 +122,6 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
       blocksets = [],
       materialGroups = [],
       blendGroups = [],
-      history,
       logger = NOOP_LOGGER,
       onCommand
     } = options;
@@ -149,12 +140,12 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     });
 
     this.world = new VoxelWorld(chunkSize);
+    this.edits = new VoxelEdits(this.world, this);
     this.world.on(
       "command",
       (command) => this.emit("command", command, { origin: "local" })
     );
     layers.forEach((name) => this.world.addLayer(name));
-    this.history = new VoxelHistory(this.world, history);
 
     this.blocksets = new BlocksetList();
     for (const blockset of blocksets) {
@@ -228,13 +219,12 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
       );
     }
 
-    this.history.clear();
     this.emit("loaded");
   }
 
   dispose(): void {
     this.#logger.debug("Disposing VoxelDocument.");
-    this.history.dispose();
+    this.edits.dispose();
     this.blocksets.clear();
     this.world.removeAllListeners();
     this.removeAllListeners();

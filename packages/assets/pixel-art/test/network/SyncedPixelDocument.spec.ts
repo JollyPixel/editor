@@ -55,15 +55,13 @@ describe("SyncedPixelDocument", () => {
 
   test("sends local document edits without any canvas", () => {
     const room = new MockRoom({ clientId: "client-A" });
-    const synced = new SyncedPixelDocument(room, {
-      history: { enabled: true }
-    });
+    const synced = new SyncedPixelDocument(room);
     room.deliverSnapshot(snapshotOf({ x: 4, y: 4 }));
 
     synced.document.paintPixels([{ x: 1, y: 1 }], kRed);
 
     assert.deepStrictEqual(room.sent.map((sent) => sent.action), ["stroke"]);
-    assert.strictEqual(synced.document.history.canUndo, true);
+    assert.strictEqual(synced.document.receipts.attached, true);
     synced.dispose();
   });
 

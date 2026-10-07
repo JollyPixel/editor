@@ -1,18 +1,15 @@
 // Import Internal Dependencies
-import { PixelDocument } from "#src/PixelDocument.ts";
+import type { PixelDocument } from "#src/PixelDocument.ts";
+import { HistoryDocument } from "./HistoryDocument.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 
 export function createNormalMapDocument(
   events: PixelCommand[] = []
-): PixelDocument {
-  const doc = new PixelDocument({
+): HistoryDocument {
+  const doc = new HistoryDocument({
     size: {
       x: 8,
       y: 8
-    },
-    history: {
-      enabled: true,
-      limit: 50
     }
   });
   doc.on("command", (command) => events.push(command));

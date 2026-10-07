@@ -364,7 +364,9 @@ export class PixelDrawPanel extends LitElement {
     options: PixelArtCanvasOptions = {}
   ): Promise<void> {
     await this.updateComplete;
-    this.#baseOptions = textureCanvasOptions({}, options);
+    this.#baseOptions = textureCanvasOptions({
+      history: { enabled: true }
+    }, options);
   }
 
   addTexture(

@@ -1,48 +1,51 @@
+// Import Third-party Dependencies
+import { CommandChange } from "@jolly-pixel/history";
+
 // Import Internal Dependencies
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
-import type { History } from "../history/History.ts";
-import type {
-  HistoryEdit,
-  HistoryEntry
-} from "../history/HistoryEntry.ts";
 import type {
   PixelDocumentSnapshot,
   PixelDocumentState
 } from "./PixelDocumentState.ts";
 import {
+  strokeOf,
   toDocumentCommand,
   toPixelCommand,
   type DocumentCommand,
   type PixelCommand
 } from "./PixelCommand.ts";
+import type {
+  LocalEdit,
+  PixelChange
+} from "./LocalEdit.types.ts";
 import type { UVOwnership } from "./UVOwnership.ts";
 
+export type EditGrouping = <T>(edit: () => T) => T;
+
 export interface EditRecorderListeners {
-  command: (command: PixelCommand) => void;
+  change: (change: PixelChange) => void;
+  command: (command: PixelCommand, change: PixelChange) => void;
   drawEnd: () => void;
-  reset: () => void;
+  load: () => void;
 }
 
 export interface EditRecorderOptions {
   state: PixelDocumentState<DefaultPixelBuffer>;
-  history: History;
   ownership: Pick<UVOwnership, "admits" | "owns">;
   listeners: EditRecorderListeners;
 }
 
 export class EditRecorder {
   #state: PixelDocumentState<DefaultPixelBuffer>;
-  #history: History;
   #ownership: Pick<UVOwnership, "admits" | "owns">;
   #listeners: EditRecorderListeners;
   #silenced = 0;
-  #batch: HistoryEdit | null = null;
+  #groupings = new Set<EditGrouping>();
 
   constructor(
     options: EditRecorderOptions
   ) {
     this.#state = options.state;
-    this.#history = options.history;
     this.#ownership = options.ownership;
     this.#listeners = options.listeners;
   }
@@ -52,81 +55,74 @@ export class EditRecorder {
   }
 
   record(
-    emitted: DocumentCommand[],
-    edit: HistoryEdit
+    edit: LocalEdit
   ): void {
     if (!this.recording) {
       return;
     }
 
-    if (this.#batch === null) {
-      this.#history.push(edit);
-    }
-    else {
-      this.#batch.redo.push(...edit.redo);
-      this.#batch.undo.unshift(...edit.undo);
-    }
-    this.#broadcast(emitted);
+    this.#emit(
+      CommandChange.local(edit.command, null, edit.inverse),
+      edit.sent ?? edit.command
+    );
   }
 
-  batch(
-    fn: () => void
-  ): void {
-    if (this.#batch !== null) {
-      fn();
-
-      return;
+  batch<T>(
+    edit: () => T
+  ): T {
+    let grouped = edit;
+    for (const grouping of this.#groupings) {
+      const inner = grouped;
+      grouped = () => grouping(inner);
     }
 
-    const batch: HistoryEdit = {
-      redo: [],
-      undo: []
+    return grouped();
+  }
+
+  groupWith(
+    grouping: EditGrouping
+  ): () => void {
+    this.#groupings.add(grouping);
+
+    return () => {
+      this.#groupings.delete(grouping);
     };
-    this.#batch = batch;
-    try {
-      fn();
-    }
-    finally {
-      this.#batch = null;
-      if (batch.redo.length > 0) {
-        this.#history.push(batch);
-      }
-    }
   }
 
-  undo(): HistoryEntry | null {
-    return this.#history.undo(
-      (entry) => this.#replay(entry.undo, entry.timestamp)
-    );
-  }
+  applyStep(
+    command: DocumentCommand,
+    basis: number | undefined
+  ): PixelChange | null {
+    if (!this.#state.accepts(command)) {
+      return null;
+    }
 
-  redo(): HistoryEntry | null {
-    return this.#history.redo(
-      (entry) => this.#replay(entry.redo, entry.timestamp)
-    );
+    const inverse = this.#state.inverseOf(command);
+    this.silently(() => this.#state.apply(command));
+    const change = CommandChange.local(command, null, inverse, basis);
+    this.#emit(change, command);
+    this.#listeners.drawEnd();
+
+    return change;
   }
 
   applyRemote(
+    command: PixelCommand,
+    clientId: string | null
+  ): void {
+    this.#applyPeer(
+      command,
+      (written) => CommandChange.remote(written, null, clientId)
+    );
+  }
+
+  replayPending(
     command: PixelCommand
   ): void {
-    if (!this.#ownership.admits(command)) {
-      return;
-    }
-
-    this.silently(() => this.#state.apply(toDocumentCommand(command)));
-    switch (command.action) {
-      case "stroke":
-      case "global-fill":
-      case "select-edit":
-        this.#listeners.drawEnd();
-        break;
-      case "resized":
-      case "texture-replaced":
-        this.#reset();
-        break;
-      default:
-        break;
-    }
+    this.#applyPeer(
+      command,
+      (written) => CommandChange.replay(written, null)
+    );
   }
 
   load(
@@ -136,7 +132,7 @@ export class EditRecorder {
       snapshot,
       (regionId) => this.#ownership.owns(regionId)
     ));
-    this.#reset();
+    this.#listeners.load();
   }
 
   silently<T>(
@@ -151,34 +147,45 @@ export class EditRecorder {
     }
   }
 
-  #reset(): void {
-    this.#history.clear();
-    this.#listeners.reset();
-  }
-
-  #replay(
-    commands: DocumentCommand[],
-    timestamp: number
+  #applyPeer(
+    command: PixelCommand,
+    changeOf: (written: DocumentCommand) => PixelChange
   ): void {
-    this.silently(() => {
-      for (const command of commands) {
-        this.#state.apply(command);
-      }
-    });
-    this.#broadcast(commands, timestamp);
-    this.#listeners.drawEnd();
-  }
-
-  #broadcast(
-    commands: DocumentCommand[],
-    originTimestamp?: number
-  ): void {
-    if (!this.recording) {
+    if (!this.#ownership.admits(command)) {
       return;
     }
 
-    for (const command of commands) {
-      this.#listeners.command(toPixelCommand(command, originTimestamp));
+    const written = this.#written(toDocumentCommand(command));
+    this.silently(() => this.#state.apply(written));
+    this.#listeners.change(changeOf(written));
+    switch (command.action) {
+      case "stroke":
+      case "global-fill":
+      case "select-edit":
+        this.#listeners.drawEnd();
+        break;
+      default:
+        break;
     }
+  }
+
+  #written(
+    command: DocumentCommand
+  ): DocumentCommand {
+    if (command.action !== "global-fill") {
+      return command;
+    }
+
+    const { fromColor, toColor } = command.metadata;
+
+    return strokeOf(this.#state.buffer.positionsOf(fromColor), toColor);
+  }
+
+  #emit(
+    change: PixelChange,
+    sent: DocumentCommand
+  ): void {
+    this.#listeners.change(change);
+    this.#listeners.command(toPixelCommand(sent), change);
   }
 }

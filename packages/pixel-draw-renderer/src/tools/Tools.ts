@@ -23,6 +23,7 @@ import type { ScreenProjection } from "../rendering/Viewport.ts";
 import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { PixelDocument } from "../PixelDocument.ts";
+import type { SelectionEdit } from "../sync/LocalEdit.types.ts";
 import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import type { SelectionOutline } from "../rendering/overlays/SelectionOutline.ts";
 import type { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
@@ -42,6 +43,7 @@ export interface ToolsOptions {
   uvResizable?: boolean;
   viewport: ScreenProjection;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
+  paintSelectionEdit?: (edit: SelectionEdit) => void;
 }
 
 export interface Toolset {
@@ -82,8 +84,12 @@ export class Tools {
       onProgress: options.onProgress
     });
 
+    const { paintSelectionEdit = (edit) => document.paintSelectionEdit(edit) } = options;
     this.select = new SelectEngine({
-      document,
+      document: {
+        buffer: document.buffer,
+        paintSelectionEdit
+      },
       floatingSelection: options.renderer.floatingSelection,
       selectionOverlay: options.selectionOverlay,
       eraseColor: options.eraseColor,

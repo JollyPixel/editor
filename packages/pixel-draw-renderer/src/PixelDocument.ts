@@ -1,21 +1,20 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
+import {
+  ChangeReceipts,
+  type DocumentResetCause
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
   CanvasBuffer,
   type CanvasBufferEvent
 } from "./buffer/CanvasBuffer.ts";
-import {
-  History,
-  type HistoryState
-} from "./history/History.ts";
-import type {
-  HistoryEdit,
-  HistoryEntry
-} from "./history/HistoryEntry.ts";
 import { PixelDocumentState } from "./sync/PixelDocumentState.ts";
-import { EditRecorder } from "./sync/EditRecorder.ts";
+import {
+  EditRecorder,
+  type EditGrouping
+} from "./sync/EditRecorder.ts";
 import {
   selectEditOf,
   strokeOf,
@@ -31,6 +30,8 @@ import {
 } from "./sync/UVOwnership.ts";
 import type {
   GlobalFill,
+  LocalEdit,
+  PixelChange,
   SelectionEdit
 } from "./sync/LocalEdit.types.ts";
 import type { UVMap } from "./uv/map/UVMap.ts";
@@ -74,23 +75,19 @@ export interface PixelDocumentOptions {
   defaultColor?: ByteColorInput;
   maxSize?: number;
   init?: HTMLCanvasElement;
-  history?: {
-    enabled?: boolean;
-    limit?: number;
-  };
 }
 
 export type PixelDocumentEvent = CanvasBufferEvent & {
-  command: (command: PixelCommand) => void;
+  command: (command: PixelCommand, change: PixelChange) => void;
+  change: (change: PixelChange) => void;
   "draw-end": () => void;
-  "history-changed": (state: HistoryState) => void;
   "islands-changed": () => void;
   "palette-changed": (index: number | null) => void;
   "normal-map-changed": (event: {
     config: NormalMapConfig | null;
     regionIds: string[] | null;
   }) => void;
-  reset: () => void;
+  reset: (cause: DocumentResetCause) => void;
 };
 
 export class PixelDocument extends Emitter<
@@ -98,7 +95,7 @@ export class PixelDocument extends Emitter<
 > {
   readonly buffer: CanvasBuffer;
   readonly uv: UVMap;
-  readonly history: History;
+  readonly receipts = new ChangeReceipts<PixelChange>();
 
   #state: PixelDocumentState<CanvasBuffer>;
   #ownership: UVOwnership;
@@ -134,25 +131,20 @@ export class PixelDocument extends Emitter<
       })
     });
     this.uv = this.#state.uv;
-    this.history = new History({
-      enabled: options.history?.enabled,
-      limit: options.history?.limit,
-      onChange: (state) => this.emit("history-changed", state)
-    });
     this.#ownership = new UVOwnership({
       uv: this.uv,
       isRecording: () => this.#recorder.recording,
       removeNormalMapZoneOf: (regionId) => this.#state.removeNormalMapZoneOf(regionId),
-      record: (edit) => this.#recorder.record(edit.redo, edit)
+      record: (edit) => this.#recorder.record(edit)
     });
     this.#recorder = new EditRecorder({
       state: this.#state,
-      history: this.history,
       ownership: this.#ownership,
       listeners: {
-        command: (command) => this.emit("command", command),
+        change: (change) => this.emit("change", change),
+        command: (command, change) => this.emit("command", command, change),
         drawEnd: () => this.emit("draw-end"),
-        reset: () => this.emit("reset")
+        load: () => this.emit("reset", "load")
       }
     });
 
@@ -196,7 +188,7 @@ export class PixelDocument extends Emitter<
       metadata: { index, color: palette.colorAt(index) }
     };
     this.#state.apply(redo);
-    this.#recorder.record([redo], { redo: [redo], undo: [undo] });
+    this.#recorder.record({ command: redo, inverse: [undo] });
   }
 
   get islands(): IslandMap {
@@ -285,12 +277,12 @@ export class PixelDocument extends Emitter<
       return;
     }
 
-    const undo = this.#undoable(() => (beforeColor ?
+    const inverse = this.#undoable(() => (beforeColor ?
       [strokeOf(pixels, beforeColor)] :
       strokesOf(pixels, this.buffer.samplePixels(pixels))));
     const stroke = strokeOf(pixels, color);
     this.#state.apply(stroke);
-    this.#commitDrawing([stroke], { redo: [stroke], undo });
+    this.#commitDrawing({ command: stroke, inverse });
   }
 
   paintGlobalFill(
@@ -300,10 +292,11 @@ export class PixelDocument extends Emitter<
     const stroke = strokeOf(positions, toColor);
 
     this.#state.apply(stroke);
-    this.#commitDrawing(
-      [{ action: "global-fill", metadata: { fromColor, toColor } }],
-      { redo: [stroke], undo: [strokeOf(positions, fromColor)] }
-    );
+    this.#commitDrawing({
+      command: stroke,
+      inverse: [strokeOf(positions, fromColor)],
+      sent: { action: "global-fill", metadata: { fromColor, toColor } }
+    });
   }
 
   recordStroke(
@@ -311,39 +304,36 @@ export class PixelDocument extends Emitter<
     color: RGBA8,
     beforeColors: RGBA8[]
   ): void {
-    const stroke = strokeOf(pixels, color);
-
-    this.#commitDrawing([stroke], {
-      redo: [stroke],
-      undo: this.#undoable(() => strokesOf(pixels, beforeColors))
+    this.#commitDrawing({
+      command: strokeOf(pixels, color),
+      inverse: this.#undoable(() => strokesOf(pixels, beforeColors))
     });
   }
 
   paintSelectionEdit(
     edit: SelectionEdit
   ): void {
-    const { positions, before, after } = edit;
+    const { positions } = edit;
     const redo = selectEditOf(positions, edit.afterColors);
 
     this.#state.apply(redo);
-    this.#commitDrawing([redo], {
-      redo: [redo],
-      undo: [selectEditOf(positions, edit.beforeColors)],
-      selection: { before, after }
+    this.#commitDrawing({
+      command: redo,
+      inverse: [selectEditOf(positions, edit.beforeColors)]
     });
   }
 
   resize(
     size: Vec2
   ): void {
-    const undo = this.#textureSnapshot();
+    const inverse = this.#textureSnapshot();
     const resized: DocumentCommand = {
       action: "resized",
       metadata: { size: structuredClone(size) }
     };
 
     this.#state.apply(resized);
-    this.#recorder.record([resized], { redo: this.#textureSnapshot(), undo });
+    this.#recorder.record({ command: resized, inverse });
   }
 
   replaceTexture(
@@ -402,18 +392,36 @@ export class PixelDocument extends Emitter<
     this.#commitNormalMap(NormalMapChange.deleteZone(this.normalMap, regionId));
   }
 
-  undo(): HistoryEntry | null {
-    return this.#recorder.undo();
-  }
-
-  redo(): HistoryEntry | null {
-    return this.#recorder.redo();
+  applyStep(
+    command: DocumentCommand,
+    basis: number | undefined
+  ): PixelChange | null {
+    return this.#recorder.applyStep(command, basis);
   }
 
   applyRemoteCommand(
+    command: PixelCommand,
+    clientId: string | null = null
+  ): void {
+    this.#recorder.applyRemote(command, clientId);
+  }
+
+  replayPendingCommand(
     command: PixelCommand
   ): void {
-    this.#recorder.applyRemote(command);
+    this.#recorder.replayPending(command);
+  }
+
+  batch<T>(
+    edit: () => T
+  ): T {
+    return this.#recorder.batch(edit);
+  }
+
+  groupEditsWith(
+    grouping: EditGrouping
+  ): () => void {
+    return this.#recorder.groupWith(grouping);
   }
 
   loadSnapshot(
@@ -447,7 +455,7 @@ export class PixelDocument extends Emitter<
   #undoable(
     build: () => DocumentCommand[]
   ): DocumentCommand[] {
-    return this.history.enabled && this.#recorder.recording ? build() : [];
+    return this.#recorder.recording ? build() : [];
   }
 
   #textureSnapshot(): DocumentCommand[] {
@@ -459,13 +467,13 @@ export class PixelDocument extends Emitter<
   #commitTexture(
     replace: () => void
   ): void {
-    const undo = this.#textureSnapshot();
+    const inverse = this.#textureSnapshot();
     replace();
 
-    this.#recorder.record(
-      [textureOf(this.buffer.size(), this.buffer.pixels({ copy: false }))],
-      { redo: this.#textureSnapshot(), undo }
-    );
+    this.#recorder.record({
+      command: textureOf(this.buffer.size(), this.buffer.pixels({ copy: false })),
+      inverse
+    });
   }
 
   #commitNormalMap(
@@ -476,14 +484,13 @@ export class PixelDocument extends Emitter<
     }
 
     this.#state.apply(change.redo);
-    this.#recorder.record([change.redo], { redo: [change.redo], undo: [change.undo] });
+    this.#recorder.record({ command: change.redo, inverse: [change.undo] });
   }
 
   #commitDrawing(
-    emitted: DocumentCommand[],
-    edit: HistoryEdit
+    edit: LocalEdit
   ): void {
-    this.#recorder.record(emitted, edit);
+    this.#recorder.record(edit);
     this.emit("draw-end");
   }
 

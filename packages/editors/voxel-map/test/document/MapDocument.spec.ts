@@ -175,13 +175,12 @@ describe("MapDocument", () => {
     assert.deepEqual(changes, ["added", "retiled"]);
   });
 
-  it("reads the world, blocks, material groups and history of its document", () => {
+  it("reads the world, blocks and material groups of its document", () => {
     const { view, mapDocument } = setup();
 
     assert.equal(mapDocument.world, view.world);
     assert.equal(mapDocument.blocks, view.blocks);
     assert.equal(mapDocument.materialGroups, view.materialGroups);
-    assert.equal(mapDocument.history, view.history);
   });
 
   it("mirrors whether its map has loaded", () => {

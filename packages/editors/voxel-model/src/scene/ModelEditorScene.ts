@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
-import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  registerPixelHistory,
+  type PixelDocument
+} from "@jolly-pixel/pixel-draw.renderer";
 import type {
   PeerIdentity,
   PresenceSource
@@ -141,6 +144,7 @@ export class ModelEditorScene extends Systems.Scene {
       });
 
     const history = createEditorHistory({ document });
+    const unregisterPixels = registerPixelHistory(history, pixels, { scope: "build" });
     const tab = new TabStore();
     const selection = new BlockSelectionStore();
     const materialFocus = new MaterialFocusStore();
@@ -275,6 +279,7 @@ export class ModelEditorScene extends Systems.Scene {
         history,
         tab
       }),
+      () => unregisterPixels(),
       () => history.dispose()
     );
 

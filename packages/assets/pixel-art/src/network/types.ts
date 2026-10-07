@@ -33,12 +33,10 @@ export type PackedPixelEvent =
   | {
     action: "stroke";
     metadata: PackedStrokeMetadata;
-    originTimestamp?: number;
   }
   | {
     action: "select-edit";
     metadata: PackedSelectEditMetadata;
-    originTimestamp?: number;
   };
 
 export type PixelWireEvent = PixelCommand | PackedPixelEvent;

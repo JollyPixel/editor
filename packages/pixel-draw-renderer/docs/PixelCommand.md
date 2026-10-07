@@ -16,23 +16,23 @@ type PixelCommand = (
   | { action: "uv-region-state-changed"; metadata: { region: UVRegionData } }
   | { action: "uv-region-rotated"; metadata: UVRegionRotation }
   | NormalMapCommand
-) & { originTimestamp?: number };
+);
 
 type PixelCommandAction = PixelCommand["action"];
 ```
 
-`texture-replaced` carries base64 RGBA8 bytes. `originTimestamp` is set on undo and redo commands to the timestamp of the history entry they replay. Normal map commands are listed in [`NormalMapConfig`](./normal/NormalMapConfig.md#commands).
+`texture-replaced` carries base64 RGBA8 bytes. Normal map commands are listed in [`NormalMapConfig`](./normal/NormalMapConfig.md#commands).
 
 ## DocumentCommand
 
 ```ts
-type DocumentCommand = /* the same variants, without originTimestamp */;
+type DocumentCommand = /* the same variants, with texture bytes in memory */;
 
-function toPixelCommand(command: DocumentCommand, originTimestamp?: number): PixelCommand;
+function toPixelCommand(command: DocumentCommand): PixelCommand;
 function toDocumentCommand(command: PixelCommand): DocumentCommand;
 ```
 
-`DocumentCommand` is the in-memory form: `texture-replaced` holds its bytes as a `Uint8ClampedArray`. History entries and `PixelDocumentState.apply()` use it. The two functions convert between the forms; every other variant is returned as is.
+`DocumentCommand` is the in-memory form: `texture-replaced` holds its bytes as a `Uint8ClampedArray`. Document changes, history steps and `PixelDocumentState.apply()` use it. The two functions convert between the forms; every other variant is returned as is.
 
 ## Applying
 

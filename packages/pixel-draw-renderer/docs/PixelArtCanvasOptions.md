@@ -34,8 +34,8 @@ interface PixelArtCanvasOptions {
   select?: SelectOptions;
   uv?: UVOptions;
   onDrawEnd?: () => void;
-  history?: HistoryOptions;
-  onHistoryChange?: (state: HistoryState) => void;
+  history?: PixelArtCanvasHistory;
+  onHistoryChange?: (state: HistoryScopeState) => void;
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
@@ -63,17 +63,9 @@ interface UVOptions {
   resizable?: boolean;
 }
 
-interface HistoryOptions {
-  enabled?: boolean;
-  limit?: number;
-}
-
-interface HistoryState {
-  canUndo: boolean;
-  canRedo: boolean;
-  undoDepth: number;
-  redoDepth: number;
-}
+type PixelArtCanvasHistory =
+  | { enabled?: boolean; limit?: number; }
+  | { history: CommandHistory<string>; scope: string; };
 
 type ColorInput = string | Color;
 ```
@@ -84,7 +76,7 @@ type ColorInput = string | Color;
 
 ### `document`
 
-An existing [`PixelDocument`](./PixelDocument.md) to edit instead of creating one. `texture` and `history` are then ignored. Destroying the canvas leaves the document intact.
+An existing [`PixelDocument`](./PixelDocument.md) to edit instead of creating one. `texture` is then ignored. Destroying the canvas leaves the document intact.
 
 ## Interaction
 
@@ -188,11 +180,11 @@ Whether the selected region shows resize handles in UV mode. It defaults to `fal
 
 ### `history`
 
-History is disabled by default. Set `enabled` to `true` to record local edits. `limit` defaults to `10` and caps the undo stack.
+History is disabled by default. `{ enabled: true }` records local edits in the document's own history, `limit` steps deep (10 by default), shared by the canvases of the same document. `{ history, scope }` drives `scope` of a [`CommandHistory`](../../history/docs/CommandHistory.md) the host owns and registered the document in with `registerPixelHistory`. See [pixel history](./history/PixelHistory.md#on-a-canvas).
 
 ### `onHistoryChange`
 
-Called after the history stack is pushed, undone, redone or cleared. The callback receives `canUndo`, `canRedo` and the `undoDepth` and `redoDepth` step counts.
+Called when the canvas's scope changes: a step is filed, undone, redone or refused. The callback receives the scope's [`HistoryScopeState`](../../history/docs/CommandHistory.md#state).
 
 ## Edit callbacks
 
