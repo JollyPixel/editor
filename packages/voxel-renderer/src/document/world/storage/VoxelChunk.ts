@@ -27,6 +27,15 @@ export type VoxelChunkDirtyListener = (
   dirty: boolean
 ) => void;
 
+export interface VoxelChunkBounds {
+  readonly minX: number;
+  readonly minY: number;
+  readonly minZ: number;
+  readonly maxX: number;
+  readonly maxY: number;
+  readonly maxZ: number;
+}
+
 /**
  * Fixed-size sparse grid storing voxels as packed integers.
  */
@@ -55,6 +64,8 @@ export class VoxelChunk {
   #revision = 0;
   #blockCounts: ReadonlyMap<number, number> = new Map();
   #blockCountsRevision = 0;
+  #contentBounds: VoxelChunkBounds | null = null;
+  #contentBoundsRevision = 0;
 
   constructor(
     [cx, cy, cz]: [number, number, number],
@@ -453,6 +464,51 @@ export class VoxelChunk {
     this.#blockCountsRevision = this.#revision;
 
     return counts;
+  }
+
+  contentBounds(): VoxelChunkBounds | null {
+    if (this.#contentBoundsRevision === this.#revision) {
+      return this.#contentBounds;
+    }
+
+    const { shift, mask } = this;
+    const { keys, capacity } = this.store;
+    let minX = Infinity;
+    let minY = Infinity;
+    let minZ = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    let maxZ = -Infinity;
+    for (let slot = 0; slot < capacity; slot++) {
+      const key = keys[slot];
+      if (key < 0) {
+        continue;
+      }
+
+      const lx = key & mask;
+      const ly = (key >> shift) & mask;
+      const lz = key >> (shift * 2);
+      minX = Math.min(minX, lx);
+      minY = Math.min(minY, ly);
+      minZ = Math.min(minZ, lz);
+      maxX = Math.max(maxX, lx);
+      maxY = Math.max(maxY, ly);
+      maxZ = Math.max(maxZ, lz);
+    }
+
+    this.#contentBounds = minX === Infinity ?
+      null :
+      Object.freeze({
+        minX,
+        minY,
+        minZ,
+        maxX,
+        maxY,
+        maxZ
+      });
+    this.#contentBoundsRevision = this.#revision;
+
+    return this.#contentBounds;
   }
 
   toString(): string {

@@ -162,6 +162,20 @@ describe("VoxelLayer coordinates and bounds", () => {
     assert.deepEqual(layer.worldCenter().toArray(), [10.5, 3, -3]);
   });
 
+  it("shrinks its bounds when the outermost voxel is removed", () => {
+    const layer = makeLayer();
+    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.setVoxelAt({ x: 9, y: 5, z: -6 }, makeVoxelEntry());
+    layer.localBounds();
+
+    layer.removeVoxelAt({ x: 9, y: 5, z: -6 });
+
+    const local = layer.localBounds();
+    assert.ok(local !== null);
+    assert.deepEqual(local.min.toArray(), [0, 0, 0]);
+    assert.deepEqual(local.max.toArray(), [1, 1, 1]);
+  });
+
   it("uses the layer position as the center of an empty layer", () => {
     const layer = makeLayer({ position: { x: 10, y: 2, z: -3 } });
 

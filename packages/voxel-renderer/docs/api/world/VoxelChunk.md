@@ -76,6 +76,23 @@ Convert between local coordinates and the linear index the iterators yield.
 Voxel count per block id, counting both shapes of a merged cell. Do not
 mutate the returned map.
 
+#### `contentBounds(): VoxelChunkBounds | null`
+
+Inclusive local corners of the stored voxels, or `null` for an empty chunk.
+The result is frozen and cached until the chunk changes, so
+`VoxelLayer.localBounds()` only rescans edited chunks.
+
+```ts
+interface VoxelChunkBounds {
+  readonly minX: number;
+  readonly minY: number;
+  readonly minZ: number;
+  readonly maxX: number;
+  readonly maxY: number;
+  readonly maxZ: number;
+}
+```
+
 #### `isEmpty(): boolean`
 
 ## Packed voxels

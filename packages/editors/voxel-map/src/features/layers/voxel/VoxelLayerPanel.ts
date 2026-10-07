@@ -58,6 +58,9 @@ export class VoxelLayerPanel extends LitElement {
   private declare _contentOrigin: THREE.Vector3;
 
   @state()
+  private declare _empty: boolean;
+
+  @state()
   private declare _props: PropertyRow[];
   #subscriptions: Array<() => void> = [];
 
@@ -75,6 +78,7 @@ export class VoxelLayerPanel extends LitElement {
     this.layerName = null;
     this._layer = null;
     this._contentOrigin = new THREE.Vector3();
+    this._empty = true;
     this._props = [];
   }
 
@@ -96,6 +100,7 @@ export class VoxelLayerPanel extends LitElement {
     super.connectedCallback();
     this.#subscriptions.push(
       this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.mapDocument.subscribe("reset", () => this.#syncFromLayer()),
       this.placement.subscribe("change", this.#onPlacementChange)
     );
   }
@@ -126,6 +131,7 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = layer;
     if (layer) {
       const bounds = layer.worldBounds();
+      this._empty = bounds === null;
       this._contentOrigin = new THREE.Vector3()
         .copy(bounds?.min ?? layer.position)
         .round();
@@ -156,7 +162,7 @@ export class VoxelLayerPanel extends LitElement {
 
   #renderActions() {
     const transforming = this.#transforming();
-    const empty = this._layer?.worldBounds() === null;
+    const empty = this._empty;
     const transformTitle = empty ?
       "The layer has no voxels to transform" :
       "Move, turn or mirror the layer with a marquee";

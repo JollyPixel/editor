@@ -28,6 +28,7 @@ import {
   BrushStroke,
   canMergePaint,
   type StrokeMode,
+  type StrokeTarget,
   type VoxelPaint
 } from "./model/BrushStroke.ts";
 import {
@@ -271,14 +272,14 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    const cursor = this.#aimAtPlane(stroke);
-    if (cursor === null) {
+    const target = this.#strokeTarget(stroke);
+    if (target === null) {
       return;
     }
 
-    const center = stroke.steer(cursor);
+    const { center, paints } = target;
     this.#frameCenter = center;
-    if (!stroke.trails(center)) {
+    if (!paints || !stroke.trails(center)) {
       return;
     }
 
@@ -327,18 +328,15 @@ export class LocalBrush extends ActorComponent {
       axis,
       pattern,
       origin: aim[side],
+      aimed: aim.remove,
       anchor: aim.anchors[side],
       aimedPart: mode === "place" ? null : this.#aimedHalf(aim)?.aimed
     });
 
     this.#stroke = stroke;
     this.view.document.history.begin();
-    const cursor = this.#aimAtPlane(stroke);
-    const target = cursor === null ?
-      stroke.origin :
-      stroke.steer(cursor);
-    this.#frameCenter = target;
-    this.#apply(stroke, stroke.advance(target));
+    this.#frameCenter = stroke.origin;
+    this.#apply(stroke, stroke.advance(stroke.origin));
   }
 
   #paint(): VoxelPaint {
@@ -473,15 +471,32 @@ export class LocalBrush extends ActorComponent {
       canMergePaint(this.view, layerName, position, this.#paint());
   }
 
-  #aimAtPlane(
+  #strokeTarget(
     stroke: BrushStroke
-  ): VoxelCoord | null {
-    const { input } = this.actor.world;
-
-    return this.#aimer.aimAtPlane(
-      input.mouse.viewportPositionTo(this.#pointer),
-      stroke.plane
+  ): StrokeTarget | null {
+    const aim = this.#resolveAim();
+    const pointer = this.actor.world.input.mouse.viewportPositionTo(
+      this.#pointer
     );
+    const revisited = this.#aimer.firstCellAlong(
+      pointer,
+      (cell) => stroke.claims(cell)
+    );
+    if (revisited !== null) {
+      return stroke.revisit(revisited);
+    }
+    if (aim !== null && aim.face !== null) {
+      return stroke.follow(aim.remove);
+    }
+
+    const center = this.#aimer.aimAtPlane(pointer, stroke.plane);
+
+    return center === null ?
+      null :
+      {
+        center,
+        paints: true
+      };
   }
 
   #refreshStaleAim(): void {
@@ -585,10 +600,7 @@ export class LocalBrush extends ActorComponent {
       return this.#frameCenter;
     }
 
-    const cursor = this.#aimAtPlane(stroke);
-    this.#frameCenter = cursor === null ?
-      null :
-      stroke.steer(cursor);
+    this.#frameCenter = this.#strokeTarget(stroke)?.center ?? null;
 
     return this.#frameCenter;
   }

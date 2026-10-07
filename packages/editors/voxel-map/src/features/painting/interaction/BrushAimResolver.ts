@@ -9,6 +9,7 @@ import {
 // Import Internal Dependencies
 import { ViewRay } from "../../../scene/camera/ViewRay.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
+import { firstCellAlong } from "./firstCellAlong.ts";
 import type { BrushPlane } from "../model/BrushFootprint.ts";
 import {
   CellFace,
@@ -53,6 +54,7 @@ export class BrushAimResolver {
   #aim: BrushAim | null = null;
   #aimPointer = new THREE.Vector2(NaN, NaN);
   #aimView = new THREE.Matrix4();
+  #aimDistance = 0;
 
   constructor(
     options: BrushAimResolverOptions
@@ -96,6 +98,19 @@ export class BrushAimResolver {
     return this.#aim;
   }
 
+  firstCellAlong(
+    pointer: THREE.Vector2,
+    matches: (cell: VoxelCoord) => boolean
+  ): VoxelCoord | null {
+    this.resolve(pointer);
+
+    return firstCellAlong(
+      this.#viewRay.aim(pointer),
+      this.#aimDistance,
+      matches
+    );
+  }
+
   #holdsAim(
     pointer: THREE.Vector2
   ): boolean {
@@ -111,8 +126,12 @@ export class BrushAimResolver {
       hit === null ||
       hit.distance > this.#maxDistance
     ) {
+      this.#aimDistance = this.#maxDistance;
+
       return this.#skyAim();
     }
+
+    this.#aimDistance = hit.distance;
 
     if (hit.ground) {
       const ground = voxelPositionOf(
