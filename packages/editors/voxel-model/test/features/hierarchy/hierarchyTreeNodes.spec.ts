@@ -63,6 +63,16 @@ describe("toTreeNodes", () => {
     }]);
   });
 
+  test("turns a name clash into a row warning", () => {
+    const [clashing, plain] = toTreeNodes([
+      { ...node("arm", "block"), nameClash: "Another root block is named \"arm\"" },
+      node("leg", "block")
+    ], new Map(), allVisible);
+
+    assert.equal(clashing.warning, "Another root block is named \"arm\"");
+    assert.equal("warning" in plain, false);
+  });
+
   test("shows a folder visible while any block under it is, at any depth", () => {
     const tree = [
       node("outer", "folder", [

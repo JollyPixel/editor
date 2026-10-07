@@ -52,7 +52,8 @@ describe("VoxelModelState", () => {
         folderNode("f"),
         { ...blockNode("a", "f"), name: "Skull" }
       ],
-      materials: []
+      materials: [],
+      animationSets: []
     });
   });
 
@@ -197,6 +198,26 @@ describe("voxelModelAssetKind", () => {
 
     assert.deepEqual(handler.dependencies?.(state), [
       { id: "copied", kind: "pixelart" }
+    ]);
+  });
+
+  test("lists linked animation sets as dependencies and rebinds them on a copy", () => {
+    const handler = voxelModelAssetKind();
+    const state = handler.create("model");
+    state.load(createVoxelModelDocument({ texture: kTexture }));
+    state.applyCommand({
+      action: "animation-set-linked",
+      link: { id: "walk", kind: "voxelanimation", bindings: [] }
+    });
+
+    assert.deepEqual(handler.dependencies?.(state), [
+      kTexture,
+      { id: "walk", kind: "voxelanimation" }
+    ]);
+
+    handler.rebind?.(state, new Map([["walk", "walk-copy"]]));
+    assert.deepEqual(state.snapshot().animationSets, [
+      { id: "walk-copy", kind: "voxelanimation", bindings: [] }
     ]);
   });
 

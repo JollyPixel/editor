@@ -51,7 +51,7 @@ describe("SceneWaker", () => {
     const { document, frames } = createHarness();
 
     document.addBlock({ name: "Block" });
-    document.load({ nodes: [], materials: [] });
+    document.load({ nodes: [], materials: [], animationSets: [] });
 
     assert.equal(frames.requested, 2);
   });

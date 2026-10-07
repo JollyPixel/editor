@@ -14,12 +14,9 @@ import type { ModelBlock } from "../../../scene/blocks/index.ts";
 const kMinSize = 0.01;
 const kSizeDecimals = 2;
 
-export type TransformMode =
-  | "pos"
-  | "angle"
-  | "size"
-  | "pivot"
-  | "scale";
+export const TRANSFORM_MODE_ORDER = ["pos", "angle", "size", "pivot", "scale"] as const;
+
+export type TransformMode = typeof TRANSFORM_MODE_ORDER[number];
 export type GizmoSpace =
   | "world"
   | "local";

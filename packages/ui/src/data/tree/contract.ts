@@ -37,6 +37,8 @@ export interface TreeNode<
   detail?: string;
   badges?: TreeBadge[];
   swatch?: TreeSwatch;
+  /** Flags the row as a problem; the text is its tooltip. */
+  warning?: string;
   data?: TData;
 }
 
@@ -78,6 +80,11 @@ export interface JollyRenameDetail {
   id: string;
   name: string;
 }
+
+/** Why `name` is refused for the row, or `null` to accept it. */
+export type TreeRenameValidator = (
+  detail: JollyRenameDetail
+) => string | null;
 
 export interface JollyReparentDetail {
   movedIds: string[];

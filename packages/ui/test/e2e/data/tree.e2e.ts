@@ -196,6 +196,57 @@ test.describe("Tree", () => {
     await expect(crate).toBeFocused();
   });
 
+  test("keeps a refused rename open and drops it on blur", async({ page }) => {
+    const tree = page.locator(TREE_SELECTOR);
+    await tree.evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
+      element.validateRename = ({ name }) => (name === "Crate" ? "Name taken" : null);
+    });
+
+    const camera = rowOf(page, "camera");
+    const field = camera.locator(".rename");
+    await camera.dblclick();
+    await field.fill("Crate");
+    await expect(camera.locator(".rename-error")).toHaveText("Name taken");
+    await field.press("Enter");
+    await expect(field).toBeFocused();
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+
+    await field.fill("Lens");
+    await expect(camera.locator(".rename-error")).toHaveCount(0);
+    await field.press("Enter");
+    await expect(camera.locator(".label")).toHaveText("Lens");
+
+    await camera.dblclick();
+    await field.fill("Crate");
+    await field.blur();
+    await expect(field).toHaveCount(0);
+    await expect(camera.locator(".label")).toHaveText("Lens");
+  });
+
+  test("marks a row carrying a warning", async({ page }) => {
+    const tree = page.locator(TREE_SELECTOR);
+    await tree.evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
+      type Node = typeof element.nodes[number];
+      function flag(
+        nodes: Node[]
+      ): Node[] {
+        return nodes.map((node) => {
+          return {
+            ...node,
+            ...node.id === "crate" ? { warning: "Duplicate name" } : {},
+            ...node.children === undefined ? {} : { children: flag(node.children) }
+          };
+        });
+      }
+      element.nodes = flag(element.nodes);
+    });
+
+    const crate = rowOf(page, "crate");
+    await expect(crate).toHaveAttribute("data-warning", "true");
+    await expect(crate.locator(".warning")).toHaveAttribute("aria-label", "Duplicate name");
+    await expect(rowOf(page, "camera")).not.toHaveAttribute("data-warning");
+  });
+
   test("keeps renaming while the pointer selects text in the field", async({ page }) => {
     const camera = rowOf(page, "camera");
     await camera.dblclick();

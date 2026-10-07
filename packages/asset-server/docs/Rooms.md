@@ -79,7 +79,10 @@ the room sends the author alone a fresh `{ type: "snapshot", data, version, acks
 so its state matches the room again. A kind whose live protocol implements
 `correct` sends `{ type: "correction", data, acks }` instead, restoring only
 what was refused. `acks` tells the author's `CommandSync` which of its
-commands the room processed.
+commands the room processed. When arbitration returned `null` (the command was
+refused outright, not narrowed) or the append failed, the snapshot or correction also
+carries `refused: <seq>`, so the author's `CommandSync` emits `"refused"` with
+that command.
 See [asset kinds](./AssetKinds.md#writing-an-editable-kind).
 
 When the append fails, the room commits and broadcasts nothing and sends the

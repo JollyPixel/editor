@@ -86,6 +86,68 @@ test("a row is renamed in place by double-click", async({ page }) => {
   expect(await outline(page)).toEqual(["Torso"]);
 });
 
+test("sibling blocks keep distinct names, and a clash left by a delete is flagged", async({ page }) => {
+  await addNode(page, "Block", "Hand", { under: "Block" });
+  await addNode(page, "Block", "Arm", { under: "Block" });
+  await addNode(page, "Block", "Palm", { under: "Arm" });
+
+  await test.step("a name taken under another block parent is accepted", async() => {
+    await treeRow(page, "Palm").dblclick();
+    const rename = page.getByRole("textbox", { name: "Rename" });
+    await rename.fill("Hand");
+    await rename.press("Enter");
+
+    await expect(treeRow(page, "Hand")).toHaveCount(2);
+    await expect(treeRow(page, "Hand").last()).not.toHaveAttribute("data-warning");
+  });
+
+  await test.step("an inline rename to a sibling's name is refused", async() => {
+    await treeRow(page, "Arm").dblclick();
+    const rename = page.getByRole("textbox", { name: "Rename" });
+    await rename.fill("hand");
+    await rename.press("Enter");
+
+    await expect(page.getByRole("alert")).toHaveText("\"Block\" already has a block named \"hand\"");
+    await expect(rename).toBeFocused();
+    await rename.press("Escape");
+    await expect(treeRow(page, "Arm")).toBeVisible();
+  });
+
+  await test.step("the new block dialog refuses a sibling's name", async() => {
+    const menu = await rowMenu(page, "Block");
+    await menu.getByRole("menuitem", { name: "Add Child Block" }).click();
+    const form = dialog(page, "New Block");
+    await textField(form, "Block name").fill("ARM");
+
+    await expect(form.getByRole("alert")).toHaveText("\"Block\" already has a block named \"ARM\"");
+    await expect(form.getByRole("button", { name: "OK" })).toBeDisabled();
+    await textField(form, "Block name").fill("Leg");
+    await form.getByRole("button", { name: "OK" }).click();
+    await expect(treeRow(page, "Leg")).toBeVisible();
+  });
+
+  await test.step("deleting a parent lifts a clashing child, flagged until renamed", async() => {
+    await treeRow(page, "Arm").click();
+    await hierarchyAction(page, "Delete").click();
+    const form = dialog(page, "Delete Block");
+    await checkboxField(form, "Delete children too").uncheck();
+    await form.getByRole("button", { name: "Delete" }).click();
+
+    const hands = treeRow(page, "Hand");
+    await expect(hands).toHaveCount(2);
+    await expect(hands.first()).toHaveAttribute("data-warning", "true");
+    await expect(hands.last()).toHaveAttribute("data-warning", "true");
+
+    await hands.last().dblclick();
+    const rename = page.getByRole("textbox", { name: "Rename" });
+    await rename.fill("Thumb");
+    await rename.press("Enter");
+
+    await expect(treeRow(page, "Thumb")).not.toHaveAttribute("data-warning");
+    await expect(treeRow(page, "Hand")).not.toHaveAttribute("data-warning");
+  });
+});
+
 test("a row is reparented with the keyboard move state", async({ page }) => {
   await addNode(page, "Block", "Arm");
 

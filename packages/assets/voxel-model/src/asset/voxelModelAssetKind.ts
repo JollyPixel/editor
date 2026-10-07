@@ -114,9 +114,13 @@ export class VoxelModelState {
   }
 
   dependencies(): AssetReferenceData[] {
-    return this.#texture === null
-      ? []
-      : [{ ...this.#texture }];
+    const sets = [...this.#tree.animationSets.values()].map(({ id, kind }) => {
+      return { id, kind };
+    });
+
+    return this.#texture === null ?
+      sets :
+      [{ ...this.#texture }, ...sets];
   }
 
   snapshot(): VoxelModelSnapshot {
@@ -207,13 +211,19 @@ export function voxelModelAssetKind(
       idMap: ReadonlyMap<string, string>
     ): void {
       const document = state.toJSON();
-      const { texture } = document;
+      const { texture, animationSets } = document;
       state.load({
         ...document,
         texture: {
           ...texture,
           id: idMap.get(texture.id) ?? texture.id
-        }
+        },
+        animationSets: animationSets.map((link) => {
+          return {
+            ...link,
+            id: idMap.get(link.id) ?? link.id
+          };
+        })
       });
     },
 

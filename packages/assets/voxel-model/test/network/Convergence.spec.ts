@@ -5,13 +5,16 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { DocumentSyncClient } from "@jolly-pixel/network/client";
+
 // Import Internal Dependencies
 import {
   ModelDocument,
   voxelModelAssetKind,
   type VoxelModelState
 } from "#src/index.ts";
-import { ModelSyncClient } from "#src/network/ModelSyncClient.ts";
+import { voxelModelWriteKeys } from "#src/network/VoxelModelCommandKeys.ts";
 import type {
   VoxelModelNetworkCommand,
   VoxelModelServerMessage
@@ -37,7 +40,8 @@ function snapshotOf(
 ) {
   return {
     nodes: [...document.tree.values()],
-    materials: [...document.tree.materials.values()]
+    materials: [...document.tree.materials.values()],
+    animationSets: [...document.tree.animationSets.values()]
   };
 }
 
@@ -51,7 +55,7 @@ function setup() {
 
   const room = createMockRoom("B");
   const document = new ModelDocument();
-  new ModelSyncClient({ room, document });
+  new DocumentSyncClient(room, { document, keys: voxelModelWriteKeys });
 
   function deliver(): void {
     for (const message of server.take("B")) {
@@ -97,6 +101,42 @@ describe("voxel-model convergence", () => {
 
     document.remove("M");
     server.receive("A", networkCommand(blockAdded("Z"), { clientId: "A" }));
+    deliver();
+    flush();
+    deliver();
+
+    assert.deepStrictEqual(
+      [...document.tree.values()],
+      server.state.snapshot().nodes
+    );
+  });
+
+  test("a rebased pending reorder keeps the server sibling order", () => {
+    const { server, document, deliver, flush } = setup();
+
+    document.move("M", null);
+    server.receive("A", networkCommand({ ...blockAdded("Z"), beforeId: "M" }, { clientId: "A" }));
+    deliver();
+    flush();
+    deliver();
+
+    assert.deepStrictEqual(
+      [...document.tree.values()],
+      server.state.snapshot().nodes
+    );
+  });
+
+  test("a peer move before a pending removal lands where the removed node stood", () => {
+    const { server, document, deliver, flush } = setup();
+
+    document.remove("N");
+    server.receive("A", networkCommand({
+      action: "node-moved",
+      id: "K",
+      parentId: null,
+      transforms: [],
+      beforeId: "N"
+    }, { clientId: "A" }));
     deliver();
     flush();
     deliver();
@@ -190,6 +230,24 @@ describe("voxel-model convergence", () => {
     const surface = document.tree.materials.material("glass")?.surface;
     assert.strictEqual(surface?.opacity, 0.5);
     assert.strictEqual(surface?.roughness, 0.2);
+    assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
+  });
+
+  test("a pending set link and binding survive a peer edit rebased before them", () => {
+    const { server, document, deliver, flush } = setup();
+
+    document.linkAnimationSet({ id: "walk", kind: "voxelanimation" });
+    document.remapAnimationTrack("walk", "M", "Body/M");
+    server.receive("A", networkCommand(blockAdded("Z"), { clientId: "A" }));
+    deliver();
+
+    assert.deepStrictEqual(
+      document.tree.animationSets.get("walk")?.bindings,
+      [{ path: "M", target: "Body/M" }]
+    );
+
+    flush();
+    deliver();
     assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
   });
 });

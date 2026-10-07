@@ -49,7 +49,8 @@ function torsoSnapshot(
         uv
       }
     ],
-    materials: []
+    materials: [],
+    animationSets: []
   };
 }
 

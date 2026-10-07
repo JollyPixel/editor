@@ -39,6 +39,7 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
+    "@jolly-pixel/asset.voxel-animation": "workspace:*",
     "@jolly-pixel/asset.voxel-map": "workspace:*",
     "@jolly-pixel/asset.voxel-model": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",

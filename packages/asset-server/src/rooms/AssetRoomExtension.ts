@@ -361,17 +361,24 @@ export class AssetRoomExtension<
       admitted
     ) ?? null;
     const acks = this.#acks.of([clientId]);
+    const refused = admitted === null && typeof command.seq === "number" ?
+      { refused: command.seq } :
+      {};
     if (correction !== null) {
       room.sendTo(clientId, {
         type: "correction",
         data: correction,
-        ...acks
+        ...acks,
+        ...refused
       } satisfies AssetSyncMessage);
 
       return;
     }
 
-    room.sendTo(clientId, this.#snapshot(acks));
+    room.sendTo(clientId, {
+      ...this.#snapshot(acks),
+      ...refused
+    });
   }
 
   #broadcastOf(

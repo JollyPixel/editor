@@ -67,7 +67,7 @@ export class BlockTextures {
         break;
       case "node-removed":
         this.#restore(() => {
-          for (const node of change.removed) {
+          for (const node of change.image.before.nodes) {
             if (node.kind === "block") {
               this.#pixels.uv.delete(blockRegionId(node.id));
             }

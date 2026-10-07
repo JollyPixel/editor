@@ -6,6 +6,11 @@ import "./app/paneIcons.ts";
 import "./app/LeftPanel.ts";
 import "./app/RightPanel.ts";
 import "./features/material/MaterialLibrary.ts";
+import "./features/history/HistoryBar.ts";
+import "./features/animation/AnimatePanel.ts";
+import "./features/animation/timeline/Timeline.ts";
+import "./features/animation/timeline/TimelineTransport.ts";
+import "./features/animation/AnimatingFrame.ts";
 import { VoxelModelEditor } from "./boot/VoxelModelEditor.ts";
 
 declare global {

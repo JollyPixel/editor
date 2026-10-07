@@ -28,6 +28,7 @@ import {
   materialOutline,
   outline
 } from "./support/scene.ts";
+import { historyButton } from "./support/history.ts";
 
 test("the hierarchy and transforms survive a reload", async({ page, peer }) => {
   test.slow();
@@ -195,4 +196,24 @@ test("a row menu action on a row a peer deleted does nothing", async({ page, pee
   await expect(menu).toBeHidden();
   await expect(dialog(page, "Delete Block")).toHaveCount(0);
   expect(await outline(page)).toEqual(["Block"]);
+});
+
+test("a peer renaming the block again refuses this rename, listed with their name", async({ page, peer }) => {
+  test.slow();
+  await treeRow(page, "Block").dblclick();
+  const rename = page.getByRole("textbox", { name: "Rename" });
+  await rename.fill("Torso");
+  await rename.press("Enter");
+  await expect(treeRow(peer, "Torso")).toBeVisible();
+
+  await treeRow(peer, "Torso").dblclick();
+  const peerRename = peer.getByRole("textbox", { name: "Rename" });
+  await peerRename.fill("Chest");
+  await peerRename.press("Enter");
+  await expect(treeRow(page, "Chest")).toBeVisible();
+
+  await expect(historyButton(page, "Undo").getByRole("button")).toBeDisabled();
+  await historyButton(page, "Refused steps").getByRole("button").click();
+  await expect(page.getByRole("dialog", { name: "Refused steps" }))
+    .toContainText("Rename Block: Peer changed it since");
 });

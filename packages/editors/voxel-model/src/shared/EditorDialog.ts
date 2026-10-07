@@ -19,6 +19,7 @@ export interface EditorDialogFrame {
   intent?: DialogIntent;
   confirmLabel: string;
   confirmVariant: ButtonVariant;
+  confirmDisabled?: boolean;
 }
 
 export abstract class EditorDialog<TContext, TResult> extends LitElement {
@@ -67,7 +68,8 @@ export abstract class EditorDialog<TContext, TResult> extends LitElement {
       icon = "",
       intent = "",
       confirmLabel,
-      confirmVariant
+      confirmVariant,
+      confirmDisabled = false
     } = this.frame;
 
     return html`
@@ -87,6 +89,7 @@ export abstract class EditorDialog<TContext, TResult> extends LitElement {
           slot="actions"
           variant=${confirmVariant}
           data-action="confirm"
+          ?disabled=${confirmDisabled}
           @click=${this.#confirm}
         >${confirmLabel}</jolly-button>
       </jolly-dialog>
@@ -94,6 +97,9 @@ export abstract class EditorDialog<TContext, TResult> extends LitElement {
   }
 
   #confirm(): void {
+    if (this.frame.confirmDisabled === true) {
+      return;
+    }
     this.#resolve(this.result());
     this.dialogElement.close("confirm");
   }

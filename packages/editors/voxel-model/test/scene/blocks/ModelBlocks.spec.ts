@@ -178,7 +178,8 @@ describe("ModelBlocks projection", () => {
           name: "Metal",
           surface: kMetal
         }
-      ]
+      ],
+      animationSets: []
     });
 
     assert.equal(fixture.blocks.get(stale.uuid), undefined);
@@ -246,14 +247,17 @@ describe("ModelBlocks surface previews", () => {
 });
 
 describe("ModelBlocks transforms", () => {
-  test("applyTransform moves a view without touching the document", () => {
+  test("applyTransform moves a view without touching the document, and says so", () => {
     const fixture = createModelFixture();
     const block = fixture.addBlock();
     const commands = recordCommands(fixture.document);
+    const applied: string[] = [];
+    fixture.blocks.on("transformApplied", (uuid) => applied.push(uuid));
 
     fixture.blocks.applyTransform(block.uuid, transformAt({ x: 7, y: 0, z: 0 }));
 
     assert.equal(block.position.x, 7);
+    assert.deepEqual(applied, [block.uuid]);
     assert.deepEqual(commands, []);
     assert.equal(
       fixture.document.tree.block(block.uuid)?.transform.position.x,

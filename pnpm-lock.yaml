@@ -342,6 +342,28 @@ importers:
         specifier: workspace:*
         version: link:../../event-store
 
+  packages/assets/voxel-animation:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+    devDependencies:
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../../asset-source
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../../event-store
+
   packages/assets/voxel-map:
     dependencies:
       '@jolly-pixel/asset-server':
@@ -381,6 +403,9 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
+      '@jolly-pixel/asset.voxel-animation':
+        specifier: workspace:*
+        version: link:../voxel-animation
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -651,12 +676,18 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../../assets/pixel-art
+      '@jolly-pixel/asset.voxel-animation':
+        specifier: workspace:*
+        version: link:../../assets/voxel-animation
       '@jolly-pixel/asset.voxel-model':
         specifier: workspace:*
         version: link:../../assets/voxel-model
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../../controls
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
@@ -870,6 +901,9 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
+      '@jolly-pixel/asset.voxel-animation':
+        specifier: workspace:*
+        version: link:../assets/voxel-animation
       '@jolly-pixel/asset.voxel-map':
         specifier: workspace:*
         version: link:../assets/voxel-map

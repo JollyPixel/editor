@@ -21,7 +21,6 @@ import { virtualize } from "@lit-labs/virtualizer/virtualize.js";
 import {
   TreeSnapshot,
   idListChanged,
-  resolveRename,
   type FlatTreeRow
 } from "./model.ts";
 import {
@@ -36,11 +35,13 @@ import {
 import { treeStyles } from "./Tree.styles.ts";
 import { TreeDragController } from "./TreeDragController.ts";
 import { TreeFocusController } from "./TreeFocusController.ts";
+import { TreeRenameController } from "./TreeRenameController.ts";
 import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
   type TreeDropAccept,
   type TreeNode,
+  type TreeRenameValidator,
   type TreeSwatchPosition
 } from "./contract.ts";
 
@@ -120,6 +121,9 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare virtual: boolean;
 
+  @property({ attribute: false })
+  declare validateRename: TreeRenameValidator | null;
+
   @state()
   private declare _interaction: TreeInteraction;
 
@@ -131,6 +135,7 @@ export class Tree<TData = unknown> extends LitElement {
   #rowViewList = new TreeRowViewList();
   #activeRowId: string | null = null;
   #focus: TreeFocusController;
+  #rename: TreeRenameController;
 
   constructor() {
     super();
@@ -148,6 +153,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.swatchPosition = "end";
     this.acceptDrop = null;
     this.virtual = false;
+    this.validateRename = null;
     this._interaction = idleTreeInteraction();
     this.#expandedIds = new Set();
     this.#selectedIds = new Set();
@@ -177,6 +183,14 @@ export class Tree<TData = unknown> extends LitElement {
       rowIndex: (id) => this.#rowViewList.indexOf(id),
       activeId: () => this.#activeRowId,
       renaming: () => this._interaction.kind === "renaming"
+    });
+    this.#rename = new TreeRenameController(this, {
+      validateRename: () => this.validateRename,
+      interaction: () => this._interaction,
+      setInteraction: (next) => {
+        this._interaction = next;
+      },
+      focusRow: (id) => this.#focus.focusRow(id)
     });
     this.#selection = new TreeSelectionController(this, {
       visibleRows: () => this.#visibleRows(),
@@ -247,8 +261,8 @@ export class Tree<TData = unknown> extends LitElement {
   #rowViews(): TreeRowView[] {
     const rows = this.#visibleRows();
     const activeId = this.#activeId(rows);
-    const renamingId = this._interaction.kind === "renaming" ?
-      this._interaction.id :
+    const renaming = this._interaction.kind === "renaming" ?
+      this._interaction :
       null;
     this.#activeRowId = activeId;
 
@@ -270,7 +284,8 @@ export class Tree<TData = unknown> extends LitElement {
         dropIndent,
         dragSource: this.#drag.isDragSource(id),
         moveCursor: this.#drag.isMoveCursor(id),
-        renaming: id === renamingId,
+        renaming: id === renaming?.id,
+        renameError: id === renaming?.id ? renaming.error : null,
         hasBranches: this.#snapshot.hasBranches,
         swatchPosition: this.swatchPosition,
         reorderable: this.reorderable
@@ -303,6 +318,7 @@ export class Tree<TData = unknown> extends LitElement {
         data-drop=${view.drop ?? nothing}
         data-move-cursor=${view.moveCursor ? "true" : nothing}
         data-hidden=${view.visible === false ? "true" : nothing}
+        data-warning=${view.warning === undefined ? nothing : "true"}
         style=${styleMap(rowStyle)}
         @click=${(event: MouseEvent) => this.#selection.onRowClick(event, id)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, id)}
@@ -329,6 +345,15 @@ export class Tree<TData = unknown> extends LitElement {
           ${this.#renderLabel(view)}
           ${view.detail ? html`<span class="detail">${view.detail}</span>` : nothing}
           ${view.swatchPosition === "end" ? this.#renderSwatch(view) : nothing}
+          ${view.warning === undefined ? nothing : html`
+            <jolly-icon
+              class="warning"
+              name="warning"
+              role="img"
+              aria-label=${view.warning}
+              title=${view.warning}
+            ></jolly-icon>
+          `}
           ${this.#renderBadges(view)}
           ${view.visible === undefined ? nothing : html`
             <button
@@ -472,19 +497,27 @@ export class Tree<TData = unknown> extends LitElement {
       >${view.label}</span>`;
     }
 
+    const message = view.renameError;
+
     return html`
       <input
         class="label rename"
         type="text"
         .value=${view.label}
         aria-label="Rename"
+        aria-invalid=${message === null ? nothing : "true"}
+        aria-errormessage=${message === null ? nothing : "rename-error"}
         @pointerdown=${stopPropagation}
         @click=${stopPropagation}
         @dblclick=${stopPropagation}
-        @keydown=${this.#onRenameKeyDown}
-        @blur=${(event: FocusEvent) => this.#commitRename(event.target, view)}
-        @focus=${this.#onRenameFocus}
+        @keydown=${(event: KeyboardEvent) => this.#rename.onKeyDown(event, view)}
+        @input=${(event: InputEvent) => this.#rename.onInput(event, view)}
+        @blur=${(event: FocusEvent) => this.#rename.onBlur(event, view)}
+        @focus=${this.#rename.onFocus}
       >
+      ${message === null ? nothing : html`
+        <span id="rename-error" class="rename-error" role="alert">${message}</span>
+      `}
     `;
   }
 
@@ -513,68 +546,11 @@ export class Tree<TData = unknown> extends LitElement {
     if (this.#isRenamable(id)) {
       this._interaction = {
         kind: "renaming",
-        id
+        id,
+        error: null
       };
       this.#focus.reveal(id);
     }
-  }
-
-  readonly #onRenameFocus = (
-    event: FocusEvent
-  ): void => {
-    const input = event.target;
-    if (input instanceof HTMLInputElement) {
-      input.select();
-    }
-  };
-
-  readonly #onRenameKeyDown = (
-    event: KeyboardEvent
-  ): void => {
-    // The tree's own navigation must not read the keys typed into the field.
-    event.stopPropagation();
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      this.#cancelRename();
-    }
-    else if (event.key === "Enter") {
-      event.preventDefault();
-      // Blur commits, so the two paths cannot double-emit.
-      (event.target as HTMLInputElement).blur();
-    }
-  };
-
-  #cancelRename(): void {
-    const id = this._interaction.kind === "renaming" ?
-      this._interaction.id :
-      null;
-    this._interaction = idleTreeInteraction();
-    if (id !== null) {
-      this.#focus.focusRow(id);
-    }
-  }
-
-  #commitRename(
-    target: EventTarget | null,
-    view: TreeRowView
-  ): void {
-    if (
-      this._interaction.kind !== "renaming" ||
-      this._interaction.id !== view.id
-    ) {
-      return;
-    }
-
-    this._interaction = idleTreeInteraction();
-    const name = resolveRename(
-      view.label,
-      target instanceof HTMLInputElement ? target.value : ""
-    );
-    if (name !== null) {
-      emitDataEvent(this, "jolly-rename", { id: view.id, name });
-    }
-    this.#focus.focusRow(view.id);
   }
 
   #onRowContextMenu(

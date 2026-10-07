@@ -135,13 +135,39 @@ export const nodeTransformSchema = defineSchema({
   required: ["id", "transform"]
 });
 
+const kRemapTargetSchema = defineSchema({
+  type: ["string", "null"],
+  minLength: 1
+});
+
+export const animationBindingSchema = defineSchema({
+  type: "object",
+  properties: {
+    path: { type: "string", minLength: 1 },
+    target: kRemapTargetSchema
+  },
+  required: ["path", "target"]
+});
+
+export const animationSetLinkSchema = defineSchema({
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    kind: { type: "string" },
+    bindings: { type: "array", items: animationBindingSchema },
+    own: { type: "boolean" }
+  },
+  required: ["id", "kind", "bindings"]
+});
+
 export const voxelModelSnapshotSchema = defineSchema({
   type: "object",
   properties: {
     nodes: { type: "array", items: modelNodeSchema },
-    materials: { type: "array", items: materialEntrySchema }
+    materials: { type: "array", items: materialEntrySchema },
+    animationSets: { type: "array", items: animationSetLinkSchema }
   },
-  required: ["nodes", "materials"]
+  required: ["nodes", "materials", "animationSets"]
 });
 
 export const voxelModelCommandSchema = defineSchema({
@@ -207,6 +233,25 @@ export const voxelModelCommandSchema = defineSchema({
     commandVariant("material-changed", {
       id: { type: "string" },
       surface: materialSurfacePatchSchema
+    }),
+    commandVariant("animation-set-linked", {
+      link: animationSetLinkSchema
+    }),
+    commandVariant("animation-set-unlinked", {
+      id: { type: "string" }
+    }),
+    commandVariant("animation-set-owned", {
+      id: { type: "string" },
+      own: { type: "boolean" }
+    }),
+    commandVariant("animation-binding-changed", {
+      id: { type: "string" },
+      path: { type: "string", minLength: 1 },
+      target: kRemapTargetSchema
+    }),
+    commandVariant("animation-binding-cleared", {
+      id: { type: "string" },
+      path: { type: "string", minLength: 1 }
     })
   ]
 });

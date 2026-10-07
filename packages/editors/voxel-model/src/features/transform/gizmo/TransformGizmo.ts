@@ -14,19 +14,19 @@ import type {
   ModelBlocks
 } from "../../../scene/blocks/index.ts";
 import type { BlockSelectionStore } from "../../../state/index.ts";
-import type {
-  TransformLiveSync,
-  TransformLock
-} from "../collaboration/index.ts";
+import type { TransformLock } from "../collaboration/index.ts";
 import {
   nodeTool,
   pivotTool,
   resizeTool,
-  type GizmoSpace,
   type GizmoTool,
   type TransformMode
 } from "./gizmoTools.ts";
 import { TRANSFORM_MODES } from "../transformModes.ts";
+import type {
+  TransformTarget,
+  TransformTool
+} from "../TransformTool.ts";
 import { RenderOrder } from "../../../scene/renderOrder.ts";
 
 // CONSTANTS
@@ -58,7 +58,12 @@ export interface TransformGizmoOptions {
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
   lock: TransformLock;
-  live: TransformLiveSync;
+  tool: TransformTool;
+}
+
+interface GizmoDrag {
+  start: BlockTransformJSON;
+  target: TransformTarget;
 }
 
 export type TransformGizmoEvents = {
@@ -70,14 +75,12 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   #blocks: ModelBlocks;
   #selection: BlockSelectionStore;
   #lock: TransformLock;
-  #live: TransformLiveSync;
   #tools: Readonly<Record<TransformMode, GizmoTool>>;
   #controls: readonly TransformControls[];
-  #mode: TransformMode | null = null;
-  #space: GizmoSpace = "local";
+  #tool: TransformTool;
   #enabled = true;
   #pivotBlock: ModelBlock | null = null;
-  #start: BlockTransformJSON | null = null;
+  #drag: GizmoDrag | null = null;
 
   #onStart = (): void => {
     const block = this.#selectedBlock();
@@ -85,9 +88,13 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
       return;
     }
 
-    this.#start = block.transform;
+    const { target } = this.#tool;
+    this.#drag = {
+      start: block.transform,
+      target
+    };
     this.#camera.enabled = false;
-    this.#lock.claim(block.uuid);
+    target.begin?.(block);
   };
 
   #onChange = (): void => {
@@ -96,25 +103,24 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
       return;
     }
 
-    if (this.#start !== null) {
-      this.#activeTool()?.apply(block, this.#start);
-      this.#live.publish(block.uuid, block.transform);
+    if (this.#drag !== null) {
+      this.#activeTool().apply(block, this.#drag.start);
+      this.#drag.target.preview?.(block);
     }
     this.emit("change", block);
   };
 
   #onEnd = (): void => {
-    this.#start = null;
+    const drag = this.#drag;
+    this.#drag = null;
     this.#camera.enabled = true;
 
     const block = this.#selectedBlock();
-    if (block !== null) {
+    if (block !== null && drag !== null) {
       block.roundTransform();
-      this.#blocks.commitTransform(block.uuid);
-      this.#live.clear();
-      this.#lock.release();
+      drag.target.end(block);
     }
-    this.#activeTool()?.reset();
+    this.#activeTool().reset();
   };
 
   #sync = (): void => {
@@ -142,7 +148,7 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     }
 
     active.controls.mode = active.mode;
-    active.controls.orientation = active.orientation(this.#space);
+    active.controls.orientation = active.orientation(this.#tool.space);
     active.controls.attach(active.attach(block));
     active.controls.enabled = true;
   };
@@ -155,7 +161,7 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     this.#blocks = options.blocks;
     this.#selection = options.selection;
     this.#lock = options.lock;
-    this.#live = options.live;
+    this.#tool = options.tool;
 
     const controls = createControls(options);
     const pivotControls = createControls(options, { handle: { kind: "sphere" } });
@@ -178,14 +184,16 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     }
     this.#selection.on("select", this.#sync);
     this.#lock.on("change", this.#sync);
+    this.#tool.on("change", this.#sync);
+    this.#sync();
   }
 
   get dragging(): boolean {
-    return this.#start !== null;
+    return this.#drag !== null;
   }
 
-  get activeControls(): TransformControls | null {
-    return this.#activeTool()?.controls ?? null;
+  get activeControls(): TransformControls {
+    return this.#activeTool().controls;
   }
 
   get enabled(): boolean {
@@ -203,18 +211,10 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     this.#sync();
   }
 
-  configure(
-    mode: TransformMode,
-    space: GizmoSpace
-  ): void {
-    this.#mode = mode;
-    this.#space = space;
-    this.#sync();
-  }
-
   dispose(): void {
     this.#selection.off("select", this.#sync);
     this.#lock.off("change", this.#sync);
+    this.#tool.off("change", this.#sync);
     for (const tool of Object.values(this.#tools)) {
       tool.detach();
     }
@@ -233,16 +233,14 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     return uuid === null ? null : this.#blocks.get(uuid) ?? null;
   }
 
-  #activeTool(): GizmoTool | null {
-    return this.#mode === null ? null : this.#tools[this.#mode];
+  #activeTool(): GizmoTool {
+    return this.#tools[this.#tool.mode];
   }
 
   #syncPivotMarker(
     selected: ModelBlock | null
   ): void {
-    const block = this.#enabled &&
-      this.#mode !== null &&
-      TRANSFORM_MODES[this.#mode].showsPivot ?
+    const block = this.#enabled && TRANSFORM_MODES[this.#tool.mode].showsPivot ?
       selected :
       null;
     if (this.#pivotBlock !== null && this.#pivotBlock !== block) {

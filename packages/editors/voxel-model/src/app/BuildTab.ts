@@ -50,12 +50,16 @@ interface BuildSources {
   model: ModelDocument | null;
 }
 
+export interface BuildWorkspace extends TransformWorkspace {
+  document: ModelDocument;
+}
+
 export class BuildTab extends LitElement {
   @property({ attribute: false })
   declare canvas: PixelArtCanvas | null;
 
   @property({ attribute: false })
-  declare workspace: TransformWorkspace | null;
+  declare workspace: BuildWorkspace | null;
 
   @query("jolly-model-editor-transform")
   declare private transformElement: TransformPanel;

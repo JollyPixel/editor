@@ -18,6 +18,10 @@ const kVersionSchema = {
   type: "integer",
   minimum: 0
 } as const;
+const kRefusedSchema = {
+  type: "integer",
+  minimum: 0
+} as const;
 
 export interface ServerMessageProtocolOptions {
   command: MessageProtocol;
@@ -33,13 +37,15 @@ const kSyncOptionalProperties: Record<
 > = {
   snapshot: {
     version: kVersionSchema,
-    acks: kAcksSchema
+    acks: kAcksSchema,
+    refused: kRefusedSchema
   },
   command: {
     version: kVersionSchema
   },
   correction: {
-    acks: kAcksSchema
+    acks: kAcksSchema,
+    refused: kRefusedSchema
   }
 };
 

@@ -11,15 +11,19 @@ import {
   ModelHierarchy,
   type HierarchyNode
 } from "#src/model/index.ts";
-import { PresenceStore } from "#src/state/index.ts";
+import { createEditorHistory } from "#src/features/history/index.ts";
+import {
+  PresenceStore,
+  TabStore
+} from "#src/state/index.ts";
 import {
   HierarchyController,
   type HierarchyView
 } from "#src/features/hierarchy/HierarchyController.ts";
 import type {
-  HierarchyNameContext,
-  HierarchyNameResult
-} from "#src/features/hierarchy/dialogs/HierarchyNameDialog.ts";
+  NameDialogContext,
+  NameDialogResult
+} from "#src/shared/NameDialog.ts";
 import type {
   HierarchyDuplicateContext,
   HierarchyDuplicateResult
@@ -29,6 +33,7 @@ import type {
   DeleteResult
 } from "#src/shared/DeleteDialog.ts";
 import {
+  buildEditsOf,
   createModelFixture,
   type ModelFixture
 } from "../../fixtures/model.ts";
@@ -49,13 +54,13 @@ const kMenuPoint = {
 };
 
 interface DialogAnswers {
-  name?: HierarchyNameResult | null;
+  name?: NameDialogResult | null;
   duplicate?: HierarchyDuplicateResult | null;
   delete?: DeleteResult | null;
 }
 
 interface DialogCalls {
-  name: HierarchyNameContext[];
+  name: NameDialogContext[];
   duplicate: HierarchyDuplicateContext[];
   delete: DeleteContext[];
   renamed: string[];
@@ -66,6 +71,8 @@ interface Harness extends ModelFixture {
   controller: HierarchyController;
   hierarchy: ModelHierarchy;
   calls: DialogCalls;
+  tab: TabStore;
+  updates(): number;
 }
 
 function createHarness(
@@ -75,6 +82,7 @@ function createHarness(
   const { document, blocks, selection } = fixture;
   const hierarchy = new ModelHierarchy({
     document,
+    edits: buildEditsOf(createEditorHistory({ document })),
     textureSize: () => kTextureSize,
     poses: blocks
   });
@@ -108,26 +116,33 @@ function createHarness(
       calls.materialShown++;
     }
   };
+  let updates = 0;
   const host: ReactiveControllerHost = {
     addController: (controller) => controller.hostConnected?.(),
     removeController: () => undefined,
-    requestUpdate: () => undefined,
+    requestUpdate: () => {
+      updates++;
+    },
     updateComplete: Promise.resolve(true)
   };
+  const tab = new TabStore();
   const controller = new HierarchyController(host, view);
   controller.attach({
     document,
     blocks,
     selection,
     hierarchy,
-    presence: new PresenceStore()
+    presence: new PresenceStore(),
+    tab
   });
 
   return {
     ...fixture,
     controller,
     hierarchy,
-    calls
+    calls,
+    tab,
+    updates: () => updates
   };
 }
 
@@ -158,16 +173,27 @@ describe("HierarchyController.addBlock", () => {
 
     await harness.controller.addBlock();
 
-    assert.deepEqual(harness.calls.name, [
-      {
-        heading: "New Block",
-        fieldLabel: "Block name",
-        defaultName: "Block"
-      }
-    ]);
+    const [{ validate: _validate, ...context }] = harness.calls.name;
+    assert.deepEqual(context, {
+      heading: "New Block",
+      fieldLabel: "Block name",
+      defaultName: "Block"
+    });
     const [body] = harness.hierarchy.nodes();
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Arm"]]]);
     assert.deepEqual(harness.controller.selected, [body.children[0].id]);
+  });
+
+  test("prefills a free name and refuses one a sibling block already has", async() => {
+    const harness = createHarness();
+    harness.addBlock({ name: "Block" });
+
+    await harness.controller.addBlock();
+
+    const [{ defaultName, validate }] = harness.calls.name;
+    assert.equal(defaultName, "Block 2");
+    assert.equal(validate?.("block"), "A root block is already named \"block\"");
+    assert.equal(validate?.("Arm"), null);
   });
 
   test("adds at the root without a selection", async() => {
@@ -181,16 +207,6 @@ describe("HierarchyController.addBlock", () => {
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Body", "Arm"]);
   });
 
-  test("falls back to the default name when the name is blank", async() => {
-    const harness = createHarness({
-      name: { name: "" }
-    });
-
-    await harness.controller.addBlock();
-
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Block"]);
-  });
-
   test("adds nothing when the dialog is dismissed", async() => {
     const harness = createHarness();
 
@@ -201,9 +217,9 @@ describe("HierarchyController.addBlock", () => {
 });
 
 describe("HierarchyController.addFolder", () => {
-  test("prompts for a folder and falls back to its default name", async() => {
+  test("prompts for a folder without refusing any name", async() => {
     const harness = createHarness({
-      name: { name: "" }
+      name: { name: "Folder" }
     });
 
     await harness.controller.addFolder();
@@ -230,6 +246,35 @@ describe("HierarchyController.addFolder", () => {
 
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Limbs"]]]);
     assert.equal(harness.hierarchy.nodes()[0].children[0].kind, "folder");
+  });
+});
+
+describe("HierarchyController.validateRename", () => {
+  test("refuses a block name a sibling block has, never a folder name", () => {
+    const harness = createHarness();
+    const arm = harness.addBlock({ name: "Arm" });
+    harness.addBlock({ name: "Leg" });
+    const folderId = harness.hierarchy.createFolder("Limbs", null)!;
+
+    assert.equal(
+      harness.controller.validateRename({ id: arm.uuid, name: "LEG" }),
+      "A root block is already named \"LEG\""
+    );
+    assert.equal(harness.controller.validateRename({ id: arm.uuid, name: "Hand" }), null);
+    assert.equal(harness.controller.validateRename({ id: folderId, name: "Leg" }), null);
+  });
+});
+
+describe("HierarchyController.editable", () => {
+  test("edits only in Build, redrawing when the tab changes", () => {
+    const { controller, tab, updates } = createHarness();
+    const before = updates();
+
+    tab.activate("animate");
+    assert.deepEqual([controller.editable, updates()], [false, before + 1]);
+
+    tab.activate("build");
+    assert.equal(controller.editable, true);
   });
 });
 
@@ -318,7 +363,7 @@ describe("HierarchyController.duplicateSelected", () => {
   test("selects and expands the copy of a subtree", async() => {
     const harness = createHarness({
       duplicate: {
-        name: "",
+        name: "Body Copy",
         includeChildren: true,
         mirrorAxes: kNoMirror
       }
@@ -331,12 +376,12 @@ describe("HierarchyController.duplicateSelected", () => {
 
     await harness.controller.duplicateSelected();
 
-    assert.deepEqual(harness.calls.duplicate, [
-      {
-        defaultName: "Body Copy",
-        hasChildren: true
-      }
-    ]);
+    const [{ validate, ...context }] = harness.calls.duplicate;
+    assert.deepEqual(context, {
+      defaultName: "Body Copy",
+      hasChildren: true
+    });
+    assert.equal(validate?.("body"), "A root block is already named \"body\"");
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [
       ["Body", ["Arm"]],
       ["Body Copy", ["Arm"]]
@@ -662,10 +707,12 @@ describe("HierarchyController.attach", () => {
       selection,
       hierarchy: new ModelHierarchy({
         document,
+        edits: buildEditsOf(createEditorHistory({ document })),
         textureSize: () => kTextureSize,
         poses: blocks
       }),
-      presence: new PresenceStore()
+      presence: new PresenceStore(),
+      tab: new TabStore()
     });
 
     const [folder] = harness.controller.nodes;

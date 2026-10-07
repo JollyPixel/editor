@@ -86,7 +86,10 @@ describe("voxelModelConflictKeys", () => {
       ["parent:folder-1", "transform:a", "transform:b"]
     ],
     [networkCommand(blockAdded("n")), []],
-    [networkCommand({ action: "node-removed", id: "n" }), []],
+    [
+      networkCommand({ action: "node-removed", id: "n" }),
+      ["name:n", "parent:n", "transform:n", "uv:n", "material:n"]
+    ],
     [
       networkCommand({
         action: "node-uv-changed",
@@ -132,7 +135,19 @@ describe("voxelModelConflictKeys", () => {
     ],
     [networkCommand(materialAdded("glass")), []],
     [networkCommand(materialFolderAdded("metals")), []],
-    [networkCommand({ action: "material-removed", id: "glass" }), []]
+    [
+      networkCommand({ action: "material-removed", id: "glass" }),
+      [
+        "material-name:glass",
+        "material-parent:glass",
+        "material-surface:glass:color",
+        "material-surface:glass:opacity",
+        "material-surface:glass:roughness",
+        "material-surface:glass:metalness",
+        "material-surface:glass:emissive",
+        "material-surface:glass:emissiveIntensity"
+      ]
+    ]
   ];
 
   for (const [command, expected] of cases) {
@@ -216,6 +231,20 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
     commit(arbiter, later);
 
     assert.equal(admitted(arbiter, stale), null);
+  });
+
+  it("refuses a removal based on a version older than a peer's edit of the node, as an undo is", () => {
+    const arbiter = new VoxelModelCommandArbiter();
+    arbiter.admit(kAcceptAll, networkCommand({
+      action: "node-renamed",
+      id: "x",
+      name: "X"
+    }, { clientId: "A" }))!.commit(5);
+    const removal = { action: "node-removed", id: "x" } as const;
+
+    assert.equal(admitted(arbiter, networkCommand(removal, { clientId: "B", basis: 3 })), null);
+    assert.notEqual(admitted(arbiter, networkCommand(removal, { clientId: "B", basis: 5 })), null);
+    assert.notEqual(admitted(arbiter, networkCommand(removal, { clientId: "B" })), null);
   });
 
   it("never conflicts across different ids", () => {

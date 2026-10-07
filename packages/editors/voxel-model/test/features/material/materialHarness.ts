@@ -25,6 +25,7 @@ import type {
   DeleteResult
 } from "#src/shared/DeleteDialog.ts";
 import type { MenuPoint } from "#src/shared/menuSession.ts";
+import { createEditorHistory } from "#src/features/history/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
 
 // CONSTANTS
@@ -81,6 +82,7 @@ export function createMaterialHarness(
   const view = new ViewSettingsStore();
   const workspace = {
     ...fixture,
+    history: createEditorHistory({ document: fixture.document }),
     materialFocus,
     presence,
     view

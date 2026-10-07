@@ -41,6 +41,7 @@ const kState: TreeRowState = {
   dragSource: false,
   moveCursor: false,
   renaming: false,
+  renameError: null,
   hasBranches: true,
   swatchPosition: "end",
   reorderable: true

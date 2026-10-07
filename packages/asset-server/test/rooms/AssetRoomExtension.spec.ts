@@ -339,10 +339,14 @@ describe("AssetRoomExtension", () => {
       }
     });
 
-    await extension.onMessage("alice", { action: "increment" }, context);
+    await extension.onMessage("alice", { action: "increment", seq: 4 }, context);
 
     assert.strictEqual(corrections[0][1], narrowed);
-    assert.strictEqual(direct.length, 1);
+    assert.deepEqual(direct.map(({ payload }) => payload), [{
+      type: "correction",
+      data: { action: "increment", seq: 4, clientId: "alice" },
+      acks: { alice: 4 }
+    }], "a narrowed command was admitted, so no refused seq");
   });
 
   test("falls back to a snapshot when the protocol has no correction", async() => {
@@ -475,7 +479,8 @@ describe("AssetRoomExtension — acks", () => {
         seq: 4,
         clientId: "alice"
       },
-      acks: { alice: 4 }
+      acks: { alice: 4 },
+      refused: 4
     });
   });
 
@@ -490,7 +495,8 @@ describe("AssetRoomExtension — acks", () => {
       payload: {
         type: "snapshot",
         data: { value: 7 },
-        acks: { alice: 2 }
+        acks: { alice: 2 },
+        refused: 2
       }
     });
   });

@@ -508,7 +508,7 @@ describe("ModelTree", () => {
 
     const node = blockNode("a");
     const loaded = new ModelTree();
-    loaded.load({ nodes: [node], materials: [] });
+    loaded.load({ nodes: [node], materials: [], animationSets: [] });
 
     assert.notStrictEqual(tree.block("a"), tree.block("a"));
     assert.notStrictEqual(loaded.block("a"), node);
@@ -522,29 +522,43 @@ describe("ModelTree.load", () => {
 
     tree.load({
       nodes: [blockNode("arm", "body"), blockNode("body")],
-      materials: []
+      materials: [],
+      animationSets: []
     });
 
     assert.equal(tree.get("arm")?.parentId, "body");
   });
 
   test("rejects a repeated id, a missing parent or material and a cycle", () => {
-    const cases: VoxelModelSnapshot[] = [
-      { nodes: [blockNode("a"), folderNode("a")], materials: [] },
-      { nodes: [blockNode("a", "ghost")], materials: [] },
-      { nodes: [folderNode("a", "b"), folderNode("b", "a")], materials: [] },
-      { nodes: [folderNode("a", "a")], materials: [] },
+    const link = { id: "walk", kind: "voxelanimation", bindings: [] };
+    const cases: Partial<VoxelModelSnapshot>[] = [
+      { nodes: [blockNode("a"), folderNode("a")] },
+      { nodes: [blockNode("a", "ghost")] },
+      { nodes: [folderNode("a", "b"), folderNode("b", "a")] },
+      { nodes: [folderNode("a", "a")] },
       { nodes: [{ ...blockNode("a"), materialId: "ghost" }], materials: [material("glass")] },
-      { nodes: [], materials: [material("glass"), material("glass")] },
-      { nodes: [], materials: [material("glass"), material("steel", "glass")] },
-      { nodes: [], materials: [material("steel", "ghost")] },
-      { nodes: [], materials: [materialFolder("a", "b"), materialFolder("b", "a")] },
-      { nodes: [{ ...blockNode("a"), materialId: "metals" }], materials: [materialFolder("metals")] }
+      { materials: [material("glass"), material("glass")] },
+      { materials: [material("glass"), material("steel", "glass")] },
+      { materials: [material("steel", "ghost")] },
+      { materials: [materialFolder("a", "b"), materialFolder("b", "a")] },
+      { nodes: [{ ...blockNode("a"), materialId: "metals" }], materials: [materialFolder("metals")] },
+      { animationSets: [link, link] },
+      {
+        animationSets: [{
+          ...link,
+          bindings: [{ path: "arm", target: null }, { path: "ARM", target: "Hand" }]
+        }]
+      }
     ];
 
     for (const snapshot of cases) {
       assert.throws(
-        () => new ModelTree().load(snapshot),
+        () => new ModelTree().load({
+          nodes: [],
+          materials: [],
+          animationSets: [],
+          ...snapshot
+        }),
         InvalidModelTreeError
       );
     }
@@ -555,7 +569,8 @@ describe("ModelTree.load", () => {
 
     assert.throws(() => tree.load({
       nodes: [blockNode("a", "ghost")],
-      materials: [material("metal")]
+      materials: [material("metal")],
+      animationSets: []
     }));
 
     assert.ok(tree.has("body"));
@@ -573,9 +588,9 @@ describe("ModelTree.imagesOf", () => {
       blockAdded("b")
     );
 
-    assert.deepEqual(tree.imagesOf(blockAdded("c")), []);
+    assert.deepEqual(tree.imagesOf(blockAdded("c")).nodes, []);
     assert.deepEqual(
-      tree.imagesOf({ action: "node-removed", id: "f" }).map((node) => node.id),
+      tree.imagesOf({ action: "node-removed", id: "f" }).nodes.map((node) => node.id),
       ["f", "a"]
     );
     assert.deepEqual(
@@ -584,15 +599,15 @@ describe("ModelTree.imagesOf", () => {
         id: "a",
         parentId: null,
         transforms: [{ id: "a", transform: TRANSFORM }, { id: "b", transform: TRANSFORM }]
-      }).map((node) => node.id),
+      }).nodes.map((node) => node.id),
       ["a", "b"]
     );
     assert.deepEqual(
       tree.imagesOf({ action: "node-renamed", id: "b", name: "B" }),
-      [blockNode("b")]
+      { nodes: [blockNode("b")], materials: [], animationSets: [] }
     );
     assert.deepEqual(
-      tree.imagesOf({ action: "node-renamed", id: "missing", name: "B" }),
+      tree.imagesOf({ action: "node-renamed", id: "missing", name: "B" }).nodes,
       []
     );
   });
@@ -607,45 +622,83 @@ describe("ModelTree.imagesOf", () => {
     );
 
     assert.deepEqual(
-      tree.imagesOf({ action: "material-removed", id: "metals" }).map((node) => node.id),
+      tree.imagesOf({ action: "material-removed", id: "metals" }).nodes.map((node) => node.id),
       ["a"]
     );
     assert.deepEqual(
-      tree.imagesOf({ action: "material-removed", id: "metals", keepContents: true }),
+      tree.imagesOf({ action: "material-removed", id: "metals", keepContents: true }).nodes,
       []
     );
     assert.deepEqual(
-      tree.imagesOf({ action: "material-renamed", id: "glass", name: "Glass" }),
+      tree.imagesOf({ action: "material-renamed", id: "glass", name: "Glass" }).nodes,
       []
     );
   });
-});
 
-describe("ModelTree.materialImagesOf", () => {
   test("returns the library entries a command changes, as they are before it", () => {
     const tree = treeOf(
       materialFolderAdded("metals"),
       materialAdded("iron", "metals"),
       materialAdded("glass")
     );
+    function materialsOf(
+      command: VoxelModelCommand
+    ): unknown {
+      return tree.imagesOf(command).materials;
+    }
 
-    assert.deepEqual(tree.materialImagesOf(materialAdded("gold")), []);
-    assert.deepEqual(tree.materialImagesOf(blockAdded("a")), []);
+    assert.deepEqual(materialsOf(materialAdded("gold")), []);
+    assert.deepEqual(materialsOf(blockAdded("a")), []);
     assert.deepEqual(
-      tree.materialImagesOf({ action: "material-removed", id: "metals" }),
+      materialsOf({ action: "material-removed", id: "metals" }),
       [materialFolder("metals"), material("iron", "metals")]
     );
     assert.deepEqual(
-      tree.materialImagesOf({ action: "material-removed", id: "metals", keepContents: true }),
+      materialsOf({ action: "material-removed", id: "metals", keepContents: true }),
       [materialFolder("metals"), material("iron", "metals")]
     );
     assert.deepEqual(
-      tree.materialImagesOf({ action: "material-changed", id: "glass", surface: { opacity: 0.5 } }),
+      materialsOf({ action: "material-changed", id: "glass", surface: { opacity: 0.5 } }),
       [material("glass")]
     );
     assert.deepEqual(
-      tree.materialImagesOf({ action: "material-moved", id: "missing", parentId: null }),
+      materialsOf({ action: "material-moved", id: "missing", parentId: null }),
       []
+    );
+  });
+});
+
+describe("ModelTree.placeable", () => {
+  test("keeps a beforeId the tree would accept and drops one it would refuse", () => {
+    const tree = treeOf(
+      folderAdded("limbs"),
+      blockAdded("arm", "limbs"),
+      blockAdded("body"),
+      materialAdded("iron")
+    );
+
+    const leg = blockNode("leg", "limbs");
+    const kept: VoxelModelCommand = { action: "node-added", node: leg, beforeId: "arm" };
+    const stale: VoxelModelCommand = { action: "node-added", node: leg, beforeId: "body" };
+
+    assert.deepEqual(tree.placeable(kept), kept);
+    assert.deepEqual(tree.placeable(stale), { action: "node-added", node: leg });
+    assert.equal(tree.accepts(stale), false);
+    assert.equal(tree.accepts(tree.placeable(stale)), true);
+    const move: VoxelModelCommand = {
+      action: "node-moved",
+      id: "body",
+      parentId: "limbs",
+      transforms: [],
+      beforeId: "gone"
+    };
+    assert.deepEqual(
+      tree.placeable(move),
+      { action: "node-moved", id: "body", parentId: "limbs", transforms: [] }
+    );
+    assert.deepEqual(
+      tree.placeable({ action: "material-moved", id: "iron", parentId: null, beforeId: "iron" }),
+      { action: "material-moved", id: "iron", parentId: null }
     );
   });
 });
