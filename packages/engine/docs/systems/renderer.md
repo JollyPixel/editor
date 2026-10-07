@@ -286,6 +286,17 @@ correctly. The renderer must not be used after disposal.
 | ----- | ------- | ------------- |
 | `resize` | `{ width, height }` | After the canvas size changes |
 | `draw` | `{ source: THREE.WebGPURenderer }` | After each render frame |
+| `deviceLost` | `{ api, message, reason }` | When the GPU device or WebGL context is lost |
+
+After `deviceLost`, three.js has already logged the loss and stops rendering.
+The canvas stays blank until the page creates a new renderer, so show a reload
+prompt:
+
+```ts
+renderer.on("deviceLost", ({ api, message }) => {
+  showReloadPrompt(`${api} device lost: ${message}`);
+});
+```
 
 ## See also
 

@@ -32,7 +32,7 @@ fails to initialize.
 | `audio` | engine default | Global audio service of the world. |
 | `renderer` | engine defaults | Forwarded to [`ThreeRenderer.create()`](../../../engine/docs/systems/renderer.md). An explicit `output.pixelRatio` or `output.maxPixelRatio` survives `load()`. |
 | `loop` | scheduler defaults | [`FrameSchedulerOptions`](../../../loop/docs/framescheduler.md) of `runtime.loop`. |
-| `logger` | every namespace disabled | Receives the [startup steps](#startup-tracing). |
+| `logger` | every namespace disabled | Receives the [startup steps](#startup-tracing) and a lost GPU device. |
 | `overlay.container` | tracks the canvas | Element or selector hosting [`runtime.overlay`](./OverlayLayer.md). |
 | `includePerformanceStats` | `false` | `true` or an object mounts the corner HUD. |
 | `includePerformanceStats.mount` | `true` | `false` leaves the HUD unmounted. |
@@ -137,3 +137,8 @@ namespace.
 Once started, an enabled logger writes `waiting for first frame` with
 `visibility` (`document.visibilityState`), then `first frame`. A missing
 `first frame` next to `visibility: "hidden"` explains a scene that never woke.
+
+When the renderer emits
+[`deviceLost`](../../../engine/docs/systems/renderer.md#events), the logger
+writes an error with `api`, `message` and `reason`. The canvas stays blank
+until the page reloads.

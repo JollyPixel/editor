@@ -27,11 +27,16 @@ export interface ChunkRendering {
   receiveShadow: boolean;
 }
 
+export interface ShadowCasters {
+  readonly meshVersion: number;
+}
+
 export interface SceneEnvironmentOptions {
   renderer: THREE.WebGPURenderer;
   scene: THREE.Scene;
   lighting: SceneLighting;
   chunks: ChunkRendering;
+  casters: ShadowCasters;
 }
 
 export class SceneEnvironment {
@@ -39,8 +44,12 @@ export class SceneEnvironment {
   #scene: THREE.Scene;
   #lighting: SceneLighting;
   #chunks: ChunkRendering;
+  #casters: ShadowCasters;
+  #casterVersion = -1;
   #environment: THREE.RenderTarget | null = null;
   #shadows = false;
+  #shadowsDirty = true;
+  #anchor = new THREE.Vector3(NaN, NaN, NaN);
   #focus = new THREE.Vector3();
   #forward = new THREE.Vector3();
   #sunDirection = new THREE.Vector3();
@@ -55,8 +64,10 @@ export class SceneEnvironment {
     this.#scene = options.scene;
     this.#lighting = options.lighting;
     this.#chunks = options.chunks;
+    this.#casters = options.casters;
 
     const { shadow } = this.#lighting.directional;
+    shadow.autoUpdate = false;
     shadow.mapSize.set(kShadowMapSize, kShadowMapSize);
     shadow.bias = -0.0002;
     shadow.normalBias = 0.02;
@@ -97,6 +108,12 @@ export class SceneEnvironment {
     this.#lighting.directional.castShadow = settings.shadows;
     this.#chunks.castShadow = settings.shadows;
     this.#chunks.receiveShadow = settings.shadows;
+    this.#anchor.set(NaN, NaN, NaN);
+    this.invalidateShadows();
+  }
+
+  invalidateShadows(): void {
+    this.#shadowsDirty = true;
   }
 
   follow(
@@ -114,7 +131,22 @@ export class SceneEnvironment {
       this.#focus,
       this.#lighting.copySunDirectionTo(this.#sunDirection)
     );
-    this.#lighting.aim(this.#focus, kShadowRadius * 2);
+    if (!this.#focus.equals(this.#anchor)) {
+      this.#anchor.copy(this.#focus);
+      this.#lighting.aim(this.#focus, kShadowRadius * 2);
+      this.#shadowsDirty = true;
+    }
+
+    const { meshVersion } = this.#casters;
+    if (meshVersion !== this.#casterVersion) {
+      this.#casterVersion = meshVersion;
+      this.#shadowsDirty = true;
+    }
+
+    if (this.#shadowsDirty) {
+      this.#lighting.directional.shadow.needsUpdate = true;
+      this.#shadowsDirty = false;
+    }
   }
 
   dispose(): void {

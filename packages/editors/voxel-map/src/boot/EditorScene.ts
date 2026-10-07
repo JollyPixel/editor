@@ -150,14 +150,16 @@ export class EditorScene extends Systems.Scene {
         rendering: {
           material: "lambert"
         },
-        blocksets: []
+        blocksets: [],
+        requestFrame: () => this.#environment?.invalidateShadows()
       });
 
     const environment = new SceneEnvironment({
       renderer: world.renderer.getSource(),
       scene,
       lighting,
-      chunks: view.lighting
+      chunks: view.lighting,
+      casters: view
     });
     const { materialGroups } = session.map.voxels;
     function applyGlow(

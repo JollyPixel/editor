@@ -1,6 +1,16 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 
+// CONSTANTS
+const kMatrix = new THREE.Matrix4();
+const kTarget = new THREE.Vector3();
+const kUp = new THREE.Vector3();
+const kOffset = new THREE.Vector3();
+const kOther = new THREE.Vector3();
+const kParentOrientation = new THREE.Quaternion();
+const kRotation = new THREE.Quaternion();
+const kEulerRotation = new THREE.Quaternion();
+
 export type TransformLike = Transform | { transform: Transform; };
 
 export class Transform {
@@ -104,7 +114,7 @@ export class Transform {
     }
 
     matrix.multiplyMatrices(
-      new THREE.Matrix4()
+      kMatrix
         .copy(this.#object3D.parent.matrixWorld)
         .invert(),
       matrix
@@ -147,20 +157,18 @@ export class Transform {
     target: TransformLike | THREE.Vector3Like,
     up?: THREE.Vector3Like
   ) {
-    const localMatrix4 = new THREE.Matrix4();
-    const resolvedTarget = target instanceof Transform || "transform" in target
-      ? Transform.resolveTransform(target).getGlobalPosition(new THREE.Vector3())
-      : target;
-    const targetVec = new THREE.Vector3().copy(resolvedTarget);
+    const targetVec = target instanceof Transform || "transform" in target
+      ? Transform.resolveTransform(target).getGlobalPosition(kTarget)
+      : kTarget.copy(target);
     const upVec = up ?
-      new THREE.Vector3().copy(up) :
+      kUp.copy(up) :
       this.#object3D.up;
-    localMatrix4.lookAt(
+    kMatrix.lookAt(
       this.getGlobalPosition(Transform.Vector3),
       targetVec,
       upVec
     );
-    this.setGlobalOrientation(Transform.Quaternion.setFromRotationMatrix(localMatrix4));
+    this.setGlobalOrientation(Transform.Quaternion.setFromRotationMatrix(kMatrix));
 
     return this;
   }
@@ -194,7 +202,7 @@ export class Transform {
     }
 
     this.#object3D.quaternion.multiplyQuaternions(
-      this.getParentGlobalOrientation(new THREE.Quaternion()).invert(),
+      this.getParentGlobalOrientation(kParentOrientation).invert(),
       Transform.Quaternion.copy(quaternion)
     );
     this.#object3D.updateMatrixWorld(false);
@@ -215,7 +223,7 @@ export class Transform {
     eulerAngles: THREE.Euler
   ) {
     return this.setGlobalOrientation(
-      new THREE.Quaternion().setFromEuler(eulerAngles)
+      kEulerRotation.setFromEuler(eulerAngles)
     );
   }
 
@@ -231,7 +239,7 @@ export class Transform {
   rotateGlobal(
     quaternion: THREE.QuaternionLike
   ) {
-    const rotation = new THREE.Quaternion()
+    const rotation = kRotation
       .copy(quaternion)
       .multiply(this.getGlobalOrientation(Transform.Quaternion));
     this.setGlobalOrientation(rotation);
@@ -254,7 +262,7 @@ export class Transform {
     eulerAngles: THREE.Euler
   ) {
     return this.rotateGlobal(
-      new THREE.Quaternion().setFromEuler(eulerAngles)
+      kEulerRotation.setFromEuler(eulerAngles)
     );
   }
 
@@ -262,7 +270,7 @@ export class Transform {
     eulerAngles: THREE.Euler
   ) {
     return this.rotateLocal(
-      new THREE.Quaternion().setFromEuler(eulerAngles)
+      kEulerRotation.setFromEuler(eulerAngles)
     );
   }
 
@@ -287,7 +295,7 @@ export class Transform {
   moveOriented(
     offset: THREE.Vector3Like
   ) {
-    const orientedOffset = new THREE.Vector3()
+    const orientedOffset = kOffset
       .copy(offset)
       .applyQuaternion(this.#object3D.quaternion);
     this.#object3D.position.add(orientedOffset);
@@ -356,7 +364,7 @@ export class Transform {
     this.getGlobalPosition(Transform.Vector3);
     const otherPos = Transform
       .resolveTransform(other)
-      .getGlobalPosition(new THREE.Vector3());
+      .getGlobalPosition(kOther);
 
     return Transform.Vector3.distanceTo(otherPos);
   }

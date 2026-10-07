@@ -19,6 +19,31 @@ function assertQuaternionClose(
   );
 }
 
+function assertVectorClose(
+  actual: THREE.Vector3,
+  expected: THREE.Vector3
+): void {
+  assert.ok(
+    actual.distanceTo(expected) < 1e-6,
+    `expected ${actual.toArray()} to match ${expected.toArray()}`
+  );
+}
+
+function createChild() {
+  const parent = new THREE.Group();
+  parent.position.set(2, -1, 4);
+  parent.quaternion.setFromEuler(new THREE.Euler(0.3, 1.1, 0));
+  const object = new THREE.Group();
+  object.position.set(1, 2, 3);
+  parent.add(object);
+  parent.updateMatrixWorld();
+
+  return {
+    parent,
+    transform: new Transform(object)
+  };
+}
+
 describe("Transform", () => {
   test("should read back the global orientation it was given", () => {
     const parent = new THREE.Group();
@@ -45,6 +70,80 @@ describe("Transform", () => {
       transform.getLocalOrientation(),
       new THREE.Quaternion().setFromEuler(euler)
     );
+  });
+
+  test("should face another transform under a rotated parent", () => {
+    const { transform } = createChild();
+    const target = new THREE.Group();
+    target.position.set(5, 3, -2);
+    target.updateMatrixWorld();
+
+    transform.lookAt(new Transform(target));
+
+    const expected = new THREE.Vector3(5, 3, -2)
+      .sub(transform.getGlobalPosition())
+      .normalize();
+    assertVectorClose(transform.getForward(), expected);
+  });
+
+  test("should look towards a direction like looking at the matching point", () => {
+    const { transform } = createChild();
+    const reference = createChild().transform;
+    const direction = new THREE.Vector3(1, -2, 0.5);
+
+    transform.lookTowards(direction);
+    reference.lookAt(reference.getGlobalPosition().sub(direction));
+
+    assertQuaternionClose(
+      transform.getGlobalOrientation(),
+      reference.getGlobalOrientation()
+    );
+  });
+
+  test("should rotate globally before the current global orientation", () => {
+    const { transform } = createChild();
+    const before = transform.getGlobalOrientation();
+    const rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.7, 0));
+
+    transform.rotateGlobalEulerAngles(new THREE.Euler(0, 0.7, 0));
+
+    assertQuaternionClose(
+      transform.getGlobalOrientation(),
+      rotation.multiply(before)
+    );
+  });
+
+  test("should place a global matrix under a moved parent", () => {
+    const { transform } = createChild();
+    const matrix = new THREE.Matrix4().compose(
+      new THREE.Vector3(-3, 4, 8),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, 0, 0)),
+      new THREE.Vector3(1, 1, 1)
+    );
+
+    transform.setGlobalMatrix(matrix.clone());
+
+    assertVectorClose(transform.getGlobalPosition(), new THREE.Vector3(-3, 4, 8));
+  });
+
+  test("should move along its own orientation", () => {
+    const object = new THREE.Group();
+    new THREE.Group().add(object);
+    const transform = new Transform(object);
+    transform.setLocalEulerAngles(new THREE.Euler(0, Math.PI / 2, 0));
+
+    transform.moveOriented({ x: 0, y: 0, z: -1 });
+
+    assertVectorClose(transform.getLocalPosition(), new THREE.Vector3(-1, 0, 0));
+  });
+
+  test("should measure the distance to another transform", () => {
+    const { transform } = createChild();
+    const other = new THREE.Group();
+    other.position.copy(transform.getGlobalPosition()).add(new THREE.Vector3(3, 4, 0));
+    other.updateMatrixWorld();
+
+    assert.ok(Math.abs(transform.distanceTo(new Transform(other)) - 5) < 1e-6);
   });
 });
 

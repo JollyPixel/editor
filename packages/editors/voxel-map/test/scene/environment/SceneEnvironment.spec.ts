@@ -29,20 +29,96 @@ function createEnvironment() {
   const renderer = {
     shadowMap: { enabled: false }
   } as unknown as THREE.WebGPURenderer;
+  const casters = { meshVersion: 0 };
+  const lighting = new SceneLighting();
   const environment = new SceneEnvironment({
     renderer,
     scene,
-    lighting: new SceneLighting(),
-    chunks
+    lighting,
+    chunks,
+    casters
   });
 
   return {
     scene,
+    environment,
+    casters,
+    shadow: lighting.directional.shadow,
     apply: (lighting: LightingMode, glow = true) => environment.apply(
       new ViewSettings({ ...ViewSettings.DEFAULT.toJSON(), lighting, glow })
+    ),
+    applyShadows: () => environment.apply(
+      new ViewSettings({ ...ViewSettings.DEFAULT.toJSON(), shadows: true })
     )
   };
 }
+
+function createCamera(): THREE.PerspectiveCamera {
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(4, 8, 12);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
+
+  return camera;
+}
+
+describe("SceneEnvironment shadows", () => {
+  test("draws the shadow map once, then not while nothing changes", () => {
+    const { shadow, applyShadows, environment } = createEnvironment();
+    const camera = createCamera();
+
+    applyShadows();
+    environment.follow(camera);
+
+    assert.equal(shadow.autoUpdate, false);
+    assert.equal(shadow.needsUpdate, true);
+
+    shadow.needsUpdate = false;
+    environment.follow(camera);
+
+    assert.equal(shadow.needsUpdate, false);
+  });
+
+  test("redraws when the camera moves the shadow anchor", () => {
+    const { shadow, applyShadows, environment } = createEnvironment();
+    const camera = createCamera();
+    applyShadows();
+    environment.follow(camera);
+    shadow.needsUpdate = false;
+
+    camera.position.x += 4;
+    camera.updateMatrixWorld();
+    environment.follow(camera);
+
+    assert.equal(shadow.needsUpdate, true);
+  });
+
+  test("redraws when the casters' meshes change", () => {
+    const { shadow, applyShadows, environment, casters } = createEnvironment();
+    const camera = createCamera();
+    applyShadows();
+    environment.follow(camera);
+    shadow.needsUpdate = false;
+
+    casters.meshVersion++;
+    environment.follow(camera);
+
+    assert.equal(shadow.needsUpdate, true);
+  });
+
+  test("redraws after an explicit invalidation", () => {
+    const { shadow, applyShadows, environment } = createEnvironment();
+    const camera = createCamera();
+    applyShadows();
+    environment.follow(camera);
+    shadow.needsUpdate = false;
+
+    environment.invalidateShadows();
+    environment.follow(camera);
+
+    assert.equal(shadow.needsUpdate, true);
+  });
+});
 
 describe("SceneEnvironment", () => {
   test("keeps one sky node per lighting mode across settings changes", () => {

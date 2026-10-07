@@ -80,6 +80,7 @@ export class ChunkMeshStore {
   #logger: VoxelLogger;
   #castShadow: boolean;
   #receiveShadow: boolean;
+  #version = 0;
 
   constructor(
     options: ChunkMeshStoreOptions
@@ -111,6 +112,10 @@ export class ChunkMeshStore {
 
   * [Symbol.iterator](): IterableIterator<[string, ChunkMeshEntry]> {
     yield* this.#entries;
+  }
+
+  get version(): number {
+    return this.#version;
   }
 
   get castShadow(): boolean {
@@ -222,6 +227,7 @@ export class ChunkMeshStore {
       meshes.push(mesh);
       geometryKeys.push(geometryKey);
     }
+    this.#version++;
 
     this.#entries.set(key, {
       target,
@@ -304,6 +310,7 @@ export class ChunkMeshStore {
         this.#materials.retain(material);
         released.push(mesh.material as THREE.Material);
         mesh.material = material;
+        this.#version++;
       });
       entry.far = far;
     }
@@ -347,6 +354,9 @@ export class ChunkMeshStore {
       return;
     }
 
+    if (entry.visible === culled && entry.meshes.length > 0) {
+      this.#version++;
+    }
     entry.visible = !culled;
     for (const mesh of entry.meshes) {
       mesh.visible = !culled;
@@ -393,6 +403,9 @@ export class ChunkMeshStore {
   #disposeMeshes(
     entry: ChunkMeshEntry
   ): void {
+    if (entry.meshes.length > 0) {
+      this.#version++;
+    }
     for (const mesh of entry.meshes) {
       this.#root.remove(mesh);
       mesh.geometry.dispose();

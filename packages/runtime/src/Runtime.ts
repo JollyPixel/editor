@@ -135,6 +135,12 @@ export class Runtime<
         undefined
     });
     this.world.on("invalidate", () => this.loop.invalidate());
+    renderer.on("deviceLost", (info) => {
+      this.#logger.error(
+        "GPU device lost, reload the page to render again",
+        { ...info }
+      );
+    });
   }
 
   static async create<

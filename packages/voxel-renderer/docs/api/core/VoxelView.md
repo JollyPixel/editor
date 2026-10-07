@@ -73,6 +73,7 @@ readonly lighting: VoxelLighting;
 readonly range: VoxelRange;
 readonly layerVisibility: VoxelLayerVisibility;
 readonly pendingRebuilds: number;
+readonly meshVersion: number;
 focus: THREE.Vector3Like | null;
 ```
 
@@ -82,6 +83,9 @@ focus: THREE.Vector3Like | null;
 - `atlases` holds the [textures](../blocksets/BlocksetAtlases.md) of the
   document's blocksets.
 - `pendingRebuilds` counts chunks queued or being meshed in a worker.
+- `meshVersion` increases whenever a chunk mesh is added, removed, culled,
+  shown again, or swaps its material. Compare it between frames to redraw a
+  static shadow map only after the meshes change.
 - `focus` is a point in `root` local space, read on every tick. Chunks closest
   to it are meshed first, and the view distance is measured from it. Assigning
   a live vector once is enough.

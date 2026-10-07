@@ -72,7 +72,7 @@ an implicit load inside the ECS lifecycle.
 
 | Type | Kind | Loader | Supported source |
 | ---- | ---- | ------ | ---------------- |
-| `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB |
+| `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB (including `EXT_meshopt_compression`) |
 | `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
 | `AUDIO_ASSET` | `audio` | `AudioAssetLoader` | Formats supported by `THREE.AudioLoader` |
 | `TEXTURE_ASSET` | `texture` | `TextureAssetLoader` | Formats supported by `THREE.TextureLoader` |

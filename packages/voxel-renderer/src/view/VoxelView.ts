@@ -386,6 +386,10 @@ export class VoxelView {
     return this.#pipeline.pendingRebuilds;
   }
 
+  get meshVersion(): number {
+    return this.#meshes.version;
+  }
+
   init(): void {
     this.#rebuildAllChunks("init");
   }

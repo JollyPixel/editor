@@ -89,6 +89,29 @@ describe("VoxelView - frame requests", () => {
   });
 });
 
+describe("VoxelView.meshVersion", () => {
+  it("moves when chunk meshes are installed or removed, not on idle flushes", () => {
+    const { document, view } = makePair();
+    const position = { x: 0, y: 0, z: 0 };
+
+    document.world.setVoxel("Ground", {
+      position,
+      blockId: CUBE_ID
+    });
+    view.flush();
+    const installed = view.meshVersion;
+    view.flush();
+
+    assert.ok(installed > 0);
+    assert.equal(view.meshVersion, installed);
+
+    document.world.removeVoxel("Ground", { position });
+    view.flush();
+
+    assert.ok(view.meshVersion > installed);
+  });
+});
+
 describe("VoxelView - document subscriptions", () => {
   it("marks the chunks holding a block dirty when its definition changes", () => {
     const { document, view } = makePair();
