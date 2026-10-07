@@ -19,7 +19,7 @@ import {
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 
 // CONSTANTS
-const kOpacity = 0.55;
+const kOpacity = 0.7;
 const kDepthRenderOrder = 1000;
 const kOrigin = {
   x: 0,

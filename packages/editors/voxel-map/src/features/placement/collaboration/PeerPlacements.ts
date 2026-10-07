@@ -35,7 +35,7 @@ import type { RegionSourceRef } from "../RegionSource.ts";
 // CONSTANTS
 const kPresencePlacementKey = "placement";
 const kPresenceFloatingKey = "floating";
-const kPeerGhostOpacity = 0.3;
+const kPeerGhostOpacity = 0.6;
 
 export type PeerPlacementPresence = PlacementPresence | MarqueePresence;
 type FloatingPresence = RegionPresence | CopyPresence;
