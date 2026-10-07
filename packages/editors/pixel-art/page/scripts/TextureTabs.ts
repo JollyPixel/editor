@@ -3,6 +3,7 @@ import {
   PixelCollaboration,
   createPixelArtAsset,
   PIXEL_ART_EXTENSION,
+  type PixelArtDocumentKind,
   type PixelServerMessage,
   type PixelWireCommand
 } from "@jolly-pixel/asset.pixel-art/client";
@@ -28,9 +29,6 @@ import type {
   TextureAddRequestDetail,
   TextureCloseRequestDetail
 } from "../../src/index.ts";
-import {
-  TEXTURE_DOCUMENT_KIND
-} from "../../src/textures/textureDocumentKind.ts";
 
 export type TextureLease = AssetLease<
   PixelDocument,
@@ -41,6 +39,7 @@ export type TextureLease = AssetLease<
 export interface TextureTabsOptions {
   panel: PixelDrawPanel;
   session: EditorSession;
+  kind: PixelArtDocumentKind;
   addDelay: number;
 }
 
@@ -52,6 +51,7 @@ interface BoundTab {
 export class TextureTabs {
   readonly #panel: PixelDrawPanel;
   readonly #session: EditorSession;
+  readonly #kind: PixelArtDocumentKind;
   readonly #addDelay: number;
   readonly #bound = new Map<string, BoundTab>();
   readonly #synced = new Set<string>();
@@ -61,6 +61,7 @@ export class TextureTabs {
   ) {
     this.#panel = options.panel;
     this.#session = options.session;
+    this.#kind = options.kind;
     this.#addDelay = options.addDelay;
 
     this.#panel.addEventListener("texture-add-request", this.#onAddRequest);
@@ -128,7 +129,7 @@ export class TextureTabs {
         `${name}${PIXEL_ART_EXTENSION}`,
         documentFromCanvas(source, uvSize)
       );
-      const lease = this.#session.assets.open(TEXTURE_DOCUMENT_KIND, assetId);
+      const lease = this.#session.assets.open(this.#kind, assetId);
       lease.document.buffer.loadTexture(source);
       const canvas = this.#panel.addTexture({
         id: assetId,

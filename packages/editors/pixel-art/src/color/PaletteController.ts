@@ -12,8 +12,8 @@ import {
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
 import {
-  colorDetailOf,
-  rgba8Of
+  rgba8ToColorChange,
+  colorChangeToRgba8
 } from "./pickerChange.ts";
 
 // CONSTANTS
@@ -75,7 +75,7 @@ export class PaletteController implements ReactiveController {
   ): ColorChangeDetail {
     const palette = this.palette ?? kDefaultPalette;
 
-    return colorDetailOf(palette.colorAt(index));
+    return rgba8ToColorChange(palette.colorAt(index));
   }
 
   selectedColor(
@@ -88,7 +88,7 @@ export class PaletteController implements ReactiveController {
 
     return index === undefined ?
       null :
-      colorDetailOf(doc.palette.colorAt(index));
+      rgba8ToColorChange(doc.palette.colorAt(index));
   }
 
   select(
@@ -100,7 +100,7 @@ export class PaletteController implements ReactiveController {
     }
     this.#selected.set(doc, index);
 
-    return colorDetailOf(doc.palette.colorAt(index));
+    return rgba8ToColorChange(doc.palette.colorAt(index));
   }
 
   deselect(): void {
@@ -115,7 +115,7 @@ export class PaletteController implements ReactiveController {
   ): void {
     const index = this.selected;
     if (index !== null) {
-      this.#activeDocument()?.changePaletteColor(index, rgba8Of(color));
+      this.#activeDocument()?.changePaletteColor(index, colorChangeToRgba8(color));
     }
   }
 

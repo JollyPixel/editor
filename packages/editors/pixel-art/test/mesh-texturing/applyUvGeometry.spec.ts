@@ -14,7 +14,7 @@ import {
   applyUvGeometry,
   orientUv
 } from "#src/mesh-texturing/applyUvGeometry.ts";
-import { edgeOf, regionOf } from "./regionAttributes.ts";
+import { readEdge, readRegion } from "./regionAttributes.ts";
 
 // CONSTANTS
 const kCanonicalTriangle: [number, number][] = [
@@ -25,7 +25,7 @@ const kCanonicalTriangle: [number, number][] = [
 const kTextureSize: Vec2 = { x: 64, y: 64 };
 const kRect = { x: 16, y: 8, width: 16, height: 8 };
 
-function geometryOf(
+function createGeometry(
   baseUv: Float32Array
 ): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -37,7 +37,7 @@ function geometryOf(
   return geometry;
 }
 
-function uvsOf(
+function readUvs(
   geometry: THREE.BufferGeometry
 ): number[] {
   return Array.from(geometry.getAttribute("uv").array);
@@ -72,7 +72,7 @@ describe("applyUvGeometry", () => {
       1, 0,
       1, 1
     ]);
-    const geometry = geometryOf(baseUv);
+    const geometry = createGeometry(baseUv);
 
     applyUvGeometry(
       geometry,
@@ -86,7 +86,7 @@ describe("applyUvGeometry", () => {
       [{ start: 0, count: 3 }]
     );
 
-    assert.deepStrictEqual(uvsOf(geometry), [
+    assert.deepStrictEqual(readUvs(geometry), [
       0.25, 0.25,
       0.5, 0.25,
       0.5, 0.5
@@ -100,7 +100,7 @@ describe("applyUvGeometry", () => {
       1, 1,
       0, 1
     ]);
-    const geometry = geometryOf(baseUv);
+    const geometry = createGeometry(baseUv);
 
     applyUvGeometry(
       geometry,
@@ -110,7 +110,7 @@ describe("applyUvGeometry", () => {
       [{ start: 2, count: 2 }]
     );
 
-    assert.deepStrictEqual(uvsOf(geometry), [
+    assert.deepStrictEqual(readUvs(geometry), [
       0, 0,
       1, 0,
       0.5, 1,
@@ -119,7 +119,7 @@ describe("applyUvGeometry", () => {
   });
 
   test("flags every written attribute for upload", () => {
-    const geometry = geometryOf(new Float32Array(8));
+    const geometry = createGeometry(new Float32Array(8));
 
     applyUvGeometry(
       geometry,
@@ -148,7 +148,7 @@ describe("applyUvGeometry — rect", () => {
       1, 0.5,
       0, 0.5
     ]);
-    const geometry = geometryOf(baseUv);
+    const geometry = createGeometry(baseUv);
 
     applyUvGeometry(
       geometry,
@@ -159,7 +159,7 @@ describe("applyUvGeometry — rect", () => {
     );
 
     // v spans [0.75, 1], so 0.5 lands halfway at 0.875.
-    assert.deepStrictEqual(uvsOf(geometry), [
+    assert.deepStrictEqual(readUvs(geometry), [
       0, 0.75,
       0.25, 0.75,
       0.25, 0.875,
@@ -174,7 +174,7 @@ describe("applyUvGeometry — rect", () => {
       0.5, 0.5,
       1, 0
     ]);
-    const geometry = geometryOf(baseUv);
+    const geometry = createGeometry(baseUv);
 
     applyUvGeometry(
       geometry,
@@ -187,7 +187,7 @@ describe("applyUvGeometry — rect", () => {
       ]
     );
 
-    assert.deepStrictEqual(uvsOf(geometry), [
+    assert.deepStrictEqual(readUvs(geometry), [
       0, 0.5,
       1, 1,
       0.5, 0.5,
@@ -204,7 +204,7 @@ describe("applyUvGeometry — compound", () => {
       1, 1,
       0, 1
     ]);
-    const geometry = geometryOf(new Float32Array(8));
+    const geometry = createGeometry(new Float32Array(8));
 
     applyUvGeometry(
       geometry,
@@ -240,7 +240,7 @@ describe("applyUvGeometry — rotation", () => {
       0, 0,
       1, 0
     ]);
-    const geometry = geometryOf(baseUv);
+    const geometry = createGeometry(baseUv);
 
     applyUvGeometry(
       geometry,
@@ -250,7 +250,7 @@ describe("applyUvGeometry — rotation", () => {
       [{ start: 0, count: 4 }]
     );
 
-    assert.deepStrictEqual(uvsOf(geometry), [
+    assert.deepStrictEqual(readUvs(geometry), [
       0.25, 1,
       0.25, 0.75,
       0, 1,
@@ -260,7 +260,7 @@ describe("applyUvGeometry — rotation", () => {
 
   test("orients a rotated triangle from its original corner", () => {
     const baseUv = Float32Array.from(kCanonicalTriangle.flat());
-    const geometry = geometryOf(baseUv);
+    const geometry = createGeometry(baseUv);
 
     applyUvGeometry(
       geometry,
@@ -275,7 +275,7 @@ describe("applyUvGeometry — rotation", () => {
       [{ start: 0, count: 3 }]
     );
 
-    assert.deepStrictEqual(uvsOf(geometry), [
+    assert.deepStrictEqual(readUvs(geometry), [
       0, 1,
       0, 0,
       1, 0
@@ -285,7 +285,7 @@ describe("applyUvGeometry — rotation", () => {
 
 describe("applyUvGeometry — region", () => {
   test("bounds the ranged vertices and leaves the others unclamped", () => {
-    const geometry = geometryOf(new Float32Array(16));
+    const geometry = createGeometry(new Float32Array(16));
 
     applyUvGeometry(
       geometry,
@@ -295,15 +295,15 @@ describe("applyUvGeometry — region", () => {
       [{ start: 4, count: 4 }]
     );
 
-    assert.deepStrictEqual(regionOf(geometry, 4), [16.5, 48.5, 31.5, 55.5]);
-    assert.deepStrictEqual(regionOf(geometry, 7), [16.5, 48.5, 31.5, 55.5]);
-    assert.deepStrictEqual(edgeOf(geometry, 4), [0, 0, 1]);
-    assert.ok(regionOf(geometry, 3)[0] < -1000);
+    assert.deepStrictEqual(readRegion(geometry, 4), [16.5, 48.5, 31.5, 55.5]);
+    assert.deepStrictEqual(readRegion(geometry, 7), [16.5, 48.5, 31.5, 55.5]);
+    assert.deepStrictEqual(readEdge(geometry, 4), [0, 0, 1]);
+    assert.ok(readRegion(geometry, 3)[0] < -1000);
   });
 
   test("keeps the diagonal of a rotated triangle in texture space", () => {
-    const expected = geometryOf(new Float32Array(6));
-    const rotated = geometryOf(new Float32Array(6));
+    const expected = createGeometry(new Float32Array(6));
+    const rotated = createGeometry(new Float32Array(6));
     const triangle = {
       shape: "triangle",
       rect: kRect,
@@ -328,11 +328,11 @@ describe("applyUvGeometry — region", () => {
       [{ start: 0, count: 3 }]
     );
 
-    assert.deepStrictEqual(edgeOf(rotated, 0), edgeOf(expected, 0));
+    assert.deepStrictEqual(readEdge(rotated, 0), readEdge(expected, 0));
   });
 
   test("ignores the rotation of a rect", () => {
-    const geometry = geometryOf(new Float32Array(8));
+    const geometry = createGeometry(new Float32Array(8));
 
     applyUvGeometry(
       geometry,
@@ -345,11 +345,11 @@ describe("applyUvGeometry — region", () => {
       [{ start: 0, count: 4 }]
     );
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
   });
 
   test("clamps a compound region to its bounding rect only", () => {
-    const geometry = geometryOf(new Float32Array(8));
+    const geometry = createGeometry(new Float32Array(8));
 
     applyUvGeometry(
       geometry,
@@ -363,7 +363,7 @@ describe("applyUvGeometry — region", () => {
       [{ start: 0, count: 4 }]
     );
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
-    assert.deepStrictEqual(edgeOf(geometry, 0), [0, 0, 1]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
+    assert.deepStrictEqual(readEdge(geometry, 0), [0, 0, 1]);
   });
 });

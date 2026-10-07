@@ -10,7 +10,7 @@ export class UvAccessPolicy {
     none: new UvAccessPolicy("none")
   };
 
-  static of(
+  static forAccess(
     access: UvAccess
   ): UvAccessPolicy {
     return UvAccessPolicy.#policies[access];
@@ -34,6 +34,7 @@ export class UvAccessPolicy {
     this.uvMode = access === "edit";
     this.visibilityInBottomBar = access === "view";
     this.fillClip = access !== "none";
+
     Object.freeze(this);
   }
 

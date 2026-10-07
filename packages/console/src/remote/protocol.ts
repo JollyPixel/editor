@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type {
   ArgDef,
+  ConsoleScalar,
   ConsoleValue,
   VariableDef
 } from "../registry/types.ts";
@@ -49,7 +50,7 @@ export interface RemoteNamespaceData {
 }
 
 export type RemoteArgValues = Readonly<
-  Record<string, ConsoleValue | undefined>
+  Record<string, ConsoleScalar | undefined>
 >;
 
 export interface SnapshotMessage {

@@ -59,14 +59,14 @@ test.describe("clear texture", () => {
     await seedTexture(panel, [{ x: 69, y: 2, color: "#000000" }]);
 
     await panel.getByRole("button", { name: "Clear texture" }).click();
-    const dialog = page.locator("jolly-dialog");
-    await expect(dialog).toContainText(
+    const dialog = page.locator("clear-texture-dialog");
+    await expect(dialog.getByText(
       "Clear the entire texture and make every pixel transparent?"
-    );
+    )).toBeVisible();
     await expect(dialog.locator("jolly-checkbox")).toHaveCount(0);
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
-    await expect(dialog).toHaveCount(0);
+    await expect(dialog.getByRole("alertdialog")).toBeHidden();
     await expect.poll(() => readPixels(panel, [{ x: 69, y: 2 }]))
       .toEqual([BLACK]);
   });
@@ -77,7 +77,7 @@ test.describe("clear texture", () => {
       { x: 73, y: 5, color: "#000000" },
       { x: 69, y: 5, color: "#000000" }
     ]);
-    const dialog = page.locator("jolly-dialog");
+    const dialog = page.locator("clear-texture-dialog");
     function pixels() {
       return readPixels(panel, [
         { x: 69, y: 5 },
@@ -86,13 +86,13 @@ test.describe("clear texture", () => {
     }
 
     await panel.getByRole("button", { name: "Clear texture" }).click();
-    await expect(dialog).toContainText(
+    await expect(dialog.getByText(
       "Pixels inside UV slots are kept unless the option below is checked."
-    );
+    )).toBeVisible();
     const keepUv = dialog.getByRole("checkbox");
     await expect(keepUv).not.toBeChecked();
     await dialog.getByRole("button", { name: "Clear", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
+    await expect(dialog.getByRole("alertdialog")).toBeHidden();
     await expect.poll(pixels).toEqual([CLEAR, BLACK]);
 
     await panel.getByRole("button", { name: "Clear texture" }).click();

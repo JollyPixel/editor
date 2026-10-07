@@ -9,10 +9,10 @@ import {
 
 // Import Internal Dependencies
 import {
-  nextActiveTextureId,
+  TextureEntry,
   type PixelDrawTextureOptions,
   type TextureUpdate
-} from "./textures.ts";
+} from "./TextureEntry.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
 
 // CONSTANTS
@@ -25,16 +25,6 @@ const kUvRefreshEvents = [
   "label-visibility-changed",
   "size-label-visibility-changed"
 ] as const;
-
-export interface TextureEntry {
-  readonly id: string;
-  name: string;
-  tooltip: string;
-  badge: string;
-  readonly disabled: boolean;
-  readonly host: HTMLDivElement;
-  readonly canvas: PixelArtCanvas;
-}
 
 export interface TextureSetOptions {
   container: () => HTMLElement;
@@ -80,7 +70,7 @@ export class TextureSet {
     }
   }
 
-  values(): IterableIterator<TextureEntry> {
+  [Symbol.iterator](): IterableIterator<TextureEntry> {
     return this.#entries.values();
   }
 
@@ -142,7 +132,7 @@ export class TextureSet {
       throw error;
     }
 
-    const entry: TextureEntry = {
+    const entry = new TextureEntry({
       id,
       name,
       tooltip,
@@ -150,7 +140,7 @@ export class TextureSet {
       disabled,
       host,
       canvas
-    };
+    });
     this.#entries.set(id, entry);
     if (!disabled && (activate || this.#active === null)) {
       this.activate(entry);
@@ -167,10 +157,7 @@ export class TextureSet {
     id: string,
     changes: TextureUpdate
   ): void {
-    const entry = this.get(id);
-    entry.name = changes.name ?? entry.name;
-    entry.tooltip = changes.tooltip ?? entry.tooltip;
-    entry.badge = changes.badge ?? entry.badge;
+    this.get(id).update(changes);
     this.#host.requestUpdate();
   }
 
@@ -201,19 +188,9 @@ export class TextureSet {
       throw new Error(`PixelDrawPanel: cannot remove "${id}", the last texture`);
     }
 
-    const candidates = [...this.#entries.values()]
-      .filter((candidate) => candidate === entry || !candidate.disabled)
-      .map((candidate) => candidate.id);
-    const nextId = nextActiveTextureId(
-      candidates,
-      id,
-      this.#active?.id ?? null
-    );
+    const next = entry === this.#active ? this.#replacementFor(entry) : null;
     this.#entries.delete(id);
 
-    const next = entry === this.#active && nextId !== null ?
-      this.get(nextId) :
-      null;
     if (next !== null) {
       this.activate(next);
     }
@@ -221,7 +198,7 @@ export class TextureSet {
       this.#deactivate();
     }
 
-    this.#destroy(entry);
+    entry.destroy();
     this.#host.requestUpdate();
 
     return next;
@@ -230,9 +207,19 @@ export class TextureSet {
   clear(): void {
     this.#deactivate();
     for (const entry of this.#entries.values()) {
-      this.#destroy(entry);
+      entry.destroy();
     }
     this.#entries.clear();
+  }
+
+  #replacementFor(
+    entry: TextureEntry
+  ): TextureEntry | null {
+    const candidates = [...this.#entries.values()]
+      .filter((candidate) => candidate === entry || !candidate.disabled);
+    const index = candidates.indexOf(entry);
+
+    return candidates[index + 1] ?? candidates[index - 1] ?? null;
   }
 
   #createCanvas(
@@ -278,13 +265,6 @@ export class TextureSet {
     this.#settings = ToolSettings.capture(previous.canvas);
     this.#unsubscribe(previous.canvas);
     this.#active = null;
-  }
-
-  #destroy(
-    entry: TextureEntry
-  ): void {
-    entry.canvas.destroy();
-    entry.host.remove();
   }
 
   #show(

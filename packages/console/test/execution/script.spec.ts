@@ -3,9 +3,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type {
+import {
   CommandConsole,
-  VariableScript
+  type VariableScript
 } from "#src/index.ts";
 import { withNested } from "../helpers/registry/withNested.ts";
 import { withBrush } from "../helpers/script/withBrush.ts";
@@ -114,6 +114,25 @@ describe("applyScript", () => {
       "echo: brush.size 4",
       "echo: brush.label \"big one\""
     ]);
+  });
+
+  test("a list is written with its items and echoed as a prompt line", async() => {
+    let tags: string[] = ["a"];
+    const commands = new CommandConsole();
+    commands.registerVariable("tags", {
+      type: "string[]",
+      description: "",
+      get: () => tags,
+      set: (value) => {
+        tags = value;
+      }
+    });
+    const script = commands.editScript();
+
+    await commands.applyScript(script.parse("tags = b \"c d\""));
+
+    assert.deepEqual(tags, ["b", "c d"]);
+    assert.deepEqual(lines(commands), ["echo: tags b \"c d\""]);
   });
 
   test("an unedited script writes nothing and leaves nothing to revert", async() => {

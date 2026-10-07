@@ -3,7 +3,8 @@ import type {
   ArgDef,
   RegisteredCommand,
   RegisteredEntry,
-  RegisteredVariable
+  RegisteredVariable,
+  VariableDef
 } from "./types.ts";
 
 // CONSTANTS
@@ -40,10 +41,13 @@ export function signature(
 export function variableSignature(
   variable: RegisteredVariable
 ): string {
-  const { def } = variable;
-  const type = def.type === "enum" ? def.enumValues.join("|") : def.type;
+  return `${variable.address} <${typeLabel(variable.def)}>`;
+}
 
-  return `${variable.address} <${type}>`;
+export function typeLabel(
+  def: VariableDef
+): string {
+  return def.type === "enum" ? def.enumValues.join("|") : def.type;
 }
 
 function formatArg(

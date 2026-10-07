@@ -21,7 +21,7 @@ export interface NormalMapTargetDocument {
 }
 
 export class NormalMapTarget {
-  static of(
+  static fromSelection(
     doc: NormalMapTargetDocument
   ): NormalMapTarget | null {
     const committed = doc.normalMap;

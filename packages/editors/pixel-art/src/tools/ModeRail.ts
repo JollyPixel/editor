@@ -303,7 +303,7 @@ export class ModeRail extends LitElement {
   }
 
   override render() {
-    const policy = UvAccessPolicy.of(this.uvAccess);
+    const policy = UvAccessPolicy.forAccess(this.uvAccess);
     const items = kModeItems.filter((item) => item.mode !== "uv" || policy.uvMode);
 
     return html`

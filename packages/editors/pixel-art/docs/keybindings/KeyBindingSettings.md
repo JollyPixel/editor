@@ -1,7 +1,7 @@
 # KeyBindingSettings
 
 Per-browser keyboard shortcuts for a `PixelDrawPanel`. They are stored as the difference from
-`PIXEL_ART_KEY_BINDINGS` and can be edited from the console's `pixelart.keybinds` namespace.
+`PixelArtKeyBindings.defaults` and can be edited from the console's `pixelart.keybinds` namespace.
 
 ```ts
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
@@ -36,9 +36,9 @@ new KeyBindingSettings(options: {
   onDropped?: (message: string) => void;
 });
 
-get keyBindings(): KeyBindingMap<PixelArtAction>;
-bind(target: { keyBindings: KeyBindingMap<PixelArtAction>; }): () => void;
-bindingsOf(action: PixelArtAction): KeyChordString[];
+get keyBindings(): PixelArtKeyBindings;
+bind(target: { keyBindings: PixelArtKeyBindings; }): () => void;
+chordsBoundTo(action: PixelArtAction): KeyChordString[];
 assign(action: PixelArtAction, bindings: readonly string[]): void;
 reset(action?: PixelArtAction): void;
 ```
@@ -47,22 +47,46 @@ Bindings are [key chords](../../../../controls/docs/key-chords.md) such as `"Mod
 lowercase letter follows the printed key and a code such as `"KeyZ"` follows the key position.
 
 The constructor reads `storageKey` (`KEY_BINDINGS_STORAGE_KEY`, `"pixel-art:keybindings"`) from
-`storage`. The stored value is a JSON object from action to a chord or a list of chords. Some
-entries are dropped: an unknown action, a value of the wrong shape, a chord not written in the
-canonical form (`"mod+z"`), or a chord that conflicts with an entry kept before it. `onDropped`
-receives a message naming each one, and the storage is rewritten without it. A value that is not
-a JSON object drops every entry.
+`storage` and reads it with `PixelArtKeyBindings.parse()`. `onDropped` receives the message
+of each dropped entry, and the storage is rewritten without it.
 
-`keyBindings` is the [KeyBindingMap](../../../../controls/docs/key-binding-map.md) with the
-stored overrides applied, ready for `panel.keyBindings`. Its `overrides` is what gets stored.
-`bindingsOf()` lists the chords of one action after overrides. `bind(target)` sets
-`target.keyBindings` now and after every change, until the returned function is called.
+`keyBindings` holds the stored overrides, ready for `panel.keyBindings`. `chordsBoundTo()` lists
+the chords of one action after overrides. `bind(target)` sets `target.keyBindings` now and after
+every change, until the returned function is called.
 
-`assign()` builds the new map first. It throws `InvalidKeyChordError` for a malformed chord, or
-`KeyChordConflictError` for a chord already bound to another action, both from
-`@jolly-pixel/controls`. When it throws, the bindings and the storage stay unchanged. An empty
-list unbinds the action. `reset(action)` restores one action's default, and `reset()` every
-action. Both methods save the new difference and emit `change` with the new map.
+`assign()` and `reset()` go through `rebind()` and `restore()`, so they throw the same errors
+and leave the bindings and the storage unchanged when they do. An empty list unbinds the
+action. `reset()` without an action restores every action. Both methods save the new
+difference and emit `change` with the new bindings.
+
+## PixelArtKeyBindings
+
+```ts
+class PixelArtKeyBindings extends KeyBindingMap<PixelArtAction> {
+  static readonly defaults: KeyBindingDefaults<PixelArtAction>;
+  static parse(json: string): {
+    keyBindings: PixelArtKeyBindings;
+    dropped: string[];
+  };
+
+  constructor(overrides?: KeyBindingOverrides<PixelArtAction>);
+  rebind(action: PixelArtAction, chords: string | readonly string[]): PixelArtKeyBindings;
+  restore(action?: PixelArtAction): PixelArtKeyBindings;
+  toJSON(): KeyBindingOverrides<PixelArtAction>;
+}
+```
+
+An immutable [KeyBindingMap](../../../../controls/docs/key-binding-map.md) over the pixel-art
+actions. `rebind()` and `restore()` return new bindings. `rebind()` throws
+`InvalidKeyChordError` for a malformed chord, or `KeyChordConflictError` for a chord already
+bound to another action, both from `@jolly-pixel/controls`. `restore(action)` drops the
+override of one action, and `restore()` drops every override. `toJSON()` returns `overrides`,
+the difference from `defaults`.
+
+`parse()` reads a JSON object from action to a chord or a list of chords. It drops an unknown
+action, a value of the wrong shape, a chord not written in the canonical form (`"mod+z"`), or
+a chord that conflicts with an entry kept before it, and `dropped` holds a message naming each
+one. A value that is not a JSON object drops every entry.
 
 ## Console
 
@@ -74,8 +98,9 @@ next to their own features. It registers `pixelart.keybinds` through `keybindCon
 | Input | Effect |
 |---|---|
 | `pixelart.keybinds.undo` | prints `Mod+z` |
-| `pixelart.keybinds.undo "Mod+u"` | rebinds undo |
-| `pixelart.keybinds.redo "Mod+y, Mod+Shift+z"` | a comma-separated list gives several bindings |
+| `pixelart.keybinds.undo Mod+u` | rebinds undo |
+| `pixelart.keybinds.redo Mod+y Mod+Shift+z` | several chords give several bindings |
+| `pixelart.keybinds.delete ""` | unbinds delete |
 | `pixelart.keybinds.copy "Mod+z"` | prints the `KeyChordConflictError` message; nothing changes |
 | `pixelart.keybinds.undo "mod+u"` | prints the `InvalidKeyChordError` message; nothing changes |
 | `/pixelart.keybinds.reset undo` | restores the default of undo |
@@ -84,5 +109,4 @@ next to their own features. It registers `pixelart.keybinds` through `keybindCon
 After `/cd pixelart.keybinds`, the same lines work without the prefix: `undo "Mod+u"`,
 `/reset undo`.
 
-There is one `string` variable per action of `keyBindings.actions`. `parseBindingList(value)` does
-the splitting: it splits on commas, trims each item and skips empty ones.
+There is one `list` variable of `string` items per action of `keyBindings.actions`.

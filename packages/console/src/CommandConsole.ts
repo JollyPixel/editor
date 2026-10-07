@@ -25,7 +25,10 @@ import {
   writeVariable,
   type VariableRestore
 } from "./execution/variables.ts";
-import { quote } from "./input/tokenize.ts";
+import {
+  formatValue,
+  promptLiteral
+} from "./input/coerce.ts";
 import { parentAddress } from "./registry/address.ts";
 import { Registry } from "./registry/Registry.ts";
 import { ScopedRegistry } from "./registry/ScopedRegistry.ts";
@@ -224,7 +227,7 @@ export class CommandConsole extends Emitter<
           error: message
         };
       }
-      lines.push(`${change.address} ${quote(String(change.value))}`);
+      lines.push(`${change.address} ${promptLiteral(change.value)}`);
     }
 
     if (lines.length > 0) {
@@ -296,13 +299,13 @@ export class CommandConsole extends Emitter<
     echo: ScrollbackEntry
   ): Promise<void> {
     const { variable } = input;
-    const previous = input.tokens.length === 2 ?
+    const previous = input.tokens.length > 1 ?
       peekValue(variable) :
       undefined;
     const value = await this.#settle(echo, accessVariable(input));
     this.#append("info", value);
 
-    if (previous !== undefined && String(previous) !== value) {
+    if (previous !== undefined && formatValue(previous) !== value) {
       this.#reverts.push({
         kind: "variable",
         address: variable.address,
@@ -400,9 +403,10 @@ export class CommandConsole extends Emitter<
     }
 
     const previous = peekValue(variable);
-    const result = await writeVariable(variable.def, String(value));
+    const literal = formatValue(value);
+    const result = await writeVariable(variable.def, literal);
     if (result === false) {
-      throw new ConsoleInputError(`${address} rejected "${value}"`);
+      throw new ConsoleInputError(`${address} rejected "${literal}"`);
     }
 
     return previous === undefined ? null : {

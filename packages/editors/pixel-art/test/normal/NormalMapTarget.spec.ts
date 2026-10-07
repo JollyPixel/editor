@@ -68,10 +68,10 @@ function createDocument(
   return doc;
 }
 
-function targetOf(
+function selectedTarget(
   doc: FakeDocument
 ): NormalMapTarget {
-  const target = NormalMapTarget.of(doc);
+  const target = NormalMapTarget.fromSelection(doc);
   assert.ok(target);
 
   return target;
@@ -82,11 +82,11 @@ describe("NormalMapTarget", () => {
     const doc = createDocument();
     doc.normalMap = null;
 
-    assert.equal(NormalMapTarget.of(doc), null);
+    assert.equal(NormalMapTarget.fromSelection(doc), null);
   });
 
   test("targets the texture defaults without a zone for the selection", () => {
-    const target = targetOf(createDocument());
+    const target = selectedTarget(createDocument());
 
     assert.equal(target.zone, null);
     assert.equal(target.off, false);
@@ -95,7 +95,7 @@ describe("NormalMapTarget", () => {
   });
 
   test("targets the zone of the selected region", () => {
-    const target = targetOf(createDocument({
+    const target = selectedTarget(createDocument({
       regionId: "tile",
       settings: { strength: 6 }
     }));
@@ -114,7 +114,7 @@ describe("NormalMapTarget", () => {
     });
     doc.normalMap = doc.normalMap?.withDefaults({ strength: 3 }) ?? null;
 
-    const target = targetOf(doc);
+    const target = selectedTarget(doc);
 
     assert.equal(target.off, true);
     assert.equal(target.settings.strength, 3);
@@ -124,16 +124,16 @@ describe("NormalMapTarget", () => {
   test("an unfinished write previews the defaults without committing", () => {
     const doc = createDocument();
 
-    targetOf(doc).write({ strength: 7 }, false);
+    selectedTarget(doc).write({ strength: 7 }, false);
 
     assert.equal(doc.commits, 0);
     assert.equal(doc.normals.config?.defaults.strength, 7);
-    assert.equal(targetOf(doc).settings.strength, 7);
+    assert.equal(selectedTarget(doc).settings.strength, 7);
   });
 
   test("the last write commits the defaults and ends the preview", () => {
     const doc = createDocument();
-    const target = targetOf(doc);
+    const target = selectedTarget(doc);
 
     target.write({ strength: 7 }, false);
     target.write({ strength: 8 }, true);
@@ -148,10 +148,10 @@ describe("NormalMapTarget", () => {
       regionId: "tile",
       settings: { invert: true }
     });
-    const target = targetOf(doc);
+    const target = selectedTarget(doc);
 
     target.write({ strength: 2 }, false);
-    assert.equal(targetOf(doc).overrides("strength"), true);
+    assert.equal(selectedTarget(doc).overrides("strength"), true);
     assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, { invert: true });
 
     target.write({ strength: 2 }, true);
@@ -167,10 +167,10 @@ describe("NormalMapTarget", () => {
       settings: { strength: 2 }
     });
 
-    targetOf(doc).switchOff(true);
+    selectedTarget(doc).switchOff(true);
     assert.equal(doc.normalMap?.zoneOf("tile")?.settings, "off");
 
-    targetOf(doc).switchOff(false);
+    selectedTarget(doc).switchOff(false);
     assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, {});
   });
 
@@ -180,7 +180,7 @@ describe("NormalMapTarget", () => {
       settings: { strength: 2, invert: true }
     });
 
-    targetOf(doc).reset("strength");
+    selectedTarget(doc).reset("strength");
 
     assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, { invert: true });
   });
@@ -188,8 +188,8 @@ describe("NormalMapTarget", () => {
   test("switchOff and reset leave the texture defaults alone", () => {
     const doc = createDocument();
 
-    targetOf(doc).switchOff(true);
-    targetOf(doc).reset("strength");
+    selectedTarget(doc).switchOff(true);
+    selectedTarget(doc).reset("strength");
 
     assert.equal(doc.commits, 0);
   });

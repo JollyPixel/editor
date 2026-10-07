@@ -6,14 +6,15 @@ import {
 
 // Import Internal Dependencies
 import type { TextureImportPolicy } from "../../src/index.ts";
-import { isTextureImportPolicy } from "../../src/textures/textures.ts";
+import { TextureImporter } from "../../src/textures/import/TextureImporter.ts";
 
 // CONSTANTS
 const kFeatureParams = new QueryParams((query) => {
   return {
     runtimeOff: query.string("runtime") === "off",
     empty: query.flag("empty"),
-    importPolicy: parseImportPolicy(query.string("import-policy")),
+    importPolicy: TextureImporter.parsePolicy(query.string("import-policy")) ??
+      undefined,
     addDelay: parseDelay(query.number("add-delay"))
   };
 });
@@ -87,14 +88,6 @@ export class PixelArtFeatures {
       addDelay: params.addDelay ?? this.addDelay
     });
   }
-}
-
-function parseImportPolicy(
-  value: string | undefined
-): TextureImportPolicy | undefined {
-  return value !== undefined && isTextureImportPolicy(value) ?
-    value :
-    undefined;
 }
 
 function parseDelay(

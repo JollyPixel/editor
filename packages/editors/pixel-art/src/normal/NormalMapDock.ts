@@ -194,7 +194,7 @@ export class NormalMapDock extends LitElement {
   #target(): NormalMapTarget | null {
     return this.pixelDocument === null ?
       null :
-      NormalMapTarget.of(this.pixelDocument);
+      NormalMapTarget.fromSelection(this.pixelDocument);
   }
 
   #settings(): Readonly<NormalMapSettings> {
@@ -381,7 +381,7 @@ export class NormalMapDock extends LitElement {
       `;
     }
 
-    const row = this.#document.overview?.zoneOf(zone.regionId);
+    const row = this.#document.overview?.findZoneRow(zone.regionId);
 
     return html`
       <h3 class="target" part="normal-map-target">${row?.name ?? zone.regionId}</h3>

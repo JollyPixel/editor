@@ -13,7 +13,7 @@ import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import { applyUvGeometry } from "#src/mesh-texturing/applyUvGeometry.ts";
 import { clampUvRegion } from "#src/mesh-texturing/clampUvRegion.ts";
 import { UV_REGION_ATTRIBUTE } from "#src/mesh-texturing/uvRegion.ts";
-import { regionOf } from "./regionAttributes.ts";
+import { readRegion } from "./regionAttributes.ts";
 
 // CONSTANTS
 const kTextureSize: Vec2 = { x: 64, y: 64 };
@@ -43,7 +43,7 @@ describe("clampUvRegion", () => {
   test("adds unclamped region attributes to a geometry", () => {
     const geometry = clamp(makeGeometry(4));
 
-    assert.ok(regionOf(geometry, 3)[0] < -1000);
+    assert.ok(readRegion(geometry, 3)[0] < -1000);
   });
 
   test("keeps the attributes and region of a geometry clamped twice", () => {
@@ -60,7 +60,7 @@ describe("clampUvRegion", () => {
     clamp(geometry);
 
     assert.strictEqual(geometry.getAttribute(UV_REGION_ATTRIBUTE), region);
-    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
   });
 
   test("gives the material a colour node that outlives map changes", () => {

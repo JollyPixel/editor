@@ -19,7 +19,7 @@ import {
 import { UVGeometryBinding } from "#src/mesh-texturing/UVGeometryBinding.ts";
 import { clampUvRegion } from "#src/mesh-texturing/clampUvRegion.ts";
 import type { FaceRanges } from "#src/mesh-texturing/types.ts";
-import { edgeOf, regionOf } from "./regionAttributes.ts";
+import { readEdge, readRegion } from "./regionAttributes.ts";
 import { boxFaceRanges } from "../../page/scripts/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
@@ -62,7 +62,7 @@ function makeInterleavedGeometry(): THREE.BufferGeometry {
   return geometry;
 }
 
-function uvOf(
+function readUv(
   geometry: THREE.BufferGeometry,
   index: number
 ): [number, number] {
@@ -98,10 +98,10 @@ describe("UVGeometryBinding", () => {
     });
 
     // rect 0,0 16x16 of a 64px texture: u in [0, 0.25], v in [0.75, 1].
-    assert.deepStrictEqual(uvOf(geometry, 0), [0, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 1), [0.25, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 2), [0, 0.75]);
-    assert.deepStrictEqual(uvOf(geometry, 23), [0.25, 0.75]);
+    assert.deepStrictEqual(readUv(geometry, 0), [0, 1]);
+    assert.deepStrictEqual(readUv(geometry, 1), [0.25, 1]);
+    assert.deepStrictEqual(readUv(geometry, 2), [0, 0.75]);
+    assert.deepStrictEqual(readUv(geometry, 23), [0.25, 0.75]);
   });
 
   test("preserves the stride and offset of an interleaved UV attribute", () => {
@@ -114,10 +114,10 @@ describe("UVGeometryBinding", () => {
       faceRanges: { front: [{ start: 0, count: 4 }] }
     });
 
-    assert.deepStrictEqual(uvOf(geometry, 0), [0, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 1), [0.25, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 2), [0, 0.75]);
-    assert.deepStrictEqual(uvOf(geometry, 3), [0.25, 0.75]);
+    assert.deepStrictEqual(readUv(geometry, 0), [0, 1]);
+    assert.deepStrictEqual(readUv(geometry, 1), [0.25, 1]);
+    assert.deepStrictEqual(readUv(geometry, 2), [0, 0.75]);
+    assert.deepStrictEqual(readUv(geometry, 3), [0.25, 0.75]);
   });
 
   test("exposes the bound region id", () => {
@@ -142,9 +142,9 @@ describe("UVGeometryBinding", () => {
     binding.applyFace("top", { x: 32, y: 0, width: 16, height: 16 });
 
     // "top" is vertices 8..11; "left" (4..7) keeps the stacked projection.
-    assert.deepStrictEqual(uvOf(geometry, 8), [0.5, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 9), [0.75, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 4), [0, 1]);
+    assert.deepStrictEqual(readUv(geometry, 8), [0.5, 1]);
+    assert.deepStrictEqual(readUv(geometry, 9), [0.75, 1]);
+    assert.deepStrictEqual(readUv(geometry, 4), [0, 1]);
   });
 
   test("applyFace ignores a face the geometry has no range for", () => {
@@ -157,7 +157,7 @@ describe("UVGeometryBinding", () => {
 
     binding.applyFace("top", { x: 32, y: 0, width: 16, height: 16 });
 
-    assert.deepStrictEqual(uvOf(geometry, 8), [0, 1]);
+    assert.deepStrictEqual(readUv(geometry, 8), [0, 1]);
   });
 
   test("setTextureSize reprojects the region against the new size", () => {
@@ -170,8 +170,8 @@ describe("UVGeometryBinding", () => {
 
     binding.setTextureSize({ x: 32, y: 32 });
 
-    assert.deepStrictEqual(uvOf(geometry, 1), [0.5, 1]);
-    assert.deepStrictEqual(uvOf(geometry, 2), [0, 0.5]);
+    assert.deepStrictEqual(readUv(geometry, 1), [0.5, 1]);
+    assert.deepStrictEqual(readUv(geometry, 2), [0, 0.5]);
   });
 
   test("setRegion rebinds to another region", () => {
@@ -190,7 +190,7 @@ describe("UVGeometryBinding", () => {
     }));
 
     assert.strictEqual(binding.regionId, "region-b");
-    assert.deepStrictEqual(uvOf(geometry, 0), [0, 0.5]);
+    assert.deepStrictEqual(readUv(geometry, 0), [0, 0.5]);
   });
 
   describe("follow", () => {
@@ -218,7 +218,7 @@ describe("UVGeometryBinding", () => {
 
       uv.previewMove("tracked", { x: 32, y: 0, width: 16, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
+      assert.deepStrictEqual(readUv(geometry, 1), [0.75, 1]);
     });
 
     test("tracks region-dragging for a resize drag too", () => {
@@ -226,7 +226,7 @@ describe("UVGeometryBinding", () => {
 
       uv.previewResize("tracked", { x: 0, y: 0, width: 32, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 1), [0.5, 1]);
+      assert.deepStrictEqual(readUv(geometry, 1), [0.5, 1]);
     });
 
     test("tracks region-moved", () => {
@@ -234,7 +234,7 @@ describe("UVGeometryBinding", () => {
 
       uv.move("tracked", { x: 0, y: 32, width: 16, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 0), [0, 0.5]);
+      assert.deepStrictEqual(readUv(geometry, 0), [0, 0.5]);
     });
 
     test("reprojects every face of an unfolded region moved as a whole", () => {
@@ -262,7 +262,7 @@ describe("UVGeometryBinding", () => {
         faceRanges: boxFaceRanges()
       });
       for (let index = 0; index < 24; index++) {
-        assert.deepStrictEqual(uvOf(geometry, index), uvOf(expected, index));
+        assert.deepStrictEqual(readUv(geometry, index), readUv(expected, index));
       }
     });
 
@@ -272,7 +272,7 @@ describe("UVGeometryBinding", () => {
       uv.setState("tracked", "free");
 
       assert.strictEqual(binding.regionId, "tracked");
-      assert.deepStrictEqual(uvOf(geometry, 0), [0, 1]);
+      assert.deepStrictEqual(readUv(geometry, 0), [0, 1]);
     });
 
     test("tracks region-rotated", () => {
@@ -280,8 +280,8 @@ describe("UVGeometryBinding", () => {
 
       uv.rotate("tracked", "cw");
 
-      assert.deepStrictEqual(uvOf(geometry, 0), [0.25, 1]);
-      assert.deepStrictEqual(uvOf(geometry, 1), [0.25, 0.75]);
+      assert.deepStrictEqual(readUv(geometry, 0), [0.25, 1]);
+      assert.deepStrictEqual(readUv(geometry, 1), [0.25, 0.75]);
     });
 
     test("keeps the rotation while a rotated region is dragged", () => {
@@ -290,8 +290,8 @@ describe("UVGeometryBinding", () => {
 
       uv.previewMove("tracked", { x: 32, y: 0, width: 16, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 0), [0.75, 1]);
-      assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 0.75]);
+      assert.deepStrictEqual(readUv(geometry, 0), [0.75, 1]);
+      assert.deepStrictEqual(readUv(geometry, 1), [0.75, 0.75]);
     });
 
     test("preview projects a drag that did not come from the followed map", () => {
@@ -300,12 +300,12 @@ describe("UVGeometryBinding", () => {
 
       binding.preview(region.movedTo({ x: 32, y: 0 }));
 
-      assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
+      assert.deepStrictEqual(readUv(geometry, 1), [0.75, 1]);
     });
 
     test("preview ignores another region", () => {
       const binding = bindCreated();
-      const before = uvOf(geometry, 1);
+      const before = readUv(geometry, 1);
 
       binding.preview(UVRegion.from({
         id: "other",
@@ -314,27 +314,27 @@ describe("UVGeometryBinding", () => {
         rect: { x: 32, y: 0, width: 16, height: 16 }
       }));
 
-      assert.deepStrictEqual(uvOf(geometry, 1), before);
+      assert.deepStrictEqual(readUv(geometry, 1), before);
     });
 
     test("ignores events for other regions", () => {
       bindCreated();
       uv.create({ id: "other", width: 16, height: 16 });
-      const before = uvOf(geometry, 1);
+      const before = readUv(geometry, 1);
 
       uv.previewMove("other", { x: 48, y: 48, width: 16, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 1), before);
+      assert.deepStrictEqual(readUv(geometry, 1), before);
     });
 
     test("unfollow stops tracking", () => {
       const binding = bindCreated();
       binding.unfollow();
-      const before = uvOf(geometry, 1);
+      const before = readUv(geometry, 1);
 
       uv.previewMove("tracked", { x: 32, y: 0, width: 16, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 1), before);
+      assert.deepStrictEqual(readUv(geometry, 1), before);
     });
 
     test("unfollow is idempotent", () => {
@@ -350,7 +350,7 @@ describe("UVGeometryBinding", () => {
 
       uv.previewMove("tracked", { x: 32, y: 0, width: 16, height: 16 });
 
-      assert.deepStrictEqual(uvOf(geometry, 1), [0.75, 1]);
+      assert.deepStrictEqual(readUv(geometry, 1), [0.75, 1]);
     });
   });
 });
@@ -381,7 +381,7 @@ describe("UVGeometryBinding region attributes", () => {
     });
     clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()));
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
   });
 
   test("writes the region of every face on construction", () => {
@@ -389,8 +389,8 @@ describe("UVGeometryBinding region attributes", () => {
 
     bind(geometry);
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
-    assert.deepStrictEqual(regionOf(geometry, 23), [0.5, 48.5, 15.5, 63.5]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
+    assert.deepStrictEqual(readRegion(geometry, 23), [0.5, 48.5, 15.5, 63.5]);
   });
 
   test("follows a face moved with applyFace", () => {
@@ -399,8 +399,8 @@ describe("UVGeometryBinding region attributes", () => {
 
     binding.applyFace("top", { x: 32, y: 0, width: 16, height: 16 });
 
-    assert.deepStrictEqual(regionOf(geometry, 8), [32.5, 48.5, 47.5, 63.5]);
-    assert.deepStrictEqual(regionOf(geometry, 4), [0.5, 48.5, 15.5, 63.5]);
+    assert.deepStrictEqual(readRegion(geometry, 8), [32.5, 48.5, 47.5, 63.5]);
+    assert.deepStrictEqual(readRegion(geometry, 4), [0.5, 48.5, 15.5, 63.5]);
   });
 
   test("follows a whole-region drag preview", () => {
@@ -409,7 +409,7 @@ describe("UVGeometryBinding region attributes", () => {
 
     binding.preview(stackedRegion({ x: 16, y: 16, width: 16, height: 16 }));
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
   });
 
   test("bounds a whole-region triangle by its rect only", () => {
@@ -422,8 +422,8 @@ describe("UVGeometryBinding region attributes", () => {
       corner: "top-left"
     });
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
-    assert.deepStrictEqual(edgeOf(geometry, 0), [0, 0, 1]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [16.5, 32.5, 31.5, 47.5]);
+    assert.deepStrictEqual(readEdge(geometry, 0), [0, 0, 1]);
   });
 
   test("follows a texture resize", () => {
@@ -432,7 +432,7 @@ describe("UVGeometryBinding region attributes", () => {
 
     binding.setTextureSize({ x: 32, y: 32 });
 
-    assert.deepStrictEqual(regionOf(geometry, 0), [0.5, 16.5, 15.5, 31.5]);
+    assert.deepStrictEqual(readRegion(geometry, 0), [0.5, 16.5, 15.5, 31.5]);
   });
 
   test("writes the diagonal of a triangle face", () => {
@@ -445,9 +445,9 @@ describe("UVGeometryBinding region attributes", () => {
       corner: "bottom-left"
     });
 
-    const [nx, ny] = edgeOf(geometry, 0);
+    const [nx, ny] = readEdge(geometry, 0);
     assert.ok(Math.hypot(nx, ny) > 0.99);
-    assert.deepStrictEqual(edgeOf(geometry, 3), [0, 0, 1]);
+    assert.deepStrictEqual(readEdge(geometry, 3), [0, 0, 1]);
   });
 
   for (const rotation of [0, 1, 2, 3] as const) {
@@ -466,9 +466,9 @@ describe("UVGeometryBinding region attributes", () => {
         rotation
       });
 
-      const [nx, ny, c] = edgeOf(geometry, 0);
+      const [nx, ny, c] = readEdge(geometry, 0);
       for (let index = 0; index < 3; index++) {
-        const [u, v] = uvOf(geometry, index);
+        const [u, v] = readUv(geometry, index);
         const distance = (nx * u * kTextureSize.x) +
           (ny * v * kTextureSize.y) - c;
         assert.ok(distance < 0.1, `vertex ${index} is ${distance} texels out`);

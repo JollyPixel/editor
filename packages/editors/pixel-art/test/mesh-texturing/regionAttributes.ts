@@ -7,7 +7,7 @@ import {
   UV_REGION_ATTRIBUTE
 } from "#src/mesh-texturing/uvRegion.ts";
 
-export function regionOf(
+export function readRegion(
   geometry: THREE.BufferGeometry,
   index: number
 ): number[] {
@@ -21,7 +21,7 @@ export function regionOf(
   ];
 }
 
-export function edgeOf(
+export function readEdge(
   geometry: THREE.BufferGeometry,
   index: number
 ): number[] {

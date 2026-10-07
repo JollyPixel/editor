@@ -8,10 +8,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import {
-  isApplePlatform,
-  KeyBindingMap
-} from "@jolly-pixel/controls";
+import { isApplePlatform } from "@jolly-pixel/controls";
 import type { CanvasShortcuts } from "@jolly-pixel/pixel-draw.renderer";
 import type {
   ReactiveController,
@@ -23,8 +20,8 @@ import {
   CANVAS_HOVER_CHANGE_EVENT,
   CanvasKeyboardController,
   type CanvasHoverChangeDetail
-} from "../../src/keybindings/CanvasKeyboardController.ts";
-import { PIXEL_ART_KEY_BINDINGS } from "../../src/keybindings/pixelArtKeyBindings.ts";
+} from "../../src/panel/CanvasKeyboardController.ts";
+import { PixelArtKeyBindings } from "../../src/keybindings/PixelArtKeyBindings.ts";
 
 // CONSTANTS
 const kMod: KeyboardEventInit = isApplePlatform() ?
@@ -247,7 +244,7 @@ describe("CanvasKeyboardController", () => {
   });
 
   test("a new key binding map replaces the previous chords", () => {
-    controller.keyBindings = new KeyBindingMap(PIXEL_ART_KEY_BINDINGS, {
+    controller.keyBindings = new PixelArtKeyBindings({
       undo: "Mod+u"
     });
 

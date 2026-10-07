@@ -6,6 +6,10 @@ import {
   type VariableInput
 } from "../input/classify.ts";
 import {
+  formatValue,
+  isListVariable
+} from "../input/coerce.ts";
+import {
   quote,
   type Token
 } from "../input/tokenize.ts";
@@ -131,26 +135,25 @@ function variableCandidates(
   current: CaretToken,
   registry: ConsoleRegistry
 ): Candidates {
-  switch (current.index) {
-    case 0:
-      return {
-        candidates: addressCandidates(registry, current.typed, "variable"),
-        hint: null
-      };
-    case 1: {
-      const value = peekValue(variable);
-
-      return {
-        candidates: valueCandidates(
-          staticValues(variable.def),
-          current.typed
-        ),
-        hint: value === undefined ? null : String(value)
-      };
-    }
-    default:
-      return kNoCandidates;
+  if (current.index === 0) {
+    return {
+      candidates: addressCandidates(registry, current.typed, "variable"),
+      hint: null
+    };
   }
+  if (current.index > 1 && !isListVariable(variable.def)) {
+    return kNoCandidates;
+  }
+
+  const value = peekValue(variable);
+
+  return {
+    candidates: valueCandidates(
+      staticValues(variable.def),
+      current.typed
+    ),
+    hint: value === undefined ? null : formatValue(value)
+  };
 }
 
 function tokenAt(
@@ -307,6 +310,7 @@ function staticValues(
 ): readonly string[] {
   switch (def.type) {
     case "boolean":
+    case "boolean[]":
       return kBooleanValues;
     case "enum":
       return def.enumValues;

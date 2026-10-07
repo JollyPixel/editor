@@ -86,6 +86,29 @@ describe("complete", () => {
     assert.equal(list.hint, "origin");
   });
 
+  test("a boolean list offers true and false at every item, hinting its items", async() => {
+    const commands = new CommandConsole();
+    commands.registerVariable("flags", {
+      type: "boolean[]",
+      description: "",
+      get: () => [true, false],
+      set: () => undefined
+    });
+    commands.registerVariable("name", {
+      type: "string",
+      description: "",
+      get: () => "",
+      set: () => undefined
+    });
+
+    const list = await complete("flags true f", 12, commands.registry);
+    const scalar = await complete("name a ", 7, commands.registry);
+
+    assert.deepEqual(list.items.map((item) => item.label), ["false"]);
+    assert.equal(list.hint, "true false");
+    assert.equal(scalar.hint, null);
+  });
+
   test("a variable whose getter throws completes without a hint", async() => {
     const commands = new CommandConsole();
     commands.registerVariable("broken", {

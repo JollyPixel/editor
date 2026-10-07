@@ -1,9 +1,11 @@
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
+import { formatValue } from "../input/coerce.ts";
 import type {
   ArgDef,
   CommandContext,
   CommandResult,
+  ConsoleScalar,
   ConsoleValue,
   RegistrationHandle,
   VariableDef,
@@ -32,7 +34,7 @@ export interface RemoteCalls {
   ): ConsoleValue | undefined;
   write(
     address: string,
-    value: ConsoleValue
+    literal: string
   ): Promise<VariableSetResult>;
 }
 
@@ -109,13 +111,39 @@ export class RemoteNamespace {
 
       return value;
     }
+    function readList(): readonly ConsoleScalar[] {
+      const value = read();
+      if (typeof value !== "object") {
+        throw new RemoteValueMissingError(address);
+      }
+
+      return value;
+    }
     function set(
       value: ConsoleValue
     ): Promise<VariableSetResult> {
-      return calls.write(address, value);
+      return calls.write(address, formatValue(value));
     }
 
     switch (variable.type) {
+      case "string[]":
+        return {
+          ...variable,
+          get: () => readList().map(String),
+          set
+        };
+      case "number[]":
+        return {
+          ...variable,
+          get: () => readList().map(Number),
+          set
+        };
+      case "boolean[]":
+        return {
+          ...variable,
+          get: () => readList().map((item) => item === true),
+          set
+        };
       case "number":
         return {
           ...variable,

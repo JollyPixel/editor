@@ -9,14 +9,13 @@ import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { renderIcon } from "../../shared/icons.ts";
-import type { TextureImportPolicy } from "../textures.ts";
-import type { TextureImporter } from "./TextureImporter.ts";
-import {
-  hasSupportedImageDrag,
-  isDirectoryItem,
-  isSupportedFile
-} from "./textureDropFiles.ts";
+import type {
+  TextureImporter,
+  TextureImportPolicy
+} from "./TextureImporter.ts";
+import { ImageDrop } from "./ImageDrop.ts";
 import { TextureDropBounds } from "./TextureDropBounds.ts";
+import { TextureImportError } from "./errors/TextureImportError.ts";
 
 // CONSTANTS
 const kDropLabels: Record<TextureImportPolicy, string> = {
@@ -33,64 +32,6 @@ interface DropTarget {
 export interface TextureDropControllerOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
-}
-
-function hasFilePayload(
-  dataTransfer: DataTransfer | null
-): boolean {
-  return dataTransfer !== null && (
-    dataTransfer.files.length > 0 ||
-    [...dataTransfer.types].includes("Files")
-  );
-}
-
-function validDropFile(
-  dataTransfer: DataTransfer | null
-): File | null {
-  if (!dataTransfer || dataTransfer.files.length !== 1) {
-    return null;
-  }
-  if ([...dataTransfer.items].some(isDirectoryItem)) {
-    return null;
-  }
-
-  const file = dataTransfer.files[0];
-
-  return isSupportedFile(file) ? file : null;
-}
-
-function isInteractiveTarget(
-  event: DragEvent
-): boolean {
-  const target = event.composedPath()[0];
-
-  return target instanceof Element &&
-    target.closest(".overlay-toolbar, .tool-option-overlay") !== null;
-}
-
-function dropTarget(
-  event: DragEvent,
-  canvas: PixelArtCanvas | null
-): DropTarget | null {
-  const stage = event.currentTarget;
-  if (
-    !canvas ||
-    canvas.pixelsReadOnly ||
-    !(stage instanceof HTMLElement) ||
-    isInteractiveTarget(event)
-  ) {
-    return null;
-  }
-
-  const bounds = TextureDropBounds.measure(canvas, stage);
-  if (!bounds.contains(event.clientX, event.clientY)) {
-    return null;
-  }
-
-  return {
-    canvas,
-    bounds
-  };
 }
 
 export class TextureDropController implements ReactiveController {
@@ -123,9 +64,8 @@ export class TextureDropController implements ReactiveController {
   readonly onDragOver = (
     event: DragEvent
   ): void => {
-    const target = hasFilePayload(event.dataTransfer) ?
-      dropTarget(event, this.#canvas()) :
-      null;
+    const drop = new ImageDrop(event.dataTransfer);
+    const target = drop.carriesFiles ? this.#target(event) : null;
     if (target === null) {
       this.#clearOverlay();
 
@@ -133,7 +73,7 @@ export class TextureDropController implements ReactiveController {
     }
 
     event.preventDefault();
-    if (!hasSupportedImageDrag(event.dataTransfer)) {
+    if (!drop.supported) {
       this.#clearOverlay();
 
       return;
@@ -163,23 +103,27 @@ export class TextureDropController implements ReactiveController {
   readonly onDrop = (
     event: DragEvent
   ): void => {
-    const target = dropTarget(event, this.#canvas());
+    const target = this.#target(event);
     this.#clearOverlay();
     if (target === null) {
       return;
     }
 
     event.preventDefault();
-    const file = validDropFile(event.dataTransfer);
-    if (file) {
-      void this.#importer.importFile(target.canvas, file, "drop");
+    let file: File;
+    try {
+      file = new ImageDrop(event.dataTransfer).file();
     }
-    else if (!event.dataTransfer || event.dataTransfer.files.length !== 1) {
-      this.#importer.status.set("Drop one image file");
+    catch (error) {
+      if (!(error instanceof TextureImportError)) {
+        throw error;
+      }
+      this.#importer.status.set(error.message);
+
+      return;
     }
-    else {
-      this.#importer.status.set("Unsupported image format");
-    }
+
+    void this.#importer.importFile(target.canvas, file, "drop");
   };
 
   readonly #clearOverlay = (): void => {
@@ -188,6 +132,40 @@ export class TextureDropController implements ReactiveController {
       this.#host.requestUpdate();
     }
   };
+
+  #target(
+    event: DragEvent
+  ): DropTarget | null {
+    const canvas = this.#canvas();
+    const stage = event.currentTarget;
+    if (
+      !canvas ||
+      canvas.pixelsReadOnly ||
+      !(stage instanceof HTMLElement) ||
+      this.#isOverToolbar(event)
+    ) {
+      return null;
+    }
+
+    const bounds = TextureDropBounds.measure(canvas, stage);
+    if (!bounds.contains(event.clientX, event.clientY)) {
+      return null;
+    }
+
+    return {
+      canvas,
+      bounds
+    };
+  }
+
+  #isOverToolbar(
+    event: DragEvent
+  ): boolean {
+    const target = event.composedPath()[0];
+
+    return target instanceof Element &&
+      target.closest(".overlay-toolbar, .tool-option-overlay") !== null;
+  }
 
   render() {
     if (!this.#bounds) {

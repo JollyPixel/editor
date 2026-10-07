@@ -1,6 +1,8 @@
 export type ConsoleValueType = "string" | "number" | "boolean" | "enum";
 
-export type ConsoleValue = string | number | boolean;
+export type ConsoleScalar = string | number | boolean;
+
+export type ConsoleValue = ConsoleScalar | readonly ConsoleScalar[];
 
 export interface ArgDefBase {
   name: string;
@@ -124,13 +126,46 @@ export interface EnumVariableDef<
   ): VariableSetResult | Promise<VariableSetResult>;
 }
 
+export interface StringListVariableDef {
+  type: "string[]";
+  description: string;
+  get(): readonly string[];
+  set(
+    value: string[]
+  ): VariableSetResult | Promise<VariableSetResult>;
+}
+
+export interface NumberListVariableDef {
+  type: "number[]";
+  description: string;
+  get(): readonly number[];
+  set(
+    value: number[]
+  ): VariableSetResult | Promise<VariableSetResult>;
+}
+
+export interface BooleanListVariableDef {
+  type: "boolean[]";
+  description: string;
+  get(): readonly boolean[];
+  set(
+    value: boolean[]
+  ): VariableSetResult | Promise<VariableSetResult>;
+}
+
+export type ListVariableDef =
+  | StringListVariableDef
+  | NumberListVariableDef
+  | BooleanListVariableDef;
+
 export type VariableDef<
   TValue extends string = string
 > =
   | StringVariableDef
   | NumberVariableDef
   | BooleanVariableDef
-  | EnumVariableDef<TValue>;
+  | EnumVariableDef<TValue>
+  | ListVariableDef;
 
 export interface NamespaceMeta {
   description?: string;

@@ -63,7 +63,7 @@ test("Import replaces the texture without a dialog, tabs or busy scrim", async({
 
   await expect.poll(() => readPixels(panel, [kCorner])).toEqual(["#ff8800ff"]);
   await expect(panel.locator("[part=drop-status]")).toHaveText("Texture replaced");
-  await expect(page.locator("jolly-dialog")).toHaveCount(0);
+  await expect(page.locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
   await expect(panel.locator("jolly-tabs")).toHaveCount(0);
   await expect(panel.locator(".stage-busy")).toHaveCount(0);
 });

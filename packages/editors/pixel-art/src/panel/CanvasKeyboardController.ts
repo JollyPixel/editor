@@ -5,17 +5,13 @@ import type {
 } from "lit";
 import {
   Keyboard,
-  KeyBindingMap,
   type KeyboardGuard
 } from "@jolly-pixel/controls";
 import type { CanvasShortcuts } from "@jolly-pixel/pixel-draw.renderer";
 import { inputLayers } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  PIXEL_ART_KEY_BINDINGS,
-  type PixelArtKeyBindings
-} from "./pixelArtKeyBindings.ts";
+import { PixelArtKeyBindings } from "../keybindings/PixelArtKeyBindings.ts";
 
 // CONSTANTS
 export const CANVAS_HOVER_CHANGE_EVENT = "canvas-hover-change";
@@ -41,7 +37,7 @@ export class CanvasKeyboardController implements ReactiveController {
   readonly #hoverGuard: KeyboardGuard = {
     blocks: () => !this.#hovering
   };
-  #keyBindings: PixelArtKeyBindings = new KeyBindingMap(PIXEL_ART_KEY_BINDINGS);
+  #keyBindings = new PixelArtKeyBindings();
   #connected = false;
   #releases: Array<() => void> = [];
   #releaseBindings: (() => void) | null = null;

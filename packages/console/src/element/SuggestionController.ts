@@ -11,6 +11,7 @@ import {
 import type { CommandConsole } from "../CommandConsole.ts";
 import { peekValue } from "../execution/variables.ts";
 import { classify } from "../input/classify.ts";
+import { formatValue } from "../input/coerce.ts";
 import {
   signature,
   variableSignature
@@ -378,7 +379,7 @@ function variableUsage(
   const text = variableSignature(variable);
   const value = peekValue(variable);
 
-  return value === undefined ? text : `${text} = ${String(value)}`;
+  return value === undefined ? text : `${text} = ${formatValue(value)}`;
 }
 
 function count(

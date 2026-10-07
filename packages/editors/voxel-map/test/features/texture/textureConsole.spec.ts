@@ -21,7 +21,7 @@ describe("texture console", () => {
 
     await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
 
-    assert.deepEqual(state.pixelArtKeyBindings.bindingsOf("undo"), ["Mod+u"]);
+    assert.deepEqual(state.pixelArtKeyBindings.chordsBoundTo("undo"), ["Mod+u"]);
 
     handle.unregister();
 

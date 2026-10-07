@@ -285,6 +285,32 @@ describe("ConsoleMirror", () => {
     assert.ok(shell.registry.namespace("brush"));
   });
 
+  test("writes, reads and reverts a list variable in the frame", async() => {
+    const { frame, shell } = await bridge();
+    let weights = [1, 2];
+    frame.registerNamespace("layers").registerVariable("weights", {
+      type: "number[]",
+      description: "",
+      get: () => weights,
+      set: (value) => {
+        weights = value;
+      }
+    });
+    await until(() => shell.registry.resolveVariable("layers.weights")?.def.get() !== undefined);
+
+    await shell.submit("layers.weights 3 4.5");
+    assert.deepEqual(weights, [3, 4.5]);
+    await shell.submit("/revert");
+
+    assert.deepEqual(weights, [1, 2]);
+    assert.deepEqual(lines(shell), [
+      "echo: layers.weights 3 4.5",
+      "info: 3 4.5",
+      "echo: /revert",
+      "info: Reverted layers.weights 3 4.5"
+    ]);
+  });
+
   test("mirrors a nested namespace under its full address, beside the shell's own", async() => {
     const local = new CommandConsole();
     local.registerNamespace("pixelart.local");

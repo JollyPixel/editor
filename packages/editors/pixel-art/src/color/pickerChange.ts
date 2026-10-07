@@ -35,7 +35,7 @@ export function colorWithOpacity(
   };
 }
 
-export function colorDetailOf(
+export function rgba8ToColorChange(
   color: RGBA8
 ): ColorChangeDetail {
   const rgba = fromRGBA8(color);
@@ -46,7 +46,7 @@ export function colorDetailOf(
   };
 }
 
-export function rgba8Of(
+export function colorChangeToRgba8(
   color: ColorChangeDetail
 ): RGBA8 {
   return toRGBA8(colorWithOpacity(color.hex, color.opacity));
@@ -69,7 +69,7 @@ export function applyPickerChange(
   value: string,
   last = true
 ): void {
-  const detail = colorChangeOf(value);
+  const detail = parseColorChange(value);
   if (detail === null) {
     return;
   }
@@ -86,7 +86,7 @@ export function applyPickerChange(
   ));
 }
 
-export function colorChangeOf(
+export function parseColorChange(
   value: string
 ): ColorChangeDetail | null {
   const parsed = parseColor(value);

@@ -26,7 +26,9 @@ const kUvCreateSize = {
   width: 16,
   height: 16
 };
-const kRampSlopeHeight = Math.round(kUvCreateSize.height * Math.SQRT2);
+const kRampSlopeHeight = Math.round(
+  kUvCreateSize.height * Math.SQRT2
+);
 
 const kStateLabels: Record<UVRegionState, string> = {
   stacked: "Stacked",

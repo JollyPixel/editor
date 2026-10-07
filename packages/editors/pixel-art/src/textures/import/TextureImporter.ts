@@ -4,38 +4,58 @@ import type {
   ReactiveControllerHost
 } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-import { decodeRasterCanvas } from "@jolly-pixel/image/browser";
 
 // Import Internal Dependencies
-import { showImportTextureDialog } from "./importTextureDialog.ts";
 import { TransientStatus } from "../../shared/TransientStatus.ts";
-import { TextureBusy } from "../TextureBusy.ts";
+import { TextureBusy } from "./TextureBusy.ts";
+import { TextureSource } from "./TextureSource.ts";
+import { TextureImportError } from "./errors/TextureImportError.ts";
 import type { TextureSet } from "../TextureSet.ts";
-import {
-  DECODE_FAILED_MESSAGE,
-  sourceProblem,
-  suggestTextureName,
-  type TextureAddRequestDetail,
-  type TextureImportOrigin,
-  type TextureImportPolicy
-} from "../textures.ts";
+import type { ImportTextureDialog } from "../dialogs/ImportTextureDialog.ts";
 
 // CONSTANTS
 const kDecodingLabel = "Decoding image";
+
+export type TextureImportPolicy = "replace" | "add" | "ask";
+
+export type TextureImportOrigin = "import" | "drop";
+
+export interface TextureAddRequestDetail {
+  name: string;
+  source: HTMLCanvasElement;
+  origin: TextureImportOrigin;
+  uvSize: number | null;
+  respondWith(work: Promise<unknown>): void;
+}
 
 export type TextureImporterHost = ReactiveControllerHost & HTMLElement;
 
 export interface TextureImporterOptions {
   textures: TextureSet;
   policy: () => TextureImportPolicy;
+  dialog: () => Pick<ImportTextureDialog, "open">;
 }
 
 export class TextureImporter implements ReactiveController {
+  static parsePolicy(
+    value: string | null | undefined
+  ): TextureImportPolicy | null {
+    switch (value) {
+      case "replace":
+      case "add":
+      case "ask":
+        return value;
+      default:
+        return null;
+    }
+  }
+
   readonly busy: TextureBusy;
   readonly status: TransientStatus;
   readonly #host: TextureImporterHost;
   readonly #textures: TextureSet;
   readonly #policy: () => TextureImportPolicy;
+  readonly #dialog: () => Pick<ImportTextureDialog, "open">;
   #generation = 0;
 
   constructor(
@@ -45,6 +65,7 @@ export class TextureImporter implements ReactiveController {
     this.#host = host;
     this.#textures = options.textures;
     this.#policy = options.policy;
+    this.#dialog = options.dialog;
     this.busy = new TextureBusy(host);
     this.status = new TransientStatus(host);
     host.addController(this);
@@ -71,13 +92,16 @@ export class TextureImporter implements ReactiveController {
   ): Promise<void> {
     const generation = ++this.#generation;
     const release = this.busy.begin(origin, kDecodingLabel);
-    let source: HTMLCanvasElement;
+    let source: TextureSource;
     try {
-      source = await decodeRasterCanvas(file);
+      source = await TextureSource.decode(file, canvas.maxTextureSize);
     }
-    catch {
+    catch (error) {
+      if (!(error instanceof TextureImportError)) {
+        throw error;
+      }
       if (this.#isCurrent(generation, canvas)) {
-        this.status.set(DECODE_FAILED_MESSAGE);
+        this.status.set(error.message);
       }
 
       return;
@@ -90,14 +114,7 @@ export class TextureImporter implements ReactiveController {
       return;
     }
 
-    const problem = sourceProblem(source, canvas.maxTextureSize);
-    if (problem !== null) {
-      this.status.set(problem);
-
-      return;
-    }
-
-    const replaced = await this.#place(canvas, source, file.name, origin);
+    const replaced = await this.#place(canvas, source, origin);
     if (replaced && generation === this.#generation) {
       this.status.set("Texture replaced");
     }
@@ -113,19 +130,14 @@ export class TextureImporter implements ReactiveController {
 
   async #place(
     canvas: PixelArtCanvas,
-    source: HTMLCanvasElement,
-    fileName: string,
+    source: TextureSource,
     origin: TextureImportOrigin
   ): Promise<boolean> {
-    const name = suggestTextureName(fileName);
     const policy = this.#policy();
     const result = policy === "ask" ?
-      await showImportTextureDialog({
-        name,
-        size: {
-          x: source.width,
-          y: source.height
-        }
+      await this.#dialog().open({
+        name: source.name.value,
+        size: source.size
       }) :
       {
         choice: policy,
@@ -133,7 +145,7 @@ export class TextureImporter implements ReactiveController {
       };
 
     if (result?.choice === "add") {
-      this.#requestAdd(name, source, origin, result.uvSize);
+      this.#requestAdd(source, origin, result.uvSize);
 
       return false;
     }
@@ -141,18 +153,18 @@ export class TextureImporter implements ReactiveController {
       return false;
     }
 
-    canvas.texture = source;
+    canvas.texture = source.canvas;
     canvas.centerTexture();
 
     return true;
   }
 
   #requestAdd(
-    name: string,
-    source: HTMLCanvasElement,
+    source: TextureSource,
     origin: TextureImportOrigin,
     uvSize: number | null
   ): void {
+    const name = source.name.value;
     const release = this.busy.begin(origin, `Adding ${name}`);
     const work: Promise<unknown>[] = [];
     this.#host.dispatchEvent(new CustomEvent<TextureAddRequestDetail>(
@@ -162,7 +174,7 @@ export class TextureImporter implements ReactiveController {
         composed: true,
         detail: {
           name,
-          source,
+          source: source.canvas,
           origin,
           uvSize,
           respondWith(promise) {

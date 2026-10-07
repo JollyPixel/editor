@@ -127,6 +127,27 @@ describe("/revert", () => {
     });
   });
 
+  test("restores the items a list held before the write", async() => {
+    const tags = ["two words", "b"];
+    const commands = new CommandConsole();
+    commands.registerVariable("tags", {
+      type: "string[]",
+      description: "",
+      get: () => tags,
+      set: (value) => {
+        tags.splice(0, tags.length, ...value);
+      }
+    });
+    await commands.submit("tags c d");
+    await commands.submit("tags c d");
+
+    assert.deepEqual(await revert(commands, "/revert 2"), [
+      "info: Reverted tags c d",
+      "info: Reverted 1 of 2"
+    ]);
+    assert.deepEqual(tags, ["two words", "b"]);
+  });
+
   test("reports when there is nothing to revert", async() => {
     const { commands } = withBrush();
 

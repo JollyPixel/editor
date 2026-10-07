@@ -51,7 +51,7 @@ export class NormalMapOverview {
     });
   }
 
-  zoneOf(
+  findZoneRow(
     regionId: string
   ): NormalMapZoneRow | undefined {
     return this.zones.find(
@@ -68,7 +68,7 @@ export class NormalMapOverview {
       if (
         island.isRect ||
         !this.#governs(island, regionId) ||
-        this.#borderOf(island) !== "wrap"
+        this.#resolvedBorder(island) !== "wrap"
       ) {
         continue;
       }
@@ -100,7 +100,7 @@ export class NormalMapOverview {
       winner?.regionId === regionId;
   }
 
-  #borderOf(
+  #resolvedBorder(
     island: Island
   ): string | null {
     const settings = this.#config.resolve(

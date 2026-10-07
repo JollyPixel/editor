@@ -1,13 +1,19 @@
 // Import Internal Dependencies
 import { peekValue } from "../execution/variables.ts";
-import { coerce } from "../input/coerce.ts";
+import {
+  coerce,
+  formatValue,
+  isListVariable
+} from "../input/coerce.ts";
 import { isWithin } from "../registry/address.ts";
+import { typeLabel } from "../registry/format.ts";
 import type {
   ConsoleRegistry,
   ConsoleValue,
   ConsoleValueType,
   RegisteredNamespace,
-  RegisteredVariable
+  RegisteredVariable,
+  VariableDef
 } from "../registry/types.ts";
 import {
   closest,
@@ -16,6 +22,7 @@ import {
 } from "../search/typo.ts";
 import {
   formatScriptValue,
+  parseScriptValue,
   scanScript,
   type EntryLine,
   type ScriptSpan
@@ -118,7 +125,7 @@ export class VariableScript {
         this.#snapshot.set(variable.address.toLowerCase(), value);
         block.push(
           `; ${describe(variable)}`,
-          `${variable.name} = ${formatScriptValue(String(value))}`
+          `${variable.name} = ${scriptValue(value)}`
         );
       }
       if (block.length === 0) {
@@ -196,7 +203,8 @@ export class VariableScript {
       return;
     }
 
-    state.valueTypes.set(number, variable.def.type);
+    const { def } = variable;
+    state.valueTypes.set(number, highlightType(def));
     const id = variable.address.toLowerCase();
     const first = state.seen.get(id);
     if (first !== undefined) {
@@ -207,20 +215,12 @@ export class VariableScript {
     state.seen.set(id, number);
 
     const valueSpan = value.text === "" ? operatorSpan(line) : value;
-    if (line.quote === "unterminated") {
-      report(state, number, valueSpan, "Unterminated quote");
-
-      return;
-    }
-    if (line.quote === "trailing") {
-      report(state, number, valueSpan, "Unexpected text after the closing quote");
-
-      return;
-    }
-
     let parsed: ConsoleValue;
     try {
-      parsed = coerce(line.literal, variable.def);
+      const literal = isListVariable(def) ?
+        value.text :
+        parseScriptValue(value.text);
+      parsed = coerce(literal, def);
     }
     catch (error) {
       report(state, number, valueSpan, error instanceof Error ? error.message : String(error));
@@ -231,7 +231,7 @@ export class VariableScript {
     const previous = this.#snapshot.has(id) ?
       this.#snapshot.get(id) :
       peekValue(variable);
-    if (parsed !== previous) {
+    if (previous === undefined || formatValue(parsed) !== formatValue(previous)) {
       state.changes.push({
         line: number,
         address: variable.address,
@@ -244,12 +244,34 @@ export class VariableScript {
 function describe(
   variable: RegisteredVariable
 ): string {
-  const { def } = variable;
-  const type = def.type === "enum" ? def.enumValues.join("|") : def.type;
+  const type = typeLabel(variable.def);
 
   return variable.description === "" ?
     `<${type}>` :
     `${variable.description} <${type}>`;
+}
+
+function highlightType(
+  def: VariableDef
+): ConsoleValueType {
+  switch (def.type) {
+    case "string[]":
+      return "string";
+    case "number[]":
+      return "number";
+    case "boolean[]":
+      return "boolean";
+    default:
+      return def.type;
+  }
+}
+
+function scriptValue(
+  value: ConsoleValue
+): string {
+  return typeof value === "object" ?
+    formatValue(value) :
+    formatScriptValue(String(value));
 }
 
 function* subtree(

@@ -22,11 +22,11 @@ export function keybindConsole(
 
   for (const action of actions) {
     namespace.registerVariable(action, {
-      type: "string",
-      description: `Shortcut for ${action}, comma-separated for several`,
-      get: () => keyBindingSettings.bindingsOf(action).join(", "),
-      set: (value) => {
-        keyBindingSettings.assign(action, parseBindingList(value));
+      type: "string[]",
+      description: `Shortcuts for ${action}`,
+      get: () => keyBindingSettings.chordsBoundTo(action),
+      set: (chords) => {
+        keyBindingSettings.assign(action, chords);
       }
     });
   }
@@ -46,20 +46,11 @@ export function keybindConsole(
         action === undefined ?
           "Every shortcut restored" :
           `${action} restored to ${
-            keyBindingSettings.bindingsOf(action).join(", ")
+            keyBindingSettings.chordsBoundTo(action).join(" ")
           }`
       );
     }
   });
 
   return namespace;
-}
-
-export function parseBindingList(
-  value: string
-): string[] {
-  return value
-    .split(",")
-    .map((binding) => binding.trim())
-    .filter((binding) => binding !== "");
 }

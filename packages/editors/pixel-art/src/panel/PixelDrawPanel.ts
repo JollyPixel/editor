@@ -9,7 +9,6 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
 import type {
   PixelArtCanvas,
   PixelArtCanvasOptions,
@@ -19,7 +18,6 @@ import {
   ambientThemeMode,
   resolveThemeColor,
   themeStyles,
-  type JollyTabChangeDetail,
   type ResolvedThemeMode,
   type TabsVariant
 } from "@jolly-pixel/ui";
@@ -51,28 +49,29 @@ import {
   type ToolOption
 } from "../tools/toolOptions.ts";
 import { TextureSet } from "../textures/TextureSet.ts";
-import { TextureImporter } from "../textures/import/TextureImporter.ts";
+import type {
+  PixelDrawTextureOptions,
+  TextureUpdate
+} from "../textures/TextureEntry.ts";
+import {
+  TextureImporter,
+  type TextureAddRequestDetail,
+  type TextureImportPolicy
+} from "../textures/import/TextureImporter.ts";
+import {
+  TextureTabStrip,
+  type TextureChangeDetail,
+  type TextureCloseRequestDetail,
+  type TextureEditRequestDetail,
+  type TextureTabsMode
+} from "../textures/TextureTabStrip.ts";
+import "../textures/dialogs/ClearTextureDialog.ts";
+import "../textures/dialogs/ImportTextureDialog.ts";
 import {
   CanvasKeyboardController,
   type CanvasHoverChangeDetail
-} from "../keybindings/CanvasKeyboardController.ts";
-import type { PixelArtKeyBindings } from "../keybindings/pixelArtKeyBindings.ts";
-import {
-  isTextureImportPolicy,
-  isTextureTabsMode,
-  textureCanvasOptions,
-  type AddTextureOptions,
-  type PixelDrawInitializeOptions,
-  type PixelDrawTextureOptions,
-  type TextureAddRequestDetail,
-  type TextureChangeDetail,
-  type TextureChangeSource,
-  type TextureCloseRequestDetail,
-  type TextureEditRequestDetail,
-  type TextureImportPolicy,
-  type TextureTabsMode,
-  type TextureUpdate
-} from "../textures/textures.ts";
+} from "./CanvasKeyboardController.ts";
+import type { PixelArtKeyBindings } from "../keybindings/PixelArtKeyBindings.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
 import "../color/ColorPickerPopover.ts";
@@ -84,6 +83,16 @@ const kDefaultTextureId = "default";
 const kDefaultTextureName = "Texture";
 
 export type ThemeMode = "light" | "dark" | "auto";
+
+export interface AddTextureOptions {
+  activate?: boolean;
+}
+
+export interface PixelDrawInitializeOptions extends PixelArtCanvasOptions {
+  id?: string;
+  name?: string;
+  tooltip?: string;
+}
 
 export interface PixelDrawTexture {
   readonly id: string;
@@ -156,7 +165,7 @@ export class PixelDrawPanel extends LitElement {
     attribute: "texture-import-policy",
     converter: {
       fromAttribute(value) {
-        return (value !== null && isTextureImportPolicy(value)) ? value : "replace";
+        return TextureImporter.parsePolicy(value) ?? "replace";
       }
     }
   })
@@ -171,7 +180,7 @@ export class PixelDrawPanel extends LitElement {
     attribute: "texture-tabs",
     converter: {
       fromAttribute(value) {
-        return (value !== null && isTextureTabsMode(value)) ? value : "auto";
+        return value === "always" ? "always" : "auto";
       }
     }
   })
@@ -199,9 +208,11 @@ export class PixelDrawPanel extends LitElement {
     onModeChange: (mode) => this.#selectToolbar.onModeChange(mode === "select"),
     onClipboardResult: (result) => this.#selectToolbar.onClipboardResult(result)
   });
+  readonly #tabs = new TextureTabStrip(this, this.#textures);
   readonly #importer = new TextureImporter(this, {
     textures: this.#textures,
-    policy: () => this.textureImportPolicy
+    policy: () => this.textureImportPolicy,
+    dialog: () => this.#dialog("import-texture-dialog")
   });
   readonly #activeCanvas = (): PixelArtCanvas | null => this.canvasManager;
   readonly #uvToolbar = new UvToolbarController(this, this.#activeCanvas);
@@ -214,7 +225,7 @@ export class PixelDrawPanel extends LitElement {
   readonly #docks = new DockSlot(this, () => this.#syncColorDocked());
   readonly #normalMaps = new NormalMapController(this, {
     canvas: this.#activeCanvas,
-    canvases: () => [...this.#textures.values()].map((entry) => entry.canvas),
+    canvases: () => [...this.#textures].map((entry) => entry.canvas),
     docks: this.#docks
   });
   readonly #keyboard = new CanvasKeyboardController(
@@ -258,7 +269,7 @@ export class PixelDrawPanel extends LitElement {
   }
 
   get textures(): PixelDrawTexture[] {
-    return [...this.#textures.values()].map((entry) => {
+    return [...this.#textures].map((entry) => {
       return {
         id: entry.id,
         name: entry.name,
@@ -286,7 +297,7 @@ export class PixelDrawPanel extends LitElement {
   set activeTextureId(
     id: string
   ) {
-    this.#activateTexture(id, "api");
+    this.#tabs.activate(id, "api");
   }
 
   override connectedCallback() {
@@ -348,12 +359,19 @@ export class PixelDrawPanel extends LitElement {
   async initialize(
     options: PixelDrawInitializeOptions = {}
   ): Promise<PixelArtCanvas> {
+    const {
+      id = kDefaultTextureId,
+      name = kDefaultTextureName,
+      tooltip,
+      ...canvasOptions
+    } = options;
     this.#destroyTextures();
-    await this.configure(options);
+    await this.configure(canvasOptions);
     const canvas = this.addTexture({
-      ...options,
-      id: options.id ?? kDefaultTextureId,
-      name: options.name ?? kDefaultTextureName
+      ...canvasOptions,
+      id,
+      name,
+      tooltip
     });
     await this.updateComplete;
 
@@ -364,9 +382,10 @@ export class PixelDrawPanel extends LitElement {
     options: PixelArtCanvasOptions = {}
   ): Promise<void> {
     await this.updateComplete;
-    this.#baseOptions = textureCanvasOptions({
-      history: { enabled: true }
-    }, options);
+    this.#baseOptions = {
+      history: { enabled: true },
+      ...options
+    };
   }
 
   addTexture(
@@ -382,12 +401,8 @@ export class PixelDrawPanel extends LitElement {
     const previous = this.activeTextureId;
     const canvas = this.#createTexture(
       {
-        ...textureCanvasOptions(this.#baseOptions, options),
-        id: options.id,
-        name: options.name,
-        tooltip: options.tooltip,
-        badge: options.badge,
-        disabled: options.disabled
+        ...this.#baseOptions,
+        ...options
       },
       addOptions.activate ?? true
     );
@@ -399,7 +414,7 @@ export class PixelDrawPanel extends LitElement {
       void this.updateComplete.then(() => this.setAttribute("data-ready", ""));
     }
     if (previous !== null && this.activeTextureId !== previous) {
-      this.#emitTextureChange(options.id, "api");
+      this.#tabs.emitChange(options.id, "api");
     }
 
     return canvas;
@@ -410,7 +425,7 @@ export class PixelDrawPanel extends LitElement {
   ): void {
     const next = this.#textures.remove(id);
     if (next !== null) {
-      this.#emitTextureChange(next.id, "api");
+      this.#tabs.emitChange(next.id, "api");
     }
   }
 
@@ -441,6 +456,17 @@ export class PixelDrawPanel extends LitElement {
     }
 
     return element;
+  }
+
+  #dialog<TName extends "clear-texture-dialog" | "import-texture-dialog">(
+    name: TName
+  ): HTMLElementTagNameMap[TName] {
+    const dialog = this.renderRoot.querySelector(name);
+    if (dialog === null) {
+      throw new Error(`PixelDrawPanel: ${name} element not found`);
+    }
+
+    return dialog;
   }
 
   #observeCanvasHost(): void {
@@ -515,50 +541,6 @@ export class PixelDrawPanel extends LitElement {
     }));
   }
 
-  #activateTexture(
-    id: string,
-    source: TextureChangeSource
-  ): void {
-    const entry = this.#textures.get(id);
-    if (entry !== this.#textures.active) {
-      this.#textures.activate(entry);
-      this.#emitTextureChange(entry.id, source);
-    }
-  }
-
-  #emitTextureChange(
-    id: string,
-    source: TextureChangeSource
-  ): void {
-    this.dispatchEvent(new CustomEvent<TextureChangeDetail>("texture-change", {
-      bubbles: true,
-      composed: true,
-      detail: {
-        id,
-        source
-      }
-    }));
-  }
-
-  #forwardTabRequest(
-    type: "texture-close-request" | "texture-edit-request",
-    event: CustomEvent<JollyTabChangeDetail>
-  ): void {
-    event.stopPropagation();
-    this.dispatchEvent(new CustomEvent<TextureCloseRequestDetail>(type, {
-      bubbles: true,
-      composed: true,
-      detail: { id: event.detail.value }
-    }));
-  }
-
-  #onTextureCreateClick(): void {
-    this.dispatchEvent(new CustomEvent("texture-create-request", {
-      bubbles: true,
-      composed: true
-    }));
-  }
-
   #editCanvas(
     edit: (canvas: PixelArtCanvas) => void
   ): void {
@@ -570,7 +552,7 @@ export class PixelDrawPanel extends LitElement {
   }
 
   get #uvPolicy(): UvAccessPolicy {
-    return UvAccessPolicy.of(this.uvAccess);
+    return UvAccessPolicy.forAccess(this.uvAccess);
   }
 
   #applyUvAccess(): void {
@@ -601,69 +583,13 @@ export class PixelDrawPanel extends LitElement {
       return;
     }
 
-    for (const { canvas } of this.#textures.values()) {
+    for (const { canvas } of this.#textures) {
       canvas.backgroundColor = canvasBg;
     }
   }
 
   #canvasBackground(): string {
     return resolveThemeColor(this, "--color-canvas-bg");
-  }
-
-  #renderTextureTabs() {
-    if (this.textureTabs === "auto" && this.#textures.size < 2) {
-      return nothing;
-    }
-
-    return html`
-      <jolly-tabs
-        class="texture-tabs"
-        part="texture-tabs"
-        .variant=${this.textureTabsVariant}
-        .value=${this.activeTextureId ?? ""}
-        @jolly-tab-change=${(event: CustomEvent<JollyTabChangeDetail>) => {
-          event.stopPropagation();
-          this.#activateTexture(event.detail.value, "user");
-        }}
-        @jolly-tab-close=${(event: CustomEvent<JollyTabChangeDetail>) => {
-          this.#forwardTabRequest("texture-close-request", event);
-        }}
-        @jolly-tab-action=${(event: CustomEvent<JollyTabChangeDetail>) => {
-          this.#forwardTabRequest("texture-edit-request", event);
-        }}
-      >
-        ${repeat(
-          this.#textures.values(),
-          (entry) => entry.id,
-          (entry) => html`
-            <jolly-tab
-              .value=${entry.id}
-              .label=${entry.name}
-              .tooltip=${entry.tooltip}
-              .badge=${entry.badge}
-              .action=${this.texturesEditable ? "edit" : ""}
-              .actionLabel=${"Edit"}
-              ?disabled=${entry.disabled}
-              ?closable=${this.texturesClosable}
-            ></jolly-tab>
-          `
-        )}
-        ${this.texturesAddable ?
-          html`
-            <jolly-button
-              slot="list-end"
-              class="texture-add"
-              part="texture-add"
-              icon="add"
-              icon-only
-              label=${this.textureAddLabel}
-              title=${this.textureAddLabel}
-              @click=${() => this.#onTextureCreateClick()}
-            ></jolly-button>
-          ` :
-          nothing}
-      </jolly-tabs>
-    `;
   }
 
   override render() {
@@ -708,7 +634,7 @@ export class PixelDrawPanel extends LitElement {
       </div>
 
       <div class="workspace" part="workspace">
-        ${this.#renderTextureTabs()}
+        ${this.#tabs.render()}
         <div
           class="stage"
           part="stage"
@@ -743,6 +669,7 @@ export class PixelDrawPanel extends LitElement {
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,
             importer: this.#importer,
+            clearDialog: () => this.#dialog("clear-texture-dialog"),
             exportMenu: (exportAlbedo) => (
               normalMaps?.renderExportButton(exportAlbedo) ?? nothing
             ),
@@ -759,6 +686,8 @@ export class PixelDrawPanel extends LitElement {
         </div>
       </div>
       ${this.#colors.renderPopover()}
+      <clear-texture-dialog></clear-texture-dialog>
+      <import-texture-dialog></import-texture-dialog>
     `;
   }
 }

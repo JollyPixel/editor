@@ -13,7 +13,7 @@ import type {
 } from "lit";
 
 // Import Internal Dependencies
-import { TextureBusy } from "../../src/textures/TextureBusy.ts";
+import { TextureBusy } from "../../../src/textures/import/TextureBusy.ts";
 
 class TestHost implements ReactiveControllerHost {
   readonly updateComplete = Promise.resolve(true);

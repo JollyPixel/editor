@@ -3,11 +3,34 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { ArgDef } from "#src/index.ts";
-import { coerce } from "#src/input/coerce.ts";
+import type {
+  ArgDef,
+  ConsoleScalar
+} from "#src/index.ts";
+import {
+  coerce,
+  coerceBoolean,
+  coerceList,
+  coerceNumber,
+  formatValue
+} from "#src/input/coerce.ts";
 import { InvalidValueError } from "#src/input/errors/InvalidValueError.ts";
 
 type ScalarType = "string" | "number" | "boolean";
+
+// CONSTANTS
+const kItemCoercers: Record<ScalarType, (item: string) => ConsoleScalar> = {
+  string: (item) => item,
+  number: coerceNumber,
+  boolean: coerceBoolean
+};
+
+function list(
+  literal: string,
+  items: ScalarType
+): ConsoleScalar[] {
+  return coerceList(literal, kItemCoercers[items]);
+}
 
 function arg(
   type: ScalarType
@@ -78,5 +101,52 @@ describe("coerce", () => {
       () => coerce("spin", enumArg(["rotateY", "fixed"])),
       { message: "Expected one of rotateY, fixed, got \"spin\"" }
     );
+  });
+});
+
+describe("coerce a list", () => {
+  const accepted: [string, ScalarType, unknown[]][] = [
+    ["Mod+y Mod+Shift+z", "string", ["Mod+y", "Mod+Shift+z"]],
+    ["  a   b  ", "string", ["a", "b"]],
+    ["\"two words\" a,b", "string", ["two words", "a,b"]],
+    ["\"say \\\"hi\\\"\"", "string", ["say \"hi\""]],
+    ["", "string", []],
+    ["\"\"", "string", []],
+    ["1 -2.5 1e3", "number", [1, -2.5, 1000]],
+    ["yes off 1", "boolean", [true, false, true]]
+  ];
+  for (const [literal, items, expected] of accepted) {
+    test(`${items}[] accepts ${JSON.stringify(literal)}`, () => {
+      assert.deepEqual(list(literal, items), expected);
+    });
+  }
+
+  const rejected: [string, ScalarType, string][] = [
+    ["a \"\"", "string", "Expected a list without empty items, got \"a \"\"\""],
+    ["a \"b", "string", "Expected a closing quote, got \"a \"b\""],
+    ["1 two", "number", "Expected a number, got \"two\""],
+    ["true maybe", "boolean", "Expected a boolean (true, false, yes, no, on, off, 1, 0), got \"maybe\""]
+  ];
+  for (const [literal, items, message] of rejected) {
+    test(`${items}[] rejects ${JSON.stringify(literal)}`, () => {
+      assert.throws(() => list(literal, items), {
+        name: "InvalidValueError",
+        message
+      });
+    });
+  }
+
+  test("formatValue writes a literal that reads back to the same list", () => {
+    const values: [ConsoleScalar[], ScalarType][] = [
+      [["Mod+y", "Mod+Shift+z"], "string"],
+      [["two words", "say \"hi\"", "back\\slash", "\"lead", "a,b"], "string"],
+      [[], "string"],
+      [[1, -2.5], "number"],
+      [[true, false], "boolean"]
+    ];
+    for (const [value, items] of values) {
+      const literal = formatValue(value);
+      assert.deepEqual(list(literal, items), value, literal);
+    }
   });
 });

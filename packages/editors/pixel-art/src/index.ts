@@ -1,22 +1,26 @@
 export {
   PixelDrawPanel,
+  type AddTextureOptions,
+  type PixelDrawInitializeOptions,
   type PixelDrawTexture,
   type ThemeMode
 } from "./panel/PixelDrawPanel.ts";
 export type {
-  AddTextureOptions,
-  PixelDrawInitializeOptions,
-  PixelDrawTextureOptions,
-  TextureAddRequestDetail,
   TextureChangeDetail,
   TextureChangeSource,
   TextureCloseRequestDetail,
   TextureEditRequestDetail,
-  TextureImportOrigin,
-  TextureImportPolicy,
-  TextureTabsMode,
+  TextureTabsMode
+} from "./textures/TextureTabStrip.ts";
+export type {
+  PixelDrawTextureOptions,
   TextureUpdate
-} from "./textures/textures.ts";
+} from "./textures/TextureEntry.ts";
+export type {
+  TextureAddRequestDetail,
+  TextureImportOrigin,
+  TextureImportPolicy
+} from "./textures/import/TextureImporter.ts";
 export type { UvAccess } from "./uv/UvAccessPolicy.ts";
 export type {
   ToolOption,
@@ -41,4 +45,4 @@ export * from "./console/index.ts";
 export {
   CANVAS_HOVER_CHANGE_EVENT,
   type CanvasHoverChangeDetail
-} from "./keybindings/CanvasKeyboardController.ts";
+} from "./panel/CanvasKeyboardController.ts";
