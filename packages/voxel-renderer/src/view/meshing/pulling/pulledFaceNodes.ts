@@ -8,12 +8,12 @@ import {
   instanceIndex,
   int,
   ivec2,
+  max,
   modelPosition,
   normalLocal,
   positionGeometry,
   positionPrevious,
   round,
-  textureLoad,
   textureSize,
   uint,
   varying,
@@ -25,6 +25,8 @@ import {
 // Import Internal Dependencies
 import type { TileInputs } from "../../shading/tileShading.ts";
 import { ChunkTextureNode } from "./ChunkTextureNode.ts";
+import { chunkLight } from "./ChunkLightNode.ts";
+import { texelLoad } from "../../shading/texelLoad.ts";
 import {
   FACE_TEMPLATE_TEXELS,
   FACE_TEMPLATES_PER_ROW,
@@ -59,6 +61,7 @@ const kPlaceholder = new THREE.DataTexture(
   THREE.RGIntegerFormat,
   THREE.UnsignedIntType
 );
+const kMinimumLightWeight = 1e-4;
 const kBlendPlaceholder = new THREE.DataTexture(
   new Float32Array(PULLED_BLEND_TEXELS * 4),
   PULLED_BLEND_TEXELS,
@@ -88,6 +91,7 @@ export interface PulledFaceNodes {
    */
   cell: Vec3Node;
   blendIndices: readonly [Vec4Node, Vec4Node];
+  light: Vec3Node;
 }
 
 class ChunkFaceNode extends ChunkTextureNode {
@@ -125,13 +129,14 @@ class ChunkBlendNode extends ChunkTextureNode {
 }
 
 export function pulledFaceNodes(
-  templates: FaceTemplateTable
+  templates: FaceTemplateTable,
+  lightSpan: FloatNode = float(1)
 ): PulledFaceNodes {
   const faces = new ChunkFaceNode();
   const face = int(instanceIndex);
   const size = textureSize(faces, int(0)) as unknown as Node<"ivec2">;
   const width = int(size.x);
-  const data = textureLoad(faces, ivec2(face.mod(width), face.div(width)));
+  const data = texelLoad(faces, ivec2(face.mod(width), face.div(width)));
   const cell = uint(data.x);
   const packed = uint(data.y);
 
@@ -146,7 +151,7 @@ export function pulledFaceNodes(
   function texel(
     offset: Node<"int">
   ): Vec4Node {
-    return textureLoad(templates.node, ivec2(column.add(offset), row));
+    return texelLoad(templates.node, ivec2(column.add(offset), row));
   }
 
   const vertex = texel(int(corner));
@@ -165,7 +170,7 @@ export function pulledFaceNodes(
   );
   const worldCell = cellPosition.add(round(modelPosition));
   const regionId = int(texel(int(kRegionTexel)).x);
-  const region = textureLoad(
+  const region = texelLoad(
     templates.regions.node,
     ivec2(
       regionId.mod(int(FACE_REGIONS_PER_ROW)),
@@ -173,9 +178,10 @@ export function pulledFaceNodes(
     )
   );
   const tileUv = vec2(vertex.w, vs.dot(cornerMask));
+  const position = cellPosition.add(local);
 
   return {
-    position: cellPosition.add(local),
+    position,
     normal: normal.xyz,
     uv: region.xy.add(region.zw.mul(tileUv)),
     region,
@@ -190,16 +196,23 @@ export function pulledFaceNodes(
     blendIndices: [
       blendIndicesOf(uint(data.z)),
       blendIndicesOf(uint(data.w))
-    ]
+    ],
+    light: blockLightAt(position, normal.xyz, lightSpan)
   };
+}
+
+export interface VertexPullingOptions {
+  blended?: boolean;
+  lightSpan?: FloatNode;
 }
 
 export function enableVertexPulling(
   material: THREE.Material,
   templates: FaceTemplateTable,
-  blended = false
+  options: VertexPullingOptions = {}
 ): TileInputs {
-  const nodes = pulledFaceNodes(templates);
+  const { blended = false, lightSpan } = options;
+  const nodes = pulledFaceNodes(templates, lightSpan);
 
   (material as { positionNode?: unknown; }).positionNode = Fn(() => {
     normalLocal.assign(nodes.normal);
@@ -215,7 +228,8 @@ export function enableVertexPulling(
     region: varying(nodes.region),
     vertexRegion: nodes.region,
     brightness: varying(nodes.brightness),
-    faceBrightness: varying(nodes.faceBrightness)
+    faceBrightness: varying(nodes.faceBrightness),
+    light: varying(nodes.light)
   };
   if (blended) {
     inputs.blend = {
@@ -230,6 +244,17 @@ export function enableVertexPulling(
   }
 
   return inputs;
+}
+
+function blockLightAt(
+  position: Vec3Node,
+  normal: Vec3Node,
+  span: FloatNode
+): Vec3Node {
+  const uvw = position.add(normal.mul(0.5)).add(1).div(span);
+  const light = chunkLight(uvw);
+
+  return light.rgb.div(max(light.a, float(kMinimumLightWeight)));
 }
 
 function blendIndicesOf(

@@ -110,3 +110,59 @@ the strength does not.
 - It multiplies the albedo, so it darkens direct and ambient light alike.
 - An edit on a chunk edge or corner also rebuilds the diagonal chunks next to
   it.
+
+## Block light
+
+A block whose [material group](../api/materials/MaterialGroup.md) has a
+`lightLevel` lights the blocks around it, Minecraft style: the light loses one
+level per cell, so a level of 15 reaches 14 cells. It flows around opaque full
+cubes and through every other block (slabs, stairs, glass, cutout leaves). The
+colour follows the group's `emissive` hue, or white when `emissive` is black,
+and each RGB channel spreads on its own, so two coloured lights mix. A
+channel weaker than the peak starts at the level whose brightness matches its
+share of the colour, so the hue holds near the source and the weak channels
+fade out first.
+
+`lighting.blockLight` scales the result, `1` by default and `0` to hide it.
+The light adds to the scene lights rather than replacing them, so it shows
+best in a dark scene. A standard material receives it like light from its
+surroundings, so a metallic finish reflects it in its own colour instead of
+going dark.
+
+The material's `emissive` output holds only the glow of the emitting block,
+not the light other blocks receive, so a bloom fed from it halos the light
+sources alone. See [selective bloom](../api/core/VoxelTransparencyPassNode.md#selective-bloom).
+
+- The light is computed on the CPU and never saved or sent to peers. An edit
+  relights the chunks within reach of it; edits out of reach of any light cost
+  nothing, and a world without glowing groups skips the work entirely. While
+  `blockLight` is `0` the light is not updated; it catches up when the
+  strength rises again.
+- Each lit chunk mesh gets a small light texture (the chunk plus a one-cell
+  border, about 23 KB for 16-cell chunks). A light change re-uploads that
+  texture and does not rebuild the mesh.
+- The vertex shader averages the light of the open cells around each corner,
+  skipping opaque ones, so light fades smoothly across faces and does not leak
+  through one-block walls. The texture stores light premultiplied by
+  openness, so one filtered 3D sample does the whole average.
+- Sun shadows do not dim it; ambient occlusion does, as it does every light.
+
+`lighting.blockLightFalloff` picks the curve:
+
+| Falloff | Next to the source | 3 cells away | 8 cells away |
+| --- | --- | --- | --- |
+| `"wide"` (default) | 0.82 | 0.57 | 0.23 |
+| `"focused"` | 1.38 | 0.39 | 0.04 |
+
+`"wide"` lights every cell in range almost evenly, Minecraft style.
+`"focused"` is brighter near the source and fades fast, so a light reads as a
+lamp with a pool of light around it. Values above 1 rely on tone mapping.
+Changing the falloff rewrites the light texture of every lit chunk. Only
+coloured lights are relit, because their channel levels depend on the curve.
+
+A sun shadow still falls next to a glowing block, because block light adds to
+the shadowed surface instead of replacing the missing sunlight.
+`lighting.shadowFill` washes received shadows out where block light is
+strong: `0` (default) keeps them whole, and at `1` a shadow vanishes where
+block light reaches full brightness. Shadows far from any light keep their
+strength.

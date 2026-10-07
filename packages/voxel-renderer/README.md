@@ -224,6 +224,18 @@ pnpm run bench:compare
 
 Use the minimum of three runs when comparing numbers, since single runs can drift a lot on a throttled machine.
 
+### Block light and frame benchmarks
+
+```bash
+pnpm run bench:light --size 256 --lights 300
+pnpm run bench:render --size 256 --lights 400 --resolution 1024
+pnpm run bench:render --webgpu
+```
+
+`block-light.bench.ts` times the CPU side of block light on a stone floor with scattered lights and pillars: first and full relight, texture fill, falloff switch, single edits and the idle update. `--tint` sets the light colour. A coloured light relights on a falloff switch; a white one only rewrites its textures.
+
+`render.bench.ts` reports the frame time of a lit map in headless Chrome (WebGL by default, `--webgpu` for WebGPU), with and without block light, glass and the glow pass. Three only advances its node frame inside the animation loop, so the bench page swaps `requestAnimationFrame` for an unthrottled one. The numbers are throughput, not latency, and only compare between runs on the same machine.
+
 ## 🔥 Troubleshooting
 
 If something isn't working as expected, enable verbose logging to get detailed runtime output:

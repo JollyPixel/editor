@@ -49,6 +49,9 @@ function probeCases(
   sample("opaque foreground rejects glass without multisampling", {
     alpha: 0.5, count: 2, occluder: true, samples: 0
   }, [0, 255, 0]);
+  sample("clears the glass once it is gone", {
+    alpha: 0.5, side: "front", hideAfterFirstFrame: true
+  }, [0, 0, 0]);
   sample("low alpha", { alpha: 0.02, side: "front" }, [5, 5, 5]);
   sample("opaque ignores texture alpha", { alpha: 0.02, mode: "opaque" }, [255, 255, 255]);
   sample("mask discards uncovered texels", { alpha: 0.02, mode: "mask" }, [0, 0, 0]);

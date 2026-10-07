@@ -123,6 +123,16 @@ describe("blocksetCommandProtocol", () => {
     }), false);
   });
 
+  test("accepts a material group light level only as an integer from 0 to 15", () => {
+    for (const [lightLevel, valid] of [[15, true], [0, true], [16, false], [7.5, false]] as const) {
+      assert.strictEqual(accepts({
+        ...kHeader,
+        action: "material-group-defined",
+        group: { id: "glowstone", lightLevel }
+      }), valid);
+    }
+  });
+
   test("rejects a layer command, a bad finish or a bad tile size", () => {
     assert.strictEqual(accepts({
       ...kHeader,

@@ -1,6 +1,6 @@
 # MaterialGroup
 
-A surface finish (roughness, metalness, emission) shared by every block whose
+A surface finish (roughness, metalness, emission, light) shared by every block whose
 [`BlockSurface`](../blocks/BlockSurface.md) names it in `materialGroup`. Groups
 belong to a [blockset document](../blocksets/BlocksetDocument.md) and reach a
 world as `"<blocksetId>/<groupId>"`; a `VoxelDocument` can also define its own.
@@ -30,6 +30,7 @@ document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 | `emissive` | `"#000000"` | A `#rrggbb` colour, stored in lower case. |
 | `emissiveIntensity` | `1` | `0` or more. |
 | `normalScale` | `1` | `0` or more. Strength of the blockset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns it off. |
+| `lightLevel` | `0` | Integer from `0` to `MAX_LIGHT_LEVEL` (`15`). Light the blocks cast on their surroundings, see [block light](../../concepts/rendering-and-meshing.md#block-light); `0` casts none. |
 | `swatch` | None (`null`) | A `#rrggbb` colour, stored in lower case. A label colour for editors; it is not rendered. |
 
 `MaterialGroup.defaults` holds the defaults of the finish fields
@@ -44,6 +45,10 @@ naming an undefined group, keep the view's material. A
 runs after the finish is applied, and not again when the finish is edited
 later.
 
+The emission multiplies the block texture by `emissive × emissiveIntensity`,
+so a white emissive makes the texture glow in its own colours and ambient
+occlusion does not darken it.
+
 A metallic finish reflects `scene.environment`; without one, a metalness near
 `1` renders dark.
 
@@ -55,6 +60,11 @@ value out of bounds.
 #### `MaterialGroup.parse(value: unknown): MaterialGroup | null`
 
 Like the constructor, but returns `null` for invalid input.
+
+#### `glows: boolean`
+
+`true` when the group writes a visible glow: a non-black `emissive` with an
+`emissiveIntensity` above `0`. Use it to skip a bloom pass nothing feeds.
 
 #### `with(changes: MaterialGroupChanges): MaterialGroup`
 

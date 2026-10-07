@@ -185,6 +185,20 @@ describe("MapMaterials", () => {
     assert.equal(finish?.roughness, 0.4);
   });
 
+  it("refinishes the light level as a whole step from 0 to 15", () => {
+    const { document, materials } = setup(
+      [block(kGrass, "terrain/glow")],
+      [new MaterialGroup({ id: "terrain/glow" })]
+    );
+    const glow = materials.of(kGrass)!;
+
+    assert.equal(materials.refinish(glow, { lightLevel: 12 }), true);
+    assert.equal(materials.refinish(glow, { lightLevel: 16 }), false);
+    assert.equal(materials.refinish(glow, { lightLevel: 2.5 }), false);
+
+    assert.equal(document.materialGroups.get("terrain/glow")?.lightLevel, 12);
+  });
+
   it("defines the finish of a material only its blocks named", () => {
     const { document, materials } = setup([block(kGrass, "terrain/wet")]);
 

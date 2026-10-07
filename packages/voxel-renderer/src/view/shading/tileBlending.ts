@@ -17,7 +17,6 @@ import {
   mix,
   round,
   select,
-  textureLoad,
   uint,
   vec2
 } from "three/tsl";
@@ -29,6 +28,7 @@ import {
 } from "../meshing/faceBlend.ts";
 import { PULLED_BLEND_TEXELS } from "../meshing/pulling/PulledChunkGeometry.ts";
 import { regionTexels } from "./atlasNodes.ts";
+import { texelLoad } from "./texelLoad.ts";
 
 // CONSTANTS
 const kMinimumScale = 1e-6;
@@ -157,14 +157,14 @@ function candidateOf(
     componentOf(blend.indices[neighbour >> 2], neighbour & 3)
   ));
   const column = index.mul(PULLED_BLEND_TEXELS);
-  const params = textureLoad(blend.palette, ivec2(column.add(1), 0));
+  const params = texelLoad(blend.palette, ivec2(column.add(1), 0));
   const strength = params.y;
   const inverted = params.w.greaterThan(0.5);
 
   return {
     du,
     dv,
-    tile: textureLoad(blend.palette, ivec2(column, 0)),
+    tile: texelLoad(blend.palette, ivec2(column, 0)),
     width: max(params.x, float(1)),
     strength,
     bayer: params.z.greaterThan(BLEND_PATTERN_CODES.bayer - 0.5),

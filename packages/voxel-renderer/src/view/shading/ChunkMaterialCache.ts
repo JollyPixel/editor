@@ -9,6 +9,7 @@ import {
 import { enableTileShading } from "./tileShading.ts";
 import { AtlasAverages } from "../atlases/AtlasAverages.ts";
 import { createAoStrength } from "./ambientOcclusionNodes.ts";
+import { createBlockLightUniforms } from "./emissionNodes.ts";
 import type { BlocksetAtlases } from "../atlases/BlocksetAtlases.ts";
 import type { ChunkGeometryKey } from "../meshing/ChunkGeometryKey.ts";
 import type { BlockSurface } from "../../document/blocks/BlockSurface.ts";
@@ -67,6 +68,7 @@ export class ChunkMaterialCache {
   tileAveraging: boolean;
   alphaToCoverage: boolean;
   readonly aoStrength: ReturnType<typeof createAoStrength>;
+  readonly blockLight = createBlockLightUniforms();
   readonly faceTemplates: FaceTemplateTable;
 
   #materials = new Map<string, ChunkMaterial>();
@@ -221,11 +223,15 @@ export class ChunkMaterialCache {
     const inputs = enableVertexPulling(
       material,
       this.faceTemplates,
-      geometryKey.blended && !far
+      {
+        blended: geometryKey.blended && !far,
+        lightSpan: this.blockLight.span
+      }
     );
     enableTileShading(material, inputs, {
       surface,
       aoStrength: this.aoStrength,
+      blockLight: this.blockLight,
       averages,
       normal: relief ? normal : null,
       flat,

@@ -41,6 +41,7 @@ function setup() {
     camera: new THREE.PerspectiveCamera(60, 1, 0.1, 1000),
     enabled: true,
     isOrbiting: false,
+    postProcessing: null as Systems.PostProcessing | null,
     teleport: (pose: CameraPose) => poses.push(pose),
     enterOrbitFocus: (point: THREE.Vector3Like) => {
       pivots.push(point);
@@ -194,5 +195,21 @@ describe("EditorCamera", () => {
 
     assert.equal(pressEscape(), false);
     assert.equal(controls.enabled, true);
+  });
+
+  test("keeps the camera pipeline while the glow setting is unchanged", () => {
+    const { camera, controls } = setup();
+
+    camera.glow = true;
+    const glowing = controls.postProcessing;
+    camera.glow = true;
+
+    assert.equal(camera.glow, true);
+    assert.equal(controls.postProcessing, glowing);
+
+    camera.glow = false;
+
+    assert.equal(camera.glow, false);
+    assert.notEqual(controls.postProcessing, glowing);
   });
 });

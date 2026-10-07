@@ -12,6 +12,7 @@ import {
 
 // Import Internal Dependencies
 import { SettledSize } from "./SettledSize.ts";
+import { TransparentScan } from "./TransparentScan.ts";
 
 // CONSTANTS
 const kDepthWeightRange = 10;
@@ -44,6 +45,8 @@ export class VoxelTransparencyPassNode extends THREE.PassNode {
   #renderer: THREE.Renderer | null = null;
   #allocated = new SettledSize();
   #primed = false;
+  #transparents = new TransparentScan();
+  #cleared = false;
 
   constructor(
     scene: THREE.Scene,
@@ -103,6 +106,7 @@ export class VoxelTransparencyPassNode extends THREE.PassNode {
   ): void {
     if (this.#allocated.request(width, height)) {
       this.#primed = false;
+      this.#cleared = false;
     }
     super.setSize(this.#allocated.width, this.#allocated.height);
 
@@ -141,6 +145,12 @@ export class VoxelTransparencyPassNode extends THREE.PassNode {
     try {
       super.updateBefore(frame);
 
+      const transparent = this.#transparents.foundIn(scene);
+      if (!transparent && this.#cleared) {
+        return;
+      }
+      this.#cleared = !transparent;
+
       renderer.autoClear = false;
       renderer.opaque = false;
       renderer.transparent = true;
@@ -151,6 +161,9 @@ export class VoxelTransparencyPassNode extends THREE.PassNode {
         renderer.setRenderTarget(coverage ? this.#coverage : this.#accumulation);
         renderer.setMRT(coverage ? this.#coverageOutput : this.#accumulationOutput);
         renderer.clear(true, false, false);
+        if (!transparent) {
+          continue;
+        }
         renderer.setRenderObjectFunction((...args) => {
           const material = args[4];
           const saved = {

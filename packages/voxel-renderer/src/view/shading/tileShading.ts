@@ -38,6 +38,11 @@ import {
   regionTexels
 } from "./atlasNodes.ts";
 import {
+  BlockLightIrradianceNode,
+  emissionNode,
+  type BlockLightUniforms
+} from "./emissionNodes.ts";
+import {
   blendedTile,
   remapTileUv,
   type TileBlendInputs
@@ -52,6 +57,7 @@ export type TileShadedMaterial =
   | THREE.MeshStandardMaterial;
 
 type Vec2Node = Node<"vec2">;
+type Vec3Node = Node<"vec3">;
 type Vec4Node = Node<"vec4">;
 type FloatNode = Node<"float">;
 type TableNode = ReturnType<typeof texture<"vec4">>;
@@ -62,6 +68,7 @@ export interface TileInputs {
   vertexRegion: Vec4Node;
   brightness: FloatNode;
   faceBrightness: FloatNode;
+  light: Vec3Node;
   /**
    * Blend neighbours of a blended face; ignored by flat shading.
    */
@@ -75,6 +82,7 @@ export interface TileShadingOptions {
   normal?: THREE.Texture | null;
   flat?: boolean;
   alphaToCoverage?: boolean;
+  blockLight?: BlockLightUniforms;
 }
 
 interface TileColorOptions extends TileShadingOptions {
@@ -197,6 +205,10 @@ function applyTileColor(
    */
   const tint = shadedTint(material, brightness, aoStrength);
 
+  const blockLight = options.blockLight === undefined ?
+    null :
+    new BlockLightIrradianceNode(options.blockLight);
+
   /*
    * The WebGPU build aliases the classic material names onto their node
    * variants, so `colorNode` exists at runtime but not on the classic type.
@@ -206,6 +218,7 @@ function applyTileColor(
       diffuse.a.lessThan(surface.alphaCutoff).discard();
     }
     const alpha = keepsAlpha ? diffuse.a : float(1);
+    blockLight?.received.assign(inputs.light);
 
     return vec4(tint, float(1)).mul(vec4(diffuse.rgb, alpha));
   })();
@@ -213,6 +226,14 @@ function applyTileColor(
     color,
     casterColor(sample.sampled, surface, keepsAlpha)
   );
+  (material as { emissiveNode?: unknown; }).emissiveNode = emissionNode(
+    diffuse.rgb
+  );
+  if (blockLight !== null) {
+    (material as { setupLightMap?: unknown; }).setupLightMap = () => blockLight;
+    (material as { receivedShadowNode?: unknown; }).receivedShadowNode =
+      blockLight.fillShadow();
+  }
   configureClassicAlpha(material, surface, flat);
 }
 

@@ -19,6 +19,8 @@ import type { IterableLayerChunk } from "../../document/world/VoxelWorld.ts";
 import type { VoxelCoord } from "../../document/world/types.ts";
 import { NOOP_LOGGER, type VoxelLogger } from "../../VoxelLogger.ts";
 import type { ChunkMaterialCache } from "../shading/ChunkMaterialCache.ts";
+import type { ChunkLightTextures } from "../lighting/ChunkLightTextures.ts";
+import type { LightChunkKey } from "../lighting/LightGrid.ts";
 import type {
   ChunkMeshLayout,
   ChunkMeshTarget
@@ -49,6 +51,7 @@ export interface ChunkMeshStoreOptions {
   materials: ChunkMaterialCache;
   inspector: VoxelInspector;
   collider?: VoxelCollider | null;
+  light?: ChunkLightTextures | null;
   logger?: VoxelLogger;
   /**
    * @default false
@@ -73,6 +76,7 @@ export class ChunkMeshStore {
   #materials: ChunkMaterialCache;
   #inspector: VoxelInspector;
   #collider: VoxelCollider | null;
+  #light: ChunkLightTextures | null;
   #logger: VoxelLogger;
   #castShadow: boolean;
   #receiveShadow: boolean;
@@ -87,6 +91,7 @@ export class ChunkMeshStore {
       materials,
       inspector,
       collider = null,
+      light = null,
       logger = NOOP_LOGGER,
       castShadow = false,
       receiveShadow = false
@@ -98,6 +103,7 @@ export class ChunkMeshStore {
     this.#materials = materials;
     this.#inspector = inspector;
     this.#collider = collider;
+    this.#light = light;
     this.#logger = logger;
     this.#castShadow = castShadow;
     this.#receiveShadow = receiveShadow;
@@ -198,9 +204,11 @@ export class ChunkMeshStore {
     const [first] = members;
     this.#discard(key);
 
+    const light = this.#light?.textureFor(target) ?? null;
     const meshes: THREE.Mesh[] = [];
     const geometryKeys: ChunkGeometryKey[] = [];
     for (const [geometryKey, geometry] of geometries) {
+      geometry.light = light;
       const material = this.#materials.resolve(geometryKey, far);
       const mesh = new PulledChunkMesh(geometry, material);
       mesh.name = `voxel_chunk_${key}:${geometryKey}`;
@@ -251,6 +259,28 @@ export class ChunkMeshStore {
     }
   }
 
+  refreshLight(
+    changed: ReadonlySet<LightChunkKey>
+  ): void {
+    const light = this.#light;
+    if (light === null || changed.size === 0) {
+      return;
+    }
+
+    for (const { target, meshes } of this.#entries.values()) {
+      if (meshes.length === 0 || !light.affects(target, changed)) {
+        continue;
+      }
+
+      const texture = light.rebuild(target);
+      for (const mesh of meshes) {
+        if (mesh instanceof PulledChunkMesh) {
+          mesh.geometry.light = texture;
+        }
+      }
+    }
+  }
+
   applyFar(
     changes: Iterable<[key: string, far: boolean]>
   ): void {
@@ -289,6 +319,7 @@ export class ChunkMeshStore {
     this.#logger.debug(`Removing chunk '${key}'`);
 
     this.#discard(key);
+    this.#light?.release(key);
     this.#collider?.removeChunk(key);
   }
 
@@ -296,6 +327,7 @@ export class ChunkMeshStore {
     key: string
   ): void {
     this.#inspector.unregisterChunk(key);
+    this.#light?.release(key);
 
     const entry = this.#entries.get(key);
     if (entry) {
@@ -324,6 +356,7 @@ export class ChunkMeshStore {
 
   clear(): void {
     this.#inspector.clear();
+    this.#light?.clear();
 
     for (const entry of this.#entries.values()) {
       this.#disposeMeshes(entry);

@@ -16,6 +16,7 @@ export {
   VoxelRange,
   VoxelRendering,
   ViewDistance,
+  type BlockLightFalloff,
   type TileMinification,
   type ViewDistanceOptions,
   type ViewDistancePolicy,

@@ -45,6 +45,9 @@ drives a view through the actor lifecycle.
 | | `alphaToCoverage` | `false` | Mask blocks write MSAA coverage. Needs a multisampled target and an opaque canvas. |
 | | `tileMinification` | `"average"` | `"average"` or `"nearest"`, see [tile minification](../../concepts/rendering-and-meshing.md#tile-minification). |
 | `lighting` | `ambientOcclusion` | `0` | Strength from `0` (off) to `1`, see [ambient occlusion](../../concepts/rendering-and-meshing.md#ambient-occlusion). |
+| | `blockLight` | `1` | Strength of the light glowing blocks cast, `0` or more, see [block light](../../concepts/rendering-and-meshing.md#block-light). |
+| | `blockLightFalloff` | `"wide"` | `"wide"` or `"focused"`, how block light fades with distance. |
+| | `shadowFill` | `0` | How much block light washes out received shadows, `0` or more. |
 | | `castShadow` | `false` | |
 | | `receiveShadow` | `false` | |
 | `range` | `viewDistance` | `Infinity` | Chunks around `focus`; a number, `ViewDistanceOptions` or a [`ViewDistance`](../world/ViewDistance.md). |
@@ -94,7 +97,7 @@ view.range.farDistance = 10;
 | Object | Writable fields |
 | --- | --- |
 | `rendering` | `tileMinification`, `alphaToCoverage` |
-| `lighting` | `ambientOcclusion` (clamped to `0..1`), `castShadow`, `receiveShadow` |
+| `lighting` | `ambientOcclusion` (clamped to `0..1`), `blockLight` (`0` or more), `blockLightFalloff` (rewrites every lit chunk's light texture), `shadowFill` (`0` or more), `castShadow`, `receiveShadow` |
 | `range` | `viewDistance`, `policy`, `farDistance` |
 
 ### Layer visibility

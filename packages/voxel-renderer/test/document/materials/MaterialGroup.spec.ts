@@ -21,7 +21,8 @@ describe("MaterialGroup", () => {
       metalness: 0,
       emissive: "#000000",
       emissiveIntensity: 1,
-      normalScale: 1
+      normalScale: 1,
+      lightLevel: 0
     });
     assert.ok(Object.isFrozen(group));
   });
@@ -30,6 +31,16 @@ describe("MaterialGroup", () => {
     assert.equal(
       new MaterialGroup({ id: "lava", emissive: "#FF8800" }).emissive,
       "#ff8800"
+    );
+  });
+
+  it("glows only with a non-black emissive and a positive intensity", () => {
+    assert.equal(new MaterialGroup({ id: "stone" }).glows, false);
+    assert.equal(new MaterialGroup({ id: "lamp", lightLevel: 15 }).glows, false);
+    assert.equal(new MaterialGroup({ id: "lava", emissive: "#FF8000" }).glows, true);
+    assert.equal(
+      new MaterialGroup({ id: "dim", emissive: "#ff8000", emissiveIntensity: 0 }).glows,
+      false
     );
   });
 
@@ -43,7 +54,10 @@ describe("MaterialGroup", () => {
       { id: "a", emissiveIntensity: -1 },
       { id: "a", emissiveIntensity: Infinity },
       { id: "a", normalScale: -0.5 },
-      { id: "a", normalScale: NaN }
+      { id: "a", normalScale: NaN },
+      { id: "a", lightLevel: -1 },
+      { id: "a", lightLevel: 16 },
+      { id: "a", lightLevel: 7.5 }
     ];
     for (const json of invalid) {
       assert.throws(() => new MaterialGroup(json), RangeError);
@@ -125,6 +139,16 @@ describe("MaterialGroup", () => {
 
     assert.equal(flat.normalScale, 0);
     assert.ok(!group.equals(flat));
+  });
+
+  it("keeps the light level through a copy and its JSON", () => {
+    const group = new MaterialGroup({ id: "glowstone" });
+    const lit = group.with({ lightLevel: 15 });
+
+    assert.equal(group.lightLevel, 0);
+    assert.equal(lit.lightLevel, 15);
+    assert.ok(!group.equals(lit));
+    assert.ok(lit.equals(new MaterialGroup(lit.toJSON())));
   });
 });
 

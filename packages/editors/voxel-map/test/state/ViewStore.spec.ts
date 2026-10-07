@@ -16,7 +16,7 @@ import {
 const kKey = "voxel-map:view";
 
 describe("ViewStore", () => {
-  test("starts from the defaults with every effect off", () => {
+  test("starts from the defaults with every effect off but block light and glow", () => {
     const store = new ViewStore();
 
     assert.deepEqual(store.settings, ViewSettings.DEFAULT);
@@ -24,7 +24,9 @@ describe("ViewStore", () => {
       lighting: "studio",
       reflections: false,
       ambientOcclusion: false,
-      shadows: false
+      shadows: false,
+      blockLight: true,
+      glow: true
     });
   });
 
@@ -63,9 +65,16 @@ describe("ViewStore", () => {
     const store = new ViewStore();
     store.update({ lighting: "daylight" });
 
-    store.update(JSON.parse("{\"lighting\":\"night\"}"));
+    store.update(JSON.parse("{\"lighting\":\"dusk\"}"));
 
     assert.equal(store.settings.lighting, "daylight");
+  });
+
+  test("restores the night lighting mode from storage", () => {
+    const storage = new MemoryStorageAdapter();
+    new ViewStore(storage).update({ lighting: "night" });
+
+    assert.equal(new ViewStore(storage).settings.lighting, "night");
   });
 });
 

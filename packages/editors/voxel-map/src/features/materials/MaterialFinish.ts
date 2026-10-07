@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/ui";
 import {
   MaterialGroup,
+  MAX_LIGHT_LEVEL,
   type MaterialGroupFinish
 } from "@jolly-pixel/voxel.renderer";
 
@@ -49,6 +50,7 @@ export class MaterialFinish extends LitElement {
     this.#source("emissiveIntensity")
   );
   #normalScale = new FieldBinding(this, this.#source("normalScale"));
+  #lightLevel = new FieldBinding(this, this.#source("lightLevel"));
 
   override render() {
     if (this.material === undefined) {
@@ -96,6 +98,18 @@ export class MaterialFinish extends LitElement {
         @jolly-input=${this.#emissiveIntensity.input}
         @jolly-change=${this.#emissiveIntensity.commit}
       ></jolly-number>
+      <jolly-slider
+        label="Light level"
+        label-position="auto"
+        description="Lights nearby blocks in the emissive colour, 0 turns it off"
+        description-display="tooltip"
+        min="0"
+        max=${MAX_LIGHT_LEVEL}
+        step="1"
+        .value=${this.#lightLevel.value}
+        @jolly-input=${this.#lightLevel.input}
+        @jolly-change=${this.#lightLevel.commit}
+      ></jolly-slider>
       <jolly-slider
         label="Normal strength"
         label-position="auto"
