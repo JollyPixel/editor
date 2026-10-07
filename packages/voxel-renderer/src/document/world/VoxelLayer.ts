@@ -451,6 +451,7 @@ export class VoxelLayer {
   }
 
   localBounds(): Box3 | null {
+    const size = this.#chunkSize;
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -458,13 +459,21 @@ export class VoxelLayer {
     let minZ = Infinity;
     let maxZ = -Infinity;
 
-    for (const [x, y, z] of this.localVoxels()) {
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
-      minZ = Math.min(minZ, z);
-      maxZ = Math.max(maxZ, z);
+    for (const chunk of this.#chunks.values()) {
+      const bounds = chunk.contentBounds();
+      if (bounds === null) {
+        continue;
+      }
+
+      const ox = chunk.cx * size;
+      const oy = chunk.cy * size;
+      const oz = chunk.cz * size;
+      minX = Math.min(minX, ox + bounds.minX);
+      maxX = Math.max(maxX, ox + bounds.maxX);
+      minY = Math.min(minY, oy + bounds.minY);
+      maxY = Math.max(maxY, oy + bounds.maxY);
+      minZ = Math.min(minZ, oz + bounds.minZ);
+      maxZ = Math.max(maxZ, oz + bounds.maxZ);
     }
 
     if (minX === Infinity) {

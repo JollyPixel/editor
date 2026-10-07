@@ -206,6 +206,46 @@ describe("VoxelChunk mayContain()", () => {
   });
 });
 
+describe("VoxelChunk contentBounds()", () => {
+  it("is null while the chunk holds no voxel", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    assert.equal(chunk.contentBounds(), null);
+
+    chunk.set([1, 2, 3], makeVoxelEntry(1));
+    chunk.delete([1, 2, 3]);
+    assert.equal(chunk.contentBounds(), null);
+  });
+
+  it("spans the stored voxels exactly, shrinking after a delete", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 8);
+    chunk.set([2, 3, 4], makeVoxelEntry(1));
+    chunk.set([5, 1, 6], makeVoxelEntry(2));
+    chunk.set([7, 7, 7], makeVoxelEntry(3));
+    chunk.delete([7, 7, 7]);
+
+    assert.deepEqual(chunk.contentBounds(), {
+      minX: 2,
+      minY: 1,
+      minZ: 4,
+      maxX: 5,
+      maxY: 3,
+      maxZ: 6
+    });
+  });
+
+  it("reuses its bounds until the chunk changes", () => {
+    const chunk = new VoxelChunk([0, 0, 0], 4);
+    chunk.set([0, 0, 0], makeVoxelEntry(1));
+
+    const first = chunk.contentBounds();
+    assert.equal(chunk.contentBounds(), first);
+
+    chunk.set([3, 0, 0], makeVoxelEntry(1));
+    assert.notEqual(chunk.contentBounds(), first);
+    assert.equal(chunk.contentBounds()?.maxX, 3);
+  });
+});
+
 describe("VoxelChunk power-of-two size", () => {
   it("exposes shift and mask matching the size", () => {
     const chunk = new VoxelChunk([0, 0, 0], 32);

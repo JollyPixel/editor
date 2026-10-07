@@ -40,12 +40,18 @@ export function canMergePaint(
 export interface BrushStrokeOptions {
   mode: StrokeMode;
   origin: VoxelCoord;
+  aimed?: VoxelCoord;
   axis?: BrushAxis;
   pattern?: BrushPattern;
   anchor?: BrushAnchor;
   layerName: string;
   paint?: VoxelPaint;
   aimedPart?: VoxelPart | null;
+}
+
+export interface StrokeTarget {
+  center: VoxelCoord;
+  paints: boolean;
 }
 
 export class BrushStroke {
@@ -61,7 +67,7 @@ export class BrushStroke {
 
   #stamped = new Set<string>();
   #last: VoxelCoord | null = null;
-  #pivot: VoxelCoord | null = null;
+  #reach: VoxelCoord;
 
   constructor(
     options: BrushStrokeOptions
@@ -75,6 +81,13 @@ export class BrushStroke {
     this.layerName = options.layerName;
     this.paint = options.paint;
     this.aimedPart = options.aimedPart ?? null;
+
+    const aimed = options.aimed ?? this.origin;
+    this.#reach = {
+      x: this.origin.x - aimed.x,
+      y: this.origin.y - aimed.y,
+      z: this.origin.z - aimed.z
+    };
   }
 
   footprintAt(
@@ -99,18 +112,38 @@ export class BrushStroke {
     };
   }
 
-  steer(
-    cursor: VoxelCoord
-  ): VoxelCoord {
-    this.#pivot ??= { ...cursor };
-    const { origin } = this;
-    const pivot = this.#pivot;
+  claims(
+    cell: VoxelCoord
+  ): boolean {
+    return this.#stamped.has(keyOf(cell));
+  }
 
-    return this.lock({
-      x: origin.x + cursor.x - pivot.x,
-      y: origin.y + cursor.y - pivot.y,
-      z: origin.z + cursor.z - pivot.z
-    });
+  revisit(
+    cell: VoxelCoord
+  ): StrokeTarget {
+    return {
+      center: this.lock(cell),
+      paints: this.mode !== "place"
+    };
+  }
+
+  follow(
+    block: VoxelCoord
+  ): StrokeTarget {
+    if (this.claims(block)) {
+      return this.revisit(block);
+    }
+
+    const reach = this.#reach;
+
+    return {
+      center: this.lock({
+        x: block.x + reach.x,
+        y: block.y + reach.y,
+        z: block.z + reach.z
+      }),
+      paints: true
+    };
   }
 
   advance(
@@ -148,7 +181,7 @@ export class BrushStroke {
     const result: VoxelCoord[] = [];
 
     for (const cell of cells) {
-      const key = `${cell.x},${cell.y},${cell.z}`;
+      const key = keyOf(cell);
       if (this.#stamped.has(key)) {
         continue;
       }
@@ -170,6 +203,12 @@ export class BrushStroke {
       null :
       AimedHalf.of(entry, aimed);
   }
+}
+
+function keyOf(
+  cell: VoxelCoord
+): string {
+  return `${cell.x},${cell.y},${cell.z}`;
 }
 
 function sameCell(

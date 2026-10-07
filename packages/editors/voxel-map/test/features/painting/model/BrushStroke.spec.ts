@@ -70,38 +70,65 @@ describe("BrushStroke", () => {
     }
   });
 
-  test("starts on its origin wherever the cursor first lands", () => {
-    const stroke = createStroke({ x: 4, y: 0, z: 4 });
+  test("follows each aimed block on the side it started from", () => {
+    const onTop = new BrushStroke({
+      mode: "place",
+      layerName: "Ground",
+      origin: { x: 0, y: 1, z: 0 },
+      aimed: { x: 0, y: 0, z: 0 }
+    });
+    const beside = new BrushStroke({
+      mode: "place",
+      layerName: "Ground",
+      origin: { x: 0, y: 1, z: -1 },
+      aimed: { x: 0, y: 1, z: 0 }
+    });
 
     assert.deepStrictEqual(
-      stroke.steer({ x: 9, y: 0, z: -2 }),
-      { x: 4, y: 0, z: 4 }
+      onTop.follow({ x: 3, y: 0, z: 2 }),
+      { center: { x: 3, y: 1, z: 2 }, paints: true }
+    );
+    assert.deepStrictEqual(
+      beside.follow({ x: 4, y: 1, z: 0 }),
+      { center: { x: 4, y: 1, z: -1 }, paints: true }
     );
   });
 
-  test("moves as far as the cursor moved since the first aim", () => {
-    const stroke = createStroke({ x: 4, y: 0, z: 4 });
-
-    stroke.steer({ x: 9, y: 0, z: -2 });
-
+  test("follows an aimed block onto the stroke height", () => {
     assert.deepStrictEqual(
-      stroke.steer({ x: 10, y: 0, z: -2 }),
-      { x: 5, y: 0, z: 4 }
-    );
-    assert.deepStrictEqual(
-      stroke.steer({ x: 9, y: 0, z: -4 }),
-      { x: 4, y: 0, z: 2 }
+      createStroke().follow({ x: 2, y: 5, z: 3 }).center,
+      { x: 2, y: 0, z: 3 }
     );
   });
 
-  test("locks the goal it steers to on the stroke height", () => {
-    const stroke = createStroke();
-
-    stroke.steer({ x: 2, y: 9, z: 3 });
+  test("tracks the blocks it painted itself without painting from them", () => {
+    const stroke = new BrushStroke({
+      mode: "place",
+      layerName: "Ground",
+      origin: { x: 0, y: 1, z: -1 },
+      aimed: { x: 0, y: 1, z: 0 }
+    });
+    stroke.claim(stroke.advance(stroke.origin));
+    stroke.claim(stroke.advance({ x: 3, y: 1, z: -1 }));
 
     assert.deepStrictEqual(
-      stroke.steer({ x: 3, y: 4, z: 3 }),
-      { x: 1, y: 0, z: 0 }
+      stroke.follow({ x: 1, y: 1, z: -1 }),
+      { center: { x: 1, y: 1, z: -1 }, paints: false }
+    );
+  });
+
+  test("keeps digging around the cells it already removed", () => {
+    const stroke = new BrushStroke({
+      mode: "remove",
+      layerName: "Ground",
+      origin: { x: 0, y: 1, z: 0 }
+    });
+    stroke.claim(stroke.footprintAt(stroke.origin, 3).cells());
+
+    assert.strictEqual(stroke.claims({ x: 1, y: 1, z: 0 }), true);
+    assert.deepStrictEqual(
+      stroke.revisit({ x: 1, y: 1, z: 0 }),
+      { center: { x: 1, y: 1, z: 0 }, paints: true }
     );
   });
 

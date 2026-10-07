@@ -120,6 +120,19 @@ export class BlocksPanel extends WorkspaceElement {
     await this._blockLibrary?.editBlock();
   };
 
+  readonly #duplicateBlock = (): void => {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return;
+    }
+
+    const id = workspace.blocksets.duplicateBlock(workspace.state.block.id);
+    if (id !== null) {
+      this.#openFolder();
+      workspace.state.block.id = id;
+    }
+  };
+
   #openFolder(): void {
     if (
       this._folder !== null &&
@@ -156,6 +169,15 @@ export class BlocksPanel extends WorkspaceElement {
           title="Edit block"
           ?disabled=${!this._canEditBlock}
           @click=${this.#editBlock}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="block-duplicate"
+          icon-only
+          label="Duplicate block"
+          title="Duplicate block"
+          ?disabled=${!this._canEditBlock}
+          @click=${this.#duplicateBlock}
         ></jolly-button>
         <block-library
           .workspace=${workspace}

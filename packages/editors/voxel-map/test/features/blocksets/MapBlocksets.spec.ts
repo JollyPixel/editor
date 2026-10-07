@@ -357,6 +357,43 @@ describe("MapBlocksets", () => {
     );
   });
 
+  it("duplicates a block with its tiles right after the source", () => {
+    const { view, sources, blocksets } = setup([kRock]);
+    const source = composeBlockId(2, 2);
+    blocksets.defineBlock({
+      id: source,
+      name: "b",
+      shapeId: "cube",
+      materialGroup: "rock/wet",
+      defaultTexture: { col: 1, row: 1, blocksetId: "rock" },
+      faceTextures: { top: { col: 2, row: 0, blocksetId: "rock" } }
+    });
+    blocksets.defineBlock({ id: composeBlockId(2, 3), name: "c", shapeId: "cube" });
+
+    const id = blocksets.duplicateBlock(source);
+
+    assert.equal(id, composeBlockId(2, 4));
+    const copy = view.document.blocks.get(id!);
+    const original = view.document.blocks.get(source)!;
+    assert.equal(copy?.name, "b copy");
+    assert.equal(copy?.materialGroup, "rock/wet");
+    assert.deepEqual(copy?.defaultTexture, original.defaultTexture);
+    assert.deepEqual(copy?.faceTextures, original.faceTextures);
+    assert.deepEqual(
+      [...sources.opened.get("rock")!.blockset.blocks].map((block) => block.id),
+      [1, 2, 4, 3]
+    );
+  });
+
+  it("duplicates nothing for a block no blockset owns", () => {
+    const { view, blocksets } = setup([kRock]);
+    const before = [...view.document.blocks].map((block) => block.id);
+
+    assert.equal(blocksets.duplicateBlock(composeBlockId(2, 9)), null);
+    assert.equal(blocksets.duplicateBlock(composeBlockId(5, 1)), null);
+    assert.deepEqual([...view.document.blocks].map((block) => block.id), before);
+  });
+
   it("keeps the blocks of a blockset taking over the slot of an unlinked one", () => {
     const { view, blocksets, relink } = setup([kTerrain]);
 
