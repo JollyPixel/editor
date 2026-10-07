@@ -6,9 +6,18 @@ import type {
 
 export interface MenuItem<TAction extends string> extends ContextMenuItem {
   id: TAction;
+  items?: never;
 }
 
-export type MenuEntry<TAction extends string> = MenuItem<TAction> | "separator";
+export interface MenuBranch<TAction extends string> extends ContextMenuItem {
+  id: string;
+  items: readonly MenuEntry<TAction>[];
+}
+
+export type MenuEntry<TAction extends string> =
+  | MenuItem<TAction>
+  | MenuBranch<TAction>
+  | "separator";
 
 /** Viewport pixels where the action was asked for; a follow-up menu opens there. */
 export interface MenuPoint {
@@ -33,16 +42,28 @@ export function menuSession<TAction extends string>(
   items: readonly MenuEntry<TAction>[],
   run: MenuAction<TAction>
 ): MenuSession {
+  const actions = menuActions(items);
+
   return {
     items,
     run: (actionId, point) => {
-      const item = items.find(
-        (entry): entry is MenuItem<TAction> => entry !== "separator" && entry.id === actionId
-      );
+      const item = actions.find((action) => action.id === actionId);
 
       return item === undefined ? undefined : run(item.id, point);
     }
   };
+}
+
+function menuActions<TAction extends string>(
+  entries: readonly MenuEntry<TAction>[]
+): MenuItem<TAction>[] {
+  return entries.flatMap((entry) => {
+    if (entry === "separator") {
+      return [];
+    }
+
+    return entry.items === undefined ? [entry] : menuActions(entry.items);
+  });
 }
 
 export function rowMenuSession<TAction extends string>(

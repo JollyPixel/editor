@@ -2,9 +2,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type { AnimationClipJSON } from "@jolly-pixel/asset.voxel-animation/client";
-
 // Import Internal Dependencies
 import { AnimationPoser } from "#src/features/animation/AnimationPoser.ts";
 import {
@@ -28,9 +25,10 @@ describe("AnimationPlaybackStore", () => {
     playback.seek(2.4);
     playback.play();
     playback.play();
+    playback.toggleLoop();
 
-    assert.deepEqual(playback.playback, { tick: 2, playing: true });
-    assert.deepEqual(changes, [[2, false], [2, true]]);
+    assert.deepEqual(playback.playback, { tick: 2, playing: true, loop: false });
+    assert.deepEqual(changes, [[2, false], [2, true], [2, true]]);
   });
 });
 
@@ -114,10 +112,22 @@ describe("AnimationPlayer", () => {
   }
 
   function createPlayer(
-    clip: Pick<AnimationClipJSON, "length" | "loop">
+    options: {
+      length: number;
+      clipLoop?: boolean;
+      previewLoop?: boolean;
+    }
   ) {
+    const {
+      length,
+      clipLoop = false,
+      previewLoop = true
+    } = options;
     const model = createAnimatedModel();
-    model.set.changeClip(model.clipId, clip);
+    model.set.changeClip(model.clipId, { length, loop: clipLoop });
+    if (!previewLoop) {
+      model.animationPlayback.toggleLoop();
+    }
     const clock = createClock();
     const player = new AnimationPlayer({
       session: model.animationSession,
@@ -127,8 +137,8 @@ describe("AnimationPlayer", () => {
     return { playback: model.animationPlayback, clock, player };
   }
 
-  test("moves the playhead with time and wraps a loop", () => {
-    const { playback, clock, player } = createPlayer({ length: 24000, loop: "loop" });
+  test("moves the playhead with time and wraps while the preview loops, whatever the clip's loop", () => {
+    const { playback, clock, player } = createPlayer({ length: 24000, clipLoop: false });
 
     playback.play();
     clock.advance(500);
@@ -138,18 +148,35 @@ describe("AnimationPlayer", () => {
     player.dispose();
   });
 
-  test("stops a one-shot at its end", () => {
-    const { playback, clock, player } = createPlayer({ length: 24000, loop: "once" });
+  test("stops at the end when the preview does not loop, even for a looping clip", () => {
+    const { playback, clock, player } = createPlayer({
+      length: 24000,
+      clipLoop: true,
+      previewLoop: false
+    });
 
     playback.play();
     clock.advance(1500);
 
-    assert.deepEqual(playback.playback, { tick: 24000, playing: false });
+    assert.deepEqual(playback.playback, { tick: 24000, playing: false, loop: false });
+    player.dispose();
+  });
+
+  test("turning the preview loop off while playing finishes the current pass", () => {
+    const { playback, clock, player } = createPlayer({ length: 24000 });
+
+    playback.play();
+    clock.advance(1250);
+    playback.toggleLoop();
+    clock.advance(500);
+    assert.deepEqual([playback.playback.tick, playback.playback.playing], [18000, true]);
+    clock.advance(500);
+    assert.deepEqual([playback.playback.tick, playback.playback.playing], [24000, false]);
     player.dispose();
   });
 
   test("carries on from a seek made while playing, and stops on pause", () => {
-    const { playback, clock, player } = createPlayer({ length: 48000, loop: "loop" });
+    const { playback, clock, player } = createPlayer({ length: 48000 });
 
     playback.play();
     clock.advance(100);
@@ -167,12 +194,13 @@ describe("AnimationPlayer", () => {
 describe("AnimationSession playback", () => {
   function createSession() {
     const model = createAnimatedModel();
-    model.set.changeClip(model.clipId, { length: 48000, loop: "once" });
+    model.set.changeClip(model.clipId, { length: 48000 });
+    model.animationPlayback.toggleLoop();
 
     return model.animationSession;
   }
 
-  test("toggling plays and pauses, and replays a one-shot from its end", () => {
+  test("toggling plays and pauses, and replays a non-looping preview from its end", () => {
     const session = createSession();
 
     session.togglePlay();
@@ -182,7 +210,7 @@ describe("AnimationSession playback", () => {
 
     session.seek(48000);
     session.togglePlay();
-    assert.deepEqual(session.playback, { tick: 0, playing: true });
+    assert.deepEqual(session.playback, { tick: 0, playing: true, loop: false });
   });
 
   test("stepping pauses on whole frames inside the clip; edges jump to its ends", () => {
@@ -191,7 +219,7 @@ describe("AnimationSession playback", () => {
     session.togglePlay();
 
     session.stepFrames(1);
-    assert.deepEqual(session.playback, { tick: 2000, playing: false });
+    assert.deepEqual(session.playback, { tick: 2000, playing: false, loop: false });
     session.stepFrames(-5);
     assert.equal(session.playback.tick, 0);
     session.stepFrames(99);
@@ -231,8 +259,39 @@ describe("AnimationSession playback", () => {
     model.tab.activate("build");
 
     assert.equal(model.animationSession.active, false);
-    assert.deepEqual(model.animationSession.playback, { tick: 0, playing: false });
+    assert.deepEqual(model.animationSession.playback, { tick: 0, playing: false, loop: true });
     assert.deepEqual(events, ["active true", "active false"]);
+  });
+
+  test("switching clips rewinds and keeps playing; refocusing or reloading keeps the playhead", () => {
+    const model = createAnimatedModel();
+    const session = model.animationSession;
+    const runId = model.set.addClip({ id: "run", name: "Run", length: 24000 })!;
+    session.seek(6000);
+    session.togglePlay();
+
+    model.animationFocus.focusClip("walk", runId);
+    assert.deepEqual(session.playback, { tick: 0, playing: true, loop: true });
+
+    session.seek(3000);
+    model.animationFocus.focusClip("walk", runId);
+    model.set.load(model.set.set.toJSON());
+    assert.equal(session.playback.tick, 3000);
+  });
+
+  test("the preview loop never touches the clip or the history; the clip's loop is an undoable edit", () => {
+    const model = createAnimatedModel();
+    const session = model.animationSession;
+    const clipLoop = session.focused?.clip.loop;
+    const history = model.history.state("animate");
+
+    session.toggleLoop();
+    assert.deepEqual([session.playback.loop, session.focused?.clip.loop], [false, clipLoop]);
+    assert.deepEqual(model.history.state("animate"), history);
+
+    model.set.changeClip(model.clipId, { loop: !clipLoop });
+    assert.equal(model.history.undo("animate"), true);
+    assert.equal(session.focused?.clip.loop, clipLoop);
   });
 
   test("does nothing to play without a focused clip", () => {
@@ -243,7 +302,7 @@ describe("AnimationSession playback", () => {
     model.animationSession.stepFrames(3);
 
     assert.equal(model.animationSession.focused, null);
-    assert.deepEqual(model.animationSession.playback, { tick: 0, playing: false });
+    assert.deepEqual(model.animationSession.playback, { tick: 0, playing: false, loop: true });
   });
 });
 

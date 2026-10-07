@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  clipTick,
-  TICKS_PER_SECOND
-} from "@jolly-pixel/asset.voxel-animation/client";
+import { TICKS_PER_SECOND } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
 import type { AnimationSession } from "./AnimationSession.ts";
@@ -94,12 +91,17 @@ export class AnimationPlayer {
       return;
     }
 
-    const elapsed = run.startTick +
+    let elapsed = run.startTick +
       ((this.#clock.now() - run.startedAt) * TICKS_PER_SECOND / 1000);
-    const tick = Math.round(clipTick(clip, elapsed));
+    if (this.#session.playback.loop && elapsed >= clip.length) {
+      const passes = clip.length * Math.floor(elapsed / clip.length);
+      run.startTick -= passes;
+      elapsed -= passes;
+    }
+    const tick = Math.round(Math.min(elapsed, clip.length));
     this.#written = tick;
     this.#session.seek(tick);
-    if (clip.loop === "once" && elapsed >= clip.length) {
+    if (elapsed >= clip.length) {
       this.#session.pause();
 
       return;

@@ -270,6 +270,53 @@ describe("KeyEditor through the timeline", () => {
     keys.clear();
     assert.equal(timeline.view!.selectedKeys.size, 0);
   });
+
+  test("pressing a key selects its block; an additive press that drops the key leaves the block", () => {
+    const { model, timeline } = createTimeline();
+    const arm = timeline.view!.rows.find((row) => row.blockId === model.ids.arm)!;
+
+    timeline.pressKey(arm, 0, false);
+    assert.equal(model.selection.selected, model.ids.arm);
+
+    model.selection.select(model.ids.body);
+    timeline.pressKey(arm, 0, true);
+    assert.deepEqual(
+      [model.selection.selected, timeline.view!.selectedKeys.size],
+      [model.ids.body, 0]
+    );
+
+    timeline.pressKey(arm, 24000, true);
+    assert.equal(model.selection.selected, model.ids.arm);
+  });
+
+  test("the key menu acts on the selection: interpolation, copy, and delete in one undo step", () => {
+    const { model, timeline, keys, ticks } = createTimeline();
+    const point = { x: 0, y: 0 };
+    assert.equal(timeline.keyMenu().items.length, 0, "no menu without a selected key");
+
+    keys.select({ path: "Body/Arm", tick: 0 }, false);
+    keys.select({ path: "Body/Arm", tick: 24000 }, true);
+
+    void timeline.keyMenu().run("step", point);
+    assert.equal(keys.interpolation, "step");
+    const [interpolation] = timeline.keyMenu().items;
+    assert.ok(interpolation !== "separator" && interpolation.items !== undefined);
+    assert.deepEqual(
+      interpolation.items.map((item) => item !== "separator" && item.disabled),
+      [true, false, false],
+      "the current interpolation is disabled"
+    );
+
+    void timeline.keyMenu().run("copy", point);
+    void timeline.keyMenu().run("delete", point);
+    assert.deepEqual(ticks(), []);
+    model.history.undo("animate");
+    assert.deepEqual(ticks(), [0, 24000]);
+
+    model.animationPlayback.seek(6000);
+    keys.paste();
+    assert.ok(ticks().includes(6000), "the copied keys paste at the playhead");
+  });
 });
 
 describe("KeyInspectorController", () => {

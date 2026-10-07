@@ -4,8 +4,7 @@ export * from "./SyncedAnimationDocument.ts";
 export * from "../model/index.ts";
 export {
   ANIMATION_CHANNELS,
-  ANIMATION_INTERPOLATIONS,
-  ANIMATION_LOOPS
+  ANIMATION_INTERPOLATIONS
 } from "./AnimationCommand.schema.ts";
 export {
   VOXEL_ANIMATION_EXTENSION,

@@ -11,7 +11,6 @@ import type {
   AnimationClipPatchJSON,
   AnimationCommand,
   AnimationKeyJSON,
-  AnimationLoop,
   AnimationSetSnapshot,
   AnimationTrackJSON
 } from "../network/types.ts";
@@ -41,8 +40,8 @@ export interface AddClipOptions {
   length?: number;
   /** @default 24 */
   fps?: number;
-  /** @default "loop" */
-  loop?: AnimationLoop;
+  /** @default false */
+  loop?: boolean;
   tracks?: readonly AnimationTrackJSON[];
   /** The clip to land before; last when omitted. */
   beforeId?: string;
@@ -75,7 +74,7 @@ export class AnimationDocument extends CommandDocument<
       name,
       length = TICKS_PER_SECOND,
       fps = kDefaultFps,
-      loop = "loop",
+      loop = false,
       tracks = [],
       beforeId
     } = options;

@@ -66,7 +66,7 @@ export function clipTick(
   clip: Pick<AnimationClipJSON, "length" | "loop">,
   elapsed: number
 ): number {
-  return clip.loop === "loop" ?
+  return clip.loop ?
     ((elapsed % clip.length) + clip.length) % clip.length :
     Math.min(Math.max(elapsed, 0), clip.length);
 }

@@ -18,6 +18,7 @@ import {
   type UnboundTimelineRow
 } from "./timelineRows.ts";
 import { keyId } from "./timelineKeys.ts";
+import { keyMenu } from "./keyMenu.ts";
 import {
   rebindMenu,
   type TrackRebindWorkspace
@@ -102,6 +103,26 @@ export class TimelineController {
     blockId: string
   ): void {
     this.#connection.current?.selection.select(blockId);
+  }
+
+  pressKey(
+    row: Pick<TimelineRow, "blockId" | "path">,
+    tick: number,
+    additive: boolean
+  ): void {
+    const selected = this.keys?.select({ path: row.path, tick }, additive);
+    if (selected === true) {
+      this.selectBlock(row.blockId);
+    }
+  }
+
+  keyMenu(): MenuSession {
+    const keys = this.keys;
+    if (keys === undefined || keys.selected.length === 0) {
+      return EMPTY_MENU;
+    }
+
+    return keyMenu(keys);
   }
 
   rebindMenu(

@@ -8,31 +8,16 @@ import {
 } from "lit";
 import {
   Mixed,
-  type JollyChangeDetail,
-  type JollyOption
+  type JollyChangeDetail
 } from "@jolly-pixel/ui";
-import {
-  ANIMATION_INTERPOLATIONS,
-  type AnimationInterpolation
-} from "@jolly-pixel/asset.voxel-animation/client";
+import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
 import {
   KeyInspectorController,
   type KeyInspectorWorkspace
 } from "./KeyInspectorController.ts";
-
-// CONSTANTS
-const kInterpolationLabels: Readonly<Record<AnimationInterpolation, string>> = {
-  step: "Step",
-  linear: "Linear",
-  smooth: "Smooth"
-};
-const kInterpolationOptions: JollyOption<AnimationInterpolation>[] = ANIMATION_INTERPOLATIONS.map(
-  (value) => {
-    return { value, label: kInterpolationLabels[value] };
-  }
-);
+import { INTERPOLATION_OPTIONS } from "./interpolation.ts";
 
 export class KeyInspector extends LitElement {
   static override styles = css`
@@ -80,7 +65,7 @@ export class KeyInspector extends LitElement {
         <h3>Key (${state.title})</h3>
         <jolly-select
           label="Interpolation"
-          .options=${kInterpolationOptions}
+          .options=${INTERPOLATION_OPTIONS}
           .value=${state.interpolation === "mixed" ? Mixed : state.interpolation}
           @jolly-change=${this.#onInterpolation}
         ></jolly-select>

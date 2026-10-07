@@ -146,10 +146,10 @@ describe("AnimationSet", () => {
   test("changes only the clip fields a patch names", () => {
     const set = setOf(
       { action: "clip-added", clip: clip("walk") },
-      { action: "clip-changed", id: "walk", patch: { loop: "once", fps: 30 } }
+      { action: "clip-changed", id: "walk", patch: { loop: false, fps: 30 } }
     );
 
-    assert.deepEqual(set.clip("walk"), clip("walk", { loop: "once", fps: 30 }));
+    assert.deepEqual(set.clip("walk"), clip("walk", { loop: false, fps: 30 }));
   });
 
   test("rejects a snapshot with a repeated clip or keys out of order, keeping the previous set", () => {

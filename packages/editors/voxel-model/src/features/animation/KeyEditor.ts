@@ -63,10 +63,10 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
   select(
     ref: KeyRef,
     additive: boolean
-  ): void {
+  ): boolean {
     const clip = this.#session.focused?.clip;
     if (clip === undefined) {
-      return;
+      return false;
     }
 
     const refs = this.selected;
@@ -80,6 +80,8 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
     if (!additive && next.length === 1) {
       this.#session.seek(ref.tick);
     }
+
+    return !(additive && pressed);
   }
 
   clear(): void {

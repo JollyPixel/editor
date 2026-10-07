@@ -34,6 +34,10 @@ export class TimelineTransport extends LitElement {
       opacity: 0.75;
     }
 
+    jolly-tool-button {
+      --jolly-tool-button-size: var(--jolly-icon-button-size, 32px);
+    }
+
     .clip {
       max-width: 160px;
       overflow: hidden;
@@ -60,7 +64,7 @@ export class TimelineTransport extends LitElement {
       return nothing;
     }
 
-    const { tick, playing } = session.playback;
+    const { tick, playing, loop } = session.playback;
     const label = playing ? "Pause" : "Play";
 
     return html`
@@ -73,11 +77,17 @@ export class TimelineTransport extends LitElement {
           title=${`${label} (Space)`}
           @click=${this.#onToggle}
         ></jolly-button>
+        <jolly-tool-button
+          icon="timeline-loop"
+          label="Loop preview"
+          ?active=${loop}
+          @click=${this.#onToggleLoop}
+        ></jolly-tool-button>
         <span aria-label="Playhead">
           Frame ${frameAt(tick, clip.fps)} / ${frameAt(clip.length, clip.fps)}
           <span class="muted">· ${(tick / TICKS_PER_SECOND).toFixed(2)}s</span>
         </span>
-        <span class="muted">· ${clip.fps} fps · ${clip.loop === "loop" ? "Loop" : "Once"}</span>
+        <span class="muted">· ${clip.fps} fps</span>
       </div>
     `;
   }
@@ -88,6 +98,10 @@ export class TimelineTransport extends LitElement {
 
   readonly #onToggle = (): void => {
     this.#connection.current?.animationSession.togglePlay();
+  };
+
+  readonly #onToggleLoop = (): void => {
+    this.#connection.current?.animationSession.toggleLoop();
   };
 }
 

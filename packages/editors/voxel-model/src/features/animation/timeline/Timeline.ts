@@ -245,7 +245,7 @@ export class Timeline extends LitElement {
         ${view.unbound.map((row) => this.#renderUnboundRow(row, view))}
       </div>
       <jolly-context-menu
-        label="Blocks"
+        label="Timeline"
         @jolly-context-action=${this.#menu.onContextAction}
       ></jolly-context-menu>
     `;
@@ -333,6 +333,7 @@ export class Timeline extends LitElement {
           @pointermove=${this.#onKeyDrag}
           @pointerup=${this.#onKeyDrop}
           @pointercancel=${this.#onKeyDragCancel}
+          @contextmenu=${(event: MouseEvent) => this.#onLaneMenu(event, row)}
         >
           ${row.keys.map((key) => this.#renderKey(row, key, view))}
           <span class="playhead"></span>
@@ -393,16 +394,20 @@ export class Timeline extends LitElement {
     view: TimelineView
   ): void {
     const lane = event.currentTarget;
-    const key = event.target;
+    const tick = keyTickAt(event);
     this.renderRoot.querySelector<HTMLElement>(".rows")?.focus();
-    if (!(lane instanceof HTMLElement) || !(key instanceof HTMLElement) || !key.classList.contains("key")) {
+    if (event.button !== 0) {
+      return;
+    }
+    if (!(lane instanceof HTMLElement) || tick === null) {
       this.#controller.keys?.clear();
 
       return;
     }
 
-    this.#controller.keys?.select(
-      { path: row.path, tick: Number(key.dataset.tick) },
+    this.#controller.pressKey(
+      row,
+      tick,
       event.shiftKey || event.ctrlKey || event.metaKey
     );
     lane.setPointerCapture(event.pointerId);
@@ -412,6 +417,18 @@ export class Timeline extends LitElement {
       framesPerPixel: view.frames / Math.max(lane.getBoundingClientRect().width, 1),
       frames: 0
     };
+  }
+
+  #onLaneMenu(
+    event: MouseEvent,
+    row: TimelineRow
+  ): void {
+    event.preventDefault();
+    const tick = keyTickAt(event);
+    if (tick !== null) {
+      this.#controller.pressKey(row, tick, false);
+      this.#menu.open(this.#controller.keyMenu(), { x: event.clientX, y: event.clientY });
+    }
   }
 
   readonly #onKeyDrag = (
@@ -462,6 +479,16 @@ export class Timeline extends LitElement {
       event.stopPropagation();
     }
   };
+}
+
+function keyTickAt(
+  event: Event
+): number | null {
+  const key = event.target;
+
+  return key instanceof HTMLElement && key.classList.contains("key") ?
+    Number(key.dataset.tick) :
+    null;
 }
 
 function rulerStep(
