@@ -22,6 +22,8 @@
     "test-gpu": "node --test \"test/view/gpu/*.gpu.ts\"",
     "bench": "node --max-old-space-size=8192 bench/mesh-build.bench.ts",
     "bench:compare": "node --max-old-space-size=8192 bench/mesh-compare.bench.ts",
+    "bench:light": "node bench/block-light.bench.ts",
+    "bench:render": "node bench/render.bench.ts",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "clean": "rm -f cpu-profile-*.* heap-profile-*.*",
     "lint": "oxlint src test",

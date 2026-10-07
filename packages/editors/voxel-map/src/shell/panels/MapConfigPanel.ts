@@ -25,7 +25,8 @@ import type {
 const kLightingOptions: JollyOption<LightingMode>[] = [
   { label: "Flat", value: "flat" },
   { label: "Studio", value: "studio" },
-  { label: "Daylight", value: "daylight" }
+  { label: "Daylight", value: "daylight" },
+  { label: "Night", value: "night" }
 ];
 
 @customElement("map-config-panel")
@@ -56,6 +57,8 @@ export class MapConfigPanel extends LitElement {
   #reflections = this.#viewBinding("reflections");
   #ambientOcclusion = this.#viewBinding("ambientOcclusion");
   #shadows = this.#viewBinding("shadows");
+  #blockLight = this.#viewBinding("blockLight");
+  #glow = this.#viewBinding("glow");
 
   #skyRadius = new FieldBinding<number>(this, {
     read: () => this.workspace.localBrush.skyRadius,
@@ -120,6 +123,20 @@ export class MapConfigPanel extends LitElement {
         description="Sun shadows around the camera"
         .value=${this.#shadows.value}
         @jolly-change=${this.#shadows.commit}
+      ></jolly-checkbox>
+      <jolly-checkbox
+        align="end"
+        label="Block light"
+        description="Glowing materials light the blocks around them"
+        .value=${this.#blockLight.value}
+        @jolly-change=${this.#blockLight.commit}
+      ></jolly-checkbox>
+      <jolly-checkbox
+        align="end"
+        label="Glow"
+        description="Glowing materials bloom on screen"
+        .value=${this.#glow.value}
+        @jolly-change=${this.#glow.commit}
       ></jolly-checkbox>
     `;
   }

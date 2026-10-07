@@ -102,6 +102,7 @@ export class VoxelLayer {
   #dirtyChunks = new Set<VoxelChunk>();
   #dirtySubscriptions = new Map<VoxelChunk, () => void>();
   #dirtyRevision = 0;
+  #revision = 0;
   #trackDirty = (chunk: VoxelChunk, dirty: boolean): void => {
     if (dirty) {
       this.#dirtyChunks.add(chunk);
@@ -349,6 +350,7 @@ export class VoxelLayer {
       packed,
       partner
     );
+    this.#revision++;
   }
 
   loadPackedVoxels(
@@ -399,6 +401,7 @@ export class VoxelLayer {
         partners === undefined ? VOXEL_ABSENT : partners[i]
       );
     }
+    this.#revision++;
   }
 
   loadPackedChunk(
@@ -416,6 +419,7 @@ export class VoxelLayer {
       voxels,
       partners
     );
+    this.#revision++;
   }
 
   removeVoxelAt(
@@ -436,6 +440,7 @@ export class VoxelLayer {
       this.#worldToLocal(y),
       this.#worldToLocal(z)
     ]);
+    this.#revision++;
 
     if (chunk.isEmpty()) {
       this.#chunks.delete(packChunkKey(cx, cy, cz));
@@ -602,18 +607,16 @@ export class VoxelLayer {
     yield* this.#chunks.values();
   }
 
-  /**
-   * Chunks whose `dirty` flag is set, without visiting clean ones.
-   */
   * getDirtyChunks(): IterableIterator<VoxelChunk> {
     yield* this.#dirtyChunks;
   }
 
-  /**
-   * Increments whenever a chunk of this layer becomes dirty.
-   */
   get dirtyRevision(): number {
     return this.#dirtyRevision;
+  }
+
+  get revision(): number {
+    return this.#revision;
   }
 
   * drainPendingRemovals(): IterableIterator<VoxelChunk> {

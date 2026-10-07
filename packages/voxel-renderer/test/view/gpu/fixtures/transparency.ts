@@ -52,6 +52,7 @@ export interface ProbeOptions {
   normals?: boolean;
   gray?: number;
   lights?: ProbeLights;
+  hideAfterFirstFrame?: boolean;
 }
 
 export interface ProbeLights {
@@ -274,6 +275,11 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     }
     await renderFrames(renderer, 1, () => pipeline.render());
     verifyState();
+    if (options.hideAfterFirstFrame) {
+      view.root.visible = false;
+      await renderFrames(renderer, 1, () => pipeline.render());
+      verifyState();
+    }
     if (options.resize) {
       renderer.setSize(64, 64);
       target.setSize(64, 64);

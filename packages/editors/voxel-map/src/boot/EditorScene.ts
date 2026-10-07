@@ -4,6 +4,7 @@ import {
   Grid,
   type GridOptions
 } from "@jolly-pixel/three";
+import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
@@ -21,7 +22,10 @@ import type {
 import { MapDocument } from "../document/MapDocument.ts";
 import { bindHistoryShortcuts } from "../shared/historyShortcuts.ts";
 import { bindToolShortcuts } from "../shared/toolShortcuts.ts";
-import type { EditorState } from "../state/index.ts";
+import type {
+  EditorState,
+  ViewSettings
+} from "../state/index.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
 import { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
@@ -146,16 +150,30 @@ export class EditorScene extends Systems.Scene {
         rendering: {
           material: "lambert"
         },
-        blocksets: []
+        blocksets: [],
+        requestFrame: () => this.#environment?.invalidateShadows()
       });
 
     const environment = new SceneEnvironment({
       renderer: world.renderer.getSource(),
       scene,
       lighting,
-      chunks: view.lighting
+      chunks: view.lighting,
+      casters: view
     });
-    environment.apply(state.view.settings);
+    const { materialGroups } = session.map.voxels;
+    function applyGlow(
+      enabled: boolean
+    ): void {
+      camera.glow = enabled && anyGlows(materialGroups);
+    }
+    function applyView(
+      settings: ViewSettings
+    ): void {
+      environment.apply(settings);
+      applyGlow(settings.glow);
+    }
+    applyView(state.view.settings);
     this.#environment = environment;
 
     const blockSources = BlockRenderSources.of(view);
@@ -324,7 +342,11 @@ export class EditorScene extends Systems.Scene {
         camera.spawn(view.document.world.getLayers());
       }),
       state.view.subscribe("change", (settings) => {
-        environment.apply(settings);
+        applyView(settings);
+        world.invalidate();
+      }),
+      mapDocument.subscribe("materialGroupsChanged", () => {
+        applyGlow(state.view.settings.glow);
         world.invalidate();
       }),
       bindBrushShortcuts({
@@ -431,4 +453,16 @@ export class EditorScene extends Systems.Scene {
       new Error("The editor scene was destroyed before it awoke.")
     );
   }
+}
+
+function anyGlows(
+  groups: Iterable<MaterialGroup>
+): boolean {
+  for (const group of groups) {
+    if (group.glows) {
+      return true;
+    }
+  }
+
+  return false;
 }

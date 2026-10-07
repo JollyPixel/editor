@@ -9,6 +9,7 @@ import {
   pixelSnapshotSchema
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
+  MAX_LIGHT_LEVEL,
   MAX_LOCAL_BLOCK_ID,
   type BlocksetMaterialGroupRenameCommand,
   type BlocksetTileSizeCommand,
@@ -64,6 +65,7 @@ export const materialGroupSchema = defineSchema({
     emissive: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
     emissiveIntensity: { type: "number", minimum: 0 },
     normalScale: { type: "number", minimum: 0 },
+    lightLevel: { type: "integer", minimum: 0, maximum: MAX_LIGHT_LEVEL },
     swatch: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" }
   },
   required: ["id"]

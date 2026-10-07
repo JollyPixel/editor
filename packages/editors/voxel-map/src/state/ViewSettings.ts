@@ -1,5 +1,5 @@
 // CONSTANTS
-const kLightingModes = ["flat", "studio", "daylight"] as const;
+const kLightingModes = ["flat", "studio", "daylight", "night"] as const;
 
 export type LightingMode = typeof kLightingModes[number];
 
@@ -8,6 +8,8 @@ export interface ViewSettingsJSON {
   reflections: boolean;
   ambientOcclusion: boolean;
   shadows: boolean;
+  blockLight: boolean;
+  glow: boolean;
 }
 
 export class ViewSettings implements ViewSettingsJSON {
@@ -15,7 +17,9 @@ export class ViewSettings implements ViewSettingsJSON {
     lighting: "studio",
     reflections: false,
     ambientOcclusion: false,
-    shadows: false
+    shadows: false,
+    blockLight: true,
+    glow: true
   });
 
   static parse(
@@ -39,6 +43,8 @@ export class ViewSettings implements ViewSettingsJSON {
   readonly reflections: boolean;
   readonly ambientOcclusion: boolean;
   readonly shadows: boolean;
+  readonly blockLight: boolean;
+  readonly glow: boolean;
 
   constructor(
     settings: ViewSettingsJSON
@@ -47,6 +53,8 @@ export class ViewSettings implements ViewSettingsJSON {
     this.reflections = settings.reflections;
     this.ambientOcclusion = settings.ambientOcclusion;
     this.shadows = settings.shadows;
+    this.blockLight = settings.blockLight;
+    this.glow = settings.glow;
 
     Object.freeze(this);
   }
@@ -63,7 +71,9 @@ export class ViewSettings implements ViewSettingsJSON {
     return this.lighting === other.lighting &&
       this.reflections === other.reflections &&
       this.ambientOcclusion === other.ambientOcclusion &&
-      this.shadows === other.shadows;
+      this.shadows === other.shadows &&
+      this.blockLight === other.blockLight &&
+      this.glow === other.glow;
   }
 
   toJSON(): ViewSettingsJSON {
@@ -71,7 +81,9 @@ export class ViewSettings implements ViewSettingsJSON {
       lighting: this.lighting,
       reflections: this.reflections,
       ambientOcclusion: this.ambientOcclusion,
-      shadows: this.shadows
+      shadows: this.shadows,
+      blockLight: this.blockLight,
+      glow: this.glow
     };
   }
 
@@ -92,7 +104,9 @@ export class ViewSettings implements ViewSettingsJSON {
         fields.get("ambientOcclusion"),
         this.ambientOcclusion
       ),
-      shadows: booleanOr(fields.get("shadows"), this.shadows)
+      shadows: booleanOr(fields.get("shadows"), this.shadows),
+      blockLight: booleanOr(fields.get("blockLight"), this.blockLight),
+      glow: booleanOr(fields.get("glow"), this.glow)
     });
   }
 }

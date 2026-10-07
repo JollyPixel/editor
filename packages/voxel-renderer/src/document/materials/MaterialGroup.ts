@@ -4,6 +4,8 @@ import * as THREE from "three";
 // CONSTANTS
 const kHexColor = /^#[0-9a-f]{6}$/i;
 
+export const MAX_LIGHT_LEVEL = 15;
+
 export interface MaterialGroupJSON {
   id: string;
   roughness?: number;
@@ -11,6 +13,7 @@ export interface MaterialGroupJSON {
   emissive?: string;
   emissiveIntensity?: number;
   normalScale?: number;
+  lightLevel?: number;
   swatch?: string;
 }
 
@@ -30,7 +33,8 @@ export class MaterialGroup {
     metalness: 0,
     emissive: "#000000",
     emissiveIntensity: 1,
-    normalScale: 1
+    normalScale: 1,
+    lightLevel: 0
   });
 
   readonly id: string;
@@ -39,6 +43,7 @@ export class MaterialGroup {
   readonly emissive: string;
   readonly emissiveIntensity: number;
   readonly normalScale: number;
+  readonly lightLevel: number;
   readonly swatch: string | null;
 
   static parse(
@@ -63,8 +68,14 @@ export class MaterialGroup {
     this.emissiveIntensity = json.emissiveIntensity ??
       defaults.emissiveIntensity;
     this.normalScale = json.normalScale ?? defaults.normalScale;
+    this.lightLevel = json.lightLevel ?? defaults.lightLevel;
     this.swatch = json.swatch?.toLowerCase() ?? null;
     Object.freeze(this);
+  }
+
+  get glows(): boolean {
+    return this.emissive !== MaterialGroup.defaults.emissive &&
+      this.emissiveIntensity > 0;
   }
 
   with(
@@ -98,6 +109,7 @@ export class MaterialGroup {
       this.emissive === other.emissive &&
       this.emissiveIntensity === other.emissiveIntensity &&
       this.normalScale === other.normalScale &&
+      this.lightLevel === other.lightLevel &&
       this.swatch === other.swatch;
   }
 
@@ -108,7 +120,8 @@ export class MaterialGroup {
       metalness: this.metalness,
       emissive: this.emissive,
       emissiveIntensity: this.emissiveIntensity,
-      normalScale: this.normalScale
+      normalScale: this.normalScale,
+      lightLevel: this.lightLevel
     };
 
     return this.swatch === null ?
@@ -165,6 +178,9 @@ function problemOf(
   if (!isNonNegativeOrUndefined(fields.get("normalScale"))) {
     return "Normal scale must be a finite number of 0 or more.";
   }
+  if (!isLightLevelOrUndefined(fields.get("lightLevel"))) {
+    return `Light level must be an integer between 0 and ${MAX_LIGHT_LEVEL}.`;
+  }
 
   return null;
 }
@@ -176,6 +192,17 @@ function isNonNegativeOrUndefined(
     typeof value === "number" &&
     Number.isFinite(value) &&
     value >= 0
+  );
+}
+
+function isLightLevelOrUndefined(
+  value: unknown
+): boolean {
+  return value === undefined || (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= MAX_LIGHT_LEVEL
   );
 }
 

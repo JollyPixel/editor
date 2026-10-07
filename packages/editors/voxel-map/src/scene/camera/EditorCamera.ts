@@ -5,7 +5,6 @@ import {
   type CameraPose,
   type Systems
 } from "@jolly-pixel/engine";
-import { voxelTransparencyPass } from "@jolly-pixel/voxel.renderer";
 import { clientToNdc } from "@jolly-pixel/three";
 import type { LogQueue } from "@jolly-pixel/ui";
 
@@ -16,6 +15,7 @@ import {
   type SpawnLayer
 } from "./SpawnPose.ts";
 import { ViewRay } from "./ViewRay.ts";
+import { CameraPostProcessing } from "./CameraPostProcessing.ts";
 
 // CONSTANTS
 const kPivotMaxDistance = 32;
@@ -33,6 +33,7 @@ export class EditorCamera {
   #log: Pick<LogQueue, "push">;
   #controls: OrbitFlyCamera;
   #viewRay: ViewRay;
+  #postProcessing: CameraPostProcessing;
   #disposables: Array<() => void>;
   #pointer = new THREE.Vector2();
   #orbiting = false;
@@ -44,16 +45,15 @@ export class EditorCamera {
     const { world, pointer, log, samples } = options;
     this.#world = world;
     this.#log = log;
+    this.#postProcessing = new CameraPostProcessing(
+      samples === undefined ? {} : { samples }
+    );
 
     const controls = world
       .createActor("camera")
       .addComponentAndGet(OrbitFlyCamera, {
         focusMode: "lock",
-        postProcessing: (context) => voxelTransparencyPass(
-          context.scene,
-          context.camera,
-          samples === undefined ? {} : { samples }
-        )
+        postProcessing: this.#postProcessing.select(false)
       });
     controls.teleport(SpawnPose.frame([]));
     this.#controls = controls;
@@ -78,6 +78,18 @@ export class EditorCamera {
 
   get camera(): THREE.PerspectiveCamera {
     return this.#controls.camera;
+  }
+
+  get glow(): boolean {
+    return this.#controls.postProcessing === this.#postProcessing.glow;
+  }
+
+  set glow(
+    enabled: boolean
+  ) {
+    this.#controls.postProcessing = this.#postProcessing.select(
+      enabled
+    );
   }
 
   focus(

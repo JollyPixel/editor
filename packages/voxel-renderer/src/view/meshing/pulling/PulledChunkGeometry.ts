@@ -107,6 +107,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
   readonly faceWords: number;
   readonly templates: FaceTemplateTable;
   readonly blends: THREE.DataTexture | null;
+  light: THREE.Texture | null = null;
 
   #words: Uint32Array<ArrayBuffer>;
 

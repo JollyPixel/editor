@@ -48,6 +48,7 @@ blended ones included. See
 | `properties` | `Record<string, any>` | Free-form layer data. |
 | `chunkSize` | `number` | Read-only. |
 | `voxelCount` | `number` | Read-only. Stored voxels. |
+| `revision` | `number` | Read-only. Grows on every voxel write, removal, load or rebase. |
 
 A layer has no `toJSON()`; use
 [`serializeVoxelLayer(layer)`](../serialization/serialization.md).

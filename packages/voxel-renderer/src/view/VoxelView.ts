@@ -17,6 +17,7 @@ import type {
   VoxelColliderFactory
 } from "./collision/VoxelCollider.ts";
 import {
+  isBlocksetDocumentCommand,
   isVoxelBlendGroupCommand,
   isVoxelMaterialGroupCommand,
   isVoxelBlocksetCommand
@@ -44,6 +45,7 @@ import { ChunkMeshStore } from "./chunks/ChunkMeshStore.ts";
 import { ChunkPipeline } from "./chunks/ChunkPipeline.ts";
 import { ChunkViewport } from "./chunks/ChunkViewport.ts";
 import { ChunkMeshWorkers } from "./workers/ChunkMeshWorkers.ts";
+import { BlockLight } from "./lighting/BlockLight.ts";
 import {
   VoxelLighting,
   VoxelRange,
@@ -147,6 +149,8 @@ export class VoxelView {
   #meshBuilder: VoxelMeshBuilder;
   #materials: ChunkMaterialCache;
   #pipeline: ChunkPipeline;
+  #meshes: ChunkMeshStore;
+  #blockLight: BlockLight;
   #collider: VoxelCollider | null;
   #logger: VoxelLogger;
   #requestFrame: () => void;
@@ -156,6 +160,9 @@ export class VoxelView {
     context: VoxelCommandContext
   ): void => {
     this.requestFrame();
+    if (isBlocksetDocumentCommand(command) || isVoxelBlocksetCommand(command)) {
+      this.#blockLight.refreshSources();
+    }
     if (isVoxelBlocksetCommand(command)) {
       this.#syncAtlases();
       this.markAllChunksDirty(command.action);
@@ -209,6 +216,7 @@ export class VoxelView {
       }
     }
     this.#materials.invalidate();
+    this.#blockLight.invalidate();
     this.#rebuildAllChunks("load");
     this.requestFrame();
   };
@@ -276,6 +284,13 @@ export class VoxelView {
     this.layerVisibility = new VoxelLayerVisibility(
       () => this.markAllChunksDirty("layerVisibility")
     );
+    this.#blockLight = new BlockLight({
+      world,
+      blocks,
+      shapes: this.shapes,
+      materialGroups,
+      visibility: this.layerVisibility
+    });
 
     const meshBuilder = new VoxelMeshBuilder({
       world,
@@ -309,8 +324,11 @@ export class VoxelView {
       materials: this.#materials,
       inspector: this.inspector,
       collider: this.#collider,
+      light: this.#blockLight.textures,
       logger: this.#logger
     });
+    this.#materials.blockLight.span.value = this.#blockLight.textures.span;
+    this.#meshes = meshes;
     this.#pipeline = new ChunkPipeline({
       world,
       layout,
@@ -341,7 +359,8 @@ export class VoxelView {
         meshBuilder,
         materials: this.#materials,
         meshes,
-        remesh
+        remesh,
+        light: this.#blockLight
       },
       lighting
     );
@@ -367,6 +386,10 @@ export class VoxelView {
     return this.#pipeline.pendingRebuilds;
   }
 
+  get meshVersion(): number {
+    return this.#meshes.version;
+  }
+
   init(): void {
     this.#rebuildAllChunks("init");
   }
@@ -375,10 +398,12 @@ export class VoxelView {
     _deltaTime: number
   ): void {
     this.atlases.refreshAverages();
+    this.#updateLight();
     this.#pipeline.tick(this.#viewport());
   }
 
   flush(): void {
+    this.#updateLight();
     this.#pipeline.flush(this.#viewport());
   }
 
@@ -515,6 +540,14 @@ export class VoxelView {
   ): void {
     this.#logger.debug("Rebuilding all chunks...", { source });
     this.#pipeline.rebuildAll(this.#viewport());
+  }
+
+  #updateLight(): void {
+    if (this.lighting.blockLight === 0) {
+      return;
+    }
+
+    this.#meshes.refreshLight(this.#blockLight.update());
   }
 
   #syncAtlases(): void {

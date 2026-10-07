@@ -10,105 +10,12 @@ import {
   Runtime,
   type RuntimeOptions
 } from "../src/Runtime.ts";
+import { FakeRenderer } from "./helpers/FakeRenderer.ts";
 
 Object.defineProperty(globalThis.navigator, "getGamepads", {
   configurable: true,
   value: () => []
 });
-
-class FakeAnimationRenderer {
-  readonly info = {
-    render: {
-      drawCalls: 0,
-      triangles: 0
-    },
-    memory: {
-      geometries: 0,
-      textures: 0,
-      attributesSize: 0,
-      indexAttributesSize: 0,
-      texturesSize: 0
-    }
-  };
-
-  #loop: ((time: number) => void) | null = null;
-
-  get looping(): boolean {
-    return this.#loop !== null;
-  }
-
-  setAnimationLoop(
-    callback: ((time: number) => void) | null
-  ): void {
-    this.#loop = callback;
-  }
-
-  tick(
-    time: number
-  ): void {
-    this.#loop?.(time);
-  }
-}
-
-class FakeRenderer {
-  readonly canvas: HTMLCanvasElement;
-  readonly source = new FakeAnimationRenderer();
-  readonly renderComponents = [];
-  draws = 0;
-
-  #drawListeners = new Set<() => void>();
-
-  constructor(
-    canvas: HTMLCanvasElement
-  ) {
-    this.canvas = canvas;
-  }
-
-  on(
-    type: string,
-    listener: () => void
-  ): this {
-    if (type === "draw") {
-      this.#drawListeners.add(listener);
-    }
-
-    return this;
-  }
-
-  off(
-    _type: string,
-    listener: () => void
-  ): void {
-    this.#drawListeners.delete(listener);
-  }
-
-  getSource(): FakeAnimationRenderer {
-    return this.source;
-  }
-
-  observeResize(): void {
-    return;
-  }
-
-  unobserveResize(): void {
-    return;
-  }
-
-  draw(): void {
-    this.draws++;
-    for (const listener of this.#drawListeners) {
-      listener();
-    }
-  }
-
-  clear(): void {
-    return;
-  }
-
-  dispose(): void {
-    return;
-  }
-}
 
 function createRuntime(
   options: RuntimeOptions = {}

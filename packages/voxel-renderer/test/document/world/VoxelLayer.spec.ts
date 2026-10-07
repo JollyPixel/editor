@@ -615,3 +615,23 @@ describe("VoxelLayer getDirtyChunks", () => {
     assert.equal([...layer.getDirtyChunks()].length, 1);
   });
 });
+
+describe("VoxelLayer revision", () => {
+  it("advances on every write path, even while a chunk stays dirty", () => {
+    const layer = makeLayer();
+    const writes: Array<() => void> = [
+      () => layer.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry(1)),
+      () => layer.setVoxelAt({ x: 2, y: 0, z: 0 }, makeVoxelEntry(1)),
+      () => layer.loadPackedVoxels(new Int32Array([3, 0, 0]), [256]),
+      () => layer.loadPackedChunk([1, 0, 0], [0], [256]),
+      () => layer.removeVoxelAt({ x: 1, y: 0, z: 0 }),
+      () => layer.rebase({ x: 2, y: 0, z: 0 })
+    ];
+
+    for (const write of writes) {
+      const before = layer.revision;
+      write();
+      assert.ok(layer.revision > before, String(write));
+    }
+  });
+});

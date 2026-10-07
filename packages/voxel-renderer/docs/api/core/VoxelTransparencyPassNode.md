@@ -73,11 +73,32 @@ camera.postProcessing = ({ scene, camera }) => {
 };
 ```
 
+### Selective bloom
+
+Glowing blocks write their glow to the `emissive` material output, and blocks
+lit by [block light](../../concepts/rendering-and-meshing.md#block-light) do
+not, so bloom fed from it halos the light sources only.
+
+```ts
+import { bloom } from "three/addons/tsl/display/BloomNode.js";
+import { emissive, mrt, output } from "three/tsl";
+
+camera.postProcessing = ({ scene, camera }) => {
+  const scenePass = voxelTransparencyPass(scene, camera);
+  scenePass.setMRT(mrt({ output, emissive }));
+
+  return scenePass.add(bloom(scenePass.getTextureNode("emissive"), 0.6, 0.2));
+};
+```
+
+The MRT covers the opaque draw only: transparent glowing blocks do not bloom.
+
 ## Limitations
 
 - Colour is a depth-weighted average, not exact back-to-front compositing, and
   can shift as the camera moves.
 - Double-sided transparent blocks contribute both their near and far walls.
 - Every transparent material in the scene goes through the pass, voxel or not.
+  When no visible object has one, the two transparent draws are skipped.
   Their blend settings are replaced during the frame and restored afterwards,
   so additive effects need a separate render pass.

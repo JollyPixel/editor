@@ -9,6 +9,7 @@ import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 // Import Internal Dependencies
 import { parse } from "../utils/path.ts";
@@ -113,6 +114,7 @@ export class ModelAssetLoader implements AssetLoader<Model> {
     source: ReturnType<typeof parse>
   ): Promise<Model> {
     const object = await new GLTFLoader(this.#manager)
+      .setMeshoptDecoder(MeshoptDecoder)
       .setPath(source.dir)
       .loadAsync(source.base);
 

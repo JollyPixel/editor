@@ -81,4 +81,30 @@ describe("Systems.Rendering.ThreeRenderer", () => {
       [[800, 600, false], [1024, 768, false]]
     );
   });
+
+  test("should report a lost device after the three.js handler", () => {
+    const calls: string[] = [];
+    const source = {
+      ...createRendererSpy(),
+      onDeviceLost: (_info: unknown) => calls.push("three")
+    };
+    const renderer = new ThreeRenderer(source as any);
+    renderer.on("deviceLost", (info) => {
+      calls.push("engine");
+      assert.deepStrictEqual(info, {
+        api: "WebGPU",
+        message: "GPU reset",
+        reason: "unknown"
+      });
+    });
+
+    source.onDeviceLost({
+      api: "WebGPU",
+      message: "GPU reset",
+      reason: "unknown",
+      originalEvent: null
+    });
+
+    assert.deepStrictEqual(calls, ["three", "engine"]);
+  });
 });

@@ -36,6 +36,7 @@ flowchart TB
 | `view/chunks` | `ChunkPipeline`, mesh targets, rebuild queue, viewport, visibility, mesh store |
 | `view/meshing`, `shading` | CPU face emission and the pulled face format, TSL nodes and chunk materials |
 | `view/workers`, `atlases`, `options` | Mesh workers, atlas textures, `rendering` / `lighting` / `range` settings |
+| `view/lighting` | Block light flood fill over world cells, per-target light textures sampled when vertices are pulled |
 
 ## Commands
 

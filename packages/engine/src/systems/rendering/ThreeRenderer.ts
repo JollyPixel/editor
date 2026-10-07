@@ -16,7 +16,17 @@ import {
 // CONSTANTS
 const kDefaultMaxPixelRatio = 2;
 
-export type ThreeRendererEvents = RendererEvents;
+export interface RendererDeviceLost {
+  api: "WebGL" | "WebGPU";
+  message: string;
+  reason: string | null;
+}
+
+export type ThreeRendererEvents = RendererEvents & {
+  deviceLost: (
+    info: RendererDeviceLost
+  ) => void;
+};
 
 /**
  * Mutable `WebGPURenderer` state, applied after the GPU context exists.
@@ -129,6 +139,16 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
     super();
     this.webGPURenderer = webGPURenderer;
     this.renderStrategy = new DirectRenderStrategy(webGPURenderer);
+
+    const onDeviceLost = webGPURenderer.onDeviceLost;
+    webGPURenderer.onDeviceLost = (info) => {
+      onDeviceLost.call(webGPURenderer, info);
+      this.emit("deviceLost", {
+        api: info.api,
+        message: info.message,
+        reason: info.reason
+      });
+    };
   }
 
   static async create(
