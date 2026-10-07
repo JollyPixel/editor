@@ -155,27 +155,29 @@ export class MapPlacement {
     region: CellRegion
   ): boolean {
     this.cancel();
-    const source = RegionSource.capture(
-      this.#world,
-      layerName,
-      region
-    );
-    if (source === null) {
-      return false;
-    }
 
-    this.#world.unrecorded(
-      () => this.#patch(layerName, source.erasePatch())
-    );
-    this.#lifted = source;
-    this.#assign(
-      Placement.at(
-        source,
-        source.pivot
+    return this.#lift(
+      RegionSource.capture(
+        this.#world,
+        layerName,
+        region
       )
     );
+  }
 
-    return true;
+  liftConnected(
+    layerName: string,
+    start: VoxelCoord
+  ): boolean {
+    this.cancel();
+
+    return this.#lift(
+      RegionSource.captureConnected(
+        this.#world,
+        layerName,
+        start
+      )
+    );
   }
 
   transforming(
@@ -341,6 +343,27 @@ export class MapPlacement {
     return source.kind === "template" || source.kind === "copy" ?
       this.#selection.lastVoxelLayer :
       source.layerName;
+  }
+
+  #lift(
+    source: RegionSource | null
+  ): boolean {
+    if (source === null) {
+      return false;
+    }
+
+    this.#world.unrecorded(
+      () => this.#patch(source.layerName, source.erasePatch())
+    );
+    this.#lifted = source;
+    this.#assign(
+      Placement.at(
+        source,
+        source.pivot
+      )
+    );
+
+    return true;
   }
 
   #patch(

@@ -32,7 +32,10 @@ export interface MarqueeToolOptions {
   camera: THREE.PerspectiveCamera;
   tool: ToolStore;
   selection: Pick<SelectionStore, "voxelLayer">;
-  placement: Pick<MapPlacement, "current" | "liftRegion">;
+  placement: Pick<
+    MapPlacement,
+    "current" | "liftRegion" | "liftConnected"
+  >;
   pointer: PointerCapture;
   color: THREE.ColorRepresentation;
   onChange: () => void;
@@ -198,6 +201,12 @@ export class MarqueeTool extends ActorComponent {
     const aim = this.#aim();
     if (aim === null) {
       this.#show(null);
+
+      return;
+    }
+    if (this.#tool.selectMode === "connected") {
+      this.#show(null);
+      this.#placement.liftConnected(layerName, aim.remove);
 
       return;
     }

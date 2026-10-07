@@ -33,7 +33,12 @@ export function bindToolShortcuts(
       tool.current = "brush";
     }),
     keyboard.bind(TOOL_SHORTCUTS.select, () => {
-      tool.current = "select";
+      if (tool.selecting) {
+        tool.cycleSelectMode();
+      }
+      else {
+        tool.current = "select";
+      }
     }),
     keyboard.bind(TOOL_EXIT_SHORTCUT, () => {
       if (!tool.selecting) {

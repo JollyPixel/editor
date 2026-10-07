@@ -66,7 +66,9 @@ export default defineConfig(async({ mode }) => {
       ...(e2e ? {
         port: PORTS.studio,
         strictPort: true
-      } : {}),
+      } : {
+        allowedHosts: true
+      }),
       fs: {
         allow: [
           searchForWorkspaceRoot(import.meta.dirname),

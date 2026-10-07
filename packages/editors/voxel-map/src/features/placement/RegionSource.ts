@@ -13,6 +13,7 @@ import type {
   CellRegion,
   CellRegionJSON
 } from "./CellRegion.ts";
+import { ConnectedCells } from "./ConnectedCells.ts";
 import type { Placement } from "./Placement.ts";
 
 // CONSTANTS
@@ -35,12 +36,46 @@ export class RegionSource {
       return null;
     }
 
-    const anchored = VoxelTemplate.fromLayer(layer, {
-      id: `region:${layerName}`,
-      name: REGION_NAME,
-      bounds: region,
-      pivot: region.min
-    });
+    return RegionSource.#anchor(
+      layerName,
+      region,
+      VoxelTemplate.fromLayer(layer, {
+        id: `region:${layerName}`,
+        name: REGION_NAME,
+        bounds: region,
+        pivot: region.min
+      })
+    );
+  }
+
+  static captureConnected(
+    world: VoxelWorld,
+    layerName: string,
+    start: VoxelCoord
+  ): RegionSource | null {
+    const layer = world.getLayer(layerName);
+    const cells = layer === undefined ?
+      null :
+      ConnectedCells.flood(layer, start);
+    if (cells === null) {
+      return null;
+    }
+
+    return RegionSource.#anchor(
+      layerName,
+      cells.bounds,
+      cells.toTemplate({
+        id: `region:${layerName}`,
+        name: REGION_NAME
+      })
+    );
+  }
+
+  static #anchor(
+    layerName: string,
+    region: CellRegion,
+    anchored: VoxelTemplate
+  ): RegionSource | null {
     if (anchored.voxelCount === 0) {
       return null;
     }

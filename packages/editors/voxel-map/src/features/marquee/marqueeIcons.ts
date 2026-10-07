@@ -13,3 +13,14 @@ registerIcon("marquee", svg`
     stroke-linejoin="round"
   />
 `, { tone: "sky" });
+
+registerIcon("select-connected", svg`
+  <path
+    class="tone-ink"
+    d="M4 4h7v9h9v7H4Z"
+    fill="currentColor"
+    stroke="currentColor"
+    stroke-width="1.6"
+    stroke-linejoin="round"
+  />
+`, { tone: "sky" });

@@ -165,6 +165,24 @@ test("Delete removes the selected blocks only", async({ page }) => {
   expect(await blocksAt(page, [...kRow, kOutside])).toEqual([null, null, null, 1]);
 });
 
+test("a click in connected mode selects the touching blocks only", async({ page }) => {
+  await seed(page, [...kRow, kOutside]);
+  const toolbar = page.locator("voxel-edit-toolbar");
+  await toolbar.getByRole("button", { name: /^Select/ }).click();
+  await toolbar.getByRole("button", { name: /^Connected select/ }).click();
+
+  await clickCell(page, kRow[2]);
+
+  await expect.poll(async() => (await placement(page))?.cells.length)
+    .toBe(kRow.length);
+  expect(await blocksAt(page, [...kRow, kOutside])).toEqual([null, null, null, 1]);
+
+  await hoverCell(page, kOutside);
+  await page.keyboard.press("Delete");
+  await expect.poll(() => placement(page)).toBeNull();
+  expect(await blocksAt(page, [...kRow, kOutside])).toEqual([null, null, null, 1]);
+});
+
 test("a peer sees the cursor and the selection; Escape puts the blocks back", async({ page, peer }) => {
   test.slow();
   await seed(page, [...kRow, kOutside]);
