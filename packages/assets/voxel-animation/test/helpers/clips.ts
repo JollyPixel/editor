@@ -21,7 +21,7 @@ export function clip(
     name: id,
     length: 24000,
     fps: 24,
-    loop: "loop",
+    loop: true,
     tracks: [],
     ...overrides
   };

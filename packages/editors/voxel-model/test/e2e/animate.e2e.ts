@@ -4,6 +4,7 @@ import type {
   Page
 } from "@playwright/test";
 import {
+  checkboxField,
   dialog,
   selectField,
   textField,
@@ -217,6 +218,25 @@ test("keys are selected, dragged along the timeline and deleted", async({ page }
   await expect(keys(page)).toHaveCount(0);
 });
 
+test("right-clicking a key selects it and its menu sets interpolation and deletes", async({ page }) => {
+  await startClip(page);
+  await tool(page, "Key").click();
+  const menu = timeline(page).getByRole("menu", { name: "Timeline" });
+
+  await keys(page).click({ button: "right" });
+  await expect(keys(page)).toHaveAttribute("data-selected", "true");
+  await menu.getByRole("menuitem", { name: "Interpolation" }).hover();
+  await menu.getByRole("menuitem", { name: "Step", exact: true }).click();
+  await expect(keys(page)).toHaveAttribute("data-interpolation", "step");
+
+  await keys(page).click({ button: "right" });
+  await menu.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await expect(keys(page)).toHaveCount(0);
+
+  await page.keyboard.press("Control+z");
+  await expect(keys(page)).toHaveCount(1);
+});
+
 test("picking a key moves the playhead to it and the Key section sets its interpolation", async({ page }) => {
   await startClip(page);
   await scrubTo(page, 0.5);
@@ -240,7 +260,10 @@ test("play in the Timeline header runs the playhead and pause stops it", async({
   await startClip(page);
 
   const transport = playback(page);
-  await expect(transport).toContainText("24 fps · Loop");
+  await expect(transport).toContainText("24 fps");
+  await transport.getByRole("button", { name: "Loop preview", pressed: true }).click();
+  await expect(transport.getByRole("button", { name: "Loop preview", pressed: false })).toBeVisible();
+  await expect(checkboxField(animatePanel(page), "Loop")).not.toBeChecked();
   await expect(transport.locator(".clip")).toHaveText("Clip 1");
   await expect(timeline(page).locator(".ruler .label")).toHaveText("");
   await transport.getByRole("button", { name: "Play" }).click();
@@ -363,7 +386,7 @@ test("a deleted block's track shows unbound in Tracks and the timeline, rebound 
   await expect(track).toContainText("No block");
   await expect(unbound.locator(".key")).toHaveCount(1);
   await unbound.getByRole("button", { name: "Rebind Block" }).click();
-  await page.getByRole("menu", { name: "Blocks" })
+  await page.getByRole("menu", { name: "Timeline" })
     .getByRole("menuitem", { name: "Torso", exact: true })
     .click();
 
@@ -395,6 +418,12 @@ test("a new set gets clips that are edited and deleted", async({ page }) => {
 
   await selectField(panel, "Frame rate").selectOption({ label: "12 fps" });
   await expect(numberField(panel, "Length (frames)")).toHaveValue("24");
+
+  const loop = checkboxField(panel, "Loop");
+  await expect(loop).not.toBeChecked();
+  await loop.check();
+  await page.keyboard.press("Control+z");
+  await expect(loop).not.toBeChecked();
 
   await rowMenu(page, "Walk");
   await chooseMenuItem(page, "Delete");

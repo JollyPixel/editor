@@ -6,7 +6,6 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   ANIMATION_CHANNELS,
   ANIMATION_INTERPOLATIONS,
-  ANIMATION_LOOPS,
   animationClipPatchSchema,
   animationClipSchema,
   animationCommandSchema,
@@ -19,7 +18,6 @@ import type {
 export type Vector3JSON = network.Infer<typeof vector3Schema>;
 export type AnimationChannel = typeof ANIMATION_CHANNELS[number];
 export type AnimationInterpolation = typeof ANIMATION_INTERPOLATIONS[number];
-export type AnimationLoop = typeof ANIMATION_LOOPS[number];
 export type AnimationKeyJSON = network.Infer<typeof animationKeySchema>;
 export type AnimationTrackJSON = network.Infer<typeof animationTrackSchema>;
 export type AnimationClipJSON = network.Infer<typeof animationClipSchema>;

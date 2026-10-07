@@ -58,10 +58,10 @@ describe("sampleClip", () => {
 
 describe("clipTick", () => {
   test("wraps a loop and holds a one-shot at its ends", () => {
-    assert.equal(clipTick({ length: 100, loop: "loop" }, 250), 50);
-    assert.equal(clipTick({ length: 100, loop: "loop" }, -10), 90);
-    assert.equal(clipTick({ length: 100, loop: "once" }, 250), 100);
-    assert.equal(clipTick({ length: 100, loop: "once" }, -10), 0);
+    assert.equal(clipTick({ length: 100, loop: true }, 250), 50);
+    assert.equal(clipTick({ length: 100, loop: true }, -10), 90);
+    assert.equal(clipTick({ length: 100, loop: false }, 250), 100);
+    assert.equal(clipTick({ length: 100, loop: false }, -10), 0);
   });
 });
 

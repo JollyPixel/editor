@@ -38,7 +38,7 @@ describe("AnimationDocument", () => {
       name: "Idle",
       length: TICKS_PER_SECOND,
       fps: 24,
-      loop: "loop",
+      loop: false,
       tracks: []
     });
     assert.deepEqual(changes.map(({ origin }) => origin), ["local"]);

@@ -18,7 +18,6 @@ import type {
   JollyReparentDetail,
   Tree
 } from "@jolly-pixel/ui";
-import type { AnimationLoop } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
@@ -58,16 +57,6 @@ const kFpsOptions: JollyOption<number>[] = CLIP_FRAME_RATES.map((fps) => {
     label: `${fps} fps`
   };
 });
-const kLoopOptions: JollyOption<AnimationLoop>[] = [
-  {
-    value: "loop",
-    label: "Loop"
-  },
-  {
-    value: "once",
-    label: "Once"
-  }
-];
 
 export type AnimatePanelWorkspace = AnimateWorkspace &
   TransformWorkspace &
@@ -315,14 +304,13 @@ export class AnimatePanel extends LitElement {
             this.#controller.changeClip({ fps: event.detail.value });
           }}
         ></jolly-select>
-        <jolly-select
-          label="Playback"
-          .options=${kLoopOptions}
+        <jolly-checkbox
+          label="Loop"
           .value=${clip.loop}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<AnimationLoop>>) => {
+          @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => {
             this.#controller.changeClip({ loop: event.detail.value });
           }}
-        ></jolly-select>
+        ></jolly-checkbox>
       </section>
     `;
   }

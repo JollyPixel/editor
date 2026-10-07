@@ -16,6 +16,7 @@ import type {
   LinkedAnimationSet
 } from "./AnimationLibrary.ts";
 import type {
+  AnimationFocus,
   AnimationFocusStore,
   AnimationPlayback,
   AnimationPlaybackStore,
@@ -60,7 +61,7 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
       document.subscribe("change", this.#resolve),
       document.subscribe("reset", this.#resolve),
       animations.subscribe("change", this.#resolve),
-      animationFocus.subscribe("change", this.#resolve),
+      animationFocus.subscribe("change", this.#onFocus),
       animationPlayback.subscribe("change", this.#onPlayhead),
       tab.subscribe("change", this.#onTab)
     ];
@@ -93,16 +94,20 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
   togglePlay(): void {
     const store = this.#options.animationPlayback;
     const clip = this.#focused?.clip;
-    const { playing, tick } = store.playback;
+    const { playing, tick, loop } = store.playback;
     if (playing) {
       store.pause();
     }
     else if (clip !== undefined) {
-      if (clip.loop === "once" && tick >= clip.length) {
+      if (!loop && tick >= clip.length) {
         store.seek(0);
       }
       store.play();
     }
+  }
+
+  toggleLoop(): void {
+    this.#options.animationPlayback.toggleLoop();
   }
 
   stepFrames(
@@ -135,6 +140,15 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
   readonly #resolve = (): void => {
     this.#focused = this.#lookup();
     this.emit("clip");
+  };
+
+  readonly #onFocus = (
+    focus: AnimationFocus
+  ): void => {
+    if (focus.clipId !== null) {
+      this.seek(0);
+    }
+    this.#resolve();
   };
 
   readonly #onPlayhead = (): void => {

@@ -22,6 +22,17 @@ registerIcon("timeline-key", svg`
   />
 `, { tone: "amber" });
 
+registerIcon("timeline-loop", svg`
+  <path
+    d="M4 12a6 6 0 0 1 6-6h8m0 0-3-3m3 3-3 3M20 12a6 6 0 0 1-6 6H6m0 0 3 3m-3-3 3-3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`);
+
 registerIcon("timeline-pause", svg`
   <rect class="tone-fill" x="6" y="4" width="4" height="16" rx="1" stroke="currentColor" stroke-width="1.5" />
   <rect class="tone-fill" x="14" y="4" width="4" height="16" rx="1" stroke="currentColor" stroke-width="1.5" />

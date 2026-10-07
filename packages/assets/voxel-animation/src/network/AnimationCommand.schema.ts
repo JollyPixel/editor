@@ -9,7 +9,6 @@ import {
 // CONSTANTS
 export const ANIMATION_CHANNELS = ["position", "rotation", "scale"] as const;
 export const ANIMATION_INTERPOLATIONS = ["step", "linear", "smooth"] as const;
-export const ANIMATION_LOOPS = ["loop", "once"] as const;
 
 export const vector3Schema = defineSchema({
   type: "object",
@@ -58,7 +57,7 @@ export const animationClipSchema = defineSchema({
     name: { type: "string" },
     length: { type: "integer", minimum: 1 },
     fps: { type: "integer", minimum: 1 },
-    loop: { enum: ANIMATION_LOOPS },
+    loop: { type: "boolean" },
     tracks: { type: "array", items: animationTrackSchema }
   },
   required: ["id", "name", "length", "fps", "loop", "tracks"]
@@ -70,7 +69,7 @@ export const animationClipPatchSchema = defineSchema({
     name: { type: "string" },
     length: { type: "integer", minimum: 1 },
     fps: { type: "integer", minimum: 1 },
-    loop: { enum: ANIMATION_LOOPS }
+    loop: { type: "boolean" }
   },
   additionalProperties: false
 });
