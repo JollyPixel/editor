@@ -15,10 +15,10 @@ test("an undo rebound from the console still works after a reload", async({ pane
   const prompt = page.getByRole("combobox", { name: "Command" });
   await page.keyboard.press("Control+k");
   await expect(prompt).toBeFocused();
-  await prompt.fill("keybind.undo \"Mod+u\"");
+  await prompt.fill("pixelart.keybinds.undo \"Mod+u\"");
   await prompt.press("Enter");
   await expect(page.getByRole("log", { name: "Console output" }))
-    .toContainText("keybind.undo \"Mod+u\"");
+    .toContainText("pixelart.keybinds.undo \"Mod+u\"");
   await page.keyboard.press("Escape");
 
   await page.reload();

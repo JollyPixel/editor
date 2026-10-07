@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import { label } from "../registry/format.ts";
 import type { RegisteredEntry } from "../registry/types.ts";
 import type { MatchRange } from "./score.ts";
 
@@ -25,9 +24,10 @@ interface Insertion {
 }
 
 export function entrySuggestion(
-  entry: RegisteredEntry
+  entry: RegisteredEntry,
+  address = entry.address
 ): Suggestion {
-  const shown = label(entry);
+  const shown = entry.kind === "command" ? `/${address}` : address;
   const { text, run } = insertion(entry, shown);
 
   return {

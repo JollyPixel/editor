@@ -58,15 +58,18 @@ console while a script is open; Ctrl+K does, and discards the text.
 
 ## Empty prompt
 
-An empty prompt lists what is available:
+An empty prompt lists what is available in the [scope](./grammar.md#scope), named relative to it:
 
 | Section | Lists | Enter or click |
 |---|---|---|
 | Recent | the last three lines run | runs it again |
-| Toggles | `boolean` variables | flips the value |
-| Namespaces | every namespace | lists its members |
-| Commands | root commands | runs it, or inserts it if it needs arguments |
-| Variables | other root variables | inserts it |
+| Toggles | `boolean` variables in the scope and below | flips the value |
+| Namespaces | the namespaces one level below the scope | lists its members |
+| Commands | the scope's commands | runs it, or inserts it if it needs arguments |
+| Variables | the scope's other variables | inserts it |
+
+After `/cd`, the prompt shows the scope before the text, and the combobox is named
+`Command in <scope>`.
 
 ## Styling
 

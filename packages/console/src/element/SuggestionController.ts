@@ -169,7 +169,7 @@ export class SuggestionController implements ReactiveController {
     caret: number
   ): Promise<void> {
     const request = ++this.#request;
-    const { registry } = commands;
+    const registry = commands.scoped;
     const classified = classify(text, registry);
     if (classified.mode === "search") {
       this.#show(classified.query === "" ?
@@ -363,7 +363,7 @@ function entryUsage(
       ];
 
       return {
-        usage: `${entry.name}.`,
+        usage: `${entry.address}.`,
         description: [entry.description, counts.join(", ")]
           .filter((part) => part !== "")
           .join(": ")

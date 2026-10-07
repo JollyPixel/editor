@@ -140,4 +140,23 @@ describe("KeyBindingSettings", () => {
     assert.deepEqual(received[0].chordsOf("undo").map(String), ["Mod+j"]);
     assert.deepEqual(received[1].chordsOf("undo").map(String), ["Mod+z"]);
   });
+
+  test("bind applies the current map and follows changes until released", () => {
+    const { settings } = load(stored({ undo: ["Mod+u"] }));
+    const initial = settings.keyBindings;
+    const target = {
+      keyBindings: new KeyBindingSettings({ storage: new MemoryStorageAdapter() }).keyBindings
+    };
+
+    const release = settings.bind(target);
+    assert.equal(target.keyBindings, initial);
+
+    settings.assign("undo", ["Mod+j"]);
+    assert.equal(target.keyBindings, settings.keyBindings);
+
+    release();
+    settings.reset();
+    assert.notEqual(target.keyBindings, settings.keyBindings);
+    assert.deepEqual(target.keyBindings.chordsOf("undo").map(String), ["Mod+j"]);
+  });
 });

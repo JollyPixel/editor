@@ -7,6 +7,7 @@ import type {
   CommandConsole,
   VariableScript
 } from "#src/index.ts";
+import { withNested } from "../helpers/registry/withNested.ts";
 import { withBrush } from "../helpers/script/withBrush.ts";
 
 function lines(
@@ -59,6 +60,27 @@ describe("/script", () => {
       "echo: /script audio",
       "error: audio has no variables"
     ]);
+  });
+
+  test("in a scope, edits that namespace and the nested ones as full-address sections", async() => {
+    const { commands, bindings } = withNested();
+    const requested: VariableScript[] = [];
+    commands.on("script-requested", (script) => requested.push(script));
+
+    await commands.submit("/cd pixelart");
+    await commands.submit("/script");
+    const [script] = requested;
+    const result = await commands.applyScript(
+      script.parse(edit(script, { "undo = mod+z": "undo = mod+u" }))
+    );
+
+    assert.equal(script.scope, "pixelart");
+    assert.deepEqual(
+      script.text.split("\n").filter((line) => line.startsWith("[")),
+      ["[pixelart.keybinds]", "[pixelart.preview]"]
+    );
+    assert.deepEqual(result, { ok: true, applied: 1 });
+    assert.equal(bindings.get("undo"), "mod+u");
   });
 
   test("completes the namespaces that hold variables", async() => {

@@ -28,3 +28,15 @@ test("the host theme variable restyles the page and the open console", async({ p
   await expect(page.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
   await expect(page.locator("jolly-console")).toHaveAttribute("theme", "light");
 });
+
+test("the texture panel's pixel-art shortcuts are in the console", async({ page }) => {
+  const prompt = page.getByRole("combobox", { name: "Command" });
+  await page.keyboard.press("Control+k");
+  await expect(prompt).toBeFocused();
+
+  await prompt.fill("pixelart.keybinds.undo");
+  await prompt.press("Enter");
+
+  await expect(page.getByRole("log", { name: "Console output" }))
+    .toContainText("Mod+z");
+});

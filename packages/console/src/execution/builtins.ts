@@ -1,6 +1,11 @@
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
 import {
+  ancestorAddresses,
+  isWithin,
+  relativeAddress
+} from "../registry/address.ts";
+import {
   compareText,
   label
 } from "../registry/format.ts";
@@ -12,6 +17,19 @@ export function registerBuiltins(
   commands: CommandConsole,
   reverts: RevertStack
 ): void {
+  commands.registerCommand("cd", {
+    description: "Enter a namespace; .. goes up, no name returns to the root",
+    args: [
+      {
+        name: "namespace",
+        type: "string",
+        autocomplete: () => cdTargets(commands.scoped)
+      }
+    ],
+    execute: ({ namespace = "" }) => {
+      commands.enter(namespace);
+    }
+  });
   commands.registerCommand("clear", {
     description: "Clear the scrollback",
     args: [],
@@ -27,7 +45,7 @@ export function registerBuiltins(
       }
     ],
     execute: ({ name }, ctx) => {
-      const text = helpText(commands.registry, name);
+      const text = helpText(commands.scoped, name);
       if (text === null) {
         ctx.error(`Nothing is registered as "${name}"`);
       }
@@ -52,7 +70,7 @@ export function registerBuiltins(
       {
         name: "namespace",
         type: "string",
-        autocomplete: () => scriptScopes(commands.registry)
+        autocomplete: () => scriptScopes(commands.scoped)
       }
     ],
     execute: ({ namespace }) => {
@@ -61,13 +79,54 @@ export function registerBuiltins(
   });
 }
 
+function cdTargets(
+  registry: ConsoleRegistry
+): string[] {
+  const addresses = Array.from(
+    registry.namespaces(),
+    (namespace) => namespace.address
+  );
+  const targets = namespaceTargets(registry, addresses);
+
+  return registry.scope.address === "" ? targets : ["..", ...targets];
+}
+
 function scriptScopes(
   registry: ConsoleRegistry
 ): string[] {
-  return Array.from(registry.namespaces())
-    .filter((namespace) => !namespace.variables().next().done)
-    .map((namespace) => namespace.name)
-    .sort(compareText);
+  const addresses = new Set<string>();
+  for (const namespace of registry.namespaces()) {
+    if (!namespace.variables().next().done) {
+      addresses.add(namespace.address);
+      for (const ancestor of ancestorAddresses(namespace.address)) {
+        addresses.add(ancestor);
+      }
+    }
+  }
+
+  return namespaceTargets(registry, addresses);
+}
+
+function namespaceTargets(
+  registry: ConsoleRegistry,
+  addresses: Iterable<string>
+): string[] {
+  const scope = registry.scope.address;
+  const relative: string[] = [];
+  const absolute: string[] = [];
+  for (const address of addresses) {
+    if (scope !== "" && isWithin(address, scope)) {
+      relative.push(relativeAddress(address, scope));
+    }
+    absolute.push(address);
+  }
+
+  return [
+    ...new Set([
+      ...relative.sort(compareText),
+      ...absolute.sort(compareText)
+    ])
+  ];
 }
 
 function helpTopics(

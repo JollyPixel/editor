@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { peekValue } from "../execution/variables.ts";
 import { coerce } from "../input/coerce.ts";
+import { isWithin } from "../registry/address.ts";
 import type {
   ConsoleRegistry,
   ConsoleValue,
@@ -47,7 +48,7 @@ export class VariableScript {
     this.#registry = registry;
     this.scope = scope;
     this.text = this.#write(
-      scope === null ? [...registry] : [registry.namespace(scope)]
+      scope === null ? [...registry] : [...subtree(registry, scope)]
     );
   }
 
@@ -124,8 +125,8 @@ export class VariableScript {
         continue;
       }
 
-      if (namespace.name !== "") {
-        block.unshift(`[${namespace.name}]`);
+      if (namespace.address !== "") {
+        block.unshift(`[${namespace.address}]`);
         if (namespace.description !== "") {
           block.unshift(`; ${namespace.description}`);
         }
@@ -153,7 +154,7 @@ export class VariableScript {
 
     const namespace = this.#registry.namespace(name.text);
     if (namespace === undefined) {
-      const names = Array.from(this.#registry.namespaces(), (entry) => entry.name);
+      const names = Array.from(this.#registry.namespaces(), (entry) => entry.address);
       report(
         state,
         number,
@@ -164,7 +165,7 @@ export class VariableScript {
       return null;
     }
 
-    return namespace.name;
+    return namespace.address;
   }
 
   #readEntry(
@@ -249,6 +250,18 @@ function describe(
   return variable.description === "" ?
     `<${type}>` :
     `${variable.description} <${type}>`;
+}
+
+function* subtree(
+  registry: ConsoleRegistry,
+  scope: string
+): IterableIterator<RegisteredNamespace> {
+  for (const namespace of registry.namespaces()) {
+    const { address } = namespace;
+    if (address.toLowerCase() === scope.toLowerCase() || isWithin(address, scope)) {
+      yield namespace;
+    }
+  }
 }
 
 function report(

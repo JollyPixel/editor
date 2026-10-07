@@ -15,7 +15,7 @@ export function helpText(
   name?: string
 ): string | null {
   if (name === undefined || name === "") {
-    return overview(registry);
+    return describeNamespace(registry, registry.scope);
   }
 
   if (name.startsWith("/")) {
@@ -24,11 +24,9 @@ export function helpText(
     return command === undefined ? null : describeCommand(command);
   }
 
-  if (!name.includes(".")) {
-    const namespace = registry.namespace(name);
-    if (namespace !== undefined) {
-      return describeNamespace(namespace);
-    }
+  const namespace = registry.namespace(name);
+  if (namespace !== undefined) {
+    return describeNamespace(registry, namespace);
   }
 
   const command = registry.resolveCommand(name);
@@ -42,33 +40,29 @@ export function helpText(
     table([[variableSignature(variable), variable.description]]);
 }
 
-function overview(
-  registry: ConsoleRegistry
-): string {
-  const namespaces = [...registry.namespaces()]
-    .sort(byName)
-    .map((namespace) => [namespace.name, namespace.description]);
-
-  return [
-    section("Namespaces", namespaces),
-    namespaceMembers(registry.root)
-  ].filter((part) => part !== "").join("\n");
-}
-
 function describeNamespace(
+  registry: ConsoleRegistry,
   namespace: RegisteredNamespace
 ): string {
+  const members = namespaceMembers(registry, namespace);
+  if (namespace.address === "") {
+    return members;
+  }
+
   const heading = namespace.description === "" ?
-    namespace.name :
-    `${namespace.name}: ${namespace.description}`;
-  const members = namespaceMembers(namespace);
+    namespace.address :
+    `${namespace.address}: ${namespace.description}`;
 
   return members === "" ? heading : `${heading}\n${members}`;
 }
 
 function namespaceMembers(
+  registry: ConsoleRegistry,
   namespace: RegisteredNamespace
 ): string {
+  const namespaces = [...registry.children(namespace)]
+    .sort(byName)
+    .map((child) => [child.address, child.description]);
   const commands = [...namespace.commands()]
     .sort(byName)
     .map((command) => [signature(command), command.description]);
@@ -77,6 +71,7 @@ function namespaceMembers(
     .map((variable) => [variableSignature(variable), variable.description]);
 
   return [
+    section("Namespaces", namespaces),
     section("Commands", commands),
     section("Variables", variables)
   ].filter((part) => part !== "").join("\n");

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CommandConsole } from "#src/index.ts";
+import { withNested } from "../helpers/registry/withNested.ts";
 
 function createConsole(): CommandConsole {
   const commands = new CommandConsole();
@@ -93,5 +94,44 @@ describe("Registry", () => {
     assert.equal(registry.namespace("brush")?.description, "Voxel brush");
     assert.equal(registry.resolveCommand("brush.grow")?.description, "Grow the brush");
     assert.equal(registry.resolveVariable("brush.size")?.description, "Brush size");
+  });
+});
+
+describe("nested namespaces", () => {
+  test("a nested namespace makes its parent exist and resolves addresses at the last dot", () => {
+    const { registry } = withNested().commands;
+    const pixelart = registry.namespace("pixelart");
+    assert.ok(pixelart);
+
+    assert.deepEqual([pixelart.name, pixelart.description, pixelart.implicit], ["pixelart", "", true]);
+    assert.deepEqual(
+      [...registry.children(registry.root)].map((namespace) => namespace.address),
+      ["pixelart", "brush"]
+    );
+    assert.deepEqual(
+      [...registry.children(pixelart)].map((namespace) => namespace.name),
+      ["keybinds", "preview"]
+    );
+    assert.equal(registry.resolveVariable("pixelart.keybinds.undo")?.name, "undo");
+    assert.equal(registry.resolveCommand("pixelart.keybinds.reset")?.namespace.address, "pixelart.keybinds");
+    assert.equal(registry.resolveVariable("pixelart.undo"), undefined);
+  });
+
+  test("a parent registered on its own keeps its children, and leaves with the last of them", () => {
+    const commands = new CommandConsole();
+    const child = commands.registerNamespace("a.b");
+    const parent = commands.registerNamespace("a", { description: "Parent" });
+
+    assert.equal(commands.registry.namespace("a")?.description, "Parent");
+    assert.equal(commands.registry.namespace("a")?.implicit, false);
+
+    parent.unregister();
+
+    assert.equal(commands.registry.namespace("a")?.implicit, true);
+    assert.ok(commands.registry.namespace("a.b"));
+
+    child.unregister();
+
+    assert.equal(commands.registry.namespace("a"), undefined);
   });
 });

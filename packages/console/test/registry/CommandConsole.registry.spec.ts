@@ -40,7 +40,7 @@ function numberVariable(
 
 describe("identifiers", () => {
   const valid = ["size", "_private", "auto-fetch", "flipY", "a1_b-2", "Z"];
-  const invalid = ["", "1size", "-dash", "brush.size", "with space", "size!", "été"];
+  const invalid = ["", "1size", "-dash", "with space", "size!", "été"];
 
   for (const name of valid) {
     test(`accepts "${name}"`, () => {
@@ -67,6 +67,19 @@ describe("identifiers", () => {
       );
     });
   }
+
+  test("a namespace path joins identifiers with dots, a member name cannot", () => {
+    const commands = new CommandConsole();
+
+    commands.registerNamespace("pixelart.keybinds");
+
+    assert.equal(commands.registry.namespace("pixelart.keybinds")?.name, "keybinds");
+    assert.throws(() => commands.registerVariable("brush.size", numberVariable()), InvalidIdentifierError);
+    assert.throws(() => commands.registerCommand("brush.grow", command()), InvalidIdentifierError);
+    for (const path of ["pixelart.", ".keybinds", "pixelart..keybinds", "pixelart.1keys"]) {
+      assert.throws(() => commands.registerNamespace(path), InvalidIdentifierError);
+    }
+  });
 });
 
 describe("argument rules", () => {

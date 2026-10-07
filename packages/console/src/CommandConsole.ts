@@ -26,17 +26,21 @@ import {
   type VariableRestore
 } from "./execution/variables.ts";
 import { quote } from "./input/tokenize.ts";
+import { parentAddress } from "./registry/address.ts";
 import { Registry } from "./registry/Registry.ts";
+import { ScopedRegistry } from "./registry/ScopedRegistry.ts";
 import type {
   ArgDef,
   CommandDef,
   ConsoleNamespace,
   ConsoleRegistry,
   NamespaceMeta,
+  RegisteredNamespace,
   RegistrationHandle,
   VariableDef
 } from "./registry/types.ts";
 import {
+  closest,
   closestAddress,
   didYouMean
 } from "./search/typo.ts";
@@ -52,6 +56,7 @@ export type CommandConsoleEvents = {
   "open-requested": () => void;
   "close-requested": () => void;
   opened: () => void;
+  "scope-changed": () => void;
   "script-requested": (script: VariableScript) => void;
 };
 
@@ -75,6 +80,7 @@ export class CommandConsole extends Emitter<
     () => this.emit("registry-changed")
   );
   #reverts = new RevertStack(this.#registry);
+  #scope = "";
 
   constructor() {
     super();
@@ -84,6 +90,23 @@ export class CommandConsole extends Emitter<
 
   get registry(): ConsoleRegistry {
     return this.#registry;
+  }
+
+  get scope(): RegisteredNamespace {
+    let address = this.#scope;
+    while (address !== "") {
+      const entry = this.#registry.namespace(address);
+      if (entry !== undefined) {
+        return entry;
+      }
+      address = parentAddress(address);
+    }
+
+    return this.#registry.root;
+  }
+
+  get scoped(): ConsoleRegistry {
+    return new ScopedRegistry(this.#registry, this.scope);
   }
 
   get scrollback(): readonly ScrollbackEntry[] {
@@ -137,18 +160,29 @@ export class CommandConsole extends Emitter<
     this.emit("scrollback-changed");
   }
 
+  enter(
+    address: string
+  ): RegisteredNamespace {
+    const target = this.#scopeTarget(address.trim());
+    if (target.address !== this.#scope) {
+      this.#scope = target.address;
+      this.emit("scope-changed");
+    }
+
+    return target;
+  }
+
   editScript(
     namespace?: string
   ): VariableScript {
-    let scope: string | null = null;
-    if (namespace !== undefined) {
-      const entry = this.#registry.namespace(namespace);
-      if (entry === undefined) {
-        throw new ConsoleInputError(`Unknown namespace "${namespace}"`);
-      }
-      scope = entry.name;
+    const entry = namespace === undefined ?
+      this.scope :
+      this.scoped.namespace(namespace);
+    if (entry === undefined) {
+      throw new ConsoleInputError(`Unknown namespace "${namespace}"`);
     }
 
+    const scope = entry.address === "" ? null : entry.address;
     const script = new VariableScript(this.#registry, scope);
     if (script.empty) {
       throw new ConsoleInputError(
@@ -222,7 +256,7 @@ export class CommandConsole extends Emitter<
     const echo = this.#append("echo", line);
     const input = classify(
       line,
-      this.#registry
+      this.scoped
     );
 
     try {
@@ -325,6 +359,35 @@ export class CommandConsole extends Emitter<
     if (command.def.closeOnExecute) {
       this.close();
     }
+  }
+
+  #scopeTarget(
+    address: string
+  ): RegisteredNamespace {
+    const root = this.#registry.root;
+    if (address === "") {
+      return root;
+    }
+    if (address === "..") {
+      return this.#registry.namespace(parentAddress(this.scope.address)) ?? root;
+    }
+
+    const entry = this.scoped.namespace(address);
+    if (entry === undefined) {
+      const addresses = Array.from(
+        this.#registry.namespaces(),
+        (namespace) => namespace.address
+      );
+
+      throw new ConsoleInputError(
+        didYouMean(
+          `Unknown namespace "${address}"`,
+          closest(address, addresses)
+        )
+      );
+    }
+
+    return entry;
   }
 
   async #writeChange(

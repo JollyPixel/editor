@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { CommandConsole } from "#src/index.ts";
 import { complete } from "#src/search/complete.ts";
+import { withNested } from "../helpers/registry/withNested.ts";
 
 function createConsole(): CommandConsole {
   const commands = new CommandConsole();
@@ -49,7 +50,10 @@ async function lines(
 
 describe("complete", () => {
   test("after / lists root and namespaced commands", async() => {
-    assert.deepEqual(await lines("/"), ["/clear", "/git.checkout", "/help", "/revert", "/say", "/script"]);
+    assert.deepEqual(
+      await lines("/"),
+      ["/cd", "/clear", "/git.checkout", "/help", "/revert", "/say", "/script"]
+    );
     assert.deepEqual(await lines("/g"), ["/git.checkout"]);
   });
 
@@ -172,5 +176,27 @@ describe("complete", () => {
     const list = await complete("/open ", 6, commands.registry);
 
     assert.deepEqual(list.items, []);
+  });
+});
+
+describe("complete in nested namespaces", () => {
+  async function scopedLines(
+    scope: string,
+    input: string
+  ): Promise<string[]> {
+    const { commands } = withNested();
+    commands.enter(scope);
+    const list = await complete(input, input.length, commands.scoped);
+
+    return list.items.map((item) => item.text);
+  }
+
+  test("after /namespace. lists the commands of every namespace nested in it", async() => {
+    assert.deepEqual(await scopedLines("", "/pixelart."), ["/pixelart.keybinds.reset"]);
+  });
+
+  test("in a scope, lists its commands relative to it before the root ones", async() => {
+    assert.deepEqual(await scopedLines("pixelart.keybinds", "/re"), ["/reset", "/revert"]);
+    assert.deepEqual(await scopedLines("pixelart", "/keybinds."), ["/keybinds.reset"]);
   });
 });

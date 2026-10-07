@@ -36,7 +36,7 @@ test("Ctrl+A selects the full texture only when the canvas owns the key", async(
   await page.keyboard.press("Control+k");
   const prompt = page.getByRole("combobox", { name: "Command" });
   await expect(prompt).toBeFocused();
-  await prompt.fill("keybind.selectAll");
+  await prompt.fill("pixelart.keybinds.selectAll");
   await hoverTexturePixel(panel, { x: 42, y: 42 });
   await page.keyboard.press("Control+a");
   await expect.poll(() => prompt.evaluate(
@@ -44,6 +44,6 @@ test("Ctrl+A selects the full texture only when the canvas owns the key", async(
       element.selectionStart,
       element.selectionEnd
     ]
-  )).toEqual([0, "keybind.selectAll".length]);
+  )).toEqual([0, "pixelart.keybinds.selectAll".length]);
   await expect.poll(selection).toBeNull();
 });

@@ -95,6 +95,7 @@ export class TextureEditor extends WorkspaceElement {
   #tabs = new Map<string, BlocksetTab>();
   #placeholders = new Set<string>();
   #panel: PixelDrawPanel | null = null;
+  #releaseKeyBindings: (() => void) | null = null;
   #reconciling: Promise<void> = Promise.resolve();
   #followedBlocksetId: string | null = null;
   #adding = false;
@@ -248,6 +249,8 @@ export class TextureEditor extends WorkspaceElement {
     panel.addEventListener("texture-change", this.#onTextureChange);
     panel.addEventListener("texture-create-request", this.#addBlockset);
     panel.addEventListener("texture-edit-request", this.#onEditRequest);
+    this.#releaseKeyBindings =
+      this.workspace?.state.pixelArtKeyBindings.bind(panel) ?? null;
     await panel.configure(kCanvasOptions);
   }
 
@@ -256,6 +259,8 @@ export class TextureEditor extends WorkspaceElement {
     panel?.removeEventListener("texture-change", this.#onTextureChange);
     panel?.removeEventListener("texture-create-request", this.#addBlockset);
     panel?.removeEventListener("texture-edit-request", this.#onEditRequest);
+    this.#releaseKeyBindings?.();
+    this.#releaseKeyBindings = null;
     this.#panel = null;
   }
 

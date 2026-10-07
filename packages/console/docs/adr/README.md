@@ -15,3 +15,5 @@ API is described in the [docs](../CommandConsole.md).
 | [0008](./0008-mirrored-variables-read-a-cached-value.md) | Mirrored variables read a cached value |
 | [0009](./0009-revert-is-opt-in-per-command.md) | Revert is opt-in per command, and stale changes are skipped |
 | [0010](./0010-scripts-edit-variables-as-ini-all-or-nothing.md) | Scripts edit variables as INI text, all or nothing |
+| [0011](./0011-namespaces-nest-by-address.md) | Namespaces nest by dotted address, and parents are implicit |
+| [0012](./0012-the-scope-is-a-prompt-view.md) | The scope is a view for the prompt, not registry state |

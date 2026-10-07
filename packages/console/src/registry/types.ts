@@ -176,6 +176,7 @@ export interface RegisteredNamespace {
   readonly name: string;
   readonly address: string;
   readonly description: string;
+  readonly implicit: boolean;
   command(
     name: string
   ): RegisteredCommand | undefined;
@@ -198,10 +199,14 @@ export type RegisteredEntry =
 
 export interface ConsoleRegistry {
   readonly root: RegisteredNamespace;
+  readonly scope: RegisteredNamespace;
   namespace(
-    name: string
+    address: string
   ): RegisteredNamespace | undefined;
   namespaces(): IterableIterator<RegisteredNamespace>;
+  children(
+    namespace: RegisteredNamespace
+  ): IterableIterator<RegisteredNamespace>;
   [Symbol.iterator](): IterableIterator<RegisteredNamespace>;
   resolveCommand(
     address: string

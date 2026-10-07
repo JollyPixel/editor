@@ -37,6 +37,7 @@ export {
 } from "./color/ColorSwatch.ts";
 export type { IconName } from "./shared/icons.ts";
 export * from "./keybindings/index.ts";
+export * from "./console/index.ts";
 export {
   CANVAS_HOVER_CHANGE_EVENT,
   type CanvasHoverChangeDetail

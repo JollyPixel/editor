@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { lastSegment } from "./address.ts";
 import type {
   ArgDef,
   CommandDef,
@@ -21,8 +22,9 @@ interface CommandSlot {
 }
 
 export interface NamespaceEntryOptions {
-  name: string;
+  address: string;
   description?: string;
+  implicit?: boolean;
   onChange: () => void;
 }
 
@@ -31,6 +33,7 @@ export class NamespaceEntry implements RegisteredNamespace {
   readonly name: string;
   readonly address: string;
   readonly description: string;
+  readonly implicit: boolean;
 
   #prefix: string;
   #onChange: () => void;
@@ -42,10 +45,12 @@ export class NamespaceEntry implements RegisteredNamespace {
   constructor(
     options: NamespaceEntryOptions
   ) {
-    this.name = options.name;
-    this.address = options.name;
+    const { address } = options;
+    this.name = lastSegment(address);
+    this.address = address;
     this.description = options.description ?? "";
-    this.#prefix = options.name === "" ? "" : `${options.name}.`;
+    this.implicit = options.implicit ?? false;
+    this.#prefix = address === "" ? "" : `${address}.`;
     this.#onChange = options.onChange;
   }
 

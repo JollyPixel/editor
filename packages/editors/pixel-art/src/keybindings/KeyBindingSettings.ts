@@ -33,6 +33,10 @@ export type KeyBindingSettingsEvents = {
   change: (keyBindings: PixelArtKeyBindings) => void;
 };
 
+export interface KeyBindingTarget {
+  keyBindings: PixelArtKeyBindings;
+}
+
 export class KeyBindingSettings extends Emitter<KeyBindingSettingsEvents> {
   readonly #storage: StorageAdapter;
   readonly #storageKey: string;
@@ -57,6 +61,16 @@ export class KeyBindingSettings extends Emitter<KeyBindingSettingsEvents> {
 
   get keyBindings(): PixelArtKeyBindings {
     return this.#keyBindings;
+  }
+
+  bind(
+    target: KeyBindingTarget
+  ): () => void {
+    target.keyBindings = this.#keyBindings;
+
+    return this.subscribe("change", (keyBindings) => {
+      target.keyBindings = keyBindings;
+    });
   }
 
   bindingsOf(

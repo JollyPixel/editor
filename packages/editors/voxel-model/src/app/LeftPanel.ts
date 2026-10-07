@@ -17,7 +17,10 @@ import type {
   PixelDocument,
   UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
-import { type PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+import type {
+  KeyBindingSettings,
+  PixelDrawPanel
+} from "@jolly-pixel/editor.pixel-art";
 import {
   PixelCollaboration,
   type PixelArtRoom
@@ -62,6 +65,9 @@ export class LeftPanel extends LitElement {
   @property({ attribute: false })
   declare workspace: LeftPanelWorkspace | null;
 
+  @property({ attribute: false })
+  declare keyBindingSettings: KeyBindingSettings | null;
+
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
 
@@ -72,6 +78,7 @@ export class LeftPanel extends LitElement {
   #collaboration: PixelCollaboration | null = null;
   #peerRegionSelections: PeerRegionSelections | null = null;
   #initializing = false;
+  #releaseKeyBindings: (() => void) | null = null;
 
   static override styles = css`
     :host {
@@ -93,6 +100,7 @@ export class LeftPanel extends LitElement {
     this.mode = "build";
     this._canvas = null;
     this.workspace = null;
+    this.keyBindingSettings = null;
   }
 
   setTexture(
@@ -155,6 +163,11 @@ export class LeftPanel extends LitElement {
     if (changedProperties.has("workspace")) {
       this.#syncPeerRegionSelections();
     }
+    if (changedProperties.has("keyBindingSettings")) {
+      this.#releaseKeyBindings?.();
+      this.#releaseKeyBindings =
+        this.keyBindingSettings?.bind(this.panelElement) ?? null;
+    }
   }
 
   #syncPeerRegionSelections(): void {
@@ -180,6 +193,8 @@ export class LeftPanel extends LitElement {
       this.#collaboration = null;
       this.#peerRegionSelections?.dispose();
       this.#peerRegionSelections = null;
+      this.#releaseKeyBindings?.();
+      this.#releaseKeyBindings = null;
     });
   }
 

@@ -246,15 +246,21 @@ export class ConsoleElement extends LitElement {
     const expanded = suggestions.items.length > 0;
     const ghost = this.#ghostText();
     const usage = suggestions.usage;
+    const scope = this.console?.scope.address ?? "";
 
     return html`
       <div class="prompt">
         <jolly-icon name="search" aria-hidden="true"></jolly-icon>
+        <span
+          class="scope"
+          title=${scope}
+          ?hidden=${scope === ""}
+        >${scope}</span>
         <div class="field">
           <input
             type="text"
             role="combobox"
-            aria-label="Command"
+            aria-label=${scope === "" ? "Command" : `Command in ${scope}`}
             aria-autocomplete="both"
             aria-controls="suggestions"
             aria-expanded=${expanded ? "true" : "false"}
@@ -308,6 +314,12 @@ export class ConsoleElement extends LitElement {
         }
       }),
       commands.subscribe("scrollback-changed", () => this.requestUpdate()),
+      commands.subscribe("scope-changed", () => {
+        this.requestUpdate();
+        if (this.open) {
+          this.#refresh();
+        }
+      }),
       commands.subscribe("open-requested", () => void this.show()),
       commands.subscribe("close-requested", () => this.hide()),
       commands.subscribe("script-requested", (script) => void this.#editScript(script))

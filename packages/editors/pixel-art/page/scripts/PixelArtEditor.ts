@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  registerConsoleFeatures,
-  type RegistrationHandle
-} from "@jolly-pixel/console";
+import type { RegistrationHandle } from "@jolly-pixel/console";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art/client";
 import type {
   EditorContext,
@@ -15,8 +12,8 @@ import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  keybindConsole,
   KeyBindingSettings,
+  pixelArtConsole,
   type PixelDrawPanel
 } from "../../src/index.ts";
 import { PanelScope } from "../../src/panel/PanelScope.ts";
@@ -102,7 +99,7 @@ export class PixelArtEditor {
       storage: new LocalStorageAdapter(),
       onDropped: (message) => console.warn(message)
     });
-    panel.keyBindings = keyBindingSettings.keyBindings;
+    const keybindings = keyBindingSettings.bind(panel);
 
     const target = session.targetLease(TEXTURE_DOCUMENT_KIND);
     const { record } = target;
@@ -147,17 +144,8 @@ export class PixelArtEditor {
       target,
       tabs,
       preferences,
-      keybindings: keyBindingSettings.subscribe(
-        "change",
-        (keyBindings) => {
-          panel.keyBindings = keyBindings;
-        }
-      ),
-      consoleFeatures: registerConsoleFeatures(
-        commands,
-        [keybindConsole],
-        { keyBindingSettings }
-      )
+      keybindings,
+      consoleFeatures: pixelArtConsole(commands, { keyBindingSettings })
     });
   }
 

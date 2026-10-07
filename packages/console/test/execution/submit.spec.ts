@@ -449,6 +449,7 @@ describe("built-ins", () => {
       "Namespaces",
       "  brush",
       "Commands",
+      "  /cd [namespace]         Enter a namespace; .. goes up, no name returns to the root",
       "  /clear                  Clear the scrollback",
       "  /help [name]            List namespaces and commands, or describe one",
       "  /revert [count:number]  Undo the last changes made from the console",

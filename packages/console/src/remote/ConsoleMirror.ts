@@ -168,7 +168,8 @@ export class ConsoleMirror {
   #register(
     namespace: RemoteNamespace
   ): void {
-    if (this.#commands.registry.namespace(namespace.name) === undefined) {
+    const owned = this.#commands.registry.namespace(namespace.name);
+    if (owned === undefined || owned.implicit) {
       this.#registered.set(namespace.key, {
         shape: namespace.shape,
         handle: namespace.register(this.#commands, this.#calls)

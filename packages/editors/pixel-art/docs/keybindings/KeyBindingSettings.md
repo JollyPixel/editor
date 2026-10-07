@@ -1,14 +1,13 @@
 # KeyBindingSettings
 
 Per-browser keyboard shortcuts for a `PixelDrawPanel`. They are stored as the difference from
-`PIXEL_ART_KEY_BINDINGS` and can be edited from the console's `keybind` namespace.
+`PIXEL_ART_KEY_BINDINGS` and can be edited from the console's `pixelart.keybinds` namespace.
 
 ```ts
-import { registerConsoleFeatures } from "@jolly-pixel/console";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
 import {
-  keybindConsole,
-  KeyBindingSettings
+  KeyBindingSettings,
+  pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
 
 const keyBindingSettings = new KeyBindingSettings({
@@ -16,22 +15,17 @@ const keyBindingSettings = new KeyBindingSettings({
   onDropped: (message) => console.warn(message)
 });
 
-panel.keyBindings = keyBindingSettings.keyBindings;
-const unsubscribe = keyBindingSettings.subscribe("change", (keyBindings) => {
-  panel.keyBindings = keyBindings;
-});
-const features = registerConsoleFeatures(
-  commands,
-  [keybindConsole],
-  { keyBindingSettings }
-);
+const release = keyBindingSettings.bind(panel);
+const features = pixelArtConsole(commands, { keyBindingSettings });
 ```
 
-Keybinds are per browser. They are not part of the asset and are not sent to peers.
+Keybinds are per browser. They are not part of the asset and are not sent to peers. Every editor
+that embeds a `PixelDrawPanel` creates its own `KeyBindingSettings` on the same storage key, so a
+shortcut changed in one editor applies in the others on the same origin after a reload.
 
 The default `selectAll` action is `Mod+a` (Ctrl+A on Windows/Linux and Cmd+A on macOS).
 While hovering the canvas in Select mode, it selects the full texture. Editable fields
-keep their native Select All behavior. Rebind it with `keybind.selectAll`.
+keep their native Select All behavior. Rebind it with `pixelart.keybinds.selectAll`.
 
 ## Settings
 
@@ -43,6 +37,7 @@ new KeyBindingSettings(options: {
 });
 
 get keyBindings(): KeyBindingMap<PixelArtAction>;
+bind(target: { keyBindings: KeyBindingMap<PixelArtAction>; }): () => void;
 bindingsOf(action: PixelArtAction): KeyChordString[];
 assign(action: PixelArtAction, bindings: readonly string[]): void;
 reset(action?: PixelArtAction): void;
@@ -60,7 +55,8 @@ a JSON object drops every entry.
 
 `keyBindings` is the [KeyBindingMap](../../../../controls/docs/key-binding-map.md) with the
 stored overrides applied, ready for `panel.keyBindings`. Its `overrides` is what gets stored.
-`bindingsOf()` lists the chords of one action after overrides.
+`bindingsOf()` lists the chords of one action after overrides. `bind(target)` sets
+`target.keyBindings` now and after every change, until the returned function is called.
 
 `assign()` builds the new map first. It throws `InvalidKeyChordError` for a malformed chord, or
 `KeyChordConflictError` for a chord already bound to another action, both from
@@ -70,18 +66,23 @@ action. Both methods save the new difference and emit `change` with the new map.
 
 ## Console
 
-`keybindConsole(commands, { keyBindingSettings })` is a
-[console feature](../../../../console/docs/features.md). It registers the `keybind` namespace:
+`pixelArtConsole(commands, { keyBindingSettings })` is a
+[console feature](../../../../console/docs/features.md) that registers every pixel-art namespace
+under `pixelart`, and returns one handle for all of them. Editors that embed the panel call it
+next to their own features. It registers `pixelart.keybinds` through `keybindConsole`:
 
 | Input | Effect |
 |---|---|
-| `keybind.undo` | prints `Mod+z` |
-| `keybind.undo "Mod+u"` | rebinds undo |
-| `keybind.redo "Mod+y, Mod+Shift+z"` | a comma-separated list gives several bindings |
-| `keybind.copy "Mod+z"` | prints the `KeyChordConflictError` message; nothing changes |
-| `keybind.undo "mod+u"` | prints the `InvalidKeyChordError` message; nothing changes |
-| `/keybind.reset undo` | restores the default of undo |
-| `/keybind.reset` | restores every default |
+| `pixelart.keybinds.undo` | prints `Mod+z` |
+| `pixelart.keybinds.undo "Mod+u"` | rebinds undo |
+| `pixelart.keybinds.redo "Mod+y, Mod+Shift+z"` | a comma-separated list gives several bindings |
+| `pixelart.keybinds.copy "Mod+z"` | prints the `KeyChordConflictError` message; nothing changes |
+| `pixelart.keybinds.undo "mod+u"` | prints the `InvalidKeyChordError` message; nothing changes |
+| `/pixelart.keybinds.reset undo` | restores the default of undo |
+| `/pixelart.keybinds.reset` | restores every default |
+
+After `/cd pixelart.keybinds`, the same lines work without the prefix: `undo "Mod+u"`,
+`/reset undo`.
 
 There is one `string` variable per action of `keyBindings.actions`. `parseBindingList(value)` does
 the splitting: it splits on commas, trims each item and skips empty ones.

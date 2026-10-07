@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { CommandConsole } from "#src/index.ts";
 import { browse } from "#src/search/browse.ts";
+import { withNested } from "../helpers/registry/withNested.ts";
 
 function createConsole(): CommandConsole {
   const commands = new CommandConsole();
@@ -66,6 +67,7 @@ describe("browse", () => {
       ["brush", "brush.", false]
     ]);
     assert.deepEqual(commands.items.map((item) => [item.label, item.text, item.run]), [
+      ["/cd", "/cd", true],
       ["/clear", "/clear", true],
       ["/help", "/help", true],
       ["/revert", "/revert", true],
@@ -108,5 +110,22 @@ describe("browse", () => {
       ["brush.size 2", true],
       ["grid true", true]
     ]);
+  });
+});
+
+describe("browse in a scope", () => {
+  test("lists the scope's namespaces, members and toggles relative to it", () => {
+    const { commands } = withNested();
+    commands.enter("pixelart");
+
+    const sections = browse(commands.scoped, []);
+
+    assert.deepEqual(
+      sections.map((section) => [section.kind, section.items.map((item) => item.text)]),
+      [
+        ["toggles", ["preview.rotate true"]],
+        ["namespaces", ["keybinds.", "preview."]]
+      ]
+    );
   });
 });
