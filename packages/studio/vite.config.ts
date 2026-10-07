@@ -6,7 +6,8 @@ import path from "node:path";
 import {
   defineConfig,
   searchForWorkspaceRoot,
-  type Plugin
+  type Plugin,
+  type UserConfig
 } from "vite";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
@@ -52,7 +53,7 @@ async function assetWorkspacePlugin(
   });
 }
 
-export default defineConfig(async({ mode }) => {
+export default defineConfig(async({ mode }): Promise<UserConfig> => {
   const e2e = mode === "e2e";
   const inMemory = e2e || mode === "static";
   const project = await StudioProject.open(
