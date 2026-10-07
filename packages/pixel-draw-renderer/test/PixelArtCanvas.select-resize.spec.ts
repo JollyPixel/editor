@@ -134,10 +134,10 @@ describe("PixelArtCanvas selection resize", () => {
     manager.brush.primary.set("#00FF00");
     manager.commitPixels([{ x: 5, y: 5 }]);
     const before = manager.texture;
-    manager.document.history.clear();
+    const depth = manager.undoDepth();
     stroke(canvas, [[104, 104], [108, 108]]);
     assert.deepEqual(manager.texture, before);
-    assert.equal(manager.canUndo(), false);
+    assert.equal(manager.undoDepth(), depth);
     await manager.copySelection();
     manager.tools.select.delete();
     assert.deepEqual(readPixel(manager.texture, { x: 5, y: 5 }, 8),
@@ -177,7 +177,6 @@ describe("PixelArtCanvas selection resize", () => {
   test("shrinking excludes pixels from a subsequent move and its undo", () => {
     const { manager, canvas, overlay } = selectedCanvas();
     manager.commitPixels([{ x: 2, y: 2 }, { x: 4, y: 4 }]);
-    manager.document.history.clear();
     stroke(canvas, [[104, 104], [100, 100]]);
     assertOutline(overlay, { x: 2, y: 2, width: 2, height: 2 });
     stroke(canvas, [[96, 96], [108, 96]]);
@@ -210,13 +209,13 @@ describe("PixelArtCanvas selection resize", () => {
     stroke(canvas, [[98, 98], [114, 98]]);
     const rect = { x: 6, y: 2, width: 3, height: 3 };
     assertOutline(overlay, rect);
-    manager.document.history.clear();
+    const depth = manager.undoDepth();
     stroke(canvas, [[120, 104], [124, 108], [120, 104]]);
     assertOutline(overlay, rect);
     stroke(canvas, [[108, 92], [120, 96]]);
     assertOutline(overlay, rect);
     assert.equal(manager.tools.select.hasSelection, true);
-    assert.equal(manager.canUndo(), false);
+    assert.equal(manager.undoDepth(), depth);
     manager.destroy();
   });
 

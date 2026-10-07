@@ -322,6 +322,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -350,6 +353,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -391,6 +397,9 @@ importers:
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
 
   packages/assets/voxel-model:
     dependencies:
@@ -406,6 +415,9 @@ importers:
       '@jolly-pixel/asset.voxel-animation':
         specifier: workspace:*
         version: link:../voxel-animation
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -627,6 +639,9 @@ importers:
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -697,6 +712,9 @@ importers:
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -773,6 +791,12 @@ importers:
         specifier: workspace:*
         version: link:../bench
 
+  packages/history:
+    dependencies:
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+
   packages/image:
     devDependencies:
       '@jolly-pixel/bench':
@@ -794,6 +818,9 @@ importers:
 
   packages/network:
     dependencies:
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../history
       '@loglayer/transport-pino':
         specifier: 3.3.0
         version: 3.3.0(pino@10.3.1)
@@ -843,6 +870,9 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../color
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../history
       '@jolly-pixel/image':
         specifier: workspace:*
         version: link:../image
@@ -997,6 +1027,9 @@ importers:
 
   packages/voxel-renderer:
     dependencies:
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../history
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0

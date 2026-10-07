@@ -11,12 +11,12 @@ import {
   type KeyCode
 } from "@jolly-pixel/controls";
 import {
-  VoxelHistory,
   VoxelTransform,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { mapHistoryOf } from "../../helpers/mapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
@@ -37,7 +37,7 @@ function setup() {
   })!.id;
   const store = new MapPlacement({
     world,
-    history: new VoxelHistory(world, { enabled: true }),
+    history: mapHistoryOf(world),
     selection: new SelectionStore(),
     mapDocument: mapDocumentOf(world)
   });

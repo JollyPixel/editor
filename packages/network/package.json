@@ -54,6 +54,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@jolly-pixel/history": "workspace:*",
     "@loglayer/transport-pino": "3.3.0",
     "@openally/emitt": "1.1.0",
     "@openally/result": "3.1.0",

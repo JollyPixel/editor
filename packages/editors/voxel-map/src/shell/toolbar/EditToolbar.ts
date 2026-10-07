@@ -10,7 +10,7 @@ import {
   state
 } from "lit/decorators.js";
 import type { KeyChordString } from "@jolly-pixel/controls";
-import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
+import type { HistoryScopeState } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import type {
@@ -50,10 +50,10 @@ export class EditToolbar extends WorkspaceElement {
   declare _selectMode: SelectMode;
 
   #onHistoryChange = (
-    state: VoxelHistoryState
+    state: HistoryScopeState
   ): void => {
-    this._undoDepth = state.undoDepth;
-    this._redoDepth = state.redoDepth;
+    this._undoDepth = state.undoCount;
+    this._redoDepth = state.redoCount;
   };
 
   constructor() {
@@ -70,7 +70,7 @@ export class EditToolbar extends WorkspaceElement {
   ): Iterable<() => void> {
     const { placement } = workspace;
     const { tool, keyboardLayout } = workspace.state;
-    const { history } = workspace.mapDocument;
+    const { history } = workspace;
     const refreshMode = (): void => {
       if (placement.placing) {
         this.mode = "place";
@@ -80,15 +80,13 @@ export class EditToolbar extends WorkspaceElement {
       }
     };
 
-    this._undoDepth = history.undoDepth;
-    this._redoDepth = history.redoDepth;
+    this.#onHistoryChange(history.state);
     this._canPaste = placement.clipboard.content !== null;
     this._selectMode = tool.selectMode;
     refreshMode();
 
-    history.on("change", this.#onHistoryChange);
-
     return [
+      history.subscribe("change", this.#onHistoryChange),
       placement.subscribe("change", refreshMode),
       placement.clipboard.subscribe("change", (content) => {
         this._canPaste = content !== null;
@@ -97,8 +95,7 @@ export class EditToolbar extends WorkspaceElement {
       tool.subscribe("selectMode", (selectMode) => {
         this._selectMode = selectMode;
       }),
-      keyboardLayout.subscribe("change", () => this.requestUpdate()),
-      () => history.off("change", this.#onHistoryChange)
+      keyboardLayout.subscribe("change", () => this.requestUpdate())
     ];
   }
 

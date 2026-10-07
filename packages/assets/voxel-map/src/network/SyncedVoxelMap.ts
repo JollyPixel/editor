@@ -12,7 +12,7 @@ import type { VoxelMapRoom } from "./types.ts";
 
 export type SyncedVoxelMapOptions = Pick<
   VoxelDocumentOptions,
-  "chunkSize" | "layers" | "blocks" | "history" | "logger"
+  "chunkSize" | "layers" | "blocks" | "logger"
 >;
 
 export class SyncedVoxelMap {

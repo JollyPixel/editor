@@ -22,6 +22,12 @@ const kRed = {
   b: 0,
   a: 255
 };
+const kBlue = {
+  r: 0,
+  g: 0,
+  b: 255,
+  a: 255
+};
 const kDrawingCommands: PixelCommand[] = [
   {
     action: "stroke",
@@ -42,7 +48,7 @@ const kDrawingCommands: PixelCommand[] = [
 
 describe("PixelDocument", () => {
   describe("remote commands", () => {
-    test("applies a stroke without echoing a hook or recording history, keeping local history", () => {
+    test("applies a stroke elsewhere without echo or history, keeping local history", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
@@ -58,11 +64,57 @@ describe("PixelDocument", () => {
       assert.deepEqual(pixelAt(doc, 2, 3), [255, 0, 0, 255]);
       assert.equal(events.length, 0);
       assert.equal(changed, 1);
-      assert.equal(doc.history.canUndo, true);
+      assert.equal(doc.canUndo, true);
 
       doc.undo();
-      assert.equal(doc.history.canUndo, false);
+      assert.equal(doc.canUndo, false);
       assert.deepEqual(pixelAt(doc, 2, 3), [255, 0, 0, 255]);
+    });
+
+    test("a peer stroke over a pixel of a settled step refuses it, naming the peer", () => {
+      const doc = createDocument();
+      doc.paintPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }], kRed);
+
+      doc.applyRemoteCommand({
+        action: "stroke",
+        metadata: { color: kBlue, positions: [{ x: 1, y: 0 }] }
+      }, "peer");
+
+      assert.equal(doc.undo(), false);
+      assert.deepEqual(doc.state.refused, [
+        { label: "Paint", refused: { reason: "peer", clientId: "peer" } }
+      ]);
+      assert.deepEqual(pixelAt(doc, 1, 0), [0, 0, 255, 255]);
+    });
+
+    test("a remote global fill refuses only the steps over the pixels it filled", () => {
+      const doc = createDocument();
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 3, y: 3 }], kBlue);
+
+      doc.applyRemoteCommand({
+        action: "global-fill",
+        metadata: { fromColor: kBlue, toColor: kRed }
+      }, "peer");
+
+      assert.equal(doc.state.undoCount, 1);
+      assert.equal(doc.state.refused.length, 1);
+    });
+
+    test("replaying a pending command updates the guards instead of refusing", () => {
+      const doc = createDocument();
+      const changes: string[] = [];
+      doc.on("change", (change) => changes.push(change.origin));
+      doc.paintPixels([{ x: 0, y: 0 }], kRed);
+      doc.paintPixels([{ x: 1, y: 1 }], kBlue);
+
+      doc.replayPendingCommand({
+        action: "stroke",
+        metadata: { color: kBlue, positions: [{ x: 0, y: 0 }] }
+      });
+
+      assert.deepEqual(changes, ["local", "local", "replay"]);
+      assert.equal(doc.state.undoCount, 2);
     });
 
     for (const command of kDrawingCommands) {
@@ -77,7 +129,7 @@ describe("PixelDocument", () => {
       });
     }
 
-    test("a remote resize emits resized then reset, clears history and does not echo", () => {
+    test("a remote resize refuses the steps over pixels and does not echo", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
@@ -92,12 +144,13 @@ describe("PixelDocument", () => {
       });
 
       assert.deepEqual(doc.size(), { x: 8, y: 2 });
-      assert.deepEqual(order, ["resized", "reset"]);
-      assert.equal(doc.history.canUndo, false);
+      assert.deepEqual(order, ["resized"]);
+      assert.equal(doc.canUndo, false);
+      assert.equal(doc.state.refused.length, 1);
       assert.equal(events.length, 0);
     });
 
-    test("remote texture-replaced decodes pixels, clears history, emits replaced then reset, no echo", () => {
+    test("remote texture-replaced decodes pixels, refuses the steps over pixels, no echo", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
@@ -122,8 +175,8 @@ describe("PixelDocument", () => {
 
       assert.deepEqual(pixelAt(doc, 0, 0), [10, 20, 30, 255]);
       assert.deepEqual(pixelAt(doc, 1, 1), [100, 110, 120, 255]);
-      assert.deepEqual(order, ["replaced:2", "reset"]);
-      assert.equal(doc.history.canUndo, false);
+      assert.deepEqual(order, ["replaced:2"]);
+      assert.equal(doc.canUndo, false);
       assert.equal(events.length, 0);
     });
   });

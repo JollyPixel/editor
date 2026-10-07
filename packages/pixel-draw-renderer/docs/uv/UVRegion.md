@@ -151,7 +151,7 @@ Packs the active faces into a net anchored on the current `bounds` top-left. Eac
 
 The packer places the tallest face first, then fills the lowest free spot left of the strip, so a short cell slides in beside a tall neighbour instead of starting a new row. It repeats that over every strip width a shelf packer could need and keeps the net whose bounding box has the smallest perimeter, then the smallest area. Six equal faces give a 2x3 net; a pole's two horizontal side strips end up stacked on top of each other rather than side by side, and a stair's half-height back and top slots pair into full rows.
 
-Unfolding always repacks, whatever state it starts from, so a hand-arranged free layout is discarded. That transition is recorded as a `uv-state` history entry holding the whole previous region, so undo brings the arrangement back. The result is idempotent: unfolding a net returns `this`.
+Unfolding always repacks, whatever state it starts from, so a hand-arranged free layout is discarded. That transition undoes with the whole previous region, so undo brings the arrangement back. The result is idempotent: unfolding a net returns `this`.
 
 Nothing here knows about the canvas. A net larger than the texture keeps going past the edge; [`UVMap.setState()`](./UVMap.md#setstateid-state-face) is what pulls it back inside.
 

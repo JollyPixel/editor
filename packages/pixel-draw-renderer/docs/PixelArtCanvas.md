@@ -46,7 +46,7 @@ readonly viewport: CanvasViewport
 
 ### `document`
 
-The [`PixelDocument`](./PixelDocument.md) behind the canvas: buffer, UV map and history, plus the `changed` / `resized` / `replaced` events forwarded from [`CanvasBuffer`](./buffer/CanvasBuffer.md). Subscribe here — not to `onDrawEnd` — to mirror the texture elsewhere, such as onto a Three.js material:
+The [`PixelDocument`](./PixelDocument.md) behind the canvas: buffer and UV map, plus the `changed` / `resized` / `replaced` events forwarded from [`CanvasBuffer`](./buffer/CanvasBuffer.md). Subscribe here — not to `onDrawEnd` — to mirror the texture elsewhere, such as onto a Three.js material:
 
 ```ts
 canvas.document.on("changed", ({ bounds }) => texture.markDirty(bounds));
@@ -201,7 +201,7 @@ Makes pixels transparent. By default, pixels inside a [UV slot](../GLOSSARY.md#u
 
 Slot membership uses every region, whatever [`UVMap.isVisible()`](./uv/UVMap.md) returns, and only the active slots of each region. A pixel belongs to a slot when its center lies inside the slot geometry, the same rule as `hasTransparency()`.
 
-The clear is one history entry and one `texture-replaced` command. The document emits `replaced`.
+The clear is one history step and one `texture-replaced` command. The document emits `replaced`.
 
 ### `commitPixels()`
 
@@ -279,7 +279,16 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-History must be enabled through [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history). Each method returns whether the requested operation is available or succeeded.
+History must be enabled through [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history). `undo` and `redo` replay the newest step that is not refused in the canvas's scope and return whether one did; `canUndo` and `canRedo` leave refused steps out.
+
+### `history` / `historyScope`
+
+```ts
+get history(): CommandHistory<string> | null
+get historyScope(): string
+```
+
+The history the canvas records into, `null` when disabled, and its scope: `"pixels"` for a standalone history, the owner's scope otherwise.
 
 ### `undoDepth()` / `redoDepth()`
 
@@ -288,9 +297,9 @@ undoDepth(): number
 redoDepth(): number
 ```
 
-The number of edits that can be undone or redone, from `0` up to the history `limit`. Both are `0` when history is disabled.
+The number of steps that can be undone or redone, refused steps left out. Both are `0` when history is disabled.
 
-A remote resize, remote texture replacement or snapshot load clears local history. See [history entries](./history/HistoryStack.md#entries) for what each edit records and how it replays.
+A peer edit, a remote resize or texture replacement, or a snapshot load refuses the steps whose values it changed. See [pixel history](./history/PixelHistory.md).
 
 ## View and canvas elements
 

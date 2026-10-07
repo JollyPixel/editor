@@ -32,7 +32,7 @@ describe("PixelDocument", () => {
       doc.paintPixels([{ x: 1, y: 1 }], kRed);
 
       assert.deepEqual(pixelAt(doc, 1, 1), [255, 0, 0, 255]);
-      assert.equal(doc.history.canUndo, true);
+      assert.equal(doc.canUndo, true);
       assert.equal(events.length, 1);
       assert.equal(events[0].action, "stroke");
       assert.equal(drawEnds, 1);
@@ -45,14 +45,12 @@ describe("PixelDocument", () => {
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
 
-      const entry = doc.undo();
-
-      assert.deepEqual(entry?.undo.map(({ action }) => action), ["stroke"]);
+      assert.equal(doc.undo(), true);
       assert.deepEqual(pixelAt(doc, 0, 0), before);
       assert.equal(events.length, 1);
       assert.equal(events[0].action, "stroke");
 
-      assert.deepEqual(doc.redo()?.redo.map(({ action }) => action), ["stroke"]);
+      assert.equal(doc.redo(), true);
       assert.deepEqual(pixelAt(doc, 0, 0), [255, 0, 0, 255]);
       assert.equal(events.length, 2);
       assert.equal(events[1].action, "stroke");
@@ -90,10 +88,10 @@ describe("PixelDocument", () => {
       assert.deepEqual(emitted.map(({ action }) => action), ["stroke", "stroke"]);
     });
 
-    test("forwards history changes as an event", () => {
+    test("a local edit reaches the history as a step", () => {
       const doc = createDocument();
       const states: boolean[] = [];
-      doc.on("history-changed", (state) => states.push(state.canUndo));
+      doc.history.on("change", (_scope, state) => states.push(state.canUndo));
 
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
 
@@ -102,14 +100,14 @@ describe("PixelDocument", () => {
   });
 
   describe("loadSnapshot", () => {
-    test("replaces pixels and UV regions, clears history, emits reset", () => {
+    test("replaces pixels and UV regions, refuses the steps it changed, emits a load reset", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       const previous = doc.uv.create({ width: 2, height: 2 });
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
       events.length = 0;
-      let resets = 0;
-      doc.on("reset", () => resets++);
+      const resets: string[] = [];
+      doc.on("reset", (cause) => resets.push(cause));
       const snapshotRegion: UVRegionData = {
         state: "stacked",
         id: "a",
@@ -131,9 +129,9 @@ describe("PixelDocument", () => {
         ["a"]
       );
       assert.deepEqual(doc.uv.get("a")?.toJSON(), snapshotRegion);
-      assert.equal(doc.history.canUndo, false);
+      assert.equal(doc.canUndo, false);
       assert.equal(events.length, 0);
-      assert.equal(resets, 1);
+      assert.deepEqual(resets, ["load"]);
     });
   });
 });

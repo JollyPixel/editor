@@ -17,7 +17,7 @@ const kBufferWideActions = new Set<string>([
   "texture-replaced"
 ]);
 
-export type PixelReplayTarget = Pick<PixelDocument, "applyRemoteCommand">;
+export type PixelReplayTarget = Pick<PixelDocument, "replayPendingCommand">;
 
 export function revertsInPlace(
   command: PixelWireCommand
@@ -29,7 +29,9 @@ export function replayPixelCommand(
   target: PixelReplayTarget,
   command: PixelWireCommand
 ): boolean {
-  target.applyRemoteCommand(unpackPixelCommand(command));
+  target.replayPendingCommand(
+    unpackPixelCommand(command)
+  );
 
   return true;
 }

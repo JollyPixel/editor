@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
 import type { Emitter } from "@openally/emitt";
+import type {
+  CommandHistory,
+  HistoryScopeState
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
@@ -13,8 +17,11 @@ import {
 } from "./tools/Tools.ts";
 import type { SelectEngineEvent } from "./tools/SelectEngine.events.ts";
 import type { SelectionPresence } from "./selection/SelectionPresence.ts";
-import type { HistoryState } from "./history/History.ts";
-import type { SelectionFootprint } from "./history/HistoryEntry.ts";
+import {
+  CanvasHistory,
+  type PixelArtCanvasHistory
+} from "./history/CanvasHistory.ts";
+import type { SelectionFootprint } from "./selection/SelectionFootprint.ts";
 import {
   InteractionRouter,
   type ExternalCursorMoveListener
@@ -66,7 +73,6 @@ import type {
 
 export type { Mode };
 export type { TextureView };
-export type { HistoryState };
 
 export interface ClearTextureOptions {
   includeUV?: boolean;
@@ -101,11 +107,8 @@ export interface PixelArtCanvasOptions {
     resizable?: boolean;
   };
   onDrawEnd?: () => void;
-  history?: {
-    enabled?: boolean;
-    limit?: number;
-  };
-  onHistoryChange?: (state: HistoryState) => void;
+  history?: PixelArtCanvasHistory;
+  onHistoryChange?: (state: HistoryScopeState) => void;
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
@@ -117,13 +120,12 @@ export class PixelArtCanvas {
   #input: PointerController;
 
   #onDrawEnd?: () => void;
-  #onHistoryChange?: (state: HistoryState) => void;
+  #history: CanvasHistory;
   #onStrokeProgress?: (pixels: PeerStrokePixel[]) => void;
   #router: InteractionRouter;
   #tools: Tools;
   #clipboard: ClipboardController;
   #onDocumentDrawEnd = () => this.#onDrawEnd?.();
-  #onDocumentHistoryChanged = (state: HistoryState) => this.#onHistoryChange?.(state);
   #onTextureReplaced = () => {
     this.#tools.select.discard();
     this.#tools.line.reset();
@@ -153,7 +155,6 @@ export class PixelArtCanvas {
   ) {
     this.#parentHtmlElement = parentHtmlElement;
     this.#onDrawEnd = options.onDrawEnd;
-    this.#onHistoryChange = options.onHistoryChange;
     const defaultMode: Mode = options.defaultMode ?? "paint";
     const eraseColor = new SelectionEraseColor(
       options.select?.eraseColor === undefined ?
@@ -169,13 +170,15 @@ export class PixelArtCanvas {
       size: textureSize,
       defaultColor: options.texture?.defaultColor,
       maxSize: options.texture?.maxSize,
-      init: options.texture?.init,
-      history: {
-        enabled: options.history?.enabled,
-        limit: options.history?.limit
-      }
+      init: options.texture?.init
     });
     this.uv = this.document.uv;
+    this.#history = new CanvasHistory({
+      document: this.document,
+      history: options.history,
+      restoreSelection: (footprint) => this.#restoreSelection(footprint),
+      onChange: options.onHistoryChange
+    });
 
     this.brush = new Brush(options.brush);
 
@@ -202,14 +205,17 @@ export class PixelArtCanvas {
       uvDeselectOnEmptyClick: options.uv?.deselectOnEmptyClick,
       uvResizable: options.uv?.resizable,
       viewport: this.#view.viewport,
-      onProgress: (pixels) => this.#onStrokeProgress?.(pixels)
+      onProgress: (pixels) => this.#onStrokeProgress?.(pixels),
+      paintSelectionEdit: (edit) => this.#history.recordSelectionEdit(
+        { before: edit.before, after: edit.after },
+        () => this.document.paintSelectionEdit(edit)
+      )
     });
     this.tools = this.#tools;
     this.selectionEvents = this.#tools.select;
 
     this.#view.viewport.on("changed", this.#onViewportChanged);
     this.document.on("draw-end", this.#onDocumentDrawEnd);
-    this.document.on("history-changed", this.#onDocumentHistoryChanged);
     this.document.on("resized", this.#onTextureReplaced);
     this.document.on("replaced", this.#onTextureReplaced);
 
@@ -379,10 +385,10 @@ export class PixelArtCanvas {
     this.#input.destroy();
     this.#view.viewport.off("changed", this.#onViewportChanged);
     this.document.off("draw-end", this.#onDocumentDrawEnd);
-    this.document.off("history-changed", this.#onDocumentHistoryChanged);
     this.document.off("resized", this.#onTextureReplaced);
     this.document.off("replaced", this.#onTextureReplaced);
     this.#view.destroy();
+    this.#history.destroy();
   }
 
   set texture(
@@ -415,22 +421,20 @@ export class PixelArtCanvas {
     this.document.paintPixels(pixels, this.brush.colorFor(source));
   }
 
-  undo(): boolean {
-    const entry = this.document.undo();
-    if (entry?.selection) {
-      this.#restoreSelection(entry.selection.before);
-    }
+  get history(): CommandHistory<string> | null {
+    return this.#history.history;
+  }
 
-    return entry !== null;
+  get historyScope(): string {
+    return this.#history.scope;
+  }
+
+  undo(): boolean {
+    return this.#history.undo();
   }
 
   redo(): boolean {
-    const entry = this.document.redo();
-    if (entry?.selection) {
-      this.#restoreSelection(entry.selection.after);
-    }
-
-    return entry !== null;
+    return this.#history.redo();
   }
 
   #restoreSelection(
@@ -442,19 +446,19 @@ export class PixelArtCanvas {
   }
 
   canUndo(): boolean {
-    return this.document.history.canUndo;
+    return this.#history.state.canUndo;
   }
 
   canRedo(): boolean {
-    return this.document.history.canRedo;
+    return this.#history.state.canRedo;
   }
 
   undoDepth(): number {
-    return this.document.history.undoDepth;
+    return this.#history.state.undoCount;
   }
 
   redoDepth(): number {
-    return this.document.history.redoDepth;
+    return this.#history.state.redoCount;
   }
 
   get onCursorMove(): ExternalCursorMoveListener | undefined {

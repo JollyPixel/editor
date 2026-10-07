@@ -5,11 +5,15 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { ChangeReceipts } from "@jolly-pixel/history";
+
 // Import Internal Dependencies
 import {
   CommandSync,
   type NetworkCommandHeader,
-  type NetworkServerMessage
+  type NetworkServerMessage,
+  type SentChange
 } from "#src/index.ts";
 import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
 
@@ -39,6 +43,15 @@ function setup(
     harness,
     sync
   };
+}
+
+class ChangeSync extends CommandSync<TestCommand, TestSnapshot, TestNotice> {
+  sendValue(
+    value: number,
+    change: SentChange
+  ): TestCommand {
+    return this.sendChange({ action: "set", value }, change);
+  }
 }
 
 function remote(
@@ -156,6 +169,28 @@ describe("CommandSync", () => {
     assert.strictEqual(sync.pending, 0);
   });
 
+  test("reports each acknowledged command once, with the version of the message that acknowledged it", () => {
+    const { harness, sync } = setup();
+    const outcomes: string[] = [];
+    sync.on("acknowledged", (command, version) => outcomes.push(`${command.value}@${version}`));
+    sync.on("refused", (command) => outcomes.push(`${command.value} refused`));
+
+    for (let value = 1; value <= 4; value++) {
+      sync.send({ action: "set", value });
+    }
+    harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 1 }, version: 3 });
+    harness.serverMessage({
+      type: "snapshot",
+      data: { value: 0 },
+      version: 5,
+      acks: { self: 3 },
+      refused: 3
+    });
+    harness.serverMessage({ type: "correction", data: remote("peer"), acks: { self: 4 } });
+
+    assert.deepEqual(outcomes, ["1@3", "2@5", "3 refused", "4@undefined"]);
+  });
+
   test("a snapshot received before admission replays the held commands", () => {
     const { harness, sync } = setup({ admitted: false });
     const values: number[] = [];
@@ -260,5 +295,38 @@ describe("CommandSync", () => {
     assert.strictEqual(snapshots, 0);
     assert.strictEqual(sync.ready, false);
     assert.deepEqual(harness.messages, []);
+  });
+
+  test("writes the answers about changes sent with sendChange to its receipts, until destroyed", () => {
+    const harness = new RoomHarness<TestCommand, TestMessage>();
+    harness.admit();
+    const receipts = new ChangeReceipts<SentChange>();
+    const sync = new ChangeSync(harness.room, { receipts });
+    const first = { basis: 2 };
+    const second = {};
+    const answers: string[] = [];
+    function nameOf(
+      change: SentChange
+    ): string {
+      return change === first ? "first" : "second";
+    }
+    receipts.on("confirmed", (change, version) => answers.push(`${nameOf(change)}@${version}`));
+    receipts.on("refused", (change) => answers.push(`${nameOf(change)} refused`));
+
+    sync.sendValue(1, first);
+    sync.sendValue(2, second);
+    sync.send({ action: "set", value: 3 });
+    harness.serverMessage({
+      type: "snapshot",
+      data: { value: 0 },
+      version: 4,
+      acks: { self: 3 },
+      refused: 2
+    });
+    sync.destroy();
+
+    assert.equal((harness.messages as TestCommand[])[0].basis, 2);
+    assert.deepEqual(answers, ["first@4", "second refused"]);
+    assert.equal(receipts.attached, false);
   });
 });

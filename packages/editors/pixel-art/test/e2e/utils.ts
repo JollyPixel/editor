@@ -129,8 +129,9 @@ export async function seedTexture(
         rect.height ?? 1
       );
     }
-    canvas.texture = source;
-    canvas.document.history.clear();
+    canvas.document.runLocalRestore(() => {
+      canvas.texture = source;
+    });
   }, {
     rects,
     size: TEXTURE_SIZE

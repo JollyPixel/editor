@@ -43,7 +43,8 @@ export const packageGroups: PackageGroup[] = [
   {
     text: "Collaboration",
     packages: [
-      { dir: "network", text: "Network" }
+      { dir: "network", text: "Network" },
+      { dir: "history", text: "History" }
     ]
   },
   {

@@ -6,7 +6,7 @@ This glossary defines the vocabulary for the local pixel-drawing context. It cov
 
 ### Pixel Document
 
-The editable unit of work: the texture data, UV map, and local undo/redo history. `PixelDocument` owns these parts and needs no view: a network client can sync it headless, and several canvases can edit one document.
+The editable unit of work: the texture data, UV map and normal map settings. `PixelDocument` owns these parts and needs no view: a network client can sync it headless, and several canvases can edit one document. Undo and redo live in a *history* the canvas or its host owns, which records the document's changes.
 
 ### Texture
 
@@ -44,7 +44,7 @@ A component that performs or configures an editing behavior. Brush, fill, select
 
 The ten saved RGBA8 colors of a Pixel Document, addressed by fixed slot
 indices from zero to nine. A palette slot change is a Pixel Command and a
-History Entry when history is enabled. Palette selection and color picker
+History Step when history is enabled. Palette selection and color picker
 drafts are local view state. Changing a slot leaves texture pixels unchanged.
 
 ### Brush
@@ -102,7 +102,7 @@ The pixel area a fill may touch when `FillTool.uvClip` is on. Seeded inside one 
 
 ### UV Ownership
 
-Which document stores a UV region. By default the pixel document stores every region, and UV edits become commands and history entries. An external region is stored by another document, such as a model; the pixel document only shows and edits it, and ignores that region in its own commands and snapshots.
+Which document stores a UV region. By default the pixel document stores every region, and UV edits become commands and history steps. An external region is stored by another document, such as a model; the pixel document only shows and edits it, and ignores that region in its own commands and snapshots.
 
 ### UV Layout
 
@@ -114,7 +114,7 @@ Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions
 
 ### Nested UV
 
-What a drag moves, following the UV movement scope (a whole region, or one slot of a free region), when its rectangle lies inside another one's, edges included. A move drag with the line modifier held carries the nested UVs of the dragged unit by the same delta, and the drop is one history entry. A unit that only overlaps is not nested.
+What a drag moves, following the UV movement scope (a whole region, or one slot of a free region), when its rectangle lies inside another one's, edges included. A move drag with the line modifier held carries the nested UVs of the dragged unit by the same delta, and the drop is one history step. A unit that only overlaps is not nested.
 
 ### UV Rotation
 
@@ -144,9 +144,9 @@ What the canvas draws for the texture: its pixels (*albedo*) or its generated no
 
 One change to a pixel document: a stroke, a texture resize or replacement, a UV region change, or a normal map settings change. Local edits, undo and redo emit commands, and peers apply them. *Document state* is the texture, UV map and normal map settings without history or view; it applies every command, remote, undone or redone, the same way.
 
-### History Entry
+### History Step
 
-The reversible record of one local edit, used by undo and redo: the commands that redo it and the commands that undo it.
+The reversible record of one local edit, used by undo and redo: the commands that undo it, and the values they must find unchanged. A peer edit over those values refuses the step instead of being overwritten.
 
 ## Naming boundaries
 

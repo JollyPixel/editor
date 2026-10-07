@@ -60,7 +60,7 @@ interface UVRegionCreateOptions {
 
 `width` and `height` are clamped to the canvas. A slot template's own `width` or `height` replaces the region's for that slot, clamped the same way; a stacked region keeps the region size for its shared rect. The default `id` comes from `crypto.randomUUID()` and the default color comes from the built-in palette.
 
-`batch` runs an edit that changes several regions, such as [`moveGroup()`](#movegroupmoves), so the owner can record it as one history entry. It defaults to calling `apply` directly. A [`PixelDocument`](../PixelDocument.md) passes its own.
+`batch` runs an edit that changes several regions, such as [`moveGroup()`](#movegroupmoves), so the owner can record it as one history step. It defaults to calling `apply` directly. A [`PixelDocument`](../PixelDocument.md) passes its own.
 
 A region with `activeSlots` or `slotGeometries` starts free. Other regions start stacked. Pass `state` to override that default; `"unfolded"` packs the net at creation and clamps it into the canvas.
 
@@ -205,7 +205,7 @@ Returns the visible movement units whose rectangle lies inside `rect`, edges inc
 moveGroup(moves: readonly UVMove[]): boolean
 ```
 
-Applies each move as [`move()`](#moveid-rect-slot) does, inside the `batch` option, so a document records them as one history entry. Each move emits its own `"region-moved"` and syncs as its own `uv-region-moved`. Returns `true` when at least one move applied.
+Applies each move as [`move()`](#moveid-rect-slot) does, inside the `batch` option, so a document records them as one history step. Each move emits its own `"region-moved"` and syncs as its own `uv-region-moved`. Returns `true` when at least one move applied.
 
 ### `previewMoveGroup(moves)`
 
@@ -223,7 +223,7 @@ resize(id: string, rect: SelectionRect, slot?: UVSlot | null, options?: UVResize
 
 Gives a stacked region, or one active `slot` of an unfolded or free region, the size and position of `rect`, following [`UVRegion.resized()`](./UVRegion.md#resizedrect-slot-options). Sizes below 1px are raised to 1px. Moved edges stop at the canvas border; for an unfolded net, that includes the faces sliding with an edge. A net already past the border is not pulled back, but it cannot grow further out.
 
-The new region is committed like a state change: it emits `"region-state-changed"` with the previous region, so it records one `uv-state` history entry and syncs as `uv-region-state-changed`. Returns `false` for an unknown id, a region with a triangle or compound face, or an unchanged result.
+The new region is committed like a state change: it emits `"region-state-changed"` with the previous region, so it records one history step and syncs as `uv-region-state-changed`. Returns `false` for an unknown id, a region with a triangle or compound face, or an unchanged result.
 
 ### `previewResize(id, rect, slot?, options?)`
 
@@ -253,7 +253,7 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 `"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` packs the net wherever the region already sits, then `setState()` shifts the whole net back inside the canvas if it overhangs. A net larger than the texture is shifted to `0, 0` and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
 
-Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because `uv-state` history entries carry the whole previous region.
+Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because a state change undoes with the whole previous region.
 
 ### `rename(id, name)`
 
@@ -316,4 +316,4 @@ off<T extends UVMapEventType>(type: T, listener: UVMapListener<T>): void
 
 Adds or removes a typed event listener.
 
-A [`PixelDocument`](../PixelDocument.md) turns the mutation events of the regions it owns into [commands](../PixelCommand.md) and [history entries](../history/HistoryStack.md#entries), and applies remote commands through the same map.
+A [`PixelDocument`](../PixelDocument.md) turns the mutation events of the regions it owns into [commands](../PixelCommand.md) and [history steps](../history/PixelHistory.md), and applies remote commands through the same map.

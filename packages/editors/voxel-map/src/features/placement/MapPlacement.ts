@@ -2,7 +2,6 @@
 import {
   VoxelTransform,
   type VoxelCoord,
-  type VoxelHistory,
   type VoxelPatch,
   type VoxelTransformOptions,
   type VoxelWorld
@@ -12,6 +11,10 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { SelectionStore } from "../../state/index.ts";
+import {
+  MAP_HISTORY_SCOPE,
+  type MapSteps
+} from "../../shared/mapHistory.ts";
 import { ActivePlacement } from "./ActivePlacement.ts";
 import type { CellRegion } from "./CellRegion.ts";
 import { CopySource } from "./CopySource.ts";
@@ -24,6 +27,14 @@ import {
 } from "./PlacementSource.ts";
 import { RegionSource } from "./RegionSource.ts";
 
+// CONSTANTS
+const kCommitLabels: Readonly<Record<PlacementSource["kind"], string>> = {
+  template: "Place template",
+  layer: "Transform layer",
+  region: "Move selection",
+  copy: "Paste"
+};
+
 export type LayerConcealer = (layerName: string) => () => void;
 
 export type MapPlacementEvents = {
@@ -34,7 +45,7 @@ export type MapPlacementEvents = {
 
 export interface MapPlacementOptions {
   world: VoxelWorld;
-  history: Pick<VoxelHistory, "begin" | "commit">;
+  history: MapSteps;
   selection: Pick<SelectionStore, "lastVoxelLayer" | "subscribe">;
   mapDocument: MapDocumentSignals;
   conceal?: LayerConcealer;
@@ -45,7 +56,7 @@ export class MapPlacement {
   readonly clipboard: PlacementClipboard;
 
   readonly #world: VoxelWorld;
-  readonly #history: Pick<VoxelHistory, "begin" | "commit">;
+  readonly #history: MapSteps;
   readonly #selection: Pick<SelectionStore, "lastVoxelLayer">;
   readonly #conceal: LayerConcealer | null;
   readonly #events = new Emitter<MapPlacementEvents>();
@@ -238,7 +249,7 @@ export class MapPlacement {
 
     const { placement, target } = current;
     const { source } = placement;
-    this.#history.begin();
+    const step = this.#history.open(MAP_HISTORY_SCOPE, kCommitLabels[source.kind]);
     let committed = false;
     try {
       switch (source.kind) {
@@ -264,7 +275,7 @@ export class MapPlacement {
       }
     }
     finally {
-      this.#history.commit();
+      step.commit();
     }
     if (committed) {
       this.#end();

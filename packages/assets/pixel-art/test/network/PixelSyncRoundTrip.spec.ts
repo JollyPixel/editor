@@ -54,6 +54,15 @@ function isSnapshot(
     message.type === "snapshot";
 }
 
+function isCommandEcho(
+  message: unknown
+): message is Extract<PixelServerMessage, { type: "command"; }> {
+  return typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "command";
+}
+
 function setup() {
   const handler = pixelArtAssetKind({
     defaultSize: { x: 8, y: 8 }
@@ -114,17 +123,20 @@ function setup() {
 }
 
 describe("PixelSyncClient and the pixel-art asset room, undo", () => {
-  test("an undo replays with the original stroke's timestamp", (t) => {
+  test("an undo carries the room version of the stroke it undoes", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { room, manager, paintPixelOneOne } = setup();
+    const { room, broadcasts, manager, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
     paintPixelOneOne();
+    const echo = broadcasts.at(-1);
+    assert.ok(isCommandEcho(echo) && echo.version !== undefined);
+    room.emit("message", echo);
     t.mock.timers.tick(2000);
     manager.undo();
 
     assert.strictEqual(room.sent.at(-1)?.action, "stroke");
-    assert.strictEqual(room.sent.at(-1)?.timestamp, 1000);
+    assert.strictEqual(room.sent.at(-1)?.basis, echo.version);
     manager.destroy();
   });
 
@@ -188,9 +200,9 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     manager.destroy();
   });
 
-  test("a rejected palette undo restores the peer's newer color from the room snapshot", (t) => {
+  test("a palette undo after a peer's newer color is refused before it reaches the server", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { state, broadcasts, receive, room, manager } = setup();
+    const { state, receive, room, manager } = setup();
     const peer = new PixelDocument({ size: { x: 8, y: 8 } });
     const peerRoom = new MockRoom({
       clientId: "B",
@@ -212,12 +224,13 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     peerRoom.deliverCommand(newer);
     room.deliverCommand(newer);
     t.mock.timers.tick(1000);
-    manager.document.undo();
-    assert.notDeepEqual(manager.document.palette.colorAt(3), peer.palette.colorAt(3));
-    const snapshot = broadcasts.at(-1);
-    assert.ok(isSnapshot(snapshot));
-    room.emit("message", snapshot);
+    const sent = room.sent.length;
 
+    assert.strictEqual(manager.undo(), false);
+    assert.strictEqual(room.sent.length, sent);
+    assert.deepEqual(manager.history?.state(manager.historyScope).refused, [
+      { label: "Change palette color", refused: { reason: "peer", clientId: "B" } }
+    ]);
     assert.deepEqual(manager.document.palette.colorAt(3), { r: 0, g: 0, b: 255, a: 255 });
     assert.deepEqual(manager.document.palette.toJSON(), peer.palette.toJSON());
     assert.deepEqual(state.document.palette.toJSON(), peer.palette.toJSON());

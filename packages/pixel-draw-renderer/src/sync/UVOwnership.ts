@@ -7,12 +7,16 @@ import {
 } from "../uv/region/UVRegion.ts";
 import type { SelectionRect } from "../types.ts";
 import type { IndexedNormalMapZone } from "../normal/types.ts";
-import type { HistoryEdit } from "../history/HistoryEntry.ts";
-import type {
-  DocumentCommand,
-  PixelCommand,
-  UVRegionRotation
+import {
+  uvRegionCreated,
+  uvRegionDeleted,
+  uvRegionMoved,
+  uvRegionRotated,
+  uvRegionStateChanged,
+  type DocumentCommand,
+  type PixelCommand
 } from "./PixelCommand.ts";
+import type { LocalEdit } from "./LocalEdit.types.ts";
 
 export type UVRegionFilter = (id: string) => boolean;
 
@@ -20,14 +24,14 @@ export interface UVOwnershipOptions {
   uv: UVMap;
   isRecording: () => boolean;
   removeNormalMapZoneOf: (regionId: string) => IndexedNormalMapZone | null;
-  record: (edit: HistoryEdit) => void;
+  record: (edit: LocalEdit) => void;
 }
 
 export class UVOwnership {
   #disowned = new Set<UVRegionFilter>();
   #isRecording: () => boolean;
   #removeNormalMapZoneOf: (regionId: string) => IndexedNormalMapZone | null;
-  #record: (edit: HistoryEdit) => void;
+  #record: (edit: LocalEdit) => void;
 
   constructor(
     options: UVOwnershipOptions
@@ -96,8 +100,8 @@ export class UVOwnership {
     }
 
     this.#record({
-      redo: [created(region.toJSON())],
-      undo: [deleted(region.id)]
+      command: uvRegionCreated(region.toJSON()),
+      inverse: [uvRegionDeleted(region.id)]
     });
   }
 
@@ -109,17 +113,17 @@ export class UVOwnership {
     }
 
     const zone = this.#removeNormalMapZoneOf(region.id);
-    const undo = [created(region.toJSON())];
+    const inverse: DocumentCommand[] = [uvRegionCreated(region.toJSON())];
     if (zone) {
-      undo.push({
+      inverse.push({
         action: "normal-map-zone-set",
         metadata: zone
       });
     }
 
     this.#record({
-      redo: [deleted(region.id)],
-      undo
+      command: uvRegionDeleted(region.id),
+      inverse
     });
   }
 
@@ -133,8 +137,8 @@ export class UVOwnership {
     }
 
     this.#record({
-      redo: [moved(region.id, face, region.rectFor(face ?? "front"))],
-      undo: [moved(region.id, face, previousRect)]
+      command: uvRegionMoved(region.id, face, region.rectFor(face ?? "front")),
+      inverse: [uvRegionMoved(region.id, face, previousRect)]
     });
   }
 
@@ -147,8 +151,8 @@ export class UVOwnership {
     }
 
     this.#record({
-      redo: [stateChanged(region.toJSON())],
-      undo: [stateChanged(previous)]
+      command: uvRegionStateChanged(region.toJSON()),
+      inverse: [uvRegionStateChanged(previous)]
     });
   }
 
@@ -162,72 +166,8 @@ export class UVOwnership {
     }
 
     this.#record({
-      redo: [rotated(region, face)],
-      undo: [rotated(UVRegion.from(previous), face)]
+      command: uvRegionRotated(region, face),
+      inverse: [uvRegionRotated(UVRegion.from(previous), face)]
     });
   }
-}
-
-function created(
-  region: UVRegionData
-): DocumentCommand {
-  return {
-    action: "uv-region-created",
-    metadata: { region }
-  };
-}
-
-function deleted(
-  id: string
-): DocumentCommand {
-  return {
-    action: "uv-region-deleted",
-    metadata: { id }
-  };
-}
-
-function moved(
-  id: string,
-  face: UVSlot | null,
-  rect: SelectionRect
-): DocumentCommand {
-  return {
-    action: "uv-region-moved",
-    metadata: {
-      id,
-      face,
-      rect
-    }
-  };
-}
-
-function stateChanged(
-  region: UVRegionData
-): DocumentCommand {
-  return {
-    action: "uv-region-state-changed",
-    metadata: { region }
-  };
-}
-
-function rotated(
-  region: UVRegion,
-  face: UVSlot | null
-): DocumentCommand {
-  const rotation: UVRegionRotation = face === null ?
-    {
-      id: region.id,
-      face,
-      region: region.toJSON()
-    } :
-    {
-      id: region.id,
-      face,
-      geometry: region.geometryFor(face)
-    };
-
-  return {
-    action: "uv-region-rotated",
-    metadata: rotation
-  };
 }

@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
+  PixelChange,
   PixelCommand,
   PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -20,15 +21,25 @@ import {
   unpackPixelCommand
 } from "./PixelWireCodec.ts";
 import { createPixelReconciler } from "./PixelReconciler.ts";
-import { ReplayBasis } from "./ReplayBasis.ts";
 import { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
+
+export type PixelCommandListener = (
+  command: PixelCommand,
+  change: PixelChange
+) => void;
 
 export interface PixelSyncTarget extends Pick<
   PixelDocument,
-  "applyRemoteCommand" | "loadSnapshot"
+  "applyRemoteCommand" | "replayPendingCommand" | "loadSnapshot" | "receipts"
 > {
-  on(event: "command", listener: (command: PixelCommand) => void): unknown;
-  off(event: "command", listener: (command: PixelCommand) => void): unknown;
+  on(
+    event: "command",
+    listener: PixelCommandListener
+  ): unknown;
+  off(
+    event: "command",
+    listener: PixelCommandListener
+  ): unknown;
 }
 
 export interface PixelSyncClientOptions {
@@ -43,13 +54,12 @@ export class PixelSyncClient extends CommandSync<
   AssetRoomNotice
 > {
   #document: PixelSyncTarget;
-  #basis = new ReplayBasis();
 
-  #sendLocalCommand = (
-    command: PixelCommand
-  ): void => {
-    const { originTimestamp, ...body } = packPixelEvent(command);
-    this.send(body, originTimestamp, this.#basis.of(originTimestamp));
+  #sendLocalCommand: PixelCommandListener = (command, change) => {
+    this.sendChange(
+      packPixelEvent(command),
+      change
+    );
   };
 
   constructor(
@@ -58,19 +68,22 @@ export class PixelSyncClient extends CommandSync<
     super(options.room, {
       reconciler: createPixelReconciler(options.document),
       resolver: options.resolver,
-      applySnapshot: (snapshot) => loadPixelSnapshot(options.document, snapshot)
+      applySnapshot: (snapshot) => loadPixelSnapshot(
+        options.document,
+        snapshot
+      ),
+      receipts: options.document.receipts
     });
     const { document } = options;
 
     this.#document = document;
     document.on("command", this.#sendLocalCommand);
     this.on(
-      "acknowledged",
-      (command, version) => this.#basis.learn(command.timestamp, version)
-    );
-    this.on(
       "command",
-      (command) => document.applyRemoteCommand(unpackPixelCommand(command))
+      (command) => document.applyRemoteCommand(
+        unpackPixelCommand(command),
+        command.clientId
+      )
     );
   }
 

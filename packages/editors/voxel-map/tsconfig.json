@@ -23,6 +23,9 @@
       "path": "../../voxel-renderer"
     },
     {
+      "path": "../../history"
+    },
+    {
       "path": "../../network"
     },
     {

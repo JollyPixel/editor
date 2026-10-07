@@ -3,7 +3,7 @@ import {
   CommandDocument,
   type CommandChange,
   type CommandState
-} from "@jolly-pixel/network/client";
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import type {

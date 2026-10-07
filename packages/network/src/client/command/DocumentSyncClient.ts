@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import type {
+  ChangeReceipts,
+  CommandChange
+} from "@jolly-pixel/history";
+
 // Import Internal Dependencies
 import type { Room } from "../Room.ts";
 import type { CommandReconciler } from "./CommandReconciler.ts";
@@ -5,8 +11,6 @@ import {
   CommandSync,
   type CommandBody
 } from "./CommandSync.ts";
-import type { CommandChange } from "./CommandDocument.ts";
-import type { ChangeReceipts } from "../history/ChangeReceipts.ts";
 import type { ConflictResolver } from "../../sync/ConflictResolver.ts";
 import type {
   NetworkCommandHeader,
@@ -38,7 +42,9 @@ export interface DocumentSyncClientOptions<
   TImage
 > {
   document: SyncableDocument<TCommand, TSnapshot, TImage>;
-  /** The registers an absolute write sets; `null` for any other command. */
+  /**
+   * The registers an absolute write sets; `null` for any other command.
+   */
   keys(command: TCommand): readonly string[] | null;
   resolver?: ConflictResolver<TCommand>;
 }
@@ -57,27 +63,18 @@ export class DocumentSyncClient<
   ) {
     const { document, keys, resolver } = options;
     const reconciler = new DocumentReconciler(document, keys);
-    super(room, { reconciler, resolver });
+    super(room, {
+      reconciler,
+      resolver,
+      receipts: document.receipts
+    });
 
-    this.on("acknowledged", (command, version) => {
-      const change = reconciler.changeOf(command);
-      if (change !== undefined && version !== undefined) {
-        document.receipts.confirm(change, version);
-      }
-    });
-    this.on("refused", (command) => {
-      const change = reconciler.changeOf(command);
-      if (change !== undefined) {
-        document.receipts.refuse(change);
-      }
-    });
     this.on("snapshot", (snapshot) => document.load(snapshot));
     this.on("command", (command) => document.apply(command, command.clientId));
     this.#release = [
-      document.receipts.attach(),
       document.subscribe("change", (change) => {
         if (change.origin === "local") {
-          reconciler.capture(this.send(change.command, Date.now(), change.basis), change);
+          reconciler.capture(this.sendChange(change.command, change), change);
         }
       })
     ];
@@ -91,14 +88,6 @@ export class DocumentSyncClient<
   }
 }
 
-interface PendingChange<
-  TCommand extends NetworkCommandHeader,
-  TImage
-> {
-  readonly change: SyncedChange<TCommand, TImage>;
-  image: TImage | null;
-}
-
 class DocumentReconciler<
   TCommand extends NetworkCommandHeader,
   TSnapshot,
@@ -106,7 +95,7 @@ class DocumentReconciler<
 > implements CommandReconciler<TCommand> {
   #document: SyncableDocument<TCommand, TSnapshot, TImage>;
   #keys: (command: TCommand) => readonly string[] | null;
-  #pending = new WeakMap<TCommand, PendingChange<TCommand, TImage>>();
+  #images = new WeakMap<TCommand, TImage | null>();
 
   constructor(
     document: SyncableDocument<TCommand, TSnapshot, TImage>,
@@ -130,13 +119,7 @@ class DocumentReconciler<
     sent: TCommand,
     change: SyncedChange<TCommand, TImage>
   ): void {
-    this.#pending.set(sent, { change, image: change.image });
-  }
-
-  changeOf(
-    command: TCommand
-  ): SyncedChange<TCommand, TImage> | undefined {
-    return this.#pending.get(command)?.change;
+    this.#images.set(sent, change.image);
   }
 
   revert(
@@ -144,7 +127,7 @@ class DocumentReconciler<
   ): boolean {
     const images: TImage[] = [];
     for (const command of pending) {
-      const image = this.#pending.get(command)?.image ?? null;
+      const image = this.#images.get(command) ?? null;
       if (image === null) {
         return false;
       }
@@ -159,9 +142,8 @@ class DocumentReconciler<
     command: TCommand
   ): boolean {
     const replayed = this.#document.replayPending(command);
-    const pending = this.#pending.get(command);
-    if (pending !== undefined) {
-      pending.image = replayed?.image ?? null;
+    if (this.#images.has(command)) {
+      this.#images.set(command, replayed?.image ?? null);
     }
 
     return replayed !== null;

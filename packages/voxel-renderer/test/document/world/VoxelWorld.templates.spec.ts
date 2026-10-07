@@ -8,7 +8,7 @@ import {
   type VoxelCoord,
   type VoxelTemplate
 } from "../../../src/document/world/index.ts";
-import { VoxelHistory } from "../../../src/document/VoxelHistory.ts";
+import { worldHistory } from "../../helpers/history.ts";
 import { VoxelTransform } from "../../../src/document/geometry/index.ts";
 import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
 import { recordCommands } from "../../helpers/fakes.ts";
@@ -199,7 +199,7 @@ describe("VoxelWorld.templates.place", () => {
 
   it("is undone as one history step", () => {
     const world = makeWorld();
-    const history = new VoxelHistory(world, { enabled: true });
+    const history = worldHistory(world);
     const { id } = world.templates.createFromLayer("Source", { name: "Steps" })!;
 
     world.templates.place(id, {

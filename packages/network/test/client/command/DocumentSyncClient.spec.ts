@@ -5,11 +5,15 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   CommandDocument,
+  type CommandChange
+} from "@jolly-pixel/history";
+
+// Import Internal Dependencies
+import {
   DocumentSyncClient,
-  type CommandChange,
   type NetworkCommandHeader,
   type NetworkServerMessage
 } from "#src/client/index.ts";
@@ -68,24 +72,38 @@ class ValueDocument extends CommandDocument<SetCommand, TestSnapshot, number> {
   }
 }
 
-function setup() {
+function setup(
+  keys: (command: TestCommand) => readonly string[] | null = () => null
+) {
   const harness = new RoomHarness<TestCommand, TestMessage>();
   harness.room.join();
   harness.admit("self");
   const document = new ValueDocument();
   const sync = new DocumentSyncClient(harness.room, {
     document,
-    keys: () => null
+    keys
   });
 
   return { harness, document, sync };
+}
+
+function peer(
+  value: number
+): TestCommand {
+  return {
+    action: "set",
+    value,
+    clientId: "peer",
+    seq: value,
+    timestamp: 1
+  };
 }
 
 describe("DocumentSyncClient", () => {
   test("sends a local change with its basis and confirms it when its echo lands", (t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 100 });
     const { harness, document } = setup();
-    const confirmed: Array<[CommandChange<SetCommand, number>, number]> = [];
+    const confirmed: Array<[CommandChange<SetCommand, number>, number | undefined]> = [];
     document.receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
 
     const local = document.applyStep({ action: "set", value: 1 }, 4)!;
@@ -133,6 +151,33 @@ describe("DocumentSyncClient", () => {
     harness.serverMessage({ type: "snapshot", data: { value: 5 }, acks: { self: 1 }, refused: 1 });
 
     assert.deepEqual(refused, [local]);
+  });
+
+  test("a keyed peer write it cannot narrow applies whole, then the outliving change replays", () => {
+    const { harness, document } = setup((command) => (
+      command.clientId === "peer" ? ["value", "label"] : ["value"]
+    ));
+    harness.serverMessage({ type: "snapshot", data: { value: 3 }, version: 1 });
+
+    document.set(4);
+    harness.serverMessage({ type: "command", data: peer(5), version: 2 });
+
+    assert.deepEqual(
+      document.changes.map(({ origin, command }) => [origin, command.value]),
+      [["local", 4], ["remote", 5], ["replay", 4]]
+    );
+    assert.equal(document.value, 4);
+  });
+
+  test("a command sent around the document has no image, so a rebase asks for a snapshot", () => {
+    const { harness, sync, document } = setup();
+    harness.serverMessage({ type: "snapshot", data: { value: 3 } });
+
+    sync.send({ action: "set", value: 4 });
+    harness.serverMessage({ type: "command", data: peer(5), version: 1 });
+
+    assert.deepEqual(harness.sent.at(-1), { room: "room", kind: "resync" });
+    assert.equal(document.value, 3);
   });
 
   test("stops sending and writing receipts once destroyed", () => {

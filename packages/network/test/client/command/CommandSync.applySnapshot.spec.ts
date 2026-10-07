@@ -118,6 +118,14 @@ describe("CommandSync applySnapshot", () => {
     assert.strictEqual(sync.ready, false);
   });
 
+  test("whenReady rejects when the first snapshot fails to load", async() => {
+    const { harness, sync } = setup(() => Promise.reject(new Error("corrupt pixels")));
+
+    harness.serverMessage({ type: "snapshot", data: { value: 1 }, version: 1 });
+
+    await assert.rejects(sync.whenReady(), { message: "corrupt pixels" });
+  });
+
   test("a destroyed sync ignores an apply that settles later", async() => {
     const decode = Promise.withResolvers<void>();
     const { harness, sync, events } = setup(() => decode.promise);

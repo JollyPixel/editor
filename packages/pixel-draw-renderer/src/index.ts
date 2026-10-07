@@ -20,7 +20,6 @@ export type { Toolset } from "./tools/Tools.ts";
 export type { UVTool } from "./tools/uv/UVController.ts";
 export {
   PixelArtCanvas,
-  type HistoryState,
   type PixelArtCanvasOptions,
   type ClearTextureOptions,
   type Mode,
@@ -49,8 +48,26 @@ export {
 } from "./sync/PixelCommand.ts";
 export type {
   GlobalFill,
+  PixelChange,
   SelectionEdit
 } from "./sync/LocalEdit.types.ts";
+export type { EditGrouping } from "./sync/EditRecorder.ts";
+export type {
+  PixelArtCanvasHistory,
+  PixelHistoryOwner,
+  StandalonePixelHistory
+} from "./history/CanvasHistory.ts";
+export {
+  pixelHistoryKeys,
+  pixelHistoryRegistration,
+  registerPixelHistory,
+  type PixelHistoryRegistrationOptions
+} from "./history/pixelHistoryRegistration.ts";
+export type {
+  PixelArea,
+  PixelKeySet
+} from "./history/PixelKeySet.ts";
+export type { PixelCapture } from "./history/PixelCapture.ts";
 export type { CanvasBufferEvent } from "./buffer/CanvasBuffer.ts";
 export {
   PixelBuffer,
@@ -114,16 +131,10 @@ export {
   isNormalMapCommand,
   type NormalMapCommandAction
 } from "./sync/normalMapCommands.ts";
-export {
-  HistoryStack,
-  type HistoryStackOptions
-} from "./history/HistoryStack.ts";
 export type {
-  HistoryEdit,
-  HistoryEntry,
   SelectionChange,
   SelectionFootprint
-} from "./history/HistoryEntry.ts";
+} from "./selection/SelectionFootprint.ts";
 export type {
   CanvasViewport,
   ClientOrigin,

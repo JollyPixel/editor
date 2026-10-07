@@ -10,6 +10,11 @@ interface CommandSyncOptions<TCommand extends NetworkCommandHeader, TSnapshot = 
   reconciler?: CommandReconciler<TCommand>;
   resolver?: ConflictResolver<TCommand>;
   applySnapshot?: (snapshot: TSnapshot) => void | Promise<void>;
+  receipts?: ChangeReceipts<SentChange>;
+}
+
+interface SentChange {
+  readonly basis?: number;
 }
 
 class CommandSync<
@@ -24,6 +29,7 @@ class CommandSync<
   notice: (notice: TNotice) => void;
   settled: () => void;
   overflow: () => void;
+  discarded: () => void;
   acknowledged: (command: TCommand, version: number | undefined) => void;
   refused: (command: TCommand) => void;
 }> {
@@ -40,6 +46,7 @@ class CommandSync<
 
   whenReady(): Promise<void>;
   send(body: CommandBody<TCommand>, timestamp?: number, basis?: number): TCommand;
+  protected sendChange(body: CommandBody<TCommand>, change: SentChange): TCommand;
   destroy(): void;
 }
 ```
@@ -69,15 +76,20 @@ A notice's `type` must be a literal other than `"snapshot"`, `"command"`, `"corr
 - `catch-up` answers a resume; see [Resume](#resume).
 - Any other `type` emits `"notice"` with the whole message, for server notices such as the asset room's `rejected` and `deleted`.
 
-`applySnapshot` loads a snapshot before `"snapshot"` is emitted. When it returns a promise, as an asynchronous decode does, every later message is held and processed in order once the promise settles. A rejection emits `"snapshot-failed"` instead of `"snapshot"`, leaves `ready` unchanged, and releases the held messages.
+`applySnapshot` loads a snapshot before `"snapshot"` is emitted. When it returns a promise, as an asynchronous decode does, every later message is held and processed in order once the promise settles. A rejection emits `"snapshot-failed"` instead of `"snapshot"`, leaves `ready` unchanged, and releases the held messages. When no snapshot loaded before, `whenReady()` rejects with the same error.
 
-`"settled"` fires when an acknowledgement empties the ledger. `"acknowledged"` fires for each own echo with the pending command it acknowledges and the echo's `version`. `"refused"` fires when a snapshot or correction carries `refused`, the `seq` of this client's command the server refused outright; it fires after the state is rolled back, with that pending command, so an undo history can tell its user. A snapshot without `refused`, such as one after a reconnect, never fires it.
+`"settled"` fires when an acknowledgement empties the ledger. Every command that leaves the ledger fires exactly one of these, with the pending command:
+
+- `"acknowledged"`, with the `version` of the message that acknowledged it: exact for an echo, the message's version for a snapshot or catch-up, `undefined` for a correction. A snapshot or catch-up version can be past the command's own; the peer writes in between still reach the client, through the snapshot or the catch-up, before any later command.
+- `"refused"`, when a snapshot or correction names it in `refused`, the `seq` of this client's command the server refused outright, or when a catch-up acknowledges it without its echo. It fires after the state is rolled back, so an undo history can tell its user.
 
 ## Pending ledger
 
 `send(body, timestamp?)` stamps `{ ...body, clientId: room.clientId, seq, timestamp }`, where `seq` increments per instance and `timestamp` defaults to `Date.now()`. Pass `timestamp` when the original event time must survive, as in undo flows, and `basis` for a command that replays an earlier one: the room version of the original, learned from `"acknowledged"`. See [Conflicts](./Conflicts.md#lastwritewinsresolver). While `room.clientId` is `null`, the command is held and sent on the room's next `sync`.
 
 `send` returns the pending command. The object stays the same while it is pending, so a reconciler can key the inverse it captured on it. The room receives a copy.
+
+A subclass that syncs a history source passes its [`ChangeReceipts`](../../../history/docs/ChangeReceipts.md) as `receipts` and sends each local change with `sendChange(body, change)`, which sends `body` with the change's `basis`. The sync client attaches the receipts until `destroy()`, writes `"acknowledged"` and `"refused"` of those commands to `confirm` and `refuse`, and `"discarded"` to `discard()`.
 
 The server processes one client's commands in order, so every acknowledgement is cumulative.
 
@@ -100,7 +112,7 @@ interface CommandReconciler<TCommand extends NetworkCommandHeader> {
 |---|---|
 | `keys` | The registers an absolute write sets, one key per entry; `null` for any other command. |
 | `narrow` | The command restricted to the entries at `keep`, or `null` when it cannot be restricted. |
-| `revert` | Undoes the pending commands, last first, from inverses captured when each was applied. Returns `false`, and changes nothing, when one has no inverse. |
+| `revert` | Makes replaying the pending commands after the incoming one correct. Most reconcilers undo them, last first, from inverses captured when each was applied; pending commands that only write absolute values can stay as they are. Returns `false`, and changes nothing, when that is not possible, such as when one has no inverse. |
 | `replay` | Applies a pending command locally without sending it and without adding it to undo history, and captures its inverse. Returns `false` when the local state rejects it. |
 
 A peer command or correction takes one of two paths:
@@ -146,24 +158,9 @@ class CounterSync extends CommandSync<CounterCommand, CounterSnapshot> {
 }
 ```
 
-### CommandDocument
-
-`CommandDocument<TCommand, TSnapshot, TImage>` (from `@jolly-pixel/network/client`) is the base of a document edited by commands. It takes a `CommandState`, which owns the data:
-
-| Member | Role |
-|---|---|
-| `accepts(command)` | Whether the command applies to the state now. |
-| `placeable(command)` | The command placed where it still fits, for an undo or redo. |
-| `apply(command)`, `load(snapshot)` | Change the state. |
-| `imageOf(command)` | What the command is about to replace, read before it applies. |
-| `inverseOf(command)` | The commands undoing it, read before it applies. |
-| `restored(images)` | The snapshot with the images of the pending commands, oldest first, put back. |
-
-The document emits a `CommandChange` for each applied command, `{ command, origin, image, inverse, clientId, basis? }`, and `reset` after `load`. A subclass's edit methods call the protected `commit(command)`, which applies a local change and returns whether the state accepted it. `apply(command, clientId)` applies a peer command (`origin` `remote`), `replayPending(command)` re-applies a pending one (`replay`), `applyStep(command, basis)` applies a placeable command as a local edit sent with `basis`, and `revert(images)` loads `restored(images)`. `receipts` is its `ChangeReceipts`.
-
 ### DocumentSyncClient
 
-`DocumentSyncClient` does the wiring above for a `CommandDocument`, with a reconciler built from the change images:
+`DocumentSyncClient` does the wiring above for a [`CommandDocument`](../../../history/docs/CommandDocument.md) from `@jolly-pixel/history`, with a reconciler built from the change images:
 
 ```ts
 const sync = new DocumentSyncClient(room, {
@@ -174,7 +171,7 @@ const sync = new DocumentSyncClient(room, {
 ```
 
 - `keys(command)` names the registers an absolute write sets, or `null` for any other command, as the reconciler's `keys`.
-- A change whose `origin` is `local` is sent with its `basis`, its image kept for the reconciler, and its acknowledgement or refusal written to `receipts`. Other origins are not sent.
+- A change whose `origin` is `local` is sent with `sendChange`, its image kept for the reconciler, and the document's `receipts` feed a [`CommandHistory`](../../../history/docs/CommandHistory.md). Other origins are not sent.
 - A peer command reverts the pending commands with one `revert(images)`, applies, and re-applies each with `replayPending`.
 - Snapshots go to `load`, and peer commands to `apply` with their `clientId`.
 - `destroy()` also stops the change subscription and detaches the receipts.
@@ -187,11 +184,11 @@ const sync = new DocumentSyncClient(room, {
 
 When the new `sync` names another client id, `CommandSync` holds new commands, ignores peer commands, and treats the previous id's echoes as acknowledgements until one of these arrives:
 
-- `{ type: "catch-up", data, version, acks }`: the commands after the resumed version, in order. Commands from the previous id acknowledge the ledger; the others are reconciled like peer commands.
+- `{ type: "catch-up", data, version, acks }`: the commands after the resumed version, in order. Commands from the previous id acknowledge the ledger; the others are reconciled like peer commands. A command `acks` covers without its echo in `data` was refused before the drop, and its refusal was lost with the old connection: `CommandSync` asks for a snapshot to roll it back, then fires `"refused"`.
 - A snapshot, when the server has no catch-up for that version.
 
 Then every command still pending, sent before the drop or held since, is stamped with the new client id and a new `seq` and sent. A command the server processed before the drop is acknowledged by `acks[previousClientId]` or by its echo in the catch-up, so it is not sent twice.
 
-While the room has no client id, the ledger holds at most 500 commands or 2 MB of bodies. Past either, `overflowed` becomes `true`, `"overflow"` fires, and new commands are applied locally only. The next join then sends no resume, the ledger is dropped, and the snapshot replaces the unsaved local changes.
+While the room has no client id, the ledger holds at most 500 commands or 2 MB of bodies. Past either, `overflowed` becomes `true`, `"overflow"` fires, and new commands are applied locally only. The next join then sends no resume, the ledger is dropped with `"discarded"`, and the snapshot replaces the unsaved local changes.
 
 `destroy()` removes the room listeners and the resume source, and discards the ledger. It does not call `room.leave()`.

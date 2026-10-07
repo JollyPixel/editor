@@ -7,7 +7,6 @@ import {
   type BlockRedefinition,
   type VoxelCommand,
   type VoxelCommandContext,
-  type VoxelHistory,
   type VoxelLayerCommand,
   type VoxelWorld,
   type VoxelWorldJSON
@@ -120,10 +119,6 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
 
   get materialGroups(): SyncedMap["voxels"]["materialGroups"] {
     return this.#map.voxels.materialGroups;
-  }
-
-  get history(): VoxelHistory {
-    return this.#map.voxels.history;
   }
 
   constructor(

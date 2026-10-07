@@ -14,6 +14,10 @@ import {
 // Import Internal Dependencies
 import { VoxelReconciler } from "../../src/network/VoxelReconciler.ts";
 import type { VoxelMapNetworkCommand } from "../../src/network/types.ts";
+import {
+  mapHistory,
+  MAP_SCOPE
+} from "../helpers/history.ts";
 
 // CONSTANTS
 const kOrigin = {
@@ -25,9 +29,9 @@ const kOrigin = {
 function setup() {
   const document = new VoxelDocument({
     chunkSize: 16,
-    layers: ["L3", "L2", "L1"],
-    history: { enabled: true }
+    layers: ["L3", "L2", "L1"]
   });
+  const history = mapHistory(document);
   const reconciler = new VoxelReconciler(document);
   const pending: VoxelMapNetworkCommand[] = [];
   document.on("command", (command, { origin }) => {
@@ -46,6 +50,7 @@ function setup() {
 
   return {
     document,
+    history,
     reconciler,
     pending
   };
@@ -59,10 +64,10 @@ function names(
 
 describe("VoxelReconciler", () => {
   test("reverts a pending undo from the cells it changed", () => {
-    const { document, reconciler, pending } = setup();
+    const { document, history, reconciler, pending } = setup();
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    document.history.undo();
+    history.undo(MAP_SCOPE);
 
     assert.strictEqual(pending.length, 2);
     assert.strictEqual(reconciler.revert([pending[1]]), true);

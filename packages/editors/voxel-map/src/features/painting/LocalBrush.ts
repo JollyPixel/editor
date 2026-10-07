@@ -10,6 +10,7 @@ import type {
   VoxelPart,
   VoxelView
 } from "@jolly-pixel/voxel.renderer";
+import type { OpenStep } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import type {
@@ -47,11 +48,20 @@ import {
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
+import {
+  MAP_HISTORY_SCOPE,
+  type MapSteps
+} from "../../shared/mapHistory.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
 const kDefaultSkyRadius = 24;
 const kStaleAimFrames = 2;
+const kStrokeLabels: Readonly<Record<StrokeMode, string>> = {
+  place: "Paint",
+  replace: "Replace",
+  remove: "Erase"
+};
 
 export interface LocalBrushOptions {
   view: VoxelView;
@@ -61,6 +71,7 @@ export interface LocalBrushOptions {
   block: BlockSelection;
   selection: SelectionStore;
   pointer: PointerCapture;
+  history: MapSteps;
   groundPlaneSize?: number;
   maxDistance?: number;
   skyRadius?: number;
@@ -77,6 +88,8 @@ export class LocalBrush extends ActorComponent {
   #block: BlockSelection;
   #selection: SelectionStore;
   #pointerCapture: PointerCapture;
+  #history: MapSteps;
+  #step: OpenStep | null = null;
   #onPaintBlocked: () => void;
   #aimer: BrushAimResolver;
   #preview: BrushPreview;
@@ -115,6 +128,7 @@ export class LocalBrush extends ActorComponent {
     this.#block = block;
     this.#selection = selection;
     this.#pointerCapture = pointer;
+    this.#history = options.history;
     this.#onPaintBlocked = options.onPaintBlocked;
     this.#aimer = new BrushAimResolver({
       camera,
@@ -334,7 +348,7 @@ export class LocalBrush extends ActorComponent {
     });
 
     this.#stroke = stroke;
-    this.view.document.history.begin();
+    this.#step = this.#history.open(MAP_HISTORY_SCOPE, kStrokeLabels[mode]);
     this.#frameCenter = stroke.origin;
     this.#apply(stroke, stroke.advance(stroke.origin));
   }
@@ -356,7 +370,8 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#stroke = null;
-    this.view.document.history.commit();
+    this.#step?.commit();
+    this.#step = null;
   }
 
   #apply(

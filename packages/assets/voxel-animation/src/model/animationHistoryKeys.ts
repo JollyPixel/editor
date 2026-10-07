@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
-import type {
-  HistoryGuard,
-  HistoryKeys
-} from "@jolly-pixel/network/client";
+import {
+  KeyedGuard,
+  type HistoryKeys,
+  type KeyedGuardEntry
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import type { AnimationImage } from "./animationImages.ts";
@@ -23,8 +24,8 @@ export function animationHistoryKeys(
       ...animationConflictKeys(command),
       ...contentKeysOf(command)
     ],
-    guards: (commands) => commands.flatMap((command) => [
-      ...animationConflictRefs(command).map((ref): HistoryGuard => {
+    guard: (commands) => new KeyedGuard(commands.flatMap((command) => [
+      ...animationConflictRefs(command).map((ref): KeyedGuardEntry => {
         return {
           key: animationValueKey(ref),
           read: () => valueOf(set, ref)
@@ -33,7 +34,7 @@ export function animationHistoryKeys(
       ...command.action === "clip-removed" ?
         [{ key: clipContentKey(command.id), read: () => set.clip(command.id)?.tracks }] :
         []
-    ])
+    ]))
   };
 }
 

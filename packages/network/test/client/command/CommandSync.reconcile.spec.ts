@@ -147,7 +147,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
     assert.deepEqual(log, ["apply:peer:paint:k=0"]);
   });
 
-  test("an echo reports the version its command landed at", () => {
+  test("an echo reports its version for every command it acknowledges", () => {
     const { harness, sync } = setup();
     const acknowledged: [number, number | undefined][] = [];
     sync.on("acknowledged", (command, version) => acknowledged.push([command.timestamp, version]));
@@ -156,7 +156,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
     sync.send({ action: "paint", keys: ["k"], value: 2 }, 200);
     harness.serverMessage({ type: "command", data: { ...paint("self", ["k"], 200), seq: 2 }, version: 9 });
 
-    assert.deepEqual(acknowledged, [[200, 9]]);
+    assert.deepEqual(acknowledged, [[100, 9], [200, 9]]);
   });
 
   test("applies a remote write that beats the pending write", () => {
@@ -318,6 +318,18 @@ describe("CommandSync reconciliation, snapshots and resync", () => {
 
     assert.deepEqual(log, ["snapshot:5", "replay:2"]);
     assert.strictEqual(sync.pending, 1);
+  });
+
+  test("an own echo ignored while resyncing still reports its version", () => {
+    const { harness, sync } = setup({ revertible: false });
+    const versions: Array<number | undefined> = [];
+    sync.on("acknowledged", (_command, version) => versions.push(version));
+
+    sync.send({ action: "move", item: "a" });
+    harness.serverMessage({ type: "command", data: move("peer") });
+    harness.serverMessage({ type: "command", data: move("self", 1), version: 4 });
+
+    assert.deepEqual(versions, [4]);
   });
 
   test("asks for one snapshot at a time", () => {

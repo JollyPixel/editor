@@ -57,8 +57,7 @@ function torsoSnapshot(
 function createHarness() {
   const pixelEvents: PixelCommand[] = [];
   const pixels = new PixelDocument({
-    size: kTextureSize,
-    history: { enabled: true }
+    size: kTextureSize
   });
   pixels.on("command", (command) => pixelEvents.push(command));
   const { document, blocks, selection, addBlock } = createModelFixture();
@@ -324,13 +323,15 @@ describe("BlockTextures UV edits", () => {
 
   test("sends no texture command and records no texture history", () => {
     const { pixels, pixelEvents, uv, regionId } = bound();
+    const pixelChanges: unknown[] = [];
+    pixels.on("change", (change) => pixelChanges.push(change));
 
     uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
     uv.rotate(regionId, "cw");
     uv.setState(regionId, "unfolded");
 
     assert.deepEqual(pixelEvents, []);
-    assert.equal(pixels.history.canUndo, false);
+    assert.deepEqual(pixelChanges, []);
   });
 
   test("applies a remote UV change to the region without echoing it", () => {

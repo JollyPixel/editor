@@ -37,6 +37,7 @@ import type { TexturePane } from "./texturePanes.ts";
 import type { TransformWorkspace } from "../features/transform/TransformPanelController.ts";
 import { PeerRegionSelections } from "../features/texture/index.ts";
 import type { PresenceStore } from "../state/index.ts";
+import type { EditorHistory } from "../features/history/index.ts";
 
 // CONSTANTS
 const kDefaultZoom = {
@@ -48,6 +49,7 @@ const kDefaultZoom = {
 
 export interface LeftPanelWorkspace extends TransformWorkspace {
   presence: PresenceStore;
+  history: EditorHistory;
 }
 
 export interface LeftPanelTexture {
@@ -120,8 +122,10 @@ export class LeftPanel extends LitElement {
 
   async #initializeCanvas(): Promise<void> {
     const texture = this.#texture;
+    const workspace = this.workspace;
     if (
       texture === null ||
+      workspace === null ||
       !this.hasUpdated ||
       this.#initializing
     ) {
@@ -133,7 +137,11 @@ export class LeftPanel extends LitElement {
       document: texture.document,
       defaultMode: "move",
       zoom: kDefaultZoom,
-      brush: { size: 8 }
+      brush: { size: 8 },
+      history: {
+        history: workspace.history,
+        scope: "build"
+      }
     });
     canvas.uv.showAll = true;
     canvas.uv.showRegionLabels = true;
@@ -162,6 +170,7 @@ export class LeftPanel extends LitElement {
     }
     if (changedProperties.has("workspace")) {
       this.#syncPeerRegionSelections();
+      void this.#initializeCanvas();
     }
     if (changedProperties.has("keyBindingSettings")) {
       this.#releaseKeyBindings?.();

@@ -11,6 +11,7 @@ import type {
 } from "../types.ts";
 import type {
   UVGeometry,
+  UVRegion,
   UVSlot,
   UVRegionData
 } from "../uv/region/UVRegion.ts";
@@ -132,17 +133,14 @@ type CommandOf<TPixels> =
 
 export type DocumentCommand = CommandOf<Uint8ClampedArray>;
 
-export type PixelCommand = CommandOf<string> & {
-  originTimestamp?: number;
-};
+export type PixelCommand = CommandOf<string>;
 
 export type PixelCommandAction = DocumentCommand["action"];
 
 export function toPixelCommand(
-  command: DocumentCommand,
-  originTimestamp?: number
+  command: DocumentCommand
 ): PixelCommand {
-  const encoded: PixelCommand = command.action === "texture-replaced" ?
+  return command.action === "texture-replaced" ?
     {
       action: "texture-replaced",
       metadata: {
@@ -151,10 +149,6 @@ export function toPixelCommand(
       }
     } :
     command;
-
-  return originTimestamp === undefined ?
-    encoded :
-    { ...encoded, originTimestamp };
 }
 
 export function toDocumentCommand(
@@ -209,5 +203,69 @@ export function textureOf(
   return {
     action: "texture-replaced",
     metadata: { size, pixels }
+  };
+}
+
+export function uvRegionCreated(
+  region: UVRegionData
+): DocumentCommand {
+  return {
+    action: "uv-region-created",
+    metadata: { region }
+  };
+}
+
+export function uvRegionDeleted(
+  id: string
+): DocumentCommand {
+  return {
+    action: "uv-region-deleted",
+    metadata: { id }
+  };
+}
+
+export function uvRegionMoved(
+  id: string,
+  face: UVSlot | null,
+  rect: SelectionRect
+): DocumentCommand {
+  return {
+    action: "uv-region-moved",
+    metadata: {
+      id,
+      face,
+      rect
+    }
+  };
+}
+
+export function uvRegionStateChanged(
+  region: UVRegionData
+): DocumentCommand {
+  return {
+    action: "uv-region-state-changed",
+    metadata: { region }
+  };
+}
+
+export function uvRegionRotated(
+  region: UVRegion,
+  face: UVSlot | null
+): DocumentCommand {
+  const rotation: UVRegionRotation = face === null ?
+    {
+      id: region.id,
+      face,
+      region: region.toJSON()
+    } :
+    {
+      id: region.id,
+      face,
+      geometry: region.geometryFor(face)
+    };
+
+  return {
+    action: "uv-region-rotated",
+    metadata: rotation
   };
 }

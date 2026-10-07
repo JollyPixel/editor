@@ -29,7 +29,8 @@ type VoxelCommandListener = (
 ) => void;
 
 interface VoxelCommandContext {
-  origin: "local" | "remote";
+  origin: "local" | "remote" | "replay";
+  clientId?: string | null;
   redefinition?: BlockRedefinition;
 }
 
@@ -41,9 +42,15 @@ type BlockRedefinition =
   | "occlusion";
 ```
 
-`origin` is `"local"` for a change made on this document and `"remote"` for one
-replayed with `document.apply(command, { origin: "remote" })`. A network
-adapter applies peer commands as `"remote"` and sends only `"local"` ones.
+`origin` is `"local"` for a change made on this document, `"remote"` for a
+peer's command applied with `document.apply(command, { origin: "remote" })`,
+and `"replay"` for this client's pending command applied or rolled back around
+a peer's. A network adapter applies peer commands as `"remote"` and sends only
+`"local"` ones.
+
+`clientId` is the peer `apply()` was given. `change` is set on every local
+command written through `VoxelWorld`: the [history change](./VoxelEdits.md)
+of that command, whose `basis` a sync client sends with it.
 
 `redefinition` is set on `"block-defined"` commands only. It compares the new
 definition with the one it replaced:

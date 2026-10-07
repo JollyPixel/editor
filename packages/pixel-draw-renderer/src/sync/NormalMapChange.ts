@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { NormalMapCommand } from "./PixelCommand.ts";
-import type { NormalMapConfig } from "../normal/NormalMapConfig.ts";
+import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 import type {
   IndexedNormalMapZone,
   NormalMapSettings,
@@ -8,6 +8,25 @@ import type {
 } from "../normal/types.ts";
 
 export class NormalMapChange {
+  static of(
+    current: NormalMapConfig | null,
+    command: NormalMapCommand
+  ): NormalMapChange | null {
+    switch (command.action) {
+      case "normal-map-toggled":
+        return NormalMapChange.toggle(
+          current,
+          command.metadata.config === null ? null : NormalMapConfig.from(command.metadata.config)
+        );
+      case "normal-map-defaults-patched":
+        return NormalMapChange.patchDefaults(current, command.metadata.patch);
+      case "normal-map-zone-set":
+        return NormalMapChange.setZone(current, command.metadata.zone);
+      case "normal-map-zone-deleted":
+        return NormalMapChange.deleteZone(current, command.metadata.regionId);
+    }
+  }
+
   static toggle(
     current: NormalMapConfig | null,
     config: NormalMapConfig | null

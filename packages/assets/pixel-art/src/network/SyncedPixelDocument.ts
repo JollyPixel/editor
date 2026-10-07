@@ -14,10 +14,6 @@ const kInitialSize: Vec2 = { x: 1, y: 1 };
 
 export interface SyncedPixelDocumentOptions {
   maxSize?: number;
-  history?: {
-    enabled?: boolean;
-    limit?: number;
-  };
 }
 
 export function blankPixelDocument(
@@ -25,8 +21,7 @@ export function blankPixelDocument(
 ): PixelDocument {
   return new PixelDocument({
     size: kInitialSize,
-    maxSize: options.maxSize,
-    history: options.history
+    maxSize: options.maxSize
   });
 }
 
@@ -69,6 +64,9 @@ export function pixelArtDocumentKind(
 ): PixelArtDocumentKind {
   return {
     kind: PIXEL_ART_KIND,
-    createDocument: (room) => new SyncedPixelDocument(room, options)
+    createDocument: (room) => new SyncedPixelDocument(
+      room,
+      options
+    )
   };
 }

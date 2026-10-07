@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { CommandHistory } from "@jolly-pixel/network/client";
+import { CommandHistory } from "@jolly-pixel/history";
 import {
   modelHistoryKeys,
   type ModelDocument
@@ -35,7 +35,7 @@ export function createEditorHistory(
 ): EditorHistory {
   const history = new CommandHistory({
     scopes: EDITOR_TABS,
-    ...options.limit === undefined ? {} : { limit: options.limit }
+    limit: options.limit
   });
   history.register({
     id: "model",

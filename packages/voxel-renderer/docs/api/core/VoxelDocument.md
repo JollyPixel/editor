@@ -1,7 +1,7 @@
 # VoxelDocument
 
-The voxel data of a world: layers, the block registry, blockset links, undo
-history and the command stream. It creates no Three.js objects; pair it with a
+The voxel data of a world: layers, the block registry, blockset links, the
+undo source and the command stream. It creates no Three.js objects; pair it with a
 [`VoxelView`](./VoxelView.md) to draw it.
 
 ```ts
@@ -37,7 +37,6 @@ Layer, voxel and object edits go through
 | `blocksets` | `Iterable<BlocksetDefinition>` | | Blockset links declared up front. |
 | `materialGroups` | `Iterable<MaterialGroupJSON>` | `[]` | Material groups the blocks can name. Invalid entries are skipped. |
 | `blendGroups` | `Iterable<BlendGroupJSON>` | `[]` | Blend groups the blocks can name. Invalid entries are skipped. |
-| `history` | `VoxelHistoryOptions` | disabled | See [`VoxelHistory`](./VoxelHistory.md). |
 | `logger` | `VoxelLogger` | no-op | |
 | `onCommand` | `VoxelCommandListener` | | Subscribed to `"command"` before any command is applied. |
 
@@ -50,7 +49,7 @@ class VoxelDocument {
   readonly blocksets: BlocksetList;
   readonly materialGroups: MaterialGroupList;
   readonly blendGroups: BlendGroupList;
-  readonly history: VoxelHistory;
+  readonly edits: VoxelEdits;
   readonly chunkSize: number;
 }
 ```
@@ -64,12 +63,14 @@ class VoxelDocument {
 - [`blocksets`](../blocksets/blocksets.md) holds blockset definitions and their
   slots, not textures. Atlases belong to the view's
   [`BlocksetAtlases`](../blocksets/BlocksetAtlases.md).
+- [`edits`](./VoxelEdits.md) is the source a `CommandHistory` from
+  `@jolly-pixel/history` undoes.
 
 ## Events
 
 | Event | Arguments | When |
 | --- | --- | --- |
-| `command` | `(command, { origin })` | After every applied [command](./commands.md), local or replayed. |
+| `command` | `(command, context)` | After every applied [command](./commands.md), local or replayed. See [context](./commands.md#context). |
 | `loaded` | | After `load()` put the new world in place. |
 
 `load()` and direct `blocks` or `blocksets` mutations emit no command.
@@ -79,11 +80,18 @@ class VoxelDocument {
 ### Commands
 
 ```ts
-apply(command: VoxelCommand, options?: { origin?: "local" | "remote" }): boolean;
+apply(command: VoxelCommand, options?: VoxelApplyOptions): boolean;
+
+interface VoxelApplyOptions {
+  origin?: "local" | "remote" | "replay";
+  clientId?: string | null;
+}
 ```
 
 Applies a command and emits it once on `"command"` with `options.origin`
-(default `"local"`). Returns `false` and emits nothing when the command changed
+(default `"local"`) and `options.clientId`. A sync client applies a peer's
+command as `"remote"` with the peer's `clientId`, and its own pending
+commands, applied or rolled back around a peer's, as `"replay"`. Returns `false` and emits nothing when the command changed
 nothing. See [commands](./commands.md) for what each command carries once
 applied.
 
@@ -134,11 +142,11 @@ interface VoxelLoadOptions {
 `save()` writes the world and its blockset links in the
 [serialized format](../serialization/serialization.md).
 
-`load()` replaces the world and the blockset list, clears the undo history and
-emits `loaded`. It emits no command and leaves `blocks` and the groups alone.
+`load()` replaces the world and the blockset list and emits `loaded`; `edits`
+emits a `"load"` reset. It emits no command and leaves `blocks` and the groups alone.
 The document keeps its own `chunkSize`. `options.blocksets` are declared after
 the snapshot. `mergeLayers` collapses the layers as
 [`world.mergeAllLayers()`](../world/VoxelWorld.md) does; an `except`
 name with no matching layer logs a warning.
 
-`dispose()` clears the history, the blockset list and every listener.
+`dispose()` stops `edits` and clears the blockset list and every listener.

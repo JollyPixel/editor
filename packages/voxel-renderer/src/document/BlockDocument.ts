@@ -39,10 +39,15 @@ export type BlockDocumentEvents<TCommand> = {
 export interface VoxelApplyOptions {
   /**
    * Origin reported with the `"command"` event; `"remote"` for a command
-   * replayed on behalf of another peer.
+   * replayed on behalf of another peer, `"replay"` for this client's pending
+   * command applied or rolled back around a peer's.
    * @default "local"
    */
   origin?: VoxelCommandOrigin;
+  /**
+   * The peer behind a `"remote"` command, reported with the `"command"` event.
+   */
+  clientId?: string | null;
 }
 
 export abstract class BlockDocument<
@@ -67,7 +72,7 @@ export abstract class BlockDocument<
     command: TCommand | BlockCatalogCommand,
     options: VoxelApplyOptions = {}
   ): boolean {
-    const { origin = "local" } = options;
+    const { origin = "local", clientId } = options;
 
     const previous = definesBlock(command) ?
       this.blocks.get(command.block.id) :
@@ -78,6 +83,9 @@ export abstract class BlockDocument<
     }
 
     const context: VoxelCommandContext = { origin };
+    if (clientId !== undefined) {
+      context.clientId = clientId;
+    }
     if (definesBlock(applied)) {
       context.redefinition = redefinitionOf(previous, applied.block);
     }

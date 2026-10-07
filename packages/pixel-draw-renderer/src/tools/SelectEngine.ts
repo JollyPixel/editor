@@ -26,7 +26,7 @@ import type {
 import type {
   SelectionOutline
 } from "../rendering/overlays/SelectionOutline.ts";
-import type { SelectionFootprint } from "../history/HistoryEntry.ts";
+import type { SelectionFootprint } from "../selection/SelectionFootprint.ts";
 import type { PixelDocument } from "../PixelDocument.ts";
 import type {
   RGBA8,

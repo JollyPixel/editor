@@ -19,4 +19,3 @@ pieces fit together; the pages below are the contract for each one.
 
 - [CommandSync](./sync/CommandSync.md): stamped commands, snapshots and server notices over a room.
 - [Conflicts](./sync/Conflicts.md) — the conflict resolver and its last-write-wins default.
-- [CommandHistory](./sync/CommandHistory.md): per-person undo over command documents, refused when a peer changed what it would undo.
