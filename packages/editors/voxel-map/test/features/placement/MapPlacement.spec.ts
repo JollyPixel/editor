@@ -436,6 +436,39 @@ describe("MapPlacement regions", () => {
     assert.deepEqual(concealed, []);
   });
 
+  test("lifts and moves only the voxels connected to a cell, as one undo step", () => {
+    const { world, history, placement } = setup();
+    const draft = world.getLayer("Draft")!;
+    const before = cellsOf(draft);
+
+    assert.equal(placement.liftConnected("Draft", { x: 1, y: 0, z: 0 }), true);
+    assert.deepEqual(blocksOf(draft), [[0, 1, 1, 3]]);
+    assert.deepEqual(placement.current!.bounds, {
+      min: { x: 0, y: 0, z: 0 },
+      size: { x: 3, y: 1, z: 1 }
+    });
+
+    placement.moveBoundsTo({ x: 0, y: 0, z: 2 });
+    assert.equal(placement.commit(), true);
+    assert.deepEqual(blocksOf(draft), [
+      [0, 0, 2, 1],
+      [0, 1, 1, 3],
+      [1, 0, 2, 2],
+      [2, 0, 2, 1]
+    ]);
+
+    history.undo();
+    assert.deepEqual(cellsOf(draft), before);
+  });
+
+  test("refuses to lift connected voxels from an empty cell or a missing layer", () => {
+    const { placement } = setup();
+
+    assert.equal(placement.liftConnected("Draft", { x: 5, y: 0, z: 5 }), false);
+    assert.equal(placement.liftConnected("Missing", { x: 0, y: 0, z: 0 }), false);
+    assert.equal(placement.placing, false);
+  });
+
   test("refuses a region without voxels or without its layer", () => {
     const { placement } = setup();
     const empty = CellRegion.spanning(

@@ -13,7 +13,10 @@ import type { KeyChordString } from "@jolly-pixel/controls";
 import type { VoxelHistoryState } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { EditorTool } from "../../state/index.ts";
+import type {
+  EditorTool,
+  SelectMode
+} from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { HISTORY_SHORTCUTS } from "../../shared/historyShortcuts.ts";
@@ -43,6 +46,9 @@ export class EditToolbar extends WorkspaceElement {
   @state()
   declare _canPaste: boolean;
 
+  @state()
+  declare _selectMode: SelectMode;
+
   #onHistoryChange = (
     state: VoxelHistoryState
   ): void => {
@@ -56,6 +62,7 @@ export class EditToolbar extends WorkspaceElement {
     this._undoDepth = 0;
     this._redoDepth = 0;
     this._canPaste = false;
+    this._selectMode = "box";
   }
 
   protected override watchWorkspace(
@@ -76,6 +83,7 @@ export class EditToolbar extends WorkspaceElement {
     this._undoDepth = history.undoDepth;
     this._redoDepth = history.redoDepth;
     this._canPaste = placement.clipboard.content !== null;
+    this._selectMode = tool.selectMode;
     refreshMode();
 
     history.on("change", this.#onHistoryChange);
@@ -86,6 +94,9 @@ export class EditToolbar extends WorkspaceElement {
         this._canPaste = content !== null;
       }),
       tool.subscribe("change", refreshMode),
+      tool.subscribe("selectMode", (selectMode) => {
+        this._selectMode = selectMode;
+      }),
       keyboardLayout.subscribe("change", () => this.requestUpdate()),
       () => history.off("change", this.#onHistoryChange)
     ];
@@ -107,6 +118,7 @@ export class EditToolbar extends WorkspaceElement {
         aria-label="Map editing"
       >
         ${renderSegment("edit", mode !== "place", this.#renderEdit())}
+        ${renderSegment("select", mode === "select", this.#renderSelect())}
         ${renderSegment("brush", mode === "paint", html`
           <span class="separator" aria-hidden="true"></span>
           <voxel-brush-controls .workspace=${workspace}></voxel-brush-controls>
@@ -170,6 +182,31 @@ export class EditToolbar extends WorkspaceElement {
     `;
   }
 
+  #renderSelect(): TemplateResult {
+    const connected = this._selectMode === "connected";
+    const cycle = this.#shortcut(TOOL_SHORTCUTS.select);
+
+    return html`
+      <span class="separator" aria-hidden="true"></span>
+      <div class="group" role="group" aria-label="Select mode">
+        <jolly-tool-button
+          data-select-mode="box"
+          icon="marquee"
+          label=${`Box select (${cycle})`}
+          ?active=${!connected}
+          @click=${() => this.#selectMode("box")}
+        ></jolly-tool-button>
+        <jolly-tool-button
+          data-select-mode="connected"
+          icon="select-connected"
+          label=${`Connected select (${cycle})`}
+          ?active=${connected}
+          @click=${() => this.#selectMode("connected")}
+        ></jolly-tool-button>
+      </div>
+    `;
+  }
+
   #shortcut(
     chords: readonly KeyChordString[]
   ): string {
@@ -180,6 +217,12 @@ export class EditToolbar extends WorkspaceElement {
     tool: EditorTool
   ): void {
     this.attached.state.tool.current = tool;
+  }
+
+  #selectMode(
+    mode: SelectMode
+  ): void {
+    this.attached.state.tool.selectMode = mode;
   }
 
   #onUndo(): void {

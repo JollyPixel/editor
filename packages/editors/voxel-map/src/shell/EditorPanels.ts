@@ -106,7 +106,9 @@ export class EditorPanels {
       return;
     }
 
-    const { layout, blocks, paint } = this.#elements;
+    const { layout, blocks, paint, materials } = this.#elements;
+    materials.showsBlockLibrary = !layout.paneVisible("blocks");
+
     const host = TextureHost.resolve(
       layout.placement("blocks"),
       layout.placement("paint"),

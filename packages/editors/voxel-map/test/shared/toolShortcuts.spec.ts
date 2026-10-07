@@ -45,6 +45,18 @@ describe("ToolShortcuts", () => {
     assert.equal(tool.current, "brush");
   });
 
+  it("cycles the select mode on M while the select tool is active", () => {
+    const { tool, press } = setup();
+    tool.current = "select";
+
+    press("KeyM", "m");
+    assert.equal(tool.selectMode, "connected");
+
+    press("KeyM", "m");
+    assert.equal(tool.selectMode, "box");
+    assert.equal(tool.current, "select");
+  });
+
   it("leaves the select tool for the brush on Escape", () => {
     const { tool, press } = setup();
     tool.current = "select";
