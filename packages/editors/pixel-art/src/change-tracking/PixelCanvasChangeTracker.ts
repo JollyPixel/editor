@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import type {
-  SelectionRect,
-  Vec2
+import {
+  RectArea,
+  type SelectionRect,
+  type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -32,7 +33,7 @@ export class PixelCanvasChangeTracker extends Emitter<
   readonly #flush: PixelCanvasChangeFlush;
   readonly #scheduler: (callback: () => void) => void;
 
-  #pending: SelectionRect | null = null;
+  #pending: RectArea | null = null;
   #scheduled = false;
   #disposed = false;
 
@@ -41,12 +42,22 @@ export class PixelCanvasChangeTracker extends Emitter<
   };
 
   readonly #onResized = (event: { size: Vec2; }): void => {
-    this.#markDirty(fullBounds(event.size));
+    this.#markDirty({
+      x: 0,
+      y: 0,
+      width: event.size.x,
+      height: event.size.y
+    });
     this.emit("resized", event);
   };
 
   readonly #onReplaced = (event: { size: Vec2; }): void => {
-    this.#markDirty(fullBounds(event.size));
+    this.#markDirty({
+      x: 0,
+      y: 0,
+      width: event.size.x,
+      height: event.size.y
+    });
     this.emit("replaced", event);
   };
 
@@ -66,7 +77,7 @@ export class PixelCanvasChangeTracker extends Emitter<
   }
 
   consume(): SelectionRect | null {
-    const bounds = this.#pending;
+    const bounds = this.#pending?.bounds ?? null;
     this.#pending = null;
     if (bounds !== null) {
       this.emit("consumed", { bounds });
@@ -89,9 +100,7 @@ export class PixelCanvasChangeTracker extends Emitter<
   #markDirty(
     bounds: SelectionRect
   ): void {
-    this.#pending = this.#pending === null ?
-      bounds :
-      unionRect(this.#pending, bounds);
+    this.#pending = this.#pending?.union(bounds) ?? RectArea.from(bounds);
 
     if (this.#flush === "immediate") {
       this.consume();
@@ -110,30 +119,4 @@ export class PixelCanvasChangeTracker extends Emitter<
       }
     });
   }
-}
-
-function fullBounds(
-  size: Vec2
-): SelectionRect {
-  return {
-    x: 0,
-    y: 0,
-    width: size.x,
-    height: size.y
-  };
-}
-
-function unionRect(
-  a: SelectionRect,
-  b: SelectionRect
-): SelectionRect {
-  const x = Math.min(a.x, b.x);
-  const y = Math.min(a.y, b.y);
-
-  return {
-    x,
-    y,
-    width: Math.max(a.x + a.width, b.x + b.width) - x,
-    height: Math.max(a.y + a.height, b.y + b.height) - y
-  };
 }

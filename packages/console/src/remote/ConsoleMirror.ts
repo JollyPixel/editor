@@ -252,13 +252,13 @@ export class ConsoleMirror {
 
   async #write(
     address: string,
-    value: ConsoleValue
+    literal: string
   ): Promise<VariableSetResult> {
     const reply = await this.#request(
       {
         type: "write",
         address,
-        literal: String(value)
+        literal
       },
       "written"
     );

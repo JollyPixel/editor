@@ -14,7 +14,6 @@ import {
   KEY_BINDINGS_STORAGE_KEY,
   KeyBindingSettings
 } from "../../src/keybindings/KeyBindingSettings.ts";
-import { parseBindingList } from "../../src/keybindings/keybindConsole.ts";
 import { pixelArtConsole } from "../../src/console/pixelArtConsole.ts";
 
 function boot(
@@ -47,12 +46,12 @@ describe("keybind console", () => {
     assert.notEqual(commands.registry.resolveCommand("pixelart.keybinds.reset"), undefined);
   });
 
-  test("a read prints the bindings as a comma-separated list", async() => {
+  test("a read prints every binding of the action", async() => {
     const { commands } = boot(new MemoryStorageAdapter());
 
     await commands.submit("pixelart.keybinds.redo");
 
-    assert.equal(lastLine(commands), "info: Mod+y, Mod+Shift+z");
+    assert.equal(lastLine(commands), "info: Mod+y Mod+Shift+z");
   });
 
   test("a write survives a reboot on the same storage", async() => {
@@ -60,15 +59,15 @@ describe("keybind console", () => {
     const first = boot(storage);
 
     await first.commands.submit("pixelart.keybinds.undo \"Mod+u\"");
-    await first.commands.submit("pixelart.keybinds.redo \"Mod+y, Mod+Shift+u\"");
-    assert.equal(lastLine(first.commands), "info: Mod+y, Mod+Shift+u");
+    await first.commands.submit("pixelart.keybinds.redo Mod+y Mod+Shift+u");
+    assert.equal(lastLine(first.commands), "info: Mod+y Mod+Shift+u");
 
     const second = boot(storage);
     assert.deepEqual(second.keyBindingSettings.keyBindings.overrides, {
       undo: ["Mod+u"],
       redo: ["Mod+y", "Mod+Shift+u"]
     });
-    assert.deepEqual(second.keyBindingSettings.bindingsOf("undo"), ["Mod+u"]);
+    assert.deepEqual(second.keyBindingSettings.chordsBoundTo("undo"), ["Mod+u"]);
   });
 
   test("a conflict prints the KeyChordConflictError message and stores nothing", async() => {
@@ -81,7 +80,7 @@ describe("keybind console", () => {
       lastLine(commands),
       "error: Key chord \"Mod+z\" is bound to both \"copy\" and \"undo\""
     );
-    assert.deepEqual(keyBindingSettings.bindingsOf("copy"), ["Mod+c"]);
+    assert.deepEqual(keyBindingSettings.chordsBoundTo("copy"), ["Mod+c"]);
     assert.equal(storage.get(KEY_BINDINGS_STORAGE_KEY), null);
   });
 
@@ -90,7 +89,7 @@ describe("keybind console", () => {
 
     await commands.submit("pixelart.keybinds.delete \"\"");
 
-    assert.deepEqual(keyBindingSettings.bindingsOf("delete"), []);
+    assert.deepEqual(keyBindingSettings.chordsBoundTo("delete"), []);
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, { delete: [] });
   });
 
@@ -129,15 +128,5 @@ describe("keybind console", () => {
     assert.equal(lastLine(commands), "info: Every shortcut restored");
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, {});
     assert.deepEqual(JSON.parse(storage.get(KEY_BINDINGS_STORAGE_KEY)!), {});
-  });
-});
-
-describe("parseBindingList", () => {
-  test("splits on commas, trims and skips empty items", () => {
-    assert.deepEqual(
-      parseBindingList(" Mod+y ,Mod+Shift+z,, "),
-      ["Mod+y", "Mod+Shift+z"]
-    );
-    assert.deepEqual(parseBindingList(""), []);
   });
 });

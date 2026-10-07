@@ -17,3 +17,4 @@ API is described in the [docs](../CommandConsole.md).
 | [0010](./0010-scripts-edit-variables-as-ini-all-or-nothing.md) | Scripts edit variables as INI text, all or nothing |
 | [0011](./0011-namespaces-nest-by-address.md) | Namespaces nest by dotted address, and parents are implicit |
 | [0012](./0012-the-scope-is-a-prompt-view.md) | The scope is a view for the prompt, not registry state |
+| [0013](./0013-list-items-are-space-separated-tokens.md) | List items are space-separated tokens |

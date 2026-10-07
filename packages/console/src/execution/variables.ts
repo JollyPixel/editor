@@ -3,10 +3,14 @@ import type { VariableInput } from "../input/classify.ts";
 import {
   coerceBoolean,
   coerceEnum,
-  coerceNumber
+  coerceList,
+  coerceNumber,
+  formatValue,
+  isListVariable
 } from "../input/coerce.ts";
 import type {
   ConsoleRegistry,
+  ConsoleScalar,
   ConsoleValue,
   RegisteredVariable,
   Revert,
@@ -15,11 +19,27 @@ import type {
 } from "../registry/types.ts";
 import { ConsoleInputError } from "./errors/ConsoleInputError.ts";
 
+export function readVariable(
+  variable: RegisteredVariable
+): ConsoleValue {
+  const value = variable.def.get();
+  if (typeof value !== "object") {
+    return value;
+  }
+
+  const items: readonly ConsoleScalar[] = value;
+  if (items.includes("")) {
+    throw new ConsoleInputError(`${variable.address} holds an empty item`);
+  }
+
+  return [...items];
+}
+
 export function peekValue(
   variable: RegisteredVariable
 ): ConsoleValue | undefined {
   try {
-    return variable.def.get();
+    return readVariable(variable);
   }
   catch {
     return undefined;
@@ -30,17 +50,20 @@ export function accessVariable(
   input: VariableInput
 ): string | Promise<string> {
   const { variable, tokens } = input;
+  const isList = isListVariable(variable.def);
   if (input.unterminated) {
     throw new ConsoleInputError("Unterminated quote");
   }
-  if (tokens.length > 2) {
+  if (tokens.length > 2 && !isList) {
     throw new ConsoleInputError(
       `${variable.address} takes one value; quote a value containing spaces`
     );
   }
 
-  if (tokens.length === 2) {
-    const literal = tokens[1].value;
+  if (tokens.length > 1) {
+    const literal = isList ?
+      input.line.slice(tokens[1].start).trimEnd() :
+      tokens[1].value;
     const result = writeVariable(variable.def, literal);
     if (result instanceof Promise) {
       return result.then(
@@ -51,7 +74,7 @@ export function accessVariable(
     return readBack(variable, literal, result);
   }
 
-  return String(variable.def.get());
+  return formatValue(readVariable(variable));
 }
 
 function readBack(
@@ -65,7 +88,7 @@ function readBack(
     );
   }
 
-  return String(variable.def.get());
+  return formatValue(readVariable(variable));
 }
 
 export function restoreVariable(
@@ -79,9 +102,10 @@ export function restoreVariable(
       throw new ConsoleInputError(`Unknown variable "${address}"`);
     }
 
-    const result = await writeVariable(variable.def, String(previous));
+    const literal = formatValue(previous);
+    const result = await writeVariable(variable.def, literal);
     if (result === false) {
-      throw new ConsoleInputError(`${address} rejected "${previous}"`);
+      throw new ConsoleInputError(`${address} rejected "${literal}"`);
     }
   };
 }
@@ -105,6 +129,18 @@ export function writeVariable(
           literal,
           def.enumValues
         )
+      );
+    case "string[]":
+      return def.set(
+        coerceList(literal, (item) => item)
+      );
+    case "number[]":
+      return def.set(
+        coerceList(literal, coerceNumber)
+      );
+    case "boolean[]":
+      return def.set(
+        coerceList(literal, coerceBoolean)
       );
     default:
       return def.set(

@@ -9,35 +9,36 @@ import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { renderRailButton } from "../shared/railButton.ts";
-import { showClearTextureDialog } from "../textures/clearTextureDialog.ts";
 import { isInputElement } from "../shared/dom.ts";
 import { PngFile } from "../shared/PngFile.ts";
 import type { TextureImporter } from "../textures/import/TextureImporter.ts";
+import type { ClearTextureDialog } from "../textures/dialogs/ClearTextureDialog.ts";
 
 export interface HistoryFileToolbarOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
+  clearDialog: () => Pick<ClearTextureDialog, "open">;
   exportMenu: (exportAlbedo: () => void) => TemplateResult | typeof nothing;
   trailing: readonly (TemplateResult | typeof nothing)[];
 }
 
 async function clearTexture(
   event: MouseEvent,
-  activeCanvas: () => PixelArtCanvas | null
+  options: HistoryFileToolbarOptions
 ): Promise<void> {
   const trigger = event.currentTarget;
-  const canvas = activeCanvas();
+  const canvas = options.canvas();
   if (!canvas) {
     return;
   }
 
-  const result = await showClearTextureDialog({
+  const result = await options.clearDialog().open({
     hasUVRegions: !canvas.uv.regions.next().done
   });
   if (trigger instanceof HTMLElement) {
     trigger.blur();
   }
-  if (result !== null && activeCanvas() === canvas) {
+  if (result !== null && options.canvas() === canvas) {
     canvas.clearTexture(result);
   }
 }
@@ -145,7 +146,7 @@ export function renderHistoryFileToolbar(
         label: "Clear texture",
         icon: "clearTexture",
         disabled: readOnly,
-        onClick: (event) => void clearTexture(event, options.canvas)
+        onClick: (event) => void clearTexture(event, options)
       })}
       </div>
       ${trailing.map((group) => (group === nothing ? nothing : html`

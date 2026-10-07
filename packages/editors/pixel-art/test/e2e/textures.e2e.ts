@@ -81,7 +81,7 @@ async function addThroughDialog(
   const count = Math.max(await tabs.count(), 1);
   await importPng(panel, name);
   await panel.page().getByRole("button", { name: "Add as new" }).click();
-  await expect(panel.page().locator("jolly-dialog")).toHaveCount(0);
+  await expect(panel.page().locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
 
   await expect(tabs).toHaveCount(count + 1);
   await expect(tabs.last()).toHaveText(name);
@@ -106,7 +106,7 @@ test.describe("import policy ask", () => {
     await importPng(panel, uniqueName("ask-cancel"));
     await page.getByRole("button", { name: "Cancel" }).click();
 
-    await expect(page.locator("jolly-dialog")).toHaveCount(0);
+    await expect(page.locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
     expect((await panelState(panel)).size).toEqual(TEXTURE_SIZE);
   });
 
@@ -235,7 +235,7 @@ test.describe("import policy add", () => {
     await importPng(panel, name);
 
     await expect(panel.getByRole("tab")).toHaveText([/.+/, name]);
-    await expect(page.locator("jolly-dialog")).toHaveCount(0);
+    await expect(page.locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
     expect((await panelState(panel)).size).toEqual(kImportSize);
   });
 });

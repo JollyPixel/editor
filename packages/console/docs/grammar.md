@@ -10,8 +10,8 @@ The prompt accepts three kinds of input:
 | anything else, or `?text` | search | acts on the highlighted result |
 
 Arguments are separated by spaces. Quote a value that contains spaces:
-`pixelart.keybinds.redo "mod+y, mod+shift+z"`. Inside quotes, `\"` and `\\` are escapes. There
-are no `--flag` or `key=value` forms.
+`brush.label "main brush"`. Inside quotes, `\"` and `\\` are escapes. There are no `--flag` or
+`key=value` forms.
 
 An address splits at its last dot: `pixelart.keybinds.undo` is the variable `undo` of the nested
 namespace `pixelart.keybinds`.
@@ -39,6 +39,12 @@ variables and toggles; search still covers everything.
 | `number` | a finite number |
 | `boolean` | `true`/`false`, `yes`/`no`, `y`/`n`, `on`/`off`, `1`/`0` (any case) |
 | `enum` | one of `enumValues` (any case) |
+| `string[]`, `number[]`, `boolean[]` | items of that type, separated by spaces |
+
+A list item follows the quoting rules of an argument:
+`pixelart.keybinds.redo Mod+y Mod+Shift+z` sets two items and `tags "two words" b` sets two
+items. A lone `""` sets the empty list; an empty item next to others is an error. Tab offers
+`true` and `false` at every item of a `boolean[]`.
 
 An invalid value prints an error and nothing runs.
 
@@ -97,6 +103,8 @@ size = 3
 - A value is everything after the first `=`, trimmed, and is coerced as in the prompt. Quote it
   to keep leading or trailing spaces or to write an empty string: `label = "  padded"`, with `\"`
   and `\\` escapes.
+- A list value is written as at the prompt, one quoted item at a time:
+  `redo = Mod+y Mod+Shift+z`, `tags = "two words" b`. An empty value is the empty list.
 - The comments are written again each time the script opens; comments you add are not kept.
 
 Ctrl+S saves only the lines whose value changed, all or nothing; Escape discards the text.

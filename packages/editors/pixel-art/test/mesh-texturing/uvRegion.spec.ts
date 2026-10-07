@@ -19,7 +19,7 @@ import {
   texelBounds,
   type HalfPlane
 } from "#src/mesh-texturing/uvRegion.ts";
-import { edgeOf, regionOf } from "./regionAttributes.ts";
+import { readEdge, readRegion } from "./regionAttributes.ts";
 
 // CONSTANTS
 const kTextureSize: Vec2 = { x: 64, y: 64 };
@@ -60,10 +60,10 @@ describe("ensureUvRegionAttributes", () => {
 
     assert.strictEqual(region.count, 4);
     assert.strictEqual(edge.count, 4);
-    const [minX, minY, maxX, maxY] = regionOf(geometry, 3);
+    const [minX, minY, maxX, maxY] = readRegion(geometry, 3);
     assert.ok(minX < -1000 && minY < -1000);
     assert.ok(maxX > 1000 && maxY > 1000);
-    assert.deepStrictEqual(edgeOf(geometry, 3), [0, 0, 1]);
+    assert.deepStrictEqual(readEdge(geometry, 3), [0, 0, 1]);
   });
 
   test("returns the attributes a geometry already has", () => {

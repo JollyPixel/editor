@@ -8,11 +8,11 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   applyPickerChange,
-  colorChangeOf,
-  colorDetailOf,
+  parseColorChange,
+  rgba8ToColorChange,
   colorWithOpacity,
   pickerSource,
-  rgba8Of,
+  colorChangeToRgba8,
   type ColorValueElement
 } from "../../src/color/pickerChange.ts";
 import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
@@ -58,16 +58,16 @@ describe("colorWithOpacity", () => {
   });
 });
 
-describe("colorChangeOf", () => {
+describe("parseColorChange", () => {
   test("splits an eight-digit hex into a color and an opacity", () => {
     assert.deepEqual(
-      colorChangeOf("#33669980"),
+      parseColorChange("#33669980"),
       { hex: "#336699", opacity: 128 / 255 }
     );
   });
 
   test("returns null for an unparsable value", () => {
-    assert.equal(colorChangeOf("#zzz"), null);
+    assert.equal(parseColorChange("#zzz"), null);
   });
 });
 
@@ -144,11 +144,11 @@ describe("applyPickerChange", () => {
   });
 });
 
-describe("colorDetailOf and rgba8Of", () => {
+describe("rgba8ToColorChange and colorChangeToRgba8", () => {
   test("convert between byte colors and picker details", () => {
-    const detail = colorDetailOf({ r: 18, g: 52, b: 86, a: 128 });
+    const detail = rgba8ToColorChange({ r: 18, g: 52, b: 86, a: 128 });
 
     assert.deepEqual(detail, { hex: "#123456", opacity: 128 / 255 });
-    assert.deepEqual(rgba8Of(detail), { r: 18, g: 52, b: 86, a: 128 });
+    assert.deepEqual(colorChangeToRgba8(detail), { r: 18, g: 52, b: 86, a: 128 });
   });
 });

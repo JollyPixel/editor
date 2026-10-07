@@ -25,11 +25,11 @@ describe("UvAccessPolicy.isAccess", () => {
   });
 });
 
-describe("UvAccessPolicy.of", () => {
+describe("UvAccessPolicy.forAccess", () => {
   test("returns one shared frozen instance per level", () => {
-    const policy = UvAccessPolicy.of("view");
+    const policy = UvAccessPolicy.forAccess("view");
 
-    assert.equal(UvAccessPolicy.of("view"), policy);
+    assert.equal(UvAccessPolicy.forAccess("view"), policy);
     assert.equal(policy.access, "view");
     assert.ok(Object.isFrozen(policy));
   });
@@ -37,17 +37,17 @@ describe("UvAccessPolicy.of", () => {
 
 describe("UvAccessPolicy.constrain", () => {
   test("keeps UV mode when UV is editable", () => {
-    assert.equal(UvAccessPolicy.of("edit").constrain("uv"), "uv");
+    assert.equal(UvAccessPolicy.forAccess("edit").constrain("uv"), "uv");
   });
 
   test("falls back to paint when UV is not editable", () => {
-    assert.equal(UvAccessPolicy.of("view").constrain("uv"), "paint");
-    assert.equal(UvAccessPolicy.of("none").constrain("uv"), "paint");
+    assert.equal(UvAccessPolicy.forAccess("view").constrain("uv"), "paint");
+    assert.equal(UvAccessPolicy.forAccess("none").constrain("uv"), "paint");
   });
 
   test("leaves other modes untouched", () => {
     for (const access of ["edit", "view", "none"] as const) {
-      const policy = UvAccessPolicy.of(access);
+      const policy = UvAccessPolicy.forAccess(access);
 
       assert.equal(policy.constrain("fill"), "fill");
       assert.equal(policy.constrain("move"), "move");
@@ -67,7 +67,7 @@ describe("UvAccessPolicy flags", () => {
   }
 
   test("exposes UV mode and the fill clip when editable", () => {
-    assert.deepEqual(flags(UvAccessPolicy.of("edit")), {
+    assert.deepEqual(flags(UvAccessPolicy.forAccess("edit")), {
       uvMode: true,
       visibilityInBottomBar: false,
       fillClip: true
@@ -75,7 +75,7 @@ describe("UvAccessPolicy flags", () => {
   });
 
   test("moves the visibility toggles to the bottom bar when view-only", () => {
-    assert.deepEqual(flags(UvAccessPolicy.of("view")), {
+    assert.deepEqual(flags(UvAccessPolicy.forAccess("view")), {
       uvMode: false,
       visibilityInBottomBar: true,
       fillClip: true
@@ -83,7 +83,7 @@ describe("UvAccessPolicy flags", () => {
   });
 
   test("hides every UV control when disabled", () => {
-    assert.deepEqual(flags(UvAccessPolicy.of("none")), {
+    assert.deepEqual(flags(UvAccessPolicy.forAccess("none")), {
       uvMode: false,
       visibilityInBottomBar: false,
       fillClip: false

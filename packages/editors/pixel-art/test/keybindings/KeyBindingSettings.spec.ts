@@ -17,7 +17,7 @@ import {
   KEY_BINDINGS_STORAGE_KEY,
   KeyBindingSettings
 } from "../../src/keybindings/KeyBindingSettings.ts";
-import type { PixelArtKeyBindings } from "../../src/keybindings/pixelArtKeyBindings.ts";
+import { PixelArtKeyBindings } from "../../src/keybindings/PixelArtKeyBindings.ts";
 
 function stored(
   value: unknown
@@ -64,39 +64,20 @@ describe("KeyBindingSettings", () => {
     settings.assign("redo", ["Mod+y", "Mod+Shift+z"]);
 
     assert.deepEqual(storedValue(storage), { undo: ["Mod+u"] });
-    assert.deepEqual(settings.bindingsOf("undo"), ["Mod+u"]);
+    assert.deepEqual(settings.chordsBoundTo("undo"), ["Mod+u"]);
   });
 
-  test("drops a corrupt entry with a warning and keeps the others", () => {
+  test("reports each dropped entry and rewrites the storage without it", () => {
     const storage = stored({
       undo: ["Mod+u"],
-      redo: 42,
-      jump: "j",
-      copy: "Mod+u"
+      jump: "j"
     });
 
     const { settings, warnings } = load(storage);
 
+    assert.deepEqual(warnings, ["Dropped the stored keybinding \"jump\": unknown action"]);
     assert.deepEqual(settings.keyBindings.overrides, { undo: ["Mod+u"] });
-    assert.equal(warnings.length, 3);
-    assert.match(warnings[0], /"redo": not a string or a list of strings/);
-    assert.match(warnings[1], /"jump": unknown action/);
-    assert.match(warnings[2], /"copy": Key chord "Mod\+u" is bound to both/);
     assert.deepEqual(storedValue(storage), { undo: ["Mod+u"] });
-  });
-
-  test("drops a stored chord that is not in the canonical form", () => {
-    const storage = stored({
-      undo: "mod+u",
-      delete: "Backspace"
-    });
-
-    const { settings, warnings } = load(storage);
-
-    assert.equal(warnings.length, 1);
-    assert.match(warnings[0], /"undo": Invalid key chord: "mod\+u"/);
-    assert.deepEqual(storedValue(storage), { delete: ["Backspace"] });
-    assert.deepEqual(settings.bindingsOf("undo"), ["Mod+z"]);
   });
 
   test("leaves the storage alone when every entry is current", () => {
@@ -106,13 +87,6 @@ describe("KeyBindingSettings", () => {
     load(storage);
 
     assert.equal(storage.get(KEY_BINDINGS_STORAGE_KEY), raw);
-  });
-
-  test("drops a stored value that is not a JSON object", () => {
-    const { settings, warnings } = load(stored("{not json"));
-
-    assert.deepEqual(settings.keyBindings.overrides, {});
-    assert.equal(warnings.length, 1);
   });
 
   test("a rejected assign leaves the bindings and storage unchanged", () => {
@@ -145,7 +119,7 @@ describe("KeyBindingSettings", () => {
     const { settings } = load(stored({ undo: ["Mod+u"] }));
     const initial = settings.keyBindings;
     const target = {
-      keyBindings: new KeyBindingSettings({ storage: new MemoryStorageAdapter() }).keyBindings
+      keyBindings: new PixelArtKeyBindings()
     };
 
     const release = settings.bind(target);

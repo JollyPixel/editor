@@ -16,7 +16,7 @@ import { formatHex } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
-  colorChangeOf,
+  parseColorChange,
   colorWithOpacity
 } from "./pickerChange.ts";
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
@@ -51,7 +51,7 @@ export class ColorPickerPopover extends LitElement {
       if (request === null || !this.#element()?.matches(":popover-open")) {
         return;
       }
-      const color = colorChangeOf(value);
+      const color = parseColorChange(value);
       if (color !== null) {
         this._value = value;
         this.#draft = !last;

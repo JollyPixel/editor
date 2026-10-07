@@ -83,4 +83,32 @@ describe("registerVariable", () => {
       }
     });
   });
+
+  test("types a list setter from its items", () => {
+    commands.registerVariable("weights", {
+      type: "number[]",
+      description: "",
+      get: () => [1],
+      set: (value) => {
+        expect(value).type.toBe<number[]>();
+      }
+    });
+    commands.registerVariable("flags", {
+      type: "boolean[]",
+      description: "",
+      get: () => [true],
+      set: (value) => {
+        expect(value).type.toBe<boolean[]>();
+      }
+    });
+  });
+
+  test("rejects a list getter that returns other items", () => {
+    expect(commands.registerVariable).type.not.toBeCallableWith("tags", {
+      type: "string[]",
+      description: "",
+      get: () => [1],
+      set: () => undefined
+    });
+  });
 });

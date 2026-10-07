@@ -32,7 +32,7 @@ export type UvRegionClampedMesh = THREE.Mesh<
 
 // CONSTANTS
 const kClampedMapColor = Fn(({ material }) => {
-  const map = mapOf(material);
+  const map = readTextureMap(material);
   if (map === null) {
     return materialColor;
   }
@@ -66,7 +66,7 @@ export function clampUvRegion(
   mesh.material.needsUpdate = true;
 }
 
-function mapOf(
+function readTextureMap(
   material: THREE.Material
 ): THREE.Texture | null {
   return "map" in material && material.map instanceof THREE.Texture ?

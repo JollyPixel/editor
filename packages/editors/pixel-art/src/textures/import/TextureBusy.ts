@@ -7,7 +7,7 @@ import {
 } from "lit";
 
 // Import Internal Dependencies
-import type { TextureImportOrigin } from "./textures.ts";
+import type { TextureImportOrigin } from "./TextureImporter.ts";
 
 // CONSTANTS
 const kBusyDelayMs = 150;

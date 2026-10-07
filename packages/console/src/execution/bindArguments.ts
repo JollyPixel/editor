@@ -5,7 +5,7 @@ import type { Token } from "../input/tokenize.ts";
 import { label } from "../registry/format.ts";
 import type {
   ArgDef,
-  ConsoleValue,
+  ConsoleScalar,
   RegisteredCommand
 } from "../registry/types.ts";
 import { ConsoleInputError } from "./errors/ConsoleInputError.ts";
@@ -14,7 +14,7 @@ export function bindArguments(
   command: RegisteredCommand,
   input: CommandInput,
   line: string
-): Record<string, ConsoleValue> {
+): Record<string, ConsoleScalar> {
   const { args } = command.def;
   const tokens = input.tokens.slice(1);
   const last = args.at(-1);
@@ -27,7 +27,7 @@ export function bindArguments(
     throw new ConsoleInputError("Unterminated quote");
   }
 
-  const values: Record<string, ConsoleValue> = {};
+  const values: Record<string, ConsoleScalar> = {};
   for (const [index, arg] of positional.entries()) {
     const token = tokens[index];
     if (token !== undefined) {

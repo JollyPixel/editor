@@ -60,8 +60,8 @@ describe("NormalMapOverview", () => {
       overview.zones.map((row) => [row.zone.regionId, row.name, row.region?.id]),
       [["glass", "GLASS", "glass"], ["brick", "BRICK", "brick"]]
     );
-    assert.deepEqual(overview.zoneOf("brick")?.zone.settings, { strength: 4 });
-    assert.equal(overview.zoneOf("moss"), undefined);
+    assert.deepEqual(overview.findZoneRow("brick")?.zone.settings, { strength: 4 });
+    assert.equal(overview.findZoneRow("moss"), undefined);
   });
 
   test("a zone whose region is missing is orphaned", () => {
@@ -88,8 +88,8 @@ describe("NormalMapOverview", () => {
       IslandMap.fromFaces(kSize, [face("brick", 0), face("glass", 2)])
     );
 
-    assert.deepEqual(overview.zoneOf("brick")?.sharedWith, ["GLASS"]);
-    assert.deepEqual(overview.zoneOf("glass")?.sharedWith, []);
+    assert.deepEqual(overview.findZoneRow("brick")?.sharedWith, ["GLASS"]);
+    assert.deepEqual(overview.findZoneRow("glass")?.sharedWith, []);
   });
 
   test("a merged island without a competing zone shares nothing", () => {
@@ -101,7 +101,7 @@ describe("NormalMapOverview", () => {
       IslandMap.fromFaces(kSize, [face("brick", 0), face("moss", 2)])
     );
 
-    assert.deepEqual(overview.zoneOf("brick")?.sharedWith, []);
+    assert.deepEqual(overview.findZoneRow("brick")?.sharedWith, []);
   });
 
   describe("wrapFallback", () => {

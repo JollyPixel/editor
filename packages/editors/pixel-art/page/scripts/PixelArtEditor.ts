@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { RegistrationHandle } from "@jolly-pixel/console";
-import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art/client";
+import {
+  PIXEL_ART_KIND,
+  pixelArtDocumentKind
+} from "@jolly-pixel/asset.pixel-art/client";
 import type {
   EditorContext,
   EditorSession,
@@ -17,10 +20,7 @@ import {
   type PixelDrawPanel
 } from "../../src/index.ts";
 import { PanelScope } from "../../src/panel/PanelScope.ts";
-import {
-  TEXTURE_DOCUMENT_KIND
-} from "../../src/textures/textureDocumentKind.ts";
-import { suggestTextureName } from "../../src/textures/textures.ts";
+import { TextureName } from "../../src/textures/TextureName.ts";
 import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
 import { EditorPreferences } from "./EditorPreferences.ts";
 import {
@@ -31,6 +31,7 @@ import type { PreviewPane } from "./preview/PreviewPane.ts";
 
 // CONSTANTS
 const kStorage = new LocalStorageAdapter();
+const kTextureKind = pixelArtDocumentKind();
 const kColorDockedStorageKey = "pixel-art:color-docked";
 const kZoom = {
   min: 1,
@@ -67,7 +68,7 @@ export class PixelArtEditor {
       identity: {
         title: "Join pixel art"
       },
-      kinds: [TEXTURE_DOCUMENT_KIND],
+      kinds: [kTextureKind],
       mount: (context) => PixelArtEditor.mount(context, options)
     };
   }
@@ -101,12 +102,12 @@ export class PixelArtEditor {
     });
     const keybindings = keyBindingSettings.bind(panel);
 
-    const target = session.targetLease(TEXTURE_DOCUMENT_KIND);
+    const target = session.targetLease(kTextureKind);
     const { record } = target;
     const preferences = new EditorPreferences(kStorage);
     const canvas = await panel.initialize({
       id: record.id,
-      name: suggestTextureName(record.source),
+      name: TextureName.fromPath(record.source).value,
       tooltip: record.source,
       document: target.document,
       defaultMode: preferences.mode,
@@ -129,6 +130,7 @@ export class PixelArtEditor {
     const tabs = new TextureTabs({
       panel,
       session,
+      kind: kTextureKind,
       addDelay: features.addDelay
     });
     await tabs.attach(target, canvas);

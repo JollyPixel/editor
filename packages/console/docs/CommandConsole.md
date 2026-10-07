@@ -117,7 +117,24 @@ brush.registerVariable("mode", {
 });
 ```
 
-`brush.mode` prints the value, `brush.mode replace` sets it. Types are the same four as arguments.
+`brush.mode` prints the value, `brush.mode replace` sets it. Types are the same four as arguments,
+plus the lists `string[]`, `number[]` and `boolean[]`.
+
+```ts
+brush.registerVariable("palette", {
+  type: "string[]",
+  description: "Blocks the brush cycles through",
+  get: () => brushStore.palette,
+  set: (blocks) => {
+    brushStore.palette = blocks;
+  }
+});
+```
+
+A list's `set` receives an array of its item type. `brush.palette grass "red stone"` sets two
+items and `brush.palette ""` sets none. The console prints the items separated by spaces, quoted
+when needed. A list cannot hold an empty item: when `get` returns one, reading the variable prints
+an error and it is left out of scripts and `/revert`.
 
 After `set`, the console prints what `get` returns, so a store that clamps `brush.size 999` to 16
 prints `16`.

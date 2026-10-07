@@ -20,6 +20,7 @@ export interface CommandInput {
 export interface VariableInput {
   mode: "variable";
   variable: RegisteredVariable;
+  line: string;
   tokens: Token[];
   unterminated: boolean;
 }
@@ -68,6 +69,7 @@ export function classify(
     return {
       mode: "variable",
       variable,
+      line: input,
       tokens,
       unterminated
     };

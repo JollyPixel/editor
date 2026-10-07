@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { ScriptDraft } from "#src/index.ts";
+import {
+  CommandConsole,
+  type ScriptDraft
+} from "#src/index.ts";
 import { withBrush } from "../helpers/script/withBrush.ts";
 
 function changesOf(
@@ -171,6 +174,29 @@ describe("VariableScript", () => {
 
     assert.deepEqual(diagnosticsOf(draft), [
       "2:7-16 Unexpected text after the closing quote"
+    ]);
+  });
+
+  test("a list key reads and writes its items like the prompt", () => {
+    const commands = new CommandConsole();
+    commands.registerVariable("tags", {
+      type: "string[]",
+      description: "Labels",
+      get: () => ["two words", "b"],
+      set: () => undefined
+    });
+    const script = commands.editScript();
+
+    assert.equal(script.text, "; Labels <string[]>\ntags = \"two words\" b");
+    const unedited = script.parse(script.text);
+    assert.deepEqual(changesOf(unedited), []);
+    assert.equal(unedited.valueType(2), "string");
+    assert.deepEqual(changesOf(script.parse("tags = b \"two words\"")), [
+      "1: tags = [\"b\",\"two words\"]"
+    ]);
+    assert.deepEqual(changesOf(script.parse("tags =")), ["1: tags = []"]);
+    assert.deepEqual(diagnosticsOf(script.parse("tags = a \"b")), [
+      "1:7-11 Expected a closing quote, got \"a \"b\""
     ]);
   });
 });

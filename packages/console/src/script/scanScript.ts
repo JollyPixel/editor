@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { ConsoleInputError } from "../execution/errors/ConsoleInputError.ts";
+
 // CONSTANTS
 const kQuote = "\"";
 const kBackslash = "\\";
@@ -33,8 +36,6 @@ export interface EntryLine {
   readonly key: ScriptSpan;
   readonly operator: number;
   readonly value: ScriptSpan;
-  readonly literal: string;
-  readonly quote: "none" | "closed" | "unterminated" | "trailing";
 }
 
 export interface InvalidLine {
@@ -93,15 +94,12 @@ export function scanLine(
     };
   }
 
-  const value = trimmedSpan(text, operator + 1, text.length);
-
   return {
     kind: "entry",
     text,
     key: trimmedSpan(text, 0, operator),
     operator,
-    value,
-    ...readLiteral(value.text)
+    value: trimmedSpan(text, operator + 1, text.length)
   };
 }
 
@@ -123,14 +121,11 @@ export function formatScriptValue(
   return `"${escaped}"`;
 }
 
-function readLiteral(
+export function parseScriptValue(
   value: string
-): Pick<EntryLine, "literal" | "quote"> {
+): string {
   if (!value.startsWith(kQuote)) {
-    return {
-      literal: value,
-      quote: "none"
-    };
+    return value;
   }
 
   let literal = "";
@@ -138,10 +133,11 @@ function readLiteral(
   while (index < value.length) {
     const char = value[index];
     if (char === kQuote) {
-      return {
-        literal,
-        quote: index === value.length - 1 ? "closed" : "trailing"
-      };
+      if (index !== value.length - 1) {
+        throw new ConsoleInputError("Unexpected text after the closing quote");
+      }
+
+      return literal;
     }
     const next = value[index + 1];
     if (char === kBackslash && (next === kQuote || next === kBackslash)) {
@@ -153,10 +149,7 @@ function readLiteral(
     index++;
   }
 
-  return {
-    literal,
-    quote: "unterminated"
-  };
+  throw new ConsoleInputError("Unterminated quote");
 }
 
 function trimmedSpan(

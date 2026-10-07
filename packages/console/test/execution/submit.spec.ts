@@ -146,6 +146,47 @@ describe("variables", () => {
 
     assert.equal(mode, "rotateY");
   });
+
+  test("a list takes every value as one item and prints them back", async() => {
+    let tags: string[] = ["a"];
+    const commands = new CommandConsole();
+    commands.registerVariable("tags", {
+      type: "string[]",
+      description: "",
+      get: () => tags,
+      set: (value) => {
+        tags = value;
+      }
+    });
+
+    await commands.submit("tags \"two words\" b");
+    await commands.submit("tags \"\"");
+
+    assert.deepEqual(tags, []);
+    assert.deepEqual(lines(commands), [
+      "echo: tags \"two words\" b",
+      "info: \"two words\" b",
+      "echo: tags \"\"",
+      "info: \"\""
+    ]);
+  });
+
+  test("a list whose getter returns an empty item cannot be read", async() => {
+    const commands = new CommandConsole();
+    commands.registerVariable("tags", {
+      type: "string[]",
+      description: "",
+      get: () => ["", "a"],
+      set: () => undefined
+    });
+
+    await commands.submit("tags");
+
+    assert.deepEqual(lines(commands), [
+      "echo: tags",
+      "error: tags holds an empty item"
+    ]);
+  });
 });
 
 describe("commands", () => {
