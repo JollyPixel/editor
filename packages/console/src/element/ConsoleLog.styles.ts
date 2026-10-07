@@ -37,11 +37,15 @@ export const consoleLogStyles = css`
   }
 
   .entry {
+    --jolly-console-line: 16px;
+
     display: flex;
     gap: var(--jolly-space-2, 8px);
-    align-items: baseline;
+    align-items: flex-start;
     min-height: var(--jolly-console-row);
-    padding: 2px var(--jolly-space-3, 12px);
+    padding:
+      calc((var(--jolly-console-row) - var(--jolly-console-line)) / 2)
+      var(--jolly-space-3, 12px);
     box-sizing: border-box;
     content-visibility: auto;
     contain-intrinsic-block-size: auto var(--jolly-console-row);
@@ -60,13 +64,14 @@ export const consoleLogStyles = css`
   .text {
     flex: 1 1 auto;
     min-width: 0;
+    line-height: var(--jolly-console-line);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 
   jolly-icon {
     flex: 0 0 auto;
-    align-self: center;
+    margin-block: calc((var(--jolly-console-line) - var(--jolly-icon-size)) / 2);
 
     --jolly-icon-size: 10px;
   }
