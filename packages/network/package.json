@@ -63,7 +63,7 @@
     "pino": "10.3.1",
     "secure-json-parse": "4.1.0",
     "ts-pattern": "5.9.0",
-    "ws": "8.21.3",
+    "ws": "8.22.0",
     "zod": "4.6.5"
   },
   "peerDependencies": {
@@ -75,7 +75,7 @@
     }
   },
   "devDependencies": {
-    "@types/ws": "8.18.1",
+    "@types/ws": "8.18.2",
     "fast-check": "4.10.2"
   }
 }
