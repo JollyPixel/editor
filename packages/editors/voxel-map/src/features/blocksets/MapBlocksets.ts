@@ -195,6 +195,31 @@ export class MapBlocksets
     );
   }
 
+  duplicateBlock(
+    blockId: number
+  ): number | null {
+    const owner = this.ownerOf(blockId);
+    const blocks = [...this.#view.document.blocks.getAll()];
+    const index = blocks.findIndex((block) => block.id === blockId);
+    if (owner === undefined || index === -1) {
+      return null;
+    }
+
+    const source = blocks[index];
+    const id = owner.link.nextBlockId;
+    const defined = this.defineBlock({
+      ...source,
+      id,
+      name: `${source.name} copy`
+    });
+    if (!defined) {
+      return null;
+    }
+    this.moveBlock(id, index + 1);
+
+    return id;
+  }
+
   syncAlphaModes(
     blocksetId: string,
     bounds?: SelectionRect

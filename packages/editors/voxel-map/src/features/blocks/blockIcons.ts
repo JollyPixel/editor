@@ -37,6 +37,30 @@ registerIcon("block-edit", svg`
   />
 `, { tone: "amber" });
 
+registerIcon("block-duplicate", svg`
+  <rect
+    class="tone-ink"
+    x="9"
+    y="9"
+    width="12"
+    height="12"
+    rx="2"
+    fill="currentColor"
+    fill-opacity="0.4"
+    stroke="currentColor"
+    stroke-width="2.2"
+  />
+  <path
+    class="tone-ink"
+    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });
+
 registerIcon("order-registry", svg`
   <path
     class="tone-ink"
