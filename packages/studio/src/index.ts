@@ -48,6 +48,7 @@ async function boot(): Promise<void> {
   await studio.attach({
     console: editorConsole,
     share: connection.share,
+    identity: connection.identity,
     editors: createEditorRegistry(manifest, connection.editorQuery),
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",

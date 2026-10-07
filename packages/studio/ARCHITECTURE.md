@@ -115,7 +115,7 @@ sequenceDiagram
 | Message | Direction | Carries |
 |---|---|---|
 | `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density, a port to the shell catalog and a port for the frame's console |
+| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
 | `jolly-shell` | frame → shell | `open-asset` or `toggle-console` |
 | `jolly-appearance` | shell → frame | new theme or density |
@@ -124,6 +124,8 @@ sequenceDiagram
 - Frames open their catalog on the launch port, served by the shell's
   `CatalogShare` ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).
 - The shell never answers a `jolly-shell` command.
+- Online, every frame joins as the shell's peer (`username`, `peerId`), so one
+  user has one presence color across tabs. Offline frames stay guests.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
 - The frame serves its console namespaces on the console port, and
@@ -137,7 +139,7 @@ sequenceDiagram
 | `studio:tabs` | `localStorage` | open tab ids in order, active id |
 | `studio:home-layout` | `localStorage` | asset dock size |
 | `studio:asset-kind` | `localStorage` | kind filter |
-| `jolly-pixel:username` | `sessionStorage` | peer name, shared with frames |
+| `jolly-pixel:username` | `sessionStorage` | peer name, read by the shell's prompt |
 
 Restoring tabs skips missing assets and kinds without an editor, stops at the
 cap, and loads only the active frame.

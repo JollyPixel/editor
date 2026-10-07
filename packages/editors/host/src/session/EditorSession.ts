@@ -104,7 +104,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     const {
       logger = new Systems.Logger()
     } = options;
-    const identity = await logger.step(
+    const identity = options.launch.shell?.identity ?? await logger.step(
       "identity",
       () => promptPeerIdentity({
         title: options.identity.title,

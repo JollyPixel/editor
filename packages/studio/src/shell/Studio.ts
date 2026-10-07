@@ -16,7 +16,8 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
-  type LogEntry
+  type LogEntry,
+  type PeerIdentity
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -31,6 +32,7 @@ import "./home/StudioHome.ts";
 
 export interface StudioOptions {
   share: CatalogShare;
+  identity: PeerIdentity | null;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
   editors: EditorRegistry;
   console?: EditorConsole;
@@ -92,6 +94,7 @@ export class Studio extends LitElement {
       frames: {
         container: this._frames,
         share: options.share,
+        identity: options.identity,
         consoles: options.console === undefined ?
           undefined :
           new FrameConsoles({ commands: options.console.commands })

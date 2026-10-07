@@ -1,12 +1,10 @@
-// Import Third-party Dependencies
-import { colorFromKey } from "@jolly-pixel/color";
-
 // Import Internal Dependencies
 import { resolveStoredPrompt } from "../containers/dialog/dialogHelpers.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import {
   GUEST_USERNAME,
+  peerIdentity,
   type PeerIdentity
 } from "./identity.ts";
 
@@ -33,11 +31,6 @@ export async function promptPeerIdentity(
     storageKey: options.storageKey,
     fallbackValue: GUEST_USERNAME
   });
-  const peerId = crypto.randomUUID();
 
-  return {
-    username,
-    peerId,
-    color: colorFromKey(peerId)
-  };
+  return peerIdentity(username);
 }

@@ -499,9 +499,6 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
-      '@jolly-pixel/color':
-        specifier: workspace:*
-        version: link:../../color
       '@jolly-pixel/console':
         specifier: workspace:*
         version: link:../../console

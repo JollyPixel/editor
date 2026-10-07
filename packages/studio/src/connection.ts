@@ -7,7 +7,10 @@ import {
   withOfflineFallback
 } from "@jolly-pixel/editor.host";
 import { Client } from "@jolly-pixel/network/client";
-import { promptPeerIdentity } from "@jolly-pixel/ui";
+import {
+  promptPeerIdentity,
+  type PeerIdentity
+} from "@jolly-pixel/ui";
 import { toPeerMetadata } from "@jolly-pixel/ui/network";
 
 // CONSTANTS
@@ -16,6 +19,7 @@ const kIdentityTitle = "Join studio";
 export interface StudioConnection {
   share: CatalogShare;
   editorQuery: Readonly<Record<string, string>>;
+  identity: PeerIdentity | null;
 }
 
 export function connectStudio(): Promise<StudioConnection> {
@@ -45,7 +49,8 @@ async function connectOnline(): Promise<StudioConnection> {
     share: await CatalogShare.open(client, {
       timeoutMs: CATALOG_TIMEOUT_MS
     }),
-    editorQuery: {}
+    editorQuery: {},
+    identity
   };
 }
 

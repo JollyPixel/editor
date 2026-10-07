@@ -101,8 +101,9 @@ Because the snapshot lands before `mount()`, an editor cannot learn the target's
 contents from a one-off event. Read the current state when attaching, and treat
 later events as updates.
 
-`identity` contains `username`, `peerId`, and `color`. The username prompt
-remembers the entered username per tab. `assets` is the session's
+`identity` contains `username`, `peerId`, and `color`. `open()` takes it from
+`launch.shell.identity` when the shell sent one, and prompts otherwise. The
+username prompt remembers the entered username per tab. `assets` is the session's
 [`AssetLeases`](./AssetLeases.md), where panels open their own leases.
 `catalog` comes from `@jolly-pixel/asset-server/client`.
 

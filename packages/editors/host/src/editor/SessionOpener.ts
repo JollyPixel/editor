@@ -11,19 +11,26 @@ import {
   QueryLaunchSource,
   type EditorLaunch
 } from "../launch/index.ts";
-import { EditorSession } from "../session/EditorSession.ts";
+import {
+  EditorSession,
+  type EditorSessionTarget
+} from "../session/EditorSession.ts";
 import type { CatalogOpener } from "../session/openCatalog.ts";
 import type { StandaloneConnection } from "../workspace/SessionWorkspace.ts";
 
+type SessionConnect = () =>
+  | StandaloneConnection
+  | Promise<StandaloneConnection>;
+
 export interface SessionOpenerOptions {
   definition: EditorDefinition<EditorHandle>;
-  connect?: () => StandaloneConnection | Promise<StandaloneConnection>;
+  connect?: SessionConnect;
   logger: HostLogger;
 }
 
 export class SessionOpener {
   readonly #definition: EditorDefinition<EditorHandle>;
-  readonly #connect: SessionOpenerOptions["connect"];
+  readonly #connect: SessionConnect | undefined;
   readonly #logger: HostLogger;
   readonly #queried: EditorLaunch | undefined;
   readonly #launch = Promise.withResolvers<EditorLaunch>();
@@ -36,9 +43,17 @@ export class SessionOpener {
     this.#connect = options.connect;
     this.#logger = options.logger;
     this.#launch.promise.catch(() => undefined);
+    if (options.connect === undefined) {
+      return;
+    }
+
     this.#queried = new QueryLaunchSource().peek();
     if (this.#queried !== undefined) {
-      this.#early = this.#openSession(this.#queried, this.#launch.promise);
+      this.#early = this.#connectSession(
+        options.connect,
+        this.#queried,
+        this.#launch.promise
+      );
       this.#early.catch(() => undefined);
     }
   }
@@ -46,6 +61,14 @@ export class SessionOpener {
   open(
     launch: EditorLaunch
   ): Promise<EditorSession> {
+    if (this.#connect === undefined) {
+      return EditorSession.open({
+        ...this.#sessionTarget(launch),
+        identity: this.#definition.identity,
+        openCatalog: shellCatalog(launch)
+      });
+    }
+
     this.#launch.resolve(launch);
     const early = this.#early;
     if (
@@ -58,7 +81,7 @@ export class SessionOpener {
     }
     this.dispose();
 
-    return this.#openSession(launch, Promise.resolve(launch));
+    return this.#connectSession(this.#connect, launch, launch);
   }
 
   dispose(): void {
@@ -67,38 +90,34 @@ export class SessionOpener {
     this.#early = null;
   }
 
-  async #openSession(
+  async #connectSession(
+    connect: SessionConnect,
     target: EditorLaunch,
-    launch: Promise<EditorLaunch>
+    launch: EditorLaunch | Promise<EditorLaunch>
   ): Promise<EditorSession> {
-    const definition = this.#definition;
-    const options = {
-      launch: target,
-      kinds: definition.kinds,
-      accepts: definition.accepts,
-      logger: this.#logger
-    };
-
-    if (this.#connect === undefined) {
-      return EditorSession.open({
-        ...options,
-        identity: definition.identity,
-        openCatalog: shellCatalog(launch)
-      });
-    }
-
-    const connection = await this.#connect();
+    const connection = await connect();
 
     return EditorSession.connect({
-      ...options,
+      ...this.#sessionTarget(target),
       ...connection,
       openCatalog: connection.openCatalog ?? shellCatalog(launch)
     });
   }
+
+  #sessionTarget(
+    launch: EditorLaunch
+  ): EditorSessionTarget {
+    return {
+      launch,
+      kinds: this.#definition.kinds,
+      accepts: this.#definition.accepts,
+      logger: this.#logger
+    };
+  }
 }
 
 function shellCatalog(
-  launch: Promise<EditorLaunch>
+  launch: EditorLaunch | Promise<EditorLaunch>
 ): CatalogOpener {
   return async(client, options) => {
     const { shell } = await launch;

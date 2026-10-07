@@ -208,10 +208,12 @@ prompt is skipped. Without `dev`, neither happens.
 `connect` replaces the username prompt and the WebSocket client. The session
 destroys the returned client when it is disposed or fails to open.
 
-The session opens while the launch is read when the page URL has a `target`
-query parameter: a shell that also posts `jolly-launch` names the same asset,
-so the session is ready sooner. When the launch names another target, that
-session is disposed and a new one opens, so `connect` runs twice.
+With `connect`, the session opens while the launch is read when the page URL
+has a `target` query parameter: a shell that also posts `jolly-launch` names
+the same asset, so the session is ready sooner. When the launch names another
+target, that session is disposed and a new one opens, so `connect` runs twice.
+Without `connect`, the session waits for the launch, whose shell may carry the
+identity to join as.
 
 `origins` lists the parent origins allowed to launch the page, `[location.origin]`
 by default. It applies to the parent's `jolly-launch`, which is read before
@@ -461,6 +463,7 @@ class ShellChannel {
   readonly appearance: Appearance | null;
   readonly catalog: ShellCatalog | null;
   readonly console: MessagePort | null;
+  readonly identity: PeerIdentity | null;
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
   onAppearance(
@@ -477,9 +480,15 @@ class ShellChannel {
 
 A shell that listens on its own window narrows what a frame posts with
 `isReadyMessage(data)` and `isShellCommand(data)`, and answers with
-`launchMessage(target, appearance, ports?)`. `parseLaunchMessage(data)` is the
-frame's side: it returns the launch message, without an invalid `appearance`
-and with `ports` reset to `{}` when they are not ports, or `undefined`.
+`launchMessage({ target, appearance, ports?, identity? })`.
+`parseLaunchMessage(data)` is the frame's side: it returns the launch message,
+without an invalid `appearance`, with a missing or invalid `identity` as
+`null` and with `ports` reset to `{}` when they are not ports, or `undefined`.
+
+`identity` is `{ username, peerId }`; parsing drops any other field.
+The channel exposes it as a `PeerIdentity` colored from `peerId`, and
+`EditorSession.open` joins as that peer instead of prompting, so every frame
+of one shell shares a name and a presence color.
 `READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE` and
 `APPEARANCE_MESSAGE_TYPE` name the four messages.
 
@@ -504,7 +513,7 @@ const share = await CatalogShare.open(client, { timeoutMs: 5_000 });
 const channel = new MessageChannel();
 const stop = share.serve(channel.port1);
 frame.contentWindow.postMessage(
-  launchMessage(target, appearance, { catalog: channel.port2 }),
+  launchMessage({ target, appearance, ports: { catalog: channel.port2 } }),
   origin,
   [channel.port2]
 );
@@ -535,7 +544,7 @@ const ports: LaunchPorts = {
   console: consolePorts.port2
 };
 frame.contentWindow.postMessage(
-  launchMessage(target, appearance, ports),
+  launchMessage({ target, appearance, ports }),
   origin,
   [catalog.port2, consolePorts.port2]
 );
@@ -573,7 +582,7 @@ A shell keeps its frames on its own theme and density. It adds
 `launchMessage` and `appearanceMessage(appearance)`:
 
 ```ts
-{ type: "jolly-launch", target: string, appearance?: Appearance, ports: LaunchPorts }
+{ type: "jolly-launch", target: string, appearance?: Appearance, identity: LaunchIdentity | null, ports: LaunchPorts }
 { type: "jolly-appearance", appearance: Appearance }
 
 interface Appearance {

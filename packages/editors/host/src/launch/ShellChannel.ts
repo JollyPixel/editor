@@ -2,7 +2,9 @@
 import { AssetId } from "@jolly-pixel/asset";
 import {
   DENSITIES,
-  THEME_MODES
+  THEME_MODES,
+  peerIdentity,
+  type PeerIdentity
 } from "@jolly-pixel/ui";
 import * as z from "zod";
 
@@ -23,6 +25,10 @@ const kLaunchPortsSchema = z.object({
   catalog: z.instanceof(MessagePort).optional(),
   console: z.instanceof(MessagePort).optional()
 });
+const kLaunchIdentitySchema = z.object({
+  username: z.string().trim().min(1),
+  peerId: z.string().min(1)
+});
 const kReadyMessageSchema = z.object({
   type: z.literal(READY_MESSAGE_TYPE)
 });
@@ -30,6 +36,7 @@ const kLaunchMessageSchema = z.object({
   type: z.literal(LAUNCH_MESSAGE_TYPE),
   target: z.string(),
   appearance: kAppearanceSchema.optional().catch(undefined),
+  identity: kLaunchIdentitySchema.nullable().catch(null),
   ports: kLaunchPortsSchema.catch({})
 });
 const kShellCommandSchema = z.discriminatedUnion("command", [
@@ -56,7 +63,26 @@ export interface LaunchMessage {
   type: typeof LAUNCH_MESSAGE_TYPE;
   target: string;
   appearance?: Appearance;
+  identity: LaunchIdentity | null;
   ports: LaunchPorts;
+}
+
+export interface LaunchMessageOptions {
+  target: string;
+  appearance: Appearance;
+  /**
+   * @default {}
+   */
+  ports?: LaunchPorts;
+  /**
+   * @default null
+   */
+  identity?: LaunchIdentity | null;
+}
+
+export interface LaunchIdentity {
+  username: string;
+  peerId: string;
 }
 
 export interface LaunchPorts {
@@ -106,6 +132,10 @@ export interface ShellChannelOptions {
    * @default null
    */
   console?: MessagePort | null;
+  /**
+   * @default null
+   */
+  identity?: LaunchIdentity | null;
 }
 
 export class ShellChannel {
@@ -113,6 +143,7 @@ export class ShellChannel {
   readonly appearance: Appearance | null;
   readonly catalog: ShellCatalog | null;
   readonly console: MessagePort | null;
+  readonly identity: PeerIdentity | null;
 
   #port: ShellPort;
 
@@ -124,6 +155,9 @@ export class ShellChannel {
     this.appearance = options.appearance ?? null;
     this.catalog = options.catalog ?? null;
     this.console = options.console ?? null;
+    this.identity = options.identity ?
+      peerIdentity(options.identity.username, options.identity.peerId) :
+      null;
   }
 
   openAsset(
@@ -166,15 +200,14 @@ export class ShellChannel {
 }
 
 export function launchMessage(
-  target: string,
-  appearance: Appearance,
-  ports: LaunchPorts = {}
+  options: LaunchMessageOptions
 ): LaunchMessage {
   return {
     type: LAUNCH_MESSAGE_TYPE,
-    target,
-    appearance,
-    ports
+    target: options.target,
+    appearance: options.appearance,
+    identity: options.identity ?? null,
+    ports: options.ports ?? {}
   };
 }
 
