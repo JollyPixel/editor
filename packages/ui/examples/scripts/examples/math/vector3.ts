@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Vector3 } from "../../../../src/index.ts";
+import { Vector3 } from "../../../../src/math/Vector3.ts";
 import {
   AXIS_STYLE_OPTIONS,
   axisStyleOf,
@@ -9,8 +9,6 @@ import {
 } from "./axisStyle.ts";
 
 export const VECTOR3_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
-  id: "math/vector3",
-  title: "Vector3",
   options: AXIS_STYLE_OPTIONS,
   render(host, options) {
     return renderStateMatrix<Vector3>(host, {

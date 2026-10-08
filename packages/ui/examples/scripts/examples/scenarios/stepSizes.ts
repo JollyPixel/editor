@@ -1,12 +1,13 @@
 // Import Internal Dependencies
+import "../../../../src/controls/Number.ts";
+import "../../../../src/controls/Range.ts";
+import "../../../../src/controls/Slider.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  detailOf,
-  type JollyChangeDetail,
-  type NumberField,
-  type Slider,
-  type Range
-} from "../../../../src/index.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
+import type { NumberField } from "../../../../src/controls/Number.ts";
+import type { Slider } from "../../../../src/controls/Slider.ts";
+import type { Range } from "../../../../src/controls/Range.ts";
 
 // CONSTANTS
 const kLabelWidth = "10ch";
@@ -15,8 +16,6 @@ const kSliderSteps = [1, 0.1, 0.01];
 const kRangeSteps = [1, 0.5];
 
 export const STEP_SIZES_EXAMPLE: GalleryExample = {
-  id: "scenarios/step-sizes",
-  title: "Step sizes",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";

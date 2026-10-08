@@ -2,10 +2,9 @@
 import { svg } from "lit";
 
 // Import Internal Dependencies
-import {
-  ICON_TONES,
-  registerIcon
-} from "../../../../src/index.ts";
+import "../../../../src/controls/Button.ts";
+import "../../../../src/controls/ToolButton.ts";
+import { ICON_TONES, registerIcon } from "../../../../src/icon/registry.ts";
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
@@ -43,8 +42,6 @@ for (const tone of ICON_TONES) {
 }
 
 export const ICON_TONES_EXAMPLE: GalleryExample = {
-  id: "foundation/icon-tones",
-  title: "Icon tones",
   render(host) {
     const root = document.createElement("div");
     root.className = "tone-demo";

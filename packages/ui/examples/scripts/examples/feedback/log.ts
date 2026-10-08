@@ -2,11 +2,10 @@
 import { html } from "lit";
 
 // Import Internal Dependencies
+import "../../../../src/feedback/Log.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  LogQueue,
-  peerColor
-} from "../../../../src/index.ts";
+import { LogQueue } from "../../../../src/feedback/LogQueue.ts";
+import { peerColor } from "../../../../src/theme/peerColor.ts";
 import { button } from "../shared/containerBuilders.ts";
 
 // CONSTANTS
@@ -24,8 +23,6 @@ const kMessages = [
 ] as const;
 
 export const LOG_EXAMPLE: GalleryExample = {
-  id: "feedback/log",
-  title: "Log",
   render(host) {
     const queue = new LogQueue({
       max: 5,

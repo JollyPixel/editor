@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
+import { boxOf, widthOf } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator,
   type Page
-} from "@playwright/test";
-import { boxOf, widthOf } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { manifest } from "../../../examples/scripts/manifest.ts";
 import {
   disposedIds,

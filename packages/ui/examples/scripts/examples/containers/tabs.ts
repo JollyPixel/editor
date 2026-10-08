@@ -1,8 +1,9 @@
 // Import Internal Dependencies
-import type {
-  Tab,
-  Tabs
-} from "../../../../src/index.ts";
+import "../../../../src/containers/tabs/Tab.ts";
+import "../../../../src/containers/tabs/Tabs.ts";
+import "../../../../src/controls/Button.ts";
+import type { Tab } from "../../../../src/containers/tabs/Tab.ts";
+import type { Tabs } from "../../../../src/containers/tabs/Tabs.ts";
 import type {
   GalleryExample,
   GalleryOptionValues
@@ -110,8 +111,6 @@ function buildTabs(
 }
 
 export const TABS_EXAMPLE: GalleryExample<TabsOptionKey> = {
-  id: "containers/tabs",
-  title: "Tabs",
   options: [
     {
       key: "skew",

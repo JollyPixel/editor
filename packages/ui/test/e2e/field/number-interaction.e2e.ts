@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
-import {
-  test,
-  expect
-} from "@playwright/test";
 import { scrubBy } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { fieldRow as row, openExample } from "../support/gallery.ts";
+import {
+  test,
+  expect
+} from "../fixtures.ts";
+import { fieldRow as row } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
   fieldInputCount,
@@ -15,8 +15,11 @@ import {
 } from "../support/events.ts";
 
 test.describe("number", () => {
+  test.use({
+    example: "controls/number"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/number");
     await recordChanges(page);
   });
 

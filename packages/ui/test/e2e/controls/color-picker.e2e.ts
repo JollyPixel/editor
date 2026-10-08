@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Locator,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   hold
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
+import {
+  test,
+  expect,
+  type Locator,
+  type Page
+} from "../fixtures.ts";
 import { fieldRow, openExample } from "../support/gallery.ts";
 import {
   fieldChanges,
@@ -65,8 +65,11 @@ function channel(
 }
 
 test.describe("color: popup", () => {
+  test.use({
+    example: "controls/color"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/color");
     await recordFieldChanges(page);
   });
 
@@ -168,8 +171,8 @@ test.describe("color: alpha", () => {
 });
 
 test.describe("color picker: standalone panel", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/color-picker");
+  test.use({
+    example: "controls/color-picker"
   });
 
   test("the hex field rejects garbage and expands shorthand", async({ page }) => {
@@ -211,8 +214,8 @@ test.describe("color picker: standalone panel", () => {
 });
 
 test.describe("color picker: wide layout", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/color-picker");
+  test.use({
+    example: "controls/color-picker"
   });
 
   test("a channel field rejects garbage and commits a typed value", async({ page }) => {

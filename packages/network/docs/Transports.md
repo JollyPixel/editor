@@ -2,7 +2,7 @@
 
 ## Vite plugin
 
-Use the Vite plugin for editor development servers. It creates the `Server`, wires the websocket transport and registers your extensions.
+Use the Vite plugin for editor development servers. It creates the `Server`, wires the websocket transport and registers your extensions. It serves both `vite` and `vite preview`.
 
 ```ts
 import { defineConfig } from "vite";

@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
+import { boxOf } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator
-} from "@playwright/test";
-import { boxOf } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { fieldRow, openExample } from "../support/gallery.ts";
 
 async function insets(
@@ -67,8 +67,8 @@ test("label-less fields inset their value symmetrically", async({ page }) => {
 });
 
 test.describe("field layout", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "scenarios/field-layout");
+  test.use({
+    example: "scenarios/field-layout"
   });
 
   test("a modified row keeps the value column of its neighbours", async({ page }) => {

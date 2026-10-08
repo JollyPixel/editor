@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
-import { css } from "lit";
+import { adoptStyles, css } from "lit";
 
 // Import Internal Dependencies
-import { themeStyles } from "../../../../src/index.ts";
+import { themeStyles } from "../../../../src/theme/styles/themeStyles.ts";
 
 // CONSTANTS
 const kScopedHostStyles = css`
@@ -40,9 +40,10 @@ export function createScopedHost(
   const content = host.attachShadow({
     mode: "open"
   });
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(`${themeStyles.cssText}\n${kScopedHostStyles.cssText}`);
-  content.adoptedStyleSheets = [sheet];
+  adoptStyles(content, [
+    themeStyles,
+    kScopedHostStyles
+  ]);
 
   return {
     host,

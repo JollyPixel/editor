@@ -5,7 +5,8 @@ import type { Plugin } from "vite";
 import { Server } from "../server/Server.ts";
 import {
   WebsocketTransport,
-  type WebsocketCompressionOptions
+  type WebsocketCompressionOptions,
+  type WebsocketTransportOptions
 } from "../transport/websocket.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
 import type { Extension } from "../server/extension/Extension.ts";
@@ -71,19 +72,28 @@ export function createWebSocketNetworkPlugin(
     server.register(extension);
   }
 
+  function attach(
+    httpServer: WebsocketTransportOptions["httpServer"] | null
+  ): void {
+    if (!httpServer) {
+      return;
+    }
+
+    new WebsocketTransport({
+      path,
+      httpServer,
+      server,
+      compression
+    });
+  }
+
   return {
     name: "network-websocket",
     configureServer({ httpServer }) {
-      if (!httpServer) {
-        return;
-      }
-
-      new WebsocketTransport({
-        path,
-        httpServer,
-        server,
-        compression
-      });
+      attach(httpServer);
+    },
+    configurePreviewServer({ httpServer }) {
+      attach(httpServer);
     }
   };
 }

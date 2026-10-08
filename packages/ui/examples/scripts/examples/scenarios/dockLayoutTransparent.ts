@@ -1,4 +1,7 @@
 // Import Internal Dependencies
+import "../../../../src/containers/dock/Dock.ts";
+import "../../../../src/containers/dock/DockLayout.ts";
+import "../../../../src/theme/components/ThemePreferences.ts";
 import type { GalleryExample } from "../../types.ts";
 import { text } from "../shared/containerBuilders.ts";
 
@@ -6,8 +9,6 @@ import { text } from "../shared/containerBuilders.ts";
 const kStorageKey = "gallery-example:dock-layout-transparent";
 
 export const DOCK_LAYOUT_TRANSPARENT_EXAMPLE: GalleryExample = {
-  id: "scenarios/dock-layout-transparent",
-  title: "Dock layout transparent",
   render(host) {
     const hint = document.createElement("p");
     hint.className = "scenario-hint";

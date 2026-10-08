@@ -1,13 +1,13 @@
 // Import Internal Dependencies
+import { DIALOG_INTENTS } from "../../../../src/containers/dialog/dialogHeader.ts";
+import { detailOf } from "../../../../src/dom.ts";
 import {
-  DIALOG_INTENTS,
-  detailOf,
   showChoice,
   showConfirm,
-  showPrompt,
-  type JollyChangeDetail,
-  type JollyHeadingChangeDetail
-} from "../../../../src/index.ts";
+  showPrompt
+} from "../../../../src/containers/dialog/dialogHelpers.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
+import type { JollyHeadingChangeDetail } from "../../../../src/containers/events.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   button,
@@ -84,8 +84,6 @@ function inlineConfirmDialog(
 }
 
 export const DIALOG_EXAMPLE: GalleryExample = {
-  id: "containers/dialog",
-  title: "Dialog",
   render(host) {
     const root = document.createElement("div");
     root.className = "chrome-row";

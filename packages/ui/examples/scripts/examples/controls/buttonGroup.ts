@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { ButtonGroup } from "../../../../src/index.ts";
+import { ButtonGroup } from "../../../../src/controls/ButtonGroup.ts";
 
 // CONSTANTS
 const kModes = [
@@ -28,8 +28,6 @@ const kModes = [
 ];
 
 export const BUTTON_GROUP_EXAMPLE: GalleryExample = {
-  id: "controls/button-group",
-  title: "Button group",
   render(host) {
     return renderStateMatrix<ButtonGroup<unknown>>(host, {
       create() {

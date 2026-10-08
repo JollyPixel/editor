@@ -1,13 +1,10 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator,
   type Page
-} from "@playwright/test";
-
-// Import Internal Dependencies
-import { openExample } from "../../support/gallery.ts";
+} from "../../fixtures.ts";
 
 function menuItem(
   page: Page,
@@ -48,8 +45,8 @@ async function openOn(
 }
 
 test.describe("Context menu submenus", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "containers/context-menu");
+  test.use({
+    example: "containers/context-menu"
   });
 
   test("hovering opens a cascade on the right and a nested choice is emitted", async({ page }) => {

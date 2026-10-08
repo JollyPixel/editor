@@ -30,6 +30,7 @@
     "build": "tsc -b",
     "build:watch": "tsc -b --watch",
     "dev": "vite",
+    "serve:e2e": "vite build --mode e2e && vite preview --mode e2e",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",

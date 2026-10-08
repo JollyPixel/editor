@@ -1,10 +1,5 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   hold,
@@ -14,17 +9,20 @@ import {
 
 // Import Internal Dependencies
 import {
+  test,
+  expect,
+  type Page
+} from "../../fixtures.ts";
+import {
   partStyleOf,
   shadowBlurOf
 } from "../../support/styles.ts";
 import {
   DOCK_HANDLE_SIZE,
-  openDockLayout,
-  paneKeysOf
+  Dock
 } from "../../support/dock.ts";
-
-// CONSTANTS
-const kOverlay = "jolly-dock[key='right']";
+import { FloatingWindow } from "../../support/floating.ts";
+import { Pane } from "../../support/pane.ts";
 
 function adoptExampleCss(
   page: Page,
@@ -56,18 +54,20 @@ function hitsInside(
 }
 
 test.describe("DockLayout", () => {
-  test.beforeEach(async({ page }) => {
-    await openDockLayout(page);
+  test.use({
+    example: "scenarios/dock-layout"
   });
 
   test("renders the authored overlay and solid docks", async({ page }) => {
-    const overlay = page.locator(kOverlay);
-    const hud = page.locator("jolly-pane[key='hud']");
+    const left = new Dock(page, "left");
+    const right = new Dock(page, "right");
+    const overlay = right.root;
+    const hud = new Pane(page, "hud").root;
 
-    await expect(paneKeysOf(page, "left"))
+    await expect(left.paneKeys())
       .resolves.toEqual(["hierarchy", "inspector"]);
-    await expect(paneKeysOf(page, "right")).resolves.toEqual(["hud"]);
-    await expect(page.locator("jolly-floating")).toHaveCount(1);
+    await expect(right.paneKeys()).resolves.toEqual(["hud"]);
+    await expect(new FloatingWindow(page).root).toHaveCount(1);
     await expect(overlay).toHaveAttribute("overlay");
     await expect(overlay).toHaveAttribute("align", "end");
     await expect(overlay).toHaveCSS("pointer-events", "none");
@@ -77,7 +77,7 @@ test.describe("DockLayout", () => {
       () => partStyleOf(overlay, ".resize-handle", "background-color")
     ).toBe("rgba(0, 0, 0, 0)");
     await expect.poll(
-      () => partStyleOf(page.locator("jolly-dock[key='left']"), ".content", "overflow-y")
+      () => partStyleOf(left.root, ".content", "overflow-y")
     ).toBe("auto");
     await expect.poll(
       () => partStyleOf(overlay, ".content", "overflow")
@@ -94,12 +94,13 @@ test.describe("DockLayout", () => {
 
     const cast = await shadowBlurOf(hud);
     expect(cast).toBeGreaterThan(0);
-    expect(cast).toBeLessThan(await shadowBlurOf(page.locator("jolly-floating")));
+    expect(cast).toBeLessThan(await shadowBlurOf(new FloatingWindow(page).root));
   });
 
   test("an overlay dock resizes from its keyboard and pointer edge", async({ page }) => {
-    const overlay = page.locator(kOverlay);
-    const handle = overlay.locator(".resize-handle");
+    const right = new Dock(page, "right");
+    const overlay = right.root;
+    const handle = right.resizeHandle;
     await expect(handle).toHaveCount(1);
 
     const width = await widthOf(overlay);
@@ -123,9 +124,9 @@ test.describe("DockLayout", () => {
       "jolly-dock, jolly-dock-layout { pointer-events: auto; }"
     );
 
-    const pane = page.locator("jolly-pane[key='hud']");
+    const pane = new Pane(page, "hud").root;
     const [dock, hud] = await Promise.all([
-      boxOf(page.locator(kOverlay)),
+      boxOf(new Dock(page, "right").root),
       boxOf(pane)
     ]);
     expect(hud.y - dock.y).toBeGreaterThan(20);
@@ -162,29 +163,30 @@ test.describe("DockLayout", () => {
 
     await expect.poll(async() => hitsInside(
       page,
-      await centerOf(page.locator("jolly-dock[key='left']")),
+      await centerOf(new Dock(page, "left").root),
       "jolly-dock"
     )).toBe(true);
     await expect.poll(async() => hitsInside(
       page,
-      await centerOf(page.locator("jolly-floating")),
+      await centerOf(new FloatingWindow(page).root),
       "jolly-floating"
     )).toBe(true);
   });
 
   test("an empty overlay dock does not keep a resize strip over the viewport", async({ page }) => {
-    const overlay = page.locator(kOverlay);
-    await page.locator("jolly-pane[key='hud']").evaluate(
+    const right = new Dock(page, "right");
+    await right.pane("hud").root.evaluate(
       (element) => element.remove()
     );
 
-    await expect(overlay).toHaveAttribute("empty");
-    await expect(overlay.locator(".resize-handle")).toBeHidden();
+    await expect(right.root).toHaveAttribute("empty");
+    await expect(right.resizeHandle).toBeHidden();
   });
 
   test("a jittery click on a collapsed dock's handle keeps its remembered size", async({ page }) => {
-    const dock = page.locator("jolly-dock[key='left']");
-    const handle = dock.locator(".resize-handle");
+    const left = new Dock(page, "left");
+    const dock = left.root;
+    const handle = left.resizeHandle;
     function size(): Promise<number> {
       return dock.evaluate(
         (element: HTMLElementTagNameMap["jolly-dock"]) => element.size

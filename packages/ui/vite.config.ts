@@ -6,7 +6,13 @@ import {
   Server
 } from "@jolly-pixel/network";
 import { createWebSocketNetworkPlugin } from "@jolly-pixel/network/node";
-import { PORTS } from "@jolly-pixel/e2e";
+import {
+  PORTS,
+  prebundleWorkspace
+} from "@jolly-pixel/e2e";
+
+// CONSTANTS
+const kE2EMode = "e2e";
 
 const network = new Server();
 network.setRoomResolver((roomName) => {
@@ -16,19 +22,36 @@ network.setRoomResolver((roomName) => {
 });
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  root: "examples",
-  server: {
-    port: PORTS.ui,
-    strictPort: true,
-    allowedHosts: true
-  },
-  plugins: [
-    createWebSocketNetworkPlugin({ server: network }),
-    checker({
-      typescript: {
-        tsconfigPath: "examples/tsconfig.json"
+export default defineConfig(({ mode }) => {
+  const e2e = mode === kE2EMode;
+
+  return {
+    root: "examples",
+    server: {
+      port: PORTS.ui,
+      strictPort: true
+    },
+    preview: {
+      port: PORTS.ui,
+      strictPort: true
+    },
+    build: {
+      rolldownOptions: {
+        output: {
+          inlineDynamicImports: true
+        }
       }
-    })
-  ]
+    },
+    plugins: [
+      prebundleWorkspace(),
+      createWebSocketNetworkPlugin({ server: network }),
+      e2e ?
+        null :
+        checker({
+          typescript: {
+            tsconfigPath: "examples/tsconfig.json"
+          }
+        })
+    ]
+  };
 });

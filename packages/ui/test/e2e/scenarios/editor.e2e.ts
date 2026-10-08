@@ -1,25 +1,26 @@
 // Import Third-party Dependencies
+import { boxOf, hold } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Page
-} from "@playwright/test";
-import { boxOf, hold } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { openExample } from "../support/gallery.ts";
-import { paneKeysOf } from "../support/dock.ts";
+import { Dock } from "../support/dock.ts";
+import { Pane } from "../support/pane.ts";
 import { styleOf } from "../support/styles.ts";
 
 async function dropBrushNearTop(
   page: Page,
-  dock: string,
+  dock: Dock,
   y?: number
 ): Promise<void> {
   const [header, target, firstHeader] = await Promise.all([
-    boxOf(page.locator("jolly-pane[key='brush'] .header")),
-    boxOf(page.locator(`jolly-dock[key='${dock}']`)),
-    boxOf(page.locator(`jolly-dock[key='${dock}'] > jolly-pane .header`).first())
+    boxOf(new Pane(page, "brush").header),
+    boxOf(dock.root),
+    boxOf(dock.root.locator(":scope > jolly-pane .header").first())
   ]);
 
   await hold(page, {
@@ -36,9 +37,10 @@ test.describe("editor scenario", () => {
   test("a docked Brush keeps its own label column", async({ page }) => {
     await openExample(page, "scenarios/editor");
 
-    await dropBrushNearTop(page, "inspector");
-    await expect(paneKeysOf(page, "inspector")).resolves.toEqual(["brush", "inspector"]);
-    expect(await styleOf(page.locator("jolly-pane[key='brush']"), "--jolly-label-width"))
+    const dock = new Dock(page, "inspector");
+    await dropBrushNearTop(page, dock);
+    await expect(dock.paneKeys()).resolves.toEqual(["brush", "inspector"]);
+    expect(await styleOf(new Pane(page, "brush").root, "--jolly-label-width"))
       .toBe("10ch");
   });
 
@@ -48,10 +50,11 @@ test.describe("editor scenario", () => {
     test("scrolls to the pane the fold would have swallowed", async({ page }) => {
       await openExample(page, "scenarios/editor");
 
-      const dock = page.locator("jolly-dock[key='inspector']");
+      const inspector = new Dock(page, "inspector");
+      const dock = inspector.root;
       const target = await boxOf(dock);
-      await dropBrushNearTop(page, "inspector", target.y + target.height - 20);
-      await expect(paneKeysOf(page, "inspector"))
+      await dropBrushNearTop(page, inspector, target.y + target.height - 20);
+      await expect(inspector.paneKeys())
         .resolves.toEqual(["inspector", "brush"]);
 
       const content = await dock.evaluate((element) => {
@@ -67,7 +70,7 @@ test.describe("editor scenario", () => {
         overflows: true
       });
 
-      const brush = page.locator("jolly-pane[key='brush']");
+      const brush = new Pane(page, "brush").root;
       const stranded = await boxOf(brush);
       expect(stranded.y + stranded.height).toBeGreaterThan(520);
 

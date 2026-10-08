@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import "../../../../src/containers/rail/Rail.ts";
 import { createSimpleExample } from "../shared/example.ts";
 import {
   button,
@@ -6,8 +7,6 @@ import {
 } from "../shared/containerBuilders.ts";
 
 export const RAIL_EXAMPLE = createSimpleExample(
-  "containers/rail",
-  "Rail",
   () => {
     const root = document.createElement("div");
     root.className = "chrome-demo";

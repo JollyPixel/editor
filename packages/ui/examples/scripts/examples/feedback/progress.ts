@@ -1,9 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
-import {
-  Loading,
-  Progress
-} from "../../../../src/index.ts";
+import { Loading } from "../../../../src/feedback/Loading.ts";
+import { Progress } from "../../../../src/feedback/Progress.ts";
 import { button } from "../shared/containerBuilders.ts";
 
 // CONSTANTS
@@ -18,8 +16,6 @@ const kAssetNames = [
 ] as const;
 
 export const PROGRESS_EXAMPLE: GalleryExample = {
-  id: "feedback/progress",
-  title: "Progress and loading",
   render(host) {
     const root = document.createElement("div");
     root.className = "progress-example";

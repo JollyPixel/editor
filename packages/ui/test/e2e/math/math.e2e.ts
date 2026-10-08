@@ -1,16 +1,16 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Locator,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   scrubBy
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
+import {
+  test,
+  expect,
+  type Locator,
+  type Page
+} from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
@@ -31,8 +31,11 @@ function axisTagColor(
 }
 
 test.describe("vector3", () => {
+  test.use({
+    example: "math/vector3"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "math/vector3");
     await recordChanges(page);
   });
 
@@ -164,8 +167,8 @@ test.describe("axis markers", () => {
 });
 
 test.describe("quaternion", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "math/quaternion");
+  test.use({
+    example: "math/quaternion"
   });
 
   test("typing an axis in degrees commits the equivalent quaternion", async({ page }) => {

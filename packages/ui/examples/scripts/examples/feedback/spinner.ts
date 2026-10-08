@@ -1,6 +1,7 @@
 // Import Internal Dependencies
+import "../../../../src/feedback/Spinner.ts";
 import type { GalleryExample } from "../../types.ts";
-import type { Spinner } from "../../../../src/index.ts";
+import type { Spinner } from "../../../../src/feedback/Spinner.ts";
 import { button } from "../shared/containerBuilders.ts";
 
 // CONSTANTS
@@ -21,8 +22,6 @@ const kSizes = [
 const kBusyDurationMs = 2_000;
 
 export const SPINNER_EXAMPLE: GalleryExample = {
-  id: "feedback/spinner",
-  title: "Spinner",
   render(host) {
     const root = document.createElement("div");
     root.className = "spinner-example";

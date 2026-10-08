@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Select } from "../../../../src/index.ts";
+import { Select } from "../../../../src/controls/Select.ts";
 
 // CONSTANTS
 const kFilters = [
@@ -25,8 +25,6 @@ const kFilters = [
 ];
 
 export const SELECT_EXAMPLE: GalleryExample = {
-  id: "controls/select",
-  title: "Select",
   render(host) {
     return renderStateMatrix<Select<unknown>>(host, {
       create() {

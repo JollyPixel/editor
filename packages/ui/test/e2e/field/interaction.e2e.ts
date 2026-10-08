@@ -1,10 +1,8 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect
-} from "@playwright/test";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
@@ -15,8 +13,11 @@ import {
 import { styleOf } from "../support/styles.ts";
 
 test.describe("range", () => {
+  test.use({
+    example: "controls/range"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/range");
     await recordChanges(page);
   });
 
@@ -63,8 +64,11 @@ test.describe("range", () => {
 });
 
 test.describe("text", () => {
+  test.use({
+    example: "controls/text"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/text");
     await recordChanges(page);
   });
 
@@ -141,8 +145,11 @@ test.describe("slider", () => {
 });
 
 test.describe("select", () => {
+  test.use({
+    example: "controls/select"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/select");
     await recordChanges(page);
   });
 

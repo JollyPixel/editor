@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
-import {
-  test,
-  expect
-} from "@playwright/test";
 import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
+import {
+  test,
+  expect
+} from "../fixtures.ts";
 import {
   TRANSPARENT,
   fieldControl as control

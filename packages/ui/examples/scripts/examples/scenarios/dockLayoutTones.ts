@@ -1,5 +1,6 @@
 // Import Internal Dependencies
-import type { IconTone } from "../../../../src/index.ts";
+import "../../../../src/containers/dock/Dock.ts";
+import type { IconTone } from "../../../../src/icon/registry.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   button,
@@ -16,8 +17,6 @@ type DockLayoutTonesOptionKey = "shareTone";
 export const DOCK_LAYOUT_TONES_EXAMPLE: GalleryExample<
   DockLayoutTonesOptionKey
 > = {
-  id: "scenarios/dock-layout-tones",
-  title: "Dock layout tones",
   options: [
     {
       key: "shareTone",

@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Text } from "../../../../src/index.ts";
+import { Text } from "../../../../src/controls/Text.ts";
 
 export const TEXT_EXAMPLE: GalleryExample = {
-  id: "controls/text",
-  title: "Text",
   render(host) {
     return renderStateMatrix<Text>(host, {
       create() {

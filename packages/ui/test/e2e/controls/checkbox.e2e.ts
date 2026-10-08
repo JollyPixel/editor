@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
+import { boxOf } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator
-} from "@playwright/test";
-import { boxOf } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges,
@@ -33,8 +33,11 @@ function gradientOf(
 }
 
 test.describe("checkbox", () => {
+  test.use({
+    example: "controls/checkbox"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/checkbox");
     await recordFieldChanges(page);
   });
 

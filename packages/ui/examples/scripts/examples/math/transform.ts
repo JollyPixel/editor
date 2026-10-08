@@ -1,11 +1,10 @@
 // Import Internal Dependencies
+import "../../../../src/math/Transform.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  detailOf,
-  peerColor,
-  type JollyChangeDetail,
-  type Transform
-} from "../../../../src/index.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import { peerColor } from "../../../../src/theme/peerColor.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
+import type { Transform } from "../../../../src/math/Transform.ts";
 import {
   AXIS_STYLE_OPTIONS,
   axisStyleOf,
@@ -18,8 +17,6 @@ type TransformOptionKey =
   | AxisStyleOptionKey;
 
 export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
-  id: "math/transform",
-  title: "Transform",
   options: [
     {
       key: "stacked",

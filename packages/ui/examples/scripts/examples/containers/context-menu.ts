@@ -1,5 +1,6 @@
 // Import Internal Dependencies
-import type { ContextMenuEntry } from "../../../../src/index.ts";
+import "../../../../src/containers/context-menu/ContextMenu.ts";
+import type { ContextMenuEntry } from "../../../../src/containers/context-menu/ContextMenu.ts";
 import { createSimpleExample } from "../shared/example.ts";
 import { text } from "../shared/containerBuilders.ts";
 
@@ -64,8 +65,6 @@ function entriesFor(
 }
 
 export const CONTEXT_MENU_EXAMPLE = createSimpleExample(
-  "containers/context-menu",
-  "Context menu",
   () => {
     const root = document.createElement("div");
     const menu = document.createElement("jolly-context-menu");

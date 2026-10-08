@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
+import { boxOf } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Page
-} from "@playwright/test";
-import { boxOf } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
+} from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
 import { styleOf } from "../../support/styles.ts";
 

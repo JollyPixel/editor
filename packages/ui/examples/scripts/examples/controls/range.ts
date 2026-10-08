@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Range } from "../../../../src/index.ts";
+import { Range } from "../../../../src/controls/Range.ts";
 
 export const RANGE_EXAMPLE: GalleryExample = {
-  id: "controls/range",
-  title: "Range",
   render(host) {
     return renderStateMatrix<Range>(host, {
       create() {

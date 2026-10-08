@@ -1,10 +1,8 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect
-} from "@playwright/test";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
 import { styleOf } from "../support/styles.ts";
 

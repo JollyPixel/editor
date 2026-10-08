@@ -1,10 +1,9 @@
 // Import Internal Dependencies
+import "../../../../src/monitors/Graph.ts";
 import type { GalleryExample } from "../../types.ts";
-import { formatCount } from "../../../../src/index.ts";
+import { formatCount } from "../../../../src/monitors/format.ts";
 
 export const GRAPH_EXAMPLE: GalleryExample = {
-  id: "monitors/graph",
-  title: "Graph",
   render(host) {
     const graph = document.createElement("jolly-graph");
     graph.label = "fps";

@@ -1,6 +1,8 @@
 // Import Internal Dependencies
+import "../../../../src/controls/Button.ts";
+import "../../../../src/controls/PropertyRow.ts";
+import "../../../../src/controls/Separator.ts";
 import type { GalleryExample } from "../../types.ts";
-import "../../../../src/index.ts";
 
 // CONSTANTS
 const kVariants = [
@@ -10,8 +12,6 @@ const kVariants = [
 ] as const;
 
 export const CHROME_EXAMPLE: GalleryExample = {
-  id: "controls/chrome",
-  title: "Button, separator, row",
   render(host) {
     const root = document.createElement("div");
     root.className = "chrome-demo";

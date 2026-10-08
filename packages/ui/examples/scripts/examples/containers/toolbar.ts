@@ -1,10 +1,9 @@
 // Import Internal Dependencies
+import "../../../../src/containers/toolbar/Toolbar.ts";
 import { createSimpleExample } from "../shared/example.ts";
 import { button } from "../shared/containerBuilders.ts";
 
 export const TOOLBAR_EXAMPLE = createSimpleExample(
-  "containers/toolbar",
-  "Toolbar",
   () => {
     const toolbar = document.createElement("jolly-toolbar");
     toolbar.label = "Editing tools";

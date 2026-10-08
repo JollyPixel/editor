@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Point2d } from "../../../../src/index.ts";
+import { Point2d } from "../../../../src/math/Point2d.ts";
 
 export const POINT2D_EXAMPLE: GalleryExample = {
-  id: "math/point2d",
-  title: "Point2d",
   render(host) {
     return renderStateMatrix<Point2d>(host, {
       liveInput: true,

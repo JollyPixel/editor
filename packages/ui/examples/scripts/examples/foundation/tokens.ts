@@ -23,8 +23,6 @@ const kSemanticTokens = [
 ];
 
 export const TOKENS_EXAMPLE: GalleryExample = {
-  id: "foundation/tokens",
-  title: "Semantic tokens",
   render(host) {
     const grid = document.createElement("div");
     grid.className = "token-grid";

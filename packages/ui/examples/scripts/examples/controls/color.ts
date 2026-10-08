@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Color } from "../../../../src/index.ts";
+import { Color } from "../../../../src/controls/Color.ts";
 
 export const COLOR_EXAMPLE: GalleryExample<"alpha"> = {
-  id: "controls/color",
-  title: "Color",
   options: [
     {
       key: "alpha",

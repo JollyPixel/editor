@@ -1,11 +1,9 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   expect,
   test,
   type Page
-} from "@playwright/test";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { openExample } from "../support/gallery.ts";
 
 // CONSTANTS

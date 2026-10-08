@@ -1,12 +1,9 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Page
-} from "@playwright/test";
-
-// Import Internal Dependencies
-import { openExample } from "../../support/gallery.ts";
+} from "../../fixtures.ts";
 
 function row(
   page: Page,
@@ -16,8 +13,8 @@ function row(
 }
 
 test.describe("Context menu", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "containers/context-menu");
+  test.use({
+    example: "containers/context-menu"
   });
 
   test("opens at the pointer, runs the chosen item and returns focus", async({ page }) => {

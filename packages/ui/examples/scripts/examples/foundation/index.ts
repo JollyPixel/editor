@@ -1,10 +1,20 @@
 // Import Internal Dependencies
-import { TOKENS_EXAMPLE } from "./tokens.ts";
-import { PEER_COLORS_EXAMPLE } from "./peerColors.ts";
-import { ICON_TONES_EXAMPLE } from "./iconTones.ts";
+import type { GalleryEntry } from "../../types.ts";
 
-export const FOUNDATION_EXAMPLES = [
-  TOKENS_EXAMPLE,
-  PEER_COLORS_EXAMPLE,
-  ICON_TONES_EXAMPLE
+export const FOUNDATION_EXAMPLES: readonly GalleryEntry[] = [
+  {
+    id: "foundation/tokens",
+    title: "Semantic tokens",
+    load: async() => (await import("./tokens.ts")).TOKENS_EXAMPLE
+  },
+  {
+    id: "foundation/peer-colors",
+    title: "Peer colours",
+    load: async() => (await import("./peerColors.ts")).PEER_COLORS_EXAMPLE
+  },
+  {
+    id: "foundation/icon-tones",
+    title: "Icon tones",
+    load: async() => (await import("./iconTones.ts")).ICON_TONES_EXAMPLE
+  }
 ];

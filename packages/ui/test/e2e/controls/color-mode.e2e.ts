@@ -1,16 +1,14 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect
-} from "@playwright/test";
-
-// Import Internal Dependencies
-import { fieldRow as row, openExample } from "../support/gallery.ts";
+} from "../fixtures.ts";
+import { fieldRow as row } from "../support/gallery.ts";
 import { styleOf } from "../support/styles.ts";
 
 test.describe("colored fields", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/checkbox");
+  test.use({
+    example: "controls/checkbox"
   });
 
   test("the modified gutter follows the field color mode", async({ page }) => {

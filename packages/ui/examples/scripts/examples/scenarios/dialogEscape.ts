@@ -1,17 +1,14 @@
 // Import Internal Dependencies
+import "../../../../src/containers/dialog/Dialog.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   button,
   text
 } from "../shared/containerBuilders.ts";
-import {
-  Color,
-  inputLayers
-} from "../../../../src/index.ts";
+import { Color } from "../../../../src/controls/Color.ts";
+import { inputLayers } from "../../../../src/interaction/input/InputLayers.ts";
 
 export const DIALOG_ESCAPE_EXAMPLE: GalleryExample = {
-  id: "scenarios/dialog-escape",
-  title: "Dialog Escape",
   render(host) {
     const root = document.createElement("div");
     root.className = "chrome-row";

@@ -1,13 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
-import {
-  Control,
-  Controls
-} from "../../../../src/index.ts";
+import { Control } from "../../../../src/controls/Control.ts";
+import { Controls } from "../../../../src/controls/Controls.ts";
 
 export const SCENE_CONTROLS_EXAMPLE: GalleryExample = {
-  id: "controls/scene-controls",
-  title: "Scene controls",
   render(host) {
     const scene = document.createElement("div");
     const controls = new Controls();

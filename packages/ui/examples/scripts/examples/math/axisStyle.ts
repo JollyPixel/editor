@@ -3,7 +3,7 @@ import type {
   GalleryOption,
   GalleryOptionValues
 } from "../../types.ts";
-import type { AxisStyle } from "../../../../src/index.ts";
+import type { AxisStyle } from "../../../../src/math/types.ts";
 
 export type AxisStyleOptionKey =
   | "axisLetters"

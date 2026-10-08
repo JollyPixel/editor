@@ -1,13 +1,18 @@
 // Import Third-party Dependencies
+import { centerOf, dragTo } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Page
-} from "@playwright/test";
-import { centerOf, dragTo } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
+} from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
+import { FloatingWindow } from "../../support/floating.ts";
+import {
+  Pane,
+  PaneGroup
+} from "../../support/pane.ts";
 
 // CONSTANTS
 const kExample = "scenarios/dock-layout-tones";
@@ -16,7 +21,7 @@ function areaOf(
   page: Page,
   pane: string
 ): Promise<string> {
-  return page.locator(`jolly-pane[key='${pane}']`).evaluate(
+  return new Pane(page, pane).root.evaluate(
     (element) => element.style.getPropertyValue("--jolly-area-tone")
   );
 }
@@ -27,7 +32,7 @@ test.describe("DockLayout tones", () => {
 
     expect(await areaOf(page, "general")).toBe("var(--jolly-tone-sky)");
     expect(await areaOf(page, "paint")).toBe("var(--jolly-tone-pink)");
-    await expect(page.locator("jolly-pane[key='assets']"))
+    await expect(new Pane(page, "assets").root)
       .not.toHaveAttribute("toned");
   });
 
@@ -41,7 +46,7 @@ test.describe("DockLayout tones", () => {
     await expect.poll(() => areaOf(page, "assets"))
       .toBe("var(--jolly-tone-violet)");
 
-    await page.locator("jolly-pane-group .tab[data-key='blocks']").click();
+    await new PaneGroup(page).tab("Blocks").click();
 
     await expect.poll(() => areaOf(page, "paint"))
       .toBe("var(--jolly-tone-amber)");
@@ -58,11 +63,11 @@ test.describe("DockLayout tones", () => {
 
     await dragTo(
       page,
-      page.locator("jolly-pane[key='paint'] .header").first(),
+      new Pane(page, "paint").header.first(),
       await centerOf(page.locator(".dock-layout-viewport"))
     );
 
-    await expect(page.locator("jolly-floating jolly-pane[key='paint']"))
+    await expect(new FloatingWindow(page, "paint").root)
       .toHaveCount(1);
     await expect.poll(() => areaOf(page, "paint"))
       .toBe("var(--jolly-tone-pink)");

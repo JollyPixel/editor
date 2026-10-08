@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   dragTo,
@@ -14,18 +10,21 @@ import {
 
 // Import Internal Dependencies
 import {
-  openExample,
-  reloadGallery
-} from "../../support/gallery.ts";
+  test,
+  expect
+} from "../../fixtures.ts";
+import { reloadGallery } from "../../support/gallery.ts";
+import { FloatingWindow } from "../../support/floating.ts";
 
 test.describe("Floating", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "containers/floating");
+  test.use({
+    example: "containers/floating"
   });
 
   test("moves within the viewport and resizes from the keyboard", async({ page }) => {
-    const floating = page.locator("jolly-floating");
-    const title = await boxOf(floating.locator("jolly-pane .title"));
+    const frame = new FloatingWindow(page);
+    const floating = frame.root;
+    const title = await boxOf(frame.pane().title);
 
     await hold(page, {
       x: title.x + 5,
@@ -39,15 +38,16 @@ test.describe("Floating", () => {
     await expect(floating).toHaveAttribute("y", "0");
 
     const width = await widthOf(floating);
-    const handle = floating.locator(".resize-handle.right");
+    const handle = frame.resizeHandle("right");
     await handle.focus();
     await handle.press("ArrowRight");
     await expect.poll(() => widthOf(floating)).toBe(width + 8);
   });
 
   test("a button in the pane actions is clicked, not dragged", async({ page }) => {
-    const floating = page.locator("jolly-floating");
-    const title = await boxOf(floating.locator("jolly-pane .title"));
+    const frame = new FloatingWindow(page);
+    const floating = frame.root;
+    const title = await boxOf(frame.pane().title);
     await hold(page, {
       x: title.x + 5,
       y: title.y + 5
@@ -65,8 +65,9 @@ test.describe("Floating", () => {
   });
 
   test("the corner handle resizes both axes from one drag", async({ page }) => {
-    const floating = page.locator("jolly-floating");
-    const corner = floating.locator(".resize-handle.corner");
+    const frame = new FloatingWindow(page);
+    const floating = frame.root;
+    const corner = frame.resizeHandle("corner");
     const [width, height, from] = await Promise.all([
       widthOf(floating),
       heightOf(floating),
@@ -83,27 +84,28 @@ test.describe("Floating", () => {
   });
 
   test("folding the held pane shrinks the window to its header and locks its height", async({ page }) => {
-    const floating = page.locator("jolly-floating");
-    const pane = floating.locator("jolly-pane");
-    const bottom = floating.locator(".resize-handle.bottom");
+    const frame = new FloatingWindow(page);
+    const floating = frame.root;
+    const pane = frame.pane();
+    const bottom = frame.resizeHandle("bottom");
     const height = await heightOf(floating);
 
-    await pane.locator(".fold").click();
-    await expect(pane).toHaveAttribute("collapsed");
-    const header = await heightOf(pane.locator(".header"));
+    await pane.fold.click();
+    await expect(pane.root).toHaveAttribute("collapsed");
+    const header = await heightOf(pane.header);
     await expect.poll(() => heightOf(floating)).toBeCloseTo(header, 0);
     await expect(bottom).toHaveClass(/disabled/);
-    await expect(floating.locator(".resize-handle.corner")).toHaveClass(/disabled/);
-    await expect(floating.locator(".resize-handle.right")).not.toHaveClass(/disabled/);
+    await expect(frame.resizeHandle("corner")).toHaveClass(/disabled/);
+    await expect(frame.resizeHandle("right")).not.toHaveClass(/disabled/);
 
-    await pane.locator(".fold").click();
-    await expect(pane).not.toHaveAttribute("collapsed");
+    await pane.fold.click();
+    await expect(pane.root).not.toHaveAttribute("collapsed");
     await expect.poll(() => heightOf(floating)).toBeCloseTo(height, 0);
     await expect(bottom).not.toHaveClass(/disabled/);
   });
 
   test("a window hidden by its owner comes back hidden", async({ page }) => {
-    const floating = page.locator("jolly-floating");
+    const floating = new FloatingWindow(page).root;
     function setHidden(hidden: boolean): Promise<void> {
       return floating.evaluate(
         (element: HTMLElement, value) => {

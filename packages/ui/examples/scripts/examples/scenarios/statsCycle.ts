@@ -1,10 +1,10 @@
 // Import Internal Dependencies
+import "../../../../src/stats/Stats.ts";
+import "../../../../src/theme/components/ScopeHost.ts";
 import type { GalleryExample } from "../../types.ts";
 import { StatsRecorder } from "../../../../src/stats/StatsRecorder.ts";
 
 export const STATS_CYCLE_EXAMPLE: GalleryExample = {
-  id: "scenarios/stats-cycle",
-  title: "Stats cycle",
   render(host) {
     const recorder = new StatsRecorder();
     const started = performance.now();
