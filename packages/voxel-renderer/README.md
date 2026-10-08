@@ -187,7 +187,7 @@ Then open `http://localhost:5173/` for the landing page, or go straight to one:
 - `/physics/`: a 32×32 voxel terrain with ramps, stairs and slabs, and a Rapier3D sphere you roll with the arrow keys.
 - `/noise-world/`: a Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters. This is the benchmark example.
 
-See [examples/README.md](examples/README.md) to add one.
+See [examples/README.md](https://github.com/JollyPixel/editor/blob/main/packages/voxel-renderer/examples/README.md) to add one.
 
 ## 🧪 Benchmarks
 
