@@ -1,7 +1,10 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 import {
+  afterEach,
+  beforeEach,
   describe,
+  mock,
   test
 } from "node:test";
 
@@ -17,7 +20,7 @@ import { peerProfileColor } from "../../src/network/peerProfile.ts";
 import {
   createRoomHarness,
   type RoomHarness
-} from "./roomHarness.ts";
+} from "../helpers/network/roomHarness.ts";
 
 const kLocalIdentity: PeerIdentity = {
   username: "Ada",
@@ -67,6 +70,14 @@ function messagesOf(
 }
 
 describe("PeerRoster", () => {
+  beforeEach(() => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+  });
+
+  afterEach(() => {
+    mock.timers.reset();
+  });
+
   test("publishes the local peer alone before anyone joins", () => {
     const harness = createHarness();
 

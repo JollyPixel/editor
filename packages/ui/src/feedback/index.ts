@@ -12,8 +12,7 @@ export type {
   LogContent,
   LogEntry,
   LogListener,
-  LogQueueOptions,
-  LogScheduler
+  LogQueueOptions
 } from "./LogQueue.types.ts";
 export {
   Progress

@@ -85,11 +85,11 @@ test.describe("color: popup", () => {
     const popover = await openPicker(field);
 
     await dragAreaToBlack(page, popover.locator(".area"));
-    expect(await lastChange(page)).toBe("#000000");
+    await expect.poll(() => lastChange(page)).toBe("#000000");
 
     await page.keyboard.press("Escape");
     await expect(popover).toBeHidden();
-    expect(await lastChange(page)).toBe("#4488ff");
+    await expect.poll(() => lastChange(page)).toBe("#4488ff");
     await expect(field.locator("button.swatch")).toBeFocused();
   });
 
@@ -100,7 +100,7 @@ test.describe("color: popup", () => {
     await page.mouse.click(2, 2);
 
     await expect(popover).toBeHidden();
-    expect(await lastChange(page)).toBe("#000000");
+    await expect.poll(() => lastChange(page)).toBe("#000000");
   });
 
   test("does not open from a disabled row", async({ page }) => {
@@ -117,7 +117,7 @@ test.describe("color: popup", () => {
     await popover.locator('input[aria-label="Hue"]').focus();
     await page.keyboard.press("ArrowRight");
 
-    expect(await lastChange(page)).toMatch(/^#[0-9a-f]{6}$/);
+    await expect.poll(() => lastChange(page)).toMatch(/^#[0-9a-f]{6}$/);
   });
 });
 
@@ -136,7 +136,7 @@ test.describe("color: alpha", () => {
     await popover.locator('input[aria-label="Alpha"]').focus();
     await page.keyboard.press("ArrowLeft");
 
-    expect(await lastChange(page)).toMatch(/^#[0-9a-f]{8}$/);
+    await expect.poll(() => lastChange(page)).toMatch(/^#[0-9a-f]{8}$/);
   });
 
   test("the alpha readout cancels garbage and evaluates expressions", async({ page }) => {
@@ -147,15 +147,15 @@ test.describe("color: alpha", () => {
     await readout.fill("nope");
     await readout.press("Enter");
     await expect(readout).toHaveValue("0.80");
-    expect(await fieldChanges(page)).toEqual([]);
+    await expect.poll(() => fieldChanges(page)).toEqual([]);
 
     await readout.fill("0.5");
     await readout.press("Enter");
-    expect(await lastChange(page)).toBe("#4488ff80");
+    await expect.poll(() => lastChange(page)).toBe("#4488ff80");
 
     await readout.fill("1 / 4");
     await readout.press("Enter");
-    expect(await lastChange(page)).toBe("#4488ff40");
+    await expect.poll(() => lastChange(page)).toBe("#4488ff40");
   });
 
   test("the row's hex field accepts eight digits", async({ page }) => {
@@ -163,7 +163,7 @@ test.describe("color: alpha", () => {
     await input.fill("#ff660080");
     await input.press("Enter");
 
-    expect(await lastChange(page)).toBe("#ff660080");
+    await expect.poll(() => lastChange(page)).toBe("#ff660080");
   });
 });
 

@@ -26,7 +26,7 @@ test.describe("range", () => {
     await input.fill("2*3");
     await input.press("Enter");
 
-    expect(await changes(page)).toEqual([{ from: 6, to: 20 }]);
+    await expect.poll(() => changes(page)).toEqual([{ from: 6, to: 20 }]);
   });
 
   test("reports an invalid expression without committing", async({ page }) => {
@@ -36,7 +36,7 @@ test.describe("range", () => {
     await input.press("Enter");
 
     await expect(field).toHaveAttribute("invalid", "");
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
   });
 
   test("arrow keys step only the focused end", async({ page }) => {
@@ -46,7 +46,7 @@ test.describe("range", () => {
     await from.press("Alt+ArrowUp");
     await from.press("Shift+ArrowUp");
 
-    expect(await changes(page)).toEqual([
+    await expect.poll(() => changes(page)).toEqual([
       { from: 5.05, to: 20 },
       { from: 10.05, to: 20 }
     ]);
@@ -58,7 +58,7 @@ test.describe("range", () => {
     await to.fill("1");
     await to.press("Enter");
 
-    expect(await changes(page)).toEqual([{ from: 5, to: 5 }]);
+    await expect.poll(() => changes(page)).toEqual([{ from: 5, to: 5 }]);
   });
 });
 
@@ -74,7 +74,7 @@ test.describe("text", () => {
     await input.press("Escape");
 
     await expect(input).toHaveValue("Background");
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
   });
 
   test("blur commits, matching native change semantics", async({ page }) => {
@@ -82,7 +82,7 @@ test.describe("text", () => {
     await input.fill("Edited");
     await input.blur();
 
-    expect(await changes(page)).toEqual(["Edited"]);
+    await expect.poll(() => changes(page)).toEqual(["Edited"]);
   });
 
   test("typing emits jolly-input per keystroke", async({ page }) => {
@@ -92,7 +92,7 @@ test.describe("text", () => {
     await input.press("End");
     await input.pressSequentially("abc");
 
-    expect(await fieldInputCount(page)).toBe(3);
+    await expect.poll(() => fieldInputCount(page)).toBe(3);
   });
 
   test("reverting a mixed field commits the default", async({ page }) => {
@@ -100,7 +100,7 @@ test.describe("text", () => {
       .locator(".revert")
       .dispatchEvent("click");
 
-    expect(await changes(page)).toEqual(["Background"]);
+    await expect.poll(() => changes(page)).toEqual(["Background"]);
   });
 });
 
@@ -113,7 +113,7 @@ test.describe("slider", () => {
     await readout.focus();
     await readout.press("ArrowUp");
 
-    expect(await changes(page)).toEqual([0.45]);
+    await expect.poll(() => changes(page)).toEqual([0.45]);
   });
 
   test("progress follows input before any commit", async({ page }) => {
@@ -136,7 +136,7 @@ test.describe("slider", () => {
 
     await expect.poll(() => styleOf(lane, "--jolly-slider-progress"))
       .not.toBe(before);
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
   });
 });
 
@@ -151,7 +151,7 @@ test.describe("select", () => {
       .locator("select")
       .selectOption({ label: "Linear" });
 
-    expect(await changes(page)).toEqual(["linear"]);
+    await expect.poll(() => changes(page)).toEqual(["linear"]);
   });
 
   test("a locked select puts the picked option back", async({ page }) => {
@@ -168,6 +168,6 @@ test.describe("select", () => {
     });
 
     expect(after).toBe("0");
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
   });
 });

@@ -25,7 +25,7 @@ test.describe("number", () => {
     await input.fill("1920/2");
     await input.press("Enter");
 
-    expect(await changes(page)).toEqual([1]);
+    await expect.poll(() => changes(page)).toEqual([1]);
   });
 
   test("a parse error blocks the commit until a valid value clears it", async({ page }) => {
@@ -36,12 +36,12 @@ test.describe("number", () => {
     await input.press("Enter");
     await expect(field).toHaveAttribute("invalid", "");
     await expect(field.locator(".error")).toBeVisible();
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
 
     await input.fill("0.25");
     await input.press("Enter");
     await expect(field).not.toHaveAttribute("invalid", "");
-    expect(await changes(page)).toEqual([0.25]);
+    await expect.poll(() => changes(page)).toEqual([0.25]);
   });
 
   test("a consumer set error is not cleared by the element", async({ page }) => {
@@ -59,7 +59,7 @@ test.describe("number", () => {
     await row(page, "jolly-number", "default").locator("input")
       .pressSequentially("1920/2");
 
-    expect(await fieldInputCount(page)).toBe(0);
+    await expect.poll(() => fieldInputCount(page)).toBe(0);
   });
 
   test("arrow keys step, Shift coarsens from a refined value, Alt refines", async({ page }) => {
@@ -70,7 +70,7 @@ test.describe("number", () => {
     await input.press("Alt+ArrowUp");
     await input.press("Shift+ArrowUp");
 
-    expect(await changes(page)).toEqual([0.49, 0.48, 0.481, 0.581]);
+    await expect.poll(() => changes(page)).toEqual([0.49, 0.48, 0.481, 0.581]);
   });
 
   test("dragging the scrub handle commits one stepped value", async({ page }) => {
@@ -80,7 +80,7 @@ test.describe("number", () => {
       40
     );
 
-    expect(await changes(page)).toEqual([0.6]);
+    await expect.poll(() => changes(page)).toEqual([0.6]);
   });
 
   test("a scrub streams jolly-input and commits once", async({ page }) => {
@@ -137,7 +137,7 @@ test.describe("number", () => {
         await input.press("Enter");
       }
 
-      expect(await changes(page)).toEqual([]);
+      await expect.poll(() => changes(page)).toEqual([]);
     });
   }
 
@@ -146,7 +146,7 @@ test.describe("number", () => {
 
     await field.locator(".revert").dispatchEvent("click");
 
-    expect(await changes(page)).toEqual([0.5]);
+    await expect.poll(() => changes(page)).toEqual([0.5]);
     await expect(field).not.toHaveAttribute("modified", "");
     await expect(field.locator(".revert")).toHaveCount(0);
   });

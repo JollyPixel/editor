@@ -48,7 +48,7 @@ test.describe("controls: button group", () => {
     await focusable.focus();
     await page.keyboard.press("ArrowRight");
 
-    expect(await fieldChanges(page)).toEqual(["paint"]);
+    await expect.poll(() => fieldChanges(page)).toEqual(["paint"]);
   });
 
   test("names its radio group from aria-label when unlabeled", async({ page }) => {
@@ -86,7 +86,7 @@ test.describe("controls: button group", () => {
 
     await paint.click();
 
-    expect(await fieldChanges(page)).toEqual(["paint"]);
+    await expect.poll(() => fieldChanges(page)).toEqual(["paint"]);
   });
 
   test("lifts the label cap for a field packed beside another", async({ page }) => {

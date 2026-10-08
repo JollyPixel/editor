@@ -236,7 +236,9 @@ describe("StatsRecorder", () => {
       );
     }
   });
+});
 
+describe("resolveMetricRange", () => {
   it("resolves fixed and automatic graph bounds", () => {
     assert.deepEqual(
       resolveMetricRange(
@@ -253,9 +255,7 @@ describe("StatsRecorder", () => {
       { min: 0, max: 10 }
     );
   });
-});
 
-describe("resolveMetricRange", () => {
   it("scans the history only for a missing bound", () => {
     assert.deepEqual(
       resolveMetricRange(

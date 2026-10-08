@@ -46,7 +46,7 @@ test.describe("checkbox", () => {
     await box.click();
     await expect(box).not.toBeChecked();
 
-    expect(await fieldChanges(page)).toEqual([true, false]);
+    await expect.poll(() => fieldChanges(page)).toEqual([true, false]);
   });
 
   test("a mixed checkbox is indeterminate and resolves to true", async({ page }) => {
@@ -58,7 +58,7 @@ test.describe("checkbox", () => {
     await box.click();
     await expect(box).toBeChecked();
 
-    expect(await fieldChanges(page)).toEqual([true]);
+    await expect.poll(() => fieldChanges(page)).toEqual([true]);
   });
 
   test("clicking the background away from the box toggles it", async({ page }) => {
@@ -95,7 +95,7 @@ test.describe("checkbox", () => {
       await expect(input).not.toBeChecked();
     }
 
-    expect(await fieldChanges(page)).toEqual([]);
+    await expect.poll(() => fieldChanges(page)).toEqual([]);
   });
 
   test("the background gradient mirrors with alignment", async({ page }) => {
@@ -172,7 +172,7 @@ test.describe("flags", () => {
     await box.click();
     await expect(box).not.toBeChecked();
 
-    expect(await fieldChanges(page)).toEqual([0b0111, 0b0101]);
+    await expect.poll(() => fieldChanges(page)).toEqual([0b0111, 0b0101]);
   });
 });
 

@@ -50,7 +50,7 @@ export function createRoomHarness(): RoomHarness {
     leave: () => void 0,
     send: () => void 0,
     updatePresence: (patch: PeerMetadata) => {
-      published.push(patch);
+      published.push(JSON.parse(JSON.stringify(patch)));
     },
     on: (event: string, listener: (payload: unknown) => void) => {
       const bucket = listeners.get(event) ?? new Set();

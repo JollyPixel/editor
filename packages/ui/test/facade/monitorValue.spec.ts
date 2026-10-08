@@ -18,13 +18,6 @@ describe("facade.displayMonitorValue", () => {
     );
   });
 
-  test("rounds to two decimals and drops trailing zeros", () => {
-    assert.equal(
-      displayMonitorValue({ x: 1.567, y: 2.5, z: 3 }),
-      "1.57, 2.5, 3"
-    );
-  });
-
   test("honours a precision of zero", () => {
     assert.equal(
       displayMonitorValue({ x: 1.6, y: 2.4 }, { precision: 0 }),

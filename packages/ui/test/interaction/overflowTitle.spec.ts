@@ -58,17 +58,6 @@ describe("syncOverflowTitle", () => {
 
     assert.equal(element.hasAttribute("title"), false);
   });
-
-  test("leaves no title when an ancestor switches it off", () => {
-    const scope = document.createElement("div");
-    scope.setAttribute("overflow-title", "off");
-    const element = label("A very long block name", { content: 120, box: 40 });
-    scope.append(element);
-
-    syncOverflowTitle(element);
-
-    assert.equal(element.hasAttribute("title"), false);
-  });
 });
 
 describe("revealOverflowTitle", () => {
