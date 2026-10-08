@@ -462,8 +462,12 @@ function isMovedRow<TData>(
   moved: ReadonlySet<string>,
   snapshot: TreeSnapshot<TData>
 ): boolean {
-  return moved.size > 0 &&
-    snapshot.ancestorChain(row.node.id).some((id) => moved.has(id));
+  let id: string | null | undefined = row.node.id;
+  while (moved.size > 0 && typeof id === "string" && !moved.has(id)) {
+    id = snapshot.parentId(id);
+  }
+
+  return moved.size > 0 && typeof id === "string";
 }
 
 interface ResolveRootDropOptions<TData> {

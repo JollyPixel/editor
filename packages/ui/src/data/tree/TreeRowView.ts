@@ -14,6 +14,7 @@ import {
 
 // CONSTANTS
 const kNoBadges: readonly TreeBadge[] = Object.freeze([]);
+const kIndents: string[] = [];
 
 export interface TreeRowState {
   position: number;
@@ -64,7 +65,9 @@ export class TreeRowView {
   static indentOf(
     depth: number
   ): string {
-    return `calc(${depth} * var(--jolly-tree-indent, 16px))`;
+    kIndents[depth] ??= `calc(${depth} * var(--jolly-tree-indent, 16px))`;
+
+    return kIndents[depth];
   }
 
   constructor(
@@ -108,35 +111,38 @@ export class TreeRowView {
     Object.freeze(this);
   }
 
-  equals(
-    other: TreeRowView
+  matches(
+    row: FlatTreeRow<unknown>,
+    state: TreeRowState
   ): boolean {
-    return this.id === other.id &&
-      this.label === other.label &&
-      this.icon === other.icon &&
-      sameAvatar(this.avatar, other.avatar) &&
-      this.detail === other.detail &&
-      this.warning === other.warning &&
-      this.visible === other.visible &&
-      this.locked === other.locked &&
-      this.branch === other.branch &&
-      this.depth === other.depth &&
-      this.position === other.position &&
-      this.setSize === other.setSize &&
-      this.expanded === other.expanded &&
-      this.selected === other.selected &&
-      this.active === other.active &&
-      this.drop === other.drop &&
-      this.dropIndent === other.dropIndent &&
-      this.dragSource === other.dragSource &&
-      this.moveCursor === other.moveCursor &&
-      this.renaming === other.renaming &&
-      this.renameError === other.renameError &&
-      this.hasBranches === other.hasBranches &&
-      this.swatchPosition === other.swatchPosition &&
-      this.reorderable === other.reorderable &&
-      sameSwatch(this.swatch, other.swatch) &&
-      sameBadges(this.badges, other.badges);
+    const { node } = row;
+
+    return this.id === node.id &&
+      this.label === node.label &&
+      this.icon === node.icon &&
+      sameAvatar(this.avatar, node.avatar) &&
+      this.detail === node.detail &&
+      this.warning === node.warning &&
+      this.visible === node.visible &&
+      this.locked === node.locked &&
+      this.branch === isExpandable(node) &&
+      this.depth === row.depth &&
+      this.position === state.position &&
+      this.setSize === state.setSize &&
+      this.expanded === state.expanded &&
+      this.selected === state.selected &&
+      this.active === state.active &&
+      this.drop === state.drop &&
+      this.dropIndent === state.dropIndent &&
+      this.dragSource === state.dragSource &&
+      this.moveCursor === state.moveCursor &&
+      this.renaming === state.renaming &&
+      this.renameError === state.renameError &&
+      this.hasBranches === state.hasBranches &&
+      this.swatchPosition === state.swatchPosition &&
+      this.reorderable === state.reorderable &&
+      sameSwatch(this.swatch, node.swatch) &&
+      sameBadges(this.badges, node.badges ?? kNoBadges);
   }
 }
 
@@ -170,44 +176,97 @@ function sameBadges(
   left: readonly Readonly<TreeBadge>[],
   right: readonly Readonly<TreeBadge>[]
 ): boolean {
-  return left.length === right.length && left.every(
-    (badge, index) => badge.color === right[index].color &&
-      badge.title === right[index].title
-  );
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let index = 0; index < left.length; index++) {
+    if (
+      left[index].color !== right[index].color ||
+      left[index].title !== right[index].title
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+interface ListedView {
+  view: TreeRowView;
+  generation: number;
 }
 
 export class TreeRowViewList {
-  #byId = new Map<string, TreeRowView>();
+  #byId = new Map<string, ListedView>();
   #views: TreeRowView[] = [];
+  #generation = 0;
 
   indexOf(
     id: string
   ): number {
-    const view = this.#byId.get(id);
+    const listed = this.#byId.get(id);
 
-    return view === undefined ? -1 : this.#views.indexOf(view);
+    return listed === undefined ? -1 : this.#views.indexOf(listed.view);
   }
 
   update(
     rows: readonly FlatTreeRow<unknown>[],
     stateOf: (row: FlatTreeRow<unknown>) => TreeRowState
   ): TreeRowView[] {
-    const byId = new Map<string, TreeRowView>();
-    let changed = rows.length !== this.#views.length;
-    const views = rows.map((row, index) => {
-      const view = new TreeRowView(row, stateOf(row));
-      const known = this.#byId.get(view.id);
-      const kept = known !== undefined && known.equals(view) ? known : view;
-      byId.set(kept.id, kept);
-      changed ||= kept !== this.#views[index];
-
-      return kept;
-    });
-    this.#byId = byId;
-    if (changed) {
+    const previous = this.#views;
+    const generation = ++this.#generation;
+    let views: TreeRowView[] | null = rows.length === previous.length ?
+      null :
+      [];
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      const view = this.#viewFor(row, stateOf(row), generation);
+      if (views === null && view !== previous[index]) {
+        views = previous.slice(0, index);
+      }
+      views?.push(view);
+    }
+    if (this.#byId.size > rows.length) {
+      this.#forgetUnlisted(generation);
+    }
+    if (views !== null) {
       this.#views = views;
     }
 
     return this.#views;
+  }
+
+  #viewFor(
+    row: FlatTreeRow<unknown>,
+    state: TreeRowState,
+    generation: number
+  ): TreeRowView {
+    const listed = this.#byId.get(row.node.id);
+    if (listed === undefined) {
+      const view = new TreeRowView(row, state);
+      this.#byId.set(view.id, {
+        view,
+        generation
+      });
+
+      return view;
+    }
+
+    listed.generation = generation;
+    if (!listed.view.matches(row, state)) {
+      listed.view = new TreeRowView(row, state);
+    }
+
+    return listed.view;
+  }
+
+  #forgetUnlisted(
+    generation: number
+  ): void {
+    for (const [id, listed] of this.#byId) {
+      if (listed.generation !== generation) {
+        this.#byId.delete(id);
+      }
+    }
   }
 }

@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { TreeNode } from "../../src/data/tree/contract.ts";
+import type { FlatTreeRow } from "../../src/data/tree/model.ts";
 import {
   TreeRowView,
   TreeRowViewList,
@@ -52,30 +53,47 @@ const kState: TreeRowState = {
   reorderable: true
 };
 
+function rowOf(
+  node: Partial<TreeNode> = {},
+  depth = 1
+): FlatTreeRow<unknown> {
+  return {
+    node: {
+      ...kNode,
+      ...node
+    },
+    depth,
+    parentId: "root"
+  };
+}
+
+function stateWith(
+  state: Partial<TreeRowState> = {}
+): TreeRowState {
+  return {
+    ...kState,
+    ...state
+  };
+}
+
 function viewOf(
+  node: Partial<TreeNode> = {}
+): TreeRowView {
+  return new TreeRowView(rowOf(node), kState);
+}
+
+function matches(
+  view: TreeRowView,
   node: Partial<TreeNode> = {},
   state: Partial<TreeRowState> = {},
   depth = 1
-): TreeRowView {
-  return new TreeRowView(
-    {
-      node: {
-        ...kNode,
-        ...node
-      },
-      depth,
-      parentId: "root"
-    },
-    {
-      ...kState,
-      ...state
-    }
-  );
+): boolean {
+  return view.matches(rowOf(node, depth), stateWith(state));
 }
 
 describe("Data.TreeRowView", () => {
-  test("rebuilt nodes with the same rendered fields give equal views", () => {
-    assert.ok(viewOf().equals(viewOf({
+  test("rebuilt nodes with the same rendered fields match the view", () => {
+    assert.ok(matches(viewOf(), {
       avatar: { ...kAvatar },
       swatch: { ...kSwatch },
       badges: kBadges.map((badge) => {
@@ -83,10 +101,10 @@ describe("Data.TreeRowView", () => {
       }),
       data: { weight: 2 },
       renamable: true
-    })));
+    }));
   });
 
-  test("any rendered node field makes the views differ", () => {
+  test("any rendered node field no longer matches", () => {
     const changes: Partial<TreeNode>[] = [
       { label: "Villain" },
       { icon: "folder" },
@@ -107,11 +125,11 @@ describe("Data.TreeRowView", () => {
     ];
 
     for (const change of changes) {
-      assert.ok(!viewOf().equals(viewOf(change)), JSON.stringify(change));
+      assert.ok(!matches(viewOf(), change), JSON.stringify(change));
     }
   });
 
-  test("any row state makes the views differ", () => {
+  test("any row state no longer matches", () => {
     const changes: Partial<TreeRowState>[] = [
       { position: 2 },
       { setSize: 3 },
@@ -129,15 +147,15 @@ describe("Data.TreeRowView", () => {
     ];
 
     for (const change of changes) {
-      assert.ok(!viewOf().equals(viewOf({}, change)), JSON.stringify(change));
+      assert.ok(!matches(viewOf(), {}, change), JSON.stringify(change));
     }
   });
 
-  test("a deeper row differs", () => {
-    assert.ok(!viewOf().equals(viewOf({}, {}, 2)));
+  test("a deeper row no longer matches", () => {
+    assert.ok(!matches(viewOf(), {}, {}, 2));
   });
 
-  test("a swatch or badge mutated in place still makes the views differ", () => {
+  test("a swatch or badge mutated in place no longer matches", () => {
     const swatch = { ...kSwatch };
     const badge = { ...kBadges[0] };
     const node: TreeNode = {
@@ -148,11 +166,11 @@ describe("Data.TreeRowView", () => {
 
     const beforeSwatch = viewOf(node);
     swatch.color = "#00f";
-    assert.ok(!beforeSwatch.equals(viewOf(node)));
+    assert.ok(!matches(beforeSwatch, node));
 
     const beforeBadge = viewOf(node);
     badge.color = "#00f";
-    assert.ok(!beforeBadge.equals(viewOf(node)));
+    assert.ok(!matches(beforeBadge, node));
   });
 });
 
@@ -210,5 +228,15 @@ describe("Data.TreeRowViewList", () => {
     assert.equal(next[2], a);
     assert.equal(list.indexOf("a"), 2);
     assert.equal(list.indexOf("missing"), -1);
+  });
+
+  test("keeps the remaining views stable once a row is removed", () => {
+    const list = new TreeRowViewList();
+    const [a, , c] = list.update(rowsOf("a", "b", "c"), stateOf(null));
+    const next = list.update(rowsOf("a", "c"), stateOf(null));
+
+    assert.deepEqual(next, [a, c]);
+    assert.equal(list.update(rowsOf("a", "c"), stateOf(null)), next);
+    assert.equal(list.indexOf("b"), -1);
   });
 });

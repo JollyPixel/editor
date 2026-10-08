@@ -10,8 +10,13 @@ import type { TreeNode } from "../src/data/tree/contract.ts";
 import {
   TreeSnapshot,
   flattenVisible,
-  resolveEdgeDropRows
+  resolveEdgeDropRows,
+  type FlatTreeRow
 } from "../src/data/tree/model.ts";
+import {
+  TreeRowViewList,
+  type TreeRowState
+} from "../src/data/tree/TreeRowView.ts";
 
 // CONSTANTS
 const kSizes = [1_000, 10_000];
@@ -44,10 +49,50 @@ const suite = defineSuite("tree", (bench) => {
         `resolveEdgeDropRows ${size}, 50 leading`,
         () => resolveEdgeDropRows(rows, leadingIds, snapshot).firstRow
       );
+
+    const list = new TreeRowViewList();
+    const selectedId = rows[Math.floor(rows.length / 2)].node.id;
+    let selected = false;
+    const stateOf = rowStateOf(selectedId, () => selected);
+    list.update(rows, stateOf);
+    bench
+      .add(
+        `TreeRowViewList ${size} unchanged`,
+        () => list.update(rows, stateOf).length
+      )
+      .add(`TreeRowViewList ${size} one row toggled`, () => {
+        selected = !selected;
+
+        return list.update(rows, stateOf).length;
+      });
   }
 });
 
 export default suite;
+
+function rowStateOf(
+  selectedId: string,
+  selected: () => boolean
+): (row: FlatTreeRow<unknown>) => TreeRowState {
+  return (row) => {
+    return {
+      position: 1,
+      setSize: 1,
+      expanded: true,
+      selected: row.node.id === selectedId && selected(),
+      active: false,
+      drop: null,
+      dropIndent: "",
+      dragSource: false,
+      moveCursor: false,
+      renaming: false,
+      renameError: null,
+      hasBranches: true,
+      swatchPosition: "end",
+      reorderable: true
+    };
+  };
+}
 
 function randomTree(
   size: number
