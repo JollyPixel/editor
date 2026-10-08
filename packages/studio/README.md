@@ -24,6 +24,28 @@ The project root defaults to `project/`, seeded on first boot. Set `JOLLY_PROJEC
 |---|---|
 | `?offline` | Run the asset back-end in the browser (IndexedDB) |
 
+## 👤 Accounts
+
+The online studio asks everyone to sign in. The first account registered on a project becomes its admin; later ones get the project's default role. Accounts live in `.jollypixel/accounts.db`, which stays out of Git. Signing in needs HTTPS or `localhost`.
+
+Roles are set in the `access` section of `.jollypixel/project.json`. Without it, the defaults below apply. `admin` is built in and cannot be declared.
+
+```json
+"access": {
+  "defaultRole": "spectator",
+  "roles": {
+    "member": { "*": "write" },
+    "spectator": {
+      "*.$join": "write",
+      "*.$presence": "write",
+      "*": "read"
+    }
+  }
+}
+```
+
+The Users pane on Home lists every account under its role and shows who is online. An admin changes a role or removes an account from its context menu, or with the `/users` console commands. A role change applies on the user's next connection.
+
 To pick up editor, host or ui changes while the studio runs, start the watch builds in a second terminal:
 
 ```bash

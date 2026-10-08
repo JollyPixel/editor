@@ -1,0 +1,55 @@
+{
+  "name": "@jolly-pixel/accounts",
+  "description": "User accounts and session tokens for JollyPixel servers",
+  "version": "1.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "default": "./dist/node.js"
+    }
+  },
+  "scripts": {
+    "prepublishOnly": "tsc -b",
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/accounts"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/network": "workspace:*",
+    "@openally/emitt": "1.1.0",
+    "cookie": "2.0.1",
+    "rate-limiter-flexible": "11.2.1",
+    "zod": "4.6.5"
+  }
+}

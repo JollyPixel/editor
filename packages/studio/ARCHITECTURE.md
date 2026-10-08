@@ -52,12 +52,18 @@ flowchart TB
   ([ADR-0017](./docs/adr/0017-project-packages-are-trusted-code.md)).
 - Editing the project file restarts the dev server.
 - `server/` knows nothing of Vite; `vite/` only adapts it.
+- `StudioAccess` reads the `access` section into a rights table with a
+  built-in `admin` and the `AccountRoles`. `server/accounts` opens the
+  project's `Accounts` on `.jollypixel/accounts.db`: the network server
+  authenticates with it and registers its `accounts` room, and
+  `vite/accountsPlugin` serves its `/api/accounts/` handler.
+- The session cookie is named after the project root: cookies ignore ports.
 
 | Mode | Project file | Back-end | Editor pages |
 |---|---|---|---|
 | `dev` | on disk | project root | each page folder |
-| `e2e` | in memory | in memory, fixed port | same |
-| `static` | in memory | none, shell starts offline | `dist/editors/`, offline-only |
+| `e2e` | in memory | in memory, fixed port, accounts in memory, new accounts are `member` | same |
+| `static` | in memory | none, no accounts, shell starts offline | `dist/editors/`, offline-only |
 
 Online and offline back-ends get the same handlers (plus `texture`) and the
 same seed (`src/seed.ts`).
@@ -80,7 +86,11 @@ sequenceDiagram
   S->>S: build tree, restore tabs
 ```
 
-- The manifest loads while the username prompt is open.
+- The manifest loads while the sign-in dialog is open. A valid session cookie
+  skips the dialog (`me`).
+- Editor frames connect with the same cookie; `jolly-launch` carries the
+  identity only.
+- A refused socket (`unauthorized`) signs out and reloads to the dialog.
 - Catalog unreachable: Retry, or go offline.
 - Offline adds `{ offline, workspace: "studio" }` to every editor URL, so the
   frames join the same browser workspace.
@@ -115,7 +125,7 @@ sequenceDiagram
 | Message | Direction | Carries |
 |---|---|---|
 | `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density, a port to the shell catalog and a port for the frame's console |
+| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
 | `jolly-shell` | frame → shell | `open-asset` or `toggle-console` |
 | `jolly-appearance` | shell → frame | new theme or density |
@@ -124,6 +134,8 @@ sequenceDiagram
 - Frames open their catalog on the launch port, served by the shell's
   `CatalogShare` ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).
 - The shell never answers a `jolly-shell` command.
+- Online, every frame joins as the shell's peer (`username`, `peerId`), so one
+  user has one presence color across tabs. Offline frames stay guests.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
 - The frame serves its console namespaces on the console port, and
@@ -137,7 +149,7 @@ sequenceDiagram
 | `studio:tabs` | `localStorage` | open tab ids in order, active id |
 | `studio:home-layout` | `localStorage` | asset dock size |
 | `studio:asset-kind` | `localStorage` | kind filter |
-| `jolly-pixel:username` | `sessionStorage` | peer name, shared with frames |
+| `jolly_session_<hash>` | HttpOnly cookie | session token, unreadable from scripts |
 
 Restoring tabs skips missing assets and kinds without an editor, stops at the
 cap, and loads only the active frame.
@@ -150,8 +162,10 @@ flowchart TB
   Dock["asset dock"]
   Overview["project-overview"]
   Browser["asset-browser"]
+  Users["studio-users"]
   Home --> Dock
   Home --> Overview
+  Home --> Users
   Dock --> Browser
 ```
 
@@ -159,6 +173,8 @@ flowchart TB
   ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
 - `project-overview` counts assets per kind (`AssetTally`) and lists open
   editors.
+- `studio-users`, in the right dock when online, draws the `accounts` room
+  roster through `UsersTreeModel`; admins get a role menu.
 
 ## Asset browser
 
@@ -224,6 +240,7 @@ flowchart TB
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog, offline fallback |
 | `src/seed.ts` | seed for both back-ends |
 | `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
+| `src/accounts/` | `StudioSignedIn`, `UsersTreeModel`, `/users` console |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser, sign-in dialog, Users pane |

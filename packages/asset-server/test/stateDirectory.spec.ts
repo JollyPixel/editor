@@ -45,6 +45,18 @@ describe("ensureStateGitignore", () => {
     );
   });
 
+  test("adds the extra entries a host keeps in the state directory", async() => {
+    const source = new MemoryAssetSource();
+    await ensureStateGitignore(source);
+
+    await ensureStateGitignore(source, ["accounts.db", "events.db"]);
+
+    assert.strictEqual(
+      text(await source.read(STATE_GITIGNORE_PATH)),
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\naccounts.db\n"
+    );
+  });
+
   test("leaves a complete file untouched", async() => {
     const source = new MemoryAssetSource();
     await ensureStateGitignore(source);

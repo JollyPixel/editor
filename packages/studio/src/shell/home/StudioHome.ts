@@ -2,6 +2,7 @@
 import {
   LitElement,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -10,10 +11,12 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
+import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
 import "./ProjectOverview.ts";
+import "../users/UsersPane.ts";
 
 // CONSTANTS
 export const HOME_LAYOUT_STORAGE_KEY = "studio:home-layout";
@@ -26,10 +29,14 @@ export class StudioHome extends LitElement {
   @property({ attribute: false })
   declare openTabs: readonly EditorTab[];
 
+  @property({ attribute: false })
+  declare signedIn: StudioSignedIn | null;
+
   constructor() {
     super();
     this.assets = null;
     this.openTabs = [];
+    this.signedIn = null;
   }
 
   protected override createRenderRoot(): HTMLElement {
@@ -55,6 +62,23 @@ export class StudioHome extends LitElement {
           .options=${this.assets}
           .openTabs=${this.openTabs}
         ></project-overview>
+        ${this.signedIn === null ? nothing : html`
+          <jolly-dock
+            id="users-dock"
+            key="right"
+            side="right"
+            size="240"
+            min-size="180"
+            max-size="400"
+          >
+            <jolly-pane key="users" heading="Users" locked>
+              <studio-users
+                .roster=${this.signedIn.roster}
+                .self=${this.signedIn.account}
+              ></studio-users>
+            </jolly-pane>
+          </jolly-dock>
+        `}
       </jolly-dock-layout>
     `;
   }

@@ -16,6 +16,7 @@ import {
   createProjectFileWatchPlugin,
   createProjectKindsPlugin
 } from "@jolly-pixel/asset-server/node";
+import type { Accounts } from "@jolly-pixel/accounts/node";
 import {
   PORTS,
   prebundleWorkspace
@@ -23,7 +24,12 @@ import {
 
 // Import Internal Dependencies
 import { EditorPages } from "./server/EditorPages.ts";
+import {
+  ACCOUNTS_STATE_IGNORES,
+  openStudioAccounts
+} from "./server/accounts.ts";
 import { StudioProject } from "./server/StudioProject.ts";
+import { accountsPlugin } from "./vite/accountsPlugin.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
 import { projectManifestPlugin } from "./vite/projectManifestPlugin.ts";
 import { createStudioSeed } from "./src/seed.ts";
@@ -36,9 +42,11 @@ const kBlocksetFile = path.join(
   "blockset.png"
 );
 const kRoomGraceMs = 5 * 60_000;
+const kE2EDefaultRole = "member";
 
 async function assetWorkspacePlugin(
   project: StudioProject,
+  accounts: Accounts,
   inMemory: boolean
 ): Promise<Plugin> {
   return createAssetWorkspacePlugin({
@@ -49,7 +57,14 @@ async function assetWorkspacePlugin(
     } : {}),
     handlers: project.kinds.handlers(),
     seed: await createStudioSeed(await fs.readFile(kBlocksetFile)),
-    roomGraceMs: kRoomGraceMs
+    roomGraceMs: kRoomGraceMs,
+    rights: project.access.rights,
+    defaultRole: accounts.roles.defaultRole,
+    auth: accounts,
+    extensions: [accounts.extension],
+    backend: {
+      stateIgnores: ACCOUNTS_STATE_IGNORES
+    }
   });
 }
 
@@ -59,6 +74,13 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
   const project = await StudioProject.open(
     StudioProject.resolveRoot(import.meta.dirname),
     { inMemory }
+  );
+  const accounts = mode === "static" ? null : await openStudioAccounts(
+    project,
+    e2e ? {
+      inMemory: true,
+      defaultRole: kE2EDefaultRole
+    } : {}
   );
 
   return {
@@ -83,7 +105,8 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
       projectManifestPlugin(project),
       inMemory ? null : createProjectFileWatchPlugin(project.file),
       editorPagesPlugin(new EditorPages(project.editors)),
-      mode === "static" ? null : await assetWorkspacePlugin(project, e2e)
+      accounts === null ? null : accountsPlugin(accounts),
+      accounts === null ? null : await assetWorkspacePlugin(project, accounts, e2e)
     ]
   };
 });

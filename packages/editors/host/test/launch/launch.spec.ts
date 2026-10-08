@@ -208,6 +208,32 @@ describe("HostMessageLaunchSource", () => {
     const launch = await pending;
     assert.equal(launch?.target.value, "from-host");
     assert.equal(launch?.shell?.origin, kStudioOrigin);
+    assert.equal(launch?.shell?.identity, null);
+  });
+
+  test("hands the launch identity to the shell channel", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+
+    const pending = new HostMessageLaunchSource({
+      origins: [kStudioOrigin]
+    }).read();
+    window.dispatchEvent(new MessageEvent("message", {
+      source: parent,
+      origin: kStudioOrigin,
+      data: {
+        type: LAUNCH_MESSAGE_TYPE,
+        target: "from-host",
+        identity: {
+          username: "alice",
+          peerId: "peer-alice"
+        }
+      }
+    }));
+    const launch = await pending;
+
+    assert.equal(launch?.shell?.identity?.username, "alice");
+    assert.equal(launch?.shell?.identity?.peerId, "peer-alice");
   });
 
   test("answers the parent through the shell channel", async(context) => {

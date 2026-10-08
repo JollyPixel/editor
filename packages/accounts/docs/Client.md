@@ -1,0 +1,74 @@
+# Client
+
+Everything here is imported from `@jolly-pixel/accounts` and runs in browsers and Node.js.
+
+## `AccountsClient`
+
+Calls the [HTTP routes](./Server.md#http-routes) of `Accounts`. The session lives in an HttpOnly cookie the browser sends on its own, so no method takes or returns a token.
+
+```ts
+const accounts = new AccountsClient({
+  url: new URL("api/accounts/", document.baseURI)
+});
+```
+
+- `url`: absolute URL of the routes, with a trailing slash.
+- `fetch`: defaults to `globalThis.fetch`. Outside a browser, pass one that keeps cookies.
+
+Failed requests throw `AccountsRequestError`, with the HTTP `status` and the server's `code`, an `AccountsErrorCode` (`ACCOUNTS_ERROR_CODES` lists them). A code the client does not know reads as `"unknown"`.
+
+### `register(username, password)`
+
+Creates an account, signs it in and resolves to the `Account`. Throws `InvalidPasswordError` without sending anything when the password is shorter than `MIN_PASSWORD_LENGTH` (8), and `InvalidUsernameError` for an invalid username.
+
+### `login(username, password)`
+
+Signs in and resolves to the `Account`.
+
+### `logout()`
+
+Closes the session.
+
+### `me()`
+
+The signed-in account, or `null` without a valid session.
+
+## `prehashPassword(username, password)`
+
+PBKDF2-SHA-256 with `PREHASH_ITERATIONS` (600,000) iterations, salted with `jolly-pixel:v1:` followed by the username's `key`. It resolves to 32 bytes in base64url. `AccountsClient` sends this instead of the password, so the plaintext never reaches the server or its logs.
+
+## `AccountsRoster`
+
+A client for the `accounts` room. It is iterable over `RosterEntry` and emits `"change"` whenever the server pushes a roster.
+
+```ts
+const roster = AccountsRoster.join(client);
+await roster.ready;
+for (const { username, role, online } of roster) {
+  console.log(username, role, online);
+}
+```
+
+`AccountsRoster.join(rooms)` joins `ACCOUNTS_ROOM` on anything with a `room(name)` method, such as a network `Client`.
+
+### `ready`
+
+Resolves on the first roster.
+
+### `roles`
+
+The declared roles, `"admin"` first.
+
+### `assignRole(username, role)`
+
+Resolves once the server stored the role. The new roster follows.
+
+### `remove(username)`
+
+Resolves once the account is deleted.
+
+### `dispose()`
+
+Leaves the room and rejects pending requests.
+
+Both commands reject with `AccountsRejectedError` when the server refuses them, including for a peer that is not an admin.

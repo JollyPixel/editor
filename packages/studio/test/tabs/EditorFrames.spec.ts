@@ -117,12 +117,31 @@ describe("EditorFrames", () => {
           {
             type: LAUNCH_MESSAGE_TYPE,
             target: "map-1",
-            appearance: { theme: "dark", density: "comfortable" }
+            appearance: { theme: "dark", density: "comfortable" },
+            identity: null
           },
           ["catalog"],
           kOrigin
         ]
       ]
+    );
+  });
+
+  test("launches every frame as the shell's peer", () => {
+    const frames = editorFrames({
+      identity: {
+        username: "alice",
+        peerId: "peer-alice"
+      }
+    });
+    frames.show(kMap);
+    const posted = recordPosts(frame());
+
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+
+    assert.deepEqual(
+      posted.map(([message]) => parseLaunchMessage(message)?.identity),
+      [{ username: "alice", peerId: "peer-alice" }]
     );
   });
 

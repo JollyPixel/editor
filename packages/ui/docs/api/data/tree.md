@@ -156,6 +156,15 @@ node.swatch = material === null ?
   { title: "Material: Glass", color: "#dff4ff73" };
 ```
 
+The swatch is exposed as the `swatch` part, so a consumer can space it from the
+label:
+
+```css
+jolly-tree::part(swatch) {
+  margin-inline-end: var(--jolly-space-2);
+}
+```
+
 A swatch without `color` is empty: a dashed square shown only on a hovered or
 selected row. Clicking a swatch emits `jolly-activate-swatch` and neither
 selects nor renames the row, so a consumer opens the property's editor there.

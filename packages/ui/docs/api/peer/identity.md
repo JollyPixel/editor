@@ -17,6 +17,18 @@ Asks for a username once per tab and reuses it from `sessionStorage` under
 falls back to `GUEST_USERNAME` (`"Guest"`). `peerId` is a fresh UUID and
 `color` is derived from it.
 
+## `peerIdentity(username, peerId?)`
+
+```ts
+import { peerIdentity } from "@jolly-pixel/ui";
+
+const guest = peerIdentity("Guest");
+const joined = peerIdentity("alice", launch.peerId);
+```
+
+Builds a `PeerIdentity` whose `color` is derived from `peerId`, so the same
+peer id always gets the same color. `peerId` defaults to a fresh UUID.
+
 ## Profile helpers
 
 Available under the `./network` subpath:

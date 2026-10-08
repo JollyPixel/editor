@@ -15,7 +15,17 @@ Two distinct things travel with a peer:
 
 `subject` reaches extensions through `context.identity`; hosts that persist events use it as the actor id. `role` is the key the rights table is indexed by. Neither is readable from a client payload — a `join` envelope claiming `profile: { role: "admin" }` changes nothing.
 
-Peers see each other's `role` and `profile`. `subject` never leaves the server.
+Peers see each other's `role` and `profile`. `subject` never leaves the server, unless a provider copies it into the profile.
+
+A provider may also return `profile` on the identity. Its fields are merged over the client's `profile` on every join, so a client cannot claim a `username` the server has already set. Fields the server leaves out still come from the client.
+
+```ts
+return {
+  subject: account.id,
+  role: account.role,
+  profile: { username: account.username }
+};
+```
 
 ## Configuring
 
@@ -85,6 +95,22 @@ comparison and digest comparison does not leak content or length through timing.
 
 > [!WARNING]
 > Nothing rate-limits attempts. A shared password on a socket anyone may retry against is guessable at speed, and `AuthenticationProvider` gives a provider nowhere to hang a lockout. Adequate for a dev server; not for an exposed one.
+
+### Password helpers
+
+The same `scrypt` primitives, exported from `@jolly-pixel/network/node` for providers that store their own users.
+
+```ts
+import {
+  hashPassword,
+  verifyPassword
+} from "@jolly-pixel/network/node";
+
+const hash = await hashPassword("hunter2");
+await verifyPassword("hunter2", hash); // true
+```
+
+`hashPassword(password)` resolves to a `PasswordHash`, `{ digest, salt }`: a 32-byte derived key and its random 16-byte salt, both `Buffer`. Store both. `verifyPassword(password, hash)` derives the key again with `hash.salt` and compares it in constant time.
 
 ## The handshake
 

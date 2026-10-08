@@ -194,6 +194,41 @@ describe("Server — peer metadata", () => {
     }]);
   });
 
+  test("the identity profile overrides the fields a joiner claims and keeps the others", async() => {
+    const server = new Server();
+    server.register(new RecordingExtension("pixel-draw"));
+
+    const a = createClient("A");
+    const b = createClient("B");
+    server.handleConnect(a.client, identityOf(a.client));
+    server.handleConnect(b.client, {
+      ...identityOf(b.client),
+      profile: { username: "bob" }
+    });
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+
+    await server.handleMessage("B", {
+      room: "pixel-draw",
+      kind: "join",
+      profile: {
+        username: "alice",
+        color: "red"
+      }
+    });
+
+    assert.deepEqual(withoutSync(a.sent), [{
+      room: "pixel-draw",
+      kind: "peer-joined",
+      clientId: "B",
+      role: "default",
+      profile: {
+        username: "bob",
+        color: "red"
+      },
+      presence: {}
+    }]);
+  });
+
   test("a joiner with existing members receives a sync snapshot of their profile and presence", async() => {
     const server = new Server();
     const extension = new RecordingExtension("pixel-draw");

@@ -16,11 +16,13 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
-  type LogEntry
+  type LogEntry,
+  type PeerIdentity
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
+import type { StudioSignedIn } from "../accounts/StudioSignedIn.ts";
 import { StudioSession } from "./StudioSession.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import type {
@@ -28,12 +30,15 @@ import type {
   EditorTabsOptions
 } from "../tabs/EditorTabs.ts";
 import "./home/StudioHome.ts";
+import "./account/AccountBadge.ts";
 
 export interface StudioOptions {
   share: CatalogShare;
+  identity: PeerIdentity | null;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
   editors: EditorRegistry;
   console?: EditorConsole;
+  signedIn?: StudioSignedIn | null;
 }
 
 @customElement("jolly-studio")
@@ -46,6 +51,9 @@ export class Studio extends LitElement {
 
   @state()
   declare _log: readonly LogEntry[];
+
+  @state()
+  declare _signedIn: StudioSignedIn | null;
 
   @query("jolly-tabs")
   declare _strip: HTMLElementTagNameMap["jolly-tabs"] | null;
@@ -65,6 +73,7 @@ export class Studio extends LitElement {
     this._assets = null;
     this._openTabs = [];
     this._log = [];
+    this._signedIn = null;
   }
 
   async attach(
@@ -92,6 +101,7 @@ export class Studio extends LitElement {
       frames: {
         container: this._frames,
         share: options.share,
+        identity: options.identity,
         consoles: options.console === undefined ?
           undefined :
           new FrameConsoles({ commands: options.console.commands })
@@ -102,6 +112,7 @@ export class Studio extends LitElement {
       }
     });
     this.#session = session;
+    this._signedIn = options.signedIn ?? null;
     this._assets = {
       catalog,
       kinds: session.kinds
@@ -148,7 +159,12 @@ export class Studio extends LitElement {
     return html`
       <header id="studio-header">
         <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
-        <jolly-toolbar id="studio-actions" label="Studio actions"></jolly-toolbar>
+        <jolly-toolbar id="studio-actions" label="Studio actions">
+          <studio-account
+            .account=${this._signedIn?.account ?? null}
+            @sign-out=${this.#signOut}
+          ></studio-account>
+        </jolly-toolbar>
       </header>
       <section id="workbench">
         <div id="editor-frames">
@@ -159,13 +175,19 @@ export class Studio extends LitElement {
             .assets=${this._assets}
             .openTabs=${this._openTabs}
             @asset-open=${this.#onAssetOpen}
-            @asset-error=${this.#onAssetError}
+            .signedIn=${this._signedIn}
+            @asset-error=${this.#logError}
+            @users-error=${this.#logError}
           ></studio-home>
         </div>
         <jolly-log .entries=${this._log}></jolly-log>
       </section>
     `;
   }
+
+  readonly #signOut = (): void => {
+    void this._signedIn?.signOut();
+  };
 
   readonly #syncOpenTabs = (): void => {
     this._openTabs = this.#session?.tabs.list() ?? [];
@@ -177,8 +199,8 @@ export class Studio extends LitElement {
     void this.openAsset(event.detail.assetId);
   };
 
-  readonly #onAssetError = (
-    event: HTMLElementEventMap["asset-error"]
+  readonly #logError = (
+    event: HTMLElementEventMap["asset-error" | "users-error"]
   ): void => {
     this.#queue.push(event.detail.message);
   };

@@ -1,0 +1,37 @@
+# Accounts
+
+## `Username`
+
+A username as a value object.
+
+### `Username.parse(input)`
+
+Normalizes `input` to NFKC and trims it. It throws `InvalidUsernameError` unless the result has 2 to 32 characters, starts with a letter or a digit, and holds only letters, digits, `_`, `.` and `-`. Letters beyond ASCII are allowed.
+
+### `value`
+
+The name as typed, after normalization. It is what peers see.
+
+### `key`
+
+`value` in lowercase. Two usernames with the same `key` are the same account, and the password pre-hash is salted with it.
+
+## `Account`
+
+```ts
+interface Account {
+  id: string;
+  username: string;
+  role: string;
+}
+```
+
+`id` is a random UUID. The network server uses it as the peer `subject`, so the event store records it as the actor, and as the profile `peerId`, so a user keeps one presence colour everywhere. `role` is the effective role: a role that is no longer declared reads as the default one.
+
+## `RosterEntry`
+
+An `Account` with `online`, true while one of its studio shells is in the `accounts` room.
+
+## `ADMIN_ROLE`
+
+`"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it.

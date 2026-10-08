@@ -2,16 +2,21 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { peerIdentity } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import {
   APPEARANCE_MESSAGE_TYPE,
   isReadyMessage,
   isShellCommand,
   LAUNCH_MESSAGE_TYPE,
+  launchMessage,
   parseLaunchMessage,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE,
-  ShellChannel
+  ShellChannel,
+  type LaunchIdentity
 } from "#src/launch/ShellChannel.ts";
 
 // CONSTANTS
@@ -73,10 +78,70 @@ describe("ShellChannel message guards", () => {
       type: LAUNCH_MESSAGE_TYPE,
       target: "x",
       appearance: undefined,
+      identity: null,
       ports: {}
     });
     assert.equal(parseLaunchMessage({ type: LAUNCH_MESSAGE_TYPE }), undefined);
     assert.equal(parseLaunchMessage({ target: "x" }), undefined);
+  });
+
+  test("parses a launch identity and nulls a blank or partial one", () => {
+    function identityOf(identity: unknown) {
+      return parseLaunchMessage({
+        type: LAUNCH_MESSAGE_TYPE,
+        target: "x",
+        identity
+      })?.identity;
+    }
+
+    assert.deepEqual(identityOf({ username: " alice ", peerId: "p-1" }), {
+      username: "alice",
+      peerId: "p-1"
+    });
+    assert.equal(identityOf({ username: "  ", peerId: "p-1" }), null);
+    assert.equal(identityOf({ username: "alice" }), null);
+    assert.equal(identityOf("alice"), null);
+    assert.equal(identityOf(undefined), null);
+  });
+});
+
+describe("launchMessage", () => {
+  test("reaches the frame with only the username and peer id of a peer", () => {
+    const appearance = { theme: "dark", density: "default" } as const;
+    const message = launchMessage({
+      target: "x",
+      appearance,
+      identity: peerIdentity("alice", "p-1")
+    });
+
+    assert.deepEqual(parseLaunchMessage(message), {
+      type: LAUNCH_MESSAGE_TYPE,
+      target: "x",
+      appearance,
+      identity: {
+        username: "alice",
+        peerId: "p-1"
+      },
+      ports: {}
+    });
+  });
+});
+
+describe("ShellChannel.identity", () => {
+  test("is the launch identity with a color derived from its peer id", () => {
+    function channel(identity?: LaunchIdentity) {
+      return new ShellChannel({
+        port: { postMessage: () => undefined },
+        origin: kShellOrigin,
+        identity
+      });
+    }
+
+    assert.deepEqual(
+      channel({ username: "alice", peerId: "p-1" }).identity,
+      peerIdentity("alice", "p-1")
+    );
+    assert.equal(channel().identity, null);
   });
 });
 

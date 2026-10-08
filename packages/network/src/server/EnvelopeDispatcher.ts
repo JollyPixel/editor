@@ -8,7 +8,9 @@ import type {
   ClientSession,
   ClientSessions
 } from "./ClientSessions.ts";
+import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
 import type { ClientEnvelope } from "../protocol/envelope/Envelope.ts";
+import type { PeerMetadata } from "../protocol/types.ts";
 
 export interface DispatchOutcome {
   outcome: "joined" | "left" | "handled" | "ignored" | "dropped";
@@ -79,7 +81,7 @@ export class EnvelopeDispatcher {
         session.handle.id,
         session.handle,
         session.identity,
-        envelope.profile ?? Object.create(null),
+        joinProfile(session.identity, envelope.profile),
         {
           presence: envelope.presence ?? Object.create(null),
           resume: envelope.resume
@@ -176,4 +178,18 @@ export class EnvelopeDispatcher {
 
     return { outcome: "handled" };
   }
+}
+
+function joinProfile(
+  identity: PeerIdentity,
+  claimed: PeerMetadata | undefined
+): PeerMetadata {
+  if (identity.profile === undefined) {
+    return claimed ?? Object.create(null);
+  }
+
+  return {
+    ...claimed,
+    ...identity.profile
+  };
 }

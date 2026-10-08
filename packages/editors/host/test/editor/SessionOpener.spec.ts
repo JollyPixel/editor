@@ -18,7 +18,11 @@ import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
 import { CatalogShare } from "#src/launch/catalog/CatalogShare.ts";
 import { ShellCatalog } from "#src/launch/catalog/ShellCatalog.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { ShellChannel } from "#src/launch/ShellChannel.ts";
+import {
+  ShellChannel,
+  type LaunchIdentity
+} from "#src/launch/ShellChannel.ts";
+import { IDENTITY_STORAGE_KEY } from "#src/session/EditorSession.ts";
 import {
   FakeClient,
   record,
@@ -40,9 +44,12 @@ const kDefinition: EditorDefinition<EditorHandle> = {
 
 afterEach(() => {
   window.history.replaceState(null, "", "/");
+  sessionStorage.clear();
 });
 
-async function shellLaunch() {
+async function shellLaunch(
+  identity: LaunchIdentity | null = null
+) {
   const shellClient = new FakeClient();
   const opening = CatalogShare.open(shellClient);
   shellClient.fakeRoom(CATALOG_ROOM).receive(
@@ -56,7 +63,8 @@ async function shellLaunch() {
     new ShellChannel({
       port: { postMessage: () => undefined },
       origin: location.origin,
-      catalog: new ShellCatalog(connector.port2)
+      catalog: new ShellCatalog(connector.port2),
+      identity
     })
   );
 
@@ -95,6 +103,24 @@ describe("SessionOpener", () => {
     assert.strictEqual(session.target.record.id, "map");
     assert.strictEqual(client.rooms.has(CATALOG_ROOM), false);
     session.dispose();
+  });
+
+  test("an online session joins as the launch identity, not the stored name", async() => {
+    window.history.replaceState(null, "", "/?target=map");
+    sessionStorage.setItem(IDENTITY_STORAGE_KEY, "bob");
+    using shell = await shellLaunch({
+      username: "alice",
+      peerId: "peer-alice"
+    });
+
+    const session = await new SessionOpener({
+      definition: kDefinition,
+      logger: readDebugLogger()
+    }).open(shell.launch);
+    session.dispose();
+
+    assert.equal(session.identity.username, "alice");
+    assert.equal(session.identity.peerId, "peer-alice");
   });
 
   test("a launch without a shell catalog opens one on the client", async() => {

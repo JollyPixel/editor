@@ -94,7 +94,8 @@ export class HostMessageLaunchSource implements LaunchSource {
           origin: event.origin,
           appearance: message.appearance ?? null,
           catalog: catalog === undefined ? null : new ShellCatalog(catalog),
-          console: consolePort ?? null
+          console: consolePort ?? null,
+          identity: message.identity
         })
       );
       if (launch !== undefined) {
