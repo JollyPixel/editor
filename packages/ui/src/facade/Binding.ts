@@ -291,7 +291,20 @@ function matchesComponents(
     }
   }
 
-  return Object.keys(record).length === count;
+  return ownKeyCount(record) === count;
+}
+
+function ownKeyCount(
+  record: Record<string, unknown>
+): number {
+  let count = 0;
+  for (const key in record) {
+    if (Object.hasOwn(record, key)) {
+      count++;
+    }
+  }
+
+  return count;
 }
 
 function applyBounds<TValue>(

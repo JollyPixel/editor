@@ -1,4 +1,8 @@
 // Import Internal Dependencies
+import "../../../../src/controls/Checkbox.ts";
+import "../../../../src/controls/Color.ts";
+import "../../../../src/controls/Number.ts";
+import "../../../../src/controls/Text.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   createScopedHost,
@@ -15,8 +19,6 @@ const kScopes: Record<string, string>[] = [
 ];
 
 export const SCOPED_HOSTS_EXAMPLE: GalleryExample = {
-  id: "scenarios/scoped-hosts",
-  title: "Scoped density and theme",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";

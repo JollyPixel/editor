@@ -1,13 +1,12 @@
 // Import Third-party Dependencies
+import { boxOf } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator
-} from "@playwright/test";
-import { boxOf } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+} from "../fixtures.ts";
 
 function isOpen(
   details: Locator
@@ -16,8 +15,8 @@ function isOpen(
 }
 
 test.describe("scene controls", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/scene-controls");
+  test.use({
+    example: "controls/scene-controls"
   });
 
   test("renders a positioned card of declarative entries", async({ page }) => {

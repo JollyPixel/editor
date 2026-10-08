@@ -1,12 +1,9 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Page
-} from "@playwright/test";
-
-// Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+} from "../fixtures.ts";
 import {
   TREE_SELECTOR,
   rowOf
@@ -26,8 +23,11 @@ function scrollTo(
 }
 
 test.describe("Tree, virtual", () => {
+  test.use({
+    example: "data/virtual-tree"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "data/virtual-tree");
     await expect(rowOf(page, "folder-0")).toBeVisible();
   });
 

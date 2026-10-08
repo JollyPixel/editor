@@ -2,11 +2,9 @@
 import { Client } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import {
-  Pane,
-  peerColor,
-  toPresencePeers
-} from "../../../../src/index.ts";
+import { Pane } from "../shared/facadePane.ts";
+import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { toPresencePeers } from "../../../../src/peer/toPresencePeers.ts";
 import { RoomPresenceSource } from "../../../../src/network/index.ts";
 import type { GalleryExample } from "../../types.ts";
 
@@ -18,8 +16,6 @@ const kFields = [
 ];
 
 export const LOCKING_EXAMPLE: GalleryExample = {
-  id: "scenarios/locking",
-  title: "Locking",
   render(host) {
     const params = new URLSearchParams(location.search);
     const roomName = params.get("room");

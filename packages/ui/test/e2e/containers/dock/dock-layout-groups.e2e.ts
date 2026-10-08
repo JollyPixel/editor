@@ -1,10 +1,5 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   dragTo,
@@ -15,14 +10,20 @@ import {
 
 // Import Internal Dependencies
 import {
-  openExample,
-  reloadGallery
-} from "../../support/gallery.ts";
+  test,
+  expect,
+  type Page
+} from "../../fixtures.ts";
+import { reloadGallery } from "../../support/gallery.ts";
 import {
   DOCK_HANDLE_SIZE,
-  dropIntoDock,
-  slotsOf
+  Dock
 } from "../../support/dock.ts";
+import { FloatingWindow } from "../../support/floating.ts";
+import {
+  Pane,
+  PaneGroup
+} from "../../support/pane.ts";
 
 async function rightEdgeOf(
   page: Page
@@ -36,59 +37,59 @@ async function rightEdgeOf(
 }
 
 test.describe("DockLayout groups", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "scenarios/dock-layout-groups");
+  test.use({
+    example: "scenarios/dock-layout-groups"
   });
 
   test("a group shows one pane behind its tabs and a tab click swaps it", async({ page }) => {
-    const group = page.locator("jolly-pane-group");
+    const group = new PaneGroup(page);
+    const blocks = new Pane(page, "blocks");
+    const paint = new Pane(page, "paint");
     const visible = page.locator(".dock-layout-visible");
 
-    await expect(group.locator(".tab")).toHaveText(["General", "Blocks", "Paint"]);
-    await expect(group.locator(".tab[aria-selected='true']")).toHaveText("Blocks");
-    await expect(page.locator("jolly-pane[key='blocks']")).toBeVisible();
-    await expect(page.locator("jolly-pane[key='blocks'] .title")).toHaveCount(0);
-    await expect(page.locator("jolly-pane[key='paint']")).toBeHidden();
+    await expect(group.tabs).toHaveText(["General", "Blocks", "Paint"]);
+    await expect(group.selectedTab).toHaveText("Blocks");
+    await expect(blocks.root).toBeVisible();
+    await expect(blocks.title).toHaveCount(0);
+    await expect(paint.root).toBeHidden();
     await expect(visible).toHaveText("blocks layers");
 
-    await group.locator(".tab", { hasText: "Paint" }).click();
-    await expect(page.locator("jolly-pane[key='paint']")).toBeVisible();
-    await expect(page.locator("jolly-pane[key='blocks']")).toHaveAttribute("inactive");
+    await group.tab("Paint").click();
+    await expect(paint.root).toBeVisible();
+    await expect(blocks.root).toHaveAttribute("inactive");
     await expect(visible).toHaveText("layers paint");
   });
 
   test("tabs with an icon collapse to it when the labels no longer fit", async({ page }) => {
-    const group = page.locator("jolly-pane-group");
-    const general = group.locator(".tab[data-key='general']");
-    const dock = page.locator("jolly-dock[key='left']");
+    const group = new PaneGroup(page);
+    const general = group.tab("General");
 
     await expect(general).not.toHaveAttribute("data-icon-only");
     await expect(general).not.toHaveAttribute("title");
 
-    await group.evaluate((element) => {
+    await group.root.evaluate((element) => {
       (element as HTMLElement).style.width = "120px";
     });
     await expect(general).toHaveAttribute("data-icon-only");
     await expect(general).toHaveAttribute("title", "General");
     await expect(general).toHaveAccessibleName("General");
-    await expect(group.locator(".tab[data-key='blocks']")).not.toHaveAttribute("data-icon-only");
+    await expect(group.tab("Blocks")).not.toHaveAttribute("data-icon-only");
 
-    await group.evaluate((element) => {
+    await group.root.evaluate((element) => {
       (element as HTMLElement).style.width = "";
     });
-    await expect(dock).toBeVisible();
+    await expect(new Dock(page, "left").root).toBeVisible();
     await expect(general).not.toHaveAttribute("data-icon-only");
     await expect(general).toHaveText("General");
   });
 
   test("a pane icon leads its tab, its header and its drag ghost", async({ page }) => {
-    const general = page.locator("jolly-pane-group .tab", { hasText: "General" });
-    const layersHeader = page.locator("jolly-pane[key='layers'] .header");
+    const group = new PaneGroup(page);
+    const general = group.tab("General");
+    const layersHeader = new Pane(page, "layers").header;
 
     await expect(general.locator("jolly-icon")).toHaveAttribute("name", "info");
-    await expect(
-      page.locator("jolly-pane-group .tab", { hasText: "Blocks" }).locator("jolly-icon")
-    ).toHaveCount(0);
+    await expect(group.tab("Blocks").locator("jolly-icon")).toHaveCount(0);
     await expect(layersHeader.locator("jolly-icon.icon")).toHaveAttribute("name", "eye");
 
     const [icon, label] = await Promise.all([
@@ -109,17 +110,17 @@ test.describe("DockLayout groups", () => {
   });
 
   test("stretched tabs restore their labels after widening the dock", async({ page }) => {
-    const group = page.locator("jolly-pane-group");
-    const dock = page.locator("jolly-dock[key='left']");
-    await group.evaluate((element) => {
+    const group = new PaneGroup(page);
+    const dock = new Dock(page, "left").root;
+    await group.root.evaluate((element) => {
       const style = document.createElement("style");
       style.textContent = "jolly-pane-group::part(tab) { flex: 1 1 0; }";
       const root = element.getRootNode();
       (root instanceof ShadowRoot ? root : document.head).append(style);
     });
 
-    const strip = await boxOf(group.locator(".tabs"));
-    const widths = await group.locator(".tab").evaluateAll(
+    const strip = await boxOf(group.tabStrip);
+    const widths = await group.tabs.evaluateAll(
       (tabs) => tabs.map((tab) => tab.getBoundingClientRect().width)
     );
     expect(widths.reduce((sum, width) => sum + width, 0))
@@ -131,7 +132,7 @@ test.describe("DockLayout groups", () => {
     await dock.evaluate((element) => {
       element.setAttribute("size", "150");
     });
-    const general = group.locator(".tab", { hasText: "General" });
+    const general = group.tab("General");
     await expect.poll(() => widthOf(general)).toBeLessThan(60);
     expect(await widthOf(general.locator("jolly-icon"))).toBeCloseTo(14, 0);
     expect(await general.locator(".label").evaluate(
@@ -149,13 +150,14 @@ test.describe("DockLayout groups", () => {
   });
 
   test("an empty dock previews, takes and gives back its width", async({ page }) => {
-    const right = page.locator("jolly-dock[key='right']");
-    await expect(right).toHaveAttribute("empty");
-    expect(await widthOf(right)).toBe(0);
+    const right = new Dock(page, "right");
+    const layers = new Pane(page, "layers");
+    await expect(right.root).toHaveAttribute("empty");
+    expect(await widthOf(right.root)).toBe(0);
 
     await hold(
       page,
-      await centerOf(page.locator("jolly-pane[key='layers'] .header")),
+      await centerOf(layers.header),
       await rightEdgeOf(page),
       16
     );
@@ -164,168 +166,154 @@ test.describe("DockLayout groups", () => {
     expect((await boxOf(armed)).width).toBe(240);
     await page.mouse.up();
 
-    await expect(right).not.toHaveAttribute("empty");
-    await expect.poll(() => widthOf(right)).toBe(240 + DOCK_HANDLE_SIZE);
-    await expect(slotsOf(page, "right")).resolves.toEqual([["layers"]]);
+    await expect(right.root).not.toHaveAttribute("empty");
+    await expect.poll(() => widthOf(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
+    await expect(right.slots()).resolves.toEqual([["layers"]]);
 
-    await dropIntoDock(page, "jolly-pane[key='layers'] .header", "left", 20);
-    await expect(right).toHaveAttribute("empty");
-    await expect.poll(() => widthOf(right)).toBe(0);
+    await new Dock(page, "left").drop(layers.header, 20);
+    await expect(right.root).toHaveAttribute("empty");
+    await expect.poll(() => widthOf(right.root)).toBe(0);
   });
 
   test("an empty dock shows no resize handle and cannot be collapsed", async({ page }) => {
-    const right = page.locator("jolly-dock[key='right']");
-    await right.evaluate((dock) => dock.setAttribute("collapsible", ""));
-    await expect(right.locator(".resize-handle")).toBeHidden();
+    const right = new Dock(page, "right");
+    await right.root.evaluate((dock) => dock.setAttribute("collapsible", ""));
+    await expect(right.resizeHandle).toBeHidden();
 
-    await right.locator(".resize-handle").dispatchEvent("dblclick");
-    await expect(right).not.toHaveAttribute("collapsed");
+    await right.resizeHandle.dispatchEvent("dblclick");
+    await expect(right.root).not.toHaveAttribute("collapsed");
   });
 
   test("a pane dropped into a collapsed dock opens it", async({ page }) => {
-    const right = page.locator("jolly-dock[key='right']");
-    await right.evaluate((dock) => dock.setAttribute("collapsible", ""));
+    const right = new Dock(page, "right");
+    await right.root.evaluate((dock) => dock.setAttribute("collapsible", ""));
     await dragTo(
       page,
-      page.locator("jolly-pane[key='layers'] .header"),
+      new Pane(page, "layers").header,
       await rightEdgeOf(page)
     );
-    await right.locator(".resize-handle").dblclick();
-    await expect(right).toHaveAttribute("collapsed");
+    await right.resizeHandle.dblclick();
+    await expect(right.root).toHaveAttribute("collapsed");
 
-    const edge = await boxOf(right);
-    await dragTo(
-      page,
-      page.locator("jolly-pane-group .tab", { hasText: "Paint" }),
-      {
-        x: edge.x - 8,
-        y: edge.y + (edge.height / 2)
-      }
-    );
+    const edge = await boxOf(right.root);
+    await dragTo(page, new PaneGroup(page).tab("Paint"), {
+      x: edge.x - 8,
+      y: edge.y + (edge.height / 2)
+    });
 
-    await expect(slotsOf(page, "right")).resolves.toEqual([["layers"], ["paint"]]);
-    await expect(right).not.toHaveAttribute("collapsed");
-    await expect.poll(() => widthOf(right)).toBe(240 + DOCK_HANDLE_SIZE);
+    await expect(right.slots()).resolves.toEqual([["layers"], ["paint"]]);
+    await expect(right.root).not.toHaveAttribute("collapsed");
+    await expect.poll(() => widthOf(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
   });
 
   test("a tab dropped into another dock takes its own slot", async({ page }) => {
-    await dragTo(
-      page,
-      page.locator("jolly-pane-group .tab", { hasText: "Paint" }),
-      await rightEdgeOf(page)
-    );
+    await dragTo(page, new PaneGroup(page).tab("Paint"), await rightEdgeOf(page));
 
-    const paint = page.locator("jolly-pane[key='paint']");
-    await expect(slotsOf(page, "right")).resolves.toEqual([["paint"]]);
-    await expect(slotsOf(page, "left"))
+    const paint = new Pane(page, "paint");
+    await expect(new Dock(page, "right").slots()).resolves.toEqual([["paint"]]);
+    await expect(new Dock(page, "left").slots())
       .resolves.toEqual([["general", "blocks"], ["layers"]]);
-    await expect(paint).not.toHaveAttribute("grouped");
-    await expect(paint).toBeVisible();
+    await expect(paint.root).not.toHaveAttribute("grouped");
+    await expect(paint.root).toBeVisible();
     await expect(page.locator(".dock-layout-visible"))
       .toHaveText("blocks layers paint");
   });
 
   test("a hidden tab floats at its declared size, else at its group size", async({ page }) => {
-    const group = await boxOf(page.locator("jolly-pane-group"));
+    const group = new PaneGroup(page);
+    const groupBox = await boxOf(group.root);
     const viewport = await centerOf(page.locator(".dock-layout-viewport"));
 
-    await dragTo(page, page.locator("jolly-pane-group .tab", { hasText: "Paint" }), viewport);
-    const declared = await boxOf(
-      page.locator("jolly-floating:has(jolly-pane[key='paint'])")
-    );
+    await dragTo(page, group.tab("Paint"), viewport);
+    const declared = await boxOf(new FloatingWindow(page, "paint").root);
     expect(declared.width).toBeCloseTo(300, 0);
     expect(declared.height).toBeCloseTo(420, 0);
 
-    await dragTo(page, page.locator("jolly-pane-group .tab", { hasText: "General" }), {
+    await dragTo(page, group.tab("General"), {
       x: viewport.x - 200,
       y: viewport.y
     });
-    const inherited = await boxOf(
-      page.locator("jolly-floating:has(jolly-pane[key='general'])")
-    );
-    expect(inherited.width).toBeCloseTo(group.width, 0);
-    expect(inherited.height).toBeCloseTo(group.height, 0);
+    const inherited = await boxOf(new FloatingWindow(page, "general").root);
+    expect(inherited.width).toBeCloseTo(groupBox.width, 0);
+    expect(inherited.height).toBeCloseTo(groupBox.height, 0);
   });
 
   test("a pane dropped on a tab strip joins the group as the shown tab", async({ page }) => {
-    const strip = await boxOf(page.locator("jolly-pane-group .tabs"));
-    await dragTo(page, page.locator("jolly-pane[key='layers'] .header"), {
+    const group = new PaneGroup(page);
+    const strip = await boxOf(group.tabStrip);
+    await dragTo(page, new Pane(page, "layers").header, {
       x: strip.x + strip.width - 8,
       y: strip.y + (strip.height / 2)
     });
 
-    await expect(slotsOf(page, "left"))
+    await expect(new Dock(page, "left").slots())
       .resolves.toEqual([["general", "blocks", "paint", "layers"]]);
-    await expect(page.locator("jolly-pane[key='layers']")).toHaveAttribute("grouped");
-    await expect(page.locator("jolly-pane-group .tab[aria-selected='true']"))
-      .toHaveText("Layers");
+    await expect(new Pane(page, "layers").root).toHaveAttribute("grouped");
+    await expect(group.selectedTab).toHaveText("Layers");
   });
 
   test("a tab dropped on a pane header creates a group", async({ page }) => {
-    const header = await boxOf(page.locator("jolly-pane[key='layers'] .header"));
-    await dragTo(page, page.locator("jolly-pane-group .tab", { hasText: "General" }), {
+    const group = new PaneGroup(page);
+    const header = await boxOf(new Pane(page, "layers").header);
+    await dragTo(page, group.tab("General"), {
       x: header.x + 12,
       y: header.y + (header.height / 2)
     });
 
-    await expect(slotsOf(page, "left"))
+    await expect(new Dock(page, "left").slots())
       .resolves.toEqual([["blocks", "paint"], ["general", "layers"]]);
-    await expect(page.locator("jolly-pane-group")).toHaveCount(2);
+    await expect(group.root).toHaveCount(2);
   });
 
   test("a group left with one pane gives way to that pane", async({ page }) => {
+    const left = new Dock(page, "left");
     for (const label of ["General", "Blocks"]) {
-      await dragTo(
-        page,
-        page.locator("jolly-pane-group .tab", { hasText: label }),
-        await rightEdgeOf(page)
-      );
+      await dragTo(page, new PaneGroup(page).tab(label), await rightEdgeOf(page));
     }
 
-    await expect(page.locator("jolly-dock[key='left'] jolly-pane-group")).toHaveCount(0);
-    await expect(slotsOf(page, "left")).resolves.toEqual([["paint"], ["layers"]]);
-    await expect(page.locator("jolly-pane[key='paint'] .title")).toHaveText("Paint");
+    await expect(new PaneGroup(left.root).root).toHaveCount(0);
+    await expect(left.slots()).resolves.toEqual([["paint"], ["layers"]]);
+    await expect(new Pane(page, "paint").title).toHaveText("Paint");
   });
 
   test("the keyboard takes a tab out of its group and back in", async({ page }) => {
-    const announcer = page.locator("jolly-pane[key='blocks'] .live-region");
-    await page.locator("jolly-pane-group .tab", { hasText: "Blocks" }).focus();
+    const left = new Dock(page, "left");
+    const announcer = new Pane(page, "blocks").liveRegion;
+    await new PaneGroup(page).tab("Blocks").focus();
     await page.keyboard.press(" ");
     await page.keyboard.press("ArrowDown");
 
-    await expect(slotsOf(page, "left"))
+    await expect(left.slots())
       .resolves.toEqual([["general", "paint"], ["blocks"], ["layers"]]);
     await expect(announcer).toHaveText("Blocks, left dock, position 2 of 3");
 
     await page.keyboard.press("Shift+ArrowUp");
-    await expect(slotsOf(page, "left"))
+    await expect(left.slots())
       .resolves.toEqual([["general", "paint", "blocks"], ["layers"]]);
     await expect(announcer)
       .toHaveText("Blocks, left dock, position 1 of 2, tab 3 of 3");
 
     await page.keyboard.press("Escape");
-    await expect(slotsOf(page, "left"))
+    await expect(left.slots())
       .resolves.toEqual([["general", "blocks", "paint"], ["layers"]]);
   });
 
   test("groups survive a reload and Reset restores the markup", async({ page }) => {
-    await page.locator("jolly-pane-group .tab", { hasText: "General" }).click();
-    await dragTo(
-      page,
-      page.locator("jolly-pane-group .tab", { hasText: "Paint" }),
-      await rightEdgeOf(page)
-    );
+    const group = new PaneGroup(page);
+    const left = new Dock(page, "left");
+    const right = new Dock(page, "right");
+    await group.tab("General").click();
+    await dragTo(page, group.tab("Paint"), await rightEdgeOf(page));
     await reloadGallery(page);
 
-    await expect(slotsOf(page, "left"))
+    await expect(left.slots())
       .resolves.toEqual([["general", "blocks"], ["layers"]]);
-    await expect(slotsOf(page, "right")).resolves.toEqual([["paint"]]);
-    await expect(page.locator("jolly-pane-group .tab[aria-selected='true']"))
-      .toHaveText("General");
+    await expect(right.slots()).resolves.toEqual([["paint"]]);
+    await expect(group.selectedTab).toHaveText("General");
 
     await page.locator("[data-action='reset-layout']").click();
-    await expect(slotsOf(page, "left"))
+    await expect(left.slots())
       .resolves.toEqual([["general", "blocks", "paint"], ["layers"]]);
-    await expect(slotsOf(page, "right")).resolves.toEqual([]);
+    await expect(right.slots()).resolves.toEqual([]);
   });
 });

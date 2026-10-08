@@ -37,14 +37,21 @@ export type GalleryOptionValues<
   TKey extends string = string
 > = Readonly<Record<TKey, boolean>>;
 
-export interface GalleryExample<
-  TKey extends string = string
-> {
+export interface GalleryEntry {
   /**
    * Also the deep link: `/?example=<id>`.
    */
   id: GalleryExampleId;
   title: string;
+  /**
+   * Imports the example's own chunk, so a page only loads the example it shows.
+   */
+  load(): Promise<GalleryExample>;
+}
+
+export interface GalleryExample<
+  TKey extends string = string
+> {
   options?: readonly GalleryOption<TKey>[];
   /**
    * Returns a teardown only for state living outside `host`: timers, subscriptions, listeners on

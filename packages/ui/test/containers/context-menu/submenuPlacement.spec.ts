@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { placeSubmenu } from "../../../src/containers/context-menu/submenuPlacement.ts";
+import {
+  placeSubmenu,
+  submenuSide
+} from "../../../src/containers/context-menu/submenuPlacement.ts";
 
 // CONSTANTS
 const kPanel = {
@@ -86,5 +89,43 @@ describe("ContextMenu.placeSubmenu", () => {
       }).y,
       540
     );
+  });
+});
+
+describe("ContextMenu.submenuSide", () => {
+  function sideFor(
+    left: number,
+    prefer: "left" | "right",
+    viewportWidth = kViewport.width
+  ) {
+    return submenuSide({
+      menu: {
+        left,
+        right: left + 160
+      },
+      budget: 320,
+      viewport: {
+        ...kViewport,
+        width: viewportWidth
+      },
+      prefer
+    });
+  }
+
+  test("keeps the right side while a full-width submenu fits there", () => {
+    assert.equal(sideFor(320, "right"), "right");
+  });
+
+  test("turns left once the right side cannot hold a full-width submenu", () => {
+    assert.equal(sideFor(321, "right"), "left");
+  });
+
+  test("keeps cascading left while a full-width submenu fits there", () => {
+    assert.equal(sideFor(320, "left"), "left");
+  });
+
+  test("keeps the preferred side when neither side fits", () => {
+    assert.equal(sideFor(200, "right", 600), "right");
+    assert.equal(sideFor(200, "left", 600), "left");
   });
 });

@@ -145,16 +145,15 @@ shell:
 
 Adding an example:
 
-- Put the module in `examples/scripts/examples/<group>/`, and give it the id `<group>/<name>`. The
-  folder, the id prefix, and the navigation group are the same word, and `groups.ts` maps it to a
-  label. An id outside that list fails to compile.
-- Register it in that folder's `index.ts`, which is the only order the navigation and the manifest
-  sweep read. `manifest.ts` itself never changes.
+- Put the module in `examples/scripts/examples/<group>/`. It exports the `render` function and any
+  `options`.
+- Register it in that folder's `index.ts` with its id `<group>/<name>`, its title and a `load`
+  that imports the module. The folder, the id prefix, and the navigation group are the same word,
+  and `groups.ts` maps it to a label. An id outside that list fails to compile. The index is the
+  only order the navigation and the manifest sweep read, and `manifest.ts` itself never changes.
 - Return a teardown from `render` only for state living outside `host`: timers, subscriptions,
   listeners on `window` or `document`, and panes mounting themselves on `document.body`. The
   gallery clears `host` on its own.
-- Keep DOM access inside `render`. The manifest sweep imports every example in Node, where
-  `HTMLElement` does not exist at module scope.
 - Give a component one page, and declare its variants as `options` rather than as sibling pages.
   The shell renders one checkbox per option, remounts the example on a toggle, and keeps the state
   in the URL (`/?example=containers/tabs&closable=1`), so a variant stays deep-linkable and survives

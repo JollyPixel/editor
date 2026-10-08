@@ -1,12 +1,26 @@
 // Import Internal Dependencies
-import {
-  Mixed,
-  peerColor,
-  detailOf,
-  showConfirm,
-  type CollaboratorPresence,
-  type FieldValue
-} from "../../../../src/index.ts";
+import "../../../../src/containers/dock/Dock.ts";
+import "../../../../src/containers/dock/DockLayout.ts";
+import "../../../../src/containers/folder/Folder.ts";
+import "../../../../src/containers/rail/Rail.ts";
+import "../../../../src/containers/toolbar/Toolbar.ts";
+import "../../../../src/controls/ButtonGroup.ts";
+import "../../../../src/controls/Checkbox.ts";
+import "../../../../src/controls/Color.ts";
+import "../../../../src/controls/Flags.ts";
+import "../../../../src/controls/Number.ts";
+import "../../../../src/controls/PropertyRow.ts";
+import "../../../../src/controls/Range.ts";
+import "../../../../src/controls/Select.ts";
+import "../../../../src/controls/Separator.ts";
+import "../../../../src/controls/Slider.ts";
+import "../../../../src/math/Quaternion.ts";
+import "../../../../src/math/Vector3.ts";
+import { Mixed, type FieldValue } from "../../../../src/field/mixed.ts";
+import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import { showConfirm } from "../../../../src/containers/dialog/dialogHelpers.ts";
+import type { CollaboratorPresence } from "../../../../src/peer/types.ts";
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
@@ -67,8 +81,6 @@ const kGutterWidth = "14px";
 const kLayoutStorageKey = "gallery-example:editor:layout";
 
 export const EDITOR_EXAMPLE: GalleryExample = {
-  id: "scenarios/editor",
-  title: "Editor",
   render: mountEditor
 };
 

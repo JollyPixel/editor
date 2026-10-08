@@ -213,15 +213,18 @@ export abstract class VectorField<
     value: number
   ): TValue {
     const current = this.value;
-    const base: Record<TAxis, FieldValue<number>> = isMixed(current)
-      ? Object.fromEntries(
-        this.getAxisKeys().map((key) => [key, current])
-      ) as Record<TAxis, FieldValue<number>>
-      : { ...current as Record<TAxis, FieldValue<number>> };
+    let next: Record<string, FieldValue<number>>;
+    if (isMixed(current)) {
+      next = {};
+      for (const key of this.getAxisKeys()) {
+        next[key] = current;
+      }
+    }
+    else {
+      next = { ...current as Record<TAxis, FieldValue<number>> };
+    }
+    next[axis] = value;
 
-    return {
-      ...base,
-      [axis]: value
-    } as TValue;
+    return next as TValue;
   }
 }

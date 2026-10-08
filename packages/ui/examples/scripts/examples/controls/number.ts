@@ -1,18 +1,14 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import {
-  detailOf,
-  NumberField,
-  type JollyChangeDetail
-} from "../../../../src/index.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import { NumberField } from "../../../../src/controls/Number.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
 // CONSTANTS
 const kLogLength = 12;
 
 export const NUMBER_EXAMPLE: GalleryExample<"eventLog"> = {
-  id: "controls/number",
-  title: "Number",
   options: [
     {
       key: "eventLog",

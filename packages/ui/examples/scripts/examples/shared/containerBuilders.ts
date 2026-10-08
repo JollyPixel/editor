@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import type { IconName } from "../../../../src/index.ts";
+import "../../../../src/containers/dock/Dock.ts";
+import "../../../../src/containers/dock/DockLayout.ts";
+import "../../../../src/containers/folder/Folder.ts";
+import "../../../../src/controls/Button.ts";
+import type { IconName } from "../../../../src/icon/registry.ts";
 
 export interface KeyedPaneOptions {
   icon?: IconName;

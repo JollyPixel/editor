@@ -1,6 +1,12 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  mock,
+  test
+} from "node:test";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
@@ -32,9 +38,7 @@ function createLayer(
 function setup() {
   const keyboard = new KeyBindings();
   const pointer = new PointerCapture();
-  const log = new LogQueue({
-    schedule: () => () => void 0
-  });
+  const log = new LogQueue();
   const poses: CameraPose[] = [];
   const pivots: THREE.Vector3Like[] = [];
   const controls = {
@@ -109,6 +113,14 @@ function createBlock(
 }
 
 describe("EditorCamera", () => {
+  beforeEach(() => {
+    mock.timers.enable({ apis: ["setTimeout"] });
+  });
+
+  afterEach(() => {
+    mock.timers.reset();
+  });
+
   test("frames the layers once per spawn request", () => {
     const { camera, poses } = setup();
     const near = [createLayer({ x: 0, y: 0, z: 0 }, { x: 4, y: 4, z: 4 })];

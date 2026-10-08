@@ -10,7 +10,7 @@ import {
   PeerMarkTracker,
   type PeerMarkMap
 } from "../../src/network/PeerMarkTracker.ts";
-import { createRoomHarness } from "./roomHarness.ts";
+import { createRoomHarness } from "../helpers/network/roomHarness.ts";
 
 interface TrackerHarness extends ReturnType<typeof createRoomHarness> {
   tracker: PeerMarkTracker<string>;

@@ -1,10 +1,20 @@
 // Import Internal Dependencies
-import { PROGRESS_EXAMPLE } from "./progress.ts";
-import { SPINNER_EXAMPLE } from "./spinner.ts";
-import { LOG_EXAMPLE } from "./log.ts";
+import type { GalleryEntry } from "../../types.ts";
 
-export const FEEDBACK_EXAMPLES = [
-  PROGRESS_EXAMPLE,
-  SPINNER_EXAMPLE,
-  LOG_EXAMPLE
+export const FEEDBACK_EXAMPLES: readonly GalleryEntry[] = [
+  {
+    id: "feedback/progress",
+    title: "Progress and loading",
+    load: async() => (await import("./progress.ts")).PROGRESS_EXAMPLE
+  },
+  {
+    id: "feedback/spinner",
+    title: "Spinner",
+    load: async() => (await import("./spinner.ts")).SPINNER_EXAMPLE
+  },
+  {
+    id: "feedback/log",
+    title: "Log",
+    load: async() => (await import("./log.ts")).LOG_EXAMPLE
+  }
 ];

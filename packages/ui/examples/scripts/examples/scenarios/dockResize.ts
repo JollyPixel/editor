@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import "../../../../src/containers/dock/DockLayout.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   placementDock,
@@ -7,8 +8,6 @@ import {
 } from "../shared/containerBuilders.ts";
 
 export const DOCK_RESIZE_EXAMPLE: GalleryExample = {
-  id: "scenarios/dock-resize",
-  title: "Dock and floating placement",
   render(host) {
     const stage = document.createElement("div");
     stage.className = "placement-stage";

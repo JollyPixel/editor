@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Flags } from "../../../../src/index.ts";
+import { Flags } from "../../../../src/controls/Flags.ts";
 
 // CONSTANTS
 const kCollisionLayers = [
@@ -24,8 +24,6 @@ const kCollisionLayers = [
 ];
 
 export const FLAGS_EXAMPLE: GalleryExample = {
-  id: "controls/flags",
-  title: "Flags",
   render(host) {
     return renderStateMatrix<Flags>(host, {
       colored: true,

@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   hold,
@@ -11,11 +7,14 @@ import {
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import {
+  test,
+  expect
+} from "../fixtures.ts";
 
 test.describe("Tool button", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/tool-button");
+  test.use({
+    example: "controls/tool-button"
   });
 
   test("renders pressed state, icon and a notch towards the flyout", async({ page }) => {

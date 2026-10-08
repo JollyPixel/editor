@@ -77,6 +77,15 @@ export const contextMenuStyles = css`
     height: 12px;
   }
 
+  .menu[data-opens="left"] > .branch > .item > .chevron {
+    order: -1;
+    transform: scaleX(-1);
+  }
+
+  .menu[data-opens="left"]:has(> .branch) > .item {
+    padding-inline-start: calc(var(--jolly-space-2, 8px) * 2 + 12px);
+  }
+
   .label {
     flex: 1 1 auto;
     min-width: 0;

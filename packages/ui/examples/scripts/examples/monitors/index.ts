@@ -1,8 +1,15 @@
 // Import Internal Dependencies
-import { MONITOR_EXAMPLE } from "./monitor.ts";
-import { GRAPH_EXAMPLE } from "./graph.ts";
+import type { GalleryEntry } from "../../types.ts";
 
-export const MONITORS_EXAMPLES = [
-  MONITOR_EXAMPLE,
-  GRAPH_EXAMPLE
+export const MONITORS_EXAMPLES: readonly GalleryEntry[] = [
+  {
+    id: "monitors/monitor",
+    title: "Monitor",
+    load: async() => (await import("./monitor.ts")).MONITOR_EXAMPLE
+  },
+  {
+    id: "monitors/graph",
+    title: "Graph",
+    load: async() => (await import("./graph.ts")).GRAPH_EXAMPLE
+  }
 ];

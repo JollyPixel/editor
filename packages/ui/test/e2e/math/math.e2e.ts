@@ -1,16 +1,16 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Locator,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   scrubBy
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
+import {
+  test,
+  expect,
+  type Locator,
+  type Page
+} from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
@@ -31,8 +31,11 @@ function axisTagColor(
 }
 
 test.describe("vector3", () => {
+  test.use({
+    example: "math/vector3"
+  });
+
   test.beforeEach(async({ page }) => {
-    await openExample(page, "math/vector3");
     await recordChanges(page);
   });
 
@@ -43,10 +46,10 @@ test.describe("vector3", () => {
     }
 
     await scrubBy(page, handle("mixed"), 40);
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
 
     await scrubBy(page, handle("default"), 40);
-    expect(await changes(page)).toEqual([{ x: 1, y: 1, z: 0 }]);
+    await expect.poll(() => changes(page)).toEqual([{ x: 1, y: 1, z: 0 }]);
   });
 
   test("an axis parse error uses the field error presentation", async({ page }) => {
@@ -58,7 +61,7 @@ test.describe("vector3", () => {
     await expect(field).toHaveAttribute("invalid", "");
     await expect(field.locator(".error")).toBeVisible();
     await expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(await changes(page)).toEqual([]);
+    await expect.poll(() => changes(page)).toEqual([]);
 
     await input.press("Escape");
     await expect(field).not.toHaveAttribute("invalid");
@@ -69,7 +72,7 @@ test.describe("vector3", () => {
       .locator(".revert")
       .dispatchEvent("click");
 
-    expect(await changes(page)).toEqual([{ x: 0, y: 1, z: 0 }]);
+    await expect.poll(() => changes(page)).toEqual([{ x: 0, y: 1, z: 0 }]);
   });
 });
 
@@ -115,7 +118,7 @@ test.describe("axis markers", () => {
     expect(await inputWidth(page)).toBe(cornerWidth);
 
     await scrubBy(page, box.locator(".scrub-handle"), 40);
-    expect(await changes(page)).toEqual([{ x: 1, y: 1, z: 0 }]);
+    await expect.poll(() => changes(page)).toEqual([{ x: 1, y: 1, z: 0 }]);
   });
 
   test("a chip is as wide as the control is tall", async({ page }) => {
@@ -164,8 +167,8 @@ test.describe("axis markers", () => {
 });
 
 test.describe("quaternion", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "math/quaternion");
+  test.use({
+    example: "math/quaternion"
   });
 
   test("typing an axis in degrees commits the equivalent quaternion", async({ page }) => {
@@ -233,7 +236,7 @@ test.describe("transform", () => {
     await scaleX.fill("2");
     await scaleX.press("Enter");
 
-    expect(await changes(page)).toEqual([
+    await expect.poll(() => changes(page)).toEqual([
       {
         position: { x: 0, y: 1, z: 0 },
         rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -268,7 +271,7 @@ test("point2d commits a clamped point from a pad press", async({ page }) => {
   await page.mouse.down();
   await page.mouse.up();
 
-  expect(await changes(page)).toEqual([{ x: 0.98, y: 0.02 }]);
+  await expect.poll(() => changes(page)).toEqual([{ x: 0.98, y: 0.02 }]);
 });
 
 test("vector2 edits an x/z pair painted with the z ramp", async({ page }) => {
@@ -289,5 +292,5 @@ test("vector2 edits an x/z pair painted with the z ramp", async({ page }) => {
   await input.fill("9");
   await input.press("Enter");
 
-  expect(await changes(page)).toEqual([{ x: 4, z: 9 }]);
+  await expect.poll(() => changes(page)).toEqual([{ x: 4, z: 9 }]);
 });

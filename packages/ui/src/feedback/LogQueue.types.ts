@@ -13,14 +13,7 @@ export type LogListener = (
   entries: readonly LogEntry[]
 ) => void;
 
-export type LogScheduler = (
-  callback: () => void,
-  delay: number
-) => () => void;
-
 export interface LogQueueOptions {
   max?: number;
   gracePeriod?: number;
-  now?: () => number;
-  schedule?: LogScheduler;
 }

@@ -1,10 +1,8 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect
-} from "@playwright/test";
-
-// Import Internal Dependencies
+} from "../fixtures.ts";
 import { gotoGallery } from "../support/gallery.ts";
 
 test("raw jolly-theme-preferences report a real extent to their pane", async({ page }) => {

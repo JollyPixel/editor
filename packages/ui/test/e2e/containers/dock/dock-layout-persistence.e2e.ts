@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   dragTo,
@@ -12,146 +8,132 @@ import {
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { reloadGallery } from "../../support/gallery.ts";
 import {
-  dropIntoDock,
-  openDockLayout,
-  paneKeysOf,
-  resizeFrame
-} from "../../support/dock.ts";
+  test,
+  expect
+} from "../../fixtures.ts";
+import { reloadGallery } from "../../support/gallery.ts";
+import { Dock } from "../../support/dock.ts";
+import { FloatingWindow } from "../../support/floating.ts";
+import { Pane } from "../../support/pane.ts";
 
 // CONSTANTS
-const kFloatingAssets = "jolly-floating jolly-pane[key='assets'] .header";
 const kReset = "[data-action='reset-layout']";
 
 test.describe("DockLayout persistence", () => {
-  test.beforeEach(async({ page }) => {
-    await openDockLayout(page);
+  test.use({
+    example: "scenarios/dock-layout"
   });
 
   test("a window remembers its size through docking and reloads until reset", async({ page }) => {
-    const frame = page.locator("jolly-floating");
-    const origin = await boxOf(frame);
-    await resizeFrame(page, { width: 170, height: 130 });
-    const resized = await boxOf(frame);
+    const left = new Dock(page, "left");
+    const frame = new FloatingWindow(page);
+    const origin = await boxOf(frame.root);
+    await frame.resizeTo({ width: 170, height: 130 });
+    const resized = await boxOf(frame.root);
     expect(resized.width).toBeLessThan(origin.width);
     expect(resized.height).toBeLessThan(origin.height);
 
-    await dropIntoDock(page, kFloatingAssets, "left");
-    await expect(frame).toHaveCount(0);
-    await expect(paneKeysOf(page, "left"))
+    await left.drop(frame.pane("assets").header);
+    await expect(frame.root).toHaveCount(0);
+    await expect(left.paneKeys())
       .resolves.toEqual(["hierarchy", "inspector", "assets"]);
     await reloadGallery(page);
 
-    await dragTo(
-      page,
-      page.locator("jolly-pane[key='assets'] .header"),
-      { x: 700, y: 400 }
-    );
-    const restored = await boxOf(frame);
+    await dragTo(page, new Pane(page, "assets").header, { x: 700, y: 400 });
+    const restored = await boxOf(frame.root);
     expect(restored.width).toBeCloseTo(resized.width, 0);
     expect(restored.height).toBeCloseTo(resized.height, 0);
     expect(700 - restored.x).toBeGreaterThan(0);
     expect(700 - restored.x).toBeLessThan(restored.width);
 
     await page.locator(kReset).click();
-    await expect.poll(() => widthOf(frame)).toBe(260);
+    await expect.poll(() => widthOf(frame.root)).toBe(260);
   });
 
   test("reset restores the authored geometry, not only the placement", async({ page }) => {
-    const dock = page.locator("jolly-dock[key='left']");
-    const frame = page.locator("jolly-floating");
-    const width = await widthOf(dock);
-    const origin = await boxOf(frame);
+    const dock = new Dock(page, "left");
+    const frame = new FloatingWindow(page);
+    const width = await widthOf(dock.root);
+    const origin = await boxOf(frame.root);
 
-    const handle = dock.locator(".resize-handle");
-    await handle.focus();
-    await handle.press("ArrowRight");
-    await expect.poll(() => widthOf(dock)).toBeGreaterThan(width);
+    await dock.resizeHandle.focus();
+    await dock.resizeHandle.press("ArrowRight");
+    await expect.poll(() => widthOf(dock.root)).toBeGreaterThan(width);
 
-    await dragTo(page, page.locator(kFloatingAssets), {
+    await dragTo(page, frame.pane("assets").header, {
       x: origin.x + 220,
       y: origin.y + 180
     });
-    await expect.poll(async() => (await boxOf(frame)).x)
+    await expect.poll(async() => (await boxOf(frame.root)).x)
       .toBeGreaterThan(origin.x);
 
     await page.locator(kReset).click();
-    await expect.poll(() => widthOf(dock)).toBe(width);
-    await expect.poll(async() => (await boxOf(frame)).x).toBe(origin.x);
-    await expect.poll(async() => (await boxOf(frame)).y).toBe(origin.y);
+    await expect.poll(() => widthOf(dock.root)).toBe(width);
+    await expect.poll(async() => (await boxOf(frame.root)).x).toBe(origin.x);
+    await expect.poll(async() => (await boxOf(frame.root)).y).toBe(origin.y);
   });
 
   test("folds, folders and a collapsed dock survive a reload", async({ page }) => {
-    const inspector = page.locator("jolly-pane[key='inspector']");
-    const folder = page.locator("jolly-pane[key='hud'] jolly-folder");
-    const dock = page.locator("jolly-dock[key='left']");
-    const expanded = await heightOf(inspector);
+    const inspector = new Pane(page, "inspector");
+    const folder = new Pane(page, "hud").root.locator("jolly-folder");
+    const dock = new Dock(page, "left");
+    const expanded = await heightOf(inspector.root);
 
-    await inspector.locator(".fold").click();
-    await expect(inspector).toHaveAttribute("collapsed");
-    await expect(inspector.locator(".fold"))
-      .toHaveAttribute("aria-expanded", "false");
-    await expect.poll(() => heightOf(inspector)).toBeLessThan(expanded);
+    await inspector.fold.click();
+    await expect(inspector.root).toHaveAttribute("collapsed");
+    await expect(inspector.fold).toHaveAttribute("aria-expanded", "false");
+    await expect.poll(() => heightOf(inspector.root)).toBeLessThan(expanded);
 
     await folder.locator(".toggle").click();
-    await dock.locator(".resize-handle").dblclick();
+    await dock.resizeHandle.dblclick();
     await expect(folder).not.toHaveAttribute("open");
-    await expect(dock).toHaveAttribute("collapsed");
+    await expect(dock.root).toHaveAttribute("collapsed");
 
     await reloadGallery(page);
-    await expect(inspector).toHaveAttribute("collapsed");
+    await expect(inspector.root).toHaveAttribute("collapsed");
     await expect(folder).not.toHaveAttribute("open");
-    await expect(dock).toHaveAttribute("collapsed");
+    await expect(dock.root).toHaveAttribute("collapsed");
   });
 
   test("an emptied solid dock gives its space back and still takes a pane", async({ page }) => {
-    const dock = page.locator("jolly-dock[key='left']");
+    const dock = new Dock(page, "left");
     const viewport = await centerOf(page.locator(".dock-layout-viewport"));
-    expect(await widthOf(dock)).toBeGreaterThan(0);
+    expect(await widthOf(dock.root)).toBeGreaterThan(0);
 
     for (const [key, offset] of [["hierarchy", 0], ["inspector", 80]] as const) {
-      await dragTo(
-        page,
-        page.locator(`jolly-dock[key='left'] jolly-pane[key='${key}'] .header`),
-        {
-          x: viewport.x,
-          y: viewport.y + offset
-        }
-      );
+      await dragTo(page, dock.pane(key).header, {
+        x: viewport.x,
+        y: viewport.y + offset
+      });
     }
-    await expect(dock).toHaveAttribute("empty");
-    await expect.poll(() => widthOf(dock)).toBe(0);
+    await expect(dock.root).toHaveAttribute("empty");
+    await expect.poll(() => widthOf(dock.root)).toBe(0);
 
-    const edge = await boxOf(dock);
-    await dragTo(
-      page,
-      page.locator("jolly-floating jolly-pane[key='hierarchy'] .header"),
-      {
-        x: edge.x + 8,
-        y: edge.y + 200
-      }
-    );
-    await expect(paneKeysOf(page, "left")).resolves.toEqual(["hierarchy"]);
-    await expect(dock).not.toHaveAttribute("empty");
+    const edge = await boxOf(dock.root);
+    await dragTo(page, new FloatingWindow(page).pane("hierarchy").header, {
+      x: edge.x + 8,
+      y: edge.y + 200
+    });
+    await expect(dock.paneKeys()).resolves.toEqual(["hierarchy"]);
+    await expect(dock.root).not.toHaveAttribute("empty");
   });
 
   test("the arrangement survives a reload and Reset restores the markup", async({ page }) => {
+    const left = new Dock(page, "left");
     await dragTo(
       page,
-      page.locator("jolly-pane[key='hierarchy'] .header"),
+      new Pane(page, "hierarchy").header,
       await centerOf(page.locator(".dock-layout-viewport"))
     );
-    await expect(paneKeysOf(page, "left")).resolves.toEqual(["inspector"]);
+    await expect(left.paneKeys()).resolves.toEqual(["inspector"]);
 
     await reloadGallery(page);
-    await expect(paneKeysOf(page, "left")).resolves.toEqual(["inspector"]);
-    await expect(
-      page.locator("jolly-floating jolly-pane[key='hierarchy']")
-    ).toHaveCount(1);
+    await expect(left.paneKeys()).resolves.toEqual(["inspector"]);
+    await expect(new FloatingWindow(page, "hierarchy").root).toHaveCount(1);
 
     await page.locator(kReset).click();
-    await expect(paneKeysOf(page, "left"))
+    await expect(left.paneKeys())
       .resolves.toEqual(["hierarchy", "inspector"]);
   });
 });

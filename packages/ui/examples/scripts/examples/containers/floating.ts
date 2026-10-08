@@ -1,10 +1,10 @@
 // Import Internal Dependencies
+import "../../../../src/containers/floating/Floating.ts";
+import "../../../../src/controls/Button.ts";
 import { createSimpleExample } from "../shared/example.ts";
 import { pane } from "../shared/containerBuilders.ts";
 
 export const FLOATING_EXAMPLE = createSimpleExample(
-  "containers/floating",
-  "Floating",
   () => {
     const floating = document.createElement("jolly-floating");
     floating.x = 280;

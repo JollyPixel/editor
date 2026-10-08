@@ -1,12 +1,10 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator
-} from "@playwright/test";
-
-// Import Internal Dependencies
-import { fieldRow as row, openExample } from "../support/gallery.ts";
+} from "../fixtures.ts";
+import { fieldRow as row } from "../support/gallery.ts";
 import {
   fieldChanges,
   recordFieldChanges
@@ -30,8 +28,8 @@ function labelRatio(
 }
 
 test.describe("controls: button group", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "controls/button-group");
+  test.use({
+    example: "controls/button-group"
   });
 
   test("is one tab stop that arrow keys commit through", async({ page }) => {
@@ -48,7 +46,7 @@ test.describe("controls: button group", () => {
     await focusable.focus();
     await page.keyboard.press("ArrowRight");
 
-    expect(await fieldChanges(page)).toEqual(["paint"]);
+    await expect.poll(() => fieldChanges(page)).toEqual(["paint"]);
   });
 
   test("names its radio group from aria-label when unlabeled", async({ page }) => {
@@ -86,7 +84,7 @@ test.describe("controls: button group", () => {
 
     await paint.click();
 
-    expect(await fieldChanges(page)).toEqual(["paint"]);
+    await expect.poll(() => fieldChanges(page)).toEqual(["paint"]);
   });
 
   test("lifts the label cap for a field packed beside another", async({ page }) => {

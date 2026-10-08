@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { detailOf } from "../../src/index.ts";
+import { detailOf } from "../../src/dom.ts";
 import { findExample } from "./manifest.ts";
 import {
   clearOptions,
@@ -8,24 +8,37 @@ import {
 } from "./options.ts";
 import { GalleryRoot } from "./shell/GalleryRoot.ts";
 import type {
+  GalleryEntry,
   GalleryExample
 } from "./types.ts";
+
+interface MountedExample {
+  entry: GalleryEntry;
+  example: GalleryExample;
+}
 
 const disposed: string[] = [];
 window.__galleryDisposed = disposed;
 
-let current: GalleryExample | null = null;
+let current: MountedExample | null = null;
 let dispose: (() => void) | void;
+let mountTicket = 0;
 
-function mount(
-  example: GalleryExample,
+async function mount(
+  entry: GalleryEntry,
   root: GalleryRoot
 ) {
+  const ticket = ++mountTicket;
+  const example = await entry.load();
+  if (ticket !== mountTicket) {
+    return;
+  }
+
   if (current !== null) {
     if (typeof dispose === "function") {
       dispose();
     }
-    disposed.push(current.id);
+    disposed.push(current.entry.id);
   }
 
   const values = readOptions(
@@ -34,30 +47,33 @@ function mount(
   );
 
   root.exampleHost.replaceChildren();
-  current = example;
+  current = {
+    entry,
+    example
+  };
   dispose = example.render(root.exampleHost, values);
-  root.setActive(example.id);
+  root.setActive(entry.id);
   root.showOptions(example.options ?? [], values);
-  document.title = `${example.title} | jolly-pixel/ui`;
+  document.title = `${entry.title} | jolly-pixel/ui`;
 }
 
 function select(
   id: string,
   root: GalleryRoot
 ) {
-  const example = findExample(id);
+  const entry = findExample(id);
   const url = new URL(window.location.href);
 
   if (current !== null) {
-    clearOptions(current, url.searchParams);
+    clearOptions(current.example, url.searchParams);
   }
-  url.searchParams.set("example", example.id);
+  url.searchParams.set("example", entry.id);
   window.history.pushState(
-    { example: example.id },
+    { example: entry.id },
     "",
     url
   );
-  mount(example, root);
+  void mount(entry, root);
 }
 
 function toggle(
@@ -72,16 +88,14 @@ function toggle(
   const url = new URL(window.location.href);
   writeOption(url.searchParams, key, value);
   window.history.replaceState(window.history.state, "", url);
-  mount(current, root);
+  void mount(current.entry, root);
 }
 
-function start() {
+async function start() {
   const params = new URLSearchParams(
     window.location.search
   );
   const root = document.createElement("gallery-root");
-
-  // `chrome=off` drops the nav, so a test addresses the example without sharing fate with the shell.
   root.setAttribute(
     "chrome",
     params.get("chrome") === "off" ? "off" : "on"
@@ -96,10 +110,6 @@ function start() {
   }
 
   document.body.append(root);
-  mount(
-    findExample(params.get("example")),
-    root
-  );
 
   root.addEventListener("gallery-select", (event) => {
     const detail = detailOf<{ id: string; }>(event);
@@ -119,13 +129,17 @@ function start() {
     const id = new URLSearchParams(
       window.location.search
     ).get("example");
-    mount(
+    void mount(
       findExample(id),
       root
     );
   });
 
+  await mount(
+    findExample(params.get("example")),
+    root
+  );
   window.__galleryReady = true;
 }
 
-start();
+void start();

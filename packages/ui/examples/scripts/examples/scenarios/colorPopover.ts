@@ -7,19 +7,16 @@ import {
 } from "lit";
 
 // Import Internal Dependencies
+import "../../../../src/controls/ColorPicker.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  PopoverController,
-  detailOf,
-  type JollyChangeDetail
-} from "../../../../src/index.ts";
+import { PopoverController } from "../../../../src/field/PopoverController.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
 // CONSTANTS
 const kTag = "gallery-brush-swatch";
 
 export const COLOR_POPOVER_EXAMPLE: GalleryExample = {
-  id: "scenarios/color-popover",
-  title: "Picker in a popup",
   render(host) {
     define();
 

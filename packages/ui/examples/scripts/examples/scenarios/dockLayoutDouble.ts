@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import "../../../../src/containers/dock/Dock.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   dockLayoutStage,
@@ -9,8 +10,6 @@ import {
 const kStorageKey = "gallery-example:dock-layout-double";
 
 export const DOCK_LAYOUT_DOUBLE_EXAMPLE: GalleryExample = {
-  id: "scenarios/dock-layout-double",
-  title: "Dock layout double",
   render(host) {
     const {
       layout,

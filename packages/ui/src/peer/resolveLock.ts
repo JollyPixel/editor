@@ -27,13 +27,14 @@ export function resolveLock(
     return kEmptyLock;
   }
 
-  const editing: CollaboratorPresence[] = [];
+  let editing: CollaboratorPresence[] | null = null;
   for (const peer of peers) {
     if (peer.editing === path) {
+      editing ??= [];
       editing.push(peer);
     }
   }
-  if (editing.length === 0) {
+  if (editing === null) {
     return kEmptyLock;
   }
 

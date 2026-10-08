@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Quaternion } from "../../../../src/index.ts";
+import { Quaternion } from "../../../../src/math/Quaternion.ts";
 import {
   AXIS_STYLE_OPTIONS,
   axisStyleOf,
@@ -9,8 +9,6 @@ import {
 } from "./axisStyle.ts";
 
 export const QUATERNION_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
-  id: "math/quaternion",
-  title: "Quaternion",
   options: AXIS_STYLE_OPTIONS,
   render(host, options) {
     return renderStateMatrix<Quaternion>(host, {

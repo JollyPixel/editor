@@ -114,8 +114,6 @@ new LogQueue({
 |---|---|---|
 | `max` | `number` | `5` |
 | `gracePeriod` | `number` | `10_000` |
-| `now` | `() => number` | `Date.now` |
-| `schedule` | `LogScheduler` | `setTimeout`, returning its canceller |
 
 | Member | Behavior |
 |---|---|
@@ -135,11 +133,5 @@ values, which is what makes a peer-supplied username safe to render; building
 a template with `unsafeHTML` gives that up. The queue never inspects content,
 so it stays DOM-free and its tests run under `node --test`.
 
-Pass `now` and `schedule` to drive expiry by hand in a test:
-
-```ts
-const queue = new LogQueue({
-  now: () => clock.time,
-  schedule: (callback, delay) => clock.at(clock.time + delay, callback)
-});
-```
+Expiry runs on `setTimeout` and `createdAt` reads `Date.now()`, so a test
+drives both with `t.mock.timers.enable({ apis: ["setTimeout", "Date"] })`.

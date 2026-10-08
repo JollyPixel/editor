@@ -57,11 +57,13 @@ describe("defineE2EConfig", () => {
     process.env.CI = "true";
     const config = defineE2EConfig({
       ...kOptions,
-      ciWorkers: 2
+      ciWorkers: 2,
+      localWorkers: 8
     });
 
     assert.equal(config.workers, 2);
     assert.equal(config.retries, 1);
+    assert.equal(config.use?.trace, "on-first-retry");
     assert.deepEqual(config.webServer, {
       command: "pnpm run dev:e2e",
       port: 3100,
@@ -76,13 +78,24 @@ describe("defineE2EConfig", () => {
     assert.equal(defineE2EConfig(kOptions).workers, 4);
   });
 
-  it("applies viewport and reuse overrides", () => {
+  it("uses localWorkers outside CI", () => {
+    const config = defineE2EConfig({
+      ...kOptions,
+      ciWorkers: 2,
+      localWorkers: "50%"
+    });
+
+    assert.equal(config.workers, "50%");
+  });
+
+  it("applies viewport, motion and reuse overrides", () => {
     const config = defineE2EConfig({
       ...kOptions,
       viewport: {
         width: 960,
         height: 540
       },
+      reducedMotion: "reduce",
       reuseExistingServer: false
     });
 
@@ -92,7 +105,8 @@ describe("defineE2EConfig", () => {
       viewport: {
         width: 960,
         height: 540
-      }
+      },
+      reducedMotion: "reduce"
     });
     assert.deepEqual(config.webServer, {
       command: "pnpm run dev:e2e",

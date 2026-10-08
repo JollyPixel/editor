@@ -1,22 +1,50 @@
 // Import Internal Dependencies
-import { PANE_EXAMPLE } from "./pane.ts";
-import { FOLDER_EXAMPLE } from "./folder.ts";
-import { TABS_EXAMPLE } from "./tabs.ts";
-import { DOCK_EXAMPLE } from "./dock.ts";
-import { FLOATING_EXAMPLE } from "./floating.ts";
-import { DIALOG_EXAMPLE } from "./dialog.ts";
-import { TOOLBAR_EXAMPLE } from "./toolbar.ts";
-import { RAIL_EXAMPLE } from "./rail.ts";
-import { CONTEXT_MENU_EXAMPLE } from "./context-menu.ts";
+import type { GalleryEntry } from "../../types.ts";
 
-export const CONTAINERS_EXAMPLES = [
-  PANE_EXAMPLE,
-  FOLDER_EXAMPLE,
-  TABS_EXAMPLE,
-  DOCK_EXAMPLE,
-  FLOATING_EXAMPLE,
-  DIALOG_EXAMPLE,
-  CONTEXT_MENU_EXAMPLE,
-  TOOLBAR_EXAMPLE,
-  RAIL_EXAMPLE
+export const CONTAINERS_EXAMPLES: readonly GalleryEntry[] = [
+  {
+    id: "containers/pane",
+    title: "Pane",
+    load: async() => (await import("./pane.ts")).PANE_EXAMPLE
+  },
+  {
+    id: "containers/folder",
+    title: "Folder",
+    load: async() => (await import("./folder.ts")).FOLDER_EXAMPLE
+  },
+  {
+    id: "containers/tabs",
+    title: "Tabs",
+    load: async() => (await import("./tabs.ts")).TABS_EXAMPLE
+  },
+  {
+    id: "containers/dock",
+    title: "Dock",
+    load: async() => (await import("./dock.ts")).DOCK_EXAMPLE
+  },
+  {
+    id: "containers/floating",
+    title: "Floating",
+    load: async() => (await import("./floating.ts")).FLOATING_EXAMPLE
+  },
+  {
+    id: "containers/dialog",
+    title: "Dialog",
+    load: async() => (await import("./dialog.ts")).DIALOG_EXAMPLE
+  },
+  {
+    id: "containers/context-menu",
+    title: "Context menu",
+    load: async() => (await import("./context-menu.ts")).CONTEXT_MENU_EXAMPLE
+  },
+  {
+    id: "containers/toolbar",
+    title: "Toolbar",
+    load: async() => (await import("./toolbar.ts")).TOOLBAR_EXAMPLE
+  },
+  {
+    id: "containers/rail",
+    title: "Rail",
+    load: async() => (await import("./rail.ts")).RAIL_EXAMPLE
+  }
 ];

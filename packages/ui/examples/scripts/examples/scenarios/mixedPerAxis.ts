@@ -1,12 +1,11 @@
 // Import Internal Dependencies
+import "../../../../src/math/Vector3.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  detailOf,
-  Mixed,
-  type JollyChangeDetail,
-  type Vector3,
-  type VectorValue
-} from "../../../../src/index.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import { Mixed } from "../../../../src/field/mixed.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
+import type { Vector3 } from "../../../../src/math/Vector3.ts";
+import type { VectorValue } from "../../../../src/math/types.ts";
 
 type Axis3 = "x" | "y" | "z";
 
@@ -19,8 +18,6 @@ interface SceneObject {
 const kAxes: readonly Axis3[] = ["x", "y", "z"];
 
 export const MIXED_PER_AXIS_EXAMPLE: GalleryExample = {
-  id: "scenarios/mixed-per-axis",
-  title: "Mixed per axis",
   render(host) {
     const selection: SceneObject[] = [
       { name: "Crate A", position: { x: 2, y: 1, z: -4 } },

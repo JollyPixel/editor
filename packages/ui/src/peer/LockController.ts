@@ -10,6 +10,9 @@ import { resolveLock } from "./resolveLock.ts";
 import type { PresenceSource } from "./PresenceSource.ts";
 import type { CollaboratorPresence } from "./types.ts";
 
+// CONSTANTS
+const kNoPeers: readonly CollaboratorPresence[] = [];
+
 /**
  * Field state synchronized while a presence source is attached.
  */
@@ -148,7 +151,7 @@ export class LockController implements ReactiveController {
 
     const { path } = this.#host;
     const { lockedBy, peers } = resolveLock(
-      path === null ? [] : this.#source.peers.values(),
+      path === null ? kNoPeers : this.#source.peers.values(),
       path,
       this.#source.clientId
     );

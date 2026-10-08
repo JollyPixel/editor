@@ -1,8 +1,7 @@
 // Import Internal Dependencies
-import type { GalleryExample } from "./types.ts";
+import type { GalleryEntry } from "./types.ts";
 import type { GalleryGroup } from "./groups.ts";
 
-import { TOKENS_EXAMPLE } from "./examples/foundation/tokens.ts";
 import { FOUNDATION_EXAMPLES } from "./examples/foundation/index.ts";
 import { PEER_EXAMPLES } from "./examples/peer/index.ts";
 import { CONTROLS_EXAMPLES } from "./examples/controls/index.ts";
@@ -14,7 +13,7 @@ import { FEEDBACK_EXAMPLES } from "./examples/feedback/index.ts";
 import { MATH_EXAMPLES } from "./examples/math/index.ts";
 
 // CONSTANTS
-const kExamplesByGroup: Record<GalleryGroup, readonly GalleryExample[]> = {
+const kExamplesByGroup: Record<GalleryGroup, readonly GalleryEntry[]> = {
   foundation: FOUNDATION_EXAMPLES,
   peer: PEER_EXAMPLES,
   controls: CONTROLS_EXAMPLES,
@@ -29,14 +28,14 @@ const kExamplesByGroup: Record<GalleryGroup, readonly GalleryExample[]> = {
 /**
  * The navigation and E2E sweep derive from this list, in group declaration order.
  */
-export const manifest: readonly GalleryExample[] = Object
+export const manifest: readonly GalleryEntry[] = Object
   .values(kExamplesByGroup)
   .flat();
 
 export function findExample(
   id: string | null
-): GalleryExample {
+): GalleryEntry {
   return manifest.find(
     (example) => example.id === id
-  ) ?? TOKENS_EXAMPLE;
+  ) ?? manifest[0];
 }

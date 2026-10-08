@@ -7,9 +7,11 @@ import type {
 // Import Internal Dependencies
 import {
   placeSubmenu,
+  submenuSide,
   type SubmenuSide
 } from "./submenuPlacement.ts";
 import { placePopover } from "../../field/placePopover.ts";
+import type { AnchorRect } from "../../geometry/anchoredPosition.ts";
 
 // CONSTANTS
 const kOpenDelay = 150;
@@ -104,16 +106,12 @@ export class SubmenuController implements ReactiveController {
     if (this.#levels.at(depth)?.item !== item) {
       this.#closeFrom(depth);
       branch.menu.showPopover();
-      const level: SubmenuLevel = {
+      this.#levels.push({
         ...branch,
         item,
         side: "right"
-      };
-      this.#levels.push(level);
-      this.#place(
-        level,
-        this.#levels.at(depth - 1)?.side ?? "right"
-      );
+      });
+      this.reposition();
       this.#host.requestUpdate();
     }
 
@@ -141,9 +139,12 @@ export class SubmenuController implements ReactiveController {
   }
 
   reposition(): void {
-    let side: SubmenuSide = "right";
+    let menu = this.#options.root();
+    let side = chooseOpening(menu, "right");
     for (const level of this.#levels) {
-      side = this.#place(level, side);
+      menu.dataset.opens = this.#place(level, menu, side);
+      menu = level.menu;
+      side = chooseOpening(menu, level.side);
     }
   }
 
@@ -203,9 +204,10 @@ export class SubmenuController implements ReactiveController {
 
   #place(
     level: SubmenuLevel,
+    parent: HTMLElement,
     prefer: SubmenuSide
   ): SubmenuSide {
-    const item = level.item.getBoundingClientRect();
+    const item = layoutRect(parent, level.item);
     const padding = Number.parseFloat(
       getComputedStyle(level.menu).paddingTop
     ) || 0;
@@ -234,6 +236,44 @@ export function levelItems(
       ":scope > .item, :scope > .branch > .item"
     )
   ];
+}
+
+function chooseOpening(
+  menu: HTMLElement,
+  prefer: SubmenuSide
+): SubmenuSide {
+  const side = submenuSide({
+    menu: layoutRect(menu),
+    budget: Number.parseFloat(
+      getComputedStyle(menu).maxWidth
+    ) || menu.offsetWidth,
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight
+    },
+    prefer
+  });
+  menu.dataset.opens = side;
+
+  return side;
+}
+
+function layoutRect(
+  menu: HTMLElement,
+  element: HTMLElement = menu
+): AnchorRect {
+  const nested = element !== menu;
+  const left = Number.parseFloat(menu.style.left) +
+    (nested ? element.offsetLeft - menu.scrollLeft : 0);
+  const top = Number.parseFloat(menu.style.top) +
+    (nested ? element.offsetTop - menu.scrollTop : 0);
+
+  return {
+    top,
+    bottom: top + element.offsetHeight,
+    left,
+    right: left + element.offsetWidth
+  };
 }
 
 function branchOf(

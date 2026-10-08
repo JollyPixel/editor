@@ -7,6 +7,17 @@ import type {
   CollaboratorPresence
 } from "../peer/types.ts";
 
+// CONSTANTS
+const kNoPeerChips: PeerChips = Object.freeze({
+  shown: Object.freeze([]),
+  overflow: 0
+});
+
+export interface PeerChips {
+  shown: readonly CollaboratorPresence[];
+  overflow: number;
+}
+
 /**
  * Whether a value differs from its default.
  */
@@ -55,11 +66,29 @@ export function splitPeerChips(
   peers: readonly CollaboratorPresence[],
   limit: number,
   selfId: string
-): { shown: CollaboratorPresence[]; overflow: number; } {
-  const others = peers.filter((peer) => peer.clientId !== selfId);
+): PeerChips {
+  if (peers.length === 0) {
+    return kNoPeerChips;
+  }
+
+  const shown: CollaboratorPresence[] = [];
+  let others = 0;
+  for (const peer of peers) {
+    if (peer.clientId === selfId) {
+      continue;
+    }
+
+    others++;
+    if (others <= limit) {
+      shown.push(peer);
+    }
+  }
+  if (others === 0) {
+    return kNoPeerChips;
+  }
 
   return {
-    shown: others.slice(0, limit),
-    overflow: Math.max(others.length - limit, 0)
+    shown,
+    overflow: Math.max(others - limit, 0)
   };
 }

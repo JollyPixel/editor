@@ -1,15 +1,10 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   expect,
   test,
   type Locator
-} from "@playwright/test";
-
-// Import Internal Dependencies
-import {
-  openExample,
-  reloadGallery
-} from "../support/gallery.ts";
+} from "../fixtures.ts";
+import { reloadGallery } from "../support/gallery.ts";
 
 // CONSTANTS
 const kDarkFpsBackground = [0, 17, 34, 255];
@@ -26,8 +21,8 @@ function cornerPixelOf(
 }
 
 test.describe("stats cycle", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "scenarios/stats-cycle");
+  test.use({
+    example: "scenarios/stats-cycle"
   });
 
   test("cycles with pointer and keyboard input", async({ page }) => {

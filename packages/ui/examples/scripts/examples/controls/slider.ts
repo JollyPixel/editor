@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Slider } from "../../../../src/index.ts";
+import { Slider } from "../../../../src/controls/Slider.ts";
 
 export const SLIDER_EXAMPLE: GalleryExample = {
-  id: "controls/slider",
-  title: "Slider",
   render(host) {
     return renderStateMatrix<Slider>(host, {
       liveInput: true,

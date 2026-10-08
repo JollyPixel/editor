@@ -1,13 +1,12 @@
 // Import Third-party Dependencies
+import { boxOf } from "@jolly-pixel/e2e";
+
+// Import Internal Dependencies
 import {
   test,
   expect,
   type Locator
-} from "@playwright/test";
-import { boxOf } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+} from "../fixtures.ts";
 import { styleOf } from "../support/styles.ts";
 import {
   TREE_SELECTOR,
@@ -22,8 +21,8 @@ function swatchOrder(
 }
 
 test.describe("Tree", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "data/tree");
+  test.use({
+    example: "data/tree"
   });
 
   test("titles a label only while it is cut off, unless an ancestor opts out", async({ page }) => {

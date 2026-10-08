@@ -1,15 +1,12 @@
 // Import Internal Dependencies
+import "../../../../src/controls/Text.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  peerColor,
-  detailOf,
-  type JollyChangeDetail,
-  type Text
-} from "../../../../src/index.ts";
+import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
+import type { Text } from "../../../../src/controls/Text.ts";
 
 export const UNLABELED_FIELDS_EXAMPLE: GalleryExample = {
-  id: "scenarios/unlabeled-fields",
-  title: "Unlabeled fields",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";

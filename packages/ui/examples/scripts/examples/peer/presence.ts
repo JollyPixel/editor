@@ -1,10 +1,8 @@
 // Import Internal Dependencies
-import { Pane } from "../../../../src/index.ts";
+import { Pane } from "../shared/facadePane.ts";
 import type { GalleryExample } from "../../types.ts";
 
 export const PRESENCE_EXAMPLE: GalleryExample = {
-  id: "peer/presence",
-  title: "Presence",
   render(host) {
     const pane = new Pane({
       title: "Session",

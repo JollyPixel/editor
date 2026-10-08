@@ -283,7 +283,7 @@ export class PaneGroup extends LitElement {
   }
 
   #resolveActive(): string {
-    return resolveActiveTab(this._panes, this.active);
+    return resolveActiveTab(this.panes(), this.active);
   }
 
   #onSlotChange = () => {

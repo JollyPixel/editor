@@ -3,30 +3,18 @@ import type {
   LogContent,
   LogEntry,
   LogListener,
-  LogQueueOptions,
-  LogScheduler
+  LogQueueOptions
 } from "./LogQueue.types.ts";
 
 // CONSTANTS
 const kDefaultMax = 5;
 const kDefaultGracePeriod = 10_000;
 
-function defaultScheduler(
-  callback: () => void,
-  delay: number
-): () => void {
-  const timer = setTimeout(callback, delay);
-
-  return () => clearTimeout(timer);
-}
-
 export class LogQueue {
   #max: number;
   #gracePeriod: number;
-  #now: () => number;
-  #schedule: LogScheduler;
   #entries: readonly LogEntry[] = [];
-  #timers = new Map<string, () => void>();
+  #timers = new Map<string, ReturnType<typeof setTimeout>>();
   #listeners = new Set<LogListener>();
   #sequence = 0;
 
@@ -35,8 +23,6 @@ export class LogQueue {
   ) {
     this.#max = Math.max(0, options.max ?? kDefaultMax);
     this.#gracePeriod = options.gracePeriod ?? kDefaultGracePeriod;
-    this.#now = options.now ?? Date.now;
-    this.#schedule = options.schedule ?? defaultScheduler;
   }
 
   get entries(): readonly LogEntry[] {
@@ -51,7 +37,7 @@ export class LogQueue {
     const entry: LogEntry = {
       id,
       content,
-      createdAt: this.#now()
+      createdAt: Date.now()
     };
 
     const next = [entry, ...this.#entries];
@@ -61,7 +47,7 @@ export class LogQueue {
     this.#entries = next.slice(0, this.#max);
 
     if (this.#entries.includes(entry)) {
-      this.#timers.set(id, this.#schedule(
+      this.#timers.set(id, setTimeout(
         () => this.dismiss(id),
         this.#gracePeriod
       ));
@@ -108,8 +94,8 @@ export class LogQueue {
   }
 
   dispose(): void {
-    for (const cancel of this.#timers.values()) {
-      cancel();
+    for (const timer of this.#timers.values()) {
+      clearTimeout(timer);
     }
     this.#timers.clear();
     this.#listeners.clear();
@@ -119,12 +105,7 @@ export class LogQueue {
   #cancel(
     id: string
   ): void {
-    const cancel = this.#timers.get(id);
-    if (cancel === undefined) {
-      return;
-    }
-
-    cancel();
+    clearTimeout(this.#timers.get(id));
     this.#timers.delete(id);
   }
 

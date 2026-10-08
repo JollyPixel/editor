@@ -1,9 +1,14 @@
+// Import Third-party Dependencies
+import { adoptStyles } from "lit";
+
 // Import Internal Dependencies
-import {
-  detailOf,
-  themeStyles,
-  type Checkbox
-} from "../../../src/index.ts";
+import "../../../src/containers/dock/Dock.ts";
+import "../../../src/containers/folder/Folder.ts";
+import "../../../src/controls/Checkbox.ts";
+import "../../../src/theme/components/ThemePreferences.ts";
+import { detailOf } from "../../../src/dom.ts";
+import { themeStyles } from "../../../src/theme/styles/themeStyles.ts";
+import type { Checkbox } from "../../../src/controls/Checkbox.ts";
 import { manifest } from "../manifest.ts";
 import { groupLabelOf } from "../groups.ts";
 import { exampleStyles } from "../examples/shared/exampleStyles.ts";
@@ -19,6 +24,7 @@ export class GalleryRoot extends HTMLElement {
   #options: readonly GalleryOption[] = [];
   #checkboxes = new Map<string, Checkbox>();
   #links = new Map<string, HTMLAnchorElement>();
+  #activeLink: HTMLAnchorElement | null = null;
 
   get exampleHost(): HTMLElement {
     return this.#exampleHost;
@@ -32,11 +38,11 @@ export class GalleryRoot extends HTMLElement {
     const root = this.attachShadow({
       mode: "open"
     });
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(
-      `${themeStyles.cssText}\n${shellStyles.cssText}\n${exampleStyles.cssText}`
-    );
-    root.adoptedStyleSheets = [sheet];
+    adoptStyles(root, [
+      themeStyles,
+      shellStyles,
+      exampleStyles
+    ]);
 
     const layout = document.createElement("div");
     layout.className = "layout";
@@ -71,14 +77,9 @@ export class GalleryRoot extends HTMLElement {
   setActive(
     id: string
   ) {
-    for (const [linkId, link] of this.#links) {
-      if (linkId === id) {
-        link.setAttribute("aria-current", "page");
-      }
-      else {
-        link.removeAttribute("aria-current");
-      }
-    }
+    this.#activeLink?.removeAttribute("aria-current");
+    this.#activeLink = this.#links.get(id) ?? null;
+    this.#activeLink?.setAttribute("aria-current", "page");
   }
 
   #buildOptions() {
@@ -134,6 +135,7 @@ export class GalleryRoot extends HTMLElement {
     pane.heading = "@jolly-pixel/ui";
     pane.reorderable = true;
     pane.storageKey = "jolly-ui-gallery:navigation";
+    pane.addEventListener("click", (event) => this.#navigate(event));
     pane.append(...this.#buildGroups());
     pane.append(this.#buildPreferences());
     dock.append(pane);
@@ -141,21 +143,43 @@ export class GalleryRoot extends HTMLElement {
     return dock;
   }
 
+  #navigate(
+    event: MouseEvent
+  ) {
+    const link = event.target instanceof Element ?
+      event.target.closest<HTMLAnchorElement>("a[data-example-id]") :
+      null;
+    if (link === null) {
+      return;
+    }
+
+    event.preventDefault();
+    const customEvent = new CustomEvent(
+      "gallery-select",
+      {
+        detail: { id: link.dataset.exampleId }
+      }
+    );
+    this.dispatchEvent(customEvent);
+  }
+
   #buildGroups(): HTMLElement[] {
     const groups = new Map<string, HTMLElementTagNameMap["jolly-folder"]>();
+    const navs = new Map<string, HTMLElement>();
     for (const example of manifest) {
       const label = groupLabelOf(example.id);
-      let folder = groups.get(label);
-      if (folder === undefined) {
-        folder = document.createElement("jolly-folder");
+      let nav = navs.get(label);
+      if (nav === undefined) {
+        const folder = document.createElement("jolly-folder");
         folder.label = label;
-        const nav = document.createElement("nav");
+        nav = document.createElement("nav");
         nav.setAttribute("aria-label", `${label} examples`);
         folder.append(nav);
         groups.set(label, folder);
+        navs.set(label, nav);
       }
 
-      folder.querySelector("nav")?.append(
+      nav.append(
         this.#buildLink(example.id, example.title)
       );
     }
@@ -182,17 +206,6 @@ export class GalleryRoot extends HTMLElement {
     link.href = `?example=${encodeURIComponent(id)}`;
     link.textContent = title;
     link.dataset.exampleId = id;
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-
-      const customEvent = new CustomEvent(
-        "gallery-select",
-        {
-          detail: { id }
-        }
-      );
-      this.dispatchEvent(customEvent);
-    });
     this.#links.set(id, link);
 
     return link;

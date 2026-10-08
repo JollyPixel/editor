@@ -1,11 +1,9 @@
 // Import Internal Dependencies
-import {
-  Mixed,
-  peerColor,
-  detailOf,
-  type CollaboratorPresence,
-  type JollyChangeDetail
-} from "../../src/index.ts";
+import { Mixed } from "../../src/field/mixed.ts";
+import { peerColor } from "../../src/theme/peerColor.ts";
+import { detailOf } from "../../src/dom.ts";
+import type { CollaboratorPresence } from "../../src/peer/types.ts";
+import type { JollyChangeDetail } from "../../src/field/events.ts";
 
 export interface FieldLike {
   label: string;

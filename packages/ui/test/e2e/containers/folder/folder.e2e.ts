@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Locator,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   hold
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
+import {
+  test,
+  expect,
+  type Locator,
+  type Page
+} from "../../fixtures.ts";
 import {
   openExample,
   reloadGallery
@@ -200,8 +200,8 @@ test.describe("Folder", () => {
 });
 
 test.describe("Folder reorder", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "scenarios/reorder-persist");
+  test.use({
+    example: "scenarios/reorder-persist"
   });
 
   test("headers carry a faded pixel pattern and a light gap", async({ page }) => {

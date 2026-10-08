@@ -18,7 +18,9 @@ export interface E2EConfigOptions {
   port: number;
   command: string;
   ciWorkers?: number;
+  localWorkers?: PlaywrightTestConfig["workers"];
   viewport?: ViewportSize;
+  reducedMotion?: "reduce" | "no-preference";
   reuseExistingServer?: boolean;
 }
 
@@ -30,7 +32,9 @@ export function defineE2EConfig(
     port,
     command,
     ciWorkers = kWorkers,
+    localWorkers = kWorkers,
     viewport,
+    reducedMotion,
     reuseExistingServer = !ci
   } = options;
 
@@ -38,12 +42,13 @@ export function defineE2EConfig(
     testDir: "./test/e2e",
     testMatch: "**/*.e2e.ts",
     fullyParallel: true,
-    workers: ci ? ciWorkers : kWorkers,
+    workers: ci ? ciWorkers : localWorkers,
     retries: ci ? 1 : 0,
     use: {
       baseURL: baseUrl(port),
-      trace: "retain-on-failure",
-      ...(viewport === undefined ? {} : { viewport })
+      trace: ci ? "on-first-retry" : "retain-on-failure",
+      ...(viewport === undefined ? {} : { viewport }),
+      ...(reducedMotion === undefined ? {} : { reducedMotion })
     },
     webServer: {
       command,

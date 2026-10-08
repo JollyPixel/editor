@@ -1,17 +1,20 @@
 // Import Internal Dependencies
+import "../../../../src/controls/Button.ts";
+import "../../../../src/controls/Checkbox.ts";
+import "../../../../src/controls/Number.ts";
+import "../../../../src/controls/PropertyRow.ts";
+import "../../../../src/controls/Select.ts";
+import "../../../../src/controls/Text.ts";
+import "../../../../src/math/Transform.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  detailOf,
-  type FieldDescriptionDisplay,
-  type JollyChangeDetail
-} from "../../../../src/index.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import type { FieldDescriptionDisplay } from "../../../../src/field/DescriptionHint.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
 // CONSTANTS
 const kStackBelow = 260;
 
 export const FIELD_LAYOUT_EXAMPLE: GalleryExample = {
-  id: "scenarios/field-layout",
-  title: "Field layout",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";

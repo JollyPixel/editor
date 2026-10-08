@@ -6,8 +6,6 @@ import {
 } from "../shared/containerBuilders.ts";
 
 export const REORDER_PERSIST_EXAMPLE = createSimpleExample(
-  "scenarios/reorder-persist",
-  "Reorder persistence",
   () => {
     const host = pane("Reorder folders", "");
     host.reorderable = true;

@@ -1,11 +1,10 @@
 // Import Internal Dependencies
-import {
-  findNode,
-  resolveReparent,
-  type ContextMenu,
-  type Tree,
-  type TreeNode
-} from "../../../../src/index.ts";
+import "../../../../src/containers/context-menu/ContextMenu.ts";
+import "../../../../src/data/tree/Tree.ts";
+import { findNode, resolveReparent } from "../../../../src/data/tree/model.ts";
+import type { ContextMenu } from "../../../../src/containers/context-menu/ContextMenu.ts";
+import type { Tree } from "../../../../src/data/tree/Tree.ts";
+import type { TreeNode } from "../../../../src/data/tree/contract.ts";
 import type {
   GalleryExample,
   GalleryOption,
@@ -260,8 +259,6 @@ function renameNode(
 }
 
 export const TREE_EXAMPLE: GalleryExample<TreeOptionKey> = {
-  id: "data/tree",
-  title: "Tree",
   options: kOptions,
   render(host, options) {
     const tree = buildTree(options);

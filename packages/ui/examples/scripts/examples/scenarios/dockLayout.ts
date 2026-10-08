@@ -1,4 +1,7 @@
 // Import Internal Dependencies
+import "../../../../src/containers/dock/Dock.ts";
+import "../../../../src/containers/floating/Floating.ts";
+import "../../../../src/containers/folder/Folder.ts";
 import type { GalleryExample } from "../../types.ts";
 import {
   dockLayoutStage,
@@ -12,8 +15,6 @@ const kCollapsible = {
 };
 
 export const DOCK_LAYOUT_EXAMPLE: GalleryExample = {
-  id: "scenarios/dock-layout",
-  title: "Dock layout",
   render(host) {
     const {
       layout,

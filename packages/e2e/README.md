@@ -122,7 +122,10 @@ the package without a workspace cycle.
    `vite` serves each file of their `dist/` as its own module: about 1,000
    requests per editor boot, which on a CI runner is enough to push tests that
    boot several pages past the 30s timeout. A trace of one test should show no
-   request under `packages/*/dist/`.
+   request under `packages/*/dist/`. A page that imports its own `src/` still
+   serves each source file on its own; build it instead with
+   `vite build --mode e2e && vite preview --mode e2e`, as `@jolly-pixel/ui`
+   does.
 6. CI picks the suite up from its `test:e2e` script and runs it when the
    package or one of its workspace dependencies changes
    (`scripts/ciE2eMatrix.ts`). To keep it out of CI, add a `--skip` entry in

@@ -2,12 +2,11 @@
 import { parseColor } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
+import "../../../../src/controls/ColorPicker.ts";
 import type { GalleryExample } from "../../types.ts";
-import {
-  detailOf,
-  type ColorPickerLayout,
-  type JollyChangeDetail
-} from "../../../../src/index.ts";
+import { detailOf } from "../../../../src/dom.ts";
+import type { ColorPickerLayout } from "../../../../src/controls/ColorPicker.ts";
+import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
 interface PanelOptions {
   name: string;
@@ -54,8 +53,6 @@ const kPanels: PanelOptions[] = [
 ];
 
 export const COLOR_PICKER_EXAMPLE: GalleryExample = {
-  id: "controls/color-picker",
-  title: "Color picker",
   render(host) {
     const root = document.createElement("div");
     root.className = "scenario-grid";

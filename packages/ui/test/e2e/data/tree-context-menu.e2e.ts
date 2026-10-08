@@ -1,20 +1,19 @@
 // Import Third-party Dependencies
-import {
-  test,
-  expect
-} from "@playwright/test";
 import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import {
+  test,
+  expect
+} from "../fixtures.ts";
 import {
   TREE_SELECTOR,
   rowOf
 } from "../support/tree.ts";
 
 test.describe("Tree context requests", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "data/tree");
+  test.use({
+    example: "data/tree"
   });
 
   test("a right-click selects the row and opens its menu at the pointer", async({ page }) => {

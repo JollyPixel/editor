@@ -1,4 +1,6 @@
 // Import Internal Dependencies
+import "../../../../src/containers/folder/Folder.ts";
+import "../../../../src/controls/Button.ts";
 import type {
   GalleryExample,
   GalleryOptionValues
@@ -10,8 +12,6 @@ type FolderOptionKey =
   | "nested";
 
 export const FOLDER_EXAMPLE: GalleryExample<FolderOptionKey> = {
-  id: "containers/folder",
-  title: "Folder",
   options: [
     {
       key: "collapsible",

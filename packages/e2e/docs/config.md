@@ -25,19 +25,22 @@ export default defineE2EConfig({
 ```
 
 Specs live in `test/e2e/**/*.e2e.ts`, so `node --test` (which globs
-`*.spec.ts`) never picks them up. Tests run fully parallel on 4 workers with a
-`retain-on-failure` trace, and the dev server has 60 seconds to answer. The result is a plain config object; spread it to
-override anything else.
+`*.spec.ts`) never picks them up. Tests run fully parallel on 4 workers, and
+the dev server has 60 seconds to answer. The result is a plain config object;
+spread it to override anything else.
 
 | Option | Default | |
 |---|---|---|
 | `port` | | dev server port, also the `baseURL` |
 | `command` | | starts the dev server |
 | `ciWorkers` | `4` | workers when `CI` is set |
+| `localWorkers` | `4` | workers when `CI` is not set, a count or a share of the CPU cores such as `"50%"` |
 | `viewport` | Playwright's | |
 | `reuseExistingServer` | `!CI` | |
 
-On CI a failed test retries once.
+Locally a failed test keeps its trace. On CI a failed test retries once, and
+only the retry records a trace: tracing slows a test enough to hide races, so
+the first attempt runs at full speed.
 
 ## Ports
 

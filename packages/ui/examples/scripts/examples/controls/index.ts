@@ -1,30 +1,70 @@
 // Import Internal Dependencies
-import { TEXT_EXAMPLE } from "./text.ts";
-import { NUMBER_EXAMPLE } from "./number.ts";
-import { CHECKBOX_EXAMPLE } from "./checkbox.ts";
-import { SLIDER_EXAMPLE } from "./slider.ts";
-import { RANGE_EXAMPLE } from "./range.ts";
-import { FLAGS_EXAMPLE } from "./flags.ts";
-import { SELECT_EXAMPLE } from "./select.ts";
-import { COLOR_EXAMPLE } from "./color.ts";
-import { COLOR_PICKER_EXAMPLE } from "./colorPicker.ts";
-import { BUTTON_GROUP_EXAMPLE } from "./buttonGroup.ts";
-import { SCENE_CONTROLS_EXAMPLE } from "./controls.ts";
-import { CHROME_EXAMPLE } from "./chrome.ts";
-import { TOOL_BUTTON_EXAMPLE } from "./toolButton.ts";
+import type { GalleryEntry } from "../../types.ts";
 
-export const CONTROLS_EXAMPLES = [
-  TEXT_EXAMPLE,
-  NUMBER_EXAMPLE,
-  CHECKBOX_EXAMPLE,
-  SLIDER_EXAMPLE,
-  RANGE_EXAMPLE,
-  FLAGS_EXAMPLE,
-  SELECT_EXAMPLE,
-  COLOR_EXAMPLE,
-  COLOR_PICKER_EXAMPLE,
-  BUTTON_GROUP_EXAMPLE,
-  SCENE_CONTROLS_EXAMPLE,
-  CHROME_EXAMPLE,
-  TOOL_BUTTON_EXAMPLE
+export const CONTROLS_EXAMPLES: readonly GalleryEntry[] = [
+  {
+    id: "controls/text",
+    title: "Text",
+    load: async() => (await import("./text.ts")).TEXT_EXAMPLE
+  },
+  {
+    id: "controls/number",
+    title: "Number",
+    load: async() => (await import("./number.ts")).NUMBER_EXAMPLE
+  },
+  {
+    id: "controls/checkbox",
+    title: "Checkbox",
+    load: async() => (await import("./checkbox.ts")).CHECKBOX_EXAMPLE
+  },
+  {
+    id: "controls/slider",
+    title: "Slider",
+    load: async() => (await import("./slider.ts")).SLIDER_EXAMPLE
+  },
+  {
+    id: "controls/range",
+    title: "Range",
+    load: async() => (await import("./range.ts")).RANGE_EXAMPLE
+  },
+  {
+    id: "controls/flags",
+    title: "Flags",
+    load: async() => (await import("./flags.ts")).FLAGS_EXAMPLE
+  },
+  {
+    id: "controls/select",
+    title: "Select",
+    load: async() => (await import("./select.ts")).SELECT_EXAMPLE
+  },
+  {
+    id: "controls/color",
+    title: "Color",
+    load: async() => (await import("./color.ts")).COLOR_EXAMPLE
+  },
+  {
+    id: "controls/color-picker",
+    title: "Color picker",
+    load: async() => (await import("./colorPicker.ts")).COLOR_PICKER_EXAMPLE
+  },
+  {
+    id: "controls/button-group",
+    title: "Button group",
+    load: async() => (await import("./buttonGroup.ts")).BUTTON_GROUP_EXAMPLE
+  },
+  {
+    id: "controls/scene-controls",
+    title: "Scene controls",
+    load: async() => (await import("./controls.ts")).SCENE_CONTROLS_EXAMPLE
+  },
+  {
+    id: "controls/chrome",
+    title: "Button, separator, row",
+    load: async() => (await import("./chrome.ts")).CHROME_EXAMPLE
+  },
+  {
+    id: "controls/tool-button",
+    title: "Tool button",
+    load: async() => (await import("./toolButton.ts")).TOOL_BUTTON_EXAMPLE
+  }
 ];

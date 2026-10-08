@@ -1,10 +1,9 @@
 // Import Internal Dependencies
+import "../../../../src/monitors/Monitor.ts";
 import type { GalleryExample } from "../../types.ts";
-import { formatCount } from "../../../../src/index.ts";
+import { formatCount } from "../../../../src/monitors/format.ts";
 
 export const MONITOR_EXAMPLE: GalleryExample = {
-  id: "monitors/monitor",
-  title: "Monitor",
   render(host) {
     const state = {
       fps: 60,

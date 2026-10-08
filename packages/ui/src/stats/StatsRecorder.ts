@@ -39,7 +39,7 @@ export type StatsListener = (
 
 interface MetricState {
   definition: MetricDefinition;
-  pending: number[];
+  pending: PendingWindow;
   current: number;
   history: number[];
   historyCount: number;
@@ -151,7 +151,7 @@ export class StatsRecorder {
 
     this.#metrics.set(definition.id, {
       definition: { ...definition },
-      pending: [],
+      pending: new PendingWindow(),
       current: 0,
       history: new Array<number>(this.#historySize),
       historyCount: 0,
@@ -211,10 +211,14 @@ export class StatsRecorder {
       return state.history.slice(0, state.historyCount);
     }
 
-    return [
-      ...state.history.slice(state.historyIndex),
-      ...state.history.slice(0, state.historyIndex)
-    ];
+    const ordered: number[] = [];
+    for (let offset = 0; offset < this.#historySize; offset++) {
+      ordered.push(
+        state.history[(state.historyIndex + offset) % this.#historySize]
+      );
+    }
+
+    return ordered;
   }
 
   subscribe(
@@ -231,18 +235,16 @@ export class StatsRecorder {
     for (const state of this.#metrics.values()) {
       const sample = state.definition.sample?.();
       if (sample !== undefined && Number.isFinite(sample)) {
-        state.pending.push(sample);
+        state.pending.add(sample);
       }
 
-      if (state.pending.length === 0) {
+      if (state.pending.empty) {
         continue;
       }
 
-      state.current = aggregate(
-        state.pending,
+      state.current = state.pending.drain(
         state.definition.aggregate ?? "last"
       );
-      state.pending = [];
       state.history[state.historyIndex] = state.current;
       state.historyIndex = (state.historyIndex + 1) % this.#historySize;
       state.historyCount = Math.min(
@@ -263,7 +265,51 @@ export class StatsRecorder {
     id: string,
     value: number
   ): void {
-    this.#metrics.get(id)?.pending.push(value);
+    this.#metrics.get(id)?.pending.add(value);
+  }
+}
+
+class PendingWindow {
+  #count = 0;
+  #sum = 0;
+  #max = -Infinity;
+  #last = 0;
+
+  get empty(): boolean {
+    return this.#count === 0;
+  }
+
+  add(
+    value: number
+  ): void {
+    this.#count++;
+    this.#sum += value;
+    this.#max = Math.max(this.#max, value);
+    this.#last = value;
+  }
+
+  drain(
+    mode: MetricAggregation
+  ): number {
+    const value = this.#reduce(mode);
+    this.#count = 0;
+    this.#sum = 0;
+    this.#max = -Infinity;
+
+    return value;
+  }
+
+  #reduce(
+    mode: MetricAggregation
+  ): number {
+    switch (mode) {
+      case "average":
+        return this.#sum / this.#count;
+      case "max":
+        return this.#max;
+      default:
+        return this.#last;
+    }
   }
 }
 
@@ -273,30 +319,6 @@ function release(
   for (const remove of removals) {
     remove();
   }
-}
-
-function aggregate(
-  values: readonly number[],
-  mode: MetricAggregation
-): number {
-  if (mode === "average") {
-    let sum = 0;
-    for (const value of values) {
-      sum += value;
-    }
-
-    return sum / values.length;
-  }
-  if (mode === "max") {
-    let max = -Infinity;
-    for (const value of values) {
-      max = Math.max(max, value);
-    }
-
-    return max;
-  }
-
-  return values[values.length - 1];
 }
 
 function positiveInteger(

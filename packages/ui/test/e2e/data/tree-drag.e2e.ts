@@ -1,17 +1,16 @@
 // Import Third-party Dependencies
 import {
-  test,
-  expect,
-  type Page
-} from "@playwright/test";
-import {
   boxOf,
   centerOf,
   hold
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { openExample } from "../support/gallery.ts";
+import {
+  test,
+  expect,
+  type Page
+} from "../fixtures.ts";
 import {
   TREE_SELECTOR,
   rowOf
@@ -49,8 +48,8 @@ async function cancelDrag(
 }
 
 test.describe("Tree", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "data/tree");
+  test.use({
+    example: "data/tree"
   });
 
   test("reparents with the keyboard move state", async({ page }) => {

@@ -10,6 +10,7 @@ const kZoneClass = "jolly-drag-zone";
 const kArmedClass = "jolly-drag-zone-armed";
 const kTopLayer = "2147483646";
 const kZoneFade = 120;
+const kReducedMotion = "(prefers-reduced-motion: reduce)";
 
 const kIdleZone = {
   background: "var(--jolly-dock-zone-bg, rgb(47 111 216 / 0.06))"
@@ -95,6 +96,7 @@ function labelChip(
 export function createDragOverlay(
   options: DragOverlayOptions
 ): DragOverlay {
+  const zoneFade = window.matchMedia(kReducedMotion).matches ? 0 : kZoneFade;
   const root = document.createElement("div");
   root.className = kOverlayClass;
   Object.assign(root.style, {
@@ -165,13 +167,15 @@ export function createDragOverlay(
           width: `${zone.width}px`,
           height: `${zone.height}px`,
           transition:
-            `background-color ${kZoneFade}ms var(--jolly-easing, ease)`,
+            `background-color ${zoneFade}ms var(--jolly-easing, ease)`,
           ...kIdleZone
         });
-        band.animate(
-          [{ opacity: 0 }, { opacity: 1 }],
-          { duration: kZoneFade, easing: "ease-out" }
-        );
+        if (zoneFade > 0) {
+          band.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            { duration: zoneFade, easing: "ease-out" }
+          );
+        }
         bands.push(band);
         rects.push(zone);
         root.prepend(band);

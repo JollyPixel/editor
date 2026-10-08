@@ -25,7 +25,8 @@ import {
 } from "./model.ts";
 import {
   TreeRowView,
-  TreeRowViewList
+  TreeRowViewList,
+  type TreeRowState
 } from "./TreeRowView.ts";
 import {
   idleTreeInteraction,
@@ -134,6 +135,22 @@ export class Tree<TData = unknown> extends LitElement {
   #drag: TreeDragController<TData>;
   #selection: TreeSelectionController<TData>;
   #rowViewList = new TreeRowViewList();
+  #rowState: TreeRowState = {
+    position: 1,
+    setSize: 1,
+    expanded: false,
+    selected: false,
+    active: false,
+    drop: null,
+    dropIndent: "",
+    dragSource: false,
+    moveCursor: false,
+    renaming: false,
+    renameError: null,
+    hasBranches: false,
+    swatchPosition: "end",
+    reorderable: false
+  };
   #activeRowId: string | null = null;
   #focus: TreeFocusController;
   #rename: TreeRenameController;
@@ -208,8 +225,12 @@ export class Tree<TData = unknown> extends LitElement {
   protected override willUpdate(
     changed: Map<string, unknown>
   ): void {
-    this.#expandedIds = new Set(this.expanded);
-    this.#selectedIds = new Set(this.selected);
+    if (changed.has("expanded")) {
+      this.#expandedIds = new Set(this.expanded);
+    }
+    if (changed.has("selected")) {
+      this.#selectedIds = new Set(this.selected);
+    }
     if (changed.has("nodes") || changed.has("expanded")) {
       this.#snapshot = new TreeSnapshot(
         this.nodes,
@@ -267,6 +288,11 @@ export class Tree<TData = unknown> extends LitElement {
       null;
     this.#activeRowId = activeId;
 
+    const state = this.#rowState;
+    state.hasBranches = this.#snapshot.hasBranches;
+    state.swatchPosition = this.swatchPosition;
+    state.reorderable = this.reorderable;
+
     return this.#rowViewList.update(rows, (row) => {
       const { id } = row.node;
       const placement = this.#snapshot.placement(id);
@@ -274,23 +300,19 @@ export class Tree<TData = unknown> extends LitElement {
         id,
         TreeRowView.indentOf(row.depth)
       );
+      state.position = placement?.position ?? 1;
+      state.setSize = placement?.size ?? 1;
+      state.expanded = this.#expandedIds.has(id);
+      state.selected = this.#selectedIds.has(id);
+      state.active = id === activeId;
+      state.drop = drop;
+      state.dropIndent = dropIndent;
+      state.dragSource = this.#drag.isDragSource(id);
+      state.moveCursor = this.#drag.isMoveCursor(id);
+      state.renaming = id === renaming?.id;
+      state.renameError = id === renaming?.id ? renaming.error : null;
 
-      return {
-        position: placement?.position ?? 1,
-        setSize: placement?.size ?? 1,
-        expanded: this.#expandedIds.has(id),
-        selected: this.#selectedIds.has(id),
-        active: id === activeId,
-        drop,
-        dropIndent,
-        dragSource: this.#drag.isDragSource(id),
-        moveCursor: this.#drag.isMoveCursor(id),
-        renaming: id === renaming?.id,
-        renameError: id === renaming?.id ? renaming.error : null,
-        hasBranches: this.#snapshot.hasBranches,
-        swatchPosition: this.swatchPosition,
-        reorderable: this.reorderable
-      };
+      return state;
     });
   }
 

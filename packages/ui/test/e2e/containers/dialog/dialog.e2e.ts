@@ -1,15 +1,14 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   test,
   expect
-} from "@playwright/test";
-
-// Import Internal Dependencies
+} from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
 
 test.describe("Dialog", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "containers/dialog", { theme: "dark" });
+  test.use({
+    example: "containers/dialog",
+    exampleOptions: { theme: "dark" }
   });
 
   test("native Escape dismisses a declarative themed dialog", async({ page }) => {
@@ -154,6 +153,7 @@ test.describe("Dialog", () => {
 
   test("a helper dialog stays mounted until its exit transition ends", async({ page }) => {
     const confirm = page.locator("body > jolly-dialog");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
 
     await page.locator("[data-action=confirm-helper]").click();
     await expect(confirm.locator("dialog")).toHaveAttribute("open");
@@ -189,8 +189,8 @@ test("reduced motion opens a dialog without transitions", async({ page }) => {
 });
 
 test.describe("Input layers", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "scenarios/dialog-escape");
+  test.use({
+    example: "scenarios/dialog-escape"
   });
 
   test("an open dialog claims keys from document listeners", async({ page }) => {
@@ -226,8 +226,9 @@ test.describe("Input layers", () => {
 });
 
 test.describe("Dialog header", () => {
-  test.beforeEach(async({ page }) => {
-    await openExample(page, "containers/dialog", { theme: "dark" });
+  test.use({
+    example: "containers/dialog",
+    exampleOptions: { theme: "dark" }
   });
 
   test("a danger intent draws its icon and raises an alert dialog", async({ page }) => {

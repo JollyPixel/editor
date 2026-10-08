@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { Checkbox } from "../../../../src/index.ts";
+import { Checkbox } from "../../../../src/controls/Checkbox.ts";
 
 export const CHECKBOX_EXAMPLE: GalleryExample = {
-  id: "controls/checkbox",
-  title: "Checkbox",
   render(host) {
     return renderStateMatrix<Checkbox>(host, {
       colored: true,

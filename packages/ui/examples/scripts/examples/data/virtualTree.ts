@@ -1,8 +1,7 @@
 // Import Internal Dependencies
-import type {
-  Tree,
-  TreeNode
-} from "../../../../src/index.ts";
+import "../../../../src/data/tree/Tree.ts";
+import type { Tree } from "../../../../src/data/tree/Tree.ts";
+import type { TreeNode } from "../../../../src/data/tree/contract.ts";
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
@@ -84,8 +83,6 @@ function buildTree(): Tree {
 }
 
 export const VIRTUAL_TREE_EXAMPLE: GalleryExample = {
-  id: "data/virtual-tree",
-  title: "Virtual tree",
   render(host) {
     const tree = buildTree();
     tree.className = "tree-demo virtual-tree-demo";

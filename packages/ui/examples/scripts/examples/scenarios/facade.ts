@@ -1,13 +1,11 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
-import { Pane } from "../../../../src/index.ts";
+import { Pane } from "../shared/facadePane.ts";
 
 // CONSTANTS
 const kStorageKey = "gallery-example:facade";
 
 export const FACADE_EXAMPLE: GalleryExample<"hidden"> = {
-  id: "scenarios/facade",
-  title: "Facade",
   options: [
     {
       key: "hidden",

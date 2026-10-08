@@ -1,10 +1,11 @@
 // Import Internal Dependencies
+import "../../../../src/containers/rail/Rail.ts";
+import "../../../../src/controls/Slider.ts";
+import "../../../../src/controls/ToolButton.ts";
 import { createSimpleExample } from "../shared/example.ts";
-import { onFieldChange } from "../../../../src/index.ts";
+import { onFieldChange } from "../../../../src/field/events.ts";
 
 export const TOOL_BUTTON_EXAMPLE = createSimpleExample(
-  "controls/tool-button",
-  "Tool button",
   () => {
     const root = document.createElement("div");
     root.className = "chrome-demo";
