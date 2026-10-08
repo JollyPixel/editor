@@ -23,6 +23,11 @@ export const CONTROLS_EXAMPLES: readonly GalleryEntry[] = [
     load: async() => (await import("./slider.ts")).SLIDER_EXAMPLE
   },
   {
+    id: "controls/spin-slider",
+    title: "Spin slider",
+    load: async() => (await import("./spinSlider.ts")).SPIN_SLIDER_EXAMPLE
+  },
+  {
     id: "controls/range",
     title: "Range",
     load: async() => (await import("./range.ts")).RANGE_EXAMPLE

@@ -17,6 +17,7 @@ below documents the properties and behavior owned by one component.
 - [`jolly-select`](./select.md), exported as `Select`
 - [`jolly-separator`](./separator.md), exported as `Separator`
 - [`jolly-slider`](./slider.md), exported as `Slider`
+- [`jolly-spin-slider`](./spin-slider.md), exported as `SpinSlider`
 - [`jolly-text`](./text.md), exported as `Text`
 - [`jolly-tool-button`](./tool-button.md), exported as `ToolButton`
 

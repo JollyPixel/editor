@@ -7,6 +7,7 @@ Use field controls for editable values:
 | String | [`jolly-text`](../api/controls/text.md) |
 | Number without a fixed range | [`jolly-number`](../api/controls/number.md) |
 | Number with a fixed range | [`jolly-slider`](../api/controls/slider.md) |
+| Number with a fixed range, in a narrow column | [`jolly-spin-slider`](../api/controls/spin-slider.md) |
 | Numeric interval | [`jolly-range`](../api/controls/range.md) |
 | Boolean | [`jolly-checkbox`](../api/controls/checkbox.md) |
 | One choice | [`jolly-select`](../api/controls/select.md) |

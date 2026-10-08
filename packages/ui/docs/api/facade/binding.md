@@ -11,7 +11,7 @@ interface BindingOptions<TValue> {
   max?: number;
   step?: number;
   options?: Record<string, TValue>;
-  view?: "buttons" | "flags" | "point2d" | "quaternion";
+  view?: "buttons" | "flags" | "point2d" | "quaternion" | "spin";
   layout?: "segmented" | "grid";
   columns?: number;
   alpha?: boolean;
@@ -45,6 +45,7 @@ The initial property value and the options determine the element:
 | `options` with `view: "flags"` and a number | `jolly-flags` |
 | `options` is present | `jolly-select` |
 | Boolean | `jolly-checkbox` |
+| Number with both `min` and `max`, and `view: "spin"` | `jolly-spin-slider` |
 | Number with both `min` and `max` | `jolly-slider` |
 | Other number | `jolly-number` |
 | Six-digit or eight-digit hex string | `jolly-color` |
@@ -92,6 +93,10 @@ folder.addBinding(layer, "mask", {
 
 Option entries that are not numbers are dropped, and `view: "flags"` on a
 value that is not a number falls back to `jolly-select`.
+
+`view: "spin"` swaps `jolly-slider` for the narrower `jolly-spin-slider`, which
+draws the range as a bar under the value. A number without both bounds
+ignores it and stays a `jolly-number`.
 
 Vector shapes are tested widest first, so `{ x, y, z }` is a three-axis value
 rather than the two-axis one it also satisfies. `"point2d"` turns a two-axis

@@ -57,7 +57,9 @@ export class NumberField extends JollyField<number> {
     editable: () => this.editable,
     onInput: (value) => this.emitInput(value),
     onChange: (value) => this.emitChange(value),
-    scrubTarget: () => this.renderRoot.querySelector(".scrub-handle")
+    scrub: {
+      target: () => this.renderRoot.querySelector(".scrub-handle")
+    }
   });
 
   constructor() {

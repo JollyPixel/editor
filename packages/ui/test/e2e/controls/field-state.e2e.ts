@@ -23,7 +23,13 @@ const kFields = [
   { id: "controls/text", tag: "jolly-text", colored: false },
   { id: "controls/number", tag: "jolly-number", colored: false },
   { id: "controls/checkbox", tag: "jolly-checkbox", colored: true },
-  { id: "controls/slider", tag: "jolly-slider", colored: true },
+  { id: "controls/slider", tag: "jolly-slider", colored: true, track: ".lane" },
+  {
+    id: "controls/spin-slider",
+    tag: "jolly-spin-slider",
+    colored: true,
+    track: ".bar"
+  },
   { id: "controls/range", tag: "jolly-range", colored: false },
   { id: "controls/flags", tag: "jolly-flags", colored: true },
   { id: "controls/color", tag: "jolly-color", colored: false }
@@ -35,11 +41,11 @@ const kInputlessFields = [
 
 function paintOf(
   field: Locator,
-  tag: string
+  track: string | undefined
 ): Promise<string> {
-  return tag === "jolly-slider" ?
-    styleOf(field.locator(".lane"), "background-image", "::before") :
-    styleOf(control(field), "accent-color");
+  return track === undefined ?
+    styleOf(control(field), "accent-color") :
+    styleOf(field.locator(track), "background-image", "::before");
 }
 
 async function expectLabelColumn(
@@ -105,7 +111,7 @@ async function expectPeerChips(
 }
 
 test.describe("controls: state matrix", () => {
-  for (const { id, tag, colored } of kFields) {
+  for (const { id, tag, colored, track } of kFields) {
     test(`${tag} renders every matrix state`, async({ page }) => {
       await openExample(page, id);
 
@@ -170,8 +176,8 @@ test.describe("controls: state matrix", () => {
           await expect(neutral).not.toHaveAttribute("colored", "");
           await expect(accented).toHaveJSProperty("colored", true);
           await expect(accented).toHaveAttribute("colored", "");
-          expect(await paintOf(neutral, tag))
-            .not.toBe(await paintOf(accented, tag));
+          expect(await paintOf(neutral, track))
+            .not.toBe(await paintOf(accented, track));
         });
       }
 

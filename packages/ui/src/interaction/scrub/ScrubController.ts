@@ -32,6 +32,28 @@ export interface ScrubOptions {
   start(): number | undefined;
   min?(): number;
   max?(): number;
+  /**
+   * Pointer travel per step, or `undefined` for the default of 4.
+   */
+  pixelsPerStep?(): number | undefined;
+  /**
+   * Travel before a press becomes a drag. @default 0
+   */
+  threshold?: number;
+  /**
+   * Draws the dashed guide while dragging. @default true
+   */
+  guide?: boolean;
+  /**
+   * Value the press jumps to, or `undefined` to scrub from the current value.
+   */
+  jump?(
+    event: PointerEvent
+  ): number | undefined;
+  /**
+   * Called when a press is released before it crosses a non-zero `threshold`.
+   */
+  onClick?(): void;
   onInput(
     value: number
   ): void;
@@ -47,8 +69,10 @@ export class ScrubController implements ReactiveController {
   #host: ReactiveControllerHost & HTMLElement;
   #options: ScrubOptions;
   #session: PointerDragSessionHandle | null = null;
+  #originValue = 0;
   #startValue = 0;
   #startX = 0;
+  #pixelsPerStep: number | undefined;
   #currentValue = 0;
   #precisionStep: number | null = null;
   #precision = 0;
@@ -101,9 +125,12 @@ export class ScrubController implements ReactiveController {
       return;
     }
 
-    this.#startValue = start;
+    const jumped = this.#options.jump?.(event);
+    this.#originValue = start;
+    this.#startValue = jumped ?? start;
     this.#startX = event.clientX;
-    this.#currentValue = start;
+    this.#currentValue = this.#startValue;
+    this.#pixelsPerStep = this.#options.pixelsPerStep?.();
     this.#precisionStep = null;
     ensureDocumentStyles("jolly-drag-styles", `
       html.jolly-scrub-dragging,
@@ -112,24 +139,19 @@ export class ScrubController implements ReactiveController {
         user-select: none !important;
       }
     `);
-    const { top, height } = target.getBoundingClientRect();
-    this.#guide = createDragGuide(
-      top + (height / 2),
-      event.clientX,
-      resolveThemeToken(
-        this.#host as HTMLElement,
-        "--jolly-focus-ring",
-        String(kFallback.focusRing)
-      )
-    );
 
     this.#session = startPointerDragSession({
       element: target,
       event,
+      threshold: jumped === undefined ? this.#options.threshold : 0,
       documentClass: kDraggingClass,
+      onStart: () => this.#showGuide(target),
       onMove: this.#onPointerMove,
       onFinish: this.#onPointerFinish
     });
+    if (jumped !== undefined) {
+      this.#options.onInput(jumped);
+    }
 
     // Prevent native text selection while dragging.
     event.preventDefault();
@@ -147,21 +169,47 @@ export class ScrubController implements ReactiveController {
 
   #onPointerFinish = (
     result: "commit" | "cancel",
-    _started: boolean,
+    started: boolean,
     event: PointerEvent | null
   ): void => {
-    if (result === "commit" && event !== null) {
-      this.#currentValue = this.#valueAt(event);
+    this.#end();
+    if (!started) {
+      if (result === "commit") {
+        this.#options.onClick?.();
+      }
+
+      return;
     }
 
-    this.#end();
     if (result === "commit") {
+      if (event !== null) {
+        this.#currentValue = this.#valueAt(event);
+      }
       this.#options.onCommit(this.#currentValue);
     }
     else {
-      this.#options.onInput(this.#startValue);
+      this.#options.onInput(this.#originValue);
     }
   };
+
+  #showGuide(
+    target: HTMLElement
+  ): void {
+    if (this.#options.guide === false) {
+      return;
+    }
+
+    const { top, height } = target.getBoundingClientRect();
+    this.#guide = createDragGuide(
+      top + (height / 2),
+      this.#startX,
+      resolveThemeToken(
+        this.#host as HTMLElement,
+        "--jolly-focus-ring",
+        String(kFallback.focusRing)
+      )
+    );
+  }
 
   #valueAt(
     event: PointerEvent
@@ -172,6 +220,7 @@ export class ScrubController implements ReactiveController {
       start: this.#startValue,
       deltaPx: event.clientX - this.#startX,
       step,
+      pixelsPerStep: this.#pixelsPerStep,
       multiplier: multiplierFor(event),
       min: this.#options.min?.(),
       max: this.#options.max?.(),

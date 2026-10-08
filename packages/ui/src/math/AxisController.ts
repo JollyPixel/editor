@@ -72,9 +72,11 @@ export class AxisController {
       editable: () => options.editable(),
       onInput: (value) => options.onInput(value),
       onChange: (value) => options.onChange(value),
-      scrubTarget: () => host.renderRoot.querySelector(
-        `.axis-box[data-axis="${options.key}"] .scrub-handle`
-      )
+      scrub: {
+        target: () => host.renderRoot.querySelector(
+          `.axis-box[data-axis="${options.key}"] .scrub-handle`
+        )
+      }
     });
   }
 
