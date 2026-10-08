@@ -20,7 +20,9 @@ export interface DeleteContext {
   heading: string;
   hasChildren: boolean;
   childrenLabel?: string;
-  /** What the deletion affects beyond the deleted row. */
+  /**
+   * What the deletion affects beyond the deleted row.
+   */
   message?: string;
 }
 

@@ -66,7 +66,9 @@ export class AssetCreationPlanner {
     }
 
     if (input.kind !== undefined && !this.#kinds.has(input.kind)) {
-      return Err(new UnknownAssetKindError(input.kind));
+      const error = new UnknownAssetKindError(input.kind);
+
+      return Err(error);
     }
 
     const requested = new AssetSourcePath(writable.val);
@@ -167,7 +169,9 @@ export class AssetCreationPlanner {
     const companions: PlannedCompanion[] = [];
     for (const companion of handler.companions ?? []) {
       if (!this.#kinds.has(companion.kind)) {
-        return Err(new UnknownAssetKindError(companion.kind));
+        const error = new UnknownAssetKindError(companion.kind);
+
+        return Err(error);
       }
 
       const companionHandler = this.#kinds.get(companion.kind);
@@ -176,10 +180,12 @@ export class AssetCreationPlanner {
         companionExtension === undefined ||
         extensions.has(companionExtension)
       ) {
-        return Err(new TypeError(
+        const error = new TypeError(
           `Asset kind "${handler.kind}" lists companion kind ` +
           `"${companion.kind}" without a distinct extension.`
-        ));
+        );
+
+        return Err(error);
       }
 
       extensions.add(companionExtension);

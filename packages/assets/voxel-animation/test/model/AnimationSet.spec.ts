@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { AnimationSet } from "#src/model/AnimationSet.ts";
-import { InvalidAnimationSetError } from "#src/model/InvalidAnimationSetError.ts";
+import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
 import {
   imageOf,
   restoreImages

@@ -74,7 +74,9 @@ export interface TransformSlabHandleOptions {
   shaftLength?: number;
   shaftRadius?: number;
   size?: number;
-  /** Defaults to half of `size`. */
+  /**
+   * Defaults to half of `size`.
+   */
   depth?: number;
   radialSegments?: number;
 }

@@ -25,7 +25,7 @@ import {
   voxelModelAssetKind,
   VoxelModelState
 } from "#src/asset/voxelModelAssetKind.ts";
-import { InvalidModelTreeError } from "#src/model/InvalidModelTreeError.ts";
+import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
 import {
   blockAdded,
   blockNode,

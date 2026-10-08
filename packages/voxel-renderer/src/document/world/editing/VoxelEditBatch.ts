@@ -197,6 +197,7 @@ export class VoxelEditBatch {
 
       const flush: VoxelEditBatchFlush = {
         layer,
+        // oxlint-disable-next-line unicorn/no-new-array
         cells: new Array(pending * VOXEL_PATCH_STRIDE),
         partners: [],
         changes: [],

@@ -107,7 +107,9 @@ export class AssetKindRegistry {
     content: Uint8Array
   ): Result<DecodedAsset, Error> {
     if (!this.has(kind)) {
-      return Err(new UnknownAssetKindError(kind));
+      const error = new UnknownAssetKindError(kind);
+
+      return Err(error);
     }
 
     const handler = this.get(kind);

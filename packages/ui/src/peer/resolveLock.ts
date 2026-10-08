@@ -6,7 +6,9 @@ export interface ResolvedLock {
    * Remote holder, or null while the local peer owns the path.
    */
   lockedBy: CollaboratorPresence | null;
-  /** Everyone advertising the path, local peer included, in a stable order. */
+  /**
+   * Everyone advertising the path, local peer included, in a stable order.
+   */
   peers: CollaboratorPresence[];
 }
 

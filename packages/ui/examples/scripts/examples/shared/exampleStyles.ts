@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
-/** Styles for content rendered inside the gallery, distinct from its navigation shell. */
+/**
+ * Styles for content rendered inside the gallery, distinct from its navigation shell.
+ */
 export const exampleStyles = css`
   main:has(.editor-shell) {
     overflow: hidden;

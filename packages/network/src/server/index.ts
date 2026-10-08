@@ -1,8 +1,6 @@
 export * from "./Server.ts";
-export {
-  UngatedExtensionError,
-  UnknownDefaultRoleError
-} from "./errors.ts";
+export * from "./errors/UngatedExtensionError.ts";
+export * from "./errors/UnknownDefaultRoleError.ts";
 export * from "./extension/Extension.ts";
 export * from "./extension/PresenceOnlyExtension.ts";
 export * from "./rights/index.ts";

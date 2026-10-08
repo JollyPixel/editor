@@ -42,7 +42,7 @@ describe("SelectionPresence", () => {
     const invalid = [
       { phase: "selected", rect, mask: [true] },
       { phase: "selected", rect, mask: [false, false] },
-      { phase: "selected", rect, mask: Object.assign(new Array(2), { 0: true }) },
+      { phase: "selected", rect, mask: Object.assign([], { 0: true, length: 2 }) },
       { phase: "selected", rect: { ...rect, x: 0.5 }, mask: [true, true] },
       { phase: "selected", rect: { ...rect, width: 0 }, mask: [] },
       {
@@ -50,7 +50,7 @@ describe("SelectionPresence", () => {
         sourceRect: rect,
         liveRect: rect,
         mask: [true, true],
-        pixels: new Array(2),
+        pixels: Object.assign([], { length: 2 }),
         eraseColor: { r: 0, g: 0, b: 0, a: 0 },
         blankSource: false
       }

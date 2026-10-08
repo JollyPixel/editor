@@ -97,7 +97,7 @@ function buildResolveContexts(
   count: number,
   rng: () => number
 ): network.ConflictContext[] {
-  const contexts: network.ConflictContext[] = new Array(count);
+  const contexts: network.ConflictContext[] = [];
 
   for (let i = 0; i < count; i++) {
     const incoming: network.NetworkCommandHeader = {
@@ -113,7 +113,7 @@ function buildResolveContexts(
         timestamp: Math.floor(rng() * 1000)
       };
 
-    contexts[i] = { incoming, existing };
+    contexts.push({ incoming, existing });
   }
 
   return contexts;

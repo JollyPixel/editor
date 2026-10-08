@@ -10,7 +10,7 @@ import type {
   AnimationSetLinkJSON,
   VoxelModelCommand
 } from "../network/types.ts";
-import { InvalidModelTreeError } from "./InvalidModelTreeError.ts";
+import { InvalidModelTreeError } from "./errors/InvalidModelTreeError.ts";
 
 export type AnimationLinkCommand = Extract<
   VoxelModelCommand,

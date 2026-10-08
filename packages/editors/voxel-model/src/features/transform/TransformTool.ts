@@ -17,13 +17,19 @@ import {
 } from "./gizmo/gizmoTools.ts";
 
 export interface TransformTarget {
-  /** In toolbar order. */
+  /**
+   * In toolbar order.
+   */
   readonly modes: readonly TransformMode[];
   begin?(block: ModelBlock): void;
   preview?(block: ModelBlock): void;
-  /** A gizmo drag let go of `block`. */
+  /**
+   * A gizmo drag let go of `block`.
+   */
   end(block: ModelBlock): void;
-  /** A typed value changed `block`. */
+  /**
+   * A typed value changed `block`.
+   */
   commit(block: ModelBlock): void;
 }
 

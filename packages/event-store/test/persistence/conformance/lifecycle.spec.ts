@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
-import { EventLogClosedError } from "#src/persistence/EventLog.ts";
+import { EventLogClosedError } from "#src/persistence/errors/EventLogClosedError.ts";
 import {
   append,
   backends

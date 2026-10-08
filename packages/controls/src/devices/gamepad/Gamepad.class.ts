@@ -16,10 +16,14 @@ import { GamepadVibration } from "./GamepadVibration.class.ts";
 import { EdgeBuffer } from "../EdgeBuffer.ts";
 
 // CONSTANTS
-/** Deflection past which a stick axis counts as "pressed" in a direction. */
+/**
+ * Deflection past which a stick axis counts as "pressed" in a direction.
+ */
 const kAxisPressedValue = 0.5;
 const kStickCount = 2;
-/** Edge flags per axis, packed as `axisIndex * kAxisEdgeCount + edge`. */
+/**
+ * Edge flags per axis, packed as `axisIndex * kAxisEdgeCount + edge`.
+ */
 const kAxisEdgeCount = 6;
 
 export type GamepadIndex = 0 | 1 | 2 | 3;
@@ -133,7 +137,9 @@ interface GamepadEdges {
   pressed: EdgeBuffer;
   released: EdgeBuffer;
   axes: EdgeBuffer;
-  /** Non-zero while any `wasJust*` flag of this gamepad is set. */
+  /**
+   * Non-zero while any `wasJust*` flag of this gamepad is set.
+   */
   published: number;
 }
 
@@ -164,11 +170,15 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
   #wasActive = false;
   #idlePollCountdown = 0;
-  /** One bit per slot that returned a gamepad on the latest poll. */
+  /**
+   * One bit per slot that returned a gamepad on the latest poll.
+   */
   #presentGamepads = 0;
   #edges: GamepadEdges[] = [];
 
-  /** Reused by `#updateAxes` to avoid per-stick allocations. */
+  /**
+   * Reused by `#updateAxes` to avoid per-stick allocations.
+   */
   #stickScratch: [GamepadAxisState, GamepadAxisState] = [
     null as unknown as GamepadAxisState,
     null as unknown as GamepadAxisState

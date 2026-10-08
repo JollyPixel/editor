@@ -3,7 +3,9 @@ import { Emitter } from "@openally/emitt";
 
 export interface AnimationFocus {
   setId: string | null;
-  /** Never set without `setId`. */
+  /**
+   * Never set without `setId`.
+   */
   clipId: string | null;
 }
 

@@ -37,7 +37,9 @@ export abstract class Scene<
   readonly name: string;
   readonly assets: readonly AssetReference<unknown>[];
 
-  /** Set by SceneManager when the scene is activated. */
+  /**
+   * Set by SceneManager when the scene is activated.
+   */
   world!: World<any, TContext>;
 
   #logger: Logger | undefined;

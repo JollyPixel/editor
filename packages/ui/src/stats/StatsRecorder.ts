@@ -153,7 +153,7 @@ export class StatsRecorder {
       definition: { ...definition },
       pending: new PendingWindow(),
       current: 0,
-      history: new Array<number>(this.#historySize),
+      history: Array.from({ length: this.#historySize }, () => 0),
       historyCount: 0,
       historyIndex: 0
     });

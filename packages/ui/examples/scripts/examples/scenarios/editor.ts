@@ -123,7 +123,9 @@ function bind<
   return element;
 }
 
-/** Creates a pane whose fields share one label column. */
+/**
+ * Creates a pane whose fields share one label column.
+ */
 function labelledPane(
   key: string,
   title: string

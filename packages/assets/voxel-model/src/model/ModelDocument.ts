@@ -38,7 +38,9 @@ export interface AddFolderOptions {
   id?: string;
   name: string;
   parentId?: string | null;
-  /** The sibling to land before; last when omitted. */
+  /**
+   * The sibling to land before; last when omitted.
+   */
   beforeId?: string;
 }
 
@@ -52,7 +54,9 @@ export interface AddMaterialFolderOptions {
   id?: string;
   name: string;
   parentId?: string | null;
-  /** The sibling to land before; last when omitted. */
+  /**
+   * The sibling to land before; last when omitted.
+   */
   beforeId?: string;
 }
 
@@ -61,13 +65,17 @@ export interface AddMaterialOptions extends AddMaterialFolderOptions {
 }
 
 export interface RemoveMaterialOptions {
-  /** Removes only the folder and lifts its entries into its place. */
+  /**
+   * Removes only the folder and lifts its entries into its place.
+   */
   keepContents?: boolean;
 }
 
 export interface MoveOptions {
   transforms?: Iterable<NodeTransformJSON>;
-  /** The sibling to land before; last when omitted. */
+  /**
+   * The sibling to land before; last when omitted.
+   */
   beforeId?: string;
 }
 

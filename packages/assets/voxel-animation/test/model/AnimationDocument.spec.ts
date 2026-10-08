@@ -7,7 +7,7 @@ import {
   AnimationDocument,
   type AnimationChange
 } from "#src/model/AnimationDocument.ts";
-import { InvalidAnimationSetError } from "#src/model/InvalidAnimationSetError.ts";
+import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
 import { inverseOf } from "#src/model/animationInverse.ts";
 import { TICKS_PER_SECOND } from "#src/model/ticks.ts";
 import { key } from "../helpers/clips.ts";

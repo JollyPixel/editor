@@ -10,13 +10,21 @@ export interface DropCandidate {
 }
 
 export interface ResolveDropIndexOptions {
-  /** Pointer position on the same axis as the candidates. */
+  /**
+   * Pointer position on the same axis as the candidates.
+   */
   position: number;
-  /** Children ordered by ascending `start`. */
+  /**
+   * Children ordered by ascending `start`.
+   */
   candidates: readonly DropCandidate[];
-  /** Index currently previewed, or `null` for an unbiased resolution. */
+  /**
+   * Index currently previewed, or `null` for an unbiased resolution.
+   */
   current?: number | null;
-  /** Pixels the pointer must clear past a midpoint to leave `current`. */
+  /**
+   * Pixels the pointer must clear past a midpoint to leave `current`.
+   */
   deadBand?: number;
 }
 

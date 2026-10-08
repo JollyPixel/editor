@@ -2,7 +2,7 @@ export * from "./animationBinding.ts";
 export * from "./blockNames.ts";
 export * from "./blockTransform.ts";
 export * from "./blockUv.ts";
-export * from "./InvalidModelTreeError.ts";
+export * from "./errors/InvalidModelTreeError.ts";
 export * from "./materialSurface.ts";
 export * from "./materialTransfer.ts";
 export * from "./ModelAnimationLinks.ts";

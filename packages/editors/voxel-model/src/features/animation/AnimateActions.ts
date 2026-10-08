@@ -47,7 +47,9 @@ export interface AnimateActionsOptions {
   workspace: AnimateActionsWorkspace;
   view: AnimateActionsView;
   expand(setId: string): void;
-  /** Why the last action failed, or `null` once one succeeds. */
+  /**
+   * Why the last action failed, or `null` once one succeeds.
+   */
   report(error: string | null): void;
 }
 

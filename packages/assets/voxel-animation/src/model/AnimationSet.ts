@@ -15,7 +15,7 @@ import {
   withoutTrack,
   withTrackPath
 } from "./clipTracks.ts";
-import { InvalidAnimationSetError } from "./InvalidAnimationSetError.ts";
+import { InvalidAnimationSetError } from "./errors/InvalidAnimationSetError.ts";
 import {
   freeName,
   nameKey,

@@ -13,7 +13,9 @@ import {
 export type NodeKind = "Block" | "Folder";
 
 export interface AddNodeOptions {
-  /** Adds inside this row through its menu instead of the header button. */
+  /**
+   * Adds inside this row through its menu instead of the header button.
+   */
   under?: string;
 }
 

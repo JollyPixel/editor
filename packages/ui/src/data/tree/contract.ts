@@ -13,12 +13,16 @@ export interface TreeBadge {
   title?: string;
 }
 
-/** Where a row draws its swatch: before the label, or after the detail. */
+/**
+ * Where a row draws its swatch: before the label, or after the detail.
+ */
 export type TreeSwatchPosition = "start" | "end";
 
 export interface TreeSwatch {
   title: string;
-  /** Any CSS colour; empty when omitted. */
+  /**
+   * Any CSS colour; empty when omitted.
+   */
   color?: string;
   ring?: string;
 }
@@ -29,10 +33,14 @@ export interface TreeNode<
   id: string;
   label: string;
   children?: TreeNode<TData>[];
-  /** `false` keeps the children shown, with no expand toggle. */
+  /**
+   * `false` keeps the children shown, with no expand toggle.
+   */
   collapsible?: boolean;
   icon?: IconName;
-  /** Drawn in place of `icon`, for a row that stands for a person. */
+  /**
+   * Drawn in place of `icon`, for a row that stands for a person.
+   */
   avatar?: PeerAvatar;
   visible?: boolean;
   locked?: boolean;
@@ -40,7 +48,9 @@ export interface TreeNode<
   detail?: string;
   badges?: TreeBadge[];
   swatch?: TreeSwatch;
-  /** Flags the row as a problem; the text is its tooltip. */
+  /**
+   * Flags the row as a problem; the text is its tooltip.
+   */
   warning?: string;
   data?: TData;
 }
@@ -58,7 +68,9 @@ export interface JollyActivateSwatchDetail {
 }
 
 export interface JollyContextRequestDetail {
-  /** `null` for the tree itself. */
+  /**
+   * `null` for the tree itself.
+   */
   id: string | null;
   x: number;
   y: number;
@@ -84,7 +96,9 @@ export interface JollyRenameDetail {
   name: string;
 }
 
-/** Why `name` is refused for the row, or `null` to accept it. */
+/**
+ * Why `name` is refused for the row, or `null` to accept it.
+ */
 export type TreeRenameValidator = (
   detail: JollyRenameDetail
 ) => string | null;

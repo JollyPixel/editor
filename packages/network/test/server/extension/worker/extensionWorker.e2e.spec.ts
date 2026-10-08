@@ -20,7 +20,7 @@ const fixtureUrl = new URL("../../../fixtures/workerExtension.fixture.ts", impor
 /**
  * WorkerExtensionProxy captures context.room from the *first* dispatch and reuses
  * it for every later room.broadcast/client.send context-call (mirroring ServerRoom's
- * single stable #roomBroadcast) — so every call in a test must share one `room`,
+ * single stable #roomBroadcast), so every call in a test must share one `room`,
  * not get a fresh one, or later broadcasts would silently land on a discarded object.
  */
 function createSharedRoom(): { room: RoomBroadcast; sent: unknown[]; } {
@@ -65,7 +65,7 @@ describe("WorkerExtensionProxy — real worker_threads.Worker (e2e)", () => {
 
         /*
          * A worker-hosted extension can't hold onto the literal ClientHandle it was
-         * passed (it's synthesized locally in the worker) — its .send() is proxied
+         * passed (it's synthesized locally in the worker); its .send() is proxied
          * through the same stable roomBroadcast.sendTo every later out-of-band send
          * uses, exactly like ServerRoom's real #members.get(clientId)?.handle.send.
          */

@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
-/** Keeps checkboxes fixed-size and aligned to the requested logical edge. */
+/**
+ * Keeps checkboxes fixed-size and aligned to the requested logical edge.
+ */
 export const checkboxStyles = css`
   .value {
     justify-content: flex-start;

@@ -90,9 +90,13 @@ export interface AnimatePanelState {
   selectedId: string | null;
   set: LinkedAnimationSet | null;
   clip: FocusedClip | null;
-  /** The model has clips of its own, which can become a shared set. */
+  /**
+   * The model has clips of its own, which can become a shared set.
+   */
   canShare: boolean;
-  /** Why the last action failed, until the next one succeeds. */
+  /**
+   * Why the last action failed, until the next one succeeds.
+   */
   error: string | null;
 }
 

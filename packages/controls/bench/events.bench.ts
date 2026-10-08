@@ -16,7 +16,7 @@ import {
 
 /**
  * The DOM-facing path. `mousemove` can fire at 1000 Hz on a high-poll mouse, so
- * per-event work — layout reads, object literals, generators — is paid far more
+ * per-event work (layout reads, object literals, generators) is paid far more
  * often than per-frame work.
  *
  * Layout cost cannot be reproduced outside a browser, so

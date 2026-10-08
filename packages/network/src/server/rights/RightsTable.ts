@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { RightsGate } from "./RightsGate.ts";
 import { RightsPattern } from "./RightsPattern.ts";
-import { UnknownDefaultRoleError } from "../errors.ts";
+import { UnknownDefaultRoleError } from "../errors/UnknownDefaultRoleError.ts";
 import { DEFAULT_ROLE } from "../../protocol/constants.ts";
 import type { Right } from "../../protocol/types.ts";
 

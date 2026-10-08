@@ -22,7 +22,9 @@ import { MotionBuffer } from "./MotionBuffer.ts";
 import { isApplePlatform } from "../../platform.ts";
 
 // CONSTANTS
-/** Every index in `MouseEventButton`, hence every bit the state masks use. */
+/**
+ * Every index in `MouseEventButton`, hence every bit the state masks use.
+ */
 const kButtonCount = 7;
 const kScrollMask = (1 << 5) | (1 << 6);
 
@@ -108,7 +110,9 @@ export class Mouse extends Emitter<
   #canvas: CanvasAdapter;
   #documentAdapter: DocumentAdapter;
 
-  /** Live DOM state and the last published state, stored as bitsets. */
+  /**
+   * Live DOM state and the last published state, stored as bitsets.
+   */
   #downMask = 0;
   #prevMask = 0;
   #pressed = new MouseMask();
@@ -122,7 +126,9 @@ export class Mouse extends Emitter<
   };
   newPosition: { x: number; y: number; } | null = null;
 
-  /** Reused by `#onMouseMove`; `newPosition` points at this or is null. */
+  /**
+   * Reused by `#onMouseMove`; `newPosition` points at this or is null.
+   */
   #newPositionSlot = {
     x: 0,
     y: 0

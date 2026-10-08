@@ -80,6 +80,7 @@ function decodeMask(
   length: number
 ): boolean[] | undefined {
   if (value === "full") {
+    // oxlint-disable-next-line unicorn/no-new-array
     return new Array<boolean>(length).fill(true);
   }
   const bytes = decodeBytes(value, Math.ceil(length / 8));

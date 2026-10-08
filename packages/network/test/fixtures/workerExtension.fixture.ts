@@ -12,7 +12,7 @@ export interface FixtureWorkerData {
 }
 
 /**
- * Real Extension used by the worker_threads e2e test — exercises the actual
+ * Real Extension used by the worker_threads e2e test; it exercises the actual
  * dynamic import + construction + RPC round-trip a worker-mode registration
  * goes through, as opposed to WorkerExtensionProxy.spec.ts's FakeWorkerTransport.
  */

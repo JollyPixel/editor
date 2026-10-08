@@ -94,7 +94,7 @@ describe("encodePng", () => {
       },
       {
         name: "a fully transparent image",
-        source: image(3, 2, new Array(24).fill(0))
+        source: image(3, 2, Array.from({ length: 24 }, () => 0))
       },
       {
         name: "a 1x1 image",
@@ -141,7 +141,7 @@ describe("encodePng", () => {
     });
 
     it("declares an 8-bit, non-interlaced, truecolor-with-alpha image", async() => {
-      const bytes = await encodePng(image(3, 5, new Array(60).fill(0)));
+      const bytes = await encodePng(image(3, 5, Array.from({ length: 60 }, () => 0)));
       const [ihdr] = parseChunks(bytes);
 
       assert.equal(ihdr.data.length, 13);
@@ -155,7 +155,7 @@ describe("encodePng", () => {
     });
 
     it("gives every chunk a CRC over its type and payload", async() => {
-      const bytes = await encodePng(image(2, 2, new Array(16).fill(9)));
+      const bytes = await encodePng(image(2, 2, Array.from({ length: 16 }, () => 9)));
 
       for (const { type, data, crc } of parseChunks(bytes)) {
         assert.equal(
@@ -171,7 +171,7 @@ describe("encodePng", () => {
     const cases = [
       {
         name: "a data length that disagrees with width * height",
-        source: image(2, 2, new Array(8).fill(0)),
+        source: image(2, 2, Array.from({ length: 8 }, () => 0)),
         message: /expected 16 bytes/
       },
       {
@@ -181,7 +181,7 @@ describe("encodePng", () => {
       },
       {
         name: "non-integer dimensions",
-        source: image(1.5, 1, new Array(4).fill(0)),
+        source: image(1.5, 1, Array.from({ length: 4 }, () => 0)),
         message: /dimensions must be positive 32-bit integers/
       },
       {

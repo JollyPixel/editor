@@ -5,7 +5,9 @@ import { TICKS_PER_SECOND } from "@jolly-pixel/asset.voxel-animation/client";
 import type { AnimationSession } from "./AnimationSession.ts";
 
 export interface PlaybackClock {
-  /** Milliseconds. */
+  /**
+   * Milliseconds.
+   */
   now(): number;
   frame(callback: () => void): number;
   cancel(handle: number): void;

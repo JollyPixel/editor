@@ -28,7 +28,9 @@ export interface TimelineRow {
   blockId: string;
   name: string;
   path: string;
-  /** Rising, one per tick, whatever channel holds the key. */
+  /**
+   * Rising, one per tick, whatever channel holds the key.
+   */
   keys: TimelineKey[];
   selected: boolean;
 }

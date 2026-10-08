@@ -13,10 +13,8 @@ import type {
   ListAllOptions,
   ListFromCheckpointsOptions
 } from "../../EventStore.ts";
-import {
-  EventLogClosedError,
-  type EventLog
-} from "../EventLog.ts";
+import type { EventLog } from "../EventLog.ts";
+import { EventLogClosedError } from "../errors/EventLogClosedError.ts";
 import {
   materializeEvent,
   toJson

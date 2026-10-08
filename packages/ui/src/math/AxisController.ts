@@ -35,7 +35,9 @@ export interface AxisControllerOptions {
   step(): number;
   min(): number;
   max(): number;
-  /** `undefined` renders the mixed placeholder and blocks scrubbing. */
+  /**
+   * `undefined` renders the mixed placeholder and blocks scrubbing.
+   */
   value(): number | undefined;
   editable(): boolean;
   disabled(): boolean;

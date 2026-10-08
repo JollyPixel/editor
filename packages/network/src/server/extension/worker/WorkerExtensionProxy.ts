@@ -10,10 +10,8 @@ import {
 } from "../Extension.ts";
 import type { Logger } from "../../logger.ts";
 import type { WorkerExtensionDescriptor } from "./WorkerExtensionDescriptor.ts";
-import {
-  PendingCallRegistry,
-  PendingCallTimeoutError
-} from "./PendingCallRegistry.ts";
+import { PendingCallRegistry } from "./PendingCallRegistry.ts";
+import { PendingCallTimeoutError } from "./errors/PendingCallTimeoutError.ts";
 import {
   NodeWorkerTransport,
   type WorkerTransport,

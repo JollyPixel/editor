@@ -26,7 +26,9 @@ export function packChunkKey(
     (cz + CHUNK_BIAS_XZ);
 }
 
-/** Unsigned compares catch both ends of each range in one test. */
+/**
+ * Unsigned compares catch both ends of each range in one test.
+ */
 export function inChunkRange(
   cx: number,
   cy: number,

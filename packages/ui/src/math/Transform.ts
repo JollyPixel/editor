@@ -44,7 +44,9 @@ export interface TransformDefault {
   scale?: Record<TransformAxis3, number>;
 }
 
-/** State applied independently to one transform sub-field. */
+/**
+ * State applied independently to one transform sub-field.
+ */
 export interface TransformSubFieldState {
   lockedBy?: CollaboratorPresence | null;
   peers?: CollaboratorPresence[];

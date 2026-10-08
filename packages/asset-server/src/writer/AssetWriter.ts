@@ -316,10 +316,13 @@ export class AssetWriter {
     assetId: string
   ): Result<AssetProjection, UnknownAssetError> {
     const current = this.#projector.desired(assetId);
+    if (current !== null) {
+      return Ok(current);
+    }
 
-    return current === null ?
-      Err(new UnknownAssetError(assetId)) :
-      Ok(current);
+    const error = new UnknownAssetError(assetId);
+
+    return Err(error);
   }
 
   #writeData(

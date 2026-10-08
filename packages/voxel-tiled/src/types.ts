@@ -8,7 +8,9 @@ export interface TiledPropertyBase {
    * @default "string"
    */
   type?: TiledPropertyType;
-  /** Name of the custom property type (since 1.8), when applicable */
+  /**
+   * Name of the custom property type (since 1.8), when applicable
+   */
   propertytype?: string;
 }
 
@@ -87,7 +89,9 @@ interface TiledLayerBase {
   parallaxx?: number;
   parallaxy?: number;
 
-  /** Tint color multiplied with drawn graphics (#RRGGBB or #AARRGGBB) */
+  /**
+   * Tint color multiplied with drawn graphics (#RRGGBB or #AARRGGBB)
+   */
   tintcolor?: string;
 
   class?: string;
@@ -115,7 +119,9 @@ export interface TiledObjectLayer extends TiledLayerBase {
    */
   draworder?: "topdown" | "index";
   objects: TiledObject[];
-  /** For fixed-size maps, height/width are 0 in examples */
+  /**
+   * For fixed-size maps, height/width are 0 in examples
+   */
   height?: number;
   width?: number;
 }
@@ -128,7 +134,9 @@ export interface TiledImageLayer extends TiledLayerBase {
   repeaty?: boolean;
   imageheight?: number;
   imagewidth?: number;
-  /** For fixed-size maps, height/width are not stored; keep optional */
+  /**
+   * For fixed-size maps, height/width are not stored; keep optional
+   */
   height?: number;
   width?: number;
 }
@@ -308,20 +316,26 @@ export interface TiledTile {
   image?: string;
   imagewidth?: number;
   imageheight?: number;
-  /** sub-rectangle within the tileset image (since 1.9) */
+  /**
+   * sub-rectangle within the tileset image (since 1.9)
+   */
   x?: number;
   y?: number;
   width?: number;
   height?: number;
 
-  /** Collision/object shapes for this tile (optional) */
+  /**
+   * Collision/object shapes for this tile (optional)
+   */
   objectgroup?: TiledObjectLayer;
 
   probability?: number;
 
   properties?: TiledProperties;
 
-  /** Legacy terrain info (replaced by Wang sets since 1.5) */
+  /**
+   * Legacy terrain info (replaced by Wang sets since 1.5)
+   */
   terrain?: [number, number, number, number];
 
   animation?: TiledFrame[];
@@ -359,7 +373,9 @@ export interface TiledWangColor {
 
 export interface TiledWangTile {
   tileid: number;
-  /** Array of Wang color indexes (uchar[8]) */
+  /**
+   * Array of Wang color indexes (uchar[8])
+   */
   wangid: number[];
 }
 
@@ -371,5 +387,7 @@ export interface TiledObjectTemplate {
 
 export type TiledGID = number;
 
-/** A tile layer data cell is a GID or 0 (empty). */
+/**
+ * A tile layer data cell is a GID or 0 (empty).
+ */
 export type TiledCell = TiledGID;

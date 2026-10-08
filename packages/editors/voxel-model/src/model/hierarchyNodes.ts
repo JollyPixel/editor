@@ -18,9 +18,13 @@ export interface HierarchyNode {
   id: string;
   name: string;
   kind: HierarchyNodeKind;
-  /** `null` for a block without a material and for a folder. */
+  /**
+   * `null` for a block without a material and for a folder.
+   */
   material: ModelMaterialJSON | null;
-  /** Set when the block shares its name with a sibling block. */
+  /**
+   * Set when the block shares its name with a sibling block.
+   */
   nameClash?: string;
   children: HierarchyNode[];
 }

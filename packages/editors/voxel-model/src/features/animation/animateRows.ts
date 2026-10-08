@@ -13,7 +13,9 @@ import type {
 
 export interface RowTarget {
   setId: string;
-  /** `null` for the model's own clips. */
+  /**
+   * `null` for the model's own clips.
+   */
   target: ClipTarget;
   clipId: string | null;
 }

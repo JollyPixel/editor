@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { ExpressionError } from "./errors/ExpressionError.ts";
+
 // CONSTANTS
 const kPlainNumber = /^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?$/;
 const kNumberAt = /^(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:[eE][+-]?\d+)?/;
@@ -18,8 +21,6 @@ type Token =
   | { type: "number"; value: number; }
   | { type: "operator"; value: string; }
   | { type: "paren"; value: "(" | ")"; };
-
-class ExpressionError extends Error {}
 
 /**
  * Evaluates arithmetic expressions with decimal and scientific literals.

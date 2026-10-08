@@ -34,7 +34,9 @@ export type SurfaceField =
     control: "slider";
     key: UnboundedKey;
     label: string;
-    /** The slider's end, which the schema leaves open. */
+    /**
+     * The slider's end, which the schema leaves open.
+     */
     max: number;
     help: string;
   };

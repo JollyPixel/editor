@@ -30,12 +30,16 @@ export interface BlocksetResolver {
  * Polygon with transforms, winding, and atlas UVs compiled into its data.
  */
 export interface BlockVariantFace {
-  /** World-space neighbour direction to test for occlusion, or -1 to always emit. */
+  /**
+   * World-space neighbour direction to test for occlusion, or -1 to always emit.
+   */
   cull: number;
   slot: number;
   vertexCount: number;
   indexCount: number;
-  /** `vertexCount × 3` block-local positions in 0-1 space. */
+  /**
+   * `vertexCount × 3` block-local positions in 0-1 space.
+   */
   positions: Float32Array;
   /**
    * Unsigned-normalized UVs inside the tile; `region` maps them to the atlas.
@@ -55,7 +59,9 @@ export interface BlockVariantFace {
    * True when a neighbour's footprint may split this boundary face.
    */
   splittable: boolean;
-  /** Face normal, signed-normalized to the byte the attribute is emitted as. */
+  /**
+   * Face normal, signed-normalized to the byte the attribute is emitted as.
+   */
   normalX: number;
   normalY: number;
   normalZ: number;
@@ -63,7 +69,9 @@ export interface BlockVariantFace {
 
 export interface BlockVariant {
   surface: BlockSurface;
-  /** Block this variant was compiled from, for same-block face culling. */
+  /**
+   * Block this variant was compiled from, for same-block face culling.
+   */
   blockId: number;
   faces: readonly BlockVariantFace[];
   /**

@@ -7,7 +7,7 @@ const kFlipXBit = 0b100;
 const kFlipZBit = 0b1000;
 const kFlipYBit = 0b10000;
 const kVariantCount = 32;
-const kInterned = new Array<VoxelTransform | undefined>(kVariantCount);
+const kInterned = Array.from<VoxelTransform | undefined>({ length: kVariantCount });
 const kRotationMatrices: readonly XzMatrix[] = [
   [1, 0, 0, 1],
   [0, 1, -1, 0],

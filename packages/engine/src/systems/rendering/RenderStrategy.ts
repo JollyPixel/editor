@@ -9,7 +9,9 @@ import {
 } from "./CameraPipelines.ts";
 
 export interface RenderParameters {
-  /** Pre-sorted by `depth` ascending — strategies must not re-sort. */
+  /**
+   * Pre-sorted by `depth` ascending: strategies must not re-sort.
+   */
   components: readonly RenderComponent[];
   canvasWidth: number;
   canvasHeight: number;
@@ -24,7 +26,9 @@ export interface RenderStrategy {
     width: number,
     height: number
   ): void;
-  /** Releases GPU resources owned by the strategy. */
+  /**
+   * Releases GPU resources owned by the strategy.
+   */
   dispose(): void;
 }
 

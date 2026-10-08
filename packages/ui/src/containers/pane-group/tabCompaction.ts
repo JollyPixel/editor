@@ -2,15 +2,25 @@
 const kSubpixelTolerance = 0.5;
 
 export interface TabExtent {
-  /** Rendered width of the tab button, in CSS pixels. */
+  /**
+   * Rendered width of the tab button, in CSS pixels.
+   */
   tabWidth: number;
-  /** Rendered width of its label, possibly cut off; ignored while hidden. */
+  /**
+   * Rendered width of its label, possibly cut off; ignored while hidden.
+   */
   labelWidth: number;
-  /** Width the label needs to show in full. */
+  /**
+   * Width the label needs to show in full.
+   */
   labelContentWidth: number;
-  /** Whether the label is out of the layout, as on an icon-only tab. */
+  /**
+   * Whether the label is out of the layout, as on an icon-only tab.
+   */
   labelHidden: boolean;
-  /** Gap between the tab's icon and label, which a hidden label drops. */
+  /**
+   * Gap between the tab's icon and label, which a hidden label drops.
+   */
   innerGap: number;
 }
 

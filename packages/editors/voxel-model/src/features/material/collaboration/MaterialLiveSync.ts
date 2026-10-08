@@ -33,7 +33,9 @@ export interface MaterialLiveSyncOptions {
 interface MaterialLiveFrame {
   materialId: string;
   changes: MaterialSurfacePatchJSON;
-  /** The stream ended on fields a command writes; they stay until it lands. */
+  /**
+   * The stream ended on fields a command writes; they stay until it lands.
+   */
   saved?: true;
 }
 

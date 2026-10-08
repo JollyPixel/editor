@@ -44,7 +44,7 @@ export class Camera3DControls extends CameraComponent<any> {
   #rotationSpeed: number;
   #movementSpeed: number;
 
-  // Reused each frame — avoid allocations.
+  // Reused each frame to avoid allocations.
   #orientation = new THREE.Quaternion();
   #euler = new THREE.Euler(0, 0, 0, "YXZ");
   #direction = new THREE.Vector3();

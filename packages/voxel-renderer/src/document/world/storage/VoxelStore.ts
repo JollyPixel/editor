@@ -3,12 +3,18 @@ import { VOXEL_ABSENT, type PackedVoxel } from "./packedVoxel.ts";
 
 // CONSTANTS
 const kInitialCapacity = 16;
-/** Grow once three quarters of the slots are taken; linear probing degrades past that. */
+/**
+ * Grow once three quarters of the slots are taken; linear probing degrades past that.
+ */
 const kLoadFactorNum = 3;
 const kLoadFactorDen = 4;
-/** Int32Array fill value marking a free slot. Linear indices are never negative. */
+/**
+ * Int32Array fill value marking a free slot. Linear indices are never negative.
+ */
 const kFreeKey = -1;
-/** Knuth's multiplicative constant, 2^32 / φ rounded to an odd integer. */
+/**
+ * Knuth's multiplicative constant, 2^32 / φ rounded to an odd integer.
+ */
 const kGoldenRatio = 0x9E3779B1;
 
 /**
@@ -18,7 +24,9 @@ export class VoxelStore {
   #keys: Int32Array;
   #values: Uint32Array;
   #mask: number;
-  /** High-bit extraction shift; `32 - log2(capacity)`. */
+  /**
+   * High-bit extraction shift; `32 - log2(capacity)`.
+   */
   #shift: number;
   #size = 0;
   #growAt: number;

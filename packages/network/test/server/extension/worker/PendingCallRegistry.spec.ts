@@ -6,10 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  PendingCallRegistry,
-  PendingCallTimeoutError
-} from "#src/server/extension/worker/PendingCallRegistry.ts";
+import { PendingCallRegistry } from "#src/server/extension/worker/PendingCallRegistry.ts";
+import { PendingCallTimeoutError } from "#src/server/extension/worker/errors/PendingCallTimeoutError.ts";
 
 describe("PendingCallRegistry — resolve", () => {
   test("resolves the promise returned by create() with the given id", async() => {

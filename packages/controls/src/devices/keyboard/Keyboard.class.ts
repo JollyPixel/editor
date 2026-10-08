@@ -25,7 +25,9 @@ import {
 import { KeyEdgeBuffer } from "./KeyEdgeBuffer.ts";
 
 // CONSTANTS
-/** `Tab` and `Escape` keep browser defaults but still emit key events. */
+/**
+ * `Tab` and `Escape` keep browser defaults but still emit key events.
+ */
 const kControlKeys = new Set([
   "ArrowUp",
   "ArrowDown",

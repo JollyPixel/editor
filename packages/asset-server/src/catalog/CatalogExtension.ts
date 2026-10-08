@@ -267,10 +267,12 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       return archive;
     }
     if (archive.val.byteLength > this.#maxContentBytes) {
-      return Err(new CatalogContentTooLargeError(
+      const error = new CatalogContentTooLargeError(
         archive.val.byteLength,
         this.#maxContentBytes
-      ));
+      );
+
+      return Err(error);
     }
 
     return Ok({
@@ -374,9 +376,13 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         };
       });
 
-    return dependents.length === 0 ?
-      Ok(undefined) :
-      Err(new AssetHasDependentsError(assetId, dependents));
+    if (dependents.length === 0) {
+      return Ok(undefined);
+    }
+
+    const error = new AssetHasDependentsError(assetId, dependents);
+
+    return Err(error);
   }
 
   #readArchive(
@@ -391,12 +397,15 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     content: AssetInlineContent
   ): Result<Uint8Array, Error> {
     const data = decodeContent(content);
+    if (data.byteLength <= this.#maxContentBytes) {
+      return Ok(data);
+    }
 
-    return data.byteLength > this.#maxContentBytes ?
-      Err(new CatalogContentTooLargeError(
-        data.byteLength,
-        this.#maxContentBytes
-      )) :
-      Ok(data);
+    const error = new CatalogContentTooLargeError(
+      data.byteLength,
+      this.#maxContentBytes
+    );
+
+    return Err(error);
   }
 }

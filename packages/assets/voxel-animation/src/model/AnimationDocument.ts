@@ -36,14 +36,22 @@ export type AnimationChange = CommandChange<AnimationCommand, AnimationImage>;
 export interface AddClipOptions {
   name: string;
   id?: string;
-  /** In ticks; one second by default. */
+  /**
+   * In ticks; one second by default.
+   */
   length?: number;
-  /** @default 24 */
+  /**
+   * @default 24
+   */
   fps?: number;
-  /** @default false */
+  /**
+   * @default false
+   */
   loop?: boolean;
   tracks?: readonly AnimationTrackJSON[];
-  /** The clip to land before; last when omitted. */
+  /**
+   * The clip to land before; last when omitted.
+   */
   beforeId?: string;
 }
 

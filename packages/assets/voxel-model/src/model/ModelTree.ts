@@ -8,7 +8,7 @@ import type {
   VoxelModelCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
-import { InvalidModelTreeError } from "./InvalidModelTreeError.ts";
+import { InvalidModelTreeError } from "./errors/InvalidModelTreeError.ts";
 import {
   ModelAnimationLinks,
   type ModelAnimationLinksReader

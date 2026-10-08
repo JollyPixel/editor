@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import hyperid from "hyperid";
 
+// Import Internal Dependencies
+import { PendingCallTimeoutError } from "./errors/PendingCallTimeoutError.ts";
+
 export interface PendingCallEntry<TResult> {
   resolve: (value: TResult) => void;
   reject: (error: Error) => void;
@@ -14,13 +17,6 @@ export interface PendingCall<TResult> {
 export interface PendingCallOptions {
   timeoutMs?: number;
   timeoutMessage?: string;
-}
-
-export class PendingCallTimeoutError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PendingCallTimeoutError";
-  }
 }
 
 export class PendingCallRegistry<TResult = unknown> {

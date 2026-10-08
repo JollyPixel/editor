@@ -72,7 +72,9 @@ export interface MaterialLibraryPrompts {
   beginRename(
     id: string
   ): void;
-  /** `choose` runs only when the person picks a preset. */
+  /**
+   * `choose` runs only when the person picks a preset.
+   */
   choosePreset(
     choose: (preset: MaterialPreset) => void,
     point: MenuPoint
@@ -80,7 +82,9 @@ export interface MaterialLibraryPrompts {
   writeClipboard(
     text: string
   ): Promise<void>;
-  /** `null` when the browser refuses to read the clipboard. */
+  /**
+   * `null` when the browser refuses to read the clipboard.
+   */
   readClipboard(): Promise<string | null>;
 }
 
@@ -89,12 +93,18 @@ export interface SelectedBlockState {
   materialId: string | null;
 }
 
-/** A new object whenever any of it changes. */
+/**
+ * A new object whenever any of it changes.
+ */
 export interface MaterialLibraryState {
   nodes: readonly TreeNode[];
-  /** The selected block's row when it uses the edited material, otherwise the material's row. */
+  /**
+   * The selected block's row when it uses the edited material, otherwise the material's row.
+   */
   selectedId: string | null;
-  /** The material being edited, as the material focus holds it. */
+  /**
+   * The material being edited, as the material focus holds it.
+   */
   editedId: string | null;
   expanded: readonly string[];
   block: SelectedBlockState | null;

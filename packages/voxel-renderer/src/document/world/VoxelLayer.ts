@@ -31,7 +31,9 @@ const kCellMax = new Vector3();
 const kDefaultRank = "V";
 
 export interface VoxelLayerConfigurableOptions {
-  /** Cell replacement or optical compositing. Defaults to "composite". */
+  /**
+   * Cell replacement or optical compositing. Defaults to "composite".
+   */
   compositing?: "replace" | "composite";
   /**
    * Whether the layer is visible by default.
@@ -54,9 +56,13 @@ export interface VoxelLayerMergeOptions {
 }
 
 export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
-  /** Unique layer identifier. */
+  /**
+   * Unique layer identifier.
+   */
   id: string;
-  /** Human-readable layer name. */
+  /**
+   * Human-readable layer name.
+   */
   name: string;
   /**
    * Draw order;
@@ -65,7 +71,9 @@ export interface VoxelLayerOptions extends VoxelLayerConfigurableOptions {
    */
   order: number;
   rank?: string;
-  /** Size of one voxel chunk (required). */
+  /**
+   * Size of one voxel chunk (required).
+   */
   chunkSize: number;
   /**
    * World-space position of the layer origin.

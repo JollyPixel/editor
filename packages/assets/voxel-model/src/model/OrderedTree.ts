@@ -2,7 +2,7 @@
 import {
   InvalidModelTreeError,
   type ModelTreeEntry
-} from "./InvalidModelTreeError.ts";
+} from "./errors/InvalidModelTreeError.ts";
 
 export interface OrderedTreeEntry {
   id: string;
@@ -12,7 +12,9 @@ export interface OrderedTreeEntry {
 
 export interface OrderedTreeOptions<T extends OrderedTreeEntry> {
   kind: ModelTreeEntry;
-  /** Not asked for the root, which takes anything. */
+  /**
+   * Not asked for the root, which takes anything.
+   */
   canContain: (parent: T) => boolean;
 }
 

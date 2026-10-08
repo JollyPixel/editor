@@ -27,7 +27,9 @@ const kCheckpointEventTypes = new Set<string>(ASSET_CHECKPOINT_EVENT_TYPES);
 const kContentEventTypes = new Set<string>([ASSET_CREATED, ASSET_UPDATED]);
 
 export type AssetStateStoreEventMap = {
-  /** Content loaded outside a scheduled snapshot, such as a disk edit or an archive import. */
+  /**
+   * Content loaded outside a scheduled snapshot, such as a disk edit or an archive import.
+   */
   replaced: (
     assetId: string
   ) => void;

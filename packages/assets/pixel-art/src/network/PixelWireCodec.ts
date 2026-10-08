@@ -30,6 +30,7 @@ export interface SelectEditPixels {
 export function packPositions(
   positions: readonly Vec2[]
 ): number[] {
+  // oxlint-disable-next-line unicorn/no-new-array
   const xy = new Array<number>(positions.length * 2);
   for (let i = 0; i < positions.length; i++) {
     const { x, y } = positions[i];
@@ -43,6 +44,7 @@ export function packPositions(
 export function unpackPositions(
   xy: readonly number[]
 ): Vec2[] {
+  // oxlint-disable-next-line unicorn/no-new-array
   const positions = new Array<Vec2>(Math.floor(xy.length / 2));
   for (let i = 0; i < positions.length; i++) {
     positions[i] = {
@@ -57,6 +59,7 @@ export function unpackPositions(
 export function packColors(
   colors: readonly RGBA8[]
 ): number[] {
+  // oxlint-disable-next-line unicorn/no-new-array
   const rgba = new Array<number>(colors.length * 4);
   for (let i = 0; i < colors.length; i++) {
     const { r, g, b, a } = colors[i];
@@ -72,6 +75,7 @@ export function packColors(
 export function unpackColors(
   rgba: readonly number[]
 ): RGBA8[] {
+  // oxlint-disable-next-line unicorn/no-new-array
   const colors = new Array<RGBA8>(Math.floor(rgba.length / 4));
   for (let i = 0; i < colors.length; i++) {
     colors[i] = {

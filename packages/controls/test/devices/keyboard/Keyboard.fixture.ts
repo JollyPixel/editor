@@ -18,7 +18,9 @@ export interface EventData extends Pick<
 > {
   code?: KeyCode;
   key?: string;
-  /** Stands in for the composed path, which an undispatched event cannot supply. */
+  /**
+   * Stands in for the composed path, which an undispatched event cannot supply.
+   */
   target?: unknown;
 }
 

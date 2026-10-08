@@ -22,20 +22,28 @@ export interface AnimationSetLease {
 export interface AnimationSetRecord {
   id: string;
   kind: string;
-  /** The asset's file name without its extension. */
+  /**
+   * The asset's file name without its extension.
+   */
   name: string;
 }
 
 export interface AnimationSetSource {
   open(id: string): AnimationSetLease;
   create(name: string): Promise<AssetReferenceData>;
-  /** Named after the model. */
+  /**
+   * Named after the model.
+   */
   createOwn(): Promise<AssetReferenceData>;
   rename(id: string, name: string): Promise<void>;
   records(): AnimationSetRecord[];
-  /** How many assets reference the set. */
+  /**
+   * How many assets reference the set.
+   */
   usersOf(id: string): number;
-  /** Calls `listener` when records or their users change. */
+  /**
+   * Calls `listener` when records or their users change.
+   */
   subscribe(listener: () => void): () => void;
 }
 
@@ -43,7 +51,9 @@ export interface LinkedAnimationSet {
   id: string;
   name: string;
   users: number;
-  /** Holds this model's own clips rather than shared ones. */
+  /**
+   * Holds this model's own clips rather than shared ones.
+   */
   own: boolean;
   document: AnimationDocument;
 }
@@ -53,7 +63,9 @@ export interface ClipRef {
   clipId: string;
 }
 
-/** `null` stands for the model's own clips; the own set's id never does. */
+/**
+ * `null` stands for the model's own clips; the own set's id never does.
+ */
 export type ClipTarget = string | null;
 
 export interface ClipPlacement {

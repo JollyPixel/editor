@@ -11,6 +11,7 @@ import {
 import { parseHex } from "./hex.ts";
 import { parseNamed } from "./named.ts";
 import { parseRgbFunction } from "./rgb.ts";
+import { ColorParseError } from "./errors/ColorParseError.ts";
 import type {
   ColorInput,
   RGBA
@@ -19,15 +20,6 @@ import type {
 // CONSTANTS
 const kHash = 0x23;
 const kCloseParen = 0x29;
-
-export class ColorParseError extends Error {
-  constructor(
-    input: string
-  ) {
-    super(`Unable to parse color '${input}'`);
-    this.name = "ColorParseError";
-  }
-}
 
 /**
  * Returns `null` for partial input so fields can parse every keystroke.

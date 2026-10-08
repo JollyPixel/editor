@@ -68,10 +68,13 @@ export class AssetPathAllocator {
     assetId: string | undefined
   ): Result<void, AssetPathConflictError> {
     const occupant = this.#projector.assetAt(path);
+    if (occupant === null || occupant === assetId) {
+      return Ok(undefined);
+    }
 
-    return occupant === null || occupant === assetId ?
-      Ok(undefined) :
-      Err(new AssetPathConflictError(path, occupant));
+    const error = new AssetPathConflictError(path, occupant);
+
+    return Err(error);
   }
 
   dormantId(
@@ -121,14 +124,14 @@ export function writableAssetPath(
 ): Result<string, AssetPathEscapeError> {
   const result = safeAssetPath(input);
   if (!result.ok) {
-    return Err(
-      new AssetPathEscapeError(input, result.val)
-    );
+    const error = new AssetPathEscapeError(input, result.val);
+
+    return Err(error);
   }
   if (isStatePath(result.val)) {
-    return Err(
-      new AssetPathEscapeError(input, "reserved")
-    );
+    const error = new AssetPathEscapeError(input, "reserved");
+
+    return Err(error);
   }
 
   return Ok(result.val);

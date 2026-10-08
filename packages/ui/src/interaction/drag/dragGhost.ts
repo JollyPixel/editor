@@ -11,7 +11,9 @@ const kTokenPattern = /--jolly-[a-z0-9-]+(?=\s*:)/g;
  */
 export interface GhostSource extends HTMLElement {
   storage: StorageAdapter;
-  /** Client rect of the chrome the ghost keeps. */
+  /**
+   * Client rect of the chrome the ghost keeps.
+   */
   headerRect(): DOMRect;
 }
 

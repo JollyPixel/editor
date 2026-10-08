@@ -7,11 +7,17 @@ import type {
 import { ANIMATION_CHANNELS } from "../network/AnimationCommand.schema.ts";
 
 export interface AnimationSample {
-  /** Added to the rest position. */
+  /**
+   * Added to the rest position.
+   */
   position?: Vector3JSON;
-  /** In degrees, added per axis to the rest rotation. */
+  /**
+   * In degrees, added per axis to the rest rotation.
+   */
   rotation?: Vector3JSON;
-  /** Multiplies the rest scale. */
+  /**
+   * Multiplies the rest scale.
+   */
   scale?: Vector3JSON;
 }
 

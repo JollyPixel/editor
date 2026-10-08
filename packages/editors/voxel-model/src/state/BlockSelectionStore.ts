@@ -7,7 +7,9 @@ export type BlockSelectionEvents = {
   emphasize: (uuids: readonly string[]) => void;
 };
 
-/** The marks peers see; an emphasis stays with this person. */
+/**
+ * The marks peers see; an emphasis stays with this person.
+ */
 export type BlockMark = "select" | "hover";
 
 export class BlockSelectionStore extends Emitter<BlockSelectionEvents> {
