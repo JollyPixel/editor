@@ -54,6 +54,7 @@ class MessageProtocol<TSchema extends JSONSchema = JSONSchema> {
   static readonly EMPTY: MessageProtocol;
 
   readonly schema: TSchema;
+  readonly discriminator: string;
   get variants(): readonly MessageVariant[];
   get events(): readonly string[];
 
@@ -69,6 +70,10 @@ interface MessageProtocolOptions {
 
 interface MessageVariant {
   readonly event: string;
+  /**
+   * The variant's required `const` discriminator value, or null.
+   */
+  readonly tag: string | null;
   readonly schema: JSONSchema;
 }
 
@@ -103,6 +108,8 @@ type VoxelCommand = InferMessage<typeof voxelCommands>;
 ```
 
 `InferMessage` derives the TypeScript union from the schema, so `Extension<VoxelCommand>` receives a message that is already narrowed by the time `onMessage` runs. `events` lists the event names the protocol declares, which is what [rights](./Rights.md) rules match against, and `variants` pairs each name with its schema. The constructor reads every event name, so a variant that names none throws `InvalidMessageProtocolError` where the protocol is defined, not when a room is built.
+
+A payload matching the variants of two different events is rejected, as rights are checked per event. Variants named by a required `const` discriminator never overlap; give `title` variants shapes that exclude each other.
 
 Two protocol pairs are shipped for the cases that have no domain schema of their own:
 

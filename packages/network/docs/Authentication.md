@@ -62,7 +62,7 @@ interface AuthenticationProvider {
 }
 ```
 
-`AuthenticationRequest` is `{ clientId, url, headers, defaultRole }` — deliberately not a `node:http` request, so a provider is testable and transport-independent. `clientId` is the id the connection will be known by; `defaultRole` is the server's, so a provider can fall through to it without holding a second copy.
+`AuthenticationRequest` is `{ clientId, url, headers, remoteAddress, defaultRole }` — deliberately not a `node:http` request, so a provider is testable and transport-independent. `clientId` is the id the connection will be known by; `defaultRole` is the server's, so a provider can fall through to it without holding a second copy.
 
 Returning `null` refuses the connection.
 
@@ -93,8 +93,26 @@ Passwords are processed with Node.js `scrypt` and a random salt. Derived keys ar
 compared with `timingSafeEqual`, so the password itself is never retained for
 comparison and digest comparison does not leak content or length through timing.
 
+```ts
+new PasswordAuthentication({
+  password: "hunter2",
+  role: "editor",
+  maxFailures: 10,
+  failureWindowMs: 60_000,
+  maxConcurrentChecks: 2
+});
+```
+
+Each check runs `scrypt` on libuv's thread pool, which file I/O shares:
+
+- At most `maxConcurrentChecks` checks run at once. Further attempts wait their turn.
+- An address's attempts count against `maxFailures` from the moment they start, so it never has more than `maxFailures` checks in flight.
+- After `maxFailures` wrong passwords within `failureWindowMs`, an address is refused without a check until the window ends. A correct password clears its count.
+
+Limits are kept per remote address. Clients sharing one, behind a NAT, a VPN or a reverse proxy, share its lockout. Requests without a `remoteAddress`, such as loopback ones, are not limited.
+
 > [!WARNING]
-> Nothing rate-limits attempts. A shared password on a socket anyone may retry against is guessable at speed, and `AuthenticationProvider` gives a provider nowhere to hang a lockout. Adequate for a dev server; not for an exposed one.
+> The credential travels in a handshake header, readable by anyone on the path over `ws://`. Serve the page over HTTPS, so the client connects with `wss://`, when the server is reachable beyond localhost.
 
 ### Password helpers
 

@@ -91,6 +91,14 @@ describe("Envelope.parseClient", () => {
     }
   });
 
+  test("rejects a room name longer than 256 characters", () => {
+    assert.equal(Envelope.parseClient({ room: "r".repeat(256), kind: "leave" }).ok, true);
+    assert.equal(
+      errorOf(Envelope.parseClient({ room: "r".repeat(257), kind: "leave" })).reason,
+      "malformed"
+    );
+  });
+
   test("rejects an unrecognized kind", () => {
     const result = Envelope.parseClient({ room: "pixel-draw", kind: "unknown-kind" });
 

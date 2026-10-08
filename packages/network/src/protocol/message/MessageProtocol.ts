@@ -12,6 +12,7 @@ const kDefaultDiscriminator = "action";
 
 export interface MessageVariant {
   readonly event: string;
+  readonly tag: string | null;
   readonly schema: JSONSchema;
 }
 
@@ -57,6 +58,18 @@ function eventNameOf(
   return value;
 }
 
+function tagOf(
+  variant: JSONSchema,
+  discriminator: string
+): string | null {
+  const value = variant.properties?.[discriminator]?.const;
+
+  return typeof value === "string" &&
+    variant.required?.includes(discriminator) === true ?
+    value :
+    null;
+}
+
 export class MessageProtocol<
   const TSchema extends JSONSchema = JSONSchema
 > {
@@ -65,6 +78,7 @@ export class MessageProtocol<
   });
 
   readonly schema: TSchema;
+  readonly discriminator: string;
 
   #variants: readonly MessageVariant[];
   #events: readonly string[];
@@ -79,9 +93,11 @@ export class MessageProtocol<
     const variants = schema.oneOf ?? schema.anyOf ?? [schema];
 
     this.schema = schema;
+    this.discriminator = discriminator;
     this.#variants = Object.freeze(variants.map((variant) => {
       return {
         event: eventNameOf(variant, discriminator),
+        tag: tagOf(variant, discriminator),
         schema: variant
       };
     }));

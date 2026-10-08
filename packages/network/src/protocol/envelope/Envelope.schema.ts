@@ -2,9 +2,12 @@
 import { defineSchema } from "../schema.ts";
 
 // CONSTANTS
+const kMaxRoomNameLength = 256;
+
 const kRoomProperties = {
   room: {
-    type: "string"
+    type: "string",
+    maxLength: kMaxRoomNameLength
   }
 } as const;
 const kRoomRequired = [

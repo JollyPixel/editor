@@ -378,7 +378,12 @@ describe("Server — rights: denied join", () => {
 
   test("ServerOptions.rights gates message writes end-to-end, independent of the extension", async() => {
     const server = new Server({
-      rights: { viewer: { "pixel-draw.voxel-set": "read" } }
+      rights: {
+        viewer: {
+          "pixel-draw.$join": "write",
+          "pixel-draw.voxel-set": "read"
+        }
+      }
     });
     const extension = new RecordingExtension("pixel-draw", "pixel-draw", actionProtocols);
     server.register(extension);
@@ -407,7 +412,12 @@ describe("Server — rights: denied join", () => {
     "one rule covers every room registered under the same extension name, regardless of distinct ids",
     async() => {
       const server = new Server({
-        rights: { viewer: { "voxel.renderer.voxel-set": "read" } }
+        rights: {
+          viewer: {
+            "voxel.renderer.$join": "write",
+            "voxel.renderer.voxel-set": "read"
+          }
+        }
       });
       const worldOne = new RecordingExtension("voxel-map:world-1", "voxel.renderer", actionProtocols);
       const worldTwo = new RecordingExtension("voxel-map:world-2", "voxel.renderer", actionProtocols);

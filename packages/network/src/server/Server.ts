@@ -15,6 +15,7 @@ import {
 } from "./rights/RightsTable.ts";
 import type { AnyExtension } from "./extension/Extension.ts";
 import { RoomRegistry } from "./room/RoomRegistry.ts";
+import type { RoomLimits } from "./room/ServerRoom.ts";
 import { BypassAuthentication } from "./auth/providers/BypassAuthentication.ts";
 import type {
   AuthenticationAttempt,
@@ -45,6 +46,7 @@ export interface ServerOptions {
    * @default 30_000
    */
   roomGraceMs?: number;
+  limits?: RoomLimits;
 }
 
 /**
@@ -69,7 +71,8 @@ export class Server {
     this.#rooms = new RoomRegistry({
       logger: this.logger,
       rights: this.#rights,
-      graceMs: options.roomGraceMs
+      graceMs: options.roomGraceMs,
+      limits: options.limits
     });
     this.#dispatcher = new EnvelopeDispatcher({
       rooms: this.#rooms,
@@ -124,6 +127,7 @@ export class Server {
       this.logger
         .withMetadata({
           clientId: attempt.clientId,
+          remoteAddress: attempt.remoteAddress,
           outcome: "unauthorized"
         })
         .warn("client rejected");

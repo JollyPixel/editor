@@ -57,6 +57,7 @@
     "@jolly-pixel/history": "workspace:*",
     "@loglayer/transport-pino": "3.3.0",
     "@openally/emitt": "1.1.0",
+    "@openally/mutex": "4.0.0",
     "@openally/result": "3.1.0",
     "ata-validator": "1.27.1",
     "hyperid": "4.0.0",

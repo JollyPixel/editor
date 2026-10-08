@@ -3,12 +3,13 @@ import type { Envelope } from "../../protocol/envelope/Envelope.ts";
 import type { PeerMetadata } from "../../protocol/types.ts";
 import type { ClientHandle } from "../../transport/ClientHandle.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
+import type { PeerPresence } from "./PeerPresence.ts";
 
 export interface PeerRecord {
   handle: ClientHandle;
   identity: PeerIdentity;
   profile: PeerMetadata;
-  presence: PeerMetadata;
+  presence: PeerPresence;
 }
 
 export interface RoomMemberSnapshot {
@@ -64,7 +65,7 @@ export class RoomMembers {
         clientId,
         role: record.identity.role,
         profile: record.profile,
-        presence: record.presence
+        presence: record.presence.values
       };
     });
   }

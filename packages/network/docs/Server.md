@@ -27,6 +27,21 @@ interface ServerOptions {
    * @default 30_000
    */
   roomGraceMs?: number;
+  limits?: RoomLimits;
+}
+
+interface RoomLimits {
+  /**
+   * Longest profile, and longest merged presence, a member may hold,
+   * in JSON characters.
+   * @default 1_048_576
+   */
+  peerMetadataLength?: number;
+  /**
+   * Shortest interval, in milliseconds, between two resyncs of a member.
+   * @default 1_000
+   */
+  resyncIntervalMs?: number;
 }
 ```
 
@@ -35,7 +50,8 @@ interface ServerOptions {
 - `logger` — a `loglayer` `ILogLayer`. Each room logs through a child that adds its `room` to the context. The default is a pino logger whose LogLayer level follows pino (`info` unless configured), so disabled `debug` calls are dropped before their metadata is built.
 - `rights` — see [Rights](./Rights.md). One table for the whole server; there is no per-room override.
 - `auth`, `defaultRole` — see [Authentication](./Authentication.md). Constructing a server whose `defaultRole` is absent from `rights` throws `UnknownDefaultRoleError`.
-- `authenticate(attempt)` — runs the provider against `{ clientId, url, headers }`, filling in `defaultRole`. Resolves to the `PeerIdentity` to admit, or `null` to refuse. It never rejects: a provider that throws or rejects refuses the client and is logged. Transports call it before opening a session.
+- `limits` applies to every room. A join whose profile or initial presence is longer than `peerMetadataLength`, or a presence patch that would grow the merged presence past it, is refused with an `"error"` envelope naming `$join` or `$presence`. Resyncs asked for inside `resyncIntervalMs` are merged into one, run when the interval ends.
+- `authenticate(attempt)` — runs the provider against `{ clientId, url, headers, remoteAddress }`, filling in `defaultRole`. Resolves to the `PeerIdentity` to admit, or `null` to refuse. It never rejects: a provider that throws or rejects refuses the client and is logged. Transports call it before opening a session.
 
 Transport implementations call `authenticate`, `handleConnect`, `handleDisconnect` and `handleMessage`. `handleConnect` takes the identity `authenticate` returned, and that identity is the only source of the connection's role and subject for its whole lifetime. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are handled in arrival order per room, so a slow join on one room does not hold up a join on another; `handleDisconnect` waits for every room still in flight.
 

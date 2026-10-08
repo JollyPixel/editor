@@ -199,7 +199,7 @@ export class AssetRoomExtension<
       return;
     }
 
-    const command = withAuthor(message, clientId);
+    const command = network.attributeCommand(message, clientId);
     this.#acks.record(clientId, command.seq);
 
     const arbitration = this.#protocol.arbitrate(command);
@@ -401,24 +401,6 @@ export class AssetRoomExtension<
         ...this.#acks.ofEveryone()
       };
   }
-}
-
-function withAuthor<TCommand extends AssetCommandHeader>(
-  command: TCommand,
-  clientId: string
-): TCommand {
-  if (typeof command.timestamp === "number") {
-    return {
-      ...command,
-      clientId,
-      timestamp: Math.min(command.timestamp, Date.now())
-    };
-  }
-
-  return {
-    ...command,
-    clientId
-  };
 }
 
 function assetRoomProtocols(

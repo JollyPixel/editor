@@ -50,8 +50,19 @@ describe("RightsTable — configured", () => {
     assert.strictEqual(table.check("unknown-role", "voxel-set"), "void");
   });
 
-  test("check() fails open to \"write\" for a known role with an unlisted event", () => {
-    const table = new RightsTable({ viewer: { "voxel-set": "void" } });
+  test("check() denies a known role an unlisted event", () => {
+    const table = new RightsTable({ viewer: { "voxel-set": "write" } });
+
+    assert.strictEqual(table.check("viewer", "object-added"), "void");
+  });
+
+  test("check() grants an unlisted event through an explicit \"*\" catch-all", () => {
+    const table = new RightsTable({
+      viewer: {
+        "voxel-set": "void",
+        "*": "write"
+      }
+    });
 
     assert.strictEqual(table.check("viewer", "object-added"), "write");
   });
@@ -68,7 +79,7 @@ describe("RightsTable — glob patterns", () => {
   test("a literal \".\" in the pattern only matches a literal \".\", not \"any character\"", () => {
     const table = new RightsTable({ viewer: { "voxel.renderer.voxel-set": "read" } });
 
-    assert.strictEqual(table.check("viewer", "voxelXrendererXvoxel-set"), "write");
+    assert.strictEqual(table.check("viewer", "voxelXrendererXvoxel-set"), "void");
   });
 
   test("\"*\" matches across namespace separators too, not just within one segment", () => {

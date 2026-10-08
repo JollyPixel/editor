@@ -11,6 +11,8 @@ import type {
 import { RightsTable } from "../rights/RightsTable.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import { RoomMembers } from "./RoomMembers.ts";
+import { PeerPresence } from "./PeerPresence.ts";
+import { ResyncThrottle } from "./ResyncThrottle.ts";
 import { MessageParser } from "../../protocol/message/MessageParser.ts";
 import {
   JOIN_EVENT,
@@ -18,6 +20,7 @@ import {
   PRESENCE_EVENT
 } from "../../protocol/constants.ts";
 import { describeErrors } from "../../protocol/schema.ts";
+import { errorMessage } from "../errors.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type {
   PeerMetadata,
@@ -25,11 +28,23 @@ import type {
 } from "../../protocol/types.ts";
 import type { ClientHandle } from "../../transport/ClientHandle.ts";
 
+// CONSTANTS
+const kDefaultPeerMetadataLength = 1_048_576;
+const kDefaultResyncIntervalMs = 1_000;
+
 interface AuthorizeOptions {
   clientId: string;
   role: string;
   event: string;
-  target: ClientHandle | undefined;
+  target: ClientHandle;
+  reason: string;
+  label: string;
+}
+
+interface Refusal {
+  clientId: string;
+  kind: "denied" | "error";
+  event: string;
   reason: string;
   label: string;
 }
@@ -39,8 +54,24 @@ export interface ServerRoomJoinOptions {
   resume?: unknown;
 }
 
+export interface RoomLimits {
+  /**
+   * Longest profile, and longest merged presence, a member may hold,
+   * in JSON characters. A join or presence update past it is refused.
+   * @default 1_048_576
+   */
+  peerMetadataLength?: number;
+  /**
+   * Shortest interval, in milliseconds, between two resyncs of a member.
+   * Requests inside it are coalesced into one resync at its end.
+   * @default 1_000
+   */
+  resyncIntervalMs?: number;
+}
+
 export interface ServerRoomOptions {
   logger?: Logger;
+  limits?: RoomLimits;
 }
 
 export class ServerRoom {
@@ -57,6 +88,8 @@ export class ServerRoom {
   #roomBroadcast: RoomBroadcast;
   #inbound: MessageParser | null;
   #outbound: MessageParser | null;
+  #peerMetadataLength: number;
+  #resyncs: ResyncThrottle;
 
   constructor(
     id: string,
@@ -70,6 +103,13 @@ export class ServerRoom {
     this.#logger = (options.logger ?? createLogger()).child().withContext({
       room: this.id
     });
+
+    const {
+      peerMetadataLength = kDefaultPeerMetadataLength,
+      resyncIntervalMs = kDefaultResyncIntervalMs
+    } = options.limits ?? {};
+    this.#peerMetadataLength = peerMetadataLength;
+    this.#resyncs = new ResyncThrottle(resyncIntervalMs);
 
     const { inbound, outbound } = extension.protocols;
     this.#inbound = inbound === null
@@ -98,33 +138,74 @@ export class ServerRoom {
     options: AuthorizeOptions
   ): boolean {
     const {
-      clientId,
       role,
-      event,
       target,
-      reason,
-      label
+      ...refusal
     } = options;
-    if (this.#rights.canWrite(role, event)) {
+    if (this.#rights.canWrite(role, refusal.event)) {
       return true;
     }
 
-    target?.send({
+    this.#refuse(target, {
+      ...refusal,
+      kind: "denied"
+    });
+
+    return false;
+  }
+
+  #withinLimit(
+    client: ClientHandle,
+    event: string,
+    subject: "profile" | "presence",
+    length: number
+  ): boolean {
+    if (length <= this.#peerMetadataLength) {
+      return true;
+    }
+
+    this.#refuse(client, {
+      clientId: client.id,
+      kind: "error",
+      event,
+      reason: `${subject} exceeds ${this.#peerMetadataLength} JSON characters`,
+      label: subject
+    });
+
+    return false;
+  }
+
+  #refuse(
+    target: ClientHandle,
+    refusal: Refusal
+  ): void {
+    const {
+      clientId,
+      kind,
+      event,
+      reason,
+      label
+    } = refusal;
+    target.send({
       room: this.id,
-      kind: "denied",
+      kind,
       event,
       reason
     });
     this.#logger
       .withMetadata({
         clientId,
-        role,
         event,
-        outcome: "denied"
+        outcome: kind === "denied" ? "denied" : "dropped",
+        reason
       })
       .debug(label);
+  }
 
-    return false;
+  #canReadPresence(
+    role: string
+  ): boolean {
+    return this.#rights.check(role, PRESENCE_EVENT) !== "void";
   }
 
   rightsFor(
@@ -162,6 +243,14 @@ export class ServerRoom {
     })) {
       return false;
     }
+    if (!this.#withinLimit(
+      client,
+      JOIN_EVENT,
+      "profile",
+      JSON.stringify(profile).length
+    )) {
+      return false;
+    }
 
     const initialPresence = this.#initialPresence(
       clientId,
@@ -169,6 +258,15 @@ export class ServerRoom {
       role,
       presence
     );
+    if (!this.#withinLimit(
+      client,
+      JOIN_EVENT,
+      "presence",
+      initialPresence.length
+    )) {
+      return false;
+    }
+
     this.#members.add(clientId, {
       handle: client,
       identity,
@@ -180,7 +278,7 @@ export class ServerRoom {
       clientId,
       role,
       profile,
-      initialPresence
+      initialPresence.values
     );
 
     await this.#extension.onClientConnect?.(
@@ -192,7 +290,7 @@ export class ServerRoom {
         clientId,
         identity,
         profile,
-        presence: { ...initialPresence },
+        presence: { ...initialPresence.values },
         ...(resume === undefined ? {} : { resume })
       },
       this.#contextFor(identity)
@@ -213,9 +311,9 @@ export class ServerRoom {
     client: ClientHandle,
     role: string,
     presence: PeerMetadata
-  ): PeerMetadata {
+  ): PeerPresence {
     if (Object.keys(presence).length === 0) {
-      return {};
+      return PeerPresence.EMPTY;
     }
 
     const authorized = this.#authorize({
@@ -227,7 +325,9 @@ export class ServerRoom {
       label: "join presence"
     });
 
-    return authorized ? { ...presence } : {};
+    return authorized ?
+      PeerPresence.EMPTY.patched(presence) :
+      PeerPresence.EMPTY;
   }
 
   #announceJoin(
@@ -236,8 +336,6 @@ export class ServerRoom {
     profile: PeerMetadata,
     presence: PeerMetadata
   ): void {
-    const canReadPresence = (peerRole: string) => this.#rights
-      .check(peerRole, PRESENCE_EVENT) !== "void";
     const envelope = {
       room: this.id,
       kind: "peer-joined",
@@ -251,14 +349,14 @@ export class ServerRoom {
       presence
     }, {
       excludeClientId: clientId,
-      predicate: canReadPresence
+      predicate: (peerRole) => this.#canReadPresence(peerRole)
     });
     this.#members.send({
       ...envelope,
       presence: {}
     }, {
       excludeClientId: clientId,
-      predicate: (peerRole) => !canReadPresence(peerRole)
+      predicate: (peerRole) => !this.#canReadPresence(peerRole)
     });
   }
 
@@ -267,12 +365,20 @@ export class ServerRoom {
     client: ClientHandle,
     role: string
   ): void {
+    const members = this.#members.snapshot();
     client.send({
       room: this.id,
       kind: "sync",
       self: clientId,
       rights: this.rightsFor(role),
-      members: this.#members.snapshot()
+      members: this.#canReadPresence(role) ?
+        members :
+        members.map((member) => {
+          return {
+            ...member,
+            presence: {}
+          };
+        })
     });
   }
 
@@ -293,6 +399,7 @@ export class ServerRoom {
     }
 
     this.#members.remove(clientId);
+    this.#resyncs.forget(clientId);
     this.#members.send({
       room: this.id,
       kind: "peer-left",
@@ -337,10 +444,17 @@ export class ServerRoom {
       return;
     }
 
-    record.presence = {
-      ...record.presence,
-      ...patch
-    };
+    const presence = record.presence.patched(patch);
+    if (!this.#withinLimit(
+      record.handle,
+      PRESENCE_EVENT,
+      "presence",
+      presence.length
+    )) {
+      return;
+    }
+
+    record.presence = presence;
     this.#members.send({
       room: this.id,
       kind: "peer-presence",
@@ -348,8 +462,7 @@ export class ServerRoom {
       patch
     }, {
       excludeClientId: clientId,
-      predicate: (peerRole) => this.#rights
-        .check(peerRole, PRESENCE_EVENT) !== "void"
+      predicate: (peerRole) => this.#canReadPresence(peerRole)
     });
 
     if (this.#logger.isLevelEnabled("debug")) {
@@ -394,20 +507,13 @@ export class ServerRoom {
 
     const parsed = this.#inbound.parse(payload);
     if (!parsed.ok) {
-      const reason = describeErrors(parsed.val);
-      record.handle.send({
-        room: this.id,
+      this.#refuse(record.handle, {
+        clientId,
         kind: "error",
         event: MESSAGE_EVENT,
-        reason
+        reason: describeErrors(parsed.val),
+        label: "message"
       });
-      this.#logger
-        .withMetadata({
-          clientId,
-          outcome: "dropped",
-          reason
-        })
-        .debug("message");
 
       return;
     }
@@ -447,10 +553,35 @@ export class ServerRoom {
       return;
     }
 
-    await this.#extension.onResync?.(
+    await this.#resyncs.request(
       clientId,
-      this.#contextFor(record.identity)
+      () => this.#runResync(clientId)
     );
+  }
+
+  async #runResync(
+    clientId: string
+  ): Promise<void> {
+    const record = this.#members.get(clientId);
+    if (record === undefined) {
+      return;
+    }
+
+    try {
+      await this.#extension.onResync?.(
+        clientId,
+        this.#contextFor(record.identity)
+      );
+    }
+    catch (error) {
+      this.#logger
+        .withMetadata({
+          clientId,
+          outcome: "failed",
+          reason: errorMessage(error)
+        })
+        .error("resync");
+    }
   }
 
   async #deliverMessage(
@@ -479,6 +610,7 @@ export class ServerRoom {
 
   async dispose(): Promise<void> {
     this.#members.clear();
+    this.#resyncs.clear();
     await this.#extension.dispose?.();
   }
 

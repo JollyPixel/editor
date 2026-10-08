@@ -106,7 +106,10 @@ describe("Server — the authenticated role drives rights", () => {
     await using server = new Server({
       rights: {
         viewer: { "presence.$presence": "read" },
-        editor: { "presence.$presence": "write" }
+        editor: {
+          "presence.$join": "write",
+          "presence.$presence": "write"
+        }
       },
       defaultRole: "viewer"
     });
