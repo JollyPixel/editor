@@ -162,7 +162,9 @@ export class Studio extends LitElement {
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-account
             .account=${this._signedIn?.account ?? null}
+            .avatar=${this._signedIn?.account.avatar ?? ""}
             @sign-out=${this.#signOut}
+            @avatar-change=${this.#replaceAvatar}
           ></studio-account>
         </jolly-toolbar>
       </header>
@@ -187,6 +189,28 @@ export class Studio extends LitElement {
 
   readonly #signOut = (): void => {
     void this._signedIn?.signOut();
+  };
+
+  readonly #replaceAvatar = async(
+    event: HTMLElementEventMap["avatar-change"]
+  ): Promise<void> => {
+    const signedIn = this._signedIn;
+    if (signedIn === null) {
+      return;
+    }
+
+    try {
+      const account = await signedIn.replaceAvatar(event.detail.image);
+      this._signedIn = {
+        ...signedIn,
+        account
+      };
+    }
+    catch (error) {
+      this.#queue.push(
+        `Avatar not changed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   };
 
   readonly #syncOpenTabs = (): void => {

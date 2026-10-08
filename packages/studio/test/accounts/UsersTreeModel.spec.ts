@@ -28,6 +28,7 @@ const kEntries: RosterEntry[] = [
     id: "b",
     username: "bob",
     role: "spectator",
+    avatar: "/api/accounts/b/avatar?v=0123456789abcdef",
     online: false
   },
   {
@@ -66,6 +67,20 @@ describe("UsersTreeModel", () => {
     assert.equal(alice?.detail, "you");
     assert.equal(bob?.swatch?.title, "Offline");
     assert.match(bob?.swatch?.color ?? "", /^color-mix\(in srgb, .+ 30%, transparent\)$/);
+  });
+
+  test("draws each user's avatar, with the uploaded image when there is one", () => {
+    const model = new UsersTreeModel(kRoles, kEntries, "a");
+    const [admin, , spectator] = model.nodes;
+
+    assert.deepEqual(admin.children?.[0].avatar, {
+      peerId: "a",
+      image: undefined
+    });
+    assert.equal(
+      spectator.children?.[0].avatar?.image,
+      "/api/accounts/b/avatar?v=0123456789abcdef"
+    );
   });
 
   test("resolves a user row back to its roster entry", () => {

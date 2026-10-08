@@ -5,32 +5,14 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## 1. Account avatars
-
-Every peer gets an avatar, signed in or not.
-
-- **Defaults.** About ten SVG avatars in `@jolly-pixel/ui`, one or two bold
-  shapes each, readable at 16 to 24 px. The peer id picks one with the hash
-  `colorFromKey` uses, drawn in the peer color. Nothing is stored, so
-  standalone editors show them too.
-- **Uploads.** `PUT /api/accounts/avatar` replaces the signed-in account's
-  own image, body capped at 2 MB. sharp, imported from
-  `@jolly-pixel/accounts/node` only, refuses undecodable input, crops to a
-  128 px square, strips metadata and encodes WebP.
-- **Storage.** An `avatars (user_id, hash, bytes)` table in `accounts.db`,
-  deleted with its account. `Account` gains `avatar?: string`, the content
-  hash. Clients load `/api/accounts/<id>/avatar?v=<hash>` with an immutable
-  cache, and the roster push carries the new hash.
-- The upload lives in the `AccountBadge` menu until step 4.
-
-## 2. Master password
+## 1. Master password
 
 Anyone who reaches the server can register today, and the first account
 becomes admin. A project secret closes that race.
 
 - The first account must give it and becomes admin. Later, giving it
   registers with `defaultRole`; without it, registering files an access
-  request (step 3).
+  request (step 2).
 - Stored hashed in `accounts.db`. On start, `JOLLY_MASTER_PASSWORD` seeds the
   hash when none is stored and is ignored once one is. Admins rotate it from
   the Users pane.
@@ -39,7 +21,7 @@ becomes admin. A project secret closes that race.
 - Still open: recovering when every admin is locked out. An environment flag
   that resets the hash is the candidate.
 
-## 3. Access requests
+## 2. Access requests
 
 Registering without the master password creates a pending account.
 
@@ -52,14 +34,14 @@ Registering without the master password creates a pending account.
 - `LoginLimiter` rate-limits requests, and the number of pending accounts is
   capped.
 
-## 4. Preferences and settings pane
+## 3. Preferences and settings pane
 
 A per-user store the shell owns, reached from the header toolbar. The open
 tabs, the dock layout and the kind filter move there from `localStorage`. It
-becomes the home of the account: avatar upload, and master password rotation
-for admins.
+becomes the home of the account: the avatar upload moves there from the
+`AccountBadge` menu, and admins rotate the master password.
 
-## 5. Share links
+## 4. Share links
 
 A read-only link to one asset for people without an account.
 

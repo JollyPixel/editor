@@ -13,9 +13,18 @@ import { presenceStyles } from "./Presence.styles.ts";
 import { emitPeerEvent } from "./events.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import type { CollaboratorPresence } from "./types.ts";
+import "./Avatar.ts";
 
 export interface PresencePeer extends CollaboratorPresence {
   self?: boolean;
+  /**
+   * Picks the default avatar. Defaults to `clientId`.
+   */
+  peerId?: string;
+  /**
+   * Image URL of an uploaded avatar.
+   */
+  avatar?: string;
 }
 
 /**
@@ -114,13 +123,13 @@ export class PresenceElement extends LitElement {
     peer: PresencePeer
   ): TemplateResult {
     const body = html`
-      <span
-        class="swatch"
-        part="swatch"
-        role="img"
-        aria-label=${`${peer.displayName}'s color`}
-        style=${`background-color: ${peer.color}`}
-      ></span>
+      <jolly-avatar
+        class="avatar"
+        part="avatar"
+        peer-id=${peer.peerId ?? peer.clientId}
+        color=${peer.color}
+        image=${peer.avatar ?? ""}
+      ></jolly-avatar>
       <span class=${peer.self ? "self" : ""}>
         ${peer.displayName}${peer.self ? " (you)" : ""}
       </span>

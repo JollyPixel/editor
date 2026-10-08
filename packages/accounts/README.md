@@ -26,16 +26,25 @@ import {
 const accounts = await Accounts.open({
   location: ".jollypixel/accounts.db",
   roles: new AccountRoles({
-    roles: ["member", "spectator"],
+    roles: [
+      "member",
+      "spectator"
+    ],
     defaultRole: "spectator"
   })
 });
 
 const server = new Server({
   rights: {
-    admin: { "*": "write" },
-    member: { "*": "write" },
-    spectator: { "*": "read" }
+    admin: {
+      "*": "write"
+    },
+    member: {
+      "*": "write"
+    },
+    spectator: {
+      "*": "read"
+    }
   },
   defaultRole: accounts.roles.defaultRole,
   auth: accounts
@@ -48,17 +57,24 @@ httpServer.on("request", accounts.handler);
 In the browser, the client signs in and the socket carries the cookie on its own.
 
 ```ts
-import { AccountsClient, AccountsRoster } from "@jolly-pixel/accounts";
+import {
+  AccountsClient,
+  AccountsRoster
+} from "@jolly-pixel/accounts";
 import { Client } from "@jolly-pixel/network/client";
 
 const accounts = new AccountsClient({
   url: new URL("api/accounts/", document.baseURI)
 });
-const account = await accounts.me() ??
-  await accounts.login("alice", "correct horse");
+const account = await accounts.me() ?? await accounts.login(
+  "alice",
+  "correct horse"
+);
 
 const client = new Client({
-  profile: { username: account.username }
+  profile: {
+    username: account.username
+  }
 });
 const roster = AccountsRoster.join(client);
 ```

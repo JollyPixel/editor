@@ -8,15 +8,21 @@ export interface PeerIdentity {
   username: string;
   peerId: string;
   color: string;
+  /**
+   * Same-origin path of an uploaded avatar image.
+   */
+  avatar?: string;
 }
 
 export function peerIdentity(
   username: string,
-  peerId: string = crypto.randomUUID()
+  peerId: string = crypto.randomUUID(),
+  avatar?: string
 ): PeerIdentity {
   return {
     username,
     peerId,
-    color: colorFromKey(peerId)
+    color: colorFromKey(peerId),
+    ...(avatar === undefined ? {} : { avatar })
   };
 }

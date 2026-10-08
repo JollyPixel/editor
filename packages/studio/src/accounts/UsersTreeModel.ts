@@ -116,6 +116,10 @@ export class UsersTreeModel {
       id: userNodeId(entry.id),
       label: entry.username,
       ...(entry.id === this.selfId ? { detail: "you" } : {}),
+      avatar: {
+        peerId: entry.id,
+        image: entry.avatar
+      },
       swatch: {
         title: entry.online ? "Online" : "Offline",
         color: entry.online ?

@@ -17,6 +17,15 @@ describe("peerIdentity", () => {
     });
   });
 
+  test("carries the avatar path it is given", () => {
+    assert.deepEqual(peerIdentity("alice", "p-1", "/avatars/p-1"), {
+      username: "alice",
+      peerId: "p-1",
+      color: colorFromKey("p-1"),
+      avatar: "/avatars/p-1"
+    });
+  });
+
   test("mints a fresh peer id when none is given", () => {
     const first = peerIdentity("alice");
     const second = peerIdentity("alice");

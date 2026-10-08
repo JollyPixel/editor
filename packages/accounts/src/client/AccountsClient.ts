@@ -3,6 +3,7 @@ import * as z from "zod";
 
 // Import Internal Dependencies
 import {
+  AVATAR_MAX_BYTES,
   accountSchema,
   type Account
 } from "../account/Account.ts";
@@ -17,6 +18,7 @@ import { prehashPassword } from "./prehashPassword.ts";
 // CONSTANTS
 export const MIN_PASSWORD_LENGTH = 8;
 const kUnauthorized = 401;
+const kBytesPerMegabyte = 1_024 * 1_024;
 const kAccountBodySchema = z.object({
   account: accountSchema
 });
@@ -37,8 +39,8 @@ export interface AccountsClientOptions {
 }
 
 interface AccountsRequest {
-  method: "GET" | "POST";
-  body?: unknown;
+  method: "GET" | "POST" | "PUT";
+  body?: Blob | object;
 }
 
 export class AccountsClient {
@@ -108,6 +110,30 @@ export class AccountsClient {
     ).account;
   }
 
+  async replaceAvatar(
+    image: Blob
+  ): Promise<Account> {
+    if (image.size > AVATAR_MAX_BYTES) {
+      throw new AccountsRequestError(
+        413,
+        "payload-too-large",
+        `an avatar is at most ${AVATAR_MAX_BYTES / kBytesPerMegabyte} MB`
+      );
+    }
+
+    const response = await this.#request("avatar", {
+      method: "PUT",
+      body: image
+    });
+    if (!response.ok) {
+      throw await requestError(response);
+    }
+
+    return kAccountBodySchema.parse(
+      await response.json()
+    ).account;
+  }
+
   async #authenticate(
     route: "register" | "login",
     username: string,
@@ -143,15 +169,33 @@ export class AccountsClient {
       {
         method: options.method,
         credentials: "same-origin",
-        headers: options.body === undefined ?
-          {} :
-          { "content-type": "application/json" },
-        body: options.body === undefined ?
-          undefined :
-          JSON.stringify(options.body)
+        ...requestBody(options)
       }
     );
   }
+}
+
+function requestBody(
+  { body }: AccountsRequest
+): Pick<RequestInit, "headers" | "body"> {
+  if (body === undefined) {
+    return {};
+  }
+  if (body instanceof Blob) {
+    return {
+      headers: {
+        "content-type": body.type || "application/octet-stream"
+      },
+      body
+    };
+  }
+
+  return {
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  };
 }
 
 async function requestError(

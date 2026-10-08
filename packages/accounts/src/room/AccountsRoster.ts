@@ -36,12 +36,15 @@ interface Pending {
   reject: (error: Error) => void;
 }
 
-export class AccountsRoster extends Emitter<AccountsRosterEventMap>
-  implements Iterable<RosterEntry> {
+export class AccountsRoster extends Emitter<
+  AccountsRosterEventMap
+> implements Iterable<RosterEntry> {
   static join(
     rooms: AccountsRoomSource
   ): AccountsRoster {
-    return new AccountsRoster(rooms.room(ACCOUNTS_ROOM));
+    return new AccountsRoster(
+      rooms.room(ACCOUNTS_ROOM)
+    );
   }
 
   #room: AccountsRoom;
@@ -103,7 +106,12 @@ export class AccountsRoster extends Emitter<AccountsRosterEventMap>
     request: AccountsRequest
   ): Promise<void> {
     const requestId = crypto.randomUUID();
-    const { promise, resolve, reject } = Promise.withResolvers<void>();
+    const {
+      promise,
+      resolve,
+      reject
+    } = Promise.withResolvers<void>();
+
     this.#pending.set(requestId, {
       resolve,
       reject
@@ -140,7 +148,9 @@ export class AccountsRoster extends Emitter<AccountsRosterEventMap>
     const pending = this.#pending.get(message.requestId);
     this.#pending.delete(message.requestId);
     if (message.type === ACCOUNTS_REJECTED) {
-      pending?.reject(new AccountsRejectedError(message.reason));
+      pending?.reject(
+        new AccountsRejectedError(message.reason)
+      );
     }
     else {
       pending?.resolve();

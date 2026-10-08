@@ -21,6 +21,7 @@ const kRosterEntrySchema = {
     id: kString,
     username: kString,
     role: kString,
+    avatar: kString,
     online: { type: "boolean" }
   },
   required: [

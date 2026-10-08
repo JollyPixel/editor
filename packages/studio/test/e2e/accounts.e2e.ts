@@ -12,6 +12,12 @@ import {
   uniqueUsername
 } from "./support/account.ts";
 
+// CONSTANTS
+const kOnePixelPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64"
+);
+
 function signInDialog(
   page: Page
 ) {
@@ -36,8 +42,30 @@ test("creates an account from the dialog, then signs out", async({ page }) => {
 
   const badge = page.locator("#studio-actions studio-account");
   await expect(badge).toContainText(username);
-  await badge.getByRole("button", { name: "Sign out" }).click();
+  await badge.getByRole("button", { name: username }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(signInDialog(page)).toBeVisible();
+});
+
+test("uploads an avatar from the account menu", async({ page }) => {
+  const username = await registerAccount(page.request);
+  await page.goto("/");
+
+  const badge = page.locator("#studio-actions studio-account");
+  const chooser = page.waitForEvent("filechooser");
+  await badge.getByRole("button", { name: username }).click();
+  await page.getByRole("menuitem", { name: "Change avatar…" }).click();
+  await (await chooser).setFiles({
+    name: "avatar.png",
+    mimeType: "image/png",
+    buffer: kOnePixelPng
+  });
+
+  const avatar = /\/avatar\?v=[0-9a-f]{16}$/;
+  await expect(badge.locator("jolly-avatar img")).toHaveAttribute("src", avatar);
+  await expect(
+    page.locator("studio-users jolly-tree jolly-avatar img")
+  ).toHaveAttribute("src", avatar);
 });
 
 test("signs back in with the password an account registered with", async({ page, request }) => {

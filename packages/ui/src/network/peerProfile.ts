@@ -33,6 +33,16 @@ export function readPeerId(
     : undefined;
 }
 
+export function readAvatar(
+  profile: PeerMetadata | undefined
+): string | undefined {
+  const avatar = profile?.avatar;
+
+  return typeof avatar === "string" && isSameOriginPath(avatar)
+    ? avatar
+    : undefined;
+}
+
 export function peerProfileColor(
   clientId: string,
   profile: PeerMetadata | undefined
@@ -40,4 +50,12 @@ export function peerProfileColor(
   return colorFromKey(
     readPeerId(profile) ?? clientId
   );
+}
+
+function isSameOriginPath(
+  value: string
+): boolean {
+  return value.startsWith("/") &&
+    !value.startsWith("//") &&
+    !value.startsWith("/\\");
 }

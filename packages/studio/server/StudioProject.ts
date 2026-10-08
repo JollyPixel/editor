@@ -7,7 +7,6 @@ import {
   PackageResolver,
   ProjectFile,
   ProjectKinds,
-  type PackageLoader,
   type ProjectFileData,
   type ProjectFileOpenOptions
 } from "@jolly-pixel/asset-server/node";
@@ -41,21 +40,6 @@ const kEditorsSectionSchema = z.object({
   editors: z.array(z.string().min(1)).default([])
 });
 
-export interface StudioProjectLoadOptions {
-  /**
-   * @default the project root, then `STUDIO_ROOT`
-   */
-  resolver?: PackageResolver;
-  /**
-   * @default imports the file resolver.resolve returns
-   */
-  load?: PackageLoader;
-}
-
-export interface StudioProjectOpenOptions extends
-  StudioProjectLoadOptions,
-  ProjectFileOpenOptions {}
-
 export class StudioProject {
   readonly file: ProjectFile;
   readonly editors: EditorPackages;
@@ -78,24 +62,12 @@ export class StudioProject {
 
   static async open(
     root: string,
-    options: StudioProjectOpenOptions = {}
+    options: ProjectFileOpenOptions = {}
   ): Promise<StudioProject> {
-    return StudioProject.load(
-      await ProjectFile.open(root, DEFAULT_PROJECT_FILE, options),
-      options
-    );
-  }
-
-  static async load(
-    file: ProjectFile,
-    options: StudioProjectLoadOptions = {}
-  ): Promise<StudioProject> {
-    const {
-      resolver = new PackageResolver(file.root, {
-        fallbacks: [STUDIO_ROOT]
-      }),
-      load
-    } = options;
+    const file = await ProjectFile.open(root, DEFAULT_PROJECT_FILE, options);
+    const resolver = new PackageResolver(file.root, {
+      fallbacks: [STUDIO_ROOT]
+    });
     const section = kEditorsSectionSchema.safeParse(file.document);
     if (!section.success) {
       throw new TypeError(
@@ -106,10 +78,7 @@ export class StudioProject {
     return new StudioProject(
       file,
       EditorPackages.read(section.data.editors, resolver),
-      await ProjectKinds.load(file, {
-        resolver,
-        load
-      }),
+      await ProjectKinds.load(file, { resolver }),
       StudioAccess.read(file.document, file.path)
     );
   }

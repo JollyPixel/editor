@@ -47,12 +47,8 @@ export const presenceStyles = css`
     );
   }
 
-  .swatch {
-    flex: none;
-    width: 0.75em;
-    height: 0.75em;
+  .avatar {
     margin-inline-end: var(--jolly-space-2, 8px);
-    border-radius: 50%;
   }
 
   .select {

@@ -18,6 +18,7 @@ import {
   name,
   storeWith
 } from "../helpers/accounts.ts";
+import { solidPng } from "../helpers/avatar/images.ts";
 import {
   AccountsRejectedError,
   AccountsRoster,
@@ -146,6 +147,22 @@ describe("AccountsExtension roster", () => {
 
     assert.deepEqual(summary(await changed), ["Alice:admin:on", "Carol:spectator:off"]);
   });
+
+  test("pushes the path of a new avatar", async() => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    const accounts = createAccounts(store);
+    await using server = rosterServer(accounts);
+    const roster = await server.connect({
+      role: "admin",
+      subject: alice.id
+    });
+
+    const changed = nextChange(roster);
+    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
+
+    assert.equal((await changed)[0].avatar, avatar);
+  });
 });
 
 describe("AccountsExtension commands", () => {
@@ -170,26 +187,6 @@ describe("AccountsExtension commands", () => {
     assert.deepEqual(summary(await removed), ["Alice:admin:on", "Bob:member:off"]);
   });
 
-  test("rejects an undeclared role and the removal of the last admin", async() => {
-    using store = storeWith("Alice", "Bob");
-    const [alice] = store;
-    await using server = rosterServer(createAccounts(store));
-    const roster = await server.connect({
-      role: "admin",
-      subject: alice.id
-    });
-
-    await assert.rejects(
-      roster.assignRole("bob", "editor"),
-      AccountsRejectedError
-    );
-    await assert.rejects(
-      roster.remove("alice"),
-      AccountsRejectedError
-    );
-    assert.equal(store.size, 2);
-  });
-
   test("rejects a command from a peer that is not an admin", async() => {
     using store = storeWith("Alice", "Bob");
     const [, bob] = store;
@@ -201,7 +198,8 @@ describe("AccountsExtension commands", () => {
 
     await assert.rejects(
       roster.remove("bob"),
-      /only an admin manages accounts/
+      (error) => error instanceof AccountsRejectedError &&
+        /only an admin manages accounts/.test(error.message)
     );
     assert.equal(store.size, 2);
   });

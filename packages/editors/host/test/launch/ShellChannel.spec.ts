@@ -98,6 +98,15 @@ describe("ShellChannel message guards", () => {
       username: "alice",
       peerId: "p-1"
     });
+    assert.deepEqual(identityOf({ username: "alice", peerId: "p-1", avatar: "/a.webp" }), {
+      username: "alice",
+      peerId: "p-1",
+      avatar: "/a.webp"
+    });
+    assert.equal(
+      identityOf({ username: "alice", peerId: "p-1", avatar: 42 })?.avatar,
+      undefined
+    );
     assert.equal(identityOf({ username: "  ", peerId: "p-1" }), null);
     assert.equal(identityOf({ username: "alice" }), null);
     assert.equal(identityOf("alice"), null);
@@ -142,6 +151,23 @@ describe("ShellChannel.identity", () => {
       peerIdentity("alice", "p-1")
     );
     assert.equal(channel().identity, null);
+  });
+
+  test("keeps the avatar of the launch identity", () => {
+    const shell = new ShellChannel({
+      port: { postMessage: () => undefined },
+      origin: kShellOrigin,
+      identity: {
+        username: "alice",
+        peerId: "p-1",
+        avatar: "/api/accounts/p-1/avatar?v=1"
+      }
+    });
+
+    assert.deepEqual(shell.identity, {
+      ...peerIdentity("alice", "p-1"),
+      avatar: "/api/accounts/p-1/avatar?v=1"
+    });
   });
 });
 

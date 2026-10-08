@@ -20,7 +20,7 @@ export interface Browser {
   fetch: typeof fetch;
 }
 
-export function browser(
+function browser(
   url: URL
 ): Browser {
   const cookies = new Map<string, string>();

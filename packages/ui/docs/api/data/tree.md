@@ -38,7 +38,7 @@ by content: assigning a new array with the same IDs in the same order does not
 re-render, so replace the array instead of mutating it in place.
 
 `nodes` can be rebuilt on every change: rows are keyed by ID, and a row
-re-renders only when something it displays changes (label, icon, detail,
+re-renders only when something it displays changes (label, icon, avatar, detail,
 toggles, swatch, badges, depth, or its selection, expansion and drag state).
 Fields a row does not display, such as `data`, never re-render it.
 
@@ -170,6 +170,21 @@ selected row. Clicking a swatch emits `jolly-activate-swatch` and neither
 selects nor renames the row, so a consumer opens the property's editor there.
 Unlike a badge, a swatch is a click target. It is not a tab stop: the keyboard
 reaches the same editor through the row. A row has at most one swatch.
+
+## Showing a person's avatar
+
+`TreeNode.avatar` draws a [`jolly-avatar`](../peer/avatar.md) in place of
+`icon`, for rows that stand for a person, such as a list of accounts. It takes
+the avatar's `peerId`, and optionally `color` and `image`.
+
+```ts
+node.avatar = {
+  peerId: account.id,
+  image: account.avatar
+};
+```
+
+Avatars are 16px square; `--jolly-tree-avatar-size` changes that.
 
 ## Flagging a row with a warning
 

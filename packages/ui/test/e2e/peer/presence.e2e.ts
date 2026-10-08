@@ -16,8 +16,9 @@ test.describe("Presence", () => {
     await expect(presence.locator("[part=summary]")).toHaveText("3 people connected");
     await expect(presence.locator("[part=peer]")).toHaveText(["Ada", "Sam (you)"]);
     await expect(presence.locator("[part=overflow]")).toHaveText("+1 more");
-    await expect(presence.locator("[part=swatch]").first())
-      .toHaveAttribute("aria-label", "Ada's color");
+    await expect(presence.locator("[part=avatar]")).toHaveCount(2);
+    await expect(presence.locator("[part=avatar]").first().locator("jolly-icon"))
+      .toHaveAttribute("name", /^avatar-/);
 
     const buttons = presence.locator("[part=peer-button]");
     await expect(buttons).toHaveText(["Ada"]);

@@ -16,4 +16,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS sessions_by_user ON sessions (user_id);
+
+CREATE TABLE IF NOT EXISTS avatars (
+  user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  hash TEXT NOT NULL,
+  bytes BLOB NOT NULL
+) STRICT;
 `;

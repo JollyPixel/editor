@@ -105,6 +105,10 @@ export const treeStyles = css`
     color: var(--jolly-text-muted, ${kFallback.text});
   }
 
+  .node-avatar {
+    --jolly-avatar-size: var(--jolly-tree-avatar-size, 16px);
+  }
+
   .row:hover .node-icon,
   .row[aria-selected="true"] .node-icon {
     --jolly-icon-tone-strength: var(--jolly-icon-tone-engaged, 100%);
@@ -227,7 +231,8 @@ export const treeStyles = css`
   }
 
   .row[data-hidden="true"] .label,
-  .row[data-hidden="true"] .node-icon {
+  .row[data-hidden="true"] .node-icon,
+  .row[data-hidden="true"] .node-avatar {
     opacity: 0.5;
   }
 

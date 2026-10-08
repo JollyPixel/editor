@@ -33,6 +33,10 @@ Closes the session.
 
 The signed-in account, or `null` without a valid session.
 
+### `replaceAvatar(image)`
+
+Uploads a `Blob` as the signed-in account's avatar and resolves to the account, with its new `avatar` path. Throws `AccountsRequestError` with `payload-too-large` without sending anything when the image is over `AVATAR_MAX_BYTES`, and with `invalid-avatar` when the server cannot decode it.
+
 ## `prehashPassword(username, password)`
 
 PBKDF2-SHA-256 with `PREHASH_ITERATIONS` (600,000) iterations, salted with `jolly-pixel:v1:` followed by the username's `key`. It resolves to 32 bytes in base64url. `AccountsClient` sends this instead of the password, so the plaintext never reaches the server or its logs.

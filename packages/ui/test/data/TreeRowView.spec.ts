@@ -19,6 +19,10 @@ const kSwatch = {
   color: "#f00"
 };
 const kBadges = [{ color: "#0f0", title: "Peer" }];
+const kAvatar = {
+  peerId: "ada",
+  color: "#f00"
+};
 const kNode: TreeNode = {
   id: "hero",
   label: "Hero",
@@ -26,6 +30,7 @@ const kNode: TreeNode = {
   detail: "Model",
   visible: true,
   locked: false,
+  avatar: kAvatar,
   swatch: kSwatch,
   badges: kBadges,
   data: { weight: 1 }
@@ -71,6 +76,7 @@ function viewOf(
 describe("Data.TreeRowView", () => {
   test("rebuilt nodes with the same rendered fields give equal views", () => {
     assert.ok(viewOf().equals(viewOf({
+      avatar: { ...kAvatar },
       swatch: { ...kSwatch },
       badges: kBadges.map((badge) => {
         return { ...badge };
@@ -84,6 +90,10 @@ describe("Data.TreeRowView", () => {
     const changes: Partial<TreeNode>[] = [
       { label: "Villain" },
       { icon: "folder" },
+      { avatar: undefined },
+      { avatar: { peerId: "lin", color: "#f00" } },
+      { avatar: { peerId: "ada", color: "#00f" } },
+      { avatar: { ...kAvatar, image: "/ada.webp" } },
       { detail: undefined },
       { visible: false },
       { locked: true },
