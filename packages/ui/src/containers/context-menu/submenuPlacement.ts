@@ -52,3 +52,28 @@ export function placeSubmenu({
     side: center < (item.left + item.right) / 2 ? "left" : "right"
   };
 }
+
+export interface SubmenuSideOptions {
+  menu: Pick<AnchorRect, "left" | "right">;
+  /**
+   * Width, in pixels, a submenu may take on the chosen side.
+   */
+  budget: number;
+  viewport: ViewportSize;
+  prefer: SubmenuSide;
+}
+
+export function submenuSide({
+  menu,
+  budget,
+  viewport,
+  prefer
+}: SubmenuSideOptions): SubmenuSide {
+  const fits = {
+    left: menu.left - budget >= 0,
+    right: menu.right + budget <= viewport.width
+  };
+  const other = prefer === "right" ? "left" : "right";
+
+  return !fits[prefer] && fits[other] ? other : prefer;
+}

@@ -79,8 +79,10 @@ menu.items = [
 ```
 
 A submenu opens beside its item, on the right, and on the left when the
-right side has no room. Deeper levels keep the side their parent opened on.
-Its first item lines up with the item that opened it.
+right side has no room for a submenu at the menu's `max-width`. Deeper levels
+keep the side their parent opened on. Its first item lines up with the item
+that opened it. The chevron sits on the side the submenu opens on and points
+toward it.
 
 Resting the pointer on the item opens the submenu after 150 ms. Resting on
 another item of the same menu closes it after 300 ms, so the pointer can cross

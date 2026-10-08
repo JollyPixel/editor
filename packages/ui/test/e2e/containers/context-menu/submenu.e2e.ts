@@ -2,6 +2,7 @@
 import {
   test,
   expect,
+  type Locator,
   type Page
 } from "@playwright/test";
 
@@ -13,6 +14,29 @@ function menuItem(
   name: string
 ) {
   return page.getByRole("menuitem", { name, exact: true });
+}
+
+async function settledBox(
+  locator: Locator
+) {
+  await locator.evaluate((element) => Promise.all(
+    element.getAnimations().map(
+      (animation) => animation.finished.catch(() => undefined)
+    )
+  ));
+
+  return (await locator.boundingBox())!;
+}
+
+async function chevronOffset(
+  page: Page,
+  name: string
+) {
+  const item = menuItem(page, name);
+  const chevron = (await item.locator(".chevron").boundingBox())!;
+  const label = (await item.locator(".label").boundingBox())!;
+
+  return chevron.x - label.x;
 }
 
 async function openOn(
@@ -38,9 +62,10 @@ test.describe("Context menu submenus", () => {
     await expect(menuItem(page, "Add")).toHaveAttribute("aria-expanded", "true");
     await expect(menuItem(page, "Add")).toBeFocused();
 
-    const rootBox = (await root.boundingBox())!;
-    const addBox = (await add.boundingBox())!;
+    const rootBox = await settledBox(root);
+    const addBox = await settledBox(add);
     expect(addBox.x).toBeGreaterThanOrEqual(rootBox.x + rootBox.width - 1);
+    expect(await chevronOffset(page, "Add")).toBeGreaterThan(0);
 
     await menuItem(page, "Shape").hover();
     await expect(page.getByRole("menu", { name: "Shape" })).toBeVisible();
@@ -85,29 +110,30 @@ test.describe("Context menu submenus", () => {
     await expect(page.getByRole("menu", { name: "Row actions" })).toBeVisible();
   });
 
-  test("opens on the left near the right edge of the viewport", async({ page }) => {
-    const viewport = page.viewportSize()!;
-    await page.locator("jolly-context-menu").evaluate((
-      menu: HTMLElementTagNameMap["jolly-context-menu"],
-      width
-    ) => {
-      menu.items = [
-        {
-          id: "more",
-          label: "More",
-          items: [{ id: "one", label: "One" }]
-        }
-      ];
-      menu.openAt(width - 180, 40);
-    }, viewport.width);
+  test("cascades on the left near the right edge of the viewport", async({ page }) => {
+    await openOn(page, "Wing");
+    const rootBox = await settledBox(page.getByRole("menu", { name: "Row actions" }));
 
-    await page.keyboard.press("ArrowRight");
-    const submenu = page.getByRole("menu", { name: "More" });
-    await expect(menuItem(page, "One")).toBeFocused();
+    expect(await chevronOffset(page, "Add")).toBeLessThan(0);
+    const addLabel = (await menuItem(page, "Add").locator(".label").boundingBox())!;
+    const renameLabel = (await menuItem(page, "Rename").locator(".label").boundingBox())!;
+    expect(Math.abs(addLabel.x - renameLabel.x)).toBeLessThanOrEqual(1);
 
-    const rootBox = (await page.getByRole("menu", { name: "Row actions" }).boundingBox())!;
-    const submenuBox = (await submenu.boundingBox())!;
-    expect(submenuBox.x + submenuBox.width).toBeLessThanOrEqual(rootBox.x + 1);
+    await menuItem(page, "Add").hover();
+    const add = page.getByRole("menu", { name: "Add" });
+    await expect(add).toBeVisible();
+    const addBox = await settledBox(add);
+    expect(addBox.x + addBox.width).toBeLessThanOrEqual(rootBox.x + 1);
+
+    expect(await chevronOffset(page, "Shape")).toBeLessThan(0);
+    await menuItem(page, "Shape").hover();
+    const shape = page.getByRole("menu", { name: "Shape" });
+    await expect(shape).toBeVisible();
+    const shapeBox = await settledBox(shape);
+    expect(shapeBox.x + shapeBox.width).toBeLessThanOrEqual(addBox.x + 1);
+
+    await menuItem(page, "Sphere").click();
+    await expect(page.locator("main > div")).toHaveAttribute("data-result", "add-sphere:Wing");
   });
 
   test("follows its menu when a resize pushes the menu back into the viewport", async({ page }) => {
@@ -131,8 +157,8 @@ test.describe("Context menu submenus", () => {
     const root = page.getByRole("menu", { name: "Row actions" });
     const submenu = page.getByRole("menu", { name: "More" });
     await expect.poll(async() => (await root.boundingBox())!.x).toBeLessThan(400);
-    const rootBox = (await root.boundingBox())!;
-    const submenuBox = (await submenu.boundingBox())!;
+    const rootBox = await settledBox(root);
+    const submenuBox = await settledBox(submenu);
     expect(submenuBox.x + submenuBox.width).toBeLessThanOrEqual(rootBox.x + 1);
     expect(submenuBox.x).toBeGreaterThanOrEqual(0);
   });

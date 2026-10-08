@@ -4,7 +4,8 @@ import { createSimpleExample } from "../shared/example.ts";
 import { text } from "../shared/containerBuilders.ts";
 
 // CONSTANTS
-const kRows = ["Torso", "Arm", "Locked leg"];
+const kEdgeRow = "Wing";
+const kRows = ["Torso", "Arm", "Locked leg", kEdgeRow];
 
 function entriesFor(
   row: string
@@ -77,6 +78,9 @@ export const CONTEXT_MENU_EXAMPLE = createSimpleExample(
       row.className = "row";
       row.textContent = name;
       row.style.display = "block";
+      if (name === kEdgeRow) {
+        row.style.marginInlineStart = "auto";
+      }
       row.addEventListener("contextmenu", (event) => {
         event.preventDefault();
         row.focus();
@@ -93,6 +97,7 @@ export const CONTEXT_MENU_EXAMPLE = createSimpleExample(
 
     root.append(
       text("Right-click a row, or focus it and press Shift+F10."),
+      text("Wing sits at the right edge, so its submenus open on the left."),
       ...rows,
       menu
     );
