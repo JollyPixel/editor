@@ -34,7 +34,7 @@ export class ShapeOccupancy {
   ): ShapeOccupancy {
     let variants = kCache.get(shape);
     if (variants === undefined) {
-      variants = new Array(VOXEL_TRANSFORM_MASK + 1);
+      variants = Array.from<ShapeOccupancy | undefined>({ length: VOXEL_TRANSFORM_MASK + 1 });
       kCache.set(shape, variants);
     }
 

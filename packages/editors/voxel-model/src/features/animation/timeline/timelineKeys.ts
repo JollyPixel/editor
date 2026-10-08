@@ -16,7 +16,9 @@ export interface KeyRef {
 export interface CopiedKey {
   path: string;
   channel: AnimationChannel;
-  /** `tick` counts from the earliest key copied. */
+  /**
+   * `tick` counts from the earliest key copied.
+   */
   key: AnimationKeyJSON;
 }
 

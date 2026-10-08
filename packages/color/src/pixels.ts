@@ -10,6 +10,7 @@ const kBytesPerPixel = 4;
 export function imageDataToPixels(
   data: Uint8ClampedArray
 ): RGBA8[] {
+  // oxlint-disable-next-line unicorn/no-new-array
   const pixels: RGBA8[] = new Array(
     data.length / kBytesPerPixel
   );

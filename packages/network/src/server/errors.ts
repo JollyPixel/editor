@@ -5,6 +5,3 @@ export function errorMessage(
     ? error.message
     : String(error);
 }
-
-export class UngatedExtensionError extends Error {}
-export class UnknownDefaultRoleError extends Error {}

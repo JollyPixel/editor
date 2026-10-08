@@ -170,6 +170,7 @@ function buildElement<TValue>(
   switch (tag) {
     case "jolly-number":
     case "jolly-slider":
+    case "jolly-spin-slider":
     case "jolly-range":
     case "jolly-point2d": {
       const element = document.createElement(tag);

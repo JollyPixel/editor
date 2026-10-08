@@ -7,7 +7,7 @@ import type {
 import { ANIMATION_CHANNELS } from "../network/AnimationCommand.schema.ts";
 import type { AnimationSetReader } from "./AnimationSet.ts";
 import { trackOf } from "./clipTracks.ts";
-import { InvalidAnimationSetError } from "./InvalidAnimationSetError.ts";
+import { InvalidAnimationSetError } from "./errors/InvalidAnimationSetError.ts";
 
 export function inverseOf(
   set: AnimationSetReader,

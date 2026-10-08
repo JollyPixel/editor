@@ -40,6 +40,7 @@ export type DispatchTag =
   | "jolly-range"
   | "jolly-select"
   | "jolly-slider"
+  | "jolly-spin-slider"
   | "jolly-text"
   | "jolly-vector2"
   | "jolly-vector3"
@@ -49,7 +50,8 @@ export type DispatchView =
   | "buttons"
   | "flags"
   | "point2d"
-  | "quaternion";
+  | "quaternion"
+  | "spin";
 
 export interface DispatchOptions<TValue> {
   min?: number;
@@ -105,9 +107,13 @@ export function dispatchTag<TValue>(
     return "jolly-checkbox";
   }
   if (typeof value === "number") {
-    return options.min !== undefined && options.max !== undefined
-      ? "jolly-slider"
-      : "jolly-number";
+    if (options.min === undefined || options.max === undefined) {
+      return "jolly-number";
+    }
+
+    return options.view === "spin"
+      ? "jolly-spin-slider"
+      : "jolly-slider";
   }
   if (typeof value === "string") {
     return kHexColor.test(value) ? "jolly-color" : "jolly-text";

@@ -13,6 +13,7 @@ import {
 
 export class FaceEmitter {
   #pass: ChunkMeshPass;
+  // oxlint-disable-next-line unicorn/no-new-array
   #neighbours: FaceBlendNeighbours = new Array(FACE_BLEND_OFFSETS.length)
     .fill(null);
   #position: [number, number, number] = [0, 0, 0];

@@ -61,7 +61,9 @@ export class GraphElement extends LitElement {
   @property({ type: Number })
   declare samples: number;
 
-  /** Formats the current-value overlay drawn over the graph. */
+  /**
+   * Formats the current-value overlay drawn over the graph.
+   */
   @property({ attribute: false })
   declare format: ((value: number) => string) | undefined;
 

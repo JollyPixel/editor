@@ -44,6 +44,7 @@ export class LayerChunkCache {
   /**
    * Pre-filled with `null` rather than left holey, so reads stay monomorphic.
    */
+  // oxlint-disable-next-line unicorn/no-new-array
   #chunks: (MeshableChunk | null)[] = new Array(kSpan ** 3).fill(null);
 
   #centreWx: number;

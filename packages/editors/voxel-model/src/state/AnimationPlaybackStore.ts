@@ -2,7 +2,9 @@
 import { Emitter } from "@openally/emitt";
 
 export interface AnimationPlayback {
-  /** The playhead, in ticks from the start of the focused clip. */
+  /**
+   * The playhead, in ticks from the start of the focused clip.
+   */
   tick: number;
   playing: boolean;
   loop: boolean;

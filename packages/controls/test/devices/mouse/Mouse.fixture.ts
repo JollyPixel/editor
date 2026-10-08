@@ -18,7 +18,9 @@ export interface MouseEventData {
   clientY?: number;
   movementX?: number;
   movementY?: number;
-  /** Simulates an environment that does not expose offsetX/offsetY. */
+  /**
+   * Simulates an environment that does not expose offsetX/offsetY.
+   */
   omitOffsets?: boolean;
 }
 
@@ -116,7 +118,9 @@ export class MouseDocumentAdapter extends DocumentAdapter {
   override exitPointerLock = mock.fn();
   override pointerLockElement: any = null;
 
-  /** A move or release that happened away from the canvas. */
+  /**
+   * A move or release that happened away from the canvas.
+   */
   dispatchMouseEvent(
     type: "mousemove" | "mouseup",
     eventData: MouseEventData = {}
@@ -132,7 +136,9 @@ export class MouseDocumentAdapter extends DocumentAdapter {
     this.replay(type, event);
   }
 
-  /** Replays a canvas event the way bubbling delivers it to the document. */
+  /**
+   * Replays a canvas event the way bubbling delivers it to the document.
+   */
   replay(
     type: string,
     event: unknown

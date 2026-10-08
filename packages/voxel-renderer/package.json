@@ -27,7 +27,7 @@
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "clean": "rm -f cpu-profile-*.* heap-profile-*.*",
     "lint": "oxlint src test examples",
-    "test-types": "tsc -p test/tsconfig.json && tstyche",
+    "test-types": "tstyche",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "publishConfig": {

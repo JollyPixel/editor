@@ -6,7 +6,9 @@ import type { GridFadeFrom } from "./shader.ts";
 
 export class GridFadeValue {
   readonly from: GridFadeFrom;
-  /** Target for `"target"` mode. Set to `null` to use `trackTarget`'s fallback. */
+  /**
+   * Target for `"target"` mode. Set to `null` to use `trackTarget`'s fallback.
+   */
   target: THREE.Object3D | null;
 
   constructor(

@@ -26,7 +26,9 @@ export interface TabRecorder<TTab extends EditorTab> {
 
 export interface EditorHistoryOptions {
   document: ModelDocument;
-  /** Steps kept per tab; 50 by default. */
+  /**
+   * Steps kept per tab; 50 by default.
+   */
   limit?: number;
 }
 

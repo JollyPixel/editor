@@ -19,7 +19,9 @@ export type MenuEntry<TAction extends string> =
   | MenuBranch<TAction>
   | "separator";
 
-/** Viewport pixels where the action was asked for; a follow-up menu opens there. */
+/**
+ * Viewport pixels where the action was asked for; a follow-up menu opens there.
+ */
 export interface MenuPoint {
   x: number;
   y: number;

@@ -22,7 +22,9 @@ export type TrackState = "bound" | "missing" | "ambiguous" | "ignored";
 
 export interface TrackResolution {
   state: TrackState;
-  /** `null` unless bound. */
+  /**
+   * `null` unless bound.
+   */
   blockId: string | null;
   remap: AnimationBindingJSON | null;
 }

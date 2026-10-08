@@ -23,7 +23,9 @@ export interface JollyTabChangeDetail {
 
 export interface JollyTabReorderDetail {
   value: string;
-  /** Index the tab asks to occupy once moved. */
+  /**
+   * Index the tab asks to occupy once moved.
+   */
   index: number;
 }
 

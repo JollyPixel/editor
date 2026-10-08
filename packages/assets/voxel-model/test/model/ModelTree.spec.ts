@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
-import { InvalidModelTreeError } from "#src/model/InvalidModelTreeError.ts";
+import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
 import { createBlockTransform } from "#src/model/blockTransform.ts";
 import { createMaterialSurface } from "#src/model/materialSurface.ts";
 import type {

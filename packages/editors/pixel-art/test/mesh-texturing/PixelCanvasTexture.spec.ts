@@ -14,7 +14,9 @@ import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import { PixelCanvasTexture } from "#src/mesh-texturing/PixelCanvasTexture.ts";
 import { FakeTextureSource } from "./fixtures/FakeTextureSource.ts";
 
-/** Collects scheduler callbacks so a test can decide when the frame runs. */
+/**
+ * Collects scheduler callbacks so a test can decide when the frame runs.
+ */
 function manualScheduler() {
   const queue: (() => void)[] = [];
 

@@ -1,8 +1,12 @@
-/** Why a name is refused, or `null` to accept it. */
+/**
+ * Why a name is refused, or `null` to accept it.
+ */
 export type NameValidator = (name: string) => string | null;
 
 export interface NameFieldOptions {
-  /** Prefilled, and used when the field is left blank. */
+  /**
+   * Prefilled, and used when the field is left blank.
+   */
   defaultName: string;
   validate?: NameValidator;
 }

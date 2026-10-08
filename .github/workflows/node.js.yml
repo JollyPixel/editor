@@ -16,7 +16,9 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      e2e: ${{ steps.e2e.outputs.matrix }}
+      e2e: ${{ steps.affected.outputs.e2e }}
+      test: ${{ steps.affected.outputs.test }}
+      build: ${{ steps.affected.outputs.build }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -29,19 +31,19 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           install: 'false'
-      - name: Select e2e suites
-        id: e2e
+      - name: Select affected workspaces
+        id: affected
         env:
-          BASE: ${{ github.event_name == 'pull_request' && 'HEAD~1' || github.event.before }}
+          BASE: ${{ github.event_name == 'pull_request' && 'HEAD~1' || '' }}
         # TODO: enable voxel-map and voxel-model once their CI-only timeouts are fixed
         run: |
-          matrix=$(node scripts/ciE2eMatrix.ts --base "$BASE" \
-            --skip @jolly-pixel/editor.voxel-map \
-            --skip @jolly-pixel/editor.voxel-model \
-            --skip @jolly-pixel/studio)
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          node scripts/ciAffected.ts --base "$BASE" \
+            --skip-e2e @jolly-pixel/editor.voxel-map \
+            --skip-e2e @jolly-pixel/editor.voxel-model \
+            --skip-e2e @jolly-pixel/studio >> "$GITHUB_OUTPUT"
 
-  test:
+  check:
+    name: lint & typecheck
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -57,8 +59,30 @@ jobs:
         run: pnpm run lint
       - name: Run typecheck
         run: pnpm run typecheck
-      - name: Run tests
-        run: pnpm run test
+      - name: Run script tests
+        run: pnpm run test:scripts
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.test != ''
+    runs-on: ubuntu-latest
+    env:
+      TEST_FILTERS: ${{ needs.changes.outputs.test }}
+      BUILD_FILTERS: ${{ needs.changes.outputs.build }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Build tested workspaces and their dependencies
+        run: pnpm $BUILD_FILTERS --if-present run build
+      - name: Run unit tests
+        run: pnpm $TEST_FILTERS --if-present run test-only
+      - name: Run type tests
+        run: pnpm $TEST_FILTERS --if-present run test-types
 
   e2e:
     needs: changes

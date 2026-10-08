@@ -38,11 +38,17 @@ interface PaintedInsertion {
  * A container that can receive the dragged element.
  */
 export interface DragZone {
-  /** Caller-owned identifier, returned untouched in the result. */
+  /**
+   * Caller-owned identifier, returned untouched in the result.
+   */
   id: string;
-  /** Region that arms this zone when the pointer enters it. */
+  /**
+   * Region that arms this zone when the pointer enters it.
+   */
   rect: Rect;
-  /** Existing children, ordered along `axis`. */
+  /**
+   * Existing children, ordered along `axis`.
+   */
   candidates: DropCandidate[];
   axis: "x" | "y";
   /**
@@ -51,7 +57,9 @@ export interface DragZone {
    * so no line is painted there.
    */
   source?: number | null;
-  /** Client rect of the insertion line for an index. */
+  /**
+   * Client rect of the insertion line for an index.
+   */
   line(
     index: number
   ): Rect;
@@ -75,7 +83,9 @@ export interface DragStackResult {
 }
 
 export interface DragResult {
-  /** Armed zone, or `null` when the pointer sits over none. */
+  /**
+   * Armed zone, or `null` when the pointer sits over none.
+   */
   zone: DragZone | null;
   /**
    * Insertion index into the zone's current children, counting the dragged
@@ -90,11 +100,17 @@ export interface DragResult {
 
 export interface DragSessionOptions {
   source: HTMLElement;
-  /** The `pointerdown` that opened the session. */
+  /**
+   * The `pointerdown` that opened the session.
+   */
   event: PointerEvent;
-  /** Element that keeps pointer capture; defaults to `source`. */
+  /**
+   * Element that keeps pointer capture; defaults to `source`.
+   */
   handle?: HTMLElement;
-  /** Resolved once, when the drag passes the threshold. */
+  /**
+   * Resolved once, when the drag passes the threshold.
+   */
   zones(): DragZone[];
   /**
    * Box the gesture will occupy for a pointer position, asked on every move.

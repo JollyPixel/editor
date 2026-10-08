@@ -96,7 +96,9 @@ async function flushRoot(
   await flushClosure(backend, rootId);
   const record = backend.catalog.record(rootId);
   if (record === undefined) {
-    return Err(new UnknownAssetError(rootId));
+    const error = new UnknownAssetError(rootId);
+
+    return Err(error);
   }
 
   return Ok(referenceOf(record));

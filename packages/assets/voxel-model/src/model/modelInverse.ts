@@ -9,7 +9,7 @@ import type {
 import {
   InvalidModelTreeError,
   type ModelTreeEntry
-} from "./InvalidModelTreeError.ts";
+} from "./errors/InvalidModelTreeError.ts";
 import { materialSurfaceChanges } from "./materialSurface.ts";
 import type { EntryTreeReader } from "./modelCommands.ts";
 import type { ModelTreeReader } from "./ModelTree.ts";

@@ -47,7 +47,9 @@ export interface ThreeRendererOutputOptions {
    * @default false
    */
   shadows?: false | {
-    /** @default THREE.PCFShadowMap */
+    /**
+     * @default THREE.PCFShadowMap
+     */
     type?: THREE.ShadowMapType;
   };
   /**
@@ -67,7 +69,7 @@ export interface ThreeRendererOutputOptions {
 export interface ThreeRendererOptions {
   /**
    * Forwarded to `new THREE.WebGPURenderer()`. These can only be chosen when the
-   * GPU context is created — `antialias`, `powerPreference`, `alpha`,
+   * GPU context is created: `antialias`, `powerPreference`, `alpha`,
    * `logarithmicDepthBuffer`, `stencil`, `forceWebGL`, …
    */
   webgpu?: Omit<THREE.WebGPURendererParameters, "canvas" | "context">;

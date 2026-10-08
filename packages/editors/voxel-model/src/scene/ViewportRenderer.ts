@@ -2,7 +2,9 @@
 import type * as THREE from "three/webgpu";
 import type { Systems } from "@jolly-pixel/engine";
 
-/** Runs each frame after the camera is placed and before the scene is drawn. */
+/**
+ * Runs each frame after the camera is placed and before the scene is drawn.
+ */
 export type PreDrawStep = () => void;
 
 export class ViewportRenderer implements Systems.RenderComponent {

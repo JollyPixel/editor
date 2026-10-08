@@ -12,7 +12,9 @@ export const Mixed: MixedSymbol = Symbol.for("jolly-pixel.ui.mixed") as MixedSym
 
 export type FieldValue<TValue> = TValue | MixedSymbol;
 
-/** Mixed-value placeholder chosen to avoid minus-sign ambiguity. */
+/**
+ * Mixed-value placeholder chosen to avoid minus-sign ambiguity.
+ */
 export const MIXED_PLACEHOLDER = "—";
 
 export function isMixed<TValue>(

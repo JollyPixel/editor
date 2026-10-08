@@ -234,12 +234,18 @@ const softLatticeMask = Fn((
 interface PlaneComponents {
   u: Node<"float">;
   v: Node<"float">;
-  /** Fade anchor's `u`/`v` (camera or `Grid.fade.target`, per `fadeFrom`). */
+  /**
+   * Fade anchor's `u`/`v` (camera or `Grid.fade.target`, per `fadeFrom`).
+   */
   anchorU: Node<"float">;
   anchorV: Node<"float">;
-  /** Color along `u` (drawn where `v` crosses zero). */
+  /**
+   * Color along `u` (drawn where `v` crosses zero).
+   */
   uAxisColor: GridUniforms["xAxisColor"];
-  /** Color along `v` (drawn where `u` crosses zero). */
+  /**
+   * Color along `v` (drawn where `u` crosses zero).
+   */
   vAxisColor: GridUniforms["xAxisColor"];
 }
 

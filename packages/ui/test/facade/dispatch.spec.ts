@@ -39,6 +39,17 @@ describe("facade.dispatchTag", () => {
     );
   });
 
+  test("view spin picks jolly-spin-slider only for a bounded number", () => {
+    assert.equal(
+      dispatchTag(5, { min: 0, max: 10, view: "spin" }),
+      "jolly-spin-slider"
+    );
+    assert.equal(
+      dispatchTag(5, { min: 0, view: "spin" }),
+      "jolly-number"
+    );
+  });
+
   test("dispatches a plain string to jolly-text", () => {
     assert.equal(
       dispatchTag("BoxName"),

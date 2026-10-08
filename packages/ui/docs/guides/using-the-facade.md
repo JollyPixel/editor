@@ -42,7 +42,8 @@ pane.addBinding(settings, "mode", {
 ```
 
 The first binding creates `jolly-checkbox`. Bounds make the numeric binding a
-`jolly-slider`, and `options` makes the string binding a `jolly-select`. See
+`jolly-slider` (or a narrower `jolly-spin-slider` with `view: "spin"`), and
+`options` makes the string binding a `jolly-select`. See
 [Binding facade](../api/facade/binding.md) for the full dispatch table.
 
 ## Bind a vector

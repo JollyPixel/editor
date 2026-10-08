@@ -11,7 +11,9 @@ import { isScenePipelineTechnique } from "../MeshHighlightState.ts";
 
 export interface ObjectOverlayRendererOptions {
   registry: HighlightOverlayRegistry;
-  /** Without it, render only places the overlays for a scene drawn elsewhere. */
+  /**
+   * Without it, render only places the overlays for a scene drawn elsewhere.
+   */
   renderScene?: () => void;
   camera: THREE.Camera;
   boundsOnly?: boolean;

@@ -4,13 +4,21 @@ import type { ReactiveControllerHost } from "lit";
 // Import Internal Dependencies
 import type { DraftController } from "./DraftController.ts";
 import { PointerFocusController } from "./PointerFocusController.ts";
-import { ScrubController } from "../interaction/scrub/ScrubController.ts";
+import {
+  ScrubController,
+  type ScrubOptions
+} from "../interaction/scrub/ScrubController.ts";
 import {
   formatNumber,
   parseNumericEntry,
   stepNumericEntry,
   type NumericBounds
 } from "../numeric/entry.ts";
+
+export type NumericScrubOptions = Omit<
+  ScrubOptions,
+  "step" | "start" | "min" | "max" | "onInput" | "onCommit"
+>;
 
 export interface NumericInputOptions {
   draft: DraftController<number>;
@@ -22,7 +30,7 @@ export interface NumericInputOptions {
   coerce?(value: number): number;
   onInput(value: number): void;
   onChange(value: number): void;
-  scrubTarget?(): HTMLElement | null;
+  scrub?: NumericScrubOptions;
 }
 
 export class NumericInputController {
@@ -36,11 +44,11 @@ export class NumericInputController {
   ) {
     this.#options = options;
     this.#pointerFocus = new PointerFocusController(host);
-    const { scrubTarget } = options;
-    this.#scrub = scrubTarget === undefined ?
+    const { scrub } = options;
+    this.#scrub = scrub === undefined ?
       null :
       new ScrubController(host, {
-        target: scrubTarget,
+        ...scrub,
         step: () => options.step(),
         start: () => this.#start(),
         min: () => options.min(),

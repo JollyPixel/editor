@@ -102,21 +102,19 @@ export function seedInputs(
   } = options;
 
   const rng = mulberry32(seed);
-  const inputs: EventStore.AppendInput[] = new Array(assets * perAsset);
+  const inputs: EventStore.AppendInput[] = [];
 
-  let cursor = 0;
   for (let index = 0; index < perAsset; index++) {
     const eventType = eventTypeAt(index, checkpointIndex);
 
     for (let asset = 0; asset < assets; asset++) {
-      inputs[cursor] = {
+      inputs.push({
         assetType: "texture",
         assetId: `asset-${asset}`,
         eventType,
         eventData: payload(rng, payloadBytes),
         actor: kActor
-      };
-      cursor++;
+      });
     }
   }
 

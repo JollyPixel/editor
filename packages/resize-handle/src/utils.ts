@@ -1,15 +1,27 @@
 export interface SizeFromDeltaOptions {
-  /** Target size in pixels when the drag starts. */
+  /**
+   * Target size in pixels when the drag starts.
+   */
   initialSize: number;
-  /** Pointer coordinate in pixels when the drag starts. */
+  /**
+   * Pointer coordinate in pixels when the drag starts.
+   */
   startDrag: number;
-  /** Current pointer coordinate in pixels. */
+  /**
+   * Current pointer coordinate in pixels.
+   */
   current: number;
-  /** Whether increasing the pointer coordinate increases the size. */
+  /**
+   * Whether increasing the pointer coordinate increases the size.
+   */
   fromStart: boolean;
-  /** Smallest returned size in pixels. */
+  /**
+   * Smallest returned size in pixels.
+   */
   min: number;
-  /** Largest returned size in pixels. */
+  /**
+   * Largest returned size in pixels.
+   */
   max: number;
 }
 

@@ -32,7 +32,9 @@ const kInsertion = {
 export interface DragOverlayOptions {
   accent: string;
   label: string;
-  /** Trails the cursor with a label chip. */
+  /**
+   * Trails the cursor with a label chip.
+   */
   ghost?: boolean;
   /**
    * Carried in place of the label chip, normally a header-only clone of the
@@ -46,7 +48,9 @@ export interface DragOverlayOptions {
    * defaults.
    */
   scope?: HTMLElement;
-  /** Ghost width, normally the source rect. The chip also uses `height`. */
+  /**
+   * Ghost width, normally the source rect. The chip also uses `height`.
+   */
   width: number;
   height: number;
 }

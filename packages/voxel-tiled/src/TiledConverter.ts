@@ -419,6 +419,7 @@ function decodeBase64GIDs(
 
   const view = new DataView(bytes.buffer, bytes.byteOffset);
   const count = bytes.byteLength / 4;
+  // oxlint-disable-next-line unicorn/no-new-array
   const gids: number[] = new Array(count);
 
   for (let i = 0; i < count; i++) {

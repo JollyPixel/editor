@@ -24,7 +24,9 @@ export class Checkbox extends JollyField<boolean> {
     checkboxStyles
   ];
 
-  /** Expands the native label across the value background. */
+  /**
+   * Expands the native label across the value background.
+   */
   @property({ type: Boolean, attribute: "clickable-background", reflect: true })
   declare clickableBackground: boolean;
 
@@ -35,7 +37,9 @@ export class Checkbox extends JollyField<boolean> {
     this.clickableBackground = false;
   }
 
-  /** Keeps the native checkbox on the standard control-sized hit target. */
+  /**
+   * Keeps the native checkbox on the standard control-sized hit target.
+   */
   protected renderValue(): TemplateResult {
     return html`
       <label class="checkbox">

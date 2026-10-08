@@ -3,10 +3,8 @@ import {
   ServerRoom,
   type RoomLimits
 } from "./ServerRoom.ts";
-import {
-  errorMessage,
-  UngatedExtensionError
-} from "../errors.ts";
+import { errorMessage } from "../errors.ts";
+import { UngatedExtensionError } from "../errors/UngatedExtensionError.ts";
 import type { Logger } from "../logger.ts";
 import type { RightsTable } from "../rights/RightsTable.ts";
 import type { AnyExtension } from "../extension/Extension.ts";

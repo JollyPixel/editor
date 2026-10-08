@@ -26,7 +26,9 @@ export type NetworkServerNoticeOf<TNotice extends NetworkServerNotice> =
     NetworkServerNotice :
     never;
 
-/** `refused` is the seq of the receiver's own command the server refused. */
+/**
+ * `refused` is the seq of the receiver's own command the server refused.
+ */
 export type NetworkSyncMessage<TCommand, TSnapshot> =
   | { type: "snapshot"; data: TSnapshot; version?: number; acks?: NetworkAcks; refused?: number; }
   | { type: "command"; data: TCommand; version?: number; }

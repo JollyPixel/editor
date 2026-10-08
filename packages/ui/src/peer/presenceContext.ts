@@ -9,7 +9,9 @@ export type PresenceListener = (
 ) => void;
 
 export interface PresenceRequestDetail {
-  /** Filled in by the nearest ancestor holding a source. */
+  /**
+   * Filled in by the nearest ancestor holding a source.
+   */
   source: PresenceSource | null;
   /**
    * Subscribes when a pane receives its source after a field connects.
@@ -18,7 +20,9 @@ export interface PresenceRequestDetail {
 }
 
 export interface PresenceProvider {
-  /** Pushes the current source to every registered descendant. */
+  /**
+   * Pushes the current source to every registered descendant.
+   */
   notify(): void;
   dispose(): void;
 }

@@ -30,9 +30,13 @@ export interface FocusedAnimation {
 }
 
 export type AnimationSessionEvents = {
-  /** The focused clip, its contents, or the model it binds to changed. */
+  /**
+   * The focused clip, its contents, or the model it binds to changed.
+   */
   clip: () => void;
-  /** The playhead moved, playback started or stopped, or Animate opened or closed. */
+  /**
+   * The playhead moved, playback started or stopped, or Animate opened or closed.
+   */
   playhead: () => void;
   active: (active: boolean) => void;
 };

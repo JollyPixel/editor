@@ -5,7 +5,9 @@ import type {
   MaterialSurfacePatchJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
-/** `null` for this person, a client id for a peer. */
+/**
+ * `null` for this person, a client id for a peer.
+ */
 export type PreviewOwner = string | null;
 
 export type MaterialPreviewsEvents = {

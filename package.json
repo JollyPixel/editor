@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm -r --if-present run test && pnpm run test:scripts",
+    "test:scripts": "node --test \"scripts/test/**/*.spec.ts\"",
     "lint": "oxlint packages scripts && node scripts/checkExports.ts && pnpm -r --if-present run lint:css",
     "ci:publish": "changeset publish",
     "ci:version": "changeset version",

@@ -18,7 +18,9 @@ export const TRACK_STATE_LABELS: Readonly<Record<TrackBindingState, string>> = {
 export interface TrackBindingRow {
   path: string;
   state: TrackBindingState;
-  /** `null` without a remap, or for an ignored track. */
+  /**
+   * `null` without a remap, or for an ignored track.
+   */
   target: string | null;
   remapped: boolean;
 }

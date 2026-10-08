@@ -182,7 +182,7 @@ export function createGamepadSnapshot(
 
 /**
  * `offsetX`/`offsetY` are always present on a real `MouseEvent`, so they are
- * present here too — without them the benchmark would measure `Mouse`'s
+ * present here too: without them the benchmark would measure `Mouse`'s
  * `getBoundingClientRect()` fallback rather than the path a browser takes.
  * Pass `omitOffsets` to exercise that fallback deliberately.
  */

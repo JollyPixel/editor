@@ -16,13 +16,21 @@ export interface MaterialUser {
 }
 
 export interface MaterialTreeSources {
-  /** In library order. */
+  /**
+   * In library order.
+   */
   materials: readonly ModelMaterialJSON[];
-  /** Blocks by the material they use, in hierarchy order. */
+  /**
+   * Blocks by the material they use, in hierarchy order.
+   */
   users: ReadonlyMap<string, readonly MaterialUser[]>;
-  /** Peers editing each material. */
+  /**
+   * Peers editing each material.
+   */
   marks: PeerMarkMap<string>;
-  /** Peers selecting each block. */
+  /**
+   * Peers selecting each block.
+   */
   blockMarks: PeerMarkMap<string>;
 }
 

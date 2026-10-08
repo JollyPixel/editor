@@ -69,15 +69,18 @@ function harness(
   const events: EventStore.EventWriter = {
     append: (input) => {
       appended.push(input);
+      if (!appends) {
+        const error = new Error("disk full");
 
-      return appends ?
-        Ok({
-          ...input,
-          eventId: appended.length,
-          eventVersion: appended.length,
-          createdAt: ""
-        }) :
-        Err(new Error("disk full"));
+        return Err(error);
+      }
+
+      return Ok({
+        ...input,
+        eventId: appended.length,
+        eventVersion: appended.length,
+        createdAt: ""
+      });
     }
   };
 

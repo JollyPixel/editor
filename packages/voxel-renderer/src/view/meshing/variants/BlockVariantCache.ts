@@ -241,6 +241,7 @@ export class BlockVariantCache {
       return;
     }
 
+    // oxlint-disable-next-line unicorn/no-new-array
     const grown: (BlockVariant | null | undefined)[] = new Array(
       Math.min(kOcclusionMaxSlots, nextPowerOfTwo(key + 1))
     ).fill(undefined);

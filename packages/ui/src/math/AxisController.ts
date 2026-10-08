@@ -35,7 +35,9 @@ export interface AxisControllerOptions {
   step(): number;
   min(): number;
   max(): number;
-  /** `undefined` renders the mixed placeholder and blocks scrubbing. */
+  /**
+   * `undefined` renders the mixed placeholder and blocks scrubbing.
+   */
   value(): number | undefined;
   editable(): boolean;
   disabled(): boolean;
@@ -72,9 +74,11 @@ export class AxisController {
       editable: () => options.editable(),
       onInput: (value) => options.onInput(value),
       onChange: (value) => options.onChange(value),
-      scrubTarget: () => host.renderRoot.querySelector(
-        `.axis-box[data-axis="${options.key}"] .scrub-handle`
-      )
+      scrub: {
+        target: () => host.renderRoot.querySelector(
+          `.axis-box[data-axis="${options.key}"] .scrub-handle`
+        )
+      }
     });
   }
 

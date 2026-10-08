@@ -6,13 +6,21 @@ import type { EventMap } from "@openally/emitt";
 import type { PostProcessing } from "./PostProcessing.ts";
 
 export interface RenderViewport {
-  /** Normalized [0, 1]. x=0 is left */
+  /**
+   * Normalized [0, 1]. x=0 is left
+   */
   x: number;
-  /** Normalized [0, 1]. y=0 is bottom (WebGL convention) */
+  /**
+   * Normalized [0, 1]. y=0 is bottom (WebGL convention)
+   */
   y: number;
-  /** Normalized width [0, 1] */
+  /**
+   * Normalized width [0, 1]
+   */
   width: number;
-  /** Normalized height [0, 1] */
+  /**
+   * Normalized height [0, 1]
+   */
   height: number;
 }
 

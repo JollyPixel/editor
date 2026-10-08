@@ -17,7 +17,7 @@ import { modelHistoryKeys } from "#src/model/modelHistoryKeys.ts";
 import { createBlockTransform } from "#src/model/blockTransform.ts";
 import { createMaterialSurface } from "#src/model/materialSurface.ts";
 import { inverseOf } from "#src/model/modelInverse.ts";
-import { InvalidModelTreeError } from "#src/model/InvalidModelTreeError.ts";
+import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
 import type { ModelTreeReader } from "#src/model/ModelTree.ts";
 import { networkCommand } from "../helpers/commands.ts";
 
