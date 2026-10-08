@@ -16,7 +16,7 @@ const server = new Server({
       "voxel.renderer.*": "void"
     },
     editor: {
-      "voxel.renderer.$join": "write"
+      "voxel.renderer.*": "write"
     }
   }
 });
@@ -60,17 +60,9 @@ Domain event names come from the extension's [message protocols](./Extension.md#
 | `"read"` | no | yes |
 | `"void"` | no | no |
 
-`"void"` is real fan-out filtering: the payload never reaches that client, whether it came from `broadcast()` or `sendTo()`. For `$join`, `"read"` behaves like `"void"` — admission is binary.
+`"void"` is real fan-out filtering: the payload never reaches that client, whether it came from `broadcast()` or `sendTo()`. A role with `"void"` on `$presence` also gets the `sync` snapshot without the other members' presence. For `$join`, `"read"` behaves like `"void"` — admission is binary.
 
-Unmatched keys resolve in two different ways, because they mean different things:
-
-| Case | Right |
-|---|---|
-| No table at all | `"write"` — RBAC is opt-in |
-| A role absent from a configured table | `"void"` — the table is an allowlist |
-| A listed role, no pattern matching the key | `"write"` — put exceptions before catch-alls |
-
-A role the table never mentions is a mismatch between authentication and rights, so it is denied rather than waved through. Within a role the host wrote, an unmatched key still falls open; close it with a `*` catch-all.
+A configured table is an allowlist. A key that no pattern of the role matches is `"void"`, and so is every key of a role the table never mentions. An event added to an extension later stays closed until a rule names it. To open a role by default, end it with a `"*": "write"` catch-all. Without any table, every key is `"write"`.
 
 ## Ungated extensions
 

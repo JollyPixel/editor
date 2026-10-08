@@ -156,7 +156,8 @@ export function createAssetWorkspacePlugin(
           path: socketPath,
           httpServer: devServer.httpServer,
           server: workspace.server,
-          compression
+          compression,
+          allowedHosts: devServer.config.server.allowedHosts
         });
       }
 

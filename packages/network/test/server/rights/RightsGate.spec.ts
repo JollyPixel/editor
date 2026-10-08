@@ -19,10 +19,10 @@ describe("RightsGate", () => {
 
   test("does not match a rule written for another namespace", () => {
     const gate = new RightsTable({
-      viewer: { "pixel-draw.voxel-set": "void" }
+      viewer: { "pixel-draw.voxel-set": "write" }
     }).scope("voxel.renderer");
 
-    assert.strictEqual(gate.check("viewer", "voxel-set"), "write");
+    assert.strictEqual(gate.check("viewer", "voxel-set"), "void");
   });
 
   test("mirrors the underlying table's configured flag", () => {

@@ -23,11 +23,22 @@ import {
   UNAUTHORIZED_CLOSE_REASON,
   WEBSOCKET_PROTOCOL
 } from "./constants.ts";
-import type { ClientHandle } from "./ClientHandle.ts";
+import { HandshakePolicy } from "./HandshakePolicy.ts";
+import { WebsocketConnection } from "./WebsocketConnection.ts";
 
 // CONSTANTS
 const kDefaultCompressionLevel = 3;
 const kDefaultCompressionThreshold = 64;
+const kDefaultMaxPayload = 16 * 1024 * 1024;
+const kDefaultMaxBufferedBytes = 32 * 1024 * 1024;
+const kDefaultHeartbeatMs = 30_000;
+const kForbiddenResponse = [
+  "HTTP/1.1 403 Forbidden",
+  "Connection: close",
+  "Content-Length: 0",
+  "",
+  ""
+].join("\r\n");
 
 export interface WebsocketCompressionOptions {
   /**
@@ -64,6 +75,39 @@ export interface WebsocketTransportOptions {
    * @default false
    */
   compression?: boolean | WebsocketCompressionOptions;
+  /**
+   * Host header values accepted on upgrade, against DNS rebinding.
+   * IP addresses, `localhost` and `*.localhost` are always accepted.
+   * An entry starting with "." also accepts its subdomains.
+   * `true` accepts any host.
+   * @default []
+   */
+  allowedHosts?: readonly string[] | true;
+  /**
+   * Browser origins accepted on upgrade, besides the request's own host.
+   * Upgrades without an Origin header, sent by non-browser clients, are
+   * accepted. `true` accepts any origin.
+   * @default []
+   */
+  allowedOrigins?: readonly string[] | true;
+  /**
+   * Largest client message, in bytes. A larger one closes the socket
+   * with code 1009.
+   * @default 16 MiB
+   */
+  maxPayload?: number;
+  /**
+   * Bytes a socket may have queued for sending. Past it, the client is
+   * a slow reader and its socket is terminated.
+   * @default 32 MiB
+   */
+  maxBufferedBytes?: number;
+  /**
+   * Milliseconds between pings. A socket that has not answered the
+   * previous ping is terminated. 0 disables pings.
+   * @default 30_000
+   */
+  heartbeatMs?: number;
 }
 
 export class WebsocketTransport {
@@ -71,6 +115,10 @@ export class WebsocketTransport {
   #logger: Logger;
   #path: string;
   #wss: WebSocketServer;
+  #policy: HandshakePolicy;
+  #maxBufferedBytes: number;
+  #heartbeat: ReturnType<typeof setInterval> | null = null;
+  #connections = new Set<WebsocketConnection>();
 
   constructor(
     options: WebsocketTransportOptions
@@ -79,15 +127,26 @@ export class WebsocketTransport {
       path,
       httpServer,
       server,
-      compression = false
+      compression = false,
+      allowedHosts,
+      allowedOrigins,
+      maxPayload = kDefaultMaxPayload,
+      maxBufferedBytes = kDefaultMaxBufferedBytes,
+      heartbeatMs = kDefaultHeartbeatMs
     } = options;
     this.#server = server;
     this.#logger = server.logger;
     this.#path = path;
+    this.#policy = new HandshakePolicy({
+      allowedHosts,
+      allowedOrigins
+    });
+    this.#maxBufferedBytes = maxBufferedBytes;
 
     // Manual upgrade filtering requires `noServer` mode.
     this.#wss = new WebSocketServer({
       noServer: true,
+      maxPayload,
       perMessageDeflate: perMessageDeflate(compression),
       handleProtocols(protocols) {
         return protocols.has(WEBSOCKET_PROTOCOL)
@@ -109,6 +168,14 @@ export class WebsocketTransport {
       () => this.#onHttpServerClose(httpServer)
     );
 
+    if (heartbeatMs > 0) {
+      this.#heartbeat = setInterval(
+        () => this.#probe(),
+        heartbeatMs
+      );
+      this.#heartbeat.unref();
+    }
+
     this.#logger.info(`WebSocket transport listening on ${path}`);
   }
 
@@ -125,15 +192,43 @@ export class WebsocketTransport {
       return;
     }
 
+    function destroySocket(): void {
+      socket.destroy();
+    }
+    socket.on("error", destroySocket);
+
+    const remoteAddress = req.socket.remoteAddress;
+    const refusal = this.#policy.refusalFor(req.headers);
+    if (refusal !== null) {
+      this.#logger
+        .withMetadata({
+          remoteAddress,
+          host: req.headers.host,
+          origin: req.headers.origin,
+          reason: refusal
+        })
+        .warn("upgrade refused");
+      socket.once("finish", destroySocket);
+      socket.end(kForbiddenResponse);
+
+      return;
+    }
+
     const clientId = randomUUID();
 
     void this.#server
       .authenticate({
         clientId,
         url: req.url ?? "",
-        headers: req.headers
+        headers: req.headers,
+        remoteAddress
       })
       .then((identity) => {
+        socket.off("error", destroySocket);
+        if (socket.destroyed) {
+          return;
+        }
+
         this.#wss.handleUpgrade(req, socket, head, (ws) => {
           if (identity === null) {
             ws.close(
@@ -160,10 +255,20 @@ export class WebsocketTransport {
       "upgrade",
       this.#onUpgrade
     );
+    if (this.#heartbeat !== null) {
+      clearInterval(this.#heartbeat);
+      this.#heartbeat = null;
+    }
     for (const client of this.#wss.clients) {
       client.terminate();
     }
     this.#wss.close();
+  }
+
+  #probe(): void {
+    for (const connection of this.#connections) {
+      connection.probe();
+    }
   }
 
   #onWebsocketClientConnect(
@@ -171,30 +276,33 @@ export class WebsocketTransport {
     clientId: string,
     identity: PeerIdentity
   ): void {
-    const handle: ClientHandle = {
+    const connection = new WebsocketConnection({
       id: clientId,
-      send(data) {
-        socket.send(JSON.stringify(data));
-      },
-      sendSerialized(json) {
-        socket.send(json);
-      }
-    };
-
+      socket,
+      logger: this.#logger,
+      maxBufferedBytes: this.#maxBufferedBytes,
+      onMessage: (json) => this.#server.handleMessage(clientId, json)
+    });
+    this.#connections.add(connection);
     this.#server.handleConnect(
-      handle,
+      connection,
       identity
     );
 
-    socket.on("message", (raw) => {
-      this.#server.handleMessage(
-        clientId,
-        raw.toString()
-      );
-    });
+    socket.on(
+      "message",
+      (raw) => connection.receive(raw.toString())
+    );
+    socket.on(
+      "pong",
+      () => connection.markAlive()
+    );
     socket.on(
       "close",
-      () => this.#server.handleDisconnect(clientId)
+      () => {
+        this.#connections.delete(connection);
+        void this.#server.handleDisconnect(clientId);
+      }
     );
     socket.on(
       "error",

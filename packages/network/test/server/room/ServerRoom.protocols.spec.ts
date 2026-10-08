@@ -56,8 +56,14 @@ describe("ServerRoom — outbound protocol", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable({
-      blocked: { "pixel-draw.voxel-set": "void" },
-      allowed: { "pixel-draw.voxel-set": "read" }
+      blocked: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "void"
+      },
+      allowed: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "read"
+      }
     }));
     await room.join("A", a.client, identityOf("A", "blocked"), {});
     await room.join("B", b.client, identityOf("B", "allowed"), {});
@@ -80,8 +86,14 @@ describe("ServerRoom — outbound protocol", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable({
-      blocked: { "pixel-draw.$snapshot": "void" },
-      allowed: { "pixel-draw.$snapshot": "read" }
+      blocked: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.$snapshot": "void"
+      },
+      allowed: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.$snapshot": "read"
+      }
     }));
     await room.join("A", a.client, identityOf("A", "blocked"), {});
     await room.join("B", b.client, identityOf("B", "allowed"), {});
@@ -110,7 +122,10 @@ describe("ServerRoom — outbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({
-      blocked: { "pixel-draw.voxel-set": "void" }
+      blocked: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "void"
+      }
     }));
     await room.join("A", a.client, identityOf("A", "blocked"), {});
     a.sent.length = 0;

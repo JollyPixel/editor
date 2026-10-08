@@ -119,7 +119,8 @@ describe("catalog archive commands over loopback", () => {
     await using connection = await connectCatalog(target.backend, {
       rights: {
         default: {
-          [`${CATALOG_ROOM}.${CATALOG_IMPORT}`]: "read"
+          [`${CATALOG_ROOM}.${CATALOG_IMPORT}`]: "read",
+          "*": "write"
         }
       }
     });

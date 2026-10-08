@@ -14,7 +14,7 @@ interface Permission {
 
 /**
  * Per-role access lookup by glob against `${extension.name}.${event}`.
- * No table means "write"; with one, an absent role is "void".
+ * No table means "write"; with one, anything unmatched is "void".
  */
 export class RightsTable {
   readonly defaultRole: string;
@@ -80,7 +80,7 @@ export class RightsTable {
       ({ pattern }) => pattern.matches(key)
     );
 
-    return rule?.right ?? "write";
+    return rule?.right ?? "void";
   }
 
   scope(

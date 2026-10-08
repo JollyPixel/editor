@@ -44,9 +44,9 @@ describe("RightsTable properties", () => {
     fc.assert(
       fc.property(kPattern, kKey, (pattern, key) => {
         const table = new RightsTable({
-          [kRole]: { [pattern]: "void" }
+          [kRole]: { [pattern]: "write" }
         });
-        const expected = documentedMatch(pattern, key) ? "void" : "write";
+        const expected = documentedMatch(pattern, key) ? "write" : "void";
 
         assert.strictEqual(table.check(kRole, key), expected);
       })

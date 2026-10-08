@@ -44,8 +44,15 @@ interface WebsocketVitePluginOptions {
    * @default false
    */
   compression?: boolean | WebsocketCompressionOptions;
+  /**
+   * Forwarded to the WebSocket transport. See below.
+   * @default []
+   */
+  allowedOrigins?: readonly string[] | true;
 }
 ```
+
+The plugin hands the transport Vite's own `server.allowedHosts` (`preview.allowedHosts` under `vite preview`), so the socket accepts the hosts the dev server does.
 
 ## WebsocketTransport
 
@@ -65,9 +72,65 @@ new WebsocketTransport({
 ```
 
 The transport authenticates before it opens a session: it filters the upgrade
-by path, calls `server.authenticate({ clientId, url, headers })`, and only then
+by path, checks its Host and Origin headers, calls
+`server.authenticate({ clientId, url, headers, remoteAddress })`, and only then
 calls `handleConnect`. A refused connection is closed with code `4401` and
 never reaches the server's session table.
+
+### Hosts and origins
+
+A browser lets any page open a WebSocket to `localhost`, and sends the page's
+origin along. The transport answers `403` before authenticating when:
+
+- the Host header names a host it does not serve. IP addresses, `localhost` and
+  `*.localhost` are always served; add domain names to `allowedHosts`. This
+  blocks DNS rebinding.
+- the Origin header is neither the request's own host nor listed in
+  `allowedOrigins`. Upgrades without an Origin header come from non-browser
+  clients and pass.
+
+```ts
+new WebsocketTransport({
+  httpServer,
+  server,
+  path: "/ws-sync",
+  allowedHosts: ["studio.example.com", ".jolly.example.com"],
+  allowedOrigins: ["https://editor.example.com"]
+});
+```
+
+An `allowedHosts` entry starting with `.` also accepts its subdomains. `true`
+accepts any host or origin. Behind a reverse proxy that rewrites the Host
+header, list the public origin in `allowedOrigins`.
+
+### Limits
+
+```ts
+interface WebsocketTransportOptions {
+  /**
+   * @default 16 MiB
+   */
+  maxPayload?: number;
+  /**
+   * @default 32 MiB
+   */
+  maxBufferedBytes?: number;
+  /**
+   * @default 30_000
+   */
+  heartbeatMs?: number;
+}
+```
+
+- `maxPayload` is the largest message a client may send, in bytes. A larger one
+  closes the socket with code `1009`.
+- `maxBufferedBytes` is how much a socket may have queued for sending. A client
+  that stops reading passes it and is terminated.
+- `heartbeatMs` is the interval between pings. A socket that has not answered
+  the previous ping is terminated. `0` disables pings.
+
+The transport stops reading a socket while 64 of its messages are in flight,
+and resumes once 16 remain.
 
 It also negotiates the subprotocol, selecting the bare `jolly-pixel` value so a
 credential offered as `jolly-pixel.auth.<base64url>` is never echoed back. See

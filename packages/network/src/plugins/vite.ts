@@ -49,6 +49,12 @@ export interface WebsocketVitePluginOptions {
    * @default false
    */
   compression?: boolean | WebsocketCompressionOptions;
+  /**
+   * Forwarded to the WebSocket transport. Hosts come from Vite's
+   * `server.allowedHosts` or `preview.allowedHosts`.
+   * @default []
+   */
+  allowedOrigins?: readonly string[] | true;
 }
 
 export function createWebSocketNetworkPlugin(
@@ -60,7 +66,8 @@ export function createWebSocketNetworkPlugin(
     rights,
     defaultRole,
     auth,
-    compression
+    compression,
+    allowedOrigins
   } = options;
 
   const server = options.server ?? new Server({
@@ -73,7 +80,8 @@ export function createWebSocketNetworkPlugin(
   }
 
   function attach(
-    httpServer: WebsocketTransportOptions["httpServer"] | null
+    httpServer: WebsocketTransportOptions["httpServer"] | null,
+    allowedHosts: readonly string[] | true
   ): void {
     if (!httpServer) {
       return;
@@ -83,17 +91,25 @@ export function createWebSocketNetworkPlugin(
       path,
       httpServer,
       server,
-      compression
+      compression,
+      allowedHosts,
+      allowedOrigins
     });
   }
 
   return {
     name: "network-websocket",
-    configureServer({ httpServer }) {
-      attach(httpServer);
+    configureServer({ httpServer, config }) {
+      attach(
+        httpServer,
+        config.server.allowedHosts
+      );
     },
-    configurePreviewServer({ httpServer }) {
-      attach(httpServer);
+    configurePreviewServer({ httpServer, config }) {
+      attach(
+        httpServer,
+        config.preview.allowedHosts
+      );
     }
   };
 }

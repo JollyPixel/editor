@@ -51,6 +51,7 @@ async function pluginHarness(
   });
   const devServer = {
     middlewares: { use: () => undefined },
+    config: { server: { allowedHosts: [] } },
     httpServer
   };
   await callHook(plugin.configureServer, devServer as unknown as ViteDevServer);

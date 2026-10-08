@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import { ServerRoom } from "./ServerRoom.ts";
+import {
+  ServerRoom,
+  type RoomLimits
+} from "./ServerRoom.ts";
 import {
   errorMessage,
   UngatedExtensionError
@@ -31,6 +34,7 @@ export interface RoomRegistryOptions {
    * @default 30_000
    */
   graceMs?: number;
+  limits?: RoomLimits;
 }
 
 /**
@@ -41,6 +45,7 @@ export class RoomRegistry {
   #rights: RightsTable;
   #resolver: RoomResolver | null;
   #graceMs: number;
+  #limits: RoomLimits | undefined;
   #entries = new Map<string, RoomEntry>();
   #evictions = new Map<string, Promise<void>>();
   #resolutions = new Map<string, Promise<ServerRoom | null>>();
@@ -52,6 +57,7 @@ export class RoomRegistry {
     this.#rights = options.rights;
     this.#resolver = options.resolver ?? null;
     this.#graceMs = options.graceMs ?? kDefaultRoomGraceMs;
+    this.#limits = options.limits;
   }
 
   setResolver(
@@ -212,7 +218,8 @@ export class RoomRegistry {
         extension,
         this.#rights,
         {
-          logger: this.#logger
+          logger: this.#logger,
+          limits: this.#limits
         }
       ),
       resolution,

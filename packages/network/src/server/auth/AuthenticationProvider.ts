@@ -14,6 +14,7 @@ export interface AuthenticationAttempt {
   clientId: string;
   url: string;
   headers: Record<string, string | string[] | undefined>;
+  remoteAddress?: string;
 }
 
 export interface AuthenticationRequest extends AuthenticationAttempt {

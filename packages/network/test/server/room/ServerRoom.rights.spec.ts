@@ -18,6 +18,17 @@ import {
 import { RightsTable } from "#src/index.ts";
 import { actionProtocols } from "../../helpers/protocol/protocols.ts";
 
+// CONSTANTS
+const kPresenceVoidForViewer = {
+  default: {
+    "pixel-draw.*": "write"
+  },
+  viewer: {
+    "pixel-draw.$presence": "void",
+    "pixel-draw.*": "write"
+  }
+} as const;
+
 describe("ServerRoom — rights: $join", () => {
   test("a role with \"write\" on $join is admitted", async() => {
     const extension = createExtension(actionProtocols);
@@ -76,7 +87,7 @@ describe("ServerRoom — rights: $presence", () => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
     const b = createClient("B");
-    const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$presence": "write" } }));
+    const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.*": "write" } }));
     await room.join("A", a.client, identityOf("A", "viewer"), {});
     await room.join("B", b.client, identityOf("B", "viewer"), {});
     a.sent.length = 0;
@@ -97,7 +108,7 @@ describe("ServerRoom — rights: $presence", () => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
     const b = createClient("B");
-    const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$presence": "void" } }));
+    const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
     await room.join("A", a.client, identityOf("A", "viewer"), {});
     await room.join("B", b.client, identityOf("B"), {});
     a.sent.length = 0;
@@ -118,7 +129,7 @@ describe("ServerRoom — rights: $presence", () => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
     const b = createClient("B");
-    const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$presence": "void" } }));
+    const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
     await room.join("A", a.client, identityOf("A"), {});
     await room.join("B", b.client, identityOf("B", "viewer"), {});
     a.sent.length = 0;
@@ -133,10 +144,7 @@ describe("ServerRoom — rights: $presence", () => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
     const b = createClient("B");
-    const room = createRoom(extension, new RightsTable({
-      default: {},
-      viewer: { "pixel-draw.$presence": "void" }
-    }));
+    const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
     await room.join("A", a.client, identityOf("A"), {});
     await room.join(
       "B",
@@ -166,10 +174,7 @@ describe("ServerRoom — rights: $presence", () => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
     const b = createClient("B");
-    const room = createRoom(extension, new RightsTable({
-      default: {},
-      viewer: { "pixel-draw.$presence": "void" }
-    }));
+    const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
     await room.join("A", a.client, identityOf("A", "viewer"), {});
     await room.join(
       "B",
@@ -194,7 +199,12 @@ describe("ServerRoom — rights: message write gate", () => {
   test("a role with \"write\" on the event reaches the extension", async() => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
-    const room = createRoom(extension, new RightsTable({ editor: { "pixel-draw.voxel-set": "write" } }));
+    const room = createRoom(extension, new RightsTable({
+      editor: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "write"
+      }
+    }));
     await room.join("A", a.client, identityOf("A", "editor"), {});
 
     await room.message("A", { action: "voxel-set" });
@@ -205,7 +215,12 @@ describe("ServerRoom — rights: message write gate", () => {
   test("a role with \"read\" on the event is denied and never reaches the extension", async() => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
-    const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.voxel-set": "read" } }));
+    const room = createRoom(extension, new RightsTable({
+      viewer: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "read"
+      }
+    }));
     await room.join("A", a.client, identityOf("A", "viewer"), {});
     a.sent.length = 0;
 
@@ -245,8 +260,14 @@ describe("ServerRoom — rights: broadcast read gate", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable({
-      blocked: { "pixel-draw.voxel-set": "void" },
-      allowed: { "pixel-draw.voxel-set": "read" }
+      blocked: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "void"
+      },
+      allowed: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "read"
+      }
     }));
     await room.join("A", a.client, identityOf("A", "blocked"), {});
     await room.join("B", b.client, identityOf("B", "allowed"), {});

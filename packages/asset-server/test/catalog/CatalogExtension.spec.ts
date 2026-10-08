@@ -517,7 +517,8 @@ describe("CatalogExtension — server", () => {
     const server = new Server({
       rights: {
         author: {
-          [`${CATALOG_ROOM}.${CATALOG_DELETE}`]: "read"
+          [`${CATALOG_ROOM}.${CATALOG_DELETE}`]: "read",
+          "*": "write"
         }
       }
     });

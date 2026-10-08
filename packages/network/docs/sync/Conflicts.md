@@ -56,6 +56,16 @@ The last write the server processes wins, unless it replays a write older than t
 
 `timestamp` only decides for records committed without a version. The asset rooms commit with the event version, so a client with a slow clock does not lose the writes it sends last.
 
+The resolver trusts the header it is given, which the client wrote. On the server, pass each command through `attributeCommand` before `admit`:
+
+```ts
+import { attributeCommand } from "@jolly-pixel/network";
+
+const command = attributeCommand(message, clientId);
+```
+
+It returns a copy carrying the sending connection's `clientId` and a `timestamp` no later than the server's clock. `basis` stays the client's claim; omitting it makes a blind write.
+
 ## ConflictTracker
 
 Neither `admit` nor `admitEach` mutates the tracker. `commit(version)` records the command at the admitted keys with the version it landed at; call it only once the command has actually been applied or persisted.

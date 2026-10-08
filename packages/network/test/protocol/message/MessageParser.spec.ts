@@ -82,6 +82,50 @@ describe("MessageParser", () => {
     }
   });
 
+  test("rejects a payload matching variants of two different events", () => {
+    const parser = new MessageParser(new MessageProtocol({
+      oneOf: [
+        {
+          title: "paint",
+          type: "object",
+          properties: { x: { type: "number" } },
+          required: ["x"]
+        },
+        {
+          title: "erase",
+          type: "object",
+          properties: { y: { type: "number" } },
+          required: ["y"]
+        }
+      ]
+    }));
+
+    const result = parser.parse({ x: 1, y: 2 });
+
+    assert.ok(!result.ok);
+    assert.match(result.val[0].message, /matches both "paint" and "erase"/);
+    assert.strictEqual(parser.parse({ x: 1 }).unwrap().event, "paint");
+  });
+
+  test("checks variants without a discriminator alongside the tagged ones", () => {
+    const parser = new MessageParser(new MessageProtocol({
+      oneOf: [
+        {
+          type: "object",
+          properties: { action: { const: "voxel-set" } },
+          required: ["action"]
+        },
+        {
+          title: "anything",
+          type: "object"
+        }
+      ]
+    }));
+
+    assert.ok(!parser.parse({ action: "voxel-set" }).ok);
+    assert.strictEqual(parser.parse({ action: "other" }).unwrap().event, "anything");
+  });
+
   test("accepts nothing when the protocol declares no message", () => {
     const parser = new MessageParser(MessageProtocol.EMPTY);
 
