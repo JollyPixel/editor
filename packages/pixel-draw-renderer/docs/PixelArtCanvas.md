@@ -7,9 +7,7 @@ const canvas = new PixelArtCanvas(parent, {
   texture: {
     size: { x: 64, y: 32 }
   },
-  history: {
-    enabled: true
-  }
+  history: new StandalonePixelHistory()
 });
 
 canvas.brush.primary.set("#ff6600");
@@ -279,16 +277,7 @@ canUndo(): boolean
 canRedo(): boolean
 ```
 
-History must be enabled through [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history). `undo` and `redo` replay the newest step that is not refused in the canvas's scope and return whether one did; `canUndo` and `canRedo` leave refused steps out.
-
-### `history` / `historyScope`
-
-```ts
-get history(): CommandHistory<string> | null
-get historyScope(): string
-```
-
-The history the canvas records into, `null` when disabled, and its scope: `"pixels"` for a standalone history, the owner's scope otherwise.
+They forward to the history passed in [`PixelArtCanvasOptions.history`](./PixelArtCanvasOptions.md#history), and return `false` without one.
 
 ### `undoDepth()` / `redoDepth()`
 
@@ -297,9 +286,7 @@ undoDepth(): number
 redoDepth(): number
 ```
 
-The number of steps that can be undone or redone, refused steps left out. Both are `0` when history is disabled.
-
-A peer edit, a remote resize or texture replacement, or a snapshot load refuses the steps whose values it changed. See [pixel history](./history/PixelHistory.md).
+The number of steps that can be undone or redone. Both are `0` without a history. See [pixel history](./history/PixelHistory.md).
 
 ## View and canvas elements
 

@@ -10,19 +10,21 @@ import {
   CommandChange,
   CommandHistory
 } from "@jolly-pixel/history";
+import {
+  ColorPalette,
+  NormalMapConfig,
+  PixelDocument,
+  type DocumentCommand,
+  type RGBA8,
+  type Vec2
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
   pixelHistoryKeys,
   registerPixelHistory
 } from "#src/history/pixelHistoryRegistration.ts";
-import { PixelDocument } from "#src/PixelDocument.ts";
-import {
-  strokeOf,
-  type DocumentCommand
-} from "#src/sync/PixelCommand.ts";
-import type { PixelChange } from "#src/sync/LocalEdit.types.ts";
-import { HistoryDocument } from "../helpers/document/HistoryDocument.ts";
+import { HistoryDocument } from "../helpers/history/HistoryDocument.ts";
 
 // CONSTANTS
 const kRed = {
@@ -38,9 +40,19 @@ const kBlue = {
   a: 255
 };
 
+function strokeOf(
+  positions: Vec2[],
+  color: RGBA8
+): DocumentCommand {
+  return {
+    action: "stroke",
+    metadata: { color, positions }
+  };
+}
+
 function localChange(
   command: DocumentCommand
-): PixelChange {
+): CommandChange<DocumentCommand, null> {
   return CommandChange.local(command, null);
 }
 
@@ -149,5 +161,94 @@ describe("registerPixelHistory", () => {
       [first.state("build").undoCount, second.state("paint").undoCount],
       [1, 2]
     );
+  });
+});
+
+describe("pixel history refusals", () => {
+  test("a peer stroke over a pixel of a settled step refuses it, naming the peer", () => {
+    const doc = createDocument();
+    doc.paintPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }], kRed);
+
+    doc.applyRemoteCommand({
+      action: "stroke",
+      metadata: { color: kBlue, positions: [{ x: 1, y: 0 }] }
+    }, "peer");
+
+    assert.equal(doc.undo(), false);
+    assert.deepEqual(doc.state.refused, [
+      { label: "Paint", refused: { reason: "peer", clientId: "peer" } }
+    ]);
+  });
+
+  test("a remote global fill refuses only the steps over the pixels it filled", () => {
+    const doc = createDocument();
+    doc.paintPixels([{ x: 0, y: 0 }], kRed);
+    doc.paintPixels([{ x: 3, y: 3 }], kBlue);
+
+    doc.applyRemoteCommand({
+      action: "global-fill",
+      metadata: { fromColor: kBlue, toColor: kRed }
+    }, "peer");
+
+    assert.equal(doc.state.undoCount, 1);
+    assert.equal(doc.state.refused.length, 1);
+  });
+
+  test("a remote resize or texture replacement refuses the steps over pixels", () => {
+    const resized = createDocument();
+    resized.paintPixels([{ x: 0, y: 0 }], kRed);
+    const replaced = createDocument();
+    replaced.paintPixels([{ x: 0, y: 0 }], kRed);
+
+    resized.applyRemoteCommand({
+      action: "resized",
+      metadata: { size: { x: 8, y: 2 } }
+    });
+    replaced.applyRemoteCommand({
+      action: "texture-replaced",
+      metadata: {
+        size: { x: 1, y: 1 },
+        pixels: Buffer.from([10, 20, 30, 255]).toString("base64")
+      }
+    });
+
+    assert.deepEqual(
+      [resized.canUndo, resized.state.refused.length],
+      [false, 1]
+    );
+    assert.deepEqual(
+      [replaced.canUndo, replaced.state.refused.length],
+      [false, 1]
+    );
+  });
+
+  test("a peer deleting a UV region refuses the steps that edited it", () => {
+    const doc = createDocument();
+    const region = doc.uv.create({ width: 2, height: 2 });
+    doc.uv.move(region.id, { x: 1, y: 1, width: 2, height: 2 });
+
+    doc.applyRemoteCommand({ action: "uv-region-deleted", metadata: { id: region.id } });
+
+    assert.equal(doc.undo(), false);
+    assert.deepEqual(doc.state.refused.map(({ refused }) => refused.reason), ["peer", "peer"]);
+  });
+
+  test("a snapshot load refuses the pixel, UV, normal map and palette steps it changed", () => {
+    const doc = createDocument();
+    doc.uv.create({ width: 2, height: 2 });
+    doc.paintPixels([{ x: 0, y: 0 }], kRed);
+    doc.enableNormalMap();
+    doc.changePaletteColor(0, kBlue);
+
+    doc.loadSnapshot(
+      { x: 2, y: 1 },
+      new Uint8ClampedArray(8),
+      [],
+      NormalMapConfig.create({ strength: 3 }).toJSON(),
+      ColorPalette.create().withColor(9, kRed).toJSON()
+    );
+
+    assert.equal(doc.canUndo, false);
+    assert.equal(doc.state.refused.length, 4);
   });
 });

@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import {
   createPixelArtCanvas,
   type CreatedPixelArtCanvas
@@ -20,7 +21,7 @@ import type { SelectionProgressEvent } from "#src/tools/SelectEngine.events.ts";
 function selectedCanvas(): CreatedPixelArtCanvas {
   const result = createPixelArtCanvas({
     zoom: { default: 4, smoothing: 0 },
-    history: { enabled: true },
+    history: new LocalHistory(),
     clipboard: null,
     select: { eraseColor: "#FF00FF" }
   });

@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { StandalonePixelHistory } from "#src/history/PixelCanvasHistory.ts";
 import { pixelArtAssetKind } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
@@ -40,7 +41,7 @@ function setup(
   const { manager, canvas } = createPixelArtCanvas({
     zoom: { default: 4 },
     brush: { size: 1, maxSize: 1 },
-    history: { enabled: history }
+    history: history ? new StandalonePixelHistory() : undefined
   });
   new PixelSyncClient({ room, document: manager.document });
 

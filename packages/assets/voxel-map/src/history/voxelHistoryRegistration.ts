@@ -4,24 +4,26 @@ import type {
   HistoryKeys,
   HistoryRegistration
 } from "@jolly-pixel/history";
+import {
+  VOXEL_ABSENT,
+  VOXEL_PATCH_STRIDE,
+  voxelPatchWrites,
+  VoxelPatchBuilder,
+  type VoxelCoord,
+  type VoxelPatchWrite,
+  type VoxelWorld,
+  type VoxelWorldCommand
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { VoxelDocument } from "../VoxelDocument.ts";
-import type { VoxelWorldCommand } from "../commands/types.ts";
-import type { VoxelWorld } from "../world/VoxelWorld.ts";
-import type { VoxelCoord } from "../world/types.ts";
-import { VOXEL_ABSENT } from "../world/storage/packedVoxel.ts";
-import { VoxelPatchBuilder } from "../world/editing/VoxelPatchBuilder.ts";
-import { VOXEL_PATCH_STRIDE } from "../world/editing/voxelPatch.ts";
-import type { VoxelChange } from "./VoxelEdits.ts";
+import type {
+  VoxelChange,
+  VoxelEdits
+} from "./VoxelEdits.ts";
 import {
   VoxelKeySet,
   type VoxelKeyCell
 } from "./VoxelKeySet.ts";
-import {
-  patchCells,
-  type PatchCell
-} from "./patchCells.ts";
 
 // CONSTANTS
 const kDefaultId = "voxels";
@@ -36,15 +38,15 @@ export interface VoxelHistoryRegistrationOptions<TScope extends string> {
 }
 
 export function voxelHistoryRegistration<TScope extends string>(
-  document: Pick<VoxelDocument, "edits" | "world">,
+  edits: VoxelEdits,
   options: VoxelHistoryRegistrationOptions<TScope>
 ): HistoryRegistration<TScope, VoxelWorldCommand, null, VoxelKeySet, Int32Array> {
   const { id = kDefaultId, scope } = options;
 
   return {
     id,
-    document: document.edits,
-    keys: voxelHistoryKeys(document.world),
+    document: edits,
+    keys: voxelHistoryKeys(edits.world),
     scopeOf: () => scope,
     label: () => kLabel,
     compact: compactVoxelPatches
@@ -174,7 +176,7 @@ function cellOf(
 function compactVoxelPatches(
   commands: readonly VoxelWorldCommand[]
 ): VoxelWorldCommand[] {
-  const layers = new Map<string, Map<string, PatchCell>>();
+  const layers = new Map<string, Map<string, VoxelPatchWrite>>();
   const kept: VoxelWorldCommand[] = [];
   for (const command of commands) {
     if (command.action !== "voxels-patched") {
@@ -187,7 +189,7 @@ function compactVoxelPatches(
       cells = new Map();
       layers.set(command.layerId, cells);
     }
-    for (const cell of patchCells(command.metadata)) {
+    for (const cell of voxelPatchWrites(command.metadata)) {
       cells.set(cellKey(cell.position), cell);
     }
   }

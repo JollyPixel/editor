@@ -6,9 +6,6 @@
   "references": [
     {
       "path": "../engine"
-    },
-    {
-      "path": "../history"
     }
   ]
 }

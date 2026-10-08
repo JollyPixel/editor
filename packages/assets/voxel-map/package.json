@@ -54,14 +54,15 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
-    "@jolly-pixel/voxel.renderer": "workspace:*"
+    "@jolly-pixel/voxel.renderer": "workspace:*",
+    "@openally/emitt": "1.1.0"
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-source": "workspace:*",
-    "@jolly-pixel/event-store": "workspace:*",
-    "@jolly-pixel/history": "workspace:*"
+    "@jolly-pixel/event-store": "workspace:*"
   }
 }

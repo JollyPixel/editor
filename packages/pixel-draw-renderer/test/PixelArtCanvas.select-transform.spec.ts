@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { readPixel } from "./fixtures/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
@@ -130,7 +131,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
   describe("undo/redo", () => {
     test("undo/redo covers a clockwise Rotate around the selection's center", () => {
       const manager = createSelectCanvas({
-        history: { enabled: true }
+        history: new LocalHistory()
       });
       const canvas = manager.canvas();
 
@@ -188,7 +189,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
 
     test("undoing a Rotate resyncs the selection box, so a follow-up rotate doesn't corrupt pixels", () => {
       const manager = createSelectCanvas({
-        history: { enabled: true }
+        history: new LocalHistory()
       });
       const canvas = manager.canvas();
 
@@ -232,7 +233,7 @@ describe("PixelArtCanvas — select mode rotate/flip", () => {
 
     test("undo/redo covers a horizontal Flip in place", () => {
       const manager = createSelectCanvas({
-        history: { enabled: true }
+        history: new LocalHistory()
       });
       const canvas = manager.canvas();
 

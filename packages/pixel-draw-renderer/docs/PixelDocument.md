@@ -1,6 +1,6 @@
 # PixelDocument
 
-The texture buffer, UV map and normal map settings of one pixel-art texture, without any view. A network client can keep it in sync with no canvas mounted, and several [`PixelArtCanvas`](./PixelArtCanvas.md) instances can edit the same document through the `document` option. It is a history source for [pixel history](./history/PixelHistory.md).
+The texture buffer, UV map and normal map settings of one pixel-art texture, without any view. A network client can keep it in sync with no canvas mounted, and several [`PixelArtCanvas`](./PixelArtCanvas.md) instances can edit the same document through the `document` option. It emits a change for each edit, which [pixel history](./history/PixelHistory.md) records.
 
 ```ts
 const doc = new PixelDocument({
@@ -8,8 +8,7 @@ const doc = new PixelDocument({
 });
 
 const canvas = new PixelArtCanvas(parent, {
-  document: doc,
-  history: { enabled: true }
+  document: doc
 });
 ```
 
@@ -31,7 +30,6 @@ interface PixelDocumentOptions {
 ```ts
 readonly buffer: CanvasBuffer;
 readonly uv: UVMap;
-readonly receipts: ChangeReceipts<PixelChange>;
 readonly palette: ColorPalette;
 ```
 
@@ -110,17 +108,17 @@ interface SelectionEdit {
 
 `resize` emits `resized`. Its change holds the texture before it, so undo and redo restore the exact pixels and emit `texture-replaced`.
 
-`batch` runs `edit` as one history step when a grouping is set: `groupEditsWith` sets it, usually to `(edit) => history.record(scope, null, edit)`, and returns a function that removes it. Without one, `batch` just calls `edit`. A canvas sets it for its document.
+`batch` runs `edit` as one history step when a grouping is set: `groupEditsWith` sets it, usually to `(edit) => history.record(scope, null, edit)`, and returns a function that removes it. Without one, `batch` just calls `edit`. `registerPixelHistory` from `@jolly-pixel/asset.pixel-art` sets it.
 
-## History source
+## Changes
 
 ```ts
-type PixelChange = CommandChange<DocumentCommand, null>;
+type PixelChange = EditChange<DocumentCommand>;
 
-applyStep(command: DocumentCommand, basis: number | undefined): PixelChange | null;
+applyStep(command: DocumentCommand): PixelChange | null;
 ```
 
-`applyStep` applies an undo or redo command as a local edit, carrying `basis`: it emits the change, with the commands undoing it read before it applied, then the command and `draw-end`. It returns `null` and changes nothing when the command no longer applies, such as a move of a deleted UV region. `receipts` carries the server's answers about local changes; a sync client attaches it. See [pixel history](./history/PixelHistory.md).
+`applyStep` applies an undo or redo command as a local edit: it emits the change, with the commands undoing it read before it applied, then the command and `draw-end`. It returns `null` and changes nothing when the command no longer applies, such as a move of a deleted UV region. See [pixel history](./history/PixelHistory.md#editchange).
 
 ## Normal map
 

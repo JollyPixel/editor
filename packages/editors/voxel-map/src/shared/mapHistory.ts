@@ -6,8 +6,8 @@ import {
 } from "@jolly-pixel/history";
 import {
   voxelHistoryRegistration,
-  type VoxelDocument
-} from "@jolly-pixel/voxel.renderer";
+  type VoxelEdits
+} from "@jolly-pixel/asset.voxel-map/client";
 
 // CONSTANTS
 const kLimit = 10;
@@ -19,13 +19,15 @@ export type MapHistoryScope = typeof MAP_HISTORY_SCOPE;
 export type MapSteps = Pick<CommandHistory<MapHistoryScope>, "open">;
 
 export function createMapHistory(
-  document: Pick<VoxelDocument, "edits" | "world">
+  edits: VoxelEdits
 ): CommandHistory<MapHistoryScope> {
   const history = new CommandHistory({
     scopes: [MAP_HISTORY_SCOPE],
     limit: kLimit
   });
-  history.register(voxelHistoryRegistration(document, { scope: MAP_HISTORY_SCOPE }));
+  history.register(
+    voxelHistoryRegistration(edits, { scope: MAP_HISTORY_SCOPE })
+  );
 
   return history;
 }

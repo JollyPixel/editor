@@ -6,22 +6,19 @@ import {
   type DocumentResetCause,
   type HistorySource
 } from "@jolly-pixel/history";
-
-// Import Internal Dependencies
-import type { BlockDocumentEvents } from "../BlockDocument.ts";
-import { isVoxelWorldCommand } from "../commands/categories.ts";
-import type {
-  VoxelCommand,
-  VoxelCommandContext,
-  VoxelWorldCommand
-} from "../commands/types.ts";
-import type { VoxelWorld } from "../world/VoxelWorld.ts";
-import type {
-  VoxelCellChange,
-  VoxelEditRecorder
-} from "../world/types.ts";
-import { VoxelPatchBuilder } from "../world/editing/VoxelPatchBuilder.ts";
-import { patchCells } from "./patchCells.ts";
+import {
+  isVoxelWorldCommand,
+  voxelPatchesRestoring,
+  voxelPatchWrites,
+  VoxelPatchBuilder,
+  type BlockDocumentEvents,
+  type VoxelCellChange,
+  type VoxelCommand,
+  type VoxelCommandContext,
+  type VoxelEditRecorder,
+  type VoxelWorld,
+  type VoxelWorldCommand
+} from "@jolly-pixel/voxel.renderer";
 
 export type VoxelChange = CommandChange<VoxelWorldCommand, null>;
 
@@ -30,15 +27,18 @@ export type VoxelEditsEvents = {
   reset: (cause: DocumentResetCause) => void;
 };
 
-export type VoxelEditsDocument = Pick<
+export interface VoxelEditsDocument extends Pick<
   Emitter<BlockDocumentEvents<VoxelCommand>>,
-  "on"
->;
+  "on" | "off"
+> {
+  readonly world: VoxelWorld;
+}
 
 export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
   readonly receipts = new ChangeReceipts<VoxelChange>();
+  readonly world: VoxelWorld;
 
-  #world: VoxelWorld;
+  #document: VoxelEditsDocument;
   #events = new Emitter<VoxelEditsEvents>();
   #changes = new WeakMap<VoxelWorldCommand, VoxelChange>();
   #recorded: VoxelCellChange[] = [];
@@ -51,22 +51,41 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
   };
   #recording = false;
   #stepping: VoxelChange | null = null;
+  #onCommand = (
+    command: VoxelCommand,
+    context: VoxelCommandContext
+  ): void => {
+    if (!isVoxelWorldCommand(command)) {
+      return;
+    }
+
+    switch (context.origin) {
+      case "local":
+        this.#local(command);
+        break;
+      case "remote":
+        this.#events.emit(
+          "change",
+          CommandChange.remote(command, null, context.clientId ?? null)
+        );
+        break;
+      case "replay":
+        this.#events.emit("change", CommandChange.replay(command, null));
+        break;
+    }
+  };
+  #onLoaded = (): void => {
+    this.#recorded = [];
+    this.#events.emit("reset", "load");
+  };
 
   constructor(
-    world: VoxelWorld,
     document: VoxelEditsDocument
   ) {
-    this.#world = world;
-    world.on("command", (command) => this.#local(command));
-    document.on("command", (command, context) => {
-      if (isVoxelWorldCommand(command) && !this.#changes.has(command)) {
-        this.#events.emit("change", changeOf(command, context));
-      }
-    });
-    document.on("loaded", () => {
-      this.#recorded = [];
-      this.#events.emit("reset", "load");
-    });
+    this.world = document.world;
+    this.#document = document;
+    document.on("command", this.#onCommand);
+    document.on("loaded", this.#onLoaded);
   }
 
   subscribe<TEvent extends keyof VoxelEditsEvents>(
@@ -82,7 +101,7 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
     };
   }
 
-  changeOf(
+  changeFor(
     command: VoxelWorldCommand
   ): VoxelChange | undefined {
     return this.#changes.get(command);
@@ -96,13 +115,13 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
       return null;
     }
 
-    const layer = this.#world.getLayerById(command.layerId);
+    const layer = this.world.getLayerById(command.layerId);
     if (layer === undefined) {
       return null;
     }
 
     const inverse = new VoxelPatchBuilder();
-    for (const { position, packed, partner } of patchCells(command.metadata)) {
+    for (const { position, packed, partner } of voxelPatchWrites(command.metadata)) {
       const before = layer.getPackedVoxelAt(position);
       const beforePartner = layer.getPartnerVoxelAt(position);
       if (before !== packed || beforePartner !== partner) {
@@ -127,7 +146,7 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
     );
     this.#stepping = change;
     try {
-      this.#world.unrecorded(() => this.#world.patchVoxels(
+      this.world.unrecorded(() => this.world.patchVoxels(
         layer.name,
         command.metadata.cells,
         command.metadata.partners
@@ -142,6 +161,8 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
   }
 
   dispose(): void {
+    this.#document.off("command", this.#onCommand);
+    this.#document.off("loaded", this.#onLoaded);
     this.#events.removeAllListeners();
     this.#follow();
   }
@@ -157,7 +178,11 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
       return;
     }
 
-    const change = CommandChange.local(command, null, inverseOf(recorded));
+    const change = CommandChange.local(
+      command,
+      null,
+      revertingCommands(recorded)
+    );
     this.#changes.set(command, change);
     this.#events.emit("change", change);
   }
@@ -171,47 +196,24 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
     this.#recording = recording;
     this.#recorded = [];
     if (recording) {
-      this.#world.addRecorder(this.#recorder);
+      this.world.addRecorder(this.#recorder);
     }
     else {
-      this.#world.removeRecorder(this.#recorder);
+      this.world.removeRecorder(this.#recorder);
     }
   }
 }
 
-function inverseOf(
+function revertingCommands(
   changes: readonly VoxelCellChange[]
 ): VoxelWorldCommand[] {
-  const patches = new Map<string, VoxelPatchBuilder>();
-  for (let index = changes.length - 1; index >= 0; index--) {
-    const { layerId, position, before, beforePartner } = changes[index];
-    let patch = patches.get(layerId);
-    if (patch === undefined) {
-      patch = new VoxelPatchBuilder();
-      patches.set(layerId, patch);
-    }
-    patch.push(position, before, beforePartner);
-  }
+  const patches = voxelPatchesRestoring(changes, "before");
 
-  return Array.from(patches, ([layerId, patch]) => {
+  return Array.from(patches, ([layerId, metadata]) => {
     return {
       action: "voxels-patched",
       layerId,
-      metadata: patch.toPatch()
+      metadata
     };
   });
-}
-
-function changeOf(
-  command: VoxelWorldCommand,
-  context: VoxelCommandContext
-): VoxelChange {
-  switch (context.origin) {
-    case "local":
-      return CommandChange.local(command, null);
-    case "remote":
-      return CommandChange.remote(command, null, context.clientId ?? null);
-    case "replay":
-      return CommandChange.replay(command, null);
-  }
 }

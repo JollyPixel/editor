@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { LocalHistory } from "../history/LocalHistory.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import {
   createPixelArtCanvas,
@@ -12,9 +13,7 @@ export function createUvCanvas(
     zoom: {
       default: 4
     },
-    history: {
-      enabled: true
-    },
+    history: new LocalHistory(),
     ...options
   }).manager;
 }

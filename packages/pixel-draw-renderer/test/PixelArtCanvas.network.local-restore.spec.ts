@@ -7,6 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
@@ -27,7 +28,7 @@ describe("PixelArtCanvas — runLocalRestore", () => {
         maxSize: 32,
         size: { x: 4, y: 4 }
       },
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     manager.document.on("command", (event) => events.push(event));
 
@@ -53,7 +54,7 @@ describe("PixelArtCanvas — runLocalRestore", () => {
         maxSize: 32,
         size: { x: 8, y: 8 }
       },
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     manager.document.on("command", (event) => events.push(event));
 
@@ -120,21 +121,19 @@ describe("PixelArtCanvas — runLocalRestore", () => {
 });
 
 describe("PixelArtCanvas — loadSnapshot", () => {
-  test("replaces texture, UV regions and normal map silently and clears history", () => {
+  test("replaces texture, UV regions and normal map silently", () => {
     const events: PixelCommand[] = [];
     const manager = new PixelArtCanvas(makeContainer(), {
       texture: {
         maxSize: 32,
         size: { x: 8, y: 8 }
-      },
-      history: { enabled: true }
+      }
     });
     manager.document.on("command", (event) => events.push(event));
     manager.uv.create({
       width: 4,
       height: 4
     });
-    assert.ok(manager.canUndo());
     events.length = 0;
     const snapshotRegion: UVRegionData = {
       state: "stacked",
@@ -167,7 +166,6 @@ describe("PixelArtCanvas — loadSnapshot", () => {
       manager.document.normalMap?.toJSON(),
       normalMapData
     );
-    assert.ok(!manager.canUndo());
     assert.strictEqual(events.length, 0);
     manager.destroy();
   });

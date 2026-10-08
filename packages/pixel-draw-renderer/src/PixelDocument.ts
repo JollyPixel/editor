@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import {
-  ChangeReceipts,
-  type DocumentResetCause
-} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
@@ -34,6 +30,7 @@ import type {
   PixelChange,
   SelectionEdit
 } from "./sync/LocalEdit.types.ts";
+import type { EditSource } from "./sync/EditChange.ts";
 import type { UVMap } from "./uv/map/UVMap.ts";
 import {
   coveredPixels,
@@ -87,15 +84,15 @@ export type PixelDocumentEvent = CanvasBufferEvent & {
     config: NormalMapConfig | null;
     regionIds: string[] | null;
   }) => void;
-  reset: (cause: DocumentResetCause) => void;
+  reset: (cause: "load") => void;
 };
 
 export class PixelDocument extends Emitter<
   PixelDocumentEvent
-> {
+>
+  implements EditSource<DocumentCommand> {
   readonly buffer: CanvasBuffer;
   readonly uv: UVMap;
-  readonly receipts = new ChangeReceipts<PixelChange>();
 
   #state: PixelDocumentState<CanvasBuffer>;
   #ownership: UVOwnership;
@@ -393,10 +390,9 @@ export class PixelDocument extends Emitter<
   }
 
   applyStep(
-    command: DocumentCommand,
-    basis: number | undefined
+    command: DocumentCommand
   ): PixelChange | null {
-    return this.#recorder.applyStep(command, basis);
+    return this.#recorder.applyStep(command);
   }
 
   applyRemoteCommand(

@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
@@ -31,7 +32,7 @@ describe("PixelArtCanvas — fill mode", () => {
         zoom: { default: 1 },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
-        history: { enabled: true },
+        history: new LocalHistory(),
         onCommand: (event) => events.push(event)
       });
       created.manager.tools.fill.uvClip = true;

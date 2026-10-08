@@ -12,6 +12,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { VoxelEdits } from "../../src/history/VoxelEdits.ts";
 import { VoxelReconciler } from "../../src/network/VoxelReconciler.ts";
 import type { VoxelMapNetworkCommand } from "../../src/network/types.ts";
 import {
@@ -31,7 +32,7 @@ function setup() {
     chunkSize: 16,
     layers: ["L3", "L2", "L1"]
   });
-  const history = mapHistory(document);
+  const history = mapHistory(new VoxelEdits(document));
   const reconciler = new VoxelReconciler(document);
   const pending: VoxelMapNetworkCommand[] = [];
   document.on("command", (command, { origin }) => {

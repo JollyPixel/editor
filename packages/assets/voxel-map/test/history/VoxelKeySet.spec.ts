@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { VoxelKeySet } from "../../../src/document/history/index.ts";
+import { VoxelKeySet } from "#src/history/VoxelKeySet.ts";
 
 // CONSTANTS
 const kCell = {

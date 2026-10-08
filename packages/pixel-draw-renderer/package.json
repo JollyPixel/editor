@@ -44,11 +44,11 @@
   "license": "MIT",
   "devDependencies": {
     "@jolly-pixel/asset-source": "workspace:*",
-    "@jolly-pixel/bench": "workspace:*"
+    "@jolly-pixel/bench": "workspace:*",
+    "@jolly-pixel/history": "workspace:*"
   },
   "dependencies": {
     "@jolly-pixel/color": "workspace:*",
-    "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/image": "workspace:*",
     "@openally/emitt": "1.1.0",
     "js-base64": "3.9.4"

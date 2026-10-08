@@ -21,7 +21,7 @@ UV region tools, undo/redo, and zoom/pan behind one `PixelArtCanvas` API.
 - **Paint-bucket fill**: flood-fill a connected region of same-colored pixels
 - **Rectangle and shape select**: drag out a rectangle or select a connected region
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
-- **Undo/redo**: optional history over strokes, resizes, texture replaces, and UV region changes, built on `@jolly-pixel/history`, refusing a step a peer changed since;
+- **Undo/redo**: every edit is emitted with the commands that undo it, and a canvas binds to the undo history its host passes in;
 - **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag panning and left-drag panning while a pan modifier is held;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 
@@ -60,9 +60,6 @@ const manager = new PixelArtCanvas(container, {
   },
   brush: {
     size: 3
-  },
-  history: {
-    enabled: true
   }
 });
 
@@ -127,22 +124,20 @@ Each method returns `true` when it handled the intent, so the host knows whether
 
 ### Undo/redo
 
-Disabled by default. Enable it and (optionally) track button-enabled state, or pass `{ history, scope }` to record into a `CommandHistory` the host shares with other documents:
+Disabled by default. Pass a `PixelArtCanvasHistory`, such as `StandalonePixelHistory` from `@jolly-pixel/asset.pixel-art`, and (optionally) track button-enabled state:
 
 ```ts
+import { StandalonePixelHistory } from "@jolly-pixel/asset.pixel-art/client";
+
 const manager = new PixelArtCanvas(container, {
-  history: {
-    enabled: true,
-    // limit defaults to 10
-    limit: 20
-  },
+  history: new StandalonePixelHistory({ limit: 20 }),
   onHistoryChange: ({ canUndo, canRedo }) => {
     undoButton.disabled = !canUndo;
     redoButton.disabled = !canRedo;
   }
 });
 
-manager.undo(); // false if history is disabled or there's nothing to undo
+manager.undo(); // false without a history or with nothing to undo
 manager.redo();
 ```
 

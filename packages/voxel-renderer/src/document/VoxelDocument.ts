@@ -18,7 +18,6 @@ import type {
   VoxelCommand,
   VoxelCommandListener
 } from "./commands/types.ts";
-import { VoxelEdits } from "./history/VoxelEdits.ts";
 import type { MaterialGroupJSON } from "./materials/MaterialGroup.ts";
 import { MaterialGroupList } from "./materials/MaterialGroupList.ts";
 import type { BlendGroupJSON } from "./materials/BlendGroup.ts";
@@ -108,7 +107,6 @@ export interface VoxelDocumentOptions {
 export class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly world: VoxelWorld;
   readonly blocksets: BlocksetList;
-  readonly edits: VoxelEdits;
 
   #logger: VoxelLogger;
 
@@ -140,7 +138,6 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     });
 
     this.world = new VoxelWorld(chunkSize);
-    this.edits = new VoxelEdits(this.world, this);
     this.world.on(
       "command",
       (command) => this.emit("command", command, { origin: "local" })
@@ -224,7 +221,6 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
 
   dispose(): void {
     this.#logger.debug("Disposing VoxelDocument.");
-    this.edits.dispose();
     this.blocksets.clear();
     this.world.removeAllListeners();
     this.removeAllListeners();

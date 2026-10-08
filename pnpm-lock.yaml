@@ -399,6 +399,9 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -408,6 +411,9 @@ importers:
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../../voxel-renderer
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -418,9 +424,6 @@ importers:
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
-      '@jolly-pixel/history':
-        specifier: workspace:*
-        version: link:../../history
 
   packages/assets/voxel-model:
     dependencies:
@@ -888,9 +891,6 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../color
-      '@jolly-pixel/history':
-        specifier: workspace:*
-        version: link:../history
       '@jolly-pixel/image':
         specifier: workspace:*
         version: link:../image
@@ -907,6 +907,9 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../bench
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../history
 
   packages/resize-handle: {}
 
@@ -1048,9 +1051,6 @@ importers:
 
   packages/voxel-renderer:
     dependencies:
-      '@jolly-pixel/history':
-        specifier: workspace:*
-        version: link:../history
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0

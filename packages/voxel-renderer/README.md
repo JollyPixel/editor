@@ -24,7 +24,7 @@
 - `"lambert"` (default) or `"standard"` (PBR) material modes
 - Opaque, masked, and blended block surfaces with configurable sides and mask cutoff
 - `save()` / `load()` round-trips the full world state as plain JSON
-- Undo/redo of voxel edits on a `CommandHistory` from `@jolly-pixel/history`, refusing a step a peer changed since
+- World recorders that report the cells each write replaced, for an undo history to invert
 - Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
 - Compatible with JollyPixel engine logger
 - Inspector (`view.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
@@ -137,9 +137,8 @@ the renderer package does not depend on an ECS runtime.
 
 - [`VoxelDocument`](docs/api/core/VoxelDocument.md) (voxel data, headless) and
   [`VoxelView`](docs/api/core/VoxelView.md) (the meshes drawn from it).
-- [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md),
-  [`VoxelEdits` undo source](docs/api/core/VoxelEdits.md), and
-  [commands](docs/api/core/commands.md).
+- [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md)
+  and [commands](docs/api/core/commands.md).
 - [`VoxelWorld`](docs/api/world/VoxelWorld.md),
   [`VoxelLayer`](docs/api/world/VoxelLayer.md),
   [`VoxelTemplates`](docs/api/world/VoxelTemplates.md),
@@ -188,7 +187,7 @@ Then open `http://localhost:5173/` for the landing page, or go straight to one:
 - `/physics/`: a 32×32 voxel terrain with ramps, stairs and slabs, and a Rapier3D sphere you roll with the arrow keys.
 - `/noise-world/`: a Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters. This is the benchmark example.
 
-See [examples/README.md](examples/README.md) to add one.
+See [examples/README.md](https://github.com/JollyPixel/editor/blob/main/packages/voxel-renderer/examples/README.md) to add one.
 
 ## 🧪 Benchmarks
 

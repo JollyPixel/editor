@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { VoxelCoord } from "../world/types.ts";
+// Import Third-party Dependencies
+import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 const kSpan = 2 ** 26;

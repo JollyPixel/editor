@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import type { KeyedSnapshot } from "@jolly-pixel/history";
-
-// Import Internal Dependencies
-import type { Vec2 } from "../types.ts";
+import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 export class PixelCapture {
   readonly size: Vec2;

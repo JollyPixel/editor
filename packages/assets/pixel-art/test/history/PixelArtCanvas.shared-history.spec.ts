@@ -7,30 +7,28 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { CommandHistory } from "@jolly-pixel/history";
+import {
+  PixelDocument,
+  type PixelArtCanvas,
+  type SelectionRect
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelDocument } from "#src/PixelDocument.ts";
 import { registerPixelHistory } from "#src/history/pixelHistoryRegistration.ts";
-import { createPixelArtCanvas } from "./helpers/canvas.ts";
-import { mouseEvent } from "./helpers/events.ts";
-import { readPixel } from "./fixtures/canvas.ts";
-import type { SelectionRect } from "#src/types.ts";
+import {
+  SharedPixelHistory,
+  StandalonePixelHistory
+} from "#src/history/PixelCanvasHistory.ts";
+import { createPixelArtCanvas } from "../helpers/canvas.ts";
+import { mouseEvent } from "../helpers/events.ts";
+import { readPixel } from "../fixtures/canvas.ts";
 
-function outlineOf(
-  rect: SelectionRect
-): string {
-  const left = 84 + (rect.x * 4);
-  const top = 84 + (rect.y * 4);
-  const right = left + (rect.width * 4);
-  const bottom = top + (rect.height * 4);
+function selectedRect(
+  canvas: PixelArtCanvas
+): SelectionRect | null {
+  const presence = canvas.selectionPresence?.toJSON();
 
-  return `M ${left} ${top} L ${right} ${top} L ${right} ${bottom} L ${left} ${bottom} Z`;
-}
-
-function outlineIn(
-  overlay: SVGSVGElement
-): string | null | undefined {
-  return overlay.querySelector("[data-overlay=selection]")?.getAttribute("d");
+  return presence?.phase === "selected" ? presence.rect : null;
 }
 
 function drag(
@@ -60,10 +58,10 @@ function ownedDocument(
 describe("PixelArtCanvas on a shared history", () => {
   test("files edits in the owner's scope; an undo there restores the selection after the pixels", () => {
     const history = new CommandHistory({ scopes: ["build", "animate"] });
-    const { manager, canvas, overlay } = createPixelArtCanvas({
+    const { manager, canvas } = createPixelArtCanvas({
       document: ownedDocument(history),
       zoom: { default: 4 },
-      history: { history, scope: "build" }
+      history: new SharedPixelHistory(history, "build")
     });
     manager.commitPixels([
       { x: 2, y: 2 },
@@ -77,15 +75,15 @@ describe("PixelArtCanvas on a shared history", () => {
 
     assert.equal(history.state("build").undoCount, 2);
     assert.equal(history.state("animate").undoCount, 0);
-    assert.equal(outlineIn(overlay), outlineOf({ x: 4, y: 4, width: 2, height: 2 }));
+    assert.deepEqual(selectedRect(manager), { x: 4, y: 4, width: 2, height: 2 });
 
     assert.equal(history.undo("build"), true);
     assert.deepEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), [0, 0, 0, 255]);
-    assert.equal(outlineIn(overlay), outlineOf({ x: 2, y: 2, width: 2, height: 2 }));
+    assert.deepEqual(selectedRect(manager), { x: 2, y: 2, width: 2, height: 2 });
 
     assert.equal(history.redo("build"), true);
     assert.deepEqual(readPixel(manager.texture, { x: 4, y: 4 }, 8), [0, 0, 0, 255]);
-    assert.equal(outlineIn(overlay), outlineOf({ x: 4, y: 4, width: 2, height: 2 }));
+    assert.deepEqual(selectedRect(manager), { x: 4, y: 4, width: 2, height: 2 });
     manager.destroy();
   });
 
@@ -94,7 +92,7 @@ describe("PixelArtCanvas on a shared history", () => {
     const document = ownedDocument(history);
     const { manager } = createPixelArtCanvas({
       document,
-      history: { history, scope: "build" }
+      history: new SharedPixelHistory(history, "build")
     });
     const before = document.buffer.samplePixels([{ x: 0, y: 0 }]);
     manager.commitPixels([{ x: 0, y: 0 }]);
@@ -110,7 +108,7 @@ describe("PixelArtCanvas on a shared history", () => {
     const { manager, canvas } = createPixelArtCanvas({
       document: ownedDocument(history),
       zoom: { default: 4 },
-      history: { history, scope: "build" }
+      history: new SharedPixelHistory(history, "build")
     });
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
@@ -121,5 +119,44 @@ describe("PixelArtCanvas on a shared history", () => {
 
     assert.equal(history.undo("build"), true);
     assert.deepEqual(history.state("build").refused.map(({ refused }) => refused.reason), ["closed"]);
+  });
+});
+
+describe("StandalonePixelHistory", () => {
+  test("one history per document, kept for the canvases opened on it later", () => {
+    const history = new StandalonePixelHistory();
+    const document = new PixelDocument({ size: { x: 4, y: 4 } });
+    const other = new PixelDocument({ size: { x: 4, y: 4 } });
+    const first = createPixelArtCanvas({ document, history });
+    const elsewhere = createPixelArtCanvas({ document: other, history });
+    const before = readPixel(document.buffer.pixels(), { x: 3, y: 3 }, 4);
+    first.manager.commitPixels([{ x: 3, y: 3 }]);
+    first.manager.destroy();
+
+    const second = createPixelArtCanvas({ document, history });
+
+    assert.equal(elsewhere.manager.canUndo(), false);
+    assert.equal(second.manager.undo(), true);
+    assert.deepEqual(readPixel(document.buffer.pixels(), { x: 3, y: 3 }, 4), before);
+  });
+
+  test("canvases on one document share its history through separate instances", () => {
+    const document = new PixelDocument({ size: { x: 4, y: 4 } });
+    const first = createPixelArtCanvas({
+      document,
+      history: new StandalonePixelHistory()
+    });
+    const second = createPixelArtCanvas({
+      document,
+      history: new StandalonePixelHistory()
+    });
+    const before = readPixel(document.buffer.pixels(), { x: 3, y: 3 }, 4);
+    first.manager.commitPixels([{ x: 3, y: 3 }]);
+
+    assert.equal(second.manager.undo(), true);
+
+    assert.deepEqual(readPixel(document.buffer.pixels(), { x: 3, y: 3 }, 4), before);
+    assert.equal(first.manager.canUndo(), false);
+    assert.equal(first.manager.canRedo(), true);
   });
 });

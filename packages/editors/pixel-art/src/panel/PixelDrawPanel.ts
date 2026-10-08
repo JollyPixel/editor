@@ -21,6 +21,7 @@ import {
   type ResolvedThemeMode,
   type TabsVariant
 } from "@jolly-pixel/ui";
+import { StandalonePixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "../color/ColorSwatch.ts";
@@ -383,7 +384,7 @@ export class PixelDrawPanel extends LitElement {
   ): Promise<void> {
     await this.updateComplete;
     this.#baseOptions = {
-      history: { enabled: true },
+      history: new StandalonePixelHistory(),
       ...options
     };
   }

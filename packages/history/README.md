@@ -80,6 +80,7 @@ What sync clients and custom history sources use.
 
 - [CommandChange](./docs/CommandChange.md): the change a history source emits, built per origin.
 - [ChangeReceipts](./docs/ChangeReceipts.md): the server's answers a sync client writes.
+- [ChangeSourceAdapter](./docs/ChangeSourceAdapter.md): a history source over a document that emits plain changes.
 
 The [collaborative undo guide](./docs/guides/collaborative-undo.md) explains steps, guards, refusals and receipts.
 

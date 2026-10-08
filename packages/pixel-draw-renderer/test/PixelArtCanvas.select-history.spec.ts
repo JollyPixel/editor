@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import { readPixel } from "./fixtures/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import { createSelectCanvas } from "./helpers/select-canvas/manager.ts";
@@ -13,7 +14,7 @@ import { createSelectCanvas } from "./helpers/select-canvas/manager.ts";
 describe("PixelArtCanvas — select mode undo/redo", () => {
   test("undo/redo covers a Move that erases the source and paints the destination", () => {
     const manager = createSelectCanvas({
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
 
@@ -77,7 +78,7 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
 
   test("undoing a select-edit outside select mode restores pixels, not the selection", () => {
     const manager = createSelectCanvas({
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
 
@@ -121,7 +122,7 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
 
   test("undo/redo covers a Delete that fills the rectangle with the dominant surrounding color", () => {
     const manager = createSelectCanvas({
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
 
@@ -170,7 +171,7 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
 
   test("undo/redo covers a Paste", async() => {
     const manager = createSelectCanvas({
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
 
@@ -230,7 +231,7 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
 
   test("undoing a texture clear discards the selection", () => {
     const manager = createSelectCanvas({
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
     manager.clearTexture({ includeUV: true });
@@ -248,7 +249,7 @@ describe("PixelArtCanvas — select mode undo/redo", () => {
 
   test("a move partly off the texture records only pixels inside it", () => {
     const manager = createSelectCanvas({
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
     const positions: { x: number; y: number; }[] = [];

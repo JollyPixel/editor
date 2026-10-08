@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import { CommandHistory } from "@jolly-pixel/history";
-import {
-  voxelHistoryRegistration,
-  type VoxelDocument
-} from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import type { VoxelEdits } from "#src/history/VoxelEdits.ts";
+import { voxelHistoryRegistration } from "#src/history/voxelHistoryRegistration.ts";
 
 export const MAP_SCOPE = "map";
 
 export function mapHistory(
-  document: VoxelDocument
+  edits: VoxelEdits
 ): CommandHistory<typeof MAP_SCOPE> {
   const history = new CommandHistory({ scopes: [MAP_SCOPE] });
-  history.register(voxelHistoryRegistration(document, { scope: MAP_SCOPE }));
+  history.register(voxelHistoryRegistration(edits, { scope: MAP_SCOPE }));
 
   return history;
 }

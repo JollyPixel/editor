@@ -16,6 +16,7 @@ import {
   type VoxelPatchCells,
   type VoxelPatchPartners
 } from "./voxelPatch.ts";
+import type { VoxelCellChange } from "../types.ts";
 
 export class VoxelPatchBuilder {
   #cells: VoxelPatchCells = [];
@@ -67,4 +68,29 @@ export class VoxelPatchBuilder {
       this.#partners
     );
   }
+}
+
+export function voxelPatchesRestoring(
+  changes: readonly VoxelCellChange[],
+  side: "before" | "after"
+): Map<string, VoxelPatch> {
+  const ordered = side === "before" ? changes.toReversed() : changes;
+  const builders = new Map<string, VoxelPatchBuilder>();
+  for (const change of ordered) {
+    let builder = builders.get(change.layerId);
+    if (builder === undefined) {
+      builder = new VoxelPatchBuilder();
+      builders.set(change.layerId, builder);
+    }
+    if (side === "before") {
+      builder.push(change.position, change.before, change.beforePartner);
+    }
+    else {
+      builder.push(change.position, change.after, change.afterPartner);
+    }
+  }
+
+  return new Map(
+    Array.from(builders, ([layerId, builder]) => [layerId, builder.toPatch()])
+  );
 }

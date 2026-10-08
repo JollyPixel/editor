@@ -13,3 +13,4 @@ are described in the [collaborative undo guide](../guides/collaborative-undo.md)
 | [0006](./0006-steps-open-across-calls.md) | Steps open across calls |
 | [0007](./0007-texture-edits-record-into-build.md) | voxel-model texture edits record into the build scope |
 | [0008](./0008-reconciler-revert-keeps-its-name.md) | `CommandReconciler.revert` keeps its name |
+| [0009](./0009-renderers-emit-plain-changes.md) | Renderers emit plain changes; asset packages own their history |

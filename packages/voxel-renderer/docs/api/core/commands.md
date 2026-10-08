@@ -48,9 +48,7 @@ and `"replay"` for this client's pending command applied or rolled back around
 a peer's. A network adapter applies peer commands as `"remote"` and sends only
 `"local"` ones.
 
-`clientId` is the peer `apply()` was given. `change` is set on every local
-command written through `VoxelWorld`: the [history change](./VoxelEdits.md)
-of that command, whose `basis` a sync client sends with it.
+`clientId` is the peer `apply()` was given.
 
 `redefinition` is set on `"block-defined"` commands only. It compares the new
 definition with the one it replaced:
@@ -188,6 +186,15 @@ const patch = new VoxelPatchBuilder()
   .toPatch();
 // { cells: [0, 0, 0, 1, 0, 1, 0, 0, 1, 0], partners: [1, 2, 16] }
 ```
+
+`voxelPatchWrites(patch)` iterates the same payload as
+`{ position, packed, partner }`, with `VOXEL_ABSENT` for an air cell and for a
+cell without a partner.
+
+`voxelPatchesRestoring(changes, side)` turns cell changes a
+[recorder](../world/VoxelWorld.md) received into one patch per layer id.
+`"before"` restores what the changes replaced, the earliest change of a cell
+winning; `"after"` replays them, the latest winning.
 
 ## Template commands
 

@@ -9,13 +9,16 @@ import {
   PixelDocument,
   type PixelDocumentOptions
 } from "#src/PixelDocument.ts";
-import { pixelHistoryRegistration } from "#src/history/pixelHistoryRegistration.ts";
+import {
+  unguardedRegistration,
+  type LocalScope
+} from "../history/LocalHistory.ts";
 
 // CONSTANTS
 const kScope = "pixels";
 
 export class HistoryDocument extends PixelDocument {
-  readonly history: CommandHistory<typeof kScope>;
+  readonly history: CommandHistory<LocalScope>;
 
   constructor(
     options: PixelDocumentOptions,
@@ -26,7 +29,7 @@ export class HistoryDocument extends PixelDocument {
       scopes: [kScope],
       limit
     });
-    this.history.register(pixelHistoryRegistration(this, { scope: kScope }));
+    this.history.register(unguardedRegistration("pixels", this));
   }
 
   get state(): HistoryScopeState {

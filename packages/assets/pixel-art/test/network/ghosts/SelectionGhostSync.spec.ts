@@ -10,6 +10,7 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { StandalonePixelHistory } from "#src/history/PixelCanvasHistory.ts";
 import { SelectionGhostSync } from "#src/network/ghosts/SelectionGhostSync.ts";
 import {
   decodeSelectionPresence,
@@ -46,7 +47,7 @@ function setup(
 ) {
   const owner = createPixelArtCanvas({
     zoom: { default: 4, smoothing: 0 },
-    history: { enabled: true },
+    history: new StandalonePixelHistory(),
     clipboard: null,
     select: { eraseColor: "#FF00FF" }
   });

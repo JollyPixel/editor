@@ -99,7 +99,10 @@ function setup() {
 
   const room = createMockRoom("B");
   const document = new VoxelDocument({ chunkSize: 16 });
-  new VoxelSyncClient({ room, document });
+  const { edits } = new VoxelSyncClient({
+    room,
+    document
+  });
 
   function deliver(): void {
     for (const message of server.take("B")) {
@@ -114,6 +117,7 @@ function setup() {
     server,
     room,
     document,
+    edits,
     deliver,
     flush(): void {
       for (const sent of room.sentCommands.splice(0)) {
@@ -218,8 +222,8 @@ describe("voxel-map convergence", () => {
   });
 
   test("a pending undo is rebased with the inverse of its own writes", () => {
-    const { server, room, document, deliver, flush } = setup();
-    const history = mapHistory(document);
+    const { server, room, document, edits, deliver, flush } = setup();
+    const history = mapHistory(edits);
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
     history.undo(MAP_SCOPE);
@@ -235,8 +239,8 @@ describe("voxel-map convergence", () => {
   });
 
   test("a peer write landing after the server confirmed an edit refuses its step", () => {
-    const { server, document, deliver, flush } = setup();
-    const history = mapHistory(document);
+    const { server, document, edits, deliver, flush } = setup();
+    const history = mapHistory(edits);
     const refused: HistoryStepInfo[] = [];
     history.on("refused", (_scope, step) => refused.push(step));
 
@@ -252,8 +256,8 @@ describe("voxel-map convergence", () => {
   });
 
   test("an undo carries the version of its step, so the server refuses it over a newer peer write", () => {
-    const { server, document, deliver, flush } = setup();
-    const history = mapHistory(document);
+    const { server, document, edits, deliver, flush } = setup();
+    const history = mapHistory(edits);
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
     flush();

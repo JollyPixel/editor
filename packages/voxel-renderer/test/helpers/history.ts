@@ -1,21 +1,11 @@
-// Import Third-party Dependencies
-import { Emitter } from "@openally/emitt";
-import { CommandHistory } from "@jolly-pixel/history";
-
 // Import Internal Dependencies
-import type { BlockDocumentEvents } from "../../src/document/BlockDocument.ts";
-import type { VoxelCommand } from "../../src/document/commands/index.ts";
 import {
-  VoxelEdits,
-  voxelHistoryRegistration
-} from "../../src/document/history/index.ts";
-import type { VoxelWorld } from "../../src/document/world/index.ts";
-
-export const VOXEL_SCOPE = "voxels";
+  voxelPatchesRestoring,
+  type VoxelCellChange,
+  type VoxelWorld
+} from "../../src/document/world/index.ts";
 
 export interface WorldHistory {
-  history: CommandHistory<typeof VOXEL_SCOPE>;
-  edits: VoxelEdits;
   undo(): boolean;
   redo(): boolean;
   readonly canUndo: boolean;
@@ -25,23 +15,52 @@ export interface WorldHistory {
 export function worldHistory(
   world: VoxelWorld
 ): WorldHistory {
-  const edits = new VoxelEdits(
-    world,
-    new Emitter<BlockDocumentEvents<VoxelCommand>>()
-  );
-  const history = new CommandHistory({ scopes: [VOXEL_SCOPE] });
-  history.register(voxelHistoryRegistration({ edits, world }, { scope: VOXEL_SCOPE }));
+  const undone: VoxelCellChange[][] = [];
+  const redone: VoxelCellChange[][] = [];
+  let recorded: VoxelCellChange[] = [];
+  world.addRecorder({
+    record: (changes) => recorded.push(...changes)
+  });
+  world.on("command", () => {
+    if (recorded.length > 0) {
+      undone.push(recorded);
+      redone.length = 0;
+    }
+    recorded = [];
+  });
+
+  function step(
+    from: VoxelCellChange[][],
+    to: VoxelCellChange[][],
+    side: "before" | "after"
+  ): boolean {
+    const changes = from.pop();
+    if (changes === undefined) {
+      return false;
+    }
+
+    world.unrecorded(() => {
+      for (const [layerId, patch] of voxelPatchesRestoring(changes, side)) {
+        world.patchVoxels(
+          world.getLayerById(layerId)!.name,
+          patch.cells,
+          patch.partners
+        );
+      }
+    });
+    to.push(changes);
+
+    return true;
+  }
 
   return {
-    history,
-    edits,
-    undo: () => history.undo(VOXEL_SCOPE),
-    redo: () => history.redo(VOXEL_SCOPE),
+    undo: () => step(undone, redone, "before"),
+    redo: () => step(redone, undone, "after"),
     get canUndo() {
-      return history.state(VOXEL_SCOPE).canUndo;
+      return undone.length > 0;
     },
     get canRedo() {
-      return history.state(VOXEL_SCOPE).canRedo;
+      return redone.length > 0;
     }
   };
 }

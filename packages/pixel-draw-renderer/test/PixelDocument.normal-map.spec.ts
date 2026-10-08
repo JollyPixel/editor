@@ -140,7 +140,7 @@ describe("PixelDocument normal map", () => {
     });
   });
 
-  test("loadSnapshot replaces the config and refuses the steps it changed", () => {
+  test("loadSnapshot replaces the config", () => {
     const doc = createNormalMapDocument();
     doc.enableNormalMap();
 
@@ -151,7 +151,6 @@ describe("PixelDocument normal map", () => {
       NormalMapConfig.create({ strength: 3 }).toJSON()
     );
     assert.equal(doc.normalMap?.defaults.strength, 3);
-    assert.equal(doc.canUndo, false);
 
     doc.loadSnapshot({ x: 2, y: 2 }, new Uint8ClampedArray(16));
     assert.equal(doc.normalMap, null);

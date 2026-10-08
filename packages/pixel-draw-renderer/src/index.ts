@@ -52,22 +52,13 @@ export type {
   SelectionEdit
 } from "./sync/LocalEdit.types.ts";
 export type { EditGrouping } from "./sync/EditRecorder.ts";
+export * from "./sync/EditChange.ts";
 export type {
   PixelArtCanvasHistory,
-  PixelHistoryOwner,
-  StandalonePixelHistory
+  PixelHistoryBinding,
+  PixelHistoryState,
+  PixelHistoryTarget
 } from "./history/CanvasHistory.ts";
-export {
-  pixelHistoryKeys,
-  pixelHistoryRegistration,
-  registerPixelHistory,
-  type PixelHistoryRegistrationOptions
-} from "./history/pixelHistoryRegistration.ts";
-export type {
-  PixelArea,
-  PixelKeySet
-} from "./history/PixelKeySet.ts";
-export type { PixelCapture } from "./history/PixelCapture.ts";
 export type { CanvasBufferEvent } from "./buffer/CanvasBuffer.ts";
 export {
   PixelBuffer,
