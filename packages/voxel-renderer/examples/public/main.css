@@ -26,7 +26,6 @@ canvas {
   outline: none;
 }
 
-/* Centered page heading, top of the viewport. */
 #title {
   position: fixed;
   top: 12px;
@@ -41,7 +40,6 @@ canvas {
   white-space: nowrap;
 }
 
-/* Centered control hints, bottom of the viewport. */
 #hint {
   position: fixed;
   bottom: 12px;
@@ -56,7 +54,6 @@ canvas {
   white-space: nowrap;
 }
 
-/* Multi-line explanatory block, below the title on the left. */
 #info {
   position: fixed;
   top: 48px;
@@ -69,11 +66,6 @@ canvas {
   pointer-events: none;
 }
 
-/*
- * The scope host covers the viewport so its dock can dock to an edge, but
- * only the dock itself should catch pointer events — everywhere else has to
- * reach the canvas underneath.
- */
 body > jolly-scope {
   position: fixed;
   inset: 0;
@@ -85,22 +77,11 @@ jolly-dock {
   --jolly-label-width: 17ch;
 }
 
-/*
- * `grow` claims leftover flex space unconditionally, which is right for a
- * lone pane but wastes space here. The content pane's default flex-shrink
- * is 0 (`jolly-dock`'s non-grow panes are meant to stack and let the dock
- * scroll them as one block), which blocks it from ever going below its
- * content size — so it overflows the dock instead of capping itself and
- * scrolling internally. Overriding shrink is enough: the flex algorithm
- * then sizes it to content when that fits, or to whatever the chrome pane
- * above it leaves, whichever is smaller.
- */
 #tools > jolly-pane:last-of-type {
   flex-shrink: 1;
   min-height: 0;
 }
 
-/* Generic HUD panel — position it from the page that uses it. */
 .panel {
   position: fixed;
   background: rgba(32, 32, 32, 0.88);

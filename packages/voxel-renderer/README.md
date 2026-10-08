@@ -173,32 +173,33 @@ the renderer package does not depend on an ECS runtime.
 
 ## 🚀 Running the examples
 
-Five interactive examples live in the `examples/` directory and are served by Vite. Start the dev server from the package root:
+Six interactive examples live in the `examples/` directory, one folder each, and are served by Vite. Start the dev server from the package root:
 
 ```bash
 pnpm --filter @jolly-pixel/voxel.renderer dev
 ```
 
-Then open one of these URLs in your browser:
+Then open `http://localhost:5173/` for the landing page, or go straight to one:
 
-| URL | Script | What it shows |
-|---|---|---|
-| `http://localhost:5173/` | `demo-physics.ts` | A 32×32 voxel terrain with a raised platform and a Rapier3D physics sphere you can roll around with arrow keys |
-| `http://localhost:5173/blockset.html` | `demo-blockset.ts` | Every tile in `Blockset001.png` laid out as UV-mapped quads with col/row labels, plus a rotating textured cube |
-| `http://localhost:5173/shapes.html` | `demo-shapes.ts` | All 19 built-in block shapes rendered as coloured meshes with a wireframe overlay and labelled name |
-| `http://localhost:5173/noise-world.html` | `demo-noise-world.ts` | A Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters - the benchmark example |
-| `http://localhost:5173/transparency.html` | `demo-transparency.ts` | A diorama for checking transparency and lighting: blended water and glass, cutout leaves/grates/windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light, material and layer controls |
+- `/shapes/`: every built-in block shape as a coloured mesh with a wireframe overlay and a ground label.
+- `/blockset/`: every tile of `UV_cube.png` laid out as a UV-mapped quad with col/row labels.
+- `/transparency/`: a diorama for transparency and lighting: blended water and glass, cutout leaves, grates and windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light and layer controls.
+- `/normal-map/`: procedural relief tiles lit by an orbiting sun, with live normal scale and roughness.
+- `/physics/`: a 32×32 voxel terrain with ramps, stairs and slabs, and a Rapier3D sphere you roll with the arrow keys.
+- `/noise-world/`: a Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters. This is the benchmark example.
+
+See [examples/README.md](examples/README.md) to add one.
 
 ## 🧪 Benchmarks
 
 ### Noise-world benchmark
 
-Use `noise-world.html` to measure the renderer under load. It builds a heightmap world from layered simplex noise (continents, ridged mountains, domain warp) and reports two separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
+Use `/noise-world/` to measure the renderer under load. It builds a heightmap world from layered simplex noise (continents, ridged mountains, domain warp) and reports two separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
 
 It is configurable from the query string:
 
 ```text
-/noise-world.html?size=1024&chunk=32&seed=42
+/noise-world/?size=1024&chunk=32&seed=42
 ```
 
 | Param | Default | Effect |
@@ -206,7 +207,7 @@ It is configurable from the query string:
 | `size` | `512` | World width/depth in voxels (`size²` columns) |
 | `chunk` | `32` | `chunkSize`; trades draw calls against rebuild cost |
 | `seed` | `1337` | Terrain seed; the same seed always yields the same world |
-| `workers` | `1` up to 512, `2` up to 1024, `4` above | Mesh workers, capped at `hardwareConcurrency - 1`; `0` meshes on the main thread |
+| `workers` | `2` up to 512, `4` above | Mesh workers, capped at `hardwareConcurrency - 1`; `0` meshes on the main thread |
 
 The examples dev server sends `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers, which mesh workers need for `SharedArrayBuffer`.
 

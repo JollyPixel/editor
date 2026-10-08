@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import { fileURLToPath } from "node:url";
+import { globSync } from "node:fs";
 
 // Import Third-party Dependencies
 import { defineConfig } from "vite";
@@ -8,6 +9,13 @@ import glsl from "vite-plugin-glsl";
 import wasm from "vite-plugin-wasm";
 
 // CONSTANTS
+const kExamplesRoot = fileURLToPath(
+  new URL("examples", import.meta.url)
+);
+const kPages = globSync("**/index.html", {
+  cwd: kExamplesRoot,
+  exclude: (entry) => entry === "dist"
+}).map((page) => page.replaceAll("\\", "/"));
 const kCrossOriginIsolation = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Embedder-Policy": "require-corp"
@@ -16,6 +24,16 @@ const kCrossOriginIsolation = {
 // https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
+  build: {
+    rollupOptions: {
+      input: Object.fromEntries(
+        kPages.map((page) => [
+          page.replace(/[/]?index\.html$/, "") || "index",
+          fileURLToPath(new URL(`examples/${page}`, import.meta.url))
+        ])
+      )
+    }
+  },
   resolve: {
     alias: [
       {
