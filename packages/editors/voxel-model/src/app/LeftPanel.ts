@@ -23,6 +23,7 @@ import type {
 } from "@jolly-pixel/editor.pixel-art";
 import {
   PixelCollaboration,
+  SharedPixelHistory,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
 import "@jolly-pixel/ui";
@@ -138,10 +139,7 @@ export class LeftPanel extends LitElement {
       defaultMode: "move",
       zoom: kDefaultZoom,
       brush: { size: 8 },
-      history: {
-        history: workspace.history,
-        scope: "build"
-      }
+      history: new SharedPixelHistory(workspace.history, "build")
     });
     canvas.uv.showAll = true;
     canvas.uv.showRegionLabels = true;

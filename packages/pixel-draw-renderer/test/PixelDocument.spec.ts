@@ -100,7 +100,7 @@ describe("PixelDocument", () => {
   });
 
   describe("loadSnapshot", () => {
-    test("replaces pixels and UV regions, refuses the steps it changed, emits a load reset", () => {
+    test("replaces pixels and UV regions silently and emits a load reset", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       const previous = doc.uv.create({ width: 2, height: 2 });
@@ -129,7 +129,6 @@ describe("PixelDocument", () => {
         ["a"]
       );
       assert.deepEqual(doc.uv.get("a")?.toJSON(), snapshotRegion);
-      assert.equal(doc.canUndo, false);
       assert.equal(events.length, 0);
       assert.deepEqual(resets, ["load"]);
     });

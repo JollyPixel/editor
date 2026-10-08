@@ -1,5 +1,11 @@
 // Import Internal Dependencies
 import { isAir } from "../../blocks/BlockId.ts";
+import {
+  packVoxel,
+  VOXEL_ABSENT,
+  type PackedVoxel
+} from "../storage/packedVoxel.ts";
+import type { VoxelCoord } from "../types.ts";
 
 /**
  * Number of values per cell in a `VoxelPatchCells` array.
@@ -33,6 +39,18 @@ export interface VoxelPatchCell {
   z: number;
   blockId: number;
   transform: number;
+}
+
+export interface VoxelPatchWrite {
+  readonly position: VoxelCoord;
+  /**
+   * `VOXEL_ABSENT` when the cell is cleared.
+   */
+  readonly packed: PackedVoxel;
+  /**
+   * `VOXEL_ABSENT` unless the cell is merged.
+   */
+  readonly partner: PackedVoxel;
 }
 
 export function voxelPatch(
@@ -106,6 +124,35 @@ export function* voxelPatchCells(
   }
 }
 
+export function* voxelPatchWrites(
+  patch: VoxelPatch
+): IterableIterator<VoxelPatchWrite> {
+  const { cells, partners = [] } = patch;
+  const partnerOf = new Map<number, PackedVoxel>();
+  for (
+    let index = 0;
+    index < partners.length;
+    index += VOXEL_PATCH_PARTNER_STRIDE
+  ) {
+    partnerOf.set(
+      partners[index],
+      packPatchCell(partners[index + 1], partners[index + 2])
+    );
+  }
+
+  for (let offset = 0; offset < cells.length; offset += VOXEL_PATCH_STRIDE) {
+    yield {
+      position: {
+        x: cells[offset],
+        y: cells[offset + 1],
+        z: cells[offset + 2]
+      },
+      packed: packPatchCell(cells[offset + 3], cells[offset + 4]),
+      partner: partnerOf.get(offset / VOXEL_PATCH_STRIDE) ?? VOXEL_ABSENT
+    };
+  }
+}
+
 export function pickVoxelPatch(
   patch: VoxelPatch,
   cellIndices: Iterable<number>
@@ -136,4 +183,11 @@ export function pickVoxelPatch(
   }
 
   return voxelPatch(cells, partners);
+}
+
+function packPatchCell(
+  blockId: number,
+  transform: number
+): PackedVoxel {
+  return isAir(blockId) ? VOXEL_ABSENT : packVoxel(blockId, transform);
 }

@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import type { PeerStrokePixel } from "#src/types.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
@@ -39,7 +40,7 @@ function makeCanvas() {
       defaultColor: "#0000FF"
     },
     zoom: { default: 4 },
-    history: { enabled: true },
+    history: new LocalHistory(),
     brush: {
       size: 1,
       maxSize: 1,

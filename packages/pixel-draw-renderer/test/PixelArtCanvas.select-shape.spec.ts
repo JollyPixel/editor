@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import { readPixel } from "./fixtures/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import { createSelectCanvas } from "./helpers/select-canvas/manager.ts";
@@ -194,7 +195,7 @@ describe("PixelArtCanvas — select mode (shape sub-mode)", () => {
   test("undoing a shape move resyncs the selection's true mask, not its bounding rect", () => {
     const manager = createSelectCanvas({
       select: { eraseColor: "#FF00FF" },
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     const canvas = manager.canvas();
 

@@ -4,6 +4,9 @@ export {
   VOXEL_MAP_KIND
 } from "../asset/voxelMap.ts";
 export * from "../asset/blockset.ts";
+export * from "../history/VoxelEdits.ts";
+export * from "../history/VoxelKeySet.ts";
+export * from "../history/voxelHistoryRegistration.ts";
 export * from "./VoxelSyncClient.ts";
 export * from "./SyncedVoxelMap.ts";
 export * from "./blockset/types.ts";

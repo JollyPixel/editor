@@ -17,7 +17,6 @@ flowchart TB
 
     Document --> World["VoxelWorld<br/>layers, chunks, packed voxels"]
     Document --> Definitions["BlockRegistry, MaterialGroupList, BlocksetList<br/>block, finish and blockset declarations"]
-    Document --> History["VoxelEdits<br/>undo source for a CommandHistory"]
 
     View --> Pipeline["ChunkPipeline<br/>dirty scan, queue, visibility, workers"]
     View --> Atlases["BlocksetAtlases + ChunkMaterialCache<br/>textures and materials"]
@@ -128,8 +127,8 @@ The snapshot stores each layer as a palette plus run-length encoded chunks
 (see [serialization](./docs/api/serialization/serialization.md)). Saving
 captures chunks as sorted cells and packed voxels, and loading writes them back
 chunk by chunk when the chunk sizes match.
-`load()` validates the snapshot, replaces document state, and emits `loaded`
-(and a `"load"` reset on `edits`); the view then clears old meshes, syncs atlases, and rebuilds.
+`load()` validates the snapshot, replaces document state, and emits `loaded`;
+the view then clears old meshes, syncs atlases, and rebuilds.
 `view.load()` registers the textures of the snapshot's blocksets before the
 document loads it.
 

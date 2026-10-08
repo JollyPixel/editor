@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import {
@@ -20,7 +21,7 @@ describe("PixelArtCanvas — uv rotation", () => {
   ): PixelArtCanvas {
     return createPixelArtCanvas({
       zoom: { default: 4 },
-      history: { enabled: true },
+      history: new LocalHistory(),
       ...options
     }).manager;
   }

@@ -6,18 +6,19 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
 import {
-  ChangeReceipts,
-  CommandChange
-} from "@jolly-pixel/history";
-import type {
-  PixelCommandListener,
-  PixelSyncTarget
+  pixelEdits,
+  type PixelCommandListener,
+  type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
+  EditChange,
   encodePixelBytes,
   encodePngPixels,
   toDocumentCommand,
+  toPixelCommand,
+  type DocumentCommand,
   type PixelChange,
   type PixelCommand,
   NormalMapConfig,
@@ -58,42 +59,32 @@ interface LoadedSnapshot {
   normalMap: NormalMapData | null;
 }
 
-class PixelsRecorder implements PixelSyncTarget {
-  readonly receipts = new ChangeReceipts<PixelChange>();
-  readonly listeners = new Set<PixelCommandListener>();
+type PixelsRecorderEvents = {
+  command: PixelCommandListener;
+  change: (change: PixelChange) => void;
+  reset: (cause: "load") => void;
+};
+
+class PixelsRecorder extends Emitter<PixelsRecorderEvents> implements PixelSyncTarget {
   readonly remote: PixelCommand[] = [];
   readonly replayed: PixelCommand[] = [];
   readonly loaded: LoadedSnapshot[] = [];
 
-  on(
-    _event: "command",
-    listener: PixelCommandListener
-  ): void {
-    this.listeners.add(listener);
-  }
+  applyStep(
+    command: DocumentCommand
+  ): PixelChange {
+    const change = EditChange.local(command);
+    this.emit("change", change);
+    this.emit("command", toPixelCommand(command), change);
 
-  off(
-    _event: "command",
-    listener: PixelCommandListener
-  ): void {
-    this.listeners.delete(listener);
+    return change;
   }
 
   emitLocal(
     event: PixelCommand,
     basis?: number
-  ): PixelChange {
-    const change: PixelChange = CommandChange.local(
-      toDocumentCommand(event),
-      null,
-      [],
-      basis
-    );
-    for (const listener of this.listeners) {
-      listener(event, change);
-    }
-
-    return change;
+  ): void {
+    pixelEdits(this).applyStep(toDocumentCommand(event), basis);
   }
 
   replayPendingCommand(
@@ -191,7 +182,7 @@ describe("BlocksetSyncClient", () => {
       ]
     );
     assert.equal(room.sentCommands[0].basis, 7);
-    assert.equal(pixels.receipts.attached, true);
+    assert.equal(pixelEdits(pixels).receipts.attached, true);
   });
 
   it("loads PNG pixels before the commands that follow the snapshot", async() => {
@@ -284,7 +275,7 @@ describe("BlocksetSyncClient", () => {
     client.destroy();
     blockset.defineBlock(makeBlockDef(3, "cube"));
 
-    assert.equal(pixels.listeners.size, 0);
+    assert.equal(pixels.listenerCount("command"), 0);
     assert.equal(room.sentCommands.length, 0);
   });
 });

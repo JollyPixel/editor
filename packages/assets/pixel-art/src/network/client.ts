@@ -6,6 +6,11 @@ export {
 export * from "./pixelCommandActions.ts";
 export * from "./PixelCommandKeys.ts";
 export * from "./PixelReconciler.ts";
+export * from "../history/PixelEdits.ts";
+export * from "../history/PixelKeySet.ts";
+export type * from "../history/PixelCapture.ts";
+export * from "../history/pixelHistoryRegistration.ts";
+export * from "../history/PixelCanvasHistory.ts";
 export * from "./PixelSyncClient.ts";
 export { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
 export * from "./PixelWireCodec.ts";

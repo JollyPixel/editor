@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { Vec2 } from "../types.ts";
+// Import Third-party Dependencies
+import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
 const kRowStride = 65_536;

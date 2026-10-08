@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
+import { CommandHistory } from "@jolly-pixel/history";
 import { AssetRoom } from "@jolly-pixel/asset";
 import {
   AssetRoomExtension,
@@ -22,6 +23,8 @@ import {
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
+import { SharedPixelHistory } from "#src/history/PixelCanvasHistory.ts";
+import { registerPixelHistory } from "#src/history/pixelHistoryRegistration.ts";
 import type { PixelWireCommand, PixelServerMessage } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
@@ -97,10 +100,14 @@ function setup() {
     clientId: "A",
     onSend: (sent) => receive("A", sent)
   });
+  const history = new CommandHistory({ scopes: ["pixels"] });
+  const document = new PixelDocument({ size: { x: 8, y: 8 } });
+  registerPixelHistory(history, document, { scope: "pixels" });
   const { manager, canvas } = createPixelArtCanvas({
+    document,
     zoom: { default: 4 },
     brush: { size: 1, maxSize: 1 },
-    history: { enabled: true }
+    history: new SharedPixelHistory(history, "pixels")
   });
   new PixelSyncClient({ room, document: manager.document });
   room.deliverSnapshot(pixelArtSnapshot(state.document));
@@ -116,6 +123,7 @@ function setup() {
     broadcasts,
     receive,
     room,
+    history,
     manager,
     canvas,
     paintPixelOneOne
@@ -202,7 +210,7 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
 
   test("a palette undo after a peer's newer color is refused before it reaches the server", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { state, receive, room, manager } = setup();
+    const { state, receive, room, history, manager } = setup();
     const peer = new PixelDocument({ size: { x: 8, y: 8 } });
     const peerRoom = new MockRoom({
       clientId: "B",
@@ -228,7 +236,7 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
 
     assert.strictEqual(manager.undo(), false);
     assert.strictEqual(room.sent.length, sent);
-    assert.deepEqual(manager.history?.state(manager.historyScope).refused, [
+    assert.deepEqual(history.state("pixels").refused, [
       { label: "Change palette color", refused: { reason: "peer", clientId: "B" } }
     ]);
     assert.deepEqual(manager.document.palette.colorAt(3), { r: 0, g: 0, b: 255, a: 255 });

@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import type { CommandChange } from "@jolly-pixel/history";
-
 // Import Internal Dependencies
 import type {
   RGBA8,
@@ -8,8 +5,9 @@ import type {
 } from "../types.ts";
 import type { SelectionChange } from "../selection/SelectionFootprint.ts";
 import type { DocumentCommand } from "./PixelCommand.ts";
+import type { EditChange } from "./EditChange.ts";
 
-export type PixelChange = CommandChange<DocumentCommand, null>;
+export type PixelChange = EditChange<DocumentCommand>;
 
 export interface LocalEdit {
   command: DocumentCommand;

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type { Mode } from "#src/types.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
@@ -14,7 +15,7 @@ describe("PixelArtCanvas select all", () => {
       const { manager, canvas } = createPixelArtCanvas({
         texture: { size, defaultColor: "#00000000" },
         zoom: { default: 16 },
-        history: { enabled: true },
+        history: new LocalHistory(),
         onCommand: (command) => commands.push(command)
       }, 32);
       manager.mode = "select";
@@ -124,7 +125,7 @@ describe("PixelArtCanvas select all", () => {
   test("deposits a floating paste before capturing all pixels", async() => {
     const { manager } = createPixelArtCanvas({
       clipboard: null,
-      history: { enabled: true }
+      history: new LocalHistory()
     });
     manager.mode = "select";
     manager.brush.primary.set("#ff0000", 1);

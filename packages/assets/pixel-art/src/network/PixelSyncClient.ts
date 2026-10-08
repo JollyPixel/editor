@@ -4,7 +4,9 @@ import {
   type ConflictResolver
 } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
+import type { ChangeSource } from "@jolly-pixel/history";
 import type {
+  DocumentCommand,
   PixelChange,
   PixelCommand,
   PixelDocument
@@ -22,6 +24,10 @@ import {
 } from "./PixelWireCodec.ts";
 import { createPixelReconciler } from "./PixelReconciler.ts";
 import { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
+import {
+  pixelEdits,
+  type PixelEdits
+} from "../history/PixelEdits.ts";
 
 export type PixelCommandListener = (
   command: PixelCommand,
@@ -30,8 +36,8 @@ export type PixelCommandListener = (
 
 export interface PixelSyncTarget extends Pick<
   PixelDocument,
-  "applyRemoteCommand" | "replayPendingCommand" | "loadSnapshot" | "receipts"
-> {
+  "applyRemoteCommand" | "replayPendingCommand" | "loadSnapshot"
+>, ChangeSource<DocumentCommand> {
   on(
     event: "command",
     listener: PixelCommandListener
@@ -54,17 +60,19 @@ export class PixelSyncClient extends CommandSync<
   AssetRoomNotice
 > {
   #document: PixelSyncTarget;
+  #edits: PixelEdits;
 
   #sendLocalCommand: PixelCommandListener = (command, change) => {
     this.sendChange(
       packPixelEvent(command),
-      change
+      this.#edits.adapt(change)
     );
   };
 
   constructor(
     options: PixelSyncClientOptions
   ) {
+    const edits = pixelEdits(options.document);
     super(options.room, {
       reconciler: createPixelReconciler(options.document),
       resolver: options.resolver,
@@ -72,11 +80,12 @@ export class PixelSyncClient extends CommandSync<
         options.document,
         snapshot
       ),
-      receipts: options.document.receipts
+      receipts: edits.receipts
     });
     const { document } = options;
 
     this.#document = document;
+    this.#edits = edits;
     document.on("command", this.#sendLocalCommand);
     this.on(
       "command",

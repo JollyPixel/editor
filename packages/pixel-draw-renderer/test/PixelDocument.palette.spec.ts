@@ -45,13 +45,12 @@ describe("Pixel Document palette", () => {
     assert.equal(doc.canUndo, false);
   });
 
-  test("snapshot replacement refuses the steps it changed and restores legacy defaults", () => {
+  test("snapshot replacement loads the palette and restores legacy defaults", () => {
     const doc = new HistoryDocument({ size: { x: 1, y: 1 } });
     doc.changePaletteColor(0, kColor);
     const colors = ColorPalette.create().withColor(9, kColor).toJSON();
     doc.loadSnapshot({ x: 1, y: 1 }, new Uint8ClampedArray(4), [], null, colors);
     assert.deepEqual(doc.palette.colorAt(9), kColor);
-    assert.equal(doc.canUndo, false);
     doc.loadSnapshot({ x: 1, y: 1 }, new Uint8ClampedArray(4));
     assert.deepEqual(doc.palette.toJSON(), ColorPalette.create().toJSON());
   });

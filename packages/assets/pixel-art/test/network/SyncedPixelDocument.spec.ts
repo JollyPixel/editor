@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { encodePixelBytes } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { pixelEdits } from "#src/history/PixelEdits.ts";
 import {
   SyncedPixelDocument,
   pixelArtDocumentKind
@@ -61,7 +62,7 @@ describe("SyncedPixelDocument", () => {
     synced.document.paintPixels([{ x: 1, y: 1 }], kRed);
 
     assert.deepStrictEqual(room.sent.map((sent) => sent.action), ["stroke"]);
-    assert.strictEqual(synced.document.receipts.attached, true);
+    assert.strictEqual(pixelEdits(synced.document).receipts.attached, true);
     synced.dispose();
   });
 

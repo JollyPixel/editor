@@ -49,7 +49,6 @@ class VoxelDocument {
   readonly blocksets: BlocksetList;
   readonly materialGroups: MaterialGroupList;
   readonly blendGroups: BlendGroupList;
-  readonly edits: VoxelEdits;
   readonly chunkSize: number;
 }
 ```
@@ -63,8 +62,6 @@ class VoxelDocument {
 - [`blocksets`](../blocksets/blocksets.md) holds blockset definitions and their
   slots, not textures. Atlases belong to the view's
   [`BlocksetAtlases`](../blocksets/BlocksetAtlases.md).
-- [`edits`](./VoxelEdits.md) is the source a `CommandHistory` from
-  `@jolly-pixel/history` undoes.
 
 ## Events
 
@@ -142,11 +139,10 @@ interface VoxelLoadOptions {
 `save()` writes the world and its blockset links in the
 [serialized format](../serialization/serialization.md).
 
-`load()` replaces the world and the blockset list and emits `loaded`; `edits`
-emits a `"load"` reset. It emits no command and leaves `blocks` and the groups alone.
+`load()` replaces the world and the blockset list and emits `loaded`. It emits no command and leaves `blocks` and the groups alone.
 The document keeps its own `chunkSize`. `options.blocksets` are declared after
 the snapshot. `mergeLayers` collapses the layers as
 [`world.mergeAllLayers()`](../world/VoxelWorld.md) does; an `except`
 name with no matching layer logs a warning.
 
-`dispose()` stops `edits` and clears the blockset list and every listener.
+`dispose()` clears the blockset list and every listener.

@@ -1,175 +1,113 @@
-// Import Third-party Dependencies
-import {
-  CommandHistory,
-  type HistoryScopeState
-} from "@jolly-pixel/history";
-
 // Import Internal Dependencies
 import type { PixelDocument } from "../PixelDocument.ts";
 import type {
   SelectionChange,
   SelectionFootprint
 } from "../selection/SelectionFootprint.ts";
-import { SelectionHistory } from "./SelectionHistory.ts";
-import { registerPixelHistory } from "./pixelHistoryRegistration.ts";
+import type { EditSource } from "../sync/EditChange.ts";
+import type { EditGrouping } from "../sync/EditRecorder.ts";
+import { SelectionEdits } from "./SelectionEdits.ts";
 
 // CONSTANTS
-const kDefaultLimit = 10;
-const kStandaloneScope = "pixels";
-const kStandalone = new WeakMap<PixelDocument, CommandHistory<string>>();
-const kEmptyState: HistoryScopeState = {
-  canUndo: false,
-  canRedo: false,
-  undoLabel: null,
-  redoLabel: null,
-  undoCount: 0,
-  redoCount: 0,
-  refused: []
+const kNoHistory: PixelHistoryBinding = {
+  state: {
+    canUndo: false,
+    canRedo: false,
+    undoLabel: null,
+    redoLabel: null,
+    undoCount: 0,
+    redoCount: 0
+  },
+  undo: () => false,
+  redo: () => false,
+  record: (edit) => edit(),
+  release: () => undefined
 };
 
-export interface PixelHistoryOwner<TScope extends string = string> {
-  /**
-   * A history the host registered the document in, with `registerPixelHistory`.
-   */
-  history: CommandHistory<TScope>;
-  scope: TScope;
+export interface PixelHistoryState {
+  canUndo: boolean;
+  canRedo: boolean;
+  undoLabel: string | null;
+  redoLabel: string | null;
+  undoCount: number;
+  redoCount: number;
 }
 
-export interface StandalonePixelHistory {
+export interface PixelHistoryTarget {
+  document: PixelDocument;
   /**
-   * @default false
+   * The canvas's selection changes, recorded beside the document's so an undo
+   * restores the selection it replaced.
    */
-  enabled?: boolean;
-  /**
-   * @default 10
-   */
-  limit?: number;
+  selection: EditSource<SelectionChange>;
 }
 
-export type PixelArtCanvasHistory = StandalonePixelHistory | PixelHistoryOwner;
+export interface PixelHistoryBinding {
+  readonly state: PixelHistoryState;
+  undo(): boolean;
+  redo(): boolean;
+  record: EditGrouping;
+  release(): void;
+}
+
+export interface PixelArtCanvasHistory {
+  bind(
+    target: PixelHistoryTarget,
+    onChange: (state: PixelHistoryState) => void
+  ): PixelHistoryBinding;
+}
 
 export interface CanvasHistoryOptions {
   document: PixelDocument;
   history?: PixelArtCanvasHistory;
   restoreSelection: (footprint: SelectionFootprint) => void;
-  onChange?: (state: HistoryScopeState) => void;
+  onChange?: (state: PixelHistoryState) => void;
 }
 
 export class CanvasHistory {
-  static #selections = 0;
-
-  readonly history: CommandHistory<string> | null;
-  readonly scope: string;
-
-  #selection = new SelectionHistory();
-  #releases: (() => void)[] = [];
+  #selection = new SelectionEdits();
+  #binding: PixelHistoryBinding;
 
   constructor(
     options: CanvasHistoryOptions
   ) {
-    const owner = ownerOf(options.document, options.history ?? {});
-    this.history = owner?.history ?? null;
-    this.scope = owner?.scope ?? kStandaloneScope;
-    if (owner === null) {
-      return;
-    }
-
-    const { history, scope } = owner;
-    const onChange = (changed: string, state: HistoryScopeState): void => {
-      if (changed !== scope) {
-        return;
-      }
-
+    const target = {
+      document: options.document,
+      selection: this.#selection
+    };
+    this.#binding = options.history?.bind(target, (state) => {
       const restored = this.#selection.takeRestored();
       if (restored !== null) {
         options.restoreSelection(restored);
       }
       options.onChange?.(state);
-    };
-    history.on("change", onChange);
-    this.#releases.push(
-      () => history.off("change", onChange),
-      history.register(
-        this.#selection.registration(
-          `selection:${CanvasHistory.#selections++}`,
-          scope
-        )
-      )
-    );
+    }) ?? kNoHistory;
   }
 
-  get state(): HistoryScopeState {
-    return this.history?.state(this.scope) ?? kEmptyState;
+  get state(): PixelHistoryState {
+    return this.#binding.state;
   }
 
   undo(): boolean {
-    return this.history?.undo(this.scope) ?? false;
+    return this.#binding.undo();
   }
 
   redo(): boolean {
-    return this.history?.redo(this.scope) ?? false;
+    return this.#binding.redo();
   }
 
   recordSelectionEdit(
     change: SelectionChange,
     edit: () => void
   ): void {
-    if (this.history === null) {
-      edit();
-
-      return;
-    }
-
-    this.history.record(this.scope, null, () => {
+    this.#binding.record(() => {
       this.#selection.record(change);
       edit();
     });
   }
 
   destroy(): void {
-    for (const release of this.#releases.splice(0)) {
-      release();
-    }
+    this.#binding.release();
+    this.#binding = kNoHistory;
   }
-}
-
-function ownerOf(
-  document: PixelDocument,
-  history: PixelArtCanvasHistory
-): PixelHistoryOwner | null {
-  if ("history" in history) {
-    return history;
-  }
-  if (history.enabled !== true) {
-    return null;
-  }
-
-  return {
-    history: standaloneHistoryOf(
-      document,
-      history.limit ?? kDefaultLimit
-    ),
-    scope: kStandaloneScope
-  };
-}
-
-function standaloneHistoryOf(
-  document: PixelDocument,
-  limit: number
-): CommandHistory<string> {
-  let history = kStandalone.get(document);
-  if (history === undefined) {
-    history = new CommandHistory({
-      scopes: [kStandaloneScope],
-      limit
-    });
-    registerPixelHistory(
-      history,
-      document,
-      { scope: kStandaloneScope }
-    );
-    kStandalone.set(document, history);
-  }
-
-  return history;
 }

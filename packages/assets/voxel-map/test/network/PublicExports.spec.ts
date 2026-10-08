@@ -22,8 +22,10 @@ describe("public entry points", () => {
     assert.strictEqual("BlocksetSyncClient" in root, false);
   });
 
-  test("client exports browser synchronization of maps and blocksets", () => {
+  test("client exports browser synchronization and history of maps and blocksets", () => {
     assert.strictEqual(typeof client.VoxelSyncClient, "function");
+    assert.strictEqual(typeof client.VoxelEdits, "function");
+    assert.strictEqual(typeof client.voxelHistoryRegistration, "function");
     assert.strictEqual(typeof client.voxelMapDocumentKind, "function");
     assert.strictEqual(typeof client.BlocksetSyncClient, "function");
     assert.strictEqual(typeof client.SyncedBlockset, "function");

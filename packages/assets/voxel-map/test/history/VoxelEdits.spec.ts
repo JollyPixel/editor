@@ -8,21 +8,21 @@ import {
   type HistoryStepInfo
 } from "@jolly-pixel/history";
 
-// Import Internal Dependencies
-import { VoxelDocument } from "../../../src/document/VoxelDocument.ts";
-import {
-  voxelHistoryRegistration,
-  type VoxelChange
-} from "../../../src/document/history/index.ts";
 import {
   isVoxelWorldCommand,
+  VoxelDocument,
   type VoxelCommand,
-  type VoxelCommandContext
-} from "../../../src/document/commands/index.ts";
-import type {
-  VoxelCoord,
-  VoxelWorld
-} from "../../../src/document/world/index.ts";
+  type VoxelCommandContext,
+  type VoxelCoord,
+  type VoxelWorld
+} from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import {
+  VoxelEdits,
+  type VoxelChange
+} from "#src/history/VoxelEdits.ts";
+import { voxelHistoryRegistration } from "#src/history/voxelHistoryRegistration.ts";
 
 // CONSTANTS
 const kScope = "map";
@@ -40,8 +40,9 @@ function setup() {
     chunkSize: 4,
     layers: [kLayer]
   });
+  const edits = new VoxelEdits(document);
   const history = new CommandHistory({ scopes: [kScope] });
-  history.register(voxelHistoryRegistration(document, { scope: kScope }));
+  history.register(voxelHistoryRegistration(edits, { scope: kScope }));
   const refused: HistoryStepInfo[] = [];
   history.on("refused", (_scope, step) => refused.push(step));
   const emitted: Emitted[] = [];
@@ -49,6 +50,7 @@ function setup() {
 
   return {
     document,
+    edits,
     world: document.world,
     layerId: document.world.getLayer(kLayer)!.id,
     history,
@@ -57,11 +59,11 @@ function setup() {
   };
 }
 
-function changeOf(
-  document: VoxelDocument,
+function recordedChange(
+  edits: VoxelEdits,
   command: VoxelCommand
 ): VoxelChange | undefined {
-  return isVoxelWorldCommand(command) ? document.edits.changeOf(command) : undefined;
+  return isVoxelWorldCommand(command) ? edits.changeFor(command) : undefined;
 }
 
 function blockAt(
@@ -128,16 +130,16 @@ describe("VoxelEdits", () => {
   });
 
   it("sends an undo as a local command whose change carries the step's version", () => {
-    const { document, world, history, emitted } = setup();
-    document.edits.receipts.attach();
+    const { edits, world, history, emitted } = setup();
+    edits.receipts.attach();
 
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-    document.edits.receipts.confirm(changeOf(document, emitted[0].command)!, 7);
+    edits.receipts.confirm(recordedChange(edits, emitted[0].command)!, 7);
     history.undo(kScope);
 
     const { command, context } = emitted[1];
     assert.equal(context.origin, "local");
-    assert.equal(changeOf(document, command)?.basis, 7);
+    assert.equal(recordedChange(edits, command)?.basis, 7);
   });
 
   it("a peer writing a guarded cell refuses the step and names the peer", () => {
@@ -210,11 +212,12 @@ describe("VoxelEdits", () => {
 
   it("records the cells an edit replaced only while a history listens", () => {
     const document = new VoxelDocument({ layers: [kLayer] });
+    const edits = new VoxelEdits(document);
     const changes: VoxelChange[] = [];
-    document.on("command", (command) => changes.push(changeOf(document, command)!));
+    document.on("command", (command) => changes.push(recordedChange(edits, command)!));
 
     document.world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-    const unsubscribe = document.edits.subscribe("change", () => undefined);
+    const unsubscribe = edits.subscribe("change", () => undefined);
     document.world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
     unsubscribe();
     document.world.setVoxel(kLayer, { position: kOrigin, blockId: 3 });

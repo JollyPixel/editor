@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { toUint8Array } from "js-base64";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
@@ -22,7 +23,7 @@ function makeCanvasWithSlot(
   events: PixelCommand[] = []
 ): PixelArtCanvas {
   const { manager } = createPixelArtCanvas({
-    history: { enabled: true },
+    history: new LocalHistory(),
     onCommand: (event) => events.push(event)
   });
   manager.uv.restore({

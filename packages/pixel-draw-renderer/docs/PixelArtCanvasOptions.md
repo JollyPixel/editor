@@ -7,11 +7,12 @@ import type {
   PixelArtCanvasOptions,
   WindowLike
 } from "@jolly-pixel/pixel-draw.renderer";
+import { StandalonePixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 
 const options: PixelArtCanvasOptions = {
   defaultMode: "paint",
   texture: { size: { x: 64, y: 32 } },
-  history: { enabled: true, limit: 20 }
+  history: new StandalonePixelHistory({ limit: 20 })
 };
 
 const canvas = new PixelArtCanvas(parent, options);
@@ -35,7 +36,7 @@ interface PixelArtCanvasOptions {
   uv?: UVOptions;
   onDrawEnd?: () => void;
   history?: PixelArtCanvasHistory;
-  onHistoryChange?: (state: HistoryScopeState) => void;
+  onHistoryChange?: (state: PixelHistoryState) => void;
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
@@ -180,11 +181,11 @@ Whether the selected region shows resize handles in UV mode. It defaults to `fal
 
 ### `history`
 
-History is disabled by default. `{ enabled: true }` records local edits in the document's own history, `limit` steps deep (10 by default), shared by the canvases of the same document. `{ history, scope }` drives `scope` of a [`CommandHistory`](../../history/docs/CommandHistory.md) the host owns and registered the document in with `registerPixelHistory`. See [pixel history](./history/PixelHistory.md#on-a-canvas).
+A [`PixelArtCanvasHistory`](./history/PixelHistory.md#pixelartcanvashistory) the canvas binds its document and selection to. Without one, the canvas records nothing. `@jolly-pixel/asset.pixel-art` provides `StandalonePixelHistory` and `SharedPixelHistory`.
 
 ### `onHistoryChange`
 
-Called when the canvas's scope changes: a step is filed, undone, redone or refused. The callback receives the scope's [`HistoryScopeState`](../../history/docs/CommandHistory.md#state).
+Called when the bound history changes: a step is filed, undone, redone or refused. The callback receives its [`PixelHistoryState`](./history/PixelHistory.md#pixelhistorystate).
 
 ## Edit callbacks
 

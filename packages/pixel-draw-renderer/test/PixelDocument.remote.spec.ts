@@ -71,34 +71,36 @@ describe("PixelDocument", () => {
       assert.deepEqual(pixelAt(doc, 2, 3), [255, 0, 0, 255]);
     });
 
-    test("a peer stroke over a pixel of a settled step refuses it, naming the peer", () => {
+    test("a peer stroke is reported as a remote change naming the peer", () => {
       const doc = createDocument();
-      doc.paintPixels([{ x: 0, y: 0 }, { x: 1, y: 0 }], kRed);
+      const changes: (string | null)[] = [];
+      doc.on("change", (change) => changes.push(`${change.origin}:${change.clientId}`));
 
       doc.applyRemoteCommand({
         action: "stroke",
         metadata: { color: kBlue, positions: [{ x: 1, y: 0 }] }
       }, "peer");
 
-      assert.equal(doc.undo(), false);
-      assert.deepEqual(doc.state.refused, [
-        { label: "Paint", refused: { reason: "peer", clientId: "peer" } }
-      ]);
+      assert.deepEqual(changes, ["remote:peer"]);
       assert.deepEqual(pixelAt(doc, 1, 0), [0, 0, 255, 255]);
     });
 
-    test("a remote global fill refuses only the steps over the pixels it filled", () => {
+    test("a remote global fill is reported as a stroke over the pixels it filled", () => {
       const doc = createDocument();
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
       doc.paintPixels([{ x: 3, y: 3 }], kBlue);
+      const written: unknown[] = [];
+      doc.on("change", (change) => written.push(change.command));
 
       doc.applyRemoteCommand({
         action: "global-fill",
         metadata: { fromColor: kBlue, toColor: kRed }
       }, "peer");
 
-      assert.equal(doc.state.undoCount, 1);
-      assert.equal(doc.state.refused.length, 1);
+      assert.deepEqual(written, [{
+        action: "stroke",
+        metadata: { color: kRed, positions: [{ x: 3, y: 3 }] }
+      }]);
     });
 
     test("replaying a pending command updates the guards instead of refusing", () => {
@@ -129,7 +131,7 @@ describe("PixelDocument", () => {
       });
     }
 
-    test("a remote resize refuses the steps over pixels and does not echo", () => {
+    test("a remote resize does not echo", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
@@ -145,12 +147,10 @@ describe("PixelDocument", () => {
 
       assert.deepEqual(doc.size(), { x: 8, y: 2 });
       assert.deepEqual(order, ["resized"]);
-      assert.equal(doc.canUndo, false);
-      assert.equal(doc.state.refused.length, 1);
       assert.equal(events.length, 0);
     });
 
-    test("remote texture-replaced decodes pixels, refuses the steps over pixels, no echo", () => {
+    test("remote texture-replaced decodes pixels without an echo", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
@@ -176,7 +176,6 @@ describe("PixelDocument", () => {
       assert.deepEqual(pixelAt(doc, 0, 0), [10, 20, 30, 255]);
       assert.deepEqual(pixelAt(doc, 1, 1), [100, 110, 120, 255]);
       assert.deepEqual(order, ["replaced:2"]);
-      assert.equal(doc.canUndo, false);
       assert.equal(events.length, 0);
     });
   });

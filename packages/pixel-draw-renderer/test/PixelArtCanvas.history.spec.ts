@@ -7,6 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 import { makeContainer } from "./helpers/dom.ts";
@@ -55,9 +56,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
           size: 1,
           maxSize: 1
         },
-        history: {
-          enabled: true
-        }
+        history: new LocalHistory()
       });
 
       stroke(canvas, [[88, 88]]);
@@ -97,9 +96,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
         },
         defaultMode: "fill",
         brush: { color: "#FF0000" },
-        history: {
-          enabled: true
-        },
+        history: new LocalHistory(),
         onCommand: (event) => events.push(event)
       });
       manager.tools.fill.global = true;
@@ -148,10 +145,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
           size: 1,
           maxSize: 1
         },
-        history: {
-          enabled: true,
-          limit: 1
-        }
+        history: new LocalHistory({ limit: 1 })
       });
       const canvas = manager.canvas();
 
@@ -171,9 +165,7 @@ describe("PixelArtCanvas — history (undo/redo)", () => {
           maxSize: 32,
           size: { x: 8, y: 8 }
         },
-        history: {
-          enabled: true
-        }
+        history: new LocalHistory()
       });
 
       manager.textureSize = { x: 4, y: 4 };

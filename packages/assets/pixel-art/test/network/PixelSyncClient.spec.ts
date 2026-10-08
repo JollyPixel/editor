@@ -7,13 +7,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import type { CommandChange } from "@jolly-pixel/history";
 import {
-  ChangeReceipts,
-  CommandChange
-} from "@jolly-pixel/history";
-import {
+  EditChange,
   encodePngPixels,
   toDocumentCommand,
+  toPixelCommand,
+  type DocumentCommand,
   type PixelChange,
   type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -23,6 +23,7 @@ import {
   PixelSyncClient,
   type PixelCommandListener
 } from "#src/network/PixelSyncClient.ts";
+import { pixelEdits } from "#src/history/PixelEdits.ts";
 import {
   command,
   gray,
@@ -41,25 +42,48 @@ const kResized: PixelCommand = {
 
 class Host extends MockEmitter<{
   command: PixelCommandListener;
+  change: (change: PixelChange) => void;
+  reset: (cause: "load") => void;
 }> {
-  readonly receipts = new ChangeReceipts<PixelChange>();
   applyRemoteCommand = mock.fn();
   replayPendingCommand = mock.fn();
   loadSnapshot = mock.fn();
 
-  edit(
-    command: PixelCommand,
-    basis?: number
+  subscribe(
+    event: "change",
+    listener: (change: PixelChange) => void
+  ): () => void;
+  subscribe(
+    event: "reset",
+    listener: (cause: "load") => void
+  ): () => void;
+  subscribe(
+    event: "change" | "reset",
+    listener: ((change: PixelChange) => void) | ((cause: "load") => void)
+  ): () => void {
+    this.on(event, listener);
+
+    return () => this.off(event, listener);
+  }
+
+  applyStep(
+    command: DocumentCommand
   ): PixelChange {
-    const change: PixelChange = CommandChange.local(
-      toDocumentCommand(command),
-      null,
-      [],
-      basis
-    );
-    this.emit("command", command, change);
+    const change = EditChange.local(command);
+    this.emit("change", change);
+    this.emit("command", toPixelCommand(command), change);
 
     return change;
+  }
+
+  edit(
+    command: PixelCommand
+  ): CommandChange<DocumentCommand, null> {
+    const change = EditChange.local(toDocumentCommand(command));
+    this.emit("change", change);
+    this.emit("command", command, change);
+
+    return pixelEdits(this).adapt(change);
   }
 }
 
@@ -109,8 +133,8 @@ describe("PixelSyncClient — document events", () => {
 describe("PixelSyncClient — receipts", () => {
   test("confirms the change behind an acknowledged command, with its version", () => {
     const { room, host } = setup();
-    const confirmed: [PixelChange, number | undefined][] = [];
-    host.receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
+    const confirmed: [CommandChange<DocumentCommand, null>, number | undefined][] = [];
+    pixelEdits(host).receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
     room.deliverSnapshot();
 
     const change = host.edit(kResized);
@@ -122,7 +146,7 @@ describe("PixelSyncClient — receipts", () => {
   test("sends an undo with the basis of its change", () => {
     const { room, host } = setup();
 
-    host.edit(kResized, 7);
+    pixelEdits(host).applyStep(toDocumentCommand(kResized), 7);
 
     assert.strictEqual(room.sent[0].basis, 7);
   });
@@ -130,9 +154,9 @@ describe("PixelSyncClient — receipts", () => {
   test("attaches the receipts until destroyed", () => {
     const { host, client } = setup();
 
-    assert.strictEqual(host.receipts.attached, true);
+    assert.strictEqual(pixelEdits(host).receipts.attached, true);
     client.destroy();
-    assert.strictEqual(host.receipts.attached, false);
+    assert.strictEqual(pixelEdits(host).receipts.attached, false);
   });
 });
 

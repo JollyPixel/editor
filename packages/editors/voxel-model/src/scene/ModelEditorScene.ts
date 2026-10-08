@@ -1,10 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
-import {
-  registerPixelHistory,
-  type PixelDocument
-} from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 import type {
   PeerIdentity,
   PresenceSource

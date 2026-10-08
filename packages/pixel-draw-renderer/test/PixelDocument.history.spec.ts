@@ -45,19 +45,19 @@ describe("PixelDocument history", () => {
     assert.deepEqual(pixelAt(doc, 1, 0), [0, 0, 255, 255]);
   });
 
-  test("UV undo and redo emit their commands as local changes carrying the step's basis", () => {
+  test("UV undo and redo emit their commands as local changes", () => {
     const events: PixelCommand[] = [];
     const doc = createDocument(events);
     const region = doc.uv.create({ width: 2, height: 2 });
     doc.uv.move(region.id, { x: 1, y: 1, width: 2, height: 2 });
     events.length = 0;
-    const bases: (number | undefined)[] = [];
-    doc.on("change", (change) => bases.push(change.basis));
+    const origins: string[] = [];
+    doc.on("change", (change) => origins.push(change.origin));
 
     doc.undo();
     doc.redo();
 
-    assert.deepEqual(bases, [0, 0]);
+    assert.deepEqual(origins, ["local", "local"]);
 
     assert.deepEqual(events, [
       {
@@ -175,13 +175,16 @@ describe("PixelDocument history", () => {
     assert.deepEqual(order, ["change:stroke", "command:global-fill:stroke"]);
   });
 
-  test("an undo whose UV region is gone refuses the step as gone", () => {
+  test("an undo whose UV region is gone applies nothing", () => {
     const doc = createDocument();
     const region = doc.uv.create({ width: 2, height: 2 });
     doc.uv.move(region.id, { x: 1, y: 1, width: 2, height: 2 });
     doc.applyRemoteCommand({ action: "uv-region-deleted", metadata: { id: region.id } });
 
-    assert.equal(doc.undo(), false);
-    assert.deepEqual(doc.state.refused.map(({ refused }) => refused.reason), ["peer", "peer"]);
+    assert.equal(doc.applyStep({
+      action: "uv-region-moved",
+      metadata: { id: region.id, face: null, rect: { x: 0, y: 0, width: 2, height: 2 } }
+    }), null);
+    assert.equal(doc.uv.get(region.id), undefined);
   });
 });

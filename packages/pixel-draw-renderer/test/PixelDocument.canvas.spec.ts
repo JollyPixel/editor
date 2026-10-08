@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import { PixelDocument } from "#src/PixelDocument.ts";
 import { pixelAt } from "./helpers/document/document.ts";
@@ -46,7 +47,7 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
     let historyChanges = 0;
     const { manager } = createPixelArtCanvas({
       document: doc,
-      history: { enabled: true },
+      history: new LocalHistory(),
       onDrawEnd: () => drawEnds++,
       onHistoryChange: () => historyChanges++
     });
@@ -61,8 +62,9 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
 
   test("undo on one canvas reverts the edit for every canvas on the document", () => {
     const doc = new PixelDocument({ size: { x: 4, y: 4 } });
-    const first = createPixelArtCanvas({ document: doc, history: { enabled: true } });
-    const second = createPixelArtCanvas({ document: doc, history: { enabled: true } });
+    const history = new LocalHistory();
+    const first = createPixelArtCanvas({ document: doc, history });
+    const second = createPixelArtCanvas({ document: doc, history });
     const before = pixelAt(doc, 3, 3);
 
     first.manager.commitPixels([{ x: 3, y: 3 }]);
@@ -76,12 +78,13 @@ describe("PixelArtCanvas built on an existing PixelDocument", () => {
 
   test("the history outlives its canvases: a canvas opened later redoes what an earlier one undid", () => {
     const doc = new PixelDocument({ size: { x: 4, y: 4 } });
-    const first = createPixelArtCanvas({ document: doc, history: { enabled: true } });
+    const history = new LocalHistory();
+    const first = createPixelArtCanvas({ document: doc, history });
     first.manager.commitPixels([{ x: 3, y: 3 }]);
     first.manager.undo();
     first.manager.destroy();
 
-    const second = createPixelArtCanvas({ document: doc, history: { enabled: true } });
+    const second = createPixelArtCanvas({ document: doc, history });
 
     assert.equal(second.manager.redo(), true);
     assert.equal(second.manager.canUndo(), true);

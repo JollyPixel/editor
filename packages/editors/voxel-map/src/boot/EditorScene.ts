@@ -200,7 +200,7 @@ export class EditorScene extends Systems.Scene {
       selection: state.selection,
       mapDocument
     });
-    const mapHistory = createMapHistory(view.document);
+    const mapHistory = createMapHistory(session.map.edits);
     mapHistory.on("skipped", (_scope, step) => {
       state.log.push(skippedMessage(step));
     });

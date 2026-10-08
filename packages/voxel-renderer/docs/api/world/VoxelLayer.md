@@ -5,8 +5,8 @@ A named voxel layer with its own position in the world. Get one from
 
 > [!IMPORTANT]
 > Writes made on a layer (`setVoxelAt`, `setPackedVoxelAt`, `removeVoxelAt`,
-> `rebase`, `mergeFrom`) are raw: they emit no command, add no
-> [history](../core/VoxelEdits.md) step and reach no recorder. Edit through
+> `rebase`, `mergeFrom`) are raw: they emit no command and reach no
+> [recorder](./VoxelWorld.md#recorders), so no undo history sees them. Edit through
 > [`VoxelWorld`](./VoxelWorld.md) for synced and undoable changes. The same
 > applies to assigning the properties below: use `world.updateLayer()`,
 > `world.setLayerPosition()` and the other world methods.

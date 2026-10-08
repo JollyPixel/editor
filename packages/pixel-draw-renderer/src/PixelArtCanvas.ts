@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
 import type { Emitter } from "@openally/emitt";
-import type {
-  CommandHistory,
-  HistoryScopeState
-} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
@@ -19,7 +15,8 @@ import type { SelectEngineEvent } from "./tools/SelectEngine.events.ts";
 import type { SelectionPresence } from "./selection/SelectionPresence.ts";
 import {
   CanvasHistory,
-  type PixelArtCanvasHistory
+  type PixelArtCanvasHistory,
+  type PixelHistoryState
 } from "./history/CanvasHistory.ts";
 import type { SelectionFootprint } from "./selection/SelectionFootprint.ts";
 import {
@@ -108,7 +105,7 @@ export interface PixelArtCanvasOptions {
   };
   onDrawEnd?: () => void;
   history?: PixelArtCanvasHistory;
-  onHistoryChange?: (state: HistoryScopeState) => void;
+  onHistoryChange?: (state: PixelHistoryState) => void;
   clipboard?: ClipboardAdapter | null;
   onClipboardResult?: (result: ClipboardOperationResult) => void;
   onModeChange?: (mode: Mode, previousMode: Mode) => void;
@@ -419,14 +416,6 @@ export class PixelArtCanvas {
     source: BrushPaintSource = "primary"
   ): void {
     this.document.paintPixels(pixels, this.brush.colorFor(source));
-  }
-
-  get history(): CommandHistory<string> | null {
-    return this.#history.history;
-  }
-
-  get historyScope(): string {
-    return this.#history.scope;
   }
 
   undo(): boolean {

@@ -1,30 +1,30 @@
 // Import Third-party Dependencies
 import {
   KeyedGuard,
+  type CommandChange,
   type CommandHistory,
   type HistoryGuard,
   type HistoryKeys,
   type HistoryRegistration,
   type KeyedGuardEntry
 } from "@jolly-pixel/history";
+import {
+  DEFAULT_UV_SLOTS,
+  uvTargetKey,
+  type DocumentCommand,
+  type PixelDocument,
+  type UVRegionData,
+  type UVSlot,
+  type Vec2
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { PixelDocument } from "../PixelDocument.ts";
-import type { DocumentCommand } from "../sync/PixelCommand.ts";
-import type { PixelChange } from "../sync/LocalEdit.types.ts";
-import { NormalMapChange } from "../sync/NormalMapChange.ts";
-import { DEFAULT_UV_SLOTS } from "../uv/geometry/types.ts";
-import type {
-  UVRegionData,
-  UVSlot
-} from "../uv/region/UVRegion.ts";
-import { uvTargetKey } from "../uv/region/UVTarget.ts";
-import type { Vec2 } from "../types.ts";
 import {
   PixelKeySet,
   type PixelArea
 } from "./PixelKeySet.ts";
 import { PixelCapture } from "./PixelCapture.ts";
+import { pixelEdits } from "./PixelEdits.ts";
 
 // CONSTANTS
 const kNormalMapKey = "normal-map";
@@ -62,7 +62,7 @@ export function pixelHistoryRegistration<TScope extends string>(
 
   return {
     id,
-    document,
+    document: pixelEdits(document),
     keys: pixelHistoryKeys(document),
     scopeOf: () => scope,
     label: ({ command }) => kLabels[command.action]
@@ -179,7 +179,7 @@ class PixelGuard implements HistoryGuard<PixelKeySet, PixelCapture> {
 
 function writtenKeys(
   document: PixelDocument,
-  change: PixelChange
+  change: CommandChange<DocumentCommand, null>
 ): PixelKeySet {
   return new PixelKeySet(
     areaOf(change.command),
@@ -286,7 +286,7 @@ function zoneEntry(
 ): KeyedGuardEntry {
   return {
     key: `normal-map:zone:${regionId}`,
-    read: () => NormalMapChange.zoneOf(document.normalMap, regionId)?.zone
+    read: () => document.normalMap?.zones.find((zone) => zone.regionId === regionId)
   };
 }
 

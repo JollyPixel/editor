@@ -144,9 +144,13 @@ What the canvas draws for the texture: its pixels (*albedo*) or its generated no
 
 One change to a pixel document: a stroke, a texture resize or replacement, a UV region change, or a normal map settings change. Local edits, undo and redo emit commands, and peers apply them. *Document state* is the texture, UV map and normal map settings without history or view; it applies every command, remote, undone or redone, the same way.
 
+### Edit Change
+
+What the document emits for each applied command: the command, its origin (*local*, *remote* or *replay*), and for a local edit the commands that undo it. Undo history is built from edit changes outside the renderer. An *edit source* emits edit changes and applies the commands of an undo or redo: the document, and the canvas's selection.
+
 ### History Step
 
-The reversible record of one local edit, used by undo and redo: the commands that undo it, and the values they must find unchanged. A peer edit over those values refuses the step instead of being overwritten.
+The reversible record of one local edit, used by undo and redo: the commands that undo it, and the values they must find unchanged. The host's history decides when a peer edit refuses a step; the canvas only binds to that history.
 
 ## Naming boundaries
 

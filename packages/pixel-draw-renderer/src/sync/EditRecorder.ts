@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { CommandChange } from "@jolly-pixel/history";
-
 // Import Internal Dependencies
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
 import type {
@@ -19,6 +16,7 @@ import type {
   PixelChange
 } from "./LocalEdit.types.ts";
 import type { UVOwnership } from "./UVOwnership.ts";
+import { EditChange } from "./EditChange.ts";
 
 export type EditGrouping = <T>(edit: () => T) => T;
 
@@ -62,7 +60,7 @@ export class EditRecorder {
     }
 
     this.#emit(
-      CommandChange.local(edit.command, null, edit.inverse),
+      EditChange.local(edit.command, edit.inverse),
       edit.sent ?? edit.command
     );
   }
@@ -90,8 +88,7 @@ export class EditRecorder {
   }
 
   applyStep(
-    command: DocumentCommand,
-    basis: number | undefined
+    command: DocumentCommand
   ): PixelChange | null {
     if (!this.#state.accepts(command)) {
       return null;
@@ -99,7 +96,7 @@ export class EditRecorder {
 
     const inverse = this.#state.inverseOf(command);
     this.silently(() => this.#state.apply(command));
-    const change = CommandChange.local(command, null, inverse, basis);
+    const change = EditChange.local(command, inverse);
     this.#emit(change, command);
     this.#listeners.drawEnd();
 
@@ -112,7 +109,7 @@ export class EditRecorder {
   ): void {
     this.#applyPeer(
       command,
-      (written) => CommandChange.remote(written, null, clientId)
+      (written) => EditChange.remote(written, clientId)
     );
   }
 
@@ -121,7 +118,7 @@ export class EditRecorder {
   ): void {
     this.#applyPeer(
       command,
-      (written) => CommandChange.replay(written, null)
+      (written) => EditChange.replay(written)
     );
   }
 

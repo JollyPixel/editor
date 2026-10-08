@@ -7,6 +7,7 @@ import {
 
 // Import Internal Dependencies
 import { VOXEL_MAP_KIND } from "../asset/voxelMap.ts";
+import type { VoxelEdits } from "../history/VoxelEdits.ts";
 import { VoxelSyncClient } from "./VoxelSyncClient.ts";
 import type { VoxelMapRoom } from "./types.ts";
 
@@ -17,6 +18,7 @@ export type SyncedVoxelMapOptions = Pick<
 
 export class SyncedVoxelMap {
   readonly voxels: VoxelDocument;
+  readonly edits: VoxelEdits;
   readonly ready: Promise<void>;
 
   #sync: VoxelSyncClient;
@@ -34,6 +36,7 @@ export class SyncedVoxelMap {
       room,
       document: this.voxels
     });
+    this.edits = this.#sync.edits;
     this.ready = this.#sync.whenReady();
   }
 

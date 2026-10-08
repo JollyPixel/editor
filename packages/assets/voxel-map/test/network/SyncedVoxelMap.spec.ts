@@ -18,6 +18,7 @@ import {
 } from "#src/network/SyncedVoxelMap.ts";
 import { VOXEL_MAP_KIND } from "#src/asset/voxelMap.ts";
 import { createMockRoom } from "../helpers/room.ts";
+import { mapHistory } from "../helpers/history.ts";
 
 // CONSTANTS
 const kSnapshot: VoxelWorldJSON = {
@@ -64,6 +65,22 @@ describe("SyncedVoxelMap", () => {
     map.dispose();
 
     assert.equal(room.left, false);
+  });
+
+  it("confirms each local command to its history when the server echoes it", () => {
+    const room = createMockRoom();
+    const map = new SyncedVoxelMap(room);
+    room.simulateSnapshot(kSnapshot);
+    map.voxels.world.addLayer("Ground");
+    mapHistory(map.edits);
+    const confirmed: string[] = [];
+    map.edits.receipts.on("confirmed", (change) => confirmed.push(change.command.action));
+
+    map.voxels.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+    room.simulateCommand(room.sentCommands.at(-1)!);
+
+    assert.deepEqual(confirmed, ["added", "voxel-set"]);
+    map.dispose();
   });
 
   it("broadcasts a replacement world without applying it locally", () => {

@@ -10,10 +10,12 @@ import {
   loadPixelSnapshot,
   narrowPixelCommand,
   packPixelEvent,
+  pixelEdits,
   replayPixelCommand,
   revertsInPlace,
   unpackPixelCommand,
   type PixelCommandListener,
+  type PixelEdits,
   type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
 import type {
@@ -75,12 +77,13 @@ export class BlocksetSyncClient extends CommandSync<
   AssetRoomNotice
 > {
   #pixels: PixelSyncTarget;
+  #pixelEdits: PixelEdits;
   #blockset: BlocksetDocument;
 
   #sendPixelCommand: PixelCommandListener = (command, change) => {
     this.sendChange(
       packPixelEvent(command),
-      change
+      this.#pixelEdits.adapt(change)
     );
   };
 
@@ -93,6 +96,7 @@ export class BlocksetSyncClient extends CommandSync<
   constructor(
     options: BlocksetSyncClientOptions
   ) {
+    const edits = pixelEdits(options.pixels);
     super(options.room, {
       reconciler: createBlocksetReconciler(
         options.pixels,
@@ -104,11 +108,12 @@ export class BlocksetSyncClient extends CommandSync<
         options.pixels,
         snapshot
       ),
-      receipts: options.pixels.receipts
+      receipts: edits.receipts
     });
     const { pixels, blockset } = options;
 
     this.#pixels = pixels;
+    this.#pixelEdits = edits;
     this.#blockset = blockset;
     pixels.on("command", this.#sendPixelCommand);
     blockset.on("command", this.#sendBlocksetCommand);

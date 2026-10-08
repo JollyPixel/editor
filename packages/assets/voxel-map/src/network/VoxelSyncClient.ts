@@ -12,6 +12,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { VoxelEdits } from "../history/VoxelEdits.ts";
 import type {
   VoxelMapNetworkCommand,
   VoxelMapRoom
@@ -29,6 +30,8 @@ export class VoxelSyncClient extends CommandSync<
   VoxelWorldJSON,
   AssetRoomNotice
 > {
+  readonly edits: VoxelEdits;
+
   #document: VoxelDocument;
   #reconciler: VoxelReconciler;
   #onCommand: VoxelCommandListener;
@@ -38,22 +41,21 @@ export class VoxelSyncClient extends CommandSync<
     options: VoxelSyncClientOptions
   ) {
     const reconciler = new VoxelReconciler(options.document);
+    const edits = new VoxelEdits(options.document);
     super(options.room, {
       reconciler,
       resolver: options.resolver,
-      receipts: options.document.edits.receipts
+      receipts: edits.receipts
     });
     const { document } = options;
 
+    this.edits = edits;
     this.#document = document;
     this.#reconciler = reconciler;
     this.#onCommand = (command, { origin }) => {
       if (origin === "local" && isVoxelWorldCommand(command)) {
-        const change = document.edits.changeOf(command);
         reconciler.capture(
-          change === undefined
-            ? this.send(command)
-            : this.sendChange(command, change)
+          this.sendChange(command, edits.changeFor(command)!)
         );
       }
       reconciler.observe();
@@ -78,6 +80,7 @@ export class VoxelSyncClient extends CommandSync<
     this.#document.off("command", this.#onCommand);
     this.#document.off("loaded", this.#onLoaded);
     this.#reconciler.dispose();
+    this.edits.dispose();
     super.destroy();
   }
 

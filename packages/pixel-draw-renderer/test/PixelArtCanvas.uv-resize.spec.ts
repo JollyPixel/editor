@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { LocalHistory } from "./helpers/history/LocalHistory.ts";
 import type {
   PixelArtCanvas,
   PixelArtCanvasOptions
@@ -18,7 +19,7 @@ function makeManager(
 ): PixelArtCanvas {
   const manager = createPixelArtCanvas({
     zoom: { default: 4 },
-    history: { enabled: true },
+    history: new LocalHistory(),
     ...options
   }).manager;
   manager.mode = "uv";
