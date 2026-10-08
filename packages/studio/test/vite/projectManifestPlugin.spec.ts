@@ -33,6 +33,7 @@ import {
   STUDIO_ROOT,
   StudioProject
 } from "../../server/StudioProject.ts";
+import { StudioAccess } from "../../server/StudioAccess.ts";
 import { projectManifestPlugin } from "../../vite/projectManifestPlugin.ts";
 import {
   listen,
@@ -71,7 +72,8 @@ function voxelMapProject(
       })
     ], new PackageResolver(root, {
       fallbacks: [STUDIO_ROOT]
-    }))
+    })),
+    StudioAccess.read({}, "project.json")
   );
 }
 

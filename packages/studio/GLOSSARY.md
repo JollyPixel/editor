@@ -116,6 +116,21 @@ A `jolly-shell` message an editor page posts back through its
 `ShellChannel`. `open-asset` is the only command; the shell handles it like a
 tree activation.
 
+### Account
+
+A user of the online studio, signed in with a session cookie. Its id is the
+peer `subject` the event store records and the `peerId` presence colours.
+
+### Role
+
+What an account may do, a key of the project's `access.roles` rights table.
+`admin` is built in; an undeclared role falls back to `defaultRole`.
+
+### Roster
+
+The accounts, their role and whether they are online, pushed by the
+`accounts` room to every shell and drawn by the Users pane.
+
 ### Offline workspace
 
 The asset back-end the shell runs in the browser when the catalog is

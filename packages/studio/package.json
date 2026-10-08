@@ -36,6 +36,7 @@
     "zod": "4.6.5"
   },
   "dependencies": {
+    "@jolly-pixel/accounts": "workspace:*",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",

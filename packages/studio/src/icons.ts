@@ -75,6 +75,23 @@ registerIcon("home", `
   />
 `);
 
+registerIcon("sign-out", `
+  <path
+    d="M4 4h8v16H4Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 4H4v16h8M10 12h10M16 8l4 4-4 4"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
 registerIcon("export", `
   <path
     d="M4 15v5h16v-5"

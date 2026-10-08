@@ -14,6 +14,7 @@ import {
 
 // Import Internal Dependencies
 import { EditorPackages } from "./EditorPackages.ts";
+import { StudioAccess } from "./StudioAccess.ts";
 import { TEXTURE_SIZE } from "../src/seed.ts";
 
 // CONSTANTS
@@ -59,6 +60,7 @@ export class StudioProject {
   readonly file: ProjectFile;
   readonly editors: EditorPackages;
   readonly kinds: ProjectKinds;
+  readonly access: StudioAccess;
 
   static resolveRoot(
     base: string,
@@ -107,17 +109,20 @@ export class StudioProject {
       await ProjectKinds.load(file, {
         resolver,
         load
-      })
+      }),
+      StudioAccess.read(file.document, file.path)
     );
   }
 
   constructor(
     file: ProjectFile,
     editors: EditorPackages,
-    kinds: ProjectKinds
+    kinds: ProjectKinds,
+    access: StudioAccess
   ) {
     this.file = file;
     this.editors = editors;
     this.kinds = kinds;
+    this.access = access;
   }
 }

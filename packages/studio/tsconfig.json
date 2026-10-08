@@ -8,6 +8,9 @@
   },
   "references": [
     {
+      "path": "../accounts"
+    },
+    {
       "path": "../asset-server"
     },
     {

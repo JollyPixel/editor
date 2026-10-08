@@ -180,6 +180,23 @@ asset-browser jolly-tree {
   --jolly-tree-icon-size: 16px;
 }
 
+#users-dock jolly-pane {
+  margin-block-start: var(--jolly-space-2);
+}
+
+studio-users {
+  display: block;
+  padding-inline: var(--jolly-space-2);
+}
+
+studio-users jolly-tree {
+  --jolly-tree-indent: 4px;
+}
+
+studio-users jolly-tree::part(swatch) {
+  margin-inline-end: var(--jolly-space-1);
+}
+
 asset-browser asset-delete-dialog {
   position: absolute;
 }
@@ -256,4 +273,42 @@ project-overview .open-editors jolly-button {
 
 project-overview .empty {
   color: var(--jolly-text-muted);
+}
+
+#studio-actions studio-account {
+  display: flex;
+  align-items: center;
+  gap: var(--jolly-space-2);
+}
+
+.sign-in-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jolly-space-3);
+  min-width: 280px;
+}
+
+.sign-in-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jolly-space-1);
+}
+
+.sign-in-form input {
+  padding: var(--jolly-space-2);
+  border: 1px solid var(--jolly-border);
+  border-radius: var(--jolly-radius-sm);
+  background: var(--jolly-control-bg);
+  color: var(--jolly-text);
+  font: inherit;
+}
+
+.sign-in-form input:focus-visible {
+  outline: 2px solid var(--jolly-focus-ring);
+  outline-offset: 1px;
+}
+
+.sign-in-error {
+  margin: 0;
+  color: var(--jolly-danger);
 }

@@ -236,6 +236,24 @@ importers:
         specifier: 2.0.17
         version: 2.0.17(mermaid@12.0.0)(vitepress@1.6.4(@algolia/client-search@5.55.2)(@types/node@26.6.4)(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(typescript@6.0.3))
 
+  packages/accounts:
+    dependencies:
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      cookie:
+        specifier: 2.0.1
+        version: 2.0.1
+      rate-limiter-flexible:
+        specifier: 11.2.1
+        version: 11.2.1
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+
   packages/arbor: {}
 
   packages/asset:
@@ -919,6 +937,9 @@ importers:
 
   packages/studio:
     dependencies:
+      '@jolly-pixel/accounts':
+        specifier: workspace:*
+        version: link:../accounts
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../asset
@@ -2750,6 +2771,10 @@ packages:
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
 
+  cookie@2.0.1:
+    resolution: {integrity: sha512-yuToqVvRrj6pfDXREyQAAv8SkAEk/8GS3jQRTiUMm66TVtBYmqQeoEjL2Lmq8Rpo6271vH76InTChTitEAm65w==}
+    engines: {node: '>=22'}
+
   copy-anything@4.0.5:
     resolution: {integrity: sha512-7Vv6asjS4gMOuILabD3l739tsaxFQmC+a7pLZm02zyvs8p977bL3zEgq3yDk5rn9B0PbYgIv++jmHcuUab4RhA==}
     engines: {node: '>=18'}
@@ -3817,6 +3842,9 @@ packages:
 
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
+
+  rate-limiter-flexible@11.2.1:
+    resolution: {integrity: sha512-JAaz01HZ893zAw+Hx5MdM1z3lLAkyVvNpqR+GNp0k3kjuQB8gY91fXhf5C0osWs+A7iKgFv585qzwmjS3aBHlA==}
 
   readdirp@5.0.0:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
@@ -5886,6 +5914,8 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
+  cookie@2.0.1: {}
+
   copy-anything@4.0.5:
     dependencies:
       is-what: 5.5.0
@@ -6994,6 +7024,8 @@ snapshots:
   queue-microtask@1.2.3: {}
 
   quick-format-unescaped@4.0.4: {}
+
+  rate-limiter-flexible@11.2.1: {}
 
   readdirp@5.0.0: {}
 

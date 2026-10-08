@@ -10,13 +10,15 @@ import {
   MAP,
   SEED_ROW_COUNT
 } from "./support/shell.ts";
+import { registerAccount } from "./support/account.ts";
 
 test("offers a shared offline catalog when the socket closes", async({ page }) => {
   await page.routeWebSocket("**/ws-sync", (socket) => {
     socket.close();
   });
   await expandSeedFolders(page);
-  await page.goto("/?username=Guest");
+  await registerAccount(page.request);
+  await page.goto("/");
   await page.getByRole("button", {
     name: "Open offline workspace"
   }).click();

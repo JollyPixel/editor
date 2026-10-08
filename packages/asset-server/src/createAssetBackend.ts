@@ -77,6 +77,11 @@ export interface AssetBackendOptions {
    */
   catalogDeleteProtection?: boolean;
   compactOnSnapshot?: boolean;
+  /**
+   * Extra entries for the `.gitignore` of the state directory, relative to
+   * that directory.
+   */
+  stateIgnores?: string[];
   logger?: Logger;
 }
 
@@ -129,6 +134,7 @@ export async function createAssetBackend(
     catalogArchiveLimits,
     catalogDeleteProtection,
     compactOnSnapshot = false,
+    stateIgnores = [],
     logger = silentLogger()
   } = options;
 
@@ -170,7 +176,7 @@ export async function createAssetBackend(
   eventStore.writer.on("error", onAppendError);
 
   const kinds = new AssetKindRegistry(handlers);
-  await ensureStateGitignore(source);
+  await ensureStateGitignore(source, stateIgnores);
 
   const state = await ProjectionState.load(source, logger);
   const projector = new AssetProjector({

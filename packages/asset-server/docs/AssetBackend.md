@@ -22,6 +22,7 @@ interface AssetBackendOptions {
   catalogArchiveLimits?: ArchiveLimits;
   catalogDeleteProtection?: boolean;
   compactOnSnapshot?: boolean;
+  stateIgnores?: string[];
   logger?: Logger;
 }
 ```
@@ -45,6 +46,8 @@ create and archive commands. See [Catalog](./Catalog.md#network-room).
 imported archive. See [readAssetArchive](./Archive.md#readassetarchive).
 `catalogDeleteProtection` defaults to `true`. See
 [Delete protection](./Catalog.md#delete-protection).
+`stateIgnores` adds entries to `.jollypixel/.gitignore`, beside the event log
+and projection state it always lists, for a host keeping its own files there.
 `logger` defaults to a silent logger.
 
 ## Returned backend

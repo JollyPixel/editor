@@ -20,8 +20,13 @@ const kStateGitignoreEntries = [
 ];
 
 export async function ensureStateGitignore(
-  source: AssetSource
+  source: AssetSource,
+  extraEntries: Iterable<string> = []
 ): Promise<void> {
+  const entries = [...new Set([
+    ...kStateGitignoreEntries,
+    ...extraEntries
+  ])];
   const encoder = new TextEncoder();
   const created = await source.writeIfAbsent(
     STATE_GITIGNORE_PATH,
@@ -37,7 +42,7 @@ export async function ensureStateGitignore(
   const present = new Set(
     current.split(/\r?\n/).map((line) => line.trim())
   );
-  const missing = kStateGitignoreEntries.filter(
+  const missing = entries.filter(
     (entry) => !present.has(entry)
   );
   if (missing.length === 0) {

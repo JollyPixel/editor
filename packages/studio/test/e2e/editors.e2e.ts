@@ -20,6 +20,7 @@ import {
   SEED_ROW_COUNT,
   TEXTURE
 } from "./support/shell.ts";
+import { registerAccount } from "./support/account.ts";
 
 test("opens a pixel-art texture in the pixel-art editor page", async({ page }) => {
   await openShell(page);
@@ -46,7 +47,8 @@ test("editor frames read the catalog through the shell", async({ page }) => {
     });
   });
   await expandSeedFolders(page);
-  await page.goto("/?username=Guest");
+  await registerAccount(page.request);
+  await page.goto("/");
   await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
 
   await treeRow(page, MODEL).dblclick();

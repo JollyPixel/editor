@@ -1,6 +1,13 @@
+// Import Internal Dependencies
+import type { PeerMetadata } from "../../protocol/types.ts";
+
 export interface PeerIdentity {
   subject: string;
   role: string;
+  /**
+   * Server-owned profile fields, merged over the client's on join.
+   */
+  profile?: PeerMetadata;
 }
 
 export interface AuthenticationAttempt {

@@ -49,7 +49,7 @@ export async function openShell(
   if (!collapsed) {
     await expandSeedFolders(page);
   }
-  await page.goto("/?offline&username=Guest");
+  await page.goto("/?offline");
   await expect(assetRows(page)).toHaveCount(
     collapsed ? SEED_FOLDERS.length : SEED_ROW_COUNT
   );

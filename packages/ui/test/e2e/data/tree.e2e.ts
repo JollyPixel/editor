@@ -77,6 +77,20 @@ test.describe("Tree", () => {
     await expect.poll(() => swatchOrder(crate)).toEqual(["swatch", "label"]);
   });
 
+  test("lets the page space the swatch through its part", async({ page }) => {
+    const tree = page.locator(TREE_SELECTOR);
+    const swatch = rowOf(page, "crate").getByRole("button", { name: "Material: Glass" });
+    await tree.evaluate((element) => {
+      element.setAttribute("swatch-position", "start");
+      const style = document.createElement("style");
+      style.textContent = "jolly-tree::part(swatch) { margin-inline-end: 12px; }";
+      const root = element.getRootNode();
+      (root instanceof ShadowRoot ? root : document.head).append(style);
+    });
+
+    await expect(swatch).toHaveCSS("margin-inline-end", "12px");
+  });
+
   test("shows an empty swatch only on a hovered or selected row", async({ page }) => {
     const barrel = rowOf(page, "barrel");
     const swatch = barrel.getByRole("button", { name: "Add material" });

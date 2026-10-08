@@ -1,12 +1,11 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
-import {
-  mountConsole,
-  rememberQueryUsername
-} from "@jolly-pixel/editor.host";
+import { ADMIN_ROLE } from "@jolly-pixel/accounts";
+import { mountConsole } from "@jolly-pixel/editor.host";
 import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { usersConsole } from "./accounts/usersConsole.ts";
 import { connectStudio } from "./connection.ts";
 import {
   EDITOR_PAGE_REBUILT_EVENT,
@@ -36,9 +35,6 @@ function required<TName extends keyof HTMLElementTagNameMap>(
 }
 
 async function boot(): Promise<void> {
-  if (import.meta.env.DEV) {
-    rememberQueryUsername();
-  }
   const editorConsole = mountConsole();
   const [connection, manifest] = await Promise.all([
     connectStudio(),
@@ -49,6 +45,7 @@ async function boot(): Promise<void> {
     console: editorConsole,
     share: connection.share,
     identity: connection.identity,
+    signedIn: connection.signedIn,
     editors: createEditorRegistry(manifest, connection.editorQuery),
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",
@@ -56,6 +53,13 @@ async function boot(): Promise<void> {
       confirmLabel: "Close"
     })
   });
+
+  if (connection.signedIn?.account.role === ADMIN_ROLE) {
+    usersConsole(
+      editorConsole.commands,
+      connection.signedIn.roster
+    );
+  }
 
   if (import.meta.env.DEV) {
     window.studio = studio;

@@ -468,6 +468,7 @@ export class Tree<TData = unknown> extends LitElement {
     return html`
       <button
         class="swatch"
+        part="swatch"
         type="button"
         tabindex="-1"
         aria-label=${swatch.title}
