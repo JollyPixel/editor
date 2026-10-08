@@ -12,7 +12,7 @@ the studio.
 Editors were page-scoped when the studio started: they query `document`, own the dock layout and
 boot at module top level. Framing a page needs none of that to change. Mounting editors in the
 shell's own document waits for the `EditorDefinition` revisit in the
-[editor host roadmap](../../../editors/host/ROADMAP.md).
+[roadmap](../../ROADMAP.md#in-process-editors).
 
 ## Considered Options
 
