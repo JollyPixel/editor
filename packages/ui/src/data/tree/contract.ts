@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { emitComposedEvent } from "../../events.ts";
 import type { IconName } from "../../icon/registry.ts";
+import type { PeerAvatar } from "../../peer/Avatar.ts";
 
 export type TreeDropWhere =
   | "above"
@@ -31,6 +32,8 @@ export interface TreeNode<
   /** `false` keeps the children shown, with no expand toggle. */
   collapsible?: boolean;
   icon?: IconName;
+  /** Drawn in place of `icon`, for a row that stands for a person. */
+  avatar?: PeerAvatar;
   visible?: boolean;
   locked?: boolean;
   renamable?: boolean;

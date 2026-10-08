@@ -18,8 +18,10 @@ const roster = new PeerRoster({
 ```
 
 `peers` is a `PresencePeer[]` with the local peer first (`self: true`, built
-from `identity`) and remote peers sorted by `clientId`. Names and colors are
-read from each peer's profile with `readUsername` and `peerProfileColor`.
+from `identity`) and remote peers sorted by `clientId`. Names, colors and
+avatars are read from each peer's profile with `readUsername`,
+`peerProfileColor`, `readPeerId` and `readAvatar`. The local avatar comes from
+`identity.avatar`.
 
 The roster republishes on `sync`, `peer-joined` and `peer-left`. With a `log`,
 it pushes one "has joined" or "has left" entry per remote peer; members already

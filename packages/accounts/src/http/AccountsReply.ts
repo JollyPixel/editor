@@ -4,6 +4,9 @@ import type { ServerResponse } from "node:http";
 // Import Internal Dependencies
 import type { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 
+// CONSTANTS
+const kJsonContentType = "application/json; charset=utf-8";
+
 export class AccountsReply {
   static json(
     status: number,
@@ -12,8 +15,11 @@ export class AccountsReply {
   ): AccountsReply {
     return new AccountsReply(
       status,
-      body,
-      headers
+      JSON.stringify(body),
+      {
+        ...headers,
+        "content-type": kJsonContentType
+      }
     );
   }
 
@@ -28,11 +34,28 @@ export class AccountsReply {
     );
   }
 
+  static image(
+    bytes: Uint8Array,
+    contentType: string,
+    cacheControl: string
+  ): AccountsReply {
+    return new AccountsReply(
+      200,
+      bytes,
+      {
+        "content-type": contentType,
+        "cache-control": cacheControl,
+        "cross-origin-resource-policy": "same-origin",
+        "x-content-type-options": "nosniff"
+      }
+    );
+  }
+
   static failure(
     error: AccountsRequestError,
     headers: Record<string, string> = {}
   ): AccountsReply {
-    return new AccountsReply(
+    return AccountsReply.json(
       error.status,
       {
         code: error.code,
@@ -43,12 +66,12 @@ export class AccountsReply {
   }
 
   readonly status: number;
-  readonly body: unknown;
+  readonly body: string | Uint8Array | undefined;
   readonly headers: Readonly<Record<string, string>>;
 
   private constructor(
     status: number,
-    body: unknown,
+    body: string | Uint8Array | undefined,
     headers: Record<string, string>
   ) {
     this.status = status;
@@ -64,18 +87,6 @@ export class AccountsReply {
     for (const [name, value] of Object.entries(this.headers)) {
       response.setHeader(name, value);
     }
-    if (this.body === undefined) {
-      response.end();
-
-      return;
-    }
-
-    response.setHeader(
-      "content-type",
-      "application/json; charset=utf-8"
-    );
-    response.end(
-      JSON.stringify(this.body)
-    );
+    response.end(this.body);
   }
 }

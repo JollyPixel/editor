@@ -27,7 +27,8 @@ const kLaunchPortsSchema = z.object({
 });
 const kLaunchIdentitySchema = z.object({
   username: z.string().trim().min(1),
-  peerId: z.string().min(1)
+  peerId: z.string().min(1),
+  avatar: z.string().optional().catch(undefined)
 });
 const kReadyMessageSchema = z.object({
   type: z.literal(READY_MESSAGE_TYPE)
@@ -83,6 +84,10 @@ export interface LaunchMessageOptions {
 export interface LaunchIdentity {
   username: string;
   peerId: string;
+  /**
+   * Same-origin path of the peer's uploaded avatar.
+   */
+  avatar?: string;
 }
 
 export interface LaunchPorts {
@@ -156,7 +161,11 @@ export class ShellChannel {
     this.catalog = options.catalog ?? null;
     this.console = options.console ?? null;
     this.identity = options.identity ?
-      peerIdentity(options.identity.username, options.identity.peerId) :
+      peerIdentity(
+        options.identity.username,
+        options.identity.peerId,
+        options.identity.avatar
+      ) :
       null;
   }
 

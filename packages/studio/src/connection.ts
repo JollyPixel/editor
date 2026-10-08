@@ -48,13 +48,18 @@ async function connectOnline(): Promise<StudioConnection> {
     url: new URL(`.${ACCOUNTS_URL_PATH}`, document.baseURI)
   });
   const account = await accounts.me() ?? await signIn(accounts);
-  const identity = peerIdentity(account.username, account.id);
+  const identity = peerIdentity(
+    account.username,
+    account.id,
+    account.avatar
+  );
   const client = new Client({
     profile: toPeerMetadata(identity)
   });
   const signedIn: StudioSignedIn = {
     account,
     roster: AccountsRoster.join(client),
+    replaceAvatar: (image) => accounts.replaceAvatar(image),
     signOut: () => signOut(accounts)
   };
   client.on("unauthorized", () => {

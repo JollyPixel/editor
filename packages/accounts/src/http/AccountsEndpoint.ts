@@ -6,6 +6,11 @@ import type {
   Accounts,
   AccountSession
 } from "../Accounts.ts";
+import {
+  AVATAR_MAX_BYTES,
+  type Account
+} from "../account/Account.ts";
+import { InvalidAvatarError } from "../avatar/errors/InvalidAvatarError.ts";
 import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
@@ -18,6 +23,10 @@ import {
 } from "./LoginLimiter.ts";
 
 // CONSTANTS
+const kAvatarRoute = /^(?<accountId>[\w-]+)\/avatar$/;
+const kAvatarContentType = "image/webp";
+const kImmutable = "public, max-age=31536000, immutable";
+const kRevalidate = "no-cache";
 const kDomainErrors = [
   {
     type: InvalidUsernameError,
@@ -33,6 +42,11 @@ const kDomainErrors = [
     type: UsernameTakenError,
     status: 409,
     code: "username-taken"
+  },
+  {
+    type: InvalidAvatarError,
+    status: 422,
+    code: "invalid-avatar"
   }
 ] as const;
 
@@ -58,6 +72,11 @@ export class AccountsEndpoint {
         throw new AccountsRequestError(403, "cross-origin", "the request comes from another origin");
       }
 
+      const avatarOwner = kAvatarRoute.exec(route)?.groups?.accountId;
+      if (avatarOwner !== undefined) {
+        return this.#avatar(avatarOwner, request);
+      }
+
       switch (route) {
         case "register":
           return await this.#register(request);
@@ -67,6 +86,8 @@ export class AccountsEndpoint {
           return this.#logout(request);
         case "me":
           return this.#me(request);
+        case "avatar":
+          return await this.#replaceAvatar(request);
         default:
           return null;
       }
@@ -141,6 +162,44 @@ export class AccountsEndpoint {
     request: AccountsRequest
   ): AccountsReply {
     request.expect("GET");
+
+    return AccountsReply.json(200, {
+      account: this.#signedInAccount(request)
+    });
+  }
+
+  async #replaceAvatar(
+    request: AccountsRequest
+  ): Promise<AccountsReply> {
+    request.expect("PUT");
+    const { id } = this.#signedInAccount(request);
+    const image = await request.bytes(AVATAR_MAX_BYTES);
+
+    return AccountsReply.json(200, {
+      account: await this.#accounts.replaceAvatar(id, image)
+    });
+  }
+
+  #avatar(
+    accountId: string,
+    request: AccountsRequest
+  ): AccountsReply {
+    request.expect("GET");
+    const avatar = this.#accounts.avatar(accountId);
+    if (avatar === null) {
+      throw new AccountsRequestError(404, "not-found", "the account has no avatar");
+    }
+
+    return AccountsReply.image(
+      avatar.bytes,
+      kAvatarContentType,
+      request.query("v") === avatar.hash ? kImmutable : kRevalidate
+    );
+  }
+
+  #signedInAccount(
+    request: AccountsRequest
+  ): Account {
     const token = request.sessionToken(this.#accounts.cookie);
     const account = token === null ?
       null :
@@ -149,7 +208,7 @@ export class AccountsEndpoint {
       throw new AccountsRequestError(401, "unauthenticated", "no valid session");
     }
 
-    return AccountsReply.json(200, { account });
+    return account;
   }
 
   #signedIn(

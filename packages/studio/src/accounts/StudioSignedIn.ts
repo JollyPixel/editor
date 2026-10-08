@@ -7,5 +7,8 @@ import type {
 export interface StudioSignedIn {
   account: Account;
   roster: AccountsRoster;
+  replaceAvatar(
+    image: Blob
+  ): Promise<Account>;
   signOut(): Promise<void>;
 }

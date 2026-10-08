@@ -80,8 +80,10 @@ describe("AccountStore sessions", () => {
     assert.equal(store.accountForToken(token), null);
   });
 
-  test("rejects a token it never minted", () => {
+  test("rejects a token it never minted while another session is open", () => {
     using store = storeWith("Alice");
+    const [alice] = store;
+    store.openSession(alice.id);
 
     assert.equal(store.accountForToken("x".repeat(43)), null);
   });
@@ -143,6 +145,69 @@ describe("AccountStore.remove", () => {
       AccountChangeRefusedError
     );
     assert.equal(store.size, 1);
+  });
+});
+
+describe("AccountStore avatars", () => {
+  const kAvatar = {
+    hash: "0123456789abcdef",
+    bytes: new Uint8Array([1, 2, 3])
+  };
+
+  test("stores an avatar and names its hash on every read of the account", () => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    const token = store.openSession(alice.id);
+
+    const updated = store.replaceAvatar(alice.id, kAvatar);
+
+    assert.equal(updated.avatarHash, kAvatar.hash);
+    assert.deepEqual(store.accountById(alice.id), updated);
+    assert.deepEqual(store.accountForToken(token), updated);
+    assert.deepEqual(store.credentials(name("alice"))?.account, updated);
+    assert.deepEqual([...store], [updated]);
+    assert.deepEqual(store.avatar(alice.id), kAvatar);
+  });
+
+  test("replaces the previous avatar", () => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    store.replaceAvatar(alice.id, kAvatar);
+
+    store.replaceAvatar(alice.id, {
+      hash: "fedcba9876543210",
+      bytes: new Uint8Array([4])
+    });
+
+    assert.equal(store.accountById(alice.id)?.avatarHash, "fedcba9876543210");
+    assert.deepEqual(store.avatar(alice.id)?.bytes, new Uint8Array([4]));
+  });
+
+  test("has no avatar hash for an account without one", () => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+
+    assert.equal(alice.avatarHash, null);
+    assert.equal(store.avatar(alice.id), null);
+  });
+
+  test("deletes the avatar with its account", () => {
+    using store = storeWith("Alice", "Bob");
+    const [, bob] = store;
+    store.replaceAvatar(bob.id, kAvatar);
+
+    store.remove(name("bob"));
+
+    assert.equal(store.avatar(bob.id), null);
+  });
+
+  test("refuses an unknown account", () => {
+    using store = createStore();
+
+    assert.throws(
+      () => store.replaceAvatar("nobody", kAvatar),
+      AccountChangeRefusedError
+    );
   });
 });
 

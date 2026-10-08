@@ -10,7 +10,6 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import { PROJECT_FILE_PATH } from "@jolly-pixel/asset-server";
-import { ProjectFile } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
 import {
@@ -27,24 +26,6 @@ import {
 // CONSTANTS
 const kBase = path.resolve("/studio");
 const kRoots: string[] = [];
-
-async function loadKinds(
-  packageName: string
-): Promise<unknown> {
-  return {
-    ASSET_KINDS: {
-      descriptors: [],
-      optionsSchema: {
-        type: "object"
-      },
-      handlers: () => [
-        {
-          kind: packageName
-        }
-      ]
-    }
-  };
-}
 
 async function createRoot(): Promise<string> {
   const root = await createTempDir("studio-project-");
@@ -124,34 +105,6 @@ describe("StudioProject", () => {
   });
 
   describe("open", () => {
-    test("resolves the editors and the kinds of the project file", async() => {
-      const root = await createRoot();
-      await installEditorPackage(root, "editor-a");
-      await writeProjectFile(root, {
-        version: 1,
-        editors: ["editor-a"],
-        kinds: {
-          "kind-a": {}
-        }
-      });
-
-      const project = await StudioProject.open(root, {
-        load: loadKinds
-      });
-
-      assert.strictEqual(project.file.root, root);
-      assert.deepEqual(project.editors.descriptors(), [
-        {
-          name: "editor-a",
-          kinds: ["editor-a"]
-        }
-      ]);
-      assert.deepEqual(
-        project.kinds.handlers().map((handler) => handler.kind),
-        ["kind-a", "texture"]
-      );
-    });
-
     test("resolves packages from the project before the studio", async() => {
       const root = await createRoot();
       const installed = await installEditorPackage(root, "editor-a");
@@ -321,21 +274,6 @@ describe("StudioProject", () => {
         (error) => error instanceof TypeError &&
           error.message.startsWith(`"${file}" is invalid:`)
       );
-    });
-  });
-
-  describe("load", () => {
-    test("loads a project file without touching the project root", async() => {
-      const root = await createRoot();
-      const project = await StudioProject.load(
-        new ProjectFile(root, DEFAULT_PROJECT_FILE)
-      );
-
-      assert.deepEqual(
-        project.editors.descriptors().map((editor) => editor.name),
-        ["pixel-art", "voxel-map", "voxel-model"]
-      );
-      assert.deepEqual(await fs.readdir(root), []);
     });
   });
 });

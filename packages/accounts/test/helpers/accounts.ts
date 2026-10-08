@@ -6,6 +6,7 @@ import type { PasswordHash } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import { Username } from "#src/account/Username.ts";
+import { SqliteDatabase } from "#src/store/SqliteDatabase.ts";
 import {
   Accounts,
   AccountStore,
@@ -37,7 +38,9 @@ export function createStore(
   options: AccountStoreOptions = {}
 ): AccountStore {
   return new AccountStore(
-    new DatabaseSync(":memory:"),
+    new SqliteDatabase(
+      new DatabaseSync(":memory:")
+    ),
     options
   );
 }

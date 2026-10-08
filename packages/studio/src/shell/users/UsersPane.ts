@@ -80,7 +80,6 @@ export class UsersPane extends LitElement {
     return html`
       <jolly-tree
         indent-guides
-        swatch-position="start"
         .nodes=${model.nodes}
         .expanded=${this.#expanded(model)}
         @jolly-toggle-expand=${this.#onToggleExpand}

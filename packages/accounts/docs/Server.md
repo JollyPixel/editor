@@ -43,12 +43,15 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
   role: account.role,
   profile: {
     username: account.username,
-    peerId: account.id
+    peerId: account.id,
+    avatar: "/api/accounts/<id>/avatar?v=<hash>"
   }
 }
 ```
 
-The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A role change applies on the next connection.
+The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A role change or a new avatar applies on the next connection.
+
+`avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `path`.
 
 ### `extension`
 
@@ -74,19 +77,29 @@ Throws `AccountChangeRefusedError` when `role` is not one of `roles`, for an unk
 
 Deletes the account and its sessions. Throws `AccountChangeRefusedError` for an unknown account or the last admin.
 
+### `replaceAvatar(accountId, image)`
+
+Encodes `image` with [`AvatarImage.encode`](#avatarimage), stores it in place of the account's previous avatar and resolves to the account, whose `avatar` is the new path. Throws `InvalidAvatarError` for bytes that are not an image, and `AccountChangeRefusedError` for an unknown account.
+
+### `avatar(accountId)`
+
+The stored `{ hash, bytes }` WebP, or `null`.
+
 ### `[Symbol.iterator]()`
 
 The accounts, oldest first.
 
 ### `"changed"` event
 
-Emitted after `register`, `assignRole` and `remove`.
+Emitted after `register`, `assignRole`, `remove` and `replaceAvatar`.
 
-Every account the methods return carries its effective role: a role that is no longer declared reads as the default one.
+Every account the methods return carries its effective role: a role that is no longer declared reads as the default one. Its `avatar` is `path` followed by `<id>/avatar?v=<hash>`.
 
 ## `AccountStore`
 
 Users and their sessions in one SQLite database (`node:sqlite`). It stores what it is given and checks nothing against the roles.
+
+Its methods return a [`StoredAccount`](#storedaccount): an `Account` whose `avatar` path is replaced by `avatarHash`, the hash of the stored avatar or `null`. `Accounts` turns the hash into the path.
 
 ### `AccountStore.open(location?, options?)`
 
@@ -126,6 +139,14 @@ Stores `role` as is. Throws `AccountChangeRefusedError` for an unknown account o
 
 Deletes the account and its sessions. Throws `AccountChangeRefusedError` for an unknown account or the last admin.
 
+### `replaceAvatar(accountId, avatar)`
+
+Stores `avatar`, a `{ hash, bytes }`, in place of the account's previous one and returns the account. Throws `AccountChangeRefusedError` for an unknown account. Avatars live in their own table and are deleted with their account.
+
+### `avatar(accountId)`
+
+The stored `{ hash, bytes }`, or `null`.
+
 ### `size`
 
 The number of accounts.
@@ -137,6 +158,34 @@ The accounts, oldest first.
 ### `close()`
 
 Closes the database. The store is also `Disposable`.
+
+## `StoredAccount`
+
+An immutable account as the store keeps it, with readonly `id`, `username`, `role` and `avatarHash` fields.
+
+### `isAdmin`
+
+`true` when `role` is `"admin"`.
+
+### `withRole(role)` and `withAvatar(avatarHash)`
+
+A copy with the given role or avatar hash.
+
+## `AvatarImage`
+
+An uploaded avatar, encoded for storage. Only `@jolly-pixel/accounts/node` loads `sharp`.
+
+### `AvatarImage.encode(input)`
+
+Decodes `input` with `sharp` and resolves to a 128px square (`AVATAR_SIZE_PX`) WebP: oriented from its EXIF tag, cropped to its center, with every metadata block dropped. An image smaller than 128px is scaled up with nearest-neighbour, so pixel art stays sharp. Only the first frame of an animation is kept. It throws `InvalidAvatarError` for bytes `sharp` cannot decode, or past 4096 by 4096 pixels.
+
+### `hash`
+
+The first 16 hex characters of the SHA-256 of `bytes`. Clients put it in the avatar URL, so a new avatar is a new URL.
+
+### `bytes`
+
+The WebP file.
 
 ## `AccountRoles`
 
@@ -179,7 +228,7 @@ The session token, or `null`. A browser sends the cookie with any request, inclu
 
 ## HTTP routes
 
-Bodies are JSON with a `Content-Length` of at most 4 KiB. Errors answer `{ code, message }`, where `code` is an `AccountsErrorCode`. A request whose `Origin` does not match its `Host` answers 403 `cross-origin`. Requests outside `path`, or on an unknown route, go to `next()`.
+Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. Errors answer `{ code, message }`, where `code` is an `AccountsErrorCode`. A request whose `Origin` does not match its `Host` answers 403 `cross-origin`. Requests outside `path`, or on an unknown route, go to `next()`.
 
 ### `POST register`
 
@@ -197,6 +246,14 @@ Closes the session, clears the cookie and answers 204.
 
 Answers `{ account }` for the session, or 401 `unauthenticated`.
 
+### `PUT avatar`
+
+The body is an image of at most 2 MiB (`AVATAR_MAX_BYTES`), with a `Content-Length`. It replaces the avatar of the session's account and answers 200 with `{ account }`. Without a session it answers 401 `unauthenticated`, past the limit 413 `payload-too-large`, and for bytes that are not an image 422 `invalid-avatar`.
+
+### `GET <id>/avatar`
+
+Answers the account's avatar as `image/webp`, or 404 `not-found`. No session is needed: account ids are random UUIDs. When `?v=` names the current hash, the reply is cached as `immutable` for a year; otherwise it is `no-cache`. `Cross-Origin-Resource-Policy: same-origin` keeps other sites from embedding it.
+
 > [!WARNING]
 > The pre-hash is still the credential: whoever reads it can sign in. Expose the routes over HTTPS only. Browsers also only provide `crypto.subtle` on HTTPS and localhost.
 
@@ -204,13 +261,13 @@ Answers `{ account }` for the session, or 401 `unauthenticated`.
 
 A roster for every member, and account management for admins.
 
-Every member receives `accounts:roster` on join and again whenever a member joins or leaves or the accounts change:
+Every member receives `accounts:roster` on join and again whenever a member joins or leaves or the accounts change, including a new avatar:
 
 ```ts
 {
   type: "accounts:roster",
   roles: string[],
-  accounts: { id: string; username: string; role: string; online: boolean; }[]
+  accounts: { id: string; username: string; role: string; avatar?: string; online: boolean; }[]
 }
 ```
 

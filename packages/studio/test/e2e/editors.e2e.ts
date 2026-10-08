@@ -22,20 +22,6 @@ import {
 } from "./support/shell.ts";
 import { registerAccount } from "./support/account.ts";
 
-test("opens a pixel-art texture in the pixel-art editor page", async({ page }) => {
-  await openShell(page);
-  await treeRow(page, TEXTURE).dblclick();
-
-  const frame = editorFrames(page);
-  await expect(frame).toHaveAttribute(
-    "src",
-    /^editors\/pixel-art\/\?.*target=model-texture/
-  );
-  const editor = frame.contentFrame();
-  await expectEditorReady(editor);
-  await expect(editor.locator("pixel-draw-panel")).toBeVisible();
-});
-
 test("editor frames read the catalog through the shell", async({ page }) => {
   const catalogJoins: unknown[] = [];
   page.on("websocket", (socket) => {

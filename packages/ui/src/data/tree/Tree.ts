@@ -47,6 +47,7 @@ import {
 
 // Registers the chevron, eye, lock and drag glyphs.
 import "../../icon/Icon.ts";
+import "../../peer/Avatar.ts";
 import { originatesInButton } from "../../dom.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 
@@ -338,9 +339,7 @@ export class Tree<TData = unknown> extends LitElement {
           ${!view.branch && view.hasBranches ? html`
             <span class="toggle-spacer"></span>
           ` : nothing}
-          ${view.icon === undefined ? nothing : html`
-            <jolly-icon class="node-icon" name=${view.icon} aria-hidden="true"></jolly-icon>
-          `}
+          ${this.#renderIcon(view)}
           ${view.swatchPosition === "start" ? this.#renderSwatch(view) : nothing}
           ${this.#renderLabel(view)}
           ${view.detail ? html`<span class="detail">${view.detail}</span>` : nothing}
@@ -448,6 +447,28 @@ export class Tree<TData = unknown> extends LitElement {
           style="background: ${badge.color}"
         ></span>
       `)}</span>
+    `;
+  }
+
+  #renderIcon(
+    view: TreeRowView
+  ): TemplateResult | typeof nothing {
+    if (view.avatar !== undefined) {
+      return html`
+        <jolly-avatar
+          class="node-avatar"
+          peer-id=${view.avatar.peerId}
+          color=${view.avatar.color ?? ""}
+          image=${view.avatar.image ?? ""}
+        ></jolly-avatar>
+      `;
+    }
+    if (view.icon === undefined) {
+      return nothing;
+    }
+
+    return html`
+      <jolly-icon class="node-icon" name=${view.icon} aria-hidden="true"></jolly-icon>
     `;
   }
 

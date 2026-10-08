@@ -11,6 +11,8 @@ import type { PeerIdentity } from "../peer/identity.ts";
 import type { PresencePeer } from "../peer/Presence.ts";
 import {
   peerProfileColor,
+  readAvatar,
+  readPeerId,
   readUsername
 } from "./peerProfile.ts";
 
@@ -92,14 +94,16 @@ export class PeerRoster {
 
   #snapshot(): PresencePeer[] {
     const remote = [...this.#room.peers.values()]
-      .map((peer) => {
+      .map((peer): PresencePeer => {
         return {
           clientId: peer.clientId,
           displayName: readUsername(peer.profile),
           color: peerProfileColor(
             peer.clientId,
             peer.profile
-          )
+          ),
+          peerId: readPeerId(peer.profile),
+          avatar: readAvatar(peer.profile)
         };
       })
       .sort((left, right) => left.clientId.localeCompare(right.clientId));
@@ -109,6 +113,8 @@ export class PeerRoster {
         clientId: this.#identity.peerId,
         displayName: this.#identity.username,
         color: this.#identity.color,
+        peerId: this.#identity.peerId,
+        avatar: this.#identity.avatar,
         self: true
       },
       ...remote

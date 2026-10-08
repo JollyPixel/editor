@@ -23,10 +23,13 @@ interface Account {
   id: string;
   username: string;
   role: string;
+  avatar?: string;
 }
 ```
 
 `id` is a random UUID. The network server uses it as the peer `subject`, so the event store records it as the actor, and as the profile `peerId`, so a user keeps one presence colour everywhere. `role` is the effective role: a role that is no longer declared reads as the default one.
+
+`avatar` is the same-origin path of the uploaded avatar, `<path><id>/avatar?v=<hash>`, absent until the account uploads one. It changes with the image, so it can be cached for good. `AVATAR_MAX_BYTES` (2 MiB) is the largest upload.
 
 ## `RosterEntry`
 

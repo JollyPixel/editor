@@ -11,6 +11,7 @@ import { colorFromKey } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import {
   peerProfileColor,
+  readAvatar,
   readPeerId,
   readUsername,
   toPeerMetadata
@@ -21,7 +22,8 @@ describe("peer profile", () => {
     assert.deepEqual(toPeerMetadata({
       username: "Ada",
       peerId: "peer-1",
-      color: "#000000"
+      color: "#000000",
+      avatar: "/avatar.webp"
     }), {
       username: "Ada",
       peerId: "peer-1"
@@ -44,5 +46,21 @@ describe("peer profile", () => {
     assert.equal(readUsername(profile), "Ada");
     assert.equal(readPeerId(profile), "peer-1");
     assert.equal(peerProfileColor("client-1", profile), colorFromKey("peer-1"));
+  });
+
+  test("reads a same-origin avatar path", () => {
+    assert.equal(
+      readAvatar({ avatar: "/api/accounts/a/avatar?v=1" }),
+      "/api/accounts/a/avatar?v=1"
+    );
+  });
+
+  test("ignores an avatar that is missing or points to another origin", () => {
+    assert.equal(readAvatar(undefined), undefined);
+    assert.equal(readAvatar({ avatar: null }), undefined);
+    assert.equal(readAvatar({ avatar: "https://example.com/a.png" }), undefined);
+    assert.equal(readAvatar({ avatar: "//example.com/a.png" }), undefined);
+    assert.equal(readAvatar({ avatar: "/\\example.com/a.png" }), undefined);
+    assert.equal(readAvatar({ avatar: "data:image/png;base64,AA" }), undefined);
   });
 });

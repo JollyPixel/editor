@@ -15,10 +15,12 @@ import {
   name,
   storeWith
 } from "./helpers/accounts.ts";
+import { solidPng } from "./helpers/avatar/images.ts";
 import {
   AccountChangeRefusedError,
   SessionCookie
 } from "#src/node.ts";
+import { InvalidAvatarError } from "#src/index.ts";
 import { PasswordDigest } from "#src/session/PasswordDigest.ts";
 
 // CONSTANTS
@@ -117,6 +119,43 @@ describe("Accounts changes", () => {
   });
 });
 
+describe("Accounts.replaceAvatar", () => {
+  test("encodes the image, stores it and emits changed", async() => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    using accounts = createAccounts(store);
+    let changes = 0;
+    accounts.on("changed", () => {
+      changes++;
+    });
+
+    const account = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
+
+    assert.equal(changes, 1);
+    assert.equal(
+      account.avatar,
+      `/api/accounts/${alice.id}/avatar?v=${accounts.avatar(alice.id)?.hash}`
+    );
+  });
+
+  test("refuses an undecodable image without emitting", async() => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    using accounts = createAccounts(store);
+    let changes = 0;
+    accounts.on("changed", () => {
+      changes++;
+    });
+
+    await assert.rejects(
+      accounts.replaceAvatar(alice.id, new Uint8Array([1, 2, 3])),
+      InvalidAvatarError
+    );
+    assert.equal(changes, 0);
+    assert.equal(accounts.avatar(alice.id), null);
+  });
+});
+
 describe("Accounts.authenticate", () => {
   test("identifies the account of a same-origin upgrade", () => {
     using store = storeWith("Alice");
@@ -133,10 +172,24 @@ describe("Accounts.authenticate", () => {
         role: "admin",
         profile: {
           username: "Alice",
-          peerId: alice.id
+          peerId: alice.id,
+          avatar: null
         }
       }
     );
+  });
+
+  test("points the profile at the uploaded avatar", async() => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    using accounts = createAccounts(store);
+    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
+
+    const identity = accounts.authenticate(upgrade({
+      cookie: `jolly_session=${store.openSession(alice.id)}`
+    }));
+
+    assert.equal(identity?.profile?.avatar, avatar);
   });
 
   test("ignores the cookie of an upgrade from another origin", () => {

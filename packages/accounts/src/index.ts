@@ -8,3 +8,4 @@ export * from "./room/errors/AccountsRejectedError.ts";
 export * from "./http/errors/AccountsRequestError.ts";
 export * from "./session/errors/InvalidPasswordError.ts";
 export * from "./account/errors/InvalidUsernameError.ts";
+export * from "./avatar/errors/InvalidAvatarError.ts";

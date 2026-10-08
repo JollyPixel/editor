@@ -1,6 +1,9 @@
 // Import Node.js Dependencies
 import type { IncomingMessage } from "node:http";
-import { json } from "node:stream/consumers";
+import {
+  buffer,
+  json
+} from "node:stream/consumers";
 import { TLSSocket } from "node:tls";
 
 // Import Third-party Dependencies
@@ -47,7 +50,7 @@ export class AccountsRequest {
   }
 
   expect(
-    method: "GET" | "POST"
+    method: "GET" | "POST" | "PUT"
   ): void {
     if (this.#message.method !== method) {
       throw new AccountsRequestError(
@@ -56,6 +59,15 @@ export class AccountsRequest {
         `expected ${method}`
       );
     }
+  }
+
+  query(
+    name: string
+  ): string | null {
+    return URL.parse(
+      this.#message.url ?? "",
+      "http://localhost"
+    )?.searchParams.get(name) ?? null;
   }
 
   sessionToken(
@@ -82,7 +94,34 @@ export class AccountsRequest {
     };
   }
 
+  async bytes(
+    maxBytes: number
+  ): Promise<Uint8Array> {
+    this.#expectLength(maxBytes);
+
+    return new Uint8Array(
+      await buffer(this.#message)
+    );
+  }
+
   async #json(): Promise<unknown> {
+    this.#expectLength(kMaxBodyBytes);
+
+    try {
+      return await json(this.#message);
+    }
+    catch {
+      throw new AccountsRequestError(
+        400,
+        "invalid-request",
+        "the request body is not JSON"
+      );
+    }
+  }
+
+  #expectLength(
+    maxBytes: number
+  ): void {
     const length = Number(
       this.#message.headers["content-length"] ?? Number.NaN
     );
@@ -93,22 +132,11 @@ export class AccountsRequest {
         "the request body has no length"
       );
     }
-    if (length > kMaxBodyBytes) {
+    if (length > maxBytes) {
       throw new AccountsRequestError(
         413,
         "payload-too-large",
         "the request body is too large"
-      );
-    }
-
-    try {
-      return await json(this.#message);
-    }
-    catch {
-      throw new AccountsRequestError(
-        400,
-        "invalid-request",
-        "the request body is not JSON"
       );
     }
   }

@@ -15,13 +15,17 @@ import {
 } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
-import type { Account } from "./account/Account.ts";
+import {
+  ACCOUNTS_URL_PATH,
+  type Account
+} from "./account/Account.ts";
 import type { Username } from "./account/Username.ts";
 import type { AccountRoles } from "./auth/AccountRoles.ts";
 import {
   AccountStore,
   type AccountStoreOptions
 } from "./store/AccountStore.ts";
+import type { StoredAccount } from "./store/StoredAccount.ts";
 import { SessionCookie } from "./session/SessionCookie.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
 import {
@@ -31,6 +35,10 @@ import {
 import type { LoginThrottleOptions } from "./http/LoginLimiter.ts";
 import { AccountsExtension } from "./room/AccountsExtension.ts";
 import { AccountChangeRefusedError } from "./store/errors/AccountChangeRefusedError.ts";
+import {
+  AvatarImage,
+  type StoredAvatar
+} from "./avatar/AvatarImage.ts";
 
 export interface AccountsOptions {
   store: AccountStore;
@@ -83,6 +91,7 @@ export class Accounts extends Emitter<AccountsEventMap>
 
   readonly roles: AccountRoles;
   readonly cookie: SessionCookie;
+  readonly path: string;
   readonly sessionTtlMs: number;
   readonly handler: AccountsHandler;
   readonly extension: AccountsExtension;
@@ -97,6 +106,7 @@ export class Accounts extends Emitter<AccountsEventMap>
     this.#store = options.store;
     this.roles = options.roles;
     this.cookie = options.cookie ?? new SessionCookie();
+    this.path = options.path ?? ACCOUNTS_URL_PATH;
     this.sessionTtlMs = options.store.sessionTtlMs;
     this.handler = createAccountsHandler(this, options);
     this.extension = new AccountsExtension(this);
@@ -163,7 +173,7 @@ export class Accounts extends Emitter<AccountsEventMap>
     const account = this.#store.assignRole(username, role);
     this.emit("changed");
 
-    return account;
+    return this.#effective(account);
   }
 
   remove(
@@ -172,7 +182,24 @@ export class Accounts extends Emitter<AccountsEventMap>
     const account = this.#store.remove(username);
     this.emit("changed");
 
-    return account;
+    return this.#effective(account);
+  }
+
+  async replaceAvatar(
+    accountId: string,
+    image: Uint8Array
+  ): Promise<Account> {
+    const avatar = await AvatarImage.encode(image);
+    const account = this.#store.replaceAvatar(accountId, avatar);
+    this.emit("changed");
+
+    return this.#effective(account);
+  }
+
+  avatar(
+    accountId: string
+  ): StoredAvatar | null {
+    return this.#store.avatar(accountId);
   }
 
   authenticate(
@@ -189,7 +216,8 @@ export class Accounts extends Emitter<AccountsEventMap>
       role: account.role,
       profile: {
         username: account.username,
-        peerId: account.id
+        peerId: account.id,
+        avatar: account.avatar ?? null
       }
     };
   }
@@ -206,7 +234,7 @@ export class Accounts extends Emitter<AccountsEventMap>
   }
 
   #open(
-    account: Account
+    account: StoredAccount
   ): AccountSession {
     return {
       token: this.#store.openSession(account.id),
@@ -215,11 +243,15 @@ export class Accounts extends Emitter<AccountsEventMap>
   }
 
   #effective(
-    account: Account
+    account: StoredAccount
   ): Account {
     return {
-      ...account,
-      role: this.roles.effective(account.role)
+      id: account.id,
+      username: account.username,
+      role: this.roles.effective(account.role),
+      avatar: account.avatarHash === null ?
+        undefined :
+        `${this.path}${account.id}/avatar?v=${account.avatarHash}`
     };
   }
 

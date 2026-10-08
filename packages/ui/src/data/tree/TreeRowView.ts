@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { IconName } from "../../icon/registry.ts";
+import type { PeerAvatar } from "../../peer/Avatar.ts";
 import type {
   TreeBadge,
   TreeDropWhere,
@@ -35,6 +36,7 @@ export class TreeRowView {
   readonly id: string;
   readonly label: string;
   readonly icon: IconName | undefined;
+  readonly avatar: Readonly<PeerAvatar> | undefined;
   readonly detail: string | undefined;
   readonly warning: string | undefined;
   readonly visible: boolean | undefined;
@@ -73,6 +75,9 @@ export class TreeRowView {
     this.id = node.id;
     this.label = node.label;
     this.icon = node.icon;
+    this.avatar = node.avatar === undefined ?
+      undefined :
+      Object.freeze({ ...node.avatar });
     this.detail = node.detail;
     this.warning = node.warning;
     this.visible = node.visible;
@@ -109,6 +114,7 @@ export class TreeRowView {
     return this.id === other.id &&
       this.label === other.label &&
       this.icon === other.icon &&
+      sameAvatar(this.avatar, other.avatar) &&
       this.detail === other.detail &&
       this.warning === other.warning &&
       this.visible === other.visible &&
@@ -132,6 +138,19 @@ export class TreeRowView {
       sameSwatch(this.swatch, other.swatch) &&
       sameBadges(this.badges, other.badges);
   }
+}
+
+function sameAvatar(
+  left: Readonly<PeerAvatar> | undefined,
+  right: Readonly<PeerAvatar> | undefined
+): boolean {
+  if (left === undefined || right === undefined) {
+    return left === right;
+  }
+
+  return left.peerId === right.peerId &&
+    left.color === right.color &&
+    left.image === right.image;
 }
 
 function sameSwatch(

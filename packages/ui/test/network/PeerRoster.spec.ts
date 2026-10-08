@@ -75,9 +75,28 @@ describe("PeerRoster", () => {
         clientId: "local-peer",
         displayName: "Ada",
         color: kLocalIdentity.color,
+        peerId: "local-peer",
+        avatar: undefined,
         self: true
       }
     ]);
+  });
+
+  test("shows the local avatar given by the identity", () => {
+    const harness = createRoomHarness();
+    let peers: readonly PresencePeer[] = [];
+    new PeerRoster({
+      room: harness.room,
+      identity: {
+        ...kLocalIdentity,
+        avatar: "/api/accounts/local-peer/avatar?v=1"
+      },
+      publish: (next) => {
+        peers = next;
+      }
+    });
+
+    assert.strictEqual(peers[0].avatar, "/api/accounts/local-peer/avatar?v=1");
   });
 
   test("lists the members carried by the join sync", () => {
@@ -117,6 +136,32 @@ describe("PeerRoster", () => {
       harness.peers()[1].color,
       peerProfileColor("another-connection", { peerId: "shared" })
     );
+  });
+
+  test("keys a remote avatar on the stamped peerId and carries its image", () => {
+    const harness = createHarness();
+    harness.addPeer("client-a", {
+      profile: {
+        username: "Alan",
+        peerId: "a",
+        avatar: "/api/accounts/a/avatar?v=2"
+      }
+    });
+
+    harness.emit("peer-joined", { clientId: "client-a" });
+
+    assert.strictEqual(harness.peers()[1].peerId, "a");
+    assert.strictEqual(harness.peers()[1].avatar, "/api/accounts/a/avatar?v=2");
+  });
+
+  test("leaves the peerId and avatar of an unstamped peer to the presence defaults", () => {
+    const harness = createHarness();
+    harness.addPeer("client-a", { profile: {} });
+
+    harness.emit("peer-joined", { clientId: "client-a" });
+
+    assert.strictEqual(harness.peers()[1].peerId, undefined);
+    assert.strictEqual(harness.peers()[1].avatar, undefined);
   });
 
   test("reads a peer that joined without an identity as a guest", () => {

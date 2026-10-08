@@ -485,7 +485,9 @@ A shell that listens on its own window narrows what a frame posts with
 without an invalid `appearance`, with a missing or invalid `identity` as
 `null` and with `ports` reset to `{}` when they are not ports, or `undefined`.
 
-`identity` is `{ username, peerId }`; parsing drops any other field.
+`identity` is `{ username, peerId, avatar? }`, where `avatar` is the
+same-origin path of an uploaded image; parsing drops any other field and an
+`avatar` that is not a string.
 The channel exposes it as a `PeerIdentity` colored from `peerId`, and
 `EditorSession.open` joins as that peer instead of prompting, so every frame
 of one shell shares a name and a presence color.
