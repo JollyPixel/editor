@@ -4,18 +4,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Physics — @jolly-pixel/voxel.renderer</title>
-  <link rel="stylesheet" href="/main.css">
+  <title>Examples - @jolly-pixel/voxel.renderer</title>
+  <link rel="stylesheet" href="./landing.css">
 </head>
 
-<body class="light">
-  <canvas tabindex="-1"></canvas>
-  <jolly-scope>
-    <jolly-dock-layout storage-key="voxel-renderer-examples:layout">
-      <jolly-dock id="tools" key="tools" side="right" align="start" overlay collapsible size="340"></jolly-dock>
-    </jolly-dock-layout>
-  </jolly-scope>
-  <script type="module" src="./scripts/demo-physics.ts"></script>
+<body>
+  <main>
+    <header>
+      <h1>@jolly-pixel/voxel.renderer</h1>
+      <p>Interactive examples. Press <kbd>F3</kbd> in any example to toggle its dock.</p>
+    </header>
+    <div id="examples"></div>
+  </main>
+  <script type="module" src="./landing.ts"></script>
 </body>
 
 </html>

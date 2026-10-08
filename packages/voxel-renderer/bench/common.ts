@@ -8,12 +8,11 @@ import { VoxelDocument } from "../src/document/VoxelDocument.ts";
 import { VoxelView } from "../src/view/VoxelView.ts";
 import type { MeshWorkerOptions } from "../src/view/workers/ChunkMeshWorkers.ts";
 import type { BlockDefinition } from "../src/document/blocks/BlockDefinition.ts";
-import { TerrainBlock } from "../examples/scripts/noise-world/blocks.ts";
+import { TerrainBlock } from "../examples/noise-world/blocks.ts";
 import {
   generateTerrain,
-  type TerrainOptions,
-  type TerrainStats
-} from "../examples/scripts/noise-world/terrain.ts";
+  type TerrainOptions
+} from "../examples/noise-world/terrain.ts";
 
 // CONSTANTS
 export const TERRAIN_LAYER = "Terrain";
@@ -21,6 +20,10 @@ export const WATER_LAYER = "Water";
 export const TILE_SIZE = 8;
 export const COLS = 4;
 const kFrameMs = 1000 / 60;
+
+export interface PopulatedTerrain {
+  voxelCount: number;
+}
 
 /**
  * Creates a `VoxelView` pre-wired for terrain generation benchmarks.
@@ -65,10 +68,10 @@ export function createBenchView(
 export function populateTerrain(
   view: VoxelView,
   options: TerrainOptions
-): TerrainStats {
+): PopulatedTerrain {
   const terrain: number[] = [];
   const water: number[] = [];
-  const stats = generateTerrain(
+  generateTerrain(
     (position, blockId) => {
       (blockId === TerrainBlock.Water ? water : terrain)
         .push(position.x, position.y, position.z, blockId, 0);
@@ -78,7 +81,9 @@ export function populateTerrain(
   view.document.world.patchVoxels(TERRAIN_LAYER, terrain);
   view.document.world.patchVoxels(WATER_LAYER, water);
 
-  return stats;
+  return {
+    voxelCount: (terrain.length + water.length) / 5
+  };
 }
 
 function terrainBlocks(): BlockDefinition[] {

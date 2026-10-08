@@ -11,7 +11,7 @@ import {
 } from "./common.ts";
 
 /**
- * Headless replay of `demo-noise-world`: generate terrain, then mesh dirty
+ * Headless replay of the `noise-world` example: generate terrain, then mesh dirty
  * chunks. Measures the same two phases shown in the demo HUD.
  *
  * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--workers 0]

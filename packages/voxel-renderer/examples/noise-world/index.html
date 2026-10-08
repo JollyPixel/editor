@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noise World - @jolly-pixel/voxel.renderer</title>
+  <link rel="stylesheet" href="/main.css">
+</head>
+
+<body class="sky">
+  <canvas tabindex="-1"></canvas>
+  <div id="title">Noise World</div>
+  <jolly-scope>
+    <jolly-controls
+      position="bottom-left"
+      max-entries-per-row="1"
+      heading="Controls"
+    >
+      <jolly-control
+        description="Move"
+        details="Move across the terrain relative to the camera direction."
+      ><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></jolly-control>
+      <jolly-control
+        description="Ascend"
+        details="Move upward while the key is held."
+      ><kbd>Space</kbd></jolly-control>
+      <jolly-control
+        description="Descend"
+        details="Move downward while the key is held."
+      ><kbd>Shift</kbd></jolly-control>
+      <jolly-control
+        description="Look around"
+        details="Hold the middle mouse button, or Alt with the left button, and drag to rotate the camera."
+      ><kbd>Middle drag</kbd><kbd>Alt</kbd><kbd>Left drag</kbd></jolly-control>
+      <jolly-control
+        description="Fly speed"
+        details="Scroll to change how fast the camera moves."
+      ><kbd>Wheel</kbd></jolly-control>
+      <jolly-control
+        description="Rebuild world"
+        details="Generate the terrain again using the next seed."
+      ><kbd>R</kbd></jolly-control>
+      <jolly-control
+        description="Mesh debug"
+        details="Cycle the voxel mesh debug modes."
+      ><kbd>G</kbd></jolly-control>
+      <jolly-control
+        description="Configuration"
+        details="Show or hide the configuration panel."
+      ><kbd>F3</kbd></jolly-control>
+    </jolly-controls>
+  </jolly-scope>
+  <script type="module" src="./main.ts"></script>
+</body>
+
+</html>
