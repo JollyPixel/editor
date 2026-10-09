@@ -17,11 +17,11 @@ import {
   DEFAULT_PROJECT_FILE,
   PROJECT_ROOT_ENV,
   StudioProject
-} from "../../server/StudioProject.ts";
+} from "../../../server/project/StudioProject.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kBase = path.resolve("/studio");

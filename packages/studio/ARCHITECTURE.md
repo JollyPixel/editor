@@ -58,6 +58,9 @@ flowchart TB
   authenticates with it and registers its `accounts` room, and
   `vite/accountsPlugin` serves its `/api/accounts/` handler.
 - The session cookie is named after the project root: cookies ignore ports.
+- `StudioProject.privateFiles` lists the globs Vite must not serve: every
+  `.jollypixel/` folder and the project's asset files. Assets reach the
+  browser through the catalog only, which applies the rights table.
 
 | Mode | Project file | Back-end | Editor pages |
 |---|---|---|---|
@@ -234,7 +237,9 @@ flowchart TB
 
 | Path | Role |
 |---|---|
-| `server/` | project file, editor packages and pages, no Vite |
+| `server/project/` | project file, `access` section, private files |
+| `server/editors/` | editor packages and pages, dist watcher |
+| `server/accounts.ts` | project accounts |
 | `vite.config.ts`, `vite/` | Vite plugins |
 | `src/index.ts` | boot |
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog, offline fallback |

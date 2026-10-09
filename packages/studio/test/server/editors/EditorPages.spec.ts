@@ -11,10 +11,10 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 // Import Internal Dependencies
-import { EditorPackage } from "../../server/EditorPackage.ts";
-import { EditorPackages } from "../../server/EditorPackages.ts";
-import { EditorPages } from "../../server/EditorPages.ts";
-import { EDITOR_PAGE_SETTLE_MS } from "../../server/EditorPagesWatcher.ts";
+import { EditorPackage } from "../../../server/editors/EditorPackage.ts";
+import { EditorPackages } from "../../../server/editors/EditorPackages.ts";
+import { EditorPages } from "../../../server/editors/EditorPages.ts";
+import { EDITOR_PAGE_SETTLE_MS } from "../../../server/editors/EditorPagesWatcher.ts";
 import {
   BUNDLE,
   createDist,
@@ -25,11 +25,11 @@ import {
   voxelMapEditor,
   voxelMapPages,
   type PagesServer
-} from "../helpers/editorPages.ts";
+} from "../../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 describe("EditorPages", () => {
   let dist: string;

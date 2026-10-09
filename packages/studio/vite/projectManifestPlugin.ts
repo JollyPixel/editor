@@ -16,7 +16,7 @@ import {
   PROJECT_MANIFEST_FILE,
   ProjectManifest
 } from "../src/editors/ProjectManifest.ts";
-import type { StudioProject } from "../server/StudioProject.ts";
+import type { StudioProject } from "../server/project/StudioProject.ts";
 
 // CONSTANTS
 const kManifestPathname = `/${PROJECT_MANIFEST_FILE}`;

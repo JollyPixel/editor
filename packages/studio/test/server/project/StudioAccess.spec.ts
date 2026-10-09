@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_ACCESS,
   StudioAccess
-} from "../../server/StudioAccess.ts";
+} from "../../../server/project/StudioAccess.ts";
 
 // CONSTANTS
 const kSource = "project.json";

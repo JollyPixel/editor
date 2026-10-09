@@ -14,7 +14,7 @@ import {
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
-import type { StudioProject } from "./StudioProject.ts";
+import type { StudioProject } from "./project/StudioProject.ts";
 
 // CONSTANTS
 const kDatabaseFile = "accounts.db";
@@ -43,6 +43,14 @@ export interface StudioAccountsOptions {
    * @default {}
    */
   env?: Record<string, string | undefined>;
+  /**
+   * Warned when `JOLLY_MASTER_PASSWORD` is not set and registration is open.
+   */
+  logger?: StudioAccountsLogger;
+}
+
+export interface StudioAccountsLogger {
+  warn(message: string): void;
 }
 
 export async function openStudioAccounts(
@@ -68,16 +76,16 @@ export async function openStudioAccounts(
     throttle: options.throttle,
     masterPassword: masterPasswordFor(
       project,
-      options.env ?? {}
+      options
     )
   });
 }
 
 function masterPasswordFor(
   project: StudioProject,
-  env: Record<string, string | undefined>
+  options: StudioAccountsOptions
 ): MasterPasswordOptions | undefined {
-  const secret = env[kMasterPasswordEnv];
+  const secret = options.env?.[kMasterPasswordEnv];
   const { accessRequests } = project.access;
   if (secret === undefined || secret === "") {
     if (accessRequests) {
@@ -85,6 +93,10 @@ function masterPasswordFor(
         `"${project.file.path}" sets accessRequests but ${kMasterPasswordEnv} is not set`
       );
     }
+    options.logger?.warn(
+      `${kMasterPasswordEnv} is not set: anyone who reaches this server ` +
+      "can register, and the first account becomes admin"
+    );
 
     return undefined;
   }

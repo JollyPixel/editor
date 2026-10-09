@@ -9,7 +9,7 @@ import {
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "../src/editors/EditorDescriptor.ts";
+} from "../../src/editors/EditorDescriptor.ts";
 import { DistSnapshot } from "./DistSnapshot.ts";
 import type { EditorPackage } from "./EditorPackage.ts";
 

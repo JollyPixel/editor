@@ -28,12 +28,12 @@ import {
 
 // Import Internal Dependencies
 import { PROJECT_MANIFEST_FILE } from "../../src/editors/ProjectManifest.ts";
-import { EditorPackages } from "../../server/EditorPackages.ts";
+import { EditorPackages } from "../../server/editors/EditorPackages.ts";
 import {
   STUDIO_ROOT,
   StudioProject
-} from "../../server/StudioProject.ts";
-import { StudioAccess } from "../../server/StudioAccess.ts";
+} from "../../server/project/StudioProject.ts";
+import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { projectManifestPlugin } from "../../vite/projectManifestPlugin.ts";
 import {
   listen,

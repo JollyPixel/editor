@@ -6,7 +6,7 @@ import path from "node:path";
 import * as z from "zod";
 
 // Import Internal Dependencies
-import type { EditorDescriptor } from "../src/editors/EditorDescriptor.ts";
+import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
 
 // CONSTANTS
 const kInstallFolder = "node_modules";

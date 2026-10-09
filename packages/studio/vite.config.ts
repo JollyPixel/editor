@@ -1,9 +1,13 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
 import path from "node:path";
+import { loadEnvFile } from "node:process";
+
+loadEnvFile();
 
 // Import Third-party Dependencies
 import {
+  createLogger,
   defineConfig,
   searchForWorkspaceRoot,
   type Plugin,
@@ -23,12 +27,12 @@ import {
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { EditorPages } from "./server/EditorPages.ts";
+import { EditorPages } from "./server/editors/EditorPages.ts";
 import {
   ACCOUNTS_STATE_IGNORES,
   openStudioAccounts
 } from "./server/accounts.ts";
-import { StudioProject } from "./server/StudioProject.ts";
+import { StudioProject } from "./server/project/StudioProject.ts";
 import { accountsPlugin } from "./vite/accountsPlugin.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
 import { projectManifestPlugin } from "./vite/projectManifestPlugin.ts";
@@ -44,6 +48,14 @@ const kBlocksetFile = path.join(
 const kRoomGraceMs = 5 * 60_000;
 const kE2EDefaultRole = "member";
 const kE2ERegistrations = 1_000;
+const kViteDefaultDeny = [
+  ".env",
+  ".env.*",
+  "*.{crt,pem,key,p12,pfx,cer,der}",
+  ".npmrc",
+  ".yarnrc.yml",
+  "**/.git/**"
+];
 
 async function assetWorkspacePlugin(
   project: StudioProject,
@@ -85,7 +97,8 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
         registrations: kE2ERegistrations
       }
     } : {
-      env: process.env
+      env: process.env,
+      logger: createLogger()
     }
   );
 
@@ -102,6 +115,10 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
         allow: [
           searchForWorkspaceRoot(import.meta.dirname),
           ...project.kinds.resolver.directories
+        ],
+        deny: [
+          ...kViteDefaultDeny,
+          ...project.privateFiles
         ]
       }
     },
