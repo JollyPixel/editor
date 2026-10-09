@@ -17,11 +17,9 @@ import {
   TRACK_STATE_LABELS,
   type TrackBindingRow
 } from "./trackBindingRows.ts";
-import { ContextMenuController } from "../../../shared/ContextMenuController.ts";
-import {
-  EMPTY_MENU,
-  menuPointBelow
-} from "../../../shared/menuSession.ts";
+import { ContextMenuController } from "../../../shared/menu/ContextMenuController.ts";
+import { MenuSession } from "../../../shared/menu/MenuSession.ts";
+import { menuPointBelow } from "../../../shared/menu/menuPointBelow.ts";
 
 export class TrackBindings extends LitElement {
   static override styles = css`
@@ -81,7 +79,7 @@ export class TrackBindings extends LitElement {
   });
   #menu = new ContextMenuController(
     () => this.renderRoot.querySelector<ContextMenu>("jolly-context-menu")!,
-    () => EMPTY_MENU
+    () => MenuSession.EMPTY
   );
 
   attach(

@@ -10,7 +10,7 @@ import {
   MATERIAL_PRESETS,
   type MaterialPreset
 } from "./materialPresets.ts";
-import { surfaceSwatch } from "../../../shared/materialSwatch.ts";
+import { surfaceSwatch } from "../materialSwatch.ts";
 
 export function presetIcon(
   preset: MaterialPreset

@@ -10,7 +10,7 @@ import {
   blockIdsUnder,
   type HierarchyNode
 } from "../../model/index.ts";
-import { materialSwatch } from "../../shared/materialSwatch.ts";
+import { materialSwatch } from "../material/materialSwatch.ts";
 
 export function toTreeNodes(
   nodes: readonly HierarchyNode[],

@@ -14,7 +14,7 @@ describe("ExpandedRows", () => {
 
     rows.expand("a");
     rows.expand("a");
-    rows.set("b", true);
+    rows.toggle("b", true);
     rows.toggle("a");
     rows.toggle("c");
 
@@ -27,7 +27,7 @@ describe("ExpandedRows", () => {
     const before = rows.ids;
 
     rows.expand("a");
-    rows.set("b", false);
+    rows.toggle("b", false);
     assert.equal(rows.ids, before);
 
     rows.expand("b");

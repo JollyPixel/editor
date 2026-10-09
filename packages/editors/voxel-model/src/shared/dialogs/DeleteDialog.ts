@@ -35,32 +35,23 @@ export class DeleteDialog extends EditorDialog<
   DeleteResult
 > {
   @state()
-  declare private heading: string;
-
-  @state()
-  declare private hasChildren: boolean;
+  declare private context: DeleteContext;
 
   @state()
   declare private deleteChildren: boolean;
 
-  @state()
-  declare private childrenLabel: string;
-
-  @state()
-  declare private message: string;
-
   constructor() {
     super();
-    this.heading = "";
-    this.hasChildren = false;
+    this.context = {
+      heading: "",
+      hasChildren: false
+    };
     this.deleteChildren = true;
-    this.childrenLabel = kChildrenLabel;
-    this.message = "";
   }
 
   protected get frame(): EditorDialogFrame {
     return {
-      heading: this.heading,
+      heading: this.context.heading,
       icon: "action-delete",
       intent: "danger",
       confirmLabel: "Delete",
@@ -71,16 +62,13 @@ export class DeleteDialog extends EditorDialog<
   protected reset(
     context: DeleteContext
   ): void {
-    this.heading = context.heading;
-    this.hasChildren = context.hasChildren;
-    this.childrenLabel = context.childrenLabel ?? kChildrenLabel;
-    this.message = context.message ?? "";
+    this.context = context;
     this.deleteChildren = true;
   }
 
   protected result(): DeleteResult {
     return {
-      deleteChildren: this.hasChildren && this.deleteChildren
+      deleteChildren: this.context.hasChildren && this.deleteChildren
     };
   }
 
@@ -89,12 +77,18 @@ export class DeleteDialog extends EditorDialog<
   }
 
   protected renderFields(): TemplateResult {
+    const {
+      hasChildren,
+      childrenLabel = kChildrenLabel,
+      message = ""
+    } = this.context;
+
     return html`
-      ${this.message === "" ? nothing : html`<p>${this.message}</p>`}
-      ${this.hasChildren ?
+      ${message === "" ? nothing : html`<p>${message}</p>`}
+      ${hasChildren ?
         html`
           <jolly-checkbox
-            label=${this.childrenLabel}
+            label=${childrenLabel}
             .value=${this.deleteChildren}
             @jolly-change=${this.#onDeleteChildren}
           ></jolly-checkbox>

@@ -12,7 +12,7 @@ import {
   toTreeNodes
 } from "#src/features/hierarchy/hierarchyTreeNodes.ts";
 import type { HierarchyNode } from "#src/model/index.ts";
-import { materialSwatch } from "#src/shared/materialSwatch.ts";
+import { materialSwatch } from "#src/features/material/materialSwatch.ts";
 
 function allVisible(): boolean {
   return true;

@@ -7,7 +7,7 @@ import {
 import type { ModelMaterialJSON } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import { surfaceSwatch } from "../../../shared/materialSwatch.ts";
+import { surfaceSwatch } from "../materialSwatch.ts";
 import { usageRowId } from "./usageRows.ts";
 
 export interface MaterialUser {

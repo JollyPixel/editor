@@ -30,10 +30,7 @@ import type {
   BlockSelectionStore,
   PresenceStore
 } from "../../../state/index.ts";
-import {
-  EMPTY_MENU,
-  type MenuSession
-} from "../../../shared/menuSession.ts";
+import { MenuSession } from "../../../shared/menu/MenuSession.ts";
 
 export interface TimelineWorkspace {
   document: ModelDocument;
@@ -138,7 +135,7 @@ export class TimelineController {
   keyMenu(): MenuSession {
     const keys = this.keys;
     if (keys === undefined || keys.selected.length === 0) {
-      return EMPTY_MENU;
+      return MenuSession.EMPTY;
     }
 
     return keyMenu(keys);
@@ -151,7 +148,7 @@ export class TimelineController {
     const setId = workspace?.animationSession.focused?.set.id;
 
     return workspace === null || setId === undefined ?
-      EMPTY_MENU :
+      MenuSession.EMPTY :
       rebindMenu(workspace.document, setId, path);
   }
 

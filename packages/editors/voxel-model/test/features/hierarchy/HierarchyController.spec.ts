@@ -23,7 +23,7 @@ import {
 import type {
   NameDialogContext,
   NameDialogResult
-} from "#src/shared/NameDialog.ts";
+} from "#src/shared/dialogs/NameDialog.ts";
 import type {
   HierarchyDuplicateContext,
   HierarchyDuplicateResult
@@ -31,7 +31,7 @@ import type {
 import type {
   DeleteContext,
   DeleteResult
-} from "#src/shared/DeleteDialog.ts";
+} from "#src/shared/dialogs/DeleteDialog.ts";
 import {
   buildEditsOf,
   createModelFixture,

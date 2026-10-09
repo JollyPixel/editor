@@ -23,11 +23,9 @@ import type {
 } from "./timelineRows.ts";
 import { keyId } from "./timelineKeys.ts";
 import { TRACK_STATE_LABELS } from "../tracks/trackBindingRows.ts";
-import { ContextMenuController } from "../../../shared/ContextMenuController.ts";
-import {
-  EMPTY_MENU,
-  menuPointBelow
-} from "../../../shared/menuSession.ts";
+import { ContextMenuController } from "../../../shared/menu/ContextMenuController.ts";
+import { MenuSession } from "../../../shared/menu/MenuSession.ts";
+import { menuPointBelow } from "../../../shared/menu/menuPointBelow.ts";
 
 // CONSTANTS
 const kRulerSteps = [1, 2, 5, 10, 12, 24, 30, 60, 120, 240];
@@ -241,7 +239,7 @@ export class Timeline extends LitElement {
   #drag: KeyDrag | null = null;
   #menu = new ContextMenuController(
     () => this.renderRoot.querySelector<ContextMenu>("jolly-context-menu")!,
-    () => EMPTY_MENU
+    () => MenuSession.EMPTY
   );
 
   attach(

@@ -9,7 +9,7 @@ import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 import {
   materialSwatch,
   surfaceGlows
-} from "#src/shared/materialSwatch.ts";
+} from "#src/features/material/materialSwatch.ts";
 
 describe("materialSwatch", () => {
   test("is empty and invites a material when the block has none", () => {

@@ -17,7 +17,7 @@ import type { AnimationFocusStore } from "../../../state/index.ts";
 import type {
   MenuPoint,
   MenuSession
-} from "../../../shared/menuSession.ts";
+} from "../../../shared/menu/MenuSession.ts";
 
 export interface TrackBindingsWorkspace {
   document: ModelDocument;

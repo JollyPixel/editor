@@ -22,7 +22,7 @@ import {
 } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
-import "../../shared/actionIcons.ts";
+import "./historyIcons.ts";
 import type { PresenceStore } from "../../state/index.ts";
 import {
   historyShortcutLabel,

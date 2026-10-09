@@ -4,10 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { TrackBindingsController } from "#src/features/animation/tracks/TrackBindingsController.ts";
-import {
-  EMPTY_MENU,
-  type MenuSession
-} from "#src/shared/menuSession.ts";
+import { MenuSession } from "#src/shared/menu/MenuSession.ts";
 import {
   createAnimatedModel,
   createHost
@@ -15,7 +12,7 @@ import {
 
 function setup() {
   const model = createAnimatedModel();
-  let menu: MenuSession = EMPTY_MENU;
+  let menu = MenuSession.EMPTY;
   const bindings = new TrackBindingsController(createHost(), {
     openMenu: (session) => {
       menu = session;

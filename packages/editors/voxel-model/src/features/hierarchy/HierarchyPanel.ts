@@ -14,17 +14,18 @@ import type {
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
-import "../../shared/NameDialog.ts";
+import "./hierarchyIcons.ts";
+import "../../shared/dialogs/NameDialog.ts";
 import "./dialogs/HierarchyDuplicateDialog.ts";
-import "../../shared/DeleteDialog.ts";
+import "../../shared/dialogs/DeleteDialog.ts";
 import {
   HierarchyController,
   type HierarchyWorkspace
 } from "./HierarchyController.ts";
-import type { NameDialog } from "../../shared/NameDialog.ts";
+import type { NameDialog } from "../../shared/dialogs/NameDialog.ts";
 import type { HierarchyDuplicateDialog } from "./dialogs/HierarchyDuplicateDialog.ts";
-import type { DeleteDialog } from "../../shared/DeleteDialog.ts";
-import { ContextMenuController } from "../../shared/ContextMenuController.ts";
+import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
+import { ContextMenuController } from "../../shared/menu/ContextMenuController.ts";
 
 // CONSTANTS
 export const SHOW_MATERIAL_EVENT = "show-material";

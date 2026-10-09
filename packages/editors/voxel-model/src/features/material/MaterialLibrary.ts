@@ -26,13 +26,14 @@ import type {
 import { materialLibraryStyles } from "./MaterialLibrary.styles.ts";
 import { presetIcon } from "./library/materialIcons.ts";
 import "../../shared/actionIcons.ts";
-import "../../shared/DeleteDialog.ts";
-import type { DeleteDialog } from "../../shared/DeleteDialog.ts";
-import { ContextMenuController } from "../../shared/ContextMenuController.ts";
+import "../../shared/dialogs/DeleteDialog.ts";
+import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
+import { ContextMenuController } from "../../shared/menu/ContextMenuController.ts";
 import {
-  menuSession,
+  MenuSession,
   type MenuPoint
-} from "../../shared/menuSession.ts";
+} from "../../shared/menu/MenuSession.ts";
+import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import type { MaterialAction } from "./library/materialMenu.ts";
 import {
   MaterialLibraryController,
@@ -56,7 +57,7 @@ import {
   type SurfaceField,
   type SurfaceGroup
 } from "./surface/surfaceFields.ts";
-import { surfaceGlows } from "../../shared/materialSwatch.ts";
+import { surfaceGlows } from "./materialSwatch.ts";
 
 // CONSTANTS
 const kHelpKey = "voxel-model:material-help";
@@ -195,16 +196,7 @@ export class MaterialLibrary extends LitElement {
     action: MaterialAction
   ): (event: MouseEvent) => void {
     return (event) => {
-      const button = event.currentTarget;
-      if (!(button instanceof HTMLElement)) {
-        return;
-      }
-
-      const anchor = button.getBoundingClientRect();
-      void this.#menu.run(id, action, {
-        x: anchor.left,
-        y: anchor.bottom
-      });
+      void this.#menu.run(id, action, menuPointBelow(event));
     };
   }
 
@@ -346,7 +338,7 @@ export class MaterialLibrary extends LitElement {
     });
 
     this.#menu.open(
-      menuSession(items, (presetId) => {
+      MenuSession.from(items, (presetId) => {
         const preset = presets.get(presetId);
         if (preset !== undefined) {
           choose(preset);

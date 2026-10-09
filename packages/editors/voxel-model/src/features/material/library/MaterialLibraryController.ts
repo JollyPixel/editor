@@ -31,16 +31,13 @@ import type {
 import type { ScopeRecorder } from "../../history/index.ts";
 import { ExpandedRows } from "../../../shared/ExpandedRows.ts";
 import {
-  EMPTY_MENU,
-  menuSession,
-  rowMenuSession,
-  type MenuPoint,
-  type MenuSession
-} from "../../../shared/menuSession.ts";
+  MenuSession,
+  type MenuPoint
+} from "../../../shared/menu/MenuSession.ts";
 import type {
   DeleteContext,
   DeleteResult
-} from "../../../shared/DeleteDialog.ts";
+} from "../../../shared/dialogs/DeleteDialog.ts";
 import type { MaterialPreset } from "./materialPresets.ts";
 import {
   MATERIAL_MENU,
@@ -326,7 +323,7 @@ export class MaterialLibraryController {
   readonly handleToggleExpand = (
     event: CustomEvent<JollyToggleExpandDetail>
   ): void => {
-    this.#expanded.set(event.detail.id, event.detail.expanded);
+    this.#expanded.toggle(event.detail.id, event.detail.expanded);
     this.#invalidate();
   };
 
@@ -363,13 +360,13 @@ export class MaterialLibraryController {
     id: string | null
   ): MenuSession {
     if (id === null) {
-      return menuSession(ROOT_MENU, (action, point) => this.#rootActions[action](point));
+      return MenuSession.from(ROOT_MENU, (action, point) => this.#rootActions[action](point));
     }
     if (this.#material(id) === undefined) {
-      return EMPTY_MENU;
+      return MenuSession.EMPTY;
     }
 
-    return rowMenuSession<MaterialRowAction>(
+    return MenuSession.forRow<MaterialRowAction>(
       MATERIAL_MENU,
       () => this.#material(id) !== undefined,
       (action) => this.#rowActions[action](id)

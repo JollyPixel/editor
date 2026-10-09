@@ -13,11 +13,11 @@ import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 import {
   EditorDialog,
   type EditorDialogFrame
-} from "../../../shared/EditorDialog.ts";
+} from "../../../shared/dialogs/EditorDialog.ts";
 import {
   NameDraft,
   type NameFieldOptions
-} from "../../../shared/NameDraft.ts";
+} from "../../../shared/dialogs/NameDraft.ts";
 
 // CONSTANTS
 const kAxes = ["x", "y", "z"] as const;
@@ -95,6 +95,12 @@ export class HierarchyDuplicateDialog extends EditorDialog<
       y: false,
       z: false
     };
+  }
+
+  protected override canConfirm(): boolean {
+    this.draft = this.draft.revalidate();
+
+    return this.draft.error === null;
   }
 
   protected result(): HierarchyDuplicateResult {

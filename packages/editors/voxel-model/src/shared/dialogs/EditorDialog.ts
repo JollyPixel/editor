@@ -46,6 +46,10 @@ export abstract class EditorDialog<TContext, TResult> extends LitElement {
 
   protected abstract focusTarget(): HTMLElement | null;
 
+  protected canConfirm(): boolean {
+    return this.frame.confirmDisabled !== true;
+  }
+
   async open(
     context: TContext
   ): Promise<TResult | null> {
@@ -97,7 +101,7 @@ export abstract class EditorDialog<TContext, TResult> extends LitElement {
   }
 
   #confirm(): void {
-    if (this.frame.confirmDisabled === true) {
+    if (!this.canConfirm()) {
       return;
     }
     this.#resolve(this.result());

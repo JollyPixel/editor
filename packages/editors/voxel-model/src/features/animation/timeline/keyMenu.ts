@@ -5,11 +5,10 @@ import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/
 import type { KeyEditor } from "../keys/KeyEditor.ts";
 import { INTERPOLATION_OPTIONS } from "../keys/interpolation.ts";
 import {
-  menuSession,
-  type MenuEntry,
-  type MenuSession
-} from "../../../shared/menuSession.ts";
-import { DELETE_ITEM } from "../../../shared/menuItems.ts";
+  MenuSession,
+  type MenuEntry
+} from "../../../shared/menu/MenuSession.ts";
+import { DELETE_ITEM } from "../../../shared/menu/menuItems.ts";
 
 type KeyAction =
   | AnimationInterpolation
@@ -40,7 +39,7 @@ export function keyMenu(
     DELETE_ITEM
   ];
 
-  return menuSession(items, (action) => runKeyAction(keys, action));
+  return MenuSession.from(items, (action) => runKeyAction(keys, action));
 }
 
 function runKeyAction(
