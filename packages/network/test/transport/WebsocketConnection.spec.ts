@@ -42,6 +42,8 @@ class FakeSocket implements WebsocketConnectionSocket {
   terminate(): void {
     this.terminated = true;
   }
+
+  close = () => void 0;
 }
 
 function connectionOver(

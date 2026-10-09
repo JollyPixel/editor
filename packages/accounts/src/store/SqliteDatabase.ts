@@ -8,6 +8,8 @@ import type {
 
 // CONSTANTS
 export const IN_MEMORY_LOCATION = ":memory:";
+const kOwnerOnlyDirectoryMode = 0o700;
+const kOwnerOnlyFileMode = 0o600;
 
 export class SqliteDatabase implements Disposable {
   static async open(
@@ -17,8 +19,17 @@ export class SqliteDatabase implements Disposable {
     if (location !== IN_MEMORY_LOCATION) {
       await fs.mkdir(
         path.dirname(location),
-        { recursive: true }
+        {
+          recursive: true,
+          mode: kOwnerOnlyDirectoryMode
+        }
       );
+      await using file = await fs.open(
+        location,
+        "a",
+        kOwnerOnlyFileMode
+      );
+      await file.chmod(kOwnerOnlyFileMode);
     }
 
     const db = new DatabaseSync(location);

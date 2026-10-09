@@ -25,4 +25,8 @@ export interface AuthenticationProvider {
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null | Promise<PeerIdentity | null>;
+
+  watchRevocations?(
+    listener: (subject: string) => void
+  ): () => void;
 }

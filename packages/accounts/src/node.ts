@@ -4,7 +4,7 @@ export * from "./store/AccountStore.ts";
 export * from "./store/StoredAccount.ts";
 export * from "./avatar/AvatarImage.ts";
 export type { AccountsHandler } from "./http/createAccountsHandler.ts";
-export type { LoginThrottleOptions } from "./http/LoginLimiter.ts";
+export type { AccountsThrottleOptions } from "./http/AccountsThrottle.ts";
 export type { AccountsExtension } from "./room/AccountsExtension.ts";
 export * from "./store/errors/AccountChangeRefusedError.ts";
 export * from "./store/errors/UsernameTakenError.ts";

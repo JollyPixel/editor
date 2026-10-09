@@ -27,7 +27,11 @@ Opens an `AccountStore` at `location` (in memory by default, see `AccountStore.o
 - `roles`: an `AccountRoles`.
 - `cookie`: a `SessionCookie`. Defaults to `new SessionCookie()`.
 - `path`: URL prefix of the HTTP routes, with a trailing slash. Defaults to `"/api/accounts/"`.
-- `throttle.attempts` and `throttle.windowMs`: failed logins allowed per window. Default to 10 per 15 minutes.
+- `throttle.attempts`: failed logins allowed per username and per client address within `throttle.windowMs`. Defaults to 10.
+- `throttle.registrations`: registrations allowed per client address within `throttle.windowMs`. Defaults to 10.
+- `throttle.windowMs`: defaults to 15 minutes.
+- `proxyHops`: reverse proxies in front of the server. Defaults to 0, which ignores `X-Forwarded-*` headers. With `n`, the server lists the entries of `X-Forwarded-For` followed by the socket address, and trusts the one `n` places before the socket address as the client address. It reads `X-Forwarded-Proto` the same way, with the socket scheme last, and the request counts as HTTPS when the trusted entry is `https`. Each proxy must append to both headers, or clients can pick the address they are throttled under.
+- `maxConcurrentHashes`: `scrypt` hashes and checks running at once. Further ones wait their turn, which keeps libuv threads free for file I/O. Defaults to 2.
 
 ### `handler`
 
@@ -49,7 +53,11 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
 }
 ```
 
-The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A role change or a new avatar applies on the next connection.
+The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A new avatar applies on the next connection.
+
+### `watchRevocations(listener)`
+
+Calls `listener` with the account id after `assignRole`, `remove` and a `logout` that closed a session, and returns a function that stops the calls. The network server watches it, so every open connection of that account is closed and authenticates again: a removed or signed-out account is refused, and a new role applies at once. A logout also reconnects the account's other devices, whose sessions stay valid.
 
 `avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `path`.
 
@@ -63,7 +71,7 @@ Take a `Username` and a pre-hashed password, and resolve to `{ token, account }`
 
 ### `logout(token)`
 
-Closes the session.
+Closes the session and revokes its account.
 
 ### `accountForToken(token)` and `accountById(id)`
 
@@ -105,6 +113,8 @@ Its methods return a [`StoredAccount`](#storedaccount): an `Account` whose `avat
 
 Opens or creates the database at `location`, creating its directory. `":memory:"` (`IN_MEMORY_LOCATION`, the default) keeps everything in memory. File databases use WAL.
 
+On POSIX systems, a directory it creates gets mode `0700`, and the database file is set to `0600` on every open, even when it already exists. SQLite gives the WAL and shared-memory files the mode of the database.
+
 - `sessionTtlMs`: lifetime of a session. Defaults to 30 days.
 
 ### `register(username, hash, defaultRole)`
@@ -129,7 +139,7 @@ The account, or `null`.
 
 ### `closeSession(token)`
 
-Forgets the session. Unknown tokens are ignored.
+Forgets the session and returns its account id, or `null` when the token opened no session.
 
 ### `assignRole(username, role)`
 
@@ -214,7 +224,7 @@ The roles, `"admin"` first.
 
 ## `SessionCookie`
 
-The cookie a browser session lives in: `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS. Page scripts never read the token.
+The cookie a browser session lives in: `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS, directly or through the `proxyHops` proxies. Page scripts never read the token.
 
 ```ts
 new SessionCookie("jolly_session_project");
@@ -232,15 +242,17 @@ Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. Er
 
 ### `POST register`
 
-`{ username, password }` creates an account, sets the session cookie and answers 201 with `{ account }`. `password` must be a pre-hash from `prehashPassword` (43 base64url characters); anything else is refused with 400 `invalid-password`, so a plaintext password is never stored by mistake. A taken name answers 409 `username-taken`.
+`{ username, password }` creates an account, sets the session cookie and answers 201 with `{ account }`. `password` must be a pre-hash from `prehashPassword` (43 base64url characters); anything else is refused with 400 `invalid-password`, so a plaintext password is never stored by mistake. A taken name answers 409 `username-taken`. Every registration counts against the client address, whatever its outcome; past `throttle.registrations`, the route answers 429 `throttled` with `Retry-After`.
 
 ### `POST login`
 
-`{ username, password }` sets a new session cookie and answers 200 with `{ account }`, or 401 `invalid-credentials`. Failures count against both the username and the client address; past the limit, the route answers 429 `throttled` with `Retry-After`. A success clears the username's count.
+`{ username, password }` sets a new session cookie and answers 200 with `{ account }`, or 401 `invalid-credentials`. An attempt counts against both the username and the client address before its password is checked, so parallel requests cannot exceed `throttle.attempts`. Past the limit, the route answers 429 `throttled` with `Retry-After`, and the refused attempt counts for nothing. A success clears the username's count and gives the address its attempt back.
+
+Anyone can lock a username out for `throttle.windowMs` by failing its login `throttle.attempts` times.
 
 ### `POST logout`
 
-Closes the session, clears the cookie and answers 204.
+Closes the session, clears the cookie, revokes the account's open connections and answers 204.
 
 ### `GET me`
 
@@ -276,4 +288,4 @@ Commands carry a `requestId` and are answered with `accounts:applied` or `accoun
 - `accounts:assign-role` with `username` and `role`
 - `accounts:remove` with `username`
 
-The room answers commands only when the sender's account is an admin now, whatever role its socket connected with and whatever the rights table allows. Removing an account closes its sessions but leaves its open sockets connected until they reconnect.
+The room answers commands only when the sender's account is an admin now, whatever role its socket connected with and whatever the rights table allows. Assigning a role or removing an account [revokes](#watchrevocationslistener) its open connections.

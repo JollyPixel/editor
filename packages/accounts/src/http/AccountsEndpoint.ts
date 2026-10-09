@@ -17,10 +17,8 @@ import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts"
 import { UsernameTakenError } from "../store/errors/UsernameTakenError.ts";
 import { AccountsReply } from "./AccountsReply.ts";
 import { AccountsRequest } from "./AccountsRequest.ts";
-import {
-  LoginLimiter,
-  type LoginThrottleOptions
-} from "./LoginLimiter.ts";
+import type { AccountsThrottle } from "./AccountsThrottle.ts";
+import type { TrustedProxies } from "./TrustedProxies.ts";
 
 // CONSTANTS
 const kAvatarRoute = /^(?<accountId>[\w-]+)\/avatar$/;
@@ -52,21 +50,24 @@ const kDomainErrors = [
 
 export class AccountsEndpoint {
   #accounts: Accounts;
-  #limiter: LoginLimiter;
+  #throttle: AccountsThrottle;
+  #proxies: TrustedProxies;
 
   constructor(
     accounts: Accounts,
-    throttle?: LoginThrottleOptions
+    throttle: AccountsThrottle,
+    proxies: TrustedProxies
   ) {
     this.#accounts = accounts;
-    this.#limiter = new LoginLimiter(throttle);
+    this.#throttle = throttle;
+    this.#proxies = proxies;
   }
 
   async handle(
     route: string,
     message: IncomingMessage
   ): Promise<AccountsReply | null> {
-    const request = new AccountsRequest(message);
+    const request = new AccountsRequest(message, this.#proxies);
     try {
       if (request.crossOrigin) {
         throw new AccountsRequestError(403, "cross-origin", "the request comes from another origin");
@@ -107,6 +108,12 @@ export class AccountsEndpoint {
   ): Promise<AccountsReply> {
     request.expect("POST");
     const { username, password } = await request.credentials();
+    const retryAfter = await this.#throttle.reserveRegistration(
+      request.address
+    );
+    if (retryAfter > 0) {
+      return throttled(retryAfter, "too many registrations");
+    }
 
     return this.#signedIn(
       request,
@@ -120,26 +127,19 @@ export class AccountsEndpoint {
   ): Promise<AccountsReply> {
     request.expect("POST");
     const { username, password } = await request.credentials();
-    const retryAfter = await this.#limiter.retryAfter(
+    const retryAfter = await this.#throttle.reserveLogin(
       username,
       request.address
     );
     if (retryAfter > 0) {
-      return AccountsReply.failure(
-        new AccountsRequestError(429, "throttled", "too many failed sign-in attempts"),
-        {
-          "retry-after": String(Math.ceil(retryAfter / 1_000))
-        }
-      );
+      return throttled(retryAfter, "too many failed sign-in attempts");
     }
 
     const session = await this.#accounts.login(username, password);
     if (session === null) {
-      await this.#limiter.fail(username, request.address);
-
       throw new AccountsRequestError(401, "invalid-credentials", "wrong username or password");
     }
-    await this.#limiter.succeed(username);
+    await this.#throttle.forgiveLogin(username, request.address);
 
     return this.#signedIn(request, 200, session);
   }
@@ -229,6 +229,18 @@ export class AccountsEndpoint {
       }
     );
   }
+}
+
+function throttled(
+  retryAfterMs: number,
+  message: string
+): AccountsReply {
+  return AccountsReply.failure(
+    new AccountsRequestError(429, "throttled", message),
+    {
+      "retry-after": String(Math.ceil(retryAfterMs / 1_000))
+    }
+  );
 }
 
 function requestError(

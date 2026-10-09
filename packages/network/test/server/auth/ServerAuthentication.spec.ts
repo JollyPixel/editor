@@ -3,16 +3,19 @@ import {
   describe,
   test
 } from "node:test";
+import { setTimeout as nextTimer } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { createClient } from "../../helpers/server/clientHandle.ts";
+import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
 import {
   PresenceOnlyExtension,
   RightsTable,
   Server,
   UnknownDefaultRoleError,
-  type AuthenticationProvider
+  type AuthenticationProvider,
+  type ClientHandle
 } from "#src/index.ts";
 
 function attempt(
@@ -159,5 +162,65 @@ describe("Server — the authenticated role drives rights", () => {
       event: "$join",
       reason: "role \"viewer\" is not permitted to join this room"
     }]);
+  });
+});
+
+describe("Server — revocations", () => {
+  function closableClient(
+    id: string,
+    closed: string[]
+  ): ClientHandle {
+    return {
+      id,
+      send: () => void 0,
+      close: (code) => closed.push(`${id}:${code}`)
+    };
+  }
+
+  test("a provider's revocation closes every connection of that subject only with 4001", async() => {
+    const revoked = new Set<(subject: string) => void>();
+    const auth: AuthenticationProvider = {
+      authenticate: () => null,
+      watchRevocations(listener) {
+        revoked.add(listener);
+
+        return () => revoked.delete(listener);
+      }
+    };
+    const closed: string[] = [];
+    await using server = new Server({ auth });
+    server.handleConnect(closableClient("A1", closed), { subject: "alice", role: "default" });
+    server.handleConnect(closableClient("A2", closed), { subject: "alice", role: "default" });
+    server.handleConnect(closableClient("B", closed), { subject: "bob", role: "default" });
+
+    for (const listener of revoked) {
+      listener("alice");
+    }
+    await nextTimer(0);
+
+    assert.deepEqual(closed, ["A1:4001", "A2:4001"]);
+  });
+
+  test("drops the envelopes a revoked connection sends before it closes", async() => {
+    await using server = new Server();
+    const extension = new RecordingExtension("pixel-draw");
+    server.register(extension);
+    server.handleConnect(
+      closableClient("A", []),
+      {
+        subject: "alice",
+        role: "default"
+      }
+    );
+    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+
+    server.revoke("alice");
+    await server.handleMessage("A", {
+      room: "pixel-draw",
+      kind: "message",
+      payload: {}
+    });
+
+    assert.deepEqual(extension.messages, []);
   });
 });

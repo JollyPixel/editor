@@ -75,7 +75,8 @@ The transport authenticates before it opens a session: it filters the upgrade
 by path, checks its Host and Origin headers, calls
 `server.authenticate({ clientId, url, headers, remoteAddress })`, and only then
 calls `handleConnect`. A refused connection is closed with code `4401` and
-never reaches the server's session table.
+never reaches the server's session table. A connection the server revokes is
+closed with code `4001`.
 
 ### Hosts and origins
 
@@ -179,7 +180,7 @@ const client = new network.Client({
 });
 ```
 
-`connect()` opens one connection and returns the `ClientSocket` a `Client` expects. It authenticates with `url: "loopback:"` and no header, then calls `handleConnect`. A refused connection closes with code `4401`, as it does over a WebSocket.
+`connect()` opens one connection and returns the `ClientSocket` a `Client` expects. It authenticates with `url: "loopback:"` and no header, then calls `handleConnect`. A refused connection closes with code `4401` and a revoked one with `4001`, as they do over a WebSocket.
 
 Envelopes are serialized to JSON and delivered on a later microtask, so a message never arrives inside the call that sent it.
 

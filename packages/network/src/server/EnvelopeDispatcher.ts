@@ -44,6 +44,12 @@ export class EnvelopeDispatcher {
         reason: "unknown client"
       };
     }
+    if (session.revoked) {
+      return {
+        outcome: "dropped",
+        reason: "revoked client"
+      };
+    }
 
     const room = await this.#rooms.resolve(envelope.room, {
       create: envelope.kind === "join"
