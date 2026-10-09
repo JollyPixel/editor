@@ -13,6 +13,7 @@ import {
 } from "lit/decorators.js";
 import {
   ADMIN_ROLE,
+  type AccessRequest,
   type Account,
   type AccountsRoster,
   type RosterEntry
@@ -25,7 +26,8 @@ import {
 // Import Internal Dependencies
 import {
   UsersTreeModel,
-  parseRoleAction
+  parseRoleAction,
+  type UsersMenuTarget
 } from "../../accounts/UsersTreeModel.ts";
 
 export interface UsersErrorDetail {
@@ -52,7 +54,7 @@ export class UsersPane extends LitElement {
     ];
   });
 
-  #menuTarget: RosterEntry | null = null;
+  #menuTarget: UsersMenuTarget | null = null;
 
   constructor() {
     super();
@@ -103,6 +105,7 @@ export class UsersPane extends LitElement {
     return new UsersTreeModel(
       roster.roles,
       roster,
+      roster.requests,
       this.self?.id ?? null
     );
   }
@@ -142,33 +145,54 @@ export class UsersPane extends LitElement {
     }
 
     const model = this.#model();
-    const entry = model.entry(id);
-    if (entry === undefined) {
+    const target = model.target(id);
+    if (target === undefined) {
       return;
     }
 
-    this.#menuTarget = entry;
-    this._menu.items = model.menu(entry);
+    this.#menuTarget = target;
+    this._menu.items = model.menu(target);
     this._menu.openAt(x, y);
   };
 
   readonly #onContextAction = (
     event: HTMLElementEventMap["jolly-context-action"]
   ): void => {
-    const entry = this.#menuTarget;
+    const target = this.#menuTarget;
     this.#menuTarget = null;
-    if (entry === null) {
-      return;
+    if (target?.type === "user") {
+      this.#onUserAction(target.entry, event.detail.id);
     }
+    else if (target?.type === "request") {
+      this.#onRequestAction(target.request, event.detail.id);
+    }
+  };
 
-    const role = parseRoleAction(event.detail.id);
+  #onUserAction(
+    entry: RosterEntry,
+    actionId: string
+  ): void {
+    const role = parseRoleAction(actionId);
     if (role !== null) {
       this.#run(this.#roster.attached.assignRole(entry.username, role));
     }
-    else if (event.detail.id === "remove") {
+    else if (actionId === "remove") {
       void this.#remove(entry);
     }
-  };
+  }
+
+  #onRequestAction(
+    request: AccessRequest,
+    actionId: string
+  ): void {
+    const role = parseRoleAction(actionId);
+    if (role !== null) {
+      this.#run(this.#roster.attached.approve(request.username, role));
+    }
+    else if (actionId === "deny") {
+      void this.#deny(request);
+    }
+  }
 
   async #remove(
     entry: RosterEntry
@@ -181,6 +205,20 @@ export class UsersPane extends LitElement {
     });
     if (confirmed) {
       this.#run(this.#roster.attached.remove(entry.username));
+    }
+  }
+
+  async #deny(
+    request: AccessRequest
+  ): Promise<void> {
+    const confirmed = await showConfirm({
+      title: `Deny "${request.username}"?`,
+      message: "The request will be deleted and the username freed.",
+      confirmLabel: "Deny",
+      danger: true
+    });
+    if (confirmed) {
+      this.#run(this.#roster.attached.deny(request.username));
     }
   }
 

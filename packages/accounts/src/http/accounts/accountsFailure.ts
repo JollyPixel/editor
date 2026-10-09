@@ -13,6 +13,8 @@ const kErrorStatuses: Record<AccountsErrorCode, number> = {
   "username-taken": 409,
   "master-password-required": 403,
   "invalid-master-password": 403,
+  "account-pending": 403,
+  "access-requests-full": 429,
   "invalid-credentials": 401,
   "invalid-avatar": 422,
   throttled: 429

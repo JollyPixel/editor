@@ -9,6 +9,7 @@ export * from "./account/Username.ts";
 export * from "./client/AccountsClient.ts";
 export * from "./client/prehashPassword.ts";
 export type { RegisterOptions } from "./registration/RegisterOptions.ts";
+export type { RegistrationResult } from "./registration/RegistrationResult.ts";
 export * from "./room/AccountsRoster.ts";
 export * from "./room/protocol.ts";
 export * from "./room/errors/AccountsRejectedError.ts";

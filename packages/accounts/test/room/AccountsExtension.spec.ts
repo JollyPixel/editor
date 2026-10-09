@@ -15,6 +15,7 @@ import {
 // Import Internal Dependencies
 import {
   ADDRESS,
+  FIXED_HASH,
   createDirectory,
   name,
   registration,
@@ -102,6 +103,12 @@ function summary(
   );
 }
 
+function requests(
+  roster: AccountsRoster
+): string[] {
+  return roster.requests.map((request) => request.username);
+}
+
 describe("AccountsExtension roster", () => {
   test("pushes every account, its role and whether it is online to any member", async() => {
     using store = storeWith("Alice", "Bob");
@@ -169,9 +176,51 @@ describe("AccountsExtension roster", () => {
 
     assert.equal((await changed)[0].avatar, avatar);
   });
+
+  test("pushes access requests to admins only", async() => {
+    using store = storeWith("Alice", "Bob");
+    const [alice, bob] = store;
+    store.requestAccess(name("Carol"), FIXED_HASH, 5);
+    await using server = rosterServer(createDirectory(store));
+
+    const adminRoster = await server.connect({
+      role: "admin",
+      subject: alice.id
+    });
+    const spectatorRoster = await server.connect({
+      role: "spectator",
+      subject: bob.id
+    });
+
+    assert.deepEqual(requests(adminRoster), ["Carol"]);
+    assert.deepEqual(requests(spectatorRoster), []);
+    assert.deepEqual(summary(spectatorRoster), ["Alice:admin:on", "Bob:spectator:on"]);
+  });
 });
 
 describe("AccountsExtension commands", () => {
+  test("approves one access request with a role and denies another", async() => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    store.requestAccess(name("Bob"), FIXED_HASH, 5);
+    store.requestAccess(name("Carol"), FIXED_HASH, 5);
+    await using server = rosterServer(createDirectory(store));
+    const roster = await server.connect({
+      role: "admin",
+      subject: alice.id
+    });
+
+    const approved = nextChange(roster);
+    await roster.approve("bob", "member");
+    await approved;
+    const denied = nextChange(roster);
+    await roster.deny("carol");
+    await denied;
+
+    assert.deepEqual(requests(roster), []);
+    assert.deepEqual(summary(roster), ["Alice:admin:on", "Bob:member:off"]);
+  });
+
   test("assigns a declared role and removes an account", async() => {
     using store = storeWith("Alice", "Bob", "Carol");
     const [alice] = store;

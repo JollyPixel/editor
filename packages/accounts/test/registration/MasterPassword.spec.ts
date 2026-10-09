@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   ADDRESS,
+  activeAccount,
   createAccounts,
   createDirectory,
   createStore,
@@ -48,7 +49,9 @@ describe("master password", () => {
       directory.register(registration("Mallory", kWrongSecret), ADDRESS),
       InvalidMasterPasswordError
     );
-    const alice = await directory.register(registration("Alice", kSecret), ADDRESS);
+    const alice = await activeAccount(
+      directory.register(registration("Alice", kSecret), ADDRESS)
+    );
 
     assert.equal(alice.role, "admin");
     assert.deepEqual(
@@ -65,8 +68,12 @@ describe("master password", () => {
       }
     });
 
-    const bob = await directory.register(registration("Bob"), ADDRESS);
-    const carol = await directory.register(registration("Carol", kSecret), ADDRESS);
+    const bob = await activeAccount(
+      directory.register(registration("Bob"), ADDRESS)
+    );
+    const carol = await activeAccount(
+      directory.register(registration("Carol", kSecret), ADDRESS)
+    );
 
     assert.equal(bob.role, "spectator");
     assert.equal(carol.role, "spectator");
@@ -76,22 +83,24 @@ describe("master password", () => {
     );
   });
 
-  test("makes every account give it when required", async() => {
+  test("turns a registration without it into an access request with accessRequests", async() => {
     using store = storeWith("Alice");
     const directory = createDirectory(store, {
       masterPassword: {
-        secret: "open sesame",
-        required: true
+        secret: kSecret,
+        accessRequests: true
       }
     });
 
-    await assert.rejects(
-      directory.register(registration("Bob"), ADDRESS),
-      MasterPasswordRequiredError
+    const bob = await directory.register(registration("Bob"), ADDRESS);
+    const carol = await activeAccount(
+      directory.register(registration("Carol", kSecret), ADDRESS)
     );
-    const bob = await directory.register(registration("Bob", kSecret), ADDRESS);
 
-    assert.equal(bob.role, "spectator");
+    assert.deepEqual(bob, {
+      status: "pending"
+    });
+    assert.equal(carol.role, "spectator");
   });
 
   test("sends the master password with a registration and answers its refusals", async() => {
@@ -113,7 +122,9 @@ describe("master password", () => {
       (error: AccountsRequestError) => error.status === 403 &&
         error.code === "invalid-master-password"
     );
-    const alice = await client.register("Alice", "correct horse", kSecretBody);
+    const alice = await activeAccount(
+      client.register("Alice", "correct horse", kSecretBody)
+    );
 
     assert.equal(alice.role, "admin");
   });

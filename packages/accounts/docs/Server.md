@@ -34,7 +34,8 @@ Opens an `AccountStore` with `roles` at `location` (in memory by default, see `A
 - `proxyHops`: reverse proxies in front of the server. Defaults to 0, which ignores `X-Forwarded-*` headers. With `n`, the server lists the entries of `X-Forwarded-For` followed by the socket address, and trusts the one `n` places before the socket address as the client address. It reads `X-Forwarded-Proto` the same way, with the socket scheme last, and the request counts as HTTPS when the trusted entry is `https`. Each proxy must append to both headers, or clients can pick the address they are throttled under.
 - `maxConcurrentHashes`: `scrypt` hashes and checks running at once. Further ones wait their turn, which keeps libuv threads free for file I/O. Defaults to 2.
 - `masterPassword.secret`: a secret the first account must give to register, while the store is `unclaimed`. Without it, anyone who reaches the server first becomes admin. A wrong secret is refused even when none was needed, and both checks run before hashing. Throws a `RangeError` when empty.
-- `masterPassword.required`: every registration must give the secret, not only the first one. Defaults to `false`.
+- `masterPassword.accessRequests`: a later registration without the secret creates an access request, a pending account that an admin approves or denies in the [`accounts` room](#accounts-room). It cannot sign in until approved. Defaults to `false`.
+- `maxAccessRequests`: access requests allowed to wait at once. A request past it is refused with `AccessRequestsFullError`. Defaults to 20.
 
 ### `handler`
 
@@ -81,7 +82,8 @@ The `SessionCookie` the sessions live in.
 Users and their sessions in one SQLite database (`node:sqlite`). It holds the `AccountRoles` and enforces every rule about them:
 
 - The first account gets `"admin"`, the others the default role.
-- Only an admin changes a role or removes an account, and only to a declared role.
+- Only an admin changes a role, approves or denies an access request, or removes an account, and only to a declared role.
+- An access request keeps the default role until it is approved. `assignRole` and `remove` refuse it like an unknown account, and `approve` and `deny` refuse anything else.
 - The last admin can be neither demoted nor removed.
 - A stored role that is no longer declared reads as the default one.
 
@@ -101,6 +103,18 @@ The `AccountRoles` it was opened with.
 
 Inserts an account with `hash`, a `PasswordHash` from `hashPassword`. The first account of the database gets `"admin"`, decided inside the insert transaction. Others get `roles.defaultRole`. Throws `UsernameTakenError` when another account has the same `username.key`.
 
+### `requestAccess(username, hash, limit)`
+
+Inserts a pending account with `hash` and `roles.defaultRole`. Throws `AccessRequestsFullError` when `limit` accounts are already pending, and `UsernameTakenError` like `register`. Both checks run inside the insert transaction.
+
+### `approve(actorId, username, role)`
+
+Makes the pending account named `username` active with `role`, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, when `role` is not declared, or when no access request has that name.
+
+### `deny(actorId, username)`
+
+Deletes the access request named `username` and frees the username, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin or when no access request has that name.
+
 ### `credentials(username)`
 
 The account and its `PasswordHash`, or `null`.
@@ -111,11 +125,11 @@ The account, or `null`.
 
 ### `assignRole(actorId, username, role)`
 
-Gives `role` to the account named `username`, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, when `role` is not declared, for an unknown account, or when it would demote the last admin.
+Gives `role` to the account named `username`, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, when `role` is not declared, for an unknown account or an access request, or when it would demote the last admin.
 
 ### `remove(actorId, username)`
 
-Deletes the account and its sessions, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, for an unknown account or for the last admin.
+Deletes the account and its sessions, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, for an unknown account or an access request, or for the last admin.
 
 ### `replaceAvatar(accountId, avatar)`
 
@@ -127,7 +141,7 @@ The stored `{ hash, bytes }`, or `null`.
 
 ### `size`
 
-The number of accounts.
+The number of accounts, pending ones included.
 
 ### `unclaimed`
 
@@ -135,7 +149,7 @@ The number of accounts.
 
 ### `[Symbol.iterator]()`
 
-The accounts, oldest first.
+The accounts, pending ones included, oldest first.
 
 ### `close()`
 
@@ -143,15 +157,23 @@ Closes the database. The store is also `Disposable`.
 
 ## `StoredAccount`
 
-An immutable account as the store keeps it, with readonly `id`, `username`, `role` and `avatarHash` fields.
+An immutable account as the store keeps it, with readonly `id`, `username`, `role`, `status` and `avatarHash` fields. `status` is `"active"`, or `"pending"` for an access request.
+
+### `pending`
+
+`true` while the account awaits approval.
 
 ### `isAdmin`
 
-`true` when `role` is `"admin"`.
+`true` when `role` is `"admin"` and the account is active.
 
 ### `withRole(role)` and `withAvatar(avatarHash)`
 
 A copy with the given role or avatar hash.
+
+### `approved(role)`
+
+An active copy with `role`.
 
 ## `AvatarImage`
 
@@ -216,11 +238,11 @@ Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. A 
 
 ### `POST register`
 
-`{ username, password, masterPassword? }` creates an account, sets the session cookie and answers 201 with `{ account }`. `password` must be a pre-hash from `prehashPassword` (43 base64url characters); anything else is refused with 400 `invalid-password`, so a plaintext password is never stored by mistake. A taken name answers 409 `username-taken`. A missing master password that is needed answers 403 `master-password-required`, and a wrong one 403 `invalid-master-password`. The master password is sent as typed: the server holds it in plain form already. Every registration counts against the client address, whatever its outcome; past `throttle.registrations`, the route answers 429 `throttled` with `Retry-After`.
+`{ username, password, masterPassword? }` creates an account, sets the session cookie and answers 201 with `{ account }`. `password` must be a pre-hash from `prehashPassword` (43 base64url characters); anything else is refused with 400 `invalid-password`, so a plaintext password is never stored by mistake. A taken name answers 409 `username-taken`. A missing master password answers 403 `master-password-required` for the first account, and a wrong one 403 `invalid-master-password`. When `masterPassword.accessRequests` is set, a later registration without it stores an access request and answers 202 with no body and no cookie, or 429 `access-requests-full` past `maxAccessRequests`. The master password is sent as typed: the server holds it in plain form already. Every registration counts against the client address, whatever its outcome; past `throttle.registrations`, the route answers 429 `throttled` with `Retry-After`.
 
 ### `POST login`
 
-`{ username, password }` sets a new session cookie and answers 200 with `{ account }`, or 401 `invalid-credentials`. An attempt counts against both the username and the client address before its password is checked, so parallel requests cannot exceed `throttle.attempts`. Past the limit, the route answers 429 `throttled` with `Retry-After`, and the refused attempt counts for nothing. A success clears the username's count and gives the address its attempt back.
+`{ username, password }` sets a new session cookie and answers 200 with `{ account }`, or 401 `invalid-credentials`. A pending account with the right password answers 403 `account-pending` without a cookie; a wrong password still answers 401, so a pending username tells a guesser nothing new. An attempt counts against both the username and the client address before its password is checked, so parallel requests cannot exceed `throttle.attempts`. Past the limit, the route answers 429 `throttled` with `Retry-After`, and the refused attempt counts for nothing. A success clears the username's count and gives the address its attempt back.
 
 Anyone can lock a username out for `throttle.windowMs` by failing its login `throttle.attempts` times.
 
@@ -247,19 +269,22 @@ Answers the account's avatar as `image/webp`, or 404 `not-found`. No session is 
 
 A roster for every member, and account management for admins.
 
-Every member receives `accounts:roster` on join and again whenever a member joins or leaves or the accounts change, including a new avatar:
+Every member receives `accounts:roster` on join and again whenever a member joins or leaves or the accounts change, including a new avatar. `requests` lists the access requests, oldest first, to admins only; other members receive an empty list:
 
 ```ts
 {
   type: "accounts:roster",
   roles: string[],
-  accounts: { id: string; username: string; role: string; avatar?: string; online: boolean; }[]
+  accounts: { id: string; username: string; role: string; avatar?: string; online: boolean; }[],
+  requests: { id: string; username: string; }[]
 }
 ```
 
 Commands carry a `requestId` and are answered with `accounts:applied` or `accounts:rejected` with a `reason`; the new roster follows an applied one.
 
 - `accounts:assign-role` with `username` and `role`
+- `accounts:approve` with `username` and `role`, for an access request
+- `accounts:deny` with `username`, which deletes an access request and frees its username
 - `accounts:remove` with `username`
 
 The room answers commands only when the sender's account is an admin now, whatever role its socket connected with and whatever the rights table allows. Assigning a role or removing an account [revokes](#watchrevocationslistener) its open connections.

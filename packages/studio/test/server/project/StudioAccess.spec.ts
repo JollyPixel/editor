@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_ACCESS,
   StudioAccess
-} from "../../server/StudioAccess.ts";
+} from "../../../server/project/StudioAccess.ts";
 
 // CONSTANTS
 const kSource = "project.json";
@@ -24,17 +24,17 @@ describe("StudioAccess.read", () => {
       ...DEFAULT_ACCESS.roles
     });
     assert.deepEqual([...access.roles], ["admin", "member", "spectator"]);
-    assert.equal(access.masterPasswordRequired, false);
+    assert.equal(access.accessRequests, false);
   });
 
-  test("reads whether every registration needs the master password", () => {
+  test("reads whether registering without the master password requests access", () => {
     const access = StudioAccess.read({
       access: {
-        masterPasswordRequired: true
+        accessRequests: true
       }
     }, kSource);
 
-    assert.equal(access.masterPasswordRequired, true);
+    assert.equal(access.accessRequests, true);
     assert.equal(access.roles.defaultRole, "spectator");
   });
 

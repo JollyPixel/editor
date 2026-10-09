@@ -16,11 +16,13 @@ import {
 import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import type { RegisterOptions } from "../registration/RegisterOptions.ts";
+import type { RegistrationResult } from "../registration/RegistrationResult.ts";
 import { Username } from "../account/Username.ts";
 import { prehashPassword } from "./prehashPassword.ts";
 
 // CONSTANTS
 export const MIN_PASSWORD_LENGTH = 8;
+const kAccepted = 202;
 const kUnauthorized = 401;
 const kBytesPerMegabyte = 1_024 * 1_024;
 
@@ -55,18 +57,27 @@ export class AccountsClient {
     username: string,
     password: string,
     options: RegisterOptions = {}
-  ): Promise<Account> {
+  ): Promise<RegistrationResult> {
     if ([...password].length < MIN_PASSWORD_LENGTH) {
       throw new InvalidPasswordError(
         `a password has at least ${MIN_PASSWORD_LENGTH} characters`
       );
     }
     const credentials = await this.#credentials(username, password);
-
-    return this.#account("register", {
+    const response = await this.#request("register", {
       ...credentials,
       masterPassword: options.masterPassword
     });
+    if (response.status === kAccepted) {
+      return {
+        status: "pending"
+      };
+    }
+
+    return {
+      status: "active",
+      account: await accountFrom(response)
+    };
   }
 
   async login(
@@ -91,13 +102,8 @@ export class AccountsClient {
     if (response.status === kUnauthorized) {
       return null;
     }
-    if (!response.ok) {
-      throw await requestError(response);
-    }
 
-    return accountReplySchema.parse(
-      await response.json()
-    ).account;
+    return accountFrom(response);
   }
 
   async replaceAvatar(
@@ -130,14 +136,9 @@ export class AccountsClient {
     route: AccountsRouteName,
     body: RequestBody
   ): Promise<Account> {
-    const response = await this.#request(route, body);
-    if (!response.ok) {
-      throw await requestError(response);
-    }
-
-    return accountReplySchema.parse(
-      await response.json()
-    ).account;
+    return accountFrom(
+      await this.#request(route, body)
+    );
   }
 
   #request(
@@ -178,6 +179,18 @@ function requestBody(
     },
     body: JSON.stringify(body)
   };
+}
+
+async function accountFrom(
+  response: Response
+): Promise<Account> {
+  if (!response.ok) {
+    throw await requestError(response);
+  }
+
+  return accountReplySchema.parse(
+    await response.json()
+  ).account;
 }
 
 async function requestError(

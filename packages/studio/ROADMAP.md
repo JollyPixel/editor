@@ -5,28 +5,14 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## 1. Access requests
-
-When `access.masterPasswordRequired` is set, registering without the master
-password creates a pending account instead of being refused.
-
-- The account row gets a `status`. A pending account cannot log in: login
-  answers a typed `AccountsErrorCode`, and the sign-in dialog says the
-  request awaits approval. Its username stays reserved.
-- The roster sends pending accounts to admins only. The Users pane lists
-  them; approving picks a role, rejecting deletes the row and frees the
-  username.
-- The number of pending accounts is capped, on top of the per-address
-  registration throttle.
-
-## 2. Preferences and settings pane
+## 1. Preferences and settings pane
 
 A per-user store the shell owns, reached from the header toolbar. The open
 tabs, the dock layout and the kind filter move there from `localStorage`. It
 becomes the home of the account: the avatar upload moves there from the
 `AccountBadge` menu.
 
-## 3. Share links
+## 2. Share links
 
 A read-only link to one asset for people without an account.
 

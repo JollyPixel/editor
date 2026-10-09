@@ -5,8 +5,8 @@ import path from "node:path";
 import type { Plugin } from "vite";
 
 // Import Internal Dependencies
-import type { EditorPages } from "../server/EditorPages.ts";
-import type { EditorPagesWatcher } from "../server/EditorPagesWatcher.ts";
+import type { EditorPages } from "../server/editors/EditorPages.ts";
+import type { EditorPagesWatcher } from "../server/editors/EditorPagesWatcher.ts";
 
 export function editorPagesPlugin(
   pages: EditorPages

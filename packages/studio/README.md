@@ -18,7 +18,7 @@ $ pnpm -r build
 $ pnpm --filter @jolly-pixel/studio dev
 ```
 
-The project root defaults to `project/`, seeded on first boot. Set `JOLLY_PROJECT` to open another directory. The packages `.jollypixel/project.json` lists resolve from the project's `node_modules`, then from the studio's; an entry starting with `./` names a folder of the project. The dev server restarts when that file changes.
+The project root defaults to `project/`, seeded on first boot. A missing `.jollypixel/project.json` is written with every key at its default value. Set `JOLLY_PROJECT` to open another directory. The packages `.jollypixel/project.json` lists resolve from the project's `node_modules`, then from the studio's; an entry starting with `./` names a folder of the project. The dev server restarts when that file changes.
 
 | Query parameter | Effect |
 |---|---|
@@ -44,9 +44,9 @@ Roles are set in the `access` section of `.jollypixel/project.json`. Without it,
 }
 ```
 
-Set `JOLLY_MASTER_PASSWORD` so that a stranger who reaches the server first cannot claim the admin account: the first registration must give it. Later registrations need it too when `access.masterPasswordRequired` is `true`, and the studio refuses to start with that setting but no password. To change the password, restart with a new value. Without the variable, registration is open.
+Set `JOLLY_MASTER_PASSWORD` so that a stranger who reaches the server first cannot claim the admin account: the first registration must give it. When `access.accessRequests` is `true`, a later registration without it becomes an access request: the account cannot sign in until an admin approves it, and the studio refuses to start with that setting but no password. To change the password, restart with a new value. Without the variable, registration is open and the dev server warns at startup.
 
-The Users pane on Home lists every account under its role and shows who is online. An admin changes a role or removes an account from its context menu, or with the `/users` console commands. A role change applies on the user's next connection.
+The Users pane on Home lists every account under its role and shows who is online. An admin changes a role or removes an account from its context menu, or with the `/users` console commands. Admins also see pending access requests in their own group, and approve one with a role or deny it, which frees the username. A role change applies on the user's next connection.
 
 To pick up editor, host or ui changes while the studio runs, start the watch builds in a second terminal:
 

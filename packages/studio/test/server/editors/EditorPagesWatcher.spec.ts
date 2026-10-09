@@ -14,21 +14,21 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "../../src/editors/EditorDescriptor.ts";
+} from "../../../src/editors/EditorDescriptor.ts";
 import {
   EDITOR_PAGE_SETTLE_MS,
   EditorPagesWatcher,
   type EditorPagesServer
-} from "../../server/EditorPagesWatcher.ts";
+} from "../../../server/editors/EditorPagesWatcher.ts";
 import {
   BUNDLE,
   INDEX_HTML,
   voxelMapEditor
-} from "../helpers/editorPages.ts";
+} from "../../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kBuiltAt = new Date("2026-01-01T00:00:00.000Z");

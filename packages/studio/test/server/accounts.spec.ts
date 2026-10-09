@@ -14,15 +14,15 @@ import {
 } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
-import { EditorPackages } from "../../server/EditorPackages.ts";
-import { StudioAccess } from "../../server/StudioAccess.ts";
+import { EditorPackages } from "../../server/editors/EditorPackages.ts";
+import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { openStudioAccounts } from "../../server/accounts.ts";
-import { StudioProject } from "../../server/StudioProject.ts";
+import { StudioProject } from "../../server/project/StudioProject.ts";
 
 // CONSTANTS
-const kMasterPasswordRequired = {
+const kAccessRequests = {
   access: {
-    masterPasswordRequired: true
+    accessRequests: true
   }
 };
 
@@ -64,9 +64,9 @@ describe("openStudioAccounts", () => {
     assert.equal(accounts.roles.defaultRole, "member");
   });
 
-  test("opens a project that requires a master password once JOLLY_MASTER_PASSWORD is set", async() => {
+  test("opens a project with access requests once JOLLY_MASTER_PASSWORD is set", async() => {
     using accounts = await openStudioAccounts(
-      project(path.resolve("/studio"), kMasterPasswordRequired),
+      project(path.resolve("/studio"), kAccessRequests),
       {
         inMemory: true,
         env: {
@@ -78,10 +78,10 @@ describe("openStudioAccounts", () => {
     assert.equal(accounts.roles.defaultRole, "spectator");
   });
 
-  test("refuses an empty JOLLY_MASTER_PASSWORD when the project requires one", async() => {
+  test("refuses an empty JOLLY_MASTER_PASSWORD when the project takes access requests", async() => {
     await assert.rejects(
       openStudioAccounts(
-        project(path.resolve("/studio"), kMasterPasswordRequired),
+        project(path.resolve("/studio"), kAccessRequests),
         {
           inMemory: true,
           env: {
@@ -89,8 +89,38 @@ describe("openStudioAccounts", () => {
           }
         }
       ),
-      /sets masterPasswordRequired but JOLLY_MASTER_PASSWORD is not set/
+      /sets accessRequests but JOLLY_MASTER_PASSWORD is not set/
     );
+  });
+
+  test("warns that registration is open while JOLLY_MASTER_PASSWORD is not set", async() => {
+    const warnings: string[] = [];
+    const logger = {
+      warn: (message: string) => warnings.push(message)
+    };
+
+    using _open = await openStudioAccounts(
+      project(path.resolve("/studio")),
+      {
+        inMemory: true,
+        env: {},
+        logger
+      }
+    );
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /JOLLY_MASTER_PASSWORD is not set/);
+
+    using _guarded = await openStudioAccounts(
+      project(path.resolve("/studio")),
+      {
+        inMemory: true,
+        env: {
+          JOLLY_MASTER_PASSWORD: "open sesame"
+        },
+        logger
+      }
+    );
+    assert.equal(warnings.length, 1);
   });
 
   test("names the session cookie after the project root", async() => {

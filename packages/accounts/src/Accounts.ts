@@ -52,10 +52,16 @@ export interface AccountsOptions {
    */
   maxConcurrentHashes?: number;
   /**
-   * Secret the first registration must give, and every registration when
-   * `required` is set. Without it, registration is open.
+   * Secret the first registration must give. With `accessRequests`, a later
+   * registration without it creates an access request. Without it,
+   * registration is open.
    */
   masterPassword?: MasterPasswordOptions;
+  /**
+   * Access requests allowed to wait at once.
+   * @default 20
+   */
+  maxAccessRequests?: number;
 }
 
 export interface AccountsOpenOptions extends Omit<AccountsOptions, "store"> {
@@ -101,7 +107,8 @@ export class Accounts implements AuthenticationProvider, Disposable {
       avatarUrl: (accountId, hash) => avatarPath(prefix, accountId, hash),
       throttle: options.throttle,
       maxConcurrentHashes: options.maxConcurrentHashes,
-      masterPassword: options.masterPassword
+      masterPassword: options.masterPassword,
+      maxAccessRequests: options.maxAccessRequests
     });
     this.#sessions = new CookieSessions(
       options.store,

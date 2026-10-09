@@ -2,7 +2,7 @@
 import type { PackageResolver } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
-import type { EditorDescriptor } from "../src/editors/EditorDescriptor.ts";
+import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
 import { EditorPackage } from "./EditorPackage.ts";
 
 export class EditorPackages implements Iterable<EditorPackage> {

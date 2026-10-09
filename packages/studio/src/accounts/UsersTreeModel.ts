@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { RosterEntry } from "@jolly-pixel/accounts";
+import type {
+  AccessRequest,
+  RosterEntry
+} from "@jolly-pixel/accounts";
 import type {
   ContextMenuEntry,
   TreeNode
@@ -8,8 +11,20 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // CONSTANTS
 const kRolePrefix = "role:";
+const kRequestsNodeId = "requests";
+const kRequestPrefix = "request:";
 const kUserPrefix = "user:";
 const kOfflineOpacity = "30%";
+
+export type UsersMenuTarget =
+  | {
+    type: "user";
+    entry: RosterEntry;
+  }
+  | {
+    type: "request";
+    request: AccessRequest;
+  };
 
 export type UsersNodeData =
   | {
@@ -17,14 +32,15 @@ export type UsersNodeData =
     role: string;
   }
   | {
-    type: "user";
-    entry: RosterEntry;
-  };
+    type: "requests";
+  }
+  | UsersMenuTarget;
 
 export type UsersTreeNode = TreeNode<UsersNodeData>;
 
 export class UsersTreeModel {
   static readonly EMPTY = new UsersTreeModel(
+    [],
     [],
     [],
     null
@@ -34,11 +50,12 @@ export class UsersTreeModel {
   readonly nodes: UsersTreeNode[];
   readonly selfId: string | null;
 
-  #users = new Map<string, RosterEntry>();
+  #targets = new Map<string, UsersMenuTarget>();
 
   constructor(
     roles: readonly string[],
     entries: Iterable<RosterEntry>,
+    requests: readonly AccessRequest[],
     selfId: string | null
   ) {
     this.roles = roles;
@@ -47,23 +64,33 @@ export class UsersTreeModel {
       roles.map((role) => [role, []])
     );
     for (const entry of entries) {
-      this.#users.set(userNodeId(entry.id), entry);
       byRole.get(entry.role)?.push(entry);
     }
 
-    this.nodes = Array.from(
+    const roleNodes = Array.from(
       byRole,
       ([role, entries]) => this.#roleNode(role, entries)
     );
+    this.nodes = requests.length === 0 ?
+      roleNodes :
+      [this.#requestsNode(requests), ...roleNodes];
   }
 
-  entry(
+  target(
     nodeId: string
-  ): RosterEntry | undefined {
-    return this.#users.get(nodeId);
+  ): UsersMenuTarget | undefined {
+    return this.#targets.get(nodeId);
   }
 
   menu(
+    target: UsersMenuTarget
+  ): ContextMenuEntry[] {
+    return target.type === "request" ?
+      this.#requestMenu() :
+      this.#userMenu(target.entry);
+  }
+
+  #userMenu(
     entry: RosterEntry
   ): ContextMenuEntry[] {
     return [
@@ -89,6 +116,62 @@ export class UsersTreeModel {
     ];
   }
 
+  #requestMenu(): ContextMenuEntry[] {
+    return [
+      {
+        id: "approve",
+        label: "Approve as",
+        items: this.roles.map((role) => {
+          return {
+            id: `${kRolePrefix}${role}`,
+            label: roleLabel(role)
+          };
+        })
+      },
+      "separator",
+      {
+        id: "deny",
+        label: "Deny request",
+        icon: "trash",
+        intent: "danger"
+      }
+    ];
+  }
+
+  #requestsNode(
+    requests: readonly AccessRequest[]
+  ): UsersTreeNode {
+    return {
+      id: kRequestsNodeId,
+      label: "Access requests",
+      detail: String(requests.length),
+      data: {
+        type: "requests"
+      },
+      children: requests.map((request) => this.#requestNode(request))
+    };
+  }
+
+  #requestNode(
+    request: AccessRequest
+  ): UsersTreeNode {
+    const data: UsersMenuTarget = {
+      type: "request",
+      request
+    };
+    const id = `${kRequestPrefix}${request.id}`;
+    this.#targets.set(id, data);
+
+    return {
+      id,
+      label: request.username,
+      avatar: {
+        peerId: request.id
+      },
+      data
+    };
+  }
+
   #roleNode(
     role: string,
     entries: readonly RosterEntry[]
@@ -111,9 +194,15 @@ export class UsersTreeModel {
     entry: RosterEntry
   ): UsersTreeNode {
     const color = peerProfileColor(entry.id, { peerId: entry.id });
+    const data: UsersMenuTarget = {
+      type: "user",
+      entry
+    };
+    const id = `${kUserPrefix}${entry.id}`;
+    this.#targets.set(id, data);
 
     return {
-      id: userNodeId(entry.id),
+      id,
       label: entry.username,
       ...(entry.id === this.selfId ? { detail: "you" } : {}),
       avatar: {
@@ -126,10 +215,7 @@ export class UsersTreeModel {
           color :
           `color-mix(in srgb, ${color} ${kOfflineOpacity}, transparent)`
       },
-      data: {
-        type: "user",
-        entry
-      }
+      data
     };
   }
 }
@@ -140,12 +226,6 @@ export function parseRoleAction(
   return actionId.startsWith(kRolePrefix) ?
     actionId.slice(kRolePrefix.length) :
     null;
-}
-
-function userNodeId(
-  accountId: string
-): string {
-  return `${kUserPrefix}${accountId}`;
 }
 
 function roleLabel(

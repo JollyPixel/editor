@@ -6,9 +6,12 @@ import type {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
+import type { AccessRequest } from "../account/Account.ts";
 import { AccountsRejectedError } from "./errors/AccountsRejectedError.ts";
 import {
+  ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DENY,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
@@ -50,6 +53,7 @@ export class AccountsRoster extends Emitter<
   #room: AccountsRoom;
   #roles: readonly string[] = [];
   #entries: readonly RosterEntry[] = [];
+  #requests: readonly AccessRequest[] = [];
   #pending = new Map<string, Pending>();
   #ready = Promise.withResolvers<void>();
 
@@ -71,6 +75,10 @@ export class AccountsRoster extends Emitter<
     return this.#roles;
   }
 
+  get requests(): readonly AccessRequest[] {
+    return this.#requests;
+  }
+
   [Symbol.iterator](): IterableIterator<RosterEntry> {
     return this.#entries.values();
   }
@@ -83,6 +91,26 @@ export class AccountsRoster extends Emitter<
       type: ACCOUNTS_ASSIGN_ROLE,
       username,
       role
+    });
+  }
+
+  approve(
+    username: string,
+    role: string
+  ): Promise<void> {
+    return this.#request({
+      type: ACCOUNTS_APPROVE,
+      username,
+      role
+    });
+  }
+
+  deny(
+    username: string
+  ): Promise<void> {
+    return this.#request({
+      type: ACCOUNTS_DENY,
+      username
     });
   }
 
@@ -141,6 +169,7 @@ export class AccountsRoster extends Emitter<
     if (message.type === ACCOUNTS_ROSTER) {
       this.#roles = message.roles;
       this.#entries = message.accounts;
+      this.#requests = message.requests;
       this.#ready.resolve();
       this.emit("change");
 

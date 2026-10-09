@@ -10,6 +10,7 @@ import sharp from "sharp";
 
 // Import Internal Dependencies
 import {
+  activeAccount,
   createAccounts,
   createStore
 } from "../../helpers/accounts.ts";
@@ -64,7 +65,9 @@ describe("AccountsApi avatars", () => {
   test("answers not-found for an account without an avatar", async() => {
     using store = createStore();
     await using server = await listenAccounts(createAccounts(store));
-    const account = await server.browser().client.register("Alice", "correct horse");
+    const account = await activeAccount(
+      server.browser().client.register("Alice", "correct horse")
+    );
 
     const response = await fetch(new URL(`${account.id}/avatar`, server.url));
 

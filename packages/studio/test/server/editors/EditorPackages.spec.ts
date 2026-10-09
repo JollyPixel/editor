@@ -12,13 +12,13 @@ import path from "node:path";
 import { PackageResolver } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
-import { EditorPackage } from "../../server/EditorPackage.ts";
-import { EditorPackages } from "../../server/EditorPackages.ts";
-import { STUDIO_ROOT } from "../../server/StudioProject.ts";
+import { EditorPackage } from "../../../server/editors/EditorPackage.ts";
+import { EditorPackages } from "../../../server/editors/EditorPackages.ts";
+import { STUDIO_ROOT } from "../../../server/project/StudioProject.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kRoots: string[] = [];

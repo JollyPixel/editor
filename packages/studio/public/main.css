@@ -312,3 +312,27 @@ project-overview .empty {
   margin: 0;
   color: var(--jolly-danger);
 }
+
+.sign-in-notice {
+  margin: 0;
+  color: var(--jolly-text-muted);
+}
+
+.sign-in-link {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--jolly-accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sign-in-link:hover {
+  text-decoration: underline;
+}
+
+.sign-in-link:focus-visible {
+  outline: 2px solid var(--jolly-focus-ring);
+  outline-offset: 1px;
+}

@@ -17,7 +17,7 @@ import type { Connect } from "vite";
 import {
   EDITOR_PAGES_DIR,
   EDITOR_PAGES_PREFIX
-} from "../src/editors/EditorDescriptor.ts";
+} from "../../src/editors/EditorDescriptor.ts";
 import type { EditorPackage } from "./EditorPackage.ts";
 import type { EditorPackages } from "./EditorPackages.ts";
 import {
@@ -74,7 +74,10 @@ function cacheHashedAssets(
   filePath: string
 ): void {
   if (kHashedAsset.test(filePath)) {
-    response.setHeader("Cache-Control", kImmutableCacheControl);
+    response.setHeader(
+      "Cache-Control",
+      kImmutableCacheControl
+    );
   }
 }
 

@@ -9,9 +9,9 @@ import type { AddressInfo } from "node:net";
 import type { Connect } from "vite";
 
 // Import Internal Dependencies
-import { EditorPackage } from "../../server/EditorPackage.ts";
-import { EditorPackages } from "../../server/EditorPackages.ts";
-import { EditorPages } from "../../server/EditorPages.ts";
+import { EditorPackage } from "../../server/editors/EditorPackage.ts";
+import { EditorPackages } from "../../server/editors/EditorPackages.ts";
+import { EditorPages } from "../../server/editors/EditorPages.ts";
 import { createTempDir } from "./tempDir.ts";
 
 // CONSTANTS
