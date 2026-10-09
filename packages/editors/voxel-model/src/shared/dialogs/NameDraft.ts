@@ -19,6 +19,8 @@ export class NameDraft {
   }
 
   readonly text: string;
+  readonly name: string;
+  readonly error: string | null;
   readonly #fallback: string;
   readonly #validate: NameValidator;
 
@@ -28,21 +30,19 @@ export class NameDraft {
     text = fallback
   ) {
     this.text = text;
+    this.name = text.trim() || fallback;
+    this.error = validate(this.name);
     this.#fallback = fallback;
     this.#validate = validate;
-  }
-
-  get name(): string {
-    return this.text.trim() || this.#fallback;
-  }
-
-  get error(): string | null {
-    return this.#validate(this.name);
   }
 
   edit(
     text: string
   ): NameDraft {
     return new NameDraft(this.#fallback, this.#validate, text);
+  }
+
+  revalidate(): NameDraft {
+    return this.edit(this.text);
   }
 }

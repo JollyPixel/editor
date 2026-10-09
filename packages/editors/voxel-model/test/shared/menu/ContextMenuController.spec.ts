@@ -13,8 +13,8 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { ContextMenuController } from "#src/shared/ContextMenuController.ts";
-import { menuSession } from "#src/shared/menuSession.ts";
+import { ContextMenuController } from "#src/shared/menu/ContextMenuController.ts";
+import { MenuSession } from "#src/shared/menu/MenuSession.ts";
 
 interface FakeMenu {
   items: readonly ContextMenuEntry[];
@@ -58,7 +58,7 @@ describe("ContextMenuController", () => {
     const ran: string[] = [];
     const controller = new ContextMenuController(
       () => menu,
-      (id) => menuSession(
+      (id) => MenuSession.from(
         [
           {
             id: "rename",
@@ -85,7 +85,7 @@ describe("ContextMenuController", () => {
     const ran: string[] = [];
     const controller = new ContextMenuController(
       () => menu,
-      (id) => menuSession(
+      (id) => MenuSession.from(
         [
           {
             id: "delete",

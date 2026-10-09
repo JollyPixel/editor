@@ -9,7 +9,7 @@ import type {
 import type {
   MenuPoint,
   MenuSession
-} from "./menuSession.ts";
+} from "./MenuSession.ts";
 
 export type MenuSurface = Pick<ContextMenu, "items" | "openAt">;
 

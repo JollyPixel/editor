@@ -11,17 +11,16 @@ import type {
 import type {
   NameDialogContext,
   NameDialogResult
-} from "../../../shared/NameDialog.ts";
-import type { NameValidator } from "../../../shared/NameDraft.ts";
+} from "../../../shared/dialogs/NameDialog.ts";
+import type { NameValidator } from "../../../shared/dialogs/NameDraft.ts";
 import type {
   DeleteContext,
   DeleteResult
-} from "../../../shared/DeleteDialog.ts";
+} from "../../../shared/dialogs/DeleteDialog.ts";
 import {
-  pickerMenu,
-  type MenuPoint,
-  type MenuSession
-} from "../../../shared/menuSession.ts";
+  MenuSession,
+  type MenuPoint
+} from "../../../shared/menu/MenuSession.ts";
 import { duplicateNameOf } from "../../../model/index.ts";
 
 // CONSTANTS
@@ -103,7 +102,7 @@ export class AnimateActions {
     });
 
     this.#view.openMenu(
-      pickerMenu(options, "Create or link a set first", (id) => this.newClip(id)),
+      MenuSession.picker(options, "Create or link a set first", (id) => this.newClip(id)),
       point
     );
   }
@@ -161,7 +160,7 @@ export class AnimateActions {
       };
     });
 
-    this.#view.openMenu(pickerMenu(options, "No other animation set", (id) => {
+    this.#view.openMenu(MenuSession.picker(options, "No other animation set", (id) => {
       if (this.#animations.link(id)) {
         this.#focusSet(id);
       }
@@ -249,7 +248,7 @@ export class AnimateActions {
       };
     });
 
-    this.#view.openMenu(pickerMenu(options, "No other place", async(target) => {
+    this.#view.openMenu(MenuSession.picker(options, "No other place", async(target) => {
       this.#focusClip(await this.#copy(row, target));
     }), point);
   }

@@ -13,7 +13,7 @@ import type { PeerMarkMap } from "@jolly-pixel/ui/network";
 import type { ModelBlock, ModelBlocks } from "../../scene/blocks/index.ts";
 import { SELECTION_HIGHLIGHT_COLOR } from "../../scene/blocks/ModelBlock.ts";
 import { RenderOrder } from "../../scene/renderOrder.ts";
-import { reconcilePeerMarks } from "../../shared/reconcilePeerMarks.ts";
+import { reconcilePeerMarks } from "../../collaboration/reconcilePeerMarks.ts";
 import type {
   BlockSelectionStore,
   PresenceStore

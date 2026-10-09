@@ -48,7 +48,7 @@ import {
 import type {
   NameDialogContext,
   NameDialogResult
-} from "../../shared/NameDialog.ts";
+} from "../../shared/dialogs/NameDialog.ts";
 import type {
   HierarchyDuplicateContext,
   HierarchyDuplicateResult
@@ -56,15 +56,10 @@ import type {
 import type {
   DeleteContext,
   DeleteResult
-} from "../../shared/DeleteDialog.ts";
+} from "../../shared/dialogs/DeleteDialog.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
-import type { NameFieldOptions } from "../../shared/NameDraft.ts";
-import {
-  EMPTY_MENU,
-  menuSession,
-  rowMenuSession,
-  type MenuSession
-} from "../../shared/menuSession.ts";
+import type { NameFieldOptions } from "../../shared/dialogs/NameDraft.ts";
+import { MenuSession } from "../../shared/menu/MenuSession.ts";
 
 export interface HierarchyWorkspace {
   document: ModelDocument;
@@ -160,7 +155,7 @@ export class HierarchyController {
     return this.#selected;
   }
 
-  get expanded(): string[] {
+  get expanded(): readonly string[] {
     return this.#expanded.ids;
   }
 
@@ -207,7 +202,7 @@ export class HierarchyController {
   readonly handleToggleExpand = (
     event: CustomEvent<JollyToggleExpandDetail>
   ): void => {
-    this.#expanded.set(event.detail.id, event.detail.expanded);
+    this.#expanded.toggle(event.detail.id, event.detail.expanded);
     this.#host.requestUpdate();
   };
 
@@ -278,15 +273,15 @@ export class HierarchyController {
     id: string | null
   ): MenuSession {
     if (id === null) {
-      return menuSession(ROOT_MENU, (action) => this.#rootActions[action]());
+      return MenuSession.from(ROOT_MENU, (action) => this.#rootActions[action]());
     }
 
     const kind = this.#workspace?.document.tree.get(id)?.kind;
     if (kind === undefined) {
-      return EMPTY_MENU;
+      return MenuSession.EMPTY;
     }
 
-    return rowMenuSession(
+    return MenuSession.forRow(
       kind === "block" ? BLOCK_MENU : FOLDER_MENU,
       () => this.#workspace?.document.tree.has(id) === true,
       (action) => this.#rowActions[action](id)

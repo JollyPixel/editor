@@ -5,10 +5,7 @@ import {
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import {
-  pickerMenu,
-  type MenuSession
-} from "../../../shared/menuSession.ts";
+import { MenuSession } from "../../../shared/menu/MenuSession.ts";
 
 export function rebindMenu(
   document: Pick<ModelDocument, "tree" | "remapAnimationTrack">,
@@ -22,7 +19,7 @@ export function rebindMenu(
     return { label: target, value: target };
   });
 
-  return pickerMenu(
+  return MenuSession.picker(
     options,
     "The model has no block",
     (target) => {

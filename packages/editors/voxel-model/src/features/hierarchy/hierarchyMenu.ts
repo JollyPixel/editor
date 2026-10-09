@@ -2,12 +2,12 @@
 import type {
   MenuEntry,
   MenuItem
-} from "../../shared/menuSession.ts";
+} from "../../shared/menu/MenuSession.ts";
 import {
   DELETE_ITEM,
   DUPLICATE_ITEM,
   RENAME_ITEM
-} from "../../shared/menuItems.ts";
+} from "../../shared/menu/menuItems.ts";
 
 // CONSTANTS
 const kAddBlock: MenuItem<"add-block"> = {

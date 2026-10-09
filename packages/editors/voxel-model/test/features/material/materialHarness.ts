@@ -23,8 +23,8 @@ import {
 import type {
   DeleteContext,
   DeleteResult
-} from "#src/shared/DeleteDialog.ts";
-import type { MenuPoint } from "#src/shared/menuSession.ts";
+} from "#src/shared/dialogs/DeleteDialog.ts";
+import type { MenuPoint } from "#src/shared/menu/MenuSession.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
 

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { MenuItem } from "./menuSession.ts";
+import type { MenuItem } from "./MenuSession.ts";
 
 export const RENAME_ITEM: MenuItem<"rename"> = {
   id: "rename",

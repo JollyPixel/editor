@@ -28,12 +28,9 @@ import {
   type KeySelectedOptions
 } from "./keys/animationShortcuts.ts";
 import {
-  EMPTY_MENU,
-  menuSession,
-  rowMenuSession,
-  type MenuPoint,
-  type MenuSession
-} from "../../shared/menuSession.ts";
+  MenuSession,
+  type MenuPoint
+} from "../../shared/menu/MenuSession.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import {
   animationKey,
@@ -93,7 +90,7 @@ export interface FocusedClip {
 export interface AnimatePanelState {
   ownClips: TreeNode<RowTarget>[];
   sharedSets: TreeNode<RowTarget>[];
-  expanded: string[];
+  expanded: readonly string[];
   selectedId: string | null;
   set: LinkedAnimationSet | null;
   clip: FocusedClip | null;
@@ -184,7 +181,7 @@ export class AnimatePanelController {
   readonly handleToggleExpand = (
     event: CustomEvent<JollyToggleExpandDetail>
   ): void => {
-    this.#expanded.set(event.detail.id, event.detail.expanded);
+    this.#expanded.toggle(event.detail.id, event.detail.expanded);
     this.#refresh();
   };
 
@@ -238,16 +235,16 @@ export class AnimatePanelController {
     const actions = this.#actions;
     const row = this.#findRow(rowId);
     if (actions === null || row === undefined) {
-      return EMPTY_MENU;
+      return MenuSession.EMPTY;
     }
 
     const exists = (): boolean => this.#findRow(rowId) !== undefined;
     const clipRow = asClipRow(row);
     if (clipRow === null) {
-      return rowMenuSession(SET_MENU, exists, (action) => this.#setAction(actions, action, row.setId));
+      return MenuSession.forRow(SET_MENU, exists, (action) => this.#setAction(actions, action, row.setId));
     }
 
-    return rowMenuSession(
+    return MenuSession.forRow(
       clipMenu(actions.copyTargets(clipRow).length > 0),
       exists,
       (action, point) => this.#clipAction(actions, action, clipRow, rowId, point)
@@ -259,14 +256,14 @@ export class AnimatePanelController {
   ): MenuSession {
     const actions = this.#actions;
     if (actions === null) {
-      return EMPTY_MENU;
+      return MenuSession.EMPTY;
     }
 
     return section === "own" ?
-      menuSession(ownMenu(this.#state.canShare), (action) => (action === "share" ?
+      MenuSession.from(ownMenu(this.#state.canShare), (action) => (action === "share" ?
         actions.shareOwnSet() :
         actions.newClip(null))) :
-      menuSession(SHARED_MENU, (action, point) => (action === "new-set" ?
+      MenuSession.from(SHARED_MENU, (action, point) => (action === "new-set" ?
         actions.newSet() :
         actions.linkSet(point)));
   }

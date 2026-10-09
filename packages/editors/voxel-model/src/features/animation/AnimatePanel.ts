@@ -21,15 +21,14 @@ import type {
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
-import "../../shared/DeleteDialog.ts";
-import "../../shared/NameDialog.ts";
-import type { DeleteDialog } from "../../shared/DeleteDialog.ts";
-import type { NameDialog } from "../../shared/NameDialog.ts";
-import { ContextMenuController } from "../../shared/ContextMenuController.ts";
-import {
-  EMPTY_MENU,
-  menuPointBelow
-} from "../../shared/menuSession.ts";
+import "./animateIcons.ts";
+import "../../shared/dialogs/DeleteDialog.ts";
+import "../../shared/dialogs/NameDialog.ts";
+import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
+import type { NameDialog } from "../../shared/dialogs/NameDialog.ts";
+import { ContextMenuController } from "../../shared/menu/ContextMenuController.ts";
+import { MenuSession } from "../../shared/menu/MenuSession.ts";
+import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";
 import type { TrackBindings } from "./tracks/TrackBindings.ts";
@@ -161,7 +160,7 @@ export class AnimatePanel extends LitElement {
   });
   #menu = new ContextMenuController(
     () => this.menu,
-    () => EMPTY_MENU
+    () => MenuSession.EMPTY
   );
   #acceptOwnDrop = this.#controller.acceptDrop("own");
   #acceptSharedDrop = this.#controller.acceptDrop("shared");

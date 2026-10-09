@@ -1,10 +1,10 @@
 // Import Internal Dependencies
-import type { MenuEntry } from "../../../shared/menuSession.ts";
+import type { MenuEntry } from "../../../shared/menu/MenuSession.ts";
 import {
   DELETE_ITEM,
   DUPLICATE_ITEM,
   RENAME_ITEM
-} from "../../../shared/menuItems.ts";
+} from "../../../shared/menu/menuItems.ts";
 
 export type MaterialAction =
   | "new-material"

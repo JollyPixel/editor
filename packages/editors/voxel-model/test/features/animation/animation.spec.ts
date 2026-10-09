@@ -33,11 +33,8 @@ import {
   ANIMATION_LIBRARY,
   createEditorHistory
 } from "#src/features/history/index.ts";
-import type { NameDialogContext } from "#src/shared/NameDialog.ts";
-import {
-  EMPTY_MENU,
-  type MenuSession
-} from "#src/shared/menuSession.ts";
+import type { NameDialogContext } from "#src/shared/dialogs/NameDialog.ts";
+import { MenuSession } from "#src/shared/menu/MenuSession.ts";
 import { createHost } from "./fixtures.ts";
 
 // CONSTANTS
@@ -223,7 +220,7 @@ describe("AnimatePanelController", () => {
     const deletes: string[] = [];
     const prompts: NameDialogContext[] = [];
     const names: string[] = [];
-    let menu: MenuSession = EMPTY_MENU;
+    let menu = MenuSession.EMPTY;
     const controller = new AnimatePanelController(createHost(), {
       promptName: (context) => {
         prompts.push(context);

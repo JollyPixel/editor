@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { reconcilePeerMarks } from "#src/shared/reconcilePeerMarks.ts";
+import { reconcilePeerMarks } from "#src/collaboration/reconcilePeerMarks.ts";
 
 type Call = ["hold", string, string] | ["release", string];
 

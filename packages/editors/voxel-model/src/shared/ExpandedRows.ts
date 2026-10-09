@@ -1,7 +1,7 @@
 export class ExpandedRows {
   #ids: string[] = [];
 
-  get ids(): string[] {
+  get ids(): readonly string[] {
     return this.#ids;
   }
 
@@ -19,9 +19,9 @@ export class ExpandedRows {
     }
   }
 
-  set(
+  toggle(
     id: string,
-    expanded: boolean
+    expanded = !this.has(id)
   ): void {
     if (expanded) {
       this.expand(id);
@@ -29,12 +29,6 @@ export class ExpandedRows {
     else if (this.has(id)) {
       this.#ids = this.#ids.filter((expandedId) => expandedId !== id);
     }
-  }
-
-  toggle(
-    id: string
-  ): void {
-    this.set(id, !this.has(id));
   }
 
   reset(

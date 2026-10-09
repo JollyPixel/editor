@@ -30,24 +30,24 @@ export class NameDialog extends EditorDialog<
   NameDialogResult
 > {
   @state()
-  declare private heading: string;
-
-  @state()
-  declare private fieldLabel: string;
+  declare private context: NameDialogContext;
 
   @state()
   declare private draft: NameDraft;
 
   constructor() {
     super();
-    this.heading = "";
-    this.fieldLabel = "";
-    this.draft = new NameDraft("");
+    this.context = {
+      heading: "",
+      fieldLabel: "",
+      defaultName: ""
+    };
+    this.draft = NameDraft.from(this.context);
   }
 
   protected get frame(): EditorDialogFrame {
     return {
-      heading: this.heading,
+      heading: this.context.heading,
       confirmLabel: "OK",
       confirmVariant: "accent",
       confirmDisabled: this.draft.error !== null
@@ -57,9 +57,14 @@ export class NameDialog extends EditorDialog<
   protected reset(
     context: NameDialogContext
   ): void {
-    this.heading = context.heading;
-    this.fieldLabel = context.fieldLabel;
+    this.context = context;
     this.draft = NameDraft.from(context);
+  }
+
+  protected override canConfirm(): boolean {
+    this.draft = this.draft.revalidate();
+
+    return this.draft.error === null;
   }
 
   protected result(): NameDialogResult {
@@ -75,7 +80,7 @@ export class NameDialog extends EditorDialog<
   protected renderFields(): TemplateResult {
     return html`
       <jolly-text
-        label=${this.fieldLabel}
+        label=${this.context.fieldLabel}
         .value=${this.draft.text}
         .error=${this.draft.error}
         @jolly-input=${this.#onName}
