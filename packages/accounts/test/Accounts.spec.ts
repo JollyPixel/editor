@@ -119,6 +119,29 @@ describe("Accounts changes", () => {
   });
 });
 
+describe("Accounts.watchRevocations", () => {
+  test("revokes the account on a role change, a removal and a logout", async() => {
+    using accounts = createAccounts(storeWith("Alice"));
+    const bob = await accounts.register(name("Bob"), kPassword);
+    const carol = await accounts.register(name("Carol"), kPassword);
+    const revoked: string[] = [];
+    const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));
+
+    accounts.assignRole(name("bob"), "member");
+    accounts.remove(name("bob"));
+    accounts.logout(carol.token);
+    accounts.logout(carol.token);
+    stop();
+    accounts.remove(name("carol"));
+
+    assert.deepEqual(revoked, [
+      bob.account.id,
+      bob.account.id,
+      carol.account.id
+    ]);
+  });
+});
+
 describe("Accounts.replaceAvatar", () => {
   test("encodes the image, stores it and emits changed", async() => {
     using store = storeWith("Alice");

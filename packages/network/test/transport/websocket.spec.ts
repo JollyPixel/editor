@@ -84,6 +84,41 @@ describe("WebsocketTransport + Client (integration)", () => {
     client.destroy();
   });
 
+  test("a revoked client reconnects and authenticates again", async() => {
+    let role = "editor";
+    const server = new Server({
+      auth: {
+        authenticate: () => {
+          return {
+            subject: "alice",
+            role
+          };
+        }
+      }
+    });
+    const extension = new RecordingExtension("test-ns");
+    server.register(extension);
+    new WebsocketTransport({ httpServer, server, path: "/ws-revoke" });
+
+    const client = new Client({
+      socket: () => connectWebSocket({ url: `ws://127.0.0.1:${port}/ws-revoke` }),
+      reconnect: { delays: [0] }
+    });
+    client.room("test-ns").join();
+    await waitFor(() => extension.connected.length === 1);
+
+    role = "viewer";
+    server.revoke("alice");
+
+    await waitFor(() => extension.connected.length === 2);
+    assert.deepEqual(
+      extension.peers.map((peer) => peer.identity.role),
+      ["editor", "viewer"]
+    );
+
+    client.destroy();
+  });
+
   test("two real clients get peer-joined/peer-left over the wire", async() => {
     const server = new Server();
     const extension = new RecordingExtension("test-ns");

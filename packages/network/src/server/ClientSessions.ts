@@ -6,6 +6,7 @@ export interface ClientSession {
   handle: ClientHandle;
   identity: PeerIdentity;
   rooms: Set<string>;
+  revoked: boolean;
 }
 
 /**
@@ -35,8 +36,23 @@ export class ClientSessions {
     this.#sessions.set(handle.id, {
       handle,
       identity,
-      rooms: new Set()
+      rooms: new Set(),
+      revoked: false
     });
+  }
+
+  revoke(
+    subject: string
+  ): ClientHandle[] {
+    const handles: ClientHandle[] = [];
+    for (const session of this.#sessions.values()) {
+      if (session.identity.subject === subject) {
+        session.revoked = true;
+        handles.push(session.handle);
+      }
+    }
+
+    return handles;
   }
 
   get(

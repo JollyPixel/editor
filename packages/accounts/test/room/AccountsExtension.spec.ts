@@ -39,14 +39,18 @@ interface RosterServer extends AsyncDisposable {
 }
 
 function rosterServer(
-  accounts: Accounts
+  accounts: Accounts,
+  revocations = true
 ): RosterServer {
   const peers: Peer[] = [];
   const clients: Client[] = [];
   const rosters: AccountsRoster[] = [];
   const server = new Server({
     auth: {
-      authenticate: () => peers.shift() ?? null
+      authenticate: () => peers.shift() ?? null,
+      watchRevocations: revocations ?
+        (listener) => accounts.watchRevocations(listener) :
+        undefined
     }
   });
   server.register(accounts.extension);
@@ -187,6 +191,21 @@ describe("AccountsExtension commands", () => {
     assert.deepEqual(summary(await removed), ["Alice:admin:on", "Bob:member:off"]);
   });
 
+  test("answers an admin who demotes itself before revoking its connection", {
+    timeout: 2_000
+  }, async() => {
+    using store = storeWith("Alice", "Bob");
+    const [alice] = store;
+    store.assignRole(name("bob"), "admin");
+    await using server = rosterServer(createAccounts(store));
+    const roster = await server.connect({
+      role: "admin",
+      subject: alice.id
+    });
+
+    await roster.assignRole("alice", "member");
+  });
+
   test("rejects a command from a peer that is not an admin", async() => {
     using store = storeWith("Alice", "Bob");
     const [, bob] = store;
@@ -206,11 +225,11 @@ describe("AccountsExtension commands", () => {
 });
 
 describe("AccountsExtension authorization", () => {
-  test("reads the current role of the sender, not the role it connected with", async() => {
+  test("reads the current role of a sender whose connection is not revoked", async() => {
     using store = storeWith("Alice", "Bob");
     const [alice] = store;
     const accounts = createAccounts(store);
-    await using server = rosterServer(accounts);
+    await using server = rosterServer(accounts, false);
     const roster = await server.connect({
       role: "admin",
       subject: alice.id

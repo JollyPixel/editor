@@ -29,6 +29,10 @@ import {
   type DispatchOutcome
 } from "./EnvelopeDispatcher.ts";
 import type { ClientHandle } from "../transport/ClientHandle.ts";
+import {
+  REAUTHENTICATE_CLOSE_CODE,
+  REAUTHENTICATE_CLOSE_REASON
+} from "../transport/constants.ts";
 
 interface EnvelopeFields {
   clientId: string;
@@ -60,6 +64,7 @@ export class Server {
   #auth: AuthenticationProvider;
   #sessions = new ClientSessions();
   #dispatcher: EnvelopeDispatcher;
+  #stopRevocations: () => void;
 
   constructor(
     options: ServerOptions = {}
@@ -78,6 +83,9 @@ export class Server {
       rooms: this.#rooms,
       sessions: this.#sessions
     });
+    this.#stopRevocations = this.#auth.watchRevocations?.(
+      (subject) => this.revoke(subject)
+    ) ?? (() => void 0);
   }
 
   register(
@@ -98,7 +106,22 @@ export class Server {
     return this.#rooms.settled(roomName);
   }
 
+  revoke(
+    subject: string
+  ): void {
+    for (const handle of this.#sessions.revoke(subject)) {
+      void this.#sessions.drain(handle.id).then(
+        () => handle.close?.(
+          REAUTHENTICATE_CLOSE_CODE,
+          REAUTHENTICATE_CLOSE_REASON
+        )
+      );
+    }
+  }
+
   async close(): Promise<void> {
+    this.#stopRevocations();
+    this.#stopRevocations = () => void 0;
     this.#sessions.clear();
     await this.#rooms.close();
   }

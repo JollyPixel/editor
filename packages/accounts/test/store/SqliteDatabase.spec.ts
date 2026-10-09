@@ -104,4 +104,33 @@ describe("SqliteDatabase.open", () => {
     );
     assert.deepEqual(parentIds(reopened), [3]);
   });
+
+  test("keeps the database files readable by their owner only", {
+    skip: process.platform === "win32" && "Windows has no POSIX modes"
+  }, async(t) => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sqlite-"));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const location = path.join(directory, "nested", "state.db");
+    await fs.mkdir(path.dirname(location), { recursive: true });
+    await fs.writeFile(location, "", { mode: 0o644 });
+
+    using db = await SqliteDatabase.open(location);
+    db.exec(kSchema);
+
+    for (const file of [location, `${location}-wal`]) {
+      assert.equal((await fs.stat(file)).mode & 0o777, 0o600, file);
+    }
+  });
+
+  test("creates its directory readable by its owner only", {
+    skip: process.platform === "win32" && "Windows has no POSIX modes"
+  }, async(t) => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "sqlite-"));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const location = path.join(directory, "nested", "state.db");
+
+    using _db = await SqliteDatabase.open(location);
+
+    assert.equal((await fs.stat(path.dirname(location))).mode & 0o777, 0o700);
+  });
 });

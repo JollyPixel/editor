@@ -59,12 +59,18 @@ interface AuthenticationProvider {
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null | Promise<PeerIdentity | null>;
+
+  watchRevocations?(
+    listener: (subject: string) => void
+  ): () => void;
 }
 ```
 
 `AuthenticationRequest` is `{ clientId, url, headers, remoteAddress, defaultRole }` — deliberately not a `node:http` request, so a provider is testable and transport-independent. `clientId` is the id the connection will be known by; `defaultRole` is the server's, so a provider can fall through to it without holding a second copy.
 
 Returning `null` refuses the connection.
+
+A provider whose identities can change, such as one backed by user accounts, implements `watchRevocations`. The server subscribes once at construction and unsubscribes on `close()`. Each `subject` the provider passes to the listener goes to [`server.revoke`](./Server.md).
 
 ### `BypassAuthentication`
 
@@ -167,3 +173,5 @@ The handshake is completed rather than answered with a 401 because browsers expo
 ## Lifetime
 
 An identity is minted once and fixed for the life of the socket. A role cannot change mid-session, so a client's rights are resolved once at join and never revised. Reconnect to change role.
+
+`server.revoke(subject)` closes every connection of `subject` with code `4001` (`REAUTHENTICATE_CLOSE_CODE`). `Client` treats it as any other lost connection: it reconnects and goes through the provider again, which may refuse it with `4401` or return a new role.

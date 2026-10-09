@@ -8,4 +8,9 @@ export interface ClientHandle {
   sendSerialized?(
     json: string
   ): void;
+
+  close?(
+    code: number,
+    reason: string
+  ): void;
 }

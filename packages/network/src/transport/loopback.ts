@@ -90,7 +90,11 @@ class LoopbackSocket implements ClientSocket {
       {
         id: this.id,
         send: (data) => this.#deliver(JSON.stringify(data)),
-        sendSerialized: (json) => this.#deliver(json)
+        sendSerialized: (json) => this.#deliver(json),
+        close: (code, reason) => this.#terminate({
+          code,
+          reason
+        })
       },
       identity
     );

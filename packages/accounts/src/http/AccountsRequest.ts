@@ -15,6 +15,7 @@ import { PasswordDigest } from "../session/PasswordDigest.ts";
 import type { SessionCookie } from "../session/SessionCookie.ts";
 import { isCrossOrigin } from "../session/origin.ts";
 import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
+import type { TrustedProxies } from "./TrustedProxies.ts";
 
 // CONSTANTS
 const kMaxBodyBytes = 4 * 1_024;
@@ -30,19 +31,28 @@ export interface Credentials {
 
 export class AccountsRequest {
   #message: IncomingMessage;
+  #proxies: TrustedProxies;
 
   constructor(
-    message: IncomingMessage
+    message: IncomingMessage,
+    proxies: TrustedProxies
   ) {
     this.#message = message;
+    this.#proxies = proxies;
   }
 
   get address(): string {
-    return this.#message.socket.remoteAddress ?? "unknown";
+    return this.#proxies.clientAddress(
+      this.#message.headers,
+      this.#message.socket.remoteAddress
+    );
   }
 
   get secure(): boolean {
-    return this.#message.socket instanceof TLSSocket;
+    return this.#proxies.isSecure(
+      this.#message.headers,
+      this.#message.socket instanceof TLSSocket
+    );
   }
 
   get crossOrigin(): boolean {

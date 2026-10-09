@@ -49,6 +49,10 @@ interface CredentialsRow extends StoredAccountFields {
   salt: Uint8Array;
 }
 
+interface SessionRow {
+  user_id: string;
+}
+
 interface CountRow {
   count: number;
 }
@@ -182,11 +186,13 @@ export class AccountStore implements Disposable {
 
   closeSession(
     token: string
-  ): void {
-    this.#db.run(
-      "DELETE FROM sessions WHERE token_hash = ?",
+  ): string | null {
+    const row = this.#db.get<SessionRow>(
+      "DELETE FROM sessions WHERE token_hash = ? RETURNING user_id",
       digestSessionToken(token)
     );
+
+    return row?.user_id ?? null;
   }
 
   assignRole(

@@ -63,8 +63,9 @@ describe("AccountStore sessions", () => {
     assert.match(token, /^[A-Za-z0-9_-]{43}$/);
     assert.deepEqual(store.accountForToken(token), alice);
 
-    store.closeSession(token);
+    assert.equal(store.closeSession(token), alice.id);
     assert.equal(store.accountForToken(token), null);
+    assert.equal(store.closeSession(token), null);
   });
 
   test("expires a session after its time to live", (t) => {

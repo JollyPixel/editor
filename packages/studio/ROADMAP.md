@@ -31,8 +31,8 @@ Registering without the master password creates a pending account.
 - The roster sends pending accounts to admins only. The Users pane lists
   them; approving picks a role, rejecting deletes the row and frees the
   username.
-- `LoginLimiter` rate-limits requests, and the number of pending accounts is
-  capped.
+- The number of pending accounts is capped, on top of the per-address
+  registration throttle.
 
 ## 3. Preferences and settings pane
 

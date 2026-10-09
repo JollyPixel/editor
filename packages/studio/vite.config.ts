@@ -43,6 +43,7 @@ const kBlocksetFile = path.join(
 );
 const kRoomGraceMs = 5 * 60_000;
 const kE2EDefaultRole = "member";
+const kE2ERegistrations = 1_000;
 
 async function assetWorkspacePlugin(
   project: StudioProject,
@@ -79,7 +80,10 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
     project,
     e2e ? {
       inMemory: true,
-      defaultRole: kE2EDefaultRole
+      defaultRole: kE2EDefaultRole,
+      throttle: {
+        registrations: kE2ERegistrations
+      }
     } : {}
   );
 

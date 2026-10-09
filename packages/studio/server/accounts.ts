@@ -8,7 +8,8 @@ import {
   Accounts,
   AccountRoles,
   IN_MEMORY_LOCATION,
-  SessionCookie
+  SessionCookie,
+  type AccountsThrottleOptions
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
@@ -34,6 +35,7 @@ export interface StudioAccountsOptions {
    * Role of new accounts, in place of the project's `access.defaultRole`.
    */
   defaultRole?: string;
+  throttle?: AccountsThrottleOptions;
 }
 
 export function openStudioAccounts(
@@ -53,7 +55,8 @@ export function openStudioAccounts(
         roles,
         defaultRole: options.defaultRole
       }),
-    cookie: new SessionCookie(cookieNameFor(root))
+    cookie: new SessionCookie(cookieNameFor(root)),
+    throttle: options.throttle
   });
 }
 

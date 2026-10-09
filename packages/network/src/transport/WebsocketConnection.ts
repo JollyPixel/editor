@@ -21,6 +21,10 @@ export interface WebsocketConnectionSocket {
   pause(): void;
   resume(): void;
   terminate(): void;
+  close(
+    code: number,
+    reason: string
+  ): void;
 }
 
 export interface WebsocketConnectionOptions {
@@ -116,5 +120,12 @@ export class WebsocketConnection implements ClientHandle {
 
   markAlive(): void {
     this.#awaitingPong = false;
+  }
+
+  close(
+    code: number,
+    reason: string
+  ): void {
+    this.#socket.close(code, reason);
   }
 }

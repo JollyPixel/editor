@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
+import { Mutex } from "@openally/mutex";
 import type {
   AuthenticationProvider,
   AuthenticationRequest,
@@ -32,13 +33,21 @@ import {
   createAccountsHandler,
   type AccountsHandler
 } from "./http/createAccountsHandler.ts";
-import type { LoginThrottleOptions } from "./http/LoginLimiter.ts";
+import { AccountsEndpoint } from "./http/AccountsEndpoint.ts";
+import {
+  AccountsThrottle,
+  type AccountsThrottleOptions
+} from "./http/AccountsThrottle.ts";
+import { TrustedProxies } from "./http/TrustedProxies.ts";
 import { AccountsExtension } from "./room/AccountsExtension.ts";
 import { AccountChangeRefusedError } from "./store/errors/AccountChangeRefusedError.ts";
 import {
   AvatarImage,
   type StoredAvatar
 } from "./avatar/AvatarImage.ts";
+
+// CONSTANTS
+const kDefaultMaxConcurrentHashes = 2;
 
 export interface AccountsOptions {
   store: AccountStore;
@@ -52,7 +61,18 @@ export interface AccountsOptions {
    * @default ACCOUNTS_URL_PATH
    */
   path?: string;
-  throttle?: LoginThrottleOptions;
+  throttle?: AccountsThrottleOptions;
+  /**
+   * Reverse proxies in front of the server. Each one must append to
+   * `X-Forwarded-For` and `X-Forwarded-Proto`.
+   * @default 0
+   */
+  proxyHops?: number;
+  /**
+   * Password hashes and checks running at once.
+   * @default 2
+   */
+  maxConcurrentHashes?: number;
 }
 
 export interface AccountsOpenOptions
@@ -97,6 +117,8 @@ export class Accounts extends Emitter<AccountsEventMap>
   readonly extension: AccountsExtension;
 
   #store: AccountStore;
+  #hashes: Mutex;
+  #revocations = new Set<(accountId: string) => void>();
   #dummyHash: Promise<PasswordHash> | null = null;
 
   constructor(
@@ -104,11 +126,21 @@ export class Accounts extends Emitter<AccountsEventMap>
   ) {
     super();
     this.#store = options.store;
+    this.#hashes = new Mutex({
+      concurrency: options.maxConcurrentHashes ?? kDefaultMaxConcurrentHashes
+    });
     this.roles = options.roles;
     this.cookie = options.cookie ?? new SessionCookie();
     this.path = options.path ?? ACCOUNTS_URL_PATH;
     this.sessionTtlMs = options.store.sessionTtlMs;
-    this.handler = createAccountsHandler(this, options);
+    this.handler = createAccountsHandler(
+      this.path,
+      new AccountsEndpoint(
+        this,
+        new AccountsThrottle(options.throttle),
+        new TrustedProxies(options.proxyHops)
+      )
+    );
     this.extension = new AccountsExtension(this);
   }
 
@@ -118,7 +150,7 @@ export class Accounts extends Emitter<AccountsEventMap>
   ): Promise<AccountSession> {
     const account = this.#store.register(
       username,
-      await hashPassword(password.value),
+      await this.#hashing(() => hashPassword(password.value)),
       this.roles.defaultRole
     );
     this.emit("changed");
@@ -131,9 +163,9 @@ export class Accounts extends Emitter<AccountsEventMap>
     password: PasswordDigest
   ): Promise<AccountSession | null> {
     const credentials = this.#store.credentials(username);
-    const valid = await verifyPassword(
-      password.value,
-      credentials?.hash ?? await this.#dummy()
+    const hash = credentials?.hash ?? await this.#dummy();
+    const valid = await this.#hashing(
+      () => verifyPassword(password.value, hash)
     );
 
     return credentials === null || !valid ?
@@ -144,7 +176,10 @@ export class Accounts extends Emitter<AccountsEventMap>
   logout(
     token: string
   ): void {
-    this.#store.closeSession(token);
+    const accountId = this.#store.closeSession(token);
+    if (accountId !== null) {
+      this.#revoke(accountId);
+    }
   }
 
   accountForToken(
@@ -172,6 +207,7 @@ export class Accounts extends Emitter<AccountsEventMap>
     }
     const account = this.#store.assignRole(username, role);
     this.emit("changed");
+    this.#revoke(account.id);
 
     return this.#effective(account);
   }
@@ -181,6 +217,7 @@ export class Accounts extends Emitter<AccountsEventMap>
   ): Account {
     const account = this.#store.remove(username);
     this.emit("changed");
+    this.#revoke(account.id);
 
     return this.#effective(account);
   }
@@ -222,6 +259,16 @@ export class Accounts extends Emitter<AccountsEventMap>
     };
   }
 
+  watchRevocations(
+    listener: (accountId: string) => void
+  ): () => void {
+    this.#revocations.add(listener);
+
+    return () => {
+      this.#revocations.delete(listener);
+    };
+  }
+
   * [Symbol.iterator](): IterableIterator<Account> {
     for (const account of this.#store) {
       yield this.#effective(account);
@@ -255,9 +302,25 @@ export class Accounts extends Emitter<AccountsEventMap>
     };
   }
 
+  #revoke(
+    accountId: string
+  ): void {
+    for (const listener of this.#revocations) {
+      listener(accountId);
+    }
+  }
+
   #dummy(): Promise<PasswordHash> {
-    this.#dummyHash ??= hashPassword(randomUUID());
+    this.#dummyHash ??= this.#hashing(() => hashPassword(randomUUID()));
 
     return this.#dummyHash;
+  }
+
+  async #hashing<TResult>(
+    task: () => Promise<TResult>
+  ): Promise<TResult> {
+    using _ = await this.#hashes.acquire();
+
+    return await task();
   }
 }

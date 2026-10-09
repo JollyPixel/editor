@@ -52,10 +52,11 @@ interface RoomLimits {
 - `auth`, `defaultRole` — see [Authentication](./Authentication.md). Constructing a server whose `defaultRole` is absent from `rights` throws `UnknownDefaultRoleError`.
 - `limits` applies to every room. A join whose profile or initial presence is longer than `peerMetadataLength`, or a presence patch that would grow the merged presence past it, is refused with an `"error"` envelope naming `$join` or `$presence`. Resyncs asked for inside `resyncIntervalMs` are merged into one, run when the interval ends.
 - `authenticate(attempt)` — runs the provider against `{ clientId, url, headers, remoteAddress }`, filling in `defaultRole`. Resolves to the `PeerIdentity` to admit, or `null` to refuse. It never rejects: a provider that throws or rejects refuses the client and is logged. Transports call it before opening a session.
+- `revoke(subject)` — drops every envelope that connections authenticated as `subject` send from now on, then closes each one with `ClientHandle.close(4001, "reauthenticate")` once its envelopes in flight are handled, so the client [authenticates again](./Authentication.md#lifetime). A reply an extension sends while handling the revoking command still reaches its client. A handle without `close` stays connected, but the server ignores it. The server calls `revoke` for each revocation its provider reports through `watchRevocations`.
 
 Transport implementations call `authenticate`, `handleConnect`, `handleDisconnect` and `handleMessage`. `handleConnect` takes the identity `authenticate` returned, and that identity is the only source of the connection's role and subject for its whole lifetime. The message and disconnect handlers return `Promise<void>`. Envelopes from one client are handled in arrival order per room, so a slow join on one room does not hold up a join on another; `handleDisconnect` waits for every room still in flight.
 
-The `ClientHandle` passed to `handleConnect` needs an `id` and `send(data)`. A transport that sends JSON can also implement `sendSerialized(json)`. A room then serializes each message it fans out once, instead of once per member.
+The `ClientHandle` passed to `handleConnect` needs an `id` and `send(data)`. A transport that sends JSON can also implement `sendSerialized(json)`. A room then serializes each message it fans out once, instead of once per member. `close(code, reason)` lets the server revoke the connection.
 
 ## Dynamic rooms
 
