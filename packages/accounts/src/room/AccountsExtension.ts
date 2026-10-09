@@ -15,14 +15,15 @@ import { AccountChangeRefusedError } from "../store/errors/AccountChangeRefusedE
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
 import {
   ACCOUNTS_APPLIED,
+  ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DENY,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
   ACCOUNTS_ROSTER,
   type AccountsCommand,
-  type AccountsMessage,
-  type AccountsRosterMessage
+  type AccountsMessage
 } from "./protocol.ts";
 import { accountsProtocols } from "./protocol.schema.ts";
 
@@ -127,6 +128,19 @@ export class AccountsExtension extends Extension<AccountsCommand> {
           command.role
         );
         break;
+      case ACCOUNTS_APPROVE:
+        this.#directory.approve(
+          actorId,
+          username,
+          command.role
+        );
+        break;
+      case ACCOUNTS_DENY:
+        this.#directory.deny(
+          actorId,
+          username
+        );
+        break;
       case ACCOUNTS_REMOVE:
         this.#directory.remove(
           actorId,
@@ -136,22 +150,28 @@ export class AccountsExtension extends Extension<AccountsCommand> {
     }
   }
 
-  #roster(): AccountsRosterMessage {
-    const online = new Set(this.#members.values());
-
-    return {
-      type: ACCOUNTS_ROSTER,
-      roles: [...this.#directory.roles],
-      accounts: Array.from(this.#directory, (account) => {
-        return {
-          ...account,
-          online: online.has(account.id)
-        };
-      })
-    };
-  }
-
   readonly #broadcastRoster = (): void => {
-    this.#room?.broadcast(this.#roster());
+    const room = this.#room;
+    if (room === null) {
+      return;
+    }
+
+    const online = new Set(this.#members.values());
+    const roles = [...this.#directory.roles];
+    const accounts = Array.from(this.#directory, (account) => {
+      return {
+        ...account,
+        online: online.has(account.id)
+      };
+    });
+    const requests = [...this.#directory.requests()];
+    for (const [clientId, accountId] of this.#members) {
+      room.sendTo(clientId, {
+        type: ACCOUNTS_ROSTER,
+        roles,
+        accounts,
+        requests: this.#directory.isAdmin(accountId) ? requests : []
+      });
+    }
   };
 }

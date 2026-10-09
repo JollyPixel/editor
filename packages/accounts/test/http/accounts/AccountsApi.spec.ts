@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  activeAccount,
   createAccounts,
   createStore
 } from "../../helpers/accounts.ts";
@@ -66,7 +67,9 @@ describe("AccountsApi", () => {
     await using server = await listenAccounts(createAccounts(store));
     const { client, cookies } = server.browser();
 
-    const account = await client.register("Alice", "correct horse");
+    const account = await activeAccount(
+      client.register("Alice", "correct horse")
+    );
 
     assert.equal(account.username, "Alice");
     assert.equal(account.role, "admin");
@@ -80,7 +83,9 @@ describe("AccountsApi", () => {
   test("logs in with the password the account registered with", async() => {
     using store = createStore();
     await using server = await listenAccounts(createAccounts(store));
-    const registered = await server.browser().client.register("Alice", "correct horse");
+    const registered = await activeAccount(
+      server.browser().client.register("Alice", "correct horse")
+    );
     const { client } = server.browser();
 
     assert.deepEqual(await client.login("ALICE", "correct horse"), registered);

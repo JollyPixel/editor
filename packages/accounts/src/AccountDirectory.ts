@@ -11,7 +11,10 @@ import {
 } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
-import type { Account } from "./account/Account.ts";
+import type {
+  AccessRequest,
+  Account
+} from "./account/Account.ts";
 import type { Username } from "./account/Username.ts";
 import type { AccountRoles } from "./auth/AccountRoles.ts";
 import {
@@ -27,13 +30,16 @@ import {
   MasterPassword,
   type MasterPasswordOptions
 } from "./registration/MasterPassword.ts";
+import { AccountPendingError } from "./registration/errors/AccountPendingError.ts";
 import type { RegisterOptions } from "./registration/RegisterOptions.ts";
+import type { RegistrationResult } from "./registration/RegistrationResult.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
 import type { AccountStore } from "./store/AccountStore.ts";
 import type { StoredAccount } from "./store/StoredAccount.ts";
 
 // CONSTANTS
 const kDefaultMaxConcurrentHashes = 2;
+const kDefaultMaxAccessRequests = 20;
 
 export interface Credentials {
   username: Username;
@@ -55,6 +61,7 @@ export interface AccountDirectoryOptions {
   throttle?: AccountsThrottleOptions;
   maxConcurrentHashes?: number;
   masterPassword?: MasterPasswordOptions;
+  maxAccessRequests?: number;
 }
 
 export type AccountDirectoryEventMap = {
@@ -68,6 +75,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   #throttle: AccountsThrottle;
   #hashes: Mutex;
   #masterPassword: MasterPassword | null;
+  #maxAccessRequests: number;
   #revocations = new Set<(accountId: string) => void>();
   #dummyHash: Promise<PasswordHash> | null = null;
 
@@ -85,6 +93,8 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     this.#masterPassword = options.masterPassword === undefined ?
       null :
       new MasterPassword(options.masterPassword);
+    this.#maxAccessRequests = options.maxAccessRequests ??
+      kDefaultMaxAccessRequests;
   }
 
   get roles(): AccountRoles {
@@ -94,23 +104,34 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   async register(
     registration: Registration,
     address: string
-  ): Promise<Account> {
+  ): Promise<RegistrationResult> {
     const { username, password, options } = registration;
 
     await this.#throttle.reserveRegistration(address);
-    this.#masterPassword?.admit(
+    const status = this.#masterPassword?.admit(
       options.masterPassword,
       this.#store.unclaimed
+    ) ?? "active";
+    const hash = await this.#hashing(
+      () => hashPassword(password.value)
     );
-    const account = this.#store.register(
-      username,
-      await this.#hashing(
-        () => hashPassword(password.value)
-      )
-    );
+    if (status === "pending") {
+      this.#store.requestAccess(
+        username,
+        hash,
+        this.#maxAccessRequests
+      );
+      this.emit("changed");
+
+      return { status };
+    }
+    const account = this.#store.register(username, hash);
     this.emit("changed");
 
-    return this.#account(account);
+    return {
+      status,
+      account: this.#account(account)
+    };
   }
 
   async login(
@@ -132,6 +153,9 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       username,
       address
     );
+    if (stored.account.pending) {
+      throw new AccountPendingError();
+    }
 
     return this.#account(stored.account);
   }
@@ -142,6 +166,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     const account = this.#store.accountById(id);
 
     return account === null ? null : this.#account(account);
+  }
+
+  isAdmin(
+    accountId: string
+  ): boolean {
+    return this.#store.accountById(accountId)?.isAdmin === true;
   }
 
   assignRole(
@@ -158,6 +188,29 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     this.revoke(account.id);
 
     return this.#account(account);
+  }
+
+  approve(
+    actorId: string,
+    username: Username,
+    role: string
+  ): Account {
+    const account = this.#store.approve(
+      actorId,
+      username,
+      role
+    );
+    this.emit("changed");
+
+    return this.#account(account);
+  }
+
+  deny(
+    actorId: string,
+    username: Username
+  ): void {
+    this.#store.deny(actorId, username);
+    this.emit("changed");
   }
 
   remove(
@@ -214,7 +267,20 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
 
   * [Symbol.iterator](): IterableIterator<Account> {
     for (const account of this.#store) {
-      yield this.#account(account);
+      if (!account.pending) {
+        yield this.#account(account);
+      }
+    }
+  }
+
+  * requests(): IterableIterator<AccessRequest> {
+    for (const account of this.#store) {
+      if (account.pending) {
+        yield {
+          id: account.id,
+          username: account.username
+        };
+      }
     }
   }
 

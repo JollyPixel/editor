@@ -5,21 +5,23 @@ import {
 } from "node:crypto";
 
 // Import Internal Dependencies
+import type { AccountStatus } from "../store/StoredAccount.ts";
 import { InvalidMasterPasswordError } from "./errors/InvalidMasterPasswordError.ts";
 import { MasterPasswordRequiredError } from "./errors/MasterPasswordRequiredError.ts";
 
 export interface MasterPasswordOptions {
   secret: string;
   /**
-   * Every registration must give the secret, not only the first one.
+   * Registering without the secret creates an access request that an admin
+   * approves, instead of an active account.
    * @default false
    */
-  required?: boolean;
+  accessRequests?: boolean;
 }
 
 export class MasterPassword {
   #digest: Buffer;
-  #required: boolean;
+  #accessRequests: boolean;
 
   constructor(
     options: MasterPasswordOptions
@@ -28,23 +30,25 @@ export class MasterPassword {
       throw new RangeError("the master password is empty");
     }
     this.#digest = digest(options.secret);
-    this.#required = options.required ?? false;
+    this.#accessRequests = options.accessRequests ?? false;
   }
 
   admit(
     given: string | undefined,
     unclaimed: boolean
-  ): void {
+  ): AccountStatus {
     if (given === undefined) {
-      if (unclaimed || this.#required) {
+      if (unclaimed) {
         throw new MasterPasswordRequiredError();
       }
 
-      return;
+      return this.#accessRequests ? "pending" : "active";
     }
     if (!timingSafeEqual(digest(given), this.#digest)) {
       throw new InvalidMasterPasswordError();
     }
+
+    return "active";
   }
 }
 

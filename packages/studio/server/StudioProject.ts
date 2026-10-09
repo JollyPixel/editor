@@ -64,11 +64,18 @@ export class StudioProject {
     root: string,
     options: ProjectFileOpenOptions = {}
   ): Promise<StudioProject> {
-    const file = await ProjectFile.open(root, DEFAULT_PROJECT_FILE, options);
+    const file = await ProjectFile.open(
+      root,
+      DEFAULT_PROJECT_FILE,
+      options
+    );
+
     const resolver = new PackageResolver(file.root, {
       fallbacks: [STUDIO_ROOT]
     });
-    const section = kEditorsSectionSchema.safeParse(file.document);
+    const section = kEditorsSectionSchema.safeParse(
+      file.document
+    );
     if (!section.success) {
       throw new TypeError(
         `"${file.path}" is invalid:\n${z.prettifyError(section.error)}`
@@ -77,8 +84,14 @@ export class StudioProject {
 
     return new StudioProject(
       file,
-      EditorPackages.read(section.data.editors, resolver),
-      await ProjectKinds.load(file, { resolver }),
+      EditorPackages.read(
+        section.data.editors,
+        resolver
+      ),
+      await ProjectKinds.load(
+        file,
+        { resolver }
+      ),
       StudioAccess.read(file.document, file.path)
     );
   }

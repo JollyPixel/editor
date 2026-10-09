@@ -10,6 +10,7 @@ import { ADMIN_ROLE } from "../account/Account.ts";
 import type { Username } from "../account/Username.ts";
 import type { AccountRoles } from "../auth/AccountRoles.ts";
 import type { StoredAvatar } from "../avatar/AvatarImage.ts";
+import { AccessRequestsFullError } from "../registration/errors/AccessRequestsFullError.ts";
 import type { SessionToken } from "../session/SessionToken.ts";
 import { AccountChangeRefusedError } from "./errors/AccountChangeRefusedError.ts";
 import { UsernameTakenError } from "./errors/UsernameTakenError.ts";
@@ -20,12 +21,13 @@ import {
 } from "./SqliteDatabase.ts";
 import {
   StoredAccount,
+  type AccountStatus,
   type StoredAccountFields
 } from "./StoredAccount.ts";
 
 // CONSTANTS
 export { IN_MEMORY_LOCATION } from "./SqliteDatabase.ts";
-const kAccountColumns = "users.id, users.username, users.role, avatars.hash AS avatarHash";
+const kAccountColumns = "users.id, users.username, users.role, users.status, avatars.hash AS avatarHash";
 const kAccountTables = "users LEFT JOIN avatars ON avatars.user_id = users.id";
 
 export interface AccountCredentials {
@@ -82,30 +84,31 @@ export class AccountStore implements Disposable {
     username: Username,
     hash: PasswordHash
   ): StoredAccount {
+    return this.#db.transaction(() => this.#insert(
+      username,
+      hash,
+      "active"
+    ));
+  }
+
+  requestAccess(
+    username: Username,
+    hash: PasswordHash,
+    limit: number
+  ): StoredAccount {
     return this.#db.transaction(() => {
-      if (this.credentials(username) !== null) {
-        throw new UsernameTakenError(username.value);
+      const requests = this.#count(
+        "SELECT COUNT(*) AS count FROM users WHERE status = 'pending'"
+      );
+      if (requests >= limit) {
+        throw new AccessRequestsFullError(limit);
       }
 
-      const account = new StoredAccount({
-        id: randomUUID(),
-        username: username.value,
-        role: this.unclaimed ? ADMIN_ROLE : this.roles.defaultRole,
-        avatarHash: null
-      });
-      this.#db.run(
-        `INSERT INTO users (id, username, username_key, digest, salt, role, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        account.id,
-        account.username,
-        username.key,
-        hash.digest,
-        hash.salt,
-        account.role,
-        Date.now()
+      return this.#insert(
+        username,
+        hash,
+        "pending"
       );
-
-      return account;
     });
   }
 
@@ -188,10 +191,8 @@ export class AccountStore implements Disposable {
   ): StoredAccount {
     return this.#db.transaction(() => {
       this.#assertAdmin(actorId);
-      if (!this.roles.has(role)) {
-        throw new AccountChangeRefusedError(`"${role}" is not a role`);
-      }
-      const account = this.#existing(username);
+      this.#assertDeclared(role);
+      const account = this.#existingAccount(username);
       if (role !== ADMIN_ROLE) {
         this.#assertNotLastAdmin(account);
       }
@@ -206,13 +207,47 @@ export class AccountStore implements Disposable {
     });
   }
 
+  approve(
+    actorId: string,
+    username: Username,
+    role: string
+  ): StoredAccount {
+    return this.#db.transaction(() => {
+      this.#assertAdmin(actorId);
+      this.#assertDeclared(role);
+      const request = this.#existingRequest(username);
+
+      this.#db.run(
+        "UPDATE users SET role = ?, status = 'active' WHERE id = ?",
+        role,
+        request.id
+      );
+
+      return request.approved(role);
+    });
+  }
+
+  deny(
+    actorId: string,
+    username: Username
+  ): void {
+    this.#db.transaction(() => {
+      this.#assertAdmin(actorId);
+      const request = this.#existingRequest(username);
+      this.#db.run(
+        "DELETE FROM users WHERE id = ?",
+        request.id
+      );
+    });
+  }
+
   remove(
     actorId: string,
     username: Username
   ): StoredAccount {
     return this.#db.transaction(() => {
       this.#assertAdmin(actorId);
-      const account = this.#existing(username);
+      const account = this.#existingAccount(username);
       this.#assertNotLastAdmin(account);
       this.#db.run(
         "DELETE FROM users WHERE id = ?",
@@ -285,21 +320,75 @@ export class AccountStore implements Disposable {
       id: fields.id,
       username: fields.username,
       role: this.roles.effective(fields.role),
+      status: fields.status,
       avatarHash: fields.avatarHash
     });
   }
 
-  #existing(
+  #insert(
+    username: Username,
+    hash: PasswordHash,
+    status: AccountStatus
+  ): StoredAccount {
+    if (this.credentials(username) !== null) {
+      throw new UsernameTakenError(username.value);
+    }
+
+    const account = new StoredAccount({
+      id: randomUUID(),
+      username: username.value,
+      role: this.unclaimed ? ADMIN_ROLE : this.roles.defaultRole,
+      status,
+      avatarHash: null
+    });
+    this.#db.run(
+      `INSERT INTO users (id, username, username_key, digest, salt, role, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      account.id,
+      account.username,
+      username.key,
+      hash.digest,
+      hash.salt,
+      account.role,
+      account.status,
+      Date.now()
+    );
+
+    return account;
+  }
+
+  #existingAccount(
     username: Username
   ): StoredAccount {
-    const credentials = this.credentials(username);
-    if (credentials === null) {
+    const account = this.credentials(username)?.account;
+    if (account === undefined || account.pending) {
       throw new AccountChangeRefusedError(
         `no account is named "${username.value}"`
       );
     }
 
-    return credentials.account;
+    return account;
+  }
+
+  #existingRequest(
+    username: Username
+  ): StoredAccount {
+    const account = this.credentials(username)?.account;
+    if (account === undefined || !account.pending) {
+      throw new AccountChangeRefusedError(
+        `no access request is named "${username.value}"`
+      );
+    }
+
+    return account;
+  }
+
+  #assertDeclared(
+    role: string
+  ): void {
+    if (!this.roles.has(role)) {
+      throw new AccountChangeRefusedError(`"${role}" is not a role`);
+    }
   }
 
   #assertAdmin(
@@ -318,7 +407,7 @@ export class AccountStore implements Disposable {
     }
 
     const admins = this.#count(
-      "SELECT COUNT(*) AS count FROM users WHERE role = ?",
+      "SELECT COUNT(*) AS count FROM users WHERE role = ? AND status = 'active'",
       ADMIN_ROLE
     );
     if (admins <= 1) {

@@ -5,6 +5,8 @@ export const ACCOUNTS_ERROR_CODES = [
   "username-taken",
   "master-password-required",
   "invalid-master-password",
+  "account-pending",
+  "access-requests-full",
   "invalid-credentials",
   "invalid-avatar",
   "throttled"

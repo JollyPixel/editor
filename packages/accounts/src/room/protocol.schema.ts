@@ -7,7 +7,9 @@ import {
 // Import Internal Dependencies
 import {
   ACCOUNTS_APPLIED,
+  ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DENY,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROSTER
@@ -31,6 +33,17 @@ const kRosterEntrySchema = {
     "online"
   ]
 } as const;
+const kAccessRequestSchema = {
+  type: "object",
+  properties: {
+    id: kString,
+    username: kString
+  },
+  required: [
+    "id",
+    "username"
+  ]
+} as const;
 
 export const accountsCommandProtocol = new MessageProtocol(
   {
@@ -48,6 +61,34 @@ export const accountsCommandProtocol = new MessageProtocol(
           "requestId",
           "username",
           "role"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: ACCOUNTS_APPROVE },
+          requestId: kString,
+          username: kString,
+          role: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "username",
+          "role"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: ACCOUNTS_DENY },
+          requestId: kString,
+          username: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "username"
         ]
       },
       {
@@ -84,12 +125,17 @@ export const accountsMessageProtocol = new MessageProtocol(
           accounts: {
             type: "array",
             items: kRosterEntrySchema
+          },
+          requests: {
+            type: "array",
+            items: kAccessRequestSchema
           }
         },
         required: [
           "type",
           "roles",
-          "accounts"
+          "accounts",
+          "requests"
         ]
       },
       {

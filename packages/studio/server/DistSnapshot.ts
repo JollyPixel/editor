@@ -40,9 +40,17 @@ export class DistSnapshot {
   #record(
     directory: string
   ): void {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const dirent = readdirSync(
+      directory,
+      { withFileTypes: true }
+    );
+
+    for (const entry of dirent) {
       const file = path.join(directory, entry.name);
-      this.update(path.relative(this.#root, file));
+      this.update(
+        path.relative(this.#root, file)
+      );
+
       if (entry.isDirectory()) {
         this.#record(file);
       }

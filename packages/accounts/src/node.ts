@@ -11,3 +11,5 @@ export * from "./session/SessionCookie.ts";
 export type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
 export * from "./registration/errors/MasterPasswordRequiredError.ts";
 export * from "./registration/errors/InvalidMasterPasswordError.ts";
+export * from "./registration/errors/AccountPendingError.ts";
+export * from "./registration/errors/AccessRequestsFullError.ts";

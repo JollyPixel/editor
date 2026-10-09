@@ -35,10 +35,14 @@ interface Account {
 
 An `Account` with `online`, true while one of its studio shells is in the `accounts` room.
 
+## `AccessRequest`
+
+A registration waiting for an admin's approval: `{ id, username }`. Only admins receive them, through `AccountsRoster.requests`.
+
 ## `ADMIN_ROLE`
 
 `"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it.
 
 ## `AccountsError`
 
-The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the routes pick one when they answer. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError` and `InvalidMasterPasswordError` extend it. `ACCOUNTS_ERROR_CODES` lists the codes.
+The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the routes pick one when they answer. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError` and `AccessRequestsFullError` extend it. `ACCOUNTS_ERROR_CODES` lists the codes.

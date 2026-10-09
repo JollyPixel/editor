@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { RosterEntry } from "@jolly-pixel/accounts";
+import type {
+  AccessRequest,
+  RosterEntry
+} from "@jolly-pixel/accounts";
 import type { ContextMenuItem } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -38,10 +41,25 @@ const kEntries: RosterEntry[] = [
     online: true
   }
 ];
+const kRequest: AccessRequest = {
+  id: "d",
+  username: "dave"
+};
+
+function modelWith(
+  requests: readonly AccessRequest[] = []
+): UsersTreeModel {
+  return new UsersTreeModel(
+    kRoles,
+    kEntries,
+    requests,
+    "a"
+  );
+}
 
 describe("UsersTreeModel", () => {
   test("groups accounts under every role, in role order, with an online count", () => {
-    const model = new UsersTreeModel(kRoles, kEntries, "a");
+    const model = modelWith();
 
     assert.deepEqual(
       model.nodes.map((node) => [
@@ -57,8 +75,32 @@ describe("UsersTreeModel", () => {
     );
   });
 
+  test("lists access requests apart, before the roles, only when there are some", () => {
+    const [requests] = modelWith([kRequest]).nodes;
+
+    assert.deepEqual(
+      [requests.label, requests.detail, requests.children?.map((child) => child.label)],
+      ["Access requests", "1", ["dave"]]
+    );
+    assert.equal(modelWith().nodes[0].label, "Admin");
+  });
+
+  test("offers to approve a request under any role or deny it", () => {
+    const model = modelWith([kRequest]);
+    const [approve, , deny] = model.menu({
+      type: "request",
+      request: kRequest
+    }) as ContextMenuItem[];
+
+    assert.deepEqual(
+      approve.items?.map((item) => item !== "separator" && parseRoleAction(item.id)),
+      ["admin", "member", "spectator"]
+    );
+    assert.equal(deny.id, "deny");
+  });
+
   test("colours a user by its account and fades it while offline", () => {
-    const model = new UsersTreeModel(kRoles, kEntries, "a");
+    const model = modelWith();
     const [admin, , spectator] = model.nodes;
     const alice = admin.children?.[0];
     const bob = spectator.children?.[0];
@@ -70,7 +112,7 @@ describe("UsersTreeModel", () => {
   });
 
   test("draws each user's avatar, with the uploaded image when there is one", () => {
-    const model = new UsersTreeModel(kRoles, kEntries, "a");
+    const model = modelWith();
     const [admin, , spectator] = model.nodes;
 
     assert.deepEqual(admin.children?.[0].avatar, {
@@ -83,19 +125,32 @@ describe("UsersTreeModel", () => {
     );
   });
 
-  test("resolves a user row back to its roster entry", () => {
-    const model = new UsersTreeModel(kRoles, kEntries, "a");
-    const [, , spectator] = model.nodes;
-    const bobId = spectator.children?.[0].id ?? "";
+  test("resolves a user or request row back to its menu target", () => {
+    const model = modelWith([kRequest]);
+    const [requests, , , spectator] = model.nodes;
 
-    assert.equal(model.entry(bobId)?.username, "bob");
-    assert.equal(model.entry(spectator.id), undefined);
+    assert.deepEqual(model.target(spectator.children?.[0].id ?? ""), {
+      type: "user",
+      entry: kEntries[1]
+    });
+    assert.deepEqual(model.target(requests.children?.[0].id ?? ""), {
+      type: "request",
+      request: kRequest
+    });
+    assert.equal(model.target(spectator.id), undefined);
+    assert.equal(model.target(requests.id), undefined);
   });
 
   test("offers every other role and refuses to remove oneself", () => {
-    const model = new UsersTreeModel(kRoles, kEntries, "a");
-    const [role, , remove] = model.menu(kEntries[1]) as ContextMenuItem[];
-    const [self, , removeSelf] = model.menu(kEntries[0]) as ContextMenuItem[];
+    const model = modelWith();
+    const [role, , remove] = model.menu({
+      type: "user",
+      entry: kEntries[1]
+    }) as ContextMenuItem[];
+    const [self, , removeSelf] = model.menu({
+      type: "user",
+      entry: kEntries[0]
+    }) as ContextMenuItem[];
 
     assert.deepEqual(
       role.items?.map((item) => item !== "separator" && [item.label, item.disabled]),

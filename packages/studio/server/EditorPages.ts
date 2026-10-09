@@ -74,7 +74,10 @@ function cacheHashedAssets(
   filePath: string
 ): void {
   if (kHashedAsset.test(filePath)) {
-    response.setHeader("Cache-Control", kImmutableCacheControl);
+    response.setHeader(
+      "Cache-Control",
+      kImmutableCacheControl
+    );
   }
 }
 

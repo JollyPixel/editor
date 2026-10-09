@@ -66,7 +66,7 @@ export class EditorPagesWatcher {
     );
     const snapshot = new DistSnapshot(editor.dist);
 
-    return watch(editor.dist, { recursive: true }, (_event, filename) => {
+    const fsWatcher = watch(editor.dist, { recursive: true }, (_event, filename) => {
       if (
         filename !== null &&
         !snapshot.update(filename)
@@ -81,10 +81,14 @@ export class EditorPagesWatcher {
           name: editor.name
         });
       }, EDITOR_PAGE_SETTLE_MS));
-    }).on("error", (error) => {
+    });
+
+    fsWatcher.on("error", (error) => {
       this.#server.config.logger.warn(
         `editor page watcher for ${editor.name} failed: ${error.message}`
       );
     });
+
+    return fsWatcher;
   }
 }

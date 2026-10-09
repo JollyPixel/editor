@@ -73,7 +73,7 @@ export class AccountsApi implements Iterable<HttpRoute> {
     request: HttpRequest
   ): Promise<HttpReply> {
     const body = await request.json(registrationBodySchema);
-    const account = await this.#directory.register(
+    const registration = await this.#directory.register(
       {
         ...parseCredentials(body),
         options: {
@@ -83,7 +83,9 @@ export class AccountsApi implements Iterable<HttpRoute> {
       request.address
     );
 
-    return this.#signedIn(request, 201, account);
+    return registration.status === "pending" ?
+      HttpReply.empty(202) :
+      this.#signedIn(request, 201, registration.account);
   }
 
   async #login(

@@ -1,10 +1,12 @@
 // Import Node.js Dependencies
+import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 
 // Import Third-party Dependencies
 import type { PasswordHash } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
+import type { Account } from "#src/account/Account.ts";
 import { Username } from "#src/account/Username.ts";
 import {
   AccountDirectory,
@@ -15,6 +17,7 @@ import {
   ACCOUNTS_URL_PATH,
   avatarPath
 } from "#src/http/accounts/routes.ts";
+import type { RegistrationResult } from "#src/registration/RegistrationResult.ts";
 import { PasswordDigest } from "#src/session/PasswordDigest.ts";
 import { SessionToken } from "#src/session/SessionToken.ts";
 import { SqliteDatabase } from "#src/store/SqliteDatabase.ts";
@@ -59,6 +62,15 @@ export function registration(
       masterPassword
     }
   };
+}
+
+export async function activeAccount(
+  registering: Promise<RegistrationResult>
+): Promise<Account> {
+  const result = await registering;
+  assert.ok(result.status === "active");
+
+  return result.account;
 }
 
 export function createStore(

@@ -27,12 +27,15 @@ const kRequestMessages: Partial<Record<AccountsFailureCode, string>> = {
   "username-taken": "This username is taken.",
   "master-password-required": "This studio asks for its master password.",
   "invalid-master-password": "Wrong master password.",
+  "account-pending": "Your access request awaits an admin's approval.",
+  "access-requests-full": "Too many access requests await approval. Try again later.",
   throttled: "Too many failed attempts. Try again later."
 };
 const kMasterPasswordCodes = new Set<AccountsFailureCode>([
   "master-password-required",
   "invalid-master-password"
 ]);
+const kRequestSent = "Request sent. Sign in once an admin approves it.";
 
 export type SignInMode = "login" | "register";
 
@@ -43,6 +46,9 @@ export class SignInDialog extends LitElement {
 
   @state()
   declare _error: string | null;
+
+  @state()
+  declare _notice: string | null;
 
   @state()
   declare _pending: boolean;
@@ -69,6 +75,7 @@ export class SignInDialog extends LitElement {
     super();
     this._mode = "login";
     this._error = null;
+    this._notice = null;
     this._pending = false;
     this._masterPasswordAsked = false;
   }
@@ -144,6 +151,17 @@ export class SignInDialog extends LitElement {
               >
             </label>
           ` : nothing}
+          ${register && !this._masterPasswordAsked ? html`
+            <button
+              type="button"
+              class="sign-in-link"
+              ?disabled=${this._pending}
+              @click=${this.#askMasterPassword}
+            >I have the master password</button>
+          ` : nothing}
+          ${this._notice === null ? nothing : html`
+            <p class="sign-in-notice" role="status">${this._notice}</p>
+          `}
           ${this._error === null ? nothing : html`
             <p class="sign-in-error" role="alert">${this._error}</p>
           `}
@@ -168,6 +186,13 @@ export class SignInDialog extends LitElement {
   #switchMode(): void {
     this._mode = this._mode === "login" ? "register" : "login";
     this._error = null;
+    this._notice = null;
+  }
+
+  async #askMasterPassword(): Promise<void> {
+    this._masterPasswordAsked = true;
+    await this.updateComplete;
+    this._masterPassword?.focus();
   }
 
   #onSubmit(
@@ -202,19 +227,25 @@ export class SignInDialog extends LitElement {
 
     this._pending = true;
     this._error = null;
+    this._notice = null;
     let masterPasswordRefused = false;
     try {
       const username = this._username.value;
       const password = this._password.value;
-      const signedIn = this._mode === "register" ?
-        await accounts.register(username, password, {
-          masterPassword: this._masterPassword?.value
-        }) :
-        await accounts.login(username, password);
-      this.#resolve(signedIn);
+      if (this._mode === "register") {
+        await this.#register(accounts, username, password);
+      }
+      else {
+        this.#resolve(await accounts.login(username, password));
+      }
     }
     catch (error) {
-      this._error = messageFor(error);
+      if (isPending(error)) {
+        this._notice = messageFor(error);
+      }
+      else {
+        this._error = messageFor(error);
+      }
       masterPasswordRefused = error instanceof AccountsRequestError &&
         kMasterPasswordCodes.has(error.code);
     }
@@ -229,6 +260,23 @@ export class SignInDialog extends LitElement {
     }
   }
 
+  async #register(
+    accounts: AccountsClient,
+    username: string,
+    password: string
+  ): Promise<void> {
+    const registration = await accounts.register(username, password, {
+      masterPassword: this._masterPassword?.value
+    });
+    if (registration.status === "active") {
+      this.#resolve(registration.account);
+    }
+    else {
+      this._mode = "login";
+      this._notice = kRequestSent;
+    }
+  }
+
   #resolve(
     signedIn: Account
   ): void {
@@ -238,6 +286,13 @@ export class SignInDialog extends LitElement {
     this._dialog.close("confirm");
     settle?.(signedIn);
   }
+}
+
+function isPending(
+  error: unknown
+): boolean {
+  return error instanceof AccountsRequestError &&
+    error.code === "account-pending";
 }
 
 function messageFor(

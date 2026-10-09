@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   digest BLOB NOT NULL,
   salt BLOB NOT NULL,
   role TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('active', 'pending')),
   created_at INTEGER NOT NULL
 ) STRICT;
 

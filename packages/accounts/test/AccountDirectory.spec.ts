@@ -10,6 +10,7 @@ import {
   ADDRESS,
   PASSWORD,
   WRONG_PASSWORD,
+  activeAccount,
   createDirectory,
   name,
   registration,
@@ -24,7 +25,9 @@ describe("AccountDirectory sign-in", () => {
   test("logs in under any casing with the password the account registered with", async() => {
     const directory = createDirectory();
 
-    const registered = await directory.register(registration("Alice"), ADDRESS);
+    const registered = await activeAccount(
+      directory.register(registration("Alice"), ADDRESS)
+    );
     const logged = await directory.login({
       username: name("alice"),
       password: PASSWORD

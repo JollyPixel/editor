@@ -66,7 +66,10 @@ export async function openStudioAccounts(
       name: cookieNameFor(root)
     }),
     throttle: options.throttle,
-    masterPassword: masterPasswordFor(project, options.env ?? {})
+    masterPassword: masterPasswordFor(
+      project,
+      options.env ?? {}
+    )
   });
 }
 
@@ -75,11 +78,11 @@ function masterPasswordFor(
   env: Record<string, string | undefined>
 ): MasterPasswordOptions | undefined {
   const secret = env[kMasterPasswordEnv];
-  const required = project.access.masterPasswordRequired;
+  const { accessRequests } = project.access;
   if (secret === undefined || secret === "") {
-    if (required) {
+    if (accessRequests) {
       throw new Error(
-        `"${project.file.path}" sets masterPasswordRequired but ${kMasterPasswordEnv} is not set`
+        `"${project.file.path}" sets accessRequests but ${kMasterPasswordEnv} is not set`
       );
     }
 
@@ -88,7 +91,7 @@ function masterPasswordFor(
 
   return {
     secret,
-    required
+    accessRequests
   };
 }
 

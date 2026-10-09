@@ -19,13 +19,13 @@ Failed requests throw `AccountsRequestError`, with the HTTP `status` and the ser
 
 ### `register(username, password, options?)`
 
-Creates an account, signs it in and resolves to the `Account`. Throws `InvalidPasswordError` without sending anything when the password is shorter than `MIN_PASSWORD_LENGTH` (8), and `InvalidUsernameError` for an invalid username.
+Creates an account, signs it in and resolves to a `RegistrationResult`: `{ status: "active", account }`, or `{ status: "pending" }` when the server stored an access request instead, without a session. Throws `InvalidPasswordError` without sending anything when the password is shorter than `MIN_PASSWORD_LENGTH` (8), and `InvalidUsernameError` for an invalid username.
 
-`options` is a `RegisterOptions`. `options.masterPassword` is sent as typed. A server with a master password refuses a registration without it with `master-password-required`, and a wrong one with `invalid-master-password`.
+`options` is a `RegisterOptions`. `options.masterPassword` is sent as typed. A server with a master password refuses the first registration without it with `master-password-required`, and a wrong one with `invalid-master-password`. When the server takes access requests, a registration without it resolves as pending, or rejects with `access-requests-full` when too many requests already wait.
 
 ### `login(username, password)`
 
-Signs in and resolves to the `Account`.
+Signs in and resolves to the `Account`. Rejects with `account-pending` while an admin has not approved the account.
 
 ### `logout()`
 
@@ -65,9 +65,21 @@ Resolves on the first roster.
 
 The declared roles, `"admin"` first.
 
+### `requests`
+
+The `AccessRequest`s, oldest first. Empty unless the signed-in account is an admin.
+
 ### `assignRole(username, role)`
 
 Resolves once the server stored the role. The new roster follows.
+
+### `approve(username, role)`
+
+Resolves once the access request named `username` is an active account with `role`.
+
+### `deny(username)`
+
+Resolves once the access request is deleted and its username freed.
 
 ### `remove(username)`
 
@@ -77,4 +89,4 @@ Resolves once the account is deleted.
 
 Leaves the room and rejects pending requests.
 
-Both commands reject with `AccountsRejectedError` when the server refuses them, including for a peer that is not an admin.
+The commands reject with `AccountsRejectedError` when the server refuses them, including for a peer that is not an admin.
