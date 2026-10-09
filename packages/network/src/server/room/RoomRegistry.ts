@@ -9,6 +9,7 @@ import { UngatedExtensionError } from "../errors/UngatedExtensionError.ts";
 import type { Logger } from "../logger.ts";
 import type { RightsTable } from "../rights/RightsTable.ts";
 import type { AnyExtension } from "../extension/Extension.ts";
+import type { PeerMetadata } from "../../protocol/types.ts";
 import type {
   RoomResolution,
   RoomResolver
@@ -141,6 +142,15 @@ export class RoomRegistry {
     }
 
     return names;
+  }
+
+  updateProfile(
+    clientId: string,
+    patch: PeerMetadata
+  ): void {
+    for (const { room } of this.#entries.values()) {
+      room.updateProfile(clientId, patch);
+    }
   }
 
   async #resolve(

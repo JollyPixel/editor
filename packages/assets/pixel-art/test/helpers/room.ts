@@ -33,6 +33,7 @@ export class MockRoom
   readonly id = "test-room";
   readonly clientId: string;
   readonly peers = new Map<string, network.Peer>();
+  readonly profile = null;
   readonly role = "default";
   readonly rights = {};
   readonly access = "write";

@@ -33,10 +33,10 @@ export interface EditorFramesOptions {
    */
   share: Pick<CatalogShare, "serve">;
   /**
-   * Sent with each launch, so every frame joins as the same peer.
-   * @default null
+   * Read at each launch, so every frame joins as the same peer.
+   * @default () => null
    */
-  identity?: LaunchIdentity | null;
+  identity?: () => LaunchIdentity | null;
   consoles?: Pick<FrameConsoles, "connect" | "focus">;
   onShellCommand?: (command: ShellCommand, from: string) => void;
   /**
@@ -50,7 +50,7 @@ export class EditorFrames {
   #launchOrigin: string;
   #appearance: PageAppearance;
   #share: Pick<CatalogShare, "serve">;
-  #identity: LaunchIdentity | null;
+  #identity: () => LaunchIdentity | null;
   #consoles: Pick<FrameConsoles, "connect" | "focus"> | undefined;
   #onShellCommand: ((command: ShellCommand, from: string) => void) | undefined;
   #logger: HostLogger;
@@ -65,7 +65,7 @@ export class EditorFrames {
     this.#launchOrigin = options.launchOrigin ?? location.origin;
     this.#appearance = options.appearance ?? new PageAppearance();
     this.#share = options.share;
-    this.#identity = options.identity ?? null;
+    this.#identity = options.identity ?? (() => null);
     this.#consoles = options.consoles;
     this.#onShellCommand = options.onShellCommand;
     this.#logger = (options.logger ?? readDebugLogger()).child({
@@ -179,7 +179,7 @@ export class EditorFrames {
       launchMessage({
         target: id,
         appearance: this.#appearance.toJSON(),
-        identity: this.#identity,
+        identity: this.#identity(),
         ports
       }),
       Object.values(ports).filter((port) => port !== undefined)

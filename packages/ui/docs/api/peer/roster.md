@@ -17,14 +17,15 @@ const roster = new PeerRoster({
 });
 ```
 
-`peers` is a `PresencePeer[]` with the local peer first (`self: true`, built
-from `identity`) and remote peers sorted by `clientId`. Names, colors and
-avatars are read from each peer's profile with `readUsername`,
-`peerProfileColor`, `readPeerId` and `readAvatar`. The local avatar comes from
-`identity.avatar`.
+`peers` is a `PresencePeer[]` with the local peer first (`self: true`, keyed
+and colored from `identity`) and remote peers sorted by `clientId`. Names,
+colors and avatars are read from each peer's profile with `readUsername`,
+`peerProfileColor`, `readPeerId` and `readAvatar`. The local name and avatar
+are read the same way from `room.profile`, the profile the server admitted,
+and from `identity` until the room has one.
 
-The roster republishes on `sync`, `peer-joined` and `peer-left`. With a `log`,
-it pushes one "has joined" or "has left" entry per remote peer; members already
+The roster republishes on `sync`, `peer-joined`, `peer-left` and
+`peer-profile`. With a `log`, it pushes one "has joined" or "has left" entry per remote peer; members already
 present at `sync` are not announced. `dispose()` unsubscribes and publishes an
 empty list.
 

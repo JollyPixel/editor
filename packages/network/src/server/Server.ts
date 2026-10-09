@@ -29,6 +29,7 @@ import {
   type DispatchOutcome
 } from "./EnvelopeDispatcher.ts";
 import type { ClientHandle } from "../transport/ClientHandle.ts";
+import type { PeerMetadata } from "../protocol/types.ts";
 import {
   REAUTHENTICATE_CLOSE_CODE,
   REAUTHENTICATE_CLOSE_REASON
@@ -72,7 +73,7 @@ export class Server {
   #auth: AuthenticationProvider;
   #sessions = new ClientSessions();
   #dispatcher: EnvelopeDispatcher;
-  #stopRevocations: () => void;
+  #unwatch: (() => void)[];
 
   constructor(
     options: ServerOptions = {}
@@ -91,9 +92,14 @@ export class Server {
       rooms: this.#rooms,
       sessions: this.#sessions
     });
-    this.#stopRevocations = this.#auth.watchRevocations?.(
-      (subject) => this.revoke(subject)
-    ) ?? (() => void 0);
+    this.#unwatch = [
+      this.#auth.watchRevocations?.(
+        (subject) => this.revoke(subject)
+      ),
+      this.#auth.watchProfiles?.(
+        (subject, patch) => this.updateProfile(subject, patch)
+      )
+    ].filter((stop) => stop !== undefined);
   }
 
   register(
@@ -127,9 +133,22 @@ export class Server {
     }
   }
 
+  updateProfile(
+    subject: string,
+    patch: PeerMetadata
+  ): void {
+    for (const clientId of this.#sessions.updateProfile(subject, patch)) {
+      void this.#sessions.drain(clientId).then(
+        () => this.#rooms.updateProfile(clientId, patch)
+      );
+    }
+  }
+
   async close(): Promise<void> {
-    this.#stopRevocations();
-    this.#stopRevocations = () => void 0;
+    for (const stop of this.#unwatch) {
+      stop();
+    }
+    this.#unwatch = [];
     this.#sessions.clear();
     await this.#rooms.close();
   }

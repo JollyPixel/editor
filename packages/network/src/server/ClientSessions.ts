@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { ClientHandle } from "../transport/ClientHandle.ts";
 import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
+import type { PeerMetadata } from "../protocol/types.ts";
 
 export interface ClientSession {
   handle: ClientHandle;
@@ -47,6 +48,27 @@ export class ClientSessions {
     }
 
     return handles;
+  }
+
+  updateProfile(
+    subject: string,
+    patch: PeerMetadata
+  ): string[] {
+    const clientIds: string[] = [];
+    for (const session of this.#sessions.values()) {
+      if (session.identity.subject === subject) {
+        session.identity = {
+          ...session.identity,
+          profile: {
+            ...session.identity.profile,
+            ...patch
+          }
+        };
+        clientIds.push(session.handle.id);
+      }
+    }
+
+    return clientIds;
   }
 
   get(

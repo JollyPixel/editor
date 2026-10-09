@@ -25,12 +25,14 @@ const kEntries: RosterEntry[] = [
     id: "a",
     username: "alice",
     role: "admin",
+    owner: false,
     online: true
   },
   {
     id: "b",
     username: "bob",
     role: "spectator",
+    owner: false,
     avatar: "/api/accounts/b/avatar?v=0123456789abcdef",
     online: false
   },
@@ -38,9 +40,17 @@ const kEntries: RosterEntry[] = [
     id: "c",
     username: "carol",
     role: "spectator",
+    owner: false,
     online: true
   }
 ];
+const kOwner: RosterEntry = {
+  id: "o",
+  username: "olga",
+  role: "admin",
+  owner: true,
+  online: false
+};
 const kRequest: AccessRequest = {
   id: "d",
   username: "dave"
@@ -55,6 +65,16 @@ function modelWith(
     requests,
     "a"
   );
+}
+
+function menuIds(
+  model: UsersTreeModel,
+  entry: RosterEntry
+): (string | false)[] {
+  return model.menu({
+    type: "user",
+    entry
+  }).map((item) => item !== "separator" && !item.disabled && item.id);
 }
 
 describe("UsersTreeModel", () => {
@@ -161,5 +181,37 @@ describe("UsersTreeModel", () => {
     assert.equal(remove.disabled, false);
     assert.equal(self.items?.length, 3);
     assert.equal(removeSelf.disabled, true);
+  });
+
+  test("crowns the owner and offers an admin no change to it", () => {
+    const model = new UsersTreeModel(
+      kRoles,
+      [kOwner, ...kEntries],
+      [],
+      "a"
+    );
+    const [admin] = model.nodes;
+
+    assert.deepEqual(
+      admin.children?.map((child) => child.badges?.map((badge) => badge.icon)),
+      [["crown"], undefined]
+    );
+    assert.deepEqual(menuIds(model, kOwner), [false, false, false]);
+    assert.deepEqual(menuIds(model, kEntries[1]), ["role", false, "remove"]);
+  });
+
+  test("offers the owner to transfer ownership to any other account", () => {
+    const model = new UsersTreeModel(
+      kRoles,
+      [kOwner, ...kEntries],
+      [],
+      kOwner.id
+    );
+
+    assert.deepEqual(
+      menuIds(model, kEntries[1]),
+      ["role", false, "transfer-ownership", "remove"]
+    );
+    assert.deepEqual(menuIds(model, kOwner), [false, false, false]);
   });
 });

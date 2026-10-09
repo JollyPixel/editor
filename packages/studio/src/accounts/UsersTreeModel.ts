@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
-import type {
-  AccessRequest,
-  RosterEntry
+import {
+  ADMIN_ROLE,
+  type AccessRequest,
+  type RosterEntry
 } from "@jolly-pixel/accounts";
 import type {
   ContextMenuEntry,
+  TreeBadge,
   TreeNode
 } from "@jolly-pixel/ui";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
@@ -15,6 +17,11 @@ const kRequestsNodeId = "requests";
 const kRequestPrefix = "request:";
 const kUserPrefix = "user:";
 const kOfflineOpacity = "30%";
+const kOwnerBadge: TreeBadge = {
+  color: "#e3a21a",
+  title: "Owner",
+  icon: "crown"
+};
 
 export type UsersMenuTarget =
   | {
@@ -48,8 +55,8 @@ export class UsersTreeModel {
 
   readonly roles: readonly string[];
   readonly nodes: UsersTreeNode[];
-  readonly selfId: string | null;
 
+  #viewer: RosterEntry | null = null;
   #targets = new Map<string, UsersMenuTarget>();
 
   constructor(
@@ -59,12 +66,14 @@ export class UsersTreeModel {
     selfId: string | null
   ) {
     this.roles = roles;
-    this.selfId = selfId;
     const byRole = new Map<string, RosterEntry[]>(
       roles.map((role) => [role, []])
     );
     for (const entry of entries) {
       byRole.get(entry.role)?.push(entry);
+      if (entry.id === selfId) {
+        this.#viewer = entry;
+      }
     }
 
     const roleNodes = Array.from(
@@ -74,6 +83,10 @@ export class UsersTreeModel {
     this.nodes = requests.length === 0 ?
       roleNodes :
       [this.#requestsNode(requests), ...roleNodes];
+  }
+
+  get viewerIsAdmin(): boolean {
+    return this.#viewer?.role === ADMIN_ROLE;
   }
 
   target(
@@ -93,10 +106,19 @@ export class UsersTreeModel {
   #userMenu(
     entry: RosterEntry
   ): ContextMenuEntry[] {
+    const transfer: ContextMenuEntry[] = this.#viewer?.owner === true && !entry.owner ?
+      [{
+        id: "transfer-ownership",
+        label: "Transfer ownership",
+        icon: "crown"
+      }] :
+      [];
+
     return [
       {
         id: "role",
         label: "Role",
+        disabled: entry.owner,
         items: this.roles.map((role) => {
           return {
             id: `${kRolePrefix}${role}`,
@@ -106,12 +128,13 @@ export class UsersTreeModel {
         })
       },
       "separator",
+      ...transfer,
       {
         id: "remove",
         label: "Remove account",
         icon: "trash",
         intent: "danger",
-        disabled: entry.id === this.selfId
+        disabled: entry.owner || this.#isViewer(entry)
       }
     ];
   }
@@ -204,7 +227,7 @@ export class UsersTreeModel {
     return {
       id,
       label: entry.username,
-      ...(entry.id === this.selfId ? { detail: "you" } : {}),
+      ...(this.#isViewer(entry) ? { detail: "you" } : {}),
       avatar: {
         peerId: entry.id,
         image: entry.avatar
@@ -215,8 +238,15 @@ export class UsersTreeModel {
           color :
           `color-mix(in srgb, ${color} ${kOfflineOpacity}, transparent)`
       },
+      ...(entry.owner ? { badges: [kOwnerBadge] } : {}),
       data
     };
+  }
+
+  #isViewer(
+    entry: RosterEntry
+  ): boolean {
+    return entry.id === this.#viewer?.id;
   }
 }
 

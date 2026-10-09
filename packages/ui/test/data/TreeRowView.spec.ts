@@ -121,6 +121,7 @@ describe("Data.TreeRowView", () => {
       { badges: [] },
       { badges: [{ color: "#0f0" }] },
       { badges: [{ color: "#00f", title: "Peer" }] },
+      { badges: [{ color: "#0f0", title: "Peer", icon: "lock" }] },
       { children: [{ id: "arm", label: "Arm" }] }
     ];
 

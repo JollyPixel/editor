@@ -6,14 +6,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { AuthenticationRequest } from "@jolly-pixel/network";
+import type {
+  AuthenticationRequest,
+  PeerMetadata
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
   createAccounts,
-  sessionFor,
-  storeWith,
-  storeWithRetiredRole
+  databaseWith,
+  databaseWithRetiredRole,
+  sessionFor
 } from "./helpers/accounts.ts";
 import { listenAccounts } from "./helpers/accountsServer.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
@@ -35,12 +38,12 @@ function upgrade(
 
 describe("Accounts.authenticate", () => {
   test("identifies the account of a session cookie", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
 
     assert.deepEqual(
-      accounts.authenticate(upgrade(`jolly_session=${sessionFor(store, alice.id)}`)),
+      accounts.authenticate(upgrade(`jolly_session=${sessionFor(database, alice.id)}`)),
       {
         subject: alice.id,
         role: "admin",
@@ -55,12 +58,12 @@ describe("Accounts.authenticate", () => {
   });
 
   test("points the profile at the uploaded avatar", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
     await using server = await listenAccounts(accounts);
     const { client, cookies } = server.browser();
-    const token = sessionFor(store, alice.id);
+    const token = sessionFor(database, alice.id);
     cookies.set("jolly_session", token);
     const { avatar } = await client.replaceAvatar(
       new Blob([await solidPng(8, 8)], { type: "image/png" })
@@ -73,12 +76,12 @@ describe("Accounts.authenticate", () => {
   });
 
   test("connects an account whose role left the table with the default role", () => {
-    using store = storeWithRetiredRole();
-    const [, bob] = store;
-    using accounts = createAccounts(store);
+    using database = databaseWithRetiredRole();
+    const [, bob] = database.accounts;
+    using accounts = createAccounts(database);
 
     assert.equal(
-      accounts.authenticate(upgrade(`jolly_session=${sessionFor(store, bob.id)}`))?.role,
+      accounts.authenticate(upgrade(`jolly_session=${sessionFor(database, bob.id)}`))?.role,
       "spectator"
     );
   });
@@ -86,12 +89,12 @@ describe("Accounts.authenticate", () => {
 
 describe("Accounts.watchRevocations", () => {
   test("revokes the account that signs out", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
     await using server = await listenAccounts(accounts);
     const { client, cookies } = server.browser();
-    cookies.set("jolly_session", sessionFor(store, alice.id));
+    cookies.set("jolly_session", sessionFor(database, alice.id));
     const revoked: string[] = [];
     const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));
 
@@ -99,5 +102,37 @@ describe("Accounts.watchRevocations", () => {
     stop();
 
     assert.deepEqual(revoked, [alice.id]);
+  });
+});
+
+describe("Accounts.watchProfiles", () => {
+  test("reports the profile of an account whose avatar changed, until stopped", async() => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    await using server = await listenAccounts(accounts);
+    const { client, cookies } = server.browser();
+    cookies.set("jolly_session", sessionFor(database, alice.id));
+    const changes: [string, PeerMetadata][] = [];
+    const stop = accounts.watchProfiles(
+      (accountId, profile) => changes.push([accountId, profile])
+    );
+
+    const { avatar } = await client.replaceAvatar(
+      new Blob([await solidPng(8, 8)], { type: "image/png" })
+    );
+    stop();
+    await client.replaceAvatar(
+      new Blob([await solidPng(4, 4)], { type: "image/png" })
+    );
+
+    assert.deepEqual(changes, [[
+      alice.id,
+      {
+        username: "Alice",
+        peerId: alice.id,
+        avatar
+      }
+    ]]);
   });
 });

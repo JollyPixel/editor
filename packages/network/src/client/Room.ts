@@ -16,6 +16,10 @@ export interface RoomPeerPresenceEvent extends RoomPeerEvent {
   patch: PeerMetadata;
 }
 
+export interface RoomPeerProfileEvent extends RoomPeerEvent {
+  patch: PeerMetadata;
+}
+
 export interface RoomSyncEvent {
   self: string;
   clientIds: string[];
@@ -51,6 +55,9 @@ export type RoomEventMap<TServerMessage = unknown> = {
   "peer-presence": (
     event: RoomPeerPresenceEvent
   ) => void;
+  "peer-profile": (
+    event: RoomPeerProfileEvent
+  ) => void;
   denied: (
     event: RoomRejectionEvent
   ) => void;
@@ -70,6 +77,7 @@ export interface Room<
   readonly id: string;
   readonly clientId: string | null;
   readonly peers: ReadonlyMap<string, Peer>;
+  readonly profile: PeerMetadata | null;
   readonly role: string;
   readonly rights: RoomRights;
   readonly access: Right;

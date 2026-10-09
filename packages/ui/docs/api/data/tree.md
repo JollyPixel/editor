@@ -139,6 +139,13 @@ node.badges = peersOn(node.id).map((peer) => ({
 `title` fills both the tooltip and the dot's accessible label. Rows with an
 empty or absent list render no badge container at all.
 
+Give a badge an `icon` to draw that registered icon in `color` instead of a
+dot, at the size of the row icon:
+
+```ts
+node.badges = [{ color: "#e3a21a", title: "Locked by Ada", icon: "lock" }];
+```
+
 ## Sampling a property with a swatch
 
 `TreeNode.swatch` draws one small square after the detail and before the

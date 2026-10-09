@@ -23,6 +23,7 @@ export function createMockRoom(
     id: "animation-room",
     clientId,
     peers: new Map(),
+    profile: null,
     role: "default",
     rights: {},
     access: "write",

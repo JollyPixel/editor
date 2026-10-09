@@ -126,6 +126,12 @@ peer `subject` the event store records and the `peerId` presence colours.
 What an account may do, a key of the project's `access.roles` rights table.
 `admin` is built in; an undeclared role falls back to `defaultRole`.
 
+### Project owner
+
+The one admin account no other admin can demote or remove, first the account
+that registered first. Only the owner hands the title to another account.
+Unrelated to the owner of a companion.
+
 ### Roster
 
 The accounts, their role and whether they are online, pushed by the

@@ -38,6 +38,13 @@ Missing credentials use the default role unless `mandatory` is true.
 Refusal emits `unauthorized` and stops retries. `server.revoke(subject)` forces
 reauthentication. Use HTTPS/WSS for remote credentials.
 
+### Profile updates
+
+A provider's optional `watchProfiles(listener)` reports `(subject, patch)` when
+server profile fields change. The server applies each report with
+`server.updateProfile(subject, patch)`, so open connections keep their identity
+and role while rooms show the new profile.
+
 ## Rights
 
 Rules match `${extension.name}.${event}`. First match wins; `*` matches any text.

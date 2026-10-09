@@ -177,6 +177,7 @@ describe("Envelope schemas", () => {
       | "peer-joined"
       | "peer-left"
       | "peer-presence"
+      | "peer-profile"
       | "denied"
       | "error"
     >();

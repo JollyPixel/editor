@@ -52,6 +52,16 @@ registerIcon("trash", `
   />
 `);
 
+registerIcon("crown", `
+  <path
+    d="M3 7l5 5 4-7 4 7 5-5-2 12H5L3 7Z"
+    fill="currentColor"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`);
+
 registerIcon("file", `
   <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
   <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#8fd8ff" />

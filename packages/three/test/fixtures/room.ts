@@ -12,6 +12,7 @@ export class FakeRoom implements Room {
   readonly id = "three:test";
   readonly clientId = "local-uuid-nobody-sees";
   readonly peers = new Map<string, Peer>();
+  readonly profile = null;
   readonly patches: PeerMetadata[] = [];
   readonly role = "default";
   readonly rights: RoomRights = {};

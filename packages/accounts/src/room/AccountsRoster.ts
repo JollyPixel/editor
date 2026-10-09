@@ -16,6 +16,7 @@ import {
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
   ACCOUNTS_ROSTER,
+  ACCOUNTS_TRANSFER_OWNERSHIP,
   type AccountsCommand,
   type AccountsMessage,
   type AccountsRequest,
@@ -119,6 +120,15 @@ export class AccountsRoster extends Emitter<
   ): Promise<void> {
     return this.#request({
       type: ACCOUNTS_REMOVE,
+      username
+    });
+  }
+
+  transferOwnership(
+    username: string
+  ): Promise<void> {
+    return this.#request({
+      type: ACCOUNTS_TRANSFER_OWNERSHIP,
       username
     });
   }

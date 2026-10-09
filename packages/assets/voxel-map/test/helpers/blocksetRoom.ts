@@ -35,6 +35,7 @@ export function createMockBlocksetRoom(
     id: "blockset-room",
     clientId,
     peers: new Map(),
+    profile: null,
     role: "default",
     rights: {},
     access: "write" as const,

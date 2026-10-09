@@ -40,6 +40,7 @@ import { TreeRenameController } from "./TreeRenameController.ts";
 import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
+  type TreeBadge,
   type TreeDropAccept,
   type TreeNode,
   type TreeRenameValidator,
@@ -460,15 +461,36 @@ export class Tree<TData = unknown> extends LitElement {
     }
 
     return html`
-      <span class="badges">${badges.map((badge) => html`
+      <span class="badges">${badges.map((badge) => this.#renderBadge(badge))}</span>
+    `;
+  }
+
+  #renderBadge(
+    badge: TreeBadge
+  ): TemplateResult {
+    const label = badge.title ?? "Badge";
+    const title = badge.title ?? nothing;
+    if (badge.icon === undefined) {
+      return html`
         <span
           class="badge"
           role="img"
-          aria-label=${badge.title ?? "Badge"}
-          title=${badge.title ?? nothing}
+          aria-label=${label}
+          title=${title}
           style="background: ${badge.color}"
         ></span>
-      `)}</span>
+      `;
+    }
+
+    return html`
+      <jolly-icon
+        class="badge-icon"
+        name=${badge.icon}
+        role="img"
+        aria-label=${label}
+        title=${title}
+        style="color: ${badge.color}"
+      ></jolly-icon>
     `;
   }
 

@@ -11,6 +11,10 @@ export type TreeDropWhere =
 export interface TreeBadge {
   color: string;
   title?: string;
+  /**
+   * Drawn in `color` in place of the dot.
+   */
+  icon?: IconName;
 }
 
 /**

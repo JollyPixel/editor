@@ -29,4 +29,8 @@ export interface AuthenticationProvider {
   watchRevocations?(
     listener: (subject: string) => void
   ): () => void;
+
+  watchProfiles?(
+    listener: (subject: string, patch: PeerMetadata) => void
+  ): () => void;
 }

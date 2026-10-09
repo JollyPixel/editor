@@ -54,6 +54,20 @@ function toPeer(
   };
 }
 
+function withPatch(
+  peer: Peer,
+  field: "presence" | "profile",
+  patch: PeerMetadata
+): Peer {
+  return {
+    ...peer,
+    [field]: {
+      ...peer[field],
+      ...patch
+    }
+  };
+}
+
 export class ClientRoom<
   TClientMessage = unknown,
   TServerMessage = unknown
@@ -63,12 +77,12 @@ export class ClientRoom<
 
   #state: ClientRoomState = "idle";
   #clientId: string | null = null;
-  #role = DEFAULT_ROLE;
+  #self: Peer | null = null;
   #rights = kNoRights;
   #peers = new Map<string, Peer>();
   #presence: PeerMetadata = {};
   #resume: (() => unknown) | null = null;
-  #profile: PeerMetadata;
+  #claimedProfile: PeerMetadata;
   #parser: RoomMessageParser<TServerMessage> | undefined;
   #send: (envelope: ClientEnvelope) => void;
   #onLeave: () => void;
@@ -78,7 +92,7 @@ export class ClientRoom<
   ) {
     super();
     this.id = options.id;
-    this.#profile = options.profile;
+    this.#claimedProfile = options.profile;
     this.#parser = options.parser;
     this.#send = options.send;
     this.#onLeave = options.onLeave;
@@ -92,8 +106,12 @@ export class ClientRoom<
     return this.#peers;
   }
 
+  get profile(): PeerMetadata | null {
+    return this.#self?.profile ?? null;
+  }
+
   get role(): string {
-    return this.#role;
+    return this.#self?.role ?? DEFAULT_ROLE;
   }
 
   get rights(): RoomRights {
@@ -206,8 +224,8 @@ export class ClientRoom<
     this.#onLeave();
     this.#peers.clear();
     this.#clientId = null;
+    this.#self = null;
     this.#rights = kNoRights;
-    this.#role = DEFAULT_ROLE;
     this.emit("left");
   }
 
@@ -219,7 +237,8 @@ export class ClientRoom<
       .with({ kind: "sync" }, (envelope) => this.#admit(envelope))
       .with({ kind: "peer-joined" }, (envelope) => this.#addPeer(envelope))
       .with({ kind: "peer-left" }, (envelope) => this.#removePeer(envelope.clientId))
-      .with({ kind: "peer-presence" }, (envelope) => this.#patchPeer(envelope))
+      .with({ kind: "peer-presence" }, (envelope) => this.#patchMember(envelope, "presence"))
+      .with({ kind: "peer-profile" }, (envelope) => this.#patchMember(envelope, "profile"))
       .with({ kind: P.union("denied", "error") }, (envelope) => this.emit(envelope.kind, {
         event: envelope.event,
         reason: envelope.reason
@@ -233,7 +252,7 @@ export class ClientRoom<
     this.#send({
       room: this.id,
       kind: "join",
-      profile: this.#profile,
+      profile: this.#claimedProfile,
       presence: { ...this.#presence },
       ...(resume === undefined ? {} : { resume })
     });
@@ -261,13 +280,13 @@ export class ClientRoom<
   ): void {
     this.#clientId = envelope.self;
     this.#rights = envelope.rights;
-    this.#role = DEFAULT_ROLE;
+    this.#self = null;
     this.#peers.clear();
 
     const clientIds: string[] = [];
     for (const member of envelope.members) {
       if (member.clientId === envelope.self) {
-        this.#role = member.role;
+        this.#self = toPeer(member);
       }
       else {
         this.#peers.set(member.clientId, toPeer(member));
@@ -299,23 +318,22 @@ export class ClientRoom<
     });
   }
 
-  #patchPeer(
-    envelope: ServerEnvelopeOf<"peer-presence">
+  #patchMember(
+    envelope: ServerEnvelopeOf<"peer-presence" | "peer-profile">,
+    field: "presence" | "profile"
   ): void {
-    const peer = this.#peers.get(envelope.clientId);
+    const { kind, clientId, patch } = envelope;
+    const peer = this.#peers.get(clientId);
     if (peer !== undefined) {
-      this.#peers.set(envelope.clientId, {
-        ...peer,
-        presence: {
-          ...peer.presence,
-          ...envelope.patch
-        }
-      });
+      this.#peers.set(clientId, withPatch(peer, field, patch));
+    }
+    else if (clientId === this.#clientId && this.#self !== null) {
+      this.#self = withPatch(this.#self, field, patch);
     }
 
-    this.emit("peer-presence", {
-      clientId: envelope.clientId,
-      patch: envelope.patch
+    this.emit(kind, {
+      clientId,
+      patch
     });
   }
 }

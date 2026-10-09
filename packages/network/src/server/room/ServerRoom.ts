@@ -405,6 +405,40 @@ export class ServerRoom {
     return true;
   }
 
+  updateProfile(
+    clientId: string,
+    patch: PeerMetadata
+  ): void {
+    const record = this.#members.get(clientId);
+    if (record === undefined) {
+      return;
+    }
+
+    const profile = {
+      ...record.profile,
+      ...patch
+    };
+    if (JSON.stringify(profile).length > this.#peerMetadataLength) {
+      this.#logger
+        .withMetadata({
+          clientId,
+          outcome: "dropped",
+          reason: `profile exceeds ${this.#peerMetadataLength} JSON characters`
+        })
+        .error("profile update");
+
+      return;
+    }
+
+    record.profile = profile;
+    this.#members.send({
+      room: this.id,
+      kind: "peer-profile",
+      clientId,
+      patch
+    });
+  }
+
   updatePresence(
     clientId: string,
     patch: PeerMetadata

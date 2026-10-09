@@ -93,7 +93,7 @@ describe("PeerRoster", () => {
     ]);
   });
 
-  test("shows the local avatar given by the identity", () => {
+  test("shows the local avatar given by the identity until the room admits a profile", () => {
     const harness = createRoomHarness();
     let peers: readonly PresencePeer[] = [];
     new PeerRoster({
@@ -253,5 +253,6 @@ describe("PeerRoster", () => {
     assert.strictEqual(harness.listenerCount("sync"), 0);
     assert.strictEqual(harness.listenerCount("peer-joined"), 0);
     assert.strictEqual(harness.listenerCount("peer-left"), 0);
+    assert.strictEqual(harness.listenerCount("peer-profile"), 0);
   });
 });

@@ -12,7 +12,7 @@ import sharp from "sharp";
 import {
   activeAccount,
   createAccounts,
-  createStore
+  createDatabase
 } from "../../helpers/accounts.ts";
 import { listenAccounts } from "../../helpers/accountsServer.ts";
 import { solidPng } from "../../helpers/avatar/images.ts";
@@ -24,8 +24,8 @@ import { AVATAR_SIZE_PX } from "#src/node.ts";
 
 describe("AccountsApi avatars", () => {
   test("replaces the avatar of the signed-in account and serves it", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -50,8 +50,8 @@ describe("AccountsApi avatars", () => {
   });
 
   test("revalidates an avatar requested without its current hash", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
     const account = await client.replaceAvatar(new Blob([await solidPng(8, 8)]));
@@ -63,8 +63,8 @@ describe("AccountsApi avatars", () => {
   });
 
   test("answers not-found for an account without an avatar", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const account = await activeAccount(
       server.browser().client.register("Alice", "correct horse")
     );
@@ -76,8 +76,8 @@ describe("AccountsApi avatars", () => {
   });
 
   test("refuses an upload without a session", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
 
     const response = await fetch(new URL("avatar", server.url), {
       method: "PUT",
@@ -89,8 +89,8 @@ describe("AccountsApi avatars", () => {
   });
 
   test("refuses an upload that is not an image", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -103,8 +103,8 @@ describe("AccountsApi avatars", () => {
   });
 
   test("refuses an upload over the size limit", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { client, fetch: browserFetch } = server.browser();
     await client.register("Alice", "correct horse");
     const oversized = new Uint8Array(AVATAR_MAX_BYTES + 1);

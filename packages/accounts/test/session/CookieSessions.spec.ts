@@ -12,28 +12,28 @@ import { parseSetCookie } from "cookie";
 // Import Internal Dependencies
 import {
   createDirectory,
-  sessionFor,
-  storeWith
+  databaseWith,
+  sessionFor
 } from "../helpers/accounts.ts";
 import type { AccountDirectory } from "#src/AccountDirectory.ts";
 import type { Account } from "#src/index.ts";
 import { CookieSessions } from "#src/session/CookieSessions.ts";
 import {
   SessionCookie,
-  type AccountStore
+  type AccountsDatabase
 } from "#src/node.ts";
 
 function createSessions(
-  store: AccountStore,
+  database: AccountsDatabase,
   cookie = new SessionCookie()
 ): {
   sessions: CookieSessions;
   directory: AccountDirectory;
 } {
-  const directory = createDirectory(store);
+  const directory = createDirectory(database);
 
   return {
-    sessions: new CookieSessions(store, directory, cookie),
+    sessions: new CookieSessions(database.sessions, directory, cookie),
     directory
   };
 }
@@ -69,9 +69,9 @@ function cookieHeader(
 
 describe("CookieSessions", () => {
   test("issues an HttpOnly strict cookie that resolves to its account", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const { sessions, directory } = createSessions(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    const { sessions, directory } = createSessions(database);
     const account = signedIn(directory, alice.id);
 
     const issued = sessions.open(account, true);
@@ -90,10 +90,10 @@ describe("CookieSessions", () => {
 
   test("ends a session after the time to live of its cookie", (t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    using store = storeWith("Alice");
-    const [alice] = store;
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
     const { sessions, directory } = createSessions(
-      store,
+      database,
       new SessionCookie({ ttlMs: 2_000 })
     );
 
@@ -107,31 +107,31 @@ describe("CookieSessions", () => {
   });
 
   test("ignores the cookie of a request from another origin", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const { sessions } = createSessions(store);
-    const cookie = `jolly_session=${sessionFor(store, alice.id)}`;
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    const { sessions } = createSessions(database);
+    const cookie = `jolly_session=${sessionFor(database, alice.id)}`;
 
     assert.equal(sessions.account(headers(cookie, "http://evil.example")), null);
     assert.notEqual(sessions.account(headers(cookie, "http://studio.local")), null);
   });
 
   test("reads only the cookie it is configured with", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
     const { sessions } = createSessions(
-      store,
+      database,
       new SessionCookie({ name: "project_session" })
     );
-    const token = sessionFor(store, alice.id);
+    const token = sessionFor(database, alice.id);
 
     assert.equal(sessions.account(headers(`jolly_session=${token}`)), null);
     assert.notEqual(sessions.account(headers(`project_session=${token}`)), null);
   });
 
   test("resolves no account without a cookie or for a malformed or unknown token", () => {
-    using store = storeWith("Alice");
-    const { sessions } = createSessions(store);
+    using database = databaseWith("Alice");
+    const { sessions } = createSessions(database);
 
     assert.equal(sessions.account(headers()), null);
     assert.equal(sessions.account(headers("jolly_session=hunter2")), null);
@@ -139,12 +139,12 @@ describe("CookieSessions", () => {
   });
 
   test("closes the session, revokes its account once and clears the cookie", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const { sessions, directory } = createSessions(store);
-    const cookie = headers(`jolly_session=${sessionFor(store, alice.id)}`);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    const { sessions, directory } = createSessions(database);
+    const cookie = headers(`jolly_session=${sessionFor(database, alice.id)}`);
     const revoked: string[] = [];
-    directory.watchRevocations((accountId) => revoked.push(accountId));
+    directory.subscribe("revoked", (accountId) => revoked.push(accountId));
 
     const cleared = parseSetCookie(sessions.close(cookie, false));
     sessions.close(cookie, false);

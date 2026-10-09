@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   createAccounts,
-  createStore,
-  storeWith
+  createDatabase,
+  databaseWith
 } from "../../helpers/accounts.ts";
 import { listenAccounts } from "../../helpers/accountsServer.ts";
 import type { AccountsRequestError } from "#src/index.ts";
@@ -34,8 +34,8 @@ function postCredentials(
 
 describe("AccountsApi throttle", () => {
   test("throttles a username after too many failed logins", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store, {
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database, {
       throttle: {
         attempts: 2
       }
@@ -55,8 +55,8 @@ describe("AccountsApi throttle", () => {
   });
 
   test("counts parallel logins before checking any password", async() => {
-    using store = storeWith("Alice");
-    await using server = await listenAccounts(createAccounts(store, {
+    using database = databaseWith("Alice");
+    await using server = await listenAccounts(createAccounts(database, {
       throttle: {
         attempts: 3
       }
@@ -72,8 +72,8 @@ describe("AccountsApi throttle", () => {
   });
 
   test("throttles registrations from one address", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store, {
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database, {
       throttle: {
         registrations: 2
       }
@@ -86,12 +86,12 @@ describe("AccountsApi throttle", () => {
       (error: AccountsRequestError) => error.status === 429 &&
         error.code === "throttled"
     );
-    assert.equal(store.size, 2);
+    assert.equal(database.accounts.size, 2);
   });
 
   test("keys the address throttle on the address the proxies forward", async() => {
-    using store = storeWith("Alice", "Bob");
-    await using server = await listenAccounts(createAccounts(store, {
+    using database = databaseWith("Alice", "Bob");
+    await using server = await listenAccounts(createAccounts(database, {
       proxyHops: 1,
       throttle: {
         attempts: 1

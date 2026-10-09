@@ -182,7 +182,8 @@ function sameBadges(
   for (let index = 0; index < left.length; index++) {
     if (
       left[index].color !== right[index].color ||
-      left[index].title !== right[index].title
+      left[index].title !== right[index].title ||
+      left[index].icon !== right[index].icon
     ) {
       return false;
     }
