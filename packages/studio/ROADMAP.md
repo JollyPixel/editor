@@ -5,25 +5,10 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## 1. Master password
+## 1. Access requests
 
-Anyone who reaches the server can register today, and the first account
-becomes admin. A project secret closes that race.
-
-- The first account must give it and becomes admin. Later, giving it
-  registers with `defaultRole`; without it, registering files an access
-  request (step 2).
-- Stored hashed in `accounts.db`. On start, `JOLLY_MASTER_PASSWORD` seeds the
-  hash when none is stored and is ignored once one is. Admins rotate it from
-  the Users pane.
-- No variable and no stored hash keeps registration open, as today. Dev and
-  e2e rely on it.
-- Still open: recovering when every admin is locked out. An environment flag
-  that resets the hash is the candidate.
-
-## 2. Access requests
-
-Registering without the master password creates a pending account.
+When `access.masterPasswordRequired` is set, registering without the master
+password creates a pending account instead of being refused.
 
 - The account row gets a `status`. A pending account cannot log in: login
   answers a typed `AccountsErrorCode`, and the sign-in dialog says the
@@ -34,14 +19,14 @@ Registering without the master password creates a pending account.
 - The number of pending accounts is capped, on top of the per-address
   registration throttle.
 
-## 3. Preferences and settings pane
+## 2. Preferences and settings pane
 
 A per-user store the shell owns, reached from the header toolbar. The open
 tabs, the dock layout and the kind filter move there from `localStorage`. It
 becomes the home of the account: the avatar upload moves there from the
-`AccountBadge` menu, and admins rotate the master password.
+`AccountBadge` menu.
 
-## 4. Share links
+## 3. Share links
 
 A read-only link to one asset for people without an account.
 

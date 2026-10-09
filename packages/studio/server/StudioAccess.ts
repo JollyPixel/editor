@@ -25,19 +25,24 @@ export const DEFAULT_ACCESS = {
       "*.$presence": "write",
       "*": "read"
     }
-  }
+  },
+  masterPasswordRequired: false
 } as const satisfies StudioAccessData;
 
 const kAccessSectionSchema = z.object({
   access: z.object({
     defaultRole: z.string().min(1).default(DEFAULT_ACCESS.defaultRole),
-    roles: kRolesSchema.default(DEFAULT_ACCESS.roles)
+    roles: kRolesSchema.default(DEFAULT_ACCESS.roles),
+    masterPasswordRequired: z.boolean().default(
+      DEFAULT_ACCESS.masterPasswordRequired
+    )
   }).optional()
 });
 
 export interface StudioAccessData {
   defaultRole: string;
   roles: RightsMap;
+  masterPasswordRequired: boolean;
 }
 
 export class StudioAccess {
@@ -81,18 +86,22 @@ export class StudioAccess {
       new AccountRoles({
         roles: Object.keys(data.roles),
         defaultRole: data.defaultRole
-      })
+      }),
+      data.masterPasswordRequired
     );
   }
 
   readonly rights: RightsMap;
   readonly roles: AccountRoles;
+  readonly masterPasswordRequired: boolean;
 
   private constructor(
     rights: RightsMap,
-    roles: AccountRoles
+    roles: AccountRoles,
+    masterPasswordRequired: boolean
   ) {
     this.rights = rights;
     this.roles = roles;
+    this.masterPasswordRequired = masterPasswordRequired;
   }
 }

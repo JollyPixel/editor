@@ -15,6 +15,8 @@ import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
 import { UsernameTakenError } from "../store/errors/UsernameTakenError.ts";
+import { InvalidMasterPasswordError } from "../registration/errors/InvalidMasterPasswordError.ts";
+import { MasterPasswordRequiredError } from "../registration/errors/MasterPasswordRequiredError.ts";
 import { AccountsReply } from "./AccountsReply.ts";
 import { AccountsRequest } from "./AccountsRequest.ts";
 import type { AccountsThrottle } from "./AccountsThrottle.ts";
@@ -40,6 +42,16 @@ const kDomainErrors = [
     type: UsernameTakenError,
     status: 409,
     code: "username-taken"
+  },
+  {
+    type: MasterPasswordRequiredError,
+    status: 403,
+    code: "master-password-required"
+  },
+  {
+    type: InvalidMasterPasswordError,
+    status: 403,
+    code: "invalid-master-password"
   },
   {
     type: InvalidAvatarError,
@@ -107,7 +119,11 @@ export class AccountsEndpoint {
     request: AccountsRequest
   ): Promise<AccountsReply> {
     request.expect("POST");
-    const { username, password } = await request.credentials();
+    const {
+      username,
+      password,
+      options
+    } = await request.registration();
     const retryAfter = await this.#throttle.reserveRegistration(
       request.address
     );
@@ -118,7 +134,7 @@ export class AccountsEndpoint {
     return this.#signedIn(
       request,
       201,
-      await this.#accounts.register(username, password)
+      await this.#accounts.register(username, password, options)
     );
   }
 

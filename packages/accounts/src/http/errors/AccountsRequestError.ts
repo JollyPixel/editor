@@ -8,6 +8,8 @@ export const ACCOUNTS_ERROR_CODES = [
   "invalid-username",
   "invalid-password",
   "username-taken",
+  "master-password-required",
+  "invalid-master-password",
   "invalid-credentials",
   "invalid-avatar",
   "not-found",

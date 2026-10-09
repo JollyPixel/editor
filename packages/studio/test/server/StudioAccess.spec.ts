@@ -24,6 +24,18 @@ describe("StudioAccess.read", () => {
       ...DEFAULT_ACCESS.roles
     });
     assert.deepEqual([...access.roles], ["admin", "member", "spectator"]);
+    assert.equal(access.masterPasswordRequired, false);
+  });
+
+  test("reads whether every registration needs the master password", () => {
+    const access = StudioAccess.read({
+      access: {
+        masterPasswordRequired: true
+      }
+    }, kSource);
+
+    assert.equal(access.masterPasswordRequired, true);
+    assert.equal(access.roles.defaultRole, "spectator");
   });
 
   test("reads declared roles and their rule order", () => {

@@ -9,3 +9,6 @@ export type { AccountsExtension } from "./room/AccountsExtension.ts";
 export * from "./store/errors/AccountChangeRefusedError.ts";
 export * from "./store/errors/UsernameTakenError.ts";
 export * from "./session/SessionCookie.ts";
+export type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
+export * from "./registration/errors/MasterPasswordRequiredError.ts";
+export * from "./registration/errors/InvalidMasterPasswordError.ts";

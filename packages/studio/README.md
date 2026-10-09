@@ -44,6 +44,8 @@ Roles are set in the `access` section of `.jollypixel/project.json`. Without it,
 }
 ```
 
+Set `JOLLY_MASTER_PASSWORD` so that a stranger who reaches the server first cannot claim the admin account: the first registration must give it. Later registrations need it too when `access.masterPasswordRequired` is `true`, and the studio refuses to start with that setting but no password. To change the password, restart with a new value. Without the variable, registration is open.
+
 The Users pane on Home lists every account under its role and shows who is online. An admin changes a role or removes an account from its context menu, or with the `/users` console commands. A role change applies on the user's next connection.
 
 To pick up editor, host or ui changes while the studio runs, start the watch builds in a second terminal:

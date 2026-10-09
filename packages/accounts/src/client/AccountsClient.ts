@@ -12,6 +12,7 @@ import {
   AccountsRequestError
 } from "../http/errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
+import type { RegisterOptions } from "../registration/RegisterOptions.ts";
 import { Username } from "../account/Username.ts";
 import { prehashPassword } from "./prehashPassword.ts";
 
@@ -59,7 +60,8 @@ export class AccountsClient {
 
   async register(
     username: string,
-    password: string
+    password: string,
+    options: RegisterOptions = {}
   ): Promise<Account> {
     if ([...password].length < MIN_PASSWORD_LENGTH) {
       throw new InvalidPasswordError(
@@ -70,7 +72,8 @@ export class AccountsClient {
     return this.#authenticate(
       "register",
       username,
-      password
+      password,
+      options
     );
   }
 
@@ -137,13 +140,15 @@ export class AccountsClient {
   async #authenticate(
     route: "register" | "login",
     username: string,
-    password: string
+    password: string,
+    fields: RegisterOptions = {}
   ): Promise<Account> {
     const parsed = Username.parse(username);
 
     const response = await this.#request(route, {
       method: "POST",
       body: {
+        ...fields,
         username: parsed.value,
         password: await prehashPassword(
           parsed,

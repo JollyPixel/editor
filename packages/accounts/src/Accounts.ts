@@ -45,6 +45,11 @@ import {
   AvatarImage,
   type StoredAvatar
 } from "./avatar/AvatarImage.ts";
+import {
+  MasterPassword,
+  type MasterPasswordOptions
+} from "./registration/MasterPassword.ts";
+import type { RegisterOptions } from "./registration/RegisterOptions.ts";
 
 // CONSTANTS
 const kDefaultMaxConcurrentHashes = 2;
@@ -73,6 +78,11 @@ export interface AccountsOptions {
    * @default 2
    */
   maxConcurrentHashes?: number;
+  /**
+   * Secret the first registration must give, and every registration when
+   * `required` is set. Without it, registration is open.
+   */
+  masterPassword?: MasterPasswordOptions;
 }
 
 export interface AccountsOpenOptions
@@ -120,12 +130,16 @@ export class Accounts extends Emitter<AccountsEventMap>
   #hashes: Mutex;
   #revocations = new Set<(accountId: string) => void>();
   #dummyHash: Promise<PasswordHash> | null = null;
+  #masterPassword: MasterPassword | null;
 
   constructor(
     options: AccountsOptions
   ) {
     super();
     this.#store = options.store;
+    this.#masterPassword = options.masterPassword === undefined ?
+      null :
+      new MasterPassword(options.masterPassword);
     this.#hashes = new Mutex({
       concurrency: options.maxConcurrentHashes ?? kDefaultMaxConcurrentHashes
     });
@@ -146,8 +160,13 @@ export class Accounts extends Emitter<AccountsEventMap>
 
   async register(
     username: Username,
-    password: PasswordDigest
+    password: PasswordDigest,
+    options: RegisterOptions = {}
   ): Promise<AccountSession> {
+    this.#masterPassword?.admit(
+      options.masterPassword,
+      this.#store.unclaimed
+    );
     const account = this.#store.register(
       username,
       await this.#hashing(() => hashPassword(password.value)),

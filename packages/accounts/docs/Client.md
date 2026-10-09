@@ -17,9 +17,11 @@ const accounts = new AccountsClient({
 
 Failed requests throw `AccountsRequestError`, with the HTTP `status` and the server's `code`, an `AccountsErrorCode` (`ACCOUNTS_ERROR_CODES` lists them). A code the client does not know reads as `"unknown"`.
 
-### `register(username, password)`
+### `register(username, password, options?)`
 
 Creates an account, signs it in and resolves to the `Account`. Throws `InvalidPasswordError` without sending anything when the password is shorter than `MIN_PASSWORD_LENGTH` (8), and `InvalidUsernameError` for an invalid username.
+
+`options` is a `RegisterOptions`. `options.masterPassword` is sent as typed. A server with a master password refuses a registration without it with `master-password-required`, and a wrong one with `invalid-master-password`.
 
 ### `login(username, password)`
 

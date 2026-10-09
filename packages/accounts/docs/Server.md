@@ -32,6 +32,8 @@ Opens an `AccountStore` at `location` (in memory by default, see `AccountStore.o
 - `throttle.windowMs`: defaults to 15 minutes.
 - `proxyHops`: reverse proxies in front of the server. Defaults to 0, which ignores `X-Forwarded-*` headers. With `n`, the server lists the entries of `X-Forwarded-For` followed by the socket address, and trusts the one `n` places before the socket address as the client address. It reads `X-Forwarded-Proto` the same way, with the socket scheme last, and the request counts as HTTPS when the trusted entry is `https`. Each proxy must append to both headers, or clients can pick the address they are throttled under.
 - `maxConcurrentHashes`: `scrypt` hashes and checks running at once. Further ones wait their turn, which keeps libuv threads free for file I/O. Defaults to 2.
+- `masterPassword.secret`: a secret the first account must give to register. Without it, anyone who reaches the server first becomes admin. Throws a `RangeError` when empty.
+- `masterPassword.required`: every registration must give the secret, not only the first one. Defaults to `false`.
 
 ### `handler`
 
@@ -65,9 +67,11 @@ Calls `listener` with the account id after `assignRole`, `remove` and a `logout`
 
 The [`accounts` room](#accounts-room), to register on the network server.
 
-### `register(username, password)` and `login(username, password)`
+### `register(username, password, options?)` and `login(username, password)`
 
 Take a `Username` and a pre-hashed password, and resolve to `{ token, account }`. `register` hashes the pre-hash again with `scrypt`. `login` resolves to `null` for a wrong password or an unknown username, after the same `scrypt` work.
+
+`options.masterPassword` is the master password as typed. When `Accounts` was built with `masterPassword`, `register` throws `MasterPasswordRequiredError` when it is missing but needed: for the first account (while the store is `unclaimed`), or for any account when `required` is set. It throws `InvalidMasterPasswordError` when the given one is wrong, even if none was needed. Both are checked before hashing. Without that constructor option, `options.masterPassword` is ignored.
 
 ### `logout(token)`
 
@@ -161,6 +165,10 @@ The stored `{ hash, bytes }`, or `null`.
 
 The number of accounts.
 
+### `unclaimed`
+
+`true` while the store has no account. The next registration becomes admin.
+
 ### `[Symbol.iterator]()`
 
 The accounts, oldest first.
@@ -242,7 +250,7 @@ Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. Er
 
 ### `POST register`
 
-`{ username, password }` creates an account, sets the session cookie and answers 201 with `{ account }`. `password` must be a pre-hash from `prehashPassword` (43 base64url characters); anything else is refused with 400 `invalid-password`, so a plaintext password is never stored by mistake. A taken name answers 409 `username-taken`. Every registration counts against the client address, whatever its outcome; past `throttle.registrations`, the route answers 429 `throttled` with `Retry-After`.
+`{ username, password, masterPassword? }` creates an account, sets the session cookie and answers 201 with `{ account }`. `password` must be a pre-hash from `prehashPassword` (43 base64url characters); anything else is refused with 400 `invalid-password`, so a plaintext password is never stored by mistake. A taken name answers 409 `username-taken`. A missing master password that is needed answers 403 `master-password-required`, and a wrong one 403 `invalid-master-password`. The master password is sent as typed: the server holds it in plain form already. Every registration counts against the client address, whatever its outcome; past `throttle.registrations`, the route answers 429 `throttled` with `Retry-After`.
 
 ### `POST login`
 

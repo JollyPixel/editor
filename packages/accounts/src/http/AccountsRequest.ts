@@ -14,6 +14,7 @@ import { Username } from "../account/Username.ts";
 import { PasswordDigest } from "../session/PasswordDigest.ts";
 import type { SessionCookie } from "../session/SessionCookie.ts";
 import { isCrossOrigin } from "../session/origin.ts";
+import type { RegisterOptions } from "../registration/RegisterOptions.ts";
 import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import type { TrustedProxies } from "./TrustedProxies.ts";
 
@@ -23,10 +24,19 @@ const kCredentialsSchema = z.object({
   username: z.string(),
   password: z.string()
 });
+const kRegistrationSchema = kCredentialsSchema.extend({
+  masterPassword: z.string().optional()
+});
+
+type CredentialsBody = z.output<typeof kCredentialsSchema>;
 
 export interface Credentials {
   username: Username;
   password: PasswordDigest;
+}
+
+export interface Registration extends Credentials {
+  options: RegisterOptions;
 }
 
 export class AccountsRequest {
@@ -87,7 +97,26 @@ export class AccountsRequest {
   }
 
   async credentials(): Promise<Credentials> {
-    const body = kCredentialsSchema.safeParse(
+    return parseCredentials(
+      await this.#credentialsBody(kCredentialsSchema)
+    );
+  }
+
+  async registration(): Promise<Registration> {
+    const body = await this.#credentialsBody(kRegistrationSchema);
+
+    return {
+      ...parseCredentials(body),
+      options: {
+        masterPassword: body.masterPassword
+      }
+    };
+  }
+
+  async #credentialsBody<TSchema extends z.ZodType<CredentialsBody>>(
+    schema: TSchema
+  ): Promise<z.output<TSchema>> {
+    const body = schema.safeParse(
       await this.#json()
     );
     if (!body.success) {
@@ -98,10 +127,7 @@ export class AccountsRequest {
       );
     }
 
-    return {
-      username: Username.parse(body.data.username),
-      password: PasswordDigest.parse(body.data.password)
-    };
+    return body.data;
   }
 
   async bytes(
@@ -150,4 +176,13 @@ export class AccountsRequest {
       );
     }
   }
+}
+
+function parseCredentials(
+  body: CredentialsBody
+): Credentials {
+  return {
+    username: Username.parse(body.username),
+    password: PasswordDigest.parse(body.password)
+  };
 }

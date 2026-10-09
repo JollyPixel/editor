@@ -85,6 +85,10 @@ export class AccountStore implements Disposable {
     return this.#count("SELECT COUNT(*) AS count FROM users");
   }
 
+  get unclaimed(): boolean {
+    return this.size === 0;
+  }
+
   register(
     username: Username,
     hash: PasswordHash,
@@ -98,7 +102,7 @@ export class AccountStore implements Disposable {
       const account = new StoredAccount({
         id: randomUUID(),
         username: username.value,
-        role: this.size === 0 ? ADMIN_ROLE : defaultRole,
+        role: this.unclaimed ? ADMIN_ROLE : defaultRole,
         avatarHash: null
       });
       this.#db.run(
