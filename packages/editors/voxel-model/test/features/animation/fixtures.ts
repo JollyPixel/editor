@@ -2,7 +2,7 @@
 import type { ReactiveControllerHost } from "lit";
 import { AnimationDocument } from "@jolly-pixel/asset.voxel-animation/client";
 import {
-  createBlockTransform,
+  BlockTransform,
   ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 
@@ -67,7 +67,7 @@ export function createAnimatedModel(
   const arm = document.addBlock({
     name: "Arm",
     parentId: limbs,
-    transform: createBlockTransform({ position: { x: 1, y: 0, z: 0 } })
+    transform: BlockTransform.create({ position: { x: 1, y: 0, z: 0 } })
   })!;
   const set = new AnimationDocument();
   const clipId = set.addClip({ id: "clip", name: "Wave", length: 24000 })!;

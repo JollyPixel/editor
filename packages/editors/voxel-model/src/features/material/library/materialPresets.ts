@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  createMaterialSurface,
+  MaterialSurface,
   type MaterialSurfaceJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
@@ -17,12 +17,12 @@ export const MATERIAL_PRESETS: readonly MaterialPreset[] = [
   {
     id: "default",
     label: "Material",
-    surface: createMaterialSurface()
+    surface: MaterialSurface.create()
   },
   {
     id: "glass",
     label: "Glass",
-    surface: createMaterialSurface({
+    surface: MaterialSurface.create({
       color: "#dff4ff",
       opacity: 0.45,
       roughness: 0.05
@@ -31,21 +31,21 @@ export const MATERIAL_PRESETS: readonly MaterialPreset[] = [
   {
     id: "ghost",
     label: "Ghost",
-    surface: createMaterialSurface({
+    surface: MaterialSurface.create({
       opacity: 0.2
     })
   },
   {
     id: "shadow",
     label: "Shadow",
-    surface: createMaterialSurface({
+    surface: MaterialSurface.create({
       color: "#555a66"
     })
   },
   {
     id: "metal",
     label: "Metal",
-    surface: createMaterialSurface({
+    surface: MaterialSurface.create({
       color: "#d0d4da",
       roughness: 0.3,
       metalness: 0.8
@@ -54,7 +54,7 @@ export const MATERIAL_PRESETS: readonly MaterialPreset[] = [
   {
     id: "glow",
     label: "Glow",
-    surface: createMaterialSurface({
+    surface: MaterialSurface.create({
       emissive: "#ffcc66",
       emissiveIntensity: 0.6
     })

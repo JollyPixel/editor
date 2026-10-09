@@ -7,8 +7,8 @@ import {
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { createBlockTransform } from "../model/blockTransform.ts";
-import { createBlockUv } from "../model/blockUv.ts";
+import { BlockTransform } from "../model/nodes/BlockTransform.ts";
+import { BlockUvLayouts } from "../model/nodes/BlockUvLayouts.ts";
 import { voxelModelSnapshotSchema } from "../network/VoxelModelCommand.schema.ts";
 import { VOXEL_MODEL_ICON } from "./icons.ts";
 
@@ -68,8 +68,8 @@ export function createVoxelModelDocument(
         id: crypto.randomUUID(),
         parentId: null,
         name,
-        transform: createBlockTransform(),
-        uv: createBlockUv()
+        transform: BlockTransform.create(),
+        uv: BlockUvLayouts.net()
       };
     }),
     materials: [],

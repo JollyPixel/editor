@@ -10,8 +10,7 @@ import {
   type TreeNode
 } from "@jolly-pixel/ui";
 import {
-  frameAt,
-  frameToTick,
+  FrameRate,
   type AnimationClipJSON,
   type AnimationClipPatchJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
@@ -309,7 +308,7 @@ export class AnimatePanelController {
   ): void {
     const focused = this.#state.clip;
     if (focused !== null && Number.isInteger(frames) && frames > 0) {
-      this.changeClip({ length: frameToTick(frames, focused.clip.fps) });
+      this.changeClip({ length: new FrameRate(focused.clip.fps).toTick(frames) });
     }
   }
 
@@ -402,7 +401,7 @@ export class AnimatePanelController {
         {
           setId: set.id,
           clip,
-          frames: frameAt(clip.length, clip.fps)
+          frames: new FrameRate(clip.fps).frameAt(clip.length)
         },
       canShare: own !== undefined && own.document.set.size > 0,
       error: this.#error,

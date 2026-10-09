@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import {
-  materialSurfaceChanges,
+  MaterialSurface,
   type MaterialSurfacePatchJSON,
   type ModelDocument,
   type ModelMaterialJSON
@@ -112,7 +112,7 @@ export class MaterialSurfaceController {
       return;
     }
 
-    const changed = materialSurfaceChanges(stored.surface, {
+    const changed = new MaterialSurface(stored.surface).changesTo({
       ...stored.surface,
       ...changes
     });

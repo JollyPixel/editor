@@ -5,9 +5,8 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  blockUvBounds,
-  createBlockTransform,
-  createBlockUv,
+  BlockTransform,
+  BlockUvLayouts,
   type UVLayoutData,
   type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -72,7 +71,7 @@ function at(
   y = 0,
   z = 0
 ) {
-  return createBlockTransform({
+  return BlockTransform.create({
     position: { x, y, z }
   });
 }
@@ -133,7 +132,7 @@ describe("ModelHierarchy.createBlock", () => {
     const uuid = hierarchy.createBlock("Head", null);
 
     assert.ok(uuid);
-    assert.deepEqual(document.tree.block(uuid)?.uv, createBlockUv());
+    assert.deepEqual(document.tree.block(uuid)?.uv, BlockUvLayouts.net());
     assert.deepEqual(commands.map((command) => command.action), ["node-added"]);
   });
 
@@ -142,12 +141,12 @@ describe("ModelHierarchy.createBlock", () => {
 
     const first = hierarchy.createBlock("Head", null);
     const second = hierarchy.createBlock("Body", null);
-    const net = blockUvBounds(createBlockUv());
+    const net = new BlockUvLayouts([BlockUvLayouts.net()]).extent;
 
     assert.ok(first && second);
     assert.deepEqual(
       document.tree.block(second)?.uv,
-      createBlockUv({ x: net.width, y: 0 })
+      BlockUvLayouts.net({ x: net.x, y: 0 })
     );
   });
 

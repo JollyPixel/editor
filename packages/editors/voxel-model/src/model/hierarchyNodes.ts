@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
-import {
-  blockNameClashes,
-  type ModelMaterialJSON,
-  type ModelNodeKind,
-  type ModelTreeReader
+import type {
+  ModelMaterialJSON,
+  ModelNodeKind,
+  ModelTreeReader
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -36,7 +35,7 @@ export function buildHierarchyNodes(
     tree.values(),
     (node) => node.parentId
   );
-  const clashes = blockNameClashes(tree);
+  const clashes = tree.blockNameClashes();
 
   function build(
     parentId: string | null

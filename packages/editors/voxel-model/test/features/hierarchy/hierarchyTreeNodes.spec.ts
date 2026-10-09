@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { PresencePeer } from "@jolly-pixel/ui";
-import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
@@ -43,7 +43,7 @@ describe("toTreeNodes", () => {
       id: "glass",
       parentId: null,
       name: "Glass",
-      surface: createMaterialSurface({ opacity: 0.4 })
+      surface: MaterialSurface.create({ opacity: 0.4 })
     };
     const nodes = toTreeNodes([node("limbs", "folder", [
       node("arm", "block"),

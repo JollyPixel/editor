@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  trackBlockName,
+  TrackPath,
   type AnimationChange
 } from "@jolly-pixel/asset.voxel-animation/client";
 
@@ -22,12 +22,12 @@ export function describeAnimationChange(
     case "clip-moved":
       return `Move clip ${clip}`;
     case "key-set":
-      return `Key ${trackBlockName(command.path)}`;
+      return `Key ${new TrackPath(command.path).blockName}`;
     case "key-removed":
-      return `Delete key of ${trackBlockName(command.path)}`;
+      return `Delete key of ${new TrackPath(command.path).blockName}`;
     case "track-removed":
-      return `Delete track ${trackBlockName(command.path)}`;
+      return `Delete track ${new TrackPath(command.path).blockName}`;
     case "track-renamed":
-      return `Rename track ${trackBlockName(command.path)}`;
+      return `Rename track ${new TrackPath(command.path).blockName}`;
   }
 }

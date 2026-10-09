@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
-import { trackPathKey } from "@jolly-pixel/asset.voxel-animation/client";
+import { TrackPath } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import { MATERIAL_SURFACE_KEYS } from "../model/materialSurface.ts";
+import { MaterialSurface } from "../model/materials/MaterialSurface.ts";
 import type {
   VoxelModelCommand,
   VoxelModelNetworkCommand
@@ -24,7 +24,7 @@ export function modelValueKey(
     case "material-surface":
       return `${ref.kind}:${ref.id}:${ref.field}`;
     case "animation-binding":
-      return `${ref.kind}:${ref.id}:${trackPathKey(ref.path)}`;
+      return `${ref.kind}:${ref.id}:${new TrackPath(ref.path).key}`;
     default:
       return `${ref.kind}:${ref.id}`;
   }
@@ -131,7 +131,7 @@ function materialValueRefs(
   return [
     { kind: "material-name", id },
     { kind: "material-parent", id },
-    ...MATERIAL_SURFACE_KEYS.map((field): ModelValueRef => {
+    ...MaterialSurface.KEYS.map((field): ModelValueRef => {
       return { kind: "material-surface", id, field };
     })
   ];

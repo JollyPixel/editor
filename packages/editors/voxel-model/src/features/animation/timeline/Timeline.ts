@@ -6,10 +6,7 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import {
-  frameToTick,
-  tickToFrame
-} from "@jolly-pixel/asset.voxel-animation/client";
+import { FrameRate } from "@jolly-pixel/asset.voxel-animation/client";
 import type { ContextMenu } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -356,7 +353,7 @@ export class Timeline extends LitElement {
               class="peer-head"
               type="button"
               data-peer=${peer.clientId}
-              title="${peer.displayName}: frame ${tickToFrame(tick, view.clip.fps)}"
+              title="${peer.displayName}: frame ${new FrameRate(view.clip.fps).toFrame(tick)}"
               aria-label="Jump to ${peer.displayName}"
               style=${placeAt(tick, view.clip.length, peer.color)}
               @pointerdown=${(event: PointerEvent) => event.stopPropagation()}
@@ -405,7 +402,9 @@ export class Timeline extends LitElement {
     const id = keyId({ path: row.path, tick });
     const selected = view.selectedKeys.has(id);
     const peerColor = view.peerKeys.get(id);
-    const shift = selected && this.#drag !== null ? frameToTick(this.#drag.frames, view.clip.fps) : 0;
+    const shift = selected && this.#drag !== null ?
+      new FrameRate(view.clip.fps).toTick(this.#drag.frames) :
+      0;
 
     return html`
       <span

@@ -8,7 +8,7 @@ import {
 } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import {
-  frameAt,
+  FrameRate,
   TICKS_PER_SECOND
 } from "@jolly-pixel/asset.voxel-animation/client";
 
@@ -66,6 +66,7 @@ export class TimelineTransport extends LitElement {
 
     const { tick, playing, loop } = session.playback;
     const label = playing ? "Pause" : "Play";
+    const rate = new FrameRate(clip.fps);
 
     return html`
       <div class="transport" role="toolbar" aria-label="Playback">
@@ -84,7 +85,7 @@ export class TimelineTransport extends LitElement {
           @click=${this.#onToggleLoop}
         ></jolly-tool-button>
         <span aria-label="Playhead">
-          Frame ${frameAt(tick, clip.fps)} / ${frameAt(clip.length, clip.fps)}
+          Frame ${rate.frameAt(tick)} / ${rate.frameAt(clip.length)}
           <span class="muted">· ${(tick / TICKS_PER_SECOND).toFixed(2)}s</span>
         </span>
         <span class="muted">· ${clip.fps} fps</span>

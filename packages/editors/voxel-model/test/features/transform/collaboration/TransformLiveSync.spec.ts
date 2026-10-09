@@ -6,11 +6,13 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  BlockTransform,
+  type BlockTransformJSON
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { TransformLiveSync } from "#src/features/transform/collaboration/TransformLiveSync.ts";
-import { parseBlockTransformJSON } from "#src/features/transform/collaboration/blockTransformCodec.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { createRoomHarness } from "../../../collaboration/roomHarness.ts";
 import { createModelFixture } from "../../../fixtures/model.ts";
@@ -112,7 +114,7 @@ function liveX(
     return null;
   }
 
-  return parseBlockTransformJSON(Reflect.get(frame, "transform"))?.position.x ?? null;
+  return BlockTransform.parse(Reflect.get(frame, "transform"))?.position.x ?? null;
 }
 
 function isGlowing(

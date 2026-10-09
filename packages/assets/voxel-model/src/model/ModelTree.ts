@@ -1,9 +1,10 @@
+// Import Third-party Dependencies
+import type { NameSet } from "@jolly-pixel/asset.voxel-animation/client";
+
 // Import Internal Dependencies
 import type {
   BlockNodeJSON,
-  BlockTransformJSON,
   MaterialEntryJSON,
-  MirrorAxes,
   ModelNodeJSON,
   VoxelModelCommand,
   VoxelModelSnapshot
@@ -12,18 +13,19 @@ import { InvalidModelTreeError } from "./errors/InvalidModelTreeError.ts";
 import {
   ModelAnimationLinks,
   type ModelAnimationLinksReader
-} from "./ModelAnimationLinks.ts";
+} from "./animation/ModelAnimationLinks.ts";
 import {
   entryImagesOf,
   entrySlotOf,
   type ModelEntryTree
-} from "./modelCommands.ts";
-import type { ModelImages } from "./modelImages.ts";
+} from "./history/modelCommands.ts";
+import type { ModelImages } from "./history/modelImages.ts";
 import {
   ModelMaterials,
   type ModelMaterialsReader
-} from "./ModelMaterials.ts";
-import { OrderedTree } from "./OrderedTree.ts";
+} from "./materials/ModelMaterials.ts";
+import { ModelNodes } from "./nodes/ModelNodes.ts";
+import type { OrderedTree } from "./OrderedTree.ts";
 
 export type ModelTreeReader = Pick<
   ModelTree,
@@ -40,6 +42,8 @@ export type ModelTreeReader = Pick<
   | "imagesOf"
   | "enclosingBlockOf"
   | "transformParentOf"
+  | "blockNamesUnder"
+  | "blockNameClashes"
   | "placeable"
   | "materials"
   | "animationSets"
@@ -49,7 +53,7 @@ export type ModelTreeReader = Pick<
 >;
 
 export class ModelTree {
-  #nodes = createNodeTree();
+  #nodes = new ModelNodes();
   #materials = new ModelMaterials();
   #links = new ModelAnimationLinks();
 
@@ -63,28 +67,6 @@ export class ModelTree {
 
   get animationSets(): ModelAnimationLinksReader {
     return this.#links;
-  }
-
-  blocksUsing(
-    materialId: string
-  ): string[] {
-    return [...this.#nodes.scan()]
-      .filter((node) => node.kind === "block" && node.materialId === materialId)
-      .map(({ id }) => id);
-  }
-
-  materialUses(): Map<string, number> {
-    const uses = new Map<string, number>();
-    for (const { id } of this.#materials.materials()) {
-      uses.set(id, 0);
-    }
-    for (const node of this.#nodes.scan()) {
-      if (node.kind === "block" && node.materialId !== undefined) {
-        uses.set(node.materialId, (uses.get(node.materialId) ?? 0) + 1);
-      }
-    }
-
-    return uses;
   }
 
   has(
@@ -102,29 +84,21 @@ export class ModelTree {
   block(
     id: string
   ): BlockNodeJSON | undefined {
-    const node = this.#nodes.peek(id);
-
-    return node?.kind === "block" ? structuredClone(node) : undefined;
+    return this.#nodes.block(id);
   }
 
   materialIdOf(
     id: string
   ): string | undefined {
-    const node = this.#nodes.peek(id);
-
-    return node?.kind === "block" ? node.materialId : undefined;
+    return this.#nodes.materialIdOf(id);
   }
 
   values(): IterableIterator<ModelNodeJSON> {
     return this.#nodes.values();
   }
 
-  * blocks(): IterableIterator<BlockNodeJSON> {
-    for (const node of this.#nodes.scan()) {
-      if (node.kind === "block") {
-        yield structuredClone(node);
-      }
-    }
+  blocks(): IterableIterator<BlockNodeJSON> {
+    return this.#nodes.blocks();
   }
 
   childrenOf(
@@ -145,36 +119,53 @@ export class ModelTree {
     return this.#nodes.subtreeOf(id);
   }
 
-  imagesOf(
-    command: VoxelModelCommand
-  ): ModelImages {
-    return entryImagesOf(this, command);
-  }
-
   enclosingBlockOf(
     id: string | null
   ): string | null {
-    let current = id;
-    for (let step = 0; current !== null && step <= this.#nodes.size; step++) {
-      const node = this.#nodes.peek(current);
-      if (node === undefined) {
-        return null;
-      }
-      if (node.kind === "block") {
-        return node.id;
-      }
-      current = node.parentId;
-    }
-
-    return null;
+    return this.#nodes.enclosingBlockOf(id);
   }
 
   transformParentOf(
     id: string
   ): string | null {
-    return this.enclosingBlockOf(
-      this.#nodes.peek(id)?.parentId ?? null
-    );
+    return this.#nodes.transformParentOf(id);
+  }
+
+  blockNamesUnder(
+    parentId: string | null,
+    exceptId?: string
+  ): NameSet {
+    return this.#nodes.blockNamesUnder(parentId, exceptId);
+  }
+
+  blockNameClashes(): Set<string> {
+    return this.#nodes.blockNameClashes();
+  }
+
+  blocksUsing(
+    materialId: string
+  ): string[] {
+    return this.#nodes.blocksUsing(materialId);
+  }
+
+  materialUses(): Map<string, number> {
+    const uses = new Map<string, number>();
+    for (const { id } of this.#materials.materials()) {
+      uses.set(id, 0);
+    }
+    for (const node of this.#nodes.scan()) {
+      if (node.kind === "block" && node.materialId !== undefined) {
+        uses.set(node.materialId, (uses.get(node.materialId) ?? 0) + 1);
+      }
+    }
+
+    return uses;
+  }
+
+  imagesOf(
+    command: VoxelModelCommand
+  ): ModelImages {
+    return entryImagesOf(this, command);
   }
 
   placeable(
@@ -196,22 +187,19 @@ export class ModelTree {
   ): boolean {
     switch (command.action) {
       case "node-added":
-        return this.#nodes.canAdd(command.node, command.beforeId) &&
+        return this.#nodes.accepts(command) &&
           hasKnownMaterial(command.node, this.#materials);
-      case "node-removed":
-      case "node-renamed":
-        return this.#nodes.has(command.id);
-      case "node-moved":
-        return this.#nodes.canMove(command.id, command.parentId, command.beforeId) &&
-          command.transforms.every(({ id }) => this.#isBlock(id));
-      case "node-transformed":
-      case "node-uv-changed":
-        return this.#isBlock(command.id);
       case "node-material-changed":
-        return this.#isBlock(command.id) && (
+        return this.#nodes.accepts(command) && (
           command.materialId === null ||
           this.#materials.material(command.materialId) !== undefined
         );
+      case "node-removed":
+      case "node-renamed":
+      case "node-moved":
+      case "node-transformed":
+      case "node-uv-changed":
+        return this.#nodes.accepts(command);
       case "material-added":
       case "material-folder-added":
       case "material-moved":
@@ -233,42 +221,13 @@ export class ModelTree {
   ): void {
     switch (command.action) {
       case "node-added":
-        this.#nodes.add(command.node, command.beforeId);
-        break;
-
       case "node-removed":
-        this.#nodes.remove(command.id);
-        break;
-
       case "node-renamed":
-        this.#nodes.update(command.id, (node) => {
-          return {
-            ...node,
-            name: command.name
-          };
-        });
-        break;
-
       case "node-moved":
-        this.#nodes.move(command.id, command.parentId, command.beforeId);
-        for (const { id, transform } of command.transforms) {
-          this.#transform(id, transform);
-        }
-        break;
-
       case "node-transformed":
-        this.#transform(command.id, command.transform);
-        if (command.flipAxes) {
-          this.#flip(command.id, command.flipAxes);
-        }
-        break;
-
       case "node-uv-changed":
-        this.#patchBlock(command.id, { uv: structuredClone(command.uv) });
-        break;
-
       case "node-material-changed":
-        this.#assignMaterial(command.id, command.materialId);
+        this.#nodes.apply(command);
         break;
 
       case "material-added":
@@ -300,7 +259,7 @@ export class ModelTree {
     const materials = new ModelMaterials();
     materials.load(snapshot.materials);
 
-    const nodes = createNodeTree();
+    const nodes = new ModelNodes();
     nodes.load(snapshot.nodes);
     for (const node of nodes.scan()) {
       if (!hasKnownMaterial(node, materials)) {
@@ -327,12 +286,6 @@ export class ModelTree {
     };
   }
 
-  #isBlock(
-    id: string
-  ): boolean {
-    return this.#nodes.peek(id)?.kind === "block";
-  }
-
   #entries(
     which: ModelEntryTree
   ): OrderedTree<ModelNodeJSON> | OrderedTree<MaterialEntryJSON> {
@@ -344,67 +297,8 @@ export class ModelTree {
       (node) => !hasKnownMaterial(node, this.#materials)
     );
     for (const { id } of orphans) {
-      this.#assignMaterial(id, null);
+      this.#nodes.assignMaterial(id, null);
     }
-  }
-
-  #patchBlock(
-    id: string,
-    patch: Partial<Pick<BlockNodeJSON, "transform" | "uv">>
-  ): void {
-    this.#nodes.update(id, (node) => (node.kind === "block" ?
-      {
-        ...node,
-        ...patch
-      } :
-      node));
-  }
-
-  #flip(
-    id: string,
-    flipAxes: MirrorAxes
-  ): void {
-    this.#nodes.update(id, (node) => {
-      if (node.kind !== "block") {
-        return node;
-      }
-
-      const { flipAxes: _previous, ...rest } = node;
-
-      return flipAxes.x || flipAxes.y || flipAxes.z ?
-        {
-          ...rest,
-          flipAxes: { ...flipAxes }
-        } :
-        rest;
-    });
-  }
-
-  #assignMaterial(
-    id: string,
-    materialId: string | null
-  ): void {
-    this.#nodes.update(id, (node) => {
-      if (node.kind !== "block") {
-        return node;
-      }
-
-      const { materialId: _previous, ...rest } = node;
-
-      return materialId === null ?
-        rest :
-        {
-          ...rest,
-          materialId
-        };
-    });
-  }
-
-  #transform(
-    id: string,
-    transform: BlockTransformJSON
-  ): void {
-    this.#patchBlock(id, { transform: structuredClone(transform) });
   }
 }
 
@@ -418,13 +312,6 @@ function withoutBefore(
   const { beforeId: _beforeId, ...placed } = command;
 
   return placed;
-}
-
-function createNodeTree(): OrderedTree<ModelNodeJSON> {
-  return new OrderedTree<ModelNodeJSON>({
-    kind: "node",
-    canContain: () => true
-  });
 }
 
 function hasKnownMaterial(

@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import {
-  snapToFrame,
-  ticksPerFrame,
-  trackBlockName,
+  FrameRate,
+  TrackPath,
   type AnimationClipJSON,
   type AnimationDocument,
   type AnimationInterpolation
@@ -99,7 +98,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
       document,
       clip,
       refs,
-      frames * ticksPerFrame(clip.fps)
+      frames * new FrameRate(clip.fps).ticksPerFrame
     ));
   }
 
@@ -128,7 +127,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
         document,
         clip,
         copied,
-        snapToFrame(tick, clip.fps)
+        new FrameRate(clip.fps).snap(tick)
       ));
     }
   }
@@ -142,7 +141,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
     }
 
     const label = refs.length === 1 ?
-      `Set interpolation of ${trackBlockName(refs[0].path)}` :
+      `Set interpolation of ${new TrackPath(refs[0].path).blockName}` :
       `Set interpolation of ${refs.length} keys`;
     this.#edit(label, (document, clip) => {
       setInterpolation(document, clip, refs, interpolation);

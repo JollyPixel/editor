@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { ModelBlock } from "#src/scene/blocks/ModelBlock.ts";
@@ -279,7 +279,7 @@ describe("ModelBlock selection ghost", () => {
     const block = new ModelBlock();
     block.showSelectionGhost();
 
-    block.surface = createMaterialSurface({
+    block.surface = MaterialSurface.create({
       opacity: 0.5,
       metalness: 0.7
     });
@@ -296,7 +296,7 @@ describe("ModelBlock selection ghost", () => {
     const ghostMaterial = textureGhostOf(block)?.material;
     const versions = [block.mesh.material.version, ghostMaterial?.version];
 
-    block.surface = createMaterialSurface({
+    block.surface = MaterialSurface.create({
       color: "#336699",
       roughness: 0.2,
       metalness: 0.5
@@ -321,7 +321,7 @@ describe("ModelBlock selection ghost", () => {
 describe("ModelBlock material", () => {
   test("renders a material and falls back to the default look without one", () => {
     const block = new ModelBlock();
-    const surface = createMaterialSurface({
+    const surface = MaterialSurface.create({
       color: "#ff0000",
       opacity: 0.4,
       roughness: 0.2,

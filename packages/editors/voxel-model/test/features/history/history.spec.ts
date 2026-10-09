@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  createBlockUv,
+  BlockUvLayouts,
   ModelDocument,
   type ModelChange
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -179,7 +179,7 @@ describe("ModelHierarchy undo steps", () => {
     document.transform(body.uuid, { ...rest, position: { x: 4, y: 0, z: 0 } });
     const steps = kScopes.map((scope) => history.state(scope).undoCount);
 
-    const uv = createBlockUv({ x: 32, y: 0 });
+    const uv = BlockUvLayouts.net({ x: 32, y: 0 });
     document.setUv(body.uuid, uv);
 
     assert.deepEqual(kScopes.map((scope) => history.state(scope).undoCount), steps);

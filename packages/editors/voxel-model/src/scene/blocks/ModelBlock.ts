@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  createMaterialSurface,
+  MaterialSurface,
   type BlockTransformJSON,
   type MaterialSurfaceJSON
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -393,7 +393,7 @@ export class ModelBlock {
   }
 
   #shownSurface(): MaterialSurfaceJSON {
-    return this.#surface ?? createMaterialSurface();
+    return this.#surface ?? MaterialSurface.create();
   }
 
   #paint(): void {

@@ -8,7 +8,7 @@ import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetE
 import {
   imageOf,
   restoreImages
-} from "#src/model/animationImages.ts";
+} from "#src/model/history/animationImages.ts";
 import type { AnimationCommand } from "#src/network/types.ts";
 import {
   clip,

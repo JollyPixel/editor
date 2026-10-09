@@ -14,7 +14,7 @@ import {
   voxelModelDocumentKind
 } from "#src/network/SyncedModelDocument.ts";
 import { VOXEL_MODEL_KIND } from "#src/asset/voxelModel.ts";
-import { modelHistoryKeys } from "#src/model/modelHistoryKeys.ts";
+import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { createMockRoom } from "../helpers/room.ts";
 import { networkCommand } from "../helpers/commands.ts";
 

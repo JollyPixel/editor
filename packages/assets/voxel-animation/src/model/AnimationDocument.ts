@@ -22,9 +22,9 @@ import {
   imageOf,
   restoreImages,
   type AnimationImage
-} from "./animationImages.ts";
-import { inverseOf } from "./animationInverse.ts";
-import { TICKS_PER_SECOND } from "./ticks.ts";
+} from "./history/animationImages.ts";
+import { inverseOf } from "./history/animationInverse.ts";
+import { TICKS_PER_SECOND } from "./values/FrameRate.ts";
 
 // CONSTANTS
 const kDefaultFps = 24;

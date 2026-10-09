@@ -9,8 +9,8 @@ import {
   type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  createBlockTransform,
-  createBlockUv,
+  BlockTransform,
+  BlockUvLayouts,
   type ModelChange,
   type UVLayoutData,
   type VoxelModelSnapshot
@@ -45,7 +45,7 @@ function torsoSnapshot(
         id: "torso",
         parentId: null,
         name: "Torso",
-        transform: createBlockTransform(),
+        transform: BlockTransform.create(),
         uv
       }
     ],
@@ -163,7 +163,7 @@ describe("BlockTextures model layouts", () => {
         id: "late",
         parentId: null,
         name: "Late",
-        transform: createBlockTransform(),
+        transform: BlockTransform.create(),
         uv: stackedAt(32)
       }
     });
@@ -187,7 +187,7 @@ describe("BlockTextures model layouts", () => {
 
   test("binds the layout of a snapshot block", () => {
     const { document, blocks, uv } = createHarness();
-    document.load(torsoSnapshot(createBlockUv()));
+    document.load(torsoSnapshot(BlockUvLayouts.net()));
 
     assert.equal(uv.get(kTorsoRegionId)?.name, "Torso");
 
@@ -450,7 +450,7 @@ describe("BlockTextures UV edits", () => {
         id: "mirrored",
         parentId: null,
         name: "Mirrored",
-        transform: createBlockTransform(),
+        transform: BlockTransform.create(),
         flipAxes: { x: true, y: false, z: false },
         uv: document.tree.block(block.uuid)!.uv
       }

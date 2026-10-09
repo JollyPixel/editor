@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { AnimationSetReader } from "@jolly-pixel/asset.voxel-animation/client";
 import {
-  bindTracks,
+  TrackBinding,
   type AnimationSetLinkJSON,
   type ModelTreeReader
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -30,7 +30,7 @@ export function trackBindingRows(
   link: AnimationSetLinkJSON,
   tree: ModelTreeReader
 ): TrackBindingRow[] {
-  return [...bindTracks(set.trackPaths(), link, tree)].flatMap(([path, { state, remap }]) => {
+  return [...new TrackBinding(set.trackPaths(), link, tree)].flatMap(([path, { state, remap }]) => {
     if (state === "bound" && remap === null) {
       return [];
     }

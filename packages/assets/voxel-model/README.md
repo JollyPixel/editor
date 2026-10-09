@@ -8,7 +8,7 @@
 
 ## 💃 Getting Started
 
-This workspace-private package stores `.voxelmodel.json` model trees. Add `"@jolly-pixel/asset.voxel-model": "workspace:*"` to another workspace's dependencies.
+This workspace-private package stores `.voxelmodel.json` model trees: blocks and folders, a material library and links to animation sets. Add `"@jolly-pixel/asset.voxel-model": "workspace:*"` to another workspace's dependencies.
 
 ## 👀 Usage example
 
@@ -51,7 +51,9 @@ export default defineConfig({
 });
 ```
 
-`createVoxelModelDocument({ texture, blocks? })` creates a version 2 document. `texture` is a required pixel-art asset reference. A block's `position` is its pivot point, relative to its parent's pivot, and `pivotOffset` is where that pivot sits on the box, from the box center along the box's own axes. A block's `scale` applies around its pivot and carries its child blocks. Children never skew: each child takes its parent's scale on the same axis, whatever its rotation. It starts with one root block named `Block` unless `blocks` supplies root names; `blocks: []` creates an empty tree. A model created without content through the asset back-end comes with a pixel-art texture of the same name beside it and holds this default document referencing it. Each block carries a UV layout, `createBlockUv()` by default. `materials` lists the model's material library, materials and the folders sorting them, empty at creation; a block points to a material with `materialId`. `decodeVoxelModelDocument()` throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server` when the bytes are not JSON or do not match `voxelModelDocumentSchema`: version 2, every node shaped as in a snapshot, and `texture` an asset reference. Loading the document then throws `InvalidModelTreeError` when an id repeats, a parent or material is missing, a library entry's parent is not a folder, or an entry is its own ancestor, and keeps the previous tree.
+A model references one pixel-art texture, which only stores pixels: each block owns its UV layout. `createVoxelModelDocument({ texture, blocks? })` creates a model with one root block named `Block`, or one root block per name in `blocks`; `blocks: []` creates an empty tree. A model created without content comes with a pixel-art texture of the same name beside it. Every linked animation set is a catalog dependency of the model. Pass `snapshot` to `voxelModelAssetKind()` to change when snapshots are written.
+
+`decodeVoxelModelDocument()` throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server` when the bytes are not JSON or do not match `voxelModelDocumentSchema`. Loading the tree then throws `InvalidModelTreeError` when an ID repeats, a parent or material is missing, or an entry is its own ancestor, and keeps the previous tree.
 
 ### Connect a model
 
@@ -74,15 +76,15 @@ const blockId = synced.document.addBlock({ name: "Body" });
 // On teardown: synced.dispose(); room.leave(); client.destroy();
 ```
 
-`ModelDocument` exposes `addBlock`, `addFolder`, `remove`, `rename`, `move`, `transform`, and `setUv`. Each block stores its own UV layout; the pixel-art texture only stores pixels. Local changes are sent to the room by a `DocumentSyncClient` from `@jolly-pixel/network/client`, with `voxelModelWriteKeys`; snapshots replace the local tree. A rejected edit returns `null` from `addBlock` or `addFolder`, or `false` from the other edit methods.
+The first snapshot loads the document. Local edits go to the room and stay pending until the server acknowledges them; peer commands are applied with a remote origin. A rejected edit returns `null` from `addBlock` or `addFolder`, and `false` from the other edit methods.
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, the document codec and `voxelModelDocumentSchema`, `VoxelModelState`, `ModelTree`, `ModelDocument` and `modelHistoryKeys` (for a `CommandHistory` from `@jolly-pixel/network/client`), the animation binding helpers (`bindTracks`, `blockPathOf`, `poseBlock`, `poseDelta`, `trackPathOf`), the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ snapshot? }` options), and the kind and event constants.
-- `@jolly-pixel/asset.voxel-model/client` exports `SyncedModelDocument`, `voxelModelWriteKeys`, `voxelModelDocumentKind`, and model types.
-- `@jolly-pixel/asset.voxel-model/server` exports `VoxelModelCommandArbiter` and the command and snapshot schemas.
+- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, `VoxelModelState`, the document codec and `voxelModelDocumentSchema`, the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
+- `@jolly-pixel/asset.voxel-model/client` exports the [model document](./docs/model.md) (`ModelDocument`, `ModelTree`, `BlockTransform`, `BlockUvLayouts`), the [material library](./docs/materials.md) (`MaterialSurface`, the material clipboard codec), the [animation bindings](./docs/animation.md) (`TrackBinding`, `blockPathOf`), the [undo keys](./docs/history.md) (`modelHistoryKeys`), `SyncedModelDocument`, `voxelModelWriteKeys`, `voxelModelDocumentKind`, and the wire types.
+- `@jolly-pixel/asset.voxel-model/server` exports `VoxelModelCommandArbiter`, the conflict keys, and the command and snapshot schemas.
 
-The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for command shapes and sync behavior, and [architecture](./ARCHITECTURE.md) for tree and arbitration rules.
+The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for commands and sync behavior and [architecture](./ARCHITECTURE.md) for tree rules and conflict keys.
 
 ## ✨ Contributors guide
 

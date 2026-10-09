@@ -1,12 +1,8 @@
 // Import Third-party Dependencies
+import { ClipSampler } from "@jolly-pixel/asset.voxel-animation/client";
 import {
-  sampleClip,
-  type AnimationClipJSON
-} from "@jolly-pixel/asset.voxel-animation/client";
-import {
-  bindTracks,
-  boundBlocks,
-  poseBlock,
+  BlockTransform,
+  TrackBinding,
   type BlockTransformJSON,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -24,7 +20,7 @@ export interface AnimationPoserOptions {
 }
 
 interface PosedClip {
-  clip: AnimationClipJSON;
+  sampler: ClipSampler;
   bound: ReadonlyMap<string, string>;
 }
 
@@ -83,8 +79,8 @@ export class AnimationPoser {
       const { clip, link } = focused;
       const paths = clip.tracks.map(({ path }) => path);
       this.#clip = {
-        clip,
-        bound: boundBlocks(bindTracks(paths, link, this.#options.document.tree))
+        sampler: new ClipSampler(clip),
+        bound: new TrackBinding(paths, link, this.#options.document.tree).bound()
       };
     }
 
@@ -101,12 +97,12 @@ export class AnimationPoser {
     }
 
     const { tree } = this.#options.document;
-    const samples = sampleClip(posed.clip, tick);
+    const samples = posed.sampler.sample(tick);
     for (const [path, blockId] of posed.bound) {
       const rest = tree.block(blockId)?.transform;
       const sample = samples.get(path);
       if (rest !== undefined && sample !== undefined) {
-        poses.set(blockId, poseBlock(rest, sample));
+        poses.set(blockId, new BlockTransform(rest).pose(sample));
       }
     }
 

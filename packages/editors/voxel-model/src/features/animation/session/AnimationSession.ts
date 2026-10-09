@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import {
-  frameAt,
-  frameToTick,
+  FrameRate,
   type AnimationClipJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 import type {
@@ -133,9 +132,10 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
   ): void {
     const clip = this.#focused?.clip;
     if (clip !== undefined) {
-      const last = frameAt(clip.length, clip.fps);
-      const frame = frameAt(this.playback.tick, clip.fps) + frames;
-      this.#pauseAt(frameToTick(Math.min(Math.max(frame, 0), last), clip.fps));
+      const rate = new FrameRate(clip.fps);
+      const last = rate.frameAt(clip.length);
+      const frame = rate.frameAt(this.playback.tick) + frames;
+      this.#pauseAt(rate.toTick(Math.min(Math.max(frame, 0), last)));
     }
   }
 
