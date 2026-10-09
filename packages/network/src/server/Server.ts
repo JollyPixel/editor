@@ -40,6 +40,14 @@ interface EnvelopeFields {
   kind?: string;
 }
 
+export interface ServerConnection {
+  readonly id: string;
+  receive(
+    raw: unknown
+  ): Promise<void>;
+  close(): Promise<void>;
+}
+
 export interface ServerOptions {
   logger?: Logger;
   rights?: RightsMap;
@@ -159,28 +167,56 @@ export class Server {
     return identity;
   }
 
-  handleConnect(
+  connect(
     client: ClientHandle,
     identity: PeerIdentity
-  ): void {
+  ): ServerConnection {
+    const clientId = client.id;
     this.#sessions.open(client, identity);
     this.logger
       .withMetadata({
-        clientId: client.id,
+        clientId,
         subject: identity.subject,
         role: identity.role
       })
       .debug("client connected");
+
+    let closing: Promise<void> | null = null;
+
+    return {
+      id: clientId,
+      receive: (raw) => {
+        if (closing === null) {
+          return this.#receive(clientId, raw);
+        }
+
+        this.#logEnvelope({ clientId }, {
+          outcome: "dropped",
+          reason: "closed connection"
+        });
+
+        return Promise.resolve();
+      },
+      close: () => {
+        closing ??= this.#disconnect(clientId);
+
+        return closing;
+      }
+    };
   }
 
-  async handleDisconnect(
+  async #disconnect(
     clientId: string
   ): Promise<void> {
     await this.#sessions.drain(clientId);
-    await this.#processDisconnect(clientId);
+    const rooms = await this.#rooms.leaveAll(clientId);
+    this.#sessions.close(clientId);
+    this.logger
+      .withMetadata({ clientId, rooms })
+      .debug("client disconnected");
   }
 
-  handleMessage(
+  #receive(
     clientId: string,
     raw: unknown
   ): Promise<void> {
@@ -201,33 +237,6 @@ export class Server {
       () => this.#processMessage(clientId, envelope),
       envelope.room
     );
-  }
-
-  async #processDisconnect(
-    clientId: string
-  ): Promise<void> {
-    const session = this.#sessions.get(clientId);
-    const rooms = session ? [...session.rooms] : [];
-
-    for (const name of rooms) {
-      try {
-        await this.#rooms.leave(name, clientId);
-      }
-      catch (error) {
-        this.logger
-          .withMetadata({
-            clientId,
-            room: name,
-            reason: errorMessage(error)
-          })
-          .error("disconnect handling failed");
-      }
-    }
-
-    this.#sessions.close(clientId);
-    this.logger
-      .withMetadata({ clientId, rooms })
-      .debug("client disconnected");
   }
 
   async #processMessage(

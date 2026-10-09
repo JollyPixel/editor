@@ -1,295 +1,120 @@
 # Architecture
 
-`@jolly-pixel/network` carries several independent features over one WebSocket
-connection. Each feature owns a room. The network layer owns authentication,
-envelope routing, membership, presence, protocol validation, and rights checks.
-An `Extension` owns the feature-specific behavior inside a room.
+Start with [rooms, peers, and extensions](./GLOSSARY.md#collaboration).
+This guide follows a participant from connecting to sharing edits.
 
-## System map
+## 1. One connection, several rooms
 
-```mermaid
-flowchart TD
-  subgraph Browser
-    direction TB
-    Room["Room handles<br/>one per feature"] --> Client["Client<br/>one WebSocket"]
-  end
-
-  subgraph Transport
-    direction TB
-    Socket["WebsocketTransport<br/>/ws-sync"]
-  end
-
-  subgraph ServerCore["Server core"]
-    direction TB
-    Auth["AuthenticationProvider"]
-    Server["Server<br/>parse and queue"]
-    Sessions["ClientSessions<br/>identity and joined rooms"]
-    Dispatcher["EnvelopeDispatcher"]
-    Registry["RoomRegistry"]
-  end
-
-  subgraph RoomRuntime["Room runtime"]
-    direction TB
-    ServerRoom["ServerRoom<br/>members, protocols, rights"]
-    Extension["Extension<br/>feature behavior"]
-  end
-
-  Client <-->|"JSON envelopes"| Socket
-  Socket -->|"authenticate, connect,<br/>message, disconnect"| Server
-  Server -->|"authenticate once"| Auth
-  Auth -->|"PeerIdentity or null"| Server
-  Server --> Sessions
-  Server --> Dispatcher
-  Dispatcher --> Registry
-  Registry --> ServerRoom
-  ServerRoom --> Extension
-  ServerRoom -->|"sync, peer events, messages"| Socket
-```
-
-`Client.room(name)` creates a local `Room` handle. It does not create another
-socket and does not join immediately. Calls on every room are wrapped in an
-envelope containing the room name, which lets the server route unrelated
-features without coupling their extensions.
-
-## Wire protocol
-
-Every frame is a JSON envelope. The `room` field chooses the room and `kind`
-chooses the network operation.
-
-| Direction | `kind` | Data | Purpose |
-|---|---|---|---|
-| Client to server | `join` | `profile?`, `presence?`, `resume?` | Request membership and publish initial peer data. `resume` is an opaque payload for the extension after a reconnect. |
-| Client to server | `leave` | | Leave a joined room. |
-| Both | `message` | `payload` | Carry a feature-specific message. |
-| Client to server | `presence` | `patch` | Update per-room presence. |
-| Client to server | `resync` | | Ask the extension for a fresh state; forwarded to `Extension.onResync`. |
-| Server to client | `sync` | `self`, `rights`, `members` | Initialize the joining client's room state. |
-| Server to client | `peer-joined` | `clientId`, `role`, `profile`, `presence` | Announce a new member. |
-| Server to client | `peer-left` | `clientId` | Remove a member from the peer mirror. |
-| Server to client | `peer-presence` | `clientId`, `patch` | Apply a presence patch to a peer. |
-| Server to client | `denied` | `event`, `reason` | Report a rights rejection. |
-| Server to client | `error` | `event`, `reason` | Report a rejected inbound payload. |
-
-The same peer has three kinds of metadata with different trust and lifetime
-rules:
-
-| Data | Set by | Lifetime | Visibility |
-|---|---|---|---|
-| `PeerIdentity` | `AuthenticationProvider` | WebSocket connection | `subject` stays on the server; `role` is shared with room members. |
-| `profile` | Client options | Reused for every room join | Shared with room members. It is untrusted display data. |
-| `presence` | `Room.updatePresence()` | One room membership | Shared only with members allowed to read `$presence`. |
-
-The schemas in
-[`Envelope.schema.ts`](./src/protocol/envelope/Envelope.schema.ts) are the source of
-both the TypeScript envelope types and the checked-in validators. The server
-parses only client envelope kinds and the browser parses only server envelope
-kinds. An envelope sent in the wrong direction is rejected before routing.
-Unknown properties remain compatible with older peers. Both sides parse frames
-with `secure-json-parse`, which drops `__proto__` keys, and `constructor` keys
-that carry a `prototype`, at any depth.
-
-## Connecting and joining
-
-Authentication finishes before the server opens a client session. The
-resulting `PeerIdentity` is fixed for the socket lifetime, so a join payload
-cannot claim a different subject or role.
-
-```mermaid
-sequenceDiagram
-  autonumber
-  participant C as Client
-  participant T as WebsocketTransport
-  participant S as Server
-  participant A as AuthenticationProvider
-  participant R as RoomRegistry
-  participant SR as ServerRoom
-  participant E as Extension
-  participant P as Existing members
-
-  C->>T: WebSocket upgrade + optional credential
-  T->>S: authenticate(attempt)
-  S->>A: authenticate(request)
-  A-->>S: PeerIdentity or null
-
-  alt Authentication refused
-    T-->>C: close 4401 (unauthorized)
-  else Authentication accepted
-    T->>S: handleConnect(client, identity)
-    C->>T: join { room, profile, presence }
-    T->>S: handleMessage(clientId, envelope)
-    S->>R: resolve(room, { create: true })
-    R-->>S: ServerRoom or null
-    S->>SR: join(clientId, identity, profile, presence)
-    SR->>SR: check extension.$join
-
-    alt Join denied
-      SR-->>C: denied { event, reason }
-    else Join admitted
-      SR->>SR: check initial $presence and add member
-      SR-->>C: sync { self, rights, members } via ClientHandle
-      SR-->>P: peer-joined { clientId, role, profile, presence } via ClientHandle
-      SR->>E: onClientConnect(client, peer, context)
-    end
-  end
-```
-
-Only `join` may ask `RoomRegistry` to resolve an unknown room. A resolver that
-returns `null` or throws leaves the room unavailable, and the join is dropped.
-Repeated joins are ignored after the session records the membership.
-If the client may join but cannot write `$presence`, the room admits it with
-empty presence and sends a separate `denied` envelope for `$presence`.
-
-The `sync.members` snapshot includes the joining member. The browser adopts
-its server-assigned `self`, `role`, and `rights`, then keeps only remote members
-in `room.peers`. Existing members receive `peer-joined`; the joiner does not.
-
-### Reconnecting
-
-When an open socket drops unexpectedly, the client suspends its joined rooms
-(`clientId` becomes `null`, peers are dropped), queues outgoing envelopes, and
-reopens the socket with a 0.5 s, 1 s, 2 s, 5 s, then 10 s backoff. The new
-connection authenticates again and gets a new client ID. Each joined room
-sends `join` again with the payload of `Room.resumeWith()` as `resume`, then
-the queue is flushed. The server treats it as a first join: the old
-connection leaves when the server notices its close. An `unauthorized` close
-stops reconnecting.
-
-[`CommandSync`](./docs/sync/CommandSync.md#resume) puts the previous client
-ID and the last room version in `resume`, so the extension can send only
-the missed commands and say which of the previous connection's commands it
-processed.
-
-## Message routing
-
-Client messages and extension output pass through separate protocols. The
-matched schema variant supplies the event name used by the rights table.
+A browser's `Client` shares one WebSocket across its rooms. Each room serves
+one feature instance, such as an open asset.
 
 ```mermaid
 flowchart TD
-  Incoming["message envelope"] --> Envelope["Parse client envelope"]
-  Envelope -->|"invalid"| Drop["Drop and log"]
-  Envelope -->|"valid"| Member{"Known session,<br/>room, and member?"}
-  Member -->|"no"| Drop
-  Member -->|"yes"| Inbound["Parse inbound protocol"]
-  Inbound -->|"invalid payload"| Error["Send error<br/>event: $message"]
-  Inbound -->|"matched event"| Write{"Write right?"}
-  Write -->|"no"| Denied["Send denied<br/>matched event"]
-  Write -->|"yes"| Handler["Extension.onMessage"]
-  Handler --> Emit["broadcast or sendTo"]
-  Emit --> Outbound["Parse outbound protocol"]
-  Outbound -->|"invalid payload"| ServerDrop["Drop and log error"]
-  Outbound -->|"matched event"| Read["Filter recipients<br/>by read right"]
-  Read --> Delivered["message envelope"]
+  Client["Browser client"] <-->|"One WebSocket"| Server["Network server"]
+  Server <-->|"Asset A activity"| RoomA["Room: asset A"]
+  Server <-->|"Asset B activity"| RoomB["Room: asset B"]
 ```
 
-Rights keys use `${extension.name}.${event}`. A writer needs `write` access to
-the inbound event. An outbound recipient receives the event with `read` or
-`write` access; `void` removes that recipient from the send. `denied` means the
-event was understood but forbidden. `error` reports a payload rejected by the
-inbound protocol.
+Opening a room handle does not join it. Calling `room.join()` asks the server
+to admit the participant.
 
-An extension may declare an opaque side with a `null` protocol. Opaque payloads
-skip schema parsing. A server with a configured rights table refuses an
-extension with an opaque inbound protocol because it cannot derive an event to
-gate. An opaque outbound protocol also skips per-event recipient filtering. See
-[Extension](./docs/Extension.md) and [Rights](./docs/Rights.md) for the protocol
-and rule formats.
+See [Client and Room](./docs/client/Client.md).
 
-The server queues dispatch by client and room. Envelopes keep their arrival
-order inside one room, while slow work in another room can continue on a
-separate lane. Disconnect waits for every lane owned by the client before it
-removes the remaining memberships.
+## 2. Network carries activity; extensions give it meaning
 
-## Presence and leaving
+- **Network** manages participants, shares presence, and routes activity.
+  It checks identity, message contracts, and permissions.
+- **Extension** implements the feature inside a room. It decides what an edit
+  does and owns any feature state or persistence it needs.
 
-`Room.updatePresence(patch)` shallow-merges the local value. Before `join()`,
-the client holds the patch and includes it as initial presence in the join
-envelope. After joining, each patch follows this path:
+Passing network checks permits a request to reach the extension. The extension
+can still refuse the requested edit.
+
+See [Extension](./docs/server/Extension.md) and [Rights](./docs/server/Access.md#rights).
+Worker extensions follow the same boundary; see [Worker extensions](./docs/server/Extension.md#worker-extensions).
+
+## 3. Joining establishes who is in the room
+
+1. Connect. The server establishes the participant's trusted identity.
+2. Join a room. The server checks permission to enter.
+3. Receive the room's peers and permissions. The extension handles the arrival
+   and may send initial feature state.
+
+After the connection is accepted, a successful join looks like this:
 
 ```mermaid
 sequenceDiagram
-  participant C as Publishing client
-  participant SR as ServerRoom
-  participant P as Other members
-
-  C->>SR: presence { patch }
-  SR->>SR: require write on extension.$presence
-  SR->>SR: shallow-merge stored presence
-  SR-->>P: peer-presence { clientId, patch }
-  Note over P: Members with void access to $presence are excluded
+  participant New as New participant
+  participant Server as Network server
+  participant Peers as Existing peers
+  New->>Server: Join room
+  Server->>Server: Check join permission
+  Server-->>New: Your identity, peers, and rights
+  Server-->>Peers: Participant joined
 ```
 
-An explicit `leave` and a socket disconnect use the same room cleanup. The
-server removes the member, broadcasts `peer-left` to the remaining members,
-and calls `Extension.onClientDisconnect()`. Leaving is never rights-gated.
-Profile and presence disappear with the membership.
+The room's peer list excludes the local participant. Feature state, such as an
+image snapshot, arrives separately from the peer list.
 
-## Room lifetime
+See [Authentication](./docs/server/Access.md#authentication) and [Room events](./docs/client/Client.md#events).
 
-Static rooms are registered before clients connect. Dynamic rooms are created
-by a `RoomResolver` when the first client joins an unknown room.
+## 4. Sharing edits and presence
+
+An extension decides how commands change shared state. A participant may show
+an edit locally before the server answers, keeping the editor responsive.
+
+```mermaid
+sequenceDiagram
+  participant Alice as Alice's editor
+  participant Feature as Server extension
+  participant Bob as Bob's editor
+  Alice->>Alice: Show pending edit
+  Alice->>Feature: Request edit through network
+  Feature->>Feature: Decide accepted change
+  Feature-->>Alice: Send outcome through network
+  Feature-->>Bob: Share accepted change through network
+```
+
+This is a command-synchronized feature. A refused edit can require a local
+rollback; competing edits are resolved by the feature's conflict policy.
+`CommandSync` reconciles pending local edits with server changes.
+
+Presence follows a simpler path: a participant updates their cursor or selection,
+and network shares it with peers allowed to receive it. Extensions do not need
+to interpret those updates.
+
+See [CommandSync](./docs/client/CommandSync.md),
+[Conflicts](./docs/client/CommandSync.md#conflict-resolution), and
+[PresenceChannel](./docs/client/Client.md#presencechannel-api).
+
+## 5. Leaving and reconnecting
+
+Leaving a room removes the participant and their presence from that room.
+A closed connection removes them from every room they joined.
+
+With automatic retries enabled, the connection moves between these states:
 
 ```mermaid
 stateDiagram-v2
-  state "Static room" as StaticRoom
-  state "Unknown dynamic room" as Unknown
-  state "Active dynamic room" as Active
-  state "Empty grace period" as Grace
-  state "Evicting" as Evicting
-  state "Unavailable" as Rejected
-  state "Server closed" as Closed
-
-  [*] --> StaticRoom: register(extension)
-  StaticRoom --> Closed: Server.close()
-
-  [*] --> Unknown
-  Unknown --> Active: first join resolves
-  Unknown --> Rejected: resolver returns null or throws
-  Active --> Grace: last member leaves
-  Grace --> Active: join before timeout
-  Grace --> Evicting: grace expires
-  Evicting --> Unknown: onEvict then dispose
-  Active --> Closed: Server.close()
-  Grace --> Closed: Server.close()
-
-  Rejected --> [*]
-  Closed --> [*]
+  direction TB
+  Connected --> Reconnecting: Connection lost
+  Reconnecting --> Reconnecting: Retry fails
+  Reconnecting --> Connected: Connection restored
+  Reconnecting --> Stopped: Authentication refused or client destroyed
+  Connected --> Stopped: Access revoked or client destroyed
 ```
 
-The default grace period for a resolved room is 30 seconds. A resolution can
-override it. Static rooms do not enter the grace period and remain registered
-until `Server.close()`. See [Dynamic rooms](./docs/Server.md#dynamic-rooms) for
-the resolver and eviction contracts.
+Each retry authenticates again. Once connected, rooms rejoin and `CommandSync`
+asks the extension for missed commands or a fresh snapshot. Connection recovery
+comes before feature-state recovery. Disabling retries makes a disconnect stop
+the client instead.
 
-## Extension execution
+Rooms can be registered ahead of time or created on the first join. An empty
+dynamic room is removed after its grace period; static rooms remain until
+server shutdown.
 
-The room boundary stays the same whether feature code runs in the server
-process or in a worker thread.
+See [Reconnecting](./docs/client/Client.md#reconnecting),
+[Resume](./docs/client/CommandSync.md#resume), and [Dynamic rooms](./docs/server/Server.md#dynamic-rooms).
 
-```mermaid
-flowchart TD
-  ServerRoom["ServerRoom"] -->|"Extension instance"| InProcess["Extension<br/>server process"]
-  ServerRoom -->|"Extension"| Proxy["WorkerExtensionProxy<br/>network/node"]
-  Proxy <-->|"dispatch results and context calls"| Host["WorkerExtensionHost"]
-  Host --> WorkerExtension["Extension<br/>worker thread"]
-```
-
-The main thread still parses protocols and applies rights. The worker receives
-accepted lifecycle calls and can call `broadcast` or `sendTo` through the
-proxy. Worker startup, timeouts, restarts, and disposal are covered in
-[Worker extensions](./docs/Extension.md#worker-extensions).
-
-## Higher-level helpers
-
-These APIs build on `Room` messages and presence without changing the routing
-model above:
-
-- [`PresenceChannel`](./docs/PresenceChannel.md) exposes one typed presence
-  field per peer.
-- [`CommandSync`](./docs/sync/CommandSync.md) stamps commands, keeps them
-  pending until the server acknowledges them, and rebases them on every server
-  change so the client converges to the server's state.
-- [`ConflictTracker`](./docs/sync/Conflicts.md) applies server-side conflict
-  rules before an extension commits a command.
-
-The remaining public contracts are indexed in the [API reference](./docs/index.md).
+The [API reference](./README.md#api) covers transport wiring, protocol formats,
+and the remaining contracts.

@@ -7,7 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import { Server } from "@jolly-pixel/network";
+import {
+  Server,
+  type ServerConnection
+} from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -51,7 +54,7 @@ interface RoomHarness extends AsyncDisposable {
   readonly assetId: string;
   readonly clients: Map<string, RecordingClient>;
   readonly refusals: string[];
-  join(clientId: string, room?: string): Promise<void>;
+  join(clientId: string, room?: string): Promise<ServerConnection>;
   send(clientId: string, payload: unknown): Promise<void>;
 }
 
@@ -123,6 +126,7 @@ async function roomHarness(
   });
 
   const clients = new Map<string, RecordingClient>();
+  const connections = new Map<string, ServerConnection>();
 
   return {
     sync,
@@ -141,11 +145,14 @@ async function roomHarness(
     ) {
       const handle = recordingClient(clientId);
       clients.set(clientId, handle);
-      server.handleConnect(handle, { subject: handle.id, role: "default" });
-      await server.handleMessage(clientId, { room, kind: "join" });
+      const connection = server.connect(handle, { subject: handle.id, role: "default" });
+      connections.set(clientId, connection);
+      await connection.receive({ room, kind: "join" });
+
+      return connection;
     },
-    send(clientId, payload) {
-      return server.handleMessage(clientId, {
+    async send(clientId, payload) {
+      await connections.get(clientId)?.receive({
         room: new AssetRoom("counter", created.assetId).toString(),
         kind: "message",
         payload
@@ -286,13 +293,9 @@ describe("registerAssetRooms — eviction", () => {
     await using harness = await roomHarness({ graceMs: 100 });
     const room = new AssetRoom("counter", harness.assetId).toString();
 
-    await harness.join("A");
-    await harness.server.handleMessage("A", {
-      room,
-      kind: "message",
-      payload: { action: "increment" }
-    });
-    await harness.server.handleMessage("A", { room, kind: "leave" });
+    const connectionA = await harness.join("A");
+    await harness.send("A", { action: "increment" });
+    await connectionA.receive({ room, kind: "leave" });
 
     t.mock.timers.tick(100);
     await harness.server.settled(room);

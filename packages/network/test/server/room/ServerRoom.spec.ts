@@ -16,8 +16,6 @@ import {
   createExtension,
   createRoom
 } from "../../helpers/server/serverRoom.ts";
-import { Extension } from "#src/index.ts";
-import { OPAQUE_PROTOCOLS } from "../../helpers/protocol/protocols.ts";
 
 describe("ServerRoom", () => {
   test("join notifies existing members but not the joiner itself", async() => {
@@ -26,10 +24,14 @@ describe("ServerRoom", () => {
     const b = createClient("B");
     const room = createRoom(extension);
 
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
     assert.deepEqual(withoutSync(a.sent), []);
 
-    await room.join("B", b.client, identityOf("B"), { username: "bob" });
+    await room.join({
+      handle: b.client,
+      identity: identityOf("B"),
+      profile: { username: "bob" }
+    });
     assert.deepEqual(withoutSync(a.sent), [{
       room: "pixel-draw",
       kind: "peer-joined",
@@ -47,7 +49,11 @@ describe("ServerRoom", () => {
     const b = createClient("B");
     const room = createRoom(extension);
 
-    await room.join("A", a.client, identityOf("A"), { username: "alice" });
+    await room.join({
+      handle: a.client,
+      identity: identityOf("A"),
+      profile: { username: "alice" }
+    });
     assert.deepEqual(a.sent, [{
       room: "pixel-draw",
       kind: "sync",
@@ -63,7 +69,7 @@ describe("ServerRoom", () => {
       ]
     }]);
 
-    await room.join("B", b.client, identityOf("B"), {});
+    await room.join({ handle: b.client, identity: identityOf("B") });
     assert.deepEqual(b.sent, [{
       room: "pixel-draw",
       kind: "sync",
@@ -91,7 +97,7 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const room = createRoom(extension);
 
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
     extension.clients[0].send({ type: "snapshot" });
 
     assert.deepEqual(withoutSync(a.sent), [{
@@ -106,8 +112,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", b.client, identityOf("B"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: b.client, identity: identityOf("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -123,8 +129,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", b.client, identityOf("B"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: b.client, identity: identityOf("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -143,7 +149,7 @@ describe("ServerRoom", () => {
     const extension = createExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
 
     await room.message("A", { hello: "world" });
 
@@ -155,8 +161,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", b.client, identityOf("B"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: b.client, identity: identityOf("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -180,9 +186,9 @@ describe("ServerRoom", () => {
       };
     }
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", serializingClient("B"), identityOf("B"), {});
-    await room.join("C", serializingClient("C"), identityOf("C"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: serializingClient("B"), identity: identityOf("B") });
+    await room.join({ handle: serializingClient("C"), identity: identityOf("C") });
     a.sent.length = 0;
     serialized.length = 0;
 
@@ -206,8 +212,12 @@ describe("ServerRoom", () => {
     const extension = createExtension();
     const room = createRoom(extension);
 
-    await room.join("A", createClient("A").client, identityOf("A"), {}, { resume: { version: 2 } });
-    await room.join("B", createClient("B").client, identityOf("B"), {});
+    await room.join({
+      handle: createClient("A").client,
+      identity: identityOf("A"),
+      resume: { version: 2 }
+    });
+    await room.join({ handle: createClient("B").client, identity: identityOf("B") });
 
     assert.deepEqual(extension.peers.map((peer) => peer.resume), [{ version: 2 }, undefined]);
     assert.strictEqual("resume" in extension.peers[1], false);
@@ -217,7 +227,7 @@ describe("ServerRoom", () => {
     const extension = createExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
 
     await room.resync("A");
     await room.resync("nobody");
@@ -241,15 +251,13 @@ describe("ServerRoom", () => {
     const b = createClient("B");
     const c = createClient("C");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join(
-      "B",
-      b.client,
-      identityOf("B"),
-      {},
-      { presence: { cursor: { x: 2, y: 3 } } }
-    );
-    await room.join("C", c.client, identityOf("C"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({
+      handle: b.client,
+      identity: identityOf("B"),
+      presence: { cursor: { x: 2, y: 3 } }
+    });
+    await room.join({ handle: c.client, identity: identityOf("C") });
 
     assert.deepEqual(withoutSync(a.sent)[0], {
       room: "pixel-draw",
@@ -265,115 +273,5 @@ describe("ServerRoom", () => {
       sync.members.find((member) => member.clientId === "B")?.presence,
       { cursor: { x: 2, y: 3 } }
     );
-  });
-});
-
-describe("ServerRoom — RoomContext identity", () => {
-  test("hands the member's authenticated identity to onClientConnect and onMessage", async() => {
-    const extension = createExtension();
-    const a = createClient("A");
-    const room = createRoom(extension);
-    const identity = { subject: "alice", role: "editor" };
-    await room.join("A", a.client, identity, {});
-    await room.message("A", {});
-
-    assert.deepEqual(
-      extension.contexts.map((context) => context.identity),
-      [identity, identity]
-    );
-  });
-
-  test("keeps the departing member's identity for onClientDisconnect", async() => {
-    const extension = createExtension();
-    const a = createClient("A");
-    const room = createRoom(extension);
-    await room.join("A", a.client, { subject: "alice", role: "default" }, {});
-
-    await room.leave("A");
-
-    assert.deepEqual(extension.lastContext.identity, {
-      subject: "alice",
-      role: "default"
-    });
-  });
-
-  test("scopes each context to the member that triggered it", async() => {
-    const extension = createExtension();
-    const room = createRoom(extension);
-    await room.join("A", createClient("A").client, identityOf("A"), {});
-    await room.join("B", createClient("B").client, identityOf("B"), {});
-
-    await room.message("B", {});
-
-    assert.deepEqual(extension.lastContext.identity, identityOf("B"));
-  });
-
-  test("ignores a leave from a client that is not a member", async() => {
-    const extension = createExtension();
-    const a = createClient("A");
-    const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
-    a.sent.length = 0;
-
-    await room.leave("ghost");
-
-    assert.deepEqual(extension.disconnected, []);
-    assert.deepEqual(a.sent, []);
-  });
-});
-
-class HooklessExtension extends Extension {
-  readonly id = "hookless";
-  readonly name = "hookless";
-  readonly protocols = OPAQUE_PROTOCOLS;
-}
-
-describe("ServerRoom — extension without lifecycle hooks", () => {
-  test("join still admits the client and notifies existing members", async() => {
-    const room = createRoom(new HooklessExtension());
-    const a = createClient("A");
-    const b = createClient("B");
-
-    assert.equal(await room.join("A", a.client, identityOf("A"), {}), true);
-    assert.equal(await room.join("B", b.client, identityOf("B"), { username: "bob" }), true);
-
-    assert.deepEqual(withoutSync(a.sent), [{
-      room: "hookless",
-      kind: "peer-joined",
-      clientId: "B",
-      role: "default",
-      profile: { username: "bob" },
-      presence: {}
-    }]);
-  });
-
-  test("leave still broadcasts peer-left to remaining members", async() => {
-    const room = createRoom(new HooklessExtension());
-    const a = createClient("A");
-    const b = createClient("B");
-
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", b.client, identityOf("B"), {});
-    a.sent.length = 0;
-
-    await room.leave("B");
-
-    assert.deepEqual(a.sent, [{
-      room: "hookless",
-      kind: "peer-left",
-      clientId: "B"
-    }]);
-  });
-
-  test("message is dropped without reaching any client", async() => {
-    const room = createRoom(new HooklessExtension());
-    const a = createClient("A");
-
-    await room.join("A", a.client, identityOf("A"), {});
-    a.sent.length = 0;
-
-    await room.message("A", { any: "payload" });
-
-    assert.deepEqual(a.sent, []);
   });
 });

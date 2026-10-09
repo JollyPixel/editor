@@ -10,7 +10,10 @@ import type {
 } from "../extension/Extension.ts";
 import { RightsTable } from "../rights/RightsTable.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
-import { RoomMembers } from "./RoomMembers.ts";
+import {
+  RoomMembers,
+  type PeerRecord
+} from "./RoomMembers.ts";
 import { PeerPresence } from "./PeerPresence.ts";
 import { ResyncThrottle } from "./ResyncThrottle.ts";
 import { MessageParser } from "../../protocol/message/MessageParser.ts";
@@ -49,7 +52,10 @@ interface Refusal {
   label: string;
 }
 
-export interface ServerRoomJoinOptions {
+export interface RoomJoiner {
+  handle: ClientHandle;
+  identity: PeerIdentity;
+  profile?: PeerMetadata;
   presence?: PeerMetadata;
   resume?: unknown;
 }
@@ -81,9 +87,15 @@ export class ServerRoom {
     return this.#members.size;
   }
 
+  has(
+    clientId: string
+  ): boolean {
+    return this.#members.has(clientId);
+  }
+
   #extension: AnyExtension;
   #rights: RightsGate;
-  #members = new RoomMembers();
+  #members: RoomMembers;
   #logger: Logger;
   #roomBroadcast: RoomBroadcast;
   #inbound: MessageParser | null;
@@ -100,6 +112,7 @@ export class ServerRoom {
     this.id = id;
     this.#extension = extension;
     this.#rights = rights.scope(extension.name);
+    this.#members = new RoomMembers(this.#rights);
     this.#logger = (options.logger ?? createLogger()).child().withContext({
       room: this.id
     });
@@ -120,8 +133,8 @@ export class ServerRoom {
       : MessageParser.of(outbound);
 
     this.#roomBroadcast = {
-      broadcast: (payload) => this.#broadcast(payload),
-      sendTo: (clientId, payload) => this.#sendTo(clientId, payload)
+      broadcast: (payload) => this.#deliver(payload),
+      sendTo: (clientId, payload) => this.#deliver(payload, clientId)
     };
   }
 
@@ -202,12 +215,6 @@ export class ServerRoom {
       .debug(label);
   }
 
-  #canReadPresence(
-    role: string
-  ): boolean {
-    return this.#rights.check(role, PRESENCE_EVENT) !== "void";
-  }
-
   rightsFor(
     role: string
   ): RoomRights {
@@ -222,16 +229,16 @@ export class ServerRoom {
   }
 
   async join(
-    clientId: string,
-    client: ClientHandle,
-    identity: PeerIdentity,
-    profile: PeerMetadata,
-    options: ServerRoomJoinOptions = {}
+    joiner: RoomJoiner
   ): Promise<boolean> {
     const {
+      handle: client,
+      identity,
+      profile = {},
       presence = {},
       resume
-    } = options;
+    } = joiner;
+    const clientId = client.id;
     const { role } = identity;
     if (!this.#authorize({
       clientId,
@@ -283,8 +290,8 @@ export class ServerRoom {
 
     await this.#extension.onClientConnect?.(
       {
-        id: client.id,
-        send: (data) => this.#sendTo(client.id, data)
+        id: clientId,
+        send: (data) => this.#deliver(data, clientId)
       },
       {
         clientId,
@@ -348,15 +355,12 @@ export class ServerRoom {
       ...envelope,
       presence
     }, {
-      excludeClientId: clientId,
-      predicate: (peerRole) => this.#canReadPresence(peerRole)
-    });
-    this.#members.send({
-      ...envelope,
-      presence: {}
-    }, {
-      excludeClientId: clientId,
-      predicate: (peerRole) => !this.#canReadPresence(peerRole)
+      event: PRESENCE_EVENT,
+      unreadable: {
+        ...envelope,
+        presence: {}
+      },
+      excludeClientId: clientId
     });
   }
 
@@ -365,37 +369,21 @@ export class ServerRoom {
     client: ClientHandle,
     role: string
   ): void {
-    const members = this.#members.snapshot();
     client.send({
       room: this.id,
       kind: "sync",
       self: clientId,
       rights: this.rightsFor(role),
-      members: this.#canReadPresence(role) ?
-        members :
-        members.map((member) => {
-          return {
-            ...member,
-            presence: {}
-          };
-        })
+      members: this.#members.snapshotFor(role)
     });
   }
 
   async leave(
     clientId: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     const record = this.#members.get(clientId);
     if (record === undefined) {
-      this.#logger
-        .withMetadata({
-          clientId,
-          outcome: "ignored",
-          reason: "not a member"
-        })
-        .debug("leave");
-
-      return;
+      return false;
     }
 
     this.#members.remove(clientId);
@@ -413,25 +401,33 @@ export class ServerRoom {
     this.#logger
       .withMetadata({ clientId })
       .debug("leave");
+
+    return true;
   }
 
   updatePresence(
     clientId: string,
     patch: PeerMetadata
-  ): void {
+  ): boolean {
     const record = this.#members.get(clientId);
-    if (!record) {
-      this.#logger
-        .withMetadata({
-          clientId,
-          outcome: "ignored",
-          reason: "not a member"
-        })
-        .debug("presence update");
-
-      return;
+    if (record === undefined) {
+      return false;
     }
 
+    this.#patchPresence(
+      clientId,
+      record,
+      patch
+    );
+
+    return true;
+  }
+
+  #patchPresence(
+    clientId: string,
+    record: PeerRecord,
+    patch: PeerMetadata
+  ): void {
     const { role } = record.identity;
     if (!this.#authorize({
       clientId,
@@ -461,8 +457,8 @@ export class ServerRoom {
       clientId,
       patch
     }, {
-      excludeClientId: clientId,
-      predicate: (peerRole) => this.#canReadPresence(peerRole)
+      event: PRESENCE_EVENT,
+      excludeClientId: clientId
     });
 
     if (this.#logger.isLevelEnabled("debug")) {
@@ -479,20 +475,26 @@ export class ServerRoom {
   async message(
     clientId: string,
     payload: unknown
-  ): Promise<void> {
+  ): Promise<boolean> {
     const record = this.#members.get(clientId);
     if (record === undefined) {
-      this.#logger
-        .withMetadata({
-          clientId,
-          outcome: "dropped",
-          reason: "not a member"
-        })
-        .debug("message");
-
-      return;
+      return false;
     }
 
+    await this.#receiveMessage(
+      clientId,
+      record,
+      payload
+    );
+
+    return true;
+  }
+
+  async #receiveMessage(
+    clientId: string,
+    record: PeerRecord,
+    payload: unknown
+  ): Promise<void> {
     const { identity } = record;
     const { role } = identity;
     if (this.#inbound === null) {
@@ -539,24 +541,17 @@ export class ServerRoom {
 
   async resync(
     clientId: string
-  ): Promise<void> {
-    const record = this.#members.get(clientId);
-    if (record === undefined) {
-      this.#logger
-        .withMetadata({
-          clientId,
-          outcome: "dropped",
-          reason: "not a member"
-        })
-        .debug("resync");
-
-      return;
+  ): Promise<boolean> {
+    if (!this.has(clientId)) {
+      return false;
     }
 
     await this.#resyncs.request(
       clientId,
       () => this.#runResync(clientId)
     );
+
+    return true;
   }
 
   async #runResync(
@@ -614,78 +609,36 @@ export class ServerRoom {
     await this.#extension.dispose?.();
   }
 
-  #outboundEvent(
-    payload: unknown
-  ): string | null {
-    if (this.#outbound === null) {
-      return null;
-    }
-
-    const parsed = this.#outbound.parse(payload);
-    if (!parsed.ok) {
-      this.#logger
-        .withMetadata({
-          outcome: "dropped",
-          reason: describeErrors(parsed.val)
-        })
-        .error("outbound payload does not match the extension protocol");
-
-      return null;
-    }
-
-    return parsed.val.event;
-  }
-
-  #broadcast(
-    payload: unknown
+  #deliver(
+    payload: unknown,
+    to?: string
   ): void {
+    let event: string | undefined;
     if (this.#outbound !== null) {
-      const event = this.#outboundEvent(payload);
-      if (event === null) {
+      const parsed = this.#outbound.parse(payload);
+      if (!parsed.ok) {
+        this.#logger
+          .withMetadata({
+            outcome: "dropped",
+            reason: describeErrors(parsed.val)
+          })
+          .error("outbound payload does not match the extension protocol");
+
         return;
       }
-
-      this.#members.send({
-        room: this.id,
-        kind: "message",
-        payload
-      }, {
-        predicate: (role) => this.#rights.check(role, event) !== "void"
-      });
-
-      return;
+      event = parsed.val.event;
     }
 
-    this.#members.send({
+    const envelope = {
       room: this.id,
       kind: "message",
       payload
-    });
-  }
-
-  #sendTo(
-    clientId: string,
-    payload: unknown
-  ): void {
-    const record = this.#members.get(clientId);
-    if (record === undefined) {
-      return;
+    } as const;
+    if (to === undefined) {
+      this.#members.send(envelope, { event });
     }
-
-    if (this.#outbound !== null) {
-      const event = this.#outboundEvent(payload);
-      if (event === null) {
-        return;
-      }
-      if (this.#rights.check(record.identity.role, event) === "void") {
-        return;
-      }
+    else {
+      this.#members.sendTo(to, envelope, event);
     }
-
-    record.handle.send({
-      room: this.id,
-      kind: "message",
-      payload
-    });
   }
 }

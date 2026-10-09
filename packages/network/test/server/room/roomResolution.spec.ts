@@ -66,8 +66,8 @@ describe("Server — dynamic room resolution", () => {
   test("a message to a never-joined dynamic room is dropped", async() => {
     const { server, created } = harness();
 
-    server.handleConnect(client("A"), identityOf(client("A")));
-    await server.handleMessage("A", {
+    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "message",
       payload: { hello: "world" }
@@ -84,14 +84,14 @@ describe("Server — dynamic room resolution", () => {
       throw new Error("resolver exploded");
     });
 
-    server.handleConnect(
+    const connectionA = server.connect(
       {
         id: "A",
         send: (data) => kinds.push(serverEnvelopeOf(data).kind)
       },
       identityOf("A")
     );
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "join"
     });
@@ -100,7 +100,7 @@ describe("Server — dynamic room resolution", () => {
     server.setRoomResolver((name): RoomResolution => {
       return { extension: new AssetExtension(name, "pixelart") };
     });
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "join"
     });
@@ -112,8 +112,8 @@ describe("Server — dynamic room resolution", () => {
   test("a resolved room routes messages to its extension", async() => {
     const { server, extensions } = harness();
 
-    await join(server, "A", "pixelart:asset-1");
-    await server.handleMessage("A", {
+    const connectionA = await join(server, "A", "pixelart:asset-1");
+    await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "message",
       payload: { stroke: 1 }
@@ -141,12 +141,12 @@ describe("dynamic rooms — concurrent joins", () => {
       return { extension: new AssetExtension(name, "pixelart") };
     });
 
-    server.handleConnect(client("A"), identityOf(client("A")));
-    const slow = server.handleMessage("A", {
+    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const slow = connectionA.receive({
       room: "pixelart:slow",
       kind: "join"
     });
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: "pixelart:fast",
       kind: "join"
     });
@@ -163,9 +163,9 @@ describe("dynamic rooms — concurrent joins", () => {
     const { server, extensions } = harness();
     const room = "pixelart:a1";
 
-    server.handleConnect(client("A"), identityOf(client("A")));
-    const join = server.handleMessage("A", { room, kind: "join" });
-    const message = server.handleMessage("A", {
+    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const join = connectionA.receive({ room, kind: "join" });
+    const message = connectionA.receive({
       room,
       kind: "message",
       payload: { action: "stroke" }
@@ -202,12 +202,12 @@ describe("dynamic rooms — concurrent joins", () => {
       };
     });
 
-    server.handleConnect(client("A"), identityOf(client("A")));
-    const join = server.handleMessage("A", {
+    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const join = connectionA.receive({
       room: "pixelart:a1",
       kind: "join"
     });
-    const disconnect = server.handleDisconnect("A");
+    const disconnect = connectionA.close();
     await flush();
     assert.deepEqual(order, []);
 

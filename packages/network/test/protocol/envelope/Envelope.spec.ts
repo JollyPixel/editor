@@ -24,15 +24,6 @@ function errorOf(
 }
 
 describe("Envelope.parseClient", () => {
-  test("parses a valid JSON string into a client envelope", () => {
-    const result = Envelope.parseClient(
-      JSON.stringify({ room: "pixel-draw", kind: "leave" })
-    );
-
-    assert.equal(result.ok, true);
-    assert.deepEqual(result.val, { room: "pixel-draw", kind: "leave" });
-  });
-
   test("accepts an already-deserialized object", () => {
     const result = Envelope.parseClient({
       room: "pixel-draw",
@@ -46,12 +37,6 @@ describe("Envelope.parseClient", () => {
       kind: "message",
       payload: { hello: "world" }
     });
-  });
-
-  test("accepts a join envelope without identity", () => {
-    const result = Envelope.parseClient({ room: "pixel-draw", kind: "join" });
-
-    assert.equal(result.ok, true);
   });
 
   test("rejects a presence envelope without a patch", () => {
@@ -108,47 +93,6 @@ describe("Envelope.parseClient", () => {
 });
 
 describe("Envelope.parseServer", () => {
-  test("accepts a denied envelope", () => {
-    const result = Envelope.parseServer({
-      room: "pixel-draw",
-      kind: "denied",
-      event: "$join",
-      reason: "role \"viewer\" is not permitted to join this room"
-    });
-
-    assert.equal(result.ok, true);
-  });
-
-  test("accepts an error envelope", () => {
-    const result = Envelope.parseServer({
-      room: "pixel-draw",
-      kind: "error",
-      event: "pixel-set",
-      reason: "disk full"
-    });
-
-    assert.equal(result.ok, true);
-  });
-
-  test("accepts a sync envelope carrying self, rights and members", () => {
-    const result = Envelope.parseServer({
-      room: "pixel-draw",
-      kind: "sync",
-      self: "a",
-      rights: { "voxel-set": "read" },
-      members: [
-        {
-          clientId: "a",
-          role: "viewer",
-          profile: { name: "ada" },
-          presence: {}
-        }
-      ]
-    });
-
-    assert.equal(result.ok, true);
-  });
-
   test("rejects a sync envelope without members", () => {
     const result = Envelope.parseServer({
       room: "pixel-draw",

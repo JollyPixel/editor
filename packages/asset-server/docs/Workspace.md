@@ -198,7 +198,7 @@ interface AssetLaunchRequest {
 
 `catalogPath` defaults to `/__jollypixel/catalog`, `prefix` to `/assets/`,
 and `socketPath` to `/ws-sync`. `compression` is forwarded to the
-[`WebsocketTransport`](../../network/docs/Transports.md) and is off by default.
+[`WebsocketTransport`](../../network/docs/transport/Transports.md#websockettransport) and is off by default.
 `onReady` runs when the workspace is ready.
 `launch` selects the asset an HTML page opens.
 

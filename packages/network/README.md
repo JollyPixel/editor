@@ -52,16 +52,18 @@ room.join();
 room.send({ hello: "world" });
 ```
 
-## 📚 API
+## API
 
-- [Client](./docs/Client.md): client connection and room handles
-- [Server](./docs/Server.md): room multiplexer
-- [Extension](./docs/Extension.md): room-side base class, including worker-mode extensions
-- [Rights](./docs/Rights.md): role-based access control
-- [Transports](./docs/Transports.md): Vite plugin and websocket wiring
-- [CommandSync](./docs/sync/CommandSync.md): client-side command sync
-- [PresenceChannel](./docs/PresenceChannel.md): typed per-peer presence
-- [Conflicts](./docs/sync/Conflicts.md): server-side conflict resolution
+- [Client](./docs/client/Client.md): rooms and presence
+- [CommandSync](./docs/client/CommandSync.md): document synchronization
+- [Server](./docs/server/Server.md): connections and room lifecycle
+- [Extension](./docs/server/Extension.md): feature hooks and workers
+- [Access](./docs/server/Access.md): authentication and rights
+- [Messages](./docs/protocol/Messages.md): protocols and parsing
+- [Transports](./docs/transport/Transports.md): hosting and socket adapters
+
+Guides: [Getting started](./docs/guides/getting-started.md),
+[Command synchronization](./docs/guides/command-sync.md).
 
 ## ✨ Contributors guide
 

@@ -35,7 +35,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "write" } }));
 
-    const admitted = await room.join("A", a.client, identityOf("A", "viewer"), {});
+    const admitted = await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
 
     assert.strictEqual(admitted, true);
     assert.deepEqual(withoutSync(a.sent), []);
@@ -46,7 +46,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "void" } }));
 
-    const admitted = await room.join("A", a.client, identityOf("A", "viewer"), {});
+    const admitted = await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
 
     assert.strictEqual(admitted, false);
     assert.deepEqual(a.sent, [{
@@ -62,7 +62,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "read" } }));
 
-    assert.strictEqual(await room.join("A", a.client, identityOf("A", "viewer"), {}), false);
+    assert.strictEqual(await room.join({ handle: a.client, identity: identityOf("A", "viewer") }), false);
   });
 
   test("a role absent from a configured rights table is denied", async() => {
@@ -70,7 +70,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.$join": "void" } }));
 
-    assert.strictEqual(await room.join("A", a.client, identityOf("A"), {}), false);
+    assert.strictEqual(await room.join({ handle: a.client, identity: identityOf("A") }), false);
   });
 
   test("a glob pattern (\"pixel-draw.*\") matches the namespaced $join key", async() => {
@@ -78,7 +78,7 @@ describe("ServerRoom — rights: $join", () => {
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.*": "void" } }));
 
-    assert.strictEqual(await room.join("A", a.client, identityOf("A", "viewer"), {}), false);
+    assert.strictEqual(await room.join({ handle: a.client, identity: identityOf("A", "viewer") }), false);
   });
 });
 
@@ -88,8 +88,8 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable({ viewer: { "pixel-draw.*": "write" } }));
-    await room.join("A", a.client, identityOf("A", "viewer"), {});
-    await room.join("B", b.client, identityOf("B", "viewer"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
+    await room.join({ handle: b.client, identity: identityOf("B", "viewer") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -109,8 +109,8 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
-    await room.join("A", a.client, identityOf("A", "viewer"), {});
-    await room.join("B", b.client, identityOf("B"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
+    await room.join({ handle: b.client, identity: identityOf("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -130,8 +130,8 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", b.client, identityOf("B", "viewer"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: b.client, identity: identityOf("B", "viewer") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -145,14 +145,12 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join(
-      "B",
-      b.client,
-      identityOf("B", "viewer"),
-      {},
-      { presence: { cursor: { x: 1, y: 1 } } }
-    );
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({
+      handle: b.client,
+      identity: identityOf("B", "viewer"),
+      presence: { cursor: { x: 1, y: 1 } }
+    });
 
     assert.deepEqual(withoutSync(b.sent), [{
       room: "pixel-draw",
@@ -175,14 +173,12 @@ describe("ServerRoom — rights: $presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension, new RightsTable(kPresenceVoidForViewer));
-    await room.join("A", a.client, identityOf("A", "viewer"), {});
-    await room.join(
-      "B",
-      b.client,
-      identityOf("B"),
-      {},
-      { presence: { cursor: { x: 1, y: 1 } } }
-    );
+    await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
+    await room.join({
+      handle: b.client,
+      identity: identityOf("B"),
+      presence: { cursor: { x: 1, y: 1 } }
+    });
 
     assert.deepEqual(withoutSync(a.sent), [{
       room: "pixel-draw",
@@ -205,7 +201,7 @@ describe("ServerRoom — rights: message write gate", () => {
         "pixel-draw.voxel-set": "write"
       }
     }));
-    await room.join("A", a.client, identityOf("A", "editor"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "editor") });
 
     await room.message("A", { action: "voxel-set" });
 
@@ -221,7 +217,7 @@ describe("ServerRoom — rights: message write gate", () => {
         "pixel-draw.voxel-set": "read"
       }
     }));
-    await room.join("A", a.client, identityOf("A", "viewer"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
     a.sent.length = 0;
 
     await room.message("A", { action: "voxel-set" });
@@ -244,7 +240,7 @@ describe("ServerRoom — rights: message write gate", () => {
         "pixel-draw.*": "read"
       }
     }));
-    const admitted = await room.join("A", a.client, identityOf("A", "viewer"), {});
+    const admitted = await room.join({ handle: a.client, identity: identityOf("A", "viewer") });
 
     await room.message("A", { action: "voxel-set" });
     await room.message("A", { action: "object-added" });
@@ -269,8 +265,8 @@ describe("ServerRoom — rights: broadcast read gate", () => {
         "pixel-draw.voxel-set": "read"
       }
     }));
-    await room.join("A", a.client, identityOf("A", "blocked"), {});
-    await room.join("B", b.client, identityOf("B", "allowed"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
+    await room.join({ handle: b.client, identity: identityOf("B", "allowed") });
     a.sent.length = 0;
     b.sent.length = 0;
 

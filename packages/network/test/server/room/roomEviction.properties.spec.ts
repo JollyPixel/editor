@@ -16,6 +16,7 @@ import {
   client,
   harness
 } from "../../helpers/server/dynamicRooms.ts";
+import type { ServerConnection } from "#src/index.ts";
 
 // CONSTANTS
 const kRoom = "pixelart:asset-1";
@@ -87,7 +88,7 @@ describe("room eviction properties", () => {
         async(actions) => {
           const { server, created, evicted, extensions } = harness({ graceMs: kGraceMs });
           const model = new EvictionModel();
-          const connected = new Set<string>();
+          const connected = new Map<string, ServerConnection>();
           const instances = new Set<AssetExtension>();
 
           for (const action of actions) {
@@ -96,18 +97,20 @@ describe("room eviction properties", () => {
               t.mock.timers.tick(action.ms);
             }
             else if (action.type === "join") {
-              if (!connected.has(action.client)) {
-                server.handleConnect(client(action.client), identityOf(action.client));
-                connected.add(action.client);
+              let connection = connected.get(action.client);
+              if (connection === undefined) {
+                connection = server.connect(client(action.client), identityOf(action.client));
+                connected.set(action.client, connection);
               }
-              await server.handleMessage(action.client, { room: kRoom, kind: "join" });
+              await connection.receive({ room: kRoom, kind: "join" });
             }
             else if (action.type === "leave") {
-              await server.handleMessage(action.client, { room: kRoom, kind: "leave" });
+              await connected.get(action.client)?.receive({ room: kRoom, kind: "leave" });
             }
             else {
+              const connection = connected.get(action.client);
               connected.delete(action.client);
-              await server.handleDisconnect(action.client);
+              await connection?.close();
             }
             await setImmediate();
             const current = extensions.get(kRoom);

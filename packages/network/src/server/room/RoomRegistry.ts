@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import {
   ServerRoom,
+  type RoomJoiner,
   type RoomLimits
 } from "./ServerRoom.ts";
 import { errorMessage } from "../errors.ts";
@@ -23,6 +24,8 @@ interface RoomEntry {
   evictionHandle: ReturnType<typeof setTimeout> | null;
 }
 
+export type RoomJoinResult = "joined" | "member" | "denied" | "unregistered";
+
 export interface RoomRegistryOptions {
   logger: Logger;
   rights: RightsTable;
@@ -36,7 +39,7 @@ export interface RoomRegistryOptions {
 }
 
 /**
- * Owns room resolution and eviction; membership comes from `room.size`.
+ * Owns room resolution and eviction; membership lives in each room.
  */
 export class RoomRegistry {
   #logger: Logger;
@@ -73,16 +76,79 @@ export class RoomRegistry {
       .info("room registered");
   }
 
-  async resolve(
+  get(
+    name: string
+  ): ServerRoom | undefined {
+    return this.#entries.get(name)?.room;
+  }
+
+  async join(
     name: string,
-    options: { create: boolean; }
+    joiner: RoomJoiner
+  ): Promise<RoomJoinResult> {
+    const room = await this.#resolve(name);
+    if (room === null) {
+      return "unregistered";
+    }
+    if (room.has(joiner.handle.id)) {
+      return "member";
+    }
+
+    try {
+      return await room.join(joiner) ? "joined" : "denied";
+    }
+    finally {
+      this.#syncEviction(name);
+    }
+  }
+
+  async leave(
+    name: string,
+    clientId: string
+  ): Promise<boolean> {
+    const room = this.get(name);
+    if (room === undefined) {
+      return false;
+    }
+
+    try {
+      return await room.leave(clientId);
+    }
+    finally {
+      this.#syncEviction(name);
+    }
+  }
+
+  async leaveAll(
+    clientId: string
+  ): Promise<string[]> {
+    const names = [...this.#entries.values()]
+      .filter((entry) => entry.room.has(clientId))
+      .map((entry) => entry.name);
+    for (const name of names) {
+      try {
+        await this.leave(name, clientId);
+      }
+      catch (error) {
+        this.#logger
+          .withMetadata({
+            clientId,
+            room: name,
+            reason: errorMessage(error)
+          })
+          .error("disconnect handling failed");
+      }
+    }
+
+    return names;
+  }
+
+  async #resolve(
+    name: string
   ): Promise<ServerRoom | null> {
     const existing = this.#entries.get(name);
     if (existing !== undefined) {
       return existing.room;
-    }
-    if (!options.create) {
-      return null;
     }
 
     const pending = this.#resolutions.get(name);
@@ -121,24 +187,7 @@ export class RoomRegistry {
     return entry.room;
   }
 
-  async leave(
-    name: string,
-    clientId: string
-  ): Promise<void> {
-    const entry = this.#entries.get(name);
-    if (entry === undefined) {
-      return;
-    }
-
-    try {
-      await entry.room.leave(clientId);
-    }
-    finally {
-      this.syncEviction(name);
-    }
-  }
-
-  syncEviction(
+  #syncEviction(
     name: string
   ): void {
     const entry = this.#entries.get(name);

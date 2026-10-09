@@ -34,4 +34,4 @@ A refused or narrowed `voxel-set`, `voxel-removed`, `voxels-set`, `voxels-remove
 
 `voxelCommandProtocol` and `blocksetCommandProtocol` validate command messages. `voxelWorldSchema` and `blocksetSnapshotSchema` check the snapshot headers; `voxelWorldSchema` also checks a stored map before the renderer parses the full world document. `VoxelMapState.applyCommand()` applies commands to the headless world and blockset list; `BlocksetState.applyCommand()` applies them to the pixel buffer or the blockset document.
 
-Access policies use the `voxelmap` and `blockset` extensions and protocol action names such as `voxel-set`, `stroke` and `block-defined`. Resolve roles from a trusted server session when access control matters. See [network rights](../../../network/docs/Rights.md).
+Access policies use the `voxelmap` and `blockset` extensions and protocol action names such as `voxel-set`, `stroke` and `block-defined`. Resolve roles from a trusted server session when access control matters. See [network rights](../../../network/docs/server/Access.md#rights).

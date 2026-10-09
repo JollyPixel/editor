@@ -116,12 +116,12 @@ describe("voxel-map asset kind over a real back-end", () => {
       backend.attach(server);
       const room = new AssetRoom(VOXEL_MAP_KIND, record.id).toString();
 
-      server.handleConnect(client("A"), { subject: "A", role: "default" });
-      await server.handleMessage("A", {
+      const connectionA = server.connect(client("A"), { subject: "A", role: "default" });
+      await connectionA.receive({
         room,
         kind: "join"
       });
-      await server.handleMessage("A", {
+      await connectionA.receive({
         room,
         kind: "message",
         payload: voxelSetCmd({
@@ -199,18 +199,18 @@ describe("voxel-map asset kind over a real back-end", () => {
       backend.attach(server);
       const room = new AssetRoom(VOXEL_MAP_KIND, record.id).toString();
 
-      server.handleConnect(client("A"), { subject: "A", role: "default" });
-      server.handleConnect(client("B"), { subject: "B", role: "default" });
-      await server.handleMessage("A", {
+      const connectionA = server.connect(client("A"), { subject: "A", role: "default" });
+      const connectionB = server.connect(client("B"), { subject: "B", role: "default" });
+      await connectionA.receive({
         room,
         kind: "join"
       });
-      await server.handleMessage("B", {
+      await connectionB.receive({
         room,
         kind: "join"
       });
 
-      await server.handleMessage("A", {
+      await connectionA.receive({
         room,
         kind: "message",
         payload: voxelSetCmd({
@@ -220,7 +220,7 @@ describe("voxel-map asset kind over a real back-end", () => {
         })
       });
       // A replay of an edit older than A's write loses.
-      await server.handleMessage("B", {
+      await connectionB.receive({
         room,
         kind: "message",
         payload: {

@@ -2,15 +2,41 @@
 import { match } from "ts-pattern";
 
 // Import Internal Dependencies
-import type { RoomRegistry } from "./room/RoomRegistry.ts";
-import type { ServerRoom } from "./room/ServerRoom.ts";
 import type {
-  ClientSession,
-  ClientSessions
-} from "./ClientSessions.ts";
+  RoomJoinResult,
+  RoomRegistry
+} from "./room/RoomRegistry.ts";
+import type { ClientSessions } from "./ClientSessions.ts";
 import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
 import type { ClientEnvelope } from "../protocol/envelope/Envelope.ts";
 import type { PeerMetadata } from "../protocol/types.ts";
+
+// CONSTANTS
+const kHandled: DispatchOutcome = { outcome: "handled" };
+const kLeft: DispatchOutcome = { outcome: "left" };
+const kNotMember: DispatchOutcome = {
+  outcome: "ignored",
+  reason: "not a member"
+};
+const kNotJoined: DispatchOutcome = {
+  outcome: "dropped",
+  reason: "client has not joined room"
+};
+const kJoinOutcomes: Record<RoomJoinResult, DispatchOutcome> = {
+  joined: { outcome: "joined" },
+  member: {
+    outcome: "ignored",
+    reason: "already joined"
+  },
+  denied: {
+    outcome: "dropped",
+    reason: "join denied"
+  },
+  unregistered: {
+    outcome: "dropped",
+    reason: "unregistered room"
+  }
+};
 
 export interface DispatchOutcome {
   outcome: "joined" | "left" | "handled" | "ignored" | "dropped";
@@ -51,139 +77,40 @@ export class EnvelopeDispatcher {
       };
     }
 
-    const room = await this.#rooms.resolve(envelope.room, {
-      create: envelope.kind === "join"
-    });
-    if (room === null) {
-      return {
-        outcome: "dropped",
-        reason: "unregistered room"
-      };
-    }
-
     return match(envelope)
-      .with({ kind: "join" }, (envelope) => this.#handleJoin(session, room, envelope))
-      .with({ kind: "leave" }, (envelope) => this.#handleLeave(session, envelope))
-      .with({ kind: "message" }, (envelope) => this.#handleMessage(session, room, envelope))
-      .with({ kind: "presence" }, (envelope) => this.#handlePresence(session, room, envelope))
-      .with({ kind: "resync" }, (envelope) => this.#handleResync(session, room, envelope))
-      .exhaustive();
-  }
-
-  async #handleJoin(
-    session: ClientSession,
-    room: ServerRoom,
-    envelope: Extract<ClientEnvelope, { kind: "join"; }>
-  ): Promise<DispatchOutcome> {
-    if (session.rooms.has(envelope.room)) {
-      return {
-        outcome: "ignored",
-        reason: "already joined"
-      };
-    }
-
-    try {
-      const admitted = await room.join(
-        session.handle.id,
-        session.handle,
-        session.identity,
-        joinProfile(session.identity, envelope.profile),
-        {
+      .with({ kind: "join" }, async(envelope) => {
+        const result = await this.#rooms.join(envelope.room, {
+          handle: session.handle,
+          identity: session.identity,
+          profile: joinProfile(session.identity, envelope.profile),
           presence: envelope.presence ?? Object.create(null),
           resume: envelope.resume
-        }
-      );
-      if (!admitted) {
-        return {
-          outcome: "dropped",
-          reason: "join denied"
-        };
-      }
+        });
 
-      session.rooms.add(envelope.room);
-
-      return { outcome: "joined" };
-    }
-    finally {
-      this.#rooms.syncEviction(envelope.room);
-    }
+        return kJoinOutcomes[result];
+      })
+      .with({ kind: "leave" }, async(envelope) => (
+        await this.#rooms.leave(envelope.room, clientId) ?
+          kLeft :
+          kNotMember
+      ))
+      .with({ kind: "message" }, (envelope) => handled(
+        this.#rooms.get(envelope.room)?.message(clientId, envelope.payload)
+      ))
+      .with({ kind: "presence" }, (envelope) => handled(
+        this.#rooms.get(envelope.room)?.updatePresence(clientId, envelope.patch)
+      ))
+      .with({ kind: "resync" }, (envelope) => handled(
+        this.#rooms.get(envelope.room)?.resync(clientId)
+      ))
+      .exhaustive();
   }
+}
 
-  async #handleLeave(
-    session: ClientSession,
-    envelope: Extract<ClientEnvelope, { kind: "leave"; }>
-  ): Promise<DispatchOutcome> {
-    if (!session.rooms.delete(envelope.room)) {
-      return {
-        outcome: "ignored",
-        reason: "not a member"
-      };
-    }
-
-    await this.#rooms.leave(
-      envelope.room,
-      session.handle.id
-    );
-
-    return { outcome: "left" };
-  }
-
-  async #handleMessage(
-    session: ClientSession,
-    room: ServerRoom,
-    envelope: Extract<ClientEnvelope, { kind: "message"; }>
-  ): Promise<DispatchOutcome> {
-    if (!session.rooms.has(envelope.room)) {
-      return {
-        outcome: "dropped",
-        reason: "client has not joined room"
-      };
-    }
-
-    await room.message(
-      session.handle.id,
-      envelope.payload
-    );
-
-    return { outcome: "handled" };
-  }
-
-  async #handleResync(
-    session: ClientSession,
-    room: ServerRoom,
-    envelope: Extract<ClientEnvelope, { kind: "resync"; }>
-  ): Promise<DispatchOutcome> {
-    if (!session.rooms.has(envelope.room)) {
-      return {
-        outcome: "dropped",
-        reason: "client has not joined room"
-      };
-    }
-
-    await room.resync(session.handle.id);
-
-    return { outcome: "handled" };
-  }
-
-  #handlePresence(
-    session: ClientSession,
-    room: ServerRoom,
-    envelope: Extract<ClientEnvelope, { kind: "presence"; }>
-  ): DispatchOutcome {
-    if (!session.rooms.has(envelope.room)) {
-      return {
-        outcome: "dropped",
-        reason: "client has not joined room"
-      };
-    }
-
-    room.updatePresence(
-      session.handle.id,
-      envelope.patch
-    );
-
-    return { outcome: "handled" };
-  }
+async function handled(
+  membership: boolean | Promise<boolean> | undefined
+): Promise<DispatchOutcome> {
+  return await membership ? kHandled : kNotJoined;
 }
 
 function joinProfile(

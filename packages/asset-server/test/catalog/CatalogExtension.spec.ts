@@ -526,10 +526,10 @@ describe("CatalogExtension — server", () => {
       backend: catalogBackend(sync, projection)
     }));
     const author = recordingClient("A");
-    server.handleConnect(author, { subject: "A", role: "author" });
-    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+    const connectionA = server.connect(author, { subject: "A", role: "author" });
+    await connectionA.receive({ room: CATALOG_ROOM, kind: "join" });
 
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: CATALOG_ROOM,
       kind: "message",
       payload: {
@@ -539,7 +539,7 @@ describe("CatalogExtension — server", () => {
       }
     });
     const denied = author.received.at(-1);
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: CATALOG_ROOM,
       kind: "message",
       payload: {
@@ -575,10 +575,10 @@ describe("CatalogExtension — server", () => {
       backend: catalogBackend(sync, projection)
     }));
     const author = recordingClient("A");
-    server.handleConnect(author, { subject: "A", role: "default" });
-    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+    const connectionA = server.connect(author, { subject: "A", role: "default" });
+    await connectionA.receive({ room: CATALOG_ROOM, kind: "join" });
 
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: CATALOG_ROOM,
       kind: "message",
       payload: {

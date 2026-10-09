@@ -108,7 +108,7 @@ helpers, the writer, the catalog, the asset rooms, `seedAssetSource` and
 HTTP handlers and the Vite plugins live in `@jolly-pixel/asset-server/node`.
 
 With a `MemoryAssetSource`, a memory event store and a
-[`LoopbackTransport`](../../network/docs/Transports.md#loopbacktransport), the
+[`LoopbackTransport`](../../network/docs/transport/Transports.md#loopbacktransport), the
 whole back-end runs inside a page:
 
 ```ts
