@@ -11,6 +11,7 @@ below documents the properties and behavior owned by one component.
 - [`jolly-control`](./control.md), exported as `Control`
 - [`jolly-controls`](./controls.md), exported as `Controls`
 - [`jolly-flags`](./flags.md), exported as `Flags`
+- [`jolly-layer-grid`](./layer-grid.md), exported as `LayerGrid`
 - [`jolly-number`](./number.md), exported as `NumberField`
 - [`jolly-property-row`](./property-row.md), exported as `PropertyRow`
 - [`jolly-range`](./range.md), exported as `Range`

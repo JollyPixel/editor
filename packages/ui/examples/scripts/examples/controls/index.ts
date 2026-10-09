@@ -38,6 +38,11 @@ export const CONTROLS_EXAMPLES: readonly GalleryEntry[] = [
     load: async() => (await import("./flags.ts")).FLAGS_EXAMPLE
   },
   {
+    id: "controls/layer-grid",
+    title: "Layer grid",
+    load: async() => (await import("./layerGrid.ts")).LAYER_GRID_EXAMPLE
+  },
+  {
     id: "controls/select",
     title: "Select",
     load: async() => (await import("./select.ts")).SELECT_EXAMPLE

@@ -12,7 +12,8 @@ Use field controls for editable values:
 | Boolean | [`jolly-checkbox`](../api/controls/checkbox.md) |
 | One choice | [`jolly-select`](../api/controls/select.md) |
 | One visual choice | [`jolly-button-group`](../api/controls/button-group.md) |
-| Bitmask | [`jolly-flags`](../api/controls/flags.md) |
+| Bitmask with a few named bits | [`jolly-flags`](../api/controls/flags.md) |
+| Layer mask, or one index out of up to 32 | [`jolly-layer-grid`](../api/controls/layer-grid.md) |
 | Hex color | [`jolly-color`](../api/controls/color.md) |
 
 Math fields cover vectors, quaternions, transforms, and a two-dimensional pad.

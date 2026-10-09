@@ -84,6 +84,11 @@ export {
   Flags
 } from "./controls/Flags.ts";
 export {
+  LayerGrid,
+  type LayerGridDefaults,
+  type LayerGridMode
+} from "./controls/LayerGrid.ts";
+export {
   NumberField
 } from "./controls/Number.ts";
 export * from "./controls/PropertyRow.ts";

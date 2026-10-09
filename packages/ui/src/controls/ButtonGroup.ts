@@ -14,6 +14,7 @@ import { JollyField } from "../field/JollyField.ts";
 import { buttonGroupStyles } from "./ButtonGroup.styles.ts";
 import { nextEnabledIndex } from "./roving.ts";
 import type { JollyOption } from "./types.ts";
+import { RovingFocus } from "../interaction/focus/RovingFocus.ts";
 
 export interface ButtonGroupDefaults {
   layout: "segmented" | "grid";
@@ -57,6 +58,8 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
     attribute: "icon-only"
   })
   declare iconOnly: boolean;
+
+  #roving = new RovingFocus(this, ".segment");
 
   constructor() {
     super();
@@ -163,20 +166,7 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
 
     event.preventDefault();
     this.#select(next);
-    this.#focusSegment(next);
-  }
-
-  #focusSegment(
-    index: number
-  ): void {
-    void this.updateComplete.then(() => {
-      const segment = this.renderRoot.querySelector(
-        `.segment[data-index="${index}"]`
-      );
-      if (segment instanceof HTMLElement) {
-        segment.focus();
-      }
-    });
+    this.#roving.focus(next);
   }
 
   #select(

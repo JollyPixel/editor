@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  bitAt,
   hasFlag,
   setFlag,
   normalizeMask
@@ -68,6 +69,12 @@ describe("Controls.flags: 32 bit boundary", () => {
 
   test("clears the high bit back to zero", () => {
     assert.equal(setFlag(kHighBit, kHighBit, false), 0);
+  });
+
+  test("bitAt maps index 31 to the unsigned high bit and drops indices past it", () => {
+    assert.equal(bitAt(0), 1);
+    assert.equal(bitAt(31), kHighBit);
+    assert.equal(bitAt(32), 0);
   });
 
   test("treats a non finite mask as empty", () => {
