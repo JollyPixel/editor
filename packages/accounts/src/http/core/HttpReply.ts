@@ -2,18 +2,18 @@
 import type { ServerResponse } from "node:http";
 
 // Import Internal Dependencies
-import type { AccountsRequestError } from "./errors/AccountsRequestError.ts";
+import type { HttpError } from "./errors/HttpError.ts";
 
 // CONSTANTS
 const kJsonContentType = "application/json; charset=utf-8";
 
-export class AccountsReply {
+export class HttpReply {
   static json(
     status: number,
     body: unknown,
     headers: Record<string, string> = {}
-  ): AccountsReply {
-    return new AccountsReply(
+  ): HttpReply {
+    return new HttpReply(
       status,
       JSON.stringify(body),
       {
@@ -26,42 +26,38 @@ export class AccountsReply {
   static empty(
     status: number,
     headers: Record<string, string> = {}
-  ): AccountsReply {
-    return new AccountsReply(
+  ): HttpReply {
+    return new HttpReply(
       status,
       undefined,
       headers
     );
   }
 
-  static image(
-    bytes: Uint8Array,
-    contentType: string,
-    cacheControl: string
-  ): AccountsReply {
-    return new AccountsReply(
+  static bytes(
+    body: Uint8Array,
+    headers: Record<string, string>
+  ): HttpReply {
+    return new HttpReply(
       200,
-      bytes,
+      body,
       {
-        "content-type": contentType,
-        "cache-control": cacheControl,
-        "cross-origin-resource-policy": "same-origin",
+        ...headers,
         "x-content-type-options": "nosniff"
       }
     );
   }
 
   static failure(
-    error: AccountsRequestError,
-    headers: Record<string, string> = {}
-  ): AccountsReply {
-    return AccountsReply.json(
+    error: HttpError
+  ): HttpReply {
+    return HttpReply.json(
       error.status,
       {
         code: error.code,
         message: error.message
       },
-      headers
+      error.headers
     );
   }
 

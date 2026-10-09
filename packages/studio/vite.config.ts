@@ -84,7 +84,9 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
       throttle: {
         registrations: kE2ERegistrations
       }
-    } : {}
+    } : {
+      env: process.env
+    }
   );
 
   return {

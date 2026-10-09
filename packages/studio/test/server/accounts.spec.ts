@@ -19,6 +19,13 @@ import { StudioAccess } from "../../server/StudioAccess.ts";
 import { openStudioAccounts } from "../../server/accounts.ts";
 import { StudioProject } from "../../server/StudioProject.ts";
 
+// CONSTANTS
+const kMasterPasswordRequired = {
+  access: {
+    masterPasswordRequired: true
+  }
+};
+
 function project(
   root: string,
   document: Record<string, unknown> = {}
@@ -55,6 +62,35 @@ describe("openStudioAccounts", () => {
 
     assert.deepEqual([...accounts.roles], ["admin", "member", "spectator"]);
     assert.equal(accounts.roles.defaultRole, "member");
+  });
+
+  test("opens a project that requires a master password once JOLLY_MASTER_PASSWORD is set", async() => {
+    using accounts = await openStudioAccounts(
+      project(path.resolve("/studio"), kMasterPasswordRequired),
+      {
+        inMemory: true,
+        env: {
+          JOLLY_MASTER_PASSWORD: "open sesame"
+        }
+      }
+    );
+
+    assert.equal(accounts.roles.defaultRole, "spectator");
+  });
+
+  test("refuses an empty JOLLY_MASTER_PASSWORD when the project requires one", async() => {
+    await assert.rejects(
+      openStudioAccounts(
+        project(path.resolve("/studio"), kMasterPasswordRequired),
+        {
+          inMemory: true,
+          env: {
+            JOLLY_MASTER_PASSWORD: ""
+          }
+        }
+      ),
+      /sets masterPasswordRequired but JOLLY_MASTER_PASSWORD is not set/
+    );
   });
 
   test("names the session cookie after the project root", async() => {

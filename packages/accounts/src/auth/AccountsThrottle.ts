@@ -6,6 +6,7 @@ import {
 
 // Import Internal Dependencies
 import type { Username } from "../account/Username.ts";
+import { AccountsThrottledError } from "./errors/AccountsThrottledError.ts";
 
 // CONSTANTS
 const kDefaultAttempts = 10;
@@ -53,14 +54,20 @@ export class AccountsThrottle {
     });
   }
 
-  reserveLogin(
+  async reserveLogin(
     username: Username,
     address: string
-  ): Promise<number> {
-    return reserve(this.#logins, [
+  ): Promise<void> {
+    const retryAfterMs = await reserve(this.#logins, [
       userKey(username),
       addressKey(address)
     ]);
+    if (retryAfterMs > 0) {
+      throw new AccountsThrottledError(
+        retryAfterMs,
+        "too many failed sign-in attempts"
+      );
+    }
   }
 
   async forgiveLogin(
@@ -73,12 +80,18 @@ export class AccountsThrottle {
     ]);
   }
 
-  reserveRegistration(
+  async reserveRegistration(
     address: string
-  ): Promise<number> {
-    return reserve(this.#registrations, [
+  ): Promise<void> {
+    const retryAfterMs = await reserve(this.#registrations, [
       addressKey(address)
     ]);
+    if (retryAfterMs > 0) {
+      throw new AccountsThrottledError(
+        retryAfterMs,
+        "too many registrations"
+      );
+    }
   }
 }
 

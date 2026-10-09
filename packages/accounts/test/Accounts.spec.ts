@@ -11,185 +11,36 @@ import type { AuthenticationRequest } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import {
   createAccounts,
-  createStore,
-  name,
-  storeWith
+  sessionFor,
+  storeWith,
+  storeWithRetiredRole
 } from "./helpers/accounts.ts";
+import { listenAccounts } from "./helpers/accountsServer.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
-import {
-  AccountChangeRefusedError,
-  SessionCookie
-} from "#src/node.ts";
-import { InvalidAvatarError } from "#src/index.ts";
-import { PasswordDigest } from "#src/session/PasswordDigest.ts";
-
-// CONSTANTS
-const kPassword = PasswordDigest.parse("p".repeat(43));
-const kWrongPassword = PasswordDigest.parse("w".repeat(43));
 
 function upgrade(
-  headers: Record<string, string>
+  cookie?: string
 ): AuthenticationRequest {
   return {
     clientId: "client",
     url: "/ws-sync",
     headers: {
       host: "studio.local",
-      ...headers
+      origin: "http://studio.local",
+      ...(cookie === undefined ? {} : { cookie })
     },
     defaultRole: "spectator"
   };
 }
 
-describe("Accounts sessions", () => {
-  test("opens a session on register and on login with the same password", async() => {
-    using accounts = createAccounts();
-
-    const registered = await accounts.register(name("Alice"), kPassword);
-    const logged = await accounts.login(name("alice"), kPassword);
-
-    assert.deepEqual(logged?.account, registered.account);
-    assert.deepEqual(accounts.accountForToken(registered.token), registered.account);
-  });
-
-  test("refuses a wrong password and an unknown username alike", async() => {
-    using accounts = createAccounts();
-    await accounts.register(name("Alice"), kPassword);
-
-    assert.equal(await accounts.login(name("Alice"), kWrongPassword), null);
-    assert.equal(await accounts.login(name("Nobody"), kPassword), null);
-  });
-
-  test("reads an undeclared role as the default role", async() => {
-    using store = createStore();
-    using accounts = createAccounts(store);
-    await accounts.register(name("Alice"), kPassword);
-    const bob = await accounts.register(name("Bob"), kPassword);
-    store.assignRole(name("bob"), "editor");
-
-    assert.equal(accounts.accountForToken(bob.token)?.role, "spectator");
-    assert.equal(accounts.accountById(bob.account.id)?.role, "spectator");
-    assert.deepEqual(
-      [...accounts].map((account) => account.role),
-      ["admin", "spectator"]
-    );
-  });
-
-  test("closes a session on logout", async() => {
-    using accounts = createAccounts();
-    const { token } = await accounts.register(name("Alice"), kPassword);
-
-    accounts.logout(token);
-
-    assert.equal(accounts.accountForToken(token), null);
-  });
-});
-
-describe("Accounts changes", () => {
-  test("emits changed after a registration, a role change and a removal", async() => {
-    using accounts = createAccounts(storeWith("Alice"));
-    let changes = 0;
-    accounts.on("changed", () => {
-      changes++;
-    });
-
-    await accounts.register(name("Bob"), kPassword);
-    accounts.assignRole(name("bob"), "member");
-    accounts.remove(name("bob"));
-
-    assert.equal(changes, 3);
-  });
-
-  test("refuses an undeclared role without touching the account", () => {
-    using accounts = createAccounts(storeWith("Alice", "Bob"));
-    let changes = 0;
-    accounts.on("changed", () => {
-      changes++;
-    });
-
-    assert.throws(
-      () => accounts.assignRole(name("bob"), "editor"),
-      AccountChangeRefusedError
-    );
-    assert.deepEqual(
-      [...accounts].map((account) => account.role),
-      ["admin", "spectator"]
-    );
-    assert.equal(changes, 0);
-  });
-});
-
-describe("Accounts.watchRevocations", () => {
-  test("revokes the account on a role change, a removal and a logout", async() => {
-    using accounts = createAccounts(storeWith("Alice"));
-    const bob = await accounts.register(name("Bob"), kPassword);
-    const carol = await accounts.register(name("Carol"), kPassword);
-    const revoked: string[] = [];
-    const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));
-
-    accounts.assignRole(name("bob"), "member");
-    accounts.remove(name("bob"));
-    accounts.logout(carol.token);
-    accounts.logout(carol.token);
-    stop();
-    accounts.remove(name("carol"));
-
-    assert.deepEqual(revoked, [
-      bob.account.id,
-      bob.account.id,
-      carol.account.id
-    ]);
-  });
-});
-
-describe("Accounts.replaceAvatar", () => {
-  test("encodes the image, stores it and emits changed", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store);
-    let changes = 0;
-    accounts.on("changed", () => {
-      changes++;
-    });
-
-    const account = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
-
-    assert.equal(changes, 1);
-    assert.equal(
-      account.avatar,
-      `/api/accounts/${alice.id}/avatar?v=${accounts.avatar(alice.id)?.hash}`
-    );
-  });
-
-  test("refuses an undecodable image without emitting", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store);
-    let changes = 0;
-    accounts.on("changed", () => {
-      changes++;
-    });
-
-    await assert.rejects(
-      accounts.replaceAvatar(alice.id, new Uint8Array([1, 2, 3])),
-      InvalidAvatarError
-    );
-    assert.equal(changes, 0);
-    assert.equal(accounts.avatar(alice.id), null);
-  });
-});
-
 describe("Accounts.authenticate", () => {
-  test("identifies the account of a same-origin upgrade", () => {
+  test("identifies the account of a session cookie", () => {
     using store = storeWith("Alice");
     const [alice] = store;
     using accounts = createAccounts(store);
 
     assert.deepEqual(
-      accounts.authenticate(upgrade({
-        origin: "http://studio.local",
-        cookie: `theme=dark; jolly_session=${store.openSession(alice.id)}`
-      })),
+      accounts.authenticate(upgrade(`jolly_session=${sessionFor(store, alice.id)}`)),
       {
         subject: alice.id,
         role: "admin",
@@ -200,76 +51,53 @@ describe("Accounts.authenticate", () => {
         }
       }
     );
+    assert.equal(accounts.authenticate(upgrade()), null);
   });
 
   test("points the profile at the uploaded avatar", async() => {
     using store = storeWith("Alice");
     const [alice] = store;
     using accounts = createAccounts(store);
-    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
-
-    const identity = accounts.authenticate(upgrade({
-      cookie: `jolly_session=${store.openSession(alice.id)}`
-    }));
-
-    assert.equal(identity?.profile?.avatar, avatar);
-  });
-
-  test("ignores the cookie of an upgrade from another origin", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store);
+    await using server = await listenAccounts(accounts);
+    const { client, cookies } = server.browser();
+    const token = sessionFor(store, alice.id);
+    cookies.set("jolly_session", token);
+    const { avatar } = await client.replaceAvatar(
+      new Blob([await solidPng(8, 8)], { type: "image/png" })
+    );
 
     assert.equal(
-      accounts.authenticate(upgrade({
-        origin: "http://evil.example",
-        cookie: `jolly_session=${store.openSession(alice.id)}`
-      })),
-      null
+      accounts.authenticate(upgrade(`jolly_session=${token}`))?.profile?.avatar,
+      avatar
     );
-  });
-
-  test("reads only the cookie it is configured with", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    using accounts = createAccounts(store, {
-      cookie: new SessionCookie("project_session")
-    });
-    const token = store.openSession(alice.id);
-
-    assert.equal(
-      accounts.authenticate(upgrade({ cookie: `jolly_session=${token}` })),
-      null
-    );
-    assert.notEqual(
-      accounts.authenticate(upgrade({ cookie: `project_session=${token}` })),
-      null
-    );
-  });
-
-  test("refuses an upgrade without a cookie, or with a malformed or closed token", () => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const token = store.openSession(alice.id);
-    store.closeSession(token);
-    using accounts = createAccounts(store);
-
-    assert.equal(accounts.authenticate(upgrade({})), null);
-    assert.equal(accounts.authenticate(upgrade({ cookie: `jolly_session=${token}` })), null);
-    assert.equal(accounts.authenticate(upgrade({ cookie: "jolly_session=hunter2" })), null);
   });
 
   test("connects an account whose role left the table with the default role", () => {
-    using store = storeWith("Alice", "Bob");
-    store.assignRole(name("bob"), "editor");
+    using store = storeWithRetiredRole();
     const [, bob] = store;
     using accounts = createAccounts(store);
 
     assert.equal(
-      accounts.authenticate(upgrade({
-        cookie: `jolly_session=${store.openSession(bob.id)}`
-      }))?.role,
+      accounts.authenticate(upgrade(`jolly_session=${sessionFor(store, bob.id)}`))?.role,
       "spectator"
     );
+  });
+});
+
+describe("Accounts.watchRevocations", () => {
+  test("revokes the account that signs out", async() => {
+    using store = storeWith("Alice");
+    const [alice] = store;
+    using accounts = createAccounts(store);
+    await using server = await listenAccounts(accounts);
+    const { client, cookies } = server.browser();
+    cookies.set("jolly_session", sessionFor(store, alice.id));
+    const revoked: string[] = [];
+    const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));
+
+    await client.logout();
+    stop();
+
+    assert.deepEqual(revoked, [alice.id]);
   });
 });

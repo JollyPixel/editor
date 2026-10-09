@@ -128,7 +128,9 @@ export class AccountsRoster extends Emitter<
     reason: string
   ): void {
     for (const pending of this.#pending.values()) {
-      pending.reject(new AccountsRejectedError(reason));
+      pending.reject(
+        new AccountsRejectedError(reason)
+      );
     }
     this.#pending.clear();
   }

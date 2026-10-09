@@ -17,16 +17,22 @@ import {
   MIN_PASSWORD_LENGTH,
   type Account,
   type AccountsClient,
-  type AccountsErrorCode
+  type AccountsFailureCode
 } from "@jolly-pixel/accounts";
 import type { Dialog } from "@jolly-pixel/ui";
 
 // CONSTANTS
-const kRequestMessages: Partial<Record<AccountsErrorCode, string>> = {
+const kRequestMessages: Partial<Record<AccountsFailureCode, string>> = {
   "invalid-credentials": "Wrong username or password.",
   "username-taken": "This username is taken.",
+  "master-password-required": "This studio asks for its master password.",
+  "invalid-master-password": "Wrong master password.",
   throttled: "Too many failed attempts. Try again later."
 };
+const kMasterPasswordCodes = new Set<AccountsFailureCode>([
+  "master-password-required",
+  "invalid-master-password"
+]);
 
 export type SignInMode = "login" | "register";
 
@@ -41,6 +47,9 @@ export class SignInDialog extends LitElement {
   @state()
   declare _pending: boolean;
 
+  @state()
+  declare _masterPasswordAsked: boolean;
+
   @query("jolly-dialog")
   declare _dialog: Dialog;
 
@@ -50,6 +59,9 @@ export class SignInDialog extends LitElement {
   @query("input[name=password]")
   declare _password: HTMLInputElement;
 
+  @query("input[name=master-password]")
+  declare _masterPassword: HTMLInputElement | null;
+
   #accounts: AccountsClient | null = null;
   #settle: ((signedIn: Account) => void) | null = null;
 
@@ -58,6 +70,7 @@ export class SignInDialog extends LitElement {
     this._mode = "login";
     this._error = null;
     this._pending = false;
+    this._masterPasswordAsked = false;
   }
 
   async open(
@@ -119,6 +132,18 @@ export class SignInDialog extends LitElement {
               ?disabled=${this._pending}
             >
           </label>
+          ${register && this._masterPasswordAsked ? html`
+            <label>
+              <span>Master password</span>
+              <input
+                name="master-password"
+                type="password"
+                autocomplete="off"
+                required
+                ?disabled=${this._pending}
+              >
+            </label>
+          ` : nothing}
           ${this._error === null ? nothing : html`
             <p class="sign-in-error" role="alert">${this._error}</p>
           `}
@@ -166,25 +191,41 @@ export class SignInDialog extends LitElement {
     if (accounts === null || this._pending) {
       return;
     }
-    if (!this._username.reportValidity() || !this._password.reportValidity()) {
+    const fields = [
+      this._username,
+      this._password,
+      this._masterPassword
+    ];
+    if (!fields.every((field) => field?.reportValidity() ?? true)) {
       return;
     }
 
     this._pending = true;
     this._error = null;
+    let masterPasswordRefused = false;
     try {
       const username = this._username.value;
       const password = this._password.value;
       const signedIn = this._mode === "register" ?
-        await accounts.register(username, password) :
+        await accounts.register(username, password, {
+          masterPassword: this._masterPassword?.value
+        }) :
         await accounts.login(username, password);
       this.#resolve(signedIn);
     }
     catch (error) {
       this._error = messageFor(error);
+      masterPasswordRefused = error instanceof AccountsRequestError &&
+        kMasterPasswordCodes.has(error.code);
     }
     finally {
       this._pending = false;
+    }
+
+    if (masterPasswordRefused) {
+      this._masterPasswordAsked = true;
+      await this.updateComplete;
+      this._masterPassword?.select();
     }
   }
 

@@ -27,7 +27,9 @@ export class Username {
   ): Username {
     const parsed = kUsernameSchema.safeParse(input);
     if (!parsed.success) {
-      throw new InvalidUsernameError(parsed.error.issues[0].message);
+      throw new InvalidUsernameError(
+        parsed.error.issues[0].message
+      );
     }
 
     return new Username(parsed.data);
