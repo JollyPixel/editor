@@ -17,7 +17,7 @@ function setup() {
   const document = new AnimationDocument();
   document.addClip({ id: "walk", name: "Walk" });
   document.addClip({ id: "run", name: "Run" });
-  const history = new CommandHistory({ scopes: ["animate"] });
+  const history = new CommandHistory<"animate">();
   history.register({
     id: "set:humanoid",
     document,

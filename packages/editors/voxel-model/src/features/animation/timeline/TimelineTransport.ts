@@ -14,7 +14,7 @@ import {
 
 // Import Internal Dependencies
 import "./timelineIcons.ts";
-import type { AnimationSession } from "../AnimationSession.ts";
+import type { AnimationSession } from "../session/AnimationSession.ts";
 
 export interface TimelineTransportWorkspace {
   animationSession: AnimationSession;

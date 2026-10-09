@@ -3,10 +3,7 @@
 Per-person undo and redo over registered documents, one undo and redo stack per scope. See the [collaborative undo guide](./guides/collaborative-undo.md) for how steps are recorded, guarded and refused.
 
 ```ts
-const history = new CommandHistory({
-  scopes: ["build", "animate"],
-  limit: 50
-});
+const history = new CommandHistory<"build" | "animate">({ limit: 50 });
 const unregister = history.register({
   id: "model",
   document,
@@ -21,12 +18,10 @@ history.undo("build");
 ## Constructor
 
 ```ts
-new CommandHistory<TScope extends string>(options: CommandHistoryOptions<TScope>)
+new CommandHistory<TScope extends string>(options?: CommandHistoryOptions)
 ```
 
-### scopes
-
-`readonly TScope[]`. The named histories. Every method taking a `scope` throws when it is not one of them.
+`TScope` names the histories. A scope starts with its first step, recorded or scoped by a registration, and `removeScope` drops it again. Until then `undo` and `redo` return `false` and `state` returns `EMPTY_HISTORY_STATE` for it.
 
 ### limit
 
@@ -65,6 +60,10 @@ Same as `undo`, from the redo stack to the undo stack.
 ### state(scope): HistoryScopeState
 
 The scope's current [state](#state).
+
+### removeScope(scope): void
+
+Drops `scope` and its steps, for a history that follows what is open, such as one scope per clip, then emits `change` with `EMPTY_HISTORY_STATE`. Does nothing when `scope` does not exist. Its next step starts it again. A step still open in it files nothing, and later receipts of its steps are ignored.
 
 ### dispose(): void
 
@@ -106,7 +105,7 @@ interface HistoryScopeState {
   redoLabel: string | null;
   undoCount: number;
   redoCount: number;
-  refused: HistoryStepInfo[];
+  refused: readonly HistoryStepInfo[];
 }
 
 interface HistoryStepInfo {
@@ -124,3 +123,9 @@ type HistoryRefusal =
 ```
 
 Flags, labels and counts leave refused steps out. `refused` lists the refused steps of both stacks, newest first. Each reason is described in [refusals](./guides/collaborative-undo.md#refusals).
+
+`EMPTY_HISTORY_STATE` is the frozen state of a scope with no steps, for a view that shows no history yet.
+
+```ts
+import { EMPTY_HISTORY_STATE } from "@jolly-pixel/history";
+```

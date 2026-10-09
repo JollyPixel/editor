@@ -10,7 +10,7 @@ export const MAP_SCOPE = "map";
 export function mapHistory(
   edits: VoxelEdits
 ): CommandHistory<typeof MAP_SCOPE> {
-  const history = new CommandHistory({ scopes: [MAP_SCOPE] });
+  const history = new CommandHistory<typeof MAP_SCOPE>();
   history.register(voxelHistoryRegistration(edits, { scope: MAP_SCOPE }));
 
   return history;

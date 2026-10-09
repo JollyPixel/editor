@@ -31,16 +31,16 @@ import {
   menuPointBelow
 } from "../../shared/menuSession.ts";
 import "../transform/TransformPanel.ts";
-import "./TrackBindings.ts";
-import type { TrackBindings } from "./TrackBindings.ts";
-import type { TrackBindingsWorkspace } from "./TrackBindingsController.ts";
-import "./KeyInspector.ts";
-import type { KeyInspector } from "./KeyInspector.ts";
-import type { KeyInspectorWorkspace } from "./KeyInspectorController.ts";
+import "./tracks/TrackBindings.ts";
+import type { TrackBindings } from "./tracks/TrackBindings.ts";
+import type { TrackBindingsWorkspace } from "./tracks/TrackBindingsController.ts";
+import "./keys/KeyInspector.ts";
+import type { KeyInspector } from "./keys/KeyInspector.ts";
+import type { KeyInspectorWorkspace } from "./keys/KeyInspectorController.ts";
 import "./timeline/timelineIcons.ts";
 import type { TransformPanel } from "../transform/TransformPanel.ts";
 import type { TransformWorkspace } from "../transform/TransformPanelController.ts";
-import { keyBlockShortcutLabel } from "./animationShortcuts.ts";
+import { keyBlockShortcutLabel } from "./keys/animationShortcuts.ts";
 import {
   AnimatePanelController,
   CLIP_FRAME_RATES,
@@ -125,6 +125,11 @@ export class AnimatePanel extends LitElement {
       padding: 0 var(--jolly-space-2, 8px);
       color: var(--jolly-danger, inherit);
     }
+
+    .notice {
+      padding: 0 var(--jolly-space-2, 8px);
+      color: var(--jolly-text-muted, inherit);
+    }
   `;
 
   @query("jolly-context-menu")
@@ -177,6 +182,7 @@ export class AnimatePanel extends LitElement {
 
     return html`
       ${state.error === null ? nothing : html`<p class="error" role="alert">${state.error}</p>`}
+      ${state.notice === null ? nothing : html`<p class="notice" role="status">${state.notice}</p>`}
       <div class="sets">
         <section aria-label="Animations">
           <div class="heading">

@@ -90,7 +90,7 @@ function setup(
     document,
     keys: (command) => (keyed ? [command.key] : null)
   });
-  const history = new CommandHistory({ scopes: ["main"] });
+  const history = new CommandHistory<"main">();
   history.register({
     id: "values",
     document,

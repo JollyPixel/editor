@@ -13,7 +13,8 @@ import {
 
 // Import Internal Dependencies
 import type { AnimationSession } from "./AnimationSession.ts";
-import type { ModelBlocks } from "../../scene/index.ts";
+import type { ModelBlocks } from "../../../scene/index.ts";
+import { combineReleases } from "../../../shared/combineReleases.ts";
 
 export interface AnimationPoserOptions {
   document: ModelDocument;
@@ -31,31 +32,36 @@ export class AnimationPoser {
   #options: AnimationPoserOptions;
   #clip: PosedClip | null = null;
   #posed = new Set<string>();
-  #unsubscribe: Array<() => void>;
+  #release: () => void;
 
   constructor(
     options: AnimationPoserOptions
   ) {
     this.#options = options;
-    this.#unsubscribe = [
+    this.#release = combineReleases([
       options.session.subscribe("clip", this.#onClip),
       options.session.subscribe("playhead", this.#update)
-    ];
+    ]);
     this.#onClip();
   }
 
   dispose(): void {
-    for (const unsubscribe of this.#unsubscribe.splice(0)) {
-      unsubscribe();
-    }
+    this.#release();
     this.#pose(new Map());
+  }
+
+  shownTransform(
+    blockId: string
+  ): BlockTransformJSON | undefined {
+    return this.#poses().get(blockId) ??
+      this.#options.document.tree.block(blockId)?.transform;
   }
 
   reset(
     blockId: string
   ): void {
-    const { document, blocks, requestFrame } = this.#options;
-    const transform = this.#poses().get(blockId) ?? document.tree.block(blockId)?.transform;
+    const { blocks, requestFrame } = this.#options;
+    const transform = this.shownTransform(blockId);
     if (transform !== undefined) {
       blocks.applyTransform(blockId, transform);
       requestFrame();

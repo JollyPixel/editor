@@ -42,19 +42,21 @@ import {
   type TransformLock
 } from "../features/transform/index.ts";
 import {
+  ActiveHistory,
   bindHistoryShortcuts,
   createEditorHistory,
   type EditorHistory
 } from "../features/history/index.ts";
-import type {
-  AnimationLibrary,
-  AnimationSetSource
-} from "../features/animation/AnimationLibrary.ts";
-import type { AnimationKeyer } from "../features/animation/AnimationKeyer.ts";
-import type { KeyEditor } from "../features/animation/KeyEditor.ts";
-import type { AnimationSession } from "../features/animation/AnimationSession.ts";
-import { createAnimation } from "../features/animation/createAnimation.ts";
-import { bindAnimationShortcuts } from "../features/animation/animationShortcuts.ts";
+import {
+  bindAnimationShortcuts,
+  createAnimation,
+  type AnimationKeyer,
+  type AnimationLibrary,
+  type AnimationSession,
+  type AnimationSetSource,
+  type ClipRemovalFocus,
+  type KeyEditor
+} from "../features/animation/index.ts";
 import { createModelGrid } from "./modelGrid.ts";
 import { SceneWaker } from "./SceneWaker.ts";
 
@@ -73,9 +75,11 @@ export interface ModelWorkspace {
   archives: EditorArchives;
   document: ModelDocument;
   history: EditorHistory;
+  activeHistory: ActiveHistory;
   tab: TabStore;
   animations: AnimationLibrary;
   animationFocus: AnimationFocusStore;
+  clipRemoval: ClipRemovalFocus;
   animationSession: AnimationSession;
   keyEditor: KeyEditor;
   keyer: AnimationKeyer;
@@ -157,11 +161,24 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       history,
       tab,
+      presence,
       source: this.#options.animationSets,
       blocks,
       requestFrame: () => this.world.invalidate()
     });
-    const { animations, animationFocus, animationSession, keyEditor, keyer } = animation;
+    const {
+      animations,
+      animationFocus,
+      clipRemoval,
+      animationSession,
+      keyEditor,
+      keyer
+    } = animation;
+    const activeHistory = new ActiveHistory({
+      history,
+      tab,
+      animate: animation.historyFocus
+    });
 
     const lighting = new ViewLighting({
       scene,
@@ -201,14 +218,15 @@ export class ModelEditorScene extends Systems.Scene {
       materialFocus,
       previews,
       presence,
+      animate: {
+        session: animationSession,
+        keyEditor,
+        liveView: animation.liveView
+      },
       world: this.world,
       camera: camera.camera
     });
-    const rest = restTarget({
-      blocks,
-      lock: collaboration.lock,
-      live: collaboration.live
-    });
+    const rest = restTarget({ blocks, lock: collaboration.lock });
     const tool = new TransformTool(rest);
     const gizmo = new TransformGizmo({
       camera,
@@ -217,6 +235,7 @@ export class ModelEditorScene extends Systems.Scene {
       blocks,
       selection,
       lock: collaboration.lock,
+      live: collaboration.live,
       tool
     });
     this.world
@@ -274,9 +293,9 @@ export class ModelEditorScene extends Systems.Scene {
       () => blocks.dispose(),
       bindHistoryShortcuts({
         keyboard: this.world.input.keyboard,
-        history,
-        tab
+        history: activeHistory
       }),
+      () => activeHistory.dispose(),
       () => unregisterPixels(),
       () => history.dispose()
     );
@@ -285,9 +304,11 @@ export class ModelEditorScene extends Systems.Scene {
       archives: this.#options.archives,
       document,
       history,
+      activeHistory,
       tab,
       animations,
       animationFocus,
+      clipRemoval,
       animationSession,
       keyEditor,
       keyer,

@@ -28,7 +28,7 @@ import type {
   MaterialFocusStore,
   PresenceStore
 } from "../../../state/index.ts";
-import type { TabRecorder } from "../../history/index.ts";
+import type { ScopeRecorder } from "../../history/index.ts";
 import { ExpandedRows } from "../../../shared/ExpandedRows.ts";
 import {
   EMPTY_MENU,
@@ -59,7 +59,7 @@ import {
 
 export interface MaterialWorkspace {
   document: ModelDocument;
-  history: TabRecorder<"material">;
+  history: ScopeRecorder<"material">;
   selection: BlockSelectionStore;
   materialFocus: MaterialFocusStore;
   presence: PresenceStore;

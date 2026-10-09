@@ -14,6 +14,7 @@ import { parseBlockTransformJSON } from "./blockTransformCodec.ts";
 import type { ModelBlocks } from "../../../scene/index.ts";
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 import { LatestFrameThrottle } from "../../../collaboration/LatestFrameThrottle.ts";
+import { combineReleases } from "../../../shared/combineReleases.ts";
 
 // CONSTANTS
 const kThrottleMs = 50;
@@ -23,28 +24,46 @@ const kEmphasisOwnerPrefix = "transform-live:";
 export interface TransformLivePayload {
   uuid: string;
   transform: BlockTransformJSON;
+  /**
+   * The posed view being edited, `null` for a rest pose edit.
+   */
+  view: string | null;
+}
+
+export interface LiveView {
+  /**
+   * Names the pose the viewport shows, `null` for the rest pose.
+   */
+  key(): string | null;
+  /**
+   * Where `uuid` stands in that pose without any live edit.
+   */
+  shownTransform(uuid: string): BlockTransformJSON | undefined;
+  subscribe(listener: () => void): () => void;
 }
 
 export interface TransformLiveSyncOptions {
   room: VoxelModelRoom;
   blocks: ModelBlocks;
+  view: LiveView;
   requestFrame?: () => void;
 }
 
 interface LiveStream {
   uuid: string;
-  baseline: BlockTransformJSON;
+  view: string | null;
   timer?: ReturnType<typeof setTimeout>;
 }
 
 export class TransformLiveSync {
   #room: VoxelModelRoom;
   #blocks: ModelBlocks;
+  #view: LiveView;
   #requestFrame: () => void;
   #channel: PresenceChannel<TransformLivePayload | null>;
   #streams = new Map<string, LiveStream>();
   #throttle: LatestFrameThrottle<TransformLivePayload>;
-  #unsubscribe: () => void;
+  #release: () => void;
 
   #onPeerChange = (
     change: PresenceChange<TransformLivePayload | null>
@@ -53,8 +72,11 @@ export class TransformLiveSync {
     if (value) {
       this.#applyLiveTransform(clientId, value);
     }
+    else if (this.#room.peers.has(clientId)) {
+      this.#settle(clientId);
+    }
     else {
-      this.#endStream(clientId, { revert: !this.#room.peers.has(clientId) });
+      this.#drop(clientId);
     }
   };
 
@@ -63,6 +85,7 @@ export class TransformLiveSync {
   ) {
     this.#room = options.room;
     this.#blocks = options.blocks;
+    this.#view = options.view;
     this.#requestFrame = options.requestFrame ?? (() => undefined);
     this.#channel = new PresenceChannel<TransformLivePayload | null>(options.room, {
       key: PRESENCE_KEYS.transformLive,
@@ -73,14 +96,21 @@ export class TransformLiveSync {
       kThrottleMs,
       (payload) => this.#channel.publish(payload)
     );
-    this.#unsubscribe = this.#channel.subscribe("change", this.#onPeerChange);
+    this.#release = combineReleases([
+      this.#channel.subscribe("change", this.#onPeerChange),
+      this.#view.subscribe(this.#onViewChange)
+    ]);
   }
 
   publish(
     uuid: string,
     transform: BlockTransformJSON
   ): void {
-    this.#throttle.push({ uuid, transform });
+    this.#throttle.push({
+      uuid,
+      transform,
+      view: this.#view.key()
+    });
   }
 
   clear(): void {
@@ -90,28 +120,40 @@ export class TransformLiveSync {
 
   dispose(): void {
     this.#throttle.cancel();
-    this.#unsubscribe();
+    this.#release();
     for (const clientId of [...this.#streams.keys()]) {
-      this.#endStream(clientId, { revert: false });
+      this.#stop(clientId);
     }
     this.#channel.destroy();
   }
+
+  readonly #onViewChange = (): void => {
+    const shown = this.#view.key();
+    for (const [clientId, stream] of [...this.#streams]) {
+      if (stream.view !== shown) {
+        this.#drop(clientId);
+      }
+    }
+  };
 
   #applyLiveTransform(
     clientId: string,
     payload: TransformLivePayload
   ): void {
-    const block = this.#blocks.get(payload.uuid);
-    if (!block) {
+    const { uuid, view } = payload;
+    const block = this.#blocks.get(uuid);
+    if (!block || view !== this.#view.key()) {
+      this.#drop(clientId);
+
       return;
     }
 
     let stream = this.#streams.get(clientId);
-    if (stream?.uuid !== payload.uuid) {
-      this.#endStream(clientId, { revert: true });
+    if (stream?.uuid !== uuid || stream.view !== view) {
+      this.#drop(clientId);
       stream = {
-        uuid: payload.uuid,
-        baseline: block.transform
+        uuid,
+        view
       };
       this.#streams.set(clientId, stream);
       block.emphasize(
@@ -121,33 +163,62 @@ export class TransformLiveSync {
     }
 
     clearTimeout(stream.timer);
-    this.#blocks.applyTransform(payload.uuid, payload.transform);
+    this.#blocks.applyTransform(uuid, payload.transform);
     this.#requestFrame();
     stream.timer = setTimeout(
-      () => this.#endStream(clientId, { revert: true }),
+      () => this.#drop(clientId),
       kExpiryMs
     );
   }
 
-  #endStream(
-    clientId: string,
-    options: { revert: boolean; }
+  #settle(
+    clientId: string
   ): void {
+    const stream = this.#stop(clientId);
+    if (stream !== undefined && !commitLandsAsStreamed(stream)) {
+      this.#repose(stream.uuid);
+    }
+  }
+
+  #drop(
+    clientId: string
+  ): void {
+    const stream = this.#stop(clientId);
+    if (stream !== undefined) {
+      this.#repose(stream.uuid);
+    }
+  }
+
+  #stop(
+    clientId: string
+  ): LiveStream | undefined {
     const stream = this.#streams.get(clientId);
-    if (!stream) {
-      return;
+    if (stream === undefined) {
+      return undefined;
     }
 
     clearTimeout(stream.timer);
     this.#streams.delete(clientId);
-
-    const block = this.#blocks.get(stream.uuid);
-    block?.clearEmphasis(`${kEmphasisOwnerPrefix}${clientId}`);
-    if (options.revert) {
-      this.#blocks.applyTransform(stream.uuid, stream.baseline);
-    }
+    this.#blocks.get(stream.uuid)?.clearEmphasis(`${kEmphasisOwnerPrefix}${clientId}`);
     this.#requestFrame();
+
+    return stream;
   }
+
+  #repose(
+    uuid: string
+  ): void {
+    const transform = this.#view.shownTransform(uuid);
+    if (transform !== undefined) {
+      this.#blocks.applyTransform(uuid, transform);
+    }
+  }
+}
+
+function commitLandsAsStreamed(
+  stream: LiveStream
+): boolean {
+  return stream.view === null;
 }
 
 function decodeLivePayload(
@@ -161,12 +232,14 @@ function decodeLivePayload(
   const transform = parseBlockTransformJSON(
     Reflect.get(value, "transform")
   );
-  if (typeof uuid !== "string" || transform === undefined) {
+  const view: unknown = Reflect.get(value, "view");
+  if (
+    typeof uuid !== "string" ||
+    transform === undefined ||
+    (view !== null && typeof view !== "string")
+  ) {
     return undefined;
   }
 
-  return {
-    uuid,
-    transform
-  };
+  return { uuid, transform, view };
 }

@@ -42,8 +42,8 @@ export function describeModelChange(
     case "animation-set-owned":
       return command.own ? "Keep animations on this model" : "Share animations as a set";
     case "animation-binding-changed":
-      return `Bind track ${command.path}`;
+      return `${command.target === null ? "Ignore" : "Rebind"} ${command.path}`;
     case "animation-binding-cleared":
-      return `Unbind track ${command.path}`;
+      return `Reset ${command.path}`;
   }
 }

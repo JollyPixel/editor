@@ -6,12 +6,41 @@ import {
 
 // Import Internal Dependencies
 import type { PresencePeer } from "../peer/Presence.ts";
-import {
-  peerProfileColor,
-  readUsername
-} from "./peerProfile.ts";
+import { presencePeerOf } from "./peerProfile.ts";
 
 export type PeerMarkMap<TKey> = ReadonlyMap<TKey, readonly PresencePeer[]>;
+
+export type MarkedPeer<TValue> = readonly [peer: PresencePeer, value: TValue];
+
+export function markedPeers<TValue>(
+  room: Pick<Room, "peers">,
+  values: ReadonlyMap<string, TValue | null>
+): MarkedPeer<TValue>[] {
+  const marked: MarkedPeer<TValue>[] = [];
+  const entries = [...values]
+    .sort(([left], [right]) => left.localeCompare(right));
+  for (const [clientId, value] of entries) {
+    const peer = room.peers.get(clientId);
+    if (peer !== undefined && value !== null) {
+      marked.push([presencePeerOf(peer), value]);
+    }
+  }
+
+  return marked;
+}
+
+export function peerMarks<TKey>(
+  marked: Iterable<MarkedPeer<TKey>>
+): PeerMarkMap<TKey> {
+  const marks = new Map<TKey, PresencePeer[]>();
+  for (const [peer, key] of marked) {
+    const bucket = marks.get(key) ?? [];
+    bucket.push(peer);
+    marks.set(key, bucket);
+  }
+
+  return marks;
+}
 
 export interface PeerMarkTrackerOptions<TKey> {
   room: Room;
@@ -34,26 +63,9 @@ export class PeerMarkTracker<TKey> {
   ) => void;
 
   #publish = (): void => {
-    const marks = new Map<TKey, PresencePeer[]>();
-    const entries = [...this.#channel.values]
-      .sort(([left], [right]) => left.localeCompare(right));
-
-    for (const [clientId, key] of entries) {
-      const peer = this.#room.peers.get(clientId);
-      if (!peer || key === null) {
-        continue;
-      }
-
-      const bucket = marks.get(key) ?? [];
-      bucket.push({
-        clientId,
-        displayName: readUsername(peer.profile),
-        color: peerProfileColor(clientId, peer.profile)
-      });
-      marks.set(key, bucket);
-    }
-
-    this.#publishMarks(marks);
+    this.#publishMarks(
+      peerMarks(markedPeers(this.#room, this.#channel.values))
+    );
   };
 
   constructor(

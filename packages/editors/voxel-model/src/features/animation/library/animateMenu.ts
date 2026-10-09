@@ -2,12 +2,12 @@
 import type {
   MenuEntry,
   MenuItem
-} from "../../shared/menuSession.ts";
+} from "../../../shared/menuSession.ts";
 import {
   DELETE_ITEM,
   DUPLICATE_ITEM,
   RENAME_ITEM
-} from "../../shared/menuItems.ts";
+} from "../../../shared/menuItems.ts";
 
 // CONSTANTS
 const kNewClip: MenuItem<"new-clip"> = {

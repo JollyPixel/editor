@@ -5,17 +5,21 @@ import { Emitter } from "@openally/emitt";
 import type { CommandChange } from "../document/CommandChange.ts";
 import type { HistoryRegistration } from "./HistoryRegistration.ts";
 import { HistoryScopes } from "./HistoryScopes.ts";
-import type {
-  HistoryRefusal,
-  HistoryScopeState,
-  HistoryStepInfo
+import {
+  EMPTY_HISTORY_STATE,
+  type HistoryRefusal,
+  type HistoryScopeState,
+  type HistoryStepInfo
 } from "./HistoryState.ts";
 import {
   HistoryStep,
   type HistoryPart
 } from "./HistoryStep.ts";
 import type { PartBasis } from "./PartBasis.ts";
-import type { StackSide } from "./ScopeStacks.ts";
+import type {
+  ScopeStacks,
+  StackSide
+} from "./ScopeStacks.ts";
 
 // CONSTANTS
 const kDefaultLimit = 50;
@@ -49,10 +53,7 @@ export type CommandHistoryEvents<
   ) => void;
 };
 
-export interface CommandHistoryOptions<
-  TScope extends string
-> {
-  scopes: readonly TScope[];
+export interface CommandHistoryOptions {
   /**
    * Steps kept per stack, the oldest dropped first; 50 by default.
    */
@@ -87,13 +88,10 @@ export class CommandHistory<
   #owners = new WeakMap<object, Owner<TScope>>();
 
   constructor(
-    options: CommandHistoryOptions<TScope>
+    options: CommandHistoryOptions = {}
   ) {
     super();
-    this.#scopes = new HistoryScopes(
-      options.scopes,
-      options.limit ?? kDefaultLimit
-    );
+    this.#scopes = new HistoryScopes(options.limit ?? kDefaultLimit);
   }
 
   get limit(): number {
@@ -162,11 +160,11 @@ export class CommandHistory<
     scope: TScope,
     label: string | null
   ): OpenStep {
-    const stacks = this.#scopes.get(scope);
     if (this.#recording !== null) {
       return kJoinedStep;
     }
 
+    const stacks = this.#scopes.ensure(scope);
     const step = new HistoryStep(scope, label);
     this.#recording = step;
     const close = (file: boolean): void => {
@@ -175,7 +173,7 @@ export class CommandHistory<
       }
 
       this.#recording = null;
-      if (file && this.#seal(step)) {
+      if (file && this.#accept(step, stacks)) {
         stacks.record(step);
         this.#notify(scope);
       }
@@ -202,7 +200,21 @@ export class CommandHistory<
   state(
     scope: TScope
   ): HistoryScopeState {
-    return this.#scopes.get(scope).state;
+    return this.#scopes.get(scope)?.state ?? EMPTY_HISTORY_STATE;
+  }
+
+  removeScope(
+    scope: TScope
+  ): void {
+    const stacks = this.#scopes.remove(scope);
+    if (stacks === undefined) {
+      return;
+    }
+
+    for (const step of stacks) {
+      this.#drop(step);
+    }
+    this.emit("change", scope, EMPTY_HISTORY_STATE);
   }
 
   dispose(): void {
@@ -277,6 +289,29 @@ export class CommandHistory<
     }
   }
 
+  #accept(
+    step: HistoryStep<TScope>,
+    stacks: ScopeStacks<TScope>
+  ): boolean {
+    if (this.#scopes.get(step.scope) !== stacks) {
+      this.#drop(step);
+
+      return false;
+    }
+
+    return this.#seal(step);
+  }
+
+  #drop(
+    step: HistoryStep<TScope>
+  ): void {
+    for (const link of step.lineage()) {
+      for (const part of link.parts.values()) {
+        part.basis.drop();
+      }
+    }
+  }
+
   #seal(
     step: HistoryStep<TScope>
   ): boolean {
@@ -319,11 +354,11 @@ export class CommandHistory<
     scope: TScope,
     from: StackSide
   ): boolean {
-    if (this.#recording !== null) {
+    const stacks = this.#scopes.get(scope);
+    if (stacks === undefined || this.#recording !== null) {
       return false;
     }
 
-    const stacks = this.#scopes.get(scope);
     for (const step of stacks.newestFirst(from)) {
       const info = step.info;
       if (info !== null) {
@@ -351,7 +386,7 @@ export class CommandHistory<
       }
 
       const taken = stacks.take(step)!;
-      if (this.#replay(step, from === "undo" ? "redo" : "undo")) {
+      if (this.#replay(step, stacks, from === "undo" ? "redo" : "undo")) {
         this.#notify(scope);
 
         return true;
@@ -383,6 +418,7 @@ export class CommandHistory<
 
   #replay(
     step: HistoryStep<TScope>,
+    stacks: ScopeStacks<TScope>,
     side: StackSide
   ): boolean {
     const replayed = new HistoryStep(step.scope, step.label, step);
@@ -401,8 +437,8 @@ export class CommandHistory<
     }
     finally {
       this.#recording = null;
-      if (this.#seal(replayed)) {
-        this.#scopes.get(step.scope).push(side, replayed);
+      if (this.#accept(replayed, stacks)) {
+        stacks.push(side, replayed);
       }
     }
 
@@ -513,12 +549,18 @@ export class CommandHistory<
     refusal: HistoryRefusal
   ): void {
     const stacks = this.#scopes.get(replayed.scope);
-    const taken = stacks.take(replayed);
-    if (taken !== null) {
-      stacks.push(taken.side === "undo" ? "redo" : "undo", source);
-      this.#refuse(source, refusal);
-      this.#notify(replayed.scope);
+    if (stacks === undefined) {
+      return;
     }
+
+    const taken = stacks.take(replayed);
+    if (taken === null) {
+      return;
+    }
+
+    stacks.push(taken.side === "undo" ? "redo" : "undo", source);
+    this.#refuse(source, refusal);
+    this.#notify(replayed.scope);
   }
 
   #takeOwner(
@@ -533,10 +575,9 @@ export class CommandHistory<
   #notify(
     scope: TScope
   ): void {
-    this.emit(
-      "change",
-      scope,
-      this.state(scope)
-    );
+    const stacks = this.#scopes.get(scope);
+    if (stacks !== undefined) {
+      this.emit("change", scope, stacks.state);
+    }
   }
 }

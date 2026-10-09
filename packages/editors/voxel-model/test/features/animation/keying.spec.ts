@@ -14,9 +14,10 @@ import {
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import { AnimationKeyer } from "#src/features/animation/AnimationKeyer.ts";
+import { AnimationKeyer } from "#src/features/animation/keys/AnimationKeyer.ts";
 import { TimelineController } from "#src/features/animation/timeline/TimelineController.ts";
-import { KeyInspectorController } from "#src/features/animation/KeyInspectorController.ts";
+import { KeyInspectorController } from "#src/features/animation/keys/KeyInspectorController.ts";
+import { animationKey } from "#src/state/index.ts";
 import {
   restTarget,
   TransformTool,
@@ -94,32 +95,25 @@ describe("TransformTool", () => {
     assert.equal(changes, 3);
   });
 
-  test("the rest target locks and streams a drag, and commits it to the model", () => {
+  test("the rest target locks a drag and commits it to the model", () => {
     const calls: string[] = [];
     const rest = restTarget({
       blocks: { commitTransform: (uuid) => calls.push(`commit ${uuid}`) },
       lock: {
         claim: (uuid) => calls.push(`claim ${uuid}`),
         release: () => calls.push("release")
-      },
-      live: {
-        publish: (uuid) => calls.push(`publish ${uuid}`),
-        clear: () => calls.push("clear")
       }
     });
     const block = createModelFixture().addBlock();
     const { uuid } = block;
 
     rest.begin?.(block);
-    rest.preview?.(block);
     rest.end(block);
     rest.commit(block);
 
     assert.deepEqual(calls, [
       `claim ${uuid}`,
-      `publish ${uuid}`,
       `commit ${uuid}`,
-      "clear",
       "release",
       `commit ${uuid}`
     ]);
@@ -175,16 +169,16 @@ describe("AnimationKeyer", () => {
 
   test("the Key action keys every channel as one undo step, and only in Animate", () => {
     const { model, keyer, keys } = createKeying(12000);
-    const steps = model.history.state("animate").undoCount;
+    const steps = model.history.state(model.clipScope).undoCount;
 
     assert.equal(keyer.keyBlock(model.ids.arm), true);
     assert.deepEqual(keys("scale"), [{ tick: 12000, value: { x: 1, y: 1, z: 1 }, interpolation: "linear" }]);
     assert.equal(keys("rotation").length, 1);
-    assert.equal(model.history.state("animate").undoLabel, "Key Arm");
+    assert.equal(model.history.state(model.clipScope).undoLabel, "Key Arm");
 
-    model.history.undo("animate");
+    model.history.undo(model.clipScope);
     assert.deepEqual([keys("scale"), keys("rotation")], [[], []]);
-    assert.equal(model.history.state("animate").undoCount, steps);
+    assert.equal(model.history.state(model.clipScope).undoCount, steps);
 
     model.tab.activate("build");
     assert.equal(keyer.keyBlock(model.ids.arm), false);
@@ -218,6 +212,28 @@ describe("KeyEditor through the timeline", () => {
     assert.deepEqual(playheads.slice(-2), [0.25, null]);
   });
 
+  test("shows peers on the same clip only, within its length, and rings their keys", () => {
+    const { model, timeline } = createTimeline();
+    const wave = animationKey("walk", model.clipId);
+    const run = animationKey("walk", "run");
+    const keys = [{ path: "Body/Arm", tick: 24000 }];
+    function peer(clientId: string) {
+      return { clientId, displayName: clientId, color: `#${clientId}` };
+    }
+
+    const { rows } = timeline.view!;
+
+    model.presence.animateCursors = [
+      { peer: peer("bob"), cursor: { clip: wave, tick: 12000, keys } },
+      { peer: peer("ann"), cursor: { clip: wave, tick: 48000, keys } },
+      { peer: peer("eve"), cursor: { clip: run, tick: 6000, keys } }
+    ];
+
+    assert.deepEqual(timeline.view!.peers.map(({ peer }) => peer.clientId), ["bob"]);
+    assert.deepEqual([...timeline.view!.peerKeys], [["24000:Body/Arm", "#bob"]]);
+    assert.equal(timeline.view!.rows, rows, "peer cursors leave the rows alone");
+  });
+
   test("moves selected keys by frames, held inside the clip, and keeps them selected", () => {
     const { timeline, keys, ticks } = createTimeline();
 
@@ -246,7 +262,7 @@ describe("KeyEditor through the timeline", () => {
     assert.deepEqual(ticks(), [24000]);
     assert.equal(timeline.view!.selectedKeys.size, 0);
 
-    model.history.undo("animate");
+    model.history.undo(model.clipScope);
     assert.deepEqual(ticks(), [0, 6000, 24000], "the delete of two keys undoes as one step");
   });
 
@@ -310,7 +326,7 @@ describe("KeyEditor through the timeline", () => {
     void timeline.keyMenu().run("copy", point);
     void timeline.keyMenu().run("delete", point);
     assert.deepEqual(ticks(), []);
-    model.history.undo("animate");
+    model.history.undo(model.clipScope);
     assert.deepEqual(ticks(), [0, 24000]);
 
     model.animationPlayback.seek(6000);
@@ -344,9 +360,9 @@ describe("KeyInspectorController", () => {
 
     inspector.setInterpolation("step");
     assert.deepEqual([interpolations(), state()?.interpolation], [["step", "step"], "step"]);
-    assert.equal(model.history.state("animate").undoLabel, "Set interpolation of 2 keys");
+    assert.equal(model.history.state(model.clipScope).undoLabel, "Set interpolation of 2 keys");
 
-    model.history.undo("animate");
+    model.history.undo(model.clipScope);
     assert.deepEqual(interpolations(), ["linear", "smooth"]);
   });
 });

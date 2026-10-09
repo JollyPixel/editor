@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/history";
 
 const source = new ChangeSourceAdapter(document);
-const history = new CommandHistory({ scopes: ["main"] });
+const history = new CommandHistory<"main">();
 history.register({
   id: "document",
   document: source,

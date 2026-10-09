@@ -18,7 +18,7 @@ import {
 
 const document = new VoxelDocument({ layers: ["Ground"] });
 const edits = new VoxelEdits(document);
-const history = new CommandHistory({ scopes: ["map"], limit: 10 });
+const history = new CommandHistory<"map">({ limit: 10 });
 history.register(voxelHistoryRegistration(edits, { scope: "map" }));
 
 const stroke = history.open("map", "Paint");

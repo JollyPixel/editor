@@ -3,11 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AnimationPoser } from "#src/features/animation/AnimationPoser.ts";
+import { AnimationPoser } from "#src/features/animation/session/AnimationPoser.ts";
 import {
   AnimationPlayer,
   type PlaybackClock
-} from "#src/features/animation/AnimationPlayer.ts";
+} from "#src/features/animation/session/AnimationPlayer.ts";
 import {
   timelineRows,
   unboundTimelineRows
@@ -283,14 +283,18 @@ describe("AnimationSession playback", () => {
     const model = createAnimatedModel();
     const session = model.animationSession;
     const clipLoop = session.focused?.clip.loop;
-    const history = model.history.state("animate");
+    const history = model.history.state(model.clipScope);
 
     session.toggleLoop();
     assert.deepEqual([session.playback.loop, session.focused?.clip.loop], [false, clipLoop]);
-    assert.deepEqual(model.history.state("animate"), history);
+    assert.deepEqual(model.history.state(model.clipScope), history);
 
-    model.set.changeClip(model.clipId, { loop: !clipLoop });
-    assert.equal(model.history.undo("animate"), true);
+    model.history.record(
+      model.clipScope,
+      null,
+      () => model.set.changeClip(model.clipId, { loop: !clipLoop })
+    );
+    assert.equal(model.history.undo(model.clipScope), true);
     assert.equal(session.focused?.clip.loop, clipLoop);
   });
 

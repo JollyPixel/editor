@@ -21,7 +21,7 @@ export class HistoryDocument extends PixelDocument {
     options: PixelDocumentOptions
   ) {
     super(options);
-    this.history = new CommandHistory({ scopes: [kScope] });
+    this.history = new CommandHistory<typeof kScope>();
     this.history.register(pixelHistoryRegistration(this, { scope: kScope }));
   }
 

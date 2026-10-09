@@ -22,7 +22,7 @@ Pass either one as [`PixelArtCanvasOptions.history`](../../../pixel-draw-rendere
 - `SharedPixelHistory` drives `scope` of a history the host owns, next to other documents' steps. The host registers the document with `registerPixelHistory`; the canvas only adds its selection to the steps. Closing the canvas leaves the document registered: its pixel steps still undo, and steps holding its selection are refused as `closed`.
 
 ```ts
-const history = new CommandHistory({ scopes: ["build"] });
+const history = new CommandHistory<"build">();
 registerPixelHistory(history, document, { scope: "build" });
 
 const canvas = new PixelArtCanvas(parent, {

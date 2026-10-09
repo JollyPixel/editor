@@ -112,7 +112,7 @@ describe("SyncedModelDocument", () => {
     const room = createMockRoom();
     const synced = new SyncedModelDocument(room);
     room.deliverSnapshot(kSnapshot);
-    const history = new CommandHistory({ scopes: ["model"] });
+    const history = new CommandHistory<"model">();
     history.register({
       id: "model",
       document: synced.document,

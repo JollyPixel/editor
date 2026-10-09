@@ -1,15 +1,26 @@
 // Import Third-party Dependencies
 import type { TreeNode } from "@jolly-pixel/ui";
 import {
+  peerBadges,
+  type PeerMarkMap
+} from "@jolly-pixel/ui/network";
+import {
   TICKS_PER_SECOND,
   type AnimationClipJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type {
-  ClipTarget,
-  LinkedAnimationSet
+import {
+  clipTargetOf,
+  type ClipTarget,
+  type LinkedAnimationSet
 } from "./AnimationLibrary.ts";
+import {
+  animationKey,
+  type ClipKey
+} from "../../../state/index.ts";
+
+export type ClipFocuses = PeerMarkMap<ClipKey>;
 
 export interface RowTarget {
   setId: string;
@@ -25,29 +36,34 @@ export interface ClipRow extends RowTarget {
 }
 
 export function setNode(
-  set: LinkedAnimationSet
+  set: LinkedAnimationSet,
+  focuses: ClipFocuses
 ): TreeNode<RowTarget> {
   return {
-    id: setRowId(set.id),
+    id: animationKey(set.id),
     label: set.name,
     icon: "model-animate",
     detail: set.users > 1 ? `${set.users} models` : "",
     data: { setId: set.id, target: set.id, clipId: null },
-    children: clipNodes(set)
+    children: clipNodes(set, focuses)
   };
 }
 
 export function clipNodes(
-  set: LinkedAnimationSet
+  set: LinkedAnimationSet,
+  focuses: ClipFocuses
 ): TreeNode<RowTarget>[] {
-  const target = set.own ? null : set.id;
+  const target = clipTargetOf(set);
 
   return [...set.document.set.clips()].map((clip) => {
+    const id = animationKey(set.id, clip.id);
+
     return {
-      id: clipRowId(set.id, clip.id),
+      id,
       label: clip.name,
       renamable: true,
       detail: `${(clip.length / TICKS_PER_SECOND).toFixed(1)}s`,
+      badges: peerBadges(id, focuses),
       data: { setId: set.id, target, clipId: clip.id }
     };
   });
@@ -67,7 +83,7 @@ export function selectedRow(
     return null;
   }
 
-  return clip === undefined ? setRowId(set.id) : clipRowId(set.id, clip.id);
+  return animationKey(set.id, clip?.id);
 }
 
 export function findRow(
@@ -85,17 +101,4 @@ export function findRow(
   }
 
   return undefined;
-}
-
-export function setRowId(
-  setId: string
-): string {
-  return `set:${setId}`;
-}
-
-function clipRowId(
-  setId: string,
-  clipId: string
-): string {
-  return `clip:${setId}:${clipId}`;
 }

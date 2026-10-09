@@ -21,10 +21,7 @@ export type MapSteps = Pick<CommandHistory<MapHistoryScope>, "open">;
 export function createMapHistory(
   edits: VoxelEdits
 ): CommandHistory<MapHistoryScope> {
-  const history = new CommandHistory({
-    scopes: [MAP_HISTORY_SCOPE],
-    limit: kLimit
-  });
+  const history = new CommandHistory<MapHistoryScope>({ limit: kLimit });
   history.register(
     voxelHistoryRegistration(edits, { scope: MAP_HISTORY_SCOPE })
   );

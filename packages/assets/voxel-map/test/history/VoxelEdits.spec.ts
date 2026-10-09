@@ -41,7 +41,7 @@ function setup() {
     layers: [kLayer]
   });
   const edits = new VoxelEdits(document);
-  const history = new CommandHistory({ scopes: [kScope] });
+  const history = new CommandHistory<typeof kScope>();
   history.register(voxelHistoryRegistration(edits, { scope: kScope }));
   const refused: HistoryStepInfo[] = [];
   history.on("refused", (_scope, step) => refused.push(step));

@@ -10,8 +10,8 @@ import {
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type { AnimationSession } from "./AnimationSession.ts";
-import type { TabRecorder } from "../history/index.ts";
+import type { AnimationSession } from "../session/AnimationSession.ts";
+import type { ScopeRecorder } from "../../history/index.ts";
 import {
   copyKeys,
   interpolationOf,
@@ -20,9 +20,12 @@ import {
   pasteKeys,
   removeKeys,
   setInterpolation,
-  type CopiedKey,
-  type KeyRef
-} from "./timeline/timelineKeys.ts";
+  type CopiedKey
+} from "../timeline/timelineKeys.ts";
+import type {
+  ClipKey,
+  KeyRef
+} from "../../../state/index.ts";
 
 export type KeyEditorEvents = {
   change: () => void;
@@ -30,7 +33,7 @@ export type KeyEditorEvents = {
 
 export interface KeyEditorOptions {
   session: Pick<AnimationSession, "focused" | "playback" | "seek">;
-  history: TabRecorder<"animate">;
+  history: ScopeRecorder<ClipKey>;
 }
 
 type KeyEdit = (document: AnimationDocument, clip: AnimationClipJSON) => readonly KeyRef[];
@@ -154,7 +157,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
   ): void {
     const focused = this.#session.focused;
     if (focused !== null) {
-      const refs = this.#history.record("animate", label, () => edit(focused.set.document, focused.clip));
+      const refs = this.#history.record(focused.key, label, () => edit(focused.set.document, focused.clip));
       this.#set(focused.clip.id, refs);
     }
   }

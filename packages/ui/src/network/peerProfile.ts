@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { PeerMetadata } from "@jolly-pixel/network/client";
+import type {
+  Peer,
+  PeerMetadata
+} from "@jolly-pixel/network/client";
 import { colorFromKey } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
@@ -7,6 +10,7 @@ import {
   GUEST_USERNAME,
   type PeerIdentity
 } from "../peer/identity.ts";
+import type { PresencePeer } from "../peer/Presence.ts";
 
 export function toPeerMetadata(
   identity: PeerIdentity
@@ -50,6 +54,18 @@ export function peerProfileColor(
   return colorFromKey(
     readPeerId(profile) ?? clientId
   );
+}
+
+export function presencePeerOf(
+  peer: Peer
+): PresencePeer {
+  return {
+    clientId: peer.clientId,
+    displayName: readUsername(peer.profile),
+    color: peerProfileColor(peer.clientId, peer.profile),
+    peerId: readPeerId(peer.profile),
+    avatar: readAvatar(peer.profile)
+  };
 }
 
 function isSameOriginPath(

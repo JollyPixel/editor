@@ -6,10 +6,7 @@ import type {
   ModelBlock,
   ModelBlocks
 } from "../../scene/index.ts";
-import type {
-  TransformLiveSync,
-  TransformLock
-} from "./collaboration/index.ts";
+import type { TransformLock } from "./collaboration/index.ts";
 import {
   TRANSFORM_MODE_ORDER,
   type GizmoSpace,
@@ -22,7 +19,6 @@ export interface TransformTarget {
    */
   readonly modes: readonly TransformMode[];
   begin?(block: ModelBlock): void;
-  preview?(block: ModelBlock): void;
   /**
    * A gizmo drag let go of `block`.
    */
@@ -40,21 +36,18 @@ export type TransformToolEvents = {
 export interface RestTargetOptions {
   blocks: Pick<ModelBlocks, "commitTransform">;
   lock: Pick<TransformLock, "claim" | "release">;
-  live: Pick<TransformLiveSync, "publish" | "clear">;
 }
 
 export function restTarget(
   options: RestTargetOptions
 ): TransformTarget {
-  const { blocks, lock, live } = options;
+  const { blocks, lock } = options;
 
   return {
     modes: TRANSFORM_MODE_ORDER,
     begin: (block) => lock.claim(block.uuid),
-    preview: (block) => live.publish(block.uuid, block.transform),
     end(block) {
       blocks.commitTransform(block.uuid);
-      live.clear();
       lock.release();
     },
     commit: (block) => blocks.commitTransform(block.uuid)

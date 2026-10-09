@@ -7,6 +7,8 @@ import {
 
 // Import Internal Dependencies
 import {
+  markedPeers,
+  peerMarks,
   PeerMarkTracker,
   type PeerMarkMap
 } from "../../src/network/PeerMarkTracker.ts";
@@ -207,5 +209,42 @@ describe("PeerMarkTracker", () => {
     assert.equal(harness.listenerCount("sync"), 0);
     assert.equal(harness.listenerCount("peer-left"), 0);
     assert.equal(harness.listenerCount("peer-presence"), 0);
+  });
+});
+
+describe("markedPeers and peerMarks", () => {
+  it("pairs present peers with their values by client id, skipping null values and absent senders", () => {
+    const harness = createRoomHarness();
+    harness.addPeer("zoe", { profile: { username: "Zoe", peerId: "zoe" } });
+    harness.addPeer("ada", { profile: { username: "Ada", peerId: "ada" } });
+    harness.addPeer("bob");
+    const values = new Map<string, { clip: string; } | null>([
+      ["zoe", { clip: "walk" }],
+      ["gone", { clip: "walk" }],
+      ["bob", null],
+      ["ada", { clip: "run" }]
+    ]);
+
+    const marked = markedPeers(harness.room, values);
+
+    assert.deepEqual(
+      marked.map(([peer, value]) => [peer.displayName, value.clip]),
+      [["Ada", "run"], ["Zoe", "walk"]]
+    );
+  });
+
+  it("folds marked peers into buckets in their given order", () => {
+    const harness = createRoomHarness();
+    harness.addPeer("ada");
+    harness.addPeer("zoe");
+    const [ada, zoe] = markedPeers(harness.room, new Map([["ada", 1], ["zoe", 2]]))
+      .map(([peer]) => peer);
+
+    const marks = peerMarks([[zoe, "walk"], [ada, "walk"], [ada, "run"]]);
+
+    assert.deepEqual(clientIdsOf(marks), [
+      ["walk", ["zoe", "ada"]],
+      ["run", ["ada"]]
+    ]);
   });
 });

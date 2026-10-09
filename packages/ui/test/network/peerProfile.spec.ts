@@ -11,6 +11,7 @@ import { colorFromKey } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import {
   peerProfileColor,
+  presencePeerOf,
   readAvatar,
   readPeerId,
   readUsername,
@@ -62,5 +63,22 @@ describe("peer profile", () => {
     assert.equal(readAvatar({ avatar: "//example.com/a.png" }), undefined);
     assert.equal(readAvatar({ avatar: "/\\example.com/a.png" }), undefined);
     assert.equal(readAvatar({ avatar: "data:image/png;base64,AA" }), undefined);
+  });
+
+  test("describes a room peer by its profile", () => {
+    const peer = {
+      clientId: "client-1",
+      role: "editor",
+      profile: { username: "Ada", peerId: "peer-1", avatar: "/avatar.webp" },
+      presence: {}
+    };
+
+    assert.deepEqual(presencePeerOf(peer), {
+      clientId: "client-1",
+      displayName: "Ada",
+      color: colorFromKey("peer-1"),
+      peerId: "peer-1",
+      avatar: "/avatar.webp"
+    });
   });
 });

@@ -15,7 +15,6 @@ import type { HistoryStepInfo } from "@jolly-pixel/history";
 import "./HistoryButtons.ts";
 import { describeRefusal } from "./describeRefusal.ts";
 import type { HistoryWorkspace } from "./HistoryButtons.ts";
-import type { EditorTab } from "../../state/index.ts";
 
 export class HistoryBar extends LitElement {
   static override styles = css`
@@ -50,10 +49,10 @@ export class HistoryBar extends LitElement {
   #releaseLog: (() => void) | null = null;
   #workspace = new SubscriptionController<HistoryWorkspace>(
     this,
-    ({ history }) => {
-      history.on("skipped", this.#onSkipped);
+    ({ activeHistory }) => {
+      activeHistory.on("skipped", this.#onSkipped);
 
-      return [() => history.off("skipped", this.#onSkipped)];
+      return [() => activeHistory.off("skipped", this.#onSkipped)];
     }
   );
 
@@ -75,7 +74,6 @@ export class HistoryBar extends LitElement {
   }
 
   readonly #onSkipped = (
-    _scope: EditorTab,
     skipped: HistoryStepInfo
   ): void => {
     const step = skipped.label === null ? "a step" : `"${skipped.label}"`;

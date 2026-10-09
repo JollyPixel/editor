@@ -100,8 +100,7 @@ export class StandalonePixelHistory implements PixelArtCanvasHistory {
   ): PixelHistoryBinding {
     let shared = kStandaloneHistories.get(target.document);
     if (shared === undefined) {
-      const history = new CommandHistory({
-        scopes: [kStandaloneScope],
+      const history = new CommandHistory<typeof kStandaloneScope>({
         limit: this.#limit
       });
       registerPixelHistory(history, target.document, { scope: kStandaloneScope });

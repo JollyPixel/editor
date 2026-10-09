@@ -11,14 +11,12 @@ import {
 
 // Import Internal Dependencies
 import {
+  ANIMATION_LIBRARY,
   bindHistoryShortcuts,
   createEditorHistory,
-  describeModelChange
+  describeModelChange,
+  type EditorHistoryScope
 } from "#src/features/history/index.ts";
-import {
-  EDITOR_TABS,
-  TabStore
-} from "#src/state/index.ts";
 import { ModelHierarchy } from "#src/model/index.ts";
 import {
   buildEditsOf,
@@ -27,6 +25,7 @@ import {
 
 // CONSTANTS
 const kNoMirror = { x: false, y: false, z: false };
+const kScopes: readonly EditorHistoryScope[] = ["build", "material", ANIMATION_LIBRARY];
 
 function changesOf(
   document: ModelDocument,
@@ -72,10 +71,9 @@ describe("describeModelChange", () => {
 });
 
 describe("bindHistoryShortcuts", () => {
-  test("binds undo and redo chords to the active tab's history, and releases them", () => {
+  test("binds undo and redo chords to the active history, and releases them", () => {
     const bound = new Map<string, () => void>();
     const calls: string[] = [];
-    const tab = new TabStore();
     const release = bindHistoryShortcuts({
       keyboard: {
         bind: (chords, handler) => {
@@ -92,18 +90,15 @@ describe("bindHistoryShortcuts", () => {
         }
       },
       history: {
-        undo: (scope) => calls.push(`undo ${scope}`) > 0,
-        redo: (scope) => calls.push(`redo ${scope}`) > 0
-      },
-      tab
+        undo: () => calls.push("undo") > 0,
+        redo: () => calls.push("redo") > 0
+      }
     });
 
     bound.get("Mod+z")?.();
-    tab.activate("material");
     bound.get("Mod+y")?.();
-    tab.activate("animate");
     bound.get("Mod+Shift+z")?.();
-    assert.deepEqual(calls, ["undo build", "redo material", "redo animate"]);
+    assert.deepEqual(calls, ["undo", "redo", "redo"]);
 
     release();
     assert.equal(bound.size, 0);
@@ -182,12 +177,12 @@ describe("ModelHierarchy undo steps", () => {
     const body = addBlock({ name: "Body" });
     const rest = document.tree.block(body.uuid)!.transform;
     document.transform(body.uuid, { ...rest, position: { x: 4, y: 0, z: 0 } });
-    const steps = EDITOR_TABS.map((scope) => history.state(scope).undoCount);
+    const steps = kScopes.map((scope) => history.state(scope).undoCount);
 
     const uv = createBlockUv({ x: 32, y: 0 });
     document.setUv(body.uuid, uv);
 
-    assert.deepEqual(EDITOR_TABS.map((scope) => history.state(scope).undoCount), steps);
+    assert.deepEqual(kScopes.map((scope) => history.state(scope).undoCount), steps);
     assert.equal(history.undo("build"), true);
     assert.equal(document.tree.block(body.uuid)?.transform.position.x, rest.position.x);
     assert.deepEqual(document.tree.block(body.uuid)?.uv, uv);

@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type { AnimationSession } from "./AnimationSession.ts";
+import type { AnimationSession } from "../session/AnimationSession.ts";
 import type { KeyEditor } from "./KeyEditor.ts";
 
 export interface KeyInspectorWorkspace {

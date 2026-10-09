@@ -25,10 +25,7 @@ export class HistoryDocument extends PixelDocument {
     limit = 50
   ) {
     super(options);
-    this.history = new CommandHistory({
-      scopes: [kScope],
-      limit
-    });
+    this.history = new CommandHistory({ limit });
     this.history.register(unguardedRegistration("pixels", this));
   }
 

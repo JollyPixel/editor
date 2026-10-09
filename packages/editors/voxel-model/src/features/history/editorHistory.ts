@@ -4,30 +4,31 @@ import {
   modelHistoryKeys,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
-import {
-  animationHistoryKeys,
-  type AnimationDocument
-} from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import {
-  EDITOR_TABS,
-  type EditorTab
-} from "../../state/index.ts";
-import { describeAnimationChange } from "./describeAnimationChange.ts";
+import type { EditorTab } from "../../state/index.ts";
+import type { AnimationScope } from "./animationScopes.ts";
 import { describeModelChange } from "./describeModelChange.ts";
 import { scopeOfModelChange } from "./scopeOfModelChange.ts";
 
-export type EditorHistory = CommandHistory<EditorTab>;
+export type TabHistoryScope = Exclude<EditorTab, "animate">;
+export type EditorHistoryScope = TabHistoryScope | AnimationScope;
+export type EditorHistory = CommandHistory<EditorHistoryScope>;
 
-export interface TabRecorder<TTab extends EditorTab> {
-  record<T>(scope: TTab, label: string | null, edit: () => T): T;
+export function isTabHistoryScope(
+  tab: EditorTab
+): tab is TabHistoryScope {
+  return tab !== "animate";
+}
+
+export interface ScopeRecorder<TScope extends EditorHistoryScope> {
+  record<T>(scope: TScope, label: string | null, edit: () => T): T;
 }
 
 export interface EditorHistoryOptions {
   document: ModelDocument;
   /**
-   * Steps kept per tab; 50 by default.
+   * Steps kept per scope; 50 by default.
    */
   limit?: number;
 }
@@ -35,31 +36,15 @@ export interface EditorHistoryOptions {
 export function createEditorHistory(
   options: EditorHistoryOptions
 ): EditorHistory {
-  const history = new CommandHistory({
-    scopes: EDITOR_TABS,
-    limit: options.limit
-  });
+  const { document } = options;
+  const history = new CommandHistory<EditorHistoryScope>({ limit: options.limit });
   history.register({
     id: "model",
-    document: options.document,
-    keys: modelHistoryKeys(options.document.tree),
-    scopeOf: scopeOfModelChange,
+    document,
+    keys: modelHistoryKeys(document.tree),
+    scopeOf: (change) => scopeOfModelChange(change, document.tree.animationSets),
     label: describeModelChange
   });
 
   return history;
-}
-
-export function registerAnimationSet(
-  history: Pick<EditorHistory, "register">,
-  setId: string,
-  document: AnimationDocument
-): () => void {
-  return history.register({
-    id: `set:${setId}`,
-    document,
-    keys: animationHistoryKeys(document.set),
-    scopeOf: () => "animate",
-    label: describeAnimationChange
-  });
 }
