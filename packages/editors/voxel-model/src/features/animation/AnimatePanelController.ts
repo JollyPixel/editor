@@ -17,16 +17,17 @@ import {
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type { LinkedAnimationSet } from "./AnimationLibrary.ts";
+import type { LinkedAnimationSet } from "./library/AnimationLibrary.ts";
+import type { ClipRemovalFocus } from "./library/ClipRemovalFocus.ts";
 import {
   AnimateActions,
   type AnimateActionsView,
   type AnimateActionsWorkspace
-} from "./AnimateActions.ts";
+} from "./library/AnimateActions.ts";
 import {
   keySelectedBlock,
   type KeySelectedOptions
-} from "./animationShortcuts.ts";
+} from "./keys/animationShortcuts.ts";
 import {
   EMPTY_MENU,
   menuSession,
@@ -36,23 +37,26 @@ import {
 } from "../../shared/menuSession.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import {
+  animationKey,
+  type PresenceStore
+} from "../../state/index.ts";
+import {
   clipMenu,
   ownMenu,
   SET_MENU,
   SHARED_MENU,
   type ClipAction,
   type SetAction
-} from "./animateMenu.ts";
+} from "./library/animateMenu.ts";
 import {
   asClipRow,
   clipNodes,
   findRow,
   selectedRow,
   setNode,
-  setRowId,
   type ClipRow,
   type RowTarget
-} from "./animateRows.ts";
+} from "./library/animateRows.ts";
 
 // CONSTANTS
 export const CLIP_FRAME_RATES = [12, 15, 24, 25, 30, 48, 60] as const;
@@ -64,10 +68,14 @@ const kEmptyState: AnimatePanelState = {
   set: null,
   clip: null,
   canShare: false,
-  error: null
+  error: null,
+  notice: null
 };
 
-export interface AnimateWorkspace extends AnimateActionsWorkspace, KeySelectedOptions {}
+export interface AnimateWorkspace extends AnimateActionsWorkspace, KeySelectedOptions {
+  presence: Pick<PresenceStore, "clipFocuses" | "subscribe">;
+  clipRemoval: Pick<ClipRemovalFocus, "notice" | "dismiss" | "subscribe">;
+}
 
 export interface AnimatePanelView extends AnimateActionsView {
   beginRename(
@@ -98,6 +106,10 @@ export interface AnimatePanelState {
    * Why the last action failed, until the next one succeeds.
    */
   error: string | null;
+  /**
+   * Why the focus moved, until it moves again.
+   */
+  notice: string | null;
 }
 
 export class AnimatePanelController {
@@ -115,10 +127,16 @@ export class AnimatePanelController {
   ) {
     this.#host = host;
     this.#view = view;
-    this.#connection = new SubscriptionController(host, ({ animations, animationFocus }) => [
-      animations.subscribe("change", this.#refresh),
-      animationFocus.subscribe("change", this.#refresh)
-    ]);
+    this.#connection = new SubscriptionController(host, (workspace) => {
+      const { animations, animationFocus, presence, clipRemoval } = workspace;
+
+      return [
+        animations.subscribe("change", this.#refresh),
+        animationFocus.subscribe("change", this.#refresh),
+        presence.subscribe("clipFocusesChange", this.#refresh),
+        clipRemoval.subscribe("change", this.#refresh)
+      ];
+    });
   }
 
   get state(): AnimatePanelState {
@@ -132,11 +150,13 @@ export class AnimatePanelController {
   attach(
     workspace: AnimateWorkspace
   ): void {
-    this.#expanded.reset(workspace.animations.sets().map(({ id }) => setRowId(id)));
+    this.#expanded.reset(
+      workspace.animations.sets().map(({ id }) => animationKey(id))
+    );
     this.#actions = new AnimateActions({
       workspace,
       view: this.#view,
-      expand: (setId) => this.#expanded.expand(setRowId(setId)),
+      expand: (setId) => this.#expanded.expand(animationKey(setId)),
       report: this.#report
     });
     this.#connection.attach(workspace);
@@ -147,11 +167,13 @@ export class AnimatePanelController {
     event: CustomEvent<JollySelectDetail>
   ): void => {
     const row = this.#findRow(event.detail.selected[0]);
-    const focus = this.#connection.current?.animationFocus;
-    if (row === undefined || focus === undefined) {
+    const workspace = this.#connection.current;
+    if (row === undefined || workspace === null) {
       return;
     }
 
+    const focus = workspace.animationFocus;
+    workspace.clipRemoval.dismiss();
     if (row.clipId === null) {
       focus.focusSet(row.setId);
     }
@@ -367,10 +389,11 @@ export class AnimatePanelController {
     const { setId, clipId } = workspace.animationFocus.focus;
     const set = sets.find(({ id }) => id === setId) ?? null;
     const clip = set === null || clipId === null ? undefined : set.document.set.clip(clipId);
+    const focuses = workspace.presence.clipFocuses;
 
     return {
-      ownClips: own === undefined ? [] : clipNodes(own),
-      sharedSets: sets.filter((candidate) => !candidate.own).map(setNode),
+      ownClips: own === undefined ? [] : clipNodes(own, focuses),
+      sharedSets: sets.filter((candidate) => !candidate.own).map((shared) => setNode(shared, focuses)),
       expanded: this.#expanded.ids,
       selectedId: selectedRow(set, clip),
       set,
@@ -382,7 +405,8 @@ export class AnimatePanelController {
           frames: frameAt(clip.length, clip.fps)
         },
       canShare: own !== undefined && own.document.set.size > 0,
-      error: this.#error
+      error: this.#error,
+      notice: workspace.clipRemoval.notice
     };
   }
 }

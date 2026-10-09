@@ -24,32 +24,25 @@ import {
   addNode,
   hierarchyAction
 } from "./support/hierarchy.ts";
-
-function animatePanel(
-  page: Page
-): Locator {
-  return page.locator("jolly-model-editor-animate-panel");
-}
-
-function tool(
-  page: Page,
-  label: string
-): Locator {
-  return animatePanel(page).locator(`jolly-button[label="${label}"]`).getByRole("button");
-}
+import {
+  addClip,
+  animatePanel,
+  keys,
+  openAnimateTab,
+  playback,
+  playhead,
+  scrubTo,
+  startClip,
+  timeline,
+  tool,
+  typeAxis
+} from "./support/animate.ts";
 
 function numberField(
   scope: Locator,
   label: string
 ): Locator {
   return scope.locator("jolly-number").filter({ hasText: label }).getByRole("textbox");
-}
-
-async function openAnimateTab(
-  page: Page
-): Promise<void> {
-  await page.getByRole("tab", { name: "Animate" }).click();
-  await expect(animatePanel(page)).toBeVisible();
 }
 
 async function createSet(
@@ -85,73 +78,6 @@ async function rowMenu(
     .filter({ has: page.getByText(name, { exact: true }) })
     .nth(index)
     .click({ button: "right" });
-}
-
-async function addClip(
-  page: Page,
-  name?: string
-): Promise<void> {
-  await tool(page, "New clip").click();
-  const form = dialog(page, "New Clip");
-  if (name !== undefined) {
-    await textField(form, "Clip name").fill(name);
-  }
-  await form.getByRole("button", { name: "OK" }).click();
-}
-
-function timeline(
-  page: Page
-): Locator {
-  return page.locator("jolly-model-editor-timeline");
-}
-
-function playback(
-  page: Page
-): Locator {
-  return page.locator("jolly-model-editor-timeline-transport").getByRole("toolbar", { name: "Playback" });
-}
-
-function playhead(
-  page: Page
-): Locator {
-  return playback(page).getByLabel("Playhead");
-}
-
-async function scrubTo(
-  page: Page,
-  fraction: number
-): Promise<void> {
-  const lane = timeline(page).getByLabel("Scrub");
-  const box = await lane.boundingBox();
-  if (box === null) {
-    throw new Error("The timeline ruler is not visible.");
-  }
-  await page.mouse.click(box.x + (box.width * fraction), box.y + (box.height / 2));
-}
-
-async function startClip(
-  page: Page
-): Promise<void> {
-  await openAnimateTab(page);
-  await addClip(page);
-  await expect(treeRow(page, "Clip 1")).toHaveAttribute("aria-selected", "true");
-  await treeRow(page, "Block").click();
-}
-
-async function typeAxis(
-  page: Page,
-  axis: "X" | "Y" | "Z",
-  value: number
-): Promise<void> {
-  const field = animatePanel(page).getByRole("textbox", { name: axis });
-  await field.fill(String(value));
-  await field.press("Enter");
-}
-
-function keys(
-  page: Page
-): Locator {
-  return timeline(page).locator(".row[data-block] .key");
 }
 
 test("the timeline shows only in Animate and poses keyed blocks at the playhead", async({ page }) => {
@@ -293,6 +219,25 @@ test("the focused timeline plays with Space and steps with the arrows, Home and 
   await expect(playback(page).getByRole("button", { name: "Pause" })).toBeVisible();
   await page.keyboard.press("Space");
   await expect(playback(page).getByRole("button", { name: "Play" })).toBeVisible();
+});
+
+test("undo follows the open clip", async({ page }) => {
+  await startClip(page);
+  await tool(page, "Key").click();
+  await addClip(page, "Clip 2");
+  await treeRow(page, "Block").click();
+  await tool(page, "Key").click();
+  await expect(keys(page)).toHaveCount(1);
+
+  await page.keyboard.press("Control+z");
+  await expect(keys(page)).toHaveCount(0);
+  await page.keyboard.press("Control+z");
+
+  await treeRow(page, "Clip 1").click();
+  await treeRow(page, "Block").click();
+  await expect(keys(page)).toHaveCount(1);
+  await page.keyboard.press("Control+z");
+  await expect(keys(page)).toHaveCount(0);
 });
 
 test("the Animate tab opens on an empty state", async({ page }) => {

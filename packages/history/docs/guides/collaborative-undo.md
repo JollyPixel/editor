@@ -6,7 +6,7 @@ The lifecycle diagrams are in [ARCHITECTURE.md](../../ARCHITECTURE.md).
 
 ## Steps and scopes
 
-A scope is a named history with its own undo and redo stacks, usually one per editor tab or tool. Undo in one scope never walks into another.
+A scope is a named history with its own undo and redo stacks, usually one per editor tab or tool. Undo in one scope never walks into another. Scopes can also follow what is open, such as one per clip: a scope starts with its first step and `removeScope(scope)` drops it with its steps.
 
 A step is what one undo takes back: every local change made by one user action, across every registered document. Each document gets its own part of the step, guarded and confirmed on its own.
 

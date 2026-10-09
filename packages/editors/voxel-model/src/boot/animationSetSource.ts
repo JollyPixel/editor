@@ -11,7 +11,7 @@ import {
 import type {
   AnimationSetRecord,
   AnimationSetSource
-} from "../features/animation/AnimationLibrary.ts";
+} from "../features/animation/index.ts";
 
 // CONSTANTS
 const kFolder = "animations";

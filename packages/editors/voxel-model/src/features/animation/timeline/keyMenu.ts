@@ -2,8 +2,8 @@
 import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type { KeyEditor } from "../KeyEditor.ts";
-import { INTERPOLATION_OPTIONS } from "../interpolation.ts";
+import type { KeyEditor } from "../keys/KeyEditor.ts";
+import { INTERPOLATION_OPTIONS } from "../keys/interpolation.ts";
 import {
   menuSession,
   type MenuEntry,

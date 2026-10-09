@@ -10,14 +10,21 @@ import {
 import {
   AnimationLibrary,
   type AnimationSetSource
-} from "#src/features/animation/AnimationLibrary.ts";
-import { AnimationSession } from "#src/features/animation/AnimationSession.ts";
-import { KeyEditor } from "#src/features/animation/KeyEditor.ts";
-import { createEditorHistory } from "#src/features/history/index.ts";
+} from "#src/features/animation/library/AnimationLibrary.ts";
+import { AnimationSession } from "#src/features/animation/session/AnimationSession.ts";
+import { KeyEditor } from "#src/features/animation/keys/KeyEditor.ts";
+import { AnimationHistories } from "#src/features/animation/undo/AnimationHistories.ts";
+import { animateHistoryFocus } from "#src/features/animation/undo/animateHistoryFocus.ts";
+import { ClipRemovalFocus } from "#src/features/animation/library/ClipRemovalFocus.ts";
+import {
+  animationScope,
+  createEditorHistory
+} from "#src/features/history/index.ts";
 import {
   AnimationFocusStore,
   AnimationPlaybackStore,
   BlockSelectionStore,
+  PresenceStore,
   TabStore
 } from "#src/state/index.ts";
 
@@ -69,14 +76,21 @@ export function createAnimatedModel(
   }
   const history = createEditorHistory({ document });
   const source = createSource(set);
-  const animations = new AnimationLibrary({ document, source, history });
+  const animations = new AnimationLibrary({ document, source });
+  const animationFocus = new AnimationFocusStore();
+  new AnimationHistories({
+    history,
+    document,
+    animations
+  });
+  const presence = new PresenceStore();
+  new ClipRemovalFocus({ animations, animationFocus, presence });
   if (options.own) {
     document.linkAnimationSet(source.records()[0], { own: true });
   }
   else {
     animations.link("walk");
   }
-  const animationFocus = new AnimationFocusStore();
   animationFocus.focusClip("walk", clipId);
   const animationPlayback = new AnimationPlaybackStore();
   const tab = new TabStore();
@@ -88,10 +102,15 @@ export function createAnimatedModel(
     tab
   });
   const selection = new BlockSelectionStore();
+  const sets = document.tree.animationSets;
 
   return {
     document,
     history,
+    historyFocus: animateHistoryFocus({ document, animations, animationFocus }),
+    clipRef: { setId: "walk", clipId },
+    clipScope: animationScope({ setId: "walk", clipId }, sets),
+    setScope: animationScope({ setId: "walk", clipId: null }, sets),
     tab,
     set,
     clipId,
@@ -101,6 +120,7 @@ export function createAnimatedModel(
     animationPlayback,
     animationSession,
     keyEditor: new KeyEditor({ session: animationSession, history }),
+    presence,
     selection
   };
 }

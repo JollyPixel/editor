@@ -60,7 +60,7 @@ class Counters extends Emitter<CounterEvents> {
 function setup() {
   const counters = new Counters();
   const adapter = new ChangeSourceAdapter(counters);
-  const history = new CommandHistory({ scopes: ["main"] });
+  const history = new CommandHistory<"main">();
   history.register({
     id: "counters",
     document: adapter,

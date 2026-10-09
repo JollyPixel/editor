@@ -9,12 +9,7 @@ import type {
 import type { LogQueue } from "../feedback/LogQueue.ts";
 import type { PeerIdentity } from "../peer/identity.ts";
 import type { PresencePeer } from "../peer/Presence.ts";
-import {
-  peerProfileColor,
-  readAvatar,
-  readPeerId,
-  readUsername
-} from "./peerProfile.ts";
+import { presencePeerOf } from "./peerProfile.ts";
 
 export interface PeerRosterOptions {
   room: Room;
@@ -94,18 +89,7 @@ export class PeerRoster {
 
   #snapshot(): PresencePeer[] {
     const remote = [...this.#room.peers.values()]
-      .map((peer): PresencePeer => {
-        return {
-          clientId: peer.clientId,
-          displayName: readUsername(peer.profile),
-          color: peerProfileColor(
-            peer.clientId,
-            peer.profile
-          ),
-          peerId: readPeerId(peer.profile),
-          avatar: readAvatar(peer.profile)
-        };
-      })
+      .map(presencePeerOf)
       .sort((left, right) => left.clientId.localeCompare(right.clientId));
 
     return [

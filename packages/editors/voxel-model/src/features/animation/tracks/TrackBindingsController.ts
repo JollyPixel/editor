@@ -1,25 +1,26 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
+import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import type { AnimationLibrary } from "./AnimationLibrary.ts";
+import {
+  clipTargetOf,
+  type AnimationLibrary
+} from "../library/AnimationLibrary.ts";
 import {
   trackBindingRows,
   type TrackBindingRow
 } from "./trackBindingRows.ts";
-import {
-  rebindMenu,
-  remapTrack,
-  type TrackRebindWorkspace
-} from "./trackRebind.ts";
-import type { AnimationFocusStore } from "../../state/index.ts";
+import { rebindMenu } from "./trackRebind.ts";
+import type { AnimationFocusStore } from "../../../state/index.ts";
 import type {
   MenuPoint,
   MenuSession
-} from "../../shared/menuSession.ts";
+} from "../../../shared/menuSession.ts";
 
-export interface TrackBindingsWorkspace extends TrackRebindWorkspace {
+export interface TrackBindingsWorkspace {
+  document: ModelDocument;
   animations: AnimationLibrary;
   animationFocus: AnimationFocusStore;
 }
@@ -72,25 +73,23 @@ export class TrackBindingsController {
     point: MenuPoint
   ): void {
     this.#withFocusedSet((workspace, setId) => {
-      this.#view.openMenu(rebindMenu(workspace, setId, path), point);
+      this.#view.openMenu(rebindMenu(workspace.document, setId, path), point);
     });
   }
 
   ignore(
     path: string
   ): void {
-    this.#withFocusedSet((workspace, setId) => remapTrack(workspace, setId, path, null));
+    this.#withFocusedSet((workspace, setId) => {
+      workspace.document.remapAnimationTrack(setId, path, null);
+    });
   }
 
   reset(
     path: string
   ): void {
     this.#withFocusedSet((workspace, setId) => {
-      workspace.history.record(
-        "animate",
-        `Reset ${path}`,
-        () => workspace.document.clearAnimationTrackRemap(setId, path)
-      );
+      workspace.document.clearAnimationTrackRemap(setId, path);
     });
   }
 
@@ -123,7 +122,7 @@ export class TrackBindingsController {
     }
 
     return {
-      setName: set.own ? "this model" : set.name,
+      setName: workspace.animations.targetName(clipTargetOf(set)),
       rows: trackBindingRows(set.document.set, link, workspace.document.tree)
     };
   }

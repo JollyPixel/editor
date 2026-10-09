@@ -64,3 +64,8 @@ account's uploaded image.
 
 The color of the published `peerId`, falling back to `clientId`, so every peer
 computes the same color for the same identity.
+
+### `presencePeerOf(peer)`
+
+The `PresencePeer` of a room peer: named with `readUsername`, colored with
+`peerProfileColor`, and carrying the profile's `peerId` and `avatar`.

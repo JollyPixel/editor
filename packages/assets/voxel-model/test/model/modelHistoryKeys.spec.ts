@@ -36,10 +36,7 @@ function createHistory(
   document: ModelDocument,
   options: { limit?: number; label?: (change: ModelChange) => string; } = {}
 ): ModelHistory {
-  const history = new CommandHistory({
-    scopes: [kScope],
-    limit: options.limit
-  });
+  const history = new CommandHistory<typeof kScope>({ limit: options.limit });
   history.register({
     id: "model",
     document,

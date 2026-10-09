@@ -43,5 +43,15 @@ export interface HistoryScopeState {
   /**
    * Refused steps of both stacks, newest first.
    */
-  refused: HistoryStepInfo[];
+  refused: readonly HistoryStepInfo[];
 }
+
+export const EMPTY_HISTORY_STATE: Readonly<HistoryScopeState> = Object.freeze({
+  canUndo: false,
+  canRedo: false,
+  undoLabel: null,
+  redoLabel: null,
+  undoCount: 0,
+  redoCount: 0,
+  refused: Object.freeze([])
+});

@@ -57,7 +57,7 @@ function ownedDocument(
 
 describe("PixelArtCanvas on a shared history", () => {
   test("files edits in the owner's scope; an undo there restores the selection after the pixels", () => {
-    const history = new CommandHistory({ scopes: ["build", "animate"] });
+    const history = new CommandHistory<"build" | "animate">();
     const { manager, canvas } = createPixelArtCanvas({
       document: ownedDocument(history),
       zoom: { default: 4 },
@@ -88,7 +88,7 @@ describe("PixelArtCanvas on a shared history", () => {
   });
 
   test("leaves the document to its owner: pixel steps still undo once the canvas closes", () => {
-    const history = new CommandHistory({ scopes: ["build"] });
+    const history = new CommandHistory<"build">();
     const document = ownedDocument(history);
     const { manager } = createPixelArtCanvas({
       document,
@@ -104,7 +104,7 @@ describe("PixelArtCanvas on a shared history", () => {
   });
 
   test("a selection step refuses as closed once its canvas closes", () => {
-    const history = new CommandHistory({ scopes: ["build"] });
+    const history = new CommandHistory<"build">();
     const { manager, canvas } = createPixelArtCanvas({
       document: ownedDocument(history),
       zoom: { default: 4 },

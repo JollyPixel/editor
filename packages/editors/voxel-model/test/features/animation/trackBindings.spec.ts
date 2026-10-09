@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TrackBindingsController } from "#src/features/animation/TrackBindingsController.ts";
+import { TrackBindingsController } from "#src/features/animation/tracks/TrackBindingsController.ts";
 import {
   EMPTY_MENU,
   type MenuSession
@@ -49,9 +49,10 @@ describe("TrackBindingsController", () => {
     bindings.rebind("Body/Arm", { x: 0, y: 0 });
     await pick("Body/Hand");
     assert.deepEqual(rows(), [["Body/Arm", "remapped", "Body/Hand"]]);
-    assert.equal(model.history.state("animate").undoLabel, "Rebind Body/Arm");
+    assert.equal(model.history.state(model.setScope).undoLabel, "Rebind Body/Arm");
+    assert.equal(model.history.state(model.clipScope).undoCount, 0);
 
-    model.history.undo("animate");
+    model.history.undo(model.setScope);
     assert.deepEqual(rows(), [["Body/Arm", "missing", null]]);
   });
 

@@ -8,8 +8,8 @@ import {
 
 // Import Internal Dependencies
 import type { AnimationLibrary } from "./AnimationLibrary.ts";
-import type { TabRecorder } from "../history/index.ts";
-import type { BuildRecorder } from "../../model/index.ts";
+import type { ScopeRecorder } from "../../history/index.ts";
+import type { BuildRecorder } from "../../../model/index.ts";
 
 export interface AnimationFollowOptions {
   document: ModelDocument;
@@ -17,7 +17,7 @@ export interface AnimationFollowOptions {
 }
 
 export function followingBuildEdits(
-  history: TabRecorder<"build">,
+  history: ScopeRecorder<"build">,
   follow: AnimationFollow
 ): BuildRecorder {
   return {

@@ -1,18 +1,33 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import type { AnimationDocument } from "@jolly-pixel/asset.voxel-animation/client";
+import type {
+  AnimationChange,
+  AnimationDocument
+} from "@jolly-pixel/asset.voxel-animation/client";
 import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import {
-  registerAnimationSet,
-  type EditorHistory
-} from "../history/index.ts";
+import type {
+  AnimationFocus,
+  ClipRef
+} from "../../../state/index.ts";
+import { combineReleases } from "../../../shared/combineReleases.ts";
 
 // CONSTANTS
 const kUnnamed = "Animation set";
 const kOwnClips = "this model";
+
+/**
+ * `null` stands for the model's own clips; the own set's id never does.
+ */
+export type ClipTarget = string | null;
+
+export function clipTargetOf(
+  set: Pick<LinkedAnimationSet, "id" | "own">
+): ClipTarget {
+  return set.own ? null : set.id;
+}
 
 export interface AnimationSetLease {
   readonly document: AnimationDocument;
@@ -58,29 +73,23 @@ export interface LinkedAnimationSet {
   document: AnimationDocument;
 }
 
-export interface ClipRef {
-  setId: string;
-  clipId: string;
-}
-
-/**
- * `null` stands for the model's own clips; the own set's id never does.
- */
-export type ClipTarget = string | null;
-
 export interface ClipPlacement {
   name: string;
   beforeId?: string;
 }
 
+export type OpenedAnimationSet = Pick<LinkedAnimationSet, "id" | "document">;
+
 export type AnimationLibraryEvents = {
   change: () => void;
+  setOpened: (set: OpenedAnimationSet) => void;
+  setClosed: (setId: string) => void;
+  setChange: (setId: string, change: AnimationChange) => void;
 };
 
 export interface AnimationLibraryOptions {
   document: ModelDocument;
   source: AnimationSetSource;
-  history: Pick<EditorHistory, "register">;
 }
 
 interface OpenSet {
@@ -91,10 +100,9 @@ interface OpenSet {
 export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   #document: ModelDocument;
   #source: AnimationSetSource;
-  #history: Pick<EditorHistory, "register">;
   #open = new Map<string, OpenSet>();
   #creatingOwn: Promise<string> | null = null;
-  #unsubscribe: Array<() => void>;
+  #release: () => void;
 
   constructor(
     options: AnimationLibraryOptions
@@ -102,12 +110,11 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     super();
     this.#document = options.document;
     this.#source = options.source;
-    this.#history = options.history;
-    this.#unsubscribe = [
+    this.#release = combineReleases([
       this.#document.subscribe("change", this.#sync),
       this.#document.subscribe("reset", this.#sync),
       this.#source.subscribe(this.#notify)
-    ];
+    ]);
     this.#sync();
   }
 
@@ -184,6 +191,24 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     target: ClipTarget
   ): string {
     return target === null ? kOwnClips : this.#nameOf(target);
+  }
+
+  focusName(
+    focus: AnimationFocus
+  ): string | null {
+    const { setId, clipId } = focus;
+    if (setId === null) {
+      return kOwnClips;
+    }
+
+    const set = this.set(setId);
+    if (set === undefined) {
+      return null;
+    }
+
+    return clipId === null ?
+      this.targetName(clipTargetOf(set)) :
+      set.document.set.clip(clipId)?.name ?? null;
   }
 
   async addClip(
@@ -264,9 +289,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   }
 
   dispose(): void {
-    for (const unsubscribe of this.#unsubscribe.splice(0)) {
-      unsubscribe();
-    }
+    this.#release();
     for (const id of [...this.#open.keys()]) {
       this.#close(id);
     }
@@ -304,19 +327,17 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   ): void {
     const lease = this.#source.open(id);
     const { document } = lease;
-    const unsubscribe = [
-      document.subscribe("change", this.#notify),
-      document.subscribe("reset", this.#notify),
-      registerAnimationSet(this.#history, id, document)
-    ];
     this.#open.set(id, {
       lease,
-      unsubscribe: () => {
-        for (const each of unsubscribe) {
-          each();
-        }
-      }
+      unsubscribe: combineReleases([
+        document.subscribe("change", (change) => {
+          this.emit("setChange", id, change);
+          this.#notify();
+        }),
+        document.subscribe("reset", this.#notify)
+      ])
     });
+    this.emit("setOpened", { id, document });
   }
 
   #close(
@@ -324,6 +345,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   ): void {
     const open = this.#open.get(id);
     if (open !== undefined) {
+      this.emit("setClosed", id);
       open.unsubscribe();
       open.lease.release();
       this.#open.delete(id);

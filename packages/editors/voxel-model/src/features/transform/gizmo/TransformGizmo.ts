@@ -14,7 +14,10 @@ import type {
   ModelBlocks
 } from "../../../scene/blocks/index.ts";
 import type { BlockSelectionStore } from "../../../state/index.ts";
-import type { TransformLock } from "../collaboration/index.ts";
+import type {
+  TransformLiveSync,
+  TransformLock
+} from "../collaboration/index.ts";
 import {
   nodeTool,
   pivotTool,
@@ -58,6 +61,7 @@ export interface TransformGizmoOptions {
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
   lock: TransformLock;
+  live: Pick<TransformLiveSync, "publish" | "clear">;
   tool: TransformTool;
 }
 
@@ -75,6 +79,7 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
   #blocks: ModelBlocks;
   #selection: BlockSelectionStore;
   #lock: TransformLock;
+  #live: TransformGizmoOptions["live"];
   #tools: Readonly<Record<TransformMode, GizmoTool>>;
   #controls: readonly TransformControls[];
   #tool: TransformTool;
@@ -105,7 +110,7 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
 
     if (this.#drag !== null) {
       this.#activeTool().apply(block, this.#drag.start);
-      this.#drag.target.preview?.(block);
+      this.#live.publish(block.uuid, block.transform);
     }
     this.emit("change", block);
   };
@@ -115,10 +120,13 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     this.#drag = null;
     this.#camera.enabled = true;
 
-    const block = this.#selectedBlock();
-    if (block !== null && drag !== null) {
-      block.roundTransform();
-      drag.target.end(block);
+    if (drag !== null) {
+      const block = this.#selectedBlock();
+      if (block !== null) {
+        block.roundTransform();
+        drag.target.end(block);
+      }
+      this.#live.clear();
     }
     this.#activeTool().reset();
   };
@@ -161,6 +169,7 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     this.#blocks = options.blocks;
     this.#selection = options.selection;
     this.#lock = options.lock;
+    this.#live = options.live;
     this.#tool = options.tool;
 
     const controls = createControls(options);

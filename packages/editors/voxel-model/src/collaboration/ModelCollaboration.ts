@@ -23,8 +23,19 @@ import type {
 import { BlockMarkPresence } from "../features/selection/collaboration/BlockMarkPresence.ts";
 import { MaterialEditPresence } from "../features/material/collaboration/MaterialEditPresence.ts";
 import { MaterialLiveSync } from "../features/material/collaboration/MaterialLiveSync.ts";
-import { TransformLiveSync } from "../features/transform/collaboration/TransformLiveSync.ts";
+import {
+  TransformLiveSync,
+  type LiveView
+} from "../features/transform/collaboration/TransformLiveSync.ts";
 import { TransformLock } from "../features/transform/collaboration/TransformLock.ts";
+import {
+  AnimatePresence,
+  type AnimatePresenceOptions
+} from "../features/animation/collaboration/AnimatePresence.ts";
+
+export interface AnimateCollaboration extends Pick<AnimatePresenceOptions, "session" | "keyEditor"> {
+  liveView: LiveView;
+}
 
 export interface ModelCollaborationOptions {
   room: VoxelModelRoom;
@@ -35,6 +46,7 @@ export interface ModelCollaborationOptions {
   materialFocus: MaterialFocusStore;
   previews: MaterialPreviews;
   presence: PresenceStore;
+  animate: AnimateCollaboration;
   world: Systems.World;
   camera: THREE.PerspectiveCamera;
 }
@@ -50,6 +62,7 @@ export class ModelCollaboration {
   #hovers: BlockMarkPresence;
   #materialEdits: MaterialEditPresence;
   #materialLive: MaterialLiveSync;
+  #animate: AnimatePresence;
 
   constructor(
     options: ModelCollaborationOptions
@@ -75,6 +88,12 @@ export class ModelCollaboration {
       focus: options.materialFocus,
       presence
     });
+    this.#animate = new AnimatePresence({
+      room,
+      session: options.animate.session,
+      keyEditor: options.animate.keyEditor,
+      presence
+    });
     this.frustums = options.world
       .createActor("peer-frustums")
       .addComponentAndGet(PeerFrustums, {
@@ -84,6 +103,7 @@ export class ModelCollaboration {
     this.live = new TransformLiveSync({
       room,
       blocks,
+      view: options.animate.liveView,
       requestFrame: () => options.world.invalidate()
     });
     this.lock = new TransformLock({ room });
@@ -104,6 +124,7 @@ export class ModelCollaboration {
     this.#selections.dispose();
     this.#hovers.dispose();
     this.#materialEdits.dispose();
+    this.#animate.dispose();
     this.live.dispose();
     this.lock.dispose();
     this.fields.dispose();

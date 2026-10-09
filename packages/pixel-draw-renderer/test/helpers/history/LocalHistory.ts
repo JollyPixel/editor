@@ -46,10 +46,7 @@ export function localPixelHistory(
   document: PixelDocument,
   limit = 10
 ): CommandHistory<LocalScope> {
-  const history = new CommandHistory({
-    scopes: [kScope],
-    limit
-  });
+  const history = new CommandHistory<LocalScope>({ limit });
   history.register(unguardedRegistration("pixels", document));
   document.groupEditsWith((edit) => history.record(kScope, null, edit));
 

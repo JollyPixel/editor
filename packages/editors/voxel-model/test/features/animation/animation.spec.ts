@@ -15,14 +15,24 @@ import {
   AnimationLibrary,
   type AnimationSetRecord,
   type AnimationSetSource
-} from "#src/features/animation/AnimationLibrary.ts";
+} from "#src/features/animation/library/AnimationLibrary.ts";
 import { AnimatePanelController } from "#src/features/animation/AnimatePanelController.ts";
 import {
   AnimationFocusStore,
-  BlockSelectionStore
+  AnimationPlaybackStore,
+  BlockSelectionStore,
+  PresenceStore,
+  TabStore,
+  animationKey
 } from "#src/state/index.ts";
+import { AnimationSession } from "#src/features/animation/session/AnimationSession.ts";
 import { setName } from "#src/boot/animationSetSource.ts";
-import { createEditorHistory } from "#src/features/history/index.ts";
+import { AnimationHistories } from "#src/features/animation/undo/AnimationHistories.ts";
+import { ClipRemovalFocus } from "#src/features/animation/library/ClipRemovalFocus.ts";
+import {
+  ANIMATION_LIBRARY,
+  createEditorHistory
+} from "#src/features/history/index.ts";
 import type { NameDialogContext } from "#src/shared/NameDialog.ts";
 import {
   EMPTY_MENU,
@@ -94,11 +104,7 @@ function createLibrary(
   document: ModelDocument,
   source: AnimationSetSource
 ): AnimationLibrary {
-  return new AnimationLibrary({
-    document,
-    source,
-    history: createEditorHistory({ document })
-  });
+  return new AnimationLibrary({ document, source });
 }
 
 describe("AnimationLibrary", () => {
@@ -150,18 +156,23 @@ describe("AnimationLibrary", () => {
     assert.equal(await library.ensureOwnSet(), first);
   });
 
-  test("a first clip of the model is one undo step, which keeps the own set linked", async() => {
+  test("a first clip of the model is one library undo step, which keeps the own set linked", async() => {
     const document = new ModelDocument();
     const history = createEditorHistory({ document });
-    const library = new AnimationLibrary({ document, source: createSource(), history });
+    const library = new AnimationLibrary({ document, source: createSource() });
+    new AnimationHistories({
+      history,
+      document,
+      animations: library
+    });
 
     const ref = await library.addClip(null, "Walk");
 
-    assert.equal(history.state("animate").undoCount, 1);
-    assert.equal(history.undo("animate"), true);
+    assert.equal(history.state(ANIMATION_LIBRARY).undoCount, 1);
+    assert.equal(history.undo(ANIMATION_LIBRARY), true);
     assert.equal(library.ownSet()?.id, ref?.setId);
     assert.equal(library.ownSet()?.document.set.size, 0);
-    assert.equal(history.state("animate").canUndo, false);
+    assert.equal(history.state(ANIMATION_LIBRARY).canUndo, false);
   });
 
   test("shares the own set under a new name", async() => {
@@ -199,8 +210,16 @@ describe("AnimatePanelController", () => {
     source = createSource([{ id: "shared", kind: "voxelanimation", name: "Humanoid" }])
   ) {
     const document = new ModelDocument();
-    const animations = createLibrary(document, source);
+    const history = createEditorHistory({ document });
+    const animations = new AnimationLibrary({ document, source });
     const animationFocus = new AnimationFocusStore();
+    new AnimationHistories({
+      history,
+      document,
+      animations
+    });
+    const presence = new PresenceStore();
+    const clipRemoval = new ClipRemovalFocus({ animations, animationFocus, presence });
     const deletes: string[] = [];
     const prompts: NameDialogContext[] = [];
     const names: string[] = [];
@@ -223,10 +242,19 @@ describe("AnimatePanelController", () => {
     });
     const keyed: string[] = [];
     const selection = new BlockSelectionStore();
+    const animationSession = new AnimationSession({
+      document,
+      animations,
+      animationFocus,
+      animationPlayback: new AnimationPlaybackStore(),
+      tab: new TabStore()
+    });
     controller.attach({
       animations,
       animationFocus,
       selection,
+      presence,
+      clipRemoval,
       keyer: {
         keyBlock: (id) => keyed.push(id) > 0
       }
@@ -257,9 +285,12 @@ describe("AnimatePanelController", () => {
     return {
       controller,
       animations,
+      history,
       animationFocus,
+      animationSession,
       deletes,
       selection,
+      presence,
       keyed,
       prompts,
       names,
@@ -267,6 +298,69 @@ describe("AnimatePanelController", () => {
       rowAction
     };
   }
+
+  test("badges a clip row with the peers who have it open", () => {
+    const { controller, animations, presence } = createHarness();
+    animations.link("shared");
+    const clipId = animations.set("shared")!.document.addClip({ name: "Wave" })!;
+    const peer = { clientId: "bob", displayName: "Bob", color: "#ff0000" };
+    const clip = animationKey("shared", clipId);
+    function badges() {
+      return controller.state.sharedSets[0].children?.[0]?.badges;
+    }
+
+    presence.animateCursors = [{ peer, cursor: { clip, tick: 0, keys: [] } }];
+    const { state } = controller;
+    assert.deepEqual(badges(), [{ color: "#ff0000", title: "Bob" }]);
+
+    presence.animateCursors = [{ peer, cursor: { clip, tick: 6000, keys: [] } }];
+    assert.equal(controller.state, state, "a moving playhead leaves the rows alone");
+
+    presence.animateCursors = [];
+    assert.deepEqual(badges(), []);
+  });
+
+  test("falls back to the set and names the peer who deleted the open clip", () => {
+    const { controller, animations, animationFocus, presence } = createHarness();
+    animations.link("shared");
+    const { document } = animations.set("shared")!;
+    const clipId = document.addClip({ name: "Wave" })!;
+    animationFocus.focusClip("shared", clipId);
+    presence.peers = [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }];
+
+    document.apply({ action: "clip-removed", id: clipId }, "bob");
+
+    assert.deepEqual(animationFocus.focus, { setId: "shared", clipId: null });
+    assert.equal(controller.state.notice, "Bob deleted the clip you had open.");
+
+    controller.handleSelect(new CustomEvent("jolly-select", {
+      detail: { selected: [animationKey("shared")] }
+    }));
+    assert.equal(controller.state.notice, null, "picking the set it fell back to clears the notice");
+
+    document.addClip({ id: "again", name: "Again" });
+    animationFocus.focusClip("shared", "again");
+    document.apply({ action: "clip-removed", id: "again" }, "bob");
+    animationFocus.focusSet(null);
+    assert.equal(controller.state.notice, null);
+
+    animationFocus.focusSet("shared");
+    assert.equal(controller.state.notice, null, "coming back to the set does not bring the notice back");
+  });
+
+  test("names the peer who deleted the open clip once the roster knows them", () => {
+    const { controller, animations, animationFocus, presence } = createHarness();
+    animations.link("shared");
+    const { document } = animations.set("shared")!;
+    const clipId = document.addClip({ name: "Wave" })!;
+    animationFocus.focusClip("shared", clipId);
+
+    document.apply({ action: "clip-removed", id: clipId }, "bob");
+    assert.equal(controller.state.notice, "A peer deleted the clip you had open.");
+
+    presence.peers = [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }];
+    assert.equal(controller.state.notice, "Bob deleted the clip you had open.");
+  });
 
   function clipLabels(
     nodes: readonly { label: string; }[]
@@ -496,6 +590,21 @@ describe("AnimatePanelController", () => {
 
     controller.changeClip({ fps: 12 });
     assert.equal(controller.state.clip?.frames, 24);
+  });
+
+  test("files clip settings in the clip's history, not its set's", async() => {
+    const { controller, history } = createHarness();
+    await controller.actions!.newClip(null);
+    const { setId, clip } = controller.state.clip!;
+    const clipScope = animationKey(setId, clip.id);
+    const setSteps = history.state(ANIMATION_LIBRARY).undoCount;
+
+    controller.changeClip({ loop: !clip.loop });
+
+    assert.equal(history.state(clipScope).undoCount, 1);
+    assert.equal(history.state(ANIMATION_LIBRARY).undoCount, setSteps);
+    assert.equal(history.undo(clipScope), true);
+    assert.equal(controller.state.clip?.clip.loop, clip.loop);
   });
 
   test("creates a set from the name the user gives", async() => {

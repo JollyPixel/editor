@@ -51,6 +51,22 @@ Call `publishLocal()` after the local key changes; an unchanged key is not
 sent again. The local peer never appears in the marks, since `room.peers`
 excludes it. `dispose()` unsubscribes and publishes an empty map.
 
+## `markedPeers` and `peerMarks`
+
+```ts
+const cursors = markedPeers(room, channel.values);
+const marks = peerMarks(
+  cursors.map(([peer, cursor]): MarkedPeer<string> => [peer, cursor.clip])
+);
+```
+
+`markedPeers(room, values)` pairs each presence value with its sender's
+`PresencePeer`, sorted by `clientId`, and skips `null` values and senders that
+are not in `room.peers`. `peerMarks(marked)` folds such pairs into a
+`PeerMarkMap<TKey>`, keeping their order in each bucket. `PeerMarkTracker`
+publishes `peerMarks(markedPeers(room, values))`; use them directly when a
+presence value carries more than a key.
+
 ## `peerBadges`
 
 ```ts

@@ -6,7 +6,10 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import { frameToTick } from "@jolly-pixel/asset.voxel-animation/client";
+import {
+  frameToTick,
+  tickToFrame
+} from "@jolly-pixel/asset.voxel-animation/client";
 import type { ContextMenu } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -22,7 +25,7 @@ import type {
   UnboundTimelineRow
 } from "./timelineRows.ts";
 import { keyId } from "./timelineKeys.ts";
-import { TRACK_STATE_LABELS } from "../trackBindingRows.ts";
+import { TRACK_STATE_LABELS } from "../tracks/trackBindingRows.ts";
 import { ContextMenuController } from "../../../shared/ContextMenuController.ts";
 import {
   EMPTY_MENU,
@@ -180,6 +183,32 @@ export class Timeline extends LitElement {
       display: none;
     }
 
+    .key[data-peer] {
+      box-shadow: 0 0 0 2px var(--peer-color);
+    }
+
+    .peer-playhead {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      border-left: 1px dashed var(--peer-color);
+      pointer-events: none;
+    }
+
+    .peer-head {
+      position: absolute;
+      top: 0;
+      width: 8px;
+      height: 8px;
+      padding: 0;
+      border: 0;
+      border-radius: 0 0 4px 4px;
+      background: var(--peer-color);
+      transform: translateX(-50%);
+      cursor: pointer;
+    }
+
     .unbound {
       opacity: 0.55;
     }
@@ -278,10 +307,22 @@ export class Timeline extends LitElement {
               style="left: ${percent(tick, view.clip.length)}"
             ></span>
           `)}
+          ${this.#renderPeerPlayheads(view)}
           <span class="playhead"></span>
         </div>
       </div>
     `;
+  }
+
+  #renderPeerPlayheads(
+    view: TimelineView
+  ): TemplateResult[] {
+    return view.peers.map(({ peer, tick }) => html`
+      <span
+        class="peer-playhead"
+        style=${placeAt(tick, view.clip.length, peer.color)}
+      ></span>
+    `);
   }
 
   #renderRuler(
@@ -308,6 +349,19 @@ export class Timeline extends LitElement {
               data-end=${frame === view.frames ? "true" : nothing}
               style="left: ${percent(frame, view.frames)}"
             >${frame}</span>
+          `)}
+          ${this.#renderPeerPlayheads(view)}
+          ${view.peers.map(({ peer, tick }) => html`
+            <button
+              class="peer-head"
+              type="button"
+              data-peer=${peer.clientId}
+              title="${peer.displayName}: frame ${tickToFrame(tick, view.clip.fps)}"
+              aria-label="Jump to ${peer.displayName}"
+              style=${placeAt(tick, view.clip.length, peer.color)}
+              @pointerdown=${(event: PointerEvent) => event.stopPropagation()}
+              @click=${() => this.#controller.session?.seek(tick)}
+            ></button>
           `)}
           <span class="playhead"></span>
         </div>
@@ -336,6 +390,7 @@ export class Timeline extends LitElement {
           @contextmenu=${(event: MouseEvent) => this.#onLaneMenu(event, row)}
         >
           ${row.keys.map((key) => this.#renderKey(row, key, view))}
+          ${this.#renderPeerPlayheads(view)}
           <span class="playhead"></span>
         </div>
       </div>
@@ -347,7 +402,9 @@ export class Timeline extends LitElement {
     { tick, interpolation }: TimelineKey,
     view: TimelineView
   ): TemplateResult {
-    const selected = view.selectedKeys.has(keyId({ path: row.path, tick }));
+    const id = keyId({ path: row.path, tick });
+    const selected = view.selectedKeys.has(id);
+    const peerColor = view.peerKeys.get(id);
     const shift = selected && this.#drag !== null ? frameToTick(this.#drag.frames, view.clip.fps) : 0;
 
     return html`
@@ -356,7 +413,8 @@ export class Timeline extends LitElement {
         data-tick=${tick}
         data-interpolation=${interpolation}
         data-selected=${selected ? "true" : "false"}
-        style="left: ${percent(tick + shift, view.clip.length)}"
+        data-peer=${peerColor === undefined ? nothing : "true"}
+        style=${placeAt(tick + shift, view.clip.length, peerColor)}
       ></span>
     `;
   }
@@ -502,6 +560,16 @@ function percent(
   total: number
 ): string {
   return `${total === 0 ? 0 : (value / total) * 100}%`;
+}
+
+function placeAt(
+  tick: number,
+  length: number,
+  peerColor?: string
+): string {
+  const left = `left: ${percent(tick, length)}`;
+
+  return peerColor === undefined ? left : `${left}; --peer-color: ${peerColor}`;
 }
 
 customElements.define("jolly-model-editor-timeline", Timeline);

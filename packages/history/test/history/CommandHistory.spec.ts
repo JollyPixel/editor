@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CommandHistory } from "#src/index.ts";
+import {
+  CommandHistory,
+  EMPTY_HISTORY_STATE
+} from "#src/index.ts";
 import {
   NumbersDocument,
   setup,
@@ -14,6 +17,75 @@ import {
 } from "../helpers/history/NumbersDocument.ts";
 
 describe("CommandHistory", () => {
+  test("a scope without steps reports the empty state", () => {
+    const { history, document } = setup();
+
+    assert.deepEqual(history.state("build"), EMPTY_HISTORY_STATE);
+    document.set("a", 1);
+    assert.notDeepEqual(history.state("build"), EMPTY_HISTORY_STATE);
+    assert.ok(Object.isFrozen(EMPTY_HISTORY_STATE));
+  });
+
+  test("a scope a registration names starts with its first step", () => {
+    const history = new CommandHistory<Scope>();
+    const document = new NumbersDocument("numbers");
+    history.register(document.registration(() => "paint"));
+
+    assert.deepEqual(history.state("paint"), EMPTY_HISTORY_STATE);
+    document.set("a", 1);
+
+    assert.equal(history.state("paint").undoCount, 1);
+    assert.equal(history.undo("paint"), true);
+    assert.equal(document.values.has("a"), false);
+  });
+
+  test("an explicit record starts its scope", () => {
+    const history = new CommandHistory<Scope>();
+    const document = new NumbersDocument("numbers");
+    history.register(document.registration(() => "build"));
+
+    history.record("paint", "Paint", () => document.set("a", 1));
+
+    assert.equal(history.state("paint").undoLabel, "Paint");
+    assert.equal(history.state("build").undoCount, 0);
+  });
+
+  test("a removed scope drops its steps and reports the empty state", () => {
+    const { history, document } = setup();
+    history.record("paint", null, () => document.set("a", 1));
+    const changes: [Scope, unknown][] = [];
+    history.on("change", (scope, state) => changes.push([scope, state]));
+
+    history.removeScope("paint");
+    history.removeScope("paint");
+
+    assert.deepEqual(changes, [["paint", EMPTY_HISTORY_STATE]]);
+    assert.deepEqual(history.state("paint"), EMPTY_HISTORY_STATE);
+    assert.equal(document.values.get("a"), 1);
+    assert.equal(history.state("build").undoCount, 0);
+  });
+
+  test("a step recorded while its scope is removed files nothing", () => {
+    const { history, document } = setup();
+
+    history.record("paint", null, () => {
+      document.set("a", 1);
+      history.removeScope("paint");
+    });
+
+    assert.equal(history.state("paint").undoCount, 0);
+  });
+
+  test("a server refusal of a removed scope's step is ignored", () => {
+    const { history, document, refused } = setup({ synced: true });
+    const change = history.record("paint", null, () => document.set("a", 1)!);
+
+    history.removeScope("paint");
+    document.receipts.refuse(change);
+
+    assert.deepEqual(refused, []);
+  });
+
   test("a change its document scopes to null makes no step, yet joins an open record", () => {
     const { history, document, activate } = setup();
 
@@ -130,7 +202,7 @@ describe("CommandHistory", () => {
   });
 
   test("a registration's compact rewrites the commands a step files", () => {
-    const history = new CommandHistory<Scope>({ scopes: ["build"] });
+    const history = new CommandHistory<Scope>();
     const document = new NumbersDocument("numbers");
     history.register({
       ...document.registration(() => "build"),
@@ -172,26 +244,29 @@ describe("CommandHistory", () => {
     assert.deepEqual(counts, [[0, 1]]);
   });
 
-  test("throws on a second document under one id and on an unknown scope", () => {
+  test("throws on a second document under one id", () => {
     const { history, document } = setup();
 
     assert.throws(
       () => history.register(document.registration(() => "build")),
       { message: "CommandHistory: a document \"numbers\" is already registered." }
     );
-    assert.throws(
-      () => history.undo("sculpt" as Scope),
-      { message: "CommandHistory: unknown scope \"sculpt\"." }
-    );
-    assert.throws(
-      () => history.open("sculpt" as Scope, null),
-      { message: "CommandHistory: unknown scope \"sculpt\"." }
-    );
+  });
+
+  test("a removed scope has nothing to undo or redo until its next step", () => {
+    const { history, document } = setup();
+    history.record("paint", null, () => document.set("a", 1));
+    history.removeScope("paint");
+
+    assert.equal(history.undo("paint"), false);
+    assert.equal(history.redo("paint"), false);
+    history.record("paint", null, () => document.set("b", 2));
+    assert.equal(history.state("paint").undoCount, 1);
   });
 
   test("rejects a limit that is not a positive integer", () => {
     assert.throws(
-      () => new CommandHistory({ scopes: ["build"], limit: 0 }),
+      () => new CommandHistory({ limit: 0 }),
       RangeError
     );
   });

@@ -142,8 +142,8 @@ describe("pixelHistoryKeys", () => {
 describe("registerPixelHistory", () => {
   test("every history a document is registered in files a batch as one step", () => {
     const doc = new PixelDocument({ size: { x: 4, y: 4 } });
-    const first = new CommandHistory({ scopes: ["build"] });
-    const second = new CommandHistory({ scopes: ["paint"] });
+    const first = new CommandHistory<"build">();
+    const second = new CommandHistory<"paint">();
     const releaseFirst = registerPixelHistory(first, doc, { scope: "build" });
     registerPixelHistory(second, doc, { scope: "paint" });
     function paintTwice(): void {

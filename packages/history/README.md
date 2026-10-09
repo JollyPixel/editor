@@ -26,9 +26,7 @@ import {
   KeyedGuard
 } from "@jolly-pixel/history";
 
-const history = new CommandHistory({
-  scopes: ["build"]
-});
+const history = new CommandHistory<"build">();
 history.register({
   id: "stats",
   document: stats,

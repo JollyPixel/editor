@@ -1,26 +1,28 @@
 // Import Internal Dependencies
 import type {
   AnimationLibrary,
-  ClipRef,
   ClipTarget
 } from "./AnimationLibrary.ts";
 import type { ClipRow } from "./animateRows.ts";
-import type { AnimationFocusStore } from "../../state/index.ts";
+import type {
+  AnimationFocusStore,
+  ClipRef
+} from "../../../state/index.ts";
 import type {
   NameDialogContext,
   NameDialogResult
-} from "../../shared/NameDialog.ts";
-import type { NameValidator } from "../../shared/NameDraft.ts";
+} from "../../../shared/NameDialog.ts";
+import type { NameValidator } from "../../../shared/NameDraft.ts";
 import type {
   DeleteContext,
   DeleteResult
-} from "../../shared/DeleteDialog.ts";
+} from "../../../shared/DeleteDialog.ts";
 import {
   pickerMenu,
   type MenuPoint,
   type MenuSession
-} from "../../shared/menuSession.ts";
-import { duplicateNameOf } from "../../model/index.ts";
+} from "../../../shared/menuSession.ts";
+import { duplicateNameOf } from "../../../model/index.ts";
 
 // CONSTANTS
 const kFirstClipName = "Clip 1";
@@ -264,7 +266,6 @@ export class AnimateActions {
   async deleteClip(
     ref: ClipRef
   ): Promise<void> {
-    const { animationFocus } = this.#workspace;
     const set = this.#animations.set(ref.setId);
     const clip = set?.document.set.clip(ref.clipId);
     if (set === undefined || clip === undefined) {
@@ -283,10 +284,6 @@ export class AnimateActions {
     }
 
     set.document.removeClip(clip.id);
-    const { focus } = animationFocus;
-    if (focus.setId === ref.setId && focus.clipId === ref.clipId) {
-      animationFocus.focusSet(set.own ? null : set.id);
-    }
   }
 
   nameRule(

@@ -7,7 +7,7 @@ import {
 
 // Import Internal Dependencies
 import type { AnimationKeyer } from "./AnimationKeyer.ts";
-import type { BlockSelectionStore } from "../../state/index.ts";
+import type { BlockSelectionStore } from "../../../state/index.ts";
 
 export const KEY_BLOCK_SHORTCUT = ["k"] as const satisfies readonly KeyChordString[];
 

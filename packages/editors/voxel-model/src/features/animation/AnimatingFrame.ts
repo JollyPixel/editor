@@ -10,7 +10,7 @@ import { SubscriptionController } from "@jolly-pixel/ui";
 import { frameAt } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type { AnimationSession } from "./AnimationSession.ts";
+import type { AnimationSession } from "./session/AnimationSession.ts";
 
 export interface AnimatingFrameWorkspace {
   animationSession: AnimationSession;

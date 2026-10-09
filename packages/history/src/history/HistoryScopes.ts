@@ -10,7 +10,6 @@ export class HistoryScopes<
   #stacks = new Map<TScope, ScopeStacks<TScope>>();
 
   constructor(
-    scopes: readonly TScope[],
     limit: number
   ) {
     if (!Number.isInteger(limit) || limit < 1) {
@@ -18,23 +17,33 @@ export class HistoryScopes<
     }
 
     this.limit = limit;
-    for (const scope of scopes) {
-      this.#stacks.set(
-        scope,
-        new ScopeStacks(limit)
-      );
+  }
+
+  ensure(
+    scope: TScope
+  ): ScopeStacks<TScope> {
+    let stacks = this.#stacks.get(scope);
+    if (stacks === undefined) {
+      stacks = new ScopeStacks(this.limit);
+      this.#stacks.set(scope, stacks);
     }
+
+    return stacks;
+  }
+
+  remove(
+    scope: TScope
+  ): ScopeStacks<TScope> | undefined {
+    const stacks = this.#stacks.get(scope);
+    this.#stacks.delete(scope);
+
+    return stacks;
   }
 
   get(
     scope: TScope
-  ): ScopeStacks<TScope> {
-    const stacks = this.#stacks.get(scope);
-    if (stacks === undefined) {
-      throw new Error(`CommandHistory: unknown scope "${scope}".`);
-    }
-
-    return stacks;
+  ): ScopeStacks<TScope> | undefined {
+    return this.#stacks.get(scope);
   }
 
   clear(): void {

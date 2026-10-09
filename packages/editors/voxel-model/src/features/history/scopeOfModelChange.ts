@@ -2,12 +2,17 @@
 import type { ModelChange } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import type { EditorTab } from "../../state/index.ts";
+import type { EditorHistoryScope } from "./editorHistory.ts";
+import {
+  ANIMATION_LIBRARY,
+  animationScope,
+  type OwnedAnimationSets
+} from "./animationScopes.ts";
 
 export function scopeOfModelChange(
-  change: ModelChange
-): EditorTab | null {
-  const { command } = change;
+  { command }: Pick<ModelChange, "command">,
+  sets: OwnedAnimationSets
+): EditorHistoryScope | null {
   switch (command.action) {
     case "node-added":
     case "node-removed":
@@ -24,12 +29,13 @@ export function scopeOfModelChange(
     case "material-changed":
       return "material";
     case "animation-set-linked":
-      return command.link.own === true ? null : "animate";
+      return command.link.own === true ? null : ANIMATION_LIBRARY;
     case "animation-set-unlinked":
     case "animation-set-owned":
+      return ANIMATION_LIBRARY;
     case "animation-binding-changed":
     case "animation-binding-cleared":
-      return "animate";
+      return animationScope({ setId: command.id, clipId: null }, sets);
     case "node-uv-changed":
       return null;
   }

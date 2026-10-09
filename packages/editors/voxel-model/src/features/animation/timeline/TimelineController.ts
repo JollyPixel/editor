@@ -7,10 +7,14 @@ import {
   tickToFrame,
   type AnimationClipJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
+import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import type { AnimationSession } from "../AnimationSession.ts";
-import type { KeyEditor } from "../KeyEditor.ts";
+import type {
+  AnimationSession,
+  FocusedAnimation
+} from "../session/AnimationSession.ts";
+import type { KeyEditor } from "../keys/KeyEditor.ts";
 import {
   timelineRows,
   unboundTimelineRows,
@@ -18,24 +22,30 @@ import {
   type UnboundTimelineRow
 } from "./timelineRows.ts";
 import { keyId } from "./timelineKeys.ts";
-import { keyMenu } from "./keyMenu.ts";
 import {
-  rebindMenu,
-  type TrackRebindWorkspace
-} from "../trackRebind.ts";
-import type { BlockSelectionStore } from "../../../state/index.ts";
+  timelinePeers,
+  type TimelinePeers
+} from "./timelinePeers.ts";
+import { keyMenu } from "./keyMenu.ts";
+import { rebindMenu } from "../tracks/trackRebind.ts";
+import type {
+  BlockSelectionStore,
+  PresenceStore
+} from "../../../state/index.ts";
 import {
   EMPTY_MENU,
   type MenuSession
 } from "../../../shared/menuSession.ts";
 
-export interface TimelineWorkspace extends TrackRebindWorkspace {
+export interface TimelineWorkspace {
+  document: ModelDocument;
   animationSession: AnimationSession;
   selection: BlockSelectionStore;
   keyEditor: KeyEditor;
+  presence: Pick<PresenceStore, "animateCursors" | "subscribe">;
 }
 
-export interface TimelineView {
+export interface TimelineView extends TimelinePeers {
   clip: AnimationClipJSON;
   /**
    * The clip's length in frames of its fps.
@@ -68,12 +78,17 @@ export class TimelineController {
   ) {
     this.#host = host;
     this.#playhead = playhead;
-    this.#connection = new SubscriptionController(host, ({ animationSession, selection, keyEditor }) => [
-      animationSession.subscribe("clip", this.#refresh),
-      animationSession.subscribe("playhead", this.#movePlayhead),
-      selection.subscribe("select", this.#refresh),
-      keyEditor.subscribe("change", this.#refresh)
-    ]);
+    this.#connection = new SubscriptionController(host, (workspace) => {
+      const { animationSession, selection, keyEditor, presence } = workspace;
+
+      return [
+        animationSession.subscribe("clip", this.#refresh),
+        animationSession.subscribe("playhead", this.#movePlayhead),
+        selection.subscribe("select", this.#refresh),
+        keyEditor.subscribe("change", this.#refresh),
+        presence.subscribe("animateCursorsChange", this.#refreshPeers)
+      ];
+    });
   }
 
   get view(): TimelineView | null {
@@ -139,12 +154,26 @@ export class TimelineController {
 
     return workspace === null || setId === undefined ?
       EMPTY_MENU :
-      rebindMenu(workspace, setId, path);
+      rebindMenu(workspace.document, setId, path);
   }
 
   readonly #refresh = (): void => {
     this.#view = this.#build();
     this.#movePlayhead();
+    this.#host.requestUpdate();
+  };
+
+  readonly #refreshPeers = (): void => {
+    const workspace = this.#connection.current;
+    const focused = workspace?.animationSession.focused ?? null;
+    if (workspace === null || focused === null || this.#view === null) {
+      return;
+    }
+
+    this.#view = {
+      ...this.#view,
+      ...peersOn(workspace, focused)
+    };
     this.#host.requestUpdate();
   };
 
@@ -178,7 +207,19 @@ export class TimelineController {
       frames: frameAt(clip.length, clip.fps),
       rows: timelineRows(workspace.document.tree, clip, link, workspace.selection.selected),
       unbound: unboundTimelineRows(workspace.document.tree, clip, link),
-      selectedKeys: new Set(workspace.keyEditor.selected.map(keyId))
+      selectedKeys: new Set(workspace.keyEditor.selected.map(keyId)),
+      ...peersOn(workspace, focused)
     };
   }
+}
+
+function peersOn(
+  workspace: TimelineWorkspace,
+  focused: FocusedAnimation
+): TimelinePeers {
+  return timelinePeers(
+    workspace.presence.animateCursors,
+    focused.key,
+    focused.clip
+  );
 }

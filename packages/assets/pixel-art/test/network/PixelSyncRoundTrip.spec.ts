@@ -100,7 +100,7 @@ function setup() {
     clientId: "A",
     onSend: (sent) => receive("A", sent)
   });
-  const history = new CommandHistory({ scopes: ["pixels"] });
+  const history = new CommandHistory<"pixels">();
   const document = new PixelDocument({ size: { x: 8, y: 8 } });
   registerPixelHistory(history, document, { scope: "pixels" });
   const { manager, canvas } = createPixelArtCanvas({

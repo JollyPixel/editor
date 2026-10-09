@@ -6,8 +6,8 @@ import {
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { TabStore } from "../../state/index.ts";
-import type { EditorHistory } from "./editorHistory.ts";
+import type { ActiveHistory } from "./ActiveHistory.ts";
+import { combineReleases } from "../../shared/combineReleases.ts";
 
 export const HISTORY_SHORTCUTS = {
   undo: ["Mod+z"],
@@ -18,8 +18,7 @@ export type HistoryAction = keyof typeof HISTORY_SHORTCUTS;
 
 export interface HistoryShortcutsOptions {
   keyboard: Pick<Keyboard, "bind">;
-  history: Pick<EditorHistory, HistoryAction>;
-  tab: Pick<TabStore, "active">;
+  history: Pick<ActiveHistory, HistoryAction>;
 }
 
 export function historyShortcutLabel(
@@ -31,19 +30,14 @@ export function historyShortcutLabel(
 export function bindHistoryShortcuts(
   options: HistoryShortcutsOptions
 ): () => void {
-  const { keyboard, history, tab } = options;
-  const releases = [
+  const { keyboard, history } = options;
+
+  return combineReleases([
     keyboard.bind(HISTORY_SHORTCUTS.undo, () => {
-      history.undo(tab.active);
+      history.undo();
     }),
     keyboard.bind(HISTORY_SHORTCUTS.redo, () => {
-      history.redo(tab.active);
+      history.redo();
     })
-  ];
-
-  return () => {
-    for (const release of releases) {
-      release();
-    }
-  };
+  ]);
 }

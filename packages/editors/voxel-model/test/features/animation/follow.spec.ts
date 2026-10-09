@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import {
   AnimationFollow,
   followingBuildEdits
-} from "#src/features/animation/AnimationFollow.ts";
+} from "#src/features/animation/library/AnimationFollow.ts";
+import { ANIMATION_LIBRARY } from "#src/features/history/index.ts";
 import { ModelHierarchy } from "#src/model/index.ts";
 import { createAnimatedModel } from "./fixtures.ts";
 
@@ -37,25 +38,33 @@ function createFollowing(
 
 describe("AnimationFollow", () => {
   test("renaming a parent remaps a shared set's tracks below it, undone with the rename", () => {
-    const { hierarchy, history, ids, trackPaths, bindings } = createFollowing();
-    const animateSteps = history.state("animate").undoCount;
+    const { hierarchy, history, setScope, ids, trackPaths, bindings } = createFollowing();
+    const librarySteps = history.state(ANIMATION_LIBRARY).undoCount;
 
     hierarchy.rename(ids.body, "Torso");
     assert.deepEqual(bindings(), [{ path: "Body/Arm", target: "Torso/Arm" }]);
     assert.deepEqual(trackPaths(), ["Body/Arm"]);
-    assert.equal(history.state("animate").undoCount, animateSteps);
+    assert.equal(history.state(ANIMATION_LIBRARY).undoCount, librarySteps);
+    assert.equal(history.state(setScope).undoCount, 0);
 
     assert.equal(history.state("build").undoLabel, "Rename Body");
     assert.equal(history.undo("build"), true);
     assert.deepEqual(bindings(), []);
+    assert.equal(
+      history.state(setScope).undoCount,
+      0,
+      "the Build undo files no step in the set"
+    );
   });
 
   test("renaming a block renames the track paths of the model's own clips", () => {
-    const { hierarchy, history, ids, trackPaths, bindings } = createFollowing({ own: true });
+    const following = createFollowing({ own: true });
+    const { hierarchy, history, ids, trackPaths, bindings } = following;
 
     hierarchy.rename(ids.body, "Torso");
     assert.deepEqual(trackPaths(), ["Torso/Arm"]);
     assert.deepEqual(bindings(), []);
+    assert.equal(history.state(following.clipScope).undoCount, 0);
 
     assert.equal(history.undo("build"), true);
     assert.deepEqual(trackPaths(), ["Body/Arm"]);

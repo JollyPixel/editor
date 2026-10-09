@@ -15,39 +15,24 @@ import {
   PopoverController,
   SubscriptionController
 } from "@jolly-pixel/ui";
-import type {
-  HistoryScopeState,
-  HistoryStepInfo
+import {
+  EMPTY_HISTORY_STATE,
+  type HistoryScopeState,
+  type HistoryStepInfo
 } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
-import type {
-  EditorTab,
-  PresenceStore,
-  TabStore
-} from "../../state/index.ts";
+import type { PresenceStore } from "../../state/index.ts";
 import {
   historyShortcutLabel,
   type HistoryAction
 } from "./historyShortcuts.ts";
 import { describeRefusal } from "./describeRefusal.ts";
-import type { EditorHistory } from "./editorHistory.ts";
-
-// CONSTANTS
-const kEmptyState: HistoryScopeState = {
-  canUndo: false,
-  canRedo: false,
-  undoLabel: null,
-  redoLabel: null,
-  undoCount: 0,
-  redoCount: 0,
-  refused: []
-};
+import type { ActiveHistory } from "./ActiveHistory.ts";
 
 export interface HistoryWorkspace {
-  history: EditorHistory;
-  tab: TabStore;
+  activeHistory: ActiveHistory;
   presence: PresenceStore;
 }
 
@@ -119,11 +104,13 @@ export class HistoryButtons extends LitElement {
 
   static override properties = {
     workspace: { attribute: false },
-    _state: { state: true }
+    _state: { state: true },
+    _target: { state: true }
   };
 
   declare workspace: HistoryWorkspace | null;
   declare private _state: HistoryScopeState;
+  declare private _target: string | null;
 
   #marker = createRef<HTMLElement>();
   #steps = createRef<HTMLElement>();
@@ -134,22 +121,19 @@ export class HistoryButtons extends LitElement {
   });
   #workspace = new SubscriptionController<HistoryWorkspace>(
     this,
-    ({ history, tab }) => {
+    ({ activeHistory }) => {
       this.#sync();
-      history.on("change", this.#onChange);
-      tab.on("change", this.#sync);
+      activeHistory.on("change", this.#sync);
 
-      return [
-        () => history.off("change", this.#onChange),
-        () => tab.off("change", this.#sync)
-      ];
+      return [() => activeHistory.off("change", this.#sync)];
     }
   );
 
   constructor() {
     super();
     this.workspace = null;
-    this._state = kEmptyState;
+    this._state = EMPTY_HISTORY_STATE;
+    this._target = null;
   }
 
   override willUpdate(
@@ -161,24 +145,15 @@ export class HistoryButtons extends LitElement {
   }
 
   readonly #sync = (): void => {
-    const workspace = this.#workspace.current;
-    this._state = workspace?.history.state(workspace.tab.active) ?? kEmptyState;
-  };
-
-  readonly #onChange = (
-    scope: EditorTab,
-    state: HistoryScopeState
-  ): void => {
-    if (scope === this.#workspace.current?.tab.active) {
-      this._state = state;
-    }
+    const activeHistory = this.#workspace.current?.activeHistory;
+    this._state = activeHistory?.state ?? EMPTY_HISTORY_STATE;
+    this._target = activeHistory?.targetName ?? null;
   };
 
   #run(
     action: HistoryAction
   ): void {
-    const workspace = this.#workspace.current;
-    workspace?.history[action](workspace.tab.active);
+    this.#workspace.current?.activeHistory[action]();
   }
 
   readonly #toggleSteps = (): void => {
@@ -207,7 +182,9 @@ export class HistoryButtons extends LitElement {
     step: string | null,
     count: number
   ): TemplateResult {
-    const title = `${step === null ? verb : `${verb} ${step}`} (${historyShortcutLabel(action)})`;
+    const what = step === null ? verb : `${verb} ${step}`;
+    const where = this._target === null ? what : `${what} in ${this._target}`;
+    const title = `${where} (${historyShortcutLabel(action)})`;
 
     return html`
       <span class="action">

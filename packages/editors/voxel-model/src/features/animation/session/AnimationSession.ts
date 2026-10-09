@@ -14,16 +14,20 @@ import type {
 import type {
   AnimationLibrary,
   LinkedAnimationSet
-} from "./AnimationLibrary.ts";
-import type {
-  AnimationFocus,
-  AnimationFocusStore,
-  AnimationPlayback,
-  AnimationPlaybackStore,
-  TabStore
-} from "../../state/index.ts";
+} from "../library/AnimationLibrary.ts";
+import {
+  animationKey,
+  type AnimationFocus,
+  type AnimationFocusStore,
+  type ClipKey,
+  type AnimationPlayback,
+  type AnimationPlaybackStore,
+  type TabStore
+} from "../../../state/index.ts";
+import { combineReleases } from "../../../shared/combineReleases.ts";
 
 export interface FocusedAnimation {
+  key: ClipKey;
   set: LinkedAnimationSet;
   link: AnimationSetLinkJSON;
   clip: AnimationClipJSON;
@@ -39,6 +43,10 @@ export type AnimationSessionEvents = {
    */
   playhead: () => void;
   active: (active: boolean) => void;
+  /**
+   * Another clip went on show, or Animate opened or closed.
+   */
+  shown: () => void;
 };
 
 export interface AnimationSessionOptions {
@@ -53,7 +61,8 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
   #options: AnimationSessionOptions;
   #focused: FocusedAnimation | null = null;
   #active: boolean;
-  #unsubscribe: Array<() => void>;
+  #shownKey: ClipKey | null;
+  #release: () => void;
 
   constructor(
     options: AnimationSessionOptions
@@ -61,20 +70,25 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
     super();
     this.#options = options;
     const { document, animations, animationFocus, animationPlayback, tab } = options;
-    this.#unsubscribe = [
+    this.#release = combineReleases([
       document.subscribe("change", this.#resolve),
       document.subscribe("reset", this.#resolve),
       animations.subscribe("change", this.#resolve),
       animationFocus.subscribe("change", this.#onFocus),
       animationPlayback.subscribe("change", this.#onPlayhead),
       tab.subscribe("change", this.#onTab)
-    ];
+    ]);
     this.#focused = this.#lookup();
     this.#active = this.active;
+    this.#shownKey = this.#keyOfShown();
   }
 
   get focused(): FocusedAnimation | null {
     return this.#focused;
+  }
+
+  get shownKey(): ClipKey | null {
+    return this.#shownKey;
   }
 
   get active(): boolean {
@@ -135,15 +149,14 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
   }
 
   dispose(): void {
-    for (const unsubscribe of this.#unsubscribe.splice(0)) {
-      unsubscribe();
-    }
+    this.#release();
     this.removeAllListeners();
   }
 
   readonly #resolve = (): void => {
     this.#focused = this.#lookup();
     this.emit("clip");
+    this.#emitShown();
   };
 
   readonly #onFocus = (
@@ -154,6 +167,18 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
     }
     this.#resolve();
   };
+
+  #emitShown(): void {
+    const key = this.#keyOfShown();
+    if (key !== this.#shownKey) {
+      this.#shownKey = key;
+      this.emit("shown");
+    }
+  }
+
+  #keyOfShown(): ClipKey | null {
+    return this.active ? this.#focused?.key ?? null : null;
+  }
 
   readonly #onPlayhead = (): void => {
     this.emit("playhead");
@@ -167,6 +192,7 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
 
     this.#active = active;
     this.emit("active", active);
+    this.#emitShown();
     if (!active && this.playback.playing) {
       this.pause();
     }
@@ -196,6 +222,11 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
       return null;
     }
 
-    return { set, link, clip };
+    return {
+      key: animationKey(setId, clipId),
+      set,
+      link,
+      clip
+    };
   }
 }

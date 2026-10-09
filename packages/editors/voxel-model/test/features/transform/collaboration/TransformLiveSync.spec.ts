@@ -5,6 +5,9 @@ import {
   test
 } from "node:test";
 
+// Import Third-party Dependencies
+import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
+
 // Import Internal Dependencies
 import { TransformLiveSync } from "#src/features/transform/collaboration/TransformLiveSync.ts";
 import { parseBlockTransformJSON } from "#src/features/transform/collaboration/blockTransformCodec.ts";
@@ -12,7 +15,42 @@ import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { createRoomHarness } from "../../../collaboration/roomHarness.ts";
 import { createModelFixture } from "../../../fixtures/model.ts";
 
-function createHarness() {
+// CONSTANTS
+const kWave = "wave";
+const kRun = "run";
+const kShown: BlockTransformJSON = {
+  position: { x: 0, y: 0, z: 0 },
+  pivotOffset: { x: 0, y: 0, z: 0 },
+  size: { x: 1, y: 1, z: 1 },
+  scale: { x: 1, y: 1, z: 1 },
+  rotation: { x: 0, y: 0, z: 0 }
+};
+
+function createView() {
+  const listeners = new Set<() => void>();
+  const view = {
+    shown: null as string | null,
+    key: () => view.shown,
+    shownTransform: () => kShown,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+
+      return () => listeners.delete(listener);
+    },
+    show: (key: string | null) => {
+      view.shown = key;
+      for (const listener of listeners) {
+        listener();
+      }
+    }
+  };
+
+  return view;
+}
+
+function createHarness(
+  view = createView()
+) {
   const room = createRoomHarness();
   room.addPeer("bob");
   const { blocks, addBlock } = createModelFixture();
@@ -20,6 +58,7 @@ function createHarness() {
   const sync = new TransformLiveSync({
     room: room.room,
     blocks,
+    view,
     requestFrame: () => frames.requested++
   });
 
@@ -28,6 +67,7 @@ function createHarness() {
     blocks,
     addBlock,
     sync,
+    view,
     frames
   };
 }
@@ -35,7 +75,8 @@ function createHarness() {
 function publishLive(
   harness: ReturnType<typeof createHarness>,
   uuid: string,
-  x: number
+  x: number,
+  view: string | null = null
 ): void {
   harness.emit("peer-presence", {
     clientId: "bob",
@@ -48,7 +89,8 @@ function publishLive(
           size: { x: 1, y: 1, z: 1 },
           scale: { x: 1, y: 1, z: 1 },
           rotation: { x: 0, y: 0, z: 0 }
-        }
+        },
+        view
       }
     }
   });
@@ -136,7 +178,7 @@ describe("TransformLiveSync", () => {
     harness.sync.dispose();
   });
 
-  test("reverts to the pre-drag baseline once the stream goes silent", (t) => {
+  test("reverts once the stream goes silent", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const harness = createHarness();
     const block = harness.addBlock();
@@ -165,7 +207,7 @@ describe("TransformLiveSync", () => {
     harness.sync.dispose();
   });
 
-  test("reverts to the pre-drag baseline when the peer disconnects mid-drag", () => {
+  test("reverts when the peer disconnects mid-drag", () => {
     const harness = createHarness();
     const block = harness.addBlock();
 
@@ -237,6 +279,87 @@ describe("TransformLiveSync", () => {
       harness.published.map((patch) => liveX(patch.transformLive)),
       [1, 3, null]
     );
+    harness.sync.dispose();
+  });
+
+  test("publishes the shown view with the transform", () => {
+    const harness = createHarness();
+    const block = harness.addBlock();
+
+    harness.view.show(kWave);
+    harness.sync.publish(block.uuid, block.transform);
+
+    assert.deepEqual(harness.published, [{
+      transformLive: { uuid: block.uuid, transform: block.transform, view: kWave }
+    }]);
+    harness.sync.dispose();
+  });
+});
+
+describe("TransformLiveSync clip gating", () => {
+  test("shows a peer keying the clip I pose, and ignores one keying another clip", () => {
+    const view = createView();
+    view.show(kWave);
+    const harness = createHarness(view);
+    const block = harness.addBlock();
+
+    publishLive(harness, block.uuid, 5, kRun);
+    assert.equal(block.position.x, 0);
+
+    publishLive(harness, block.uuid, 6, kWave);
+    assert.equal(block.position.x, 6);
+    harness.sync.dispose();
+  });
+
+  test("ignores a drag whose view is not an animation key", () => {
+    const view = createView();
+    view.show(kWave);
+    const harness = createHarness(view);
+    const block = harness.addBlock();
+
+    publishLive(harness, block.uuid, 5, "walk:wave");
+    assert.equal(block.position.x, 0);
+    harness.sync.dispose();
+  });
+
+  test("ignores rest pose drags while I pose a clip, and clip drags while I show the rest pose", () => {
+    const view = createView();
+    const harness = createHarness(view);
+    const block = harness.addBlock();
+
+    publishLive(harness, block.uuid, 5, kWave);
+    assert.equal(block.position.x, 0);
+
+    view.show(kWave);
+    publishLive(harness, block.uuid, 6);
+    assert.equal(block.position.x, 0);
+    harness.sync.dispose();
+  });
+
+  test("hands a stream back to my own pose when I leave its clip", () => {
+    const view = createView();
+    view.show(kWave);
+    const harness = createHarness(view);
+    const block = harness.addBlock();
+
+    publishLive(harness, block.uuid, 5, kWave);
+    view.show(kRun);
+
+    assert.equal(block.position.x, 0);
+    assert.ok(!isGlowing(block));
+    harness.sync.dispose();
+  });
+
+  test("re-poses a block once a clip drag is cleared, since its key may land on another tick", () => {
+    const view = createView();
+    view.show(kWave);
+    const harness = createHarness(view);
+    const block = harness.addBlock();
+
+    publishLive(harness, block.uuid, 5, kWave);
+    clearLive(harness);
+
+    assert.equal(block.position.x, 0);
     harness.sync.dispose();
   });
 });

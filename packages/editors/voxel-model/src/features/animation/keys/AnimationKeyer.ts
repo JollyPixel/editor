@@ -14,14 +14,15 @@ import {
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import type { AnimationPoser } from "./AnimationPoser.ts";
-import type { TabRecorder } from "../history/index.ts";
-import type { AnimationSession } from "./AnimationSession.ts";
-import type { ModelBlock } from "../../scene/index.ts";
+import type { AnimationPoser } from "../session/AnimationPoser.ts";
+import type { AnimationSession } from "../session/AnimationSession.ts";
+import type { ScopeRecorder } from "../../history/index.ts";
+import type { ModelBlock } from "../../../scene/index.ts";
+import type { ClipKey } from "../../../state/index.ts";
 import type {
   TransformMode,
   TransformTarget
-} from "../transform/index.ts";
+} from "../../transform/index.ts";
 
 // CONSTANTS
 const kAnimatedModes: readonly TransformMode[] = ["pos", "angle", "scale"];
@@ -34,7 +35,7 @@ const kRestSample: Required<AnimationSample> = {
 
 export interface AnimationKeyerOptions {
   document: ModelDocument;
-  history: TabRecorder<"animate">;
+  history: ScopeRecorder<ClipKey>;
   blocks: {
     get(id: string): PosedBlock | undefined;
   };
@@ -93,14 +94,14 @@ export class AnimationKeyer implements TransformTarget {
       return false;
     }
 
-    const { set, link, clip } = focused;
+    const { key, set, link, clip } = focused;
     const path = trackPathOf(link, tree, blockId, clip.tracks.map((track) => track.path));
     const { tick } = session.playback;
     const shown = { ...kRestSample, ...sampleClip(clip, tick).get(path) };
     const delta = poseDelta(rest, pose);
     const frameTick = Math.min(snapToFrame(tick, clip.fps), clip.length);
 
-    return this.#options.history.record("animate", `Key ${tree.get(blockId)?.name ?? ""}`, () => {
+    return this.#options.history.record(key, `Key ${tree.get(blockId)?.name ?? ""}`, () => {
       let keyed = false;
       for (const channel of ANIMATION_CHANNELS) {
         const value = rounded(delta[channel]);

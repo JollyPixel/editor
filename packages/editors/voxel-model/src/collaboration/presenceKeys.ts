@@ -1,4 +1,5 @@
 export const PRESENCE_KEYS = {
+  animateCursor: "animateCursor",
   block: "block",
   blockHover: "blockHover",
   materialEdit: "materialEdit",

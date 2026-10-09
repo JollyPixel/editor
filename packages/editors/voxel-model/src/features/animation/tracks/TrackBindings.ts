@@ -17,11 +17,11 @@ import {
   TRACK_STATE_LABELS,
   type TrackBindingRow
 } from "./trackBindingRows.ts";
-import { ContextMenuController } from "../../shared/ContextMenuController.ts";
+import { ContextMenuController } from "../../../shared/ContextMenuController.ts";
 import {
   EMPTY_MENU,
   menuPointBelow
-} from "../../shared/menuSession.ts";
+} from "../../../shared/menuSession.ts";
 
 export class TrackBindings extends LitElement {
   static override styles = css`

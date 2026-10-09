@@ -8,10 +8,8 @@ import {
   type AnimationKeyJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 
-export interface KeyRef {
-  path: string;
-  tick: number;
-}
+// Import Internal Dependencies
+import type { KeyRef } from "../../../state/index.ts";
 
 export interface CopiedKey {
   path: string;

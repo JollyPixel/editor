@@ -121,8 +121,7 @@ export function setup(
   options: { synced?: boolean; limit?: number; } = {}
 ) {
   let active: Scope | null = "build";
-  const history = new CommandHistory({
-    scopes: ["build", "paint"],
+  const history = new CommandHistory<Scope>({
     limit: options.limit
   });
   const document = new NumbersDocument("numbers", options);
