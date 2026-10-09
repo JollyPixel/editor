@@ -10,10 +10,10 @@ import {
   ADDRESS,
   activeAccount,
   createAccounts,
+  createDatabase,
   createDirectory,
-  createStore,
-  registration,
-  storeWith
+  databaseWith,
+  registration
 } from "../helpers/accounts.ts";
 import { listenAccounts } from "../helpers/accountsServer.ts";
 import type { AccountsRequestError } from "#src/index.ts";
@@ -34,8 +34,8 @@ const kWrongSecretBody = {
 
 describe("master password", () => {
   test("makes the first account give it before it becomes admin", async() => {
-    using store = createStore();
-    const directory = createDirectory(store, {
+    using database = createDatabase();
+    const directory = createDirectory(database, {
       masterPassword: {
         secret: kSecret
       }
@@ -61,8 +61,8 @@ describe("master password", () => {
   });
 
   test("lets later accounts register without it, but not with a wrong one", async() => {
-    using store = storeWith("Alice");
-    const directory = createDirectory(store, {
+    using database = databaseWith("Alice");
+    const directory = createDirectory(database, {
       masterPassword: {
         secret: kSecret
       }
@@ -84,8 +84,8 @@ describe("master password", () => {
   });
 
   test("turns a registration without it into an access request with accessRequests", async() => {
-    using store = storeWith("Alice");
-    const directory = createDirectory(store, {
+    using database = databaseWith("Alice");
+    const directory = createDirectory(database, {
       masterPassword: {
         secret: kSecret,
         accessRequests: true
@@ -104,8 +104,8 @@ describe("master password", () => {
   });
 
   test("sends the master password with a registration and answers its refusals", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store, {
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database, {
       masterPassword: {
         secret: kSecret
       }
@@ -130,10 +130,10 @@ describe("master password", () => {
   });
 
   test("refuses an empty secret", () => {
-    using store = createStore();
+    using database = createDatabase();
 
     assert.throws(
-      () => createAccounts(store, {
+      () => createAccounts(database, {
         masterPassword: {
           secret: ""
         }

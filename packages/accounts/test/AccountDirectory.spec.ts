@@ -12,9 +12,9 @@ import {
   WRONG_PASSWORD,
   activeAccount,
   createDirectory,
+  databaseWith,
   name,
-  registration,
-  storeWith
+  registration
 } from "./helpers/accounts.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
 import { InvalidCredentialsError } from "#src/auth/errors/InvalidCredentialsError.ts";
@@ -60,9 +60,9 @@ describe("AccountDirectory sign-in", () => {
 
 describe("AccountDirectory changes", () => {
   test("emits changed after a registration, a role change and a removal", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const directory = createDirectory(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    const directory = createDirectory(database);
     let changes = 0;
     directory.on("changed", () => {
       changes++;
@@ -76,9 +76,9 @@ describe("AccountDirectory changes", () => {
   });
 
   test("emits nothing for a refused role change", () => {
-    using store = storeWith("Alice", "Bob");
-    const [alice] = store;
-    const directory = createDirectory(store);
+    using database = databaseWith("Alice", "Bob");
+    const [alice] = database.accounts;
+    const directory = createDirectory(database);
     let changes = 0;
     directory.on("changed", () => {
       changes++;
@@ -91,28 +91,30 @@ describe("AccountDirectory changes", () => {
     assert.equal(changes, 0);
   });
 
-  test("revokes the account on a role change and a removal", () => {
-    using store = storeWith("Alice", "Bob", "Carol");
-    const [alice, bob, carol] = store;
-    const directory = createDirectory(store);
+  test("revokes the account on a role change, a removal and an ownership transfer", () => {
+    using database = databaseWith("Alice", "Bob", "Carol", "Dave");
+    const [alice, bob, carol, dave] = database.accounts;
+    const directory = createDirectory(database);
     const revoked: string[] = [];
     const stop = directory.watchRevocations((accountId) => revoked.push(accountId));
 
     directory.assignRole(alice.id, name("bob"), "member");
     directory.remove(alice.id, name("bob"));
+    const owner = directory.transferOwnership(alice.id, name("dave"));
     stop();
     directory.remove(alice.id, name("carol"));
 
-    assert.deepEqual(revoked, [bob.id, bob.id]);
+    assert.deepEqual(revoked, [bob.id, bob.id, dave.id]);
+    assert.equal(owner.owner, true);
     assert.equal(directory.account(carol.id), null);
   });
 });
 
 describe("AccountDirectory.replaceAvatar", () => {
   test("encodes the image, stores it and emits changed", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const directory = createDirectory(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    const directory = createDirectory(database);
     let changes = 0;
     directory.on("changed", () => {
       changes++;
@@ -129,9 +131,9 @@ describe("AccountDirectory.replaceAvatar", () => {
   });
 
   test("refuses an undecodable image without emitting", async() => {
-    using store = storeWith("Alice");
-    const [alice] = store;
-    const directory = createDirectory(store);
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    const directory = createDirectory(database);
     let changes = 0;
     directory.on("changed", () => {
       changes++;

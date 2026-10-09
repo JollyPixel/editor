@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { AccountsError } from "../../account/errors/AccountsError.ts";
+import { AccountsError } from "./AccountsError.ts";
 
 export class UsernameTakenError extends AccountsError {
   constructor(

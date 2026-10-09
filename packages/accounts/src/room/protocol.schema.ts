@@ -12,24 +12,28 @@ import {
   ACCOUNTS_DENY,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
-  ACCOUNTS_ROSTER
+  ACCOUNTS_ROSTER,
+  ACCOUNTS_TRANSFER_OWNERSHIP
 } from "./protocol.ts";
 
 // CONSTANTS
 const kString = { type: "string" } as const;
+const kBoolean = { type: "boolean" } as const;
 const kRosterEntrySchema = {
   type: "object",
   properties: {
     id: kString,
     username: kString,
     role: kString,
+    owner: kBoolean,
     avatar: kString,
-    online: { type: "boolean" }
+    online: kBoolean
   },
   required: [
     "id",
     "username",
     "role",
+    "owner",
     "online"
   ]
 } as const;
@@ -95,6 +99,19 @@ export const accountsCommandProtocol = new MessageProtocol(
         type: "object",
         properties: {
           type: { const: ACCOUNTS_REMOVE },
+          requestId: kString,
+          username: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "username"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: ACCOUNTS_TRANSFER_OWNERSHIP },
           requestId: kString,
           username: kString
         },

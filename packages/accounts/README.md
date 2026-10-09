@@ -82,7 +82,7 @@ const roster = AccountsRoster.join(client);
 ## 📚 API
 
 - [Accounts](./docs/Accounts.md): usernames, roles and the stored accounts.
-- [Server](./docs/Server.md): `Accounts`, `AccountStore`, `AccountRoles`, `SessionCookie`, the HTTP routes and the `accounts` room.
+- [Server](./docs/Server.md): `Accounts`, `AccountsDatabase`, `AccountRoles`, `SessionCookie`, the HTTP routes and the `accounts` room.
 - [Client](./docs/Client.md): `AccountsClient`, `prehashPassword` and `AccountsRoster`.
 
 > [!NOTE]

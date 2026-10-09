@@ -7,6 +7,7 @@ import type { PasswordHash } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import type { Account } from "#src/account/Account.ts";
+import { AccountEntity } from "#src/account/AccountEntity.ts";
 import { Username } from "#src/account/Username.ts";
 import {
   AccountDirectory,
@@ -23,7 +24,7 @@ import { SessionToken } from "#src/session/SessionToken.ts";
 import { SqliteDatabase } from "#src/store/SqliteDatabase.ts";
 import {
   Accounts,
-  AccountStore,
+  AccountsDatabase,
   AccountRoles,
   DEFAULT_SESSION_TTL_MS,
   type AccountsOptions
@@ -73,73 +74,92 @@ export async function activeAccount(
   return result.account;
 }
 
-export function createStore(
-  roles: AccountRoles = ROLES
-): AccountStore {
-  return new AccountStore(
+export function createDatabase(): AccountsDatabase {
+  return new AccountsDatabase(
     new SqliteDatabase(
       new DatabaseSync(":memory:")
-    ),
-    roles
+    )
   );
 }
 
-export function storeWith(
+export function insertAccount(
+  database: AccountsDatabase,
+  account: AccountEntity
+): AccountEntity {
+  database.accounts.insert(
+    account,
+    name(account.username),
+    FIXED_HASH
+  );
+
+  return account;
+}
+
+export function databaseWith(
   ...usernames: string[]
-): AccountStore {
-  const store = createStore();
+): AccountsDatabase {
+  const database = createDatabase();
   for (const username of usernames) {
-    store.register(name(username), FIXED_HASH);
+    insertAccount(
+      database,
+      database.accounts.size === 0 ?
+        AccountEntity.claim(name(username)) :
+        AccountEntity.register(name(username), ROLES.defaultRole)
+    );
   }
 
-  return store;
+  return database;
 }
 
-export function storeWithRetiredRole(): AccountStore {
-  const db = new SqliteDatabase(
-    new DatabaseSync(":memory:")
+export function requestAccess(
+  database: AccountsDatabase,
+  username: string
+): AccountEntity {
+  return insertAccount(
+    database,
+    AccountEntity.request(name(username), ROLES.defaultRole)
   );
-  const before = new AccountStore(db, new AccountRoles({
-    roles: [
-      "editor",
-      "spectator"
-    ],
-    defaultRole: "spectator"
-  }));
-  const alice = before.register(name("Alice"), FIXED_HASH);
-  before.register(name("Bob"), FIXED_HASH);
-  before.assignRole(alice.id, name("bob"), "editor");
+}
 
-  return new AccountStore(db, ROLES);
+export function databaseWithRetiredRole(): AccountsDatabase {
+  const database = databaseWith("Alice");
+  insertAccount(
+    database,
+    AccountEntity.register(name("Bob"), "editor")
+  );
+
+  return database;
 }
 
 export function createDirectory(
-  store: AccountStore = createStore(),
-  options: Omit<AccountDirectoryOptions, "store" | "avatarUrl"> = {}
+  database: AccountsDatabase = createDatabase(),
+  options: Omit<AccountDirectoryOptions, "database" | "roles" | "avatarUrl"> = {}
 ): AccountDirectory {
   return new AccountDirectory({
-    store,
+    database,
+    roles: ROLES,
     avatarUrl: (accountId, hash) => avatarPath(ACCOUNTS_URL_PATH, accountId, hash),
     ...options
   });
 }
 
 export function createAccounts(
-  store: AccountStore = createStore(),
-  options: Omit<AccountsOptions, "store"> = {}
+  database: AccountsDatabase = createDatabase(),
+  options: Omit<AccountsOptions, "database" | "roles"> = {}
 ): Accounts {
   return new Accounts({
-    store,
+    database,
+    roles: ROLES,
     ...options
   });
 }
 
 export function sessionFor(
-  store: AccountStore,
+  database: AccountsDatabase,
   accountId: string
 ): string {
   const token = SessionToken.mint();
-  store.openSession(token, accountId, Date.now() + DEFAULT_SESSION_TTL_MS);
+  database.sessions.open(token, accountId, Date.now() + DEFAULT_SESSION_TTL_MS);
 
   return token.value;
 }

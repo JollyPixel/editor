@@ -5,7 +5,7 @@ import {
 } from "node:crypto";
 
 // Import Internal Dependencies
-import type { AccountStatus } from "../store/StoredAccount.ts";
+import type { AccountStatus } from "../account/AccountEntity.ts";
 import { InvalidMasterPasswordError } from "./errors/InvalidMasterPasswordError.ts";
 import { MasterPasswordRequiredError } from "./errors/MasterPasswordRequiredError.ts";
 

@@ -9,7 +9,7 @@ import type {
 import { AccountDirectory } from "./AccountDirectory.ts";
 import type { AccountRoles } from "./auth/AccountRoles.ts";
 import type { AccountsThrottleOptions } from "./auth/AccountsThrottle.ts";
-import { AccountStore } from "./store/AccountStore.ts";
+import { AccountsDatabase } from "./store/AccountsDatabase.ts";
 import { SessionCookie } from "./session/SessionCookie.ts";
 import { CookieSessions } from "./session/CookieSessions.ts";
 import { AccountsApi } from "./http/accounts/AccountsApi.ts";
@@ -29,7 +29,8 @@ import type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
 export type AccountsHandler = HttpHandler;
 
 export interface AccountsOptions {
-  store: AccountStore;
+  database: AccountsDatabase;
+  roles: AccountRoles;
   /**
    * @default new SessionCookie()
    */
@@ -64,8 +65,7 @@ export interface AccountsOptions {
   maxAccessRequests?: number;
 }
 
-export interface AccountsOpenOptions extends Omit<AccountsOptions, "store"> {
-  roles: AccountRoles;
+export interface AccountsOpenOptions extends Omit<AccountsOptions, "database"> {
   /**
    * @default IN_MEMORY_LOCATION
    */
@@ -77,14 +77,13 @@ export class Accounts implements AuthenticationProvider, Disposable {
     options: AccountsOpenOptions
   ): Promise<Accounts> {
     const {
-      roles,
       location,
       ...accountsOptions
     } = options;
 
     return new Accounts({
       ...accountsOptions,
-      store: await AccountStore.open(roles, location)
+      database: await AccountsDatabase.open(location)
     });
   }
 
@@ -93,7 +92,7 @@ export class Accounts implements AuthenticationProvider, Disposable {
   readonly handler: AccountsHandler;
   readonly extension: AccountsExtension;
 
-  #store: AccountStore;
+  #database: AccountsDatabase;
   #directory: AccountDirectory;
   #sessions: CookieSessions;
 
@@ -101,9 +100,11 @@ export class Accounts implements AuthenticationProvider, Disposable {
     options: AccountsOptions
   ) {
     const prefix = options.path ?? ACCOUNTS_URL_PATH;
-    this.#store = options.store;
+    this.#database = options.database;
+    this.roles = options.roles;
     this.#directory = new AccountDirectory({
-      store: options.store,
+      database: options.database,
+      roles: options.roles,
       avatarUrl: (accountId, hash) => avatarPath(prefix, accountId, hash),
       throttle: options.throttle,
       maxConcurrentHashes: options.maxConcurrentHashes,
@@ -111,11 +112,10 @@ export class Accounts implements AuthenticationProvider, Disposable {
       maxAccessRequests: options.maxAccessRequests
     });
     this.#sessions = new CookieSessions(
-      options.store,
+      options.database.sessions,
       this.#directory,
       options.cookie ?? new SessionCookie()
     );
-    this.roles = options.store.roles;
     this.cookie = this.#sessions.cookie;
     this.handler = new HttpRouter({
       prefix,
@@ -153,6 +153,6 @@ export class Accounts implements AuthenticationProvider, Disposable {
 
   [Symbol.dispose](): void {
     this.extension.dispose();
-    this.#store.close();
+    this.#database.close();
   }
 }

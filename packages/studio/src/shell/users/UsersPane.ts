@@ -11,12 +11,11 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import {
-  ADMIN_ROLE,
-  type AccessRequest,
-  type Account,
-  type AccountsRoster,
-  type RosterEntry
+import type {
+  AccessRequest,
+  Account,
+  AccountsRoster,
+  RosterEntry
 } from "@jolly-pixel/accounts";
 import {
   SubscriptionController,
@@ -68,10 +67,6 @@ export class UsersPane extends LitElement {
     this.#roster.attach(roster);
   }
 
-  get #admin(): boolean {
-    return this.self?.role === ADMIN_ROLE;
-  }
-
   protected override createRenderRoot(): HTMLElement {
     return this;
   }
@@ -87,7 +82,7 @@ export class UsersPane extends LitElement {
         @jolly-toggle-expand=${this.#onToggleExpand}
         @jolly-context-request=${this.#onContextRequest}
       ></jolly-tree>
-      ${this.#admin ? html`
+      ${model.viewerIsAdmin ? html`
         <jolly-context-menu
           label="User actions"
           @jolly-context-action=${this.#onContextAction}
@@ -136,15 +131,15 @@ export class UsersPane extends LitElement {
     event: HTMLElementEventMap["jolly-context-request"]
   ): void => {
     const { id, x, y } = event.detail;
+    const model = this.#model();
     if (
-      !this.#admin ||
+      !model.viewerIsAdmin ||
       this._menu === null ||
       id === null
     ) {
       return;
     }
 
-    const model = this.#model();
     const target = model.target(id);
     if (target === undefined) {
       return;
@@ -179,6 +174,9 @@ export class UsersPane extends LitElement {
     else if (actionId === "remove") {
       void this.#remove(entry);
     }
+    else if (actionId === "transfer-ownership") {
+      void this.#transferOwnership(entry);
+    }
   }
 
   #onRequestAction(
@@ -205,6 +203,20 @@ export class UsersPane extends LitElement {
     });
     if (confirmed) {
       this.#run(this.#roster.attached.remove(entry.username));
+    }
+  }
+
+  async #transferOwnership(
+    entry: RosterEntry
+  ): Promise<void> {
+    const confirmed = await showConfirm({
+      title: `Make "${entry.username}" the owner?`,
+      message: "They become an admin, and only they can give ownership back. You stay an admin.",
+      confirmLabel: "Transfer",
+      danger: true
+    });
+    if (confirmed) {
+      this.#run(this.#roster.attached.transferOwnership(entry.username));
     }
   }
 

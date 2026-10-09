@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import {
   activeAccount,
   createAccounts,
-  createStore
+  createDatabase
 } from "../../helpers/accounts.ts";
 import { listenAccounts } from "../../helpers/accountsServer.ts";
 import {
@@ -39,8 +39,8 @@ function postChunked(
 
 describe("AccountsApi", () => {
   test("keeps the session in an HttpOnly cookie, never in the body", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { fetch: browserFetch } = server.browser();
 
     const response = await browserFetch(new URL("register", server.url), {
@@ -63,8 +63,8 @@ describe("AccountsApi", () => {
   });
 
   test("registers, resolves and closes a session", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { client, cookies } = server.browser();
 
     const account = await activeAccount(
@@ -81,8 +81,8 @@ describe("AccountsApi", () => {
   });
 
   test("logs in with the password the account registered with", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const registered = await activeAccount(
       server.browser().client.register("Alice", "correct horse")
     );
@@ -102,8 +102,8 @@ describe("AccountsApi", () => {
   });
 
   test("reads the cookie it is configured with", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store, {
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database, {
       cookie: new SessionCookie({ name: "project_session" })
     }));
     const { client, cookies } = server.browser();
@@ -115,8 +115,8 @@ describe("AccountsApi", () => {
   });
 
   test("refuses a request from another origin", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const { client, fetch: browserFetch } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -131,8 +131,8 @@ describe("AccountsApi", () => {
   });
 
   test("refuses a taken username", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     await server.browser().client.register("Alice", "correct horse");
 
     await assert.rejects(
@@ -146,8 +146,8 @@ describe("AccountsApi", () => {
     async function cookieFrom(
       proxyHops: number
     ): Promise<string> {
-      using store = createStore();
-      await using server = await listenAccounts(createAccounts(store, {
+      using database = createDatabase();
+      await using server = await listenAccounts(createAccounts(database, {
         proxyHops
       }));
       const response = await fetch(new URL("register", server.url), {
@@ -170,8 +170,8 @@ describe("AccountsApi", () => {
   });
 
   test("refuses a password that is not a pre-hashed digest", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
 
     const response = await fetch(new URL("register", server.url), {
       method: "POST",
@@ -186,12 +186,12 @@ describe("AccountsApi", () => {
 
     assert.equal(response.status, 400);
     assert.equal((await response.json()).code, "invalid-password");
-    assert.equal(store.size, 0);
+    assert.equal(database.accounts.size, 0);
   });
 
   test("refuses a body carrying prototype keys", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const credentials = `"username": "Alice", "password": "${"a".repeat(43)}"`;
 
     for (const pollution of [
@@ -209,12 +209,12 @@ describe("AccountsApi", () => {
       assert.equal(response.status, 400);
       assert.equal((await response.json()).code, "invalid-request");
     }
-    assert.equal(store.size, 0);
+    assert.equal(database.accounts.size, 0);
   });
 
   test("refuses a body that is too large or has no length", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
     const url = new URL("login", server.url);
 
     const large = await fetch(url, {
@@ -227,8 +227,8 @@ describe("AccountsApi", () => {
   });
 
   test("refuses the wrong method and passes other routes on", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
 
     const wrongMethod = await fetch(new URL("register", server.url));
     assert.equal(wrongMethod.status, 405);
@@ -238,13 +238,13 @@ describe("AccountsApi", () => {
   });
 
   test("checks the password length before sending anything", async() => {
-    using store = createStore();
-    await using server = await listenAccounts(createAccounts(store));
+    using database = createDatabase();
+    await using server = await listenAccounts(createAccounts(database));
 
     await assert.rejects(
       server.browser().client.register("Alice", "short"),
       InvalidPasswordError
     );
-    assert.equal(store.size, 0);
+    assert.equal(database.accounts.size, 0);
   });
 });

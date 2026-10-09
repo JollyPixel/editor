@@ -4,7 +4,7 @@ Everything here is imported from `@jolly-pixel/accounts/node`.
 
 ## `Accounts`
 
-The accounts of one server: the store, the roles and the session cookie, with what a host plugs into its HTTP and network servers.
+The accounts of one server: the database, the roles and the session cookie, with what a host plugs into its HTTP and network servers.
 
 ```ts
 const accounts = await Accounts.open({
@@ -21,11 +21,12 @@ const accounts = await Accounts.open({
 
 ### `Accounts.open(options)`
 
-Opens an `AccountStore` with `roles` at `location` (in memory by default, see `AccountStore.open`) and builds the accounts over it. The other options are those of the constructor.
+Opens an `AccountsDatabase` at `location` (in memory by default, see [`AccountsDatabase.open`](#accountsdatabaseopenlocation)) and builds the accounts over it. The other options are those of the constructor.
 
 ### `new Accounts(options)`
 
-- `store`: an open `AccountStore`. Disposing the accounts closes it.
+- `database`: an open `AccountsDatabase`. Disposing the accounts closes it.
+- `roles`: the `AccountRoles` accounts may hold.
 - `cookie`: a `SessionCookie`. Defaults to `new SessionCookie()`.
 - `path`: URL prefix of the HTTP routes, with a trailing slash. Defaults to `"/api/accounts/"`.
 - `throttle.attempts`: failed logins allowed per username and per client address within `throttle.windowMs`. Defaults to 10.
@@ -33,7 +34,7 @@ Opens an `AccountStore` with `roles` at `location` (in memory by default, see `A
 - `throttle.windowMs`: defaults to 15 minutes.
 - `proxyHops`: reverse proxies in front of the server. Defaults to 0, which ignores `X-Forwarded-*` headers. With `n`, the server lists the entries of `X-Forwarded-For` followed by the socket address, and trusts the one `n` places before the socket address as the client address. It reads `X-Forwarded-Proto` the same way, with the socket scheme last, and the request counts as HTTPS when the trusted entry is `https`. Each proxy must append to both headers, or clients can pick the address they are throttled under.
 - `maxConcurrentHashes`: `scrypt` hashes and checks running at once. Further ones wait their turn, which keeps libuv threads free for file I/O. Defaults to 2.
-- `masterPassword.secret`: a secret the first account must give to register, while the store is `unclaimed`. Without it, anyone who reaches the server first becomes admin. A wrong secret is refused even when none was needed, and both checks run before hashing. Throws a `RangeError` when empty.
+- `masterPassword.secret`: a secret the first account must give to register, while the database has no account. Without it, anyone who reaches the server first becomes admin. A wrong secret is refused even when none was needed, and both checks run before hashing. Throws a `RangeError` when empty.
 - `masterPassword.accessRequests`: a later registration without the secret creates an access request, a pending account that an admin approves or denies in the [`accounts` room](#accounts-room). It cannot sign in until approved. Defaults to `false`.
 - `maxAccessRequests`: access requests allowed to wait at once. A request past it is refused with `AccessRequestsFullError`. Defaults to 20.
 
@@ -71,109 +72,27 @@ The [`accounts` room](#accounts-room), to register on the network server.
 
 ### `roles`
 
-The `AccountRoles` of the store.
+The `AccountRoles` the accounts were built with.
 
 ### `cookie`
 
 The `SessionCookie` the sessions live in.
 
-## `AccountStore`
+## `AccountsDatabase`
 
-Users and their sessions in one SQLite database (`node:sqlite`). It holds the `AccountRoles` and enforces every rule about them:
+The SQLite database (`node:sqlite`) that holds the accounts, their sessions and their avatars. `Accounts` reads and writes it: a host only opens it.
 
-- The first account gets `"admin"`, the others the default role.
-- Only an admin changes a role, approves or denies an access request, or removes an account, and only to a declared role.
-- An access request keeps the default role until it is approved. `assignRole` and `remove` refuse it like an unknown account, and `approve` and `deny` refuse anything else.
-- The last admin can be neither demoted nor removed.
-- A stored role that is no longer declared reads as the default one.
-
-Its methods return a [`StoredAccount`](#storedaccount): an `Account` whose `avatar` path is replaced by `avatarHash`, the hash of the stored avatar or `null`. `Accounts` turns the hash into the path. Sessions are opened, read and closed by `Accounts`, through its `cookie`.
-
-### `AccountStore.open(roles, location?)`
+### `AccountsDatabase.open(location?)`
 
 Opens or creates the database at `location`, creating its directory. `":memory:"` (`IN_MEMORY_LOCATION`, the default) keeps everything in memory. File databases use WAL.
 
 On POSIX systems, a directory it creates gets mode `0700`, and the database file is set to `0600` on every open, even when it already exists. SQLite gives the WAL and shared-memory files the mode of the database.
 
-### `roles`
-
-The `AccountRoles` it was opened with.
-
-### `register(username, hash)`
-
-Inserts an account with `hash`, a `PasswordHash` from `hashPassword`. The first account of the database gets `"admin"`, decided inside the insert transaction. Others get `roles.defaultRole`. Throws `UsernameTakenError` when another account has the same `username.key`.
-
-### `requestAccess(username, hash, limit)`
-
-Inserts a pending account with `hash` and `roles.defaultRole`. Throws `AccessRequestsFullError` when `limit` accounts are already pending, and `UsernameTakenError` like `register`. Both checks run inside the insert transaction.
-
-### `approve(actorId, username, role)`
-
-Makes the pending account named `username` active with `role`, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, when `role` is not declared, or when no access request has that name.
-
-### `deny(actorId, username)`
-
-Deletes the access request named `username` and frees the username, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin or when no access request has that name.
-
-### `credentials(username)`
-
-The account and its `PasswordHash`, or `null`.
-
-### `accountById(id)`
-
-The account, or `null`.
-
-### `assignRole(actorId, username, role)`
-
-Gives `role` to the account named `username`, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, when `role` is not declared, for an unknown account or an access request, or when it would demote the last admin.
-
-### `remove(actorId, username)`
-
-Deletes the account and its sessions, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, for an unknown account or an access request, or for the last admin.
-
-### `replaceAvatar(accountId, avatar)`
-
-Stores `avatar`, a `{ hash, bytes }`, in place of the account's previous one and returns the account. Throws `AccountChangeRefusedError` for an unknown account. Avatars live in their own table and are deleted with their account.
-
-### `avatar(accountId)`
-
-The stored `{ hash, bytes }`, or `null`.
-
-### `size`
-
-The number of accounts, pending ones included.
-
-### `unclaimed`
-
-`true` while the store has no account. The next registration becomes admin.
-
-### `[Symbol.iterator]()`
-
-The accounts, pending ones included, oldest first.
+A database written before ownership existed gets its oldest active admin as owner when it opens.
 
 ### `close()`
 
-Closes the database. The store is also `Disposable`.
-
-## `StoredAccount`
-
-An immutable account as the store keeps it, with readonly `id`, `username`, `role`, `status` and `avatarHash` fields. `status` is `"active"`, or `"pending"` for an access request.
-
-### `pending`
-
-`true` while the account awaits approval.
-
-### `isAdmin`
-
-`true` when `role` is `"admin"` and the account is active.
-
-### `withRole(role)` and `withAvatar(avatarHash)`
-
-A copy with the given role or avatar hash.
-
-### `approved(role)`
-
-An active copy with `role`.
+Closes the database. It is also `Disposable`.
 
 ## `AvatarImage`
 
@@ -275,7 +194,7 @@ Every member receives `accounts:roster` on join and again whenever a member join
 {
   type: "accounts:roster",
   roles: string[],
-  accounts: { id: string; username: string; role: string; avatar?: string; online: boolean; }[],
+  accounts: { id: string; username: string; role: string; owner: boolean; avatar?: string; online: boolean; }[],
   requests: { id: string; username: string; }[]
 }
 ```
@@ -286,5 +205,6 @@ Commands carry a `requestId` and are answered with `accounts:applied` or `accoun
 - `accounts:approve` with `username` and `role`, for an access request
 - `accounts:deny` with `username`, which deletes an access request and frees its username
 - `accounts:remove` with `username`
+- `accounts:transfer-ownership` with `username`, from the owner only
 
-The room answers commands only when the sender's account is an admin now, whatever role its socket connected with and whatever the rights table allows. Assigning a role or removing an account [revokes](#watchrevocationslistener) its open connections.
+The room answers commands only when the sender's account is an admin now, or the owner for a transfer, whatever role its socket connected with and whatever the rights table allows. A sender who is not is refused before the target is looked up. `role` must be declared. `assign-role`, `remove` and `transfer-ownership` refuse an access request like an unknown account, `approve` and `deny` refuse anything but an access request, and the owner's role cannot be changed nor the owner removed. Assigning a role or removing an account [revokes](#watchrevocationslistener) its open connections, and a transfer revokes those of the new owner.

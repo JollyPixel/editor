@@ -14,6 +14,7 @@ export const ACCOUNTS_ASSIGN_ROLE = "accounts:assign-role";
 export const ACCOUNTS_APPROVE = "accounts:approve";
 export const ACCOUNTS_DENY = "accounts:deny";
 export const ACCOUNTS_REMOVE = "accounts:remove";
+export const ACCOUNTS_TRANSFER_OWNERSHIP = "accounts:transfer-ownership";
 export const ACCOUNTS_ROSTER = "accounts:roster";
 export const ACCOUNTS_APPLIED = "accounts:applied";
 export const ACCOUNTS_REJECTED = "accounts:rejected";

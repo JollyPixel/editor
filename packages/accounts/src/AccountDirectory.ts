@@ -15,7 +15,10 @@ import type {
   AccessRequest,
   Account
 } from "./account/Account.ts";
+import { AccountEntity } from "./account/AccountEntity.ts";
 import type { Username } from "./account/Username.ts";
+import { AccountChangeRefusedError } from "./account/errors/AccountChangeRefusedError.ts";
+import { UsernameTakenError } from "./account/errors/UsernameTakenError.ts";
 import type { AccountRoles } from "./auth/AccountRoles.ts";
 import {
   AccountsThrottle,
@@ -30,12 +33,12 @@ import {
   MasterPassword,
   type MasterPasswordOptions
 } from "./registration/MasterPassword.ts";
+import { AccessRequestsFullError } from "./registration/errors/AccessRequestsFullError.ts";
 import { AccountPendingError } from "./registration/errors/AccountPendingError.ts";
 import type { RegisterOptions } from "./registration/RegisterOptions.ts";
 import type { RegistrationResult } from "./registration/RegistrationResult.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
-import type { AccountStore } from "./store/AccountStore.ts";
-import type { StoredAccount } from "./store/StoredAccount.ts";
+import type { AccountsDatabase } from "./store/AccountsDatabase.ts";
 
 // CONSTANTS
 const kDefaultMaxConcurrentHashes = 2;
@@ -56,7 +59,8 @@ export type AvatarUrl = (
 ) => string;
 
 export interface AccountDirectoryOptions {
-  store: AccountStore;
+  database: AccountsDatabase;
+  roles: AccountRoles;
   avatarUrl: AvatarUrl;
   throttle?: AccountsThrottleOptions;
   maxConcurrentHashes?: number;
@@ -70,7 +74,9 @@ export type AccountDirectoryEventMap = {
 
 export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   implements Iterable<Account> {
-  #store: AccountStore;
+  readonly roles: AccountRoles;
+
+  #database: AccountsDatabase;
   #avatarUrl: AvatarUrl;
   #throttle: AccountsThrottle;
   #hashes: Mutex;
@@ -84,7 +90,8 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   ) {
     super();
 
-    this.#store = options.store;
+    this.#database = options.database;
+    this.roles = options.roles;
     this.#avatarUrl = options.avatarUrl;
     this.#throttle = new AccountsThrottle(options.throttle);
     this.#hashes = new Mutex({
@@ -97,10 +104,6 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       kDefaultMaxAccessRequests;
   }
 
-  get roles(): AccountRoles {
-    return this.#store.roles;
-  }
-
   async register(
     registration: Registration,
     address: string
@@ -110,22 +113,18 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     await this.#throttle.reserveRegistration(address);
     const status = this.#masterPassword?.admit(
       options.masterPassword,
-      this.#store.unclaimed
+      this.#database.accounts.size === 0
     ) ?? "active";
     const hash = await this.#hashing(
       () => hashPassword(password.value)
     );
     if (status === "pending") {
-      this.#store.requestAccess(
-        username,
-        hash,
-        this.#maxAccessRequests
-      );
+      this.#requestAccess(username, hash);
       this.emit("changed");
 
       return { status };
     }
-    const account = this.#store.register(username, hash);
+    const account = this.#register(username, hash);
     this.emit("changed");
 
     return {
@@ -141,7 +140,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     const { username, password } = credentials;
 
     await this.#throttle.reserveLogin(username, address);
-    const stored = this.#store.credentials(username);
+    const stored = this.#database.accounts.credentials(username);
     const hash = stored?.hash ?? await this.#dummy();
     const valid = await this.#hashing(
       () => verifyPassword(password.value, hash)
@@ -163,7 +162,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   account(
     id: string
   ): Account | null {
-    const account = this.#store.accountById(id);
+    const account = this.#database.accounts.byId(id);
 
     return account === null ? null : this.#account(account);
   }
@@ -171,7 +170,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   isAdmin(
     accountId: string
   ): boolean {
-    return this.#store.accountById(accountId)?.isAdmin === true;
+    return this.#database.accounts.byId(accountId)?.isAdmin === true;
   }
 
   assignRole(
@@ -179,11 +178,16 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     username: Username,
     role: string
   ): Account {
-    const account = this.#store.assignRole(
-      actorId,
-      username,
-      role
-    );
+    const account = this.#database.transaction(() => {
+      this.#actor(actorId).assertAdmin();
+      this.#assertDeclared(role);
+      const target = this.#existingAccount(username);
+      target.assertNotOwner();
+      const changed = target.withRole(role);
+      this.#database.accounts.save(changed);
+
+      return changed;
+    });
     this.emit("changed");
     this.revoke(account.id);
 
@@ -195,11 +199,14 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     username: Username,
     role: string
   ): Account {
-    const account = this.#store.approve(
-      actorId,
-      username,
-      role
-    );
+    const account = this.#database.transaction(() => {
+      this.#actor(actorId).assertAdmin();
+      this.#assertDeclared(role);
+      const approved = this.#existingRequest(username).approved(role);
+      this.#database.accounts.save(approved);
+
+      return approved;
+    });
     this.emit("changed");
 
     return this.#account(account);
@@ -209,7 +216,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     actorId: string,
     username: Username
   ): void {
-    this.#store.deny(actorId, username);
+    this.#database.transaction(() => {
+      this.#actor(actorId).assertAdmin();
+      this.#database.accounts.delete(
+        this.#existingRequest(username).id
+      );
+    });
     this.emit("changed");
   }
 
@@ -217,14 +229,37 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     actorId: string,
     username: Username
   ): Account {
-    const account = this.#store.remove(
-      actorId,
-      username
-    );
+    const account = this.#database.transaction(() => {
+      this.#actor(actorId).assertAdmin();
+      const removed = this.#existingAccount(username);
+      removed.assertNotOwner();
+      this.#database.accounts.delete(removed.id);
+
+      return removed;
+    });
     this.emit("changed");
     this.revoke(account.id);
 
     return this.#account(account);
+  }
+
+  transferOwnership(
+    actorId: string,
+    username: Username
+  ): Account {
+    const owner = this.#database.transaction(() => {
+      this.#actor(actorId).assertOwner();
+      const target = this.#existingAccount(username);
+      target.assertNotOwner();
+      const transferred = target.promotedToOwner();
+      this.#database.accounts.save(transferred);
+
+      return transferred;
+    });
+    this.emit("changed");
+    this.revoke(owner.id);
+
+    return this.#account(owner);
   }
 
   async replaceAvatar(
@@ -232,10 +267,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     image: Uint8Array
   ): Promise<Account> {
     const avatar = await AvatarImage.encode(image);
-    const account = this.#store.replaceAvatar(
-      accountId,
-      avatar
-    );
+    const account = this.#database.transaction(() => {
+      const changed = this.#actor(accountId).withAvatar(avatar.hash);
+      this.#database.avatars.replace(accountId, avatar);
+
+      return changed;
+    });
     this.emit("changed");
 
     return this.#account(account);
@@ -244,7 +281,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   avatar(
     accountId: string
   ): StoredAvatar | null {
-    return this.#store.avatar(accountId);
+    return this.#database.avatars.find(accountId);
   }
 
   revoke(
@@ -266,7 +303,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   }
 
   * [Symbol.iterator](): IterableIterator<Account> {
-    for (const account of this.#store) {
+    for (const account of this.#database.accounts) {
       if (!account.pending) {
         yield this.#account(account);
       }
@@ -274,7 +311,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   }
 
   * requests(): IterableIterator<AccessRequest> {
-    for (const account of this.#store) {
+    for (const account of this.#database.accounts) {
       if (account.pending) {
         yield {
           id: account.id,
@@ -284,13 +321,99 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     }
   }
 
+  #register(
+    username: Username,
+    hash: PasswordHash
+  ): AccountEntity {
+    return this.#database.transaction(() => {
+      this.#assertAvailable(username);
+      const account = this.#database.accounts.size === 0 ?
+        AccountEntity.claim(username) :
+        AccountEntity.register(username, this.roles.defaultRole);
+      this.#database.accounts.insert(account, username, hash);
+
+      return account;
+    });
+  }
+
+  #requestAccess(
+    username: Username,
+    hash: PasswordHash
+  ): void {
+    this.#database.transaction(() => {
+      if (this.#database.accounts.pendingSize >= this.#maxAccessRequests) {
+        throw new AccessRequestsFullError(this.#maxAccessRequests);
+      }
+      this.#assertAvailable(username);
+      this.#database.accounts.insert(
+        AccountEntity.request(username, this.roles.defaultRole),
+        username,
+        hash
+      );
+    });
+  }
+
+  #assertAvailable(
+    username: Username
+  ): void {
+    if (this.#database.accounts.named(username) !== null) {
+      throw new UsernameTakenError(username.value);
+    }
+  }
+
+  #actor(
+    id: string
+  ): AccountEntity {
+    const account = this.#database.accounts.byId(id);
+    if (account === null) {
+      throw new AccountChangeRefusedError(`no account has the id "${id}"`);
+    }
+
+    return account;
+  }
+
+  #existingAccount(
+    username: Username
+  ): AccountEntity {
+    const account = this.#database.accounts.named(username);
+    if (account === null || account.pending) {
+      throw new AccountChangeRefusedError(
+        `no account is named "${username.value}"`
+      );
+    }
+
+    return account;
+  }
+
+  #existingRequest(
+    username: Username
+  ): AccountEntity {
+    const account = this.#database.accounts.named(username);
+    if (account === null || !account.pending) {
+      throw new AccountChangeRefusedError(
+        `no access request is named "${username.value}"`
+      );
+    }
+
+    return account;
+  }
+
+  #assertDeclared(
+    role: string
+  ): void {
+    if (!this.roles.has(role)) {
+      throw new AccountChangeRefusedError(`"${role}" is not a role`);
+    }
+  }
+
   #account(
-    account: StoredAccount
+    account: AccountEntity
   ): Account {
     return {
       id: account.id,
       username: account.username,
-      role: account.role,
+      role: this.roles.effective(account.role),
+      owner: account.owner,
       avatar: account.avatarHash === null ?
         undefined :
         this.#avatarUrl(account.id, account.avatarHash)

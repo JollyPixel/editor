@@ -103,14 +103,34 @@ export function usersConsole(
     }
   });
 
+  namespace.registerCommand("transfer", {
+    description: "Make another account the owner, for the owner only; you stay an admin",
+    args: [
+      {
+        name: "user",
+        type: "string",
+        required: true
+      }
+    ],
+    execute: async({ user }, ctx) => {
+      await roster.transferOwnership(user);
+      ctx.print(`${user} is now the owner`);
+    }
+  });
+
   return namespace;
 }
 
 function describe(
   entries: Iterable<RosterEntry>
 ): string[] {
-  return Array.from(
-    entries,
-    (entry) => `${entry.username} (${entry.role}${entry.online ? ", online" : ""})`
-  );
+  return Array.from(entries, (entry) => {
+    const traits = [
+      entry.role,
+      ...(entry.owner ? ["owner"] : []),
+      ...(entry.online ? ["online"] : [])
+    ];
+
+    return `${entry.username} (${traits.join(", ")})`;
+  });
 }

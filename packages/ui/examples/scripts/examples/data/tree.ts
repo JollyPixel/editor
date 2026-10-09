@@ -73,7 +73,8 @@ function sampleNodes(): TreeNode[] {
           detail: "2 lights",
           badges: [
             { color: "#e0567a", title: "Ada" },
-            { color: "#4ad991", title: "Lin" }
+            { color: "#4ad991", title: "Lin" },
+            { color: "#e3a21a", title: "Locked by Ada", icon: "lock" }
           ]
         },
         {

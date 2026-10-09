@@ -85,8 +85,12 @@ Resolves once the access request is deleted and its username freed.
 
 Resolves once the account is deleted.
 
+### `transferOwnership(username)`
+
+Resolves once the account named `username` is the owner and an admin. The previous owner stays an admin.
+
 ### `dispose()`
 
 Leaves the room and rejects pending requests.
 
-The commands reject with `AccountsRejectedError` when the server refuses them, including for a peer that is not an admin.
+The commands reject with `AccountsRejectedError` when the server refuses them, including for a peer that is not an admin, a transfer from anyone but the owner, and a role change or removal of the owner.

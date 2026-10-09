@@ -1,12 +1,11 @@
 export * from "./Accounts.ts";
 export * from "./auth/AccountRoles.ts";
-export * from "./store/AccountStore.ts";
-export * from "./store/StoredAccount.ts";
+export * from "./store/AccountsDatabase.ts";
 export * from "./avatar/AvatarImage.ts";
 export type { AccountsThrottleOptions } from "./auth/AccountsThrottle.ts";
 export type { AccountsExtension } from "./room/AccountsExtension.ts";
-export * from "./store/errors/AccountChangeRefusedError.ts";
-export * from "./store/errors/UsernameTakenError.ts";
+export * from "./account/errors/AccountChangeRefusedError.ts";
+export * from "./account/errors/UsernameTakenError.ts";
 export * from "./session/SessionCookie.ts";
 export type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
 export * from "./registration/errors/MasterPasswordRequiredError.ts";

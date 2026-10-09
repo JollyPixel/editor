@@ -135,6 +135,12 @@ export const treeStyles = css`
     padding-inline: var(--jolly-space-1, 4px);
   }
 
+  .badge-icon {
+    flex: 0 0 auto;
+    width: var(--jolly-tree-icon-size, 12px);
+    height: var(--jolly-tree-icon-size, 12px);
+  }
+
   .badge {
     width: 8px;
     height: 8px;

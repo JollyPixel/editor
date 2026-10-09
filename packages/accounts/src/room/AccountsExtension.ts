@@ -11,7 +11,7 @@ import {
 // Import Internal Dependencies
 import type { AccountDirectory } from "../AccountDirectory.ts";
 import { Username } from "../account/Username.ts";
-import { AccountChangeRefusedError } from "../store/errors/AccountChangeRefusedError.ts";
+import { AccountChangeRefusedError } from "../account/errors/AccountChangeRefusedError.ts";
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
 import {
   ACCOUNTS_APPLIED,
@@ -22,6 +22,7 @@ import {
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
   ACCOUNTS_ROSTER,
+  ACCOUNTS_TRANSFER_OWNERSHIP,
   type AccountsCommand,
   type AccountsMessage
 } from "./protocol.ts";
@@ -143,6 +144,12 @@ export class AccountsExtension extends Extension<AccountsCommand> {
         break;
       case ACCOUNTS_REMOVE:
         this.#directory.remove(
+          actorId,
+          username
+        );
+        break;
+      case ACCOUNTS_TRANSFER_OWNERSHIP:
+        this.#directory.transferOwnership(
           actorId,
           username
         );

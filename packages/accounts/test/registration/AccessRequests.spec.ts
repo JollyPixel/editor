@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   activeAccount,
   createAccounts,
-  createStore,
+  createDatabase,
   name
 } from "../helpers/accounts.ts";
 import {
@@ -20,7 +20,7 @@ import type {
   Account,
   AccountsRequestError
 } from "#src/index.ts";
-import type { AccountStore } from "#src/node.ts";
+import type { AccountsDatabase } from "#src/node.ts";
 
 // CONSTANTS
 const kSecret = "open sesame";
@@ -31,10 +31,10 @@ interface Studio extends AccountsServer {
 }
 
 async function studioWithAdmin(
-  store: AccountStore,
+  database: AccountsDatabase,
   maxAccessRequests?: number
 ): Promise<Studio> {
-  const server = await listenAccounts(createAccounts(store, {
+  const server = await listenAccounts(createAccounts(database, {
     masterPassword: {
       secret: kSecret,
       accessRequests: true
@@ -55,8 +55,8 @@ async function studioWithAdmin(
 
 describe("access requests", () => {
   test("answer a request as pending and refuse its sign-ins without a session", async() => {
-    using store = createStore();
-    await using studio = await studioWithAdmin(store);
+    using database = createDatabase();
+    await using studio = await studioWithAdmin(database);
     const { client, cookies } = studio.browser();
 
     assert.deepEqual(await client.register("Bob", kPassword), {
@@ -73,7 +73,9 @@ describe("access requests", () => {
     );
     assert.equal(cookies.size, 0);
 
-    store.approve(studio.admin.id, name("bob"), "member");
+    const request = database.accounts.named(name("bob"));
+    assert.ok(request !== null);
+    database.accounts.save(request.approved("member"));
     const bob = await client.login("bob", kPassword);
 
     assert.equal(bob.role, "member");
@@ -81,8 +83,8 @@ describe("access requests", () => {
   });
 
   test("refuse a request once access requests reach their limit", async() => {
-    using store = createStore();
-    await using studio = await studioWithAdmin(store, 1);
+    using database = createDatabase();
+    await using studio = await studioWithAdmin(database, 1);
     const { client } = studio.browser();
     await client.register("Bob", kPassword);
 

@@ -23,11 +23,14 @@ interface Account {
   id: string;
   username: string;
   role: string;
+  owner: boolean;
   avatar?: string;
 }
 ```
 
 `id` is a random UUID. The network server uses it as the peer `subject`, so the event store records it as the actor, and as the profile `peerId`, so a user keeps one presence colour everywhere. `role` is the effective role: a role that is no longer declared reads as the default one.
+
+`owner` is `true` for exactly one account once the first one registers. The owner is always an admin, no one can change its role or remove it, and only the owner hands ownership to another account.
 
 `avatar` is the same-origin path of the uploaded avatar, `<path><id>/avatar?v=<hash>`, absent until the account uploads one. It changes with the image, so it can be cached for good. `AVATAR_MAX_BYTES` (2 MiB) is the largest upload.
 
@@ -41,7 +44,7 @@ A registration waiting for an admin's approval: `{ id, username }`. Only admins 
 
 ## `ADMIN_ROLE`
 
-`"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it.
+`"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it along with ownership.
 
 ## `AccountsError`
 

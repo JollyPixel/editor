@@ -9,6 +9,7 @@ export const accountSchema = z.object({
   id: z.string(),
   username: z.string(),
   role: z.string(),
+  owner: z.boolean(),
   avatar: z.string().optional()
 });
 

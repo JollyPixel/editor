@@ -106,6 +106,10 @@ test.describe("Tree", () => {
     await expect(badges.nth(0)).toHaveAttribute("aria-label", "Ada");
     await expect(badges.nth(1)).toHaveAttribute("aria-label", "Lin");
     await expect(badges.nth(0)).toHaveCSS("background-color", "rgb(224, 86, 122)");
+    const iconBadge = rowOf(page, "camera").locator(".badge-icon");
+    await expect(iconBadge).toHaveAttribute("name", "lock");
+    await expect(iconBadge).toHaveAttribute("aria-label", "Locked by Ada");
+    await expect(iconBadge).toHaveCSS("color", "rgb(227, 162, 26)");
     await expect(rowOf(page, "scene").locator(".badges")).toHaveCount(0);
     await expect(rowOf(page, "camera").locator(".detail")).toHaveText("2 lights");
     await expect(rowOf(page, "scene").locator(".detail")).toHaveCount(0);

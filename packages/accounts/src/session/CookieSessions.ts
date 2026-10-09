@@ -4,22 +4,22 @@ import type { IncomingHttpHeaders } from "node:http";
 // Import Internal Dependencies
 import type { Account } from "../account/Account.ts";
 import type { AccountDirectory } from "../AccountDirectory.ts";
-import type { AccountStore } from "../store/AccountStore.ts";
+import type { SessionRepository } from "../store/SessionRepository.ts";
 import type { SessionCookie } from "./SessionCookie.ts";
 import { SessionToken } from "./SessionToken.ts";
 
 export class CookieSessions {
   readonly cookie: SessionCookie;
 
-  #store: AccountStore;
+  #sessions: SessionRepository;
   #directory: AccountDirectory;
 
   constructor(
-    store: AccountStore,
+    sessions: SessionRepository,
     directory: AccountDirectory,
     cookie: SessionCookie
   ) {
-    this.#store = store;
+    this.#sessions = sessions;
     this.#directory = directory;
     this.cookie = cookie;
   }
@@ -29,7 +29,7 @@ export class CookieSessions {
     secure: boolean
   ): string {
     const token = SessionToken.mint();
-    this.#store.openSession(
+    this.#sessions.open(
       token,
       account.id,
       Date.now() + this.cookie.ttlMs
@@ -47,7 +47,7 @@ export class CookieSessions {
     const token = this.cookie.read(headers);
     const accountId = token === null
       ? null
-      : this.#store.sessionOwner(token);
+      : this.#sessions.owner(token);
 
     return accountId === null
       ? null
@@ -61,7 +61,7 @@ export class CookieSessions {
     const token = this.cookie.read(headers);
     const accountId = token === null
       ? null
-      : this.#store.closeSession(token);
+      : this.#sessions.close(token);
     if (accountId !== null) {
       this.#directory.revoke(accountId);
     }
