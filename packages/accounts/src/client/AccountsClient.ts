@@ -1,16 +1,19 @@
-// Import Third-party Dependencies
-import * as z from "zod";
-
 // Import Internal Dependencies
 import {
   AVATAR_MAX_BYTES,
-  accountSchema,
   type Account
 } from "../account/Account.ts";
 import {
-  ACCOUNTS_ERROR_CODES,
-  AccountsRequestError
-} from "../http/errors/AccountsRequestError.ts";
+  ACCOUNTS_ROUTES,
+  type AccountsRouteName
+} from "../http/accounts/routes.ts";
+import {
+  accountReplySchema,
+  failureReplySchema,
+  type CredentialsBody,
+  type RegistrationBody
+} from "../http/accounts/routes.schema.ts";
+import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import type { RegisterOptions } from "../registration/RegisterOptions.ts";
 import { Username } from "../account/Username.ts";
@@ -20,13 +23,6 @@ import { prehashPassword } from "./prehashPassword.ts";
 export const MIN_PASSWORD_LENGTH = 8;
 const kUnauthorized = 401;
 const kBytesPerMegabyte = 1_024 * 1_024;
-const kAccountBodySchema = z.object({
-  account: accountSchema
-});
-const kErrorBodySchema = z.object({
-  code: z.enum(ACCOUNTS_ERROR_CODES).catch("unknown"),
-  message: z.string().optional().catch(undefined)
-});
 
 export interface AccountsClientOptions {
   /**
@@ -39,10 +35,7 @@ export interface AccountsClientOptions {
   fetch?: typeof fetch;
 }
 
-interface AccountsRequest {
-  method: "GET" | "POST" | "PUT";
-  body?: Blob | object;
-}
+type RequestBody = Blob | CredentialsBody | RegistrationBody;
 
 export class AccountsClient {
   readonly url: URL;
@@ -68,39 +61,33 @@ export class AccountsClient {
         `a password has at least ${MIN_PASSWORD_LENGTH} characters`
       );
     }
+    const credentials = await this.#credentials(username, password);
 
-    return this.#authenticate(
-      "register",
-      username,
-      password,
-      options
-    );
+    return this.#account("register", {
+      ...credentials,
+      masterPassword: options.masterPassword
+    });
   }
 
-  login(
+  async login(
     username: string,
     password: string
   ): Promise<Account> {
-    return this.#authenticate(
+    return this.#account(
       "login",
-      username,
-      password
+      await this.#credentials(username, password)
     );
   }
 
   async logout(): Promise<void> {
-    const response = await this.#request("logout", {
-      method: "POST"
-    });
+    const response = await this.#request("logout");
     if (!response.ok) {
       throw await requestError(response);
     }
   }
 
   async me(): Promise<Account | null> {
-    const response = await this.#request("me", {
-      method: "GET"
-    });
+    const response = await this.#request("me");
     if (response.status === kUnauthorized) {
       return null;
     }
@@ -108,7 +95,7 @@ export class AccountsClient {
       throw await requestError(response);
     }
 
-    return kAccountBodySchema.parse(
+    return accountReplySchema.parse(
       await response.json()
     ).account;
   }
@@ -124,64 +111,54 @@ export class AccountsClient {
       );
     }
 
-    const response = await this.#request("avatar", {
-      method: "PUT",
-      body: image
-    });
-    if (!response.ok) {
-      throw await requestError(response);
-    }
-
-    return kAccountBodySchema.parse(
-      await response.json()
-    ).account;
+    return this.#account("replaceAvatar", image);
   }
 
-  async #authenticate(
-    route: "register" | "login",
+  async #credentials(
     username: string,
-    password: string,
-    fields: RegisterOptions = {}
-  ): Promise<Account> {
+    password: string
+  ): Promise<CredentialsBody> {
     const parsed = Username.parse(username);
 
-    const response = await this.#request(route, {
-      method: "POST",
-      body: {
-        ...fields,
-        username: parsed.value,
-        password: await prehashPassword(
-          parsed,
-          password
-        )
-      }
-    });
+    return {
+      username: parsed.value,
+      password: await prehashPassword(parsed, password)
+    };
+  }
+
+  async #account(
+    route: AccountsRouteName,
+    body: RequestBody
+  ): Promise<Account> {
+    const response = await this.#request(route, body);
     if (!response.ok) {
       throw await requestError(response);
     }
 
-    return kAccountBodySchema.parse(
+    return accountReplySchema.parse(
       await response.json()
     ).account;
   }
 
   #request(
-    route: string,
-    options: AccountsRequest
+    route: AccountsRouteName,
+    body?: RequestBody
   ): Promise<Response> {
+    const { method, path } = ACCOUNTS_ROUTES[route];
+
     return this.#fetch(
-      new URL(route, this.url),
+      new URL(path, this.url),
       {
-        method: options.method,
+        method,
         credentials: "same-origin",
-        ...requestBody(options)
+        ...requestBody(body)
       }
     );
   }
 }
 
 function requestBody(
-  { body }: AccountsRequest
+  body: RequestBody | undefined
 ): Pick<RequestInit, "headers" | "body"> {
   if (body === undefined) {
     return {};
@@ -206,7 +183,7 @@ function requestBody(
 async function requestError(
   response: Response
 ): Promise<AccountsRequestError> {
-  const body = kErrorBodySchema.safeParse(
+  const body = failureReplySchema.safeParse(
     await response.json().catch(() => null)
   );
 

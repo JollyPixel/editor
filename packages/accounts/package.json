@@ -50,7 +50,9 @@
     "@openally/emitt": "1.1.0",
     "@openally/mutex": "4.0.0",
     "cookie": "2.0.1",
+    "find-my-way": "9.9.0",
     "rate-limiter-flexible": "11.2.1",
+    "secure-json-parse": "4.1.0",
     "sharp": "0.35.5",
     "zod": "4.6.5"
   }

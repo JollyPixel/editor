@@ -1,8 +1,11 @@
-export class UsernameTakenError extends Error {
+// Import Internal Dependencies
+import { AccountsError } from "../../account/errors/AccountsError.ts";
+
+export class UsernameTakenError extends AccountsError {
   constructor(
     username: string
   ) {
-    super(`the username "${username}" is taken`);
+    super("username-taken", `the username "${username}" is taken`);
     this.name = "UsernameTakenError";
   }
 }

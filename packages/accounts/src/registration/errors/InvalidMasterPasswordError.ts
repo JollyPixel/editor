@@ -1,6 +1,9 @@
-export class InvalidMasterPasswordError extends Error {
+// Import Internal Dependencies
+import { AccountsError } from "../../account/errors/AccountsError.ts";
+
+export class InvalidMasterPasswordError extends AccountsError {
   constructor() {
-    super("wrong master password");
+    super("invalid-master-password", "wrong master password");
     this.name = "InvalidMasterPasswordError";
   }
 }

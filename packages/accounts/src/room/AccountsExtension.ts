@@ -9,8 +9,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { ADMIN_ROLE } from "../account/Account.ts";
-import type { Accounts } from "../Accounts.ts";
+import type { AccountDirectory } from "../AccountDirectory.ts";
 import { Username } from "../account/Username.ts";
 import { AccountChangeRefusedError } from "../store/errors/AccountChangeRefusedError.ts";
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
@@ -32,16 +31,16 @@ export class AccountsExtension extends Extension<AccountsCommand> {
   readonly name = ACCOUNTS_ROOM;
   readonly protocols: MessageProtocols = accountsProtocols;
 
-  #accounts: Accounts;
+  #directory: AccountDirectory;
   #members = new Map<string, string>();
   #room: RoomBroadcast | null = null;
 
   constructor(
-    accounts: Accounts
+    directory: AccountDirectory
   ) {
     super();
-    this.#accounts = accounts;
-    this.#accounts.on("changed", this.#broadcastRoster);
+    this.#directory = directory;
+    this.#directory.on("changed", this.#broadcastRoster);
   }
 
   override onClientConnect(
@@ -50,7 +49,10 @@ export class AccountsExtension extends Extension<AccountsCommand> {
     context: RoomContext
   ): void {
     this.#room = context.room;
-    this.#members.set(peer.clientId, context.identity.subject);
+    this.#members.set(
+      peer.clientId,
+      context.identity.subject
+    );
     this.#broadcastRoster();
   }
 
@@ -69,11 +71,14 @@ export class AccountsExtension extends Extension<AccountsCommand> {
     command: AccountsCommand,
     context: RoomContext
   ): void {
-    context.room.sendTo(clientId, this.#reply(command, context));
+    context.room.sendTo(
+      clientId,
+      this.#reply(command, context)
+    );
   }
 
   override dispose(): void {
-    this.#accounts.off("changed", this.#broadcastRoster);
+    this.#directory.off("changed", this.#broadcastRoster);
     this.#members.clear();
     this.#room = null;
   }
@@ -83,11 +88,10 @@ export class AccountsExtension extends Extension<AccountsCommand> {
     context: RoomContext
   ): AccountsMessage {
     try {
-      const sender = this.#accounts.accountById(context.identity.subject);
-      if (sender?.role !== ADMIN_ROLE) {
-        throw new AccountChangeRefusedError("only an admin manages accounts");
-      }
-      this.#apply(command);
+      this.#apply(
+        command,
+        context.identity.subject
+      );
 
       return {
         type: ACCOUNTS_APPLIED,
@@ -111,15 +115,23 @@ export class AccountsExtension extends Extension<AccountsCommand> {
   }
 
   #apply(
-    command: AccountsCommand
+    command: AccountsCommand,
+    actorId: string
   ): void {
     const username = Username.parse(command.username);
     switch (command.type) {
       case ACCOUNTS_ASSIGN_ROLE:
-        this.#accounts.assignRole(username, command.role);
+        this.#directory.assignRole(
+          actorId,
+          username,
+          command.role
+        );
         break;
       case ACCOUNTS_REMOVE:
-        this.#accounts.remove(username);
+        this.#directory.remove(
+          actorId,
+          username
+        );
         break;
     }
   }
@@ -129,8 +141,8 @@ export class AccountsExtension extends Extension<AccountsCommand> {
 
     return {
       type: ACCOUNTS_ROSTER,
-      roles: [...this.#accounts.roles],
-      accounts: Array.from(this.#accounts, (account) => {
+      roles: [...this.#directory.roles],
+      accounts: Array.from(this.#directory, (account) => {
         return {
           ...account,
           online: online.has(account.id)

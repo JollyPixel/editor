@@ -17,19 +17,19 @@ import {
   MIN_PASSWORD_LENGTH,
   type Account,
   type AccountsClient,
-  type AccountsErrorCode
+  type AccountsFailureCode
 } from "@jolly-pixel/accounts";
 import type { Dialog } from "@jolly-pixel/ui";
 
 // CONSTANTS
-const kRequestMessages: Partial<Record<AccountsErrorCode, string>> = {
+const kRequestMessages: Partial<Record<AccountsFailureCode, string>> = {
   "invalid-credentials": "Wrong username or password.",
   "username-taken": "This username is taken.",
   "master-password-required": "This studio asks for its master password.",
   "invalid-master-password": "Wrong master password.",
   throttled: "Too many failed attempts. Try again later."
 };
-const kMasterPasswordCodes = new Set<AccountsErrorCode>([
+const kMasterPasswordCodes = new Set<AccountsFailureCode>([
   "master-password-required",
   "invalid-master-password"
 ]);

@@ -8,52 +8,65 @@ import {
 } from "cookie";
 
 // Import Internal Dependencies
-import { SESSION_TOKEN_PATTERN } from "../store/sessionToken.ts";
-import { isCrossOrigin } from "./origin.ts";
+import { isCrossOrigin } from "../http/core/origin.ts";
+import { SessionToken } from "./SessionToken.ts";
 
 // CONSTANTS
 export const DEFAULT_SESSION_COOKIE = "jolly_session";
+export const DEFAULT_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
 
-export interface SessionCookieIssue {
-  maxAgeMs: number;
-  secure: boolean;
+export interface SessionCookieOptions {
+  /**
+   * @default DEFAULT_SESSION_COOKIE
+   */
+  name?: string;
+  /**
+   * Lifetime of a session, in milliseconds.
+   * @default DEFAULT_SESSION_TTL_MS
+   */
+  ttlMs?: number;
 }
 
 export class SessionCookie {
   readonly name: string;
+  readonly ttlMs: number;
 
   constructor(
-    name: string = DEFAULT_SESSION_COOKIE
+    options: SessionCookieOptions = {}
   ) {
-    this.name = name;
+    this.name = options.name ?? DEFAULT_SESSION_COOKIE;
+    this.ttlMs = options.ttlMs ?? DEFAULT_SESSION_TTL_MS;
   }
 
   read(
     headers: IncomingHttpHeaders
-  ): string | null {
+  ): SessionToken | null {
     const header = headers.cookie;
-    if (header === undefined || isCrossOrigin(headers)) {
+    if (
+      header === undefined ||
+      isCrossOrigin(headers)
+    ) {
       return null;
     }
 
-    const token = parseCookie(header)[this.name];
+    const value = parseCookie(header)[this.name];
 
-    return token !== undefined && SESSION_TOKEN_PATTERN.test(token)
-      ? token
-      : null;
+    return value === undefined
+      ? null
+      : SessionToken.parse(value);
   }
 
   issue(
-    token: string,
-    options: SessionCookieIssue
+    token: SessionToken,
+    secure: boolean
   ): string {
     return stringifySetCookie({
       name: this.name,
-      value: token,
-      maxAge: Math.floor(options.maxAgeMs / 1_000),
+      value: token.value,
+      maxAge: Math.floor(this.ttlMs / 1_000),
       path: "/",
       httpOnly: true,
-      secure: options.secure,
+      secure,
       sameSite: "strict"
     });
   }

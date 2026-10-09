@@ -13,18 +13,19 @@ const accounts = await Accounts.open({
     roles: ["member", "spectator"],
     defaultRole: "spectator"
   }),
-  cookie: new SessionCookie("jolly_session_project")
+  cookie: new SessionCookie({
+    name: "jolly_session_project"
+  })
 });
 ```
 
 ### `Accounts.open(options)`
 
-Opens an `AccountStore` at `location` (in memory by default, see `AccountStore.open`) and builds the accounts over it. `sessionTtlMs` goes to the store.
+Opens an `AccountStore` with `roles` at `location` (in memory by default, see `AccountStore.open`) and builds the accounts over it. The other options are those of the constructor.
 
 ### `new Accounts(options)`
 
 - `store`: an open `AccountStore`. Disposing the accounts closes it.
-- `roles`: an `AccountRoles`.
 - `cookie`: a `SessionCookie`. Defaults to `new SessionCookie()`.
 - `path`: URL prefix of the HTTP routes, with a trailing slash. Defaults to `"/api/accounts/"`.
 - `throttle.attempts`: failed logins allowed per username and per client address within `throttle.windowMs`. Defaults to 10.
@@ -32,7 +33,7 @@ Opens an `AccountStore` at `location` (in memory by default, see `AccountStore.o
 - `throttle.windowMs`: defaults to 15 minutes.
 - `proxyHops`: reverse proxies in front of the server. Defaults to 0, which ignores `X-Forwarded-*` headers. With `n`, the server lists the entries of `X-Forwarded-For` followed by the socket address, and trusts the one `n` places before the socket address as the client address. It reads `X-Forwarded-Proto` the same way, with the socket scheme last, and the request counts as HTTPS when the trusted entry is `https`. Each proxy must append to both headers, or clients can pick the address they are throttled under.
 - `maxConcurrentHashes`: `scrypt` hashes and checks running at once. Further ones wait their turn, which keeps libuv threads free for file I/O. Defaults to 2.
-- `masterPassword.secret`: a secret the first account must give to register. Without it, anyone who reaches the server first becomes admin. Throws a `RangeError` when empty.
+- `masterPassword.secret`: a secret the first account must give to register, while the store is `unclaimed`. Without it, anyone who reaches the server first becomes admin. A wrong secret is refused even when none was needed, and both checks run before hashing. Throws a `RangeError` when empty.
 - `masterPassword.required`: every registration must give the secret, not only the first one. Defaults to `false`.
 
 ### `handler`
@@ -57,101 +58,64 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
 
 The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A new avatar applies on the next connection.
 
+`avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `path`.
+
 ### `watchRevocations(listener)`
 
-Calls `listener` with the account id after `assignRole`, `remove` and a `logout` that closed a session, and returns a function that stops the calls. The network server watches it, so every open connection of that account is closed and authenticates again: a removed or signed-out account is refused, and a new role applies at once. A logout also reconnects the account's other devices, whose sessions stay valid.
-
-`avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `path`.
+Calls `listener` with the account id after a role change or a removal in the [`accounts` room](#accounts-room), and after a [`POST logout`](#post-logout) that closed a session. It returns a function that stops the calls. The network server watches it, so every open connection of that account is closed and authenticates again: a removed or signed-out account is refused, and a new role applies at once. A logout also reconnects the account's other devices, whose sessions stay valid.
 
 ### `extension`
 
 The [`accounts` room](#accounts-room), to register on the network server.
 
-### `register(username, password, options?)` and `login(username, password)`
+### `roles`
 
-Take a `Username` and a pre-hashed password, and resolve to `{ token, account }`. `register` hashes the pre-hash again with `scrypt`. `login` resolves to `null` for a wrong password or an unknown username, after the same `scrypt` work.
+The `AccountRoles` of the store.
 
-`options.masterPassword` is the master password as typed. When `Accounts` was built with `masterPassword`, `register` throws `MasterPasswordRequiredError` when it is missing but needed: for the first account (while the store is `unclaimed`), or for any account when `required` is set. It throws `InvalidMasterPasswordError` when the given one is wrong, even if none was needed. Both are checked before hashing. Without that constructor option, `options.masterPassword` is ignored.
+### `cookie`
 
-### `logout(token)`
-
-Closes the session and revokes its account.
-
-### `accountForToken(token)` and `accountById(id)`
-
-The account, or `null`.
-
-### `assignRole(username, role)`
-
-Throws `AccountChangeRefusedError` when `role` is not one of `roles`, for an unknown account, or when it would demote the last admin.
-
-### `remove(username)`
-
-Deletes the account and its sessions. Throws `AccountChangeRefusedError` for an unknown account or the last admin.
-
-### `replaceAvatar(accountId, image)`
-
-Encodes `image` with [`AvatarImage.encode`](#avatarimage), stores it in place of the account's previous avatar and resolves to the account, whose `avatar` is the new path. Throws `InvalidAvatarError` for bytes that are not an image, and `AccountChangeRefusedError` for an unknown account.
-
-### `avatar(accountId)`
-
-The stored `{ hash, bytes }` WebP, or `null`.
-
-### `[Symbol.iterator]()`
-
-The accounts, oldest first.
-
-### `"changed"` event
-
-Emitted after `register`, `assignRole`, `remove` and `replaceAvatar`.
-
-Every account the methods return carries its effective role: a role that is no longer declared reads as the default one. Its `avatar` is `path` followed by `<id>/avatar?v=<hash>`.
+The `SessionCookie` the sessions live in.
 
 ## `AccountStore`
 
-Users and their sessions in one SQLite database (`node:sqlite`). It stores what it is given and checks nothing against the roles.
+Users and their sessions in one SQLite database (`node:sqlite`). It holds the `AccountRoles` and enforces every rule about them:
 
-Its methods return a [`StoredAccount`](#storedaccount): an `Account` whose `avatar` path is replaced by `avatarHash`, the hash of the stored avatar or `null`. `Accounts` turns the hash into the path.
+- The first account gets `"admin"`, the others the default role.
+- Only an admin changes a role or removes an account, and only to a declared role.
+- The last admin can be neither demoted nor removed.
+- A stored role that is no longer declared reads as the default one.
 
-### `AccountStore.open(location?, options?)`
+Its methods return a [`StoredAccount`](#storedaccount): an `Account` whose `avatar` path is replaced by `avatarHash`, the hash of the stored avatar or `null`. `Accounts` turns the hash into the path. Sessions are opened, read and closed by `Accounts`, through its `cookie`.
+
+### `AccountStore.open(roles, location?)`
 
 Opens or creates the database at `location`, creating its directory. `":memory:"` (`IN_MEMORY_LOCATION`, the default) keeps everything in memory. File databases use WAL.
 
 On POSIX systems, a directory it creates gets mode `0700`, and the database file is set to `0600` on every open, even when it already exists. SQLite gives the WAL and shared-memory files the mode of the database.
 
-- `sessionTtlMs`: lifetime of a session. Defaults to 30 days.
+### `roles`
 
-### `register(username, hash, defaultRole)`
+The `AccountRoles` it was opened with.
 
-Inserts an account with `hash`, a `PasswordHash` from `hashPassword`. The first account of the database gets `"admin"`, decided inside the insert transaction. Others get `defaultRole`. Throws `UsernameTakenError` when another account has the same `username.key`.
+### `register(username, hash)`
+
+Inserts an account with `hash`, a `PasswordHash` from `hashPassword`. The first account of the database gets `"admin"`, decided inside the insert transaction. Others get `roles.defaultRole`. Throws `UsernameTakenError` when another account has the same `username.key`.
 
 ### `credentials(username)`
 
 The account and its `PasswordHash`, or `null`.
 
-### `openSession(accountId)`
-
-Mints a 256-bit token for the account and returns it. Only its SHA-256 digest is stored. Expired sessions are purged at the same time.
-
-### `accountForToken(token)`
-
-The account of a live session, or `null` for an unknown, closed or expired token.
-
 ### `accountById(id)`
 
 The account, or `null`.
 
-### `closeSession(token)`
+### `assignRole(actorId, username, role)`
 
-Forgets the session and returns its account id, or `null` when the token opened no session.
+Gives `role` to the account named `username`, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, when `role` is not declared, for an unknown account, or when it would demote the last admin.
 
-### `assignRole(username, role)`
+### `remove(actorId, username)`
 
-Stores `role` as is. Throws `AccountChangeRefusedError` for an unknown account or when it would demote the last admin.
-
-### `remove(username)`
-
-Deletes the account and its sessions. Throws `AccountChangeRefusedError` for an unknown account or the last admin.
+Deletes the account and its sessions, on behalf of the account `actorId`. Throws `AccountChangeRefusedError` when the actor is not an admin, for an unknown account or for the last admin.
 
 ### `replaceAvatar(accountId, avatar)`
 
@@ -235,18 +199,20 @@ The roles, `"admin"` first.
 The cookie a browser session lives in: `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS, directly or through the `proxyHops` proxies. Page scripts never read the token.
 
 ```ts
-new SessionCookie("jolly_session_project");
+new SessionCookie({
+  name: "jolly_session_project",
+  ttlMs: 7 * 24 * 60 * 60 * 1_000
+});
 ```
 
-The name defaults to `DEFAULT_SESSION_COOKIE` (`"jolly_session"`). Cookies ignore ports, so two servers on one host need two names, or signing in to one signs out of the other.
+- `name`: defaults to `DEFAULT_SESSION_COOKIE` (`"jolly_session"`). Cookies ignore ports, so two servers on one host need two names, or signing in to one signs out of the other.
+- `ttlMs`: lifetime of a session, both the cookie's `Max-Age` and the server-side expiry. Defaults to `DEFAULT_SESSION_TTL_MS`, 30 days.
 
-### `read(headers)`
-
-The session token, or `null`. A browser sends the cookie with any request, including a WebSocket a foreign page opens, so the cookie of a request whose `Origin` does not match its `Host` is ignored.
+The token is 256 random bits, and the database keeps only its SHA-256 digest. A browser sends the cookie with any request, including a WebSocket a foreign page opens, so the cookie of a request whose `Origin` does not match its `Host` is ignored.
 
 ## HTTP routes
 
-Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. Errors answer `{ code, message }`, where `code` is an `AccountsErrorCode`. A request whose `Origin` does not match its `Host` answers 403 `cross-origin`. Requests outside `path`, or on an unknown route, go to `next()`.
+Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. A body with a `__proto__` or `constructor.prototype` key answers 400 `invalid-request`. Errors answer `{ code, message }`, where `code` is an `AccountsFailureCode`. A request whose `Origin` does not match its `Host` answers 403 `cross-origin`, and a known route called with another method answers 405 `method-not-allowed` with `Allow`. Requests outside `path`, or on an unknown route, go to `next()`.
 
 ### `POST register`
 

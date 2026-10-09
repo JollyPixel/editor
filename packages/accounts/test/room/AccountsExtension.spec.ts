@@ -14,8 +14,10 @@ import {
 
 // Import Internal Dependencies
 import {
-  createAccounts,
+  ADDRESS,
+  createDirectory,
   name,
+  registration,
   storeWith
 } from "../helpers/accounts.ts";
 import { solidPng } from "../helpers/avatar/images.ts";
@@ -24,8 +26,8 @@ import {
   AccountsRoster,
   type RosterEntry
 } from "#src/index.ts";
-import type { Accounts } from "#src/node.ts";
-import { PasswordDigest } from "#src/session/PasswordDigest.ts";
+import type { AccountDirectory } from "#src/AccountDirectory.ts";
+import { AccountsExtension } from "#src/room/AccountsExtension.ts";
 
 interface Peer {
   role: string;
@@ -39,7 +41,7 @@ interface RosterServer extends AsyncDisposable {
 }
 
 function rosterServer(
-  accounts: Accounts,
+  directory: AccountDirectory,
   revocations = true
 ): RosterServer {
   const peers: Peer[] = [];
@@ -49,11 +51,11 @@ function rosterServer(
     auth: {
       authenticate: () => peers.shift() ?? null,
       watchRevocations: revocations ?
-        (listener) => accounts.watchRevocations(listener) :
+        (listener) => directory.watchRevocations(listener) :
         undefined
     }
   });
-  server.register(accounts.extension);
+  server.register(new AccountsExtension(directory));
   const loopback = new LoopbackTransport({ server });
 
   return {
@@ -104,7 +106,7 @@ describe("AccountsExtension roster", () => {
   test("pushes every account, its role and whether it is online to any member", async() => {
     using store = storeWith("Alice", "Bob");
     const [alice] = store;
-    await using server = rosterServer(createAccounts(store));
+    await using server = rosterServer(createDirectory(store));
 
     const roster = await server.connect({
       role: "spectator",
@@ -118,7 +120,7 @@ describe("AccountsExtension roster", () => {
   test("follows peers joining and leaving", async() => {
     using store = storeWith("Alice", "Bob");
     const [alice, bob] = store;
-    await using server = rosterServer(createAccounts(store));
+    await using server = rosterServer(createDirectory(store));
     const aliceRoster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -139,15 +141,15 @@ describe("AccountsExtension roster", () => {
   test("pushes a registration made outside the room", async() => {
     using store = storeWith("Alice");
     const [alice] = store;
-    const accounts = createAccounts(store);
-    await using server = rosterServer(accounts);
+    const directory = createDirectory(store);
+    await using server = rosterServer(directory);
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
     });
 
     const changed = nextChange(roster);
-    await accounts.register(name("Carol"), PasswordDigest.parse("p".repeat(43)));
+    await directory.register(registration("Carol"), ADDRESS);
 
     assert.deepEqual(summary(await changed), ["Alice:admin:on", "Carol:spectator:off"]);
   });
@@ -155,15 +157,15 @@ describe("AccountsExtension roster", () => {
   test("pushes the path of a new avatar", async() => {
     using store = storeWith("Alice");
     const [alice] = store;
-    const accounts = createAccounts(store);
-    await using server = rosterServer(accounts);
+    const directory = createDirectory(store);
+    await using server = rosterServer(directory);
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
     });
 
     const changed = nextChange(roster);
-    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
+    const { avatar } = await directory.replaceAvatar(alice.id, await solidPng(8, 8));
 
     assert.equal((await changed)[0].avatar, avatar);
   });
@@ -173,7 +175,7 @@ describe("AccountsExtension commands", () => {
   test("assigns a declared role and removes an account", async() => {
     using store = storeWith("Alice", "Bob", "Carol");
     const [alice] = store;
-    await using server = rosterServer(createAccounts(store));
+    await using server = rosterServer(createDirectory(store));
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -196,8 +198,8 @@ describe("AccountsExtension commands", () => {
   }, async() => {
     using store = storeWith("Alice", "Bob");
     const [alice] = store;
-    store.assignRole(name("bob"), "admin");
-    await using server = rosterServer(createAccounts(store));
+    store.assignRole(alice.id, name("bob"), "admin");
+    await using server = rosterServer(createDirectory(store));
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -209,7 +211,7 @@ describe("AccountsExtension commands", () => {
   test("rejects a command from a peer that is not an admin", async() => {
     using store = storeWith("Alice", "Bob");
     const [, bob] = store;
-    await using server = rosterServer(createAccounts(store));
+    await using server = rosterServer(createDirectory(store));
     const roster = await server.connect({
       role: "member",
       subject: bob.id
@@ -227,15 +229,15 @@ describe("AccountsExtension commands", () => {
 describe("AccountsExtension authorization", () => {
   test("reads the current role of a sender whose connection is not revoked", async() => {
     using store = storeWith("Alice", "Bob");
-    const [alice] = store;
-    const accounts = createAccounts(store);
-    await using server = rosterServer(accounts, false);
+    const [alice, bob] = store;
+    const directory = createDirectory(store);
+    await using server = rosterServer(directory, false);
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
     });
-    accounts.assignRole(name("bob"), "admin");
-    accounts.assignRole(name("alice"), "member");
+    directory.assignRole(alice.id, name("bob"), "admin");
+    directory.assignRole(bob.id, name("alice"), "member");
 
     await assert.rejects(
       roster.remove("bob"),

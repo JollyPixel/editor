@@ -8,7 +8,9 @@ import type { PasswordHash } from "@jolly-pixel/network/node";
 // Import Internal Dependencies
 import { ADMIN_ROLE } from "../account/Account.ts";
 import type { Username } from "../account/Username.ts";
+import type { AccountRoles } from "../auth/AccountRoles.ts";
 import type { StoredAvatar } from "../avatar/AvatarImage.ts";
+import type { SessionToken } from "../session/SessionToken.ts";
 import { AccountChangeRefusedError } from "./errors/AccountChangeRefusedError.ts";
 import { UsernameTakenError } from "./errors/UsernameTakenError.ts";
 import { SQL_SCHEMA } from "./schema.ts";
@@ -17,27 +19,14 @@ import {
   SqliteDatabase
 } from "./SqliteDatabase.ts";
 import {
-  digestSessionToken,
-  mintSessionToken
-} from "./sessionToken.ts";
-import {
   StoredAccount,
   type StoredAccountFields
 } from "./StoredAccount.ts";
 
 // CONSTANTS
 export { IN_MEMORY_LOCATION } from "./SqliteDatabase.ts";
-export const DEFAULT_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
 const kAccountColumns = "users.id, users.username, users.role, avatars.hash AS avatarHash";
 const kAccountTables = "users LEFT JOIN avatars ON avatars.user_id = users.id";
-
-export interface AccountStoreOptions {
-  /**
-   * Lifetime of a session token, in milliseconds.
-   * @default DEFAULT_SESSION_TTL_MS
-   */
-  sessionTtlMs?: number;
-}
 
 export interface AccountCredentials {
   account: StoredAccount;
@@ -59,25 +48,25 @@ interface CountRow {
 
 export class AccountStore implements Disposable {
   static async open(
-    location: string = IN_MEMORY_LOCATION,
-    options: AccountStoreOptions = {}
+    roles: AccountRoles,
+    location: string = IN_MEMORY_LOCATION
   ): Promise<AccountStore> {
     return new AccountStore(
       await SqliteDatabase.open(location),
-      options
+      roles
     );
   }
 
-  readonly sessionTtlMs: number;
+  readonly roles: AccountRoles;
 
   #db: SqliteDatabase;
 
   constructor(
     db: SqliteDatabase,
-    options: AccountStoreOptions = {}
+    roles: AccountRoles
   ) {
     this.#db = db;
-    this.sessionTtlMs = options.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS;
+    this.roles = roles;
     this.#db.exec(SQL_SCHEMA);
   }
 
@@ -91,8 +80,7 @@ export class AccountStore implements Disposable {
 
   register(
     username: Username,
-    hash: PasswordHash,
-    defaultRole: string
+    hash: PasswordHash
   ): StoredAccount {
     return this.#db.transaction(() => {
       if (this.credentials(username) !== null) {
@@ -102,7 +90,7 @@ export class AccountStore implements Disposable {
       const account = new StoredAccount({
         id: randomUUID(),
         username: username.value,
-        role: this.unclaimed ? ADMIN_ROLE : defaultRole,
+        role: this.unclaimed ? ADMIN_ROLE : this.roles.defaultRole,
         avatarHash: null
       });
       this.#db.run(
@@ -134,7 +122,7 @@ export class AccountStore implements Disposable {
     }
 
     return {
-      account: new StoredAccount(row),
+      account: this.#account(row),
       hash: {
         digest: Buffer.from(row.digest),
         salt: Buffer.from(row.salt)
@@ -143,38 +131,43 @@ export class AccountStore implements Disposable {
   }
 
   openSession(
-    accountId: string
-  ): string {
-    const now = Date.now();
-    const token = mintSessionToken();
+    token: SessionToken,
+    accountId: string,
+    expiresAt: number
+  ): void {
     this.#db.run(
       "DELETE FROM sessions WHERE expires_at <= ?",
-      now
+      Date.now()
     );
     this.#db.run(
       "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
-      digestSessionToken(token),
+      token.digest,
       accountId,
-      now + this.sessionTtlMs
+      expiresAt
     );
-
-    return token;
   }
 
-  accountForToken(
-    token: string
-  ): StoredAccount | null {
-    const row = this.#db.get<StoredAccountFields>(
-      `SELECT ${kAccountColumns}
-       FROM ${kAccountTables} JOIN sessions ON sessions.user_id = users.id
-       WHERE sessions.token_hash = ? AND sessions.expires_at > ?`,
-      digestSessionToken(token),
+  sessionOwner(
+    token: SessionToken
+  ): string | null {
+    const row = this.#db.get<SessionRow>(
+      "SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > ?",
+      token.digest,
       Date.now()
     );
 
-    return row === undefined
-      ? null
-      : new StoredAccount(row);
+    return row?.user_id ?? null;
+  }
+
+  closeSession(
+    token: SessionToken
+  ): string | null {
+    const row = this.#db.get<SessionRow>(
+      "DELETE FROM sessions WHERE token_hash = ? RETURNING user_id",
+      token.digest
+    );
+
+    return row?.user_id ?? null;
   }
 
   accountById(
@@ -185,25 +178,19 @@ export class AccountStore implements Disposable {
       id
     );
 
-    return row === undefined ? null : new StoredAccount(row);
-  }
-
-  closeSession(
-    token: string
-  ): string | null {
-    const row = this.#db.get<SessionRow>(
-      "DELETE FROM sessions WHERE token_hash = ? RETURNING user_id",
-      digestSessionToken(token)
-    );
-
-    return row?.user_id ?? null;
+    return row === undefined ? null : this.#account(row);
   }
 
   assignRole(
+    actorId: string,
     username: Username,
     role: string
   ): StoredAccount {
     return this.#db.transaction(() => {
+      this.#assertAdmin(actorId);
+      if (!this.roles.has(role)) {
+        throw new AccountChangeRefusedError(`"${role}" is not a role`);
+      }
       const account = this.#existing(username);
       if (role !== ADMIN_ROLE) {
         this.#assertNotLastAdmin(account);
@@ -220,9 +207,11 @@ export class AccountStore implements Disposable {
   }
 
   remove(
+    actorId: string,
     username: Username
   ): StoredAccount {
     return this.#db.transaction(() => {
+      this.#assertAdmin(actorId);
       const account = this.#existing(username);
       this.#assertNotLastAdmin(account);
       this.#db.run(
@@ -277,7 +266,7 @@ export class AccountStore implements Disposable {
       `SELECT ${kAccountColumns} FROM ${kAccountTables} ORDER BY users.created_at, users.rowid`
     );
     for (const row of rows) {
-      yield new StoredAccount(row);
+      yield this.#account(row);
     }
   }
 
@@ -287,6 +276,17 @@ export class AccountStore implements Disposable {
 
   [Symbol.dispose](): void {
     this.close();
+  }
+
+  #account(
+    fields: StoredAccountFields
+  ): StoredAccount {
+    return new StoredAccount({
+      id: fields.id,
+      username: fields.username,
+      role: this.roles.effective(fields.role),
+      avatarHash: fields.avatarHash
+    });
   }
 
   #existing(
@@ -300,6 +300,14 @@ export class AccountStore implements Disposable {
     }
 
     return credentials.account;
+  }
+
+  #assertAdmin(
+    actorId: string
+  ): void {
+    if (this.accountById(actorId)?.isAdmin !== true) {
+      throw new AccountChangeRefusedError("only an admin manages accounts");
+    }
   }
 
   #assertNotLastAdmin(

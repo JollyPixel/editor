@@ -7,9 +7,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  ADDRESS,
   createAccounts,
+  createDirectory,
   createStore,
-  name,
+  registration,
   storeWith
 } from "../helpers/accounts.ts";
 import { listenAccounts } from "../helpers/accountsServer.ts";
@@ -18,62 +20,65 @@ import {
   InvalidMasterPasswordError,
   MasterPasswordRequiredError
 } from "#src/node.ts";
-import { PasswordDigest } from "#src/session/PasswordDigest.ts";
 
 // CONSTANTS
-const kPassword = PasswordDigest.parse("p".repeat(43));
-const kSecret = {
-  masterPassword: "open sesame"
+const kSecret = "open sesame";
+const kSecretBody = {
+  masterPassword: kSecret
 };
-const kWrongSecret = {
-  masterPassword: "guess"
+const kWrongSecret = "guess";
+const kWrongSecretBody = {
+  masterPassword: kWrongSecret
 };
 
-describe("Accounts master password", () => {
+describe("master password", () => {
   test("makes the first account give it before it becomes admin", async() => {
-    using accounts = createAccounts(createStore(), {
+    using store = createStore();
+    const directory = createDirectory(store, {
       masterPassword: {
-        secret: "open sesame"
+        secret: kSecret
       }
     });
 
     await assert.rejects(
-      accounts.register(name("Mallory"), kPassword),
+      directory.register(registration("Mallory"), ADDRESS),
       MasterPasswordRequiredError
     );
     await assert.rejects(
-      accounts.register(name("Mallory"), kPassword, kWrongSecret),
+      directory.register(registration("Mallory", kWrongSecret), ADDRESS),
       InvalidMasterPasswordError
     );
-    const alice = await accounts.register(name("Alice"), kPassword, kSecret);
+    const alice = await directory.register(registration("Alice", kSecret), ADDRESS);
 
-    assert.equal(alice.account.role, "admin");
+    assert.equal(alice.role, "admin");
     assert.deepEqual(
-      [...accounts].map((account) => account.username),
+      [...directory].map((account) => account.username),
       ["Alice"]
     );
   });
 
   test("lets later accounts register without it, but not with a wrong one", async() => {
-    using accounts = createAccounts(storeWith("Alice"), {
+    using store = storeWith("Alice");
+    const directory = createDirectory(store, {
       masterPassword: {
-        secret: "open sesame"
+        secret: kSecret
       }
     });
 
-    const bob = await accounts.register(name("Bob"), kPassword);
-    const carol = await accounts.register(name("Carol"), kPassword, kSecret);
+    const bob = await directory.register(registration("Bob"), ADDRESS);
+    const carol = await directory.register(registration("Carol", kSecret), ADDRESS);
 
-    assert.equal(bob.account.role, "spectator");
-    assert.equal(carol.account.role, "spectator");
+    assert.equal(bob.role, "spectator");
+    assert.equal(carol.role, "spectator");
     await assert.rejects(
-      accounts.register(name("Dave"), kPassword, kWrongSecret),
+      directory.register(registration("Dave", kWrongSecret), ADDRESS),
       InvalidMasterPasswordError
     );
   });
 
   test("makes every account give it when required", async() => {
-    using accounts = createAccounts(storeWith("Alice"), {
+    using store = storeWith("Alice");
+    const directory = createDirectory(store, {
       masterPassword: {
         secret: "open sesame",
         required: true
@@ -81,19 +86,19 @@ describe("Accounts master password", () => {
     });
 
     await assert.rejects(
-      accounts.register(name("Bob"), kPassword),
+      directory.register(registration("Bob"), ADDRESS),
       MasterPasswordRequiredError
     );
-    const bob = await accounts.register(name("Bob"), kPassword, kSecret);
+    const bob = await directory.register(registration("Bob", kSecret), ADDRESS);
 
-    assert.equal(bob.account.role, "spectator");
+    assert.equal(bob.role, "spectator");
   });
 
   test("sends the master password with a registration and answers its refusals", async() => {
     using store = createStore();
     await using server = await listenAccounts(createAccounts(store, {
       masterPassword: {
-        secret: "open sesame"
+        secret: kSecret
       }
     }));
     const { client } = server.browser();
@@ -104,11 +109,11 @@ describe("Accounts master password", () => {
         error.code === "master-password-required"
     );
     await assert.rejects(
-      client.register("Alice", "correct horse", kWrongSecret),
+      client.register("Alice", "correct horse", kWrongSecretBody),
       (error: AccountsRequestError) => error.status === 403 &&
         error.code === "invalid-master-password"
     );
-    const alice = await client.register("Alice", "correct horse", kSecret);
+    const alice = await client.register("Alice", "correct horse", kSecretBody);
 
     assert.equal(alice.role, "admin");
   });

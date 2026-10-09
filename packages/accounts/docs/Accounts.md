@@ -38,3 +38,7 @@ An `Account` with `online`, true while one of its studio shells is in the `accou
 ## `ADMIN_ROLE`
 
 `"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it.
+
+## `AccountsError`
+
+The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the routes pick one when they answer. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError` and `InvalidMasterPasswordError` extend it. `ACCOUNTS_ERROR_CODES` lists the codes.

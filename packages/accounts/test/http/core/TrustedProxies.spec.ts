@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { TrustedProxies } from "#src/http/TrustedProxies.ts";
+import { TrustedProxies } from "#src/http/core/TrustedProxies.ts";
 
 // CONSTANTS
 const kForwarded = {

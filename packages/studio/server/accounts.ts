@@ -62,7 +62,9 @@ export async function openStudioAccounts(
         roles,
         defaultRole: options.defaultRole
       }),
-    cookie: new SessionCookie(cookieNameFor(root)),
+    cookie: new SessionCookie({
+      name: cookieNameFor(root)
+    }),
     throttle: options.throttle,
     masterPassword: masterPasswordFor(project, options.env ?? {})
   });

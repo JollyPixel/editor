@@ -3,7 +3,6 @@ import * as z from "zod";
 
 // CONSTANTS
 export const ADMIN_ROLE = "admin";
-export const ACCOUNTS_URL_PATH = "/api/accounts/";
 export const AVATAR_MAX_BYTES = 2 * 1_024 * 1_024;
 
 export const accountSchema = z.object({
