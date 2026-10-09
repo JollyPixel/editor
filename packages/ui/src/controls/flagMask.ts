@@ -26,3 +26,9 @@ export function setFlag(
     enabled ? base | flag : base & ~flag
   );
 }
+
+export function bitAt(
+  index: number
+): number {
+  return normalizeMask(2 ** index);
+}

@@ -29,6 +29,7 @@ import {
   verticalInsertionLine,
   type DragSessionHandle
 } from "../../interaction/drag/DragSession.ts";
+import { RovingFocus } from "../../interaction/focus/RovingFocus.ts";
 import "../../icon/Icon.ts";
 
 // CONSTANTS
@@ -70,6 +71,7 @@ export class Tabs extends LitElement {
 
   #generatedId: string;
   #session: DragSessionHandle | null = null;
+  #roving = new RovingFocus(this, ".label");
 
   constructor() {
     super();
@@ -442,11 +444,7 @@ export class Tabs extends LitElement {
 
     event.preventDefault();
     this.#selectIndex(next, true);
-    void this.updateComplete.then(() => {
-      this.renderRoot.querySelectorAll<HTMLButtonElement>(
-        "[role=tab]"
-      )[next]?.focus();
-    });
+    this.#roving.focus(next);
   };
 
   #selectIndex(

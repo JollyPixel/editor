@@ -6,6 +6,7 @@ import type {
   Interval,
   JollyOption
 } from "../controls/types.ts";
+import type { LayerGridMode } from "../controls/LayerGrid.ts";
 import {
   isVec2Like,
   isVec3Like,
@@ -34,6 +35,7 @@ export type DispatchTag =
   | "jolly-checkbox"
   | "jolly-color"
   | "jolly-flags"
+  | "jolly-layer-grid"
   | "jolly-number"
   | "jolly-point2d"
   | "jolly-quaternion"
@@ -49,6 +51,7 @@ export type DispatchTag =
 export type DispatchView =
   | "buttons"
   | "flags"
+  | "layers"
   | "point2d"
   | "quaternion"
   | "spin";
@@ -84,9 +87,26 @@ export interface DispatchOptions<TValue> {
   layout?: ButtonGroupLayout;
   /*
    * Columns of a `layout: "grid"` button group. Zero lets the grid size
-   * itself.
+   * itself. Cells per block row of a `view: "layers"` grid, where zero keeps
+   * the element default.
    */
   columns?: number;
+  /*
+   * Number of cells in a `view: "layers"` grid.
+   */
+  count?: number;
+  /*
+   * Whether a `view: "layers"` grid edits a mask or one index.
+   */
+  mode?: LayerGridMode;
+  /*
+   * Number shown on the first cell of a `view: "layers"` grid.
+   */
+  start?: number;
+  /*
+   * Tooltip names of a `view: "layers"` grid, keyed by cell index.
+   */
+  names?: Record<number, string>;
 }
 
 export function dispatchTag<TValue>(
@@ -107,6 +127,9 @@ export function dispatchTag<TValue>(
     return "jolly-checkbox";
   }
   if (typeof value === "number") {
+    if (options.view === "layers") {
+      return "jolly-layer-grid";
+    }
     if (options.min === undefined || options.max === undefined) {
       return "jolly-number";
     }

@@ -59,8 +59,8 @@ for a different reason: `editors/voxel-map` needed an ambient feed, not an alert
   and command bindings match `event.key` (so undo stays on the key labelled Z).
   `@jolly-pixel/controls` key chords already match this way (`"KeyQ"` is a position, `"z"` a
   printed letter), so a registry would build on them.
-- Whether `jolly-flags` needs per-bit mixedness. A bitmask across a multi-selection genuinely is
-  mixed bit by bit, which `FieldValue<number>` cannot express.
+- Whether `jolly-flags` and `jolly-layer-grid` need per-bit mixedness. A bitmask across a
+  multi-selection genuinely is mixed bit by bit, which `FieldValue<number>` cannot express.
 - Relative multi-edit is not expressible. `{ value: T }` carries one absolute value; Unity applies a
   delta to each selected object instead, which would need a second detail shape and write-back path.
 - Whether `JollyField` becomes public. Promoting it is additive (ADR-0003).

@@ -3,6 +3,7 @@ import "../../../../src/controls/ButtonGroup.ts";
 import "../../../../src/controls/Checkbox.ts";
 import "../../../../src/controls/Color.ts";
 import "../../../../src/controls/Flags.ts";
+import "../../../../src/controls/LayerGrid.ts";
 import "../../../../src/controls/Number.ts";
 import "../../../../src/controls/Range.ts";
 import "../../../../src/controls/Select.ts";

@@ -11,9 +11,13 @@ interface BindingOptions<TValue> {
   max?: number;
   step?: number;
   options?: Record<string, TValue>;
-  view?: "buttons" | "flags" | "point2d" | "quaternion" | "spin";
+  view?: "buttons" | "flags" | "layers" | "point2d" | "quaternion" | "spin";
   layout?: "segmented" | "grid";
   columns?: number;
+  count?: number;
+  mode?: "mask" | "index";
+  start?: number;
+  names?: Record<number, string>;
   alpha?: boolean;
   axisLabels?: Record<string, string>;
   axes?: "xy" | "xz" | "yz";
@@ -45,6 +49,7 @@ The initial property value and the options determine the element:
 | `options` with `view: "flags"` and a number | `jolly-flags` |
 | `options` is present | `jolly-select` |
 | Boolean | `jolly-checkbox` |
+| Number with `view: "layers"` | `jolly-layer-grid` |
 | Number with both `min` and `max`, and `view: "spin"` | `jolly-spin-slider` |
 | Number with both `min` and `max` | `jolly-slider` |
 | Other number | `jolly-number` |
@@ -98,6 +103,17 @@ value that is not a number falls back to `jolly-select`.
 draws the range as a bar under the value. A number without both bounds
 ignores it and stays a `jolly-number`.
 
+`view: "layers"` makes a `jolly-layer-grid` for a number, with or without
+bounds, as a layer mask or, with `mode: "index"`, one index:
+
+```ts
+folder.addBinding(camera, "cullMask", {
+  label: "Cull mask",
+  view: "layers",
+  count: 20
+});
+```
+
 Vector shapes are tested widest first, so `{ x, y, z }` is a three-axis value
 rather than the two-axis one it also satisfies. `"point2d"` turns a two-axis
 value into a drag pad, and `"quaternion"` reads a four-axis value as a rotation
@@ -127,6 +143,8 @@ directly.
 | `axes` | `jolly-vector2` | Which plane the field edits. Defaults to the pair the bound value carries. |
 | `layout` | `jolly-button-group` | `"segmented"` in a row, or `"grid"`. Defaults to the element's `"segmented"`. |
 | `columns` | `jolly-button-group` | Columns of a `"grid"` layout. Zero lets the grid size itself. |
+| `columns` | `jolly-layer-grid` | Cells per row of one two-row block. Zero or less keeps the element default `5`, unlike the button group. |
+| `count`, `mode`, `start`, `names` | `jolly-layer-grid` | Forwarded to the element's [properties](../controls/layer-grid.md#properties). |
 
 ## Write-back and change handlers
 

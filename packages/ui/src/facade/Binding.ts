@@ -252,6 +252,26 @@ function buildElement<TValue>(
 
       return element;
     }
+    case "jolly-layer-grid": {
+      const element = document.createElement(tag);
+      if (options.count !== undefined) {
+        element.count = options.count;
+      }
+      if (options.columns !== undefined) {
+        element.columns = options.columns;
+      }
+      if (options.mode !== undefined) {
+        element.mode = options.mode;
+      }
+      if (options.start !== undefined) {
+        element.start = options.start;
+      }
+      if (options.names !== undefined) {
+        element.names = options.names;
+      }
+
+      return element;
+    }
     case "jolly-color": {
       const element = document.createElement(tag);
       element.alpha = options.alpha ??

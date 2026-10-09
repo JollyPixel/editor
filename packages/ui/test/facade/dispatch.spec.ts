@@ -243,13 +243,28 @@ describe("facade.dispatchTag alternate option views", () => {
     );
   });
 
-  test("ignores view flags when the value is not a number", () => {
+  test("view layers picks jolly-layer-grid for a number, bounded or not", () => {
+    assert.equal(
+      dispatchTag(5, { view: "layers" }),
+      "jolly-layer-grid"
+    );
+    assert.equal(
+      dispatchTag(5, { min: 0, max: 31, view: "layers" }),
+      "jolly-layer-grid"
+    );
+  });
+
+  test("ignores number views when the value is not a number", () => {
     assert.equal(
       dispatchTag("player", {
         options: { Default: "default", Player: "player" },
         view: "flags"
       }),
       "jolly-select"
+    );
+    assert.equal(
+      dispatchTag("5", { view: "layers" }),
+      "jolly-text"
     );
   });
 
