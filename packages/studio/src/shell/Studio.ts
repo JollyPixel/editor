@@ -12,7 +12,8 @@ import {
 import {
   FrameConsoles,
   type CatalogShare,
-  type EditorConsole
+  type EditorConsole,
+  type LaunchIdentity
 } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
@@ -101,7 +102,7 @@ export class Studio extends LitElement {
       frames: {
         container: this._frames,
         share: options.share,
-        identity: options.identity,
+        identity: () => this.#launchIdentity(options.identity),
         consoles: options.console === undefined ?
           undefined :
           new FrameConsoles({ commands: options.console.commands })
@@ -212,6 +213,19 @@ export class Studio extends LitElement {
       );
     }
   };
+
+  #launchIdentity(
+    identity: PeerIdentity | null
+  ): LaunchIdentity | null {
+    const avatar = this._signedIn?.account.avatar;
+
+    return identity === null || avatar === undefined ?
+      identity :
+      {
+        ...identity,
+        avatar
+      };
+  }
 
   readonly #syncOpenTabs = (): void => {
     this._openTabs = this.#session?.tabs.list() ?? [];

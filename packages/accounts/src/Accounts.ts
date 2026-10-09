@@ -2,10 +2,12 @@
 import type {
   AuthenticationProvider,
   AuthenticationRequest,
-  PeerIdentity
+  PeerIdentity,
+  PeerMetadata
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import type { Account } from "./account/Account.ts";
 import { AccountDirectory } from "./AccountDirectory.ts";
 import type { AccountRoles } from "./auth/AccountRoles.ts";
 import type { AccountsThrottleOptions } from "./auth/AccountsThrottle.ts";
@@ -137,22 +139,37 @@ export class Accounts implements AuthenticationProvider, Disposable {
     return {
       subject: account.id,
       role: account.role,
-      profile: {
-        username: account.username,
-        peerId: account.id,
-        avatar: account.avatar ?? null
-      }
+      profile: toPeerProfile(account)
     };
   }
 
   watchRevocations(
     listener: (accountId: string) => void
   ): () => void {
-    return this.#directory.watchRevocations(listener);
+    return this.#directory.subscribe("revoked", listener);
+  }
+
+  watchProfiles(
+    listener: (accountId: string, profile: PeerMetadata) => void
+  ): () => void {
+    return this.#directory.subscribe(
+      "profile",
+      (account) => listener(account.id, toPeerProfile(account))
+    );
   }
 
   [Symbol.dispose](): void {
     this.extension.dispose();
     this.#database.close();
   }
+}
+
+function toPeerProfile(
+  account: Account
+): PeerMetadata {
+  return {
+    username: account.username,
+    peerId: account.id,
+    avatar: account.avatar ?? null
+  };
 }

@@ -35,7 +35,7 @@ export function rosterServer(
     auth: {
       authenticate: () => peers.shift() ?? null,
       watchRevocations: revocations ?
-        (listener) => directory.watchRevocations(listener) :
+        (listener) => directory.subscribe("revoked", listener) :
         undefined
     }
   });

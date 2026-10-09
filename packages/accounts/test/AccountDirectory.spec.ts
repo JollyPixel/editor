@@ -96,7 +96,7 @@ describe("AccountDirectory changes", () => {
     const [alice, bob, carol, dave] = database.accounts;
     const directory = createDirectory(database);
     const revoked: string[] = [];
-    const stop = directory.watchRevocations((accountId) => revoked.push(accountId));
+    const stop = directory.subscribe("revoked", (accountId) => revoked.push(accountId));
 
     directory.assignRole(alice.id, name("bob"), "member");
     directory.remove(alice.id, name("bob"));

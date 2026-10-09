@@ -9,7 +9,8 @@ export type RoomEvent =
   | "sync"
   | "peer-joined"
   | "peer-left"
-  | "peer-presence";
+  | "peer-presence"
+  | "peer-profile";
 
 export interface RoomHarness {
   room: Room;
@@ -23,6 +24,9 @@ export interface RoomHarness {
   ): void;
   removePeer(
     clientId: string
+  ): void;
+  admitProfile(
+    profile: PeerMetadata
   ): void;
   emit(
     event: RoomEvent,
@@ -42,6 +46,7 @@ export function createRoomHarness(): RoomHarness {
     id: "room",
     clientId: "local",
     peers,
+    profile: null as PeerMetadata | null,
     role: "default",
     rights: {},
     access: "write" as const,
@@ -60,10 +65,10 @@ export function createRoomHarness(): RoomHarness {
     off: (event: string, listener: (payload: unknown) => void) => {
       listeners.get(event)?.delete(listener);
     }
-  } as unknown as Room;
+  };
 
   return {
-    room,
+    room: room as unknown as Room,
     published,
     addPeer(clientId, options = {}) {
       peers.set(clientId, {
@@ -78,6 +83,9 @@ export function createRoomHarness(): RoomHarness {
     },
     removePeer(clientId) {
       peers.delete(clientId);
+    },
+    admitProfile(profile) {
+      room.profile = profile;
     },
     emit(event, payload) {
       for (const listener of listeners.get(event) ?? []) {

@@ -201,6 +201,25 @@ export const peerPresenceEnvelopeSchema = defineSchema({
   ]
 });
 
+export const peerProfileEnvelopeSchema = defineSchema({
+  type: "object",
+  properties: {
+    ...kRoomProperties,
+    kind: {
+      const: "peer-profile"
+    },
+    clientId: {
+      type: "string"
+    },
+    patch: peerMetadataSchema
+  },
+  required: [
+    ...kRoomRequired,
+    "clientId",
+    "patch"
+  ]
+});
+
 export const deniedEnvelopeSchema = defineSchema({
   type: "object",
   properties: {
@@ -254,6 +273,7 @@ export const serverEnvelopeSchema = defineSchema({
     peerJoinedEnvelopeSchema,
     peerLeftEnvelopeSchema,
     peerPresenceEnvelopeSchema,
+    peerProfileEnvelopeSchema,
     deniedEnvelopeSchema,
     errorEnvelopeSchema
   ]

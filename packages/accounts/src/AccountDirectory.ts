@@ -70,6 +70,8 @@ export interface AccountDirectoryOptions {
 
 export type AccountDirectoryEventMap = {
   changed: () => void;
+  revoked: (accountId: string) => void;
+  profile: (account: Account) => void;
 };
 
 export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
@@ -82,7 +84,6 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   #hashes: Mutex;
   #masterPassword: MasterPassword | null;
   #maxAccessRequests: number;
-  #revocations = new Set<(accountId: string) => void>();
   #dummyHash: Promise<PasswordHash> | null = null;
 
   constructor(
@@ -273,9 +274,11 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
 
       return changed;
     });
+    const replaced = this.#account(account);
     this.emit("changed");
+    this.emit("profile", replaced);
 
-    return this.#account(account);
+    return replaced;
   }
 
   avatar(
@@ -287,19 +290,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   revoke(
     accountId: string
   ): void {
-    for (const listener of this.#revocations) {
-      listener(accountId);
-    }
-  }
-
-  watchRevocations(
-    listener: (accountId: string) => void
-  ): () => void {
-    this.#revocations.add(listener);
-
-    return () => {
-      this.#revocations.delete(listener);
-    };
+    this.emit("revoked", accountId);
   }
 
   * [Symbol.iterator](): IterableIterator<Account> {

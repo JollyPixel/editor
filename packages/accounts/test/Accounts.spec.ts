@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { AuthenticationRequest } from "@jolly-pixel/network";
+import type {
+  AuthenticationRequest,
+  PeerMetadata
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -99,5 +102,37 @@ describe("Accounts.watchRevocations", () => {
     stop();
 
     assert.deepEqual(revoked, [alice.id]);
+  });
+});
+
+describe("Accounts.watchProfiles", () => {
+  test("reports the profile of an account whose avatar changed, until stopped", async() => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    await using server = await listenAccounts(accounts);
+    const { client, cookies } = server.browser();
+    cookies.set("jolly_session", sessionFor(database, alice.id));
+    const changes: [string, PeerMetadata][] = [];
+    const stop = accounts.watchProfiles(
+      (accountId, profile) => changes.push([accountId, profile])
+    );
+
+    const { avatar } = await client.replaceAvatar(
+      new Blob([await solidPng(8, 8)], { type: "image/png" })
+    );
+    stop();
+    await client.replaceAvatar(
+      new Blob([await solidPng(4, 4)], { type: "image/png" })
+    );
+
+    assert.deepEqual(changes, [[
+      alice.id,
+      {
+        username: "Alice",
+        peerId: alice.id,
+        avatar
+      }
+    ]]);
   });
 });

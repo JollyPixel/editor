@@ -144,7 +144,7 @@ describe("CookieSessions", () => {
     const { sessions, directory } = createSessions(database);
     const cookie = headers(`jolly_session=${sessionFor(database, alice.id)}`);
     const revoked: string[] = [];
-    directory.watchRevocations((accountId) => revoked.push(accountId));
+    directory.subscribe("revoked", (accountId) => revoked.push(accountId));
 
     const cleared = parseSetCookie(sessions.close(cookie, false));
     sessions.close(cookie, false);

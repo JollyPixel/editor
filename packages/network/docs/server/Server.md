@@ -45,6 +45,12 @@ Activity is ordered per connection and room.
 
 Blocks further activity, then requests reauthentication after in-flight work drains.
 
+### `updateProfile(subject, patch): void`
+
+Merges `patch` into the server-owned profile of every connection of `subject`, so
+rooms it joins later carry it. After in-flight work drains, each room it is in
+sends `peer-profile` to every member, the subject's own connections included.
+
 ### `close(): Promise<void>`
 
 Disposes rooms and workers. Await it; close transport resources too.

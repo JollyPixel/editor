@@ -14,6 +14,7 @@ import {
   parseLaunchMessage,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE,
+  type LaunchIdentity,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
 
@@ -127,21 +128,31 @@ describe("EditorFrames", () => {
     );
   });
 
-  test("launches every frame as the shell's peer", () => {
-    const frames = editorFrames({
-      identity: {
-        username: "alice",
-        peerId: "peer-alice"
-      }
-    });
-    frames.show(kMap);
+  test("launches every frame as the shell's current peer", () => {
+    const alice: LaunchIdentity = {
+      username: "alice",
+      peerId: "peer-alice"
+    };
+    let identity = alice;
+    editorFrames({ identity: () => identity }).show(kMap);
     const posted = recordPosts(frame());
 
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    identity = {
+      ...alice,
+      avatar: "/api/accounts/peer-alice/avatar?v=2"
+    };
     postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
 
     assert.deepEqual(
       posted.map(([message]) => parseLaunchMessage(message)?.identity),
-      [{ username: "alice", peerId: "peer-alice" }]
+      [
+        alice,
+        {
+          ...alice,
+          avatar: "/api/accounts/peer-alice/avatar?v=2"
+        }
+      ]
     );
   });
 

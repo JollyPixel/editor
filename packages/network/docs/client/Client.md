@@ -67,6 +67,11 @@ Request fresh state or supply reconnect data.
 
 `peers` contains remote members only. `can(event)` resolves access for UI controls.
 
+### `profile`
+
+This client's profile as the server admitted it, with the server's fields over the
+claimed ones. `null` before the first `sync` and after `leave()`.
+
 ### Events
 
 #### message / sync
@@ -76,6 +81,11 @@ Feature payloads / admission confirmation.
 #### peer-joined / peer-left / peer-presence
 
 Peer changes; the peer map is already updated.
+
+#### peer-profile
+
+`{ clientId, patch }`: the server changed a member's profile. When `clientId` is
+`room.clientId`, `profile` holds the change; otherwise `peers` does.
 
 #### denied / error / malformed
 

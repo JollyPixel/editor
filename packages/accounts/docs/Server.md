@@ -58,13 +58,17 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
 }
 ```
 
-The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A new avatar applies on the next connection.
+The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A new avatar reaches open connections through [`watchProfiles`](#watchprofileslistener).
 
 `avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `path`.
 
 ### `watchRevocations(listener)`
 
 Calls `listener` with the account id after a role change or a removal in the [`accounts` room](#accounts-room), and after a [`POST logout`](#post-logout) that closed a session. It returns a function that stops the calls. The network server watches it, so every open connection of that account is closed and authenticates again: a removed or signed-out account is refused, and a new role applies at once. A logout also reconnects the account's other devices, whose sessions stay valid.
+
+### `watchProfiles(listener)`
+
+Calls `listener` with the account id and its new `profile`, shaped as in `authenticate`, after a [`PUT avatar`](#put-avatar). It returns a function that stops the calls. The network server watches it and sends the profile to every room the account's connections are in, without reconnecting them.
 
 ### `extension`
 

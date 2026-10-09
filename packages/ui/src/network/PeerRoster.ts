@@ -9,7 +9,12 @@ import type {
 import type { LogQueue } from "../feedback/LogQueue.ts";
 import type { PeerIdentity } from "../peer/identity.ts";
 import type { PresencePeer } from "../peer/Presence.ts";
-import { presencePeerOf } from "./peerProfile.ts";
+import {
+  presencePeerOf,
+  readAvatar,
+  readUsername,
+  toPeerMetadata
+} from "./peerProfile.ts";
 
 export interface PeerRosterOptions {
   room: Room;
@@ -60,6 +65,7 @@ export class PeerRoster {
     this.#room.on("sync", this.#publish);
     this.#room.on("peer-joined", this.#onPeerJoined);
     this.#room.on("peer-left", this.#onPeerLeft);
+    this.#room.on("peer-profile", this.#publish);
 
     this.#publish();
   }
@@ -68,6 +74,7 @@ export class PeerRoster {
     this.#room.off("sync", this.#publish);
     this.#room.off("peer-joined", this.#onPeerJoined);
     this.#room.off("peer-left", this.#onPeerLeft);
+    this.#room.off("peer-profile", this.#publish);
 
     this.#known.clear();
     this.#publishPeers([]);
@@ -93,15 +100,24 @@ export class PeerRoster {
       .sort((left, right) => left.clientId.localeCompare(right.clientId));
 
     return [
-      {
-        clientId: this.#identity.peerId,
-        displayName: this.#identity.username,
-        color: this.#identity.color,
-        peerId: this.#identity.peerId,
-        avatar: this.#identity.avatar,
-        self: true
-      },
+      this.#localPeer(),
       ...remote
     ];
+  }
+
+  #localPeer(): PresencePeer {
+    const profile = this.#room.profile ?? {
+      ...toPeerMetadata(this.#identity),
+      avatar: this.#identity.avatar ?? null
+    };
+
+    return {
+      clientId: this.#identity.peerId,
+      displayName: readUsername(profile),
+      color: this.#identity.color,
+      peerId: this.#identity.peerId,
+      avatar: readAvatar(profile),
+      self: true
+    };
   }
 }

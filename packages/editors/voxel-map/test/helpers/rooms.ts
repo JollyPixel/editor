@@ -18,6 +18,7 @@ export class FakeRoom
   readonly id = "voxel-map:test";
   readonly clientId = "local";
   readonly peers = new Map<string, Peer>();
+  readonly profile = null;
   readonly role = "editor";
   readonly rights: RoomRights = {};
   readonly access: Right = "write";

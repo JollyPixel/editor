@@ -28,6 +28,7 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
   readonly id: string;
   readonly clientId = "fake-client";
   readonly peers = new Map<string, Peer>();
+  readonly profile = null;
   readonly role = "editor";
   readonly rights: RoomRights = {};
   readonly access: Right = "write";
