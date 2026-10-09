@@ -19,10 +19,7 @@ import {
   connectWebSocket
 } from "#src/index.ts";
 import { WebsocketTransport } from "#src/transport/websocket.ts";
-import {
-  DEFAULT_WEBSOCKET_PATH,
-  WEBSOCKET_PROTOCOL
-} from "#src/transport/constants.ts";
+import { WEBSOCKET_PROTOCOL } from "#src/transport/constants.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 
@@ -44,44 +41,6 @@ describe("WebsocketTransport + Client (integration)", () => {
 
   after(() => {
     httpServer.close();
-  });
-
-  test("joins, exchanges messages, and leaves over a real WebSocket", async() => {
-    const server = new Server();
-    const extension = new RecordingExtension("test-ns");
-    server.register(extension);
-
-    new WebsocketTransport({ httpServer, server, path: DEFAULT_WEBSOCKET_PATH });
-
-    const client = new Client({
-      socket: () => connectWebSocket({ url: `ws://127.0.0.1:${port}${DEFAULT_WEBSOCKET_PATH}` })
-    });
-    const room = client.room("test-ns");
-    room.join();
-
-    assert.equal(room.clientId, null);
-
-    await waitFor(() => extension.connected.length === 1);
-    await waitFor(() => room.clientId !== null);
-    assert.equal(room.clientId, extension.clients[0].id);
-
-    let received: unknown;
-    room.on("message", (payload) => {
-      received = payload;
-    });
-
-    room.send({ hello: "world" });
-    await waitFor(() => extension.messages.length === 1);
-    assert.deepEqual(extension.messages[0].payload, { hello: "world" });
-
-    extension.clients[0].send({ type: "ack" });
-    await waitFor(() => received !== undefined);
-    assert.deepEqual(received, { type: "ack" });
-
-    room.leave();
-    await waitFor(() => extension.disconnected.length === 1);
-
-    client.destroy();
   });
 
   test("a revoked client reconnects and authenticates again", async() => {

@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { Server } from "../server/Server.ts";
+import type {
+  Server,
+  ServerConnection
+} from "../server/Server.ts";
 import type {
   ClientSocket,
   ClientSocketEvent,
@@ -15,7 +18,6 @@ const kLoopbackUrl = "loopback:";
 const kNormalCloseCode = 1000;
 
 type SocketListener = (event: ClientSocketEvent) => void;
-type LoopbackSocketState = "connecting" | "open" | "closed";
 
 export interface LoopbackTransportOptions {
   server: Server;
@@ -29,7 +31,8 @@ class LoopbackSocket implements ClientSocket {
     ClientSocketEventType,
     SocketListener[]
   >();
-  #state: LoopbackSocketState = "connecting";
+  #connection: ServerConnection | null = null;
+  #closed = false;
 
   constructor(
     server: Server
@@ -42,8 +45,8 @@ class LoopbackSocket implements ClientSocket {
   send(
     data: string
   ): void {
-    if (this.#state === "open") {
-      void this.#server.handleMessage(this.id, data);
+    if (!this.#closed) {
+      void this.#connection?.receive(data);
     }
   }
 
@@ -73,7 +76,7 @@ class LoopbackSocket implements ClientSocket {
       url: kLoopbackUrl,
       headers: {}
     });
-    if (this.#state === "closed") {
+    if (this.#closed) {
       return;
     }
     if (identity === null) {
@@ -85,8 +88,7 @@ class LoopbackSocket implements ClientSocket {
       return;
     }
 
-    this.#state = "open";
-    this.#server.handleConnect(
+    this.#connection = this.#server.connect(
       {
         id: this.id,
         send: (data) => this.#deliver(JSON.stringify(data)),
@@ -105,7 +107,7 @@ class LoopbackSocket implements ClientSocket {
     json: string
   ): void {
     queueMicrotask(() => {
-      if (this.#state !== "closed") {
+      if (!this.#closed) {
         this.#emit("message", { data: json });
       }
     });
@@ -114,15 +116,12 @@ class LoopbackSocket implements ClientSocket {
   #terminate(
     event: ClientSocketEvent
   ): void {
-    if (this.#state === "closed") {
+    if (this.#closed) {
       return;
     }
 
-    const wasOpen = this.#state === "open";
-    this.#state = "closed";
-    if (wasOpen) {
-      void this.#server.handleDisconnect(this.id);
-    }
+    this.#closed = true;
+    void this.#connection?.close();
 
     queueMicrotask(
       () => this.#emit("close", event)

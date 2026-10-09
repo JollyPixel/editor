@@ -276,32 +276,32 @@ export class WebsocketTransport {
     clientId: string,
     identity: PeerIdentity
   ): void {
-    const connection = new WebsocketConnection({
+    const handle = new WebsocketConnection({
       id: clientId,
       socket,
       logger: this.#logger,
       maxBufferedBytes: this.#maxBufferedBytes,
-      onMessage: (json) => this.#server.handleMessage(clientId, json)
+      onMessage: (json) => serverConnection.receive(json)
     });
-    this.#connections.add(connection);
-    this.#server.handleConnect(
-      connection,
+    this.#connections.add(handle);
+    const serverConnection = this.#server.connect(
+      handle,
       identity
     );
 
     socket.on(
       "message",
-      (raw) => connection.receive(raw.toString())
+      (raw) => handle.receive(raw.toString())
     );
     socket.on(
       "pong",
-      () => connection.markAlive()
+      () => handle.markAlive()
     );
     socket.on(
       "close",
       () => {
-        this.#connections.delete(connection);
-        void this.#server.handleDisconnect(clientId);
+        this.#connections.delete(handle);
+        void serverConnection.close();
       }
     );
     socket.on(

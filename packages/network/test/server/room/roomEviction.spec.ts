@@ -37,15 +37,15 @@ describe("Server — room lifetime regressions", () => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { server, evicted } = harness({ graceMs: 1_000 });
 
-    await join(server, "A", "pixelart:asset-1");
-    await server.handleMessage("A", {
+    const connectionA = await join(server, "A", "pixelart:asset-1");
+    await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "leave"
     });
 
     // dropped as "client has not joined room", and must not disarm the timer
-    server.handleConnect(client("Z"), identityOf(client("Z")));
-    await server.handleMessage("Z", {
+    const connectionZ = server.connect(client("Z"), identityOf(client("Z")));
+    await connectionZ.receive({
       room: "pixelart:asset-1",
       kind: "message",
       payload: {}
@@ -77,8 +77,8 @@ describe("Server — room lifetime regressions", () => {
       };
     });
 
-    server.handleConnect(client("A"), identityOf(client("A"), "guest"));
-    await server.handleMessage("A", {
+    const connectionA = server.connect(client("A"), identityOf(client("A"), "guest"));
+    await connectionA.receive({
       room: "kind:asset-1",
       kind: "join"
     });
@@ -98,10 +98,10 @@ describe("Server — room lifetime regressions", () => {
       return { extension: new AssetExtension("ext-id", "kind") };
     });
 
-    server.handleConnect({ id: "A", send: (data) => sent.push(data) }, identityOf("A"));
-    server.handleConnect({ id: "B", send: (data) => sent.push(data) }, identityOf("B"));
-    await server.handleMessage("A", { room: "kind:asset-1", kind: "join" });
-    await server.handleMessage("B", { room: "kind:asset-1", kind: "join" });
+    const connectionA = server.connect({ id: "A", send: (data) => sent.push(data) }, identityOf("A"));
+    const connectionB = server.connect({ id: "B", send: (data) => sent.push(data) }, identityOf("B"));
+    await connectionA.receive({ room: "kind:asset-1", kind: "join" });
+    await connectionB.receive({ room: "kind:asset-1", kind: "join" });
 
     assert.deepEqual(
       [...new Set(sent.map((envelope) => envelope.room))],
@@ -137,8 +137,8 @@ describe("Server — room lifetime regressions", () => {
       };
     });
 
-    await join(server, "A", "pixelart:asset-1");
-    await server.handleMessage("A", {
+    const connectionA = await join(server, "A", "pixelart:asset-1");
+    await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "leave"
     });
@@ -147,8 +147,8 @@ describe("Server — room lifetime regressions", () => {
     await flush();
     assert.deepEqual(order, ["resolve", "evict:start"]);
 
-    server.handleConnect(client("B"), identityOf(client("B")));
-    const rejoin = server.handleMessage("B", {
+    const connectionB = server.connect(client("B"), identityOf(client("B")));
+    const rejoin = connectionB.receive({
       room: "pixelart:asset-1",
       kind: "join"
     });
@@ -181,8 +181,8 @@ describe("Server browser timers", () => {
     const { server, evicted, extensions } = harness();
 
     try {
-      await join(server, "A", "pixelart:asset-1");
-      await server.handleDisconnect("A");
+      const connectionA = await join(server, "A", "pixelart:asset-1");
+      await connectionA.close();
       assert.equal(callbacks.length, 1);
 
       callbacks[0]();

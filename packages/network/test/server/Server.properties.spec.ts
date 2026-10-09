@@ -59,11 +59,11 @@ describe("Server properties", () => {
           const extension = new RecordingExtension(kRoom);
           server.register(extension);
           const { client, sent } = createClient("A");
-          server.handleConnect(client, identityOf(client));
-          await server.handleMessage("A", JSON.stringify({ room: kRoom, kind: "join" }));
+          const connectionA = server.connect(client, identityOf(client));
+          await connectionA.receive(JSON.stringify({ room: kRoom, kind: "join" }));
 
           for (const frame of frames) {
-            await server.handleMessage("A", frame);
+            await connectionA.receive(frame);
           }
 
           assert.deepStrictEqual(extension.connected, ["A"]);
@@ -72,7 +72,7 @@ describe("Server properties", () => {
           assert.deepStrictEqual(withoutSync(sent), []);
           assert.deepStrictEqual(errors, []);
 
-          await server.handleMessage("A", JSON.stringify({
+          await connectionA.receive(JSON.stringify({
             room: kRoom,
             kind: "message",
             payload: "still here"

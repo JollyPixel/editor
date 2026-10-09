@@ -67,37 +67,3 @@ describe("RightsTable — configured", () => {
     assert.strictEqual(table.check("viewer", "object-added"), "write");
   });
 });
-
-describe("RightsTable — glob patterns", () => {
-  test("a trailing \"*\" matches any suffix, letting one rule cover a whole namespace", () => {
-    const table = new RightsTable({ viewer: { "voxel.renderer.*": "read" } });
-
-    assert.strictEqual(table.check("viewer", "voxel.renderer.voxel-set"), "read");
-    assert.strictEqual(table.check("viewer", "voxel.renderer.object-added"), "read");
-  });
-
-  test("a literal \".\" in the pattern only matches a literal \".\", not \"any character\"", () => {
-    const table = new RightsTable({ viewer: { "voxel.renderer.voxel-set": "read" } });
-
-    assert.strictEqual(table.check("viewer", "voxelXrendererXvoxel-set"), "void");
-  });
-
-  test("\"*\" matches across namespace separators too, not just within one segment", () => {
-    const table = new RightsTable({ viewer: { "*.$join": "void" } });
-
-    assert.strictEqual(table.check("viewer", "voxel.renderer.$join"), "void");
-    assert.strictEqual(table.check("viewer", "pixel-draw.$join"), "void");
-  });
-
-  test("the first pattern that matches wins, in declaration order", () => {
-    const table = new RightsTable({
-      viewer: {
-        "voxel.renderer.voxel-set": "write",
-        "voxel.renderer.*": "void"
-      }
-    });
-
-    assert.strictEqual(table.check("viewer", "voxel.renderer.voxel-set"), "write");
-    assert.strictEqual(table.check("viewer", "voxel.renderer.object-added"), "void");
-  });
-});

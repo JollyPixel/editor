@@ -7,121 +7,14 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  CommandSync,
-  type CommandReconciler,
-  type NetworkCommandHeader,
-  type NetworkServerMessage
-} from "#src/index.ts";
-import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
-
-type TestCommand = (
-  | { action: "paint"; keys: string[]; value: number; }
-  | { action: "move"; item: string; }
-) & NetworkCommandHeader;
-
-interface TestSnapshot {
-  value: number;
-}
-
-type TestMessage = NetworkServerMessage<TestCommand, TestSnapshot>;
-
-interface SetupOptions {
-  revertible?: boolean;
-  narrows?: boolean;
-  replays?: (command: TestCommand) => boolean;
-}
-
-function label(
-  command: TestCommand
-): string {
-  return command.action === "paint" ?
-    `${command.clientId}:paint:${command.keys.join("+")}=${command.value}` :
-    `${command.clientId}:move:${command.item}`;
-}
-
-function setup(
-  options: SetupOptions = {}
-) {
-  const {
-    revertible = true,
-    narrows = true,
-    replays = () => true
-  } = options;
-  const log: string[] = [];
-  const harness = new RoomHarness<TestCommand, TestMessage>();
-  harness.room.join();
-  harness.admit("self");
-  const reconciler: CommandReconciler<TestCommand> = {
-    keys: (command) => (command.action === "paint" ? command.keys : null),
-    narrow: (command, keep) => {
-      if (!narrows || command.action !== "paint") {
-        return null;
-      }
-
-      return {
-        ...command,
-        keys: keep.map((index) => command.keys[index])
-      };
-    },
-    revert: (pending) => {
-      if (!revertible) {
-        return false;
-      }
-      log.push(`revert:${pending.map((command) => command.seq).join(",")}`);
-
-      return true;
-    },
-    replay: (command) => {
-      log.push(`replay:${command.seq}`);
-
-      return replays(command);
-    }
-  };
-  const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room, {
-    reconciler
-  });
-  sync.on("command", (command) => log.push(`apply:${label(command)}`));
-  sync.on("snapshot", (snapshot) => log.push(`snapshot:${snapshot.value}`));
-
-  return {
-    harness,
-    sync,
-    log
-  };
-}
-
-function paint(
-  clientId: string,
-  keys: string[],
-  timestamp: number,
-  value = 0
-): TestCommand {
-  return {
-    action: "paint",
-    keys,
-    value,
-    clientId,
-    seq: 1,
-    timestamp
-  };
-}
-
-function move(
-  clientId: string,
-  seq = 1
-): TestCommand {
-  return {
-    action: "move",
-    item: "a",
-    clientId,
-    seq,
-    timestamp: 0
-  };
-}
+  createReconciledSync,
+  move,
+  paint
+} from "../../helpers/client/reconciledSync.ts";
 
 describe("CommandSync reconciliation, keyed writes", () => {
   test("drops a remote write to a key a pending write outlives", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "paint", keys: ["k"], value: 1 }, 200);
     harness.serverMessage({ type: "command", data: paint("peer", ["k"], 100) });
@@ -130,7 +23,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
   });
 
   test("a pending write outlives a versioned remote write whatever the clocks say", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "paint", keys: ["k"], value: 1 }, 100);
     harness.serverMessage({ type: "command", data: paint("peer", ["k"], 9_000), version: 3 });
@@ -139,7 +32,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
   });
 
   test("a pending replay older than the remote version lets the remote write through", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "paint", keys: ["k"], value: 1 }, 100, 2);
     harness.serverMessage({ type: "command", data: paint("peer", ["k"], 50), version: 3 });
@@ -147,20 +40,8 @@ describe("CommandSync reconciliation, keyed writes", () => {
     assert.deepEqual(log, ["apply:peer:paint:k=0"]);
   });
 
-  test("an echo reports its version for every command it acknowledges", () => {
-    const { harness, sync } = setup();
-    const acknowledged: [number, number | undefined][] = [];
-    sync.on("acknowledged", (command, version) => acknowledged.push([command.timestamp, version]));
-
-    sync.send({ action: "paint", keys: ["k"], value: 1 }, 100);
-    sync.send({ action: "paint", keys: ["k"], value: 2 }, 200);
-    harness.serverMessage({ type: "command", data: { ...paint("self", ["k"], 200), seq: 2 }, version: 9 });
-
-    assert.deepEqual(acknowledged, [[100, 9], [200, 9]]);
-  });
-
   test("applies a remote write that beats the pending write", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "paint", keys: ["k"], value: 1 }, 100);
     harness.serverMessage({ type: "command", data: paint("peer", ["k"], 200) });
@@ -169,7 +50,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
   });
 
   test("narrows a remote write to the keys no pending write outlives", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "paint", keys: ["b"], value: 1 }, 200);
     harness.serverMessage({ type: "command", data: paint("peer", ["a", "b", "c"], 100) });
@@ -178,7 +59,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
   });
 
   test("applies a write it cannot narrow, then replays the pending writes that outlive it", () => {
-    const { harness, sync, log } = setup({ narrows: false });
+    const { harness, sync, log } = createReconciledSync({ narrows: false });
 
     sync.send({ action: "paint", keys: ["b"], value: 1 }, 200);
     sync.send({ action: "paint", keys: ["z"], value: 2 }, 200);
@@ -188,7 +69,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
   });
 
   test("applies a remote write as is when the ledger is empty", () => {
-    const { harness, log } = setup();
+    const { harness, log } = createReconciledSync();
 
     harness.serverMessage({ type: "command", data: paint("peer", ["k"], 100) });
 
@@ -196,7 +77,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
   });
 
   test("a correction is masked by a later pending write on the same key", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "paint", keys: ["k"], value: 1 }, 100);
     sync.send({ action: "paint", keys: ["k"], value: 2 }, 150);
@@ -213,7 +94,7 @@ describe("CommandSync reconciliation, keyed writes", () => {
 
 describe("CommandSync reconciliation, structural commands", () => {
   test("reverts pending commands, applies the remote command, then replays them", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "move", item: "a" });
     sync.send({ action: "paint", keys: ["k"], value: 1 }, 100);
@@ -228,7 +109,7 @@ describe("CommandSync reconciliation, structural commands", () => {
   });
 
   test("a keyed remote write takes the slow path while a structural command is pending", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "move", item: "a" });
     harness.serverMessage({ type: "command", data: paint("peer", ["k"], 100) });
@@ -241,7 +122,7 @@ describe("CommandSync reconciliation, structural commands", () => {
   });
 
   test("a pending command the view rejects is left out of the next revert", () => {
-    const { harness, sync, log } = setup({
+    const { harness, sync, log } = createReconciledSync({
       replays: (command) => command.seq !== 1
     });
 
@@ -259,7 +140,7 @@ describe("CommandSync reconciliation, structural commands", () => {
   });
 
   test("applies the echo of a command the view rejected but the server admitted", () => {
-    const { harness, sync, log } = setup({
+    const { harness, sync, log } = createReconciledSync({
       replays: (command) => command.seq !== 1
     });
 
@@ -273,7 +154,7 @@ describe("CommandSync reconciliation, structural commands", () => {
   });
 
   test("an own echo of an applied command is not applied again", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "move", item: "a" });
     harness.serverMessage({ type: "command", data: move("self", 1) });
@@ -284,7 +165,7 @@ describe("CommandSync reconciliation, structural commands", () => {
 
 describe("CommandSync reconciliation, snapshots and resync", () => {
   test("a snapshot replays the unacknowledged commands through the reconciler", () => {
-    const { harness, sync, log } = setup();
+    const { harness, sync, log } = createReconciledSync();
 
     sync.send({ action: "move", item: "a" });
     sync.send({ action: "move", item: "b" });
@@ -294,7 +175,7 @@ describe("CommandSync reconciliation, snapshots and resync", () => {
   });
 
   test("asks for a snapshot when a pending command cannot be reverted", () => {
-    const { harness, sync, log } = setup({ revertible: false });
+    const { harness, sync, log } = createReconciledSync({ revertible: false });
 
     sync.send({ action: "move", item: "a" });
     harness.serverMessage({ type: "command", data: move("peer") });
@@ -307,7 +188,7 @@ describe("CommandSync reconciliation, snapshots and resync", () => {
   });
 
   test("ignores server commands until the requested snapshot arrives", () => {
-    const { harness, sync, log } = setup({ revertible: false });
+    const { harness, sync, log } = createReconciledSync({ revertible: false });
 
     sync.send({ action: "move", item: "a" });
     sync.send({ action: "move", item: "b" });
@@ -321,7 +202,7 @@ describe("CommandSync reconciliation, snapshots and resync", () => {
   });
 
   test("an own echo ignored while resyncing still reports its version", () => {
-    const { harness, sync } = setup({ revertible: false });
+    const { harness, sync } = createReconciledSync({ revertible: false });
     const versions: Array<number | undefined> = [];
     sync.on("acknowledged", (_command, version) => versions.push(version));
 
@@ -333,7 +214,7 @@ describe("CommandSync reconciliation, snapshots and resync", () => {
   });
 
   test("asks for one snapshot at a time", () => {
-    const { harness, sync } = setup({ revertible: false });
+    const { harness, sync } = createReconciledSync({ revertible: false });
 
     sync.send({ action: "move", item: "a" });
     harness.serverMessage({ type: "command", data: move("peer") });

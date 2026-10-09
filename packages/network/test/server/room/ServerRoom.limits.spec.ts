@@ -48,12 +48,14 @@ describe("ServerRoom — sync snapshot presence", () => {
     const a = createClient("A");
     const b = createClient("B");
     const c = createClient("C");
-    await room.join("A", a.client, identityOf("A"), {}, {
+    await room.join({
+      handle: a.client,
+      identity: identityOf("A"),
       presence: { cursor: { x: 1, y: 1 } }
     });
 
-    await room.join("B", b.client, identityOf("B", "viewer"), {});
-    await room.join("C", c.client, identityOf("C"), {});
+    await room.join({ handle: b.client, identity: identityOf("B", "viewer") });
+    await room.join({ handle: c.client, identity: identityOf("C") });
 
     assert.deepEqual(syncMembersOf(b.sent), [
       { clientId: "A", role: "default", profile: {}, presence: {} },
@@ -81,8 +83,10 @@ describe("ServerRoom — peer metadata length", () => {
     const room = roomWithLimit();
     const a = createClient("A");
 
-    const admitted = await room.join("A", a.client, identityOf("A"), {
-      username: "x".repeat(64)
+    const admitted = await room.join({
+      handle: a.client,
+      identity: identityOf("A"),
+      profile: { username: "x".repeat(64) }
     });
 
     assert.strictEqual(admitted, false);
@@ -99,7 +103,9 @@ describe("ServerRoom — peer metadata length", () => {
     const room = roomWithLimit();
     const a = createClient("A");
 
-    const admitted = await room.join("A", a.client, identityOf("A"), {}, {
+    const admitted = await room.join({
+      handle: a.client,
+      identity: identityOf("A"),
       presence: { selection: "x".repeat(64) }
     });
 
@@ -111,8 +117,8 @@ describe("ServerRoom — peer metadata length", () => {
     const room = roomWithLimit();
     const a = createClient("A");
     const b = createClient("B");
-    await room.join("A", a.client, identityOf("A"), {});
-    await room.join("B", b.client, identityOf("B"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: b.client, identity: identityOf("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -136,7 +142,7 @@ describe("ServerRoom — peer metadata length", () => {
   test("measures a replaced key once, so repeated patches of one key never add up", async() => {
     const room = roomWithLimit();
     const a = createClient("A");
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
     a.sent.length = 0;
 
     for (let x = 0; x < 100; x++) {
@@ -156,7 +162,7 @@ describe("ServerRoom — resync throttle", () => {
         limits: { resyncIntervalMs: 1_000 }
       });
       const a = createClient("A");
-      await room.join("A", a.client, identityOf("A"), {});
+      await room.join({ handle: a.client, identity: identityOf("A") });
 
       await room.resync("A");
       await room.resync("A");
@@ -182,7 +188,7 @@ describe("ServerRoom — resync throttle", () => {
       const extension = createExtension(actionProtocols);
       const room = new ServerRoom(extension.id, extension);
       const a = createClient("A");
-      await room.join("A", a.client, identityOf("A"), {});
+      await room.join({ handle: a.client, identity: identityOf("A") });
 
       await room.resync("A");
       await room.resync("A");

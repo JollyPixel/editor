@@ -4,6 +4,7 @@ import {
   Server,
   Extension,
   type ClientHandle,
+  type ServerConnection,
   type MessageProtocols,
   type RoomResolution
 } from "#src/index.ts";
@@ -94,7 +95,9 @@ export async function join(
   server: Server,
   clientId: string,
   room: string
-): Promise<void> {
-  server.handleConnect(client(clientId), identityOf(client(clientId)));
-  await server.handleMessage(clientId, { room, kind: "join" });
+): Promise<ServerConnection> {
+  const connection = server.connect(client(clientId), identityOf(client(clientId)));
+  await connection.receive({ room, kind: "join" });
+
+  return connection;
 }

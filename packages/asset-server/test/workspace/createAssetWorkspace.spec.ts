@@ -89,8 +89,8 @@ describe("createAssetWorkspace", () => {
     const record = workspace.backend.catalog.snapshot().assets[0];
     assert.strictEqual(record.kind, "counter");
 
-    workspace.server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
-    const joined = await workspace.server.handleMessage("A", {
+    const connectionA = workspace.server.connect(recordingClient("A"), { subject: "A", role: "default" });
+    const joined = await connectionA.receive({
       room: new AssetRoom(record.kind, record.id).toString(),
       kind: "join"
     });
@@ -188,8 +188,8 @@ describe("createAssetWorkspace", () => {
       backend: { watch: false }
     });
 
-    workspace.server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
-    const joined = await workspace.server.handleMessage("A", {
+    const connectionA = workspace.server.connect(recordingClient("A"), { subject: "A", role: "default" });
+    const joined = await connectionA.receive({
       room: "static-room",
       kind: "join"
     });
@@ -210,9 +210,9 @@ describe("createAssetWorkspace", () => {
     });
 
     assert.strictEqual(workspace.server, server);
-    server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
+    const connectionA = server.connect(recordingClient("A"), { subject: "A", role: "default" });
     assert.notStrictEqual(
-      await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" }),
+      await connectionA.receive({ room: CATALOG_ROOM, kind: "join" }),
       null
     );
   });

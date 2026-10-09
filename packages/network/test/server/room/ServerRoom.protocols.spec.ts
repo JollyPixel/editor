@@ -23,7 +23,7 @@ describe("ServerRoom — inbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
 
     await room.message("A", { action: "voxel-set" });
 
@@ -34,7 +34,7 @@ describe("ServerRoom — inbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
     a.sent.length = 0;
 
     await room.message("A", { action: "not-a-known-action" });
@@ -65,8 +65,8 @@ describe("ServerRoom — outbound protocol", () => {
         "pixel-draw.voxel-set": "read"
       }
     }));
-    await room.join("A", a.client, identityOf("A", "blocked"), {});
-    await room.join("B", b.client, identityOf("B", "allowed"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
+    await room.join({ handle: b.client, identity: identityOf("B", "allowed") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -95,8 +95,8 @@ describe("ServerRoom — outbound protocol", () => {
         "pixel-draw.$snapshot": "read"
       }
     }));
-    await room.join("A", a.client, identityOf("A", "blocked"), {});
-    await room.join("B", b.client, identityOf("B", "allowed"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
+    await room.join({ handle: b.client, identity: identityOf("B", "allowed") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -110,7 +110,7 @@ describe("ServerRoom — outbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join("A", a.client, identityOf("A"), {});
+    await room.join({ handle: a.client, identity: identityOf("A") });
     a.sent.length = 0;
 
     extension.lastContext.room.broadcast({ type: "command", data: { action: "unheard-of" } });
@@ -127,7 +127,7 @@ describe("ServerRoom — outbound protocol", () => {
         "pixel-draw.voxel-set": "void"
       }
     }));
-    await room.join("A", a.client, identityOf("A", "blocked"), {});
+    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
     a.sent.length = 0;
 
     extension.lastContext.room.sendTo("A", {

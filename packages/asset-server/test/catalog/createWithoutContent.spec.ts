@@ -47,15 +47,15 @@ async function catalogServer(
     backend: catalogBackend(sync, projection)
   }));
   const author = recordingClient("A");
-  server.handleConnect(author, { subject: "A", role: "default" });
-  await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+  const connectionA = server.connect(author, { subject: "A", role: "default" });
+  await connectionA.receive({ room: CATALOG_ROOM, kind: "join" });
 
   let requests = 0;
 
   return {
     sync,
     async create(path, kind) {
-      await server.handleMessage("A", {
+      await connectionA.receive({
         room: CATALOG_ROOM,
         kind: "message",
         payload: {

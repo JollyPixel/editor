@@ -11,7 +11,6 @@ import { createClient } from "../../helpers/server/clientHandle.ts";
 import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
 import {
   PresenceOnlyExtension,
-  RightsTable,
   Server,
   UnknownDefaultRoleError,
   type AuthenticationProvider,
@@ -60,11 +59,13 @@ describe("Server — defaultRole", () => {
     );
   });
 
-  test("accepts a defaultRole when no rights table constrains the vocabulary", () => {
-    assert.strictEqual(
-      new RightsTable(undefined, "anything").defaultRole,
-      "anything"
-    );
+  test("accepts a defaultRole when no rights table constrains the vocabulary", async() => {
+    await using server = new Server({ defaultRole: "anything" });
+
+    assert.deepEqual(await server.authenticate(attempt("A")), {
+      subject: "A",
+      role: "anything"
+    });
   });
 });
 
@@ -119,8 +120,8 @@ describe("Server — the authenticated role drives rights", () => {
     server.register(new PresenceOnlyExtension("lobby", "presence"));
 
     const { client, sent } = createClient("A");
-    server.handleConnect(client, { subject: "A", role: "editor" });
-    await server.handleMessage("A", { room: "lobby", kind: "join" });
+    const connectionA = server.connect(client, { subject: "A", role: "editor" });
+    await connectionA.receive({ room: "lobby", kind: "join" });
 
     assert.deepEqual(sent, [{
       room: "lobby",
@@ -149,8 +150,8 @@ describe("Server — the authenticated role drives rights", () => {
     server.register(new PresenceOnlyExtension("lobby", "presence"));
 
     const { client, sent } = createClient("A");
-    server.handleConnect(client, { subject: "A", role: "viewer" });
-    await server.handleMessage("A", {
+    const connectionA = server.connect(client, { subject: "A", role: "viewer" });
+    await connectionA.receive({
       room: "lobby",
       kind: "join",
       profile: { role: "admin" }
@@ -189,9 +190,9 @@ describe("Server — revocations", () => {
     };
     const closed: string[] = [];
     await using server = new Server({ auth });
-    server.handleConnect(closableClient("A1", closed), { subject: "alice", role: "default" });
-    server.handleConnect(closableClient("A2", closed), { subject: "alice", role: "default" });
-    server.handleConnect(closableClient("B", closed), { subject: "bob", role: "default" });
+    server.connect(closableClient("A1", closed), { subject: "alice", role: "default" });
+    server.connect(closableClient("A2", closed), { subject: "alice", role: "default" });
+    server.connect(closableClient("B", closed), { subject: "bob", role: "default" });
 
     for (const listener of revoked) {
       listener("alice");
@@ -205,17 +206,17 @@ describe("Server — revocations", () => {
     await using server = new Server();
     const extension = new RecordingExtension("pixel-draw");
     server.register(extension);
-    server.handleConnect(
+    const connectionA = server.connect(
       closableClient("A", []),
       {
         subject: "alice",
         role: "default"
       }
     );
-    await server.handleMessage("A", { room: "pixel-draw", kind: "join" });
+    await connectionA.receive({ room: "pixel-draw", kind: "join" });
 
     server.revoke("alice");
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: "pixel-draw",
       kind: "message",
       payload: {}

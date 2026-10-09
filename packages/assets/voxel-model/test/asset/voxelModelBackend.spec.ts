@@ -117,15 +117,15 @@ describe("voxel-model asset kind over a real back-end", () => {
       const room = new AssetRoom(VOXEL_MODEL_KIND, recordId).toString();
       const sent: SentMessage[] = [];
 
-      server.handleConnect(client("A", sent), { subject: "A", role: "default" });
-      await server.handleMessage("A", { room, kind: "join" });
+      const connectionA = server.connect(client("A", sent), { subject: "A", role: "default" });
+      await connectionA.receive({ room, kind: "join" });
       for (const command of [
         folderAdded("f"),
         blockAdded("a", "f"),
         { action: "node-renamed", id: "missing", name: "x" } as const,
         blockAdded("b", "missing")
       ]) {
-        await server.handleMessage("A", {
+        await connectionA.receive({
           room,
           kind: "message",
           payload: networkCommand(command)

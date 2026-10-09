@@ -405,14 +405,14 @@ undo must not overwrite. `registerAssetRooms` passes the commands the state
 store recorded while folding them, so opening a room reads the log once.
 
 The room keeps the last `seq` it processed per member, admitted or not, and
-sends it as `acks` so the client's [`CommandSync`](../../network/docs/sync/CommandSync.md)
+sends it as `acks` so the client's [`CommandSync`](../../network/docs/client/CommandSync.md)
 can drop acknowledged commands from its pending ledger: `{ [author]: seq }`
 on a correction or resync snapshot, every member's entry on a snapshot that
 `broadcast` returns. A `Room.resync()` request gets a snapshot with the
 member's `acks`.
 
 Every command broadcast carries `version`, the `eventVersion` of its event,
-and every snapshot the [room version](../../network/GLOSSARY.md#room-version)
+and every snapshot the [room version](../../network/docs/client/CommandSync.md#constructor-and-readiness)
 it reflects. A join whose `resume` names a previous client id and a version
 waits until that client has left the room (at most `departureTimeout`), then
 gets `{ type: "catch-up", data, version, acks }`: the command events after

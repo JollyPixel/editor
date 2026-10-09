@@ -2,7 +2,10 @@
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import { AssetRoom } from "@jolly-pixel/asset";
-import { Server } from "@jolly-pixel/network";
+import {
+  Server,
+  type ServerConnection
+} from "@jolly-pixel/network";
 import {
   strToU8,
   zipSync,
@@ -61,6 +64,7 @@ export async function archiveWorkspace(
   });
 
   let server: Server | null = null;
+  let editor: ServerConnection | null = null;
   const joined = new Set<string>();
 
   return {
@@ -68,10 +72,10 @@ export async function archiveWorkspace(
     source,
     eventStore,
     async editLive(assetId, ...targets) {
-      if (server === null) {
+      if (editor === null) {
         server = new Server();
         backend.attach(server);
-        server.handleConnect(recordingClient(kEditor), {
+        editor = server.connect(recordingClient(kEditor), {
           subject: kEditor,
           role: "default"
         });
@@ -80,9 +84,9 @@ export async function archiveWorkspace(
       const room = new AssetRoom("link", assetId).toString();
       if (!joined.has(room)) {
         joined.add(room);
-        await server.handleMessage(kEditor, { room, kind: "join" });
+        await editor.receive({ room, kind: "join" });
       }
-      await server.handleMessage(kEditor, {
+      await editor.receive({
         room,
         kind: "message",
         payload: { action: "set", targets }

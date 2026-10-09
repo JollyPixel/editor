@@ -95,10 +95,10 @@ describe("asset-server — end to end", () => {
     backend.attach(server);
     const room = new AssetRoom("counter", counterRecord.id).toString();
 
-    server.handleConnect(recordingClient("A"), { subject: "A", role: "default" });
-    await server.handleMessage("A", { room, kind: "join" });
+    const connectionA = server.connect(recordingClient("A"), { subject: "A", role: "default" });
+    await connectionA.receive({ room, kind: "join" });
     for (let index = 0; index < 3; index++) {
-      await server.handleMessage("A", {
+      await connectionA.receive({
         room,
         kind: "message",
         payload: { action: "increment" }
@@ -210,12 +210,14 @@ describe("asset-server — end to end", () => {
 
     const author = recordingClient("A");
     const peer = recordingClient("B");
-    for (const handle of [author, peer]) {
-      server.handleConnect(handle, { subject: handle.id, role: "default" });
-      await server.handleMessage(handle.id, { room: CATALOG_ROOM, kind: "join" });
+    const [connectionA, connectionB] = [author, peer].map(
+      (handle) => server.connect(handle, { subject: handle.id, role: "default" })
+    );
+    for (const connection of [connectionA, connectionB]) {
+      await connection.receive({ room: CATALOG_ROOM, kind: "join" });
     }
 
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: CATALOG_ROOM,
       kind: "message",
       payload: {
@@ -244,9 +246,9 @@ describe("asset-server — end to end", () => {
     const counter = backend.catalog.snapshot().assets
       .find((record) => record.source === "a.counter")!;
     const room = new AssetRoom("counter", counter.id).toString();
-    await server.handleMessage("B", { room, kind: "join" });
+    await connectionB.receive({ room, kind: "join" });
 
-    await server.handleMessage("A", {
+    await connectionA.receive({
       room: CATALOG_ROOM,
       kind: "message",
       payload: {
@@ -284,11 +286,11 @@ describe("asset-server — end to end", () => {
     backend.attach(server);
 
     const author = recordingClient("A");
-    server.handleConnect(author, { subject: author.id, role: "default" });
-    await server.handleMessage("A", { room: CATALOG_ROOM, kind: "join" });
+    const connectionA = server.connect(author, { subject: author.id, role: "default" });
+    await connectionA.receive({ room: CATALOG_ROOM, kind: "join" });
 
     for (const [path, content] of [["small.bin", "1234"], ["large.bin", "12345"]]) {
-      await server.handleMessage("A", {
+      await connectionA.receive({
         room: CATALOG_ROOM,
         kind: "message",
         payload: {

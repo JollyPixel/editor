@@ -5,20 +5,15 @@ import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
 export interface ClientSession {
   handle: ClientHandle;
   identity: PeerIdentity;
-  rooms: Set<string>;
   revoked: boolean;
 }
 
 /**
- * Tracks joined rooms and serializes dispatch per client and lane.
+ * Tracks client identities and serializes dispatch per client and lane.
  */
 export class ClientSessions {
   #sessions = new Map<string, ClientSession>();
   #queues = new Map<string, Map<string, Promise<void>>>();
-
-  get size(): number {
-    return this.#sessions.size;
-  }
 
   get pending(): number {
     let total = 0;
@@ -36,7 +31,6 @@ export class ClientSessions {
     this.#sessions.set(handle.id, {
       handle,
       identity,
-      rooms: new Set(),
       revoked: false
     });
   }

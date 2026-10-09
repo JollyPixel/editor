@@ -45,14 +45,11 @@ function createHarness(
   };
 }
 
-function joinedRooms(
-  sessions: ClientSessions,
+function isMember(
+  rooms: RoomRegistry,
   clientId: string
-): string[] {
-  const session = sessions.get(clientId);
-  assert.ok(session);
-
-  return [...session.rooms];
+): boolean {
+  return rooms.get("lobby")?.has(clientId) === true;
 }
 
 describe("EnvelopeDispatcher — routing", () => {
@@ -84,8 +81,8 @@ describe("EnvelopeDispatcher — routing", () => {
 });
 
 describe("EnvelopeDispatcher — join", () => {
-  test("admits a client and records the room on its session", async() => {
-    const { dispatcher, sessions } = createHarness();
+  test("admits a client into the room", async() => {
+    const { dispatcher, sessions, rooms } = createHarness();
     const { client } = createClient("A");
     sessions.open(client, identityOf(client));
 
@@ -93,7 +90,7 @@ describe("EnvelopeDispatcher — join", () => {
       await dispatcher.dispatch("A", { room: "lobby", kind: "join" }),
       { outcome: "joined" }
     );
-    assert.deepEqual(joinedRooms(sessions, "A"), ["lobby"]);
+    assert.ok(isMember(rooms, "A"));
   });
 
   test("ignores a second join for a room already joined", async() => {
@@ -112,8 +109,8 @@ describe("EnvelopeDispatcher — join", () => {
     );
   });
 
-  test("drops a join the room denies and leaves the session untouched", async() => {
-    const { dispatcher, sessions } = createHarness(
+  test("drops a join the room denies without admitting the client", async() => {
+    const { dispatcher, sessions, rooms } = createHarness(
       new RightsTable({ viewer: { "lobby.$join": "void" } })
     );
     const { client } = createClient("A");
@@ -130,7 +127,7 @@ describe("EnvelopeDispatcher — join", () => {
         reason: "join denied"
       }
     );
-    assert.deepEqual(joinedRooms(sessions, "A"), []);
+    assert.equal(isMember(rooms, "A"), false);
   });
 });
 
@@ -235,8 +232,8 @@ describe("EnvelopeDispatcher — membership gate", () => {
 });
 
 describe("EnvelopeDispatcher — leave", () => {
-  test("removes the room from the session", async() => {
-    const { dispatcher, sessions } = createHarness();
+  test("removes the client from the room", async() => {
+    const { dispatcher, sessions, rooms } = createHarness();
     const { client } = createClient("A");
     sessions.open(client, identityOf(client));
 
@@ -246,7 +243,7 @@ describe("EnvelopeDispatcher — leave", () => {
       await dispatcher.dispatch("A", { room: "lobby", kind: "leave" }),
       { outcome: "left" }
     );
-    assert.deepEqual(joinedRooms(sessions, "A"), []);
+    assert.equal(isMember(rooms, "A"), false);
   });
 
   test("ignores a leave from a client that never joined", async() => {
