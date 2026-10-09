@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
 import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
-import { createBlockTransform } from "#src/model/blockTransform.ts";
-import { createMaterialSurface } from "#src/model/materialSurface.ts";
+import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
+import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import type {
   VoxelModelCommand,
   VoxelModelSnapshot
@@ -137,7 +137,7 @@ describe("ModelTree", () => {
       folderAdded("limbs"),
       blockAdded("arm", "limbs")
     );
-    const transform = createBlockTransform({
+    const transform = BlockTransform.create({
       position: { x: 1, y: 2, z: 3 }
     });
 
@@ -339,7 +339,7 @@ describe("ModelTree", () => {
     assert.deepEqual(tree.materials.get("glass"), {
       ...material("glass"),
       name: "Chrome",
-      surface: createMaterialSurface({ metalness: 1, roughness: 0.2 })
+      surface: MaterialSurface.create({ metalness: 1, roughness: 0.2 })
     });
     assert.equal(
       tree.accepts({ action: "material-changed", id: "glass", surface: {} }),
@@ -351,6 +351,19 @@ describe("ModelTree", () => {
       false
     );
     assert.equal(tree.accepts({ action: "material-removed", id: "ghost" }), false);
+  });
+
+  test("rejects a material or a surface change with a value off its range", () => {
+    const tree = treeOf(materialAdded("glass"));
+
+    assert.equal(tree.accepts({
+      action: "material-added",
+      material: { ...material("iron"), surface: MaterialSurface.create({ opacity: 1.5 }) }
+    }), false);
+    assert.equal(
+      tree.accepts({ action: "material-changed", id: "glass", surface: { color: "red" } }),
+      false
+    );
   });
 
   test("leaves the blocks of a removed material without one", () => {
@@ -435,7 +448,7 @@ describe("ModelTree", () => {
       { action: "material-moved", id: "metals", parentId: "metals" },
       { action: "material-moved", id: "glass", parentId: "metals", beforeId: "glass" },
       { action: "material-moved", id: "glass", parentId: null, beforeId: "alloys" },
-      { action: "material-changed", id: "metals", surface: createMaterialSurface() },
+      { action: "material-changed", id: "metals", surface: MaterialSurface.create() },
       { action: "node-material-changed", id: "a", materialId: "metals" }
     ];
 
@@ -700,5 +713,64 @@ describe("ModelTree.placeable", () => {
       tree.placeable({ action: "material-moved", id: "iron", parentId: null, beforeId: "iron" }),
       { action: "material-moved", id: "iron", parentId: null }
     );
+  });
+});
+
+describe("ModelTree block names", () => {
+  function renamed(
+    id: string,
+    name: string
+  ): VoxelModelCommand {
+    return {
+      action: "node-renamed",
+      id,
+      name
+    };
+  }
+
+  test("compares names among blocks sharing a block parent, through folders", () => {
+    const tree = treeOf(
+      blockAdded("body"),
+      blockAdded("arm", "body"),
+      folderAdded("limbs", "body"),
+      blockAdded("leg", "limbs")
+    );
+
+    assert.equal(tree.blockNamesUnder("body").has(" ARM "), true);
+    assert.equal(tree.blockNamesUnder("limbs").has("arm"), true);
+    assert.equal(tree.blockNamesUnder("body").has("leg"), true);
+    assert.equal(tree.blockNamesUnder(null).has("arm"), false);
+    assert.equal(tree.blockNamesUnder("arm").has("arm"), false);
+    assert.equal(tree.blockNamesUnder("body", "arm").has("arm"), false);
+    assert.equal(tree.blockNamesUnder("body").has("limbs"), false);
+  });
+
+  test("picks the first free numbered name among the siblings only", () => {
+    const tree = treeOf(
+      blockAdded("body"),
+      blockAdded("a", "body"),
+      blockAdded("b", "body"),
+      renamed("a", "Block"),
+      renamed("b", "Block 2")
+    );
+
+    assert.equal(tree.blockNamesUnder("body").free("block"), "block 3");
+    assert.equal(tree.blockNamesUnder(null).free("Block"), "Block");
+  });
+
+  test("accepts clashing names and reports every block involved", () => {
+    const tree = treeOf(
+      blockAdded("body"),
+      blockAdded("a", "body"),
+      folderAdded("limbs", "body"),
+      blockAdded("b", "limbs"),
+      blockAdded("c", "body"),
+      blockAdded("d"),
+      renamed("a", "arm"),
+      renamed("b", "Arm"),
+      renamed("d", "arm")
+    );
+
+    assert.deepEqual(tree.blockNameClashes(), new Set(["a", "b"]));
   });
 });

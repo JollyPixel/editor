@@ -8,10 +8,7 @@ import {
 import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 
 // Import Internal Dependencies
-import {
-  MATERIAL_SURFACE_KEYS,
-  MATERIAL_SURFACE_PROPERTIES
-} from "../model/materialSurface.ts";
+import { MaterialSurface } from "../model/materials/MaterialSurface.ts";
 
 // CONSTANTS
 const kNullableIdSchema = defineSchema({
@@ -58,13 +55,13 @@ export const blockTransformSchema = defineSchema({
 
 export const materialSurfaceSchema = defineSchema({
   type: "object",
-  properties: MATERIAL_SURFACE_PROPERTIES,
-  required: MATERIAL_SURFACE_KEYS
+  properties: MaterialSurface.PROPERTIES,
+  required: MaterialSurface.KEYS
 });
 
 export const materialSurfacePatchSchema = defineSchema({
   type: "object",
-  properties: MATERIAL_SURFACE_PROPERTIES,
+  properties: MaterialSurface.PROPERTIES,
   minProperties: 1,
   additionalProperties: false
 });

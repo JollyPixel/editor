@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { trackPathKey } from "../model/names.ts";
+import { TrackPath } from "../model/values/TrackPath.ts";
 import type {
   AnimationChannel,
   AnimationClipPatchJSON,
@@ -34,7 +34,7 @@ export function animationValueKey(
     case "clip-order":
       return `clip-order:${ref.clipId}`;
     case "key":
-      return `key:${ref.clipId}:${trackPathKey(ref.path)}:${ref.channel}:${ref.tick}`;
+      return `key:${ref.clipId}:${new TrackPath(ref.path).key}:${ref.channel}:${ref.tick}`;
   }
 }
 

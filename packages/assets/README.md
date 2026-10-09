@@ -12,7 +12,8 @@ command flow, and persistence lifecycle.
 
 - [pixel-art](./pixel-art/README.md): pixel-art documents and canvas edits
 - [voxel-map](./voxel-map/README.md): voxel worlds with optional pixel-art blockset references
-- [voxel-model](./voxel-model/README.md): model trees with an optional pixel-art texture reference
+- [voxel-model](./voxel-model/README.md): model trees with a pixel-art texture reference
+- [voxel-animation](./voxel-animation/README.md): animation sets of keyframed clips that models link
 
 For the shared meaning of asset ID, kind, reference, record, and catalog, see
 the [asset glossary](../asset/GLOSSARY.md).

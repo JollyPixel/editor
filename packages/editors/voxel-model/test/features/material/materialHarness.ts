@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
-import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
@@ -29,8 +29,8 @@ import { createEditorHistory } from "#src/features/history/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
 
 // CONSTANTS
-export const GLASS_SURFACE = createMaterialSurface({ opacity: 0.4 });
-export const METAL_SURFACE = createMaterialSurface({ metalness: 0.8 });
+export const GLASS_SURFACE = MaterialSurface.create({ opacity: 0.4 });
+export const METAL_SURFACE = MaterialSurface.create({ metalness: 0.8 });
 
 export interface MaterialHarnessOptions {
   deleteAnswer?: DeleteResult | null;

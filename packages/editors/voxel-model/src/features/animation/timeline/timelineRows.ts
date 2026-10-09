@@ -1,15 +1,13 @@
 // Import Third-party Dependencies
 import {
   ANIMATION_CHANNELS,
-  trackBlockName,
+  TrackPath,
   type AnimationClipJSON,
   type AnimationInterpolation,
   type AnimationTrackJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 import {
-  bindTracks,
-  boundBlocks,
-  trackPathOf,
+  TrackBinding,
   type AnimationSetLinkJSON,
   type ModelNodeJSON,
   type ModelTreeReader,
@@ -49,7 +47,8 @@ export function timelineRows(
   selectedId: string | null
 ): TimelineRow[] {
   const tracks = new Map<string, { path: string; keys: TimelineKey[]; }>();
-  const bound = boundBlocks(bindTracks(clip.tracks.map(({ path }) => path), link, tree));
+  const binding = new TrackBinding(clip.tracks.map(({ path }) => path), link, tree);
+  const bound = binding.bound();
   for (const track of clip.tracks) {
     const blockId = bound.get(track.path);
     if (blockId !== undefined && !tracks.has(blockId)) {
@@ -57,7 +56,7 @@ export function timelineRows(
     }
   }
   if (selectedId !== null && tree.block(selectedId) !== undefined && !tracks.has(selectedId)) {
-    tracks.set(selectedId, { path: trackPathOf(link, tree, selectedId), keys: [] });
+    tracks.set(selectedId, { path: binding.pathOf(selectedId), keys: [] });
   }
 
   return blocksInOrder(tree).flatMap((block) => {
@@ -78,14 +77,14 @@ export function unboundTimelineRows(
   clip: AnimationClipJSON,
   link: AnimationSetLinkJSON
 ): UnboundTimelineRow[] {
-  const binding = bindTracks(clip.tracks.map(({ path }) => path), link, tree);
+  const binding = new TrackBinding(clip.tracks.map(({ path }) => path), link, tree);
 
   return clip.tracks.flatMap((track) => {
     const state = binding.get(track.path)?.state ?? "missing";
 
     return state === "bound" ? [] : [{
       path: track.path,
-      name: trackBlockName(track.path),
+      name: new TrackPath(track.path).blockName,
       state,
       keys: keysOf(track)
     }];

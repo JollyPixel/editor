@@ -8,17 +8,17 @@ import {
 
 // Import Internal Dependencies
 import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
-import { createBlockTransform } from "./blockTransform.ts";
-import { createBlockUv } from "./blockUv.ts";
-import { createMaterialSurface } from "./materialSurface.ts";
-import { inverseOf } from "./modelInverse.ts";
+import { BlockTransform } from "./nodes/BlockTransform.ts";
+import { BlockUvLayouts } from "./nodes/BlockUvLayouts.ts";
+import { MaterialSurface } from "./materials/MaterialSurface.ts";
+import { inverseOf } from "./history/modelInverse.ts";
 import {
   modelImageOf,
   restoreModelImages,
   type EntryOrder,
   type ModelImage,
   type ModelImages
-} from "./modelImages.ts";
+} from "./history/modelImages.ts";
 import type {
   BlockTransformJSON,
   MaterialSurfaceJSON,
@@ -99,8 +99,8 @@ export class ModelDocument extends CommandDocument<
       id = crypto.randomUUID(),
       name,
       parentId = null,
-      transform = createBlockTransform(),
-      uv = createBlockUv(),
+      transform = BlockTransform.create(),
+      uv = BlockUvLayouts.net(),
       materialId,
       beforeId
     } = options;
@@ -226,7 +226,7 @@ export class ModelDocument extends CommandDocument<
       name,
       parentId = null,
       beforeId,
-      surface = createMaterialSurface()
+      surface = MaterialSurface.create()
     } = options;
     const added = this.commit({
       action: "material-added",

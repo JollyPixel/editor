@@ -2,9 +2,7 @@
 import type { ReactiveControllerHost } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import {
-  frameAt,
-  frameToTick,
-  tickToFrame,
+  FrameRate,
   type AnimationClipJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
@@ -116,7 +114,7 @@ export class TimelineController {
     const view = this.#view;
     if (view !== null) {
       const frame = Math.round(Math.min(Math.max(fraction, 0), 1) * view.frames);
-      this.session?.seek(frameToTick(frame, view.clip.fps));
+      this.session?.seek(new FrameRate(view.clip.fps).toTick(frame));
     }
   }
 
@@ -184,7 +182,7 @@ export class TimelineController {
       return;
     }
 
-    const frame = tickToFrame(workspace.animationSession.playback.tick, view.clip.fps);
+    const frame = new FrameRate(view.clip.fps).toFrame(workspace.animationSession.playback.tick);
     if (frame > view.frames) {
       this.#playhead.showPlayhead(null);
     }
@@ -204,7 +202,7 @@ export class TimelineController {
 
     return {
       clip,
-      frames: frameAt(clip.length, clip.fps),
+      frames: new FrameRate(clip.fps).frameAt(clip.length),
       rows: timelineRows(workspace.document.tree, clip, link, workspace.selection.selected),
       unbound: unboundTimelineRows(workspace.document.tree, clip, link),
       selectedKeys: new Set(workspace.keyEditor.selected.map(keyId)),

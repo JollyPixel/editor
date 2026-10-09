@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
@@ -20,7 +20,7 @@ describe("materialSwatch", () => {
     const glass = {
       id: "glass",
       name: "Window",
-      surface: createMaterialSurface({ color: "#dff4ff", opacity: 0.45 })
+      surface: MaterialSurface.create({ color: "#dff4ff", opacity: 0.45 })
     };
 
     assert.deepEqual(materialSwatch(glass), {
@@ -35,7 +35,7 @@ describe("materialSwatch", () => {
     ) {
       return materialSwatch({
         name: "Glow",
-        surface: createMaterialSurface({ emissive: "#ff0000", emissiveIntensity })
+        surface: MaterialSurface.create({ emissive: "#ff0000", emissiveIntensity })
       }).ring;
     }
 
@@ -46,8 +46,8 @@ describe("materialSwatch", () => {
 
 describe("surfaceGlows", () => {
   test("is off at zero intensity or with a black glow color", () => {
-    assert.equal(surfaceGlows(createMaterialSurface({ emissive: "#ffcc66" })), true);
-    assert.equal(surfaceGlows(createMaterialSurface({ emissive: "#ffcc66", emissiveIntensity: 0 })), false);
-    assert.equal(surfaceGlows(createMaterialSurface()), false);
+    assert.equal(surfaceGlows(MaterialSurface.create({ emissive: "#ffcc66" })), true);
+    assert.equal(surfaceGlows(MaterialSurface.create({ emissive: "#ffcc66", emissiveIntensity: 0 })), false);
+    assert.equal(surfaceGlows(MaterialSurface.create()), false);
   });
 });

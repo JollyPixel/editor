@@ -4,8 +4,7 @@ import {
   type PresenceChange
 } from "@jolly-pixel/network/client";
 import {
-  holdsSurfacePatch,
-  isMaterialSurfacePatch,
+  MaterialSurface,
   type MaterialSurfacePatchJSON,
   type ModelChange,
   type ModelDocument,
@@ -139,7 +138,7 @@ export class MaterialLiveSync {
 
     const stored = this.#document.tree.materials.material(frame.materialId)?.surface;
     this.#channel.publish(
-      stored !== undefined && holdsSurfacePatch(stored, frame.changes) ?
+      stored !== undefined && new MaterialSurface(stored).holds(frame.changes) ?
         {
           ...frame,
           saved: true
@@ -157,7 +156,7 @@ export class MaterialLiveSync {
     }
 
     const stored = this.#document.tree.materials.material(stream.materialId)?.surface;
-    if (stored === undefined || holdsSurfacePatch(stored, stream.changes)) {
+    if (stored === undefined || new MaterialSurface(stored).holds(stream.changes)) {
       this.#endStream(clientId);
     }
     else if (!this.#settling.has(clientId)) {
@@ -191,7 +190,7 @@ function decodeLiveFrame(
 
   const materialId: unknown = Reflect.get(value, "materialId");
   const changes: unknown = Reflect.get(value, "changes");
-  if (typeof materialId !== "string" || !isMaterialSurfacePatch(changes)) {
+  if (typeof materialId !== "string" || !MaterialSurface.isPatch(changes)) {
     return undefined;
   }
 

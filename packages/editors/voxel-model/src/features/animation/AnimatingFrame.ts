@@ -7,7 +7,7 @@ import {
   type TemplateResult
 } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
-import { frameAt } from "@jolly-pixel/asset.voxel-animation/client";
+import { FrameRate } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
 import type { AnimationSession } from "./session/AnimationSession.ts";
@@ -99,7 +99,7 @@ function animatingLabel(
 
   return clip === undefined ?
     "Animating: no clip" :
-    `Animating: ${clip.name} · frame ${frameAt(session.playback.tick, clip.fps)}`;
+    `Animating: ${clip.name} · frame ${new FrameRate(clip.fps).frameAt(session.playback.tick)}`;
 }
 
 customElements.define("jolly-model-editor-animating-frame", AnimatingFrame);

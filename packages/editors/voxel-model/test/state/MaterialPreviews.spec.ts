@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
@@ -15,7 +15,7 @@ import {
 } from "#src/state/index.ts";
 
 // CONSTANTS
-const kStored = createMaterialSurface({ opacity: 0.5 });
+const kStored = MaterialSurface.create({ opacity: 0.5 });
 
 describe("MaterialPreviews", () => {
   test("shows peers' layers in client order under this person's layer", () => {

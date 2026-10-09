@@ -7,13 +7,9 @@ import {
   ModelDocument,
   type ModelChange
 } from "#src/model/ModelDocument.ts";
-import { createBlockTransform } from "#src/model/blockTransform.ts";
-import { createBlockUv } from "#src/model/blockUv.ts";
-import {
-  createMaterialSurface,
-  holdsSurfacePatch,
-  materialSurfaceChanges
-} from "#src/model/materialSurface.ts";
+import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
+import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
+import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import type { UVLayoutData } from "#src/network/types.ts";
 
 // CONSTANTS
@@ -53,8 +49,8 @@ describe("ModelDocument", () => {
       id: blockId,
       parentId: folderId,
       name: "Leg",
-      transform: createBlockTransform(),
-      uv: createBlockUv()
+      transform: BlockTransform.create(),
+      uv: BlockUvLayouts.net()
     });
   });
 
@@ -195,7 +191,7 @@ describe("ModelDocument", () => {
     const plain = document.addBlock({ name: "Plain" })!;
     const window = document.addBlock({ name: "Window", materialId: glass })!;
 
-    assert.deepEqual(document.tree.materials.material(glass)?.surface, createMaterialSurface());
+    assert.deepEqual(document.tree.materials.material(glass)?.surface, MaterialSurface.create());
     assert.equal(document.tree.block(plain)?.materialId, undefined);
     assert.equal(document.tree.block(window)?.materialId, glass);
     assert.equal(document.addBlock({ name: "Ghost", materialId: "missing" }), null);
@@ -206,30 +202,13 @@ describe("ModelDocument", () => {
     const first = document.addMaterial({ name: "Glow" })!;
     const second = document.addMaterial({
       name: "Glow",
-      surface: createMaterialSurface({ emissive: "#ff0000" })
+      surface: MaterialSurface.create({ emissive: "#ff0000" })
     })!;
 
     assert.notEqual(first, second);
     assert.deepEqual(
       [...document.tree.materials.values()].map(({ name }) => name),
       ["Glow", "Glow"]
-    );
-  });
-
-  test("tells whether a surface already holds every field of a patch", () => {
-    const surface = createMaterialSurface({ opacity: 0.5 });
-
-    assert.equal(holdsSurfacePatch(surface, { opacity: 0.5 }), true);
-    assert.equal(holdsSurfacePatch(surface, { opacity: 0.5, roughness: 0.2 }), false);
-  });
-
-  test("lists the surface fields that changed", () => {
-    const surface = createMaterialSurface();
-
-    assert.deepEqual(materialSurfaceChanges(surface, { ...surface }), {});
-    assert.deepEqual(
-      materialSurfaceChanges(surface, { ...surface, opacity: 0.5, emissive: "#ff0000" }),
-      { opacity: 0.5, emissive: "#ff0000" }
     );
   });
 

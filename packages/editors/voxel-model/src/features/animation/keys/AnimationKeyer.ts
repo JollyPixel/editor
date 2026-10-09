@@ -1,14 +1,14 @@
 // Import Third-party Dependencies
 import {
   ANIMATION_CHANNELS,
-  sampleClip,
-  snapToFrame,
+  ClipSampler,
+  FrameRate,
   type AnimationSample,
   type Vector3JSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 import {
-  poseDelta,
-  trackPathOf,
+  BlockTransform,
+  TrackBinding,
   type BlockTransformJSON,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -95,11 +95,11 @@ export class AnimationKeyer implements TransformTarget {
     }
 
     const { key, set, link, clip } = focused;
-    const path = trackPathOf(link, tree, blockId, clip.tracks.map((track) => track.path));
+    const path = new TrackBinding(clip.tracks.map((track) => track.path), link, tree).pathOf(blockId);
     const { tick } = session.playback;
-    const shown = { ...kRestSample, ...sampleClip(clip, tick).get(path) };
-    const delta = poseDelta(rest, pose);
-    const frameTick = Math.min(snapToFrame(tick, clip.fps), clip.length);
+    const shown = { ...kRestSample, ...new ClipSampler(clip).sample(tick).get(path) };
+    const delta = new BlockTransform(rest).deltaTo(pose);
+    const frameTick = Math.min(new FrameRate(clip.fps).snap(tick), clip.length);
 
     return this.#options.history.record(key, `Key ${tree.get(blockId)?.name ?? ""}`, () => {
       let keyed = false;

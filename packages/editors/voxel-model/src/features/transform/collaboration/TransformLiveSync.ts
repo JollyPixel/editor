@@ -3,14 +3,14 @@ import {
   PresenceChannel,
   type PresenceChange
 } from "@jolly-pixel/network/client";
-import type {
-  BlockTransformJSON,
-  VoxelModelRoom
+import {
+  BlockTransform,
+  type BlockTransformJSON,
+  type VoxelModelRoom
 } from "@jolly-pixel/asset.voxel-model/client";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { parseBlockTransformJSON } from "./blockTransformCodec.ts";
 import type { ModelBlocks } from "../../../scene/index.ts";
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 import { LatestFrameThrottle } from "../../../collaboration/LatestFrameThrottle.ts";
@@ -229,9 +229,7 @@ function decodeLivePayload(
   }
 
   const uuid: unknown = Reflect.get(value, "uuid");
-  const transform = parseBlockTransformJSON(
-    Reflect.get(value, "transform")
-  );
+  const transform = BlockTransform.parse(Reflect.get(value, "transform"));
   const view: unknown = Reflect.get(value, "view");
   if (
     typeof uuid !== "string" ||

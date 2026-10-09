@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
-import { sameTrackPath } from "@jolly-pixel/asset.voxel-animation/client";
+import { TrackPath } from "@jolly-pixel/asset.voxel-animation/client";
 import {
-  bindTracks,
+  TrackBinding,
   blockPathOf,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -78,7 +78,7 @@ export class AnimationFollow {
         return [];
       }
 
-      return [...bindTracks(set.trackPaths(), link, tree)].flatMap(([path, { blockId, remap }]) => (
+      return [...new TrackBinding(set.trackPaths(), link, tree)].flatMap(([path, { blockId, remap }]) => (
         blockId === null ?
           [] :
           [{
@@ -101,13 +101,13 @@ export class AnimationFollow {
       return;
     }
 
-    const blockPath = blockPathOf(tree, track.blockId);
-    if (sameTrackPath(blockPath, track.blockPath)) {
+    const blockPath = new TrackPath(blockPathOf(tree, track.blockId));
+    if (blockPath.equals(track.blockPath)) {
       return;
     }
 
-    const renamed = track.own && this.#renameOwnTrack(track, blockPath);
-    this.#retarget(track, renamed || sameTrackPath(track.path, blockPath) ? null : blockPath);
+    const renamed = track.own && this.#renameOwnTrack(track, blockPath.path);
+    this.#retarget(track, renamed || blockPath.equals(track.path) ? null : blockPath.path);
   }
 
   #retarget(
@@ -132,8 +132,9 @@ export class AnimationFollow {
     }
 
     const { path } = track;
+    const renamed = new TrackPath(path);
     const clipIds = [...document.set.clips()]
-      .filter((clip) => clip.tracks.some((candidate) => sameTrackPath(candidate.path, path)))
+      .filter((clip) => clip.tracks.some((candidate) => renamed.equals(candidate.path)))
       .map((clip) => clip.id);
     const accepted = clipIds.every((clipId) => document.set.accepts({
       action: "track-renamed",

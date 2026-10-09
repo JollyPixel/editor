@@ -11,7 +11,7 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { voxelModelCommandProtocol } from "#src/network/VoxelModelCommand.schema.ts";
 import type { VoxelModelCommand } from "#src/network/types.ts";
-import { createMaterialSurface } from "#src/model/materialSurface.ts";
+import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import {
   TRANSFORM,
   UV,
@@ -91,7 +91,7 @@ const kCommands: readonly VoxelModelCommand[] = [
   {
     action: "material-changed",
     id: "material-1",
-    surface: createMaterialSurface()
+    surface: MaterialSurface.create()
   },
   {
     action: "animation-set-linked",
@@ -259,11 +259,11 @@ describe("voxelModelCommandProtocol", () => {
     };
 
     assert.strictEqual(
-      accepts({ ...command, surface: createMaterialSurface({ opacity: 1.5 }) }),
+      accepts({ ...command, surface: MaterialSurface.create({ opacity: 1.5 }) }),
       false
     );
     assert.strictEqual(
-      accepts({ ...command, surface: createMaterialSurface({ color: "red" }) }),
+      accepts({ ...command, surface: MaterialSurface.create({ color: "red" }) }),
       false
     );
   });

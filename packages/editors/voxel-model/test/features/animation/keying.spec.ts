@@ -4,11 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  poseBlock,
+  BlockTransform,
   type BlockTransformJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 import {
-  sampleClip,
+  ClipSampler,
   type AnimationChannel,
   type AnimationKeyJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
@@ -49,7 +49,7 @@ function createKeying(
   const clip = model.set.set.clip(model.clipId)!;
   const arm = {
     uuid: model.ids.arm,
-    transform: poseBlock(rest, sampleClip(clip, tick).get("Body/Arm")!)
+    transform: new BlockTransform(rest).pose(new ClipSampler(clip).sample(tick).get("Body/Arm")!)
   };
   const resets: string[] = [];
   const keyer = new AnimationKeyer({

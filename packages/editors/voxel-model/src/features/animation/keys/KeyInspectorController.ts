@@ -2,8 +2,8 @@
 import type { ReactiveControllerHost } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import {
-  frameAt,
-  trackBlockName,
+  FrameRate,
+  TrackPath,
   type AnimationInterpolation
 } from "@jolly-pixel/asset.voxel-animation/client";
 
@@ -71,7 +71,7 @@ export class KeyInspectorController {
 
     return {
       title: refs.length === 1 ?
-        `${trackBlockName(first.path)} @ frame ${frameAt(first.tick, clip.fps)}` :
+        `${new TrackPath(first.path).blockName} @ frame ${new FrameRate(clip.fps).frameAt(first.tick)}` :
         `${refs.length} keys`,
       interpolation
     };

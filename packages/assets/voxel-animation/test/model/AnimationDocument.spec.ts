@@ -8,8 +8,8 @@ import {
   type AnimationChange
 } from "#src/model/AnimationDocument.ts";
 import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
-import { inverseOf } from "#src/model/animationInverse.ts";
-import { TICKS_PER_SECOND } from "#src/model/ticks.ts";
+import { inverseOf } from "#src/model/history/animationInverse.ts";
+import { TICKS_PER_SECOND } from "#src/model/values/FrameRate.ts";
 import { key } from "../helpers/clips.ts";
 
 function createDocument(): AnimationDocument {

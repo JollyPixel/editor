@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import { createMaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { MaterialLiveSync } from "#src/features/material/collaboration/MaterialLiveSync.ts";
@@ -59,12 +59,12 @@ describe("MaterialLiveSync receiving", () => {
     streamFromBob(harness, { materialId: harness.glass, changes: { roughness: 0.3 } });
 
     assert.deepEqual(harness.previews.layer(harness.glass, "bob"), { roughness: 0.3 });
-    assert.deepEqual(harness.block.surface, createMaterialSurface({ roughness: 0.3 }));
+    assert.deepEqual(harness.block.surface, MaterialSurface.create({ roughness: 0.3 }));
 
     streamFromBob(harness, null);
 
     assert.equal(harness.previews.layer(harness.glass, "bob"), undefined);
-    assert.deepEqual(harness.block.surface, createMaterialSurface());
+    assert.deepEqual(harness.block.surface, MaterialSurface.create());
     harness.sync.dispose();
   });
 
@@ -74,12 +74,12 @@ describe("MaterialLiveSync receiving", () => {
 
     streamFromBob(harness, { materialId: harness.glass, changes: { metalness: 0.8 }, saved: true });
 
-    assert.deepEqual(harness.block.surface, createMaterialSurface({ metalness: 0.8 }));
+    assert.deepEqual(harness.block.surface, MaterialSurface.create({ metalness: 0.8 }));
     assert.notEqual(harness.previews.layer(harness.glass, "bob"), undefined);
 
     harness.document.changeMaterial(harness.glass, { metalness: 0.8 });
 
-    assert.deepEqual(harness.block.surface, createMaterialSurface({ metalness: 0.8 }));
+    assert.deepEqual(harness.block.surface, MaterialSurface.create({ metalness: 0.8 }));
     assert.equal(harness.previews.layer(harness.glass, "bob"), undefined);
     harness.sync.dispose();
   });
@@ -91,7 +91,7 @@ describe("MaterialLiveSync receiving", () => {
 
     streamFromBob(harness, { materialId: harness.glass, changes: { metalness: 0.8 }, saved: true });
 
-    assert.deepEqual(harness.block.surface, createMaterialSurface({ metalness: 0.8 }));
+    assert.deepEqual(harness.block.surface, MaterialSurface.create({ metalness: 0.8 }));
     assert.equal(harness.previews.layer(harness.glass, "bob"), undefined);
     harness.sync.dispose();
   });
@@ -106,7 +106,7 @@ describe("MaterialLiveSync receiving", () => {
 
     t.mock.timers.tick(1);
     assert.equal(harness.previews.layer(harness.glass, "bob"), undefined);
-    assert.deepEqual(harness.block.surface, createMaterialSurface());
+    assert.deepEqual(harness.block.surface, MaterialSurface.create());
     harness.sync.dispose();
   });
 
@@ -118,7 +118,7 @@ describe("MaterialLiveSync receiving", () => {
     harness.emit("peer-left", { clientId: "bob" });
 
     assert.equal(harness.previews.layer(harness.glass, "bob"), undefined);
-    assert.deepEqual(harness.block.surface, createMaterialSurface());
+    assert.deepEqual(harness.block.surface, MaterialSurface.create());
     harness.sync.dispose();
   });
 
@@ -129,7 +129,7 @@ describe("MaterialLiveSync receiving", () => {
     streamFromBob(harness, { materialId: harness.glass, changes: { shine: 1 } });
 
     assert.equal(harness.previews.layer(harness.glass, "bob"), undefined);
-    assert.deepEqual(harness.block.surface, createMaterialSurface());
+    assert.deepEqual(harness.block.surface, MaterialSurface.create());
     harness.sync.dispose();
   });
 });

@@ -4,24 +4,14 @@ import type {
   AnimationClipJSON,
   AnimationCommand,
   AnimationKeyJSON,
-  AnimationSetSnapshot
+  AnimationSetSnapshot,
+  AnimationTrackJSON
 } from "../network/types.ts";
-import {
-  clipProblem,
-  keyAt,
-  trackOf,
-  withKey,
-  withoutKey,
-  withoutTrack,
-  withTrackPath
-} from "./clipTracks.ts";
+import { AnimationClip } from "./AnimationClip.ts";
 import { InvalidAnimationSetError } from "./errors/InvalidAnimationSetError.ts";
-import {
-  freeName,
-  nameKey,
-  trackPathKey
-} from "./names.ts";
-import { isFrameRate } from "./ticks.ts";
+import { FrameRate } from "./values/FrameRate.ts";
+import { NameSet } from "./values/NameSet.ts";
+import { TrackPath } from "./values/TrackPath.ts";
 
 export type AnimationSetReader = Pick<
   AnimationSet,
@@ -34,6 +24,7 @@ export type AnimationSetReader = Pick<
   | "nextClipOf"
   | "clipNameTaken"
   | "freeClipName"
+  | "track"
   | "keyAt"
   | "accepts"
   | "placeable"
@@ -42,7 +33,7 @@ export type AnimationSetReader = Pick<
 
 export class AnimationSet {
   #rig = "";
-  #clips = new Map<string, AnimationClipJSON>();
+  #clips = new Map<string, AnimationClip>();
 
   get rig(): string {
     return this.#rig;
@@ -61,22 +52,20 @@ export class AnimationSet {
   clip(
     clipId: string
   ): AnimationClipJSON | undefined {
-    const clip = this.#clips.get(clipId);
-
-    return clip === undefined ? undefined : structuredClone(clip);
+    return this.#clips.get(clipId)?.toJSON();
   }
 
   * clips(): IterableIterator<AnimationClipJSON> {
     for (const clip of this.#clips.values()) {
-      yield structuredClone(clip);
+      yield clip.toJSON();
     }
   }
 
   trackPaths(): string[] {
     const paths = new Map<string, string>();
     for (const clip of this.#clips.values()) {
-      for (const { path } of clip.tracks) {
-        const key = trackPathKey(path);
+      for (const path of clip.trackPaths()) {
+        const { key } = new TrackPath(path);
         if (!paths.has(key)) {
           paths.set(key, path);
         }
@@ -99,15 +88,20 @@ export class AnimationSet {
     name: string,
     exceptId?: string
   ): boolean {
-    return this.#clipNameKeys(exceptId).has(nameKey(name));
+    return this.#clipNames(exceptId).has(name);
   }
 
   freeClipName(
     name: string
   ): string {
-    const taken = this.#clipNameKeys();
+    return this.#clipNames().free(name);
+  }
 
-    return freeName(name, (candidate) => taken.has(nameKey(candidate)));
+  track(
+    clipId: string,
+    path: string
+  ): AnimationTrackJSON | undefined {
+    return this.#clips.get(clipId)?.track(path);
   }
 
   keyAt(
@@ -116,10 +110,7 @@ export class AnimationSet {
     channel: AnimationChannel,
     tick: number
   ): AnimationKeyJSON | undefined {
-    const clip = this.#clips.get(clipId);
-    const key = clip === undefined ? undefined : keyAt(clip, path, channel, tick);
-
-    return key === undefined ? undefined : structuredClone(key);
+    return this.#clips.get(clipId)?.keyAt(path, channel, tick);
   }
 
   accepts(
@@ -130,14 +121,14 @@ export class AnimationSet {
         return true;
       case "clip-added":
         return !this.#clips.has(command.clip.id) &&
-          clipProblem(command.clip) === null &&
+          AnimationClip.problemOf(command.clip) === null &&
           this.#isSlot(command.beforeId, command.clip.id);
       case "clip-removed":
         return this.#clips.has(command.id);
       case "clip-changed":
         return this.#clips.has(command.id) &&
           Object.keys(command.patch).length > 0 &&
-          (command.patch.fps === undefined || isFrameRate(command.patch.fps));
+          (command.patch.fps === undefined || FrameRate.isValid(command.patch.fps));
       case "clip-moved":
         return this.#clips.has(command.id) &&
           this.#isSlot(command.beforeId, command.id);
@@ -145,20 +136,10 @@ export class AnimationSet {
         return this.#clips.has(command.clipId);
       case "key-removed":
         return this.keyAt(command.clipId, command.path, command.channel, command.tick) !== undefined;
-      case "track-removed": {
-        const clip = this.#clips.get(command.clipId);
-
-        return clip !== undefined && trackOf(clip, command.path) !== undefined;
-      }
-      case "track-renamed": {
-        const clip = this.#clips.get(command.clipId);
-        const track = clip === undefined ? undefined : trackOf(clip, command.path);
-        const holder = clip === undefined ? undefined : trackOf(clip, command.to);
-
-        return track !== undefined &&
-          track.path !== command.to &&
-          (holder === undefined || holder === track);
-      }
+      case "track-removed":
+        return this.track(command.clipId, command.path) !== undefined;
+      case "track-renamed":
+        return this.#clips.get(command.clipId)?.canRenameTrack(command.path, command.to) ?? false;
     }
   }
 
@@ -171,7 +152,7 @@ export class AnimationSet {
         break;
 
       case "clip-added":
-        this.#place(structuredClone(command.clip), command.beforeId);
+        this.#place(new AnimationClip(command.clip), command.beforeId);
         break;
 
       case "clip-removed":
@@ -179,12 +160,7 @@ export class AnimationSet {
         break;
 
       case "clip-changed":
-        this.#update(command.id, (clip) => {
-          return {
-            ...clip,
-            ...command.patch
-          };
-        });
+        this.#update(command.id, (clip) => clip.withPatch(command.patch));
         break;
 
       case "clip-moved": {
@@ -197,19 +173,19 @@ export class AnimationSet {
       }
 
       case "key-set":
-        this.#update(command.clipId, (clip) => withKey(clip, command.path, command.channel, command.key));
+        this.#update(command.clipId, (clip) => clip.withKey(command.path, command.channel, command.key));
         break;
 
       case "key-removed":
-        this.#update(command.clipId, (clip) => withoutKey(clip, command.path, command.channel, command.tick));
+        this.#update(command.clipId, (clip) => clip.withoutKey(command.path, command.channel, command.tick));
         break;
 
       case "track-removed":
-        this.#update(command.clipId, (clip) => withoutTrack(clip, command.path));
+        this.#update(command.clipId, (clip) => clip.withoutTrack(command.path));
         break;
 
       case "track-renamed":
-        this.#update(command.clipId, (clip) => withTrackPath(clip, command.path, command.to));
+        this.#update(command.clipId, (clip) => clip.withTrackPath(command.path, command.to));
         break;
     }
   }
@@ -217,16 +193,12 @@ export class AnimationSet {
   load(
     snapshot: AnimationSetSnapshot
   ): void {
-    const clips = new Map<string, AnimationClipJSON>();
+    const clips = new Map<string, AnimationClip>();
     for (const clip of snapshot.clips) {
       if (clips.has(clip.id)) {
         throw new InvalidAnimationSetError(clip.id, "is repeated");
       }
-      const problem = clipProblem(clip);
-      if (problem !== null) {
-        throw new InvalidAnimationSetError(clip.id, problem);
-      }
-      clips.set(clip.id, structuredClone(clip));
+      clips.set(clip.id, new AnimationClip(clip));
     }
 
     this.#rig = snapshot.rig;
@@ -269,7 +241,7 @@ export class AnimationSet {
   }
 
   #place(
-    clip: AnimationClipJSON,
+    clip: AnimationClip,
     beforeId: string | undefined
   ): void {
     if (beforeId === undefined || !this.#clips.has(beforeId)) {
@@ -278,7 +250,7 @@ export class AnimationSet {
       return;
     }
 
-    const clips = new Map<string, AnimationClipJSON>();
+    const clips = new Map<string, AnimationClip>();
     for (const [id, entry] of this.#clips) {
       if (id === beforeId) {
         clips.set(clip.id, clip);
@@ -290,7 +262,7 @@ export class AnimationSet {
 
   #update(
     clipId: string,
-    change: (clip: AnimationClipJSON) => AnimationClipJSON
+    change: (clip: AnimationClip) => AnimationClip
   ): void {
     const clip = this.#clips.get(clipId);
     if (clip !== undefined) {
@@ -298,16 +270,16 @@ export class AnimationSet {
     }
   }
 
-  #clipNameKeys(
+  #clipNames(
     exceptId?: string
-  ): Set<string> {
-    const keys = new Set<string>();
+  ): NameSet {
+    const names: string[] = [];
     for (const clip of this.#clips.values()) {
       if (clip.id !== exceptId) {
-        keys.add(nameKey(clip.name));
+        names.push(clip.name);
       }
     }
 
-    return keys;
+    return new NameSet(names);
   }
 }

@@ -2,8 +2,8 @@
 import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { createBlockTransform } from "#src/model/blockTransform.ts";
-import { createMaterialSurface } from "#src/model/materialSurface.ts";
+import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
+import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import type {
   BlockNodeJSON,
   BlockTransformJSON,
@@ -16,7 +16,7 @@ import type {
 } from "#src/network/types.ts";
 
 // CONSTANTS
-export const TRANSFORM: BlockTransformJSON = createBlockTransform();
+export const TRANSFORM: BlockTransformJSON = BlockTransform.create();
 export const UV: UVLayoutData = {
   state: "stacked",
   rect: { x: 0, y: 0, width: 16, height: 16 }
@@ -94,7 +94,7 @@ export function material(
     id,
     parentId,
     name: id,
-    surface: createMaterialSurface()
+    surface: MaterialSurface.create()
   };
 }
 

@@ -12,11 +12,10 @@ import {
   type JollyToggleVisibleDetail,
   type TreeNode
 } from "@jolly-pixel/ui";
-import {
-  freeBlockName,
-  type ModelChange,
-  type ModelDocument,
-  type VoxelModelCommand
+import type {
+  ModelChange,
+  ModelDocument,
+  VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -340,7 +339,7 @@ export class HierarchyController {
     }
 
     return {
-      defaultName: freeBlockName(workspace.document.tree, name, parentId),
+      defaultName: workspace.document.tree.blockNamesUnder(parentId).free(name),
       validate: (candidate) => workspace.hierarchy.blockNameError(candidate, parentId)
     };
   }

@@ -20,7 +20,7 @@ import type {
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  blockUvExtent,
+  BlockUvLayouts,
   type ModelChange,
   type ModelDocument,
   type VoxelModelCommandAction
@@ -124,7 +124,7 @@ export class BuildTab extends LitElement {
 
   #remeasure = (): void => {
     const blocks = this.workspace?.document.tree.blocks() ?? [];
-    this.#extent = blockUvExtent([...blocks].map((block) => block.uv));
+    this.#extent = new BlockUvLayouts([...blocks].map((block) => block.uv)).extent;
     this.requestUpdate();
   };
 

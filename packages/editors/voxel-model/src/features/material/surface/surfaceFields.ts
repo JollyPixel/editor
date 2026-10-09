@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  MATERIAL_SURFACE_PROPERTIES,
+  MaterialSurface,
   type MaterialSurfaceJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
@@ -11,7 +11,7 @@ type SurfaceKeyOf<TValue> = {
 export type ColorKey = SurfaceKeyOf<string>;
 export type NumberKey = SurfaceKeyOf<number>;
 
-type SurfaceSchemas = typeof MATERIAL_SURFACE_PROPERTIES;
+type SurfaceSchemas = typeof MaterialSurface.PROPERTIES;
 
 type UnboundedKey = {
   [TKey in NumberKey]: SurfaceSchemas[TKey] extends { maximum: number; } ? never : TKey;
@@ -119,5 +119,5 @@ export function sliderMax(
 ): number {
   return "max" in field ?
     field.max :
-    MATERIAL_SURFACE_PROPERTIES[field.key].maximum;
+    MaterialSurface.PROPERTIES[field.key].maximum;
 }

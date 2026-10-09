@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  createBlockTransform,
-  createBlockUv,
-  createMaterialSurface,
+  BlockTransform,
+  BlockUvLayouts,
+  MaterialSurface,
   type BlockTransformJSON,
   type ModelDocument,
   type VoxelModelCommand
@@ -20,7 +20,7 @@ import {
 } from "../../fixtures/model.ts";
 
 // CONSTANTS
-const kMetal = createMaterialSurface({ metalness: 0.8 });
+const kMetal = MaterialSurface.create({ metalness: 0.8 });
 
 function recordCommands(
   document: ModelDocument
@@ -34,7 +34,7 @@ function recordCommands(
 function transformAt(
   position: { x: number; y: number; z: number; }
 ): BlockTransformJSON {
-  return createBlockTransform({ position });
+  return BlockTransform.create({ position });
 }
 
 function assertCloseTo(
@@ -53,7 +53,7 @@ function rotatedParentWithChild(
   fixture: ModelFixture
 ) {
   const parent = fixture.addBlock({
-    transform: createBlockTransform({
+    transform: BlockTransform.create({
       position: { x: 10, y: 0, z: 0 },
       rotation: { x: 0, y: Math.PI / 2, z: 0 }
     })
@@ -158,7 +158,7 @@ describe("ModelBlocks projection", () => {
           parentId: "parent",
           name: "Child",
           transform: transformAt({ x: 1, y: 0, z: 0 }),
-          uv: createBlockUv(),
+          uv: BlockUvLayouts.net(),
           materialId: "metal"
         },
         {
@@ -167,7 +167,7 @@ describe("ModelBlocks projection", () => {
           parentId: null,
           name: "Parent",
           transform: transformAt({ x: 0, y: 0, z: 0 }),
-          uv: createBlockUv()
+          uv: BlockUvLayouts.net()
         }
       ],
       materials: [
@@ -209,16 +209,16 @@ describe("ModelBlocks surface previews", () => {
     const block = addBlock({ materialId: glass });
 
     previews.set(glass, "bob", { roughness: 0.3 });
-    assert.deepEqual(block.surface, createMaterialSurface({ roughness: 0.3 }));
+    assert.deepEqual(block.surface, MaterialSurface.create({ roughness: 0.3 }));
 
     document.changeMaterial(glass, { opacity: 0.5 });
     assert.deepEqual(
       block.surface,
-      createMaterialSurface({ opacity: 0.5, roughness: 0.3 })
+      MaterialSurface.create({ opacity: 0.5, roughness: 0.3 })
     );
 
     previews.end(glass, "bob");
-    assert.deepEqual(block.surface, createMaterialSurface({ opacity: 0.5 }));
+    assert.deepEqual(block.surface, MaterialSurface.create({ opacity: 0.5 }));
   });
 
   test("dresses a block newly given a material with the material's previews", () => {
@@ -229,14 +229,14 @@ describe("ModelBlocks surface previews", () => {
     previews.set(glass, "bob", { roughness: 0.3 });
     document.assignMaterial(block.uuid, glass);
 
-    assert.deepEqual(block.surface, createMaterialSurface({ roughness: 0.3 }));
+    assert.deepEqual(block.surface, MaterialSurface.create({ roughness: 0.3 }));
   });
 
   test("shows the default surface once a block's material is removed", () => {
     const { document, addBlock } = createModelFixture();
     const glass = document.addMaterial({
       name: "Glass",
-      surface: createMaterialSurface({ opacity: 0.5 })
+      surface: MaterialSurface.create({ opacity: 0.5 })
     })!;
     const block = addBlock({ materialId: glass });
 
@@ -309,14 +309,14 @@ describe("ModelBlocks poses", () => {
   test("a block's scale carries its children around its pivot", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         pivotOffset: { x: 1, y: 0, z: 0 },
         scale: { x: 2, y: 2, z: 2 }
       })
     });
     const child = fixture.addBlock({
       parentId: parent.uuid,
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         position: { x: 1, y: 0, z: 0 },
         pivotOffset: { x: 0, y: 0.5, z: 0 }
       })
@@ -334,12 +334,12 @@ describe("ModelBlocks poses", () => {
   test("under keeps the world size of a block moved between differently scaled parents", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         scale: { x: 2, y: 2, z: 2 }
       })
     });
     const child = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         position: { x: 4, y: 0, z: 0 },
         pivotOffset: { x: 0, y: 1, z: 0 }
       })
@@ -362,7 +362,7 @@ describe("ModelBlocks poses", () => {
   test("a per-axis scale stretches children along that axis of the parent only", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         scale: { x: 3, y: 1, z: 1 }
       })
     });
@@ -379,13 +379,13 @@ describe("ModelBlocks poses", () => {
   test("a child takes its parent's scale on the same axis whatever its rotation", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         scale: { x: 3, y: 1, z: 1 }
       })
     });
     const child = fixture.addBlock({
       parentId: parent.uuid,
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         position: { x: 1, y: 0, z: 0 },
         rotation: { x: 0, y: Math.PI / 2, z: 0 }
       })
@@ -399,13 +399,13 @@ describe("ModelBlocks poses", () => {
   test("an angled child stays a box under a stretched parent", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         scale: { x: 3, y: 1, z: 1 }
       })
     });
     const child = fixture.addBlock({
       parentId: parent.uuid,
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         pivotOffset: { x: 0.5, y: 0, z: 0 },
         rotation: { x: 0, y: Math.PI / 6, z: 0 }
       })
@@ -447,7 +447,7 @@ describe("ModelBlocks poses", () => {
   test("a new child with the default transform sits on its parent's pivot", () => {
     const fixture = createModelFixture();
     const parent = fixture.addBlock({
-      transform: createBlockTransform({
+      transform: BlockTransform.create({
         position: { x: 5, y: 0, z: 0 },
         pivotOffset: { x: 1, y: 0, z: 0 }
       })
@@ -455,7 +455,7 @@ describe("ModelBlocks poses", () => {
 
     const child = fixture.addBlock({
       parentId: parent.uuid,
-      transform: createBlockTransform()
+      transform: BlockTransform.create()
     });
     fixture.scene.updateMatrixWorld(true);
 

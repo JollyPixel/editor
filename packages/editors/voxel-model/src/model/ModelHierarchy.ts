@@ -1,11 +1,8 @@
 // Import Third-party Dependencies
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  blockNameTaken,
-  createBlockTransform,
-  createBlockUv,
-  freeBlockName,
-  nextBlockUvOrigin,
+  BlockTransform,
+  BlockUvLayouts,
   type AddFolderOptions,
   type BlockTransformJSON,
   type MirrorAxes,
@@ -91,7 +88,7 @@ export class ModelHierarchy {
   ): string | null {
     const { tree } = this.#document;
 
-    return blockNameTaken(tree, name, parentId, exceptId) ?
+    return tree.blockNamesUnder(parentId, exceptId).has(name) ?
       blockNameTakenMessage(tree, parentId, name.trim()) :
       null;
   }
@@ -111,13 +108,13 @@ export class ModelHierarchy {
     name: string,
     parentId: string | null
   ): string | null {
-    const layouts = [...this.#document.tree.blocks()].map((block) => block.uv);
+    const layouts = new BlockUvLayouts([...this.#document.tree.blocks()].map((block) => block.uv));
 
     return this.#document.addBlock({
       name,
       parentId,
-      transform: createBlockTransform(),
-      uv: createBlockUv(nextBlockUvOrigin(layouts, this.#textureSize()))
+      transform: BlockTransform.create(),
+      uv: layouts.nextNet(this.#textureSize())
     });
   }
 
@@ -261,7 +258,7 @@ export class ModelHierarchy {
       this.#document.addFolder(copy) :
       this.#document.addBlock({
         ...copy,
-        name: freeBlockName(this.#document.tree, copy.name, copy.parentId ?? null),
+        name: this.#document.tree.blockNamesUnder(copy.parentId ?? null).free(copy.name),
         transform: node.transform,
         uv: node.uv,
         materialId: node.materialId
