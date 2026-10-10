@@ -61,6 +61,8 @@ jobs:
         run: pnpm run typecheck
       - name: Run script tests
         run: pnpm run test:scripts
+      - name: Build docs
+        run: pnpm run docs:build
 
   test:
     needs: changes

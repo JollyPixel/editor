@@ -8,7 +8,7 @@ relief.
 
 Each term below describes the idea first. The *In code* line names where it
 shows up in the API. Features built on these ideas, such as undo, the color
-palette, shortcuts or the clipboard, are described in [docs](./docs).
+palette, shortcuts or the clipboard, are described in the [README](./README.md).
 [Network](../network/GLOSSARY.md) and [history](../history/GLOSSARY.md) have
 their own glossaries.
 
