@@ -141,6 +141,7 @@ export class ConsoleScriptElement extends LitElement {
             aria-invalid=${draft?.ok === false ? "true" : nothing}
             autocapitalize="off"
             autocomplete="off"
+            autofocus
             spellcheck="false"
             wrap="off"
             rows="1"
