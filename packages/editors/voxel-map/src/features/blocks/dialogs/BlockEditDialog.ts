@@ -199,6 +199,7 @@ export class BlockEditDialog extends WorkspaceElement {
       <jolly-button-group
         label="Alpha"
         description="Cutout keeps hard edges; Blended follows the tile pixels"
+        description-display="tooltip"
         .options=${kAlphaModeOptions}
         .value=${alphaMode}
         @jolly-change=${this.#onAlphaModeChange}
@@ -206,6 +207,7 @@ export class BlockEditDialog extends WorkspaceElement {
       <jolly-button-group
         label="Sides"
         description="Both also draws the faces seen from inside the block"
+        description-display="tooltip"
         .options=${kSideOptions}
         .value=${block.side ?? "double"}
         @jolly-change=${this.#onSideChange}
@@ -214,6 +216,7 @@ export class BlockEditDialog extends WorkspaceElement {
         align="end"
         label="Cull faces"
         description="Drops the faces a neighbouring block covers"
+        description-display="tooltip"
         .value=${cullsCoveredFaces(block)}
         @jolly-change=${this.#onCullCoveredFacesChange}
       ></jolly-checkbox>

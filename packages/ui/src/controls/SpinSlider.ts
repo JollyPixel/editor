@@ -96,6 +96,7 @@ export class SpinSlider extends JollyField<number> {
           ?disabled=${this.disabled}
           ?readonly=${this.inputReadonly}
           ?data-pointer-focus=${this.#input.pointerFocused}
+          aria-label=${this.label === "" ? nothing : this.label}
           aria-valuemin=${this.min}
           aria-valuemax=${this.max}
           aria-valuenow=${value ?? nothing}

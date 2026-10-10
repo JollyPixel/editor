@@ -18,6 +18,9 @@ export class MaterialsPane {
   readonly removeButton: Locator;
   readonly color: Locator;
   readonly roughness: Locator;
+  readonly materialLibrary: Locator;
+  readonly viewSettings: Locator;
+  readonly noBlocksHint: Locator;
 
   constructor(
     page: Page
@@ -36,7 +39,10 @@ export class MaterialsPane {
       .locator("jolly-color")
       .filter({ hasText: "Color" })
       .locator("input.hex");
-    this.roughness = this.root.getByRole("textbox", { name: "Roughness value" });
+    this.roughness = this.root.getByRole("spinbutton", { name: "Roughness" });
+    this.materialLibrary = this.root.locator("material-library");
+    this.viewSettings = this.root.locator("map-config-panel");
+    this.noBlocksHint = this.root.getByText("Add a block to the map to edit materials.");
   }
 
   async create(

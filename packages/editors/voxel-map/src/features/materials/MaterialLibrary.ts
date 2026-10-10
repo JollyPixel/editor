@@ -22,6 +22,7 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import type { MapMaterial } from "./MapMaterial.ts";
 import {
   MaterialShelves,
@@ -32,7 +33,7 @@ import "./MaterialFinish.ts";
 
 @customElement("material-library")
 export class MaterialLibrary extends WorkspaceElement {
-  static override styles = materialLibraryStyles;
+  static override styles = [hintStyles, materialLibraryStyles];
 
   @state()
   private declare _selectedId: string | null;

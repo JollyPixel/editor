@@ -1,27 +1,36 @@
 // Import Third-party Dependencies
 import { html, css, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import "../../features/blocks/library/BlockLibrary.ts";
 import "../../features/materials/MaterialLibrary.ts";
+import "./MapConfigPanel.ts";
 
 @customElement("materials-panel")
 export class MaterialsPanel extends WorkspaceElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex: 1 1 auto;
-      flex-direction: column;
-      min-height: 0;
-    }
+  static override styles = [
+    hintStyles,
+    css`
+      :host {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+      }
 
-    jolly-folder {
-      flex: 0 0 auto;
-    }
-  `;
+      jolly-folder {
+        flex: 0 0 auto;
+      }
+
+      material-library {
+        flex-shrink: 0;
+      }
+    `
+  ];
 
   @property({
     type: Boolean,
@@ -30,9 +39,13 @@ export class MaterialsPanel extends WorkspaceElement {
   })
   declare showsBlockLibrary: boolean;
 
+  @state()
+  declare _hasBlocks: boolean;
+
   constructor() {
     super();
     this.showsBlockLibrary = true;
+    this._hasBlocks = false;
   }
 
   protected override watchWorkspace(
@@ -40,10 +53,7 @@ export class MaterialsPanel extends WorkspaceElement {
   ): Iterable<() => void> {
     const { mapDocument } = workspace;
     const refresh = (): void => {
-      const pane = this.closest("jolly-pane");
-      if (pane !== null) {
-        pane.disabled = mapDocument.blocks.size === 0;
-      }
+      this._hasBlocks = mapDocument.blocks.size > 0;
     };
     refresh();
 
@@ -59,6 +69,23 @@ export class MaterialsPanel extends WorkspaceElement {
       return html``;
     }
 
+    return html`
+      ${this._hasBlocks ?
+        this.#renderMaterials(workspace) :
+        html`<p class="hint">Add a block to the map to edit materials.</p>`}
+      <jolly-folder
+        key="map-config"
+        label="View"
+        storage-key="voxel-map:folder:map-config"
+      >
+        <map-config-panel .workspace=${workspace}></map-config-panel>
+      </jolly-folder>
+    `;
+  }
+
+  #renderMaterials(
+    workspace: VoxelMapWorkspace
+  ) {
     return html`
       ${this.showsBlockLibrary ? html`
         <jolly-folder

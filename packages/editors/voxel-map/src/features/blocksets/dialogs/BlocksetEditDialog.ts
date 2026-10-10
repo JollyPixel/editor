@@ -165,6 +165,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
           .value=${entry.label}
           ?disabled=${!renamable}
           description=${entry.assetId === null ? "Unlinked texture, read-only" : ""}
+          description-display="tooltip"
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
             void this.#rename(entry, event.detail.value);
           }}

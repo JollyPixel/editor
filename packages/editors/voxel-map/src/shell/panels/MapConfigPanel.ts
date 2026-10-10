@@ -60,6 +60,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Reflections"
         description="Shows the metal and roughness of material groups"
+        description-display="tooltip"
         .value=${this.#reflections.value}
         @jolly-change=${this.#reflections.commit}
       ></jolly-checkbox>
@@ -67,6 +68,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Occlusion"
         description="Darkens corners; rebuilds every chunk"
+        description-display="tooltip"
         .value=${this.#ambientOcclusion.value}
         @jolly-change=${this.#ambientOcclusion.commit}
       ></jolly-checkbox>
@@ -74,6 +76,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Shadows"
         description="Sun shadows around the camera"
+        description-display="tooltip"
         .value=${this.#shadows.value}
         @jolly-change=${this.#shadows.commit}
       ></jolly-checkbox>
@@ -81,6 +84,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Block light"
         description="Glowing materials light the blocks around them"
+        description-display="tooltip"
         .value=${this.#blockLight.value}
         @jolly-change=${this.#blockLight.commit}
       ></jolly-checkbox>
@@ -88,6 +92,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Glow"
         description="Glowing materials bloom on screen"
+        description-display="tooltip"
         .value=${this.#glow.value}
         @jolly-change=${this.#glow.commit}
       ></jolly-checkbox>

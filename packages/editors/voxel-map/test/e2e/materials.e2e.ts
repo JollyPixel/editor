@@ -98,9 +98,10 @@ test("the material fields follow the block picked in the library", async({ map }
   await expect(materials.removeButton).toBeVisible();
 });
 
-test("the Materials tab is disabled while the map has no blocks", async({ map }) => {
-  const tab = map.panes.tab("Materials");
-  await expect(tab).toBeEnabled();
+test("the Materials tab shows a hint and the View settings while the map has no blocks", async({ map }) => {
+  const { materials } = map;
+  await map.panes.open("Materials");
+  await expect(materials.materialLibrary).toBeVisible();
 
   await map.page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
@@ -109,5 +110,7 @@ test("the Materials tab is disabled while the map has no blocks", async({ map })
     }
   });
 
-  await expect(tab).toBeDisabled();
+  await expect(materials.materialLibrary).toHaveCount(0);
+  await expect(materials.noBlocksHint).toBeVisible();
+  await expect(materials.viewSettings).toBeVisible();
 });

@@ -18,7 +18,7 @@ export const materialLibraryStyles = css`
   .layout {
     display: grid;
     flex: 1 1 auto;
-    grid-template-columns: minmax(112px, 38%) minmax(0, 1fr);
+    grid-template-columns: minmax(112px, 34%) minmax(0, 1fr);
     min-height: 160px;
   }
 
@@ -63,12 +63,9 @@ export const materialLibraryStyles = css`
   }
 
   .fields {
-    padding-block-end: var(--jolly-space-1, 4px);
-  }
+    --jolly-label-width: 18ch;
+    --jolly-label-max-width: 60%;
 
-  .hint {
-    margin: 0;
-    padding: var(--jolly-space-2, 8px);
-    color: var(--jolly-text-muted);
+    padding-block-end: var(--jolly-space-1, 4px);
   }
 `;

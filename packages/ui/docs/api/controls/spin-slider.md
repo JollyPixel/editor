@@ -49,8 +49,8 @@ Dragging and jumping emit `jolly-input` while the pointer moves and one
 the press and emits no `jolly-change`. A disabled, read-only or locked field
 cannot be dragged.
 
-The input has the `spinbutton` role and exposes `aria-valuemin`,
-`aria-valuemax` and `aria-valuenow`.
+The input has the `spinbutton` role, takes `label` as its accessible name, and
+exposes `aria-valuemin`, `aria-valuemax` and `aria-valuenow`.
 
 ## Facade
 
