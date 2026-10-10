@@ -1,6 +1,6 @@
 # Voxel-model architecture
 
-`VoxelModelState` is the server's headless model. Its snapshot holds three ordered parts: the nodes (blocks and folders), the material library (materials and material folders) and the animation set links. The stored document adds a version and the texture reference, which stay outside the live snapshot. Linked animation sets become catalog dependencies of the model. The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
+`VoxelModelState` is the server's headless model. Its snapshot holds three ordered parts: the nodes (blocks and folders), the material library (materials and material folders) and the animation set links. The stored document adds a version and the texture reference, which stay outside the live snapshot. It also leaves out the transform vectors that match `BlockTransform.create()` and an `activeFaces` list that names every face in `faces` order. The decoder fills both back in, so the snapshot, the commands and `VoxelModelState.toJSON()` always hold full blocks. Linked animation sets become catalog dependencies of the model. The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
 
 ```mermaid
 flowchart TB

@@ -26,6 +26,7 @@ import {
   VoxelModelState
 } from "#src/asset/voxelModelAssetKind.ts";
 import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
+import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
 import {
   blockAdded,
   blockNode,
@@ -161,6 +162,30 @@ describe("decodeVoxelModelDocument", () => {
         }
       ],
       materials: [],
+      texture: kTexture
+    }));
+
+    assert.throws(
+      () => decodeVoxelModelDocument(content),
+      /\/nodes\/0/
+    );
+  });
+
+  test("rejects a stored transform part that is not a vector", () => {
+    const content = new TextEncoder().encode(JSON.stringify({
+      version: 2,
+      nodes: [
+        {
+          kind: "block",
+          id: "a",
+          parentId: null,
+          name: "Block",
+          transform: { size: { x: 2 } },
+          uv: BlockUvLayouts.net()
+        }
+      ],
+      materials: [],
+      animationSets: [],
       texture: kTexture
     }));
 

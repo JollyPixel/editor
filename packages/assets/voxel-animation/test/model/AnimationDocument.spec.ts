@@ -33,6 +33,7 @@ describe("AnimationDocument", () => {
     const id = document.addClip({ name: "Idle" });
 
     assert.ok(id);
+    assert.match(id, /^[0-9A-Za-z]{12}$/);
     assert.deepEqual(document.set.clip(id), {
       id,
       name: "Idle",
@@ -54,6 +55,25 @@ describe("AnimationDocument", () => {
     source.setKey("walk", "body/arm", "rotation", key(0, 45));
 
     assert.deepEqual(document.set.clip(id)?.tracks, createDocument().set.clip("walk")?.tracks);
+  });
+
+  test("rounds key values to four decimals", () => {
+    const document = new AnimationDocument();
+    const noisy = {
+      tick: 0,
+      value: { x: 0.006363961030678927, y: 5.5e-19, z: -0.00001 },
+      interpolation: "smooth" as const
+    };
+    const rounded = {
+      ...noisy,
+      value: { x: 0.0064, y: 0, z: 0 }
+    };
+
+    const id = document.addClip({ name: "Spin", tracks: [{ path: "ring", rotation: [noisy] }] })!;
+    document.setKey(id, "ring", "position", noisy);
+
+    assert.deepStrictEqual(document.set.keyAt(id, "ring", "rotation", 0), rounded);
+    assert.deepStrictEqual(document.set.keyAt(id, "ring", "position", 0), rounded);
   });
 
   const kEdits: Record<string, (document: AnimationDocument) => boolean> = {

@@ -42,6 +42,19 @@ describe("voxel animation document", () => {
     );
   });
 
+  test("stores linear keys without their interpolation", () => {
+    const document = createVoxelAnimationDocument({
+      clips: [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15), key(12, 30, "smooth")] }] })]
+    });
+
+    const stored = JSON.parse(new TextDecoder().decode(encodeVoxelAnimationDocument(document)));
+
+    assert.deepEqual(stored.clips[0].tracks[0].rotation, [
+      { tick: 0, value: { x: 15, y: 0, z: 0 } },
+      { tick: 12, value: { x: 30, y: 0, z: 0 }, interpolation: "smooth" }
+    ]);
+  });
+
   test("rejects bytes that are not JSON or not a set", () => {
     const encoder = new TextEncoder();
 

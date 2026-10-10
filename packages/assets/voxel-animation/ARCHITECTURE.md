@@ -1,6 +1,6 @@
 # Voxel-animation architecture
 
-`AnimationSet` is both the server's headless set and the state behind `AnimationDocument` on the client. Its snapshot holds a `rig` label and the clips, in order; each clip holds tracks of keys addressed by block name path. A set knows nothing about models: a model links it and binds its tracks to blocks, see [animation bindings](../voxel-model/docs/animation.md). The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
+`AnimationSet` is both the server's headless set and the state behind `AnimationDocument` on the client. Its snapshot holds a `rig` label and the clips, in order; each clip holds tracks of keys addressed by block name path. The stored document leaves out a key's `interpolation` when it is `"linear"`, and the decoder fills it back in. A set knows nothing about models: a model links it and binds its tracks to blocks, see [animation bindings](../voxel-model/docs/animation.md). The shared room and persistence lifecycle is shown in [asset workspace architecture](../ARCHITECTURE.md).
 
 ```mermaid
 flowchart TB

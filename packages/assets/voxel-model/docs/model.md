@@ -41,7 +41,7 @@ A model tree holds blocks and folders. A folder only sorts nodes. A block is a b
 | `setUv(id, uv)` | Sets a block's whole UV layout. |
 | `assignMaterial(id, materialId)` | Points a block to a material, or to none with `null`. |
 
-The edit methods return `false` when the tree refuses the command, and the `add*` methods `null`. A node lands before the sibling `beforeId`, or last among its siblings without one. Parents must exist, IDs must be unused, and transforms, UV layouts and materials target blocks.
+The edit methods return `false` when the tree refuses the command, and the `add*` methods `null`. Without an `id`, the `add*` methods give the node a random ID of 12 letters and digits. A node lands before the sibling `beforeId`, or last among its siblings without one. Parents must exist, IDs must be unused, and transforms, UV layouts and materials target blocks.
 
 ## Reading the tree
 
@@ -69,6 +69,7 @@ Block names should be unique among the blocks sharing a transform parent, compar
 | Member | Description |
 |---|---|
 | `BlockTransform.create(overrides?)` | The identity transform of a unit block, with `overrides` applied. |
+| `BlockTransform.compact(transform)` | A copy holding only the vectors that differ from `BlockTransform.create()`. `BlockTransform.create(compact)` restores the full transform. |
 | `BlockTransform.parse(value)` | A copy holding only the five vectors of a transform, or `undefined` when one is missing or is not three numbers. Use it on transforms received from peers. |
 | `new BlockTransform(rest)` | Holds a copy of a block's rest transform. |
 | `pose(sample)`, `deltaTo(pose)` | Poses the rest transform with an animation sample, and the reverse. See [animation bindings](./animation.md#posing). |

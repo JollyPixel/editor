@@ -25,6 +25,7 @@ import {
 } from "./history/animationImages.ts";
 import { inverseOf } from "./history/animationInverse.ts";
 import { TICKS_PER_SECOND } from "./values/FrameRate.ts";
+import { randomId } from "./values/randomId.ts";
 
 // CONSTANTS
 const kDefaultFps = 24;
@@ -78,7 +79,7 @@ export class AnimationDocument extends CommandDocument<
     options: AddClipOptions
   ): string | null {
     const {
-      id = crypto.randomUUID(),
+      id = randomId(),
       name,
       length = TICKS_PER_SECOND,
       fps = kDefaultFps,
