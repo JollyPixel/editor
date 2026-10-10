@@ -34,6 +34,7 @@ export class PaletteController implements ReactiveController {
   readonly #selected = new WeakMap<PixelDocument, number>();
   #document: PixelDocument | null = null;
   #unsubscribe: (() => void) | null = null;
+  locked = false;
 
   constructor(
     host: ReactiveControllerHost & HTMLElement,
@@ -113,6 +114,12 @@ export class PaletteController implements ReactiveController {
   commit(
     color: ColorChangeDetail
   ): void {
+    if (this.locked) {
+      this.deselect();
+
+      return;
+    }
+
     const index = this.selected;
     if (index !== null) {
       this.#activeDocument()?.changePaletteColor(index, colorChangeToRgba8(color));

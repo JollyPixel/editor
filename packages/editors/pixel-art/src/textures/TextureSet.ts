@@ -14,6 +14,11 @@ import {
   type TextureUpdate
 } from "./TextureEntry.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
+import { PixelArtAccess } from "../access/PixelArtAccess.ts";
+import {
+  UvAccessPolicy,
+  type UvAccess
+} from "../uv/UvAccessPolicy.ts";
 
 // CONSTANTS
 const kUvRefreshEvents = [
@@ -41,6 +46,7 @@ export class TextureSet {
   #settings: ToolSettings | null = null;
   #uvResizable = false;
   #uvOverflow = 0;
+  #uvAccess: UvAccess = "edit";
 
   constructor(
     host: ReactiveControllerHost,
@@ -60,6 +66,23 @@ export class TextureSet {
 
   get carriesSettings(): boolean {
     return this.#settings !== null;
+  }
+
+  get activeAccess(): PixelArtAccess {
+    return this.#active?.access ?? PixelArtAccess.full;
+  }
+
+  get activeUvPolicy(): UvAccessPolicy {
+    return this.#uvPolicy(this.activeAccess);
+  }
+
+  set uvAccess(
+    value: UvAccess
+  ) {
+    this.#uvAccess = value;
+    for (const entry of this.#entries.values()) {
+      this.#applyAccess(entry);
+    }
   }
 
   set uvResizable(
@@ -117,6 +140,7 @@ export class TextureSet {
       tooltip = "",
       badge = "",
       disabled = false,
+      access = PixelArtAccess.full,
       ...canvasOptions
     } = options;
     if (this.#entries.has(id)) {
@@ -131,7 +155,12 @@ export class TextureSet {
 
     let canvas: PixelArtCanvas;
     try {
-      canvas = this.#createCanvas(host, canvasOptions);
+      canvas = this.#createCanvas(host, {
+        ...canvasOptions,
+        defaultMode: this.#uvPolicy(access).constrain(
+          canvasOptions.defaultMode ?? "paint"
+        )
+      });
     }
     catch (error) {
       host.remove();
@@ -148,9 +177,11 @@ export class TextureSet {
       tooltip,
       badge,
       disabled,
+      access,
       host,
       canvas
     });
+    this.#applyAccess(entry);
     this.#entries.set(id, entry);
     if (!disabled && (activate || this.#active === null)) {
       this.activate(entry);
@@ -167,7 +198,11 @@ export class TextureSet {
     id: string,
     changes: TextureUpdate
   ): void {
-    this.get(id).update(changes);
+    const entry = this.get(id);
+    entry.update(changes);
+    if (changes.access !== undefined) {
+      this.#applyAccess(entry);
+    }
     this.#host.requestUpdate();
   }
 
@@ -183,6 +218,7 @@ export class TextureSet {
     this.#show(entry.host);
     if (this.#settings !== null) {
       this.#settings.applyTo(entry.canvas);
+      this.#applyAccess(entry);
     }
     this.#subscribe(entry.canvas);
     entry.canvas.onResize();
@@ -267,6 +303,24 @@ export class TextureSet {
     canvas.uv.overflow = this.#uvOverflow;
 
     return canvas;
+  }
+
+  #uvPolicy(
+    access: PixelArtAccess
+  ): UvAccessPolicy {
+    return UvAccessPolicy.forAccess(this.#uvAccess, access.uv);
+  }
+
+  #applyAccess(
+    entry: TextureEntry
+  ): void {
+    const { canvas, access } = entry;
+    const policy = this.#uvPolicy(access);
+    canvas.mode = policy.constrain(canvas.mode);
+    if (!policy.fillClip) {
+      canvas.tools.fill.uvClip = false;
+    }
+    canvas.pixelsLocked = !access.pixels;
   }
 
   #deactivate(): void {

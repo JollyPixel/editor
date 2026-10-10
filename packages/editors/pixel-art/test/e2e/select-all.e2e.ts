@@ -1,29 +1,29 @@
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
-import {
-  hoverTexturePixel,
-  setMode
-} from "./utils.ts";
 
-test("Ctrl+A selects the full texture only when the canvas owns the key", async({ panel, page }) => {
+test("Ctrl+A selects the full texture only when the canvas owns the key", async({
+  panel,
+  page,
+  commands
+}) => {
   function selection() {
-    return panel.evaluate(
+    return panel.root.evaluate(
       (element: PixelDrawPanel) => element.canvasManager!.selectionPresence?.toJSON() ?? null
     );
   }
 
-  await setMode(panel, "paint");
-  await hoverTexturePixel(panel, { x: 42, y: 42 });
+  await panel.modes.select("paint");
+  await panel.canvas.hover({ x: 42, y: 42 });
   await page.keyboard.press("Control+a");
   await expect.poll(selection).toBeNull();
 
-  await setMode(panel, "select");
+  await panel.modes.select("select");
   await page.mouse.move(0, 0);
   await page.keyboard.press("Control+a");
   await expect.poll(selection).toBeNull();
 
-  await hoverTexturePixel(panel, { x: 42, y: 42 });
+  await panel.canvas.hover({ x: 42, y: 42 });
   await page.keyboard.press("Control+a");
   await expect.poll(selection).toEqual({
     phase: "selected",
@@ -31,15 +31,13 @@ test("Ctrl+A selects the full texture only when the canvas owns the key", async(
     mask: Array(80 * 80).fill(true)
   });
 
-  await setMode(panel, "paint");
-  await setMode(panel, "select");
-  await page.keyboard.press("Control+k");
-  const prompt = page.getByRole("combobox", { name: "Command" });
-  await expect(prompt).toBeFocused();
-  await prompt.fill("pixelart.keybinds.selectAll");
-  await hoverTexturePixel(panel, { x: 42, y: 42 });
+  await panel.modes.select("paint");
+  await panel.modes.select("select");
+  await commands.open();
+  await commands.prompt.fill("pixelart.keybinds.selectAll");
+  await panel.canvas.hover({ x: 42, y: 42 });
   await page.keyboard.press("Control+a");
-  await expect.poll(() => prompt.evaluate(
+  await expect.poll(() => commands.prompt.evaluate(
     (element: HTMLInputElement) => [
       element.selectionStart,
       element.selectionEnd

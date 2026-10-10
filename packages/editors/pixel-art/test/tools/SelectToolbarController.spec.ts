@@ -38,6 +38,7 @@ type ClipboardOperationResult = Awaited<ReturnType<PixelArtCanvas["copySelection
 interface FakeCanvasState {
   canvas: PixelArtCanvas;
   select(hasSelection: boolean): void;
+  lockPixels(): void;
   calls: Record<string, number>;
   copyDeferred: PromiseWithResolvers<ClipboardOperationResult>;
 }
@@ -77,6 +78,7 @@ function makeCanvas(): FakeCanvasState {
     }
   };
   const canvas = {
+    pixelsReadOnly: false,
     tools: { select },
     copySelection: () => {
       calls.copy++;
@@ -98,6 +100,9 @@ function makeCanvas(): FakeCanvasState {
       hasSelection: boolean
     ) {
       select.hasSelection = hasSelection;
+    },
+    lockPixels() {
+      Object.assign(canvas, { pixelsReadOnly: true });
     }
   };
 }
@@ -141,6 +146,18 @@ describe("SelectToolbarController", () => {
     fake.select(true);
     render(controller.render(true), container);
     assert.ok(disabledStates(container).every((disabled) => !disabled));
+  });
+
+  test("keeps copy but disables paste and edits while pixels are read-only", () => {
+    const fake = makeCanvas();
+    const controller = new SelectToolbarController(new TestHost(), () => fake.canvas);
+    const container = document.createElement("div");
+    fake.select(true);
+    fake.lockPixels();
+
+    render(controller.render(true), container);
+
+    assert.deepStrictEqual(disabledStates(container), [false, true, true, true, true, true]);
   });
 
   test("disables selection actions without a canvas", () => {

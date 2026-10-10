@@ -37,6 +37,9 @@ export class ColorDock extends LitElement {
   @property({ attribute: false })
   declare editing: number | null;
 
+  @property({ type: Boolean, attribute: "palette-locked" })
+  declare paletteLocked: boolean;
+
   #picker = new FieldBinding(this, pickerSource(this));
 
   constructor() {
@@ -47,6 +50,7 @@ export class ColorDock extends LitElement {
     this.palette = null;
     this.selected = null;
     this.editing = null;
+    this.paletteLocked = false;
   }
 
   override render() {
@@ -57,6 +61,7 @@ export class ColorDock extends LitElement {
         .selected=${this.selected}
         .editing=${this.editing}
         .disabled=${this.palette === null}
+        .locked=${this.paletteLocked}
       ></color-palette-grid>
       <jolly-color-picker
         layout="wide"

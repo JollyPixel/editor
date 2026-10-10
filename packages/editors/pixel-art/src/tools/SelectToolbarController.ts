@@ -117,8 +117,11 @@ export class SelectToolbarController implements ReactiveController {
       return nothing;
     }
 
-    const select = this.#canvas()?.tools.select;
+    const canvas = this.#canvas();
+    const select = canvas?.tools.select;
+    const readOnly = canvas?.pixelsReadOnly === true;
     const selectionDisabled = !select?.hasSelection;
+    const editDisabled = selectionDisabled || readOnly;
 
     return html`
       <div class="select-toolbar-row">
@@ -136,7 +139,7 @@ export class SelectToolbarController implements ReactiveController {
             label: "Paste image",
             tooltip: "Paste",
             icon: "paste",
-            disabled: this.#clipboardPending,
+            disabled: this.#clipboardPending || readOnly,
             onClick: () => void this.paste()
           })}
           ${RAIL_DIVIDER}
@@ -146,21 +149,21 @@ export class SelectToolbarController implements ReactiveController {
             tooltip: "Rotate 90° clockwise",
             icon: "rotateClockwise",
             text: "90°",
-            disabled: selectionDisabled,
+            disabled: editDisabled,
             onClick: () => select?.rotate()
           })}
           ${renderRailButton({
             part: "select-flip-horizontal-button",
             label: "Flip horizontal",
             icon: "flipHorizontal",
-            disabled: selectionDisabled,
+            disabled: editDisabled,
             onClick: () => select?.flipHorizontal()
           })}
           ${renderRailButton({
             part: "select-flip-vertical-button",
             label: "Flip vertical",
             icon: "flipVertical",
-            disabled: selectionDisabled,
+            disabled: editDisabled,
             onClick: () => select?.flipVertical()
           })}
           ${RAIL_DIVIDER}
@@ -169,7 +172,7 @@ export class SelectToolbarController implements ReactiveController {
             label: "Delete selection",
             tooltip: "Delete",
             icon: "trash",
-            disabled: selectionDisabled,
+            disabled: editDisabled,
             onClick: () => select?.delete()
           })}
         </div>

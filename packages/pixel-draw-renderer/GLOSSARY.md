@@ -57,9 +57,11 @@ of the canvas element.
 
 What the canvas draws: the texture's own colors (*albedo*) or its normal map
 (*normal*). It is view state, never saved or shared. In the normal view the
-pixels are read-only, so modes that write pixels are unavailable.
+pixels are read-only, so modes that write pixels are unavailable. A *pixel
+lock* makes them read-only in every view.
 
-*In code:* `PixelArtCanvas.textureView`, `"albedo"` or `"normal"`.
+*In code:* `PixelArtCanvas.textureView`, `"albedo"` or `"normal"`;
+`PixelArtCanvas.pixelsLocked`.
 
 ## Editing
 

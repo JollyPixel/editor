@@ -127,6 +127,24 @@ export class ColorController {
     this.#host.requestUpdate();
   }
 
+  get paletteLocked(): boolean {
+    return this.#palette.locked;
+  }
+
+  set paletteLocked(
+    locked: boolean
+  ) {
+    if (locked === this.#palette.locked) {
+      return;
+    }
+
+    this.#palette.locked = locked;
+    if (locked && this.#editing !== null) {
+      this.#picker.value?.close();
+    }
+    this.#host.requestUpdate();
+  }
+
   adopt(): void {
     if (this.#docked) {
       this.#dock();
@@ -259,6 +277,7 @@ export class ColorController {
         .palette=${this.#palette.palette}
         .selected=${this.#palette.selected}
         .editing=${this.#editing}
+        .paletteLocked=${this.#palette.locked}
         @palette-select=${(event: CustomEvent<number>) => {
           this.selectPaletteColor(event.detail);
         }}

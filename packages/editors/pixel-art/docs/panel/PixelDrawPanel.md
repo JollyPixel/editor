@@ -53,6 +53,53 @@ hides UV controls and disables clipping. UV region overlays still follow
 `UVMap.isVisible()` in all modes. `allow-uv-create-delete` controls the UV
 Create/Delete buttons and defaults to false.
 
+## Access rights
+
+Rights belong to the room of a texture, so each texture has its own
+`PixelArtAccess`. Pass `access` to `addTexture()` or change it with
+`updateTexture(id, { access })`; it defaults to `PixelArtAccess.full`. The
+panel hides or disables what the active texture does not grant.
+
+`RoomAccess` keeps one texture in step with its room. It builds the access
+again on every `sync`, because a role change reconnects the room, and
+announces the pixel-art commands the server refuses:
+
+```ts
+import { RoomAccess } from "@jolly-pixel/editor.pixel-art";
+
+const access = new RoomAccess(room, panel, textureId);
+
+// once the texture is closed
+access.dispose();
+```
+
+Create it after `addTexture()`: when the room is already synced, it updates
+the texture right away.
+
+`PixelArtAccess.fromRights(room)` groups the pixel-art commands into five
+capabilities. A capability is granted only when every command in it can be
+written:
+
+- `pixels`: strokes, fills, selection edits, resizes and imports. Without it
+  the texture's canvas gets
+  [`pixelsLocked`](../../../../pixel-draw-renderer/docs/PixelArtCanvas.md#textureview--pixelslocked--pixelsreadonly--unavailablemodes),
+  and import, clear, paste and the selection edit buttons are disabled.
+- `uv`: moving, rotating and changing the state of UV regions. Without it
+  `uv-access` acts as `view` at most for that texture.
+- `uvStructure`: creating and deleting UV regions, combined with
+  `allow-uv-create-delete`.
+- `palette`: editing palette slots. Slots can still be used as brush colors.
+- `normalMap`: the normal-map settings, which stay visible as read-only fields.
+
+`viewOnly` is true when no capability is granted; the bottom toolbar then shows
+a "View only" badge. `PixelArtAccess.none` grants nothing. The server still
+checks every command, so access only shapes the controls.
+
+`announce(message)` shows a short status message on the stage for three
+seconds, on the same line as texture import messages.
+
+## Texture tabs and import
+
 `texture-tabs` is `auto` (show from two textures) or `always`. The host can
 control tab actions with `textures-addable`, `textures-editable` and
 `textures-closable`. `texture-import-policy` is `replace` (default), `add` or
@@ -87,6 +134,7 @@ removeTexture(id: string): void
 renameTexture(id: string, name: string): void
 updateTexture(id: string, update: TextureUpdate): void
 onResize(): void
+announce(message: string): void
 ```
 
 | Member | Contract |

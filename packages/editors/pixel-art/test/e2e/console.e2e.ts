@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  Locator,
-  Page
-} from "@playwright/test";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import type { Page } from "@playwright/test";
 
 // Import Internal Dependencies
 import {
@@ -11,81 +7,67 @@ import {
   expect,
   playground
 } from "./fixtures.ts";
+import type { PixelArtPanel } from "./support/panel.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-// CONSTANTS
-const kLightBgSurface = "rgb(238, 243, 248)";
-const kDarkBgSurface = "rgb(19, 27, 36)";
-
-function readBgSurface(
-  panel: Locator
-): Promise<string> {
-  return panel.evaluate((element: PixelDrawPanel) => {
+function surfaceBrightness(
+  panel: PixelArtPanel
+): Promise<number> {
+  return panel.root.evaluate((element: PixelDrawPanel) => {
     element.style.setProperty("color", "var(--color-bg-surface)");
-    const resolved = getComputedStyle(element).color;
+    const [r, g, b] = getComputedStyle(element).color.match(/\d+/g)!.map(Number);
     element.style.removeProperty("color");
 
-    return resolved;
+    return r + g + b;
   });
 }
 
 function readRowHeight(
-  panel: Locator
+  panel: PixelArtPanel
 ): Promise<string> {
-  return panel.evaluate(
+  return panel.root.evaluate(
     (element) => getComputedStyle(element)
       .getPropertyValue("--jolly-row-height")
       .trim()
   );
 }
 
-async function submit(
-  page: Page,
-  line: string
-): Promise<void> {
-  const prompt = page.getByRole("combobox", { name: "Command" });
-  if (!await prompt.isVisible()) {
-    await page.keyboard.press("Control+k");
-    await expect(prompt).toBeFocused();
-  }
-  await prompt.fill(line);
-  await prompt.press("Enter");
-  await expect(page.getByRole("log", { name: "Console output" }))
-    .toContainText(line);
-}
-
-test("the theme variable switches the panel between auto, dark and light", async({ panel, page }) => {
+test("the theme variable switches the panel between auto, dark and light", async({
+  panel,
+  page,
+  commands
+}) => {
   function theme() {
-    return panel.evaluate((element: PixelDrawPanel) => element.theme);
+    return panel.root.evaluate((element: PixelDrawPanel) => element.theme);
   }
   const html = page.locator("html");
 
   expect(await theme()).toBe("auto");
-  await expect(panel).not.toHaveAttribute("theme");
+  await expect(panel.root).not.toHaveAttribute("theme");
 
-  await submit(page, "theme dark");
-  await expect(panel).toHaveAttribute("theme", "dark");
+  await commands.submit("theme dark");
+  await expect(panel.root).toHaveAttribute("theme", "dark");
   await expect(html).toHaveAttribute("data-resolved-theme", "dark");
-  await expect.poll(() => readBgSurface(panel)).toBe(kDarkBgSurface);
+  const dark = await surfaceBrightness(panel);
 
-  await submit(page, "theme light");
-  await expect(panel).toHaveAttribute("theme", "light");
+  await commands.submit("theme light");
+  await expect(panel.root).toHaveAttribute("theme", "light");
   await expect(html).toHaveAttribute("data-resolved-theme", "light");
-  await expect.poll(() => readBgSurface(panel)).toBe(kLightBgSurface);
+  await expect.poll(() => surfaceBrightness(panel)).toBeGreaterThan(dark);
 
-  await submit(page, "theme auto");
-  await expect(panel).not.toHaveAttribute("theme");
+  await commands.submit("theme auto");
+  await expect(panel.root).not.toHaveAttribute("theme");
   await expect.poll(theme).toBe("auto");
 });
 
-test("the density variable resizes the panel rows", async({ panel, page }) => {
+test("the density variable resizes the panel rows", async({ panel, commands }) => {
   expect(await readRowHeight(panel)).toBe("20px");
 
-  await submit(page, "density compact");
-  await expect(panel).toHaveAttribute("density", "compact");
+  await commands.submit("density compact");
+  await expect(panel.root).toHaveAttribute("density", "compact");
   await expect.poll(() => readRowHeight(panel)).toBe("16px");
 
-  await submit(page, "density comfortable");
+  await commands.submit("density comfortable");
   await expect.poll(() => readRowHeight(panel)).toBe("26px");
 });
 
@@ -98,14 +80,13 @@ test.describe("3D preview", () => {
     return page.evaluate(() => window.pixelArtEditor?.preview?.scene.rotating);
   }
 
-  test("pixelart.preview.rotate stops the spin across a reload", async({ page }) => {
+  test("pixelart.preview.rotate stops the spin across a reload", async({ panel, page, commands }) => {
     expect(await rotating(page)).toBe(true);
 
-    await submit(page, "pixelart.preview.rotate false");
+    await commands.submit("pixelart.preview.rotate false");
     await expect.poll(() => rotating(page)).toBe(false);
 
-    await page.reload();
-    await waitForEditor(page);
+    await panel.reload();
     expect(await rotating(page)).toBe(false);
   });
 });

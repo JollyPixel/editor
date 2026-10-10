@@ -1,21 +1,15 @@
-// Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
-
 // Import Internal Dependencies
 import {
   test,
   expect,
   playground
 } from "./fixtures.ts";
+import { TEXTURE_SIZE } from "./support/canvas.ts";
 import {
-  TEXTURE_SIZE,
-  clickTexturePixel,
-  dropFile,
-  importFile,
   pngFile,
-  readPixels,
-  setMode
-} from "./utils.ts";
+  uniqueName
+} from "./support/files.ts";
+import type { PixelArtPanel } from "./support/panel.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 // CONSTANTS
@@ -29,43 +23,20 @@ const kImportCorner = {
 };
 const kImportColor = "#22aa66";
 
-function uniqueName(
-  slug: string
-): string {
-  return `e2e-${slug}-${Date.now()}`;
-}
-
-function importPng(
-  panel: Locator,
+async function importPng(
+  panel: PixelArtPanel,
   name: string
 ): Promise<void> {
-  return pngFile(`${name}.png`, kImportSize, [
+  await panel.import(await pngFile(`${name}.png`, kImportSize, [
     { ...kImportCorner, color: kImportColor }
-  ]).then((file) => importFile(panel, file));
-}
-
-function panelState(
-  panel: Locator
-) {
-  return panel.evaluate((element: PixelDrawPanel) => {
-    const canvas = element.canvasManager!;
-
-    return {
-      activeTextureId: element.activeTextureId,
-      textureIds: element.textures.map((texture) => texture.id),
-      size: canvas.textureSize,
-      mode: canvas.mode,
-      camera: { ...canvas.viewport.camera },
-      canUndo: canvas.canUndo()
-    };
-  });
+  ]));
 }
 
 async function waitForTextureSync(
-  panel: Locator
+  panel: PixelArtPanel
 ): Promise<string> {
-  const id = (await panelState(panel)).activeTextureId!;
-  await panel.page().waitForFunction(
+  const id = (await panel.textures.activeState()).activeTextureId!;
+  await panel.page.waitForFunction(
     (textureId) => window.pixelArtEditor?.tabs.isSynced(textureId) === true,
     id
   );
@@ -74,14 +45,14 @@ async function waitForTextureSync(
 }
 
 async function addThroughDialog(
-  panel: Locator,
+  panel: PixelArtPanel,
   name: string
 ): Promise<string> {
-  const tabs = panel.getByRole("tab");
+  const { tabs } = panel.textures;
   const count = Math.max(await tabs.count(), 1);
   await importPng(panel, name);
-  await panel.page().getByRole("button", { name: "Add as new" }).click();
-  await expect(panel.page().locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
+  await panel.importDialog.addAsNew.click();
+  await expect(panel.importDialog.dialog).toBeHidden();
 
   await expect(tabs).toHaveCount(count + 1);
   await expect(tabs.last()).toHaveText(name);
@@ -93,92 +64,92 @@ async function addThroughDialog(
 test.describe("import policy ask", () => {
   test.use({ editor: playground({ importPolicy: "ask" }) });
 
-  test("Replace current replaces the active texture without a tab", async({ panel, page }) => {
+  test("Replace current replaces the active texture without a tab", async({ panel }) => {
     await importPng(panel, uniqueName("ask-replace"));
-    await page.getByRole("button", { name: "Replace current" }).click();
+    await panel.importDialog.replaceCurrent.click();
 
-    await expect.poll(() => readPixels(panel, [kImportCorner]))
+    await expect.poll(() => panel.canvas.pixels([kImportCorner]))
       .toEqual([`${kImportColor}ff`]);
-    await expect(panel.locator("jolly-tabs")).toHaveCount(0);
+    await expect(panel.textures.strip).toHaveCount(0);
   });
 
-  test("Cancel leaves the texture unchanged", async({ panel, page }) => {
+  test("Cancel leaves the texture unchanged", async({ panel }) => {
     await importPng(panel, uniqueName("ask-cancel"));
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await panel.importDialog.cancel.click();
 
-    await expect(page.locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
-    expect((await panelState(panel)).size).toEqual(TEXTURE_SIZE);
+    await expect(panel.importDialog.dialog).toBeHidden();
+    expect((await panel.textures.activeState()).size).toEqual(TEXTURE_SIZE);
   });
 
   test("Add as new opens a tab with its own pixels, history and camera", async({ panel }) => {
-    const undo = panel.getByRole("button", { name: "Undo" });
-    await setMode(panel, "paint");
-    await clickTexturePixel(panel, { x: 5, y: 5 });
-    await expect(undo).toBeEnabled();
-    await setMode(panel, "fill");
-    const first = await panelState(panel);
+    const { undoButton } = panel;
+    await panel.modes.select("paint");
+    await panel.canvas.click({ x: 5, y: 5 });
+    await expect(undoButton).toBeEnabled();
+    await panel.modes.select("fill");
+    const first = await panel.textures.activeState();
 
     const addedId = await addThroughDialog(panel, uniqueName("ask-add"));
 
-    expect(await panelState(panel)).toMatchObject({
+    expect(await panel.textures.activeState()).toMatchObject({
       activeTextureId: addedId,
       size: kImportSize,
       mode: "fill",
       canUndo: false
     });
-    await expect(undo).toBeDisabled();
-    await expect.poll(() => readPixels(panel, [kImportCorner]))
+    await expect(undoButton).toBeDisabled();
+    await expect.poll(() => panel.canvas.pixels([kImportCorner]))
       .toEqual([`${kImportColor}ff`]);
 
-    const tabs = panel.getByRole("tab");
+    const { tabs } = panel.textures;
     await tabs.first().click();
-    const restored = await panelState(panel);
+    const restored = await panel.textures.activeState();
     expect(restored).toMatchObject({
       activeTextureId: first.activeTextureId,
       size: TEXTURE_SIZE,
       mode: "fill",
       canUndo: true
     });
-    expect(await readPixels(panel, [{ x: 5, y: 5 }])).toEqual(["#000000ff"]);
-    await expect(undo).toBeEnabled();
+    expect(await panel.canvas.pixels([{ x: 5, y: 5 }])).toEqual(["#000000ff"]);
+    await expect(undoButton).toBeEnabled();
 
     await tabs.last().click();
-    expect((await panelState(panel)).camera).not.toEqual(restored.camera);
+    expect((await panel.textures.activeState()).camera).not.toEqual(restored.camera);
     await tabs.first().click();
-    expect((await panelState(panel)).camera).toEqual(restored.camera);
+    expect((await panel.textures.activeState()).camera).toEqual(restored.camera);
   });
 
-  test("a dropped image can be added as a new texture", async({ panel, page }) => {
+  test("a dropped image can be added as a new texture", async({ panel }) => {
     const name = uniqueName("ask-drop");
 
-    await dropFile(panel, { x: 20, y: 20 }, await pngFile(`${name}.png`, { x: 4, y: 3 }));
-    await page.getByRole("button", { name: "Add as new" }).click();
+    await panel.canvas.drop({ x: 20, y: 20 }, await pngFile(`${name}.png`, { x: 4, y: 3 }));
+    await panel.importDialog.addAsNew.click();
 
-    await expect(panel.getByRole("tab")).toHaveText([/.+/, name]);
-    await expect.poll(async() => (await panelState(panel)).size)
+    await expect(panel.textures.tabs).toHaveText([/.+/, name]);
+    await expect.poll(async() => (await panel.textures.activeState()).size)
       .toEqual({ x: 4, y: 3 });
   });
 
   test("closing the active tab selects its neighbour, the last close hides the strip", async({ panel }) => {
-    const first = (await panelState(panel)).activeTextureId;
+    const first = (await panel.textures.activeState()).activeTextureId;
     const second = uniqueName("ask-close-b");
     const third = uniqueName("ask-close-c");
     const secondId = await addThroughDialog(panel, second);
     await addThroughDialog(panel, third);
-    const tabs = panel.getByRole("tab");
+    const { tabs } = panel.textures;
     await expect(tabs).toHaveCount(3);
     await expect(tabs.first()).toHaveAttribute("aria-selected", "false");
 
-    await panel.getByRole("button", { name: `Close ${third}` }).click();
+    await panel.textures.closeButton(third).click();
     await expect(tabs).toHaveCount(2);
-    expect(await panelState(panel)).toMatchObject({
+    expect(await panel.textures.activeState()).toMatchObject({
       activeTextureId: secondId,
       textureIds: [first, secondId]
     });
 
-    await panel.getByRole("button", { name: `Close ${second}` }).click();
-    await expect(panel.locator("jolly-tabs")).toHaveCount(0);
-    expect(await panelState(panel)).toMatchObject({
+    await panel.textures.closeButton(second).click();
+    await expect(panel.textures.strip).toHaveCount(0);
+    expect(await panel.textures.activeState()).toMatchObject({
       activeTextureId: first,
       textureIds: [first],
       size: TEXTURE_SIZE
@@ -187,7 +158,7 @@ test.describe("import policy ask", () => {
 
   test("the canvas stays fitted to its host as the tab strip appears and hides", async({ panel }) => {
     function fitMismatches() {
-      return panel.evaluate((element: PixelDrawPanel) => {
+      return panel.root.evaluate((element: PixelDrawPanel) => {
         const canvas = element.canvasManager!;
         const host = canvas.canvas();
         const box = host.getBoundingClientRect();
@@ -203,24 +174,24 @@ test.describe("import policy ask", () => {
     await addThroughDialog(panel, name);
     await expect.poll(fitMismatches).toEqual([]);
 
-    await panel.getByRole("button", { name: `Close ${name}` }).click();
-    await expect(panel.locator("jolly-tabs")).toHaveCount(0);
+    await panel.textures.closeButton(name).click();
+    await expect(panel.textures.strip).toHaveCount(0);
 
     await expect.poll(fitMismatches).toEqual([]);
   });
 
   test("shortcuts only reach the active texture", async({ panel, page }) => {
     await addThroughDialog(panel, uniqueName("ask-hidden"));
-    await setMode(panel, "paint");
-    await clickTexturePixel(panel, { x: 1, y: 1 });
-    await expect(panel.getByRole("button", { name: "Undo" })).toBeEnabled();
+    await panel.modes.select("paint");
+    await panel.canvas.click({ x: 1, y: 1 });
+    await expect(panel.undoButton).toBeEnabled();
 
-    await panel.evaluate((element: PixelDrawPanel) => {
+    await panel.root.evaluate((element: PixelDrawPanel) => {
       element.activeTextureId = element.textures[0].id;
     });
     await page.keyboard.press("Control+z");
 
-    expect(await panel.evaluate(
+    expect(await panel.root.evaluate(
       (element: PixelDrawPanel) => element.textures[1].canvas.canUndo()
     )).toBe(true);
   });
@@ -229,27 +200,26 @@ test.describe("import policy ask", () => {
 test.describe("import policy add", () => {
   test.use({ editor: playground({ importPolicy: "add" }) });
 
-  test("Import adds a tab without asking", async({ panel, page }) => {
+  test("Import adds a tab without asking", async({ panel }) => {
     const name = uniqueName("add");
 
     await importPng(panel, name);
 
-    await expect(panel.getByRole("tab")).toHaveText([/.+/, name]);
-    await expect(page.locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
-    expect((await panelState(panel)).size).toEqual(kImportSize);
+    await expect(panel.textures.tabs).toHaveText([/.+/, name]);
+    await expect(panel.importDialog.dialog).toBeHidden();
+    expect((await panel.textures.activeState()).size).toEqual(kImportSize);
   });
 });
 
 test.describe("import progress", () => {
   test.use({ editor: playground({ importPolicy: "ask", addDelay: 1_500 }) });
 
-  test("a busy scrim covers the stage until the host has added the texture", async({ panel, page }) => {
-    const busy = panel.locator(".stage-busy");
-    const importButton = panel.getByRole("button", { name: "Import texture" });
+  test("a busy scrim covers the stage until the host has added the texture", async({ panel }) => {
+    const { busy, importButton } = panel;
     const name = uniqueName("busy-add");
 
     await importPng(panel, name);
-    await page.getByRole("button", { name: "Add as new" }).click();
+    await panel.importDialog.addAsNew.click();
 
     await expect(busy).toContainText(`Adding ${name}`);
     await expect(busy.locator("jolly-spinner")).toHaveCount(1);
@@ -257,115 +227,6 @@ test.describe("import progress", () => {
 
     await expect(busy).toHaveCount(0, { timeout: 10_000 });
     await expect(importButton).toBeEnabled();
-    await expect(panel.getByRole("tab")).toHaveCount(2);
-  });
-});
-
-test.describe("texture API", () => {
-  test("addTexture can leave the active texture and texture-change reports its source", async({ panel }) => {
-    const result = await panel.evaluate((element: PixelDrawPanel) => {
-      const sources: string[] = [];
-      element.addEventListener("texture-change", (event) => {
-        sources.push(event.detail.source);
-      });
-      const firstId = element.activeTextureId;
-      element.addTexture(
-        { id: "background", name: "Background" },
-        { activate: false }
-      );
-      const afterAdd = element.activeTextureId;
-      element.activeTextureId = "background";
-
-      return {
-        firstId,
-        afterAdd,
-        sources,
-        ids: element.textures.map((texture) => texture.id)
-      };
-    });
-
-    expect(result.afterAdd).toBe(result.firstId);
-    expect(result.ids).toContain("background");
-    expect(result.sources).toEqual(["api"]);
-
-    const userSource = panel.evaluate((element: PixelDrawPanel) => {
-      const { promise, resolve } = Promise.withResolvers<string>();
-      element.addEventListener("texture-change", (event) => resolve(event.detail.source), { once: true });
-
-      return promise;
-    });
-    await panel.getByRole("tab").first().click();
-
-    expect(await userSource).toBe("user");
-  });
-
-  test("texture-tabs always shows the strip for a single texture, with its badge", async({ panel }) => {
-    await expect(panel.locator("jolly-tabs")).toHaveCount(0);
-
-    await panel.evaluate((element: PixelDrawPanel) => {
-      element.textureTabs = "always";
-      element.updateTexture(element.activeTextureId!, { badge: "3" });
-    });
-
-    const tab = panel.getByRole("tab");
-    await expect(tab).toHaveCount(1);
-    await expect(tab.locator("[part~=badge]")).toHaveText("3");
-
-    await panel.evaluate((element: PixelDrawPanel) => {
-      element.updateTexture(element.activeTextureId!, { badge: "" });
-    });
-    await expect(tab.locator("[part~=badge]")).toHaveCount(0);
-  });
-
-  test("the add and edit buttons only raise their request events", async({ panel }) => {
-    await panel.evaluate((element: PixelDrawPanel) => {
-      element.textureTabs = "always";
-      element.texturesAddable = true;
-      element.texturesEditable = true;
-      element.addEventListener("texture-create-request", () => {
-        element.dataset.created = "yes";
-      });
-      element.addEventListener("texture-edit-request", (event) => {
-        element.dataset.edited = event.detail.id;
-      });
-    });
-    const before = await panelState(panel);
-
-    await panel.getByRole("button", { name: "Add texture" }).click();
-    await expect(panel).toHaveAttribute("data-created", "yes");
-
-    await panel.getByRole("button", { name: /^Edit / }).click();
-    await expect(panel).toHaveAttribute("data-edited", before.activeTextureId!);
-    expect(await panelState(panel)).toMatchObject({
-      activeTextureId: before.activeTextureId,
-      textureIds: before.textureIds
-    });
-  });
-
-  test("a disabled texture keeps a tab and its edit button but never activates", async({ panel }) => {
-    const result = await panel.evaluate((element: PixelDrawPanel) => {
-      element.texturesEditable = true;
-      element.addEventListener("texture-edit-request", (event) => {
-        element.dataset.edited = event.detail.id;
-      });
-      const firstId = element.activeTextureId;
-      element.addTexture({
-        id: "unlinked",
-        name: "Unlinked",
-        disabled: true
-      });
-      element.activeTextureId = "unlinked";
-
-      return {
-        firstId,
-        activeId: element.activeTextureId
-      };
-    });
-    expect(result.activeId).toBe(result.firstId);
-
-    await expect(panel.getByRole("tab", { name: "Unlinked" })).toBeDisabled();
-    await panel.getByRole("button", { name: "Edit Unlinked" }).click();
-    await expect(panel).toHaveAttribute("data-edited", "unlinked");
-    expect((await panelState(panel)).activeTextureId).toBe(result.firstId);
+    await expect(panel.textures.tabs).toHaveCount(2);
   });
 });

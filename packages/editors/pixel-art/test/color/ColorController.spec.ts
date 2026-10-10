@@ -343,6 +343,20 @@ describe("UI.ColorController palette", () => {
     assert.deepEqual(controller.foreground, color("#445566"));
   });
 
+  test("a committed change on a locked palette leaves the slot and deselects it", () => {
+    const { controller, doc } = setup();
+    controller.docked = true;
+    controller.selectPaletteColor(3);
+    controller.paletteLocked = true;
+
+    controller.changeActive(color("#112233"));
+    controller.paletteLocked = false;
+    controller.changeActive(color("#445566"));
+
+    assert.deepEqual(doc.palette.colorAt(3), ColorPalette.create().colorAt(3));
+    assert.deepEqual(controller.foreground, color("#445566"));
+  });
+
   test("cancelling a preview restores the slot color saved meanwhile", () => {
     const { host, controller, brush, doc } = setup();
     host.connect();

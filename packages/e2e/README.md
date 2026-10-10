@@ -94,6 +94,7 @@ test("opens the requested model with its default block", async({ page }) => {
 - [Pointer](./docs/pointer.md): bounding boxes, drags and multi-step presses.
 - [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
 - [Sockets](./docs/sockets.md): `recordSockets`.
+- [Roles](./docs/roles.md): `CookieRoles`, `grantRole` and `changeRole`.
 
 `@jolly-pixel/e2e/editor`, for editors and the studio:
 

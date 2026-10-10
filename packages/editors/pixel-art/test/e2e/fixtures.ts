@@ -1,8 +1,4 @@
 // Import Third-party Dependencies
-import type {
-  Locator,
-  Page
-} from "@playwright/test";
 import {
   e2eFolder,
   editorFixture,
@@ -18,7 +14,9 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { TEXTURE_SIZE } from "./utils.ts";
+import { TEXTURE_SIZE } from "./support/canvas.ts";
+import { CommandConsole } from "./support/commandConsole.ts";
+import { PixelArtPanel } from "./support/panel.ts";
 import type { PixelArtEditor } from "../../page/scripts/PixelArtEditor.ts";
 import type { TextureImportPolicy } from "../../src/index.ts";
 
@@ -67,12 +65,6 @@ export function playground(
   };
 }
 
-export function editorPanel(
-  page: Page
-): Locator {
-  return page.locator("pixel-draw-panel");
-}
-
 export const test = editorFixture<EditorTarget>({
   editor: playground(),
   async create(catalog) {
@@ -91,10 +83,18 @@ export const test = editorFixture<EditorTarget>({
     return { id };
   }
 }).extend<{
-  panel: Locator;
+  panel: PixelArtPanel;
+  peerPanel: PixelArtPanel;
+  commands: CommandConsole;
 }>({
   panel: async({ page }, use) => {
-    await use(editorPanel(page));
+    await use(new PixelArtPanel(page));
+  },
+  peerPanel: async({ peer }, use) => {
+    await use(new PixelArtPanel(peer));
+  },
+  commands: async({ page }, use) => {
+    await use(new CommandConsole(page));
   }
 });
 

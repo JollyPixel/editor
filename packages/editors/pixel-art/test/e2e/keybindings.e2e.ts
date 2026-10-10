@@ -1,34 +1,21 @@
-// Import Third-party Dependencies
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
-
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
 import {
   BLACK,
-  CLEAR,
-  clickTexturePixel,
-  readPixels,
-  setMode
-} from "./utils.ts";
+  CLEAR
+} from "./support/canvas.ts";
 
-test("an undo rebound from the console still works after a reload", async({ panel, page }) => {
-  const prompt = page.getByRole("combobox", { name: "Command" });
-  await page.keyboard.press("Control+k");
-  await expect(prompt).toBeFocused();
-  await prompt.fill("pixelart.keybinds.undo \"Mod+u\"");
-  await prompt.press("Enter");
-  await expect(page.getByRole("log", { name: "Console output" }))
-    .toContainText("pixelart.keybinds.undo \"Mod+u\"");
-  await page.keyboard.press("Escape");
+test("an undo rebound from the console still works after a reload", async({ panel, page, commands }) => {
+  await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
+  await commands.close();
 
-  await page.reload();
-  await waitForEditor(page);
+  await panel.reload();
 
   function pixel() {
-    return readPixels(panel, [{ x: 65, y: 2 }]);
+    return panel.canvas.pixels([{ x: 65, y: 2 }]);
   }
-  await setMode(panel, "paint");
-  await clickTexturePixel(panel, { x: 65, y: 2 });
+  await panel.modes.select("paint");
+  await panel.canvas.click({ x: 65, y: 2 });
   await expect.poll(pixel).toEqual([BLACK]);
 
   await page.keyboard.press("Control+z");

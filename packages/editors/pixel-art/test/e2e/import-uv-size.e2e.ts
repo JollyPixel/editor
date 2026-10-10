@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
-
 // Import Internal Dependencies
 import {
   test,
@@ -8,9 +5,10 @@ import {
   playground
 } from "./fixtures.ts";
 import {
-  importFile,
-  pngFile
-} from "./utils.ts";
+  pngFile,
+  uniqueName
+} from "./support/files.ts";
+import type { PixelArtPanel } from "./support/panel.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 // CONSTANTS
@@ -19,16 +17,10 @@ const kImportSize = {
   y: 64
 };
 
-function uniqueName(
-  slug: string
-): string {
-  return `e2e-${slug}-${Date.now()}`;
-}
-
 function activeRegions(
-  panel: Locator
+  panel: PixelArtPanel
 ) {
-  return panel.evaluate((element: PixelDrawPanel) => {
+  return panel.root.evaluate((element: PixelDrawPanel) => {
     const { uv } = element.canvasManager!;
 
     return {
@@ -50,10 +42,10 @@ test.describe("UV size on import", () => {
   test.use({ editor: playground({ importPolicy: "ask" }) });
 
   test("Add as new creates a cube of the picked UV size", async({ panel, page }) => {
-    const tabs = panel.getByRole("tab");
+    const { tabs } = panel.textures;
     const count = Math.max(await tabs.count(), 1);
     const name = uniqueName("uv-size");
-    await importFile(panel, await pngFile(`${name}.png`, kImportSize));
+    await panel.import(await pngFile(`${name}.png`, kImportSize));
 
     const select = page.locator("[part=import-uv-size] select");
     await expect(select.locator("option")).toHaveText([
@@ -69,7 +61,7 @@ test.describe("UV size on import", () => {
     ]);
     await expect(select.locator("option:checked")).toHaveText("16 × 16");
     await select.selectOption({ label: "32 × 32" });
-    await page.getByRole("button", { name: "Add as new" }).click();
+    await panel.importDialog.addAsNew.click();
 
     await expect(tabs).toHaveCount(count + 1);
     await expect(tabs.last()).toHaveText(name);
@@ -81,13 +73,13 @@ test.describe("UV size on import", () => {
   });
 
   test("an image smaller than every UV size shows no select", async({ panel, page }) => {
-    await importFile(panel, await pngFile(`${uniqueName("uv-tiny")}.png`, {
+    await panel.import(await pngFile(`${uniqueName("uv-tiny")}.png`, {
       x: 8,
       y: 8
     }));
 
-    await expect(page.getByRole("button", { name: "Add as new" })).toBeVisible();
+    await expect(panel.importDialog.addAsNew).toBeVisible();
     await expect(page.locator("[part=import-uv-size]")).toHaveCount(0);
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await panel.importDialog.cancel.click();
   });
 });

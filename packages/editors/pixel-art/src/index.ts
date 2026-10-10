@@ -1,10 +1,4 @@
-export {
-  PixelDrawPanel,
-  type AddTextureOptions,
-  type PixelDrawInitializeOptions,
-  type PixelDrawTexture,
-  type ThemeMode
-} from "./panel/PixelDrawPanel.ts";
+export * from "./panel/PixelDrawPanel.ts";
 export type {
   TextureChangeDetail,
   TextureChangeSource,
@@ -22,23 +16,22 @@ export type {
   TextureImportPolicy
 } from "./textures/import/TextureImporter.ts";
 export type { UvAccess } from "./uv/UvAccessPolicy.ts";
+export * from "./access/PixelArtAccess.ts";
+export * from "./access/RoomAccess.ts";
 export type {
   ToolOption,
   ToolOptionName,
   ToolOptions
 } from "./tools/toolOptions.ts";
-export { ModeRail } from "./tools/ModeRail.ts";
-export { ColorPickerRail } from "./color/ColorPickerRail.ts";
-export { ColorPickerPopover, type ColorPickerRequest } from "./color/ColorPickerPopover.ts";
+export * from "./tools/ModeRail.ts";
+export * from "./color/ColorPickerRail.ts";
+export * from "./color/ColorPickerPopover.ts";
 export { ColorPaletteGrid } from "./color/ColorPaletteGrid.ts";
-export { ColorDock } from "./color/ColorDock.ts";
-export { NormalMapDock } from "./normal/NormalMapDock.ts";
+export * from "./color/ColorDock.ts";
+export * from "./normal/NormalMapDock.ts";
 export type { NormalMapConvention } from "./normal/NormalMapPng.ts";
 export type { ColorPickedDetail } from "./color/ColorController.ts";
-export {
-  ColorSwatch,
-  type ColorChangeDetail
-} from "./color/ColorSwatch.ts";
+export * from "./color/ColorSwatch.ts";
 export type { IconName } from "./shared/icons.ts";
 export * from "./keybindings/index.ts";
 export * from "./console/index.ts";

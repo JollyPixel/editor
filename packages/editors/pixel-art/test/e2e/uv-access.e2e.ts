@@ -1,39 +1,16 @@
-// Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
-
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
-import {
-  activeMode,
-  clickToolOption,
-  setMode
-} from "./utils.ts";
-import type {
-  PixelDrawPanel,
-  UvAccess
-} from "../../src/index.ts";
-
-async function setUvAccess(
-  panel: Locator,
-  access: UvAccess
-): Promise<void> {
-  await panel.evaluate((element: PixelDrawPanel, value) => {
-    element.uvAccess = value;
-
-    return element.updateComplete;
-  }, access);
-}
+import type { PixelDrawPanel } from "../../src/index.ts";
 
 test("view moves region visibility to the bottom toolbar and opens on hover", async({ panel, page }) => {
-  await setUvAccess(panel, "view");
+  await panel.changeUvAccess("view");
 
-  await expect(panel.getByRole("button", { name: "UV", exact: true })).toHaveCount(0);
-  await expect(panel.locator("[part=uv-toolbar]")).toHaveCount(0);
+  await expect(panel.modes.button("uv")).toHaveCount(0);
+  await expect(panel.uv.root).toHaveCount(0);
 
-  const bottom = panel.locator("[part=history-file-toolbar]");
-  const trigger = bottom.getByRole("button", { name: "Region visibility" });
+  const trigger = panel.bottomToolbar.getByRole("button", { name: "Region visibility" });
+  const { menu } = panel.visibility;
   await trigger.hover();
-  const menu = panel.getByRole("dialog", { name: "Region visibility" });
   await expect(menu).toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   for (const name of ["Show all regions", "Show region labels"]) {
@@ -47,62 +24,57 @@ test("view moves region visibility to the bottom toolbar and opens on hover", as
   expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(buttonBox!.y);
   await page.keyboard.press("Escape");
   await expect(menu).not.toBeVisible();
-  await setUvAccess(panel, "none");
+  await panel.changeUvAccess("none");
   await expect(trigger).toHaveCount(0);
 });
 
 test("leaving edit while in UV mode falls back to Paint", async({ panel }) => {
-  await setMode(panel, "uv");
-  await expect(panel.locator("[part=uv-toolbar]")).toBeVisible();
+  await panel.modes.select("uv");
+  await expect(panel.uv.root).toBeVisible();
 
-  await setUvAccess(panel, "view");
+  await panel.changeUvAccess("view");
 
-  expect(await activeMode(panel)).toBe("paint");
-  await expect(panel.getByRole("button", { name: "Paint", exact: true }))
-    .toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator("[part=uv-toolbar]")).toHaveCount(0);
+  expect(await panel.modes.active()).toBe("paint");
+  await expect(panel.modes.button("paint")).toHaveAttribute("aria-pressed", "true");
+  await expect(panel.uv.root).toHaveCount(0);
 });
 
 test("none removes every UV control and turns the fill clip off", async({ panel }) => {
-  await setMode(panel, "fill");
-  await clickToolOption(panel, "fill", "Clip to UV");
+  await panel.modes.select("fill");
+  await panel.modes.pick("fill", "Clip to UV");
   function uvClip() {
-    return panel.evaluate(
+    return panel.root.evaluate(
       (element: PixelDrawPanel) => element.canvasManager!.tools.fill.uvClip
     );
   }
   expect(await uvClip()).toBe(true);
 
-  await setUvAccess(panel, "none");
+  await panel.changeUvAccess("none");
 
   expect(await uvClip()).toBe(false);
   for (const name of ["UV", "Clip to UV", "Region visibility"]) {
-    await expect(panel.getByRole("button", { name, exact: true })).toHaveCount(0);
+    await expect(panel.root.getByRole("button", { name, exact: true })).toHaveCount(0);
   }
-  await expect(panel.locator("mode-rail [part=uv-clip-badge]")).toHaveCount(0);
+  await expect(panel.modes.clipBadge).toHaveCount(0);
 });
 
 test("an open visibility popover closes when access moves its trigger", async({ panel }) => {
-  await setMode(panel, "uv");
-  const trigger = panel.getByRole("button", { name: "Region visibility" });
+  const { trigger, menu } = panel.visibility;
+  await panel.modes.select("uv");
   await trigger.click();
-  await expect(panel.getByRole("dialog", { name: "Region visibility" }))
-    .toBeVisible();
-  await setUvAccess(panel, "view");
-  await expect(panel.getByRole("dialog", { name: "Region visibility" }))
-    .not.toBeVisible();
+  await expect(menu).toBeVisible();
+  await panel.changeUvAccess("view");
+  await expect(menu).not.toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await trigger.click();
-  await expect(panel.getByRole("dialog", { name: "Region visibility" }))
-    .toBeVisible();
+  await expect(menu).toBeVisible();
 });
 
 test("hover delays cancel across the trigger, gap and visibility popover", async({ panel, page }) => {
-  await setUvAccess(panel, "view");
+  await panel.changeUvAccess("view");
   await page.clock.install();
   await page.clock.pauseAt(new Date());
-  const trigger = panel.getByRole("button", { name: "Region visibility" });
-  const menu = panel.getByRole("dialog", { name: "Region visibility" });
+  const { trigger, menu } = panel.visibility;
   await trigger.hover();
   await page.clock.runFor(199);
   await expect(menu).not.toBeVisible();
@@ -147,18 +119,18 @@ test("hover delays cancel across the trigger, gap and visibility popover", async
 });
 
 test("removing the uv-access attribute restores edit", async({ panel }) => {
-  const uvMode = panel.getByRole("button", { name: "UV", exact: true });
+  const uvMode = panel.modes.button("uv");
 
-  await panel.evaluate((element) => element.setAttribute("uv-access", "view"));
+  await panel.root.evaluate((element) => element.setAttribute("uv-access", "view"));
   await expect(uvMode).toHaveCount(0);
 
-  await panel.evaluate((element) => element.removeAttribute("uv-access"));
+  await panel.root.evaluate((element) => element.removeAttribute("uv-access"));
   await expect(uvMode).toBeVisible();
 });
 
 test("visibility popovers animate quickly and respect reduced motion", async({ panel, page }) => {
-  await setUvAccess(panel, "view");
-  const menu = panel.locator("[part=uv-visibility-menu]");
+  await panel.changeUvAccess("view");
+  const menu = panel.root.locator("[part=uv-visibility-menu]");
   for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await page.emulateMedia({ reducedMotion });
     const motion = await menu.evaluate((element: HTMLElement) => {

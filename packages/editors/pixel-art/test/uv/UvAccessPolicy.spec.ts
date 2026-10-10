@@ -33,6 +33,12 @@ describe("UvAccessPolicy.forAccess", () => {
     assert.equal(policy.access, "view");
     assert.ok(Object.isFrozen(policy));
   });
+
+  test("limits editing to viewing when UV edits are not granted", () => {
+    assert.equal(UvAccessPolicy.forAccess("edit", false).access, "view");
+    assert.equal(UvAccessPolicy.forAccess("view", false).access, "view");
+    assert.equal(UvAccessPolicy.forAccess("none", false).access, "none");
+  });
 });
 
 describe("UvAccessPolicy.constrain", () => {

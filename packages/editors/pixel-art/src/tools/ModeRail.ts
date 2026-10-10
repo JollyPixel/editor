@@ -304,7 +304,9 @@ export class ModeRail extends LitElement {
 
   override render() {
     const policy = UvAccessPolicy.forAccess(this.uvAccess);
-    const items = kModeItems.filter((item) => item.mode !== "uv" || policy.uvMode);
+    const items = kModeItems.filter(
+      (item) => item.mode !== "uv" || policy.uvMode
+    );
 
     return html`
       <jolly-rail role="group" aria-label="Drawing mode">

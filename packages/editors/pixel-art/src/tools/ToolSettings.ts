@@ -50,9 +50,16 @@ export class ToolSettings {
   ) {
     this.mode = init.mode;
     this.brushSize = init.brushSize;
-    this.options = Object.freeze({ ...init.options });
-    this.primary = Object.freeze({ ...init.primary });
-    this.secondary = Object.freeze({ ...init.secondary });
+    this.options = Object.freeze({
+      ...init.options
+    });
+    this.primary = Object.freeze({
+      ...init.primary
+    });
+    this.secondary = Object.freeze({
+      ...init.secondary
+    });
+
     Object.freeze(this);
   }
 
@@ -63,8 +70,18 @@ export class ToolSettings {
 
     canvas.mode = this.mode;
     brush.size = this.brushSize;
-    writeToolOptions(canvas, this.options);
-    writeBrushColor(brush.primary, this.primary);
-    writeBrushColor(brush.secondary, this.secondary);
+
+    writeToolOptions(
+      canvas,
+      this.options
+    );
+    writeBrushColor(
+      brush.primary,
+      this.primary
+    );
+    writeBrushColor(
+      brush.secondary,
+      this.secondary
+    );
   }
 }

@@ -11,9 +11,12 @@ export class UvAccessPolicy {
   };
 
   static forAccess(
-    access: UvAccess
+    access: UvAccess,
+    granted = true
   ): UvAccessPolicy {
-    return UvAccessPolicy.#policies[access];
+    const limited = granted || access === "none" ? access : "view";
+
+    return UvAccessPolicy.#policies[limited];
   }
 
   static isAccess(
