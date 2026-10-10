@@ -15,8 +15,6 @@ import {
   databaseWith,
   registration
 } from "../helpers/accounts.ts";
-import { listenAccounts } from "../helpers/accountsServer.ts";
-import type { AccountsRequestError } from "#src/index.ts";
 import {
   InvalidMasterPasswordError,
   MasterPasswordRequiredError
@@ -24,13 +22,7 @@ import {
 
 // CONSTANTS
 const kSecret = "open sesame";
-const kSecretBody = {
-  masterPassword: kSecret
-};
 const kWrongSecret = "guess";
-const kWrongSecretBody = {
-  masterPassword: kWrongSecret
-};
 
 describe("master password", () => {
   test("makes the first account give it before it becomes admin", async() => {
@@ -101,32 +93,6 @@ describe("master password", () => {
       status: "pending"
     });
     assert.equal(carol.role, "spectator");
-  });
-
-  test("sends the master password with a registration and answers its refusals", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database, {
-      masterPassword: {
-        secret: kSecret
-      }
-    }));
-    const { client } = server.browser();
-
-    await assert.rejects(
-      client.register("Alice", "correct horse"),
-      (error: AccountsRequestError) => error.status === 403 &&
-        error.code === "master-password-required"
-    );
-    await assert.rejects(
-      client.register("Alice", "correct horse", kWrongSecretBody),
-      (error: AccountsRequestError) => error.status === 403 &&
-        error.code === "invalid-master-password"
-    );
-    const alice = await activeAccount(
-      client.register("Alice", "correct horse", kSecretBody)
-    );
-
-    assert.equal(alice.role, "admin");
   });
 
   test("refuses an empty secret", () => {

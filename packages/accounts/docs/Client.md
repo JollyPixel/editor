@@ -4,7 +4,7 @@ Everything here is imported from `@jolly-pixel/accounts` and runs in browsers an
 
 ## `AccountsClient`
 
-Calls the [HTTP routes](./Server.md#http-routes) of `Accounts`. The session lives in an HttpOnly cookie the browser sends on its own, so no method takes or returns a token.
+Calls the [HTTP routes](./Server.md#http-routes) a host serves for `Accounts`. The session lives in an HttpOnly cookie the browser sends on its own, so no method takes or returns a token.
 
 ```ts
 const accounts = new AccountsClient({

@@ -14,10 +14,15 @@ $ pnpm add @jolly-pixel/accounts
 
 ## 👀 Usage example
 
-On the server, one SQLite file holds the users and their sessions. The HTTP handler keeps the session in an HttpOnly cookie, and the network server reads that cookie on every WebSocket upgrade.
+On the server, one SQLite file holds the users and their sessions. Your HTTP server serves the [HTTP routes](./docs/Server.md#http-routes) by calling `Accounts`, which mints the HttpOnly session cookie, and the network server reads that cookie on every WebSocket upgrade.
 
 ```ts
 import { Server } from "@jolly-pixel/network";
+import {
+  ACCOUNTS_ROUTES,
+  ACCOUNTS_URL_PATH,
+  credentialsBodySchema
+} from "@jolly-pixel/accounts";
 import {
   Accounts,
   AccountRoles
@@ -51,7 +56,19 @@ const server = new Server({
 });
 server.register(accounts.extension);
 
-httpServer.on("request", accounts.handler);
+// With Fastify, one route of six
+app.post(`${ACCOUNTS_URL_PATH}${ACCOUNTS_ROUTES.login.path}`, async(request, reply) => {
+  const { account, cookie } = await accounts.login(
+    credentialsBodySchema.parse(request.body),
+    {
+      address: request.ip,
+      secure: request.protocol === "https",
+      headers: request.headers
+    }
+  );
+
+  return reply.header("set-cookie", cookie).send({ account });
+});
 ```
 
 In the browser, the client signs in and the socket carries the cookie on its own.

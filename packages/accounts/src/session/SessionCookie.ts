@@ -8,7 +8,7 @@ import {
 } from "cookie";
 
 // Import Internal Dependencies
-import { isCrossOrigin } from "../http/core/origin.ts";
+import { isCrossOrigin } from "./origin.ts";
 import { SessionToken } from "./SessionToken.ts";
 
 // CONSTANTS

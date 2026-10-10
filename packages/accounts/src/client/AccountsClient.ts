@@ -6,13 +6,13 @@ import {
 import {
   ACCOUNTS_ROUTES,
   type AccountsRouteName
-} from "../http/accounts/routes.ts";
+} from "../http/routes.ts";
 import {
   accountReplySchema,
   failureReplySchema,
   type CredentialsBody,
   type RegistrationBody
-} from "../http/accounts/routes.schema.ts";
+} from "../http/routes.schema.ts";
 import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import type { RegisterOptions } from "../registration/RegisterOptions.ts";

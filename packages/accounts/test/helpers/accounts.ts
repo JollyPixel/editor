@@ -14,10 +14,6 @@ import {
   type AccountDirectoryOptions,
   type Registration
 } from "#src/AccountDirectory.ts";
-import {
-  ACCOUNTS_URL_PATH,
-  avatarPath
-} from "#src/http/accounts/routes.ts";
 import type { RegistrationResult } from "#src/registration/RegistrationResult.ts";
 import { PasswordDigest } from "#src/session/PasswordDigest.ts";
 import { SessionToken } from "#src/session/SessionToken.ts";
@@ -133,12 +129,11 @@ export function databaseWithRetiredRole(): AccountsDatabase {
 
 export function createDirectory(
   database: AccountsDatabase = createDatabase(),
-  options: Omit<AccountDirectoryOptions, "database" | "roles" | "avatarUrl"> = {}
+  options: Omit<AccountDirectoryOptions, "database" | "roles"> = {}
 ): AccountDirectory {
   return new AccountDirectory({
     database,
     roles: ROLES,
-    avatarUrl: (accountId, hash) => avatarPath(ACCOUNTS_URL_PATH, accountId, hash),
     ...options
   });
 }

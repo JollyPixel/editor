@@ -29,6 +29,7 @@ import {
   AvatarImage,
   type StoredAvatar
 } from "./avatar/AvatarImage.ts";
+import { avatarPath } from "./http/routes.ts";
 import {
   MasterPassword,
   type MasterPasswordOptions
@@ -53,15 +54,9 @@ export interface Registration extends Credentials {
   options: RegisterOptions;
 }
 
-export type AvatarUrl = (
-  accountId: string,
-  hash: string
-) => string;
-
 export interface AccountDirectoryOptions {
   database: AccountsDatabase;
   roles: AccountRoles;
-  avatarUrl: AvatarUrl;
   throttle?: AccountsThrottleOptions;
   maxConcurrentHashes?: number;
   masterPassword?: MasterPasswordOptions;
@@ -79,7 +74,6 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   readonly roles: AccountRoles;
 
   #database: AccountsDatabase;
-  #avatarUrl: AvatarUrl;
   #throttle: AccountsThrottle;
   #hashes: Mutex;
   #masterPassword: MasterPassword | null;
@@ -93,7 +87,6 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
 
     this.#database = options.database;
     this.roles = options.roles;
-    this.#avatarUrl = options.avatarUrl;
     this.#throttle = new AccountsThrottle(options.throttle);
     this.#hashes = new Mutex({
       concurrency: options.maxConcurrentHashes ?? kDefaultMaxConcurrentHashes
@@ -407,7 +400,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       owner: account.owner,
       avatar: account.avatarHash === null ?
         undefined :
-        this.#avatarUrl(account.id, account.avatarHash)
+        avatarPath(account.id, account.avatarHash)
     };
   }
 

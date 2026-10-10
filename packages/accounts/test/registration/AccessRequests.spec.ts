@@ -7,91 +7,100 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  activeAccount,
+  ADDRESS,
+  PASSWORD,
+  WRONG_PASSWORD,
   createAccounts,
   createDatabase,
   name
 } from "../helpers/accounts.ts";
+import type { CredentialsBody } from "#src/index.ts";
 import {
-  listenAccounts,
-  type AccountsServer
-} from "../helpers/accountsServer.ts";
-import type {
-  Account,
-  AccountsRequestError
-} from "#src/index.ts";
-import type { AccountsDatabase } from "#src/node.ts";
+  AccessRequestsFullError,
+  AccountPendingError,
+  InvalidCredentialsError,
+  type Accounts,
+  type AccountsDatabase,
+  type Requester
+} from "#src/node.ts";
 
 // CONSTANTS
 const kSecret = "open sesame";
-const kPassword = "correct horse";
+const kRequester: Requester = {
+  address: ADDRESS,
+  secure: false,
+  headers: {}
+};
 
-interface Studio extends AccountsServer {
-  admin: Account;
+function credentials(
+  username: string,
+  password = PASSWORD
+): CredentialsBody {
+  return {
+    username,
+    password: password.value
+  };
 }
 
-async function studioWithAdmin(
+async function accountsWithAdmin(
   database: AccountsDatabase,
   maxAccessRequests?: number
-): Promise<Studio> {
-  const server = await listenAccounts(createAccounts(database, {
+): Promise<Accounts> {
+  const accounts = createAccounts(database, {
     masterPassword: {
       secret: kSecret,
       accessRequests: true
     },
     maxAccessRequests
-  }));
-  const admin = await activeAccount(
-    server.browser().client.register("Alice", kPassword, {
+  });
+  await accounts.register(
+    {
+      ...credentials("Alice"),
       masterPassword: kSecret
-    })
+    },
+    kRequester
   );
 
-  return {
-    ...server,
-    admin
-  };
+  return accounts;
 }
 
 describe("access requests", () => {
-  test("answer a request as pending and refuse its sign-ins without a session", async() => {
+  test("keep a request pending without a session until an admin approves it", async() => {
     using database = createDatabase();
-    await using studio = await studioWithAdmin(database);
-    const { client, cookies } = studio.browser();
+    using accounts = await accountsWithAdmin(database);
 
-    assert.deepEqual(await client.register("Bob", kPassword), {
+    assert.deepEqual(await accounts.register(credentials("Bob"), kRequester), {
       status: "pending"
     });
     await assert.rejects(
-      client.login("bob", kPassword),
-      (error: AccountsRequestError) => error.status === 403 &&
-        error.code === "account-pending"
+      accounts.login(credentials("bob"), kRequester),
+      AccountPendingError
     );
     await assert.rejects(
-      client.login("bob", "wrong horse"),
-      (error: AccountsRequestError) => error.code === "invalid-credentials"
+      accounts.login(credentials("bob", WRONG_PASSWORD), kRequester),
+      InvalidCredentialsError
     );
-    assert.equal(cookies.size, 0);
 
     const request = database.accounts.named(name("bob"));
     assert.ok(request !== null);
     database.accounts.save(request.approved("member"));
-    const bob = await client.login("bob", kPassword);
+    const { account, cookie } = await accounts.login(credentials("bob"), kRequester);
 
-    assert.equal(bob.role, "member");
-    assert.equal(cookies.size, 1);
+    assert.equal(account.role, "member");
+    assert.deepEqual(
+      accounts.signedIn({ cookie: cookie.split(";")[0] }),
+      account
+    );
   });
 
   test("refuse a request once access requests reach their limit", async() => {
     using database = createDatabase();
-    await using studio = await studioWithAdmin(database, 1);
-    const { client } = studio.browser();
-    await client.register("Bob", kPassword);
+    using accounts = await accountsWithAdmin(database, 1);
+    await accounts.register(credentials("Bob"), kRequester);
 
     await assert.rejects(
-      client.register("Carol", kPassword),
-      (error: AccountsRequestError) => error.status === 429 &&
-        error.code === "access-requests-full"
+      accounts.register(credentials("Carol"), kRequester),
+      AccessRequestsFullError
     );
   });
 });

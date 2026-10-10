@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { AccountsFailureCode } from "../../http/accounts/routes.ts";
+import type { AccountsFailureCode } from "../../http/routes.ts";
 
 export class AccountsRequestError extends Error {
   readonly status: number;

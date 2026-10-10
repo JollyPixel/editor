@@ -4,15 +4,17 @@ import type { AssetKindIcon } from "@jolly-pixel/asset-server";
 // CONSTANTS
 export const VOXEL_ANIMATION_ICON: AssetKindIcon = {
   svg: `
-    <rect x="8" y="10" width="48" height="44" rx="6" fill="#2b1d16" />
-    <rect x="11" y="13" width="42" height="38" rx="4" fill="#3d2a20" />
-    <line x1="11" y1="24" x2="53" y2="24" stroke="#5c4232" stroke-width="2" />
-    <line x1="11" y1="36" x2="53" y2="36" stroke="#5c4232" stroke-width="2" />
-    <line x1="34" y1="13" x2="34" y2="51" stroke="#ffad72" stroke-width="2.5" />
-    <polygon points="20,15 23.5,18.5 20,22 16.5,18.5" fill="#ff7a2f" stroke="#b9461a" stroke-width="1.1" />
-    <polygon points="44,15 47.5,18.5 44,22 40.5,18.5" fill="#ff7a2f" stroke="#b9461a" stroke-width="1.1" />
-    <polygon points="26,26.5 29.5,30 26,33.5 22.5,30" fill="#ffad72" stroke="#b9461a" stroke-width="1.1" />
-    <polygon points="40,38.5 43.5,42 40,45.5 36.5,42" fill="#d9581d" stroke="#b9461a" stroke-width="1.1" />
+    <rect x="5" y="29" width="54" height="7" rx="3.5" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+    <rect x="5" y="29" width="54" height="7" rx="3.5" fill="#b8a6ff" />
+    <polygon points="13,24.5 21,32.5 13,40.5 5,32.5" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+    <polygon points="51,24.5 59,32.5 51,40.5 43,32.5" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+    <polygon points="13,24.5 21,32.5 13,40.5 5,32.5" fill="#ff8a3d" />
+    <polygon points="13,24.5 17,28.5 13,32.5 9,28.5" fill="#ffb27a" />
+    <polygon points="51,24.5 59,32.5 51,40.5 43,32.5" fill="#ff8a3d" />
+    <polygon points="51,24.5 55,28.5 51,32.5 47,28.5" fill="#ffb27a" />
+    <polygon points="32,17.5 47,32.5 32,47.5 17,32.5" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+    <polygon points="32,17.5 47,32.5 32,47.5 17,32.5" fill="#ffd23f" />
+    <polygon points="32,17.5 39.5,25 32,32.5 24.5,25" fill="#fff0a0" />
   `,
   viewBox: "0 0 64 64"
 };
