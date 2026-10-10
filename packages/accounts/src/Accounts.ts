@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import type { IncomingHttpHeaders } from "node:http";
+
 // Import Third-party Dependencies
 import type {
   AuthenticationProvider,
@@ -8,27 +11,24 @@ import type {
 
 // Import Internal Dependencies
 import type { Account } from "./account/Account.ts";
-import { AccountDirectory } from "./AccountDirectory.ts";
+import { Username } from "./account/Username.ts";
+import {
+  AccountDirectory,
+  type Credentials
+} from "./AccountDirectory.ts";
 import type { AccountRoles } from "./auth/AccountRoles.ts";
 import type { AccountsThrottleOptions } from "./auth/AccountsThrottle.ts";
+import type { StoredAvatar } from "./avatar/AvatarImage.ts";
+import type {
+  CredentialsBody,
+  RegistrationBody
+} from "./http/routes.schema.ts";
 import { AccountsDatabase } from "./store/AccountsDatabase.ts";
+import { PasswordDigest } from "./session/PasswordDigest.ts";
 import { SessionCookie } from "./session/SessionCookie.ts";
 import { CookieSessions } from "./session/CookieSessions.ts";
-import { AccountsApi } from "./http/accounts/AccountsApi.ts";
-import { accountsFailure } from "./http/accounts/accountsFailure.ts";
-import {
-  ACCOUNTS_URL_PATH,
-  avatarPath
-} from "./http/accounts/routes.ts";
-import {
-  HttpRouter,
-  type HttpHandler
-} from "./http/core/HttpRouter.ts";
-import { TrustedProxies } from "./http/core/TrustedProxies.ts";
 import { AccountsExtension } from "./room/AccountsExtension.ts";
 import type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
-
-export type AccountsHandler = HttpHandler;
 
 export interface AccountsOptions {
   database: AccountsDatabase;
@@ -37,18 +37,7 @@ export interface AccountsOptions {
    * @default new SessionCookie()
    */
   cookie?: SessionCookie;
-  /**
-   * URL prefix of the HTTP routes, with a trailing slash.
-   * @default ACCOUNTS_URL_PATH
-   */
-  path?: string;
   throttle?: AccountsThrottleOptions;
-  /**
-   * Reverse proxies in front of the server. Each one must append to
-   * `X-Forwarded-For` and `X-Forwarded-Proto`.
-   * @default 0
-   */
-  proxyHops?: number;
   /**
    * Password hashes and checks running at once.
    * @default 2
@@ -74,6 +63,37 @@ export interface AccountsOpenOptions extends Omit<AccountsOptions, "database"> {
   location?: string;
 }
 
+export interface Requester {
+  /**
+   * Client address the throttle counts attempts against.
+   */
+  address: string;
+  /**
+   * Whether the request came over TLS, which makes the cookie `Secure`.
+   */
+  secure: boolean;
+  /**
+   * Request headers the session cookie is read from.
+   */
+  headers: IncomingHttpHeaders;
+}
+
+export interface SignIn {
+  account: Account;
+  /**
+   * `Set-Cookie` header value of the new session.
+   */
+  cookie: string;
+}
+
+export type SignInRegistration =
+  | (SignIn & {
+    status: "active";
+  })
+  | {
+    status: "pending";
+  };
+
 export class Accounts implements AuthenticationProvider, Disposable {
   static async open(
     options: AccountsOpenOptions
@@ -91,7 +111,6 @@ export class Accounts implements AuthenticationProvider, Disposable {
 
   readonly roles: AccountRoles;
   readonly cookie: SessionCookie;
-  readonly handler: AccountsHandler;
   readonly extension: AccountsExtension;
 
   #database: AccountsDatabase;
@@ -101,13 +120,11 @@ export class Accounts implements AuthenticationProvider, Disposable {
   constructor(
     options: AccountsOptions
   ) {
-    const prefix = options.path ?? ACCOUNTS_URL_PATH;
     this.#database = options.database;
     this.roles = options.roles;
     this.#directory = new AccountDirectory({
       database: options.database,
       roles: options.roles,
-      avatarUrl: (accountId, hash) => avatarPath(prefix, accountId, hash),
       throttle: options.throttle,
       maxConcurrentHashes: options.maxConcurrentHashes,
       masterPassword: options.masterPassword,
@@ -119,19 +136,73 @@ export class Accounts implements AuthenticationProvider, Disposable {
       options.cookie ?? new SessionCookie()
     );
     this.cookie = this.#sessions.cookie;
-    this.handler = new HttpRouter({
-      prefix,
-      routes: new AccountsApi(this.#directory, this.#sessions),
-      proxies: new TrustedProxies(options.proxyHops),
-      failure: accountsFailure
-    }).handler;
     this.extension = new AccountsExtension(this.#directory);
+  }
+
+  async register(
+    body: RegistrationBody,
+    requester: Requester
+  ): Promise<SignInRegistration> {
+    const registration = await this.#directory.register(
+      {
+        ...parseCredentials(body),
+        options: {
+          masterPassword: body.masterPassword
+        }
+      },
+      requester.address
+    );
+    if (registration.status === "pending") {
+      return registration;
+    }
+
+    return {
+      status: "active",
+      ...this.#signIn(registration.account, requester)
+    };
+  }
+
+  async login(
+    body: CredentialsBody,
+    requester: Requester
+  ): Promise<SignIn> {
+    const account = await this.#directory.login(
+      parseCredentials(body),
+      requester.address
+    );
+
+    return this.#signIn(account, requester);
+  }
+
+  signOut(
+    requester: Requester
+  ): string {
+    return this.#sessions.close(requester.headers, requester.secure);
+  }
+
+  signedIn(
+    headers: IncomingHttpHeaders
+  ): Account | null {
+    return this.#sessions.account(headers);
+  }
+
+  replaceAvatar(
+    accountId: string,
+    image: Uint8Array
+  ): Promise<Account> {
+    return this.#directory.replaceAvatar(accountId, image);
+  }
+
+  avatar(
+    accountId: string
+  ): StoredAvatar | null {
+    return this.#directory.avatar(accountId);
   }
 
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null {
-    const account = this.#sessions.account(request.headers);
+    const account = this.signedIn(request.headers);
     if (account === null) {
       return null;
     }
@@ -162,6 +233,25 @@ export class Accounts implements AuthenticationProvider, Disposable {
     this.extension.dispose();
     this.#database.close();
   }
+
+  #signIn(
+    account: Account,
+    requester: Requester
+  ): SignIn {
+    return {
+      account,
+      cookie: this.#sessions.open(account, requester.secure)
+    };
+  }
+}
+
+function parseCredentials(
+  body: CredentialsBody
+): Credentials {
+  return {
+    username: Username.parse(body.username),
+    password: PasswordDigest.parse(body.password)
+  };
 }
 
 function toPeerProfile(

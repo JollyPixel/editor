@@ -13,12 +13,12 @@ import type {
 
 // Import Internal Dependencies
 import {
+  ADDRESS,
   createAccounts,
   databaseWith,
   databaseWithRetiredRole,
   sessionFor
 } from "./helpers/accounts.ts";
-import { listenAccounts } from "./helpers/accountsServer.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
 
 function upgrade(
@@ -61,13 +61,8 @@ describe("Accounts.authenticate", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     using accounts = createAccounts(database);
-    await using server = await listenAccounts(accounts);
-    const { client, cookies } = server.browser();
     const token = sessionFor(database, alice.id);
-    cookies.set("jolly_session", token);
-    const { avatar } = await client.replaceAvatar(
-      new Blob([await solidPng(8, 8)], { type: "image/png" })
-    );
+    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
 
     assert.equal(
       accounts.authenticate(upgrade(`jolly_session=${token}`))?.profile?.avatar,
@@ -92,13 +87,16 @@ describe("Accounts.watchRevocations", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     using accounts = createAccounts(database);
-    await using server = await listenAccounts(accounts);
-    const { client, cookies } = server.browser();
-    cookies.set("jolly_session", sessionFor(database, alice.id));
     const revoked: string[] = [];
     const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));
 
-    await client.logout();
+    accounts.signOut({
+      address: ADDRESS,
+      secure: false,
+      headers: {
+        cookie: `jolly_session=${sessionFor(database, alice.id)}`
+      }
+    });
     stop();
 
     assert.deepEqual(revoked, [alice.id]);
@@ -110,21 +108,14 @@ describe("Accounts.watchProfiles", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     using accounts = createAccounts(database);
-    await using server = await listenAccounts(accounts);
-    const { client, cookies } = server.browser();
-    cookies.set("jolly_session", sessionFor(database, alice.id));
     const changes: [string, PeerMetadata][] = [];
     const stop = accounts.watchProfiles(
       (accountId, profile) => changes.push([accountId, profile])
     );
 
-    const { avatar } = await client.replaceAvatar(
-      new Blob([await solidPng(8, 8)], { type: "image/png" })
-    );
+    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
     stop();
-    await client.replaceAvatar(
-      new Blob([await solidPng(4, 4)], { type: "image/png" })
-    );
+    await accounts.replaceAvatar(alice.id, await solidPng(4, 4));
 
     assert.deepEqual(changes, [[
       alice.id,

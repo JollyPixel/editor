@@ -1,6 +1,5 @@
 // Import Internal Dependencies
-import type { AccountsErrorCode } from "../../account/errors/AccountsError.ts";
-import { HTTP_ERROR_CODES } from "../core/errors/HttpError.ts";
+import type { AccountsErrorCode } from "../account/errors/AccountsError.ts";
 
 // CONSTANTS
 export const ACCOUNTS_URL_PATH = "/api/accounts/";
@@ -31,7 +30,9 @@ export const ACCOUNTS_ROUTES = {
   }
 } as const;
 export const ACCOUNTS_REQUEST_ERROR_CODES = [
-  ...HTTP_ERROR_CODES,
+  "cross-origin",
+  "payload-too-large",
+  "invalid-request",
   "not-found",
   "unauthenticated",
   "unknown"
@@ -44,11 +45,10 @@ export type AccountsRequestErrorCode =
 export type AccountsFailureCode = AccountsErrorCode | AccountsRequestErrorCode;
 
 export function avatarPath(
-  prefix: string,
   accountId: string,
   hash: string
 ): string {
   const path = ACCOUNTS_ROUTES.avatar.path.replace(":accountId", accountId);
 
-  return `${prefix}${path}?${AVATAR_VERSION_PARAM}=${hash}`;
+  return `${ACCOUNTS_URL_PATH}${path}?${AVATAR_VERSION_PARAM}=${hash}`;
 }

@@ -33,9 +33,11 @@
     "@jolly-pixel/editor.voxel-model": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
     "@openally/servo": "1.1.0",
+    "cookie": "2.0.1",
     "zod": "4.6.5"
   },
   "dependencies": {
+    "@fastify/rate-limit": "11.0.0",
     "@jolly-pixel/accounts": "workspace:*",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
@@ -48,6 +50,7 @@
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
+    "fastify": "5.12.5",
     "lit": "3.3.3"
   }
 }

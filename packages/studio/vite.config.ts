@@ -33,7 +33,7 @@ import {
   openStudioAccounts
 } from "./server/accounts.ts";
 import { StudioProject } from "./server/project/StudioProject.ts";
-import { accountsPlugin } from "./vite/accountsPlugin.ts";
+import { apiPlugin } from "./vite/apiPlugin.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
 import { projectManifestPlugin } from "./vite/projectManifestPlugin.ts";
 import { createStudioSeed } from "./src/seed.ts";
@@ -48,6 +48,7 @@ const kBlocksetFile = path.join(
 const kRoomGraceMs = 5 * 60_000;
 const kE2EDefaultRole = "member";
 const kE2ERegistrations = 1_000;
+const kE2ERequestsPerMinute = 100_000;
 const kViteDefaultDeny = [
   ".env",
   ".env.*",
@@ -79,6 +80,22 @@ async function assetWorkspacePlugin(
       stateIgnores: ACCOUNTS_STATE_IGNORES
     }
   });
+}
+
+function disposeAfterClose(
+  resource: Disposable
+): Plugin {
+  return {
+    name: "studio-dispose-after-close",
+    apply: "serve",
+    closeBundle: {
+      order: "post",
+      sequential: true,
+      handler() {
+        resource[Symbol.dispose]();
+      }
+    }
+  };
 }
 
 export default defineConfig(async({ mode }): Promise<UserConfig> => {
@@ -128,8 +145,14 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
       projectManifestPlugin(project),
       inMemory ? null : createProjectFileWatchPlugin(project.file),
       editorPagesPlugin(new EditorPages(project.editors)),
-      accounts === null ? null : accountsPlugin(accounts),
-      accounts === null ? null : await assetWorkspacePlugin(project, accounts, e2e)
+      ...(accounts === null ? [] : [
+        apiPlugin({
+          accounts,
+          requestsPerMinute: e2e ? kE2ERequestsPerMinute : undefined
+        }),
+        await assetWorkspacePlugin(project, accounts, e2e),
+        disposeAfterClose(accounts)
+      ])
     ]
   };
 });

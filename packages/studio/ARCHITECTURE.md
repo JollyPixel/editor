@@ -55,8 +55,13 @@ flowchart TB
 - `StudioAccess` reads the `access` section into a rights table with a
   built-in `admin` and the `AccountRoles`. `server/accounts` opens the
   project's `Accounts` on `.jollypixel/accounts.db`: the network server
-  authenticates with it and registers its `accounts` room, and
-  `vite/accountsPlugin` serves its `/api/accounts/` handler.
+  authenticates with it and registers its `accounts` room.
+- `server/api/StudioApi` is a Fastify app that owns every `/api/` path;
+  `vite/apiPlugin` hands those requests to it. Each API surface is a Fastify
+  plugin holding only its route table, such as `accountsRoutes`. A controller
+  class such as `AccountsController` owns the handlers and maps domain errors
+  to statuses.
+  The accounts are disposed last, once every plugin has closed.
 - The session cookie is named after the project root: cookies ignore ports.
 - `StudioProject.privateFiles` lists the globs Vite must not serve: every
   `.jollypixel/` folder and the project's asset files. Assets reach the

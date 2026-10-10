@@ -32,7 +32,7 @@ interface Account {
 
 `owner` is `true` for exactly one account once the first one registers. The owner is always an admin, no one can change its role or remove it, and only the owner hands ownership to another account.
 
-`avatar` is the same-origin path of the uploaded avatar, `<path><id>/avatar?v=<hash>`, absent until the account uploads one. It changes with the image, so it can be cached for good. `AVATAR_MAX_BYTES` (2 MiB) is the largest upload.
+`avatar` is the same-origin path of the uploaded avatar, `/api/accounts/<id>/avatar?v=<hash>`, absent until the account uploads one. It changes with the image, so it can be cached for good. `AVATAR_MAX_BYTES` (2 MiB) is the largest upload.
 
 ## `RosterEntry`
 
@@ -48,4 +48,4 @@ A registration waiting for an admin's approval: `{ id, username }`. Only admins 
 
 ## `AccountsError`
 
-The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the routes pick one when they answer. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError` and `AccessRequestsFullError` extend it. `ACCOUNTS_ERROR_CODES` lists the codes.
+The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError` and `AccessRequestsFullError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.

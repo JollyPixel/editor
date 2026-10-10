@@ -28,19 +28,39 @@ Opens an `AccountsDatabase` at `location` (in memory by default, see [`AccountsD
 - `database`: an open `AccountsDatabase`. Disposing the accounts closes it.
 - `roles`: the `AccountRoles` accounts may hold.
 - `cookie`: a `SessionCookie`. Defaults to `new SessionCookie()`.
-- `path`: URL prefix of the HTTP routes, with a trailing slash. Defaults to `"/api/accounts/"`.
 - `throttle.attempts`: failed logins allowed per username and per client address within `throttle.windowMs`. Defaults to 10.
 - `throttle.registrations`: registrations allowed per client address within `throttle.windowMs`. Defaults to 10.
 - `throttle.windowMs`: defaults to 15 minutes.
-- `proxyHops`: reverse proxies in front of the server. Defaults to 0, which ignores `X-Forwarded-*` headers. With `n`, the server lists the entries of `X-Forwarded-For` followed by the socket address, and trusts the one `n` places before the socket address as the client address. It reads `X-Forwarded-Proto` the same way, with the socket scheme last, and the request counts as HTTPS when the trusted entry is `https`. Each proxy must append to both headers, or clients can pick the address they are throttled under.
 - `maxConcurrentHashes`: `scrypt` hashes and checks running at once. Further ones wait their turn, which keeps libuv threads free for file I/O. Defaults to 2.
 - `masterPassword.secret`: a secret the first account must give to register, while the database has no account. Without it, anyone who reaches the server first becomes admin. A wrong secret is refused even when none was needed, and both checks run before hashing. Throws a `RangeError` when empty.
 - `masterPassword.accessRequests`: a later registration without the secret creates an access request, a pending account that an admin approves or denies in the [`accounts` room](#accounts-room). It cannot sign in until approved. Defaults to `false`.
 - `maxAccessRequests`: access requests allowed to wait at once. A request past it is refused with `AccessRequestsFullError`. Defaults to 20.
 
-### `handler`
+### `register(body, requester)`
 
-A connect-style `(request, response, next)` middleware serving the [HTTP routes](#http-routes).
+Registers an account for [`POST register`](#post-register). `body` is a `RegistrationBody`, `{ username, password, masterPassword? }`. `requester` is a `Requester`, `{ address, secure, headers }`: the client address the throttle counts against, whether the request came over TLS, which makes the cookie `Secure`, and the request headers. Behind a reverse proxy, the host decides which forwarded address to trust.
+
+Resolves to `{ status: "active", account, cookie }`, where `cookie` is the `Set-Cookie` value of the new session, or to `{ status: "pending" }` for an access request, which gets no session. Every refusal listed under `POST register` throws an `AccountsError` with the code named there.
+
+### `login(body, requester)`
+
+Signs in for [`POST login`](#post-login). `body` is a `CredentialsBody`, `{ username, password }`. Resolves to `{ account, cookie }`, or throws `InvalidCredentialsError`, `AccountPendingError` or `AccountsThrottledError`, whose `retryAfterMs` gives the wait.
+
+### `signOut(requester)`
+
+Closes the session of the requester's cookie and [revokes](#watchrevocationslistener) its account. Returns the `Set-Cookie` value that clears the cookie, also when the request had no session.
+
+### `signedIn(headers)`
+
+The `Account` of the request's session cookie, or `null`. The cookie of a request whose `Origin` does not match its `Host` is ignored.
+
+### `replaceAvatar(accountId, image)`
+
+Encodes `image` with [`AvatarImage.encode`](#avatarimageencodeinput), stores it and resolves to the account with its new `avatar` path. Throws `InvalidAvatarError` for bytes that are not an image.
+
+### `avatar(accountId)`
+
+The stored avatar, `{ hash, bytes }`, or `null` when the account has none.
 
 ### `authenticate(request)`
 
@@ -60,7 +80,7 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
 
 The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A new avatar reaches open connections through [`watchProfiles`](#watchprofileslistener).
 
-`avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `path`.
+`avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `ACCOUNTS_URL_PATH`.
 
 ### `watchRevocations(listener)`
 
@@ -141,7 +161,7 @@ The roles, `"admin"` first.
 
 ## `SessionCookie`
 
-The cookie a browser session lives in: `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the request came over TLS, directly or through the `proxyHops` proxies. Page scripts never read the token.
+The cookie a browser session lives in: `HttpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` when the host reports the request came over TLS. Page scripts never read the token.
 
 ```ts
 new SessionCookie({
@@ -155,9 +175,15 @@ new SessionCookie({
 
 The token is 256 random bits, and the database keeps only its SHA-256 digest. A browser sends the cookie with any request, including a WebSocket a foreign page opens, so the cookie of a request whose `Origin` does not match its `Host` is ignored.
 
+## `isCrossOrigin(headers)`
+
+Whether the request has an `Origin` that does not match its `Host`. A request without `Origin` is same-origin, and one with an `Origin` but no `Host` is cross-origin. `SessionCookie` ignores the cookie of a cross-origin request, and a host answers it with 403 `cross-origin`.
+
 ## HTTP routes
 
-Bodies are JSON with a `Content-Length` of at most 4 KiB, except for avatars. A body with a `__proto__` or `constructor.prototype` key answers 400 `invalid-request`. Errors answer `{ code, message }`, where `code` is an `AccountsFailureCode`. A request whose `Origin` does not match its `Host` answers 403 `cross-origin`, and a known route called with another method answers 405 `method-not-allowed` with `Allow`. Requests outside `path`, or on an unknown route, go to `next()`.
+The routes `AccountsClient` calls. The package does not serve them: the host mounts each entry of `ACCOUNTS_ROUTES` under `ACCOUNTS_URL_PATH`, checks JSON bodies against `credentialsBodySchema` or `registrationBodySchema`, and calls the `Accounts` method of the same purpose. The studio serves them with Fastify.
+
+Errors answer `{ code, message }`, where `code` is an `AccountsFailureCode`. Besides the codes of each route, a host answers 400 `invalid-request` for a body of the wrong shape or one with a `__proto__` or `constructor.prototype` key, 413 `payload-too-large` for a body over its limit, and 403 `cross-origin` for a request [`isCrossOrigin`](#iscrossoriginheaders) reports. `AVATAR_VERSION_PARAM` names the `?v=` parameter of avatar URLs.
 
 ### `POST register`
 
@@ -179,7 +205,7 @@ Answers `{ account }` for the session, or 401 `unauthenticated`.
 
 ### `PUT avatar`
 
-The body is an image of at most 2 MiB (`AVATAR_MAX_BYTES`), with a `Content-Length`. It replaces the avatar of the session's account and answers 200 with `{ account }`. Without a session it answers 401 `unauthenticated`, past the limit 413 `payload-too-large`, and for bytes that are not an image 422 `invalid-avatar`.
+The body is an image of at most 2 MiB (`AVATAR_MAX_BYTES`). It replaces the avatar of the session's account and answers 200 with `{ account }`. Without a session it answers 401 `unauthenticated`, past the limit 413 `payload-too-large`, and for bytes that are not an image 422 `invalid-avatar`.
 
 ### `GET <id>/avatar`
 

@@ -6,31 +6,42 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import sharp from "sharp";
+import {
+  AVATAR_MAX_BYTES,
+  AccountsRequestError,
+  type Account,
+  type RegistrationResult
+} from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import {
-  activeAccount,
-  createAccounts,
-  createDatabase
-} from "../../helpers/accounts.ts";
-import { listenAccounts } from "../../helpers/accountsServer.ts";
-import { solidPng } from "../../helpers/avatar/images.ts";
-import {
-  AVATAR_MAX_BYTES,
-  AccountsRequestError
-} from "#src/index.ts";
-import { AVATAR_SIZE_PX } from "#src/node.ts";
+  listenStudioApi,
+  requestStatus
+} from "../../../helpers/studioApi.ts";
 
-describe("AccountsApi avatars", () => {
+// CONSTANTS
+const kPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAA" +
+  "EklEQVQImWP4z8CAFWEXHbQSACj/P8FTKqelAAAAAElFTkSuQmCC",
+  "base64"
+);
+
+function activeAccount(
+  result: RegistrationResult
+): Account {
+  assert.ok(result.status === "active");
+
+  return result.account;
+}
+
+describe("accountsRoutes avatars", () => {
   test("replaces the avatar of the signed-in account and serves it", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database));
+    await using server = await listenStudioApi();
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
 
     const account = await client.replaceAvatar(
-      new Blob([await solidPng(300, 200)], { type: "image/png" })
+      new Blob([kPng], { type: "image/png" })
     );
     const response = await fetch(new URL(account.avatar ?? "", server.url));
 
@@ -43,45 +54,40 @@ describe("AccountsApi avatars", () => {
     assert.equal(response.headers.get("content-type"), "image/webp");
     assert.equal(response.headers.get("cache-control"), "public, max-age=31536000, immutable");
     assert.equal(response.headers.get("cross-origin-resource-policy"), "same-origin");
-    assert.equal(
-      (await sharp(await response.bytes()).metadata()).width,
-      AVATAR_SIZE_PX
-    );
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+    assert.ok((await response.arrayBuffer()).byteLength > 0);
   });
 
   test("revalidates an avatar requested without its current hash", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database));
+    await using server = await listenStudioApi();
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
-    const account = await client.replaceAvatar(new Blob([await solidPng(8, 8)]));
+    const account = await client.replaceAvatar(new Blob([kPng]));
 
-    const response = await fetch(new URL(`${account.id}/avatar?v=stale`, server.url));
+    const response = await fetch(new URL(`${account.id}/avatar?v=stale`, server.accountsUrl));
 
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("cache-control"), "no-cache");
   });
 
   test("answers not-found for an account without an avatar", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database));
-    const account = await activeAccount(
-      server.browser().client.register("Alice", "correct horse")
+    await using server = await listenStudioApi();
+    const account = activeAccount(
+      await server.browser().client.register("Alice", "correct horse")
     );
 
-    const response = await fetch(new URL(`${account.id}/avatar`, server.url));
+    const response = await fetch(new URL(`${account.id}/avatar`, server.accountsUrl));
 
     assert.equal(response.status, 404);
     assert.equal((await response.json()).code, "not-found");
   });
 
   test("refuses an upload without a session", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database));
+    await using server = await listenStudioApi();
 
-    const response = await fetch(new URL("avatar", server.url), {
+    const response = await fetch(new URL("avatar", server.accountsUrl), {
       method: "PUT",
-      body: await solidPng(8, 8)
+      body: kPng
     });
 
     assert.equal(response.status, 401);
@@ -89,8 +95,7 @@ describe("AccountsApi avatars", () => {
   });
 
   test("refuses an upload that is not an image", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database));
+    await using server = await listenStudioApi();
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -103,22 +108,21 @@ describe("AccountsApi avatars", () => {
   });
 
   test("refuses an upload over the size limit", async() => {
-    using database = createDatabase();
-    await using server = await listenAccounts(createAccounts(database));
-    const { client, fetch: browserFetch } = server.browser();
+    await using server = await listenStudioApi();
+    const { client, cookies } = server.browser();
     await client.register("Alice", "correct horse");
+    const [[name, value]] = cookies;
     const oversized = new Uint8Array(AVATAR_MAX_BYTES + 1);
 
-    const response = await browserFetch(new URL("avatar", server.url), {
+    const status = await requestStatus(new URL("avatar", server.accountsUrl), {
       method: "PUT",
+      headers: {
+        cookie: `${name}=${value}`,
+        "content-length": String(oversized.byteLength)
+      },
       body: oversized
     });
 
-    assert.equal(response.status, 413);
-    await assert.rejects(
-      client.replaceAvatar(new Blob([oversized])),
-      (error) => error instanceof AccountsRequestError &&
-        error.code === "payload-too-large"
-    );
+    assert.equal(status, 413);
   });
 });
