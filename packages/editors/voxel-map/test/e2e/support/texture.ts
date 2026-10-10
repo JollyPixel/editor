@@ -15,91 +15,103 @@ export interface TexturePoint {
   y: number;
 }
 
-export function blockTileCenter(
-  page: Page,
-  blockId: number
-): Promise<TexturePoint> {
-  return page.evaluate((id) => {
-    const { view, blocksets } = window.voxelMapEditor!.workspace;
-    const texture = view.document.blocks.get(id)!.defaultTexture!;
-    const tileSize = blocksets.tileSizeOf(texture.blocksetId ?? "");
-    if (tileSize === undefined) {
-      throw new Error(`Block ${id} has no loaded blockset.`);
-    }
+export class TextureEditor {
+  readonly host: Locator;
+  readonly panel: Locator;
+  readonly accessBadge: Locator;
+  readonly addBlocksetButton: Locator;
+  readonly #page: Page;
 
-    return {
-      x: (texture.col * tileSize) + Math.floor(tileSize / 2),
-      y: (texture.row * tileSize) + Math.floor(tileSize / 2)
-    };
-  }, blockId);
-}
+  constructor(
+    page: Page
+  ) {
+    this.#page = page;
+    this.host = page.locator("texture-editor");
+    this.panel = this.host.locator("pixel-draw-panel");
+    this.accessBadge = this.panel.locator("[part=access-badge]");
+    this.addBlocksetButton = this.host.getByRole("button", { name: "Add blockset" });
+  }
 
-export async function createBlankBlockset(
-  page: Page,
-  name: string
-): Promise<void> {
-  const form = dialog(page, "Add blockset");
-  await buttonGroup(form, "Source")
-    .getByRole("radio", { name: "New", exact: true })
-    .click();
-  await textField(form, "Name").fill(name);
-  await form.getByRole("button", { name: "Create" }).click();
-  await form.waitFor({ state: "hidden" });
-}
+  blocksetTab(
+    name: RegExp
+  ): Locator {
+    return this.panel.getByRole("tab", { name });
+  }
 
-export function texturePanel(
-  page: Page
-): Locator {
-  return page.locator("texture-editor pixel-draw-panel");
-}
+  async editBlockset(
+    label: string
+  ): Promise<Locator> {
+    await this.panel
+      .getByRole("button", { name: `Edit ${label}` })
+      .click();
 
-export async function setTextureMode(
-  panel: Locator,
-  label: string
-): Promise<void> {
-  await panel.getByRole("button", {
-    name: label,
-    exact: true
-  }).click();
-}
+    return dialog(this.#page, `Blockset "${label}"`);
+  }
 
-export function textureState(
-  panel: Locator
-) {
-  return panel.evaluate((element: PixelDrawPanel) => {
-    return {
-      activeTextureId: element.activeTextureId,
-      textureIds: element.textures.map((texture) => texture.id),
-      selectedRegionId: element.canvasManager?.uv.selectedRegionId ?? null
-    };
-  });
-}
+  async addBlankBlockset(
+    name: string
+  ): Promise<void> {
+    await this.addBlocksetButton.click();
+    const form = dialog(this.#page, "Add blockset");
+    await buttonGroup(form, "Source")
+      .getByRole("radio", { name: "New", exact: true })
+      .click();
+    await textField(form, "Name").fill(name);
+    await form.getByRole("button", { name: "Create" }).click();
+    await form.waitFor({ state: "hidden" });
+  }
 
-export function pixelAlpha(
-  panel: Locator,
-  point: TexturePoint
-): Promise<number> {
-  return panel.evaluate((element: PixelDrawPanel, target) => {
-    const { buffer } = element.canvasManager!.document;
+  async selectMode(
+    label: string
+  ): Promise<void> {
+    await this.panel.getByRole("button", {
+      name: label,
+      exact: true
+    }).click();
+  }
 
-    return buffer.samplePixel(target.x, target.y)[3];
-  }, point);
-}
+  async clickTexel(
+    point: TexturePoint
+  ): Promise<void> {
+    const screen = await this.panel.evaluate((element: PixelDrawPanel, target) => {
+      const canvasManager = element.canvasManager!;
 
-export async function clickTexel(
-  panel: Locator,
-  point: TexturePoint
-): Promise<void> {
-  const screen = await panel.evaluate((element: PixelDrawPanel, target) => {
-    const canvasManager = element.canvasManager!;
+      return canvasManager.viewport.textureClientPosition(
+        target,
+        canvasManager.canvas().getBoundingClientRect()
+      );
+    }, point);
+    const { mouse } = this.#page;
+    await mouse.move(screen.x, screen.y);
+    await mouse.down();
+    await mouse.up();
+  }
 
-    return canvasManager.viewport.textureClientPosition(
-      target,
-      canvasManager.canvas().getBoundingClientRect()
-    );
-  }, point);
-  const { mouse } = panel.page();
-  await mouse.move(screen.x, screen.y);
-  await mouse.down();
-  await mouse.up();
+  blockTileCenter(
+    blockId: number
+  ): Promise<TexturePoint> {
+    return this.#page.evaluate((id) => {
+      const { view, blocksets } = window.voxelMapEditor!.workspace;
+      const texture = view.document.blocks.get(id)!.defaultTexture!;
+      const tileSize = blocksets.tileSizeOf(texture.blocksetId ?? "");
+      if (tileSize === undefined) {
+        throw new Error(`Block ${id} has no loaded blockset.`);
+      }
+
+      return {
+        x: (texture.col * tileSize) + Math.floor(tileSize / 2),
+        y: (texture.row * tileSize) + Math.floor(tileSize / 2)
+      };
+    }, blockId);
+  }
+
+  pixelAlpha(
+    point: TexturePoint
+  ): Promise<number> {
+    return this.panel.evaluate((element: PixelDrawPanel, target) => {
+      const { buffer } = element.canvasManager!.document;
+
+      return buffer.samplePixel(target.x, target.y)[3];
+    }, point);
+  }
 }

@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { CommandConsole } from "@jolly-pixel/e2e";
 import {
   e2eFolder,
   editorFixture,
@@ -15,7 +16,6 @@ import {
 
 // Import Internal Dependencies
 import { TEXTURE_SIZE } from "./support/canvas.ts";
-import { CommandConsole } from "./support/commandConsole.ts";
 import { PixelArtPanel } from "./support/panel.ts";
 import type { PixelArtEditor } from "../../page/scripts/PixelArtEditor.ts";
 import type { TextureImportPolicy } from "../../src/index.ts";

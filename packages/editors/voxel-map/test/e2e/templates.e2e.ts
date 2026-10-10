@@ -1,263 +1,230 @@
-// Import Third-party Dependencies
-import type { Page } from "@playwright/test";
-import {
-  centerOf,
-  pressAt
-} from "@jolly-pixel/e2e";
-import {
-  nextFrames,
-  waitForEditor
-} from "@jolly-pixel/e2e/editor";
-
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
-import {
-  peerPlacementCount,
-  placement,
-  dragPlacement,
-  hoverCell
-} from "./support/placement.ts";
-import {
-  blocksAt,
-  cellTopPoint,
-  clickCell,
-  pinCamera,
-  pivotOnCell,
-  seedVoxels,
-  voxelCount,
-  type Cell
-} from "./support/scene.ts";
+import type { Cell } from "./support/viewport.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 function templateNames(
-  page: Page
+  map: VoxelMapPage
 ): Promise<string[]> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .templates.toArray()
     .map((template) => template.name));
 }
 
-test.beforeEach(async({ page }) => {
-  await openPane(page, "Layers");
+async function seedCell(
+  map: VoxelMapPage
+): Promise<void> {
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await map.viewport.pinCamera();
+}
+
+test.beforeEach(async({ map }) => {
+  await map.panes.open("Layers");
 });
 
-test("a saved layer is placed, moved, turned and committed as one undo step", async({ page }) => {
+test("a saved layer is placed, moved, turned and committed as one undo step", async({ map, page }) => {
   test.slow();
+  const { placement, templates, world } = map;
   const original: Cell[] = [0, 1, 2].map((x) => {
     return { x, y: 0, z: 0 };
   });
-  await seedVoxels(page, original.map((cell) => {
+  await world.seed(original.map((cell) => {
     return { ...cell, blockId: 1 };
   }));
-  await pinCamera(page);
+  await map.viewport.pinCamera();
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  await expect(page.locator("template-manager [role=\"treeitem\"]"))
-    .toHaveAttribute("aria-selected", "true");
+  await templates.saveLayer();
+  await expect(templates.row).toHaveAttribute("aria-selected", "true");
 
-  await page.getByRole("button", { name: "Place template" }).click();
-  const placed = await placement(page);
+  await templates.place();
+  const placed = await placement.current();
   expect(placed).not.toBeNull();
 
   const grab = {
     ...placed!.cells[0],
     y: placed!.top
   };
-  await dragPlacement(page, grab, {
+  await map.viewport.drag([grab, {
     ...grab,
     x: grab.x + 3
-  });
-  const moved = await placement(page);
+  }]);
+  const moved = await placement.current();
   expect(moved?.position).toEqual({
     ...placed!.position,
     x: placed!.position.x + 3
   });
 
   await page.keyboard.press("KeyQ");
-  await expect.poll(async() => (await placement(page))?.rotation).toBe(1);
-  const turned = await placement(page);
+  await expect.poll(async() => (await placement.current())?.rotation).toBe(1);
+  const turned = await placement.current();
 
-  await page.getByRole("button", { name: "Commit into Ground" }).click();
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, turned!.cells)).toEqual([1, 1, 1]);
+  await map.toolbar.commitButton("Ground").click();
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await world.blocks(turned!.cells)).toEqual([1, 1, 1]);
 
   await page.keyboard.press("Control+KeyZ");
-  await expect.poll(() => voxelCount(page)).toBe(3);
-  expect(await blocksAt(page, original)).toEqual([1, 1, 1]);
+  await expect.poll(() => world.voxelCount()).toBe(3);
+  expect(await world.blocks(original)).toEqual([1, 1, 1]);
 });
 
-test("Escape cancels a placement and leaves the world untouched", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await pinCamera(page);
+test("Escape cancels a placement and leaves the world untouched", async({ map, page }) => {
+  const { placement, templates } = map;
+  await seedCell(map);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  await page.getByRole("button", { name: "Place template" }).click();
-  await expect.poll(() => placement(page)).not.toBeNull();
+  await templates.saveLayer();
+  await templates.place();
+  await expect.poll(() => placement.current()).not.toBeNull();
 
-  await hoverCell(page, { x: 0, y: 0, z: 0 });
+  await map.viewport.hover({ x: 0, y: 0, z: 0 });
   await page.keyboard.press("Escape");
 
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await voxelCount(page)).toBe(1);
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await map.world.voxelCount()).toBe(1);
 });
 
-test("Alt+click pivots the camera while a placement is pending", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await pinCamera(page);
+test("Alt+click pivots the camera while a placement is pending", async({ map }) => {
+  const { placement, templates } = map;
+  await seedCell(map);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  await page.getByRole("button", { name: "Place template" }).click();
-  await expect.poll(() => placement(page)).not.toBeNull();
+  await templates.saveLayer();
+  await templates.place();
+  await expect.poll(() => placement.current()).not.toBeNull();
 
-  await pivotOnCell(page, { x: 4, y: 0, z: 4 });
+  await map.viewport.pivot({ x: 4, y: 0, z: 4 });
 
-  await expect(page.locator("jolly-log")).toContainText("Camera switched to pivot");
-  expect(await placement(page)).not.toBeNull();
+  await expect(map.log).toContainText("Camera switched to pivot");
+  expect(await placement.current()).not.toBeNull();
 });
 
-test("a click outside the placement commits it without painting", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await pinCamera(page);
+test("a click outside the placement commits it without painting", async({ map }) => {
+  const { placement, templates, world } = map;
+  await seedCell(map);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
+  await templates.saveLayer();
   const staged: Cell = { x: 3, y: 0, z: 0 };
-  await pressAt(page, [
-    await centerOf(page.locator("template-manager [role=\"treeitem\"]")),
-    await cellTopPoint(page, staged)
-  ], { settle: nextFrames });
-  await expect.poll(async() => (await placement(page))?.position)
+  await templates.dragTo(staged);
+  await expect.poll(async() => (await placement.current())?.position)
     .toEqual(staged);
 
   const outside: Cell = { x: 4, y: 0, z: 4 };
-  await clickCell(page, outside);
+  await map.viewport.click(outside);
 
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, [staged, outside])).toEqual([1, null]);
-  expect(await voxelCount(page)).toBe(2);
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await world.blocks([staged, outside])).toEqual([1, null]);
+  expect(await world.voxelCount()).toBe(2);
 });
 
-test("a peer sees the placement preview until it is cancelled", async({ page, peer }) => {
+test("a peer sees the placement preview until it is cancelled", async({ map, peerMap, page }) => {
   test.slow();
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await pinCamera(page);
+  const { templates } = map;
+  await seedCell(map);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  await page.getByRole("button", { name: "Place template" }).click();
-  await expect.poll(() => peerPlacementCount(peer)).toBe(1);
+  await templates.saveLayer();
+  await templates.place();
+  await expect.poll(() => peerMap.placement.peerPreviews()).toBe(1);
 
-  await hoverCell(page, { x: 0, y: 0, z: 0 });
+  await map.viewport.hover({ x: 0, y: 0, z: 0 });
   await page.keyboard.press("Escape");
 
-  await expect.poll(() => peerPlacementCount(peer)).toBe(0);
+  await expect.poll(() => peerMap.placement.peerPreviews()).toBe(0);
 });
 
-test("a layer is turned with its marquee and committed with Enter", async({ page }) => {
+test("a layer is turned with its marquee and committed with Enter", async({ map, page }) => {
+  const { placement, viewport, world } = map;
   const original: Cell[] = [0, 1, 2].map((x) => {
     return { x, y: 0, z: 0 };
   });
-  await seedVoxels(page, original.map((cell) => {
+  await world.seed(original.map((cell) => {
     return { ...cell, blockId: 1 };
   }));
-  await pinCamera(page);
+  await viewport.pinCamera();
 
-  await page.locator("layer-panel").getByRole("button", { name: "Transform" }).click();
-  await expect.poll(() => placement(page)).not.toBeNull();
+  await map.layers.transformButton.click();
+  await expect.poll(() => placement.current()).not.toBeNull();
 
-  await hoverCell(page, original[1]);
+  await viewport.hover(original[1]);
   await page.keyboard.press("KeyQ");
-  await expect.poll(async() => (await placement(page))?.rotation).toBe(1);
-  const turned = await placement(page);
+  await expect.poll(async() => (await placement.current())?.rotation).toBe(1);
+  const turned = await placement.current();
   await page.keyboard.press("Enter");
 
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await voxelCount(page)).toBe(3);
-  expect(await blocksAt(page, turned!.cells)).toEqual([1, 1, 1]);
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await world.voxelCount()).toBe(3);
+  expect(await world.blocks(turned!.cells)).toEqual([1, 1, 1]);
 });
 
-test("the toolbar swaps the brush for the placement controls until cancelled", async({ page }) => {
-  await seedVoxels(page, [
+test("the toolbar swaps the brush for the placement controls until cancelled", async({ map }) => {
+  const { toolbar } = map;
+  await map.world.seed([
     { x: 0, y: 0, z: 0, blockId: 1 },
     { x: 1, y: 0, z: 0, blockId: 1 }
   ]);
 
-  const toolbar = page.locator("voxel-edit-toolbar");
-  const brush = toolbar.getByRole("group", { name: "Brush" });
-  const lockedBrush = toolbar.getByRole("group", {
+  const { brushTools, history, rotate } = toolbar;
+  const lockedBrush = toolbar.root.getByRole("group", {
     name: "Brush",
     includeHidden: true
   });
-  const history = toolbar.getByRole("group", { name: "History" });
-  const rotate = toolbar.getByRole("group", { name: "Rotate" });
   await expect(rotate).toBeHidden();
-  await expect(brush).toHaveAttribute("aria-disabled", "false");
+  await expect(brushTools).toHaveAttribute("aria-disabled", "false");
 
-  await page.locator("layer-panel").getByRole("button", { name: "Transform" }).click();
+  await map.layers.transformButton.click();
   await expect(rotate).toBeVisible();
-  await expect(toolbar.getByRole("status")).toHaveText("Ground");
-  await expect(brush).toBeHidden();
+  await expect(toolbar.status).toHaveText("Ground");
+  await expect(brushTools).toBeHidden();
   await expect(history).toBeHidden();
   await expect(lockedBrush).toHaveAttribute("aria-disabled", "true");
 
   await rotate.getByRole("button", { name: /^Rotate 90° counter-clockwise/ }).click();
-  await expect.poll(async() => (await placement(page))?.rotation).toBe(1);
+  await expect.poll(async() => (await map.placement.current())?.rotation).toBe(1);
 
-  await toolbar.getByRole("button", { name: /^Cancel/ }).click();
-  await expect.poll(() => placement(page)).toBeNull();
+  await toolbar.cancelButton.click();
+  await expect.poll(() => map.placement.current()).toBeNull();
   await expect(rotate).toBeHidden();
   await expect(history).toBeVisible();
-  await expect(brush).toBeVisible();
-  await expect(brush).toHaveAttribute("aria-disabled", "false");
+  await expect(brushTools).toBeVisible();
+  await expect(brushTools).toHaveAttribute("aria-disabled", "false");
 });
 
-test("double-clicking a template row renames it", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+test("double-clicking a template row renames it", async({ map }) => {
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  await page.locator("template-manager [role=\"treeitem\"] .label").dblclick();
+  await map.templates.saveLayer();
+  await map.templates.rename("House");
 
-  const rename = page.locator("template-manager").getByRole("textbox", { name: "Rename" });
-  await rename.fill("House");
-  await rename.press("Enter");
-
-  await expect.poll(() => templateNames(page)).toEqual(["House"]);
-  expect(await placement(page)).toBeNull();
+  await expect.poll(() => templateNames(map)).toEqual(["House"]);
+  expect(await map.placement.current()).toBeNull();
 });
 
-test("a template row dragged into the viewport is staged at the hovered cell", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await pinCamera(page);
+test("a template row dragged into the viewport is staged at the hovered cell", async({ map }) => {
+  const { placement, templates } = map;
+  await seedCell(map);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  const row = page.locator("template-manager [role=\"treeitem\"]");
-  await pressAt(page, [
-    await centerOf(row),
-    await cellTopPoint(page, { x: 3, y: 0, z: 0 })
-  ], { settle: nextFrames });
+  await templates.saveLayer();
+  await templates.dragTo({ x: 3, y: 0, z: 0 });
 
-  await expect.poll(async() => (await placement(page))?.position)
+  await expect.poll(async() => (await placement.current())?.position)
     .toEqual({ x: 3, y: 0, z: 0 });
-  const staged = await placement(page);
+  const staged = await placement.current();
 
-  await page.getByRole("button", { name: "Commit into Ground" }).click();
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, staged!.cells)).toEqual([1]);
+  await map.toolbar.commitButton("Ground").click();
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await map.world.blocks(staged!.cells)).toEqual([1]);
 });
 
-test("a saved template reaches a peer and survives a reload", async({ page, peer }) => {
+test("a saved template reaches a peer and survives a reload", async({ map, peerMap }) => {
   test.slow();
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
 
-  await page.getByRole("button", { name: "Save layer as template" }).click();
-  await expect.poll(() => templateNames(peer)).toEqual(["Ground"]);
+  await map.templates.saveLayer();
+  await expect.poll(() => templateNames(peerMap)).toEqual(["Ground"]);
 
-  await page.reload();
-  await waitForEditor(page);
-  await openPane(page, "Layers");
+  await map.reload();
+  await map.panes.open("Layers");
 
-  await expect.poll(() => templateNames(page)).toEqual(["Ground"]);
-  await expect(page.locator("template-manager [role=\"treeitem\"]"))
-    .toHaveText(/Ground/);
+  await expect.poll(() => templateNames(map)).toEqual(["Ground"]);
+  await expect(map.templates.row).toHaveText(/Ground/);
 });

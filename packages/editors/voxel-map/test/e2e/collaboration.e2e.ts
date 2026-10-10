@@ -1,13 +1,5 @@
-// Import Third-party Dependencies
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
-
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
-import {
-  blocksAt,
-  clickCell,
-  pinCamera
-} from "./support/scene.ts";
 
 const kCell = {
   x: 0,
@@ -15,30 +7,29 @@ const kCell = {
   z: 0
 };
 
-test("painted voxels survive a reload", async({ page }) => {
-  await pinCamera(page);
-  await clickCell(page, kCell);
-  await expect.poll(() => blocksAt(page, [kCell])).toEqual([1]);
+test("painted voxels survive a reload", async({ map }) => {
+  await map.viewport.pinCamera();
+  await map.viewport.click(kCell);
+  await expect.poll(() => map.world.blocks([kCell])).toEqual([1]);
 
-  await page.reload();
-  await waitForEditor(page);
+  await map.reload();
 
-  await expect.poll(() => blocksAt(page, [kCell])).toEqual([1]);
+  await expect.poll(() => map.world.blocks([kCell])).toEqual([1]);
 });
 
-test("a peer sees edits and appears among the collaborators", async({ page, peer }) => {
+test("a peer sees edits and appears among the collaborators", async({ map, peerMap }) => {
   test.slow();
-  await expect(page.getByRole("button", { name: "Select Peer" })).toBeVisible();
-  await expect(peer.getByRole("button", { name: "Select E2E" })).toBeVisible();
+  await expect(map.collaborator("Peer")).toBeVisible();
+  await expect(peerMap.collaborator("E2E")).toBeVisible();
 
-  await pinCamera(page);
-  await clickCell(page, kCell);
-  await expect.poll(() => blocksAt(peer, [kCell])).toEqual([1]);
+  await map.viewport.pinCamera();
+  await map.viewport.click(kCell);
+  await expect.poll(() => peerMap.world.blocks([kCell])).toEqual([1]);
 
-  await pinCamera(peer);
-  await clickCell(peer, { x: 0, y: 1, z: 0 }, "right");
-  await expect.poll(() => blocksAt(page, [kCell])).toEqual([null]);
+  await peerMap.viewport.pinCamera();
+  await peerMap.viewport.click({ x: 0, y: 1, z: 0 }, "right");
+  await expect.poll(() => map.world.blocks([kCell])).toEqual([null]);
 
-  await peer.context().close();
-  await expect(page.getByRole("button", { name: "Select Peer" })).toBeHidden();
+  await peerMap.page.context().close();
+  await expect(map.collaborator("Peer")).toBeHidden();
 });

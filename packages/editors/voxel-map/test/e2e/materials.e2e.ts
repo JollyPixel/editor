@@ -1,41 +1,16 @@
-// Import Third-party Dependencies
-import type {
-  Locator,
-  Page
-} from "@playwright/test";
-
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 import { DEFAULT_BLOCKSET_ID } from "../../src/boot/defaultSeed.ts";
 
-function materialsPane(
-  page: Page
-): Locator {
-  return page.locator("materials-panel");
-}
-
-function selectedMaterial(
-  pane: Locator
-): Locator {
-  return pane.getByRole("treeitem", { selected: true }).locator(".label");
-}
-
-function materialSquare(
-  scope: Locator,
-  blockId: number
-): Locator {
-  return scope.locator(`block-library-viewport .material[data-block-id="${blockId}"] .swatch`);
-}
-
 function finishOf(
-  page: Page,
+  map: VoxelMapPage,
   groupId: string
 ): Promise<{ roughness: number; swatch: string | null; } | null> {
-  return page.evaluate((id) => {
+  return map.page.evaluate((id) => {
     const group = window.voxelMapEditor!.workspace.mapDocument.materialGroups.get(id);
 
     return group === undefined ?
@@ -48,9 +23,9 @@ function finishOf(
 }
 
 function blocksOf(
-  page: Page
+  map: VoxelMapPage
 ): Promise<{ id: number; name: string; }[]> {
-  return page.evaluate(() => [
+  return map.page.evaluate(() => [
     ...window.voxelMapEditor!.workspace.mapDocument.blocks.getAll()
   ].slice(0, 2).map((block) => {
     return { id: block.id, name: block.name };
@@ -58,64 +33,56 @@ function blocksOf(
 }
 
 function materialOf(
-  page: Page,
+  map: VoxelMapPage,
   blockId: number
 ): Promise<string | undefined> {
-  return page.evaluate(
+  return map.page.evaluate(
     (id) => window.voxelMapEditor!.workspace.mapDocument.blocks.get(id)?.materialGroup,
     blockId
   );
 }
 
-test("a material made in the Materials pane is renamed, applied, recoloured and edited", async({ page }) => {
-  await openPane(page, "Materials");
-  const pane = materialsPane(page);
-  const library = pane.getByRole("listbox", { name: "Blocks" });
-  const [first, second] = await blocksOf(page);
+test("a material made in the Materials pane is renamed, applied, recoloured and edited", async({ map }) => {
+  const { materials } = map;
+  const { library } = materials;
+  await map.panes.open("Materials");
+  const [first, second] = await blocksOf(map);
 
-  await library.getByRole("option", { name: first.name, exact: true }).click();
-  await pane.getByRole("button", { name: "New material" }).click();
-  const rename = pane.getByRole("tree").getByRole("textbox");
-  await rename.fill("Gold");
-  await rename.press("Enter");
+  await library.select(first.name);
+  await materials.create("Gold");
   const goldId = `${DEFAULT_BLOCKSET_ID}/Gold`;
-  await expect.poll(() => finishOf(page, goldId)).not.toBeNull();
-  expect(await materialOf(page, first.id)).toBeUndefined();
+  await expect.poll(() => finishOf(map, goldId)).not.toBeNull();
+  expect(await materialOf(map, first.id)).toBeUndefined();
 
-  await pane.getByRole("button", { name: "Apply to selected block" }).click();
-  await expect.poll(() => materialOf(page, first.id)).toBe(goldId);
+  await materials.applyButton.click();
+  await expect.poll(() => materialOf(map, first.id)).toBe(goldId);
 
-  await library.getByRole("option", { name: second.name, exact: true }).click();
-  await expect(selectedMaterial(pane)).toHaveText("Gold");
-  await pane.getByRole("button", { name: "Apply to selected block" }).click();
-  await expect.poll(() => materialOf(page, second.id)).toBe(goldId);
+  await library.select(second.name);
+  await expect(materials.selected).toHaveText("Gold");
+  await materials.applyButton.click();
+  await expect.poll(() => materialOf(map, second.id)).toBe(goldId);
 
-  const firstSquare = materialSquare(pane, first.id);
+  const firstSquare = library.swatch(first.id);
   await expect(firstSquare).toBeVisible();
-  await expect(materialSquare(pane, second.id))
+  await expect(library.swatch(second.id))
     .toHaveAttribute("style", (await firstSquare.getAttribute("style"))!);
 
-  const color = pane.locator("jolly-color").filter({ hasText: "Color" }).locator("input.hex");
-  await color.fill("#ff0000");
-  await color.press("Enter");
-  await expect.poll(async() => (await finishOf(page, goldId))?.swatch).toBe("#ff0000");
+  await materials.changeColor("#ff0000");
+  await expect.poll(async() => (await finishOf(map, goldId))?.swatch).toBe("#ff0000");
   await expect(firstSquare).toHaveAttribute("style", /background:#ff0000/);
 
-  const roughness = pane.getByRole("textbox", { name: "Roughness value" });
-  await roughness.fill("0");
-  await roughness.press("Enter");
-  await expect.poll(async() => (await finishOf(page, goldId))?.roughness).toBe(0);
+  await materials.changeRoughness(0);
+  await expect.poll(async() => (await finishOf(map, goldId))?.roughness).toBe(0);
 
-  await openPane(page, "Blocks");
-  await expect(materialSquare(page.locator("blocks-panel"), first.id)).toBeVisible();
+  await map.panes.open("Blocks");
+  await expect(map.blocks.library.swatch(first.id)).toBeVisible();
 });
 
-test("the material fields follow the block picked in the library", async({ page }) => {
-  await openPane(page, "Materials");
-  const pane = materialsPane(page);
-  const library = pane.getByRole("listbox", { name: "Blocks" });
-  const [first, second] = await blocksOf(page);
-  await page.evaluate(([firstId, secondId]) => {
+test("the material fields follow the block picked in the library", async({ map }) => {
+  const { materials } = map;
+  await map.panes.open("Materials");
+  const [first, second] = await blocksOf(map);
+  await map.page.evaluate(([firstId, secondId]) => {
     const { blocksets, mapDocument } = window.voxelMapEditor!.workspace;
     for (const [blockId, name] of [[firstId, "Gold"], [secondId, "Silver"]] as const) {
       const block = mapDocument.blocks.get(blockId)!;
@@ -124,18 +91,18 @@ test("the material fields follow the block picked in the library", async({ page 
     }
   }, [first.id, second.id]);
 
-  await library.getByRole("option", { name: first.name, exact: true }).click();
-  await expect(selectedMaterial(pane)).toHaveText("Gold");
-  await library.getByRole("option", { name: second.name, exact: true }).click();
-  await expect(selectedMaterial(pane)).toHaveText("Silver");
-  await expect(pane.getByRole("button", { name: "Remove from selected block" })).toBeVisible();
+  await materials.library.select(first.name);
+  await expect(materials.selected).toHaveText("Gold");
+  await materials.library.select(second.name);
+  await expect(materials.selected).toHaveText("Silver");
+  await expect(materials.removeButton).toBeVisible();
 });
 
-test("the Materials tab is disabled while the map has no blocks", async({ page }) => {
-  const tab = page.getByRole("tab", { name: "Materials", exact: true });
+test("the Materials tab is disabled while the map has no blocks", async({ map }) => {
+  const tab = map.panes.tab("Materials");
   await expect(tab).toBeEnabled();
 
-  await page.evaluate(() => {
+  await map.page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
     for (const block of [...workspace.mapDocument.blocks.getAll()]) {
       workspace.blocksets.removeBlock(block.id);

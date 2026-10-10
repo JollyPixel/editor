@@ -1,23 +1,28 @@
+// Import Third-party Dependencies
+import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
+
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
-import {
-  blockTileCenter,
-  clickTexel,
-  pixelAlpha,
-  setTextureMode,
-  texturePanel,
-  textureState
-} from "./support/texture.ts";
+import type { TextureEditor } from "./support/texture.ts";
 
-test.beforeEach(async({ page }) => {
-  await openPane(page, "Paint");
+function textureState(
+  texture: TextureEditor
+) {
+  return texture.panel.evaluate((element: PixelDrawPanel) => {
+    return {
+      activeTextureId: element.activeTextureId,
+      textureIds: element.textures.map((entry) => entry.id),
+      selectedRegionId: element.canvasManager?.uv.selectedRegionId ?? null
+    };
+  });
+}
+
+test.beforeEach(async({ map }) => {
+  await map.panes.open("Paint");
 });
 
-test("the texture follows the selected block", async({ page }) => {
-  const panel = texturePanel(page);
-
-  await expect.poll(() => textureState(panel)).toEqual({
+test("the texture follows the selected block", async({ map, page }) => {
+  await expect.poll(() => textureState(map.texture)).toEqual({
     activeTextureId: "default",
     textureIds: ["default"],
     selectedRegionId: "block-1"
@@ -27,20 +32,18 @@ test("the texture follows the selected block", async({ page }) => {
     window.voxelMapEditor!.workspace.state.block.id = 5;
   });
 
-  await expect.poll(async() => (await textureState(panel)).selectedRegionId)
+  await expect.poll(async() => (await textureState(map.texture)).selectedRegionId)
     .toBe("block-5");
 });
 
-test("texture edits reach a peer", async({ page, peer }) => {
+test("texture edits reach a peer", async({ map, peerMap }) => {
   test.slow();
-  await openPane(peer, "Paint");
-  const texel = await blockTileCenter(page, 2);
-  const peerPanel = texturePanel(peer);
-  await expect.poll(() => pixelAlpha(peerPanel, texel)).toBe(255);
+  await peerMap.panes.open("Paint");
+  const texel = await map.texture.blockTileCenter(2);
+  await expect.poll(() => peerMap.texture.pixelAlpha(texel)).toBe(255);
 
-  const panel = texturePanel(page);
-  await setTextureMode(panel, "Erase");
-  await clickTexel(panel, texel);
+  await map.texture.selectMode("Erase");
+  await map.texture.clickTexel(texel);
 
-  await expect.poll(() => pixelAlpha(peerPanel, texel)).toBe(0);
+  await expect.poll(() => peerMap.texture.pixelAlpha(texel)).toBe(0);
 });

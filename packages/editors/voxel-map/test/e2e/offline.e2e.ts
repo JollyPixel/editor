@@ -1,35 +1,19 @@
 // Import Third-party Dependencies
 import {
-  expect,
-  test
-} from "@playwright/test";
-import {
   dialog,
-  recordSockets,
-  titledDialog
+  recordSockets
 } from "@jolly-pixel/e2e";
-import {
-  openEditor,
-  waitForEditor
-} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { OFFLINE_EDITOR } from "./support/offline.ts";
-import { openPane } from "./support/panels.ts";
 import {
-  blocksAt,
-  seedVoxels
-} from "./support/scene.ts";
-import {
-  clickTexel,
-  pixelAlpha,
-  setTextureMode,
-  texturePanel
-} from "./support/texture.ts";
+  offlineTest as test,
+  expect
+} from "./fixtures.ts";
+import { VoxelMapPage } from "./support/voxelMap.ts";
 
-test("boots the seeded map from an in-page workspace, without a socket", async({ page }) => {
+test("boots the seeded map from an in-page workspace, without a socket", async({ map, page }) => {
   const sockets = recordSockets(page);
-  await openEditor(page, OFFLINE_EDITOR);
+  await map.openOffline();
 
   const state = await page.evaluate(() => {
     const { workspace, session } = window.voxelMapEditor!;
@@ -58,11 +42,11 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
   expect(sockets).toEqual([]);
 });
 
-test("shares an offline catalog with a second tab", async({ page }) => {
-  await openEditor(page, OFFLINE_EDITOR);
-  const second = await page.context().newPage();
+test("shares an offline catalog with a second tab", async({ map, page }) => {
+  await map.openOffline();
+  const second = new VoxelMapPage(await page.context().newPage());
   try {
-    await openEditor(second, OFFLINE_EDITOR);
+    await second.openOffline();
     const id = await page.evaluate(
       () => window.voxelMapEditor!.session.catalog.create(
         "shared.bin",
@@ -71,16 +55,16 @@ test("shares an offline catalog with a second tab", async({ page }) => {
       )
     );
 
-    await expect.poll(() => second.evaluate(
+    await expect.poll(() => second.page.evaluate(
       (assetId) => window.voxelMapEditor?.session.catalog.record(assetId)?.source,
       id
     )).toBe("shared.bin");
-    expect(await second.evaluate(
+    expect(await second.page.evaluate(
       () => window.voxelMapEditor?.session.workspace?.persistent
     )).toBe(true);
   }
   finally {
-    await second.close();
+    await second.page.close();
   }
 });
 
@@ -107,16 +91,14 @@ test("offers an offline workspace when the socket is unreachable", async({ page 
   )).toBe(true);
 });
 
-test("keeps offline map and texture edits across a reload", async({ page }) => {
+test("keeps offline map and texture edits across a reload", async({ map, page }) => {
   test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await openEditor(page, OFFLINE_EDITOR);
-  await openPane(page, "Blocks");
-  await page.getByRole("button", { name: "Add block", exact: true }).click();
-  await titledDialog(page, "New Block")
-    .getByRole("button", { name: "Create" })
-    .click();
+  await map.openOffline();
+  await map.panes.open("Blocks");
+  await map.blocks.library.addButton.click();
+  await map.blockDialog("New Block").createButton.click();
 
   const before = await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
@@ -132,27 +114,25 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
     };
   });
 
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
   await expect.poll(() => page.evaluate(
     (mapId) => window.voxelMapEditor!.session.catalog.record(mapId)!.revision,
     before.mapId
   ), { timeout: 10_000 }).not.toBe(before.map);
 
-  await openPane(page, "Paint");
-  const panel = texturePanel(page);
+  await map.panes.open("Paint");
   const texel = { x: 16, y: 16 };
-  await expect.poll(() => pixelAlpha(panel, texel)).toBe(0);
-  await setTextureMode(panel, "Paint");
-  await clickTexel(panel, texel);
-  await expect.poll(() => pixelAlpha(panel, texel)).toBe(255);
+  await expect.poll(() => map.texture.pixelAlpha(texel)).toBe(0);
+  await map.texture.selectMode("Paint");
+  await map.texture.clickTexel(texel);
+  await expect.poll(() => map.texture.pixelAlpha(texel)).toBe(255);
   await expect.poll(() => page.evaluate(
     (textureId) => window.voxelMapEditor!.session.catalog
       .record(textureId)!.revision,
     before.textureId
   )).not.toBe(before.texture);
 
-  await page.reload();
-  await waitForEditor(page);
+  await map.reload();
   expect(await page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
 
@@ -164,9 +144,9 @@ test("keeps offline map and texture edits across a reload", async({ page }) => {
     mapId: before.mapId,
     textureId: before.textureId
   });
-  expect(await blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
-  await openPane(page, "Paint");
-  await expect.poll(() => pixelAlpha(texturePanel(page), texel)).toBe(255);
+  expect(await map.world.blocks([{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+  await map.panes.open("Paint");
+  await expect.poll(() => map.texture.pixelAlpha(texel)).toBe(255);
 
   await page.evaluate(() => window.voxelMapEditor!.dispose());
   expect(errors).toEqual([]);
