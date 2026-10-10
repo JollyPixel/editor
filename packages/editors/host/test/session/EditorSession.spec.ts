@@ -493,6 +493,7 @@ describe("EditorSession archives", () => {
           assign: () => undefined,
           reload: () => undefined
         },
+        pickArchive: () => Promise.resolve(null),
         save: (_blob, fileName) => {
           saved.push(fileName);
         },

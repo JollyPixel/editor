@@ -67,7 +67,7 @@ export class GeneralPanel extends WorkspaceElement {
 
       <jolly-folder
         key="map-config"
-        label="Map Config"
+        label="View"
         storage-key="voxel-map:folder:map-config"
       >
         <map-config-panel .workspace=${workspace}></map-config-panel>

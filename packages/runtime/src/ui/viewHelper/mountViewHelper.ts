@@ -7,21 +7,10 @@ import type { Systems } from "@jolly-pixel/engine";
 import {
   resolveOverlayAlignment
 } from "../overlay/resolveOverlayAnchor.ts";
-
-// CONSTANTS
-const kDefaultPosition = "bottom-right";
-const kDefaultInset = 0;
-
-export type ViewHelperPosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
-
-export interface ViewHelperOptions {
-  position?: ViewHelperPosition;
-  inset?: number;
-}
+import type {
+  ViewHelperPosition,
+  ViewHelperSettings
+} from "./ViewHelperSettings.ts";
 
 export interface MountedViewHelper {
   dispose(): void;
@@ -42,11 +31,11 @@ export interface ViewHelperHost extends Pick<
 
 export function mountViewHelper(
   renderer: ViewHelperHost,
-  options: ViewHelperOptions = {}
+  settings: Pick<ViewHelperSettings, "position" | "inset" | "hidden">
 ): MountedViewHelper {
   const location = resolveViewHelperLocation(
-    options.position ?? kDefaultPosition,
-    options.inset ?? kDefaultInset
+    settings.position,
+    settings.inset
   );
 
   let helper: ViewHelper | null = null;
@@ -61,6 +50,10 @@ export function mountViewHelper(
   function draw(
     event: { source: THREE.WebGPURenderer; }
   ): void {
+    if (settings.hidden) {
+      return;
+    }
+
     const camera = findViewHelperCamera(renderer.renderComponents);
     if (camera !== trackedCamera) {
       releaseHelper();

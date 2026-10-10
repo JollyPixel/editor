@@ -14,9 +14,13 @@ import type { Systems } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import {
   mountViewHelper,
-  type ViewHelperHost,
-  type ViewHelperPosition
+  type ViewHelperHost
 } from "../../../src/ui/viewHelper/mountViewHelper.ts";
+import {
+  ViewHelperSettings,
+  type ViewHelperOptions,
+  type ViewHelperPosition
+} from "../../../src/ui/viewHelper/ViewHelperSettings.ts";
 
 // CONSTANTS
 const kLocations: Array<[ViewHelperPosition, HelperLocation]> = [
@@ -81,7 +85,7 @@ before(() => {
 describe("mountViewHelper", () => {
   test("renders nothing while no camera is registered", () => {
     const renderer = new FakeRenderer();
-    const mounted = mountViewHelper(renderer);
+    const mounted = mountViewHelper(renderer, createSettings());
 
     renderer.draw();
     mounted.dispose();
@@ -93,7 +97,7 @@ describe("mountViewHelper", () => {
     const renderer = new FakeRenderer();
     const main = createRenderComponent(0);
     renderer.renderComponents.push(createRenderComponent(5), main);
-    const mounted = mountViewHelper(renderer);
+    const mounted = mountViewHelper(renderer, createSettings());
 
     renderer.draw();
     mounted.dispose();
@@ -106,7 +110,7 @@ describe("mountViewHelper", () => {
     const renderer = new FakeRenderer();
     const first = createRenderComponent(0);
     renderer.renderComponents.push(first, createRenderComponent(0));
-    const mounted = mountViewHelper(renderer);
+    const mounted = mountViewHelper(renderer, createSettings());
 
     renderer.draw();
     mounted.dispose();
@@ -118,10 +122,10 @@ describe("mountViewHelper", () => {
     test(`anchors a ${position} helper with the inset`, () => {
       const renderer = new FakeRenderer();
       renderer.renderComponents.push(createRenderComponent(0));
-      const mounted = mountViewHelper(renderer, {
+      const mounted = mountViewHelper(renderer, createSettings({
         position,
         inset: 12
-      });
+      }));
 
       renderer.draw();
       mounted.dispose();
@@ -133,7 +137,7 @@ describe("mountViewHelper", () => {
   test("rebinds to a new lowest-depth camera", () => {
     const renderer = new FakeRenderer();
     renderer.renderComponents.push(createRenderComponent(0));
-    const mounted = mountViewHelper(renderer);
+    const mounted = mountViewHelper(renderer, createSettings());
 
     renderer.draw();
     const replacement = createRenderComponent(-1);
@@ -146,10 +150,32 @@ describe("mountViewHelper", () => {
     assert.equal(second.camera, replacement.threeCamera);
   });
 
+  test("skips drawing while hidden and requests a frame on each change", () => {
+    const renderer = new FakeRenderer();
+    renderer.renderComponents.push(createRenderComponent(0));
+    let invalidations = 0;
+    const settings = createSettings({}, () => {
+      invalidations++;
+    });
+    const mounted = mountViewHelper(renderer, settings);
+
+    settings.hidden = true;
+    settings.hidden = true;
+    renderer.draw();
+    assert.equal(renderer.source.renders.length, 0);
+
+    settings.hidden = false;
+    renderer.draw();
+    mounted.dispose();
+
+    assert.equal(renderer.source.renders.length, 1);
+    assert.equal(invalidations, 2);
+  });
+
   test("stops rendering once disposed", () => {
     const renderer = new FakeRenderer();
     renderer.renderComponents.push(createRenderComponent(0));
-    const mounted = mountViewHelper(renderer);
+    const mounted = mountViewHelper(renderer, createSettings());
 
     mounted.dispose();
     renderer.draw();
@@ -213,6 +239,13 @@ class FakeRenderer implements ViewHelperHost {
       });
     }
   }
+}
+
+function createSettings(
+  options: ViewHelperOptions = {},
+  invalidate: () => void = () => undefined
+): ViewHelperSettings {
+  return new ViewHelperSettings(options, invalidate);
 }
 
 function createRenderComponent(

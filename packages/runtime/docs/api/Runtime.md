@@ -62,6 +62,8 @@ fails to initialize.
 | `manager` | `THREE.LoadingManager` | Shared by every asset loader. |
 | `stats` | [`StatsRecorder`](../../../ui/docs/api/stats/stats-recorder.md) | Times every frame, with or without a HUD. |
 | `metrics` | [`RuntimeMetrics`](./RuntimeMetrics.md) | Metric registry and readout panel. |
+| `statsHud` | `PerformanceStatsHud \| null` | The corner HUD, or `null` when `includePerformanceStats` mounts none. Set its `hidden` to hide it without unmounting. |
+| `viewHelper` | `ViewHelperSettings \| null` | The axis gizmo's resolved `position` and `inset`, or `null` without the `viewHelper` option. Setting its `hidden` requests a frame and lasts across `stop()` and `start()`. |
 | `running` | `boolean` | `true` between `start()` and `stop()`. |
 | `renderOnDemand` | `boolean` | The option's value. |
 | `idle` | `boolean` | `true` while on-demand rendering sleeps. |

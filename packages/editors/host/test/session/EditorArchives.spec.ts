@@ -21,6 +21,7 @@ import {
   type EditorArchiveTarget
 } from "#src/session/EditorArchives.ts";
 import { ArchiveRootError } from "#src/session/errors/ArchiveRootError.ts";
+import { ArchiveImportDisabledError } from "#src/session/errors/ArchiveImportDisabledError.ts";
 import type {
   SessionArchive,
   SessionArchiveImportOptions
@@ -61,11 +62,13 @@ interface FakeBrowser extends EditorArchiveBrowser {
   confirmed: string[];
   assigned: string[];
   reloads: number;
+  picks: number;
 }
 
 interface FakeBrowserOptions {
   policy?: ImportConflictPolicy | null;
   confirm?: boolean;
+  picked?: Blob | null;
 }
 
 function createArchive(
@@ -120,7 +123,8 @@ function createBrowser(
 ): FakeBrowser {
   const {
     policy = "replace",
-    confirm = true
+    confirm = true,
+    picked = new Blob(["zip"])
   } = options;
 
   const browser: FakeBrowser = {
@@ -129,6 +133,7 @@ function createBrowser(
     confirmed: [],
     assigned: [],
     reloads: 0,
+    picks: 0,
     location: {
       href: "http://localhost:5173/?target=model-1&room=a",
       assign(url) {
@@ -137,6 +142,11 @@ function createBrowser(
       reload() {
         browser.reloads++;
       }
+    },
+    pickArchive() {
+      browser.picks++;
+
+      return Promise.resolve(picked);
     },
     save(blob, fileName) {
       browser.saved.push({
@@ -300,6 +310,47 @@ describe("EditorArchives", () => {
 
       await assert.rejects(archives.importFile(new Blob()), ArchiveRootError);
       assert.deepEqual(archive.imported, []);
+    });
+  });
+
+  describe("pickAndImport", () => {
+    test("imports the picked archive, then opens the root", async() => {
+      const archive = createArchive();
+      const browser = createBrowser();
+      const archives = createArchives({ archive, browser });
+
+      await archives.pickAndImport();
+
+      assert.equal(browser.picks, 1);
+      assert.deepEqual(archive.imported, [{ onConflict: "keep" }]);
+      assert.deepEqual(browser.assigned, [
+        "http://localhost:5173/?target=model-2&room=a"
+      ]);
+    });
+
+    test("does nothing when the pick is cancelled", async() => {
+      const archive = createArchive();
+      const browser = createBrowser({ picked: null });
+      const archives = createArchives({ archive, browser });
+
+      await archives.pickAndImport();
+
+      assert.deepEqual(archive.imported, []);
+      assert.deepEqual(browser.assigned, []);
+    });
+
+    test("refuses before opening the picker when importing is disabled", async() => {
+      const browser = createBrowser();
+      const archives = createArchives({
+        archive: createArchive({ canImport: false }),
+        browser
+      });
+
+      await assert.rejects(
+        archives.pickAndImport(),
+        ArchiveImportDisabledError
+      );
+      assert.equal(browser.picks, 0);
     });
   });
 

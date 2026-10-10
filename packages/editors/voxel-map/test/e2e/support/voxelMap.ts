@@ -9,13 +9,13 @@ import {
 } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
+import { Archives } from "./archives.ts";
 import {
   BlockDialog,
   BlocksPane
 } from "./blocks.ts";
 import { Brush } from "./brush.ts";
 import { PaneDock } from "./dock.ts";
-import { GeneralPane } from "./general.ts";
 import { LayersPane } from "./layers.ts";
 import { MaterialsPane } from "./materials.ts";
 import { Placement } from "./placement.ts";
@@ -43,7 +43,7 @@ export class VoxelMapPage {
   readonly placement: Placement;
   readonly toolbar: EditToolbar;
   readonly panes: PaneDock;
-  readonly general: GeneralPane;
+  readonly archives: Archives;
   readonly blocks: BlocksPane;
   readonly materials: MaterialsPane;
   readonly texture: TextureEditor;
@@ -61,7 +61,7 @@ export class VoxelMapPage {
     this.placement = new Placement(page);
     this.toolbar = new EditToolbar(page);
     this.panes = new PaneDock(page);
-    this.general = new GeneralPane(page);
+    this.archives = new Archives(page);
     this.blocks = new BlocksPane(page);
     this.materials = new MaterialsPane(page);
     this.texture = new TextureEditor(page);

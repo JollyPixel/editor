@@ -34,6 +34,7 @@ export interface PerformanceStatsPlacement {
 
 export class PerformanceStatsHud {
   #host: PerformanceStatsHost;
+  #frame: HTMLElement;
   #badge: HTMLElement;
   #mounted: MountedOverlay;
   #unsubscribers: Array<() => void>;
@@ -96,6 +97,7 @@ export class PerformanceStatsHud {
     });
 
     const frame = document.createElement("div");
+    this.#frame = frame;
     Object.assign(frame.style, {
       position: "relative",
       boxSizing: "border-box",
@@ -126,6 +128,16 @@ export class PerformanceStatsHud {
       ...placement,
       interactive: true
     });
+  }
+
+  get hidden(): boolean {
+    return this.#frame.hidden !== false;
+  }
+
+  set hidden(
+    value: boolean
+  ) {
+    this.#frame.hidden = value;
   }
 
   dispose(): void {

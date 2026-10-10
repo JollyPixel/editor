@@ -35,19 +35,17 @@ test("exports the map, resets the workspace and imports it back", async({ map, p
 
   await map.openOffline();
   const exported = await offlineIds(map);
-  await map.panes.open("General");
 
-  const download = await map.general.exportArchive();
+  const download = await map.archives.exportArchive();
   expect(download.suggestedFilename()).toBe("overworld.zip");
   const archivePath = await download.path();
 
-  await map.general.resetWorkspace();
+  await map.archives.resetWorkspace();
 
   const reseeded = await offlineIds(map);
   expect(reseeded.mapId).not.toBe(exported.mapId);
 
-  await map.panes.open("General");
-  await map.general.importArchive(archivePath);
+  await map.archives.importArchive(archivePath);
   await page.waitForURL(new RegExp(`target=${exported.mapId}`));
   await waitForEditor(page);
 
@@ -71,11 +69,10 @@ test("imports a map and its blockset as a copy", async({ map, page }) => {
   test.setTimeout(90_000);
   await map.openOffline();
   const original = await offlineIds(map);
-  await map.panes.open("General");
 
-  const download = await map.general.exportArchive();
-  await map.general.importArchive(await download.path());
-  await map.general.importCopyButton.click();
+  const download = await map.archives.exportArchive();
+  await map.archives.importArchive(await download.path());
+  await map.archives.importCopyButton.click();
   await page.waitForURL((url) => {
     const target = url.searchParams.get("target");
 

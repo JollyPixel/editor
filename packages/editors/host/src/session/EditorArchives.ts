@@ -11,13 +11,30 @@ import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource
 import type { SessionArchive } from "./SessionArchive.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 import { ArchiveRootError } from "./errors/ArchiveRootError.ts";
+import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
 import { askImportConflictPolicy } from "./askImportConflictPolicy.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
+const kArchiveAccept = ".zip,application/zip";
 const kDomArchiveBrowser: EditorArchiveBrowser = {
   get location() {
     return globalThis.location;
+  },
+  pickArchive() {
+    const { promise, resolve } = Promise.withResolvers<Blob | null>();
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = kArchiveAccept;
+    input.addEventListener("change", () => {
+      resolve(input.files?.[0] ?? null);
+    }, { once: true });
+    input.addEventListener("cancel", () => {
+      resolve(null);
+    }, { once: true });
+    input.click();
+
+    return promise;
   },
   save(blob, fileName) {
     const url = URL.createObjectURL(blob);
@@ -48,6 +65,7 @@ export interface EditorArchiveTarget {
  */
 export interface EditorArchiveBrowser {
   readonly location: Pick<Location, "href" | "assign" | "reload">;
+  pickArchive(): Promise<Blob | null>;
   save(
     blob: Blob,
     fileName: string
@@ -149,6 +167,17 @@ export class EditorArchives {
     const url = new URL(location.href);
     url.searchParams.set(LAUNCH_QUERY_PARAM, root.id);
     location.assign(url.toString());
+  }
+
+  async pickAndImport(): Promise<void> {
+    if (!this.canImport) {
+      throw new ArchiveImportDisabledError();
+    }
+
+    const file = await this.#browser.pickArchive();
+    if (file !== null) {
+      await this.importFile(file);
+    }
   }
 
   async reset(): Promise<void> {

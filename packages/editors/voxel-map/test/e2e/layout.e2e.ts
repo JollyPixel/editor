@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
+import type { CommandConsole } from "@jolly-pixel/e2e";
 import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
@@ -12,7 +13,6 @@ import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kPerformancePane = "performance";
-const kPerformanceToggleKey = "F3";
 
 function textureView(
   map: VoxelMapPage
@@ -65,6 +65,14 @@ async function performanceReadout(
   await expect(readout).toBeAttached();
 
   return readout;
+}
+
+async function toggleReadout(
+  commands: CommandConsole,
+  visible: boolean
+): Promise<void> {
+  await commands.submit(`runtime.metrics ${visible}`);
+  await commands.close();
 }
 
 function leftGroups(
@@ -148,9 +156,9 @@ test("the Materials pane shows its block library only while Blocks is not on scr
   await expect(materialsLibrary).toBeVisible();
 });
 
-test("the performance readout merges into the pane group it is dropped on", async({ map, page }) => {
+test("the performance readout merges into the pane group it is dropped on", async({ map, commands }) => {
   const readout = await performanceReadout(map);
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 
   await map.panes.movePane(readout, "General");
@@ -160,9 +168,9 @@ test("the performance readout merges into the pane group it is dropped on", asyn
   ]);
 });
 
-test("the performance toggle key still toggles the readout once docked", async({ map, page }) => {
+test("runtime.metrics still toggles the readout once docked", async({ map, commands }) => {
   const readout = await performanceReadout(map);
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 
   await map.panes.movePane(readout, "General");
@@ -170,8 +178,8 @@ test("the performance toggle key still toggles the readout once docked", async({
     map.panes.dock("left").locator(`jolly-pane[key='${kPerformancePane}']`)
   ).toBeVisible();
 
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, false);
   await expect(readout).toBeHidden();
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 });

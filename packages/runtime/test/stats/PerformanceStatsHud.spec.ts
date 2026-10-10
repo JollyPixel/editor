@@ -73,6 +73,28 @@ describe("PerformanceStatsHud", () => {
     }
   });
 
+  test("hidden hides the mounted HUD until shown again", async() => {
+    const { host, dispose } = createHost(0);
+    const hud = await PerformanceStatsHud.mount(host, true);
+    assert.ok(hud);
+    const frame = queryBadge(host).parentElement!;
+
+    try {
+      assert.equal(hud.hidden, false);
+
+      hud.hidden = true;
+      assert.equal(frame.hidden, true);
+      assert.equal(host.overlay.element.contains(frame), true);
+
+      hud.hidden = false;
+      assert.equal(frame.hidden, false);
+    }
+    finally {
+      hud.dispose();
+      dispose();
+    }
+  });
+
   test("dispose() unmounts the HUD and stops following the loop", async() => {
     const { host, source, dispose } = createHost(1);
     host.loop.start();
