@@ -31,7 +31,8 @@ describe("textureAssetKind", () => {
       "a.jpeg",
       "a.webp",
       "a.gif",
-      "a.bmp"
+      "a.bmp",
+      "a.ktx2"
     ]) {
       assert.strictEqual(
         registry.resolve(path).kind,
@@ -59,6 +60,7 @@ describe("textureAssetKind", () => {
 
   test("declares the content type of each image extension", () => {
     assert.strictEqual(textureAssetKind().extensions[".jpg"], "image/jpeg");
+    assert.strictEqual(textureAssetKind().extensions[".ktx2"], "image/ktx2");
   });
 
   test("stores the bytes verbatim", async() => {

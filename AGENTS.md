@@ -29,6 +29,8 @@
 - After changing a workspace, rebuild it with `pnpm run build` before
   validating consuming workspaces so they load the updated `dist/` output.
 - Run the relevant package tests, `pnpm run typecheck`, and `pnpm run lint`.
+- After changing Markdown under `packages/**`, run `pnpm run docs:build`; it
+  fails on dead links, including links to a folder instead of a page.
 
 ## Package routing
 

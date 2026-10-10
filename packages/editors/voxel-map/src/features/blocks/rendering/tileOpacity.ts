@@ -18,11 +18,13 @@ export interface TexelSquare {
   size: number;
 }
 
-export type ImagePixelReader = (image: AtlasImage) => PixelBuffer | null;
+export type ImagePixelReader = (
+  image: AtlasTexture["image"]
+) => PixelBuffer | null;
 
 interface ProbeCache {
   version: number;
-  image: AtlasImage;
+  image: AtlasTexture["image"];
   pixels: PixelBuffer | null | undefined;
   empty: Map<string, boolean>;
 }
@@ -50,8 +52,12 @@ function hasVisiblePixel(
 }
 
 export function readImagePixels(
-  image: AtlasImage
+  image: AtlasTexture["image"]
 ): PixelBuffer | null {
+  if (!isAtlasImage(image)) {
+    return null;
+  }
+
   const isImage = "naturalWidth" in image;
   if (isImage && !image.complete) {
     return null;
@@ -82,6 +88,13 @@ export function readImagePixels(
   catch {
     return null;
   }
+}
+
+function isAtlasImage(
+  image: AtlasTexture["image"]
+): image is AtlasImage {
+  return image instanceof HTMLImageElement ||
+    image instanceof HTMLCanvasElement;
 }
 
 export class TileOpacityProbe {

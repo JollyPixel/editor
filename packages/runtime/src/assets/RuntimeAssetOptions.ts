@@ -11,6 +11,15 @@ export type RuntimeAssetCatalog = AssetCatalog | string | URL;
 export interface RuntimeAssetOptions {
   readonly catalog?: RuntimeAssetCatalog;
   readonly loaders?: Iterable<RuntimeAssetLoaderDefinition>;
+  readonly ktx2?: RuntimeKTX2Options;
+}
+
+export interface RuntimeKTX2Options {
+  /**
+   * URL of the directory serving `basis_transcoder.js` and
+   * `basis_transcoder.wasm`, copied from `three/examples/jsm/libs/basis/`.
+   */
+  readonly transcoderPath: string;
 }
 
 export interface RuntimeAssetLoaderDefinition<

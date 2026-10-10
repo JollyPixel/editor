@@ -31,5 +31,6 @@ export type {
 export type {
   RuntimeAssetCatalog,
   RuntimeAssetLoaderDefinition,
-  RuntimeAssetOptions
+  RuntimeAssetOptions,
+  RuntimeKTX2Options
 } from "./assets/RuntimeAssetOptions.ts";

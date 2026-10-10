@@ -245,7 +245,7 @@ Its state is the file's bytes, exactly like `binary`, and it has no
 `commands`, so texture assets get no editing room. The kind exists to
 name the record: `AssetCatalog.resolve()` rejects a record whose kind does not
 match its reference, and nothing on the browser side loads `binary`. It claims
-`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif` and `.bmp`; pass `match` to narrow
+`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.bmp` and `.ktx2`; pass `match` to narrow
 that claim, for example to `["textures/**"]`.
 
 ## Kinds shipped by other packages
