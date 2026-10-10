@@ -15,6 +15,7 @@ export abstract class InteractionMode {
   readonly writesPixels: boolean = false;
   readonly pansOnPrimary: boolean = false;
 
+  onEnter(): void {}
   onExit(): void {}
 
   cursor(): string {

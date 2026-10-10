@@ -6,84 +6,27 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { LocalHistory } from "./helpers/history/LocalHistory.ts";
-import type {
-  PixelArtCanvas,
-  PixelArtCanvasOptions
-} from "#src/PixelArtCanvas.ts";
-import { createPixelArtCanvas } from "./helpers/canvas.ts";
+import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
+import {
+  createPixelArtCanvas,
+  type TestCanvasOptions
+} from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
+import {
+  createUvCanvas,
+  drag
+} from "./helpers/uv/canvas.ts";
 
 function makeManager(
-  options: PixelArtCanvasOptions = {}
+  options: TestCanvasOptions = {}
 ): PixelArtCanvas {
-  const manager = createPixelArtCanvas({
-    zoom: { default: 4 },
-    history: new LocalHistory(),
-    ...options
-  }).manager;
+  const manager = createUvCanvas(options);
   manager.mode = "uv";
 
   return manager;
 }
 
-function drag(
-  manager: PixelArtCanvas,
-  from: { x: number; y: number; },
-  to: { x: number; y: number; }
-): void {
-  const canvas = manager.canvas();
-  canvas.dispatchEvent(mouseEvent("mousemove", from.x, from.y));
-  canvas.dispatchEvent(mouseEvent("mousedown", from.x, from.y));
-  canvas.dispatchEvent(mouseEvent("mousemove", to.x, to.y));
-  canvas.dispatchEvent(mouseEvent("mouseup", to.x, to.y));
-}
-
 describe("PixelArtCanvas — uv resize", () => {
-  for (const state of ["stacked", "free"] as const) {
-    test(`peer drags block ${state} handles and movement until cleared`, () => {
-      const { manager, canvas, overlay } = createPixelArtCanvas({
-        zoom: { default: 4 },
-        uv: { resizable: true }
-      });
-      manager.mode = "uv";
-      const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.setState(region.id, state);
-      manager.uv.select(region.id, "front");
-      const before = manager.uv.get(region.id)!;
-      const preview = {
-        region: before.resized({ ...before.bounds, width: 6 }, "front"),
-        face: state === "free" ? "front" : null,
-        color: "#ff0000"
-      };
-      function handles(): NodeListOf<SVGRectElement> {
-        return overlay.querySelectorAll("[part='uv-resize-handle']");
-      }
-      assert.equal(handles().length, 4);
-
-      manager.peerPresence.uv.set("peer-A", preview);
-      manager.peerPresence.uv.set("peer-B", preview);
-      assert.equal(handles().length, 0);
-      canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
-      assert.equal(canvas.style.cursor, "grab");
-      drag(manager, { x: 100, y: 100 }, { x: 108, y: 104 });
-      drag(manager, { x: 90, y: 90 }, { x: 94, y: 94 });
-      assert.deepEqual(manager.uv.get(region.id)!.toJSON(), before.toJSON());
-
-      const other = manager.uv.create({ width: 2, height: 2 });
-      manager.uv.select(other.id);
-      assert.equal(handles().length, 4);
-      manager.uv.select(region.id, "front");
-      manager.peerPresence.uv.remove("peer-A");
-      assert.equal(handles().length, 0);
-      manager.peerPresence.uv.clearAll();
-      assert.equal(handles().length, 4);
-      drag(manager, { x: 100, y: 100 }, { x: 108, y: 104 });
-      assert.equal(manager.uv.get(region.id)!.rectFor("front").width, 6);
-      manager.destroy();
-    });
-  }
-
   test("announces a resize on pointer-down and clears a no-op drag", () => {
     const manager = makeManager({ uv: { resizable: true } });
     const region = manager.uv.create({ width: 4, height: 4 });

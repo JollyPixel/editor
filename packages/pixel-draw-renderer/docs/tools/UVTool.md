@@ -24,7 +24,7 @@ get resizable(): boolean
 set resizable(value: boolean)
 ```
 
-Shows handles on the selected region and lets them resize it. It starts from [`uv.resizable`](../PixelArtCanvasOptions.md#uvresizable), which defaults to `false`. Turning it off cancels a resize in progress.
+Shows handles on the selected region in UV mode and lets them resize it. Other modes hide them. It starts from [`uv.resizable`](../PixelArtCanvasOptions.md#uvresizable), which defaults to `false`. Turning it off cancels a resize in progress.
 
 Handles follow the region state, as [`UVRegion.resized()`](../uv/UVRegion.md#resizedrect-slot-options) describes:
 

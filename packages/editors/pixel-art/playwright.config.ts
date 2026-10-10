@@ -6,5 +6,6 @@ import {
 
 export default defineE2EConfig({
   port: PORTS.pixelArt,
-  command: "pnpm run dev:e2e"
+  command: "pnpm run dev:e2e",
+  localWorkers: "50%"
 });
