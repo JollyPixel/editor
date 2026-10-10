@@ -4,6 +4,9 @@ import type {
   PixelArtCanvasOptions
 } from "@jolly-pixel/pixel-draw.renderer";
 
+// Import Internal Dependencies
+import type { PixelArtAccess } from "../access/PixelArtAccess.ts";
+
 export interface PixelDrawTextureOptions extends PixelArtCanvasOptions {
   /**
    * Unique key of the texture inside the panel, reported by every texture event.
@@ -30,6 +33,11 @@ export interface PixelDrawTextureOptions extends PixelArtCanvasOptions {
    * @default false
    */
   disabled?: boolean;
+  /**
+   * What the user may change in this texture.
+   * @default PixelArtAccess.full
+   */
+  access?: PixelArtAccess;
 }
 
 export interface TextureUpdate {
@@ -45,6 +53,10 @@ export interface TextureUpdate {
    * New tab badge, an empty string removes it. Left unchanged when omitted.
    */
   badge?: string;
+  /**
+   * New access, applied to the canvas at once. Left unchanged when omitted.
+   */
+  access?: PixelArtAccess;
 }
 
 export interface TextureEntryInit {
@@ -53,6 +65,7 @@ export interface TextureEntryInit {
   tooltip: string;
   badge: string;
   disabled: boolean;
+  access: PixelArtAccess;
   host: HTMLDivElement;
   canvas: PixelArtCanvas;
 }
@@ -65,6 +78,7 @@ export class TextureEntry {
   name: string;
   tooltip: string;
   badge: string;
+  access: PixelArtAccess;
 
   constructor(
     init: TextureEntryInit
@@ -74,6 +88,7 @@ export class TextureEntry {
     this.tooltip = init.tooltip;
     this.badge = init.badge;
     this.disabled = init.disabled;
+    this.access = init.access;
     this.host = init.host;
     this.canvas = init.canvas;
   }
@@ -84,6 +99,7 @@ export class TextureEntry {
     this.name = changes.name ?? this.name;
     this.tooltip = changes.tooltip ?? this.tooltip;
     this.badge = changes.badge ?? this.badge;
+    this.access = changes.access ?? this.access;
   }
 
   destroy(): void {

@@ -227,3 +227,46 @@ describe("PixelArtCanvas texture view", () => {
     assert.equal(manager.mode, "move");
   });
 });
+
+describe("PixelArtCanvas pixel lock", () => {
+  test("refuses the pixel-writing modes and restores the displaced one", () => {
+    const manager = createCanvas();
+    manager.mode = "fill";
+
+    manager.pixelsLocked = true;
+
+    assert.equal(manager.pixelsReadOnly, true);
+    assert.equal(manager.mode, "move");
+    manager.mode = "paint";
+    assert.equal(manager.mode, "move");
+
+    manager.pixelsLocked = false;
+
+    assert.equal(manager.pixelsReadOnly, false);
+    assert.equal(manager.mode, "fill");
+  });
+
+  test("keeps pixels read-only when the normal view closes", () => {
+    const manager = createCanvas();
+    manager.pixelsLocked = true;
+    manager.textureView = "normal";
+
+    manager.textureView = "albedo";
+
+    assert.equal(manager.pixelsReadOnly, true);
+    manager.mode = "paint";
+    assert.equal(manager.mode, "move");
+  });
+
+  test("unlocking in the normal view keeps pixels read-only", () => {
+    const manager = createCanvas();
+    manager.textureView = "normal";
+    manager.pixelsLocked = true;
+
+    manager.pixelsLocked = false;
+
+    assert.equal(manager.pixelsReadOnly, true);
+    manager.textureView = "albedo";
+    assert.equal(manager.pixelsReadOnly, false);
+  });
+});

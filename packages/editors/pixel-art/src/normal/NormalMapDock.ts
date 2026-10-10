@@ -117,6 +117,9 @@ export class NormalMapDock extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare open: boolean;
 
+  @property({ type: Boolean })
+  declare locked: boolean;
+
   readonly #document = new NormalMapDocumentController(
     this,
     () => this.pixelDocument
@@ -171,6 +174,7 @@ export class NormalMapDock extends LitElement {
     super();
     this.pixelDocument = null;
     this.open = false;
+    this.locked = false;
   }
 
   override shouldUpdate(): boolean {
@@ -221,7 +225,7 @@ export class NormalMapDock extends LitElement {
         data-setting=${key}
       >
         ${control}
-        ${overridden ?
+        ${overridden && !this.locked ?
           html`
             <button
               class="reset"
@@ -247,6 +251,7 @@ export class NormalMapDock extends LitElement {
       <div class="fields">
         ${this.#renderSetting(target, "height", html`
           <jolly-select
+            ?readonly=${this.locked}
             align="end"
             label-position="auto"
             label="Height"
@@ -258,6 +263,7 @@ export class NormalMapDock extends LitElement {
         `)}
         ${this.#renderSetting(target, "invert", html`
           <jolly-checkbox
+            ?readonly=${this.locked}
             align="end"
             label-position="auto"
             label="Invert"
@@ -268,6 +274,7 @@ export class NormalMapDock extends LitElement {
         `)}
         ${this.#renderSetting(target, "strength", html`
           <jolly-slider
+            ?readonly=${this.locked}
             label-position="auto"
             label="Strength"
             min="0"
@@ -281,6 +288,7 @@ export class NormalMapDock extends LitElement {
         `)}
         ${this.#renderSetting(target, "border", html`
           <jolly-select
+            ?readonly=${this.locked}
             align="end"
             label-position="auto"
             label="Border"
@@ -293,6 +301,7 @@ export class NormalMapDock extends LitElement {
         ${bevelUsed ? this.#renderSetting(target, "bevel", html`
           <div class="group">
             <jolly-slider
+              ?readonly=${this.locked}
               label-position="auto"
               label="Bevel width"
               min="1"
@@ -304,6 +313,7 @@ export class NormalMapDock extends LitElement {
               @jolly-change=${this.#bevelWidth.commit}
             ></jolly-slider>
             <jolly-select
+              ?readonly=${this.locked}
               align="end"
               label-position="auto"
               label="Bevel profile"
@@ -316,6 +326,7 @@ export class NormalMapDock extends LitElement {
         `) : nothing}
         ${this.#renderSetting(target, "edgeIntensity", html`
           <jolly-slider
+            ?readonly=${this.locked}
             label-position="auto"
             label="Edge intensity"
             min="0"
@@ -329,6 +340,7 @@ export class NormalMapDock extends LitElement {
         `)}
         ${this.#renderSetting(target, "levels", html`
           <jolly-select
+            ?readonly=${this.locked}
             align="end"
             label-position="auto"
             label="Levels"
@@ -386,6 +398,7 @@ export class NormalMapDock extends LitElement {
     return html`
       <h3 class="target" part="normal-map-target">${row?.name ?? zone.regionId}</h3>
       <jolly-checkbox
+        ?readonly=${this.locked}
         align="end"
         label="Off for this UV"
         .value=${this.#off.value}
@@ -423,13 +436,15 @@ export class NormalMapDock extends LitElement {
           <span class="zone-name">${name}</span>
           ${zone.settings === "off" ? html`<span class="tag">Off</span>` : nothing}
         </button>
-        <button
-          class="zone-delete"
-          part="normal-map-zone-delete"
-          title="Delete zone"
-          aria-label="Delete zone ${name}"
-          @click=${() => this.pixelDocument?.deleteNormalMapZone(zone.regionId)}
-        >${renderIcon("trash")}</button>
+        ${this.locked ? nothing : html`
+          <button
+            class="zone-delete"
+            part="normal-map-zone-delete"
+            title="Delete zone"
+            aria-label="Delete zone ${name}"
+            @click=${() => this.pixelDocument?.deleteNormalMapZone(zone.regionId)}
+          >${renderIcon("trash")}</button>
+        `}
         ${region === null ?
           renderNote("UV region missing", { warning: true }) :
           nothing}
@@ -483,6 +498,7 @@ export class NormalMapDock extends LitElement {
   ): TemplateResult {
     return html`
       <jolly-checkbox
+        ?readonly=${this.locked}
         class="toggle"
         align="end"
         part="normal-map-enable"

@@ -337,6 +337,16 @@ export const panelStyles = css`
     gap: 1px;
   }
 
+  .access-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 6px;
+    gap: 4px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
   .overlay-toolbar .rail-text {
     font-size: 8.5px;
     letter-spacing: -0.02em;

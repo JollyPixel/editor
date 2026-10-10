@@ -6,7 +6,7 @@ import type {
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { TransientStatus } from "../../shared/TransientStatus.ts";
+import type { TransientStatus } from "../../shared/TransientStatus.ts";
 import { TextureBusy } from "./TextureBusy.ts";
 import { TextureSource } from "./TextureSource.ts";
 import { TextureImportError } from "./errors/TextureImportError.ts";
@@ -32,6 +32,7 @@ export type TextureImporterHost = ReactiveControllerHost & HTMLElement;
 
 export interface TextureImporterOptions {
   textures: TextureSet;
+  status: TransientStatus;
   policy: () => TextureImportPolicy;
   dialog: () => Pick<ImportTextureDialog, "open">;
 }
@@ -67,7 +68,7 @@ export class TextureImporter implements ReactiveController {
     this.#policy = options.policy;
     this.#dialog = options.dialog;
     this.busy = new TextureBusy(host);
-    this.status = new TransientStatus(host);
+    this.status = options.status;
     host.addController(this);
   }
 

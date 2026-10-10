@@ -24,10 +24,11 @@ import {
 } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type {
-  PixelDrawPanel,
-  TextureAddRequestDetail,
-  TextureCloseRequestDetail
+import {
+  RoomAccess,
+  type PixelDrawPanel,
+  type TextureAddRequestDetail,
+  type TextureCloseRequestDetail
 } from "../../src/index.ts";
 
 export type TextureLease = AssetLease<
@@ -46,6 +47,7 @@ export interface TextureTabsOptions {
 interface BoundTab {
   texture: TextureLease;
   collaboration: PixelCollaboration;
+  access: RoomAccess;
 }
 
 export class TextureTabs {
@@ -74,7 +76,7 @@ export class TextureTabs {
     return this.#synced.has(textureId);
   }
 
-  attach(
+  async attach(
     texture: TextureLease,
     canvas: PixelArtCanvas
   ): Promise<void> {
@@ -86,7 +88,8 @@ export class TextureTabs {
         canvas,
         label: (_clientId, profile) => readUsername(profile),
         color: peerProfileColor
-      })
+      }),
+      access: new RoomAccess(texture.room, this.#panel, textureId)
     });
 
     return texture.ready.then(() => {
@@ -97,8 +100,14 @@ export class TextureTabs {
   }
 
   dispose(): void {
-    this.#panel.removeEventListener("texture-add-request", this.#onAddRequest);
-    this.#panel.removeEventListener("texture-close-request", this.#onCloseRequest);
+    this.#panel.removeEventListener(
+      "texture-add-request",
+      this.#onAddRequest
+    );
+    this.#panel.removeEventListener(
+      "texture-close-request",
+      this.#onCloseRequest
+    );
     for (const textureId of [...this.#bound.keys()]) {
       this.#detach(textureId);
     }
@@ -157,6 +166,7 @@ export class TextureTabs {
     }
 
     bound.collaboration.destroy();
+    bound.access.dispose();
     bound.texture.release();
     this.#bound.delete(textureId);
     this.#synced.delete(textureId);
@@ -182,7 +192,9 @@ function documentFromCanvas(
     return document;
   }
 
-  const region = new UVMap({ getCanvasSize: () => size }).create({
+  const region = new UVMap({
+    getCanvasSize: () => size
+  }).create({
     name: "cube 0",
     width: uvSize,
     height: uvSize
@@ -190,7 +202,9 @@ function documentFromCanvas(
 
   return {
     ...document,
-    uvRegions: [region.toJSON()]
+    uvRegions: [
+      region.toJSON()
+    ]
   };
 }
 
@@ -201,7 +215,10 @@ function delay(
     return Promise.resolve();
   }
 
-  const { promise, resolve } = Promise.withResolvers<void>();
+  const {
+    promise,
+    resolve
+  } = Promise.withResolvers<void>();
   window.setTimeout(resolve, milliseconds);
 
   return promise;

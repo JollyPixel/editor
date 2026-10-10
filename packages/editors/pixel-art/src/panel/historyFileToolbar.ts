@@ -9,6 +9,7 @@ import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { renderRailButton } from "../shared/railButton.ts";
+import { renderIcon } from "../shared/icons.ts";
 import { isInputElement } from "../shared/dom.ts";
 import { PngFile } from "../shared/PngFile.ts";
 import type { TextureImporter } from "../textures/import/TextureImporter.ts";
@@ -20,6 +21,7 @@ export interface HistoryFileToolbarOptions {
   clearDialog: () => Pick<ClearTextureDialog, "open">;
   exportMenu: (exportAlbedo: () => void) => TemplateResult | typeof nothing;
   trailing: readonly (TemplateResult | typeof nothing)[];
+  viewOnly: boolean;
 }
 
 async function clearTexture(
@@ -107,6 +109,15 @@ export function renderHistoryFileToolbar(
 
   return html`
     <div class="overlay-toolbar bottom" part="history-file-toolbar">
+      ${options.viewOnly ? html`
+        <div class="toolbar-group">
+          <span
+            class="access-badge"
+            part="access-badge"
+            title="You can look at this texture but not change it"
+          >${renderIcon("eyeOpen")}<span>View only</span></span>
+        </div>
+      ` : nothing}
       <div class="toolbar-group">
       ${renderRailButton({
         part: "undo-button",

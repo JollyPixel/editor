@@ -122,6 +122,7 @@ export class PixelArtCanvas {
   #router: InteractionRouter;
   #tools: Tools;
   #clipboard: ClipboardController;
+  #pixelsLocked = false;
   #onDocumentDrawEnd = () => this.#onDrawEnd?.();
   #onTextureReplaced = () => {
     this.#tools.select.discard();
@@ -290,9 +291,18 @@ export class PixelArtCanvas {
     }
 
     this.#view.textureView = view;
-    const readOnly = view === "normal";
-    this.#tools.select.readOnly = readOnly;
-    this.#router.pixelsReadOnly = readOnly;
+    this.#syncPixelsReadOnly();
+  }
+
+  get pixelsLocked(): boolean {
+    return this.#pixelsLocked;
+  }
+
+  set pixelsLocked(
+    locked: boolean
+  ) {
+    this.#pixelsLocked = locked;
+    this.#syncPixelsReadOnly();
   }
 
   get pixelsReadOnly(): boolean {
@@ -301,6 +311,13 @@ export class PixelArtCanvas {
 
   get unavailableModes(): ReadonlySet<Mode> {
     return this.#router.unavailableModes;
+  }
+
+  #syncPixelsReadOnly(): void {
+    const readOnly = this.#pixelsLocked ||
+      this.#view.textureView === "normal";
+    this.#tools.select.readOnly = readOnly;
+    this.#router.pixelsReadOnly = readOnly;
   }
 
   get backgroundColor(): string {

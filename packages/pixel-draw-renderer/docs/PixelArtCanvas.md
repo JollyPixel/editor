@@ -134,28 +134,32 @@ Wheel input zooms in every mode. Middle-drag, or left-drag while [`shortcuts.pan
 
 Leaving paint or erase mode cancels an armed line, and leaving paint mode also cancels the color pick. Leaving select mode clears the selection. Leaving UV mode cancels the current drag and keeps the UV selection.
 
-### `textureView` / `pixelsReadOnly` / `unavailableModes`
+### `textureView` / `pixelsLocked` / `pixelsReadOnly` / `unavailableModes`
 
 ```ts
 type TextureView = "albedo" | "normal";
 
 get textureView(): TextureView
 set textureView(value: TextureView)
+get pixelsLocked(): boolean
+set pixelsLocked(value: boolean)
 readonly pixelsReadOnly: boolean;
 readonly unavailableModes: ReadonlySet<Mode>;
 ```
 
 `textureView` picks what the canvas draws: the texture (`"albedo"`, the default) or its generated [normal map](./normal/NormalMap.md) (`"normal"`). It is view state: it is not stored in the document and not synchronized. The normal view retains `document.normals` and releases it when the view goes back to albedo or the canvas is destroyed.
 
-`pixelsReadOnly` is `true` in the normal view. `unavailableModes` holds the modes the current view refuses: empty in the albedo view, `"paint"`, `"erase"` and `"fill"` in the normal view. It returns the same set until the view changes, so it can be bound to a property directly.
+`pixelsLocked` makes pixels read-only in every view, for example when the user has no right to write them. It defaults to `false`, and it is not stored in the document or synchronized.
 
-The normal view is read-only for pixels:
+`pixelsReadOnly` is `true` in the normal view or while `pixelsLocked` is set. `unavailableModes` holds the modes the canvas refuses: empty while pixels are writable, `"paint"`, `"erase"` and `"fill"` while they are read-only. It returns the same set until `pixelsReadOnly` changes, so it can be bound to a property directly.
 
-- `"paint"`, `"erase"` and `"fill"` are unavailable. Entering the view from one of them switches to `"move"`, and setting one of them is ignored. Going back to the albedo view restores that mode, unless another mode was set in the normal view.
-- Entering the view clears the selection. A selection can still be drawn and copied, but it does not move, and delete, rotate, flip and `pasteClipboard()` are refused. Paste reports `paste-failed`.
-- UV mode works as in the albedo view.
+While pixels are read-only:
 
-Programmatic writes such as `commitPixels()`, `clearTexture()` and remote commands still apply, and the normal view follows them.
+- `"paint"`, `"erase"` and `"fill"` are unavailable. Becoming read-only in one of them switches to `"move"`, and setting one of them is ignored. Becoming writable again restores that mode, unless another mode was set in between.
+- Becoming read-only clears the selection. A selection can still be drawn and copied, but it does not move, and delete, rotate, flip and `pasteClipboard()` are refused. Paste reports `paste-failed`.
+- UV mode works as before.
+
+Programmatic writes such as `commitPixels()`, `clearTexture()` and remote commands still apply, and the canvas shows them.
 
 ## Texture
 

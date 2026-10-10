@@ -21,12 +21,14 @@ when no local picker draft is active. Close the popover when its target goes
 away, for example on a texture switch.
 
 `ColorPaletteGrid` receives `palette`, `selected`, `editing` (the slot whose
-picker is open, or `null`) and `disabled`. It emits `palette-select` with a
-zero-based index, and `palette-edit` with `{ index, anchor }` on double click
-or F2. The host opens the shared picker for an edit request.
+picker is open, or `null`), `disabled` and `locked`. It emits `palette-select`
+with a zero-based index, and `palette-edit` with `{ index, anchor }` on double
+click or F2. A `locked` grid never emits `palette-edit`. The host opens the
+shared picker for an edit request.
 
-`ColorDock` receives `color`, `opacity`, `palette`, `selected` and
-`editing`. A `null` palette disables the grid. Inline picker drafts emit
+`ColorDock` receives `color`, `opacity`, `palette`, `selected`, `editing` and
+`paletteLocked`, which it passes to the grid as `locked`. A `null` palette
+disables the grid. Inline picker drafts emit
 `color-preview`; completed adjustments emit `color-change`. The full panel
 commits palette colors through `PixelDocument.changePaletteColor` and retains
 the selected slot locally. Toggling Pick color retains the selected slot. Other

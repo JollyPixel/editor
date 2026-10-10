@@ -27,7 +27,8 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
-    "@jolly-pixel/network": "workspace:*"
+    "@jolly-pixel/network": "workspace:*",
+    "cookie": "2.0.1"
   },
   "peerDependencies": {
     "@playwright/test": "^1.63.0"

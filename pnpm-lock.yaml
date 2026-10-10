@@ -514,6 +514,9 @@ importers:
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
+      cookie:
+        specifier: 2.0.1
+        version: 2.0.1
 
   packages/editors/host:
     dependencies:

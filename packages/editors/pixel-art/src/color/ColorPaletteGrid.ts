@@ -7,7 +7,8 @@ import {
 import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
 import {
   LitElement,
-  html
+  html,
+  nothing
 } from "lit";
 import {
   customElement,
@@ -38,15 +39,23 @@ export class ColorPaletteGrid extends LitElement {
   @property({ type: Boolean })
   declare disabled: boolean;
 
+  @property({ type: Boolean })
+  declare locked: boolean;
+
   constructor() {
     super();
     this.palette = ColorPalette.create();
     this.selected = null;
     this.editing = null;
     this.disabled = false;
+    this.locked = false;
   }
 
   override render() {
+    const hint = this.locked ?
+      "click to use" :
+      "click to use, double click or F2 to edit";
+
     return html`
       <div class="grid" role="group" aria-label="Document color palette">
         ${this.palette.toJSON().map((color, index) => {
@@ -58,9 +67,9 @@ export class ColorPaletteGrid extends LitElement {
               part="palette-slot"
               aria-label=${`Palette color ${index + 1}`}
               aria-pressed=${String(this.selected === index)}
-              aria-haspopup="dialog"
-              aria-expanded=${String(this.editing === index)}
-              title=${`${formatHex(rgba, true)}: click to use, double click or F2 to edit`}
+              aria-haspopup=${this.locked ? nothing : "dialog"}
+              aria-expanded=${this.locked ? nothing : String(this.editing === index)}
+              title=${`${formatHex(rgba, true)}: ${hint}`}
               ?disabled=${this.disabled}
               @click=${() => this.#dispatch("palette-select", index)}
               @dblclick=${(event: MouseEvent) => this.#edit(event, index)}
@@ -81,7 +90,7 @@ export class ColorPaletteGrid extends LitElement {
     event: Event,
     index: number
   ): void {
-    if (event.currentTarget instanceof HTMLButtonElement) {
+    if (!this.locked && event.currentTarget instanceof HTMLButtonElement) {
       this.#dispatch<PaletteEditDetail>("palette-edit", {
         index,
         anchor: event.currentTarget

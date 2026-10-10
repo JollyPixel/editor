@@ -65,6 +65,7 @@ export interface NormalMapControllerOptions {
   canvas: () => PixelArtCanvas | null;
   canvases: () => Iterable<PixelArtCanvas>;
   docks: DockSlot;
+  locked: () => boolean;
 }
 
 export class NormalMapController {
@@ -172,6 +173,7 @@ export class NormalMapController {
         ?open=${docked}
         ?inert=${!docked}
         .pixelDocument=${this.#canvas()?.document ?? null}
+        .locked=${this.#options.locked()}
       ></normal-map-dock>
     `;
   }
@@ -269,7 +271,11 @@ export class NormalMapController {
 
   renderOverrideButton(): TemplateResult | typeof nothing {
     const doc = this.#canvas()?.document;
-    if (!doc || doc.normalMap === null) {
+    if (
+      !doc ||
+      doc.normalMap === null ||
+      this.#options.locked()
+    ) {
       return nothing;
     }
 

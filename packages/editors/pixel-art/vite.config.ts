@@ -10,6 +10,7 @@ import {
   ProjectKinds
 } from "@jolly-pixel/asset-server/node";
 import {
+  CookieRoles,
   PORTS,
   prebundleWorkspace
 } from "@jolly-pixel/e2e";
@@ -24,7 +25,18 @@ import {
 const kE2EMode = "e2e";
 const kTextureAssetId = "texture-default";
 const kCatalogMaxContentBytes = 32 * 1024 * 1024;
+const kRights = {
+  member: {
+    "*": "write"
+  },
+  spectator: {
+    "*.$join": "write",
+    "*.$presence": "write",
+    "*": "read"
+  }
+} as const;
 
+const kRoles = new CookieRoles();
 const kinds = await ProjectKinds.load(
   new ProjectFile(import.meta.dirname, {
     version: 1,
@@ -57,6 +69,7 @@ export default defineConfig(({ command, mode }) => {
       prebundleWorkspace(),
       serve && !e2e ? checker({ typescript: true }) : null,
       createProjectKindsPlugin(kinds),
+      e2e ? kRoles.plugin() : null,
       serve ?
         createAssetWorkspacePlugin({
           root: import.meta.dirname,
@@ -65,6 +78,9 @@ export default defineConfig(({ command, mode }) => {
           handlers: kinds.handlers(),
           seed: createPixelArtSeed(kTextureAssetId),
           launch: () => kTextureAssetId,
+          auth: e2e ? kRoles : undefined,
+          rights: kRights,
+          defaultRole: "member",
           backend: {
             catalogMaxContentBytes: kCatalogMaxContentBytes
           }
