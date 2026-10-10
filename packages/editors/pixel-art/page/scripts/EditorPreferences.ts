@@ -29,10 +29,12 @@ const kVisibilityEvents = [
   "size-label-visibility-changed"
 ] as const;
 
+export type PreferenceCanvas = Pick<PixelArtCanvas, "uv">;
+
 export class EditorPreferences {
   readonly #storage: StorageAdapter;
   readonly #state: z.infer<typeof kPreferences>;
-  #canvas: PixelArtCanvas | null = null;
+  #canvas: PreferenceCanvas | null = null;
 
   constructor(
     storage: StorageAdapter
@@ -62,7 +64,7 @@ export class EditorPreferences {
   }
 
   activate(
-    canvas: PixelArtCanvas
+    canvas: PreferenceCanvas
   ): void {
     if (canvas === this.#canvas) {
       return;

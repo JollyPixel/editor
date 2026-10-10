@@ -1,19 +1,12 @@
-// Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
-
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
-import {
-  hoverTexturePixel,
-  setMode,
-  textureToScreenPoint
-} from "./utils.ts";
+import type { PixelArtPanel } from "./support/panel.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 function readViewport(
-  panel: Locator
+  panel: PixelArtPanel
 ) {
-  return panel.evaluate((element: PixelDrawPanel) => {
+  return panel.root.evaluate((element: PixelDrawPanel) => {
     const { viewport } = element.canvasManager!;
 
     return {
@@ -24,9 +17,9 @@ function readViewport(
 }
 
 test("Move mode pans the canvas with a left drag", async({ panel, page }) => {
-  await setMode(panel, "move");
+  await panel.modes.select("move");
   const before = await readViewport(panel);
-  const anchor = await textureToScreenPoint(panel, { x: 40, y: 40 });
+  const anchor = await panel.canvas.screenPoint({ x: 40, y: 40 });
 
   await page.mouse.move(anchor.x, anchor.y);
   await page.mouse.down();
@@ -41,7 +34,7 @@ test("Move mode pans the canvas with a left drag", async({ panel, page }) => {
 
 test("the wheel zooms out", async({ panel, page }) => {
   const before = await readViewport(panel);
-  await hoverTexturePixel(panel, { x: 40, y: 40 });
+  await panel.canvas.hover({ x: 40, y: 40 });
 
   await page.mouse.wheel(0, 500);
 

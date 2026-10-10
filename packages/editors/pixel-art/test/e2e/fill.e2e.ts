@@ -3,15 +3,8 @@ import { test, expect } from "./fixtures.ts";
 import {
   BLACK,
   CLEAR,
-  addUvRegion,
-  clickTexturePixel,
-  clickToolOption,
-  readPixels,
-  seedTexture,
-  setBrushColor,
-  setMode,
   type PixelRect
-} from "./utils.ts";
+} from "./support/canvas.ts";
 
 function outline(
   x: number,
@@ -29,20 +22,20 @@ function outline(
 }
 
 test.beforeEach(async({ panel }) => {
-  await setMode(panel, "fill");
+  await panel.modes.select("fill");
 });
 
 test("contiguous fill stays inside a boundary, right-click uses the secondary color", async({ panel }) => {
-  await seedTexture(panel, [
+  await panel.canvas.seed([
     ...outline(0, 0, 8),
     ...outline(20, 0, 5)
   ]);
-  await setBrushColor(panel, "secondary", "#ff8800");
+  await panel.colors.assign("secondary", "#ff8800");
 
-  await clickTexturePixel(panel, { x: 3, y: 3 });
-  await clickTexturePixel(panel, { x: 22, y: 2 }, "right");
+  await panel.canvas.click({ x: 3, y: 3 });
+  await panel.canvas.click({ x: 22, y: 2 }, "right");
 
-  await expect.poll(() => readPixels(panel, [
+  await expect.poll(() => panel.canvas.pixels([
     { x: 3, y: 3 },
     { x: 10, y: 3 },
     { x: 22, y: 2 },
@@ -51,16 +44,16 @@ test("contiguous fill stays inside a boundary, right-click uses the secondary co
 });
 
 test("global fill recolors every matching pixel canvas-wide", async({ panel }) => {
-  await seedTexture(panel, [
+  await panel.canvas.seed([
     { x: 4, y: 10, color: "#123456" },
     { x: 60, y: 70, color: "#123456" }
   ]);
-  await clickToolOption(panel, "fill", "Global");
-  await setBrushColor(panel, "primary", "#654321");
+  await panel.modes.pick("fill", "Global");
+  await panel.colors.assign("primary", "#654321");
 
-  await clickTexturePixel(panel, { x: 4, y: 10 });
+  await panel.canvas.click({ x: 4, y: 10 });
 
-  await expect.poll(() => readPixels(panel, [
+  await expect.poll(() => panel.canvas.pixels([
     { x: 4, y: 10 },
     { x: 60, y: 70 },
     { x: 5, y: 10 }
@@ -68,23 +61,22 @@ test("global fill recolors every matching pixel canvas-wide", async({ panel }) =
 });
 
 test("Clip to UV keeps a fill inside or outside a UV region", async({ panel }) => {
-  await addUvRegion(panel, { x: 30, y: 10, width: 4, height: 4 });
-  const clip = panel.getByRole("button", { name: "Clip to UV", exact: true });
+  await panel.uv.addRegion({ x: 30, y: 10, width: 4, height: 4 });
 
-  await clickToolOption(panel, "fill", "Clip to UV");
-  await expect(clip).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.locator("mode-rail [part=uv-clip-badge]")).toBeVisible();
+  await panel.modes.pick("fill", "Clip to UV");
+  await expect(panel.modes.option("Clip to UV")).toHaveAttribute("aria-pressed", "true");
+  await expect(panel.modes.clipBadge).toBeVisible();
 
-  await setBrushColor(panel, "primary", "#123456");
-  await clickTexturePixel(panel, { x: 31, y: 11 });
-  await expect.poll(() => readPixels(panel, [
+  await panel.colors.assign("primary", "#123456");
+  await panel.canvas.click({ x: 31, y: 11 });
+  await expect.poll(() => panel.canvas.pixels([
     { x: 33, y: 13 },
     { x: 29, y: 11 }
   ])).toEqual(["#123456ff", CLEAR]);
 
-  await setBrushColor(panel, "primary", "#654321");
-  await clickTexturePixel(panel, { x: 25, y: 5 });
-  await expect.poll(() => readPixels(panel, [
+  await panel.colors.assign("primary", "#654321");
+  await panel.canvas.click({ x: 25, y: 5 });
+  await expect.poll(() => panel.canvas.pixels([
     { x: 25, y: 5 },
     { x: 34, y: 12 },
     { x: 31, y: 11 }
@@ -92,15 +84,12 @@ test("Clip to UV keeps a fill inside or outside a UV region", async({ panel }) =
 });
 
 test("a mode flyout closes once the pointer leaves, even after a click", async({ panel, page }) => {
-  const fill = panel.getByRole("button", { name: "Fill", exact: true });
-  const flyout = panel.locator("mode-rail .rail-flyout").filter({
-    has: page.getByRole("button", { name: "Global", exact: true })
-  });
+  const flyout = panel.modes.flyout("Global");
 
   await page.mouse.move(0, 0);
-  await fill.hover();
+  await panel.modes.button("fill").hover();
   await expect(flyout).toBeVisible();
-  await fill.click();
+  await panel.modes.button("fill").click();
   await page.mouse.move(0, 0);
 
   await expect(flyout).toBeHidden();

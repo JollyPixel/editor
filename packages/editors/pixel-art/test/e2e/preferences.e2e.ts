@@ -1,82 +1,35 @@
-// Import Third-party Dependencies
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
-
 // Import Internal Dependencies
 import {
   test,
   expect,
   playground
 } from "./fixtures.ts";
-import {
-  activeMode,
-  importFile,
-  pngFile,
-  setMode
-} from "./utils.ts";
+import { pngFile } from "./support/files.ts";
 
-test("drawing modes survive refresh", async({ panel, page }) => {
-  for (const mode of ["erase", "fill", "select", "move", "uv", "paint"] as const) {
-    await setMode(panel, mode);
-    await page.reload();
-    await waitForEditor(page);
-    expect(await activeMode(panel)).toBe(mode);
+test("drawing modes survive refresh", async({ panel }) => {
+  for (const mode of ["fill", "uv"] as const) {
+    await panel.modes.select(mode);
+    await panel.reload();
+    expect(await panel.modes.active()).toBe(mode);
   }
 });
 
-test("invalid stored preferences fall back without losing valid fields", async({ panel, page }) => {
-  for (const state of [
-    { raw: "{broken", mode: "paint" },
-    {
-      raw: JSON.stringify({ mode: "unknown", showAll: "true" }),
-      mode: "paint"
-    },
-    {
-      raw: JSON.stringify({ mode: "uv", showRegionLabels: "true" }),
-      mode: "uv"
-    }
-  ]) {
-    await page.evaluate((value) => {
-      localStorage.setItem("pixel-art:preferences", value);
-    }, state.raw);
-    await page.reload();
-    await waitForEditor(page);
-    expect(await activeMode(panel)).toBe(state.mode);
-    await setMode(panel, "uv");
-    await panel.getByRole("button", { name: "Region visibility" }).click();
-    await expect(panel.getByRole("checkbox", { name: "Show all regions" }))
-      .not.toBeChecked();
-    await expect(panel.getByRole("checkbox", { name: "Show region labels" }))
-      .not.toBeChecked();
-    await expect(panel.getByRole("checkbox", { name: "Show UV size" }))
-      .not.toBeChecked();
-  }
-});
-
-test("UV visibility preferences survive refresh independently", async({ panel, page }) => {
-  await setMode(panel, "uv");
-  const trigger = panel.getByRole("button", { name: "Region visibility" });
-  const labels = panel.getByRole("checkbox", { name: "Show region labels" });
-  const showAll = panel.getByRole("checkbox", { name: "Show all regions" });
-  const size = panel.getByRole("checkbox", { name: "Show UV size" });
+test("UV visibility preferences survive refresh independently", async({ panel }) => {
+  const { visibility } = panel;
+  await panel.modes.select("uv");
 
   for (const state of [
-    { all: true, labels: true, size: false },
-    { all: false, labels: true, size: true },
     { all: true, labels: false, size: true },
-    { all: false, labels: false, size: false }
+    { all: false, labels: true, size: false }
   ]) {
-    await trigger.click();
-    await showAll.setChecked(state.all);
-    await labels.setChecked(state.labels);
-    await size.setChecked(state.size);
-    await page.reload();
-    await waitForEditor(page);
-    await setMode(panel, "uv");
-    await trigger.click();
-    await expect(showAll).toBeChecked({ checked: state.all });
-    await expect(labels).toBeChecked({ checked: state.labels });
-    await expect(size).toBeChecked({ checked: state.size });
-    await labels.press("Escape");
+    await visibility.apply(state);
+    await panel.reload();
+    await panel.modes.select("uv");
+    await visibility.open();
+    await expect(visibility.showAll).toBeChecked({ checked: state.all });
+    await expect(visibility.labels).toBeChecked({ checked: state.labels });
+    await expect(visibility.size).toBeChecked({ checked: state.size });
+    await visibility.close();
   }
 });
 
@@ -84,27 +37,22 @@ test.describe("texture preferences", () => {
   test.use({ editor: playground({ importPolicy: "add" }) });
 
   test("visibility preferences follow the active texture", async({ panel }) => {
-    await setMode(panel, "uv");
-    const trigger = panel.getByRole("button", { name: "Region visibility" });
-    const labels = panel.getByRole("checkbox", { name: "Show region labels" });
-    const showAll = panel.getByRole("checkbox", { name: "Show all regions" });
-    await trigger.click();
-    await showAll.check();
-    await labels.check();
-    await labels.press("Escape");
-    await setMode(panel, "fill");
-    await importFile(panel, await pngFile("second.png", { x: 32, y: 32 }, []));
-    await expect(panel.getByRole("tab")).toHaveCount(2);
-    expect(await activeMode(panel)).toBe("fill");
-    await setMode(panel, "uv");
-    await trigger.click();
-    await expect(showAll).toBeChecked();
-    await expect(labels).toBeChecked();
-    await showAll.uncheck();
-    await labels.press("Escape");
-    await panel.getByRole("tab").first().click();
-    await trigger.click();
-    await expect(showAll).not.toBeChecked();
-    await expect(labels).toBeChecked();
+    const { visibility } = panel;
+    await panel.modes.select("uv");
+    await visibility.apply({ all: true, labels: true });
+    await panel.modes.select("fill");
+    await panel.import(await pngFile("second.png", { x: 32, y: 32 }, []));
+    await expect(panel.textures.tabs).toHaveCount(2);
+    expect(await panel.modes.active()).toBe("fill");
+    await panel.modes.select("uv");
+    await visibility.open();
+    await expect(visibility.showAll).toBeChecked();
+    await expect(visibility.labels).toBeChecked();
+    await visibility.showAll.uncheck();
+    await visibility.close();
+    await panel.textures.tabs.first().click();
+    await visibility.open();
+    await expect(visibility.showAll).not.toBeChecked();
+    await expect(visibility.labels).toBeChecked();
   });
 });

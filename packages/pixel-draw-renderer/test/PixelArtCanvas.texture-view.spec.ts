@@ -179,29 +179,38 @@ describe("PixelArtCanvas texture view", () => {
     assert.equal(manager.mode, "paint");
   });
 
-  test("a selection cannot change pixels in the normal view", () => {
-    const manager = createCanvas();
-    const canvas = manager.canvas();
-    paintHorizontalPair(manager);
-    manager.textureView = "normal";
-    manager.mode = "select";
+  for (const [cause, makeReadOnly] of [
+    ["the normal view", (manager: PixelArtCanvas) => {
+      manager.textureView = "normal";
+    }],
+    ["a pixel lock", (manager: PixelArtCanvas) => {
+      manager.pixelsLocked = true;
+    }]
+  ] as const) {
+    test(`a selection cannot change pixels under ${cause}`, () => {
+      const manager = createCanvas();
+      const canvas = manager.canvas();
+      paintHorizontalPair(manager);
+      makeReadOnly(manager);
+      manager.mode = "select";
 
-    selectHorizontalPair(canvas);
-    assert.equal(manager.tools.select.hasSelection, true);
+      selectHorizontalPair(canvas);
+      assert.equal(manager.tools.select.hasSelection, true);
 
-    assert.equal(manager.shortcuts.delete(), false);
-    assert.equal(manager.shortcuts.rotate("cw"), false);
-    assert.equal(manager.shortcuts.flipHorizontal(), false);
-    assert.equal(manager.shortcuts.flipVertical(), false);
+      assert.equal(manager.shortcuts.delete(), false);
+      assert.equal(manager.shortcuts.rotate("cw"), false);
+      assert.equal(manager.shortcuts.flipHorizontal(), false);
+      assert.equal(manager.shortcuts.flipVertical(), false);
 
-    canvas.dispatchEvent(mouseEvent("mousedown", 94, 94));
-    canvas.dispatchEvent(mouseEvent("mousemove", 94, 102));
-    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      canvas.dispatchEvent(mouseEvent("mousedown", 94, 94));
+      canvas.dispatchEvent(mouseEvent("mousemove", 94, 102));
+      canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
 
-    assert.deepEqual(texturePixel(manager, 2, 2), [0, 0, 0, 255]);
-    assert.deepEqual(texturePixel(manager, 3, 2), [255, 0, 0, 255]);
-    assert.deepEqual(texturePixel(manager, 2, 4), [128, 128, 128, 255]);
-  });
+      assert.deepEqual(texturePixel(manager, 2, 2), [0, 0, 0, 255]);
+      assert.deepEqual(texturePixel(manager, 3, 2), [255, 0, 0, 255]);
+      assert.deepEqual(texturePixel(manager, 2, 4), [128, 128, 128, 255]);
+    });
+  }
 
   test("entering the normal view drops the current selection", () => {
     const manager = createCanvas();

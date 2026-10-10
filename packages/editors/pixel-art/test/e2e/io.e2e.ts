@@ -3,23 +3,15 @@ import { readFile } from "node:fs/promises";
 import { Buffer } from "node:buffer";
 
 // Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
 import { decodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
 import {
   CLEAR,
-  TEXTURE_SIZE,
-  activeMode,
-  dragFileOver,
-  dropFile,
-  importFile,
-  pngFile,
-  readPixels,
-  seedTexture,
-  setMode
-} from "./utils.ts";
+  TEXTURE_SIZE
+} from "./support/canvas.ts";
+import { pngFile } from "./support/files.ts";
 import type {
   PixelDrawPanel,
   TextureImportPolicy
@@ -31,20 +23,12 @@ const kCorner = {
   y: TEXTURE_SIZE.y - 1
 };
 
-function textureSize(
-  panel: Locator
-) {
-  return panel.evaluate(
-    (element: PixelDrawPanel) => element.canvasManager!.textureSize
-  );
-}
-
 test("Export downloads the texture as a PNG with its pixels", async({ panel, page }) => {
-  await seedTexture(panel, [{ x: 30, y: 25, color: "#ff8800" }]);
+  await panel.canvas.seed([{ x: 30, y: 25, color: "#ff8800" }]);
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    panel.getByRole("button", { name: "Export texture" }).click()
+    panel.exportButton.click()
   ]);
 
   expect(download.suggestedFilename()).toBe("texture.png");
@@ -56,35 +40,34 @@ test("Export downloads the texture as a PNG with its pixels", async({ panel, pag
     .toEqual([0xff, 0x88, 0, 0xff]);
 });
 
-test("Import replaces the texture without a dialog, tabs or busy scrim", async({ panel, page }) => {
-  await importFile(panel, await pngFile("fixture.png", TEXTURE_SIZE, [
+test("Import replaces the texture without a dialog, tabs or busy scrim", async({ panel }) => {
+  await panel.import(await pngFile("fixture.png", TEXTURE_SIZE, [
     { ...kCorner, color: "#ff8800" }
   ]));
 
-  await expect.poll(() => readPixels(panel, [kCorner])).toEqual(["#ff8800ff"]);
-  await expect(panel.locator("[part=drop-status]")).toHaveText("Texture replaced");
-  await expect(page.locator("import-texture-dialog").getByRole("dialog")).toBeHidden();
-  await expect(panel.locator("jolly-tabs")).toHaveCount(0);
-  await expect(panel.locator(".stage-busy")).toHaveCount(0);
+  await expect.poll(() => panel.canvas.pixels([kCorner])).toEqual(["#ff8800ff"]);
+  await expect(panel.dropStatus).toHaveText("Texture replaced");
+  await expect(panel.importDialog.dialog).toBeHidden();
+  await expect(panel.textures.strip).toHaveCount(0);
+  await expect(panel.busy).toHaveCount(0);
 });
 
 test("an undecodable file is reported and leaves the texture untouched", async({ panel }) => {
-  await seedTexture(panel, [{ x: 1, y: 1, color: "#ff8800" }]);
+  await panel.canvas.seed([{ x: 1, y: 1, color: "#ff8800" }]);
 
-  await importFile(panel, {
+  await panel.import({
     name: "broken.png",
     mimeType: "image/png",
     buffer: Buffer.from("not a png")
   });
 
-  await expect(panel.locator("[part=drop-status]"))
-    .toHaveText("Could not decode the image");
-  expect(await readPixels(panel, [{ x: 1, y: 1 }])).toEqual(["#ff8800ff"]);
-  expect(await textureSize(panel)).toEqual(TEXTURE_SIZE);
+  await expect(panel.dropStatus).toHaveText("Could not decode the image");
+  expect(await panel.canvas.pixels([{ x: 1, y: 1 }])).toEqual(["#ff8800ff"]);
+  expect(await panel.canvas.size()).toEqual(TEXTURE_SIZE);
 });
 
 test("the drop overlay names what the import policy will do", async({ panel }) => {
-  const overlay = panel.locator(".texture-drop-overlay");
+  const overlay = panel.root.locator(".texture-drop-overlay");
   const labels: Record<TextureImportPolicy, string> = {
     replace: "Drop image to replace texture",
     add: "Drop image to add texture",
@@ -92,26 +75,26 @@ test("the drop overlay names what the import policy will do", async({ panel }) =
   };
 
   for (const [policy, label] of Object.entries(labels)) {
-    await panel.evaluate((element: PixelDrawPanel, value) => {
+    await panel.root.evaluate((element: PixelDrawPanel, value) => {
       element.textureImportPolicy = value;
     }, policy as TextureImportPolicy);
-    await dragFileOver(panel, { x: 20, y: 20 });
+    await panel.canvas.dragFileOver({ x: 20, y: 20 });
     await expect(overlay).toHaveText(label);
   }
 });
 
 test("dropping an image replaces the texture and keeps the current mode", async({ panel }) => {
-  await setMode(panel, "fill");
+  await panel.modes.select("fill");
 
-  await dropFile(panel, { x: 20, y: 20 }, await pngFile("drop.png", { x: 4, y: 3 }, [
+  await panel.canvas.drop({ x: 20, y: 20 }, await pngFile("drop.png", { x: 4, y: 3 }, [
     { x: 3, y: 2, color: "#22aa66" }
   ]));
 
-  await expect.poll(() => textureSize(panel)).toEqual({ x: 4, y: 3 });
-  expect(await activeMode(panel)).toBe("fill");
-  expect(await readPixels(panel, [
+  await expect.poll(() => panel.canvas.size()).toEqual({ x: 4, y: 3 });
+  expect(await panel.modes.active()).toBe("fill");
+  expect(await panel.canvas.pixels([
     { x: 3, y: 2 },
     { x: 0, y: 0 }
   ])).toEqual(["#22aa66ff", CLEAR]);
-  await expect(panel.locator(".texture-drop-overlay")).toHaveCount(0);
+  await expect(panel.root.locator(".texture-drop-overlay")).toHaveCount(0);
 });

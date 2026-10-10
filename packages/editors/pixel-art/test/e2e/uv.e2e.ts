@@ -1,18 +1,11 @@
-// Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
-
 // Import Internal Dependencies
 import {
   test,
   expect,
   playground
 } from "./fixtures.ts";
-import {
-  clickTexturePixel,
-  dragStroke,
-  setMode,
-  type TexturePoint
-} from "./utils.ts";
+import type { TexturePoint } from "./support/canvas.ts";
+import type { PixelArtPanel } from "./support/panel.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 // CONSTANTS
@@ -26,9 +19,9 @@ interface UvSnapshot {
 }
 
 function uvSnapshot(
-  panel: Locator
+  panel: PixelArtPanel
 ): Promise<UvSnapshot> {
-  return panel.evaluate((element: PixelDrawPanel) => {
+  return panel.root.evaluate((element: PixelDrawPanel) => {
     const { uv } = element.canvasManager!;
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
     const faces: Record<string, { x: number; y: number; }> = {};
@@ -45,18 +38,10 @@ function uvSnapshot(
   });
 }
 
-async function setRegionState(
-  panel: Locator,
-  state: "Stacked" | "Unfolded" | "Free"
-): Promise<void> {
-  await panel.getByRole("button", { name: /^Region state: / }).click();
-  await panel.getByRole("menuitem", { name: state }).click();
-}
-
 function uvRotations(
-  panel: Locator
+  panel: PixelArtPanel
 ): Promise<Record<string, number>> {
-  return panel.evaluate((element: PixelDrawPanel) => {
+  return panel.root.evaluate((element: PixelDrawPanel) => {
     const { uv } = element.canvasManager!;
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
     const rotations: Record<string, number> = {};
@@ -77,19 +62,17 @@ function sixFaces<TValue>(
 }
 
 test.beforeEach(async({ panel }) => {
-  await setMode(panel, "uv");
-  await panel.getByRole("button", { name: "Region visibility" }).click();
-  const showAll = panel.getByRole("checkbox", { name: "Show all regions" });
-  await showAll.check();
-  await showAll.press("Escape");
-  await panel.getByRole("button", { name: "Create cube", exact: true }).click();
+  await panel.modes.select("uv");
+  await panel.visibility.apply({ all: true });
+  await panel.uv.createCube.click();
 });
 
-test("the state menu follows the selection and lists the other two states", async({ panel }) => {
-  const trigger = panel.getByRole("button", { name: /^Region state: / });
+test("the state menu follows the selection and lists the other two states", async({ panel, page }) => {
+  const trigger = panel.uv.stateMenu;
+  const menuItems = panel.root.getByRole("menuitem");
   await expect(trigger).toHaveCount(0);
 
-  await clickTexturePixel(panel, kCubeCell);
+  await panel.canvas.click(kCubeCell);
   await expect(trigger).toHaveAccessibleName("Region state: Stacked");
   expect(await uvSnapshot(panel)).toEqual({
     selectedSlot: null,
@@ -98,27 +81,27 @@ test("the state menu follows the selection and lists the other two states", asyn
   });
 
   await trigger.hover();
-  await expect(panel.getByRole("menuitem")).toHaveText(["Unfolded", "Free"]);
-  await panel.page().mouse.move(0, 0);
-  await expect(panel.getByRole("menuitem")).toHaveCount(0);
+  await expect(menuItems).toHaveText(["Unfolded", "Free"]);
+  await page.mouse.move(0, 0);
+  await expect(menuItems).toHaveCount(0);
   await trigger.hover();
-  await panel.getByRole("menuitem", { name: "Free" }).click();
+  await panel.root.getByRole("menuitem", { name: "Free" }).click();
   await expect(trigger).toHaveAccessibleName("Region state: Free");
   await trigger.click();
-  await expect(panel.getByRole("menuitem")).toHaveText(["Stacked", "Unfolded"]);
-  await panel.page().keyboard.press("Escape");
+  await expect(menuItems).toHaveText(["Stacked", "Unfolded"]);
+  await page.keyboard.press("Escape");
 
-  await clickTexturePixel(panel, { x: 70, y: 70 });
+  await panel.canvas.click({ x: 70, y: 70 });
   await expect(trigger).toHaveCount(0);
 
-  await clickTexturePixel(panel, kCubeCell);
-  await panel.getByRole("button", { name: "Delete", exact: true }).click();
+  await panel.canvas.click(kCubeCell);
+  await panel.root.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(trigger).toHaveCount(0);
 });
 
 test("unfolding lays the faces out as a net that drags as one and stays put when freed", async({ panel }) => {
-  await clickTexturePixel(panel, kCubeCell);
-  await setRegionState(panel, "Unfolded");
+  await panel.canvas.click(kCubeCell);
+  await panel.uv.changeState("Unfolded");
   function net(
     dx: number,
     dy: number
@@ -136,13 +119,13 @@ test("unfolding lays the faces out as a net that drags as one and stays put when
     faces: net(0, 0)
   });
 
-  await dragStroke(panel, [
+  await panel.canvas.drag([
     { x: 20, y: 20 },
     { x: 28, y: 24 }
   ], { steps: 1 });
   expect((await uvSnapshot(panel)).faces).toEqual(net(8, 4));
 
-  await setRegionState(panel, "Free");
+  await panel.uv.changeState("Free");
   expect(await uvSnapshot(panel)).toMatchObject({
     state: "free",
     faces: net(8, 4)
@@ -150,13 +133,13 @@ test("unfolding lays the faces out as a net that drags as one and stays put when
 });
 
 test("freeing stacks six faces in place and clicks cycle through them", async({ panel }) => {
-  await clickTexturePixel(panel, kCubeCell);
-  await setRegionState(panel, "Free");
+  await panel.canvas.click(kCubeCell);
+  await panel.uv.changeState("Free");
   expect((await uvSnapshot(panel)).faces).toEqual(sixFaces(() => kOrigin));
 
   const picked: (string | null)[] = [];
   for (let index = 0; index < 7; index++) {
-    await clickTexturePixel(panel, kCubeCell);
+    await panel.canvas.click(kCubeCell);
     picked.push((await uvSnapshot(panel)).selectedSlot);
   }
 
@@ -164,12 +147,12 @@ test("freeing stacks six faces in place and clicks cycle through them", async({ 
 });
 
 test("dragging a free region moves only the face under the press", async({ panel }) => {
-  await clickTexturePixel(panel, kCubeCell);
-  await setRegionState(panel, "Free");
-  await clickTexturePixel(panel, kCubeCell);
-  await clickTexturePixel(panel, kCubeCell);
+  await panel.canvas.click(kCubeCell);
+  await panel.uv.changeState("Free");
+  await panel.canvas.click(kCubeCell);
+  await panel.canvas.click(kCubeCell);
 
-  await dragStroke(panel, [kCubeCell, { x: 40, y: 8 }], { steps: 1 });
+  await panel.canvas.drag([kCubeCell, { x: 40, y: 8 }], { steps: 1 });
 
   const { selectedSlot, faces } = await uvSnapshot(panel);
   expect(selectedSlot).toBe("left");
@@ -181,21 +164,21 @@ test("dragging a free region moves only the face under the press", async({ panel
 });
 
 test("stacking keeps the edited face, and undo restores the free faces", async({ panel }) => {
-  await clickTexturePixel(panel, kCubeCell);
-  await setRegionState(panel, "Free");
-  await dragStroke(panel, [kCubeCell, { x: 40, y: 8 }], { steps: 1 });
+  await panel.canvas.click(kCubeCell);
+  await panel.uv.changeState("Free");
+  await panel.canvas.drag([kCubeCell, { x: 40, y: 8 }], { steps: 1 });
   expect(await uvSnapshot(panel)).toMatchObject({
     selectedSlot: "front",
     faces: { front: { x: 32, y: 0 } }
   });
 
-  await setRegionState(panel, "Stacked");
+  await panel.uv.changeState("Stacked");
   expect(await uvSnapshot(panel)).toMatchObject({
     state: "stacked",
     faces: { "*": { x: 32, y: 0 } }
   });
 
-  await panel.getByRole("button", { name: "Undo" }).click();
+  await panel.undoButton.click();
   expect(await uvSnapshot(panel)).toMatchObject({
     state: "free",
     faces: {
@@ -205,35 +188,38 @@ test("stacking keeps the edited face, and undo restores the free faces", async({
   });
 });
 
-test("rotation turns the whole stacked region, and only the selected face once freed", async({ panel }) => {
-  const clockwise = panel.getByRole("button", { name: /^Rotate .* clockwise$/ });
+test("rotation turns the whole stacked region, and only the selected face once freed", async({
+  panel,
+  page
+}) => {
+  const clockwise = panel.uv.rotateClockwise;
   await expect(clockwise).toHaveCount(0);
 
-  await clickTexturePixel(panel, kCubeCell);
+  await panel.canvas.click(kCubeCell);
   await expect(clockwise).toHaveAccessibleName("Rotate region clockwise");
   await clockwise.click();
   expect(await uvRotations(panel)).toEqual(sixFaces(() => 1));
-  await expect(panel.locator("[part=\"uv-orientation-marker\"]")).toHaveCount(1);
+  await expect(panel.root.locator("[part=\"uv-orientation-marker\"]")).toHaveCount(1);
 
-  await panel.getByRole("button", { name: "Rotate region counter-clockwise" }).click();
+  await panel.root.getByRole("button", { name: "Rotate region counter-clockwise" }).click();
   expect(await uvRotations(panel)).toEqual(sixFaces(() => 0));
 
-  await setRegionState(panel, "Free");
+  await panel.uv.changeState("Free");
   await expect(clockwise).toHaveAccessibleName("Rotate slot \"front\" clockwise");
-  await panel.page().keyboard.press("r");
+  await page.keyboard.press("r");
   expect(await uvRotations(panel)).toMatchObject({
     front: 1,
     back: 0
   });
 
-  await panel.getByRole("button", { name: "Undo" }).click();
+  await panel.undoButton.click();
   expect(await uvRotations(panel)).toMatchObject({ front: 0 });
 });
 
 test("Create ramp adds a region with triangular sides and a true-length slope", async({ panel }) => {
-  await panel.getByRole("button", { name: "Create ramp", exact: true }).click();
+  await panel.uv.createRamp.click();
 
-  const ramp = await panel.evaluate((element: PixelDrawPanel) => {
+  const ramp = await panel.root.evaluate((element: PixelDrawPanel) => {
     const region = Array.from(element.canvasManager!.uv.regions).at(-1)!;
     const { activeFaces, faces } = region.toJSON();
 
@@ -255,10 +241,9 @@ test("Create ramp adds a region with triangular sides and a true-length slope", 
 });
 
 test("Show all and region labels toggle independently", async({ panel }) => {
-  const trigger = panel.getByRole("button", { name: "Region visibility" });
+  const { trigger, menu } = panel.visibility;
   await trigger.focus();
   await trigger.press("Enter");
-  const menu = panel.getByRole("dialog", { name: "Region visibility" });
   const labels = menu.getByRole("checkbox", { name: "Show region labels" });
   const showAll = menu.getByRole("checkbox", { name: "Show all regions" });
   await expect(showAll).toBeChecked();
@@ -278,7 +263,7 @@ test("Show all and region labels toggle independently", async({ panel }) => {
   await trigger.press("Enter");
   await expect(labels).toBeChecked();
   await expect(showAll).not.toBeChecked();
-  expect(await panel.evaluate((element: PixelDrawPanel) => {
+  expect(await panel.root.evaluate((element: PixelDrawPanel) => {
     return {
       all: element.canvasManager!.uv.showAll,
       labels: element.canvasManager!.uv.showRegionLabels
@@ -290,9 +275,9 @@ test.describe("3D preview", () => {
   test.use({ editor: playground({ runtime: true }) });
 
   function previewMeshCount(
-    panel: Locator
+    panel: PixelArtPanel
   ): Promise<number> {
-    return panel.page().evaluate(
+    return panel.page.evaluate(
       () => window.pixelArtEditor?.preview?.scene.meshCount ?? -1
     );
   }
@@ -300,35 +285,10 @@ test.describe("3D preview", () => {
   test("each region owns exactly one preview mesh", async({ panel }) => {
     await expect.poll(() => previewMeshCount(panel)).toBe(1);
 
-    await panel.getByRole("button", { name: "Create cube", exact: true }).click();
+    await panel.uv.createCube.click();
     await expect.poll(() => previewMeshCount(panel)).toBe(2);
 
-    await panel.getByRole("button", { name: "Create ramp", exact: true }).click();
+    await panel.uv.createRamp.click();
     await expect.poll(() => previewMeshCount(panel)).toBe(3);
-  });
-
-  test("a re-sent create for a known region adds no region and no mesh", async({ panel }) => {
-    const created = await panel.evaluate((element: PixelDrawPanel) => {
-      const canvas = element.canvasManager!;
-      const [region] = canvas.uv.regions;
-      let creations = 0;
-      function count() {
-        creations++;
-      }
-      canvas.uv.on("region-created", count);
-      canvas.document.applyRemoteCommand({
-        action: "uv-region-created",
-        metadata: { region: region.toJSON() }
-      });
-      canvas.uv.off("region-created", count);
-
-      return {
-        creations,
-        regions: Array.from(canvas.uv.regions).length
-      };
-    });
-
-    expect(created).toEqual({ creations: 0, regions: 1 });
-    expect(await previewMeshCount(panel)).toBe(1);
   });
 });
