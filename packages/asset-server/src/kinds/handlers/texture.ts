@@ -14,7 +14,8 @@ const kExtensions: Readonly<Record<string, string>> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".gif": "image/gif",
-  ".bmp": "image/bmp"
+  ".bmp": "image/bmp",
+  ".ktx2": "image/ktx2"
 };
 
 export interface TextureAssetKindOptions {

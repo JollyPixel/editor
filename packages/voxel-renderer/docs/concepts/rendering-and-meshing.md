@@ -62,7 +62,8 @@ face's own tile. Mask surfaces test the averaged coverage, so distant foliage
 fills in. `"nearest"` turns the filter off.
 
 The average needs the atlas pixels. When they cannot be read, such as a
-cross-origin image without CORS, those faces fall back to nearest sampling.
+cross-origin image without CORS or a compressed `.ktx2` atlas, those faces fall
+back to nearest sampling.
 The averages are recomputed on the next `tick()` after the atlas texture's
 `version` changes, for example through `BlocksetAtlas.updateImage()`.
 

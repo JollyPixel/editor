@@ -100,6 +100,6 @@ export interface AtlasSize {
 
 export type AtlasImage = HTMLImageElement | HTMLCanvasElement;
 
-export type AtlasTexture = THREE.Texture<AtlasImage>;
+export type AtlasTexture = THREE.Texture<AtlasImage> | THREE.CompressedTexture;
 
 export type AtlasNormalTexture = THREE.Texture<AtlasSize>;

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import type { AssetCatalog } from "@jolly-pixel/asset";
 import {
   Systems,
@@ -93,6 +94,7 @@ export class Runtime<
   #adaptivePixelRatio: boolean;
   #logger: Systems.Logger;
   #session: RuntimeSession | null = null;
+  #ktx2: KTX2Loader | null;
   #statsHud: PerformanceStatsHud | null = null;
 
   private constructor(
@@ -112,6 +114,13 @@ export class Runtime<
     this.#sessionSettings = new RuntimeSessionSettings(options);
     this.#logger = options.logger ?? new Systems.Logger();
 
+    const ktx2 = options.assets?.ktx2;
+    this.#ktx2 = ktx2 === undefined ?
+      null :
+      new KTX2Loader(this.manager)
+        .setTranscoderPath(ktx2.transcoderPath)
+        .detectSupport(renderer.getSource());
+
     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
       sceneManager: new Systems.SceneManager<TContext>(),
@@ -120,7 +129,10 @@ export class Runtime<
       assetCoordinator: createRuntimeAssetCoordinator(
         this.manager,
         catalog,
-        options.assets?.loaders
+        {
+          loaders: options.assets?.loaders,
+          ktx2: this.#ktx2 ?? undefined
+        }
       )
     });
     this.loop = new GameLoop({
@@ -271,5 +283,7 @@ export class Runtime<
     this.metrics.dispose();
     this.overlay.dispose();
     this.world.dispose();
+    this.#ktx2?.dispose();
+    this.#ktx2 = null;
   }
 }

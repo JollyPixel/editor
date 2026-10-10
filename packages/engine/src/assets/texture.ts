@@ -6,7 +6,16 @@ import {
 } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
+// Import Internal Dependencies
+import { extname } from "../utils/path.ts";
+
 export const TEXTURE_ASSET = new AssetType<THREE.Texture>("texture");
+
+export interface CompressedTextureLoader {
+  loadAsync(
+    url: string
+  ): Promise<THREE.CompressedTexture>;
+}
 
 export interface TextureAssetLoaderOptions {
   /**
@@ -19,6 +28,11 @@ export interface TextureAssetLoaderOptions {
    * @default THREE.SRGBColorSpace
    */
   colorSpace?: THREE.ColorSpace;
+  /**
+   * Loads `.ktx2` sources, usually a `KTX2Loader` whose transcoder path is set
+   * and whose `detectSupport()` ran. Without it, `.ktx2` sources fail to load.
+   */
+  ktx2?: CompressedTextureLoader;
 }
 
 /**
@@ -29,6 +43,7 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
   #manager: THREE.LoadingManager;
   #filter: THREE.MagnificationTextureFilter;
   #colorSpace: THREE.ColorSpace;
+  #ktx2: CompressedTextureLoader | null;
 
   constructor(
     manager: THREE.LoadingManager,
@@ -37,6 +52,7 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
     this.#manager = manager;
     this.#filter = options.filter ?? THREE.NearestFilter;
     this.#colorSpace = options.colorSpace ?? THREE.SRGBColorSpace;
+    this.#ktx2 = options.ktx2 ?? null;
   }
 
   async load(
@@ -44,8 +60,7 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
   ): Promise<THREE.Texture> {
     let texture: THREE.Texture;
     try {
-      texture = await new THREE.TextureLoader(this.#manager)
-        .loadAsync(record.source);
+      texture = await this.#loadSource(record.source);
     }
     catch (error: unknown) {
       throw new Error(
@@ -59,5 +74,19 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
     texture.minFilter = this.#filter;
 
     return texture;
+  }
+
+  #loadSource(
+    source: string
+  ): Promise<THREE.Texture> {
+    if (extname(source).toLowerCase() !== ".ktx2") {
+      return new THREE.TextureLoader(this.#manager).loadAsync(source);
+    }
+
+    if (this.#ktx2 === null) {
+      throw new Error("No KTX2 loader configured");
+    }
+
+    return this.#ktx2.loadAsync(source);
   }
 }

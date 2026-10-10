@@ -3,20 +3,21 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type {
+  AtlasTexture,
   BlocksetDefinition,
   AtlasNormalTexture
 } from "../../document/blocksets/types.ts";
 
 export interface AtlasSource {
   def: BlocksetDefinition;
-  texture: THREE.Texture<HTMLImageElement>;
+  texture: AtlasTexture;
   normal?: AtlasNormalTexture;
 }
 
 export interface TextureSourceLoader {
   loadAsync(
     url: string
-  ): Promise<THREE.Texture<HTMLImageElement>>;
+  ): Promise<AtlasTexture>;
 }
 
 export interface LoadBlocksetsOptions {

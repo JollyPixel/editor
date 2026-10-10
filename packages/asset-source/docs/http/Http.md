@@ -66,5 +66,5 @@ A textual type without parameters gets `; charset=utf-8`. The lookup is
 servo's `contentType`, run on this table instead of servo's defaults.
 
 `DEFAULT_CONTENT_TYPES` covers `.json`, `.txt`, `.png`, `.jpg`, `.jpeg`,
-`.webp`, `.gif`, `.bmp` and `.svg`. It leaves out `.html`, `.js` and `.css`,
+`.webp`, `.gif`, `.bmp`, `.ktx2` and `.svg`. It leaves out `.html`, `.js` and `.css`,
 so an uploaded page or script is served as an octet stream.

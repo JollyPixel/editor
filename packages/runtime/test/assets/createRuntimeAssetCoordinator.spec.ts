@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   AssetCatalog,
   AssetLoaderAlreadyExistsError,
+  AssetRecord,
   AssetType
 } from "@jolly-pixel/asset";
 import {
@@ -54,18 +55,20 @@ describe("createRuntimeAssetCoordinator", () => {
     const coordinator = createRuntimeAssetCoordinator(
       manager,
       catalog,
-      [
-        {
-          type: customType,
-          create: (loaderManager) => {
-            receivedManager = loaderManager;
+      {
+        loaders: [
+          {
+            type: customType,
+            create: (loaderManager) => {
+              receivedManager = loaderManager;
 
-            return {
-              load: async() => "loaded"
-            };
+              return {
+                load: async() => "loaded"
+              };
+            }
           }
-        }
-      ]
+        ]
+      }
     );
 
     assert.strictEqual(coordinator.catalog, catalog);
@@ -81,14 +84,45 @@ describe("createRuntimeAssetCoordinator", () => {
       () => createRuntimeAssetCoordinator(
         new THREE.LoadingManager(),
         new AssetCatalog(),
-        [
-          {
-            type: AssetTypes.model,
-            create: (manager) => new AssetLoaders.model(manager)
-          }
-        ]
+        {
+          loaders: [
+            {
+              type: AssetTypes.model,
+              create: (manager) => new AssetLoaders.model(manager)
+            }
+          ]
+        }
       ),
       AssetLoaderAlreadyExistsError
     );
+  });
+
+  test("loads .ktx2 textures through the given KTX2 loader", async() => {
+    const requested: string[] = [];
+    const coordinator = createRuntimeAssetCoordinator(
+      new THREE.LoadingManager(),
+      new AssetCatalog(),
+      {
+        ktx2: {
+          loadAsync: async(url) => {
+            requested.push(url);
+
+            return new THREE.CompressedTexture([], 16, 16);
+          }
+        }
+      }
+    );
+
+    const texture = await coordinator.loaders.get(TEXTURE_ASSET).load(
+      new AssetRecord({
+        id: "texture.grass",
+        kind: "texture",
+        source: "textures/grass.ktx2"
+      }),
+      {}
+    );
+
+    assert.deepStrictEqual(requested, ["textures/grass.ktx2"]);
+    assert.ok(texture instanceof THREE.CompressedTexture);
   });
 });

@@ -90,9 +90,17 @@ function loadBlocksets(
   options?: { manager?: THREE.LoadingManager; loader?: TextureSourceLoader }
 ): Promise<AtlasSource[]>;
 
+interface TextureSourceLoader {
+  loadAsync(url: string): Promise<AtlasTexture>;
+}
+
+type AtlasTexture =
+  | THREE.Texture<HTMLImageElement | HTMLCanvasElement>
+  | THREE.CompressedTexture;
+
 interface AtlasSource {
   def: BlocksetDefinition;
-  texture: THREE.Texture<HTMLImageElement>;
+  texture: AtlasTexture;
   normal?: AtlasNormalTexture;
 }
 ```
@@ -103,6 +111,12 @@ definitions without `src` are skipped. `loader` replaces the default
 result to `VoxelViewOptions.blocksets` or `view.load()`. `normal` is never
 filled; add a [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps)
 yourself.
+
+To load `.ktx2` atlases, pass a `KTX2Loader` from
+`three/addons/loaders/KTX2Loader.js` as `loader`, after setting its transcoder
+path and calling `detectSupport(renderer)`. A compressed atlas has no readable
+pixels, so its faces use nearest sampling under
+[tile minification](../../concepts/rendering-and-meshing.md#tile-minification).
 
 ## Tile geometry
 

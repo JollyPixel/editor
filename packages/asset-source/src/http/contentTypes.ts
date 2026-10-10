@@ -12,6 +12,7 @@ export const DEFAULT_CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".webp": "image/webp",
   ".gif": "image/gif",
   ".bmp": "image/bmp",
+  ".ktx2": "image/ktx2",
   ".svg": "image/svg+xml"
 };
 
