@@ -9,6 +9,8 @@ import type {
 } from "@jolly-pixel/runtime";
 import {
   EditorRuntime,
+  archiveConsole,
+  runtimeConsole,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -26,15 +28,14 @@ import { EditorScene } from "./EditorScene.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
 import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
-import { mountInspectorControls } from "./inspectorControls.ts";
 import { brushConsole } from "../features/painting/brushConsole.ts";
 import { textureConsole } from "../features/texture/textureConsole.ts";
+import { viewConsole } from "../scene/viewConsole.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
 const kPerformanceStorageKey = "voxel-map:performance-hud";
 const kPerformancePaneKey = "performance";
-const kPerformanceToggleKey = "F3";
 const kMapKind = voxelMapDocumentKind();
 
 export interface VoxelMapEditorParts {
@@ -122,9 +123,8 @@ export class VoxelMapEditor {
         target: shell.layout ?? undefined,
         floating: true,
         key: kPerformancePaneKey,
-        title: "Performance [F3]",
+        title: "Performance",
         storageKey: kPerformanceStorageKey,
-        toggleKey: kPerformanceToggleKey,
         hidden: true
       })
     );
@@ -138,8 +138,22 @@ export class VoxelMapEditor {
       target,
       consoleFeatures: registerConsoleFeatures(
         commands,
-        [brushConsole, textureConsole],
-        workspace
+        [
+          brushConsole,
+          textureConsole,
+          viewConsole,
+          runtimeConsole,
+          archiveConsole
+        ],
+        {
+          brush: workspace.brush,
+          localBrush: workspace.localBrush,
+          state: workspace.state,
+          grid: workspace.grid,
+          archives: workspace.archives,
+          inspector: workspace.view.inspector,
+          runtime
+        }
       ),
       metricsPanel
     });
@@ -174,14 +188,7 @@ export class VoxelMapEditor {
     parts.metricsPanel.then((panel) => {
       if (this.#disposed) {
         panel.dispose();
-
-        return;
       }
-
-      mountInspectorControls({
-        panel,
-        view: this.workspace.view
-      });
     }, () => undefined);
   }
 

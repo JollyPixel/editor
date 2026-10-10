@@ -44,7 +44,10 @@ import {
   OverlayLayer,
   type OverlayLayerOptions
 } from "./ui/overlay/OverlayLayer.ts";
-import type { ViewHelperOptions } from "./ui/viewHelper/mountViewHelper.ts";
+import {
+  ViewHelperSettings,
+  type ViewHelperOptions
+} from "./ui/viewHelper/ViewHelperSettings.ts";
 
 export type RuntimeCanvasTarget = HTMLCanvasElement | string;
 
@@ -88,6 +91,7 @@ export class Runtime<
   readonly overlay: OverlayLayer;
   readonly stats = new StatsRecorder();
   readonly metrics: RuntimeMetrics;
+  readonly viewHelper: ViewHelperSettings | null;
   readonly manager = new THREE.LoadingManager();
 
   #sessionSettings: RuntimeSessionSettings;
@@ -112,6 +116,13 @@ export class Runtime<
     this.#adaptivePixelRatio = output?.pixelRatio === undefined &&
       output?.maxPixelRatio === undefined;
     this.#sessionSettings = new RuntimeSessionSettings(options);
+    const { viewHelper = false } = options;
+    this.viewHelper = viewHelper === false ?
+      null :
+      new ViewHelperSettings(
+        viewHelper === true ? {} : viewHelper,
+        () => this.world.invalidate()
+      );
     this.#logger = options.logger ?? new Systems.Logger();
 
     const ktx2 = options.assets?.ktx2;
@@ -202,6 +213,10 @@ export class Runtime<
 
   get idle(): boolean {
     return this.loop.sleeping;
+  }
+
+  get statsHud(): PerformanceStatsHud | null {
+    return this.#statsHud;
   }
 
   load(

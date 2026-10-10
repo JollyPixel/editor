@@ -125,6 +125,7 @@ function startSession(
     renderer: {} as Systems.ThreeRenderer,
     loop: new GameLoop({ source: new ManualFrameSource() }),
     nextFrame,
+    viewHelper: null,
     world: {
       input: {
         gamepad: {

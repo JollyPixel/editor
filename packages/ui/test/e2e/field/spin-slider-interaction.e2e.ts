@@ -35,7 +35,8 @@ test.describe("spin slider", () => {
   });
 
   test("a click without travel opens the value for typing", async({ page }) => {
-    const input = row(page, "jolly-spin-slider", "default").locator("input");
+    const input = row(page, "jolly-spin-slider", "default")
+      .getByRole("spinbutton", { name: "Intensity" });
 
     await input.click();
     await expect(input).toBeFocused();

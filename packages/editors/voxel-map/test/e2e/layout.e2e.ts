@@ -1,5 +1,11 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
+import {
+  boxOf,
+  centerOf,
+  dragTo,
+  type CommandConsole
+} from "@jolly-pixel/e2e";
 import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
@@ -7,12 +13,30 @@ import {
   test,
   expect
 } from "./fixtures.ts";
+import type { BlockLibrary } from "./support/blocks.ts";
 import type { PaneName } from "./support/dock.ts";
 import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kPerformancePane = "performance";
-const kPerformanceToggleKey = "F3";
+const kStackedBlockLibraries: StackedBlockLibrary[] = [
+  {
+    pane: "Blocks",
+    library: (map) => map.blocks.library,
+    below: (map) => map.texture.panel
+  },
+  {
+    pane: "Materials",
+    library: (map) => map.materials.library,
+    below: (map) => map.materials.materialLibrary
+  }
+];
+
+interface StackedBlockLibrary {
+  pane: PaneName;
+  library: (map: VoxelMapPage) => BlockLibrary;
+  below: (map: VoxelMapPage) => Locator;
+}
 
 function textureView(
   map: VoxelMapPage
@@ -65,6 +89,14 @@ async function performanceReadout(
   await expect(readout).toBeAttached();
 
   return readout;
+}
+
+async function toggleReadout(
+  commands: CommandConsole,
+  visible: boolean
+): Promise<void> {
+  await commands.submit(`runtime.metrics ${visible}`);
+  await commands.close();
 }
 
 function leftGroups(
@@ -148,9 +180,35 @@ test("the Materials pane shows its block library only while Blocks is not on scr
   await expect(materialsLibrary).toBeVisible();
 });
 
-test("the performance readout merges into the pane group it is dropped on", async({ map, page }) => {
+for (const stacked of kStackedBlockLibraries) {
+  test(`shrinking the ${stacked.pane} block library pulls the section below up with it`, async({
+    map,
+    page
+  }) => {
+    const library = stacked.library(map);
+    const below = stacked.below(map);
+    await map.panes.open(stacked.pane);
+    await expect(below).toBeVisible();
+
+    const before = await boxOf(library.listbox);
+    const gap = (await boxOf(below)).y - (before.y + before.height);
+    const grip = await centerOf(library.heightGrip);
+    await dragTo(page, library.heightGrip, {
+      x: grip.x,
+      y: grip.y - before.height
+    });
+
+    await expect.poll(async() => (await boxOf(library.listbox)).height)
+      .toBeLessThan(before.height);
+    const after = await boxOf(library.listbox);
+    expect((await boxOf(below)).y - (after.y + after.height))
+      .toBeCloseTo(gap, 0);
+  });
+}
+
+test("the performance readout merges into the pane group it is dropped on", async({ map, commands }) => {
   const readout = await performanceReadout(map);
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 
   await map.panes.movePane(readout, "General");
@@ -160,9 +218,9 @@ test("the performance readout merges into the pane group it is dropped on", asyn
   ]);
 });
 
-test("the performance toggle key still toggles the readout once docked", async({ map, page }) => {
+test("runtime.metrics still toggles the readout once docked", async({ map, commands }) => {
   const readout = await performanceReadout(map);
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 
   await map.panes.movePane(readout, "General");
@@ -170,8 +228,8 @@ test("the performance toggle key still toggles the readout once docked", async({
     map.panes.dock("left").locator(`jolly-pane[key='${kPerformancePane}']`)
   ).toBeVisible();
 
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, false);
   await expect(readout).toBeHidden();
-  await page.keyboard.press(kPerformanceToggleKey);
+  await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 });

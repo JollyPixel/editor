@@ -186,10 +186,13 @@ await archives.reset();
 | `canImport` / `canReset` / `volatile` | whether to offer import and reset, and whether edits are lost on reload |
 | `download()` | exports the target and saves it as the target path's stem with `.zip`, or `fallbackName` |
 | `importFile(file)` | rejects with `ArchiveRootError` before anything is written when the archive root is not an `accepts` asset; asks how to handle assets that already exist, imports, remembers the root as the last opened asset, then reloads onto it; does nothing when the question is dismissed |
+| `pickAndImport()` | opens a `.zip` file picker, then runs `importFile()` on the chosen file; does nothing when the picker is cancelled, and rejects with `ArchiveImportDisabledError` before opening it when `canImport` is `false` |
 | `reset()` | asks to confirm `resetWarning`, resets the workspace and reloads |
 
-Downloads, dialogs and navigation go through the `browser` option, an
-`EditorArchiveBrowser`; it defaults to the DOM and `window.location`.
+Downloads, file picking, dialogs and navigation go through the `browser`
+option, an `EditorArchiveBrowser`; it defaults to the DOM and `window.location`.
+A browser opens the file picker only during a user action, such as a click or
+a console command submitted with Enter.
 
 ### ArchiveActions
 
@@ -203,6 +206,26 @@ the available width. It renders nothing until `archives` is set. Importing
 import "@jolly-pixel/editor.host/ui";
 
 html`<jolly-archive-actions .archives=${archives}></jolly-archive-actions>`;
+```
+
+### archiveConsole
+
+A [console feature](../../../console/docs/features.md) that registers the
+`archive` namespace over an `EditorArchives`:
+
+- `/archive.export` runs `download()`.
+- `/archive.import` runs `pickAndImport()`. It is registered only when
+  `canImport` is `true`.
+- `/archive.reset` runs `reset()`. It is registered only when `canReset` is
+  `true`.
+
+A failed flow prints its error in the console.
+
+```ts
+import { registerConsoleFeatures } from "@jolly-pixel/console";
+import { archiveConsole } from "@jolly-pixel/editor.host";
+
+registerConsoleFeatures(commands, [archiveConsole], { archives });
 ```
 
 ## Dependencies

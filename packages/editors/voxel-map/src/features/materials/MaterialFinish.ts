@@ -24,7 +24,7 @@ import type { MapMaterial } from "./MapMaterial.ts";
 import type { MapMaterials } from "./MapMaterials.ts";
 
 // CONSTANTS
-const kMetalHint = "Turn on Reflections in General to see metal";
+const kMetalHint = "Turn on Reflections in View to see metal";
 
 @customElement("material-finish")
 export class MaterialFinish extends LitElement {
@@ -66,7 +66,7 @@ export class MaterialFinish extends LitElement {
     }
 
     return html`
-      <jolly-slider
+      <jolly-spin-slider
         label="Roughness"
         label-position="auto"
         min="0"
@@ -76,8 +76,8 @@ export class MaterialFinish extends LitElement {
         .value=${this.#roughness.value}
         @jolly-input=${this.#roughness.input}
         @jolly-change=${this.#roughness.commit}
-      ></jolly-slider>
-      <jolly-slider
+      ></jolly-spin-slider>
+      <jolly-spin-slider
         label="Metalness"
         label-position="auto"
         description=${this.#metalness.value > 0 ? kMetalHint : ""}
@@ -89,7 +89,7 @@ export class MaterialFinish extends LitElement {
         .value=${this.#metalness.value}
         @jolly-input=${this.#metalness.input}
         @jolly-change=${this.#metalness.commit}
-      ></jolly-slider>
+      ></jolly-spin-slider>
       <jolly-color
         label="Emissive"
         label-position="auto"
@@ -110,7 +110,7 @@ export class MaterialFinish extends LitElement {
         @jolly-input=${this.#emissiveIntensity.input}
         @jolly-change=${this.#emissiveIntensity.commit}
       ></jolly-number>
-      <jolly-slider
+      <jolly-spin-slider
         label="Light level"
         label-position="auto"
         description="Lights nearby blocks in the emissive colour, 0 turns it off"
@@ -122,8 +122,8 @@ export class MaterialFinish extends LitElement {
         .value=${this.#lightLevel.value}
         @jolly-input=${this.#lightLevel.input}
         @jolly-change=${this.#lightLevel.commit}
-      ></jolly-slider>
-      <jolly-slider
+      ></jolly-spin-slider>
+      <jolly-spin-slider
         label="Normal strength"
         label-position="auto"
         description="Relief from the blockset normal map, 0 turns it off"
@@ -135,7 +135,7 @@ export class MaterialFinish extends LitElement {
         .value=${this.#normalScale.value}
         @jolly-input=${this.#normalScale.input}
         @jolly-change=${this.#normalScale.commit}
-      ></jolly-slider>
+      ></jolly-spin-slider>
     `;
   }
 

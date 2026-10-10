@@ -12,7 +12,6 @@ import {
   FieldBinding,
   type JollyOption
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
@@ -37,21 +36,10 @@ export class MapConfigPanel extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
     }
-
-    jolly-archive-actions {
-      padding-inline-end: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
-    }
   `;
 
   @property({ attribute: false })
   declare workspace: VoxelMapWorkspace;
-
-  #gridVisible = new FieldBinding<boolean>(this, {
-    read: () => this.workspace.grid.enabled,
-    write: (value) => {
-      this.workspace.grid.enabled = value;
-    }
-  });
 
   #lighting = this.#viewBinding("lighting");
   #reflections = this.#viewBinding("reflections");
@@ -60,43 +48,8 @@ export class MapConfigPanel extends LitElement {
   #blockLight = this.#viewBinding("blockLight");
   #glow = this.#viewBinding("glow");
 
-  #skyRadius = new FieldBinding<number>(this, {
-    read: () => this.workspace.localBrush.skyRadius,
-    write: (value) => {
-      this.workspace.localBrush.skyRadius = value;
-    }
-  });
-
   override render() {
     return html`
-      <jolly-checkbox
-        align="end"
-        label="Grid visibility"
-        .value=${this.#gridVisible.value}
-        @jolly-change=${this.#gridVisible.commit}
-      ></jolly-checkbox>
-
-      <jolly-slider
-        label="Sky radius"
-        min="0"
-        max="32"
-        step="1"
-        .value=${this.#skyRadius.value}
-        @jolly-input=${this.#skyRadius.input}
-        @jolly-change=${this.#skyRadius.commit}
-      ></jolly-slider>
-
-      ${this.#renderView()}
-      <jolly-separator label="File"></jolly-separator>
-      <jolly-archive-actions
-        .archives=${this.workspace.archives}
-      ></jolly-archive-actions>
-    `;
-  }
-
-  #renderView() {
-    return html`
-      <jolly-separator label="View"></jolly-separator>
       <jolly-select
         label="Lighting"
         .options=${kLightingOptions}
@@ -107,6 +60,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Reflections"
         description="Shows the metal and roughness of material groups"
+        description-display="tooltip"
         .value=${this.#reflections.value}
         @jolly-change=${this.#reflections.commit}
       ></jolly-checkbox>
@@ -114,6 +68,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Occlusion"
         description="Darkens corners; rebuilds every chunk"
+        description-display="tooltip"
         .value=${this.#ambientOcclusion.value}
         @jolly-change=${this.#ambientOcclusion.commit}
       ></jolly-checkbox>
@@ -121,6 +76,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Shadows"
         description="Sun shadows around the camera"
+        description-display="tooltip"
         .value=${this.#shadows.value}
         @jolly-change=${this.#shadows.commit}
       ></jolly-checkbox>
@@ -128,6 +84,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Block light"
         description="Glowing materials light the blocks around them"
+        description-display="tooltip"
         .value=${this.#blockLight.value}
         @jolly-change=${this.#blockLight.commit}
       ></jolly-checkbox>
@@ -135,6 +92,7 @@ export class MapConfigPanel extends LitElement {
         align="end"
         label="Glow"
         description="Glowing materials bloom on screen"
+        description-display="tooltip"
         .value=${this.#glow.value}
         @jolly-change=${this.#glow.commit}
       ></jolly-checkbox>

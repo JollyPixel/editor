@@ -91,3 +91,24 @@ suspension, including when called during hover. Repeated calls do nothing.
 Overlapping bindings keep input suspended until the last hovering binding
 releases it. The suspension uses `Keyboard.suspend()`, so it never changes
 `keyboard.enabled`.
+
+## Console
+
+`runtimeConsole` is a [console feature](../../../console/docs/features.md)
+that registers the `runtime` namespace over a `Runtime`:
+
+- `runtime.stats` shows or hides the corner performance HUD. It is registered
+  only when `runtime.statsHud` is not `null`.
+- `runtime.viewHelper` shows or hides the axis gizmo. It is registered only
+  when `runtime.viewHelper` is not `null`.
+- `runtime.metrics` shows or hides the panel from `mountMetricsPanel()`.
+  Writing it before a panel is mounted prints an error.
+
+```ts
+import { registerConsoleFeatures } from "@jolly-pixel/console";
+import { runtimeConsole } from "@jolly-pixel/editor.host";
+
+registerConsoleFeatures(commands, [runtimeConsole], {
+  runtime: editorRuntime.runtime
+});
+```

@@ -14,7 +14,12 @@ import type { RuntimeSessionSettings } from "./RuntimeSessionSettings.ts";
 
 export type RuntimeSessionHost = Pick<
   Runtime,
-  "canvas" | "overlay" | "renderer" | "loop" | "nextFrame"
+  | "canvas"
+  | "overlay"
+  | "renderer"
+  | "loop"
+  | "nextFrame"
+  | "viewHelper"
 > & {
   readonly world: {
     readonly input: {
@@ -52,11 +57,11 @@ export class RuntimeSession {
       );
     }
 
-    if (settings.viewHelper !== null) {
+    if (host.viewHelper !== null) {
       this.#mounted.push(
         mountViewHelper(
           host.renderer,
-          settings.viewHelper
+          host.viewHelper
         )
       );
     }

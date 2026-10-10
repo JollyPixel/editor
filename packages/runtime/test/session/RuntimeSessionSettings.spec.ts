@@ -13,19 +13,16 @@ describe("RuntimeSessionSettings", () => {
 
     assert.equal(settings.focusCanvas, true);
     assert.equal(settings.focusHint, null);
-    assert.equal(settings.viewHelper, null);
     assert.equal(settings.renderOnDemand, false);
     assert.equal(settings.suspendWhenHidden, false);
   });
 
   test("turns a true toggle into empty options and false into null", () => {
-    const settings = new RuntimeSessionSettings({
-      focusHint: true,
-      viewHelper: false
-    });
+    const shown = new RuntimeSessionSettings({ focusHint: true });
+    const hidden = new RuntimeSessionSettings({ focusHint: false });
 
-    assert.deepEqual(settings.focusHint, {});
-    assert.equal(settings.viewHelper, null);
+    assert.deepEqual(shown.focusHint, {});
+    assert.equal(hidden.focusHint, null);
   });
 
   test("copies toggle options and freezes itself", () => {

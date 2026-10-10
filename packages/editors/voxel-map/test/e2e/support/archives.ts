@@ -4,32 +4,29 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
-import { dialog } from "@jolly-pixel/e2e";
+import {
+  CommandConsole,
+  dialog
+} from "@jolly-pixel/e2e";
 import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
-export class GeneralPane {
-  readonly root: Locator;
-  readonly exportButton: Locator;
-  readonly resetButton: Locator;
-  readonly archiveInput: Locator;
+export class Archives {
   readonly importCopyButton: Locator;
   readonly #page: Page;
+  readonly #commands: CommandConsole;
 
   constructor(
     page: Page
   ) {
     this.#page = page;
-    this.root = page.locator("map-config-panel");
-    this.exportButton = this.root.locator("#export-archive");
-    this.resetButton = this.root.locator("#reset-workspace");
-    this.archiveInput = this.root.locator("input[type=file]");
+    this.#commands = new CommandConsole(page);
     this.importCopyButton = dialog(page, "Import archive")
       .getByRole("button", { name: "Import as copy" });
   }
 
   async exportArchive(): Promise<Download> {
     const downloading = this.#page.waitForEvent("download");
-    await this.exportButton.click();
+    await this.#commands.submit("/archive.export");
 
     return downloading;
   }
@@ -37,11 +34,14 @@ export class GeneralPane {
   async importArchive(
     path: string
   ): Promise<void> {
-    await this.archiveInput.setInputFiles(path);
+    const choosing = this.#page.waitForEvent("filechooser");
+    await this.#commands.submit("/archive.import");
+    const chooser = await choosing;
+    await chooser.setFiles(path);
   }
 
   async resetWorkspace(): Promise<void> {
-    await this.resetButton.click();
+    await this.#commands.submit("/archive.reset");
     await dialog(this.#page, "Reset workspace")
       .getByRole("button", { name: "Reset" })
       .click();

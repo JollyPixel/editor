@@ -18,11 +18,15 @@ import {
 function registerBrush() {
   const commands = new CommandConsole();
   const brush = new BrushStore();
-  const handle = brushConsole(commands, { brush });
+  const localBrush = {
+    skyRadius: 24
+  };
+  const handle = brushConsole(commands, { brush, localBrush });
 
   return {
     commands,
     brush,
+    localBrush,
     handle
   };
 }
@@ -82,6 +86,15 @@ describe("brush console", () => {
     await commands.submit("brush.rotationMode 270");
     assert.equal(brush.rotationMode, 3);
     assert.equal(lastLine(commands), "info: 270");
+  });
+
+  test("skyRadius writes the local brush", async() => {
+    const { commands, localBrush } = registerBrush();
+
+    await commands.submit("brush.skyRadius 8");
+
+    assert.equal(localBrush.skyRadius, 8);
+    assert.equal(lastLine(commands), "info: 8");
   });
 
   test("a value outside the enum leaves the store unchanged", async() => {

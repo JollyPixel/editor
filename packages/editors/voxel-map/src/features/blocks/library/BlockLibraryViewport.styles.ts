@@ -41,7 +41,7 @@ export const blockLibraryViewportStyles = css`
     position: relative;
     z-index: 4;
     height: 6px;
-    margin-block: -3px;
+    margin-block-start: -6px;
     cursor: ns-resize;
     touch-action: none;
     outline: none;

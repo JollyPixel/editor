@@ -46,6 +46,8 @@ export * from "./editor/offerOffline.ts";
 export * from "./appearance/PageAppearance.ts";
 export * from "./console/mountConsole.ts";
 export * from "./console/FrameConsoles.ts";
+export * from "./console/namespaces/archive.ts";
+export * from "./console/namespaces/runtime.ts";
 export * from "./debug/readDebugLogger.ts";
 export * from "./params/QueryParams.ts";
 export * from "./params/HostParams.ts";

@@ -16,7 +16,6 @@ import type {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import "./MapConfigPanel.ts";
 
 @customElement("general-panel")
 export class GeneralPanel extends WorkspaceElement {
@@ -57,22 +56,11 @@ export class GeneralPanel extends WorkspaceElement {
   };
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    if (this.workspace === null) {
       return nothing;
     }
 
-    return html`
-      ${this.#renderCollaborators()}
-
-      <jolly-folder
-        key="map-config"
-        label="Map Config"
-        storage-key="voxel-map:folder:map-config"
-      >
-        <map-config-panel .workspace=${workspace}></map-config-panel>
-      </jolly-folder>
-    `;
+    return this.#renderCollaborators();
   }
 
   #renderCollaborators() {

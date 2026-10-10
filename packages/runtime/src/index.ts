@@ -7,19 +7,10 @@ export type {
   FocusHintOptions,
   FocusHintPosition
 } from "./ui/focus/mountFocusHint.ts";
-export type {
-  ViewHelperOptions,
-  ViewHelperPosition
-} from "./ui/viewHelper/mountViewHelper.ts";
-export type {
-  PerformanceStatsPosition
-} from "./stats/PerformanceStatsHud.ts";
-export { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
-export {
-  RendererMetrics,
-  type RendererMetricsOptions,
-  type RendererFrameStats
-} from "./metrics/RendererMetrics.ts";
+export type * from "./ui/viewHelper/ViewHelperSettings.ts";
+export type * from "./stats/PerformanceStatsHud.ts";
+export * from "./metrics/RuntimeMetrics.ts";
+export * from "./metrics/RendererMetrics.ts";
 export type {
   MetricsPanel,
   MetricsPanelKeyboard,
@@ -28,9 +19,4 @@ export type {
 export type {
   RuntimeLoadOptions
 } from "./bootstrap/bootstrapRuntime.ts";
-export type {
-  RuntimeAssetCatalog,
-  RuntimeAssetLoaderDefinition,
-  RuntimeAssetOptions,
-  RuntimeKTX2Options
-} from "./assets/RuntimeAssetOptions.ts";
+export * from "./assets/RuntimeAssetOptions.ts";
