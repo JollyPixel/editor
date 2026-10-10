@@ -8,6 +8,7 @@ import {
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { MapAccessSource } from "../../access/MapAccess.ts";
 import {
   ObjectRef,
   parseLayerRef,
@@ -29,6 +30,7 @@ export interface MapLayersOptions {
   world: VoxelWorld;
   selection: SelectionStore;
   mapDocument: MapDocumentSignals;
+  access: MapAccessSource;
   confirm?: ConfirmPrompt;
 }
 
@@ -45,6 +47,7 @@ export class MapLayers {
 
   readonly #world: VoxelWorld;
   readonly #selection: SelectionStore;
+  readonly #access: MapAccessSource;
   readonly #confirm: ConfirmPrompt;
   readonly #subscriptions: Array<() => void>;
 
@@ -53,6 +56,7 @@ export class MapLayers {
   ) {
     this.#world = options.world;
     this.#selection = options.selection;
+    this.#access = options.access;
     this.#confirm = options.confirm ?? showConfirm;
 
     const { mapDocument } = options;
@@ -69,6 +73,12 @@ export class MapLayers {
     }
   }
 
+  canEdit(
+    kind: AddKind
+  ): boolean {
+    return this.#access.current.has(kind === "object" ? "objects" : "layers");
+  }
+
   defaultNames(): Record<AddKind, string> {
     return {
       "voxel-layer": `Layer ${this.#world.getLayers().length + 1}`,
@@ -81,6 +91,10 @@ export class MapLayers {
     focus: Vector3Like,
     result: AddLayerResult
   ): void {
+    if (!this.canEdit(result.kind)) {
+      return;
+    }
+
     switch (result.kind) {
       case "voxel-layer":
         this.#world.addLayer(result.name);
@@ -100,7 +114,7 @@ export class MapLayers {
     ref: LayerRef,
     name: string
   ): void {
-    if (ref instanceof ObjectRef) {
+    if (ref instanceof ObjectRef && this.canEdit(ref.kind)) {
       ref.update(this.#world, { name });
     }
   }
@@ -109,7 +123,7 @@ export class MapLayers {
     ref: LayerRef,
     locked: boolean
   ): void {
-    if (ref instanceof ObjectRef) {
+    if (ref instanceof ObjectRef && this.canEdit(ref.kind)) {
       ref.update(this.#world, { locked });
     }
   }
@@ -117,6 +131,10 @@ export class MapLayers {
   async remove(
     ref: LayerRef
   ): Promise<void> {
+    if (!this.canEdit(ref.kind)) {
+      return;
+    }
+
     const message = ref.removalMessage(this.#world);
     const confirmed = message === null || await this.#confirm({
       title: "Delete layer",
@@ -133,7 +151,7 @@ export class MapLayers {
   clone(
     ref: LayerRef
   ): void {
-    if (ref.kind !== "voxel-layer") {
+    if (ref.kind !== "voxel-layer" || !this.canEdit(ref.kind)) {
       return;
     }
 
@@ -147,7 +165,7 @@ export class MapLayers {
     ref: LayerRef,
     pickTarget: (context: MergeLayerContext) => Promise<string | null>
   ): Promise<void> {
-    if (ref.kind !== "voxel-layer") {
+    if (ref.kind !== "voxel-layer" || !this.canEdit(ref.kind)) {
       return;
     }
 
@@ -183,13 +201,17 @@ export class MapLayers {
   reparent(
     detail: JollyReparentDetail
   ): void {
-    if (!MapLayers.acceptsDrop(detail)) {
+    const moved = detail.movedIds.map(parseLayerRef);
+    if (
+      !MapLayers.acceptsDrop(detail) ||
+      !moved.every((ref) => this.canEdit(ref.kind))
+    ) {
       return;
     }
 
     const target = parseLayerRef(detail.targetId);
-    for (const movedId of detail.movedIds) {
-      parseLayerRef(movedId).moveOnto(this.#world, target, detail.where);
+    for (const ref of moved) {
+      ref.moveOnto(this.#world, target, detail.where);
     }
   }
 

@@ -10,21 +10,25 @@ import {
   MAP_HISTORY_SCOPE,
   type MapHistoryScope
 } from "../../shared/mapHistory.ts";
+import type { MapAccessSource } from "../../access/MapAccess.ts";
 
 export interface MapHistoryOptions {
   history: CommandHistory<MapHistoryScope>;
   placement: Pick<MapPlacement, "cancelLift">;
+  access: MapAccessSource;
 }
 
 export class MapHistory {
   readonly #history: CommandHistory<MapHistoryScope>;
   readonly #placement: Pick<MapPlacement, "cancelLift">;
+  readonly #access: MapAccessSource;
 
   constructor(
     options: MapHistoryOptions
   ) {
     this.#history = options.history;
     this.#placement = options.placement;
+    this.#access = options.access;
   }
 
   get state(): HistoryScopeState {
@@ -32,10 +36,18 @@ export class MapHistory {
   }
 
   undo(): boolean {
+    if (this.#access.current.readOnly) {
+      return false;
+    }
+
     return this.#placement.cancelLift() || this.#history.undo(MAP_HISTORY_SCOPE);
   }
 
   redo(): boolean {
+    if (this.#access.current.readOnly) {
+      return false;
+    }
+
     this.#placement.cancelLift();
 
     return this.#history.redo(MAP_HISTORY_SCOPE);

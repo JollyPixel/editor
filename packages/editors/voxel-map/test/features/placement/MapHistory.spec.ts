@@ -18,6 +18,7 @@ import { MapHistory } from "../../../src/features/placement/MapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
 const kOrigin = CellRegion.spanning(
@@ -33,11 +34,13 @@ function setup() {
     world,
     history: voxels,
     selection: new SelectionStore(),
-    mapDocument: mapDocumentOf(world)
+    mapDocument: mapDocumentOf(world),
+    access: mapAccess()
   });
   const history = new MapHistory({
     history: voxels,
-    placement
+    placement,
+    access: mapAccess()
   });
   world.setVoxel("Draft", {
     position: { x: 0, y: 0, z: 0 },

@@ -21,9 +21,11 @@ import type { MapPlacement } from "../features/placement/MapPlacement.ts";
 import type { MapTemplates } from "../features/templates/MapTemplates.ts";
 import type { MapBlocksets } from "../features/blocksets/MapBlocksets.ts";
 import type { MapMaterials } from "../features/materials/MapMaterials.ts";
+import type { MapGrants } from "../access/MapAccess.ts";
 
 export interface VoxelMapWorkspace {
   state: EditorState;
+  access: MapGrants;
   brush: BrushStore;
   mapDocument: MapDocument;
   usage: BlockUsageStore;

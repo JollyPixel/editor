@@ -46,6 +46,8 @@ export class ObjectPanel extends LitElement {
   declare objectId: string | null;
   @property({ attribute: false })
   declare mapDocument: MapDocument;
+  @property({ type: Boolean })
+  declare writable: boolean;
 
   @state()
   private declare _object: VoxelObjectJSON | null;
@@ -71,6 +73,7 @@ export class ObjectPanel extends LitElement {
     super();
     this.layerName = null;
     this.objectId = null;
+    this.writable = true;
     this._object = null;
     this._props = [];
   }
@@ -153,13 +156,14 @@ export class ObjectPanel extends LitElement {
       return nothing;
     }
 
-    const locked = object.locked ?? false;
+    const locked = !this.writable || (object.locked ?? false);
 
     return html`
       <jolly-separator label=${object.name}></jolly-separator>
 
       <jolly-color
         label="Color"
+        ?disabled=${!this.writable}
         .value=${this.#color.value}
         .default=${new MapObject(object).derivedColor}
         @jolly-input=${this.#color.input}
@@ -193,6 +197,7 @@ export class ObjectPanel extends LitElement {
   #renderProperties() {
     return html`<custom-properties-editor
       .rows=${this._props}
+      .disabled=${!this.writable}
       storage-key="voxel-map:folder:object-properties"
       @property-rows-change=${this.#onPropertyRowsChange}
     ></custom-properties-editor>`;

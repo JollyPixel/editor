@@ -11,13 +11,18 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
+import { MAP_CAPABILITIES } from "../../../src/access/MapAccess.ts";
 
-function setup() {
+function setup(
+  access = mapAccess()
+) {
   const world = new VoxelWorld();
   const templates = new MapTemplates({
     world,
     mapDocument: mapDocumentOf(world),
-    confirm: () => Promise.resolve(true)
+    confirm: () => Promise.resolve(true),
+    access
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
@@ -80,7 +85,8 @@ describe("MapTemplates.remove", () => {
         prompts.push(options.message);
 
         return Promise.resolve(true);
-      }
+      },
+      access: mapAccess()
     });
     const id = templates.saveLayer("Draft")!;
 
@@ -88,6 +94,19 @@ describe("MapTemplates.remove", () => {
     assert.equal(await templates.remove(id), true);
     assert.equal(world.templates.size, 0);
     assert.equal(prompts.length, 1);
+  });
+});
+
+describe("MapTemplates access", () => {
+  test("refuses every template write for a role that cannot write templates", async() => {
+    const { world, templates } = setup(mapAccess(MAP_CAPABILITIES.none));
+    const id = world.templates.createFromLayer("Draft", { name: "Draft" })!.id;
+
+    assert.equal(templates.editable, false);
+    assert.equal(templates.saveLayer("Draft"), null);
+    assert.equal(templates.rename(id, "Wall"), false);
+    assert.equal(await templates.remove(id), false);
+    assert.deepEqual(Array.from(world.templates, (template) => template.name), ["Draft"]);
   });
 });
 

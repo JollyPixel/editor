@@ -24,6 +24,7 @@ import type { ActivePlacement } from "../../../src/features/placement/ActivePlac
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
 
 function setup() {
   const world = new VoxelWorld();
@@ -33,7 +34,8 @@ function setup() {
   const layers = new MapLayers({
     world,
     selection,
-    mapDocument
+    mapDocument,
+    access: mapAccess()
   });
   const concealed: string[] = [];
   const placement = new MapPlacement({
@@ -47,7 +49,8 @@ function setup() {
       return () => {
         concealed.splice(concealed.indexOf(layerName), 1);
       };
-    }
+    },
+    access: mapAccess()
   });
   world.addLayer("Draft");
   world.addLayer("Ground");

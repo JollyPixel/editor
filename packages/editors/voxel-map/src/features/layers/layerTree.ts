@@ -17,6 +17,7 @@ import {
   type LayerRef
 } from "../../state/index.ts";
 import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
+import type { MapLayers } from "./MapLayers.ts";
 
 export function layerSelectionsOf(
   world: VoxelWorld
@@ -32,8 +33,11 @@ export function layerSelectionsOf(
 
 export function layerTreeNodes(
   world: VoxelWorld,
-  visibility: Pick<LayerVisibilityStore, "resolve">
+  visibility: Pick<LayerVisibilityStore, "resolve">,
+  layers: Pick<MapLayers, "canEdit">
 ): TreeNode<LayerRef>[] {
+  const lockable = layers.canEdit("object");
+
   return [
     ...world.getLayers().map((layer): TreeNode<LayerRef> => {
       const ref = new VoxelLayerRef(layer.name);
@@ -67,7 +71,7 @@ export function layerTreeNodes(
             label: object.name,
             icon: "object-area",
             visible: visibility.resolve(objectId, object.visible),
-            locked: object.locked ?? false,
+            locked: lockable ? object.locked ?? false : undefined,
             renamable: true,
             data: objectRef
           };

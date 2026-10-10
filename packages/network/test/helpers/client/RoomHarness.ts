@@ -3,7 +3,8 @@ import { ClientRoom } from "#src/client/ClientRoom.ts";
 import type {
   ClientEnvelope,
   PeerMetadata,
-  RoomOptions
+  RoomOptions,
+  RoomRights
 } from "#src/index.ts";
 
 export class RoomHarness<
@@ -39,13 +40,14 @@ export class RoomHarness<
 
   admit(
     self = "self",
-    peers: Record<string, PeerMetadata> = {}
+    peers: Record<string, PeerMetadata> = {},
+    rights: RoomRights = {}
   ): void {
     this.room.receive({
       room: this.room.id,
       kind: "sync",
       self,
-      rights: {},
+      rights,
       members: [
         self,
         ...Object.keys(peers)
@@ -57,6 +59,17 @@ export class RoomHarness<
           presence: peers[clientId] ?? {}
         };
       })
+    });
+  }
+
+  deny(
+    event: string
+  ): void {
+    this.room.receive({
+      room: this.room.id,
+      kind: "denied",
+      event,
+      reason: "read-only"
     });
   }
 

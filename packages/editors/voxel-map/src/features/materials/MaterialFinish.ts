@@ -42,6 +42,9 @@ export class MaterialFinish extends LitElement {
   @property({ attribute: false })
   declare material: MapMaterial | undefined;
 
+  @property({ type: Boolean })
+  declare disabled: boolean;
+
   #roughness = new FieldBinding(this, this.#source("roughness"));
   #metalness = new FieldBinding(this, this.#source("metalness"));
   #emissive = new FieldBinding(this, this.#source("emissive"));
@@ -51,6 +54,11 @@ export class MaterialFinish extends LitElement {
   );
   #normalScale = new FieldBinding(this, this.#source("normalScale"));
   #lightLevel = new FieldBinding(this, this.#source("lightLevel"));
+
+  constructor() {
+    super();
+    this.disabled = false;
+  }
 
   override render() {
     if (this.material === undefined) {
@@ -64,6 +72,7 @@ export class MaterialFinish extends LitElement {
         min="0"
         max="1"
         step="0.05"
+        ?disabled=${this.disabled}
         .value=${this.#roughness.value}
         @jolly-input=${this.#roughness.input}
         @jolly-change=${this.#roughness.commit}
@@ -76,6 +85,7 @@ export class MaterialFinish extends LitElement {
         min="0"
         max="1"
         step="0.05"
+        ?disabled=${this.disabled}
         .value=${this.#metalness.value}
         @jolly-input=${this.#metalness.input}
         @jolly-change=${this.#metalness.commit}
@@ -83,6 +93,7 @@ export class MaterialFinish extends LitElement {
       <jolly-color
         label="Emissive"
         label-position="auto"
+        ?disabled=${this.disabled}
         .value=${this.#emissive.value}
         @jolly-input=${this.#emissive.input}
         @jolly-change=${this.#emissive.commit}
@@ -94,6 +105,7 @@ export class MaterialFinish extends LitElement {
         description-display="tooltip"
         min="0"
         step="0.1"
+        ?disabled=${this.disabled}
         .value=${this.#emissiveIntensity.value}
         @jolly-input=${this.#emissiveIntensity.input}
         @jolly-change=${this.#emissiveIntensity.commit}
@@ -106,6 +118,7 @@ export class MaterialFinish extends LitElement {
         min="0"
         max=${MAX_LIGHT_LEVEL}
         step="1"
+        ?disabled=${this.disabled}
         .value=${this.#lightLevel.value}
         @jolly-input=${this.#lightLevel.input}
         @jolly-change=${this.#lightLevel.commit}
@@ -118,6 +131,7 @@ export class MaterialFinish extends LitElement {
         min="0"
         max="3"
         step="0.1"
+        ?disabled=${this.disabled}
         .value=${this.#normalScale.value}
         @jolly-input=${this.#normalScale.input}
         @jolly-change=${this.#normalScale.commit}

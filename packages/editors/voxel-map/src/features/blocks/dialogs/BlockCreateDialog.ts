@@ -48,8 +48,11 @@ export class BlockCreateDialog extends WorkspaceElement {
   }
 
   async open(): Promise<void> {
+    const blocksets = this.workspace?.blocksets;
+    const writable = blocksets?.entriesGranting("blocks") ?? [];
+    const active = blocksets?.activeBlocksetId ?? null;
     this._draft = BlockDraft.create(
-      this.workspace?.blocksets.activeBlocksetId ?? ""
+      writable.find((entry) => entry.id === active)?.id ?? writable[0]?.id ?? ""
     );
     this._open = true;
     await this.updateComplete;
@@ -72,6 +75,7 @@ export class BlockCreateDialog extends WorkspaceElement {
 
     const { blocksets, view } = workspace;
     const draft = this._draft;
+    const writable = blocksets.entriesGranting("blocks");
 
     return html`
       <jolly-dialog
@@ -85,9 +89,9 @@ export class BlockCreateDialog extends WorkspaceElement {
           <div class="fields">
             <jolly-select
               label="Blockset"
-              .options=${blocksetOptions(blocksets.entries, false)}
+              .options=${blocksetOptions(writable, false)}
               .value=${draft.blocksetId}
-              ?disabled=${blocksets.entries.length <= 1}
+              ?disabled=${writable.length <= 1}
               @jolly-change=${this.#onBlocksetChange}
             ></jolly-select>
             <jolly-select

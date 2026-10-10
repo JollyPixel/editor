@@ -7,6 +7,7 @@ import {
 export default defineE2EConfig({
   port: PORTS.voxelMap,
   command: "pnpm run dev:e2e",
+  localWorkers: "50%",
   ciWorkers: 2,
   viewport: {
     width: 960,

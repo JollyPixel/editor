@@ -74,6 +74,7 @@ export class MaterialLibrary extends WorkspaceElement {
     const material = selectedId === null ?
       undefined :
       shelves.material(selectedId);
+    const editable = material !== undefined && shelves.canEdit(material.id);
     const block = this.#block(workspace);
 
     return html`
@@ -89,7 +90,7 @@ export class MaterialLibrary extends WorkspaceElement {
           icon-only
           label="New material"
           title="New material"
-          ?disabled=${shelves.size === 0}
+          ?disabled=${shelves.editableShelves.length === 0}
           @click=${this.#create}
         ></jolly-button>
         <jolly-button
@@ -99,7 +100,7 @@ export class MaterialLibrary extends WorkspaceElement {
           icon-only
           label="Delete material"
           title="Delete material"
-          ?disabled=${material === undefined}
+          ?disabled=${!editable}
           @click=${this.#confirmRemove}
         ></jolly-button>
         <div class="layout">
@@ -120,7 +121,7 @@ export class MaterialLibrary extends WorkspaceElement {
           <section class="editor">
             ${material === undefined ?
               html`<p class="hint">Pick a material or create one.</p>` :
-              this.#renderFields(workspace, material, block)}
+              this.#renderFields(workspace, material, block, editable)}
           </section>
         </div>
       </jolly-folder>
@@ -130,7 +131,8 @@ export class MaterialLibrary extends WorkspaceElement {
   #renderFields(
     workspace: VoxelMapWorkspace,
     material: MapMaterial,
-    block: ResolvedBlockDefinition | undefined
+    block: ResolvedBlockDefinition | undefined,
+    editable: boolean
   ) {
     return html`
       <div class="apply">
@@ -143,6 +145,7 @@ export class MaterialLibrary extends WorkspaceElement {
           label-position="auto"
           description="Swatch shown on the blocks using this material"
           description-display="tooltip"
+          ?disabled=${!editable}
           .value=${material.swatch.color}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
             workspace.materials.refinish(material, {
@@ -153,6 +156,7 @@ export class MaterialLibrary extends WorkspaceElement {
         <material-finish
           .materials=${workspace.materials}
           .material=${material}
+          .disabled=${!editable}
         ></material-finish>
       </div>
     `;
@@ -163,13 +167,15 @@ export class MaterialLibrary extends WorkspaceElement {
     material: MapMaterial,
     block: ResolvedBlockDefinition | undefined
   ) {
-    if (block === undefined || !material.slot.owns(block.id)) {
+    if (
+      block === undefined ||
+      !material.slot.owns(block.id) ||
+      !workspace.blocksets.canEditBlock(block.id)
+    ) {
       return html`
         <jolly-button
           icon="material"
-          title=${block === undefined ?
-            "Select a block to apply this material" :
-            `${block.name} belongs to another blockset`}
+          title=${applyBlockedReason(material, block)}
           disabled
         >Apply to selected block</jolly-button>
       `;
@@ -207,7 +213,8 @@ export class MaterialLibrary extends WorkspaceElement {
           blocksetId: entry.id,
           label: entry.label,
           slot: binding.slot,
-          materials: materials.inSlot(binding.slot)
+          materials: materials.inSlot(binding.slot),
+          editable: binding.access.current.has("materials")
         });
       }
     }
@@ -284,9 +291,11 @@ export class MaterialLibrary extends WorkspaceElement {
       undefined :
       shelves.shelfOf(selectedId);
     const blockOwner = workspace.blocksets.ownerOf(workspace.state.block.id);
-    const target = selectedShelf?.slot ??
-      blockOwner?.slot ??
-      [...shelves][0]?.slot;
+    const writable = shelves.editableShelves;
+    const preferred = [selectedShelf?.slot, blockOwner?.slot].find(
+      (slot) => writable.some((shelf) => shelf.slot === slot)
+    );
+    const target = preferred ?? writable[0]?.slot;
     const materialId = target === undefined ?
       null :
       workspace.materials.create(target);
@@ -311,7 +320,7 @@ export class MaterialLibrary extends WorkspaceElement {
     const material = selectedId === null ?
       undefined :
       shelves.material(selectedId);
-    if (material === undefined) {
+    if (material === undefined || !shelves.canEdit(material.id)) {
       return;
     }
 
@@ -329,6 +338,19 @@ export class MaterialLibrary extends WorkspaceElement {
       workspace.materials.remove(material);
     }
   }
+}
+
+function applyBlockedReason(
+  material: MapMaterial,
+  block: ResolvedBlockDefinition | undefined
+): string {
+  if (block === undefined) {
+    return "Select a block to apply this material";
+  }
+
+  return material.slot.owns(block.id) ?
+    "You can only view the blocks of this blockset" :
+    `${block.name} belongs to another blockset`;
 }
 
 declare global {

@@ -25,6 +25,14 @@ import {
 } from "../../../src/state/index.ts";
 import { LayerVisibilityStore } from "../../../src/features/layers/LayerVisibilityStore.ts";
 
+// CONSTANTS
+const kEditable = {
+  canEdit: () => true
+};
+const kViewOnly = {
+  canEdit: () => false
+};
+
 describe("layerTreeNodes", () => {
   test("projects voxel layers, object layers and their objects", () => {
     const world = {
@@ -54,7 +62,8 @@ describe("layerTreeNodes", () => {
     };
     const nodes = layerTreeNodes(
       world as unknown as VoxelWorld,
-      new LayerVisibilityStore()
+      new LayerVisibilityStore(),
+      kEditable
     );
 
     assert.strictEqual(nodes.length, 2);
@@ -105,12 +114,43 @@ describe("layerTreeNodes", () => {
 
     const [ground, triggers] = layerTreeNodes(
       world as unknown as VoxelWorld,
-      visibility
+      visibility,
+      kEditable
     );
 
     assert.strictEqual(ground.visible, false);
     assert.strictEqual(triggers.visible, true);
     assert.strictEqual(triggers.children?.[0].visible, false);
+  });
+
+  test("drops the lock toggle of objects the user cannot change", () => {
+    const world = {
+      getLayers: () => [],
+      objectLayers: {
+        toArray: () => [
+          {
+            name: "Triggers",
+            visible: true,
+            objects: [
+              {
+                id: "spawn",
+                name: "Spawn",
+                visible: true,
+                locked: true
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    const [triggers] = layerTreeNodes(
+      world as unknown as VoxelWorld,
+      new LayerVisibilityStore(),
+      kViewOnly
+    );
+
+    assert.strictEqual(triggers.children?.[0].locked, undefined);
   });
 });
 

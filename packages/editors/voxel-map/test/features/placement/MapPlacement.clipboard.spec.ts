@@ -20,6 +20,7 @@ import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
 const kLowerCorner = CellRegion.spanning(
@@ -35,13 +36,15 @@ function setup() {
   const layers = new MapLayers({
     world,
     selection,
-    mapDocument
+    mapDocument,
+    access: mapAccess()
   });
   const placement = new MapPlacement({
     world,
     history,
     selection,
-    mapDocument
+    mapDocument,
+    access: mapAccess()
   });
   world.addLayer("Draft");
   world.addLayer("Ground");

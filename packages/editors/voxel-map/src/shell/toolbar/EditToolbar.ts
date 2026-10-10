@@ -95,6 +95,7 @@ export class EditToolbar extends WorkspaceElement {
       tool.subscribe("selectMode", (selectMode) => {
         this._selectMode = selectMode;
       }),
+      workspace.access.subscribe("change", () => this.requestUpdate()),
       keyboardLayout.subscribe("change", () => this.requestUpdate())
     ];
   }
@@ -131,6 +132,7 @@ export class EditToolbar extends WorkspaceElement {
 
   #renderEdit(): TemplateResult {
     const selecting = this.mode === "select";
+    const { access, placement } = this.attached;
 
     return html`
       <div class="group" role="group" aria-label="Tools">
@@ -155,14 +157,14 @@ export class EditToolbar extends WorkspaceElement {
           data-tool="undo"
           icon="undo"
           label=${`Undo (${this.#shortcut(HISTORY_SHORTCUTS.undo)})`}
-          ?disabled=${this._undoDepth === 0}
+          ?disabled=${access.current.readOnly || this._undoDepth === 0}
           @click=${this.#onUndo}
         >${renderStepCount(this._undoDepth)}</jolly-tool-button>
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
           label=${`Redo (${this.#shortcut(HISTORY_SHORTCUTS.redo)})`}
-          ?disabled=${this._redoDepth === 0}
+          ?disabled=${access.current.readOnly || this._redoDepth === 0}
           @click=${this.#onRedo}
         >${renderStepCount(this._redoDepth)}</jolly-tool-button>
       </div>
@@ -172,7 +174,7 @@ export class EditToolbar extends WorkspaceElement {
           data-tool="paste"
           icon="paste"
           label=${`Paste (${this.#shortcut(CLIPBOARD_SHORTCUTS.paste)})`}
-          ?disabled=${!this._canPaste}
+          ?disabled=${!placement.canPlace("copy") || !this._canPaste}
           @click=${this.#onPaste}
         ></jolly-tool-button>
       </div>

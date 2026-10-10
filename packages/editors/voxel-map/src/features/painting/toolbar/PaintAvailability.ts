@@ -1,10 +1,12 @@
 // Import Internal Dependencies
 import type { SelectionStore } from "../../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
+import type { MapAccess } from "../../../access/MapAccess.ts";
 
 // CONSTANTS
 export const BRUSH_NO_LAYER_REASON = "Select a voxel layer to paint";
 export const BRUSH_SUSPENDED_REASON = "Commit or cancel the placement to paint";
+export const BRUSH_VIEW_ONLY_REASON = "You can only view this map";
 
 export type PaintingSelection = Pick<
   SelectionStore,
@@ -23,15 +25,16 @@ export class PaintAvailability {
     workspace: VoxelMapWorkspace,
     listener: (availability: PaintAvailability) => void
   ): Iterable<() => void> {
-    const { brush, mapDocument } = workspace;
+    const { brush, mapDocument, access } = workspace;
     const { selection } = workspace.state;
     function refresh(): void {
-      listener(PaintAvailability.of(selection, brush.suspended));
+      listener(PaintAvailability.of(selection, brush.suspended, access.current));
     }
 
     refresh();
 
     return [
+      access.subscribe("change", refresh),
       brush.subscribe("suspendedChange", refresh),
       selection.subscribe("change", refresh),
       mapDocument.subscribe("layerUpdated", refresh)
@@ -40,8 +43,15 @@ export class PaintAvailability {
 
   static of(
     selection: PaintingSelection,
-    suspended: boolean
+    suspended: boolean,
+    access: MapAccess
   ): PaintAvailability {
+    if (!access.has("voxels")) {
+      return new PaintAvailability(BRUSH_VIEW_ONLY_REASON, {
+        message: "View only",
+        resumeLayer: null
+      });
+    }
     if (suspended) {
       return new PaintAvailability(BRUSH_SUSPENDED_REASON, null);
     }

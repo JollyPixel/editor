@@ -76,6 +76,7 @@ export class LayerManager extends WorkspaceElement {
       workspace.mapDocument.subscribe("reset", refresh),
       presence.subscribe("layerSelectionsChange", refresh),
       workspace.layerVisibility.subscribe("change", refresh),
+      workspace.access.subscribe("change", refresh),
       workspace.usage.subscribe("change", () => this.requestUpdate()),
       selection.subscribe("change", (current) => {
         this._selection = current;
@@ -90,8 +91,12 @@ export class LayerManager extends WorkspaceElement {
       return nothing;
     }
 
+    const { layers } = workspace;
     const world = workspace.mapDocument.world;
-    const voxelLayerSelected = this._selection?.kind === "voxel-layer";
+    const selection = this._selection;
+    const voxelLayerSelected = selection?.kind === "voxel-layer" &&
+      layers.canEdit(selection.kind);
+    const removable = selection !== null && layers.canEdit(selection.kind);
 
     return html`
       <jolly-folder
@@ -110,6 +115,7 @@ export class LayerManager extends WorkspaceElement {
           icon-only
           label="Add layer"
           title="Add layer"
+          ?disabled=${!layers.canEdit("voxel-layer")}
           @click=${this.#addLayer}
         ></jolly-button>
         <jolly-button
@@ -137,16 +143,16 @@ export class LayerManager extends WorkspaceElement {
           variant="danger"
           label="Remove layer"
           title="Remove layer"
-          ?disabled=${this._selection === null}
+          ?disabled=${!removable}
           @click=${this.#removeLayer}
         ></jolly-button>
 
         <div class="tree-host">
           <jolly-tree
             require-selection
-            renamable
-            reorderable
-            row-drag
+            .renamable=${layers.canEdit("object")}
+            .reorderable=${layers.canEdit("voxel-layer")}
+            .rowDrag=${layers.canEdit("voxel-layer")}
             .nodes=${this._nodes}
             .selected=${this._selection === null ? [] : [this._selection.key]}
             .expanded=${this._expanded}
@@ -175,6 +181,7 @@ export class LayerManager extends WorkspaceElement {
     if (selection === null) {
       return nothing;
     }
+    const writable = workspace.layers.canEdit(selection.kind);
 
     switch (selection.kind) {
       case "voxel-layer":
@@ -184,6 +191,7 @@ export class LayerManager extends WorkspaceElement {
           .placement=${workspace.placement}
           .mapDocument=${workspace.mapDocument}
           .layerName=${selection.name}
+          .writable=${writable}
         ></layer-panel>`;
       case "object":
         return html`<object-panel
@@ -191,6 +199,7 @@ export class LayerManager extends WorkspaceElement {
           .mapDocument=${workspace.mapDocument}
           .layerName=${selection.layerName}
           .objectId=${selection.objectId}
+          .writable=${writable}
         ></object-panel>`;
       default:
         return html`<p class="hint">
@@ -203,7 +212,11 @@ export class LayerManager extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): void {
     this._nodes = withLayerBadges(
-      layerTreeNodes(workspace.mapDocument.world, workspace.layerVisibility),
+      layerTreeNodes(
+        workspace.mapDocument.world,
+        workspace.layerVisibility,
+        workspace.layers
+      ),
       workspace.state.presence.layerSelections
     );
   }
@@ -296,7 +309,8 @@ export class LayerManager extends WorkspaceElement {
 
     const { objectLayer } = workspace.state.selection;
     const result = await this._addDialog.open({
-      canAddObject: objectLayer !== null,
+      canAddObject: objectLayer !== null &&
+        workspace.layers.canEdit("object"),
       defaultKind: objectLayer === null ? "voxel-layer" : "object",
       defaultName: workspace.layers.defaultNames()
     });

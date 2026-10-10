@@ -21,6 +21,7 @@ import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
 
 function setup() {
   const keyboard = new KeyBindings();
@@ -39,7 +40,8 @@ function setup() {
     world,
     history: mapHistoryOf(world),
     selection: new SelectionStore(),
-    mapDocument: mapDocumentOf(world)
+    mapDocument: mapDocumentOf(world),
+    access: mapAccess()
   });
   let commits = 0;
   const release = bindPlacementShortcuts({

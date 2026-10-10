@@ -96,14 +96,14 @@ describe("RoomAccess", () => {
     const room = new FakeRoom();
     const panel = new FakePanel();
     new RoomAccess(room, panel, "texture");
-    assert.equal(panel.access.size, 0);
+    assert.equal(panel.access.get("texture")?.readOnly, false);
 
     room.admit("read");
-    assert.equal(panel.access.get("texture")?.viewOnly, true);
+    assert.equal(panel.access.get("texture")?.readOnly, true);
 
     room.admit("write");
-    assert.equal(panel.access.get("texture")?.pixels, true);
-    assert.equal(panel.access.get("texture")?.viewOnly, false);
+    assert.equal(panel.access.get("texture")?.has("pixels"), true);
+    assert.equal(panel.access.get("texture")?.readOnly, false);
   });
 
   test("reads the rights of a room admitted before it attached", () => {
@@ -113,7 +113,7 @@ describe("RoomAccess", () => {
 
     new RoomAccess(room, panel, "texture");
 
-    assert.equal(panel.access.get("texture")?.viewOnly, true);
+    assert.equal(panel.access.get("texture")?.readOnly, true);
   });
 
   test("gives each texture the rights of its own room", () => {
@@ -126,8 +126,8 @@ describe("RoomAccess", () => {
     writable.admit("write");
     readable.admit("read");
 
-    assert.equal(panel.access.get("a")?.pixels, true);
-    assert.equal(panel.access.get("b")?.viewOnly, true);
+    assert.equal(panel.access.get("a")?.has("pixels"), true);
+    assert.equal(panel.access.get("b")?.readOnly, true);
   });
 
   test("announces refused pixel commands but not refused presence", () => {
@@ -149,7 +149,7 @@ describe("RoomAccess", () => {
     room.admit("read");
     room.deny("stroke");
 
-    assert.equal(panel.access.size, 0);
+    assert.equal(panel.access.get("texture")?.readOnly, false);
     assert.deepEqual(panel.messages, []);
   });
 });

@@ -60,10 +60,14 @@ export class CustomPropertiesEditor extends LitElement {
   @property({ type: String, attribute: "storage-key" })
   declare storageKey: string;
 
+  @property({ type: Boolean })
+  declare disabled: boolean;
+
   constructor() {
     super();
 
     this.rows = [];
+    this.disabled = false;
     this.storageKey = "voxel-map:folder:custom-properties";
   }
 
@@ -84,6 +88,7 @@ export class CustomPropertiesEditor extends LitElement {
           icon-only
           label="Add property"
           title="Add property"
+          ?disabled=${this.disabled}
           @click=${this.#add}
         ></jolly-button>
 
@@ -94,6 +99,7 @@ export class CustomPropertiesEditor extends LitElement {
             <div class="prop-row">
               <jolly-text
                 placeholder="key"
+                ?disabled=${this.disabled}
                 .value=${row.key}
                 @jolly-change=${(
                   event: CustomEvent<JollyChangeDetail<string>>
@@ -101,6 +107,7 @@ export class CustomPropertiesEditor extends LitElement {
               ></jolly-text>
               <jolly-text
                 placeholder="value"
+                ?disabled=${this.disabled}
                 .value=${row.value}
                 @jolly-change=${(
                   event: CustomEvent<JollyChangeDetail<string>>
@@ -111,6 +118,7 @@ export class CustomPropertiesEditor extends LitElement {
                 icon-only
                 variant="danger"
                 label="Remove property"
+                ?disabled=${this.disabled}
                 @click=${() => this.#remove(index)}
               ></jolly-button>
             </div>

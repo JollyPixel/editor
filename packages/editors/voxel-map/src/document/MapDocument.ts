@@ -16,6 +16,9 @@ import type {
 } from "@jolly-pixel/asset.voxel-map/client";
 import { Emitter } from "@openally/emitt";
 
+// Import Internal Dependencies
+import type { MapAccessSource } from "../access/MapAccess.ts";
+
 export type BlockRegistryChange =
   | "added"
   | "redefined"
@@ -60,11 +63,13 @@ export type SyncedMap = Pick<
 export interface MapDocumentOptions {
   map: SyncedMap;
   defaultLayerName: string;
+  access: MapAccessSource;
 }
 
 export class MapDocument extends Emitter<MapDocumentEvents> {
   #map: SyncedMap;
   #defaultLayerName: string;
+  readonly #access: MapAccessSource;
 
   #onCommand = (
     command: VoxelCommand,
@@ -128,6 +133,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
     this.setMaxListeners(kMaxListenersPerEvent);
     this.#map = options.map;
     this.#defaultLayerName = options.defaultLayerName;
+    this.#access = options.access;
 
     this.#map.voxels.on("command", this.#onCommand);
     this.#map.voxels.on("loaded", this.#onLoaded);
@@ -148,7 +154,10 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   }
 
   #seedDefaultLayer(): void {
-    if (this.world.getLayers().length === 0) {
+    if (
+      this.#access.current.has("layers") &&
+      this.world.getLayers().length === 0
+    ) {
       this.world.addLayer(this.#defaultLayerName);
     }
   }

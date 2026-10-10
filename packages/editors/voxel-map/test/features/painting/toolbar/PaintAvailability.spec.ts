@@ -9,15 +9,17 @@ import {
 import {
   BRUSH_NO_LAYER_REASON,
   BRUSH_SUSPENDED_REASON,
+  BRUSH_VIEW_ONLY_REASON,
   PaintAvailability
 } from "../../../../src/features/painting/toolbar/PaintAvailability.ts";
+import { MAP_CAPABILITIES } from "../../../../src/access/MapAccess.ts";
 
 describe("PaintAvailability", () => {
   test("lets the brush paint on a voxel layer", () => {
     const availability = PaintAvailability.of({
       voxelLayer: "Ground",
       lastVoxelLayer: "Ground"
-    }, false);
+    }, false, MAP_CAPABILITIES.full);
 
     assert.strictEqual(availability.blocked, false);
     assert.strictEqual(availability.reason, null);
@@ -28,7 +30,7 @@ describe("PaintAvailability", () => {
     const availability = PaintAvailability.of({
       voxelLayer: null,
       lastVoxelLayer: "Roof"
-    }, false);
+    }, false, MAP_CAPABILITIES.full);
 
     assert.strictEqual(availability.reason, BRUSH_NO_LAYER_REASON);
     assert.deepEqual(availability.notice, {
@@ -41,7 +43,7 @@ describe("PaintAvailability", () => {
     const availability = PaintAvailability.of({
       voxelLayer: null,
       lastVoxelLayer: null
-    }, false);
+    }, false, MAP_CAPABILITIES.full);
 
     assert.strictEqual(availability.reason, BRUSH_NO_LAYER_REASON);
     assert.deepEqual(availability.notice, {
@@ -54,10 +56,23 @@ describe("PaintAvailability", () => {
     const availability = PaintAvailability.of({
       voxelLayer: null,
       lastVoxelLayer: "Roof"
-    }, true);
+    }, true, MAP_CAPABILITIES.full);
 
     assert.strictEqual(availability.reason, BRUSH_SUSPENDED_REASON);
     assert.strictEqual(availability.notice, null);
+  });
+
+  test("tells a role that cannot change voxels that the map is view only", () => {
+    const availability = PaintAvailability.of({
+      voxelLayer: "Ground",
+      lastVoxelLayer: "Ground"
+    }, true, MAP_CAPABILITIES.none);
+
+    assert.strictEqual(availability.reason, BRUSH_VIEW_ONLY_REASON);
+    assert.deepEqual(availability.notice, {
+      message: "View only",
+      resumeLayer: null
+    });
   });
 
   test("equals compares the reason and the notice", () => {
@@ -67,13 +82,13 @@ describe("PaintAvailability", () => {
     };
 
     assert.ok(
-      PaintAvailability.of(selection, false).equals(
-        PaintAvailability.of(selection, false)
+      PaintAvailability.of(selection, false, MAP_CAPABILITIES.full).equals(
+        PaintAvailability.of(selection, false, MAP_CAPABILITIES.full)
       )
     );
     assert.ok(
-      !PaintAvailability.of(selection, false).equals(
-        PaintAvailability.of(selection, true)
+      !PaintAvailability.of(selection, false, MAP_CAPABILITIES.full).equals(
+        PaintAvailability.of(selection, true, MAP_CAPABILITIES.full)
       )
     );
   });

@@ -16,9 +16,14 @@ import {
   type BlocksetRoom
 } from "@jolly-pixel/asset.voxel-map/client";
 import type { AssetLeases } from "@jolly-pixel/editor.host";
+import { RoomGrants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/MapDocument.ts";
+import {
+  BLOCKSET_CAPABILITIES,
+  type BlocksetGrants
+} from "../../access/BlocksetAccess.ts";
 import type { BlocksetEntry } from "./BlocksetEntry.ts";
 import { BlocksetAtlasBridge } from "./BlocksetAtlasBridge.ts";
 
@@ -53,6 +58,7 @@ export class BlocksetBinding {
   readonly assetId: string | null;
   readonly opened: OpenedBlockset;
   readonly link: BlocksetLink;
+  readonly access: BlocksetGrants;
   readonly #atlas: BlocksetAtlasBridge;
   #definition: BlocksetDefinition;
   #loaded = false;
@@ -78,6 +84,7 @@ export class BlocksetBinding {
       mapDocument: options.mapDocument,
       blocks: options.blocks
     });
+    this.access = new RoomGrants(opened.room, BLOCKSET_CAPABILITIES);
     void opened.ready.then(() => {
       this.#loaded = true;
       this.#atlas.syncAlphaModes();
@@ -111,6 +118,7 @@ export class BlocksetBinding {
   }
 
   dispose(): void {
+    this.access.dispose();
     this.#atlas.destroy();
     this.link.dispose();
     this.opened.release();

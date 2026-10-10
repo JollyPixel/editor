@@ -4,222 +4,22 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  BlendGroupList,
-  BlockRegistry,
-  BlockShapeRegistry,
   composeBlockId,
-  MaterialGroup,
-  MaterialGroupList,
-  BlocksetDocument,
-  BlocksetList,
-  BlocksetAtlases,
-  type BlendGroupJSON,
-  type ResolvedBlockDefinition,
-  type BlocksetDefinition,
-  type AtlasTexture,
-  type VoxelView
+  MaterialGroup
 } from "@jolly-pixel/voxel.renderer";
-import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
-import type { BlocksetRoom } from "@jolly-pixel/asset.voxel-map/client";
-import { Emitter } from "@openally/emitt";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../src/document/MapDocument.ts";
 import {
-  MapBlocksets,
-  type BlocksetCatalog
-} from "../../../src/features/blocksets/MapBlocksets.ts";
-import type { OpenedBlockset } from "../../../src/features/blocksets/BlocksetBinding.ts";
-
-// CONSTANTS
-const kTerrain: BlocksetDefinition = {
-  id: "terrain",
-  slot: 1,
-  asset: { id: "asset-terrain", kind: "blockset" }
-};
-const kRock: BlocksetDefinition = {
-  id: "rock",
-  slot: 2,
-  asset: { id: "asset-rock", kind: "blockset" }
-};
-const kMoss: BlocksetDefinition = {
-  id: "moss",
-  slot: 1,
-  asset: { id: "asset-moss", kind: "blockset" }
-};
-
-if (typeof globalThis.requestAnimationFrame !== "function") {
-  globalThis.requestAnimationFrame = () => 0;
-}
-
-function makePixels(
-  transparent: () => boolean
-): PixelDocument {
-  const canvas = { width: 64, height: 64 };
-  const fake = Object.assign(
-    new Emitter<Record<string, (...args: unknown[]) => void>>(),
-    {
-      buffer: { canvas: () => canvas },
-      size: () => {
-        return { x: 64, y: 64 };
-      },
-      normalMap: null,
-      normals: new Emitter(),
-      useIslandFaces: () => () => undefined,
-      invalidateIslands: () => undefined,
-      hasTransparency: transparent
-    }
-  );
-
-  return fake as unknown as PixelDocument;
-}
-
-function makeView(): VoxelView {
-  const blocksets = new BlocksetList();
-  const atlases = new BlocksetAtlases({ blocksets });
-  const blockRegistry = new BlockRegistry();
-  const materialGroups = new MaterialGroupList();
-  const blendGroups = new BlendGroupList();
-  const fake = {
-    document: {
-      blocksets,
-      blocks: blockRegistry,
-      materialGroups,
-      blendGroups,
-      defineBlock: (def: ResolvedBlockDefinition) => {
-        blockRegistry.register(def);
-      },
-      defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
-        blockRegistry.registerMany(defs);
-      },
-      removeBlock: (id: number) => blockRegistry.unregister(id),
-      moveBlock: (id: number, toIndex: number) => blockRegistry.moveTo(id, toIndex),
-      defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
-      removeMaterialGroup: (id: string) => materialGroups.remove(id),
-      defineBlendGroup: (group: BlendGroupJSON) => blendGroups.define(group),
-      removeBlendGroup: (id: string) => blendGroups.remove(id),
-      addBlockset: (def: BlocksetDefinition) => {
-        blocksets.declare(def);
-
-        return true;
-      }
-    },
-    atlases,
-    shapes: BlockShapeRegistry.createDefault(),
-    loadBlockset: (def: BlocksetDefinition, texture: AtlasTexture) => {
-      blocksets.declare(def);
-      atlases.registerTexture(def.id, texture);
-    },
-    markAllChunksDirty: () => void 0,
-    requestFrame: () => void 0
-  };
-
-  return fake as unknown as VoxelView;
-}
-
-class FakeSources {
-  readonly opened = new Map<string, OpenedBlockset>();
-  readonly released: string[] = [];
-  transparent = false;
-
-  open(
-    assetId: string
-  ): OpenedBlockset {
-    const blockset = new BlocksetDocument({
-      tileSize: 16,
-      blocks: [
-        {
-          id: 1,
-          name: "first",
-          shapeId: "cube",
-          defaultTexture: { col: 0, row: 0 }
-        }
-      ]
-    });
-    const opened: OpenedBlockset = {
-      pixels: makePixels(() => this.transparent),
-      blockset,
-      room: {} as BlocksetRoom,
-      ready: Promise.resolve(),
-      release: () => {
-        this.released.push(assetId);
-      }
-    };
-    this.opened.set(assetId.replace("asset-", ""), opened);
-
-    return opened;
-  }
-}
-
-class FakeCatalog extends Emitter<{ change: () => void; }> implements BlocksetCatalog {
-  list: AssetRecordData[] = [];
-
-  records(): Iterable<AssetRecordData> {
-    return this.list;
-  }
-
-  record(
-    assetId: string
-  ): AssetRecordData | undefined {
-    return this.list.find((record) => record.id === assetId);
-  }
-
-  create(): Promise<string> {
-    return Promise.resolve("asset-created");
-  }
-
-  rename(): Promise<void> {
-    return Promise.resolve();
-  }
-}
-
-function blocksetRecord(
-  assetId: string
-): AssetRecordData {
-  return {
-    id: assetId,
-    kind: "blockset",
-    source: `blocksets/${assetId.replace("asset-", "")}.blockset.json`
-  } as AssetRecordData;
-}
-
-function setup(
-  definitions: BlocksetDefinition[] = [kTerrain]
-) {
-  const view = makeView();
-  const sources = new FakeSources();
-  const catalog = new FakeCatalog();
-  catalog.list = [kTerrain, kRock, kMoss].map(
-    (definition) => blocksetRecord(definition.asset!.id)
-  );
-  const mapDocument = Object.assign(
-    new Emitter<Record<string, () => void>>(),
-    { ready: true }
-  ) as unknown as MapDocument;
-  view.document.blocksets.replace(definitions);
-  let nextId = 0;
-  const blocksets = new MapBlocksets({
-    view,
-    catalog,
-    mapDocument,
-    open: (assetId) => sources.open(assetId),
-    generateId: () => `generated-${nextId++}`
-  });
-
-  function relink(
-    next: BlocksetDefinition[]
-  ): void {
-    view.document.blocksets.replace(next);
-    mapDocument.emit("blocksetsChanged");
-  }
-
-  return { view, catalog, sources, blocksets, relink };
-}
+  MOSS_BLOCKSET,
+  ROCK_BLOCKSET,
+  TERRAIN_BLOCKSET,
+  setupMapBlocksets
+} from "../../helpers/mapBlocksets.ts";
 
 describe("MapBlocksets", () => {
   it("binds each linked blockset and projects its blocks into the document", () => {
-    const { view, blocksets } = setup();
+    const { view, blocksets } = setupMapBlocksets();
 
     assert.equal(blocksets.open("terrain") !== undefined, true);
     assert.equal(blocksets.tileSizeOf("terrain"), 16);
@@ -232,7 +32,7 @@ describe("MapBlocksets", () => {
   });
 
   it("finds the owner of a world block id by its slot", () => {
-    const { blocksets } = setup([kTerrain, kRock]);
+    const { blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
 
     assert.equal(blocksets.ownerOf(composeBlockId(2, 7))?.definition.id, "rock");
     assert.equal(blocksets.ownerOf(composeBlockId(5, 1)), undefined);
@@ -241,7 +41,7 @@ describe("MapBlocksets", () => {
   });
 
   it("routes world-space block writes to the owning blockset in its own space", () => {
-    const { view, sources, blocksets } = setup([kTerrain, kRock]);
+    const { view, sources, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
     const id = composeBlockId(2, 3);
 
     assert.equal(blocksets.defineBlock({
@@ -264,7 +64,7 @@ describe("MapBlocksets", () => {
   });
 
   it("writes a block with the alpha mode its pixels need in a single command", async() => {
-    const { view, sources, blocksets } = setup();
+    const { view, sources, blocksets } = setupMapBlocksets();
     const opened = sources.opened.get("terrain")!;
     const id = composeBlockId(1, 1);
     await opened.ready;
@@ -283,7 +83,7 @@ describe("MapBlocksets", () => {
   });
 
   it("keeps the alpha mode of a block written before its blockset loaded", () => {
-    const { view, sources, blocksets } = setup();
+    const { view, sources, blocksets } = setupMapBlocksets();
     const id = composeBlockId(1, 1);
     sources.transparent = true;
 
@@ -296,7 +96,7 @@ describe("MapBlocksets", () => {
   });
 
   it("syncs the alpha mode of the blocks a blockset repaint changed", async() => {
-    const { view, sources, blocksets } = setup();
+    const { view, sources, blocksets } = setupMapBlocksets();
     const id = composeBlockId(1, 1);
     await sources.opened.get("terrain")!.ready;
 
@@ -313,7 +113,7 @@ describe("MapBlocksets", () => {
   });
 
   it("routes material groups by their projected id", () => {
-    const { view, sources, blocksets } = setup([kTerrain, kRock]);
+    const { view, sources, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
 
     assert.equal(blocksets.defineMaterialGroup(
       new MaterialGroup({ id: "rock/wet", roughness: 0.2 })
@@ -327,7 +127,7 @@ describe("MapBlocksets", () => {
   });
 
   it("maps a document position onto the blockset order when moving a block", () => {
-    const { view, sources, blocksets } = setup([kTerrain, kRock]);
+    const { view, sources, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
     blocksets.defineBlock({ id: composeBlockId(2, 2), name: "b", shapeId: "cube" });
     blocksets.defineBlock({ id: composeBlockId(2, 3), name: "c", shapeId: "cube" });
 
@@ -341,7 +141,7 @@ describe("MapBlocksets", () => {
   });
 
   it("moves a block down to the document position it was dropped at", () => {
-    const { view, sources, blocksets } = setup([kRock]);
+    const { view, sources, blocksets } = setupMapBlocksets([ROCK_BLOCKSET]);
     blocksets.defineBlock({ id: composeBlockId(2, 2), name: "b", shapeId: "cube" });
     blocksets.defineBlock({ id: composeBlockId(2, 3), name: "c", shapeId: "cube" });
 
@@ -358,7 +158,7 @@ describe("MapBlocksets", () => {
   });
 
   it("duplicates a block with its tiles right after the source", () => {
-    const { view, sources, blocksets } = setup([kRock]);
+    const { view, sources, blocksets } = setupMapBlocksets([ROCK_BLOCKSET]);
     const source = composeBlockId(2, 2);
     blocksets.defineBlock({
       id: source,
@@ -386,7 +186,7 @@ describe("MapBlocksets", () => {
   });
 
   it("duplicates nothing for a block no blockset owns", () => {
-    const { view, blocksets } = setup([kRock]);
+    const { view, blocksets } = setupMapBlocksets([ROCK_BLOCKSET]);
     const before = [...view.document.blocks].map((block) => block.id);
 
     assert.equal(blocksets.duplicateBlock(composeBlockId(2, 9)), null);
@@ -395,9 +195,9 @@ describe("MapBlocksets", () => {
   });
 
   it("keeps the blocks of a blockset taking over the slot of an unlinked one", () => {
-    const { view, blocksets, relink } = setup([kTerrain]);
+    const { view, blocksets, relink } = setupMapBlocksets([TERRAIN_BLOCKSET]);
 
-    relink([kMoss]);
+    relink([MOSS_BLOCKSET]);
 
     assert.equal(blocksets.open("terrain") !== undefined, false);
     assert.equal(blocksets.open("moss") !== undefined, true);
@@ -408,7 +208,7 @@ describe("MapBlocksets", () => {
   });
 
   it("resizes the tiles of a linked blockset", () => {
-    const { view, blocksets } = setup();
+    const { view, blocksets } = setupMapBlocksets();
 
     assert.equal(blocksets.resizeTiles("terrain", 32), true);
     assert.equal(blocksets.tileSizeOf("terrain"), 32);
@@ -417,13 +217,13 @@ describe("MapBlocksets", () => {
   });
 
   it("releases an unlinked blockset and takes its blocks out of the document", () => {
-    const { view, sources, blocksets, relink } = setup([kTerrain, kRock]);
+    const { view, sources, blocksets, relink } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
     let changes = 0;
     blocksets.subscribe("change", () => {
       changes++;
     });
 
-    relink([kTerrain]);
+    relink([TERRAIN_BLOCKSET]);
 
     assert.deepEqual(sources.released, ["asset-rock"]);
     assert.equal(view.document.blocks.has(composeBlockId(2, 1)), false);
@@ -433,7 +233,7 @@ describe("MapBlocksets", () => {
   });
 
   it("labels its entries from the catalog and relabels on a catalog change", () => {
-    const { catalog, blocksets } = setup([kTerrain]);
+    const { catalog, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET]);
 
     assert.deepEqual(
       blocksets.entries.map(({ assetId, label }) => [assetId, label]),
@@ -453,7 +253,7 @@ describe("MapBlocksets", () => {
   });
 
   it("activates the first blockset and ignores an unknown one", () => {
-    const { blocksets, relink } = setup([kTerrain, kRock]);
+    const { blocksets, relink } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
     const changes: Array<string | null> = [];
     blocksets.subscribe("activeChange", (blocksetId) => changes.push(blocksetId));
 
@@ -461,13 +261,13 @@ describe("MapBlocksets", () => {
 
     blocksets.activeBlocksetId = "missing";
     blocksets.activeBlocksetId = "rock";
-    relink([kTerrain]);
+    relink([TERRAIN_BLOCKSET]);
 
     assert.deepEqual(changes, ["rock", "terrain"]);
   });
 
   it("links a catalog asset under a fresh blockset id", () => {
-    const { view, blocksets } = setup([kTerrain]);
+    const { view, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET]);
 
     assert.deepEqual(
       blocksets.linkableAssets().map((record) => record.id),

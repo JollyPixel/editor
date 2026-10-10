@@ -24,13 +24,15 @@ function shelf(
   slot: BlocksetSlot,
   label: string,
   groups: MaterialGroup[],
-  blockIds: number[] = []
+  blockIds: number[] = [],
+  editable = true
 ): MaterialShelf {
   return {
     blocksetId: slot.id,
     label,
     slot,
-    materials: groups.map((finish) => new MapMaterial({ slot, finish, blockIds }))
+    materials: groups.map((finish) => new MapMaterial({ slot, finish, blockIds })),
+    editable
   };
 }
 
@@ -53,6 +55,18 @@ describe("MaterialShelves", () => {
       color: "#ffcc00",
       ring: "#ff0000"
     });
+  });
+
+  it("keeps the materials of a blockset the user cannot change from being renamed", () => {
+    const shelves = new MaterialShelves([
+      shelf(kTerrain, "Terrain", [new MaterialGroup({ id: "terrain/wet" })]),
+      shelf(kRock, "Rock", [new MaterialGroup({ id: "rock/dry" })], [], false)
+    ]);
+
+    const [terrain, rock] = shelves.toTreeNodes();
+
+    assert.equal(terrain.children?.[0].renamable, true);
+    assert.equal(rock.children?.[0].renamable, false);
   });
 
   it("groups materials under one node per blockset", () => {
