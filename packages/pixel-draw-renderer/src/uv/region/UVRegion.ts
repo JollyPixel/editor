@@ -16,6 +16,7 @@ import type {
 import { StackedLayout } from "./layout/StackedLayout.ts";
 import { NetLayout } from "./layout/NetLayout.ts";
 import { FreeLayout } from "./layout/FreeLayout.ts";
+import { UVNet } from "./UVNet.ts";
 import type { UVResizeTarget } from "./layout/UVResizeTarget.ts";
 import type {
   UVSlot,
@@ -42,6 +43,10 @@ export type {
   UVResizeOptions
 } from "./layout/UVLayout.ts";
 export { DEFAULT_UV_SLOTS } from "../geometry/types.ts";
+export {
+  UVNet,
+  type UVNetRow
+} from "./UVNet.ts";
 
 export interface UVRegionIdentity {
   id: string;
@@ -155,10 +160,12 @@ export class UVRegion {
       this.#with(StackedLayout.stacking(this.#layout, slot));
   }
 
-  unfold(): UVRegion {
+  unfold(
+    net: UVNet = UVNet.packed
+  ): UVRegion {
     return this.state === "unfolded" ?
       this :
-      this.#with(NetLayout.unfolding(this.#layout));
+      this.#with(NetLayout.unfolding(this.#layout, net));
   }
 
   free(): UVRegion {

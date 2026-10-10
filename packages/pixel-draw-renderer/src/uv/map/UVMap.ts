@@ -13,6 +13,7 @@ import {
   type UVRegionCreateOptions
 } from "./UVRegionFactory.ts";
 import {
+  UVNet,
   UVRegion,
   type UVSlot,
   type UVRegionData,
@@ -59,6 +60,8 @@ interface UVMovement {
 export class UVMap extends Emitter<
   UVMapEvent
 > implements Iterable<UVRegion> {
+  net: UVNet = UVNet.packed;
+
   #getCanvasSize: () => Vec2;
   #batch: (apply: () => void) => void;
   #factory: UVRegionFactory;
@@ -188,7 +191,7 @@ export class UVMap extends Emitter<
   create(
     options: UVRegionCreateOptions
   ): UVRegion {
-    const region = this.#factory.create(options);
+    const region = this.#factory.create(options, this.net);
 
     this.#regions.set(region.id, region);
     this.emit("region-created", { region });
@@ -432,7 +435,7 @@ export class UVMap extends Emitter<
       case "stacked":
         return region.stack(slot);
       case "unfolded":
-        return this.#bounds().clamp(region.unfold());
+        return this.#bounds().clamp(region.unfold(this.net));
       case "free":
         return region.free();
       default:

@@ -6,6 +6,7 @@ import { clamp } from "../../utils/math.ts";
 import { CanvasBounds } from "./CanvasBounds.ts";
 import {
   DEFAULT_UV_SLOTS,
+  UVNet,
   UVRegion,
   type UVGeometry,
   type UVRegionState,
@@ -62,7 +63,8 @@ export class UVRegionFactory {
   }
 
   create(
-    options: UVRegionCreateOptions
+    options: UVRegionCreateOptions,
+    net: UVNet = UVNet.packed
   ): UVRegion {
     const size = this.#getCanvasSize();
     const width = clamp(options.width, 1, Math.max(1, size.x));
@@ -118,7 +120,7 @@ export class UVRegionFactory {
     });
 
     return state === "unfolded" ?
-      new CanvasBounds(size).clamp(spread.unfold()) :
+      new CanvasBounds(size).clamp(spread.unfold(net)) :
       spread;
   }
 
