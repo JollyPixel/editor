@@ -3,7 +3,7 @@ import { ColorPalette } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { clamp } from "../../utils/math.ts";
-import { CanvasBounds } from "./CanvasBounds.ts";
+import { UVBounds } from "./UVBounds.ts";
 import {
   DEFAULT_UV_SLOTS,
   UVNet,
@@ -120,7 +120,7 @@ export class UVRegionFactory {
     });
 
     return state === "unfolded" ?
-      new CanvasBounds(size).clamp(spread.unfold(net)) :
+      new UVBounds(size).clamp(spread.unfold(net)) :
       spread;
   }
 

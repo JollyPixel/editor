@@ -212,7 +212,7 @@ export class LeftPanel extends LitElement {
         .canvas=${this._canvas}
         .workspace=${this.workspace}
       ></jolly-model-editor-build>
-      <pixel-draw-panel uv-resize></pixel-draw-panel>
+      <pixel-draw-panel uv-resize uv-overflow="64"></pixel-draw-panel>
     `;
   }
 }

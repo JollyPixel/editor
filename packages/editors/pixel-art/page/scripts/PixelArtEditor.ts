@@ -39,6 +39,7 @@ const kZoom = {
 };
 const kStarterRegionId = "pixel-draw-demo:starter-region";
 const kStarterRegionSize = 16;
+const kUvOverflow = 32;
 
 export type PreviewPaneLoader = () => Promise<typeof PreviewPane>;
 
@@ -84,6 +85,7 @@ export class PixelArtEditor {
     panel.colorDocked = kStorage.get(kColorDockedStorageKey) === "true";
     panel.allowUvCreateDelete = features.uvCreateDelete;
     panel.uvResize = features.uvResize;
+    panel.uvOverflow = kUvOverflow;
     panel.textureImportPolicy = features.importPolicy;
 
     const previewType = loadPreview === null

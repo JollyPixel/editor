@@ -94,8 +94,11 @@ is dropped.
 ### UV map
 
 All the UV regions of a document, plus which region and slot is selected.
+Edits keep regions inside the texture, or up to the *overflow*: a number of
+texture pixels, or no limit at all, that regions may go past each texture
+edge. The overflow is local configuration, like the net.
 
-*In code:* `UVMap`, reached through `canvas.uv`.
+*In code:* `UVMap`, reached through `canvas.uv`. `UVMap.overflow`, `UVMap.bounds`.
 
 ### UV region
 

@@ -40,6 +40,7 @@ export class TextureSet {
   #active: TextureEntry | null = null;
   #settings: ToolSettings | null = null;
   #uvResizable = false;
+  #uvOverflow = 0;
 
   constructor(
     host: ReactiveControllerHost,
@@ -67,6 +68,15 @@ export class TextureSet {
     this.#uvResizable = value;
     for (const { canvas } of this.#entries.values()) {
       canvas.tools.uv.resizable = value;
+    }
+  }
+
+  set uvOverflow(
+    value: number
+  ) {
+    this.#uvOverflow = value;
+    for (const { canvas } of this.#entries.values()) {
+      canvas.uv.overflow = value;
     }
   }
 
@@ -228,7 +238,7 @@ export class TextureSet {
   ): PixelArtCanvas {
     const isActive = () => this.#active?.host === host;
 
-    return new PixelArtCanvas(host, {
+    const canvas = new PixelArtCanvas(host, {
       ...options,
       uv: {
         ...options.uv,
@@ -254,6 +264,9 @@ export class TextureSet {
         options.onClipboardResult?.(result);
       }
     });
+    canvas.uv.overflow = this.#uvOverflow;
+
+    return canvas;
   }
 
   #deactivate(): void {

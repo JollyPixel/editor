@@ -33,21 +33,6 @@ function headless(): PixelDocumentState {
 }
 
 describe("PixelDocumentState", () => {
-  test("uv-region-moved clamps the region inside the texture", () => {
-    const state = headless();
-
-    state.apply({
-      action: "uv-region-moved",
-      metadata: {
-        id: "a",
-        face: null,
-        rect: { x: 3, y: 3, width: 2, height: 2 }
-      }
-    });
-
-    assert.deepEqual(state.uv.get("a")?.bounds, { x: 2, y: 2, width: 2, height: 2 });
-  });
-
   test("uv-region-moved moves a stacked region whole even when a slot is named", () => {
     const state = headless();
 
