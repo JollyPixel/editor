@@ -4,7 +4,8 @@ import {
   defineSchema,
   describeErrors,
   SchemaParser,
-  type ConflictResolver
+  type ConflictResolver,
+  type Infer
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
@@ -29,16 +30,21 @@ import {
   type VoxelModelDocument
 } from "./voxelModel.ts";
 import { ModelTree } from "../model/ModelTree.ts";
+import { BlockTransform } from "../model/nodes/BlockTransform.ts";
 import {
   voxelModelCommandProtocol,
   voxelModelSnapshotSchema
 } from "../network/VoxelModelCommand.schema.ts";
 import { VoxelModelCommandArbiter } from "../network/VoxelModelCommandArbiter.ts";
 import type {
+  ModelNodeJSON,
+  UVLayoutData,
   VoxelModelCommand,
   VoxelModelNetworkCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
+
+type StoredModelNode = Infer<typeof voxelModelDocumentSchema>["nodes"][number];
 
 // CONSTANTS
 const kDocumentParser = new SchemaParser(voxelModelDocumentSchema);
@@ -73,7 +79,33 @@ export function decodeVoxelModelDocument(
     );
   }
 
-  return result.val;
+  return {
+    ...result.val,
+    nodes: result.val.nodes.map(expandNode)
+  };
+}
+
+function expandNode(
+  stored: StoredModelNode
+): ModelNodeJSON {
+  return stored.kind === "folder" ?
+    stored :
+    {
+      ...stored,
+      transform: BlockTransform.create(stored.transform),
+      uv: expandUv(stored.uv)
+    };
+}
+
+function expandUv(
+  uv: UVLayoutData
+): UVLayoutData {
+  return uv.state === "stacked" || uv.activeFaces !== undefined ?
+    uv :
+    {
+      ...uv,
+      activeFaces: Object.keys(uv.faces)
+    };
 }
 
 export class VoxelModelState {

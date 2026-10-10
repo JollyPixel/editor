@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  BlockTransform,
   BlockUvLayouts,
   createVoxelModelDocument,
   decodeVoxelModelDocument,
@@ -52,6 +53,7 @@ describe("createVoxelModelDocument", () => {
       ["Head", "Torso"]
     );
     assert.notStrictEqual(first.id, second.id);
+    assert.match(first.id, /^[0-9A-Za-z]{12}$/);
   });
 
   test("creates an empty model when no block is asked for", () => {
@@ -78,5 +80,41 @@ describe("createVoxelModelDocument", () => {
     );
 
     assert.deepEqual(decoded, document);
+  });
+});
+
+describe("encodeVoxelModelDocument", () => {
+  test("stores only the transform parts and active faces that differ from the defaults", () => {
+    const created = createVoxelModelDocument({
+      texture: kTexture,
+      blocks: ["Head", "Torso"]
+    });
+    const [head, torso] = created.nodes;
+    assert.ok(head.kind === "block" && torso.kind === "block");
+    const document = {
+      ...created,
+      nodes: [
+        {
+          ...head,
+          transform: BlockTransform.create({ position: { x: 0, y: 2, z: 0 } })
+        },
+        {
+          ...torso,
+          uv: {
+            ...torso.uv,
+            activeFaces: ["front" as const]
+          }
+        }
+      ]
+    };
+
+    const content = encodeVoxelModelDocument(document);
+    const stored = JSON.parse(new TextDecoder().decode(content));
+
+    assert.deepEqual(stored.nodes[0].transform, { position: { x: 0, y: 2, z: 0 } });
+    assert.equal("activeFaces" in stored.nodes[0].uv, false);
+    assert.deepEqual(stored.nodes[1].transform, {});
+    assert.deepEqual(stored.nodes[1].uv.activeFaces, ["front"]);
+    assert.deepEqual(decodeVoxelModelDocument(content), document);
   });
 });

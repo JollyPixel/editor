@@ -3,6 +3,7 @@ import {
   ANIMATION_CHANNELS,
   ClipSampler,
   FrameRate,
+  roundKeyValue,
   type AnimationSample,
   type Vector3JSON
 } from "@jolly-pixel/asset.voxel-animation/client";
@@ -26,7 +27,6 @@ import type {
 
 // CONSTANTS
 const kAnimatedModes: readonly TransformMode[] = ["pos", "angle", "scale"];
-const kKeyDecimals = 4;
 const kRestSample: Required<AnimationSample> = {
   position: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0 },
@@ -104,8 +104,8 @@ export class AnimationKeyer implements TransformTarget {
     return this.#options.history.record(key, `Key ${tree.get(blockId)?.name ?? ""}`, () => {
       let keyed = false;
       for (const channel of ANIMATION_CHANNELS) {
-        const value = rounded(delta[channel]);
-        if (channels === "all" || !sameVector(value, rounded(shown[channel]))) {
+        const value = roundKeyValue(delta[channel]);
+        if (channels === "all" || !sameVector(value, roundKeyValue(shown[channel]))) {
           const current = set.document.set.keyAt(clip.id, path, channel, frameTick);
           const key = {
             tick: frameTick,
@@ -119,16 +119,6 @@ export class AnimationKeyer implements TransformTarget {
       return keyed;
     });
   }
-}
-
-function rounded(
-  value: Vector3JSON
-): Vector3JSON {
-  return {
-    x: Number(value.x.toFixed(kKeyDecimals)),
-    y: Number(value.y.toFixed(kKeyDecimals)),
-    z: Number(value.z.toFixed(kKeyDecimals))
-  };
 }
 
 function sameVector(

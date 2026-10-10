@@ -10,6 +10,8 @@ import { ANIMATION_CHANNELS } from "../network/AnimationCommand.schema.ts";
 import { InvalidAnimationSetError } from "./errors/InvalidAnimationSetError.ts";
 import { KeyCurve } from "./sampling/KeyCurve.ts";
 import { FrameRate } from "./values/FrameRate.ts";
+import { roundKeyValue } from "./values/keyValue.ts";
+import { mapTrackKeys } from "./values/trackKeys.ts";
 import { TrackPath } from "./values/TrackPath.ts";
 
 export class AnimationClip {
@@ -47,7 +49,15 @@ export class AnimationClip {
       throw new InvalidAnimationSetError(clip.id, problem);
     }
 
-    this.#json = structuredClone(clip);
+    this.#json = {
+      ...clip,
+      tracks: clip.tracks.map((track) => mapTrackKeys(track, (key) => {
+        return {
+          ...key,
+          value: roundKeyValue(key.value)
+        };
+      }))
+    };
   }
 
   get id(): string {

@@ -9,7 +9,18 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import { BlockTransform } from "../model/nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "../model/nodes/BlockUvLayouts.ts";
-import { voxelModelSnapshotSchema } from "../network/VoxelModelCommand.schema.ts";
+import { randomId } from "../model/randomId.ts";
+import {
+  blockNodeSchema,
+  blockTransformSchema,
+  folderNodeSchema,
+  voxelModelSnapshotSchema
+} from "../network/VoxelModelCommand.schema.ts";
+import type {
+  ModelNodeJSON,
+  UVLayoutData,
+  VoxelModelSnapshot
+} from "../network/types.ts";
 import { VOXEL_MODEL_ICON } from "./icons.ts";
 
 // CONSTANTS
@@ -26,11 +37,27 @@ export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
   icon: VOXEL_MODEL_ICON
 };
 
+const kStoredBlockNodeSchema = defineSchema({
+  ...blockNodeSchema,
+  properties: {
+    ...blockNodeSchema.properties,
+    transform: {
+      type: "object",
+      properties: blockTransformSchema.properties
+    }
+  }
+});
+
 export const voxelModelDocumentSchema = defineSchema({
   type: "object",
   properties: {
     version: { const: VOXEL_MODEL_DOCUMENT_VERSION },
-    nodes: voxelModelSnapshotSchema.properties.nodes,
+    nodes: {
+      type: "array",
+      items: {
+        oneOf: [folderNodeSchema, kStoredBlockNodeSchema]
+      }
+    },
     materials: voxelModelSnapshotSchema.properties.materials,
     animationSets: voxelModelSnapshotSchema.properties.animationSets,
     texture: {
@@ -45,7 +72,13 @@ export const voxelModelDocumentSchema = defineSchema({
   required: ["version", "nodes", "materials", "animationSets", "texture"]
 });
 
-export type VoxelModelDocument = Infer<typeof voxelModelDocumentSchema>;
+type StoredVoxelModelDocument = Infer<typeof voxelModelDocumentSchema>;
+type StoredModelNode = StoredVoxelModelDocument["nodes"][number];
+
+export type VoxelModelDocument = VoxelModelSnapshot & {
+  version: typeof VOXEL_MODEL_DOCUMENT_VERSION;
+  texture: AssetReferenceData;
+};
 
 export interface VoxelModelDocumentOptions {
   texture: AssetReferenceData;
@@ -65,7 +98,7 @@ export function createVoxelModelDocument(
     nodes: [...blocks].map((name) => {
       return {
         kind: "block",
-        id: crypto.randomUUID(),
+        id: randomId(),
         parentId: null,
         name,
         transform: BlockTransform.create(),
@@ -84,5 +117,38 @@ export function createVoxelModelDocument(
 export function encodeVoxelModelDocument(
   document: VoxelModelDocument
 ): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify(document));
+  const stored: StoredVoxelModelDocument = {
+    ...document,
+    nodes: document.nodes.map(compactNode)
+  };
+
+  return new TextEncoder().encode(JSON.stringify(stored));
+}
+
+function compactNode(
+  node: ModelNodeJSON
+): StoredModelNode {
+  return node.kind === "folder" ?
+    node :
+    {
+      ...node,
+      transform: BlockTransform.compact(node.transform),
+      uv: compactUv(node.uv)
+    };
+}
+
+function compactUv(
+  uv: UVLayoutData
+): UVLayoutData {
+  if (uv.state === "stacked" || uv.activeFaces === undefined) {
+    return uv;
+  }
+
+  const { activeFaces, ...rest } = uv;
+  const slots = Object.keys(uv.faces);
+
+  return activeFaces.length === slots.length &&
+    activeFaces.every((slot, index) => slot === slots[index]) ?
+    rest :
+    uv;
 }

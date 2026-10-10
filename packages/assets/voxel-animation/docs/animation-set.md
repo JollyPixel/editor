@@ -33,7 +33,7 @@ A set is `{ rig, clips }`. `rig` labels the hierarchy the set targets, such as `
 
 An `AnimationClipJSON` is `{ id, name, length, fps, loop, tracks }`. `length` is in ticks, `fps` is the frame grid the timeline snaps to, and `loop` tells a game to play the clip on repeat by default. Clip names compare trimmed and in any case.
 
-A track is `{ path, position?, rotation?, scale? }`. `path` names a block by its name path, such as `Body/Arm.L`. Each channel holds keys in strictly rising tick order. A key is `{ tick, value: { x, y, z }, interpolation }`, with `interpolation` one of `"step"`, `"linear"` or `"smooth"`. A track exists while it has a key: removing its last key removes it.
+A track is `{ path, position?, rotation?, scale? }`. `path` names a block by its name path, such as `Body/Arm.L`. Each channel holds keys in strictly rising tick order. A key is `{ tick, value: { x, y, z }, interpolation }`, with `interpolation` one of `"step"`, `"linear"` or `"smooth"`. The set rounds each value to 4 decimals, whether the key comes from `setKey`, `addClip` or a loaded document, so `0.006363961` is stored as `0.0064`. `roundKeyValue(value)` applies the same rounding to an `{ x, y, z }`, so callers can compare a value with a stored key. A track exists while it has a key: removing its last key removes it.
 
 Values are relative to the block's rest pose. Position is added, rotation is added per axis in degrees, so a key can spin several turns, and scale multiplies.
 
@@ -77,7 +77,7 @@ Track paths compare as a `TrackPath`: segment by segment, trimmed and in any cas
 | Method | Description |
 |---|---|
 | `renameRig(rig)` | Sets the rig label. |
-| `addClip({ name, id?, length?, fps?, loop?, tracks?, beforeId? })` | Adds a clip and returns its ID, or `null`. It defaults to one second at 24 fps, not looping, with no tracks, last in the set. `tracks` are copied, so a clip can be copied from another set. |
+| `addClip({ name, id?, length?, fps?, loop?, tracks?, beforeId? })` | Adds a clip and returns its ID, or `null`. It defaults to a random ID of 12 letters and digits, one second at 24 fps, not looping, with no tracks, last in the set. `tracks` are copied, so a clip can be copied from another set. |
 | `removeClip(id)` | Removes a clip. |
 | `changeClip(id, patch)` | Changes any of `name`, `length`, `fps` and `loop`. |
 | `moveClip(id, beforeId?)` | Moves a clip before `beforeId`, or last. |

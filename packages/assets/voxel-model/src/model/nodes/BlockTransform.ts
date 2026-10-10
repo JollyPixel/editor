@@ -31,6 +31,18 @@ export class BlockTransform {
     });
   }
 
+  static compact(
+    transform: BlockTransformJSON
+  ): Partial<BlockTransformJSON> {
+    const identity = BlockTransform.create();
+
+    return Object.fromEntries(
+      kTransformKeys
+        .filter((key) => !sameVector(transform[key], identity[key]))
+        .map((key) => [key, { ...transform[key] }])
+    );
+  }
+
   static parse(
     value: unknown
   ): BlockTransformJSON | undefined {
@@ -121,6 +133,13 @@ function parseVector3(
   return typeof x === "number" && typeof y === "number" && typeof z === "number" ?
     { x, y, z } :
     undefined;
+}
+
+function sameVector(
+  left: Vector3JSON,
+  right: Vector3JSON
+): boolean {
+  return left.x === right.x && left.y === right.y && left.z === right.z;
 }
 
 function combine(

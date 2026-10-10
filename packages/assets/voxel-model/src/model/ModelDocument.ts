@@ -11,6 +11,7 @@ import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
 import { BlockTransform } from "./nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "./nodes/BlockUvLayouts.ts";
 import { MaterialSurface } from "./materials/MaterialSurface.ts";
+import { randomId } from "./randomId.ts";
 import { inverseOf } from "./history/modelInverse.ts";
 import {
   modelImageOf,
@@ -96,7 +97,7 @@ export class ModelDocument extends CommandDocument<
     options: AddBlockOptions
   ): string | null {
     const {
-      id = crypto.randomUUID(),
+      id = randomId(),
       name,
       parentId = null,
       transform = BlockTransform.create(),
@@ -125,7 +126,7 @@ export class ModelDocument extends CommandDocument<
     options: AddFolderOptions
   ): string | null {
     const {
-      id = crypto.randomUUID(),
+      id = randomId(),
       name,
       parentId = null,
       beforeId
@@ -222,7 +223,7 @@ export class ModelDocument extends CommandDocument<
     options: AddMaterialOptions
   ): string | null {
     const {
-      id = crypto.randomUUID(),
+      id = randomId(),
       name,
       parentId = null,
       beforeId,
@@ -247,7 +248,7 @@ export class ModelDocument extends CommandDocument<
     options: AddMaterialFolderOptions
   ): string | null {
     const {
-      id = crypto.randomUUID(),
+      id = randomId(),
       name,
       parentId = null,
       beforeId
