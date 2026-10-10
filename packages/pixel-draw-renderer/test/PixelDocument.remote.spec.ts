@@ -178,5 +178,27 @@ describe("PixelDocument", () => {
       assert.deepEqual(order, ["replaced:2"]);
       assert.equal(events.length, 0);
     });
+
+    test("a peer without overflow keeps a move another peer placed outside the texture", () => {
+      const commands: PixelCommand[] = [];
+      const author = createDocument(commands);
+      author.uv.overflow = 8;
+      const region = author.uv.create({ width: 2, height: 2 });
+      author.uv.move(region.id, { x: -6, y: 5, width: 2, height: 2 });
+      const peer = createDocument();
+
+      for (const command of commands) {
+        peer.applyRemoteCommand(command);
+      }
+
+      assert.deepEqual(
+        peer.uv.get(region.id)!.toJSON(),
+        author.uv.get(region.id)!.toJSON()
+      );
+      assert.deepEqual(
+        peer.uv.get(region.id)!.rectFor("front"),
+        { x: -6, y: 5, width: 2, height: 2 }
+      );
+    });
   });
 });

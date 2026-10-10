@@ -29,7 +29,8 @@ describe("UVRegionLayer — resize handles", () => {
 
     assert.equal(handles(svg), 0);
 
-    layer.resizeHandles = true;
+    layer.editing = true;
+    layer.resizable = true;
     assert.equal(handles(svg), 4);
 
     map.setState(region.id, "unfolded");
@@ -46,7 +47,8 @@ describe("UVRegionLayer — resize handles", () => {
     const layer = new UVRegionLayer(svg, makeViewport(), map);
     const region = map.create({ width: 4, height: 4 });
     map.select(region.id);
-    layer.resizeHandles = true;
+    layer.editing = true;
+    layer.resizable = true;
 
     layer.setLivePreview({
       regions: [region.resized({ ...region.bounds, width: 10 })],

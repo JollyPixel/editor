@@ -7,7 +7,7 @@ import type {
   SelectionRect,
   Vec2
 } from "../../types.ts";
-import { CanvasBounds } from "./CanvasBounds.ts";
+import { UVBounds } from "./UVBounds.ts";
 import {
   UVRegionFactory,
   type UVRegionCreateOptions
@@ -33,6 +33,7 @@ export type {
   UVSlotGeometryTemplate,
   UVSlotSize
 } from "./UVRegionFactory.ts";
+export type { UVBounds } from "./UVBounds.ts";
 
 export interface UVMapOptions {
   getCanvasSize: () => Vec2;
@@ -72,6 +73,7 @@ export class UVMap extends Emitter<
   #showRegionLabels = false;
   #showSizeLabels = false;
   #labelScope: UVLabelScope = "all";
+  #overflow = 0;
 
   constructor(
     options: UVMapOptions
@@ -162,6 +164,26 @@ export class UVMap extends Emitter<
     this.emit("changed");
   }
 
+  get overflow(): number {
+    return this.#overflow;
+  }
+
+  set overflow(
+    value: number
+  ) {
+    const overflow = Number.isNaN(value) ? 0 : Math.max(0, Math.floor(value));
+    if (this.#overflow === overflow) {
+      return;
+    }
+
+    this.#overflow = overflow;
+    this.emit("changed");
+  }
+
+  get bounds(): UVBounds {
+    return new UVBounds(this.#getCanvasSize(), this.#overflow);
+  }
+
   get(
     id: string
   ): UVRegion | undefined {
@@ -237,13 +259,35 @@ export class UVMap extends Emitter<
     rect: SelectionRect,
     slot: UVSlot | null = null
   ): boolean {
+    return this.#moveWithin(this.bounds, id, rect, slot);
+  }
+
+  restoreMove(
+    id: string,
+    rect: SelectionRect,
+    slot: UVSlot | null = null
+  ): boolean {
+    return this.#moveWithin(
+      new UVBounds(this.#getCanvasSize(), Infinity),
+      id,
+      rect,
+      slot
+    );
+  }
+
+  #moveWithin(
+    bounds: UVBounds,
+    id: string,
+    rect: SelectionRect,
+    slot: UVSlot | null
+  ): boolean {
     const movement = this.#movement(this.#regions.get(id), slot);
     if (movement === null) {
       return false;
     }
 
     const { region, target } = movement;
-    const moved = this.#bounds().move(region, rect, target);
+    const moved = bounds.move(region, rect, target);
     this.#regions.set(id, moved);
     this.emit("region-moved", {
       region: moved,
@@ -323,7 +367,7 @@ export class UVMap extends Emitter<
       }
 
       previews.set(id, {
-        region: this.#bounds().move(movement.region, rect, movement.target),
+        region: this.bounds.move(movement.region, rect, movement.target),
         face: folded === undefined ? movement.target : null
       });
     }
@@ -341,7 +385,7 @@ export class UVMap extends Emitter<
   ): boolean {
     return this.#replace(
       id,
-      (region) => this.#bounds().resize(region, rect, slot, options),
+      (region) => this.bounds.resize(region, rect, slot, options),
       this.#stateChanged
     );
   }
@@ -357,7 +401,7 @@ export class UVMap extends Emitter<
       return null;
     }
 
-    return this.#previewed(this.#bounds().resize(region, rect, slot, options), slot);
+    return this.#previewed(this.bounds.resize(region, rect, slot, options), slot);
   }
 
   endPreview(
@@ -412,7 +456,7 @@ export class UVMap extends Emitter<
 
     return this.#replace(
       id,
-      (current) => this.#bounds().clampSlot(current.rotated(direction, face), face),
+      (current) => this.bounds.clamp(current.rotated(direction, face), face),
       this.#rotated(face)
     );
   }
@@ -435,7 +479,7 @@ export class UVMap extends Emitter<
       case "stacked":
         return region.stack(slot);
       case "unfolded":
-        return this.#bounds().clamp(region.unfold(this.net));
+        return this.bounds.clamp(region.unfold(this.net));
       case "free":
         return region.free();
       default:
@@ -530,10 +574,6 @@ export class UVMap extends Emitter<
         target: slot
       } :
       null;
-  }
-
-  #bounds(): CanvasBounds {
-    return new CanvasBounds(this.#getCanvasSize());
   }
 
   #applySelection(

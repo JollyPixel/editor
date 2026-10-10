@@ -94,6 +94,27 @@ net: UVNet
 
 The [net](./UVNet.md) used when a region unfolds through `setState()` or is created unfolded. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
 
+### `overflow`
+
+```ts
+get overflow(): number
+set overflow(value: number)
+```
+
+How far, in texture pixels, regions may go past each edge of the texture. Moves, resizes, rotations and unfolds stop at that limit instead of the texture edge. The default is `0`, which keeps regions inside the texture. `Infinity` removes the limit. Fractions round down, and negative values and `NaN` become `0`.
+
+New regions are still created inside the texture. Lowering the value leaves regions that are already past the new limit where they are until they are edited again. While the canvas is in UV mode and the value is finite and above `0`, a faint red dashed rectangle shows the limit, labelled "UV limit" just above its top-left corner.
+
+It is local configuration and is not synchronized. A peer applies a remote move at the position it was sent, whatever its own `overflow`.
+
+### `bounds`
+
+```ts
+get bounds(): UVBounds
+```
+
+The [area](./UVBounds.md) edits keep regions in: the current canvas size extended by `overflow`. Each read builds a new value from the current settings.
+
 ### `regions`
 
 ```ts
@@ -189,7 +210,7 @@ Removes a region and emits `"region-deleted"`. Deleting the selected region also
 move(id: string, rect: SelectionRect, slot?: UVSlot | null): boolean
 ```
 
-Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. Only the position of `rect` is used: the region keeps its current size and rotation, so a move computed before a rotation cannot undo it. The position is clamped to the canvas. Returns `false` when the id is unknown or a free region has no active `slot`.
+Moves one slot of a free region, or the whole of a stacked or unfolded one, in which case `rect` is the region's bounds and `slot` is ignored. Only the position of `rect` is used: the region keeps its current size and rotation, so a move computed before a rotation cannot undo it. The position is clamped to the canvas, extended by [`overflow`](#overflow). Returns `false` when the id is unknown or a free region has no active `slot`.
 
 ### `previewMove(id, rect, slot?)`
 
@@ -229,7 +250,7 @@ Previews `moveGroup()` without storing it. Moves that target the same region are
 resize(id: string, rect: SelectionRect, slot?: UVSlot | null, options?: UVResizeOptions): boolean
 ```
 
-Gives a stacked region, or one active `slot` of an unfolded or free region, the size and position of `rect`, following [`UVRegion.resized()`](./UVRegion.md#resizedrect-slot-options). Sizes below 1px are raised to 1px. Moved edges stop at the canvas border; for an unfolded net, that includes the faces sliding with an edge. A net already past the border is not pulled back, but it cannot grow further out.
+Gives a stacked region, or one active `slot` of an unfolded or free region, the size and position of `rect`, following [`UVRegion.resized()`](./UVRegion.md#resizedrect-slot-options). Sizes below 1px are raised to 1px. Moved edges stop at the canvas border, extended by [`overflow`](#overflow); for an unfolded net, that includes the faces sliding with an edge. A net already past that border is not pulled back, but it cannot grow further out.
 
 The new region is committed like a state change: it emits `"region-state-changed"` with the previous region, so it records one history step and syncs as `uv-region-state-changed`. Returns `false` for an unknown id, a region with a triangle or compound face, or an unchanged result.
 
@@ -259,7 +280,7 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 `slot` applies to `"stacked"` only, where it picks between equally large candidate faces. The geometry each state produces is described on [`UVRegion`](./UVRegion.md).
 
-`"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` lays out the map's [`net`](#net) wherever the region already sits, then `setState()` shifts the whole net back inside the canvas if it overhangs. A net larger than the texture is shifted to `0, 0` and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
+`"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` lays out the map's [`net`](#net) wherever the region already sits, then `setState()` shifts the whole net back inside the canvas, extended by [`overflow`](#overflow), if it overhangs. A net larger than that area is shifted to its top-left corner and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
 
 Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because a state change undoes with the whole previous region.
 
@@ -285,7 +306,7 @@ Turns a region 90 degrees and emits `"region-rotated"` with the previous region 
 - **unfolded**: the whole net as one piece around its bounds.
 - **free**: only `slot`, in place. Without an active `slot` nothing turns.
 
-The top-left corner stays fixed and a non-square rect swaps its width and height. The result is then clamped into the canvas: the whole region for stacked and unfolded, only the turned slot for free. Returns `false` for an unknown id or a free region without an active `slot`. See [`UVRegion.rotated()`](./UVRegion.md#rotateddirection-slot) for the geometry.
+The top-left corner stays fixed and a non-square rect swaps its width and height. The result is then clamped into the canvas, extended by [`overflow`](#overflow): the whole region for stacked and unfolded, only the turned slot for free. Returns `false` for an unknown id or a free region without an active `slot`. See [`UVRegion.rotated()`](./UVRegion.md#rotateddirection-slot) for the geometry.
 
 In UV mode, `shortcuts.rotate("cw")` and `shortcuts.rotate("ccw")` rotate the selected region, or the selected slot of a free region, clockwise and counter-clockwise. They do nothing during a drag.
 
@@ -297,15 +318,16 @@ select(id: string | null, slot?: UVSlot | null): void
 
 Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
 
-### `restore(region)` / `restoreState(region)` / `restoreRotation(region, face?)`
+### `restore(region)` / `restoreState(region)` / `restoreRotation(region, face?)` / `restoreMove(id, rect, slot?)`
 
 ```ts
 restore(region: UVRegion | UVRegionData): UVRegion
 restoreState(region: UVRegion | UVRegionData): boolean
 restoreRotation(region: UVRegion | UVRegionData, face?: UVSlot | null): boolean
+restoreMove(id: string, rect: SelectionRect, slot?: UVSlot | null): boolean
 ```
 
-`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. `restoreRotation()` replaces an existing region and emits `"region-rotated"` with `face`, which defaults to `null`. History and network hydration use these methods.
+`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. `restoreRotation()` replaces an existing region and emits `"region-rotated"` with `face`, which defaults to `null`. `restoreMove()` works like [`move()`](#moveid-rect-slot) but keeps the position as given, ignoring the canvas and [`overflow`](#overflow). History and network hydration use these methods.
 
 ### `clear()`
 

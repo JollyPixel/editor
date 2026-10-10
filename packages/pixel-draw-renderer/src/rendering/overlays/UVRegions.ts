@@ -5,6 +5,7 @@ import { UVRegionBorder } from "./UVRegionBorder.ts";
 import { UVRegionLabels } from "./UVRegionLabels.ts";
 import { UVSizeLabels } from "./UVSizeLabels.ts";
 import { UVResizeHandles } from "./UVResizeHandles.ts";
+import { UVOverflowLimit } from "./UVOverflowLimit.ts";
 import {
   projectUVOverlay,
   uvOverlayPaintOrder,
@@ -47,8 +48,10 @@ export class UVRegionLayer {
   #labels: UVRegionLabels;
   #sizeLabels: UVSizeLabels;
   #livePreview: UVLivePreview | null = null;
-  #resizeHandles = false;
+  #editing = false;
+  #resizable = false;
   #handles: UVResizeHandles;
+  #overflowLimit: UVOverflowLimit;
   #peerPreviews: ReadonlyMap<string, UVPeerPreview> = new Map();
   #peerSelections: ReadonlyMap<string, string> = new Map();
 
@@ -67,6 +70,7 @@ export class UVRegionLayer {
     this.#labels = new UVRegionLabels(this.#group, viewport, uvMap);
     this.#sizeLabels = new UVSizeLabels(this.#group, viewport, uvMap);
     this.#handles = new UVResizeHandles(this.#group);
+    this.#overflowLimit = new UVOverflowLimit(this.#group);
 
     this.#uvMap.on("changed", this.#onChanged);
   }
@@ -78,10 +82,17 @@ export class UVRegionLayer {
     this.#render();
   }
 
-  set resizeHandles(
+  set editing(
     value: boolean
   ) {
-    this.#resizeHandles = value;
+    this.#editing = value;
+    this.#render();
+  }
+
+  set resizable(
+    value: boolean
+  ) {
+    this.#resizable = value;
     this.#render();
   }
 
@@ -125,6 +136,7 @@ export class UVRegionLayer {
     this.#labels.destroy();
     this.#sizeLabels.destroy();
     this.#handles.destroy();
+    this.#overflowLimit.destroy();
     this.#group.remove();
   }
 
@@ -164,8 +176,15 @@ export class UVRegionLayer {
       });
     }
 
+    this.#overflowLimit.render(
+      this.#editing ? this.#uvMap.bounds.limit : null,
+      this.#viewport
+    );
     this.#labels.render(entries);
-    this.#sizeLabels.render(entries, this.#livePreview?.slot ?? null);
+    this.#sizeLabels.render(
+      entries,
+      this.#livePreview?.slot ?? null
+    );
     this.#handles.render(
       this.#handleRegion(entries),
       this.#uvMap.selectedSlot,
@@ -224,7 +243,8 @@ export class UVRegionLayer {
   ): UVRegion | null {
     const id = this.#uvMap.selectedRegionId;
     if (
-      !this.#resizeHandles ||
+      !this.#editing ||
+      !this.#resizable ||
       this.#livePreview !== null ||
       id === null ||
       this.isPeerDragging(id)
@@ -232,6 +252,8 @@ export class UVRegionLayer {
       return null;
     }
 
-    return entries.find((entry) => entry.region.id === id)?.region ?? null;
+    return entries.find(
+      (entry) => entry.region.id === id
+    )?.region ?? null;
   }
 }

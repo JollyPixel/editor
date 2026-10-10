@@ -130,7 +130,7 @@ export class PixelDocumentState<
         break;
       case "uv-region-moved": {
         const { id, rect, face } = command.metadata;
-        this.uv.move(id, rect, face);
+        this.uv.restoreMove(id, rect, face);
         break;
       }
       case "uv-region-state-changed":

@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import { clampRectPosition } from "../../utils/math.ts";
 import { sameRect } from "../../uv/geometry/geometry.ts";
 import { UV_RESIZE_CURSORS } from "./resizeHandles.ts";
 import { RectArea } from "../../utils/RectArea.ts";
@@ -146,14 +145,11 @@ class UVMoveEdit implements UVRectEdit {
   ): SelectionRect {
     const { rect } = this.#dragged;
 
-    return clampRectPosition(
-      {
-        ...rect,
-        x: rect.x + Math.floor(pointer.x) - this.#origin.x,
-        y: rect.y + Math.floor(pointer.y) - this.#origin.y
-      },
-      this.#uvMap.canvasSize()
-    );
+    return this.#uvMap.bounds.fit({
+      ...rect,
+      x: rect.x + Math.floor(pointer.x) - this.#origin.x,
+      y: rect.y + Math.floor(pointer.y) - this.#origin.y
+    });
   }
 
   preview(

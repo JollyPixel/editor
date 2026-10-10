@@ -120,7 +120,7 @@ describe("applyPixelCommand", () => {
     assert.deepStrictEqual(state.uv.get("r1")?.toJSON(), stackedRegion("r1", rect));
   });
 
-  test("uv-region-moved clamps the region inside the texture like a pixel document", () => {
+  test("uv-region-moved keeps a region placed outside the texture like a pixel document", () => {
     const state = makeState();
     const document = new PixelDocument({ size: { x: 8, y: 8 } });
     const moved = command("uv-region-moved", {
@@ -134,7 +134,7 @@ describe("applyPixelCommand", () => {
     applyPixelCommand(state, moved);
     document.applyRemoteCommand(unpackPixelCommand(moved));
 
-    assert.deepStrictEqual(state.uv.get("r1")?.bounds, { x: 6, y: 6, width: 2, height: 2 });
+    assert.deepStrictEqual(state.uv.get("r1")?.bounds, { x: 7, y: 7, width: 2, height: 2 });
     assert.deepStrictEqual(state.uv.get("r1")?.toJSON(), document.uv.get("r1")?.toJSON());
   });
 

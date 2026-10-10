@@ -7,7 +7,8 @@ import type {
 
 export class FakeOverlay {
   previews: (UVLivePreview | null)[] = [];
-  resizeHandles = false;
+  editing = false;
+  resizable = false;
 
   isPeerDragging(): boolean {
     return false;

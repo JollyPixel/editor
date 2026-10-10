@@ -57,6 +57,7 @@ export class UVController implements UVTool {
     this.#deselectOnEmptyClick = options.deselectOnEmptyClick ?? true;
     this.#viewport = options.viewport;
     this.#resizable = options.resizable ?? false;
+    this.#overlay.resizable = this.#resizable;
   }
 
   get resizable(): boolean {
@@ -73,7 +74,7 @@ export class UVController implements UVTool {
       this.cancelDrag();
     }
     this.#resizable = value;
-    this.#syncHandles();
+    this.#overlay.resizable = value;
   }
 
   get active(): boolean {
@@ -84,7 +85,7 @@ export class UVController implements UVTool {
     value: boolean
   ) {
     this.#active = value;
-    this.#syncHandles();
+    this.#overlay.editing = value;
   }
 
   get cursor(): string {
@@ -217,10 +218,6 @@ export class UVController implements UVTool {
     this.#picks.reset();
 
     return this.#uvMap.delete(id);
-  }
-
-  #syncHandles(): void {
-    this.#overlay.resizeHandles = this.#resizable && this.#active;
   }
 
   #showPreview(

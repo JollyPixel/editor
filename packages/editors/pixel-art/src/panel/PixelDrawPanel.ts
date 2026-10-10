@@ -131,6 +131,9 @@ export class PixelDrawPanel extends LitElement {
   @property({ type: Boolean, attribute: "uv-resize" })
   declare uvResize: boolean;
 
+  @property({ type: Number, attribute: "uv-overflow" })
+  declare uvOverflow: number;
+
   @property({
     type: String,
     reflect: true,
@@ -242,6 +245,7 @@ export class PixelDrawPanel extends LitElement {
     super();
     this.allowUvCreateDelete = false;
     this.uvResize = false;
+    this.uvOverflow = 0;
     this.uvAccess = "edit";
     this.theme = "auto";
     this.colorDocked = false;
@@ -338,6 +342,9 @@ export class PixelDrawPanel extends LitElement {
     }
     if (changedProperties.has("uvResize")) {
       this.#textures.uvResizable = this.uvResize;
+    }
+    if (changedProperties.has("uvOverflow")) {
+      this.#textures.uvOverflow = this.uvOverflow;
     }
   }
 
