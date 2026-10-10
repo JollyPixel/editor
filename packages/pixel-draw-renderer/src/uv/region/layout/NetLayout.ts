@@ -4,7 +4,7 @@ import {
   rectOf,
   sameRect
 } from "../../geometry/geometry.ts";
-import { packNet } from "../netLayout.ts";
+import { UVNet } from "../UVNet.ts";
 import {
   alignedResizes,
   slidNeighbors,
@@ -32,10 +32,11 @@ export class NetLayout extends SpreadLayout {
   readonly movementScope: UVMovementScope = "region";
 
   static unfolding(
-    layout: UVLayout
+    layout: UVLayout,
+    net: UVNet = UVNet.packed
   ): NetLayout {
     const spread = layout.spreadFaces();
-    const packed = packNet(
+    const packed = net.place(
       layout.activeSlots.map((face) => {
         return {
           face,

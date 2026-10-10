@@ -39,7 +39,7 @@ get uvClip(): boolean
 set uvClip(value: boolean)
 ```
 
-Narrows the fill with a [UV clip](../../GLOSSARY.md#uv-clip). It combines with `global`: flood fill still matches the seed color with four-connectivity, and a global fill still recolors every matching pixel, but only inside the clip.
+Narrows the fill with a UV clip. It combines with `global`: flood fill still matches the seed color with four-connectivity, and a global fill still recolors every matching pixel, but only inside the clip.
 
 - Seed pixel inside one or more slots: the fill stays inside the union of those slots.
 - Seed pixel outside every slot: the fill stays outside all slots. Gaps between the slots of an unfolded net count as outside.

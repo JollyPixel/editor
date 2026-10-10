@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { UVSlot } from "#src/uv/region/UVRegion.ts";
+import {
+  UVNet,
+  type UVSlot
+} from "#src/uv/region/UVRegion.ts";
 import type { SelectionRect } from "#src/types.ts";
 import { makeUvMap } from "../../helpers/uv/map.ts";
 
@@ -43,6 +46,18 @@ describe("UVMap — setState unfolded", () => {
 
     assert.strictEqual(region.state, "unfolded");
     assert.deepStrictEqual(region.bounds, { x: 0, y: 0, width: 8, height: 12 });
+  });
+
+  test("unfolds through the map net on setState and create", () => {
+    const map = makeUvMap({ x: 64, y: 64 });
+    map.net = new UVNet([["front", "back", "left", "right", "top", "bottom"]]);
+    const stacked = map.create({ width: 4, height: 4 });
+
+    map.setState(stacked.id, "unfolded");
+    const created = map.create({ width: 4, height: 4, state: "unfolded" });
+
+    assert.deepStrictEqual(map.get(stacked.id)!.bounds, { x: 0, y: 0, width: 24, height: 4 });
+    assert.deepStrictEqual(created.bounds, { x: 16, y: 0, width: 24, height: 4 });
   });
 
   test("selects the region without a face", () => {

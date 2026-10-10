@@ -86,6 +86,14 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 
 ## Properties
 
+### `net`
+
+```ts
+net: UVNet
+```
+
+The [net](./UVNet.md) used when a region unfolds through `setState()` or is created unfolded. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
+
 ### `regions`
 
 ```ts
@@ -251,7 +259,7 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 `slot` applies to `"stacked"` only, where it picks between equally large candidate faces. The geometry each state produces is described on [`UVRegion`](./UVRegion.md).
 
-`"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` packs the net wherever the region already sits, then `setState()` shifts the whole net back inside the canvas if it overhangs. A net larger than the texture is shifted to `0, 0` and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
+`"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` lays out the map's [`net`](#net) wherever the region already sits, then `setState()` shifts the whole net back inside the canvas if it overhangs. A net larger than the texture is shifted to `0, 0` and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
 
 Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because a state change undoes with the whole previous region.
 

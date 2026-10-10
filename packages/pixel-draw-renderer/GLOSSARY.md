@@ -1,163 +1,168 @@
 # Pixel draw renderer glossary
 
-This glossary defines the vocabulary for the local pixel-drawing context. It covers editing, selection, UV mapping, rendering, and undo/redo. Network synchronization has its own bounded context and is intentionally out of scope.
+A pixel document is a small image, the **texture**, plus a **UV map** that
+says which part of the texture covers which face of a 3D mesh. The canvas shows
+the texture through a **viewport** and edits it in one **mode** at a time. A
+**normal map** can be generated from the texture to light it as if it had
+relief.
 
-## Terms
+Each term below describes the idea first. The *In code* line names where it
+shows up in the API. Features built on these ideas, such as undo, the color
+palette, shortcuts or the clipboard, are described in [docs](./docs).
+[Network](../network/GLOSSARY.md) and [history](../history/GLOSSARY.md) have
+their own glossaries.
 
-### Pixel Document
-
-The editable unit of work: the texture data, UV map and normal map settings. `PixelDocument` owns these parts and needs no view: a network client can sync it headless, and several canvases can edit one document. Undo and redo live in a *history* the canvas or its host owns, which records the document's changes.
+## Document
 
 ### Texture
 
-The rectangular RGBA image being edited. A texture has a size and can be loaded, replaced, resized, or exported.
+The image being edited: a rectangle of RGBA pixels. A pixel is addressed by
+its position `{ x, y }` in texture space, where y points down. The texture can
+be resized or replaced; pixels cut off by a shrink come back when it grows
+again.
 
-### Pixel
+*In code:* `PixelArtCanvas.texture` and `textureSize`, stored in a
+`PixelBuffer`.
 
-One addressable RGBA cell in texture coordinates. Use *pixel position* for its `{ x, y }` coordinate.
+### Pixel document
 
-### Pixel Buffer
+Everything that is saved and shared: the texture, the UV map and the normal map
+settings. It needs no canvas, so a server can hold one headless and several
+canvases can edit the same one. Every change to it is a *pixel command*,
+applied the same way whether it comes from a local edit, a peer, an undo or a
+redo. Undo history and what the canvas shows are not part of it.
 
-Headless storage for the texture's pixels. It has a working buffer and retained master data so content can survive resize cycles.
+*In code:* `PixelDocument`. `PixelDocumentState` is the same data without
+events, where commands are applied. `PixelCommand`.
 
-### Pixel-art Canvas
+## View
 
-`PixelArtCanvas`, the public editing surface that connects the document, input, tools, and rendering. Use *canvas element* when referring to an `HTMLCanvasElement`.
+### Canvas
+
+The editing surface. It connects one document to input, tools and drawing. Say
+*canvas element* for the DOM `<canvas>` it draws into.
+
+*In code:* `PixelArtCanvas`. `canvas()` returns the canvas element.
 
 ### Viewport
 
-The camera and zoom through which the user sees and navigates the texture. Panning changes the viewport; it does not move the texture.
+The window through which the user sees the texture: a camera position and a
+zoom level. Panning and zooming change the viewport, never the texture. It
+converts between texture space, in texture pixels, and screen space, in pixels
+of the canvas element.
+
+*In code:* `PixelArtCanvas.viewport`, with `toScreen()` and `toTexture()`.
+
+### Texture view
+
+What the canvas draws: the texture's own colors (*albedo*) or its normal map
+(*normal*). It is view state, never saved or shared. In the normal view the
+pixels are read-only, so modes that write pixels are unavailable.
+
+*In code:* `PixelArtCanvas.textureView`, `"albedo"` or `"normal"`.
+
+## Editing
 
 ### Mode
 
-The active input interpretation: `paint`, `erase`, `move`, `fill`, `select`, or `uv`.
+What a click means right now: paint, erase, move, fill, select or uv. One mode
+is active at a time. A mode routes input; a *tool* holds the settings behind
+it, such as whether a fill is global.
 
-### Shortcut
-
-A keyboard-driven intent of the canvas, such as undo, delete, or rotate, reached through `canvas.shortcuts`. The renderer owns what a shortcut does in each mode; the host owns which key triggers it. *Held modifiers* are the pan and line states a host sets while a key stays down.
-
-### Tool
-
-A component that performs or configures an editing behavior. Brush, fill, selection, line, and UV manipulation are tools.
-
-### Color Palette
-
-The ten saved RGBA8 colors of a Pixel Document, addressed by fixed slot
-indices from zero to nine. A palette slot change is a Pixel Command and a
-History Step when history is enabled. Palette selection and color picker
-drafts are local view state. Changing a slot leaves texture pixels unchanged.
+*In code:* `PixelArtCanvas.mode`. Tools are under `canvas.tools`.
 
 ### Brush
 
-The paint configuration: primary and secondary colors, opacity, size, and cursor appearance.
+The paint settings: primary, secondary and erase colors, and a size. A
+*stroke* is one paint drag applying a brush color to pixels; it keeps the color
+it started with. Erasing is a stroke too, written with the erase color, which
+is transparent by default.
 
-### Eraser
-
-The brush writing its erase color, transparent by default. Erasing is a stroke like any other: it is undoable, synchronized, and shares the brush size. Distinct from the *selection erase color*, which fills the pixels a selection vacates.
-
-### Stroke
-
-One completed paint or line operation that applies a brush color to a set of pixel positions. The color is read once, when the stroke starts.
-
-### Line Anchor
-
-The saved pixel position from the last paint or erase mouse-down. A straight line starts here when the line modifier is held. Before any click, the first available cursor position while the modifier is held supplies the anchor. Hover, mouse-up, and preview cancellation keep it; replacing or resizing the texture clears it.
+*In code:* `PixelArtCanvas.brush`.
 
 ### Selection
 
-A completed rectangular or shape-masked region of the texture that can be moved, transformed, copied, or deleted. A shape selection can have holes inside its rectangular bounds.
+An area of the texture, rectangular or shaped, that can be moved, transformed,
+copied or deleted. A shaped selection can have holes. A *floating selection*
+is pasted content that hovers above the texture and is not part of it until it
+is dropped.
 
-### Floating Selection
+*In code:* select mode and `canvas.tools.select`.
 
-Pasted content held above the texture until it is deposited. It can be moved, but is not yet stored in the pixel buffer.
+## UV mapping
 
-### Selection Presence
+### UV map
 
-An immutable description of the current selection for another view. It includes
-creating and resizing bounds, a completed selection's bounds and mask, or a
-moving or floating selection's exact pixels, mask and preview erase color.
-`SelectionPresence` owns and validates this data; its snapshots are independent
-copies. Room membership and network retention belong to the network context.
+All the UV regions of a document, plus which region and slot is selected.
 
-### UV Region
+*In code:* `UVMap`, reached through `canvas.uv`.
 
+### UV region
 
-A named texture area mapped to one or more mesh texture slots. A region may use one shared rectangle or separate geometry for individual slots.
+A named texture area for one mesh, such as a block. It holds the geometry of
+each of the mesh's UV slots: a rectangle, a triangle or a compound shape.
 
-### UV Slot
+*In code:* `UVRegion`.
 
-A consumer-defined texture mapping identifier such as `front`, `top`, or `top.1`. The renderer core treats slots as open strings; a mesh integration decides which polygons each slot controls. A region may carry geometry for inactive slots; only active slots are drawn, selected, moved, rotated or resized.
+### UV slot
 
-### UV Map
+A named face of the mesh, such as `front`, `top` or `top.1`. The renderer
+treats slot names as open strings; the mesh integration decides which polygons
+a slot covers. A region turns slots on or off: only active slots are drawn and
+edited, and inactive ones keep their geometry. The API docs also call a slot a
+*face*.
 
-The collection of UV regions and its current region and slot selection.
+*In code:* `UVSlot`. `DEFAULT_UV_SLOTS` holds the six faces of a box.
 
-### UV Target
+### UV region state
 
-The part of a UV map addressed by an interaction or change. A target identifies a region and may identify one slot within it.
+How a region lays its slots out on the texture:
 
-### UV Clip
+- *stacked*: every slot shares one rectangle, so all faces show the same
+  pixels.
+- *unfolded*: the slots sit side by side in a UV net.
+- *free*: each slot has its own rectangle anywhere on the texture.
 
-The pixel area a fill may touch when `FillTool.uvClip` is on. Seeded inside one or more UV slots, it is the union of those slots; seeded outside, it is every pixel outside all slots. Membership uses pixel centers, active slots, and every region regardless of view visibility. `clearTexture()` keeps the same slot pixels by default.
+The state decides what a drag or a rotation acts on: the whole region when
+stacked or unfolded, one slot when free.
 
-### UV Ownership
+*In code:* `UVRegion.state` and `UVMap.setState()`.
 
-Which document stores a UV region. By default the pixel document stores every region, and UV edits become commands and history steps. An external region is stored by another document, such as a model; the pixel document only shows and edits it, and ignores that region in its own commands and snapshots.
+### UV net
 
-### UV Layout
+The arrangement of an unfolded region's slots. By default they are packed into
+the smallest box; a grid net gives each slot a fixed cell instead. The net is
+local configuration: only the resulting region is saved and shared.
 
-A UV region's geometry without its identity (`id`, `name`, `color`). The owner of an external region stores its layout, and the region is rebuilt from that layout and an identity when shown.
+*In code:* `UVNet`, set through `canvas.uv.net`.
 
-### UV Movement Scope
+### UV ownership
 
-Whether a drag moves a whole UV region or one slot. Stacked and unfolded regions have region scope; free regions have slot scope.
+Which document stores a UV region. By default the pixel document stores all of
+them. A host can hand some to another document, such as a 3D model: the pixel
+document still shows and edits those regions, but leaves them out of its own
+commands and snapshots.
 
-### Nested UV
+*In code:* `PixelDocument.disownUvRegions()` and `ownsUvRegion()`.
 
-What a drag moves, following the UV movement scope (a whole region, or one slot of a free region), when its rectangle lies inside another one's, edges included. A move drag with the line modifier held carries the nested UVs of the dragged unit by the same delta, and the drop is one history step. A unit that only overlaps is not nested.
+## Normal maps
 
-### UV Rotation
+### Normal map
 
-The quarter turns a UV slot's mapping has taken, clockwise in texture space. It follows the UV movement scope: stacked and unfolded regions turn whole, a free region turns one slot. The slot geometry is stored as it looks after the turn, and the rotation tells a mesh which way its UVs face inside it.
+Per-pixel surface directions generated from the texture, used to light it as
+if it had relief. Red points right and green points up in the image. The
+document stores only the *settings*; the normal pixels are generated on
+request, so they never go stale. A *zone* overrides the settings for one UV
+region, or turns the normal map off there.
 
-### UV Resize
-
-Changing a UV rectangle's size independently of the mesh. A stacked region resizes whole and resets every face to the new size. An unfolded or free region resizes one slot; in an unfolded net, faces act as solid boxes: a growing face pushes the faces it runs into, a shrinking one pulls back the faces that touched it, and faces out of contact stay put. Regions with a triangle or compound face cannot be resized.
-
-### Normal Map
-
-Per-pixel surface directions derived from the texture, its islands and the document's normal map settings. The document stores only the settings; the normal pixels are generated when a consumer asks for them, so they never go stale against the texture. Normals point right (red) and up in the image (green).
+*In code:* `NormalMap`, and `NormalMapConfig` for settings and zones.
 
 ### Island
 
-An area of the texture that normal map generation never samples across. Islands follow the UV slot faces, or the faces a host supplies in their place: faces whose pixels overlap form one island, faces that only touch stay separate, and pixels covered by no face form one remainder island.
+An area of the texture that normal generation never samples across. In an
+atlas, the pixel across a face edge belongs to another face, so islands follow
+the UV slots, or faces a host supplies instead. Faces that overlap form one
+island, faces that only touch stay apart, and pixels outside every face form
+one remainder island.
 
-### Normal Map Zone
-
-An override of the normal map settings for one UV region, addressed by region id with no geometry of its own. A zone can turn the normal map off for the islands the region touches. A zone whose region is missing is kept and ignored.
-
-### Texture View
-
-What the canvas draws for the texture: its pixels (*albedo*) or its generated normal map (*normal*). It is view state, never stored or synchronized. The normal view is read-only for pixels: modes that write pixels are unavailable and a selection cannot move, delete or transform pixels.
-
-### Pixel Command
-
-One change to a pixel document: a stroke, a texture resize or replacement, a UV region change, or a normal map settings change. Local edits, undo and redo emit commands, and peers apply them. *Document state* is the texture, UV map and normal map settings without history or view; it applies every command, remote, undone or redone, the same way.
-
-### Edit Change
-
-What the document emits for each applied command: the command, its origin (*local*, *remote* or *replay*), and for a local edit the commands that undo it. Undo history is built from edit changes outside the renderer. An *edit source* emits edit changes and applies the commands of an undo or redo: the document, and the canvas's selection.
-
-### History Step
-
-The reversible record of one local edit, used by undo and redo: the commands that undo it, and the values they must find unchanged. The host's history decides when a peer edit refuses a step; the canvas only binds to that history.
-
-## Naming boundaries
-
-- Use **texture** for editable image data, **viewport** for the user's view of it, and **canvas element** for a DOM canvas.
-- Use **brush** for paint configuration and **stroke** for a completed painting operation.
-- Use **eraser** for the brush writing its erase color, never for selection deletion.
-- Use **selection** for a region already in the texture and **floating selection** for pending pasted content.
-- Use **UV region** for one mapping and **UV map** for the collection that manages all mappings.
-- Use **mode** for input routing and **tool** for editing behavior.
-- Use **normal map** for the generated directions and **normal map settings** for what the document stores; use **island** for a generation area, never *tile* or *chunk*.
+*In code:* `IslandMap`.

@@ -141,17 +141,17 @@ free(): UVRegion
 
 Hands every face its own position. From `"unfolded"` this changes nothing but the state: the cells stay where the net put them and become individually draggable. From `"stacked"` it restores retained faces and shapes onto the shared rectangle, each keeping the size and shape its slot carries. A stacked face holds no offset of its own, so a region that moved while stacked frees at its current rectangle. Returns `this` when already free.
 
-### `unfold()`
+### `unfold(net?)`
 
 ```ts
-unfold(): UVRegion
+unfold(net?: UVNet): UVRegion
 ```
 
-Packs the active faces into a net anchored on the current `bounds` top-left. Each face keeps its own size and shape; only its position changes.
+Lays the active faces out as a net anchored on the current `bounds` top-left. Each face keeps its own size and shape; only its position changes. `net` decides the arrangement and defaults to [`UVNet.packed`](./UVNet.md#packed); a grid net gives each face a fixed cell.
 
-The packer places the tallest face first, then fills the lowest free spot left of the strip, so a short cell slides in beside a tall neighbour instead of starting a new row. It repeats that over every strip width a shelf packer could need and keeps the net whose bounding box has the smallest perimeter, then the smallest area. Six equal faces give a 2x3 net; a pole's two horizontal side strips end up stacked on top of each other rather than side by side, and a stair's half-height back and top slots pair into full rows.
+The packing net places the tallest face first, then fills the lowest free spot left of the strip, so a short cell slides in beside a tall neighbour instead of starting a new row. It repeats that over every strip width a shelf packer could need and keeps the net whose bounding box has the smallest perimeter, then the smallest area. Six equal faces give a 2x3 net; a pole's two horizontal side strips end up stacked on top of each other rather than side by side, and a stair's half-height back and top slots pair into full rows.
 
-Unfolding always repacks, whatever state it starts from, so a hand-arranged free layout is discarded. That transition undoes with the whole previous region, so undo brings the arrangement back. The result is idempotent: unfolding a net returns `this`.
+Unfolding always lays the net out again, whatever state it starts from, so a hand-arranged free layout is discarded. That transition undoes with the whole previous region, so undo brings the arrangement back. The result is idempotent: unfolding a net returns `this`.
 
 Nothing here knows about the canvas. A net larger than the texture keeps going past the edge; [`UVMap.setState()`](./UVMap.md#setstateid-state-face) is what pulls it back inside.
 
