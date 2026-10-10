@@ -13,6 +13,7 @@ export interface MaterialShelf {
   readonly label: string;
   readonly slot: BlocksetSlot;
   readonly materials: readonly MapMaterial[];
+  readonly editable: boolean;
 }
 
 export class MaterialShelves implements Iterable<MaterialShelf> {
@@ -32,6 +33,10 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
 
   get size(): number {
     return this.#shelves.length;
+  }
+
+  get editableShelves(): MaterialShelf[] {
+    return this.#shelves.filter((shelf) => shelf.editable);
   }
 
   get materialCount(): number {
@@ -71,6 +76,12 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
     return this.shelfOf(nodeId) !== undefined;
   }
 
+  canEdit(
+    materialId: string
+  ): boolean {
+    return this.shelfOf(materialId)?.editable === true;
+  }
+
   toTreeNodes(): TreeNode[] {
     if (this.#shelves.length === 1) {
       return materialNodes(this.#shelves[0]);
@@ -95,11 +106,14 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
 function materialNodes(
   shelf: MaterialShelf
 ): TreeNode[] {
-  return shelf.materials.map(materialNode);
+  return shelf.materials.map(
+    (material) => materialNode(material, shelf.editable)
+  );
 }
 
 function materialNode(
-  material: MapMaterial
+  material: MapMaterial,
+  renamable: boolean
 ): TreeNode {
   const { color, glow } = material.swatch;
   const users = material.blockIds.length;
@@ -107,7 +121,7 @@ function materialNode(
   return {
     id: material.id,
     label: material.name,
-    renamable: true,
+    renamable,
     ...(users === 0 ? {} : { detail: String(users) }),
     swatch: {
       title: `Swatch: ${material.name}`,

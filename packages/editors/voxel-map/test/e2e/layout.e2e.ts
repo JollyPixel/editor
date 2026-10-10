@@ -1,33 +1,23 @@
 // Import Third-party Dependencies
-import type {
-  Locator,
-  Page
-} from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
-import {
-  centerOf,
-  dragTo
-} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import {
-  openPane,
-  type PaneName
-} from "./support/panels.ts";
-import { texturePanel } from "./support/texture.ts";
+import type { PaneName } from "./support/dock.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kPerformancePane = "performance";
 const kPerformanceToggleKey = "F3";
 
 function textureView(
-  panel: Locator
+  map: VoxelMapPage
 ) {
-  return panel.evaluate((element: PixelDrawPanel) => {
+  return map.texture.panel.evaluate((element: PixelDrawPanel) => {
     const { camera, viewport, textureSize } = element.canvasManager!;
 
     return {
@@ -39,23 +29,22 @@ function textureView(
 }
 
 async function showPaneCanvas(
-  page: Page,
+  map: VoxelMapPage,
   pane: PaneName,
   previousHeight: number
 ) {
-  const panel = texturePanel(page);
-  await openPane(page, pane);
-  await expect.poll(async() => (await textureView(panel)).canvasHeight)
+  await map.panes.open(pane);
+  await expect.poll(async() => (await textureView(map)).canvasHeight)
     .not.toBe(previousHeight);
 
-  return textureView(panel);
+  return textureView(map);
 }
 
 async function textureHost(
-  page: Page
+  map: VoxelMapPage
 ) {
   for (const pane of ["blocks", "paint"]) {
-    const editor = page.locator(`jolly-pane[key="${pane}"] texture-editor`);
+    const editor = map.panes.pane(pane).locator("texture-editor");
     if (await editor.count() === 1) {
       return {
         pane,
@@ -70,30 +59,18 @@ async function textureHost(
 }
 
 async function performanceReadout(
-  page: Page
+  map: VoxelMapPage
 ): Promise<Locator> {
-  const readout = page.locator(`jolly-pane[key='${kPerformancePane}']`);
+  const readout = map.panes.pane(kPerformancePane);
   await expect(readout).toBeAttached();
 
   return readout;
 }
 
-async function dragPaneToTab(
-  page: Page,
-  pane: Locator,
-  tab: string
-): Promise<void> {
-  await dragTo(
-    page,
-    pane.locator(".header").first(),
-    await centerOf(page.getByRole("tab", { name: tab, exact: true }))
-  );
-}
-
 function leftGroups(
-  page: Page
+  map: VoxelMapPage
 ): Promise<string[][]> {
-  return page.evaluate(() => {
+  return map.page.evaluate(() => {
     const layout = document.querySelector("jolly-dock-layout")!;
 
     return layout.snapshot().docks.left.groups.map(
@@ -102,39 +79,26 @@ function leftGroups(
   });
 }
 
-async function dragTabToDock(
-  page: Page,
-  tab: string,
-  dock: string
-): Promise<void> {
-  await dragTo(
-    page,
-    page.getByRole("tab", { name: tab, exact: true }),
-    await centerOf(page.locator(`jolly-dock[key='${dock}']`))
-  );
-}
-
-test("the texture editor follows the shown tab while Blocks and Paint share a group", async({ page }) => {
-  await openPane(page, "Blocks");
-  await expect.poll(() => textureHost(page)).toEqual({
+test("the texture editor follows the shown tab while Blocks and Paint share a group", async({ map }) => {
+  await map.panes.open("Blocks");
+  await expect.poll(() => textureHost(map)).toEqual({
     pane: "blocks",
     uvAccess: "edit"
   });
 
-  await openPane(page, "Paint");
-  await expect.poll(() => textureHost(page)).toEqual({
+  await map.panes.open("Paint");
+  await expect.poll(() => textureHost(map)).toEqual({
     pane: "paint",
     uvAccess: "view"
   });
 });
 
-test("the texture keeps its frame after a round trip through Paint", async({ page }) => {
+test("the texture keeps its frame after a round trip through Paint", async({ map, page }) => {
   test.slow();
-  const panel = texturePanel(page);
-  await openPane(page, "Blocks");
-  await expect(panel).toHaveAttribute("data-ready", "");
-  const blocks = await textureView(panel);
-  const paint = await showPaneCanvas(page, "Paint", blocks.canvasHeight);
+  await map.panes.open("Blocks");
+  await expect(map.texture.panel).toHaveAttribute("data-ready", "");
+  const blocks = await textureView(map);
+  const paint = await showPaneCanvas(map, "Paint", blocks.canvasHeight);
 
   const gap = paint.canvasHeight - blocks.canvasHeight;
   const paintHeight = Math.round(paint.textureHeight + 16 + (gap / 2));
@@ -143,64 +107,67 @@ test("the texture keeps its frame after a round trip through Paint", async({ pag
     width: viewport.width,
     height: viewport.height + (paintHeight - paint.canvasHeight)
   });
-  await expect.poll(async() => (await textureView(panel)).canvasHeight)
+  await expect.poll(async() => (await textureView(map)).canvasHeight)
     .toBe(paintHeight);
 
-  const before = await showPaneCanvas(page, "Blocks", paintHeight);
+  const before = await showPaneCanvas(map, "Blocks", paintHeight);
   expect(before.canvasHeight).toBeLessThan(paint.textureHeight + 16);
-  await showPaneCanvas(page, "Paint", before.canvasHeight);
-  await openPane(page, "Blocks");
+  await showPaneCanvas(map, "Paint", before.canvasHeight);
+  await map.panes.open("Blocks");
 
-  await expect.poll(() => textureView(panel)).toEqual(before);
+  await expect.poll(() => textureView(map)).toEqual(before);
 });
 
-test("the texture editor stays in Paint once it has its own dock", async({ page }) => {
-  await dragTabToDock(page, "Paint", "right");
-  await expect(page.locator("jolly-dock[key='right'] jolly-pane[key='paint']")).toBeAttached();
+test("the texture editor stays in Paint once it has its own dock", async({ map }) => {
+  await map.panes.moveTab("Paint", "right");
+  await expect(map.panes.dock("right").locator("jolly-pane[key='paint']")).toBeAttached();
 
-  await openPane(page, "Blocks");
+  await map.panes.open("Blocks");
 
-  await expect.poll(() => textureHost(page)).toEqual({
+  await expect.poll(() => textureHost(map)).toEqual({
     pane: "paint",
     uvAccess: "edit"
   });
-  await expect(page.getByRole("listbox", { name: "Blocks" })).toBeVisible();
+  await expect(map.blocks.library.listbox).toBeVisible();
 });
 
-test("the Materials pane shows its block library only while Blocks is not on screen", async({ page }) => {
-  const materialsLibrary = page.locator("materials-panel block-library");
-  await openPane(page, "Materials");
+test("the Materials pane shows its block library only while Blocks is not on screen", async({
+  map,
+  page
+}) => {
+  const materialsLibrary = map.materials.blockLibrary;
+  await map.panes.open("Materials");
   await expect(materialsLibrary).toBeVisible();
 
-  await dragTabToDock(page, "Blocks", "right");
-  await openPane(page, "Materials");
+  await map.panes.moveTab("Blocks", "right");
+  await map.panes.open("Materials");
   await expect(materialsLibrary).toHaveCount(0);
   await expect(page.getByRole("listbox", { name: "Blocks" })).toHaveCount(1);
 
-  await page.locator("jolly-dock[key='right'] .resize-handle").dblclick();
+  await map.panes.dock("right").locator(".resize-handle").dblclick();
   await expect(materialsLibrary).toBeVisible();
 });
 
-test("the performance readout merges into the pane group it is dropped on", async({ page }) => {
-  const readout = await performanceReadout(page);
+test("the performance readout merges into the pane group it is dropped on", async({ map, page }) => {
+  const readout = await performanceReadout(map);
   await page.keyboard.press(kPerformanceToggleKey);
   await expect(readout).toBeVisible();
 
-  await dragPaneToTab(page, readout, "General");
+  await map.panes.movePane(readout, "General");
 
-  await expect.poll(() => leftGroups(page)).toEqual([
+  await expect.poll(() => leftGroups(map)).toEqual([
     ["general", kPerformancePane, "blocks", "materials", "paint", "layers"]
   ]);
 });
 
-test("the performance toggle key still toggles the readout once docked", async({ page }) => {
-  const readout = await performanceReadout(page);
+test("the performance toggle key still toggles the readout once docked", async({ map, page }) => {
+  const readout = await performanceReadout(map);
   await page.keyboard.press(kPerformanceToggleKey);
   await expect(readout).toBeVisible();
 
-  await dragPaneToTab(page, readout, "General");
+  await map.panes.movePane(readout, "General");
   await expect(
-    page.locator(`jolly-dock[key='left'] jolly-pane[key='${kPerformancePane}']`)
+    map.panes.dock("left").locator(`jolly-pane[key='${kPerformancePane}']`)
   ).toBeVisible();
 
   await page.keyboard.press(kPerformanceToggleKey);

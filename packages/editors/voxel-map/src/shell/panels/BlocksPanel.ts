@@ -82,9 +82,8 @@ export class BlocksPanel extends WorkspaceElement {
     const refreshEditable = (): void => {
       const { id } = workspace.state.block;
 
-      this._canEditBlock = workspace.mapDocument.blocks.get(
-        id
-      ) !== undefined;
+      this._canEditBlock = workspace.mapDocument.blocks.has(id) &&
+        workspace.blocksets.canEditBlock(id);
     };
     refreshEditable();
 
@@ -98,6 +97,10 @@ export class BlocksPanel extends WorkspaceElement {
         refreshEditable
       ),
       workspace.state.block.subscribe(
+        "change",
+        refreshEditable
+      ),
+      workspace.blocksets.subscribe(
         "change",
         refreshEditable
       )

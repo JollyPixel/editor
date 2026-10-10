@@ -95,6 +95,7 @@ test("opens the requested model with its default block", async({ page }) => {
 - [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
 - [Sockets](./docs/sockets.md): `recordSockets`.
 - [Roles](./docs/roles.md): `CookieRoles`, `grantRole` and `changeRole`.
+- [Console](./docs/console.md): `CommandConsole`, the command console prompt and log.
 
 `@jolly-pixel/e2e/editor`, for editors and the studio:
 

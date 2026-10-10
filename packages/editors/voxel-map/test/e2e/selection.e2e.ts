@@ -1,7 +1,5 @@
 // Import Third-party Dependencies
-import type { Page } from "@playwright/test";
 import type { Object3D } from "three";
-import { pressAt } from "@jolly-pixel/e2e";
 import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
@@ -9,22 +7,8 @@ import {
   test,
   expect
 } from "./fixtures.ts";
-import {
-  dragPlacement,
-  hoverCell,
-  peerPlacementCount,
-  placement
-} from "./support/placement.ts";
-import {
-  blocksAt,
-  clickCell,
-  pinCamera,
-  pivotOnCell,
-  pointAt,
-  seedVoxels,
-  voxelCount,
-  type Cell
-} from "./support/scene.ts";
+import type { Cell } from "./support/viewport.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kRow: Cell[] = [0, 1, 2].map((x) => {
@@ -33,36 +17,36 @@ const kRow: Cell[] = [0, 1, 2].map((x) => {
 const kOutside: Cell = { x: 5, y: 0, z: 0 };
 
 async function seed(
-  page: Page,
+  map: VoxelMapPage,
   cells: Cell[]
 ): Promise<void> {
-  await seedVoxels(page, cells.map((cell) => {
+  await map.world.seed(cells.map((cell) => {
     return { ...cell, blockId: 1 };
   }));
-  await pinCamera(page);
+  await map.viewport.pinCamera();
 }
 
 async function useSelectTool(
-  page: Page
+  map: VoxelMapPage
 ): Promise<void> {
-  await hoverCell(page, kOutside);
-  await page.keyboard.press("m");
+  await map.viewport.hover(kOutside);
+  await map.page.keyboard.press("m");
 }
 
 async function selectRow(
-  page: Page
+  map: VoxelMapPage
 ): Promise<void> {
   const last = kRow.at(-1)!;
-  await pressAt(page, [
-    await pointAt(page, { x: 0.5, y: 1, z: 0.5 }),
-    await pointAt(page, { x: last.x + 0.5, y: 0.5, z: 0.5 })
-  ], { settle: nextFrames });
+  await map.viewport.press([
+    { x: 0.5, y: 1, z: 0.5 },
+    { x: last.x + 0.5, y: 0.5, z: 0.5 }
+  ]);
 }
 
 function cursorVisible(
-  page: Page
+  map: VoxelMapPage
 ): Promise<boolean> {
-  return page.evaluate(() => {
+  return map.page.evaluate(() => {
     let root: Object3D = window.voxelMapEditor!.workspace.view.root;
     while (root.parent !== null) {
       root = root.parent;
@@ -73,10 +57,10 @@ function cursorVisible(
 }
 
 function raiseCamera(
-  page: Page,
+  map: VoxelMapPage,
   height: number
 ): Promise<void> {
-  return page.evaluate((rise) => {
+  return map.page.evaluate((rise) => {
     const orbit = window.voxelMapEditor!.scene.camera!;
     const { camera } = orbit;
     orbit.teleport({
@@ -90,161 +74,170 @@ function raiseCamera(
   }, height);
 }
 
-test("a dragged marquee cuts the blocks it covers until the selection is committed", async({ page }) => {
+test("a dragged marquee cuts the blocks it covers until the selection is committed", async({ map, page }) => {
   test.slow();
-  await seed(page, [...kRow, kOutside]);
-  const toolbar = page.locator("voxel-edit-toolbar");
+  const { placement, toolbar, viewport, world } = map;
+  await seed(map, [...kRow, kOutside]);
 
-  await toolbar.getByRole("button", { name: /^Select/ }).click();
-  await expect(toolbar.getByRole("group", { name: "Brush" })).toBeHidden();
-  await hoverCell(page, kRow[0]);
-  await expect.poll(() => cursorVisible(page)).toBe(true);
-  await selectRow(page);
-  expect(await cursorVisible(page)).toBe(false);
+  await toolbar.selectButton.click();
+  await expect(toolbar.brushTools).toBeHidden();
+  await viewport.hover(kRow[0]);
+  await expect.poll(() => cursorVisible(map)).toBe(true);
+  await selectRow(map);
+  expect(await cursorVisible(map)).toBe(false);
 
-  const lifted = await placement(page);
+  const lifted = await placement.current();
   expect(lifted?.kind).toBe("region");
   expect(lifted?.cells).toHaveLength(kRow.length);
-  expect(await blocksAt(page, kRow)).toEqual([null, null, null]);
-  await expect(page.locator("voxel-placement-controls").getByRole("status"))
-    .toHaveText("Selection → Ground");
+  expect(await world.blocks(kRow)).toEqual([null, null, null]);
+  await expect(toolbar.status).toHaveText("Selection → Ground");
 
   const grab = {
     ...kRow[1],
     y: lifted!.top
   };
-  await dragPlacement(page, grab, {
+  await viewport.drag([grab, {
     ...grab,
     z: grab.z + 3
-  });
-  await expect.poll(async() => (await placement(page))?.position.z)
+  }]);
+  await expect.poll(async() => (await placement.current())?.position.z)
     .toBe(lifted!.position.z + 3);
-  const moved = await placement(page);
+  const moved = await placement.current();
 
-  await hoverCell(page, kOutside);
+  await viewport.hover(kOutside);
   await page.keyboard.press("Enter");
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, moved!.cells)).toEqual([1, 1, 1]);
-  expect(await blocksAt(page, kRow)).toEqual([null, null, null]);
-  expect(await blocksAt(page, [kOutside])).toEqual([1]);
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await world.blocks(moved!.cells)).toEqual([1, 1, 1]);
+  expect(await world.blocks(kRow)).toEqual([null, null, null]);
+  expect(await world.blocks([kOutside])).toEqual([1]);
 
   await page.keyboard.press("Control+KeyZ");
-  await expect.poll(() => blocksAt(page, kRow)).toEqual([1, 1, 1]);
-  expect(await voxelCount(page)).toBe(kRow.length + 1);
+  await expect.poll(() => world.blocks(kRow)).toEqual([1, 1, 1]);
+  expect(await world.voxelCount()).toBe(kRow.length + 1);
 });
 
-test("the marquee grows in height while the camera rises during the drag", async({ page }) => {
+test("the marquee grows in height while the camera rises during the drag", async({ map, page }) => {
+  const { viewport } = map;
   const step: Cell = { x: 1, y: 1, z: 0 };
-  await seed(page, [kRow[0], step, kOutside]);
-  await useSelectTool(page);
+  await seed(map, [kRow[0], step, kOutside]);
+  await useSelectTool(map);
 
-  const from = await pointAt(page, { x: 0.5, y: 1, z: 0.5 });
-  const to = await pointAt(page, { x: 1.5, y: 0.5, z: 0.5 });
+  const from = await viewport.screenPoint({ x: 0.5, y: 1, z: 0.5 });
+  const to = await viewport.screenPoint({ x: 1.5, y: 0.5, z: 0.5 });
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 4 });
   await nextFrames(page);
-  await raiseCamera(page, 2);
+  await raiseCamera(map, 2);
   await nextFrames(page);
   await page.mouse.up();
 
-  await expect.poll(async() => (await placement(page))?.cells.length).toBe(2);
-  expect(await blocksAt(page, [kRow[0], step])).toEqual([null, null]);
+  await expect.poll(async() => (await map.placement.current())?.cells.length).toBe(2);
+  expect(await map.world.blocks([kRow[0], step])).toEqual([null, null]);
 });
 
-test("Delete removes the selected blocks only", async({ page }) => {
-  await seed(page, [...kRow, kOutside]);
-  await useSelectTool(page);
-  await selectRow(page);
-  await expect.poll(async() => (await placement(page))?.kind).toBe("region");
+test("Delete removes the selected blocks only", async({ map, page }) => {
+  const { placement } = map;
+  await seed(map, [...kRow, kOutside]);
+  await useSelectTool(map);
+  await selectRow(map);
+  await expect.poll(async() => (await placement.current())?.kind).toBe("region");
 
-  await hoverCell(page, kOutside);
+  await map.viewport.hover(kOutside);
   await page.keyboard.press("Delete");
 
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, [...kRow, kOutside])).toEqual([null, null, null, 1]);
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await map.world.blocks([...kRow, kOutside])).toEqual([null, null, null, 1]);
 });
 
-test("a click in connected mode selects the touching blocks only", async({ page }) => {
-  await seed(page, [...kRow, kOutside]);
-  const toolbar = page.locator("voxel-edit-toolbar");
-  await toolbar.getByRole("button", { name: /^Select/ }).click();
-  await toolbar.getByRole("button", { name: /^Connected select/ }).click();
+test("a click in connected mode selects the touching blocks only", async({ map, page }) => {
+  const { placement, toolbar, viewport, world } = map;
+  await seed(map, [...kRow, kOutside]);
+  await toolbar.selectButton.click();
+  await toolbar.connectedSelectButton.click();
 
-  await clickCell(page, kRow[2]);
+  await viewport.click(kRow[2]);
 
-  await expect.poll(async() => (await placement(page))?.cells.length)
+  await expect.poll(async() => (await placement.current())?.cells.length)
     .toBe(kRow.length);
-  expect(await blocksAt(page, [...kRow, kOutside])).toEqual([null, null, null, 1]);
+  expect(await world.blocks([...kRow, kOutside])).toEqual([null, null, null, 1]);
 
-  await hoverCell(page, kOutside);
+  await viewport.hover(kOutside);
   await page.keyboard.press("Delete");
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, [...kRow, kOutside])).toEqual([null, null, null, 1]);
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await world.blocks([...kRow, kOutside])).toEqual([null, null, null, 1]);
 });
 
-test("a peer sees the cursor and the selection; Escape puts the blocks back", async({ page, peer }) => {
+test("a peer sees the cursor and the selection; Escape puts the blocks back", async({
+  map,
+  peerMap,
+  page
+}) => {
   test.slow();
-  await seed(page, [...kRow, kOutside]);
-  await useSelectTool(page);
-  await expect.poll(() => peerPlacementCount(peer)).toBe(1);
+  const { placement, toolbar } = map;
+  await seed(map, [...kRow, kOutside]);
+  await useSelectTool(map);
+  await expect.poll(() => peerMap.placement.peerPreviews()).toBe(1);
 
-  await selectRow(page);
-  await expect.poll(async() => (await placement(page))?.kind).toBe("region");
-  await expect.poll(() => peerPlacementCount(peer)).toBe(1);
+  await selectRow(map);
+  await expect.poll(async() => (await placement.current())?.kind).toBe("region");
+  await expect.poll(() => peerMap.placement.peerPreviews()).toBe(1);
 
-  const toolbar = page.locator("voxel-edit-toolbar");
-  await hoverCell(page, kOutside);
+  await map.viewport.hover(kOutside);
   await page.keyboard.press("Escape");
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, kRow)).toEqual([1, 1, 1]);
-  await expect(toolbar).toHaveAttribute("mode", "select");
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await map.world.blocks(kRow)).toEqual([1, 1, 1]);
+  await expect(toolbar.root).toHaveAttribute("mode", "select");
 
   await page.keyboard.press("Escape");
-  await expect(toolbar).toHaveAttribute("mode", "paint");
-  await expect.poll(() => peerPlacementCount(peer)).toBe(0);
+  await expect(toolbar.root).toHaveAttribute("mode", "paint");
+  await expect.poll(() => peerMap.placement.peerPreviews()).toBe(0);
 });
 
-test("Alt+click pivots the camera, then Escape leaves the pivot before the select tool", async({ page }) => {
-  await seed(page, [...kRow, kOutside]);
-  await useSelectTool(page);
-  const toolbar = page.locator("voxel-edit-toolbar");
-  const log = page.locator("jolly-log");
+test("Alt+click pivots the camera, then Escape leaves the pivot before the select tool", async({
+  map,
+  page
+}) => {
+  const { log, toolbar } = map;
+  await seed(map, [...kRow, kOutside]);
+  await useSelectTool(map);
 
-  await pivotOnCell(page, kRow[1]);
+  await map.viewport.pivot(kRow[1]);
   await expect(log).toContainText("Camera switched to pivot");
-  expect(await placement(page)).toBeNull();
+  expect(await map.placement.current()).toBeNull();
 
   await page.keyboard.press("Escape");
   await expect(log).toContainText("Camera switched to free fly");
-  await expect(toolbar).toHaveAttribute("mode", "select");
+  await expect(toolbar.root).toHaveAttribute("mode", "select");
 
   await page.keyboard.press("Escape");
-  await expect(toolbar).toHaveAttribute("mode", "paint");
+  await expect(toolbar.root).toHaveAttribute("mode", "paint");
 });
 
-test("Ctrl+C then Ctrl+V floats a copy under the cursor, committed by a click outside", async({ page }) => {
+test("Ctrl+C then Ctrl+V floats a copy under the cursor, committed by a click outside", async({
+  map,
+  page
+}) => {
   test.slow();
-  await seed(page, [...kRow, kOutside]);
-  await useSelectTool(page);
-  const paste = page.locator("voxel-edit-toolbar")
-    .getByRole("button", { name: /^Paste/, includeHidden: true });
-  await selectRow(page);
-  await expect.poll(async() => (await placement(page))?.kind).toBe("region");
+  const { placement, viewport, world } = map;
+  await seed(map, [...kRow, kOutside]);
+  await useSelectTool(map);
+  await selectRow(map);
+  await expect.poll(async() => (await placement.current())?.kind).toBe("region");
 
-  await hoverCell(page, kOutside);
+  await viewport.hover(kOutside);
   await page.keyboard.press("Control+KeyC");
-  await expect(paste.first()).toBeEnabled();
-  await hoverCell(page, { x: 1, y: 0, z: 4 });
+  await expect(map.toolbar.pasteButton).toBeEnabled();
+  await viewport.hover({ x: 1, y: 0, z: 4 });
   await page.keyboard.press("Control+KeyV");
 
-  await expect.poll(async() => (await placement(page))?.kind).toBe("copy");
-  expect(await blocksAt(page, kRow)).toEqual([1, 1, 1]);
-  const pasted = await placement(page);
+  await expect.poll(async() => (await placement.current())?.kind).toBe("copy");
+  expect(await world.blocks(kRow)).toEqual([1, 1, 1]);
+  const pasted = await placement.current();
   expect(pasted?.position.z).toBeGreaterThan(0);
 
-  await clickCell(page, { x: 5, y: 0, z: 2 });
-  await expect.poll(() => placement(page)).toBeNull();
-  expect(await blocksAt(page, pasted!.cells)).toEqual([1, 1, 1]);
-  expect(await voxelCount(page)).toBe((kRow.length * 2) + 1);
+  await viewport.click({ x: 5, y: 0, z: 2 });
+  await expect.poll(() => placement.current()).toBeNull();
+  expect(await world.blocks(pasted!.cells)).toEqual([1, 1, 1]);
+  expect(await world.voxelCount()).toBe((kRow.length * 2) + 1);
 });

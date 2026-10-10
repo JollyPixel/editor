@@ -51,6 +51,9 @@ export class VoxelLayerPanel extends LitElement {
   @property({ attribute: false })
   declare mapDocument: MapDocument;
 
+  @property({ type: Boolean })
+  declare writable: boolean;
+
   @state()
   private declare _layer: VoxelLayer | null;
 
@@ -76,6 +79,7 @@ export class VoxelLayerPanel extends LitElement {
   constructor() {
     super();
     this.layerName = null;
+    this.writable = true;
     this._layer = null;
     this._contentOrigin = new THREE.Vector3();
     this._empty = true;
@@ -154,6 +158,7 @@ export class VoxelLayerPanel extends LitElement {
 
       <custom-properties-editor
         .rows=${this._props}
+        .disabled=${!this.writable}
         storage-key="voxel-map:folder:layer-properties"
         @property-rows-change=${this.#onPropertyRowsChange}
       ></custom-properties-editor>
@@ -161,7 +166,7 @@ export class VoxelLayerPanel extends LitElement {
   }
 
   #renderActions() {
-    const transforming = this.#transforming();
+    const transforming = !this.writable || this.#transforming();
     const empty = this._empty;
     const transformTitle = empty ?
       "The layer has no voxels to transform" :
@@ -195,7 +200,7 @@ export class VoxelLayerPanel extends LitElement {
       <jolly-vector3
         label="Position"
         step="1"
-        ?disabled=${this.#transforming()}
+        ?disabled=${!this.writable || this.#transforming()}
         .value=${this.#position.value}
         @jolly-input=${this.#position.input}
         @jolly-change=${this.#position.commit}

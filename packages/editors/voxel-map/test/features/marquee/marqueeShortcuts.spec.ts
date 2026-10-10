@@ -25,6 +25,7 @@ import {
   ToolStore
 } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
 const kSelectAll: KeyboardEventInit = isApplePlatform() ?
@@ -61,7 +62,8 @@ function setup() {
     world,
     history: mapHistoryOf(world),
     selection,
-    mapDocument: mapDocumentOf(world)
+    mapDocument: mapDocumentOf(world),
+    access: mapAccess()
   });
   bindMarqueeShortcuts({
     keyboard,

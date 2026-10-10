@@ -21,6 +21,7 @@ import type {
   PointerCapture,
   SelectionStore
 } from "../../../state/index.ts";
+import type { MapGrants } from "../../../access/MapAccess.ts";
 import type { LayerVisibilityStore } from "../LayerVisibilityStore.ts";
 import { MapObject } from "./MapObject.ts";
 import { ObjectAreaScene } from "./ObjectAreaScene.ts";
@@ -39,6 +40,7 @@ export interface ObjectLayerRendererOptions {
   pointer: PointerCapture;
   mapDocument: MapDocument;
   visibility: LayerVisibilityStore;
+  access: MapGrants;
 }
 
 export class ObjectLayerRenderer extends ActorComponent {
@@ -48,6 +50,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   #pointerCapture: PointerCapture;
   #mapDocument: MapDocument;
   #visibility: LayerVisibilityStore;
+  #access: MapGrants;
   #scene: ObjectAreaScene;
   #canvas: HTMLCanvasElement | null = null;
   #controls: BoxControls<AreaBox> | null = null;
@@ -70,6 +73,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     this.#pointerCapture = options.pointer;
     this.#mapDocument = options.mapDocument;
     this.#visibility = options.visibility;
+    this.#access = options.access;
     this.#scene = new ObjectAreaScene({
       actor,
       world: options.world,
@@ -98,7 +102,8 @@ export class ObjectLayerRenderer extends ActorComponent {
       this.#selection.subscribe("change", this.#onSelectionChange),
       this.#mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
       this.#mapDocument.subscribe("reset", this.#onWorldReset),
-      this.#visibility.subscribe("change", this.#onVisibilityChange)
+      this.#visibility.subscribe("change", this.#onVisibilityChange),
+      this.#access.subscribe("change", this.#onAccessChange)
     );
 
     this.#syncAll();
@@ -177,6 +182,7 @@ export class ObjectLayerRenderer extends ActorComponent {
       selectedKey === null ||
       area === undefined ||
       !area.visible ||
+      !this.#access.current.has("objects") ||
       this.#scene.locked(selectedKey)
     ) {
       this.#detach();
@@ -260,8 +266,10 @@ export class ObjectLayerRenderer extends ActorComponent {
       return;
     }
 
-    this.#selectedKey = key;
-    controls.attach(area, { from: event });
+    if (this.#access.current.has("objects")) {
+      this.#selectedKey = key;
+      controls.attach(area, { from: event });
+    }
     this.#selection.selectObject(ref);
   };
 
@@ -299,6 +307,11 @@ export class ObjectLayerRenderer extends ActorComponent {
   readonly #onSelectionChange = (): void => this.#updateVisibility();
 
   readonly #onVisibilityChange = (): void => this.#updateVisibility();
+
+  readonly #onAccessChange = (): void => {
+    this.#syncGizmo(this.#selectedObjectKey());
+    this.actor.world.invalidate();
+  };
 
   readonly #onWorldReset = (): void => this.#syncAll();
 

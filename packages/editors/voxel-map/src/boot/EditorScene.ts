@@ -8,6 +8,7 @@ import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
+import { RoomGrants } from "@jolly-pixel/network/client";
 import {
   PeerFrustums,
   type AssetLeases,
@@ -63,9 +64,13 @@ import { SceneLighting } from "../scene/environment/SceneLighting.ts";
 import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
 import { PivotClick } from "../scene/camera/PivotClick.ts";
+import { MAP_CAPABILITIES } from "../access/MapAccess.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
+const kMaxAccessListeners = 32;
+const kMapRefusedMessage = "You can only view this map, so the change was not saved";
+const kBlocksetRefusedMessage = "You can only view this blockset, so the change was not saved";
 const kGrid: GridOptions = {
   extent: 400,
   infiniteGrid: true,
@@ -181,13 +186,17 @@ export class EditorScene extends Systems.Scene {
     this.#environment = environment;
 
     const blockSources = BlockRenderSources.of(view);
+    const access = new RoomGrants(session.room, MAP_CAPABILITIES)
+      .setMaxListeners(kMaxAccessListeners);
     const mapDocument = new MapDocument({
       map: session.map,
-      defaultLayerName: kDefaultLayerName
+      defaultLayerName: kDefaultLayerName,
+      access
     });
     const templates = new MapTemplates({
       world: view.document.world,
-      mapDocument
+      mapDocument,
+      access
     });
     const localVisibility = new LocalLayerVisibility({
       world: view.document.world,
@@ -198,7 +207,8 @@ export class EditorScene extends Systems.Scene {
     const layers = new MapLayers({
       world: view.document.world,
       selection: state.selection,
-      mapDocument
+      mapDocument,
+      access
     });
     const mapHistory = createMapHistory(session.map.edits);
     mapHistory.on("skipped", (_scope, step) => {
@@ -209,11 +219,13 @@ export class EditorScene extends Systems.Scene {
       history: mapHistory,
       selection: state.selection,
       mapDocument,
-      conceal: (layerName) => localVisibility.conceal(layerName)
+      conceal: (layerName) => localVisibility.conceal(layerName),
+      access
     });
     const history = new MapHistory({
       history: mapHistory,
-      placement
+      placement,
+      access
     });
     const usage = new BlockUsageStore({
       mapDocument,
@@ -318,7 +330,8 @@ export class EditorScene extends Systems.Scene {
         selection: state.selection,
         pointer: state.pointer,
         mapDocument,
-        visibility: layerVisibility
+        visibility: layerVisibility,
+        access
       });
     function publishPlacement(): void {
       peerPlacements.publishLocal(
@@ -326,7 +339,9 @@ export class EditorScene extends Systems.Scene {
       );
     }
     function suspendBrush(): void {
-      brush.suspended = placement.placing || state.tool.selecting;
+      brush.suspended = placement.placing ||
+        state.tool.selecting ||
+        !access.current.has("voxels");
     }
 
     const marquee = world.createActor("marquee")
@@ -344,6 +359,13 @@ export class EditorScene extends Systems.Scene {
     this.#disposables.push(
       placement.subscribe("change", suspendBrush),
       state.tool.subscribe("change", suspendBrush),
+      access.subscribe("change", suspendBrush),
+      access.subscribe("denied", () => {
+        state.log.push(kMapRefusedMessage);
+      }),
+      blocksets.subscribe("denied", () => {
+        state.log.push(kBlocksetRefusedMessage);
+      }),
       () => {
         brush.suspended = false;
       },
@@ -404,7 +426,8 @@ export class EditorScene extends Systems.Scene {
       () => layers.dispose(),
       () => templates.dispose(),
       () => localVisibility.dispose(),
-      () => mapDocument.dispose()
+      () => mapDocument.dispose(),
+      () => access.dispose()
     );
 
     if (mapDocument.ready) {
@@ -413,6 +436,7 @@ export class EditorScene extends Systems.Scene {
 
     this.#workspace.resolve({
       state,
+      access,
       brush,
       mapDocument,
       usage,

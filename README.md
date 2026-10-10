@@ -44,6 +44,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 - [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art)
 - [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map)
 - [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model)
+- [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation)
 
 ### UI
 

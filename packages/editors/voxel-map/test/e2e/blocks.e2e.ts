@@ -1,46 +1,31 @@
-// Import Third-party Dependencies
-import type { Page } from "@playwright/test";
-import {
-  buttonGroup,
-  dialogTitle,
-  titledDialog
-} from "@jolly-pixel/e2e";
-
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
-import { seedVoxels } from "./support/scene.ts";
-import {
-  blockTileCenter,
-  clickTexel,
-  setTextureMode,
-  texturePanel
-} from "./support/texture.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 function brushBlock(
-  page: Page
+  map: VoxelMapPage
 ): Promise<number> {
-  return page.evaluate(
+  return map.page.evaluate(
     () => window.voxelMapEditor!.workspace.state.block.id
   );
 }
 
 function blockNames(
-  page: Page
+  map: VoxelMapPage
 ): Promise<string[]> {
-  return page.evaluate(() => [
+  return map.page.evaluate(() => [
     ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
   ].map((block) => block.name));
 }
 
 function blockSurface(
-  page: Page,
+  map: VoxelMapPage,
   blockId: number
 ): Promise<{ alphaMode?: string; side?: string; }> {
-  return page.evaluate((id) => {
+  return map.page.evaluate((id) => {
     const block = window.voxelMapEditor!.workspace.view.document.blocks.get(id);
 
     return {
@@ -50,23 +35,11 @@ function blockSurface(
   }, blockId);
 }
 
-async function eraseBlockTile(
-  page: Page,
-  blockId: number
-): Promise<void> {
-  await openPane(page, "Paint");
-  const panel = texturePanel(page);
-  const texel = await blockTileCenter(page, blockId);
-
-  await setTextureMode(panel, "Erase");
-  await clickTexel(panel, texel);
-}
-
 function blockTileSize(
-  page: Page,
+  map: VoxelMapPage,
   blockId: number
 ): Promise<number | undefined> {
-  return page.evaluate((id) => {
+  return map.page.evaluate((id) => {
     const block = window.voxelMapEditor!.workspace.view.document.blocks.get(id);
     const refs = Object.values(block?.faceTextures ?? {});
 
@@ -74,45 +47,54 @@ function blockTileSize(
   }, blockId);
 }
 
-test.beforeEach(async({ page }) => {
-  await openPane(page, "Blocks");
+async function eraseBlockTile(
+  map: VoxelMapPage,
+  blockId: number
+): Promise<void> {
+  await map.panes.open("Paint");
+  const texel = await map.texture.blockTileCenter(blockId);
+
+  await map.texture.selectMode("Erase");
+  await map.texture.clickTexel(texel);
+}
+
+test.beforeEach(async({ map }) => {
+  await map.panes.open("Blocks");
 });
 
-test("clicking a block selects it for the brush", async({ page }) => {
-  const [, second] = await blockNames(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
-  await expect(library.getByRole("option")).toHaveCount(32);
+test("clicking a block selects it for the brush", async({ map }) => {
+  const { library } = map.blocks;
+  const [, second] = await blockNames(map);
+  await expect(library.options).toHaveCount(32);
 
-  await library.getByRole("option", { name: second, exact: true }).click();
+  await library.select(second);
 
-  await expect(library.getByRole("option", { name: second, exact: true }))
-    .toHaveAttribute("aria-selected", "true");
-  expect(await brushBlock(page)).toBe(2);
+  await expect(library.option(second)).toHaveAttribute("aria-selected", "true");
+  expect(await brushBlock(map)).toBe(2);
 });
 
-test("the order menu opens on hover and stays open once clicked", async({ page }) => {
-  const trigger = page.getByRole("button", { name: /^Order:/ });
-  const menu = page.getByRole("menu", { name: "Block order" });
+test("the order menu opens on hover and stays open once clicked", async({ map, page }) => {
+  const { orderButton, orderMenu } = map.blocks;
+  const mostUsed = orderMenu.getByRole("menuitemradio", { name: "Most used first" });
 
-  await trigger.hover();
-  await expect(menu).toBeVisible();
+  await orderButton.hover();
+  await expect(orderMenu).toBeVisible();
   await page.mouse.move(0, 0);
-  await expect(menu).toBeHidden();
+  await expect(orderMenu).toBeHidden();
 
-  await trigger.hover();
-  await expect(menu).toBeVisible();
-  await trigger.click();
+  await orderButton.hover();
+  await expect(orderMenu).toBeVisible();
+  await orderButton.click();
   await page.mouse.move(0, 0);
-  await expect(menu.getByRole("menuitemradio", { name: "Most used first" }))
-    .toBeVisible();
+  await expect(mostUsed).toBeVisible();
 
-  await menu.getByRole("menuitemradio", { name: "Most used first" }).click();
-  await expect(menu).toBeHidden();
-  await expect(trigger).toHaveAccessibleName("Order: Most used first");
+  await mostUsed.click();
+  await expect(orderMenu).toBeHidden();
+  await expect(orderButton).toHaveAccessibleName("Order: Most used first");
 });
 
-test("the library redraws after the browser drops its WebGL context", async({ page }) => {
-  const canvas = page.locator("block-library-viewport canvas");
+test("the library redraws after the browser drops its WebGL context", async({ map }) => {
+  const { canvas } = map.blocks.library;
   await expect(canvas).toHaveCount(1);
 
   await canvas.evaluate((element: HTMLCanvasElement) => {
@@ -129,118 +111,100 @@ test("the library redraws after the browser drops its WebGL context", async({ pa
   )).toBe(false);
 });
 
-test("the add cell creates a block and selects it", async({ page }) => {
-  await page.getByRole("button", { name: "Add block", exact: true }).click();
-  const editor = titledDialog(page, "New Block");
-  const title = dialogTitle(editor);
-  await expect(title).not.toBeFocused();
-  await title.fill("Lantern");
-  await title.press("Enter");
-  await titledDialog(page, "Lantern")
-    .getByRole("button", { name: "Create" })
-    .click();
-  await expect(editor).toBeHidden();
+test("the add cell creates a block and selects it", async({ map }) => {
+  const { library } = map.blocks;
+  await library.addButton.click();
+  const editor = map.blockDialog("New Block");
+  await expect(editor.title).not.toBeFocused();
+  await editor.rename("Lantern");
+  await map.blockDialog("Lantern").createButton.click();
+  await expect(editor.root).toBeHidden();
 
-  const library = page.getByRole("listbox", { name: "Blocks" });
-  await expect(library.getByRole("option", { name: "Lantern" }))
-    .toHaveAttribute("aria-selected", "true");
-  expect(await brushBlock(page)).toBe(33);
+  await expect(library.option("Lantern")).toHaveAttribute("aria-selected", "true");
+  expect(await brushBlock(map)).toBe(33);
 });
 
-test("double-clicking a block edits it in place", async({ page }) => {
-  const [first] = await blockNames(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
+test("double-clicking a block edits it in place", async({ map }) => {
+  const { library } = map.blocks;
+  const [first] = await blockNames(map);
 
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
-  const editor = titledDialog(page, first);
-  const title = dialogTitle(editor);
-  await title.fill("Bedrock");
-  await title.press("Tab");
-  const renamed = titledDialog(page, "Bedrock");
-  await renamed.getByRole("button", { name: "Close" }).click();
+  await library.edit(first);
+  await map.blockDialog(first).rename("Bedrock", "Tab");
+  await map.blockDialog("Bedrock").closeButton.click();
 
-  await expect(library.getByRole("option", { name: "Bedrock" })).toBeVisible();
-  expect((await blockNames(page))[0]).toBe("Bedrock");
+  await expect(library.option("Bedrock")).toBeVisible();
+  expect((await blockNames(map))[0]).toBe("Bedrock");
 });
 
-test("a transparent block edits its alpha mode and its sides", async({ page }) => {
-  const [first] = await blockNames(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
-  const editor = titledDialog(page, first);
-  const alpha = buttonGroup(editor, "Alpha");
-  await expect(editor.getByText("Transparency")).toBeHidden();
-  await expect(alpha).toBeHidden();
-  await editor.getByRole("button", { name: "Close" }).click();
+test("a transparent block edits its alpha mode and its sides", async({ map }) => {
+  const { library } = map.blocks;
+  const [first] = await blockNames(map);
+  await library.edit(first);
+  const editor = map.blockDialog(first);
+  await expect(editor.transparency).toBeHidden();
+  await expect(editor.alpha).toBeHidden();
+  await editor.closeButton.click();
 
-  await eraseBlockTile(page, 1);
-  await expect.poll(() => blockSurface(page, 1))
+  await eraseBlockTile(map, 1);
+  await expect.poll(() => blockSurface(map, 1))
     .toEqual({ alphaMode: "mask", side: undefined });
 
-  await openPane(page, "Blocks");
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
+  await map.panes.open("Blocks");
+  await library.edit(first);
 
-  await expect(editor.getByText("Transparency")).toBeVisible();
-  await expect(alpha.getByRole("radio", { name: "Cutout" }))
+  await expect(editor.transparency).toBeVisible();
+  await expect(editor.alpha.getByRole("radio", { name: "Cutout" }))
     .toHaveAttribute("aria-checked", "true");
-  await expect(alpha.getByRole("radio", { name: "Opaque" })).toHaveCount(0);
+  await expect(editor.alpha.getByRole("radio", { name: "Opaque" })).toHaveCount(0);
 
-  await alpha.getByRole("radio", { name: "Blended" }).click();
-  await expect.poll(() => blockSurface(page, 1))
+  await editor.alpha.getByRole("radio", { name: "Blended" }).click();
+  await expect.poll(() => blockSurface(map, 1))
     .toEqual({ alphaMode: "blend", side: undefined });
 
-  await buttonGroup(editor, "Sides")
-    .getByRole("radio", { name: "Both" })
-    .click();
-  await expect.poll(() => blockSurface(page, 1))
+  await editor.sides.getByRole("radio", { name: "Both" }).click();
+  await expect.poll(() => blockSurface(map, 1))
     .toEqual({ alphaMode: "blend", side: "double" });
 });
 
-test("a lone blockset leaves the blockset field disabled", async({ page }) => {
-  const [first] = await blockNames(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
+test("a lone blockset leaves the blockset field disabled", async({ map }) => {
+  const [first] = await blockNames(map);
 
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
+  await map.blocks.library.edit(first);
 
-  await expect(titledDialog(page, first).locator("jolly-select[disabled]"))
-    .toHaveCount(1);
+  await expect(map.blockDialog(first).disabledBlockset).toHaveCount(1);
 });
 
-test("the UV size group resizes the block tiles", async({ page }) => {
-  const [first] = await blockNames(page);
-  const library = page.getByRole("listbox", { name: "Blocks" });
+test("the UV size group resizes the block tiles", async({ map }) => {
+  const [first] = await blockNames(map);
 
-  await library.getByRole("option", { name: first, exact: true }).dblclick();
-  const editor = titledDialog(page, first);
-  const sizes = buttonGroup(editor, "UV size");
+  await map.blocks.library.edit(first);
+  const { uvSizes } = map.blockDialog(first);
 
-  await expect(sizes.getByRole("radio", { name: "32", exact: true }))
+  await expect(uvSizes.getByRole("radio", { name: "32", exact: true }))
     .toHaveAttribute("aria-checked", "true");
 
-  await sizes.getByRole("radio", { name: "64", exact: true }).click();
+  await uvSizes.getByRole("radio", { name: "64", exact: true }).click();
 
-  await expect.poll(() => blockTileSize(page, 1)).toBe(64);
-  await expect(sizes.getByRole("radio", { name: "64", exact: true }))
+  await expect.poll(() => blockTileSize(map, 1)).toBe(64);
+  await expect(uvSizes.getByRole("radio", { name: "64", exact: true }))
     .toHaveAttribute("aria-checked", "true");
 });
 
-test("deleting a placed block asks first and removes its voxels", async({ page }) => {
-  await seedVoxels(page, [
+test("deleting a placed block asks first and removes its voxels", async({ map, page }) => {
+  await map.world.seed([
     { x: 0, y: 0, z: 0, blockId: 1 },
     { x: 1, y: 0, z: 0, blockId: 1 }
   ]);
-  const [first] = await blockNames(page);
+  const [first] = await blockNames(map);
 
-  await page.getByRole("listbox", { name: "Blocks" })
-    .getByRole("option", { name: first, exact: true })
-    .dblclick();
-  const editor = titledDialog(page, first);
-  await editor.getByRole("button", { name: "Delete" }).click();
+  await map.blocks.library.edit(first);
+  const editor = map.blockDialog(first);
+  await editor.deleteButton.click();
 
-  await expect(editor.getByRole("alert")).toContainText(`Delete "${first}"?`);
-  await expect(editor.getByRole("alert")).toContainText("2 voxels");
+  await expect(editor.alert).toContainText(`Delete "${first}"?`);
+  await expect(editor.alert).toContainText("2 voxels");
   await expect(page.locator("dialog[open]")).toHaveCount(1);
-  await editor.getByRole("button", { name: "Delete" }).click();
+  await editor.deleteButton.click();
 
-  await expect.poll(() => blockNames(page)).not.toContain(first);
+  await expect.poll(() => blockNames(map)).not.toContain(first);
 });

@@ -149,6 +149,8 @@ export class BlockLibrary extends WorkspaceElement {
       workspace.mapDocument.subscribe("materialGroupsChanged", refreshSwatches),
       presence.subscribe("blockSelectionsChange", refreshMarks),
       presence.subscribe("peersChange", refreshMarks),
+      workspace.blocksets.subscribe("change", () => this.requestUpdate()),
+      workspace.access.subscribe("change", () => this.requestUpdate()),
       workspace.usage.subscribe("change", () => this.#refreshUsage(workspace))
     ];
   }
@@ -169,8 +171,12 @@ export class BlockLibrary extends WorkspaceElement {
       return nothing;
     }
 
+    const editable = this.editable &&
+      workspace.blocksets.entriesGranting("blocks").length > 0;
+    const cleanable = this.editable && workspace.access.current.has("voxels");
+
     return html`
-      ${this.editable ? this.#renderOrphans(workspace) : nothing}
+      ${cleanable ? this.#renderOrphans(workspace) : nothing}
       <block-library-viewport
         .sources=${workspace.blockSources}
         .blocks=${this._shownBlocks}
@@ -178,8 +184,8 @@ export class BlockLibrary extends WorkspaceElement {
         .selectedId=${this._selectedId}
         .unused=${this._unused}
         .swatches=${this._swatches}
-        .editable=${this.editable}
-        .reorderable=${this.editable && this.order.reorderable}
+        .editable=${editable}
+        .reorderable=${editable && this.order.reorderable}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
@@ -189,7 +195,7 @@ export class BlockLibrary extends WorkspaceElement {
 
       <slot></slot>
 
-      ${this.editable ? html`
+      ${editable ? html`
         <block-create-dialog .workspace=${workspace}></block-create-dialog>
         <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
       ` : nothing}
@@ -261,12 +267,13 @@ export class BlockLibrary extends WorkspaceElement {
   }
 
   async editBlock(): Promise<void> {
-    if (this._selectedId === null) {
+    const id = this._selectedId;
+    if (id === null || this.workspace?.blocksets.canEditBlock(id) !== true) {
       return;
     }
 
     await this.updateComplete;
-    await this._editDialog?.open(this._selectedId);
+    await this._editDialog?.open(id);
   }
 
   async #revealSelection(): Promise<void> {

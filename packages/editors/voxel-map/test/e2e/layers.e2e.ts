@@ -1,14 +1,8 @@
 // Import Third-party Dependencies
-import type {
-  Locator,
-  Page
-} from "@playwright/test";
 import {
   boxOf,
-  buttonGroup,
   dialog,
-  selectField,
-  textField
+  selectField
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -16,8 +10,7 @@ import {
   test,
   expect
 } from "./fixtures.ts";
-import { openPane } from "./support/panels.ts";
-import { blocksAt, seedVoxels } from "./support/scene.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 interface LayerSummary {
   name: string;
@@ -26,9 +19,9 @@ interface LayerSummary {
 }
 
 function voxelLayers(
-  page: Page
+  map: VoxelMapPage
 ): Promise<LayerSummary[]> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .getLayers()
     .map((layer) => {
       return {
@@ -40,9 +33,9 @@ function voxelLayers(
 }
 
 function objectLayers(
-  page: Page
+  map: VoxelMapPage
 ): Promise<Array<{ name: string; objects: string[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -53,9 +46,9 @@ function objectLayers(
 }
 
 function objectVisibility(
-  page: Page
+  map: VoxelMapPage
 ): Promise<Array<{ name: string; visible: boolean; objects: boolean[]; }>> {
-  return page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -67,10 +60,10 @@ function objectVisibility(
 }
 
 function layerShown(
-  page: Page,
+  map: VoxelMapPage,
   name: string
 ): Promise<boolean> {
-  return page.evaluate((layerName) => {
+  return map.page.evaluate((layerName) => {
     const { view } = window.voxelMapEditor!.workspace;
 
     return view.layerVisibility.isVisible(
@@ -80,67 +73,44 @@ function layerShown(
 }
 
 async function syncFence(
-  page: Page,
-  peer: Page
+  map: VoxelMapPage,
+  peerMap: VoxelMapPage
 ): Promise<void> {
-  await page.evaluate(
+  await map.page.evaluate(
     () => window.voxelMapEditor!.workspace.view.document.world.addLayer("Fence")
   );
-  await expect.poll(async() => (await voxelLayers(peer))
+  await expect.poll(async() => (await voxelLayers(peerMap))
     .some((layer) => layer.name === "Fence")).toBe(true);
 }
 
-function layerRow(
-  page: Page,
-  name: string
-): Locator {
-  return page.locator(`[role="treeitem"][data-id$=":${name}"]`);
-}
-
-async function addEntry(
-  page: Page,
-  kind: string,
-  name: string
-): Promise<void> {
-  await page.getByRole("button", { name: "Add layer" }).click();
-  const form = dialog(page, "New");
-  await buttonGroup(form, "Kind")
-    .getByRole("radio", { name: kind, exact: true })
-    .click();
-  await textField(form, "Name").fill(name);
-  await form.getByRole("button", { name: "Create" }).click();
-  await expect(form).toBeHidden();
-}
-
-test.beforeEach(async({ page }) => {
-  await openPane(page, "Layers");
+test.beforeEach(async({ map }) => {
+  await map.panes.open("Layers");
 });
 
-test("a new voxel layer is listed and selected", async({ page }) => {
-  await addEntry(page, "Voxel", "Caves");
+test("a new voxel layer is listed and selected", async({ map }) => {
+  await map.layers.add("Voxel", "Caves");
 
-  const row = layerRow(page, "Caves");
-  await expect(row).toHaveAttribute("aria-selected", "true");
-  expect((await voxelLayers(page)).map((layer) => layer.name))
+  await expect(map.layers.row("Caves")).toHaveAttribute("aria-selected", "true");
+  expect((await voxelLayers(map)).map((layer) => layer.name))
     .toEqual(["Caves", "Ground"]);
 });
 
-test("clicking the empty tree area keeps the layer selected", async({ page }) => {
-  const manager = page.locator("layer-manager");
-  const row = layerRow(page, "Ground");
-  const box = await boxOf(manager);
+test("clicking the empty tree area keeps the layer selected", async({ map }) => {
+  const { tree } = map.layers;
+  const row = map.layers.row("Ground");
+  const box = await boxOf(tree);
 
   await row.click();
-  await manager.click({ position: { x: 8, y: box.height - 8 } });
+  await tree.click({ position: { x: 8, y: box.height - 8 } });
 
   await expect(row).toHaveAttribute("aria-selected", "true");
 });
 
-test("the custom properties folder only toggles once it holds a property", async({ page }) => {
-  const properties = page.locator("layer-panel custom-properties-editor");
+test("the custom properties folder only toggles once it holds a property", async({ map }) => {
+  const { properties } = map.layers;
   const toggle = properties.getByRole("button", { name: "Custom Properties" });
 
-  await layerRow(page, "Ground").click();
+  await map.layers.row("Ground").click();
   await expect(toggle).toHaveCount(0);
 
   await properties.getByRole("button", { name: "Add property" }).click();
@@ -150,141 +120,138 @@ test("the custom properties folder only toggles once it holds a property", async
   await expect(toggle).toHaveCount(0);
 });
 
-test("the layer header rebases the layer and locks while transforming", async({ page }) => {
-  await seedVoxels(page, [{ x: 3, y: 1, z: 2, blockId: 1 }]);
-  await layerRow(page, "Ground").click();
+test("the layer header rebases the layer and locks while transforming", async({ map }) => {
+  const { layers } = map;
+  await map.world.seed([{ x: 3, y: 1, z: 2, blockId: 1 }]);
+  await layers.row("Ground").click();
 
-  const panel = page.locator("layer-panel");
-  const rebase = panel.getByRole("button", { name: "Rebase to content origin" });
-  const transform = panel.getByRole("button", { name: "Transform" });
-  await expect(panel.locator("jolly-button[title*=\"(3, 1, 2)\"]")).toHaveCount(1);
+  await expect(layers.panel.locator("jolly-button[title*=\"(3, 1, 2)\"]")).toHaveCount(1);
 
-  await rebase.click();
-  await expect.poll(() => page.evaluate(() => {
+  await layers.rebaseButton.click();
+  await expect.poll(() => map.page.evaluate(() => {
     const { position } = window.voxelMapEditor!.workspace.view.document.world
       .getLayer("Ground")!;
 
     return { x: position.x, y: position.y, z: position.z };
   })).toEqual({ x: 3, y: 1, z: 2 });
-  await expect(rebase).toBeDisabled();
-  expect(await blocksAt(page, [{ x: 3, y: 1, z: 2 }])).toEqual([1]);
+  await expect(layers.rebaseButton).toBeDisabled();
+  expect(await map.world.blocks([{ x: 3, y: 1, z: 2 }])).toEqual([1]);
 
-  await transform.click();
-  await expect(page.locator("voxel-edit-toolbar").getByRole("group", { name: "Rotate" }))
-    .toBeVisible();
-  await expect(transform).toBeDisabled();
-  await expect(panel.locator("jolly-vector3")).toHaveAttribute("disabled", "");
+  await layers.transformButton.click();
+  await expect(map.toolbar.rotate).toBeVisible();
+  await expect(layers.transformButton).toBeDisabled();
+  await expect(layers.panel.locator("jolly-vector3")).toHaveAttribute("disabled", "");
 });
 
-test("cloning copies the voxels and removing asks first", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await layerRow(page, "Ground").click();
+test("cloning copies the voxels and removing asks first", async({ map, page }) => {
+  const { layers } = map;
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  await layers.row("Ground").click();
 
-  await page.getByRole("button", { name: "Clone layer" }).click();
-  await expect(page.getByRole("treeitem")).toHaveCount(2);
-  await expect.poll(async() => (await voxelLayers(page)).map((layer) => layer.voxels))
+  await layers.cloneButton.click();
+  await expect(layers.rows).toHaveCount(2);
+  await expect.poll(async() => (await voxelLayers(map)).map((layer) => layer.voxels))
     .toEqual([1, 1]);
 
-  await layerRow(page, "Ground (1)").click();
-  await page.getByRole("button", { name: "Remove layer" }).click();
-  const confirm = dialog(page, "Delete layer");
-  await confirm.getByRole("button", { name: "Delete" }).click();
+  await layers.row("Ground (1)").click();
+  await layers.removeButton.click();
+  await dialog(page, "Delete layer").getByRole("button", { name: "Delete" }).click();
 
-  await expect(page.getByRole("treeitem")).toHaveCount(1);
-  await expect(layerRow(page, "Ground")).toHaveAttribute("aria-selected", "true");
-  expect((await voxelLayers(page)).map((layer) => layer.name)).toEqual(["Ground"]);
+  await expect(layers.rows).toHaveCount(1);
+  await expect(layers.row("Ground")).toHaveAttribute("aria-selected", "true");
+  expect((await voxelLayers(map)).map((layer) => layer.name)).toEqual(["Ground"]);
 });
 
-test("merging folds a layer into the chosen target", async({ page }) => {
-  await addEntry(page, "Voxel", "Top");
-  await seedVoxels(page, [{ x: 0, y: 1, z: 0, blockId: 2 }], "Top");
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
+test("merging folds a layer into the chosen target", async({ map, page }) => {
+  const { layers, world } = map;
+  await layers.add("Voxel", "Top");
+  await world.seed([{ x: 0, y: 1, z: 0, blockId: 2 }], "Top");
+  await world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
 
-  await layerRow(page, "Top").click();
-  await page.getByRole("button", { name: "Merge layer" }).click();
+  await layers.row("Top").click();
+  await layers.mergeButton.click();
   const form = dialog(page, "Merge layer");
   await selectField(form, "Into").selectOption({ label: "Ground" });
   await form.getByRole("button", { name: "Merge" }).click();
 
-  await expect(page.getByRole("treeitem")).toHaveCount(1);
-  expect(await voxelLayers(page)).toEqual([
+  await expect(layers.rows).toHaveCount(1);
+  expect(await voxelLayers(map)).toEqual([
     { name: "Ground", voxels: 2, visible: true }
   ]);
 });
 
-test("the eye hides and shows a layer", async({ page }) => {
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  const row = layerRow(page, "Ground");
+test("the eye hides and shows a layer", async({ map }) => {
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
+  const row = map.layers.row("Ground");
 
   await row.getByRole("button", { name: "Hide" }).click();
-  await expect.poll(() => layerShown(page, "Ground")).toBe(false);
+  await expect.poll(() => layerShown(map, "Ground")).toBe(false);
   await row.getByRole("button", { name: "Show" }).click();
-  await expect.poll(() => layerShown(page, "Ground")).toBe(true);
+  await expect.poll(() => layerShown(map, "Ground")).toBe(true);
 });
 
-test("hiding a voxel layer stays local to the page", async({ page, peer }) => {
+test("hiding a voxel layer stays local to the page", async({ map, peerMap }) => {
   test.slow();
-  await seedVoxels(page, [{ x: 0, y: 0, z: 0, blockId: 1 }]);
-  await expect.poll(() => blocksAt(peer, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
+  const cell = { x: 0, y: 0, z: 0 };
+  await map.world.seed([{ ...cell, blockId: 1 }]);
+  await expect.poll(() => peerMap.world.blocks([cell])).toEqual([1]);
 
-  await layerRow(page, "Ground").getByRole("button", { name: "Hide" }).click();
-  await expect.poll(() => layerShown(page, "Ground")).toBe(false);
-  await syncFence(page, peer);
+  await map.layers.row("Ground").getByRole("button", { name: "Hide" }).click();
+  await expect.poll(() => layerShown(map, "Ground")).toBe(false);
+  await syncFence(map, peerMap);
 
-  expect(await blocksAt(page, [{ x: 0, y: 0, z: 0 }])).toEqual([1]);
-  expect(await layerShown(peer, "Ground")).toBe(true);
-  for (const client of [page, peer]) {
+  expect(await map.world.blocks([cell])).toEqual([1]);
+  expect(await layerShown(peerMap, "Ground")).toBe(true);
+  for (const client of [map, peerMap]) {
     expect((await voxelLayers(client))
       .find((layer) => layer.name === "Ground")?.visible).toBe(true);
   }
 });
 
-test("hiding an object layer or an object stays local to the page", async({ page, peer }) => {
+test("hiding an object layer or an object stays local to the page", async({ map, peerMap }) => {
   test.slow();
-  await addEntry(page, "Objects", "Spawns");
-  await addEntry(page, "Object", "Player");
-  await expect.poll(() => objectVisibility(peer)).toEqual([
+  const { layers } = map;
+  await layers.add("Objects", "Spawns");
+  await layers.add("Object", "Player");
+  await expect.poll(() => objectVisibility(peerMap)).toEqual([
     { name: "Spawns", visible: true, objects: [true] }
   ]);
 
-  await page.getByRole("treeitem", { name: /^Player/ })
+  await layers.objectRow("Player")
     .getByRole("button", { name: "Hide" })
     .click();
-  await layerRow(page, "Spawns")
+  await layers.row("Spawns")
     .getByRole("button", { name: "Hide" })
     .first()
     .click();
-  await syncFence(page, peer);
+  await syncFence(map, peerMap);
 
-  await expect(page.getByRole("treeitem", { name: /^Player/ })
+  await expect(layers.objectRow("Player")
     .getByRole("button", { name: "Show" })).toBeVisible();
-  await expect(layerRow(page, "Spawns")
+  await expect(layers.row("Spawns")
     .getByRole("button", { name: "Hide" })).toHaveCount(0);
-  expect(await objectVisibility(page)).toEqual([
-    { name: "Spawns", visible: true, objects: [true] }
-  ]);
-  expect(await objectVisibility(peer)).toEqual([
-    { name: "Spawns", visible: true, objects: [true] }
-  ]);
+  for (const client of [map, peerMap]) {
+    expect(await objectVisibility(client)).toEqual([
+      { name: "Spawns", visible: true, objects: [true] }
+    ]);
+  }
 });
 
-test("objects are added inside the selected object layer and renamed in place", async({ page }) => {
-  await addEntry(page, "Objects", "Spawns");
-  await addEntry(page, "Object", "Player");
+test("objects are added inside the selected object layer and renamed in place", async({ map }) => {
+  const { layers } = map;
+  await layers.add("Objects", "Spawns");
+  await layers.add("Object", "Player");
 
-  const object = page.getByRole("treeitem", { name: /^Player/ });
+  const object = layers.objectRow("Player");
   await expect(object).toHaveAttribute("aria-selected", "true");
-  expect(await objectLayers(page)).toEqual([
+  expect(await objectLayers(map)).toEqual([
     { name: "Spawns", objects: ["Player"] }
   ]);
 
-  await object.locator(".label").dblclick();
-  const rename = page.getByRole("textbox", { name: "Rename" });
-  await rename.fill("Hero");
-  await rename.press("Enter");
+  await layers.rename(object, "Hero");
 
-  await expect(page.getByRole("treeitem", { name: /^Hero/ })).toBeVisible();
-  expect(await objectLayers(page)).toEqual([
+  await expect(layers.objectRow("Hero")).toBeVisible();
+  expect(await objectLayers(map)).toEqual([
     { name: "Spawns", objects: ["Hero"] }
   ]);
 });

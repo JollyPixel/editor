@@ -80,6 +80,7 @@ export class TemplateManager extends WorkspaceElement {
       selection.subscribe("change", () => {
         this._canSave = selection.voxelLayer !== null;
       }),
+      workspace.access.subscribe("change", () => this.requestUpdate()),
       () => this.#drag?.cancel()
     ];
   }
@@ -89,6 +90,8 @@ export class TemplateManager extends WorkspaceElement {
     if (workspace === null) {
       return nothing;
     }
+
+    const { templates, placement } = workspace;
 
     return html`
       <jolly-folder
@@ -102,7 +105,7 @@ export class TemplateManager extends WorkspaceElement {
           icon-only
           label="Save layer as template"
           title="Save the selected voxel layer as a template"
-          ?disabled=${!this._canSave}
+          ?disabled=${!templates.editable || !this._canSave}
           @click=${this.#saveTemplate}
         ></jolly-button>
         <jolly-button
@@ -111,7 +114,7 @@ export class TemplateManager extends WorkspaceElement {
           icon-only
           label="Place template"
           title="Place the selected template in the world"
-          ?disabled=${this._selected === null}
+          ?disabled=${!placement.canPlace("template") || this._selected === null}
           @click=${this.#place}
         ></jolly-button>
         <jolly-button
@@ -121,22 +124,24 @@ export class TemplateManager extends WorkspaceElement {
           variant="danger"
           label="Delete template"
           title="Delete template"
-          ?disabled=${this._selected === null}
+          ?disabled=${!templates.editable || this._selected === null}
           @click=${this.#removeTemplate}
         ></jolly-button>
 
-        <div class="tree-host">${this.#renderTree()}</div>
+        <div class="tree-host">${this.#renderTree(templates.editable)}</div>
         <template-panel
           .world=${workspace.mapDocument.world}
-          .templates=${workspace.templates}
-          .placement=${workspace.placement}
+          .templates=${templates}
+          .placement=${placement}
           .mapDocument=${workspace.mapDocument}
         ></template-panel>
       </jolly-folder>
     `;
   }
 
-  #renderTree() {
+  #renderTree(
+    renamable: boolean
+  ) {
     if (this._nodes.length === 0) {
       return html`<p class="hint">
         Select a voxel layer and save it to create a template.
@@ -145,7 +150,7 @@ export class TemplateManager extends WorkspaceElement {
 
     return html`
       <jolly-tree
-        renamable
+        .renamable=${renamable}
         .nodes=${this._nodes}
         .selected=${this._selected === null ? [] : [this._selected]}
         @jolly-select=${this.#onSelect}
@@ -222,7 +227,12 @@ export class TemplateManager extends WorkspaceElement {
     const workspace = this.workspace;
     const row = event.button === 0 ? templateRowOf(event) : null;
     const templateId = row?.dataset.id;
-    if (workspace === null || row === null || templateId === undefined) {
+    if (
+      workspace === null ||
+      row === null ||
+      templateId === undefined ||
+      !workspace.placement.canPlace("template")
+    ) {
       return;
     }
 

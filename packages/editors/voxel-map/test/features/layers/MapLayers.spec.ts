@@ -8,6 +8,7 @@ import {
 // Import Third-party Dependencies
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import type { JollyReparentDetail } from "@jolly-pixel/ui";
+import { Grants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import {
@@ -21,6 +22,8 @@ import {
   VoxelLayerRef
 } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
+import type { MapCapability } from "../../../src/access/MapAccess.ts";
 
 // CONSTANTS
 const kGround = new VoxelLayerRef("Ground").key;
@@ -301,7 +304,8 @@ describe("MapLayers entries", () => {
     const layers = new MapLayers({
       world,
       selection,
-      mapDocument: mapDocumentOf(world)
+      mapDocument: mapDocumentOf(world),
+      access: mapAccess()
     });
     const focus = { x: 3.4, y: 1, z: -2.6 };
 
@@ -362,7 +366,8 @@ describe("MapLayers entries", () => {
     new MapLayers({
       world,
       selection,
-      mapDocument: mapDocumentOf(world)
+      mapDocument: mapDocumentOf(world),
+      access: mapAccess()
     }).clone(new VoxelLayerRef("A"));
 
     assert.equal(selection.voxelLayer, "A (1)");
@@ -375,7 +380,8 @@ describe("MapLayers entries", () => {
     const layers = new MapLayers({
       world,
       selection,
-      mapDocument: mapDocumentOf(world)
+      mapDocument: mapDocumentOf(world),
+      access: mapAccess()
     });
 
     await layers.merge(new VoxelLayerRef("C"), (context) => {
@@ -387,17 +393,36 @@ describe("MapLayers entries", () => {
     assert.deepEqual(stack(world), ["B", "A"]);
     assert.equal(selection.voxelLayer, "A");
   });
+
+  test("edits only the entries the role can write", async() => {
+    const world = makeWorld();
+    const layers = layersOf(
+      world,
+      undefined,
+      mapAccess(new Grants<MapCapability>(["objects"]))
+    );
+
+    layers.create({ x: 0, y: 0, z: 0 }, { kind: "voxel-layer", name: "Top" });
+    layers.clone(new VoxelLayerRef("A"));
+    await layers.remove(new VoxelLayerRef("A"));
+    layers.rename(new ObjectRef("Triggers", "obj_1"), "Door");
+
+    assert.deepEqual(stack(world), ["C", "B", "A"]);
+    assert.equal(world.objectLayers.get("Triggers")!.objects[0].name, "Door");
+  });
 });
 
 function layersOf(
   world: VoxelWorld,
-  confirm: ConfirmPrompt = () => Promise.resolve(true)
+  confirm: ConfirmPrompt = () => Promise.resolve(true),
+  access = mapAccess()
 ): MapLayers {
   return new MapLayers({
     world,
     selection: new SelectionStore(),
     mapDocument: mapDocumentOf(world),
-    confirm
+    confirm,
+    access
   });
 }
 
@@ -408,7 +433,8 @@ describe("MapLayers selection", () => {
     new MapLayers({
       world,
       selection,
-      mapDocument: mapDocumentOf(world)
+      mapDocument: mapDocumentOf(world),
+      access: mapAccess()
     });
 
     assert.notEqual(selection.current, null);
@@ -426,7 +452,8 @@ describe("MapLayers selection", () => {
     const layers = new MapLayers({
       world,
       selection,
-      mapDocument: mapDocumentOf(world)
+      mapDocument: mapDocumentOf(world),
+      access: mapAccess()
     });
     selection.selectVoxelLayer("C");
 

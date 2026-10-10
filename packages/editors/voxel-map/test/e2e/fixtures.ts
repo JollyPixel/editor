@@ -1,4 +1,6 @@
 // Import Third-party Dependencies
+import { test as base } from "@playwright/test";
+import { CommandConsole } from "@jolly-pixel/e2e";
 import {
   e2eFolder,
   editorFixture
@@ -24,6 +26,7 @@ import {
   DEFAULT_BLOCKSET_ID,
   DEFAULT_BLOCKSET_SIZE
 } from "../../src/boot/defaultSeed.ts";
+import { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kBlockCount = 32;
@@ -87,5 +90,25 @@ export const test = editorFixture<E2EWorld>({
       id,
       blocksetId
     };
+  }
+}).extend<{
+  map: VoxelMapPage;
+  peerMap: VoxelMapPage;
+  commands: CommandConsole;
+}>({
+  map: async({ page }, use) => {
+    await use(new VoxelMapPage(page));
+  },
+  peerMap: async({ peer }, use) => {
+    await use(new VoxelMapPage(peer));
+  },
+  commands: async({ page }, use) => {
+    await use(new CommandConsole(page));
+  }
+});
+
+export const offlineTest = base.extend<{ map: VoxelMapPage; }>({
+  map: async({ page }, use) => {
+    await use(new VoxelMapPage(page));
   }
 });

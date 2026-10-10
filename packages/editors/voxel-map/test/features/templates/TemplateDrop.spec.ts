@@ -17,6 +17,7 @@ import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { TemplateDrop } from "../../../src/features/templates/TemplateDrop.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
 import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
 const kViewportEdge = 100;
@@ -35,7 +36,8 @@ function setup() {
     world,
     history: mapHistoryOf(world),
     selection: new SelectionStore(),
-    mapDocument: mapDocumentOf(world)
+    mapDocument: mapDocumentOf(world),
+    access: mapAccess()
   });
   const drop = new TemplateDrop({
     templateId: template.id,

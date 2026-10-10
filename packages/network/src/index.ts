@@ -7,6 +7,8 @@ export * from "./server/index.ts";
 export * from "./client/Client.ts";
 export * from "./client/command/CommandReconciler.ts";
 export * from "./client/command/CommandSync.ts";
+export * from "./client/grants/Grants.ts";
+export * from "./client/grants/RoomGrants.ts";
 export * from "./client/PresenceChannel.ts";
 export * from "./client/Room.ts";
 

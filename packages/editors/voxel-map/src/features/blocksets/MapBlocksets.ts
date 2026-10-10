@@ -22,6 +22,11 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/MapDocument.ts";
 import {
+  BLOCKSET_CAPABILITIES,
+  type BlocksetAccess,
+  type BlocksetCapability
+} from "../../access/BlocksetAccess.ts";
+import {
   BlockAlphaModes,
   type BlocksetPixels
 } from "./BlockAlphaModes.ts";
@@ -70,6 +75,7 @@ export interface MapBlocksetsOptions {
 export type MapBlocksetsEvents = {
   change: () => void;
   activeChange: (blocksetId: string | null) => void;
+  denied: (blocksetId: string) => void;
 };
 
 export class MapBlocksets
@@ -146,6 +152,27 @@ export class MapBlocksets
     );
   }
 
+  access(
+    blocksetId: string
+  ): BlocksetAccess {
+    return this.#bindings.get(blocksetId)?.access.current ??
+      BLOCKSET_CAPABILITIES.none;
+  }
+
+  entriesGranting(
+    capability: BlocksetCapability
+  ): BlocksetEntry[] {
+    return this.#entries.filter(
+      (entry) => this.access(entry.id).has(capability)
+    );
+  }
+
+  canEditBlock(
+    blockId: number
+  ): boolean {
+    return this.#editableBlockOwner(blockId) !== undefined;
+  }
+
   tileSizeOf(
     blocksetId: string
   ): number | undefined {
@@ -185,7 +212,7 @@ export class MapBlocksets
   defineBlock(
     block: BlockDefinition
   ): boolean {
-    const owner = this.ownerOf(block.id);
+    const owner = this.#editableBlockOwner(block.id);
     if (owner === undefined) {
       return false;
     }
@@ -225,21 +252,21 @@ export class MapBlocksets
     bounds?: SelectionRect
   ): void {
     for (const block of this.#alphaModes.staleIn(blocksetId, bounds)) {
-      this.ownerOf(block.id)?.link.defineBlock(block);
+      this.#editableBlockOwner(block.id)?.link.defineBlock(block);
     }
   }
 
   removeBlock(
     blockId: number
   ): boolean {
-    return this.ownerOf(blockId)?.link.removeBlock(blockId) ?? false;
+    return this.#editableBlockOwner(blockId)?.link.removeBlock(blockId) ?? false;
   }
 
   moveBlock(
     blockId: number,
     toIndex: number
   ): boolean {
-    return this.ownerOf(blockId)?.link.moveBlock(blockId, toIndex) ?? false;
+    return this.#editableBlockOwner(blockId)?.link.moveBlock(blockId, toIndex) ?? false;
   }
 
   defineMaterialGroup(
@@ -271,6 +298,7 @@ export class MapBlocksets
     const binding = this.#bindings.get(blocksetId);
 
     return binding !== undefined &&
+      binding.access.current.has("tileSize") &&
       binding.opened.blockset.resizeTiles(tileSize);
   }
 
@@ -429,6 +457,8 @@ export class MapBlocksets
       mapDocument: this.#mapDocument,
       blocks: this
     });
+    binding.access.on("change", () => this.emit("change"));
+    binding.access.on("denied", () => this.emit("denied", definition.id));
     this.#bindings.set(definition.id, binding);
     void opened.ready.then(() => {
       if (this.#bindings.get(definition.id) === binding) {
@@ -459,12 +489,22 @@ export class MapBlocksets
     };
   }
 
+  #editableBlockOwner(
+    blockId: number
+  ): BlocksetBinding | undefined {
+    const owner = this.ownerOf(blockId);
+
+    return owner?.access.current.has("blocks") ? owner : undefined;
+  }
+
   #materialGroupOwnerOf(
     groupId: string
   ): BlocksetBinding | undefined {
-    return [...this.#bindings.values()].find(
+    const owner = [...this.#bindings.values()].find(
       (binding) => binding.slot.localGroupId(groupId) !== null
     );
+
+    return owner?.access.current.has("materials") ? owner : undefined;
   }
 
   #uniqueBlocksetId(): string {

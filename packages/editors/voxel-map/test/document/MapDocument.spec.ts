@@ -20,6 +20,8 @@ import {
   type MapDocumentEvents,
   type SyncedMap
 } from "../../src/document/MapDocument.ts";
+import { MAP_CAPABILITIES } from "../../src/access/MapAccess.ts";
+import { mapAccess } from "../helpers/mapAccess.ts";
 
 // CONSTANTS
 const kEvents: Array<keyof MapDocumentEvents> = [
@@ -46,12 +48,14 @@ class FakeMap implements SyncedMap {
 }
 
 function setup(
-  map = new FakeMap()
+  map = new FakeMap(),
+  access = mapAccess()
 ) {
   const view = map.voxels;
   const mapDocument = new MapDocument({
     map,
-    defaultLayerName: kDefaultLayerName
+    defaultLayerName: kDefaultLayerName,
+    access
   });
   const seen: string[] = [];
   for (const event of kEvents) {
@@ -222,6 +226,14 @@ describe("MapDocument", () => {
       view.world.getLayers().map((layer) => layer.name),
       [kDefaultLayerName]
     );
+  });
+
+  it("leaves an empty map without layers for a role that cannot add one", () => {
+    const { view } = setup(new FakeMap(), mapAccess(MAP_CAPABILITIES.none));
+
+    view.emit("loaded");
+
+    assert.equal(view.world.getLayers().length, 0);
   });
 
   it("keeps the layers of a map that loads with layers", () => {

@@ -91,7 +91,8 @@ export class BlocksetEditDialog extends WorkspaceElement {
     return [
       workspace.blocksets.subscribe("change", this.#refresh),
       workspace.mapDocument.subscribe("blockRegistryChanged", this.#refresh),
-      workspace.usage.subscribe("change", this.#refresh)
+      workspace.usage.subscribe("change", this.#refresh),
+      workspace.access.subscribe("change", this.#refresh)
     ];
   }
 
@@ -134,7 +135,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
           class="remove"
           variant="danger"
           icon="trash"
-          ?disabled=${entry === undefined}
+          ?disabled=${entry === undefined || !workspace.access.current.has("blocksets")}
           @click=${this.#remove}
         >Remove</jolly-button>
         <jolly-button
@@ -152,6 +153,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
   ) {
     const { definition } = entry;
     const tileSize = workspace.blocksets.tileSizeOf(definition.id);
+    const resizable = workspace.blocksets.access(definition.id).has("tileSize");
     const usage = workspace.usage.blocksetUsageOf(definition.id);
     const renamable = entry.assetId !== null;
     const pendingTileSize = this._pendingTileSize;
@@ -171,7 +173,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
           label="Tile size"
           .options=${tileSizeSegments(tileSize)}
           .value=${pendingTileSize ?? tileSize}
-          ?disabled=${tileSize === undefined}
+          ?disabled=${!resizable || tileSize === undefined}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
             this.#resize(entry, event.detail.value);
           }}

@@ -56,13 +56,16 @@ Create/Delete buttons and defaults to false.
 ## Access rights
 
 Rights belong to the room of a texture, so each texture has its own
-`PixelArtAccess`. Pass `access` to `addTexture()` or change it with
-`updateTexture(id, { access })`; it defaults to `PixelArtAccess.full`. The
-panel hides or disables what the active texture does not grant.
+`PixelArtAccess`, the
+[`Grants`](../../../../network/docs/client/Client.md#roomgrants-api) of its
+room. Pass `access` to `addTexture()` or change it with
+`updateTexture(id, { access })`; it defaults to `PIXEL_ART_CAPABILITIES.full`.
+The panel hides or disables what the active texture does not grant.
 
-`RoomAccess` keeps one texture in step with its room. It builds the access
-again on every `sync`, because a role change reconnects the room, and
-announces the pixel-art commands the server refuses:
+`RoomAccess` keeps one texture in step with its room. It applies the room's
+grants at once, then again whenever a `sync` changes them, because a role
+change reconnects the room. It also announces the pixel-art commands the
+server refuses:
 
 ```ts
 import { RoomAccess } from "@jolly-pixel/editor.pixel-art";
@@ -73,10 +76,9 @@ const access = new RoomAccess(room, panel, textureId);
 access.dispose();
 ```
 
-Create it after `addTexture()`: when the room is already synced, it updates
-the texture right away.
+Create it after `addTexture()`.
 
-`PixelArtAccess.fromRights(room)` groups the pixel-art commands into five
+`PIXEL_ART_CAPABILITIES` groups the pixel-art commands into five
 capabilities. A capability is granted only when every command in it can be
 written:
 
@@ -91,9 +93,9 @@ written:
 - `palette`: editing palette slots. Slots can still be used as brush colors.
 - `normalMap`: the normal-map settings, which stay visible as read-only fields.
 
-`viewOnly` is true when no capability is granted; the bottom toolbar then shows
-a "View only" badge. `PixelArtAccess.none` grants nothing. The server still
-checks every command, so access only shapes the controls.
+`readOnly` is true when no capability is granted; the bottom toolbar then shows
+a "View only" badge. `PIXEL_ART_CAPABILITIES.none` grants nothing. The server
+still checks every command, so access only shapes the controls.
 
 `announce(message)` shows a short status message on the stage for three
 seconds, on the same line as texture import messages.

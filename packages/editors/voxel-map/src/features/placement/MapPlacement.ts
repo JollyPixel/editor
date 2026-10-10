@@ -11,6 +11,7 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { SelectionStore } from "../../state/index.ts";
+import type { MapAccessSource } from "../../access/MapAccess.ts";
 import {
   MAP_HISTORY_SCOPE,
   type MapSteps
@@ -50,6 +51,7 @@ export interface MapPlacementOptions {
   mapDocument: MapDocumentSignals;
   conceal?: LayerConcealer;
   clipboard?: PlacementClipboard;
+  access: MapAccessSource;
 }
 
 export class MapPlacement {
@@ -59,6 +61,7 @@ export class MapPlacement {
   readonly #history: MapSteps;
   readonly #selection: Pick<SelectionStore, "lastVoxelLayer">;
   readonly #conceal: LayerConcealer | null;
+  readonly #access: MapAccessSource;
   readonly #events = new Emitter<MapPlacementEvents>();
   readonly #subscriptions: Array<() => void>;
 
@@ -77,6 +80,7 @@ export class MapPlacement {
     this.#history = options.history;
     this.#selection = options.selection;
     this.#conceal = options.conceal ?? null;
+    this.#access = options.access;
     this.clipboard = options.clipboard ?? new PlacementClipboard();
 
     const { mapDocument } = options;
@@ -123,11 +127,20 @@ export class MapPlacement {
     return this.#events.subscribe(event, listener);
   }
 
+  canPlace(
+    kind: PlacementSource["kind"]
+  ): boolean {
+    return this.#access.current.has(kind === "layer" ? "layers" : "voxels");
+  }
+
   placeTemplate(
     templateId: string,
     position: VoxelCoord
   ): boolean {
-    if (this.#world.templates.get(templateId) === undefined) {
+    if (
+      !this.canPlace("template") ||
+      this.#world.templates.get(templateId) === undefined
+    ) {
       return false;
     }
     this.#assign(
@@ -143,10 +156,9 @@ export class MapPlacement {
   transformLayer(
     layerName: string
   ): boolean {
-    const source = LayerSource.capture(
-      this.#world,
-      layerName
-    );
+    const source = this.canPlace("layer") ?
+      LayerSource.capture(this.#world, layerName) :
+      null;
     if (source === null) {
       return false;
     }
@@ -249,6 +261,10 @@ export class MapPlacement {
 
     const { placement, target } = current;
     const { source } = placement;
+    if (!this.canPlace(source.kind)) {
+      return false;
+    }
+
     const step = this.#history.open(MAP_HISTORY_SCOPE, kCommitLabels[source.kind]);
     let committed = false;
     try {
@@ -286,7 +302,11 @@ export class MapPlacement {
 
   deleteRegion(): boolean {
     const lifted = this.#lifted;
-    if (lifted === null || !this.#putBack()) {
+    if (
+      lifted === null ||
+      !this.canPlace(lifted.kind) ||
+      !this.#putBack()
+    ) {
       return false;
     }
 
@@ -313,7 +333,7 @@ export class MapPlacement {
     position: VoxelCoord
   ): boolean {
     const content = this.clipboard.content;
-    if (content === null) {
+    if (content === null || !this.canPlace("copy")) {
       return false;
     }
     if (this.#lifted !== null) {
@@ -359,7 +379,7 @@ export class MapPlacement {
   #lift(
     source: RegionSource | null
   ): boolean {
-    if (source === null) {
+    if (source === null || !this.canPlace(source.kind)) {
       return false;
     }
 

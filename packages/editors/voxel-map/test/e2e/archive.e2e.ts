@@ -1,18 +1,12 @@
 // Import Third-party Dependencies
-import {
-  expect,
-  test,
-  type Page
-} from "@playwright/test";
-import { dialog } from "@jolly-pixel/e2e";
-import {
-  openEditor,
-  waitForEditor
-} from "@jolly-pixel/e2e/editor";
+import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { OFFLINE_EDITOR } from "./support/offline.ts";
-import { openPane } from "./support/panels.ts";
+import {
+  offlineTest as test,
+  expect
+} from "./fixtures.ts";
+import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 interface OfflineIds {
   mapId: string;
@@ -20,9 +14,9 @@ interface OfflineIds {
 }
 
 function offlineIds(
-  page: Page
+  map: VoxelMapPage
 ): Promise<OfflineIds> {
-  return page.evaluate(() => {
+  return map.page.evaluate(() => {
     const { session, workspace } = window.voxelMapEditor!;
 
     return {
@@ -34,39 +28,30 @@ function offlineIds(
   });
 }
 
-test("exports the map, resets the workspace and imports it back", async({ page }) => {
+test("exports the map, resets the workspace and imports it back", async({ map, page }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
-  await openEditor(page, OFFLINE_EDITOR);
-  const exported = await offlineIds(page);
-  await openPane(page, "General");
+  await map.openOffline();
+  const exported = await offlineIds(map);
+  await map.panes.open("General");
 
-  const downloading = page.waitForEvent("download");
-  await page.locator("map-config-panel #export-archive").click();
-  const download = await downloading;
+  const download = await map.general.exportArchive();
   expect(download.suggestedFilename()).toBe("overworld.zip");
   const archivePath = await download.path();
 
-  await page.locator("map-config-panel #reset-workspace").click();
-  await dialog(page, "Reset workspace")
-    .getByRole("button", { name: "Reset" })
-    .click();
-  await page.waitForEvent("load");
-  await waitForEditor(page);
+  await map.general.resetWorkspace();
 
-  const reseeded = await offlineIds(page);
+  const reseeded = await offlineIds(map);
   expect(reseeded.mapId).not.toBe(exported.mapId);
 
-  await openPane(page, "General");
-  await page
-    .locator("map-config-panel input[type=file]")
-    .setInputFiles(archivePath);
+  await map.panes.open("General");
+  await map.general.importArchive(archivePath);
   await page.waitForURL(new RegExp(`target=${exported.mapId}`));
   await waitForEditor(page);
 
-  expect(await offlineIds(page)).toEqual(exported);
+  expect(await offlineIds(map)).toEqual(exported);
   const state = await page.evaluate(() => {
     const { view } = window.voxelMapEditor!.workspace;
 
@@ -82,20 +67,15 @@ test("exports the map, resets the workspace and imports it back", async({ page }
   expect(errors).toEqual([]);
 });
 
-test("imports a map and its blockset as a copy", async({ page }) => {
+test("imports a map and its blockset as a copy", async({ map, page }) => {
   test.setTimeout(90_000);
-  await openEditor(page, OFFLINE_EDITOR);
-  const original = await offlineIds(page);
-  await openPane(page, "General");
+  await map.openOffline();
+  const original = await offlineIds(map);
+  await map.panes.open("General");
 
-  const downloading = page.waitForEvent("download");
-  await page.locator("map-config-panel #export-archive").click();
-  const archivePath = await (await downloading).path();
-  await page.locator("map-config-panel input[type=file]")
-    .setInputFiles(archivePath);
-  await dialog(page, "Import archive")
-    .getByRole("button", { name: "Import as copy" })
-    .click();
+  const download = await map.general.exportArchive();
+  await map.general.importArchive(await download.path());
+  await map.general.importCopyButton.click();
   await page.waitForURL((url) => {
     const target = url.searchParams.get("target");
 
@@ -103,7 +83,7 @@ test("imports a map and its blockset as a copy", async({ page }) => {
   });
   await waitForEditor(page);
 
-  const copied = await offlineIds(page);
+  const copied = await offlineIds(map);
   expect(copied.mapId).not.toBe(original.mapId);
   expect(copied.blocksetIds[0]).not.toBe(original.blocksetIds[0]);
   expect(await page.evaluate(

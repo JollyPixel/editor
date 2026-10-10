@@ -4,6 +4,7 @@ import { showConfirm } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { MapAccessSource } from "../../access/MapAccess.ts";
 import { TemplateStore } from "./TemplateStore.ts";
 
 export type TemplateWorld = Pick<VoxelWorld, "templates">;
@@ -11,6 +12,7 @@ export type TemplateWorld = Pick<VoxelWorld, "templates">;
 export interface MapTemplatesOptions {
   world: TemplateWorld;
   mapDocument: MapDocumentSignals;
+  access: MapAccessSource;
   store?: TemplateStore;
   confirm?: typeof showConfirm;
 }
@@ -19,6 +21,7 @@ export class MapTemplates {
   readonly store: TemplateStore;
 
   readonly #world: TemplateWorld;
+  readonly #access: MapAccessSource;
   readonly #confirm: typeof showConfirm;
   readonly #unsubscribe: () => void;
 
@@ -26,12 +29,17 @@ export class MapTemplates {
     options: MapTemplatesOptions
   ) {
     this.#world = options.world;
+    this.#access = options.access;
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
     this.#unsubscribe = options.mapDocument.subscribe(
       "templatesChanged",
       this.#reconcile
     );
+  }
+
+  get editable(): boolean {
+    return this.#access.current.has("templates");
   }
 
   dispose(): void {
@@ -41,6 +49,10 @@ export class MapTemplates {
   saveLayer(
     layerName: string
   ): string | null {
+    if (!this.editable) {
+      return null;
+    }
+
     const template = this.#world.templates.createFromLayer(layerName, {
       name: layerName
     });
@@ -58,7 +70,8 @@ export class MapTemplates {
   ): boolean {
     const trimmed = name.trim();
 
-    return trimmed !== "" &&
+    return this.editable &&
+      trimmed !== "" &&
       this.#world.templates.update(templateId, { name: trimmed });
   }
 
@@ -66,7 +79,7 @@ export class MapTemplates {
     templateId: string
   ): Promise<boolean> {
     const template = this.#world.templates.get(templateId);
-    if (template === undefined) {
+    if (!this.editable || template === undefined) {
       return false;
     }
 

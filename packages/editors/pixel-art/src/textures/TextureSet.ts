@@ -14,7 +14,10 @@ import {
   type TextureUpdate
 } from "./TextureEntry.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
-import { PixelArtAccess } from "../access/PixelArtAccess.ts";
+import {
+  PIXEL_ART_CAPABILITIES,
+  type PixelArtAccess
+} from "../access/PixelArtAccess.ts";
 import {
   UvAccessPolicy,
   type UvAccess
@@ -69,7 +72,7 @@ export class TextureSet {
   }
 
   get activeAccess(): PixelArtAccess {
-    return this.#active?.access ?? PixelArtAccess.full;
+    return this.#active?.access ?? PIXEL_ART_CAPABILITIES.full;
   }
 
   get activeUvPolicy(): UvAccessPolicy {
@@ -140,7 +143,7 @@ export class TextureSet {
       tooltip = "",
       badge = "",
       disabled = false,
-      access = PixelArtAccess.full,
+      access = PIXEL_ART_CAPABILITIES.full,
       ...canvasOptions
     } = options;
     if (this.#entries.has(id)) {
@@ -308,7 +311,7 @@ export class TextureSet {
   #uvPolicy(
     access: PixelArtAccess
   ): UvAccessPolicy {
-    return UvAccessPolicy.forAccess(this.#uvAccess, access.uv);
+    return UvAccessPolicy.forAccess(this.#uvAccess, access.has("uv"));
   }
 
   #applyAccess(
@@ -320,7 +323,7 @@ export class TextureSet {
     if (!policy.fillClip) {
       canvas.tools.fill.uvClip = false;
     }
-    canvas.pixelsLocked = !access.pixels;
+    canvas.pixelsLocked = !access.has("pixels");
   }
 
   #deactivate(): void {

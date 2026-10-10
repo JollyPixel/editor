@@ -18,6 +18,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MAP_KIND } from "@jolly-pixel/asset.voxel-map";
 import {
+  CookieRoles,
   PORTS,
   prebundleWorkspace
 } from "@jolly-pixel/e2e";
@@ -35,6 +36,18 @@ const kProjectFile: ProjectFileData = {
     "@jolly-pixel/asset.voxel-map": {}
   }
 };
+const kRights = {
+  member: {
+    "*": "write"
+  },
+  spectator: {
+    "*.$join": "write",
+    "*.$presence": "write",
+    "*": "read"
+  }
+} as const;
+
+const kRoles = new CookieRoles();
 
 export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
   const e2e = mode === kE2EMode;
@@ -58,6 +71,7 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
     plugins: [
       prebundleWorkspace(),
       createProjectKindsPlugin(kinds),
+      e2e ? kRoles.plugin() : null,
       inMemory ? null : createProjectFileWatchPlugin(projectFile),
       staticHosting ? null : createAssetWorkspacePlugin({
         root: kAssetsRoot,
@@ -69,6 +83,9 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
           {}),
         launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
         handlers: kinds.handlers(),
+        auth: e2e ? kRoles : undefined,
+        rights: kRights,
+        defaultRole: "member",
         ...createDefaultSeed(kBlocksetAssetId)
       })
     ]

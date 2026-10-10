@@ -120,3 +120,39 @@ Emits `{ clientId, value }`; `undefined` means removal.
 ### `destroy(): void`
 
 Detaches the channel without leaving the room.
+
+## RoomGrants API
+
+### CapabilityTable
+
+```ts
+const table = new CapabilityTable({
+  stroke: "pixels",
+  fill: "pixels",
+  "palette-changed": "palette"
+});
+```
+
+Groups room events into capabilities. `grantsFor(source)` grants a capability
+only when `source.can()` returns `"write"` for every event mapped to it.
+`full` and `none` grant every capability and none. `governs(event)` tells
+whether the table maps an event.
+
+### Grants
+
+`has(capability)` tells whether a capability is granted. `readOnly` is `true`
+when nothing is. `equals(other)` compares two grants. Instances are frozen.
+
+### Constructor
+
+`new RoomGrants(room, table)` follows one room. `current` is `table.full` until
+the room admits this client, then follows each `sync`.
+
+### change / denied
+
+`change` emits the new grants when a `sync` changes them. `denied` emits the
+event name of a refusal the table governs.
+
+### `dispose(): void`
+
+Stops following the room.

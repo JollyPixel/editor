@@ -115,6 +115,7 @@ export class TextureEditor extends WorkspaceElement {
       blocksets.subscribe("change", this.#requestSync),
       blocksets.subscribe("activeChange", this.#reconcile),
       workspace.state.block.subscribe("change", this.#onBlockChange),
+      workspace.access.subscribe("change", this.#requestSync),
       mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
     ];
   }
@@ -189,6 +190,7 @@ export class TextureEditor extends WorkspaceElement {
         { activate: false }
       );
       this.#tabs.set(blocksetId, new BlocksetTab({
+        panel,
         canvas,
         view,
         binding,
@@ -375,9 +377,11 @@ export class TextureEditor extends WorkspaceElement {
       return nothing;
     }
 
+    const addable = workspace.access.current.has("blocksets");
+
     return html`
       ${workspace.blocksets.entries.length === 0 ?
-        this.#renderEmpty() :
+        this.#renderEmpty(addable) :
         html`
           <pixel-draw-panel
             texture-tabs="always"
@@ -385,7 +389,7 @@ export class TextureEditor extends WorkspaceElement {
             textures-editable
             normal-map
             .uvAccess=${this.uvAccess}
-            .texturesAddable=${true}
+            .texturesAddable=${addable}
             .texturesClosable=${false}
           ></pixel-draw-panel>
         `}
@@ -394,12 +398,15 @@ export class TextureEditor extends WorkspaceElement {
     `;
   }
 
-  #renderEmpty() {
+  #renderEmpty(
+    addable: boolean
+  ) {
     return html`
       <div class="empty">
         <p>No blockset yet.</p>
         <jolly-button
           icon="plus"
+          ?disabled=${!addable}
           @click=${this.#addBlockset}
         >Add blockset</jolly-button>
       </div>

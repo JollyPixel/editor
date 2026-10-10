@@ -6,6 +6,10 @@ import type {
 import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/client";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import {
+  RoomAccess,
+  type AccessPanel
+} from "@jolly-pixel/editor.pixel-art";
+import {
   peerProfileColor,
   readUsername
 } from "@jolly-pixel/ui/network";
@@ -20,6 +24,7 @@ import type {
 import { BlockUvBridge } from "./bridge/BlockUvBridge.ts";
 
 export interface BlocksetTabOptions {
+  panel: AccessPanel;
   canvas: PixelArtCanvas;
   view: VoxelView;
   binding: BlocksetBinding;
@@ -32,6 +37,7 @@ export class BlocksetTab {
   readonly binding: BlocksetBinding;
   readonly #uvBridge: BlockUvBridge;
   readonly #collaboration: PixelCollaboration;
+  readonly #access: RoomAccess;
 
   readonly #onBlocksetCommand: BlocksetDocumentListener = (command) => {
     if (command.action === "tile-size-updated") {
@@ -61,6 +67,11 @@ export class BlocksetTab {
       mapDocument: options.mapDocument,
       blocks: options.blocks
     });
+    this.#access = new RoomAccess(
+      binding.opened.room,
+      options.panel,
+      binding.definition.id
+    );
     binding.opened.blockset.on("command", this.#onBlocksetCommand);
     binding.opened.blockset.on("loaded", this.#onBlocksetLoaded);
     this.#apply();
@@ -71,6 +82,7 @@ export class BlocksetTab {
     this.binding.opened.blockset.off("loaded", this.#onBlocksetLoaded);
     this.#uvBridge.dispose();
     this.#collaboration.destroy();
+    this.#access.dispose();
   }
 
   #apply(): void {

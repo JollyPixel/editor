@@ -234,7 +234,7 @@ export class PixelDrawPanel extends LitElement {
     canvas: this.#activeCanvas,
     canvases: () => [...this.#textures].map((entry) => entry.canvas),
     docks: this.#docks,
-    locked: () => !this.#textures.activeAccess.normalMap
+    locked: () => !this.#textures.activeAccess.has("normalMap")
   });
   readonly #keyboard = new CanvasKeyboardController(
     this,
@@ -350,7 +350,7 @@ export class PixelDrawPanel extends LitElement {
     if (changedProperties.has("uvOverflow")) {
       this.#textures.uvOverflow = this.uvOverflow;
     }
-    this.#colors.paletteLocked = !this.#textures.activeAccess.palette;
+    this.#colors.paletteLocked = !this.#textures.activeAccess.has("palette");
   }
 
   override firstUpdated(
@@ -665,14 +665,14 @@ export class PixelDrawPanel extends LitElement {
           ${this.#selectToolbar.render(mode === "select")}
           ${this.#uvToolbar.render(
             mode === "uv" && policy.uvMode,
-            this.allowUvCreateDelete && access.uvStructure,
+            this.allowUvCreateDelete && access.has("uvStructure"),
             normalMaps?.renderOverrideButton() ?? nothing
           )}
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,
             importer: this.#importer,
             clearDialog: () => this.#dialog("clear-texture-dialog"),
-            viewOnly: access.viewOnly,
+            viewOnly: access.readOnly,
             exportMenu: (exportAlbedo) => (
               normalMaps?.renderExportButton(exportAlbedo) ?? nothing
             ),
