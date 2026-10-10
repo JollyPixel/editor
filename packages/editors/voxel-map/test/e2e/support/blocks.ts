@@ -14,6 +14,7 @@ export class BlockLibrary {
   readonly options: Locator;
   readonly addButton: Locator;
   readonly canvas: Locator;
+  readonly heightGrip: Locator;
   readonly #root: Locator;
 
   constructor(
@@ -27,6 +28,9 @@ export class BlockLibrary {
       exact: true
     });
     this.canvas = scope.locator("block-library-viewport canvas");
+    this.heightGrip = scope.getByRole("separator", {
+      name: "Block library height"
+    });
   }
 
   option(
