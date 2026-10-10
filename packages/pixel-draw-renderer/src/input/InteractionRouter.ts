@@ -59,6 +59,7 @@ export class InteractionRouter implements InputActions {
     this.#active = active;
     this.#setCursor = options.setCursor;
     this.#onModeChange = options.onModeChange;
+    active.onEnter();
   }
 
   get mode(): Mode {
@@ -275,6 +276,7 @@ export class InteractionRouter implements InputActions {
     const previous = this.#active;
     previous.onExit();
     this.#active = mode;
+    mode.onEnter();
     this.#syncCursor();
     this.#onModeChange?.(mode.id, previous.id);
   }

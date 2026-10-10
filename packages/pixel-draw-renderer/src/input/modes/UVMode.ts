@@ -25,9 +25,14 @@ export class UVMode extends InteractionMode {
     this.#uv = options.uv;
   }
 
+  onEnter(): void {
+    this.#uv.active = true;
+  }
+
   onExit(): void {
     this.#uv.cancelDrag();
     this.#uv.lineHeld = false;
+    this.#uv.active = false;
   }
 
   cursor(): string {

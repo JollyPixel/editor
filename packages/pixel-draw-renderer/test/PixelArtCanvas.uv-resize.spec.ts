@@ -262,4 +262,40 @@ describe("PixelArtCanvas — uv resize", () => {
     assert.deepEqual(ended, [false]);
     manager.destroy();
   });
+
+  test("shows handles only while in uv mode", () => {
+    const { manager, overlay } = createPixelArtCanvas({
+      uv: { resizable: true }
+    });
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+    function handles(): number {
+      return overlay.querySelectorAll("[part='uv-resize-handle']").length;
+    }
+
+    assert.equal(handles(), 0);
+    manager.mode = "uv";
+    assert.equal(handles(), 4);
+    manager.mode = "paint";
+    assert.equal(handles(), 0);
+    manager.tools.uv.resizable = false;
+    manager.tools.uv.resizable = true;
+    assert.equal(handles(), 0);
+    manager.destroy();
+  });
+
+  test("shows handles at once when uv is the default mode", () => {
+    const { manager, overlay } = createPixelArtCanvas({
+      defaultMode: "uv",
+      uv: { resizable: true }
+    });
+    const region = manager.uv.create({ width: 4, height: 4 });
+    manager.uv.select(region.id);
+
+    assert.equal(
+      overlay.querySelectorAll("[part='uv-resize-handle']").length,
+      4
+    );
+    manager.destroy();
+  });
 });
