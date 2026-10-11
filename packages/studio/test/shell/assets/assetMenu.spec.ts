@@ -105,7 +105,7 @@ describe("assetMenu", () => {
     );
   });
 
-  test("offers one new asset per kind in a submenu, named and iconed after it", () => {
+  test("offers one new asset per kind in a submenu, named, iconed and keyed after it", () => {
     const [, newAsset] = menuOf([]);
     assert.ok(newAsset !== "separator");
 
@@ -121,10 +121,10 @@ describe("assetMenu", () => {
         icon: "file"
       }
     ]);
-  });
-
-  test("a new asset item names its kind", () => {
-    assert.equal(newAssetKindOf("new-asset:voxelmap"), "voxelmap");
+    assert.deepEqual(
+      newAsset.items?.map((item) => newAssetKindOf(item.id)),
+      ["voxelmap", "pixelart"]
+    );
     assert.equal(newAssetKindOf("new-folder"), null);
   });
 

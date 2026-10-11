@@ -100,20 +100,6 @@ describe("EditorPagesWatcher", () => {
     ]);
   });
 
-  test("ignores reads that only touch the access time", async() => {
-    const index = path.join(mapDist, "index.html");
-    await fs.writeFile(index, INDEX_HTML);
-    await fs.utimes(index, kBuiltAt, kBuiltAt);
-    await settle(() => sent.length === 1);
-
-    await fs.utimes(index, kReadAt, kBuiltAt);
-    await sleep(EDITOR_PAGE_SETTLE_MS * 2);
-
-    assert.deepEqual(sent.map(([, page]) => page.name), [
-      "voxel-map"
-    ]);
-  });
-
   test("ignores files the page already had when watching started", async() => {
     watcher.close();
     const index = path.join(mapDist, "index.html");

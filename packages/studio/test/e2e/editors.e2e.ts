@@ -1,52 +1,34 @@
 // Import Third-party Dependencies
-import { expect, test } from "@playwright/test";
-import { treeRow } from "@jolly-pixel/e2e";
 import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import {
-  assetAction,
-  assetMenu,
-  assetRows,
-  editorFrames,
-  expandSeedFolders,
-  expectEditorReady,
-  homeTab,
+  test,
+  expect
+} from "./fixtures.ts";
+import {
   MAP,
-  MODEL,
-  openFromHome,
-  openShell,
-  renameField,
-  SEED_ROW_COUNT,
   TEXTURE
-} from "./support/shell.ts";
+} from "./support/assets.ts";
+import { joinedRooms } from "./support/shares.ts";
 import { registerAccount } from "./support/account.ts";
 
-test("editor frames read the catalog through the shell", async({ page }) => {
-  const catalogJoins: unknown[] = [];
-  page.on("websocket", (socket) => {
-    socket.on("framesent", ({ payload }) => {
-      const envelope = typeof payload === "string" ? JSON.parse(payload) : null;
-      if (envelope?.room === CATALOG_ROOM && envelope.kind === "join") {
-        catalogJoins.push(envelope);
-      }
-    });
-  });
-  await expandSeedFolders(page);
+test("editor frames read the catalog through the shell", async({ studio, page }) => {
+  const rooms = joinedRooms(page);
   await registerAccount(page.request);
-  await page.goto("/");
-  await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
+  await studio.open();
 
-  await treeRow(page, MODEL).dblclick();
-  await expectEditorReady(editorFrames(page).contentFrame());
+  await studio.assets.open(TEXTURE);
+  await studio.frames.expectReady(studio.frames.only());
 
-  expect(catalogJoins).toHaveLength(1);
+  expect(rooms.filter((room) => room === CATALOG_ROOM)).toHaveLength(1);
 });
 
-test("creates a map, a model and a texture from the tree and opens each", async({ page }) => {
+test("creates a map, a model and a texture from the tree and opens each", async({ studio }) => {
   test.slow();
-  await openShell(page);
-  const assets = [
+  const { assets } = studio;
+  await studio.openOffline();
+  const created = [
     {
       kind: "Voxel map",
       file: "New voxel map.voxelmap.json",
@@ -67,72 +49,59 @@ test("creates a map, a model and a texture from the tree and opens each", async(
     }
   ];
 
-  for (const asset of assets) {
-    await assetAction(page, "New asset").click();
-    await assetMenu(page).getByRole("menuitem", { name: asset.kind, exact: true }).click();
-    await expect(renameField(page)).toHaveValue(asset.file);
-    await renameField(page).press("Escape");
+  for (const asset of created) {
+    await assets.createAsset(asset.kind);
+    await expect(assets.renameField).toHaveValue(asset.file);
+    await assets.renameField.press("Escape");
 
     if (asset.companion !== null) {
-      await expect(treeRow(page, asset.companion)).toBeVisible();
+      await expect(assets.row(asset.companion)).toBeVisible();
     }
 
-    await treeRow(page, asset.file).dblclick();
-    await expectEditorReady(
-      page.locator(`#editor-frames iframe[src^="editors/${asset.editor}/"]`).contentFrame()
-    );
-    await homeTab(page).click();
+    await assets.open(asset.file);
+    await studio.frames.expectReady(studio.frames.of(asset.editor));
+    await studio.tabs.home.click();
   }
 });
 
-test("an editor frame opens the shell console, which themes every frame", async({ page }) => {
+test("an editor frame opens the shell console, which themes every frame", async({ studio, commands }) => {
   test.slow();
-  await openShell(page);
-  await treeRow(page, TEXTURE).dblclick();
-  const texture = editorFrames(page).contentFrame();
-  await expectEditorReady(texture);
+  await studio.openOffline();
+  await studio.assets.open(TEXTURE);
+  const texture = studio.frames.only();
+  await studio.frames.expectReady(texture);
   await expect(texture.locator("jolly-console")).toHaveCount(0);
 
   await texture.locator("pixel-draw-panel")
     .getByRole("button")
     .first()
     .focus();
-  await page.keyboard.press("Control+k");
-  const prompt = page.getByRole("combobox", { name: "Command" });
-  await expect(prompt).toBeFocused();
-  await prompt.fill("theme light");
-  await prompt.press("Enter");
-  await page.keyboard.press("Escape");
+  await commands.open();
+  await commands.submit("theme light");
+  await commands.close();
 
-  await expect(page.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
+  await expect(studio.theme).toHaveAttribute("theme", "light");
   await expect(texture.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
 
-  await openFromHome(page, MODEL);
-  const model = page.locator("#editor-frames iframe[src*='voxel-model']").contentFrame();
-  await expect(model.locator("jolly-scope").first())
+  await studio.openFromHome(MAP);
+  await expect(studio.frames.of("voxel-map").locator("jolly-scope").first())
     .toHaveAttribute("theme", "light", { timeout: 30_000 });
 });
 
-test("the shell console reaches the commands of the active editor only", async({ page }) => {
+test("the shell console reaches the commands of the active editor only", async({ studio, commands }) => {
   test.slow();
-  await openShell(page);
-  await treeRow(page, MAP).dblclick();
-  await expectEditorReady(editorFrames(page).contentFrame());
-  const prompt = page.getByRole("combobox", { name: "Command" });
-  const lastEntry = page.getByRole("log").locator(".entry").last();
+  const lastEntry = commands.log.locator(".entry").last();
+  await studio.openOffline();
+  await studio.assets.open(MAP);
+  await studio.frames.expectReady(studio.frames.only());
 
-  await page.keyboard.press("Control+k");
-  await prompt.fill("brush.size 3");
-  await prompt.press("Enter");
+  await commands.submit("brush.size 3");
   await expect(lastEntry).toHaveText("3");
-  await prompt.fill("/help brush");
-  await prompt.press("Enter");
-  await expect(lastEntry).toContainText("brush.axis");
-  await page.keyboard.press("Escape");
+  await commands.submit("/help brush");
+  await expect(lastEntry).toContainText("brush: Voxel brush");
+  await commands.close();
 
-  await homeTab(page).click();
-  await page.keyboard.press("Control+k");
-  await prompt.fill("/help brush");
-  await prompt.press("Enter");
+  await studio.tabs.home.click();
+  await commands.submit("/help brush");
   await expect(lastEntry).toContainText("Nothing is registered as \"brush\"");
 });
