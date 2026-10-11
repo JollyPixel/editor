@@ -8,7 +8,7 @@ import {
 import {
   test,
   expect
-} from "./fixtures.ts";
+} from "../fixtures.ts";
 import {
   animatePanel,
   clipRow,
@@ -17,7 +17,7 @@ import {
   scrubTo,
   startClip,
   timeline
-} from "./support/animate.ts";
+} from "../support/animate.ts";
 
 test("a peer's open clip shows a chip, and their playhead a marker to jump to", async({ page, peer }) => {
   test.slow();

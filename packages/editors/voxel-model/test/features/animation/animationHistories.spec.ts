@@ -3,10 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  AnimationChange,
-  AnimationKeyJSON
-} from "@jolly-pixel/asset.voxel-animation/client";
+import type { AnimationChange } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   ModelDocument,
   type VoxelModelCommand
@@ -14,61 +11,15 @@ import {
 
 // Import Internal Dependencies
 import {
-  ActiveHistory,
   ANIMATION_LIBRARY,
-  animationScope,
   createEditorHistory,
   scopeOfModelChange
 } from "#src/features/history/index.ts";
+import { animationKey } from "#src/state/index.ts";
 import {
-  animationKey,
-  type AnimationFocus
-} from "#src/state/index.ts";
-import { createAnimatedModel } from "./fixtures.ts";
-
-type HistoryTarget = AnimationFocus | typeof ANIMATION_LIBRARY;
-
-// CONSTANTS
-const kKey: AnimationKeyJSON = {
-  tick: 12000,
-  value: { x: 5, y: 0, z: 0 },
-  interpolation: "linear"
-};
-
-function createModel(
-  options: { own?: boolean; } = {}
-) {
-  const model = createAnimatedModel(options);
-  const run = model.set.addClip({ id: "run", name: "Run", length: 24000 })!;
-  function scope(
-    target: HistoryTarget
-  ) {
-    return target === ANIMATION_LIBRARY ?
-      target :
-      animationScope(target, model.document.tree.animationSets);
-  }
-
-  return {
-    ...model,
-    wave: model.clipRef,
-    run: { setId: "walk", clipId: run },
-    walkSet: { setId: "walk", clipId: null },
-    state: (target: HistoryTarget) => model.history.state(scope(target)),
-    undo: (target: HistoryTarget) => model.history.undo(scope(target)),
-    active: () => new ActiveHistory({
-      history: model.history,
-      tab: model.tab,
-      animate: model.historyFocus,
-      access: model.access
-    }),
-    key: (target: { setId: string; clipId: string; }, label: string) => model.history.record(
-      scope(target),
-      label,
-      () => model.set.setKey(target.clipId, "Body/Arm", "position", kKey)
-    ),
-    keyOf: (clipId: string) => model.set.set.keyAt(clipId, "Body/Arm", "position", kKey.tick)?.value.x
-  };
-}
+  HISTORY_KEY,
+  createHistoryModel
+} from "./historyModel.ts";
 
 describe("scopeOfModelChange", () => {
   test("sends bindings to their set, own set and library edits to the library, tree edits to Build", () => {
@@ -105,10 +56,10 @@ describe("scopeOfModelChange", () => {
 describe("scopeOfAnimationChange", () => {
   for (const own of [false, true]) {
     test(`files an unrecorded key edit under the focused clip's key, ${own ? "own" : "shared"} set`, () => {
-      const model = createModel({ own });
+      const model = createHistoryModel({ own });
       const focused = model.animationSession.focused!;
 
-      model.set.setKey(model.clipId, "Body/Arm", "position", kKey);
+      model.set.setKey(model.clipId, "Body/Arm", "position", HISTORY_KEY);
 
       assert.equal(model.history.state(focused.key).undoLabel, "Key Arm");
     });
@@ -117,7 +68,7 @@ describe("scopeOfAnimationChange", () => {
 
 describe("AnimationHistories", () => {
   test("files the own set's edits in the library, and a shared set's edits in the set's scope", () => {
-    const model = createModel({ own: true });
+    const model = createHistoryModel({ own: true });
     const { document, history, set } = model;
     const walkScope = animationKey("walk");
 
@@ -134,7 +85,7 @@ describe("AnimationHistories", () => {
   });
 
   test("files library edits in the library scope", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { animations, document } = model;
 
     animations.unlink("walk");
@@ -145,7 +96,7 @@ describe("AnimationHistories", () => {
   });
 
   test("keeps one scope per clip, and the set's own edits in the set's scope", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { set } = model;
 
     model.key(model.wave, "Key wave");
@@ -166,7 +117,7 @@ describe("AnimationHistories", () => {
   });
 
   test("drops a clip's scope with the clip, and its return starts empty", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { set } = model;
     model.key(model.run, "Key run");
 
@@ -180,7 +131,7 @@ describe("AnimationHistories", () => {
   });
 
   test("opens a history for a clip that a reload brings back", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { set } = model;
     set.addClip({ id: "sprint", name: "Sprint", length: 24000 });
     const snapshot = set.set.toJSON();
@@ -193,7 +144,7 @@ describe("AnimationHistories", () => {
   });
 
   test("keeps a clip's steps and focus while the reconciler rewinds and replays its creation", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { set, animationFocus } = model;
     const changes: AnimationChange[] = [];
     const unsubscribe = set.subscribe("change", (change) => changes.push(change));
@@ -212,7 +163,7 @@ describe("AnimationHistories", () => {
   });
 
   test("closing a set drops its scopes and its clips' scopes", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { animations } = model;
     const targets = [model.walkSet, model.wave, model.run];
     model.key(model.wave, "Key wave");
@@ -225,7 +176,7 @@ describe("AnimationHistories", () => {
   });
 
   test("a peer's key edit refuses only the clip step that wrote it", () => {
-    const model = createModel();
+    const model = createHistoryModel();
     const { set } = model;
     model.key(model.wave, "Key wave");
     model.key(model.run, "Key run");
@@ -235,117 +186,10 @@ describe("AnimationHistories", () => {
       clipId: "run",
       path: "Body/Arm",
       channel: "position",
-      key: { ...kKey, value: { x: 9, y: 0, z: 0 } }
+      key: { ...HISTORY_KEY, value: { x: 9, y: 0, z: 0 } }
     }, "peer");
 
     assert.equal(model.state(model.run).refused.length, 1);
     assert.equal(model.state(model.wave).refused.length, 0);
-  });
-});
-
-describe("ActiveHistory", () => {
-  function createActive(
-    options: { own?: boolean; } = {}
-  ) {
-    const model = createModel(options);
-
-    return { ...model, active: model.active() };
-  }
-
-  test("undoes in the focused clip, then the focused set, and the tab outside Animate", () => {
-    const model = createActive();
-    const { active, animationFocus, tab } = model;
-    model.key(model.run, "Key run");
-    tab.activate("animate");
-
-    assert.equal(active.state.canUndo, false);
-    assert.equal(active.targetName, "Wave");
-
-    animationFocus.focusClip("walk", "run");
-    assert.equal(active.state.undoLabel, "Key run");
-    assert.equal(active.undo(), true);
-    assert.equal(model.keyOf("run"), undefined);
-
-    animationFocus.focusSet("walk");
-    assert.equal(active.targetName, "Walk");
-    assert.equal(active.state.undoLabel, "Add clip Run");
-
-    tab.activate("build");
-    assert.equal(active.targetName, null);
-    assert.equal(active.state.canUndo, false);
-  });
-
-  test("a read-only viewer can neither undo nor redo, and is told when rights change", () => {
-    const model = createActive();
-    const { active, animationFocus, tab } = model;
-    model.key(model.run, "Key run");
-    tab.activate("animate");
-    animationFocus.focusClip("walk", "run");
-    let changes = 0;
-    active.on("change", () => changes++);
-
-    model.access.grant();
-
-    assert.deepEqual([active.readOnly, active.undo(), changes], [true, false, 1]);
-    assert.notEqual(model.keyOf("run"), undefined);
-
-    model.access.grant("animations");
-    assert.deepEqual([active.readOnly, active.undo()], [false, true]);
-  });
-
-  test("a focused clip without a history has nothing to undo or redo", () => {
-    const { active, animationFocus, tab } = createActive();
-    tab.activate("animate");
-    animationFocus.focusClip("walk", "ghost");
-
-    assert.equal(active.state.canUndo, false);
-    assert.equal(active.undo(), false);
-    assert.equal(active.redo(), false);
-  });
-
-  test("with nothing focused, undoes in the library, which holds the own set's steps", () => {
-    const model = createActive({ own: true });
-    const { active } = model;
-    model.tab.activate("animate");
-    model.animationFocus.focusSet(null);
-
-    model.set.removeClip(model.clipId);
-    assert.equal(active.targetName, "this model");
-    assert.equal(active.state.undoLabel, "Delete clip Wave");
-    assert.equal(model.history.state(ANIMATION_LIBRARY).undoLabel, "Delete clip Wave");
-
-    assert.equal(active.undo(), true);
-    assert.equal(model.set.set.clip(model.clipId)?.name, "Wave");
-  });
-
-  test("tells listeners when the focused history changes, and moves to the set when its clip goes", () => {
-    const model = createActive();
-    const { active, tab, animationFocus, set } = model;
-    tab.activate("animate");
-    animationFocus.focusClip("walk", "run");
-    const counts: number[] = [];
-    active.on("change", (state) => counts.push(state.undoCount));
-
-    model.key(model.wave, "Key wave");
-    model.key(model.run, "Key run");
-    assert.deepEqual(counts, [1]);
-
-    set.removeClip("run");
-    assert.equal(active.state.undoLabel, "Delete clip Run");
-    assert.equal(counts.at(-1), active.state.undoCount);
-  });
-
-  test("tells listeners when the focused clip is renamed", () => {
-    const model = createActive();
-    const { active, tab, animationFocus, set } = model;
-    tab.activate("animate");
-    animationFocus.focusClip("walk", "run");
-    const names: (string | null)[] = [];
-    active.on("change", () => names.push(active.targetName));
-
-    set.changeClip(model.clipId, { name: "Hello" });
-    set.changeClip("run", { name: "Sprint" });
-
-    assert.deepEqual(names, ["Sprint"]);
   });
 });

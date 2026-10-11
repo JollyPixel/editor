@@ -26,6 +26,29 @@ Object.assign(globalThis, {
   getComputedStyle: kEmulatedBrowserWindow.getComputedStyle.bind(kEmulatedBrowserWindow)
 });
 
+const kFrameTimers = new Map<number, ReturnType<typeof setTimeout>>();
+let lastFrameHandle = 0;
+
+Object.assign(globalThis, {
+  requestAnimationFrame(
+    callback: FrameRequestCallback
+  ): number {
+    const handle = ++lastFrameHandle;
+    kFrameTimers.set(handle, setTimeout(() => {
+      kFrameTimers.delete(handle);
+      callback(performance.now());
+    }, 16));
+
+    return handle;
+  },
+  cancelAnimationFrame(
+    handle: number
+  ): void {
+    clearTimeout(kFrameTimers.get(handle));
+    kFrameTimers.delete(handle);
+  }
+});
+
 function createImageData(
   width: number,
   height: number

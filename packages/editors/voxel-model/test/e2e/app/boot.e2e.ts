@@ -5,16 +5,16 @@ import { treeRow } from "@jolly-pixel/e2e";
 import {
   test,
   expect
-} from "./fixtures.ts";
-import { hierarchyAction } from "./support/hierarchy.ts";
+} from "../fixtures.ts";
+import { hierarchyAction } from "../support/hierarchy.ts";
 import {
   blockSummary,
   outline,
   runtimeIdle
-} from "./support/scene.ts";
+} from "../support/scene.ts";
 
 test("opens the requested model with its default block and texture regions", async({ page }) => {
-  await expect(treeRow(page, "Block")).toBeVisible();
+  await treeRow(page, "Block").click();
   await expect(page.getByRole("img").filter({ hasText: "(Block)front" })).toBeVisible();
 
   expect(await outline(page)).toEqual(["Block"]);

@@ -5,21 +5,24 @@ import { treeRow } from "@jolly-pixel/e2e";
 import {
   test,
   expect
-} from "./fixtures.ts";
+} from "../fixtures.ts";
 import {
   addNode,
   hierarchyAction,
+  renameRow
+} from "../support/hierarchy.ts";
+import {
   newMaterial,
   openMaterialTab
-} from "./support/hierarchy.ts";
+} from "../support/material.ts";
 import {
   historyBar,
   historyButton
-} from "./support/history.ts";
+} from "../support/history.ts";
 import {
   materialOutline,
   outline
-} from "./support/scene.ts";
+} from "../support/scene.ts";
 
 test("each tab undoes and redoes its own steps, naming and counting them", async({ page }) => {
   await expect(historyButton(page, "Undo").getByRole("button")).toBeDisabled();
@@ -59,10 +62,7 @@ test("outside Build the tree only selects, and its lock opens Build", async({ pa
 });
 
 test("keyboard shortcuts undo and redo outside text fields", async({ page }) => {
-  await treeRow(page, "Block").dblclick();
-  const rename = page.getByRole("textbox", { name: "Rename" });
-  await rename.fill("Torso");
-  await rename.press("Enter");
+  await renameRow(page, "Block", "Torso");
   await expect(treeRow(page, "Torso")).toBeVisible();
 
   await page.keyboard.press("ControlOrMeta+z");

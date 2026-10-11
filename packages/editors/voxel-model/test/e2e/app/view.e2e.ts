@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
+import { checkboxField } from "@jolly-pixel/e2e";
 import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { test, expect } from "./fixtures.ts";
+import { test, expect } from "../fixtures.ts";
 
 function blocksLit(
   page: Page
@@ -30,9 +31,10 @@ function viewportRender(
 test("the viewport draws the scene once, through the glow while it is on", async({ page }) => {
   expect(await viewportRender(page)).toEqual(["glow"]);
 
-  await page.evaluate(() => window.voxelModelEditor!.workspace.view.update({ glow: false }));
+  await page.getByRole("button", { name: "View", exact: true }).click();
+  await checkboxField(page.locator("jolly-model-editor-view"), "Glow").uncheck();
 
-  expect(await viewportRender(page)).toEqual(["direct"]);
+  await expect.poll(() => viewportRender(page)).toEqual(["direct"]);
 });
 
 test("the shading toggle switches blocks to flat and is remembered after a reload", async({ page }) => {

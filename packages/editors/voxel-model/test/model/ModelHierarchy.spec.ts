@@ -4,89 +4,20 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import {
-  BlockTransform,
-  BlockUvLayouts,
-  type UVLayoutData,
-  type VoxelModelCommand
-} from "@jolly-pixel/asset.voxel-model/client";
+import { BlockUvLayouts } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
+import type { HierarchyNode } from "#src/model/index.ts";
 import {
-  ModelHierarchy,
-  type HierarchyNode
-} from "#src/model/index.ts";
-import { createEditorHistory } from "#src/features/history/index.ts";
-import {
-  buildEditsOf,
-  createModelFixture,
-  type ModelFixture
-} from "../fixtures/model.ts";
-import {
-  modelAccess,
-  type TestModelAccess
-} from "../fixtures/modelAccess.ts";
-
-// CONSTANTS
-const kNoMirror = { x: false, y: false, z: false };
-const kTextureSize = { x: 256, y: 256 };
-
-interface Harness extends ModelFixture {
-  access: TestModelAccess;
-  hierarchy: ModelHierarchy;
-  commands: VoxelModelCommand[];
-}
-
-function layoutAt(
-  x: number
-): UVLayoutData {
-  return {
-    state: "stacked",
-    rect: { x, y: 0, width: 16, height: 16 }
-  };
-}
-
-function createHarness(): Harness {
-  const fixture = createModelFixture();
-  const commands: VoxelModelCommand[] = [];
-  fixture.document.on("change", (change) => commands.push(change.command));
-  const access = modelAccess();
-
-  return {
-    ...fixture,
-    access,
-    hierarchy: new ModelHierarchy({
-      document: fixture.document,
-      edits: buildEditsOf(createEditorHistory({ document: fixture.document })),
-      textureSize: () => kTextureSize,
-      poses: fixture.blocks,
-      access
-    }),
-    commands
-  };
-}
-
-function shapeOf(
-  nodes: readonly HierarchyNode[]
-): unknown[] {
-  return nodes.map((node) => (
-    node.children.length > 0 ? [node.name, shapeOf(node.children)] : node.name
-  ));
-}
-
-function at(
-  x: number,
-  y = 0,
-  z = 0
-) {
-  return BlockTransform.create({
-    position: { x, y, z }
-  });
-}
+  NO_MIRROR,
+  at,
+  createHierarchyFixture,
+  shapeOf
+} from "../fixtures/hierarchy.ts";
 
 describe("ModelHierarchy.nodes", () => {
   test("lists nodes in document order under their folder or block parent", () => {
-    const { document, addBlock, hierarchy } = createHarness();
+    const { document, addBlock, hierarchy } = createHierarchyFixture();
     addBlock({ name: "Body" });
     const folderId = document.addFolder({ name: "Arms" });
     const arm = addBlock({ name: "Arm", parentId: folderId });
@@ -100,7 +31,7 @@ describe("ModelHierarchy.nodes", () => {
   });
 
   test("nests folders under folders, and a folder under a block beside its children", () => {
-    const { addBlock, hierarchy } = createHarness();
+    const { addBlock, hierarchy } = createHierarchyFixture();
     const body = addBlock({ name: "Body" });
     addBlock({ name: "Head", parentId: body.uuid });
     const outer = hierarchy.createFolder("Outer", body.uuid);
@@ -112,7 +43,7 @@ describe("ModelHierarchy.nodes", () => {
   });
 
   test("carries a block's material, and none for a folder", () => {
-    const { document, addBlock, hierarchy } = createHarness();
+    const { document, addBlock, hierarchy } = createHierarchyFixture();
     const metalId = document.addMaterial({ name: "Metal" })!;
     addBlock({ name: "Plain" });
     addBlock({ name: "Metal", materialId: metalId });
@@ -125,7 +56,7 @@ describe("ModelHierarchy.nodes", () => {
   });
 
   test("labels unnamed nodes by kind", () => {
-    const { document, hierarchy } = createHarness();
+    const { document, hierarchy } = createHierarchyFixture();
     document.addFolder({ name: "" });
     document.addBlock({ name: "" });
 
@@ -135,7 +66,7 @@ describe("ModelHierarchy.nodes", () => {
 
 describe("ModelHierarchy.createBlock", () => {
   test("creates the block and its UV layout with one command", () => {
-    const { document, hierarchy, commands } = createHarness();
+    const { document, hierarchy, commands } = createHierarchyFixture();
 
     const uuid = hierarchy.createBlock("Head", null);
 
@@ -145,7 +76,7 @@ describe("ModelHierarchy.createBlock", () => {
   });
 
   test("places the new block's net beside the layouts already in use", () => {
-    const { document, hierarchy } = createHarness();
+    const { document, hierarchy } = createHierarchyFixture();
 
     const first = hierarchy.createBlock("Head", null);
     const second = hierarchy.createBlock("Body", null);
@@ -159,7 +90,7 @@ describe("ModelHierarchy.createBlock", () => {
   });
 
   test("under a block, lands on the parent's position as its child", () => {
-    const { document, blocks, addBlock, hierarchy } = createHarness();
+    const { document, blocks, addBlock, hierarchy } = createHierarchyFixture();
     const parent = addBlock({ transform: at(4) });
 
     const uuid = hierarchy.createBlock("Child", parent.uuid);
@@ -173,7 +104,7 @@ describe("ModelHierarchy.createBlock", () => {
   });
 
   test("under a folder, sits in it and inherits from the folder's nearest block", () => {
-    const { document, blocks, addBlock, hierarchy } = createHarness();
+    const { document, blocks, addBlock, hierarchy } = createHierarchyFixture();
     const parent = addBlock();
     const folderId = hierarchy.createFolder("Folder", parent.uuid);
 
@@ -185,115 +116,16 @@ describe("ModelHierarchy.createBlock", () => {
   });
 
   test("returns null and adds nothing under an unknown parent", () => {
-    const { document, hierarchy } = createHarness();
+    const { document, hierarchy } = createHierarchyFixture();
 
     assert.equal(hierarchy.createBlock("Child", "missing"), null);
     assert.equal(document.tree.size, 0);
   });
 });
 
-describe("ModelHierarchy.move", () => {
-  test("moves a block in and out of a folder as one command each", () => {
-    const { document, addBlock, hierarchy, commands } = createHarness();
-    const parent = addBlock();
-    const folderId = hierarchy.createFolder("Folder", parent.uuid);
-    const block = addBlock();
-    commands.length = 0;
-
-    hierarchy.move(block.uuid, folderId);
-
-    assert.equal(document.tree.get(block.uuid)?.parentId, folderId);
-    assert.equal(document.tree.transformParentOf(block.uuid), parent.uuid);
-
-    hierarchy.move(block.uuid, null);
-
-    assert.equal(document.tree.get(block.uuid)?.parentId, null);
-    assert.equal(document.tree.transformParentOf(block.uuid), null);
-    assert.deepEqual(
-      commands.map((command) => command.action),
-      ["node-moved", "node-moved"]
-    );
-  });
-
-  test("keeps the world position of a block moved under another block", () => {
-    const { blocks, scene, addBlock, hierarchy } = createHarness();
-    const anchor = addBlock({ transform: at(10) });
-    const block = addBlock({ transform: at(3, 2) });
-
-    hierarchy.move(block.uuid, anchor.uuid);
-    scene.updateMatrixWorld(true);
-
-    assert.equal(block.node.parent, anchor.node);
-    assert.deepStrictEqual(
-      blocks.get(block.uuid)?.worldPosition,
-      new THREE.Vector3(3, 2, 0)
-    );
-    assert.deepEqual(block.transform.position, { x: -7, y: 2, z: 0 });
-  });
-
-  test("moving a folder carries the blocks of its subtree in the same command", () => {
-    const { document, scene, addBlock, hierarchy, commands } = createHarness();
-    const anchor = addBlock({ transform: at(10) });
-    const outer = hierarchy.createFolder("Outer", null);
-    const inner = hierarchy.createFolder("Inner", outer);
-    const block = addBlock({ parentId: inner, transform: at(1) });
-    const nested = addBlock({ parentId: block.uuid });
-    commands.length = 0;
-
-    hierarchy.move(outer!, anchor.uuid);
-    scene.updateMatrixWorld(true);
-
-    assert.equal(document.tree.transformParentOf(block.uuid), anchor.uuid);
-    assert.equal(document.tree.get(block.uuid)?.parentId, inner);
-    assert.deepStrictEqual(block.worldPosition, new THREE.Vector3(1, 0, 0));
-    assert.equal(commands.length, 1);
-    assert.partialDeepStrictEqual(commands[0], {
-      action: "node-moved",
-      id: outer,
-      parentId: anchor.uuid,
-      transforms: [{ id: block.uuid }]
-    });
-    assert.equal(nested.node.parent, block.node);
-  });
-
-  test("rewrites no transform when the transform parent is unchanged", () => {
-    const { addBlock, hierarchy, commands } = createHarness();
-    const folderId = hierarchy.createFolder("Folder", null);
-    const block = addBlock();
-    commands.length = 0;
-
-    hierarchy.move(block.uuid, folderId);
-
-    assert.partialDeepStrictEqual(commands[0], { transforms: [] });
-  });
-
-  test("places a node before a sibling, or last without one", () => {
-    const { addBlock, hierarchy } = createHarness();
-    addBlock({ name: "A" });
-    const b = addBlock({ name: "B" });
-    const c = addBlock({ name: "C" });
-
-    hierarchy.move(c.uuid, null, b.uuid);
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["A", "C", "B"]);
-
-    hierarchy.move(c.uuid, null);
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["A", "B", "C"]);
-  });
-
-  test("refuses to move a node into its own subtree", () => {
-    const { document, hierarchy } = createHarness();
-    const outer = hierarchy.createFolder("Outer", null);
-    const inner = hierarchy.createFolder("Inner", outer);
-
-    hierarchy.move(outer!, inner);
-
-    assert.equal(document.tree.get(outer!)?.parentId, null);
-  });
-});
-
 describe("ModelHierarchy.rename", () => {
   test("renames blocks and folders alike", () => {
-    const { document, addBlock, hierarchy } = createHarness();
+    const { document, addBlock, hierarchy } = createHierarchyFixture();
     const block = addBlock({ name: "Block" });
     const folderId = hierarchy.createFolder("Folder", null);
 
@@ -307,7 +139,7 @@ describe("ModelHierarchy.rename", () => {
 
 describe("ModelHierarchy block names", () => {
   test("refuses a block rename that clashes, naming the block parent", () => {
-    const { addBlock, hierarchy } = createHarness();
+    const { addBlock, hierarchy } = createHierarchyFixture();
     const body = addBlock({ name: "Body" });
     const arm = addBlock({ name: "Arm", parentId: body.uuid });
     addBlock({ name: "Leg", parentId: body.uuid });
@@ -326,7 +158,7 @@ describe("ModelHierarchy block names", () => {
   });
 
   test("flags every block sharing a name with a sibling block", () => {
-    const { addBlock, hierarchy } = createHarness();
+    const { addBlock, hierarchy } = createHierarchyFixture();
     const body = addBlock({ name: "Body" });
     const first = addBlock({ name: "Arm", parentId: body.uuid });
     const folderId = hierarchy.createFolder("Limbs", body.uuid);
@@ -351,7 +183,7 @@ describe("ModelHierarchy block names", () => {
 
 describe("ModelHierarchy access", () => {
   test("sends no node command without hierarchy rights, and mirrors only with transform rights", () => {
-    const { access, addBlock, commands, hierarchy } = createHarness();
+    const { access, addBlock, commands, hierarchy } = createHierarchyFixture();
     const arm = addBlock({ name: "Arm" });
     const legId = hierarchy.createFolder("Legs", null)!;
     commands.length = 0;
@@ -362,7 +194,7 @@ describe("ModelHierarchy access", () => {
     hierarchy.rename(arm.uuid, "Wing");
     hierarchy.move(arm.uuid, legId);
     hierarchy.remove(arm.uuid, { withChildren: true });
-    hierarchy.duplicate(arm.uuid, { name: "Copy", includeChildren: false, mirrorAxes: kNoMirror });
+    hierarchy.duplicate(arm.uuid, { name: "Copy", includeChildren: false, mirrorAxes: NO_MIRROR });
     assert.deepEqual(commands, []);
 
     access.grant("hierarchy");
@@ -375,232 +207,5 @@ describe("ModelHierarchy access", () => {
 
     hierarchy.rename(arm.uuid, "Wing");
     assert.deepEqual(commands.map(({ action }) => action), ["node-renamed"]);
-  });
-});
-
-describe("ModelHierarchy.duplicate", () => {
-  test("copies a block under the given name with its UV layout", () => {
-    const { document, blocks, addBlock, hierarchy } = createHarness();
-    const source = addBlock({
-      name: "Arm",
-      transform: at(1, 2, 3),
-      uv: layoutAt(7)
-    });
-
-    const duplicateId = hierarchy.duplicate(source.uuid, {
-      name: "Left Arm",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.ok(duplicateId);
-    assert.equal(blocks.get(duplicateId)?.name, "Left Arm");
-    assert.deepEqual(blocks.get(duplicateId)?.transform, source.transform);
-    assert.deepEqual(document.tree.block(duplicateId)?.uv, layoutAt(7));
-  });
-
-  test("points the copy of a block to the same material", () => {
-    const { document, addBlock, hierarchy } = createHarness();
-    const metalId = document.addMaterial({ name: "Metal" })!;
-    const source = addBlock({ materialId: metalId });
-
-    const duplicateId = hierarchy.duplicate(source.uuid, {
-      name: "Copy",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.equal(document.tree.block(duplicateId!)?.materialId, metalId);
-    assert.equal(document.tree.materials.size, 1);
-  });
-
-  test("copies a folder subtree, renaming the blocks that keep their block parent", () => {
-    const { addBlock, hierarchy } = createHarness();
-    const folderId = hierarchy.createFolder("Limbs", null);
-    const arm = addBlock({ name: "Arm", parentId: folderId });
-    addBlock({ name: "Hand", parentId: arm.uuid });
-
-    const duplicateId = hierarchy.duplicate(folderId!, {
-      name: "Limbs Copy",
-      includeChildren: true,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
-      ["Limbs", [["Arm", ["Hand"]]]],
-      ["Limbs Copy", [["Arm 2", ["Hand"]]]]
-    ]);
-    assert.ok(duplicateId && hierarchy.isFolder(duplicateId));
-  });
-
-  test("never gives the copied block a sibling's name", () => {
-    const { addBlock, hierarchy } = createHarness();
-    const source = addBlock({ name: "Arm" });
-    addBlock({ name: "Arm Copy" });
-
-    const duplicateId = hierarchy.duplicate(source.uuid, {
-      name: "Arm Copy",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.equal(hierarchy.nodes().find(({ id }) => id === duplicateId)?.name, "Arm Copy 2");
-  });
-
-  test("leaves the children behind unless asked for them", () => {
-    const { addBlock, hierarchy } = createHarness();
-    const body = addBlock({ name: "Body" });
-    addBlock({ name: "Head", parentId: body.uuid });
-
-    hierarchy.duplicate(body.uuid, {
-      name: "Body Copy",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
-      ["Body", ["Head"]],
-      "Body Copy"
-    ]);
-  });
-
-  test("lands right after its source among its siblings", () => {
-    const { addBlock, hierarchy } = createHarness();
-    const folderId = hierarchy.createFolder("Limbs", null);
-    const arm = addBlock({ name: "Arm", parentId: folderId });
-    addBlock({ name: "Leg", parentId: folderId });
-    const torso = addBlock({ name: "Torso" });
-    addBlock({ name: "Head" });
-
-    hierarchy.duplicate(arm.uuid, {
-      name: "Arm Copy",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-    hierarchy.duplicate(torso.uuid, {
-      name: "Torso Copy",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
-      ["Limbs", ["Arm", "Arm Copy", "Leg"]],
-      "Torso",
-      "Torso Copy",
-      "Head"
-    ]);
-  });
-
-  test("adds a copy in place as one command", () => {
-    const { document, addBlock, hierarchy } = createHarness();
-    const arm = addBlock({ name: "Arm" });
-    addBlock({ name: "Leg" });
-    const actions: string[] = [];
-    document.on("change", (change) => actions.push(change.command.action));
-
-    hierarchy.duplicate(arm.uuid, {
-      name: "Arm Copy",
-      includeChildren: false,
-      mirrorAxes: kNoMirror
-    });
-
-    assert.deepEqual(actions, ["node-added"]);
-  });
-
-  test("mirrors every duplicated block when an axis is requested", () => {
-    const { document, blocks, addBlock, hierarchy } = createHarness();
-    const source = addBlock({ transform: at(2) });
-    const mirrorAxes = { x: true, y: false, z: false };
-
-    const duplicateId = hierarchy.duplicate(source.uuid, {
-      name: "Mirror",
-      includeChildren: false,
-      mirrorAxes
-    });
-
-    assert.ok(duplicateId !== null);
-    assert.deepStrictEqual(
-      blocks.get(duplicateId)?.worldPosition,
-      new THREE.Vector3(-2, 0, 0)
-    );
-    assert.deepEqual(document.tree.block(duplicateId)?.flipAxes, mirrorAxes);
-    assert.deepEqual(
-      document.tree.block(duplicateId)?.transform.position,
-      { x: -2, y: 0, z: 0 }
-    );
-  });
-
-  test("returns null for an unknown source", () => {
-    const { hierarchy } = createHarness();
-
-    assert.equal(
-      hierarchy.duplicate("missing", { name: "Copy", includeChildren: true, mirrorAxes: kNoMirror }),
-      null
-    );
-  });
-});
-
-describe("ModelHierarchy.remove", () => {
-  test("with children, removes the whole subtree as one command", () => {
-    const { blocks, addBlock, hierarchy, commands } = createHarness();
-    const folderId = hierarchy.createFolder("Limbs", null);
-    addBlock({ name: "Arm", parentId: folderId });
-    commands.length = 0;
-
-    hierarchy.remove(folderId!, { withChildren: true });
-
-    assert.deepEqual(hierarchy.nodes(), []);
-    assert.equal(blocks.size, 0);
-    assert.deepEqual(commands, [{ action: "node-removed", id: folderId }]);
-  });
-
-  test("without children, promotes them to the removed node's parent in place", () => {
-    const { document, blocks, scene, addBlock, hierarchy } = createHarness();
-    const root = addBlock({ name: "Root", transform: at(1) });
-    const middle = addBlock({ name: "Middle", parentId: root.uuid, transform: at(2) });
-    const leaf = addBlock({ name: "Leaf", parentId: middle.uuid, transform: at(4) });
-
-    hierarchy.remove(middle.uuid, { withChildren: false });
-    scene.updateMatrixWorld(true);
-
-    assert.equal(blocks.get(middle.uuid), undefined);
-    assert.equal(document.tree.transformParentOf(leaf.uuid), root.uuid);
-    assert.deepStrictEqual(leaf.worldPosition, new THREE.Vector3(7, 0, 0));
-  });
-
-  test("without children, puts them where the removed node stood", () => {
-    const { addBlock, hierarchy } = createHarness();
-    addBlock({ name: "First" });
-    const group = hierarchy.createFolder("Group", null);
-    addBlock({ name: "Last" });
-    addBlock({ name: "A", parentId: group });
-    addBlock({ name: "B", parentId: group });
-
-    hierarchy.remove(group!, { withChildren: false });
-
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["First", "A", "B", "Last"]);
-  });
-
-  test("without children, promotes the blocks a child folder carries", () => {
-    const { document, addBlock, hierarchy } = createHarness();
-    const body = addBlock({ name: "Body" });
-    const folderId = hierarchy.createFolder("Limbs", body.uuid);
-    const arm = addBlock({ name: "Arm", parentId: folderId });
-
-    hierarchy.remove(body.uuid, { withChildren: false });
-
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [["Limbs", ["Arm"]]]);
-    assert.equal(document.tree.transformParentOf(arm.uuid), null);
-    assert.equal(arm.node.parent?.type, "Scene");
-  });
-
-  test("without children, removing a folder keeps its blocks at the folder's parent", () => {
-    const { addBlock, hierarchy } = createHarness();
-    const folderId = hierarchy.createFolder("Limbs", null);
-    addBlock({ name: "Arm", parentId: folderId });
-
-    hierarchy.remove(folderId!, { withChildren: false });
-
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["Arm"]);
   });
 });

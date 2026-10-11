@@ -9,26 +9,30 @@ import {
 } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { test, expect } from "./fixtures.ts";
+import { test, expect } from "../fixtures.ts";
 import {
   addNode,
+  deleteBlock,
+  renameRow,
+  rowMenu
+} from "../support/hierarchy.ts";
+import {
   dragMaterialSlider,
-  hierarchyAction,
+  holdMaterialSlider,
   materialRow,
   materialTab,
   newMaterial,
   openMaterial,
-  openMaterialTab,
-  rowMenu
-} from "./support/hierarchy.ts";
+  openMaterialTab
+} from "../support/material.ts";
 import {
   blockSummary,
   blockSurface,
-  gizmoHandlePoints,
   materialOutline,
   outline
-} from "./support/scene.ts";
-import { historyButton } from "./support/history.ts";
+} from "../support/scene.ts";
+import { gizmoHandlePoints } from "../support/gizmo.ts";
+import { historyButton } from "../support/history.ts";
 
 test("the hierarchy and transforms survive a reload", async({ page, peer }) => {
   test.slow();
@@ -62,10 +66,7 @@ test("a peer sees edits, selections and appears among the collaborators", async(
     await addNode(page, "Block", "Arm");
     await expect(treeRow(peer, "Arm")).toBeVisible();
 
-    await treeRow(peer, "Arm").dblclick();
-    const rename = peer.getByRole("textbox", { name: "Rename" });
-    await rename.fill("Leg");
-    await rename.press("Enter");
+    await renameRow(peer, "Arm", "Leg");
     await expect(treeRow(page, "Leg")).toBeVisible();
   });
 
@@ -129,27 +130,35 @@ test("a peer sees a material slider and its blocks follow a drag live", async({ 
   await materialRow(peer, "Material").click();
   const peerSlider = materialTab(peer).getByRole("slider", { name: "Metalness" });
 
-  const box = (await materialTab(page).getByRole("slider", { name: "Metalness" }).boundingBox())!;
-  const y = box.y + (box.height / 2);
-  await page.mouse.move(box.x + 1, y);
-  await page.mouse.down();
-  await page.mouse.move(box.x + (box.width * 0.8), y, { steps: 4 });
+  await holdMaterialSlider(page, "Metalness", 0.8);
 
   await expect.poll(async() => (await blockSurface(peer, "Block"))?.metalness ?? 0)
     .toBeGreaterThan(0.5);
   await expect.poll(async() => Number(await peerSlider.inputValue())).toBeGreaterThan(0.5);
   expect((await blockSurface(peer, "Block", "document"))?.metalness).toBe(0);
 
-  await page.mouse.up();
-  const seen: number[] = [];
-  const until = Date.now() + 1500;
-  while (Date.now() < until) {
-    seen.push(Number(await peerSlider.inputValue()));
-  }
+  const lowest = await peerSlider.evaluateHandle((slider: HTMLInputElement) => {
+    const seen = { min: Number(slider.value), watching: true };
+    function sample() {
+      seen.min = Math.min(seen.min, Number(slider.value));
+      if (seen.watching) {
+        requestAnimationFrame(sample);
+      }
+    }
+    sample();
 
-  expect(Math.min(...seen)).toBeGreaterThan(0.5);
+    return seen;
+  });
+  await page.mouse.up();
   await expect.poll(async() => (await blockSurface(peer, "Block", "document"))?.metalness ?? 0)
     .toBeGreaterThan(0.5);
+  await nextFrames(peer);
+
+  expect(await lowest.evaluate((seen) => {
+    seen.watching = false;
+
+    return seen.min;
+  })).toBeGreaterThan(0.5);
   expect(await blockSurface(peer, "Block")).toEqual(await blockSurface(peer, "Block", "document"));
 });
 
@@ -186,9 +195,7 @@ test("a row menu action on a row a peer deleted does nothing", async({ page, pee
   await expect(treeRow(peer, "Arm")).toBeVisible();
   const menu = await rowMenu(page, "Arm");
 
-  await treeRow(peer, "Arm").click();
-  await hierarchyAction(peer, "Delete").click();
-  await dialog(peer, "Delete Block").getByRole("button", { name: "Delete" }).click();
+  await deleteBlock(peer, "Arm");
   await expect(treeRow(page, "Arm")).toHaveCount(0);
 
   await menu.getByRole("menuitem", { name: "Delete" }).click();
@@ -200,16 +207,10 @@ test("a row menu action on a row a peer deleted does nothing", async({ page, pee
 
 test("a peer renaming the block again refuses this rename, listed with their name", async({ page, peer }) => {
   test.slow();
-  await treeRow(page, "Block").dblclick();
-  const rename = page.getByRole("textbox", { name: "Rename" });
-  await rename.fill("Torso");
-  await rename.press("Enter");
+  await renameRow(page, "Block", "Torso");
   await expect(treeRow(peer, "Torso")).toBeVisible();
 
-  await treeRow(peer, "Torso").dblclick();
-  const peerRename = peer.getByRole("textbox", { name: "Rename" });
-  await peerRename.fill("Chest");
-  await peerRename.press("Enter");
+  await renameRow(peer, "Torso", "Chest");
   await expect(treeRow(page, "Chest")).toBeVisible();
 
   await expect(historyButton(page, "Undo").getByRole("button")).toBeDisabled();

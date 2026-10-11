@@ -4,18 +4,8 @@ import { TICKS_PER_SECOND } from "@jolly-pixel/asset.voxel-animation/client";
 // Import Internal Dependencies
 import type { AnimationSession } from "./AnimationSession.ts";
 
-export interface PlaybackClock {
-  /**
-   * Milliseconds.
-   */
-  now(): number;
-  frame(callback: () => void): number;
-  cancel(handle: number): void;
-}
-
 export interface AnimationPlayerOptions {
   session: Pick<AnimationSession, "focused" | "playback" | "seek" | "pause" | "subscribe">;
-  clock?: PlaybackClock;
 }
 
 interface Run {
@@ -24,15 +14,8 @@ interface Run {
   handle: number;
 }
 
-const kBrowserClock: PlaybackClock = {
-  now: () => performance.now(),
-  frame: (callback) => requestAnimationFrame(callback),
-  cancel: (handle) => cancelAnimationFrame(handle)
-};
-
 export class AnimationPlayer {
   #session: AnimationPlayerOptions["session"];
-  #clock: PlaybackClock;
   #run: Run | null = null;
   #written: number | null = null;
   #unsubscribe: () => void;
@@ -41,7 +24,6 @@ export class AnimationPlayer {
     options: AnimationPlayerOptions
   ) {
     this.#session = options.session;
-    this.#clock = options.clock ?? kBrowserClock;
     this.#unsubscribe = this.#session.subscribe("playhead", this.#sync);
   }
 
@@ -67,15 +49,15 @@ export class AnimationPlayer {
   ): void {
     this.#stop();
     this.#run = {
-      startedAt: this.#clock.now(),
+      startedAt: performance.now(),
       startTick: tick,
-      handle: this.#clock.frame(this.#advance)
+      handle: requestAnimationFrame(this.#advance)
     };
   }
 
   #stop(): void {
     if (this.#run !== null) {
-      this.#clock.cancel(this.#run.handle);
+      cancelAnimationFrame(this.#run.handle);
       this.#run = null;
     }
     this.#written = null;
@@ -94,7 +76,7 @@ export class AnimationPlayer {
     }
 
     let elapsed = run.startTick +
-      ((this.#clock.now() - run.startedAt) * TICKS_PER_SECOND / 1000);
+      ((performance.now() - run.startedAt) * TICKS_PER_SECOND / 1000);
     if (this.#session.playback.loop && elapsed >= clip.length) {
       const passes = clip.length * Math.floor(elapsed / clip.length);
       run.startTick -= passes;
@@ -108,6 +90,6 @@ export class AnimationPlayer {
 
       return;
     }
-    run.handle = this.#clock.frame(this.#advance);
+    run.handle = requestAnimationFrame(this.#advance);
   };
 }
