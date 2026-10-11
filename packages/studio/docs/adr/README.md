@@ -27,3 +27,4 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0019](./0019-the-active-editor-namespaces-join-the-studio-console.md) | The active editor's namespaces join the studio console |
 | [0020](./0020-the-session-lives-in-an-httponly-cookie.md) | The session lives in an HttpOnly cookie |
 | [0021](./0021-share-links-admit-guests-to-one-closure.md) | Share links admit guests to one asset's closure |
+| [0022](./0022-a-refused-session-renews-in-place.md) | A refused session renews in place |

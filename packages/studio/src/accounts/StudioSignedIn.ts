@@ -6,11 +6,13 @@ import type {
 
 // Import Internal Dependencies
 import type { StudioShareLinks } from "../shares/StudioShareLinks.ts";
+import type { SessionRenewal } from "./SessionRenewal.ts";
 
 export interface StudioSignedIn {
   account: Account;
   roster: AccountsRoster;
   shares: StudioShareLinks;
+  renewal: SessionRenewal;
   replaceAvatar(
     image: Blob
   ): Promise<Account>;

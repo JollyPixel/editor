@@ -19,6 +19,7 @@ import {
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
+import { SessionRenewal } from "./accounts/SessionRenewal.ts";
 import type { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
 import { ShareLinksClient } from "./shares/ShareLinksClient.ts";
 import { StudioShareLinks } from "./shares/StudioShareLinks.ts";
@@ -60,6 +61,12 @@ async function connectOnline(): Promise<StudioConnection> {
     profile: toPeerProfileMetadata(identity)
   });
   const roster = AccountsRoster.join(client);
+  const renewal = new SessionRenewal({
+    accountId: account.id,
+    currentAccount: () => accounts.me(),
+    signIn: () => signIn(accounts),
+    reload: () => location.reload()
+  });
   const signedIn: StudioSignedIn = {
     account,
     roster,
@@ -69,11 +76,13 @@ async function connectOnline(): Promise<StudioConnection> {
       }),
       roster
     ),
+    renewal,
     replaceAvatar: (image) => accounts.replaceAvatar(image),
     signOut: () => signOut(accounts)
   };
+  renewal.onRenewed(() => client.reconnect());
   client.on("unauthorized", () => {
-    void signedIn.signOut();
+    void renewal.renew();
   });
 
   return {

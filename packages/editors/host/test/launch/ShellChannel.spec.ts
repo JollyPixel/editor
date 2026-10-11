@@ -3,6 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+import type { ClientEventMap } from "@jolly-pixel/network/client";
 import { peerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -15,6 +17,7 @@ import {
   parseLaunchMessage,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE,
+  sessionRenewedMessage,
   ShellChannel,
   type LaunchIdentity
 } from "#src/launch/ShellChannel.ts";
@@ -51,11 +54,13 @@ describe("ShellChannel message guards", () => {
     }
   });
 
-  test("accepts the toggle-console command without a target", () => {
-    assert.equal(isShellCommand({
-      type: SHELL_MESSAGE_TYPE,
-      command: "toggle-console"
-    }), true);
+  test("accepts the commands without a target", () => {
+    for (const command of ["toggle-console", "session-refused"]) {
+      assert.equal(isShellCommand({
+        type: SHELL_MESSAGE_TYPE,
+        command
+      }), true);
+    }
   });
 
   test("accepts only ready messages", () => {
@@ -210,5 +215,58 @@ describe("ShellChannel.onAppearance", () => {
     post(parent, kShellOrigin, light);
 
     assert.deepEqual(received, [light]);
+  });
+});
+
+describe("ShellChannel.renewWhenRefused", () => {
+  class RefusableClient extends Emitter<ClientEventMap> {
+    reconnects = 0;
+
+    reconnect(): void {
+      this.reconnects++;
+    }
+  }
+
+  test("reports a refusal to the shell and reconnects once the shell renews the session", () => {
+    const posted: unknown[] = [];
+    const parent = Object.assign(new MessageChannel().port1, {
+      postMessage: (message: unknown) => {
+        posted.push(message);
+      }
+    });
+    const shell = new ShellChannel({
+      port: parent,
+      origin: kShellOrigin
+    });
+    const client = new RefusableClient();
+    shell.renewWhenRefused(client);
+
+    function renew(
+      source: MessageEventSource,
+      origin: string
+    ): void {
+      window.dispatchEvent(new MessageEvent("message", {
+        source,
+        origin,
+        data: sessionRenewedMessage()
+      }));
+    }
+
+    renew(parent, kShellOrigin);
+    client.emit("unauthorized");
+    renew(window, kShellOrigin);
+    renew(parent, "http://elsewhere.test");
+    assert.equal(client.reconnects, 0);
+
+    renew(parent, kShellOrigin);
+    renew(parent, kShellOrigin);
+
+    assert.equal(client.reconnects, 1);
+    assert.deepEqual(posted, [
+      {
+        type: SHELL_MESSAGE_TYPE,
+        command: "session-refused"
+      }
+    ]);
   });
 });

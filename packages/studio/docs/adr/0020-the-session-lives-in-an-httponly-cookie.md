@@ -29,5 +29,5 @@ never handle a credential.
   cookie is named after the project root.
 - The cookie is the only carrier of the token: no route returns it, and neither the routes nor
   the socket accept it as a bearer or handshake credential.
-- A refused socket signs out and reloads to the sign-in dialog; frames do not learn of their own
-  refusal yet.
+- A refused socket renews the session in place, for the shell and for each frame
+  ([ADR-0022](./0022-a-refused-session-renews-in-place.md)).

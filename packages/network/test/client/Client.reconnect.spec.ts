@@ -193,6 +193,59 @@ describe("Client — reconnect", () => {
     assert.strictEqual(sockets.length, 1);
   });
 
+  test("reconnect after a refusal rejoins joined rooms with their resume payload", () => {
+    const { client, sockets } = createReconnectingClient();
+    sockets[0].open();
+    const room = client.room("pixel-draw");
+    room.resumeWith(() => {
+      return { clientId: "A", version: 3 };
+    });
+    room.join();
+    admit(sockets[0], "A");
+
+    sockets[0].serverClose({ code: UNAUTHORIZED_CLOSE_CODE, reason: "unauthorized" });
+    room.updatePresence({ cursor: 1 });
+    client.reconnect();
+    sockets[1].open();
+
+    assert.strictEqual(client.ready, true);
+    assert.deepEqual(sentOf(sockets[1]), [
+      {
+        room: "pixel-draw",
+        kind: "join",
+        profile: {},
+        presence: { cursor: 1 },
+        resume: { clientId: "A", version: 3 }
+      }
+    ]);
+  });
+
+  test("reconnect after a refusal of the first socket sends the join once", () => {
+    const { client, sockets } = createReconnectingClient();
+    client.room("pixel-draw").join();
+
+    sockets[0].serverClose({ code: UNAUTHORIZED_CLOSE_CODE, reason: "unauthorized" });
+    client.reconnect();
+    sockets[1].open();
+
+    assert.deepEqual(sentOf(sockets[1]), [
+      { room: "pixel-draw", kind: "join", profile: {}, presence: {} }
+    ]);
+  });
+
+  test("reconnect does nothing unless the server refused the session", () => {
+    const { client, sockets } = createReconnectingClient();
+    sockets[0].open();
+
+    client.reconnect();
+    assert.strictEqual(sockets.length, 1);
+
+    sockets[0].serverClose({ code: UNAUTHORIZED_CLOSE_CODE, reason: "unauthorized" });
+    client.destroy();
+    client.reconnect();
+    assert.strictEqual(sockets.length, 1);
+  });
+
   test("destroy during the gap cancels the next attempt", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { logger } = captureLogger();

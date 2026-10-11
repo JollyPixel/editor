@@ -17,6 +17,7 @@ export const READY_MESSAGE_TYPE = "jolly-ready";
 export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
 export const SHELL_MESSAGE_TYPE = "jolly-shell";
 export const APPEARANCE_MESSAGE_TYPE = "jolly-appearance";
+export const SESSION_RENEWED_MESSAGE_TYPE = "jolly-session-renewed";
 const kAppearanceSchema = z.object({
   theme: z.enum(THEME_MODES),
   density: z.enum(DENSITIES)
@@ -49,11 +50,18 @@ const kShellCommandSchema = z.discriminatedUnion("command", [
   z.object({
     type: z.literal(SHELL_MESSAGE_TYPE),
     command: z.literal("toggle-console")
+  }),
+  z.object({
+    type: z.literal(SHELL_MESSAGE_TYPE),
+    command: z.literal("session-refused")
   })
 ]);
 const kAppearanceMessageSchema = z.object({
   type: z.literal(APPEARANCE_MESSAGE_TYPE),
   appearance: kAppearanceSchema
+});
+const kSessionRenewedMessageSchema = z.object({
+  type: z.literal(SESSION_RENEWED_MESSAGE_TYPE)
 });
 
 export interface ShellReadyMessage {
@@ -106,13 +114,31 @@ export interface ShellToggleConsoleCommand {
   command: "toggle-console";
 }
 
+export interface ShellSessionRefusedCommand {
+  type: typeof SHELL_MESSAGE_TYPE;
+  command: "session-refused";
+}
+
 export type ShellCommand =
   | ShellOpenAssetCommand
-  | ShellToggleConsoleCommand;
+  | ShellToggleConsoleCommand
+  | ShellSessionRefusedCommand;
 
 export interface AppearanceMessage {
   type: typeof APPEARANCE_MESSAGE_TYPE;
   appearance: Appearance;
+}
+
+export interface SessionRenewedMessage {
+  type: typeof SESSION_RENEWED_MESSAGE_TYPE;
+}
+
+export interface RenewableClient {
+  on(
+    event: "unauthorized",
+    listener: () => void
+  ): unknown;
+  reconnect(): void;
 }
 
 export interface ShellPort {
@@ -186,19 +212,45 @@ export class ShellChannel {
     });
   }
 
+  renewWhenRefused(
+    client: RenewableClient
+  ): void {
+    client.on("unauthorized", () => {
+      const renewal = new AbortController();
+      window.addEventListener("message", (event) => {
+        if (
+          this.#isFromShell(event) &&
+          isSessionRenewedMessage(event.data)
+        ) {
+          renewal.abort();
+          client.reconnect();
+        }
+      }, { signal: renewal.signal });
+      this.#post({
+        type: SHELL_MESSAGE_TYPE,
+        command: "session-refused"
+      });
+    });
+  }
+
   onAppearance(
     listener: (appearance: Appearance) => void,
     signal: AbortSignal
   ): void {
     window.addEventListener("message", (event) => {
       if (
-        event.source === this.#port &&
-        event.origin === this.origin &&
+        this.#isFromShell(event) &&
         isAppearanceMessage(event.data)
       ) {
         listener(event.data.appearance);
       }
     }, { signal });
+  }
+
+  #isFromShell(
+    event: MessageEvent
+  ): boolean {
+    return event.source === this.#port && event.origin === this.origin;
   }
 
   #post(
@@ -229,6 +281,12 @@ export function appearanceMessage(
   };
 }
 
+export function sessionRenewedMessage(): SessionRenewedMessage {
+  return {
+    type: SESSION_RENEWED_MESSAGE_TYPE
+  };
+}
+
 export function isReadyMessage(
   data: unknown
 ): data is ShellReadyMessage {
@@ -253,4 +311,10 @@ function isAppearanceMessage(
   data: unknown
 ): data is AppearanceMessage {
   return kAppearanceMessageSchema.safeParse(data).success;
+}
+
+function isSessionRenewedMessage(
+  data: unknown
+): data is SessionRenewedMessage {
+  return kSessionRenewedMessageSchema.safeParse(data).success;
 }

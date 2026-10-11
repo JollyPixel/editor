@@ -111,14 +111,16 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
         storageKey: IDENTITY_STORAGE_KEY
       })
     );
+    const client = new network.Client({
+      profile: toPeerProfileMetadata(identity)
+    });
+    options.launch.shell?.renewWhenRefused(client);
 
     return EditorSession.connect({
       ...options,
       logger,
       identity,
-      client: new network.Client({
-        profile: toPeerProfileMetadata(identity)
-      }),
+      client,
       catalogTimeoutMs: CATALOG_TIMEOUT_MS
     });
   }
