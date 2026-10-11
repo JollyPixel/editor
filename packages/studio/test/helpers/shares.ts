@@ -12,6 +12,8 @@ import {
   WEBSOCKET_PROTOCOL,
   type AuthenticationRequest
 } from "@jolly-pixel/network";
+import type { ClientSocket } from "@jolly-pixel/network/client";
+import type { Window } from "happy-dom";
 
 // Import Internal Dependencies
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
@@ -77,11 +79,39 @@ export function guestUpgrade(
     clientId: "guest",
     url: "/ws-sync",
     headers: {
-      "sec-websocket-protocol": [
-        WEBSOCKET_PROTOCOL,
-        WEBSOCKET_AUTH_PROTOCOL_PREFIX + Buffer.from(token).toString("base64url")
-      ].join(", ")
+      "sec-websocket-protocol": guestProtocols(token).join(", ")
     },
     defaultRole: "spectator"
+  };
+}
+
+export function guestProtocols(
+  token: string
+): string[] {
+  return [
+    WEBSOCKET_PROTOCOL,
+    WEBSOCKET_AUTH_PROTOCOL_PREFIX + Buffer.from(token).toString("base64url")
+  ];
+}
+
+export function guestSocket(
+  page: Window,
+  url: string,
+  token: string
+): ClientSocket {
+  const socket = new page.WebSocket(url, guestProtocols(token));
+
+  return {
+    send: (data) => socket.send(data),
+    close: () => socket.close(),
+    addEventListener: (type, listener) => {
+      socket.addEventListener(type, (event) => {
+        listener({
+          data: Reflect.get(event, "data"),
+          code: Reflect.get(event, "code"),
+          reason: Reflect.get(event, "reason")
+        });
+      });
+    }
   };
 }

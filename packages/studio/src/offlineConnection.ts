@@ -27,7 +27,6 @@ export async function connectOffline(): Promise<StudioConnection> {
   return {
     share: await CatalogShare.open(workspace.connect().client),
     editorQuery: offlineWorkspaceQuery(kWorkspace),
-    identity: null,
     signedIn: null
   };
 }

@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
-import { ADMIN_ROLE } from "@jolly-pixel/accounts";
 import { mountConsole } from "@jolly-pixel/editor.host";
 import { showConfirm } from "@jolly-pixel/ui";
 
@@ -44,7 +43,6 @@ async function boot(): Promise<void> {
   await studio.attach({
     console: editorConsole,
     share: connection.share,
-    identity: connection.identity,
     signedIn: connection.signedIn,
     editors: createEditorRegistry(manifest, connection.editorQuery),
     confirmEvict: (tab) => showConfirm({
@@ -54,7 +52,7 @@ async function boot(): Promise<void> {
     })
   });
 
-  if (connection.signedIn?.account.role === ADMIN_ROLE) {
+  if (connection.signedIn?.isAdmin) {
     usersConsole(
       editorConsole.commands,
       connection.signedIn.roster

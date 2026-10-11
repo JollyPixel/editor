@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   AccountsClient,
-  AccountsRoster,
   ACCOUNTS_URL_PATH,
   type Account
 } from "@jolly-pixel/accounts";
@@ -12,24 +11,16 @@ import {
   withOfflineFallback
 } from "@jolly-pixel/editor.host";
 import { Client } from "@jolly-pixel/network/client";
-import {
-  peerIdentity,
-  type PeerIdentity
-} from "@jolly-pixel/ui";
-import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { SessionRenewal } from "./accounts/SessionRenewal.ts";
-import type { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
+import { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
 import { ShareLinksClient } from "./shares/ShareLinksClient.ts";
-import { StudioShareLinks } from "./shares/StudioShareLinks.ts";
 import { SHARES_URL_PATH } from "./shares/routes.ts";
 import "./shell/account/SignInDialog.ts";
 
 export interface StudioConnection {
   share: CatalogShare;
   editorQuery: Readonly<Record<string, string>>;
-  identity: PeerIdentity | null;
   signedIn: StudioSignedIn | null;
 }
 
@@ -51,46 +42,21 @@ async function connectOnline(): Promise<StudioConnection> {
   const accounts = new AccountsClient({
     url: new URL(`.${ACCOUNTS_URL_PATH}`, document.baseURI)
   });
-  const account = await accounts.me() ?? await signIn(accounts);
-  const identity = peerIdentity(
-    account.username,
-    account.id,
-    account.avatar
-  );
-  const client = new Client({
-    profile: toPeerProfileMetadata(identity)
-  });
-  const roster = AccountsRoster.join(client);
-  const renewal = new SessionRenewal({
-    accountId: account.id,
-    currentAccount: () => accounts.me(),
+  const signedIn = await StudioSignedIn.open({
+    accounts,
     signIn: () => signIn(accounts),
+    shareLinks: new ShareLinksClient({
+      url: new URL(`.${SHARES_URL_PATH}`, document.baseURI)
+    }),
+    connect: (profile) => new Client({ profile }),
     reload: () => location.reload()
-  });
-  const signedIn: StudioSignedIn = {
-    account,
-    roster,
-    shares: new StudioShareLinks(
-      new ShareLinksClient({
-        url: new URL(`.${SHARES_URL_PATH}`, document.baseURI)
-      }),
-      roster
-    ),
-    renewal,
-    replaceAvatar: (image) => accounts.replaceAvatar(image),
-    signOut: () => signOut(accounts)
-  };
-  renewal.onRenewed(() => client.reconnect());
-  client.on("unauthorized", () => {
-    void renewal.renew();
   });
 
   return {
-    share: await CatalogShare.open(client, {
+    share: await CatalogShare.open(signedIn.client, {
       timeoutMs: CATALOG_TIMEOUT_MS
     }),
     editorQuery: {},
-    identity,
     signedIn
   };
 }
@@ -111,16 +77,5 @@ async function signIn(
   }
   finally {
     dialog.remove();
-  }
-}
-
-async function signOut(
-  accounts: AccountsClient
-): Promise<void> {
-  try {
-    await accounts.logout();
-  }
-  finally {
-    location.reload();
   }
 }

@@ -9,23 +9,26 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import type { Account } from "@jolly-pixel/accounts";
 import {
   FrameConsoles,
   type CatalogShare,
-  type EditorConsole,
-  type LaunchIdentity
+  type EditorConsole
 } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
-  type LogEntry,
-  type PeerIdentity
+  type LogEntry
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
-import type { StudioSignedIn } from "../accounts/StudioSignedIn.ts";
+import {
+  SIGNED_IN_CHANGE,
+  type StudioSignedIn
+} from "../accounts/StudioSignedIn.ts";
 import { StudioSession } from "./StudioSession.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
+import { StudioPreferences } from "../preferences/StudioPreferences.ts";
 import type {
   EditorTab,
   EditorTabsOptions
@@ -35,7 +38,6 @@ import "./account/AccountBadge.ts";
 
 export interface StudioOptions {
   share: CatalogShare;
-  identity: PeerIdentity | null;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
   editors: EditorRegistry;
   console?: EditorConsole;
@@ -56,6 +58,9 @@ export class Studio extends LitElement {
   @state()
   declare _signedIn: StudioSignedIn | null;
 
+  @state()
+  declare _account: Account | null;
+
   @query("jolly-tabs")
   declare _strip: HTMLElementTagNameMap["jolly-tabs"] | null;
 
@@ -66,9 +71,9 @@ export class Studio extends LitElement {
   declare _home: HTMLElement | null;
 
   #session: StudioSession | null = null;
+  #preferences = new StudioPreferences();
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
-  #stopRenewal: (() => void) | null = null;
 
   constructor() {
     super();
@@ -76,6 +81,7 @@ export class Studio extends LitElement {
     this._openTabs = [];
     this._log = [];
     this._signedIn = null;
+    this._account = null;
   }
 
   async attach(
@@ -92,9 +98,11 @@ export class Studio extends LitElement {
 
     this.#session?.dispose();
     const { catalog } = options.share;
+    const signedIn = options.signedIn ?? null;
     const session = new StudioSession({
       catalog,
       editors: options.editors,
+      preferences: this.#preferences,
       tabs: {
         strip: this._strip,
         home: this._home,
@@ -103,29 +111,22 @@ export class Studio extends LitElement {
       frames: {
         container: this._frames,
         share: options.share,
-        identity: () => this.#launchIdentity(options.identity),
+        identity: () => signedIn?.identity ?? null,
         consoles: options.console === undefined ?
           undefined :
           new FrameConsoles({ commands: options.console.commands })
       },
       onTabsChange: this.#syncOpenTabs,
-      onToggleConsole: () => {
-        options.console?.element.toggle();
-      },
-      onSessionRefused: () => {
-        void options.signedIn?.renewal.renew();
-      }
+      console: options.console?.element,
+      renewal: signedIn?.renewal
     });
     this.#session = session;
-    this.#stopRenewal?.();
-    this.#stopRenewal = options.signedIn?.renewal.onRenewed(
-      () => session.notifySessionRenewed()
-    ) ?? null;
-    this._signedIn = options.signedIn ?? null;
+    this.#follow(signedIn);
     this._assets = {
       catalog,
       kinds: session.kinds,
-      shares: options.signedIn?.shares ?? null
+      shares: signedIn?.shares ?? null,
+      preferences: this.#preferences
     };
     await session.restoreTabs();
     this.#syncOpenTabs();
@@ -157,8 +158,7 @@ export class Studio extends LitElement {
     super.disconnectedCallback();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#stopRenewal?.();
-    this.#stopRenewal = null;
+    this.#follow(null);
     this.#session?.dispose();
     this.#session = null;
   }
@@ -173,8 +173,8 @@ export class Studio extends LitElement {
         <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-account
-            .account=${this._signedIn?.account ?? null}
-            .avatar=${this._signedIn?.account.avatar ?? ""}
+            .account=${this._account}
+            .avatar=${this._account?.avatar ?? ""}
             @sign-out=${this.#signOut}
             @avatar-change=${this.#replaceAvatar}
           ></studio-account>
@@ -190,6 +190,8 @@ export class Studio extends LitElement {
             .openTabs=${this._openTabs}
             @asset-open=${this.#onAssetOpen}
             .signedIn=${this._signedIn}
+            .account=${this._account}
+            .preferences=${this.#preferences}
             @asset-error=${this.#logError}
             @users-error=${this.#logError}
           ></studio-home>
@@ -199,6 +201,19 @@ export class Studio extends LitElement {
     `;
   }
 
+  #follow(
+    signedIn: StudioSignedIn | null
+  ): void {
+    this._signedIn?.removeEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
+    this._signedIn = signedIn;
+    signedIn?.addEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
+    this.#syncAccount();
+  }
+
+  readonly #syncAccount = (): void => {
+    this._account = this._signedIn?.account ?? null;
+  };
+
   readonly #signOut = (): void => {
     void this._signedIn?.signOut();
   };
@@ -206,17 +221,8 @@ export class Studio extends LitElement {
   readonly #replaceAvatar = async(
     event: HTMLElementEventMap["avatar-change"]
   ): Promise<void> => {
-    const signedIn = this._signedIn;
-    if (signedIn === null) {
-      return;
-    }
-
     try {
-      const account = await signedIn.replaceAvatar(event.detail.image);
-      this._signedIn = {
-        ...signedIn,
-        account
-      };
+      await this._signedIn?.replaceAvatar(event.detail.image);
     }
     catch (error) {
       this.#queue.push(
@@ -224,19 +230,6 @@ export class Studio extends LitElement {
       );
     }
   };
-
-  #launchIdentity(
-    identity: PeerIdentity | null
-  ): LaunchIdentity | null {
-    const avatar = this._signedIn?.account.avatar;
-
-    return identity === null || avatar === undefined ?
-      identity :
-      {
-        ...identity,
-        avatar
-      };
-  }
 
   readonly #syncOpenTabs = (): void => {
     this._openTabs = this.#session?.tabs.list() ?? [];

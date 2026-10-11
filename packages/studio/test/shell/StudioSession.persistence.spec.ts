@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { TABS_STORAGE_KEY } from "../../src/shell/StudioSession.ts";
+import { TABS_STORAGE_KEY } from "../../src/preferences/StudioPreferences.ts";
 import { HOME_TAB_ID } from "../../src/tabs/EditorTabs.ts";
 import {
   CAVE_RECORD,

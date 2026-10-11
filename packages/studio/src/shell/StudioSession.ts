@@ -1,15 +1,12 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { ShellCommand } from "@jolly-pixel/editor.host";
-import {
-  LocalStorageAdapter,
-  type StorageAdapter
-} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "../catalog/AssetKindSet.ts";
 import { AssetPath } from "../catalog/AssetPath.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
+import { StudioPreferences } from "../preferences/StudioPreferences.ts";
 import {
   EditorFrames,
   type EditorFramesOptions
@@ -21,9 +18,6 @@ import {
   type EditorTabTitle
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
-
-// CONSTANTS
-export const TABS_STORAGE_KEY = "studio:tabs";
 
 export interface StudioCatalog {
   record(
@@ -39,18 +33,29 @@ export interface StudioCatalog {
   ): unknown;
 }
 
+export interface StudioSessionRenewal {
+  renew(): Promise<void>;
+  onRenewed(
+    listener: () => void
+  ): () => void;
+}
+
+export interface StudioSessionConsole {
+  toggle(): void;
+}
+
 export interface StudioSessionOptions {
   catalog: StudioCatalog;
   editors: EditorRegistry;
   tabs: Omit<EditorTabsOptions, "frames" | "onChange">;
   frames: Omit<EditorFramesOptions, "onShellCommand">;
   onTabsChange?: () => void;
-  onToggleConsole?: () => void;
-  onSessionRefused?: () => void;
+  console?: StudioSessionConsole;
+  renewal?: StudioSessionRenewal;
   /**
-   * @default new LocalStorageAdapter()
+   * @default new StudioPreferences()
    */
-  storage?: StorageAdapter;
+  preferences?: StudioPreferences;
 }
 
 export class StudioSession {
@@ -60,10 +65,11 @@ export class StudioSession {
   #catalog: StudioCatalog;
   #frames: EditorFrames;
   #editors: EditorRegistry;
-  #storage: StorageAdapter;
+  #preferences: StudioPreferences;
   #onTabsChange: (() => void) | undefined;
-  #onToggleConsole: (() => void) | undefined;
-  #onSessionRefused: (() => void) | undefined;
+  #console: StudioSessionConsole | undefined;
+  #renewal: StudioSessionRenewal | undefined;
+  #stopRenewal: (() => void) | undefined;
   #restoring = false;
 
   constructor(
@@ -71,10 +77,10 @@ export class StudioSession {
   ) {
     this.#catalog = options.catalog;
     this.#editors = options.editors;
-    this.#storage = options.storage ?? new LocalStorageAdapter();
+    this.#preferences = options.preferences ?? new StudioPreferences();
     this.#onTabsChange = options.onTabsChange;
-    this.#onToggleConsole = options.onToggleConsole;
-    this.#onSessionRefused = options.onSessionRefused;
+    this.#console = options.console;
+    this.#renewal = options.renewal;
     this.kinds = options.editors.kindSet();
     this.#frames = new EditorFrames({
       ...options.frames,
@@ -86,6 +92,9 @@ export class StudioSession {
       onChange: this.#onChange
     });
     this.#catalog.on("change", this.#syncTabs);
+    this.#stopRenewal = this.#renewal?.onRenewed(
+      () => this.#frames.notifySessionRenewed()
+    );
   }
 
   async openAsset(
@@ -117,9 +126,7 @@ export class StudioSession {
   }
 
   async restoreTabs(): Promise<void> {
-    const saved = SavedTabs.parse(
-      this.#storage.get(TABS_STORAGE_KEY)
-    );
+    const saved = this.#preferences.tabs;
 
     this.#restoring = true;
     try {
@@ -156,12 +163,9 @@ export class StudioSession {
     }
   }
 
-  notifySessionRenewed(): void {
-    this.#frames.notifySessionRenewed();
-  }
-
   dispose(): void {
     this.#catalog.off("change", this.#syncTabs);
+    this.#stopRenewal?.();
     this.tabs.dispose();
     this.#frames.dispose();
   }
@@ -185,10 +189,10 @@ export class StudioSession {
         void this.openAsset(command.target);
         break;
       case "toggle-console":
-        this.#onToggleConsole?.();
+        this.#console?.toggle();
         break;
       case "session-refused":
-        this.#onSessionRefused?.();
+        void this.#renewal?.renew();
         break;
       default: {
         const unhandled: never = command;
@@ -209,13 +213,9 @@ export class StudioSession {
       return;
     }
 
-    const saved = new SavedTabs(
+    this.#preferences.tabs = new SavedTabs(
       this.tabs.ids(),
       this.tabs.active
-    );
-    this.#storage.set(
-      TABS_STORAGE_KEY,
-      JSON.stringify(saved)
     );
   };
 

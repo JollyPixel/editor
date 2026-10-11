@@ -9,9 +9,11 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import type { Account } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
+import { StudioPreferences } from "../../preferences/StudioPreferences.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
@@ -33,11 +35,19 @@ export class StudioHome extends LitElement {
   @property({ attribute: false })
   declare signedIn: StudioSignedIn | null;
 
+  @property({ attribute: false })
+  declare account: Account | null;
+
+  @property({ attribute: false })
+  declare preferences: StudioPreferences;
+
   constructor() {
     super();
     this.assets = null;
     this.openTabs = [];
     this.signedIn = null;
+    this.account = null;
+    this.preferences = new StudioPreferences();
   }
 
   protected override createRenderRoot(): HTMLElement {
@@ -46,7 +56,10 @@ export class StudioHome extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      <jolly-dock-layout storage-key=${HOME_LAYOUT_STORAGE_KEY}>
+      <jolly-dock-layout
+        storage-key=${HOME_LAYOUT_STORAGE_KEY}
+        .storage=${this.preferences.storage}
+      >
         <jolly-dock
           id="asset-dock"
           key="left"
@@ -75,7 +88,7 @@ export class StudioHome extends LitElement {
             <jolly-pane key="users" heading="Users" locked>
               <studio-users
                 .roster=${this.signedIn.roster}
-                .self=${this.signedIn.account}
+                .self=${this.account}
               ></studio-users>
             </jolly-pane>
             ${this.assets === null ? nothing : html`
