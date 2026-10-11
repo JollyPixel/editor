@@ -612,9 +612,6 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
-      '@jolly-pixel/asset-source':
-        specifier: workspace:*
-        version: link:../../asset-source
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../../e2e
@@ -624,9 +621,6 @@ importers:
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
-      '@jolly-pixel/event-store':
-        specifier: workspace:*
-        version: link:../../event-store
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
@@ -663,9 +657,6 @@ importers:
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
-      '@jolly-pixel/event-store':
-        specifier: workspace:*
-        version: link:../../event-store
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -700,9 +691,6 @@ importers:
         specifier: 0.186.1
         version: 0.186.1
     devDependencies:
-      '@jolly-pixel/asset-source':
-        specifier: workspace:*
-        version: link:../../asset-source
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../../e2e
@@ -770,15 +758,9 @@ importers:
         specifier: 0.186.1
         version: 0.186.1
     devDependencies:
-      '@jolly-pixel/asset-source':
-        specifier: workspace:*
-        version: link:../../asset-source
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../../e2e
-      '@jolly-pixel/event-store':
-        specifier: workspace:*
-        version: link:../../event-store
 
   packages/engine:
     dependencies:

@@ -42,6 +42,7 @@ export interface ProjectFileOpenOptions {
 export class ProjectFile {
   readonly root: string;
   readonly path: string;
+  readonly inMemory: boolean;
   readonly document: Readonly<Record<string, unknown>>;
   readonly kinds: ReadonlyMap<string, Readonly<Record<string, unknown>>>;
 
@@ -99,7 +100,7 @@ export class ProjectFile {
     const { inMemory = false } = options;
 
     return inMemory ?
-      new ProjectFile(root, data) :
+      new ProjectFile(root, data, { inMemory }) :
       ProjectFile.readOrCreate(root, data);
   }
 
@@ -131,12 +132,14 @@ export class ProjectFile {
 
   constructor(
     root: string,
-    data: ProjectFileData
+    data: ProjectFileData,
+    options: ProjectFileOpenOptions = {}
   ) {
     const document = structuredClone(data);
 
     this.root = root;
     this.path = path.join(root, PROJECT_FILE_PATH);
+    this.inMemory = options.inMemory ?? false;
     this.document = document;
     this.kinds = new Map(
       Object.entries(document.kinds ?? {})

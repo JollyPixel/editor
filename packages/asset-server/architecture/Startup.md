@@ -1,7 +1,9 @@
 # Startup and ownership
 
 `createAssetWorkspace()` builds a source, event store, backend, and network
-server. Hosts with their own instances can pass them in.
+server. Hosts with their own instances can pass them in. With
+`inMemory: true`, the default source and event store live in memory and the
+workspace root is never read or written.
 
 ```mermaid
 flowchart TB

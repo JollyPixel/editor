@@ -14,20 +14,16 @@ import {
   ProjectKinds,
   type ProjectFileData
 } from "@jolly-pixel/asset-server/node";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source";
-import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MAP_KIND } from "@jolly-pixel/asset.voxel-map";
 import {
-  CookieRoles,
   PORTS,
-  prebundleWorkspace
+  RunMode
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { createDefaultSeed } from "./src/boot/defaultSeed.ts";
 
 // CONSTANTS
-const kE2EMode = "e2e";
 const kBlocksetAssetId = "blockset-default";
 const kAssetsRoot = path.join(import.meta.dirname, "assets");
 const kProjectFile: ProjectFileData = {
@@ -36,56 +32,34 @@ const kProjectFile: ProjectFileData = {
     "@jolly-pixel/asset.voxel-map": {}
   }
 };
-const kRights = {
-  member: {
-    "*": "write"
-  },
-  spectator: {
-    "*.$join": "write",
-    "*.$presence": "write",
-    "*": "read"
-  }
-} as const;
 
-const kRoles = new CookieRoles();
-
-export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
-  const e2e = mode === kE2EMode;
-  const staticHosting = mode === "static";
-  const inMemory = command === "build" || e2e;
-  const projectFile = await ProjectFile.open(kAssetsRoot, kProjectFile, {
-    inMemory
-  });
+export default defineConfig(async(env): Promise<UserConfig> => {
+  const mode = new RunMode(
+    env,
+    { port: PORTS.voxelMap }
+  );
+  const projectFile = await ProjectFile.open(
+    kAssetsRoot,
+    kProjectFile,
+    mode
+  );
   const kinds = await ProjectKinds.load(projectFile);
 
   return {
     base: "./",
-    server: e2e ?
-      {
-        port: PORTS.voxelMap,
-        strictPort: true
-      } :
-      {
-        allowedHosts: true
-      },
+    server: mode.server,
     plugins: [
-      prebundleWorkspace(),
+      mode.plugins(),
       createProjectKindsPlugin(kinds),
-      e2e ? kRoles.plugin() : null,
-      inMemory ? null : createProjectFileWatchPlugin(projectFile),
-      staticHosting ? null : createAssetWorkspacePlugin({
+      createProjectFileWatchPlugin(projectFile),
+      createAssetWorkspacePlugin({
         root: kAssetsRoot,
-        ...(e2e ?
-          {
-            source: new MemoryAssetSource(),
-            eventStore: EventStore.persistence.memory()
-          } :
-          {}),
-        launch: ({ catalog }) => catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value,
+        inMemory: mode.inMemory,
+        ...mode.access,
+        launch({ catalog }) {
+          return catalog.byKind(VOXEL_MAP_KIND).next().value?.id.value;
+        },
         handlers: kinds.handlers(),
-        auth: e2e ? kRoles : undefined,
-        rights: kRights,
-        defaultRole: "member",
         ...createDefaultSeed(kBlocksetAssetId)
       })
     ]

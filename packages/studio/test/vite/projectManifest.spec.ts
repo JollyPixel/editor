@@ -34,7 +34,7 @@ import {
   StudioProject
 } from "../../server/project/StudioProject.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
-import { projectManifestPlugin } from "../../vite/projectManifestPlugin.ts";
+import { projectManifest } from "../../vite/projectManifest.ts";
 import {
   listen,
   voxelMapEditor
@@ -77,7 +77,7 @@ function voxelMapProject(
   );
 }
 
-describe("projectManifestPlugin", () => {
+describe("projectManifest", () => {
   let root: string;
 
   before(async() => {
@@ -105,7 +105,7 @@ describe("projectManifestPlugin", () => {
       server: {
         middlewareMode: true
       },
-      plugins: [projectManifestPlugin(voxelMapProject(root))]
+      plugins: [projectManifest(voxelMapProject(root))]
     });
     await using server = await listen(vite.middlewares);
 
@@ -132,7 +132,7 @@ describe("projectManifestPlugin", () => {
       build: {
         outDir
       },
-      plugins: [projectManifestPlugin(voxelMapProject(root))]
+      plugins: [projectManifest(voxelMapProject(root))]
     });
 
     assert.deepEqual(

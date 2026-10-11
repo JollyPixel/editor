@@ -89,8 +89,8 @@ test("opens the requested model with its default block", async({ page }) => {
 
 `@jolly-pixel/e2e`, for every suite:
 
-- [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl` and the
-  `prebundleWorkspace` Vite plugin.
+- [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl`, the
+  `prebundleWorkspace` Vite plugin and `RunMode`.
 - [Pointer](./docs/pointer.md): bounding boxes, drags and multi-step presses.
 - [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
 - [Sockets](./docs/sockets.md): `recordSockets`.
@@ -111,15 +111,16 @@ the package without a workspace cycle.
 
 ## 🧭 Starting a new suite
 
-1. Add a port to `PORTS` and read it in the suite's `vite.config.ts`.
+1. Add a port to `PORTS` and pass it to
+   [`RunMode`](./docs/config.md#runmode) in the suite's `vite.config.ts`.
 2. Add `playwright.config.ts` with `defineE2EConfig`, and a `test:e2e` script
    running `playwright test`.
 3. For an editor, add `test/e2e/fixtures.ts` exporting `editorFixture` with the
    suite's seed documents, and `expect`.
 4. Write `test/e2e/<feature>.e2e.ts` against that `test`. Keep domain helpers
    (scene, painting, hierarchy) in the suite's `test/e2e/support/`.
-5. Serve the page with `vite --mode e2e` and add
-   [`prebundleWorkspace()`](./docs/config.md#prebundleworkspace-plugin)
+5. Serve the page with `vite --mode e2e` and add `mode.plugins()`, which
+   holds [`prebundleWorkspace()`](./docs/config.md#prebundleworkspace-plugin),
    to the Vite plugins. Vite never pre-bundles linked packages, so plain
    `vite` serves each file of their `dist/` as its own module: about 1,000
    requests per editor boot, which on a CI runner is enough to push tests that

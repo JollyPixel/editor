@@ -8,7 +8,7 @@ import type { Plugin } from "vite";
 import type { EditorPages } from "../server/editors/EditorPages.ts";
 import type { EditorPagesWatcher } from "../server/editors/EditorPagesWatcher.ts";
 
-export function editorPagesPlugin(
+export function editorPages(
   pages: EditorPages
 ): Plugin[] {
   let outDir: string;
@@ -18,7 +18,9 @@ export function editorPagesPlugin(
     {
       name: "studio-editor-pages",
       configureServer(server) {
-        server.middlewares.use(pages.middleware);
+        server.middlewares.use(
+          pages.middleware
+        );
         watcher = pages.watch(server);
       },
       buildEnd() {
@@ -30,7 +32,10 @@ export function editorPagesPlugin(
       name: "studio-editor-pages-copy",
       apply: "build",
       configResolved(config) {
-        outDir = path.resolve(config.root, config.build.outDir);
+        outDir = path.resolve(
+          config.root,
+          config.build.outDir
+        );
       },
       closeBundle() {
         return pages.copyTo(outDir);

@@ -57,7 +57,7 @@ flowchart TB
   project's `Accounts` on `.jollypixel/accounts.db`: the network server
   authenticates with it and registers its `accounts` room.
 - `server/api/StudioApi` is a Fastify app that owns every `/api/` path;
-  `vite/apiPlugin` hands those requests to it. Each API surface is a Fastify
+  `vite/backend` hands those requests to it. Each API surface is a Fastify
   plugin holding only its route table, such as `accountsRoutes`. A controller
   class such as `AccountsController` owns the handlers and maps domain errors
   to statuses.

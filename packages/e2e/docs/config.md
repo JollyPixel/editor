@@ -2,7 +2,8 @@
 
 `defineE2EConfig()` builds the Playwright config of a suite. `PORTS` gives each
 suite its dev server port. `prebundleWorkspace()` pre-bundles the workspace
-packages its page loads.
+packages its page loads. `RunMode` answers what a `vite.config.ts` needs to
+know about the current mode.
 
 ## `defineE2EConfig(options): PlaywrightTestConfig`
 
@@ -80,3 +81,76 @@ they import to `optimizeDeps.include`, with `force: true`. It skips
 `import type` and `export type`, but keeps `import { type X }`, which still
 loads the module. It never reads `node_modules` nor the packages it lists:
 anything those import is bundled with them.
+
+## `RunMode`
+
+Reads Vite's `command` and `mode` once, so a `vite.config.ts` asks one object
+instead of repeating `mode === "e2e"` ternaries.
+
+```ts
+// Import Third-party Dependencies
+import { defineConfig } from "vite";
+import {
+  PORTS,
+  RunMode
+} from "@jolly-pixel/e2e";
+
+export default defineConfig(async(env) => {
+  const mode = new RunMode(env, { port: PORTS.voxelMap });
+
+  return {
+    server: mode.server,
+    plugins: [
+      mode.plugins(),
+      createAssetWorkspacePlugin({
+        root: kAssetsRoot,
+        inMemory: mode.inMemory,
+        ...mode.access
+      })
+    ]
+  };
+});
+```
+
+### `new RunMode(env: ConfigEnv, options: { port: number })`
+
+`port` is the suite's `PORTS` entry, used only by `vite --mode e2e`.
+
+### `e2e: boolean`
+
+`true` for `--mode e2e`, whether serving or building.
+
+### `serve: boolean`
+
+`true` for `vite` and `vite --mode <mode>`, `false` for `vite build`.
+
+### `inMemory: boolean`
+
+`true` for e2e and for every build: a test run and a build never read or
+write the workspace on disk. Pass it to `ProjectFile.open` and
+`createAssetWorkspacePlugin`.
+
+### `server: ServerOptions`
+
+`{ port, strictPort: true }` in e2e, so Playwright finds the server on the
+suite port, and `{ allowedHosts: true }` otherwise.
+
+### `access: RunModeAccess`
+
+Spread into `createAssetWorkspacePlugin`. Every connection is a `member` that
+writes everything; a `spectator` reads and may only join and share presence.
+In e2e, `auth` is a [`CookieRoles`](./roles.md#cookieroles), so a suite
+picks the role per browser context. Outside e2e, `auth` is `undefined`.
+
+```ts
+interface RunModeAccess {
+  auth: CookieRoles | undefined;
+  rights: RightsMap;
+  defaultRole: string;
+}
+```
+
+### `plugins(): PluginOption[]`
+
+In e2e, `prebundleWorkspace()` and the revoke endpoint of `access.auth`.
+Empty otherwise.

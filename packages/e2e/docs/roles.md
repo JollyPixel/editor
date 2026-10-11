@@ -27,6 +27,9 @@ createAssetWorkspacePlugin({
 });
 ```
 
+In a `vite.config.ts`, [`RunMode.access`](./config.md#access-runmodeaccess)
+builds these options for `--mode e2e`.
+
 ### `plugin(): Plugin`
 
 Serves `POST /__e2e/revoke?subject=<subject>` during `vite serve`. The request

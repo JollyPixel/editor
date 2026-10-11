@@ -68,4 +68,40 @@ describe("createProjectFileWatchPlugin", () => {
       await vite.close();
     }
   });
+
+  test("ignores a project file kept in memory", async() => {
+    await using workspace = await tempWorkspace();
+    const projectFile = await ProjectFile.open(
+      workspace.root,
+      { version: 1 },
+      { inMemory: true }
+    );
+    let checks = 0;
+    projectFile.isStale = async() => {
+      checks++;
+
+      return true;
+    };
+    const vite = await createServer({
+      root: workspace.root,
+      configFile: false,
+      logLevel: "silent",
+      appType: "custom",
+      server: {
+        middlewareMode: true,
+        watch: null
+      },
+      plugins: [createProjectFileWatchPlugin(projectFile)]
+    });
+    vite.restart = async() => undefined;
+
+    try {
+      vite.watcher.emit("change", projectFile.path);
+
+      assert.strictEqual(checks, 0);
+    }
+    finally {
+      await vite.close();
+    }
+  });
 });
