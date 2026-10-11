@@ -12,6 +12,10 @@ import type { AddressInfo } from "node:net";
 import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import {
+  ASSET_URL_PREFIX,
+  CATALOG_URL_PATH
+} from "@jolly-pixel/asset";
+import {
   DEFAULT_WEBSOCKET_PATH,
   WEBSOCKET_PROTOCOL
 } from "@jolly-pixel/network";
@@ -31,8 +35,15 @@ import {
 import { LAUNCH_ELEMENT_ID } from "#src/launch.ts";
 import type { AssetEventDataMap } from "#src/index.ts";
 
+type Middleware = (
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  next: () => void
+) => void;
+
 interface PluginHarness extends AsyncDisposable {
   transform(url: string): HtmlTagDescriptor[];
+  fetchStatus(path: string): Promise<number>;
 }
 
 async function pluginHarness(
@@ -49,14 +60,46 @@ async function pluginHarness(
     eventStore,
     ...options
   });
+  const middlewares: Middleware[] = [];
   const devServer = {
-    middlewares: { use: () => undefined },
+    middlewares: {
+      use: (middleware: Middleware) => middlewares.push(middleware)
+    },
     config: { server: { allowedHosts: [] } },
     httpServer
   };
   await callHook(plugin.configureServer, devServer as unknown as ViteDevServer);
 
   return {
+    async fetchStatus(path) {
+      const server = http.createServer((request, response) => {
+        const chain = middlewares.values();
+        function next(): void {
+          const middleware = chain.next().value;
+          if (middleware === undefined) {
+            response.statusCode = 404;
+            response.end();
+
+            return;
+          }
+          middleware(request, response, next);
+        }
+        next();
+      });
+      server.listen(0, "127.0.0.1");
+      await once(server, "listening");
+      const { port } = server.address() as AddressInfo;
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}${path}`);
+        await response.arrayBuffer();
+
+        return response.status;
+      }
+      finally {
+        server.closeAllConnections();
+        server.close();
+      }
+    },
     transform(url) {
       const context = {
         path: url.split("?")[0],
@@ -138,6 +181,28 @@ describe("createAssetWorkspacePlugin — launch", () => {
     assert.deepEqual(JSON.parse(String(tag.children)), {
       target: "</script><script>"
     });
+  });
+});
+
+describe("createAssetWorkspacePlugin — HTTP routes", () => {
+  test("serves the catalog and the asset files by default", async() => {
+    await using harness = await pluginHarness({});
+
+    assert.strictEqual(await harness.fetchStatus(CATALOG_URL_PATH), 200);
+    assert.strictEqual(
+      await harness.fetchStatus(`${ASSET_URL_PREFIX}maps/a.png`),
+      200
+    );
+  });
+
+  test("serves neither route with http: false", async() => {
+    await using harness = await pluginHarness({ http: false });
+
+    assert.strictEqual(await harness.fetchStatus(CATALOG_URL_PATH), 404);
+    assert.strictEqual(
+      await harness.fetchStatus(`${ASSET_URL_PREFIX}maps/a.png`),
+      404
+    );
   });
 });
 

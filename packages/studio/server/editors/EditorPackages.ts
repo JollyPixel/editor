@@ -44,6 +44,12 @@ export class EditorPackages implements Iterable<EditorPackage> {
     return this.#editors.values();
   }
 
+  forKind(
+    kind: string
+  ): EditorPackage | undefined {
+    return this.#editors.find((editor) => editor.kinds.includes(kind));
+  }
+
   descriptors(): EditorDescriptor[] {
     return this.#editors.map(
       (editor) => editor.toDescriptor()

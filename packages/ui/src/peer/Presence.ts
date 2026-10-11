@@ -25,6 +25,10 @@ export interface PresencePeer extends CollaboratorPresence {
    * Image URL of an uploaded avatar.
    */
   avatar?: string;
+  /**
+   * Short label shown after the name, such as "via link".
+   */
+  badge?: string;
 }
 
 /**
@@ -133,6 +137,9 @@ export class PresenceElement extends LitElement {
       <span class=${peer.self ? "self" : ""}>
         ${peer.displayName}${peer.self ? " (you)" : ""}
       </span>
+      ${peer.badge === undefined ? "" : html`
+        <span class="badge" part="badge">${peer.badge}</span>
+      `}
     `;
 
     if (!this.#selectable || peer.self) {

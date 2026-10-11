@@ -52,6 +52,25 @@ registerIcon("trash", `
   />
 `);
 
+registerIcon("share", `
+  <path
+    class="tone-ink"
+    d="M10.5 13.5a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"
+    stroke="currentColor"
+    stroke-width="2.4"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <path
+    class="tone-ink"
+    d="M13.5 10.5a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"
+    stroke="currentColor"
+    stroke-width="2.4"
+    stroke-linecap="round"
+    fill="none"
+  />
+`);
+
 registerIcon("crown", `
   <path
     d="M3 7l5 5 4-7 4 7 5-5-2 12H5L3 7Z"

@@ -13,7 +13,8 @@ const kTargetSchema = z.string().refine(
   (target) => target.trim() !== ""
 );
 const kLaunchSchema = z.object({
-  target: kTargetSchema
+  target: kTargetSchema,
+  credential: z.string().min(1).optional()
 });
 
 export class EditorLaunch {
@@ -24,7 +25,11 @@ export class EditorLaunch {
     const parsed = kLaunchSchema.safeParse(value);
 
     return parsed.success ?
-      new EditorLaunch(new AssetId(parsed.data.target), shell) :
+      new EditorLaunch(
+        new AssetId(parsed.data.target),
+        shell,
+        parsed.data.credential ?? null
+      ) :
       undefined;
   }
 
@@ -74,12 +79,15 @@ export class EditorLaunch {
 
   readonly target: AssetId;
   readonly shell: ShellChannel | null;
+  readonly credential: string | null;
 
   constructor(
     target: AssetId,
-    shell: ShellChannel | null = null
+    shell: ShellChannel | null = null,
+    credential: string | null = null
   ) {
     this.target = target;
     this.shell = shell;
+    this.credential = credential;
   }
 }

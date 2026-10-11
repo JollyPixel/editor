@@ -98,6 +98,23 @@ export class CatalogProjection extends Emitter<
     return this.#catalog.toJSON();
   }
 
+  reachableFrom(
+    assetId: string
+  ): Set<string> {
+    if (this.record(assetId) === undefined) {
+      return new Set();
+    }
+
+    const reachable = new Set([assetId]);
+    for (const { id } of this.#dependencies.closureOf(assetId)) {
+      if (this.record(id) !== undefined) {
+        reachable.add(id);
+      }
+    }
+
+    return reachable;
+  }
+
   dependentsOf(
     assetId: string
   ): AssetRecord[] {

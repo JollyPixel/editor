@@ -1,16 +1,21 @@
 // Import Node.js Dependencies
+import { randomUUID } from "node:crypto";
 import type { IncomingHttpHeaders } from "node:http";
 
 // Import Third-party Dependencies
-import type {
-  AuthenticationProvider,
-  AuthenticationRequest,
-  PeerIdentity,
-  PeerMetadata
+import {
+  readCredential,
+  type AuthenticationProvider,
+  type AuthenticationRequest,
+  type PeerIdentity,
+  type PeerMetadata
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { Account } from "./account/Account.ts";
+import {
+  GUEST_ROLE,
+  type Account
+} from "./account/Account.ts";
 import { Username } from "./account/Username.ts";
 import {
   AccountDirectory,
@@ -29,6 +34,17 @@ import { SessionCookie } from "./session/SessionCookie.ts";
 import { CookieSessions } from "./session/CookieSessions.ts";
 import { AccountsExtension } from "./room/AccountsExtension.ts";
 import type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
+import {
+  SHARE_LINK_VIA,
+  type ShareLink
+} from "./share/ShareLink.ts";
+import {
+  ShareLinks,
+  shareLinkSubject
+} from "./share/ShareLinks.ts";
+
+// CONSTANTS
+const kGuestUsername = "Guest";
 
 export interface AccountsOptions {
   database: AccountsDatabase;
@@ -112,6 +128,7 @@ export class Accounts implements AuthenticationProvider, Disposable {
   readonly roles: AccountRoles;
   readonly cookie: SessionCookie;
   readonly extension: AccountsExtension;
+  readonly shareLinks: ShareLinks;
 
   #database: AccountsDatabase;
   #directory: AccountDirectory;
@@ -137,6 +154,10 @@ export class Accounts implements AuthenticationProvider, Disposable {
     );
     this.cookie = this.#sessions.cookie;
     this.extension = new AccountsExtension(this.#directory);
+    this.shareLinks = new ShareLinks(
+      options.database.shareLinks,
+      this.#directory
+    );
   }
 
   async register(
@@ -202,6 +223,19 @@ export class Accounts implements AuthenticationProvider, Disposable {
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null {
+    let credential: string | null;
+    try {
+      credential = readCredential(request);
+    }
+    catch {
+      return null;
+    }
+    if (credential !== null) {
+      const link = this.shareLinks.find(credential);
+
+      return link === null ? null : toGuestIdentity(link);
+    }
+
     const account = this.signedIn(request.headers);
     if (account === null) {
       return null;
@@ -230,6 +264,7 @@ export class Accounts implements AuthenticationProvider, Disposable {
   }
 
   [Symbol.dispose](): void {
+    this.shareLinks[Symbol.dispose]();
     this.extension.dispose();
     this.#database.close();
   }
@@ -251,6 +286,21 @@ function parseCredentials(
   return {
     username: Username.parse(body.username),
     password: PasswordDigest.parse(body.password)
+  };
+}
+
+function toGuestIdentity(
+  link: ShareLink
+): PeerIdentity {
+  return {
+    subject: shareLinkSubject(link.id),
+    role: GUEST_ROLE,
+    profile: {
+      username: kGuestUsername,
+      peerId: randomUUID(),
+      avatar: null,
+      via: SHARE_LINK_VIA
+    }
   };
 }
 

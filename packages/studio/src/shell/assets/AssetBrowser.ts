@@ -2,6 +2,7 @@
 import {
   LitElement,
   html,
+  nothing,
   type PropertyValues,
   type TemplateResult
 } from "lit";
@@ -39,16 +40,19 @@ import {
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
+import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import {
   AssetCommands,
   type RelocationVerb
 } from "./AssetCommands.ts";
 import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
+import type { AssetShareDialog } from "./AssetShareDialog.ts";
 import {
   assetMenu,
   newAssetMenu
 } from "./assetMenu.ts";
 import "./AssetDeleteDialog.ts";
+import "./AssetShareDialog.ts";
 
 // CONSTANTS
 const kKindStorageKey = "studio:asset-kind";
@@ -63,6 +67,12 @@ const kAllKinds: JollyOption<string> = {
 export interface AssetBrowserOptions {
   catalog: CatalogClient;
   kinds: AssetKindSet;
+  shares: StudioShareLinks | null;
+}
+
+interface AssetSharing {
+  links: StudioShareLinks;
+  catalog: CatalogClient;
 }
 
 export interface AssetOpenDetail {
@@ -98,6 +108,9 @@ export class AssetBrowser extends LitElement {
 
   @query("asset-delete-dialog")
   declare _deleteDialog: AssetDeleteDialog;
+
+  @query("asset-share-dialog")
+  declare _shareDialog: AssetShareDialog;
 
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"];
@@ -227,6 +240,16 @@ export class AssetBrowser extends LitElement {
           ?disabled=${!selection.allows("export")}
           @click=${this.#exportSelected}
         ></jolly-button>
+        ${this.#sharing === null ? nothing : html`
+          <jolly-button
+            icon="share"
+            icon-only
+            label="Share"
+            title="Share a view-only link"
+            ?disabled=${!selection.allows("share")}
+            @click=${this.#shareSelected}
+          ></jolly-button>
+        `}
       </jolly-toolbar>
       <jolly-tree
         virtual
@@ -253,7 +276,20 @@ export class AssetBrowser extends LitElement {
         @jolly-context-action=${this.#onContextAction}
       ></jolly-context-menu>
       <asset-delete-dialog></asset-delete-dialog>
+      <asset-share-dialog></asset-share-dialog>
     `;
+  }
+
+  get #sharing(): AssetSharing | null {
+    const links = this.options?.shares ?? null;
+    const catalog = this.#catalog;
+
+    return links === null || catalog === null ?
+      null :
+      {
+        links,
+        catalog
+      };
   }
 
   get #kinds(): AssetKindSet {
@@ -389,6 +425,13 @@ export class AssetBrowser extends LitElement {
           void this.#commands?.export(asset);
         }
         break;
+      case "share": {
+        const sharing = this.#sharing;
+        if (asset !== null && sharing !== null) {
+          void this._shareDialog.open(asset, sharing.links, sharing.catalog);
+        }
+        break;
+      }
       case "delete":
         void this.#delete(nodeIds);
         break;
@@ -569,6 +612,10 @@ export class AssetBrowser extends LitElement {
     this.#run("new-folder", this.#selection());
   };
 
+  readonly #shareSelected = (): void => {
+    this.#run("share", this.#selection());
+  };
+
   readonly #exportSelected = (): void => {
     this.#run("export", this.#selection());
   };
@@ -637,7 +684,7 @@ export class AssetBrowser extends LitElement {
     const { id, x, y } = event.detail;
     const target = this.#selection(id === null ? [] : this._selected);
     this.#menuTarget = target;
-    this._menu.items = assetMenu(target, this.#kinds);
+    this._menu.items = assetMenu(target, this.#kinds, this.#sharing !== null);
     this._menu.openAt(x, y);
   };
 

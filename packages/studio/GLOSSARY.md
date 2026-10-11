@@ -132,6 +132,20 @@ The one admin account no other admin can demote or remove, first the account
 that registered first. Only the owner hands the title to another account.
 Unrelated to the owner of a companion.
 
+### Share link
+
+A view-only link to one asset, `/view/<token>`, for people without an
+account. It opens the asset's editor page alone and reaches the asset and its
+dependency closure. Its creator picks a lifetime (1, 7 or 30 days, or never);
+the creator or an admin copies or revokes it, from the asset's Share dialog
+or the Share links pane on Home. A role needs write on `studio.$share` to
+create one.
+
+### Guest
+
+Whoever opens a share link: the built-in `guest` role, read-only, shown as
+"Guest" with a "via link" badge. A project cannot declare that role.
+
 ### Roster
 
 The accounts, their role and whether they are online, pushed by the

@@ -38,6 +38,13 @@ Missing credentials use the default role unless `mandatory` is true.
 Refusal emits `unauthorized` and stops retries. `server.revoke(subject)` forces
 reauthentication. Use HTTPS/WSS for remote credentials.
 
+### Room admission
+
+The server option `admits(identity, room)` limits an identity to some rooms.
+It runs before the room is resolved and before rights are checked. `false`,
+or a thrown error, refuses the join with a `denied` envelope for `$join`.
+Without the option every room admits every identity.
+
 ### Profile updates
 
 A provider's optional `watchProfiles(listener)` reports `(subject, patch)` when

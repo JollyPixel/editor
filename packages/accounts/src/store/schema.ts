@@ -32,6 +32,17 @@ INSERT OR IGNORE INTO ownership (singleton, user_id)
   ORDER BY created_at, rowid
   LIMIT 1;
 
+CREATE TABLE IF NOT EXISTS share_links (
+  id TEXT PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  asset_id TEXT NOT NULL,
+  created_by TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS share_links_by_creator ON share_links (created_by);
+
 CREATE TABLE IF NOT EXISTS avatars (
   user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
   hash TEXT NOT NULL,

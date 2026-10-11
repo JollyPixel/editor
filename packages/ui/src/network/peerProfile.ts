@@ -37,6 +37,14 @@ export function readPeerId(
     : undefined;
 }
 
+export function readBadge(
+  profile: PeerMetadata | undefined
+): string | undefined {
+  return typeof profile?.via === "string"
+    ? `via ${profile.via}`
+    : undefined;
+}
+
 export function readAvatar(
   profile: PeerMetadata | undefined
 ): string | undefined {
@@ -59,12 +67,15 @@ export function peerProfileColor(
 export function presencePeerOf(
   peer: Peer
 ): PresencePeer {
+  const badge = readBadge(peer.profile);
+
   return {
     clientId: peer.clientId,
     displayName: readUsername(peer.profile),
     color: peerProfileColor(peer.clientId, peer.profile),
     peerId: readPeerId(peer.profile),
-    avatar: readAvatar(peer.profile)
+    avatar: readAvatar(peer.profile),
+    ...(badge === undefined ? {} : { badge })
   };
 }
 

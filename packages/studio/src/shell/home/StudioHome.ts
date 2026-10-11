@@ -17,6 +17,7 @@ import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
 import "./ProjectOverview.ts";
 import "../users/UsersPane.ts";
+import "../shares/ShareLinksPane.ts";
 
 // CONSTANTS
 export const HOME_LAYOUT_STORAGE_KEY = "studio:home-layout";
@@ -77,6 +78,14 @@ export class StudioHome extends LitElement {
                 .self=${this.signedIn.account}
               ></studio-users>
             </jolly-pane>
+            ${this.assets === null ? nothing : html`
+              <jolly-pane key="share-links" heading="Share links">
+                <studio-share-links
+                  .links=${this.signedIn.shares}
+                  .catalog=${this.assets.catalog}
+                ></studio-share-links>
+              </jolly-pane>
+            `}
           </jolly-dock>
         `}
       </jolly-dock-layout>

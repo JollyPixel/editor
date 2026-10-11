@@ -21,6 +21,11 @@ export interface AuthenticationRequest extends AuthenticationAttempt {
   defaultRole: string;
 }
 
+export type RoomAdmission = (
+  identity: PeerIdentity,
+  room: string
+) => boolean | Promise<boolean>;
+
 export interface AuthenticationProvider {
   authenticate(
     request: AuthenticationRequest

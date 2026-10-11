@@ -16,9 +16,14 @@ import {
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
+  CatalogViewExtension,
+  type CatalogProjection
+} from "@jolly-pixel/asset-server";
+import {
   createAssetWorkspacePlugin,
   createProjectFileWatchPlugin,
-  createProjectKindsPlugin
+  createProjectKindsPlugin,
+  type AssetWorkspacePluginOptions
 } from "@jolly-pixel/asset-server/node";
 import type { Accounts } from "@jolly-pixel/accounts/node";
 import {
@@ -33,9 +38,12 @@ import {
   openStudioAccounts
 } from "./server/accounts.ts";
 import { StudioProject } from "./server/project/StudioProject.ts";
+import { SharePage } from "./server/shares/SharePage.ts";
+import { StudioShares } from "./server/shares/StudioShares.ts";
 import { apiPlugin } from "./vite/apiPlugin.ts";
 import { editorPagesPlugin } from "./vite/editorPagesPlugin.ts";
 import { projectManifestPlugin } from "./vite/projectManifestPlugin.ts";
+import { sharePagePlugin } from "./vite/sharePagePlugin.ts";
 import { createStudioSeed } from "./src/seed.ts";
 
 // CONSTANTS
@@ -58,12 +66,16 @@ const kViteDefaultDeny = [
   "**/.git/**"
 ];
 
+type SharingOptions = Pick<AssetWorkspacePluginOptions, "admits" | "onReady">;
+
 async function assetWorkspacePlugin(
   project: StudioProject,
   accounts: Accounts,
-  inMemory: boolean
+  inMemory: boolean,
+  sharing: SharingOptions
 ): Promise<Plugin> {
   return createAssetWorkspacePlugin({
+    http: false,
     root: project.file.root,
     ...(inMemory ? {
       source: new MemoryAssetSource(),
@@ -78,7 +90,8 @@ async function assetWorkspacePlugin(
     extensions: [accounts.extension],
     backend: {
       stateIgnores: ACCOUNTS_STATE_IGNORES
-    }
+    },
+    ...sharing
   });
 }
 
@@ -96,6 +109,42 @@ function disposeAfterClose(
       }
     }
   };
+}
+
+async function accountsPlugins(
+  project: StudioProject,
+  accounts: Accounts,
+  e2e: boolean
+): Promise<Plugin[]> {
+  const catalog = Promise.withResolvers<CatalogProjection>();
+  const shares = new StudioShares({
+    accounts,
+    access: project.access,
+    catalog: catalog.promise
+  });
+
+  return [
+    apiPlugin({
+      accounts,
+      shares,
+      requestsPerMinute: e2e ? kE2ERequestsPerMinute : undefined
+    }),
+    sharePagePlugin(new SharePage({
+      shares,
+      editors: project.editors
+    })),
+    await assetWorkspacePlugin(project, accounts, e2e, {
+      admits: (identity, room) => shares.admits(identity, room),
+      onReady(workspace) {
+        catalog.resolve(workspace.backend.catalog);
+        workspace.server.register(new CatalogViewExtension({
+          catalog: workspace.backend.catalog,
+          scope: (identity) => shares.scope(identity)
+        }));
+      }
+    }),
+    disposeAfterClose(accounts)
+  ];
 }
 
 export default defineConfig(async({ mode }): Promise<UserConfig> => {
@@ -145,14 +194,7 @@ export default defineConfig(async({ mode }): Promise<UserConfig> => {
       projectManifestPlugin(project),
       inMemory ? null : createProjectFileWatchPlugin(project.file),
       editorPagesPlugin(new EditorPages(project.editors)),
-      ...(accounts === null ? [] : [
-        apiPlugin({
-          accounts,
-          requestsPerMinute: e2e ? kE2ERequestsPerMinute : undefined
-        }),
-        await assetWorkspacePlugin(project, accounts, e2e),
-        disposeAfterClose(accounts)
-      ])
+      ...(accounts === null ? [] : await accountsPlugins(project, accounts, e2e))
     ]
   };
 });

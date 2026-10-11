@@ -15,6 +15,7 @@ import type { Without } from "../../utils/Without.ts";
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";
+export const CATALOG_VIEW_ROOM = "asset-catalog-view";
 export const ARCHIVE_MIME_TYPE = "application/zip";
 
 export const CATALOG_SNAPSHOT = "catalog:snapshot";

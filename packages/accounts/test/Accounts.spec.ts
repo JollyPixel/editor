@@ -6,9 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  AuthenticationRequest,
-  PeerMetadata
+import {
+  WEBSOCKET_AUTH_PROTOCOL_PREFIX,
+  WEBSOCKET_PROTOCOL,
+  type AuthenticationRequest,
+  type PeerMetadata
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -22,7 +24,8 @@ import {
 import { solidPng } from "./helpers/avatar/images.ts";
 
 function upgrade(
-  cookie?: string
+  cookie?: string,
+  credential?: string
 ): AuthenticationRequest {
   return {
     clientId: "client",
@@ -30,11 +33,64 @@ function upgrade(
     headers: {
       host: "studio.local",
       origin: "http://studio.local",
-      ...(cookie === undefined ? {} : { cookie })
+      ...(cookie === undefined ? {} : { cookie }),
+      ...(credential === undefined ? {} : {
+        "sec-websocket-protocol": [
+          WEBSOCKET_PROTOCOL,
+          WEBSOCKET_AUTH_PROTOCOL_PREFIX + Buffer.from(credential).toString("base64url")
+        ].join(", ")
+      })
     },
     defaultRole: "spectator"
   };
 }
+
+describe("Accounts.authenticate — share links", () => {
+  test("identifies a share link token as a guest with a peer id per connection", () => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    const link = accounts.shareLinks.create({
+      assetId: "map-1",
+      createdBy: alice.id,
+      expiresAt: null
+    });
+
+    const first = accounts.authenticate(upgrade(undefined, link.token));
+    const second = accounts.authenticate(upgrade(undefined, link.token));
+
+    assert.ok(first !== null && second !== null);
+    assert.deepEqual(
+      {
+        ...first,
+        profile: {
+          ...first.profile,
+          peerId: "<random>"
+        }
+      },
+      {
+        subject: `share:${link.id}`,
+        role: "guest",
+        profile: {
+          username: "Guest",
+          peerId: "<random>",
+          avatar: null,
+          via: "link"
+        }
+      }
+    );
+    assert.notEqual(first.profile?.peerId, second.profile?.peerId);
+  });
+
+  test("refuses an unknown token even beside a valid session cookie", () => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    const cookie = `jolly_session=${sessionFor(database, alice.id)}`;
+
+    assert.equal(accounts.authenticate(upgrade(cookie, "unknown")), null);
+  });
+});
 
 describe("Accounts.authenticate", () => {
   test("identifies the account of a session cookie", () => {

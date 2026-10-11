@@ -20,7 +20,9 @@ const roster = new PeerRoster({
 `peers` is a `PresencePeer[]` with the local peer first (`self: true`, keyed
 and colored from `identity`) and remote peers sorted by `clientId`. Names,
 colors and avatars are read from each peer's profile with `readUsername`,
-`peerProfileColor`, `readPeerId` and `readAvatar`. The local name and avatar
+`peerProfileColor`, `readPeerId` and `readAvatar`. `readBadge` turns a
+profile's `via` string, such as `"link"` for a guest connected through a
+share link, into a "via link" badge. The local name, avatar and badge
 are read the same way from `room.profile`, the profile the server admitted,
 and from `identity` until the room has one.
 

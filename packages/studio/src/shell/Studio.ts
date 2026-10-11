@@ -116,7 +116,8 @@ export class Studio extends LitElement {
     this._signedIn = options.signedIn ?? null;
     this._assets = {
       catalog,
-      kinds: session.kinds
+      kinds: session.kinds,
+      shares: options.signedIn?.shares ?? null
     };
     await session.restoreTabs();
     this.#syncOpenTabs();

@@ -12,30 +12,6 @@ tabs, the dock layout and the kind filter move there from `localStorage`. It
 becomes the home of the account: the avatar upload moves there from the
 `AccountBadge` menu.
 
-## 2. Share links
-
-A read-only link to one asset for people without an account.
-
-- **Route.** `/view/<token>` serves the asset's standalone editor page with
-  the launch injected server-side, through the asset-server Vite plugin's
-  `transformIndexHtml`. Guests never get the shell or the catalog room, so
-  the project tree stays hidden. `QueryLaunchSource` stays for dev.
-- **Scope.** The asset and its dependency closure, walked over catalog edges
-  at each join. A texture linked after the link was made is readable; one
-  unlinked is not.
-- **Credential.** The upgrade accepts the token in place of the session
-  cookie, for covered rooms only, with spectator rights. Links never grant
-  write.
-- **Storage.** A `share_links (token_hash, asset_id, created_by, expires_at)`
-  table in `accounts.db`. The token is shown once at creation.
-- **Lifetime.** The creator picks 1 day, 7 days, 30 days or never. Revoking
-  disconnects guests already watching.
-- **Rights.** Creating a link is a `studio.$share` key in `access.roles`, so
-  each project decides who shares. Creators revoke their own links, admins
-  any.
-- **Presence.** Guests show as "Guest" with their default avatar and a "via
-  link" badge.
-
 ## Waiting for a trigger
 
 - **Session renewal.** A socket that rejoins without a reload once its

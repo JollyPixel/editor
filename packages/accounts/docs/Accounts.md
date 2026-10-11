@@ -46,6 +46,25 @@ A registration waiting for an admin's approval: `{ id, username }`. Only admins 
 
 `"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it along with ownership.
 
+## `GUEST_ROLE`
+
+`"guest"`. The role of a connection opened with a [share link](./Server.md#sharelinks). No account holds it, so a host declares its rights apart from the roles accounts may hold.
+
+## `ShareLink`
+
+```ts
+interface ShareLink {
+  id: string;
+  token: string;
+  assetId: string;
+  createdBy: string;
+  createdAt: number;
+  expiresAt: number | null;
+}
+```
+
+A link that lets people without an account open one asset. `token` is the credential the link carries, so anyone who reads it can open the asset. `createdBy` is the account id of its creator. Both times are epoch milliseconds; `expiresAt` is `null` for a link that never expires. `shareLinkSchema` parses one. A guest connected through it carries `via: "link"` (`SHARE_LINK_VIA`) in its profile.
+
 ## `AccountsError`
 
-The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError` and `AccessRequestsFullError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.
+The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError`, `AccessRequestsFullError`, `ShareLinkNotFoundError` and `ShareLinkRefusedError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.

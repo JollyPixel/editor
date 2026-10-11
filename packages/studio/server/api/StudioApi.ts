@@ -10,6 +10,8 @@ import Fastify, {
   type FastifyInstance,
   type FastifyReply
 } from "fastify";
+import rateLimit from "@fastify/rate-limit";
+import type * as z from "zod";
 import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 import {
   isCrossOrigin,
@@ -19,11 +21,15 @@ import {
 // Import Internal Dependencies
 import { accountsRoutes } from "./accounts/accountsRoutes.ts";
 import { ApiError } from "./errors/ApiError.ts";
+import { sharesRoutes } from "./shares/sharesRoutes.ts";
+import { SHARES_URL_PATH } from "../../src/shares/routes.ts";
+import type { StudioShares } from "../shares/StudioShares.ts";
 
 // CONSTANTS
 export const API_URL_PATH = "/api/";
 const kMaxBodyBytes = 4 * 1_024;
 const kPayloadTooLarge = 413;
+const kDefaultRequestsPerMinute = 300;
 
 export type ApiMiddleware = (
   request: IncomingMessage,
@@ -33,6 +39,7 @@ export type ApiMiddleware = (
 
 export interface StudioApiOptions {
   accounts: Accounts;
+  shares: StudioShares;
   requestsPerMinute?: number;
 }
 
@@ -75,10 +82,33 @@ export class StudioApi implements AsyncDisposable {
       return sendFailure(reply, failure);
     });
 
+    app.setValidatorCompiler<z.ZodType>(({ schema }) => (data) => {
+      const parsed = schema.safeParse(data);
+
+      return parsed.success ?
+        { value: parsed.data } :
+        { error: parsed.error };
+    });
+    await app.register(rateLimit, {
+      max: options.requestsPerMinute ?? kDefaultRequestsPerMinute,
+      timeWindow: 60_000,
+      errorResponseBuilder: (_request, context) => new ApiError(
+        context.statusCode,
+        "throttled",
+        "too many requests",
+        {
+          "retry-after": String(Math.ceil(context.ttl / 1_000))
+        }
+      )
+    });
     await app.register(accountsRoutes, {
       prefix: ACCOUNTS_URL_PATH,
+      accounts: options.accounts
+    });
+    await app.register(sharesRoutes, {
+      prefix: SHARES_URL_PATH,
       accounts: options.accounts,
-      requestsPerMinute: options.requestsPerMinute
+      shares: options.shares
     });
     await app.ready();
 

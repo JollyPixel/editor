@@ -87,4 +87,29 @@ describe("PeerRoster profiles", () => {
 
     assert.strictEqual(harness.peers()[1].avatar, "/api/accounts/a/avatar?v=3");
   });
+
+  test("badges every peer that joined through a share link, the local one included", () => {
+    const harness = createHarness();
+    const guest = {
+      username: "Guest",
+      peerId: "guest-peer",
+      avatar: null,
+      via: "link"
+    };
+    harness.admitProfile(guest);
+    harness.addPeer("client-g", { profile: guest });
+    harness.addPeer("client-a", {
+      profile: {
+        username: "Alan",
+        peerId: "a",
+        avatar: null
+      }
+    });
+    harness.emit("peer-joined", { clientId: "client-g" });
+
+    assert.deepEqual(
+      harness.peers().map((peer) => [peer.displayName, peer.badge]),
+      [["Guest", "via link"], ["Alan", undefined], ["Guest", "via link"]]
+    );
+  });
 });

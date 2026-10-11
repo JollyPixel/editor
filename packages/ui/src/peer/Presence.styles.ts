@@ -51,6 +51,14 @@ export const presenceStyles = css`
     margin-inline-end: var(--jolly-space-2, 8px);
   }
 
+  .badge {
+    margin-inline-start: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-space-1, 4px);
+    border-radius: 2px;
+    background: var(--jolly-control-bg);
+    color: var(--jolly-text-muted);
+  }
+
   .select {
     display: flex;
     flex: 1;

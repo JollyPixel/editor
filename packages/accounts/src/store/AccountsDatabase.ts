@@ -3,6 +3,7 @@ import { AccountRepository } from "./AccountRepository.ts";
 import { AvatarRepository } from "./AvatarRepository.ts";
 import { SQL_SCHEMA } from "./schema.ts";
 import { SessionRepository } from "./SessionRepository.ts";
+import { ShareLinkRepository } from "./ShareLinkRepository.ts";
 import {
   IN_MEMORY_LOCATION,
   SqliteDatabase
@@ -23,6 +24,7 @@ export class AccountsDatabase implements Disposable {
   readonly accounts: AccountRepository;
   readonly sessions: SessionRepository;
   readonly avatars: AvatarRepository;
+  readonly shareLinks: ShareLinkRepository;
 
   #db: SqliteDatabase;
 
@@ -34,6 +36,7 @@ export class AccountsDatabase implements Disposable {
     this.accounts = new AccountRepository(db);
     this.sessions = new SessionRepository(db);
     this.avatars = new AvatarRepository(db);
+    this.shareLinks = new ShareLinkRepository(db);
   }
 
   transaction<TResult>(

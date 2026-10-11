@@ -13,6 +13,7 @@ export const ASSET_ACTIONS = [
   "new-folder",
   "rename",
   "export",
+  "share",
   "delete"
 ] as const;
 
@@ -75,6 +76,7 @@ export class AssetSelection {
     switch (action) {
       case "open":
       case "export":
+      case "share":
         return this.asset !== null;
       case "rename":
         return this.nodeIds.length === 1;

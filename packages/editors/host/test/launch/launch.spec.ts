@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
+import { launchElement } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { ShellCatalog } from "#src/launch/catalog/ShellCatalog.ts";
@@ -143,6 +144,20 @@ describe("InjectedLaunchSource", () => {
     const launch = await new InjectedLaunchSource().read();
 
     assert.equal(launch?.target.value, "world-1");
+  });
+
+  test("reads the target and credential of a share link page", async() => {
+    document.head.insertAdjacentHTML("beforeend", launchElement({
+      target: "map-1",
+      credential: "</script>token"
+    }));
+
+    const launch = await new InjectedLaunchSource().read();
+
+    assert.equal(launch?.target.value, "map-1");
+    assert.equal(launch?.credential, "</script>token");
+    assert.equal(EditorLaunch.parse({ target: "map-1" })?.credential, null);
+    assert.equal(EditorLaunch.parse({ target: "map-1", credential: "" }), undefined);
   });
 
   test("ignores a missing element or malformed JSON", async() => {

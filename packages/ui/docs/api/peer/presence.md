@@ -18,16 +18,17 @@ presence.max = 5;
 | `selectable` | `boolean` | `false` |
 
 `PresencePeer` extends [`CollaboratorPresence`](./presence-source.md), adding
-`self`, `peerId` and `avatar`. Each row starts with a
+`self`, `peerId`, `avatar` and `badge`. Each row starts with a
 [`jolly-avatar`](./avatar.md): `peerId` (defaulting to `clientId`) picks its
-glyph, `color` tints it, and `avatar`, an image URL, replaces it. The element ignores `editing`: it renders a session snapshot, not a
+glyph, `color` tints it, and `avatar`, an image URL, replaces it. `badge`, a
+short label such as "via link", follows the name. The element ignores `editing`: it renders a session snapshot, not a
 field. Build the list with [`toPresencePeers`](./presence-source.md#mapping), which
 flags the local peer and orders it first.
 
 Assigning `peers` copies the iterable. Finite `max` values are floored and
 clamped to zero. When a capped list hides the local peer, the local peer
 replaces the final visible remote peer. The component exposes `summary`,
-`list`, `peer`, `peer-button`, `avatar`, and `overflow` CSS parts.
+`list`, `peer`, `peer-button`, `avatar`, `badge`, and `overflow` CSS parts.
 
 ## Selection
 

@@ -20,6 +20,9 @@ import { toPeerMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
+import { ShareLinksClient } from "./shares/ShareLinksClient.ts";
+import { StudioShareLinks } from "./shares/StudioShareLinks.ts";
+import { SHARES_URL_PATH } from "./shares/routes.ts";
 import "./shell/account/SignInDialog.ts";
 
 export interface StudioConnection {
@@ -56,9 +59,16 @@ async function connectOnline(): Promise<StudioConnection> {
   const client = new Client({
     profile: toPeerMetadata(identity)
   });
+  const roster = AccountsRoster.join(client);
   const signedIn: StudioSignedIn = {
     account,
-    roster: AccountsRoster.join(client),
+    roster,
+    shares: new StudioShareLinks(
+      new ShareLinksClient({
+        url: new URL(`.${SHARES_URL_PATH}`, document.baseURI)
+      }),
+      roster
+    ),
     replaceAvatar: (image) => accounts.replaceAvatar(image),
     signOut: () => signOut(accounts)
   };

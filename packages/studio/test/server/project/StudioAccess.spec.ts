@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { RightsTable } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import {
   DEFAULT_ACCESS,
@@ -19,10 +22,11 @@ describe("StudioAccess.read", () => {
     const access = StudioAccess.read({ version: 1 }, kSource);
 
     assert.equal(access.roles.defaultRole, "spectator");
-    assert.deepEqual(access.rights, {
-      admin: { "*": "write" },
-      ...DEFAULT_ACCESS.roles
-    });
+    assert.deepEqual(Object.keys(access.rights), [
+      "admin",
+      "guest",
+      ...Object.keys(DEFAULT_ACCESS.roles)
+    ]);
     assert.deepEqual([...access.roles], ["admin", "member", "spectator"]);
     assert.equal(access.accessRequests, false);
   });
@@ -41,9 +45,9 @@ describe("StudioAccess.read", () => {
   test("reads declared roles and their rule order", () => {
     const access = StudioAccess.read({
       access: {
-        defaultRole: "guest",
+        defaultRole: "viewer",
         roles: {
-          guest: {
+          viewer: {
             "*.$join": "write",
             "*": "void"
           }
@@ -51,25 +55,65 @@ describe("StudioAccess.read", () => {
       }
     }, kSource);
 
-    assert.equal(access.roles.defaultRole, "guest");
+    assert.equal(access.roles.defaultRole, "viewer");
     assert.deepEqual(
-      Object.keys(access.rights.guest),
+      Object.keys(access.rights.viewer),
       ["*.$join", "*"]
     );
-    assert.deepEqual([...access.roles], ["admin", "guest"]);
+    assert.deepEqual([...access.roles], ["admin", "viewer"]);
   });
 
-  test("refuses to let a project declare the built-in admin role", () => {
-    assert.throws(
-      () => StudioAccess.read({
-        access: {
-          roles: {
-            admin: { "*": "read" },
-            spectator: { "*": "read" }
+  test("refuses to let a project declare a built-in role", () => {
+    for (const role of ["admin", "guest"]) {
+      assert.throws(
+        () => StudioAccess.read({
+          access: {
+            roles: {
+              [role]: { "*": "read" },
+              spectator: { "*": "read" }
+            }
+          }
+        }, kSource),
+        new RegExp(`built-in "${role}" role`)
+      );
+    }
+  });
+
+  test("lets a role share only with write on studio.$share", () => {
+    const access = StudioAccess.read({
+      access: {
+        roles: {
+          ...DEFAULT_ACCESS.roles,
+          reviewer: {
+            "studio.$share": "write",
+            "*": "read"
           }
         }
-      }, kSource),
-      /built-in "admin" role/
+      }
+    }, kSource);
+
+    assert.deepEqual(
+      ["admin", "member", "reviewer", "spectator", "guest"].filter(
+        (role) => access.canShare(role)
+      ),
+      ["admin", "member", "reviewer"]
+    );
+  });
+
+  test("keeps guests out of the catalog and accounts rooms, read-only elsewhere", () => {
+    const access = StudioAccess.read({ version: 1 }, kSource);
+    const table = new RightsTable(access.rights, access.roles.defaultRole);
+
+    assert.deepEqual(
+      [
+        "asset-catalog.$join",
+        "accounts.$join",
+        "asset-catalog-view.$join",
+        "voxelmap.$join",
+        "voxelmap.$presence",
+        "voxelmap.place"
+      ].map((key) => table.check("guest", key)),
+      ["void", "void", "write", "write", "write", "read"]
     );
   });
 

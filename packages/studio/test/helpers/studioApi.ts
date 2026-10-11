@@ -19,12 +19,16 @@ import {
   StudioApi,
   type StudioApiOptions
 } from "../../server/api/StudioApi.ts";
+import { StudioAccess } from "../../server/project/StudioAccess.ts";
+import { StudioShares } from "../../server/shares/StudioShares.ts";
+import { sharedCatalog } from "./shares.ts";
 
 // CONSTANTS
 export const PASSED_ON_STATUS = 418;
 
 export interface StudioApiServer extends AsyncDisposable {
   accounts: Accounts;
+  shares: StudioShares;
   url: URL;
   accountsUrl: URL;
   browser(): Browser;
@@ -42,27 +46,50 @@ export interface RawRequest {
   body: string | Uint8Array;
 }
 
-export type StudioApiAccountsOptions = Omit<AccountsOpenOptions, "roles" | "location">;
+export interface StudioApiAccountsOptions extends Omit<
+  AccountsOpenOptions, "roles" | "location"
+> {
+  /**
+   * @default "spectator"
+   */
+  defaultRole?: string;
+  /**
+   * Dependency closure of each asset the catalog holds.
+   * @default {}
+   */
+  closures?: Record<string, string[]>;
+}
 
-export type StudioApiListenOptions = Omit<StudioApiOptions, "accounts">;
+export type StudioApiListenOptions = Omit<StudioApiOptions, "accounts" | "shares">;
 
 export async function listenStudioApi(
   options: StudioApiAccountsOptions = {},
   apiOptions: StudioApiListenOptions = {}
 ): Promise<StudioApiServer> {
+  const {
+    defaultRole = "spectator",
+    closures = {},
+    ...accountsOptions
+  } = options;
   const accounts = await Accounts.open({
-    ...options,
+    ...accountsOptions,
     roles: new AccountRoles({
       roles: [
         "member",
         "spectator"
       ],
-      defaultRole: "spectator"
+      defaultRole
     })
+  });
+  const shares = new StudioShares({
+    accounts,
+    access: StudioAccess.read({ version: 1 }, "project.json"),
+    catalog: Promise.resolve(sharedCatalog(closures))
   });
   const api = await StudioApi.open({
     ...apiOptions,
-    accounts
+    accounts,
+    shares
   });
   const server = http.createServer((request, response) => {
     api.middleware(request, response, () => {
@@ -80,6 +107,7 @@ export async function listenStudioApi(
 
   return {
     accounts,
+    shares,
     url,
     accountsUrl,
     browser: () => browser(accountsUrl),

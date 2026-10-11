@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type { FastifyInstance } from "fastify";
-import rateLimit from "@fastify/rate-limit";
 import * as z from "zod";
 import {
   ACCOUNTS_ROUTES,
@@ -19,15 +18,13 @@ import {
   type RegisterRoute,
   type ReplaceAvatarRoute
 } from "./AccountsController.ts";
-import { ApiError } from "../errors/ApiError.ts";
+import { accountsFailure } from "../errors/accountsFailure.ts";
 
 // CONSTANTS
 const kAvatarBodySchema = z.instanceof(Uint8Array);
-const kDefaultRequestsPerMinute = 300;
 
 export interface AccountsRoutesOptions {
   accounts: Accounts;
-  requestsPerMinute?: number;
 }
 
 export async function accountsRoutes(
@@ -45,27 +42,8 @@ export async function accountsRoutes(
   } = ACCOUNTS_ROUTES;
 
   app.decorateRequest("account", null);
-  app.setValidatorCompiler<z.ZodType>(({ schema }) => (data) => {
-    const parsed = schema.safeParse(data);
-
-    return parsed.success ?
-      { value: parsed.data } :
-      { error: parsed.error };
-  });
   app.setErrorHandler((error) => {
-    throw error instanceof AccountsError ? controller.failure(error) : error;
-  });
-  await app.register(rateLimit, {
-    max: options.requestsPerMinute ?? kDefaultRequestsPerMinute,
-    timeWindow: 60_000,
-    errorResponseBuilder: (_request, context) => new ApiError(
-      context.statusCode,
-      "throttled",
-      "too many requests",
-      {
-        "retry-after": String(Math.ceil(context.ttl / 1_000))
-      }
-    )
+    throw error instanceof AccountsError ? accountsFailure(error) : error;
   });
 
   app.route<RegisterRoute>({
