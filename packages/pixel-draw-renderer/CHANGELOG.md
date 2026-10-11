@@ -1,5 +1,73 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 8.0.0
+
+### Major Changes
+
+- [#924](https://github.com/JollyPixel/editor/pull/924) [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4) Thanks [@fraxken](https://github.com/fraxken)! - `CommandDocument`, `ChangeReceipts` and `CommandHistory` move from `@jolly-pixel/network/client` to the new `@jolly-pixel/history` package.
+  `PixelArtCanvas` undo runs on a `PixelArtCanvasHistory` the host passes in; `PixelDocument` loses `history`, `undo()` and `redo()` and emits plain `EditChange`s.
+  `VoxelHistory` is removed and neither renderer depends on `@jolly-pixel/history`: undo wiring lives in the asset packages.
+
+- [#883](https://github.com/JollyPixel/editor/pull/883) [`6931384`](https://github.com/JollyPixel/editor/commit/69313842464ca9610f0448e7e76629e3ff3a213d) Thanks [@fraxken](https://github.com/fraxken)! - One reversible `PixelCommand` model shared by history, remote apply and `PixelDocumentState`; `buffer-updated`/`onBufferUpdated` become the `command` event, document intents are `paint*`/`record*`, canvas forwarders are removed.
+  UV regions split into stacked/net/free layouts: `withRect` becomes `movedTo`, slot parameters take `UVSlot | null`, only active slots are targeted, `UVRegionCollection` is removed; `NormalMapConfig.from` now validates its data.
+  Selection edits apply through the document, strokes keep their starting color, overlays paint in fixed layers through the new `ScreenProjection` viewport methods (`mouseCanvasPosition` removed).
+
+### Minor Changes
+
+- [#867](https://github.com/JollyPixel/editor/pull/867) [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Open asset rooms broadcast a fresh snapshot when their content is replaced from outside (`AssetStateStore` emits `replaced`), and `peerPresence.uvSelections` outlines each peer's selected UV region below the local selection.
+  Truncated `@jolly-pixel/ui` labels show their full text on hover (`overflow-title="off"` disables it), `jolly-pane-group` tabs collapse to their icon when the strip is too narrow, and `jolly-tree` takes `swatch-position="start"`.
+
+- [#894](https://github.com/JollyPixel/editor/pull/894) [`a69599d`](https://github.com/JollyPixel/editor/commit/a69599d95ccbbca488aa7160d969033b24307340) Thanks [@fraxken](https://github.com/fraxken)! - Add `canvas.shortcuts.selectAll()` to select the entire texture in Select mode.
+  Preserve floating pastes and use current texture bounds, including 1×1 textures.
+
+- [#862](https://github.com/JollyPixel/editor/pull/862) [`5563478`](https://github.com/JollyPixel/editor/commit/55634788aa98ea5616d9b2e3c58c3f6987b94f19) Thanks [@fraxken](https://github.com/fraxken)! - Add normal maps: pixel-draw derives an undoable, synced `NormalMap` per UV island (`NormalMapConfig`, `normal-map-*` commands) and can preview it through `PixelArtCanvas.textureView`.
+  Voxel-renderer lights blocksets with a tangent-space normal atlas (`loadBlockset(def, texture, { normal })`, `BlocksetAtlas.normal`), scaled per material group by `MaterialGroup.normalScale`.
+
+- [#894](https://github.com/JollyPixel/editor/pull/894) [`a031790`](https://github.com/JollyPixel/editor/commit/a031790a29618b165a8566e37f846219ebbd9864) Thanks [@fraxken](https://github.com/fraxken)! - Add a ten-color RGBA8 palette to Pixel Documents, serialized in files and snapshots.
+  Palette slot commands support undo/redo and remote application; older documents load defaults.
+
+- [#916](https://github.com/JollyPixel/editor/pull/916) [`7b98310`](https://github.com/JollyPixel/editor/commit/7b9831087622af584e8415820e988376d7668c34) Thanks [@fraxken](https://github.com/fraxken)! - Holding `lineHeld` (usually `Shift`) while dragging a UV region also moves the UV regions and slots nested inside it, recorded as one history entry.
+  `UVMap` gains `targetsWithin()`, `moveGroup()`, `previewMoveGroup()` and a `batch` option; `PixelDocumentState` gains a `uv` option.
+
+- [#894](https://github.com/JollyPixel/editor/pull/894) [`b6044f6`](https://github.com/JollyPixel/editor/commit/b6044f6164dab2857268f859c642cfb384098dbb) Thanks [@fraxken](https://github.com/fraxken)! - Expose undo and redo step counts: `HistoryState` gains `undoDepth` and `redoDepth`, and `PixelArtCanvas` adds `undoDepth()` and `redoDepth()`.
+
+- [#953](https://github.com/JollyPixel/editor/pull/953) [`cb97596`](https://github.com/JollyPixel/editor/commit/cb975969e2052ae274ecbdd556ba23da2a9f4092) Thanks [@fraxken](https://github.com/fraxken)! - `PixelArtCanvas.pixelsLocked` makes pixels read-only in every texture view, for hosts whose user has no right to write them.
+
+- [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - Export the `RectArea` value object and add `RectArea.intersects(rect)` for strict rectangle overlap checks.
+
+- [#895](https://github.com/JollyPixel/editor/pull/895) [`9c05ae3`](https://github.com/JollyPixel/editor/commit/9c05ae3b4c5934521a6608a193eb87b43f8ab56c) Thanks [@fraxken](https://github.com/fraxken)! - A touchpad pinch now zooms in paint and erase modes; only `Ctrl`+wheel with a held `Ctrl` key resizes the brush, and never while `shortcuts.panHeld` is set.
+  The brush highlight and other mode hover overlays hide while `panHeld` is set or a pan runs. `WindowLike` gains `keydown` and `keyup`.
+
+- [#858](https://github.com/JollyPixel/editor/pull/858) [`d72dd94`](https://github.com/JollyPixel/editor/commit/d72dd94be9788d77af1b9b8e027b8a77887ebcce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `UVMap.labelScope` (`"all" | "selected"`) to label only the selected UV region while keeping every border visible.
+
+- [#949](https://github.com/JollyPixel/editor/pull/949) [`16a1a20`](https://github.com/JollyPixel/editor/commit/16a1a20835b29f849ecb29fa42df5c2ae24ae898) Thanks [@fraxken](https://github.com/fraxken)! - Add `UVNet` to choose how a UV region unfolds: `UVNet.packed` (the default) or a fixed grid of slots, through `UVRegion.unfold(net)` and the `UVMap.net` property.
+
+- [#853](https://github.com/JollyPixel/editor/pull/853) [`9639459`](https://github.com/JollyPixel/editor/commit/963945920d90416d0c085c1d1e80e533c8155c3f) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add UV resize handles (`uv.resizable`, `UVMap.resize()`). `"region-dragging"` now carries the previewed `region` for moves and resizes, and `PeerUVPreviewState` holds a `region`.
+
+- [#887](https://github.com/JollyPixel/editor/pull/887) [`75e537e`](https://github.com/JollyPixel/editor/commit/75e537e8514f111c94b2a0116a903ddd41689baa) Thanks [@fraxken](https://github.com/fraxken)! - Add corner handles to resize rectangular selections without changing texture pixels.
+  Selection resizing supports pixel snapping, texture clipping and outline previews.
+
+- [#887](https://github.com/JollyPixel/editor/pull/887) [`8dd3b8c`](https://github.com/JollyPixel/editor/commit/8dd3b8c0bc7d5391feef932659c8b6dccaa00f3d) Thanks [@fraxken](https://github.com/fraxken)! - Expose immutable selection presence snapshots and lifecycle notifications.
+  Keep peer selections visible through commits and synchronize exact floating pixels.
+
+- [#952](https://github.com/JollyPixel/editor/pull/952) [`0cac137`](https://github.com/JollyPixel/editor/commit/0cac13766e6a2d3b4fb88225de64d93b8b14ee48) Thanks [@fraxken](https://github.com/fraxken)! - Add `UVMap.overflow` so UV regions can be moved, resized and rotated past the texture edge, up to a limit in texture pixels or without one (`Infinity`), and `UVMap.bounds` to read the resulting area; UV mode outlines the limit with a faint dashed rectangle labelled "UV limit".
+  Remote `uv-region-moved` commands now keep the position they were sent with (`UVMap.restoreMove()`), so peers with different overflows stay in sync.
+
+- [#896](https://github.com/JollyPixel/editor/pull/896) [`e4b2279`](https://github.com/JollyPixel/editor/commit/e4b2279323d49cc3afd36b32e0f9f1538a11d7a5) Thanks [@fraxken](https://github.com/fraxken)! - `UVMap.showSizeLabels` (event `"size-label-visibility-changed"`) shows the selected UV target size in texture pixels, like the selection size, moving inside when it would cover another UV; net faces show it inside.
+
+### Patch Changes
+
+- [#948](https://github.com/JollyPixel/editor/pull/948) [`4ba669b`](https://github.com/JollyPixel/editor/commit/4ba669bba56017f7079f482c863cfcdcd0fcae3f) Thanks [@fraxken](https://github.com/fraxken)! - UV resize handles only show in UV mode, so other modes no longer draw handles they cannot use.
+
+- [#885](https://github.com/JollyPixel/editor/pull/885) [`7e4b438`](https://github.com/JollyPixel/editor/commit/7e4b4386d9b5d4a12869335ed6863653a2897a46) Thanks [@fraxken](https://github.com/fraxken)! - Start Shift lines from the last paint or erase click and retain the line anchor across Shift presses.
+  Use the first available cursor position when no line anchor exists.
+
+- [#887](https://github.com/JollyPixel/editor/pull/887) [`9478d49`](https://github.com/JollyPixel/editor/commit/9478d4912aab2584e9be07ed7c0c33432e45a130) Thanks [@fraxken](https://github.com/fraxken)! - Hide UV resize handles and block new move and resize gestures while a peer previews that region.
+  Announce UV gestures on pointer-down and restore handles when the final peer preview clears.
+- Updated dependencies [[`09eabd6`](https://github.com/JollyPixel/editor/commit/09eabd676125ee69ac8e823815c62fd01b4feb5a), [`797aeb9`](https://github.com/JollyPixel/editor/commit/797aeb960560778e6f71219197859bb001f2045a)]:
+  - @jolly-pixel/color@1.1.2
+  - @jolly-pixel/image@2.0.1
+
 ## 7.0.0
 
 ### Major Changes

@@ -1,5 +1,20 @@
 # @jolly-pixel/three
 
+## 4.2.0
+
+### Minor Changes
+
+- [#913](https://github.com/JollyPixel/editor/pull/913) [`d9038e8`](https://github.com/JollyPixel/editor/commit/d9038e846d997950d592c319d631abbf5d397baf) Thanks [@fraxken](https://github.com/fraxken)! - `BoxControls` mirror chips now mirror through the box center; `pivot` only drives quarter turns.
+  Vertical moves now use Ctrl (⌘ on macOS) instead of Shift, which fly cameras use to descend.
+  New `snapBypass` option (default `true`) lets hosts stop Alt from suspending snapping.
+
+- [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - Add `clientToNdc(canvas, clientX, clientY, target?)`, the inverse of `projectToClient`, for aiming a `Raycaster` from pointer coordinates.
+
+### Patch Changes
+
+- Updated dependencies [[`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f), [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4), [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875), [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72), [`02172bd`](https://github.com/JollyPixel/editor/commit/02172bd0a88a1db4612b76a41d78e424517f5ba0), [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36), [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4), [`27cff63`](https://github.com/JollyPixel/editor/commit/27cff63c507ae72b62c0299999590c839f2ac492), [`28dae7b`](https://github.com/JollyPixel/editor/commit/28dae7b8ef17f600128ba02cfe33436afadf1c92), [`5fbedf2`](https://github.com/JollyPixel/editor/commit/5fbedf27124e3deb38992f3b70592b9536d9223c), [`a75ee6d`](https://github.com/JollyPixel/editor/commit/a75ee6dc5ef94c274f0f3b69d8eeff73e018e495), [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681)]:
+  - @jolly-pixel/network@6.0.0
+
 ## 4.1.0
 
 ### Minor Changes

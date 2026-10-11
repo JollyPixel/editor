@@ -1,5 +1,64 @@
 # @jolly-pixel/voxel.renderer
 
+## 8.0.0
+
+### Major Changes
+
+- [#924](https://github.com/JollyPixel/editor/pull/924) [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4) Thanks [@fraxken](https://github.com/fraxken)! - `CommandDocument`, `ChangeReceipts` and `CommandHistory` move from `@jolly-pixel/network/client` to the new `@jolly-pixel/history` package.
+  `PixelArtCanvas` undo runs on a `PixelArtCanvasHistory` the host passes in; `PixelDocument` loses `history`, `undo()` and `redo()` and emits plain `EditChange`s.
+  `VoxelHistory` is removed and neither renderer depends on `@jolly-pixel/history`: undo wiring lives in the asset packages.
+
+- [#907](https://github.com/JollyPixel/editor/pull/907) [`1573449`](https://github.com/JollyPixel/editor/commit/1573449ce827112ccae3d23c6ce236fc97e2041e) Thanks [@fraxken](https://github.com/fraxken)! - Rename tilesets to blocksets across the API (`TilesetDocument` to `BlocksetDocument`, `loadTilesets` to `loadBlocksets`, `blocksFromTileset` to `blocksFromTileGrid`, `TilesetTexture` to `AtlasTexture`...).
+  World JSON and commands now use `blocksets`, `blocksetId`, `defaultBlocksetId` and `blockset-added`/`blockset-removed`, so `VOXEL_WORLD_VERSION` is 5 and older worlds are rejected.
+
+- [#959](https://github.com/JollyPixel/editor/pull/959) [`7211095`](https://github.com/JollyPixel/editor/commit/7211095861cc3627cee5c40eb016353e52ae5f54) Thanks [@fraxken](https://github.com/fraxken)! - Rename ambiguous factories, lookups, conversions, and updates to describe their intent.
+  Update callers using the API name migration guide; saved voxel data is unchanged.
+
+- [#872](https://github.com/JollyPixel/editor/pull/872) [`9153958`](https://github.com/JollyPixel/editor/commit/91539588561132385e6fe1071f629939693bdc59) Thanks [@fraxken](https://github.com/fraxken)! - Stop exporting internals: `VoxelStore`, `compareLayerRanks`, `isLayerRank`, `RankedLayer`, `AtlasAverages`, `createMissingBlocksetAtlas`, `MissingBlocksetAtlas`, `MeshBuildStats`, `VoxelInspectorContext`, `InspectedChunkBounds`, `VoxelTemplatesOptions`, `VoxelObjectLayerDispatch` and `VoxelBlockInspectorOptions`.
+  The API documentation is rewritten around the consumer surface.
+
+### Minor Changes
+
+- [#915](https://github.com/JollyPixel/editor/pull/915) [`a582ec5`](https://github.com/JollyPixel/editor/commit/a582ec518947b99eb3c0d08ee5c9608bd0281b8d) Thanks [@fraxken](https://github.com/fraxken)! - Add the `material-group-renamed` blockset command, applied by `BlocksetDocument.renameMaterialGroup()` and `BlocksetLink.renameMaterialGroup()`: it moves a group's finish and every block naming it to the new id in one command.
+
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
+  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+
+- [#916](https://github.com/JollyPixel/editor/pull/916) [`8f704d3`](https://github.com/JollyPixel/editor/commit/8f704d30544b4203fe5c6303da3c5913b48924e2) Thanks [@fraxken](https://github.com/fraxken)! - Add an optional `swatch` colour to `MaterialGroup`, a label colour for editors that is not rendered. `with()` now takes `MaterialGroupChanges`, which covers it.
+
+- [#862](https://github.com/JollyPixel/editor/pull/862) [`5563478`](https://github.com/JollyPixel/editor/commit/55634788aa98ea5616d9b2e3c58c3f6987b94f19) Thanks [@fraxken](https://github.com/fraxken)! - Add normal maps: pixel-draw derives an undoable, synced `NormalMap` per UV island (`NormalMapConfig`, `normal-map-*` commands) and can preview it through `PixelArtCanvas.textureView`.
+  Voxel-renderer lights blocksets with a tangent-space normal atlas (`loadBlockset(def, texture, { normal })`, `BlocksetAtlas.normal`), scaled per material group by `MaterialGroup.normalScale`.
+
+- [#917](https://github.com/JollyPixel/editor/pull/917) [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` emits `deviceLost`, and the runtime logs it as an error. The model loader decodes Meshopt-compressed glTF, and `Transform` no longer allocates on each call.
+  `VoxelView.meshVersion` counts chunk mesh changes, so a host can keep a static shadow map.
+
+- [#917](https://github.com/JollyPixel/editor/pull/917) [`51a51c6`](https://github.com/JollyPixel/editor/commit/51a51c6e8349436143c5fd6b5a58947826f0106c) Thanks [@fraxken](https://github.com/fraxken)! - Add block light: a material group `lightLevel` (0-15) lights nearby blocks in its emissive hue, scaled by `lighting.blockLight`, with a `wide` or `focused` falloff and an optional `shadowFill`.
+  Emission now multiplies the block texture instead of painting a flat colour; `MaterialGroup.glows` tells whether a group feeds bloom.
+  The transparency pass skips its transparent draws when the scene has no transparent material.
+
+- [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - The `"command"` context of a `"block-defined"` command carries `redefinition` (`BlockRedefinition`), telling what changed from the replaced definition.
+  `VoxelView` reads it instead of tracking block definitions itself, and no longer remeshes for a `name` or `properties` change.
+
+- [#901](https://github.com/JollyPixel/editor/pull/901) [`3dc4f6b`](https://github.com/JollyPixel/editor/commit/3dc4f6b545d6b9429f53923c1bfdcedbdf70cc7d) Thanks [@fraxken](https://github.com/fraxken)! - Add built-in shapes: `Slab` beam/corner/notch (stair complements), `rampTip`, `rampValley`, `stairCornerPeak`, `Wall` joints, and `Pole` joints with an optional vertical rise (`new Pole(type, rise)`).
+  `pole` and `poleY` now collide as boxes.
+
+- [#920](https://github.com/JollyPixel/editor/pull/920) [`81c2b1b`](https://github.com/JollyPixel/editor/commit/81c2b1b5f6638dc2735b6bef8e65b5bbc39a917e) Thanks [@fraxken](https://github.com/fraxken)! - `VoxelChunk.contentBounds()` returns the exact local bounds of a chunk's voxels, cached until the chunk changes.
+  `VoxelLayer.localBounds()`, `worldBounds()` and `worldCenter()` now merge those cached chunk bounds, so after an edit they rescan only the edited chunks instead of every voxel.
+
+- [#901](https://github.com/JollyPixel/editor/pull/901) [`fb40cb1`](https://github.com/JollyPixel/editor/commit/fb40cb1c046689078e3e1f1efebc938bbf6831a6) Thanks [@fraxken](https://github.com/fraxken)! - Add merged cells: two complementary shapes can share one cell (`setVoxel({ merge: true })`, `VoxelEntry.partner`, `view.canMergeAt()`, `view.partAt()`), saved and synced through optional `partners` fields; patch partners reference their cell by index (`VoxelPatchBuilder`, `pickVoxelPatch()`, `assertVoxelPatch()`).
+  Complements are detected from geometry (`ShapeOccupancy`, `BlockComplements`). `localVoxels()`, `packedEntries()` and template voxels yield the partner as a fifth tuple element, and `removeBlocks()` now emits `"voxels-patched"`.
+
+### Patch Changes
+
+- [#901](https://github.com/JollyPixel/editor/pull/901) [`59879f7`](https://github.com/JollyPixel/editor/commit/59879f705d6e524ce424f09cb3cc26065f81056e) Thanks [@fraxken](https://github.com/fraxken)! - Faster chunk meshing with identical output: ambient occlusion samples and quad diagonals are memoized, blend neighbours and palette entries are cached, and block variants use a flat lookup table.
+  Less memory and GC work: face textures no longer pad rows (~20% smaller), chunk geometries share their corner attributes, and `VoxelChunkCollision.geometries` is built only when a collider reads it.
+  Transactions track edited cells sparsely, so a small edit no longer allocates arrays sized to every touched chunk.
+
+- [#901](https://github.com/JollyPixel/editor/pull/901) [`2447d5c`](https://github.com/JollyPixel/editor/commit/2447d5c122a91cde0a3a1bc4416adfbbd2c37585) Thanks [@fraxken](https://github.com/fraxken)! - Moving a block's tiles or renaming it no longer remeshes any chunk: face templates keep tile-local UVs and read each block texture slot's atlas rect from a small region table the view rewrites in place.
+  Tile moves also stop growing the face template table, which kept every past tile position.
+- Updated dependencies [[`98cbd2b`](https://github.com/JollyPixel/editor/commit/98cbd2b36acf3752a62d18a2bb5b6c8a505cc311), [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943), [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0)]:
+  - @jolly-pixel/engine@7.1.0
+
 ## 7.0.0
 
 ### Major Changes

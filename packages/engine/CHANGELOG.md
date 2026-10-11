@@ -1,5 +1,29 @@
 # @jolly-pixel/engine
 
+## 7.1.0
+
+### Minor Changes
+
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
+  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Time scale support: `FrameSchedule.unscaledDelta`, `GameLoop.step()` for frame-by-frame debugging, and a step budget that grows with `timeScale` above 1.
+  Add `world.time` (game, wall-clock and fixed-step time); `Camera3DControls` and `OrbitFlyCamera` move in wall-clock time, so they work in slow motion and while paused.
+  `World.tick` samples input once per frame and publishes it to each fixed step and to the rendered frame, so a press on a frame without a step reaches the next one.
+
+- [#917](https://github.com/JollyPixel/editor/pull/917) [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` emits `deviceLost`, and the runtime logs it as an error. The model loader decodes Meshopt-compressed glTF, and `Transform` no longer allocates on each call.
+  `VoxelView.meshVersion` counts chunk mesh changes, so a host can keep a static shadow map.
+
+### Patch Changes
+
+- [#875](https://github.com/JollyPixel/editor/pull/875) [`98cbd2b`](https://github.com/JollyPixel/editor/commit/98cbd2b36acf3752a62d18a2bb5b6c8a505cc311) Thanks [@fraxken](https://github.com/fraxken)! - Declare `sideEffects: false` so bundlers drop three.js and reflect-metadata when only `Systems.Logger` is imported.
+  `ThreeRenderer` skips zero and unchanged sizes, so a canvas hidden then shown at the same size keeps its frame buffers.
+
+- [#908](https://github.com/JollyPixel/editor/pull/908) [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderDelta`/`unscaledRenderDelta` so `update` and `world.time` include frames skipped by `maxFps`; renders land on the nearest frame so a cap at the display rate no longer drops frames.
+- Updated dependencies [[`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943)]:
+  - @jolly-pixel/controls@4.0.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.0.0
 
 ### Major Changes
