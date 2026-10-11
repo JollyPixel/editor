@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
 import type {
-  TypedEventEmitter
-} from "@openally/emitt";
-import type {
   Result
 } from "@openally/result";
 
@@ -89,6 +86,7 @@ export interface TypedEventWriter<
 export interface ListFromCheckpointsOptions {
   checkpointEventTypes: readonly string[];
   eventTypePrefix?: string;
+  assetId?: string;
 }
 
 export interface CompactOptions {
@@ -106,15 +104,44 @@ export interface CompactReport {
   assets: number;
 }
 
+export interface EventTagInput {
+  assetId: string;
+  name: string;
+  eventVersion: number;
+  message?: string;
+  actor: Actor;
+}
+
+export interface EventTag extends EventTagInput {
+  createdAt: string;
+}
+
+export interface EventTags {
+  create(
+    input: EventTagInput
+  ): Result<EventTag, Error>;
+  get(
+    assetId: string,
+    name: string
+  ): EventTag | undefined;
+  list(
+    assetId?: string
+  ): EventTag[];
+  delete(
+    assetId: string,
+    name: string
+  ): boolean;
+}
+
 export interface EventReader {
+  get(
+    assetId: string,
+    eventVersion: number
+  ): Event | undefined;
+
   list(
     assetId: string,
     fromVersion?: number
-  ): Event[];
-
-  listFromCheckpoint(
-    assetId: string,
-    checkpointEventTypes: readonly string[]
   ): Event[];
 
   listAll(
@@ -134,13 +161,23 @@ export type EventListener = (
   event: Event
 ) => void;
 
+export type RejectionListener = (
+  error: Error,
+  input: AppendInput
+) => void;
+
 export interface EventStore {
-  readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
+  readonly writer: EventWriter;
   readonly reader: EventReader;
+  readonly tags: EventTags;
 
   subscribe(
     listener: EventListener,
     options?: SubscribeOptions
+  ): () => void;
+
+  subscribeRejections(
+    listener: RejectionListener
   ): () => void;
 
   compact(
@@ -154,17 +191,5 @@ export interface EventStore {
 export interface TypedEventStore<
   TMap extends EventDataMap
 > extends EventStore {
-  readonly writer:
-    & TypedEventWriter<TMap>
-    & TypedEventEmitter<EventStoreEventMap>;
+  readonly writer: TypedEventWriter<TMap>;
 }
-
-export type EventStoreEventMap = {
-  append: (
-    event: Event
-  ) => void;
-  error: (
-    error: Error,
-    input: AppendInput
-  ) => void;
-};

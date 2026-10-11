@@ -60,6 +60,20 @@ export const assetWriteDataSchema = defineSchema({
     dependencies: {
       type: "array",
       items: assetReferenceSchema
+    },
+    restoredFrom: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        eventVersion: {
+          type: "integer",
+          minimum: 1
+        }
+      },
+      required: [
+        "name",
+        "eventVersion"
+      ]
     }
   },
   required: [

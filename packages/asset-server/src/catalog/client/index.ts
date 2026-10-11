@@ -20,3 +20,7 @@ export type {
   ImportReport,
   SharedDependents
 } from "../../archive/import/AssetImport.ts";
+export type {
+  AssetTag,
+  RestoreReport
+} from "../../tags/AssetTags.schema.ts";

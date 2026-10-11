@@ -63,6 +63,17 @@ a checkpoint and physical storage can be brought up to date.
 The comparison between physical asset storage and the state last projected
 there. Differences made outside the backend become lifecycle events.
 
+### Restore
+
+Appending an update whose content is the content of a
+[tagged](../event-store/GLOSSARY.md#tag) event. The asset keeps its path and
+its history.
+
+### Restore Point
+
+The tag a restore puts on the content it is about to replace, named
+`restore/<eventVersion>`. Restoring it undoes the restore.
+
 ### Asset Room
 
 The collaboration space for one open, editable asset. Accepted editing

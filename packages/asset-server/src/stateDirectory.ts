@@ -10,13 +10,16 @@ export const PROJECTION_STATE_PATH = `${STATE_DIRECTORY}/state.json`;
 export const STATE_GITIGNORE_PATH = `${STATE_DIRECTORY}/.gitignore`;
 export const EVENTS_DB_PATH = `${STATE_DIRECTORY}/events.db`;
 export const PROJECT_FILE_PATH = `${STATE_DIRECTORY}/project.json`;
+export const CONTENT_OBJECTS_PATH = `${STATE_DIRECTORY}/objects`;
+export const BACKUP_LEDGER_PATH = `${CONTENT_OBJECTS_PATH}/index.json`;
 
 const kStateGitignoreEntries = [
   "state.json",
   "events.db",
   "events.db-journal",
   "events.db-wal",
-  "events.db-shm"
+  "events.db-shm",
+  "objects"
 ];
 
 export async function ensureStateGitignore(
@@ -30,7 +33,7 @@ export async function ensureStateGitignore(
   const encoder = new TextEncoder();
   const created = await source.writeIfAbsent(
     STATE_GITIGNORE_PATH,
-    encoder.encode(`${kStateGitignoreEntries.join("\n")}\n`)
+    encoder.encode(`${entries.join("\n")}\n`)
   );
   if (created) {
     return;

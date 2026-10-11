@@ -12,8 +12,6 @@ and live state are separate views of that history.
 - [Rooms and reconciliation](./architecture/RoomsAndReconciliation.md): edits
   from clients and changes made directly to physical storage.
 
-For callable signatures, use the [API docs](./README.md#api).
-
 ## Workspace map
 
 ```mermaid
@@ -138,6 +136,3 @@ sequenceDiagram
 
     Note over Projector,Files: no echo write to storage
 ```
-
-Details: [asset kinds](./docs/AssetKinds.md), [rooms](./docs/Rooms.md), and
-[synchronization](./docs/Sync.md).

@@ -42,11 +42,9 @@
   },
   "keywords": [],
   "files": [
-    "dist",
-    "docs"
+    "dist"
   ],
   "directories": {
-    "doc": "docs",
     "test": "test"
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",

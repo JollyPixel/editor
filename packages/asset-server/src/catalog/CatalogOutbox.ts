@@ -2,14 +2,17 @@
 import {
   CATALOG_CHANGED,
   CATALOG_FOLDERS,
+  CATALOG_TAGS_CHANGED,
   type CatalogChange,
   type CatalogMessage
 } from "./client/protocol.ts";
+import type { AssetTag } from "../tags/AssetTags.schema.ts";
 
 export class CatalogOutbox {
   readonly #send: (message: CatalogMessage) => void;
   #changes: CatalogChange[] = [];
   #folders: string[] | null = null;
+  #tags = new Map<string, readonly AssetTag[]>();
   #holds = 0;
 
   constructor(
@@ -32,6 +35,14 @@ export class CatalogOutbox {
     this.#flushUnlessHeld();
   }
 
+  pushTags(
+    assetId: string,
+    tags: readonly AssetTag[]
+  ): void {
+    this.#tags.set(assetId, tags);
+    this.#flushUnlessHeld();
+  }
+
   async hold<TResult>(
     task: () => Promise<TResult>
   ): Promise<TResult> {
@@ -48,8 +59,10 @@ export class CatalogOutbox {
   flush(): void {
     const folders = this.#folders;
     const changes = this.#changes;
+    const tags = this.#tags;
     this.#folders = null;
     this.#changes = [];
+    this.#tags = new Map();
     if (folders !== null) {
       this.#send({
         type: CATALOG_FOLDERS,
@@ -60,6 +73,13 @@ export class CatalogOutbox {
       this.#send({
         type: CATALOG_CHANGED,
         changes
+      });
+    }
+    for (const [assetId, assetTags] of tags) {
+      this.#send({
+        type: CATALOG_TAGS_CHANGED,
+        assetId,
+        tags: assetTags
       });
     }
   }

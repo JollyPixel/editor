@@ -19,6 +19,7 @@ import {
   AssetWriter
 } from "#src/index.ts";
 import { IdentitySidecar } from "#src/identity/index.ts";
+import { ContentObjects } from "#src/objects/index.ts";
 import {
   AssetProjector,
   ProjectionState
@@ -158,7 +159,12 @@ describe("SourceWatcher — real filesystem (integration)", () => {
     const source = new FilesystemAssetSource(workspace.root);
     const kinds = new AssetKindRegistry();
     const state = await ProjectionState.load(source);
-    const projector = new AssetProjector({ source, eventStore, state });
+    const projector = new AssetProjector({
+      source,
+      eventStore,
+      state,
+      objects: new ContentObjects(source)
+    });
     projector.load();
     projector.start();
     const identity = await IdentitySidecar.load(source);

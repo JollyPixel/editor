@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import type * as EventStore from "#src/index.ts";
 import {
   append,
   backends,
@@ -50,19 +51,55 @@ for (const backend of backends) {
         []
       );
     });
+  });
 
-    test("hands back copies, so mutating a result cannot reach the log", async() => {
+  describe(`${backend.name} — get`, () => {
+    test("returns the event stored at that version of the asset", async() => {
       using store = await backend.create();
-      append(store, "a1", { value: 1 });
+      append(store, "a1", { x: 1 });
+      const second = append(store, "a1", { x: 2 });
+      append(store, "a2", { x: 3 });
 
-      const [event] = store.reader.list("a1");
-      (event.eventData as { value: number; }).value = 999;
-
-      assert.deepEqual(
-        store.reader.list("a1")[0].eventData,
-        { value: 1 }
-      );
+      assert.deepEqual(store.reader.get("a1", 2), second);
     });
+
+    test("returns undefined for a version or asset the log does not hold", async() => {
+      using store = await backend.create();
+      append(store, "a1", { x: 1 });
+
+      assert.strictEqual(store.reader.get("a1", 2), undefined);
+      assert.strictEqual(store.reader.get("missing", 1), undefined);
+    });
+  });
+
+  describe(`${backend.name} — read copies`, () => {
+    const reads: [string, (reader: EventStore.EventReader) => EventStore.Event | undefined][] = [
+      ["get", (reader) => reader.get("a1", 1)],
+      ["list", (reader) => reader.list("a1")[0]],
+      ["listAll", (reader) => reader.listAll()[0]],
+      [
+        "listFromCheckpoints",
+        (reader) => reader.listFromCheckpoints({
+          checkpointEventTypes: ["asset.created"]
+        })[0]
+      ]
+    ];
+
+    for (const [name, read] of reads) {
+      test(`${name} hands back copies, so mutating a result cannot reach the log`, async() => {
+        using store = await backend.create();
+        append(store, "a1", { nested: { value: 1 } }, "asset.created");
+
+        const event = read(store.reader);
+        assert.ok(event);
+        (event.eventData as { nested: { value: number; }; }).nested.value = 999;
+
+        assert.deepEqual(
+          read(store.reader)?.eventData,
+          { nested: { value: 1 } }
+        );
+      });
+    }
   });
 
   describe(`${backend.name} — listAll`, () => {

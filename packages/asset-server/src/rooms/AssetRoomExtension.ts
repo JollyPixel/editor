@@ -317,12 +317,13 @@ export class AssetRoomExtension<
     }
 
     const events = this.#reader.list(this.#assetId, from);
-    if (events.length > 0 && events[0].eventVersion !== from + 1) {
-      return null;
-    }
-
     const commands: unknown[] = [];
+    let expectedVersion = from + 1;
     for (const event of events) {
+      if (event.eventVersion !== expectedVersion++) {
+        return null;
+      }
+
       if (event.eventType === this.#commands.eventType) {
         commands.push(event.eventData);
       }

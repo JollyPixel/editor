@@ -12,4 +12,15 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_asset ON events (asset_id, event_version);
 CREATE INDEX IF NOT EXISTS idx_events_type ON events (event_type, event_id);
+CREATE TABLE IF NOT EXISTS tags (
+  tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  asset_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  event_version INTEGER NOT NULL,
+  message TEXT,
+  actor TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (asset_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_tags_event ON tags (asset_id, event_version);
 `;

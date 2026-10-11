@@ -21,8 +21,13 @@ import {
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
+  CATALOG_RESTORE,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
+  CATALOG_TAG,
+  CATALOG_TAGS,
+  CATALOG_TAGS_CHANGED,
+  CATALOG_UNTAG,
   type CatalogApplied,
   type CatalogChange,
   type CatalogCommand,
@@ -36,6 +41,10 @@ import type {
   ImportPlan,
   ImportReport
 } from "../../archive/import/AssetImport.ts";
+import type {
+  AssetTag,
+  RestoreReport
+} from "../../tags/AssetTags.schema.ts";
 import {
   decodeContent,
   encodeContent
@@ -102,6 +111,10 @@ export interface CatalogImportOptions {
 export type CatalogClientEvents = {
   change: () => void;
   dependencies: (assetId: string) => void;
+  "tags-changed": (
+    assetId: string,
+    tags: readonly AssetTag[]
+  ) => void;
 };
 
 type Reply<TType extends CatalogCommandType> = CatalogApplied extends infer TApplied ?
@@ -347,6 +360,56 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     return reply.report;
   }
 
+  async tags(
+    assetId: string
+  ): Promise<readonly AssetTag[]> {
+    const reply = await this.#request({
+      type: CATALOG_TAGS,
+      assetId
+    });
+
+    return reply.tags;
+  }
+
+  async tag(
+    assetId: string,
+    name: string,
+    message?: string
+  ): Promise<AssetTag> {
+    const reply = await this.#request({
+      type: CATALOG_TAG,
+      assetId,
+      name,
+      message
+    });
+
+    return reply.tag;
+  }
+
+  async untag(
+    assetId: string,
+    name: string
+  ): Promise<void> {
+    await this.#request({
+      type: CATALOG_UNTAG,
+      assetId,
+      name
+    });
+  }
+
+  async restore(
+    assetId: string,
+    name: string
+  ): Promise<RestoreReport> {
+    const reply = await this.#request({
+      type: CATALOG_RESTORE,
+      assetId,
+      name
+    });
+
+    return reply.report;
+  }
+
   dispose(): void {
     this.#room.off("message", this.#onMessage);
     this.#room.leave();
@@ -408,6 +471,11 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       .with({ type: CATALOG_SNAPSHOT }, (snapshot) => this.#applySnapshot(snapshot))
       .with({ type: CATALOG_CHANGED }, ({ changes }) => this.#applyChanges(changes))
       .with({ type: CATALOG_FOLDERS }, ({ folders }) => this.#applyFolders(folders))
+      .with({ type: CATALOG_TAGS_CHANGED }, ({ assetId, tags }) => this.emit(
+        "tags-changed",
+        assetId,
+        tags
+      ))
       .with({ type: P.union(CATALOG_APPLIED, CATALOG_REJECTED) }, (reply) => this.#settle(reply))
       .exhaustive();
   };

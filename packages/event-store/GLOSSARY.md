@@ -58,7 +58,13 @@ events. The consumer decides which event types qualify because it owns the
 ### Compaction
 
 The irreversible removal of events that precede the newest checkpoint in each
-asset stream. The checkpoint and every later event remain available.
+asset stream. The checkpoint, every later event, and every tagged event remain
+available.
+
+### Tag
+
+A name attached to one event of an asset stream, unique within that asset. The
+tagged event survives compaction until its last tag is deleted.
 
 ## Naming boundaries
 

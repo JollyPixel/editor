@@ -13,5 +13,3 @@ export function createMemoryEventStore<
     new MemoryEventLog()
   );
 }
-
-export { MemoryEventLog } from "./log.ts";

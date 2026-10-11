@@ -11,6 +11,7 @@ import type {
   catalogMessageProtocol
 } from "../protocol.schema.ts";
 import type { Immutable } from "../../utils/Immutable.ts";
+import type { Without } from "../../utils/Without.ts";
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";
@@ -21,6 +22,7 @@ export const CATALOG_CHANGED = "catalog:changed";
 export const CATALOG_FOLDERS = "catalog:folders";
 export const CATALOG_APPLIED = "catalog:applied";
 export const CATALOG_REJECTED = "catalog:rejected";
+export const CATALOG_TAGS_CHANGED = "catalog:tags-changed";
 
 export const CATALOG_CREATE = "catalog:create";
 export const CATALOG_RENAME = "catalog:rename";
@@ -31,10 +33,10 @@ export const CATALOG_DELETE_FOLDER = "catalog:delete-folder";
 export const CATALOG_EXPORT = "catalog:export";
 export const CATALOG_PLAN = "catalog:plan";
 export const CATALOG_IMPORT = "catalog:import";
-
-type Without<TValue, TKey extends PropertyKey> = TValue extends unknown ?
-  Omit<TValue, TKey> :
-  never;
+export const CATALOG_TAGS = "catalog:tags";
+export const CATALOG_TAG = "catalog:tag";
+export const CATALOG_UNTAG = "catalog:untag";
+export const CATALOG_RESTORE = "catalog:restore";
 
 export type CatalogCommand = InferMessage<typeof catalogCommandProtocol>;
 export type CatalogRequest = Without<CatalogCommand, "requestId">;
@@ -54,6 +56,8 @@ export type CatalogDeleteFolderCommand = RequestOf<typeof CATALOG_DELETE_FOLDER>
 export type CatalogExportCommand = RequestOf<typeof CATALOG_EXPORT>;
 export type CatalogPlanCommand = RequestOf<typeof CATALOG_PLAN>;
 export type CatalogImportCommand = RequestOf<typeof CATALOG_IMPORT>;
+export type CatalogTagCommand = RequestOf<typeof CATALOG_TAG>;
+export type CatalogRestoreCommand = RequestOf<typeof CATALOG_RESTORE>;
 
 export type CatalogMessage = Immutable<
   InferMessage<typeof catalogMessageProtocol>

@@ -125,7 +125,7 @@ its own calls it behind `import.meta.env.DEV`.
 ## Archives
 
 `archive` exports and imports `.zip`
-[asset archives](../../../asset-server/docs/Archive.md) through the catalog
+asset archives through the catalog
 room, the same way offline and on a server. The adapter is
 `CatalogSessionArchive`, built over the `CatalogClient` archive methods;
 `EditorSession` passes it the workspace's import capability.

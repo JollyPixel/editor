@@ -17,6 +17,7 @@ import {
   type AssetProjectionChange
 } from "#src/projection/index.ts";
 import { encodeContent } from "#src/events/inlineContent.ts";
+import { ContentObjects } from "#src/objects/index.ts";
 import {
   countingReads,
   syncHarness
@@ -54,7 +55,8 @@ describe("AssetProjector — load reads the tail of the log", () => {
     const projector = new AssetProjector({
       source: harness.source,
       eventStore: counter.store,
-      state: harness.state
+      state: harness.state,
+      objects: harness.objects
     });
     projector.load();
 
@@ -87,7 +89,8 @@ describe("AssetProjector — load reads the tail of the log", () => {
     const projector = new AssetProjector({
       source: harness.source,
       eventStore: harness.eventStore,
-      state: harness.state
+      state: harness.state,
+      objects: harness.objects
     });
     projector.load();
 
@@ -112,7 +115,8 @@ describe("AssetProjector — load reads the tail of the log", () => {
     const projector = new AssetProjector({
       source: harness.source,
       eventStore: harness.eventStore,
-      state: harness.state
+      state: harness.state,
+      objects: harness.objects
     });
     projector.load();
 
@@ -399,7 +403,8 @@ describe("AssetProjector — restart convergence", () => {
     const projector = new AssetProjector({
       source: second,
       eventStore,
-      state
+      state,
+      objects: new ContentObjects(second)
     });
     projector.load();
     await projector.flush();
@@ -443,7 +448,8 @@ describe("AssetProjector — restart convergence", () => {
     const projector = new AssetProjector({
       source: restarted,
       eventStore,
-      state
+      state,
+      objects: new ContentObjects(restarted)
     });
     projector.load();
     await projector.flush();
@@ -506,7 +512,8 @@ describe("AssetProjector — malformed events", () => {
     const replayed = new AssetProjector({
       source,
       eventStore,
-      state: await ProjectionState.load(source)
+      state: await ProjectionState.load(source),
+      objects: new ContentObjects(source)
     });
 
     replayed.load();
@@ -541,6 +548,7 @@ describe("AssetProjector — rejected events", () => {
         source,
         eventStore,
         state: await ProjectionState.load(source),
+        objects: new ContentObjects(source),
         logger
       }).load();
 
@@ -577,6 +585,7 @@ describe("AssetProjector — rejected events", () => {
         source,
         eventStore,
         state: await ProjectionState.load(source),
+        objects: new ContentObjects(source),
         logger
       }).load();
 
@@ -627,6 +636,7 @@ describe("AssetProjector — rejected events", () => {
       source,
       eventStore,
       state: await ProjectionState.load(source),
+      objects: new ContentObjects(source),
       logger
     });
 

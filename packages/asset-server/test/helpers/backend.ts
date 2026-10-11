@@ -5,6 +5,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 // Import Internal Dependencies
 import {
   AssetKindRegistry,
+  AssetTags,
   AssetWriter,
   CatalogFolders,
   type ArchiveBackend,
@@ -14,6 +15,7 @@ import {
   type SnapshotPolicy
 } from "#src/index.ts";
 import { IdentitySidecar } from "#src/identity/index.ts";
+import { ContentObjects } from "#src/objects/index.ts";
 import {
   AssetProjector,
   ProjectionState
@@ -31,6 +33,7 @@ export interface SyncHarness extends AsyncDisposable {
   readonly source: MemoryAssetSource;
   readonly eventStore: EventStore.EventStore;
   readonly state: ProjectionState;
+  readonly objects: ContentObjects;
   readonly projector: AssetProjector;
   readonly states: AssetStateStore;
   readonly scheduler: SnapshotScheduler;
@@ -39,6 +42,7 @@ export interface SyncHarness extends AsyncDisposable {
   readonly watcher: SourceWatcher;
   readonly identity: IdentitySidecar;
   readonly kinds: AssetKindRegistry;
+  flush(assetId?: string): Promise<void>;
 }
 
 export interface SyncHarnessOptions {
@@ -61,10 +65,15 @@ export function countingReads(
   let read = 0;
 
   const reader: EventStore.EventReader = {
+    get: (...parameters) => {
+      const event = store.reader.get(...parameters);
+      if (event !== undefined) {
+        read++;
+      }
+
+      return event;
+    },
     list: (...parameters) => count(store.reader.list(...parameters)),
-    listFromCheckpoint: (...parameters) => count(
-      store.reader.listFromCheckpoint(...parameters)
-    ),
     listAll: (...parameters) => count(store.reader.listAll(...parameters)),
     listFromCheckpoints: (...parameters) => count(
       store.reader.listFromCheckpoints(...parameters)
@@ -83,7 +92,9 @@ export function countingReads(
     store: {
       writer: store.writer,
       reader,
+      tags: store.tags,
       subscribe: (listener, options) => store.subscribe(listener, options),
+      subscribeRejections: (listener) => store.subscribeRejections(listener),
       compact: (options) => store.compact(options),
       close: () => store.close(),
       [Symbol.dispose]: () => store.close()
@@ -105,7 +116,13 @@ export async function syncHarness(
   const eventStore = options.eventStore ?? EventStore.persistence.memory();
   const kinds = new AssetKindRegistry(options.handlers ?? []);
   const state = await ProjectionState.load(source);
-  const projector = new AssetProjector({ source, eventStore, state });
+  const objects = new ContentObjects(source);
+  const projector = new AssetProjector({
+    source,
+    eventStore,
+    state,
+    objects
+  });
   projector.load();
   projector.start();
 
@@ -149,6 +166,7 @@ export async function syncHarness(
     source,
     eventStore,
     state,
+    objects,
     projector,
     states,
     scheduler,
@@ -157,6 +175,10 @@ export async function syncHarness(
     watcher,
     identity,
     kinds,
+    async flush(assetId) {
+      await scheduler.flush(assetId);
+      await projector.flush(assetId);
+    },
     async [Symbol.asyncDispose]() {
       await watcher.close();
       await scheduler.close();
@@ -178,10 +200,7 @@ export function archiveBackend(
     kinds: sync.kinds,
     writer: sync.writer,
     catalog,
-    async flush(assetId) {
-      await sync.scheduler.flush(assetId);
-      await sync.projector.flush(assetId);
-    }
+    flush: (assetId) => sync.flush(assetId)
   };
 }
 
@@ -197,6 +216,13 @@ export function catalogBackend(
       source: sync.source,
       catalog,
       flush: () => backend.flush()
+    }),
+    tags: new AssetTags({
+      eventStore: sync.eventStore,
+      projector: sync.projector,
+      writer: sync.writer,
+      flush: (assetId) => backend.flush(assetId),
+      objects: sync.objects
     })
   };
 }

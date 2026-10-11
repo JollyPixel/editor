@@ -1,45 +1,18 @@
-// Import Node.js Dependencies
-import fs from "node:fs/promises";
-import path from "node:path";
-
 // Import Internal Dependencies
 import type {
   EventDataMap,
   TypedEventStore
 } from "../../EventStore.ts";
 import { createEventStore } from "../createEventStore.ts";
-import { SQL_SCHEMA } from "./schema.ts";
+import { SqliteDatabase } from "./database.ts";
 import { SqliteEventLog } from "./log.ts";
-import { enableIncrementalVacuum } from "./vacuum.ts";
-
-// CONSTANTS
-const kInMemoryLocation = ":memory:";
 
 export async function createSqliteEventStore<
   TMap extends EventDataMap = EventDataMap
 >(
-  location: string = kInMemoryLocation
+  location?: string
 ): Promise<TypedEventStore<TMap>> {
-  const { DatabaseSync } = await import("node:sqlite");
-
-  if (location !== kInMemoryLocation) {
-    await fs.mkdir(
-      path.dirname(location),
-      { recursive: true }
-    );
-  }
-
-  const db = new DatabaseSync(location);
-  if (location !== kInMemoryLocation) {
-    enableIncrementalVacuum(db);
-    db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
-  }
-  db.exec(SQL_SCHEMA);
-
   return createEventStore<TMap>(
-    new SqliteEventLog(db)
+    new SqliteEventLog(await SqliteDatabase.open(location))
   );
 }
-
-export { SQL_SCHEMA } from "./schema.ts";
-export { SqliteEventLog } from "./log.ts";

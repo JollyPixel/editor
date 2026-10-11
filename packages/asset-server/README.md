@@ -44,19 +44,6 @@ made through `backend.writer` are appended to the event store and written to
 the asset source. Changes made by external tools are detected and appended as
 system events.
 
-## 📚 API
-
-- [`Architecture`](./ARCHITECTURE.md): visual map of event flow, projections,
-  live state and reconciliation
-- [`AssetBackend`](./docs/AssetBackend.md): setup, options and lifecycle
-- [`AssetWriter`](./docs/AssetWriter.md): create, update, rename and remove assets
-- [`Asset kinds`](./docs/AssetKinds.md): custom state, serialization and editing rooms
-- [`Project file`](./docs/Project.md): kind packages a project loads from `.jollypixel/project.json`
-- [`Catalog`](./docs/Catalog.md): catalog projection, network messages and HTTP access
-- [`Archive`](./docs/Archive.md): ZIP export and import of an asset with its dependencies
-- [`Rooms`](./docs/Rooms.md): dynamic editing rooms and eviction
-- [`Sync`](./docs/Sync.md): lifecycle events, snapshots and reconciliation
-
 ## ✨ Contributors guide
 
 Read the [contributing guide][contributing] before submitting a change.

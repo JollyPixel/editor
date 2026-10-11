@@ -20,7 +20,12 @@ import {
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
-  CATALOG_SNAPSHOT
+  CATALOG_RESTORE,
+  CATALOG_SNAPSHOT,
+  CATALOG_TAG,
+  CATALOG_TAGS,
+  CATALOG_TAGS_CHANGED,
+  CATALOG_UNTAG
 } from "./client/protocol.ts";
 import {
   assetInlineContentSchema,
@@ -38,6 +43,13 @@ import {
   importPlanSchema,
   importReportSchema
 } from "../archive/import/AssetImport.ts";
+import {
+  assetTagSchema,
+  restoreReportSchema,
+  tagMessageSchema,
+  tagNameSchema,
+  tagReferenceSchema
+} from "../tags/AssetTags.schema.ts";
 
 // CONSTANTS
 const kString = { type: "string" } as const;
@@ -48,6 +60,10 @@ const kStrings = {
 const kReferences = {
   type: "array",
   items: assetReferenceSchema
+} as const;
+const kTags = {
+  type: "array",
+  items: assetTagSchema
 } as const;
 const kRenameSchema = {
   type: "object",
@@ -69,7 +85,11 @@ const kCommandTypes = [
   CATALOG_DELETE_FOLDER,
   CATALOG_EXPORT,
   CATALOG_PLAN,
-  CATALOG_IMPORT
+  CATALOG_IMPORT,
+  CATALOG_TAGS,
+  CATALOG_TAG,
+  CATALOG_UNTAG,
+  CATALOG_RESTORE
 ] as const;
 
 export const assetRecordSchema = defineSchema({
@@ -253,6 +273,65 @@ export const catalogCommandProtocol = new MessageProtocol(
           "content",
           "onConflict"
         ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_TAGS },
+          requestId: kString,
+          assetId: kString
+        },
+        required: [
+          "type",
+          "requestId",
+          "assetId"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_TAG },
+          requestId: kString,
+          assetId: kString,
+          name: tagNameSchema,
+          message: tagMessageSchema
+        },
+        required: [
+          "type",
+          "requestId",
+          "assetId",
+          "name"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_UNTAG },
+          requestId: kString,
+          assetId: kString,
+          name: tagReferenceSchema
+        },
+        required: [
+          "type",
+          "requestId",
+          "assetId",
+          "name"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_RESTORE },
+          requestId: kString,
+          assetId: kString,
+          name: tagReferenceSchema
+        },
+        required: [
+          "type",
+          "requestId",
+          "assetId",
+          "name"
+        ]
       }
     ]
   },
@@ -315,6 +394,19 @@ export const catalogMessageProtocol = new MessageProtocol(
         required: [
           "type",
           "folders"
+        ]
+      },
+      {
+        type: "object",
+        properties: {
+          type: { const: CATALOG_TAGS_CHANGED },
+          assetId: kString,
+          tags: kTags
+        },
+        required: [
+          "type",
+          "assetId",
+          "tags"
         ]
       },
       {
@@ -421,6 +513,70 @@ export const catalogMessageProtocol = new MessageProtocol(
               requestId: kString,
               command: { const: CATALOG_IMPORT },
               report: importReportSchema
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "report"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_TAGS },
+              assetId: kString,
+              tags: kTags
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "assetId",
+              "tags"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_TAG },
+              tag: assetTagSchema
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "tag"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_UNTAG },
+              assetId: kString,
+              name: kString
+            },
+            required: [
+              "type",
+              "requestId",
+              "command",
+              "assetId",
+              "name"
+            ]
+          },
+          {
+            type: "object",
+            properties: {
+              type: { const: CATALOG_APPLIED },
+              requestId: kString,
+              command: { const: CATALOG_RESTORE },
+              report: restoreReportSchema
             },
             required: [
               "type",

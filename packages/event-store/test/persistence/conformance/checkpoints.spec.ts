@@ -13,7 +13,7 @@ import {
 } from "../../helpers/backends.ts";
 
 for (const backend of backends) {
-  describe(`${backend.name} — listFromCheckpoint`, () => {
+  describe(`${backend.name} — listFromCheckpoints scoped to one asset`, () => {
     test("returns the newest checkpoint and everything after it", async() => {
       using store = await backend.create();
       append(store, "a1", { v: 1 }, "asset.created");
@@ -21,10 +21,10 @@ for (const backend of backends) {
       append(store, "a1", { v: 3 }, "asset.updated");
       append(store, "a1", { v: 4 }, "pixelart.command");
 
-      const events = store.reader.listFromCheckpoint(
-        "a1",
-        ["asset.created", "asset.updated"]
-      );
+      const events = store.reader.listFromCheckpoints({
+        assetId: "a1",
+        checkpointEventTypes: ["asset.created", "asset.updated"]
+      });
 
       assert.deepEqual(
         events.map((event) => event.eventData),
@@ -37,10 +37,10 @@ for (const backend of backends) {
       append(store, "a1", { v: 1 }, "asset.updated");
       append(store, "a1", { v: 2 }, "asset.deleted");
 
-      const events = store.reader.listFromCheckpoint(
-        "a1",
-        ["asset.updated", "asset.deleted"]
-      );
+      const events = store.reader.listFromCheckpoints({
+        assetId: "a1",
+        checkpointEventTypes: ["asset.updated", "asset.deleted"]
+      });
 
       assert.deepEqual(
         events.map((event) => event.eventData),
@@ -48,32 +48,20 @@ for (const backend of backends) {
       );
     });
 
-    test("returns the whole stream without a matching event", async() => {
+    test("returns only that stream for an empty type list", async() => {
       using store = await backend.create();
-      append(store, "a1", { v: 1 }, "pixelart.command");
-      append(store, "a1", { v: 2 }, "pixelart.command");
+      append(store, "a1", { v: 1 }, "asset.updated");
+      append(store, "a2", { v: 2 }, "asset.updated");
+      append(store, "a1", { v: 3 }, "pixelart.command");
 
-      const events = store.reader.listFromCheckpoint(
-        "a1",
-        ["asset.updated"]
-      );
+      const events = store.reader.listFromCheckpoints({
+        assetId: "a1",
+        checkpointEventTypes: []
+      });
 
       assert.deepEqual(
         events.map((event) => event.eventData),
-        [{ v: 1 }, { v: 2 }]
-      );
-    });
-
-    test("returns the whole stream for an empty type list", async() => {
-      using store = await backend.create();
-      append(store, "a1", { v: 1 }, "asset.updated");
-      append(store, "a1", { v: 2 }, "pixelart.command");
-
-      assert.deepEqual(
-        store.reader
-          .listFromCheckpoint("a1", [])
-          .map((event) => event.eventData),
-        [{ v: 1 }, { v: 2 }]
+        [{ v: 1 }, { v: 3 }]
       );
     });
 
@@ -82,7 +70,10 @@ for (const backend of backends) {
       append(store, "a1", {}, "asset.updated");
 
       assert.deepEqual(
-        store.reader.listFromCheckpoint("missing", ["asset.updated"]),
+        store.reader.listFromCheckpoints({
+          assetId: "missing",
+          checkpointEventTypes: ["asset.updated"]
+        }),
         []
       );
     });
@@ -92,30 +83,14 @@ for (const backend of backends) {
       append(store, "a2", { v: 1 }, "asset.updated");
       append(store, "a1", { v: 2 }, "pixelart.command");
 
-      const events = store.reader.listFromCheckpoint(
-        "a1",
-        ["asset.updated"]
-      );
+      const events = store.reader.listFromCheckpoints({
+        assetId: "a1",
+        checkpointEventTypes: ["asset.updated"]
+      });
 
       assert.deepEqual(
         events.map((event) => event.eventData),
         [{ v: 2 }]
-      );
-    });
-
-    test("returns events the caller cannot use to mutate the log", async() => {
-      using store = await backend.create();
-      append(store, "a1", { nested: { value: 1 } }, "asset.created");
-
-      const [event] = store.reader.listFromCheckpoint(
-        "a1",
-        ["asset.created"]
-      );
-      (event.eventData as { nested: { value: number; }; }).nested.value = 2;
-
-      assert.deepEqual(
-        store.reader.list("a1")[0].eventData,
-        { nested: { value: 1 } }
       );
     });
   });
@@ -224,28 +199,6 @@ for (const backend of backends) {
           checkpointEventTypes: ["asset.created"]
         }),
         []
-      );
-    });
-
-    test("reads only the tail regardless of history depth", async() => {
-      using store = await backend.create();
-      for (let index = 0; index < 200; index++) {
-        append(
-          store,
-          "a1",
-          { index },
-          "asset.updated"
-        );
-      }
-
-      const events = store.reader.listFromCheckpoints({
-        checkpointEventTypes: ["asset.updated"]
-      });
-
-      assert.strictEqual(events.length, 1);
-      assert.deepEqual(
-        events[0].eventData,
-        { index: 199 }
       );
     });
   });

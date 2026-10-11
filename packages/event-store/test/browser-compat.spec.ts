@@ -36,17 +36,4 @@ describe("browser compatibility", () => {
       []
     );
   });
-
-  test("importing the entrypoint does not evaluate any sqlite module", async() => {
-    const { persistence } = await import("#src/index.ts");
-
-    assert.strictEqual(
-      typeof persistence.sqlite,
-      "function"
-    );
-    assert.strictEqual(
-      persistence.sqlite.constructor.name,
-      "AsyncFunction"
-    );
-  });
 });

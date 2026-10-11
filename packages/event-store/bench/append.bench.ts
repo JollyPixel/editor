@@ -31,7 +31,7 @@ const suite = defineSuite("event-store / append", async(bench) => {
     const listening = await seededStore(kind);
     opened.push(small, rotating, large, listening);
 
-    listening.store.writer.on("append", noop);
+    listening.store.subscribe(noop);
 
     bench
       .add(

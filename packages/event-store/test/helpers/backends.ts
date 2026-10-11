@@ -42,6 +42,20 @@ export function append(
   }).unwrap();
 }
 
+export function tag(
+  store: EventStore.EventStore,
+  assetId: string,
+  name: string,
+  eventVersion = 1
+): EventStore.EventTag {
+  return store.tags.create({
+    assetId,
+    name,
+    eventVersion,
+    actor: USER_ACTOR
+  }).unwrap();
+}
+
 export function seed(
   store: EventStore.EventStore
 ): void {

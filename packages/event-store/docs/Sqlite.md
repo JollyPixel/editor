@@ -34,8 +34,7 @@ For a file location, the factory sets these before running the schema:
 | `synchronous` | `NORMAL` | No fsync per commit; a power loss can drop the last commits, a process crash cannot |
 
 SQLite keeps `<location>-wal` and `<location>-shm` next to the database while
-a connection is open and removes them on a clean close. A connection passed to
-`SqliteEventLog` keeps whatever pragmas its owner set.
+a connection is open and removes them on a clean close.
 
 The factory returns a promise because the main package entry point loads the
 Node-only backend when the factory is called. Importing the main entry point is
@@ -51,29 +50,18 @@ import { createSqliteEventStore } from "@jolly-pixel/event-store/node";
 using store = await createSqliteEventStore("./events.sqlite");
 ```
 
-The `./node` entry point also exports `SQL_SCHEMA` and `SqliteEventLog` for
-applications that manage their own `DatabaseSync` connection:
-
-```ts
-import { DatabaseSync } from "node:sqlite";
-import { createEventStore } from "@jolly-pixel/event-store";
-import {
-  SQL_SCHEMA,
-  SqliteEventLog
-} from "@jolly-pixel/event-store/node";
-
-const database = new DatabaseSync("./events.sqlite");
-database.exec(SQL_SCHEMA);
-using store = createEventStore(new SqliteEventLog(database));
-```
-
-`SqliteEventLog` expects the schema to exist. Closing the log, either directly
-or through the store, also closes the connection passed to its constructor.
+The factory owns the connection it opens and closes it with the store.
 
 ## Schema initialization
 
-The factory runs `SQL_SCHEMA` before returning. It creates the `events` table
-and its indexes when they do not exist.
+The factory runs the schema before returning. It creates the `events` and
+`tags` tables and their indexes when they do not exist, so a database made
+before tags existed gains the `tags` table the next time it is opened.
+
+`tags.create` checks that the event exists and inserts the tag in one
+statement. The schema's unique `(asset_id, name)` constraint turns a duplicate
+name into an `EventTagConflictError`, whichever connection created the first
+one.
 
 `CREATE TABLE IF NOT EXISTS` does not alter an existing table. A database made
 with a schema that predates the unique `(asset_id, event_version)` constraint

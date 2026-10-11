@@ -7,53 +7,53 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
-import { EventLogClosedError } from "#src/persistence/errors/EventLogClosedError.ts";
 import {
   append,
-  backends
+  backends,
+  USER_ACTOR
 } from "../../helpers/backends.ts";
 
 for (const backend of backends) {
   describe(`${backend.name} — close`, () => {
-    test("a closed store rejects further operations", async() => {
+    test("append and tag creation return the closed failure every other member throws", async() => {
       const store = await backend.create();
       store.close();
 
-      assert.throws(() => append(store, "a1"));
-      assert.throws(() => store.reader.list("a1"));
-      assert.throws(() => store.reader.listAll());
-    });
-
-    test("reports the same failure whichever call is made", async() => {
-      const store = await backend.create();
-      store.close();
-
-      assert.throws(
-        () => append(store, "a1"),
-        EventLogClosedError
-      );
-      assert.throws(
+      const results = [
+        store.writer.append({
+          assetType: "texture",
+          assetId: "a1",
+          eventType: "pixel-set",
+          eventData: {},
+          actor: USER_ACTOR
+        }),
+        store.tags.create({
+          assetId: "a1",
+          name: "v1",
+          eventVersion: 1,
+          actor: USER_ACTOR
+        })
+      ];
+      const members = [
+        () => store.reader.get("a1", 1),
         () => store.reader.list("a1"),
-        EventLogClosedError
-      );
-      assert.throws(
-        () => store.reader.listFromCheckpoint("a1", ["asset.created"]),
-        EventLogClosedError
-      );
-      assert.throws(
         () => store.reader.listAll(),
-        EventLogClosedError
-      );
-      assert.throws(
         () => store.reader.listFromCheckpoints({
           checkpointEventTypes: ["asset.created"]
         }),
-        EventLogClosedError
-      );
-      assert.throws(
         () => store.compact({ checkpointEventTypes: ["asset.created"] }),
-        EventLogClosedError
-      );
+        () => store.tags.get("a1", "v1"),
+        () => store.tags.list(),
+        () => store.tags.delete("a1", "v1")
+      ];
+
+      for (const result of results) {
+        assert.strictEqual(result.ok, false);
+        assert.ok(result.val instanceof EventStore.EventLogClosedError);
+      }
+      for (const member of members) {
+        assert.throws(member, EventStore.EventLogClosedError);
+      }
     });
 
     test("close is idempotent", async() => {

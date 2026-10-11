@@ -20,8 +20,10 @@ import {
 import type { AssetProjection } from "./applyProjection.ts";
 import { AssetFold } from "./AssetFold.ts";
 import type { ProjectionState } from "./ProjectionState.ts";
+import type { ContentObjects } from "../objects/ContentObjects.ts";
 import { TaskChain } from "../utils/TaskChain.ts";
 import { asError } from "../utils/asError.ts";
+import { contentHash } from "../utils/contentHash.ts";
 
 export interface AssetProjectionChange {
   readonly assetId: string;
@@ -39,6 +41,7 @@ export interface AssetProjectorOptions {
   source: AssetSource;
   eventStore: EventStore.EventStore;
   state: ProjectionState;
+  objects: Pick<ContentObjects, "store">;
   logger?: Logger;
 }
 
@@ -53,6 +56,7 @@ export class AssetProjector extends Emitter<
   #source: AssetSource;
   #eventStore: EventStore.EventStore;
   #state: ProjectionState;
+  #objects: Pick<ContentObjects, "store">;
   #logger: Logger;
 
   #folds = new Map<string, AssetFold>();
@@ -70,6 +74,7 @@ export class AssetProjector extends Emitter<
     this.#source = options.source;
     this.#eventStore = options.eventStore;
     this.#state = options.state;
+    this.#objects = options.objects;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -297,7 +302,7 @@ export class AssetProjector extends Emitter<
       desiredEventId
     } = fold;
     try {
-      await this.#applyOperations(fold);
+      await this.#applyOperations(assetId, fold);
     }
     catch (error) {
       const { message: reason } = asError(error);
@@ -328,34 +333,64 @@ export class AssetProjector extends Emitter<
   }
 
   async #applyOperations(
+    assetId: string,
     fold: AssetFold
   ): Promise<void> {
     const { projected, desired } = fold;
-    if (desired === null) {
-      if (projected !== null) {
-        await this.#source.delete(projected.path);
+    const deleted = projected !== null && projected.path !== desired?.path ?
+      projected.path :
+      null;
+    const written = desired !== null &&
+      (deleted !== null || projected?.hash !== desired.hash) ?
+      desired.path :
+      null;
+    const knownHashes = [projected?.hash, desired?.hash];
+    for (const path of [written, deleted]) {
+      if (path !== null) {
+        await this.#preserveExternalEdit(assetId, path, knownHashes);
       }
-
-      return;
     }
 
-    const moved = projected !== null && projected.path !== desired.path;
-    if (projected === null || moved || projected.hash !== desired.hash) {
-      this.#writing.add(desired.path);
+    if (written !== null) {
+      this.#writing.add(written);
       try {
         await this.#source.write(
-          desired.path,
+          written,
           await this.#contentOf(fold)
         );
       }
       finally {
-        this.#writing.delete(desired.path);
+        this.#writing.delete(written);
       }
     }
-
-    if (moved) {
-      await this.#source.delete(projected.path);
+    if (deleted !== null) {
+      await this.#source.delete(deleted);
     }
+  }
+
+  async #preserveExternalEdit(
+    assetId: string,
+    path: string,
+    knownHashes: readonly (string | undefined)[]
+  ): Promise<void> {
+    if (!await this.#source.exists(path)) {
+      return;
+    }
+
+    const data = await this.#source.read(path);
+    const hash = await contentHash(data);
+    if (knownHashes.includes(hash)) {
+      return;
+    }
+
+    await this.#objects.store(data, {
+      assetId,
+      path,
+      reason: "external-edit"
+    });
+    this.#logger
+      .withMetadata({ assetId, path, hash })
+      .warn("external edit backed up before projection");
   }
 
   async #contentOf(

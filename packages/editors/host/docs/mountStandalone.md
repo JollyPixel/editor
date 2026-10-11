@@ -351,7 +351,7 @@ connected; destroying the last closes the workspace. Once closing starts,
 database. `seed` is a seed map or a function
 returning one, used only when the storage holds no asset: a seeded asset the
 user deleted does not come back. `backend` takes the
-[`AssetBackendTuning`](../../../asset-server/docs/Workspace.md) the Vite
+`AssetBackendTuning` the Vite
 workspace plugin takes, such as `catalogArchiveLimits`; `watch` is always
 off.
 

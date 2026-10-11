@@ -280,8 +280,7 @@ given. `plan(file)` reports import conflicts without writing. `import(file, {
 onConflict })` performs the import and returns a report. A memory-backed
 workspace sets `archive.canImport` to `false`; `import` then throws
 `ArchiveImportDisabledError`. Default server sessions and persistent offline
-workspaces allow import. See the [archive API](./docs/EditorSession.md#archives)
-and the [archive format](../../asset-server/docs/Archive.md).
+workspaces allow import. See the [archive API](./docs/EditorSession.md#archives).
 
 `session.workspace` is the optional capability supplied by a custom
 connection. It reports `persistent` and offers `reset()`. For

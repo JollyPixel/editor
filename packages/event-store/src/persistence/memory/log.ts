@@ -9,12 +9,9 @@ import type {
 } from "../../EventStore.ts";
 import type { EventLog } from "../EventLog.ts";
 import { EventLogClosedError } from "../errors/EventLogClosedError.ts";
-import {
-  materializeEvent,
-  toJson,
-  type EventFields
-} from "../serialize.ts";
+import { EventRecord } from "../EventRecord.ts";
 import { EventVersionConflictError } from "../errors/EventVersionConflictError.ts";
+import { MemoryTagTable } from "./tags.ts";
 
 type EventPredicate = (
   event: Event
@@ -26,20 +23,16 @@ export class MemoryEventLog implements EventLog {
   #nextEventId = 1;
   #versionByAsset = new Map<string, number>();
   #closed = false;
+  readonly tags = new MemoryTagTable(
+    (assetId, eventVersion) => this.#find(assetId, eventVersion) !== undefined
+  );
 
   insert(
     input: AppendInput
   ): Event {
     this.#assertOpen();
 
-    const {
-      assetType,
-      assetId,
-      eventType,
-      eventData,
-      actor,
-      expectedVersion
-    } = input;
+    const { assetId, expectedVersion } = input;
 
     const head = this.#versionByAsset.get(assetId) ?? 0;
     if (expectedVersion !== undefined && expectedVersion !== head) {
@@ -50,25 +43,31 @@ export class MemoryEventLog implements EventLog {
       );
     }
 
-    const fields: EventFields = {
+    const record = EventRecord.encode(input);
+    const position = {
       eventId: this.#nextEventId,
-      assetType,
-      assetId,
-      eventType,
-      eventDataJson: toJson(eventData, "eventData"),
-      eventVersion: head + 1,
-      actorJson: toJson(actor, "actor"),
-      createdAt: new Date().toISOString()
+      eventVersion: head + 1
     };
 
     this.#nextEventId++;
-    this.#versionByAsset.set(assetId, fields.eventVersion);
+    this.#versionByAsset.set(assetId, position.eventVersion);
 
-    const stored = materializeEvent(fields);
+    const stored = record.toEvent(position);
     this.#events.push(stored);
     this.#stream(assetId).push(stored);
 
-    return materializeEvent(fields);
+    return record.toEvent(position);
+  }
+
+  get(
+    assetId: string,
+    eventVersion: number
+  ): Event | undefined {
+    this.#assertOpen();
+
+    const event = this.#find(assetId, eventVersion);
+
+    return event === undefined ? undefined : structuredClone(event);
   }
 
   list(
@@ -81,27 +80,6 @@ export class MemoryEventLog implements EventLog {
       this.#streams.get(assetId) ?? [],
       (event) => event.eventVersion > fromVersion
     );
-  }
-
-  listFromCheckpoint(
-    assetId: string,
-    checkpointEventTypes: readonly string[]
-  ): Event[] {
-    this.#assertOpen();
-
-    const stream = this.#streams.get(assetId) ?? [];
-    const wanted = new Set(checkpointEventTypes);
-    let start = 0;
-    for (let index = stream.length - 1; index >= 0; index--) {
-      if (wanted.has(stream[index].eventType)) {
-        start = index;
-        break;
-      }
-    }
-
-    return stream
-      .slice(start)
-      .map((event) => structuredClone(event));
   }
 
   listAll(
@@ -130,13 +108,14 @@ export class MemoryEventLog implements EventLog {
 
     const {
       checkpointEventTypes,
-      eventTypePrefix
+      eventTypePrefix,
+      assetId
     } = options;
-    const checkpoints = this.#checkpoints(checkpointEventTypes);
+    const heads = this.#checkpointHeads(checkpointEventTypes, assetId);
 
     return copyMatching(
-      this.#events,
-      (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0) &&
+      this.#scope(assetId),
+      (event) => event.eventId >= (heads.get(event.assetId) ?? 0) &&
         matchesPrefix(event.eventType, eventTypePrefix)
     );
   }
@@ -146,29 +125,41 @@ export class MemoryEventLog implements EventLog {
   ): CompactReport {
     this.#assertOpen();
 
-    const checkpoints = this.#checkpoints(
+    const heads = this.#checkpointHeads(
       options.checkpointEventTypes,
       options.assetId
     );
+    const tagged = this.tags.versionsByAsset();
     const before = this.#events.length;
 
     this.#events = this.#events.filter(
-      (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0)
+      (event) => event.eventId >= (heads.get(event.assetId) ?? 0) ||
+        tagged.get(event.assetId)?.has(event.eventVersion) === true
     );
     this.#reindex();
 
     return {
       removed: before - this.#events.length,
-      assets: checkpoints.size
+      assets: heads.size
     };
   }
 
   close(): void {
     this.#events = [];
     this.#streams.clear();
+    this.tags.close();
     this.#versionByAsset.clear();
     this.#nextEventId = 1;
     this.#closed = true;
+  }
+
+  #find(
+    assetId: string,
+    eventVersion: number
+  ): Event | undefined {
+    return this.#streams.get(assetId)?.find(
+      (event) => event.eventVersion === eventVersion
+    );
   }
 
   #stream(
@@ -190,29 +181,38 @@ export class MemoryEventLog implements EventLog {
     }
   }
 
-  #checkpoints(
-    eventTypes: readonly string[],
-    assetId?: string
-  ): Map<string, number> {
-    const wanted = new Set(eventTypes);
-    const checkpoints = new Map<string, number>();
-    if (wanted.size === 0) {
-      return checkpoints;
-    }
-
-    const events = assetId === undefined ?
+  #scope(
+    assetId: string | undefined
+  ): readonly Event[] {
+    return assetId === undefined ?
       this.#events :
       this.#streams.get(assetId) ?? [];
-    for (const event of events) {
-      if (
-        wanted.has(event.eventType) &&
-        event.eventId > (checkpoints.get(event.assetId) ?? 0)
-      ) {
-        checkpoints.set(event.assetId, event.eventId);
+  }
+
+  #checkpointHeads(
+    eventTypes: readonly string[],
+    assetId: string | undefined
+  ): Map<string, number> {
+    const wanted = new Set(eventTypes);
+    const heads = new Map<string, number>();
+    if (wanted.size === 0) {
+      return heads;
+    }
+
+    const events = this.#scope(assetId);
+    for (let index = events.length - 1; index >= 0; index--) {
+      const event = events[index];
+      if (!wanted.has(event.eventType) || heads.has(event.assetId)) {
+        continue;
+      }
+
+      heads.set(event.assetId, event.eventId);
+      if (assetId !== undefined) {
+        break;
       }
     }
 
-    return checkpoints;
+    return heads;
   }
 
   #assertOpen(): void {

@@ -18,6 +18,7 @@ export const persistence = {
   }
 } as const;
 
-export { createEventStore } from "./createEventStore.ts";
-export type { EventLog } from "./EventLog.ts";
+export { EventLogClosedError } from "./errors/EventLogClosedError.ts";
 export { EventVersionConflictError } from "./errors/EventVersionConflictError.ts";
+export { EventTagConflictError } from "./errors/EventTagConflictError.ts";
+export { UnknownEventError } from "./errors/UnknownEventError.ts";

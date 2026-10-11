@@ -38,8 +38,17 @@ export interface CreateAssetInput extends Omit<PayloadWriteOptions, "data"> {
   onPathConflict?: PathConflictPolicy;
 }
 
+export interface RestoredFrom {
+  name: string;
+  eventVersion: number;
+}
+
 export interface UpdateAssetInput extends PayloadWriteOptions {
   assetId: string;
+  /**
+   * The tag whose content this update brings back. Audit data only.
+   */
+  restoredFrom?: RestoredFrom;
 }
 
 export interface RenameAssetInput extends WriteOptions {

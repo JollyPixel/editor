@@ -64,7 +64,7 @@ The first snapshot loads the document. Local edits go to the room and stay pendi
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-animation` exports `voxelAnimationAssetKind`, the document codec and `voxelAnimationDocumentSchema`, the `VOXEL_ANIMATION_ASSET` descriptor, `ASSET_KINDS` (the [kind package](../../asset-server/docs/AssetKinds.md#kind-packages), taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
+- `@jolly-pixel/asset.voxel-animation` exports `voxelAnimationAssetKind`, the document codec and `voxelAnimationDocumentSchema`, the `VOXEL_ANIMATION_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
 - `@jolly-pixel/asset.voxel-animation/client` exports the [animation set](./docs/animation-set.md) (`AnimationDocument`, `AnimationSet`, `FrameRate`, `TrackPath`, `NameSet`), [sampling](./docs/animation-set.md#sampling) (`KeyCurve`, `ClipSampler`), the [undo keys](./docs/history.md) (`animationHistoryKeys`), `SyncedAnimationDocument`, `animationWriteKeys`, `voxelAnimationDocumentKind`, and the wire types.
 - `@jolly-pixel/asset.voxel-animation/server` exports `AnimationCommandArbiter`, the conflict keys, and the command and snapshot schemas.
 
