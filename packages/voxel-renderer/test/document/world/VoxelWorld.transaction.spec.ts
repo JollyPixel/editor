@@ -241,7 +241,7 @@ describe("VoxelWorld.transaction", () => {
     const remote = new VoxelWorld(4);
     remote.restoreLayer({ id: world.getLayer(kLayer)!.id, name: kLayer });
     for (const command of commands) {
-      remote.apply(command);
+      remote.applyCommand(command);
     }
     assert.deepEqual(
       voxelContent(remote.getLayer(kLayer)!),

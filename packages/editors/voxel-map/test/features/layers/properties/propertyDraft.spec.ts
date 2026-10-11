@@ -7,14 +7,14 @@ import {
 
 // Import Internal Dependencies
 import {
-  propertiesOf,
-  propertyRowsOf
+  parsePropertyRows,
+  createPropertyRows
 } from "../../../../src/features/layers/properties/propertyDraft.ts";
 
-describe("propertyRowsOf", () => {
+describe("createPropertyRows", () => {
   test("renders every value as text, whatever its stored type", () => {
     assert.deepEqual(
-      propertyRowsOf({
+      createPropertyRows({
         speed: 12,
         solid: true,
         tag: "door"
@@ -28,14 +28,14 @@ describe("propertyRowsOf", () => {
   });
 
   test("treats a missing bag as no rows", () => {
-    assert.deepEqual(propertyRowsOf(undefined), []);
+    assert.deepEqual(createPropertyRows(undefined), []);
   });
 });
 
-describe("propertiesOf", () => {
+describe("parsePropertyRows", () => {
   test("folds the rows back into a record", () => {
     assert.deepEqual(
-      propertiesOf([
+      parsePropertyRows([
         { key: "speed", value: "12" },
         { key: "tag", value: "door" }
       ]),
@@ -48,7 +48,7 @@ describe("propertiesOf", () => {
 
   test("drops a blank key instead of storing it", () => {
     assert.deepEqual(
-      propertiesOf([
+      parsePropertyRows([
         { key: "", value: "orphan" },
         { key: "   ", value: "orphan" },
         { key: "speed", value: "12" }
@@ -59,7 +59,7 @@ describe("propertiesOf", () => {
 
   test("trims a key and lets the last duplicate win", () => {
     assert.deepEqual(
-      propertiesOf([
+      parsePropertyRows([
         { key: " speed ", value: "1" },
         { key: "speed", value: "2" }
       ]),

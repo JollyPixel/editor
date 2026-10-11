@@ -16,8 +16,8 @@ describe("BlockRegistry.apply — custom properties", () => {
     assert.equal(command.action, "block-defined");
     command.block.properties = { hardness: 3, liquid: false };
 
-    assert.equal(registry.apply(command, null)?.action, "block-defined");
-    assert.deepEqual(registry.propertiesOf(7), {
+    assert.equal(registry.applyCommand(command, null)?.action, "block-defined");
+    assert.deepEqual(registry.copyProperties(7), {
       hardness: 3,
       liquid: false
     });
@@ -32,15 +32,15 @@ describe("BlockRegistry.apply — custom properties", () => {
       nested: { deep: true }
     } as never;
 
-    registry.apply(command, null);
+    registry.applyCommand(command, null);
 
-    assert.deepEqual(registry.propertiesOf(7), { kept: "yes" });
+    assert.deepEqual(registry.copyProperties(7), { kept: "yes" });
   });
 
   it("fills the default blockset into texture references naming none", () => {
     const registry = new BlockRegistry();
 
-    const applied = registry.apply(blockDefinedCmd({ id: 7 }), "stone");
+    const applied = registry.applyCommand(blockDefinedCmd({ id: 7 }), "stone");
 
     assert.equal(applied?.action, "block-defined");
     assert.equal(applied.block.defaultTexture?.blocksetId, "stone");
@@ -53,10 +53,10 @@ describe("BlockRegistry.apply — custom properties", () => {
     assert.equal(command.action, "block-defined");
     command.block.properties = { hardness: 3 };
 
-    registry.apply(command, null);
+    registry.applyCommand(command, null);
     command.block.properties.hardness = 99;
 
-    assert.deepEqual(registry.propertiesOf(7), { hardness: 3 });
+    assert.deepEqual(registry.copyProperties(7), { hardness: 3 });
   });
 });
 
@@ -64,7 +64,7 @@ describe("BlockRegistry.apply — reorder", () => {
   function seeded(): BlockRegistry {
     const registry = new BlockRegistry();
     for (const id of [1, 2, 3]) {
-      registry.apply(blockDefinedCmd({ id }), null);
+      registry.applyCommand(blockDefinedCmd({ id }), null);
     }
 
     return registry;
@@ -74,7 +74,7 @@ describe("BlockRegistry.apply — reorder", () => {
     const registry = seeded();
 
     assert.deepEqual(
-      registry.apply(blockMovedCmd({ blockId: 3, toIndex: 0 }), null),
+      registry.applyCommand(blockMovedCmd({ blockId: 3, toIndex: 0 }), null),
       blockMovedCmd({ blockId: 3, toIndex: 0 })
     );
     assert.deepEqual(
@@ -87,7 +87,7 @@ describe("BlockRegistry.apply — reorder", () => {
     const registry = seeded();
 
     assert.equal(
-      registry.apply(blockMovedCmd({ blockId: 1, toIndex: 0 }), null),
+      registry.applyCommand(blockMovedCmd({ blockId: 1, toIndex: 0 }), null),
       null
     );
   });
@@ -96,7 +96,7 @@ describe("BlockRegistry.apply — reorder", () => {
     const registry = seeded();
 
     assert.deepEqual(
-      registry.apply(blockMovedCmd({ blockId: 1, toIndex: 99 }), null),
+      registry.applyCommand(blockMovedCmd({ blockId: 1, toIndex: 99 }), null),
       blockMovedCmd({ blockId: 1, toIndex: 2 })
     );
   });
@@ -105,7 +105,7 @@ describe("BlockRegistry.apply — reorder", () => {
     const registry = seeded();
 
     assert.equal(
-      registry.apply(blockMovedCmd({ blockId: 404, toIndex: 0 }), null),
+      registry.applyCommand(blockMovedCmd({ blockId: 404, toIndex: 0 }), null),
       null
     );
     assert.deepEqual(

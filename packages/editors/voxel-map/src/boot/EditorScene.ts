@@ -185,7 +185,7 @@ export class EditorScene extends Systems.Scene {
     applyView(state.view.settings);
     this.#environment = environment;
 
-    const blockSources = BlockRenderSources.of(view);
+    const blockSources = BlockRenderSources.fromView(view);
     const access = new RoomGrants(session.room, MAP_CAPABILITIES)
       .setMaxListeners(kMaxAccessListeners);
     const mapDocument = new MapDocument({

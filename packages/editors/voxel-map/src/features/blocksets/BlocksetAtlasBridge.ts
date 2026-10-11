@@ -256,7 +256,7 @@ export class BlocksetAtlasBridge {
       texture,
       normal === null ? {} : { normal }
     );
-    this.#atlas = this.#view.atlases.atlas(definition.id);
+    this.#atlas = this.#view.atlases.requireLoadedAtlas(definition.id);
   }
 
   #syncNormalTexture(): void {

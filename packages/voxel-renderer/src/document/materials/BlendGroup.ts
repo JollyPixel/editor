@@ -55,7 +55,7 @@ export class BlendGroup {
   constructor(
     json: BlendGroupJSON
   ) {
-    const problem = problemOf(json);
+    const problem = validateFields(json);
     if (problem !== null) {
       throw new RangeError(problem);
     }
@@ -123,10 +123,10 @@ export class BlendGroup {
 function isBlendGroupJSON(
   value: unknown
 ): value is BlendGroupJSON {
-  return problemOf(value) === null;
+  return validateFields(value) === null;
 }
 
-function problemOf(
+function validateFields(
   value: unknown
 ): string | null {
   if (typeof value !== "object" || value === null) {

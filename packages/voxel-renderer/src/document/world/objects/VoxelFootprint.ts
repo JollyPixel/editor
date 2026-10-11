@@ -23,7 +23,7 @@ export class VoxelFootprint {
     return Math.max(1, Math.round(value));
   }
 
-  static of(
+  static fromObject(
     object: Pick<VoxelObjectJSON, "width" | "height">
   ): VoxelFootprint {
     return new VoxelFootprint(

@@ -82,7 +82,7 @@ export class Placement {
     template: VoxelTemplate,
     min: VoxelCoord
   ): VoxelCoord {
-    return template.placedPositionFor(min, this.transform);
+    return template.placementPositionFromMinCorner(min, this.transform);
   }
 
   equals(

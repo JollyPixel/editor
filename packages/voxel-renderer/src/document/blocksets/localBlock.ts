@@ -25,7 +25,7 @@ export function localBlock(
 export function withoutBlocksets(
   block: ResolvedBlockDefinition
 ): ResolvedBlockDefinition {
-  return BlockTextures.of(block)
+  return BlockTextures.fromBlock(block)
     .map((ref) => {
       if (ref.blocksetId === undefined) {
         return ref;
@@ -34,5 +34,5 @@ export function withoutBlocksets(
 
       return local;
     })
-    .applyTo(block);
+    .createTexturedBlock(block);
 }

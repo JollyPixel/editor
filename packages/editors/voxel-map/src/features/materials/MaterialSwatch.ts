@@ -19,7 +19,7 @@ export class MaterialSwatch {
     return goldenAngleColor(hashKey(materialId), kDerivedColor);
   }
 
-  static of(
+  static fromMaterial(
     materialId: string,
     finish?: MaterialGroup
   ): MaterialSwatch {

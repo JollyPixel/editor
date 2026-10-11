@@ -146,7 +146,7 @@ describe("VoxelEdits", () => {
     const { document, world, layerId, refused } = setup();
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
-    document.apply({
+    document.applyCommand({
       action: "voxels-patched",
       layerId,
       metadata: { cells: [0, 0, 0, 5, 0] }
@@ -160,7 +160,7 @@ describe("VoxelEdits", () => {
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
     world.setVoxel(kLayer, { position: kNext, blockId: 1 });
 
-    document.apply({
+    document.applyCommand({
       action: "position-updated",
       layerId,
       metadata: { delta: { x: 0, y: 1, z: 0 } }
@@ -173,7 +173,7 @@ describe("VoxelEdits", () => {
     const { document, world, layerId, history, refused } = setup();
     world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
-    document.apply({
+    document.applyCommand({
       action: "voxels-patched",
       layerId,
       metadata: { cells: [0, 0, 0, 1, 0] }

@@ -180,7 +180,7 @@ describe("VoxelView - document subscriptions", () => {
     });
     view.flush();
 
-    document.apply(
+    document.applyCommand(
       { action: "block-removed", blockId: CUBE_ID },
       { origin: "remote" }
     );

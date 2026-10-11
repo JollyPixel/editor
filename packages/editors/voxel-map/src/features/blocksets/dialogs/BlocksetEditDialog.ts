@@ -152,9 +152,9 @@ export class BlocksetEditDialog extends WorkspaceElement {
     entry: BlocksetEntry
   ) {
     const { definition } = entry;
-    const tileSize = workspace.blocksets.tileSizeOf(definition.id);
+    const tileSize = workspace.blocksets.tileSizeFor(definition.id);
     const resizable = workspace.blocksets.access(definition.id).has("tileSize");
-    const usage = workspace.usage.blocksetUsageOf(definition.id);
+    const usage = workspace.usage.inspectBlocksetUsage(definition.id);
     const renamable = entry.assetId !== null;
     const pendingTileSize = this._pendingTileSize;
 
@@ -217,7 +217,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       await this.workspace?.blocksets.rename(entry.definition.id, name);
     }
     catch (error) {
-      this.workspace?.state.log.push(`Could not rename "${entry.label}": ${messageOf(error)}`);
+      this.workspace?.state.log.push(`Could not rename "${entry.label}": ${describeError(error)}`);
     }
     this.requestUpdate();
   }
@@ -228,7 +228,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
   ): void {
     const workspace = this.workspace;
     const { definition } = entry;
-    const from = workspace?.blocksets.tileSizeOf(definition.id);
+    const from = workspace?.blocksets.tileSizeFor(definition.id);
     if (workspace === null || from === undefined) {
       return;
     }
@@ -244,7 +244,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       to: tileSize
     };
     const offGrid = [...workspace.mapDocument.blocks].some(
-      (block) => !BlockTextures.of(block).staysOnGrid(rescale)
+      (block) => !BlockTextures.fromBlock(block).canRescaleOnGrid(rescale)
     );
     if (offGrid) {
       this._pendingTileSize = tileSize;
@@ -273,7 +273,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       return;
     }
 
-    const usage = workspace.usage.blocksetUsageOf(entry.definition.id);
+    const usage = workspace.usage.inspectBlocksetUsage(entry.definition.id);
     const confirmed = usage.unused ||
       await this._dialog.confirmInline({
         message: `Remove "${entry.label}"? ` +
@@ -296,7 +296,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
   }
 }
 
-function messageOf(
+function describeError(
   error: unknown
 ): string {
   return error instanceof Error ? error.message : String(error);

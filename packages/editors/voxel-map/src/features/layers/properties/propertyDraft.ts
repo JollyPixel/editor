@@ -10,7 +10,7 @@ export interface PropertyRowsChangeDetail {
   rows: PropertyRow[];
 }
 
-export function propertyRowsOf(
+export function createPropertyRows(
   properties: VoxelObjectProperties | undefined
 ): PropertyRow[] {
   return Object.entries(properties ?? {}).map(
@@ -20,7 +20,7 @@ export function propertyRowsOf(
   );
 }
 
-export function propertiesOf(
+export function parsePropertyRows(
   rows: readonly PropertyRow[]
 ): VoxelObjectProperties {
   const properties: VoxelObjectProperties = {};

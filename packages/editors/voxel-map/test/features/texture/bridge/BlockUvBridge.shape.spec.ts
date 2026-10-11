@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   BlockShapeRegistry,
   shapeSlots,
-  tileRectOf,
+  resolveTileRect,
   type FaceDefinition,
   type ResolvedBlockDefinition,
   type TileBounds,
@@ -136,10 +136,10 @@ describe("BlockUvBridge / shape footprint", () => {
         const { faceTextures } = view.document.blocks.get(1)!;
         for (const slot of shapeSlots(shape)) {
           const sampled = slot.definitions.map(
-            (definition) => tileRectOf(
+            (definition) => resolveTileRect(
               faceTextures[slot.id],
               16,
-              boundsOf(definition.uvs),
+              computeBounds(definition.uvs),
               slot.span
             )
           );
@@ -406,7 +406,7 @@ describe("BlockUvBridge / shape footprint", () => {
   });
 });
 
-function boundsOf(
+function computeBounds(
   uvs: FaceDefinition["uvs"]
 ): TileBounds {
   const us = uvs.map(([u]) => u);

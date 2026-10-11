@@ -13,7 +13,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  ghostTargetOf,
+  resolveGhostTarget,
   type GhostTargetOptions
 } from "../../../../src/features/painting/model/ghostTarget.ts";
 
@@ -50,9 +50,9 @@ function optionsOf(
   };
 }
 
-describe("ghostTargetOf", () => {
+describe("resolveGhostTarget", () => {
   test("puts the ghost on the place cell with the brush orientation", () => {
-    const target = ghostTargetOf(optionsOf());
+    const target = resolveGhostTarget(optionsOf());
 
     assert.ok(target !== null);
     assert.deepEqual(target.position, kPlace);
@@ -63,7 +63,7 @@ describe("ghostTargetOf", () => {
   });
 
   test("overlays the aimed block in replace mode", () => {
-    const target = ghostTargetOf(optionsOf({ mode: "replace" }));
+    const target = resolveGhostTarget(optionsOf({ mode: "replace" }));
 
     assert.ok(target !== null);
     assert.deepEqual(target.position, kRemove);
@@ -71,20 +71,20 @@ describe("ghostTargetOf", () => {
   });
 
   test("shows nothing for a brush larger than one voxel", () => {
-    assert.equal(ghostTargetOf(optionsOf({ size: 2 })), null);
+    assert.equal(resolveGhostTarget(optionsOf({ size: 2 })), null);
   });
 
   test("shows nothing without an aim", () => {
-    assert.equal(ghostTargetOf(optionsOf({ aim: null })), null);
+    assert.equal(resolveGhostTarget(optionsOf({ aim: null })), null);
   });
 
   test("skips an occupied place cell and an empty replace cell", () => {
     assert.equal(
-      ghostTargetOf(optionsOf({ occupied: () => true })),
+      resolveGhostTarget(optionsOf({ occupied: () => true })),
       null
     );
     assert.equal(
-      ghostTargetOf(optionsOf({
+      resolveGhostTarget(optionsOf({
         mode: "replace",
         occupied: () => false
       })),
@@ -93,7 +93,7 @@ describe("ghostTargetOf", () => {
   });
 
   test("keeps the frozen stroke orientation over the camera one", () => {
-    const target = ghostTargetOf(optionsOf({
+    const target = resolveGhostTarget(optionsOf({
       aim: null,
       stroke: {
         center: kPlace,
@@ -114,7 +114,7 @@ describe("ghostTargetOf", () => {
   });
 
   test("overlays a cell the stroke already painted", () => {
-    const target = ghostTargetOf(optionsOf({
+    const target = resolveGhostTarget(optionsOf({
       stroke: {
         center: kRemove,
         paint: optionsOf().paint
@@ -127,7 +127,7 @@ describe("ghostTargetOf", () => {
 
   test("shows nothing during a remove stroke", () => {
     assert.equal(
-      ghostTargetOf(optionsOf({
+      resolveGhostTarget(optionsOf({
         stroke: {
           center: kRemove,
           paint: undefined

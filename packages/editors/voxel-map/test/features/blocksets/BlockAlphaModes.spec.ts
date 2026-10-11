@@ -64,7 +64,7 @@ function setup(
   const pixels = makePixels(transparentTiles);
   const alphaModes = new BlockAlphaModes({
     view,
-    pixelsOf: (blocksetId) => (loaded.has(blocksetId) ? pixels : undefined)
+    resolvePixels: (blocksetId) => (loaded.has(blocksetId) ? pixels : undefined)
   });
 
   return { blocks, alphaModes };

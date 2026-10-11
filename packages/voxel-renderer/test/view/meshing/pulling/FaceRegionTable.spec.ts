@@ -27,18 +27,18 @@ describe("FaceRegionTable", () => {
   it("gives each block texture slot one stable id", () => {
     const table = new FaceRegionTable();
 
-    const top = table.idOf(1, "top");
-    const side = table.idOf(1, "side");
-    const otherBlock = table.idOf(2, "top");
+    const top = table.internRegion(1, "top");
+    const side = table.internRegion(1, "side");
+    const otherBlock = table.internRegion(2, "top");
 
-    assert.equal(table.idOf(1, "top"), top);
+    assert.equal(table.internRegion(1, "top"), top);
     assert.deepEqual(new Set([top, side, otherBlock]).size, 3);
     assert.equal(table.count, 3);
   });
 
   it("writes unorm16-quantized rects and flags an upload only on change", () => {
     const table = new FaceRegionTable();
-    const id = table.idOf(1, "top");
+    const id = table.internRegion(1, "top");
     const version = table.texture.version;
     const region = {
       offsetU: 0.25,
@@ -59,21 +59,21 @@ describe("FaceRegionTable", () => {
 
   it("reuses the ids it was seeded with and allocates after them", () => {
     const source = new FaceRegionTable();
-    source.idOf(4, "top");
-    source.idOf(9, "front");
+    source.internRegion(4, "top");
+    source.internRegion(9, "front");
 
     const seeded = new FaceRegionTable(source.assignments());
 
-    assert.equal(seeded.idOf(9, "front"), source.idOf(9, "front"));
-    assert.equal(seeded.idOf(4, "top"), source.idOf(4, "top"));
-    assert.equal(seeded.idOf(5, "top"), 2);
+    assert.equal(seeded.internRegion(9, "front"), source.internRegion(9, "front"));
+    assert.equal(seeded.internRegion(4, "top"), source.internRegion(4, "top"));
+    assert.equal(seeded.internRegion(5, "top"), 2);
   });
 
   it("grows by whole rows and keeps earlier rects", () => {
     const table = new FaceRegionTable();
     const initial = table.texture;
     const node = table.node;
-    const first = table.idOf(0, "top");
+    const first = table.internRegion(0, "top");
     table.write(first, {
       offsetU: 0.5,
       offsetV: 0.5,
@@ -82,7 +82,7 @@ describe("FaceRegionTable", () => {
     });
 
     for (let blockId = 1; blockId <= FACE_REGIONS_PER_ROW; blockId++) {
-      table.idOf(blockId, "top");
+      table.internRegion(blockId, "top");
     }
 
     assert.notEqual(table.texture, initial);

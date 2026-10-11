@@ -13,7 +13,7 @@ import {
 // CONSTANTS
 const kCoverageEpsilon = 1e-9;
 
-export function sideCoverageOf(
+export function computeSideCoverage(
   faces: Iterable<FacePlacement>
 ): Float64Array {
   const coverage = new Float64Array(FACES.length);
@@ -32,10 +32,10 @@ export function sideCoverageOf(
   return coverage;
 }
 
-export function occlusionMaskOf(
+export function computeOcclusionMask(
   faces: readonly FaceDefinition[]
 ): number {
-  const coverage = sideCoverageOf(faces);
+  const coverage = computeSideCoverage(faces);
 
   let mask = 0;
   for (const face of FACES) {

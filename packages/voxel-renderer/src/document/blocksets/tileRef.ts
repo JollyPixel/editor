@@ -102,7 +102,7 @@ export function rotateTileBounds(
   };
 }
 
-export function tileRectOf(
+export function resolveTileRect(
   ref: ResolvedTileRef,
   tileSize: number,
   bounds: TileBounds = WHOLE_TILE_BOUNDS,

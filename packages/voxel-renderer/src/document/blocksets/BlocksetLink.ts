@@ -59,21 +59,21 @@ export class BlocksetLink {
   }
 
   get nextBlockId(): number {
-    return this.slot.blockId(this.blockset.blocks.nextId);
+    return this.slot.composeBlockId(this.blockset.blocks.nextId);
   }
 
   defineBlock(
     block: BlockDefinition
   ): boolean {
     return this.blockset.defineBlock(
-      this.slot.local(resolveBlockDefinition(block))
+      this.slot.localizeBlock(resolveBlockDefinition(block))
     );
   }
 
   removeBlock(
     blockId: number
   ): boolean {
-    return this.blockset.removeBlock(this.slot.localBlockId(blockId));
+    return this.blockset.removeBlock(this.slot.decodeLocalBlockId(blockId));
   }
 
   moveBlock(
@@ -89,25 +89,25 @@ export class BlocksetLink {
       if (index >= toIndex) {
         break;
       }
-      if (this.slot.owns(block.id)) {
+      if (this.slot.ownsBlockId(block.id)) {
         localIndex++;
       }
       index++;
     }
 
-    return this.blockset.moveBlock(this.slot.localBlockId(blockId), localIndex);
+    return this.blockset.moveBlock(this.slot.decodeLocalBlockId(blockId), localIndex);
   }
 
   defineMaterialGroup(
     group: MaterialGroupJSON
   ): boolean {
-    return this.blockset.defineMaterialGroup(this.slot.localMaterialGroup(group));
+    return this.blockset.defineMaterialGroup(this.slot.localizeMaterialGroup(group));
   }
 
   removeMaterialGroup(
     groupId: string
   ): boolean {
-    const localId = this.slot.localGroupId(groupId);
+    const localId = this.slot.decodeLocalGroupId(groupId);
 
     return localId !== null && this.blockset.removeMaterialGroup(localId);
   }
@@ -116,8 +116,8 @@ export class BlocksetLink {
     groupId: string,
     to: string
   ): boolean {
-    const localId = this.slot.localGroupId(groupId);
-    const localTo = this.slot.localGroupId(to);
+    const localId = this.slot.decodeLocalGroupId(groupId);
+    const localTo = this.slot.decodeLocalGroupId(to);
 
     return localId !== null &&
       localTo !== null &&
@@ -136,14 +136,14 @@ export class BlocksetLink {
 
     for (const block of [...document.blocks]) {
       if (
-        this.slot.owns(block.id) &&
-        !blocks.has(this.slot.localBlockId(block.id))
+        this.slot.ownsBlockId(block.id) &&
+        !blocks.has(this.slot.decodeLocalBlockId(block.id))
       ) {
         document.removeBlock(block.id);
       }
     }
     for (const group of [...document.materialGroups]) {
-      const localId = this.slot.localGroupId(group.id);
+      const localId = this.slot.decodeLocalGroupId(group.id);
       if (localId !== null && !materialGroups.has(localId)) {
         document.removeMaterialGroup(group.id);
       }
@@ -154,7 +154,7 @@ export class BlocksetLink {
       );
     }
     for (const group of [...document.blendGroups]) {
-      const localId = this.slot.localGroupId(group.id);
+      const localId = this.slot.decodeLocalGroupId(group.id);
       if (localId !== null && !blendGroups.has(localId)) {
         document.removeBlendGroup(group.id);
       }
@@ -162,24 +162,24 @@ export class BlocksetLink {
     for (const group of blendGroups) {
       document.defineBlendGroup(this.slot.projectBlendGroup(group.toJSON()));
     }
-    document.defineBlocks(this.slot.projectAll(blocks));
+    document.defineBlocks(this.slot.projectBlocks(blocks));
   }
 
   #unprojectAll(): void {
     const document = this.#document;
 
     for (const block of [...document.blocks]) {
-      if (this.slot.owns(block.id)) {
+      if (this.slot.ownsBlockId(block.id)) {
         document.removeBlock(block.id);
       }
     }
     for (const group of [...document.materialGroups]) {
-      if (this.slot.localGroupId(group.id) !== null) {
+      if (this.slot.decodeLocalGroupId(group.id) !== null) {
         document.removeMaterialGroup(group.id);
       }
     }
     for (const group of [...document.blendGroups]) {
-      if (this.slot.localGroupId(group.id) !== null) {
+      if (this.slot.decodeLocalGroupId(group.id) !== null) {
         document.removeBlendGroup(group.id);
       }
     }
@@ -191,15 +191,15 @@ export class BlocksetLink {
     const document = this.#document;
     switch (command.action) {
       case "block-defined":
-        document.defineBlock(this.slot.project(command.block));
+        document.defineBlock(this.slot.projectBlock(command.block));
         break;
       case "block-removed":
-        document.removeBlock(this.slot.blockId(command.blockId));
+        document.removeBlock(this.slot.composeBlockId(command.blockId));
         break;
       case "block-moved":
         document.moveBlock(
-          this.slot.blockId(command.blockId),
-          this.#documentIndexOf(command.toIndex)
+          this.slot.composeBlockId(command.blockId),
+          this.#findDocumentIndex(command.toIndex)
         );
         break;
       case "material-group-defined":
@@ -208,16 +208,16 @@ export class BlocksetLink {
         );
         break;
       case "material-group-removed":
-        document.removeMaterialGroup(this.slot.groupId(command.groupId));
+        document.removeMaterialGroup(this.slot.qualifyGroupId(command.groupId));
         break;
       case "blend-group-defined":
         document.defineBlendGroup(this.slot.projectBlendGroup(command.group));
         break;
       case "blend-group-removed":
-        document.removeBlendGroup(this.slot.groupId(command.groupId));
+        document.removeBlendGroup(this.slot.qualifyGroupId(command.groupId));
         break;
       case "tile-size-updated":
-        document.defineBlocks(this.slot.projectAll(this.blockset.blocks));
+        document.defineBlocks(this.slot.projectBlocks(this.blockset.blocks));
         break;
       case "material-group-renamed":
         this.#renameMaterialGroup(command.groupId, command.to);
@@ -244,19 +244,19 @@ export class BlocksetLink {
         this.slot.projectMaterialGroup(group.toJSON())
       );
     }
-    document.defineBlocks(this.slot.projectAll(
+    document.defineBlocks(this.slot.projectBlocks(
       [...blocks].filter((block) => block.materialGroup === to)
     ));
-    document.removeMaterialGroup(this.slot.groupId(groupId));
+    document.removeMaterialGroup(this.slot.qualifyGroupId(groupId));
   }
 
-  #documentIndexOf(
+  #findDocumentIndex(
     localIndex: number
   ): number {
     const positions: number[] = [];
     let index = 0;
     for (const block of this.#document.blocks) {
-      if (this.slot.owns(block.id)) {
+      if (this.slot.ownsBlockId(block.id)) {
         positions.push(index);
       }
       index++;

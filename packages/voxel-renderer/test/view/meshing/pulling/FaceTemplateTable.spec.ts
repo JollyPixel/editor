@@ -52,9 +52,9 @@ describe("FaceTemplateTable", () => {
   it("gives identical faces one template, whatever object holds them", () => {
     const table = new FaceTemplateTable();
 
-    const first = table.idOf(makeFace(0));
-    const second = table.idOf(makeFace(0));
-    const other = table.idOf(makeFace(0.5));
+    const first = table.internFace(makeFace(0));
+    const second = table.internFace(makeFace(0));
+    const other = table.internFace(makeFace(0.5));
 
     assert.equal(first, second);
     assert.notEqual(first, other);
@@ -64,9 +64,9 @@ describe("FaceTemplateTable", () => {
   it("keys templates by region id, not by the atlas rect behind it", () => {
     const table = new FaceTemplateTable();
 
-    const moved = table.idOf(makeFace(0, 4, 3, [0, 0, 65535, 65535]));
-    const sameId = table.idOf(makeFace(0, 4, 3, [100, 200, 4096, 4096]));
-    const otherId = table.idOf(makeFace(0, 4, 4, [0, 0, 65535, 65535]));
+    const moved = table.internFace(makeFace(0, 4, 3, [0, 0, 65535, 65535]));
+    const sameId = table.internFace(makeFace(0, 4, 3, [100, 200, 4096, 4096]));
+    const otherId = table.internFace(makeFace(0, 4, 4, [0, 0, 65535, 65535]));
 
     assert.equal(moved, sameId);
     assert.notEqual(moved, otherId);
@@ -74,7 +74,7 @@ describe("FaceTemplateTable", () => {
 
   it("writes corners, tile coordinates, region id and normal as floats", () => {
     const table = new FaceTemplateTable();
-    const id = table.idOf(makeFace(2, 4, 7));
+    const id = table.internFace(makeFace(2, 4, 7));
     const texels = templateTexels(table, id);
 
     assert.deepEqual(Array.from(texels.subarray(0, 4)), [2, 0, 0, 0]);
@@ -87,7 +87,7 @@ describe("FaceTemplateTable", () => {
 
   it("repeats the last corner of a triangle", () => {
     const table = new FaceTemplateTable();
-    const id = table.idOf(makeFace(0, 3));
+    const id = table.internFace(makeFace(0, 3));
 
     assert.deepEqual(
       table.copyVertexTo(id, 3, new THREE.Vector3()).toArray(),
@@ -105,7 +105,7 @@ describe("FaceTemplateTable", () => {
     });
 
     for (let i = 0; i <= FACE_TEMPLATES_PER_ROW; i++) {
-      table.idOf(makeFace(i));
+      table.internFace(makeFace(i));
     }
 
     assert.equal(table.count, FACE_TEMPLATES_PER_ROW + 1);
@@ -127,8 +127,8 @@ describe("FaceTemplateTable", () => {
     const table = new FaceTemplateTable();
     const version = table.texture.version;
 
-    table.idOf(makeFace(0));
-    table.idOf(makeFace(0));
+    table.internFace(makeFace(0));
+    table.internFace(makeFace(0));
 
     assert.equal(table.texture.version, version + 1);
   });

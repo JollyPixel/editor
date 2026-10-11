@@ -104,8 +104,8 @@ hidden layers and covered voxels. Results are computed on each call.
 
 ```ts
 readonly stats: VoxelBlockStats;
-usageOf(blockId: number): VoxelBlockUsage;
-blocksetUsageOf(blocksetId: string): VoxelBlocksetUsage;
+inspectUsage(blockId: number): VoxelBlockUsage;
+inspectBlocksetUsage(blocksetId: string): VoxelBlocksetUsage;
 ```
 
 | `stats` field | Description |
@@ -117,17 +117,17 @@ blocksetUsageOf(blocksetId: string): VoxelBlocksetUsage;
 | `orphanBlocks` | Stored ids missing from the registry, ascending. |
 | `orphanVoxels` | Voxels whose block is in `orphanBlocks`. |
 
-`usageOf()` returns `{ blockId, voxels, layers }`, listing only the layers that
+`inspectUsage()` returns `{ blockId, voxels, layers }`, listing only the layers that
 hold the block. Check it before removing a block: `block-removed` leaves the
 voxels in place as orphans.
 
 ```ts
-const { voxels, layers } = view.inspector.blocks.usageOf(blockId);
+const { voxels, layers } = view.inspector.blocks.inspectUsage(blockId);
 if (voxels > 0) {
   console.warn(`Block used by ${voxels} voxels in ${layers.length} layers`);
 }
 ```
 
-`blocksetUsageOf()` returns `{ blocksetId, blocks, voxels }`: the registered
+`inspectBlocksetUsage()` returns `{ blocksetId, blocks, voxels }`: the registered
 blocks with at least one tile in the blockset, and their voxel count. A block
 using two blocksets counts toward both.

@@ -165,7 +165,7 @@ export class ChunkMaterialCache {
         standard === this.#usesStandard(group) &&
         relief === hasRelief(normal, group)
       ) {
-        group.applyTo(material);
+        group.applyMaterialFinish(material);
         continue;
       }
 
@@ -182,7 +182,7 @@ export class ChunkMaterialCache {
     far: boolean
   ): ChunkMaterialEntry {
     const { blocksetId, surface } = geometryKey;
-    const atlas = this.#atlases.resolve(blocksetId);
+    const atlas = this.#atlases.resolveAtlas(blocksetId);
     if (atlas === undefined) {
       throw new Error(
         `ChunkMaterialCache: blockset "${blocksetId}" is not loaded.`
@@ -215,7 +215,7 @@ export class ChunkMaterialCache {
       new THREE.MeshLambertMaterial(options);
 
     const averages = this.tileAveraging ?
-      AtlasAverages.of(texture)?.texture :
+      AtlasAverages.fromTexture(texture)?.texture :
       null;
     const flat = far && averages !== null && averages !== undefined;
     const normal = flat ? null : atlas.normal;
@@ -238,7 +238,7 @@ export class ChunkMaterialCache {
       alphaToCoverage
     });
     material.map = null;
-    group?.applyTo(material);
+    group?.applyMaterialFinish(material);
     this.#customizer?.(
       material,
       blocksetId,

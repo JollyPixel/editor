@@ -71,9 +71,9 @@ describe("BlocksetList", () => {
       list.definitions().map(({ id, slot }) => [id, slot]),
       [["a", 0], ["b", 2], ["c", 1]]
     );
-    assert.equal(list.freeSlot(), 3);
-    assert.equal(list.bySlot(2)?.id, "b");
-    assert.equal(list.bySlot(3), undefined);
+    assert.equal(list.findAvailableSlot(), 3);
+    assert.equal(list.findBySlot(2)?.id, "b");
+    assert.equal(list.findBySlot(3), undefined);
   });
 
   it("rejects a taken or invalid slot", () => {
@@ -93,7 +93,7 @@ describe("BlocksetList", () => {
     ]);
     list.remove("a");
 
-    assert.equal(list.freeSlot(), 0);
+    assert.equal(list.findAvailableSlot(), 0);
     list.add({ id: "c", asset: kAsset });
     assert.equal(list.get("c")?.slot, 0);
   });
@@ -101,7 +101,7 @@ describe("BlocksetList", () => {
   it("skips reserved slots when looking for a free one", () => {
     const list = new BlocksetList([{ id: "a", asset: kAsset }]);
 
-    assert.equal(list.freeSlot([1, 2]), 3);
+    assert.equal(list.findAvailableSlot([1, 2]), 3);
   });
 
   it("keeps explicit slots on replace when a slotless blockset comes first", () => {

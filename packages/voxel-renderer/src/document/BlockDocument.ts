@@ -6,7 +6,7 @@ import {
   resolveBlockDefinition,
   type BlockDefinition
 } from "./blocks/BlockDefinition.ts";
-import { redefinitionOf } from "./blocks/BlockRedefinition.ts";
+import { classifyBlockRedefinition } from "./blocks/BlockRedefinition.ts";
 import type { BlockRegistry } from "./blocks/BlockRegistry.ts";
 import {
   MaterialGroup,
@@ -68,7 +68,7 @@ export abstract class BlockDocument<
     this.blendGroups = blendGroups;
   }
 
-  apply(
+  applyCommand(
     command: TCommand | BlockCatalogCommand,
     options: VoxelApplyOptions = {}
   ): boolean {
@@ -77,7 +77,7 @@ export abstract class BlockDocument<
     const previous = definesBlock(command) ?
       this.blocks.get(command.block.id) :
       undefined;
-    const applied = this.fold(command);
+    const applied = this.applyCommandToState(command);
     if (applied === null) {
       return false;
     }
@@ -87,7 +87,7 @@ export abstract class BlockDocument<
       context.clientId = clientId;
     }
     if (definesBlock(applied)) {
-      context.redefinition = redefinitionOf(previous, applied.block);
+      context.redefinition = classifyBlockRedefinition(previous, applied.block);
     }
     this.emit("command", applied, context);
 
@@ -97,7 +97,7 @@ export abstract class BlockDocument<
   defineBlock(
     def: BlockDefinition
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "block-defined",
       block: resolveBlockDefinition(def)
     });
@@ -114,7 +114,7 @@ export abstract class BlockDocument<
   removeBlock(
     blockId: number
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "block-removed",
       blockId
     });
@@ -124,7 +124,7 @@ export abstract class BlockDocument<
     blockId: number,
     toIndex: number
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "block-moved",
       blockId,
       toIndex
@@ -134,7 +134,7 @@ export abstract class BlockDocument<
   defineMaterialGroup(
     group: MaterialGroup | MaterialGroupJSON
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "material-group-defined",
       group: group instanceof MaterialGroup ? group.toJSON() : group
     });
@@ -143,7 +143,7 @@ export abstract class BlockDocument<
   removeMaterialGroup(
     groupId: string
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "material-group-removed",
       groupId
     });
@@ -152,7 +152,7 @@ export abstract class BlockDocument<
   defineBlendGroup(
     group: BlendGroup | BlendGroupJSON
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "blend-group-defined",
       group: group instanceof BlendGroup ? group.toJSON() : group
     });
@@ -161,13 +161,13 @@ export abstract class BlockDocument<
   removeBlendGroup(
     groupId: string
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "blend-group-removed",
       groupId
     });
   }
 
-  protected abstract fold(
+  protected abstract applyCommandToState(
     command: TCommand | BlockCatalogCommand
   ): TCommand | null;
 }

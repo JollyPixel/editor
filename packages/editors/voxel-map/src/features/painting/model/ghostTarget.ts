@@ -35,7 +35,7 @@ export interface GhostTarget {
   overlay: boolean;
 }
 
-export function ghostTargetOf(
+export function resolveGhostTarget(
   options: GhostTargetOptions
 ): GhostTarget | null {
   const {
@@ -54,7 +54,7 @@ export function ghostTargetOf(
       return null;
     }
 
-    return targetOf(center, paint, occupied(center));
+    return createGhostTarget(center, paint, occupied(center));
   }
 
   if (aim === null) {
@@ -67,10 +67,10 @@ export function ghostTargetOf(
     return null;
   }
 
-  return targetOf(position, options.paint, overlay);
+  return createGhostTarget(position, options.paint, overlay);
 }
 
-function targetOf(
+function createGhostTarget(
   position: VoxelCoord,
   paint: VoxelPaint,
   overlay: boolean
@@ -86,7 +86,7 @@ function targetOf(
   };
 }
 
-export function partGhostOf(
+export function createPartGhost(
   position: VoxelCoord,
   part: VoxelPart
 ): GhostTarget {

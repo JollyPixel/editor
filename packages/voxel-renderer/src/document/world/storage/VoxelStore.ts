@@ -109,7 +109,7 @@ export class VoxelStore {
     return this.#values;
   }
 
-  #slotOf(
+  #hashSlot(
     key: number
   ): number {
     return Math.imul(key, kGoldenRatio) >>> this.#shift;
@@ -120,7 +120,7 @@ export class VoxelStore {
   ): PackedVoxel {
     const keys = this.#keys;
     const mask = this.#mask;
-    let slot = this.#slotOf(key);
+    let slot = this.#hashSlot(key);
 
     for (;;) {
       const found = keys[slot];
@@ -146,7 +146,7 @@ export class VoxelStore {
   ): boolean {
     const keys = this.#keys;
     const mask = this.#mask;
-    let slot = this.#slotOf(key);
+    let slot = this.#hashSlot(key);
 
     for (;;) {
       const found = keys[slot];
@@ -176,7 +176,7 @@ export class VoxelStore {
   ): boolean {
     const keys = this.#keys;
     const mask = this.#mask;
-    let hole = this.#slotOf(key);
+    let hole = this.#hashSlot(key);
 
     for (;;) {
       const found = keys[hole];
@@ -199,7 +199,7 @@ export class VoxelStore {
         break;
       }
 
-      const home = this.#slotOf(candidate);
+      const home = this.#hashSlot(candidate);
       if (((scan - home) & mask) >= ((scan - hole) & mask)) {
         keys[hole] = candidate;
         values[hole] = values[scan];
@@ -279,7 +279,7 @@ export class VoxelStore {
         continue;
       }
 
-      let slot = this.#slotOf(key);
+      let slot = this.#hashSlot(key);
       while (keys[slot] !== kFreeKey) {
         slot = (slot + 1) & this.#mask;
       }

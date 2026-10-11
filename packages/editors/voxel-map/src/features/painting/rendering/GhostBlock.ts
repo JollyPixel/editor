@@ -71,7 +71,7 @@ export class GhostBlock extends THREE.Group {
 
     const piece = block === undefined ?
       null :
-      this.#pieces.pieceOf(block, target.transform);
+      this.#pieces.resolvePiece(block, target.transform);
     if (piece === null) {
       this.hide();
 

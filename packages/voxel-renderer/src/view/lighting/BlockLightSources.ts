@@ -51,7 +51,7 @@ export class BlockLightSources {
     return this.refresh();
   }
 
-  flagsOf(
+  resolveFlags(
     blockId: number
   ): number {
     let flags = this.#flags.get(blockId);
@@ -63,16 +63,16 @@ export class BlockLightSources {
     return flags;
   }
 
-  emissionOf(
+  resolveEmission(
     blockId: number
   ): number {
-    return this.flagsOf(blockId) & PACKED_LIGHT_MASK;
+    return this.resolveFlags(blockId) & PACKED_LIGHT_MASK;
   }
 
   isOpaque(
     blockId: number
   ): boolean {
-    return (this.flagsOf(blockId) & LIGHT_OPAQUE) !== 0;
+    return (this.resolveFlags(blockId) & LIGHT_OPAQUE) !== 0;
   }
 
   refresh(): boolean {
@@ -80,7 +80,7 @@ export class BlockLightSources {
     this.#flags = new Map();
     let emits = false;
     for (const { id } of this.#blocks) {
-      if (this.emissionOf(id) !== 0) {
+      if (this.resolveEmission(id) !== 0) {
         emits = true;
       }
     }
@@ -93,7 +93,7 @@ export class BlockLightSources {
     previous: ReadonlyMap<number, number>
   ): boolean {
     for (const [blockId, flags] of previous) {
-      if (this.flagsOf(blockId) !== flags) {
+      if (this.resolveFlags(blockId) !== flags) {
         return true;
       }
     }
@@ -123,11 +123,11 @@ export class BlockLightSources {
       this.#materialGroups.get(block.materialGroup);
 
     return (opaque ? LIGHT_OPAQUE : 0) |
-      (group === undefined ? 0 : emissionOf(group, this.#falloff));
+      (group === undefined ? 0 : resolveEmission(group, this.#falloff));
   }
 }
 
-function emissionOf(
+function resolveEmission(
   group: MaterialGroup,
   falloff: LightFalloff
 ): number {

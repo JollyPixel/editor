@@ -108,7 +108,7 @@ export class MapPlacement {
     return new ActivePlacement(
       placement,
       template,
-      this.#targetOf(placement.source)
+      this.#resolveTargetLayer(placement.source)
     );
   }
 
@@ -341,7 +341,7 @@ export class MapPlacement {
     }
     this.#assign(
       Placement.at(
-        CopySource.of(content),
+        CopySource.fromSnapshot(content),
         position
       )
     );
@@ -368,7 +368,7 @@ export class MapPlacement {
     this.#release();
   }
 
-  #targetOf(
+  #resolveTargetLayer(
     source: PlacementSource
   ): string | null {
     return source.kind === "template" || source.kind === "copy" ?

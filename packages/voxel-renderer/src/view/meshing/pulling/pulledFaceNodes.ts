@@ -194,8 +194,8 @@ export function pulledFaceNodes(
       worldCell.dot(vec3(1).sub(uAxis).sub(vAxis))
     ),
     blendIndices: [
-      blendIndicesOf(uint(data.z)),
-      blendIndicesOf(uint(data.w))
+      decodeBlendIndices(uint(data.z)),
+      decodeBlendIndices(uint(data.w))
     ],
     light: blockLightAt(position, normal.xyz, lightSpan)
   };
@@ -257,7 +257,7 @@ function blockLightAt(
   return light.rgb.div(max(light.a, float(kMinimumLightWeight)));
 }
 
-function blendIndicesOf(
+function decodeBlendIndices(
   word: Node<"uint">
 ): Vec4Node {
   function index(

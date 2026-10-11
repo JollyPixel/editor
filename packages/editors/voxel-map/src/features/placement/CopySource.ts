@@ -14,7 +14,7 @@ export interface CopySourceRef {
 }
 
 export class CopySource {
-  static of(
+  static fromSnapshot(
     snapshot: VoxelTemplate
   ): CopySource {
     return new CopySource(crypto.randomUUID(), snapshot);

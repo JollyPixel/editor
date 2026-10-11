@@ -45,7 +45,7 @@ export interface ShapeSlot {
   span: Readonly<TileSpan>;
 }
 
-export function slotNameOf(
+export function faceSlotName(
   face: FACE
 ): FaceSlotName {
   return FACE_SLOT_NAMES[face];
@@ -54,20 +54,20 @@ export function slotNameOf(
 /**
  * Reads a numeric `FACE` key as that face's default slot.
  */
-export function slotKeyOf(
+export function normalizeSlotKey(
   key: string
 ): string {
   const face = Number(key);
 
   return Number.isInteger(face) && face >= 0 && face < FACES.length ?
-    slotNameOf(face as FACE) :
+    faceSlotName(face as FACE) :
     key;
 }
 
 /**
  * Slot a derived slot inherits its tile from, so `top.1` falls back to `top`.
  */
-export function baseSlotOf(
+export function baseSlotName(
   slot: string
 ): string {
   const separator = slot.indexOf(".");
@@ -105,12 +105,12 @@ export function unknownTextureSlots(
   const known = new Set<string>(FACE_SLOT_NAMES);
   for (const slot of shapeSlots(shape)) {
     known.add(slot.id);
-    known.add(baseSlotOf(slot.id));
+    known.add(baseSlotName(slot.id));
   }
 
   const unknown: string[] = [];
   for (const key of keys) {
-    if (!known.has(slotKeyOf(key))) {
+    if (!known.has(normalizeSlotKey(key))) {
       unknown.push(key);
     }
   }
@@ -149,17 +149,17 @@ function deriveSlots(
         id,
         face,
         definitions,
-        span: sharedSpanOf(definitions)
+        span: computeSharedSpan(definitions)
       });
     }
     for (const group of derived) {
-      const id = nextFreeSlotId(slotNameOf(face), used);
+      const id = nextFreeSlotId(faceSlotName(face), used);
       used.add(id);
       slots.push({
         id,
         face,
         definitions: group.definitions,
-        span: sharedSpanOf(group.definitions)
+        span: computeSharedSpan(group.definitions)
       });
     }
   }
@@ -167,7 +167,7 @@ function deriveSlots(
   return slots;
 }
 
-function sharedSpanOf(
+function computeSharedSpan(
   definitions: readonly FaceDefinition[]
 ): Readonly<TileSpan> {
   const [first, ...rest] = definitions.map(

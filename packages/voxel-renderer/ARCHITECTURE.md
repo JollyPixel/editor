@@ -42,7 +42,7 @@ flowchart TB
 ```mermaid
 flowchart TB
     Edit["world.setVoxel(), addLayer(), objectLayers.add()"] --> Dispatch["VoxelWorld: build the command"]
-    Remote["document.apply(command, { origin })"] --> Apply["applyVoxelCommand()"]
+    Remote["document.applyCommand(command, { origin })"] --> Apply["applyVoxelCommand()"]
     Apply --> Execute
     Dispatch --> Execute["execute: mutate, return the command as applied or null"]
     Execute --> Writer["VoxelWriter<br/>batches, records, marks dirty"]
@@ -53,7 +53,7 @@ Every aggregate applies its own commands and returns them as applied:
 `VoxelWorld` (layers, voxels, object layers, templates), `BlockRegistry`,
 `MaterialGroupList` and `BlocksetList`. `VoxelDocument` and `BlocksetDocument`
 share `BlockDocument`, which emits an applied command once with its origin.
-A local world edit is emitted as `"local"`; `apply()` replays a peer command
+A local world edit is emitted as `"local"`; `applyCommand()` replays a peer command
 without the world re-emitting it.
 
 ## Edit to rendered chunk
@@ -66,7 +66,7 @@ sequenceDiagram
     participant Pipeline as ChunkPipeline
     participant Store as ChunkMeshStore
 
-    App->>Document: world.setVoxel(...) or apply(command)
+    App->>Document: world.setVoxel(...) or applyCommand(command)
     Document->>Document: change state and mark affected chunks dirty
     Document-->>App: command event
     App->>View: tick(deltaTime)
@@ -87,7 +87,7 @@ running.
 Face templates hold tile-local UVs and the id of a row in `FaceRegionTable`,
 one row per block texture slot; the vertex shader reads the slot's atlas rect
 from that row. A definition that only moves tiles (same shape, blocksets,
-rotations and surface, no blend group) dirties nothing: `apply()` reports it
+rotations and surface, no blend group) dirties nothing: `applyCommand()` reports it
 as `"tiles"` in the command context's `redefinition` and the view rewrites the
 block's rows. A `"metadata"` redefinition dirties nothing. Blend palettes still
 bake neighbour rects, so grouped blocks remesh. Mesh workers receive the row
@@ -102,7 +102,7 @@ expose it to the mesher, the neighbourhood queries and the Rapier collider,
 which check it and resolve the pair. The chunk orders the pair by packed
 value, smaller first, so a merged cell has one stored form whichever shape
 was written first; the writer applies the same order before recording a
-change, so history and patches compare cells by value. `BlockVariantCache.mergedOf()` drops the faces one shape hides of
+change, so history and patches compare cells by value. `BlockVariantCache.resolveMerged()` drops the faces one shape hides of
 the other and builds an occluder variant that stands for the whole cell.
 
 `ChunkMeshLayout` maps each dirty layer chunk to a mesh target: a `"cell"`

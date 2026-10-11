@@ -9,7 +9,7 @@ import {
 } from "../../../src/document/blocks/BlockSurface.ts";
 import { ChunkGeometryKey } from "../../../src/view/meshing/index.ts";
 
-function keyOf(
+function createGeometryKey(
   options?: BlockSurfaceOptions
 ): string {
   return String(new ChunkGeometryKey("atlas", new BlockSurface(options)));
@@ -41,8 +41,8 @@ describe("ChunkGeometryKey", () => {
   it("keys a material group apart from the same ungrouped surface", () => {
     for (const alphaMode of ["opaque", "blend"] as const) {
       assert.notEqual(
-        keyOf({ alphaMode, materialGroup: "gold" }),
-        keyOf({ alphaMode })
+        createGeometryKey({ alphaMode, materialGroup: "gold" }),
+        createGeometryKey({ alphaMode })
       );
     }
   });
@@ -51,15 +51,15 @@ describe("ChunkGeometryKey", () => {
     const keys = new Set<string>();
     for (const alphaMode of ["opaque", "mask", "blend"] as const) {
       for (const side of ["front", "double"] as const) {
-        keys.add(keyOf({ alphaMode, side, alphaCutoff: 0.3 }));
+        keys.add(createGeometryKey({ alphaMode, side, alphaCutoff: 0.3 }));
       }
     }
 
     assert.equal(keys.size, 6);
-    assert.equal(keys.has(keyOf({ materialGroup: "gold" })), false);
+    assert.equal(keys.has(createGeometryKey({ materialGroup: "gold" })), false);
     assert.notEqual(
-      keyOf({ alphaMode: "mask", alphaCutoff: 0.3 }),
-      keyOf({ alphaMode: "mask", alphaCutoff: 0.4 })
+      createGeometryKey({ alphaMode: "mask", alphaCutoff: 0.3 }),
+      createGeometryKey({ alphaMode: "mask", alphaCutoff: 0.4 })
     );
   });
 });

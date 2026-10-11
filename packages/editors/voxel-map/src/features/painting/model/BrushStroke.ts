@@ -31,7 +31,7 @@ export function canMergePaint(
   position: VoxelCoord,
   paint: VoxelPaint
 ): boolean {
-  return view.canMergeAt(layerName, position, {
+  return view.canMergeVoxelPart(layerName, position, {
     blockId: paint.blockId,
     transform: new VoxelTransform(paint).packed
   });
@@ -115,7 +115,7 @@ export class BrushStroke {
   claims(
     cell: VoxelCoord
   ): boolean {
-    return this.#stamped.has(keyOf(cell));
+    return this.#stamped.has(coordinateKey(cell));
   }
 
   revisit(
@@ -181,7 +181,7 @@ export class BrushStroke {
     const result: VoxelCoord[] = [];
 
     for (const cell of cells) {
-      const key = keyOf(cell);
+      const key = coordinateKey(cell);
       if (this.#stamped.has(key)) {
         continue;
       }
@@ -201,11 +201,11 @@ export class BrushStroke {
 
     return aimed === null || !sameCell(this.origin, position) ?
       null :
-      AimedHalf.of(entry, aimed);
+      AimedHalf.select(entry, aimed);
   }
 }
 
-function keyOf(
+function coordinateKey(
   cell: VoxelCoord
 ): string {
   return `${cell.x},${cell.y},${cell.z}`;

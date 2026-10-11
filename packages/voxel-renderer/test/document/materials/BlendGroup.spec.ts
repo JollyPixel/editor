@@ -117,17 +117,17 @@ describe("BlendGroupList", () => {
       group: { id: "grass" }
     } as const;
 
-    assert.deepEqual(list.apply(command), {
+    assert.deepEqual(list.applyCommand(command), {
       action: "blend-group-defined",
       group: new BlendGroup({ id: "grass" }).toJSON()
     });
-    assert.equal(list.apply(command), null);
-    assert.equal(list.apply({
+    assert.equal(list.applyCommand(command), null);
+    assert.equal(list.applyCommand({
       action: "blend-group-defined",
       group: { id: "grass", width: 0 }
     }), null);
     assert.deepEqual(
-      list.apply({ action: "blend-group-removed", groupId: "grass" }),
+      list.applyCommand({ action: "blend-group-removed", groupId: "grass" }),
       { action: "blend-group-removed", groupId: "grass" }
     );
     assert.equal(list.size, 0);

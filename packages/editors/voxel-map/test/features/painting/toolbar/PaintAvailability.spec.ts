@@ -16,7 +16,7 @@ import { MAP_CAPABILITIES } from "../../../../src/access/MapAccess.ts";
 
 describe("PaintAvailability", () => {
   test("lets the brush paint on a voxel layer", () => {
-    const availability = PaintAvailability.of({
+    const availability = PaintAvailability.evaluate({
       voxelLayer: "Ground",
       lastVoxelLayer: "Ground"
     }, false, MAP_CAPABILITIES.full);
@@ -27,7 +27,7 @@ describe("PaintAvailability", () => {
   });
 
   test("offers to resume the last voxel layer from an object layer", () => {
-    const availability = PaintAvailability.of({
+    const availability = PaintAvailability.evaluate({
       voxelLayer: null,
       lastVoxelLayer: "Roof"
     }, false, MAP_CAPABILITIES.full);
@@ -40,7 +40,7 @@ describe("PaintAvailability", () => {
   });
 
   test("reports a map without any voxel layer", () => {
-    const availability = PaintAvailability.of({
+    const availability = PaintAvailability.evaluate({
       voxelLayer: null,
       lastVoxelLayer: null
     }, false, MAP_CAPABILITIES.full);
@@ -53,7 +53,7 @@ describe("PaintAvailability", () => {
   });
 
   test("blocks the brush silently while suspended, even in an object context", () => {
-    const availability = PaintAvailability.of({
+    const availability = PaintAvailability.evaluate({
       voxelLayer: null,
       lastVoxelLayer: "Roof"
     }, true, MAP_CAPABILITIES.full);
@@ -63,7 +63,7 @@ describe("PaintAvailability", () => {
   });
 
   test("tells a role that cannot change voxels that the map is view only", () => {
-    const availability = PaintAvailability.of({
+    const availability = PaintAvailability.evaluate({
       voxelLayer: "Ground",
       lastVoxelLayer: "Ground"
     }, true, MAP_CAPABILITIES.none);
@@ -82,13 +82,13 @@ describe("PaintAvailability", () => {
     };
 
     assert.ok(
-      PaintAvailability.of(selection, false, MAP_CAPABILITIES.full).equals(
-        PaintAvailability.of(selection, false, MAP_CAPABILITIES.full)
+      PaintAvailability.evaluate(selection, false, MAP_CAPABILITIES.full).equals(
+        PaintAvailability.evaluate(selection, false, MAP_CAPABILITIES.full)
       )
     );
     assert.ok(
-      !PaintAvailability.of(selection, false, MAP_CAPABILITIES.full).equals(
-        PaintAvailability.of(selection, true, MAP_CAPABILITIES.full)
+      !PaintAvailability.evaluate(selection, false, MAP_CAPABILITIES.full).equals(
+        PaintAvailability.evaluate(selection, true, MAP_CAPABILITIES.full)
       )
     );
   });

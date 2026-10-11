@@ -40,7 +40,7 @@ describe("VoxelSolid.contour", () => {
   const cube = [{ x: 0, y: 0, z: 0 }];
 
   test("keeps the hexagon around a cube seen from a corner", () => {
-    const edges = VoxelSolid.of(cube).contour(VoxelShell.of(cube), [5, 5, 5]);
+    const edges = VoxelSolid.fromCells(cube).contour(VoxelShell.fromCells(cube), [5, 5, 5]);
 
     assert.deepStrictEqual(segmentsOf(edges), [
       "0,0,1,0,1,1",
@@ -53,7 +53,7 @@ describe("VoxelSolid.contour", () => {
   });
 
   test("keeps the four edges of the only face seen head-on", () => {
-    const edges = VoxelSolid.of(cube).contour(VoxelShell.of(cube), [0.5, 5, 0.5]);
+    const edges = VoxelSolid.fromCells(cube).contour(VoxelShell.fromCells(cube), [0.5, 5, 0.5]);
 
     assert.deepStrictEqual(segmentsOf(edges), [
       "0,1,0,0,1,1",
@@ -69,13 +69,13 @@ describe("VoxelSolid.contour", () => {
       { x: 1, y: 0, z: 0 },
       { x: 1, y: 1, z: 0 }
     ];
-    const shell = VoxelShell.of(stair);
+    const shell = VoxelShell.fromCells(stair);
     const eye = [4, 10, 0.5];
     const step = "1,2,0,1,2,1";
 
     assert.ok(segmentsOf(shell.edgesFacing(eye)).includes(step));
     assert.ok(
-      !segmentsOf(VoxelSolid.of(stair).contour(shell, eye)).includes(step)
+      !segmentsOf(VoxelSolid.fromCells(stair).contour(shell, eye)).includes(step)
     );
   });
 
@@ -88,7 +88,9 @@ describe("VoxelSolid.contour", () => {
       { x: 3, y: 0, z: 0 },
       { x: 3, y: 0, z: 1 }
     ];
-    const edges = segmentsOf(VoxelSolid.of(cells).contour(VoxelShell.of(cells), [20, 0.5, 0.5]));
+    const edges = segmentsOf(VoxelSolid.fromCells(cells).contour(
+      VoxelShell.fromCells(cells), [20, 0.5, 0.5]
+    ));
     const partial = edges.filter(
       (segment) => segment.startsWith("1,1,") && segment.endsWith(",1,1,4")
     );
@@ -105,9 +107,9 @@ describe("VoxelSolid.contour", () => {
       pattern: "circle",
       anchor: "center"
     }).cells();
-    const shell = VoxelShell.of(ball);
+    const shell = VoxelShell.fromCells(ball);
     const eye = [14, 12, 20];
-    const contour = VoxelSolid.of(ball).contour(shell, eye);
+    const contour = VoxelSolid.fromCells(ball).contour(shell, eye);
 
     assert.ok(contour.length > 0);
     assert.ok(lengthOf(contour) < lengthOf(shell.edgesFacing(eye)) / 3);

@@ -39,7 +39,7 @@ function glowingView(
   return view;
 }
 
-function lightOf(
+function resolveLightTexture(
   view: VoxelView,
   coords: string
 ): THREE.Texture | null {
@@ -55,15 +55,15 @@ describe("VoxelView - block light", () => {
   it("binds a light texture to the chunks a glowing block reaches", () => {
     const view = glowingView();
 
-    assert.ok(lightOf(view, "0,0,0") instanceof THREE.Data3DTexture);
-    assert.ok(lightOf(view, "3,0,0") instanceof THREE.Data3DTexture);
-    assert.equal(lightOf(view, "10,0,0"), null);
+    assert.ok(resolveLightTexture(view, "0,0,0") instanceof THREE.Data3DTexture);
+    assert.ok(resolveLightTexture(view, "3,0,0") instanceof THREE.Data3DTexture);
+    assert.equal(resolveLightTexture(view, "10,0,0"), null);
   });
 
   it("lights nothing while the group has no light level", () => {
     const view = glowingView(0);
 
-    assert.equal(lightOf(view, "0,0,0"), null);
+    assert.equal(resolveLightTexture(view, "0,0,0"), null);
   });
 
   it("darkens a distant chunk without rebuilding it", () => {
@@ -76,7 +76,7 @@ describe("VoxelView - block light", () => {
     view.tick(0);
 
     assert.ok(chunkMeshes(view).includes(distant));
-    assert.equal(lightOf(view, "3,0,0"), null);
+    assert.equal(resolveLightTexture(view, "3,0,0"), null);
   });
 
   it("relights when a material group gains a light level", () => {
@@ -85,7 +85,7 @@ describe("VoxelView - block light", () => {
     view.document.defineMaterialGroup({ id: "glow", lightLevel: 9 });
     view.flush();
 
-    assert.ok(lightOf(view, "0,0,0") instanceof THREE.Data3DTexture);
+    assert.ok(resolveLightTexture(view, "0,0,0") instanceof THREE.Data3DTexture);
   });
 
   it("drives the shared strength and keeps it non-negative", () => {
@@ -99,13 +99,13 @@ describe("VoxelView - block light", () => {
 
   it("relights with a new falloff and keeps the strength the caller set", () => {
     const view = glowingView();
-    const wide = [...(lightOf(view, "0,0,0") as THREE.Data3DTexture).image.data!];
+    const wide = [...(resolveLightTexture(view, "0,0,0") as THREE.Data3DTexture).image.data!];
 
     view.lighting.blockLight = 2;
     view.lighting.blockLightFalloff = "focused";
     view.tick(0);
 
-    const focused = (lightOf(view, "0,0,0") as THREE.Data3DTexture).image.data!;
+    const focused = (resolveLightTexture(view, "0,0,0") as THREE.Data3DTexture).image.data!;
     assert.equal(view.lighting.blockLightFalloff, "focused");
     assert.equal(view.lighting.blockLight, 2);
     assert.notDeepEqual([...focused], wide);
@@ -117,11 +117,11 @@ describe("VoxelView - block light", () => {
 
     view.document.world.removeVoxel("Ground", { position: { x: 1, y: 0, z: 1 } });
     view.tick(0);
-    assert.ok(lightOf(view, "3,0,0") instanceof THREE.Data3DTexture);
+    assert.ok(resolveLightTexture(view, "3,0,0") instanceof THREE.Data3DTexture);
 
     view.lighting.blockLight = 1;
     view.tick(0);
-    assert.equal(lightOf(view, "3,0,0"), null);
+    assert.equal(resolveLightTexture(view, "3,0,0"), null);
   });
 
   it("keeps the shadow fill non-negative", () => {

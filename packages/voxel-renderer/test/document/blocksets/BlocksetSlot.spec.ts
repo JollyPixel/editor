@@ -32,7 +32,7 @@ describe("BlocksetSlot", () => {
 
   describe("project", () => {
     it("gives the block its world id, blockset and group names", () => {
-      const projected = kStone.project(kLocalBlock);
+      const projected = kStone.projectBlock(kLocalBlock);
 
       assert.equal(projected.id, composeBlockId(3, 5));
       assert.deepEqual(projected.defaultTexture, {
@@ -48,7 +48,7 @@ describe("BlocksetSlot", () => {
     });
 
     it("leaves a block without groups untouched on those fields", () => {
-      const projected = kStone.project(
+      const projected = kStone.projectBlock(
         resolveBlockDefinition(makeBlockDef(1, "cube"))
       );
 
@@ -57,7 +57,7 @@ describe("BlocksetSlot", () => {
     });
 
     it("projects every block of a blockset", () => {
-      const blocks = kStone.projectAll([
+      const blocks = kStone.projectBlocks([
         resolveBlockDefinition(makeBlockDef(1, "cube")),
         resolveBlockDefinition(makeBlockDef(2, "cube"))
       ]);
@@ -71,7 +71,7 @@ describe("BlocksetSlot", () => {
 
   describe("local", () => {
     it("inverts the projection", () => {
-      assert.deepEqual(kStone.local(kStone.project(kLocalBlock)), kLocalBlock);
+      assert.deepEqual(kStone.localizeBlock(kStone.projectBlock(kLocalBlock)), kLocalBlock);
     });
 
     it("keeps a group another blockset projected", () => {
@@ -80,17 +80,17 @@ describe("BlocksetSlot", () => {
         materialGroup: "other/gold"
       };
 
-      assert.equal(kStone.local(block).materialGroup, "other/gold");
+      assert.equal(kStone.localizeBlock(block).materialGroup, "other/gold");
     });
   });
 
   describe("group ids", () => {
     it("prefixes the group with the blockset id and strips it back", () => {
-      const projected = kStone.groupId("gold");
+      const projected = kStone.qualifyGroupId("gold");
 
       assert.equal(projected, "stone/gold");
-      assert.equal(kStone.localGroupId(projected), "gold");
-      assert.equal(kStone.localGroupId("other/gold"), null);
+      assert.equal(kStone.decodeLocalGroupId(projected), "gold");
+      assert.equal(kStone.decodeLocalGroupId("other/gold"), null);
     });
 
     it("projects and localizes a material group", () => {
@@ -100,7 +100,7 @@ describe("BlocksetSlot", () => {
       });
 
       assert.deepEqual(projected, { id: "stone/gold", metalness: 1 });
-      assert.deepEqual(kStone.localMaterialGroup(projected), {
+      assert.deepEqual(kStone.localizeMaterialGroup(projected), {
         id: "gold",
         metalness: 1
       });
@@ -122,11 +122,11 @@ describe("BlocksetSlot", () => {
     it("recognizes ids projected into the blockset slot", () => {
       const origin = new BlocksetSlot({ id: "base", slot: 0 });
 
-      assert.equal(kStone.owns(composeBlockId(3, 9)), true);
-      assert.equal(kStone.owns(composeBlockId(2, 9)), false);
-      assert.equal(origin.owns(9), true);
-      assert.equal(kStone.blockId(9), composeBlockId(3, 9));
-      assert.equal(kStone.localBlockId(composeBlockId(3, 9)), 9);
+      assert.equal(kStone.ownsBlockId(composeBlockId(3, 9)), true);
+      assert.equal(kStone.ownsBlockId(composeBlockId(2, 9)), false);
+      assert.equal(origin.ownsBlockId(9), true);
+      assert.equal(kStone.composeBlockId(9), composeBlockId(3, 9));
+      assert.equal(kStone.decodeLocalBlockId(composeBlockId(3, 9)), 9);
     });
   });
 

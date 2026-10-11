@@ -55,7 +55,7 @@ export function createBlocksetReconciler(
     replay: (command) => (
       isPixelCommand(command) ?
         replayPixelCommand(pixels, command) :
-        blockset.apply(command, { origin: "remote" })
+        blockset.applyCommand(command, { origin: "remote" })
     )
   };
 }
@@ -138,6 +138,6 @@ export class BlocksetSyncClient extends CommandSync<
       return;
     }
 
-    this.#blockset.apply(command, { origin: "remote" });
+    this.#blockset.applyCommand(command, { origin: "remote" });
   }
 }

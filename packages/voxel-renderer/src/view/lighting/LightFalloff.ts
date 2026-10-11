@@ -30,7 +30,7 @@ export class LightFalloff {
       (1 + (kFocusedSpread * distance * distance));
   });
 
-  static of(
+  static fromName(
     name: BlockLightFalloff
   ): LightFalloff {
     return name === "focused" ? LightFalloff.FOCUSED : LightFalloff.WIDE;
@@ -66,13 +66,13 @@ export class LightFalloff {
     return this.#brightness[level];
   }
 
-  byteOf(
+  encodeLevel(
     level: number
   ): number {
     return this.#bytes[level];
   }
 
-  texelOf(
+  decodeTexel(
     cell: number
   ): number {
     return this.#texels[cell];

@@ -7,7 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { voxelCellOf } from "@jolly-pixel/voxel.renderer";
+import { floorVoxelPosition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
@@ -87,7 +87,7 @@ function probedAim(
 
   return {
     ...aim,
-    probe: voxelCellOf(aim.probe)
+    probe: floorVoxelPosition(aim.probe)
   };
 }
 

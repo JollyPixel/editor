@@ -33,11 +33,11 @@ export class MapMaterial {
   }
 
   get name(): string {
-    return this.slot.localGroupId(this.id) ?? this.id;
+    return this.slot.decodeLocalGroupId(this.id) ?? this.id;
   }
 
   get swatch(): MaterialSwatch {
-    return MaterialSwatch.of(this.id, this.finish);
+    return MaterialSwatch.fromMaterial(this.id, this.finish);
   }
 
   usedBy(

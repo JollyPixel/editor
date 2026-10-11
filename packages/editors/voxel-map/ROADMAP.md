@@ -15,7 +15,7 @@ Two complementary shapes can share a cell (phase 1, 2026-10-05), and each
 shape can be aimed at on its own at brush size 1 (phase 2, 2026-10-05): a
 right click removes the aimed shape, Ctrl+click picks it, Replace repaints it,
 and a red overlay shows the shape a right click removes. The aimed shape comes
-from `view.partAt()`, see the renderer's
+from `view.pickVoxelPart()`, see the renderer's
 [merged cells](../../voxel-renderer/docs/api/world/VoxelWorld.md#merged-cells)
 section. Strokes and larger brushes still treat a merged cell as a whole.
 
@@ -41,7 +41,7 @@ Open points:
 ## Not planned
 
 - **Pairs that do not fill the cell**, such as a pole through a slab. The
-  storage takes any pair and the view draws it, but `canMergeAt()` refuses it,
+  storage takes any pair and the view draws it, but `canMergeVoxelPart()` refuses it,
   and there is no rule yet for overlapping shapes or for which faces to hide.
 - **More than two shapes per cell.** The partner store holds one extra shape
   per cell.

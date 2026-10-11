@@ -78,7 +78,7 @@ export async function renderBlendScene(
     { id: "atlas", src: "", tileSize: kTileTexels },
     new THREE.Texture(await atlasImage())
   );
-  view.atlases.atlas("atlas").texture.needsUpdate = true;
+  view.atlases.requireLoadedAtlas("atlas").texture.needsUpdate = true;
   const layer = view.document.world.addLayer("ground");
   for (let x = 0; x < kColumns; x++) {
     for (let z = 0; z < kRows; z++) {

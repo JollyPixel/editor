@@ -238,7 +238,7 @@ export class VoxelTemplate {
     };
   }
 
-  placedPositionFor(
+  placementPositionFromMinCorner(
     min: Vector3Like,
     transform: VoxelTransform = VoxelTransform.Identity
   ): VoxelCoord {

@@ -69,7 +69,7 @@ export class CopyPresence {
   toJSON(): CopyPresenceJSON {
     return {
       copyId: this.source.id,
-      ...PresenceSnapshot.of(this.source.snapshot).toJSON()
+      ...PresenceSnapshot.capture(this.source.snapshot).toJSON()
     };
   }
 }

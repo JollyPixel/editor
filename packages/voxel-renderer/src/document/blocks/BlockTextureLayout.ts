@@ -8,7 +8,7 @@ import {
 } from "./shape/shapeTextureLayout.ts";
 import {
   tileFootprint,
-  tileRectOf,
+  resolveTileRect,
   UNIT_TILE_SPAN,
   type TileRect
 } from "../blocksets/tileRef.ts";
@@ -18,7 +18,7 @@ import type {
 } from "../blocksets/types.ts";
 
 export class BlockTextureLayout {
-  static of(
+  static fromShape(
     block: ResolvedBlockDefinition,
     shape: BlockShape | undefined
   ): BlockTextureLayout {
@@ -47,28 +47,28 @@ export class BlockTextureLayout {
     return this.slots.some(({ tile }) => tile.blocksetId === blocksetId);
   }
 
-  slotsIn(
+  slotsUsingBlockset(
     blocksetId: string
   ): ResolvedBlockTextureSlot[] {
     return this.slots.filter(({ tile }) => tile.blocksetId === blocksetId);
   }
 
-  drawnRectsIn(
+  collectDrawnTileRects(
     blocksetId: string,
     tileSize: number
   ): TileRect[] {
-    return uniqueRects(this.slotsIn(blocksetId).map(
-      ({ tile, bounds, span }) => tileRectOf(tile, tileSize, bounds, span)
+    return uniqueRects(this.slotsUsingBlockset(blocksetId).map(
+      ({ tile, bounds, span }) => resolveTileRect(tile, tileSize, bounds, span)
     ));
   }
 
-  footprintsIn(
+  collectTileFootprintRects(
     blocksetId: string,
     tileSize: number
   ): TileRect[] {
     const spans = this.#spansByTile();
     const rects: TileRect[] = [];
-    for (const ref of BlockTextures.of(this.block)) {
+    for (const ref of BlockTextures.fromBlock(this.block)) {
       if (ref.blocksetId !== blocksetId) {
         continue;
       }

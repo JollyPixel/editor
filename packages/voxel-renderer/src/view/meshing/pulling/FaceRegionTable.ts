@@ -44,7 +44,7 @@ export class FaceRegionTable {
     return this.#texture;
   }
 
-  idOf(
+  internRegion(
     blockId: number,
     textureSlot: string
   ): number {

@@ -32,7 +32,7 @@ import {
   toolLabel,
   type BrushToolOption
 } from "./brushToolOptions.ts";
-import { choiceOf } from "./toolChoice.ts";
+import { resolveToolChoice } from "./toolChoice.ts";
 import { BRUSH_SHORTCUTS } from "../interaction/brushShortcuts.ts";
 import "./brushIcons.ts";
 
@@ -194,7 +194,7 @@ export class BrushControls extends WorkspaceElement {
       select,
       content = () => nothing
     } = choice;
-    const { active, alternatives } = choiceOf(options, current);
+    const { active, alternatives } = resolveToolChoice(options, current);
 
     return html`
       <jolly-tool-button

@@ -37,7 +37,7 @@ block `localBlock()` refuses.
 
 ## Shared with VoxelDocument
 
-`blocks`, `materialGroups`, `blendGroups`, `apply()`, `defineBlock()`,
+`blocks`, `materialGroups`, `blendGroups`, `applyCommand()`, `defineBlock()`,
 `defineBlocks()`, `removeBlock()`, `moveBlock()`, `defineMaterialGroup()`,
 `removeMaterialGroup()`, `defineBlendGroup()` and `removeBlendGroup()` behave
 as on [`VoxelDocument`](../core/VoxelDocument.md). A block defined here, or

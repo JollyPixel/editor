@@ -22,7 +22,7 @@ function makeWorld(): VoxelWorld {
 
 describe("MergePlan targets", () => {
   test("offers every layer but the source", () => {
-    const { options } = MergePlan.of(makeWorld(), "B");
+    const { options } = MergePlan.planMerge(makeWorld(), "B");
 
     assert.deepEqual(
       options.map((option) => option.value),
@@ -31,32 +31,32 @@ describe("MergePlan targets", () => {
   });
 
   test("labels each option with the layer name", () => {
-    const { options } = MergePlan.of(makeWorld(), "B");
+    const { options } = MergePlan.planMerge(makeWorld(), "B");
 
     assert.deepEqual(options[0], { value: "C", label: "C" });
   });
 
   test("defaults to the layer directly below the source", () => {
-    assert.equal(MergePlan.of(makeWorld(), "C").defaultTarget, "B");
-    assert.equal(MergePlan.of(makeWorld(), "B").defaultTarget, "A");
+    assert.equal(MergePlan.planMerge(makeWorld(), "C").defaultTarget, "B");
+    assert.equal(MergePlan.planMerge(makeWorld(), "B").defaultTarget, "A");
   });
 
   test("falls back to the first option for the bottom layer", () => {
-    assert.equal(MergePlan.of(makeWorld(), "A").defaultTarget, "C");
+    assert.equal(MergePlan.planMerge(makeWorld(), "A").defaultTarget, "C");
   });
 
   test("has no target in a single-layer world", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Only");
 
-    const plan = MergePlan.of(world, "Only");
+    const plan = MergePlan.planMerge(world, "Only");
 
     assert.deepEqual(plan.options, []);
     assert.equal(plan.defaultTarget, null);
   });
 
   test("has no target when the source is unknown", () => {
-    const plan = MergePlan.of(makeWorld(), "NoSuch");
+    const plan = MergePlan.planMerge(makeWorld(), "NoSuch");
 
     assert.deepEqual(plan.options, []);
     assert.equal(plan.defaultTarget, null);
@@ -65,14 +65,14 @@ describe("MergePlan targets", () => {
 
 describe("MergePlan warnings", () => {
   test("says nothing about a plain visible layer", () => {
-    assert.deepEqual(MergePlan.of(makeWorld(), "B").warnings, []);
+    assert.deepEqual(MergePlan.planMerge(makeWorld(), "B").warnings, []);
   });
 
   test("warns that custom properties are folded in", () => {
     const world = makeWorld();
     world.updateLayer("B", { properties: { biome: "forest" } });
 
-    const warnings = MergePlan.of(world, "B").warnings;
+    const warnings = MergePlan.planMerge(world, "B").warnings;
 
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /custom propertie/);
@@ -82,7 +82,7 @@ describe("MergePlan warnings", () => {
     const world = makeWorld();
     world.updateLayer("B", { visible: false });
 
-    const warnings = MergePlan.of(world, "B").warnings;
+    const warnings = MergePlan.planMerge(world, "B").warnings;
 
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /hidden/);
@@ -95,10 +95,10 @@ describe("MergePlan warnings", () => {
       properties: { biome: "forest" }
     });
 
-    assert.equal(MergePlan.of(world, "B").warnings.length, 2);
+    assert.equal(MergePlan.planMerge(world, "B").warnings.length, 2);
   });
 
   test("says nothing about an unknown layer", () => {
-    assert.deepEqual(MergePlan.of(makeWorld(), "NoSuch").warnings, []);
+    assert.deepEqual(MergePlan.planMerge(makeWorld(), "NoSuch").warnings, []);
   });
 });

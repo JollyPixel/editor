@@ -9,12 +9,12 @@ import {
   type TileRescale
 } from "../blocksets/tileRef.ts";
 import type { ResolvedBlockDefinition } from "./BlockDefinition.ts";
-import { baseSlotOf } from "./shape/shapeSlots.ts";
+import { baseSlotName } from "./shape/shapeSlots.ts";
 
 export type TileRefMapper = (ref: ResolvedTileRef) => ResolvedTileRef;
 
 export class BlockTextures implements Iterable<ResolvedTileRef> {
-  static of(
+  static fromBlock(
     block: ResolvedBlockDefinition
   ): BlockTextures {
     return new BlockTextures(
@@ -47,20 +47,20 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     return (this.defaultTexture ?? [...this][0])?.size;
   }
 
-  forSlot(
+  resolveSlotTexture(
     slot: string
   ): ResolvedTileRef | undefined {
     return this.faceTextures[slot] ??
-      this.faceTextures[baseSlotOf(slot)] ??
+      this.faceTextures[baseSlotName(slot)] ??
       this.defaultTexture;
   }
 
-  spanFor(
+  resolveSlotSpan(
     slot: string,
     span: Readonly<TileSpan>
   ): Readonly<TileSpan> {
     const ownsTile = this.faceTextures[slot] !== undefined ||
-      this.faceTextures[baseSlotOf(slot)] !== undefined;
+      this.faceTextures[baseSlotName(slot)] !== undefined;
 
     return ownsTile ? span : UNIT_TILE_SPAN;
   }
@@ -97,7 +97,7 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
       this;
   }
 
-  withSize(
+  withTileSize(
     size: number
   ): BlockTextures {
     return this.map((ref) => {
@@ -108,7 +108,7 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     });
   }
 
-  staysOnGrid(
+  canRescaleOnGrid(
     rescale: TileRescale
   ): boolean {
     return [...this].every((ref) => {
@@ -118,7 +118,7 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     });
   }
 
-  withBlockset(
+  withDefaultBlockset(
     blocksetId: string | null
   ): BlockTextures {
     if (blocksetId === null) {
@@ -135,7 +135,7 @@ export class BlockTextures implements Iterable<ResolvedTileRef> {
     ));
   }
 
-  applyTo(
+  createTexturedBlock(
     block: ResolvedBlockDefinition
   ): ResolvedBlockDefinition {
     if (

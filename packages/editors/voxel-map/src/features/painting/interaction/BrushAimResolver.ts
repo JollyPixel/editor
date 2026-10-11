@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  voxelCellOf,
-  voxelPositionOf,
+  floorVoxelPosition,
+  resolveSurfaceCell,
   type VoxelCoord
 } from "@jolly-pixel/voxel.renderer";
 
@@ -134,7 +134,7 @@ export class BrushAimResolver {
     this.#aimDistance = hit.distance;
 
     if (hit.ground) {
-      const ground = voxelPositionOf(
+      const ground = resolveSurfaceCell(
         hit.point,
         hit.normal,
         "front"
@@ -152,25 +152,25 @@ export class BrushAimResolver {
       };
     }
 
-    const cell = voxelPositionOf(
+    const cell = resolveSurfaceCell(
       hit.point,
       hit.normal,
       "back"
     );
 
-    const face = CellFace.of(
+    const face = CellFace.fromDirection(
       cellFaceStep(this.#viewRay.ray, cell) ?? hit.normal
     );
 
     return {
-      place: this.#neighbourOf(
+      place: this.#resolvePlacementCell(
         cell,
         hit.point,
         hit.normal
       ),
       remove: cell,
       face,
-      probe: probeOf(hit.point, hit.normal),
+      probe: offsetInsideSurface(hit.point, hit.normal),
       anchors: face.anchors
     };
   }
@@ -190,7 +190,7 @@ export class BrushAimResolver {
       return null;
     }
 
-    const cell = voxelCellOf(point);
+    const cell = floorVoxelPosition(point);
 
     return {
       place: cell,
@@ -228,12 +228,12 @@ export class BrushAimResolver {
     }
 
     return {
-      ...voxelCellOf(point),
+      ...floorVoxelPosition(point),
       [plane.axis]: plane.value
     };
   }
 
-  #neighbourOf(
+  #resolvePlacementCell(
     cell: VoxelCoord,
     point: THREE.Vector3,
     normal: THREE.Vector3
@@ -243,7 +243,7 @@ export class BrushAimResolver {
       cell
     );
     if (step === null) {
-      return voxelPositionOf(
+      return resolveSurfaceCell(
         point,
         normal,
         "front"
@@ -258,7 +258,7 @@ export class BrushAimResolver {
   }
 }
 
-function probeOf(
+function offsetInsideSurface(
   point: THREE.Vector3,
   normal: THREE.Vector3
 ): VoxelCoord {

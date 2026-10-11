@@ -86,7 +86,7 @@ test("the material fields follow the block picked in the library", async({ map }
     const { blocksets, mapDocument } = window.voxelMapEditor!.workspace;
     for (const [blockId, name] of [[firstId, "Gold"], [secondId, "Silver"]] as const) {
       const block = mapDocument.blocks.get(blockId)!;
-      const groupId = blocksets.ownerOf(blockId)!.slot.groupId(name);
+      const groupId = blocksets.findOwner(blockId)!.slot.qualifyGroupId(name);
       blocksets.defineBlock({ ...block, materialGroup: groupId });
     }
   }, [first.id, second.id]);

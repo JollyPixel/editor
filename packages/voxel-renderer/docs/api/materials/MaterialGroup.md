@@ -71,7 +71,7 @@ Like the constructor, but returns `null` for invalid input.
 A copy with other finish values or another `swatch`. `MaterialGroupChanges` is
 every `MaterialGroupJSON` field but `id`, all optional.
 
-#### `applyTo(material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial): void`
+#### `applyMaterialFinish(material: THREE.MeshLambertMaterial | THREE.MeshStandardMaterial): void`
 
 Writes the finish to a material, for example a block preview. A Lambert
 material only receives the emissive fields and `normalScale`.

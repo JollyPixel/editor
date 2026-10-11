@@ -11,10 +11,10 @@ import {
   PeerMarkView
 } from "../../../../src/features/blocks/library/PeerMarks.ts";
 
-function viewOf(
+function createView(
   marks: PresencePeer[] | undefined
 ): PeerMarkView | null {
-  return new PeerMarks(new Map(marks === undefined ? [] : [[1, marks]])).viewOf(1);
+  return new PeerMarks(new Map(marks === undefined ? [] : [[1, marks]])).createView(1);
 }
 
 function mark(
@@ -28,21 +28,21 @@ function mark(
   };
 }
 
-describe("PeerMarks.viewOf", () => {
+describe("PeerMarks.createView", () => {
   it("returns null when a block carries no mark", () => {
-    assert.equal(viewOf(undefined), null);
-    assert.equal(viewOf([]), null);
+    assert.equal(createView(undefined), null);
+    assert.equal(createView([]), null);
   });
 
   it("keeps a lone mark as the highlight without dots", () => {
-    const view = viewOf([mark("ada")]);
+    const view = createView([mark("ada")]);
 
     assert.equal(view?.highlight.clientId, "ada");
     assert.deepEqual(view?.dots, []);
   });
 
   it("dots every mark but the highlight owner", () => {
-    const view = viewOf([
+    const view = createView([
       mark("ada"),
       mark("bob"),
       mark("cleo")
@@ -56,7 +56,7 @@ describe("PeerMarks.viewOf", () => {
   });
 
   it("caps the dots to three", () => {
-    const view = viewOf([
+    const view = createView([
       mark("ada"),
       mark("bob"),
       mark("cleo"),
@@ -71,9 +71,9 @@ describe("PeerMarks.viewOf", () => {
   });
 });
 
-describe("PeerMarks.selfOf", () => {
+describe("PeerMarks.findSelf", () => {
   it("reads the local peer out of the roster", () => {
-    const local = PeerMarks.selfOf([
+    const local = PeerMarks.findSelf([
       { clientId: "bob", displayName: "Bob", color: "#00ff00" },
       { clientId: "ada", displayName: "Ada", color: "#0000ff", self: true }
     ]);
@@ -87,7 +87,7 @@ describe("PeerMarks.selfOf", () => {
   });
 
   it("falls back to an offline identity", () => {
-    const local = PeerMarks.selfOf([]);
+    const local = PeerMarks.findSelf([]);
 
     assert.equal(local.clientId, "");
     assert.equal(local.self, true);
@@ -108,7 +108,7 @@ describe("PeerMarks.withSelf", () => {
     );
 
     assert.deepEqual(
-      merged.marksOf(3).map((entry) => entry.clientId),
+      merged.peersFor(3).map((entry) => entry.clientId),
       ["ada", "bob", "cleo"]
     );
   });
@@ -116,14 +116,14 @@ describe("PeerMarks.withSelf", () => {
   it("marks a block nobody else selected", () => {
     const merged = PeerMarks.withSelf(new Map(), 7, roster);
 
-    assert.deepEqual(merged.marksOf(7), [PeerMarks.selfOf(roster)]);
+    assert.deepEqual(merged.peersFor(7), [PeerMarks.findSelf(roster)]);
   });
 
   it("keeps peer marks when there is no local selection", () => {
     const merged = PeerMarks.withSelf(new Map([[3, [mark("bob")]]]), null, roster);
 
     assert.deepEqual(
-      merged.marksOf(3).map((entry) => entry.clientId),
+      merged.peersFor(3).map((entry) => entry.clientId),
       ["bob"]
     );
   });

@@ -25,6 +25,11 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 
 The dev server seeds its workspace under `assets/`; delete that directory to seed it again.
 
+Auto orientation makes stairs rise away from the camera. Outer stair corners
+and peaks receive a half turn to account for their default shape geometry;
+slab notches receive the same turn to align with their stair complement.
+Explicit rotations keep the renderer's original shape orientation.
+
 ## 🧪 Tests and checks
 
 ```bash

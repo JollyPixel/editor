@@ -42,7 +42,7 @@ document.defineBlendGroup({ id: "snow", width: 16, priority: 1 });
 ## What it looks like
 
 - Each texel shows its own tile or the neighbour's tile, never a mix. The
-  neighbour's `pattern` and `width` apply.
+  neighbour's `pattern` and `width` applyCommand.
 - A higher `priority` covers the edge and reaches into the lower face, which
   does not reach back. Equal priorities reach into each other.
 - Where two tiles meet, the higher one gets a darker outline and casts a short

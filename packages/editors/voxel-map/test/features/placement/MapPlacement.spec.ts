@@ -95,7 +95,7 @@ function templateOf(
   return world.templates.createFromLayer("Draft", { name: "Draft" })!.id;
 }
 
-function cellsOf(
+function scanCells(
   layer: VoxelLayer
 ): VoxelTemplateVoxel[] {
   const { x: ox, y: oy, z: oz } = layer.position;
@@ -285,7 +285,7 @@ describe("MapPlacement templates", () => {
       VoxelTransform.fromPacked(VoxelTransform.pack({ rotation: 1 }))
     );
     assert.equal(placement.current, null);
-    assert.deepEqual(cellsOf(ground), [...expected].sort(compareCells));
+    assert.deepEqual(scanCells(ground), [...expected].sort(compareCells));
 
     history.undo(MAP_HISTORY_SCOPE);
     assert.equal(ground.voxelCount, 0);
@@ -375,19 +375,19 @@ describe("MapPlacement layers", () => {
 
       assert.equal(placement.commit(), true);
       assert.equal(placement.current, null);
-      assert.deepEqual(cellsOf(world.getLayer("Draft")!), expected);
+      assert.deepEqual(scanCells(world.getLayer("Draft")!), expected);
     }
   });
 
   test("an unmoved, untransformed commit leaves the layer as it was", () => {
     const { world, placement } = setup();
-    const before = cellsOf(world.getLayer("Draft")!);
+    const before = scanCells(world.getLayer("Draft")!);
     const position = { ...world.getLayer("Draft")!.position };
 
     placement.transformLayer("Draft");
     placement.commit();
 
-    assert.deepEqual(cellsOf(world.getLayer("Draft")!), before);
+    assert.deepEqual(scanCells(world.getLayer("Draft")!), before);
     assert.deepEqual(world.getLayer("Draft")!.position, position);
   });
 
@@ -408,7 +408,7 @@ describe("MapPlacement regions", () => {
   function blocksOf(
     layer: VoxelLayer
   ): Array<[number, number, number, number]> {
-    return cellsOf(layer).map(([x, y, z, packed]) => [
+    return scanCells(layer).map(([x, y, z, packed]) => [
       x,
       y,
       z,
@@ -443,7 +443,7 @@ describe("MapPlacement regions", () => {
   test("lifts and moves only the voxels connected to a cell, as one undo step", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
-    const before = cellsOf(draft);
+    const before = scanCells(draft);
 
     assert.equal(placement.liftConnected("Draft", { x: 1, y: 0, z: 0 }), true);
     assert.deepEqual(blocksOf(draft), [[0, 1, 1, 3]]);
@@ -462,7 +462,7 @@ describe("MapPlacement regions", () => {
     ]);
 
     history.undo(MAP_HISTORY_SCOPE);
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
   });
 
   test("refuses to lift connected voxels from an empty cell or a missing layer", () => {
@@ -488,7 +488,7 @@ describe("MapPlacement regions", () => {
   test("moves the lifted voxels and clears the cells they left, as one undo step", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
-    const before = cellsOf(draft);
+    const before = scanCells(draft);
     placement.liftRegion("Draft", kLowerCorner);
 
     placement.moveBoundsTo({ x: 1, y: 0, z: 0 });
@@ -502,7 +502,7 @@ describe("MapPlacement regions", () => {
     ]);
 
     history.undo(MAP_HISTORY_SCOPE);
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
   });
 
   test("turns the lifted voxels around their pivot and leaves voxels outside the region", () => {
@@ -526,7 +526,7 @@ describe("MapPlacement regions", () => {
 
     placement.commit();
 
-    assert.deepEqual(cellsOf(world.getLayer("Draft")!), expected);
+    assert.deepEqual(scanCells(world.getLayer("Draft")!), expected);
   });
 
   test("an unmoved commit ends the session without writing history", () => {
@@ -542,7 +542,7 @@ describe("MapPlacement regions", () => {
   test("deleting removes only the lifted voxels, as one undo step", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
-    const before = cellsOf(draft);
+    const before = scanCells(draft);
     placement.liftRegion("Draft", kLowerCorner);
     placement.moveBoundsTo({ x: 8, y: 0, z: 8 });
 
@@ -551,7 +551,7 @@ describe("MapPlacement regions", () => {
     assert.deepEqual(blocksOf(draft), [[2, 0, 0, 1]]);
 
     history.undo(MAP_HISTORY_SCOPE);
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
   });
 
   test("refuses to delete outside a region session", () => {
@@ -565,21 +565,21 @@ describe("MapPlacement regions", () => {
   test("cancelling puts the lifted voxels back without writing history", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
-    const before = cellsOf(draft);
+    const before = scanCells(draft);
     const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
     placement.moveBoundsTo({ x: 8, y: 0, z: 8 });
 
     assert.equal(placement.cancel(), true);
 
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
     assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
   });
 
   test("cancelLift puts a lifted region back, once", () => {
     const { world, history, placement } = setup();
     const draft = world.getLayer("Draft")!;
-    const before = cellsOf(draft);
+    const before = scanCells(draft);
     const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
 
@@ -587,23 +587,23 @@ describe("MapPlacement regions", () => {
     assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
     assert.equal(placement.cancelLift(), true);
     assert.equal(placement.cancelLift(), false);
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
     assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth);
   });
 
   test("puts the lifted voxels back when another placement starts or when disposed", () => {
     const { world, placement } = setup();
     const draft = world.getLayer("Draft")!;
-    const before = cellsOf(draft);
+    const before = scanCells(draft);
     const templateId = templateOf(world);
 
     placement.liftRegion("Draft", kLowerCorner);
     placement.placeTemplate(templateId, { x: 9, y: 0, z: 9 });
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
 
     placement.liftRegion("Draft", kLowerCorner);
     placement.dispose();
-    assert.deepEqual(cellsOf(draft), before);
+    assert.deepEqual(scanCells(draft), before);
   });
 
   test("keeps targeting its own layer when another voxel layer is selected", () => {

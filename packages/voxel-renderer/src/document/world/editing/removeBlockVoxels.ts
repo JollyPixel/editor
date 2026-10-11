@@ -19,7 +19,7 @@ export function removeBlockVoxels(
   let removed = 0;
 
   for (const layer of world.getLayers()) {
-    const positions = Array.from(layer.positionsOf(blockIds));
+    const positions = Array.from(layer.positionsUsingBlocks(blockIds));
     for (let start = 0; start < positions.length; start += kRemoveBatchSize) {
       const patch = new VoxelPatchBuilder();
       for (const position of positions.slice(start, start + kRemoveBatchSize)) {

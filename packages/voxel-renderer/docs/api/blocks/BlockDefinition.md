@@ -71,7 +71,7 @@ Values are limited to strings, booleans and finite numbers. Anything else
 resolution, as is a `__proto__` key. `resolveBlockProperties(properties)`
 applies the same filter. A resolved definition always has a `properties` map.
 
-Read them with [`BlockRegistry.propertiesOf()`](./BlockRegistry.md#reading),
+Read them with [`BlockRegistry.copyProperties()`](./BlockRegistry.md#reading),
 or by world position with
 [`VoxelDocument.blockPropertiesAt()`](../core/VoxelDocument.md#methods).
 
@@ -97,8 +97,8 @@ const MAX_BLOCKSET_SLOT = 0x7F;
 
 function isAir(blockId: number): boolean;
 function composeBlockId(slot: number, localId: number): number;
-function blocksetSlotOf(blockId: number): number;
-function localBlockIdOf(blockId: number): number;
+function decodeBlocksetSlot(blockId: number): number;
+function decodeLocalBlockId(blockId: number): number;
 function isBlocksetSlot(value: unknown): value is number;
 function isLocalBlockId(value: unknown): value is number;
 ```
@@ -110,4 +110,4 @@ A world block id combines a blockset [slot](../blocksets/blocksets.md) and the
 block's id inside that blockset. Slot `0` leaves a local id unchanged, so blocks
 defined in code need no slots. `composeBlockId()` throws `RangeError` for a
 slot above `MAX_BLOCKSET_SLOT`, a local id of `0` or above `MAX_LOCAL_BLOCK_ID`,
-or a non-integer. `blocksetSlotOf()` and `localBlockIdOf()` split an id back.
+or a non-integer. `decodeBlocksetSlot()` and `decodeLocalBlockId()` split an id back.

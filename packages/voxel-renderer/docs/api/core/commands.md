@@ -2,7 +2,7 @@
 
 Every change to a [`VoxelDocument`](./VoxelDocument.md) is a `VoxelCommand`.
 The document emits each one on its `"command"` event and replays one with
-`apply()`.
+`applyCommand()`.
 
 ```ts
 import {
@@ -43,12 +43,12 @@ type BlockRedefinition =
 ```
 
 `origin` is `"local"` for a change made on this document, `"remote"` for a
-peer's command applied with `document.apply(command, { origin: "remote" })`,
+peer's command applied with `document.applyCommand(command, { origin: "remote" })`,
 and `"replay"` for this client's pending command applied or rolled back around
 a peer's. A network adapter applies peer commands as `"remote"` and sends only
 `"local"` ones.
 
-`clientId` is the peer `apply()` was given.
+`clientId` is the peer `applyCommand()` was given.
 
 `redefinition` is set on `"block-defined"` commands only. It compares the new
 definition with the one it replaced:
@@ -140,7 +140,7 @@ interface VoxelCommandTarget extends VoxelWorldCommandTarget {
 
 Apply a command to plain state, such as a server's, and return it as applied,
 or `null` when nothing changed. Neither emits. `applyVoxelWorldCommand()` needs
-no block registry or groups. `document.apply()` uses `applyVoxelCommand()` and
+no block registry or groups. `document.applyCommand()` uses `applyVoxelCommand()` and
 then emits the result.
 
 ## Layer commands

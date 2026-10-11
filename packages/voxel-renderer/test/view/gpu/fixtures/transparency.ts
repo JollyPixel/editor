@@ -115,7 +115,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   image.src = canvas.toDataURL();
   await image.decode();
   view.loadBlockset({ id: "atlas", src: "", tileSize: 1 }, new THREE.Texture(image));
-  const atlas = view.atlases.atlas("atlas").texture;
+  const atlas = view.atlases.requireLoadedAtlas("atlas").texture;
   atlas.needsUpdate = true;
   if (options.colored || options.hole) {
     const otherImage = new Image();
@@ -125,7 +125,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     otherImage.src = canvas.toDataURL();
     await otherImage.decode();
     view.loadBlockset({ id: "other", src: "", tileSize: 1 }, new THREE.Texture(otherImage));
-    view.atlases.atlas("other").texture.needsUpdate = true;
+    view.atlases.requireLoadedAtlas("other").texture.needsUpdate = true;
     if (options.colored) {
       view.document.blocks.register({
         id: 2,
@@ -156,7 +156,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     stoneImage.src = canvas.toDataURL();
     await stoneImage.decode();
     view.loadBlockset({ id: "stone", src: "", tileSize: 1 }, new THREE.Texture(stoneImage));
-    view.atlases.atlas("stone").texture.needsUpdate = true;
+    view.atlases.requireLoadedAtlas("stone").texture.needsUpdate = true;
     view.document.blocks.register({
       id: 3,
       name: "Stone",

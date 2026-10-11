@@ -12,7 +12,7 @@ import { VoxelTransform } from "../../document/geometry/VoxelTransform.ts";
 import { rotateTileUv } from "../../document/blocksets/tileRef.ts";
 import type { ResolvedTileRef } from "../../document/blocksets/types.ts";
 import type { BlocksetAtlases } from "../atlases/BlocksetAtlases.ts";
-import { tileUvOf } from "./variants/tileUv.ts";
+import { resolveTileUv } from "./variants/tileUv.ts";
 
 // CONSTANTS
 export const BLOCK_PIECE_TEXTURED_GROUP = 0;
@@ -54,7 +54,7 @@ export class BlockPieces {
     this.#atlasVersion = options.atlases.version;
   }
 
-  pieceOf(
+  resolvePiece(
     block: ResolvedBlockDefinition,
     transform: VoxelTransform = VoxelTransform.Identity
   ): BlockPiece | null {
@@ -74,12 +74,12 @@ export class BlockPieces {
       return cached;
     }
 
-    const geometry = this.geometryOf(block, transform);
+    const geometry = this.buildGeometry(block, transform);
     const piece = geometry === null ?
       null :
       {
         geometry,
-        texture: this.textureOf(block),
+        texture: this.resolveTexture(block),
         surface: new BlockSurface(block)
       };
     byTransform.set(transform.packed, piece);
@@ -87,7 +87,7 @@ export class BlockPieces {
     return piece;
   }
 
-  geometryOf(
+  buildGeometry(
     block: ResolvedBlockDefinition,
     transform: VoxelTransform = VoxelTransform.Identity
   ): THREE.BufferGeometry | null {
@@ -105,9 +105,9 @@ export class BlockPieces {
     } = buildShapeGeometry(shape, transform);
     const atlasUvs = Float32Array.from(uvs);
     const geometry = new THREE.BufferGeometry();
-    const empty = new Set(this.emptySlotsOf(block));
-    const textures = BlockTextures.of(block);
-    const textured = this.textureOf(block) !== null;
+    const empty = new Set(this.findEmptySlots(block));
+    const textures = BlockTextures.fromBlock(block);
+    const textured = this.resolveTexture(block) !== null;
 
     let indexStart = 0;
     for (const range of ranges) {
@@ -123,16 +123,16 @@ export class BlockPieces {
       );
       indexStart += indexCount;
 
-      const tileRef = textures.forSlot(range.slot);
-      const atlas = tileRef && this.#atlases.resolve(tileRef.blocksetId);
+      const tileRef = textures.resolveSlotTexture(range.slot);
+      const atlas = tileRef && this.#atlases.resolveAtlas(tileRef.blocksetId);
       if (isEmpty || !tileRef || !atlas || !textured) {
         continue;
       }
 
-      const { region, rotation } = tileUvOf(
+      const { region, rotation } = resolveTileUv(
         atlas,
         tileRef,
-        textures.spanFor(range.slot, range.span)
+        textures.resolveSlotSpan(range.slot, range.span)
       );
       const end = range.start + range.count;
       for (let index = range.start; index < end; index++) {
@@ -154,14 +154,14 @@ export class BlockPieces {
     return geometry;
   }
 
-  textureOf(
+  resolveTexture(
     block: ResolvedBlockDefinition
   ): THREE.Texture | null {
-    return this.#atlases.resolve(block.defaultTexture?.blocksetId)?.texture ??
+    return this.#atlases.resolveAtlas(block.defaultTexture?.blocksetId)?.texture ??
       null;
   }
 
-  emptySlotsOf(
+  findEmptySlots(
     block: ResolvedBlockDefinition
   ): string[] {
     const shape = this.#shapes.get(block.shapeId);
@@ -169,12 +169,12 @@ export class BlockPieces {
       return [];
     }
 
-    const textures = BlockTextures.of(block);
+    const textures = BlockTextures.fromBlock(block);
     const { alphaCutoff } = new BlockSurface(block);
 
     return shapeSlots(shape)
       .map((slot) => slot.id)
-      .filter((slot) => this.#emptyTile(textures.forSlot(slot), alphaCutoff));
+      .filter((slot) => this.#emptyTile(textures.resolveSlotTexture(slot), alphaCutoff));
   }
 
   clear(): void {

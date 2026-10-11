@@ -72,7 +72,7 @@ export class LocalLayerVisibility {
 
     const visible = this.#concealed.has(ref.name) ?
       false :
-      this.#visibility.overrideOf(key);
+      this.#visibility.visibilityOverride(key);
     if (visible === undefined) {
       this.#layers.reset(ref.name);
     }

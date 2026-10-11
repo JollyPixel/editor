@@ -221,7 +221,7 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
     return counts;
   }
 
-  apply(
+  applyCommand(
     command: VoxelTemplateCommand
   ): VoxelTemplateCommand | null {
     switch (command.action) {

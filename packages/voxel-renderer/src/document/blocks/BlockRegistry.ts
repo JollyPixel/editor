@@ -91,7 +91,7 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     this.#version++;
   }
 
-  moveTo(
+  moveBlockToIndex(
     id: number,
     toIndex: number
   ): boolean {
@@ -122,16 +122,16 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     return true;
   }
 
-  apply(
+  applyCommand(
     command: VoxelBlockCommand,
     defaultBlocksetId: string | null = null
   ): VoxelBlockCommand | null {
     switch (command.action) {
       case "block-defined": {
         const resolved = resolveBlockDefinition(command.block);
-        const block = BlockTextures.of(resolved)
-          .withBlockset(defaultBlocksetId)
-          .applyTo(resolved);
+        const block = BlockTextures.fromBlock(resolved)
+          .withDefaultBlockset(defaultBlocksetId)
+          .createTexturedBlock(resolved);
         this.register(block);
 
         return {
@@ -142,10 +142,10 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
       case "block-removed":
         return this.unregister(command.blockId) ? command : null;
       case "block-moved":
-        return this.moveTo(command.blockId, command.toIndex) ?
+        return this.moveBlockToIndex(command.blockId, command.toIndex) ?
           {
             ...command,
-            toIndex: this.indexOf(command.blockId)
+            toIndex: this.findIndex(command.blockId)
           } :
           null;
       default: {
@@ -157,7 +157,7 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     }
   }
 
-  indexOf(
+  findIndex(
     id: number
   ): number {
     let index = 0;
@@ -189,7 +189,7 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     return this.#blocks.get(id);
   }
 
-  propertiesOf(
+  copyProperties(
     id: number
   ): BlockProperties | undefined {
     const block = this.#blocks.get(id);

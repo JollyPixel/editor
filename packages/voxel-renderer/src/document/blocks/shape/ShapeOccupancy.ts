@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { BlockShape } from "./BlockShape.ts";
-import { sideCoverageOf } from "./shapeOcclusion.ts";
+import { computeSideCoverage } from "./shapeOcclusion.ts";
 import type { FacePlacement } from "../face/index.ts";
 import {
   FACES,
@@ -28,7 +28,7 @@ const kParallelEpsilon = 1e-12;
 const kCache = new WeakMap<BlockShape, (ShapeOccupancy | undefined)[]>();
 
 export class ShapeOccupancy {
-  static of(
+  static fromShape(
     shape: BlockShape,
     transform: VoxelTransform = VoxelTransform.Identity
   ): ShapeOccupancy {
@@ -55,7 +55,7 @@ export class ShapeOccupancy {
     faces: readonly FacePlacement[]
   ) {
     this.#faces = faces;
-    this.#coverage = sideCoverageOf(faces);
+    this.#coverage = computeSideCoverage(faces);
 
     let index = 0;
     for (const point of samplePoints()) {

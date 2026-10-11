@@ -31,7 +31,7 @@ export class ChunkLightNode extends Texture3DNode {
   override setup(
     builder: NodeBuilder
   ) {
-    this.value = lightOf(builder.object);
+    this.value = resolveLightTexture(builder.object);
 
     return super.setup(builder);
   }
@@ -39,7 +39,7 @@ export class ChunkLightNode extends Texture3DNode {
   override update(
     frame: NodeFrame
   ): boolean | undefined {
-    this.value = lightOf(frame.object);
+    this.value = resolveLightTexture(frame.object);
 
     return super.update(frame);
   }
@@ -58,7 +58,7 @@ function darkPlaceholder(): THREE.Data3DTexture {
   return texture;
 }
 
-function lightOf(
+function resolveLightTexture(
   object: THREE.Object3D | null
 ): THREE.Texture {
   const geometry = object instanceof THREE.Mesh ? object.geometry : null;

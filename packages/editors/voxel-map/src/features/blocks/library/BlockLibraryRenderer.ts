@@ -115,7 +115,7 @@ export class BlockLibraryRenderer extends BlockTurntable {
           mesh,
           mode === "spinning" ?
             this.#angles.advance(block.id) :
-            this.#angles.of(block.id)
+            this.#angles.angleForBlock(block.id)
         );
       }
     }

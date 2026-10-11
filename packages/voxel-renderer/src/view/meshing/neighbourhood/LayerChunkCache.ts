@@ -218,7 +218,7 @@ export class LayerChunkCache {
     const x = wx - this.#offsetX;
     const y = wy - this.#offsetY;
     const z = wz - this.#offsetZ;
-    const chunk = this.#chunkOf(x, y, z);
+    const chunk = this.#resolveChunk(x, y, z);
     const mask = this.#mask;
 
     return chunk === null ?
@@ -235,7 +235,7 @@ export class LayerChunkCache {
     const x = wx - this.#offsetX;
     const y = wy - this.#offsetY;
     const z = wz - this.#offsetZ;
-    const chunk = this.#chunkOf(x, y, z);
+    const chunk = this.#resolveChunk(x, y, z);
     if (chunk === null) {
       return VOXEL_ABSENT;
     }
@@ -249,7 +249,7 @@ export class LayerChunkCache {
       VOXEL_ABSENT;
   }
 
-  #chunkOf(
+  #resolveChunk(
     x: number,
     y: number,
     z: number

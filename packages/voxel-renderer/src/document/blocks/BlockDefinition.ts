@@ -5,7 +5,7 @@ import type {
   TileRef
 } from "../blocksets/types.ts";
 import {
-  slotKeyOf,
+  normalizeSlotKey,
   type TextureSlotKey
 } from "./shape/shapeSlots.ts";
 import type { BlockShapeID } from "./shape/BlockShape.ts";
@@ -128,7 +128,7 @@ export function resolveBlockDefinition(
   for (const key of Object.keys(faceTextures)) {
     const ref = faceTextures[key];
     if (ref) {
-      resolved.faceTextures[slotKeyOf(key)] = resolveTileRef(
+      resolved.faceTextures[normalizeSlotKey(key)] = resolveTileRef(
         ref,
         defaultBlocksetId
       );

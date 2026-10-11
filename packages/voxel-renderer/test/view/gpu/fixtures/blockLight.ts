@@ -137,7 +137,7 @@ export async function renderBlockLightScene(
     { id: "atlas", src: "", tileSize: kTileTexels },
     new THREE.Texture(await atlasImage())
   );
-  view.atlases.atlas("atlas").texture.needsUpdate = true;
+  view.atlases.requireLoadedAtlas("atlas").texture.needsUpdate = true;
   const layer = view.document.world.addLayer("ground");
   for (let x = 0; x < kFloorLength; x++) {
     layer.setVoxelAt({ x, y: 0, z: 0 }, { blockId: kFloorId, transform: 0 });

@@ -206,7 +206,7 @@ export class BlocksetState {
       return;
     }
 
-    this.document.apply(command, { origin: "remote" });
+    this.document.applyCommand(command, { origin: "remote" });
   }
 
   clear(): void {

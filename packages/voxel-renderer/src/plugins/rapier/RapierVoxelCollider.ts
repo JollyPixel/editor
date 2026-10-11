@@ -294,7 +294,7 @@ export class RapierVoxelCollider implements VoxelCollider {
       return;
     }
 
-    const bounds = this.#boundsOf(shape, transform);
+    const bounds = this.#resolveShapeBounds(shape, transform);
     if (bounds.full) {
       solids.cubes.push(linearIdx);
     }
@@ -303,7 +303,7 @@ export class RapierVoxelCollider implements VoxelCollider {
     }
   }
 
-  #boundsOf(
+  #resolveShapeBounds(
     shape: BlockShape,
     transform: VoxelTransform
   ): ShapeBounds {

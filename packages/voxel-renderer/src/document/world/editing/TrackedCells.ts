@@ -26,7 +26,7 @@ export class TrackedCells {
   originY = 0;
   originZ = 0;
 
-  #entryOf = new VoxelStore();
+  #entryIndices = new VoxelStore();
   #entries = new Int32Array(kInitialEntries * kStride);
   #reach = new Uint8Array(kInitialEntries);
   #size = 0;
@@ -35,10 +35,10 @@ export class TrackedCells {
     return this.#size;
   }
 
-  entryOf(
+  entryIndex(
     cell: number
   ): number {
-    return this.#entryOf.get(cell);
+    return this.#entryIndices.get(cell);
   }
 
   // eslint-disable-next-line max-params
@@ -58,7 +58,7 @@ export class TrackedCells {
     this.#entries[offset + kBefore] = before;
     this.#entries[offset + kBeforePartner] = beforePartner;
     this.#reach[entry] = reach;
-    this.#entryOf.set(cell, entry);
+    this.#entryIndices.set(cell, entry);
 
     return entry;
   }
@@ -90,7 +90,7 @@ export class TrackedCells {
     }
 
     this.#size = 0;
-    this.#entryOf.clear();
+    this.#entryIndices.clear();
   }
 
   #grow(): void {

@@ -247,7 +247,7 @@ A blockset the snapshot declares without an atlas logs a warning.
 ### Merging shapes
 
 ```ts
-canMergeAt(layerName: string, position: THREE.Vector3Like, part: VoxelPart): boolean;
+canMergeVoxelPart(layerName: string, position: THREE.Vector3Like, part: VoxelPart): boolean;
 ```
 
 `true` when the layer holds a single voxel at `position` and `part` fills the
@@ -257,7 +257,7 @@ through `document.blocks`, shapes through `shapes`.
 
 ```ts
 const part = { blockId: kSlabTop, transform: 0 };
-if (view.canMergeAt("Ground", position, part)) {
+if (view.canMergeVoxelPart("Ground", position, part)) {
   view.document.world.setVoxel("Ground", { position, blockId: kSlabTop, merge: true });
 }
 ```
@@ -267,7 +267,7 @@ shape in front is not opaque. A neighbour sees it as a full cube when both
 shapes are opaque.
 
 ```ts
-partAt(layerName: string, position: THREE.Vector3Like, point: THREE.Vector3Like): VoxelPart | null;
+pickVoxelPart(layerName: string, position: THREE.Vector3Like, point: THREE.Vector3Like): VoxelPart | null;
 ```
 
 The shape of the cell at `position` that contains `point`, given in world
@@ -280,7 +280,7 @@ lands inside the shape that owns the hit face:
 
 ```ts
 const point = hit.point.clone().addScaledVector(hit.normal, -1e-4);
-const part = view.partAt("Ground", cell, point);
+const part = view.pickVoxelPart("Ground", cell, point);
 ```
 
 ## Document changes

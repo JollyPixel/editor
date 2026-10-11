@@ -99,12 +99,12 @@ describe("VoxelBlockInspector", () => {
   it("reports where a block is used", () => {
     const view = makeView();
 
-    assert.deepEqual(view.inspector.blocks.usageOf(kGrass), {
+    assert.deepEqual(view.inspector.blocks.inspectUsage(kGrass), {
       blockId: kGrass,
       voxels: 5,
       layers: [{ layerName: "Ground", voxels: 5 }]
     });
-    assert.deepEqual(view.inspector.blocks.usageOf(kUnused), {
+    assert.deepEqual(view.inspector.blocks.inspectUsage(kUnused), {
       blockId: kUnused,
       voxels: 0,
       layers: []
@@ -114,17 +114,17 @@ describe("VoxelBlockInspector", () => {
   it("reports the blocks and voxels referencing a blockset", () => {
     const { blocks } = makeView().inspector;
 
-    assert.deepEqual(blocks.blocksetUsageOf("terrain"), {
+    assert.deepEqual(blocks.inspectBlocksetUsage("terrain"), {
       blocksetId: "terrain",
       blocks: [kGrass, kStone],
       voxels: 6
     });
-    assert.deepEqual(blocks.blocksetUsageOf("props"), {
+    assert.deepEqual(blocks.inspectBlocksetUsage("props"), {
       blocksetId: "props",
       blocks: [kStone, kUnused],
       voxels: 1
     });
-    assert.deepEqual(blocks.blocksetUsageOf("missing"), {
+    assert.deepEqual(blocks.inspectBlocksetUsage("missing"), {
       blocksetId: "missing",
       blocks: [],
       voxels: 0
@@ -134,7 +134,7 @@ describe("VoxelBlockInspector", () => {
   it("follows edits and a loaded world without any rebuild", () => {
     const view = makeView();
     view.document.world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
-    assert.equal(view.inspector.blocks.usageOf(kGrass).voxels, 4);
+    assert.equal(view.inspector.blocks.inspectUsage(kGrass).voxels, 4);
 
     const saved = view.document.save();
     const other = createView({
@@ -144,6 +144,6 @@ describe("VoxelBlockInspector", () => {
     other.load(saved);
 
     assert.equal(other.inspector.blocks.stats.voxels, 6);
-    assert.equal(other.inspector.blocks.usageOf(kGrass).voxels, 4);
+    assert.equal(other.inspector.blocks.inspectUsage(kGrass).voxels, 4);
   });
 });

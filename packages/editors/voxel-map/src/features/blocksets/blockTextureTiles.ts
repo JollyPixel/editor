@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   BlockTextureLayout,
-  tileRectOf,
+  resolveTileRect,
   type BlockShape,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
@@ -22,14 +22,14 @@ export interface BlockTextureRects {
 
 export function findBlocksReferencingBlockset(
   blocks: Iterable<ResolvedBlockDefinition>,
-  shapeOf: (shapeId: string) => BlockShape | undefined,
+  resolveShape: (shapeId: string) => BlockShape | undefined,
   blocksetId: string,
   tileSize: number
 ): BlockTextureRects[] {
   return [...blocks].flatMap((block) => {
-    const shape = shapeOf(block.shapeId);
-    const layout = BlockTextureLayout.of(block, shape);
-    const slots = layout.slotsIn(blocksetId);
+    const shape = resolveShape(block.shapeId);
+    const layout = BlockTextureLayout.fromShape(block, shape);
+    const slots = layout.slotsUsingBlockset(blocksetId);
     if (shape === undefined || slots.length === 0) {
       return [];
     }
@@ -39,9 +39,9 @@ export function findBlocksReferencingBlockset(
     return [
       {
         block,
-        rects: layout.drawnRectsIn(blocksetId, tileSize),
+        rects: layout.collectDrawnTileRects(blocksetId, tileSize),
         geometries: slots.map(({ slot, tile, bounds, span }) => uvGeometryForSlot(
-          tileRectOf(tile, tileSize, bounds, span),
+          resolveTileRect(tile, tileSize, bounds, span),
           shapeUv,
           slot
         ))

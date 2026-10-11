@@ -50,20 +50,20 @@ function assertAverage(
 }
 describe("AtlasAverages", () => {
   it("returns null when the pixels cannot be read", () => {
-    assert.equal(AtlasAverages.of(mockTexture(16, 16)), null);
+    assert.equal(AtlasAverages.fromTexture(mockTexture(16, 16)), null);
   });
 
   it("shares one table per source texture", () => {
     const texture = textureFromRows([[kRed]]);
 
-    const table = AtlasAverages.of(texture);
+    const table = AtlasAverages.fromTexture(texture);
     assert.ok(table);
-    assert.equal(AtlasAverages.of(texture), table);
+    assert.equal(AtlasAverages.fromTexture(texture), table);
     assert.equal(AtlasAverages.peek(texture), table);
   });
 
   it("allocates one extra row and column", () => {
-    const table = AtlasAverages.of(textureFromRows([
+    const table = AtlasAverages.fromTexture(textureFromRows([
       [kRed, kRed, kBlue],
       [kRed, kRed, kBlue]
     ]))!;
@@ -75,7 +75,7 @@ describe("AtlasAverages", () => {
   });
 
   it("averages any texel rect", () => {
-    const table = AtlasAverages.of(textureFromRows([
+    const table = AtlasAverages.fromTexture(textureFromRows([
       [kRed, kBlue],
       [kRed, kBlue]
     ]))!;
@@ -92,7 +92,7 @@ describe("AtlasAverages", () => {
     ];
 
     for (const flipY of [true, false]) {
-      const table = AtlasAverages.of(textureFromRows(rows, flipY))!;
+      const table = AtlasAverages.fromTexture(textureFromRows(rows, flipY))!;
 
       assertAverage(table.average(0, 0, 1, 1), [0, 0, 1, 1]);
       assertAverage(table.average(0, 1, 1, 2), [1, 0, 0, 1]);
@@ -100,7 +100,7 @@ describe("AtlasAverages", () => {
   });
 
   it("weights colour by alpha and reports coverage", () => {
-    const table = AtlasAverages.of(textureFromRows([
+    const table = AtlasAverages.fromTexture(textureFromRows([
       [kRed, kClear]
     ]))!;
 
@@ -112,14 +112,14 @@ describe("AtlasAverages", () => {
     const texture = textureFromRows([[grey]]);
     texture.colorSpace = THREE.SRGBColorSpace;
 
-    const [r] = AtlasAverages.of(texture)!.average(0, 0, 1, 1);
+    const [r] = AtlasAverages.fromTexture(texture)!.average(0, 0, 1, 1);
     const expected = ((128 / 255) + 0.055) / 1.055;
     assert.ok(Math.abs(r - (expected ** 2.4)) < kTolerance);
   });
 
   it("rebuilds only after the source texture changes", () => {
     const texture = textureFromRows([[kRed]]);
-    const table = AtlasAverages.of(texture)!;
+    const table = AtlasAverages.fromTexture(texture)!;
 
     assert.equal(table.refresh(), false);
 
@@ -132,7 +132,7 @@ describe("AtlasAverages", () => {
 
   it("reallocates the table when the source is resized", () => {
     const texture = textureFromRows([[kRed]]);
-    const table = AtlasAverages.of(texture)!;
+    const table = AtlasAverages.fromTexture(texture)!;
     let disposed = 0;
     table.texture.addEventListener("dispose", () => disposed++);
 
@@ -151,7 +151,7 @@ describe("AtlasAverages", () => {
 
   it("is released with its source texture", () => {
     const texture = textureFromRows([[kRed]]);
-    const table = AtlasAverages.of(texture)!;
+    const table = AtlasAverages.fromTexture(texture)!;
     let disposed = false;
     table.texture.addEventListener("dispose", () => {
       disposed = true;
@@ -161,6 +161,6 @@ describe("AtlasAverages", () => {
 
     assert.equal(disposed, true);
     assert.equal(AtlasAverages.peek(texture), undefined);
-    assert.notEqual(AtlasAverages.of(texture), table);
+    assert.notEqual(AtlasAverages.fromTexture(texture), table);
   });
 });

@@ -308,7 +308,7 @@ export class TextureEditor extends WorkspaceElement {
       return;
     }
 
-    const blocksetId = workspace.blocksets.ownerOf(block.id)?.definition.id ?? null;
+    const blocksetId = workspace.blocksets.findOwner(block.id)?.definition.id ?? null;
     if (!force && blocksetId === this.#followedBlocksetId) {
       return;
     }
@@ -336,7 +336,7 @@ export class TextureEditor extends WorkspaceElement {
     const { blocksets } = workspace;
     const active = blocksets.activeBlocksetId;
     const result = await this._addDialog.open({
-      defaultTileSize: (active === null ? undefined : blocksets.tileSizeOf(active)) ??
+      defaultTileSize: (active === null ? undefined : blocksets.tileSizeFor(active)) ??
         DEFAULT_TILE_SIZE,
       linkable: blocksets.linkableAssets()
     });

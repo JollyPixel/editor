@@ -4,10 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  baseSlotOf,
+  baseSlotName,
   shapeSlots,
-  slotKeyOf,
-  slotNameOf,
+  normalizeSlotKey,
+  faceSlotName,
   unknownTextureSlots,
   type ShapeSlot
 } from "../../../../src/document/blocks/shape/shapeSlots.ts";
@@ -35,7 +35,7 @@ function idsOf(
   return shapeSlots(shape).map((slot) => slot.id);
 }
 
-function boundsOf(
+function computeBounds(
   slot: ShapeSlot
 ): [number, number, number, number] {
   let u0 = Infinity;
@@ -55,19 +55,19 @@ function boundsOf(
   return [u0, v0, u1, v1];
 }
 
-describe("slotNameOf / baseSlotOf", () => {
+describe("faceSlotName / baseSlotName", () => {
   it("names every face after the 2D editor's vocabulary", () => {
-    assert.equal(slotNameOf(FACE.PosX), "right");
-    assert.equal(slotNameOf(FACE.NegX), "left");
-    assert.equal(slotNameOf(FACE.PosY), "top");
-    assert.equal(slotNameOf(FACE.NegY), "bottom");
-    assert.equal(slotNameOf(FACE.PosZ), "front");
-    assert.equal(slotNameOf(FACE.NegZ), "back");
+    assert.equal(faceSlotName(FACE.PosX), "right");
+    assert.equal(faceSlotName(FACE.NegX), "left");
+    assert.equal(faceSlotName(FACE.PosY), "top");
+    assert.equal(faceSlotName(FACE.NegY), "bottom");
+    assert.equal(faceSlotName(FACE.PosZ), "front");
+    assert.equal(faceSlotName(FACE.NegZ), "back");
   });
 
   it("resolves a derived slot back to the slot it inherits from", () => {
-    assert.equal(baseSlotOf("top.1"), "top");
-    assert.equal(baseSlotOf("top"), "top");
+    assert.equal(baseSlotName("top.1"), "top");
+    assert.equal(baseSlotName("top"), "top");
   });
 });
 
@@ -87,7 +87,7 @@ describe("shapeSlots — shapes with one polygon per face", () => {
       .find((slot) => slot.id === "right")!;
 
     assert.deepEqual(
-      boundsOf(right),
+      computeBounds(right),
       [0, 3 / 8, 1, 5 / 8],
       "rescaling an unsplit slot would repaint every pole in the world"
     );
@@ -96,7 +96,7 @@ describe("shapeSlots — shapes with one polygon per face", () => {
   it("leaves a slab's half-height side on its authored projection", () => {
     const right = shapeSlots(new Slab("bottom"))
       .find((slot) => slot.id === "right")!;
-    const [, v0, , v1] = boundsOf(right);
+    const [, v0, , v1] = computeBounds(right);
 
     assert.equal(
       v1 - v0,
@@ -137,7 +137,7 @@ describe("shapeSlots — stairs", () => {
 
     assert.equal(right.definitions.length, 2);
     assert.deepEqual(
-      boundsOf(right),
+      computeBounds(right),
       [0, 0, 1, 1],
       "the two quads span the tile, leaving the notch of an L uncovered"
     );
@@ -159,17 +159,17 @@ describe("shapeSlots — stairs", () => {
     const tread = slots.find((slot) => slot.id === "top.1")!;
 
     assert.deepEqual(
-      boundsOf(top),
+      computeBounds(top),
       [0, 0.5, 1, 1],
       "a stair's platform is half a tile deep, like a slab side"
     );
-    assert.deepEqual(boundsOf(tread), [0, 0, 1, 0.5]);
+    assert.deepEqual(computeBounds(tread), [0, 0, 1, 0.5]);
   });
 
   it("leaves the two halves of a face abutting, never overlapping", () => {
     const slots = shapeSlots(new Stair());
-    const back = boundsOf(slots.find((slot) => slot.id === "back")!);
-    const riser = boundsOf(slots.find((slot) => slot.id === "back.1")!);
+    const back = computeBounds(slots.find((slot) => slot.id === "back")!);
+    const riser = computeBounds(slots.find((slot) => slot.id === "back.1")!);
 
     assert.equal(
       back[3],
@@ -268,7 +268,7 @@ describe("shapeSlots — an explicit slot overrides the plane rule", () => {
     const top = shapeSlots(new RampCornerInner())
       .find((slot) => slot.id === "top")!;
 
-    assert.deepEqual(boundsOf(top), [0, 0, 1, 1]);
+    assert.deepEqual(computeBounds(top), [0, 0, 1, 1]);
   });
 });
 
@@ -280,11 +280,11 @@ describe("shapeSlots — memoization", () => {
   });
 });
 
-describe("slotKeyOf", () => {
+describe("normalizeSlotKey", () => {
   it("reads a numeric face key as that face's slot", () => {
-    assert.equal(slotKeyOf(String(FACE.NegY)), "bottom");
-    assert.equal(slotKeyOf("top.1"), "top.1");
-    assert.equal(slotKeyOf("6"), "6");
+    assert.equal(normalizeSlotKey(String(FACE.NegY)), "bottom");
+    assert.equal(normalizeSlotKey("top.1"), "top.1");
+    assert.equal(normalizeSlotKey("6"), "6");
   });
 });
 

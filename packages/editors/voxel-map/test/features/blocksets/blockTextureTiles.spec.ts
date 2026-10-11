@@ -12,7 +12,7 @@ import {
 import { findBlocksReferencingBlockset } from "../../../src/features/blocksets/blockTextureTiles.ts";
 
 const kShapes = BlockShapeRegistry.createDefault();
-function shapeOf(shapeId: string) {
+function resolveShape(shapeId: string) {
   return kShapes.get(shapeId);
 }
 
@@ -38,7 +38,7 @@ describe("findBlocksReferencingBlockset", () => {
   it("matches a block via defaultTexture", () => {
     const block = makeBlock(1, { defaultTexture: { blocksetId: "atlas", col: 0, row: 0 } });
 
-    const result = findBlocksReferencingBlockset([block], shapeOf, "atlas", 16);
+    const result = findBlocksReferencingBlockset([block], resolveShape, "atlas", 16);
 
     assert.equal(result.length, 1);
     assert.equal(result[0].block, block);
@@ -51,7 +51,7 @@ describe("findBlocksReferencingBlockset", () => {
       faceTextures: { top: { blocksetId: "atlas", col: 2, row: 1 } }
     });
 
-    const result = findBlocksReferencingBlockset([block], shapeOf, "atlas", 16);
+    const result = findBlocksReferencingBlockset([block], resolveShape, "atlas", 16);
 
     assert.equal(result.length, 1);
     assert.deepEqual(result[0].rects, [{ x: 32, y: 16, width: 16, height: 16 }]);
@@ -66,7 +66,7 @@ describe("findBlocksReferencingBlockset", () => {
       }
     });
 
-    const result = findBlocksReferencingBlockset([block], shapeOf, "atlas", 16);
+    const result = findBlocksReferencingBlockset([block], resolveShape, "atlas", 16);
 
     assert.equal(result.length, 1);
     assert.deepEqual(result[0].rects, [
@@ -78,7 +78,7 @@ describe("findBlocksReferencingBlockset", () => {
   it("excludes blocks that reference a different blockset entirely", () => {
     const block = makeBlock(1, { defaultTexture: { blocksetId: "other", col: 0, row: 0 } });
 
-    const result = findBlocksReferencingBlockset([block], shapeOf, "atlas", 16);
+    const result = findBlocksReferencingBlockset([block], resolveShape, "atlas", 16);
 
     assert.equal(result.length, 0);
   });
@@ -86,7 +86,7 @@ describe("findBlocksReferencingBlockset", () => {
   it("excludes a block with no defaultTexture and no matching face", () => {
     const block = makeBlock(1, {});
 
-    const result = findBlocksReferencingBlockset([block], shapeOf, "atlas", 16);
+    const result = findBlocksReferencingBlockset([block], resolveShape, "atlas", 16);
 
     assert.equal(result.length, 0);
   });
@@ -96,7 +96,7 @@ describe("findBlocksReferencingBlockset with a sized tile", () => {
   it("measures the rect from the reference size", () => {
     const [result] = findBlocksReferencingBlockset(
       [makeBlock(1, { defaultTexture: { col: 1, row: 0, blocksetId: "t", size: 32 } })],
-      shapeOf,
+      resolveShape,
       "t",
       16
     );

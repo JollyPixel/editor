@@ -24,7 +24,7 @@ export interface BlocksetPixels {
 
 export interface BlockAlphaModesOptions {
   view: VoxelView;
-  pixelsOf: (
+  resolvePixels: (
     blocksetId: string
   ) => BlocksetPixels | undefined;
 }
@@ -42,7 +42,7 @@ function alphaModeFor(
 
 export class BlockAlphaModes {
   readonly #view: VoxelView;
-  readonly #pixelsOf: (
+  readonly #resolvePixels: (
     blocksetId: string
   ) => BlocksetPixels | undefined;
 
@@ -50,7 +50,7 @@ export class BlockAlphaModes {
     options: BlockAlphaModesOptions
   ) {
     this.#view = options.view;
-    this.#pixelsOf = options.pixelsOf;
+    this.#resolvePixels = options.resolvePixels;
   }
 
   resolve(
@@ -59,9 +59,9 @@ export class BlockAlphaModes {
   ): ResolvedBlockDefinition {
     const resolved = resolveBlockDefinition(block);
     const transparent = this.#transparent(
-      BlockTextures.of(resolved)
-        .withBlockset(defaultBlocksetId)
-        .applyTo(resolved)
+      BlockTextures.fromBlock(resolved)
+        .withDefaultBlockset(defaultBlocksetId)
+        .createTexturedBlock(resolved)
     );
     if (transparent === null) {
       return resolved;
@@ -84,7 +84,7 @@ export class BlockAlphaModes {
     blocksetId: string,
     bounds?: SelectionRect
   ): ResolvedBlockDefinition[] {
-    const source = this.#pixelsOf(blocksetId);
+    const source = this.#resolvePixels(blocksetId);
     if (source === undefined) {
       return [];
     }
@@ -114,7 +114,7 @@ export class BlockAlphaModes {
   ): boolean | null {
     const shape = this.#view.shapes.get(block.shapeId);
     const blocksetIds = new Set(
-      BlockTextureLayout.of(block, shape).slots.flatMap(
+      BlockTextureLayout.fromShape(block, shape).slots.flatMap(
         ({ tile }) => (tile.blocksetId === undefined ? [] : [tile.blocksetId])
       )
     );
@@ -124,7 +124,7 @@ export class BlockAlphaModes {
 
     let known = true;
     for (const blocksetId of blocksetIds) {
-      const source = this.#pixelsOf(blocksetId);
+      const source = this.#resolvePixels(blocksetId);
       if (source === undefined) {
         known = false;
         continue;

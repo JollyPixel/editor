@@ -11,19 +11,19 @@ export class SlotRegionIds {
     this.slot = slot;
   }
 
-  blockIdOf(
+  resolveBlockId(
     regionId: string
   ): number | null {
     const localId = BlockProjection.localBlockIdOf(regionId);
 
-    return localId === null ? null : this.slot.blockId(localId);
+    return localId === null ? null : this.slot.composeBlockId(localId);
   }
 
-  regionIdOf(
+  resolveRegionId(
     blockId: number
   ): string | null {
-    return this.slot.owns(blockId) ?
-      BlockProjection.regionIdOf(this.slot.localBlockId(blockId)) :
+    return this.slot.ownsBlockId(blockId) ?
+      BlockProjection.regionIdOf(this.slot.decodeLocalBlockId(blockId)) :
       null;
   }
 }

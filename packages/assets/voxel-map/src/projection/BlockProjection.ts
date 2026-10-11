@@ -2,8 +2,8 @@
 import {
   BlockTextureLayout,
   isLocalBlockId,
-  localBlockIdOf,
-  tileRectOf,
+  decodeLocalBlockId,
+  resolveTileRect,
   WHOLE_TILE_BOUNDS,
   type BlockShape,
   type ResolvedBlockDefinition,
@@ -71,12 +71,12 @@ export class BlockProjection {
     this.block = block;
     this.shape = shape;
     this.tileSize = tileSize;
-    this.layout = BlockTextureLayout.of(block, shape);
+    this.layout = BlockTextureLayout.fromShape(block, shape);
     this.shapeUv = shape === undefined ? kBoxShapeUv : blockShapeUv(shape);
   }
 
   get regionId(): string {
-    return BlockProjection.regionIdOf(localBlockIdOf(this.block.id));
+    return BlockProjection.regionIdOf(decodeLocalBlockId(this.block.id));
   }
 
   get textured(): boolean {
@@ -117,7 +117,7 @@ export class BlockProjection {
     return this.layout.slots.map((
       { slot, tile, span }
     ): [UVSlot, UVGeometry] => {
-      const rect = tileRectOf(
+      const rect = resolveTileRect(
         tile,
         this.tileSize,
         this.shapeUv.bounds[slot],

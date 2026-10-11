@@ -74,13 +74,28 @@ changes with peers.
 | `defaultBlocksetId` | The first id, or `null`. |
 | `definitions()` | Copies of every definition. |
 | `ids()`, `has(id)`, `get(id)` | Lookups. |
-| `bySlot(slot)` | The blockset owning a slot. |
-| `freeSlot(reserved?)` | The lowest slot neither used nor in `reserved`, or `null` when all 128 are taken. |
+| `findBySlot(slot)` | The blockset owning a slot. |
+| `findAvailableSlot(reserved?)` | The lowest slot neither used nor in `reserved`, or `null` when all 128 are taken. |
 | `add(definition)` | Adds a blockset. Refuses an empty or known id, a taken or invalid slot, an invalid tile size, and a `src` blockset without tile size. |
 | `declare(definition)` | Adds an unknown blockset, or replaces a known one and keeps its slot. |
 | `remove(id)`, `replace(definitions)`, `clear()` | `replace()` skips what `add()` refuses and keeps the first of duplicated ids. |
 
 Each mutator returns whether the list changed.
+
+## BlocksetSlot
+
+`BlocksetSlot` converts between a blockset's local ids and the ids used in a
+linked world. These operations return values without changing their inputs.
+
+| Method | Result |
+| --- | --- |
+| `ownsBlockId(id)` | Whether a packed block id belongs to this slot. |
+| `composeBlockId(localId)`, `decodeLocalBlockId(id)` | Convert numeric block ids between local and world namespaces. |
+| `qualifyGroupId(localId)`, `decodeLocalGroupId(id)` | Add or remove the blockset prefix; decoding a different prefix returns `null`. |
+| `projectBlock(block)`, `projectBlocks(blocks)` | Copies with world ids, qualified group ids, and textures assigned to this blockset. |
+| `localizeBlock(block)` | A copy with local ids and texture blockset references removed. |
+| `projectMaterialGroup(group)`, `localizeMaterialGroup(group)` | Copies with world or local material group ids. |
+| `projectBlendGroup(group)` | A copy with its id and excluded group ids qualified. |
 
 ## Loading textures
 
@@ -127,7 +142,7 @@ slot's size in tiles, such as `{ u: 1, v: √2 }` on a ramp slope.
 
 | Function | Returns |
 | --- | --- |
-| `tileRectOf(ref, tileSize, bounds?, span?)` | The `TileRect` (`x, y, width, height`) in texels that `bounds` covers, honouring the reference's rotation. |
+| `resolveTileRect(ref, tileSize, bounds?, span?)` | The `TileRect` (`x, y, width, height`) in texels that `bounds` covers, honouring the reference's rotation. |
 | `tileRefFromRect(rect, template, tileSize, bounds?, span?)` | `template` moved so its `bounds` start at `rect`. |
 | `tileFootprint(size, span?, rotation?)` | The texel `width` and `height` of a region, at least one texel each. |
 | `rotateTileBounds(bounds, rotation?)` | `bounds` turned inside the tile. |

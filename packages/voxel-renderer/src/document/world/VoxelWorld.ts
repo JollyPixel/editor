@@ -188,7 +188,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): boolean {
     return this.#dispatch({
       action: "updated",
-      layerId: this.#idOf(name),
+      layerId: this.#resolveLayerId(name),
       metadata: { options }
     }) !== null;
   }
@@ -198,7 +198,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): boolean {
     return this.#dispatch({
       action: "removed",
-      layerId: this.#idOf(name),
+      layerId: this.#resolveLayerId(name),
       metadata: {}
     }) !== null;
   }
@@ -209,7 +209,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     const layer = this.getLayer(name);
     if (layer !== undefined) {
-      const index = this.#layers.indexOf(layer);
+      const index = this.#layers.findIndex(layer);
       const toIndex = direction === "up" ? index - 1 : index + 1;
       if (toIndex >= 0 && toIndex < this.#layers.size) {
         this.moveLayerTo(name, toIndex);
@@ -223,7 +223,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     const layer = this.getLayer(name);
     const index = Math.min(Math.max(Math.trunc(toIndex), 0), this.#layers.size - 1);
-    if (layer !== undefined && index !== this.#layers.indexOf(layer)) {
+    if (layer !== undefined && index !== this.#layers.findIndex(layer)) {
       this.#dispatch({
         action: "layer-moved",
         layerId: layer.id,
@@ -238,7 +238,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "position-updated",
-      layerId: this.#idOf(name),
+      layerId: this.#resolveLayerId(name),
       metadata: { position }
     });
   }
@@ -249,7 +249,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "position-updated",
-      layerId: this.#idOf(name),
+      layerId: this.#resolveLayerId(name),
       metadata: { delta }
     });
   }
@@ -260,7 +260,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "position-rebased",
-      layerId: this.#idOf(name),
+      layerId: this.#resolveLayerId(name),
       metadata: { position }
     });
   }
@@ -271,7 +271,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "layer-transformed",
-      layerId: this.#idOf(name),
+      layerId: this.#resolveLayerId(name),
       metadata: transformFields(transform)
     });
   }
@@ -308,8 +308,8 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): boolean {
     return this.#dispatch({
       action: "merged",
-      layerId: this.#idOf(sourceName),
-      metadata: { targetLayerId: this.#idOf(targetName) }
+      layerId: this.#resolveLayerId(sourceName),
+      metadata: { targetLayerId: this.#resolveLayerId(targetName) }
     }) !== null;
   }
 
@@ -422,7 +422,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     layerName: string,
     options: VoxelSetOptions
   ): void {
-    this.#dispatch(voxelSetCommand(this.#idOf(layerName), options));
+    this.#dispatch(voxelSetCommand(this.#resolveLayerId(layerName), options));
   }
 
   removeVoxel(
@@ -431,7 +431,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxel-removed",
-      layerId: this.#idOf(layerName),
+      layerId: this.#resolveLayerId(layerName),
       metadata: { position: options.position }
     });
   }
@@ -442,7 +442,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxels-set",
-      layerId: this.#idOf(layerName),
+      layerId: this.#resolveLayerId(layerName),
       metadata: { entries }
     });
   }
@@ -453,7 +453,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxels-removed",
-      layerId: this.#idOf(layerName),
+      layerId: this.#resolveLayerId(layerName),
       metadata: { entries }
     });
   }
@@ -471,7 +471,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): void {
     this.#dispatch({
       action: "voxels-patched",
-      layerId: this.#idOf(layerName),
+      layerId: this.#resolveLayerId(layerName),
       metadata: voxelPatch(cells, partners)
     });
   }
@@ -501,7 +501,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     return this.#writer.unrecorded(fn);
   }
 
-  apply(
+  applyCommand(
     command: VoxelWorldContentCommand,
     logger?: VoxelLogger
   ): VoxelWorldContentCommand | null {
@@ -577,7 +577,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     mode: VoxelWriteMode
   ): VoxelWorldContentCommand | null {
     if (isVoxelTemplateCommand(command)) {
-      return this.templates.apply(command);
+      return this.templates.applyCommand(command);
     }
     if (isVoxelEditCommand(command)) {
       return this.#writer.write(
@@ -587,13 +587,13 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
       );
     }
     if (isVoxelObjectLayerCommand(command)) {
-      return this.objectLayers.apply(command);
+      return this.objectLayers.applyCommand(command);
     }
 
-    return this.#structure.apply(command);
+    return this.#structure.applyCommand(command);
   }
 
-  #idOf(
+  #resolveLayerId(
     name: string
   ): string {
     return this.#layers.get(name)?.id ?? name;
@@ -664,10 +664,10 @@ function transformFields(
 
 function* layerChunks(
   layers: Iterable<VoxelLayer>,
-  chunksOf: (layer: VoxelLayer) => Iterable<VoxelChunk>
+  selectChunks: (layer: VoxelLayer) => Iterable<VoxelChunk>
 ): IterableIterator<IterableLayerChunk> {
   for (const layer of layers) {
-    for (const chunk of chunksOf(layer)) {
+    for (const chunk of selectChunks(layer)) {
       yield { layer, chunk };
     }
   }

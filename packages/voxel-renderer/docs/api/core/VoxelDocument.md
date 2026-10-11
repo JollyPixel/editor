@@ -77,7 +77,7 @@ class VoxelDocument {
 ### Commands
 
 ```ts
-apply(command: VoxelCommand, options?: VoxelApplyOptions): boolean;
+applyCommand(command: VoxelCommand, options?: VoxelApplyOptions): boolean;
 
 interface VoxelApplyOptions {
   origin?: "local" | "remote" | "replay";
@@ -92,7 +92,7 @@ commands, applied or rolled back around a peer's, as `"replay"`. Returns `false`
 nothing. See [commands](./commands.md) for what each command carries once
 applied.
 
-The block and group methods below are shorthands for `apply()`:
+The block and group methods below are shorthands for `applyCommand()`:
 
 | Method | Command | Returns `false` when |
 | --- | --- | --- |

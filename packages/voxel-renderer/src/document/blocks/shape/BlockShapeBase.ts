@@ -6,7 +6,7 @@ import type {
   BlockShape,
   BlockShapeID
 } from "./BlockShape.ts";
-import { occlusionMaskOf } from "./shapeOcclusion.ts";
+import { computeOcclusionMask } from "./shapeOcclusion.ts";
 
 export abstract class BlockShapeBase implements BlockShape {
   abstract readonly id: BlockShapeID;
@@ -18,7 +18,7 @@ export abstract class BlockShapeBase implements BlockShape {
   occludes(
     face: FACE
   ): boolean {
-    this.#occlusionMask ??= occlusionMaskOf(this.faces);
+    this.#occlusionMask ??= computeOcclusionMask(this.faces);
 
     return (this.#occlusionMask & (1 << face)) !== 0;
   }

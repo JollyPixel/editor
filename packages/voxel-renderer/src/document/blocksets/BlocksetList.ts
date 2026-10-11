@@ -56,7 +56,7 @@ export class BlocksetList implements Iterable<BlocksetDefinition> {
     return definition && copyDefinition(definition);
   }
 
-  bySlot(
+  findBySlot(
     slot: number
   ): BlocksetDefinition | undefined {
     for (const definition of this.#definitions.values()) {
@@ -68,7 +68,7 @@ export class BlocksetList implements Iterable<BlocksetDefinition> {
     return undefined;
   }
 
-  freeSlot(
+  findAvailableSlot(
     reserved: Iterable<number> = []
   ): number | null {
     const taken = new Set<number>(reserved);
@@ -127,13 +127,13 @@ export class BlocksetList implements Iterable<BlocksetDefinition> {
     return true;
   }
 
-  apply(
+  applyCommand(
     command: VoxelBlocksetCommand,
     slotsInUse: () => Iterable<number> = () => []
   ): VoxelBlocksetCommand | null {
     switch (command.action) {
       case "blockset-added": {
-        const slot = command.blockset.slot ?? this.freeSlot(slotsInUse());
+        const slot = command.blockset.slot ?? this.findAvailableSlot(slotsInUse());
         const added = slot !== null && this.add({ ...command.blockset, slot });
         const blockset = added ? this.get(command.blockset.id) : undefined;
 
@@ -193,8 +193,8 @@ export class BlocksetList implements Iterable<BlocksetDefinition> {
     definition: BlocksetDefinition,
     reserved: Iterable<number> = []
   ): BlocksetDefinition | null {
-    const slot = definition.slot ?? this.freeSlot(reserved);
-    if (slot === null || this.bySlot(slot) !== undefined) {
+    const slot = definition.slot ?? this.findAvailableSlot(reserved);
+    if (slot === null || this.findBySlot(slot) !== undefined) {
       return null;
     }
 

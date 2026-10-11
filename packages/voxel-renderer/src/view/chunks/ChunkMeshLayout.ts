@@ -56,7 +56,7 @@ export class ChunkMeshLayout {
       z % size === 0;
   }
 
-  originOf(
+  chunkWorldOrigin(
     layer: VoxelLayer,
     chunk: VoxelChunk
   ): VoxelCoord {
@@ -69,7 +69,7 @@ export class ChunkMeshLayout {
     };
   }
 
-  targetOf(
+  resolveTarget(
     layer: VoxelLayer,
     chunk: VoxelChunk
   ): ChunkMeshTarget | null {
@@ -77,7 +77,7 @@ export class ChunkMeshLayout {
       return null;
     }
 
-    const origin = this.originOf(layer, chunk);
+    const origin = this.chunkWorldOrigin(layer, chunk);
     if (!this.composites(layer)) {
       return {
         kind: "layer",
@@ -105,7 +105,7 @@ export class ChunkMeshLayout {
     };
   }
 
-  membersOf(
+  collectMembers(
     target: ChunkMeshTarget
   ): IterableLayerChunk[] {
     const layers = this.#world.getLayers();

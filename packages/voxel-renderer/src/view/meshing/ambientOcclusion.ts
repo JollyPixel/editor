@@ -48,7 +48,7 @@ export function packAoCorners(
     (u1v1 << (kLevelBits * 3));
 }
 
-export function aoCornersOf(
+export function decodeAoCorners(
   samples: number
 ): number {
   return kAoCornersBySamples[samples & kAoSampleMask];

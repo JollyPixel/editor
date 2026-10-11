@@ -88,12 +88,12 @@ describe("MaterialShelves", () => {
       shelf(kTerrain, "Terrain", [new MaterialGroup({ id: "terrain/wet" })]),
       shelf(kRock, "Rock", [])
     ]);
-    const rockNode = MaterialShelves.nodeIdOf("rock");
+    const rockNode = MaterialShelves.shelfNodeId("rock");
 
     assert.equal(shelves.material("terrain/wet")?.name, "wet");
     assert.equal(shelves.material(rockNode), undefined);
-    assert.equal(shelves.shelfOf("terrain/wet")?.label, "Terrain");
-    assert.equal(shelves.shelfOf(rockNode)?.label, "Rock");
+    assert.equal(shelves.findShelf("terrain/wet")?.label, "Terrain");
+    assert.equal(shelves.findShelf(rockNode)?.label, "Rock");
     assert.equal(shelves.has("rock/missing"), false);
     assert.deepEqual([...shelves].map((entry) => entry.blocksetId), ["terrain", "rock"]);
   });

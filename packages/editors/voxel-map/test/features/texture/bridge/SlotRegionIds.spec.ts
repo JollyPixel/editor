@@ -17,12 +17,12 @@ describe("SlotRegionIds", () => {
   const regions = new SlotRegionIds(new BlocksetSlot({ id: "stone", slot: 2 }));
 
   it("reads a region id as a block of its slot", () => {
-    assert.equal(regions.blockIdOf("block-4"), composeBlockId(2, 4));
-    assert.equal(regions.blockIdOf("brick"), null);
+    assert.equal(regions.resolveBlockId("block-4"), composeBlockId(2, 4));
+    assert.equal(regions.resolveBlockId("brick"), null);
   });
 
   it("names only the blocks its slot owns", () => {
-    assert.equal(regions.regionIdOf(composeBlockId(2, 4)), "block-4");
-    assert.equal(regions.regionIdOf(composeBlockId(3, 4)), null);
+    assert.equal(regions.resolveRegionId(composeBlockId(2, 4)), "block-4");
+    assert.equal(regions.resolveRegionId(composeBlockId(3, 4)), null);
   });
 });

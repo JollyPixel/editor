@@ -109,7 +109,7 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
   resizeTiles(
     tileSize: number
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "tile-size-updated",
       tileSize
     });
@@ -119,7 +119,7 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
     groupId: string,
     to: string
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "material-group-renamed",
       groupId,
       to
@@ -165,24 +165,24 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
     this.removeAllListeners();
   }
 
-  protected fold(
+  protected applyCommandToState(
     command: BlocksetDocumentCommand | BlockCatalogCommand
   ): BlocksetDocumentCommand | null {
     switch (command.action) {
       case "block-defined":
-        return this.blocks.apply({
+        return this.blocks.applyCommand({
           ...command,
           block: localBlock(command.block)
         });
       case "block-removed":
       case "block-moved":
-        return this.blocks.apply(command);
+        return this.blocks.applyCommand(command);
       case "material-group-defined":
       case "material-group-removed":
-        return this.materialGroups.apply(command);
+        return this.materialGroups.applyCommand(command);
       case "blend-group-defined":
       case "blend-group-removed":
-        return this.blendGroups.apply(command);
+        return this.blendGroups.applyCommand(command);
       case "tile-size-updated":
         return this.#resizeTiles(command.tileSize) ? command : null;
       case "material-group-renamed":
@@ -214,9 +214,9 @@ export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
     };
     const rescaled: ResolvedBlockDefinition[] = [];
     for (const block of this.blocks) {
-      const next = BlockTextures.of(block)
+      const next = BlockTextures.fromBlock(block)
         .map((ref) => rescaleTileRef(ref, rescale))
-        .applyTo(block);
+        .createTexturedBlock(block);
       if (next !== block) {
         rescaled.push(next);
       }

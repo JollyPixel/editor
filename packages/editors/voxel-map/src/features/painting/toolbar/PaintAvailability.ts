@@ -28,7 +28,7 @@ export class PaintAvailability {
     const { brush, mapDocument, access } = workspace;
     const { selection } = workspace.state;
     function refresh(): void {
-      listener(PaintAvailability.of(selection, brush.suspended, access.current));
+      listener(PaintAvailability.evaluate(selection, brush.suspended, access.current));
     }
 
     refresh();
@@ -41,7 +41,7 @@ export class PaintAvailability {
     ];
   }
 
-  static of(
+  static evaluate(
     selection: PaintingSelection,
     suspended: boolean,
     access: MapAccess

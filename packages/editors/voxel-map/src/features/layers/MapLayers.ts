@@ -15,7 +15,7 @@ import {
   type LayerRef,
   type SelectionStore
 } from "../../state/index.ts";
-import { layerSelectionsOf } from "./layerTree.ts";
+import { collectLayerSelections } from "./layerTree.ts";
 import { MapObject } from "./objects/MapObject.ts";
 import type {
   AddKind,
@@ -169,7 +169,7 @@ export class MapLayers {
       return;
     }
 
-    const plan = MergePlan.of(this.#world, ref.name);
+    const plan = MergePlan.planMerge(this.#world, ref.name);
     if (plan.defaultTarget === null) {
       return;
     }
@@ -230,6 +230,6 @@ export class MapLayers {
   }
 
   readonly #reconcileSelection = (): void => {
-    this.#selection.reconcile(layerSelectionsOf(this.#world));
+    this.#selection.reconcile(collectLayerSelections(this.#world));
   };
 }

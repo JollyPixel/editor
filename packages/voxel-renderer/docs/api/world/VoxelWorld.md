@@ -49,14 +49,14 @@ placed in.
 
 The world stores any pair it is given. Whether two shapes complement each
 other, filling the cell exactly once, is checked by
-[`VoxelView.canMergeAt()`](../core/VoxelView.md#merging-shapes)
+[`VoxelView.canMergeVoxelPart()`](../core/VoxelView.md#merging-shapes)
 before writing.
 
-#### `voxelCellOf(point: VoxelCoord): VoxelCoord`
+#### `floorVoxelPosition(point: VoxelCoord): VoxelCoord`
 
 The cell containing `point`; each component is floored, so `-0.2` gives `-1`.
 
-#### `voxelPositionOf(point: VoxelCoord, normal: VoxelCoord, side?: "front" | "back"): VoxelCoord`
+#### `resolveSurfaceCell(point: VoxelCoord, normal: VoxelCoord, side?: "front" | "back"): VoxelCoord`
 
 The cell on one side of a surface hit, such as a raycast result. `"front"`
 (default) is the empty cell the surface faces, where a new block goes. `"back"`
@@ -306,10 +306,10 @@ Removes every voxel layer, object layer and template. Emits nothing.
 
 ## Applying commands
 
-#### `apply(command: VoxelWorldContentCommand, logger?: VoxelLogger): VoxelWorldContentCommand | null`
+#### `applyCommand(command: VoxelWorldContentCommand, logger?: VoxelLogger): VoxelWorldContentCommand | null`
 
 Replays a command, for example one received from a peer, without emitting it.
-On a document, use [`document.apply()`](../core/VoxelDocument.md) instead.
+On a document, use [`document.applyCommand()`](../core/VoxelDocument.md) instead.
 
 Returns the command as this world applied it, or `null` when nothing changed: a
 `"layer-moved"` index comes back clamped, a `"cloned"` name unique, and
@@ -429,7 +429,7 @@ The whole-cell area an object covers on the ground, `width` along x and
 `height` along z.
 
 ```ts
-const footprint = VoxelFootprint.of(object);
+const footprint = VoxelFootprint.fromObject(object);
 
 footprint.equals(new VoxelFootprint(2, 1));
 ```
@@ -437,7 +437,7 @@ footprint.equals(new VoxelFootprint(2, 1));
 | Member | Description |
 | --- | --- |
 | `new VoxelFootprint(width, height)` | Each extent is rounded to a whole cell, at least `1`. |
-| `VoxelFootprint.of(object)` | The footprint of an object; a missing `width` or `height` counts as `1`. |
+| `VoxelFootprint.fromObject(object)` | The footprint of an object; a missing `width` or `height` counts as `1`. |
 | `VoxelFootprint.Unit` | A 1×1 footprint. |
 | `VoxelFootprint.normalizeExtent(value)` | Rounds to a whole cell; zero, negative and invalid values give `1`. |
 | `width`, `height` | Read-only. |

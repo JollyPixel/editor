@@ -20,7 +20,7 @@ const kExtent = {
   height: 64
 };
 
-function shapeOf(
+function resolveShape(
   shapeId: string
 ) {
   return kShapes.get(shapeId);
@@ -60,7 +60,7 @@ describe("TileOccupancy", () => {
     ];
 
     assert.deepEqual(
-      TileOccupancy.of(blocks, shapeOf, "wood", 16).rects,
+      TileOccupancy.collect(blocks, resolveShape, "wood", 16).rects,
       [rect(16, 0, 16, 16)]
     );
   });
@@ -74,7 +74,7 @@ describe("TileOccupancy", () => {
     };
 
     assert.deepEqual(
-      TileOccupancy.of([ramp], shapeOf, "wood", 16).rects,
+      TileOccupancy.collect([ramp], resolveShape, "wood", 16).rects,
       [rect(0, 16, 16, 23)]
     );
   });

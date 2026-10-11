@@ -7,8 +7,8 @@ helpers tell where those tiles land on the shape.
 ```ts
 import { BlockTextures } from "@jolly-pixel/voxel.renderer";
 
-const textures = BlockTextures.of(block);
-const tread = textures.forSlot("top.1");
+const textures = BlockTextures.fromBlock(block);
+const tread = textures.resolveSlotTexture("top.1");
 ```
 
 ## Texture slots
@@ -65,9 +65,9 @@ type TextureSlotKey =
   | Face
   | (string & {});
 
-function slotNameOf(face: Face): FaceSlotName;
-function slotKeyOf(key: string): string;
-function baseSlotOf(slot: string): string;
+function faceSlotName(face: Face): FaceSlotName;
+function normalizeSlotKey(key: string): string;
+function baseSlotName(slot: string): string;
 function unknownTextureSlots(
   keys: Iterable<string>,
   shape: BlockShape
@@ -75,8 +75,8 @@ function unknownTextureSlots(
 ```
 
 `TextureSlotKey` accepts any string, since a shape may pin custom slot names,
-so it does not catch a typo. `slotKeyOf()` turns a numeric `Face` key into its
-slot name. `baseSlotOf()` strips the suffix: `"top.1"` gives `"top"`.
+so it does not catch a typo. `normalizeSlotKey()` turns a numeric `Face` key into its
+slot name. `baseSlotName()` strips the suffix: `"top.1"` gives `"top"`.
 
 `unknownTextureSlots()` returns the keys that texture nothing on `shape`. The
 six side names always count as known, so one texture map can serve a cube and
@@ -102,7 +102,7 @@ defineFace({
 type TileRefMapper = (ref: ResolvedTileRef) => ResolvedTileRef;
 
 class BlockTextures implements Iterable<ResolvedTileRef> {
-  static of(block: ResolvedBlockDefinition): BlockTextures;
+  static fromBlock(block: ResolvedBlockDefinition): BlockTextures;
   constructor(
     faceTextures: Readonly<Record<string, ResolvedTileRef>>,
     defaultTexture?: ResolvedTileRef
@@ -112,37 +112,37 @@ class BlockTextures implements Iterable<ResolvedTileRef> {
   readonly defaultTexture: ResolvedTileRef | undefined;
   readonly size: number | undefined;
 
-  forSlot(slot: string): ResolvedTileRef | undefined;
-  spanFor(slot: string, span: Readonly<TileSpan>): Readonly<TileSpan>;
+  resolveSlotTexture(slot: string): ResolvedTileRef | undefined;
+  resolveSlotSpan(slot: string, span: Readonly<TileSpan>): Readonly<TileSpan>;
   blocksetIds(): string[];
-  staysOnGrid(rescale: TileRescale): boolean;
+  canRescaleOnGrid(rescale: TileRescale): boolean;
   map(mapper: TileRefMapper): BlockTextures;
-  withBlockset(blocksetId: string | null): BlockTextures;
-  withSize(size: number): BlockTextures;
-  applyTo(block: ResolvedBlockDefinition): ResolvedBlockDefinition;
+  withDefaultBlockset(blocksetId: string | null): BlockTextures;
+  withTileSize(size: number): BlockTextures;
+  createTexturedBlock(block: ResolvedBlockDefinition): ResolvedBlockDefinition;
 }
 ```
 
-The instance is frozen and `of()` does not copy the block's records; treat
+The instance is frozen and `fromBlock()` does not copy the block's records; treat
 them as read-only. Iteration yields every face reference, then
 `defaultTexture`.
 
 | Member | Description |
 |---|---|
-| `forSlot()` | The slot's tile: the exact slot, then its base slot, then `defaultTexture`. |
-| `spanFor()` | `span` when the slot or its base slot has its own tile, `{ u: 1, v: 1 }` when it falls back to `defaultTexture`. |
+| `resolveSlotTexture()` | The slot's tile: the exact slot, then its base slot, then `defaultTexture`. |
+| `resolveSlotSpan()` | `span` when the slot or its base slot has its own tile, `{ u: 1, v: 1 }` when it falls back to `defaultTexture`. |
 | `size` | `size` of `defaultTexture`, or of the first face reference. |
 | `blocksetIds()` | Distinct explicit blockset ids. |
-| `staysOnGrid()` | Whether every reference keeps whole `col` and `row` through [`rescaleTileRef()`](../blocksets/blocksets.md). Check it before resizing a blockset's tiles. |
+| `canRescaleOnGrid()` | Whether every reference keeps whole `col` and `row` through [`rescaleTileRef()`](../blocksets/blocksets.md). Check it before resizing a blockset's tiles. |
 | `map()` | Applies `mapper` to every reference; returns the same instance when nothing changed. |
-| `withBlockset()` | Sets `blocksetId` on references without one; `null` returns the same instance. |
-| `withSize()` | Sets `size` on every reference. |
-| `applyTo()` | `block` with these textures; `block` itself when they are unchanged. |
+| `withDefaultBlockset()` | Sets `blocksetId` on references without one; `null` returns the same instance. |
+| `withTileSize()` | Sets `size` on every reference. |
+| `createTexturedBlock()` | `block` with these textures; `block` itself when they are unchanged. |
 
 ```ts
-const assigned = BlockTextures.of(block)
-  .withBlockset(document.blocksets.defaultBlocksetId)
-  .applyTo(block);
+const assigned = BlockTextures.fromBlock(block)
+  .withDefaultBlockset(document.blocksets.defaultBlocksetId)
+  .createTexturedBlock(block);
 ```
 
 ## Texture layout
@@ -191,11 +191,11 @@ its vertex range. `isBox` is `true` only for six full-tile slots, as on a
 cube.
 
 `resolvedBlockTextureSlots()` adds the tile each slot samples, following
-`forSlot()`, and leaves out slots without one.
+`resolveSlotTexture()`, and leaves out slots without one.
 
 ```ts
 class BlockTextureLayout {
-  static of(
+  static fromShape(
     block: ResolvedBlockDefinition,
     shape: BlockShape | undefined
   ): BlockTextureLayout;
@@ -204,15 +204,15 @@ class BlockTextureLayout {
   readonly slots: readonly ResolvedBlockTextureSlot[];
 
   usesBlockset(blocksetId: string): boolean;
-  slotsIn(blocksetId: string): ResolvedBlockTextureSlot[];
-  drawnRectsIn(blocksetId: string, tileSize: number): TileRect[];
-  footprintsIn(blocksetId: string, tileSize: number): TileRect[];
+  slotsUsingBlockset(blocksetId: string): ResolvedBlockTextureSlot[];
+  collectDrawnTileRects(blocksetId: string, tileSize: number): TileRect[];
+  collectTileFootprintRects(blocksetId: string, tileSize: number): TileRect[];
 }
 ```
 
 The same resolved slots for one block, queried by blockset. Only slots the shape
-draws count, and a block with an unknown shape has none. `drawnRectsIn()`
-returns the distinct texel rectangles the block samples. `footprintsIn()`
+draws count, and a block with an unknown shape has none. `collectDrawnTileRects()`
+returns the distinct texel rectangles the block samples. `collectTileFootprintRects()`
 returns the whole tiles it references, stretched by the longest span drawing
 them; use it to find free room in an atlas.
 

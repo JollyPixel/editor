@@ -19,7 +19,7 @@ export function blockCountsByBlockset(
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const block of blocks) {
-    for (const id of BlockTextures.of(block).blocksetIds()) {
+    for (const id of BlockTextures.fromBlock(block).blocksetIds()) {
       counts.set(id, (counts.get(id) ?? 0) + 1);
     }
   }

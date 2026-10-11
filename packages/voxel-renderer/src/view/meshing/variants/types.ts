@@ -10,7 +10,7 @@ import type {
 
 export interface AtlasUvSource {
   readonly def: ResolvedBlocksetDefinition;
-  uvFor(
+  computeTileUvRegion(
     col: number,
     row: number,
     size?: number,
@@ -21,7 +21,7 @@ export interface AtlasUvSource {
 
 export interface BlocksetResolver {
   readonly version: number;
-  resolve(
+  resolveAtlas(
     blocksetId?: string
   ): AtlasUvSource | undefined;
 }

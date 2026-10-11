@@ -9,7 +9,7 @@ import { ViewDistance } from "../../../src/view/options/index.ts";
 // CONSTANTS
 const kChunkSize = 4;
 
-function originOf(
+function chunkWorldOrigin(
   cx: number,
   offset = { x: 0, y: 0, z: 0 }
 ): { x: number; y: number; z: number; } {
@@ -42,7 +42,7 @@ describe("ChunkViewport - unbounded", () => {
   });
 
   it("keeps every chunk while unbounded", () => {
-    assert.equal(makeViewport(null).contains(originOf(100), false), true);
+    assert.equal(makeViewport(null).contains(chunkWorldOrigin(100), false), true);
   });
 });
 
@@ -53,7 +53,7 @@ describe("ChunkViewport - contains", () => {
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
 
-    assert.equal(viewport.contains(originOf(0), false), true);
+    assert.equal(viewport.contains(chunkWorldOrigin(0), false), true);
   });
 
   it("rejects a chunk beyond the radius", () => {
@@ -62,11 +62,11 @@ describe("ChunkViewport - contains", () => {
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
 
-    assert.equal(viewport.contains(originOf(4), false), false);
+    assert.equal(viewport.contains(chunkWorldOrigin(4), false), false);
   });
 
   it("keeps a chunk already in view within the hysteresis slack", () => {
-    const origin = originOf(2);
+    const origin = chunkWorldOrigin(2);
     const viewport = makeViewport(
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 1 })
@@ -81,7 +81,7 @@ describe("ChunkViewport - contains", () => {
       { x: 2, y: 2, z: 2 },
       new ViewDistance({ chunks: 1, hysteresis: 0 })
     );
-    const cornerInsideCenterOutside = originOf(0, { x: 5, y: 0, z: 0 });
+    const cornerInsideCenterOutside = chunkWorldOrigin(0, { x: 5, y: 0, z: 0 });
 
     assert.equal(viewport.contains(cornerInsideCenterOutside, false), false);
   });
@@ -92,8 +92,8 @@ describe("ChunkViewport - distanceSquaredTo", () => {
     const viewport = makeViewport({ x: 2, y: 2, z: 2 });
 
     assert.ok(
-      viewport.distanceSquaredTo(originOf(0)) <
-        viewport.distanceSquaredTo(originOf(3))
+      viewport.distanceSquaredTo(chunkWorldOrigin(0)) <
+        viewport.distanceSquaredTo(chunkWorldOrigin(3))
     );
   });
 });
@@ -180,27 +180,27 @@ describe("ChunkViewport - isFar", () => {
     const viewport = detailViewport({ x: 2, y: 2, z: 2 });
 
     assert.equal(viewport.detailed, false);
-    assert.equal(viewport.isFar(originOf(10)), false);
+    assert.equal(viewport.isFar(chunkWorldOrigin(10)), false);
   });
 
   it("keeps every chunk near without a focus", () => {
     const viewport = detailViewport(null, { farDistance: 1 });
 
     assert.equal(viewport.detailed, false);
-    assert.equal(viewport.isFar(originOf(10)), false);
+    assert.equal(viewport.isFar(chunkWorldOrigin(10)), false);
   });
 
   it("flags chunks beyond farDistance", () => {
     const viewport = detailViewport({ x: 2, y: 2, z: 2 }, { farDistance: 6 });
 
-    assert.equal(viewport.isFar(originOf(1)), false);
-    assert.equal(viewport.isFar(originOf(2)), true);
+    assert.equal(viewport.isFar(chunkWorldOrigin(1)), false);
+    assert.equal(viewport.isFar(chunkWorldOrigin(2)), true);
   });
 
   it("keeps a far chunk far until it comes half a chunk closer", () => {
     const viewport = detailViewport({ x: 2, y: 2, z: 2 }, { farDistance: 6 });
-    const nearBorder = originOf(0, { x: 5, y: 0, z: 0 });
-    const wellInside = originOf(0, { x: 3, y: 0, z: 0 });
+    const nearBorder = chunkWorldOrigin(0, { x: 5, y: 0, z: 0 });
+    const wellInside = chunkWorldOrigin(0, { x: 3, y: 0, z: 0 });
 
     assert.equal(viewport.isFar(nearBorder), false);
     assert.equal(viewport.isFar(nearBorder, true), true);

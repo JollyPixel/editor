@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   BlockTextures,
-  tileRectOf,
+  resolveTileRect,
   tileRefFromRect,
   type ResolvedBlockDefinition,
   type ResolvedTileRef
@@ -62,7 +62,7 @@ export class BlockUv extends BlockProjection {
         color: kRegionColor,
         state: "stacked",
         rect: rotatedRect(
-          tileRectOf(block.defaultTexture, this.tileSize),
+          resolveTileRect(block.defaultTexture, this.tileSize),
           block.defaultTexture.rotation ?? 0
         )
       });
@@ -79,7 +79,7 @@ export class BlockUv extends BlockProjection {
     region: UVRegion
   ): ResolvedBlockDefinition {
     const { block, tileSize, shapeUv } = this;
-    const textures = BlockTextures.of(block);
+    const textures = BlockTextures.fromBlock(block);
     const stackedSlot = region.stackedFace ??
       shapeUv.activeFaces[0] ??
       "front";
@@ -89,7 +89,7 @@ export class BlockUv extends BlockProjection {
         ...block,
         faceTextures: Object.fromEntries(
           region.slots.map((face) => {
-            const template = textures.forSlot(face);
+            const template = textures.resolveSlotTexture(face);
             if (!template) {
               throw new RangeError(`No texture template for UV slot "${face}"`);
             }
@@ -111,7 +111,7 @@ export class BlockUv extends BlockProjection {
       };
     }
 
-    const template = textures.forSlot(stackedSlot);
+    const template = textures.resolveSlotTexture(stackedSlot);
     if (!template) {
       throw new RangeError(
         `No texture template for UV slot "${stackedSlot}"`

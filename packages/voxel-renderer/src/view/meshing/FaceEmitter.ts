@@ -61,7 +61,7 @@ export class FaceEmitter {
     const {
       neighbourhood,
       stats,
-      bufferFor,
+      resolveFaceBuffer,
       ambientOcclusion
     } = this.#pass;
     const ao = ambientOcclusion ?
@@ -79,7 +79,7 @@ export class FaceEmitter {
         position,
         this.#neighbours
       );
-      bufferFor(face.slot, blended)
+      resolveFaceBuffer(face.slot, blended)
         .addFace(face, wx, wy, wz, ao, blended ? this.#neighbours : undefined);
       stats.faces++;
 
@@ -88,7 +88,7 @@ export class FaceEmitter {
 
     const pieces = neighbourhood.boundaryFaces(face, wx, wy, wz, variant);
     for (const piece of pieces) {
-      bufferFor(piece.slot).addFace(piece, wx, wy, wz, ao);
+      resolveFaceBuffer(piece.slot).addFace(piece, wx, wy, wz, ao);
       stats.faces++;
     }
   }

@@ -31,7 +31,7 @@ function makeWorld(): VoxelWorld {
   return world;
 }
 
-function cellsOf(
+function scanCells(
   world: VoxelWorld
 ): number[][] {
   const layer = world.getLayer("Ground");
@@ -52,7 +52,7 @@ describe("VoxelWorld.transformLayer", () => {
 
     world.transformLayer("Ground", { rotation: 1 });
 
-    assert.deepEqual(cellsOf(world), [
+    assert.deepEqual(scanCells(world), [
       [10, 0, 1, 1, kQuarterTurn],
       [10, 0, 0, 2, VoxelTransform.pack({ rotation: 2 })],
       [12, 1, 1, 3, kQuarterTurn]
@@ -65,7 +65,7 @@ describe("VoxelWorld.transformLayer", () => {
 
     world.transformLayer("Ground", { flipX: true, flipY: true });
 
-    assert.deepEqual(cellsOf(world), [
+    assert.deepEqual(scanCells(world), [
       [11, 1, 0, 1, VoxelTransform.pack({ flipX: true, flipY: true })],
       [10, 1, 0, 2, VoxelTransform.pack({ rotation: 1, flipX: true, flipY: true })],
       [11, 0, 2, 3, VoxelTransform.pack({ flipX: true, flipY: true })]
@@ -80,7 +80,7 @@ describe("VoxelWorld.transformLayer", () => {
     world.transformLayer("Ground", { rotation: 3 });
     far.transformLayer("Ground", { rotation: 3 });
 
-    assert.deepEqual(cellsOf(far), cellsOf(world));
+    assert.deepEqual(scanCells(far), scanCells(world));
   });
 
   const kIdentitySequences: VoxelTransformOptions[][] = [
@@ -96,22 +96,22 @@ describe("VoxelWorld.transformLayer", () => {
   for (const sequence of kIdentitySequences) {
     it(`restores the layer after ${JSON.stringify(sequence)}`, () => {
       const world = makeWorld();
-      const original = cellsOf(world);
+      const original = scanCells(world);
 
       world.transformLayer("Ground", sequence[0]);
-      assert.notDeepEqual(cellsOf(world), original);
+      assert.notDeepEqual(scanCells(world), original);
       for (const transform of sequence.slice(1)) {
         world.transformLayer("Ground", transform);
       }
 
-      assert.deepEqual(cellsOf(world), original);
+      assert.deepEqual(scanCells(world), original);
     });
   }
 
   it("emits nothing for the identity, an empty layer or an unknown layer", () => {
     const world = makeWorld();
     world.addLayer("Empty");
-    const original = cellsOf(world);
+    const original = scanCells(world);
     const commands = recordCommands(world);
 
     world.transformLayer("Ground", {});
@@ -119,22 +119,22 @@ describe("VoxelWorld.transformLayer", () => {
     world.transformLayer("NoSuch", { rotation: 1 });
 
     assert.deepEqual(commands, []);
-    assert.deepEqual(cellsOf(world), original);
+    assert.deepEqual(scanCells(world), original);
   });
 
   it("is undone and redone as one history step", () => {
     const world = makeWorld();
     const history = worldHistory(world);
-    const original = cellsOf(world);
+    const original = scanCells(world);
 
     world.transformLayer("Ground", { rotation: 3, flipX: true });
-    const transformed = cellsOf(world);
+    const transformed = scanCells(world);
 
     assert.equal(history.undo(), true);
-    assert.deepEqual(cellsOf(world), original);
+    assert.deepEqual(scanCells(world), original);
     assert.equal(history.canUndo, false);
 
     assert.equal(history.redo(), true);
-    assert.deepEqual(cellsOf(world), transformed);
+    assert.deepEqual(scanCells(world), transformed);
   });
 });

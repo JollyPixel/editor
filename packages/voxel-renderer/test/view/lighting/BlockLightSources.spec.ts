@@ -55,9 +55,9 @@ describe("BlockLightSources", () => {
   it("emits the group light level in its emissive hue, white when black", () => {
     const { sources } = makeSources();
 
-    assert.equal(sources.emissionOf(1), 0);
-    assert.equal(sources.emissionOf(4), packLight(10, 6, 0));
-    assert.equal(sources.emissionOf(5), grayLight(15));
+    assert.equal(sources.resolveEmission(1), 0);
+    assert.equal(sources.resolveEmission(4), packLight(10, 6, 0));
+    assert.equal(sources.resolveEmission(5), grayLight(15));
     assert.equal(sources.emits, true);
   });
 
@@ -72,18 +72,18 @@ describe("BlockLightSources", () => {
     materialGroups.define({ id: "lamp" });
     assert.equal(sources.refresh(), true);
 
-    assert.equal(sources.emissionOf(4), 0);
+    assert.equal(sources.resolveEmission(4), 0);
     assert.equal(sources.emits, false);
   });
 
   it("reports whether a new falloff changes what tinted blocks emit", () => {
     const { sources } = makeSources();
-    const lava = sources.emissionOf(4);
+    const lava = sources.resolveEmission(4);
 
     assert.equal(sources.switchFalloff(LightFalloff.WIDE), false);
     assert.equal(sources.switchFalloff(LightFalloff.FOCUSED), true);
     assert.equal(sources.falloff, LightFalloff.FOCUSED);
-    assert.notEqual(sources.emissionOf(4), lava);
-    assert.equal(sources.emissionOf(5), grayLight(15));
+    assert.notEqual(sources.resolveEmission(4), lava);
+    assert.equal(sources.resolveEmission(5), grayLight(15));
   });
 });

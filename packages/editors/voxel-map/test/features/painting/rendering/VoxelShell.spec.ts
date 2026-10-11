@@ -48,16 +48,16 @@ function normalsOf(
   return [...normals].sort();
 }
 
-describe("VoxelShell.of", () => {
+describe("VoxelShell.fromCells", () => {
   test("a single cell is a cube with twelve edges", () => {
-    const shell = VoxelShell.of([{ x: 0, y: 0, z: 0 }]);
+    const shell = VoxelShell.fromCells([{ x: 0, y: 0, z: 0 }]);
 
     assert.strictEqual(quadCount(shell.triangles), 6);
     assert.strictEqual(shell.edges.length / 6, 12);
   });
 
   test("winds every face outward", () => {
-    const shell = VoxelShell.of([{ x: 0, y: 0, z: 0 }]);
+    const shell = VoxelShell.fromCells([{ x: 0, y: 0, z: 0 }]);
     const triangles = shell.triangles;
     const faces: string[] = [];
 
@@ -90,7 +90,7 @@ describe("VoxelShell.of", () => {
   });
 
   test("a square footprint keeps the twelve edges of its box", () => {
-    const shell = VoxelShell.of(new BrushFootprint({
+    const shell = VoxelShell.fromCells(new BrushFootprint({
       position: { x: 0, y: 0, z: 0 },
       size: 3,
       axis: "xz",
@@ -114,7 +114,7 @@ describe("VoxelShell.of", () => {
   });
 
   test("hides the faces between neighbouring cells", () => {
-    const shell = VoxelShell.of([
+    const shell = VoxelShell.fromCells([
       { x: 0, y: 0, z: 0 },
       { x: 1, y: 0, z: 0 }
     ]);
@@ -123,7 +123,7 @@ describe("VoxelShell.of", () => {
   });
 
   test("ignores duplicate cells", () => {
-    const shell = VoxelShell.of([
+    const shell = VoxelShell.fromCells([
       { x: 0, y: 0, z: 0 },
       { x: 0, y: 0, z: 0 }
     ]);
@@ -138,7 +138,7 @@ describe("VoxelShell.of", () => {
       axis: "xz",
       pattern: "circle"
     }).cells();
-    const shell = VoxelShell.of(disc);
+    const shell = VoxelShell.fromCells(disc);
 
     assert.strictEqual(quadCount(shell.triangles), 12 + 12 + 16);
     assert.strictEqual(shell.edges.length / 6, 12 + 12 + 12);
@@ -151,7 +151,7 @@ describe("VoxelShell.of", () => {
       axis: "xyz",
       pattern: "circle"
     }).cells();
-    const shell = VoxelShell.of(ball);
+    const shell = VoxelShell.fromCells(ball);
 
     assert.strictEqual(quadCount(shell.triangles), 72);
   });
@@ -159,7 +159,7 @@ describe("VoxelShell.of", () => {
 
 describe("VoxelShell rims", () => {
   test("marks every corner of a single cell", () => {
-    const shell = VoxelShell.of([{ x: 0, y: 0, z: 0 }]);
+    const shell = VoxelShell.fromCells([{ x: 0, y: 0, z: 0 }]);
 
     assert.strictEqual(shell.rims.length, shell.triangles.length / 3);
     assert.ok(shell.rims.every((rim) => rim === 1));
@@ -172,7 +172,7 @@ describe("VoxelShell rims", () => {
       axis: "xz",
       pattern: "square"
     }).cells();
-    const shell = VoxelShell.of(slab);
+    const shell = VoxelShell.fromCells(slab);
     const min = Math.min(
       ...shell.edges.filter((_, index) => index % 3 === 0)
     );
@@ -192,7 +192,7 @@ describe("VoxelShell rims", () => {
 });
 
 describe("VoxelShell.edgesFacing", () => {
-  const cube = VoxelShell.of([{ x: 0, y: 0, z: 0 }]);
+  const cube = VoxelShell.fromCells([{ x: 0, y: 0, z: 0 }]);
 
   test("keeps the nine edges of the three faces seen from a corner", () => {
     const edges = cube.edgesFacing([5, 5, 5]);
@@ -219,7 +219,7 @@ describe("VoxelShell.edgesFacing", () => {
   });
 
   test("splits a run where the faces meeting along it change", () => {
-    const shell = VoxelShell.of([
+    const shell = VoxelShell.fromCells([
       { x: 0, y: 0, z: 0 },
       { x: 0, y: 0, z: 1 },
       { x: 1, y: 1, z: 1 }
@@ -237,7 +237,7 @@ describe("VoxelShell.edgesFacing", () => {
 });
 
 describe("VoxelShell.facingKey", () => {
-  const cube = VoxelShell.of([{ x: 0, y: 0, z: 0 }]);
+  const cube = VoxelShell.fromCells([{ x: 0, y: 0, z: 0 }]);
 
   test("holds while the eye stays on the same side of every plane", () => {
     assert.strictEqual(

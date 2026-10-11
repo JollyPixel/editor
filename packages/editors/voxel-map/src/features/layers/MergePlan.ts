@@ -3,7 +3,7 @@ import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import type { JollyOption } from "@jolly-pixel/ui";
 
 export class MergePlan {
-  static of(
+  static planMerge(
     world: VoxelWorld,
     sourceName: string
   ): MergePlan {

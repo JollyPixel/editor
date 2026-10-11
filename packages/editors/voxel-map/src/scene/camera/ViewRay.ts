@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  voxelCellOf,
-  voxelPositionOf
+  floorVoxelPosition,
+  resolveSurfaceCell
 } from "@jolly-pixel/voxel.renderer";
 import type { Vector3Like } from "three";
 
@@ -121,7 +121,7 @@ export class ViewRay {
       hit.distance >= minDistance &&
       hit.distance <= maxDistance
     ) {
-      return voxelPositionOf(
+      return resolveSurfaceCell(
         hit.point,
         hit.normal,
         "front"
@@ -132,7 +132,7 @@ export class ViewRay {
       fallbackDistance :
       Math.min(maxDistance, Math.max(minDistance, hit.distance));
 
-    return voxelCellOf(
+    return floorVoxelPosition(
       this.ray.at(distance, new THREE.Vector3())
     );
   }
@@ -149,8 +149,8 @@ export class ViewRay {
 
     const hit = this.cast(solid, pointer);
     const cell = hit === null || hit.distance > maxDistance ?
-      voxelCellOf(this.ray.at(fallbackDistance, new THREE.Vector3())) :
-      voxelPositionOf(hit.point, hit.normal, hit.ground ? "front" : "back");
+      floorVoxelPosition(this.ray.at(fallbackDistance, new THREE.Vector3())) :
+      resolveSurfaceCell(hit.point, hit.normal, hit.ground ? "front" : "back");
 
     return {
       x: cell.x + 0.5,

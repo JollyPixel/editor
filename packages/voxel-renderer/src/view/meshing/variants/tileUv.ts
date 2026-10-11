@@ -13,20 +13,20 @@ export interface TileUv {
   rotation: TileRotation | undefined;
 }
 
-export function tileUvOf(
+export function resolveTileUv(
   atlas: AtlasUvSource,
   tileRef: ResolvedTileRef,
   span: Readonly<TileSpan>
 ): TileUv {
   if (atlas.def.id === MISSING_BLOCKSET_ID) {
     return {
-      region: atlas.uvFor(0, 0),
+      region: atlas.computeTileUvRegion(0, 0),
       rotation: undefined
     };
   }
 
   return {
-    region: atlas.uvFor(
+    region: atlas.computeTileUvRegion(
       tileRef.col,
       tileRef.row,
       tileRef.size,

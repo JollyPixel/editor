@@ -117,7 +117,7 @@ export class VoxelBlockInspector {
     };
   }
 
-  usageOf(
+  inspectUsage(
     blockId: number
   ): VoxelBlockUsage {
     const layers: VoxelLayerUsage[] = [];
@@ -141,12 +141,12 @@ export class VoxelBlockInspector {
     };
   }
 
-  blocksetUsageOf(
+  inspectBlocksetUsage(
     blocksetId: string
   ): VoxelBlocksetUsage {
     const blocks: number[] = [];
     for (const block of this.#blockRegistry) {
-      if (BlockTextures.of(block).blocksetIds().includes(blocksetId)) {
+      if (BlockTextures.fromBlock(block).blocksetIds().includes(blocksetId)) {
         blocks.push(block.id);
       }
     }

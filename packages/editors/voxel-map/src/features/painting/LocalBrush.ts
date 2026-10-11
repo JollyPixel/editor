@@ -23,7 +23,7 @@ import {
   BrushFootprint,
   type BrushShape
 } from "./model/BrushFootprint.ts";
-import { brushOrientationOf } from "./model/brushOrientation.ts";
+import { resolveBrushOrientation } from "./model/brushOrientation.ts";
 import { AimedHalf } from "./model/AimedHalf.ts";
 import {
   BrushStroke,
@@ -33,8 +33,8 @@ import {
   type VoxelPaint
 } from "./model/BrushStroke.ts";
 import {
-  ghostTargetOf,
-  partGhostOf,
+  resolveGhostTarget,
+  createPartGhost,
   type GhostTarget
 } from "./model/ghostTarget.ts";
 import {
@@ -356,10 +356,11 @@ export class LocalBrush extends ActorComponent {
   #paint(): VoxelPaint {
     return {
       blockId: this.#block.id,
-      ...brushOrientationOf(
+      ...resolveBrushOrientation(
         this.#camera,
         this.#brush.rotationMode,
-        this.#brush.flipY
+        this.#brush.flipY,
+        this.view.document.blocks.get(this.#block.id)?.shapeId
       )
     };
   }
@@ -419,7 +420,7 @@ export class LocalBrush extends ActorComponent {
       return null;
     }
 
-    return this.view.partAt(owner.layer.name, aim.remove, aim.probe);
+    return this.view.pickVoxelPart(owner.layer.name, aim.remove, aim.probe);
   }
 
   #aimedHalf(
@@ -440,11 +441,11 @@ export class LocalBrush extends ActorComponent {
       ?.getVoxelAt(aim.remove);
     const part = entry?.partner === undefined ?
       null :
-      this.view.partAt(layerName, aim.remove, aim.probe);
+      this.view.pickVoxelPart(layerName, aim.remove, aim.probe);
 
     return entry === undefined || part === null ?
       null :
-      AimedHalf.of(entry, part);
+      AimedHalf.select(entry, part);
   }
 
   #removalTarget(): GhostTarget | null {
@@ -457,7 +458,7 @@ export class LocalBrush extends ActorComponent {
 
     return aim === null || half === null ?
       null :
-      partGhostOf(aim.remove, half.aimed);
+      createPartGhost(aim.remove, half.aimed);
   }
 
   #replacementGhost(): GhostTarget | null {
@@ -473,7 +474,7 @@ export class LocalBrush extends ActorComponent {
 
     return aim === null || !replacement ?
       null :
-      partGhostOf(aim.remove, replacement);
+      createPartGhost(aim.remove, replacement);
   }
 
   #mergesAt(
@@ -567,7 +568,7 @@ export class LocalBrush extends ActorComponent {
     const stroke = this.#stroke;
     const layer = this.view.document.world.getLayer(layerName);
 
-    return ghostTargetOf({
+    return resolveGhostTarget({
       size: this.#brush.size,
       mode: this.#brush.mode,
       aim: stroke === null ? this.#resolveAim() : null,

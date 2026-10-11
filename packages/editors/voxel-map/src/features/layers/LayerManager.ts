@@ -80,7 +80,7 @@ export class LayerManager extends WorkspaceElement {
       workspace.usage.subscribe("change", () => this.requestUpdate()),
       selection.subscribe("change", (current) => {
         this._selection = current;
-        this.#expandLayerOf(current);
+        this.#expandSelectedLayer(current);
       })
     ];
   }
@@ -221,7 +221,7 @@ export class LayerManager extends WorkspaceElement {
     );
   }
 
-  #expandLayerOf(
+  #expandSelectedLayer(
     selection: LayerRef | null
   ): void {
     if (selection?.kind !== "object") {

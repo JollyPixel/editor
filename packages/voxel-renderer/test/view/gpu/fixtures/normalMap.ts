@@ -103,7 +103,7 @@ export async function renderNormalScene(
     new THREE.Texture(await tileImage(() => "#ffffff")),
     { normal }
   );
-  const atlas = view.atlases.atlas("atlas");
+  const atlas = view.atlases.requireLoadedAtlas("atlas");
   atlas.texture.needsUpdate = true;
   if (atlas.normal) {
     atlas.normal.needsUpdate = true;

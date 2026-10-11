@@ -85,7 +85,7 @@ export class BlocksetAtlas<
     }
   }
 
-  uvFor(
+  computeTileUvRegion(
     col: number,
     row: number,
     size?: number,
@@ -115,7 +115,7 @@ export class BlocksetAtlas<
     this.normal.needsUpdate = true;
   }
 
-  disposeReplacedBy(
+  disposeUnsharedTextures(
     next: BlocksetAtlas<TTexture>
   ): void {
     const kept = next.#textures();

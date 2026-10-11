@@ -182,7 +182,7 @@ export class ChunkPipeline {
 
     for (const layer of this.#world.getLayers()) {
       for (const chunk of layer.getDirtyChunks()) {
-        if (viewport.contains(this.#layout.originOf(layer, chunk), false)) {
+        if (viewport.contains(this.#layout.chunkWorldOrigin(layer, chunk), false)) {
           return false;
         }
       }
@@ -252,13 +252,13 @@ export class ChunkPipeline {
     let grew = false;
 
     for (const { layer, chunk } of this.#world.getAllDirtyChunks()) {
-      const origin = this.#layout.originOf(layer, chunk);
+      const origin = this.#layout.chunkWorldOrigin(layer, chunk);
       if (!viewport.contains(origin, false)) {
         continue;
       }
 
       chunk.dirty = false;
-      const target = this.#layout.targetOf(layer, chunk);
+      const target = this.#layout.resolveTarget(layer, chunk);
       const placed = this.#meshes.targetContaining(chunk);
       if (placed !== undefined && placed.key !== target?.key) {
         grew = this.#retire(placed) || grew;
@@ -283,7 +283,7 @@ export class ChunkPipeline {
     offload: boolean
   ): boolean {
     if (!viewport.contains(target.origin, false)) {
-      const members = this.#layout.membersOf(target);
+      const members = this.#layout.collectMembers(target);
       if (members.length > 0) {
         for (const { chunk } of members) {
           chunk.dirty = true;

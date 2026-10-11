@@ -48,7 +48,7 @@ describe("BlocksetAtlases.registerTexture", () => {
     manager.blocksets.add(makeAtlasDef({ id: "auto", cols: undefined, rows: undefined }));
     const atlas = manager.registerTexture("auto", mockTexture(64, 32));
 
-    assert.equal(manager.atlas("auto"), atlas);
+    assert.equal(manager.requireLoadedAtlas("auto"), atlas);
     assert.equal(atlas.def.cols, 4);
     assert.equal(atlas.def.rows, 2);
   });
@@ -82,11 +82,11 @@ describe("BlocksetAtlases.registerTexture", () => {
     manager.registerTexture("atlas", texture, normal.texture);
     manager.registerTexture("atlas", texture, normal.texture);
     assert.equal(normal.disposed, 0);
-    assert.equal(manager.atlas("atlas").normal, normal.texture);
+    assert.equal(manager.requireLoadedAtlas("atlas").normal, normal.texture);
 
     manager.registerTexture("atlas", texture);
     assert.equal(normal.disposed, 1);
-    assert.equal(manager.atlas("atlas").normal, null);
+    assert.equal(manager.requireLoadedAtlas("atlas").normal, null);
   });
 });
 
@@ -118,11 +118,11 @@ describe("BlocksetAtlases.get", () => {
   });
 });
 
-describe("BlocksetAtlases.atlas", () => {
+describe("BlocksetAtlases.requireLoadedAtlas", () => {
   it("throws when no blocksets are declared", () => {
     const manager = new BlocksetAtlases();
 
-    assert.throws(() => manager.atlas(), /no blocksets have been loaded/);
+    assert.throws(() => manager.requireLoadedAtlas(), /no blocksets have been loaded/);
   });
 
   it("throws for a blockset without texture", () => {
@@ -130,7 +130,7 @@ describe("BlocksetAtlases.atlas", () => {
     registerAtlas(manager);
 
     assert.throws(
-      () => manager.atlas("unknown"),
+      () => manager.requireLoadedAtlas("unknown"),
       /blockset "unknown" is not loaded/
     );
   });
@@ -141,40 +141,40 @@ describe("BlocksetAtlases.atlas", () => {
     const walls = mockTexture(32, 32);
     registerAtlas(manager, makeAtlasDef({ id: "walls", cols: 2, rows: 2 }), walls);
 
-    assert.equal(manager.atlas("walls").texture, walls);
-    assert.equal(manager.atlas("walls").uvFor(0, 0).scaleU, 15 / 32);
+    assert.equal(manager.requireLoadedAtlas("walls").texture, walls);
+    assert.equal(manager.requireLoadedAtlas("walls").computeTileUvRegion(0, 0).scaleU, 15 / 32);
   });
 });
 
-describe("BlocksetAtlases.resolve", () => {
+describe("BlocksetAtlases.resolveAtlas", () => {
   it("returns the atlas of a declared blockset", () => {
     const manager = new BlocksetAtlases();
     const atlas = registerAtlas(manager);
 
-    assert.equal(manager.resolve("atlas"), atlas);
-    assert.equal(manager.resolve(), atlas);
+    assert.equal(manager.resolveAtlas("atlas"), atlas);
+    assert.equal(manager.resolveAtlas(), atlas);
   });
 
   it("returns undefined while a declared blockset has no texture", () => {
     const manager = new BlocksetAtlases();
     manager.blocksets.add(makeAtlasDef({ id: "later" }));
 
-    assert.equal(manager.resolve("later"), undefined);
+    assert.equal(manager.resolveAtlas("later"), undefined);
   });
 
   it("falls back to one shared missing atlas without bumping the version", () => {
     const manager = new BlocksetAtlases();
     const before = manager.version;
 
-    const missing = manager.resolve("gone");
+    const missing = manager.resolveAtlas("gone");
 
     assert.equal(missing?.def.id, MISSING_BLOCKSET_ID);
     assert.deepEqual(
       [missing?.def.cols, missing?.def.rows],
       [1, 1]
     );
-    assert.equal(manager.resolve(), missing);
-    assert.equal(manager.resolve(MISSING_BLOCKSET_ID), missing);
+    assert.equal(manager.resolveAtlas(), missing);
+    assert.equal(manager.resolveAtlas(MISSING_BLOCKSET_ID), missing);
     assert.equal(manager.version, before);
   });
 
@@ -218,7 +218,7 @@ describe("BlocksetAtlases.syncAtlases", () => {
     );
 
     assert.deepEqual(manager.syncAtlases(), ["a"]);
-    const atlas = manager.atlas("a");
+    const atlas = manager.requireLoadedAtlas("a");
     assert.equal(atlas.def.tileSize, 32);
     assert.equal(atlas.def.cols, 2);
     assert.equal(atlas.texture, a.texture);
@@ -233,7 +233,7 @@ describe("BlocksetAtlases.syncAtlases", () => {
     manager.blocksets.declare(makeAtlasDef({ tileSize: 32 }));
 
     assert.deepEqual(manager.syncAtlases(), ["atlas"]);
-    assert.equal(manager.atlas("atlas").normal, normal);
+    assert.equal(manager.requireLoadedAtlas("atlas").normal, normal);
   });
 
   it("disposes the normal texture of a dropped atlas", () => {
@@ -280,7 +280,7 @@ describe("BlocksetAtlases.refreshAverages", () => {
     const data = new Uint8Array(4);
     const texture = readableTexture(1, 1, data);
     registerAtlas(manager, makeAtlasDef(), texture);
-    const table = AtlasAverages.of(texture)!;
+    const table = AtlasAverages.fromTexture(texture)!;
 
     data.set([255, 255, 255, 255]);
     texture.needsUpdate = true;

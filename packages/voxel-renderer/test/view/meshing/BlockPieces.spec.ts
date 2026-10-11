@@ -52,13 +52,13 @@ function uvsOf(
   pieces: BlockPieces,
   block: ReturnType<typeof blockOf>
 ): number[] {
-  return Array.from(pieces.geometryOf(block)!.getAttribute("uv").array);
+  return Array.from(pieces.buildGeometry(block)!.getAttribute("uv").array);
 }
 
 describe("BlockPieces", () => {
   it("keeps the geometry in block space", () => {
     const { pieces } = setup();
-    const geometry = pieces.geometryOf(blockOf({ shapeId: "ramp" }))!;
+    const geometry = pieces.buildGeometry(blockOf({ shapeId: "ramp" }))!;
     geometry.computeBoundingBox();
 
     assert.deepEqual(geometry.boundingBox!.min.toArray(), [0, 0, 0]);
@@ -68,8 +68,8 @@ describe("BlockPieces", () => {
   it("orients the geometry with the given transform", () => {
     const { pieces } = setup();
     const block = blockOf({ shapeId: "ramp" });
-    const identity = pieces.geometryOf(block)!;
-    const turned = pieces.geometryOf(block, new VoxelTransform({ rotation: 1 }))!;
+    const identity = pieces.buildGeometry(block)!;
+    const turned = pieces.buildGeometry(block, new VoxelTransform({ rotation: 1 }))!;
 
     assert.notDeepEqual(
       turned.getAttribute("position").array,
@@ -82,9 +82,9 @@ describe("BlockPieces", () => {
     const { pieces } = setup();
     const block = blockOf({ shapeId: "missing" });
 
-    assert.equal(pieces.geometryOf(block), null);
-    assert.equal(pieces.pieceOf(block), null);
-    assert.deepEqual(pieces.emptySlotsOf(block), []);
+    assert.equal(pieces.buildGeometry(block), null);
+    assert.equal(pieces.resolvePiece(block), null);
+    assert.deepEqual(pieces.findEmptySlots(block), []);
   });
 
   it("turns the tile inside the face like the chunk mesher", () => {
@@ -93,8 +93,8 @@ describe("BlockPieces", () => {
     const turned = blockOf({
       defaultTexture: { blocksetId: "atlas", col: 1, row: 1, rotation: 1 }
     });
-    const region = atlas.uvFor(1, 1, undefined, undefined, 1);
-    const geometry = pieces.geometryOf(turned)!;
+    const region = atlas.computeTileUvRegion(1, 1, undefined, undefined, 1);
+    const geometry = pieces.buildGeometry(turned)!;
     const { uvs } = buildShapeGeometry(
       BlockShapeRegistry.createDefault().get("cube")!
     );
@@ -114,9 +114,9 @@ describe("BlockPieces", () => {
   it("draws a block of an undeclared blockset with the missing texture", () => {
     const { atlases, pieces } = setup();
     const block = blockOf({ defaultTexture: { blocksetId: "gone", col: 3, row: 3 } });
-    const missing = atlases.resolve("gone")!;
+    const missing = atlases.resolveAtlas("gone")!;
 
-    assert.equal(pieces.textureOf(block), missing.texture);
+    assert.equal(pieces.resolveTexture(block), missing.texture);
     assert.ok(uvsOf(pieces, block).every((uv) => uv >= 0 && uv <= 1));
   });
 
@@ -130,9 +130,9 @@ describe("BlockPieces", () => {
         top: { blocksetId: "atlas", col: 1, row: 0 }
       }
     });
-    const groups = pieces.geometryOf(block)!.groups;
+    const groups = pieces.buildGeometry(block)!.groups;
 
-    assert.deepEqual(pieces.emptySlotsOf(block), ["top"]);
+    assert.deepEqual(pieces.findEmptySlots(block), ["top"]);
     assert.equal(groups[2].materialIndex, BLOCK_PIECE_EMPTY_GROUP);
     assert.ok(groups
       .filter((_, index) => index !== 2)
@@ -142,7 +142,7 @@ describe("BlockPieces", () => {
   it("treats a slot without a tile as empty by default", () => {
     const { pieces } = setup();
 
-    assert.deepEqual(pieces.emptySlotsOf(blockOf()), [
+    assert.deepEqual(pieces.findEmptySlots(blockOf()), [
       "right",
       "left",
       "top",
@@ -156,13 +156,13 @@ describe("BlockPieces", () => {
     const { atlases, pieces } = setup();
     const block = blockOf({ defaultTexture: { blocksetId: "atlas", col: 0, row: 0 } });
 
-    const before = pieces.pieceOf(block);
-    assert.equal(pieces.pieceOf(block, VoxelTransform.Identity), before);
-    assert.notEqual(pieces.pieceOf(block, new VoxelTransform({ rotation: 2 })), before);
+    const before = pieces.resolvePiece(block);
+    assert.equal(pieces.resolvePiece(block, VoxelTransform.Identity), before);
+    assert.notEqual(pieces.resolvePiece(block, new VoxelTransform({ rotation: 2 })), before);
 
     const texture = mockTexture();
     atlases.registerTexture("atlas", texture);
-    const after = pieces.pieceOf(block);
+    const after = pieces.resolvePiece(block);
 
     assert.notEqual(after, before);
     assert.equal(after?.texture, texture);

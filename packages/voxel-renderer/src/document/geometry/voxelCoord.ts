@@ -7,7 +7,7 @@ import type { VoxelCoord } from "../world/types.ts";
  */
 const kSurfaceEpsilon = 1e-4;
 
-export function voxelCellOf(
+export function floorVoxelPosition(
   point: VoxelCoord
 ): VoxelCoord {
   return {
@@ -17,12 +17,12 @@ export function voxelCellOf(
   };
 }
 
-export function voxelPositionOf(
+export function resolveSurfaceCell(
   point: VoxelCoord,
   normal: VoxelCoord,
   side: "front" | "back" = "front"
 ): VoxelCoord {
-  const cell = voxelCellOf({
+  const cell = floorVoxelPosition({
     x: point.x - (normal.x * kSurfaceEpsilon),
     y: point.y - (normal.y * kSurfaceEpsilon),
     z: point.z - (normal.z * kSurfaceEpsilon)

@@ -416,7 +416,7 @@ export class ChunkMeshWorkers {
     else if (job.definitionsVersion === this.#definitionsVersion) {
       const { faceTemplates } = this.#options.meshBuilder;
       for (const template of response.templates) {
-        slot.templateIds.push(faceTemplates.idOf(template));
+        slot.templateIds.push(faceTemplates.internFace(template));
       }
     }
     if (this.#latest.get(job.plan.target.key) === job) {
@@ -516,7 +516,7 @@ function remapTemplates(
   templateIds: readonly number[]
 ): void {
   const { words, faceCount } = data;
-  const faceWords = PulledChunkGeometry.faceWordsOf(data);
+  const faceWords = PulledChunkGeometry.faceWordCount(data);
   for (let face = 0; face < faceCount; face++) {
     const index = (face * faceWords) + 1;
     const packed = words[index];

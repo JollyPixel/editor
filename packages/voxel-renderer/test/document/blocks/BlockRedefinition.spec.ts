@@ -8,7 +8,7 @@ import {
   type BlockDefinition,
   type ResolvedBlockDefinition
 } from "../../../src/document/blocks/index.ts";
-import { redefinitionOf } from "../../../src/document/blocks/BlockRedefinition.ts";
+import { classifyBlockRedefinition } from "../../../src/document/blocks/BlockRedefinition.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
 import { CUBE_ID } from "../../helpers/ids.ts";
 
@@ -18,9 +18,9 @@ function cube(
   return resolveBlockDefinition(makeBlockDef(CUBE_ID, "cube", overrides));
 }
 
-describe("redefinitionOf", () => {
+describe("classifyBlockRedefinition", () => {
   it("reports a block with no previous definition as added", () => {
-    assert.equal(redefinitionOf(undefined, cube()), "added");
+    assert.equal(classifyBlockRedefinition(undefined, cube()), "added");
   });
 
   it("reports a change of name or properties alone as metadata", () => {
@@ -29,11 +29,11 @@ describe("redefinitionOf", () => {
       properties: { hardness: 3 }
     });
 
-    assert.equal(redefinitionOf(cube(), next), "metadata");
+    assert.equal(classifyBlockRedefinition(cube(), next), "metadata");
   });
 
   it("reports an identical definition as metadata", () => {
-    assert.equal(redefinitionOf(cube(), cube()), "metadata");
+    assert.equal(classifyBlockRedefinition(cube(), cube()), "metadata");
   });
 
   it("reports moved tile regions as tiles, whatever happened to the name", () => {
@@ -45,9 +45,9 @@ describe("redefinitionOf", () => {
       faceTextures: { top: { col: 1, row: 0 } }
     });
 
-    assert.equal(redefinitionOf(cube(), moved), "tiles");
+    assert.equal(classifyBlockRedefinition(cube(), moved), "tiles");
     assert.equal(
-      redefinitionOf(cube({ faceTextures: { top: { col: 0, row: 0 } } }), movedFace),
+      classifyBlockRedefinition(cube({ faceTextures: { top: { col: 0, row: 0 } } }), movedFace),
       "tiles"
     );
   });
@@ -60,16 +60,16 @@ describe("redefinitionOf", () => {
       defaultTexture: { col: 0, row: 0, blocksetId: "stone" }
     });
 
-    assert.equal(redefinitionOf(cube(), turned), "mesh");
-    assert.equal(redefinitionOf(cube(), relinked), "mesh");
+    assert.equal(classifyBlockRedefinition(cube(), turned), "mesh");
+    assert.equal(classifyBlockRedefinition(cube(), relinked), "mesh");
   });
 
   it("reports a change of shape, alpha mode or blend group as occlusion", () => {
     const slab = resolveBlockDefinition(makeBlockDef(CUBE_ID, "slabBottom"));
 
-    assert.equal(redefinitionOf(cube(), slab), "occlusion");
-    assert.equal(redefinitionOf(cube(), cube({ alphaMode: "mask" })), "occlusion");
-    assert.equal(redefinitionOf(cube(), cube({ blendGroup: "grass" })), "occlusion");
+    assert.equal(classifyBlockRedefinition(cube(), slab), "occlusion");
+    assert.equal(classifyBlockRedefinition(cube(), cube({ alphaMode: "mask" })), "occlusion");
+    assert.equal(classifyBlockRedefinition(cube(), cube({ blendGroup: "grass" })), "occlusion");
   });
 
   it("ignores the key order of the face textures", () => {
@@ -86,6 +86,6 @@ describe("redefinitionOf", () => {
       }
     });
 
-    assert.equal(redefinitionOf(previous, next), "metadata");
+    assert.equal(classifyBlockRedefinition(previous, next), "metadata");
   });
 });

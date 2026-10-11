@@ -44,7 +44,7 @@ import { FACES, FACE_OPPOSITE } from "../../../document/geometry/faceDirection.t
 import { splitBoundaryFace } from "../neighbourhood/splitBoundaryFace.ts";
 import { isFullQuad } from "./fullQuad.ts";
 import {
-  tileUvOf,
+  resolveTileUv,
   type TileUv
 } from "./tileUv.ts";
 import { FaceRegionTable } from "../pulling/FaceRegionTable.ts";
@@ -251,7 +251,7 @@ export class BlockVariantCache {
     this.#variantTable = grown;
   }
 
-  blendMatchOf(
+  resolveBlendMatch(
     face: BlockVariantFace,
     group: BlendGroup,
     neighbour: BlockVariant
@@ -306,7 +306,7 @@ export class BlockVariantCache {
     };
   }
 
-  mergedOf(
+  resolveMerged(
     packed: PackedVoxel,
     partner: PackedVoxel
   ): MergedVariant | null {
@@ -376,14 +376,14 @@ export class BlockVariantCache {
     };
   }
 
-  occlusionMaskOf(
+  resolveOcclusionMask(
     blockId: number,
     transform: number
   ): number {
     return this.#occlusionEntry(blockId, transform) & kOcclusionFaceMask;
   }
 
-  selfOcclusionMaskOf(
+  resolveSelfOcclusionMask(
     blockId: number,
     transform: number
   ): number {
@@ -441,13 +441,13 @@ export class BlockVariantCache {
     return this.#geometryKeys[slot];
   }
 
-  frontSlotOf(
+  resolveFrontSlot(
     slot: number
   ): number {
     let front = this.#frontSlots[slot];
     if (front === undefined) {
       const key = this.#geometryKeys[slot];
-      front = this.#slotFor(key.blocksetId, new BlockSurface({
+      front = this.#internGeometrySlot(key.blocksetId, new BlockSurface({
         ...key.surface,
         side: "front"
       }));
@@ -457,27 +457,27 @@ export class BlockVariantCache {
     return front;
   }
 
-  blendedSlotOf(
+  resolveBlendedSlot(
     slot: number
   ): number {
     let blended = this.#blendedSlots[slot];
     if (blended === undefined) {
       const key = this.#geometryKeys[slot];
-      blended = this.#slotFor(key.blocksetId, key.surface, true);
+      blended = this.#internGeometrySlot(key.blocksetId, key.surface, true);
       this.#blendedSlots[slot] = blended;
     }
 
     return blended;
   }
 
-  frontFaceOf(
+  resolveFrontFace(
     face: BlockVariantFace
   ): BlockVariantFace {
     let front = this.#frontFaces.get(face);
     if (front === undefined) {
       front = {
         ...face,
-        slot: this.frontSlotOf(face.slot)
+        slot: this.resolveFrontSlot(face.slot)
       };
       this.#frontFaces.set(face, front);
     }
@@ -504,7 +504,7 @@ export class BlockVariantCache {
     return covered;
   }
 
-  #slotFor(
+  #internGeometrySlot(
     blocksetId: string,
     surface: BlockSurface,
     blended = false
@@ -567,27 +567,27 @@ export class BlockVariantCache {
     blockDef: ResolvedBlockDefinition,
     shape: BlockShape
   ): ResolvedTiles {
-    const textures = BlockTextures.of(blockDef);
+    const textures = BlockTextures.fromBlock(blockDef);
     const tiles: SlotTile[] = [];
     let pending = false;
     for (const textureSlot of shapeSlots(shape)) {
-      const tileRef = textures.forSlot(textureSlot.id);
+      const tileRef = textures.resolveSlotTexture(textureSlot.id);
       if (!tileRef) {
         continue;
       }
 
-      const atlas = this.#atlases.resolve(tileRef.blocksetId);
+      const atlas = this.#atlases.resolveAtlas(tileRef.blocksetId);
       if (!atlas) {
         pending = true;
         continue;
       }
 
-      const tile = tileUvOf(
+      const tile = resolveTileUv(
         atlas,
         tileRef,
-        textures.spanFor(textureSlot.id, textureSlot.span)
+        textures.resolveSlotSpan(textureSlot.id, textureSlot.span)
       );
-      const regionId = this.#regions.idOf(blockDef.id, textureSlot.id);
+      const regionId = this.#regions.internRegion(blockDef.id, textureSlot.id);
       this.#regions.write(regionId, tile.region);
       tiles.push({
         textureSlot,
@@ -715,7 +715,7 @@ export class BlockVariantCache {
 
     return {
       cull,
-      slot: this.#slotFor(blocksetId, surface),
+      slot: this.#internGeometrySlot(blocksetId, surface),
       vertexCount,
       indexCount: vertexCount === 4 ? 6 : 3,
       positions,

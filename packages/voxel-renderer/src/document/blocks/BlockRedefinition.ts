@@ -12,26 +12,26 @@ export type BlockRedefinition =
   | "mesh"
   | "occlusion";
 
-export function redefinitionOf(
+export function classifyBlockRedefinition(
   previous: ResolvedBlockDefinition | undefined,
   next: ResolvedBlockDefinition
 ): BlockRedefinition {
   if (previous === undefined) {
     return "added";
   }
-  if (occlusionKeyOf(previous) !== occlusionKeyOf(next)) {
+  if (occlusionKey(previous) !== occlusionKey(next)) {
     return "occlusion";
   }
-  if (meshKeyOf(previous, false) !== meshKeyOf(next, false)) {
+  if (meshKey(previous, false) !== meshKey(next, false)) {
     return "mesh";
   }
 
-  return meshKeyOf(previous, true) === meshKeyOf(next, true) ?
+  return meshKey(previous, true) === meshKey(next, true) ?
     "metadata" :
     "tiles";
 }
 
-function occlusionKeyOf(
+function occlusionKey(
   block: ResolvedBlockDefinition
 ): string {
   return JSON.stringify([
@@ -42,7 +42,7 @@ function occlusionKeyOf(
   ]);
 }
 
-function meshKeyOf(
+function meshKey(
   block: ResolvedBlockDefinition,
   withTileRegions: boolean
 ): string {
@@ -54,17 +54,17 @@ function meshKeyOf(
     ...meshed
   } = block;
   const faces = sortedEntries(faceTextures).map(
-    ([slot, tile]) => [slot, tileKeyOf(tile, withTileRegions)]
+    ([slot, tile]) => [slot, tileKey(tile, withTileRegions)]
   );
 
   return JSON.stringify([
     sortedEntries(meshed),
-    defaultTexture && tileKeyOf(defaultTexture, withTileRegions),
+    defaultTexture && tileKey(defaultTexture, withTileRegions),
     faces
   ]);
 }
 
-function tileKeyOf(
+function tileKey(
   tile: ResolvedTileRef,
   withRegion: boolean
 ): Array<string | number | null> {

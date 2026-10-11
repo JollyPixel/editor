@@ -16,7 +16,7 @@ export type BlockUsageStoreEvents = {
 
 export type BlockUsageSource = Pick<
   VoxelBlockInspector,
-  "stats" | "usageOf" | "blocksetUsageOf"
+  "stats" | "inspectUsage" | "inspectBlocksetUsage"
 >;
 
 export interface BlockUsageStoreOptions {
@@ -55,19 +55,19 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
     return this.#stats;
   }
 
-  usageOf(
+  inspectUsage(
     blockId: number
   ): BlockUsage {
     return new BlockUsage(
-      this.#source.usageOf(blockId)
+      this.#source.inspectUsage(blockId)
     );
   }
 
-  blocksetUsageOf(
+  inspectBlocksetUsage(
     blocksetId: string
   ): BlocksetUsage {
     return new BlocksetUsage(
-      this.#source.blocksetUsageOf(blocksetId)
+      this.#source.inspectBlocksetUsage(blocksetId)
     );
   }
 

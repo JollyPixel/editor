@@ -106,7 +106,7 @@ second shapes included, turn with the placement.
 
 The `{ min, size }` box `placedVoxels()` fills.
 
-#### `placedPositionFor(min: Vector3Like, transform?: VoxelTransform): VoxelCoord`
+#### `placementPositionFromMinCorner(min: Vector3Like, transform?: VoxelTransform): VoxelCoord`
 
 The placement position whose placed box starts at `min`.
 

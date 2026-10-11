@@ -39,7 +39,7 @@ export class VoxelLayerStack implements Iterable<VoxelLayer> {
     return this.#layers.find((layer) => layer.id === id);
   }
 
-  indexOf(
+  findIndex(
     layer: VoxelLayer
   ): number {
     return this.#layers.indexOf(layer);

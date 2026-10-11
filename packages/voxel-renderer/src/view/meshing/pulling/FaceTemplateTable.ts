@@ -70,7 +70,7 @@ export class FaceTemplateTable {
     return this.#texture;
   }
 
-  idOf(
+  internFace(
     face: FaceTemplate
   ): number {
     const known = this.#ids.get(face);
@@ -89,7 +89,7 @@ export class FaceTemplateTable {
     return id;
   }
 
-  diagonalFlipOf(
+  resolveDiagonalFlip(
     id: number,
     ao: number
   ): number {

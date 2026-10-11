@@ -47,7 +47,7 @@ export class ChunkLightTextures {
     return this.#textures.size;
   }
 
-  textureFor(
+  resolveLightTexture(
     target: LitTarget
   ): THREE.Data3DTexture | null {
     const entry = this.#textures.get(target.key);
@@ -135,7 +135,7 @@ export class ChunkLightTextures {
     this.#field.copyBox(origin.x - 1, origin.y - 1, origin.z - 1, span, cells);
 
     for (let i = 0; i < cells.length; i++) {
-      texels[i] = falloff.texelOf(cells[i]);
+      texels[i] = falloff.decodeTexel(cells[i]);
     }
   }
 }

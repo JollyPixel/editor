@@ -48,7 +48,7 @@ describe("ChunkLightTextures", () => {
     const world = litWorld();
     world.field.update();
 
-    assert.equal(texturesOf(world).textureFor(kOrigin), null);
+    assert.equal(texturesOf(world).resolveLightTexture(kOrigin), null);
   });
 
   it("stores the chunk and a one-cell apron as stacked z slices", () => {
@@ -57,7 +57,7 @@ describe("ChunkLightTextures", () => {
     world.place({ x: 3, y: 0, z: 0 }, STONE_ID);
     world.field.update();
 
-    const texture = texturesOf(world).textureFor(kOrigin);
+    const texture = texturesOf(world).resolveLightTexture(kOrigin);
 
     assert.ok(texture instanceof THREE.Data3DTexture);
     assert.equal(texture.image.width, kSpan);
@@ -75,7 +75,7 @@ describe("ChunkLightTextures", () => {
     const textures = texturesOf(world);
     place({ x: 0, y: 0, z: 0 }, GLOW_ID);
     field.update();
-    const texture = textures.textureFor(kOrigin);
+    const texture = textures.resolveLightTexture(kOrigin);
     const version = texture?.version ?? 0;
 
     place({ x: 5, y: 0, z: 0 }, STONE_ID);

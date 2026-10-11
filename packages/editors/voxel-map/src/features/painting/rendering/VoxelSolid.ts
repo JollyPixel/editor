@@ -16,7 +16,7 @@ const kBisections = 8;
 type Vec3 = [number, number, number];
 
 export class VoxelSolid {
-  static of(
+  static fromCells(
     cells: Iterable<VoxelCoord>
   ): VoxelSolid {
     const list = [...cells].map<Vec3>((cell) => [cell.x, cell.y, cell.z]);
@@ -34,7 +34,7 @@ export class VoxelSolid {
       new Uint8Array(span[0] * span[1] * span[2])
     );
     for (const cell of list) {
-      solid.cells[indexOf(solid, cell)] = 1;
+      solid.cells[cellIndex(solid, cell)] = 1;
     }
 
     return solid;
@@ -76,7 +76,7 @@ function openRuns(
   const { edges, edgeFaces } = shell;
   const offset = index * 6;
   const head = pointAt(edges, offset);
-  const outward = outwardOf(edgeFaces[index], head, eye);
+  const outward = resolveContourNudge(edgeFaces[index], head, eye);
   if (outward === null) {
     return [];
   }
@@ -153,7 +153,7 @@ function boundaryBetween(
   return shown;
 }
 
-function outwardOf(
+function resolveContourNudge(
   faces: number,
   point: Vec3,
   eye: ShellPoint
@@ -227,7 +227,7 @@ function crosses(
   while (kAxes.every(
     (axis) => cell[axis] >= min[axis] && cell[axis] < min[axis] + span[axis]
   )) {
-    if (solid.cells[indexOf(solid, cell)] === 1) {
+    if (solid.cells[cellIndex(solid, cell)] === 1) {
       return true;
     }
 
@@ -241,7 +241,7 @@ function crosses(
   return false;
 }
 
-function indexOf(
+function cellIndex(
   solid: VoxelSolid,
   cell: Vec3
 ): number {
