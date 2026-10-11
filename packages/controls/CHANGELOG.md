@@ -1,5 +1,12 @@
 # @jolly-pixel/controls
 
+## 4.0.0
+
+### Major Changes
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Breaking: `publishFrameState()` is replaced by `publish(reader)` on `Input` and every device, with `InputReader` `"step"` or `"frame"`; `sample()` reads input without publishing, and `update()` is `sample()` then `publish("step")`.
+  Each reader sees every edge once, so a fixed-step host samples once per frame and a frame without a step no longer drops edges.
+
 ## 3.0.0
 
 ### Major Changes

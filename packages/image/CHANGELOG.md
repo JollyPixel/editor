@@ -1,5 +1,11 @@
 # @jolly-pixel/image
 
+## 2.0.1
+
+### Patch Changes
+
+- [#851](https://github.com/JollyPixel/editor/pull/851) [`797aeb9`](https://github.com/JollyPixel/editor/commit/797aeb960560778e6f71219197859bb001f2045a) Thanks [@fraxken](https://github.com/fraxken)! - Faster PNG encoding and decoding: specialized branchless scanline filters, a single-pass adaptive filter score, SWAR unfiltering, palette lookup tables, a zero-copy RGBA path, slicing-by-8 CRC-32, and inflation into a preallocated buffer.
+
 ## 2.0.0
 
 ### Major Changes

@@ -1,5 +1,19 @@
 # @jolly-pixel/loop
 
+## 2.0.0
+
+### Major Changes
+
+- [#846](https://github.com/JollyPixel/editor/pull/846) [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a) Thanks [@fraxken](https://github.com/fraxken)! - Rename `RafFrameSource` to `RequestAnimationFrameSource` (and `RafFrameSourceOptions` to `RequestAnimationFrameSourceOptions`).
+
+### Minor Changes
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Time scale support: `FrameSchedule.unscaledDelta`, `GameLoop.step()` for frame-by-frame debugging, and a step budget that grows with `timeScale` above 1.
+  Add `world.time` (game, wall-clock and fixed-step time); `Camera3DControls` and `OrbitFlyCamera` move in wall-clock time, so they work in slow motion and while paused.
+  `World.tick` samples input once per frame and publishes it to each fixed step and to the rendered frame, so a press on a frame without a step reaches the next one.
+
+- [#908](https://github.com/JollyPixel/editor/pull/908) [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderDelta`/`unscaledRenderDelta` so `update` and `world.time` include frames skipped by `maxFps`; renders land on the nearest frame so a cap at the display rate no longer drops frames.
+
 ## 1.1.0
 
 ### Minor Changes

@@ -1,5 +1,26 @@
 # @jolly-pixel/runtime
 
+## 6.1.0
+
+### Minor Changes
+
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
+  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+
+- [#957](https://github.com/JollyPixel/editor/pull/957) [`063705c`](https://github.com/JollyPixel/editor/commit/063705c0799707d75118cf98729a0f693082ecfc) Thanks [@fraxken](https://github.com/fraxken)! - Add `runtime.statsHud` and `runtime.viewHelper`, each with a `hidden` property, so the corner performance HUD and the axis gizmo can be hidden without remounting them.
+
+- [#917](https://github.com/JollyPixel/editor/pull/917) [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` emits `deviceLost`, and the runtime logs it as an error. The model loader decodes Meshopt-compressed glTF, and `Transform` no longer allocates on each call.
+  `VoxelView.meshVersion` counts chunk mesh changes, so a host can keep a static shadow map.
+
+### Patch Changes
+
+- [#855](https://github.com/JollyPixel/editor/pull/855) [`13a706d`](https://github.com/JollyPixel/editor/commit/13a706dc84a7dfaafc925ead7932eb6199533203) Thanks [@fraxken](https://github.com/fraxken)! - With `renderOnDemand`, the runtime keeps rendering while the pointer hovers the canvas instead of idling a few frames after the last input.
+  An idle runtime now samples connected gamepads once per animation frame and wakes on a press, so the first press is no longer missed.
+- Updated dependencies [[`c0643f9`](https://github.com/JollyPixel/editor/commit/c0643f9978941d93eb2fee7ca4d524fc20e23339), [`86dbb95`](https://github.com/JollyPixel/editor/commit/86dbb95270aae8eb3cc89a76d518a51fe93faebf), [`5d51844`](https://github.com/JollyPixel/editor/commit/5d51844c63797adadd53070d1080e1c151cf343e), [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce), [`98cbd2b`](https://github.com/JollyPixel/editor/commit/98cbd2b36acf3752a62d18a2bb5b6c8a505cc311), [`912d0f7`](https://github.com/JollyPixel/editor/commit/912d0f702ab8697c5a501df6289674e97c498059), [`a23ea74`](https://github.com/JollyPixel/editor/commit/a23ea74dca38f8684e890f0abed659277ccc230e), [`9ed0ad8`](https://github.com/JollyPixel/editor/commit/9ed0ad82e1bc15518d64314cf1859dee71c1bb5d), [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb), [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875), [`66697bd`](https://github.com/JollyPixel/editor/commit/66697bd469e84f261a4b1a018720b92d33befd04), [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72), [`a75ee6d`](https://github.com/JollyPixel/editor/commit/a75ee6dc5ef94c274f0f3b69d8eeff73e018e495), [`e1808f6`](https://github.com/JollyPixel/editor/commit/e1808f6a02cf3569d5838a601dcc0946d8fbb164), [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943), [`f724870`](https://github.com/JollyPixel/editor/commit/f72487033a8df5e7077e37780082c72f7c99688a), [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0), [`5e9f29d`](https://github.com/JollyPixel/editor/commit/5e9f29d41de26d6bc738f36e8cb5f80b03a55e90), [`3e9603a`](https://github.com/JollyPixel/editor/commit/3e9603ad94b7a4751a13e7232651a584b93a75e2), [`2f1c4ad`](https://github.com/JollyPixel/editor/commit/2f1c4ad18ecb8ce413d3951899c6096af666e9fb), [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3), [`d4b3ad1`](https://github.com/JollyPixel/editor/commit/d4b3ad1a7cab4677c23f671e391ae95b2dffe860), [`e780033`](https://github.com/JollyPixel/editor/commit/e7800335b131d45645d4a62459684993d8b87af8), [`4647e7d`](https://github.com/JollyPixel/editor/commit/4647e7dc2eeb6a9c331677fdc06440c4e049f556), [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b), [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36), [`d3cc3ee`](https://github.com/JollyPixel/editor/commit/d3cc3ee8679f691f130274eadd074ca717e52346)]:
+  - @jolly-pixel/ui@4.0.0
+  - @jolly-pixel/engine@7.1.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 6.0.0
 
 ### Major Changes
