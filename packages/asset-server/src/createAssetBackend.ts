@@ -29,6 +29,8 @@ import { CatalogExtension } from "./catalog/CatalogExtension.ts";
 import type { ArchiveLimits } from "./archive/ArchiveLimits.ts";
 import { backfillDependencies } from "./reconcile/backfillDependencies.ts";
 import { registerAssetRooms } from "./rooms/registerAssetRooms.ts";
+import { AssetTags } from "./tags/AssetTags.ts";
+import { ContentObjects } from "./objects/ContentObjects.ts";
 import {
   silentLogger,
   type Logger
@@ -101,6 +103,7 @@ export interface AssetBackend extends AsyncDisposable {
   readonly writer: AssetWriter;
   readonly catalog: CatalogProjection;
   readonly folders: CatalogFolders;
+  readonly tags: AssetTags;
 
   flush(
     assetId?: string
@@ -179,10 +182,12 @@ export async function createAssetBackend(
   await ensureStateGitignore(source, stateIgnores);
 
   const state = await ProjectionState.load(source, logger);
+  const objects = new ContentObjects(source, logger);
   const projector = new AssetProjector({
     source,
     eventStore,
     state,
+    objects,
     logger
   });
   projector.load();
@@ -214,6 +219,15 @@ export async function createAssetBackend(
     logger
   });
   scheduler.start();
+
+  const tags = new AssetTags({
+    eventStore,
+    projector,
+    writer,
+    flush,
+    objects,
+    logger
+  });
 
   const catalog = new CatalogProjection({ projector });
   const folders = new CatalogFolders({
@@ -309,6 +323,7 @@ export async function createAssetBackend(
       writer,
       catalog,
       folders,
+      tags,
       flush
     },
     maxContentBytes: catalogMaxContentBytes,
@@ -323,6 +338,7 @@ export async function createAssetBackend(
     writer,
     catalog,
     folders,
+    tags,
 
     flush,
     reconcile,

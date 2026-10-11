@@ -13,7 +13,10 @@ import path from "node:path";
 import * as EventStore from "#src/index.ts";
 import { createSqliteEventStore } from "#src/node.ts";
 import { SQL_SCHEMA } from "#src/persistence/sqlite/schema.ts";
-import { append } from "../helpers/backends.ts";
+import {
+  append,
+  tag
+} from "../helpers/backends.ts";
 
 describe("SqliteEventStore — durability", () => {
   test("data survives across instances backed by the same file", async(t) => {
@@ -166,6 +169,43 @@ describe("SqliteEventStore — journal", () => {
       { ...db.prepare("PRAGMA freelist_count").get() },
       { freelist_count: 0 }
     );
+  });
+});
+
+describe("SqliteEventStore — tags", () => {
+  test("a file made before tags gains the table and keeps tags across instances", async(t) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "event-store-tags-"));
+    t.after(
+      () => fs.rmSync(root, { force: true, recursive: true })
+    );
+
+    const file = path.join(root, "events.db");
+    const legacy = new DatabaseSync(file);
+    legacy.exec(`
+      CREATE TABLE events (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_type TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        event_data TEXT NOT NULL,
+        event_version INTEGER NOT NULL,
+        actor TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE (asset_id, event_version)
+      );
+      INSERT INTO events (asset_type, asset_id, event_type, event_data,
+        event_version, actor, created_at)
+      VALUES ('texture', 'a1', 'asset.created', '{}', 1, '{}', 'now');
+    `);
+    legacy.close();
+
+    const first = await EventStore.persistence.sqlite(file);
+    const created = tag(first, "a1", "v1");
+    first.close();
+
+    using second = await EventStore.persistence.sqlite(file);
+
+    assert.deepEqual(second.tags.list(), [created]);
   });
 });
 

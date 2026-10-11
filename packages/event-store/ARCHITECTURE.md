@@ -9,7 +9,7 @@ what events mean and how to rebuild state from them.
 ```mermaid
 flowchart TB
     Caller["Asset backend or other consumer"]
-    Store["EventStore<br/>writer · reader · subscribe · compact"]
+    Store["EventStore<br/>writer · reader · tags · subscribe · compact"]
     Log["EventLog<br/>internal backend contract"]
     Memory["MemoryEventLog<br/>instance-owned arrays and maps"]
     SQLite["SqliteEventLog<br/>SQLite events table"]
@@ -42,7 +42,7 @@ consumers validate stored data before treating it as a typed domain event.
 
 The main entry loads the Node-only SQLite backend when its factory is called.
 The separate `@jolly-pixel/event-store/node` entry exposes the SQLite factory
-directly. `SqliteEventLog.open` owns the whole opening: parent directories,
+directly. `SqliteDatabase.open` owns the whole opening: parent directories,
 vacuum mode, journal pragmas and schema.
 
 ## Appending an event
@@ -115,7 +115,8 @@ flowchart TB
 The caller supplies checkpoint event types because only the consumer knows
 which events can replace earlier state. `compact` permanently removes events
 before the newest matching checkpoint in each asset stream. Streams without a
-checkpoint stay intact. Surviving IDs and versions do not change, and the
+checkpoint stay intact. An event a tag points at survives, so a stream can keep
+gaps below its checkpoint. Surviving IDs and versions do not change, and the
 report counts removed events and assets with checkpoints. SQLite can run
 `VACUUM` after a deletion when `reclaim` is true; the memory backend has no
 file to reclaim.

@@ -26,13 +26,17 @@ flowchart TB
 5. The workspace registers host extensions, then attaches catalog and asset
    rooms to the server.
 
-The backend writes `.jollypixel/.gitignore` and uses two files under the
-source root:
+The backend writes `.jollypixel/.gitignore` and uses these entries under the
+state directory:
 
 - `assets.json` keeps path to ID mappings across checkouts. Commit it when
   IDs must remain stable without a local event log.
 - `state.json` stores local projection positions and failures. It can be
   rebuilt from the event store.
+- `objects/` holds backup copies of tagged content
+  and of external edits the projector was about to overwrite, listed in
+  `objects/index.json`. The ledger is read on the first backup, not at
+  startup. It is local, like `events.db`, and cannot be rebuilt.
 
 The default event log lives at `.jollypixel/events.db`. A host can supply an
 event store at another location.
@@ -43,6 +47,3 @@ Close the server before the workspace. Evicting an asset room may flush its
 snapshot. `workspace.close()` detaches the room resolver, closes the backend,
 and closes the event store only if the workspace created it. It does not
 close the server or source.
-
-See [Workspace](../docs/Workspace.md) and
-[AssetBackend](../docs/AssetBackend.md) for options and lifecycle methods.

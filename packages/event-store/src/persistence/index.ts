@@ -20,3 +20,5 @@ export const persistence = {
 
 export { EventLogClosedError } from "./errors/EventLogClosedError.ts";
 export { EventVersionConflictError } from "./errors/EventVersionConflictError.ts";
+export { EventTagConflictError } from "./errors/EventTagConflictError.ts";
+export { UnknownEventError } from "./errors/UnknownEventError.ts";

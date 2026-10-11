@@ -72,6 +72,7 @@ export async function catalogCommands(
 
 export interface CatalogConnection extends AsyncDisposable {
   readonly catalog: CatalogClient;
+  join(): Promise<CatalogClient>;
 }
 
 export async function connectCatalog(
@@ -84,16 +85,26 @@ export async function connectCatalog(
   });
   const detach = backend.attach(server);
   const transport = new LoopbackTransport({ server });
-  const client = new Client({
-    socket: () => transport.connect()
-  });
-  const catalog = await CatalogClient.connect(client);
+  const members: { catalog: CatalogClient; client: Client; }[] = [];
+
+  async function join(): Promise<CatalogClient> {
+    const client = new Client({
+      socket: () => transport.connect()
+    });
+    const catalog = await CatalogClient.connect(client);
+    members.push({ catalog, client });
+
+    return catalog;
+  }
 
   return {
-    catalog,
+    catalog: await join(),
+    join,
     async [Symbol.asyncDispose]() {
-      catalog.dispose();
-      client.destroy();
+      for (const { catalog, client } of members) {
+        catalog.dispose();
+        client.destroy();
+      }
       detach();
       await server.close();
     }

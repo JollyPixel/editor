@@ -17,8 +17,8 @@ using store = EventStore.persistence.memory();
 ```
 
 Each store is isolated. Its events remain private to that store. Calling
-`close()` discards the log immediately, so use a new store for every test or
-short-lived workflow that needs a clean event history.
+`close()` discards the log and its tags immediately, so use a new store for
+every test or short-lived workflow that needs a clean event history.
 
 The memory backend still applies the shared
 [`EventStore` storage contract](./EventStore.md#storage-contract), including

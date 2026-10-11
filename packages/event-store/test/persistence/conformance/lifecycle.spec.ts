@@ -15,38 +15,45 @@ import {
 
 for (const backend of backends) {
   describe(`${backend.name} — close`, () => {
-    test("append returns the closed failure the reads and compact throw", async() => {
+    test("append and tag creation return the closed failure every other member throws", async() => {
       const store = await backend.create();
       store.close();
 
-      const result = store.writer.append({
-        assetType: "texture",
-        assetId: "a1",
-        eventType: "pixel-set",
-        eventData: {},
-        actor: USER_ACTOR
-      });
-
-      assert.strictEqual(result.ok, false);
-      assert.ok(result.val instanceof EventStore.EventLogClosedError);
-      assert.throws(
+      const results = [
+        store.writer.append({
+          assetType: "texture",
+          assetId: "a1",
+          eventType: "pixel-set",
+          eventData: {},
+          actor: USER_ACTOR
+        }),
+        store.tags.create({
+          assetId: "a1",
+          name: "v1",
+          eventVersion: 1,
+          actor: USER_ACTOR
+        })
+      ];
+      const members = [
+        () => store.reader.get("a1", 1),
         () => store.reader.list("a1"),
-        EventStore.EventLogClosedError
-      );
-      assert.throws(
         () => store.reader.listAll(),
-        EventStore.EventLogClosedError
-      );
-      assert.throws(
         () => store.reader.listFromCheckpoints({
           checkpointEventTypes: ["asset.created"]
         }),
-        EventStore.EventLogClosedError
-      );
-      assert.throws(
         () => store.compact({ checkpointEventTypes: ["asset.created"] }),
-        EventStore.EventLogClosedError
-      );
+        () => store.tags.get("a1", "v1"),
+        () => store.tags.list(),
+        () => store.tags.delete("a1", "v1")
+      ];
+
+      for (const result of results) {
+        assert.strictEqual(result.ok, false);
+        assert.ok(result.val instanceof EventStore.EventLogClosedError);
+      }
+      for (const member of members) {
+        assert.throws(member, EventStore.EventLogClosedError);
+      }
     });
 
     test("close is idempotent", async() => {

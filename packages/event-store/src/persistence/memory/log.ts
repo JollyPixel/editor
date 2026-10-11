@@ -9,12 +9,9 @@ import type {
 } from "../../EventStore.ts";
 import type { EventLog } from "../EventLog.ts";
 import { EventLogClosedError } from "../errors/EventLogClosedError.ts";
-import {
-  materializeEvent,
-  toJson,
-  type EventFields
-} from "../serialize.ts";
+import { EventRecord } from "../EventRecord.ts";
 import { EventVersionConflictError } from "../errors/EventVersionConflictError.ts";
+import { MemoryTagTable } from "./tags.ts";
 
 type EventPredicate = (
   event: Event
@@ -26,20 +23,16 @@ export class MemoryEventLog implements EventLog {
   #nextEventId = 1;
   #versionByAsset = new Map<string, number>();
   #closed = false;
+  readonly tags = new MemoryTagTable(
+    (assetId, eventVersion) => this.#find(assetId, eventVersion) !== undefined
+  );
 
   insert(
     input: AppendInput
   ): Event {
     this.#assertOpen();
 
-    const {
-      assetType,
-      assetId,
-      eventType,
-      eventData,
-      actor,
-      expectedVersion
-    } = input;
+    const { assetId, expectedVersion } = input;
 
     const head = this.#versionByAsset.get(assetId) ?? 0;
     if (expectedVersion !== undefined && expectedVersion !== head) {
@@ -50,25 +43,31 @@ export class MemoryEventLog implements EventLog {
       );
     }
 
-    const fields: EventFields = {
+    const record = EventRecord.encode(input);
+    const position = {
       eventId: this.#nextEventId,
-      assetType,
-      assetId,
-      eventType,
-      eventDataJson: toJson(eventData, "eventData"),
-      eventVersion: head + 1,
-      actorJson: toJson(actor, "actor"),
-      createdAt: new Date().toISOString()
+      eventVersion: head + 1
     };
 
     this.#nextEventId++;
-    this.#versionByAsset.set(assetId, fields.eventVersion);
+    this.#versionByAsset.set(assetId, position.eventVersion);
 
-    const stored = materializeEvent(fields);
+    const stored = record.toEvent(position);
     this.#events.push(stored);
     this.#stream(assetId).push(stored);
 
-    return materializeEvent(fields);
+    return record.toEvent(position);
+  }
+
+  get(
+    assetId: string,
+    eventVersion: number
+  ): Event | undefined {
+    this.#assertOpen();
+
+    const event = this.#find(assetId, eventVersion);
+
+    return event === undefined ? undefined : structuredClone(event);
   }
 
   list(
@@ -130,10 +129,12 @@ export class MemoryEventLog implements EventLog {
       options.checkpointEventTypes,
       options.assetId
     );
+    const tagged = this.tags.versionsByAsset();
     const before = this.#events.length;
 
     this.#events = this.#events.filter(
-      (event) => event.eventId >= (heads.get(event.assetId) ?? 0)
+      (event) => event.eventId >= (heads.get(event.assetId) ?? 0) ||
+        tagged.get(event.assetId)?.has(event.eventVersion) === true
     );
     this.#reindex();
 
@@ -146,9 +147,19 @@ export class MemoryEventLog implements EventLog {
   close(): void {
     this.#events = [];
     this.#streams.clear();
+    this.tags.close();
     this.#versionByAsset.clear();
     this.#nextEventId = 1;
     this.#closed = true;
+  }
+
+  #find(
+    assetId: string,
+    eventVersion: number
+  ): Event | undefined {
+    return this.#streams.get(assetId)?.find(
+      (event) => event.eventVersion === eventVersion
+    );
   }
 
   #stream(

@@ -53,15 +53,35 @@ for (const backend of backends) {
     });
   });
 
+  describe(`${backend.name} — get`, () => {
+    test("returns the event stored at that version of the asset", async() => {
+      using store = await backend.create();
+      append(store, "a1", { x: 1 });
+      const second = append(store, "a1", { x: 2 });
+      append(store, "a2", { x: 3 });
+
+      assert.deepEqual(store.reader.get("a1", 2), second);
+    });
+
+    test("returns undefined for a version or asset the log does not hold", async() => {
+      using store = await backend.create();
+      append(store, "a1", { x: 1 });
+
+      assert.strictEqual(store.reader.get("a1", 2), undefined);
+      assert.strictEqual(store.reader.get("missing", 1), undefined);
+    });
+  });
+
   describe(`${backend.name} — read copies`, () => {
-    const reads: [string, (reader: EventStore.EventReader) => EventStore.Event[]][] = [
-      ["list", (reader) => reader.list("a1")],
-      ["listAll", (reader) => reader.listAll()],
+    const reads: [string, (reader: EventStore.EventReader) => EventStore.Event | undefined][] = [
+      ["get", (reader) => reader.get("a1", 1)],
+      ["list", (reader) => reader.list("a1")[0]],
+      ["listAll", (reader) => reader.listAll()[0]],
       [
         "listFromCheckpoints",
         (reader) => reader.listFromCheckpoints({
           checkpointEventTypes: ["asset.created"]
-        })
+        })[0]
       ]
     ];
 
@@ -70,11 +90,12 @@ for (const backend of backends) {
         using store = await backend.create();
         append(store, "a1", { nested: { value: 1 } }, "asset.created");
 
-        const [event] = read(store.reader);
+        const event = read(store.reader);
+        assert.ok(event);
         (event.eventData as { nested: { value: number; }; }).nested.value = 999;
 
         assert.deepEqual(
-          read(store.reader)[0].eventData,
+          read(store.reader)?.eventData,
           { nested: { value: 1 } }
         );
       });

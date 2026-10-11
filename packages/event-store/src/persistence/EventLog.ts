@@ -4,13 +4,30 @@ import type {
   CompactOptions,
   CompactReport,
   Event,
-  EventReader
+  EventReader,
+  EventTag,
+  EventTagInput
 } from "../EventStore.ts";
 
-/**
- * Backend contract for assigning event identity and version.
- */
+export interface TagLog {
+  insert(
+    input: EventTagInput
+  ): EventTag;
+  get(
+    assetId: string,
+    name: string
+  ): EventTag | undefined;
+  list(
+    assetId?: string
+  ): EventTag[];
+  delete(
+    assetId: string,
+    name: string
+  ): boolean;
+}
+
 export interface EventLog extends EventReader {
+  readonly tags: TagLog;
   insert(
     input: AppendInput
   ): Event;

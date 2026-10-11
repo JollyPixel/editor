@@ -4,12 +4,15 @@ export * from "./writer/index.ts";
 export * from "./catalog/index.ts";
 export * from "./archive/index.ts";
 export * from "./rooms/index.ts";
+export * from "./tags/index.ts";
 export * from "./createAssetBackend.ts";
 export type { RecordedCommand } from "./state/AssetStateStore.ts";
 export * from "./launch.ts";
 export * from "./logger.ts";
 export * from "./workspace/seedAssetSource.ts";
 export {
+  BACKUP_LEDGER_PATH,
+  CONTENT_OBJECTS_PATH,
   EVENTS_DB_PATH,
   IDENTITY_SIDECAR_PATH,
   PROJECT_FILE_PATH,

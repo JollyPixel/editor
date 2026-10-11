@@ -28,8 +28,13 @@ import {
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
+  CATALOG_RESTORE,
   CATALOG_ROOM,
-  CATALOG_SNAPSHOT
+  CATALOG_SNAPSHOT,
+  CATALOG_TAG,
+  CATALOG_TAGS,
+  CATALOG_TAGS_CHANGED,
+  CATALOG_UNTAG
 } from "#src/index.ts";
 import { createCatalogHandler } from "#src/node.ts";
 import {
@@ -211,7 +216,11 @@ describe("CatalogExtension — broadcast", () => {
         CATALOG_DELETE_FOLDER,
         CATALOG_EXPORT,
         CATALOG_PLAN,
-        CATALOG_IMPORT
+        CATALOG_IMPORT,
+        CATALOG_TAGS,
+        CATALOG_TAG,
+        CATALOG_UNTAG,
+        CATALOG_RESTORE
       ]
     );
     assert.deepEqual(
@@ -220,6 +229,7 @@ describe("CatalogExtension — broadcast", () => {
         CATALOG_SNAPSHOT,
         CATALOG_CHANGED,
         CATALOG_FOLDERS,
+        CATALOG_TAGS_CHANGED,
         CATALOG_APPLIED,
         CATALOG_REJECTED
       ]

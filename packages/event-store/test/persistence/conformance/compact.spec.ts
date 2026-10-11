@@ -9,8 +9,14 @@ import assert from "node:assert/strict";
 import {
   append,
   backends,
-  seed
+  seed,
+  tag
 } from "../../helpers/backends.ts";
+
+// CONSTANTS
+const kCheckpoints = {
+  checkpointEventTypes: ["asset.created", "asset.updated"]
+};
 
 for (const backend of backends) {
   describe(`${backend.name} — compact`, () => {
@@ -118,6 +124,50 @@ for (const backend of backends) {
       assert.deepEqual(report, { removed: 1, assets: 1 });
       assert.strictEqual(store.reader.list("a1").length, 1);
       assert.strictEqual(store.reader.list("a2").length, 2);
+    });
+
+    test("keeps a tagged event while checkpoint reads skip it", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "asset.created");
+      append(store, "a1", {}, "stroke");
+      append(store, "a1", {}, "asset.updated");
+      append(store, "a1", {}, "stroke");
+      tag(store, "a1", "v1");
+
+      const report = store.compact(kCheckpoints);
+
+      assert.deepEqual(report, { removed: 1, assets: 1 });
+      assert.deepEqual(
+        store.reader.list("a1").map((event) => event.eventVersion),
+        [1, 3, 4]
+      );
+      assert.deepEqual(
+        store.reader.listFromCheckpoints({
+          ...kCheckpoints,
+          assetId: "a1"
+        }).map((event) => event.eventVersion),
+        [3, 4]
+      );
+    });
+
+    test("removes a tagged event once its last tag is deleted", async() => {
+      using store = await backend.create();
+      append(store, "a1", {}, "asset.created");
+      append(store, "a1", {}, "asset.updated");
+      tag(store, "a1", "v1");
+      tag(store, "a1", "first");
+
+      store.tags.delete("a1", "v1");
+      const kept = store.compact(kCheckpoints);
+      store.tags.delete("a1", "first");
+      const removed = store.compact(kCheckpoints);
+
+      assert.strictEqual(kept.removed, 0);
+      assert.strictEqual(removed.removed, 1);
+      assert.deepEqual(
+        store.reader.list("a1").map((event) => event.eventVersion),
+        [2]
+      );
     });
   });
 }

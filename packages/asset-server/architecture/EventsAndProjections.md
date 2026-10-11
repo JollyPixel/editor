@@ -29,7 +29,8 @@ flowchart TB
 
 `asset.created`, `asset.updated`, and `asset.deleted` are replay checkpoints.
 The backend starts from the newest checkpoint for each asset. A rename is
-folded after its preceding checkpoint.
+folded after its preceding checkpoint. A tag keeps its
+checkpoint through compaction, so a stream can have gaps below its head.
 
 ## From edit to file
 
@@ -59,5 +60,3 @@ The room's join snapshot gives a client current state. The later
 `asset.updated` event persists serialized content and becomes a replay
 checkpoint. `backend.flush(assetId?)` waits for pending snapshots and
 projection writes.
-
-See [Sync](../docs/Sync.md) for payloads and failure behavior.

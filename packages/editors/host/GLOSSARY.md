@@ -78,8 +78,7 @@ the same asset share one synced document.
 A ZIP file containing one asset and the assets it references, or every asset
 in a workspace. It contains serialized asset content, not editing history.
 `session.archive` can export one, check an import for conflicts with `plan`,
-and import it when `canImport` is true. See the
-[archive format](../../asset-server/docs/Archive.md).
+and import it when `canImport` is true.
 
 ### Workspace
 

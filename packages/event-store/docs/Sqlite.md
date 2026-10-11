@@ -54,8 +54,14 @@ The factory owns the connection it opens and closes it with the store.
 
 ## Schema initialization
 
-The factory runs the schema before returning. It creates the `events` table
-and its indexes when they do not exist.
+The factory runs the schema before returning. It creates the `events` and
+`tags` tables and their indexes when they do not exist, so a database made
+before tags existed gains the `tags` table the next time it is opened.
+
+`tags.create` checks that the event exists and inserts the tag in one
+statement. The schema's unique `(asset_id, name)` constraint turns a duplicate
+name into an `EventTagConflictError`, whichever connection created the first
+one.
 
 `CREATE TABLE IF NOT EXISTS` does not alter an existing table. A database made
 with a schema that predates the unique `(asset_id, event_version)` constraint

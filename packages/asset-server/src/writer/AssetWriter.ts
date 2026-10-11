@@ -102,6 +102,9 @@ export class AssetWriter {
     input: UpdateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
     const snapshot = copyContentInput(input);
+    if (input.restoredFrom !== undefined) {
+      snapshot.restoredFrom = { ...input.restoredFrom };
+    }
 
     return this.#writes.run(
       () => this.#update(snapshot)
@@ -225,12 +228,14 @@ export class AssetWriter {
     }
 
     const { path, kind } = current.val;
+    const data = await this.#writeData(input.assetId, path, kind, input);
+    const { restoredFrom } = input;
 
     return this.#append(
       input.assetId,
       kind,
       ASSET_UPDATED,
-      await this.#writeData(input.assetId, path, kind, input),
+      restoredFrom === undefined ? data : { ...data, restoredFrom },
       input
     );
   }

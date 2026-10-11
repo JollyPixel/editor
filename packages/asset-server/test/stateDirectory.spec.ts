@@ -26,7 +26,18 @@ describe("ensureStateGitignore", () => {
 
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
-      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\n"
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\n"
+    );
+  });
+
+  test("writes the extra entries into a new file", async() => {
+    const source = new MemoryAssetSource();
+
+    await ensureStateGitignore(source, ["accounts.db"]);
+
+    assert.strictEqual(
+      text(await source.read(STATE_GITIGNORE_PATH)),
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\naccounts.db\n"
     );
   });
 
@@ -41,7 +52,7 @@ describe("ensureStateGitignore", () => {
 
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
-      "state.json\r\nevents.db\r\nevents.db-journal\r\nevents.db-wal\r\nmine\nevents.db-shm\n"
+      "state.json\r\nevents.db\r\nevents.db-journal\r\nevents.db-wal\r\nmine\nevents.db-shm\nobjects\n"
     );
   });
 
@@ -53,7 +64,7 @@ describe("ensureStateGitignore", () => {
 
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
-      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\naccounts.db\n"
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\naccounts.db\n"
     );
   });
 

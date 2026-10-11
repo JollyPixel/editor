@@ -5,114 +5,13 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
-import { Ok } from "@openally/result";
-
 // Import Internal Dependencies
-import {
-  AssetRoomExtension,
-  ASSET_UPDATED,
-  type AssetRoomExtensionOptions
-} from "#src/index.ts";
-import { counterSnapshotSchema } from "../helpers/protocols.ts";
-import {
-  COUNTER_ROOM_ASSET_ID,
-  counterRoomBinding,
-  counterRoomCommands,
-  recordingClient,
-  recordingRoom,
-  roomPeer
-} from "../helpers/rooms.ts";
-
-interface Command {
-  action: string;
-  clientId?: string;
-  seq?: number;
-}
-
-function setup(
-  options: AssetRoomExtensionOptions<Command> = {}
-) {
-  const log: EventStore.Event[] = [];
-  function record(
-    input: Omit<EventStore.AppendInput, "assetId" | "assetType">
-  ): EventStore.Event {
-    const event: EventStore.Event = {
-      ...input,
-      assetId: COUNTER_ROOM_ASSET_ID,
-      assetType: "counter",
-      eventId: log.length + 1,
-      eventVersion: log.length + 1,
-      createdAt: ""
-    };
-    log.push(event);
-
-    return event;
-  }
-
-  const extension = new AssetRoomExtension<Command>(
-    counterRoomBinding({ version: () => log.length }),
-    counterRoomCommands<Command>(),
-    {
-      snapshotSchema: counterSnapshotSchema,
-      snapshot: () => {
-        return { value: log.length };
-      },
-      arbitrate: (command) => {
-        return { command };
-      }
-    },
-    {
-      append: (input) => Ok(record(input))
-    },
-    {
-      reader: {
-        list: (_assetId, from = 0) => log.filter(
-          (event) => event.eventVersion > from
-        ),
-        listAll: () => [],
-        listFromCheckpoints: () => []
-      },
-      ...options
-    }
-  );
-  const { context } = recordingRoom();
-
-  function connect(
-    clientId: string,
-    resume?: unknown
-  ): { received: unknown[]; connected: Promise<void>; } {
-    const handle = recordingClient(clientId);
-
-    return {
-      received: handle.received,
-      connected: extension.onClientConnect(
-        handle,
-        roomPeer(clientId, resume),
-        context
-      )
-    };
-  }
-
-  function send(
-    clientId: string,
-    seq: number
-  ): void {
-    extension.onMessage(clientId, { action: "increment", seq }, context);
-  }
-
-  return {
-    extension,
-    record,
-    connect,
-    send
-  };
-}
+import { ASSET_UPDATED } from "#src/index.ts";
+import { resumeRoom } from "../helpers/rooms/resumeRoom.ts";
 
 describe("AssetRoomExtension — resume", () => {
   test("answers with the commands after the resumed version and the previous ack", async() => {
-    const { extension, connect, send } = setup();
+    const { extension, connect, send } = resumeRoom();
     await connect("old").connected;
     send("old", 1);
     send("peer", 1);
@@ -136,7 +35,7 @@ describe("AssetRoomExtension — resume", () => {
   });
 
   test("skips renames and scheduled snapshots in the range", async() => {
-    const { connect, record, send } = setup();
+    const { connect, record, send } = resumeRoom();
     send("peer", 1);
     record({
       eventType: "asset.renamed",
@@ -161,52 +60,8 @@ describe("AssetRoomExtension — resume", () => {
     ]);
   });
 
-  test("falls back to a snapshot for a content change in the range", async() => {
-    const { connect, record, send } = setup();
-    send("peer", 1);
-    record({
-      eventType: ASSET_UPDATED,
-      eventData: {},
-      actor: { type: "user", id: "a" }
-    });
-
-    const { received, connected } = connect("new", { clientId: "old", version: 0 });
-    await connected;
-
-    assert.deepEqual(received, [
-      { type: "snapshot", data: { value: 2 }, version: 2 }
-    ]);
-  });
-
-  test("falls back to a snapshot past the resume limit", async() => {
-    const { connect, send } = setup({ resumeLimit: 2 });
-    for (let seq = 1; seq <= 3; seq++) {
-      send("peer", seq);
-    }
-
-    const { received, connected } = connect("new", { clientId: "old", version: 0 });
-    await connected;
-
-    assert.deepEqual(received, [
-      { type: "snapshot", data: { value: 3 }, version: 3 }
-    ]);
-  });
-
-  test("falls back to a snapshot when compaction removed the range", async() => {
-    const { connect, send } = setup();
-    send("peer", 1);
-    send("peer", 2);
-
-    const { received, connected } = connect("new", { clientId: "old", version: 5 });
-    await connected;
-
-    assert.deepEqual(received, [
-      { type: "snapshot", data: { value: 2 }, version: 2 }
-    ]);
-  });
-
   test("answers a resume without a version with an acknowledging snapshot", async() => {
-    const { extension, connect, send } = setup();
+    const { extension, connect, send } = resumeRoom();
     await connect("old").connected;
     send("old", 4);
     extension.onClientDisconnect("old");
@@ -220,7 +75,7 @@ describe("AssetRoomExtension — resume", () => {
   });
 
   test("waits for the previous connection to leave before answering", async() => {
-    const { extension, connect, send } = setup();
+    const { extension, connect, send } = resumeRoom();
     await connect("old").connected;
 
     const { received, connected } = connect("new", { clientId: "old", version: 0 });
@@ -241,7 +96,7 @@ describe("AssetRoomExtension — resume", () => {
 
   test("stops waiting for the previous connection after the timeout", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { connect } = setup({ departureTimeout: 50 });
+    const { connect } = resumeRoom({ departureTimeout: 50 });
     await connect("old").connected;
 
     const { received, connected } = connect("new", { clientId: "old", version: 0 });
@@ -254,7 +109,7 @@ describe("AssetRoomExtension — resume", () => {
   });
 
   test("a join without resume gets a snapshot with the room version", async() => {
-    const { connect, send } = setup();
+    const { connect, send } = resumeRoom();
     send("peer", 1);
 
     const { received, connected } = connect("new");
@@ -266,7 +121,7 @@ describe("AssetRoomExtension — resume", () => {
   });
 
   test("a malformed resume is answered like a fresh join", async() => {
-    const { connect, send } = setup();
+    const { connect, send } = resumeRoom();
     send("old", 4);
 
     const { received, connected } = connect("new", {

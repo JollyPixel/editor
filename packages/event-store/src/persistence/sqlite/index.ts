@@ -4,6 +4,7 @@ import type {
   TypedEventStore
 } from "../../EventStore.ts";
 import { createEventStore } from "../createEventStore.ts";
+import { SqliteDatabase } from "./database.ts";
 import { SqliteEventLog } from "./log.ts";
 
 export async function createSqliteEventStore<
@@ -12,6 +13,6 @@ export async function createSqliteEventStore<
   location?: string
 ): Promise<TypedEventStore<TMap>> {
   return createEventStore<TMap>(
-    await SqliteEventLog.open(location)
+    new SqliteEventLog(await SqliteDatabase.open(location))
   );
 }

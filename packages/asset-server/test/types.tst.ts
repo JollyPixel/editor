@@ -42,6 +42,10 @@ interface LegacyWriteData {
     readonly id: string;
     readonly kind: string;
   }[];
+  readonly restoredFrom?: {
+    readonly name: string;
+    readonly eventVersion: number;
+  };
 }
 
 interface LegacyRenamedData {
@@ -65,7 +69,7 @@ describe("schema-derived payload types", () => {
     expect<AssetInlineContent>().type.toBe<LegacyInlineContent>();
   });
 
-  test("AssetWriteData narrows content and carries optional dependencies", () => {
+  test("AssetWriteData narrows content and carries optional dependencies and restoredFrom", () => {
     expect<AssetWriteData>().type.toBe<LegacyWriteData>();
   });
 
@@ -139,7 +143,11 @@ describe("schema-derived catalog types", () => {
 
   test("an applied reply pairs each command with its result", () => {
     expect<Extract<CatalogApplied, { assetId: string; }>["command"]>()
-      .type.toBe<"catalog:create">();
+      .type.toBe<"catalog:create" | "catalog:tags" | "catalog:untag">();
+    expect<Extract<CatalogApplied, { tag: unknown; }>["command"]>()
+      .type.toBe<"catalog:tag">();
+    expect<Extract<CatalogApplied, { report: unknown; }>["command"]>()
+      .type.toBe<"catalog:import" | "catalog:restore">();
     expect<Extract<CatalogApplied, { applied: number; }>["command"]>()
       .type.toBe<"catalog:rename" | "catalog:delete">();
     expect<Extract<CatalogApplied, { content: unknown; }>["command"]>()

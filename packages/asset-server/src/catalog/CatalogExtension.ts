@@ -29,8 +29,12 @@ import {
   CATALOG_PLAN,
   CATALOG_RENAME,
   CATALOG_REJECTED,
+  CATALOG_RESTORE,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
+  CATALOG_TAG,
+  CATALOG_TAGS,
+  CATALOG_UNTAG,
   type CatalogApplied,
   type CatalogChange,
   type CatalogCommand,
@@ -38,7 +42,9 @@ import {
   type CatalogExportCommand,
   type CatalogImportCommand,
   type CatalogMessage,
-  type CatalogPlanCommand
+  type CatalogPlanCommand,
+  type CatalogRestoreCommand,
+  type CatalogTagCommand
 } from "./client/protocol.ts";
 import type { CatalogFolders } from "./CatalogFolders.ts";
 import { CatalogOutbox } from "./CatalogOutbox.ts";
@@ -61,6 +67,7 @@ import {
   importAssetArchive,
   planAssetImport
 } from "../archive/import/importAssetArchive.ts";
+import type { AssetTags } from "../tags/AssetTags.ts";
 import { asError } from "../utils/asError.ts";
 
 // CONSTANTS
@@ -68,6 +75,7 @@ export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 
 export interface CatalogBackend extends ArchiveBackend {
   readonly folders: CatalogFolders;
+  readonly tags: AssetTags;
 }
 
 export interface CatalogExtensionOptions {
@@ -101,6 +109,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   );
   #onChanged: (change: CatalogChange) => void;
   #onFolders: (folders: readonly string[]) => void;
+  #onTags: (assetId: string) => void;
 
   constructor(
     options: CatalogExtensionOptions
@@ -117,6 +126,10 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#deleteProtection = options.deleteProtection ?? true;
     this.#onChanged = (change) => this.#outbox.pushChange(change);
     this.#onFolders = (folders) => this.#outbox.pushFolders(folders);
+    this.#onTags = (assetId) => this.#outbox.pushTags(
+      assetId,
+      this.#backend.tags.list(assetId)
+    );
     this.#backend.catalog.on(
       "changed",
       this.#onChanged
@@ -124,6 +137,10 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#backend.folders.on(
       "changed",
       this.#onFolders
+    );
+    this.#backend.tags.on(
+      "changed",
+      this.#onTags
     );
   }
 
@@ -186,6 +203,10 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       "changed",
       this.#onFolders
     );
+    this.#backend.tags.off(
+      "changed",
+      this.#onTags
+    );
     this.#members.clear();
     this.#broadcast = null;
   }
@@ -194,7 +215,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCommand,
     actor: EventStore.Actor
   ): Promise<Result<CatalogApplied, Error>> {
-    const { writer, folders } = this.#backend;
+    const { writer, folders, tags } = this.#backend;
 
     return match(command)
       .with({ type: CATALOG_CREATE }, (create) => this.#create(create, actor))
@@ -227,7 +248,60 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       .with({ type: CATALOG_EXPORT }, (exported) => this.#export(exported))
       .with({ type: CATALOG_PLAN }, (plan) => this.#plan(plan))
       .with({ type: CATALOG_IMPORT }, (imported) => this.#import(imported, actor))
+      .with({ type: CATALOG_TAGS }, ({ type, assetId }) => Ok({
+        command: type,
+        assetId,
+        tags: tags.list(assetId)
+      }))
+      .with({ type: CATALOG_TAG }, (tag) => this.#tag(tag, actor))
+      .with({ type: CATALOG_UNTAG }, ({ type, assetId, name }) => tags
+        .delete(assetId, name)
+        .map(() => {
+          return {
+            command: type,
+            assetId,
+            name
+          };
+        }))
+      .with({ type: CATALOG_RESTORE }, (restore) => this.#restore(restore, actor))
       .exhaustive();
+  }
+
+  async #tag(
+    command: CatalogTagCommand,
+    actor: EventStore.Actor
+  ): Promise<Result<CatalogApplied, Error>> {
+    const created = await this.#backend.tags.create({
+      assetId: command.assetId,
+      name: command.name,
+      message: command.message,
+      actor
+    });
+
+    return created.map((tag) => {
+      return {
+        command: command.type,
+        tag
+      };
+    });
+  }
+
+  async #restore(
+    command: CatalogRestoreCommand,
+    actor: EventStore.Actor
+  ): Promise<Result<CatalogApplied, Error>> {
+    const restored = await this.#backend.tags.restore({
+      assetId: command.assetId,
+      name: command.name,
+      actor
+    });
+
+    return restored.map((report) => {
+      return {
+        command: command.type,
+        report
+      };
+    });
   }
 
   async #create(

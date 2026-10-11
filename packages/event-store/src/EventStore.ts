@@ -104,7 +104,41 @@ export interface CompactReport {
   assets: number;
 }
 
+export interface EventTagInput {
+  assetId: string;
+  name: string;
+  eventVersion: number;
+  message?: string;
+  actor: Actor;
+}
+
+export interface EventTag extends EventTagInput {
+  createdAt: string;
+}
+
+export interface EventTags {
+  create(
+    input: EventTagInput
+  ): Result<EventTag, Error>;
+  get(
+    assetId: string,
+    name: string
+  ): EventTag | undefined;
+  list(
+    assetId?: string
+  ): EventTag[];
+  delete(
+    assetId: string,
+    name: string
+  ): boolean;
+}
+
 export interface EventReader {
+  get(
+    assetId: string,
+    eventVersion: number
+  ): Event | undefined;
+
   list(
     assetId: string,
     fromVersion?: number
@@ -135,6 +169,7 @@ export type RejectionListener = (
 export interface EventStore {
   readonly writer: EventWriter;
   readonly reader: EventReader;
+  readonly tags: EventTags;
 
   subscribe(
     listener: EventListener,

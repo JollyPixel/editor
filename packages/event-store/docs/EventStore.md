@@ -11,6 +11,7 @@ Shared API returned by the built-in persistence factories.
 export interface EventStore {
   readonly writer: EventWriter;
   readonly reader: EventReader;
+  readonly tags: EventTags;
   subscribe(
     listener: EventListener,
     options?: SubscribeOptions
@@ -186,10 +187,14 @@ returns the same error, so the appender handles it either way.
 ## `reader`
 
 ```ts
+reader.get(assetId: string, eventVersion: number): Event | undefined
 reader.list(assetId: string, fromVersion?: number): Event[]
 reader.listAll(options?: ListAllOptions): Event[]
 reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Event[]
 ```
+
+`get` returns the event stored at one version of an asset, or `undefined` when
+the stream does not hold that version, for example after compaction removed it.
 
 `list` returns one asset stream in `eventVersion` order and treats `fromVersion`
 as an exclusive lower bound.
@@ -238,6 +243,75 @@ const events = store.reader.listFromCheckpoints({
 });
 ```
 
+## `tags`
+
+```ts
+export interface EventTagInput {
+  assetId: string;
+  name: string;
+  eventVersion: number;
+  message?: string;
+  actor: Actor;
+}
+
+export interface EventTag extends EventTagInput {
+  createdAt: string;
+}
+
+tags.create(input: EventTagInput): Result<EventTag, Error>
+tags.get(assetId: string, name: string): EventTag | undefined
+tags.list(assetId?: string): EventTag[]
+tags.delete(assetId: string, name: string): boolean
+```
+
+A tag names one event of one asset stream and keeps that event through
+[compaction](#compaction). Its name is unique within the asset, and several
+names may point at the same event. The store only refuses an empty name; any
+other naming rule belongs to the consumer.
+
+```ts
+const [checkpoint] = store.reader.listFromCheckpoints({
+  assetId: "a1",
+  checkpointEventTypes: ["asset.created", "asset.updated"]
+});
+
+store.tags.create({
+  assetId: "a1",
+  name: "v1",
+  eventVersion: checkpoint.eventVersion,
+  message: "First pass",
+  actor
+}).unwrap();
+```
+
+`create` returns the stored tag with the `createdAt` the store assigned. It
+returns an error and stores nothing when:
+
+- the stream holds no event at `eventVersion`, including one that compaction
+  already removed: `UnknownEventError`;
+- the asset already has a tag with that name: `EventTagConflictError`;
+- `name` is empty: `TypeError`.
+
+```ts
+class UnknownEventError extends Error {
+  readonly assetId: string;
+  readonly eventVersion: number;
+}
+
+class EventTagConflictError extends Error {
+  readonly assetId: string;
+  readonly tagName: string;
+}
+```
+
+`list` returns tags in creation order, across every asset or for one. A tag
+never moves: to point a name at another event, delete it and create it again,
+which also moves it to the end of the list.
+
+`delete` returns `false` when the tag does not exist. It leaves the event in
+place, and the next `compact` removes that event unless another tag still
+points at it.
+
 ## Compaction
 
 ```ts
@@ -254,9 +328,14 @@ export interface CompactReport {
 ```
 
 `compact` removes every event stored before each asset's newest checkpoint,
-which is exactly the set `listFromCheckpoints` already skips. An asset holding
-no checkpoint keeps its whole stream, and an empty `checkpointEventTypes`
-removes nothing. `assetId` limits the pass to one asset.
+which is the set `listFromCheckpoints` already skips, minus the events a
+[tag](#tags) points at. An asset holding no checkpoint keeps its whole stream,
+and an empty `checkpointEventTypes` removes nothing. `assetId` limits the pass
+to one asset.
+
+Because tagged events stay, `list` and `listAll` can return a stream with gaps
+below its newest checkpoint, such as `v3, v9, v10`. `listFromCheckpoints` never
+returns a tagged event once a newer checkpoint exists.
 
 > [!WARNING]
 > Compaction is destructive and irreversible. Only call it when the checkpoint
@@ -275,7 +354,8 @@ close(): void
 ```
 
 `close()` is idempotent. A closed store rejects later reads and writes with an
-`EventLogClosedError`: reads and `compact` throw it, and `append` returns it.
+`EventLogClosedError`: `append` and `tags.create` return it, and every other
+member throws it.
 `[Symbol.dispose]` calls `close()`, so stores work with `using` declarations.
 
 ## Storage contract
@@ -287,6 +367,6 @@ All backends follow the same behavior:
   append, object properties with those values are omitted, and `Date` values
   become ISO strings.
 - The stored event does not alias the input, and values returned by the reader
-  cannot mutate the log.
+  or `tags` cannot mutate the log.
 - `append` returns an event equivalent to the one returned by a later `list`.
 - A rejected append consumes neither an `eventId` nor an `eventVersion`.

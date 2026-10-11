@@ -13,6 +13,8 @@ import type {
   EventDataMap,
   EventListener,
   EventReader,
+  EventTag,
+  EventTags,
   SubscribeOptions,
   TypedEventStore
 } from "../EventStore.ts";
@@ -37,9 +39,18 @@ export function createEventStore<
 ): TypedEventStore<TMap> {
   const notifications = new Emitter<AppendNotifications>();
   const reader: EventReader = {
+    get: (assetId, eventVersion) => log.get(assetId, eventVersion),
     list: (assetId, fromVersion) => log.list(assetId, fromVersion),
     listAll: (options) => log.listAll(options),
     listFromCheckpoints: (options) => log.listFromCheckpoints(options)
+  };
+  const tags: EventTags = {
+    create: (input) => wrap<EventTag, Error>(
+      () => log.tags.insert(input)
+    ),
+    get: (assetId, name) => log.tags.get(assetId, name),
+    list: (assetId) => log.tags.list(assetId),
+    delete: (assetId, name) => log.tags.delete(assetId, name)
   };
 
   return {
@@ -51,6 +62,7 @@ export function createEventStore<
         .orTee((error) => notifications.emit("rejection", error, input))
     },
     reader,
+    tags,
     subscribe: (
       listener: EventListener,
       options: SubscribeOptions = {}
