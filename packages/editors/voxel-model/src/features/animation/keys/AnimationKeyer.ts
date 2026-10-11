@@ -24,6 +24,7 @@ import type {
   TransformMode,
   TransformTarget
 } from "../../transform/index.ts";
+import type { ModelAccessSource } from "../../../access/ModelAccess.ts";
 
 // CONSTANTS
 const kAnimatedModes: readonly TransformMode[] = ["pos", "angle", "scale"];
@@ -41,6 +42,7 @@ export interface AnimationKeyerOptions {
   };
   session: Pick<AnimationSession, "focused" | "playback" | "active">;
   poser: Pick<AnimationPoser, "reset">;
+  access: ModelAccessSource;
 }
 
 type PosedBlock = Pick<ModelBlock, "uuid" | "transform">;
@@ -56,6 +58,10 @@ export class AnimationKeyer implements TransformTarget {
     options: AnimationKeyerOptions
   ) {
     this.#options = options;
+  }
+
+  get writable(): boolean {
+    return this.#options.access.current.has("animations");
   }
 
   end(
@@ -90,7 +96,7 @@ export class AnimationKeyer implements TransformTarget {
     const { document: { tree }, session } = this.#options;
     const { focused } = session;
     const rest = tree.block(blockId)?.transform;
-    if (focused === null || rest === undefined) {
+    if (focused === null || rest === undefined || !this.writable) {
       return false;
     }
 

@@ -191,6 +191,7 @@ export class AnimatePanel extends LitElement {
               icon-only
               label="New clip"
               title="New clip in this model"
+              ?disabled=${!state.editable}
               @click=${() => void this.#controller.actions?.newClip(null)}
             ></jolly-button>
             <jolly-button
@@ -213,17 +214,19 @@ export class AnimatePanel extends LitElement {
               icon-only
               label="New clip in a set"
               title="New clip in a shared set"
-              ?disabled=${state.sharedSets.length === 0}
+              ?disabled=${!state.editable || state.sharedSets.length === 0}
               @click=${this.#onNewSharedClip}
             ></jolly-button>
             <jolly-button
               label="New set"
               title="New shared set"
+              ?disabled=${!state.editable}
               @click=${() => void this.#controller.actions?.newSet()}
             >New</jolly-button>
             <jolly-button
               label="Link set"
               title="Link a set another model uses"
+              ?disabled=${!state.editable}
               @click=${this.#onLinkSet}
             >Link…</jolly-button>
           </div>
@@ -232,7 +235,7 @@ export class AnimatePanel extends LitElement {
             this.#renderTree("shared", state.sharedSets, state)}
         </section>
       </div>
-      ${state.clip === null ? nothing : this.#renderClip(state.clip)}
+      ${state.clip === null ? nothing : this.#renderClip(state.clip, state.editable)}
       <jolly-model-editor-track-bindings></jolly-model-editor-track-bindings>
       <jolly-model-editor-key-inspector></jolly-model-editor-key-inspector>
       ${this.#renderTransform(state)}
@@ -257,9 +260,9 @@ export class AnimatePanel extends LitElement {
         .expanded=${state.expanded}
         .validateRename=${this.#controller.validateRename}
         .acceptDrop=${section === "own" ? this.#acceptOwnDrop : this.#acceptSharedDrop}
-        reorderable
-        row-drag
-        renamable
+        ?reorderable=${state.editable}
+        ?row-drag=${state.editable}
+        ?renamable=${state.editable}
         @jolly-select=${this.#controller.handleSelect}
         @jolly-toggle-expand=${this.#controller.handleToggleExpand}
         @jolly-rename=${this.#controller.handleRename}
@@ -279,7 +282,8 @@ export class AnimatePanel extends LitElement {
   }
 
   #renderClip(
-    focused: FocusedClip
+    focused: FocusedClip,
+    editable: boolean
   ): TemplateResult {
     const { clip, frames } = focused;
 
@@ -287,6 +291,7 @@ export class AnimatePanel extends LitElement {
       <section class="clip" aria-label="Clip">
         <jolly-text
           label="Name"
+          ?readonly=${!editable}
           .value=${clip.name}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
             this.#controller.renameFocused(event.detail.value);
@@ -296,6 +301,7 @@ export class AnimatePanel extends LitElement {
           label="Length (frames)"
           min="1"
           step="1"
+          ?readonly=${!editable}
           .value=${frames}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
             this.#controller.changeFrames(Math.round(event.detail.value));
@@ -304,6 +310,7 @@ export class AnimatePanel extends LitElement {
         <jolly-select
           label="Frame rate"
           .options=${kFpsOptions}
+          ?readonly=${!editable}
           .value=${clip.fps}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
             this.#controller.changeClip({ fps: event.detail.value });
@@ -311,6 +318,7 @@ export class AnimatePanel extends LitElement {
         ></jolly-select>
         <jolly-checkbox
           label="Loop"
+          ?readonly=${!editable}
           .value=${clip.loop}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => {
             this.#controller.changeClip({ loop: event.detail.value });
@@ -332,7 +340,7 @@ export class AnimatePanel extends LitElement {
           icon="timeline-key"
           label="Key"
           title=${keyLabel}
-          ?disabled=${state.clip === null}
+          ?disabled=${!state.editable || state.clip === null}
           @click=${() => this.#controller.keySelected()}
         >Key</jolly-button>
       </section>

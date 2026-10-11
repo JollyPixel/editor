@@ -13,7 +13,7 @@ import type { BuildRecorder } from "../../../model/index.ts";
 
 export interface AnimationFollowOptions {
   document: ModelDocument;
-  animations: Pick<AnimationLibrary, "set">;
+  animations: Pick<AnimationLibrary, "set" | "editable">;
 }
 
 export function followingBuildEdits(
@@ -36,7 +36,7 @@ interface BoundTrack {
 
 export class AnimationFollow {
   #document: ModelDocument;
-  #animations: Pick<AnimationLibrary, "set">;
+  #animations: Pick<AnimationLibrary, "set" | "editable">;
   #carrying = false;
 
   constructor(
@@ -49,7 +49,7 @@ export class AnimationFollow {
   carry<T>(
     edit: () => T
   ): T {
-    if (this.#carrying) {
+    if (this.#carrying || !this.#animations.editable) {
       return edit();
     }
 

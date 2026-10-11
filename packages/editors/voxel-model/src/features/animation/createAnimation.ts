@@ -32,8 +32,10 @@ import {
   followingBuildEdits
 } from "./library/AnimationFollow.ts";
 import { KeyEditor } from "./keys/KeyEditor.ts";
+import type { ModelAccessSource } from "../../access/ModelAccess.ts";
 
 export interface CreateAnimationOptions {
+  access: ModelAccessSource;
   document: ModelDocument;
   history: EditorHistory;
   tab: TabStore;
@@ -59,8 +61,8 @@ export interface EditorAnimation {
 export function createAnimation(
   options: CreateAnimationOptions
 ): EditorAnimation {
-  const { document, history, tab, presence, source, blocks, requestFrame } = options;
-  const animations = new AnimationLibrary({ document, source });
+  const { access, document, history, tab, presence, source, blocks, requestFrame } = options;
+  const animations = new AnimationLibrary({ document, source, access });
   const animationFocus = new AnimationFocusStore();
   const animationHistories = new AnimationHistories({
     history,
@@ -90,13 +92,14 @@ export function createAnimation(
     animationFocus,
     clipRemoval,
     animationSession,
-    keyEditor: new KeyEditor({ session: animationSession, history }),
+    keyEditor: new KeyEditor({ session: animationSession, history, access }),
     keyer: new AnimationKeyer({
       document,
       history,
       blocks,
       session: animationSession,
-      poser
+      poser,
+      access
     }),
     liveView: animationLiveView(animationSession, poser),
     buildEdits: followingBuildEdits(history, follow),

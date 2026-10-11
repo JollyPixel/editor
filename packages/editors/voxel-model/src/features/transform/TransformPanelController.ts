@@ -123,7 +123,8 @@ export class TransformPanelController {
 
   get disabled(): boolean {
     return this.#selected === null ||
-      (this.#workspace?.lock.lockedBy(this.#selected.uuid) ?? null) !== null;
+      this.#workspace?.tool.target.writable !== true ||
+      (this.#workspace.lock.lockedBy(this.#selected.uuid) ?? null) !== null;
   }
 
   attach(
@@ -167,6 +168,7 @@ export class TransformPanelController {
     if (
       block === null ||
       workspace === null ||
+      !workspace.tool.target.writable ||
       workspace.lock.lockedBy(block.uuid) !== null
     ) {
       return;

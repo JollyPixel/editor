@@ -13,6 +13,7 @@ import {
   type EditorHistory,
   type EditorHistoryScope
 } from "./editorHistory.ts";
+import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 
 export type ActiveHistoryEvents = {
   change: (state: HistoryScopeState) => void;
@@ -36,6 +37,7 @@ export interface ActiveHistoryOptions {
   history: Pick<EditorHistory, "undo" | "redo" | "state" | "subscribe">;
   tab: Pick<TabStore, "active" | "subscribe">;
   animate: FocusedHistory;
+  access: ModelAccessSignals;
 }
 
 export class ActiveHistory extends Emitter<ActiveHistoryEvents> {
@@ -48,9 +50,10 @@ export class ActiveHistory extends Emitter<ActiveHistoryEvents> {
   ) {
     super();
     this.#options = options;
-    const { history, tab, animate } = options;
+    const { history, tab, animate, access } = options;
     this.#focus = this.#focused();
     this.#release = combineReleases([
+      access.subscribe("change", () => this.emit("change", this.state)),
       history.subscribe("change", this.#onChange),
       history.subscribe("skipped", this.#onSkipped),
       tab.subscribe("change", this.#refocus),
@@ -66,12 +69,16 @@ export class ActiveHistory extends Emitter<ActiveHistoryEvents> {
     return this.#focus.name;
   }
 
+  get readOnly(): boolean {
+    return this.#options.access.current.readOnly;
+  }
+
   undo(): boolean {
-    return this.#options.history.undo(this.#focus.scope);
+    return !this.readOnly && this.#options.history.undo(this.#focus.scope);
   }
 
   redo(): boolean {
-    return this.#options.history.redo(this.#focus.scope);
+    return !this.readOnly && this.#options.history.redo(this.#focus.scope);
   }
 
   dispose(): void {

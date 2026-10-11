@@ -107,6 +107,7 @@ export class MaterialLibrary extends LitElement {
     const controller = this.#controller;
     const { state } = controller;
     const { edited } = this.#surface;
+    const { editable } = controller;
 
     return html`
       <div class="layout" @paste=${this.#onPaste}>
@@ -117,9 +118,9 @@ export class MaterialLibrary extends LitElement {
             .selected=${state.selectedId === null ? [] : [state.selectedId]}
             .expanded=${state.expanded}
             .acceptDrop=${controller.acceptDrop}
-            reorderable
-            row-drag
-            renamable
+            ?reorderable=${editable}
+            ?row-drag=${editable}
+            ?renamable=${editable}
             swatch-position="start"
             @copy=${this.#onCopy}
             @jolly-select=${controller.handleSelect}
@@ -153,6 +154,9 @@ export class MaterialLibrary extends LitElement {
   #renderActions(
     state: MaterialLibraryState
   ): TemplateResult {
+    const { editable } = this.#controller;
+    const actOnEdited = editable && state.editedId !== null;
+
     return html`
       <div class="actions" role="toolbar" aria-label="Material tools">
         <jolly-button
@@ -160,6 +164,7 @@ export class MaterialLibrary extends LitElement {
           icon-only
           label="New Material"
           title="New material"
+          ?disabled=${!editable}
           @click=${this.#tool(null, "new-material")}
         ></jolly-button>
         <jolly-button
@@ -167,7 +172,7 @@ export class MaterialLibrary extends LitElement {
           icon-only
           label="Duplicate"
           title="Duplicate material"
-          ?disabled=${state.editedId === null}
+          ?disabled=${!actOnEdited}
           @click=${this.#tool(state.editedId, "duplicate")}
         ></jolly-button>
         <jolly-button
@@ -175,7 +180,7 @@ export class MaterialLibrary extends LitElement {
           icon-only
           label="Delete"
           title="Delete"
-          ?disabled=${state.editedId === null}
+          ?disabled=${!actOnEdited}
           @click=${this.#tool(state.editedId, "delete")}
         ></jolly-button>
         <jolly-button
@@ -211,6 +216,7 @@ export class MaterialLibrary extends LitElement {
         <jolly-text
           label="Name"
           path=${fieldPath(edited.id, "name")}
+          ?readonly=${!this.#surface.editable}
           .value=${edited.name}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => this.#controller.rename(
             edited.id,
@@ -279,6 +285,7 @@ export class MaterialLibrary extends LitElement {
     return html`
       <div class="footer">
         <jolly-button
+          ?disabled=${!this.#controller.editable}
           @click=${() => this.#controller.assign(applied ? null : edited.id)}
         >${applied ? `Remove from ${block.name}` : `Apply to ${block.name}`}</jolly-button>
       </div>
@@ -292,6 +299,7 @@ export class MaterialLibrary extends LitElement {
     const { surface } = edited;
     const description = this.help ? field.help : "";
     const path = fieldPath(edited.id, field.key);
+    const readOnly = !this.#surface.editable;
 
     return field.control === "color" ?
       html`
@@ -299,6 +307,7 @@ export class MaterialLibrary extends LitElement {
           label=${field.label}
           description=${description}
           path=${path}
+          ?readonly=${readOnly}
           .value=${surface[field.key]}
           @jolly-input=${this.#listen(field.key, this.#surface.preview)}
           @jolly-change=${this.#listen(field.key, this.#surface.commit)}
@@ -312,6 +321,7 @@ export class MaterialLibrary extends LitElement {
           min="0"
           max=${sliderMax(field)}
           step="0.01"
+          ?readonly=${readOnly}
           .value=${surface[field.key]}
           @jolly-input=${this.#listen(field.key, this.#surface.preview)}
           @jolly-change=${this.#listen(field.key, this.#surface.commit)}

@@ -66,6 +66,7 @@ export class KeyInspector extends LitElement {
         <jolly-select
           label="Interpolation"
           .options=${INTERPOLATION_OPTIONS}
+          ?readonly=${!state.editable}
           .value=${state.interpolation === "mixed" ? Mixed : state.interpolation}
           @jolly-change=${this.#onInterpolation}
         ></jolly-select>

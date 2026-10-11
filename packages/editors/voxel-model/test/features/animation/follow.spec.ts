@@ -25,7 +25,8 @@ function createFollowing(
     poses: {
       under: (uuid) => document.tree.block(uuid)!.transform,
       mirror: () => []
-    }
+    },
+    access: model.access
   });
 
   return {

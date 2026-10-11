@@ -200,7 +200,12 @@ export class AnimateActions {
   ): string | null {
     const trimmed = name.trim();
     const document = this.#animations.set(row.setId)?.document;
-    if (document === undefined || trimmed === "" || trimmed === document.set.clip(row.clipId)?.name) {
+    if (
+      !this.#animations.editable ||
+      document === undefined ||
+      trimmed === "" ||
+      trimmed === document.set.clip(row.clipId)?.name
+    ) {
       return null;
     }
 
@@ -257,7 +262,10 @@ export class AnimateActions {
     row: ClipRow,
     beforeId: string | undefined
   ): void {
-    if (this.#animations.set(row.setId)?.document.moveClip(row.clipId, beforeId)) {
+    if (
+      this.#animations.editable &&
+      this.#animations.set(row.setId)?.document.moveClip(row.clipId, beforeId)
+    ) {
       this.#focusClip(row);
     }
   }
@@ -267,7 +275,7 @@ export class AnimateActions {
   ): Promise<void> {
     const set = this.#animations.set(ref.setId);
     const clip = set?.document.set.clip(ref.clipId);
-    if (set === undefined || clip === undefined) {
+    if (set === undefined || clip === undefined || !this.#animations.editable) {
       return;
     }
 

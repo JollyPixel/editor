@@ -100,17 +100,26 @@ export class HistoryButtons extends LitElement {
     .reason {
       color: var(--jolly-text-muted, inherit);
     }
+
+    .access-badge {
+      padding: 0 var(--jolly-space-1, 4px);
+      color: var(--jolly-text-muted, inherit);
+      font-size: var(--jolly-font-size, 11px);
+      white-space: nowrap;
+    }
   `;
 
   static override properties = {
     workspace: { attribute: false },
     _state: { state: true },
-    _target: { state: true }
+    _target: { state: true },
+    _readOnly: { state: true }
   };
 
   declare workspace: HistoryWorkspace | null;
   declare private _state: HistoryScopeState;
   declare private _target: string | null;
+  declare private _readOnly: boolean;
 
   #marker = createRef<HTMLElement>();
   #steps = createRef<HTMLElement>();
@@ -134,6 +143,7 @@ export class HistoryButtons extends LitElement {
     this.workspace = null;
     this._state = EMPTY_HISTORY_STATE;
     this._target = null;
+    this._readOnly = false;
   }
 
   override willUpdate(
@@ -148,6 +158,7 @@ export class HistoryButtons extends LitElement {
     const activeHistory = this.#workspace.current?.activeHistory;
     this._state = activeHistory?.state ?? EMPTY_HISTORY_STATE;
     this._target = activeHistory?.targetName ?? null;
+    this._readOnly = activeHistory?.readOnly ?? false;
   };
 
   #run(
@@ -168,9 +179,12 @@ export class HistoryButtons extends LitElement {
   override render(): TemplateResult {
     const { canUndo, canRedo, undoLabel, redoLabel, undoCount, redoCount, refused } = this._state;
 
+    const writable = !this._readOnly;
+
     return html`
-      ${this.#renderAction("undo", "Undo", canUndo, undoLabel, undoCount)}
-      ${this.#renderAction("redo", "Redo", canRedo, redoLabel, redoCount)}
+      ${this._readOnly ? html`<span class="access-badge" role="status">View only</span>` : nothing}
+      ${this.#renderAction("undo", "Undo", writable && canUndo, undoLabel, undoCount)}
+      ${this.#renderAction("redo", "Redo", writable && canRedo, redoLabel, redoCount)}
       ${refused.length === 0 ? nothing : this.#renderRefused(refused)}
     `;
   }

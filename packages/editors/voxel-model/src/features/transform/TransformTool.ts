@@ -12,12 +12,14 @@ import {
   type GizmoSpace,
   type TransformMode
 } from "./gizmo/gizmoTools.ts";
+import type { ModelAccessSource } from "../../access/ModelAccess.ts";
 
 export interface TransformTarget {
   /**
    * In toolbar order.
    */
   readonly modes: readonly TransformMode[];
+  readonly writable: boolean;
   begin?(block: ModelBlock): void;
   /**
    * A gizmo drag let go of `block`.
@@ -36,21 +38,31 @@ export type TransformToolEvents = {
 export interface RestTargetOptions {
   blocks: Pick<ModelBlocks, "commitTransform">;
   lock: Pick<TransformLock, "claim" | "release">;
+  access: ModelAccessSource;
 }
 
 export function restTarget(
   options: RestTargetOptions
 ): TransformTarget {
-  const { blocks, lock } = options;
+  const { blocks, lock, access } = options;
 
   return {
     modes: TRANSFORM_MODE_ORDER,
+    get writable() {
+      return access.current.has("transforms");
+    },
     begin: (block) => lock.claim(block.uuid),
     end(block) {
-      blocks.commitTransform(block.uuid);
+      if (access.current.has("transforms")) {
+        blocks.commitTransform(block.uuid);
+      }
       lock.release();
     },
-    commit: (block) => blocks.commitTransform(block.uuid)
+    commit(block) {
+      if (access.current.has("transforms")) {
+        blocks.commitTransform(block.uuid);
+      }
+    }
   };
 }
 

@@ -135,6 +135,7 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
     const block = this.#selectedBlock();
     this.#syncPivotMarker(block);
     const active = !this.#enabled ||
+      !this.#tool.target.writable ||
       block === null ||
       this.#lock.lockedBy(block.uuid) !== null ?
       null :

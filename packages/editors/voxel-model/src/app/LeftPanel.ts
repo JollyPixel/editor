@@ -17,9 +17,10 @@ import type {
   PixelDocument,
   UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
-import type {
-  KeyBindingSettings,
-  PixelDrawPanel
+import {
+  RoomAccess,
+  type KeyBindingSettings,
+  type PixelDrawPanel
 } from "@jolly-pixel/editor.pixel-art";
 import {
   PixelCollaboration,
@@ -39,6 +40,7 @@ import type { TransformWorkspace } from "../features/transform/TransformPanelCon
 import { PeerRegionSelections } from "../features/texture/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import type { EditorHistory } from "../features/history/index.ts";
+import type { ModelAccessSignals } from "../access/ModelAccess.ts";
 
 // CONSTANTS
 const kDefaultZoom = {
@@ -49,6 +51,7 @@ const kDefaultZoom = {
 };
 
 export interface LeftPanelWorkspace extends TransformWorkspace {
+  access: ModelAccessSignals;
   presence: PresenceStore;
   history: EditorHistory;
 }
@@ -79,6 +82,8 @@ export class LeftPanel extends LitElement {
   #resizeObserver: ResizeObserver | null = null;
   #texture: LeftPanelTexture | null = null;
   #collaboration: PixelCollaboration | null = null;
+  #access: RoomAccess | null = null;
+  #releaseModelAccess: (() => void) | null = null;
   #peerRegionSelections: PeerRegionSelections | null = null;
   #initializing = false;
   #releaseKeyBindings: (() => void) | null = null;
@@ -154,6 +159,10 @@ export class LeftPanel extends LitElement {
       color: peerProfileColor,
       onRemoteUvDragging: (region) => this.onPeerUvDragging?.(region)
     });
+    const textureId = this.panelElement.activeTextureId;
+    if (textureId !== null) {
+      this.#access = new RoomAccess(texture.room, this.panelElement, textureId);
+    }
     this.#syncPeerRegionSelections();
   }
 
@@ -167,6 +176,11 @@ export class LeftPanel extends LitElement {
       this._canvas.mode = canvasModeForTab(this.mode);
     }
     if (changedProperties.has("workspace")) {
+      this.#releaseModelAccess?.();
+      this.#releaseModelAccess = this.workspace?.access.subscribe(
+        "change",
+        () => this.requestUpdate()
+      ) ?? null;
       this.#syncPeerRegionSelections();
       void this.#initializeCanvas();
     }
@@ -198,6 +212,10 @@ export class LeftPanel extends LitElement {
       this.#resizeObserver = null;
       this.#collaboration?.destroy();
       this.#collaboration = null;
+      this.#access?.dispose();
+      this.#access = null;
+      this.#releaseModelAccess?.();
+      this.#releaseModelAccess = null;
       this.#peerRegionSelections?.dispose();
       this.#peerRegionSelections = null;
       this.#releaseKeyBindings?.();
@@ -212,7 +230,11 @@ export class LeftPanel extends LitElement {
         .canvas=${this._canvas}
         .workspace=${this.workspace}
       ></jolly-model-editor-build>
-      <pixel-draw-panel uv-resize uv-overflow="64"></pixel-draw-panel>
+      <pixel-draw-panel
+        uv-resize
+        uv-overflow="64"
+        uv-access=${this.workspace?.access.current.has("uv") === false ? "view" : "edit"}
+      ></pixel-draw-panel>
     `;
   }
 }

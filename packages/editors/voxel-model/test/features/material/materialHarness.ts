@@ -27,6 +27,7 @@ import type {
 import type { MenuPoint } from "#src/shared/menu/MenuSession.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
+import { modelAccess } from "../../fixtures/modelAccess.ts";
 
 // CONSTANTS
 export const GLASS_SURFACE = MaterialSurface.create({ opacity: 0.4 });
@@ -80,8 +81,10 @@ export function createMaterialHarness(
   const controller = new MaterialLibraryController(host, prompts);
   const surface = new MaterialSurfaceController(host);
   const view = new ViewSettingsStore();
+  const access = modelAccess();
   const workspace = {
     ...fixture,
+    access,
     history: createEditorHistory({ document: fixture.document }),
     materialFocus,
     presence,
@@ -97,6 +100,7 @@ export function createMaterialHarness(
 
   return {
     ...fixture,
+    access,
     materialFocus,
     presence,
     view,

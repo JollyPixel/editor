@@ -111,6 +111,30 @@ export class MenuSession {
   }
 }
 
+export function disableEntries<TAction extends string>(
+  entries: readonly MenuEntry<TAction>[],
+  disabled: (action: TAction) => boolean
+): MenuEntry<TAction>[] {
+  return entries.map((entry): MenuEntry<TAction> => {
+    if (entry === "separator") {
+      return entry;
+    }
+    if (entry.items !== undefined) {
+      return {
+        ...entry,
+        items: disableEntries(entry.items, disabled)
+      };
+    }
+
+    return disabled(entry.id) ?
+      {
+        ...entry,
+        disabled: true
+      } :
+      entry;
+  });
+}
+
 function enabledActionIds(
   entries: readonly MenuEntry<string>[]
 ): string[] {

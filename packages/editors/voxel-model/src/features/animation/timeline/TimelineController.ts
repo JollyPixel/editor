@@ -147,7 +147,7 @@ export class TimelineController {
     const workspace = this.#connection.current;
     const setId = workspace?.animationSession.focused?.set.id;
 
-    return workspace === null || setId === undefined ?
+    return workspace === null || setId === undefined || !workspace.keyEditor.editable ?
       MenuSession.EMPTY :
       rebindMenu(workspace.document, setId, path);
   }

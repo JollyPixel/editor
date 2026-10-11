@@ -22,12 +22,17 @@ import {
   createModelFixture,
   type ModelFixture
 } from "../fixtures/model.ts";
+import {
+  modelAccess,
+  type TestModelAccess
+} from "../fixtures/modelAccess.ts";
 
 // CONSTANTS
 const kNoMirror = { x: false, y: false, z: false };
 const kTextureSize = { x: 256, y: 256 };
 
 interface Harness extends ModelFixture {
+  access: TestModelAccess;
   hierarchy: ModelHierarchy;
   commands: VoxelModelCommand[];
 }
@@ -45,14 +50,17 @@ function createHarness(): Harness {
   const fixture = createModelFixture();
   const commands: VoxelModelCommand[] = [];
   fixture.document.on("change", (change) => commands.push(change.command));
+  const access = modelAccess();
 
   return {
     ...fixture,
+    access,
     hierarchy: new ModelHierarchy({
       document: fixture.document,
       edits: buildEditsOf(createEditorHistory({ document: fixture.document })),
       textureSize: () => kTextureSize,
-      poses: fixture.blocks
+      poses: fixture.blocks,
+      access
     }),
     commands
   };
@@ -338,6 +346,35 @@ describe("ModelHierarchy block names", () => {
       [first.uuid, "Another block in \"Body\" is named \"Arm\""],
       [second.uuid, "Another block in \"Body\" is named \"arm\""]
     ]));
+  });
+});
+
+describe("ModelHierarchy access", () => {
+  test("sends no node command without hierarchy rights, and mirrors only with transform rights", () => {
+    const { access, addBlock, commands, hierarchy } = createHarness();
+    const arm = addBlock({ name: "Arm" });
+    const legId = hierarchy.createFolder("Legs", null)!;
+    commands.length = 0;
+    access.grant("transforms");
+
+    assert.equal(hierarchy.createBlock("Head", null), null);
+    assert.equal(hierarchy.createFolder("Props", null), null);
+    hierarchy.rename(arm.uuid, "Wing");
+    hierarchy.move(arm.uuid, legId);
+    hierarchy.remove(arm.uuid, { withChildren: true });
+    hierarchy.duplicate(arm.uuid, { name: "Copy", includeChildren: false, mirrorAxes: kNoMirror });
+    assert.deepEqual(commands, []);
+
+    access.grant("hierarchy");
+    const mirrored = hierarchy.duplicate(arm.uuid, {
+      name: "Mirror",
+      includeChildren: false,
+      mirrorAxes: { x: true, y: false, z: false }
+    });
+    assert.deepEqual([mirrored, commands], [null, []]);
+
+    hierarchy.rename(arm.uuid, "Wing");
+    assert.deepEqual(commands.map(({ action }) => action), ["node-renamed"]);
   });
 });
 

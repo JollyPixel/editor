@@ -6,6 +6,7 @@ import type { KeyEditor } from "../keys/KeyEditor.ts";
 import { INTERPOLATION_OPTIONS } from "../keys/interpolation.ts";
 import {
   MenuSession,
+  disableEntries,
   type MenuEntry
 } from "../../../shared/menu/MenuSession.ts";
 import { DELETE_ITEM } from "../../../shared/menu/menuItems.ts";
@@ -39,7 +40,10 @@ export function keyMenu(
     DELETE_ITEM
   ];
 
-  return MenuSession.from(items, (action) => runKeyAction(keys, action));
+  return MenuSession.from(
+    keys.editable ? items : disableEntries(items, (action) => action !== "copy"),
+    (action) => runKeyAction(keys, action)
+  );
 }
 
 function runKeyAction(

@@ -12,6 +12,7 @@ import type {
   ModelDocument,
   VoxelModelRoom
 } from "@jolly-pixel/asset.voxel-model/client";
+import { RoomGrants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { ModelHierarchy } from "../model/index.ts";
@@ -59,6 +60,13 @@ import {
 } from "../features/animation/index.ts";
 import { createModelGrid } from "./modelGrid.ts";
 import { SceneWaker } from "./SceneWaker.ts";
+import {
+  MODEL_CAPABILITIES,
+  type ModelGrants
+} from "../access/ModelAccess.ts";
+
+// CONSTANTS
+const kMaxAccessListeners = 32;
 
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
@@ -72,6 +80,7 @@ export interface ModelEditorSceneOptions {
 }
 
 export interface ModelWorkspace {
+  access: ModelGrants;
   archives: EditorArchives;
   document: ModelDocument;
   history: EditorHistory;
@@ -145,6 +154,8 @@ export class ModelEditorScene extends Systems.Scene {
         initialTrailDistance: 12
       });
 
+    const access = new RoomGrants(room, MODEL_CAPABILITIES)
+      .setMaxListeners(kMaxAccessListeners);
     const history = createEditorHistory({ document });
     const unregisterPixels = registerPixelHistory(history, pixels, { scope: "build" });
     const tab = new TabStore();
@@ -158,6 +169,7 @@ export class ModelEditorScene extends Systems.Scene {
       previews
     });
     const animation = createAnimation({
+      access,
       document,
       history,
       tab,
@@ -177,7 +189,8 @@ export class ModelEditorScene extends Systems.Scene {
     const activeHistory = new ActiveHistory({
       history,
       tab,
-      animate: animation.historyFocus
+      animate: animation.historyFocus,
+      access
     });
 
     const lighting = new ViewLighting({
@@ -201,13 +214,15 @@ export class ModelEditorScene extends Systems.Scene {
       document,
       blocks,
       selection,
+      access,
       requestFrame: () => this.world.invalidate()
     });
     const hierarchy = new ModelHierarchy({
       document,
       edits: animation.buildEdits,
       textureSize: () => pixels.size(),
-      poses: blocks
+      poses: blocks,
+      access
     });
     const collaboration = new ModelCollaboration({
       room,
@@ -226,7 +241,7 @@ export class ModelEditorScene extends Systems.Scene {
       world: this.world,
       camera: camera.camera
     });
-    const rest = restTarget({ blocks, lock: collaboration.lock });
+    const rest = restTarget({ blocks, lock: collaboration.lock, access });
     const tool = new TransformTool(rest);
     const gizmo = new TransformGizmo({
       camera,
@@ -275,6 +290,7 @@ export class ModelEditorScene extends Systems.Scene {
       animationSession.subscribe("active", (active) => {
         tool.use(active ? keyer : rest);
       }),
+      access.subscribe("change", () => tool.emit("change")),
       bindAnimationShortcuts({
         keyboard: this.world.input.keyboard,
         keyer,
@@ -297,10 +313,12 @@ export class ModelEditorScene extends Systems.Scene {
       }),
       () => activeHistory.dispose(),
       () => unregisterPixels(),
-      () => history.dispose()
+      () => history.dispose(),
+      () => access.dispose()
     );
 
     this.#workspace.resolve({
+      access,
       archives: this.#options.archives,
       document,
       history,

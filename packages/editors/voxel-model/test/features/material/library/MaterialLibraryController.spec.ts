@@ -458,3 +458,42 @@ describe("MaterialLibraryController peers", () => {
     ]);
   });
 });
+
+describe("MaterialLibraryController without material rights", () => {
+  test("sends no material command and keeps only Copy in the menus until rights return", async() => {
+    const harness = createHarness();
+    const block = harness.addBlock();
+    harness.selection.select(block.uuid);
+    harness.access.grant("hierarchy");
+    harness.actions.length = 0;
+
+    harness.controller.create(preset("metal"));
+    harness.controller.duplicate(harness.glass);
+    harness.controller.rename(harness.glass, "Frosted");
+    harness.controller.assign(harness.glass);
+    await harness.controller.remove(harness.glass);
+    assert.equal(harness.controller.paste(harness.controller.copy(harness.glass)!), false);
+    drop(harness, [harness.glass], harness.glass, "below");
+    harness.surface.commit(GLASS_SURFACE);
+
+    assert.deepEqual(harness.actions, []);
+    assert.equal(harness.controller.editable, false);
+    assert.deepEqual(enabledLabels(harness, null), []);
+    assert.deepEqual(enabledLabels(harness, harness.glass), ["Copy"]);
+
+    harness.access.grant("materials");
+    harness.controller.assign(harness.glass);
+
+    assert.deepEqual(harness.actions, ["node-material-changed"]);
+    assert.deepEqual(enabledLabels(harness, null), ["New Material…", "Paste"]);
+  });
+});
+
+function enabledLabels(
+  harness: MaterialHarness,
+  id: string | null
+): string[] {
+  return harness.controller.menuFor(id).items.flatMap((entry) => (
+    entry === "separator" || entry.disabled === true ? [] : [entry.label]
+  ));
+}

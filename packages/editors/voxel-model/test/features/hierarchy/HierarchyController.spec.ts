@@ -37,6 +37,10 @@ import {
   createModelFixture,
   type ModelFixture
 } from "../../fixtures/model.ts";
+import {
+  modelAccess,
+  type TestModelAccess
+} from "../../fixtures/modelAccess.ts";
 
 // CONSTANTS
 const kNoMirror = {
@@ -53,6 +57,14 @@ const kMenuPoint = {
   y: 0
 };
 
+function enabledLabelsOf(
+  entries: readonly ContextMenuEntry[]
+): string[] {
+  return entries.flatMap((entry) => (
+    entry === "separator" || entry.disabled === true ? [] : [entry.label]
+  ));
+}
+
 interface DialogAnswers {
   name?: NameDialogResult | null;
   duplicate?: HierarchyDuplicateResult | null;
@@ -68,6 +80,7 @@ interface DialogCalls {
 }
 
 interface Harness extends ModelFixture {
+  access: TestModelAccess;
   controller: HierarchyController;
   hierarchy: ModelHierarchy;
   calls: DialogCalls;
@@ -80,11 +93,13 @@ function createHarness(
 ): Harness {
   const fixture = createModelFixture();
   const { document, blocks, selection } = fixture;
+  const access = modelAccess();
   const hierarchy = new ModelHierarchy({
     document,
     edits: buildEditsOf(createEditorHistory({ document })),
     textureSize: () => kTextureSize,
-    poses: blocks
+    poses: blocks,
+    access
   });
   const calls: DialogCalls = {
     name: [],
@@ -128,6 +143,7 @@ function createHarness(
   const tab = new TabStore();
   const controller = new HierarchyController(host, view);
   controller.attach({
+    access,
     document,
     blocks,
     selection,
@@ -138,6 +154,7 @@ function createHarness(
 
   return {
     ...fixture,
+    access,
     controller,
     hierarchy,
     calls,
@@ -275,6 +292,21 @@ describe("HierarchyController.editable", () => {
 
     tab.activate("build");
     assert.equal(controller.editable, true);
+  });
+
+  test("without hierarchy rights keeps only Material… in the row menu, redrawing when rights change", () => {
+    const harness = createHarness();
+    const block = harness.addBlock({ name: "Body" });
+    const before = harness.updates();
+
+    harness.access.grant("materials");
+
+    assert.deepEqual([harness.controller.writable, harness.updates()], [false, before + 1]);
+    assert.deepEqual(enabledLabelsOf(harness.controller.menuFor(block.uuid).items), ["Material…"]);
+    assert.deepEqual(enabledLabelsOf(harness.controller.menuFor(null).items), []);
+
+    harness.access.grant("hierarchy");
+    assert.equal(harness.controller.writable, true);
   });
 });
 
@@ -702,6 +734,7 @@ describe("HierarchyController.attach", () => {
 
     const harness = createHarness();
     harness.controller.attach({
+      access: harness.access,
       document,
       blocks,
       selection,
@@ -709,7 +742,8 @@ describe("HierarchyController.attach", () => {
         document,
         edits: buildEditsOf(createEditorHistory({ document })),
         textureSize: () => kTextureSize,
-        poses: blocks
+        poses: blocks,
+        access: harness.access
       }),
       presence: new PresenceStore(),
       tab: new TabStore()
