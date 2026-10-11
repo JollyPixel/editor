@@ -127,7 +127,7 @@ describe("PresenceChannel", () => {
     assert.strictEqual(channel.values.size, 0);
   });
 
-  test("publish skips a value equal to the last published one", () => {
+  test("publish skips a value equal to the published one", () => {
     const harness = new RoomHarness();
     harness.room.join();
     const channel = new PresenceChannel(harness.room, {
@@ -139,10 +139,12 @@ describe("PresenceChannel", () => {
       ),
       equals: (left, right) => left.x === right.x
     });
+    assert.strictEqual(channel.published, undefined);
 
     assert.strictEqual(channel.publish({ x: 1 }), true);
     assert.strictEqual(channel.publish({ x: 1 }), false);
     assert.strictEqual(channel.publish({ x: 2 }), true);
+    assert.deepEqual(channel.published, { x: 2 });
 
     assert.deepEqual(harness.patches, [
       { cursor: { x: 1 } },

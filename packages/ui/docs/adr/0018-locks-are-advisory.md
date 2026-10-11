@@ -20,7 +20,8 @@ Three rules follow, each invisible in a single browser:
   that one disconnects.
 
 `peers` includes the local peer; an adapter over a transport that omits the caller from its own peer
-list synthesizes that entry.
+list synthesizes that entry. A peer is a connection, keyed by the id the room gives it, so two tabs of
+one account are two peers and lock each other out.
 
 `path` is a plain property on every field, `null` by default, which opts the field out of locking.
 Two clients must compute the same string, and a path derived from a label or a DOM position only
@@ -38,8 +39,9 @@ below would shake a panel under a user who is not touching it.
 - **Server-granted lock leases.** Needs a protocol, heartbeats and a reaper in `network`, and would
   block this package. `claim()` returns a `LockState` so a lease can replace the presence
   implementation later without touching components.
-- **Adding "your id" to the sync envelope.** A protocol, server and client change, and the envelope
-  is not sent at all to a lone first joiner.
+- **Keying peers by a host-stamped account id.** Every tab of an account shares that id, so one tab
+  read the other's claim as its own and never saw the lock. The sync envelope now carries the
+  connection id, which is what made the stamp unnecessary.
 - **Deriving a path from the label or container chain.** Duplicate labels collide silently, and for a
   lock that means two unrelated fields locking each other across machines.
 - **Consumers assigning `lockedBy` per field.** Twelve files instead of one, the argument that put

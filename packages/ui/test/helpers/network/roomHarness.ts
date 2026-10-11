@@ -37,7 +37,9 @@ export interface RoomHarness {
   ): number;
 }
 
-export function createRoomHarness(): RoomHarness {
+export function createRoomHarness(
+  claimedProfile: PeerMetadata = {}
+): RoomHarness {
   const peers = new Map<string, Peer>();
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   const published: PeerMetadata[] = [];
@@ -46,7 +48,7 @@ export function createRoomHarness(): RoomHarness {
     id: "room",
     clientId: "local",
     peers,
-    profile: null as PeerMetadata | null,
+    profile: claimedProfile,
     role: "default",
     rights: {},
     access: "write" as const,

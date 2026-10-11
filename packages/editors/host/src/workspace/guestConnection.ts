@@ -8,7 +8,7 @@ import {
   peerIdentity,
   type PeerIdentity
 } from "@jolly-pixel/ui";
-import { toPeerMetadata } from "@jolly-pixel/ui/network";
+import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 export interface GuestConnection {
   identity: PeerIdentity;
@@ -23,7 +23,7 @@ export function guestConnection(
   return {
     identity,
     client: new Client({
-      profile: toPeerMetadata(identity),
+      profile: toPeerProfileMetadata(identity),
       socket
     })
   };

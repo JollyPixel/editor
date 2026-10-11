@@ -9,10 +9,7 @@ import {
   PeerFrustumSync,
   type PeerFrustumPose
 } from "@jolly-pixel/three/network";
-import {
-  peerProfileColor,
-  readUsername
-} from "@jolly-pixel/ui/network";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // CONSTANTS
 const kHideWithin = 1.5;
@@ -42,7 +39,6 @@ export class PeerFrustums extends ActorComponent {
     this.#sync = new PeerFrustumSync({
       room: options.room,
       parent: this.actor.world.sceneManager.getSource(),
-      label: (_clientId, identity) => readUsername(identity),
       color: peerProfileColor,
       hideWithin: kHideWithin,
       fadeWithin: kFadeWithin,

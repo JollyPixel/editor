@@ -60,6 +60,7 @@ room.send({ hello: "world" });
 - [Extension](./docs/server/Extension.md): feature hooks and workers
 - [Access](./docs/server/Access.md): authentication and rights
 - [Messages](./docs/protocol/Messages.md): protocols and parsing
+- [Peer profile](./docs/protocol/PeerProfile.md): profile fields and parsing
 - [Transports](./docs/transport/Transports.md): hosting and socket adapters
 
 Guides: [Getting started](./docs/guides/getting-started.md),

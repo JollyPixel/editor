@@ -109,6 +109,10 @@ export class PresenceChannel<T> extends Emitter<PresenceChannelEventMap<T>> {
     return this.#values;
   }
 
+  get published(): T | undefined {
+    return this.#published?.value;
+  }
+
   publish(
     value: T
   ): boolean {

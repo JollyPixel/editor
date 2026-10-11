@@ -4,11 +4,13 @@ import type { IncomingHttpHeaders } from "node:http";
 
 // Import Third-party Dependencies
 import {
+  GUEST_USERNAME,
   readCredential,
   type AuthenticationProvider,
   type AuthenticationRequest,
   type PeerIdentity,
-  type PeerMetadata
+  type PeerMetadata,
+  type PeerProfileMetadata
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -42,9 +44,6 @@ import {
   ShareLinks,
   shareLinkSubject
 } from "./share/ShareLinks.ts";
-
-// CONSTANTS
-const kGuestUsername = "Guest";
 
 export interface AccountsOptions {
   database: AccountsDatabase;
@@ -296,17 +295,17 @@ function toGuestIdentity(
     subject: shareLinkSubject(link.id),
     role: GUEST_ROLE,
     profile: {
-      username: kGuestUsername,
+      username: GUEST_USERNAME,
       peerId: randomUUID(),
       avatar: null,
       via: SHARE_LINK_VIA
-    }
+    } satisfies PeerProfileMetadata
   };
 }
 
 function toPeerProfile(
   account: Account
-): PeerMetadata {
+): PeerProfileMetadata {
   return {
     username: account.username,
     peerId: account.id,

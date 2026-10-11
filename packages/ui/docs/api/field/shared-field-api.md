@@ -19,7 +19,7 @@ The exported types are `FieldValue<T>`, `FieldAlign`, `FieldLabelPosition`,
 | `readonly` | `readonly` | `boolean` | `false` |
 | `colored` | `colored` | `boolean` | `false` |
 | `lockedBy` | none | `CollaboratorPresence \| null` | `null` |
-| `peers` | none | `CollaboratorPresence[]` | `[]` |
+| `peers` | none | `readonly CollaboratorPresence[]` | `[]` |
 | `path` | `path` | `string \| null` | `null` |
 | `align` | `align` | `"start" \| "end"` | `"start"` |
 | `labelPosition` | `label-position` | `"inline" \| "top" \| "auto"` | `"inline"` |

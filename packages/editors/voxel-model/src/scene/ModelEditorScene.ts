@@ -3,10 +3,7 @@ import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
-import type {
-  PeerIdentity,
-  PresenceSource
-} from "@jolly-pixel/ui";
+import type { PresenceSource } from "@jolly-pixel/ui";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
@@ -71,7 +68,6 @@ const kMaxAccessListeners = 32;
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
   document: ModelDocument;
-  identity: PeerIdentity;
   presence: PresenceStore;
   pixels: PixelDocument;
   animationSets: AnimationSetSource;
@@ -128,7 +124,6 @@ export class ModelEditorScene extends Systems.Scene {
     const {
       room,
       document,
-      identity,
       presence,
       pixels,
       view
@@ -226,7 +221,6 @@ export class ModelEditorScene extends Systems.Scene {
     });
     const collaboration = new ModelCollaboration({
       room,
-      identity,
       document,
       blocks,
       selection,

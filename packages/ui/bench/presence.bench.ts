@@ -22,28 +22,27 @@ const suite = defineSuite("presence", (bench) => {
     peers.set(`transport-${index}`, {
       clientId: `transport-${index}`,
       role: "default",
-      profile: {},
+      profile: {
+        username: `Peer ${index}`,
+        peerId: `peer-${index}`
+      },
       presence: {
-        jolly: {
-          clientId: `peer-${index}`,
-          displayName: `Peer ${index}`,
-          color: "#43aa8b",
-          editing: index % 2 === 0 ? `field-${index}` : null
-        }
+        fieldLock: index % 2 === 0 ? `field-${index}` : null
       }
     });
   }
   const room = {
+    clientId: "me",
+    profile: {
+      username: "Me",
+      peerId: "me"
+    },
     peers,
     updatePresence: () => void 0,
     on: () => void 0,
     off: () => void 0
   } as unknown as Room;
-  const source = new RoomPresenceSource(room, {
-    clientId: "me",
-    displayName: "Me",
-    color: "#f94144"
-  });
+  const source = new RoomPresenceSource(room);
   const paths = Array.from(
     { length: kFieldCount },
     (_, index) => `field-${index}`

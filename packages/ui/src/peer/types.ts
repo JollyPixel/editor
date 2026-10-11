@@ -13,3 +13,19 @@ export interface CollaboratorPresence {
    */
   editing?: string;
 }
+
+export interface PresencePeer extends CollaboratorPresence {
+  self?: boolean;
+  /**
+   * Picks the default avatar. Defaults to `clientId`.
+   */
+  peerId?: string;
+  /**
+   * Image URL of an uploaded avatar.
+   */
+  avatar?: string;
+  /**
+   * Short label shown after the name, such as "via link".
+   */
+  badge?: string;
+}

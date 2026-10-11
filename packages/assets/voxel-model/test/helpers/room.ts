@@ -38,7 +38,7 @@ export function createMockRoom(
     id: "model-room",
     clientId,
     peers: new Map(),
-    profile: null,
+    profile: {},
     role: "default",
     rights: {},
     access: "write",

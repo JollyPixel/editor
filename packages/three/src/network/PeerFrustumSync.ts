@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   PresenceChannel,
+  parsePeerProfile,
   type PeerMetadata,
   type PresenceChange,
   type Room
@@ -46,8 +47,8 @@ export interface PeerFrustumSyncOptions {
 function defaultLabel(
   _clientId: string,
   profile: PeerMetadata
-): string | undefined {
-  return typeof profile.username === "string" ? profile.username : undefined;
+): string {
+  return parsePeerProfile(profile).username;
 }
 
 export class PeerFrustumSync {

@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import {
   PresenceChannel,
+  parsePeerProfile,
+  type PeerMetadata,
   type PresenceChange
 } from "@jolly-pixel/network/client";
 import {
@@ -22,7 +24,7 @@ import type { PixelArtRoom } from "./types.ts";
 export interface PixelCursorSyncOptions {
   room: PixelArtRoom;
   canvas: PixelArtCanvas;
-  label: PeerLabel;
+  label?: PeerLabel;
   color: PeerColor;
 }
 
@@ -30,6 +32,13 @@ function decodeCursor(
   value: unknown
 ): Vec2 | null | undefined {
   return value === null || isVec2(value) ? value : undefined;
+}
+
+function profileLabel(
+  _clientId: string,
+  profile: PeerMetadata
+): string {
+  return parsePeerProfile(profile).username;
 }
 
 export class PixelCursorSync {
@@ -61,7 +70,7 @@ export class PixelCursorSync {
     options: PixelCursorSyncOptions
   ) {
     this.#canvas = options.canvas;
-    this.#labelOf = peerStyle(options.room, options.label);
+    this.#labelOf = peerStyle(options.room, options.label ?? profileLabel);
     this.#colorOf = peerStyle(options.room, options.color);
     this.#channel = new PresenceChannel(options.room, {
       key: "cursor",

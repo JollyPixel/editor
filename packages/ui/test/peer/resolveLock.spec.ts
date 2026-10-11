@@ -3,10 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  resolveLock,
-  sortSelfFirst
-} from "../../src/peer/resolveLock.ts";
+import { resolveLock } from "../../src/peer/resolveLock.ts";
 import type { CollaboratorPresence } from "../../src/peer/types.ts";
 
 function peer(
@@ -41,6 +38,22 @@ describe("resolveLock", () => {
     assert.deepEqual(lock.peers.map((entry) => entry.clientId), ["ada"]);
   });
 
+  test("every client names the same holder, whatever order peers joined in", () => {
+    const forward = resolveLock(
+      [peer("lin", "map.width"), peer("ada", "map.width")],
+      "map.width",
+      "me"
+    );
+    const reversed = resolveLock(
+      [peer("ada", "map.width"), peer("lin", "map.width")],
+      "map.width",
+      "me"
+    );
+
+    assert.equal(forward.lockedBy?.clientId, "ada");
+    assert.equal(reversed.lockedBy?.clientId, "ada");
+  });
+
   test("the local peer never locks its own field", () => {
     const lock = resolveLock([peer("me", "map.width")], "map.width", "me");
 
@@ -57,29 +70,5 @@ describe("resolveLock", () => {
 
     assert.equal(lock.lockedBy, null);
     assert.deepEqual(lock.peers.map((entry) => entry.clientId), ["me", "ada"]);
-  });
-});
-
-describe("sortSelfFirst", () => {
-  test("puts the local peer first, then sorts by clientId", () => {
-    const sorted = sortSelfFirst(
-      [peer("zoe"), peer("ada"), peer("me"), peer("lin")],
-      "me"
-    );
-
-    assert.deepEqual(
-      sorted.map((entry) => entry.clientId),
-      ["me", "ada", "lin", "zoe"]
-    );
-  });
-
-  test("orders identically whatever order each client saw peers join in", () => {
-    const forward = sortSelfFirst([peer("ada"), peer("lin"), peer("zoe")], "me");
-    const reversed = sortSelfFirst([peer("zoe"), peer("lin"), peer("ada")], "me");
-
-    assert.deepEqual(
-      forward.map((entry) => entry.clientId),
-      reversed.map((entry) => entry.clientId)
-    );
   });
 });

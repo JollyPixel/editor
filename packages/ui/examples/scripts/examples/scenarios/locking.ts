@@ -3,7 +3,6 @@ import { Client } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { Pane } from "../shared/facadePane.ts";
-import { peerColor } from "../../../../src/theme/peerColor.ts";
 import { toPresencePeers } from "../../../../src/peer/toPresencePeers.ts";
 import { RoomPresenceSource } from "../../../../src/network/index.ts";
 import type { GalleryExample } from "../../types.ts";
@@ -44,14 +43,15 @@ export const LOCKING_EXAMPLE: GalleryExample = {
       return () => pane.dispose();
     }
 
-    const client = new Client({});
+    const client = new Client({
+      profile: {
+        username: displayName,
+        peerId: `${displayName.toLowerCase()}-${roomName}`
+      }
+    });
     const room = client.room(roomName);
     room.join();
-    const source = new RoomPresenceSource(room, {
-      clientId: `${displayName.toLowerCase()}-${roomName}`,
-      displayName,
-      color: peerColor(displayName === "Ada" ? 0 : 1)
-    });
+    const source = new RoomPresenceSource(room);
 
     function repaint(): void {
       presence.update(

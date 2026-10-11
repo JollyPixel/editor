@@ -16,7 +16,7 @@ import {
   peerIdentity,
   type PeerIdentity
 } from "@jolly-pixel/ui";
-import { toPeerMetadata } from "@jolly-pixel/ui/network";
+import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
@@ -57,7 +57,7 @@ async function connectOnline(): Promise<StudioConnection> {
     account.avatar
   );
   const client = new Client({
-    profile: toPeerMetadata(identity)
+    profile: toPeerProfileMetadata(identity)
   });
   const roster = AccountsRoster.join(client);
   const signedIn: StudioSignedIn = {

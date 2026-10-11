@@ -3,10 +3,7 @@ import { PresenceChannel } from "@jolly-pixel/network/client";
 import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
 import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
-import {
-  peerProfileColor,
-  readUsername
-} from "@jolly-pixel/ui/network";
+import { toPresencePeer } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
@@ -73,13 +70,10 @@ export class TransformLock extends Emitter<TransformLockEvents> {
       return null;
     }
 
-    const peer = this.#room.peers.get(winner);
-
-    return {
+    return toPresencePeer({
       clientId: winner,
-      displayName: readUsername(peer?.profile),
-      color: peerProfileColor(winner, peer?.profile)
-    };
+      profile: this.#room.peers.get(winner)?.profile
+    });
   }
 
   dispose(): void {

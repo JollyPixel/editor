@@ -225,11 +225,8 @@ function refreshPeersLegend(): void {
   ];
 
   for (const [clientId, peer] of room.peers) {
-    const peerUsername = typeof peer.profile.username === "string" ?
-      peer.profile.username :
-      "Guest";
     rows.push({
-      name: peerUsername,
+      name: network.parsePeerProfile(peer.profile).username,
       color: colorPalette.forKey(clientId),
       selected: selectables.labelOf(peerRegistry.selectionOf(clientId))
     });

@@ -46,7 +46,7 @@ export function createRoomHarness(): RoomHarness {
     id: "model-room",
     clientId: localId,
     peers,
-    profile: null,
+    profile: {},
     role: "default",
     rights: {},
     access: "write",

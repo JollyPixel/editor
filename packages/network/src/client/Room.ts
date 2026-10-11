@@ -77,7 +77,7 @@ export interface Room<
   readonly id: string;
   readonly clientId: string | null;
   readonly peers: ReadonlyMap<string, Peer>;
-  readonly profile: PeerMetadata | null;
+  readonly profile: PeerMetadata;
   readonly role: string;
   readonly rights: RoomRights;
   readonly access: Right;

@@ -18,10 +18,7 @@ import type {
   AssetLease,
   EditorSession
 } from "@jolly-pixel/editor.host";
-import {
-  peerProfileColor,
-  readUsername
-} from "@jolly-pixel/ui/network";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -86,7 +83,6 @@ export class TextureTabs {
       collaboration: new PixelCollaboration({
         room: texture.room,
         canvas,
-        label: (_clientId, profile) => readUsername(profile),
         color: peerProfileColor
       }),
       access: new RoomAccess(texture.room, this.#panel, textureId)

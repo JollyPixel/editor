@@ -40,32 +40,21 @@ const identity = peerIdentity(account.username, account.id, account.avatar);
 
 Available under the `./network` subpath.
 
-### `toPeerMetadata(identity)`
+### `toPeerProfileMetadata(identity)`
 
-The `{ username, peerId }` profile to pass to `new Client({ profile })`. It
-leaves `avatar` out: a client cannot claim an image, only the server can set
-one.
-
-### `readUsername(profile)`
-
-The profile's `username`, or `"Guest"`.
-
-### `readPeerId(profile)`
-
-The profile's `peerId`, or `undefined`.
-
-### `readAvatar(profile)`
-
-The profile's `avatar` when it is a same-origin path (starting with a single
-`/`), or `undefined`. A server-owned profile sets it, for example from an
-account's uploaded image.
+The `{ username, peerId }` profile to pass to `new Client({ profile })`, typed
+as `@jolly-pixel/network`'s `PeerProfileMetadata`. It leaves `avatar` out: a
+client cannot claim an image, only the server can set one.
 
 ### `peerProfileColor(clientId, profile)`
 
 The color of the published `peerId`, falling back to `clientId`, so every peer
 computes the same color for the same identity.
 
-### `presencePeerOf(peer)`
+### `toPresencePeer(peer)`
 
-The `PresencePeer` of a room peer: named with `readUsername`, colored with
-`peerProfileColor`, and carrying the profile's `peerId` and `avatar`.
+The `PresencePeer` of a room peer, read with `@jolly-pixel/network`'s
+`parsePeerProfile`: named by `username`, colored with `peerProfileColor`, and
+carrying the profile's `peerId` and `avatar`. A `via` string, such as
+`"link"` for a guest connected through a share link, becomes the badge
+"via link".

@@ -70,7 +70,9 @@ Request fresh state or supply reconnect data.
 ### `profile`
 
 This client's profile as the server admitted it, with the server's fields over the
-claimed ones. `null` before the first `sync` and after `leave()`.
+claimed ones. Before the first `sync` and after `leave()`, it is the claimed
+profile. Read it with
+[`parsePeerProfile`](../protocol/PeerProfile.md).
 
 ### Events
 
@@ -109,9 +111,10 @@ interface PresenceChannelOptions<T> {
 
 `new PresenceChannel(room, options)` tracks one typed field.
 
-### `publish(value): boolean` / `values`
+### `publish(value): boolean` / `published` / `values`
 
-`publish` skips unchanged values. `values` contains remote peers.
+`publish` skips unchanged values. `published` is the last value this client
+published, `undefined` before the first `publish`. `values` contains remote peers.
 
 ### change
 

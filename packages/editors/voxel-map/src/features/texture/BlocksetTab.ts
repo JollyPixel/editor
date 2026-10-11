@@ -9,10 +9,7 @@ import {
   RoomAccess,
   type AccessPanel
 } from "@jolly-pixel/editor.pixel-art";
-import {
-  peerProfileColor,
-  readUsername
-} from "@jolly-pixel/ui/network";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/MapDocument.ts";
@@ -58,7 +55,6 @@ export class BlocksetTab {
     this.#collaboration = new PixelCollaboration({
       room: binding.opened.room,
       canvas,
-      label: (_clientId, profile) => readUsername(profile),
       color: peerProfileColor
     });
     this.#uvBridge = new BlockUvBridge(canvas.uv, view, {

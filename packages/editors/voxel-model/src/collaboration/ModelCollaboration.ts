@@ -2,7 +2,6 @@
 import type * as THREE from "three";
 import type { Systems } from "@jolly-pixel/engine";
 import { PeerFrustums } from "@jolly-pixel/editor.host";
-import type { PeerIdentity } from "@jolly-pixel/ui";
 import {
   PeerRoster,
   RoomPresenceSource
@@ -39,7 +38,6 @@ export interface AnimateCollaboration extends Pick<AnimatePresenceOptions, "sess
 
 export interface ModelCollaborationOptions {
   room: VoxelModelRoom;
-  identity: PeerIdentity;
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
@@ -76,7 +74,6 @@ export class ModelCollaboration {
 
     this.#roster = new PeerRoster({
       room,
-      identity: options.identity,
       publish: (peers) => {
         presence.peers = peers;
       }
@@ -107,11 +104,7 @@ export class ModelCollaboration {
       requestFrame: () => options.world.invalidate()
     });
     this.lock = new TransformLock({ room });
-    this.fields = new RoomPresenceSource(room, {
-      clientId: options.identity.peerId,
-      displayName: options.identity.username,
-      color: options.identity.color
-    });
+    this.fields = new RoomPresenceSource(room);
     this.#materialLive = new MaterialLiveSync({
       room,
       document: options.document,

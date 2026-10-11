@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { sortSelfFirst } from "./peerOrder.ts";
 import type { CollaboratorPresence } from "./types.ts";
 
 export interface ResolvedLock {
@@ -9,13 +10,13 @@ export interface ResolvedLock {
   /**
    * Everyone advertising the path, local peer included, in a stable order.
    */
-  peers: CollaboratorPresence[];
+  peers: readonly CollaboratorPresence[];
 }
 
-const kEmptyLock: ResolvedLock = {
+const kEmptyLock: ResolvedLock = Object.freeze({
   lockedBy: null,
-  peers: []
-};
+  peers: Object.freeze([])
+});
 
 /**
  * Resolves one path, giving the local peer precedence.
@@ -40,31 +41,10 @@ export function resolveLock(
     return kEmptyLock;
   }
 
-  const held = editing.some((peer) => peer.clientId === selfId);
+  const ordered = sortSelfFirst(editing, selfId);
 
   return {
-    lockedBy: held ?
-      null :
-      editing.find((peer) => peer.clientId !== selfId) ?? null,
-    peers: sortSelfFirst(editing, selfId)
+    lockedBy: ordered[0].clientId === selfId ? null : ordered[0],
+    peers: ordered
   };
-}
-
-/**
- * Sorts self first, then by `clientId` for consistent client order.
- */
-export function sortSelfFirst<TPeer extends CollaboratorPresence>(
-  peers: readonly TPeer[],
-  selfId: string
-): TPeer[] {
-  return [...peers].sort((left, right) => {
-    if (left.clientId === selfId) {
-      return right.clientId === selfId ? 0 : -1;
-    }
-    if (right.clientId === selfId) {
-      return 1;
-    }
-
-    return left.clientId < right.clientId ? -1 : Number(left.clientId > right.clientId);
-  });
 }

@@ -1,88 +1,68 @@
 // Import Third-party Dependencies
-import type {
-  Peer,
-  PeerMetadata
+import {
+  parsePeerProfile,
+  type PeerMetadata,
+  type PeerProfile,
+  type PeerProfileMetadata,
+  type Room
 } from "@jolly-pixel/network/client";
 import { colorFromKey } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import {
-  GUEST_USERNAME,
-  type PeerIdentity
-} from "../peer/identity.ts";
-import type { PresencePeer } from "../peer/Presence.ts";
+import type { PeerIdentity } from "../peer/identity.ts";
+import type { PresencePeer } from "../peer/types.ts";
 
-export function toPeerMetadata(
+interface RoomMember {
+  clientId: string;
+  profile?: PeerMetadata;
+}
+
+export function toPeerProfileMetadata(
   identity: PeerIdentity
-): PeerMetadata {
+): PeerProfileMetadata {
   return {
     username: identity.username,
     peerId: identity.peerId
   };
 }
 
-export function readUsername(
-  profile: PeerMetadata | undefined
-): string {
-  return typeof profile?.username === "string"
-    ? profile.username
-    : GUEST_USERNAME;
-}
-
-export function readPeerId(
-  profile: PeerMetadata | undefined
-): string | undefined {
-  return typeof profile?.peerId === "string"
-    ? profile.peerId
-    : undefined;
-}
-
-export function readBadge(
-  profile: PeerMetadata | undefined
-): string | undefined {
-  return typeof profile?.via === "string"
-    ? `via ${profile.via}`
-    : undefined;
-}
-
-export function readAvatar(
-  profile: PeerMetadata | undefined
-): string | undefined {
-  const avatar = profile?.avatar;
-
-  return typeof avatar === "string" && isSameOriginPath(avatar)
-    ? avatar
-    : undefined;
-}
-
 export function peerProfileColor(
   clientId: string,
   profile: PeerMetadata | undefined
 ): string {
-  return colorFromKey(
-    readPeerId(profile) ?? clientId
-  );
+  return profileColor(clientId, parsePeerProfile(profile));
 }
 
-export function presencePeerOf(
-  peer: Peer
+export function toPresencePeer(
+  member: RoomMember
 ): PresencePeer {
-  const badge = readBadge(peer.profile);
+  const profile = parsePeerProfile(member.profile);
 
   return {
-    clientId: peer.clientId,
-    displayName: readUsername(peer.profile),
-    color: peerProfileColor(peer.clientId, peer.profile),
-    peerId: readPeerId(peer.profile),
-    avatar: readAvatar(peer.profile),
-    ...(badge === undefined ? {} : { badge })
+    clientId: member.clientId,
+    displayName: profile.username,
+    color: profileColor(member.clientId, profile),
+    peerId: profile.peerId,
+    avatar: profile.avatar,
+    ...(profile.via === undefined ? {} : { badge: `via ${profile.via}` })
   };
 }
 
-function isSameOriginPath(
-  value: string
-): boolean {
-  return value.startsWith("/") &&
-    !value.startsWith("//") &&
-    !value.startsWith("/\\");
+export function localPresencePeer(
+  room: Pick<Room, "clientId" | "profile">
+): PresencePeer {
+  return {
+    ...toPresencePeer({
+      clientId: room.clientId ?? "",
+      profile: room.profile
+    }),
+    self: true
+  };
+}
+
+function profileColor(
+  clientId: string,
+  profile: PeerProfile
+): string {
+  return colorFromKey(profile.peerId ?? clientId);
 }

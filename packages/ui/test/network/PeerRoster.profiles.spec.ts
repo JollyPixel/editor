@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import type { PresencePeer } from "../../src/peer/Presence.ts";
+import type { PresencePeer } from "../../src/peer/types.ts";
 import { PeerRoster } from "../../src/network/PeerRoster.ts";
 import { peerProfileColor } from "../../src/network/peerProfile.ts";
 import {
@@ -19,16 +19,13 @@ interface ProfileHarness extends RoomHarness {
 }
 
 function createHarness(): ProfileHarness {
-  const harness = createRoomHarness();
+  const harness = createRoomHarness({
+    username: "Ada",
+    peerId: "local-peer"
+  });
   let peers: readonly PresencePeer[] = [];
   new PeerRoster({
     room: harness.room,
-    identity: {
-      username: "Ada",
-      peerId: "local-peer",
-      color: peerProfileColor("ignored", { peerId: "local-peer" }),
-      avatar: "/api/accounts/local-peer/avatar?v=1"
-    },
     publish: (next) => {
       peers = next;
     }
@@ -86,6 +83,23 @@ describe("PeerRoster profiles", () => {
     });
 
     assert.strictEqual(harness.peers()[1].avatar, "/api/accounts/a/avatar?v=3");
+  });
+
+  test("colors the local peer from the peer id the room admitted, as remote peers do", () => {
+    const harness = createHarness();
+
+    harness.admitProfile({
+      username: "Guest",
+      peerId: "server-minted"
+    });
+    harness.emit("peer-profile", {
+      clientId: "local",
+      patch: { peerId: "server-minted" }
+    });
+
+    const [local] = harness.peers();
+    assert.strictEqual(local.peerId, "server-minted");
+    assert.strictEqual(local.color, peerProfileColor("local", { peerId: "server-minted" }));
   });
 
   test("badges every peer that joined through a share link, the local one included", () => {
