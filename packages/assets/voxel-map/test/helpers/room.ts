@@ -31,7 +31,7 @@ export function createMockRoom(clientId = "client-A"): MockRoom {
     id: "test-room",
     clientId,
     peers: new Map(),
-    profile: null,
+    profile: {},
 
     role: "default",
 

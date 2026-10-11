@@ -178,10 +178,9 @@ reports, so fields become read-only while a peer holds them.
 ```ts
 import { RoomPresenceSource } from "@jolly-pixel/ui/network";
 
-pane.presence = new RoomPresenceSource(room, identity);
+pane.presence = new RoomPresenceSource(room);
 pane.addBinding(map, "width", { path: "map.width" });
 ```
 
-Without a source the pane resolves to `NullPresenceSource` and no field ever
-locks. See [Presence and locking](../peer/presence-source.md).
+Without a source no field below the pane ever locks. See [Presence and locking](../peer/presence-source.md).
 

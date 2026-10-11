@@ -7,7 +7,7 @@ import {
 
 // Import Internal Dependencies
 import { peerBadges } from "../../src/network/peerBadges.ts";
-import type { PresencePeer } from "../../src/peer/Presence.ts";
+import type { PresencePeer } from "../../src/peer/types.ts";
 
 function peer(
   clientId: string

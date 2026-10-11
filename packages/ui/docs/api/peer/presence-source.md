@@ -16,8 +16,8 @@ interface CollaboratorPresence {
 }
 ```
 
-Identity, display names and colors are owned by the host, not derived. Two
-clients agree on a peer's color because it is published, not computed.
+Display names and colors come from each peer's room profile, so every client
+computes the same color for the same `peerId`.
 
 ## `PresenceSource`
 
@@ -37,14 +37,15 @@ type LockState = "held" | "denied" | "contended";
 `peers` includes the local peer. An adapter over a transport that omits the
 caller from its own peer list synthesizes that entry.
 
-`claim` returns `"contended"` when a remote peer already advertises the path,
+A client edits one path at a time: `claim` replaces the path it claimed before.
+It returns `"contended"` when a remote peer already advertises the path,
 and claims anyway: locks are advisory, and correctness comes from last write
 wins at the data layer. `"denied"` has no producer in a presence-backed source.
 It exists so a server-granted lease can replace the implementation without
 touching any component.
 
-`NullPresenceSource` is the source a field resolves to when no ancestor
-provides one. Every field renders normally against it.
+A field with no ancestor providing a source has none, and renders normally
+without ever locking.
 
 ## Wiring a pane
 
@@ -102,11 +103,7 @@ is why they are pushed.
 ```ts
 import { RoomPresenceSource } from "@jolly-pixel/ui/network";
 
-const source = new RoomPresenceSource(room, {
-  clientId: crypto.randomUUID(),
-  displayName: "Ada",
-  color: peerColor(0)
-});
+const source = new RoomPresenceSource(room);
 ```
 
 Available under the `./network` subpath, which imports `@jolly-pixel/network`'s
@@ -114,10 +111,13 @@ Available under the `./network` subpath, which imports `@jolly-pixel/network`'s
 a browser bundle. `@jolly-pixel/network` is an optional peer dependency: core
 never imports it.
 
-The local `clientId` is supplied by the host and stamped into every presence
-patch. It is deliberately not `room.clientId`, which is `null` until the join
-is admitted and is minted per connection by the transport, so it changes on
-every reconnect. Peers are matched on the stamped id, so both sides
-agree.
+Peers are keyed by connection: `clientId` is `room.clientId`, or `""` until the
+join is admitted, and remote peers use the ids of `room.peers`. Two tabs of
+the same account are two peers and lock each other out. Names and colors are
+read from profiles with [`toPresencePeer`](./identity.md#topresencepeerpeer),
+the local one from `room.profile`.
+
+A claim travels under the `fieldLock` presence key. Peers that never claimed
+are listed without `editing`.
 
 `dispose()` detaches from the room and drops its listeners.

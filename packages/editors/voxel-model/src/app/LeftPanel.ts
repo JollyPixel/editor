@@ -28,10 +28,7 @@ import {
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
 import "@jolly-pixel/ui";
-import {
-  peerProfileColor,
-  readUsername
-} from "@jolly-pixel/ui/network";
+import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import "./BuildTab.ts";
@@ -155,7 +152,6 @@ export class LeftPanel extends LitElement {
     this.#collaboration = new PixelCollaboration({
       room: texture.room,
       canvas,
-      label: (_clientId, profile) => readUsername(profile),
       color: peerProfileColor,
       onRemoteUvDragging: (region) => this.onPeerUvDragging?.(region)
     });

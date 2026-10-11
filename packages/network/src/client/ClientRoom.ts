@@ -106,8 +106,8 @@ export class ClientRoom<
     return this.#peers;
   }
 
-  get profile(): PeerMetadata | null {
-    return this.#self?.profile ?? null;
+  get profile(): PeerMetadata {
+    return this.#self?.profile ?? this.#claimedProfile;
   }
 
   get role(): string {

@@ -5,8 +5,9 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { PresencePeer } from "../peer/Presence.ts";
-import { presencePeerOf } from "./peerProfile.ts";
+import { compareClientIds } from "../peer/peerOrder.ts";
+import type { PresencePeer } from "../peer/types.ts";
+import { toPresencePeer } from "./peerProfile.ts";
 
 export type PeerMarkMap<TKey> = ReadonlyMap<TKey, readonly PresencePeer[]>;
 
@@ -18,11 +19,11 @@ export function markedPeers<TValue>(
 ): MarkedPeer<TValue>[] {
   const marked: MarkedPeer<TValue>[] = [];
   const entries = [...values]
-    .sort(([left], [right]) => left.localeCompare(right));
+    .sort(([left], [right]) => compareClientIds(left, right));
   for (const [clientId, value] of entries) {
     const peer = room.peers.get(clientId);
     if (peer !== undefined && value !== null) {
-      marked.push([presencePeerOf(peer), value]);
+      marked.push([toPresencePeer(peer), value]);
     }
   }
 

@@ -27,27 +27,3 @@ export interface PresenceSource {
     listener: () => void
   ): void;
 }
-
-/**
- * Fallback source used when no ancestor provides collaboration.
- */
-export class NullPresenceSource implements PresenceSource {
-  readonly clientId = "";
-  readonly peers: ReadonlyMap<string, CollaboratorPresence> = new Map();
-
-  claim(): LockState {
-    return "held";
-  }
-
-  release(): void {
-    // Nothing to release.
-  }
-
-  on(): void {
-    // No changes to observe.
-  }
-
-  off(): void {
-    // No listeners to remove.
-  }
-}

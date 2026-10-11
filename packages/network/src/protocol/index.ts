@@ -1,5 +1,6 @@
 export * from "./types.ts";
 export * from "./constants.ts";
+export * from "./profile/PeerProfile.ts";
 export {
   defineSchema,
   describeErrors,

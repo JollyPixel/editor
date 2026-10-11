@@ -108,7 +108,6 @@ export class VoxelModelEditor {
     const scene = new ModelEditorScene({
       room: target.room,
       document: target.document,
-      identity: session.identity,
       presence: new PresenceStore(),
       pixels: texture.document,
       animationSets: sessionAnimationSets(session, kAnimationKind),

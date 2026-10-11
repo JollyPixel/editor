@@ -248,7 +248,6 @@ export class EditorScene extends Systems.Scene {
       .addChildren(grid);
     const roster = new PeerRoster({
       room: session.room,
-      identity: session.identity,
       publish: (peers) => {
         state.presence.peers = peers;
       },

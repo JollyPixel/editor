@@ -8,7 +8,7 @@ import {
   promptPeerIdentity,
   type PeerIdentity
 } from "@jolly-pixel/ui";
-import { toPeerMetadata } from "@jolly-pixel/ui/network";
+import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
@@ -117,7 +117,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       logger,
       identity,
       client: new network.Client({
-        profile: toPeerMetadata(identity)
+        profile: toPeerProfileMetadata(identity)
       }),
       catalogTimeoutMs: CATALOG_TIMEOUT_MS
     });

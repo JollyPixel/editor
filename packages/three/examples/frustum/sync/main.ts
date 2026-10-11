@@ -86,7 +86,7 @@ const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
   color: (clientId, identity) => colorPalette.forKey(
-    readPeerId(identity) ?? clientId
+    network.parsePeerProfile(identity).peerId ?? clientId
   )
 });
 peerFrustumSync.attach(camera);
@@ -147,10 +147,12 @@ function refreshSession(): void {
 function presencePeers(): PresencePeer[] {
   const remote = [...room.peers.values()]
     .map((peer) => {
+      const profile = network.parsePeerProfile(peer.profile);
+
       return {
         clientId: peer.clientId,
-        displayName: readUsername(peer.profile),
-        color: colorPalette.forKey(readPeerId(peer.profile) ?? peer.clientId)
+        displayName: profile.username,
+        color: colorPalette.forKey(profile.peerId ?? peer.clientId)
       };
     })
     .sort((a, b) => a.clientId.localeCompare(b.clientId));
@@ -164,16 +166,4 @@ function presencePeers(): PresencePeer[] {
     },
     ...remote
   ];
-}
-
-function readUsername(
-  identity: network.PeerMetadata | undefined
-): string {
-  return typeof identity?.username === "string" ? identity.username : "Guest";
-}
-
-function readPeerId(
-  identity: network.PeerMetadata | undefined
-): string | undefined {
-  return typeof identity?.peerId === "string" ? identity.peerId : undefined;
 }

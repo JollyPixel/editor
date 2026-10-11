@@ -10,16 +10,13 @@ import { resolveLock } from "./resolveLock.ts";
 import type { PresenceSource } from "./PresenceSource.ts";
 import type { CollaboratorPresence } from "./types.ts";
 
-// CONSTANTS
-const kNoPeers: readonly CollaboratorPresence[] = [];
-
 /**
  * Field state synchronized while a presence source is attached.
  */
 export interface LockHost extends ReactiveControllerHost, HTMLElement {
   path: string | null;
   lockedBy: CollaboratorPresence | null;
-  peers: CollaboratorPresence[];
+  peers: readonly CollaboratorPresence[];
 }
 
 /**
@@ -77,9 +74,11 @@ export class LockController implements ReactiveController {
 
   pathChanged(): void {
     if (this.#claimed !== null && this.#claimed !== this.#host.path) {
-      this.#release();
       if (this.#host.matches(":focus-within")) {
         this.#claim();
+      }
+      else {
+        this.#release();
       }
     }
     this.#refresh();
@@ -104,15 +103,15 @@ export class LockController implements ReactiveController {
 
   #claim(): void {
     const { path } = this.#host;
-    if (
-      this.#source === null ||
-      path === null ||
-      this.#claimed === path
-    ) {
+    if (this.#source === null || this.#claimed === path) {
+      return;
+    }
+    if (path === null) {
+      this.#release();
+
       return;
     }
 
-    this.#release();
     this.#source.claim(path);
     this.#claimed = path;
     this.#refresh();
@@ -149,10 +148,9 @@ export class LockController implements ReactiveController {
       return;
     }
 
-    const { path } = this.#host;
     const { lockedBy, peers } = resolveLock(
-      path === null ? kNoPeers : this.#source.peers.values(),
-      path,
+      this.#source.peers.values(),
+      this.#host.path,
       this.#source.clientId
     );
     this.#host.lockedBy = lockedBy;

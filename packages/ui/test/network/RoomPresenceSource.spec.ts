@@ -3,89 +3,93 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { PeerMetadata } from "@jolly-pixel/network/client";
+import { colorFromKey } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { RoomPresenceSource } from "../../src/network/RoomPresenceSource.ts";
+import { resolveLock } from "../../src/peer/resolveLock.ts";
 import {
   createRoomHarness,
   type RoomHarness
 } from "../helpers/network/roomHarness.ts";
 
-const kIdentity = {
-  clientId: "me",
-  displayName: "Me",
-  color: "#f94144"
-};
+// CONSTANTS
+const kSelf = "local";
 
 function createSource() {
-  const harness = createRoomHarness();
+  const harness = createRoomHarness({
+    username: "Me",
+    peerId: "account-1"
+  });
 
   return {
     harness,
-    source: new RoomPresenceSource(harness.room, kIdentity)
+    source: new RoomPresenceSource(harness.room)
   };
 }
 
-function addStampedPeer(
+function joinPeer(
   harness: RoomHarness,
-  transportId: string,
-  stamp: PeerMetadata
+  clientId: string,
+  fieldLock: string | null = null
 ): void {
-  harness.addPeer(transportId, {
-    presence: {
-      jolly: stamp
-    }
+  harness.addPeer(clientId, {
+    profile: {
+      username: clientId,
+      peerId: `peer-${clientId}`
+    },
+    presence: { fieldLock }
   });
+  harness.emit("peer-joined", { clientId });
+}
+
+function patchPresence(
+  harness: RoomHarness,
+  clientId: string,
+  patch: Record<string, unknown>
+): void {
+  harness.emit("peer-presence", { clientId, patch });
 }
 
 describe("RoomPresenceSource — identity", () => {
-  test("takes its clientId from the host, not from room.clientId", () => {
-    const { harness, source } = createSource();
-
-    assert.equal(source.clientId, "me");
-    assert.notEqual(source.clientId, harness.room.clientId);
-  });
-
-  test("stamps its identity into presence on construction", () => {
-    const { harness } = createSource();
-
-    assert.deepEqual(harness.published, [
-      {
-        jolly: {
-          clientId: "me",
-          displayName: "Me",
-          color: "#f94144",
-          editing: null
-        }
-      }
-    ]);
-  });
-
-  test("synthesizes the local peer, which room.peers never holds", () => {
+  test("keys the local peer by its connection", () => {
     const { source } = createSource();
 
-    assert.deepEqual([...source.peers.keys()], ["me"]);
+    assert.equal(source.clientId, kSelf);
+    assert.deepEqual([...source.peers.keys()], [kSelf]);
   });
 
-  test("keys remote peers by their stamped id, not their transport id", () => {
+  test("tells two connections of one account apart", () => {
     const { harness, source } = createSource();
-    addStampedPeer(harness, "transport-7", {
-      clientId: "ada",
-      displayName: "Ada",
-      color: "#43aa8b",
-      editing: null
+    harness.addPeer("transport-7", {
+      profile: { username: "Me", peerId: "account-1" },
+      presence: { fieldLock: "map.width" }
     });
+    harness.emit("peer-joined", { clientId: "transport-7" });
 
-    assert.deepEqual([...source.peers.keys()], ["me", "ada"]);
-    assert.equal(source.peers.get("ada")?.displayName, "Ada");
+    const lock = resolveLock(source.peers.values(), "map.width", source.clientId);
+
+    assert.deepEqual([...source.peers.keys()], [kSelf, "transport-7"]);
+    assert.equal(lock.lockedBy?.clientId, "transport-7");
   });
 
-  test("ignores a peer carrying no stamp", () => {
+  test("names and colors a remote peer from its profile", () => {
     const { harness, source } = createSource();
-    harness.addPeer("transport-7", { presence: {} });
+    joinPeer(harness, "ada");
 
-    assert.deepEqual([...source.peers.keys()], ["me"]);
+    const ada = source.peers.get("ada");
+
+    assert.equal(ada?.displayName, "ada");
+    assert.equal(ada?.color, colorFromKey("peer-ada"));
+  });
+
+  test("lists a peer that never claimed a path", () => {
+    const { harness, source } = createSource();
+    harness.addPeer("ada");
+    harness.emit("peer-joined", { clientId: "ada" });
+
+    assert.deepEqual([...source.peers.keys()], [kSelf, "ada"]);
+    assert.equal("editing" in source.peers.get("ada")!, false);
   });
 });
 
@@ -94,20 +98,27 @@ describe("RoomPresenceSource — claim and release", () => {
     const { source } = createSource();
 
     assert.equal(source.claim("map.width"), "held");
-    assert.equal(source.peers.get("me")?.editing, "map.width");
+    assert.equal(source.peers.get(kSelf)?.editing, "map.width");
   });
 
   test("a claim on a path a remote peer holds is contended, and still claims", () => {
     const { harness, source } = createSource();
-    addStampedPeer(harness, "transport-7", {
-      clientId: "ada",
-      displayName: "Ada",
-      color: "#43aa8b",
-      editing: "map.width"
-    });
+    joinPeer(harness, "ada", "map.width");
 
     assert.equal(source.claim("map.width"), "contended");
-    assert.equal(source.peers.get("me")?.editing, "map.width");
+    assert.equal(source.peers.get(kSelf)?.editing, "map.width");
+  });
+
+  test("a second claim replaces the first without releasing in between", () => {
+    const { harness, source } = createSource();
+    source.claim("map.width");
+    source.claim("map.height");
+
+    assert.deepEqual(harness.published, [
+      { fieldLock: "map.width" },
+      { fieldLock: "map.height" }
+    ]);
+    assert.equal(source.peers.get(kSelf)?.editing, "map.height");
   });
 
   test("release publishes an explicit null, which survives serialization", () => {
@@ -115,10 +126,8 @@ describe("RoomPresenceSource — claim and release", () => {
     source.claim("map.width");
     source.release("map.width");
 
-    const last = harness.published.at(-1) as { jolly: Record<string, unknown>; };
-    assert.equal("editing" in last.jolly, true);
-    assert.equal(last.jolly.editing, null);
-    assert.equal(source.peers.get("me")?.editing, undefined);
+    assert.deepEqual(harness.published.at(-1), { fieldLock: null });
+    assert.equal(source.peers.get(kSelf)?.editing, undefined);
   });
 
   test("releasing a path it does not hold changes nothing", () => {
@@ -128,18 +137,17 @@ describe("RoomPresenceSource — claim and release", () => {
     source.release("map.height");
 
     assert.equal(harness.published.length, count);
-    assert.equal(source.peers.get("me")?.editing, "map.width");
+    assert.equal(source.peers.get(kSelf)?.editing, "map.width");
   });
 
-  test("maps a null editing back to an absent field", () => {
+  test("follows a remote claim and its release", () => {
     const { harness, source } = createSource();
-    addStampedPeer(harness, "transport-7", {
-      clientId: "ada",
-      displayName: "Ada",
-      color: "#43aa8b",
-      editing: null
-    });
+    joinPeer(harness, "ada");
 
+    patchPresence(harness, "ada", { fieldLock: "map.width" });
+    assert.equal(source.peers.get("ada")?.editing, "map.width");
+
+    patchPresence(harness, "ada", { fieldLock: null });
     assert.equal("editing" in source.peers.get("ada")!, false);
   });
 });
@@ -157,28 +165,28 @@ describe("RoomPresenceSource — change notification", () => {
     assert.equal(changes, 1);
   });
 
-  test("never re-publishes on sync or peer-joined, the join carries its presence", () => {
+  test("publishes nothing until it claims, the join carries its presence", () => {
     const { harness } = createSource();
-    harness.published.length = 0;
 
     harness.emit("sync");
-    harness.emit("peer-joined");
+    joinPeer(harness, "ada");
 
-    assert.equal(harness.published.length, 0);
+    assert.deepEqual(harness.published, []);
   });
 
-  test("peer events fire change", () => {
+  test("ignores presence patches under other keys", () => {
     const { harness, source } = createSource();
+    joinPeer(harness, "ada");
+    const before = source.peers;
     let changes = 0;
     source.on("change", () => {
       changes++;
     });
 
-    harness.emit("peer-joined");
-    harness.emit("peer-presence");
-    harness.emit("peer-left");
+    patchPresence(harness, "ada", { cursor: [1, 2] });
 
-    assert.equal(changes, 3);
+    assert.equal(changes, 0);
+    assert.equal(source.peers, before);
   });
 
   test("dispose detaches from the room and from its listeners", () => {
@@ -189,66 +197,34 @@ describe("RoomPresenceSource — change notification", () => {
     });
 
     source.dispose();
-    harness.emit("peer-presence");
+    joinPeer(harness, "ada", "map.width");
 
     assert.equal(changes, 0);
+    assert.equal(harness.listenerCount("peer-presence"), 0);
+    assert.equal(harness.listenerCount("sync"), 0);
   });
 });
 
 describe("RoomPresenceSource — repeated reads", () => {
-  const kAda = {
-    clientId: "ada",
-    displayName: "Ada",
-    color: "#43aa8b",
-    editing: "map.width"
-  };
-
   test("returns the same presence objects while nothing changed", () => {
     const { harness, source } = createSource();
-    addStampedPeer(harness, "transport-7", { ...kAda });
+    joinPeer(harness, "ada", "map.width");
 
     const first = source.peers;
-    addStampedPeer(harness, "transport-7", { ...kAda });
     const second = source.peers;
 
-    assert.equal(second.get("me"), first.get("me"));
+    assert.equal(second.get(kSelf), first.get(kSelf));
     assert.equal(second.get("ada"), first.get("ada"));
-  });
-
-  test("rebuilds a remote presence whose stamp changed", () => {
-    const { harness, source } = createSource();
-    addStampedPeer(harness, "transport-7", { ...kAda });
-
-    const before = source.peers.get("ada");
-    addStampedPeer(harness, "transport-7", { ...kAda, editing: null });
-    const after = source.peers.get("ada");
-
-    assert.notEqual(after, before);
-    assert.deepEqual(after, {
-      clientId: "ada",
-      displayName: "Ada",
-      color: "#43aa8b"
-    });
   });
 
   test("rebuilds the local presence when it claims a path", () => {
     const { source } = createSource();
 
-    const before = source.peers.get("me");
+    const before = source.peers.get(kSelf);
     source.claim("map.width");
-    const after = source.peers.get("me");
+    const after = source.peers.get(kSelf);
 
     assert.notEqual(after, before);
     assert.equal(after?.editing, "map.width");
-  });
-
-  test("follows room changes made without an event", () => {
-    const { harness, source } = createSource();
-    addStampedPeer(harness, "transport-7", { ...kAda });
-    assert.deepEqual([...source.peers.keys()], ["me", "ada"]);
-
-    harness.removePeer("transport-7");
-
-    assert.deepEqual([...source.peers.keys()], ["me"]);
   });
 });

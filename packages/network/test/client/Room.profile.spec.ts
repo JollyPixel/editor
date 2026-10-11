@@ -41,11 +41,13 @@ describe("Room — profiles", () => {
   });
 
   test("adopts its own admitted profile and the peer-profile patches addressed to it", () => {
-    const { client, socket } = createOpenClient();
+    const { client, socket } = createOpenClient({
+      profile: { username: "claimed" }
+    });
     const room = client.room("pixel-draw");
     const updated: string[] = [];
     room.on("peer-profile", (event) => updated.push(event.clientId));
-    assert.strictEqual(room.profile, null);
+    assert.deepEqual(room.profile, { username: "claimed" });
 
     socket.receive({
       room: "pixel-draw",

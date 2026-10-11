@@ -80,7 +80,7 @@ export abstract class JollyField<TValue> extends LitElement {
   declare lockedBy: CollaboratorPresence | null;
 
   @property({ attribute: false })
-  declare peers: CollaboratorPresence[];
+  declare peers: readonly CollaboratorPresence[];
 
   @property({ type: String, reflect: true })
   declare path: string | null;

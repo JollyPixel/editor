@@ -73,7 +73,7 @@ renderer.setAnimationLoop(() => {
 | `throttleMs` | `50` | Minimum delay between changed pose reports; `0` reports every change |
 | `hideWithin` | `0` | Distance from the source below which a frustum is hidden |
 | `fadeWithin` | `0` | Distance from the source below which a frustum fades toward hidden |
-| `label` | `identity.username` | Resolve a remote display name |
+| `label` | profile `username`, or `"Guest"` | Resolve a remote display name |
 | `color` | `frustum.color` | Resolve a remote color per peer |
 | `frustum` | `{}` | Shared `PeerFrustum` options except `displayName` |
 | `requestFrame` | none | Called after a remote pose shows, hides or removes a frustum, so a host rendering on demand draws it |

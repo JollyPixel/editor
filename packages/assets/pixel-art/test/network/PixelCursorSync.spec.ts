@@ -7,7 +7,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { PeerMetadata } from "@jolly-pixel/network/client";
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -25,13 +24,6 @@ interface PeerCursorState {
   pos: Vec2 | null;
   color: string;
   label?: string;
-}
-
-function peerLabel(
-  _clientId: string,
-  profile: PeerMetadata
-): string {
-  return String(profile.username);
 }
 
 function peerColor(
@@ -60,7 +52,6 @@ function setup(
   const sync = new PixelCursorSync({
     room,
     canvas: asCanvas(host),
-    label: peerLabel,
     color: peerColor,
     ...options
   });
@@ -98,7 +89,6 @@ describe("PixelCursorSync — construction", () => {
     const sync = new PixelCursorSync({
       room,
       canvas: asCanvas(host),
-      label: peerLabel,
       color: peerColor
     });
 

@@ -18,7 +18,7 @@ import type { PixelArtRoom } from "./types.ts";
 export interface PixelCollaborationOptions {
   room: PixelArtRoom;
   canvas: PixelArtCanvas;
-  label: PeerLabel;
+  label?: PeerLabel;
   color: PeerColor;
   onRemoteUvDragging?: (region: UVRegion) => void;
 }

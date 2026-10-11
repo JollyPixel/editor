@@ -14,7 +14,7 @@ export interface FieldLike {
   readonly: boolean;
   colored: boolean;
   lockedBy: CollaboratorPresence | null;
-  peers: CollaboratorPresence[];
+  peers: readonly CollaboratorPresence[];
   labelPosition: "inline" | "top" | "auto";
 }
 

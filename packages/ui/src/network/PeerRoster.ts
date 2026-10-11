@@ -7,19 +7,15 @@ import type {
 
 // Import Internal Dependencies
 import type { LogQueue } from "../feedback/LogQueue.ts";
-import type { PeerIdentity } from "../peer/identity.ts";
-import type { PresencePeer } from "../peer/Presence.ts";
+import { compareClientIds } from "../peer/peerOrder.ts";
+import type { PresencePeer } from "../peer/types.ts";
 import {
-  presencePeerOf,
-  readAvatar,
-  readBadge,
-  readUsername,
-  toPeerMetadata
+  localPresencePeer,
+  toPresencePeer
 } from "./peerProfile.ts";
 
 export interface PeerRosterOptions {
   room: Room;
-  identity: PeerIdentity;
   publish: (
     peers: readonly PresencePeer[]
   ) => void;
@@ -28,7 +24,6 @@ export interface PeerRosterOptions {
 
 export class PeerRoster {
   #room: Room;
-  #identity: PeerIdentity;
   #publishPeers: (
     peers: readonly PresencePeer[]
   ) => void;
@@ -59,7 +54,6 @@ export class PeerRoster {
     options: PeerRosterOptions
   ) {
     this.#room = options.room;
-    this.#identity = options.identity;
     this.#publishPeers = options.publish;
     this.#log = options.log;
 
@@ -97,30 +91,12 @@ export class PeerRoster {
 
   #snapshot(): PresencePeer[] {
     const remote = [...this.#room.peers.values()]
-      .map(presencePeerOf)
-      .sort((left, right) => left.clientId.localeCompare(right.clientId));
+      .map(toPresencePeer)
+      .sort((left, right) => compareClientIds(left.clientId, right.clientId));
 
     return [
-      this.#localPeer(),
+      localPresencePeer(this.#room),
       ...remote
     ];
-  }
-
-  #localPeer(): PresencePeer {
-    const profile = this.#room.profile ?? {
-      ...toPeerMetadata(this.#identity),
-      avatar: this.#identity.avatar ?? null
-    };
-    const badge = readBadge(profile);
-
-    return {
-      clientId: this.#identity.peerId,
-      displayName: readUsername(profile),
-      color: this.#identity.color,
-      peerId: this.#identity.peerId,
-      avatar: readAvatar(profile),
-      ...(badge === undefined ? {} : { badge }),
-      self: true
-    };
   }
 }

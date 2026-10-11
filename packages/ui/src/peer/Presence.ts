@@ -12,24 +12,8 @@ import {
 import { presenceStyles } from "./Presence.styles.ts";
 import { emitPeerEvent } from "./events.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
-import type { CollaboratorPresence } from "./types.ts";
+import type { PresencePeer } from "./types.ts";
 import "./Avatar.ts";
-
-export interface PresencePeer extends CollaboratorPresence {
-  self?: boolean;
-  /**
-   * Picks the default avatar. Defaults to `clientId`.
-   */
-  peerId?: string;
-  /**
-   * Image URL of an uploaded avatar.
-   */
-  avatar?: string;
-  /**
-   * Short label shown after the name, such as "via link".
-   */
-  badge?: string;
-}
 
 /**
  * A read-only view of a collaboration snapshot.
@@ -54,12 +38,19 @@ export class PresenceElement extends LitElement {
     hiddenStyles
   ];
 
+  declare selectable: boolean;
+
   #peers: PresencePeer[] = [];
   #max = Infinity;
-  #selectable = false;
+
+  constructor() {
+    super();
+
+    this.selectable = false;
+  }
 
   get peers(): ReadonlyArray<PresencePeer> {
-    return [...this.#peers];
+    return this.#peers;
   }
 
   set peers(
@@ -85,23 +76,6 @@ export class PresenceElement extends LitElement {
     const previous = this.#max;
     this.#max = next;
     this.requestUpdate("max", previous);
-  }
-
-  get selectable(): boolean {
-    return this.#selectable;
-  }
-
-  set selectable(
-    value: boolean
-  ) {
-    const next = Boolean(value);
-    if (next === this.#selectable) {
-      return;
-    }
-
-    const previous = this.#selectable;
-    this.#selectable = next;
-    this.requestUpdate("selectable", previous);
   }
 
   override render(): TemplateResult {
@@ -142,7 +116,7 @@ export class PresenceElement extends LitElement {
       `}
     `;
 
-    if (!this.#selectable || peer.self) {
+    if (!this.selectable || peer.self) {
       return html`
         <li class="peer" part="peer">${body}</li>
       `;

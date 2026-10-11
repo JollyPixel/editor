@@ -13,8 +13,7 @@ import { render } from "lit";
 
 // Import Internal Dependencies
 import { LogQueue } from "../../src/feedback/LogQueue.ts";
-import type { PeerIdentity } from "../../src/peer/identity.ts";
-import type { PresencePeer } from "../../src/peer/Presence.ts";
+import type { PresencePeer } from "../../src/peer/types.ts";
 import { PeerRoster } from "../../src/network/PeerRoster.ts";
 import { peerProfileColor } from "../../src/network/peerProfile.ts";
 import {
@@ -22,10 +21,10 @@ import {
   type RoomHarness
 } from "../helpers/network/roomHarness.ts";
 
-const kLocalIdentity: PeerIdentity = {
+// CONSTANTS
+const kLocalProfile = {
   username: "Ada",
-  peerId: "local-peer",
-  color: peerProfileColor("ignored", { peerId: "local-peer" })
+  peerId: "local-peer"
 };
 
 interface RosterHarness extends RoomHarness {
@@ -37,13 +36,12 @@ interface RosterHarness extends RoomHarness {
 function createHarness(
   options: { log?: boolean; } = {}
 ): RosterHarness {
-  const harness = createRoomHarness();
+  const harness = createRoomHarness(kLocalProfile);
   const log = new LogQueue();
   let peers: readonly PresencePeer[] = [];
 
   const roster = new PeerRoster({
     room: harness.room,
-    identity: kLocalIdentity,
     publish: (next) => {
       peers = next;
     },
@@ -78,36 +76,19 @@ describe("PeerRoster", () => {
     mock.timers.reset();
   });
 
-  test("publishes the local peer alone before anyone joins", () => {
+  test("publishes the local peer alone, keyed by its connection, before anyone joins", () => {
     const harness = createHarness();
 
     assert.deepStrictEqual(harness.peers(), [
       {
-        clientId: "local-peer",
+        clientId: harness.room.clientId,
         displayName: "Ada",
-        color: kLocalIdentity.color,
+        color: peerProfileColor("ignored", kLocalProfile),
         peerId: "local-peer",
         avatar: undefined,
         self: true
       }
     ]);
-  });
-
-  test("shows the local avatar given by the identity until the room admits a profile", () => {
-    const harness = createRoomHarness();
-    let peers: readonly PresencePeer[] = [];
-    new PeerRoster({
-      room: harness.room,
-      identity: {
-        ...kLocalIdentity,
-        avatar: "/api/accounts/local-peer/avatar?v=1"
-      },
-      publish: (next) => {
-        peers = next;
-      }
-    });
-
-    assert.strictEqual(peers[0].avatar, "/api/accounts/local-peer/avatar?v=1");
   });
 
   test("lists the members carried by the join sync", () => {
@@ -230,7 +211,7 @@ describe("PeerRoster", () => {
   test("says nothing about the local peer", () => {
     const harness = createHarness();
 
-    harness.emit("peer-joined", { clientId: "local-peer" });
+    harness.emit("peer-joined", { clientId: harness.room.clientId });
 
     assert.deepStrictEqual(messagesOf(harness.log), []);
   });
