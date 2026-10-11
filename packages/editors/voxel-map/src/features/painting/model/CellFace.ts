@@ -17,13 +17,7 @@ const kCrossAxes: Record<CoordAxis, readonly [CoordAxis, CoordAxis]> = {
 };
 
 export type CoordAxis = "x" | "y" | "z";
-export type BrushAnchor = "bottom" | "top" | "center";
 export type CellFaceId = "+x" | "-x" | "+y" | "-y" | "+z" | "-z";
-
-export interface FaceAnchors {
-  place: BrushAnchor;
-  remove: BrushAnchor;
-}
 
 export class CellFace {
   static readonly PosX = new CellFace("+x");
@@ -41,11 +35,6 @@ export class CellFace {
     CellFace.PosZ,
     CellFace.NegZ
   ];
-
-  static readonly FREE_ANCHORS: Readonly<FaceAnchors> = Object.freeze({
-    place: "center",
-    remove: "center"
-  });
 
   static parse(
     value: unknown
@@ -82,23 +71,6 @@ export class CellFace {
     this.positive = id[0] === "+";
 
     Object.freeze(this);
-  }
-
-  get anchors(): Readonly<FaceAnchors> {
-    switch (this.id) {
-      case "+y":
-        return {
-          place: "bottom",
-          remove: "top"
-        };
-      case "-y":
-        return {
-          place: "top",
-          remove: "bottom"
-        };
-      default:
-        return CellFace.FREE_ANCHORS;
-    }
   }
 
   corners(

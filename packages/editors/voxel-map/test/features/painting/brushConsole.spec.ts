@@ -65,13 +65,11 @@ describe("brush console", () => {
     const { commands, brush } = registerBrush();
 
     await commands.submit("brush.mode replace");
-    await commands.submit("brush.axis XYZ");
     await commands.submit("brush.pattern circle");
     await commands.submit("brush.flipY on");
     await commands.submit("brush.ghost yes");
 
     assert.equal(brush.mode, "replace");
-    assert.equal(brush.axis, "xyz");
     assert.equal(brush.pattern, "circle");
     assert.equal(brush.flipY, true);
     assert.equal(brush.ghost, true);

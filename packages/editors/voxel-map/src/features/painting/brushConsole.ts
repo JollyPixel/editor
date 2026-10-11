@@ -6,7 +6,6 @@ import type {
 
 // Import Internal Dependencies
 import {
-  BRUSH_AXES,
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
   BRUSH_MODES,
@@ -47,15 +46,6 @@ export function brushConsole(
     get: () => brush.mode,
     set: (mode) => {
       brush.mode = mode;
-    }
-  });
-  namespace.registerVariable("axis", {
-    type: "enum",
-    description: "Plane or volume the brush spreads over",
-    enumValues: BRUSH_AXES,
-    get: () => brush.axis,
-    set: (axis) => {
-      brush.axis = axis;
     }
   });
   namespace.registerVariable("pattern", {

@@ -10,6 +10,8 @@
 
 Private editor workspace built on [`@jolly-pixel/voxel.renderer`][voxel-renderer] and booted through [`@jolly-pixel/editor.host`][editor-host].
 
+The [brush](./docs/brush.md) document specifies how the local brush aims, sizes and paints.
+
 ## 🚀 Running the editor
 
 ```bash

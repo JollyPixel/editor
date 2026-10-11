@@ -1,6 +1,5 @@
 // Import Internal Dependencies
 import type {
-  BrushAxis,
   BrushMode,
   BrushPattern
 } from "../BrushStore.ts";
@@ -17,25 +16,6 @@ export const BRUSH_MODE_OPTIONS: readonly BrushToolOption<BrushMode>[] = [
     value: "replace",
     icon: "brush-replace",
     label: "Replace"
-  }
-];
-
-export const BRUSH_AXIS_OPTIONS: readonly BrushToolOption<BrushAxis>[] = [
-  {
-    value: "xz",
-    label: "Axis XZ"
-  },
-  {
-    value: "xy",
-    label: "Axis XY"
-  },
-  {
-    value: "yz",
-    label: "Axis YZ"
-  },
-  {
-    value: "xyz",
-    label: "Axis XYZ"
   }
 ];
 

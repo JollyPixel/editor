@@ -22,7 +22,6 @@ function footprint(
   return new BrushFootprint({
     position: { x: 0, y: 0, z: 0 },
     size,
-    axis: "xz",
     pattern: "square",
     ...patch
   });
@@ -92,12 +91,6 @@ describe("pickBlockAt", () => {
     const view = createView({ "0,1,0": 9 });
 
     assert.equal(pickBlockAt(view, footprint(3)), null);
-  });
-
-  it("reads the whole footprint of a vertical brush", () => {
-    const view = createView({ "0,2,0": 9 });
-
-    assert.equal(pickBlockAt(view, footprint(3, { axis: "xy" })), 9);
   });
 
   it("skips the corners a circle leaves out", () => {

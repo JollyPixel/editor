@@ -22,11 +22,4 @@ export const brushControlsStyles = [viewportToolbarStyles, css`
     font-weight: 600;
     text-align: center;
   }
-
-  .axis {
-    display: inline-flex;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
 `];

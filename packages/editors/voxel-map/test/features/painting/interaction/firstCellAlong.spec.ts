@@ -31,7 +31,7 @@ describe("firstCellAlong", () => {
         ray,
         10,
         scanCells({ x: 4, y: 1, z: 0 }, { x: 2, y: 3, z: 0 })
-      ),
+      )?.cell,
       { x: 2, y: 3, z: 0 }
     );
   });
@@ -43,7 +43,7 @@ describe("firstCellAlong", () => {
     };
 
     assert.deepStrictEqual(
-      firstCellAlong(ray, 10, scanCells({ x: -4, y: -1, z: -1 })),
+      firstCellAlong(ray, 10, scanCells({ x: -4, y: -1, z: -1 }))?.cell,
       { x: -4, y: -1, z: -1 }
     );
   });
@@ -56,6 +56,40 @@ describe("firstCellAlong", () => {
     const far = scanCells({ x: 0, y: 0, z: 6 });
 
     assert.strictEqual(firstCellAlong(ray, 5, far), null);
-    assert.deepStrictEqual(firstCellAlong(ray, 6, far), { x: 0, y: 0, z: 6 });
+    assert.deepStrictEqual(
+      firstCellAlong(ray, 6, far)?.cell,
+      { x: 0, y: 0, z: 6 }
+    );
+  });
+
+  test("reports the face the ray entered the cell through", () => {
+    const ray = {
+      origin: { x: 0.5, y: 5.5, z: 0.25 },
+      direction: { x: 0.6, y: -0.8, z: 0 }
+    };
+
+    assert.deepStrictEqual(
+      firstCellAlong(ray, 10, scanCells({ x: 1, y: 3, z: 0 }))?.entry,
+      { x: 0, y: 1, z: 0 }
+    );
+    assert.deepStrictEqual(
+      firstCellAlong(ray, 10, scanCells({ x: 1, y: 4, z: 0 }))?.entry,
+      { x: -1, y: 0, z: 0 }
+    );
+  });
+
+  test("has no entry face for the cell the ray starts in", () => {
+    const ray = {
+      origin: { x: 0.5, y: 0.5, z: 0.5 },
+      direction: { x: 0, y: 0, z: 1 }
+    };
+
+    assert.deepStrictEqual(
+      firstCellAlong(ray, 10, scanCells({ x: 0, y: 0, z: 0 })),
+      {
+        cell: { x: 0, y: 0, z: 0 },
+        entry: null
+      }
+    );
   });
 });

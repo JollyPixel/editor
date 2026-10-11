@@ -7,15 +7,10 @@ import type {
 
 // Import Internal Dependencies
 import type { SelectionStore } from "../../../state/index.ts";
-import {
-  BRUSH_AXES,
-  type BrushAxis,
-  type BrushStore
-} from "../BrushStore.ts";
+import type { BrushStore } from "../BrushStore.ts";
 
 export const BRUSH_SHORTCUTS = {
   mode: ["r"],
-  axis: ["x"],
   pattern: ["c"],
   ghost: ["g"],
   shrink: ["BracketLeft"],
@@ -50,9 +45,6 @@ export function bindBrushShortcuts(
     keyboard.bind(BRUSH_SHORTCUTS.mode, whilePaintable(() => {
       brush.mode = brush.mode === "build" ? "replace" : "build";
     })),
-    keyboard.bind(BRUSH_SHORTCUTS.axis, whilePaintable(() => {
-      brush.axis = nextAxis(brush.axis);
-    })),
     keyboard.bind(BRUSH_SHORTCUTS.pattern, whilePaintable(() => {
       brush.pattern = brush.pattern === "square" ? "circle" : "square";
     })),
@@ -72,12 +64,4 @@ export function bindBrushShortcuts(
       release();
     }
   };
-}
-
-function nextAxis(
-  axis: BrushAxis
-): BrushAxis {
-  const index = BRUSH_AXES.indexOf(axis);
-
-  return BRUSH_AXES[(index + 1) % BRUSH_AXES.length];
 }

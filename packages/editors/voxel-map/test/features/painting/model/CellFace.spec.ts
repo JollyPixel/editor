@@ -29,34 +29,6 @@ describe("CellFace.fromDirection", () => {
   });
 });
 
-describe("CellFace.anchors", () => {
-  test("digs down from a top face and builds up from it", () => {
-    assert.deepStrictEqual(CellFace.PosY.anchors, {
-      place: "bottom",
-      remove: "top"
-    });
-  });
-
-  test("digs up from a bottom face and builds down from it", () => {
-    assert.deepStrictEqual(CellFace.NegY.anchors, {
-      place: "top",
-      remove: "bottom"
-    });
-  });
-
-  test("centers on a side face and without a face", () => {
-    const centered = {
-      place: "center",
-      remove: "center"
-    };
-
-    for (const face of [CellFace.PosX, CellFace.NegX, CellFace.PosZ, CellFace.NegZ]) {
-      assert.deepStrictEqual(face.anchors, centered);
-    }
-    assert.deepStrictEqual(CellFace.FREE_ANCHORS, centered);
-  });
-});
-
 describe("CellFace.corners", () => {
   test("covers the top face of the aimed cell", () => {
     assert.deepStrictEqual(

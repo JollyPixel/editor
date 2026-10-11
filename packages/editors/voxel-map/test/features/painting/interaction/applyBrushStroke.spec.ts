@@ -19,53 +19,6 @@ import {
   type VoxelPaint
 } from "../../../../src/features/painting/model/BrushStroke.ts";
 
-function createWallView(
-  height: number
-): VoxelView {
-  const view = new VoxelView(new VoxelDocument({
-    chunkSize: 4,
-    layers: ["Ground"],
-    blocks: [
-      {
-        id: 1,
-        name: "cube",
-        shapeId: "cube",
-        faceTextures: {},
-        collidable: true,
-        properties: {}
-      }
-    ]
-  }));
-  const cells = Array.from({ length: height }, (_, y) => [-1, 0, 1].map((z) => {
-    return {
-      position: { x: 0, y, z },
-      blockId: 1
-    };
-  })).flat();
-  view.document.world.setVoxelBulk("Ground", cells);
-
-  return view;
-}
-
-function wallRows(
-  view: VoxelView
-): number[] {
-  const rows: number[] = [];
-  for (let y = 0; y < 8; y++) {
-    const filled = [-1, 0, 1].filter(
-      (z) => view.document.world.getVoxelAt({ x: 0, y, z }) !== undefined
-    );
-    if (filled.length === 3) {
-      rows.push(y);
-    }
-    else {
-      assert.strictEqual(filled.length, 0, `row ${y} is partly dug`);
-    }
-  }
-
-  return rows;
-}
-
 function createSlabView(): VoxelView {
   const blocks = [
     { id: 1, shapeId: "slabBottom" },
@@ -255,37 +208,6 @@ describe("applyBrushStroke", () => {
       view.document.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.partner,
       undefined
     );
-    view.dispose();
-  });
-
-  test("digs a wall down from the top face it was aimed at", () => {
-    const view = createWallView(6);
-    const origin = { x: 0, y: 5, z: 0 };
-    const stroke = new BrushStroke({
-      mode: "remove",
-      layerName: "Ground",
-      axis: "yz",
-      anchor: "top",
-      origin
-    });
-
-    assert.ok(applyBrushStroke(view, stroke, [origin], 3));
-    assert.deepStrictEqual(wallRows(view), [0, 1, 2]);
-    view.dispose();
-  });
-
-  test("only reaches the aimed row when the wall rises into the air", () => {
-    const view = createWallView(6);
-    const origin = { x: 0, y: 5, z: 0 };
-    const stroke = new BrushStroke({
-      mode: "remove",
-      layerName: "Ground",
-      axis: "yz",
-      origin
-    });
-
-    assert.ok(applyBrushStroke(view, stroke, [origin], 3));
-    assert.deepStrictEqual(wallRows(view), [0, 1, 2, 3, 4]);
     view.dispose();
   });
 });
