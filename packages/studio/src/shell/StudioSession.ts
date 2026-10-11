@@ -46,6 +46,7 @@ export interface StudioSessionOptions {
   frames: Omit<EditorFramesOptions, "onShellCommand">;
   onTabsChange?: () => void;
   onToggleConsole?: () => void;
+  onSessionRefused?: () => void;
   /**
    * @default new LocalStorageAdapter()
    */
@@ -62,6 +63,7 @@ export class StudioSession {
   #storage: StorageAdapter;
   #onTabsChange: (() => void) | undefined;
   #onToggleConsole: (() => void) | undefined;
+  #onSessionRefused: (() => void) | undefined;
   #restoring = false;
 
   constructor(
@@ -72,6 +74,7 @@ export class StudioSession {
     this.#storage = options.storage ?? new LocalStorageAdapter();
     this.#onTabsChange = options.onTabsChange;
     this.#onToggleConsole = options.onToggleConsole;
+    this.#onSessionRefused = options.onSessionRefused;
     this.kinds = options.editors.kindSet();
     this.#frames = new EditorFrames({
       ...options.frames,
@@ -153,6 +156,10 @@ export class StudioSession {
     }
   }
 
+  notifySessionRenewed(): void {
+    this.#frames.notifySessionRenewed();
+  }
+
   dispose(): void {
     this.#catalog.off("change", this.#syncTabs);
     this.tabs.dispose();
@@ -179,6 +186,9 @@ export class StudioSession {
         break;
       case "toggle-console":
         this.#onToggleConsole?.();
+        break;
+      case "session-refused":
+        this.#onSessionRefused?.();
         break;
       default: {
         const unhandled: never = command;

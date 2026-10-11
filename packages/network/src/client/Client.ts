@@ -32,6 +32,7 @@ type ConnectionState =
   | "connecting"
   | "open"
   | "reconnecting"
+  | "refused"
   | "closing"
   | "closed";
 
@@ -106,8 +107,25 @@ export class Client extends Emitter<ClientEventMap> {
     return room;
   }
 
+  reconnect(): void {
+    if (this.#state !== "refused") {
+      return;
+    }
+
+    this.#state = "connecting";
+    this.#attempt = 0;
+    this.#suspended = true;
+    this.#retry();
+  }
+
   destroy(): void {
     if (this.#state === "closed") {
+      return;
+    }
+
+    if (this.#state === "refused") {
+      this.#state = "closed";
+
       return;
     }
 
@@ -176,7 +194,8 @@ export class Client extends Emitter<ClientEventMap> {
       this.#delays === null ||
       event.code === UNAUTHORIZED_CLOSE_CODE
     ) {
-      this.#state = "closed";
+      const refused = !expected && event.code === UNAUTHORIZED_CLOSE_CODE;
+      this.#state = refused ? "refused" : "closed";
       this.#queue = [];
       this.#suspendRooms(wasOpen);
       if (event.code === UNAUTHORIZED_CLOSE_CODE) {
@@ -261,7 +280,7 @@ export class Client extends Emitter<ClientEventMap> {
     ) {
       this.#queue.push(raw);
     }
-    else {
+    else if (this.#state !== "refused") {
       this.#logger
         .withMetadata({ envelope })
         .warn("dropped message on a closed socket");

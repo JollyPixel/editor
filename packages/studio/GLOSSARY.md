@@ -113,8 +113,9 @@ no answer comes.
 ### Shell command
 
 A `jolly-shell` message an editor page posts back through its
-`ShellChannel`. The shell handles `open-asset` like a tree activation and
-`toggle-console` by toggling its console.
+`ShellChannel`. The shell handles `open-asset` like a tree activation,
+`toggle-console` by toggling its console and `session-refused` by renewing the
+session.
 
 ### Account
 

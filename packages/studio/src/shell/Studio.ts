@@ -68,6 +68,7 @@ export class Studio extends LitElement {
   #session: StudioSession | null = null;
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
+  #stopRenewal: (() => void) | null = null;
 
   constructor() {
     super();
@@ -110,9 +111,16 @@ export class Studio extends LitElement {
       onTabsChange: this.#syncOpenTabs,
       onToggleConsole: () => {
         options.console?.element.toggle();
+      },
+      onSessionRefused: () => {
+        void options.signedIn?.renewal.renew();
       }
     });
     this.#session = session;
+    this.#stopRenewal?.();
+    this.#stopRenewal = options.signedIn?.renewal.onRenewed(
+      () => session.notifySessionRenewed()
+    ) ?? null;
     this._signedIn = options.signedIn ?? null;
     this._assets = {
       catalog,
@@ -149,6 +157,8 @@ export class Studio extends LitElement {
     super.disconnectedCallback();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
+    this.#stopRenewal?.();
+    this.#stopRenewal = null;
     this.#session?.dispose();
     this.#session = null;
   }

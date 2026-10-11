@@ -104,7 +104,10 @@ sequenceDiagram
   skips the dialog (`me`).
 - Editor frames connect with the same cookie; `jolly-launch` carries the
   identity only.
-- A refused socket (`unauthorized`) signs out and reloads to the dialog.
+- A refused socket (`unauthorized`), the shell's or a frame's, goes through
+  `SessionRenewal`: `me` or the dialog, then every client reconnects. Another
+  account reloads
+  ([ADR-0022](./docs/adr/0022-a-refused-session-renews-in-place.md)).
 - Catalog unreachable: Retry, or go offline.
 - Offline adds `{ offline, workspace: "studio" }` to every editor URL, so the
   frames join the same browser workspace.
@@ -141,13 +144,15 @@ sequenceDiagram
 | `jolly-ready` | frame → shell | nothing |
 | `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
-| `jolly-shell` | frame → shell | `open-asset` or `toggle-console` |
+| `jolly-shell` | frame → shell | `open-asset`, `toggle-console` or `session-refused` |
 | `jolly-appearance` | shell → frame | new theme or density |
+| `jolly-session-renewed` | shell → frame | nothing; refused clients reconnect |
 
 - `EditorFrames` ignores messages from any other window.
 - Frames open their catalog on the launch port, served by the shell's
   `CatalogShare` ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).
-- The shell never answers a `jolly-shell` command.
+- The shell never answers a `jolly-shell` command. `jolly-session-renewed`
+  goes to every frame, not only those that posted `session-refused`.
 - Online, every frame joins as the shell's peer (`username`, `peerId`), so one
   user has one presence color across tabs. Offline frames stay guests.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
@@ -265,7 +270,7 @@ flowchart TB
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog, offline fallback |
 | `src/seed.ts` | seed for both back-ends |
 | `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
-| `src/accounts/` | `StudioSignedIn`, `UsersTreeModel`, `/users` console |
+| `src/accounts/` | `StudioSignedIn`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
 | `src/shares/` | share routes, lifetimes, `ShareLinksClient`, `StudioShareLinks` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |

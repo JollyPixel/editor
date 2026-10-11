@@ -6,6 +6,7 @@ import {
   launchMessage,
   PageAppearance,
   readDebugLogger,
+  sessionRenewedMessage,
   type Appearance,
   type CatalogShare,
   type FrameConsoles,
@@ -96,6 +97,13 @@ export class EditorFrames {
     const frame = this.#frames.get(id);
     if (frame !== undefined) {
       frame.title = title;
+    }
+  }
+
+  notifySessionRenewed(): void {
+    const message = sessionRenewedMessage();
+    for (const frame of this.#frames.values()) {
+      this.#post(frame, message);
     }
   }
 

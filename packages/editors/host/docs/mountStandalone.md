@@ -479,6 +479,7 @@ class ShellChannel {
   readonly identity: PeerIdentity | null;
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
+  renewWhenRefused(client: RenewableClient): void;
   onAppearance(
     listener: (appearance: Appearance) => void,
     signal: AbortSignal
@@ -490,6 +491,15 @@ class ShellChannel {
 |---|---|
 | `openAsset(id)` | `{ type: "jolly-shell", command: "open-asset", target: id }` |
 | `toggleConsole()` | `{ type: "jolly-shell", command: "toggle-console" }` |
+| `renewWhenRefused(client)` | `{ type: "jolly-shell", command: "session-refused" }` |
+
+`renewWhenRefused(client)` takes a `RenewableClient`, any object with
+`on("unauthorized", listener)` and `reconnect()` such as a network `Client`.
+It posts `session-refused` each time the server refuses `client`'s session,
+then calls `client.reconnect()` when the shell
+posts `sessionRenewedMessage()` (`{ type: "jolly-session-renewed" }`).
+`EditorSession.open` calls it on the client it creates, so a framed editor
+keeps its rooms and pending changes while the user signs in again.
 
 A shell that listens on its own window narrows what a frame posts with
 `isReadyMessage(data)` and `isShellCommand(data)`, and answers with
@@ -504,8 +514,9 @@ same-origin path of an uploaded image; parsing drops any other field and an
 The channel exposes it as a `PeerIdentity` colored from `peerId`, and
 `EditorSession.open` joins as that peer instead of prompting, so every frame
 of one shell shares a name and a presence color.
-`READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE` and
-`APPEARANCE_MESSAGE_TYPE` name the four messages.
+`READY_MESSAGE_TYPE`, `LAUNCH_MESSAGE_TYPE`, `SHELL_MESSAGE_TYPE`,
+`APPEARANCE_MESSAGE_TYPE` and `SESSION_RENEWED_MESSAGE_TYPE` name the five
+messages.
 
 ### Shell catalog
 

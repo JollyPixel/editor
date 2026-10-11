@@ -36,6 +36,12 @@ Whether the socket is open. Room admission is confirmed separately by `sync`.
 Returns a handle without joining. Repeated names reuse it; only the first options
 apply. The optional `parser` validates incoming payloads.
 
+### `reconnect(): void`
+
+Opens a new socket after an authentication refusal, for example once the user
+has signed in again. Does nothing in any other state, including after
+`destroy()`.
+
 ### `destroy(): void`
 
 Closes the socket and cancels retries.
@@ -43,7 +49,10 @@ Closes the socket and cancels retries.
 ### Reconnecting
 
 Joined rooms lose their client id and peers, then rejoin on reconnect.
-Authentication refusal emits `unauthorized` and stops retries.
+Authentication refusal emits `unauthorized` and stops retries until
+`reconnect()`. Messages sent while refused are dropped; joined rooms rejoin
+with their presence and resume payload, so `CommandSync` resends its pending
+changes.
 
 ## Room
 

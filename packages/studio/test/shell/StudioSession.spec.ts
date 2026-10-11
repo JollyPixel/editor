@@ -153,6 +153,28 @@ describe("StudioSession", () => {
     assert.equal(studio.tabs.active, "map-1");
   });
 
+  test("asks to renew the session on an editor's session-refused command", async() => {
+    let refusals = 0;
+    const studio = session(
+      new FakeCatalog([MAP_RECORD]),
+      new MemoryStorageAdapter(),
+      undefined,
+      {
+        onSessionRefused: () => {
+          refusals++;
+        }
+      }
+    );
+    await studio.openAsset("map-1");
+
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "session-refused"
+    });
+
+    assert.equal(refusals, 1);
+  });
+
   test("dispose stops following the catalog", () => {
     const catalog = new FakeCatalog([MAP_RECORD]);
     const studio = session(catalog);
