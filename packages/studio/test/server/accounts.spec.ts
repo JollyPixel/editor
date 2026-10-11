@@ -25,6 +25,12 @@ const kAccessRequests = {
     accessRequests: true
   }
 };
+const kDigest = "p".repeat(43);
+const kRequester = {
+  address: "203.0.113.7",
+  secure: false,
+  headers: {}
+};
 
 function project(
   root: string,
@@ -64,7 +70,7 @@ describe("openStudioAccounts", () => {
     assert.equal(accounts.roles.defaultRole, "member");
   });
 
-  test("opens a project with access requests once JOLLY_MASTER_PASSWORD is set", async() => {
+  test("holds a registration without the master password for approval", async() => {
     using accounts = await openStudioAccounts(
       project(path.resolve("/studio"), kAccessRequests),
       {
@@ -75,7 +81,20 @@ describe("openStudioAccounts", () => {
       }
     );
 
-    assert.equal(accounts.roles.defaultRole, "spectator");
+    const owner = await accounts.register({
+      username: "Alice",
+      password: kDigest,
+      masterPassword: "open sesame"
+    }, kRequester);
+    const requester = await accounts.register({
+      username: "Bob",
+      password: kDigest
+    }, kRequester);
+
+    assert.deepEqual(
+      [owner.status, requester.status],
+      ["active", "pending"]
+    );
   });
 
   test("refuses an empty JOLLY_MASTER_PASSWORD when the project takes access requests", async() => {

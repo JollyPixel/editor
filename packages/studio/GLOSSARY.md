@@ -113,8 +113,8 @@ no answer comes.
 ### Shell command
 
 A `jolly-shell` message an editor page posts back through its
-`ShellChannel`. `open-asset` is the only command; the shell handles it like a
-tree activation.
+`ShellChannel`. The shell handles `open-asset` like a tree activation and
+`toggle-console` by toggling its console.
 
 ### Account
 

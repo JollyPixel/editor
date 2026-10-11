@@ -1,88 +1,76 @@
 // Import Third-party Dependencies
-import { expect, test } from "@playwright/test";
-import {
-  boxOf,
-  dragTo,
-  treeRow
-} from "@jolly-pixel/e2e";
+import { boxOf } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
-  closeTabButton,
-  editorFrames,
-  editorTab,
-  homeTab,
+  test,
+  expect
+} from "./fixtures.ts";
+import {
   MAP,
+  TEXTURE
+} from "./support/assets.ts";
+import {
   MAP_TAB,
-  MODEL,
-  MODEL_TAB,
-  openFromHome,
-  openShell,
-  tabNames
-} from "./support/shell.ts";
+  TEXTURE_TAB
+} from "./support/tabs.ts";
 
-test("starts on home and reorders editor tabs behind it", async({ page }) => {
-  await openShell(page);
-  const home = homeTab(page);
-  await expect(home).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("#studio-home")).toBeVisible();
+test("starts on home and reorders editor tabs behind it", async({ studio }) => {
+  const { tabs } = studio;
+  await studio.openOffline();
+  await expect(tabs.home).toHaveAttribute("aria-selected", "true");
+  await expect(studio.home.root).toBeVisible();
 
-  await treeRow(page, MAP).dblclick();
-  await openFromHome(page, MODEL);
-  await expect(editorFrames(page)).toHaveCount(2);
-  await expect(page.locator("#studio-home")).toBeHidden();
-  await expect.poll(() => tabNames(page)).toEqual(["Home", MAP_TAB, MODEL_TAB]);
+  await studio.assets.open(MAP);
+  await studio.openFromHome(TEXTURE);
+  await expect(studio.frames.all).toHaveCount(2);
+  await expect(studio.home.root).toBeHidden();
+  await expect.poll(() => tabs.names()).toEqual(["Home", MAP_TAB, TEXTURE_TAB]);
 
-  const homeBox = await boxOf(home);
-  await dragTo(page, editorTab(page, MODEL_TAB), {
-    x: homeBox.x + (homeBox.width * 0.75),
-    y: homeBox.y + (homeBox.height / 2)
-  });
-  await expect.poll(() => tabNames(page)).toEqual(["Home", MODEL_TAB, MAP_TAB]);
+  await tabs.moveFirst(TEXTURE_TAB);
+  await expect.poll(() => tabs.names()).toEqual(["Home", TEXTURE_TAB, MAP_TAB]);
 
-  for (const name of [MODEL_TAB, MAP_TAB]) {
-    await closeTabButton(page, name).click();
-  }
-  await expect(home).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("#studio-home")).toBeVisible();
+  await tabs.close(TEXTURE_TAB);
+  await tabs.close(MAP_TAB);
+  await expect(tabs.home).toHaveAttribute("aria-selected", "true");
+  await expect(studio.home.root).toBeVisible();
 });
 
-test("reopens the tabs after a reload and loads only the active one", async({ page }) => {
-  await openShell(page);
-  await treeRow(page, MAP).dblclick();
-  await openFromHome(page, MODEL);
-  const map = editorTab(page, MAP_TAB);
-  await map.click();
-  await expect(map).toHaveAttribute("aria-selected", "true");
+test("reopens the tabs after a reload and loads only the active one", async({ studio, page }) => {
+  const { tabs } = studio;
+  await studio.openOffline();
+  await studio.assets.open(MAP);
+  await studio.openFromHome(TEXTURE);
+  await tabs.tab(MAP_TAB).click();
+  await expect(tabs.tab(MAP_TAB)).toHaveAttribute("aria-selected", "true");
 
   await page.reload();
 
-  await expect.poll(() => tabNames(page)).toEqual(["Home", MAP_TAB, MODEL_TAB]);
-  await expect(map).toHaveAttribute("aria-selected", "true");
-  await expect(editorFrames(page)).toHaveCount(1);
+  await expect.poll(() => tabs.names()).toEqual(["Home", MAP_TAB, TEXTURE_TAB]);
+  await expect(tabs.tab(MAP_TAB)).toHaveAttribute("aria-selected", "true");
+  await expect(studio.frames.all).toHaveCount(1);
 
-  await editorTab(page, MODEL_TAB).click();
-  await expect(editorFrames(page)).toHaveCount(2);
+  await tabs.tab(TEXTURE_TAB).click();
+  await expect(studio.frames.all).toHaveCount(2);
 });
 
-test("an editor takes the full width and home lists it among open editors", async({ page }) => {
-  await openShell(page);
-  const overview = page.locator("project-overview");
-  await expect(overview.locator(".total")).toHaveText("4");
+test("an editor takes the full width and home lists it among open editors", async({ studio, page }) => {
+  const { home, tabs } = studio;
+  await studio.openOffline();
+  await expect(home.assetTotal).toHaveText("4");
 
-  await treeRow(page, MAP).dblclick();
-  await expect(page.locator("asset-browser")).toBeHidden();
+  await studio.assets.open(MAP);
+  await expect(studio.assets.root).toBeHidden();
   const [frame, workbench] = await Promise.all([
-    boxOf(editorFrames(page)),
+    boxOf(studio.frames.all),
     boxOf(page.locator("#workbench"))
   ]);
   expect(frame.x).toBe(workbench.x);
   expect(frame.width).toBe(workbench.width);
 
-  await homeTab(page).click();
-  await expect(page.locator("asset-browser")).toBeVisible();
-  const openEditor = overview.locator("jolly-button", { hasText: MAP_TAB });
-  await expect(openEditor).toHaveAttribute("title", `maps/${MAP}`);
-  await openEditor.click();
-  await expect(editorTab(page, MAP_TAB)).toHaveAttribute("aria-selected", "true");
+  await tabs.home.click();
+  await expect(studio.assets.root).toBeVisible();
+  await expect(home.openEditor(MAP_TAB)).toHaveAttribute("title", `maps/${MAP}`);
+  await home.openEditor(MAP_TAB).click();
+  await expect(tabs.tab(MAP_TAB)).toHaveAttribute("aria-selected", "true");
 });

@@ -1,13 +1,9 @@
-// Import Third-party Dependencies
-import {
-  expect,
-  test,
-  type Page
-} from "@playwright/test";
-
 // Import Internal Dependencies
 import {
-  E2E_PASSWORD,
+  test,
+  expect
+} from "./fixtures.ts";
+import {
   registerAccount,
   uniqueUsername
 } from "./support/account.ts";
@@ -18,72 +14,39 @@ const kOnePixelPng = Buffer.from(
   "base64"
 );
 
-function signInDialog(
-  page: Page
-) {
-  return page.getByRole("dialog", { name: "Sign in" });
-}
-
-async function fillCredentials(
-  page: Page,
-  username: string
-): Promise<void> {
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill(E2E_PASSWORD);
-}
-
-test("creates an account from the dialog, then signs out", async({ page }) => {
+test("creates an account from the dialog, then signs out", async({ studio }) => {
   const username = uniqueUsername();
-  await page.goto("/");
+  await studio.goto();
 
-  await page.getByRole("button", { name: "Create an account", exact: true }).click();
-  await fillCredentials(page, username);
-  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await studio.signIn.register(username);
+  await expect(studio.account.root).toContainText(username);
 
-  const badge = page.locator("#studio-actions studio-account");
-  await expect(badge).toContainText(username);
-  await badge.getByRole("button", { name: username }).click();
-  await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(signInDialog(page)).toBeVisible();
+  await studio.account.signOut(username);
+  await expect(studio.signIn.root).toBeVisible();
 });
 
-test("uploads an avatar from the account menu", async({ page }) => {
-  const username = await registerAccount(page.request);
-  await page.goto("/");
+test("uploads an avatar from the account menu", async({ studio, account }) => {
+  await studio.goto();
 
-  const badge = page.locator("#studio-actions studio-account");
-  const chooser = page.waitForEvent("filechooser");
-  await badge.getByRole("button", { name: username }).click();
-  await page.getByRole("menuitem", { name: "Change avatar…" }).click();
-  await (await chooser).setFiles({
-    name: "avatar.png",
-    mimeType: "image/png",
-    buffer: kOnePixelPng
-  });
+  await studio.account.changeAvatar(account, kOnePixelPng);
 
   const avatar = /\/avatar\?v=[0-9a-f]{16}$/;
-  await expect(badge.locator("jolly-avatar img")).toHaveAttribute("src", avatar);
-  await expect(
-    page.locator("studio-users jolly-tree jolly-avatar img")
-  ).toHaveAttribute("src", avatar);
+  await expect(studio.account.avatar).toHaveAttribute("src", avatar);
+  await expect(studio.roster.avatar).toHaveAttribute("src", avatar);
 });
 
-test("signs back in with the password an account registered with", async({ page, request }) => {
-  const username = uniqueUsername();
-  await registerAccount(request, username);
-  await page.goto("/");
+test("signs back in with the password an account registered with", async({ studio, request }) => {
+  const username = await registerAccount(request);
+  await studio.goto();
 
-  await fillCredentials(page, username.toUpperCase());
-  await page.getByLabel("Password").press("Enter");
+  await studio.signIn.signIn(username.toUpperCase());
 
-  await expect(page.locator("#studio-actions studio-account")).toContainText(username);
+  await expect(studio.account.root).toContainText(username);
 });
 
-test("lists the signed-in user online under its role", async({ page }) => {
-  const username = await registerAccount(page.request);
-  await page.goto("/");
+test("lists the signed-in user online under its role", async({ studio, account }) => {
+  await studio.goto();
 
-  const users = page.locator("studio-users jolly-tree");
-  await expect(users.getByRole("treeitem", { name: /Member/ })).toBeVisible();
-  await expect(users.getByRole("treeitem", { name: new RegExp(username) })).toContainText("you");
+  await expect(studio.roster.row(/Member/)).toBeVisible();
+  await expect(studio.roster.row(new RegExp(account))).toContainText("you");
 });

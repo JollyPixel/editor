@@ -1,33 +1,24 @@
-// Import Third-party Dependencies
-import { expect, test } from "@playwright/test";
-import { treeRow } from "@jolly-pixel/e2e";
-
 // Import Internal Dependencies
 import {
-  assetRows,
-  editorFrames,
-  expandSeedFolders,
-  MAP,
-  SEED_ROW_COUNT
-} from "./support/shell.ts";
+  test,
+  expect
+} from "./fixtures.ts";
+import { MAP } from "./support/assets.ts";
 import { registerAccount } from "./support/account.ts";
 
-test("offers a shared offline catalog when the socket closes", async({ page }) => {
+test("offers a shared offline catalog when the socket closes", async({ studio, page }) => {
   await page.routeWebSocket("**/ws-sync", (socket) => {
     socket.close();
   });
-  await expandSeedFolders(page);
   await registerAccount(page.request);
-  await page.goto("/");
-  await page.getByRole("button", {
-    name: "Open offline workspace"
-  }).click();
+  await studio.goto();
+  await studio.offlineFallback.click();
 
-  await expect(assetRows(page)).toHaveCount(SEED_ROW_COUNT);
-  await treeRow(page, MAP).dblclick();
+  await studio.assets.expectSeeded();
+  await studio.assets.open(MAP);
 
-  await expect(editorFrames(page)).toHaveCount(1);
-  await expect(editorFrames(page)).toHaveAttribute(
+  await expect(studio.frames.all).toHaveCount(1);
+  await expect(studio.frames.all).toHaveAttribute(
     "src",
     /offline=.*workspace=studio.*target=map-overworld/
   );
