@@ -1,4 +1,6 @@
 // Import Node.js Dependencies
+import fs from "node:fs/promises";
+import path from "node:path";
 import type {
   DatabaseSync,
   SQLInputValue
@@ -31,11 +33,45 @@ import {
   escapeGlob,
   placeholdersFor
 } from "./sql.ts";
-import { reclaimStatement } from "./vacuum.ts";
+import { SQL_SCHEMA } from "./schema.ts";
+import {
+  enableIncrementalVacuum,
+  reclaimStatement
+} from "./vacuum.ts";
+
+// CONSTANTS
+const kInMemoryLocation = ":memory:";
+
+interface SqlFragment {
+  sql: string;
+  parameters: SQLInputValue[];
+}
 
 export class SqliteEventLog implements EventLog {
   #connection: SqliteConnection;
   #reclaimStatement: string;
+
+  static async open(
+    location: string = kInMemoryLocation
+  ): Promise<SqliteEventLog> {
+    const { DatabaseSync } = await import("node:sqlite");
+
+    if (location !== kInMemoryLocation) {
+      await fs.mkdir(
+        path.dirname(location),
+        { recursive: true }
+      );
+    }
+
+    const db = new DatabaseSync(location);
+    if (location !== kInMemoryLocation) {
+      enableIncrementalVacuum(db);
+      db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
+    }
+    db.exec(SQL_SCHEMA);
+
+    return new SqliteEventLog(db);
+  }
 
   constructor(
     db: DatabaseSync
@@ -123,32 +159,6 @@ export class SqliteEventLog implements EventLog {
     );
   }
 
-  listFromCheckpoint(
-    assetId: string,
-    checkpointEventTypes: readonly string[]
-  ): Event[] {
-    if (checkpointEventTypes.length === 0) {
-      return this.list(assetId);
-    }
-
-    const placeholders = placeholdersFor(checkpointEventTypes);
-
-    return this.#query(
-      `SELECT ${EVENT_COLUMNS}
-       FROM events
-       WHERE asset_id = ?
-         AND event_version >= COALESCE((
-           SELECT MAX(event_version)
-           FROM events
-           WHERE asset_id = ? AND event_type IN (${placeholders})
-         ), 0)
-       ORDER BY event_version ASC`,
-      assetId,
-      assetId,
-      ...checkpointEventTypes
-    );
-  }
-
   listAll(
     options: ListAllOptions = {}
   ): Event[] {
@@ -183,31 +193,38 @@ export class SqliteEventLog implements EventLog {
   ): Event[] {
     const {
       checkpointEventTypes,
-      eventTypePrefix
+      eventTypePrefix,
+      assetId
     } = options;
-    if (checkpointEventTypes.length === 0) {
-      return this.listAll({ eventTypePrefix });
-    }
 
-    const parameters: SQLInputValue[] = [...checkpointEventTypes];
-    let prefixCondition = "";
+    const heads = this.#checkpointHeads(checkpointEventTypes, assetId);
+    const { source, conditions, parameters, order } = assetId === undefined ?
+      {
+        source: "events e LEFT JOIN heads h ON h.asset_id = e.asset_id",
+        conditions: ["e.event_version >= COALESCE(h.head, 0)"],
+        parameters: [...heads.parameters],
+        order: "e.event_id"
+      } :
+      {
+        source: "events e",
+        conditions: [
+          "e.asset_id = ?",
+          "e.event_version >= COALESCE((SELECT head FROM heads), 0)"
+        ],
+        parameters: [...heads.parameters, assetId],
+        order: "e.event_version"
+      };
     if (eventTypePrefix !== undefined) {
-      prefixCondition = "AND e.event_type GLOB ?";
+      conditions.push("e.event_type GLOB ?");
       parameters.push(`${escapeGlob(eventTypePrefix)}*`);
     }
 
     return this.#query(
-      `WITH heads AS (
-         SELECT asset_id, MAX(event_id) AS head
-         FROM events
-         WHERE event_type IN (${placeholdersFor(checkpointEventTypes)})
-         GROUP BY asset_id
-       )
+      `${heads.sql}
        SELECT ${ALIASED_EVENT_COLUMNS}
-       FROM events e
-       LEFT JOIN heads h ON h.asset_id = e.asset_id
-       WHERE e.event_id >= COALESCE(h.head, 0) ${prefixCondition}
-       ORDER BY e.event_id ASC`,
+       FROM ${source}
+       WHERE ${conditions.join(" AND ")}
+       ORDER BY ${order} ASC`,
       ...parameters
     );
   }
@@ -222,39 +239,24 @@ export class SqliteEventLog implements EventLog {
       reclaim = true,
       assetId
     } = options;
-    if (checkpointEventTypes.length === 0) {
-      return {
-        removed: 0,
-        assets: 0
-      };
-    }
 
-    const placeholders = placeholdersFor(checkpointEventTypes);
-    const assetCondition = assetId === undefined ? "" : "AND asset_id = ?";
-    const scope: SQLInputValue[] = assetId === undefined ?
-      [...checkpointEventTypes] :
-      [...checkpointEventTypes, assetId];
+    const heads = this.#checkpointHeads(checkpointEventTypes, assetId);
     const counted = this.#connection.get<{ assets: number; }>(
-      `SELECT COUNT(DISTINCT asset_id) AS assets
-       FROM events
-       WHERE event_type IN (${placeholders}) ${assetCondition}`,
-      ...scope
+      `${heads.sql}
+       SELECT COUNT(*) AS assets
+       FROM heads`,
+      ...heads.parameters
     );
-
     const removed = this.#connection.run(
-      `DELETE FROM events
+      `${heads.sql}
+       DELETE FROM events
        WHERE event_id IN (
          SELECT e.event_id
          FROM events e
-         JOIN (
-           SELECT asset_id, MAX(event_id) AS head
-           FROM events
-           WHERE event_type IN (${placeholders}) ${assetCondition}
-           GROUP BY asset_id
-         ) h ON h.asset_id = e.asset_id
-         WHERE e.event_id < h.head
+         JOIN heads h ON h.asset_id = e.asset_id
+         WHERE e.event_version < h.head
        )`,
-      ...scope
+      ...heads.parameters
     );
 
     if (reclaim && removed > 0) {
@@ -282,6 +284,28 @@ export class SqliteEventLog implements EventLog {
     );
 
     return row?.version ?? 0;
+  }
+
+  #checkpointHeads(
+    eventTypes: readonly string[],
+    assetId: string | undefined
+  ): SqlFragment {
+    const parameters: SQLInputValue[] = [...eventTypes];
+    let assetCondition = "";
+    if (assetId !== undefined) {
+      assetCondition = "AND asset_id = ?";
+      parameters.push(assetId);
+    }
+
+    return {
+      sql: `WITH heads AS (
+         SELECT asset_id, MAX(event_version) AS head
+         FROM events
+         WHERE event_type IN (${placeholdersFor(eventTypes)}) ${assetCondition}
+         GROUP BY asset_id
+       )`,
+      parameters
+    };
   }
 
   #query(

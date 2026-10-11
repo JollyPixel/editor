@@ -172,8 +172,8 @@ export async function createAssetBackend(
       })
       .error("append event");
   }
-  eventStore.writer.on("append", onAppend);
-  eventStore.writer.on("error", onAppendError);
+  const unsubscribeAppend = eventStore.subscribe(onAppend);
+  const unsubscribeAppendError = eventStore.subscribeRejections(onAppendError);
 
   const kinds = new AssetKindRegistry(handlers);
   await ensureStateGitignore(source, stateIgnores);
@@ -351,8 +351,8 @@ export async function createAssetBackend(
       catalogExtension.dispose();
       folders.close();
       catalog.close();
-      eventStore.writer.off("append", onAppend);
-      eventStore.writer.off("error", onAppendError);
+      unsubscribeAppend();
+      unsubscribeAppendError();
     },
 
     async [Symbol.asyncDispose]() {

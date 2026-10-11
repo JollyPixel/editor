@@ -1,28 +1,56 @@
+// Import Third-party Dependencies
+import {
+  Emitter
+} from "@openally/emitt";
+import {
+  wrap
+} from "@openally/result";
+
 // Import Internal Dependencies
 import type {
-  CompactOptions,
+  AppendInput,
+  Event,
   EventDataMap,
   EventListener,
+  EventReader,
   SubscribeOptions,
   TypedEventStore
 } from "../EventStore.ts";
 import type {
   EventLog
 } from "./EventLog.ts";
-import {
-  EventStoreWriter
-} from "./EventStoreWriter.ts";
+
+type AppendNotifications = {
+  append: (
+    event: Event
+  ) => void;
+  rejection: (
+    error: Error,
+    input: AppendInput
+  ) => void;
+};
 
 export function createEventStore<
   TMap extends EventDataMap = EventDataMap
 >(
   log: EventLog
 ): TypedEventStore<TMap> {
-  const writer = new EventStoreWriter(log);
+  const notifications = new Emitter<AppendNotifications>();
+  const reader: EventReader = {
+    list: (assetId, fromVersion) => log.list(assetId, fromVersion),
+    listAll: (options) => log.listAll(options),
+    listFromCheckpoints: (options) => log.listFromCheckpoints(options)
+  };
 
   return {
-    writer: writer as unknown as TypedEventStore<TMap>["writer"],
-    reader: log,
+    writer: {
+      append: (input) => wrap<Event, Error>(
+        () => log.insert(input)
+      )
+        .andTee((event) => notifications.emit("append", event))
+        .orTee((error) => notifications.emit("rejection", error, input))
+    },
+    reader,
     subscribe: (
       listener: EventListener,
       options: SubscribeOptions = {}
@@ -36,13 +64,13 @@ export function createEventStore<
           }
         };
 
-      writer.on("append", handler);
-
-      return () => writer.off("append", handler);
+      return notifications.subscribe("append", handler);
     },
-    compact: (
-      options: CompactOptions
-    ) => log.compact(options),
+    subscribeRejections: (listener) => notifications.subscribe(
+      "rejection",
+      listener
+    ),
+    compact: (options) => log.compact(options),
     close: () => log.close(),
     [Symbol.dispose]: () => log.close()
   };

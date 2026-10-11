@@ -110,7 +110,7 @@ for (const backend of backends) {
     test("a rejected append burns neither an eventId nor a version", async() => {
       using store = await backend.create();
 
-      store.writer.append({
+      const rejected = store.writer.append({
         assetType: "texture",
         assetId: "a1",
         eventType: "pixel-set",
@@ -123,6 +123,7 @@ for (const backend of backends) {
         { x: 1 }
       );
 
+      assert.strictEqual(rejected.ok, false);
       assert.strictEqual(event.eventId, 1);
       assert.strictEqual(event.eventVersion, 1);
       assert.strictEqual(store.reader.listAll().length, 1);

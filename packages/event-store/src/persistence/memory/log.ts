@@ -83,27 +83,6 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
-  listFromCheckpoint(
-    assetId: string,
-    checkpointEventTypes: readonly string[]
-  ): Event[] {
-    this.#assertOpen();
-
-    const stream = this.#streams.get(assetId) ?? [];
-    const wanted = new Set(checkpointEventTypes);
-    let start = 0;
-    for (let index = stream.length - 1; index >= 0; index--) {
-      if (wanted.has(stream[index].eventType)) {
-        start = index;
-        break;
-      }
-    }
-
-    return stream
-      .slice(start)
-      .map((event) => structuredClone(event));
-  }
-
   listAll(
     options: ListAllOptions = {}
   ): Event[] {
@@ -130,13 +109,14 @@ export class MemoryEventLog implements EventLog {
 
     const {
       checkpointEventTypes,
-      eventTypePrefix
+      eventTypePrefix,
+      assetId
     } = options;
-    const checkpoints = this.#checkpoints(checkpointEventTypes);
+    const heads = this.#checkpointHeads(checkpointEventTypes, assetId);
 
     return copyMatching(
-      this.#events,
-      (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0) &&
+      this.#scope(assetId),
+      (event) => event.eventId >= (heads.get(event.assetId) ?? 0) &&
         matchesPrefix(event.eventType, eventTypePrefix)
     );
   }
@@ -146,20 +126,20 @@ export class MemoryEventLog implements EventLog {
   ): CompactReport {
     this.#assertOpen();
 
-    const checkpoints = this.#checkpoints(
+    const heads = this.#checkpointHeads(
       options.checkpointEventTypes,
       options.assetId
     );
     const before = this.#events.length;
 
     this.#events = this.#events.filter(
-      (event) => event.eventId >= (checkpoints.get(event.assetId) ?? 0)
+      (event) => event.eventId >= (heads.get(event.assetId) ?? 0)
     );
     this.#reindex();
 
     return {
       removed: before - this.#events.length,
-      assets: checkpoints.size
+      assets: heads.size
     };
   }
 
@@ -190,29 +170,38 @@ export class MemoryEventLog implements EventLog {
     }
   }
 
-  #checkpoints(
-    eventTypes: readonly string[],
-    assetId?: string
-  ): Map<string, number> {
-    const wanted = new Set(eventTypes);
-    const checkpoints = new Map<string, number>();
-    if (wanted.size === 0) {
-      return checkpoints;
-    }
-
-    const events = assetId === undefined ?
+  #scope(
+    assetId: string | undefined
+  ): readonly Event[] {
+    return assetId === undefined ?
       this.#events :
       this.#streams.get(assetId) ?? [];
-    for (const event of events) {
-      if (
-        wanted.has(event.eventType) &&
-        event.eventId > (checkpoints.get(event.assetId) ?? 0)
-      ) {
-        checkpoints.set(event.assetId, event.eventId);
+  }
+
+  #checkpointHeads(
+    eventTypes: readonly string[],
+    assetId: string | undefined
+  ): Map<string, number> {
+    const wanted = new Set(eventTypes);
+    const heads = new Map<string, number>();
+    if (wanted.size === 0) {
+      return heads;
+    }
+
+    const events = this.#scope(assetId);
+    for (let index = events.length - 1; index >= 0; index--) {
+      const event = events[index];
+      if (!wanted.has(event.eventType) || heads.has(event.assetId)) {
+        continue;
+      }
+
+      heads.set(event.assetId, event.eventId);
+      if (assetId !== undefined) {
+        break;
       }
     }
 
-    return checkpoints;
+    return heads;
   }
 
   #assertOpen(): void {

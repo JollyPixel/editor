@@ -15,15 +15,17 @@ import {
 
 for (const backend of backends) {
   describe(`${backend.name} — subscribe`, () => {
-    test("calls the listener with every appended event", async() => {
+    test("calls the listener with every stored event", async() => {
       using store = await backend.create();
-      const seen: string[] = [];
-      store.subscribe((event) => seen.push(event.eventType));
+      const seen: EventStore.Event[] = [];
+      store.subscribe((event) => seen.push(event));
 
-      append(store, "a1", {}, "asset.created");
-      append(store, "a1", {}, "pixelart.command");
+      const appended = [
+        append(store, "a1", {}, "asset.created"),
+        append(store, "a1", {}, "pixelart.command")
+      ];
 
-      assert.deepEqual(seen, ["asset.created", "pixelart.command"]);
+      assert.deepEqual(seen, appended);
     });
 
     test("filters on eventTypePrefix", async() => {
@@ -85,25 +87,11 @@ for (const backend of backends) {
     });
   });
 
-  describe(`${backend.name} — events`, () => {
-    test("emits an append event with the stored event on success", async() => {
-      using store = await backend.create();
-      const received: EventStore.Event[] = [];
-      store.writer.on(
-        "append",
-        (event) => received.push(event)
-      );
-
-      const event = append(store, "a1", { x: 1 });
-
-      assert.deepEqual(received, [event]);
-    });
-
-    test("emits an error event with the failure and the input", async() => {
+  describe(`${backend.name} — subscribeRejections`, () => {
+    test("calls the listener with the error and input until detached", async() => {
       using store = await backend.create();
       const received: { error: Error; input: unknown; }[] = [];
-      store.writer.on(
-        "error",
+      const unsubscribe = store.subscribeRejections(
         (error, input) => received.push({ error, input })
       );
 
@@ -115,10 +103,21 @@ for (const backend of backends) {
         actor: USER_ACTOR
       };
       const result = store.writer.append(input);
+      unsubscribe();
+      store.writer.append(input);
 
       assert.strictEqual(result.ok, false);
-      assert.strictEqual(received.length, 1);
-      assert.deepEqual(received[0].input, input);
+      assert.deepEqual(received, [{ error: result.val, input }]);
+    });
+
+    test("is not called for an accepted append", async() => {
+      using store = await backend.create();
+      const received: Error[] = [];
+      store.subscribeRejections((error) => received.push(error));
+
+      append(store, "a1", { x: 1 });
+
+      assert.deepEqual(received, []);
     });
   });
 }

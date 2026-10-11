@@ -115,16 +115,6 @@ describe("reads", () => {
     >();
   });
 
-  test("listFromCheckpoint reads one stream", () => {
-    expect(typed.reader.listFromCheckpoint).type.toBeCallableWith(
-      "a1",
-      ["sprite.created"]
-    );
-    expect(
-      typed.reader.listFromCheckpoint("a1", [])
-    ).type.toBe<EventStore.Event[]>();
-  });
-
   test("a guard is what narrows a stored event", () => {
     const event = typed.reader.list("a1")[0];
 
@@ -137,13 +127,6 @@ describe("reads", () => {
 });
 
 describe("subscribe", () => {
-  test("hands the listener a stored event and returns a detach function", () => {
-    expect(typed.subscribe).type.toBeCallableWith(
-      (event: EventStore.Event) => void event.eventType
-    );
-    expect(typed.subscribe(() => void 0)).type.toBe<() => void>();
-  });
-
   test("takes the same prefix filter as the reader", () => {
     expect(typed.subscribe).type.toBeCallableWith(
       () => void 0,

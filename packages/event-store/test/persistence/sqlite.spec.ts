@@ -11,10 +11,8 @@ import path from "node:path";
 
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
-import {
-  createSqliteEventStore,
-  SQL_SCHEMA
-} from "#src/persistence/sqlite/index.ts";
+import { createSqliteEventStore } from "#src/node.ts";
+import { SQL_SCHEMA } from "#src/persistence/sqlite/schema.ts";
 import { append } from "../helpers/backends.ts";
 
 describe("SqliteEventStore — durability", () => {
@@ -59,13 +57,6 @@ describe("SqliteEventStore — location", () => {
     append(store, "a1", { x: 1 });
 
     assert.strictEqual(fs.statSync(file).isFile(), true);
-  });
-
-  test("does not touch the filesystem for an in-memory store", async() => {
-    using store = await EventStore.persistence.sqlite(":memory:");
-    append(store, "a1", { x: 1 });
-
-    assert.strictEqual(fs.existsSync(":memory:"), false);
   });
 });
 

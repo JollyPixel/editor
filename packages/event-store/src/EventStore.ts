@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
 import type {
-  TypedEventEmitter
-} from "@openally/emitt";
-import type {
   Result
 } from "@openally/result";
 
@@ -89,6 +86,7 @@ export interface TypedEventWriter<
 export interface ListFromCheckpointsOptions {
   checkpointEventTypes: readonly string[];
   eventTypePrefix?: string;
+  assetId?: string;
 }
 
 export interface CompactOptions {
@@ -112,11 +110,6 @@ export interface EventReader {
     fromVersion?: number
   ): Event[];
 
-  listFromCheckpoint(
-    assetId: string,
-    checkpointEventTypes: readonly string[]
-  ): Event[];
-
   listAll(
     options?: ListAllOptions
   ): Event[];
@@ -134,13 +127,22 @@ export type EventListener = (
   event: Event
 ) => void;
 
+export type RejectionListener = (
+  error: Error,
+  input: AppendInput
+) => void;
+
 export interface EventStore {
-  readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
+  readonly writer: EventWriter;
   readonly reader: EventReader;
 
   subscribe(
     listener: EventListener,
     options?: SubscribeOptions
+  ): () => void;
+
+  subscribeRejections(
+    listener: RejectionListener
   ): () => void;
 
   compact(
@@ -154,17 +156,5 @@ export interface EventStore {
 export interface TypedEventStore<
   TMap extends EventDataMap
 > extends EventStore {
-  readonly writer:
-    & TypedEventWriter<TMap>
-    & TypedEventEmitter<EventStoreEventMap>;
+  readonly writer: TypedEventWriter<TMap>;
 }
-
-export type EventStoreEventMap = {
-  append: (
-    event: Event
-  ) => void;
-  error: (
-    error: Error,
-    input: AppendInput
-  ) => void;
-};

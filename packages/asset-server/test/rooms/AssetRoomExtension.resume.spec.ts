@@ -71,7 +71,6 @@ function setup(
         list: (_assetId, from = 0) => log.filter(
           (event) => event.eventVersion > from
         ),
-        listFromCheckpoint: () => [],
         listAll: () => [],
         listFromCheckpoints: () => []
       },

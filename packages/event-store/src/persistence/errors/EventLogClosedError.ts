@@ -6,5 +6,6 @@ export class EventLogClosedError extends Error {
     options?: ErrorOptions
   ) {
     super("event log is closed", options);
+    this.name = "EventLogClosedError";
   }
 }

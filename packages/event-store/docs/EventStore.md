@@ -9,11 +9,14 @@ Shared API returned by the built-in persistence factories.
 
 ```ts
 export interface EventStore {
-  readonly writer: EventWriter & TypedEventEmitter<EventStoreEventMap>;
+  readonly writer: EventWriter;
   readonly reader: EventReader;
   subscribe(
     listener: EventListener,
     options?: SubscribeOptions
+  ): () => void;
+  subscribeRejections(
+    listener: RejectionListener
   ): () => void;
   compact(
     options: CompactOptions
@@ -140,20 +143,6 @@ The check and the insert are one statement, so another connection cannot
 append in between. A writer that derived the event from state at version `v`
 passes `v` to make sure nothing landed since.
 
-### Events
-
-`writer` is a typed event emitter with this map:
-
-```ts
-export type EventStoreEventMap = {
-  append: (event: Event) => void;
-  error: (error: Error, input: AppendInput) => void;
-};
-```
-
-`append` is emitted with the stored event after a successful write. `error` is
-emitted with the error and original input after a failed write.
-
 ## `subscribe`
 
 ```ts
@@ -182,30 +171,28 @@ const unsubscribe = store.subscribe(
 Subscribing does not replay history. A projection that starts from stored
 events reads them first, then subscribes to follow the log.
 
-`subscribe` covers accepted events only. Use `writer.on("error", ...)` to
-observe the appends a backend rejected.
+### `subscribeRejections`
+
+```ts
+export type RejectionListener = (error: Error, input: AppendInput) => void;
+
+subscribeRejections(listener: RejectionListener): () => void
+```
+
+Calls `listener` with the error and the original input of each append the
+store rejects, and returns the function that detaches it. `append` still
+returns the same error, so the appender handles it either way.
 
 ## `reader`
 
 ```ts
 reader.list(assetId: string, fromVersion?: number): Event[]
-reader.listFromCheckpoint(
-  assetId: string,
-  checkpointEventTypes: readonly string[]
-): Event[]
 reader.listAll(options?: ListAllOptions): Event[]
 reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Event[]
 ```
 
 `list` returns one asset stream in `eventVersion` order and treats `fromVersion`
 as an exclusive lower bound.
-
-`listFromCheckpoint` returns one asset's newest event whose type is in
-`checkpointEventTypes`, plus everything appended after it, in `eventVersion`
-order. A stream holding no such event comes back whole, and so does one read
-with an empty type list. It is the single-asset form of
-[`listFromCheckpoints`](#listfromcheckpoints): a consumer that folds one asset
-uses it to read only the events its fold still needs.
 
 `listAll` reads every stream in `eventId` order and accepts these filters:
 
@@ -227,19 +214,29 @@ export interface ListAllOptions {
 export interface ListFromCheckpointsOptions {
   checkpointEventTypes: readonly string[];
   eventTypePrefix?: string;
+  assetId?: string;
 }
 ```
 
 Returns, for each asset, its newest event whose type is in
 `checkpointEventTypes` plus everything appended after it, across every stream
 in `eventId` order. An asset holding no checkpoint yields its whole stream,
-and an empty `checkpointEventTypes` degrades to `listAll`.
+so an empty `checkpointEventTypes` returns every event, or the whole stream
+when `assetId` is set.
 
 `eventTypePrefix` filters the result without moving the bound: an event
 matching the prefix but stored before its asset's checkpoint is still left out.
 
-A reader whose fold restarts from a checkpoint can use this method to process
-only each checkpoint and its following events.
+`assetId` limits the read to one stream, which then comes back in
+`eventVersion` order as well. A consumer that folds one asset uses it to read
+only the events its fold still needs:
+
+```ts
+const events = store.reader.listFromCheckpoints({
+  assetId: "a1",
+  checkpointEventTypes: ["asset.created", "asset.updated"]
+});
+```
 
 ## Compaction
 
@@ -277,7 +274,8 @@ close(): void
 [Symbol.dispose](): void
 ```
 
-`close()` is idempotent. A closed store rejects later reads and writes.
+`close()` is idempotent. A closed store rejects later reads and writes with an
+`EventLogClosedError`: reads and `compact` throw it, and `append` returns it.
 `[Symbol.dispose]` calls `close()`, so stores work with `using` declarations.
 
 ## Storage contract

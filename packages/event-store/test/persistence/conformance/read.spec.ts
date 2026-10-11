@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import type * as EventStore from "#src/index.ts";
 import {
   append,
   backends,
@@ -50,19 +51,34 @@ for (const backend of backends) {
         []
       );
     });
+  });
 
-    test("hands back copies, so mutating a result cannot reach the log", async() => {
-      using store = await backend.create();
-      append(store, "a1", { value: 1 });
+  describe(`${backend.name} — read copies`, () => {
+    const reads: [string, (reader: EventStore.EventReader) => EventStore.Event[]][] = [
+      ["list", (reader) => reader.list("a1")],
+      ["listAll", (reader) => reader.listAll()],
+      [
+        "listFromCheckpoints",
+        (reader) => reader.listFromCheckpoints({
+          checkpointEventTypes: ["asset.created"]
+        })
+      ]
+    ];
 
-      const [event] = store.reader.list("a1");
-      (event.eventData as { value: number; }).value = 999;
+    for (const [name, read] of reads) {
+      test(`${name} hands back copies, so mutating a result cannot reach the log`, async() => {
+        using store = await backend.create();
+        append(store, "a1", { nested: { value: 1 } }, "asset.created");
 
-      assert.deepEqual(
-        store.reader.list("a1")[0].eventData,
-        { value: 1 }
-      );
-    });
+        const [event] = read(store.reader);
+        (event.eventData as { nested: { value: number; }; }).nested.value = 999;
+
+        assert.deepEqual(
+          read(store.reader)[0].eventData,
+          { nested: { value: 1 } }
+        );
+      });
+    }
   });
 
   describe(`${backend.name} — listAll`, () => {

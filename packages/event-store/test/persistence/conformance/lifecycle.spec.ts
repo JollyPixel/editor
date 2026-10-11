@@ -7,52 +7,45 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
-import { EventLogClosedError } from "#src/persistence/errors/EventLogClosedError.ts";
 import {
   append,
-  backends
+  backends,
+  USER_ACTOR
 } from "../../helpers/backends.ts";
 
 for (const backend of backends) {
   describe(`${backend.name} — close`, () => {
-    test("a closed store rejects further operations", async() => {
+    test("append returns the closed failure the reads and compact throw", async() => {
       const store = await backend.create();
       store.close();
 
-      assert.throws(() => append(store, "a1"));
-      assert.throws(() => store.reader.list("a1"));
-      assert.throws(() => store.reader.listAll());
-    });
+      const result = store.writer.append({
+        assetType: "texture",
+        assetId: "a1",
+        eventType: "pixel-set",
+        eventData: {},
+        actor: USER_ACTOR
+      });
 
-    test("reports the same failure whichever call is made", async() => {
-      const store = await backend.create();
-      store.close();
-
-      assert.throws(
-        () => append(store, "a1"),
-        EventLogClosedError
-      );
+      assert.strictEqual(result.ok, false);
+      assert.ok(result.val instanceof EventStore.EventLogClosedError);
       assert.throws(
         () => store.reader.list("a1"),
-        EventLogClosedError
-      );
-      assert.throws(
-        () => store.reader.listFromCheckpoint("a1", ["asset.created"]),
-        EventLogClosedError
+        EventStore.EventLogClosedError
       );
       assert.throws(
         () => store.reader.listAll(),
-        EventLogClosedError
+        EventStore.EventLogClosedError
       );
       assert.throws(
         () => store.reader.listFromCheckpoints({
           checkpointEventTypes: ["asset.created"]
         }),
-        EventLogClosedError
+        EventStore.EventLogClosedError
       );
       assert.throws(
         () => store.compact({ checkpointEventTypes: ["asset.created"] }),
-        EventLogClosedError
+        EventStore.EventLogClosedError
       );
     });
 

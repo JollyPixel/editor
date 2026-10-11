@@ -171,10 +171,10 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
       version: 0,
       commandsSinceCheckpoint: []
     };
-    let events = this.#eventStore.reader.listFromCheckpoint(
+    let events = this.#eventStore.reader.listFromCheckpoints({
       assetId,
-      ASSET_CHECKPOINT_EVENT_TYPES
-    );
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
+    });
     let sinceYield = 0;
 
     while (events.length > 0) {

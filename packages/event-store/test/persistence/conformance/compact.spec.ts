@@ -103,21 +103,6 @@ for (const backend of backends) {
       assert.strictEqual(store.reader.listAll().length, 4);
     });
 
-    test("leaves the log readable from its checkpoint", async() => {
-      using store = await backend.create();
-      append(store, "a1", { v: 1 }, "asset.created");
-      append(store, "a1", { v: 2 }, "asset.updated");
-      append(store, "a1", { v: 3 }, "stroke");
-      store.compact({ checkpointEventTypes: ["asset.updated"] });
-
-      assert.deepEqual(
-        store.reader
-          .listFromCheckpoint("a1", ["asset.updated"])
-          .map((event) => event.eventData),
-        [{ v: 2 }, { v: 3 }]
-      );
-    });
-
     test("compacts only the given asset", async() => {
       using store = await backend.create();
       append(store, "a1", {}, "asset.created");
