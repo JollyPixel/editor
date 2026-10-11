@@ -1,4 +1,8 @@
 // Import Third-party Dependencies
+import {
+  registerConsoleFeatures,
+  type RegistrationHandle
+} from "@jolly-pixel/console";
 import type { Runtime } from "@jolly-pixel/runtime";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -15,6 +19,7 @@ import {
 import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   EditorRuntime,
+  archiveConsole,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -50,8 +55,6 @@ export type ModelTextureLease = AssetLease<
   PixelServerMessage
 >;
 
-type ConsoleFeatures = ReturnType<typeof pixelArtConsole>;
-
 export interface VoxelModelEditorParts {
   runtime: Runtime;
   scene: ModelEditorScene;
@@ -60,7 +63,7 @@ export interface VoxelModelEditorParts {
   shell: EditorShell;
   texture: ModelTextureLease;
   target: AssetLease<ModelDocument>;
-  consoleFeatures: ConsoleFeatures;
+  consoleFeatures: RegistrationHandle;
 }
 
 export class VoxelModelEditor {
@@ -145,14 +148,24 @@ export class VoxelModelEditor {
       shell,
       texture,
       target,
-      consoleFeatures: pixelArtConsole(commands, { keyBindingSettings })
+      consoleFeatures: registerConsoleFeatures(
+        commands,
+        [
+          pixelArtConsole,
+          archiveConsole
+        ],
+        {
+          keyBindingSettings,
+          archives: workspace.archives
+        }
+      )
     });
   }
 
   #shell: EditorShell;
   #texture: ModelTextureLease;
   #target: AssetLease<ModelDocument>;
-  #consoleFeatures: ConsoleFeatures;
+  #consoleFeatures: RegistrationHandle;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;

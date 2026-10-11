@@ -14,6 +14,11 @@ import {
 } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
+import {
+  exportArchive,
+  importArchive,
+  resetWorkspace
+} from "./support/archives.ts";
 import { addNode } from "./support/hierarchy.ts";
 import { outline } from "./support/scene.ts";
 
@@ -38,41 +43,6 @@ function offlineIds(
   });
 }
 
-async function openFileFolder(
-  page: Page
-): Promise<void> {
-  const toggle = page
-    .locator("jolly-model-editor-right-panel jolly-folder[key=\"file\"]")
-    .getByRole("button", { name: "File" });
-  if (await toggle.getAttribute("aria-expanded") === "false") {
-    await toggle.click();
-  }
-}
-
-async function exportArchive(
-  page: Page
-): Promise<string> {
-  await openFileFolder(page);
-  const downloading = page.waitForEvent("download");
-  await page
-    .locator("jolly-archive-actions #export-archive")
-    .getByRole("button")
-    .click();
-  const download = await downloading;
-  expect(download.suggestedFilename()).toBe("model.zip");
-
-  return download.path();
-}
-
-function importArchive(
-  page: Page,
-  archivePath: string
-): Promise<void> {
-  return page
-    .locator("jolly-archive-actions input[type=file]")
-    .setInputFiles(archivePath);
-}
-
 test("exports the model, resets the workspace and imports it back", async({ page }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
@@ -86,17 +56,11 @@ test("exports the model, resets the workspace and imports it back", async({ page
   });
   await addNode(page, "Block", "Arm");
   const exported = await offlineIds(page);
-  const archivePath = await exportArchive(page);
+  const download = await exportArchive(page);
+  expect(download.suggestedFilename()).toBe("model.zip");
+  const archivePath = await download.path();
 
-  await page
-    .locator("jolly-archive-actions #reset-workspace")
-    .getByRole("button")
-    .click();
-  await dialog(page, "Reset workspace")
-    .getByRole("button", { name: "Reset" })
-    .click();
-  await page.waitForEvent("load");
-  await waitForEditor(page);
+  await resetWorkspace(page);
   expect((await offlineIds(page)).modelId).not.toBe(exported.modelId);
 
   await importArchive(page, archivePath);
@@ -121,9 +85,9 @@ test("imports a model and its texture as a copy", async({ page }) => {
   });
   await addNode(page, "Block", "Arm");
   const original = await offlineIds(page);
-  const archivePath = await exportArchive(page);
+  const download = await exportArchive(page);
 
-  await importArchive(page, archivePath);
+  await importArchive(page, await download.path());
   await dialog(page, "Import archive")
     .getByRole("button", { name: "Import as copy" })
     .click();
@@ -141,21 +105,5 @@ test("imports a model and its texture as a copy", async({ page }) => {
   await expect(treeRow(page, "Arm")).toBeVisible();
   await expect(
     page.getByRole("img").filter({ hasText: "(Arm)front" })
-  ).toBeVisible();
-});
-
-test("reports a file that is not an archive", async({ page }) => {
-  await openEditor(page, {
-    maxFps: 5,
-    query: {
-      offline: ""
-    }
-  });
-  await openFileFolder(page);
-
-  await importArchive(page, "package.json");
-
-  await expect(
-    page.locator("jolly-archive-actions").getByRole("alert")
   ).toBeVisible();
 });

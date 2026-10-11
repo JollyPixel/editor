@@ -6,7 +6,6 @@ import {
   type JollyPeerSelectDetail,
   type PresencePeer
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
 import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
@@ -46,13 +45,8 @@ export class RightPanel extends LitElement {
       --jolly-folder-gap: var(--jolly-space-1, 4px);
     }
 
-    jolly-folder[key="collaborators"]::part(header),
-    jolly-folder[key="file"]::part(header) {
+    jolly-folder[key="collaborators"]::part(header) {
       font-size: calc(var(--jolly-font-size, 11px) + 2px);
-    }
-
-    jolly-archive-actions {
-      padding: var(--jolly-space-1, 4px);
     }
   `;
 
@@ -102,22 +96,6 @@ export class RightPanel extends LitElement {
       <jolly-model-editor-hierarchy></jolly-model-editor-hierarchy>
       <jolly-model-editor-view></jolly-model-editor-view>
       ${this.#renderCollaborators()}
-      ${this.#renderFile()}
-    `;
-  }
-
-  #renderFile(): TemplateResult | typeof nothing {
-    const workspace = this.#workspace.current;
-    if (workspace === null) {
-      return nothing;
-    }
-
-    return html`
-      <jolly-folder key="file" label="File" .open=${false}>
-        <jolly-archive-actions
-          .archives=${workspace.archives}
-        ></jolly-archive-actions>
-      </jolly-folder>
     `;
   }
 }

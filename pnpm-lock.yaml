@@ -727,6 +727,9 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
+      '@jolly-pixel/console':
+        specifier: workspace:*
+        version: link:../../console
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
