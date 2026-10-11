@@ -23,7 +23,6 @@ export class Brush {
         blockId: state.block.id,
         size: brush.size,
         mode: brush.mode,
-        axis: brush.axis,
         pattern: brush.pattern
       };
     });

@@ -23,45 +23,40 @@ describe("BrushFootprint.parse", () => {
       parsed({
         position: { x: 1, y: 2, z: 3 },
         size: 2,
-        axis: "xy",
         pattern: "circle"
       }),
       {
         position: { x: 1, y: 2, z: 3 },
         size: 2,
-        axis: "xy",
-        pattern: "circle",
-        anchor: "bottom"
+        pattern: "circle"
       }
     );
   });
 
-  test("reads a payload from a client without axis and pattern", () => {
+  test("ignores the axis and anchor an older client still sends", () => {
     assert.deepStrictEqual(
       parsed({
         position: { x: 1, y: 2, z: 3 },
-        size: 2
+        size: 2,
+        axis: "xyz",
+        anchor: "top"
       }),
       {
         position: { x: 1, y: 2, z: 3 },
         size: 2,
-        axis: "xz",
-        pattern: "square",
-        anchor: "bottom"
+        pattern: "square"
       }
     );
   });
 
-  test("falls back on unknown axis and pattern values", () => {
-    for (const [axis, pattern] of [["diagonal", 3], ["zx", "rectangle"]]) {
+  test("falls back on an unknown pattern", () => {
+    for (const pattern of [3, "rectangle"]) {
       const read = parsed({
         position: { x: 0, y: 0, z: 0 },
         size: 1,
-        axis,
         pattern
       });
 
-      assert.strictEqual(read?.axis, "xz");
       assert.strictEqual(read?.pattern, "square");
     }
   });
@@ -76,22 +71,6 @@ describe("BrushFootprint.parse", () => {
     for (const face of ["up", "+w", null]) {
       assert.ok(!("face" in parsed({ ...base, face })!));
     }
-  });
-
-  test("reads the anchor and falls back to the bottom on an unknown one", () => {
-    const payload = {
-      position: { x: 1, y: 2, z: 3 },
-      size: 2
-    };
-
-    assert.strictEqual(
-      parsed({ ...payload, anchor: "top" })?.anchor,
-      "top"
-    );
-    assert.strictEqual(
-      parsed({ ...payload, anchor: "middle" })?.anchor,
-      "bottom"
-    );
   });
 
   test("floors a fractional size", () => {
@@ -127,7 +106,6 @@ describe("BrushFootprint.equals", () => {
   const reference = new BrushFootprint({
     position: { x: 1, y: 2, z: 3 },
     size: 2,
-    axis: "xz",
     pattern: "square"
   });
 
@@ -137,7 +115,6 @@ describe("BrushFootprint.equals", () => {
     return new BrushFootprint({
       position: reference.position,
       size: reference.size,
-      axis: reference.axis,
       pattern: reference.pattern,
       ...patch
     });
@@ -153,22 +130,15 @@ describe("BrushFootprint.equals", () => {
     assert.ok(!withPatch({ face: CellFace.PosY }).equals(withPatch({ face: CellFace.NegX })));
   });
 
-  test("compares the anchor, a missing one standing for the bottom", () => {
-    assert.ok(reference.equals(withPatch({ anchor: "bottom" })));
-    assert.ok(!reference.equals(withPatch({ anchor: "top" })));
-    assert.ok(!withPatch({ anchor: "center" }).equals(withPatch({ anchor: "top" })));
-  });
-
-  test("compares the center, size, axis and pattern", () => {
+  test("compares the center, size and pattern", () => {
     assert.ok(reference.equals(withPatch({})));
     assert.ok(!reference.equals(withPatch({ size: 3 })));
-    assert.ok(!reference.equals(withPatch({ axis: "xy" })));
     assert.ok(!reference.equals(withPatch({ pattern: "circle" })));
     assert.ok(!reference.equals(withPatch({ position: { x: 1, y: 2, z: 4 } })));
   });
 
   test("round-trips through its JSON", () => {
-    const aimed = withPatch({ face: CellFace.NegZ, anchor: "top" });
+    const aimed = withPatch({ face: CellFace.NegZ });
 
     assert.ok(aimed.equals(BrushFootprint.parse(JSON.parse(JSON.stringify(aimed)))));
   });

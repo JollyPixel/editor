@@ -20,7 +20,7 @@ test("a click places the brush block and a right click removes it", async({ map 
   await expect.poll(() => world.blocks([cell])).toEqual([null]);
 });
 
-test("a stroke stays on the height it started on", async({ map }) => {
+test("a stroke climbs onto the blocks it crosses and back down", async({ map }) => {
   const { world } = map;
   await world.seed([{ x: 2, y: 0, z: 0, blockId: 1 }]);
   await map.brush.change({ blockId: 2 });
@@ -37,7 +37,7 @@ test("a stroke stays on the height it started on", async({ map }) => {
     { x: 2, y: 0, z: 0 },
     { x: 3, y: 0, z: 0 },
     { x: 2, y: 1, z: 0 }
-  ])).toEqual([2, 2, 1, 2, null]);
+  ])).toEqual([2, 2, 1, 2, 2]);
 });
 
 test("replace mode repaints occupied cells only", async({ map, page }) => {
@@ -54,24 +54,6 @@ test("replace mode repaints occupied cells only", async({ map, page }) => {
 
   await expect.poll(() => world.blocks([{ x: 0, y: 0, z: 0 }])).toEqual([4]);
   expect(await world.voxelCount()).toBe(1);
-});
-
-test("a wall removed from a top face digs down into it", async({ map, page }) => {
-  const { brush, world } = map;
-  const wall = [0, 1].flatMap((y) => [-1, 0].map((z) => {
-    return { x: 0, y, z };
-  }));
-  await world.seed(wall.map((cell) => {
-    return { ...cell, blockId: 1 };
-  }));
-  await brush.change({ size: 2 });
-  await page.keyboard.press("KeyX");
-  await page.keyboard.press("KeyX");
-  await expect.poll(async() => (await brush.state()).axis).toBe("yz");
-
-  await map.viewport.click({ x: 0, y: 2, z: 0 }, "right");
-
-  await expect.poll(() => world.voxelCount()).toBe(0);
 });
 
 test("a second right click without moving digs what the first uncovered", async({ map }) => {
@@ -96,29 +78,20 @@ test("a second right click without moving digs what the first uncovered", async(
   await expect.poll(() => world.voxelCount()).toBe(floor.length - 1);
 });
 
-test("a removing drag ignores the hole it digs", async({ map }) => {
+test("a removing drag erases only where it was pressed", async({ map }) => {
   const { world } = map;
-  const slab = [0, 1].flatMap((y) => [-3, -2, -1, 0, 1, 2, 3].flatMap(
-    (x) => [-3, -2, -1, 0, 1, 2, 3].map((z) => {
-      return { x, y, z, blockId: 1 };
-    })
-  ));
-  await world.seed(slab);
-  await map.brush.change({ size: 3 });
+  const row = [0, 1, 2, 3].map((x) => {
+    return { x, y: 0, z: 0, blockId: 1 };
+  });
+  await world.seed(row);
 
   await map.viewport.drag([
-    { x: 0, y: 2, z: 0 },
-    { x: 1, y: 2, z: 0 }
+    { x: 0, y: 1, z: 0 },
+    { x: 3, y: 1, z: 0 }
   ], "right");
 
-  await expect.poll(() => world.voxelCount()).toBe(slab.length - 12);
-  expect(await world.blocks([
-    { x: -1, y: 1, z: 0 },
-    { x: 2, y: 1, z: 1 },
-    { x: 3, y: 1, z: 0 },
-    { x: 0, y: 1, z: 2 },
-    { x: 0, y: 0, z: 0 }
-  ])).toEqual([null, null, 1, 1, 1]);
+  await expect.poll(() => world.voxelCount()).toBe(row.length - 1);
+  expect(await world.blocks(row.slice(1))).toEqual([1, 1, 1]);
 });
 
 test("Ctrl+click picks the block under the cursor", async({ map }) => {

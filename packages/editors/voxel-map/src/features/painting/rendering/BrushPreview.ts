@@ -20,7 +20,7 @@ const kRemovalTint = 0xff5c5c;
 
 export type BrushTarget = Pick<
   BrushFootprintOptions,
-  "position" | "face" | "anchor"
+  "position" | "face"
 >;
 
 export interface BrushPreviewOptions {

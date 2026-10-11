@@ -13,6 +13,7 @@ import {
   BRUSH_SHELL_INFLATE,
   BrushShell
 } from "./BrushShell.ts";
+import type { VoxelShell } from "./VoxelShell.ts";
 
 // CONSTANTS
 const kFaceMargin = BRUSH_SHELL_INFLATE + 0.005;
@@ -55,7 +56,7 @@ export class BrushMesh extends THREE.Group {
   #faced = false;
   #shelled = true;
   #shapeKey = "";
-  #shell: BrushShell | null = null;
+  #shell: VoxelShell | null = null;
   #facingKey = "";
   #eye = new THREE.Vector3();
 
@@ -198,15 +199,13 @@ export class BrushMesh extends THREE.Group {
   #reshape(
     shape: BrushShape
   ): void {
-    const key = `${shape.size}:${shape.axis}:${shape.pattern}`;
+    const key = `${shape.size}:${shape.pattern}`;
     if (key === this.#shapeKey) {
       return;
     }
     this.#shapeKey = key;
 
-    const brushShell = BrushShell.fromShape(shape);
-    const shell = brushShell.local;
-    const { flat } = brushShell;
+    const shell = BrushShell.fromShape(shape).local;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
       "position",
@@ -216,7 +215,7 @@ export class BrushMesh extends THREE.Group {
       "color",
       new THREE.Float32BufferAttribute(
         shell.rims.flatMap(
-          (rim) => [1, 1, 1, rim === 1 && !flat ? 1 : kCenterAlpha]
+          (rim) => [1, 1, 1, rim === 1 ? 1 : kCenterAlpha]
         ),
         4
       )
@@ -224,7 +223,7 @@ export class BrushMesh extends THREE.Group {
     this.#fill.geometry.dispose();
     this.#fill.geometry = geometry;
 
-    this.#shell = brushShell;
+    this.#shell = shell;
     this.#facingKey = "";
     this.#outline(shell.edges);
   }
@@ -246,7 +245,7 @@ export class BrushMesh extends THREE.Group {
     }
 
     this.#facingKey = key;
-    this.#outline(shell.outline(eye));
+    this.#outline(shell.edgesFacing(eye));
   }
 
   #outline(

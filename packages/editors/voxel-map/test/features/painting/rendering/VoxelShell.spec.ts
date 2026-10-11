@@ -93,7 +93,6 @@ describe("VoxelShell.fromCells", () => {
     const shell = VoxelShell.fromCells(new BrushFootprint({
       position: { x: 0, y: 0, z: 0 },
       size: 3,
-      axis: "xz",
       pattern: "square"
     }).cells());
 
@@ -135,25 +134,12 @@ describe("VoxelShell.fromCells", () => {
     const disc = new BrushFootprint({
       position: { x: 0, y: 0, z: 0 },
       size: 4,
-      axis: "xz",
       pattern: "circle"
     }).cells();
     const shell = VoxelShell.fromCells(disc);
 
     assert.strictEqual(quadCount(shell.triangles), 12 + 12 + 16);
     assert.strictEqual(shell.edges.length / 6, 12 + 12 + 12);
-  });
-
-  test("covers a sphere with exterior faces only", () => {
-    const ball = new BrushFootprint({
-      position: { x: 0, y: 0, z: 0 },
-      size: 4,
-      axis: "xyz",
-      pattern: "circle"
-    }).cells();
-    const shell = VoxelShell.fromCells(ball);
-
-    assert.strictEqual(quadCount(shell.triangles), 72);
   });
 });
 
@@ -169,7 +155,6 @@ describe("VoxelShell rims", () => {
     const slab = new BrushFootprint({
       position: { x: 0, y: 0, z: 0 },
       size: 3,
-      axis: "xz",
       pattern: "square"
     }).cells();
     const shell = VoxelShell.fromCells(slab);

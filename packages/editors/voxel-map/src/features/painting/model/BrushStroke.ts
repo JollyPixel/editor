@@ -10,12 +10,8 @@ import {
 
 // Import Internal Dependencies
 import { AimedHalf } from "./AimedHalf.ts";
-import {
-  BrushFootprint,
-  type BrushPlane
-} from "./BrushFootprint.ts";
-import type { BrushAnchor } from "./CellFace.ts";
-import type { BrushAxis, BrushPattern } from "../BrushStore.ts";
+import { BrushFootprint } from "./BrushFootprint.ts";
+import type { BrushPattern } from "../BrushStore.ts";
 
 export type StrokeMode = "place" | "replace" | "remove";
 
@@ -40,54 +36,48 @@ export function canMergePaint(
 export interface BrushStrokeOptions {
   mode: StrokeMode;
   origin: VoxelCoord;
-  aimed?: VoxelCoord;
-  axis?: BrushAxis;
   pattern?: BrushPattern;
-  anchor?: BrushAnchor;
   layerName: string;
   paint?: VoxelPaint;
   aimedPart?: VoxelPart | null;
 }
 
+export interface StrokeAim {
+  place: VoxelCoord;
+  remove: VoxelCoord;
+}
+
 export interface StrokeTarget {
   center: VoxelCoord;
   paints: boolean;
+  joins: boolean;
 }
 
 export class BrushStroke {
   readonly mode: StrokeMode;
   readonly origin: VoxelCoord;
-  readonly plane: BrushPlane;
-  readonly axis: BrushAxis;
   readonly pattern: BrushPattern;
-  readonly anchor: BrushAnchor;
   readonly layerName: string;
   readonly paint: VoxelPaint | undefined;
   readonly aimedPart: VoxelPart | null;
 
   #stamped = new Set<string>();
+  #latest = new Set<string>();
   #last: VoxelCoord | null = null;
-  #reach: VoxelCoord;
 
   constructor(
     options: BrushStrokeOptions
   ) {
     this.mode = options.mode;
     this.origin = { ...options.origin };
-    this.axis = options.axis ?? "xz";
-    this.plane = BrushFootprint.planeThrough(this.axis, this.origin);
     this.pattern = options.pattern ?? "square";
-    this.anchor = options.anchor ?? "bottom";
     this.layerName = options.layerName;
     this.paint = options.paint;
     this.aimedPart = options.aimedPart ?? null;
+  }
 
-    const aimed = options.aimed ?? this.origin;
-    this.#reach = {
-      x: this.origin.x - aimed.x,
-      y: this.origin.y - aimed.y,
-      z: this.origin.z - aimed.z
-    };
+  get height(): number {
+    return this.#last?.y ?? this.origin.y;
   }
 
   footprintAt(
@@ -97,19 +87,8 @@ export class BrushStroke {
     return new BrushFootprint({
       position,
       size,
-      axis: this.axis,
-      pattern: this.pattern,
-      anchor: this.anchor
+      pattern: this.pattern
     });
-  }
-
-  lock(
-    cell: VoxelCoord
-  ): VoxelCoord {
-    return {
-      ...cell,
-      [this.plane.axis]: this.plane.value
-    };
   }
 
   claims(
@@ -119,60 +98,60 @@ export class BrushStroke {
   }
 
   revisit(
-    cell: VoxelCoord
+    cell: VoxelCoord,
+    entry: VoxelCoord | null = null
   ): StrokeTarget {
+    const extension = this.#extensionFrom(cell, entry);
+    if (extension !== null) {
+      return {
+        center: extension,
+        paints: true,
+        joins: false
+      };
+    }
+
     return {
-      center: this.lock(cell),
-      paints: this.mode !== "place"
+      center: { ...cell },
+      paints: this.mode !== "place",
+      joins: true
     };
   }
 
   follow(
-    block: VoxelCoord
+    aim: StrokeAim
   ): StrokeTarget {
-    if (this.claims(block)) {
-      return this.revisit(block);
+    if (this.claims(aim.remove)) {
+      return this.revisit(aim.remove);
     }
 
-    const reach = this.#reach;
-
     return {
-      center: this.lock({
-        x: block.x + reach.x,
-        y: block.y + reach.y,
-        z: block.z + reach.z
-      }),
-      paints: true
+      center: { ...this.mode === "place" ? aim.place : aim.remove },
+      paints: true,
+      joins: true
     };
   }
 
   advance(
-    center: VoxelCoord
+    center: VoxelCoord,
+    joins = true
   ): VoxelCoord[] {
-    const target = this.lock(center);
     const previous = this.#last;
+    this.#last = { ...center };
 
-    if (previous === null) {
-      this.#last = target;
-
-      return [target];
+    if (!joins || previous === null) {
+      return [{ ...center }];
+    }
+    if (sameCell(previous, center)) {
+      return [];
     }
 
-    const cells = lineBetween(previous, target);
-    if (cells.length > 0) {
-      this.#last = cells[cells.length - 1];
-    }
-
-    return cells;
-  }
-
-  trails(
-    center: VoxelCoord
-  ): boolean {
-    return this.#last !== null && !sameCell(
-      this.#last,
-      this.lock(center)
+    const floor = Math.min(previous.y, center.y);
+    const cells = lineBetween(
+      { ...previous, y: floor },
+      { ...center, y: floor }
     );
+
+    return [...cells.slice(0, -1), { ...center }];
   }
 
   claim(
@@ -180,8 +159,10 @@ export class BrushStroke {
   ): VoxelCoord[] {
     const result: VoxelCoord[] = [];
 
+    this.#latest.clear();
     for (const cell of cells) {
       const key = coordinateKey(cell);
+      this.#latest.add(key);
       if (this.#stamped.has(key)) {
         continue;
       }
@@ -191,6 +172,27 @@ export class BrushStroke {
     }
 
     return result;
+  }
+
+  #extensionFrom(
+    cell: VoxelCoord,
+    entry: VoxelCoord | null
+  ): VoxelCoord | null {
+    if (
+      this.mode !== "place" ||
+      entry === null ||
+      this.#latest.has(coordinateKey(cell))
+    ) {
+      return null;
+    }
+
+    const neighbour = {
+      x: cell.x + entry.x,
+      y: cell.y + entry.y,
+      z: cell.z + entry.z
+    };
+
+    return this.claims(neighbour) ? null : neighbour;
   }
 
   aimedHalfAt(

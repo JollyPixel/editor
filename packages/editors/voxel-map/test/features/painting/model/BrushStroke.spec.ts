@@ -21,13 +21,6 @@ describe("BrushStroke", () => {
     });
   }
 
-  test("pulls a cell back to the height of the stroke", () => {
-    assert.deepStrictEqual(
-      createStroke().lock({ x: 1, y: 7, z: 2 }),
-      { x: 1, y: 0, z: 2 }
-    );
-  });
-
   test("starts on the cell it was given", () => {
     assert.deepStrictEqual(
       createStroke().advance({ x: 1, y: 0, z: 2 }),
@@ -50,118 +43,137 @@ describe("BrushStroke", () => {
     );
   });
 
-  test("locks its plane through the origin on the axis it does not span", () => {
-    const cases = [
-      { axis: "xz", plane: { axis: "y", value: 5 } },
-      { axis: "xy", plane: { axis: "z", value: 3 } },
-      { axis: "yz", plane: { axis: "x", value: 2 } },
-      { axis: "xyz", plane: { axis: "y", value: 5 } }
-    ] as const;
+  test("stamps a cell alone and off its height when told not to join it", () => {
+    const stroke = createStroke();
 
-    for (const { axis, plane } of cases) {
-      const stroke = new BrushStroke({
-        mode: "remove",
-        layerName: "Ground",
-        axis,
-        origin: { x: 2, y: 5, z: 3 }
-      });
-
-      assert.deepStrictEqual(stroke.plane, plane, axis);
-    }
-  });
-
-  test("follows each aimed block on the side it started from", () => {
-    const onTop = new BrushStroke({
-      mode: "place",
-      layerName: "Ground",
-      origin: { x: 0, y: 1, z: 0 },
-      aimed: { x: 0, y: 0, z: 0 }
-    });
-    const beside = new BrushStroke({
-      mode: "place",
-      layerName: "Ground",
-      origin: { x: 0, y: 1, z: -1 },
-      aimed: { x: 0, y: 1, z: 0 }
-    });
+    stroke.advance({ x: 0, y: 0, z: 0 });
 
     assert.deepStrictEqual(
-      onTop.follow({ x: 3, y: 0, z: 2 }),
-      { center: { x: 3, y: 1, z: 2 }, paints: true }
+      stroke.advance({ x: 3, y: 2, z: 0 }, false),
+      [{ x: 3, y: 2, z: 0 }]
     );
     assert.deepStrictEqual(
-      beside.follow({ x: 4, y: 1, z: 0 }),
-      { center: { x: 4, y: 1, z: -1 }, paints: true }
+      stroke.advance({ x: 4, y: 0, z: 0 }),
+      [{ x: 4, y: 0, z: 0 }]
     );
   });
 
-  test("follows an aimed block onto the stroke height", () => {
+  test("follows the cell a click would paint, at any height", () => {
+    const aim = {
+      place: { x: 2, y: 4, z: 3 },
+      remove: { x: 2, y: 3, z: 3 }
+    };
+    const replace = new BrushStroke({
+      mode: "replace",
+      layerName: "Ground",
+      origin: { x: 0, y: 0, z: 0 }
+    });
+
     assert.deepStrictEqual(
-      createStroke().follow({ x: 2, y: 5, z: 3 }).center,
-      { x: 2, y: 0, z: 3 }
+      createStroke().follow(aim),
+      { center: aim.place, paints: true, joins: true }
     );
+    assert.deepStrictEqual(replace.follow(aim).center, aim.remove);
   });
 
   test("tracks the blocks it painted itself without painting from them", () => {
-    const stroke = new BrushStroke({
-      mode: "place",
-      layerName: "Ground",
-      origin: { x: 0, y: 1, z: -1 },
-      aimed: { x: 0, y: 1, z: 0 }
-    });
+    const stroke = createStroke({ x: 0, y: 1, z: -1 });
     stroke.claim(stroke.advance(stroke.origin));
     stroke.claim(stroke.advance({ x: 3, y: 1, z: -1 }));
 
     assert.deepStrictEqual(
-      stroke.follow({ x: 1, y: 1, z: -1 }),
-      { center: { x: 1, y: 1, z: -1 }, paints: false }
+      stroke.follow({
+        place: { x: 1, y: 1, z: -2 },
+        remove: { x: 1, y: 1, z: -1 }
+      }),
+      { center: { x: 1, y: 1, z: -1 }, paints: false, joins: true }
     );
   });
 
-  test("keeps digging around the cells it already removed", () => {
+  test("builds out from an older block on the face the pointer came back through", () => {
+    const stroke = createStroke();
+    stroke.claim(stroke.advance(stroke.origin));
+    stroke.claim(stroke.advance({ x: 3, y: 0, z: 0 }));
+
+    assert.deepStrictEqual(
+      stroke.revisit({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -1 }),
+      { center: { x: 0, y: 0, z: -1 }, paints: true, joins: false }
+    );
+  });
+
+  test("never builds out from its latest stamp, whatever the brush size", () => {
+    const stroke = createStroke();
+    stroke.claim(stroke.footprintAt(stroke.origin, 3).cells());
+    stroke.claim(stroke.footprintAt({ x: 6, y: 0, z: 0 }, 3).cells());
+
+    const extension = stroke.revisit(
+      { x: 0, y: 0, z: -1 },
+      { x: 0, y: 0, z: -1 }
+    );
+    stroke.claim(stroke.footprintAt(extension.center, 3).cells());
+
+    assert.deepStrictEqual(extension.center, { x: 0, y: 0, z: -2 });
+    assert.deepStrictEqual(
+      stroke.revisit({ x: 1, y: 0, z: -1 }, { x: 1, y: 0, z: 0 }),
+      { center: { x: 1, y: 0, z: -1 }, paints: false, joins: true }
+    );
+  });
+
+  test("builds up from a top face, off its own height", () => {
+    const stroke = createStroke();
+    stroke.claim(stroke.advance(stroke.origin));
+    stroke.claim(stroke.advance({ x: 3, y: 0, z: 0 }));
+
+    assert.deepStrictEqual(
+      stroke.revisit({ x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }),
+      { center: { x: 0, y: 1, z: 0 }, paints: true, joins: false }
+    );
+  });
+
+  test("keeps repainting around the cells it already replaced", () => {
     const stroke = new BrushStroke({
-      mode: "remove",
+      mode: "replace",
       layerName: "Ground",
-      origin: { x: 0, y: 1, z: 0 }
+      origin: { x: 0, y: 1, z: 0 },
+      paint: {
+        blockId: 1,
+        rotation: 0,
+        flipY: false
+      }
     });
     stroke.claim(stroke.footprintAt(stroke.origin, 3).cells());
 
     assert.strictEqual(stroke.claims({ x: 1, y: 1, z: 0 }), true);
     assert.deepStrictEqual(
       stroke.revisit({ x: 1, y: 1, z: 0 }),
-      { center: { x: 1, y: 1, z: 0 }, paints: true }
+      { center: { x: 1, y: 1, z: 0 }, paints: true, joins: true }
     );
   });
 
-  test("grows upward from its origin unless told otherwise", () => {
-    assert.strictEqual(createStroke().anchor, "bottom");
-    assert.strictEqual(
-      new BrushStroke({
-        mode: "remove",
-        layerName: "Ground",
-        origin: { x: 0, y: 0, z: 0 },
-        anchor: "top"
-      }).anchor,
-      "top"
-    );
-  });
-
-  test("trails a target it has not reached yet", () => {
+  test("joins a step along its lower side, then lands on the target", () => {
     const stroke = createStroke();
 
     stroke.advance({ x: 0, y: 0, z: 0 });
 
-    assert.strictEqual(stroke.trails({ x: 2, y: 0, z: 0 }), true);
-    assert.strictEqual(stroke.trails({ x: 0, y: 0, z: 0 }), false);
-    assert.strictEqual(stroke.trails({ x: 0, y: 9, z: 0 }), false);
-  });
-
-  test("never leaves its height, whatever it is aimed at", () => {
-    const stroke = createStroke();
-
-    stroke.advance({ x: 0, y: 0, z: 0 });
-
-    assert.ok(
-      stroke.advance({ x: 2, y: 5, z: 2 }).every((cell) => cell.y === 0)
+    assert.deepStrictEqual(
+      stroke.advance({ x: 3, y: 2, z: 0 }),
+      [
+        { x: 1, y: 0, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 2, z: 0 }
+      ]
+    );
+    assert.strictEqual(stroke.height, 2);
+    assert.deepStrictEqual(
+      stroke.advance({ x: 1, y: 0, z: 0 }),
+      [
+        { x: 2, y: 0, z: 0 },
+        { x: 1, y: 0, z: 0 }
+      ]
+    );
+    assert.deepStrictEqual(
+      stroke.advance({ x: 1, y: 1, z: 0 }),
+      [{ x: 1, y: 1, z: 0 }]
     );
   });
 
@@ -190,28 +202,7 @@ describe("BrushStroke", () => {
     );
   });
 
-  test("pulls a cell back onto a vertical plane", () => {
-    const stroke = new BrushStroke({
-      mode: "remove",
-      layerName: "Ground",
-      axis: "xy",
-      origin: { x: 0, y: 0, z: 4 }
-    });
-
-    assert.deepStrictEqual(
-      stroke.lock({ x: 1, y: 7, z: 2 }),
-      { x: 1, y: 7, z: 4 }
-    );
-    stroke.advance({ x: 0, y: 0, z: 4 });
-    assert.ok(
-      stroke.advance({ x: 3, y: 3, z: 9 }).every((cell) => cell.z === 4)
-    );
-  });
-
-  test("defaults to a flat square footprint", () => {
-    const stroke = createStroke();
-
-    assert.strictEqual(stroke.axis, "xz");
-    assert.strictEqual(stroke.pattern, "square");
+  test("defaults to a square footprint", () => {
+    assert.strictEqual(createStroke().pattern, "square");
   });
 });

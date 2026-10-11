@@ -149,14 +149,9 @@ export class MarqueeTool extends ActorComponent {
       return;
     }
 
-    const corner = this.#aimer.aimAtPlane(
+    const corner = this.#aimer.aimAtHeight(
       mouse.viewportPositionTo(this.#pointer),
-      {
-        axis: "y",
-        value: draft.start.y + Math.round(
-          this.#eyeHeight() - this.#startEyeHeight
-        )
-      }
+      draft.start.y + Math.round(this.#eyeHeight() - this.#startEyeHeight)
     );
     if (corner !== null) {
       this.#show(draft.stretchedTo(corner));

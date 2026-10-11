@@ -9,22 +9,16 @@ import {
 // Import Internal Dependencies
 import { ViewRay } from "../../../scene/camera/ViewRay.ts";
 import { cellFaceStep } from "./cellFaceStep.ts";
-import { firstCellAlong } from "./firstCellAlong.ts";
-import type { BrushPlane } from "../model/BrushFootprint.ts";
 import {
-  CellFace,
-  type FaceAnchors
-} from "../model/CellFace.ts";
+  firstCellAlong,
+  type CellCrossing
+} from "./firstCellAlong.ts";
+import { CellFace } from "../model/CellFace.ts";
 
 // CONSTANTS
 const kPlane = new THREE.Plane();
 const kPlanePoint = new THREE.Vector3();
-const kPlaneNormal = new THREE.Vector3();
-const kAxisIndex = {
-  x: 0,
-  y: 1,
-  z: 2
-} as const;
+const kUp = new THREE.Vector3(0, 1, 0);
 const kSphere = new THREE.Sphere();
 const kSpherePoint = new THREE.Vector3();
 const kProbeStep = 1e-4;
@@ -34,7 +28,6 @@ export interface BrushAim {
   remove: VoxelCoord;
   face: CellFace | null;
   probe: VoxelCoord | null;
-  anchors: FaceAnchors;
 }
 
 export interface BrushAimResolverOptions {
@@ -101,7 +94,7 @@ export class BrushAimResolver {
   firstCellAlong(
     pointer: THREE.Vector2,
     matches: (cell: VoxelCoord) => boolean
-  ): VoxelCoord | null {
+  ): CellCrossing | null {
     this.resolve(pointer);
 
     return firstCellAlong(
@@ -144,11 +137,7 @@ export class BrushAimResolver {
         place: ground,
         remove: ground,
         face: CellFace.NegY,
-        probe: null,
-        anchors: {
-          place: "bottom",
-          remove: "bottom"
-        }
+        probe: null
       };
     }
 
@@ -170,8 +159,7 @@ export class BrushAimResolver {
       ),
       remove: cell,
       face,
-      probe: offsetInsideSurface(hit.point, hit.normal),
-      anchors: face.anchors
+      probe: offsetInsideSurface(hit.point, hit.normal)
     };
   }
 
@@ -196,21 +184,16 @@ export class BrushAimResolver {
       place: cell,
       remove: cell,
       face: null,
-      probe: null,
-      anchors: CellFace.FREE_ANCHORS
+      probe: null
     };
   }
 
-  aimAtPlane(
+  aimAtHeight(
     pointer: THREE.Vector2,
-    plane: BrushPlane
+    height: number
   ): VoxelCoord | null {
     const ray = this.#viewRay.aim(pointer);
-    kPlaneNormal.set(0, 0, 0).setComponent(
-      kAxisIndex[plane.axis],
-      1
-    );
-    kPlane.set(kPlaneNormal, -(plane.value + 0.5));
+    kPlane.set(kUp, -(height + 0.5));
 
     const point = ray.intersectPlane(
       kPlane,
@@ -229,7 +212,7 @@ export class BrushAimResolver {
 
     return {
       ...floorVoxelPosition(point),
-      [plane.axis]: plane.value
+      y: height
     };
   }
 

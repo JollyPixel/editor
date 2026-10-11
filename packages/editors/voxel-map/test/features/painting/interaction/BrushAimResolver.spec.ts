@@ -14,7 +14,6 @@ import {
   BrushAimResolver,
   type BrushAim
 } from "../../../../src/features/painting/interaction/BrushAimResolver.ts";
-import type { BrushPlane } from "../../../../src/features/painting/model/BrushFootprint.ts";
 import { CellFace } from "../../../../src/features/painting/model/CellFace.ts";
 
 // CONSTANTS
@@ -91,16 +90,7 @@ function probedAim(
   };
 }
 
-function heightOf(
-  value: number
-): BrushPlane {
-  return {
-    axis: "y",
-    value
-  };
-}
-
-describe("BrushAimResolver.aimAtPlane", () => {
+describe("BrushAimResolver.aimAtHeight", () => {
   test("reads the cell the ray crosses on the height row", () => {
     const resolver = createResolver([], (camera) => {
       camera.position.set(0.5, 10, 0.5);
@@ -108,7 +98,7 @@ describe("BrushAimResolver.aimAtPlane", () => {
     });
 
     assert.deepStrictEqual(
-      resolver.aimAtPlane(kPointer, heightOf(3)),
+      resolver.aimAtHeight(kPointer, 3),
       { x: 0, y: 3, z: 0 }
     );
   });
@@ -122,7 +112,7 @@ describe("BrushAimResolver.aimAtPlane", () => {
 
     for (const resolver of [covered, bare]) {
       assert.deepStrictEqual(
-        resolver.aimAtPlane(kPointer, heightOf(0)),
+        resolver.aimAtHeight(kPointer, 0),
         { x: 0, y: 0, z: 0 }
       );
     }
@@ -134,7 +124,7 @@ describe("BrushAimResolver.aimAtPlane", () => {
       camera.lookAt(0.5, 0, 0.5);
     });
 
-    assert.strictEqual(resolver.aimAtPlane(kPointer, heightOf(0)), null);
+    assert.strictEqual(resolver.aimAtHeight(kPointer, 0), null);
   });
 
   test("reports nothing when the ray never meets the height row", () => {
@@ -143,31 +133,7 @@ describe("BrushAimResolver.aimAtPlane", () => {
       camera.lookAt(20, 10, 0.5);
     });
 
-    assert.strictEqual(resolver.aimAtPlane(kPointer, heightOf(0)), null);
-  });
-
-  test("locks a vertical plane and keeps its value on the locked axis", () => {
-    const resolver = createResolver([], (camera) => {
-      camera.position.set(0.5, 1.5, 8);
-      camera.lookAt(0.5, 1.5, 0);
-    });
-
-    assert.deepStrictEqual(
-      resolver.aimAtPlane(kPointer, { axis: "z", value: 2 }),
-      { x: 0, y: 1, z: 2 }
-    );
-  });
-
-  test("reports nothing when the ray runs parallel to a vertical plane", () => {
-    const resolver = createResolver([], (camera) => {
-      camera.position.set(0.5, 1.5, 8);
-      camera.lookAt(0.5, 1.5, 0);
-    });
-
-    assert.strictEqual(
-      resolver.aimAtPlane(kPointer, { axis: "x", value: 3 }),
-      null
-    );
+    assert.strictEqual(resolver.aimAtHeight(kPointer, 0), null);
   });
 });
 
@@ -182,11 +148,7 @@ describe("BrushAimResolver.resolve", () => {
       place: { x: 0, y: 0, z: -1 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.NegZ,
-      probe: { x: 0, y: 0, z: 0 },
-      anchors: {
-        place: "center",
-        remove: "center"
-      }
+      probe: { x: 0, y: 0, z: 0 }
     });
   });
 
@@ -200,11 +162,7 @@ describe("BrushAimResolver.resolve", () => {
       place: { x: 0, y: 0, z: -1 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.NegZ,
-      probe: { x: 0, y: 0, z: 0 },
-      anchors: {
-        place: "center",
-        remove: "center"
-      }
+      probe: { x: 0, y: 0, z: 0 }
     });
   });
 
@@ -218,11 +176,7 @@ describe("BrushAimResolver.resolve", () => {
       place: { x: 0, y: 1, z: 0 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.PosY,
-      probe: { x: 0, y: 0, z: 0 },
-      anchors: {
-        place: "bottom",
-        remove: "top"
-      }
+      probe: { x: 0, y: 0, z: 0 }
     });
   });
 
@@ -236,11 +190,7 @@ describe("BrushAimResolver.resolve", () => {
       place: { x: 2, y: 0, z: 2 },
       remove: { x: 2, y: 0, z: 2 },
       face: CellFace.NegY,
-      probe: null,
-      anchors: {
-        place: "bottom",
-        remove: "bottom"
-      }
+      probe: null
     });
   });
 });
@@ -343,11 +293,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 14, z: 0 },
       remove: { x: 0, y: 14, z: 0 },
       face: null,
-      probe: null,
-      anchors: {
-        place: "center",
-        remove: "center"
-      }
+      probe: null
     });
   });
 
@@ -367,11 +313,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 0, z: 0 },
       remove: { x: 0, y: 0, z: 0 },
       face: CellFace.NegY,
-      probe: null,
-      anchors: {
-        place: "bottom",
-        remove: "bottom"
-      }
+      probe: null
     });
   });
 
@@ -385,11 +327,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 30, z: 0 },
       remove: { x: 0, y: 30, z: 0 },
       face: null,
-      probe: null,
-      anchors: {
-        place: "center",
-        remove: "center"
-      }
+      probe: null
     });
   });
 
@@ -400,11 +338,7 @@ describe("BrushAimResolver sky shell", () => {
       place: { x: 0, y: 36, z: 0 },
       remove: { x: 0, y: 36, z: 0 },
       face: null,
-      probe: null,
-      anchors: {
-        place: "center",
-        remove: "center"
-      }
+      probe: null
     });
   });
 });

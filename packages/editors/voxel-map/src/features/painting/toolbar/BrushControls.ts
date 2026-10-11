@@ -17,7 +17,6 @@ import { FieldBinding } from "@jolly-pixel/ui";
 import {
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
-  type BrushAxis,
   type BrushStore
 } from "../BrushStore.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
@@ -25,7 +24,6 @@ import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import { brushControlsStyles } from "./BrushControls.styles.ts";
 import { PaintAvailability } from "./PaintAvailability.ts";
 import {
-  BRUSH_AXIS_OPTIONS,
   BRUSH_MODE_OPTIONS,
   BRUSH_PATTERN_OPTIONS,
   ghostLabel,
@@ -42,7 +40,6 @@ interface ChoiceTool<TValue extends string> {
   current: TValue;
   shortcut: string;
   select: (value: TValue) => void;
-  content?: (value: TValue) => TemplateResult | typeof nothing;
 }
 
 @customElement("voxel-brush-controls")
@@ -126,16 +123,6 @@ export class BrushControls extends WorkspaceElement {
             brush.mode = value;
           }
         })}
-        ${this.#renderChoice({
-          tool: "axis",
-          options: BRUSH_AXIS_OPTIONS,
-          current: brush.axis,
-          shortcut: shortcut(BRUSH_SHORTCUTS.axis),
-          select: (value) => {
-            brush.axis = value;
-          },
-          content: axisLetters
-        })}
         <jolly-tool-button
           data-tool="size"
           flyout-side="above"
@@ -191,8 +178,7 @@ export class BrushControls extends WorkspaceElement {
       options,
       current,
       shortcut,
-      select,
-      content = () => nothing
+      select
     } = choice;
     const { active, alternatives } = resolveToolChoice(options, current);
 
@@ -205,7 +191,6 @@ export class BrushControls extends WorkspaceElement {
         label=${toolLabel(active.label, shortcut, this._availability.reason)}
         ?disabled=${this.disabled}
       >
-        ${content(active.value)}
         ${alternatives.map((option) => html`
           <jolly-tool-button
             slot="flyout"
@@ -214,7 +199,7 @@ export class BrushControls extends WorkspaceElement {
             icon=${ifDefined(option.icon)}
             label=${option.label}
             @click=${() => select(option.value)}
-          >${content(option.value)}</jolly-tool-button>
+          ></jolly-tool-button>
         `)}
       </jolly-tool-button>
     `;
@@ -230,16 +215,6 @@ function availabilityChanged(
   previous: PaintAvailability | undefined
 ): boolean {
   return previous === undefined || !next.equals(previous);
-}
-
-function axisLetters(
-  axis: BrushAxis
-): TemplateResult {
-  const letters = [...axis].map(
-    (letter) => html`<span class=${letter}>${letter.toUpperCase()}</span>`
-  );
-
-  return html`<span class="axis">${letters}</span>`;
 }
 
 declare global {

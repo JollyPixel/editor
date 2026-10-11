@@ -8,12 +8,6 @@ import { Emitter } from "@openally/emitt";
 // CONSTANTS
 export const BRUSH_MIN_SIZE = 1;
 export const BRUSH_MAX_SIZE = 16;
-export const BRUSH_AXES = Object.freeze([
-  "xz",
-  "xy",
-  "yz",
-  "xyz"
-] as const);
 export const BRUSH_PATTERNS = Object.freeze([
   "square",
   "circle"
@@ -27,7 +21,6 @@ export const ROTATION_MODES: readonly RotationMode[] = Object.freeze([
   ...Object.values(VoxelRotation)
 ]);
 
-export type BrushAxis = typeof BRUSH_AXES[number];
 export type BrushPattern = typeof BRUSH_PATTERNS[number];
 export type RotationMode = VoxelRotationStep | "auto";
 export type BrushMode = typeof BRUSH_MODES[number];
@@ -37,7 +30,6 @@ export interface BrushOptions {
   rotationMode: RotationMode;
   flipY: boolean;
   mode: BrushMode;
-  axis: BrushAxis;
   pattern: BrushPattern;
   ghost: boolean;
 }
@@ -54,7 +46,6 @@ export class BrushStore extends Emitter<BrushStoreEvents> {
     rotationMode: "auto",
     flipY: false,
     mode: "build",
-    axis: "xz",
     pattern: "square",
     ghost: false
   });
@@ -112,16 +103,6 @@ export class BrushStore extends Emitter<BrushStoreEvents> {
     mode: BrushMode
   ) {
     this.#assign("mode", mode);
-  }
-
-  get axis(): BrushAxis {
-    return this.#options.axis;
-  }
-
-  set axis(
-    axis: BrushAxis
-  ) {
-    this.#assign("axis", axis);
   }
 
   get pattern(): BrushPattern {

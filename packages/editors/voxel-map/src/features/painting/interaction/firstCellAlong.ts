@@ -10,11 +10,16 @@ const kReachEpsilon = 1e-6;
 
 type Axis = typeof kAxes[number];
 
+export interface CellCrossing {
+  cell: VoxelCoord;
+  entry: VoxelCoord | null;
+}
+
 export function firstCellAlong(
   ray: CellRay,
   distance: number,
   matches: (cell: VoxelCoord) => boolean
-): VoxelCoord | null {
+): CellCrossing | null {
   const cell = {
     x: Math.floor(ray.origin.x),
     y: Math.floor(ray.origin.y),
@@ -50,9 +55,18 @@ export function firstCellAlong(
   }
 
   let travelled = 0;
+  let entered: Axis | null = null;
   while (travelled <= distance + kReachEpsilon) {
     if (matches(cell)) {
-      return { ...cell };
+      return {
+        cell: { ...cell },
+        entry: entered === null ? null : {
+          x: 0,
+          y: 0,
+          z: 0,
+          [entered]: -step[entered]
+        }
+      };
     }
 
     const axis = nearestAxis(next);
@@ -60,6 +74,7 @@ export function firstCellAlong(
       return null;
     }
 
+    entered = axis;
     travelled = next[axis];
     cell[axis] += step[axis];
     next[axis] += span[axis];

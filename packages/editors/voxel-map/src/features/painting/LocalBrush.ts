@@ -46,6 +46,7 @@ import {
   type BrushTarget
 } from "./rendering/BrushPreview.ts";
 import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
+import { DragThreshold } from "./interaction/DragThreshold.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 import {
@@ -57,6 +58,7 @@ import {
 const kDefaultMaxDistance = 32;
 const kDefaultSkyRadius = 24;
 const kStaleAimFrames = 2;
+const kDragThreshold = 4;
 const kStrokeLabels: Readonly<Record<StrokeMode, string>> = {
   place: "Paint",
   replace: "Replace",
@@ -95,6 +97,7 @@ export class LocalBrush extends ActorComponent {
   #preview: BrushPreview;
   #pointer = new THREE.Vector2();
   #stroke: BrushStroke | null = null;
+  #dragThreshold: DragThreshold | null = null;
   #frameAim: BrushAim | null | undefined;
   #frameCenter: VoxelCoord | null | undefined;
   #staleAimFrames = 0;
@@ -275,13 +278,20 @@ export class LocalBrush extends ActorComponent {
       }
       else if (input.mouse.wasJustPressed("right")) {
         this.#beginStroke("remove");
+        this.#endStroke();
       }
 
       return;
     }
 
-    if (!input.mouse.isDown(strokeButton(stroke.mode))) {
+    if (!input.mouse.isDown("left")) {
       this.#endStroke();
+
+      return;
+    }
+
+    if (!this.#dragThreshold?.crossedBy(input.mouse.position)) {
+      this.#frameCenter = stroke.origin;
 
       return;
     }
@@ -291,13 +301,13 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    const { center, paints } = target;
+    const { center, paints, joins } = target;
     this.#frameCenter = center;
-    if (!paints || !stroke.trails(center)) {
+    if (!paints) {
       return;
     }
 
-    this.#apply(stroke, stroke.advance(center));
+    this.#apply(stroke, stroke.advance(center, joins));
   }
 
   #pickBlock(): void {
@@ -310,8 +320,7 @@ export class LocalBrush extends ActorComponent {
       this.view,
       new BrushFootprint({
         ...this.#shape(),
-        position: aim.remove,
-        anchor: aim.anchors.remove
+        position: aim.remove
       })
     );
     if (blockId !== null) {
@@ -332,22 +341,21 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    const side = mode === "place" ? "place" : "remove";
-    const { axis, pattern } = this.#brush;
     const paint = mode === "remove" ? undefined : this.#paint();
     const stroke = new BrushStroke({
       mode,
       layerName,
       paint,
-      axis,
-      pattern,
-      origin: aim[side],
-      aimed: aim.remove,
-      anchor: aim.anchors[side],
+      pattern: this.#brush.pattern,
+      origin: mode === "place" ? aim.place : aim.remove,
       aimedPart: mode === "place" ? null : this.#aimedHalf(aim)?.aimed
     });
 
     this.#stroke = stroke;
+    this.#dragThreshold = new DragThreshold(
+      this.actor.world.input.mouse.position,
+      kDragThreshold
+    );
     this.#step = this.#history.open(MAP_HISTORY_SCOPE, kStrokeLabels[mode]);
     this.#frameCenter = stroke.origin;
     this.#apply(stroke, stroke.advance(stroke.origin));
@@ -371,6 +379,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     this.#stroke = null;
+    this.#dragThreshold = null;
     this.#step?.commit();
     this.#step = null;
   }
@@ -401,11 +410,7 @@ export class LocalBrush extends ActorComponent {
     this.#frameAim = aim !== null && this.#mergesAt(aim.remove) ?
       {
         ...aim,
-        place: aim.remove,
-        anchors: {
-          ...aim.anchors,
-          place: aim.anchors.remove
-        }
+        place: aim.remove
       } :
       aim;
 
@@ -499,19 +504,20 @@ export class LocalBrush extends ActorComponent {
       (cell) => stroke.claims(cell)
     );
     if (revisited !== null) {
-      return stroke.revisit(revisited);
+      return stroke.revisit(revisited.cell, revisited.entry);
     }
     if (aim !== null && aim.face !== null) {
-      return stroke.follow(aim.remove);
+      return stroke.follow(aim);
     }
 
-    const center = this.#aimer.aimAtPlane(pointer, stroke.plane);
+    const center = this.#aimer.aimAtHeight(pointer, stroke.height);
 
     return center === null ?
       null :
       {
         center,
-        paints: true
+        paints: true,
+        joins: true
       };
   }
 
@@ -533,7 +539,6 @@ export class LocalBrush extends ActorComponent {
 
     return {
       size: this.#brush.size,
-      axis: source.axis,
       pattern: source.pattern
     };
   }
@@ -588,20 +593,9 @@ export class LocalBrush extends ActorComponent {
       return null;
     }
 
-    const stroke = this.#stroke;
-    if (stroke !== null) {
-      return {
-        position,
-        anchor: stroke.anchor
-      };
-    }
+    const face = this.#stroke === null ? this.#resolveAim()?.face : null;
 
-    const aim = this.#resolveAim();
-    const anchor = aim?.anchors.remove;
-
-    return aim?.face ?
-      { position, anchor, face: aim.face } :
-      { position, anchor };
+    return face ? { position, face } : { position };
   }
 
   #previewCenter(): VoxelCoord | null {
@@ -620,10 +614,4 @@ export class LocalBrush extends ActorComponent {
 
     return this.#frameCenter;
   }
-}
-
-function strokeButton(
-  mode: StrokeMode
-): "left" | "right" {
-  return mode === "remove" ? "right" : "left";
 }
