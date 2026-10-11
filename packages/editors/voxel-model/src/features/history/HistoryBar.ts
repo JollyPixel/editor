@@ -15,6 +15,17 @@ import type { HistoryStepInfo } from "@jolly-pixel/history";
 import "./HistoryButtons.ts";
 import { describeRefusal } from "./describeRefusal.ts";
 import type { HistoryWorkspace } from "./HistoryButtons.ts";
+import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
+import type { AnimationLibrary } from "../animation/index.ts";
+
+// CONSTANTS
+const kModelRefused = "You can only view this model, so the change was not saved";
+const kSetRefused = "You can only view this animation set, so the change was not saved";
+
+export interface HistoryBarWorkspace extends HistoryWorkspace {
+  access: Pick<ModelAccessSignals, "subscribe">;
+  animations: Pick<AnimationLibrary, "subscribe">;
+}
 
 export class HistoryBar extends LitElement {
   static override styles = css`
@@ -47,17 +58,21 @@ export class HistoryBar extends LitElement {
 
   #log = new LogQueue();
   #releaseLog: (() => void) | null = null;
-  #workspace = new SubscriptionController<HistoryWorkspace>(
+  #workspace = new SubscriptionController<HistoryBarWorkspace>(
     this,
-    ({ activeHistory }) => {
+    ({ activeHistory, access, animations }) => {
       activeHistory.on("skipped", this.#onSkipped);
 
-      return [() => activeHistory.off("skipped", this.#onSkipped)];
+      return [
+        () => activeHistory.off("skipped", this.#onSkipped),
+        access.subscribe("denied", () => this.#log.push(kModelRefused)),
+        animations.subscribe("setDenied", () => this.#log.push(kSetRefused))
+      ];
     }
   );
 
   attach(
-    workspace: HistoryWorkspace
+    workspace: HistoryBarWorkspace
   ): void {
     this.#workspace.attach(workspace);
   }

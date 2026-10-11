@@ -27,6 +27,7 @@ import {
   blockRegionId,
   blockUuidFromRegion
 } from "./blockRegionId.ts";
+import type { ModelAccessSource } from "../../access/ModelAccess.ts";
 
 // CONSTANTS
 const kBlockUvColor = `#${SELECTION_HIGHLIGHT_COLOR.toString(16).padStart(6, "0")}`;
@@ -36,6 +37,7 @@ export interface BlockTexturesOptions {
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
+  access: ModelAccessSource;
   requestFrame?: () => void;
 }
 
@@ -48,6 +50,7 @@ export class BlockTextures {
   #document: ModelDocument;
   #blocks: ModelBlocks;
   #selection: BlockSelectionStore;
+  #access: ModelAccessSource;
   #requestFrame: () => void;
   #texture: PixelCanvasTexture;
   #bindings = new Map<string, UVGeometryBinding>();
@@ -135,8 +138,18 @@ export class BlockTextures {
     event: { region: UVRegion; }
   ): void => {
     const uuid = blockUuidFromRegion(event.region.id);
-    if (!this.#restoring && uuid !== null) {
+    if (this.#restoring || uuid === null) {
+      return;
+    }
+    if (this.#access.current.has("uv")) {
       this.#document.setUv(uuid, event.region.toLayout());
+
+      return;
+    }
+
+    const block = this.#document.tree.block(uuid);
+    if (block !== undefined) {
+      this.#project(block);
     }
   };
 
@@ -168,6 +181,7 @@ export class BlockTextures {
     this.#document = options.document;
     this.#blocks = options.blocks;
     this.#selection = options.selection;
+    this.#access = options.access;
     this.#requestFrame = options.requestFrame ?? (() => undefined);
     this.#texture = new PixelCanvasTexture({
       document: pixels,

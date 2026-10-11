@@ -18,6 +18,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
 import {
+  CookieRoles,
   PORTS,
   prebundleWorkspace
 } from "@jolly-pixel/e2e";
@@ -42,6 +43,18 @@ const kProjectFile: ProjectFileData = {
     }
   }
 };
+const kRights = {
+  member: {
+    "*": "write"
+  },
+  spectator: {
+    "*.$join": "write",
+    "*.$presence": "write",
+    "*": "read"
+  }
+} as const;
+
+const kRoles = new CookieRoles();
 
 export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
   const e2e = mode === kE2EMode;
@@ -63,6 +76,7 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
     plugins: [
       prebundleWorkspace(),
       createProjectKindsPlugin(kinds),
+      e2e ? kRoles.plugin() : null,
       inMemory ? null : createProjectFileWatchPlugin(projectFile),
       ...staticHosting ? [] : [createAssetWorkspacePlugin({
         root: kAssetsRoot,
@@ -74,7 +88,10 @@ export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
           {}),
         ...createModelProject(kTextureAssetId),
         handlers: kinds.handlers(),
-        launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value
+        launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value,
+        auth: e2e ? kRoles : undefined,
+        rights: kRights,
+        defaultRole: "member"
       })]
     ]
   };

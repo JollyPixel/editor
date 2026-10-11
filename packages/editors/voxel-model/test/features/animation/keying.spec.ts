@@ -28,12 +28,14 @@ import {
   createHost
 } from "./fixtures.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
+import { modelAccess } from "../../fixtures/modelAccess.ts";
 
 function target(
   modes: TransformTarget["modes"]
 ): TransformTarget {
   return {
     modes,
+    writable: true,
     end: () => undefined,
     commit: () => undefined
   };
@@ -57,7 +59,8 @@ function createKeying(
     history: model.history,
     session: model.animationSession,
     blocks: { get: (id) => (id === arm.uuid ? arm : undefined) },
-    poser: { reset: (id) => resets.push(id) }
+    poser: { reset: (id) => resets.push(id) },
+    access: model.access
   });
   function keys(
     channel: AnimationChannel
@@ -102,7 +105,8 @@ describe("TransformTool", () => {
       lock: {
         claim: (uuid) => calls.push(`claim ${uuid}`),
         release: () => calls.push("release")
-      }
+      },
+      access: modelAccess()
     });
     const block = createModelFixture().addBlock();
     const { uuid } = block;
@@ -118,9 +122,40 @@ describe("TransformTool", () => {
       `commit ${uuid}`
     ]);
   });
+
+  test("the rest target without transform rights is read only and still releases a drag's lock", () => {
+    const calls: string[] = [];
+    const access = modelAccess();
+    const rest = restTarget({
+      blocks: { commitTransform: (uuid) => calls.push(`commit ${uuid}`) },
+      lock: {
+        claim: (uuid) => calls.push(`claim ${uuid}`),
+        release: () => calls.push("release")
+      },
+      access
+    });
+    const block = createModelFixture().addBlock();
+    access.grant("hierarchy");
+
+    rest.end(block);
+    rest.commit(block);
+
+    assert.deepEqual([rest.writable, calls], [false, ["release"]]);
+  });
 });
 
 describe("AnimationKeyer", () => {
+  test("keys nothing without animation rights and puts the block back on the clip's pose", () => {
+    const { model, arm, keyer, keys, resets } = createKeying(12300);
+    const before = keys("position");
+    model.access.grant("transforms");
+
+    arm.transform = moved(arm.transform, { position: { x: 5, y: 0, z: 0 } });
+    keyer.commit(arm);
+
+    assert.deepEqual([keyer.writable, keys("position"), resets], [false, before, [arm.uuid]]);
+  });
+
   test("keys the changed channels at the playhead's frame, as offsets from rest", () => {
     const { arm, keyer, keys, resets } = createKeying(12300);
 
@@ -200,6 +235,28 @@ describe("KeyEditor through the timeline", () => {
 
     return { model, host, playheads, timeline, keys: model.keyEditor, ticks };
   }
+
+  test("without animation rights edits no key and keeps only Copy in the key menu", () => {
+    const { model, timeline, keys, ticks } = createTimeline();
+    keys.select({ path: "Body/Arm", tick: 0 }, false);
+    keys.copy();
+    const before = ticks();
+    model.access.grant("hierarchy");
+
+    keys.move(2);
+    keys.remove();
+    keys.paste();
+    keys.setInterpolation("step");
+
+    assert.deepEqual(ticks(), before);
+    assert.equal(model.set.set.clip(model.clipId)!.tracks[0].position![0].interpolation, "linear");
+    assert.deepEqual(
+      timeline.keyMenu().items.flatMap((entry) => (
+        entry === "separator" || entry.disabled === true || entry.items !== undefined ? [] : [entry.label]
+      )),
+      ["Copy"]
+    );
+  });
 
   test("moves the playhead without rendering the rows again", () => {
     const { model, host, playheads } = createTimeline();
@@ -354,9 +411,9 @@ describe("KeyInspectorController", () => {
       interpolation: "smooth"
     });
     model.keyEditor.select({ path: "Body/Arm", tick: 0 }, false);
-    assert.deepEqual(state(), { title: "Arm @ frame 0", interpolation: "linear" });
+    assert.deepEqual(state(), { title: "Arm @ frame 0", interpolation: "linear", editable: true });
     model.keyEditor.select({ path: "Body/Arm", tick: 24000 }, true);
-    assert.deepEqual(state(), { title: "2 keys", interpolation: "mixed" });
+    assert.deepEqual(state(), { title: "2 keys", interpolation: "mixed", editable: true });
 
     inspector.setInterpolation("step");
     assert.deepEqual([interpolations(), state()?.interpolation], [["step", "step"], "step"]);

@@ -13,10 +13,12 @@ import type {
   ClipRef
 } from "../../../state/index.ts";
 import { combineReleases } from "../../../shared/combineReleases.ts";
+import type { ModelAccessSource } from "../../../access/ModelAccess.ts";
 
 // CONSTANTS
 const kUnnamed = "Animation set";
 const kOwnClips = "this model";
+const kViewOnly = "You can only view this model";
 
 /**
  * `null` stands for the model's own clips; the own set's id never does.
@@ -29,8 +31,14 @@ export function clipTargetOf(
   return set.own ? null : set.id;
 }
 
+export interface AnimationSetRoom {
+  on(type: "denied", listener: () => void): void;
+  off(type: "denied", listener: () => void): void;
+}
+
 export interface AnimationSetLease {
   readonly document: AnimationDocument;
+  readonly room: AnimationSetRoom;
   release(): void;
 }
 
@@ -85,11 +93,13 @@ export type AnimationLibraryEvents = {
   setOpened: (set: OpenedAnimationSet) => void;
   setClosed: (setId: string) => void;
   setChange: (setId: string, change: AnimationChange) => void;
+  setDenied: (setId: string) => void;
 };
 
 export interface AnimationLibraryOptions {
   document: ModelDocument;
   source: AnimationSetSource;
+  access: ModelAccessSource;
 }
 
 interface OpenSet {
@@ -100,6 +110,7 @@ interface OpenSet {
 export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   #document: ModelDocument;
   #source: AnimationSetSource;
+  #access: ModelAccessSource;
   #open = new Map<string, OpenSet>();
   #creatingOwn: Promise<string> | null = null;
   #release: () => void;
@@ -110,12 +121,17 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     super();
     this.#document = options.document;
     this.#source = options.source;
+    this.#access = options.access;
     this.#release = combineReleases([
       this.#document.subscribe("change", this.#sync),
       this.#document.subscribe("reset", this.#sync),
       this.#source.subscribe(this.#notify)
     ]);
     this.#sync();
+  }
+
+  get editable(): boolean {
+    return this.#access.current.has("animations");
   }
 
   sets(): LinkedAnimationSet[] {
@@ -154,6 +170,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     if (owned !== undefined) {
       return owned.id;
     }
+    this.#assertEditable();
 
     this.#creatingOwn ??= this.#source.createOwn()
       .then((reference) => {
@@ -215,6 +232,9 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     target: ClipTarget,
     name: string
   ): Promise<ClipRef | null> {
+    if (!this.editable) {
+      return null;
+    }
     const setId = await this.#resolve(target);
     const clipId = this.set(setId)?.document.addClip({ name }) ?? null;
 
@@ -227,7 +247,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     placement: ClipPlacement
   ): Promise<ClipRef | null> {
     const clip = this.set(from.setId)?.document.set.clip(from.clipId);
-    if (clip === undefined) {
+    if (clip === undefined || !this.editable) {
       return null;
     }
 
@@ -247,6 +267,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     id: string,
     name: string
   ): Promise<string> {
+    this.#assertEditable();
     await this.#source.rename(id, name);
     this.#document.shareAnimationSet(id);
 
@@ -268,6 +289,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   async create(
     name: string
   ): Promise<string> {
+    this.#assertEditable();
     const reference = await this.#source.create(name);
     this.#document.linkAnimationSet(reference);
 
@@ -279,13 +301,15 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   ): boolean {
     const record = this.#source.records().find((candidate) => candidate.id === id);
 
-    return record !== undefined && this.#document.linkAnimationSet(record);
+    return this.editable &&
+      record !== undefined &&
+      this.#document.linkAnimationSet(record);
   }
 
   unlink(
     id: string
   ): boolean {
-    return this.#document.unlinkAnimationSet(id);
+    return this.editable && this.#document.unlinkAnimationSet(id);
   }
 
   dispose(): void {
@@ -326,10 +350,15 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     id: string
   ): void {
     const lease = this.#source.open(id);
-    const { document } = lease;
+    const { document, room } = lease;
+    const onDenied = (): void => {
+      this.emit("setDenied", id);
+    };
+    room.on("denied", onDenied);
     this.#open.set(id, {
       lease,
       unsubscribe: combineReleases([
+        () => room.off("denied", onDenied),
         document.subscribe("change", (change) => {
           this.emit("setChange", id, change);
           this.#notify();
@@ -349,6 +378,12 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
       open.unsubscribe();
       open.lease.release();
       this.#open.delete(id);
+    }
+  }
+
+  #assertEditable(): void {
+    if (!this.editable) {
+      throw new Error(kViewOnly);
     }
   }
 

@@ -29,9 +29,12 @@ import {
 } from "./keys/animationShortcuts.ts";
 import {
   MenuSession,
+  disableEntries,
+  type MenuEntry,
   type MenuPoint
 } from "../../shared/menu/MenuSession.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
+import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import {
   animationKey,
   type PresenceStore
@@ -64,11 +67,13 @@ const kEmptyState: AnimatePanelState = {
   set: null,
   clip: null,
   canShare: false,
+  editable: false,
   error: null,
   notice: null
 };
 
 export interface AnimateWorkspace extends AnimateActionsWorkspace, KeySelectedOptions {
+  access: Pick<ModelAccessSignals, "subscribe">;
   presence: Pick<PresenceStore, "clipFocuses" | "subscribe">;
   clipRemoval: Pick<ClipRemovalFocus, "notice" | "dismiss" | "subscribe">;
 }
@@ -98,6 +103,7 @@ export interface AnimatePanelState {
    * The model has clips of its own, which can become a shared set.
    */
   canShare: boolean;
+  editable: boolean;
   /**
    * Why the last action failed, until the next one succeeds.
    */
@@ -124,9 +130,10 @@ export class AnimatePanelController {
     this.#host = host;
     this.#view = view;
     this.#connection = new SubscriptionController(host, (workspace) => {
-      const { animations, animationFocus, presence, clipRemoval } = workspace;
+      const { access, animations, animationFocus, presence, clipRemoval } = workspace;
 
       return [
+        access.subscribe("change", this.#refresh),
         animations.subscribe("change", this.#refresh),
         animationFocus.subscribe("change", this.#refresh),
         presence.subscribe("clipFocusesChange", this.#refresh),
@@ -241,11 +248,15 @@ export class AnimatePanelController {
     const exists = (): boolean => this.#findRow(rowId) !== undefined;
     const clipRow = asClipRow(row);
     if (clipRow === null) {
-      return MenuSession.forRow(SET_MENU, exists, (action) => this.#setAction(actions, action, row.setId));
+      return MenuSession.forRow(
+        this.#writableEntries(SET_MENU),
+        exists,
+        (action) => this.#setAction(actions, action, row.setId)
+      );
     }
 
     return MenuSession.forRow(
-      clipMenu(actions.copyTargets(clipRow).length > 0),
+      this.#writableEntries(clipMenu(actions.copyTargets(clipRow).length > 0)),
       exists,
       (action, point) => this.#clipAction(actions, action, clipRow, rowId, point)
     );
@@ -260,10 +271,10 @@ export class AnimatePanelController {
     }
 
     return section === "own" ?
-      MenuSession.from(ownMenu(this.#state.canShare), (action) => (action === "share" ?
+      MenuSession.from(this.#writableEntries(ownMenu(this.#state.canShare)), (action) => (action === "share" ?
         actions.shareOwnSet() :
         actions.newClip(null))) :
-      MenuSession.from(SHARED_MENU, (action, point) => (action === "new-set" ?
+      MenuSession.from(this.#writableEntries(SHARED_MENU), (action, point) => (action === "new-set" ?
         actions.newSet() :
         actions.linkSet(point)));
   }
@@ -295,7 +306,7 @@ export class AnimatePanelController {
     patch: AnimationClipPatchJSON
   ): void {
     const focused = this.#state.clip;
-    if (focused !== null) {
+    if (focused !== null && this.#state.editable) {
       this.#connection.current?.animations.set(focused.setId)?.document.changeClip(focused.clip.id, patch);
     }
   }
@@ -350,6 +361,14 @@ export class AnimatePanelController {
     }
   }
 
+  #writableEntries<TAction extends string>(
+    entries: readonly MenuEntry<TAction>[]
+  ): readonly MenuEntry<TAction>[] {
+    return this.#state.editable ?
+      entries :
+      disableEntries(entries, () => true);
+  }
+
   #nodesOf(
     section: AnimateSection
   ): TreeNode<RowTarget>[] {
@@ -401,6 +420,7 @@ export class AnimatePanelController {
           frames: new FrameRate(clip.fps).frameAt(clip.length)
         },
       canShare: own !== undefined && own.document.set.size > 0,
+      editable: workspace.animations.editable,
       error: this.#error,
       notice: workspace.clipRemoval.notice
     };

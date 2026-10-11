@@ -20,6 +20,7 @@ import {
 import { BlockTextures } from "#src/features/texture/BlockTextures.ts";
 import type { ModelBlock } from "#src/scene/blocks/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
+import { modelAccess } from "../../fixtures/modelAccess.ts";
 
 // CONSTANTS
 const kTextureSize = { x: 256, y: 256 };
@@ -62,17 +63,20 @@ function createHarness() {
   pixels.on("command", (command) => pixelEvents.push(command));
   const { document, blocks, selection, addBlock } = createModelFixture();
   const frames = { requested: 0 };
+  const access = modelAccess();
   const textures = new BlockTextures({
     pixels,
     document,
     blocks,
     selection,
+    access,
     requestFrame: () => frames.requested++
   });
   const changes: ModelChange[] = [];
   document.on("change", (change) => changes.push(change));
 
   return {
+    access,
     pixels,
     pixelEvents,
     uv: pixels.uv,
@@ -110,7 +114,8 @@ describe("BlockTextures texture", () => {
       pixels,
       document,
       blocks,
-      selection
+      selection,
+      access: modelAccess()
     });
     const after = addBlock();
 
@@ -319,6 +324,17 @@ describe("BlockTextures UV edits", () => {
       changes.map((change) => change.command.action),
       ["node-uv-changed"]
     );
+  });
+
+  test("without UV rights puts a moved region back on the model's layout and sends nothing", () => {
+    const { access, document, uv, block, regionId, changes } = bound();
+    const stored = document.tree.block(block.uuid)?.uv;
+    access.grant("hierarchy");
+
+    uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
+
+    assert.deepEqual(changes, []);
+    assert.deepEqual(uv.get(regionId)?.toLayout(), stored);
   });
 
   test("sends no texture command and records no texture history", () => {

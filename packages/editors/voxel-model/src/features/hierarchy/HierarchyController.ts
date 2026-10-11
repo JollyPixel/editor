@@ -59,9 +59,14 @@ import type {
 } from "../../shared/dialogs/DeleteDialog.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import type { NameFieldOptions } from "../../shared/dialogs/NameDraft.ts";
-import { MenuSession } from "../../shared/menu/MenuSession.ts";
+import {
+  MenuSession,
+  disableEntries
+} from "../../shared/menu/MenuSession.ts";
+import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 
 export interface HierarchyWorkspace {
+  access: ModelAccessSignals;
   document: ModelDocument;
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
@@ -165,6 +170,10 @@ export class HierarchyController {
 
   get editable(): boolean {
     return (this.#workspace?.tab.active ?? "build") === "build";
+  }
+
+  get writable(): boolean {
+    return this.#workspace?.hierarchy.editable ?? false;
   }
 
   attach(
@@ -272,8 +281,12 @@ export class HierarchyController {
   menuFor(
     id: string | null
   ): MenuSession {
+    const readOnly = !this.writable;
     if (id === null) {
-      return MenuSession.from(ROOT_MENU, (action) => this.#rootActions[action]());
+      return MenuSession.from(
+        disableEntries(ROOT_MENU, () => readOnly),
+        (action) => this.#rootActions[action]()
+      );
     }
 
     const kind = this.#workspace?.document.tree.get(id)?.kind;
@@ -282,7 +295,10 @@ export class HierarchyController {
     }
 
     return MenuSession.forRow(
-      kind === "block" ? BLOCK_MENU : FOLDER_MENU,
+      disableEntries(
+        kind === "block" ? BLOCK_MENU : FOLDER_MENU,
+        (action) => readOnly && action !== "material"
+      ),
       () => this.#workspace?.document.tree.has(id) === true,
       (action) => this.#rowActions[action](id)
     );
@@ -428,6 +444,7 @@ export class HierarchyController {
     workspace: HierarchyWorkspace
   ): Array<() => void> {
     const {
+      access,
       document,
       blocks,
       selection,
@@ -436,6 +453,7 @@ export class HierarchyController {
     } = workspace;
 
     return [
+      access.subscribe("change", () => this.#host.requestUpdate()),
       document.subscribe("change", this.#onChange),
       document.subscribe("reset", this.#onReset),
       blocks.subscribe("blockVisibilityChanged", this.#rebuild),

@@ -17,6 +17,7 @@ import {
   type HierarchyNode
 } from "./hierarchyNodes.ts";
 import { blockNameTakenMessage } from "./nodeNames.ts";
+import type { ModelAccessSource } from "../access/ModelAccess.ts";
 
 export interface BlockPoses {
   under(
@@ -38,6 +39,7 @@ export interface ModelHierarchyOptions {
   edits: BuildRecorder;
   textureSize(): Vec2;
   poses: BlockPoses;
+  access: ModelAccessSource;
 }
 
 export interface DuplicateOptions {
@@ -61,6 +63,7 @@ export class ModelHierarchy {
   #edits: BuildRecorder;
   #textureSize: () => Vec2;
   #poses: BlockPoses;
+  #access: ModelAccessSource;
 
   constructor(
     options: ModelHierarchyOptions
@@ -69,6 +72,11 @@ export class ModelHierarchy {
     this.#edits = options.edits;
     this.#textureSize = options.textureSize;
     this.#poses = options.poses;
+    this.#access = options.access;
+  }
+
+  get editable(): boolean {
+    return this.#access.current.has("hierarchy");
   }
 
   nodes(): HierarchyNode[] {
@@ -108,6 +116,9 @@ export class ModelHierarchy {
     name: string,
     parentId: string | null
   ): string | null {
+    if (!this.editable) {
+      return null;
+    }
     const layouts = new BlockUvLayouts([...this.#document.tree.blocks()].map((block) => block.uv));
 
     return this.#document.addBlock({
@@ -122,6 +133,10 @@ export class ModelHierarchy {
     name: string,
     parentId: string | null
   ): string | null {
+    if (!this.editable) {
+      return null;
+    }
+
     return this.#document.addFolder({
       name,
       parentId
@@ -132,7 +147,9 @@ export class ModelHierarchy {
     id: string,
     name: string
   ): void {
-    this.#edits.record(null, () => this.#document.rename(id, name));
+    if (this.editable) {
+      this.#edits.record(null, () => this.#document.rename(id, name));
+    }
   }
 
   move(
@@ -140,6 +157,9 @@ export class ModelHierarchy {
     parentId: string | null,
     beforeId?: string
   ): void {
+    if (!this.editable) {
+      return;
+    }
     const { tree } = this.#document;
     const parentUuid = tree.enclosingBlockOf(parentId);
     const transforms = this.#blocksCarriedBy(id)
@@ -173,12 +193,16 @@ export class ModelHierarchy {
     options: DuplicateOptions
   ): string | null {
     const source = this.#document.tree.get(sourceId);
-    if (source === undefined) {
+    const { mirrorAxes } = options;
+    if (
+      source === undefined ||
+      !this.editable ||
+      (isMirrored(mirrorAxes) && !this.#access.current.has("transforms"))
+    ) {
       return null;
     }
 
     return this.#edits.record(`Duplicate ${source.name}`, () => {
-      const { mirrorAxes } = options;
       const duplicatedUuids: string[] = [];
       const duplicateId = this.#duplicateNode(
         source,
@@ -193,7 +217,7 @@ export class ModelHierarchy {
 
       if (
         duplicateId !== null &&
-        (mirrorAxes.x || mirrorAxes.y || mirrorAxes.z)
+        isMirrored(mirrorAxes)
       ) {
         const mirrored = this.#poses.mirror(
           duplicatedUuids,
@@ -214,7 +238,7 @@ export class ModelHierarchy {
   ): void {
     const { tree } = this.#document;
     const node = tree.get(id);
-    if (node === undefined) {
+    if (node === undefined || !this.editable) {
       return;
     }
 
@@ -284,4 +308,10 @@ export class ModelHierarchy {
 
     return duplicateId;
   }
+}
+
+function isMirrored(
+  axes: MirrorAxes
+): boolean {
+  return axes.x || axes.y || axes.z;
 }

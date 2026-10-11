@@ -25,6 +25,7 @@ import type {
   ClipKey,
   KeyRef
 } from "../../../state/index.ts";
+import type { ModelAccessSource } from "../../../access/ModelAccess.ts";
 
 export type KeyEditorEvents = {
   change: () => void;
@@ -33,6 +34,7 @@ export type KeyEditorEvents = {
 export interface KeyEditorOptions {
   session: Pick<AnimationSession, "focused" | "playback" | "seek">;
   history: ScopeRecorder<ClipKey>;
+  access: ModelAccessSource;
 }
 
 type KeyEdit = (document: AnimationDocument, clip: AnimationClipJSON) => readonly KeyRef[];
@@ -40,6 +42,7 @@ type KeyEdit = (document: AnimationDocument, clip: AnimationClipJSON) => readonl
 export class KeyEditor extends Emitter<KeyEditorEvents> {
   #session: KeyEditorOptions["session"];
   #history: KeyEditorOptions["history"];
+  #access: ModelAccessSource;
   #clipId: string | null = null;
   #refs: readonly KeyRef[] = [];
   #copied: CopiedKey[] = [];
@@ -50,6 +53,11 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
     super();
     this.#session = options.session;
     this.#history = options.history;
+    this.#access = options.access;
+  }
+
+  get editable(): boolean {
+    return this.#access.current.has("animations");
   }
 
   get selected(): readonly KeyRef[] {
@@ -155,7 +163,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
     edit: KeyEdit
   ): void {
     const focused = this.#session.focused;
-    if (focused !== null) {
+    if (focused !== null && this.editable) {
       const refs = this.#history.record(focused.key, label, () => edit(focused.set.document, focused.clip));
       this.#set(focused.clip.id, refs);
     }

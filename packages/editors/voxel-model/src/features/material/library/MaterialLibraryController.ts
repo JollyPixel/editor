@@ -32,8 +32,10 @@ import type { ScopeRecorder } from "../../history/index.ts";
 import { ExpandedRows } from "../../../shared/ExpandedRows.ts";
 import {
   MenuSession,
+  disableEntries,
   type MenuPoint
 } from "../../../shared/menu/MenuSession.ts";
+import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 import type {
   DeleteContext,
   DeleteResult
@@ -55,6 +57,7 @@ import {
 } from "./usageRows.ts";
 
 export interface MaterialWorkspace {
+  access: ModelAccessSignals;
   document: ModelDocument;
   history: ScopeRecorder<"material">;
   selection: BlockSelectionStore;
@@ -180,6 +183,10 @@ export class MaterialLibraryController {
     return this.#state;
   }
 
+  get editable(): boolean {
+    return this.#workspace?.access.current.has("materials") ?? false;
+  }
+
   readonly acceptDrop: TreeDropAccept = (detail) => detail.where !== "inside" &&
     !isUsageRow(detail.targetId) &&
     !detail.movedIds.some(isUsageRow);
@@ -206,7 +213,12 @@ export class MaterialLibraryController {
   ): void {
     const stored = this.#material(id);
     const trimmed = name.trim();
-    if (stored !== undefined && trimmed !== "" && trimmed !== stored.name) {
+    if (
+      this.editable &&
+      stored !== undefined &&
+      trimmed !== "" &&
+      trimmed !== stored.name
+    ) {
       this.#workspace?.document.renameMaterial(id, trimmed);
     }
   }
@@ -240,7 +252,7 @@ export class MaterialLibraryController {
     id: string
   ): Promise<void> {
     const material = this.#material(id);
-    if (material === undefined) {
+    if (material === undefined || !this.editable) {
       return;
     }
 
@@ -256,7 +268,11 @@ export class MaterialLibraryController {
     materialId: string | null
   ): void {
     const block = this.#selectedBlock();
-    if (block !== undefined && (block.materialId ?? null) !== materialId) {
+    if (
+      this.editable &&
+      block !== undefined &&
+      (block.materialId ?? null) !== materialId
+    ) {
       this.#workspace?.document.assignMaterial(block.id, materialId);
     }
   }
@@ -276,7 +292,12 @@ export class MaterialLibraryController {
   ): boolean {
     const workspace = this.#workspace;
     const materials = decodeMaterialTransfer(text);
-    if (workspace === null || materials === null || materials.length === 0) {
+    if (
+      workspace === null ||
+      !this.editable ||
+      materials === null ||
+      materials.length === 0
+    ) {
       return false;
     }
 
@@ -332,7 +353,7 @@ export class MaterialLibraryController {
   ): void => {
     const { movedIds: [id], targetId, where } = event.detail;
     const library = this.#library();
-    if (library === undefined || id === targetId) {
+    if (library === undefined || id === targetId || !this.editable) {
       return;
     }
 
@@ -359,15 +380,19 @@ export class MaterialLibraryController {
   menuFor(
     id: string | null
   ): MenuSession {
+    const readOnly = !this.editable;
     if (id === null) {
-      return MenuSession.from(ROOT_MENU, (action, point) => this.#rootActions[action](point));
+      return MenuSession.from(
+        disableEntries(ROOT_MENU, () => readOnly),
+        (action, point) => this.#rootActions[action](point)
+      );
     }
     if (this.#material(id) === undefined) {
       return MenuSession.EMPTY;
     }
 
     return MenuSession.forRow<MaterialRowAction>(
-      MATERIAL_MENU,
+      disableEntries(MATERIAL_MENU, (action) => readOnly && action !== "copy"),
       () => this.#material(id) !== undefined,
       (action) => this.#rowActions[action](id)
     );
@@ -416,6 +441,9 @@ export class MaterialLibraryController {
     add: (document: ModelDocument) => string | null
   ): void {
     const workspace = this.#workspace;
+    if (!this.editable) {
+      return;
+    }
     workspace?.history.record("material", label, () => {
       const materialId = add(workspace.document);
       if (materialId === null) {
@@ -497,12 +525,14 @@ export class MaterialLibraryController {
     workspace: MaterialWorkspace
   ): Array<() => void> {
     const {
+      access,
       document,
       selection,
       presence
     } = workspace;
 
     return [
+      access.subscribe("change", () => this.#invalidate()),
       document.subscribe("change", this.#onChange),
       document.subscribe("reset", this.#onReset),
       selection.subscribe("select", this.#onSelectBlock),

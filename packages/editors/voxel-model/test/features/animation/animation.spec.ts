@@ -36,6 +36,7 @@ import {
 import type { NameDialogContext } from "#src/shared/dialogs/NameDialog.ts";
 import { MenuSession } from "#src/shared/menu/MenuSession.ts";
 import { createHost } from "./fixtures.ts";
+import { modelAccess } from "../../fixtures/modelAccess.ts";
 
 // CONSTANTS
 const kPoint = { x: 0, y: 0 };
@@ -45,12 +46,14 @@ interface FakeSource extends AnimationSetSource {
   released: string[];
   documents: Map<string, AnimationDocument>;
   notify(): void;
+  deny(id: string): void;
 }
 
 function createSource(
   records: AnimationSetRecord[] = []
 ): FakeSource {
   const listeners = new Set<() => void>();
+  const denials = new Map<string, () => void>();
   const source: FakeSource = {
     opened: [],
     released: [],
@@ -62,8 +65,15 @@ function createSource(
 
       return {
         document,
+        room: {
+          on: (_type, listener) => denials.set(id, listener),
+          off: () => denials.delete(id)
+        },
         release: () => source.released.push(id)
       };
+    },
+    deny(id) {
+      denials.get(id)?.();
     },
     create(name) {
       const record = { id: `set-${records.length + 1}`, kind: "voxelanimation", name };
@@ -99,9 +109,10 @@ function createSource(
 
 function createLibrary(
   document: ModelDocument,
-  source: AnimationSetSource
+  source: AnimationSetSource,
+  access = modelAccess()
 ): AnimationLibrary {
-  return new AnimationLibrary({ document, source });
+  return new AnimationLibrary({ document, source, access });
 }
 
 describe("AnimationLibrary", () => {
@@ -121,6 +132,31 @@ describe("AnimationLibrary", () => {
     library.unlink("shared");
     assert.deepEqual(source.released, ["shared"]);
     assert.deepEqual(library.sets(), []);
+  });
+
+  test("without animation rights changes no link or clip, and relays a set's refusals", async() => {
+    const document = new ModelDocument();
+    const source = createSource([{ id: "shared", kind: "voxelanimation", name: "Humanoid" }]);
+    const access = modelAccess();
+    const library = createLibrary(document, source, access);
+    library.link("shared");
+    const denied: string[] = [];
+    library.on("setDenied", (setId) => denied.push(setId));
+    access.grant("hierarchy");
+
+    assert.equal(library.unlink("shared"), false);
+    assert.equal(await library.addClip("shared", "Wave"), null);
+    await assert.rejects(library.create("Run"), /only view/);
+    await assert.rejects(library.ensureOwnSet(), /only view/);
+    const linked = [...document.tree.animationSets.values()].map(({ id }) => id);
+    assert.deepEqual([linked, source.documents.get("shared")!.set.size], [["shared"], 0]);
+
+    source.deny("shared");
+    assert.deepEqual(denied, ["shared"]);
+
+    library.dispose();
+    source.deny("shared");
+    assert.deepEqual(denied, ["shared"]);
   });
 
   test("creates a set asset and links it", async() => {
@@ -156,7 +192,7 @@ describe("AnimationLibrary", () => {
   test("a first clip of the model is one library undo step, which keeps the own set linked", async() => {
     const document = new ModelDocument();
     const history = createEditorHistory({ document });
-    const library = new AnimationLibrary({ document, source: createSource() });
+    const library = createLibrary(document, createSource());
     new AnimationHistories({
       history,
       document,
@@ -208,7 +244,8 @@ describe("AnimatePanelController", () => {
   ) {
     const document = new ModelDocument();
     const history = createEditorHistory({ document });
-    const animations = new AnimationLibrary({ document, source });
+    const access = modelAccess();
+    const animations = new AnimationLibrary({ document, source, access });
     const animationFocus = new AnimationFocusStore();
     new AnimationHistories({
       history,
@@ -247,6 +284,7 @@ describe("AnimatePanelController", () => {
       tab: new TabStore()
     });
     controller.attach({
+      access,
       animations,
       animationFocus,
       selection,
@@ -280,6 +318,7 @@ describe("AnimatePanelController", () => {
     }
 
     return {
+      access,
       controller,
       animations,
       history,

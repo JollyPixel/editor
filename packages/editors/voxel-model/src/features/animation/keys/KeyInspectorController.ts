@@ -10,8 +10,10 @@ import {
 // Import Internal Dependencies
 import type { AnimationSession } from "../session/AnimationSession.ts";
 import type { KeyEditor } from "./KeyEditor.ts";
+import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
 export interface KeyInspectorWorkspace {
+  access: Pick<ModelAccessSignals, "subscribe">;
   animationSession: AnimationSession;
   keyEditor: KeyEditor;
 }
@@ -19,6 +21,7 @@ export interface KeyInspectorWorkspace {
 export interface KeyInspectorState {
   title: string;
   interpolation: AnimationInterpolation | "mixed";
+  editable: boolean;
 }
 
 export class KeyInspectorController {
@@ -30,7 +33,8 @@ export class KeyInspectorController {
     host: ReactiveControllerHost
   ) {
     this.#host = host;
-    this.#connection = new SubscriptionController(host, ({ animationSession, keyEditor }) => [
+    this.#connection = new SubscriptionController(host, ({ access, animationSession, keyEditor }) => [
+      access.subscribe("change", this.#refresh),
       animationSession.subscribe("clip", this.#refresh),
       keyEditor.subscribe("change", this.#refresh)
     ]);
@@ -73,7 +77,8 @@ export class KeyInspectorController {
       title: refs.length === 1 ?
         `${new TrackPath(first.path).blockName} @ frame ${new FrameRate(clip.fps).frameAt(first.tick)}` :
         `${refs.length} keys`,
-      interpolation
+      interpolation,
+      editable: workspace.keyEditor.editable
     };
   }
 }

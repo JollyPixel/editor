@@ -22,6 +22,7 @@ import {
   buildEditsOf,
   createModelFixture
 } from "../../fixtures/model.ts";
+import { modelAccess } from "../../fixtures/modelAccess.ts";
 
 // CONSTANTS
 const kNoMirror = { x: false, y: false, z: false };
@@ -115,7 +116,8 @@ describe("ModelHierarchy undo steps", () => {
       textureSize: () => {
         return { x: 256, y: 256 };
       },
-      poses: fixture.blocks
+      poses: fixture.blocks,
+      access: modelAccess()
     });
 
     return { ...fixture, history, hierarchy };

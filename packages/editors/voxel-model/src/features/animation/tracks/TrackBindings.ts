@@ -97,7 +97,7 @@ export class TrackBindings extends LitElement {
     return html`
       <section aria-label="Tracks">
         <h3>Tracks of ${state.setName}</h3>
-        <ul>${state.rows.map((row) => this.#renderRow(row))}</ul>
+        <ul>${state.rows.map((row) => this.#renderRow(row, state.editable))}</ul>
       </section>
       <jolly-context-menu
         label="Blocks"
@@ -107,7 +107,8 @@ export class TrackBindings extends LitElement {
   }
 
   #renderRow(
-    row: TrackBindingRow
+    row: TrackBindingRow,
+    editable: boolean
   ): TemplateResult {
     const state = row.state === "remapped" && row.target !== null ?
       `→ ${row.target}` :
@@ -120,12 +121,14 @@ export class TrackBindings extends LitElement {
         <jolly-button
           label="Rebind"
           title="Rebind to a block"
+          ?disabled=${!editable}
           @click=${(event: MouseEvent) => this.#controller.rebind(row.path, menuPointBelow(event))}
         >Rebind…</jolly-button>
         ${row.state === "ignored" ? nothing : html`
           <jolly-button
             label="Ignore"
             title="Do not play this track on this model"
+            ?disabled=${!editable}
             @click=${() => this.#controller.ignore(row.path)}
           >Ignore</jolly-button>
         `}
@@ -133,6 +136,7 @@ export class TrackBindings extends LitElement {
           <jolly-button
             label="Reset"
             title="Bind by its own path again"
+            ?disabled=${!editable}
             @click=${() => this.#controller.reset(row.path)}
           >Reset</jolly-button>
         ` : nothing}

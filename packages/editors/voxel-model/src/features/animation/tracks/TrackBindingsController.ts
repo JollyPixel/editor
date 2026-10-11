@@ -18,8 +18,10 @@ import type {
   MenuPoint,
   MenuSession
 } from "../../../shared/menu/MenuSession.ts";
+import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
 export interface TrackBindingsWorkspace {
+  access: Pick<ModelAccessSignals, "subscribe">;
   document: ModelDocument;
   animations: AnimationLibrary;
   animationFocus: AnimationFocusStore;
@@ -35,6 +37,7 @@ export interface TrackBindingsView {
 export interface TrackBindingsState {
   setName: string;
   rows: TrackBindingRow[];
+  editable: boolean;
 }
 
 export class TrackBindingsController {
@@ -49,11 +52,12 @@ export class TrackBindingsController {
   ) {
     this.#host = host;
     this.#view = view;
-    this.#connection = new SubscriptionController(host, ({ document, animations, animationFocus }) => [
-      document.subscribe("change", this.#refresh),
-      document.subscribe("reset", this.#refresh),
-      animations.subscribe("change", this.#refresh),
-      animationFocus.subscribe("change", this.#refresh)
+    this.#connection = new SubscriptionController(host, (workspace) => [
+      workspace.access.subscribe("change", this.#refresh),
+      workspace.document.subscribe("change", this.#refresh),
+      workspace.document.subscribe("reset", this.#refresh),
+      workspace.animations.subscribe("change", this.#refresh),
+      workspace.animationFocus.subscribe("change", this.#refresh)
     ]);
   }
 
@@ -98,7 +102,7 @@ export class TrackBindingsController {
   ): void {
     const workspace = this.#connection.current;
     const setId = workspace?.animationFocus.focus.setId ?? null;
-    if (workspace !== null && setId !== null) {
+    if (workspace !== null && setId !== null && workspace.animations.editable) {
       use(workspace, setId);
     }
   }
@@ -123,7 +127,8 @@ export class TrackBindingsController {
 
     return {
       setName: workspace.animations.targetName(clipTargetOf(set)),
-      rows: trackBindingRows(set.document.set, link, workspace.document.tree)
+      rows: trackBindingRows(set.document.set, link, workspace.document.tree),
+      editable: workspace.animations.editable
     };
   }
 }

@@ -58,7 +58,8 @@ function createModel(
     active: () => new ActiveHistory({
       history: model.history,
       tab: model.tab,
-      animate: model.historyFocus
+      animate: model.historyFocus,
+      access: model.access
     }),
     key: (target: { setId: string; clipId: string; }, label: string) => model.history.record(
       scope(target),
@@ -272,6 +273,24 @@ describe("ActiveHistory", () => {
     tab.activate("build");
     assert.equal(active.targetName, null);
     assert.equal(active.state.canUndo, false);
+  });
+
+  test("a read-only viewer can neither undo nor redo, and is told when rights change", () => {
+    const model = createActive();
+    const { active, animationFocus, tab } = model;
+    model.key(model.run, "Key run");
+    tab.activate("animate");
+    animationFocus.focusClip("walk", "run");
+    let changes = 0;
+    active.on("change", () => changes++);
+
+    model.access.grant();
+
+    assert.deepEqual([active.readOnly, active.undo(), changes], [true, false, 1]);
+    assert.notEqual(model.keyOf("run"), undefined);
+
+    model.access.grant("animations");
+    assert.deepEqual([active.readOnly, active.undo()], [false, true]);
   });
 
   test("a focused clip without a history has nothing to undo or redo", () => {

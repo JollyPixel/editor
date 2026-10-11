@@ -18,8 +18,10 @@ import type {
   PresenceStore,
   ViewSettingsStore
 } from "../../../state/index.ts";
+import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
 export interface MaterialSurfaceWorkspace {
+  access: ModelAccessSignals;
   document: ModelDocument;
   materialFocus: MaterialFocusStore;
   presence: PresenceStore;
@@ -77,6 +79,10 @@ export class MaterialSurfaceController {
       this.#workspace?.presence.materialEdits.get(this.#materialId) ?? [];
   }
 
+  get editable(): boolean {
+    return this.#workspace?.access.current.has("materials") ?? false;
+  }
+
   get lit(): boolean {
     return this.#workspace?.view.settings.shading !== "flat";
   }
@@ -93,7 +99,7 @@ export class MaterialSurfaceController {
   ): void => {
     const previews = this.#workspace?.previews;
     const materialId = this.#stored()?.id;
-    if (previews === undefined || materialId === undefined) {
+    if (previews === undefined || materialId === undefined || !this.editable) {
       return;
     }
 
@@ -109,6 +115,11 @@ export class MaterialSurfaceController {
     const workspace = this.#workspace;
     const stored = this.#stored();
     if (workspace === null || stored === undefined) {
+      return;
+    }
+    if (!this.editable) {
+      workspace.previews.end(stored.id, null);
+
       return;
     }
 
@@ -138,6 +149,7 @@ export class MaterialSurfaceController {
     workspace: MaterialSurfaceWorkspace
   ): Array<() => void> {
     const {
+      access,
       document,
       materialFocus,
       presence,
@@ -146,6 +158,7 @@ export class MaterialSurfaceController {
     } = workspace;
 
     return [
+      access.subscribe("change", this.#onUpdate),
       document.subscribe("change", this.#onUpdate),
       materialFocus.subscribe("edit", this.#onEdit),
       view.subscribe("change", this.#onUpdate),

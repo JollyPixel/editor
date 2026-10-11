@@ -9,6 +9,7 @@ import {
 // Import Internal Dependencies
 import {
   AnimationLibrary,
+  type AnimationSetLease,
   type AnimationSetSource
 } from "#src/features/animation/library/AnimationLibrary.ts";
 import { AnimationSession } from "#src/features/animation/session/AnimationSession.ts";
@@ -27,6 +28,13 @@ import {
   PresenceStore,
   TabStore
 } from "#src/state/index.ts";
+import { modelAccess } from "../../fixtures/modelAccess.ts";
+
+// CONSTANTS
+export const IDLE_ROOM: AnimationSetLease["room"] = {
+  on: () => undefined,
+  off: () => undefined
+};
 
 export function createHost(): ReactiveControllerHost & { updates: number; } {
   const host = {
@@ -47,7 +55,7 @@ function createSource(
 ): AnimationSetSource {
   return {
     open: () => {
-      return { document: set, release: () => undefined };
+      return { document: set, room: IDLE_ROOM, release: () => undefined };
     },
     create: () => Promise.reject(new Error("unused")),
     createOwn: () => Promise.reject(new Error("unused")),
@@ -76,7 +84,8 @@ export function createAnimatedModel(
   }
   const history = createEditorHistory({ document });
   const source = createSource(set);
-  const animations = new AnimationLibrary({ document, source });
+  const access = modelAccess();
+  const animations = new AnimationLibrary({ document, source, access });
   const animationFocus = new AnimationFocusStore();
   new AnimationHistories({
     history,
@@ -105,6 +114,7 @@ export function createAnimatedModel(
   const sets = document.tree.animationSets;
 
   return {
+    access,
     document,
     history,
     historyFocus: animateHistoryFocus({ document, animations, animationFocus }),
@@ -119,7 +129,7 @@ export function createAnimatedModel(
     animationFocus,
     animationPlayback,
     animationSession,
-    keyEditor: new KeyEditor({ session: animationSession, history }),
+    keyEditor: new KeyEditor({ session: animationSession, history, access }),
     presence,
     selection
   };

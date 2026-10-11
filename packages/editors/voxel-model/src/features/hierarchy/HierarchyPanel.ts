@@ -107,7 +107,7 @@ export class HierarchyPanel extends LitElement {
   };
 
   override render(): TemplateResult {
-    const { editable } = this.#tree;
+    const editable = this.#tree.editable && this.#tree.writable;
 
     return html`
       <jolly-folder
@@ -116,7 +116,7 @@ export class HierarchyPanel extends LitElement {
         .collapsible=${false}
         flush
       >
-        ${editable ? this.#renderActions() : this.#renderLock()}
+        ${this.#tree.editable ? this.#renderActions() : this.#renderLock()}
         <jolly-tree
           .nodes=${this.#tree.nodes}
           .selected=${this.#tree.selected}
@@ -127,7 +127,7 @@ export class HierarchyPanel extends LitElement {
           ?renamable=${editable}
           @jolly-activate=${this.#tree.handleActivate}
           @jolly-activate-swatch=${this.#tree.handleActivateSwatch}
-          @jolly-context-request=${editable ? this.#menu.onContextRequest : nothing}
+          @jolly-context-request=${this.#tree.editable ? this.#menu.onContextRequest : nothing}
           @jolly-select=${this.#tree.handleSelect}
           @jolly-toggle-expand=${this.#tree.handleToggleExpand}
           @jolly-toggle-visible=${this.#tree.handleToggleVisible}
@@ -159,6 +159,9 @@ export class HierarchyPanel extends LitElement {
   }
 
   #renderActions(): TemplateResult {
+    const { writable } = this.#tree;
+    const actOnSelection = writable && this.#tree.hasSelection;
+
     return html`
       <jolly-button
         slot="actions"
@@ -166,6 +169,7 @@ export class HierarchyPanel extends LitElement {
         icon-only
         label="Add Block"
         title="Add Block"
+        ?disabled=${!writable}
         @click=${this.#tree.addBlock}
       ></jolly-button>
       <jolly-button
@@ -174,6 +178,7 @@ export class HierarchyPanel extends LitElement {
         icon-only
         label="Add Folder"
         title="Add Folder"
+        ?disabled=${!writable}
         @click=${this.#tree.addFolder}
       ></jolly-button>
       <jolly-button
@@ -182,7 +187,7 @@ export class HierarchyPanel extends LitElement {
         icon-only
         label="Duplicate"
         title="Duplicate"
-        ?disabled=${!this.#tree.hasSelection}
+        ?disabled=${!actOnSelection}
         @click=${this.#tree.duplicateSelected}
       ></jolly-button>
       <jolly-button
@@ -191,7 +196,7 @@ export class HierarchyPanel extends LitElement {
         icon-only
         label="Delete"
         title="Delete"
-        ?disabled=${!this.#tree.hasSelection}
+        ?disabled=${!actOnSelection}
         @click=${this.#tree.deleteSelected}
       ></jolly-button>
     `;
