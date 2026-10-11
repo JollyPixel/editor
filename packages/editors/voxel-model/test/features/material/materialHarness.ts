@@ -114,6 +114,27 @@ export function createMaterialHarness(
 
 export type MaterialHarness = ReturnType<typeof createMaterialHarness>;
 
+export function materialNamesOf(
+  harness: MaterialHarness
+): string[] {
+  return [...harness.document.tree.materials.values()].map(({ name }) => name);
+}
+
+export function dropMaterials(
+  harness: MaterialHarness,
+  movedIds: string[],
+  targetId: string,
+  where: "above" | "below"
+): void {
+  harness.controller.handleReparent(new CustomEvent("jolly-reparent", {
+    detail: {
+      movedIds,
+      targetId,
+      where
+    }
+  }));
+}
+
 export function preset(
   id: string
 ): MaterialPreset {

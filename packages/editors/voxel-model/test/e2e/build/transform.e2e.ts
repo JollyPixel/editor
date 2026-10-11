@@ -8,15 +8,17 @@ import { nextFrames } from "@jolly-pixel/e2e/editor";
 import {
   test,
   expect
-} from "./fixtures.ts";
-import { addNode } from "./support/hierarchy.ts";
+} from "../fixtures.ts";
+import { addNode } from "../support/hierarchy.ts";
 import {
   blockSummary,
-  clickBlock,
   gizmoAttached,
-  gizmoHandlePoints,
   selectedBlock
-} from "./support/scene.ts";
+} from "../support/scene.ts";
+import {
+  clickBlock,
+  gizmoHandlePoints
+} from "../support/gizmo.ts";
 
 type Mode = "Pos" | "Angle" | "Size" | "Pivot" | "Scale";
 

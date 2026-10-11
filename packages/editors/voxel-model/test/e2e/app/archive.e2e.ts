@@ -8,19 +8,17 @@ import {
   dialog,
   treeRow
 } from "@jolly-pixel/e2e";
-import {
-  openEditor,
-  waitForEditor
-} from "@jolly-pixel/e2e/editor";
+import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
   exportArchive,
   importArchive,
   resetWorkspace
-} from "./support/archives.ts";
-import { addNode } from "./support/hierarchy.ts";
-import { outline } from "./support/scene.ts";
+} from "../support/archives.ts";
+import { addNode } from "../support/hierarchy.ts";
+import { openOfflineEditor } from "../support/offline.ts";
+import { outline } from "../support/scene.ts";
 
 interface OfflineIds {
   modelId: string;
@@ -44,16 +42,11 @@ function offlineIds(
 }
 
 test("exports the model, resets the workspace and imports it back", async({ page }) => {
-  test.setTimeout(90_000);
+  test.slow();
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
-  await openEditor(page, {
-    maxFps: 5,
-    query: {
-      offline: ""
-    }
-  });
+  await openOfflineEditor(page);
   await addNode(page, "Block", "Arm");
   const exported = await offlineIds(page);
   const download = await exportArchive(page);
@@ -69,6 +62,7 @@ test("exports the model, resets the workspace and imports it back", async({ page
 
   expect(await offlineIds(page)).toEqual(exported);
   expect(await outline(page)).toEqual(["Block", "Arm"]);
+  await treeRow(page, "Arm").click();
   await expect(
     page.getByRole("img").filter({ hasText: "(Arm)front" })
   ).toBeVisible();
@@ -76,13 +70,8 @@ test("exports the model, resets the workspace and imports it back", async({ page
 });
 
 test("imports a model and its texture as a copy", async({ page }) => {
-  test.setTimeout(90_000);
-  await openEditor(page, {
-    maxFps: 5,
-    query: {
-      offline: ""
-    }
-  });
+  test.slow();
+  await openOfflineEditor(page);
   await addNode(page, "Block", "Arm");
   const original = await offlineIds(page);
   const download = await exportArchive(page);
@@ -102,7 +91,7 @@ test("imports a model and its texture as a copy", async({ page }) => {
   expect(copied.modelId).not.toBe(original.modelId);
   expect(copied.textureId).toBeDefined();
   expect(copied.textureId).not.toBe(original.textureId);
-  await expect(treeRow(page, "Arm")).toBeVisible();
+  await treeRow(page, "Arm").click();
   await expect(
     page.getByRole("img").filter({ hasText: "(Arm)front" })
   ).toBeVisible();

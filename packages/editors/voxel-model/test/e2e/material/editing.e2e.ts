@@ -9,9 +9,10 @@ import { waitForEditor } from "@jolly-pixel/e2e/editor";
 import {
   test,
   expect
-} from "./fixtures.ts";
+} from "../fixtures.ts";
+import { addNode } from "../support/hierarchy.ts";
 import {
-  addNode,
+  holdMaterialSlider,
   materialFooter,
   materialMenu,
   materialRow,
@@ -21,13 +22,13 @@ import {
   newMaterial,
   openMaterial,
   openMaterialTab
-} from "./support/hierarchy.ts";
+} from "../support/material.ts";
 import {
   blockSurface,
   materialOutline,
   materialUses,
   selectedBlock
-} from "./support/scene.ts";
+} from "../support/scene.ts";
 
 test("a block's swatch opens the Material tab, where a new material goes to it", async({ page }) => {
   await openMaterial(page, "Block");
@@ -43,14 +44,10 @@ test("a block's swatch opens the Material tab, where a new material goes to it",
 });
 
 test("a slider drag previews on the block and is stored on release", async({ page }) => {
-  const library = await openMaterial(page, "Block");
+  await openMaterial(page, "Block");
   await newMaterial(page, "Material");
-  const box = (await library.getByRole("slider", { name: "Metalness" }).boundingBox())!;
-  const y = box.y + (box.height / 2);
 
-  await page.mouse.move(box.x + 1, y);
-  await page.mouse.down();
-  await page.mouse.move(box.x + (box.width * 0.8), y, { steps: 4 });
+  await holdMaterialSlider(page, "Metalness", 0.8);
 
   await expect.poll(async() => (await blockSurface(page, "Block"))?.metalness ?? 0)
     .toBeGreaterThan(0.5);
@@ -160,7 +157,11 @@ test("the new material menu shows each preset's swatch", async({ page }) => {
   await openMaterial(page, "Block");
   await materialTool(page, "New Material");
 
-  await expect(materialMenu(page).locator("jolly-icon[name=material-preset-glass]")).toHaveCount(1);
+  const presets = materialMenu(page).getByRole("menuitem");
+  await expect(presets).not.toHaveCount(0);
+  for (const preset of await presets.all()) {
+    await expect(preset.locator("jolly-icon[name^=material-preset-]")).toHaveCount(1);
+  }
 });
 
 test("the material help toggles its descriptions and is remembered", async({ page }) => {
@@ -183,6 +184,7 @@ test("the Build tab keeps its texture canvas after a visit to the Material tab",
   await openMaterialTab(page);
 
   await page.getByRole("tab", { name: "Build" }).click();
+  await treeRow(page, "Block").click();
 
   await expect(page.getByRole("img").filter({ hasText: "(Block)front" })).toBeVisible();
 });

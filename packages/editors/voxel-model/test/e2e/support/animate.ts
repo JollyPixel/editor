@@ -50,6 +50,34 @@ export function clipRow(
     .filter({ has: page.getByText(name, { exact: true }) });
 }
 
+export async function openClipMenu(
+  page: Page,
+  name: string,
+  index = 0
+): Promise<void> {
+  await clipRow(page, name).nth(index).click({ button: "right" });
+}
+
+export async function chooseAnimationAction(
+  page: Page,
+  name: string
+): Promise<void> {
+  await page.getByRole("menu", { name: "Animation actions" })
+    .getByRole("menuitem", { name, exact: true })
+    .click();
+}
+
+export async function createSet(
+  page: Page,
+  name: string
+): Promise<void> {
+  await tool(page, "New set").click();
+  const form = dialog(page, "New Animation Set");
+  await textField(form, "Set name").fill(name);
+  await form.getByRole("button", { name: "OK" }).click();
+  await expect(treeRow(page, name)).toBeVisible();
+}
+
 export function timeline(
   page: Page
 ): Locator {

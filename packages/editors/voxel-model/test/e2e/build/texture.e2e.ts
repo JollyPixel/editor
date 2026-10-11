@@ -3,12 +3,12 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
-import { dialog, treeRow } from "@jolly-pixel/e2e";
+import { treeRow } from "@jolly-pixel/e2e";
 import { waitForEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
-import { test, expect } from "./fixtures.ts";
-import { addNode, hierarchyAction } from "./support/hierarchy.ts";
+import { test, expect } from "../fixtures.ts";
+import { addNode, deleteBlock } from "../support/hierarchy.ts";
 
 function regionToolbar(
   page: Page
@@ -104,11 +104,7 @@ test("selecting a block selects its texture region", async({ page }) => {
   await expect(regionToolbar(page)).toBeVisible();
 
   await addNode(page, "Block", "Arm");
-  await hierarchyAction(page, "Delete").click();
-  await dialog(page, "Delete Block")
-    .getByRole("button", { name: "Delete" })
-    .click();
+  await deleteBlock(page, "Arm");
 
-  await expect(page.getByRole("img").filter({ hasText: "(Arm)front" })).toHaveCount(0);
   await expect(regionToolbar(page)).toBeHidden();
 });

@@ -10,19 +10,21 @@ import {
 import {
   test,
   expect
-} from "./fixtures.ts";
+} from "../fixtures.ts";
 import {
   addNode,
+  deleteBlock,
   hierarchyAction,
-  materialTab,
+  renameRow,
   rowMenu
-} from "./support/hierarchy.ts";
+} from "../support/hierarchy.ts";
+import { materialTab } from "../support/material.ts";
 import {
   blockSummary,
   blockVisible,
   outline,
   selectedBlock
-} from "./support/scene.ts";
+} from "../support/scene.ts";
 
 test("a new block is listed, selected and given its texture region", async({ page }) => {
   await addNode(page, "Block", "Arm");
@@ -77,10 +79,7 @@ test("rows show no drag grip", async({ page }) => {
 });
 
 test("a row is renamed in place by double-click", async({ page }) => {
-  await treeRow(page, "Block").dblclick();
-  const rename = page.getByRole("textbox", { name: "Rename" });
-  await rename.fill("Torso");
-  await rename.press("Enter");
+  await renameRow(page, "Block", "Torso");
 
   await expect(treeRow(page, "Torso")).toBeVisible();
   expect(await outline(page)).toEqual(["Torso"]);
@@ -92,10 +91,7 @@ test("sibling blocks keep distinct names, and a clash left by a delete is flagge
   await addNode(page, "Block", "Palm", { under: "Arm" });
 
   await test.step("a name taken under another block parent is accepted", async() => {
-    await treeRow(page, "Palm").dblclick();
-    const rename = page.getByRole("textbox", { name: "Rename" });
-    await rename.fill("Hand");
-    await rename.press("Enter");
+    await renameRow(page, "Palm", "Hand");
 
     await expect(treeRow(page, "Hand")).toHaveCount(2);
     await expect(treeRow(page, "Hand").last()).not.toHaveAttribute("data-warning");
@@ -287,11 +283,7 @@ test("deleting a parent removes or promotes its children", async({ page }) => {
   });
 
   await test.step("with the children", async() => {
-    await treeRow(page, "Block").click();
-    await hierarchyAction(page, "Delete").click();
-    await dialog(page, "Delete Block")
-      .getByRole("button", { name: "Delete" })
-      .click();
+    await deleteBlock(page, "Block");
 
     await expect(page.getByRole("treeitem")).toHaveCount(0);
     expect(await outline(page)).toEqual([]);

@@ -7,13 +7,13 @@ import {
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { test as base, expect } from "./fixtures.ts";
+import { test as base, expect } from "../fixtures.ts";
 import {
   addNode,
   hierarchyAction
-} from "./support/hierarchy.ts";
-import { historyBar } from "./support/history.ts";
-import { gizmoAttached } from "./support/scene.ts";
+} from "../support/hierarchy.ts";
+import { historyBar } from "../support/history.ts";
+import { gizmoAttached } from "../support/scene.ts";
 
 const test = base.extend<{ grant: RoleGrant; }>({
   grant: [
