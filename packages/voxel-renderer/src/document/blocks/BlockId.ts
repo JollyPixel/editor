@@ -55,13 +55,13 @@ export function composeBlockId(
   return (slot << LOCAL_BLOCK_ID_BITS) | localId;
 }
 
-export function blocksetSlotOf(
+export function decodeBlocksetSlot(
   blockId: number
 ): number {
   return blockId >>> LOCAL_BLOCK_ID_BITS;
 }
 
-export function localBlockIdOf(
+export function decodeLocalBlockId(
   blockId: number
 ): number {
   return blockId & MAX_LOCAL_BLOCK_ID;

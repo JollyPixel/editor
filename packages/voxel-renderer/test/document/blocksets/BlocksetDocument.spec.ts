@@ -176,7 +176,7 @@ describe("BlocksetDocument", () => {
       }
     };
 
-    assert.equal(document.apply(command, { origin: "remote" }), true);
+    assert.equal(document.applyCommand(command, { origin: "remote" }), true);
 
     assert.deepEqual(document.blocks.get(4)?.defaultTexture, { col: 0, row: 0 });
     assert.deepEqual(emissions, [

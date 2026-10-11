@@ -9,13 +9,13 @@ import {
   rotateTileBounds,
   rotateTileUv,
   tileFootprint,
-  tileRectOf,
+  resolveTileRect,
   tileRefFromRect
 } from "../../../src/document/blocksets/index.ts";
 
-describe("tileRectOf", () => {
+describe("resolveTileRect", () => {
   it("covers one tile by default", () => {
-    assert.deepEqual(tileRectOf({ col: 2, row: 1 }, 16), {
+    assert.deepEqual(resolveTileRect({ col: 2, row: 1 }, 16), {
       x: 32,
       y: 16,
       width: 16,
@@ -25,7 +25,7 @@ describe("tileRectOf", () => {
 
   it("grows a spanned tile downward from its corner", () => {
     assert.deepEqual(
-      tileRectOf({ col: 2, row: 1 }, 16, undefined, { u: 1, v: Math.SQRT2 }),
+      resolveTileRect({ col: 2, row: 1 }, 16, undefined, { u: 1, v: Math.SQRT2 }),
       {
         x: 32,
         y: 16,
@@ -36,7 +36,7 @@ describe("tileRectOf", () => {
   });
 
   it("anchors a custom size at the tile corner and applies bounds", () => {
-    const rect = tileRectOf(
+    const rect = resolveTileRect(
       { col: 1, row: 1, size: 32 },
       16,
       { u0: 0.5, v0: 0, u1: 1, v1: 0.5 }
@@ -52,10 +52,10 @@ describe("tileRectOf", () => {
 });
 
 describe("tileRefFromRect", () => {
-  it("inverts tileRectOf", () => {
+  it("inverts resolveTileRect", () => {
     const bounds = { u0: 0.25, v0: 0, u1: 1, v1: 0.75 };
     const template = { blocksetId: "a", col: 0, row: 0, size: 32 };
-    const rect = tileRectOf({ ...template, col: 3, row: 2 }, 16, bounds);
+    const rect = resolveTileRect({ ...template, col: 3, row: 2 }, 16, bounds);
 
     assert.deepEqual(tileRefFromRect(rect, template, 16, bounds), {
       ...template,
@@ -64,11 +64,11 @@ describe("tileRefFromRect", () => {
     });
   });
 
-  it("inverts a spanned tileRectOf", () => {
+  it("inverts a spanned resolveTileRect", () => {
     const bounds = { u0: 0, v0: 0, u1: 1, v1: 0.5 };
     const span = { u: 1, v: Math.SQRT2 };
     const template = { blocksetId: "a", col: 0, row: 0 };
-    const rect = tileRectOf({ ...template, col: 3, row: 2 }, 16, bounds, span);
+    const rect = resolveTileRect({ ...template, col: 3, row: 2 }, 16, bounds, span);
 
     assert.deepEqual(tileRefFromRect(rect, template, 16, bounds, span), {
       ...template,
@@ -188,7 +188,7 @@ describe("tile rotation", () => {
   it("places rotated bounds in the rotated footprint, and inverts it", () => {
     const bounds = { u0: 0, v0: 0.5, u1: 1, v1: 1 };
     const template = { blocksetId: "a", col: 0, row: 0, rotation: 1 as const };
-    const rect = tileRectOf({ ...template, col: 1, row: 1 }, 16, bounds);
+    const rect = resolveTileRect({ ...template, col: 1, row: 1 }, 16, bounds);
 
     assert.deepEqual(rect, { x: 24, y: 16, width: 8, height: 16 });
     assert.deepEqual(tileRefFromRect(rect, template, 16, bounds), {
@@ -198,10 +198,10 @@ describe("tile rotation", () => {
     });
   });
 
-  it("inverts a rotated spanned tileRectOf", () => {
+  it("inverts a rotated spanned resolveTileRect", () => {
     const span = { u: 1, v: Math.SQRT2 };
     const template = { blocksetId: "a", col: 0, row: 0, rotation: 3 as const };
-    const rect = tileRectOf({ ...template, col: 2, row: 1 }, 16, undefined, span);
+    const rect = resolveTileRect({ ...template, col: 2, row: 1 }, 16, undefined, span);
 
     assert.deepEqual(rect, { x: 32, y: 16, width: 23, height: 16 });
     assert.deepEqual(tileRefFromRect(rect, template, 16, undefined, span), {

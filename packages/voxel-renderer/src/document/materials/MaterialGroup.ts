@@ -55,7 +55,7 @@ export class MaterialGroup {
   constructor(
     json: MaterialGroupJSON
   ) {
-    const problem = problemOf(json);
+    const problem = validateFields(json);
     if (problem !== null) {
       throw new RangeError(problem);
     }
@@ -88,7 +88,7 @@ export class MaterialGroup {
     });
   }
 
-  applyTo(
+  applyMaterialFinish(
     material: FinishableMaterial
   ): void {
     material.emissive.set(this.emissive);
@@ -136,10 +136,10 @@ export class MaterialGroup {
 function isMaterialGroupJSON(
   value: unknown
 ): value is MaterialGroupJSON {
-  return problemOf(value) === null;
+  return validateFields(value) === null;
 }
 
-function problemOf(
+function validateFields(
   value: unknown
 ): string | null {
   if (typeof value !== "object" || value === null) {

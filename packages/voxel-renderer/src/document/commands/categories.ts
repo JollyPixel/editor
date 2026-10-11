@@ -101,22 +101,22 @@ type CategoryOf<TAction extends VoxelCommandAction> = {
 }[CommandCategory];
 
 export const VOXEL_LAYER_COMMAND_ACTIONS:
-readonly VoxelLayerCommandAction[] = actionsOf("layer");
+readonly VoxelLayerCommandAction[] = collectCategoryActions("layer");
 
 export const VOXEL_TEMPLATE_COMMAND_ACTIONS:
-readonly VoxelTemplateCommandAction[] = actionsOf("template");
+readonly VoxelTemplateCommandAction[] = collectCategoryActions("template");
 
 export const VOXEL_BLOCK_COMMAND_ACTIONS:
-readonly VoxelBlockCommandAction[] = actionsOf("block");
+readonly VoxelBlockCommandAction[] = collectCategoryActions("block");
 
 export const VOXEL_BLOCKSET_COMMAND_ACTIONS:
-readonly VoxelBlocksetCommandAction[] = actionsOf("blockset");
+readonly VoxelBlocksetCommandAction[] = collectCategoryActions("blockset");
 
 export const VOXEL_MATERIAL_GROUP_COMMAND_ACTIONS:
-readonly VoxelMaterialGroupCommandAction[] = actionsOf("material-group");
+readonly VoxelMaterialGroupCommandAction[] = collectCategoryActions("material-group");
 
 export const VOXEL_BLEND_GROUP_COMMAND_ACTIONS:
-readonly VoxelBlendGroupCommandAction[] = actionsOf("blend-group");
+readonly VoxelBlendGroupCommandAction[] = collectCategoryActions("blend-group");
 
 export const VOXEL_COMMAND_ACTIONS: readonly VoxelCommandAction[] = [
   ...VOXEL_LAYER_COMMAND_ACTIONS,
@@ -214,7 +214,7 @@ export function isBlocksetDocumentCommand(
     kBlocksetOnlyActionSet.has(command.action);
 }
 
-function actionsOf<TCategory extends CommandCategory>(
+function collectCategoryActions<TCategory extends CommandCategory>(
   category: TCategory
 ): CategoryAction<TCategory>[] {
   return Object.keys(kActionCategories).filter(

@@ -721,7 +721,7 @@ export class VoxelLayer {
     }
   }
 
-  * positionsOf(
+  * positionsUsingBlocks(
     blockIds: ReadonlySet<number>
   ): IterableIterator<VoxelCoord> {
     const size = this.#chunkSize;

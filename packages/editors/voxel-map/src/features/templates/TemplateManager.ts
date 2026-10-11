@@ -225,7 +225,7 @@ export class TemplateManager extends WorkspaceElement {
     event: PointerEvent
   ): void {
     const workspace = this.workspace;
-    const row = event.button === 0 ? templateRowOf(event) : null;
+    const row = event.button === 0 ? createTemplateRow(event) : null;
     const templateId = row?.dataset.id;
     if (
       workspace === null ||
@@ -259,7 +259,7 @@ export class TemplateManager extends WorkspaceElement {
   }
 }
 
-function templateRowOf(
+function createTemplateRow(
   event: Event
 ): HTMLElement | null {
   for (const target of event.composedPath()) {

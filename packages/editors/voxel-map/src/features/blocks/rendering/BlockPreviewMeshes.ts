@@ -83,7 +83,7 @@ export class BlockPreviewMeshes {
     else if (time - this.#checkedAt >= kOpacityCheckIntervalMs) {
       this.#checkedAt = time;
       this.#rebuild(
-        (entry) => this.#emptySlotsOf(entry.block) !== entry.emptySlots
+        (entry) => this.#findEmptySlots(entry.block) !== entry.emptySlots
       );
     }
   }
@@ -123,14 +123,14 @@ export class BlockPreviewMeshes {
     return {
       block,
       mesh,
-      emptySlots: this.#emptySlotsOf(block)
+      emptySlots: this.#findEmptySlots(block)
     };
   }
 
-  #emptySlotsOf(
+  #findEmptySlots(
     block: ResolvedBlockDefinition
   ): string {
-    return this.#pieces.emptySlotsOf(block).join(",");
+    return this.#pieces.findEmptySlots(block).join(",");
   }
 
   #remove(

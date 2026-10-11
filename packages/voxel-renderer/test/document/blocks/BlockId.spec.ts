@@ -7,10 +7,10 @@ import {
   AIR_BLOCK_ID,
   composeBlockId,
   isAir,
-  localBlockIdOf,
+  decodeLocalBlockId,
   MAX_LOCAL_BLOCK_ID,
   MAX_BLOCKSET_SLOT,
-  blocksetSlotOf
+  decodeBlocksetSlot
 } from "../../../src/document/blocks/index.ts";
 import { MAX_BLOCK_ID } from "../../../src/document/world/index.ts";
 
@@ -41,8 +41,8 @@ describe("composeBlockId", () => {
     ]) {
       const blockId = composeBlockId(slot, localId);
 
-      assert.equal(blocksetSlotOf(blockId), slot);
-      assert.equal(localBlockIdOf(blockId), localId);
+      assert.equal(decodeBlocksetSlot(blockId), slot);
+      assert.equal(decodeLocalBlockId(blockId), localId);
     }
   });
 

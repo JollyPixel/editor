@@ -143,7 +143,7 @@ export class VoxelWriter {
     command: VoxelEditCommand,
     mode: VoxelWriteMode
   ): VoxelEditCommand | null {
-    const reach = this.#reachOf(mode);
+    const reach = this.#computeObserverReach(mode);
     const batch = mode === "replay" ? null : this.#batch;
     if (
       command.action === "voxels-patched" &&
@@ -155,7 +155,7 @@ export class VoxelWriter {
       return this.#patchDirect(layer, command.metadata);
     }
 
-    const writes = writesOf(command, layer);
+    const writes = decodeVoxelWrites(command, layer);
     if (layer === undefined) {
       if (writes.some(({ packed }) => packed !== VOXEL_ABSENT)) {
         throw new Error(
@@ -323,7 +323,7 @@ export class VoxelWriter {
     }
   }
 
-  #reachOf(
+  #computeObserverReach(
     mode: VoxelWriteMode
   ): number {
     if (mode !== "live") {
@@ -354,7 +354,7 @@ export class VoxelWriter {
   }
 }
 
-function writesOf(
+function decodeVoxelWrites(
   command: VoxelEditCommand,
   layer: VoxelLayer | undefined
 ): VoxelWrite[] {

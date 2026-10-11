@@ -11,7 +11,7 @@ export class TurntableAngles {
     this.#step = step;
   }
 
-  of(
+  angleForBlock(
     blockId: number
   ): number {
     return this.#angles.get(blockId) ?? this.#rest;
@@ -20,7 +20,7 @@ export class TurntableAngles {
   advance(
     blockId: number
   ): number {
-    const angle = this.of(blockId) + this.#step;
+    const angle = this.angleForBlock(blockId) + this.#step;
     this.#angles.set(blockId, angle);
 
     return angle;

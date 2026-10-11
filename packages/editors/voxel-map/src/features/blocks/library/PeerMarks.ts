@@ -28,7 +28,7 @@ export class PeerMarkView {
 }
 
 export class PeerMarks<TKey> {
-  static selfOf(
+  static findSelf(
     peers: Iterable<PresencePeer>
   ): PresencePeer {
     for (const peer of peers) {
@@ -57,7 +57,7 @@ export class PeerMarks<TKey> {
   ): PeerMarks<TKey> {
     const merged = new Map<TKey, readonly PresencePeer[]>(peerMarks);
     if (key !== null) {
-      merged.set(key, [PeerMarks.selfOf(peers), ...merged.get(key) ?? []]);
+      merged.set(key, [PeerMarks.findSelf(peers), ...merged.get(key) ?? []]);
     }
 
     return new PeerMarks(merged);
@@ -71,16 +71,16 @@ export class PeerMarks<TKey> {
     this.#marks = marks;
   }
 
-  marksOf(
+  peersFor(
     key: TKey
   ): readonly PresencePeer[] {
     return this.#marks.get(key) ?? [];
   }
 
-  viewOf(
+  createView(
     key: TKey
   ): PeerMarkView | null {
-    const marks = this.marksOf(key);
+    const marks = this.peersFor(key);
 
     return marks.length === 0 ? null : new PeerMarkView(marks);
   }

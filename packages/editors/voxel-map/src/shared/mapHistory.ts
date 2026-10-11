@@ -34,10 +34,10 @@ export function skippedMessage(
 ): string {
   const label = step.label === null ? "a step" : `"${step.label}"`;
 
-  return `Skipped ${label}: ${reasonOf(step.refused)}`;
+  return `Skipped ${label}: ${describeHistoryChange(step.refused)}`;
 }
 
-function reasonOf(
+function describeHistoryChange(
   refusal: HistoryRefusal
 ): string {
   switch (refusal.reason) {

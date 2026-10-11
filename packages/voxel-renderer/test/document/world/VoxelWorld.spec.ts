@@ -388,8 +388,8 @@ describe("VoxelWorld — layer identity", () => {
     deserializeVoxelWorld(serializeVoxelWorld(seed), first);
     deserializeVoxelWorld(serializeVoxelWorld(seed), second);
 
-    moves.forEach((move) => first.apply(move));
-    [...moves].reverse().forEach((move) => second.apply(move));
+    moves.forEach((move) => first.applyCommand(move));
+    [...moves].reverse().forEach((move) => second.applyCommand(move));
 
     assert.deepEqual(layerNames(first), ["A", "B", "C"]);
     assert.deepEqual(layerNames(second), layerNames(first));
@@ -401,7 +401,7 @@ describe("VoxelWorld — layer identity", () => {
     const commands = recordCommands(world);
 
     assert.strictEqual(world.updateLayer("Ground", { name: "Floor" }), true);
-    world.apply({
+    world.applyCommand({
       action: "voxels-set",
       layerId: layer.id,
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 2 }] }

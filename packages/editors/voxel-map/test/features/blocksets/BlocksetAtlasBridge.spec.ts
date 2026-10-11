@@ -124,7 +124,7 @@ function setup() {
       shapes: BlockShapeRegistry.createDefault(),
       atlases: {
         get: () => atlas,
-        atlas: () => atlas
+        requireLoadedAtlas: () => atlas
       },
       loadBlockset: (
         _definition: unknown,

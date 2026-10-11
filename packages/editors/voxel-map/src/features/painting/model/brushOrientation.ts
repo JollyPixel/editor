@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import {
   VoxelRotation,
+  type BlockShapeID,
   type VoxelRotationStep
 } from "@jolly-pixel/voxel.renderer";
 
@@ -10,16 +11,23 @@ import type { RotationMode } from "../BrushStore.ts";
 
 // CONSTANTS
 const kDirection = new THREE.Vector3();
+const kOppositeRotations = [
+  VoxelRotation.Deg180,
+  VoxelRotation.CW90,
+  VoxelRotation.None,
+  VoxelRotation.CCW90
+] as const;
 
 export interface BrushOrientation {
   rotation: VoxelRotationStep;
   flipY: boolean;
 }
 
-export function brushOrientationOf(
+export function resolveBrushOrientation(
   camera: THREE.Camera,
   mode: RotationMode,
-  flipY: boolean
+  flipY: boolean,
+  shapeId: BlockShapeID = "cube"
 ): BrushOrientation {
   if (mode !== "auto") {
     return {
@@ -32,14 +40,17 @@ export function brushOrientationOf(
   const lookingUp = kDirection.y > 0;
   kDirection.y = 0;
   kDirection.normalize();
+  const rotation = quantizeHorizontalRotation(kDirection);
+  const reversed = shapeId === "stairCornerOuter" ||
+    shapeId === "stairCornerPeak" || shapeId === "slabNotch";
 
   return {
-    rotation: horizontalRotationOf(kDirection),
+    rotation: reversed ? kOppositeRotations[rotation] : rotation,
     flipY: flipY || lookingUp
   };
 }
 
-function horizontalRotationOf(
+function quantizeHorizontalRotation(
   direction: THREE.Vector3
 ): VoxelRotationStep {
   if (Math.abs(direction.z) >= Math.abs(direction.x)) {

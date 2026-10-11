@@ -39,7 +39,7 @@ function ghostOf(): GhostBlock {
   });
 }
 
-function targetOf(
+function resolveTarget(
   patch: Partial<GhostTarget> = {}
 ): GhostTarget {
   return {
@@ -73,7 +73,7 @@ describe("GhostBlock", () => {
   test("centres the block on its cell", () => {
     const ghost = ghostOf();
 
-    assert.equal(ghost.draw(targetOf()), true);
+    assert.equal(ghost.draw(resolveTarget()), true);
     assert.equal(ghost.visible, true);
     assert.deepEqual(ghost.position.toArray(), [2.5, 0.5, -0.5]);
     assert.deepEqual(ghost.scale.toArray(), [1, 1, 1]);
@@ -85,7 +85,7 @@ describe("GhostBlock", () => {
 
   test("draws semi-transparent without writing depth", () => {
     const ghost = ghostOf();
-    ghost.draw(targetOf());
+    ghost.draw(resolveTarget());
     const [material] = meshOf(ghost).material;
 
     assert.equal(material.transparent, true);
@@ -95,7 +95,7 @@ describe("GhostBlock", () => {
 
   test("slightly grows over an existing block", () => {
     const ghost = ghostOf();
-    ghost.draw(targetOf({ overlay: true }));
+    ghost.draw(resolveTarget({ overlay: true }));
 
     assert.ok(ghost.scale.x > 1);
   });
@@ -103,13 +103,13 @@ describe("GhostBlock", () => {
   test("reuses the geometry of an orientation it already built", () => {
     const ghost = ghostOf();
 
-    ghost.draw(targetOf());
+    ghost.draw(resolveTarget());
     const identity = meshOf(ghost).geometry;
-    ghost.draw(targetOf({
+    ghost.draw(resolveTarget({
       transform: new VoxelTransform({ rotation: 1 })
     }));
     const rotated = meshOf(ghost).geometry;
-    ghost.draw(targetOf());
+    ghost.draw(resolveTarget());
 
     assert.notEqual(rotated, identity);
     assert.equal(meshOf(ghost).geometry, identity);
@@ -117,9 +117,9 @@ describe("GhostBlock", () => {
 
   test("hides itself for an unknown block", () => {
     const ghost = ghostOf();
-    ghost.draw(targetOf());
+    ghost.draw(resolveTarget());
 
-    assert.equal(ghost.draw(targetOf({ blockId: 99 })), false);
+    assert.equal(ghost.draw(resolveTarget({ blockId: 99 })), false);
     assert.equal(ghost.visible, false);
   });
 });

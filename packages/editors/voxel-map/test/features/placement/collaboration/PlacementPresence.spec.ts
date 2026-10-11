@@ -33,7 +33,7 @@ describe("PlacementPresence", () => {
       .at(new TemplateSource("wall"), { x: 4, y: 0, z: -1 })
       .turnedBy({ rotation: 1, flipX: true });
 
-    const received = overTheWire(PlacementPresence.of(placement));
+    const received = overTheWire(PlacementPresence.fromPlacement(placement));
 
     assert.deepEqual(received?.source, {
       kind: "template",
@@ -58,13 +58,13 @@ describe("PlacementPresence", () => {
       { x: 1, y: 2, z: 3 }
     );
 
-    const json = JSON.parse(JSON.stringify(PlacementPresence.of(placement)));
+    const json = JSON.parse(JSON.stringify(PlacementPresence.fromPlacement(placement)));
 
     assert.deepEqual(json.source, {
       kind: "layer",
       layerName: "Draft"
     });
-    assert.deepEqual(overTheWire(PlacementPresence.of(placement))?.source, json.source);
+    assert.deepEqual(overTheWire(PlacementPresence.fromPlacement(placement))?.source, json.source);
   });
 
   test("rejects malformed payloads", () => {
@@ -107,12 +107,12 @@ describe("PlacementPresence", () => {
 
   test("compares sources by reference id rather than instance", () => {
     const at = { x: 0, y: 0, z: 0 };
-    const first = PlacementPresence.of(Placement.at(new TemplateSource("wall"), at));
-    const second = PlacementPresence.of(Placement.at(new TemplateSource("wall"), at));
-    const turned = PlacementPresence.of(
+    const first = PlacementPresence.fromPlacement(Placement.at(new TemplateSource("wall"), at));
+    const second = PlacementPresence.fromPlacement(Placement.at(new TemplateSource("wall"), at));
+    const turned = PlacementPresence.fromPlacement(
       Placement.at(new TemplateSource("wall"), at).turnedBy({ rotation: 1 })
     );
-    const other = PlacementPresence.of(Placement.at(new TemplateSource("door"), at));
+    const other = PlacementPresence.fromPlacement(Placement.at(new TemplateSource("door"), at));
 
     assert.ok(first.equals(second));
     assert.ok(!first.equals(turned));
@@ -134,7 +134,7 @@ describe("PlacementPresence", () => {
       const region = CellRegion.spanning({ x: 0, y: 0, z: 0 }, { x: to, y: 0, z: 0 });
       const source = RegionSource.capture(world, "Draft", region)!;
 
-      return overTheWire(PlacementPresence.of(Placement.at(source, { x: 0, y: 0, z: 0 })))!;
+      return overTheWire(PlacementPresence.fromPlacement(Placement.at(source, { x: 0, y: 0, z: 0 })))!;
     }
 
     assert.ok(presenceOf(1).equals(presenceOf(1)));

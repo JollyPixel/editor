@@ -272,7 +272,7 @@ describe("VoxelView - normal textures", () => {
     view.loadBlockset(makeAtlasDef(), texture);
     view.flush();
 
-    assert.equal(view.atlases.atlas().normal, null);
+    assert.equal(view.atlases.requireLoadedAtlas().normal, null);
     assert.equal(normalNodeOf(materialsOf(view)[0]), null);
   });
 });

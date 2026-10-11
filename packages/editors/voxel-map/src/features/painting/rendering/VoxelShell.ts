@@ -46,10 +46,10 @@ const kDirections = [0, 1, 2].flatMap((axis) => [
 ]);
 
 export class VoxelShell implements VoxelShellData {
-  static of(
+  static fromCells(
     cells: Iterable<VoxelCoord>
   ): VoxelShell {
-    return new VoxelShell(shellDataOf(cells));
+    return new VoxelShell(buildShellData(cells));
   }
 
   readonly triangles: number[];
@@ -122,13 +122,13 @@ export class VoxelShell implements VoxelShellData {
   }
 }
 
-function shellDataOf(
+function buildShellData(
   cells: Iterable<VoxelCoord>
 ): VoxelShellData {
   const occupied = new Set<string>();
   const list: Vec3[] = [];
   for (const cell of cells) {
-    const key = keyOf(cell.x, cell.y, cell.z);
+    const key = coordinateKey(cell.x, cell.y, cell.z);
     if (occupied.has(key)) {
       continue;
     }
@@ -149,7 +149,7 @@ function shellDataOf(
     for (const { axis, sign } of kDirections) {
       const neighbour: Vec3 = [...cell];
       neighbour[axis] += sign;
-      if (occupied.has(keyOf(...neighbour))) {
+      if (occupied.has(coordinateKey(...neighbour))) {
         continue;
       }
 
@@ -184,7 +184,7 @@ function shellDataOf(
 
   return {
     triangles,
-    rims: rimsOf(triangles, creases.edges),
+    rims: collectRims(triangles, creases.edges),
     ...creases,
     planes: [
       sortedPlanes(planes[0]),
@@ -215,7 +215,7 @@ function isFacing(
   return false;
 }
 
-function rimsOf(
+function collectRims(
   triangles: number[],
   edges: number[]
 ): number[] {
@@ -231,13 +231,13 @@ function rimsOf(
     ) ?? 0;
     const end = edges[offset + 3 + axis];
     for (; point[axis] <= end; point[axis]++) {
-      onEdge.add(keyOf(...point));
+      onEdge.add(coordinateKey(...point));
     }
   }
 
   const rims: number[] = [];
   for (let offset = 0; offset < triangles.length; offset += 3) {
-    rims.push(onEdge.has(keyOf(
+    rims.push(onEdge.has(coordinateKey(
       triangles[offset],
       triangles[offset + 1],
       triangles[offset + 2]
@@ -284,7 +284,7 @@ function collectEdge(
   start: Vec3,
   normal: number
 ): void {
-  const key = `${axis}:${keyOf(...start)}`;
+  const key = `${axis}:${coordinateKey(...start)}`;
   const edge = edgeFaces.get(key);
   if (edge === undefined) {
     edgeFaces.set(key, {
@@ -315,7 +315,7 @@ function mergeCreases(
       (mask, normal) => mask | (1 << normal),
       0
     );
-    const runKey = `${axis}:${faces}:${keyOf(...fixed)}`;
+    const runKey = `${axis}:${faces}:${coordinateKey(...fixed)}`;
     const run = runs.get(runKey);
     if (run === undefined) {
       runs.set(runKey, {
@@ -362,7 +362,7 @@ function mergeCreases(
   };
 }
 
-function keyOf(
+function coordinateKey(
   x: number,
   y: number,
   z: number

@@ -18,7 +18,7 @@ export interface ChunkMeshPass {
   worldOriginY: number;
   worldOriginZ: number;
   stats: MeshBuildStats;
-  bufferFor: (slot: number, blended?: boolean) => PulledFaceBuffer;
+  resolveFaceBuffer: (slot: number, blended?: boolean) => PulledFaceBuffer;
   ambientOcclusion: boolean;
 }
 
@@ -65,7 +65,7 @@ export class ChunkMesher {
 
       const packed = values[slot];
       if (isMergedVoxel(packed)) {
-        const merged = this.#variants.mergedOf(
+        const merged = this.#variants.resolveMerged(
           packed,
           chunk.getPartnerAt(
             linearIdx & mask,

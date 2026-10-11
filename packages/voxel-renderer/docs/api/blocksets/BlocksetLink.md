@@ -35,7 +35,7 @@ Throws a `RangeError` for a slot outside `0..MAX_BLOCKSET_SLOT`.
 | `localBlockId(blockId)` | The blockset-local id of a world block id. |
 | `owns(blockId)` | Whether a world block id belongs to this slot. |
 | `groupId(localId)` | A group id prefixed with `"<blocksetId>/"`. |
-| `localGroupId(groupId)` | The prefix stripped, or `null` for a group of another blockset. |
+| `decodeLocalGroupId(groupId)` | The prefix stripped, or `null` for a group of another blockset. |
 | `equals(other)` | Compares by value. |
 | `toJSON()` | `{ id, slot }`. |
 

@@ -380,7 +380,7 @@ describe("command round-trip", () => {
 
       act(local);
       for (const command of commands) {
-        remote.apply(command);
+        remote.applyCommand(command);
       }
 
       assert.deepEqual(commands.map(({ action }) => action), actions);
@@ -409,9 +409,9 @@ describe("command round-trip", () => {
     const sourceId = local.getLayer("Source")!.id;
     local.mergeLayer("Source", "Target");
     for (const command of commands) {
-      remote.apply(command);
+      remote.applyCommand(command);
     }
-    remote.apply({
+    remote.applyCommand({
       action: "voxels-set",
       layerId: sourceId,
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 4 }] }

@@ -48,7 +48,7 @@ export class VoxelLayerStructure {
     return layer;
   }
 
-  apply(
+  applyCommand(
     command: VoxelLayerStructureCommand
   ): VoxelLayerStructureCommand | null {
     if (command.action === "added") {

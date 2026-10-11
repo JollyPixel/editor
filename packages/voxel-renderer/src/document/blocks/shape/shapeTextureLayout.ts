@@ -11,7 +11,7 @@ import {
   buildShapeGeometry,
   type ShapeGeometry
 } from "./shapeGeometry.ts";
-import { baseSlotOf } from "./shapeSlots.ts";
+import { baseSlotName } from "./shapeSlots.ts";
 
 const kEpsilon = 1e-6;
 const kBoxSlots = [
@@ -59,15 +59,15 @@ export function resolvedBlockTextureSlots(
   block: ResolvedBlockDefinition,
   shape: BlockShape
 ): readonly ResolvedBlockTextureSlot[] {
-  const textures = BlockTextures.of(block);
+  const textures = BlockTextures.fromBlock(block);
 
   return shapeTextureLayout(shape).slots.flatMap((entry) => {
-    const tile = textures.forSlot(entry.slot);
+    const tile = textures.resolveSlotTexture(entry.slot);
 
     return tile ? [
       {
         ...entry,
-        span: textures.spanFor(entry.slot, entry.span),
+        span: textures.resolveSlotSpan(entry.slot, entry.span),
         tile
       }
     ] : [];
@@ -83,8 +83,8 @@ export function shapeTextureLayout(
   const geometry = buildShapeGeometry(shape);
   let everySlotIsOneFullQuad = true;
   const slots = geometry.ranges.map((range): ShapeTextureSlotLayout => {
-    const bounds = boundsOf(geometry, range.start, range.count);
-    const parts = polygonsOf(geometry, range.start, range.definitions);
+    const bounds = computeBounds(geometry, range.start, range.count);
+    const parts = extractPolygons(geometry, range.start, range.definitions);
     if (
       parts.length !== 1 ||
       parts[0].corner !== null ||
@@ -112,19 +112,19 @@ export function shapeTextureLayout(
 }
 
 function slotOrder(a: string, b: string): number {
-  const base = kBoxSlots.indexOf(baseSlotOf(a) as typeof kBoxSlots[number]) -
-    kBoxSlots.indexOf(baseSlotOf(b) as typeof kBoxSlots[number]);
+  const base = kBoxSlots.indexOf(baseSlotName(a) as typeof kBoxSlots[number]) -
+    kBoxSlots.indexOf(baseSlotName(b) as typeof kBoxSlots[number]);
 
-  return base === 0 ? suffixOf(a) - suffixOf(b) : base;
+  return base === 0 ? slotSuffix(a) - slotSuffix(b) : base;
 }
 
-function suffixOf(slot: string): number {
+function slotSuffix(slot: string): number {
   const separator = slot.indexOf(".");
 
   return separator === -1 ? 0 : Number(slot.slice(separator + 1));
 }
 
-function polygonsOf(
+function extractPolygons(
   geometry: ShapeGeometry,
   start: number,
   definitions: readonly { vertices: readonly unknown[]; }[]
@@ -133,7 +133,7 @@ function polygonsOf(
   let cursor = start;
   for (const definition of definitions) {
     const count = definition.vertices.length;
-    const bounds = boundsOf(geometry, cursor, count);
+    const bounds = computeBounds(geometry, cursor, count);
     polygons.push({
       bounds,
       corner: count === 3 ? rightAngleCorner(geometry, cursor, bounds) : null
@@ -144,7 +144,7 @@ function polygonsOf(
   return polygons;
 }
 
-function boundsOf(
+function computeBounds(
   geometry: ShapeGeometry,
   start: number,
   count: number

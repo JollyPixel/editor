@@ -74,49 +74,49 @@ describe("VoxelFootprint", () => {
   });
 });
 
-describe("VoxelFootprint.of", () => {
+describe("VoxelFootprint.fromObject", () => {
   it("occupies a single cell when both extents are absent", () => {
     assert.deepEqual(
-      VoxelFootprint.of(makeObject()).toJSON(),
+      VoxelFootprint.fromObject(makeObject()).toJSON(),
       { width: 1, height: 1 }
     );
   });
 
   it("defaults only the extent that is missing", () => {
     assert.deepEqual(
-      VoxelFootprint.of(makeObject({ width: 4 })).toJSON(),
+      VoxelFootprint.fromObject(makeObject({ width: 4 })).toJSON(),
       { width: 4, height: 1 }
     );
     assert.deepEqual(
-      VoxelFootprint.of(makeObject({ height: 3 })).toJSON(),
+      VoxelFootprint.fromObject(makeObject({ height: 3 })).toJSON(),
       { width: 1, height: 3 }
     );
   });
 
   it("reads whole extents as they are stored", () => {
     assert.deepEqual(
-      VoxelFootprint.of(makeObject({ width: 5, height: 2 })).toJSON(),
+      VoxelFootprint.fromObject(makeObject({ width: 5, height: 2 })).toJSON(),
       { width: 5, height: 2 }
     );
   });
 
   it("snaps stored extents that are not whole cells", () => {
     assert.deepEqual(
-      VoxelFootprint.of(makeObject({ width: 2.6, height: 0.5 })).toJSON(),
+      VoxelFootprint.fromObject(makeObject({ width: 2.6, height: 0.5 })).toJSON(),
       { width: 3, height: 1 }
     );
   });
 
   it("clamps a zero or negative stored extent to one cell", () => {
     assert.deepEqual(
-      VoxelFootprint.of(makeObject({ width: 0, height: -3 })).toJSON(),
+      VoxelFootprint.fromObject(makeObject({ width: 0, height: -3 })).toJSON(),
       { width: 1, height: 1 }
     );
   });
 
   it("leaves the object it reads untouched", () => {
     const object = makeObject({ width: 2.6 });
-    VoxelFootprint.of(object);
+    VoxelFootprint.fromObject(object);
 
     assert.equal(object.width, 2.6);
     assert.equal(object.height, undefined);
@@ -132,7 +132,7 @@ describe("VoxelFootprint#equals", () => {
 
   it("matches a stored object against a patch", () => {
     assert.ok(
-      VoxelFootprint.of(makeObject({ width: 4 }))
+      VoxelFootprint.fromObject(makeObject({ width: 4 }))
         .equals(new VoxelFootprint(4, 1))
     );
   });

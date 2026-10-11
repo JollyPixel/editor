@@ -26,7 +26,7 @@ export class AtlasAverages {
    * Table shared by every atlas drawing `source`, or null when its pixels
    * cannot be read (no 2D canvas, cross-origin image, unloaded image).
    */
-  static of(
+  static fromTexture(
     source: THREE.Texture
   ): AtlasAverages | null {
     const cached = kTables.get(source);
@@ -62,7 +62,7 @@ export class AtlasAverages {
   #stride: number;
 
   /**
-   * Prefer `AtlasAverages.of()`, which shares one table per source texture.
+   * Prefer `AtlasAverages.fromTexture()`, which shares one table per source texture.
    */
   constructor(
     source: THREE.Texture,
@@ -71,7 +71,7 @@ export class AtlasAverages {
     this.#source = source;
     this.#version = source.version;
     this.#stride = pixels.width + 1;
-    this.#table = tableFor(pixels);
+    this.#table = allocateSummedAreaTable(pixels);
 
     this.texture = new THREE.DataTexture(
       this.#table,
@@ -111,7 +111,7 @@ export class AtlasAverages {
       // A resized GPU texture is only reallocated after a dispose.
       this.texture.dispose();
       this.#stride = pixels.width + 1;
-      this.#table = tableFor(pixels);
+      this.#table = allocateSummedAreaTable(pixels);
       this.texture.image = {
         data: this.#table,
         width: pixels.width + 1,
@@ -215,7 +215,7 @@ export class AtlasAverages {
 /**
  * Zeroed table; row 0 and column 0 stay zero across fills.
  */
-function tableFor(
+function allocateSummedAreaTable(
   pixels: AtlasPixels
 ): Float32Array {
   return new Float32Array(

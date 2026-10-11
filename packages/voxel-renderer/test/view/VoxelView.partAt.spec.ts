@@ -47,7 +47,7 @@ function mergePair(
 ): void {
   const { world } = view.document;
   world.setVoxel(kLayer, { ...first, position: kCell });
-  assert.ok(view.canMergeAt(kLayer, kCell, {
+  assert.ok(view.canMergeVoxelPart(kLayer, kCell, {
     blockId: second.blockId,
     transform: VoxelTransform.pack(second)
   }));
@@ -60,14 +60,14 @@ function blockAt(
   y: number,
   z: number
 ): number | undefined {
-  return view.partAt(kLayer, kCell, {
+  return view.pickVoxelPart(kLayer, kCell, {
     x: kCell.x + x,
     y: kCell.y + y,
     z: kCell.z + z
   })?.blockId;
 }
 
-describe("VoxelView.partAt", () => {
+describe("VoxelView.pickVoxelPart", () => {
   afterEach(() => {
     for (const view of kViews) {
       view.dispose();
@@ -92,7 +92,7 @@ describe("VoxelView.partAt", () => {
     );
 
     assert.deepEqual(
-      view.partAt(kLayer, kCell, {
+      view.pickVoxelPart(kLayer, kCell, {
         x: kCell.x + 0.9,
         y: kCell.y + 0.5,
         z: kCell.z + 0.1
@@ -100,7 +100,7 @@ describe("VoxelView.partAt", () => {
       { blockId: kRamp, transform: VoxelTransform.pack({ rotation: 1 }) }
     );
     assert.deepEqual(
-      view.partAt(kLayer, kCell, {
+      view.pickVoxelPart(kLayer, kCell, {
         x: kCell.x + 0.1,
         y: kCell.y + 0.5,
         z: kCell.z + 0.9
@@ -138,7 +138,7 @@ describe("VoxelView.partAt", () => {
       z: 0.5
     };
 
-    assert.equal(view.partAt(kLayer, kCell, point), null);
-    assert.equal(view.partAt("Missing", kCell, point), null);
+    assert.equal(view.pickVoxelPart(kLayer, kCell, point), null);
+    assert.equal(view.pickVoxelPart("Missing", kCell, point), null);
   });
 });

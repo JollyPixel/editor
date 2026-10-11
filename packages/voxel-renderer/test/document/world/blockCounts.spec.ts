@@ -158,7 +158,7 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     assert.equal(world.countBlock(2), 0);
     assert.equal(world.countBlock(1), 4);
     assert.deepEqual(
-      [...world.getLayer("Top")!.positionsOf(new Set([2]))],
+      [...world.getLayer("Top")!.positionsUsingBlocks(new Set([2]))],
       []
     );
   });
@@ -168,11 +168,11 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     world.setLayerPosition("Top", { x: 10, y: 2, z: 0 });
 
     assert.deepEqual(
-      [...world.getLayer("Top")!.positionsOf(new Set([2]))],
+      [...world.getLayer("Top")!.positionsUsingBlocks(new Set([2]))],
       [{ x: 10, y: 2, z: 0 }]
     );
     assert.deepEqual(
-      [...world.getLayer("Ground")!.positionsOf(new Set([2]))]
+      [...world.getLayer("Ground")!.positionsUsingBlocks(new Set([2]))]
         .map(({ x }) => x)
         .sort(),
       [4, 5]

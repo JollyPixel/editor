@@ -49,7 +49,7 @@ export class LightCellScan {
     this.#grid = options.grid;
   }
 
-  cellsOf(
+  scanCells(
     cx: number,
     cy: number,
     cz: number
@@ -145,7 +145,7 @@ export class LightCellScan {
     chunk: VoxelChunk
   ): boolean {
     for (const blockId of chunk.countBlocks().keys()) {
-      if (this.#sources.emissionOf(blockId) !== 0) {
+      if (this.#sources.resolveEmission(blockId) !== 0) {
         return true;
       }
     }
@@ -173,7 +173,7 @@ export class LightCellScan {
     const blockId = voxelBlockId(voxel);
     if (blockId !== this.#lastBlockId) {
       this.#lastBlockId = blockId;
-      this.#lastFlags = this.#sources.flagsOf(blockId);
+      this.#lastFlags = this.#sources.resolveFlags(blockId);
     }
     const flags = this.#lastFlags;
     if ((flags & LIGHT_OPAQUE) !== 0) {

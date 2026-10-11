@@ -122,14 +122,14 @@ export class PeerPlacements extends ActorComponent {
     value: Placement | MarqueePresence | null
   ): void {
     const floating = value instanceof Placement ?
-      floatingSourceOf(value.source) :
+      resolveFloatingSource(value.source) :
       null;
     if (floating !== this.#localFloating) {
       this.#localFloating = floating;
-      this.#floating.publish(floatingPresenceOf(floating));
+      this.#floating.publish(createFloatingPresence(floating));
     }
     this.#channel.publish(
-      value instanceof Placement ? PlacementPresence.of(value) : value
+      value instanceof Placement ? PlacementPresence.fromPlacement(value) : value
     );
   }
 
@@ -190,7 +190,7 @@ export class PeerPlacements extends ActorComponent {
 
     const placement = presence === null ?
       null :
-      this.#placementOf(clientId, presence);
+      this.#resolvePeerPlacement(clientId, presence);
     const template = placement?.source.resolve(this.#world);
     if (placement === null || template === undefined) {
       this.#previews.get(clientId)?.hide();
@@ -201,18 +201,18 @@ export class PeerPlacements extends ActorComponent {
     this.#previewFor(clientId, color).draw(placement, template);
   }
 
-  #placementOf(
+  #resolvePeerPlacement(
     clientId: string,
     presence: PlacementPresence
   ): Placement | null {
-    const source = this.#sourceOf(clientId, presence.source);
+    const source = this.#resolvePlacementSource(clientId, presence.source);
 
     return source === null ?
       null :
       new Placement(source, presence.position, presence.transform);
   }
 
-  #sourceOf(
+  #resolvePlacementSource(
     clientId: string,
     ref: PlacementSourceRef
   ): PlacementSource | null {
@@ -220,14 +220,14 @@ export class PeerPlacements extends ActorComponent {
       case "template":
         return new TemplateSource(ref.templateId);
       case "layer":
-        return this.#layerSourceOf(ref.layerName);
+        return this.#captureLayerSource(ref.layerName);
       case "region":
       case "copy":
-        return this.#floatingSourceOf(clientId, ref);
+        return this.#resolveFloatingSource(clientId, ref);
     }
   }
 
-  #layerSourceOf(
+  #captureLayerSource(
     layerName: string
   ): LayerSource | null {
     let source = this.#layerSources.get(layerName);
@@ -239,7 +239,7 @@ export class PeerPlacements extends ActorComponent {
     return source;
   }
 
-  #floatingSourceOf(
+  #resolveFloatingSource(
     clientId: string,
     ref: RegionSourceRef | CopySourceRef
   ): FloatingSource | null {
@@ -325,7 +325,7 @@ function sameFloating(
   return false;
 }
 
-function floatingSourceOf(
+function resolveFloatingSource(
   source: PlacementSource
 ): FloatingSource | null {
   return source.kind === "region" || source.kind === "copy" ?
@@ -333,7 +333,7 @@ function floatingSourceOf(
     null;
 }
 
-function floatingPresenceOf(
+function createFloatingPresence(
   source: FloatingSource | null
 ): FloatingPresence | null {
   if (source === null) {

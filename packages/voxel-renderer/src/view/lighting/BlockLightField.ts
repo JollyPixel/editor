@@ -355,7 +355,7 @@ export class BlockLightField {
       return;
     }
 
-    const levels = this.#levelsOf(chunk);
+    const levels = this.#allocateLevels(chunk);
     for (const [index, light] of emitters) {
       levels[index] = brightestLight(levels[index], light);
       this.#pushIndex(chunk, index);
@@ -404,7 +404,7 @@ export class BlockLightField {
             continue;
           }
 
-          const levels = this.#levelsOf(chunk);
+          const levels = this.#allocateLevels(chunk);
           const merged = brightestLight(levels[index], light);
           if (merged !== levels[index]) {
             levels[index] = merged;
@@ -509,7 +509,7 @@ export class BlockLightField {
       return;
     }
 
-    const levels = this.#levelsOf(target);
+    const levels = this.#allocateLevels(target);
     const merged = brightestLight(levels[index], light);
     if (merged !== levels[index]) {
       levels[index] = merged;
@@ -530,7 +530,7 @@ export class BlockLightField {
     );
   }
 
-  #levelsOf(
+  #allocateLevels(
     chunk: LightChunk
   ): Uint16Array {
     chunk.levels ??= new Uint16Array(this.grid.cells);
@@ -573,7 +573,7 @@ export class BlockLightField {
         this.#lastChunk = chunk;
       }
     }
-    chunk.cells ??= this.#scan.cellsOf(cx, cy, cz);
+    chunk.cells ??= this.#scan.scanCells(cx, cy, cz);
 
     return chunk;
   }
@@ -587,8 +587,8 @@ function sameLevels(
     return a === b;
   }
 
-  const left = pairsOf(a);
-  const right = pairsOf(b);
+  const left = viewLevelPairs(a);
+  const right = viewLevelPairs(b);
   for (let i = 0; i < left.length; i++) {
     if (left[i] !== right[i]) {
       return false;
@@ -601,7 +601,7 @@ function sameLevels(
 function isDark(
   levels: Uint16Array
 ): boolean {
-  const pairs = pairsOf(levels);
+  const pairs = viewLevelPairs(levels);
   for (let i = 0; i < pairs.length; i++) {
     if (pairs[i] !== 0) {
       return false;
@@ -611,7 +611,7 @@ function isDark(
   return true;
 }
 
-function pairsOf(
+function viewLevelPairs(
   levels: Uint16Array
 ): Uint32Array {
   return new Uint32Array(levels.buffer, levels.byteOffset, levels.length >> 1);

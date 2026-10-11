@@ -36,14 +36,14 @@ function setup() {
   const mapDocument = new Emitter<MapDocumentEvents>();
   const source: BlockUsageSource = {
     stats: stats(2),
-    usageOf: (blockId) => {
+    inspectUsage: (blockId) => {
       return {
         blockId,
         voxels: 7,
         layers: []
       };
     },
-    blocksetUsageOf: (blocksetId) => {
+    inspectBlocksetUsage: (blocksetId) => {
       return {
         blocksetId,
         blocks: [],
@@ -97,8 +97,8 @@ describe("BlockUsageStore", () => {
   it("forwards per-block and per-blockset usage to its source", () => {
     const { usage } = setup();
 
-    assert.equal(usage.usageOf(3).voxels, 7);
-    assert.equal(usage.blocksetUsageOf("atlas").voxels, 9);
+    assert.equal(usage.inspectUsage(3).voxels, 7);
+    assert.equal(usage.inspectBlocksetUsage("atlas").voxels, 9);
   });
 
   it("ignores the document once disposed", async() => {

@@ -14,7 +14,7 @@ export const BRUSH_SHELL_INFLATE = 0.01;
 const kShells = new Map<string, BrushShell>();
 
 export class BrushShell {
-  static of(
+  static fromShape(
     shape: BrushShape
   ): BrushShell {
     const footprint = new BrushFootprint({
@@ -52,8 +52,8 @@ export class BrushShell {
     const { x, y, z } = footprint.center;
     const cells = footprint.cells();
 
-    this.#source = VoxelShell.of(cells);
-    this.#solid = footprint.isBall ? VoxelSolid.of(cells) : null;
+    this.#source = VoxelShell.fromCells(cells);
+    this.#solid = footprint.isBall ? VoxelSolid.fromCells(cells) : null;
     this.#center = [x, y, z];
     this.#scale = [
       (span.x + (BRUSH_SHELL_INFLATE * 2)) / span.x,

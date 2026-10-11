@@ -11,7 +11,7 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import { firstCellAlong } from "../../../../src/features/painting/interaction/firstCellAlong.ts";
 
-function cellsOf(
+function scanCells(
   ...cells: VoxelCoord[]
 ): (cell: VoxelCoord) => boolean {
   const keys = new Set(cells.map(({ x, y, z }) => `${x},${y},${z}`));
@@ -30,7 +30,7 @@ describe("firstCellAlong", () => {
       firstCellAlong(
         ray,
         10,
-        cellsOf({ x: 4, y: 1, z: 0 }, { x: 2, y: 3, z: 0 })
+        scanCells({ x: 4, y: 1, z: 0 }, { x: 2, y: 3, z: 0 })
       ),
       { x: 2, y: 3, z: 0 }
     );
@@ -43,7 +43,7 @@ describe("firstCellAlong", () => {
     };
 
     assert.deepStrictEqual(
-      firstCellAlong(ray, 10, cellsOf({ x: -4, y: -1, z: -1 })),
+      firstCellAlong(ray, 10, scanCells({ x: -4, y: -1, z: -1 })),
       { x: -4, y: -1, z: -1 }
     );
   });
@@ -53,7 +53,7 @@ describe("firstCellAlong", () => {
       origin: { x: 0.5, y: 0.5, z: 0.5 },
       direction: { x: 0, y: 0, z: 1 }
     };
-    const far = cellsOf({ x: 0, y: 0, z: 6 });
+    const far = scanCells({ x: 0, y: 0, z: 6 });
 
     assert.strictEqual(firstCellAlong(ray, 5, far), null);
     assert.deepStrictEqual(firstCellAlong(ray, 6, far), { x: 0, y: 0, z: 6 });

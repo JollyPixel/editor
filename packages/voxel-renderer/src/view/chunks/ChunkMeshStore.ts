@@ -174,7 +174,7 @@ export class ChunkMeshStore {
     viewport: ChunkViewport
   ): ChunkRebuildPlan | null {
     const { key } = target;
-    const members = this.#layout.membersOf(target);
+    const members = this.#layout.collectMembers(target);
     if (members.length === 0) {
       this.remove(key);
 
@@ -183,7 +183,7 @@ export class ChunkMeshStore {
 
     this.#logger.debug(`Rebuilding chunk '${key}'`);
     const [first] = members;
-    const origin = this.#layout.originOf(first.layer, first.chunk);
+    const origin = this.#layout.chunkWorldOrigin(first.layer, first.chunk);
     const far = viewport.isFar(origin, this.#entries.get(key)?.far);
 
     return {
@@ -209,7 +209,7 @@ export class ChunkMeshStore {
     const [first] = members;
     this.#discard(key);
 
-    const light = this.#light?.textureFor(target) ?? null;
+    const light = this.#light?.resolveLightTexture(target) ?? null;
     const meshes: THREE.Mesh[] = [];
     const geometryKeys: ChunkGeometryKey[] = [];
     for (const [geometryKey, geometry] of geometries) {

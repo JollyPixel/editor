@@ -91,7 +91,7 @@ export class VoxelSyncClient extends CommandSync<
       return;
     }
 
-    this.#document.apply(command, {
+    this.#document.applyCommand(command, {
       origin: "remote",
       clientId: command.clientId
     });

@@ -204,7 +204,7 @@ export class BrushMesh extends THREE.Group {
     }
     this.#shapeKey = key;
 
-    const brushShell = BrushShell.of(shape);
+    const brushShell = BrushShell.fromShape(shape);
     const shell = brushShell.local;
     const { flat } = brushShell;
     const geometry = new THREE.BufferGeometry();

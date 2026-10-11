@@ -126,7 +126,7 @@ export class TileOpacityProbe {
     const { tileSize } = atlas.def;
     const size = ref.size ?? tileSize;
     const key = `${ref.col}:${ref.row}:${size}:${alphaCutoff}`;
-    const cache = this.#cacheOf(atlas.texture);
+    const cache = this.#resolveProbeCache(atlas.texture);
     const cached = cache.empty.get(key);
     if (cached !== undefined) {
       return cached;
@@ -153,7 +153,7 @@ export class TileOpacityProbe {
     return empty;
   }
 
-  #cacheOf(
+  #resolveProbeCache(
     texture: AtlasTexture
   ): ProbeCache {
     const cached = this.#caches.get(texture);

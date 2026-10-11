@@ -8,7 +8,7 @@ export interface ToolChoice<TOption> {
   alternatives: TOption[];
 }
 
-export function choiceOf<
+export function resolveToolChoice<
   TValue extends string,
   TOption extends ChoiceOption<TValue>
 >(

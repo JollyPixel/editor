@@ -64,14 +64,14 @@ describe("BlocksetAtlas", () => {
   });
 });
 
-describe("BlocksetAtlas.uvFor", () => {
+describe("BlocksetAtlas.computeTileUvRegion", () => {
   const atlas = new BlocksetAtlas(
     { id: "terrain", src: "t.png", tileSize: 16, cols: 4, rows: 4 },
     mockTexture(64, 64)
   );
 
   it("insets the top-left tile by half a texel", () => {
-    const uv = atlas.uvFor(0, 0);
+    const uv = atlas.computeTileUvRegion(0, 0);
 
     assert.ok(approxEqual(uv.offsetU, 0.0078125));
     assert.ok(approxEqual(uv.offsetV, 0.7578125));
@@ -80,7 +80,7 @@ describe("BlocksetAtlas.uvFor", () => {
   });
 
   it("anchors a smaller region at the tile's top-left corner", () => {
-    const uv = atlas.uvFor(1, 0, 8);
+    const uv = atlas.computeTileUvRegion(1, 0, 8);
 
     assert.ok(approxEqual(uv.offsetU, 16.5 / 64));
     assert.ok(approxEqual(uv.offsetV, 56.5 / 64));
@@ -88,14 +88,14 @@ describe("BlocksetAtlas.uvFor", () => {
   });
 
   it("maps fractional coordinates onto the texel grid", () => {
-    const uv = atlas.uvFor(1.5, 0.5, 16);
+    const uv = atlas.computeTileUvRegion(1.5, 0.5, 16);
 
     assert.ok(approxEqual(uv.offsetU, 24.5 / 64));
     assert.ok(approxEqual(uv.offsetV, 40.5 / 64));
   });
 
   it("swaps a rotated spanned footprint", () => {
-    const uv = atlas.uvFor(0, 0, 16, { u: 1, v: Math.SQRT2 }, 1);
+    const uv = atlas.computeTileUvRegion(0, 0, 16, { u: 1, v: Math.SQRT2 }, 1);
 
     assert.ok(approxEqual(uv.offsetU, 0.5 / 64));
     assert.ok(approxEqual(uv.offsetV, 48.5 / 64));
@@ -104,7 +104,7 @@ describe("BlocksetAtlas.uvFor", () => {
   });
 
   it("extends a spanned region downward over whole texels", () => {
-    const uv = atlas.uvFor(0, 0, 16, { u: 1, v: Math.SQRT2 });
+    const uv = atlas.computeTileUvRegion(0, 0, 16, { u: 1, v: Math.SQRT2 });
 
     assert.ok(approxEqual(uv.offsetU, 0.5 / 64));
     assert.ok(approxEqual(uv.offsetV, 41.5 / 64));

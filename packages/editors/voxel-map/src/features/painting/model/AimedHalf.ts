@@ -11,7 +11,7 @@ import {
 import type { VoxelPaint } from "./BrushStroke.ts";
 
 export class AimedHalf {
-  static of(
+  static select(
     entry: VoxelEntry,
     aimed: VoxelPart
   ): AimedHalf | null {
@@ -58,7 +58,7 @@ export class AimedHalf {
     };
 
     return [painted, turned].find(
-      (part) => complements.complements(packOf(this.kept), packOf(part))
+      (part) => complements.complements(packPart(this.kept), packPart(part))
     ) ?? null;
   }
 }
@@ -71,7 +71,7 @@ function samePart(
     left.transform === right.transform;
 }
 
-function packOf(
+function packPart(
   part: VoxelPart
 ): number {
   return packVoxel(part.blockId, part.transform);

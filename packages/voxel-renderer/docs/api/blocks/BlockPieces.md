@@ -11,7 +11,7 @@ const pieces = new BlockPieces({
   shapes: view.shapes,
   atlases: view.atlases
 });
-const piece = pieces.pieceOf(block, new VoxelTransform({ rotation: 1 }));
+const piece = pieces.resolvePiece(block, new VoxelTransform({ rotation: 1 }));
 ```
 
 ```ts
@@ -38,32 +38,32 @@ interface BlockPiece {
 class BlockPieces {
   constructor(options: BlockPiecesOptions);
 
-  pieceOf(
+  resolvePiece(
     block: ResolvedBlockDefinition,
     transform?: VoxelTransform
   ): BlockPiece | null;
-  geometryOf(
+  buildGeometry(
     block: ResolvedBlockDefinition,
     transform?: VoxelTransform
   ): THREE.BufferGeometry | null;
-  textureOf(block: ResolvedBlockDefinition): THREE.Texture | null;
-  emptySlotsOf(block: ResolvedBlockDefinition): string[];
+  resolveTexture(block: ResolvedBlockDefinition): THREE.Texture | null;
+  findEmptySlots(block: ResolvedBlockDefinition): string[];
   clear(): void;
 }
 ```
 
-`geometryOf()` returns a new geometry in block space, `0` to `1`, with one
+`buildGeometry()` returns a new geometry in block space, `0` to `1`, with one
 group per [texture slot](./BlockTextures.md#texture-slots). A slot whose tile
 `emptyTile` reports empty uses material index `BLOCK_PIECE_EMPTY_GROUP`, the
 others `BLOCK_PIECE_TEXTURED_GROUP`. Without a probe, only a slot with no tile
 is empty. It returns `null` for an unknown shape, and the caller owns the
 result.
 
-`emptySlotsOf()` lists the slots `geometryOf()` puts in the empty group.
+`findEmptySlots()` lists the slots `buildGeometry()` puts in the empty group.
 
-`textureOf()` returns the atlas texture of the blockset `defaultTexture` names,
+`resolveTexture()` returns the atlas texture of the blockset `defaultTexture` names,
 or the `$missing` texture when that blockset is not declared.
 
-`pieceOf()` caches one piece per block object and transform, and owns its
+`resolvePiece()` caches one piece per block object and transform, and owns its
 geometry: do not dispose or transform it. The cache empties when the atlases
 change. `clear()` empties it and disposes the cached geometries.

@@ -113,7 +113,7 @@ function fallbackSelection(
   next: readonly LayerRef[]
 ): LayerRef | null {
   if (current === null) {
-    return firstLayerOf(next);
+    return findFirstLayer(next);
   }
 
   if (next.some((entry) => current.equals(entry))) {
@@ -148,10 +148,10 @@ function fallbackSelection(
     return after[Math.min(index, after.length - 1)];
   }
 
-  return firstLayerOf(next);
+  return findFirstLayer(next);
 }
 
-function firstLayerOf(
+function findFirstLayer(
   entries: readonly LayerRef[]
 ): LayerRef | null {
   return entries.find((entry) => entry.kind === "voxel-layer") ??

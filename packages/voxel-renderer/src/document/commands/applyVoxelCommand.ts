@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { BlockRegistry } from "../blocks/BlockRegistry.ts";
-import { blocksetSlotOf } from "../blocks/BlockId.ts";
+import { decodeBlocksetSlot } from "../blocks/BlockId.ts";
 import type { MaterialGroupList } from "../materials/MaterialGroupList.ts";
 import type { BlendGroupList } from "../materials/BlendGroupList.ts";
 import type { BlocksetList } from "../blocksets/BlocksetList.ts";
@@ -41,15 +41,15 @@ export function applyVoxelWorldCommand(
 ): VoxelWorldCommand | null {
   const { world, blocksets } = target;
   if (isVoxelLayerCommand(command) || isVoxelTemplateCommand(command)) {
-    return world.apply(command, logger);
+    return world.applyCommand(command, logger);
   }
 
-  return blocksets.apply(
+  return blocksets.applyCommand(
     command,
     () => [
       ...world.countBlocks().keys(),
       ...world.templates.countBlocks().keys()
-    ].map(blocksetSlotOf)
+    ].map(decodeBlocksetSlot)
   );
 }
 
@@ -63,13 +63,13 @@ export function applyVoxelCommand(
   logger?: VoxelLogger
 ): VoxelCommand | null {
   if (isVoxelBlockCommand(command)) {
-    return target.blocks.apply(command, target.blocksets.defaultBlocksetId);
+    return target.blocks.applyCommand(command, target.blocksets.defaultBlocksetId);
   }
   if (isVoxelMaterialGroupCommand(command)) {
-    return target.materialGroups.apply(command);
+    return target.materialGroups.applyCommand(command);
   }
   if (isVoxelBlendGroupCommand(command)) {
-    return target.blendGroups.apply(command);
+    return target.blendGroups.applyCommand(command);
   }
 
   return applyVoxelWorldCommand(target, command, logger);

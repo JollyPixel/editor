@@ -90,7 +90,7 @@ export class BrushFootprint implements BrushShape {
     axis: BrushAxis,
     cell: VoxelCoord
   ): BrushPlane {
-    const lock = lockAxisOf(axis);
+    const lock = planeNormalAxis(axis);
 
     return {
       axis: lock,
@@ -293,7 +293,7 @@ export class BrushFootprint implements BrushShape {
   }
 }
 
-function lockAxisOf(
+function planeNormalAxis(
   axis: BrushAxis
 ): CoordAxis {
   switch (axis) {

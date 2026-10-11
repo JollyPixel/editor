@@ -51,7 +51,10 @@ describe("VoxelMeshBuilder - geometry attribute layout", () => {
     place(fixture, [0, 0, 0]);
     const uvs = expandedGeometry(fixture).getAttribute("uv");
 
-    const region = fixture.atlases.atlas().uvFor(DEFAULT_TEXTURE.col, DEFAULT_TEXTURE.row);
+    const region = fixture.atlases.requireLoadedAtlas().computeTileUvRegion(
+      DEFAULT_TEXTURE.col,
+      DEFAULT_TEXTURE.row
+    );
     const step = 1 / 65535;
 
     for (let i = 0; i < uvs.count; i++) {
@@ -71,16 +74,16 @@ describe("VoxelMeshBuilder - geometry attribute layout", () => {
 
   it("samples a ramp slope over its true length only when it owns a tile", () => {
     const step = 1 / 65535;
-    const atlas = makeMeshFixture().atlases.atlas();
+    const atlas = makeMeshFixture().atlases.requireLoadedAtlas();
 
     const shared = rampSlopeVs(makeBlockDef(10, "ramp"));
-    const square = atlas.uvFor(0, 0);
+    const square = atlas.computeTileUvRegion(0, 0);
     assert.ok(Math.abs(Math.min(...shared) - square.offsetV) <= step);
 
     const owned = rampSlopeVs(makeBlockDef(10, "ramp", {
       faceTextures: { top: { col: 1, row: 0 } }
     }));
-    const tall = atlas.uvFor(1, 0, undefined, { u: 1, v: Math.SQRT2 });
+    const tall = atlas.computeTileUvRegion(1, 0, undefined, { u: 1, v: Math.SQRT2 });
     assert.ok(Math.abs(Math.min(...owned) - tall.offsetV) <= step);
     assert.ok(
       Math.abs(Math.max(...owned) - (tall.offsetV + tall.scaleV)) <= step

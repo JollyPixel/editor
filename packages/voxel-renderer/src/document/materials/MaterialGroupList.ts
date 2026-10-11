@@ -59,7 +59,7 @@ export class MaterialGroupList implements Iterable<MaterialGroup> {
     return true;
   }
 
-  apply(
+  applyCommand(
     command: VoxelMaterialGroupCommand
   ): VoxelMaterialGroupCommand | null {
     if (command.action === "material-group-removed") {

@@ -18,7 +18,7 @@ export interface BlockRenderSourcesOptions {
 }
 
 export class BlockRenderSources {
-  static of(
+  static fromView(
     view: VoxelView
   ): BlockRenderSources {
     return new BlockRenderSources({

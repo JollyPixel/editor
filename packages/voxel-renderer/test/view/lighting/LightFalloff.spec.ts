@@ -18,15 +18,15 @@ function ratio(
 
 describe("LightFalloff", () => {
   it("names its curves", () => {
-    assert.equal(LightFalloff.of("wide"), LightFalloff.WIDE);
-    assert.equal(LightFalloff.of("focused"), LightFalloff.FOCUSED);
+    assert.equal(LightFalloff.fromName("wide"), LightFalloff.WIDE);
+    assert.equal(LightFalloff.fromName("focused"), LightFalloff.FOCUSED);
     assert.equal(LightFalloff.FOCUSED.name, "focused");
   });
 
   it("peaks at the source and is dark at level 0", () => {
     for (const falloff of [LightFalloff.WIDE, LightFalloff.FOCUSED]) {
       assert.equal(falloff.brightness(15), 1);
-      assert.equal(falloff.byteOf(15), 255);
+      assert.equal(falloff.encodeLevel(15), 255);
       assert.equal(falloff.brightness(0), 0);
     }
   });
@@ -53,8 +53,8 @@ describe("LightFalloff", () => {
 
   it("maps a packed cell to an RGBA texel premultiplied by openness", () => {
     const bytes = new Uint8Array(new Uint32Array([
-      LightFalloff.WIDE.texelOf(packLight(15, 0, 0)),
-      LightFalloff.WIDE.texelOf(packLight(15, 15, 15) | LIGHT_OPAQUE)
+      LightFalloff.WIDE.decodeTexel(packLight(15, 0, 0)),
+      LightFalloff.WIDE.decodeTexel(packLight(15, 15, 15) | LIGHT_OPAQUE)
     ]).buffer);
 
     assert.deepEqual([...bytes], [255, 0, 0, 255, 0, 0, 0, 0]);

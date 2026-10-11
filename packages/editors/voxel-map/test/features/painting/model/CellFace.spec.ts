@@ -8,24 +8,24 @@ import {
 // Import Internal Dependencies
 import { CellFace } from "../../../../src/features/painting/model/CellFace.ts";
 
-describe("CellFace.of", () => {
+describe("CellFace.fromDirection", () => {
   test("maps each unit direction to its face", () => {
-    assert.strictEqual(CellFace.of({ x: 1, y: 0, z: 0 }).id, "+x");
-    assert.strictEqual(CellFace.of({ x: -1, y: 0, z: 0 }).id, "-x");
-    assert.strictEqual(CellFace.of({ x: 0, y: 1, z: 0 }).id, "+y");
-    assert.strictEqual(CellFace.of({ x: 0, y: -1, z: 0 }).id, "-y");
-    assert.strictEqual(CellFace.of({ x: 0, y: 0, z: 1 }).id, "+z");
-    assert.strictEqual(CellFace.of({ x: 0, y: 0, z: -1 }).id, "-z");
+    assert.strictEqual(CellFace.fromDirection({ x: 1, y: 0, z: 0 }).id, "+x");
+    assert.strictEqual(CellFace.fromDirection({ x: -1, y: 0, z: 0 }).id, "-x");
+    assert.strictEqual(CellFace.fromDirection({ x: 0, y: 1, z: 0 }).id, "+y");
+    assert.strictEqual(CellFace.fromDirection({ x: 0, y: -1, z: 0 }).id, "-y");
+    assert.strictEqual(CellFace.fromDirection({ x: 0, y: 0, z: 1 }).id, "+z");
+    assert.strictEqual(CellFace.fromDirection({ x: 0, y: 0, z: -1 }).id, "-z");
   });
 
   test("snaps a slanted normal to its dominant axis", () => {
-    assert.strictEqual(CellFace.of({ x: 0, y: 0.7, z: -0.6 }).id, "+y");
-    assert.strictEqual(CellFace.of({ x: -0.8, y: 0.1, z: 0.5 }).id, "-x");
-    assert.strictEqual(CellFace.of({ x: 0.2, y: -0.3, z: -0.9 }).id, "-z");
+    assert.strictEqual(CellFace.fromDirection({ x: 0, y: 0.7, z: -0.6 }).id, "+y");
+    assert.strictEqual(CellFace.fromDirection({ x: -0.8, y: 0.1, z: 0.5 }).id, "-x");
+    assert.strictEqual(CellFace.fromDirection({ x: 0.2, y: -0.3, z: -0.9 }).id, "-z");
   });
 
   test("prefers the vertical axis on a tie", () => {
-    assert.strictEqual(CellFace.of({ x: 0.5, y: -0.5, z: 0 }).id, "-y");
+    assert.strictEqual(CellFace.fromDirection({ x: 0.5, y: -0.5, z: 0 }).id, "-y");
   });
 });
 

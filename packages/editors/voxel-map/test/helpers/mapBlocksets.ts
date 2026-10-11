@@ -93,7 +93,7 @@ function makeView(): VoxelView {
         blockRegistry.registerMany(defs);
       },
       removeBlock: (id: number) => blockRegistry.unregister(id),
-      moveBlock: (id: number, toIndex: number) => blockRegistry.moveTo(id, toIndex),
+      moveBlock: (id: number, toIndex: number) => blockRegistry.moveBlockToIndex(id, toIndex),
       defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
       removeMaterialGroup: (id: string) => materialGroups.remove(id),
       defineBlendGroup: (group: BlendGroupJSON) => blendGroups.define(group),

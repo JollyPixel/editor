@@ -23,7 +23,7 @@ function layoutOf(
     ...patch
   });
 
-  return BlockTextureLayout.of(block, kShapes.get(block.shapeId));
+  return BlockTextureLayout.fromShape(block, kShapes.get(block.shapeId));
 }
 
 describe("BlockTextureLayout", () => {
@@ -35,7 +35,7 @@ describe("BlockTextureLayout", () => {
 
     assert.deepEqual(layout.slots, []);
     assert.equal(layout.usesBlockset("atlas"), false);
-    assert.deepEqual(layout.drawnRectsIn("atlas", 16), []);
+    assert.deepEqual(layout.collectDrawnTileRects("atlas", 16), []);
   });
 
   it("uses the blocksets its slots sample", () => {
@@ -46,7 +46,7 @@ describe("BlockTextureLayout", () => {
 
     assert.equal(layout.usesBlockset("atlas"), true);
     assert.equal(layout.usesBlockset("third"), false);
-    assert.deepEqual(layout.slotsIn("atlas").map(({ slot }) => slot), ["top"]);
+    assert.deepEqual(layout.slotsUsingBlockset("atlas").map(({ slot }) => slot), ["top"]);
   });
 
   it("collects the unique rects its slots draw from a blockset", () => {
@@ -58,7 +58,7 @@ describe("BlockTextureLayout", () => {
       }
     });
 
-    assert.deepEqual(layout.drawnRectsIn("atlas", 16), [
+    assert.deepEqual(layout.collectDrawnTileRects("atlas", 16), [
       { x: 0, y: 0, width: 16, height: 16 },
       { x: 16, y: 0, width: 16, height: 16 }
     ]);
@@ -69,7 +69,7 @@ describe("BlockTextureLayout", () => {
       defaultTexture: { blocksetId: "t", col: 1, row: 0, size: 32 }
     });
 
-    assert.deepEqual(layout.drawnRectsIn("t", 16), [
+    assert.deepEqual(layout.collectDrawnTileRects("t", 16), [
       { x: 16, y: 0, width: 32, height: 32 }
     ]);
   });
@@ -83,12 +83,12 @@ describe("BlockTextureLayout", () => {
       defaultTexture: { blocksetId: "wood", col: 1, row: 0 }
     });
 
-    assert.deepEqual(ramp.footprintsIn("wood", 16), [
+    assert.deepEqual(ramp.collectTileFootprintRects("wood", 16), [
       { x: 0, y: 16, width: 16, height: 23 }
     ]);
-    assert.deepEqual(cube.footprintsIn("wood", 16), [
+    assert.deepEqual(cube.collectTileFootprintRects("wood", 16), [
       { x: 16, y: 0, width: 16, height: 16 }
     ]);
-    assert.deepEqual(cube.footprintsIn("stone", 16), []);
+    assert.deepEqual(cube.collectTileFootprintRects("stone", 16), []);
   });
 });

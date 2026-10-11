@@ -17,7 +17,7 @@ export interface MaterialShelf {
 }
 
 export class MaterialShelves implements Iterable<MaterialShelf> {
-  static nodeIdOf(
+  static shelfNodeId(
     blocksetId: string
   ): string {
     return `${kShelfPrefix}${blocksetId}`;
@@ -61,11 +61,11 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
     return undefined;
   }
 
-  shelfOf(
+  findShelf(
     nodeId: string
   ): MaterialShelf | undefined {
     return this.#shelves.find(
-      (shelf) => MaterialShelves.nodeIdOf(shelf.blocksetId) === nodeId ||
+      (shelf) => MaterialShelves.shelfNodeId(shelf.blocksetId) === nodeId ||
         shelf.materials.some((material) => material.id === nodeId)
     );
   }
@@ -73,13 +73,13 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
   has(
     nodeId: string
   ): boolean {
-    return this.shelfOf(nodeId) !== undefined;
+    return this.findShelf(nodeId) !== undefined;
   }
 
   canEdit(
     materialId: string
   ): boolean {
-    return this.shelfOf(materialId)?.editable === true;
+    return this.findShelf(materialId)?.editable === true;
   }
 
   toTreeNodes(): TreeNode[] {
@@ -89,7 +89,7 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
 
     return this.#shelves.map((shelf) => {
       return {
-        id: MaterialShelves.nodeIdOf(shelf.blocksetId),
+        id: MaterialShelves.shelfNodeId(shelf.blocksetId),
         label: shelf.label,
         icon: "folder",
         collapsible: false,

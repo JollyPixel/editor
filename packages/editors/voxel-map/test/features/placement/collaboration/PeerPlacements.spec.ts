@@ -227,7 +227,7 @@ describe("PeerPlacements", () => {
   test("draws a peer's pasted copy from the voxels it sent once, then swaps them for the next copy", () => {
     const [placer, observer] = connected();
     const wall = placer.world.templates.get("wall")!;
-    const first = Placement.at(CopySource.of(wall), { x: 5, y: 0, z: 5 });
+    const first = Placement.at(CopySource.fromSnapshot(wall), { x: 5, y: 0, z: 5 });
 
     placer.placements.publishLocal(first);
     relay(placer, observer);
@@ -243,7 +243,7 @@ describe("PeerPlacements", () => {
     assert.deepEqual(preview.marquee.position.toArray(), [4, 2, 5]);
     assert.deepEqual(preview.marquee.copySizeTo().toArray(), [3, 1, 1]);
 
-    const turned = CopySource.of(
+    const turned = CopySource.fromSnapshot(
       wall.transformed(first.turnedBy({ rotation: 1 }).transform)
     );
     placer.placements.publishLocal(Placement.at(turned, { x: 0, y: 0, z: 0 }));

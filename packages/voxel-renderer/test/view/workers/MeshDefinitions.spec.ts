@@ -66,11 +66,11 @@ describe("DefinedBlocksets", () => {
     const defined = new DefinedBlocksets(structuredClone(blocksets));
 
     for (const id of [undefined, "atlas", "pending", "unknown"]) {
-      const expected = sources.atlases.resolve(id);
-      const actual = defined.resolve(id);
+      const expected = sources.atlases.resolveAtlas(id);
+      const actual = defined.resolveAtlas(id);
 
       assert.deepEqual(actual?.def, expected?.def, String(id));
-      assert.deepEqual(actual?.uvFor(1, 2), expected?.uvFor(1, 2), String(id));
+      assert.deepEqual(actual?.computeTileUvRegion(1, 2), expected?.computeTileUvRegion(1, 2), String(id));
     }
   });
 });

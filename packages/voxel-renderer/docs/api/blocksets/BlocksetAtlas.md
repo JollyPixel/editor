@@ -6,7 +6,7 @@ Get it from [`view.atlases`](./BlocksetAtlases.md).
 ```ts
 const atlas = view.atlases.atlas("terrain");
 
-atlas.uvFor(2, 0); // { offsetU, offsetV, scaleU, scaleV }
+atlas.computeTileUvRegion(2, 0); // { offsetU, offsetV, scaleU, scaleV }
 atlas.updateImage(paintedCanvas);
 ```
 
@@ -39,7 +39,7 @@ size)` does the same without a texture.
 
 ## Methods
 
-#### `uvFor(col: number, row: number, size?: number, span?: TileSpan, rotation?: TileRotation): AtlasUVRegion`
+#### `computeTileUvRegion(col: number, row: number, size?: number, span?: TileSpan, rotation?: TileRotation): AtlasUVRegion`
 
 The texture rectangle of a `size` by `size` texel region (default
 `def.tileSize`) anchored at the top-left of tile `(col, row)`. `span` and
@@ -65,6 +65,11 @@ texture. The image must keep the size the atlas was built with.
 #### `updateNormal(image: AtlasSize): void`
 
 Same for the normal atlas. Throws when the atlas has none.
+
+#### `disposeUnsharedTextures(next: BlocksetAtlas): void`
+
+Disposes this atlas's textures except those also used by `next`. Use it when
+replacing an atlas while retaining its colour or normal texture.
 
 #### `dispose(): void`
 

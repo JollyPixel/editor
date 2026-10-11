@@ -155,7 +155,7 @@ export class VoxelChunk {
 
     return packed === VOXEL_ABSENT ?
       undefined :
-      this.#entryOf(index, packed);
+      this.#unpackEntry(index, packed);
   }
 
   get partners(): VoxelStore | null {
@@ -169,10 +169,10 @@ export class VoxelChunk {
   ): PackedVoxel {
     const index = this.linearIndex(lx, ly, lz);
 
-    return this.#partnerOf(index, this.store.get(index));
+    return this.#readPartner(index, this.store.get(index));
   }
 
-  #partnerOf(
+  #readPartner(
     index: number,
     packed: PackedVoxel
   ): PackedVoxel {
@@ -181,12 +181,12 @@ export class VoxelChunk {
       VOXEL_ABSENT;
   }
 
-  #entryOf(
+  #unpackEntry(
     index: number,
     packed: PackedVoxel
   ): VoxelEntry {
     const entry = unpackVoxel(packed);
-    const partner = this.#partnerOf(index, packed);
+    const partner = this.#readPartner(index, packed);
     if (partner !== VOXEL_ABSENT) {
       entry.partner = unpackVoxel(partner);
     }
@@ -415,7 +415,7 @@ export class VoxelChunk {
     for (let slot = 0; slot < capacity; slot++) {
       const key = keys[slot];
       if (key >= 0) {
-        yield [key, this.#entryOf(key, values[slot])];
+        yield [key, this.#unpackEntry(key, values[slot])];
       }
     }
   }
@@ -428,7 +428,7 @@ export class VoxelChunk {
       if (key >= 0) {
         const packed = values[slot];
 
-        yield [key, unmarkMerged(packed), this.#partnerOf(key, packed)];
+        yield [key, unmarkMerged(packed), this.#readPartner(key, packed)];
       }
     }
   }

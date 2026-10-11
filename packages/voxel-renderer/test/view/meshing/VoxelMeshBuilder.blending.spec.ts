@@ -106,7 +106,7 @@ function regionOf(
   blockId: number
 ): number[] {
   const [col, row] = kTiles[blockId];
-  const region = fixture.atlases.atlas().uvFor(col, row);
+  const region = fixture.atlases.requireLoadedAtlas().computeTileUvRegion(col, row);
 
   return [region.offsetU, region.offsetV, region.scaleU, region.scaleV]
     .map((value) => Math.round(Math.fround(value) * kUnorm16));

@@ -19,7 +19,7 @@ import {
 import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
 import type { MapLayers } from "./MapLayers.ts";
 
-export function layerSelectionsOf(
+export function collectLayerSelections(
   world: VoxelWorld
 ): LayerRef[] {
   return [

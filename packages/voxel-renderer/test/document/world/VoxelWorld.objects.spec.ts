@@ -101,7 +101,7 @@ describe("VoxelWorld - object layers", () => {
     const world = makeWorld();
     const commands = recordCommands(world);
 
-    const applied = world.objectLayers.apply({
+    const applied = world.objectLayers.applyCommand({
       action: "object-removed",
       layerName: "From",
       metadata: { objectId: "obj1" }

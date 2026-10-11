@@ -114,7 +114,7 @@ export class VoxelEditBatch {
     const lz = z & this.#mask;
     const cells = this.#trackedCells(layer, touched);
     const index = lx + (size * (ly + (size * lz)));
-    let entry = cells.entryOf(index);
+    let entry = cells.entryIndex(index);
     if (entry < 0) {
       const chunk = layer.getChunk(touched.cx, touched.cy, touched.cz);
       entry = cells.track(
@@ -147,7 +147,7 @@ export class VoxelEditBatch {
     y: number,
     z: number
   ): TouchedChunk {
-    const touched = this.#chunkOf(
+    const touched = this.#touchChunk(
       layer,
       x >> this.#shift,
       y >> this.#shift,
@@ -305,7 +305,7 @@ export class VoxelEditBatch {
     return cells;
   }
 
-  #chunkOf(
+  #touchChunk(
     layer: VoxelLayer,
     cx: number,
     cy: number,

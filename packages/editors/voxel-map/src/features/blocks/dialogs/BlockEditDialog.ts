@@ -104,7 +104,7 @@ export class BlockEditDialog extends WorkspaceElement {
     }
 
     const { blocksets, view } = workspace;
-    const owner = blocksets.ownerOf(block.id);
+    const owner = blocksets.findOwner(block.id);
     const blocksetId = owner?.definition.id ?? "";
 
     return html`
@@ -137,7 +137,7 @@ export class BlockEditDialog extends WorkspaceElement {
             open: this._open,
             sources: workspace.blockSources,
             block,
-            size: BlockTextures.of(block).size ?? blocksets.tileSizeOf(blocksetId),
+            size: BlockTextures.fromBlock(block).size ?? blocksets.tileSizeFor(blocksetId),
             onSizeChange: this.#onSizeChange
           })}
         </div>
@@ -165,7 +165,7 @@ export class BlockEditDialog extends WorkspaceElement {
       return nothing;
     }
 
-    const usage = workspace.usage.usageOf(block.id);
+    const usage = workspace.usage.inspectUsage(block.id);
 
     return html`
       <jolly-separator label="Usage"></jolly-separator>
@@ -256,7 +256,7 @@ export class BlockEditDialog extends WorkspaceElement {
     const block = this.#block;
     if (block !== undefined) {
       this.workspace?.blocksets.defineBlock(
-        BlockTextures.of(block).withSize(event.detail.value).applyTo(block)
+        BlockTextures.fromBlock(block).withTileSize(event.detail.value).createTexturedBlock(block)
       );
     }
   };
@@ -280,7 +280,7 @@ export class BlockEditDialog extends WorkspaceElement {
       return;
     }
 
-    const usage = workspace.usage.usageOf(block.id);
+    const usage = workspace.usage.inspectUsage(block.id);
     const confirmed = usage.unused ||
       await this._dialog.confirmInline({
         message: `Delete "${block.name}"? ${usage.removalMessage}`,

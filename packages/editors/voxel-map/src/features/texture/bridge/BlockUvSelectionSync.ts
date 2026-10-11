@@ -48,14 +48,14 @@ export class BlockUvSelectionSync {
       return;
     }
 
-    const blockId = this.#regions()?.blockIdOf(event.selectedRegionId) ?? null;
+    const blockId = this.#regions()?.resolveBlockId(event.selectedRegionId) ?? null;
     if (blockId !== null) {
       this.#block.id = blockId;
     }
   };
 
   readonly #onSelectedBlockChange = (id: number): void => {
-    const uvId = this.#regions()?.regionIdOf(id) ?? null;
+    const uvId = this.#regions()?.resolveRegionId(id) ?? null;
 
     this.#uv.select(uvId !== null && this.#uv.get(uvId) ? uvId : null);
   };

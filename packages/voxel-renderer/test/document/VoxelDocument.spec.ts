@@ -139,7 +139,7 @@ describe("VoxelDocument.apply", () => {
 
     document.moveBlock(LEAVES_ID, -5);
 
-    assert.equal(document.blocks.indexOf(LEAVES_ID), 0);
+    assert.equal(document.blocks.findIndex(LEAVES_ID), 0);
     assert.deepEqual(commands, [
       {
         action: "block-moved",
@@ -153,7 +153,7 @@ describe("VoxelDocument.apply", () => {
     const document = makeDocument();
     const events = trace(document);
 
-    document.apply({
+    document.applyCommand({
       action: "voxel-set",
       layerId: document.world.getLayer("Ground")!.id,
       metadata: {
@@ -220,7 +220,7 @@ describe("VoxelDocument - command origin", () => {
     const document = makeDocument();
     const events = trace(document);
 
-    document.apply({
+    document.applyCommand({
       action: "blockset-added",
       blockset: { id: "b", src: "b", tileSize: 16 }
     });
@@ -255,7 +255,7 @@ describe("VoxelDocument - command origin", () => {
       const events = trace(document);
       const command = commandOf(document);
 
-      assert.equal(document.apply(command, { origin: "remote" }), true);
+      assert.equal(document.applyCommand(command, { origin: "remote" }), true);
 
       assert.deepEqual(events, [
         { event: "command", action: command.action, origin: "remote" }
@@ -268,7 +268,7 @@ describe("VoxelDocument - command origin", () => {
     const events = trace(document);
 
     const ground = document.world.getLayer("Ground")!;
-    assert.equal(document.apply({
+    assert.equal(document.applyCommand({
       action: "layer-moved",
       layerId: ground.id,
       metadata: { rank: ground.rank }
@@ -281,7 +281,7 @@ describe("VoxelDocument - command origin", () => {
     const document = makeDocument();
     const events = trace(document);
 
-    document.apply(makeAddedCommand("Remote"), { origin: "remote" });
+    document.applyCommand(makeAddedCommand("Remote"), { origin: "remote" });
     document.world.setVoxel("Ground", {
       position: { x: 1, y: 0, z: 0 },
       blockId: CUBE_ID
@@ -308,7 +308,7 @@ describe("VoxelDocument - block redefinition", () => {
       name: "Leaves",
       defaultTexture: { col: 2, row: 0 }
     }));
-    document.apply(blockDefinedCmd({ id: LEAVES_ID }), { origin: "remote" });
+    document.applyCommand(blockDefinedCmd({ id: LEAVES_ID }), { origin: "remote" });
 
     assert.deepEqual(redefinitions, ["added", "metadata", "tiles", "tiles"]);
   });

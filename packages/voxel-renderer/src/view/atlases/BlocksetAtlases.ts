@@ -49,7 +49,7 @@ export class BlocksetAtlases {
     }
 
     const atlas = new BlocksetAtlas(declared, texture, normal);
-    this.#atlases.get(blocksetId)?.disposeReplacedBy(atlas);
+    this.#atlases.get(blocksetId)?.disposeUnsharedTextures(atlas);
     this.#atlases.set(blocksetId, atlas);
     this.#version++;
 
@@ -91,7 +91,7 @@ export class BlocksetAtlases {
     return id === null ? undefined : this.#atlases.get(id);
   }
 
-  resolve(
+  resolveAtlas(
     blocksetId?: string
   ): BlocksetAtlas | MissingBlocksetAtlas | undefined {
     const id = blocksetId ?? this.defaultBlocksetId;
@@ -104,7 +104,7 @@ export class BlocksetAtlases {
     return this.#missing;
   }
 
-  atlas(
+  requireLoadedAtlas(
     blocksetId?: string
   ): BlocksetAtlas {
     const id = blocksetId ?? this.defaultBlocksetId;

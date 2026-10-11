@@ -2,9 +2,9 @@
 import {
   composeBlockId,
   isBlocksetSlot,
-  localBlockIdOf,
+  decodeLocalBlockId,
   MAX_BLOCKSET_SLOT,
-  blocksetSlotOf
+  decodeBlocksetSlot
 } from "../blocks/BlockId.ts";
 import type { ResolvedBlockDefinition } from "../blocks/BlockDefinition.ts";
 import { BlockTextures } from "../blocks/BlockTextures.ts";
@@ -37,31 +37,31 @@ export class BlocksetSlot {
     this.slot = options.slot;
   }
 
-  owns(
+  ownsBlockId(
     blockId: number
   ): boolean {
-    return blocksetSlotOf(blockId) === this.slot;
+    return decodeBlocksetSlot(blockId) === this.slot;
   }
 
-  blockId(
+  composeBlockId(
     localId: number
   ): number {
     return composeBlockId(this.slot, localId);
   }
 
-  localBlockId(
+  decodeLocalBlockId(
     blockId: number
   ): number {
-    return localBlockIdOf(blockId);
+    return decodeLocalBlockId(blockId);
   }
 
-  groupId(
+  qualifyGroupId(
     localId: string
   ): string {
     return `${this.#groupPrefix}${localId}`;
   }
 
-  localGroupId(
+  decodeLocalGroupId(
     groupId: string
   ): string | null {
     const prefix = this.#groupPrefix;
@@ -69,10 +69,10 @@ export class BlocksetSlot {
     return groupId.startsWith(prefix) ? groupId.slice(prefix.length) : null;
   }
 
-  project(
+  projectBlock(
     block: ResolvedBlockDefinition
   ): ResolvedBlockDefinition {
-    const projected = BlockTextures.of(block)
+    const projected = BlockTextures.fromBlock(block)
       .map((ref) => (
         ref.blocksetId === this.id ?
           ref :
@@ -81,38 +81,38 @@ export class BlocksetSlot {
             blocksetId: this.id
           }
       ))
-      .applyTo(block);
+      .createTexturedBlock(block);
 
     return {
       ...projected,
-      id: this.blockId(block.id),
+      id: this.composeBlockId(block.id),
       ...(block.materialGroup === undefined ? {} : {
-        materialGroup: this.groupId(block.materialGroup)
+        materialGroup: this.qualifyGroupId(block.materialGroup)
       }),
       ...(block.blendGroup === undefined ? {} : {
-        blendGroup: this.groupId(block.blendGroup)
+        blendGroup: this.qualifyGroupId(block.blendGroup)
       })
     };
   }
 
-  projectAll(
+  projectBlocks(
     blocks: Iterable<ResolvedBlockDefinition>
   ): ResolvedBlockDefinition[] {
-    return Array.from(blocks, (block) => this.project(block));
+    return Array.from(blocks, (block) => this.projectBlock(block));
   }
 
-  local(
+  localizeBlock(
     block: ResolvedBlockDefinition
   ): ResolvedBlockDefinition {
     return {
       ...withoutBlocksets(block),
-      id: this.localBlockId(block.id),
+      id: this.decodeLocalBlockId(block.id),
       ...(block.materialGroup === undefined ? {} : {
-        materialGroup: this.localGroupId(block.materialGroup) ??
+        materialGroup: this.decodeLocalGroupId(block.materialGroup) ??
           block.materialGroup
       }),
       ...(block.blendGroup === undefined ? {} : {
-        blendGroup: this.localGroupId(block.blendGroup) ?? block.blendGroup
+        blendGroup: this.decodeLocalGroupId(block.blendGroup) ?? block.blendGroup
       })
     };
   }
@@ -122,16 +122,16 @@ export class BlocksetSlot {
   ): MaterialGroupJSON {
     return {
       ...group,
-      id: this.groupId(group.id)
+      id: this.qualifyGroupId(group.id)
     };
   }
 
-  localMaterialGroup(
+  localizeMaterialGroup(
     group: MaterialGroupJSON
   ): MaterialGroupJSON {
     return {
       ...group,
-      id: this.localGroupId(group.id) ?? group.id
+      id: this.decodeLocalGroupId(group.id) ?? group.id
     };
   }
 
@@ -140,9 +140,9 @@ export class BlocksetSlot {
   ): BlendGroupJSON {
     return {
       ...group,
-      id: this.groupId(group.id),
+      id: this.qualifyGroupId(group.id),
       ...(group.exclude === undefined ? {} : {
-        exclude: group.exclude.map((id) => this.groupId(id))
+        exclude: group.exclude.map((id) => this.qualifyGroupId(id))
       })
     };
   }

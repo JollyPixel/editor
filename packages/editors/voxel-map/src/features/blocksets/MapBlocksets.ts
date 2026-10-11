@@ -103,7 +103,7 @@ export class MapBlocksets
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
     this.#alphaModes = new BlockAlphaModes({
       view: this.#view,
-      pixelsOf: (blocksetId) => this.#loadedPixelsOf(blocksetId)
+      resolvePixels: (blocksetId) => this.#resolveLoadedPixels(blocksetId)
     });
 
     this.#catalog.on("change", this.refresh);
@@ -144,11 +144,11 @@ export class MapBlocksets
     return this.#bindings.get(blocksetId);
   }
 
-  ownerOf(
+  findOwner(
     blockId: number
   ): BlocksetBinding | undefined {
     return [...this.#bindings.values()].find(
-      (binding) => binding.slot.owns(blockId)
+      (binding) => binding.slot.ownsBlockId(blockId)
     );
   }
 
@@ -173,7 +173,7 @@ export class MapBlocksets
     return this.#editableBlockOwner(blockId) !== undefined;
   }
 
-  tileSizeOf(
+  tileSizeFor(
     blocksetId: string
   ): number | undefined {
     return this.#bindings.get(blocksetId)?.opened.blockset.tileSize;
@@ -189,14 +189,14 @@ export class MapBlocksets
     blocksetId: string,
     size: number | undefined
   ): TilePosition | undefined {
-    const tileSize = this.tileSizeOf(blocksetId);
+    const tileSize = this.tileSizeFor(blocksetId);
     if (tileSize === undefined) {
       return undefined;
     }
 
     const { atlases, shapes, document } = this.#view;
     const atlas = atlases.get(blocksetId)?.def;
-    const occupancy = TileOccupancy.of(
+    const occupancy = TileOccupancy.collect(
       document.blocks.getAll(),
       (shapeId) => shapes.get(shapeId),
       blocksetId,
@@ -225,7 +225,7 @@ export class MapBlocksets
   duplicateBlock(
     blockId: number
   ): number | null {
-    const owner = this.ownerOf(blockId);
+    const owner = this.findOwner(blockId);
     const blocks = [...this.#view.document.blocks.getAll()];
     const index = blocks.findIndex((block) => block.id === blockId);
     if (owner === undefined || index === -1) {
@@ -272,14 +272,14 @@ export class MapBlocksets
   defineMaterialGroup(
     group: MaterialGroup
   ): boolean {
-    return this.#materialGroupOwnerOf(group.id)?.link
+    return this.#findMaterialGroupOwner(group.id)?.link
       .defineMaterialGroup(group.toJSON()) ?? false;
   }
 
   removeMaterialGroup(
     groupId: string
   ): boolean {
-    return this.#materialGroupOwnerOf(groupId)?.link
+    return this.#findMaterialGroupOwner(groupId)?.link
       .removeMaterialGroup(groupId) ?? false;
   }
 
@@ -287,7 +287,7 @@ export class MapBlocksets
     groupId: string,
     to: string
   ): boolean {
-    return this.#materialGroupOwnerOf(groupId)?.link
+    return this.#findMaterialGroupOwner(groupId)?.link
       .renameMaterialGroup(groupId, to) ?? false;
   }
 
@@ -475,7 +475,7 @@ export class MapBlocksets
     binding.dispose();
   }
 
-  #loadedPixelsOf(
+  #resolveLoadedPixels(
     blocksetId: string
   ): BlocksetPixels | undefined {
     const binding = this.#bindings.get(blocksetId);
@@ -492,16 +492,16 @@ export class MapBlocksets
   #editableBlockOwner(
     blockId: number
   ): BlocksetBinding | undefined {
-    const owner = this.ownerOf(blockId);
+    const owner = this.findOwner(blockId);
 
     return owner?.access.current.has("blocks") ? owner : undefined;
   }
 
-  #materialGroupOwnerOf(
+  #findMaterialGroupOwner(
     groupId: string
   ): BlocksetBinding | undefined {
     const owner = [...this.#bindings.values()].find(
-      (binding) => binding.slot.localGroupId(groupId) !== null
+      (binding) => binding.slot.decodeLocalGroupId(groupId) !== null
     );
 
     return owner?.access.current.has("materials") ? owner : undefined;

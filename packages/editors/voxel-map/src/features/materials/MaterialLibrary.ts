@@ -169,7 +169,7 @@ export class MaterialLibrary extends WorkspaceElement {
   ) {
     if (
       block === undefined ||
-      !material.slot.owns(block.id) ||
+      !material.slot.ownsBlockId(block.id) ||
       !workspace.blocksets.canEditBlock(block.id)
     ) {
       return html`
@@ -231,7 +231,7 @@ export class MaterialLibrary extends WorkspaceElement {
       return selectedId;
     }
 
-    return workspace.materials.of(workspace.state.block.id)?.id ?? null;
+    return workspace.materials.findForBlock(workspace.state.block.id)?.id ?? null;
   }
 
   #block(
@@ -243,7 +243,7 @@ export class MaterialLibrary extends WorkspaceElement {
   #followBlock(
     workspace: VoxelMapWorkspace
   ): void {
-    const material = workspace.materials.of(workspace.state.block.id);
+    const material = workspace.materials.findForBlock(workspace.state.block.id);
     if (material !== undefined) {
       this._selectedId = material.id;
     }
@@ -275,7 +275,7 @@ export class MaterialLibrary extends WorkspaceElement {
 
     const { name } = event.detail;
     this._selectedId = workspace?.materials.rename(material, name) === "renamed" ?
-      material.slot.groupId(name.trim()) :
+      material.slot.qualifyGroupId(name.trim()) :
       material.id;
   };
 
@@ -289,8 +289,8 @@ export class MaterialLibrary extends WorkspaceElement {
     const selectedId = this.#selectedIn(workspace, shelves);
     const selectedShelf = selectedId === null ?
       undefined :
-      shelves.shelfOf(selectedId);
-    const blockOwner = workspace.blocksets.ownerOf(workspace.state.block.id);
+      shelves.findShelf(selectedId);
+    const blockOwner = workspace.blocksets.findOwner(workspace.state.block.id);
     const writable = shelves.editableShelves;
     const preferred = [selectedShelf?.slot, blockOwner?.slot].find(
       (slot) => writable.some((shelf) => shelf.slot === slot)
@@ -348,7 +348,7 @@ function applyBlockedReason(
     return "Select a block to apply this material";
   }
 
-  return material.slot.owns(block.id) ?
+  return material.slot.ownsBlockId(block.id) ?
     "You can only view the blocks of this blockset" :
     `${block.name} belongs to another blockset`;
 }

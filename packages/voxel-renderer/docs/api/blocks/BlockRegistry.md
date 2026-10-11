@@ -26,10 +26,10 @@ class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   ): this;
   unregister(id: number): boolean;
   clear(): void;
-  moveTo(id: number, toIndex: number): boolean;
-  indexOf(id: number): number;
+  moveBlockToIndex(id: number, toIndex: number): boolean;
+  findIndex(id: number): number;
   get(id: number): ResolvedBlockDefinition | undefined;
-  propertiesOf(id: number): BlockProperties | undefined;
+  copyProperties(id: number): BlockProperties | undefined;
   has(id: number): boolean;
   getAll(): IterableIterator<ResolvedBlockDefinition>;
 }
@@ -60,7 +60,7 @@ registered.
 
 `get()` returns the stored definition, not a copy. Treat it as read-only.
 
-`propertiesOf()` returns a copy of the block's custom properties, `{}` for a
+`copyProperties()` returns a copy of the block's custom properties, `{}` for a
 block without any, and `undefined` for an unknown id.
 
 ## Ordering
@@ -68,8 +68,8 @@ block without any, and `undefined` for an unknown id.
 Blocks keep registration order, and iteration, `getAll()` and
 [`BlocksetDocument.toJSON()`](../blocksets/BlocksetDocument.md) follow it.
 
-`moveTo()` moves a block to `toIndex`, clamped to the list. It returns `false`
-for an unknown id or a move that changes nothing. `indexOf()` returns `-1` for
+`moveBlockToIndex()` moves a block to `toIndex`, clamped to the list. It returns `false`
+for an unknown id or a move that changes nothing. `findIndex()` returns `-1` for
 an unknown id. Order has no effect on rendering.
 
 ## Creating blocks from a blockset

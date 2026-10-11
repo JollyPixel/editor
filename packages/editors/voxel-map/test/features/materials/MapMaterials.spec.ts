@@ -41,14 +41,14 @@ function blockOwner(
   links: BlocksetLink[],
   blockId: number
 ): BlocksetLink | undefined {
-  return links.find((link) => link.slot.owns(blockId));
+  return links.find((link) => link.slot.ownsBlockId(blockId));
 }
 
 function groupOwner(
   links: BlocksetLink[],
   groupId: string
 ): BlocksetLink | undefined {
-  return links.find((link) => link.slot.localGroupId(groupId) !== null);
+  return links.find((link) => link.slot.decodeLocalGroupId(groupId) !== null);
 }
 
 function setup(
@@ -71,7 +71,7 @@ function setup(
   const materials = new MapMaterials({
     document,
     blocksets: {
-      ownerOf: (blockId) => blockOwner(links, blockId),
+      findOwner: (blockId) => blockOwner(links, blockId),
       defineBlock: (definition) => blockOwner(links, definition.id)?.defineBlock(definition) ?? false,
       defineMaterialGroup: (group) => (
         groupOwner(links, group.id)?.defineMaterialGroup(group.toJSON()) ?? false
@@ -106,8 +106,8 @@ describe("MapMaterials", () => {
     assert.equal(listed[0].finish.metalness, 1);
     assert.deepEqual(listed[1].blockIds, [kGrass, kDirt]);
     assert.ok(listed[1].finish.equals(new MaterialGroup({ id: "terrain/wet" })));
-    assert.equal(materials.of(kGrass)?.id, "terrain/wet");
-    assert.equal(materials.of(kSand), undefined);
+    assert.equal(materials.findForBlock(kGrass)?.id, "terrain/wet");
+    assert.equal(materials.findForBlock(kSand), undefined);
     assert.deepEqual(materials.availableTo(composeBlockId(9, 1)), []);
   });
 
@@ -173,7 +173,7 @@ describe("MapMaterials", () => {
       [block(kGrass, "terrain/gold")],
       [new MaterialGroup({ id: "terrain/gold", roughness: 0.4 })]
     );
-    const gold = materials.of(kGrass)!;
+    const gold = materials.findForBlock(kGrass)!;
 
     assert.equal(materials.refinish(gold, { metalness: 1 }), true);
     assert.equal(materials.refinish(gold, { metalness: 1 }), false);
@@ -190,7 +190,7 @@ describe("MapMaterials", () => {
       [block(kGrass, "terrain/glow")],
       [new MaterialGroup({ id: "terrain/glow" })]
     );
-    const glow = materials.of(kGrass)!;
+    const glow = materials.findForBlock(kGrass)!;
 
     assert.equal(materials.refinish(glow, { lightLevel: 12 }), true);
     assert.equal(materials.refinish(glow, { lightLevel: 16 }), false);
@@ -202,7 +202,7 @@ describe("MapMaterials", () => {
   it("defines the finish of a material only its blocks named", () => {
     const { document, materials } = setup([block(kGrass, "terrain/wet")]);
 
-    assert.equal(materials.refinish(materials.of(kGrass)!, { roughness: 0.2 }), true);
+    assert.equal(materials.refinish(materials.findForBlock(kGrass)!, { roughness: 0.2 }), true);
 
     assert.equal(document.materialGroups.get("terrain/wet")?.roughness, 0.2);
   });
@@ -216,7 +216,7 @@ describe("MapMaterials", () => {
       ],
       [new MaterialGroup({ id: "terrain/wet", roughness: 0.2 })]
     );
-    const wet = materials.of(kGrass)!;
+    const wet = materials.findForBlock(kGrass)!;
 
     assert.equal(materials.rename(wet, "dry"), "taken");
     assert.equal(materials.rename(wet, "  "), "unchanged");
@@ -239,7 +239,7 @@ describe("MapMaterials", () => {
       [new MaterialGroup({ id: "terrain/wet" })]
     );
 
-    materials.remove(materials.of(kGrass)!);
+    materials.remove(materials.findForBlock(kGrass)!);
 
     assert.equal(document.blocks.get(kGrass)?.materialGroup, undefined);
     assert.equal(document.blocks.get(kDirt)?.materialGroup, undefined);

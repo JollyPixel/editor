@@ -57,7 +57,7 @@ describe("VoxelView - blocksets", () => {
 
     assert.equal(view.document.blocksets.get("atlas")?.slot, slot);
     assert.equal(view.document.blocksets.get("atlas")?.tileSize, 32);
-    assert.equal(view.atlases.atlas("atlas").def.tileSize, 32);
+    assert.equal(view.atlases.requireLoadedAtlas("atlas").def.tileSize, 32);
   });
 
   it("redraws the blocks of a removed blockset with the missing texture", () => {

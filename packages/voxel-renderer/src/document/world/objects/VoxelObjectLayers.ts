@@ -134,7 +134,7 @@ export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
     });
   }
 
-  apply(
+  applyCommand(
     command: VoxelObjectLayerCommand
   ): VoxelObjectLayerCommand | null {
     const changed = this.#change(command);

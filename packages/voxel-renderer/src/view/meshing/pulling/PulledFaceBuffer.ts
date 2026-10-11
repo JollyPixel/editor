@@ -108,8 +108,8 @@ export class PulledFaceBuffer {
     const y = wy - this.#originY;
     const z = wz - this.#originZ;
     const shaded = face.cull < 0 ? AO_UNOCCLUDED : ao;
-    const template = this.#templates.idOf(face);
-    const flip = this.#templates.diagonalFlipOf(template, shaded);
+    const template = this.#templates.internFace(face);
+    const flip = this.#templates.resolveDiagonalFlip(template, shaded);
 
     const offset = this.#reserve();
     this.#words[offset] = x |
@@ -170,14 +170,14 @@ export class PulledFaceBuffer {
     for (let i = 0; i < kIndicesPerWord; i++) {
       const neighbour = neighbours?.[first + i] ?? null;
       if (neighbour !== null) {
-        word |= this.#entryOf(neighbour) << (i * kIndexBits);
+        word |= this.#resolvePaletteEntry(neighbour) << (i * kIndexBits);
       }
     }
 
     return word >>> 0;
   }
 
-  #entryOf(
+  #resolvePaletteEntry(
     neighbour: FaceBlendNeighbour
   ): number {
     let entry = this.#paletteEntries.get(neighbour);

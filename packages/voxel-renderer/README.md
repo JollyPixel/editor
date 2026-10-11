@@ -41,6 +41,9 @@ $ yarn add @jolly-pixel/voxel.renderer
 
 ## 👀 Usage example
 
+For renamed factories and helpers, see the
+[API name migration guide](./docs/guides/api-name-migration.md).
+
 Load atlas textures before creating the view:
 
 ```ts

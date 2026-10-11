@@ -73,7 +73,7 @@ export class MapObject {
 
   get area(): AreaTransform {
     const { x, y, z } = this.data;
-    const footprint = VoxelFootprint.of(this.data);
+    const footprint = VoxelFootprint.fromObject(this.data);
 
     return {
       position: { x, y, z },
@@ -93,7 +93,7 @@ export class MapObject {
     return data.x === patch.x &&
       data.y === patch.y &&
       data.z === patch.z &&
-      VoxelFootprint.of(data).equals(
+      VoxelFootprint.fromObject(data).equals(
         new VoxelFootprint(patch.width, patch.height)
       );
   }

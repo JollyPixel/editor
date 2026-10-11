@@ -53,7 +53,7 @@ export class CellFace {
     return CellFace.all.find((face) => face.id === value);
   }
 
-  static of(
+  static fromDirection(
     direction: VoxelCoord
   ): CellFace {
     const x = Math.abs(direction.x);

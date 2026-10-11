@@ -31,11 +31,11 @@ describe("BlockRenderSources.createPieces", () => {
   const pieces = texturedSources().createPieces();
 
   it("lists every slot of an untextured block as empty", () => {
-    assert.deepEqual(pieces.emptySlotsOf(blockOf({})), kCubeSlots);
+    assert.deepEqual(pieces.findEmptySlots(blockOf({})), kCubeSlots);
   });
 
   it("lists nothing for a painted block", () => {
-    assert.deepEqual(pieces.emptySlotsOf(blockOf({ defaultTexture: kPainted })), []);
+    assert.deepEqual(pieces.findEmptySlots(blockOf({ defaultTexture: kPainted })), []);
   });
 
   it("probes the atlas pixels for the slots mapped to a blank tile", () => {
@@ -44,16 +44,16 @@ describe("BlockRenderSources.createPieces", () => {
       faceTextures: { top: kBlank, bottom: kBlank }
     });
 
-    assert.deepEqual(pieces.emptySlotsOf(block), ["top", "bottom"]);
+    assert.deepEqual(pieces.findEmptySlots(block), ["top", "bottom"]);
     assert.equal(
-      pieces.geometryOf(block)!.groups[2].materialIndex,
+      pieces.buildGeometry(block)!.groups[2].materialIndex,
       BLOCK_PIECE_EMPTY_GROUP
     );
   });
 
   it("lists nothing for an unknown shape", () => {
     assert.deepEqual(
-      pieces.emptySlotsOf(
+      pieces.findEmptySlots(
         blockOf({ shapeId: "unknown" as BlockDefinition["shapeId"] })
       ),
       []

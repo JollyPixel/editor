@@ -80,8 +80,8 @@ describe("ShapeOccupancy", () => {
     it(`pairs ${shape} with ${complement} under every shared transform`, () => {
       for (const shared of kTransforms) {
         assert.ok(
-          occupancyOf(shape, shared).complements(
-            occupancyOf(complement, transform.followedBy(shared))
+          resolveOccupancy(shape, shared).complements(
+            resolveOccupancy(complement, transform.followedBy(shared))
           ),
           `transform ${shared.packed}`
         );
@@ -90,8 +90,8 @@ describe("ShapeOccupancy", () => {
 
     it(`pairs ${complement} with ${shape} symmetrically`, () => {
       assert.ok(
-        occupancyOf(complement, transform).complements(
-          occupancyOf(shape, VoxelTransform.Identity)
+        resolveOccupancy(complement, transform).complements(
+          resolveOccupancy(shape, VoxelTransform.Identity)
         )
       );
     });
@@ -99,19 +99,19 @@ describe("ShapeOccupancy", () => {
 
   it("rejects a shape paired with a copy of itself", () => {
     assert.equal(
-      occupancyOf("slabBottom").complements(occupancyOf("slabBottom")),
+      resolveOccupancy("slabBottom").complements(resolveOccupancy("slabBottom")),
       false
     );
     assert.equal(
-      occupancyOf("ramp").complements(occupancyOf("ramp")),
+      resolveOccupancy("ramp").complements(resolveOccupancy("ramp")),
       false
     );
   });
 
   it("rejects a mirrored half that lands on the same half", () => {
     assert.equal(
-      occupancyOf("slabBottom").complements(
-        occupancyOf("slabTop", kUpsideDown)
+      resolveOccupancy("slabBottom").complements(
+        resolveOccupancy("slabTop", kUpsideDown)
       ),
       false
     );
@@ -119,11 +119,11 @@ describe("ShapeOccupancy", () => {
 
   it("rejects pairs that leave part of the cell empty", () => {
     assert.equal(
-      occupancyOf("pole").complements(occupancyOf("slabBottom")),
+      resolveOccupancy("pole").complements(resolveOccupancy("slabBottom")),
       false
     );
     assert.equal(
-      occupancyOf("ramp").complements(occupancyOf("slabTop")),
+      resolveOccupancy("ramp").complements(resolveOccupancy("slabTop")),
       false
     );
   });
@@ -131,7 +131,7 @@ describe("ShapeOccupancy", () => {
   it("rejects a cube with anything", () => {
     for (const id of kShapes.ids()) {
       assert.equal(
-        occupancyOf("cube").complements(occupancyOf(id)),
+        resolveOccupancy("cube").complements(resolveOccupancy(id)),
         false,
         id
       );
@@ -140,15 +140,15 @@ describe("ShapeOccupancy", () => {
 
   it("memoizes one occupancy per shape and transform", () => {
     assert.equal(
-      occupancyOf("ramp", kUpsideDown),
-      occupancyOf("ramp", kUpsideDown)
+      resolveOccupancy("ramp", kUpsideDown),
+      resolveOccupancy("ramp", kUpsideDown)
     );
   });
 });
 
-function occupancyOf(
+function resolveOccupancy(
   id: BlockShapeID,
   transform: VoxelTransform = VoxelTransform.Identity
 ): ShapeOccupancy {
-  return ShapeOccupancy.of(kShapes.get(id)!, transform);
+  return ShapeOccupancy.fromShape(kShapes.get(id)!, transform);
 }

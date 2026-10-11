@@ -55,7 +55,7 @@ export class BlendGroupList implements Iterable<BlendGroup> {
     return true;
   }
 
-  apply(
+  applyCommand(
     command: VoxelBlendGroupCommand
   ): VoxelBlendGroupCommand | null {
     if (command.action === "blend-group-removed") {

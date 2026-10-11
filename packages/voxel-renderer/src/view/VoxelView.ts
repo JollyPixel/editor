@@ -446,7 +446,7 @@ export class VoxelView {
     });
   }
 
-  canMergeAt(
+  canMergeVoxelPart(
     layerName: string,
     position: THREE.Vector3Like,
     part: VoxelPart
@@ -467,7 +467,7 @@ export class VoxelView {
     );
   }
 
-  partAt(
+  pickVoxelPart(
     layerName: string,
     position: THREE.Vector3Like,
     point: THREE.Vector3Like
@@ -486,7 +486,7 @@ export class VoxelView {
       return unpackVoxel(packed);
     }
 
-    const occupancy = this.complements.occupancyOf(packed);
+    const occupancy = this.complements.resolveOccupancy(packed);
     const local: Vec3 = [
       point.x - position.x,
       point.y - position.y,

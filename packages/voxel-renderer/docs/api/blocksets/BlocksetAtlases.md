@@ -9,7 +9,7 @@ atlas yet.
 document.blocksets.add(definition);
 view.atlases.registerTexture(definition.id, texture);
 
-const uv = view.atlases.get(definition.id)?.uvFor(0, 0);
+const uv = view.atlases.get(definition.id)?.computeTileUvRegion(0, 0);
 ```
 
 ## Properties
@@ -35,9 +35,14 @@ new one does not reuse. `normal` is an optional
 The atlas of a blockset, or of the default blockset when `blocksetId` is omitted.
 `undefined` when it has no atlas.
 
-#### `atlas(blocksetId?: string): BlocksetAtlas`
+#### `requireLoadedAtlas(blocksetId?: string): BlocksetAtlas`
 
 Same lookup; throws instead of returning `undefined`.
+
+#### `resolveAtlas(blocksetId?: string): BlocksetAtlas | MissingBlocksetAtlas | undefined`
+
+Returns the loaded atlas, or the missing-texture atlas when the id is undeclared.
+A declared blockset without a loaded texture returns `undefined`.
 
 #### `dispose(): void`
 

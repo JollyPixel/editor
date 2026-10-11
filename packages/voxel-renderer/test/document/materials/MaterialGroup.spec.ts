@@ -88,7 +88,7 @@ describe("MaterialGroup", () => {
       emissive: "#ff0000",
       emissiveIntensity: 2,
       normalScale: 0.5
-    }).applyTo(material);
+    }).applyMaterialFinish(material);
 
     assert.equal(material.roughness, 0.25);
     assert.equal(material.metalness, 1);
@@ -104,7 +104,7 @@ describe("MaterialGroup", () => {
       emissive: "#00ff00",
       emissiveIntensity: 0.5,
       normalScale: 2
-    }).applyTo(material);
+    }).applyMaterialFinish(material);
 
     assert.equal(material.emissive.getHexString(), "00ff00");
     assert.equal(material.emissiveIntensity, 0.5);
@@ -114,7 +114,7 @@ describe("MaterialGroup", () => {
   it("keeps an optional swatch colour out of the rendered finish", () => {
     const group = new MaterialGroup({ id: "gold", swatch: "#FFAA00" });
     const material = new THREE.MeshStandardMaterial();
-    group.applyTo(material);
+    group.applyMaterialFinish(material);
 
     assert.equal(new MaterialGroup({ id: "gold" }).swatch, null);
     assert.equal(group.swatch, "#ffaa00");
@@ -168,22 +168,22 @@ describe("MaterialGroupList", () => {
   it("applies commands, returning the parsed definition or null", () => {
     const list = new MaterialGroupList();
 
-    assert.deepEqual(list.apply({
+    assert.deepEqual(list.applyCommand({
       action: "material-group-defined",
       group: { id: "gold", metalness: 1 }
     }), {
       action: "material-group-defined",
       group: new MaterialGroup({ id: "gold", metalness: 1 }).toJSON()
     });
-    assert.equal(list.apply({
+    assert.equal(list.applyCommand({
       action: "material-group-defined",
       group: { id: "bad", roughness: 4 }
     }), null);
-    assert.equal(list.apply({
+    assert.equal(list.applyCommand({
       action: "material-group-removed",
       groupId: "missing"
     }), null);
-    assert.notEqual(list.apply({
+    assert.notEqual(list.applyCommand({
       action: "material-group-removed",
       groupId: "gold"
     }), null);

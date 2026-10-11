@@ -13,7 +13,7 @@ export function pickBlockAt(
 ): number | null {
   const { world } = view.document;
 
-  for (const cell of footprintOf(footprint)) {
+  for (const cell of centerFirstCells(footprint)) {
     const entry = world.getVoxelAt(cell);
     if (entry !== undefined) {
       return entry.blockId;
@@ -23,7 +23,7 @@ export function pickBlockAt(
   return null;
 }
 
-function* footprintOf(
+function* centerFirstCells(
   footprint: BrushFootprint
 ): IterableIterator<VoxelCoord> {
   const center = footprint.position;

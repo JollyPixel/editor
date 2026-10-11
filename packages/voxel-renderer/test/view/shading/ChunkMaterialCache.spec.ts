@@ -27,7 +27,7 @@ import {
 // CONSTANTS
 const kBlend = new BlockSurface({ alphaMode: "blend" });
 
-function keyOf(
+function createGeometryKey(
   blocksetId: string,
   surface = new BlockSurface()
 ): ChunkGeometryKey {
@@ -49,27 +49,30 @@ function makeCache(
 
 describe("ChunkMaterialCache — resolve", () => {
   it("defaults to a lambert material", () => {
-    const material = makeCache().resolve(keyOf("atlas"));
+    const material = makeCache().resolve(createGeometryKey("atlas"));
     assert.ok(material instanceof THREE.MeshLambertMaterial);
   });
 
   it("builds a standard material when asked", () => {
-    const material = makeCache({ type: "standard" }).resolve(keyOf("atlas"));
+    const material = makeCache({ type: "standard" }).resolve(createGeometryKey("atlas"));
     assert.ok(material instanceof THREE.MeshStandardMaterial);
   });
 
   it("shares one material across calls with the same key", () => {
     const cache = makeCache();
-    assert.equal(cache.resolve(keyOf("atlas")), cache.resolve(keyOf("atlas")));
+    assert.equal(cache.resolve(createGeometryKey("atlas")), cache.resolve(createGeometryKey("atlas")));
   });
 
   it("separates the cutout variant from the plain one", () => {
     const cache = makeCache();
-    assert.notEqual(cache.resolve(keyOf("atlas")), cache.resolve(keyOf("atlas", kBlend)));
+    assert.notEqual(
+      cache.resolve(createGeometryKey("atlas")),
+      cache.resolve(createGeometryKey("atlas", kBlend))
+    );
   });
 
   it("renders opaque geometry front-side only, without blending", () => {
-    const material = makeCache().resolve(keyOf("atlas"));
+    const material = makeCache().resolve(createGeometryKey("atlas"));
 
     assert.equal(material.transparent, false);
     assert.equal(material.depthWrite, !material.transparent);
@@ -77,18 +80,18 @@ describe("ChunkMaterialCache — resolve", () => {
   });
 
   it("shows both sides of cutout geometry even when opaque", () => {
-    assert.equal(makeCache().resolve(keyOf("atlas", kBlend)).side, THREE.DoubleSide);
+    assert.equal(makeCache().resolve(createGeometryKey("atlas", kBlend)).side, THREE.DoubleSide);
   });
 
   it("blends cutout geometry without writing depth", () => {
-    const material = makeCache().resolve(keyOf("atlas", kBlend));
+    const material = makeCache().resolve(createGeometryKey("atlas", kBlend));
 
     assert.equal(material.transparent, true);
     assert.equal(material.depthWrite, !material.transparent);
   });
 
   it("does not apply a global cutoff to opaque geometry", () => {
-    assert.equal(makeCache().resolve(keyOf("atlas")).alphaTest, 0);
+    assert.equal(makeCache().resolve(createGeometryKey("atlas")).alphaTest, 0);
   });
 
   it("hands each new material to the customizer with its blockset id", () => {
@@ -97,8 +100,8 @@ describe("ChunkMaterialCache — resolve", () => {
       customizer: (_material, blocksetId) => seen.push(blocksetId)
     });
 
-    cache.resolve(keyOf("atlas"));
-    cache.resolve(keyOf("atlas"));
+    cache.resolve(createGeometryKey("atlas"));
+    cache.resolve(createGeometryKey("atlas"));
 
     assert.deepEqual(seen, ["atlas"]);
   });
@@ -113,8 +116,8 @@ describe("ChunkMaterialCache — material groups", () => {
     ]);
     const cache = makeCache({ materialGroups });
 
-    const plain = cache.resolve(keyOf("atlas"));
-    const gold = cache.resolve(keyOf("atlas", kGold));
+    const plain = cache.resolve(createGeometryKey("atlas"));
+    const gold = cache.resolve(createGeometryKey("atlas", kGold));
 
     assert.ok(plain instanceof THREE.MeshLambertMaterial);
     assert.ok(gold instanceof THREE.MeshStandardMaterial);
@@ -126,7 +129,7 @@ describe("ChunkMaterialCache — material groups", () => {
     const cache = makeCache({ materialGroups: new MaterialGroupList() });
 
     assert.ok(
-      cache.resolve(keyOf("atlas", kGold)) instanceof THREE.MeshLambertMaterial
+      cache.resolve(createGeometryKey("atlas", kGold)) instanceof THREE.MeshLambertMaterial
     );
   });
 
@@ -143,7 +146,7 @@ describe("ChunkMaterialCache — material groups", () => {
       }
     });
 
-    const gold = cache.resolve(keyOf("atlas", kGold));
+    const gold = cache.resolve(createGeometryKey("atlas", kGold));
     assert.ok(gold instanceof THREE.MeshStandardMaterial);
     assert.equal(gold.metalness, 0.5);
   });
@@ -151,12 +154,12 @@ describe("ChunkMaterialCache — material groups", () => {
   it("updates a changed finish in place", () => {
     const materialGroups = new MaterialGroupList([{ id: "gold" }]);
     const cache = makeCache({ materialGroups });
-    const gold = cache.resolve(keyOf("atlas", kGold));
+    const gold = cache.resolve(createGeometryKey("atlas", kGold));
 
     materialGroups.define({ id: "gold", metalness: 1 });
 
     assert.equal(cache.refreshGroup("gold"), false);
-    assert.equal(cache.resolve(keyOf("atlas", kGold)), gold);
+    assert.equal(cache.resolve(createGeometryKey("atlas", kGold)), gold);
     assert.ok(gold instanceof THREE.MeshStandardMaterial);
     assert.equal(gold.metalness, 1);
   });
@@ -164,20 +167,20 @@ describe("ChunkMaterialCache — material groups", () => {
   it("evicts the group materials when the group appears or goes", () => {
     const materialGroups = new MaterialGroupList();
     const cache = makeCache({ materialGroups });
-    const plain = cache.resolve(keyOf("atlas"));
-    const before = cache.resolve(keyOf("atlas", kGold));
+    const plain = cache.resolve(createGeometryKey("atlas"));
+    const before = cache.resolve(createGeometryKey("atlas", kGold));
 
     materialGroups.define({ id: "gold" });
     assert.equal(cache.refreshGroup("gold"), true);
-    const after = cache.resolve(keyOf("atlas", kGold));
+    const after = cache.resolve(createGeometryKey("atlas", kGold));
     assert.notEqual(after, before);
     assert.ok(after instanceof THREE.MeshStandardMaterial);
-    assert.equal(cache.resolve(keyOf("atlas")), plain);
+    assert.equal(cache.resolve(createGeometryKey("atlas")), plain);
 
     materialGroups.remove("gold");
     assert.equal(cache.refreshGroup("gold"), true);
     assert.ok(
-      cache.resolve(keyOf("atlas", kGold)) instanceof THREE.MeshLambertMaterial
+      cache.resolve(createGeometryKey("atlas", kGold)) instanceof THREE.MeshLambertMaterial
     );
   });
 });
@@ -185,11 +188,11 @@ describe("ChunkMaterialCache — material groups", () => {
 describe("ChunkMaterialCache — invalidate", () => {
   it("rebuilds the materials of one blockset", () => {
     const cache = makeCache();
-    const before = cache.resolve(keyOf("atlas"));
+    const before = cache.resolve(createGeometryKey("atlas"));
 
     cache.invalidate("atlas");
 
-    assert.notEqual(cache.resolve(keyOf("atlas")), before);
+    assert.notEqual(cache.resolve(createGeometryKey("atlas")), before);
   });
 
   it("keeps the materials of other blocksets", () => {
@@ -200,20 +203,20 @@ describe("ChunkMaterialCache — invalidate", () => {
       atlases,
       faceTemplates: new FaceTemplateTable()
     });
-    const kept = cache.resolve(keyOf("other"));
+    const kept = cache.resolve(createGeometryKey("other"));
 
     cache.invalidate("atlas");
 
-    assert.equal(cache.resolve(keyOf("other")), kept);
+    assert.equal(cache.resolve(createGeometryKey("other")), kept);
   });
 
   it("rebuilds every material without a blockset id", () => {
     const cache = makeCache();
-    const before = cache.resolve(keyOf("atlas"));
+    const before = cache.resolve(createGeometryKey("atlas"));
 
     cache.invalidate();
 
-    assert.notEqual(cache.resolve(keyOf("atlas")), before);
+    assert.notEqual(cache.resolve(createGeometryKey("atlas")), before);
   });
 });
 
@@ -237,7 +240,7 @@ describe("ChunkMaterialCache — tile averaging", () => {
     const { cache, texture } = readableAtlasCache();
     assert.equal(cache.tileAveraging, true);
 
-    cache.resolve(keyOf("atlas"));
+    cache.resolve(createGeometryKey("atlas"));
 
     assert.ok(AtlasAverages.peek(texture));
   });
@@ -245,7 +248,7 @@ describe("ChunkMaterialCache — tile averaging", () => {
   it("skips the table when averaging is off", () => {
     const { cache, texture } = readableAtlasCache(false);
 
-    cache.resolve(keyOf("atlas"));
+    cache.resolve(createGeometryKey("atlas"));
 
     assert.equal(AtlasAverages.peek(texture), undefined);
   });
@@ -255,12 +258,18 @@ describe("ChunkMaterialCache — far materials", () => {
   it("keeps the far variant apart from the near one", () => {
     const cache = makeCache();
 
-    assert.notEqual(cache.resolve(keyOf("atlas")), cache.resolve(keyOf("atlas"), true));
-    assert.equal(cache.resolve(keyOf("atlas"), true), cache.resolve(keyOf("atlas"), true));
+    assert.notEqual(
+      cache.resolve(createGeometryKey("atlas")),
+      cache.resolve(createGeometryKey("atlas"), true)
+    );
+    assert.equal(
+      cache.resolve(createGeometryKey("atlas"), true),
+      cache.resolve(createGeometryKey("atlas"), true)
+    );
   });
 
   it("draws far blend surfaces opaque, writing depth", () => {
-    const material = makeCache().resolve(keyOf("atlas", kBlend), true);
+    const material = makeCache().resolve(createGeometryKey("atlas", kBlend), true);
 
     assert.equal(material.transparent, false);
     assert.equal(material.depthWrite, true);
@@ -268,11 +277,11 @@ describe("ChunkMaterialCache — far materials", () => {
 
   it("evicts far variants with their blockset", () => {
     const cache = makeCache();
-    const far = cache.resolve(keyOf("atlas"), true);
+    const far = cache.resolve(createGeometryKey("atlas"), true);
 
     cache.invalidate("atlas");
 
-    assert.notEqual(cache.resolve(keyOf("atlas"), true), far);
+    assert.notEqual(cache.resolve(createGeometryKey("atlas"), true), far);
   });
 });
 
@@ -283,22 +292,22 @@ describe("ChunkMaterialCache — alpha to coverage", () => {
     const cache = makeCache();
 
     assert.equal(cache.alphaToCoverage, false);
-    assert.equal(cache.resolve(keyOf("atlas", kMask)).alphaToCoverage, false);
+    assert.equal(cache.resolve(createGeometryKey("atlas", kMask)).alphaToCoverage, false);
   });
 
   it("enables it on mask materials only", () => {
     const cache = makeCache({ alphaToCoverage: true });
 
-    assert.equal(cache.resolve(keyOf("atlas", kMask)).alphaToCoverage, true);
-    assert.equal(cache.resolve(keyOf("atlas")).alphaToCoverage, false);
-    assert.equal(cache.resolve(keyOf("atlas", kBlend)).alphaToCoverage, false);
+    assert.equal(cache.resolve(createGeometryKey("atlas", kMask)).alphaToCoverage, true);
+    assert.equal(cache.resolve(createGeometryKey("atlas")).alphaToCoverage, false);
+    assert.equal(cache.resolve(createGeometryKey("atlas", kBlend)).alphaToCoverage, false);
   });
 });
 
 describe("ChunkMaterialCache — vertex pulling", () => {
   it("samples the atlas from its color node only", () => {
     const cache = makeCache();
-    const material = cache.resolve(keyOf("atlas"));
+    const material = cache.resolve(createGeometryKey("atlas"));
 
     assert.equal(material.map, null);
     assert.ok((material as { colorNode?: unknown; }).colorNode);
@@ -329,15 +338,15 @@ describe("ChunkMaterialCache — normal texture", () => {
   }
 
   it("perturbs the normal of a blockset with a normal texture", () => {
-    assert.notEqual(normalNodeOf(reliefCache().resolve(keyOf("atlas"))), null);
+    assert.notEqual(normalNodeOf(reliefCache().resolve(createGeometryKey("atlas"))), null);
   });
 
   it("keeps the geometric normal without a normal texture", () => {
-    assert.equal(normalNodeOf(makeCache().resolve(keyOf("atlas"))), null);
+    assert.equal(normalNodeOf(makeCache().resolve(createGeometryKey("atlas"))), null);
   });
 
   it("keeps the geometric normal on flat distant faces", () => {
-    const material = reliefCache().resolve(keyOf("atlas"), true);
+    const material = reliefCache().resolve(createGeometryKey("atlas"), true);
 
     assert.equal(normalNodeOf(material), null);
   });
@@ -348,7 +357,7 @@ describe("ChunkMaterialCache — normal texture", () => {
     ]);
 
     assert.equal(
-      normalNodeOf(reliefCache(materialGroups).resolve(keyOf("atlas", kStone))),
+      normalNodeOf(reliefCache(materialGroups).resolve(createGeometryKey("atlas", kStone))),
       null
     );
   });
@@ -356,36 +365,36 @@ describe("ChunkMaterialCache — normal texture", () => {
   it("updates a non-zero normal scale in place", () => {
     const materialGroups = new MaterialGroupList([{ id: "stone" }]);
     const cache = reliefCache(materialGroups);
-    const stone = cache.resolve(keyOf("atlas", kStone));
+    const stone = cache.resolve(createGeometryKey("atlas", kStone));
 
     materialGroups.define({ id: "stone", normalScale: 2 });
 
     assert.equal(cache.refreshGroup("stone"), false);
-    assert.equal(cache.resolve(keyOf("atlas", kStone)), stone);
+    assert.equal(cache.resolve(createGeometryKey("atlas", kStone)), stone);
     assert.deepEqual(stone.normalScale.toArray(), [2, 2]);
   });
 
   it("evicts the group materials when the normal scale reaches or leaves zero", () => {
     const materialGroups = new MaterialGroupList([{ id: "stone" }]);
     const cache = reliefCache(materialGroups);
-    const relief = cache.resolve(keyOf("atlas", kStone));
+    const relief = cache.resolve(createGeometryKey("atlas", kStone));
 
     materialGroups.define({ id: "stone", normalScale: 0 });
     assert.equal(cache.refreshGroup("stone"), true);
-    const flat = cache.resolve(keyOf("atlas", kStone));
+    const flat = cache.resolve(createGeometryKey("atlas", kStone));
     assert.notEqual(flat, relief);
     assert.equal(normalNodeOf(flat), null);
 
     materialGroups.define({ id: "stone", normalScale: 1 });
     assert.equal(cache.refreshGroup("stone"), true);
-    assert.notEqual(normalNodeOf(cache.resolve(keyOf("atlas", kStone))), null);
+    assert.notEqual(normalNodeOf(cache.resolve(createGeometryKey("atlas", kStone))), null);
   });
 });
 
 describe("ChunkMaterialCache — release", () => {
   it("keeps a released material for the next chunk resolving its key", () => {
     const cache = makeCache();
-    const material = cache.resolve(keyOf("atlas", kBlend));
+    const material = cache.resolve(createGeometryKey("atlas", kBlend));
     let disposed = false;
     material.addEventListener("dispose", () => {
       disposed = true;
@@ -395,13 +404,13 @@ describe("ChunkMaterialCache — release", () => {
     cache.release(material);
 
     assert.equal(disposed, false);
-    assert.equal(cache.resolve(keyOf("atlas", kBlend)), material);
+    assert.equal(cache.resolve(createGeometryKey("atlas", kBlend)), material);
   });
 
   it("disposes the oldest released material past sixteen idle ones", () => {
     const cache = makeCache();
     const materials = Array.from({ length: 17 }, (_, index) => {
-      const material = cache.resolve(keyOf(
+      const material = cache.resolve(createGeometryKey(
         "atlas",
         new BlockSurface({ alphaMode: "mask", alphaCutoff: index / 100 })
       ));
@@ -420,14 +429,14 @@ describe("ChunkMaterialCache — release", () => {
 
     assert.deepEqual([...disposed], [materials[0]]);
     assert.notEqual(
-      cache.resolve(keyOf("atlas", new BlockSurface({ alphaMode: "mask", alphaCutoff: 0 }))),
+      cache.resolve(createGeometryKey("atlas", new BlockSurface({ alphaMode: "mask", alphaCutoff: 0 }))),
       materials[0]
     );
   });
 
   it("stops treating a material as idle once a chunk retains it again", () => {
     const cache = makeCache();
-    const material = cache.resolve(keyOf("atlas", kBlend));
+    const material = cache.resolve(createGeometryKey("atlas", kBlend));
     cache.retain(material);
     cache.release(material);
     cache.retain(material);
@@ -435,7 +444,7 @@ describe("ChunkMaterialCache — release", () => {
     const disposed: THREE.Material[] = [];
     material.addEventListener("dispose", () => disposed.push(material));
     for (let index = 0; index < 17; index++) {
-      const other = cache.resolve(keyOf(
+      const other = cache.resolve(createGeometryKey(
         "atlas",
         new BlockSurface({ alphaMode: "mask", alphaCutoff: index / 100 })
       ));

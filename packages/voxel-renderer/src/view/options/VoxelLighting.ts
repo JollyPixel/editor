@@ -128,7 +128,7 @@ export class VoxelLighting {
   set blockLightFalloff(
     value: BlockLightFalloff
   ) {
-    const falloff = LightFalloff.of(value);
+    const falloff = LightFalloff.fromName(value);
     if (falloff === this.#context.light.falloff) {
       return;
     }

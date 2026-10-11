@@ -88,8 +88,8 @@ export class RegionPresence {
     return source.layerName === other.source.layerName &&
       source.region.equals(other.source.region) &&
       sameCellCoord(source.pivot, other.source.pivot) &&
-      PresenceSnapshot.of(source.snapshot).equals(
-        PresenceSnapshot.of(other.source.snapshot)
+      PresenceSnapshot.capture(source.snapshot).equals(
+        PresenceSnapshot.capture(other.source.snapshot)
       );
   }
 
@@ -100,7 +100,7 @@ export class RegionPresence {
       layerName,
       region: region.toJSON(),
       origin: { ...pivot },
-      ...PresenceSnapshot.of(snapshot).toJSON()
+      ...PresenceSnapshot.capture(snapshot).toJSON()
     };
   }
 }

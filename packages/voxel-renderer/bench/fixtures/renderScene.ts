@@ -107,7 +107,7 @@ function buildView(
   const texture = new THREE.Texture(atlasCanvas());
   texture.colorSpace = THREE.SRGBColorSpace;
   view.loadBlockset({ id: "atlas", src: "", tileSize: kTileTexels }, texture);
-  view.atlases.atlas("atlas").texture.needsUpdate = true;
+  view.atlases.requireLoadedAtlas("atlas").texture.needsUpdate = true;
 
   const cells: number[] = [];
   const { size } = options;

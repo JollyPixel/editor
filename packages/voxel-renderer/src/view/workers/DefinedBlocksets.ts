@@ -17,9 +17,9 @@ class DefinedBlockset implements AtlasUvSource {
     this.def = def;
   }
 
-  uvFor(
-    ...args: Parameters<AtlasUvSource["uvFor"]>
-  ): ReturnType<AtlasUvSource["uvFor"]> {
+  computeTileUvRegion(
+    ...args: Parameters<AtlasUvSource["computeTileUvRegion"]>
+  ): ReturnType<AtlasUvSource["computeTileUvRegion"]> {
     return tileUvRegion(this.def, ...args);
   }
 }
@@ -42,7 +42,7 @@ export class DefinedBlocksets implements BlocksetResolver {
     }
   }
 
-  resolve(
+  resolveAtlas(
     blocksetId?: string
   ): AtlasUvSource | undefined {
     const id = blocksetId ?? this.#defaultBlocksetId;

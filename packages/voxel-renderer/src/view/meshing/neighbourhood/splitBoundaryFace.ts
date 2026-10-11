@@ -24,7 +24,7 @@ export function splitBoundaryFace(
   const axis = face.cull >> 1;
   const uAxis = (axis + 1) % 3;
   const vAxis = (axis + 2) % 3;
-  const clip = verticesOf(neighbour);
+  const clip = extractVertices(neighbour);
 
   let area = 0;
   for (let vertexIndex = 0; vertexIndex < clip.length; vertexIndex++) {
@@ -34,7 +34,7 @@ export function splitBoundaryFace(
   }
 
   const sign = Math.sign(area);
-  let inside = verticesOf(face);
+  let inside = extractVertices(face);
   const outside: Vertex[][] = [];
   for (let vertexIndex = 0; vertexIndex < clip.length && inside.length >= 3; vertexIndex++) {
     const start = clip[vertexIndex].position;
@@ -64,7 +64,7 @@ export function splitBoundaryFace(
   return result;
 }
 
-function verticesOf(
+function extractVertices(
   face: BlockVariantFace
 ): Vertex[] {
   return Array.from({ length: face.vertexCount }, (_, vertexIndex) => {

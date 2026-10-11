@@ -67,7 +67,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     return width * height * faceWords;
   }
 
-  static faceWordsOf(
+  static faceWordCount(
     data: Pick<PulledMeshData, "blendPalette">
   ): number {
     return data.blendPalette === undefined ?
@@ -123,7 +123,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
       bounds,
       blendPalette
     } = options;
-    const faceWords = PulledChunkGeometry.faceWordsOf({ blendPalette });
+    const faceWords = PulledChunkGeometry.faceWordCount({ blendPalette });
     const [width, height] = textureSize(faceCount);
     const capacity = width * height * faceWords;
     if (words.length !== capacity) {

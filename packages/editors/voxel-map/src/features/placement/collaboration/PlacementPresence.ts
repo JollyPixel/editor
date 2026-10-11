@@ -20,7 +20,7 @@ export interface PlacementPresenceJSON {
 }
 
 export class PlacementPresence {
-  static of(
+  static fromPlacement(
     placement: Placement
   ): PlacementPresence {
     return new PlacementPresence(

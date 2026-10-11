@@ -56,14 +56,14 @@ const borderMaterial = new THREE.LineBasicMaterial({
   opacity: 0.6,
   transparent: true
 });
-const atlas = atlases.atlas();
+const atlas = atlases.requireLoadedAtlas();
 
 for (let row = 0; row < kRows; row++) {
   for (let col = 0; col < kCols; col++) {
     const x = col * kGap;
     const z = -row * kGap;
 
-    const tile = new THREE.Mesh(quad, tileMaterial(atlas.uvFor(col, row)));
+    const tile = new THREE.Mesh(quad, tileMaterial(atlas.computeTileUvRegion(col, row)));
     tile.position.set(x, 0, z);
 
     const outline = new THREE.LineSegments(border, borderMaterial);

@@ -19,8 +19,8 @@ import {
 import { PositionSource } from "../../../shared/PositionSource.ts";
 import { MapObject } from "./MapObject.ts";
 import {
-  propertiesOf,
-  propertyRowsOf,
+  parsePropertyRows,
+  createPropertyRows,
   type PropertyRow,
   type PropertyRowsChangeDetail
 } from "../properties/propertyDraft.ts";
@@ -146,7 +146,7 @@ export class ObjectPanel extends LitElement {
     this._object = object === null ? null : { ...object };
 
     if (object !== null && options.resetProperties === true) {
-      this._props = propertyRowsOf(object.properties);
+      this._props = createPropertyRows(object.properties);
     }
   }
 
@@ -211,7 +211,7 @@ export class ObjectPanel extends LitElement {
   }
 
   #flushProperties(): void {
-    this.#patch({ properties: propertiesOf(this._props) });
+    this.#patch({ properties: parsePropertyRows(this._props) });
   }
 
   #patch(

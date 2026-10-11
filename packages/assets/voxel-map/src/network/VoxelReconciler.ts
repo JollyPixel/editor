@@ -147,7 +147,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
 
         return layer === undefined ? undefined : imageOf(layer);
       });
-    const applied = this.#document.apply(
+    const applied = this.#document.applyCommand(
       command,
       { origin: "replay" }
     );
@@ -196,28 +196,28 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
         this.#restoreCells(inverse.cells);
         break;
       case "rank":
-        this.#document.apply({
+        this.#document.applyCommand({
           action: "layer-moved",
           layerId: inverse.layerId,
           metadata: { rank: inverse.rank }
         }, origin);
         break;
       case "options":
-        this.#document.apply({
+        this.#document.applyCommand({
           action: "updated",
           layerId: inverse.layerId,
           metadata: { options: inverse.options }
         }, origin);
         break;
       case "position":
-        this.#document.apply({
+        this.#document.applyCommand({
           action: "position-updated",
           layerId: inverse.layerId,
           metadata: { position: inverse.position }
         }, origin);
         break;
       case "remove":
-        this.#document.apply({
+        this.#document.applyCommand({
           action: "removed",
           layerId: inverse.layerId,
           metadata: {}
@@ -243,7 +243,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
     }
 
     for (const [layerId, patch] of patches) {
-      this.#document.apply({
+      this.#document.applyCommand({
         action: "voxels-patched",
         layerId,
         metadata: patch.toPatch()

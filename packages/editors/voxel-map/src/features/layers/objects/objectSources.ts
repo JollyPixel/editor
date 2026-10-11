@@ -46,7 +46,7 @@ export function objectSizeSource(
       const object = port.object();
       const footprint = object === null ?
         new VoxelFootprint(1, 1) :
-        VoxelFootprint.of(object);
+        VoxelFootprint.fromObject(object);
 
       return {
         x: footprint.width,

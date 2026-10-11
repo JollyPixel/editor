@@ -96,7 +96,7 @@ export function buildBlockPreviewMesh(
   pieces: BlockPieces,
   materialGroups?: MaterialGroupList
 ): THREE.Mesh {
-  const geo = pieces.geometryOf(block);
+  const geo = pieces.buildGeometry(block);
   if (geo === null) {
     const fallback = new THREE.BoxGeometry(1, 1, 1);
     fitGeometry(fallback);
@@ -107,7 +107,7 @@ export function buildBlockPreviewMesh(
     );
   }
 
-  const texture = pieces.textureOf(block);
+  const texture = pieces.resolveTexture(block);
   const surface = new BlockSurface(block);
   const side = surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide;
   const surfaceOptions = {
@@ -123,7 +123,7 @@ export function buildBlockPreviewMesh(
   const textured = group === undefined ?
     new THREE.MeshLambertMaterial(surfaceOptions) :
     new THREE.MeshStandardMaterial(surfaceOptions);
-  group?.applyTo(textured);
+  group?.applyMaterialFinish(textured);
   const materials = [
     textured,
     new THREE.MeshLambertMaterial({
@@ -135,7 +135,7 @@ export function buildBlockPreviewMesh(
     })
   ];
 
-  const emptyIndices = emptyIndicesOf(geo);
+  const emptyIndices = collectEmptyIndices(geo);
   fitGeometry(geo);
 
   const mesh = new THREE.Mesh(geo, materials);
@@ -146,7 +146,7 @@ export function buildBlockPreviewMesh(
   return mesh;
 }
 
-function emptyIndicesOf(
+function collectEmptyIndices(
   geometry: THREE.BufferGeometry
 ): number[] {
   const index = geometry.getIndex();

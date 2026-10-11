@@ -436,7 +436,7 @@ export class BlockLibraryViewport extends LitElement {
 
     const cells: MarkedCell[] = [];
     this.blocks.forEach((block, index) => {
-      const view = this.marks.viewOf(block.id);
+      const view = this.marks.createView(block.id);
       if (view === null) {
         return;
       }

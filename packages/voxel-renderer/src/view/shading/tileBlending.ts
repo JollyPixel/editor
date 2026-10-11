@@ -115,7 +115,7 @@ export function blendedTile(
     last,
     layer: int(round(blend.cell.z)),
     candidates: FACE_BLEND_OFFSETS.map(
-      ([du, dv], neighbour) => candidateOf(blend, du, dv, neighbour)
+      ([du, dv], neighbour) => createBlendCandidate(blend, du, dv, neighbour)
     )
   };
 
@@ -147,14 +147,14 @@ export function remapTileUv(
   return to.xy.add(local.mul(to.zw));
 }
 
-function candidateOf(
+function createBlendCandidate(
   blend: TileBlendInputs,
   du: number,
   dv: number,
   neighbour: number
 ): BlendCandidate {
   const index = int(round(
-    componentOf(blend.indices[neighbour >> 2], neighbour & 3)
+    vectorComponent(blend.indices[neighbour >> 2], neighbour & 3)
   ));
   const column = index.mul(PULLED_BLEND_TEXELS);
   const params = texelLoad(blend.palette, ivec2(column.add(1), 0));
@@ -198,8 +198,8 @@ function pickAt(
   let rank: FloatNode = float(kHomeRank);
   let region: Vec4Node = home;
   for (const candidate of field.candidates) {
-    const own = scoreOf(field, candidate, world, bayer);
-    const clump = scoreOf(field, candidate, blockWorld, blockBayer)
+    const own = computeBlendScore(field, candidate, world, bayer);
+    const clump = computeBlendScore(field, candidate, blockWorld, blockBayer)
       .add(candidate.strength.mul(kStrayTexels).div(candidate.width));
     const score = select(
       candidate.valid,
@@ -218,7 +218,7 @@ function pickAt(
   };
 }
 
-function scoreOf(
+function computeBlendScore(
   field: BlendField,
   candidate: BlendCandidate,
   world: Vec2Node,
@@ -352,7 +352,7 @@ function bayer2(
     .add(y.bitAnd(int(1)));
 }
 
-function componentOf(
+function vectorComponent(
   vector: Vec4Node,
   index: number
 ): FloatNode {

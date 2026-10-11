@@ -123,7 +123,7 @@ from the geometry, so custom shapes pair up without declaring anything:
 
 ```ts
 class ShapeOccupancy {
-  static of(shape: BlockShape, transform?: VoxelTransform): ShapeOccupancy;
+  static fromShape(shape: BlockShape, transform?: VoxelTransform): ShapeOccupancy;
   complements(other: ShapeOccupancy): boolean;
   contains(point: Vec3): boolean;
 }
@@ -131,11 +131,11 @@ class ShapeOccupancy {
 class BlockComplements {
   constructor(options: { blocks: BlockRegistry; shapes: BlockShapeRegistry });
   complements(a: PackedVoxel, b: PackedVoxel): boolean;
-  occupancyOf(packed: PackedVoxel): ShapeOccupancy | null;
+  resolveOccupancy(packed: PackedVoxel): ShapeOccupancy | null;
 }
 ```
 
-`ShapeOccupancy.of()` samples which parts of the cell a placed shape fills and
+`ShapeOccupancy.fromShape()` samples which parts of the cell a placed shape fills and
 caches the result per shape and transform. Two occupancies complement each
 other when they never overlap, leave no gap, and together cover all six sides
 of the cell. `BlockComplements` answers the same question for two placed
@@ -143,7 +143,7 @@ blocks; an unknown block or shape is never a complement.
 
 `contains()` tests one point exactly, in cell space (`0..1` on each axis),
 against the placed faces rather than the samples. A point on a face may go
-either way. `occupancyOf()` returns the occupancy of a placed block, or `null`
+either way. `resolveOccupancy()` returns the occupancy of a placed block, or `null`
 when its block or shape is unknown.
 
 ## BlockShapeBase
@@ -157,16 +157,16 @@ abstract class BlockShapeBase implements BlockShape {
   occludes(face: Face): boolean;
 }
 
-function occlusionMaskOf(faces: readonly FaceDefinition[]): number;
-function sideCoverageOf(faces: Iterable<FacePlacement>): Float64Array;
+function computeOcclusionMask(faces: readonly FaceDefinition[]): number;
+function computeSideCoverage(faces: Iterable<FacePlacement>): Float64Array;
 ```
 
 Derives `occludes()` from `faces`: a side occludes when the faces lying on its
 boundary plane cover the whole unit square. Faces sharing a side must not
 overlap, or their areas add up and the side reports covered when it is not.
 Override `occludes()` when the geometry does not tell the truth, for example a
-full quad drawn through an alpha mask. `occlusionMaskOf()` returns the same
-answer as a bitmask indexed by `Face`, and `sideCoverageOf()` the covered area
+full quad drawn through an alpha mask. `computeOcclusionMask()` returns the same
+answer as a bitmask indexed by `Face`, and `computeSideCoverage()` the covered area
 of each side, indexed by `Face`. Every built-in shape extends this class.
 
 ## BlockShapeRegistry

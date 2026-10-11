@@ -22,7 +22,7 @@ describe("MapBlocksets", () => {
     const { view, blocksets } = setupMapBlocksets();
 
     assert.equal(blocksets.open("terrain") !== undefined, true);
-    assert.equal(blocksets.tileSizeOf("terrain"), 16);
+    assert.equal(blocksets.tileSizeFor("terrain"), 16);
     assert.deepEqual(view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture, {
       col: 0,
       row: 0,
@@ -34,8 +34,8 @@ describe("MapBlocksets", () => {
   it("finds the owner of a world block id by its slot", () => {
     const { blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
 
-    assert.equal(blocksets.ownerOf(composeBlockId(2, 7))?.definition.id, "rock");
-    assert.equal(blocksets.ownerOf(composeBlockId(5, 1)), undefined);
+    assert.equal(blocksets.findOwner(composeBlockId(2, 7))?.definition.id, "rock");
+    assert.equal(blocksets.findOwner(composeBlockId(5, 1)), undefined);
     assert.equal(blocksets.nextBlockId("terrain"), composeBlockId(1, 2));
     assert.equal(blocksets.nextBlockId("missing"), undefined);
   });
@@ -211,7 +211,7 @@ describe("MapBlocksets", () => {
     const { view, blocksets } = setupMapBlocksets();
 
     assert.equal(blocksets.resizeTiles("terrain", 32), true);
-    assert.equal(blocksets.tileSizeOf("terrain"), 32);
+    assert.equal(blocksets.tileSizeFor("terrain"), 32);
     assert.equal(view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.size, 16);
     assert.equal(blocksets.resizeTiles("missing", 32), false);
   });

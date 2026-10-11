@@ -93,7 +93,7 @@ export class TextureEditor {
     return this.#page.evaluate((id) => {
       const { view, blocksets } = window.voxelMapEditor!.workspace;
       const texture = view.document.blocks.get(id)!.defaultTexture!;
-      const tileSize = blocksets.tileSizeOf(texture.blocksetId ?? "");
+      const tileSize = blocksets.tileSizeFor(texture.blocksetId ?? "");
       if (tileSize === undefined) {
         throw new Error(`Block ${id} has no loaded blockset.`);
       }

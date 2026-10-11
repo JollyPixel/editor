@@ -40,7 +40,7 @@ function makeStairView(): VoxelView {
   return view;
 }
 
-describe("VoxelView.canMergeAt", () => {
+describe("VoxelView.canMergeVoxelPart", () => {
   afterEach(() => {
     for (const view of kViews) {
       view.dispose();
@@ -52,7 +52,7 @@ describe("VoxelView.canMergeAt", () => {
     const view = makeStairView();
 
     assert.equal(
-      view.canMergeAt(kLayer, kCell, { blockId: kSlabBeam, transform: kUpsideDown }),
+      view.canMergeVoxelPart(kLayer, kCell, { blockId: kSlabBeam, transform: kUpsideDown }),
       true
     );
   });
@@ -61,11 +61,11 @@ describe("VoxelView.canMergeAt", () => {
     const view = makeStairView();
 
     assert.equal(
-      view.canMergeAt(kLayer, kCell, { blockId: kSlabBeam, transform: 0 }),
+      view.canMergeVoxelPart(kLayer, kCell, { blockId: kSlabBeam, transform: 0 }),
       false
     );
     assert.equal(
-      view.canMergeAt(kLayer, kCell, { blockId: kSlabBottom, transform: kUpsideDown }),
+      view.canMergeVoxelPart(kLayer, kCell, { blockId: kSlabBottom, transform: kUpsideDown }),
       false
     );
   });
@@ -74,13 +74,13 @@ describe("VoxelView.canMergeAt", () => {
     const view = makeStairView();
     const part = { blockId: kSlabBeam, transform: kUpsideDown };
 
-    assert.equal(view.canMergeAt(kLayer, { x: 1, y: 0, z: 0 }, part), false);
+    assert.equal(view.canMergeVoxelPart(kLayer, { x: 1, y: 0, z: 0 }, part), false);
     view.document.world.setVoxel(kLayer, {
       position: kCell,
       blockId: kSlabBeam,
       flipY: true,
       merge: true
     });
-    assert.equal(view.canMergeAt(kLayer, kCell, part), false);
+    assert.equal(view.canMergeVoxelPart(kLayer, kCell, part), false);
   });
 });

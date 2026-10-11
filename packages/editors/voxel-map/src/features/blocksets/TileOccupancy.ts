@@ -20,16 +20,16 @@ export interface TilePosition {
 export type ShapeLookup = (shapeId: string) => BlockShape | undefined;
 
 export class TileOccupancy {
-  static of(
+  static collect(
     blocks: Iterable<ResolvedBlockDefinition>,
-    shapeOf: ShapeLookup,
+    resolveShape: ShapeLookup,
     blocksetId: string,
     tileSize: number
   ): TileOccupancy {
     const rects = new Map<string, TileRect>();
     for (const block of blocks) {
-      const layout = BlockTextureLayout.of(block, shapeOf(block.shapeId));
-      for (const rect of layout.footprintsIn(blocksetId, tileSize)) {
+      const layout = BlockTextureLayout.fromShape(block, resolveShape(block.shapeId));
+      for (const rect of layout.collectTileFootprintRects(blocksetId, tileSize)) {
         rects.set(`${rect.x}:${rect.y}:${rect.width}:${rect.height}`, rect);
       }
     }

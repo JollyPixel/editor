@@ -70,7 +70,7 @@ Same lookup without allocating, for the first and the second shape. Return
 `VOXEL_ABSENT` for air, and `getPartnerVoxelAt()` also for a cell that is not
 merged; see [packed voxels](./VoxelChunk.md#packed-voxels).
 
-#### `positionsOf(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
+#### `positionsUsingBlocks(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
 
 World positions of the voxels whose block is in `blockIds`, whatever their
 transform. A merged cell matches when either shape does.

@@ -15,8 +15,8 @@ import type { MapDocument } from "../../../document/MapDocument.ts";
 import type { SelectionStore } from "../../../state/index.ts";
 import type { MapPlacement } from "../../placement/MapPlacement.ts";
 import {
-  propertiesOf,
-  propertyRowsOf,
+  parsePropertyRows,
+  createPropertyRows,
   type PropertyRow,
   type PropertyRowsChangeDetail
 } from "../properties/propertyDraft.ts";
@@ -124,7 +124,7 @@ export class VoxelLayerPanel extends LitElement {
       changed.has("world")
     ) {
       this.#syncFromLayer();
-      this._props = propertyRowsOf(this._layer?.properties);
+      this._props = createPropertyRows(this._layer?.properties);
     }
   }
 
@@ -242,7 +242,7 @@ export class VoxelLayerPanel extends LitElement {
     }
 
     world.updateLayer(layerName, {
-      properties: propertiesOf(this._props)
+      properties: parsePropertyRows(this._props)
     });
   }
 }

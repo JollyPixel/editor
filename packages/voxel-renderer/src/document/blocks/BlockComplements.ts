@@ -29,15 +29,15 @@ export class BlockComplements {
     a: PackedVoxel,
     b: PackedVoxel
   ): boolean {
-    const first = this.occupancyOf(a);
-    const second = this.occupancyOf(b);
+    const first = this.resolveOccupancy(a);
+    const second = this.resolveOccupancy(b);
 
     return first !== null &&
       second !== null &&
       first.complements(second);
   }
 
-  occupancyOf(
+  resolveOccupancy(
     packed: PackedVoxel
   ): ShapeOccupancy | null {
     const block = this.#blocks.get(voxelBlockId(packed));
@@ -45,6 +45,6 @@ export class BlockComplements {
 
     return shape === undefined ?
       null :
-      ShapeOccupancy.of(shape, VoxelTransform.fromPacked(voxelTransform(packed)));
+      ShapeOccupancy.fromShape(shape, VoxelTransform.fromPacked(voxelTransform(packed)));
   }
 }

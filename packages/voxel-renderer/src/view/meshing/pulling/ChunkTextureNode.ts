@@ -31,7 +31,7 @@ export abstract class ChunkTextureNode extends TextureNode {
   override setup(
     builder: NodeBuilder
   ) {
-    this.value = this.#textureOf(builder.object);
+    this.value = this.#resolveTexture(builder.object);
 
     return super.setup(builder);
   }
@@ -39,7 +39,7 @@ export abstract class ChunkTextureNode extends TextureNode {
   override update(
     frame: NodeFrame
   ): boolean | undefined {
-    this.value = this.#textureOf(frame.object);
+    this.value = this.#resolveTexture(frame.object);
 
     return super.update(frame);
   }
@@ -48,7 +48,7 @@ export abstract class ChunkTextureNode extends TextureNode {
     geometry: PulledChunkGeometry | null
   ): THREE.Texture;
 
-  #textureOf(
+  #resolveTexture(
     object: THREE.Object3D | null
   ): THREE.Texture {
     const geometry = object instanceof THREE.Mesh ? object.geometry : null;

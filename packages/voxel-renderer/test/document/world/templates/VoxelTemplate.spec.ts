@@ -105,13 +105,13 @@ describe("VoxelTemplate.placedBounds", () => {
   });
 });
 
-describe("VoxelTemplate.placedPositionFor", () => {
+describe("VoxelTemplate.placementPositionFromMinCorner", () => {
   test("inverts placedBounds for every transform", () => {
     const template = lShapedTemplate({ x: 1, y: 0, z: 1 });
     for (const transform of allTransforms()) {
       const { min } = template.placedBounds(kPosition, transform);
 
-      assert.deepEqual(template.placedPositionFor(min, transform), kPosition);
+      assert.deepEqual(template.placementPositionFromMinCorner(min, transform), kPosition);
     }
   });
 });

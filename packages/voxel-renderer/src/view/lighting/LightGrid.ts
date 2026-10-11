@@ -63,7 +63,7 @@ export class LightGrid {
     return x | (y << shift) | (z << (shift * 2));
   }
 
-  indexOf(
+  worldIndex(
     x: number,
     y: number,
     z: number

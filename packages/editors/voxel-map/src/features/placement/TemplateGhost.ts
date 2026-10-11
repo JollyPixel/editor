@@ -98,8 +98,8 @@ export class TemplateGhost extends THREE.Group {
       template,
       transform
     };
-    for (const batch of this.#batchesOf(template, transform)) {
-      this.add(...this.#meshesOf(batch));
+    for (const batch of this.#collectBatches(template, transform)) {
+      this.add(...this.#createBatchMeshes(batch));
     }
     this.visible = true;
   }
@@ -121,7 +121,7 @@ export class TemplateGhost extends THREE.Group {
     super.dispose();
   }
 
-  #batchesOf(
+  #collectBatches(
     template: VoxelTemplate,
     transform: VoxelTransform
   ): IterableIterator<Batch> {
@@ -148,12 +148,12 @@ export class TemplateGhost extends THREE.Group {
     const block = this.#blockRegistry.get(voxelBlockId(packed));
     const piece = block === undefined ?
       null :
-      this.#pieces.pieceOf(block, VoxelTransform.fromPacked(voxelTransform(packed)));
+      this.#pieces.resolvePiece(block, VoxelTransform.fromPacked(voxelTransform(packed)));
     if (piece === null) {
       return;
     }
 
-    const key = batchKeyOf(piece);
+    const key = batchKey(piece);
     let batch = batches.get(key);
     if (batch === undefined) {
       batch = {
@@ -176,7 +176,7 @@ export class TemplateGhost extends THREE.Group {
     );
   }
 
-  #materialsOf(
+  #resolveBatchMaterials(
     batch: Batch
   ): BatchMaterials {
     const cached = this.#materials.get(batch.key);
@@ -209,7 +209,7 @@ export class TemplateGhost extends THREE.Group {
     return materials;
   }
 
-  #meshesOf(
+  #createBatchMeshes(
     batch: Batch
   ): [THREE.Mesh, THREE.Mesh] {
     const geometry = new THREE.BufferGeometry();
@@ -227,7 +227,7 @@ export class TemplateGhost extends THREE.Group {
     );
     geometry.setIndex(batch.indices);
 
-    const materials = this.#materialsOf(batch);
+    const materials = this.#resolveBatchMaterials(batch);
     const color = new THREE.Mesh(geometry, materials.color);
     const depth = new THREE.Mesh(geometry, materials.depth);
     depth.renderOrder = kDepthRenderOrder;
@@ -260,7 +260,7 @@ export class TemplateGhost extends THREE.Group {
   }
 }
 
-function batchKeyOf(
+function batchKey(
   piece: BlockPiece
 ): string {
   return `${piece.texture?.uuid ?? "none"}:${piece.surface.alphaCutoff}:${piece.surface.side}`;

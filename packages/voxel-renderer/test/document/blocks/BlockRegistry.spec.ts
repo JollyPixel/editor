@@ -281,7 +281,7 @@ describe("BlockRegistry — custom properties", () => {
     const registry = new BlockRegistry([makeDef(1)]);
 
     assert.deepEqual(registry.get(1)?.properties, {});
-    assert.deepEqual(registry.propertiesOf(1), {});
+    assert.deepEqual(registry.copyProperties(1), {});
   });
 
   it("keeps every scalar value", () => {
@@ -295,7 +295,7 @@ describe("BlockRegistry — custom properties", () => {
       })
     ]);
 
-    assert.deepEqual(registry.propertiesOf(1), {
+    assert.deepEqual(registry.copyProperties(1), {
       hardness: 5,
       material: "stone",
       flammable: false
@@ -317,7 +317,7 @@ describe("BlockRegistry — custom properties", () => {
       })
     ]);
 
-    assert.deepEqual(registry.propertiesOf(1), { kept: 1 });
+    assert.deepEqual(registry.copyProperties(1), { kept: 1 });
   });
 
   it("ignores a __proto__ key instead of polluting the prototype", () => {
@@ -329,7 +329,7 @@ describe("BlockRegistry — custom properties", () => {
       })
     ]);
 
-    const properties = registry.propertiesOf(1);
+    const properties = registry.copyProperties(1);
 
     assert.deepEqual(properties, { safe: 1 });
     assert.equal(
@@ -345,19 +345,19 @@ describe("BlockRegistry — custom properties", () => {
       makeBlockDef(1, "cube", { properties: source })
     ]);
 
-    const first = registry.propertiesOf(1)!;
+    const first = registry.copyProperties(1)!;
     first.hardness = 99;
     source.hardness = 42;
 
-    assert.deepEqual(registry.propertiesOf(1), { hardness: 5 });
-    assert.notEqual(first, registry.propertiesOf(1));
+    assert.deepEqual(registry.copyProperties(1), { hardness: 5 });
+    assert.notEqual(first, registry.copyProperties(1));
   });
 
   it("returns undefined for an unregistered id", () => {
     const registry = new BlockRegistry([makeDef(1)]);
 
-    assert.equal(registry.propertiesOf(404), undefined);
-    assert.equal(registry.propertiesOf(0), undefined);
+    assert.equal(registry.copyProperties(404), undefined);
+    assert.equal(registry.copyProperties(0), undefined);
   });
 });
 
@@ -402,7 +402,7 @@ describe("BlockRegistry — ordering", () => {
   it("moves a block forward", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
 
-    assert.equal(registry.moveTo(1, 2), true);
+    assert.equal(registry.moveBlockToIndex(1, 2), true);
 
     assert.deepEqual(ids(registry), [2, 3, 1]);
   });
@@ -410,7 +410,7 @@ describe("BlockRegistry — ordering", () => {
   it("moves a block backward", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
 
-    assert.equal(registry.moveTo(3, 0), true);
+    assert.equal(registry.moveBlockToIndex(3, 0), true);
 
     assert.deepEqual(ids(registry), [3, 1, 2]);
   });
@@ -418,10 +418,10 @@ describe("BlockRegistry — ordering", () => {
   it("clamps an out-of-range index", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
 
-    assert.equal(registry.moveTo(1, 99), true);
+    assert.equal(registry.moveBlockToIndex(1, 99), true);
     assert.deepEqual(ids(registry), [2, 3, 1]);
 
-    assert.equal(registry.moveTo(1, -5), true);
+    assert.equal(registry.moveBlockToIndex(1, -5), true);
     assert.deepEqual(ids(registry), [1, 2, 3]);
   });
 
@@ -429,33 +429,33 @@ describe("BlockRegistry — ordering", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(2)]);
     const version = registry.version;
 
-    assert.equal(registry.moveTo(1, 0), false);
+    assert.equal(registry.moveBlockToIndex(1, 0), false);
     assert.equal(registry.version, version);
 
-    assert.equal(registry.moveTo(1, 1), true);
+    assert.equal(registry.moveBlockToIndex(1, 1), true);
     assert.equal(registry.version, version + 1);
   });
 
   it("ignores an unknown id", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(2)]);
 
-    assert.equal(registry.moveTo(404, 0), false);
+    assert.equal(registry.moveBlockToIndex(404, 0), false);
     assert.deepEqual(ids(registry), [1, 2]);
   });
 
   it("reports the index of a block", () => {
     const registry = new BlockRegistry([makeDef(5), makeDef(7)]);
 
-    assert.equal(registry.indexOf(5), 0);
-    assert.equal(registry.indexOf(7), 1);
-    assert.equal(registry.indexOf(404), -1);
+    assert.equal(registry.findIndex(5), 0);
+    assert.equal(registry.findIndex(7), 1);
+    assert.equal(registry.findIndex(404), -1);
     assert.equal(registry.size, 2);
   });
 
   it("leaves nextId untouched by a move", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(9)]);
 
-    registry.moveTo(9, 0);
+    registry.moveBlockToIndex(9, 0);
 
     assert.equal(registry.nextId, 10);
   });

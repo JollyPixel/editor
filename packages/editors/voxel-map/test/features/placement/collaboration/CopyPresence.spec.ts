@@ -20,7 +20,7 @@ function overTheWire(
 
 describe("CopyPresence", () => {
   test("carries the copied voxels and their pivot over the wire", () => {
-    const source = CopySource.of(new VoxelTemplate({
+    const source = CopySource.fromSnapshot(new VoxelTemplate({
       id: "wall",
       name: "Wall",
       pivot: { x: 1, y: 0, z: 0 },

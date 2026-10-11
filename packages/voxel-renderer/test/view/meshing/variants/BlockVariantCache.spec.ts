@@ -57,67 +57,67 @@ function makeCache(
   return { cache, blockRegistry };
 }
 
-describe("BlockVariantCache - selfOcclusionMaskOf", () => {
-  it("matches occlusionMaskOf for an opaque block", () => {
+describe("BlockVariantCache - resolveSelfOcclusionMask", () => {
+  it("matches computeOcclusionMask for an opaque block", () => {
     const { cache } = makeCache();
 
     for (const blockId of [kCubeId, kRampId, kSlabId]) {
       for (let transform = 0; transform < 32; transform++) {
         assert.equal(
-          cache.selfOcclusionMaskOf(blockId, transform),
-          cache.occlusionMaskOf(blockId, transform),
+          cache.resolveSelfOcclusionMask(blockId, transform),
+          cache.resolveOcclusionMask(blockId, transform),
           `block ${blockId}, transform ${transform}`
         );
       }
     }
   });
 
-  it("keeps what a transparent block covers, which occlusionMaskOf drops", () => {
+  it("keeps what a transparent block covers, which computeOcclusionMask drops", () => {
     const { cache } = makeCache({ alphaMode: "blend" });
 
-    assert.equal(cache.occlusionMaskOf(kLeavesId, 0), 0);
-    assert.equal(cache.selfOcclusionMaskOf(kLeavesId, 0), kAllFaces);
+    assert.equal(cache.resolveOcclusionMask(kLeavesId, 0), 0);
+    assert.equal(cache.resolveSelfOcclusionMask(kLeavesId, 0), kAllFaces);
   });
 
   it("reports only the faces a transparent non-cube shape covers", () => {
     const { cache } = makeCache({ shapeId: "slabBottom", alphaMode: "blend" });
-    const slabMask = cache.occlusionMaskOf(kSlabId, 0);
+    const slabMask = cache.resolveOcclusionMask(kSlabId, 0);
 
     assert.notEqual(slabMask, 0);
     assert.notEqual(slabMask, kAllFaces);
-    assert.equal(cache.selfOcclusionMaskOf(kLeavesId, 0), slabMask);
+    assert.equal(cache.resolveSelfOcclusionMask(kLeavesId, 0), slabMask);
   });
 
   it("returns 0 for an unknown block", () => {
     const { cache } = makeCache();
 
-    assert.equal(cache.selfOcclusionMaskOf(999, 0), 0);
+    assert.equal(cache.resolveSelfOcclusionMask(999, 0), 0);
   });
 });
 
-describe("BlockVariantCache - occlusionMaskOf", () => {
+describe("BlockVariantCache - computeOcclusionMask", () => {
   it("compiles no variant for a block whose shape is not registered", () => {
     const { cache } = makeCache({ shapeId: "unknownShape" });
 
     assert.equal(cache.get(kLeavesId, 0), null);
-    assert.equal(cache.occlusionMaskOf(kLeavesId, 0), 0);
+    assert.equal(cache.resolveOcclusionMask(kLeavesId, 0), 0);
   });
 
   it("returns 0 for an unregistered block, which occludes nothing", () => {
     const { cache } = makeCache();
 
     assert.equal(cache.get(999, 0), null);
-    assert.equal(cache.occlusionMaskOf(999, 0), 0);
+    assert.equal(cache.resolveOcclusionMask(999, 0), 0);
   });
 
   it("recompiles after a registry change", () => {
     const { cache, blockRegistry } = makeCache();
-    assert.notEqual(cache.occlusionMaskOf(kSlabId, 0), kAllFaces);
+    assert.notEqual(cache.resolveOcclusionMask(kSlabId, 0), kAllFaces);
 
     blockRegistry.register(makeBlockDef(kSlabId, "cube"));
     cache.refresh();
 
-    assert.equal(cache.occlusionMaskOf(kSlabId, 0), kAllFaces);
+    assert.equal(cache.resolveOcclusionMask(kSlabId, 0), kAllFaces);
   });
 
   it("masks the transform to the five bits a packed voxel carries", () => {
@@ -125,17 +125,17 @@ describe("BlockVariantCache - occlusionMaskOf", () => {
     const transform = new VoxelTransform({ rotation: 1, flipX: true }).packed;
 
     assert.equal(
-      cache.occlusionMaskOf(kRampId, transform),
-      cache.occlusionMaskOf(kRampId, transform + 32)
+      cache.resolveOcclusionMask(kRampId, transform),
+      cache.resolveOcclusionMask(kRampId, transform + 32)
     );
   });
 
   it("returns 0 for a transparent block, whatever its shape covers", () => {
     const { cache } = makeCache({ alphaMode: "blend" });
 
-    assert.equal(cache.occlusionMaskOf(kCubeId, 0), kAllFaces);
+    assert.equal(cache.resolveOcclusionMask(kCubeId, 0), kAllFaces);
     for (let transform = 0; transform < 32; transform++) {
-      assert.equal(cache.occlusionMaskOf(kLeavesId, transform), 0, `transform ${transform}`);
+      assert.equal(cache.resolveOcclusionMask(kLeavesId, transform), 0, `transform ${transform}`);
     }
   });
 });
@@ -174,7 +174,7 @@ describe("BlockVariantCache - transforms", () => {
           }
         }
 
-        assert.equal(cache.occlusionMaskOf(blockId, transform), fullFaces, `transform ${transform}`);
+        assert.equal(cache.resolveOcclusionMask(blockId, transform), fullFaces, `transform ${transform}`);
       }
     });
   }
@@ -209,18 +209,18 @@ describe("BlockVariantCache - keepsCoveredFaces", () => {
   });
 });
 
-describe("BlockVariantCache - frontFaceOf", () => {
+describe("BlockVariantCache - resolveFrontFace", () => {
   it("returns one cached front-sided copy of a double-sided face", () => {
     const { cache } = makeCache({ alphaMode: "blend" });
 
     const [face] = cache.get(kLeavesId, 0)!.faces;
-    const front = cache.frontFaceOf(face);
+    const front = cache.resolveFrontFace(face);
 
     assert.equal(face.full, true);
     assert.equal(cache.geometryKeyAt(face.slot).surface.side, "double");
     assert.equal(cache.geometryKeyAt(front.slot).surface.side, "front");
     assert.equal(front.positions, face.positions);
-    assert.equal(cache.frontFaceOf(face), front);
+    assert.equal(cache.resolveFrontFace(face), front);
   });
 });
 
@@ -257,14 +257,14 @@ describe("BlockVariantCache - missing blockset", () => {
     });
     cache.refresh();
     assert.equal(cache.get(kCubeId, 0)?.faces.length, 0);
-    assert.equal(cache.occlusionMaskOf(kCubeId, 0), 0);
-    assert.equal(cache.selfOcclusionMaskOf(kCubeId, 0), 0);
+    assert.equal(cache.resolveOcclusionMask(kCubeId, 0), 0);
+    assert.equal(cache.resolveSelfOcclusionMask(kCubeId, 0), 0);
 
     atlases.registerTexture("late", mockTexture());
     cache.refresh();
 
     assert.equal(cache.get(kCubeId, 0)?.faces.length, 6);
-    assert.equal(cache.occlusionMaskOf(kCubeId, 0), kAllFaces);
+    assert.equal(cache.resolveOcclusionMask(kCubeId, 0), kAllFaces);
   });
 });
 

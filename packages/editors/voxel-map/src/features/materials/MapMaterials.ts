@@ -26,7 +26,7 @@ export interface MaterialSources {
 }
 
 export interface MaterialBlocksets {
-  ownerOf(blockId: number): { readonly slot: BlocksetSlot; } | undefined;
+  findOwner(blockId: number): { readonly slot: BlocksetSlot; } | undefined;
   defineBlock(block: BlockDefinition): boolean;
   defineMaterialGroup(group: MaterialGroup): boolean;
   removeMaterialGroup(groupId: string): boolean;
@@ -49,7 +49,7 @@ export class MapMaterials {
     this.#blocksets = options.blocksets;
   }
 
-  of(
+  findForBlock(
     blockId: number
   ): MapMaterial | undefined {
     return this.availableTo(blockId).find(
@@ -60,7 +60,7 @@ export class MapMaterials {
   availableTo(
     blockId: number
   ): MapMaterial[] {
-    const slot = this.#blocksets.ownerOf(blockId)?.slot;
+    const slot = this.#blocksets.findOwner(blockId)?.slot;
 
     return slot === undefined ? [] : this.inSlot(slot);
   }
@@ -71,13 +71,13 @@ export class MapMaterials {
     const { blocks, materialGroups } = this.#document;
     const users = new Map<string, number[]>();
     for (const group of materialGroups) {
-      if (slot.localGroupId(group.id) !== null) {
+      if (slot.decodeLocalGroupId(group.id) !== null) {
         users.set(group.id, []);
       }
     }
     for (const block of blocks.getAll()) {
       const groupId = block.materialGroup;
-      if (groupId === undefined || slot.localGroupId(groupId) === null) {
+      if (groupId === undefined || slot.decodeLocalGroupId(groupId) === null) {
         continue;
       }
 
@@ -104,7 +104,7 @@ export class MapMaterials {
 
       let swatch = byGroup.get(groupId);
       if (swatch === undefined) {
-        swatch = MaterialSwatch.of(
+        swatch = MaterialSwatch.fromMaterial(
           groupId,
           this.#document.materialGroups.get(groupId)
         );
@@ -132,7 +132,7 @@ export class MapMaterials {
   create(
     slot: BlocksetSlot
   ): string | null {
-    const groupId = slot.groupId(this.#freeName(slot));
+    const groupId = slot.qualifyGroupId(this.#freeName(slot));
     const defined = this.#blocksets.defineMaterialGroup(
       new MaterialGroup({
         id: groupId,
@@ -171,7 +171,7 @@ export class MapMaterials {
 
     const renamed = this.#blocksets.renameMaterialGroup(
       material.id,
-      material.slot.groupId(localName)
+      material.slot.qualifyGroupId(localName)
     );
 
     return renamed ? "renamed" : "taken";
@@ -193,7 +193,7 @@ export class MapMaterials {
     slot: BlocksetSlot
   ): string {
     let name = kDefaultName;
-    for (let index = 2; this.#taken(slot.groupId(name)); index++) {
+    for (let index = 2; this.#taken(slot.qualifyGroupId(name)); index++) {
       name = `${kDefaultName} ${index}`;
     }
 

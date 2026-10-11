@@ -56,8 +56,8 @@ export class VoxelMeshBuilder {
   #mesher: ChunkMesher;
   #origin: [number, number, number] = [0, 0, 0];
   #buffers: (PulledFaceBuffer | undefined)[] = [];
-  #bufferFor = (slot: number, blended = false): PulledFaceBuffer => {
-    const target = blended ? this.#variants.blendedSlotOf(slot) : slot;
+  #resolveFaceBuffer = (slot: number, blended = false): PulledFaceBuffer => {
+    const target = blended ? this.#variants.resolveBlendedSlot(slot) : slot;
     let buffer = this.#buffers[target];
     if (buffer === undefined) {
       buffer = new PulledFaceBuffer(
@@ -72,7 +72,7 @@ export class VoxelMeshBuilder {
     return buffer;
   };
   #windows: Int32Array[] = [];
-  #windowFor = (index: number): Int32Array | null => {
+  #allocateVoxelWindow = (index: number): Int32Array | null => {
     const span = this.#world.chunkSize + 2;
     if (span - 2 > kMaxWindowChunkSize) {
       return null;
@@ -177,8 +177,8 @@ export class VoxelMeshBuilder {
       minWx: worldOriginX - 1,
       minWy: worldOriginY - 1,
       minWz: worldOriginZ - 1,
-      windowFor: this.#windowFor,
-      occluders: this.ambientOcclusion ? this.#occludersFor(chunkSize) : null,
+      allocateVoxelWindow: this.#allocateVoxelWindow,
+      occluders: this.ambientOcclusion ? this.#allocateOccluderWindow(chunkSize) : null,
       visibility: this.#visibility
     });
 
@@ -196,7 +196,7 @@ export class VoxelMeshBuilder {
         worldOriginY,
         worldOriginZ,
         stats,
-        bufferFor: this.#bufferFor,
+        resolveFaceBuffer: this.#resolveFaceBuffer,
         ambientOcclusion: this.ambientOcclusion
       });
     }
@@ -204,7 +204,7 @@ export class VoxelMeshBuilder {
     return true;
   }
 
-  #occludersFor(
+  #allocateOccluderWindow(
     chunkSize: number
   ): Int8Array | null {
     if (chunkSize > kMaxWindowChunkSize) {

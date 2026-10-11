@@ -19,7 +19,7 @@ export interface PresenceSnapshotJSON {
 }
 
 export class PresenceSnapshot {
-  static of(
+  static capture(
     template: VoxelTemplate
   ): PresenceSnapshot {
     const positions: number[] = [];

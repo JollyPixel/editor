@@ -167,13 +167,13 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   ): BlockProperties | undefined {
     const entry = this.world.getVoxelAt(position);
 
-    return entry && this.blocks.propertiesOf(entry.blockId);
+    return entry && this.blocks.copyProperties(entry.blockId);
   }
 
   addBlockset(
     blockset: BlocksetDefinition
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "blockset-added",
       blockset
     });
@@ -182,7 +182,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   removeBlockset(
     blocksetId: string
   ): boolean {
-    return this.apply({
+    return this.applyCommand({
       action: "blockset-removed",
       blocksetId
     });
@@ -241,7 +241,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     this.world.mergeAllLayers({ except });
   }
 
-  protected fold(
+  protected applyCommandToState(
     command: VoxelCommand | BlockCatalogCommand
   ): VoxelCommand | null {
     return applyVoxelCommand(this, command, this.#logger);
