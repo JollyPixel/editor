@@ -12,6 +12,7 @@ import type { PresencePeer } from "../peer/Presence.ts";
 import {
   presencePeerOf,
   readAvatar,
+  readBadge,
   readUsername,
   toPeerMetadata
 } from "./peerProfile.ts";
@@ -110,6 +111,7 @@ export class PeerRoster {
       ...toPeerMetadata(this.#identity),
       avatar: this.#identity.avatar ?? null
     };
+    const badge = readBadge(profile);
 
     return {
       clientId: this.#identity.peerId,
@@ -117,6 +119,7 @@ export class PeerRoster {
       color: this.#identity.color,
       peerId: this.#identity.peerId,
       avatar: readAvatar(profile),
+      ...(badge === undefined ? {} : { badge }),
       self: true
     };
   }

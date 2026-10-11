@@ -20,7 +20,8 @@ import { BypassAuthentication } from "./auth/providers/BypassAuthentication.ts";
 import type {
   AuthenticationAttempt,
   AuthenticationProvider,
-  PeerIdentity
+  PeerIdentity,
+  RoomAdmission
 } from "./auth/AuthenticationProvider.ts";
 import type { RoomResolver } from "./room/RoomResolver.ts";
 import { ClientSessions } from "./ClientSessions.ts";
@@ -54,6 +55,7 @@ export interface ServerOptions {
   rights?: RightsMap;
   defaultRole?: string;
   auth?: AuthenticationProvider;
+  admits?: RoomAdmission;
   /**
    * Empty resolved-room grace period in milliseconds.
    * @default 30_000
@@ -90,7 +92,8 @@ export class Server {
     });
     this.#dispatcher = new EnvelopeDispatcher({
       rooms: this.#rooms,
-      sessions: this.#sessions
+      sessions: this.#sessions,
+      admits: options.admits
     });
     this.#unwatch = [
       this.#auth.watchRevocations?.(

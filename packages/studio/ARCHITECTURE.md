@@ -65,7 +65,13 @@ flowchart TB
 - The session cookie is named after the project root: cookies ignore ports.
 - `StudioProject.privateFiles` lists the globs Vite must not serve: every
   `.jollypixel/` folder and the project's asset files. Assets reach the
-  browser through the catalog only, which applies the rights table.
+  browser through the rooms only, which apply the rights table: the asset
+  workspace runs with `http: false`.
+- Share links: `StudioShares` checks `studio.$share`, creates links for
+  `/api/shares/` and walks the closure for the network server's `admits`. `SharePage` answers
+  `/view/<token>` with the editor page plus a `<base>` and the launch.
+  Guests read the `asset-catalog-view` room, registered once the workspace
+  is ready.
 
 | Mode | Project file | Back-end | Editor pages |
 |---|---|---|---|
@@ -171,9 +177,11 @@ flowchart TB
   Overview["project-overview"]
   Browser["asset-browser"]
   Users["studio-users"]
+  Links["studio-share-links"]
   Home --> Dock
   Home --> Overview
   Home --> Users
+  Home --> Links
   Dock --> Browser
 ```
 
@@ -183,6 +191,11 @@ flowchart TB
   editors.
 - `studio-users`, in the right dock when online, draws the `accounts` room
   roster through `UsersTreeModel`; admins get a role menu.
+- `studio-share-links`, under it, lists the links the account may manage
+  (its own, every one for admins), newest first, with asset, creator, dates,
+  Copy link and Revoke. The Share dialog shows the same `share-link-list` for
+  one asset. Both read one `StudioShareLinks`, so a link created or revoked
+  in this shell shows in both; Refresh picks up other accounts' changes.
 
 ## Asset browser
 
@@ -194,6 +207,7 @@ flowchart TB
 | New asset | toolbar, menu | back-end writes the default content, then rename starts |
 | New folder | toolbar, menu | created in the project, then rename starts |
 | Export | toolbar, menu | `<stem>.zip` with dependencies, not on folders |
+| Share | toolbar, menu | online only; lists, creates and revokes view-only links |
 
 - Context menu: right-click, Shift+F10 or the menu key.
 - Folders start collapsed; the expanded ones are kept in `localStorage`
@@ -245,12 +259,14 @@ flowchart TB
 | `server/project/` | project file, `access` section, private files |
 | `server/editors/` | editor packages and pages, dist watcher |
 | `server/accounts.ts` | project accounts |
+| `server/shares/` | share rules, guest admission, `/view/` page |
 | `vite.config.ts`, `vite/` | Vite plugins |
 | `src/index.ts` | boot |
 | `src/connection.ts`, `src/offlineConnection.ts` | online catalog, offline fallback |
 | `src/seed.ts` | seed for both back-ends |
 | `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
 | `src/accounts/` | `StudioSignedIn`, `UsersTreeModel`, `/users` console |
+| `src/shares/` | share routes, lifetimes, `ShareLinksClient`, `StudioShareLinks` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
 | `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser, sign-in dialog, Users pane |

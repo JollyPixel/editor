@@ -8,37 +8,23 @@ import {
   AVATAR_VERSION_PARAM,
   type Account,
   type AccountReply,
-  type AccountsError,
-  type AccountsErrorCode,
   type CredentialsBody,
   type RegistrationBody
 } from "@jolly-pixel/accounts";
-import {
-  AccountsThrottledError,
-  type Accounts,
-  type Requester,
-  type SignIn
+import type {
+  Accounts,
+  Requester,
+  SignIn
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
 import { ApiError } from "../errors/ApiError.ts";
+import { requireAccount } from "../requireAccount.ts";
 
 // CONSTANTS
 const kAvatarContentType = "image/webp";
 const kImmutable = "public, max-age=31536000, immutable";
 const kRevalidate = "no-cache";
-const kErrorStatuses: Record<AccountsErrorCode, number> = {
-  "invalid-username": 400,
-  "invalid-password": 400,
-  "username-taken": 409,
-  "master-password-required": 403,
-  "invalid-master-password": 403,
-  "account-pending": 403,
-  "access-requests-full": 429,
-  "invalid-credentials": 401,
-  "invalid-avatar": 422,
-  throttled: 429
-};
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -117,8 +103,7 @@ export class AccountsController {
     _reply: FastifyReply,
     payload: RequestPayload
   ): Promise<RequestPayload> {
-    request.account = this.#accounts.signedIn(request.headers);
-    this.#signedIn(request);
+    request.account = requireAccount(this.#accounts, request);
 
     return payload;
   }
@@ -159,21 +144,6 @@ export class AccountsController {
       .send(stored.bytes);
   }
 
-  failure(
-    error: AccountsError
-  ): ApiError {
-    return new ApiError(
-      kErrorStatuses[error.code],
-      error.code,
-      error.message,
-      error instanceof AccountsThrottledError ?
-        {
-          "retry-after": String(Math.ceil(error.retryAfterMs / 1_000))
-        } :
-        {}
-    );
-  }
-
   #requester(
     request: FastifyRequest
   ): Requester {
@@ -187,11 +157,7 @@ export class AccountsController {
   #signedIn(
     request: FastifyRequest
   ): Account {
-    if (request.account === null) {
-      throw new ApiError(401, "unauthenticated", "no valid session");
-    }
-
-    return request.account;
+    return request.account ?? requireAccount(this.#accounts, request);
   }
 
   #signIn(

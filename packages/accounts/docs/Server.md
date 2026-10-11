@@ -78,7 +78,24 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
 }
 ```
 
-The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session is refused: there are no anonymous peers. A new avatar reaches open connections through [`watchProfiles`](#watchprofileslistener).
+The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session or share link is refused.
+
+A socket that offers a credential (`connectWebSocket({ credential })`) is read as a [share link](#sharelinks) token and never falls back to the cookie. A live link resolves to a guest; an unknown, expired or malformed token is refused:
+
+```ts
+{
+  subject: "share:<link id>",
+  role: GUEST_ROLE,
+  profile: {
+    username: "Guest",
+    peerId: "<random UUID per connection>",
+    avatar: null,
+    via: "link"
+  }
+}
+```
+
+A new avatar reaches open connections through [`watchProfiles`](#watchprofileslistener).
 
 `avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `ACCOUNTS_URL_PATH`.
 
@@ -86,9 +103,15 @@ The `profile` overrides what the client claims on join, so a signed-in user cann
 
 Calls `listener` with the account id after a role change or a removal in the [`accounts` room](#accounts-room), and after a [`POST logout`](#post-logout) that closed a session. It returns a function that stops the calls. The network server watches it, so every open connection of that account is closed and authenticates again: a removed or signed-out account is refused, and a new role applies at once. A logout also reconnects the account's other devices, whose sessions stay valid.
 
+It also calls `listener` with a link's guest subject, `share:<link id>`, when the link is revoked, expires, or its creator is removed, so its guests are disconnected and refused.
+
 ### `watchProfiles(listener)`
 
 Calls `listener` with the account id and its new `profile`, shaped as in `authenticate`, after a [`PUT avatar`](#put-avatar). It returns a function that stops the calls. The network server watches it and sends the profile to every room the account's connections are in, without reconnecting them.
+
+### `shareLinks`
+
+The project's [`ShareLinks`](#sharelinks).
 
 ### `extension`
 
@@ -102,9 +125,33 @@ The `AccountRoles` the accounts were built with.
 
 The `SessionCookie` the sessions live in.
 
+## `ShareLinks`
+
+The share links stored beside the accounts. Who may create a link is the host's rule.
+
+### `create({ assetId, createdBy, expiresAt })`
+
+Creates a link for `assetId` and returns the `ShareLink`, with a token of 256 random bits. The database keeps the token itself, so the link can be copied again; guard `ShareLink` values like the link they open. `expiresAt` is epoch milliseconds or `null`. Throws a `RangeError` for an expiry already past, and `ShareLinkRefusedError` when `createdBy` names no account.
+
+### `find(token)`
+
+The live `ShareLink` of `token`, or `null`.
+
+### `bySubject(subject)`
+
+The live `ShareLink` of a guest subject, `share:<link id>`, or `null`. `shareLinkSubject(linkId)` builds the subject.
+
+### `visibleTo(actorId)`
+
+The live links an account may manage, oldest first: the ones it created, or every link for an admin.
+
+### `revoke(actorId, linkId)`
+
+Deletes the link and returns it. Only its creator or an admin may: anyone else gets `ShareLinkRefusedError`, and an unknown or expired link `ShareLinkNotFoundError`. Its guests are [revoked](#watchrevocationslistener). An expired link is deleted and revoked the same way when its time comes.
+
 ## `AccountsDatabase`
 
-The SQLite database (`node:sqlite`) that holds the accounts, their sessions and their avatars. `Accounts` reads and writes it: a host only opens it.
+The SQLite database (`node:sqlite`) that holds the accounts, their sessions, their avatars and the share links. `Accounts` reads and writes it: a host only opens it.
 
 ### `AccountsDatabase.open(location?)`
 

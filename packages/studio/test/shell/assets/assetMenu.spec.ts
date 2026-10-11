@@ -62,9 +62,10 @@ function outline(
 }
 
 function menuOf(
-  nodeIds: readonly string[]
+  nodeIds: readonly string[],
+  sharing = false
 ): ContextMenuEntry[] {
-  return assetMenu(new AssetSelection(kModel, nodeIds), kKinds);
+  return assetMenu(new AssetSelection(kModel, nodeIds), kKinds, sharing);
 }
 
 describe("assetMenu", () => {
@@ -76,6 +77,17 @@ describe("assetMenu", () => {
     assert.deepEqual(
       outline(menuOf([assetNodeId("model-hero")])),
       ["open", "-", "rename", "export", "-", "delete"]
+    );
+  });
+
+  test("an asset offers a share link only when the studio can share", () => {
+    assert.deepEqual(
+      outline(menuOf([assetNodeId("model-hero")], true)),
+      ["open", "-", "rename", "export", "share", "-", "delete"]
+    );
+    assert.deepEqual(
+      outline(menuOf([folderNodeId(AssetPath.parse("models"))], true)),
+      [...kCreation, "-", "rename", "-", "delete"]
     );
   });
 

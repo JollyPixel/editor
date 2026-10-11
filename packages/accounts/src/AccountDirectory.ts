@@ -39,6 +39,7 @@ import { AccountPendingError } from "./registration/errors/AccountPendingError.t
 import type { RegisterOptions } from "./registration/RegisterOptions.ts";
 import type { RegistrationResult } from "./registration/RegistrationResult.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
+import { shareLinkSubject } from "./share/ShareLinks.ts";
 import type { AccountsDatabase } from "./store/AccountsDatabase.ts";
 
 // CONSTANTS
@@ -65,7 +66,7 @@ export interface AccountDirectoryOptions {
 
 export type AccountDirectoryEventMap = {
   changed: () => void;
-  revoked: (accountId: string) => void;
+  revoked: (subject: string) => void;
   profile: (account: Account) => void;
 };
 
@@ -223,16 +224,23 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     actorId: string,
     username: Username
   ): Account {
-    const account = this.#database.transaction(() => {
+    const { account, links } = this.#database.transaction(() => {
       this.#actor(actorId).assertAdmin();
       const removed = this.#existingAccount(username);
       removed.assertNotOwner();
+      const createdLinks = this.#database.shareLinks.deleteCreatedBy(removed.id);
       this.#database.accounts.delete(removed.id);
 
-      return removed;
+      return {
+        account: removed,
+        links: createdLinks
+      };
     });
     this.emit("changed");
     this.revoke(account.id);
+    for (const link of links) {
+      this.revoke(shareLinkSubject(link.id));
+    }
 
     return this.#account(account);
   }
@@ -281,9 +289,9 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   }
 
   revoke(
-    accountId: string
+    subject: string
   ): void {
-    this.emit("revoked", accountId);
+    this.emit("revoked", subject);
   }
 
   * [Symbol.iterator](): IterableIterator<Account> {

@@ -7,9 +7,13 @@ import type {
   RoomRegistry
 } from "./room/RoomRegistry.ts";
 import type { ClientSessions } from "./ClientSessions.ts";
-import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
+import type {
+  PeerIdentity,
+  RoomAdmission
+} from "./auth/AuthenticationProvider.ts";
 import type { ClientEnvelope } from "../protocol/envelope/Envelope.ts";
 import type { PeerMetadata } from "../protocol/types.ts";
+import { JOIN_EVENT } from "../protocol/constants.ts";
 
 // CONSTANTS
 const kHandled: DispatchOutcome = { outcome: "handled" };
@@ -37,6 +41,11 @@ const kJoinOutcomes: Record<RoomJoinResult, DispatchOutcome> = {
     reason: "unregistered room"
   }
 };
+const kOutOfScopeReason = "identity does not cover this room";
+const kOutOfScope: DispatchOutcome = {
+  outcome: "dropped",
+  reason: kOutOfScopeReason
+};
 
 export interface DispatchOutcome {
   outcome: "joined" | "left" | "handled" | "ignored" | "dropped";
@@ -46,17 +55,20 @@ export interface DispatchOutcome {
 export interface EnvelopeDispatcherOptions {
   rooms: RoomRegistry;
   sessions: ClientSessions;
+  admits?: RoomAdmission;
 }
 
 export class EnvelopeDispatcher {
   #rooms: RoomRegistry;
   #sessions: ClientSessions;
+  #admits: RoomAdmission | undefined;
 
   constructor(
     options: EnvelopeDispatcherOptions
   ) {
     this.#rooms = options.rooms;
     this.#sessions = options.sessions;
+    this.#admits = options.admits;
   }
 
   async dispatch(
@@ -79,6 +91,17 @@ export class EnvelopeDispatcher {
 
     return match(envelope)
       .with({ kind: "join" }, async(envelope) => {
+        if (!await this.#admitted(session.identity, envelope.room)) {
+          session.handle.send({
+            room: envelope.room,
+            kind: "denied",
+            event: JOIN_EVENT,
+            reason: kOutOfScopeReason
+          });
+
+          return kOutOfScope;
+        }
+
         const result = await this.#rooms.join(envelope.room, {
           handle: session.handle,
           identity: session.identity,
@@ -104,6 +127,22 @@ export class EnvelopeDispatcher {
         this.#rooms.get(envelope.room)?.resync(clientId)
       ))
       .exhaustive();
+  }
+
+  async #admitted(
+    identity: PeerIdentity,
+    room: string
+  ): Promise<boolean> {
+    if (this.#admits === undefined) {
+      return true;
+    }
+
+    try {
+      return await this.#admits(identity, room);
+    }
+    catch {
+      return false;
+    }
   }
 }
 

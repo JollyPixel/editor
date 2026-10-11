@@ -28,3 +28,6 @@ export * from "./client/errors/AccountsRequestError.ts";
 export * from "./session/errors/InvalidPasswordError.ts";
 export * from "./account/errors/InvalidUsernameError.ts";
 export * from "./avatar/errors/InvalidAvatarError.ts";
+export * from "./share/ShareLink.ts";
+export * from "./share/errors/ShareLinkNotFoundError.ts";
+export * from "./share/errors/ShareLinkRefusedError.ts";

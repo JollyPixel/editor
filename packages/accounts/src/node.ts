@@ -8,6 +8,11 @@ export * from "./auth/errors/InvalidCredentialsError.ts";
 export type { AccountsExtension } from "./room/AccountsExtension.ts";
 export * from "./account/errors/AccountChangeRefusedError.ts";
 export * from "./account/errors/UsernameTakenError.ts";
+export {
+  shareLinkSubject,
+  type ShareLinkCreation,
+  type ShareLinks
+} from "./share/ShareLinks.ts";
 export * from "./session/SessionCookie.ts";
 export * from "./session/origin.ts";
 export type { MasterPasswordOptions } from "./registration/MasterPassword.ts";

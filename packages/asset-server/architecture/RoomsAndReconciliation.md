@@ -4,6 +4,13 @@
 for editable assets. An asset room is admitted when its kind has
 `commands.live` and the catalog contains that asset under the same kind.
 
+A host registers `CatalogViewExtension` (`asset-catalog-view`) itself, for
+peers that must not see the whole catalog. Its `scope(identity)` names one
+asset; the peer receives that asset and its dependency closure, no folders,
+and changes filtered by the closure recomputed on each catalog change. An
+asset linked later shows up as created, one unlinked as deleted. Every
+command is rejected. `CatalogClient.connect(client, { room })` joins it.
+
 ## Room lifetime
 
 ```mermaid

@@ -21,7 +21,10 @@ import {
 // Import Internal Dependencies
 import { createCatalogHandler } from "../catalog/httpHandler.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
-import { LAUNCH_ELEMENT_ID } from "../launch.ts";
+import {
+  LAUNCH_ELEMENT_ID,
+  serializeLaunch
+} from "../launch.ts";
 import {
   createAssetWorkspace,
   type AssetWorkspace,
@@ -74,6 +77,12 @@ export function createAssetStaticPlugin(
 
 export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
   /**
+   * Serves the catalog JSON at `catalogPath` and the asset files under
+   * `prefix`. Neither route authenticates the request.
+   * @default true
+   */
+  http?: boolean;
+  /**
    * @default CATALOG_URL_PATH
    */
   catalogPath?: string;
@@ -120,6 +129,7 @@ export function createAssetWorkspacePlugin(
   options: AssetWorkspacePluginOptions
 ): Plugin {
   const {
+    http = true,
     catalogPath = CATALOG_URL_PATH,
     prefix,
     socketPath = DEFAULT_WEBSOCKET_PATH,
@@ -137,19 +147,21 @@ export function createAssetWorkspacePlugin(
     async configureServer(devServer) {
       workspace = await createAssetWorkspace(workspaceOptions);
 
-      devServer.middlewares.use(
-        createCatalogHandler({
-          projection: workspace.backend.catalog,
-          path: catalogPath
-        })
-      );
-      devServer.middlewares.use(
-        createAssetStaticHandler({
-          source: workspace.source,
-          contentTypes: workspace.backend.kinds.contentTypes(),
-          prefix
-        })
-      );
+      if (http) {
+        devServer.middlewares.use(
+          createCatalogHandler({
+            projection: workspace.backend.catalog,
+            path: catalogPath
+          })
+        );
+        devServer.middlewares.use(
+          createAssetStaticHandler({
+            source: workspace.source,
+            contentTypes: workspace.backend.kinds.contentTypes(),
+            prefix
+          })
+        );
+      }
 
       if (devServer.httpServer) {
         new WebsocketTransport({
@@ -194,16 +206,13 @@ function requestUrl(
 function launchTag(
   target: string
 ): HtmlTagDescriptor {
-  const payload = JSON.stringify({ target })
-    .replaceAll("<", "\\u003c");
-
   return {
     tag: "script",
     attrs: {
       type: "application/json",
       id: LAUNCH_ELEMENT_ID
     },
-    children: payload,
+    children: serializeLaunch({ target }),
     injectTo: "head"
   };
 }

@@ -7,7 +7,9 @@ import type { MountStandaloneOptions } from "./mountStandalone.ts";
 import { withOfflineFallback } from "./offerOffline.ts";
 import { StandaloneEditor } from "./StandaloneEditor.ts";
 import { readDebugLogger } from "../debug/readDebugLogger.ts";
+import { InjectedLaunchSource } from "../launch/index.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
+import { shareLinkConnection } from "../workspace/shareLinkConnection.ts";
 import type {
   OfflineProject,
   OfflineProjectLoader
@@ -54,6 +56,15 @@ export async function bootStandalone<
   }
 
   try {
+    const injected = new InjectedLaunchSource();
+    const credential = (await injected.read())?.credential ?? null;
+    if (credential !== null) {
+      return await editor.mount({
+        ...mountOptions,
+        sources: [injected],
+        connect: () => shareLinkConnection(credential)
+      });
+    }
     if (forceOffline || params.offline) {
       return await mountOffline();
     }

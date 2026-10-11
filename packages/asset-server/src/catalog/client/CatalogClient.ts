@@ -79,6 +79,10 @@ export interface CatalogRoomSource {
 
 export interface CatalogConnectOptions {
   timeoutMs?: number;
+  /**
+   * @default CATALOG_ROOM
+   */
+  room?: string;
 }
 
 export interface CatalogCreateOptions {
@@ -138,7 +142,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     options: CatalogConnectOptions = {}
   ): Promise<CatalogClient> {
     const catalog = new CatalogClient(
-      rooms.room(CATALOG_ROOM)
+      rooms.room(options.room ?? CATALOG_ROOM)
     );
     try {
       await (options.timeoutMs === undefined ?

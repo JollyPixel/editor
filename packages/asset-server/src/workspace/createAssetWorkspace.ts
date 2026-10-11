@@ -9,7 +9,8 @@ import {
   Server,
   type Extension,
   type AuthenticationProvider,
-  type RightsMap
+  type RightsMap,
+  type RoomAdmission
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -64,6 +65,7 @@ export interface AssetWorkspaceOptions {
   rights?: RightsMap;
   defaultRole?: string;
   auth?: AuthenticationProvider;
+  admits?: RoomAdmission;
   logger?: Logger;
   /**
    * Grace period, in milliseconds, before an empty asset room is evicted.
@@ -109,6 +111,7 @@ export async function createAssetWorkspace(
     rights,
     defaultRole,
     auth,
+    admits,
     logger = silentLogger(),
     roomGraceMs,
     compactOnOpen = true,
@@ -148,6 +151,7 @@ export async function createAssetWorkspace(
     rights,
     defaultRole,
     auth,
+    admits,
     roomGraceMs,
     logger: options.logger
   });

@@ -1,14 +1,31 @@
 // Import Third-party Dependencies
 import * as z from "zod";
-import { ADMIN_ROLE } from "@jolly-pixel/accounts";
+import {
+  ACCOUNTS_ROOM,
+  ADMIN_ROLE,
+  GUEST_ROLE
+} from "@jolly-pixel/accounts";
 import { AccountRoles } from "@jolly-pixel/accounts/node";
-import type { RightsMap } from "@jolly-pixel/network";
+import { CATALOG_ROOM } from "@jolly-pixel/asset-server";
+import {
+  RightsTable,
+  type RightsMap
+} from "@jolly-pixel/network";
 
 // CONSTANTS
 const kRights = ["write", "read", "void"] as const;
 const kAdminRights = {
   "*": "write"
 } as const;
+const kGuestRights = {
+  [`${CATALOG_ROOM}.*`]: "void",
+  [`${ACCOUNTS_ROOM}.*`]: "void",
+  "*.$join": "write",
+  "*.$presence": "write",
+  "*": "read"
+} as const;
+const kBuiltInRoles = [ADMIN_ROLE, GUEST_ROLE];
+export const SHARE_RIGHT = "studio.$share";
 const kRolesSchema = z.record(
   z.string().min(1),
   z.record(z.string().min(1), z.enum(kRights))
@@ -67,10 +84,12 @@ export class StudioAccess {
     data: StudioAccessData,
     source: string
   ): StudioAccess {
-    if (Object.hasOwn(data.roles, ADMIN_ROLE)) {
-      throw new TypeError(
-        `"${source}" declares the built-in "${ADMIN_ROLE}" role`
-      );
+    for (const role of kBuiltInRoles) {
+      if (Object.hasOwn(data.roles, role)) {
+        throw new TypeError(
+          `"${source}" declares the built-in "${role}" role`
+        );
+      }
     }
     if (!Object.hasOwn(data.roles, data.defaultRole)) {
       throw new TypeError(
@@ -81,6 +100,7 @@ export class StudioAccess {
     return new StudioAccess(
       {
         [ADMIN_ROLE]: { ...kAdminRights },
+        [GUEST_ROLE]: { ...kGuestRights },
         ...structuredClone(data.roles)
       },
       new AccountRoles({
@@ -95,6 +115,8 @@ export class StudioAccess {
   readonly roles: AccountRoles;
   readonly accessRequests: boolean;
 
+  #table: RightsTable;
+
   private constructor(
     rights: RightsMap,
     roles: AccountRoles,
@@ -103,5 +125,12 @@ export class StudioAccess {
     this.rights = rights;
     this.roles = roles;
     this.accessRequests = accessRequests;
+    this.#table = new RightsTable(rights, roles.defaultRole);
+  }
+
+  canShare(
+    role: string
+  ): boolean {
+    return this.#table.check(role, SHARE_RIGHT) === "write";
   }
 }

@@ -9,7 +9,9 @@ export const ACCOUNTS_ERROR_CODES = [
   "access-requests-full",
   "invalid-credentials",
   "invalid-avatar",
-  "throttled"
+  "throttled",
+  "share-link-not-found",
+  "share-link-refused"
 ] as const;
 
 export type AccountsErrorCode = typeof ACCOUNTS_ERROR_CODES[number];

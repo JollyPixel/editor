@@ -34,6 +34,11 @@ const kItems = {
     label: "Export as ZIP",
     icon: "export"
   },
+  share: {
+    id: "share",
+    label: "Share link…",
+    icon: "share"
+  },
   delete: {
     id: "delete",
     label: "Delete",
@@ -48,7 +53,8 @@ interface AssetMenuItem extends ContextMenuItem {
 
 export function assetMenu(
   selection: AssetSelection,
-  kinds: AssetKindSet
+  kinds: AssetKindSet,
+  sharing: boolean
 ): ContextMenuEntry[] {
   if (selection.asset !== null) {
     return [
@@ -56,6 +62,7 @@ export function assetMenu(
       "separator",
       kItems.rename,
       kItems.export,
+      ...(sharing ? [kItems.share] : []),
       "separator",
       kItems.delete
     ];

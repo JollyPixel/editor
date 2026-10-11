@@ -18,6 +18,7 @@ interface ServerOptions {
   rights?: RightsMap;
   defaultRole?: string;
   auth?: AuthenticationProvider;
+  admits?: RoomAdmission;
   roomGraceMs?: number;
   limits?: RoomLimits;
 }

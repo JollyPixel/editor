@@ -283,6 +283,16 @@ with the workspace's connection. The launch comes from the parent's
 `jolly-launch` first, as online, so a page framed by the studio keeps its
 [shell channel](#shell-channel), then from the workspace's launch sources.
 
+### Share links
+
+When the page carries an injected launch element with a `credential`, as a
+studio `/view/<token>` page does, `bootStandalone` mounts that launch and
+nothing else: no username prompt, no offline fallback. The socket offers the
+credential in place of the session cookie, so the server connects the page as
+a guest, and the catalog comes from the read-only `asset-catalog-view` room,
+which lists the target and its dependencies only. When the server refuses the
+socket (the link was revoked or expired), a dialog offers to reload the page.
+
 `offerOffline(message)` shows the Retry / Open offline workspace dialog alone,
 for a page that connects without `mountStandalone`. It resolves `"retry"`,
 `"offline"`, or `null` when cancelled.
@@ -429,7 +439,10 @@ await mountStandalone(MyEditor, { sources: [fromHash] });
 `EditorLaunch.fromTarget(value)` accepts a non-blank string and
 `EditorLaunch.parse(value)` an object with a `target` property. Both return
 `undefined` for anything else. Both take an optional `ShellChannel` as second
-argument, `null` by default, exposed as `launch.shell`.
+argument, `null` by default, exposed as `launch.shell`. `parse` also reads
+an optional non-empty `credential` string, exposed as `launch.credential`
+(`null` without one); `launchElement({ target, credential })` from
+`@jolly-pixel/asset-server` writes the element it reads.
 
 ## Shell channel
 

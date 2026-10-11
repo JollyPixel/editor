@@ -7,5 +7,6 @@ import {
 export default defineE2EConfig({
   port: PORTS.studio,
   command: "pnpm run dev:e2e",
-  reuseExistingServer: false
+  reuseExistingServer: false,
+  localWorkers: "50%"
 });
