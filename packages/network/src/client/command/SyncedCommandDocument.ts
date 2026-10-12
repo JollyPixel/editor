@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { Room } from "../Room.ts";
+import type { PendingChanges } from "./CommandSync.ts";
 import {
   DocumentSyncClient,
   type SyncableDocument
@@ -32,6 +33,10 @@ export class SyncedCommandDocument<
 
   get loaded(): boolean {
     return this.#sync.ready;
+  }
+
+  get pendingChanges(): PendingChanges {
+    return this.#sync;
   }
 
   constructor(

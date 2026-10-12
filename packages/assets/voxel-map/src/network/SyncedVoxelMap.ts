@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { PendingChanges } from "@jolly-pixel/network/client";
 import {
   VoxelDocument,
   type VoxelDocumentOptions,
@@ -25,6 +26,10 @@ export class SyncedVoxelMap {
 
   get loaded(): boolean {
     return this.#sync.ready;
+  }
+
+  get pendingChanges(): PendingChanges {
+    return this.#sync;
   }
 
   constructor(
@@ -54,6 +59,7 @@ export class SyncedVoxelMap {
 export interface SyncedVoxelMapLease {
   document: SyncedVoxelMap;
   ready: Promise<void>;
+  pendingChanges: PendingChanges;
   dispose(): void;
 }
 
@@ -75,6 +81,7 @@ export function voxelMapDocumentKind(
       return {
         document: map,
         ready: map.ready,
+        pendingChanges: map.pendingChanges,
         dispose: () => map.dispose()
       };
     }

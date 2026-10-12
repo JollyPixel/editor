@@ -480,6 +480,7 @@ class ShellChannel {
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
   renewWhenRefused(client: RenewableClient): void;
+  reportUnsaved(unsaved: boolean): void;
   onAppearance(
     listener: (appearance: Appearance) => void,
     signal: AbortSignal
@@ -492,6 +493,7 @@ class ShellChannel {
 | `openAsset(id)` | `{ type: "jolly-shell", command: "open-asset", target: id }` |
 | `toggleConsole()` | `{ type: "jolly-shell", command: "toggle-console" }` |
 | `renewWhenRefused(client)` | `{ type: "jolly-shell", command: "session-refused" }` |
+| `reportUnsaved(unsaved)` | `{ type: "jolly-shell", command: "unsaved", unsaved }` |
 
 `renewWhenRefused(client)` takes a `RenewableClient`, any object with
 `on("unauthorized", listener)` and `reconnect()` such as a network `Client`.
@@ -500,6 +502,9 @@ then calls `client.reconnect()` when the shell
 posts `sessionRenewedMessage()` (`{ type: "jolly-session-renewed" }`).
 `EditorSession.open` calls it on the client it creates, so a framed editor
 keeps its rooms and pending changes while the user signs in again.
+
+The [`EditorSession`](./EditorSession.md) calls `reportUnsaved` each time its
+[unsaved state](./AssetLeases.md#unsaved-changes) changes.
 
 A shell that listens on its own window narrows what a frame posts with
 `isReadyMessage(data)` and `isShellCommand(data)`, and answers with

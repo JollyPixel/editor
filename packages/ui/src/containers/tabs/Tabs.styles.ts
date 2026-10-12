@@ -233,6 +233,23 @@ export const tabsStyles = css`
     opacity: 1;
   }
 
+  .modified {
+    width: var(--jolly-tab-modified-size, 8px);
+    height: var(--jolly-tab-modified-size, 8px);
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: currentcolor;
+  }
+
+  .item[data-modified]:not(:hover) .close {
+    opacity: 1;
+  }
+
+  .item:not(:hover) .close .modified + jolly-icon,
+  .item:hover .close .modified {
+    display: none;
+  }
+
   :host([variant="skew"]) {
     --jolly-tab-skew: 8px;
     --jolly-tab-skew-seam: 2px;

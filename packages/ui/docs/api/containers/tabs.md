@@ -108,6 +108,7 @@ height of the text on the icon.
 | `--jolly-tab-icon-size` | The tab icon, `16px` |
 | `--jolly-tab-close-size` | The round close button, `14px` |
 | `--jolly-tab-close-icon-size` | The close glyph, `8px` |
+| `--jolly-tab-modified-size` | The dot of a modified tab, `8px` |
 
 ## Parts
 
@@ -122,6 +123,7 @@ height of the text on the icon.
 | `action-selected` | The action button of the selected tab, in addition to `action` |
 | `close` | Every close button of a closable tab |
 | `close-selected` | The close button of the selected tab, in addition to `close` |
+| `modified` | The dot of a modified tab |
 
 The strip sizes each item to its label. Stretch them across the strip with:
 

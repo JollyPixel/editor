@@ -16,7 +16,8 @@ type TabsOptionKey =
   | "badges"
   | "action"
   | "addButton"
-  | "preselected";
+  | "preselected"
+  | "modified";
 
 interface SampleTab {
   value: string;
@@ -26,6 +27,7 @@ interface SampleTab {
 
 // CONSTANTS
 const kPreselectedTab = "stone";
+const kModifiedTab = "water";
 const kSampleTabs: SampleTab[] = [
   { value: "grass", badge: "12" },
   { value: "stone", badge: "3" },
@@ -86,6 +88,7 @@ function buildTabs(
     tab.badge = options.badges ? tab.dataset.badge ?? "" : "";
     tab.action = options.action ? "search" : "";
     tab.actionLabel = "Inspect";
+    tab.modified = options.modified && tab.value === kModifiedTab;
 
     return tab;
   }
@@ -139,6 +142,10 @@ export const TABS_EXAMPLE: GalleryExample<TabsOptionKey> = {
     {
       key: "preselected",
       label: "Preselected value"
+    },
+    {
+      key: "modified",
+      label: "Modified"
     }
   ],
   render(host, options) {

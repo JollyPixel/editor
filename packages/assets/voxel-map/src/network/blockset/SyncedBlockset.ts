@@ -3,6 +3,7 @@ import {
   blankPixelDocument,
   type SyncedPixelDocumentOptions
 } from "@jolly-pixel/asset.pixel-art/client";
+import type { PendingChanges } from "@jolly-pixel/network/client";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { BlocksetDocument } from "@jolly-pixel/voxel.renderer";
 
@@ -22,6 +23,10 @@ export class SyncedBlockset {
 
   get loaded(): boolean {
     return this.#sync.ready;
+  }
+
+  get pendingChanges(): PendingChanges {
+    return this.#sync;
   }
 
   constructor(
@@ -47,6 +52,7 @@ export class SyncedBlockset {
 export interface SyncedBlocksetLease {
   document: SyncedBlockset;
   ready: Promise<void>;
+  pendingChanges: PendingChanges;
   dispose(): void;
 }
 
@@ -68,6 +74,7 @@ export function blocksetDocumentKind(
       return {
         document: blockset,
         ready: blockset.ready,
+        pendingChanges: blockset.pendingChanges,
         dispose: () => blockset.dispose()
       };
     }

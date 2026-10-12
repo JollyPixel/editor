@@ -155,3 +155,24 @@ test.describe("Tabs (closable)", () => {
     await expect.poll(() => styleOf(item, "background-color")).not.toBe(idle);
   });
 });
+
+test.describe("Tabs (modified)", () => {
+  test("a modified tab shows a dot in place of its close glyph until hovered", async({ page }) => {
+    await openTabs(page, { closable: true, modified: true });
+
+    const tabs = page.locator("jolly-tabs [role=tab]");
+    const water = page.locator("jolly-tabs [part~=tab]").nth(2);
+    const dot = water.locator("[part~=modified]");
+    const glyph = water.locator("[part~=close] jolly-icon");
+
+    await expect(page.locator("jolly-tabs [part~=modified]")).toHaveCount(1);
+    await expect(tabs.nth(2)).toHaveAttribute("aria-description", "Unsaved changes");
+    await page.mouse.move(0, 0);
+    await expect(dot).toBeVisible();
+    await expect(glyph).toBeHidden();
+
+    await water.hover();
+    await expect(dot).toBeHidden();
+    await expect(glyph).toBeVisible();
+  });
+});

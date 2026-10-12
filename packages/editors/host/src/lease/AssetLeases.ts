@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
 import {
   AssetId,
   AssetKindMismatchError,
@@ -36,6 +37,10 @@ export interface AssetLeasesOptions {
   records: AssetRecords;
 }
 
+export type AssetLeasesEvents = {
+  unsaved: (unsaved: boolean) => void;
+};
+
 interface LeaseEntry<TDocument> {
   readonly record: AssetRecordData;
   readonly room: Room;
@@ -58,17 +63,34 @@ function hasDocumentKind<TDocument>(
   return entry.kind === kind;
 }
 
-export class AssetLeases {
+export class AssetLeases extends Emitter<AssetLeasesEvents> {
   readonly #rooms: RoomSource;
   readonly #records: AssetRecords;
   readonly #entries = new Map<string, LeaseEntry<unknown>>();
+  #unsaved = false;
   #disposed = false;
+
+  readonly #onPendingChange = (): void => {
+    const unsaved = [...this.#entries.values()].some(
+      (entry) => (entry.synced?.pendingChanges.pending ?? 0) > 0
+    );
+    if (unsaved !== this.#unsaved) {
+      this.#unsaved = unsaved;
+      this.emit("unsaved", unsaved);
+    }
+  };
 
   constructor(
     options: AssetLeasesOptions
   ) {
+    super();
+
     this.#rooms = options.rooms;
     this.#records = options.records;
+  }
+
+  get unsaved(): boolean {
+    return this.#unsaved;
   }
 
   has(
@@ -118,6 +140,7 @@ export class AssetLeases {
       this.#close(entry);
     }
     this.#entries.clear();
+    this.#onPendingChange();
   }
 
   #acquire(
@@ -184,6 +207,9 @@ export class AssetLeases {
       record.id,
       entry
     );
+    synced?.pendingChanges.on("settled", this.#onPendingChange);
+    synced?.pendingChanges.on("unsettled", this.#onPendingChange);
+    this.#onPendingChange();
 
     return entry;
   }
@@ -221,11 +247,14 @@ export class AssetLeases {
 
     this.#entries.delete(entry.record.id);
     this.#close(entry);
+    this.#onPendingChange();
   }
 
   #close(
     entry: LeaseEntry<unknown>
   ): void {
+    entry.synced?.pendingChanges.off("settled", this.#onPendingChange);
+    entry.synced?.pendingChanges.off("unsettled", this.#onPendingChange);
     entry.synced?.dispose();
     entry.room.leave();
   }

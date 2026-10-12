@@ -1,10 +1,14 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
-import type { Room } from "@jolly-pixel/network/client";
+import type {
+  PendingChanges,
+  Room
+} from "@jolly-pixel/network/client";
 
 export interface SyncedDocument<TDocument> {
   readonly document: TDocument;
   readonly ready: Promise<void>;
+  readonly pendingChanges: PendingChanges;
 
   dispose(): void;
 }

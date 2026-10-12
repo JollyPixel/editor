@@ -146,7 +146,9 @@ and density the shell sends in `jolly-launch` and `jolly-appearance`, and
 serves its console namespaces on the launch's console port so the shell's
 console shows them. When the server refuses the session's socket, the page
 posts `session-refused` and reconnects once the shell posts
-`jolly-session-renewed`.
+`jolly-session-renewed`. It posts `unsaved` when its leased documents gain
+their first change the server has not acknowledged, and again when the last
+one is.
 
 The parent's `jolly-launch` is always read first. `mountStandalone({ sources })`
 replaces the rest of the list. Offline, `bootStandalone` passes the

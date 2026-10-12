@@ -12,28 +12,12 @@ tools open (empty for now). The open tabs, the dock layout and the kind
 filter move there from `localStorage`. It becomes the home of the account:
 the avatar upload moves there from the `AccountBadge` menu.
 
-## 2. Unsaved changes on tabs
-
-A tab shows a marker while its editor holds changes the server has not
-acknowledged, and closing or reloading the studio asks first. Those changes
-survive a session renewal ([ADR-0022](./docs/adr/0022-a-refused-session-renews-in-place.md))
-but not a reload.
-
-The count is `CommandSync.pending`, but nothing outside the synced documents
-can read it:
-
-- `CommandSync` emits `settled` when the count reaches zero, but nothing when
-  it leaves zero.
-- `SyncedDocument` keeps its sync private. Each implementation would expose
-  it: `SyncedPixelDocument`, `SyncedVoxelMap`, `SyncedBlockset` and the
-  shared `SyncedCommandDocument` (voxel-model, voxel-animation).
-- `EditorSession` sums its leases and posts a `dirty` shell command through
-  `ShellChannel`; the shell marks the tab and guards `beforeunload`.
-
-That touches network, three asset packages and editor.host, each with a
-changeset.
-
 ## Waiting for a trigger
+
+- **Confirm closing an unsaved tab.** Closing, evicting or reloading a marked
+  tab drops its frame without asking. Changes already sent usually reach the
+  server; only those held while offline or refused are lost. A confirmation
+  makes `EditorTabs.close` async, like `confirmEvict`.
 
 - **Shell commands from editors.** The host posts `toggle-console` on Ctrl+K
   and `session-refused`, but no editor calls `context.shell` since the

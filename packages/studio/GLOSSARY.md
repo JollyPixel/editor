@@ -115,8 +115,8 @@ no answer comes.
 
 A `jolly-shell` message an editor page posts back through its
 `ShellChannel`. The shell handles `open-asset` like a tree activation,
-`toggle-console` by toggling its console and `session-refused` by renewing the
-session.
+`toggle-console` by toggling its console, `session-refused` by renewing the
+session and `unsaved` by marking the tab of the frame that posted it.
 
 ### Account
 

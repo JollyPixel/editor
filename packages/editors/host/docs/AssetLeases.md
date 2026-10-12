@@ -24,9 +24,14 @@ interface AssetDocumentKind<TDocument, TCommand = unknown, TMessage = unknown> {
 interface SyncedDocument<TDocument> {
   readonly document: TDocument;
   readonly ready: Promise<void>;
+  readonly pendingChanges: PendingChanges;
   dispose(): void;
 }
 ```
+
+`pendingChanges` is the network
+[`PendingChanges`](../../../network/docs/client/CommandSync.md#syncedcommanddocument)
+of the document's sync client.
 
 A document kind pairs an asset kind with the factory of its synced document. Asset
 packages export them, such as `pixelArtDocumentKind()` from
@@ -83,6 +88,17 @@ calls throw an error; releasing an existing lease afterward is harmless.
 has(assetId: string): boolean;
 holders(assetId: string): number;
 ```
+
+## Unsaved changes
+
+```ts
+readonly unsaved: boolean;
+on(event: "unsaved", listener: (unsaved: boolean) => void): this;
+```
+
+`unsaved` is `true` while an open document has changes its server has not
+acknowledged. The `unsaved` event fires each time it flips. Releasing the last
+lease of such a document makes it `false` again: its changes go with it.
 
 ## Errors
 

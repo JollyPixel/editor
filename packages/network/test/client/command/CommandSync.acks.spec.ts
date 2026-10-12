@@ -129,18 +129,31 @@ describe("CommandSync — acknowledgements", () => {
     assert.strictEqual(sync.pending, 1);
   });
 
-  test("emits settled when the last pending command is acknowledged", () => {
+  test("emits unsettled when the first command is pending and settled when the last is acknowledged", () => {
     const { harness, sync } = createCommandSync();
-    let settled = 0;
-    sync.on("settled", () => settled++);
+    const events: string[] = [];
+    sync.on("unsettled", () => events.push("unsettled"));
+    sync.on("settled", () => events.push("settled"));
 
     sync.send({ action: "set", value: 1 });
     sync.send({ action: "set", value: 2 });
     harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 1 } });
-    assert.strictEqual(settled, 0);
+    assert.deepEqual(events, ["unsettled"]);
     harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
     harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 2 } });
+    sync.send({ action: "set", value: 3 });
 
-    assert.strictEqual(settled, 1);
+    assert.deepEqual(events, ["unsettled", "settled", "unsettled"]);
+  });
+
+  test("emits unsettled for a command held before admission", () => {
+    const { sync } = createCommandSync({ admitted: false });
+    let unsettled = 0;
+    sync.on("unsettled", () => unsettled++);
+
+    sync.send({ action: "set", value: 1 });
+
+    assert.strictEqual(unsettled, 1);
+    assert.strictEqual(sync.pending, 1);
   });
 });
